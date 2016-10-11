@@ -1,0 +1,5 @@
+myjukebox
+
+This application demonstrates how to do simple IVR by reacting on DTMF
+input. It plays the file with the corresponding name (0.wav, 1.wav, ...)
+if a key on the phone is pressed. 

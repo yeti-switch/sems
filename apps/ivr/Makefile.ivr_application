@@ -1,0 +1,95 @@
+# generic Makefile for ivr applications
+.DEFAULT_GOAL := all
+
+COREPATH ?= ../../core
+IVRPATH ?= ../ivr
+
+AUDIO_FILES=$(notdir $(wildcard wav/*.wav))
+
+include $(COREPATH)/../Makefile.defs
+include $(IVRPATH)/Makefile.defs
+
+# 
+ivr-modules-dir?=lib/$(APP_NAME)/ivr
+
+LIB_INSTALLDIR?=$(modules-prefix)/$(ivr-modules-dir)
+TARBALL_PREFIX=sems-app-${NAME}
+TARBALL="${TARBALL_PREFIX}-${VERSION}.tar.gz"
+
+BASEDIR?=${basedir}
+
+BIN_PERMISSIONS="755"
+LIB_PERMISSIONS="644"
+
+PYCHECKERARGS = --stdlib
+PYCHECKERDOCARGS = --classdoc --funcdoc
+
+module_conf_files =  $(notdir $(wildcard etc/*.conf))
+
+.PHONY: all
+all: compile
+
+.PHONY: clean
+clean:
+	find . -iname "*\.pyc" -o -iname "*\.py~" | xargs rm -f
+	rm -f ${TARBALL_PREFIX}*.tar.gz
+
+.PHONY: compile
+compile: 
+	$(PY_EXE) $(IVRPATH)/py_comp -q .
+
+.PHONY: install
+install: all $(extra_install)
+	install -d $(DESTDIR)${BASEDIR}/${LIB_INSTALLDIR}
+	install -m ${LIB_PERMISSIONS}  *.pyc $(DESTDIR)${BASEDIR}/${LIB_INSTALLDIR}
+
+ifneq (,$(LIBDIR))
+	install -d $(DESTDIR)${BASEDIR}/${LIB_INSTALLDIR}/${LIBDIR} 
+	install -m ${LIB_PERMISSIONS}  ${LIBDIR}/*.pyc $(DESTDIR)${BASEDIR}/${LIB_INSTALLDIR}/${LIBDIR}  
+endif
+
+.PHONY: install-cfg
+install-cfg: 
+	mkdir -p $(DESTDIR)$(app-cfg-target)
+	-@for r in $(module_conf_files); do \
+			echo installing $$r ;  \
+			$(INSTALL-TOUCH) $(DESTDIR)$(app-cfg-target)$$r ; \
+			sed -e "s#/usr/.*lib/sems/audio/#$(audio-target)#g" \
+			-e "s#/usr/.*lib/sems/plug-in/#$(modules-target)#g" \
+			-e "s#/usr/.*etc/sems/#$(app-cfg-target)#g" \
+			< etc/$$r > $(DESTDIR)$(app-cfg-target)$$r; \
+	done
+
+$(DESTDIR)(audio-prefix)/$(audio-dir):
+	mkdir -p $(DESTDIR)$(audio-prefix)/$(audio-dir)
+
+.PHONY: $(NAME)_audio
+$(NAME)_audio: $(DESTDIR)$(audio-prefix)/$(audio-dir)
+	mkdir -p $(DESTDIR)$(audio-prefix)/$(audio-dir)$(NAME)
+	-@for f in $(AUDIO_FILES) ; do \
+		if [ -n "wav/$$f" ]; then \
+			$(INSTALL-TOUCH) $(DESTDIR)$(audio-prefix)/$(audio-dir)$(NAME)/$$f; \
+			$(INSTALL-AUDIO) wav/$$f $(DESTDIR)$(audio-prefix)/$(audio-dir)$(NAME)/$$f; \
+		fi ; \
+	done
+
+uninstall: 
+	@echo "please remove the files from $(DESTDIR)${LIB_INSTALLDIR} manually."
+
+fulltest: 
+	find | grep /Test | grep -v ".svn" | grep \\.py$$ | sed -e "s#^./##g" | bash -e - 
+
+check: 
+	find ${LIBDIR}/ | grep \\.py$$ | grep -v Test | PYTHONPATH=$(PYTHONPATH):$(IVRPATH)/moc xargs pychecker ${PYCHECKERARGS} 
+
+doccheck: 
+	find ${LIBDIR}/  | grep \\.py$$ | grep -v Test | xargs pychecker ${PYCHECKERARGS} ${PYCHECKERDOCARGS}
+
+dist: all
+	tar -cvzf ${TARBALL} . --exclude=*.tar.gz \
+				--exclude=.svn \
+				--exclude=*~ \
+				--exclude=*.pyc
+
+
+

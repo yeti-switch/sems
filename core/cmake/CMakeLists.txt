@@ -1,0 +1,2 @@
+FILE(GLOB CMAKE_MAKE_HELPERS "*.cmake" "*.rules.txt")
+INSTALL(FILES ${CMAKE_MAKE_HELPERS} DESTINATION /usr/share/cmake/sems)

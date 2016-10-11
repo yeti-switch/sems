@@ -1,0 +1,41 @@
+fork of "SIP Express Media Server" project (https://github.com/sems-server/sems)
+
+SEMS Authors:
+
+  Raphael Coeffic (rco@iptel.org), the father of SEMS,
+  Stefan Sayer (stefan.sayer@gmail.com), current lead developer,
+  and all contributors:
+    Alex Gradinar
+    Alfred E Heggestad
+    Andreas Granig
+    Andrey Samusenko
+    Andriy I Pylypenko
+    Anton Zagorskiy
+    B. Oldenburg
+    Balint Kovacs
+    Bogdan Pintea
+    Carsten Bock
+    Greger Viken Teigre
+    Grzegorz Stanislawski
+    Helmut Kuper
+    Jeremy A
+    Jiri Kuthan
+    Joe Stusick
+    Jose-Luis Millan
+    Juha Heinanen
+    Matthew Williams
+    Michael Furmur
+    Ovidiu Sas
+    Pavel Kasparek
+    Peter Lemenkov
+    Peter Loeppky
+    Richard Newman
+    Robert Szokovacs
+    Rui Jin Zheng
+    Tom van der Geer
+    Ulrich Abend
+    Vaclav Kubart
+    Victor Seva
+
+  Special thanks to FRAFOS GmbH, sipwise GmbH, IPTEGO GmbH, iptelorg GmbH and TelTech Systems Inc. for
+  sponsoring development of SEMS.

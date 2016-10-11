@@ -1,0 +1,135 @@
+compilation instructions for SEMS
+---------------------------------
+
+make targets
+------------
+ $ make all
+makes the core and all applications. If only the core and specific 
+modules are needed, e.g. the conference module: 
+ $ make -C core && make -C apps/conference
+(alternative to exclude_modules - below)
+
+ $ make install 
+accepts the usual BASEDIR (default "") and PREFIX (default "/usr/local")
+variables.
+
+ $ make install-ser-config 
+accepts SERPREFIX variable (default /opt/ser-sems), which should be the 
+installation path of the used ser-sems.
+
+ $ make tar
+make a source tarball (.tar.gz) 
+
+ $ make bundle
+make a source tarball bundle  (.tar.gz), a combination of SEMS and SER
+for SEMS.
+
+ $ make doc
+make doxygen documentation (output in doc/doxygen_doc)
+
+ $ make fulldoc
+make doxygen documentation (output in doc/doxygen_doc) will full 
+xreff'd source
+
+Defines and Variables
+---------------------
+
++-------------+-------------+---------------------------------------+
+|  Variable   |  Default    | Comment                               |     
++-------------+-------------+---------------------------------------+
+ GPP             g++           C++ compiler 
+ GCC             gcc           C compiler 
+ INSTALL         install       
+ TAR             tar           
+
+ CXX_FLAGS       ...           C++ compiler  
+ C_FLAGS         ...           C compiler 
+
+ BASEDIR         <empty>       destination base 
+ DESTDIR/PREFIX  /usr/local    destination prefix 
+                               (installs to /basedir/prefix)
+
+ PYTHON_VERSION  2.4           ivr and py_sems modules
+ TTS             n             flite tts in ivr and py_sems modules 
+                               (y or n)
+
+ USE_MYSQL       not set       use anouncements from mysql db
+                               in conference and voicemail apps
+
+ USE_SPANDSP     not set       use inband DTMF detection from spandsp?
+ LIBSPANDSP_STATIC  not set    statically link libspandsp?
+ LIBSPANDSP_LDIR not set       lib directory of libspandsp
+			     
+
+inband DTMF detector
+--------------------
+
+Two different inband DTMF detectors can be used. The SEMS' own one
+is always available, and additionally, the inband DTMF detector from 
+spandsp library (www.soft-switch.org) can be used. To compile with 
+spandsp support, set USE_SPANDSP, and if needed LIBSPANDSP_STATIC 
+and LIBSPANDSP_LDIR in Makefile.defs.
+A fairly recent (?) version of spandsp is needed, at least >= 0.0.3.
+Tested with 0.0.4pre11 version. Current stable Debian packages and 
+gentoo ebuilds seem to be quite outdated (0.0.2 - won't work).
+
+IVR
+---
+You need python development support - locate structmember.h should 
+give you something like: 
+  $ locate structmember.h
+  /usr/include/python2.4/structmember.h
+If structmember.h is not found, you may have to install python 
+development package (e.g. in debian python-dev).
+
+Set PYTHON_VERSION when compiling, or edit apps/ivr/Makefile.defs,
+if you don't want to use the default python version on your system:
+
+1. Python version and path
+ set the python version (2.3, 2.4, 2.5) 
+ PYTHON_VERSION = 2.4
+ and the python path, usually /usr/local or /usr:
+ PYTHON_PREFIX = /usr/local
+
+2. TTS with flite speech synthesizer
+ To disable text-to-speech, set
+ TTS = n
+ To enable text-to-speech, set
+ TTS = y
+ and get the flite speech synthesizer from 
+ http://cmuflite.org/
+ e.g. with 
+  cd /usr/src ; 
+  wget http://www.speech.cs.cmu.edu/flite/packed/flite-1.3/flite-1.3-release.tar.gz ; 
+  tar xzvf flite-1.3-release.tar.gz ; cd flite-1.3-release ; 
+  ./configure ; make ; make install
+ If you do not want to do make install for flite, set
+  FLITE_DIR  = /path/to/flite/source
+ in apps/ivr/Makefile
+
+MP3 file writer
+---------------
+short: cd plug-in/mp3 ; 
+       wget http://switch.dl.sourceforge.net/sourceforge/lame/lame-3.96.1.tar.gz ;
+       tar xzvf lame-3.96.1.tar.gz ; make
+
+ 1) Get lame from lame.sourceforge.net (
+    http://sourceforge.net/project/showfiles.php?group_id=290)
+ 2) Unpack the archive
+ 3) edit LAME_DIR in mp3 plug-in Makefile to point to the location of
+    the unpacked lame source archive
+ 4) make in plug-in/mp3 directory
+
+ Note: Using the LAME encoding engine (or other mp3 encoding technology) in
+ your software may require a patent license in some countries.
+ See http://www.mp3licensing.com/ or
+ http://lame.sourceforge.net/links.html#patents for further information.
+ (Get seated before looking at the license prices).
+
+Excluding some modules from builing
+-----------------------------------
+
+Set exclude_modules in apps/Makefile to a list of the modules you 
+don't want to be built, e.g. if you are not using mp3 and conf_auth: 
+exclude_modules = mp3 conf_auth
+

@@ -1,0 +1,13 @@
+
+initial state START;
+
+transition "sess start" START - sessionStart / {
+	   playFile(wav/default_en.wav);
+} -> session_started;
+state session_started;
+
+transition "got bye" (START,session_started) - hangup / {
+	   log(1, #headers);
+	   stop;
+} -> end;
+state end;

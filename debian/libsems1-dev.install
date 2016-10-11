@@ -1,0 +1,10 @@
+core/*.h usr/include/sems/
+core/*.cc usr/include/sems/
+core/sip/*.h usr/include/sems/sip/
+core/ampi usr/include/sems/
+core/amci usr/include/sems/
+core/compat/*.h usr/include/sems/compat/
+core/compat/*.c usr/include/sems/compat/
+core/rtp usr/include/sems/
+usr/lib/pkgconfig usr/lib/
+usr/share/cmake/sems usr/share/cmake/

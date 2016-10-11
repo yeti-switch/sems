@@ -1,0 +1,16 @@
+[Unit]
+Description=SEMS for YETI project
+Documentation=https://yeti-switch.org/docs/
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=root
+LimitNOFILE=65536
+LimitCORE=infinity
+
+ExecStart=/usr/sbin/sems -P /var/run/sems.pid -u root -g root -f /etc/sems/sems.conf
+PIDFile=/var/run/sems.pid
+Type=forking
+Restart=on-abnormal

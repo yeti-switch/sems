@@ -1,0 +1,6 @@
+Name: @SEMS_LIB@
+Version: @YETI_MAJOR_VERSION@.@YETI_MINOR_VERSION@.@YETI_PATCH_VERSION@
+Description: shared library with common classes implementation for SEMS project
+Requires:
+Libs: -L/usr/lib/sems -lsems
+Cflags: -I/usr/include/sems @CoreDefs@

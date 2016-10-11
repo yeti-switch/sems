@@ -1,0 +1,55 @@
+# A place for common parts of SEMS modules rules
+#
+# We adding sems_ prefix to the internal name of the library to avoid nasty
+# issue then this name is equals to external library, our module links to.
+# E.g. the issue, then speex module should be linked to -lspeex
+
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/doc.rules.txt)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/config.rules.txt)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
+
+ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
+
+IF(APPLE)
+	SET(CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS
+		"${CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS} -flat_namespace -undefined suppress")
+	SET(CMAKE_SHARED_MODULE_CREATE_C_FLAGS
+		"${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace -undefined suppress")
+ENDIF(APPLE)
+
+ADD_DEFINITIONS(-DMOD_NAME=\\\"${sems_module_name}\\\")
+
+# all modules should be linked against ${CMAKE_DL_LIBS} at least
+# and with additional ${sems_module_libs} if they exists
+TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
+
+SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES OUTPUT_NAME ${sems_module_name})
+SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES PREFIX "")
+
+INSTALL(
+	TARGETS sems_${sems_module_name}
+	LIBRARY DESTINATION ${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/
+)
+
+IF(NOT DEFINED ${sems_module_name}_docs)
+	IF(EXISTS ${CMAKE_SOURCE_DIR}/doc/Readme.${sems_module_name}.txt)
+		SET(${sems_module_name}_docs ${CMAKE_SOURCE_DIR}/doc/Readme.${sems_module_name}.txt)
+	ENDIF(EXISTS ${CMAKE_SOURCE_DIR}/doc/Readme.${sems_module_name}.txt)
+ENDIF(NOT DEFINED ${sems_module_name}_docs)
+
+SEMS_INSTALL_DOCS("${${sems_module_name}_docs}" "${${sems_module_name}_doc_dirs}")
+
+IF(NOT DEFINED ${sems_module_name}_config_files)
+	SEMS_INSTALL_CONFIGS("${sems_module_name}")
+ELSE(NOT DEFINED ${sems_module_name}_config_files)
+	SEMS_INSTALL_CONFIGS("${${sems_module_name}_config_files}")
+ENDIF(NOT DEFINED ${sems_module_name}_config_files)
+
+IF(DEFINED ${sems_module_name}_config_dist_files)
+	SEMS_INSTALL_DIST_CONFIGS("${${sems_module_name}_config_dist_files}")
+ENDIF(DEFINED ${sems_module_name}_config_dist_files)
+
+
+IF(DEFINED ${sems_module_name}_audio_files)
+	SEMS_INSTALL_AUDIO("${sems_module_name}" "${${sems_module_name}_audio_files}")
+ENDIF(DEFINED ${sems_module_name}_audio_files)

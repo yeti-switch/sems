@@ -1,0 +1,5 @@
+usr/sbin/sems /usr/sbin/
+etc/sems/sems.conf.dist etc/sems/
+etc/default etc/
+etc/logrotate.d etc/
+etc/rsyslog.d etc/

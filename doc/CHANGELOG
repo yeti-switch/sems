@@ -1,0 +1,430 @@
+Changelog for SEMS 
+
+Version 1.6.0
+- IVR
+    - Calling stopSession() is now all that needs to be done when BYE
+      is received from caller or callee leg.
+    - It is not anymore possible to prevent callee leg from being
+      disconnected when caller leg is disconnected.
+
+Version 1.5.0
+ - Core
+    - configurable SIP timers (global)
+    - timer C support (mainly for SBC)
+    - SUBSCRIBE/NOTIFY support
+    - multi-mime bodies
+    - wideband / multiple sample frequency support
+    - multiple destinations (faked SRV record)
+    - DNS SRV: support for 503 replies
+    - multi-threaded RTP receiver
+    - complete rework of offer/answer mechanisms
+
+ - Codecs:
+    - iSAC
+    - SILK
+    - SPEEX 16kHz, 32kHz
+    - G722
+    - L16
+
+ - SBC
+    - audio & dtmf transcoder
+    - call-control modules
+    - lots of small improvements
+
+ - Monitoring
+    - munin plugin
+
+ - DSM
+    - mod_xml: XML handling
+    - mod_curl: HTTP requests
+    - mod_subscription: SUBSCRIBE/NOTIFY
+    - mod_regex: regular expressions
+    - lots of small improvements
+
+ - App Plug-ins
+    - db_reg_agent: register SIP accounts from a DB
+    - rtmp: RTMP gateway
+
+Version 1.4.0
+ - SBC
+    - topo hiding B2BUA
+    - flexible call profile based configuration
+    - online reload of call profiles
+    - From, To, RURI, Call-ID update
+    - RTP bridging
+    - Header and message filter
+    - codec filter
+    - adding arbitrary headers
+    - reply code translation
+    - SIP authentication
+    - SIP Session Timers
+    - call timer
+    - prepaid accounting
+
+ - DSM
+    - language: - if / else constructs
+                - functions
+                - for loops
+
+    - utils: RingTone
+    - mod_groups (call queues, conference interaction etc)
+
+ - multi homed support (SIP and RTP)
+
+ - MWI support for voicemail via PUBLISH
+
+ - XMLRPC bind to specific address
+
+ - webconference: private/reserved rooms mode
+
+ - proxy sticky auth
+
+ - many bug fixes and performance improvements
+
+Version 1.3.0
+ - SIP stack moved into the core (no need to load sipctrl any more)
+
+ - session app/signaling thread pool support (for very high session count)
+
+ - reduced memory usage if no RTP is processed
+
+ - SIP/UDP receive buffer configurable
+
+ - optimized potentially contentious mutexes
+
+ - multiple SIP/UDP receivers for even more signaling performance
+
+ - daemon mode can be compile-time disabled
+
+ - command line params may overrule config file
+
+ - CMake build with older versions possible (2.4)
+
+ - simple mode for voicemail/voicebox, usable without special handling by proxy
+
+ - RTP DTMF reception fixed (using RTP TS)
+
+ - support for DTMF sending/relaying on app level
+
+ - json-rpc (v2.0) module for interfacing (sync+async)
+
+ - 100rel (PRACK, RFC 3262) support
+
+ - open webconference rooms at startup
+
+ - DNS cache, support for load balancing on DNS SRV records
+
+ - new tutorials, DSM examples
+
+ - DSM state machine scripting platform
+    - #include scripts
+    - sys.popen to run external programs
+    - proper dialout support with ringing events, variables passed, auth etc.
+    - app selection and call preparation on in-mem DB (monitoring), with fallback
+    - System DSMs - executed DSM scripts unrelated to calls
+    - full conference support, with subgroups (mixed sidebars)
+    - mix in file into call or conference
+    - consistency checks on DSM scripts
+    - sets() for variable replacement
+    - raw SIP message processing
+    - arrays (also recursive) in DI action
+    - utils.add/sub
+    - prefix matching for test
+
+ - UPDATE support for Session Timer
+
+ - B2BUA with Session Timer (using UPDATE/re-INVITE with last SDP)
+
+ - SIP Session Timer for webconference, conference, dsm, ivr
+
+ - SIGHUP stops active calls, SIGUSR1/2 can be used by apps
+
+ - G.729 codec module (Intel IPP wrapper)
+
+Version 1.2.0
+
+- many DSM improvements:
+  - exceptions support
+  - transitions from multiple origin states
+  - 'not' operator on conditions
+  - B2BUA functionality
+  - register scripts as application
+  - live reload of scripts
+  - script sets with its own configuration
+  - mod_mysql for MySQL DB access  
+  - mod_conference module
+  - mod_aws Amazon Web Services module
+  - mod_py Python module
+  - CANCEL handling in early dialogs (generates hangup event)
+  - Events from DI Interface
+  - eval() function for simple expression evaluation (+, -)
+
+- ivr: fixed memory leak and crashes that occured with high load
+
+- complete working and usable CMake build system
+
+- twitter app
+
+- monitoring: server monitoring and in-memory AVP store
+
+- fixed precoded announcements for all codecs
+
+- fixed multiple timers with the same timestamp
+
+- mail_header_vars : variables from P-App-Param into voicemail template (SEMS-17)
+
+- sipctrl: outbound proxy support and ACK sent from UA layer
+
+- stored application and variables from monitoring for new calls 
+
+- improved RTP DTMF detection using TS
+
+- Audio file recording with subtype (e.g. record.wav|A-Law)
+
+- PyQT GUI example for webconference 
+
+
+
+- py_sems compiles with newer sip4 versions
+
+Version 1.1.0 RC1
+ (in order)
+
+ - configurable server timeout for XMLRPC client 
+
+ - DIAMETER client with TLS
+
+ - SEMS-42: callee domain optionally specified in webconference dialout
+
+ - SEMS-35: time out empty webconference rooms
+
+ - support for multi domain through uid/did in voicebox system
+
+ - early media support for b2b w/ media relay
+
+ - transparent signaling + media B2BUA application
+
+ - MT XMLRPC server
+
+ - ISDN gateway module 
+
+ - controlled server shutdown (de-initialization, stopping of sessions) 
+
+ - improved logging 
+
+ - MT binrpc receiver, connection pool for sending to SER
+
+ - DSM state machine interpreter: write applications as simple,
+   self-documenting, correct, state machine description charts
+
+ - g722 codec from spandsp in 8khz compatibility mode
+
+ - support for out of dialog request handling in modules
+
+ - audio file autorewind
+
+ - AmAudio mixing 
+
+ - 488 reply (instead of 606) if no compatible codec found
+
+ ... plus as always lots of fixes
+
+Version 1.0.0
+
+ - internal SIP stack (sipctrl)
+
+ - module to use ser2 as SIP stack (binrpcctrl)
+
+ - rewritten SDP parser
+
+ - various options for application selection (configured, special header, 
+   RURI regexp, RURI user, RURI parameter)
+   
+ - ZRTP support
+
+ - XMLRPC client mode
+
+ - DIAMETER client
+
+ - new complete mailbox system (msg_storage+voicebox+voicemail+annrecorder) 
+
+ - simple call generator application 
+
+ - early media pre-call announcement application with B2B
+
+ - B2B call timer application 
+
+ - callback application
+
+ - prepaid and click2dial applications
+
+ - precoded annoucements
+
+ - early media receiving example
+
+ - support for extra headers in dialout sessions
+
+ - support for setting the URI of a session in SDP
+
+ - support for posting events into conferences
+
+ - support for receiving early media
+
+ - outbound_proxy option sets next hop on outgoing dialogs and 
+   registrations
+
+ - b/f: don't reuse dialog for SIP authenticated re-sending of INVITE
+
+ - fixed artifacts on wav files with extra chunks
+
+ - support for spandsp DTMF detection, packet loss concealment
+
+ - speex NB, G726, L16 codecs
+
+ - support for local audio as audio sources into audio engine 
+   on the same channel as RTP 
+
+ - selectively exclude codecs
+
+ - MP3 playback
+
+ - libsrc resampling enables prompt files in other bitrates
+
+ - RTP receive buffer optimization 
+
+ - configurable session limit
+
+ - basic OPTIONS support for alive monitoring through SIP
+
+ - syslog calls logging, configurable syslog facility
+
+ - builds for and on solaris, openembedded, openwrt, Darwin, too
+
+ ... plus as always lots of fixes
+
+Version 0.10.0 (final)
+ - new module for exposing internal DI APIs via XMLRPC 
+
+ - new module for triggering calls via DI interface
+ 
+ - new DI/XMLRPC controlled conference application, that can for example
+   be used for conference rooms with web interface
+
+ - CallWatcher and a more powerful dialout function simplifies 
+   interfacing to external applications 
+
+ - many examples for quick start of custom service development, 
+   for example new serviceline (auto-attendant) application
+
+ - b2bua implementation with media relay
+ 
+ - language awareness of conference application 
+
+ - DB support for conference and voicemail prompts, and announcements
+
+ - PromptCollection simplifies usage of prompts in applications
+
+ - b2bua support in py_sems embedded python interpreter
+
+ - corrected RTP timeout detection 
+
+ - new api for custom logging modules, new in-memory ring buffer 
+   logging module
+
+ - accept all possible payloads and payload switching on the fly 
+   (thanks to Maxim Sobolyev/sippysoft) 
+
+ - changing callgroups (media processing threads) in running sessions 
+
+ - support for setting sessions on hold 
+
+ - support for OpenSer 1.3 
+
+ - substantially improved documentation 
+
+ - 'bundle' install method for easy installation
+
+ - support for OpenWRT package build
+
+ ... and many bugfixes
+
+Version 0.10.0 rc2
+
+ - new Adaptive jitter buffer as alternative playout method
+   Contributed by Andriy Pylypenko/Sippy Software
+
+ - new PIN collect application with transfer to e.g. 
+   separate conference bridge
+
+ - new SIP registrar client for registration at a 
+   SIP registrar
+
+ - new UAC authentication component
+
+ - new faster announcement application with memory caching for 
+   audio files
+
+ - new pre call announcement method using REFER 
+
+ - new plug-in py_sems using a Python/C++ binding generator for even more power 
+   in python scripts
+
+ - stats server can be used for monitoring custom modules/applications
+
+ - session specific parameters by default taken from unified 
+   session parameters header 
+
+ - signature configurable 
+
+ - install and make system updated
+
+ - added documentation 
+
+ - some security bugfixes (namely fixing possible 
+   buffer overflows)
+
+ - ...and a lot of other bug fixes
+
+
+Version 0.10.0 rc1
+ ...
+
+What is new in SEMS version 0.10.0 (from 0.9.0)
+
+Between 0.9.0 (CVS) versions and 0.10.0, quite a lot has changed.
+Almost 50% of the code has been rewritten: the design has been
+simplified a lot, and to make a slim, clean core a lot of 
+functionality has been dropped. Instead, for the core we just
+focus on the essentials: basic signalling, session and media 
+handling, and loading plugins.
+
+An inter-plugin API ("DI-API") has been introduced, such that 
+functionality can be added using plugins, everybody can implement
+their favorite functionality as a reusable plug-in, and applications
+can be built in a modular manner.
+
+A new kind of modules, session component plugins, can even modify the 
+basic signaling behaviour, the session timer plugin is the first one to
+use this. 
+
+Major additional changes:
+ * Interface to Ser has been rewritten.
+
+ * Application plug-in interface has been partially rewritten. 
+   Applications are now exclusively event driven and asynchronous.
+ 
+ * Media is processed by one thread for all sessions, improving
+   the performance extremely due to less task-switching
+
+ * Back-to-back User Agent (B2BUA) functionality has been added.
+
+ * IVR python code has been completely rewritten: Applications are
+   now developed in the IVR like their C++ counterparts
+
+ * Session-Timer has been added (as module), replacing the ICMP 
+   watcher
+
+ * Adaptive playout buffer has been added
+
+ * Audio processing simplified
+

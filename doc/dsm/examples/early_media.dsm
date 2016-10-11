@@ -1,0 +1,29 @@
+
+-- simple example on playing a file in early media for max 10 seconds
+-- then sending 500 final reply
+
+import(mod_dlg);
+
+initial state START;
+transition "on invite" START - invite -> runinvite;
+
+state runinvite 
+ enter { 
+   set($dlg.reply.hdrs="P-Prompt-Type: Charging-info\r\nP-Prompt-Content: 5\r\n");
+   dlg.acceptInvite(183, progress);
+   connectMedia();
+   playFile(wav/default_en.wav);
+   setTimer(1, 10);
+
+   -- we don't want to have the default 200 OK reply
+   set($connect_session=0);   
+ };
+
+transition FR runinvite - timerTest(#id==1) / {
+   dlg.reply(500, "denied");
+   stop;
+}  -> FIN;
+
+transition bye runinvite - hangup / stop -> FIN;
+
+state FIN;
