@@ -117,7 +117,6 @@ enum Log_Level {
         int level_ = FIX_LOG_LEVEL(level__); \
         if ((level_) > log_level) break; \
         char msg_[LOG_BUFFER_LEN]; \
-        snprintf(msg_, sizeof(msg_), fmt, ##args); \
         int n_ = snprintf(msg_, sizeof(msg_), fmt, ##args); \
         if ((n_ < LOG_BUFFER_LEN) && (msg_[n_ - 1] == '\n')) \
             msg_[n_ - 1] = '\0'; \
