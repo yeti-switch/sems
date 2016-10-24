@@ -24,6 +24,7 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
   if (req.method == SIP_METH_INVITE) {
     switch(reliable_1xx) {
       case REL100_SUPPORTED: /* if support is on, enforce if asked by UAC */
+      case REL100_SUPPORTED_NOT_ANNOUNCED:
         if (key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED, SIP_HDR_SUPPORTED_COMPACT),
               SIP_EXT_100REL) ||
             key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), 
@@ -96,6 +97,7 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
   if (100<reply.code && reply.code<200 && reply.cseq_method==SIP_METH_INVITE) {
     switch (reliable_1xx) {
     case REL100_SUPPORTED:
+    case REL100_SUPPORTED_NOT_ANNOUNCED:
       if (key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE), 
           SIP_EXT_100REL))
         reliable_1xx = REL100_REQUIRE;
@@ -146,7 +148,9 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
 
 void Am100rel::onRequestOut(AmSipRequest& req)
 {
-  if (reliable_1xx == REL100_IGNORED || req.method!=SIP_METH_INVITE)
+  if (reliable_1xx == REL100_IGNORED ||
+      reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED ||
+      req.method!=SIP_METH_INVITE)
     return;
 
   switch(reliable_1xx) {
@@ -168,7 +172,8 @@ void Am100rel::onRequestOut(AmSipRequest& req)
 
 void Am100rel::onReplyOut(AmSipReply& reply)
 {
-  if (reliable_1xx == REL100_IGNORED)
+  if (reliable_1xx == REL100_IGNORED ||
+      reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED)
     return;
 
   if (reply.cseq_method == SIP_METH_INVITE) {
