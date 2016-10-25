@@ -1,6 +1,7 @@
 core/*.h usr/include/sems/
 core/*.cc usr/include/sems/
 core/sip/*.h usr/include/sems/sip/
+core/resample/*.h usr/include/sems/resample/
 core/ampi usr/include/sems/
 core/amci usr/include/sems/
 core/compat/*.h usr/include/sems/compat/
