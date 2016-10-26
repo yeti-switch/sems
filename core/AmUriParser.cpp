@@ -49,7 +49,7 @@ bool AmUriParser::isEqual(const AmUriParser& c) const {
 static inline int skip_name(const string& s, unsigned int pos)
 {
   size_t i;
-  int last_wsp, quoted = 0;
+  int last_wsp __attribute__((unused)), quoted = 0;
 	
   for(i = pos; i < s.length(); i++) {
     char c = s[i];
@@ -307,7 +307,10 @@ bool AmUriParser::parse_uri() {
   case uSHDR:   uri_headers = uri.substr(p1+1, pos-p1-1); break;
   case uSPARAM: uri_param = uri.substr(p1+1, pos-p1-1); break;
   case uS0:
-  case uSPROT: { DBG("ERROR while parsing uri\n"); return false; } break;
+  case uSPROT: {
+      DBG("ERROR while parsing uri: '%s'\n",uri.c_str());
+      return false;
+    } break;
   };
   return true;
 }
