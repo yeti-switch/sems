@@ -374,7 +374,8 @@ AmSIPRegistration* SIPRegistrarClient::remove_reg_unsafe(const string& reg_id)
 
 bool SIPRegistrarClient::add_reg(const string& reg_id, AmSIPRegistration* new_reg)
 {
-    DBG("adding registration '%s'  (this = %ld)\n", reg_id.c_str(), (long)this);
+    CLASS_DBG("adding registration '%s' with id = '%s'\n",
+        reg_id.c_str(), new_reg->getInfo().id.c_str());
     AmSIPRegistration* reg = NULL;
     reg_mut.lock();
     map<string, AmSIPRegistration*>::iterator it =
