@@ -1,3 +1,10 @@
+sems (1.7.15-1) stable; urgency=low
+
+  * fb3ee3d apps/registrar_client: show registration id in the message about new registration adding
+  * 82f005a AmUriParser: show failed URI in the message about failed URI parsing
+
+ -- dev <dev@yeti-switch.org>  Wed, 26 Oct 2016 16:22:32 +0300
+
 sems (1.7.15-0) stable; urgency=low
 
   * fb9bcd3 Am100rel: add REL100_SUPPORTED_NOT_ANNOUNCED mode
