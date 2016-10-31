@@ -8,19 +8,50 @@ AmAudioFileRecorder::AmAudioFileRecorder()
 
 AmAudioFileRecorder::~AmAudioFileRecorder()
 {
-    f.close();
+    for(vector<AmAudioFile *>::iterator it = files.begin();
+        it!=files.end(); ++it)
+    {
+        delete *it;
+    }
 }
 
 int AmAudioFileRecorder::init(const string &path)
 {
-    _path = path;
-    return f.open(path,AmAudioFile::Write);
+    files.push_back(new AmAudioFile());
+    return files.back()->open(path,AmAudioFile::Write);
+}
+
+int AmAudioFileRecorder::add_file(const string &path)
+{
+    for(vector<AmAudioFile *>::const_iterator it = files.begin();
+        it!=files.end(); ++it)
+    {
+            if((*it)->getFileName()==path) {
+                ERROR("attempt to add the same file to the recorder: %s",
+                    path.c_str());
+                return 1;
+            }
+    }
+    AmAudioFile *f = new AmAudioFile();
+    if(0!=f->open(path,AmAudioFile::Write)){
+        ERROR("failed to open: %s", path.c_str());
+        delete f;
+        return 1;
+    }
+    files.push_back(f);
+    DBG("recorder has %zd opened files",  files.size());
+    return 0;
 }
 
 int AmAudioFileRecorder::writeSamples(unsigned char *samples, size_t size, int input_sample_rate)
 {
     //DBG("%s %p %ld",FUNC_NAME,samples,size);
-    return f.put(0,samples,input_sample_rate,size);
+    for(vector<AmAudioFile *>::iterator it = files.begin();
+        it!=files.end(); ++it)
+    {
+        (*it)->put(0,samples,input_sample_rate,size);
+    }
+    return 0;
 }
 
 /*int AmAudioFileRecorder::writeFrames(unsigned char *frames, size_t size, int src_codec_id)
@@ -185,7 +216,12 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
                 ERROR("can't init recorder %s with path '%s'",
                       ev.recorder_id.c_str(),
                       ev.file_path.c_str());
+                delete recorder;
                 return;
+            } else {
+                DBG("recorder %s inited with file: %s",
+                    ev.recorder_id.c_str(),
+                    ev.file_path.c_str());
             }
             recorders[ev.recorder_id] = recorder;
             recorders_opened++;
@@ -194,15 +230,23 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
                 ev.recorder_id.c_str());*/
         }
         return;
-    } else {
-        if(ev.event_id==AudioRecorderEvent::addRecorder){
-            ERROR("attempt to add existent recorder: %s",
-                  ev.recorder_id.c_str());
-        }
     }
+
     recorder = recorder_it->second;
 
     switch(ev.event_id){
+    case AudioRecorderEvent::addRecorder:
+        DBG("update recorder %s",ev.recorder_id.c_str());
+        if(0!=recorder->add_file(ev.file_path)) {
+            ERROR("failed to add file to the recorder %s with path '%s'",
+                  ev.recorder_id.c_str(),
+                  ev.file_path.c_str());
+        } else {
+            DBG("recorder %s updated with file: %s",
+                ev.recorder_id.c_str(),
+                ev.file_path.c_str());
+        }
+        break;
     case AudioRecorderEvent::putSamples:
         recorder->writeSamples(ev.data,ev.data_size,ev.sample_rate);
         break;
@@ -216,7 +260,6 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
         recorders.erase(recorder_it);
         recorders_closed++;
         break;
-    case AudioRecorderEvent::addRecorder: break;
     }
 }
 

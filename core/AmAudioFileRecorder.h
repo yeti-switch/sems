@@ -57,14 +57,14 @@ struct AudioRecorderEvent {
 };
 
 class AmAudioFileRecorder {
-    AmAudioFile f;
-    string _path;
+    vector<AmAudioFile *> files;
     //unsigned char buf[AUDIO_BUFFER_SIZE]; //for internal decoding
 
   public:
     AmAudioFileRecorder();
     ~AmAudioFileRecorder();
     int init(const string &path);
+    int add_file(const string &path);
     int writeSamples(unsigned char *samples, size_t size, int input_sample_rate);
     //int writeFrames(unsigned char *frames, size_t size, int src_codec_id);
 };

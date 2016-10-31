@@ -82,6 +82,7 @@ protected:
   /** Pointer to the file opened as last. */
   FILE* fp;
   long begin;
+  string _filename;
 
   /** Format of that file. @see fp, open(). */
   amci_inoutfmt_t* iofmt;
@@ -161,6 +162,9 @@ public:
 
   /** Gets length of the current file in ms */
   int getLength();
+
+  /** Gets opened filename */
+  const string& getFileName() const { return _filename; }
 
   /**
    * @return MIME type corresponding to the audio file.

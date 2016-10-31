@@ -181,7 +181,7 @@ int AmAudioFile::fpopen(const string& filename, OpenMode mode, FILE* n_fp)
 int AmAudioFile::fpopen_int(const string& filename, OpenMode mode, 
 			    FILE* n_fp, const string& subtype)
 {
-
+  _filename = filename;
   AmAudioFileFormat* f_fmt = fileName2Fmt(filename, subtype);
   if(!f_fmt){
     ERROR("while trying to determine the format of '%s'\n",
