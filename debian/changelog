@@ -1,3 +1,9 @@
+sems (1.7.16-0) stable; urgency=low
+
+  * 2aea4f1 AmAudioFileRecorder: write multiple files with one recorder
+
+ -- dev <dev@yeti-switch.org>  Mon, 31 Oct 2016 16:42:05 +0200
+
 sems (1.7.15-1) stable; urgency=low
 
   * fb3ee3d apps/registrar_client: show registration id in the message about new registration adding
