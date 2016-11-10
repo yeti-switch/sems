@@ -1,3 +1,9 @@
+sems (1.7.16-1) stable; urgency=low
+
+  * af4c44a AmB2BSession: propagate dlg LocalParty for new callee session only if it is not set
+
+ -- dev <dev@yeti-switch.org>  Thu, 10 Nov 2016 15:31:20 +0200
+
 sems (1.7.16-0) stable; urgency=low
 
   * 2aea4f1 AmAudioFileRecorder: write multiple files with one recorder
