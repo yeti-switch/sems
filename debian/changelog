@@ -1,3 +1,9 @@
+sems (1.7.16-2) stable; urgency=low
+
+  * 0f9c511 radius_client: more specific errors counters. fixes #368
+
+ -- dev <dev@yeti-switch.org>  Sat, 12 Nov 2016 21:31:12 +0200
+
 sems (1.7.16-1) stable; urgency=low
 
   * af4c44a AmB2BSession: propagate dlg LocalParty for new callee session only if it is not set
