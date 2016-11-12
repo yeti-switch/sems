@@ -26,6 +26,9 @@ RadiusConnection::RadiusConnection(
     requests_err(0),
     requests_timeouts(0),
     replies_err(0),
+    replies_socket_err(0),
+    replies_match_err(0),
+    replies_validate_err(0),
     min_response_time(0),
     max_response_time(0),
     connection_id(connection_id),
@@ -99,7 +102,7 @@ void RadiusConnection::process()
     RadiusPacket reply;
     if(0!=reply.read_from_socket(sock)){
         ERROR("error reading radius reply. ignore it");
-        replies_err++;
+        replies_socket_err++;
         return;
     }
     gettimeofday(&now,NULL);
@@ -108,14 +111,14 @@ void RadiusConnection::process()
     SentMap::iterator it = sent_map.find(reply.id());
     if(it==sent_map.end()){
         DBG("reply not matched with sent requests. ignore it");
-        replies_err++;
+        replies_match_err++;
         return;
     }
 
     RadiusPacket *request = it->second;
     if(!reply.validate(*request,secret)){
         DBG("reply validation failed. ignore it");
-        replies_err++;
+        replies_validate_err++;
         return;
     }
 
@@ -355,6 +358,9 @@ void RadiusConnection::getStat(AmArg &stat)
     stat["requests_timeouts"]  = requests_timeouts;
     stat["replies_received"]  = replies_got;
     stat["replies_errors"] = replies_err;
+    stat["replies_socket_errors"] = replies_socket_err;
+    stat["replies_match_errors"] = replies_match_err;
+    stat["replies_validate_errors"] = replies_validate_err;
     stat["max_response_time"] = max_response_time;
     stat["min_response_time"] = min_response_time;
 }

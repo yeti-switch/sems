@@ -32,7 +32,10 @@ class RadiusConnection
         replies_got,
         requests_err,
         requests_timeouts,
-        replies_err;
+        replies_err,
+        replies_socket_err,
+        replies_match_err,
+        replies_validate_err;
     double
         min_response_time,
         max_response_time;
