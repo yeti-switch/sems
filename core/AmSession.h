@@ -367,6 +367,11 @@ public:
   /** send an INVITE */
   virtual int sendInvite(const string& headers = "");
 
+  /** called to determine whether to send INVITE
+   *  in the newly created UAC session automatically
+   */
+  virtual bool autoSendInviteUAC() { return true; }
+
   /** set the session on/off hold */
   virtual void setOnHold(bool hold);
 

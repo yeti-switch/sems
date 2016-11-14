@@ -215,73 +215,71 @@ void AmSessionContainer::destroySession(AmSession* s)
 
 string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_name, AmArg* session_params) {
 
-  auto_ptr<AmSession> session;
-  try {
-    session.reset(createSession(req, app_name, session_params));
-    if(session.get() != 0) {
-      session->dlg->initFromLocalRequest(req);
-      session->setCallgroup(req.from_tag);
-      
-      switch(addSession(req.from_tag,session.get())) {
-	
-      case AmSessionContainer::Inserted:
-	// successful case
-	break;
-	
-      case AmSessionContainer::ShutDown:
-	throw AmSession::Exception(AmConfig::ShutdownModeErrCode,
-				   AmConfig::ShutdownModeErrReason);
-	
-      case AmSessionContainer::AlreadyExist:
-	throw AmSession::Exception(482,
-				   SIP_REPLY_LOOP_DETECTED);
-	
-      default:
-	ERROR("adding session to session container\n");
-	throw string(SIP_REPLY_SERVER_INTERNAL_ERROR);
-      }
-      
-      MONITORING_LOG5(req.from_tag, 
-		      "app", app_name.c_str(),
-		      "dir", "out",
-		      "from", req.from.c_str(),
-		      "to", req.to.c_str(),
-		      "ruri", req.r_uri.c_str());
-      
-      if (int err = session->sendInvite(req.hdrs)) {
-	ERROR("INVITE could not be sent: error code = %d.\n", err);
-	AmEventDispatcher::instance()->delEventQueue(req.from_tag);
-	MONITORING_MARK_FINISHED(req.from_tag.c_str());
-	return "";
-      }
-      
-      if (AmConfig::LogSessions) {      
-	INFO("Starting UAC session %s app %s\n",
-	     req.from_tag.c_str(), app_name.c_str());
-      }
-      try {
-	session->start();
-      } catch (...) {
-	AmEventDispatcher::instance()->delEventQueue(req.from_tag);
-	throw;
-      }
-    }
-  } 
-  catch(const AmSession::Exception& e){
-    ERROR("%i %s\n",e.code,e.reason.c_str());
-    return "";
-  }
-  catch(const string& err){
-    ERROR("startSession: %s\n",err.c_str());
-    return "";
-  }
-  catch(...){
-    ERROR("unexpected exception\n");
-    return "";
-  }
+    auto_ptr<AmSession> session;
+    try {
+        session.reset(createSession(req, app_name, session_params));
+        if(session.get() != 0) {
+            session->dlg->initFromLocalRequest(req);
+            session->setCallgroup(req.from_tag);
+            switch(addSession(req.from_tag,session.get())) {
+            case AmSessionContainer::Inserted:
+                // successful case
+                break;
+            case AmSessionContainer::ShutDown:
+                throw AmSession::Exception(AmConfig::ShutdownModeErrCode,
+                                           AmConfig::ShutdownModeErrReason);
+            case AmSessionContainer::AlreadyExist:
+                throw AmSession::Exception(482,
+                                           SIP_REPLY_LOOP_DETECTED);
+            default:
+                ERROR("adding session to session container\n");
+                throw string(SIP_REPLY_SERVER_INTERNAL_ERROR);
+            }
 
-  session.release();
-  return req.from_tag;
+            MONITORING_LOG5(req.from_tag,
+                "app", app_name.c_str(),
+                "dir", "out",
+                "from", req.from.c_str(),
+                "to", req.to.c_str(),
+                "ruri", req.r_uri.c_str());
+
+            if(session->autoSendInviteUAC()) {
+                if (int err = session->sendInvite(req.hdrs)) {
+                    ERROR("INVITE could not be sent: error code = %d.\n", err);
+                    AmEventDispatcher::instance()->delEventQueue(req.from_tag);
+                    MONITORING_MARK_FINISHED(req.from_tag.c_str());
+                    return "";
+                }
+            }
+
+            if (AmConfig::LogSessions) {
+                INFO("Starting UAC session %s app %s\n",
+                    req.from_tag.c_str(), app_name.c_str());
+            }
+
+            try {
+                session->start();
+            } catch (...) {
+                AmEventDispatcher::instance()->delEventQueue(req.from_tag);
+                throw;
+            }
+        } //if(session.get() != 0)
+    }
+    catch(const AmSession::Exception& e){
+        ERROR("%i %s\n",e.code,e.reason.c_str());
+        return "";
+    }
+    catch(const string& err){
+        ERROR("startSession: %s\n",err.c_str());
+        return "";
+    }
+    catch(...){
+        ERROR("unexpected exception\n");
+        return "";
+    }
+
+    session.release();
+    return req.from_tag;
 }
 
 void AmSessionContainer::startSessionUAS(AmSipRequest& req)
