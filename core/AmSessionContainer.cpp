@@ -236,21 +236,30 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
                 throw string(SIP_REPLY_SERVER_INTERNAL_ERROR);
             }
 
-            MONITORING_LOG5(req.from_tag,
-                "app", app_name.c_str(),
-                "dir", "out",
-                "from", req.from.c_str(),
-                "to", req.to.c_str(),
-                "ruri", req.r_uri.c_str());
-
             if(session->autoSendInviteUAC()) {
+#ifdef USE_MONITORING
+                MONITORING_LOG5(req.from_tag,
+                    "app", app_name.c_str(),
+                    "dir", "out",
+                    "from", req.from.c_str(),
+                    "to", req.to.c_str(),
+                    "ruri", req.r_uri.c_str());
+#endif
                 if (int err = session->sendInvite(req.hdrs)) {
                     ERROR("INVITE could not be sent: error code = %d.\n", err);
                     AmEventDispatcher::instance()->delEventQueue(req.from_tag);
                     MONITORING_MARK_FINISHED(req.from_tag.c_str());
                     return "";
                 }
+
             }
+#ifdef USE_MONITORING
+            else {
+                MONITORING_LOG2(req.from_tag,
+                    "app", app_name.c_str(),
+                    "dir", "out");
+            }
+#endif
 
             if (AmConfig::LogSessions) {
                 INFO("Starting UAC session %s app %s\n",
