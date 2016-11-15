@@ -1,3 +1,10 @@
+sems (1.7.17-1) stable; urgency=low
+
+  * e4b99a4 AmSessionContainer::startSessionUAC(): fix monitoring hooks
+  * 58497a0 AmSession: add autoSendInviteUAC()
+
+ -- dev <dev@yeti-switch.org>  Tue, 15 Nov 2016 16:36:34 +0200
+
 sems (1.7.16-2) stable; urgency=low
 
   * 0f9c511 radius_client: more specific errors counters. fixes #368
