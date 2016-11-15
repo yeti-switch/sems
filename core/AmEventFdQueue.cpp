@@ -33,7 +33,8 @@ void AmEventFdQueue::postEvent(AmEvent* event)
   if(event)
     ev_queue.push(event);
 
-  ::write(event_fd, &u, sizeof(uint64_t));
+  ssize_t ret = ::write(event_fd, &u, sizeof(uint64_t));
+  (void)ret;
 
   m_queue.unlock();
 
@@ -116,5 +117,6 @@ void AmEventFdQueue::epoll_unlink(int epoll_fd)
 void AmEventFdQueue::clear_pending()
 {
     uint64_t u;
-    ::read(event_fd, &u, sizeof(uint64_t));
+    ssize_t ret = ::read(event_fd, &u, sizeof(uint64_t));
+    (void)ret;
 }

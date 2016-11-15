@@ -869,7 +869,8 @@ void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg,
   DBG("replaced connection address in SDP with %s:%s.\n",
       relay_public_address.c_str(), replaced_ports.c_str());
 }
-      
+
+#if 0
 static const char* 
 _rtp_relay_mode_str(const AmB2BSession::RTPRelayMode& relay_mode)
 {
@@ -884,6 +885,7 @@ _rtp_relay_mode_str(const AmB2BSession::RTPRelayMode& relay_mode)
 
   return "";
 }
+#endif
 
 void AmB2BMedia::updateStreamPair(AudioStreamPair &pair)
 {

@@ -110,7 +110,7 @@
    void DownSample (
        float  *In,     /* (i) input samples */
        float  *Coef,   /* (i) filter coefficients */
-       int lengthIn,   /* (i) number of input samples */
+       unsigned int lengthIn,   /* (i) number of input samples */
        float  *state,  /* (i) filter state */
        float  *Out     /* (o) downsampled output */
    ){

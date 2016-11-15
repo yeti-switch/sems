@@ -132,6 +132,7 @@ typedef struct {
 
 } SpeexState;
 
+#if 0
 /*
   Search for a parameter assignement in input string.
   If it's not found *param_value is null, otherwise *param_value points to the
@@ -172,6 +173,7 @@ static char* read_param(char* input, const char *param, char** param_value)
     
   return input;
 }
+#endif
 
 #define BLEN 63
 #if 0

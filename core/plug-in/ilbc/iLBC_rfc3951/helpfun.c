@@ -283,6 +283,8 @@
        static float maxlsf=(float)3.14; /* 4000 Hz */
        static float minlsf=(float)0.01; /* 0 Hz */
 
+       (void)tmp;
+
        /* LSF separation check*/
 
        for (n=0; n<Nit; n++) { /* Run through a couple of times */

@@ -254,7 +254,8 @@ public:
   void fire()
   {
     uint64_t u = 1;
-    write(event_fd, &u, sizeof(uint64_t));
+    ssize_t ret = write(event_fd, &u, sizeof(uint64_t));
+    (void)ret;
   }
 
   bool read(){
@@ -316,10 +317,10 @@ public:
   }
 
   /** clear timer event */
-  uint64_t read(){
+  void read(){
     uint64_t u;
-    ::read(timer_fd, &u, sizeof(uint64_t));
-    return u;
+    ssize_t ret = ::read(timer_fd, &u, sizeof(uint64_t));
+    (void)ret;
   }
 
   /** Remove from external epoll handler */

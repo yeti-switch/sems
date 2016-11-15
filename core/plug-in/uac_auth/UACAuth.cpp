@@ -95,9 +95,12 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
     AmSipRequest* req = dynamic_cast<AmSipRequest*>(args.get(0).asObject());
     if (NULL == req)
       throw AmArg::TypeMismatchException();
-      UACAuth::checkAuthenticationByHA1(req, args.get(1).asCStr(),
-				 args.get(2).asCStr(),
-				 args.get(3).asCStr(), ret);
+
+    UACAuth::checkAuthenticationByHA1(
+      req, args.get(1).asCStr(),
+      args.get(2).asCStr(),
+      args.get(3).asCStr(), ret);
+
   } else
     throw AmDynInvoke::NotImplemented(method);
 }
