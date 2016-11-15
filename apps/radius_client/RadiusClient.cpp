@@ -13,6 +13,30 @@ using std::vector;
 
 EXPORT_PLUGIN_CLASS_FACTORY(RadiusClient, MOD_NAME);
 
+#define SHOW_METHOD_MACRO(container,container_type,method) \
+    ret.assertArray(); \
+    if(args.size()) { \
+        unsigned int id; \
+        args.assertArrayFmt("s"); \
+        if(str2i(args.get(0).asCStr(),id)) { \
+            throw AmSession::Exception(500,"invalid connection id"); \
+        } \
+        AmLock l(connections_mutex); (void)l; \
+        container_type::iterator it = container.find(id); \
+        if(it!=container.end()) { \
+            ret.push(AmArg()); \
+            it->second->method(ret.back()); \
+        } \
+        return; \
+    } \
+    AmLock l(connections_mutex); (void)l; \
+    for(container_type::iterator it = container.begin(); \
+        it != container.end(); it++) \
+    { \
+        ret.push(AmArg()); \
+        it->second->method(ret.back()); \
+    } \
+
 RadiusClient* RadiusClient::_instance=0;
 
 RadiusClient* RadiusClient::instance()
@@ -316,24 +340,12 @@ void RadiusClient::on_packet(int sock)
 
 void RadiusClient::showAuthConnections(const AmArg &args, AmArg &ret)
 {
-    AmLock l(connections_mutex); (void)l;
-    for(AuthConnections::iterator it = auth_connections.begin();
-        it != auth_connections.end(); it++)
-    {
-        ret.push(AmArg());
-        it->second->getInfo(ret.back());
-    }
+    SHOW_METHOD_MACRO(auth_connections,AuthConnections,getInfo);
 }
 
 void RadiusClient::showAuthStat(const AmArg &args, AmArg &ret)
 {
-    AmLock l(connections_mutex); (void)l;
-    for(AuthConnections::iterator it = auth_connections.begin();
-        it != auth_connections.end(); it++)
-    {
-        ret.push(AmArg());
-        it->second->getStat(ret.back());
-    }
+    SHOW_METHOD_MACRO(auth_connections,AuthConnections,getStat);
 }
 
 void RadiusClient::getAccRules(const AmArg &args, AmArg &ret)
@@ -448,22 +460,10 @@ void RadiusClient::clearAccConnections()
 
 void RadiusClient::showAccConnections(const AmArg &args, AmArg &ret)
 {
-    AmLock l(connections_mutex); (void)l;
-    for(AccConnections::iterator it = acc_connections.begin();
-        it != acc_connections.end(); it++)
-    {
-        ret.push(AmArg());
-        it->second->getInfo(ret.back());
-    }
+    SHOW_METHOD_MACRO(acc_connections,AccConnections,getInfo);
 }
 
 void RadiusClient::showAccStat(const AmArg &args, AmArg &ret)
 {
-    AmLock l(connections_mutex); (void)l;
-    for(AccConnections::iterator it = acc_connections.begin();
-        it != acc_connections.end(); it++)
-    {
-        ret.push(AmArg());
-        it->second->getStat(ret.back());
-    }
+    SHOW_METHOD_MACRO(acc_connections,AccConnections,getStat);
 }
