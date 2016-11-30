@@ -1,3 +1,10 @@
+sems (1.7.18-1) stable; urgency=low
+
+  * 1b87c34 AmSession: add method releaseRtpStream() to release _rtp_str ownership
+  * c1194fa AmB2BMedia: add method setFirstAudioPairStream to init audio streams pair with previously initialized streams
+
+ -- dev <dev@yeti-switch.org>  Wed, 30 Nov 2016 17:00:39 +0200
+
 sems (1.7.17-2) stable; urgency=low
 
   * 4543318 radius_client: rpc: allow to get confguration and stats by profile id
