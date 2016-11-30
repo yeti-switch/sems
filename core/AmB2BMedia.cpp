@@ -1075,6 +1075,18 @@ void AmB2BMedia::updateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &
   TRACE("streams updated with SDP\n");
 }
 
+void AmB2BMedia::setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream,
+                             const AmSdp &local_sdp, const AmSdp &remote_sdp)
+{
+    if(audio.empty()) {
+        AudioStreamPair pair(NULL, NULL, 0);
+        audio.push_back(pair);
+    }
+    AudioStreamPair &pair = *audio.begin();
+    AudioStreamData &adata = a_leg ? pair.a : pair.b;
+    adata.setStreamUnsafe(stream);
+}
+
 void AmB2BMedia::stop(bool a_leg)
 {
   TRACE("stop %s leg\n", a_leg ? "A" : "B");

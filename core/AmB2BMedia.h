@@ -216,6 +216,8 @@ class AudioStreamData {
 
     void debug();
 	void getInfo(AmArg &ret);
+
+	void setStreamUnsafe(AmRtpAudio *s) { stream = s; initialized = true; }
 };
 
 /** \brief Class for control over media relaying and transcoding in a B2B session.
@@ -432,6 +434,7 @@ class AmB2BMedia: public AmMediaSession
 
     /** Update media session with local & remote SDP. */
     void updateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
+    void setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
     /** Clear audio for given leg and stop processing if both legs stopped. 
      *
