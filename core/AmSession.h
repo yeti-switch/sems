@@ -190,6 +190,7 @@ public:
 
   AmRtpAudio* RTPStream();
   bool hasRtpStream() { return _rtp_str.get() != NULL; }
+  AmRtpAudio* releaseRtpStream() { return _rtp_str.release(); }
 
 #ifdef WITH_ZRTP
   zrtp_conn_ctx_t*    zrtp_session; // ZRTP session
