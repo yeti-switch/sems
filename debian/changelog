@@ -1,3 +1,9 @@
+sems (1.7.19-1) stable; urgency=low
+
+  * 0233b2e AmSession: make setInput,setOutput,setInOut virtual
+
+ -- dev <dev@yeti-switch.org>  Fri, 02 Dec 2016 16:51:31 +0200
+
 sems (1.7.18-1) stable; urgency=low
 
   * 1b87c34 AmSession: add method releaseRtpStream() to release _rtp_str ownership
