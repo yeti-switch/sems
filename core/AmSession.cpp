@@ -174,6 +174,7 @@ void AmSession::setInput(AmAudio* in)
 
 void AmSession::setOutput(AmAudio* out)
 {
+  DBG("AmSession[%p]::setOutput(AmAudio* out = %p)",this,out);
   lockAudio();
   output = out;
   unlockAudio();

@@ -294,9 +294,9 @@ public:
    * Audio input & output set methods.
    * Note: audio will be locked by the methods.
    */
-  void setInput(AmAudio* in);
-  void setOutput(AmAudio* out);
-  void setInOut(AmAudio* in, AmAudio* out);
+  virtual void setInput(AmAudio* in);
+  virtual void setOutput(AmAudio* out);
+  virtual void setInOut(AmAudio* in, AmAudio* out);
 
   /** checks if input/output is set, might be overidden! */
   virtual bool isAudioSet();
