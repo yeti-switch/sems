@@ -171,6 +171,7 @@ private:
   bool a_leg;
 
   bool remote_on_hold; // remote is on hold
+  bool shared_rtp_stream; //for cases when AmB2BMedia uses existent stream from _rtp_str
   //enum { HoldRequested, ResumeRequested, PreserveHoldStatus } hold;
 
   /** 

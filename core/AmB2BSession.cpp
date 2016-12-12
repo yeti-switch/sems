@@ -120,6 +120,7 @@ AmB2BSession::AmB2BSession(const string& other_local_tag, AmSipDialog* p_dlg,
     rtp_relay_force_symmetric_rtp(false),
 	symmetric_rtp_endless(false),
 	remote_on_hold(false),
+	shared_rtp_stream(false),
 	rtp_ping(false),
 	symmetric_rtp_ignore_rtcp(false),
     enable_dtmf_transcoding(false),
@@ -151,6 +152,11 @@ AmB2BSession::~AmB2BSession()
 
   if(subs)
     delete subs;
+
+  /* if AmB2BMedia instance shares AmRtpAuido pointer with AmSession::_rtp_str
+   * revoke ownership by AmSession to avoid double free */
+  if(shared_rtp_stream)
+    releaseRtpStream();
 }
 
 void AmB2BSession::set_sip_relay_only(bool r) { 
@@ -688,7 +694,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
   }
 
   if(hasRtpStream() && RTPStream()->getSdpMediaIndex() >= 0) {
-    if(!sip_relay_only){
+    if(!sip_relay_only && !shared_rtp_stream){
       return AmSession::onSdpCompleted(local_sdp,remote_sdp);
     }
     DBG("sip_relay_only = true: doing nothing!\n");
