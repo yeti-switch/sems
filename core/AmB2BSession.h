@@ -171,7 +171,7 @@ private:
   bool a_leg;
 
   bool remote_on_hold; // remote is on hold
-  bool shared_rtp_stream; //for cases when AmB2BMedia uses existent stream from _rtp_str
+  bool rtp_stream_shared; //for cases when AmB2BMedia uses existent stream from _rtp_str
   //enum { HoldRequested, ResumeRequested, PreserveHoldStatus } hold;
 
   /** 
@@ -347,8 +347,11 @@ private:
   /** set RTP relay mode (possibly initiaze by given INVITE) */
   virtual void setRtpRelayMode(RTPRelayMode mode);
 
+  virtual void setRtpStreamShare(bool shared);
+
   /** link RTP streams of other_session to our streams */
   RTPRelayMode getRtpRelayMode() const { return rtp_relay_mode; }
+  bool getRtpStreamShare() const { return rtp_stream_shared; }
   bool getRtpRelayForceSymmetricRtp() const { return rtp_relay_force_symmetric_rtp; }
   bool getRtpEndlessSymmetricRtp() const { return symmetric_rtp_endless; }
   bool getRtpPing() const { return rtp_ping; }
