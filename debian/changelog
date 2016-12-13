@@ -1,3 +1,9 @@
+sems (1.7.21-1) stable; urgency=low
+
+  * 98930f0 AmB2BMedia: memorize symmetric rtp option on shared stream set
+
+ -- dev <dev@yeti-switch.org>  Tue, 13 Dec 2016 19:22:10 +0200
+
 sems (1.7.20-1) stable; urgency=low
 
   * sharing of AmRtpAudio between _rtp_str and media_session
