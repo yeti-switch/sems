@@ -217,7 +217,7 @@ class AudioStreamData {
     void debug();
 	void getInfo(AmArg &ret);
 
-	void setStreamUnsafe(AmRtpAudio *s) { stream = s; initialized = true; }
+	void setStreamUnsafe(AmRtpAudio *s);
 };
 
 /** \brief Class for control over media relaying and transcoding in a B2B session.

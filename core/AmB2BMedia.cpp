@@ -1365,6 +1365,13 @@ void AmB2BMedia::restartRelay() {
   }
 }
 
+void AudioStreamData::setStreamUnsafe(AmRtpAudio *s)
+{
+    stream = s;
+    force_symmetric_rtp = stream->getPassiveMode();
+    initialized = true;
+}
+
 void AudioStreamData::debug()
 {
   DBG("\tmuted: %s\n", muted ? "yes" : "no");
