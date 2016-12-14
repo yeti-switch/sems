@@ -113,5 +113,5 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 void RtspAudio::play()
 {
     session->setOutput(this);
-    AmMediaProcessor::instance()->addSession(session, session->getCallgroup());
+    //AmMediaProcessor::instance()->addSession(session, session->getCallgroup());
 }
