@@ -1,3 +1,9 @@
+sems (1.7.21-2) stable; urgency=low
+
+  * 8866944 RtspAudio: avoid automatic add to the media processor
+
+ -- dev <dev@yeti-switch.org>  Wed, 14 Dec 2016 19:10:06 +0200
+
 sems (1.7.21-1) stable; urgency=low
 
   * 98930f0 AmB2BMedia: memorize symmetric rtp option on shared stream set
