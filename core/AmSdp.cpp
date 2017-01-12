@@ -33,14 +33,19 @@ using std::map;
 #include "strings.h"
 #endif
 
+#define CR   '\r'
+#define LF   '\n'
+#define CRLF "\r\n"
+
 static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next);
 static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s);
-static void parse_sdp_connection(AmSdp* sdp_msg, char* s, char t);
+static char* parse_sdp_connection(AmSdp* sdp_msg, char* s, char t);
 static void parse_sdp_media(AmSdp* sdp_msg, char* s);
-static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line);
+static char* parse_sdp_attr(AmSdp* sdp_msg, char* s);
 static void parse_sdp_origin(AmSdp* sdp_masg, char* s);
 
 inline char* get_next_line(char* s);
+inline char* skip_till_next_line(char* s, size_t& line_len);
 static char* is_eql_next(char* s);
 static char* parse_until(char* s, char end);
 static char* parse_until(char* s, char* end, char c);
@@ -95,8 +100,12 @@ inline string transport_p_2_str(int tp)
 {
   switch(tp){
   case TP_RTPAVP: return "RTP/AVP";
+  case TP_RTPAVPF: return "RTP/AVPF";
   case TP_UDP: return "udp";
   case TP_RTPSAVP: return "RTP/SAVP";
+  case TP_RTPSAVPF: return "RTP/SAVPF";
+  case TP_UDPTLSRTPSAVP: return "UDP/TLS/RTP/SAVP";
+  case TP_UDPTLSRTPSAVPF: return "UDP/TLS/RTP/SAVPF";
   case TP_UDPTL: return "udptl";
   default: return "<unknown media type>";
   }
@@ -293,24 +302,24 @@ int AmSdp::parse(const char* _sdp_msg)
 
   bool ret = true;
   try {
-	ret = parse_sdp_line_ex(this,s);
+    ret = parse_sdp_line_ex(this,s);
   } catch(const std::out_of_range &oor){
-	ERROR("AmSdp::parse() got Out of Range exception: %s",oor.what());
+    ERROR("AmSdp::parse() got Out of Range exception: %s",oor.what());
   } catch(...){
-	ERROR("AmSdp::parse() got unknown exception");
+     ERROR("AmSdp::parse() got unknown exception");
   }
 
   if(!ret && conn.address.empty()){
     for(vector<SdpMedia>::iterator it = media.begin();
         !ret && (it != media.end()); ++it)
     {
-        //address (c= line) must be present if stream is enabled
-        ret = it->conn.address.empty() && !it->port;
-        if(ret){
-            ERROR("A connection field must be field must be present in every "
-                  "media description or at the session level");
-            break;
-        }
+      //address (c= line) must be present if stream is enabled
+      ret = it->conn.address.empty() && !it->port;
+      if(ret){
+        ERROR("A connection field must be field must be present in every "
+              "media description or at the session level");
+        break;
+      }
     }
   }
 
@@ -322,9 +331,9 @@ int AmSdp::parse(const char* _sdp_msg)
   for(vector<SdpMedia>::iterator it = media.begin();
       it != media.end(); ++it)
   {
-      vector<SdpAttribute> &attrs  = (*it).attributes;
-      std::sort(attrs.begin(),attrs.end());
-      attrs.erase(std::unique(attrs.begin(),attrs.end()),attrs.end());
+    vector<SdpAttribute> &attrs  = (*it).attributes;
+    std::sort(attrs.begin(),attrs.end());
+    attrs.erase(std::unique(attrs.begin(),attrs.end()),attrs.end());
   }
 
   return ret;
@@ -333,17 +342,8 @@ int AmSdp::parse(const char* _sdp_msg)
 void AmSdp::print(string& body) const
 {
   string out_buf = "v="+int2str(version)+"\r\n"
-    "o="+origin.user+" "+long2str(origin.sessId)+" "+
-    long2str(origin.sessV)+" IN ";
-
-  /*bool conn_in_all_media_streams = true;
-  for(std::vector<SdpMedia>::const_iterator media_it = media.begin();
-	  media_it != media.end(); media_it++) {
-		if(media_it->conn.address.empty()){
-			conn_in_all_media_streams = false;
-			break;
-		}
-  }*/
+    "o="+origin.user+" "+int2str(origin.sessId)+" "+
+    int2str(origin.sessV)+" IN ";
 
   if (!origin.conn.address.empty())
     if (origin.conn.address.find(".") != std::string::npos)
@@ -365,8 +365,6 @@ void AmSdp::print(string& body) const
 
   out_buf +=
     "s="+sessionName+"\r\n";
-
-//if(!conn_in_all_media_streams) { //don't add to session level if present for all media streams
   if (!conn.address.empty()) {
     if (conn.address.find(".") != std::string::npos)
       out_buf += "c=IN IP4 ";
@@ -374,7 +372,6 @@ void AmSdp::print(string& body) const
       out_buf += "c=IN IP6 ";
     out_buf += conn.address + "\r\n";
   }
-//}
 
   out_buf += "t=0 0\r\n";
 
@@ -391,7 +388,7 @@ void AmSdp::print(string& body) const
 
       string options;
 
-      if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPSAVP) {
+      if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPAVPF || media_it->transport == TP_RTPSAVP || media_it->transport == TP_RTPSAVPF || media_it->transport == TP_UDPTLSRTPSAVP || media_it->transport == TP_UDPTLSRTPSAVPF) {
 	for(std::vector<SdpPayload>::const_iterator pl_it = media_it->payloads.begin();
 	    pl_it != media_it->payloads.end(); pl_it++) {
 
@@ -536,24 +533,24 @@ void AmSdp::clear()
 }
 
 void AmSdp::getInfo(AmArg &ret){
-	ret.assertArray();
-	for(vector<SdpMedia>::const_iterator it = media.begin(); it != media.end(); ++it)	{
-		AmArg a;
-		const SdpMedia &m = *it;
-		a["type"] = media_t_2_str(m.type);
-		AmArg &payloads = a["payloads"];
+  ret.assertArray();
+  for(vector<SdpMedia>::const_iterator it = media.begin(); it != media.end(); ++it) {
+    AmArg a;
+    const SdpMedia &m = *it;
+    a["type"] = media_t_2_str(m.type);
+    AmArg &payloads = a["payloads"];
 
-		std::vector<SdpPayload>::const_iterator pit= m.payloads.begin();
-		for(;pit!= m.payloads.end(); pit++) {
-			AmArg a;
-			const SdpPayload &p = *pit;
-			a["encoding_name"] = p.encoding_name;
-			a["clock_rate"] = p.clock_rate;
-			a["payload_type"] = p.payload_type;
-			payloads.push(a);
-		}
-		ret.push(a);
-	}
+    std::vector<SdpPayload>::const_iterator pit= m.payloads.begin();
+    for(;pit!= m.payloads.end(); pit++) {
+      AmArg a;
+      const SdpPayload &p = *pit;
+      a["encoding_name"] = p.encoding_name;
+      a["clock_rate"] = p.clock_rate;
+      a["payload_type"] = p.payload_type;
+      payloads.push(a);
+    }
+    ret.push(a);
+  }
 }
 
 void SdpMedia::calcAnswer(const AmPayloadProvider* payload_prov,
@@ -614,7 +611,7 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
 {
   if (!s) return true; // SDP can't be empty, return error (true really used for failure?)
 
-  char* next=0;
+  char* next=0; size_t line_len = 0;
   register parse_st state;
   //default state
   state=SDP_DESCR;
@@ -627,11 +624,13 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
       case 'v':
 	{
 	  s = is_eql_next(s);
-	  next = get_next_line(s);
-	  if (int(next-s)-2 >= 0) {
-	    string version(s, int(next-s)-2);
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
+	    string version(s, line_len);
 	    str2i(version, sdp_msg->version);
-	    //DBG("parse_sdp_line_ex: found version\n");
+	    //	    DBG("parse_sdp_line_ex: found version '%s'\n", version.c_str());
+	  } else {
+	    sdp_msg->version = 0;
 	  }
 	  s = next;
 	  state = SDP_DESCR;
@@ -647,23 +646,24 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
 	break;
       case 's':
 	{
-	  //DBG("parse_sdp_line_ex: found session\n");
 	  s = is_eql_next(s);
-	  next = get_next_line(s);
-	  if (int(next-s)-2 >= 0) {
-	    string sessionName(s, int(next-s)-2);
-	    sdp_msg->sessionName = sessionName;
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
+	    sdp_msg->sessionName = string(s, line_len);
+	  } else {
+	    sdp_msg->sessionName.clear();
 	  }
 	  s = next;
 	  break;
 	}
 
       case 'u': {
-	//DBG("parse_sdp_line_ex: found uri\n");
 	  s = is_eql_next(s);
-	  next = get_next_line(s);
-	  if (int(next-s)-2 >= 0) {
-	    sdp_msg->uri = string(s, int(next-s)-2);
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
+	    sdp_msg->uri = string(s, line_len);
+	  } else {
+	    sdp_msg->uri.clear();
 	  }
 	  s = next;
       } break;
@@ -674,14 +674,11 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
       case 'b':
       case 't':
       case 'k':
-	//DBG("parse_sdp_line_ex: found unknown line '%c'\n", *s);
 	s = is_eql_next(s);
-	next = get_next_line(s);
-	s = next;
+	s = skip_till_next_line(s, line_len);
 	state = SDP_DESCR;
 	break;
       case 'a':
-	//DBG("parse_sdp_line_ex: found attributes\n");
 	s = is_eql_next(s);
 	parse_session_attr(sdp_msg, s, &next);
 	// next = get_next_line(s);
@@ -690,11 +687,9 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
 	state = SDP_DESCR;
 	break;
       case 'c':
-	//DBG("parse_sdp_line_ex: found connection\n");
 	s = is_eql_next(s);
-	parse_sdp_connection(sdp_msg, s, 'd');
-	s = get_next_line(s);
-	state = SDP_DESCR;	
+	s = parse_sdp_connection(sdp_msg, s, 'd');
+	state = SDP_DESCR;
 	break;
       case 'm':
 	//DBG("parse_sdp_line_ex: found media\n");
@@ -703,11 +698,17 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
 
       default:
 	{
-	  next = get_next_line(s);
-	  if (int(next-s)-2 >= 0) {
-	    string line(s, int(next-s)-2);
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
+	    sdp_msg->uri = string(s, line_len);
+	  } else {
+	    sdp_msg->uri.clear();
+	  }
+
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
 	    DBG("parse_sdp_line: skipping unknown Session description %s=\n",
-		(char*)line.c_str());
+		string(s, line_len).c_str());
 	  }
 	  s = next;
 	  break;
@@ -720,45 +721,42 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
       case 'm':
 	s = is_eql_next(s);
 	parse_sdp_media(sdp_msg, s);
-	s = get_next_line(s);
+	s = skip_till_next_line(s, line_len);
 	state = SDP_MEDIA;
 	break;
       case 'i':
 	s = is_eql_next(s);
-	s = get_next_line(s);
+	s = skip_till_next_line(s, line_len);
 	state = SDP_MEDIA;
 	break;
       case 'c':
 	s = is_eql_next(s);
 	//DBG("parse_sdp_line: found media connection\n");
-	parse_sdp_connection(sdp_msg, s, 'm');
-	s = get_next_line(s);
+	s = parse_sdp_connection(sdp_msg, s, 'm');
 	state = SDP_MEDIA;
 	break;
       case 'b':
 	s = is_eql_next(s);
-	s = get_next_line(s);
+	s = skip_till_next_line(s, line_len);
 	state = SDP_MEDIA;
 	break;
       case 'k':
 	s = is_eql_next(s);
-	s = get_next_line(s);
+	s = skip_till_next_line(s, line_len);
 	state = SDP_MEDIA;
 	break;
       case 'a':
 	s = is_eql_next(s);
-	parse_sdp_attr(sdp_msg, s, &next);
-	s = next;
+	s = parse_sdp_attr(sdp_msg, s);
 	state = SDP_MEDIA;
 	break;
 	
       default :
 	{
-	  next = get_next_line(s);
-	  if (int(next-s)-2 >= 0) {
-	    string line(s, int(next-s)-2);
-	    DBG("parse_sdp_line: skipping unknown Media description '%s'\n",
-		(char*)line.c_str());
+	  next = skip_till_next_line(s, line_len);
+	  if (line_len) {
+	    DBG("parse_sdp_line: skipping unknown Media description '%.*s'\n",
+		(int)line_len, s);
 	  }
 	  s = next;
 	  break;
@@ -768,33 +766,27 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
     }
   }
 
-  DBG("sdp_msg[%p] addr_type = %d, conn = %s",&sdp_msg,
-	  sdp_msg->conn.addrType, sdp_msg->conn.debugPrint().c_str());
-  vector<SdpMedia> &sm = sdp_msg->media;
-  vector<SdpMedia>::iterator sm_i = sm.begin();
-  for(;sm_i != sm.end();++sm_i){
-	  SdpMedia &m = *sm_i;
-	  DBG("m[%p] addr_type = %d, conn = %s",&m,
-		m.conn.addrType,m.conn.debugPrint().c_str());
-	  /*if(m.conn.addrType == AT_NONE){
-		  m.conn = sdp_msg->conn;
-	  }*/
-  }
   return false;
 }
 
 
-static void parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
+static char* parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
 {
   
   char* connection_line=s;
   char* next=0;
-  char* line_end=0;
+  char* next_line=0;
+  size_t line_len = 0;
   int parsing=1;
 
   SdpConnection c;
 
-  line_end = get_next_line(s);
+  next_line = skip_till_next_line(s, line_len);
+  if (line_len <= 7) { // should be at least c=IN IP4 ...
+    DBG("short connection line '%.*s'\n", (int)line_len, s);
+    return next_line;
+  }
+
   register sdp_connection_st state;
   state = NET_TYPE;
 
@@ -803,34 +795,38 @@ static void parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
   while(parsing){
     switch(state){
     case NET_TYPE:
-      //Ignore NET_TYPE since it is always IN 
-      connection_line +=3;
+      //Ignore NET_TYPE since it is always IN, fixme
+      c.network = NT_IN; // fixme
+      connection_line +=3; // fixme
       state = ADDR_TYPE;
       break;
     case ADDR_TYPE:
       {
 	string addr_type(connection_line,3);
+
+	string addr_type_uc = addr_type;
+	std::transform(addr_type_uc.begin(), addr_type_uc.end(), addr_type_uc.begin(), toupper);
 	connection_line +=4;
-	if(addr_type == "IP4"){
-	  c.addrType = 1;
+	if(addr_type_uc == "IP4"){
+	  c.addrType = AT_V4;
 	  state = IP4;
-	}else if(addr_type == "IP6"){
-	  c.addrType = 2;
+	}else if(addr_type_uc == "IP6"){
+	  c.addrType = AT_V6;
 	  state = IP6;
 	}else{
-	  ERROR("parse_sdp_connection: Unknown addr_type in c=\n");
-	  c.addrType = 0;
-	  parsing = 0;
+	  DBG("parse_sdp_connection: Unknown addr_type in c-line: '%s'\n", addr_type.c_str());
+	  c.addrType = AT_NONE;
+	  parsing = 0; // ???
 	}
 	break;
       }
     case IP4:
       {
-	  if(contains(connection_line, line_end, '/')){
+	  if(contains(connection_line, next_line, '/')){
 	      next = parse_until(s, '/');
 	      c.address = string(connection_line,int(next-connection_line)-2);
 	  }else{
-	      c.address = string(connection_line, int(line_end-connection_line)-2);
+	    c.address = string(connection_line, line_len-7);
 	  }
 	  parsing = 0;
 	  break;
@@ -838,11 +834,11 @@ static void parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
       
     case IP6:
       { 
-	  if(contains(connection_line, line_end, '/')){
+	  if(contains(connection_line, next_line, '/')){
 	      next = parse_until(s, '/');
 	      c.address = string(connection_line, int(next-connection_line)-2);
 	  }else{
-	      c.address = string(connection_line, int(line_end-connection_line)-2);
+	      c.address = string(connection_line, line_len-7);
 	  }
 	  parsing = 0;
 	  break;
@@ -859,7 +855,7 @@ static void parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
   }
 
   //DBG("parse_sdp_line_ex: parse_sdp_connection: done parsing sdp connection\n");
-  return;
+  return next_line;
 }
 
 
@@ -947,7 +943,7 @@ static void parse_sdp_media(AmSdp* sdp_msg, char* s)
       }
     case FMT:
       {
-	if (m.transport == TP_RTPAVP || m.transport == TP_RTPSAVP) {
+	if (m.transport == TP_RTPAVP || m.transport  == TP_RTPAVPF || m.transport == TP_RTPSAVP || m.transport == TP_RTPSAVPF || m.transport == TP_UDPTLSRTPSAVP || m.transport == TP_UDPTLSRTPSAVPF) {
 	  if (contains(media_line, line_end, ' ')) {
 	    next = parse_until(media_line, ' ');
 	    string value;
@@ -1001,7 +997,8 @@ static void parse_sdp_media(AmSdp* sdp_msg, char* s)
 
 // session level attribute
 static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
-  *next = get_next_line(s);
+  size_t line_len = 0;
+  *next = skip_till_next_line(s, line_len);
   if (*next == s) {
     WARN("premature end of SDP in session attr\n");
     while (**next != '\0') (*next)++;
@@ -1009,7 +1006,7 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
   }
   char* attr_end = *next-1;
   while (attr_end >= s &&
-	 ((*attr_end == 10) || (*attr_end == 13)))
+	 ((*attr_end == LF) || (*attr_end == CR)))
     attr_end--;
 
   if (*attr_end == ':') {
@@ -1030,15 +1027,14 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
 					       string(col, attr_end-col+1)));
     // DBG("got session attribute '%.*s:%.*s'\n", (int)(col-s-1), s, (int)(attr_end-col+1), col);
   }
-
 }
 
 // media level attribute
-static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
+static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 {
   if(sdp_msg->media.empty()){
     ERROR("While parsing media options: no actual media !\n");
-    return;
+    return s;
   }
   
   SdpMedia& media = sdp_msg->media.back();
@@ -1050,20 +1046,16 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
   char* attr_line=s;
   char* next=0;
   char* line_end=0;
+  size_t line_len = 0;
   int parsing = 1;
-  line_end = get_next_line(attr_line);
-  *next_line = line_end;
+  line_end = skip_till_next_line(attr_line, line_len);
   
   unsigned int payload_type, clock_rate, encoding_param = 0;
   string encoding_name, params;
 
   string attr;
   if (!contains(attr_line, line_end, ':')) {
-    next = parse_until(attr_line, '\r');
-    if (next >= line_end) {
-      next = line_end;
-    }
-    attr = string(attr_line, int(next-attr_line)-1);
+    attr = string(attr_line, line_len);
     attr_check(attr);
     parsing = 0;
   } else {
@@ -1077,7 +1069,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
       switch(rtpmap_st){
       case TYPE:
 	{
-	  next = parse_until(attr_line, line_end, ' ');
+	  next = parse_until(attr_line, ' ');
 	  string type(attr_line, int(next-attr_line)-1);
 	  str2i(type,payload_type);
 	  attr_line = next;
@@ -1087,7 +1079,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
       case ENC_NAME:
 	{
 	  if(contains(s, line_end, '/')){
-		next = parse_until(attr_line, line_end, '/');
+	    next = parse_until(attr_line, '/');
 	    string enc_name(attr_line, int(next-attr_line)-1);
 	    encoding_name = enc_name;
 	    attr_line = next;
@@ -1102,7 +1094,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
 	{
 	  // check for posible encoding parameters after clock rate
 	  if(contains(attr_line, line_end, '/')){
-		next = parse_until(attr_line, line_end, '/');
+	    next = parse_until(attr_line, '/');
 	    string clk_rate(attr_line, int(next-attr_line)-1);
 	    str2i(clk_rate, clock_rate);
 	    attr_line = next;
@@ -1123,7 +1115,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
 	}
       case ENC_PARAM:
 	{
-	  next = parse_until(attr_line, line_end, ' ');
+	  next = parse_until(attr_line, ' ');
 	  if(next < line_end){
 	    string value(attr_line, int(next-attr_line)-1);
 	    str2i(value, encoding_param);
@@ -1158,7 +1150,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
 
   } else if(attr == "fmtp"){
     while(parsing){
-      switch(fmtp_st){
+      switch(fmtp_st){ // fixme
       case FORMAT:
 	{
 	  next = parse_until(attr_line, line_end, ' ');
@@ -1169,16 +1161,12 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
 	  break;
 	}
       case FORMAT_PARAM:
-	{ 
-	  line_end--;
-	  while (is_wsp(*line_end))
-	    line_end--;
+	{
+	  char* param_end = line_end-1;
+	  while (is_wsp(*param_end))
+	    param_end--;
 
-	  if(attr_line >= line_end){
-		DBG("empty param for fmtp. ignore it");
-	  } else {
-		params = string(attr_line, line_end-attr_line+1);
-	  }
+	  params = string(attr_line, param_end-attr_line+1);
 	  parsing = 0;
 	}
 	break;
@@ -1200,21 +1188,20 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
 
   } else if (attr == "direction") {
     if (parsing) {
-      next = parse_until(attr_line, line_end,'\r');
-      if(next < line_end){
-	string value(attr_line, int(next-attr_line)-1);
-	if (value == "active") {
-	  media.dir=SdpMedia::DirActive;
-	  // DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-	} else if (value == "passive") {
-	  media.dir=SdpMedia::DirPassive;
-	  //DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-	} else if (attr == "both") {
-	  media.dir=SdpMedia::DirBoth;
-	  //DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-	} 
+      size_t dir_len = 0;
+      next = skip_till_next_line(attr_line, dir_len);
+      string value(attr_line, dir_len);
+      if (value == "active") {
+	media.dir=SdpMedia::DirActive;
+	// DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
+      } else if (value == "passive") {
+	media.dir=SdpMedia::DirPassive;
+	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
+      } else if (attr == "both") {
+	media.dir=SdpMedia::DirBoth;
+	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else {
-	DBG("found media attribute 'direction', but value is not followed by cr\n");
+	DBG("found unknown value for media attribute 'direction'\n");
       }
     } else {
       DBG("ignoring direction attribute without value\n");
@@ -1235,12 +1222,9 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
     attr_check(attr);
     string value;
     if (parsing) {
-      next = parse_until(attr_line, line_end, '\r');
-      if(next >= line_end){
-	DBG("found media attribute '%s', but value is not followed by cr\n",
-	    (char *)attr.c_str());
-      }
-      value = string (attr_line, int(next-attr_line)-1);
+      size_t attr_len = 0;
+      next = skip_till_next_line(attr_line, attr_len);
+      value = string (attr_line, attr_len);
     }
 
     // if (value.empty()) {
@@ -1250,6 +1234,7 @@ static void parse_sdp_attr(AmSdp* sdp_msg, char* s, char** next_line)
     // }
     media.attributes.push_back(SdpAttribute(attr, value));
   }
+  return line_end;
 }
 
 static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
@@ -1257,7 +1242,8 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
   char* origin_line = s;
   char* next=0;
   char* line_end=0;
-  line_end = get_next_line(s);
+  size_t line_len=0;
+  line_end = skip_till_next_line(s, line_len);
   
   register sdp_origin_st origin_st;
   origin_st = USER;
@@ -1293,7 +1279,7 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
 	    break;
 	  }
 	  string id(origin_line, int(next-origin_line)-1);
-	  str2long(id, origin.sessId);
+	  str2i(id, origin.sessId);
 	  origin_line = next;
 	  origin_st = VERSION_ST;
 	  break;
@@ -1307,7 +1293,7 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
 	    break;
 	  }
 	  string version(origin_line, int(next-origin_line)-1);
-	  str2long(version, origin.sessV);
+	  str2i(version, origin.sessV);
 	  origin_line = next;
 	  origin_st = NETTYPE;
 	  break;
@@ -1321,6 +1307,7 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
 	    break;
 	  }
 	  string net_type(origin_line, int(next-origin_line)-1);
+	  origin.conn.network = NT_IN; // fixme
 	  origin_line = next;
 	  origin_st = ADDR;
 	  break;
@@ -1333,7 +1320,17 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
 	    origin_st = UNICAST_ADDR;
 	    break;
 	  }
+
 	  string addr_type(origin_line, int(next-origin_line)-1);
+	  if(addr_type == "IP4"){
+	    origin.conn.addrType = AT_V4;
+	  }else if(addr_type == "IP6"){
+	    origin.conn.addrType = AT_V6;
+	  }else{
+	    DBG("parse_sdp_connection: Unknown addr_type in o line: '%s'\n", addr_type.c_str());
+	    origin.conn.addrType = AT_NONE;
+	  }
+
 	  origin_line = next;
 	  origin_st = UNICAST_ADDR;
 	  break;
@@ -1341,12 +1338,18 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
       case UNICAST_ADDR:
 	{
 	  next = parse_until(origin_line, ' ');
-	  //check if line contains more values than allowed
-	  if(next > line_end){
-	    origin.conn.address = string(origin_line, int(line_end-origin_line)-2);
-	  }else{
-	    DBG("parse_sdp_origin: 'o=' contains more values than allowed; these values will be ignored\n");  
-	    origin.conn.address = string(origin_line, int(next-origin_line)-1);
+	  if (next != origin_line) {
+	    //check if line contains more values than allowed
+	    if(next > line_end){
+	      size_t addr_len = 0;
+	      skip_till_next_line(origin_line, addr_len);
+	      origin.conn.address = string(origin_line, addr_len);
+	    }else{
+		  DBG("parse_sdp_origin: 'o=' contains more values than allowed; these values will be ignored\n");
+	      origin.conn.address = string(origin_line, int(next-origin_line)-1);
+	    }
+	  } else {
+	    origin.conn.address = "";
 	  }
 	  parsing = 0;
 	  break;
@@ -1401,6 +1404,28 @@ static char* parse_until(char* s, char* end, char c)
   return line;
 }
 
+/*static size_t len_till_eol(char* s, char* end)
+{
+  size_t res=0;
+  char* line=s;
+  while(line<end && *line && *line != '\r' && *line != '\n'){
+    line++;
+    res++;
+  }
+  return res;
+}
+
+static size_t len_till_char_or_eol(char* s, char* end, char c)
+{
+  size_t res=0;
+  char* line=s;
+  while(line<end && *line && *line !=  c && *line != '\r' && *line != '\n'){
+    line++;
+    res++;
+  }
+  return res;
+}*/
+
 static char* is_eql_next(char* s)
 {
   char* current_line=s;
@@ -1416,20 +1441,53 @@ inline char* get_next_line(char* s)
   char* next_line=s;
   //search for next line
  while( *next_line != '\0') {
-    if(*next_line == 13){
-      next_line +=2;
+    if(*next_line == CR){
+      next_line++;
+      if (*next_line == LF) {
+	next_line++;
+	break;
+      } else {
+	continue;
+      }
+    } else if (*next_line == LF){
+      next_line++;
       break;
     }
-    else if(*next_line == 10){	
-      next_line +=1;
-      break;
-    }  
     next_line++;
  }
 
   return next_line; 
 }
 
+/* skip to 0, CRLF or LF;
+   @return line_len length of current line
+   @return start of next line
+*/
+inline char* skip_till_next_line(char* s, size_t& line_len)
+{
+  char* next_line=s;
+  line_len = 0;
+
+  //search for next line
+  while( *next_line != '\0') {
+    if (*next_line == CR) {
+      next_line++;
+      if (*next_line == LF) {
+	next_line++;
+	break;
+      } else {
+	continue;
+      }
+    } else if (*next_line == LF){
+      next_line++;
+      break;
+    }
+    line_len++;
+    next_line++;
+ }
+
+  return next_line;
+}
 
 /*
  *Check if known media type is used
@@ -1459,10 +1517,18 @@ static TransProt transport_type(string transport)
 
   if(transport_uc == "RTP/AVP")
     return TP_RTPAVP;
+  else if(transport_uc == "RTP/AVPF")
+    return TP_RTPAVPF;
   else if(transport_uc == "UDP")
     return TP_UDP;
   else if(transport_uc == "RTP/SAVP")
     return TP_RTPSAVP;
+  else if(transport_uc == "RTP/SAVPF")
+    return TP_RTPSAVPF;
+  else if(transport_uc == "UDP/TLS/RTP/SAVP")
+    return TP_UDPTLSRTPSAVP;
+  else if(transport_uc == "UDP/TLS/RTP/SAVPF")
+    return TP_UDPTLSRTPSAVPF;
   else if(transport_uc == "UDPTL")
     return TP_UDPTL;
   else 
