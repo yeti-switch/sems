@@ -1,3 +1,9 @@
+sems (1.7.22-1) stable; urgency=low
+
+  * e6284716c merge upstream SDP parsing
+
+ -- dev <dev@yeti-switch.org>  Thu, 12 Jan 2017 18:57:07 +0200
+
 sems (1.7.21-2) stable; urgency=low
 
   * 8866944 RtspAudio: avoid automatic add to the media processor
