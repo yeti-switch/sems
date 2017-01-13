@@ -1,3 +1,9 @@
+sems (1.7.22-2) stable; urgency=low
+
+  * ed80aaafd AmSdp: fix fmtp empty parameters processing
+
+ -- dev <dev@yeti-switch.org>  Fri, 13 Jan 2017 19:35:23 +0200
+
 sems (1.7.22-1) stable; urgency=low
 
   * e6284716c merge upstream SDP parsing
