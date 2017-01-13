@@ -1,3 +1,9 @@
+sems (1.7.22-3) stable; urgency=low
+
+  * fix core version output
+
+ -- dev <dev@yeti-switch.org>  Fri, 13 Jan 2017 19:52:43 +0200
+
 sems (1.7.22-2) stable; urgency=low
 
   * ed80aaafd AmSdp: fix fmtp empty parameters processing
