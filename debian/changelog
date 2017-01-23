@@ -1,3 +1,9 @@
+sems (1.7.23-1) stable; urgency=low
+
+  * d3c42f6f2 AmAudioFileRecorder: add stereo mp3 recorder
+
+ -- dev <dev@yeti-switch.org>  Mon, 23 Jan 2017 15:03:38 +0200
+
 sems (1.7.22-3) stable; urgency=low
 
   * fix core version output
