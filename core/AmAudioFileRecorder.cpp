@@ -1,64 +1,10 @@
 #include "AmAudioFileRecorder.h"
+#include "AmAudioFileRecorderMono.h"
+#include "AmAudioFileRecorderStereoMP3.h"
 #include "AmEventDispatcher.h"
 
 #define RECORDER_QUEUE_NAME "AmAudioFileRecorder"
-
-AmAudioFileRecorder::AmAudioFileRecorder()
-{ }
-
-AmAudioFileRecorder::~AmAudioFileRecorder()
-{
-    for(vector<AmAudioFile *>::iterator it = files.begin();
-        it!=files.end(); ++it)
-    {
-        delete *it;
-    }
-}
-
-int AmAudioFileRecorder::init(const string &path)
-{
-    files.push_back(new AmAudioFile());
-    return files.back()->open(path,AmAudioFile::Write);
-}
-
-int AmAudioFileRecorder::add_file(const string &path)
-{
-    for(vector<AmAudioFile *>::const_iterator it = files.begin();
-        it!=files.end(); ++it)
-    {
-            if((*it)->getFileName()==path) {
-                ERROR("attempt to add the same file to the recorder: %s",
-                    path.c_str());
-                return 1;
-            }
-    }
-    AmAudioFile *f = new AmAudioFile();
-    if(0!=f->open(path,AmAudioFile::Write)){
-        ERROR("failed to open: %s", path.c_str());
-        delete f;
-        return 1;
-    }
-    files.push_back(f);
-    DBG("recorder has %zd opened files",  files.size());
-    return 0;
-}
-
-int AmAudioFileRecorder::writeSamples(unsigned char *samples, size_t size, int input_sample_rate)
-{
-    //DBG("%s %p %ld",FUNC_NAME,samples,size);
-    for(vector<AmAudioFile *>::iterator it = files.begin();
-        it!=files.end(); ++it)
-    {
-        (*it)->put(0,samples,input_sample_rate,size);
-    }
-    return 0;
-}
-
-/*int AmAudioFileRecorder::writeFrames(unsigned char *frames, size_t size, int src_codec_id)
-{
-    DBG("%s %p %ld %d",FUNC_NAME,frames,size,src_codec_id);
-    return size;
-}*/
+#define EPOLL_MAX_EVENTS  2048
 
 _AmAudioFileRecorderProcessor::_AmAudioFileRecorderProcessor()
   : AmEventFdQueue(this),
@@ -66,14 +12,14 @@ _AmAudioFileRecorderProcessor::_AmAudioFileRecorderProcessor()
     stopped(false),
     recorders_opened(0),
     recorders_closed(0)
-{}
+{
+    //recorders.resize(AmAudioFileRecorder::RecorderTypeMax-1);
+}
 
 _AmAudioFileRecorderProcessor::~_AmAudioFileRecorderProcessor()
 {
     close(epoll_fd);
 }
-
-#define EPOLL_MAX_EVENTS  2048
 
 void _AmAudioFileRecorderProcessor::run()
 {
@@ -146,13 +92,14 @@ void _AmAudioFileRecorderProcessor::run()
     }
     audio_events_lock.unlock();
 
-    DBG("%ld recorders on stop",recorders.size());
-    for(RecordersMap::iterator it = recorders.begin();
-        it!=recorders.end(); ++it)
-    {
-        delete it->second;
+    for(int i = 0; i < AmAudioFileRecorder::RecorderTypeMax; i++) {
+        RecordersMap &r = recorders[i];
+        DBG("%ld recorders of type %d on stop",r.size(),i);
+        if(r.empty()) continue;
+        for(RecordersMap::iterator it = r.begin(); it!=r.end(); ++it)
+            delete it->second;
+        r.clear();
     }
-    recorders.clear();
 
     DBG("Audio recorder stopped");
     stopped.set(true);
@@ -176,23 +123,13 @@ void _AmAudioFileRecorderProcessor::process(AmEvent *ev)
 
 void _AmAudioFileRecorderProcessor::addRecorder(const string &recorder_id,const string &file_path)
 {
-    putEvent(new AudioRecorderEvent(recorder_id,AudioRecorderEvent::addRecorder,file_path));
+    putEvent(new AudioRecorderCtlEvent(recorder_id,AudioRecorderEvent::addRecorder,file_path));
 }
 
 void _AmAudioFileRecorderProcessor::removeRecorder(const string &recorder_id)
 {
-    putEvent(new AudioRecorderEvent(recorder_id,AudioRecorderEvent::delRecorder));
+    putEvent(new AudioRecorderCtlEvent(recorder_id,AudioRecorderEvent::delRecorder));
 }
-
-void _AmAudioFileRecorderProcessor::putSamples(const string &recorder_id, const unsigned char *samples, size_t len, int input_sample_rate)
-{
-    putEvent(new AudioRecorderEvent(recorder_id,samples,len,input_sample_rate));
-}
-
-/*void _AmAudioFileRecorderProcessor::putFrames(const string &recorder_id, const unsigned char *frames, size_t len, int codec_id)
-{
-    putEvent(new AudioRecorderEvent(recorder_id,frames,len,codec_id));
-}*/
 
 void _AmAudioFileRecorderProcessor::putEvent(AudioRecorderEvent *event)
 {
@@ -206,66 +143,93 @@ void _AmAudioFileRecorderProcessor::putEvent(AudioRecorderEvent *event)
 void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
 {
     AmAudioFileRecorder *recorder;
+    AudioRecorderCtlEvent *ctl_event = NULL;
 
-    RecordersMap::iterator recorder_it = recorders.find(ev.recorder_id);
-    if(recorder_it == recorders.end()) {
-        if(ev.event_id==AudioRecorderEvent::addRecorder){
-            DBG("add recorder %s",ev.recorder_id.c_str());
-            recorder = new AmAudioFileRecorder();
-            if(0!=recorder->init(ev.file_path)){
+    AmAudioFileRecorder::RecorderType rtype = ev.getRecorderType();
+    RecordersMap &r = recorders[rtype];
+
+    RecordersMap::iterator recorder_it = r.find(ev.recorder_id);
+    if(recorder_it == r.end()) {
+        if(ev.event_id == AudioRecorderEvent::addRecorder ||
+           ev.event_id == AudioRecorderEvent::addStereoRecorder)
+        {
+            ctl_event = static_cast<AudioRecorderCtlEvent *>(&ev);
+
+            DBG("add recorder %s with type: %d",ev.recorder_id.c_str(),rtype);
+
+            if(rtype == AmAudioFileRecorder::RecorderMonoAmAudioFile)
+                recorder = new AmAudioFileRecorderMono();
+            else if(rtype == AmAudioFileRecorder::RecorderStereoMP3Internal)
+                recorder = new AmAudioFileRecorderStereoMP3();
+            else {
+                ERROR("unknown recorder type: %d",rtype);
+                return;
+            }
+
+            if(0!=recorder->init(ctl_event->file_path)) {
                 ERROR("can't init recorder %s with path '%s'",
                       ev.recorder_id.c_str(),
-                      ev.file_path.c_str());
+                      ctl_event->file_path.c_str());
                 delete recorder;
                 return;
-            } else {
-                DBG("recorder %s inited with file: %s",
-                    ev.recorder_id.c_str(),
-                    ev.file_path.c_str());
             }
-            recorders[ev.recorder_id] = recorder;
+
+            DBG("recorder %s inited with file: %s",
+                ev.recorder_id.c_str(),
+                ctl_event->file_path.c_str());
+
+            r[ev.recorder_id] = recorder;
             recorders_opened++;
-        } else {
-            /*DBG("event for not existent recorder %s. ignore it",
-                ev.recorder_id.c_str());*/
-        }
+        }/*else {
+            //non add event for not existent recorder. ignore it
+        }*/
         return;
     }
 
     recorder = recorder_it->second;
 
-    switch(ev.event_id){
+    switch(ev.event_id) {
+    //samples
+    case AudioRecorderEvent::putSamples: {
+        AudioRecorderSamplesEvent &samples_event = static_cast<AudioRecorderSamplesEvent &>(ev);
+        recorder->writeSamples(samples_event.data,samples_event.data_size,
+                               samples_event.sample_rate);
+    } break;
+    case AudioRecorderEvent::putStereoSamples: {
+        AudioRecorderStereoSamplesEvent &samples_event = static_cast<AudioRecorderStereoSamplesEvent &>(ev);
+        recorder->writeStereoSamples(samples_event.ts,samples_event.data,samples_event.data_size,
+                                     samples_event.sample_rate,samples_event.channel_id);
+    } break;
+    //ctl
     case AudioRecorderEvent::addRecorder:
+    case AudioRecorderEvent::addStereoRecorder:
+        ctl_event = static_cast<AudioRecorderCtlEvent *>(&ev);
         DBG("update recorder %s",ev.recorder_id.c_str());
-        if(0!=recorder->add_file(ev.file_path)) {
+        if(0!=recorder->add_file(ctl_event->file_path)) {
             ERROR("failed to add file to the recorder %s with path '%s'",
                   ev.recorder_id.c_str(),
-                  ev.file_path.c_str());
+                  ctl_event->file_path.c_str());
         } else {
             DBG("recorder %s updated with file: %s",
                 ev.recorder_id.c_str(),
-                ev.file_path.c_str());
+                ctl_event->file_path.c_str());
         }
-        break;
-    case AudioRecorderEvent::putSamples:
-        recorder->writeSamples(ev.data,ev.data_size,ev.sample_rate);
-        break;
-    /*case AudioRecorderEvent::putFrames:
-        recorder->writeFrames(ev.data,ev.data_size,ev.codec_id);
-        break;*/
+    break;
     case AudioRecorderEvent::delRecorder:
+    case AudioRecorderEvent::delStereoRecorder:
         DBG("delete recorder %p with id: %s",
             recorder,recorder_it->first.c_str());
         delete recorder;
-        recorders.erase(recorder_it);
+        r.erase(recorder_it);
         recorders_closed++;
-        break;
-    }
+    break;
+    } //switch(ev.event_id)
 }
 
 void _AmAudioFileRecorderProcessor::getStats(AmArg &ret)
 {
-    ret["active"] = recorders.size();
+    ret["active_mono"] = recorders[AmAudioFileRecorder::RecorderMonoAmAudioFile].size();
+    ret["active_stereo_mp3"] = recorders[AmAudioFileRecorder::RecorderStereoMP3Internal].size();
     ret["opened"] = recorders_opened;
     ret["closed"] = recorders_closed;
 }

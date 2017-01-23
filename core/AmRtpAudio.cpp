@@ -27,7 +27,8 @@
 
 #include "AmConfig.h"
 #include "AmRtpAudio.h"
-#include "AmAudioFileRecorder.h"
+#include "AmAudioFileRecorderMono.h"
+#include "AmAudioFileRecorderStereoMP3.h"
 #include <sys/time.h>
 #include <assert.h>
 #include "AmSession.h"
@@ -292,7 +293,11 @@ int AmRtpAudio::put(unsigned long long system_ts, unsigned char* buffer,
   if (mute) return 0;
 
   if(record_enabled) {
-    RecorderPutSamples(session_local_tag,buffer,size,input_sample_rate);
+    RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
+  }
+
+  if(stereo_record_enabled) {
+    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
   }
 
   memcpy((unsigned char*)samples,buffer,size);
@@ -360,8 +365,13 @@ int AmRtpAudio::init(const AmSdp& local,
     playout_buffer.reset(new AmJbPlayout(this,getSampleRate()));
   }
 
-  if(session->getRecordAudio()){
+  if(session->getRecordAudio()) {
     setRecorder(session->getLocalTag());
+  }
+
+  if(session->getRecordStereoAudio()) {
+    setStereoRecorder(session->getRecordStereoAudioRecorderId(),
+                      session->getRecordStereoAudioChannelId());
   }
 
   return 0;

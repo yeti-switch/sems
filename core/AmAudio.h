@@ -254,6 +254,10 @@ protected:
   string recorder_id;
   bool record_enabled;
 
+  string stereo_recorder_id;
+  int stereo_recorder_channel_id;
+  bool stereo_record_enabled;
+
   /** Sample buffer. */
   DblBuffer samples;
   
@@ -382,6 +386,7 @@ public:
 
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
+  void setStereoRecorder(const string &id, int channel_id);
 };
 
 
