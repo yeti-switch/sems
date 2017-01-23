@@ -8,65 +8,84 @@
 #include <queue>
 #include <list>
 
-struct AudioRecorderEvent {
+class AmAudioFileRecorder {
+  public:
+    enum RecorderType {
+        RecorderMonoAmAudioFile = 0,
+        RecorderStereoMP3Internal,
+        RecorderTypeMax,
+    };
+  private:
+    RecorderType type;
+  public:
+    AmAudioFileRecorder(RecorderType type)
+      : type(type)
+    {}
+    virtual ~AmAudioFileRecorder() { }
+
+    RecorderType getType() { return type; }
+
+    virtual int init(const string &path) = 0;
+    virtual int add_file(const string &path) = 0;
+
+    virtual void writeSamples(unsigned char *samples, size_t size, int input_sample_rate)
+    {
+        throw std::logic_error("not implemented");
+    }
+    virtual void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id)
+    {
+        throw std::logic_error("not implemented");
+    }
+};
+
+struct AudioRecorderEvent
+{
     string recorder_id;
-    string file_path;
 
     enum event_type {
-        addRecorder,
+        addRecorder = 0,
+        addStereoRecorder,
         delRecorder,
-        putSamples/*,
-        putFrames*/
+        delStereoRecorder,
+        putSamples,
+        putStereoSamples
     } event_id;
 
-    unsigned char data[AUDIO_BUFFER_SIZE];
-    size_t data_size;
-    int sample_rate;
-
-    int codec_id;
-
-    AudioRecorderEvent(const string &recorder_id,event_type event_id)
+    AudioRecorderEvent(const string &recorder_id, event_type event_id)
       : recorder_id(recorder_id),
         event_id(event_id)
     {}
 
-    AudioRecorderEvent(const string &recorder_id,event_type event_id, const string &file_path)
-      : recorder_id(recorder_id),
-        event_id(event_id),
-        file_path(file_path)
-    {}
-
-    AudioRecorderEvent(const string &recorder_id, const unsigned char *samples, size_t len, int input_sample_rate)
-      : recorder_id(recorder_id),
-        event_id(putSamples),
-        data_size(len),
-        sample_rate(input_sample_rate)
+    inline AmAudioFileRecorder::RecorderType getRecorderType()
     {
-        memcpy(data,samples,len);
+        switch(event_id) {
+        case addRecorder:
+        case delRecorder:
+        case putSamples:
+            return AmAudioFileRecorder::RecorderMonoAmAudioFile;
+        case addStereoRecorder:
+        case delStereoRecorder:
+        case putStereoSamples:
+            return AmAudioFileRecorder::RecorderStereoMP3Internal;
+        default:
+            throw std::logic_error("unknown event type");
+        }
     }
-
-    /*AudioRecorderEvent(const string &recorder_id, const unsigned char *frames, size_t len, int codec_id)
-      : recorder_id(recorder_id),
-        event_id(putFrames),
-        data_size(len),
-        sample_rate(input_sample_rate),
-        codec_id(codec_id)
-    {
-        memcpy(data,frames,len);
-    }*/
 };
 
-class AmAudioFileRecorder {
-    vector<AmAudioFile *> files;
-    //unsigned char buf[AUDIO_BUFFER_SIZE]; //for internal decoding
+struct AudioRecorderCtlEvent
+  : AudioRecorderEvent
+{
+    string file_path;
 
-  public:
-    AmAudioFileRecorder();
-    ~AmAudioFileRecorder();
-    int init(const string &path);
-    int add_file(const string &path);
-    int writeSamples(unsigned char *samples, size_t size, int input_sample_rate);
-    //int writeFrames(unsigned char *frames, size_t size, int src_codec_id);
+    AudioRecorderCtlEvent(const string &recorder_id,event_type event_id)
+      : AudioRecorderEvent(recorder_id,event_id)
+    {}
+
+    AudioRecorderCtlEvent(const string &recorder_id,event_type event_id, const string &file_path)
+      : AudioRecorderEvent(recorder_id,event_id),
+        file_path(file_path)
+    {}
 };
 
 class _AmAudioFileRecorderProcessor
@@ -80,7 +99,8 @@ class _AmAudioFileRecorderProcessor
     typedef std::list<AudioRecorderEvent *> AudioEventsQueue;
     typedef std::map<string, AmAudioFileRecorder *> RecordersMap;
 
-    RecordersMap recorders;
+    RecordersMap recorders[AmAudioFileRecorder::RecorderTypeMax];
+    //vector<RecordersMap> recorders;
 
     AudioEventsQueue audio_events;
     AmEventFd audio_events_ready, stop_event;
@@ -91,7 +111,6 @@ class _AmAudioFileRecorderProcessor
                   recorders_closed;
 
     void processRecorderEvent(AudioRecorderEvent &ev);
-    void putEvent(AudioRecorderEvent *event);
 
   public:
     _AmAudioFileRecorderProcessor();
@@ -107,15 +126,10 @@ class _AmAudioFileRecorderProcessor
     //ctl interface
     void addRecorder(const string &recorder_id, const string &file_path);
     void removeRecorder(const string &recorder_id);
-    void putSamples(const string &recorder_id, const unsigned char *samples, size_t len, int input_sample_rate);
-    //void putFrames(const string &recorder_id, const unsigned char *frames, size_t len, int codec_id);
+    void putEvent(AudioRecorderEvent *event);
 
     //rpc commands
     void getStats(AmArg &ret);
 };
-
-#define RecorderPutSamples(id,buffer,size,rate)\
-    AmAudioFileRecorderProcessor::instance_unsafe()->putSamples(\
-        recorder_id, buffer, size, rate);
 
 typedef singleton<_AmAudioFileRecorderProcessor> AmAudioFileRecorderProcessor;

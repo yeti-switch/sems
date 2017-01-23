@@ -96,7 +96,11 @@ private:
 
   bool record_audio_enabled;
 
-  enum ProcessingStatus { 
+  bool record_stereo_audio_enabled;
+  string record_stereo_audio_recorder_id;
+  int record_stereo_channel_id;
+
+  enum ProcessingStatus {
     SESSION_PROCESSING_EVENTS = 0,
     SESSION_WAITING_DISCONNECTED,
     SESSION_ENDED_DISCONNECTED,
@@ -348,10 +352,14 @@ public:
 
   /** setter for record_audio_enabled */
   void setRecordAudio(bool record_audio);
+  void setRecordStereoAudio(bool record_audio, int channel_id, const string &recorder_id = string());
 
   /** getter for record_audio_enabled  */
   bool getRecordAudio() { return record_audio_enabled; }
 
+  bool getRecordStereoAudio() { return record_stereo_audio_enabled; }
+  int getRecordStereoAudioChannelId() { return record_stereo_channel_id; }
+  const string& getRecordStereoAudioRecorderId() { return record_stereo_audio_recorder_id; }
 
   /* ----         Call control                         ---- */
 

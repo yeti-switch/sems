@@ -15,7 +15,7 @@ codecs_bench.wav
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
 
-SET(common_LIBS stdc++ resolv)
+SET(common_LIBS stdc++ resolv mp3lame)
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)

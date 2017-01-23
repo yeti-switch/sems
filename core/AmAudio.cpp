@@ -285,6 +285,18 @@ void AmAudio::setRecorder(const string &id) {
   }
 }
 
+void AmAudio::setStereoRecorder(const string &id, int channel_id) {
+  if(!id.empty()){
+      CLASS_DBG("enable stereo recording. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
+      stereo_record_enabled = true;
+      stereo_recorder_id = id;
+      stereo_recorder_channel_id = channel_id;
+  } else {
+      CLASS_DBG("disable stereo recording");
+      stereo_record_enabled = false;
+  }
+}
+
 void AmAudio::close()
 {
 }
