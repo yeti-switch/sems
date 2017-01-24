@@ -1,4 +1,5 @@
 #include "AmConferenceChannel.h"
+#include "AmAudioFileRecorderStereoMP3.h"
 #include <assert.h>
 
 AmConferenceChannel::AmConferenceChannel(AmConferenceStatus* status, int channel_id, bool own_channel)
@@ -18,6 +19,11 @@ int AmConferenceChannel::put(unsigned long long system_ts, unsigned char* buffer
 			     int input_sample_rate, unsigned int size)
 {
   memcpy((unsigned char*)samples,buffer,size);
+
+  if(stereo_record_enabled) {
+    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+  }
+
   AmMultiPartyMixer* mixer = status->getMixer();
   mixer->lock();
   size = resampleInput(samples,size,input_sample_rate,

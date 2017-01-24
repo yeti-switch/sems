@@ -26,6 +26,7 @@
  */
 
 #include "AmAudio.h"
+#include "AmAudioFileRecorderStereoMP3.h"
 #include "AmPlugIn.h"
 #include "AmUtils.h"
 #include "AmSdp.h"
@@ -342,6 +343,10 @@ int AmAudio::put(unsigned long long system_ts, unsigned char* buffer,
 
   if(max_rec_time > -1 && rec_time >= max_rec_time)
     return -1;
+
+  if(stereo_record_enabled) {
+    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+  }
 
   memcpy((unsigned char*)samples,buffer,size);
   size = resampleInput((unsigned char*)samples, size, 
