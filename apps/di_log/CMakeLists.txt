@@ -5,3 +5,5 @@ set(di_log_SRCS
 SET(sems_module_name di_log)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/module.rules.txt)
+
+add_subdirectory(tools)

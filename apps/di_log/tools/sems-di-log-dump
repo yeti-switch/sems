@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "usage: $0 corefile";
+    exit 1;
+fi
+
+core_file=$1
+
+if [ ! -f "$core_file" ]; then
+    echo "invalid core file '$core_file' (not exists or not regular)";
+    exit 1;
+fi
+
+di_log_dump=${core_file}.di_log.dump
+
+hash gdb 2>/dev/null || { echo >&2 "gdb required. Aborting."; exit 1; }
+
+s='&DILog::ring_buf[0]'
+e='&DILog::ring_buf[DILog::pos]'
+cmd="dump binary memory $di_log_dump $s $e"
+
+echo -e "run gdb for corefile '$core_file' with command:\n\t$cmd"
+echo $cmd | gdb -q -n /usr/sbin/sems "$core_file"
+
+if [ ! -f "$di_log_dump" ]; then
+    exit 1;
+fi
+
+sems-di-log-extract "$di_log_dump" "${di_log_dump}.log"
+
+rm "$di_log_dump"
