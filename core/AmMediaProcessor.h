@@ -225,6 +225,8 @@ public:
   void init();
   /** Add session s to processor */
   void addSession(AmMediaSession* s, const string& callgroup);
+  /** Add session s to sched_thread processor */
+  void addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
   /** Remove session s from processor */
   void removeSession(AmMediaSession* s);
   /** Remove session s from processor and clear its audio */

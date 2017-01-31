@@ -119,6 +119,27 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
     postRequest(new SchedRequest(InsertSession,s));
 }
 
+void AmMediaProcessor::addSession(AmMediaSession* s,
+                                  const string &callgroup,
+                                  unsigned int sched_thread)
+{
+    if(sched_thread >= num_threads) {
+        ERROR("AmMediaProcessor::addSession: wrong sched_thread %u for session %p",
+              sched_thread,s);
+        return;
+    }
+
+    group_mut.lock();
+    // create callgroup->thread mapping
+    callgroup2thread[callgroup] = sched_thread;
+    // join the callgroup
+    callgroupmembers.insert(make_pair(callgroup, s));
+    session2callgroup[s]=callgroup;
+    group_mut.unlock();
+
+    threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
+}
+
 void AmMediaProcessor::clearSession(AmMediaSession* s) {
   removeFromProcessor(s, ClearSession);
 }
