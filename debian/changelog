@@ -1,3 +1,12 @@
+sems (1.7.24-1) stable; urgency=low
+
+  * 2743614b2 AmB2BMedia: fix RTP timeout processing on shared RTP stream
+  * 1306291dd ampi: add ConferenceMixerAPI.h
+  * f9694927d AmMediaProcessor: ability to add session to the specific media processor thread
+  * 61f71623f apps/di_log: add utility to extract ringbuffer logs from corefiles
+
+ -- dev <dev@yeti-switch.org>  Wed, 01 Feb 2017 16:35:59 +0200
+
 sems (1.7.23-2) stable; urgency=low
 
   * 20fc1e5fa AmAudio, AmConferenceChannel: add stereo recording
