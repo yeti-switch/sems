@@ -397,6 +397,8 @@ private:
   public:
     virtual void setMediaSession(AmB2BMedia *new_session);
     AmB2BMedia *getMediaSession() { return media_session; }
+    //called when owned AmB2BMedia changes session
+    void onSessionChange(AmB2BSession *new_session);
 
     // see RelayController
     virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask);

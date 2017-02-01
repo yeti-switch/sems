@@ -152,11 +152,6 @@ AmB2BSession::~AmB2BSession()
 
   if(subs)
     delete subs;
-
-  /* if AmB2BMedia instance shares AmRtpAuido pointer with AmSession::_rtp_str
-   * revoke ownership by AmSession to avoid double free */
-  if(rtp_stream_shared)
-    releaseRtpStream();
 }
 
 void AmB2BSession::set_sip_relay_only(bool r) { 
@@ -687,8 +682,14 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
       // report missing media session (here we get for rtp_relay_mode == RTP_Relay)
       ERROR("[%s] media session is missing, can't update SDP\n",
             dlg?dlg->getLocalTag().c_str():"null");
-    }
-    else {
+    } else {
+      if(rtp_stream_shared && hasRtpStream() && !media_session->isProcessingMedia()) {
+        media_session->setFirstAudioPairStream(
+          a_leg,
+          RTPStream(),
+          local_sdp,
+          remote_sdp);
+      }
       media_session->updateStreams(a_leg, local_sdp, remote_sdp, this);
     }
   }
@@ -1141,6 +1142,14 @@ void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask
   mask.invert();
 }
 
+void  AmB2BSession::onSessionChange(AmB2BSession *new_session)
+{
+  //DBG("%s(new_session = %p) a_leg = %d",FUNC_NAME,new_session,a_leg);
+  if(rtp_stream_shared && (new_session == NULL)) {
+    DBG("clear audio on unlink from media session with shared streams");
+    clearAudio();
+  }
+}
 
 // 
 // AmB2BCallerSession methods

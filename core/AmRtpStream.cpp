@@ -455,6 +455,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 	last_sent_ts_diff(0)
 {
 
+  DBG("%s() %p session = %p",FUNC_NAME,this,session);
   memset(&r_saddr,0,sizeof(struct sockaddr_storage));
   memset(&l_saddr,0,sizeof(struct sockaddr_storage));
 
@@ -468,6 +469,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 
 AmRtpStream::~AmRtpStream()
 {
+  DBG("%s() %p session = %p",FUNC_NAME,this,session);
   if(l_sd){
     if (AmRtpReceiver::haveInstance()){
       AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);

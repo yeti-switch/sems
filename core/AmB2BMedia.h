@@ -53,6 +53,7 @@ class AudioStreamData {
      *
      * Audio only for now. */
     AmRtpAudio *stream;
+    bool shared_stream;
 
     /** Non-stream input (required for music on hold for example). */
     AmAudio *in;

@@ -186,6 +186,7 @@ void AudioStreamData::initialize(AmB2BSession *session)
 
 AudioStreamData::AudioStreamData(AmB2BSession *session):
   in(NULL), initialized(false),
+  shared_stream(false),
   dtmf_detector(NULL), dtmf_queue(NULL),
   relay_enabled(false), relay_port(0),
   outgoing_payload(UNDEFINED_PAYLOAD),
@@ -235,7 +236,7 @@ void AudioStreamData::clear()
     in = NULL;
   }
   if (stream) {
-    delete stream;
+    if(!shared_stream) delete stream;
     stream = NULL;
   }
   clearDtmfSink();
@@ -568,8 +569,13 @@ void AmB2BMedia::changeSession(bool a_leg, AmB2BSession *new_session)
 void AmB2BMedia::changeSessionUnsafe(bool a_leg, AmB2BSession *new_session)
 {
   TRACE("changing %s leg session to %p\n", a_leg ? "A" : "B", new_session);
-  if (a_leg) a = new_session;
-  else b = new_session;
+  if (a_leg) {
+    if(a) a->onSessionChange(new_session);
+    a = new_session;
+  } else {
+    if(b) b->onSessionChange(new_session);
+    b = new_session;
+  }
 
   bool needs_processing = a && b && a->getRtpRelayMode() == AmB2BSession::RTP_Transcoding;
 
@@ -1368,6 +1374,7 @@ void AmB2BMedia::restartRelay() {
 void AudioStreamData::setStreamUnsafe(AmRtpAudio *s)
 {
     stream = s;
+    shared_stream = true;
     force_symmetric_rtp = stream->getPassiveMode();
     initialized = true;
 }
