@@ -1,3 +1,9 @@
+sems (1.7.24-2) stable; urgency=low
+
+  * pkg: fix libsems dep version
+
+ -- dev <dev@yeti-switch.org>  Wed, 01 Feb 2017 17:44:39 +0200
+
 sems (1.7.24-1) stable; urgency=low
 
   * 2743614b2 AmB2BMedia: fix RTP timeout processing on shared RTP stream
