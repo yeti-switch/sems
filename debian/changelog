@@ -1,3 +1,10 @@
+sems (1.7.25-1) stable; urgency=low
+
+  * 3cb6ce128 AmSipSubscription: add sendReferNotify method
+  * 0e30a69a8 actualize ConferenceMixerAPI.h
+
+ -- dev <dev@yeti-switch.org>  Thu, 09 Feb 2017 14:53:23 +0200
+
 sems (1.7.24-2) stable; urgency=low
 
   * pkg: fix libsems dep version
