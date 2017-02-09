@@ -1,2 +1,3 @@
 usr/lib/sems/plug-in usr/lib/sems/
 etc/sems/etc etc/sems/
+usr/sbin/sems-di-log-* usr/sbin/

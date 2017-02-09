@@ -1,3 +1,9 @@
+sems (1.7.25-2) stable; urgency=low
+
+  * sems-modules-base: add utility to extract ringbuffer logs from corefiles
+
+ -- dev <dev@yeti-switch.org>  Thu, 09 Feb 2017 16:54:25 +0000
+
 sems (1.7.25-1) stable; urgency=low
 
   * 3cb6ce128 AmSipSubscription: add sendReferNotify method
