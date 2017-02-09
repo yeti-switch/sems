@@ -95,14 +95,71 @@ void SingleSubscription::onTimer(int timer_id)
   }
 }
 
-void SingleSubscription::terminate()
+void SingleSubscription::terminate(const string &reason)
 {
   setState(SubState_terminated);
+  terminated_reason = reason;
 }
 
 bool SingleSubscription::terminated()
 {
   return getState() == SubState_terminated;
+}
+
+string SingleSubscription::getNotifyHeaders()
+{
+  string hdrs;
+  //Event header
+  hdrs+= SIP_HDR_COLSP(SIP_HDR_EVENT) + event + ";id=" + id + CRLF;
+  //Subscription-State header
+  switch(sub_state) {
+  case SubState_terminated:
+    hdrs+= SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "terminated";
+    if(!terminated_reason.empty())
+      hdrs+= ";reason=" + terminated_reason;
+    hdrs+=CRLF;
+    break;
+  case SubState_init:
+  case SubState_notify_wait:
+  case SubState_active:
+    hdrs+= SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "active";
+    if(expires!=0) {
+      hdrs+= ";expires=" + int2str((unsigned int)expires);
+    }
+    hdrs+=CRLF;
+    break;
+   case SubState_pending:
+     hdrs+= SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "pending" CRLF;
+     break;
+   default:
+     break;
+  }
+  return hdrs;
+}
+
+void SingleSubscription::sendReferNotify(AmBasicSipDialog *sip_dlg,
+                                         string &body,
+                                         bool terminate_sub,
+                                         const string &reason)
+{
+  if(role!=Notifier) {
+    ERROR("attempt to send Notify from subscriber");
+    return;
+  }
+
+  if(terminate_sub)
+    terminate(reason);
+
+  AmContentType ctype;
+  AmMimeBody mbody;
+
+  ctype.setType("message");
+  ctype.setSubType("sipfrag");
+  mbody.setContentType(ctype);
+  mbody.setPayload((const unsigned char *)body.data(),body.size());
+
+  if(!sip_dlg) sip_dlg = dlg();
+  sip_dlg->sendRequest(SIP_METH_NOTIFY,&mbody,getNotifyHeaders());
 }
 
 SingleSubscription* 
@@ -577,7 +634,7 @@ void AmSipSubscription::onRequestSent(const AmSipRequest& req)
   Subscriptions::iterator sub_it = matchSubscription(req,true);
   if(sub_it == subs.end()){
     // should we exclude this case in onSendRequest???
-    ERROR("we just sent a request for which we could obtain no subscription\n");
+    //ERROR("we just sent a request for which we could obtain no subscription\n");
     return;
   }
 
@@ -645,6 +702,22 @@ void AmSipSubscription::debug()
   for(Subscriptions::iterator it = subs.begin(); it != subs.end(); it++) {
     DBG("\t%s",(*it)->to_str().c_str());
   }
+}
+
+bool AmSipSubscription::sendReferNotify(AmBasicSipDialog *sip_dlg,
+                                        const string& id, string &body,
+                                        bool terminate_sub, const string &reason)
+{
+  Subscriptions::iterator sub_it =
+    findSubscription(SingleSubscription::Notifier, "refer", id);
+  if(sub_it==subs.end()) {
+     ERROR("missed notifier subscription");
+     return false;
+  }
+
+  (*sub_it)->sendReferNotify(sip_dlg,body,terminate_sub,reason);
+
+  return true;
 }
 
 

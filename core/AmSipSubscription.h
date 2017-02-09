@@ -96,6 +96,7 @@ private:
   unsigned int sub_state;
   int  pending_subscribe;
   unsigned long  expires;
+  string terminated_reason;
 
   // timers
   SubscriptionTimer timer_n;
@@ -140,10 +141,14 @@ public:
   unsigned long getExpires() { return expires; }
   void setExpires(unsigned long exp);
 
-  void terminate();
+  void terminate(const string &reason = string());
   bool terminated();
 
   string to_str();
+
+  string getNotifyHeaders();
+  void sendReferNotify(AmBasicSipDialog *sip_dlg, string &body,
+                       bool terminate_sub = false, const string &reason = string());
 };
 
 /**
@@ -210,6 +215,10 @@ public:
   virtual void onTimeout(int timer_id, SingleSubscription* sub);
 
   virtual void debug();
+
+  bool sendReferNotify(AmBasicSipDialog *sip_dlg, const string& id, string &body,
+                       bool terminate_sub = false, const string &reason = string());
+
 };
 
 struct SIPSubscriptionEvent
