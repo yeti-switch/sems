@@ -333,7 +333,7 @@ void RtspClient::addStream(RtspAudio &audio, const string &uri)
     std::pair<StreamIterator, bool> result;
     RtspStream                      *stream;
 
-    result = streams.insert( std::make_pair(&audio, RtspStream( &audio, uri )) );
+    result = streams.emplace(&audio,RtspStream(&audio, uri));
 
     stream = &result.first->second;
 
@@ -346,11 +346,11 @@ void RtspClient::addStream(RtspAudio &audio, const string &uri)
         DBG("####### %s UPDATED %s", __func__, uri.c_str());
     }
 
-    if( (stream->server = media_server_lookup()) )
+    if( (stream->server = media_server_lookup()) ) {
+        CLASS_DBG("successfull media server lookup. send DESCRIBE");
         stream->describe();
-    else
-    {
-        stream->close();
+    } else {
+        CLASS_DBG("media server lookup failed. destroy stream");
         streams.erase(result.first);
     }
 }

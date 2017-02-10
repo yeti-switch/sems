@@ -1,3 +1,9 @@
+sems (1.7.25-3) stable; urgency=low
+
+  * RtspClient::addStream(): use emplace() instead of insert(). log media_server_lookup() result
+
+ -- dev <dev@yeti-switch.org>  Fri, 10 Feb 2017 18:47:12 +0200
+
 sems (1.7.25-2) stable; urgency=low
 
   * sems-modules-base: add utility to extract ringbuffer logs from corefiles
