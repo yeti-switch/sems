@@ -214,6 +214,8 @@ struct AmConfig
   /** Override for logger level */
   static int DumpLevel;
 
+  static int node_id;
+
   enum ApplicationSelector {
     App_RURIUSER,
     App_RURIPARAM,
