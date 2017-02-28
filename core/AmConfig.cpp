@@ -98,6 +98,7 @@ unsigned int AmConfig::MaxForwards             = MAX_FORWARDS;
 bool	     AmConfig::SingleCodecInOK	       = false;
 int          AmConfig::DumpLevel               = 0;
 int          AmConfig::node_id                 = 0;
+string       AmConfig::node_id_prefix          = "";
 unsigned int AmConfig::DeadRtpTime             = DEAD_RTP_TIME;
 bool         AmConfig::IgnoreRTPXHdrs          = false;
 string       AmConfig::Application             = "";
@@ -559,6 +560,7 @@ int AmConfig::readConfiguration()
 					DEFAULT_MAX_SHUTDOWN_TIME);
 
   node_id = cfg.getParameterInt("node_id");
+  if(node_id!=0) node_id_prefix = int2str(node_id) + "-";
 
   if(cfg.hasParameter("session_processor_threads")){
 #ifdef SESSION_THREADPOOL

@@ -550,7 +550,7 @@ string AmSession::getNewId() {
   struct timeval t;
   gettimeofday(&t,NULL);
 
-  string id = "";
+  string id = AmConfig::node_id_prefix;
 
   id += int2hex(get_random()) + "-";
   id += int2hex(t.tv_sec) + int2hex(t.tv_usec) + "-";

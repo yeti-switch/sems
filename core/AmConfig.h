@@ -215,6 +215,7 @@ struct AmConfig
   static int DumpLevel;
 
   static int node_id;
+  static string node_id_prefix;
 
   enum ApplicationSelector {
     App_RURIUSER,
