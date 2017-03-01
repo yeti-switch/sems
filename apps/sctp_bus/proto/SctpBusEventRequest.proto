@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message SctpBusEventRequest {
+  required int32 src_node_id = 1;
+  required string src_session_id = 2;
+  required int32 dst_node_id = 3;
+  required string dst_session_id = 4;
+  required string json_data = 5;
+}
