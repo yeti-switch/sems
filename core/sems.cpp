@@ -271,6 +271,12 @@ static void signal_handler(int sig)
 
   WARN("Signal %s (%d) received.\n", strsignal(sig), sig);
 
+  if(sig == SIGQUIT) {
+    AmConfig::ShutdownMode = !AmConfig::ShutdownMode;
+    INFO("ShutDownMode changed to %d",AmConfig::ShutdownMode);
+    return;
+  }
+
   if (sig == SIGHUP) {
     AmSessionContainer::instance()->broadcastShutdown();
     return;
