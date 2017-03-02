@@ -303,7 +303,7 @@ static void signal_handler(int sig)
 int set_sighandler(void (*handler)(int))
 {
   static int sigs[] = {
-    SIGHUP, SIGPIPE, SIGINT, SIGTERM, SIGCHLD, SIGUSR1, SIGUSR2, 0
+    SIGHUP, SIGPIPE, SIGINT, SIGTERM, SIGQUIT, SIGCHLD, SIGUSR1, SIGUSR2, 0
   };
 
   for (int* sig = sigs; *sig; sig++) {
