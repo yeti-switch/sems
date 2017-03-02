@@ -1,3 +1,13 @@
+sems (1.7.26-1) stable; urgency=low
+
+  * 145fd7d17 catch SIGQUIT by own handler
+  * 1af2c90c9 change shutdown mode on SIGQUIT signal
+  * 5fc0c3238 add sctp_bus module
+  * ec6f2efaf AmSession: getNewId(): add prefix with node_id if set
+  * b0aa8e8d6 AmConfig: add node_id option
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 02 Mar 2017 18:23:24 +0200
+
 sems (1.7.25-3) stable; urgency=low
 
   * RtspClient::addStream(): use emplace() instead of insert(). log media_server_lookup() result
