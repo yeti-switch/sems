@@ -1,3 +1,9 @@
+sems (1.7.27-1) stable; urgency=low
+
+  * 76bd48317 sems.conf: support list of applications selectors separated by '|'
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 06 Mar 2017 18:37:37 +0200
+
 sems (1.7.26-1) stable; urgency=low
 
   * 145fd7d17 catch SIGQUIT by own handler
