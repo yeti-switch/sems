@@ -790,23 +790,26 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     else if(AmConfig::OptionsApplication.length() && SIP_METH_OPTIONS==req.method)
         m_app_name = AmConfig::OptionsApplication;
     else {
-        switch (AmConfig::AppSelect) {
-        case AmConfig::App_RURIUSER:
-            m_app_name = req.user;
-            break;
-        case AmConfig::App_APPHDR:
-            m_app_name = getHeader(req.hdrs, APPNAME_HDR, true);
-            break;
-        case AmConfig::App_RURIPARAM:
-            m_app_name = get_header_param(req.r_uri, "app");
-            break;
-        case AmConfig::App_MAPPING:
-            m_app_name = ""; // no match if not found
-            run_regex_mapping(AmConfig::AppMapping, req.r_uri.c_str(), m_app_name);
-            break;
-        case AmConfig::App_SPECIFIED:
-            m_app_name = AmConfig::Application;
-            break;
+        for(const auto &app_selector : AmConfig::Applications) {
+            switch (app_selector.AppSelect) {
+            case AmConfig::App_RURIUSER:
+                m_app_name = req.user;
+                break;
+            case AmConfig::App_APPHDR:
+                m_app_name = getHeader(req.hdrs, APPNAME_HDR, true);
+                break;
+            case AmConfig::App_RURIPARAM:
+                m_app_name = get_header_param(req.r_uri, "app");
+                break;
+            case AmConfig::App_MAPPING:
+                m_app_name = ""; // no match if not found
+                run_regex_mapping(app_selector.AppMapping, req.r_uri.c_str(), m_app_name);
+                break;
+            case AmConfig::App_SPECIFIED:
+                m_app_name = app_selector.Application;
+                break;
+            }
+            if(!m_app_name.empty()) break;
         }
     }
 

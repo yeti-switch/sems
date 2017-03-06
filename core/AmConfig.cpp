@@ -101,11 +101,9 @@ int          AmConfig::node_id                 = 0;
 string       AmConfig::node_id_prefix          = "";
 unsigned int AmConfig::DeadRtpTime             = DEAD_RTP_TIME;
 bool         AmConfig::IgnoreRTPXHdrs          = false;
-string       AmConfig::Application             = "";
 string       AmConfig::RegisterApplication     = "";
 string       AmConfig::OptionsApplication      = "";
-AmConfig::ApplicationSelector AmConfig::AppSelect        = AmConfig::App_SPECIFIED;
-RegexMappingVector AmConfig::AppMapping;
+vector<AmConfig::app_selector> AmConfig::Applications;
 bool         AmConfig::LogSessions             = false;
 bool         AmConfig::LogEvents               = false;
 int          AmConfig::UnhandledReplyLoglevel  = 0;
@@ -503,27 +501,42 @@ int AmConfig::readConfiguration()
   PcapUploadQueueName = cfg.getParameter("pcap_upload_queue",PcapUploadQueueName);
   enableRTSP = cfg.getParameter("rtsp_enable","no")=="yes";
 
-  Application  = cfg.getParameter("application");
   RegisterApplication  = cfg.getParameter("register_application");
   OptionsApplication  = cfg.getParameter("options_application");
 
-  if (Application == "$(ruri.user)") {
-    AppSelect = App_RURIUSER;
-  } else if (Application == "$(ruri.param)") {
-    AppSelect = App_RURIPARAM;
-  } else if (Application == "$(apphdr)") {
-    AppSelect = App_APPHDR;
-  } else if (Application == "$(mapping)") {
-    AppSelect = App_MAPPING;  
-    string appcfg_fname = ModConfigPath + "app_mapping.conf"; 
-    DBG("Loading application mapping...\n");
-    if (!read_regex_mapping(appcfg_fname, "=>", "application mapping",
-			    AppMapping)) {
-      ERROR("reading application mapping\n");
-      ret = -1;
+  string apps_str = cfg.getParameter("application");
+  auto apps = explode(apps_str,"|");
+  Applications.resize(apps.size());
+  int app_selector_id = 0;
+  for(const auto &app_str: apps) {
+    app_selector &app = Applications[app_selector_id];
+    app.Application = app_str;
+    if (app_str == "$(ruri.user)") {
+      app.AppSelect = App_RURIUSER;
+    } else if (app_str == "$(ruri.param)") {
+      app.AppSelect = App_RURIPARAM;
+    } else if (app_str == "$(apphdr)") {
+      app.AppSelect = App_APPHDR;
+    } else if (app_str == "$(mapping)") {
+      app.AppSelect = App_MAPPING;
+      string appcfg_fname = ModConfigPath + "app_mapping.conf";
+      DBG("Loading application mapping...\n");
+      if (!read_regex_mapping(appcfg_fname, "=>", "application mapping",
+          app.AppMapping))
+      {
+        ERROR("reading application mapping\n");
+        ret = -1;
+      }
+    } else {
+      app.AppSelect = App_SPECIFIED;
     }
-  } else {
-    AppSelect = App_SPECIFIED;
+    app_selector_id++;
+  }
+
+  app_selector_id = 0;
+  for(const auto &app_selector : AmConfig::Applications) {
+    INFO("application selector %d: %s",
+         app_selector_id++,app_selector.Application.c_str());
   }
 
 #ifndef DISABLE_DAEMON_MODE

@@ -409,20 +409,19 @@ int main(int argc, char* argv[])
          "       daemon UID:          %s\n"
          "       daemon GID:          %s\n"
 #endif
-	 "       application:         %s\n"
 	 "\n",
 #ifdef _DEBUG
 	 log_level2str[AmConfig::LogLevel], AmConfig::LogLevel,
          AmConfig::LogStderr ? "yes" : "no",
 #endif
 	 AmConfig::ConfigurationFile.c_str(),
-	 AmConfig::PlugInPath.c_str(),
+	 AmConfig::PlugInPath.c_str()
 #ifndef DISABLE_DAEMON_MODE
-	 AmConfig::DaemonMode ? "yes" : "no",
+	 ,AmConfig::DaemonMode ? "yes" : "no",
 	 AmConfig::DaemonUid.empty() ? "<not set>" : AmConfig::DaemonUid.c_str(),
-	 AmConfig::DaemonGid.empty() ? "<not set>" : AmConfig::DaemonGid.c_str(),
+	 AmConfig::DaemonGid.empty() ? "<not set>" : AmConfig::DaemonGid.c_str()
 #endif
-	 AmConfig::Application.empty() ? "<not set>" : AmConfig::Application.c_str());
+	);
 
   AmConfig::dump_Ifs();
 

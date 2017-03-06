@@ -226,14 +226,17 @@ struct AmConfig
   };
   
   /** "application" config value */ 
-  static string Application;
+  //static string Application;
   static string RegisterApplication;
   static string OptionsApplication;
-  /** type of application selection (parsed from Application) */
-  static ApplicationSelector AppSelect;
-
-  /* this is regex->application mapping is used if  App_MAPPING */
-  static RegexMappingVector AppMapping; 
+  struct app_selector {
+      string Application;
+      /** this is regex->application mapping is used if  App_MAPPING */
+      RegexMappingVector AppMapping;
+      /** type of application selection (parsed from Application) */
+      ApplicationSelector AppSelect;
+  };
+  static vector<app_selector> Applications;
 
   static unsigned int SessionLimit;
   static unsigned int SessionLimitErrCode;
