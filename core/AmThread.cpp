@@ -79,7 +79,11 @@ void * AmThread::_start(void * _t)
   DBG("Thread %lu is starting.\n", (unsigned long) _this->_pid);
   _this->run();
 
-  DBG("Thread %lu is ending.\n", (unsigned long) _this->_pid);
+  char thread_name[16];
+  pthread_getname_np(_this->_td, thread_name,16);
+  DBG("Thread %s %lu is ending.\n",
+      thread_name,
+      (unsigned long) _this->_pid);
   _this->_stopped.set(true);
     
   return NULL;
@@ -123,8 +127,12 @@ void AmThread::stop()
     return;
   }
 
+  char thread_name[16];
+  pthread_getname_np(_td, thread_name,16);
+
   // gives the thread a chance to clean up
-  DBG("Thread %lu (%lu) calling on_stop, give it a chance to clean up.\n", 
+  DBG("Thread %s %lu (%lu)calling on_stop, give it a chance to clean up.\n",
+      thread_name,
       (unsigned long int) _pid, (unsigned long int) _td);
 
   try { on_stop(); } catch(...) {}
@@ -140,7 +148,9 @@ void AmThread::stop()
     }
   }
 
-  DBG("Thread %lu (%lu) finished detach.\n", (unsigned long int) _pid, (unsigned long int) _td);
+  DBG("Thread %s %lu (%lu) finished detach.\n",
+      thread_name,
+      (unsigned long int) _pid, (unsigned long int) _td);
 
   //pthread_cancel(_td);
 
