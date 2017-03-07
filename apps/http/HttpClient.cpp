@@ -162,8 +162,6 @@ void HttpClient::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    stopped.set(true);
-
     while(!failed_upload_events.empty()){
         delete failed_upload_events.front();
         failed_upload_events.pop();
@@ -174,6 +172,8 @@ void HttpClient::run()
     }
 
     DBG("HttpClient stopped");
+
+    stopped.set(true);
 }
 
 void HttpClient::on_stop()
