@@ -1,3 +1,9 @@
+sems (1.7.27-2) stable; urgency=low
+
+  * c3d26c847 http_client: set stopped condition after failed events queues cleanup
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 07 Mar 2017 13:54:32 +0200
+
 sems (1.7.27-1) stable; urgency=low
 
   * 76bd48317 sems.conf: support list of applications selectors separated by '|'
