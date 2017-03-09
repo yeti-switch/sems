@@ -118,6 +118,8 @@ void SIPRegistrarClient::run()
         uac_auth_i = uac_auth_f->getInstance();
     }
 
+    AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
+
     while (!stop_requested.get()) {
         if (registrations.size()) {
             unsigned int cnt = 250;
@@ -134,7 +136,8 @@ void SIPRegistrarClient::run()
             processEvents();
         }
     }
-    sleep(5);
+    AmEventDispatcher::instance()->delEventQueue(REG_CLIENT_QUEUE);
+    //sleep(5); FIXME: what is this ?
     stopped.set(true);
 }
 
@@ -228,6 +231,12 @@ void SIPRegistrarClient::process(AmEvent* ev)
         onRemoveRegistration(rem_reg);
         return;
     }
+
+    BusReplyEvent *bus_event = dynamic_cast<BusReplyEvent *>(ev);
+    if(bus_event) {
+        onBusEvent(bus_event);
+        return;
+    }
 }
 
 void SIPRegistrarClient::onSipReplyEvent(AmSipReplyEvent* ev)
@@ -299,6 +308,77 @@ void SIPRegistrarClient::onRemoveRegistration(SIPRemoveRegistrationEvent* reg)
     reg_mut.unlock();
 
     _reg->doUnregister();
+}
+
+void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
+{
+#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
+    string key; \
+    if(data.hasMember(#key)) { \
+        AmArg & key ## _arg = data[#key]; \
+        if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return; } \
+        key = key ## _arg.asCStr(); \
+    }
+
+#define DEF_AND_VALIDATE_OPTIONAL_INT(key) \
+    int key = 0; \
+    if(data.hasMember(#key)) { \
+        AmArg & key ## _arg = data[#key]; \
+        if(!isArgInt(key ## _arg)) { ERROR("unexpected '" #key "' type. expected integer"); return; } \
+        key = key ## _arg.asInt(); \
+    }
+
+#define DEF_AND_VALIDATE_MANDATORY_STR(key) \
+    if(!data.hasMember(#key)) { ERROR("missed '" #key "' in BusReplyEvent payload");return; } \
+    AmArg & key ## _arg = data[#key]; \
+    if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return; } \
+    string key = key ## _arg.asCStr();
+
+    AmArg &data = bus_event->data;
+    if(!isArgStruct(data)) ERROR("unexpected payload type in BusReplyEvent"); return;
+
+    DEF_AND_VALIDATE_MANDATORY_STR(action);
+    if(action=="create") {
+        DEF_AND_VALIDATE_MANDATORY_STR(id);
+        DEF_AND_VALIDATE_MANDATORY_STR(domain);
+        DEF_AND_VALIDATE_OPTIONAL_STR(user);
+        DEF_AND_VALIDATE_OPTIONAL_STR(name);
+        DEF_AND_VALIDATE_OPTIONAL_STR(auth_username);
+        DEF_AND_VALIDATE_OPTIONAL_STR(auth_password);
+        DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
+        DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
+        DEF_AND_VALIDATE_OPTIONAL_STR(contact);
+        DEF_AND_VALIDATE_OPTIONAL_STR(handle);
+
+        DEF_AND_VALIDATE_OPTIONAL_INT(expires);
+        DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval);
+
+        instance()->postEvent(
+            new SIPNewRegistrationEvent(
+                SIPRegistrationInfo(
+                    id,
+                    domain,
+                    user,
+                    name,
+                    auth_username,
+                    auth_password,
+                    proxy,
+                    contact,
+                    expires,
+                    force_expires_interval),
+                handle.empty() ? AmSession::getNewId() : handle,
+                sess_link
+            )
+        );
+    } else if(action=="remove") {
+        DEF_AND_VALIDATE_MANDATORY_STR(id);
+        removeRegistrationById(id_arg.asCStr());
+    } else {
+        ERROR("uknown action '%s'",action.c_str());
+    }
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+#undef DEF_AND_VALIDATE_OPTIONAL_INT
+#undef DEF_AND_VALIDATE_MANDATORY_STR
 }
 
 void SIPRegistrarClient::on_stop()

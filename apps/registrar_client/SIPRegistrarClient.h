@@ -30,6 +30,7 @@
 
 #include "AmSipRegistration.h"
 #include "AmApi.h"
+#include "ampi/BusAPI.h"
 
 #include <sys/time.h>
 
@@ -37,6 +38,8 @@
 #include <string>
 using std::map;
 using std::string;
+
+#define REG_CLIENT_QUEUE "reg_client"
 
 struct SIPNewRegistrationEvent;
 class SIPRemoveRegistrationEvent;
@@ -66,6 +69,7 @@ class SIPRegistrarClient
     void onSipReplyEvent(AmSipReplyEvent* ev);
     void onNewRegistration(SIPNewRegistrationEvent* new_reg);
     void onRemoveRegistration(SIPRemoveRegistrationEvent* reg);
+    void onBusEvent(BusReplyEvent* bus_event);
     void listRegistrations(AmArg& res);
     void showRegistration(const string& handle, AmArg &ret);
     void showRegistrationById(const string& id, AmArg &ret);
