@@ -70,22 +70,38 @@ struct BusEvent
 struct BusReplyEvent
   : public AmEvent
 {
-  enum BusResult {
-    Success,
-    Error
-  } result;
+    enum BusResult {
+        Success,
+        Error
+    } result;
 
     map<string, string> params;
-
+    AmArg data;
 
     BusReplyEvent(BusResult  result, map<string, string> &_params)
-    : AmEvent(0), result(result)
+    : AmEvent(0),
+      result(result)
+    {
+        std::copy(_params.begin(), _params.end(), std::inserter(params, params.end()) );
+    }
+
+    BusReplyEvent(BusResult  result, const AmArg &data)
+    : AmEvent(0),
+      result(result),
+      data(data)
+    { }
+
+    BusReplyEvent(BusResult  result, map<string, string> &_params, const AmArg &data)
+    : AmEvent(0),
+      result(result),
+      data(data)
     {
         std::copy(_params.begin(), _params.end(), std::inserter(params, params.end()) );
     }
 
     BusReplyEvent()
-    : AmEvent(0), result(Success)
+    : AmEvent(0),
+      result(Success)
     {}
 
 };
