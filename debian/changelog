@@ -1,3 +1,9 @@
+sems (1.7.28-3) stable; urgency=low
+
+  * ab3d7d350 SIPRegistrarClient: BusReplyEvent processing: allow integer id for remove action. add flush action
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 10 Mar 2017 19:18:13 +0200
+
 sems (1.7.28-2) stable; urgency=low
 
   * 9b680b1b4 AmSipRegistration: force user for Contact if set
