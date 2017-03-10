@@ -60,6 +60,9 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     r["expires_interval"] = ri.expires_interval;
     r["expires"] =   (int)reg->reg_expires;
     r["force_reregister"] = ri.force_expires_interval;
+    r["retry_delay"] = ri.retry_delay;
+    r["max_attempts"] = ri.max_attempts;
+    r["attempt"] = ri.attempt;
     r["event_sink"] = reg->getEventSink();
     r["last_request_time"] = (int)reg->reg_send_begin;
     r["last_succ_reg_time"] = (int)reg->reg_begin;
@@ -163,7 +166,7 @@ void SIPRegistrarClient::checkTimeouts()
             }
         } else if (reg->remove) {
             remove_regs.push_back(it->first);
-        } else if ((reg->waiting_result || reg->error_code!=0) &&
+        } else if (!reg->waiting_result && reg->error_code!=0 &&
                    reg->registerSendTimeout(now.tv_sec))
         {
             reg->onRegisterSendTimeout();
@@ -321,8 +324,8 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         key = key ## _arg.asCStr(); \
     }
 
-#define DEF_AND_VALIDATE_OPTIONAL_INT(key) \
-    int key = 0; \
+#define DEF_AND_VALIDATE_OPTIONAL_INT(key,default_value) \
+    int key = default_value; \
     if(data.hasMember(#key)) { \
         AmArg & key ## _arg = data[#key]; \
         if(!isArgInt(key ## _arg)) { ERROR("unexpected '" #key "' type. expected integer"); return; } \
@@ -362,8 +365,10 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         DEF_AND_VALIDATE_OPTIONAL_STR(contact);
         DEF_AND_VALIDATE_OPTIONAL_STR(handle);
 
-        DEF_AND_VALIDATE_OPTIONAL_INT(expires);
-        DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval);
+        DEF_AND_VALIDATE_OPTIONAL_INT(expires,0);
+        DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval,0);
+        DEF_AND_VALIDATE_OPTIONAL_INT(retry_delay,DEFAULT_REGISTER_RETRY_DELAY);
+        DEF_AND_VALIDATE_OPTIONAL_INT(max_attempts,REGISTER_ATTEMPTS_UNLIMITED);
 
         SIPRegistrarClient::instance()->postEvent(
             new SIPNewRegistrationEvent(
@@ -377,7 +382,9 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
                     proxy,
                     contact,
                     expires,
-                    force_expires_interval),
+                    force_expires_interval,
+                    retry_delay,
+                    max_attempts),
                 handle.empty() ? AmSession::getNewId() : handle,
                 sess_link
             )
@@ -525,6 +532,8 @@ string SIPRegistrarClient::createRegistration(
     const string& contact,
     const int& expires_interval,
     bool &force_expires_interval,
+    const int& retry_delay,
+    const int& max_attempts,
     const string& handle)
 {
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
@@ -540,7 +549,9 @@ string SIPRegistrarClient::createRegistration(
                 proxy,
                 contact,
                 expires_interval,
-                force_expires_interval),
+                force_expires_interval,
+                retry_delay,
+                max_attempts),
             l_handle,
             sess_link
         )
@@ -626,21 +637,33 @@ void SIPRegistrarClient::invoke(
 {
     if(method == "createRegistration"){
         string proxy, contact, handle;
-        int expires_interval, force;
+        int expires_interval = 0,
+            force = 0,
+            retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
+            max_attempts = REGISTER_ATTEMPTS_UNLIMITED;
         bool force_expires_interval = false;
-        if (args.size() > 7)
+        size_t n = args.size();
+
+        do {
+
+        if (n > 7)
             proxy = args.get(7).asCStr();
-        if (args.size() > 8)
+        else break;
+
+        if (n > 8)
             contact = args.get(8).asCStr();
-        if (args.size() > 9) {
+        else break;
+
+        if (n > 9) {
             AmArg &a = args.get(9);
             if(isArgInt(a)) {
                 expires_interval = a.asInt();
             } else if(isArgCStr(a) && !str2int(a.asCStr(), expires_interval)){
                 throw AmSession::Exception(500,"wrong expires_interval argument");
             }
-        }
-        if (args.size() > 10) {
+        } else break;
+
+        if (n > 10) {
             AmArg &a = args.get(10);
             if(isArgInt(a)) {
                 force_expires_interval = a.asInt();
@@ -649,9 +672,31 @@ void SIPRegistrarClient::invoke(
             } else {
                 throw AmSession::Exception(500,"wrong force_expires_interval argument");
             }
-        }
-        if (args.size() > 11)
-            handle = args.get(11).asCStr();
+        } else break;
+
+        if (args.size() > 11) {
+            AmArg &a = args.get(11);
+            if(isArgInt(a)) {
+                retry_delay = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), retry_delay)){
+                throw AmSession::Exception(500,"wrong retry_delay argument");
+            }
+        } else break;
+
+        if (args.size() > 12) {
+            AmArg &a = args.get(12);
+            if(isArgInt(a)) {
+                retry_delay = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), max_attempts)){
+                throw AmSession::Exception(500,"wrong max_attempts argument");
+            }
+        } else break;
+
+        if (args.size() > 13)
+            handle = args.get(13).asCStr();
+        else break;
+
+        } while(0);
 
         ret.push(createRegistration(
             args.get(0).asCStr(),
@@ -665,6 +710,8 @@ void SIPRegistrarClient::invoke(
             contact,
             expires_interval,
             force_expires_interval,
+            retry_delay,
+            max_attempts,
             handle
         ).c_str());
     } else if(method == "removeRegistration") {

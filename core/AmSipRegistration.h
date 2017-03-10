@@ -36,7 +36,8 @@ using std::string;
 #include "AmUriParser.h"
 #include "AmSessionEventHandler.h"
 
-#define REGISTER_SEND_TIMEOUT 60 
+#define DEFAULT_REGISTER_RETRY_DELAY 5
+#define REGISTER_ATTEMPTS_UNLIMITED 0
 
 struct SIPRegistrationInfo {
   string id;
@@ -48,6 +49,9 @@ struct SIPRegistrationInfo {
   string proxy;
   string contact;
   int expires_interval;
+  int retry_delay;
+  int max_attempts;
+  int attempt;
   bool force_expires_interval;
 
   SIPRegistrationInfo(
@@ -60,11 +64,16 @@ struct SIPRegistrationInfo {
     const string& proxy,
     const string& contact,
     const int& expires_interval,
-    const bool &force_expires_interval)
+    const bool &force_expires_interval,
+    const int& retry_delay,
+    const int& max_attempts)
   : id(id),domain(domain),user(user),name(name),
     auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
     expires_interval(expires_interval),
-    force_expires_interval(force_expires_interval)
+    force_expires_interval(force_expires_interval),
+    retry_delay(retry_delay),
+    max_attempts(max_attempts),
+    attempt(0)
   { }
 };
 

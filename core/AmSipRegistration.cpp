@@ -141,7 +141,9 @@ bool AmSIPRegistration::doRegistration()
       + info.contact + ">" + CRLF;
     flags = SIP_FLAGS_NOCONTACT;
   }
-    
+
+  info.attempt++;
+
   if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
     ERROR("failed to send registration.\n");
     res = false;
@@ -180,11 +182,11 @@ bool AmSIPRegistration::doUnregister()
   int flags=0;
   string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) "0" CRLF;
   if(!info.contact.empty()) {
-    hdrs = SIP_HDR_COLSP(SIP_HDR_CONTACT) "<";
+    hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) "<";
     hdrs += info.contact + ">" + CRLF;
     flags = SIP_FLAGS_NOCONTACT;
   }
-    
+
   if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
     ERROR("failed to send deregistration. mark to remove anyway");
     res = false;
@@ -250,6 +252,10 @@ void AmSIPRegistration::onRegisterExpired() {
 }
 
 void AmSIPRegistration::onRegisterSendTimeout() {
+  if(info.max_attempts && info.attempt >= info.max_attempts) {
+    return;
+  }
+
   if (sess_link.length()) {
     AmSessionContainer::instance()->
       postEvent(sess_link,
@@ -263,7 +269,7 @@ void AmSIPRegistration::onRegisterSendTimeout() {
 }
 
 bool AmSIPRegistration::registerSendTimeout(time_t now_sec) {
-  return now_sec > reg_send_begin + REGISTER_SEND_TIMEOUT;
+  return now_sec > reg_send_begin + info.retry_delay;
 }
 
 bool AmSIPRegistration::timeToReregister(time_t now_sec) {
@@ -343,6 +349,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
 		  (!info.contact.empty()&&server_contact.isEqual(info_contact))) {
 	    DBG("contact found\n");
 	    found = active = true;
+		info.attempt = 0;
 		error_code = 0;
 
 	    if (str2i(server_contact.params["expires"], reg_expires)) {
@@ -385,7 +392,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
 	error_code = 500;
 	error_reason = "no matching Contact in positive reply";
 	error_initiatior = REG_ERROR_LOCAL;
-	doRegistration();
+	//doRegistration();
       }
     }
 		
@@ -424,7 +431,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 reply.reason));
     }
     active = false;
-    doRegistration();
+    //doRegistration();
   }
 }
 

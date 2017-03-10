@@ -113,6 +113,8 @@ class SIPRegistrarClient
         const string& contact,
         const int& expires_interval,
         bool &force_expires_interval,
+        const int& retry_delay,
+        const int& max_attempts,
         const string& handle);
     void removeRegistration(const string& handle);
     void removeRegistrationById(const string& id);
