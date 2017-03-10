@@ -197,7 +197,6 @@ void SIPRegistrarClient::onServerShutdown()
         it->second->doUnregister();
         AmEventDispatcher::instance()->delEventQueue(it->first);
     }
-
     stop_requested.set(true);
 }
 
@@ -237,6 +236,8 @@ void SIPRegistrarClient::process(AmEvent* ev)
         onBusEvent(bus_event);
         return;
     }
+
+    DBG("got unknown event. ignore");
 }
 
 void SIPRegistrarClient::onSipReplyEvent(AmSipReplyEvent* ev)
@@ -310,7 +311,7 @@ void SIPRegistrarClient::onRemoveRegistration(SIPRemoveRegistrationEvent* reg)
     _reg->doUnregister();
 }
 
-void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
+void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
 {
 #define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
     string key; \
@@ -334,12 +335,23 @@ void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
     if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return; } \
     string key = key ## _arg.asCStr();
 
-    AmArg &data = bus_event->data;
-    if(!isArgStruct(data)) ERROR("unexpected payload type in BusReplyEvent"); return;
+    if(!isArgStruct(data)) { ERROR("unexpected payload type in BusReplyEvent"); return; }
 
     DEF_AND_VALIDATE_MANDATORY_STR(action);
     if(action=="create") {
-        DEF_AND_VALIDATE_MANDATORY_STR(id);
+        //DEF_AND_VALIDATE_MANDATORY_STR(id);
+        if(!data.hasMember("id")) { ERROR("missed 'id' in BusReplyEvent payload");return; }
+        AmArg &id_arg = data["id"];
+        string id;
+        if(isArgCStr(id_arg)) {
+            id = id_arg.asCStr();
+        } else if(isArgInt(id_arg)) {
+            id = int2str(id_arg.asInt());
+        } else {
+            ERROR("unexpected 'id' type. expected string or integer");
+            return;
+        }
+
         DEF_AND_VALIDATE_MANDATORY_STR(domain);
         DEF_AND_VALIDATE_OPTIONAL_STR(user);
         DEF_AND_VALIDATE_OPTIONAL_STR(name);
@@ -353,7 +365,7 @@ void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
         DEF_AND_VALIDATE_OPTIONAL_INT(expires);
         DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval);
 
-        instance()->postEvent(
+        SIPRegistrarClient::instance()->postEvent(
             new SIPNewRegistrationEvent(
                 SIPRegistrationInfo(
                     id,
@@ -379,6 +391,18 @@ void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 #undef DEF_AND_VALIDATE_OPTIONAL_INT
 #undef DEF_AND_VALIDATE_MANDATORY_STR
+}
+
+void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
+{
+    AmArg &data = bus_event->data;
+    if(isArgArray(data)) {
+        for (size_t i = 0; i < data.size(); i ++) {
+            processAmArgRegistration(data[i]);
+        }
+    } else {
+        processAmArgRegistration(data);
+    }
 }
 
 void SIPRegistrarClient::on_stop()

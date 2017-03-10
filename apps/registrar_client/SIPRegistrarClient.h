@@ -70,6 +70,7 @@ class SIPRegistrarClient
     void onNewRegistration(SIPNewRegistrationEvent* new_reg);
     void onRemoveRegistration(SIPRemoveRegistrationEvent* reg);
     void onBusEvent(BusReplyEvent* bus_event);
+    void processAmArgRegistration(AmArg &data);
     void listRegistrations(AmArg& res);
     void showRegistration(const string& handle, AmArg &ret);
     void showRegistrationById(const string& id, AmArg &ret);
