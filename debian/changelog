@@ -1,3 +1,9 @@
+sems (1.7.28-2) stable; urgency=low
+
+  * 9b680b1b4 AmSipRegistration: force user for Contact if set
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 10 Mar 2017 18:44:09 +0200
+
 sems (1.7.28-1) stable; urgency=low
 
   * cdeb61a89 AmDtmfDetector: validate sample_rate in AmRtpDtmfEvent constructor
