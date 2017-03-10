@@ -58,7 +58,6 @@ AmSIPRegistration::AmSIPRegistration(const string& handle,
   req.to       = req.from;
   req.to_tag   = "";
   req.callid   = AmSession::getNewId(); 
-  //
 
   // clear dlg.callid? ->reregister?
   dlg.initFromLocalRequest(req);
@@ -129,10 +128,21 @@ bool AmSIPRegistration::doRegistration()
     int2str(expires_interval) + CRLF;
 
   int flags=0;
+
+  if(info.contact.empty() && !info.user.empty()) {
+    //force contact username
+    int oif = dlg.getOutboundIf();
+    info_contact.uri_user = info.user;
+    info_contact.uri_host = AmConfig::SIP_Ifs[oif].getIP();
+    info_contact.uri_port = int2str(AmConfig::SIP_Ifs[oif].LocalPort);
+
+    info.contact = info_contact.canon_uri_str();
+  }
+
   if(!info.contact.empty()) {
         size_t end = 0;
         if(!info_contact.parse_contact(info.contact,(size_t)0,end)){
-            ERROR("failed to parse contact field.\n");
+            ERROR("failed to parse contact field: %s",info.contact.c_str());
             waiting_result = false;
             reg_send_begin  = time(NULL);
             return false;
