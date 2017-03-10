@@ -390,10 +390,27 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
             )
         );
     } else if(action=="remove") {
-        DEF_AND_VALIDATE_MANDATORY_STR(id);
-        removeRegistrationById(id_arg.asCStr());
+        if(!data.hasMember("id")) { ERROR("missed 'id' in BusReplyEvent payload");return; }
+        AmArg &id_arg = data["id"];
+        string id;
+        if(isArgCStr(id_arg)) {
+            id = id_arg.asCStr();
+        } else if(isArgInt(id_arg)) {
+            id = int2str(id_arg.asInt());
+        } else {
+            ERROR("unexpected 'id' type. expected string or integer");
+            return;
+        }
+        removeRegistrationById(id);
+    } else if(action=="flush") {
+        DBG("flushRegistrations()");
+        AmLock l(reg_mut);
+        for(const auto &reg: registrations)
+            reg.second->doUnregister();
+        registrations.clear();
+        registrations_by_id.clear();
     } else {
-        ERROR("uknown action '%s'",action.c_str());
+        ERROR("unknown action '%s'",action.c_str());
     }
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 #undef DEF_AND_VALIDATE_OPTIONAL_INT
