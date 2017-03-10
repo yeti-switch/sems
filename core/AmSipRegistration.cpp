@@ -160,6 +160,9 @@ bool AmSIPRegistration::doUnregister()
 {
   bool res = true;
 
+  if(!unregistering && waiting_result) {
+      dlg.finalize();
+  }
   waiting_result = true;
   unregistering = true;
 
