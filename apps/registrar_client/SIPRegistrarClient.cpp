@@ -266,7 +266,6 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
         a.setBorrowedPointer(reg);
         di_args.push(a);
         di_args.push(a);
-        DBG("arg type is %d\n", a.getType());
 
         uac_auth_i->invoke("getHandler", di_args, ret);
         if (!ret.size()) {
@@ -703,7 +702,7 @@ void SIPRegistrarClient::invoke(
         if (args.size() > 12) {
             AmArg &a = args.get(12);
             if(isArgInt(a)) {
-                retry_delay = a.asInt();
+                max_attempts = a.asInt();
             } else if(isArgCStr(a) && !str2int(a.asCStr(), max_attempts)){
                 throw AmSession::Exception(500,"wrong max_attempts argument");
             }
