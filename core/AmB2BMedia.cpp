@@ -185,7 +185,7 @@ void AudioStreamData::initialize(AmB2BSession *session)
 }
 
 AudioStreamData::AudioStreamData(AmB2BSession *session):
-  in(NULL), initialized(false),
+  in(NULL), out(NULL), initialized(false),
   shared_stream(false),
   dtmf_detector(NULL), dtmf_queue(NULL),
   relay_enabled(false), relay_port(0),
@@ -448,37 +448,61 @@ void AudioStreamData::updateRecvStats(AmRtpStream *s)
 }
 
 int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, AudioStreamData &src)
-	{
-  if (!initialized) return 0;
-  if (stream->getOnHold()) return 0; // ignore hold streams?
-
-  unsigned int f_size = stream->getFrameSize();
-  if (stream->sendIntReached(ts)) {
-    // A leg is ready to send data
-    int sample_rate = stream->getSampleRate();
-    int got = 0;
-    if (in) got = in->get(ts, buffer, sample_rate, f_size);
-    else {
-      if (!src.isInitialized()) return 0;
-      AmRtpAudio *src_stream = src.getStream();
-	  if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
-        got = src_stream->get(ts, buffer, sample_rate, f_size);
+{
+    if (!initialized) {
+        if(!in || !out) return 0;
+        //non-stream mode
+        if (!src.isInitialized()) return 0; //other leg MUST be initialized with stream
+        AmRtpAudio *src_stream = src.getStream();
+        int sample_rate = src_stream->getSampleRate();
+        int got = src_stream->get(ts, buffer, sample_rate, src_stream->getFrameSize());
+        //CLASS_DBG("src_stream->get(%llu,%d)",ts,got);
+        if (got < 0) return -1;
         if (got > 0) {
-          updateRecvStats(src_stream);
-          if (dtmf_queue && enable_dtmf_transcoding) { 
-	    dtmf_queue->putDtmfAudio(buffer, got, ts);
-	  }
+            updateRecvStats(src_stream);
+            //CLASS_DBG("out->put(%llu,%d)",ts,got);
+            return out->put(ts, buffer, sample_rate, got);
         }
-      }
+        return 0;
     }
-    if (got < 0) return -1;
-    if (got > 0) {
-      // we have data to be sent
-      updateSendStats();
-      return stream->put(ts, buffer, sample_rate, got);
+
+    if (stream->getOnHold()) return 0; // ignore hold streams?
+
+    unsigned int f_size = stream->getFrameSize();
+    if (stream->sendIntReached(ts)) {
+        // A leg is ready to send data
+        int sample_rate = stream->getSampleRate();
+        int got = 0;
+        if (in) {
+            got = in->get(ts, buffer, sample_rate, f_size);
+        } else {
+            if (!src.isInitialized()) {
+                //non-stream mode
+                AmAudio *src_in = src.getInput();
+                if(!src_in) return 0;
+                got = src_in->get(ts, buffer, sample_rate, f_size);
+                //CLASS_DBG("src_in->get(%llu,%d)",ts,got);
+            } else {
+                AmRtpAudio *src_stream = src.getStream();
+                if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
+                    got = src_stream->get(ts, buffer, sample_rate, f_size);
+                    if (got > 0) {
+                        updateRecvStats(src_stream);
+                        if (dtmf_queue && enable_dtmf_transcoding) {
+                            dtmf_queue->putDtmfAudio(buffer, got, ts);
+                        }
+                    }
+                }
+            }
+            if (got < 0) return -1;
+            if (got > 0) {
+                updateSendStats();
+                //CLASS_DBG("stream->put(%llu,%d)",ts,got);
+                return stream->put(ts, buffer, sample_rate, got);
+            }
+        }
     }
-  }
-  return 0;
+    return 0;
 }
 
 void AudioStreamData::mute(bool set_mute)
@@ -1195,6 +1219,21 @@ void AmB2BMedia::setFirstStreamInput(bool a_leg, AmAudio *in)
   else {
     if (in) {
       ERROR("BUG: can't set %s leg's first stream input, no streams\n", a_leg ? "A": "B");
+    }
+  }
+}
+
+void AmB2BMedia::setFirstStreamOutput(bool a_leg, AmAudio *out)
+{
+  AmLock lock(mutex);
+  if (!audio.empty()) {
+    AudioStreamIterator i = audio.begin();
+    if (a_leg) i->a.setOutput(out);
+    else i->b.setOutput(out);
+    updateAudioStreams();
+  } else {
+    if (out) {
+      ERROR("BUG: can't set %s leg's first stream output, no streams\n", a_leg ? "A": "B");
     }
   }
 }

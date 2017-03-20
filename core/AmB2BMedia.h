@@ -57,6 +57,8 @@ class AudioStreamData {
 
     /** Non-stream input (required for music on hold for example). */
     AmAudio *in;
+    /** Non-stream output */
+    AmAudio *out;
 
     /** Flag set when streams in A/B leg are correctly initialized (for
      * transcoding purposes). */
@@ -210,7 +212,9 @@ class AudioStreamData {
     void mute(bool set_mute);
     void setReceiving(bool r);
     void setInput(AmAudio *_in) { in = _in; }
+    void setOutput(AmAudio *_in) { out = _in; }
     AmAudio *getInput() { return in; }
+    AmAudio *getOutput() { return out; }
 
     void setLogger(msg_logger *logger) { if (stream) stream->setLogger(logger); }
 	void setSensor(msg_sensor *sensor) { if (stream) stream->setSensor(sensor); }
@@ -489,6 +493,7 @@ class AmB2BMedia: public AmMediaSession
     bool isMuted(bool a_leg) { if (a_leg) return a_leg_muted; else return b_leg_muted; }
 
     void setFirstStreamInput(bool a_leg, AmAudio *in);
+    void setFirstStreamOutput(bool a_leg, AmAudio *out);
     void createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer, bool use_zero_con);
 
     void setRtpLogger(msg_logger* _logger);
