@@ -1,3 +1,9 @@
+sems (1.7.29-2) stable; urgency=low
+
+  * cb3d1b729 sctp_bus: log reconnect timeout. clear last_connect_attempt on init
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 20 Mar 2017 19:25:56 +0200
+
 sems (1.7.29-1) stable; urgency=low
 
   * 951b8221b AmB2BMedia: implement non-stream mode using in/out AmAudio (needed for distributedB2B)
