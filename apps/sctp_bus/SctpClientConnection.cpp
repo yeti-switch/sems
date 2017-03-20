@@ -19,6 +19,7 @@ int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_
     set_addr(a);
     set_epoll_fd(efd);
     reconnect_interval = reconnect_seconds;
+    timerclear(&last_connect_attempt);
 
     if(-1 == connect())
         return -1;
@@ -36,6 +37,8 @@ int SctpClientConnection::connect()
     if((fd = socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP )) == -1)
         sctp_sys_err("socket()");
 
+    state = Connected;
+
     int opt = 1;
     if( ::setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&opt, sizeof(int)) < 0 )
         sctp_sys_err("setsockopt(IPPROTO_SCTP, SCTP_NODELAY)");
@@ -43,8 +46,6 @@ int SctpClientConnection::connect()
     struct sctp_event_subscribe event;
     event.sctp_association_event = 1;
     event.sctp_shutdown_event = 1;
-
-    state = Connected;
 
     if(::setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) < 0)
         sctp_sys_err("setsockopt(SCTP_EVENTS)");
@@ -204,12 +205,15 @@ void SctpClientConnection::on_timer()
 {
     /*DBG("client on timer. state = %d, last connect: %s",
         state,timeval2str_ntp(last_connect_attempt).c_str());*/
-    if(state!=Connected) {
+    if(state!=Connected && timerisset(&last_connect_attempt)) {
         timeval now, delta;
         gettimeofday(&now,NULL);
         timersub(&now,&last_connect_attempt,&delta);
-        if(delta.tv_sec > reconnect_interval)
+        if(delta.tv_sec > reconnect_interval) {
+            DBG("reconnect timeout for not connected %s:%d",
+                am_inet_ntop(&addr).c_str(),am_get_port(&addr));
             connect();
+        }
     }
 
     /*if(state==Connected) {
