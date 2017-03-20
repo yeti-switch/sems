@@ -1,3 +1,10 @@
+sems (1.7.29-1) stable; urgency=low
+
+  * 951b8221b AmB2BMedia: implement non-stream mode using in/out AmAudio (needed for distributedB2B)
+  * 77f7b81b0 ConferenceMixerAPI.h: remove duplicate declarations. adjust ConferenceChannel access modifiers
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 20 Mar 2017 14:10:14 +0200
+
 sems (1.7.28-4) stable; urgency=low
 
   * SIPRegistrarClient: fix typo in createRegistration processing
