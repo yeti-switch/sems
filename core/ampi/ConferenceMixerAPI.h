@@ -27,7 +27,6 @@ class RxRing;
 
 #define IS_VALID_MIXER_DESCRIPTOR(d) (d.raw!=-1 && d.ctx_idx < MAX_CHANNEL_CTX)
 
-
 typedef union {
         int64_t         raw;
         struct {
@@ -35,28 +34,6 @@ typedef union {
                         seq:32;
         };
 } mixer_descriptor_t;
-
-
-enum { ConfNewParticipant = 1,
-       ConfParticipantLeft };
-
-struct ConferenceEvent : public AmEvent
-{
-    unsigned int participants;
-    string       conf_id;
-    string       sess_id;
-
-    ConferenceEvent(int event_id,
-                  unsigned int participants,
-                  const string& conf_id,
-                  const string& sess_id)
-            : AmEvent(event_id),
-                participants(participants),
-                conf_id(conf_id),
-                sess_id(sess_id)
-    {}
-};
-
 
 struct mixer_ctx : public atomic_ref_cnt
 {
@@ -72,7 +49,6 @@ struct mixer_ctx : public atomic_ref_cnt
     void on_destroy();
 };
 
-
 struct ChannelCtx {
     int64_t             id;
     pthread_t           cur_pthread;
@@ -84,7 +60,6 @@ struct ChannelCtx {
     string              channel_id,
                         local_tag;
 };
-
 
 class ConferenceMixer :
         public AmPluginFactory,
@@ -201,36 +176,29 @@ public:
 
 /** must be inherited from AmAudio for DSMConfChannel */
 class ConferenceChannel
-        : public AmAudio
+  : public AmAudio
 {
     mixer_descriptor_t      md;
 
-    ConferenceChannel()     {}
-
-protected:
-  // Fake implement AmAudio's pure virtual methods
-  // this avoids to copy the samples locally by implementing only get/put
-    int read(unsigned int user_ts, unsigned int size){ return -1; }
-    int write(unsigned int user_ts, unsigned int size){ return -1; }
-
-    // override AmAudio
-    int get(unsigned long long system_ts, unsigned char* buffer,
-                int output_sample_rate, unsigned int nb_samples);
-    int put(unsigned long long system_ts, unsigned char* buffer,
-                int input_sample_rate, unsigned int size);
-
     void run_backlog(unsigned long long system_ts, unsigned char* buffer, MultiPartyMixer *mixer);
-
     void put_external(MultiPartyMixer *mixer,
                              int neighbor_idx,
                              unsigned long long ts,
                              unsigned char *buffer,
                              int sample_rate,
                              int size);
-
-public:
+  public:
     ConferenceChannel(mixer_descriptor_t md);
     ~ConferenceChannel();
+
+    //AmAudio interface
+    int read(unsigned int user_ts, unsigned int size){ return -1; }
+    int write(unsigned int user_ts, unsigned int size){ return -1; }
+
+    int get(unsigned long long system_ts, unsigned char* buffer,
+                int output_sample_rate, unsigned int nb_samples);
+    int put(unsigned long long system_ts, unsigned char* buffer,
+                int input_sample_rate, unsigned int size);
 };
 
 struct backlog {
