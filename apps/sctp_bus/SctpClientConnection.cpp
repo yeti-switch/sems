@@ -205,7 +205,7 @@ void SctpClientConnection::on_timer()
 {
     /*DBG("client on timer. state = %d, last connect: %s",
         state,timeval2str_ntp(last_connect_attempt).c_str());*/
-    if(state!=Connected && timerisset(&last_connect_attempt)) {
+    if(state==Closed && timerisset(&last_connect_attempt)) {
         timeval now, delta;
         gettimeofday(&now,NULL);
         timersub(&now,&last_connect_attempt,&delta);

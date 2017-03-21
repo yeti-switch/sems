@@ -1,3 +1,9 @@
+sems (1.7.29-3) stable; urgency=low
+
+  * sctp_bus: avoid reconnect in connecting state
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 21 Mar 2017 14:03:45 +0200
+
 sems (1.7.29-2) stable; urgency=low
 
   * cb3d1b729 sctp_bus: log reconnect timeout. clear last_connect_attempt on init
