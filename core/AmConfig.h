@@ -112,6 +112,9 @@ struct AmConfig
      */
     unsigned int SigSockOpts;
 
+    unsigned int tcp_connect_timeout;
+    unsigned int tcp_idle_timeout;
+
     /** RTP interface index */
     int RtpInterface;
 
@@ -167,6 +170,7 @@ struct AmConfig
   static vector<SysIntf> SysIfs;
 
   static int insert_SIP_interface(const SIP_interface& intf);
+  static int insert_SIP_interface_mapping(const SIP_interface& intf);
   static int insert_RTP_interface(const RTP_interface& intf);
   static int finalizeIPConfig();
 
@@ -237,6 +241,11 @@ struct AmConfig
       ApplicationSelector AppSelect;
   };
   static vector<app_selector> Applications;
+
+#ifdef WITH_ZRTP
+  static bool enable_zrtp;
+  static bool enable_zrtp_debuglog;
+#endif
 
   static unsigned int SessionLimit;
   static unsigned int SessionLimitErrCode;

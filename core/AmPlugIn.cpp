@@ -423,7 +423,8 @@ void AmPlugIn::getPayloads(vector<SdpPayload>& pl_vec) const
   for (std::map<int,int>::const_iterator it = payload_order.begin(); it != payload_order.end(); ++it) {
     std::map<int,amci_payload_t*>::const_iterator pl_it = payloads.find(it->second);
     if(pl_it != payloads.end()){
-      pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate, 0));
+      // if channels==2 use that value; otherwise don't add channels param
+      pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate, pl_it->second->channels==2?2:0));
     } else {
       ERROR("Payload %d (from the payload_order map) was not found in payloads map!\n", it->second);
     }
@@ -448,20 +449,22 @@ amci_subtype_t* AmPlugIn::subtype(amci_inoutfmt_t* iofmt, int subtype)
   return 0;
 }
 
-int AmPlugIn::subtypeID(amci_inoutfmt_t* iofmt, const string& subtype_name) {
+amci_subtype_t* AmPlugIn::subtype(amci_inoutfmt_t* iofmt, const string& subtype_name) {
   if(!iofmt)
-    return -1;
+    return NULL;
 
+  DBG("looking for subtype '%s'\n", subtype_name.c_str());
   amci_subtype_t* st = iofmt->subtypes;
   if(subtype_name.empty()) // default subtype wanted
-    return st->type;
+    return st;
 
   for(;;st++){
     if(!st || st->type<0) break;
-    if(st->name == subtype_name)
-      return st->type;
+    if(st->name == subtype_name) {
+      return st;
+    }
   }
-  return -1;
+  return NULL;
 }
 
 AmSessionFactory* AmPlugIn::getFactory4App(const string& app_name)

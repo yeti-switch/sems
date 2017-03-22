@@ -174,6 +174,12 @@ class UACAuth : public AmSessionEventHandler
 
   static void setServerSecret(const string& secret);
 
+  /** time-constant string compare function (but leaks timing of length mismatch)
+      @return true if matching */
+  static bool tc_isequal(const std::string& s1, const std::string& s2);
+  /** time-constant string compare function @return true if matching */
+  static bool tc_isequal(const char* s1, const char* s2, size_t len);
+
   static void checkAuthenticationByHA1(const AmSipRequest* req, const string& realm,
                                   const string& user, const string& HA1, AmArg& ret);
 

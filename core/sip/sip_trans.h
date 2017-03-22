@@ -37,10 +37,14 @@
 
 #include "msg_sensor.h"
 
+#include <list>
+using std::list;
+
 struct sip_msg;
+struct sip_target_set;
+
 class trsp_socket;
 class msg_logger;
-
 
 /**
  * Transaction types
@@ -81,7 +85,7 @@ class sip_trans;
 class trans_timer
     : protected timer
 {
-    trans_timer(const trans_timer& ti) {}
+    trans_timer(const trans_timer& ti) : timer() {}
 
 public:
     unsigned int type;
@@ -105,6 +109,7 @@ public:
 class sip_trans
 {
     trans_timer* timers[SIP_TRANS_TIMERS];
+
  public:
     /** Transaction type */
     unsigned int type;
@@ -130,6 +135,9 @@ class sip_trans
     /** Dialog-ID used for UAC transactions */
     cstring dialog_id;
 
+    /** Destination list for requests */
+    sip_target_set* targets;
+    
     /**
      * Retransmission buffer
      *  - UAC transaction: ACK
@@ -150,6 +158,9 @@ class sip_trans
     /** message logging */
     msg_logger* logger;
 	msg_sensor* sensor;
+
+    /** request canceled? */
+    bool canceled;
 
 	/** hack to memorize timer_m override */
 	unsigned int timer_m;

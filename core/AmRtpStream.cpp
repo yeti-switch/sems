@@ -277,26 +277,31 @@ int AmRtpStream::compile_and_send(const int payload, bool marker, unsigned int t
   rp.setAddr(&r_saddr);
 
 #ifdef WITH_ZRTP
-  if (session && session->zrtp_audio) {
-    zrtp_status_t status = zrtp_status_fail;
+  if (session && session->enable_zrtp){
+    if (NULL == session->zrtp_session_state.zrtp_audio) {
+      ERROR("ZRTP enabled on session, but no audio stream created\n");
+      return -1;
+    }
+
     unsigned int size = rp.getBufferSize();
-    status = zrtp_process_rtp(session->zrtp_audio, (char*)rp.getBuffer(), &size);
+    zrtp_status_t status = zrtp_process_rtp(session->zrtp_session_state.zrtp_audio,
+					    (char*)rp.getBuffer(), &size);
     switch (status) {
     case zrtp_status_drop: {
-      CLASS_DBG("ZRTP says: drop packet! %u - %u\n", size, rp.getBufferSize());
+      DBG("ZRTP says: drop packet! %u - %u\n", size, rp.getBufferSize());
       return 0;
     } 
     case zrtp_status_ok: {
-      //      CLASS_DBG("ZRTP says: ok!\n");
+      //      DBG("ZRTP says: ok!\n");
       if (rp.getBufferSize() != size)
-//       CLASS_DBG("SEND packet size before: %d, after %d\n", 
+//       DBG("SEND packet size before: %d, after %d\n", 
 // 	   rp.getBufferSize(), size);
       rp.setBufferSize(size);
     } break;
     default:
     case zrtp_status_fail: {
-      CLASS_DBG("ZRTP says: fail!\n");
-      //      CLASS_DBG("(f)");
+      DBG("ZRTP says: fail!\n");
+      //      DBG("(f)");
       return 0;
     }
 
@@ -845,8 +850,16 @@ void AmRtpStream::resume()
   receive_mut.lock();
   mem.clear();
   receive_buf.clear();
+  while (!rtp_ev_qu.empty())
+    rtp_ev_qu.pop();
   receive_mut.unlock();
   receiving = true;
+
+#ifdef WITH_ZRTP
+  if (session && session->enable_zrtp) {
+    session->zrtp_session_state.startStreams(get_ssrc());
+  }
+#endif
 }
 
 void AmRtpStream::setOnHold(bool on_hold) {
@@ -943,26 +956,36 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
   // }  
 
 #ifdef WITH_ZRTP
-  if (session->zrtp_audio) {
+  if (session && session->enable_zrtp) {
 
-    zrtp_status_t status = zrtp_status_fail;
-    unsigned int size = p->getBufferSize();
-    
-    status = zrtp_process_srtp(session->zrtp_audio, (char*)p->getBuffer(), &size);
+    if (NULL == session->zrtp_session_state.zrtp_audio) {
+      WARN("dropping received packet, as there's no ZRTP stream initialized\n");
+      receive_mut.unlock();
+      mem.freePacket(p);
+      return;      
+    }
+ 
+    unsigned int size = p->getBufferSize();    
+    zrtp_status_t status = zrtp_process_srtp(session->zrtp_session_state.zrtp_audio, (char*)p->getBuffer(), &size);
     switch (status)
       {
       case zrtp_status_forward:
       case zrtp_status_ok: {
 	p->setBufferSize(size);
 	if (p->parse() < 0) {
-	  CLASS_ERROR("parsing decoded packet!\n");
+	  ERROR("parsing decoded packet!\n");
 	  mem.freePacket(p);
 	} else {
+
           if(p->payload == getLocalTelephoneEventPT()) {
             rtp_ev_qu.push(p);
           } else {
-	    receive_buf[p->timestamp] = p;
+	    if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
+	      // insert failed
+	      mem.freePacket(p);
+	    }
           }
+
 	}
       }	break;
 
@@ -1118,9 +1141,14 @@ void AmRtpStream::recvPacket(int fd)
 
     gettimeofday(&p->recv_time,NULL);
     
-    if(!relay_raw)
-      parse_res = p->parse(this);
- 
+    if(!relay_raw
+#ifdef WITH_ZRTP
+       && !(session && session->enable_zrtp)
+#endif
+       ) {
+      parse_res = p->parse();
+    }
+
     if (parse_res == -1) {
 	  rtp_parse_errors++;
 	  CLASS_ERROR("error while parsing RTP packet. "
@@ -1183,11 +1211,16 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
   // clear RTP timer
   clearRTPTimeout();
 
+  handleSymmetricRtp(&recv_addr,true);
+
   if(!relay_enabled || !relay_stream ||
      !relay_stream->l_sd)
     return;
 
-  handleSymmetricRtp(&recv_addr,true);
+  if((size_t)recved_bytes > sizeof(buffer)) {
+    ERROR("recved huge RTCP packet (%d)",recved_bytes);
+    return;
+  }
 
   struct sockaddr_storage rtcp_raddr;
   memcpy(&rtcp_raddr,&relay_stream->r_saddr,sizeof(rtcp_raddr));

@@ -392,13 +392,15 @@ bool AmUriParser::parse_params(const string& line, int& pos) {
       add_param(params, line.substr(p1, p2-p1), line.substr(p2+1, pos-p2 -1));
     else 
       add_param(params, line.substr(p1, p2-p1), line.substr(p2+1, pos-p2));
+  } else if (st == pS1) {
+	  add_param(params, line.substr(p1, pos-p1), "");
   }
   return true;
 }
 
 bool AmUriParser::parse_nameaddr(const string& line) {
-  size_t end;
-  return parse_contact(line, 0, end);
+  size_t pos=0; size_t end=0;
+  return parse_contact(line, pos, end);
 }
 
 bool AmUriParser::parse_contact(const string& line, size_t pos, size_t& end) {
@@ -508,12 +510,16 @@ string AmUriParser::uri_str() const
     res += ";" + uri_param;
   }
 
+  if (!uri_headers.empty()) {
+    res+="?" + uri_headers;
+  }
+
   return res;
 }
 
 string AmUriParser::canon_uri_str() const
 {
-  string res = "sip:";
+  string res = "sip:"; // fixme: always SIP...
   if(!uri_user.empty()) {
     res += uri_user + "@";
   }

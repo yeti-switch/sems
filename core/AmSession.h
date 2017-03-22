@@ -42,7 +42,7 @@
 #include "AmMediaProcessor.h"
 
 #ifdef WITH_ZRTP
-#include "zrtp/zrtp.h"
+#include "AmZRTP.h"
 #endif
 
 #include <string>
@@ -68,7 +68,7 @@ class AmDtmfEvent;
  * The session is identified by Call-ID, From-Tag and To-Tag.
  */
 class AmSession : 
-  public AmObject,
+  public virtual AmObject,
 #ifndef SESSION_THREADPOOL
   public AmThread,
 #endif
@@ -197,11 +197,11 @@ public:
   AmRtpAudio* releaseRtpStream() { return _rtp_str.release(); }
 
 #ifdef WITH_ZRTP
-  zrtp_conn_ctx_t*    zrtp_session; // ZRTP session
-  zrtp_stream_ctx_t*  zrtp_audio;   // ZRTP stream for audio
+  AmZRTPSessionState zrtp_session_state;
 
   /** must be set before session is started! i.e. in constructor */
   bool enable_zrtp;
+
 #endif
 
   AmSipDialog* dlg;
@@ -570,7 +570,8 @@ public:
   /**
    * ZRTP events @see ZRTP
    */
-  virtual void onZRTPEvent(zrtp_event_t event, zrtp_stream_ctx_t *stream_ctx);
+  virtual void onZRTPProtocolEvent(zrtp_protocol_event_t event, zrtp_stream_t *stream_ctx);
+  virtual void onZRTPSecurityEvent(zrtp_security_event_t event, zrtp_stream_t *stream_ctx);
 #endif
   /** This callback is called on exception during onInvite() execution */
   virtual void onInviteException(int code,string reason,bool no_reply) {}
@@ -643,6 +644,7 @@ public:
   virtual void onRTPStreamDestroy(AmRtpStream *stream) {}
 
   int getRtpInterface();
+  void setRtpInterface(int _rtp_interface);
 };
 
 inline AmRtpAudio* AmSession::RTPStream() {

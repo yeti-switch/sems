@@ -68,7 +68,9 @@ public:
   }
 };
 
-_AmAppTimer::_AmAppTimer() {
+_AmAppTimer::_AmAppTimer()
+  : direct_timers_mut(true)
+{
 }
 
 _AmAppTimer::~_AmAppTimer() {
@@ -88,8 +90,8 @@ void _AmAppTimer::app_timer_cb(app_timer* at)
       user_timers[at->get_q_id()][at->get_id()] = at_local;
     } else {
       DBG("timer fired: %d for '%s'\n", at->get_id(), at->get_q_id().c_str());
-	  AmSessionContainer::instance()->postEvent(at->get_q_id(),
-					  new AmTimeoutEvent(at->get_id()));
+      AmSessionContainer::instance()->postEvent(at->get_q_id(),
+						new AmTimeoutEvent(at->get_id()));
       delete at;
     }
 

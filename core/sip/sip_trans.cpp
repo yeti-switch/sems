@@ -35,6 +35,7 @@
 #include "trans_layer.h"
 #include "transport.h"
 #include "msg_logger.h"
+#include "ip_util.h"
 
 #include "log.h"
 
@@ -67,13 +68,15 @@ inline trans_timer** fetch_timer(unsigned int timer_type, trans_timer** base)
 
 sip_trans::sip_trans()
     : msg(NULL),
+      targets(NULL),
       retr_buf(NULL),
       retr_socket(NULL),
       retr_len(0),
       last_rseq(0),
-	  logger(NULL),
-	  sensor(NULL),
-	  timer_m(0)
+      logger(NULL),
+      canceled(false),
+      sensor(NULL),
+      timer_m(0)
 {
     memset(timers,0,SIP_TRANS_TIMERS*sizeof(void*));
 }
@@ -82,6 +85,7 @@ sip_trans::~sip_trans()
 {
     reset_all_timers();
     delete msg;
+    delete targets;
     delete [] retr_buf;
     if(retr_socket){
 	dec_ref(retr_socket);
@@ -109,7 +113,7 @@ void sip_trans::retransmit()
     }
     assert(retr_socket);
 
-    int send_err = retr_socket->send(&retr_addr,retr_buf,retr_len);
+    int send_err = retr_socket->send(&retr_addr,retr_buf,retr_len,flags);
     if(send_err < 0){
 	ERROR("Error from transport layer\n");
     }
@@ -288,9 +292,12 @@ const char* sip_trans::state_str() const
 void sip_trans::dump() const
 {
     DBG("type=%s (0x%x); msg=%p; to_tag=%.*s;"
-	" reply_status=%i; state=%s (%i); retr_buf=%p\n",
+	" reply_status=%i; state=%s (%i); retr_buf=%p; timers [%s,%s,%s]\n",
 	type_str(),type,msg,to_tag.len,to_tag.s,
-	reply_status,state_str(),state,retr_buf);
+	reply_status,state_str(),state,retr_buf,
+	timers[0]==NULL?"none":timer_name(timers[0]->type),
+	timers[1]==NULL?"none":timer_name(timers[1]->type),
+	timers[2]==NULL?"none":timer_name(timers[2]->type));
 }
 
 /** EMACS **

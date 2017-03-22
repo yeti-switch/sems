@@ -43,6 +43,7 @@
 #include "AmSessionContainer.h"
 #include "Am100rel.h"
 #include "sip/transport.h"
+#include "sip/resolver.h"
 #include "sip/ip_util.h"
 #include "sip/sip_timers.h"
 #include "sip/raw_sender.h"
@@ -111,6 +112,11 @@ string       AmConfig::PcapUploadQueueName     = "";
 
 bool         AmConfig::enableRTSP              = false;
 
+#ifdef WITH_ZRTP
+bool         AmConfig::enable_zrtp             = true;
+bool         AmConfig::enable_zrtp_debuglog    = true;
+#endif
+
 unsigned int AmConfig::SessionLimit            = 0;
 unsigned int AmConfig::SessionLimitErrCode     = 503;
 string       AmConfig::SessionLimitErrReason   = "Server overload";
@@ -160,7 +166,8 @@ static int readInterfaces(AmConfigReader& cfg);
 
 AmConfig::IP_interface::IP_interface()
   : LocalIP(),
-    PublicIP()
+    PublicIP(),
+    NetIfIdx(0)
 {
 }
 
@@ -168,7 +175,9 @@ AmConfig::SIP_interface::SIP_interface()
   : IP_interface(),
     LocalPort(5060),
     SigSockOpts(0),
-    RtpInterface(-1)
+    RtpInterface(-1),
+    tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT),
+    tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT)
 {
 }
 
@@ -419,7 +428,7 @@ int AmConfig::readConfiguration()
   }
 
   if(cfg.hasParameter("disable_dns_srv")) {
-    DisableDNSSRV = (cfg.getParameter("disable_dns_srv") == "yes");
+    _resolver::disable_srv = (cfg.getParameter("disable_dns_srv") == "yes");
   }
   
 
@@ -645,6 +654,14 @@ int AmConfig::readConfiguration()
     }
   }
 
+#ifdef WITH_ZRTP
+  enable_zrtp = cfg.getParameter("enable_zrtp", "yes") == "yes";
+  INFO("ZRTP %sabled\n", enable_zrtp ? "en":"dis");
+
+  enable_zrtp_debuglog = cfg.getParameter("enable_zrtp_debuglog", "yes") == "yes";
+  INFO("ZRTP debug log %sabled\n", enable_zrtp_debuglog ? "en":"dis");
+#endif
+
   if(cfg.hasParameter("session_limit")){ 
     vector<string> limit = explode(cfg.getParameter("session_limit"), ";");
     if (limit.size() != 3) {
@@ -736,43 +753,16 @@ int AmConfig::readConfiguration()
 
 int AmConfig::insert_SIP_interface(const SIP_interface& intf)
 {
-  if(SIP_If_names.find(intf.name) !=
-     SIP_If_names.end()) {
-
+  static map<string,unsigned short>::const_iterator if_name_it = SIP_If_names.find(intf.name);
+  if(if_name_it != SIP_If_names.end()) {
     if(intf.name != "default") {
       ERROR("duplicated interface name '%s'\n",intf.name.c_str());
       return -1;
     }
-
-    unsigned int idx = SIP_If_names[intf.name];
-    SIP_Ifs[idx] = intf;
-  }
-  else {
+    SIP_Ifs[if_name_it->second] = intf;
+  } else {
     SIP_Ifs.push_back(intf);
-    unsigned int idx = SIP_Ifs.size()-1;
-    SIP_If_names[intf.name] = idx;
-
-    if(LocalSIPIP2If.find(intf.LocalIP) == 
-       LocalSIPIP2If.end()) {
-
-      LocalSIPIP2If.insert(make_pair(intf.LocalIP,idx));
-    }
-    else {
-      map<string,unsigned short>::iterator it = 
-	LocalSIPIP2If.find(intf.LocalIP);
-
-      const SIP_interface& old_intf = SIP_Ifs[it->second];
-      if(intf.LocalPort == old_intf.LocalPort) {
-	ERROR("duplicated signaling interfaces "
-	      "(%s and %s) detected using %s:%u",
-	      old_intf.name.c_str(),intf.name.c_str(),
-	      intf.LocalIP.c_str(),intf.LocalPort);
-
-	return -1;
-      }
-    }
   }
-
   return 0;
 }
 
@@ -813,6 +803,28 @@ static int readACL(AmConfigReader& cfg, trsp_acl &acl, const string list_key, co
         return 1;
     }
     return 0;
+}
+
+int AmConfig::insert_SIP_interface_mapping(const SIP_interface& intf) {
+  unsigned int idx = SIP_If_names[intf.name];
+
+  string if_local_ip = intf.LocalIP;
+
+  map<string,unsigned short>::iterator it = LocalSIPIP2If.find(if_local_ip);
+  if(it == LocalSIPIP2If.end()) {
+    LocalSIPIP2If.emplace(if_local_ip,idx);
+  } else {
+    const SIP_interface& old_intf = SIP_Ifs[it->second];
+    if(intf.LocalPort == old_intf.LocalPort) {
+      ERROR("duplicated signaling interfaces  (%s and %s) detected using %s:%u",
+	    old_intf.name.c_str(), intf.name.c_str(), if_local_ip.c_str(), intf.LocalPort);
+      return -1;
+    }
+    // two interfaces on the sample IP - the one on port 5060 has priority
+    if (intf.LocalPort == 5060)
+      LocalSIPIP2If.insert(make_pair(if_local_ip,idx));
+  }
+  return 0;
 }
 
 static int readSIPInterface(AmConfigReader& cfg, const string& i_name)
@@ -856,21 +868,28 @@ static int readSIPInterface(AmConfigReader& cfg, const string& i_name)
 	it_opt != opt_strs.end(); ++it_opt) {
       if(*it_opt == "force_via_address") {
 	opts |= trsp_socket::force_via_address;
-      }
-      else if(*it_opt == "use_raw_sockets") {
+      } else if(*it_opt == "use_raw_sockets") {
           if(AmConfig::UseRawSockets)
             opts |= trsp_socket::use_raw_sockets;
           else
             WARN("raw sockets globally disabled but there is a try to enable for SIP interface %s",
                  i_name.c_str());
-      }
-      else {
-	WARN("unknown signaling socket option '%s' set on interface '%s'\n",
-	     it_opt->c_str(),i_name.c_str());
+      } else if(*it_opt == "no_transport_in_contact") {
+        opts |= trsp_socket::no_transport_in_contact;
+      } else {
+        WARN("unknown signaling socket option '%s' set on interface '%s'\n",
+             it_opt->c_str(),i_name.c_str());
       }
     }
     intf.SigSockOpts = opts;
   }
+
+  intf.tcp_connect_timeout =
+    cfg.getParameterInt("tcp_connect_timeout" + suffix,
+			DEFAULT_TCP_CONNECT_TIMEOUT);
+
+  intf.tcp_idle_timeout =
+    cfg.getParameterInt("tcp_idle_timeout" + suffix, DEFAULT_TCP_IDLE_TIMEOUT);
 
   if(!i_name.empty())
     intf.name = i_name;
@@ -1131,6 +1150,10 @@ static bool fillSysIntfList()
   freeifaddrs(ifap);
   close(fd);
 
+  return true;
+}
+
+static void fillMissingLocalSIPIPfromSysIntfs() {
   // add addresses from SysIntfList, if not present
   for(unsigned int idx = 0; idx < AmConfig::SIP_Ifs.size(); idx++) {
 
@@ -1153,13 +1176,12 @@ static bool fillSysIntfList()
 
       if(AmConfig::LocalSIPIP2If.find(intf_it->addrs.front().addr)
 	 == AmConfig::LocalSIPIP2If.end()) {
-	
+	DBG("mapping unmapped IP address '%s' to interface #%u \n",
+	    intf_it->addrs.front().addr.c_str(), idx);
 	AmConfig::LocalSIPIP2If[intf_it->addrs.front().addr] = idx;
       }
     }
   }
-
-  return true;
 }
 
 /** Get the AF_INET[6] address associated with the network interface */
@@ -1247,6 +1269,9 @@ int AmConfig::finalizeIPConfig()
     if(!it->LocalPort)
       it->LocalPort = 5060;
 
+    if (insert_SIP_interface_mapping(*it)<0)
+      return -1;
+
     setNetInterface(&(*it));
   }
 
@@ -1286,7 +1311,7 @@ int AmConfig::finalizeIPConfig()
       return -1;
     }
     SIP_Ifs.push_back(intf);
-    setNetInterface(&(*SIP_Ifs.begin()));
+//    setNetInterface(&(*SIP_Ifs.begin()));
     SIP_If_names["default"] = 0;
   }
 
@@ -1298,9 +1323,11 @@ int AmConfig::finalizeIPConfig()
       return -1;
     }
     RTP_Ifs.push_back(intf);
-    setNetInterface(&(*RTP_Ifs.begin()));
+//   setNetInterface(&(*RTP_Ifs.begin()));
     RTP_If_names["default"] = 0;
   }
+
+  fillMissingLocalSIPIPfromSysIntfs();
 
   return 0;
 }
@@ -1313,9 +1340,11 @@ void AmConfig::dump_Ifs()
     SIP_interface& it_ref = SIP_Ifs[i];
 
     INFO("\t(%i) name='%s'" ";LocalIP='%s'" 
-	 ";LocalPort='%u'" ";PublicIP='%s'",
+	 ";LocalPort='%u'" ";PublicIP='%s';TCP=%u/%u",
 	 i,it_ref.name.c_str(),it_ref.LocalIP.c_str(),
-	 it_ref.LocalPort,it_ref.PublicIP.c_str());
+	 it_ref.LocalPort,it_ref.PublicIP.c_str(),
+	 it_ref.tcp_connect_timeout,
+	 it_ref.tcp_idle_timeout);
   }
   
   INFO("Signaling address map:");

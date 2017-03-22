@@ -39,7 +39,6 @@ using std::list;
 
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <time.h>
 
 struct sip_request;
 struct sip_reply;
@@ -92,6 +91,10 @@ struct sip_reply
     sip_reply()
 	: code(0)
     {}
+
+    sip_reply(int code, const cstring& reason)
+	: code(code), reason(reason)
+    {}
 };
 
 
@@ -102,7 +105,7 @@ struct sip_msg
 
     // Request or Reply?
     int     type; 
-    
+
     union {
 	sip_request* request;
 	sip_reply*   reply;
@@ -133,15 +136,16 @@ struct sip_msg
     trsp_socket*       local_socket;
 
     sockaddr_storage   remote_ip;
-    dns_handle         h_dns;
-    
-	struct timeval     recv_timestamp;
+
+    timeval recv_timestamp;
 
     sip_msg();
     sip_msg(const char* msg_buf, int msg_len);
     ~sip_msg();
 
-    int send();
+    void copy_msg_buf(const char* msg_buf, int msg_len);
+
+    int send(unsigned flags);
 
     /**
      * Releases pointers otherwise deleted by the destructor

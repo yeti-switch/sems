@@ -182,13 +182,19 @@ protected:
   virtual bool onRxReqStatus(const AmSipRequest& req) { return true; }
 
   /**
+   * Basic sanity check on received replies
+   *
+   * @return true to continue processing, false otherwise
+   */
+  virtual bool onRxReplySanity(const AmSipReply& reply);
+
+  /**
    * Executed from onRxReply() to allow inherited classes
    * to extend the basic behavior (deletes the transaction on final reply).
    *
    * @return true to continue processing, false otherwise
    */
-  virtual bool onRxReplyStatus(const AmSipReply& reply, 
-			       TransMap::iterator t_uac_it);
+  virtual bool onRxReplyStatus(const AmSipReply& reply);
 
   /**
    * Terminate pending UAS transactions
@@ -316,6 +322,11 @@ public:
   string getContactHdr();
 
   /**
+   * Compute the Contact URI for the next request
+   */
+  string getContactUri();
+
+  /**
    * Compute the Route-HF for the next request
    */
   string getRoute();
@@ -385,6 +396,8 @@ public:
     termUasTrans();
     termUacTrans();
   }
+
+  virtual void dropTransactions();
 
   /**
    * This method should only be used to send responses
@@ -462,6 +475,10 @@ class AmBasicSipEventHandler
    * reply has been rejected by the local SIP UA layer.
    */
   virtual void onFailure() {}
+
+  // called upon finishing either UAC or UAS transaction
+  virtual void onTransFinished() { }
+
 
   virtual ~AmBasicSipEventHandler() {}
 };

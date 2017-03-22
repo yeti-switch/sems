@@ -31,7 +31,13 @@
 #include "hash.h"
 
 #include "parse_dns.h"
+#include "parse_common.h"
 #include "ip_util.h"
+#include "trans_layer.h"
+#include "tr_blacklist.h"
+#include "wheeltimer.h"
+
+#include "AmUtils.h"
 
 #include <sys/socket.h> 
 #include <netdb.h>
@@ -42,9 +48,11 @@
 #include <arpa/nameser.h> 
 
 #include <list>
+#include <utility>
 #include <algorithm>
 
 using std::pair;
+using std::make_pair;
 using std::list;
 
 #include "log.h"
@@ -58,26 +66,12 @@ using std::list;
 // (the limit is the # bits in dns_handle::srv_used)
 #define MAX_SRV_RR (sizeof(unsigned int)*8)
 
-/* The SEMS_GET16 macro and the sems_get16 function were copied from glibc 2.7
- * (include/arpa/nameser.h (NS_GET16) and resolv/ns_netint.c (ns_get16)) to
- *  avoid using private glibc functions.
- */
+/* in seconds */
+#define DNS_CACHE_CYCLE 10L
 
-# define SEMS_GET16(s, cp)              \
-  do {                                  \
-    uint16_t *t_cp = (uint16_t *) (cp); \
-    (s) = ntohs (*t_cp);                \
-    (cp) += NS_INT16SZ;                 \
-} while (0)
-
-u_int
-sems_get16(const u_char *src)
-{
-       u_int dst;
-
-       SEMS_GET16(dst, src);
-       return (dst);
-}
+/* in us */
+#define DNS_CACHE_SINGLE_CYCLE \
+  ((DNS_CACHE_CYCLE*1000000L)/DNS_CACHE_SIZE)
 
 struct srv_entry
     : public dns_base_entry
@@ -87,6 +81,8 @@ struct srv_entry
 
     unsigned short port;
     string       target;
+
+    virtual string to_str();
 };
 
 int dns_ip_entry::next_ip(dns_handle* h, sockaddr_storage* sa)
@@ -94,11 +90,13 @@ int dns_ip_entry::next_ip(dns_handle* h, sockaddr_storage* sa)
     if(h->ip_e != this){
 	if(h->ip_e) dec_ref(h->ip_e);
 	h->ip_e = this;
+	inc_ref(this);
 	h->ip_n = 0;
     }
     
     int& index = h->ip_n;
-    if(index >= (int)ip_vec.size()) return -1;
+    if((index < 0) || (index >= (int)ip_vec.size()))
+	return -1;
     
     //copy address
     ((ip_entry*)ip_vec[index++])->to_sa(sa);
@@ -186,6 +184,7 @@ public:
 	if(h->srv_e != this){
 	    if(h->srv_e) dec_ref(h->srv_e);
 	    h->srv_e = this;
+	    inc_ref(this);
 	    h->srv_n = 0;
 	    h->srv_used = 0;
 	}
@@ -200,6 +199,10 @@ public:
 	    }
 	    return h->ip_e->next_ip(h,sa);
 	}
+
+	if((index < 0) ||
+	   (index >= (int)ip_vec.size()))
+	    return -1;
 	
 	// reset IP record
 	if(h->ip_e){
@@ -303,6 +306,7 @@ dns_entry::dns_entry()
 
 dns_entry::~dns_entry()
 {
+    DBG("dns_entry::~dns_entry(): %s",to_str().c_str());
     for(vector<dns_base_entry*>::iterator it = ip_vec.begin();
 	it != ip_vec.end(); ++it) {
 
@@ -310,14 +314,16 @@ dns_entry::~dns_entry()
     }
 }
 
-dns_entry* dns_entry::make_entry(ns_type t, unsigned short srv_port)
+dns_entry* dns_entry::make_entry(dns_rr_type t, unsigned short srv_port)
 {
     switch(t){
-    case ns_t_srv:
-    return new dns_srv_entry(srv_port);
-    case ns_t_a:
-    //case ns_t_aaaa:
+    case dns_r_srv:
+	return new dns_srv_entry(srv_port);
+    case dns_r_a:
+    //case dns_r_aaaa:
 	return new dns_ip_entry();
+    case dns_r_naptr:
+	return new dns_naptr_entry();
     default:
 	return NULL;
     }
@@ -333,6 +339,22 @@ void dns_entry::add_rr(dns_record* rr, u_char* begin, u_char* end, long now)
 	expire = e->expire;
 
     ip_vec.push_back(e);
+}
+
+string dns_entry::to_str()
+{
+    string res;
+
+    for(vector<dns_base_entry*>::iterator it = ip_vec.begin();
+	it != ip_vec.end(); it++) {
+	
+	if(it != ip_vec.begin())
+	    res += ", ";
+
+	res += (*it)->to_str();
+    }
+
+    return "[" + res + "]";
 }
 
 dns_bucket::dns_bucket(unsigned long id) 
@@ -388,9 +410,8 @@ dns_entry* dns_bucket::find(const string& name)
 
     dns_entry* e = it->second;
 
-    timeval now;
-    gettimeofday(&now,NULL);
-    if(now.tv_sec >= e->expire){
+    u_int64_t now = wheeltimer::instance()->unix_clock.get();
+    if(now >= e->expire){
 	elmts.erase(it);
 	dec_ref(e);
 	unlock();
@@ -402,7 +423,7 @@ dns_entry* dns_bucket::find(const string& name)
     return e;
 }
 
-static void dns_error(int error, const char* domain, ns_type type)
+static void dns_error(int error, const char* domain, dns_rr_type type)
 {
     switch(error){
         case HOST_NOT_FOUND:
@@ -445,6 +466,22 @@ void ip_entry::to_sa(sockaddr_storage* sa)
     }
 }
 
+string ip_entry::to_str()
+{
+    if(type == IPv4) {
+	u_char* cp = (u_char*)&addr;
+	return int2str(cp[0]) + 
+	    "." + int2str(cp[1]) + 
+	    "." + int2str(cp[2]) + 
+	    "." + int2str(cp[3]);
+    }
+    else {
+	// not supported yet...
+	return "[IPv6]";
+    }
+}
+
+
 void ip_port_entry::to_sa(sockaddr_storage* sa)
 {
     DBG("copying ip_port_entry...");
@@ -471,6 +508,11 @@ void ip_port_entry::to_sa(sockaddr_storage* sa)
     default:
 	break;
     }
+}
+
+string ip_port_entry::to_str()
+{
+    return ip_entry::to_str() + ":" + int2str(port);
 }
 
 dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
@@ -515,39 +557,63 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
     DBG("SRV:\tTTL=%i\t%s\tP=<%i> W=<%i> P=<%i> T=<%s>\n",
     	ns_rr_ttl(*rr),
     	ns_rr_name(*rr),
-    	sems_get16(rdata),
-    	sems_get16(rdata+2),
-    	sems_get16(rdata+4),
+    	dns_get_16(rdata),
+    	dns_get_16(rdata+2),
+    	dns_get_16(rdata+4),
     	name_buf);
     
     srv_entry* srv_r = new srv_entry();
-    srv_r->p = sems_get16(rdata);
-    srv_r->w = sems_get16(rdata+2);
-    srv_r->port = sems_get16(rdata+4);
+    srv_r->p = dns_get_16(rdata);
+    srv_r->w = dns_get_16(rdata+2);
+    srv_r->port = dns_get_16(rdata+4);
     srv_r->target = (const char*)name_buf;
 
     return srv_r;
 }
 
-struct dns_entry_h
+string srv_entry::to_str()
 {
-    dns_entry* e;
-    long     now;
+    return target + ":" + int2str(port)
+	+ "/" + int2str(p)
+	+ "/" + int2str(w);
+};
+
+struct dns_search_h
+{
+    dns_entry_map entry_map;
+    uint64_t      now;
+
+    dns_search_h() {
+	now = wheeltimer::instance()->unix_clock.get();
+    }
 };
 
 int rr_to_dns_entry(dns_record* rr, dns_section_type t,
 		    u_char* begin, u_char* end, void* data)
 {
-    dns_entry* dns_e = ((dns_entry_h*)data)->e;
-    long     now = ((dns_entry_h*)data)->now;
+    // only answer and additional sections
+    if(t != dns_s_an && t != dns_s_ar)
+	return 0;
 
-    if(t == dns_s_an)
-	dns_e->add_rr(rr,begin,end,now);
+    dns_search_h* h = (dns_search_h*)data;
+    string name = ns_rr_name(*rr);
 
-    // TODO: parse the additional section as well.
-    //       there might be some A/AAAA records related to
-    //       the SRV targets.
-    
+    dns_entry* dns_e = NULL;
+    dns_entry_map::iterator it = h->entry_map.find(name);
+
+    if(it == h->entry_map.end()) {
+	dns_e = dns_entry::make_entry((dns_rr_type)rr->type);
+	if(!dns_e) {
+	    // unsupported record type
+	    return 0;
+	}
+	h->entry_map.insert(name,dns_e);
+    }
+    else {
+	dns_e = it->second;
+    }
+
+    dns_e->add_rr(rr,begin,end,h->now);
     return 0;
 }
 
@@ -605,45 +671,196 @@ const dns_handle& dns_handle::operator = (const dns_handle& rh)
     return *this;
 }
 
-void dns_handle::dump(AmArg &ret){
-	if(srv_e){
-		DBG("srv_e");
-		ret["type"] = "srv";
-		ret["port"] = port;
-		AmArg &entries = ret["entries"];
+static bool naptr_less(const dns_base_entry* le, const dns_base_entry* re)
+{
+    const naptr_record* l_naptr = (const naptr_record*)le;
+    const naptr_record* r_naptr = (const naptr_record*)re;
 
-		vector<dns_base_entry*> &v = srv_e->ip_vec;
-		for(int i = 0;i < (int)v.size();i++){
-			entries.push(AmArg());
-			AmArg &a = entries.back();
-
-			srv_entry *e = (srv_entry *)v[i];
-
-			a["priority"] = e->p;
-			a["weight"] = e->w;
-			a["port"] = e->port;
-			a["target"] = e->target;
-		}
-
-	} else if(ip_e){ //ip_e
-		char host[NI_MAXHOST] = "";
-		sockaddr_storage ss;
-
-		ret["type"] = "ip";
-		AmArg &entries = ret["entries"];
-		vector<dns_base_entry*> &v = ip_e->ip_vec;
-		for(int i = 0;i < (int)v.size();i++){
-			entries.push(AmArg());
-			AmArg &a = entries.back();
-
-			ip_entry *e = (ip_entry *)v[i];
-			e->to_sa(&ss);
-			a["addr"] = am_inet_ntop_sip(&ss,host,NI_MAXHOST);
-		}
-	} else {
-		ret["type"] = "unknown";
-	}
+    if(l_naptr->order != r_naptr->order)
+	return l_naptr->order < r_naptr->order;
+    else
+	return l_naptr->pref < r_naptr->pref;
 }
+
+void dns_naptr_entry::init()
+{
+    stable_sort(ip_vec.begin(),ip_vec.end(),naptr_less);
+}
+
+dns_base_entry* dns_naptr_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
+{
+    enum NAPTR_FieldIndex {
+	NAPTR_Flags       = 0,
+	NAPTR_Services    = 1,
+	NAPTR_Regexp      = 2,
+	NAPTR_Replacement = 3,
+	NAPTR_Fields
+    };
+
+    if(rr->type != dns_r_naptr)
+	return NULL;
+
+    const u_char * rdata = ns_rr_rdata(*rr);
+
+    unsigned short order = dns_get_16(rdata);
+    rdata += 2;
+
+    unsigned short pref = dns_get_16(rdata);
+    rdata += 2;
+
+    cstring fields[NAPTR_Fields];
+
+    for(int i=0; i < NAPTR_Fields; i++) {
+
+	if(rdata > end) {
+	    ERROR("corrupted NAPTR record!!\n");
+	    return NULL;
+	}
+
+	fields[i].len = *(rdata++);
+	fields[i].s = (const char*)rdata;
+
+	rdata += fields[i].len;
+    }
+
+    printf("ENUM: TTL=%i P=<%i> W=<%i>"
+	   " FL=<%.*s> S=<%.*s>"
+	   " REG=<%.*s> REPL=<%.*s>\n",
+	   ns_rr_ttl(*rr),
+	   order, pref,
+	   fields[NAPTR_Flags].len,       fields[NAPTR_Flags].s,
+	   fields[NAPTR_Services].len,    fields[NAPTR_Services].s,
+	   fields[NAPTR_Regexp].len,      fields[NAPTR_Regexp].s,
+	   fields[NAPTR_Replacement].len, fields[NAPTR_Replacement].s);
+
+    naptr_record* naptr_r = new naptr_record();
+    naptr_r->order = order;
+    naptr_r->pref  = pref;
+    naptr_r->flags = c2stlstr(fields[NAPTR_Flags]);
+    naptr_r->services = c2stlstr(fields[NAPTR_Services]);
+    naptr_r->regexp = c2stlstr(fields[NAPTR_Regexp]);
+    naptr_r->replace = c2stlstr(fields[NAPTR_Replacement]);
+
+    return naptr_r;
+}
+
+sip_target::sip_target() {}
+
+sip_target::sip_target(const sip_target& target)
+{
+    *this = target;
+}
+
+const sip_target& sip_target::operator = (const sip_target& target)
+{
+    memcpy(&ss,&target.ss,sizeof(sockaddr_storage));
+    memcpy(trsp,target.trsp,SIP_TRSP_SIZE_MAX+1);
+    return target;
+}
+
+void sip_target::clear()
+{
+    memset(&ss,0,sizeof(sockaddr_storage));
+    memset(trsp,'\0',SIP_TRSP_SIZE_MAX+1);
+}
+
+sip_target_set::sip_target_set()
+    : dest_list(),
+      dest_list_it(dest_list.begin())
+{}
+
+void sip_target_set::reset_iterator()
+{
+    dest_list_it = dest_list.begin();
+}
+
+bool sip_target_set::has_next()
+{
+    return dest_list_it != dest_list.end();
+}
+
+int sip_target_set::get_next(sockaddr_storage* ss, cstring& next_trsp,
+			     unsigned int flags)
+{
+    do {
+	if(!has_next())
+	    return -1;
+
+	sip_target& t = *dest_list_it;
+	memcpy(ss,&t.ss,sizeof(sockaddr_storage));
+	next_trsp = cstring(t.trsp);
+
+	next();
+
+	// set default transport to UDP
+	if(!next_trsp.len)
+	    next_trsp = cstring("udp");
+
+    } while(!(flags & TR_FLAG_DISABLE_BL) &&
+	    tr_blacklist::instance()->exist(ss));
+
+    return 0;
+}
+
+bool sip_target_set::next()
+{
+    dest_list_it++;
+    return has_next();
+}
+
+void sip_target_set::debug()
+{
+    DBG("target list:");
+
+    for(list<sip_target>::iterator it = dest_list.begin();
+	it != dest_list.end(); it++) {
+
+	DBG("\t%s:%u/%s to target list",
+	    am_inet_ntop(&it->ss).c_str(),
+	    am_get_port(&it->ss),it->trsp);
+    }
+}
+
+dns_entry_map::dns_entry_map()
+    : map<string,dns_entry*>()
+{
+}
+
+dns_entry_map::~dns_entry_map()
+{
+    for(iterator it = begin(); it != end(); ++it) {
+	dec_ref(it->second);
+    }
+}
+
+std::pair<dns_entry_map::iterator, bool>
+dns_entry_map::insert(const dns_entry_map::value_type& x)
+{
+    return dns_entry_map_base::insert(x);
+}
+
+bool dns_entry_map::insert(const string& key, dns_entry* e)
+{
+    std::pair<iterator, bool> res = emplace(key,e);
+        //insert(std::make_pair<const key_type&,mapped_type>(key,e));
+
+    if(res.second) {
+	inc_ref(e);
+	return true;
+    }
+
+    return false;
+}
+
+dns_entry* dns_entry_map::fetch(const key_type& key)
+{
+    iterator it = find(key);
+    if(it != end())
+	return it->second;
+    return NULL;
+}
+
+bool _resolver::disable_srv = false;
 
 _resolver::_resolver()
     : cache(DNS_CACHE_SIZE)
@@ -656,72 +873,41 @@ _resolver::~_resolver()
     
 }
 
-static unsigned short get_srv_sevice_port(ns_type t, const char *name){
-    if(ns_t_srv != t){
-        return 0;
-    }
-    switch(name[1]){
-    case 's': //_s ?
-        return DEFAULT_SIP_PORT;
-        /*if(0==strncmp(name+2,"ip.",3)){ //_sip. ?
-            return DEFAULT_SIP_PORT
-        }*/
-        break;
-    case 'r': //_r ?
-        return DEFAULT_RTSP_PORT;
-        /*if(0==strncmp(name+2,"tsp.",4)){ //_rtsp. ?
-            return DEFAULT_RTSP_PORT;
-        }*/
-        break;
-    default:
-        WARN("can't determine service type for '%s'. default service port will be 0",
-             name);
-        return 0;
-        break;
-    }
-}
-
-int _resolver::query_dns(const char* name, dns_entry** e, long now)
+int _resolver::query_dns(const char* name, dns_entry_map& entry_map, dns_rr_type t)
 {
     u_char dns_res[NS_PACKETSZ];
 
     if(!name) return -1;
 
-    ns_type t = (name[0] == '_') ? ns_t_srv : ns_t_a;
+    log_demangled_stacktrace(L_ERR);
+    DBG("Querying '%s' (%s)...",name,dns_rr_type_str(t));
 
-    //TODO: add AAAA record support
-    int dns_res_len = res_search(name,ns_c_in,t,dns_res,NS_PACKETSZ);
+    int dns_res_len = res_search(name,ns_c_in,(ns_type)t,
+				 dns_res,NS_PACKETSZ);
     if(dns_res_len < 0){
-    dns_error(h_errno,name,t);
-	return -1;
+        dns_error(h_errno,name,t);
+        return -1;
     }
-
-    *e = dns_entry::make_entry(t,get_srv_sevice_port(t,name));
 
     /*
      * Initialize a handle to this response.  The handle will
      * be used later to extract information from the response.
      */
-    dns_entry_h dns_h = { *e, now };
-    if (dns_msg_parse(dns_res, dns_res_len, rr_to_dns_entry, &dns_h) < 0) {
+    dns_search_h h;
+    if (dns_msg_parse(dns_res, dns_res_len, rr_to_dns_entry, &h) < 0) {
 	DBG("Could not parse DNS reply");
 	return -1;
     }
-    
-    *e = dns_h.e;
-    if(!*e) {
-	DBG("no dns_entry created");
-	return -1;
-    }
 
-    if((*e)->ip_vec.empty()){
-    	delete *e;
-    	*e = NULL;
-    	return -1;
-    }
+    for(dns_entry_map::iterator it = h.entry_map.begin();
+	it != h.entry_map.end(); it++) {
 
-    (*e)->init();
-    inc_ref(*e);
+	dns_entry* e = it->second;
+	if(!e || e->ip_vec.empty()) continue;
+
+	e->init();
+	entry_map.insert(it->first,e);
+    }
 
     return 0;
 }
@@ -729,7 +915,8 @@ int _resolver::query_dns(const char* name, dns_entry** e, long now)
 int _resolver::resolve_name(const char* name,
 			    dns_handle* h,
 			    sockaddr_storage* sa,
-			    const address_type types)
+			    const address_type types,
+			    dns_rr_type t)
 {
     int ret;
 
@@ -739,12 +926,16 @@ int _resolver::resolve_name(const char* name,
 	return h->next_ip(sa);
     }
 
-    // first try to detect if 'name' is already an IP address
-    ret = am_inet_pton(name,sa);
-    if(ret == 1) {
-	h->ip_n = -1; // flag end of IP list
-	h->srv_n = -1;
-	return 0; // 'name' is an IP address
+    if(t != dns_r_srv &&
+       t != dns_r_naptr) {
+
+	// first try to detect if 'name' is already an IP address
+	ret = am_inet_pton(name,sa);
+	if(ret == 1) {
+	    h->ip_n = -1; // flag end of IP list
+	    h->srv_n = -1;
+	    return 0; // 'name' is an IP address
+	}
     }
     
     // name is NOT an IP address -> try a cache look up
@@ -754,30 +945,38 @@ int _resolver::resolve_name(const char* name,
     // first attempt to get a valid IP
     // (from the cache)
     if(e){
-	return e->next_ip(h,sa);
+	int ret = e->next_ip(h,sa);
+	dec_ref(e);
+	return ret;
     }
 
-    timeval tv_now;
-    gettimeofday(&tv_now,NULL);
-
     // no valid IP, query the DNS
-    if(query_dns(name,&e,tv_now.tv_sec) < 0) {
+    dns_entry_map entry_map;
+    if(query_dns(name,entry_map,t) < 0) {
 	return -1;
     }
 
-    if(e) {
+    for(dns_entry_map::iterator it = entry_map.begin();
+	it != entry_map.end(); it++) {
 
-	// if ttl != 0
-	if(e->expire != tv_now.tv_sec){
-	    // cache the new record
-	    b->insert(name,e);
+	if(!it->second) continue;
+
+	b = cache.get_bucket(hashlittle(it->first.c_str(),
+					it->first.length(),0));
+	// cache the new record
+	if(b->insert(it->first,it->second)) {
+	    // cache insert successful
+	    DBG("new DNS cache entry: '%s' -> %s",
+		it->first.c_str(), it->second->to_str().c_str());
 	}
-    
+    }
+
+    e = entry_map.fetch(name);
+    if(e) {
 	// now we should have a valid IP
 	return e->next_ip(h,sa);
     }
 
-    // should not happen...
     return -1;
 }
 
@@ -792,7 +991,8 @@ int _resolver::str2ip(const char* name,
 	    return 1;
 	}
 	else if(ret < 0) {
-	    ERROR("while trying to detect an IPv4 address '%s': %s",name,strerror(errno));
+	    ERROR("while trying to detect an IPv4 address '%s': %s",
+		  name,strerror(errno));
 	    return ret;
 	}
     }
@@ -804,9 +1004,117 @@ int _resolver::str2ip(const char* name,
 	    return 1;
 	}
 	else if(ret < 0) {
-	    ERROR("while trying to detect an IPv6 address '%s': %s",name,strerror(errno));
+	    ERROR("while trying to detect an IPv6 address '%s': %s",
+		  name,strerror(errno));
 	    return ret;
 	}
+    }
+
+    return 0;
+}
+
+int _resolver::set_destination_ip(const cstring& next_hop,
+				  unsigned short next_port,
+				  const cstring& next_trsp,
+				  sockaddr_storage* remote_ip,
+				  dns_handle* h_dns)
+{
+
+    string nh = c2stlstr(next_hop);
+
+    DBG("checking whether '%s' is IP address...\n", nh.c_str());
+    if (am_inet_pton(nh.c_str(), remote_ip) != 1) {
+
+	// nh does NOT contain a valid IP address
+    
+	if(!next_port) {
+	    // no explicit port specified,
+	    // try SRV first
+	    if (disable_srv) {
+		DBG("no port specified, but DNS SRV disabled (skipping).\n");
+	    } else {
+		string srv_name = "_sip._";
+		if(!next_trsp.len || !lower_cmp_n(next_trsp,"udp")){
+		    srv_name += "udp";
+		}
+		else if(!lower_cmp_n(next_trsp,"tcp")) {
+		    srv_name += "tcp";
+		}
+		else {
+		    DBG("unsupported transport: skip SRV lookup");
+		    goto no_SRV;
+		}
+
+		srv_name += "." + nh;
+
+		DBG("no port specified, looking up SRV '%s'...\n",
+		    srv_name.c_str());
+
+		if(!resolver::instance()->resolve_name(srv_name.c_str(),
+						       h_dns,remote_ip,
+						       IPv4,dns_r_srv)){
+		    return 0;
+		}
+
+		DBG("no SRV record for %s",srv_name.c_str());
+	    }
+	}
+
+    no_SRV:
+	memset(remote_ip,0,sizeof(sockaddr_storage));
+	int err = resolver::instance()->resolve_name(nh.c_str(),
+						     h_dns,remote_ip,
+						     IPv4);
+	if(err < 0){
+	    ERROR("Unresolvable Request URI domain\n");
+	    return -478;
+	}
+    }
+    else {
+	am_set_port(remote_ip,next_port);
+    }
+
+    if(!am_get_port(remote_ip)) {
+	if(!next_port) next_port = 5060;
+	am_set_port(remote_ip,next_port);
+    }
+
+    DBG("set destination to %s:%u\n",
+	nh.c_str(), am_get_port(remote_ip));
+    
+    return 0;
+}
+
+int _resolver::resolve_targets(const list<sip_destination>& dest_list,
+			       sip_target_set* targets)
+{
+    for(list<sip_destination>::const_iterator it = dest_list.begin();
+	it != dest_list.end(); it++) {
+	
+	sip_target t;
+	dns_handle h_dns;
+
+	DBG("sip_destination: %.*s:%u/%.*s",
+	    it->host.len,it->host.s,
+	    it->port,
+	    it->trsp.len,it->trsp.s);
+
+	if(set_destination_ip(it->host,it->port,it->trsp,&t.ss,&h_dns) != 0) {
+	    ERROR("Unresolvable destination");
+	    return -478;
+	}
+	if(it->trsp.len && (it->trsp.len <= SIP_TRSP_SIZE_MAX)) {
+	    memcpy(t.trsp,it->trsp.s,it->trsp.len);
+	    t.trsp[it->trsp.len] = '\0';
+	}
+	else {
+	    t.trsp[0] = '\0';
+	}
+
+	do {
+	    targets->dest_list.push_back(t);
+
+	} while(h_dns.next_ip(&t.ss) == 0);
     }
 
     return 0;
@@ -836,42 +1144,47 @@ void _resolver::clear_cache(){
 
 void _resolver::run()
 {
+    struct timespec tick,rem;
+    tick.tv_sec  = (DNS_CACHE_SINGLE_CYCLE/1000000L);
+    tick.tv_nsec = (DNS_CACHE_SINGLE_CYCLE - (tick.tv_sec)*1000000L) * 1000L;
+
+    unsigned long i = 0;
     setThreadName("resolver");
     for(;;) {
-	sleep(10);
+	nanosleep(&tick,&rem);
 
-	timeval tv_now;
-	gettimeofday(&tv_now,NULL);
+	u_int64_t now = wheeltimer::instance()->unix_clock.get();
+	dns_bucket* bucket = cache.get_bucket(i);
 
-	//DBG("starting DNS cache garbage collection");
-	for(unsigned long i=0; i<cache.get_size(); i++){
-
-	    dns_bucket* bucket = cache.get_bucket(i);
-	    bucket->lock();
+	bucket->lock();
 	    
-	    for(dns_bucket::value_map::iterator it = bucket->elmts.begin();
-		it != bucket->elmts.end(); ++it){
+	for(dns_bucket::value_map::iterator it = bucket->elmts.begin();
+	    it != bucket->elmts.end(); ++it){
 
-		dns_entry* dns_e = (dns_entry*)it->second;
-		if(tv_now.tv_sec >= it->second->expire){
+	    dns_entry* dns_e = (dns_entry*)it->second;
+	    if(now >= it->second->expire){
 
-		    dns_bucket::value_map::iterator tmp_it = it;
-		    bool end_of_bucket = (++it == bucket->elmts.end());
+		dns_bucket::value_map::iterator tmp_it = it;
+		bool end_of_bucket = (++it == bucket->elmts.end());
 
-		    DBG("DNS record expired (%p)",dns_e);
-		    bucket->elmts.erase(tmp_it);
-		    dec_ref(dns_e);
+		DBG("DNS record expired (%p)",dns_e);
+		bucket->elmts.erase(tmp_it);
+		dec_ref(dns_e);
 
-		    if(end_of_bucket) break;
-		}
-		else {
-		    //DBG("######### record %p expires in %li seconds ##########",dns_e,it->second->expire-tv_now.tv_sec);
-		}
+		if(end_of_bucket) break;
 	    }
-	    bucket->unlock();
+	    else {
+		//DBG("######### record %p expires in %li seconds ##########",
+		//    dns_e,it->second->expire-tv_now.tv_sec);
+	    }
 	}
+
+	bucket->unlock();
+
+	if(++i >= cache.get_size()) i = 0;
     }
 }
+
 
 /** EMACS **
  * Local variables:

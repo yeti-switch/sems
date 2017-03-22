@@ -436,6 +436,20 @@ bool str2long(char*& str, long& result, char sep)
   return false;
 }
 
+bool str2bool(const string &s, bool &dst)
+{
+  // TODO: optimize
+  if ((s == "yes") || (s == "true") || (s == "1")) {
+    dst = true;
+    return true;
+  }
+  if ((s == "no") || (s == "false") || (s == "0")) {
+    dst = false;
+    return true;
+  }
+  return false;
+}
+
 bool str2longlong(const string& str, long long& result)
 {
   char* s = (char*)str.c_str();

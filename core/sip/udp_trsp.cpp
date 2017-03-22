@@ -36,7 +36,7 @@
 #include "sip_parser.h"
 #include "trans_layer.h"
 #include "log.h"
-
+#include "AmUtils.h"
 
 #include <sys/param.h>
 #include <arpa/inet.h>
@@ -259,7 +259,7 @@ int udp_trsp_socket::sendmsg(const sockaddr_storage* sa,
   // bytes_sent = ;
   if(::sendmsg(sd, &hdr, 0) < 0) {
       char host[NI_MAXHOST] = "";
-      ERROR("sendto(%i;%s:%i): %s\n", sd,
+      ERROR("sendmsg(%i;%s:%i): %s\n", sd,
 	    am_inet_ntop_sip(sa,host,NI_MAXHOST),
 	    am_get_port(sa),strerror(errno));
       return -1;
@@ -270,15 +270,15 @@ int udp_trsp_socket::sendmsg(const sockaddr_storage* sa,
 
 int udp_trsp_socket::send(const sockaddr_storage* sa, 
 			  const char* msg, 
-			  const int msg_len)
+			  const int msg_len,
+			  unsigned int flags)
 {
     if (log_level_raw_msgs >= 0) {
 	_LOG(log_level_raw_msgs, 
-		 "send via UDP from %s:%i to %s:%i:\n"
-		 "--++--\n%.*s--++--\n",
-		 ip.c_str(), port,
-		 am_inet_ntop(sa).c_str(), am_get_port(sa),
-		 msg_len, msg);
+		 "send msg via UDP to %s:%i\n--++--\n%.*s--++--\n",
+	     get_addr_str(sa).c_str(),
+	     ntohs(((sockaddr_in*)sa)->sin_port),
+	     msg_len, msg);
     }
 
     if(socket_options & use_raw_sockets)
@@ -324,8 +324,8 @@ void udp_trsp::run()
     msg.msg_namelen    = sizeof(sockaddr_storage);
     msg.msg_iov        = iov;
     msg.msg_iovlen     = 1;
-	msg.msg_control    = new u_char[CMD_MSG_SIZE];
-	msg.msg_controllen = CMD_MSG_SIZE;
+    msg.msg_control    = new u_char[DSTADDR_DATASIZE];
+    msg.msg_controllen = DSTADDR_DATASIZE;
 
     if(sock->get_sd()<=0){
 	ERROR("Transport instance not bound\n");
@@ -368,15 +368,12 @@ void udp_trsp::run()
 
 	if (trsp_socket::log_level_raw_msgs >= 0) {
 	    char host[NI_MAXHOST] = "";
-		_LOG(
-			trsp_socket::log_level_raw_msgs,
-			"Received via UDP from %s:%i on socket %s:%i:\n"
-			"--++--\n%.*s--++--\n",
-			am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
-			am_get_port(&s_msg->remote_ip),
-			sock->get_ip(),
-			sock->get_port(),
-			s_msg->len, s_msg->buf);
+	    _LOG(trsp_socket::log_level_raw_msgs, 
+		 "vv M [|] u recvd msg via UDP from %s:%i vv\n"
+		 "--++--\n%.*s--++--\n",
+		 am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
+		 am_get_port(&s_msg->remote_ip),
+		 s_msg->len, s_msg->buf);
 	}
 
 	s_msg->local_socket = sock;
@@ -416,7 +413,7 @@ void udp_trsp::run()
 #endif
 
 	// pass message to the parser / transaction layer
-	trans_layer::instance()->received_msg(s_msg, acl, opt_acl);
+	trans_layer::instance()->received_msg(s_msg,acl,opt_acl);
     }
 }
 

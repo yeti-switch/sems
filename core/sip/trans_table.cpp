@@ -123,46 +123,43 @@ sip_trans* trans_bucket::match_request(sip_msg* msg, unsigned int ttype)
 	
 	trans_list::iterator it = elmts.begin();
 	for(;it!=elmts.end();++it) {
+	    
+	    if( ((*it)->msg->type != SIP_REQUEST) ||
+		((*it)->type != ttype)){
+		continue;
+	    }
 
-		sip_trans *te = *it;
+	    if(msg->u.request->method != (*it)->msg->u.request->method) {
 
-		if( (te->msg->type != SIP_REQUEST)
-			|| (te->type != ttype)){
-			continue;
+		// ACK is the only request that should match an existing
+		// transaction without being a re-transmission
+		if( ((*it)->msg->u.request->method == sip_request::INVITE)
+		    && (msg->u.request->method == sip_request::ACK)) {
+		
+		    // match non-200 ACK first
+		    if(compare_branch(*it,msg,branch,(unsigned int)len)) {
+			t = *it;
+			break;
+		    }
+
+		    // branches do not match,
+		    // try to match a 200-ACK
+		    if((t = match_200_ack(*it,msg)) != NULL)
+			break;
 		}
 
-		if(msg->u.request->method != te->msg->u.request->method) {
+		continue;
+	    }
 
-			// ACK is the only request that should match an existing
-			// transaction without being a re-transmission
-			if( (te->msg->u.request->method == sip_request::INVITE)
-				&& (msg->u.request->method == sip_request::ACK))
-			{
-				// match non-200 ACK first
-				if( (te->reply_status >= 300)
-					&& compare_branch(te,msg,branch,(unsigned int)len))
-				{
-					t = te;
-					break;
-				}
+	    if(!compare_branch(*it,msg,branch,(unsigned int)len))
+		continue;
 
-				// branches do not match,
-				// try to match a 200-ACK
-				if((t = match_200_ack(te,msg)) != NULL){
-					break;
-				}
-			}
-			continue;
-		}
-
-		if(!compare_branch(te,msg,branch,(unsigned int)len))
-			continue;
-
-		// found matching transaction
-		t = te;
-		break;
+	    // found matching transaction
+	    t = *it; 
+	    break;
 	}
-	} else {
+    }
+    else {
 
 	// Pre-3261 matching
 
@@ -413,6 +410,33 @@ sip_trans* trans_bucket::match_1xx_prack(sip_msg* msg)
 	    continue;
 
 	return t;
+    }
+
+    return NULL;
+}
+
+sip_trans* trans_bucket::find_uac_trans(const cstring& dialog_id,
+					unsigned int inv_cseq)
+{
+    DBG("Matching dialog_id = '%.*s'\n",
+	dialog_id.len, dialog_id.s);
+
+    if(elmts.empty())
+	return NULL;
+    
+    trans_list::reverse_iterator it = elmts.rbegin();
+    for(;it!=elmts.rend();++it) {
+	    
+	sip_trans* t = *it;
+	if( t->type != TT_UAC ||
+	    t->msg->type != SIP_REQUEST ){
+	    continue;
+	}
+	sip_cseq* t_cseq = dynamic_cast<sip_cseq*>(t->msg->cseq->p);
+	if(t->dialog_id == dialog_id &&
+	   t_cseq && t_cseq->num == inv_cseq &&
+	   t->state != TS_ABANDONED)
+	    return t;
     }
 
     return NULL;

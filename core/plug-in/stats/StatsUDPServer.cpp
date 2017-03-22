@@ -35,6 +35,9 @@
 #include "log.h"
 #include "AmPlugIn.h"
 #include "AmApi.h"
+#include "sems.h"
+
+#include "sip/trans_table.h"
 
 #include <string>
 using std::string;
@@ -290,6 +293,7 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
     reply = 
       "calls                              -  number of active calls (Session Container size)\n"
       "which                              -  print available commands\n"
+      "version                            -  return SEMS version\n"
       "set_loglevel <loglevel>            -  set log level\n"
       "get_loglevel                       -  get log level\n"
       "set_cpslimit <limit>               -  set maximum allowed CPS\n"
@@ -301,11 +305,20 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
       "get_cpsavg                         -  get calls per second (5 sec average)\n"
       "get_cpsmax                         -  get maximum of CPS since the last query\n"
 
+      "dump_transactions                  -  dump transaction table to log (loglevel debug)\n"
+
       "DI <factory> <function> (<args>)*  -  invoke DI command\n"
       "\n"
       "When in shutdown mode, SEMS will answer with the configured 5xx errorcode to\n"
       "new INVITE and OPTIONS requests.\n"
       ;
+  }
+  else if (cmd_str == "version") {
+    reply = SEMS_VERSION;
+  }
+  else if (cmd_str == "dump_transactions") {
+    dumps_transactions();
+    reply = "200 OK";
   }
   else if (cmd_str.length() > 4 && cmd_str.substr(0, 4) == "set_") {
     // setters 
@@ -438,6 +451,12 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
     } catch (const AmDynInvoke::NotImplemented& e) {
       reply = "Exception occured: AmDynInvoke::NotImplemented '"+
 	e.what+"'\n";
+    } catch (const std::exception& e) {
+      reply = "Exception occured: "+
+	string(e.what())+"\n";
+      return 0;
+    } catch (const std::string& e) {
+      reply = "Exception occured: "+e+"\n";
       return 0;
     } catch (...) {
       reply = "Exception occured.\n";

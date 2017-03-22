@@ -40,15 +40,18 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#define DEFAULT_TCP_CONNECT_TIMEOUT 2000 /* 2 seconds */
+#define DEFAULT_TCP_IDLE_TIMEOUT 3600000 /* 1 hour */
 
 class trsp_socket
     : public atomic_ref_cnt
 {
 public:
     enum socket_options {
-	force_via_address = (1 << 0),
-	force_outbound_if = (1 << 1),
-	use_raw_sockets   = (1 << 2)
+	force_via_address       = (1 << 0),
+	force_outbound_if       = (1 << 1),
+	use_raw_sockets         = (1 << 2),
+	no_transport_in_contact = (1 << 3)
     };
 
     static int log_level_raw_msgs;
@@ -80,7 +83,7 @@ protected:
 
 public:
     trsp_socket(unsigned short if_num, unsigned int opts,
-		unsigned int sys_if_idx = 0);
+		unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
     /**
@@ -150,7 +153,8 @@ public:
      * Sends a message.
      * @return -1 if error(s) occured.
      */
-    virtual int send(const sockaddr_storage* sa, const char* msg, const int msg_len)=0;
+    virtual int send(const sockaddr_storage* sa, const char* msg, 
+		     const int msg_len, unsigned int flags)=0;
 };
 
 class trsp_acl {

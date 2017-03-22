@@ -35,6 +35,10 @@
 #include <pthread.h>	/* pthread_self() */
 #include <execinfo.h>   /* backtrace_symbols() */
 
+#ifdef __cplusplus
+#include <cxxabi.h> /* __cxa_demangle() */
+#endif
+
 extern __thread pid_t _self_tid;
 extern __thread pid_t _self_pid;
 
@@ -186,6 +190,8 @@ void log_stacktrace(int ll);
 
 #ifdef __cplusplus
 /* ...only for C++ */
+#define log_demangled_stacktrace __lds
+void __lds(int ll, unsigned int max_frames = 63);
 class AmLoggingFacility;
 void register_log_hook(AmLoggingFacility*);
 void unregister_log_hook(AmLoggingFacility*);

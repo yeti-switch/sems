@@ -65,6 +65,9 @@ struct AmContentType
   /** Clear and free param list */
   void clearParams();
 
+  /** set a random boundary string */
+  void resetBoundary();
+
   void clear();
 };
 

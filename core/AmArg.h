@@ -373,5 +373,8 @@ class AmArg
 // equality
 bool operator==(const AmArg& lhs, const AmArg& rhs);
 
+const int arg2int(const AmArg &a);
+string arg2str(const AmArg &a);
+
 #endif
 

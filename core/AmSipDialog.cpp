@@ -333,8 +333,26 @@ void AmSipDialog::onRequestTxed(const AmSipRequest& req)
   }
 }
 
-bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply, 
-				  TransMap::iterator t_uac_it)
+bool AmSipDialog::onRxReplySanity(const AmSipReply& reply)
+{
+  if(!getRemoteTag().empty()
+     && reply.to_tag != getRemoteTag()) {
+
+    if(status == Early) {
+      if(reply.code < 200 && !reply.to_tag.empty()) {
+        return false;// DROP
+      }
+    }
+    else {
+      // DROP
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
 {
   // rfc3261 12.1
   // Dialog established only by 101-199 or 2xx 
@@ -360,7 +378,8 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply,
         if(reply.to_tag.empty()){
           DBG("received 2xx reply without to-tag "
               "(callid=%s): sending BYE\n",reply.callid.c_str());
-          bye();
+           send_200_ack(reply.cseq);
+	   sendRequest(SIP_METH_BYE);
         } else {
           setRemoteTag(reply.to_tag);
         }
@@ -377,13 +396,14 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply,
 
     case Early:
       if(reply.code < 200){
+	 DBG("ignoring provisional reply in Early state");
       } else if(reply.code < 300){
         setStatus(Connected);
         setRouteSet(reply.route);
         if(reply.to_tag.empty()){
           DBG("received 2xx reply without to-tag "
               "(callid=%s): sending BYE\n",reply.callid.c_str());
-          bye();
+          sendRequest(SIP_METH_BYE);
         } else {
           setRemoteTag(reply.to_tag);
         }
@@ -445,7 +465,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply,
   {
     if(hdl) ((AmSipDialogEventHandler*)hdl)->onInvite2xx(reply);
   } else {
-    cont = AmBasicSipDialog::onRxReplyStatus(reply,t_uac_it);
+    cont = AmBasicSipDialog::onRxReplyStatus(reply);
   }
 
   return cont && rel100.onReplyIn(reply);
@@ -735,7 +755,8 @@ int AmSipDialog::cancel(bool final)
 	  }
 	  else if(getStatus() != Cancelling){
 	    setStatus(Cancelling);
-	    return SipCtrlInterface::cancel(&t->second.tt,t->second.hdrs);
+	    return SipCtrlInterface::cancel(&t->second.tt, local_tag,
+                                           t->first, t->second.hdrs);
 	  }
 	  else {
 	    ERROR("INVITE transaction has already been cancelled\n");

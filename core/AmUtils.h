@@ -207,6 +207,9 @@ bool str2longlong(const string& str, long long& result);
  */
 bool str2longlong(char*& str, long long& result, char sep = ' ');
 
+/* translates string value into bool, returns false on error */
+bool str2bool(const string &s, bool &dst);
+
 std::string URL_decode(const std::string& s);
 std::string URL_encode(const std::string& s);
 

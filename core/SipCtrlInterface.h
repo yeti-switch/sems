@@ -49,6 +49,9 @@ class trans_ticket;
 class udp_trsp_socket;
 class udp_trsp;
 
+class tcp_server_socket;
+class tcp_trsp;
+
 class _SipCtrlInterface:
     public sip_ua
 {
@@ -67,6 +70,18 @@ class _SipCtrlInterface:
 
     unsigned short    nr_udp_servers;
     udp_trsp**        udp_servers;
+
+    unsigned short    nr_tcp_sockets;
+    tcp_server_socket** tcp_sockets;
+
+    unsigned short    nr_tcp_servers;
+    tcp_trsp**        tcp_servers;
+
+    int alloc_udp_structs();
+    int init_udp_servers(int if_num);
+
+    int alloc_tcp_structs();
+    int init_tcp_servers(int if_num);
 
 public:
 
@@ -109,7 +124,8 @@ public:
      *
      * @param tt transaction ticket of the request to cancel.
      */
-    static int cancel(trans_ticket* tt, const string& hdrs);
+    static int cancel(trans_ticket* tt, const string& dialog_id,
+		      unsigned int inv_cseq, const string& hdrs);
 
     /**
      * From sip_ua

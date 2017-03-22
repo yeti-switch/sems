@@ -37,6 +37,7 @@
 #include "AmAudioFileRecorder.h"
 #include "AmAppTimer.h"
 #include "RtspClient.h"
+//#include "sip/async_file_writer.h"
 
 #ifdef WITH_ZRTP
 # include "AmZRTP.h"
@@ -51,6 +52,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/resource.h>
 
 #include <grp.h>
 #include <pwd.h>
@@ -338,7 +340,26 @@ static int write_pid_file()
 
 #endif /* !DISABLE_DAEMON_MODE */
 
+int set_fd_limit()
+{
+  struct rlimit rlim;
+  if(getrlimit(RLIMIT_NOFILE,&rlim) < 0) {
+    ERROR("getrlimit: %s\n",strerror(errno));
+    return -1;
+  }
 
+  rlim.rlim_cur = rlim.rlim_max;
+
+  if(setrlimit(RLIMIT_NOFILE,&rlim) < 0) {
+    ERROR("setrlimit: %s\n",strerror(errno));
+    return -1;
+  }
+ 
+  INFO("Open FDs limit has been raised to %u",
+       (unsigned int)rlim.rlim_cur);
+ 
+  return 0;
+}
 
 /*
  * Main
@@ -424,6 +445,10 @@ int main(int argc, char* argv[])
 	);
 
   AmConfig::dump_Ifs();
+
+  if(set_fd_limit() < 0) {
+    WARN("could not raise FD limit");
+  }
 
 #ifndef DISABLE_DAEMON_MODE
 
@@ -602,11 +627,23 @@ int main(int argc, char* argv[])
   INFO("Starting media processor\n");
   AmMediaProcessor::instance()->init();
 
+  // init thread usage with libevent
+  // before it's too late
+  /*if(evthread_use_pthreads() != 0) {
+    ERROR("cannot init thread usage with libevent");
+    goto error;
+  }*/
+
+  // start the asynchronous file writer (sorry, no better place...)
+  //async_file_writer::instance()->start();
+
   INFO("Starting RTP receiver\n");
   AmRtpReceiver::instance()->start();
 
   INFO("Starting SIP stack (control interface)\n");
-  sip_ctrl.load();
+  if(sip_ctrl.load()) {
+    goto error;
+  }
   
   INFO("Loading plug-ins\n");
   AmPlugIn::instance()->init();
@@ -654,6 +691,9 @@ int main(int argc, char* argv[])
  error:
   INFO("Disposing plug-ins\n");
   AmPlugIn::dispose();
+
+  //async_file_writer::instance()->stop();
+  //async_file_writer::instance()->join();
 
 #ifndef DISABLE_DAEMON_MODE
   if (AmConfig::DaemonMode) {

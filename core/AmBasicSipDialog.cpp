@@ -339,8 +339,10 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     if (remote_uri != req.from_uri) {
       setRemoteUri(req.from_uri);
       if(nat_handling && req.first_hop) {
-	setNextHop(req.remote_ip + ":"
-		   + int2str(req.remote_port));
+	string nh = req.remote_ip + ":"
+	  + int2str(req.remote_port)
+	  + "/" + req.trsp;
+	setNextHop(nh);
 	setNextHop1stReq(false);
       }
     }
@@ -369,8 +371,7 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     hdl->onSipRequest(req);
 }
 
-bool AmBasicSipDialog::onRxReplyStatus(const AmSipReply& reply, 
-				       TransMap::iterator t_uac_it)
+bool AmBasicSipDialog::onRxReplyStatus(const AmSipReply& reply)
 {
   /**
    * Error code list from RFC 5057:
@@ -429,7 +430,12 @@ void AmBasicSipDialog::termUacTrans()
   }
 }
 
-void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
+void AmBasicSipDialog::dropTransactions() {
+  termUacTrans();
+  uas_trans.clear();
+}
+
+bool AmBasicSipDialog::onRxReplySanity(const AmSipReply& reply)
 {
   if(ext_local_tag.empty()) {
     if(reply.from_tag != local_tag) {
@@ -445,6 +451,14 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
     throw string("reply has wrong from-tag");
     //return;
   }
+
+  return true;
+}
+
+void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
+{
+  if(!onRxReplySanity(reply))
+    return;
 
   TransMap::iterator t_it = uac_trans.find(reply.cseq);
   if(t_it == uac_trans.end()){
@@ -473,21 +487,27 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
   updateDialogTarget(reply);
   
   Status saved_status = status;
-  if(onRxReplyStatus(reply,t_it) && hdl)
-    hdl->onSipReply(t_it->second,reply,saved_status);
+  AmSipRequest orig_req(t_it->second);
+
+  if(onRxReplyStatus(reply) && hdl) {
+    hdl->onSipReply(orig_req,reply,saved_status);
+  }
 
   if((reply.code >= 200) && // final reply
      // but not for 2xx INV reply (wait for 200 ACK)
      ((reply.cseq_method != SIP_METH_INVITE) ||
       (reply.code >= 300))) {
-     uac_trans.erase(reply.cseq);
+       
+    uac_trans.erase(reply.cseq);
+    if (hdl) hdl->onTransFinished();
   }
 }
 
 void AmBasicSipDialog::updateDialogTarget(const AmSipReply& reply)
 {
   if( (reply.code > 100) && (reply.code < 300) &&
-      reply.to_uri.length() &&
+      !reply.to_uri.empty() &&
+      !reply.to_tag.empty() &&
       (remote_uri.empty() ||
        (reply.cseq_method.length()==6 &&
 	((reply.cseq_method == SIP_METH_INVITE) ||
@@ -496,11 +516,11 @@ void AmBasicSipDialog::updateDialogTarget(const AmSipReply& reply)
        (reply.cseq_method == SIP_METH_SUBSCRIBE)) ) {
     
     setRemoteUri(reply.to_uri);
-    if(!getNextHop().empty() && !next_hop_fixed) {
-      DBG("updating next_hop from reply to %s:%u\n",
-	  reply.remote_ip.c_str(), reply.remote_port);
-      setNextHop(reply.remote_ip + ":"
-		 + int2str(reply.remote_port));
+    if(!getNextHop().empty()) {
+      string nh = reply.remote_ip 
+	+ ":" + int2str(reply.remote_port)
+	+ "/" + reply.trsp;
+      setNextHop(nh);
     }
 
     string ua = getHeader(reply.hdrs,"Server");
@@ -562,6 +582,7 @@ void AmBasicSipDialog::onReplyTxed(const AmSipRequest& req,
       (reply.cseq_method != SIP_METH_CANCEL)) {
     
     uas_trans.erase(reply.cseq);
+    if (hdl) hdl->onTransFinished();
   }
 }
 
@@ -575,6 +596,7 @@ void AmBasicSipDialog::onRequestTxed(const AmSipRequest& req)
   }
   else {
     uac_trans.erase(req.cseq);
+    if (hdl) hdl->onTransFinished();
   }
 }
 

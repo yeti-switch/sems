@@ -388,7 +388,7 @@ void AmArg::assertArrayFmt(const char* format) const {
     for (size_t i=0;i<fmt_len;i++) {
       switch (format[i]) {
       case 'i': assertArgInt(get(i)); got+='i';  break;
-      case 'l': assertArgLongLong(get(i)); got+='i';  break;
+      case 'l': assertArgLongLong(get(i)); got+='l';  break;
       case 't': assertArgBool(get(i)); got+='t';  break;
       case 'f': assertArgDouble(get(i)); got+='f'; break;
       case 's': assertArgCStr(get(i)); got+='s'; break;
@@ -477,4 +477,29 @@ string AmArg::print(const AmArg &a) {
     default: break;
   }
   return "<UNKONWN TYPE>";
+}
+
+const int arg2int(const AmArg &a)
+{
+  if (isArgInt(a)) return a.asInt();
+  if (isArgBool(a)) return a.asBool();
+  if (isArgCStr(a)) {
+    int res;
+    if (!str2int(a.asCStr(), res)) {
+      throw std::string("can't convert arg to int: " + string(a.asCStr()));
+    }
+    return res;
+  }
+
+  throw std::string("can't convert arg to int");
+}
+
+string arg2str(const AmArg &a)
+{
+  if (isArgUndef(a)) return "";
+  if (isArgInt(a)) return int2str(a.asInt());
+  if (isArgBool(a)) return int2str(a.asBool());
+  if (isArgCStr(a)) return a.asCStr();
+
+  throw std::string("can't convert arg to string");
 }
