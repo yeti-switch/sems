@@ -1,3 +1,14 @@
+sems (1.7.30-1) stable; urgency=low
+
+  * 4465cc7d5 AmSipDialog: fix provisional replies handling in cancelling state. allow to specify custom headers for cancel() called via bye()
+  * be6317b44 fix segfault on send_request for transaction tickets without transaction
+  * 527f4bb3f trans_layer: remove excess logging (sending will be logged in transports)
+  * df9cba004 sctp_bus: close orphaned client connections sockets. add debug
+  * 904820afe merge with https://github.com/sipwise/sems.git master 6e1a53a9f860a64e17734951acb424a670797017
+  * merged TCP transport support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 23 Mar 2017 16:13:45 +0200
+
 sems (1.7.29-3) stable; urgency=low
 
   * sctp_bus: avoid reconnect in connecting state
