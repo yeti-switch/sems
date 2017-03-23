@@ -1312,10 +1312,11 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     err = generate_and_parse_new_msg(msg,p_msg);
     if(err != 0) { return err; }
 
-    DBG("Sending to %s:%i <%.*s...>\n",
-	get_addr_str(&p_msg->remote_ip).c_str(),
-	ntohs(((sockaddr_in*)&p_msg->remote_ip)->sin_port),
-	p_msg->len,p_msg->buf);
+	/*DBG("Sending to %s:%i via %s <%.*s...>\n",
+		get_addr_str(&p_msg->remote_ip).c_str(),
+		ntohs(((sockaddr_in*)&p_msg->remote_ip)->sin_port),
+		p_msg->local_socket->get_transport(),
+		p_msg->len,p_msg->buf);*/
 
     tt->_bucket = get_trans_bucket(p_msg->callid->value,
 				   get_cseq(p_msg)->num_str);
