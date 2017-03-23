@@ -1389,7 +1389,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 				&src_ip,&msg->remote_ip,
 				method_str);
 
-			if(!tt->_t->logger) {
+			if(tt->_t && !tt->_t->logger) {
 				tt->_t->logger = logger;
 				inc_ref(logger);
 			}
@@ -1399,7 +1399,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 				&src_ip,&msg->remote_ip,
 				method_str);
 
-			if(!tt->_t->sensor) {
+			if(tt->_t && !tt->_t->sensor) {
 				tt->_t->sensor = sensor;
 				inc_ref(sensor);
 			}
