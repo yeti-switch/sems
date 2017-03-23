@@ -397,7 +397,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
     case Early:
       if(reply.code < 200){
 	 DBG("ignoring provisional reply in Early state");
-      } else if(reply.code < 300){
+	  } else if(reply.code < 300){
         setStatus(Connected);
         setRouteSet(reply.route);
         if(reply.to_tag.empty()){
@@ -414,7 +414,11 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
       break; //Early
 
     case Cancelling:
-      if(reply.code >= 300){
+      if(reply.code < 200){
+        DBG("ignoring provisional reply in Cancelling state");
+        if(!reply.to_tag.empty())
+          setRemoteTag(reply.to_tag);
+      } else if(reply.code >= 300){
         // CANCEL accepted
         DBG("CANCEL accepted, status -> Disconnected\n");
         setStatus(Disconnected);
@@ -518,77 +522,73 @@ AmSipRequest* AmSipDialog::getUASPendingInv()
 
 int AmSipDialog::bye(const string& hdrs, int flags, bool final)
 {
-    switch(status){
-
+    switch(status) {
     case Disconnecting:
     case Connected: {
-      // collect INVITE UAC transactions
-      vector<unsigned int> ack_trans;
-      for (TransMap::iterator it=uac_trans.begin(); it != uac_trans.end(); it++) {
-	if (it->second.method == SIP_METH_INVITE){
-	  ack_trans.push_back(it->second.cseq);
-	}
-      }
-      // finish any UAC transaction before sending BYE
-      for (vector<unsigned int>::iterator it=
-	     ack_trans.begin(); it != ack_trans.end(); it++) {
-	send_200_ack(*it);
-      }
-
-      if (status != Disconnecting) {
-	setStatus(Disconnected);
-	return sendRequest(SIP_METH_BYE, NULL, hdrs, flags);
-      } else {
-	return 0;
-      }
+        // collect INVITE UAC transactions
+        vector<unsigned int> ack_trans;
+        for (TransMap::iterator it=uac_trans.begin(); it != uac_trans.end(); it++) {
+            if (it->second.method == SIP_METH_INVITE) {
+                ack_trans.push_back(it->second.cseq);
+            }
+        }
+        // finish any UAC transaction before sending BYE
+        for (vector<unsigned int>::iterator it=
+             ack_trans.begin(); it != ack_trans.end(); it++)
+        {
+            send_200_ack(*it);
+        }
+        if (status != Disconnecting) {
+            setStatus(Disconnected);
+            return sendRequest(SIP_METH_BYE, NULL, hdrs, flags);
+        } else {
+            return 0;
+        }
     }
-
     case Trying:
     case Proceeding:
     case Early:
-	if(getUACInvTransPending())
-		return cancel(final);
-	else {  
-	    for (TransMap::iterator it=uas_trans.begin();
-		 it != uas_trans.end(); it++) {
-	      if (it->second.method == SIP_METH_INVITE){
-		// let quit this call by sending final reply
-		return reply(it->second,
-			     487,"Request terminated");
-	      }
-	    }
-
-	    // missing AmSipRequest to be able
-	    // to send the reply on behalf of the app.
-		ERROR("[%s] ignoring bye() in %s state: "
-		  "no UAC transaction to cancel or UAS transaction to reply.\n",
-		  local_tag.c_str(),
-		  getStatusStr());
-	    setStatus(Disconnected);
-	}
-	return 0;
-
+        if(getUACInvTransPending()) {
+            return cancel(final,hdrs);
+        } else {
+            for (TransMap::iterator it=uas_trans.begin();
+                 it != uas_trans.end(); it++)
+            {
+                if (it->second.method == SIP_METH_INVITE) {
+                    // let quit this call by sending final reply
+                    return reply(it->second,
+                                 487,"Request terminated",NULL,hdrs);
+                }
+            }
+            // missing AmSipRequest to be able
+            // to send the reply on behalf of the app.
+            ERROR("[%s] ignoring bye() in %s state: "
+                  "no UAC transaction to cancel or UAS transaction to reply.\n",
+                  local_tag.c_str(),
+                  getStatusStr());
+            setStatus(Disconnected);
+        }
+        return 0;
     case Cancelling:
-      for (TransMap::iterator it=uas_trans.begin();
-	   it != uas_trans.end(); it++) {
-	if (it->second.method == SIP_METH_INVITE){
-	  // let's quit this call by sending final reply
-	  return reply(it->second, 487,"Request terminated");
-	}
-      }
-
-      // missing AmSipRequest to be able
-      // to send the reply on behalf of the app.
-	  ERROR("[%s] ignoring bye() in %s state: no UAS transaction to reply",
-			local_tag.c_str(),getStatusStr());
-      setStatus(Disconnected);
-      return 0;
-
+        for (TransMap::iterator it=uas_trans.begin();
+             it != uas_trans.end(); it++)
+        {
+            if (it->second.method == SIP_METH_INVITE) {
+                // let's quit this call by sending final reply
+                return reply(it->second, 487,"Request terminated",NULL,hdrs);
+            }
+        }
+        // missing AmSipRequest to be able
+        // to send the reply on behalf of the app.
+        ERROR("[%s] ignoring bye() in %s state: no UAS transaction to reply",
+              local_tag.c_str(),getStatusStr());
+        setStatus(Disconnected);
+        return 0;
     default:
         DBG("bye(): we are not connected "
-	    "(status=%s). do nothing!\n",getStatusStr());
-	return 0;
-    }	
+            "(status=%s). do nothing!\n",getStatusStr());
+        return 0;
+    } //switch(status)
 }
 
 int AmSipDialog::reinvite(const string& hdrs,  
@@ -742,29 +742,28 @@ int AmSipDialog::prack(const AmSipReply &reply1xx,
   return sendRequest(SIP_METH_PRACK, body, h);
 }
 
-int AmSipDialog::cancel(bool final)
+int AmSipDialog::cancel(bool final, const string& hdrs)
 {
     for(TransMap::reverse_iterator t = uac_trans.rbegin();
-	t != uac_trans.rend(); t++) {
-	
-	if(t->second.method == SIP_METH_INVITE){
-	  cancel_final |= final;
-	  if(getStatus() == Trying){
-	    cancel_pending=true;
-	    return 0;
-	  }
-	  else if(getStatus() != Cancelling){
-	    setStatus(Cancelling);
-	    return SipCtrlInterface::cancel(&t->second.tt, local_tag,
-                                           t->first, t->second.hdrs);
-	  }
-	  else {
-	    ERROR("INVITE transaction has already been cancelled\n");
-	    return -1;
-	  }
-	}
+        t != uac_trans.rend(); t++)
+    {
+        if(t->second.method == SIP_METH_INVITE) {
+            cancel_final |= final;
+            switch(getStatus()) {
+            case Trying:
+                cancel_pending = true;
+                if(hdrs.length()) t->second.hdrs+=hdrs;
+                return 0;
+            case Cancelling:
+                ERROR("INVITE transaction has already been cancelled\n");
+                return -1;
+            default:
+                setStatus(Cancelling);
+                return SipCtrlInterface::cancel(&t->second.tt, local_tag,
+                                                t->first, t->second.hdrs+hdrs);
+            } //switch(getStatus())
+        }
     }
-    
     ERROR("could not find INVITE transaction to cancel\n");
     return -1;
 }

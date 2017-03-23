@@ -141,7 +141,7 @@ protected:
   int bye(const string& hdrs = "", int flags = 0, bool final = false);
 
   /** @return 0 on success */
-  int cancel(bool final = false);
+  int cancel(bool final = false, const string& hdrs = "");
 
   /** @return 0 on success */
   int prack(const AmSipReply &reply1xx,
