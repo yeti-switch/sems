@@ -83,8 +83,8 @@ void SctpClientConnection::process(uint32_t events) {
 
         getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
 
-        ERROR("%s:%u (%d) connection error: %s",
-            am_inet_ntop(&addr).c_str(), am_get_port(&addr),fd,
+        ERROR("%s:%u (%d,%d) connection error: %s",
+            am_inet_ntop(&addr).c_str(), am_get_port(&addr),fd,events,
             err ? strerror(err) : "Peer shutdown");
 
         //state = Closed;
@@ -109,8 +109,11 @@ void SctpClientConnection::process(uint32_t events) {
                 .fd = fd
             }
         };
-        if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1)
+        if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1) {
+            DBG("epoll_ctl(%d,EPOLL_CTL_MOD,%d,EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR): %m",
+                epoll_fd,fd);
             close();
+        }
     }
 }
 

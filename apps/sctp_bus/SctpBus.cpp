@@ -390,7 +390,10 @@ void SctpBus::process_client_connection(int sock, uint32_t events)
         /*DBG("process events %d for connection with socket %d",
             events,it->first);*/
         it->second->process(events);
+        return;
     }
+    DBG("socket %d got events (%d) for unknown client connection. close socket",sock,events);
+    close(sock);
 }
 
 void SctpBus::showServerAssocations(const AmArg &args, AmArg &ret)
