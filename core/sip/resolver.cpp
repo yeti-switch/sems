@@ -879,7 +879,6 @@ int _resolver::query_dns(const char* name, dns_entry_map& entry_map, dns_rr_type
 
     if(!name) return -1;
 
-    log_demangled_stacktrace(L_ERR);
     DBG("Querying '%s' (%s)...",name,dns_rr_type_str(t));
 
     int dns_res_len = res_search(name,ns_c_in,(ns_type)t,
