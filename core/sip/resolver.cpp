@@ -1184,6 +1184,38 @@ void _resolver::run()
     }
 }
 
+void dns_handle::dump(AmArg &ret) {
+    if(srv_e) {
+        ret["type"] = "srv";
+        ret["port"] = port;
+        AmArg &entries = ret["entries"];
+        vector<dns_base_entry*> &v = srv_e->ip_vec;
+        for(int i = 0;i < (int)v.size();i++){
+            entries.push(AmArg());
+            AmArg &a = entries.back();
+            srv_entry *e = (srv_entry *)v[i];
+            a["priority"] = e->p;
+            a["weight"] = e->w;
+            a["port"] = e->port;
+            a["target"] = e->target;
+        }
+    } else if(ip_e) { //ip_e
+        char host[NI_MAXHOST] = "";
+        sockaddr_storage ss;
+        ret["type"] = "ip";
+        AmArg &entries = ret["entries"];
+        vector<dns_base_entry*> &v = ip_e->ip_vec;
+        for(int i = 0;i < (int)v.size();i++){
+            entries.push(AmArg());
+            AmArg &a = entries.back();
+            ip_entry *e = (ip_entry *)v[i];
+            e->to_sa(&ss);
+            a["addr"] = am_inet_ntop_sip(&ss,host,NI_MAXHOST);
+        }
+    } else {
+        ret["type"] = "unknown";
+    }
+}
 
 /** EMACS **
  * Local variables:
