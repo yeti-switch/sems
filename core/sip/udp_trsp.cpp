@@ -37,6 +37,7 @@
 #include "trans_layer.h"
 #include "log.h"
 #include "AmUtils.h"
+#include "parse_via.h"
 
 #include <sys/param.h>
 #include <arpa/inet.h>
@@ -364,6 +365,7 @@ void udp_trsp::run()
 	}
 
 	sip_msg* s_msg = new sip_msg(buf,buf_len);
+	s_msg->transport_id = sip_transport::UDP;
 	memcpy(&s_msg->remote_ip,msg.msg_name,msg.msg_namelen);
 
 	if (trsp_socket::log_level_raw_msgs >= 0) {

@@ -138,6 +138,7 @@ struct sip_msg
     sockaddr_storage   remote_ip;
 
     timeval recv_timestamp;
+    unsigned int transport_id;
 
     sip_msg();
     sip_msg(const char* msg_buf, int msg_len);

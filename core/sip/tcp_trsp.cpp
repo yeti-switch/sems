@@ -4,6 +4,7 @@
 #include "sip_parser.h"
 #include "trans_layer.h"
 #include "hash.h"
+#include "parse_via.h"
 
 #include "AmUtils.h"
 #include "AmConfig.h"
@@ -299,7 +300,7 @@ void tcp_trsp_socket::generate_transport_errors()
 void tcp_trsp_socket::on_read(short ev)
 {
   int bytes = 0;
-  char* old_cursor = (char*)get_input();
+  //char* old_cursor = (char*)get_input();
 
   {// locked section
 
@@ -395,6 +396,9 @@ int tcp_trsp_socket::parse_input()
 
     int msg_len = pst.get_msg_len();
     sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
+
+    gettimeofday(&s_msg->recv_timestamp,NULL);
+    s_msg->transport_id = sip_transport::TCP;
 
     copy_peer_addr(&s_msg->remote_ip);
     copy_addr_to(&s_msg->local_ip);
@@ -579,7 +583,8 @@ void tcp_server_worker::run()
 {
   // fake event to prevent the event loop from exiting
   int fake_fds[2];
-  pipe(fake_fds);
+  int ret = pipe(fake_fds);
+  (void)ret;
   struct event* ev_default =
     event_new(evbase,fake_fds[0],
 	      EV_READ|EV_PERSIST,
@@ -587,7 +592,7 @@ void tcp_server_worker::run()
   event_add(ev_default,NULL);
 
   /* Start the event loop. */
-  int ret = event_base_dispatch(evbase);
+  /*int ret = */event_base_dispatch(evbase);
 
   // clean-up fake fds/event
   event_free(ev_default);

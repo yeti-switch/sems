@@ -44,8 +44,9 @@ class _AmSipMsgInDlg
   string         trsp;
 
   timeval recv_timestamp;
+  unsigned int transport_id;
 
-  _AmSipMsgInDlg() : cseq(0), rseq(0) { }
+  _AmSipMsgInDlg() : cseq(0), rseq(0), transport_id(0) { }
   virtual ~_AmSipMsgInDlg() { }
 
   virtual string print() const = 0;

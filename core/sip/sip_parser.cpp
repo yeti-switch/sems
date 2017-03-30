@@ -86,7 +86,8 @@ sip_msg::sip_msg()
       content_length(NULL),
       body(),
       local_socket(NULL),
-      type(SIP_UNKNOWN)
+      type(SIP_UNKNOWN),
+      transport_id(sip_transport::UNPARSED)
 {
     u.request = 0;
     u.reply   = 0;
