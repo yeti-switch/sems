@@ -1,3 +1,12 @@
+sems (1.7.31-0) stable; urgency=low
+
+  * 51d21dbb5 set transport_id for received SIP messages
+  * 7137c6e35 resolver: add missed dump() implementation
+  * 34e4fd7f1 resolver: remove debug stacktrace
+  * d1817c0b3 pkg: add missed build-dep
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 30 Mar 2017 18:12:28 +0300
+
 sems (1.7.30-1) stable; urgency=low
 
   * 4465cc7d5 AmSipDialog: fix provisional replies handling in cancelling state. allow to specify custom headers for cancel() called via bye()
