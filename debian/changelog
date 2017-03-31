@@ -1,3 +1,9 @@
+sems (1.7.32-0) stable; urgency=low
+
+  * 4679913 memorize actual bound ip/port for informational purposes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 31 Mar 2017 12:20:02 +0300
+
 sems (1.7.31-0) stable; urgency=low
 
   * 51d21dbb5 set transport_id for received SIP messages
