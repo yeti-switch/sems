@@ -69,6 +69,9 @@ protected:
     // bound port number
     unsigned short   port;
 
+    string actual_ip;
+    unsigned short actual_port;
+
     // public IP (Via-HF)
     string      public_ip;
 
@@ -106,6 +109,17 @@ public:
      * Getter for the port number
      */
     unsigned short get_port() const;
+
+    /**
+     * Getter for actual IP address
+     */
+    const string &get_actual_ip() const;
+
+    /**
+     * Getter for the actual port number
+     */
+    unsigned short get_actual_port() const;
+
 
     /**
      * Setter for public IP address

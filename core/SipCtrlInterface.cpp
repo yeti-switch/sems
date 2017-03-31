@@ -666,6 +666,11 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 	req.recv_timestamp = msg->recv_timestamp;
 	req.transport_id = msg->transport_id;
 
+	if(msg->local_socket) {
+		req.actual_ip = msg->local_socket->get_actual_ip();
+		req.actual_port = msg->local_socket->get_actual_port();
+	}
+
     return true;
 }
 
@@ -751,6 +756,11 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
 
 	reply.recv_timestamp = msg->recv_timestamp;
 	reply.transport_id = msg->transport_id;
+
+	if(msg->local_socket) {
+		reply.actual_ip = msg->local_socket->get_actual_ip();
+		reply.actual_port = msg->local_socket->get_actual_port();
+	}
 
     return true;
 }

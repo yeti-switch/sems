@@ -150,8 +150,8 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 	}
 #endif
 
-    port = bind_port;
-    ip   = bind_ip;
+    actual_port = port = bind_port;
+    actual_ip = ip = bind_ip;
 
     DBG("UDP transport bound to %s/%i\n",ip.c_str(),port);
 

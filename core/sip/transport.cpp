@@ -37,7 +37,7 @@ int trsp_socket::log_level_raw_msgs = L_DBG;
 
 trsp_socket::trsp_socket(unsigned short if_num, unsigned int opts,
 			 unsigned int sys_if_idx, int sd)
-    : sd(sd), ip(), port(0), 
+	: sd(sd), ip(), port(0), actual_ip(), actual_port(0),
       if_num(if_num), sys_if_idx(sys_if_idx),
       socket_options(opts)
 {
@@ -56,6 +56,16 @@ const char* trsp_socket::get_ip() const
 unsigned short trsp_socket::get_port() const
 {
     return port;
+}
+
+const string& trsp_socket::get_actual_ip() const
+{
+    return actual_ip;
+}
+
+unsigned short trsp_socket::get_actual_port() const
+{
+    return actual_port;
 }
 
 void trsp_socket::set_public_ip(const string& ip)

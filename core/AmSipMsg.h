@@ -41,12 +41,14 @@ class _AmSipMsgInDlg
   unsigned short remote_port;
   string         local_ip;
   unsigned short local_port;
+  string         actual_ip;
+  unsigned short actual_port;
   string         trsp;
 
   timeval recv_timestamp;
   unsigned int transport_id;
 
-  _AmSipMsgInDlg() : cseq(0), rseq(0), transport_id(0) { }
+  _AmSipMsgInDlg() : cseq(0), rseq(0), transport_id(0), actual_port(0) { }
   virtual ~_AmSipMsgInDlg() { }
 
   virtual string print() const = 0;

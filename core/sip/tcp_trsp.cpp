@@ -220,6 +220,13 @@ int tcp_trsp_socket::check_connection()
       }
     }
 
+    //memorize actual ip/port
+    sockaddr_storage actual_addr;
+    socklen_t actual_addr_len = sizeof(actual_addr);
+    getsockname(sd,(sockaddr *)&actual_addr,&actual_addr_len);
+    actual_ip = am_inet_ntop(&actual_addr);
+    actual_port = am_get_port(&actual_addr);
+
     // it's time to create the events...
     create_events();
 
