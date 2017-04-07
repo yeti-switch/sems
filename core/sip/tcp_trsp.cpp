@@ -829,6 +829,8 @@ void tcp_trsp::run()
   INFO("Started SIP server TCP transport on %s:%i\n",
        sock->get_ip(),sock->get_port());
 
+  setThreadName("sip-tcp-trsp");
+
   /* Start the event loop. */
   int ret = event_base_dispatch(evbase);
 
