@@ -598,6 +598,8 @@ void tcp_server_worker::run()
 	      NULL,NULL);
   event_add(ev_default,NULL);
 
+  setThreadName("sip-tcp-worker");
+
   /* Start the event loop. */
   /*int ret = */event_base_dispatch(evbase);
 
