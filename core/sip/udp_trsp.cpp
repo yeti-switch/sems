@@ -276,7 +276,8 @@ int udp_trsp_socket::send(const sockaddr_storage* sa,
 {
     if (log_level_raw_msgs >= 0) {
 	_LOG(log_level_raw_msgs, 
-		 "send msg via UDP to %s:%i\n--++--\n%.*s--++--\n",
+		 "send msg via UDP from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+		 actual_ip.c_str(), actual_port,
 	     get_addr_str(sa).c_str(),
 	     ntohs(((sockaddr_in*)sa)->sin_port),
 	     msg_len, msg);

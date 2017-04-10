@@ -40,8 +40,8 @@ tcp_trsp_socket::tcp_trsp_socket(tcp_server_socket* server_sock,
     read_ev(NULL), write_ev(NULL)
 {
   // local address
-  ip = server_sock->get_ip();
-  port = server_sock->get_port();
+  actual_ip = ip = server_sock->get_ip();
+  actual_port = port = server_sock->get_port();
   server_sock->copy_addr_to(&addr);
 
   // peer address
@@ -480,7 +480,8 @@ void tcp_trsp_socket::on_write(short ev)
       return;
     }
 
-    DBG("send msg via TCP to %s:%i\n--++--\n%.*s--++--\n",
+    DBG("send msg via TCP from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+        actual_ip.c_str(), actual_port,
         get_addr_str(&msg->addr).c_str(),
         am_get_port(&msg->addr),
         bytes,msg->cursor);
@@ -677,8 +678,8 @@ int tcp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     return -1;
   }
 
-  port = bind_port;
-  ip   = bind_ip;
+  actual_port = port = bind_port;
+  actual_ip = ip   = bind_ip;
 
   DBG("TCP transport bound to %s/%i\n",ip.c_str(),port);
 
