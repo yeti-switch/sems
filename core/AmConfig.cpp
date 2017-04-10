@@ -805,10 +805,9 @@ static int readACL(AmConfigReader& cfg, trsp_acl &acl, const string list_key, co
     return 0;
 }
 
-int AmConfig::insert_SIP_interface_mapping(const SIP_interface& intf) {
-  unsigned int idx = SIP_If_names[intf.name];
-
-  string if_local_ip = intf.LocalIP;
+int AmConfig::insert_SIP_interface_mapping(const SIP_interface& intf, int idx) {
+  SIP_If_names[intf.name] = idx;
+  const string &if_local_ip = intf.LocalIP;
 
   map<string,unsigned short>::iterator it = LocalSIPIP2If.find(if_local_ip);
   if(it == LocalSIPIP2If.end()) {
@@ -1255,10 +1254,11 @@ int AmConfig::finalizeIPConfig()
 {
   fillSysIntfList();
 
+  int idx = 0;
   // replace system interface names with IPs
   for(vector<SIP_interface>::iterator it = SIP_Ifs.begin();
       it != SIP_Ifs.end(); it++) {
-    
+
     it->LocalIP = fixIface2IP(it->LocalIP,true);
     if(it->LocalIP.empty()) {
       ERROR("could not determine signaling IP for "
@@ -1269,10 +1269,12 @@ int AmConfig::finalizeIPConfig()
     if(!it->LocalPort)
       it->LocalPort = 5060;
 
-    if (insert_SIP_interface_mapping(*it)<0)
+    if (insert_SIP_interface_mapping(*it,idx)<0)
       return -1;
 
     setNetInterface(&(*it));
+
+    idx++;
   }
 
   for(vector<RTP_interface>::iterator it = RTP_Ifs.begin();
