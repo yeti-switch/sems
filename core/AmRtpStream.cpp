@@ -1201,7 +1201,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
         if(!recved_bytes) return;
 
       if((size_t)recved_bytes > sizeof(local_buffer)) {
-        CLASS_ERROR("recved huge RTCP packet (%d)",recved_bytes);
+        CLASS_ERROR("recved huge RTCP packet (%d/%d)",recved_bytes,sizeof(local_buffer));
         return;
       }
   }
@@ -1216,11 +1216,6 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
   if(!relay_enabled || !relay_stream ||
      !relay_stream->l_sd)
     return;
-
-  if((size_t)recved_bytes > sizeof(buffer)) {
-    ERROR("recved huge RTCP packet (%d)",recved_bytes);
-    return;
-  }
 
   struct sockaddr_storage rtcp_raddr;
   memcpy(&rtcp_raddr,&relay_stream->r_saddr,sizeof(rtcp_raddr));
