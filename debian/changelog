@@ -1,3 +1,10 @@
+sems (1.7.33-1) stable; urgency=low
+
+  * 771384a3f udp_trsp/tcp_trsp: show source ip:port for sent messages logging
+  * 8cf200cda AmConfig: fix interfaces mapping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 10 Apr 2017 12:33:43 +0300
+
 sems (1.7.32-1) stable; urgency=low
 
   * 397af977a tcp_trsp: set name for tcp transport threads
