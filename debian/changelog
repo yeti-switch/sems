@@ -1,3 +1,9 @@
+sems (1.7.33-2) stable; urgency=low
+
+  * 77764639f AmRtpStream: remove wrong received bytes count checking
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 10 Apr 2017 14:24:07 +0300
+
 sems (1.7.33-1) stable; urgency=low
 
   * 771384a3f udp_trsp/tcp_trsp: show source ip:port for sent messages logging
