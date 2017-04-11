@@ -1,3 +1,9 @@
+sems (1.7.33-3) stable; urgency=low
+
+  * 36e0b0994 AmSipDialog: onRxReplySanity: don't drop local 408 in Cancelling state
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 11 Apr 2017 19:00:53 +0300
+
 sems (1.7.33-2) stable; urgency=low
 
   * 77764639f AmRtpStream: remove wrong received bytes count checking
