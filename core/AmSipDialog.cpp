@@ -337,8 +337,7 @@ bool AmSipDialog::onRxReplySanity(const AmSipReply& reply)
 {
   if(!getRemoteTag().empty()
      && reply.to_tag != getRemoteTag()) {
-
-    if(status == Early) {
+    if(status == Early || status == Cancelling) {
       if(reply.code < 200 && !reply.to_tag.empty()) {
         return false;// DROP
       }
