@@ -371,8 +371,8 @@ bool AmSession::processEventsCatchExceptions() {
       throw AmSession::Exception(500,"unexpected exception.");
     }    
   } catch(const AmSession::Exception& e){
-    DBG("%i %s\n",e.code,e.reason.c_str());
-    return false;
+    DBG("processEventsCatchExceptions(): got exception %i %s\n",e.code,e.reason.c_str());
+    return onException(e.code,e.reason);
   }
   return true;
 }

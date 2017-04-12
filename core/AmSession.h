@@ -576,6 +576,9 @@ public:
   /** This callback is called on exception during onInvite() execution */
   virtual void onInviteException(int code,string reason,bool no_reply) {}
 
+  /** This callback is called on final exception in processEventsCatchExceptions() */
+  virtual bool onException(int code,const string &reason) noexcept { return false; }
+
   /** This callback is called if RTP timeout encountered */
   virtual void onRtpTimeout();
 
