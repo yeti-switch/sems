@@ -202,11 +202,12 @@ void Am100rel::onReplyOut(AmSipReply& reply)
             rseq_confirmed = false;
             rseq_1st = rseq;
           } else {
-            if ((! rseq_confirmed) && (rseq_1st == rseq))
+            if ((! rseq_confirmed) && (rseq_1st == rseq)) {
               // refuse subsequent 1xx if first isn't yet PRACKed
               DBG("first reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
               throw AmSession::Exception(491, "first reliable 1xx not yet "
                   "PRACKed");
+            }
             rseq ++;
           }
           reply.hdrs += SIP_HDR_COLSP(SIP_HDR_RSEQ) + int2str(rseq) + CRLF;
@@ -215,10 +216,11 @@ void Am100rel::onReplyOut(AmSipReply& reply)
           break;
       }
     } else if (reply.code < 300 && reliable_1xx == REL100_REQUIRE) { //code = 2xx
-      if (rseq && !rseq_confirmed) 
+      if (rseq && !rseq_confirmed) {
         // reliable 1xx is pending, 2xx'ing not allowed yet
         DBG("last reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
         throw AmSession::Exception(491, "last reliable 1xx not yet PRACKed");
+      }
     }
   }
 }
