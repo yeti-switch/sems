@@ -1,3 +1,9 @@
+sems (1.7.34-2) stable; urgency=low
+
+  * pkg: fix shlibs
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Apr 2017 18:29:23 +0300
+
 sems (1.7.34-1) stable; urgency=low
 
   * 4ea31fcaa Am100rel: fix conditions scope for exceptions
