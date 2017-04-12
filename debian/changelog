@@ -1,3 +1,9 @@
+sems (1.7.33-4) stable; urgency=low
+
+  * Am100rel: add callid to log messages
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Apr 2017 12:47:01 +0300
+
 sems (1.7.33-3) stable; urgency=low
 
   * 36e0b0994 AmSipDialog: onRxReplySanity: don't drop local 408 in Cancelling state

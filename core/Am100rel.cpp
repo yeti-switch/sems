@@ -30,7 +30,7 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
             key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), 
               SIP_EXT_100REL)) {
           reliable_1xx = REL100_REQUIRE;
-          DBG(SIP_EXT_100REL " now active.\n");
+          DBG(SIP_EXT_100REL " now active for callid: %s",req.callid.c_str());
         }
         break;
 
@@ -40,7 +40,7 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
             key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), 
               SIP_EXT_100REL))) {
           ERROR("'" SIP_EXT_100REL "' extension required, but not advertised"
-            " by peer.\n");
+            " by peer. callid: %s",req.callid.c_str());
 	  AmBasicSipDialog::reply_error(req, 421, SIP_REPLY_EXTENSION_REQUIRED,
 					SIP_HDR_COLSP(SIP_HDR_REQUIRE) 
 					SIP_EXT_100REL CRLF);
@@ -61,22 +61,25 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
         break;
 
       default:
-        ERROR("BUG: unexpected value `%d' for '" SIP_EXT_100REL "' switch.", 
-          reliable_1xx);
+        ERROR("BUG: unexpected value `%d' for '" SIP_EXT_100REL "' switch. callid: %s",
+          reliable_1xx,req.callid.c_str());
 #ifndef NDEBUG
         abort();
 #endif
     } // switch reliable_1xx
   } else if (req.method == SIP_METH_PRACK) {
     if (reliable_1xx != REL100_REQUIRE) {
-      WARN("unexpected PRACK received while " SIP_EXT_100REL " not active.\n");
+      WARN("unexpected PRACK received while " SIP_EXT_100REL " not active. callid: %s",
+           req.callid.c_str());
       // let if float up
     } else if (rseq_1st<=req.rseq && req.rseq<=rseq) {
       if (req.rseq == rseq) {
         rseq_confirmed = true; // confirmed
       }
       // else: confirmation for one of the pending 1xx
-      DBG("%sRSeq (%u) confirmed.\n", (req.rseq==rseq) ? "latest " : "", rseq);
+      DBG("%sRSeq (%u) confirmed. callid: %s",
+          (req.rseq==rseq) ? "latest " : "", rseq,
+          req.callid.c_str());
     }
   }
 
@@ -109,11 +112,11 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
       if (!key_in_list(getHeader(reply.hdrs,SIP_HDR_REQUIRE),SIP_EXT_100REL) ||
           !reply.rseq) {
         ERROR(SIP_EXT_100REL " not supported or no positive RSeq value in "
-            "(reliable) 1xx.\n");
+            "(reliable) 1xx. callid: %s",reply.callid.c_str());
 	dlg->bye();
         if (hdl) hdl->onFailure();
       } else {
-        DBG(SIP_EXT_100REL " now active.\n");
+        DBG(SIP_EXT_100REL " now active. callid: %s",reply.callid.c_str());
         if (hdl) ((AmSipDialogEventHandler*)hdl)->onInvite1xxRel(reply);
       }
       break;
@@ -122,8 +125,8 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
       // 100rel support disabled
       break;
     default:
-      ERROR("BUG: unexpected value `%d' for " SIP_EXT_100REL " switch.", 
-          reliable_1xx);
+      ERROR("BUG: unexpected value `%d' for " SIP_EXT_100REL " switch. callid: %s",
+          reliable_1xx,reply.callid.c_str());
 #ifndef NDEBUG
       abort();
 #endif
@@ -137,7 +140,8 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
       if (hdl) 
 	((AmSipDialogEventHandler*)hdl)->onPrack2xx(reply);
     } else {
-      WARN("received '%d' for " SIP_METH_PRACK " method.\n", reply.code);
+      WARN("received '%d' for " SIP_METH_PRACK " method. callid: %s",
+           reply.code,reply.callid.c_str());
     }
     // absorbe the replys for the prack (they've been dispatched through 
     // onPrack2xx, if necessary)
@@ -163,8 +167,8 @@ void Am100rel::onRequestOut(AmSipRequest& req)
         req.hdrs += SIP_HDR_COLSP(SIP_HDR_REQUIRE) SIP_EXT_100REL CRLF;
       break;
     default:
-      ERROR("BUG: unexpected reliability switch value of '%d'.\n",
-          reliable_1xx);
+      ERROR("BUG: unexpected reliability switch value of '%d'. callid: %s",
+          reliable_1xx,req.callid.c_str());
     case 0:
       break;
   }
@@ -200,6 +204,7 @@ void Am100rel::onReplyOut(AmSipReply& reply)
           } else {
             if ((! rseq_confirmed) && (rseq_1st == rseq))
               // refuse subsequent 1xx if first isn't yet PRACKed
+              DBG("first reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
               throw AmSession::Exception(491, "first reliable 1xx not yet "
                   "PRACKed");
             rseq ++;
@@ -212,6 +217,7 @@ void Am100rel::onReplyOut(AmSipReply& reply)
     } else if (reply.code < 300 && reliable_1xx == REL100_REQUIRE) { //code = 2xx
       if (rseq && !rseq_confirmed) 
         // reliable 1xx is pending, 2xx'ing not allowed yet
+        DBG("last reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
         throw AmSession::Exception(491, "last reliable 1xx not yet PRACKed");
     }
   }
@@ -222,13 +228,15 @@ void Am100rel::onTimeout(const AmSipRequest& req, const AmSipReply& rpl)
   if (reliable_1xx == REL100_IGNORED)
     return;
 
-  INFO("reply <%s> timed out (not PRACKed).\n", rpl.print().c_str());
+  INFO("reply <%s> timed out (not PRACKed). callid: %s",
+       rpl.print().c_str(),req.callid.c_str());
   if (100 < rpl.code && rpl.code < 200 && reliable_1xx == REL100_REQUIRE &&
       rseq == rpl.rseq && rpl.cseq_method == SIP_METH_INVITE) {
-    INFO("reliable %d reply timed out; rejecting request.\n", rpl.code);
+    INFO("reliable %d reply timed out; rejecting request. callid: %s",
+         rpl.code,req.callid.c_str());
     if(hdl) hdl->onNoPrack(req, rpl);
   } else {
-    WARN("reply timed-out, but not reliable.\n"); // debugging
+    WARN("reply timed-out, but not reliable. callid: %s",req.callid.c_str()); // debugging
   }
 }
 
