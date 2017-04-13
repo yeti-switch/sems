@@ -1,3 +1,9 @@
+sems (1.7.36-1) stable; urgency=low
+
+  * 5061bf128 resolver: do resolving for cname targets not found in local cache
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 13 Apr 2017 14:47:03 +0300
+
 sems (1.7.35-1) stable; urgency=low
 
   * resolver: add CNAME support
