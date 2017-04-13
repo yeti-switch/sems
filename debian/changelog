@@ -1,3 +1,9 @@
+sems (1.7.35-1) stable; urgency=low
+
+  * resolver: add CNAME support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 13 Apr 2017 03:40:41 +0300
+
 sems (1.7.34-2) stable; urgency=low
 
   * pkg: fix shlibs

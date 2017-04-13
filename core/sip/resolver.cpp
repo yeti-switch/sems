@@ -85,6 +85,13 @@ struct srv_entry
     virtual string to_str();
 };
 
+struct cname_entry
+    : public dns_base_entry
+{
+    string       target;
+    virtual string to_str() { return target; }
+};
+
 int dns_ip_entry::next_ip(dns_handle* h, sockaddr_storage* sa)
 {
     if(h->ip_e != this){
@@ -299,6 +306,20 @@ public:
     }
 };
 
+class dns_cname_entry
+  : public dns_entry
+{
+    string target;
+  public:
+    dns_cname_entry()
+     : dns_entry()
+    { }
+    void init() {}
+    dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end);
+    int next_ip(dns_handle* h, sockaddr_storage* sa) { return -1; }
+    dns_entry *resolve_alias(dns_cache &cache);
+};
+
 dns_entry::dns_entry()
     : dns_base_entry()
 {
@@ -319,6 +340,8 @@ dns_entry* dns_entry::make_entry(dns_rr_type t, unsigned short srv_port)
     switch(t){
     case dns_r_srv:
 	return new dns_srv_entry(srv_port);
+	case dns_r_cname:
+	return new dns_cname_entry();
     case dns_r_a:
     //case dns_r_aaaa:
 	return new dns_ip_entry();
@@ -577,6 +600,47 @@ string srv_entry::to_str()
 	+ "/" + int2str(p)
 	+ "/" + int2str(w);
 };
+
+dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
+{
+    if(rr->type != dns_r_cname)
+        return NULL;
+
+    u_char name_buf[NS_MAXDNAME];
+    const u_char * rdata = ns_rr_rdata(*rr);
+
+    /* Expand the target's name */
+    u_char* p = (u_char*)rdata;
+    if (dns_expand_name(&p,begin,end,
+                   name_buf,         /* Result                */
+                   NS_MAXDNAME)      /* Size of result buffer */
+        < 0) {    /* Negative: error       */
+
+        ERROR("dns_expand_name failed\n");
+        return NULL;
+    }
+
+    DBG("CNAME: TTL=%i\t%s\tT=<%s>\n",
+        ns_rr_ttl(*rr),
+        ns_rr_name(*rr),
+        name_buf);
+
+    cname_entry* cname_r = new cname_entry();
+    cname_r->target = (const char*)name_buf;
+
+    return cname_r;
+}
+
+dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache)
+{
+    if(ip_vec.empty()) {
+        DBG("empty cname entry");
+        return nullptr;
+    }
+    string &target = ((cname_entry *)ip_vec[0])->target;
+    dns_bucket* b = cache.get_bucket(hashlittle(target.data(),target.size(),0));
+    return b->find(target);
+}
 
 struct dns_search_h
 {
@@ -920,23 +984,23 @@ int _resolver::resolve_name(const char* name,
     int ret;
 
     // already have a valid handle?
-    if(h->valid()){
-	if(h->eoip()) return -1;
-	return h->next_ip(sa);
+    if(h->valid()) {
+        if(h->eoip()) return -1;
+        return h->next_ip(sa);
     }
 
     if(t != dns_r_srv &&
-       t != dns_r_naptr) {
-
-	// first try to detect if 'name' is already an IP address
-	ret = am_inet_pton(name,sa);
-	if(ret == 1) {
-	    h->ip_n = -1; // flag end of IP list
-	    h->srv_n = -1;
-	    return 0; // 'name' is an IP address
-	}
+       t != dns_r_naptr)
+    {
+        // first try to detect if 'name' is already an IP address
+        ret = am_inet_pton(name,sa);
+        if(ret == 1) {
+            h->ip_n = -1; // flag end of IP list
+            h->srv_n = -1;
+            return 0; // 'name' is an IP address
+        }
     }
-    
+
     // name is NOT an IP address -> try a cache look up
     dns_bucket* b = cache.get_bucket(hashlittle(name,strlen(name),0));
     dns_entry* e = b->find(name);
@@ -944,36 +1008,47 @@ int _resolver::resolve_name(const char* name,
     // first attempt to get a valid IP
     // (from the cache)
     if(e){
-	int ret = e->next_ip(h,sa);
-	dec_ref(e);
-	return ret;
+        if(dns_entry* re = e->resolve_alias(cache)) {
+            dec_ref(e);
+            int ret = re->next_ip(h,sa);
+            dec_ref(re);
+            return ret;
+        } else {
+            int ret = e->next_ip(h,sa);
+            dec_ref(e);
+            return ret;
+        }
     }
 
     // no valid IP, query the DNS
     dns_entry_map entry_map;
     if(query_dns(name,entry_map,t) < 0) {
-	return -1;
+        return -1;
     }
 
     for(dns_entry_map::iterator it = entry_map.begin();
-	it != entry_map.end(); it++) {
-
-	if(!it->second) continue;
-
-	b = cache.get_bucket(hashlittle(it->first.c_str(),
-					it->first.length(),0));
-	// cache the new record
-	if(b->insert(it->first,it->second)) {
-	    // cache insert successful
-	    DBG("new DNS cache entry: '%s' -> %s",
-		it->first.c_str(), it->second->to_str().c_str());
-	}
+        it != entry_map.end(); it++)
+    {
+        if(!it->second) continue;
+        b = cache.get_bucket(hashlittle(it->first.c_str(),
+                             it->first.length(),0));
+        // cache the new record
+        if(b->insert(it->first,it->second)) {
+            // cache insert successful
+            DBG("new DNS cache entry: '%s' -> %s",
+            it->first.c_str(), it->second->to_str().c_str());
+        }
     }
 
     e = entry_map.fetch(name);
     if(e) {
-	// now we should have a valid IP
-	return e->next_ip(h,sa);
+        if(dns_entry* re = e->resolve_alias(cache)) {
+            int ret = re->next_ip(h,sa);
+            dec_ref(re);
+            return ret;
+        } else {
+            return e->next_ip(h,sa);
+        }
     }
 
     return -1;

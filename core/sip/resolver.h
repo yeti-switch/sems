@@ -75,6 +75,21 @@ struct dns_base_entry
     virtual string to_str() = 0;
 };
 
+typedef ht_map_bucket<string,dns_entry> dns_bucket_base;
+
+class dns_bucket
+    : protected dns_bucket_base
+{
+    friend class _resolver;
+public:
+    dns_bucket(unsigned long id);
+    bool insert(const string& name, dns_entry* e);
+    bool remove(const string& name);
+    dns_entry* find(const string& name);
+};
+
+typedef hash_table<dns_bucket> dns_cache;
+
 class dns_entry
     : public atomic_ref_cnt,
       public dns_base_entry
@@ -91,24 +106,10 @@ public:
     virtual void init()=0;
     virtual void add_rr(dns_record* rr, u_char* begin, u_char* end, long now);
     virtual int next_ip(dns_handle* h, sockaddr_storage* sa)=0;
+    virtual dns_entry *resolve_alias(dns_cache &cache) { return nullptr; }
 
     virtual string to_str();
 };
-
-typedef ht_map_bucket<string,dns_entry> dns_bucket_base;
-
-class dns_bucket
-    : protected dns_bucket_base
-{
-    friend class _resolver;
-public:
-    dns_bucket(unsigned long id);
-    bool insert(const string& name, dns_entry* e);
-    bool remove(const string& name);
-    dns_entry* find(const string& name);
-};
-
-typedef hash_table<dns_bucket> dns_cache;
 
 struct ip_entry
     : public dns_base_entry
