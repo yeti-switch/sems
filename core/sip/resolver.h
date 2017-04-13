@@ -106,7 +106,7 @@ public:
     virtual void init()=0;
     virtual void add_rr(dns_record* rr, u_char* begin, u_char* end, long now);
     virtual int next_ip(dns_handle* h, sockaddr_storage* sa)=0;
-    virtual dns_entry *resolve_alias(dns_cache &cache) { return nullptr; }
+    virtual dns_entry *resolve_alias(dns_cache &cache, dns_rr_type t) { return nullptr; }
 
     virtual string to_str();
 };

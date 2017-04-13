@@ -317,7 +317,7 @@ class dns_cname_entry
     void init() {}
     dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end);
     int next_ip(dns_handle* h, sockaddr_storage* sa) { return -1; }
-    dns_entry *resolve_alias(dns_cache &cache);
+    dns_entry *resolve_alias(dns_cache &cache, dns_rr_type t);
 };
 
 dns_entry::dns_entry()
@@ -470,7 +470,7 @@ static void dns_error(int error, const char* domain, dns_rr_type type)
 
 void ip_entry::to_sa(sockaddr_storage* sa)
 {
-    DBG("copying ip_entry...");
+    //DBG("copying ip_entry...");
     switch(type){
     case IPv4:
 	{
@@ -543,7 +543,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
     if(rr->type != dns_r_a)
 	return NULL;
 
-    DBG("A:\tTTL=%i\t%s\t%i.%i.%i.%i\n",
+	DBG("A: TTL=%i %s %i.%i.%i.%i\n",
 	ns_rr_ttl(*rr),
 	ns_rr_name(*rr),
 	ns_rr_rdata(*rr)[0],
@@ -577,7 +577,7 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
     	return NULL;
     }
     
-    DBG("SRV:\tTTL=%i\t%s\tP=<%i> W=<%i> P=<%i> T=<%s>\n",
+    DBG("SRV: TTL=%i %s P=<%i> W=<%i> P=<%i> T=<%s>\n",
     	ns_rr_ttl(*rr),
     	ns_rr_name(*rr),
     	dns_get_16(rdata),
@@ -620,7 +620,7 @@ dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* e
         return NULL;
     }
 
-    DBG("CNAME: TTL=%i\t%s\tT=<%s>\n",
+    DBG("CNAME: TTL=%i %s T=<%s>\n",
         ns_rr_ttl(*rr),
         ns_rr_name(*rr),
         name_buf);
@@ -631,15 +631,51 @@ dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* e
     return cname_r;
 }
 
-dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache)
+dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, dns_rr_type t)
 {
+    dns_bucket *b;
+
     if(ip_vec.empty()) {
         DBG("empty cname entry");
         return nullptr;
     }
     string &target = ((cname_entry *)ip_vec[0])->target;
-    dns_bucket* b = cache.get_bucket(hashlittle(target.data(),target.size(),0));
-    return b->find(target);
+    DBG("cname entry points to target: %s."
+        " search for appropriate entry in the local cache",
+        target.c_str());
+    b = cache.get_bucket(hashlittle(target.data(),target.size(),0));
+    dns_entry *e = b->find(target);
+    if(e) {
+        DBG("return entry %s found in the local cache",
+            e->to_str().c_str());
+        return e;
+    }
+
+    DBG("entry for target %s is not found in the local cache. try to resolve it",
+        target.c_str());
+    //not found in cache. resolve target
+    dns_entry_map entry_map;
+    if(resolver::instance()->query_dns(target.c_str(),entry_map,t) < 0) {
+        return nullptr;
+    }
+    //fill cache
+    for(const auto &de: entry_map) {
+        if(!de.second) continue;
+        if(cache.get_bucket(
+            hashlittle(de.first.c_str(),
+            de.first.length(),0))->insert(de.first,de.second))
+        {
+            DBG("new DNS cache entry: '%s' -> %s",
+                de.first.c_str(), de.second->to_str().c_str());
+        }
+    }
+    //final lookup in the cache
+    e = b->find(target);
+    if(e) {
+        DBG("return resolved entry %s from the cache",
+            e->to_str().c_str());
+    }
+    return e;
 }
 
 struct dns_search_h
@@ -1008,7 +1044,7 @@ int _resolver::resolve_name(const char* name,
     // first attempt to get a valid IP
     // (from the cache)
     if(e){
-        if(dns_entry* re = e->resolve_alias(cache)) {
+        if(dns_entry* re = e->resolve_alias(cache,t)) {
             dec_ref(e);
             int ret = re->next_ip(h,sa);
             dec_ref(re);
@@ -1042,7 +1078,7 @@ int _resolver::resolve_name(const char* name,
 
     e = entry_map.fetch(name);
     if(e) {
-        if(dns_entry* re = e->resolve_alias(cache)) {
+        if(dns_entry* re = e->resolve_alias(cache,t)) {
             int ret = re->next_ip(h,sa);
             dec_ref(re);
             return ret;
@@ -1241,7 +1277,9 @@ void _resolver::run()
 		dns_bucket::value_map::iterator tmp_it = it;
 		bool end_of_bucket = (++it == bucket->elmts.end());
 
-		DBG("DNS record expired (%p)",dns_e);
+		DBG("DNS record expired (%p) '%s' -> %s",dns_e,
+			tmp_it->first.c_str(),dns_e->to_str().c_str());
+
 		bucket->elmts.erase(tmp_it);
 		dec_ref(dns_e);
 
@@ -1262,7 +1300,7 @@ void _resolver::run()
 void dns_handle::dump(AmArg &ret) {
     if(srv_e) {
         ret["type"] = "srv";
-        ret["port"] = port;
+        //ret["port"] = port;
         AmArg &entries = ret["entries"];
         vector<dns_base_entry*> &v = srv_e->ip_vec;
         for(int i = 0;i < (int)v.size();i++){
