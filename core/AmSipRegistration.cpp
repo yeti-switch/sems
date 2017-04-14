@@ -29,6 +29,7 @@
 #include "AmSipRegistration.h"
 #include "AmSession.h"
 #include "AmSessionContainer.h"
+#include "sip/parse_via.h"
 
 AmSIPRegistration::AmSIPRegistration(const string& handle,
 				     const SIPRegistrationInfo& info,
@@ -63,9 +64,58 @@ AmSIPRegistration::AmSIPRegistration(const string& handle,
   req.to_tag   = "";
   req.callid   = AmSession::getNewId(); 
 
+  patch_transport(req.r_uri);
+
   // clear dlg.callid? ->reregister?
   dlg.initFromLocalRequest(req);
   dlg.cseq = 50;
+}
+
+void AmSIPRegistration::patch_transport(string &uri)
+{
+    switch(info.transport_protocol_id) {
+    case sip_transport::UDP: break;
+    case sip_transport::TCP: {
+        DBG("%s patch uri to use TCP transport. current value is: '%s'",
+            handle.c_str(),uri.c_str());
+        AmUriParser parser;
+        parser.uri = uri;
+        if(!parser.parse_uri()) {
+            ERROR("%s Error parsing '%s' for protocol patching to TCP. leave it as is",
+                 handle.c_str(),parser.uri.c_str());
+            break;
+        }
+        //check for existent transport param
+        if(!parser.uri_param.empty()) {
+            bool can_patch = true;
+            auto uri_params_list = explode(URL_decode(parser.uri_param),";");
+            for(const auto &p: uri_params_list) {
+                auto v = explode(p,"=");
+                if(v[0]=="transport") {
+                    ERROR("%s attempt to patch with existent transport parameter: '%s'."
+                          " leave it as is",
+                          handle.c_str(),v.size()>1?v[1].c_str():"");
+                    can_patch = false;
+                    break;
+                }
+            }
+            if(can_patch) {
+                parser.uri_param+=";transport=TCP";
+                uri = parser.uri_str();
+                DBG("%s uri patched to: '%s'",
+                    handle.c_str(),uri.c_str());
+            }
+        } else {
+            parser.uri_param = "transport=TCP";
+            uri = parser.uri_str();
+            DBG("%s uri patched to: '%s'",
+                handle.c_str(),uri.c_str());
+        }
+    } break;
+    default:
+        ERROR("%s transport_protocol_id %d is not supported yet. ignore it",
+              handle.c_str(),info.transport_protocol_id);
+    }
 }
 
 AmSIPRegistration::~AmSIPRegistration() {
@@ -87,6 +137,8 @@ void AmSIPRegistration::setRegistrationInfo(const SIPRegistrationInfo& _info) {
   req.from_uri = "sip:"+info.user+"@"+info.domain;
   req.to       = req.from;
   req.to_tag   = "";
+
+  patch_transport(req.r_uri);
 
   // to trigger setting dlg identifiers
   dlg.setCallid(string());
@@ -134,6 +186,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
 
   req.to_tag     = "";
   req.r_uri    = "sip:"+info.domain;
+
+  patch_transport(req.r_uri);
 
   dlg.setRemoteTag(string());
   dlg.setRemoteUri(req.r_uri);
@@ -201,14 +255,19 @@ bool AmSIPRegistration::doUnregister()
 
   req.to_tag     = "";
   req.r_uri      = "sip:"+info.domain;
+  patch_transport(req.r_uri);
+
   dlg.setRemoteTag(string());
   dlg.setRemoteUri(req.r_uri);
     
   // set outbound proxy as next hop 
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
-  } else if (!AmConfig::OutboundProxy.empty()) 
+    patch_transport(dlg.outbound_proxy);
+  } else if (!AmConfig::OutboundProxy.empty()) {
     dlg.outbound_proxy = AmConfig::OutboundProxy;
+    patch_transport(dlg.outbound_proxy);
+  }
 
   int flags=0;
   string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) "0" CRLF;

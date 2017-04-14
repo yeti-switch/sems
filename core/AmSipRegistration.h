@@ -53,6 +53,7 @@ struct SIPRegistrationInfo {
   int retry_delay;
   int max_attempts;
   int attempt;
+  int transport_protocol_id;
   bool force_expires_interval;
 
   SIPRegistrationInfo(
@@ -67,13 +68,15 @@ struct SIPRegistrationInfo {
     const int& expires_interval,
     const bool &force_expires_interval,
     const int& retry_delay,
-    const int& max_attempts)
+    const int& max_attempts,
+    const int& transport_protocol_id)
   : id(id),domain(domain),user(user),name(name),
     auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
     expires_interval(expires_interval),
     force_expires_interval(force_expires_interval),
     retry_delay(retry_delay),
     max_attempts(max_attempts),
+    transport_protocol_id(transport_protocol_id),
     attempt(0)
   { }
 };
@@ -106,6 +109,8 @@ class AmSIPRegistration
   bool force_expires_interval;
 
   RegShaper &shaper;
+
+  void patch_transport(string &uri);
 
  public:
   AmSIPRegistration(const string& handle,
