@@ -1,3 +1,9 @@
+sems (1.7.38-1) stable; urgency=low
+
+  * d43a5c3bc registrar_client: add proxy_transport_protocol_id processing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 14 Apr 2017 15:23:07 +0300
+
 sems (1.7.37-1) stable; urgency=low
 
   * 12460dc0c registrar_client: fix too short throttling interval
