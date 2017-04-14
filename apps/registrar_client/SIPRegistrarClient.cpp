@@ -269,6 +269,7 @@ bool SIPRegistrarClient::configure()
                 WARN("shaper min interval %dmsec is less than timer interval %dmsec. "
                      "set it to timer interval",
                      i,(TIMEOUT_CHECKING_INTERVAL/1000));
+                i = TIMEOUT_CHECKING_INTERVAL/1000;
             }
             shaper.set_min_interval(i);
         }
