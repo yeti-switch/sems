@@ -29,9 +29,11 @@
 #include "AmSipRegistration.h"
 #include "AmSession.h"
 #include "AmSessionContainer.h"
+
 AmSIPRegistration::AmSIPRegistration(const string& handle,
 				     const SIPRegistrationInfo& info,
-				     const string& sess_link) 
+					 const string& sess_link,
+					 RegShaper &shaper)
   : info(info),
     dlg(this),
     cred(info.domain, info.auth_user, info.pwd),
@@ -44,10 +46,12 @@ AmSIPRegistration::AmSIPRegistration(const string& handle,
     reg_send_begin(0),
     waiting_result(false),
     unregistering(false),
+    postponed(false),
     seh(NULL),
     error_code(0),
     expires_interval(3600),
-    force_expires_interval(false)
+    force_expires_interval(false),
+    shaper(shaper)
 {
   req.user     = info.user;
   req.method   = "REGISTER";
@@ -104,12 +108,29 @@ void AmSIPRegistration::setForceExpiresInterval(bool force) {
   force_expires_interval = force;
 }
 
-bool AmSIPRegistration::doRegistration() 
+bool AmSIPRegistration::doRegistration(bool skip_shaper)
 {
-  bool res = true;
+  if(postponed) {
+      ERROR("programming error: attempt to call doRegistration() for postponed registration. "
+            "handle: %s",handle.c_str());
+      log_stacktrace(L_ERR);
+      return false;
+  }
 
+  if(!skip_shaper &&
+     shaper.check_rate_limit(info.domain,postponed_next_attempt))
+  {
+    DBG("registration %s(%s): rate limit reached for %s. postpone sending request",
+        handle.c_str(),info.id.c_str(),info.domain.c_str());
+    unregistering = false;
+    postponed = true;
+    return false;
+  }
+
+  bool res = true;
   waiting_result = true;
   unregistering = false;
+  postponed = false;
 
   req.to_tag     = "";
   req.r_uri    = "sip:"+info.domain;
@@ -226,6 +247,8 @@ AmSIPRegistration::RegistrationState AmSIPRegistration::getState() {
     return RegisterActive;
   if (waiting_result)
     return RegisterPending;
+  if(postponed)
+    return RegisterPostponed;
   if(error_code!=0)
     return RegisterError;
   return RegisterExpired;
@@ -278,6 +301,14 @@ void AmSIPRegistration::onRegisterSendTimeout() {
   doRegistration();
 }
 
+void AmSIPRegistration::onPostponeExpired()
+{
+    DBG("Registration %s(%s) postponing timeout. REGISTER immediately ignoring shaper",
+        handle.c_str(),info.id.c_str());
+    postponed = false;
+    doRegistration(true);
+}
+
 bool AmSIPRegistration::registerSendTimeout(time_t now_sec) {
   return now_sec > reg_send_begin + info.retry_delay;
 }
@@ -290,6 +321,11 @@ bool AmSIPRegistration::timeToReregister(time_t now_sec) {
 
 bool AmSIPRegistration::registerExpired(time_t now_sec) {
   return ((reg_begin+reg_expires) < (unsigned int)now_sec);	
+}
+
+bool AmSIPRegistration::postponingExpired(RegShaper::timep now)
+{
+	return now >= postponed_next_attempt;
 }
 
 void AmSIPRegistration::onSipReply(const AmSipRequest& req,

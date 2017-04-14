@@ -35,6 +35,7 @@ using std::string;
 #include "ampi/UACAuthAPI.h"
 #include "AmUriParser.h"
 #include "AmSessionEventHandler.h"
+#include "RegShaper.h"
 
 #define DEFAULT_REGISTER_RETRY_DELAY 5
 #define REGISTER_ATTEMPTS_UNLIMITED 0
@@ -104,10 +105,13 @@ class AmSIPRegistration
   unsigned int expires_interval;
   bool force_expires_interval;
 
+  RegShaper &shaper;
+
  public:
   AmSIPRegistration(const string& handle,
 		    const SIPRegistrationInfo& info,
-		    const string& sess_link);
+			const string& sess_link,
+			RegShaper &shaper);
   ~AmSIPRegistration();
 
   void setRegistrationInfo(const SIPRegistrationInfo& _info);
@@ -117,13 +121,15 @@ class AmSIPRegistration
   void setExpiresInterval(unsigned int desired_expires);
   void setForceExpiresInterval(bool force);
 
-  bool doRegistration();
+  bool doRegistration(bool skip_shaper = false);
   bool doUnregister();
 	
   bool timeToReregister(time_t now_sec);
   bool registerExpired(time_t now_sec);
+  bool postponingExpired(RegShaper::timep now);
   void onRegisterExpired();
   void onRegisterSendTimeout();
+  void onPostponeExpired();
 
   bool registerSendTimeout(time_t now_sec);
 
@@ -147,10 +153,13 @@ class AmSIPRegistration
   bool waiting_result;
   /** are we unregistering? */
   bool unregistering;
+  /** are we postponed */
+  bool postponed;
 
   time_t reg_begin;
   unsigned int reg_expires;
   time_t reg_send_begin;
+  RegShaper::timep postponed_next_attempt;
 
   enum error_initiator {
     REG_ERROR_LOCAL = 0,
@@ -163,7 +172,8 @@ class AmSIPRegistration
     RegisterPending = 0,
     RegisterActive,
     RegisterError,
-    RegisterExpired
+    RegisterExpired,
+    RegisterPostponed
   };
   /** return the state of the registration */
   RegistrationState getState(); 

@@ -31,6 +31,7 @@
 #include "AmSipRegistration.h"
 #include "AmApi.h"
 #include "ampi/BusAPI.h"
+#include "RegShaper.h"
 
 #include <sys/time.h>
 
@@ -46,11 +47,16 @@ class SIPRemoveRegistrationEvent;
 
 class SIPRegistrarClient
   : public AmThread,
-    public AmEventQueue,
+    public AmEventFdQueue,
     public AmEventHandler,
     public AmDynInvoke,
     public AmDynInvokeFactory
 {
+    int epoll_fd;
+    AmTimerFd timer;
+    AmEventFd stop_event;
+    AmCondition<bool> stopped;
+
     // registrations container
     AmMutex reg_mut;
 
@@ -59,6 +65,8 @@ class SIPRegistrarClient
 
     RegHash registrations;
     RegHash registrations_by_id;
+
+    RegShaper shaper;
 
     bool add_reg(const string& reg_id, AmSIPRegistration* new_reg);
     AmSIPRegistration* remove_reg(const string& reg_id);
@@ -80,10 +88,9 @@ class SIPRegistrarClient
 
     AmDynInvoke* uac_auth_i;
 
-    AmSharedVar<bool> stop_requested;
-    AmCondition<bool> stopped;
     void checkTimeouts();
     void onServerShutdown();
+    bool configure();
   public:
     SIPRegistrarClient(const string& name);
     // DI factory

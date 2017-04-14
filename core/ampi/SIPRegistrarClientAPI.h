@@ -49,6 +49,7 @@ inline const char* getSIPRegistationStateString(unsigned int s) {
   case 1: return "RegisterActive";
   case 2: return "RegisterError";
   case 3: return "RegisterExpired";
+  case 4: return "RegisterPostponed";
   default: return "unknown";
   }
 }

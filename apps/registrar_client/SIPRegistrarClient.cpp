@@ -35,10 +35,15 @@
 
 #include <unistd.h>
 
+#define CFG_OPT_NAME_SHAPER_MIN_INTERVAL "min_interval_per_domain_msec"
+
+#define TIMEOUT_CHECKING_INTERVAL 200000 //microseconds
+#define EPOLL_MAX_EVENTS    2048
+
 //EXPORT_SIP_EVENT_HANDLER_FACTORY(SIPRegistrarClient, MOD_NAME);
 //EXPORT_PLUGIN_CLASS_FACTORY(SIPRegistrarClient, MOD_NAME);
 
-static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &ret) {
+static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &ret, const RegShaper::timep &now) {
     AmArg r;
     AmSIPRegistration *reg = it->second;
     const SIPRegistrationInfo &ri = reg->getInfo();
@@ -78,6 +83,13 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
         r["last_error_reason"] = AmArg();
         r["last_error_initiator"] = AmArg();
     }
+    if(reg->postponed) {
+        r["postpone_timeout_msec"] =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                    reg->postponed_next_attempt-now).count();
+    } else {
+        r["postpone_timeout_msec"] = 0;
+    }
     ret.push(r);
 }
 
@@ -100,15 +112,18 @@ SIPRegistrarClient* SIPRegistrarClient::instance()
 }
 
 SIPRegistrarClient::SIPRegistrarClient(const string& name)
-  : AmEventQueue(this),
+  : AmEventFdQueue(this),
     uac_auth_i(NULL),
     AmDynInvokeFactory(MOD_NAME),
-    stop_requested(false),
     stopped(false)
 { }
 
 void SIPRegistrarClient::run()
 {
+    int ret;
+    bool running;
+    struct epoll_event events[EPOLL_MAX_EVENTS];
+
     setThreadName("sip-reg-client");
 
     DBG("SIPRegistrarClient starting...\n");
@@ -123,6 +138,7 @@ void SIPRegistrarClient::run()
 
     AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
 
+    /*
     while (!stop_requested.get()) {
         if (registrations.size()) {
             unsigned int cnt = 250;
@@ -138,17 +154,54 @@ void SIPRegistrarClient::run()
             waitForEvent();
             processEvents();
         }
-    }
+    }*/
+
+    running = true;
+    do {
+        ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
+
+        if(ret == -1 && errno != EINTR) {
+            ERROR("epoll_wait: %s\n",strerror(errno));
+        }
+
+        if(ret < 1)
+            continue;
+
+        for (int n = 0; n < ret; ++n) {
+            struct epoll_event &e = events[n];
+            int f = e.data.fd;
+
+            if(!(e.events & EPOLLIN)){
+                continue;
+            }
+
+            if(f==timer){
+                checkTimeouts();
+                timer.read();
+            } else if(f==queue_fd()){
+                clear_pending();
+                processEvents();
+            } else if(f==stop_event){
+                stop_event.read();
+                running = false;
+                break;
+            }
+        }
+    } while(running);
+
     AmEventDispatcher::instance()->delEventQueue(REG_CLIENT_QUEUE);
-    //sleep(5); FIXME: what is this ?
+    epoll_unlink(epoll_fd);
+    close(epoll_fd);
+
+    onServerShutdown();
     stopped.set(true);
 }
 
 void SIPRegistrarClient::checkTimeouts()
 {
-    //	DBG("checking timeouts...\n");
     struct timeval now;
     gettimeofday(&now, NULL);
+    RegShaper::timep now_point(std::chrono::system_clock::now());
     reg_mut.lock();
     vector<string> remove_regs;
 
@@ -156,7 +209,11 @@ void SIPRegistrarClient::checkTimeouts()
         it != registrations.end(); it++)
     {
         AmSIPRegistration* reg = it->second;
-        if (reg->active) {
+        if (reg->postponed) {
+            if(reg->postponingExpired(now_point)) {
+                reg->onPostponeExpired();
+            }
+        } else if (reg->active) {
             if (reg->registerExpired(now.tv_sec)) {
                 reg->onRegisterExpired();
             } else if (!reg->waiting_result &&
@@ -184,8 +241,45 @@ void SIPRegistrarClient::checkTimeouts()
     reg_mut.unlock();
 }
 
+bool SIPRegistrarClient::configure()
+{
+    if((epoll_fd = epoll_create(3)) == -1){
+        ERROR("epoll_create call failed");
+        return false;
+    }
+
+    epoll_link(epoll_fd);
+    stop_event.link(epoll_fd);
+
+    timer.set(TIMEOUT_CHECKING_INTERVAL);
+    timer.link(epoll_fd);
+
+    AmConfigReader cfg;
+    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+        DBG("missed or wrong configuration file. shaper will be disabled by default");
+        return true;
+    }
+    if(cfg.hasParameter(CFG_OPT_NAME_SHAPER_MIN_INTERVAL)) {
+        int i = cfg.getParameterInt(CFG_OPT_NAME_SHAPER_MIN_INTERVAL);
+        if(i) {
+            DBG("set shaper min interval to %dmsec",i);
+            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
+                WARN("shaper min interval %dmsec is less than timer interval %dmsec. "
+                     "set it to timer interval",
+                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
+            }
+            shaper.set_min_interval(i);
+        }
+    }
+    return true;
+}
+
 int SIPRegistrarClient::onLoad()
 {
+    if(!instance()->configure()) {
+        ERROR("registrar_client configuration error");
+        return -1;
+    }
     instance()->start();
     return 0;
 }
@@ -200,7 +294,6 @@ void SIPRegistrarClient::onServerShutdown()
         it->second->doUnregister();
         AmEventDispatcher::instance()->delEventQueue(it->first);
     }
-    stop_requested.set(true);
 }
 
 void SIPRegistrarClient::process(AmEvent* ev) 
@@ -210,7 +303,7 @@ void SIPRegistrarClient::process(AmEvent* ev)
         if(sys_ev){
             DBG("Session received system Event\n");
             if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-                onServerShutdown();
+                stop_event.fire();
             }
             return;
         }
@@ -256,7 +349,8 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
     AmSIPRegistration* reg =
         new AmSIPRegistration(new_reg->handle,
                               new_reg->info,
-                              new_reg->sess_link);
+                              new_reg->sess_link,
+                              shaper);
 
     if (uac_auth_i != NULL) {
         DBG("enabling UAC Auth for new registration.\n");
@@ -430,7 +524,7 @@ void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
 
 void SIPRegistrarClient::on_stop()
 {
-    onServerShutdown();
+    stop_event.fire();
     stopped.wait_for();
 }
 
@@ -613,10 +707,11 @@ void SIPRegistrarClient::listRegistrations(AmArg& res)
 {
     res.assertArray();
     reg_mut.lock();
+    RegShaper::timep now(std::chrono::system_clock::now());
     for (map<string, AmSIPRegistration*>::iterator it =
          registrations.begin(); it != registrations.end(); it++)
     {
-        reg2arg(it,res);
+        reg2arg(it,res,now);
     }
     reg_mut.unlock();
 }
@@ -627,7 +722,7 @@ void SIPRegistrarClient::showRegistration(const string& handle, AmArg &ret)
     map<string, AmSIPRegistration*>::iterator it = registrations.find(handle);
     ret.assertArray();
     if(it!=registrations.end())
-        reg2arg(it,ret);
+        reg2arg(it,ret,std::chrono::system_clock::now());
 }
 
 void SIPRegistrarClient::showRegistrationById(const string& id, AmArg &ret)
@@ -636,7 +731,7 @@ void SIPRegistrarClient::showRegistrationById(const string& id, AmArg &ret)
     RegHash::iterator it = registrations_by_id.find(id);
     ret.assertArray();
     if(it!=registrations_by_id.end())
-        reg2arg(it,ret);
+        reg2arg(it,ret,std::chrono::system_clock::now());
 }
 
 void SIPRegistrarClient::getRegistrationsCount(AmArg& res)
