@@ -70,6 +70,7 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     r["max_attempts"] = ri.max_attempts;
     r["attempt"] = ri.attempt;
     r["transport_protocol_id"] = ri.transport_protocol_id;
+    r["proxy_transport_protocol_id"] = ri.proxy_transport_protocol_id;
     r["event_sink"] = reg->getEventSink();
     r["last_request_time"] = (int)reg->reg_send_begin;
     r["last_succ_reg_time"] = (int)reg->reg_begin;
