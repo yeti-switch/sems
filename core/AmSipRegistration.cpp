@@ -64,16 +64,16 @@ AmSIPRegistration::AmSIPRegistration(const string& handle,
   req.to_tag   = "";
   req.callid   = AmSession::getNewId(); 
 
-  patch_transport(req.r_uri);
+  patch_transport(req.r_uri,info.transport_protocol_id);
 
   // clear dlg.callid? ->reregister?
   dlg.initFromLocalRequest(req);
   dlg.cseq = 50;
 }
 
-void AmSIPRegistration::patch_transport(string &uri)
+void AmSIPRegistration::patch_transport(string &uri, int transport_protocol_id)
 {
-    switch(info.transport_protocol_id) {
+    switch(transport_protocol_id) {
     case sip_transport::UDP: break;
     case sip_transport::TCP: {
         DBG("%s patch uri to use TCP transport. current value is: '%s'",
@@ -114,7 +114,7 @@ void AmSIPRegistration::patch_transport(string &uri)
     } break;
     default:
         ERROR("%s transport_protocol_id %d is not supported yet. ignore it",
-              handle.c_str(),info.transport_protocol_id);
+              handle.c_str(),transport_protocol_id);
     }
 }
 
@@ -138,7 +138,7 @@ void AmSIPRegistration::setRegistrationInfo(const SIPRegistrationInfo& _info) {
   req.to       = req.from;
   req.to_tag   = "";
 
-  patch_transport(req.r_uri);
+  patch_transport(req.r_uri,info.transport_protocol_id);
 
   // to trigger setting dlg identifiers
   dlg.setCallid(string());
@@ -187,7 +187,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   req.to_tag     = "";
   req.r_uri    = "sip:"+info.domain;
 
-  patch_transport(req.r_uri);
+  patch_transport(req.r_uri,info.transport_protocol_id);
 
   dlg.setRemoteTag(string());
   dlg.setRemoteUri(req.r_uri);
@@ -195,6 +195,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   // set outbound proxy as next hop 
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
+    patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
   } else if (!AmConfig::OutboundProxy.empty()) {
     dlg.outbound_proxy = AmConfig::OutboundProxy;
   }
@@ -255,7 +256,7 @@ bool AmSIPRegistration::doUnregister()
 
   req.to_tag     = "";
   req.r_uri      = "sip:"+info.domain;
-  patch_transport(req.r_uri);
+  patch_transport(req.r_uri,info.transport_protocol_id);
 
   dlg.setRemoteTag(string());
   dlg.setRemoteUri(req.r_uri);
@@ -263,10 +264,10 @@ bool AmSIPRegistration::doUnregister()
   // set outbound proxy as next hop 
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
-    patch_transport(dlg.outbound_proxy);
+    patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
   } else if (!AmConfig::OutboundProxy.empty()) {
     dlg.outbound_proxy = AmConfig::OutboundProxy;
-    patch_transport(dlg.outbound_proxy);
+    patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
   }
 
   int flags=0;

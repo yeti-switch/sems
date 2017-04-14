@@ -123,6 +123,7 @@ class SIPRegistrarClient
         const int& retry_delay,
         const int& max_attempts,
         const int &transport_protocol_id,
+        const int& proxy_transport_protocol_id,
         const string& handle);
     void removeRegistration(const string& handle);
     void removeRegistrationById(const string& id);

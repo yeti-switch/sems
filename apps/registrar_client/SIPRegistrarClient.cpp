@@ -466,6 +466,7 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         DEF_AND_VALIDATE_OPTIONAL_INT(retry_delay,DEFAULT_REGISTER_RETRY_DELAY);
         DEF_AND_VALIDATE_OPTIONAL_INT(max_attempts,REGISTER_ATTEMPTS_UNLIMITED);
         DEF_AND_VALIDATE_OPTIONAL_INT(transport_protocol_id,sip_transport::UDP);
+        DEF_AND_VALIDATE_OPTIONAL_INT(proxy_transport_protocol_id,sip_transport::UDP);
 
         SIPRegistrarClient::instance()->postEvent(
             new SIPNewRegistrationEvent(
@@ -482,7 +483,8 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
                     force_expires_interval,
                     retry_delay,
                     max_attempts,
-                    transport_protocol_id),
+                    transport_protocol_id,
+                    proxy_transport_protocol_id),
                 handle.empty() ? AmSession::getNewId() : handle,
                 sess_link
             )
@@ -650,6 +652,7 @@ string SIPRegistrarClient::createRegistration(
     const int& retry_delay,
     const int& max_attempts,
     const int& transport_protocol_id,
+    const int& proxy_transport_protocol_id,
     const string& handle)
 {
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
@@ -668,7 +671,8 @@ string SIPRegistrarClient::createRegistration(
                 force_expires_interval,
                 retry_delay,
                 max_attempts,
-                transport_protocol_id),
+                transport_protocol_id,
+                proxy_transport_protocol_id),
             l_handle,
             sess_link
         )
@@ -759,7 +763,8 @@ void SIPRegistrarClient::invoke(
             force = 0,
             retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
             max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
-            transport_protocol_id = sip_transport::UDP;
+            transport_protocol_id = sip_transport::UDP,
+            proxy_transport_protocol_id = sip_transport::UDP;
         bool force_expires_interval = false;
         size_t n = args.size();
 
@@ -816,12 +821,21 @@ void SIPRegistrarClient::invoke(
             if(isArgInt(a)) {
                 transport_protocol_id = a.asInt();
             } else if(isArgCStr(a) && !str2int(a.asCStr(), transport_protocol_id)){
-                throw AmSession::Exception(500,"wrong max_attempts argument");
+                throw AmSession::Exception(500,"wrong transport_protocol_id argument");
             }
         } else break;
 
-        if (args.size() > 14)
-            handle = args.get(14).asCStr();
+        if (args.size() > 14) {
+            AmArg &a = args.get(14);
+            if(isArgInt(a)) {
+                proxy_transport_protocol_id = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), proxy_transport_protocol_id)){
+                throw AmSession::Exception(500,"wrong proxy_transport_protocol_id argument");
+            }
+        } else break;
+
+        if (args.size() > 15)
+            handle = args.get(15).asCStr();
         else break;
 
         } while(0);
@@ -841,6 +855,7 @@ void SIPRegistrarClient::invoke(
             retry_delay,
             max_attempts,
             transport_protocol_id,
+            proxy_transport_protocol_id,
             handle
         ).c_str());
     } else if(method == "removeRegistration") {
