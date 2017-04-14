@@ -1,3 +1,11 @@
+sems (1.7.37-1) stable; urgency=low
+
+  * 12460dc0c registrar_client: fix too short throttling interval
+  * 77b93a841 registrar_client: add transport_protocol_id processing
+  * fa22d1541 registrar_client: implement shaper. use epoll for events processing thread
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 13 Apr 2017 14:47:03 +0300
+
 sems (1.7.36-1) stable; urgency=low
 
   * 5061bf128 resolver: do resolving for cname targets not found in local cache
