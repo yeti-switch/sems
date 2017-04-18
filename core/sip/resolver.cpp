@@ -60,6 +60,8 @@ using std::list;
 #define DEFAULT_SIP_PORT 5060
 #define DEFAULT_RTSP_PORT 554
 
+#define ALIAS_RESOLVING_LIMIT 5
+
 // Maximum number of SRV entries
 // within a cache entry
 //
@@ -669,6 +671,7 @@ dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, dns_rr_type t)
                 de.first.c_str(), de.second->to_str().c_str());
         }
     }
+    //ALIAS_RESOLVING_LIMIT
     //final lookup in the cache
     e = b->find(target);
     if(e) {
@@ -1017,7 +1020,8 @@ int _resolver::resolve_name(const char* name,
 			    const address_type types,
 			    dns_rr_type t)
 {
-    int ret;
+	int ret, limit;
+	dns_entry *new_re;
 
     // already have a valid handle?
     if(h->valid()) {
@@ -1044,7 +1048,25 @@ int _resolver::resolve_name(const char* name,
     // first attempt to get a valid IP
     // (from the cache)
     if(e){
-        if(dns_entry* re = e->resolve_alias(cache,t)) {
+        if(dns_entry *re = e->resolve_alias(cache,t)) {
+            limit = ALIAS_RESOLVING_LIMIT;
+            while(re) {
+                if(!limit) {
+                    DBG("recursive resolving chain limit(%d) reached "
+                        "for root entry with target: <%s>",
+                        ALIAS_RESOLVING_LIMIT,e->to_str().c_str());
+                    dec_ref(e);
+                    dec_ref(re);
+                    return -1;
+                }
+                limit--;
+                if(nullptr!=(new_re = re->resolve_alias(cache,t))) {
+                    dec_ref(re);
+                    re = new_re;
+                    continue;
+                }
+                break;
+            }
             dec_ref(e);
             int ret = re->next_ip(h,sa);
             dec_ref(re);
@@ -1079,6 +1101,23 @@ int _resolver::resolve_name(const char* name,
     e = entry_map.fetch(name);
     if(e) {
         if(dns_entry* re = e->resolve_alias(cache,t)) {
+            limit = ALIAS_RESOLVING_LIMIT;
+            while(re) {
+                if(!limit) {
+                    DBG("recursive resolving chain limit(%d) reached "
+                        "for root entry with target: <%s>",
+                        ALIAS_RESOLVING_LIMIT,e->to_str().c_str());
+                    dec_ref(re);
+                    return -1;
+                }
+                limit--;
+                if(nullptr!=(new_re = re->resolve_alias(cache,t))) {
+                    dec_ref(re);
+                    re = new_re;
+                    continue;
+                }
+                break;
+            }
             int ret = re->next_ip(h,sa);
             dec_ref(re);
             return ret;
