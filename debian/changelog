@@ -1,3 +1,9 @@
+sems (1.7.38-3) stable; urgency=low
+
+  * f77e3e317 resolver::resolve_name: do recursive CNAME resolving
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 18 Apr 2017 17:48:40 +0300
+
 sems (1.7.38-2) stable; urgency=low
 
   * registrar_client: show proxy_transport_protocol_id in registration info
