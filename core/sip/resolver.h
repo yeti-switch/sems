@@ -95,18 +95,19 @@ class dns_entry
       public dns_base_entry
 {
     virtual dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end)=0;
-
+    dns_rr_type type;
 public:
     vector<dns_base_entry*> ip_vec;
 
     static dns_entry* make_entry(dns_rr_type t, unsigned short srv_port = 0);
 
-    dns_entry();
+    dns_entry(dns_rr_type type);
     virtual ~dns_entry();
     virtual void init()=0;
     virtual void add_rr(dns_record* rr, u_char* begin, u_char* end, long now);
     virtual int next_ip(dns_handle* h, sockaddr_storage* sa)=0;
     virtual dns_entry *resolve_alias(dns_cache &cache, dns_rr_type t) { return nullptr; }
+    dns_rr_type get_type() { return type; }
 
     virtual string to_str();
 };
@@ -139,7 +140,7 @@ class dns_ip_entry
 {
 public:
     dns_ip_entry()
-	: dns_entry()
+    : dns_entry(dns_r_a)
     {}
 
     void init(){};
@@ -198,7 +199,7 @@ class dns_naptr_entry
 {
 public:
     dns_naptr_entry()
-	: dns_entry()
+    : dns_entry(dns_r_naptr)
     {}
 
     void init();

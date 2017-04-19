@@ -176,7 +176,7 @@ class dns_srv_entry
 public:
 	dns_srv_entry(unsigned short default_service_port)
 		: default_service_port(default_service_port),
-		  dns_entry()
+		  dns_entry(dns_r_srv)
     {}
 
     void init(){
@@ -314,7 +314,7 @@ class dns_cname_entry
     string target;
   public:
     dns_cname_entry()
-     : dns_entry()
+     : dns_entry(dns_r_cname)
     { }
     void init() {}
     dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end);
@@ -322,8 +322,9 @@ class dns_cname_entry
     dns_entry *resolve_alias(dns_cache &cache, dns_rr_type t);
 };
 
-dns_entry::dns_entry()
-    : dns_base_entry()
+dns_entry::dns_entry(dns_rr_type type)
+    : dns_base_entry(),
+      type(type)
 {
 }
 
@@ -671,7 +672,6 @@ dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, dns_rr_type t)
                 de.first.c_str(), de.second->to_str().c_str());
         }
     }
-    //ALIAS_RESOLVING_LIMIT
     //final lookup in the cache
     e = b->find(target);
     if(e) {
@@ -1068,10 +1068,22 @@ int _resolver::resolve_name(const char* name,
                 break;
             }
             dec_ref(e);
+            if(re->get_type()!=t) {
+                DBG("resolved to %s but it has different type %s (expected %s). ignore it",
+                    re->to_str().c_str(),dns_rr_type_str(re->get_type()),dns_rr_type_str(t));
+                dec_ref(re);
+                return -1;
+            }
             int ret = re->next_ip(h,sa);
             dec_ref(re);
             return ret;
         } else {
+            if(e->get_type()!=t) {
+                DBG("resolved to %s but it has different type %s (expected %s). ignore it",
+                    e->to_str().c_str(),dns_rr_type_str(e->get_type()),dns_rr_type_str(t));
+                dec_ref(e);
+                return -1;
+            }
             int ret = e->next_ip(h,sa);
             dec_ref(e);
             return ret;
@@ -1118,10 +1130,21 @@ int _resolver::resolve_name(const char* name,
                 }
                 break;
             }
+            if(re->get_type()!=t) {
+                DBG("resolved to %s but it has different type %s (expected %s). ignore it",
+                    re->to_str().c_str(),dns_rr_type_str(re->get_type()),dns_rr_type_str(t));
+                dec_ref(re);
+                return -1;
+            }
             int ret = re->next_ip(h,sa);
             dec_ref(re);
             return ret;
         } else {
+            if(e->get_type()!=t) {
+                DBG("resolved to %s but it has different type %s (expected %s). ignore it",
+                    e->to_str().c_str(),dns_rr_type_str(e->get_type()),dns_rr_type_str(t));
+                return -1;
+            }
             return e->next_ip(h,sa);
         }
     }
