@@ -1,3 +1,9 @@
+sems (1.7.39-1) stable; urgency=low
+
+  * e5d34d7ce resolver::resolve_name: check dns_entry type before next_ip calling
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 19 Apr 2017 14:04:38 +0300
+
 sems (1.7.38-3) stable; urgency=low
 
   * f77e3e317 resolver::resolve_name: do recursive CNAME resolving
