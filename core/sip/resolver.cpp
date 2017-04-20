@@ -71,6 +71,10 @@ using std::list;
 /* in seconds */
 #define DNS_CACHE_CYCLE 10L
 
+/* avoids issues with racing on DNS cache operations
+ * and with DNS responses with entries TTL 0 */
+#define DNS_CACHE_EXPIRE_DELAY 2
+
 /* in us */
 #define DNS_CACHE_SINGLE_CYCLE \
   ((DNS_CACHE_CYCLE*1000000L)/DNS_CACHE_SIZE)
@@ -360,7 +364,7 @@ void dns_entry::add_rr(dns_record* rr, u_char* begin, u_char* end, long now)
     dns_base_entry* e = get_rr(rr,begin,end);
     if(!e) return;
 
-    e->expire = rr->ttl + now;
+    e->expire = rr->ttl + now + DNS_CACHE_EXPIRE_DELAY;
     if(expire < e->expire)
 	expire = e->expire;
 
@@ -1238,7 +1242,7 @@ int _resolver::set_destination_ip(const cstring& next_hop,
 						     h_dns,remote_ip,
 						     IPv4);
 	if(err < 0){
-	    ERROR("Unresolvable Request URI domain\n");
+		ERROR("Unresolvable Request URI domain <%s>\n",nh.c_str());
 	    return -478;
 	}
     }
@@ -1272,7 +1276,10 @@ int _resolver::resolve_targets(const list<sip_destination>& dest_list,
 	    it->trsp.len,it->trsp.s);
 
 	if(set_destination_ip(it->host,it->port,it->trsp,&t.ss,&h_dns) != 0) {
-	    ERROR("Unresolvable destination");
+		ERROR("Unresolvable destination %.*s:%u/%.*s",
+			  it->host.len,it->host.s,
+			  it->port,
+			  it->trsp.len,it->trsp.s);
 	    return -478;
 	}
 	if(it->trsp.len && (it->trsp.len <= SIP_TRSP_SIZE_MAX)) {
