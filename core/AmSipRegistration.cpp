@@ -449,7 +449,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
           }
           server_contact.dump();
 
-          if(!reply_contacts.empty()) reply_contacts+=",\r\n";
+          if(!reply_contacts.empty()) reply_contacts+=", ";
           reply_contacts += server_contact.uri_str();
 
           if(found) continue;
