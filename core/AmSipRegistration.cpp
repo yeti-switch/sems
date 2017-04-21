@@ -205,7 +205,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
 
   int flags=0;
 
-  if(info.contact.empty() && !info.user.empty()) {
+  if(info.contact.empty()) {
     //force contact username
     int oif = dlg.getOutboundIf();
     info_contact.uri_user = info.user;
@@ -215,18 +215,17 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     info.contact = info_contact.canon_uri_str();
   }
 
-  if(!info.contact.empty()) {
-        size_t end = 0;
-        if(!info_contact.parse_contact(info.contact,(size_t)0,end)){
-            ERROR("failed to parse contact field: %s",info.contact.c_str());
-            waiting_result = false;
-            reg_send_begin  = time(NULL);
-            return false;
-        }
-    hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) "<"
-      + info.contact + ">" + CRLF;
-    flags = SIP_FLAGS_NOCONTACT;
+  size_t end = 0;
+  if(!info_contact.parse_contact(info.contact,(size_t)0,end)){
+    ERROR("failed to parse contact field: %s",info.contact.c_str());
+    waiting_result = false;
+    reg_send_begin  = time(NULL);
+    return false;
   }
+  request_contact = info.contact;
+  hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) "<"
+          + info.contact + ">" + CRLF;
+          flags = SIP_FLAGS_NOCONTACT;
 
   info.attempt++;
 
@@ -425,83 +424,86 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
           req.from_tag.c_str(),info.id.c_str());
 
       size_t end  = 0;
-      string local_contact_hdr = dlg.getContactHdr();
+      string local_contact_hdr = dlg.getContactUri();
       local_contact.parse_contact(local_contact_hdr, (size_t)0, end);
       local_contact.dump();
+      reply_contacts.clear();
 
       bool found = false;
 
       if (!contacts.length()) {
-	// should not happen - positive reply without contact
-	DBG("%s(%s) no contacts registered any more",
-		handle.c_str(),info.id.c_str());
-	active = false;
-	error_code = 500;
-	error_reason = "no Contacts in positive reply";
-	error_initiatior = REG_ERROR_LOCAL;;
+        // should not happen - positive reply without contact
+        DBG("%s(%s) no contacts registered any more",
+            handle.c_str(),info.id.c_str());
+        active = false;
+        error_code = 500;
+        error_reason = "no Contacts in positive reply";
+        error_initiatior = REG_ERROR_LOCAL;;
       } else {
-	end = 0;
-	while (!found) {
-	  if (contacts.length() == end)
-	    break;
+        end = 0;
+        while (contacts.length() != end) {
 
-	  if (!server_contact.parse_contact(contacts, end, end)) {
-	    ERROR("while parsing contact\n");
-	    break;
-	  }
-	  server_contact.dump();
+          if (!server_contact.parse_contact(contacts, end, end)) {
+            ERROR("while parsing contact\n");
+            break;
+          }
+          server_contact.dump();
 
-	  if (server_contact.isEqual(local_contact) ||
-		  (!info.contact.empty()&&server_contact.isEqual(info_contact))) {
-	    DBG("contact found\n");
-	    found = active = true;
-		info.attempt = 0;
-		error_code = 0;
+          if(!reply_contacts.empty()) reply_contacts+=",\r\n";
+          reply_contacts += server_contact.uri_str();
 
-	    if (str2i(server_contact.params["expires"], reg_expires)) {
-	      ERROR("could not extract expires value, default to 300.\n");
-	      reg_expires = 300;
-	    }
-	    DBG("got an expires of %d\n", reg_expires);
-		if(force_expires_interval) {
-			reg_expires = expires_interval;
-			DBG("force expires to %d", reg_expires);
-		}
-	    // save TS
-	    reg_begin = time(0);
+          if(found) continue;
 
-	    if (sess_link.length()) {
-		  DBG("%s(%s) posting SIPRegistrationEvent to '%s'\n",
-			  handle.c_str(),info.id.c_str(),
-			  sess_link.c_str());
-	      AmSessionContainer::instance()->
-		postEvent(sess_link,
-			  new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSuccess,
-						   req.from_tag,
-						   reply.code, reply.reason));
-	    }
-	    break;
-	  }
-	}
-      }
+          if (server_contact.isEqual(local_contact) ||
+              (!info.contact.empty()&&server_contact.isEqual(info_contact)))
+          {
+            DBG("contact found\n");
+            found = active = true;
+            info.attempt = 0;
+            error_code = 0;
+            if (str2i(server_contact.params["expires"], reg_expires)) {
+              ERROR("could not extract expires value, default to 300.\n");
+              reg_expires = 300;
+            }
+
+            DBG("got an expires of %d\n", reg_expires);
+            if(force_expires_interval) {
+              reg_expires = expires_interval;
+              DBG("force expires to %d", reg_expires);
+            }
+            // save TS
+            reg_begin = time(0);
+
+            if (sess_link.length()) {
+              DBG("%s(%s) posting SIPRegistrationEvent to '%s'\n",
+                  handle.c_str(),info.id.c_str(),
+                  sess_link.c_str());
+              AmSessionContainer::instance()->
+                postEvent(sess_link,
+                  new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSuccess,
+                  req.from_tag,
+                  reply.code, reply.reason));
+            }
+            break;
+          }
+        }
+      } //if (!contacts.length()) else
       if (!found) {
-	if (sess_link.length()) {
-	  AmSessionContainer::instance()->
-	    postEvent(sess_link,
-		      new SIPRegistrationEvent(SIPRegistrationEvent::RegisterNoContact,
-					       req.from_tag,
-					       reply.code, reply.reason));
-	}
-	DBG("Registration %s(%s) no matching Contact - deregistered",
-		handle.c_str(),info.id.c_str());
-	active = false;
-	error_code = 500;
-	error_reason = "no matching Contact in positive reply";
-	error_initiatior = REG_ERROR_LOCAL;
-	//doRegistration();
+        if (sess_link.length()) {
+          AmSessionContainer::instance()->
+            postEvent(sess_link,
+              new SIPRegistrationEvent(SIPRegistrationEvent::RegisterNoContact,
+              req.from_tag,
+              reply.code, reply.reason));
+        }
+        DBG("Registration %s(%s) no matching Contact - deregistered",
+            handle.c_str(),info.id.c_str());
+        active = false;
+        error_code = 500;
+        error_reason = "no matching Contact in positive reply";
+        error_initiatior = REG_ERROR_LOCAL;
       }
-    }
-		
+    } // if (unregistering) else
   } else if (reply.code >= 300) {
     if(unregistering) {
         DBG("De-Registration %s(%s) failed with code %d. remove it anyway",

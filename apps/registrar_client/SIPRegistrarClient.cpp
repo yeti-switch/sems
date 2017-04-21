@@ -77,6 +77,8 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     r["expires_left"] = (int)reg->getExpiresLeft();
     r["state_code"] = state;
     r["state"] = getSIPRegistationStateString(state);
+    r["last_request_contact"] = reg->request_contact;
+    r["last_reply_contacts"] = reg->reply_contacts;
     if(reg->error_code!=0) {
         r["last_error_code"] = reg->error_code;
         r["last_error_reason"] = reg->error_reason;

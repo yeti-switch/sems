@@ -169,6 +169,9 @@ class AmSIPRegistration
   time_t reg_send_begin;
   RegShaper::timep postponed_next_attempt;
 
+  string request_contact;
+  string reply_contacts;
+
   enum error_initiator {
     REG_ERROR_LOCAL = 0,
     REG_ERROR_REMOTE
