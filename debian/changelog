@@ -1,3 +1,9 @@
+sems (1.7.39-2) stable; urgency=low
+
+  * fd6fbb8ea resolver: fix processing of the DNS responses for entries with TTL=0
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 21 Apr 2017 10:45:34 +0300
+
 sems (1.7.39-1) stable; urgency=low
 
   * e5d34d7ce resolver::resolve_name: check dns_entry type before next_ip calling
