@@ -1,3 +1,12 @@
+sems (1.7.40-1) stable; urgency=low
+
+  * 5bacfa6ee registrar_client: add default_expires option
+  * 95511c806 AmBasicSipDialog: implement getContactUri
+  * 439cda6c4 AmSipRegistration: fix separator for reply_contacts
+  * cb0d6247e registrar_client: show last_request/reply contact for registration
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 24 Apr 2017 15:54:44 +0300
+
 sems (1.7.39-2) stable; urgency=low
 
   * fd6fbb8ea resolver: fix processing of the DNS responses for entries with TTL=0
