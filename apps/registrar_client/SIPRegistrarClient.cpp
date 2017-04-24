@@ -37,6 +37,8 @@
 #include <unistd.h>
 
 #define CFG_OPT_NAME_SHAPER_MIN_INTERVAL "min_interval_per_domain_msec"
+#define CFG_OPT_NAME_DEFAULT_EXPIRES "default_expires"
+#define DEFAULT_EXPIRES 1800
 
 #define TIMEOUT_CHECKING_INTERVAL 200000 //microseconds
 #define EPOLL_MAX_EVENTS    2048
@@ -120,7 +122,8 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
   : AmEventFdQueue(this),
     uac_auth_i(NULL),
     AmDynInvokeFactory(MOD_NAME),
-    stopped(false)
+    stopped(false),
+    default_expires(DEFAULT_EXPIRES)
 { }
 
 void SIPRegistrarClient::run()
@@ -277,6 +280,7 @@ bool SIPRegistrarClient::configure()
             shaper.set_min_interval(i);
         }
     }
+    default_expires = cfg.getParameterInt(CFG_OPT_NAME_DEFAULT_EXPIRES,DEFAULT_EXPIRES);
     return true;
 }
 
@@ -382,6 +386,8 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
 
     if(new_reg->info.expires_interval!=0)
         reg->setExpiresInterval(new_reg->info.expires_interval);
+    else
+        reg->setExpiresInterval(default_expires);
 
     if(new_reg->info.force_expires_interval)
         reg->setForceExpiresInterval(true);

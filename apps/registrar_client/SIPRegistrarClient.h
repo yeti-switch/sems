@@ -67,6 +67,7 @@ class SIPRegistrarClient
     RegHash registrations_by_id;
 
     RegShaper shaper;
+    int default_expires;
 
     bool add_reg(const string& reg_id, AmSIPRegistration* new_reg);
     AmSIPRegistration* remove_reg(const string& reg_id);
