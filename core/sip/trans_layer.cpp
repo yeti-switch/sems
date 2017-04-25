@@ -635,9 +635,15 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 		if(logger){
 			logger->log(reply_buf,reply_len,&src_ip,&remote_ip,
 				req->u.request->method_str,reply_code);
-			if(!t->logger){
-				t->logger = logger;
+			if(t->logger){
+				if(tt->_t->logger != logger) {
+					dec_ref(t->logger);
+					inc_ref(logger);
+					tt->_t->logger = logger;
+				}
+			} else {
 				inc_ref(logger);
+				t->logger = logger;
 			}
 		}
 		if(sensor){
@@ -1389,9 +1395,17 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 				&src_ip,&msg->remote_ip,
 				method_str);
 
-			if(tt->_t && !tt->_t->logger) {
-				tt->_t->logger = logger;
-				inc_ref(logger);
+			if(tt->_t) {
+				if(tt->_t->logger) {
+					if(tt->_t->logger != logger) {
+						dec_ref(tt->_t->logger);
+						inc_ref(logger);
+						tt->_t->logger = logger;
+					}
+				} else {
+					inc_ref(logger);
+					tt->_t->logger = logger;
+				}
 			}
 		}
 		if(sensor){
