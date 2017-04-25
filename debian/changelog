@@ -1,3 +1,10 @@
+sems (1.7.41-1) stable; urgency=low
+
+  * 9a7de7114 trans_layer: allow to change logger (fixes case with no ACK on fake_logger usage)
+  * cd637dd8c Am100rel: add checkReply method. AmSipDialog::onRxReplySanity: never drop replies for BYE and CANCEL
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 25 Apr 2017 18:59:36 +0300
+
 sems (1.7.40-1) stable; urgency=low
 
   * 5bacfa6ee registrar_client: add default_expires option
