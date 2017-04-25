@@ -460,8 +460,11 @@ bool AmBasicSipDialog::onRxReplySanity(const AmSipReply& reply)
 
 void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
 {
-  if(!onRxReplySanity(reply))
+  if(!onRxReplySanity(reply)) {
+    DBG("reply %d:%s for %s is dropped by onRxReplySanity",
+        reply.code,reply.reason.c_str(),reply.cseq_method.c_str());
     return;
+  }
 
   TransMap::iterator t_it = uac_trans.find(reply.cseq);
   if(t_it == uac_trans.end()){

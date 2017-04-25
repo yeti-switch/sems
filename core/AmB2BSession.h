@@ -100,6 +100,12 @@ struct B2BSipReplyEvent: public B2BSipEvent
    : B2BSipEvent(B2BSipReply,forward),
     reply(reply), trans_method(trans_method), sender_ltag(sender_ltag)
   { }
+
+  B2BSipReplyEvent(const B2BSipReplyEvent& e)
+    : B2BSipEvent(B2BSipReply,e.forward),
+      reply(e.reply), trans_method(e.trans_method), sender_ltag(e.sender_ltag)
+  { }
+
 };
 
 /** \brief trigger connecting the callee leg in B2B session */

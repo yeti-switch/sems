@@ -336,13 +336,21 @@ void AmSipDialog::onRequestTxed(const AmSipRequest& req)
 bool AmSipDialog::onRxReplySanity(const AmSipReply& reply)
 {
   if(!getRemoteTag().empty()
-     && reply.to_tag != getRemoteTag()) {
+     && reply.to_tag != getRemoteTag())
+  {
     if(status == Early || status == Cancelling) {
       if(reply.code < 200 && !reply.to_tag.empty()) {
         return false;// DROP
       }
-    }
-    else {
+            //never drop responses for BYE and CANCEL to avoid sessions hangs
+    } else if(reply.cseq_method == SIP_METH_BYE
+              || reply.cseq_method == SIP_METH_CANCEL)
+    {
+      DBG("[%s] reply for %s '%d %s' is not matched with dialog. but matched with transaction. process it",
+          local_tag.c_str(),
+          reply.cseq_method.c_str(),reply.code,reply.reason.c_str());
+      //PASS
+    } else {
       // DROP
       return false;
     }
@@ -498,6 +506,11 @@ void AmSipDialog::uasTimeout(AmSipTimeoutEvent* to_ev)
   };
   
   to_ev->processed = true;
+}
+
+bool AmSipDialog::checkReply100rel(AmSipReply& reply)
+{
+  return rel100.checkReply(reply);
 }
 
 bool AmSipDialog::getUACInvTransPending() {

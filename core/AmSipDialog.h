@@ -109,6 +109,8 @@ protected:
 
   void uasTimeout(AmSipTimeoutEvent* to_ev);
 
+  bool checkReply100rel(AmSipReply& reply);
+
   /** @return 0 on success (deprecated) */
   // int reply(const AmSipRequest& req,
   // 	    unsigned int  code, 

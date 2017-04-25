@@ -4,6 +4,7 @@
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
 #include "AmSession.h"
+#include "AmSessionContainer.h"
 
 #include "log.h"
 
@@ -75,6 +76,9 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
     } else if (rseq_1st<=req.rseq && req.rseq<=rseq) {
       if (req.rseq == rseq) {
         rseq_confirmed = true; // confirmed
+        AmSessionContainer::instance()->postEvent(
+            dlg->getLocalTag(),
+            new ProvisionalReplyConfirmedEvent());
       }
       // else: confirmation for one of the pending 1xx
       DBG("%sRSeq (%u) confirmed. callid: %s",
@@ -242,4 +246,38 @@ void Am100rel::onTimeout(const AmSipRequest& req, const AmSipReply& rpl)
   }
 }
 
+bool Am100rel::checkReply(AmSipReply& reply)
+{
+    if (reliable_1xx == REL100_IGNORED ||
+        reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED)
+      return false;
+
+    if (reply.cseq_method == SIP_METH_INVITE) {
+        if (100 < reply.code && reply.code < 200) {
+            switch (reliable_1xx) {
+            case REL100_REQUIRE:
+                if(rseq) {
+                    if ((! rseq_confirmed) && (rseq_1st == rseq)) {
+                        // refuse subsequent 1xx if first isn't yet PRACKed
+                        DBG("first reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
+                        //postponed_replies.emplace(std::make_tuple(req,reply));
+                        return true;
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        } else if (reply.code < 300 && reliable_1xx == REL100_REQUIRE) { //code = 2xx
+            if (rseq && !rseq_confirmed) {
+                // reliable 1xx is pending, 2xx'ing not allowed yet
+                DBG("last reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
+                //postponed_replies.emplace(std::make_tuple(req,reply));
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 

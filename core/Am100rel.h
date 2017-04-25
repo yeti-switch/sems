@@ -2,9 +2,18 @@
 #define _Am100rel_h_
 
 #include "AmSipMsg.h"
+#include "AmEvent.h"
 
 class AmSipDialog;
 class AmSipDialogEventHandler;
+
+struct ProvisionalReplyConfirmedEvent
+  : public AmEvent
+{
+    ProvisionalReplyConfirmedEvent()
+      : AmEvent(0)
+    {}
+};
 
 class Am100rel
 {
@@ -30,12 +39,14 @@ private:
 
   AmSipDialog* dlg;
   AmSipDialogEventHandler* hdl;
-  
+
 public:
   Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl);
 
   void setState(State s) { reliable_1xx = s; }
   State getState() { return reliable_1xx; }
+
+  bool checkReply(AmSipReply& reply);
 
   int  onRequestIn(const AmSipRequest& req);
   int  onReplyIn(const AmSipReply& reply);
