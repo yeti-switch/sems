@@ -64,13 +64,10 @@ void AmMutex::unlock()
   pthread_mutex_unlock(&m);
 }
 
-int AmTimerFd::settime(unsigned int umsec, bool repeat){
+int AmTimerFd::settime(unsigned int umsec, unsigned int repeat_umsec){
   struct itimerspec tmr;
   longlong2timespec(tmr.it_value,umsec);
-
-  if(repeat) longlong2timespec(tmr.it_interval,umsec);
-  else longlong2timespec(tmr.it_interval,0);
-
+  longlong2timespec(tmr.it_interval,repeat_umsec);
   return timerfd_settime(timer_fd,0,&tmr,NULL);
 }
 
