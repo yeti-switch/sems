@@ -1,3 +1,11 @@
+sems (1.7.42-1) stable; urgency=low
+
+  * 031bbfa2b AmThread: AmTimerFd: add method settime with explicit repeat interval specification
+  * 968c34dca jsonrpc: verbose exceptions logging
+  * c3bca85ca AmConfig: fix sip->rtp interfaces mapping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 27 Apr 2017 13:18:13 +0300
+
 sems (1.7.41-1) stable; urgency=low
 
   * 9a7de7114 trans_layer: allow to change logger (fixes case with no ACK on fake_logger usage)
