@@ -762,6 +762,7 @@ int AmConfig::insert_SIP_interface(const SIP_interface& intf)
     SIP_Ifs[if_name_it->second] = intf;
   } else {
     SIP_Ifs.push_back(intf);
+    SIP_If_names[intf.name] = SIP_Ifs.size()-1;
   }
   return 0;
 }
@@ -806,7 +807,7 @@ static int readACL(AmConfigReader& cfg, trsp_acl &acl, const string list_key, co
 }
 
 int AmConfig::insert_SIP_interface_mapping(const SIP_interface& intf, int idx) {
-  SIP_If_names[intf.name] = idx;
+  //SIP_If_names[intf.name] = idx;
   const string &if_local_ip = intf.LocalIP;
 
   map<string,unsigned short>::iterator it = LocalSIPIP2If.find(if_local_ip);
