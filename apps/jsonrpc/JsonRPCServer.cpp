@@ -332,10 +332,14 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
       INFO("JsonRpcError \n");
       throw;
     } catch (AmSession::Exception &e) {
-      ERROR("got AmSession exception in  RPC DI call\n");
+      ERROR("got AmSession exception in RPC DI call. method: %s, params: %s, "
+            "code: %d, reason: %s",
+            method.c_str(),AmArg::print(params).c_str(),
+            e.code,e.reason.c_str());
       throw JsonRpcError(e.code,e.reason,AmArg());
     } catch (...) {
-      ERROR("unexpected Exception in  RPC DI call\n");
+      ERROR("unexpected Exception in RPC DI call. method: %s, params: %s",
+            method.c_str(),AmArg::print(params).c_str());
       throw JsonRpcError(-32000, "Server error",
 			 "unexpected Exception");      
     }
