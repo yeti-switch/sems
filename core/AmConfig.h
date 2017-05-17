@@ -104,9 +104,9 @@ struct AmConfig
 
   struct SIP_interface : public IP_interface {
 
-    /** Used for binding SIP socket */
-    unsigned int LocalPort;
-        
+    unsigned int udp_local_port;
+    unsigned int tcp_local_port;
+
     /** options for the signaling socket 
      * (@see trsp_socket::socket_options) 
      */
@@ -122,6 +122,7 @@ struct AmConfig
     trsp_acl opt_acl;
 
     SIP_interface();
+    unsigned int getLocalPort(int transport_id);
   };
 
   struct RTP_interface : public IP_interface {

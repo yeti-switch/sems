@@ -1139,10 +1139,12 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
     char branch_buf[BRANCH_BUF_LEN];
     compute_branch(branch_buf,msg->callid->value,msg->cseq->value);
     cstring branch(branch_buf,BRANCH_BUF_LEN);
-     
+
+    //get connected here
+
     string via(msg->local_socket->get_advertised_ip());
-    if(msg->local_socket->get_port() != 5060)
- 	via += ":" + int2str(msg->local_socket->get_port());
+    if(msg->local_socket->get_actual_port() != 5060)
+    via += ":" + int2str(msg->local_socket->get_actual_port());
 
     cstring trsp(msg->local_socket->get_transport());
 
@@ -1370,8 +1372,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    }
 	}
 
-	DBG("logger = %p\n",logger);
-	DBG("sensor = %p\n",sensor);
+	/*DBG("logger = %p\n",logger);
+	DBG("sensor = %p\n",sensor);*/
 
 	if(logger || sensor) {
 	    sockaddr_storage src_ip;
@@ -2674,7 +2676,7 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
     
     sockaddr_storage from;
     socklen_t    len=sizeof(from);
-    trsp_socket* tsock=NULL;
+    //trsp_socket* tsock=NULL;
     
     if (connect(temp_sock, (sockaddr*)remote_ip, 
 		remote_ip->ss_family == AF_INET ? 
@@ -2933,10 +2935,10 @@ void trans_ticket::unlock_bucket() const
 
 const sip_trans* trans_ticket::get_trans() const
 {
-    if(_bucket->exist(_t))
-	return _t; 
-    else 
-	return NULL; 
+    if(!_t) return NULL;
+
+    if(_bucket->exist(_t)) return _t;
+    else return NULL;
 }
 
 void trans_ticket::remove_trans()

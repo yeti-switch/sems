@@ -42,6 +42,7 @@ tcp_trsp_socket::tcp_trsp_socket(tcp_server_socket* server_sock,
   // local address
   actual_ip = ip = server_sock->get_ip();
   actual_port = port = server_sock->get_port();
+  socket_options = server_sock->get_options();
   server_sock->copy_addr_to(&addr);
 
   // peer address
@@ -90,8 +91,8 @@ tcp_trsp_socket* tcp_trsp_socket::new_connection(tcp_server_socket* server_sock,
 tcp_trsp_socket::~tcp_trsp_socket()
 {
   DBG("********* connection destructor ***********");
-  event_free(read_ev);
-  event_free(write_ev);
+  if(read_ev) event_free(read_ev);
+  if(write_ev) event_free(write_ev);
 }
 
 void tcp_trsp_socket::create_events()
@@ -181,6 +182,8 @@ int tcp_trsp_socket::on_connect(short ev)
 
 int tcp_trsp_socket::connect()
 {
+  int true_opt = 1;
+
   if(sd > 0) {
     ERROR("pending connection request: close first.");
     return -1;
@@ -191,12 +194,33 @@ int tcp_trsp_socket::connect()
     return -1;
   } 
 
-  int true_opt = 1;
   if(ioctl(sd, FIONBIO , &true_opt) == -1) {
     ERROR("could not make new connection non-blocking: %s\n",strerror(errno));
     ::close(sd);
     sd = -1;
     return -1;
+  }
+
+  if(socket_options & static_client_port) {
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
+        (void*)&true_opt, sizeof (true_opt)) == -1) {
+      ERROR("setsockopt(SO_REUSEADDR): %s\n",strerror(errno));
+      ::close(sd);
+      return -1;
+    }
+
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
+        (void*)&true_opt, sizeof (true_opt)) == -1) {
+      ERROR("setsockopt(SO_REUSEPORT): %s\n",strerror(errno));
+      ::close(sd);
+      return -1;
+    }
+
+    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
+      ERROR("bind: %s\n",strerror(errno));
+      ::close(sd);
+      return -1;
+    }
   }
 
   DBG("connecting to %s:%i...",
@@ -411,10 +435,14 @@ int tcp_trsp_socket::parse_input()
     copy_addr_to(&s_msg->local_ip);
 
     char host[NI_MAXHOST] = "";
-    DBG("vv M [|] u recvd msg via TCP from: %s:%i vv\n"
+    DBG("vv M [|] u recvd msg via TCP/%i from %s:%i to %s:%i vv\n"
         "--++--\n%.*s--++--\n",
+        sd,
         am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
         am_get_port(&s_msg->remote_ip),
+        actual_ip.c_str(), actual_port,
+        /*am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
+        am_get_port(&s_msg->local_ip),*/
         s_msg->len, s_msg->buf);
 
     s_msg->local_socket = this;
@@ -480,7 +508,8 @@ void tcp_trsp_socket::on_write(short ev)
       return;
     }
 
-    DBG("send msg via TCP from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+    DBG("send msg via TCP/%i from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+        sd,
         actual_ip.c_str(), actual_port,
         get_addr_str(&msg->addr).c_str(),
         am_get_port(&msg->addr),
@@ -615,8 +644,8 @@ void tcp_server_worker::on_stop()
   event_base_loopbreak(evbase);
 }
 
-tcp_server_socket::tcp_server_socket(unsigned short if_num)
-  : trsp_socket(if_num,0),
+tcp_server_socket::tcp_server_socket(unsigned short if_num, unsigned int opts)
+  : trsp_socket(if_num,opts),
     evbase(NULL), ev_accept(NULL)
 {
 }
@@ -657,6 +686,15 @@ int tcp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     ERROR("%s\n",strerror(errno));
     close(sd);
     return -1;
+  }
+
+  if(socket_options & static_client_port) {
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
+        (void*)&true_opt, sizeof (true_opt)) == -1) {
+      ERROR("%s\n",strerror(errno));
+      close(sd);
+      return -1;
+    }
   }
 
   if(ioctl(sd, FIONBIO , &true_opt) == -1) {

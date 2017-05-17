@@ -210,7 +210,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     int oif = dlg.getOutboundIf();
     info_contact.uri_user = info.user;
     info_contact.uri_host = AmConfig::SIP_Ifs[oif].getIP();
-    info_contact.uri_port = int2str(AmConfig::SIP_Ifs[oif].LocalPort);
+    info_contact.uri_port =
+      int2str(AmConfig::SIP_Ifs[oif].getLocalPort(dlg.getOutboundTransport()));
 
     info.contact = info_contact.canon_uri_str();
   }

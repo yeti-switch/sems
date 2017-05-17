@@ -5,8 +5,10 @@
 #include "SipCtrlInterface.h"
 #include "AmSession.h"
 
+#include "sip/parse_common.h"
 #include "sip/parse_route.h"
 #include "sip/parse_uri.h"
+#include "sip/parse_via.h"
 #include "sip/parse_next_hop.h"
 #include "sip/msg_logger.h"
 #include "sip/sip_parser.h"
@@ -16,6 +18,18 @@ static const char *hdrs2remove[] = {
     SIP_HDR_SERVER,
     NULL,
 };
+
+static int str2transport(cstring &s)
+{
+#define cmp_cond(trsp) 0==strncasecmp(s.s,trsp.s,trsp.len <= s.len ? trsp.len : s.len)
+    static cstring udp("udp");
+    static cstring tcp("tcp");
+    DBG("str2transport(cstring &s [%.*s])",s.len,s.s);
+    if(cmp_cond(udp)) return sip_transport::UDP;
+    else if(cmp_cond(tcp)) return sip_transport::TCP;
+    return sip_transport::UNPARSED;
+#undef cmp_cond
+}
 
 const char* AmBasicSipDialog::status2str[AmBasicSipDialog::__max_Status] = {
   "Disconnected",
@@ -38,6 +52,7 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
     patch_ruri_next_hop(false),
     next_hop_fixed(false),
     outbound_interface(-1),
+    outbound_transport(-1),
     nat_handling(AmConfig::SipNATHandling),
     usages(0)
 {
@@ -125,7 +140,8 @@ string AmBasicSipDialog::getContactUri()
   assert(oif < (int)AmConfig::SIP_Ifs.size());
 
   contact_uri += AmConfig::SIP_Ifs[oif].getIP();
-  contact_uri += ":" + int2str(AmConfig::SIP_Ifs[oif].LocalPort);
+  if(outbound_transport < 0) getOutboundTransport();
+  contact_uri += ":" + int2str(AmConfig::SIP_Ifs[oif].getLocalPort(outbound_transport));
 
   if(!contact_params.empty()) {
     contact_uri += ";" + contact_params;
@@ -159,6 +175,11 @@ void AmBasicSipDialog::setOutboundInterface(int interface_id) {
   outbound_interface = interface_id;
 }
 
+void AmBasicSipDialog::setOutboundTransport(int transport_id) {
+  DBG("setting outbound transport to %i\n",  transport_id);
+  outbound_transport = transport_id;
+}
+
 /** 
  * Computes, set and return the outbound interface
  * based on remote_uri, next_hop_ip, outbound_proxy, route.
@@ -181,6 +202,7 @@ int AmBasicSipDialog::getOutboundIf()
   string dest_uri;
   string dest_ip;
   string local_ip;
+  int transport_id = sip_transport::UDP;
   multimap<string,unsigned short>::iterator if_it;
 
   list<sip_destination> ip_list;
@@ -189,6 +211,7 @@ int AmBasicSipDialog::getOutboundIf()
      !ip_list.empty()) {
 
     dest_ip = c2stlstr(ip_list.front().host);
+    transport_id = str2transport(ip_list.front().trsp);
   }
   else if(!outbound_proxy.empty() &&
 	  (remote_tag.empty() || force_outbound_proxy)) {
@@ -206,6 +229,8 @@ int AmBasicSipDialog::getOutboundIf()
     }
 
     dest_ip = c2stlstr(route_uri->host);
+
+    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
   }
   else {
     dest_uri = remote_uri;
@@ -225,6 +250,8 @@ int AmBasicSipDialog::getOutboundIf()
     }
 
     dest_ip = c2stlstr(d_uri.host);
+
+    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
   }
 
   if(get_local_addr_for_dest(dest_ip,local_ip) < 0){
@@ -240,6 +267,7 @@ int AmBasicSipDialog::getOutboundIf()
   }
 
   setOutboundInterface(if_it->second);
+  if(transport_id > 0) setOutboundTransport(transport_id);
   return if_it->second;
 
  error:
@@ -248,9 +276,75 @@ int AmBasicSipDialog::getOutboundIf()
   return 0;
 }
 
+int AmBasicSipDialog::getOutboundTransport()
+{
+  if(outbound_transport > 0)
+    return outbound_transport;
+
+  // 1. next_hop
+  // 2. outbound_proxy (if 1st req or force_outbound_proxy)
+  // 3. first route
+  // 4. remote URI
+
+  string dest_uri;
+  int transport_id = 0;
+  list<sip_destination> ip_list;
+
+  if(!next_hop.empty() &&
+     !parse_next_hop(stl2cstr(next_hop),ip_list) &&
+     !ip_list.empty())
+  {
+    transport_id = str2transport(ip_list.front().trsp);
+  } else if(!outbound_proxy.empty() &&
+            (remote_tag.empty() || force_outbound_proxy))
+  {
+    dest_uri = outbound_proxy;
+  } else if(!route.empty()) {
+    // parse first route
+    sip_header fr;
+    fr.value = stl2cstr(route);
+    sip_uri* route_uri = get_first_route_uri(&fr);
+    if(!route_uri){
+      ERROR("Could not parse route (local_tag='%s';route='%s')",
+        local_tag.c_str(),route.c_str());
+      goto error;
+    }
+
+    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
+    else transport_id = sip_transport::UDP;
+
+  } else {
+    dest_uri = remote_uri;
+  }
+
+  if(!dest_uri.empty()){
+    sip_uri d_uri;
+    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
+      ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
+        local_tag.c_str(),dest_uri.c_str());
+      goto error;
+    }
+
+    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
+    else transport_id = sip_transport::UDP;
+
+  }
+
+  if(!transport_id) goto error;
+
+  setOutboundTransport(transport_id);
+  return outbound_transport;
+
+error:
+  WARN("Error while computing outbound transport: UDP will be used instead.");
+  setOutboundTransport(sip_transport::UDP);
+  return outbound_transport;
+}
+
 void AmBasicSipDialog::resetOutboundIf()
 {
   setOutboundInterface(-1);
+  setOutboundTransport(-1);
 }
 
 /**
@@ -480,14 +574,13 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
   AmSipRequest &t_req = t_it->second;
   const sip_trans *req_t = t_req.tt.get_trans(),
                   *rep_t = reply.tt.get_trans();
-
   if(rep_t &&
      req_t &&
      rep_t != req_t)
   {
-      t_req.tt = reply.tt;
-      DBG("got reply from transaction %p but matched as %p. apply values from reply",
-           rep_t,req_t);
+    t_req.tt = reply.tt;
+    DBG("got reply from transaction %p but matched as %p. apply values from reply",
+        rep_t,req_t);
   }
 
   updateDialogTarget(reply);

@@ -1201,7 +1201,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
         if(!recved_bytes) return;
 
       if((size_t)recved_bytes > sizeof(local_buffer)) {
-        CLASS_ERROR("recved huge RTCP packet (%d/%d)",recved_bytes,sizeof(local_buffer));
+        CLASS_ERROR("recved huge RTCP packet (%d/%ld)",recved_bytes,sizeof(local_buffer));
         return;
       }
   }

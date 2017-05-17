@@ -142,6 +142,8 @@ class tcp_trsp_socket: public trsp_socket
   static void on_sock_read(int fd, short ev, void* arg);
   static void on_sock_write(int fd, short ev, void* arg);
 
+  bool get_binded();
+
   tcp_trsp_socket(tcp_server_socket* server_sock,
 		  tcp_server_worker* server_worker,
 		  int sd, const sockaddr_storage* sa,
@@ -234,7 +236,7 @@ class tcp_server_socket: public trsp_socket
   static uint32_t hash_addr(const sockaddr_storage* addr);
 
 public:
-  tcp_server_socket(unsigned short if_num);
+  tcp_server_socket(unsigned short if_num, unsigned int opts);
   ~tcp_server_socket() {}
 
   void add_threads(unsigned int n);

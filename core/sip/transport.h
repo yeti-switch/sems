@@ -51,7 +51,8 @@ public:
 	force_via_address       = (1 << 0),
 	force_outbound_if       = (1 << 1),
 	use_raw_sockets         = (1 << 2),
-	no_transport_in_contact = (1 << 3)
+	no_transport_in_contact = (1 << 3),
+	static_client_port = (1 << 4)
     };
 
     static int log_level_raw_msgs;
@@ -119,6 +120,12 @@ public:
      * Getter for the actual port number
      */
     unsigned short get_actual_port() const;
+
+
+    /**
+     * Getter for the socket_options
+     */
+    unsigned int get_options() const;
 
 
     /**

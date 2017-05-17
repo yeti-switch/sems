@@ -47,6 +47,7 @@
 #include "sip/ip_util.h"
 #include "sip/sip_timers.h"
 #include "sip/raw_sender.h"
+#include "sip/parse_via.h"
 
 #include <cctype>
 #include <algorithm>
@@ -173,12 +174,22 @@ AmConfig::IP_interface::IP_interface()
 
 AmConfig::SIP_interface::SIP_interface()
   : IP_interface(),
-    LocalPort(5060),
+    tcp_local_port(5060),
+    udp_local_port(5060),
     SigSockOpts(0),
     RtpInterface(-1),
     tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT),
     tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT)
 {
+}
+
+unsigned int AmConfig::SIP_interface::getLocalPort(int transport_id)
+{
+    switch(transport_id) {
+    case sip_transport::UDP: return udp_local_port;
+    case sip_transport::TCP: return tcp_local_port;
+    default: return 0;
+    }
 }
 
 AmConfig::RTP_interface::RTP_interface()
@@ -815,13 +826,18 @@ int AmConfig::insert_SIP_interface_mapping(const SIP_interface& intf, int idx) {
     LocalSIPIP2If.emplace(if_local_ip,idx);
   } else {
     const SIP_interface& old_intf = SIP_Ifs[it->second];
-    if(intf.LocalPort == old_intf.LocalPort) {
-      ERROR("duplicated signaling interfaces  (%s and %s) detected using %s:%u",
-	    old_intf.name.c_str(), intf.name.c_str(), if_local_ip.c_str(), intf.LocalPort);
+    if(intf.udp_local_port == old_intf.udp_local_port) {
+      ERROR("duplicated signaling interfaces (%s and %s) detected using %s:%u/UDP",
+        old_intf.name.c_str(), intf.name.c_str(), if_local_ip.c_str(), intf.udp_local_port);
+      return -1;
+    }
+    if(intf.tcp_local_port == old_intf.tcp_local_port) {
+      ERROR("duplicated signaling interfaces (%s and %s) detected using %s:%u/TCP",
+        old_intf.name.c_str(), intf.name.c_str(), if_local_ip.c_str(), intf.tcp_local_port);
       return -1;
     }
     // two interfaces on the sample IP - the one on port 5060 has priority
-    if (intf.LocalPort == 5060)
+    if (intf.udp_local_port == 5060)
       LocalSIPIP2If.insert(make_pair(if_local_ip,idx));
   }
   return 0;
@@ -848,12 +864,25 @@ static int readSIPInterface(AmConfigReader& cfg, const string& i_name)
   if(cfg.hasParameter("sip_port" + suffix)){
     string sip_port_str = cfg.getParameter("sip_port" + suffix);
     if(sscanf(sip_port_str.c_str(),"%u",
-	      &(intf.LocalPort)) != 1){
-      ERROR("sip_port%s: invalid sip port specified (%s)\n",
+          &(intf.udp_local_port)) != 1){
+      ERROR("sip_port%s: invalid sip UDP port specified (%s)\n",
 	    suffix.c_str(),
 	    sip_port_str.c_str());
 	  return -1;
     }
+  }
+
+  if(cfg.hasParameter("tcp_sip_port" + suffix)){
+    string sip_port_str = cfg.getParameter("tcp_sip_port" + suffix);
+    if(sscanf(sip_port_str.c_str(),"%u",
+          &(intf.tcp_local_port)) != 1){
+      ERROR("sip_port%s: invalid sip TCP port specified (%s)\n",
+        suffix.c_str(),
+        sip_port_str.c_str());
+      return -1;
+    }
+  } else {
+    intf.tcp_local_port = intf.udp_local_port;
   }
 
   // public_ip
@@ -876,6 +905,8 @@ static int readSIPInterface(AmConfigReader& cfg, const string& i_name)
                  i_name.c_str());
       } else if(*it_opt == "no_transport_in_contact") {
         opts |= trsp_socket::no_transport_in_contact;
+      } else if(*it_opt == "static_client_port") {
+        opts |= trsp_socket::static_client_port;
       } else {
         WARN("unknown signaling socket option '%s' set on interface '%s'\n",
              it_opt->c_str(),i_name.c_str());
@@ -1267,8 +1298,12 @@ int AmConfig::finalizeIPConfig()
       return -1;
     }
 
-    if(!it->LocalPort)
-      it->LocalPort = 5060;
+    if(!it->udp_local_port)
+      it->udp_local_port = 5060;
+
+    if(!it->tcp_local_port)
+      it->tcp_local_port = 5060;
+
 
     if (insert_SIP_interface_mapping(*it,idx)<0)
       return -1;
@@ -1343,9 +1378,13 @@ void AmConfig::dump_Ifs()
     SIP_interface& it_ref = SIP_Ifs[i];
 
     INFO("\t(%i) name='%s'" ";LocalIP='%s'" 
-	 ";LocalPort='%u'" ";PublicIP='%s';TCP=%u/%u",
+     ";udp_local_port='%u'"
+     ";tcp_local_port='%u'"
+     ";PublicIP='%s';TCP=%u/%u",
 	 i,it_ref.name.c_str(),it_ref.LocalIP.c_str(),
-	 it_ref.LocalPort,it_ref.PublicIP.c_str(),
+	 it_ref.udp_local_port,
+	 it_ref.tcp_local_port,
+	 it_ref.PublicIP.c_str(),
 	 it_ref.tcp_connect_timeout,
 	 it_ref.tcp_idle_timeout);
   }

@@ -88,11 +88,11 @@ int _SipCtrlInterface::init_udp_servers(int if_num)
     }
 
     if(udp_socket->bind(AmConfig::SIP_Ifs[if_num].LocalIP,
-			AmConfig::SIP_Ifs[if_num].LocalPort) < 0){
+            AmConfig::SIP_Ifs[if_num].udp_local_port) < 0){
 
 	ERROR("Could not bind SIP/UDP socket to %s:%i",
 	      AmConfig::SIP_Ifs[if_num].LocalIP.c_str(),
-	      AmConfig::SIP_Ifs[if_num].LocalPort);
+		  AmConfig::SIP_Ifs[if_num].udp_local_port);
 
 	delete udp_socket;
 	return -1;
@@ -131,7 +131,7 @@ int _SipCtrlInterface::alloc_tcp_structs()
 
 int _SipCtrlInterface::init_tcp_servers(int if_num)
 {
-    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num);
+    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num,AmConfig::SIP_Ifs[if_num].SigSockOpts);
 
     if(!AmConfig::SIP_Ifs[if_num].PublicIP.empty()) {
      	tcp_socket->set_public_ip(AmConfig::SIP_Ifs[if_num].PublicIP);
@@ -141,11 +141,11 @@ int _SipCtrlInterface::init_tcp_servers(int if_num)
     tcp_socket->set_idle_timeout(AmConfig::SIP_Ifs[if_num].tcp_idle_timeout);
 
     if(tcp_socket->bind(AmConfig::SIP_Ifs[if_num].LocalIP,
-			AmConfig::SIP_Ifs[if_num].LocalPort) < 0){
+            AmConfig::SIP_Ifs[if_num].tcp_local_port) < 0){
 
 	ERROR("Could not bind SIP/TCP socket to %s:%i",
 	      AmConfig::SIP_Ifs[if_num].LocalIP.c_str(),
-	      AmConfig::SIP_Ifs[if_num].LocalPort);
+		  AmConfig::SIP_Ifs[if_num].tcp_local_port);
 
 	delete tcp_socket;
 	return -1;
