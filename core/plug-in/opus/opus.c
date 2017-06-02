@@ -88,6 +88,8 @@ static int pcm16_2_opus( unsigned char* out_buf, unsigned char* in_buf, unsigned
 static long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_description);
 static void opus_destroy(long h_inst);
 
+static unsigned int opus_frames2samples(long, unsigned char *,unsigned int);
+
 #if SYSTEM_SAMPLECLOCK_RATE >= 48000
 #define _OPUS_RATE 48000
 #elif SYSTEM_SAMPLECLOCK_RATE >= 24000
@@ -103,10 +105,10 @@ static void opus_destroy(long h_inst);
 BEGIN_EXPORTS( "opus" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
 
   BEGIN_CODECS
-    CODEC( CODEC_OPUS, pcm16_2_opus, opus_2_pcm16, opus_plc,
+    CODEC_VARIABLE_FRAMES( CODEC_OPUS, pcm16_2_opus, opus_2_pcm16, opus_plc,
            opus_create, 
            opus_destroy,
-           NULL, NULL )
+           NULL, NULL, opus_frames2samples)
   END_CODECS
     
   BEGIN_PAYLOADS
@@ -255,5 +257,20 @@ static int opus_plc( unsigned char* out_buf, unsigned int size,
   /* DBG ("OPUS plc: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res); */
 
   return res;
+}
+
+static unsigned int opus_frames2samples(long h_codec, unsigned char* in, unsigned int size)
+{
+  opus_state_t* codec_inst;
+  if(!h_codec){
+    ERROR("opus codec not initialized.\n");
+    return 0;
+  }
+  codec_inst = (opus_state_t *)h_codec;
+  return opus_decoder_get_nb_samples(codec_inst->opus_dec,in,size);
+  /*unsigned int ret = opus_decoder_get_nb_samples(codec_inst->opus_dec,in,size);
+  DBG("opus_frames2samples(%ld, %p, %u) = %u",
+      h_codec,in,size,ret);
+  return ret;*/
 }
 
