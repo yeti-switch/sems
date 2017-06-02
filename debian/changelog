@@ -1,3 +1,9 @@
+sems (1.7.42-2) stable; urgency=low
+
+  * 5a2ac3256 opus: add frames2samples handler
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 02 Jun 2017 13:30:14 +0300
+
 sems (1.7.42-1) stable; urgency=low
 
   * 031bbfa2b AmThread: AmTimerFd: add method settime with explicit repeat interval specification
