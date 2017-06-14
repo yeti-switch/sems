@@ -142,8 +142,6 @@ class tcp_trsp_socket: public trsp_socket
   static void on_sock_read(int fd, short ev, void* arg);
   static void on_sock_write(int fd, short ev, void* arg);
 
-  bool get_binded();
-
   tcp_trsp_socket(tcp_server_socket* server_sock,
 		  tcp_server_worker* server_worker,
 		  int sd, const sockaddr_storage* sa,
