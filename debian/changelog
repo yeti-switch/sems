@@ -1,3 +1,11 @@
+sems (1.7.43-1) stable; urgency=low
+
+  * 17e81815a tcp_trsp: remove NI get_binded() method
+  * 46c7c0277 opus: use uppercase for payload definition
+  * a5d733ee3 add IANA RTP payloads table
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 14 Jun 2017 13:58:02 +0300
+
 sems (1.7.42-2) stable; urgency=low
 
   * 5a2ac3256 opus: add frames2samples handler
