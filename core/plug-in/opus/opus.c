@@ -73,7 +73,7 @@ OPUS_BANDWIDTH_FULLBAND      - 20 kHz passband */
 /* Forward error correction.
 Allowed values: 0 - 1 */
 
-#define _OPUS_DTX_ 0
+#define _OPUS_DTX_ 1
 /* Discontinued transmission
 Allowed values: 0 - 1 */
 
