@@ -1,3 +1,10 @@
+sems (1.7.43-2) stable; urgency=low
+
+  * e71385ccb opus: enable DTX
+  * bb4620126 opus: CmakeLists.txt: add commented instructions to link with custom libopus statically
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 16 Jun 2017 12:09:33 +0300
+
 sems (1.7.43-1) stable; urgency=low
 
   * 17e81815a tcp_trsp: remove NI get_binded() method
