@@ -55,7 +55,7 @@ OPUS_APPLICATION_VOIP                  Process signal for improved speech intell
 OPUS_APPLICATION_AUDIO                 Favor faithfulness to the original input.
 OPUS_APPLICATION_RESTRICTED_LOWDELAY   Configure the minimum possible coding delay by disabling certain modes of operation.*/
 
-#define _OPUS_MAX_BANDWIDTH_ OPUS_BANDWIDTH_FULLBAND
+#define _OPUS_MAX_BANDWIDTH_ OPUS_BANDWIDTH_WIDEBAND
 /* Allowed values:
 OPUS_BANDWIDTH_NARROWBAND    -  4 kHz passband
 OPUS_BANDWIDTH_MEDIUMBAND    -  6 kHz passband
@@ -66,7 +66,7 @@ OPUS_BANDWIDTH_FULLBAND      - 20 kHz passband */
 #define _OPUS_PKT_LOSS_PCT_ 5
 /* Allowed values: 0 - 100 */
 
-#define _OPUS_COMPLEXITY_ 10
+#define _OPUS_COMPLEXITY_ 1
 /* Allowed values: 0 - 10, where 10 is highest computational complexity */
 
 #define _OPUS_INBAND_FEC_ 1
