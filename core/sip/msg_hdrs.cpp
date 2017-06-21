@@ -59,7 +59,7 @@ int  copy_hdrs_len_no_via(const list<sip_header*>& hdrs)
     return ret;
 }
 
-int  copy_hdrs_len_no_via_contact(const list<sip_header*>& hdrs)
+int  copy_hdrs_len_no_via_contact_content_length(const list<sip_header*>& hdrs)
 {
     int ret = 0;
 
@@ -69,6 +69,7 @@ int  copy_hdrs_len_no_via_contact(const list<sip_header*>& hdrs)
       switch((*it)->type) {
       case sip_header::H_VIA:
       case sip_header::H_CONTACT:
+      case sip_header::H_CONTENT_LENGTH:
 	continue;
 
       default:
@@ -99,7 +100,7 @@ void copy_hdrs_wr_no_via(char** c, const list<sip_header*>& hdrs)
     }
 }
 
-void copy_hdrs_wr_no_via_contact(char** c, const list<sip_header*>& hdrs)
+void copy_hdrs_wr_no_via_contact_content_length(char** c, const list<sip_header*>& hdrs)
 {
     list<sip_header*>::const_iterator it = hdrs.begin();
     for(;it != hdrs.end(); ++it){
@@ -107,6 +108,7 @@ void copy_hdrs_wr_no_via_contact(char** c, const list<sip_header*>& hdrs)
       switch((*it)->type) {
       case sip_header::H_VIA:
       case sip_header::H_CONTACT:
+      case sip_header::H_CONTENT_LENGTH:
 	continue;
 
       default:

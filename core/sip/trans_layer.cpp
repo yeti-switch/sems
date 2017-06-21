@@ -1165,7 +1165,7 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
     request_len += via_len(trsp,stl2cstr(via),branch,true);
  
     request_len += copy_hdrs_len(msg->vias);
-    request_len += copy_hdrs_len_no_via_contact(msg->hdrs);
+    request_len += copy_hdrs_len_no_via_contact_content_length(msg->hdrs);
     request_len += copy_hdrs_len(n_contacts);
      
     string content_len = int2str(msg->body.len);
@@ -1189,7 +1189,7 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
  
     via_wr(&c,trsp,stl2cstr(via),branch,true);
     copy_hdrs_wr(&c,msg->vias);
-    copy_hdrs_wr_no_via_contact(&c,msg->hdrs);
+    copy_hdrs_wr_no_via_contact_content_length(&c,msg->hdrs);
 
     copy_hdrs_wr(&c,n_contacts);
     free_headers(n_contacts);
