@@ -1,3 +1,11 @@
+sems (1.7.43-3) stable; urgency=low
+
+  * 5aae3864 AmB2BSession: updateLocalBody: fix processing of the zero-length SDP body
+  * 3d38a8028 trans_layer: fix HF Content-Length doubling on timerM(SRV) rerouting
+  * d188ea20b opus: adjust band and complexity
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 22 Jun 2017 17:55:40 +0300
+
 sems (1.7.43-2) stable; urgency=low
 
   * e71385ccb opus: enable DTX
