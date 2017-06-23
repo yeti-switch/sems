@@ -273,8 +273,11 @@ int _SipCtrlInterface::cancel(trans_ticket* tt, const string& dialog_id,
 int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 			    const string& next_hop, int out_interface,
 				unsigned int flags, msg_logger* logger, msg_sensor *sensor,
-				sip_timers_override *timers_override)
+				sip_timers_override *timers_override,
+				sip_target_set* target_set_override)
 {
+	std::unique_ptr<sip_target_set> target_set(target_set_override);
+
     if(req.method == "CANCEL")
 	return cancel(&req.tt, dialog_id, req.cseq, req.hdrs);
 
@@ -375,7 +378,8 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 						    stl2cstr(dialog_id),
 						    stl2cstr(next_hop),
 						    out_interface,
-							flags,logger,sensor,timers_override);
+							flags,logger,sensor,timers_override,
+							target_set.release());
     delete msg;
 
     return res;

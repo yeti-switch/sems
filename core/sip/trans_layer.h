@@ -179,7 +179,8 @@ public:
     int send_request(sip_msg* msg, trans_ticket* tt, const cstring& dialog_id,
 		     const cstring& _next_hop, int out_interface = -1,
 			 unsigned int flags=0, msg_logger* logger=NULL,msg_sensor *sensor=NULL,
-			 sip_timers_override *timers_override = NULL);
+			 sip_timers_override *timers_override = NULL,
+			 sip_target_set* target_set_override = NULL);
 
     /**
      * Cancels a request. 

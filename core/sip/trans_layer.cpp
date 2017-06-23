@@ -1229,7 +1229,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 			       const cstring& _next_hop, 
 			       int out_interface, unsigned int flags,
 				   msg_logger* logger,msg_sensor *sensor,
-				   sip_timers_override *timers_override)
+				   sip_timers_override *timers_override,
+				   sip_target_set* target_set_override)
 {
     // Request-URI
     // To
@@ -1247,6 +1248,10 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
     int res=0;
     list<sip_destination> dest_list;
+
+    auto_ptr<sip_target_set> targets(
+        target_set_override ? target_set_override: new sip_target_set());
+
     if (_next_hop.len) {
 
 	res = parse_next_hop(_next_hop,dest_list);
@@ -1265,15 +1270,18 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	dest_list.push_back(dest);
     }
 
-    auto_ptr<sip_target_set> targets(new sip_target_set());
-    res = resolver::instance()->resolve_targets(dest_list,targets.get());
-    if(res < 0){
-	DBG("resolve_targets failed\n");
-	return res;
+    if(!target_set_override) {
+        res = resolver::instance()->resolve_targets(dest_list,targets.get());
+        if(res < 0){
+            DBG("resolve_targets failed\n");
+            return res;
+        }
+        targets->reset_iterator();
+    } else {
+        DBG("use overriden target set. resolving is skipped");
     }
 
     targets->debug();
-    targets->reset_iterator();
 
     string uri_buffer; // must have the same scope as 'msg'
     prepare_strict_routing(msg,uri_buffer);

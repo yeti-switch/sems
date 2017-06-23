@@ -50,6 +50,7 @@
 #include <list>
 #include <utility>
 #include <algorithm>
+#include <iterator>
 
 using std::pair;
 using std::make_pair;
@@ -915,17 +916,31 @@ bool sip_target_set::next()
     return has_next();
 }
 
+void sip_target_set::prev()
+{
+    if(dest_list_it!=dest_list.begin())
+        dest_list_it--;
+}
+
 void sip_target_set::debug()
 {
     DBG("target list:");
 
     for(list<sip_target>::iterator it = dest_list.begin();
-	it != dest_list.end(); it++) {
-
-	DBG("\t%s:%u/%s to target list",
-	    am_inet_ntop(&it->ss).c_str(),
-	    am_get_port(&it->ss),it->trsp);
+        it != dest_list.end(); it++)
+    {
+        DBG("\t%c %s:%u/%s",
+            it == dest_list_it ? '>' : ' ',
+            am_inet_ntop(&it->ss).c_str(),
+            am_get_port(&it->ss),it->trsp);
     }
+}
+
+sip_target_set::sip_target_set(const sip_target_set& other) {
+    dest_list = other.dest_list;
+    dest_list_it = std::next(dest_list.begin(),
+        std::distance(other.dest_list.begin(),
+        (list<sip_target>::const_iterator)other.dest_list_it));
 }
 
 dns_entry_map::dns_entry_map()
@@ -949,13 +964,10 @@ dns_entry_map::insert(const dns_entry_map::value_type& x)
 bool dns_entry_map::insert(const string& key, dns_entry* e)
 {
     std::pair<iterator, bool> res = emplace(key,e);
-        //insert(std::make_pair<const key_type&,mapped_type>(key,e));
-
     if(res.second) {
-	inc_ref(e);
-	return true;
+        inc_ref(e);
+        return true;
     }
-
     return false;
 }
 

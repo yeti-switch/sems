@@ -235,11 +235,11 @@ struct sip_target_set
     int  get_next(sockaddr_storage* ss, cstring& next_trsp,
 		  unsigned int flags);
     bool next();
+    void prev();
 
     void debug();
 
-private:
-    sip_target_set(const sip_target_set&) {}
+    sip_target_set(const sip_target_set&);
 };
 
 typedef map<string,dns_entry*> dns_entry_map_base;
