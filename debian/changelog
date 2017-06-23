@@ -1,3 +1,10 @@
+sems (1.7.44-1) stable; urgency=low
+
+  * 4da991b3d uac_auth: use targets set from reply to send request with authorization
+  * 4efade81a core: trans_layer: add targets set override
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 23 Jun 2017 19:23:54 +0300
+
 sems (1.7.43-3) stable; urgency=low
 
   * 5aae3864 AmB2BSession: updateLocalBody: fix processing of the zero-length SDP body
