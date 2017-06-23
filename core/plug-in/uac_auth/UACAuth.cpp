@@ -37,6 +37,8 @@
 #include <algorithm>
 
 #include "md5.h"
+#include "sip/sip_trans.h"
+#include "sip/resolver.h"
 
 using std::string;
 
@@ -249,19 +251,31 @@ bool UACAuth::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 		findHeader(hdrs, "m", skip, pos1, pos2, hdr_start))
 		  flags |= SIP_FLAGS_NOCONTACT;
 
-	    // resend request 
-	    if (dlg->sendRequest(ri->second.method,
-				 &(ri->second.body),
-				 hdrs, ri->second.flags | flags) == 0) {
-	      processed = true;
-              DBG("authenticated request successfully sent.\n");
-	      // undo SIP dialog status change
-	      if (dlg->getStatus() != old_dlg_status)
-	        dlg->setStatus(old_dlg_status);
-            } else {
-              ERROR("failed to send authenticated request.\n");
-            }
-	  }
+		reply.tt.lock_bucket();
+		const sip_trans *t = reply.tt.get_trans();
+		sip_target_set *targets_copy = NULL;
+		if(t->targets) {
+			targets_copy = new sip_target_set(*t->targets);
+			targets_copy->prev();
+		}
+		reply.tt.unlock_bucket();
+
+		// resend request
+		if (dlg->sendRequest(
+			ri->second.method,
+			 &(ri->second.body),
+			 hdrs, ri->second.flags | flags,
+			NULL, targets_copy) == 0)
+		{
+			processed = true;
+			DBG("authenticated request successfully sent.\n");
+			// undo SIP dialog status change
+			if (dlg->getStatus() != old_dlg_status)
+				dlg->setStatus(old_dlg_status);
+		} else {
+				ERROR("failed to send authenticated request.\n");
+		}
+		} //if(do_auth(..
 	}
 	sent_requests.erase(ri);
       }
