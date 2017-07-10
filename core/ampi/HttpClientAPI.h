@@ -40,7 +40,7 @@ struct HttpUploadEvent
 
   HttpUploadEvent(string destination_name, string file_name, string file_path, string token, string session_id = string())
     : AmEvent(Upload),
-      HttpEvent(session_id,token,failover_idx),
+      HttpEvent(session_id,token),
       destination_name(destination_name),
       file_name(file_name),
       file_path(file_path)
