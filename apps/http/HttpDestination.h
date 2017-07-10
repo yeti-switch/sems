@@ -32,8 +32,17 @@ class DestinationAction {
     const string &str() const { return action_str; }
 };
 
+class HttpCodesMap {
+    bool codes[1000];
+  public:
+    HttpCodesMap();
+    int parse(const string &name, AmConfigReader &cfg);
+    bool operator ()(long int code) const;
+};
+
 struct HttpDestination {
 
+    HttpCodesMap succ_codes;
     DestinationAction succ_action;
     DestinationAction fail_action;
 
@@ -51,7 +60,12 @@ struct HttpDestination {
     } mode;
     string mode_str;
 
-    string url;
+    string url_list;
+    vector<string> url;
+    size_t max_failover_idx;
+    unsigned int attempts_limit;
+
+    string succ_codes_str;
 
     int post_upload(const string &file_path, const string &file_basename, bool failed) const;
     int post_upload(bool failed) const;

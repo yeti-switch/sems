@@ -54,7 +54,7 @@ int HttpUploadConnection::init(CURLM *curl_multi)
         return -1;
     }
 
-    string upload_url = destination.url+'/'+event.file_name;
+    string upload_url = destination.url[event.failover_idx]+'/'+event.file_name;
 
     easy_setopt(CURLOPT_URL,upload_url.c_str());
     easy_setopt(CURLOPT_UPLOAD, 1L);
@@ -81,13 +81,31 @@ int HttpUploadConnection::on_finished(CURLcode result)
         event.file_path.c_str(), eff_url, http_response_code,
         total_time, speed_upload);
 
-    if(http_response_code >= 200 && http_response_code<300) {
+    if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(event.file_path,file_basename, false);
     } else {
         ERROR("can't upload '%s' to '%s'. curl_code: %d, http_code %ld",
               event.file_path.c_str(), eff_url,
               result,http_response_code);
+        if(event.failover_idx < destination.max_failover_idx) {
+            event.failover_idx++;
+            DBG("faiolver to the next destination. new failover index is %i",
+                event.failover_idx);
+            return true; //force requeue
+        } else {
+            event.attempt++;
+            event.failover_idx = 0;
+        }
         requeue = destination.post_upload(event.file_path,file_basename,true);
+    }
+
+    if(requeue &&
+       destination.attempts_limit &&
+       event.attempt >= destination.attempts_limit)
+    {
+        DBG("attempt limit(%i) reached. skip requeue",
+            destination.attempts_limit);
+        requeue = false;
     }
 
     if(!requeue)

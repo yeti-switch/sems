@@ -29,11 +29,23 @@
 #
 # pcap_mode=put
 
-# <destination>_upload_url=<url>
+# <destination>_upload_url=<url[,url2...]>
+#
+# comma-spearated list of URLs
+# automatic failover if specified more than one url
 #
 # Default: mandatory
 #
 # pcap_url=http://127.0.0.1/upload
+
+# <destination>_succ_codes=<mask[,mask2...]>
+#
+# comma-spearated list of the masks
+# for codes to be considered as successfull
+#
+# Default: 2xx
+#
+# pcap_succ_codes=2xx
 
 # <destination>_succ_action=<action>
 #
@@ -58,6 +70,15 @@
 # Default: nothing
 #
 # pcap_fail_action=nothing
+
+# <destination>_requeue_limit=<integer>
+#
+# Limit of the attempts for requeue fail action
+# unlimited if zero
+#
+# Default: 0
+#
+# pcap_requeue_limit=0
 
 # <destination>_fail_action_arg=<arg>
 #

@@ -4,6 +4,8 @@
 #include "AmUtils.h"
 #include "log.h"
 
+#include <algorithm>
+
 #include <vector>
 using std::vector;
 
@@ -73,6 +75,58 @@ int DestinationAction::perform() const
     return 0;
 }
 
+HttpCodesMap::HttpCodesMap()
+{
+    bzero(codes,sizeof(codes));
+}
+
+int HttpCodesMap::parse(const string &name, AmConfigReader &cfg)
+{
+    if(!cfg.hasParameter(name)) {
+        //2xx
+        memset(codes+200,true,sizeof(bool)*100);
+        return 0;
+    }
+
+    string mask_list_str = cfg.getParameter(name);
+    vector<string> mask_list = explode(mask_list_str,",");
+    for(const string & mask : mask_list) {
+        if(mask.find('x')!=string::npos) {
+            string mins =  mask, maxs = mask;
+            int min,max;
+            std::replace(mins.begin(),mins.end(),'x','0');
+            std::replace(maxs.begin(),maxs.end(),'x','9');
+            if(!str2int(mins,min)) {
+                ERROR("can't convert bottom border value %s for mask %s to int.",
+                    mins.c_str(),mask.c_str());
+                return -1;
+            }
+            if(!str2int(maxs,max)) {
+                ERROR("can't convert upper border value %s for mask %s to int",
+                    maxs.c_str(),mask.c_str());
+                return -1;
+            }
+            for(int i = min; i <= max; i++)
+                codes[i] = true;
+        } else {
+            int i;
+            if(!str2int(mask,i)) {
+                ERROR("can't convert mask %s to int",
+                    mask.c_str());
+                return -1;
+            }
+            codes[i] = true;
+        }
+    }
+    return 0;
+}
+
+bool HttpCodesMap::operator ()(long int code) const
+{
+    if(code > 0 && code < 1000) return codes[code];
+    else return false;
+}
+
 int HttpDestination::parse(const string &name, AmConfigReader &cfg)
 {
     string mode_str = cfg.getParameter(name + "_mode","put");
@@ -89,9 +143,18 @@ int HttpDestination::parse(const string &name, AmConfigReader &cfg)
         return -1;
     }
 
-    url = cfg.getParameter(name + "_url");
-    if(url.empty()){
+    url_list = cfg.getParameter(name + "_url");
+    if(url_list.empty()){
         ERROR("missed url for destination %s",name.c_str());
+        return -1;
+    }
+    url = explode(url_list,",");
+    max_failover_idx = url.size()-1;
+
+    attempts_limit = cfg.getParameterInt(name + "_requeue_limit",0);
+
+    if(succ_codes.parse(name+"_succ_codes",cfg)) {
+        ERROR("can't parse succ codes map");
         return -1;
     }
 
@@ -120,14 +183,14 @@ void HttpDestination::dump(const string &key) const
 {
     DBG("destination %s: %s %s, post_upload = %s %s, failed_upload = %s %s",
         key.c_str(),
-        mode_str.c_str(),url.c_str(),
+        mode_str.c_str(),url_list.c_str(),
         succ_action.str().c_str(), succ_action.data().c_str(),
         fail_action.str().c_str(), fail_action.data().c_str());
 }
 
 void HttpDestination::dump(const string &key, AmArg &ret) const
 {
-    ret["url"] = url;
+    ret["url"] = url_list;
     ret["mode"] = mode_str.c_str();
     ret["action"] = succ_action.str();
     if(succ_action.has_data()){

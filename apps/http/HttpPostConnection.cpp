@@ -41,7 +41,7 @@ int HttpPostConnection::init(CURLM *curl_multi)
         easy_setopt(CURLOPT_HTTPHEADER, headers);
     }
 
-    easy_setopt(CURLOPT_URL,destination.url.c_str());
+    easy_setopt(CURLOPT_URL,destination.url[0].c_str());
     easy_setopt(CURLOPT_POSTFIELDS,event.data.c_str());
 
     easy_setopt(CURLOPT_WRITEFUNCTION,write_func_static);
@@ -64,13 +64,31 @@ int HttpPostConnection::on_finished(CURLcode result)
         eff_url, http_response_code,
         total_time, speed_upload);
 
-    if(http_response_code >= 200 && http_response_code<300) {
+    if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(false);
     } else {
         ERROR("can't post to '%s'. curl_code: %d, http_code %ld",
               eff_url,
               result,http_response_code);
+        if(event.failover_idx < destination.max_failover_idx) {
+            event.failover_idx++;
+            DBG("faiolver to the next destination. new failover index is %i",
+                event.failover_idx);
+            return true; //force requeue
+        } else {
+            event.failover_idx = 0;
+            event.attempt++;
+        }
         requeue = destination.post_upload(true);
+    }
+
+    if(requeue &&
+       destination.attempts_limit &&
+       event.attempt >= destination.attempts_limit)
+    {
+        DBG("attempt limit(%i) reached. skip requeue",
+            destination.attempts_limit);
+        requeue = false;
     }
 
     if(!requeue)

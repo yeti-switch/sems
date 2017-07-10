@@ -52,6 +52,7 @@ class HttpClient
     void on_resend_timer_event();
 
     void showStats(AmArg &ret);
+    void postRequest(const AmArg& args, AmArg& ret);
 
   public:
     HttpClient(const string& name);

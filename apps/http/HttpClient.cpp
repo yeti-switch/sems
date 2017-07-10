@@ -100,9 +100,24 @@ void HttpClient::invoke(const string& method, const AmArg& args, AmArg& ret)
         destinations.dump(ret);
     } else if(method=="stats"){
         showStats(ret);
+    } else if(method=="post") {
+        postRequest(args,ret);
+    } else if(method=="_list"){
+        ret.push("stats");
+        ret.push("post");
     } else {
         throw AmDynInvoke::NotImplemented(method);
     }
+}
+
+void HttpClient::postRequest(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("ss");
+    AmSessionContainer::instance()->postEvent(
+        HTTP_EVENT_QUEUE,
+        new HttpPostEvent(args.get(0).asCStr(), //destination
+                          args.get(1).asCStr(), //data
+                          string()));           //token
 }
 
 void HttpClient::run()
@@ -221,13 +236,15 @@ void HttpClient::on_upload_request(const HttpUploadEvent &u)
     }
 
     if(u.token.empty()){
-        DBG("http upload request: %s => %s",
+        DBG("http upload request: %s => %s [%i/%i]",
             u.file_path.c_str(),
-            d.url.c_str());
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt);
     } else {
-        DBG("http upload request: %s => %s token: %s",
+        DBG("http upload request: %s => %s [%i/%i] token: %s",
             u.file_path.c_str(),
-            d.url.c_str(),
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt,
             u.token.c_str());
     }
 
@@ -255,11 +272,13 @@ void HttpClient::on_post_request(const HttpPostEvent &u)
     }
 
     if(u.token.empty()){
-        DBG("http post request url: %s",
-            d.url.c_str());
+        DBG("http post request url: %s [%i/%i]",
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt);
     } else {
-        DBG("http post request url: %s, token: %s",
-            d.url.c_str(),
+        DBG("http post request url: %s [%i/%i], token: %s",
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt,
             u.token.c_str());
     }
 
@@ -279,7 +298,7 @@ void HttpClient::on_requeue(CurlConnection *c)
             upload_conn->post_response_event();
             return;
         }
-        failed_upload_events.push(new HttpUploadEvent(upload_conn->get_event()));
+        failed_upload_events.emplace(new HttpUploadEvent(upload_conn->get_event()));
         return;
     }
 
@@ -290,7 +309,7 @@ void HttpClient::on_requeue(CurlConnection *c)
             post_conn->post_response_event();
             return;
         }
-        failed_post_events.push(new HttpPostEvent(post_conn->get_event()));
+        failed_post_events.emplace(new HttpPostEvent(post_conn->get_event()));
         return;
     }
 }
