@@ -1,3 +1,12 @@
+sems (1.7.45-1) stable; urgency=low
+
+  * c1c9e97ac AmRtpStream: fix debug() segfault
+  * 69f08c0c AmB2BMedia: cleanup audio stream relay info and appropriate SDP presence flags on clearAudio
+  * e7bd51f60 (origin/master, origin/HEAD, didww/master) http_client: fix constructor for upload event
+  * afeac584d http_client: failover for destinations, requeue limit, succ codes mapping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Jul 2017 16:27:34 +0300
+
 sems (1.7.44-1) stable; urgency=low
 
   * 4da991b3d uac_auth: use targets set from reply to send request with authorization
