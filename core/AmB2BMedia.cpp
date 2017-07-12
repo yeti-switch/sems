@@ -699,17 +699,29 @@ void AmB2BMedia::clearAudio(bool a_leg)
     // remove streams from AmRtpReceiver first! (always both?)
     i->a.stopStreamProcessing();
     i->b.stopStreamProcessing();
-    if (a_leg) i->a.clear();
-    else i->b.clear();
+    if (a_leg) {
+      i->a.clear();
+      i->b.setRelayStream(NULL);
+    } else {
+      i->b.clear();
+      i->a.setRelayStream(NULL);
+    }
   }
 
   for (RelayStreamIterator j = relay_streams.begin(); j != relay_streams.end(); ++j) {
     (*j)->a.stopReceiving();
     (*j)->b.stopReceiving();
   }
-
   // forget sessions to avoid using them once clearAudio is called
   changeSessionUnsafe(a_leg, NULL);
+
+  if(a_leg) {
+    have_a_leg_local_sdp = false;
+    have_a_leg_remote_sdp = false;
+  } else {
+    have_b_leg_local_sdp = false;
+    have_b_leg_remote_sdp = false;
+  }
 
   if (!a && !b) {
     audio.clear(); // both legs cleared
