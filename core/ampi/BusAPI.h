@@ -30,14 +30,14 @@ struct BusMsg {
     } msg_state_t;
 
     msg_state_t     state;
-    uint32_t        seq;
+    bool	    is_query;
     string          local_tag;
     string          application_method;
     string          body;
     uint64_t        updated;
 
-    BusMsg(string _local_tag, string _application_method, string _body)
-        : state(New), seq(0),
+    BusMsg(bool _is_query,string _local_tag, string _application_method, string _body)
+        : state(New), is_query(_is_query),
           local_tag(_local_tag),
           application_method(_application_method),
           body(_body) {}
