@@ -1,3 +1,9 @@
+sems (1.7.45-2) stable; urgency=low
+
+  * 7f320e639 AmThread: raise messages about threads start/end to the INFO loglevel
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 14 Jul 2017 12:57:40 +0300
+
 sems (1.7.45-1) stable; urgency=low
 
   * c1c9e97ac AmRtpStream: fix debug() segfault
