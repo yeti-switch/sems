@@ -1,3 +1,9 @@
+sems (1.7.46-1) stable; urgency=low
+
+  * 0c1dc1f3d Fixed core/ampi/BusAPI.h
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 14 Jul 2017 14:23:53 +0300
+
 sems (1.7.45-2) stable; urgency=low
 
   * 7f320e639 AmThread: raise messages about threads start/end to the INFO loglevel
