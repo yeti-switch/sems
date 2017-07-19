@@ -1,13 +1,14 @@
 #include "AmAudioFileRecorderStereoMP3.h"
 #include "AmEventDispatcher.h"
 #include "AmUtils.h"
+#include "AmConfig.h"
 
 #include <cstdio>
 
 #define MP3_FILE_SAMPLERATE 8000
 #define MP3_FILE_BITRATE 16
 
-#define MP3_BUFFER_SIZE 7200
+#define MP3_FLUSH_BUFFER_SIZE 7200
 
 
 AmAudioFileRecorderStereoMP3::file_data::file_data(FILE* fp, lame_global_flags* gfp, const string &path)
@@ -22,9 +23,9 @@ AmAudioFileRecorderStereoMP3::file_data::~file_data()
 void AmAudioFileRecorderStereoMP3::file_data::close()
 {
     int final_samples;
-    unsigned char  mp3buffer[MP3_BUFFER_SIZE];
+    unsigned char  mp3buffer[MP3_FLUSH_BUFFER_SIZE];
 
-    if((final_samples = lame_encode_flush(gfp,mp3buffer, MP3_BUFFER_SIZE)) > 0) {
+    if((final_samples = lame_encode_flush(gfp,mp3buffer, MP3_FLUSH_BUFFER_SIZE)) > 0) {
         //DBG("MP3: flushing %d bytes from MP3 encoder", final_samples);
         fwrite(mp3buffer, 1, final_samples, fp);
     }
@@ -48,7 +49,7 @@ int AmAudioFileRecorderStereoMP3::file_data::put(unsigned char *out,unsigned cha
                   (const short int *)rbuf,   // right channel
                   l / 2 ,                    // no of samples (size is in bytes!)
                   out,
-                  AUDIO_BUFFER_SIZE);
+                  MP3_OUT_BUF_SIZE);
 
     // 0 is valid: if not enough samples for an mp3
     //frame lame will not return anything
@@ -158,6 +159,33 @@ int AmAudioFileRecorderStereoMP3::put(unsigned char *lbuf, unsigned char *rbuf, 
     return 0;
 }
 
+inline unsigned int resample(
+    AmAudioFileRecorderStereoMP3::ResamplingStatePtr &state,
+    unsigned char *samples, unsigned int size,
+    int input_sample_rate)
+{
+    if(!state.get()) {
+#ifdef USE_INTERNAL_RESAMPLER
+        if (AmConfig::ResamplingImplementationType == AmAudio::INTERNAL_RESAMPLER) {
+            state.reset(new AmInternalResamplerState());
+        } else
+#endif
+#ifdef USE_LIBSAMPLERATE
+        if (AmConfig::ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
+            state.reset(new AmLibSamplerateResamplingState());
+        } else
+#endif
+        {
+            WARN("no available resamplers for MP3 stereo recorder. skip audio writing");
+            return 0;
+        }
+        DBG("resampler inited with %p",state.get());
+    }
+    return state->resample(
+        samples, size,
+        ((double)MP3_FILE_SAMPLERATE) / ((double)input_sample_rate));
+}
+
 #define match_buffers(lts,lsize,rts,rsize) \
 (\
     lts==rts \
@@ -205,11 +233,17 @@ void AmAudioFileRecorderStereoMP3::writeStereoSamples(unsigned long long ts,
 {
     size_t l;
 
-    //DBG("%s %llu %p %ld %d %d",FUNC_NAME,ts,samples,size, input_sample_rate,channel_id);
+    /*DBG("%s %llu %p %ld %d %d%c",FUNC_NAME,ts,samples,size, input_sample_rate,channel_id,
+        channel_id ? 'R' : 'L');*/
     //DBG("    >>> %llu l%llu(%ld) r%llu(%ld)",ts,ts_l,size_l,ts_r,size_r);
 
     switch(channel_id) {
     case AudioRecorderChannelLeft:
+        if(input_sample_rate!=MP3_FILE_SAMPLERATE) {
+            size = resample(resampling_state_l,
+                            samples,size,
+                            input_sample_rate);
+        }
         if(ts_r) {
             if(ts_l) { //+L +R nL
                 l = match_buffers(ts,size,ts_r,size_r);
@@ -243,6 +277,11 @@ void AmAudioFileRecorderStereoMP3::writeStereoSamples(unsigned long long ts,
         }
         break;
     case AudioRecorderChannelRight:
+        if(input_sample_rate!=MP3_FILE_SAMPLERATE) {
+            size = resample(resampling_state_r,
+                            samples,size,
+                            input_sample_rate);
+        }
         if(ts_r) {
             if(ts_l) { //+L +R nR
                 l = match_buffers(ts_l,size_l,ts,size);
