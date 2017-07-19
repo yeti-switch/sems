@@ -1,3 +1,10 @@
+sems (1.7.46-2) stable; urgency=low
+
+  * 0c1dc1f3d Fixed core/ampi/BusAPI.h
+  * 20dc351af AmAudioFileRecorderStereoMP: add resampling
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 19 Jul 2017 16:40:17 +0300
+
 sems (1.7.46-1) stable; urgency=low
 
   * 0c1dc1f3d Fixed core/ampi/BusAPI.h
