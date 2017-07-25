@@ -496,10 +496,20 @@ const int arg2int(const AmArg &a)
 
 string arg2str(const AmArg &a)
 {
-  if (isArgUndef(a)) return "";
-  if (isArgInt(a)) return int2str(a.asInt());
-  if (isArgBool(a)) return int2str(a.asBool());
-  if (isArgCStr(a)) return a.asCStr();
-
-  throw std::string("can't convert arg to string");
+    switch(a.getType()) {
+        case AmArg::Undef:
+            return "";
+        case AmArg::CStr:
+            return a.asCStr();
+        case AmArg::Int:
+            return int2str(a.asInt());
+        case AmArg::LongLong:
+            return longlong2str(a.asLongLong());
+        case AmArg::Double:
+            return double2str(a.asDouble());
+        case AmArg::Bool:
+            return int2str(a.asBool());
+        default:
+            throw std::string("can't convert arg to string");
+    }
 }
