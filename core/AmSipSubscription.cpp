@@ -619,7 +619,7 @@ bool AmSipSubscription::onRequestIn(const AmSipRequest& req)
   // UAS side
   Subscriptions::iterator sub_it = matchSubscription(req,false);
   if((sub_it == subs.end()) || (*sub_it)->terminated()) {
-    dlg->reply(req, 481, SIP_REPLY_NOT_EXIST);
+    dlg->reply(req, 481, "Subscription does not exist");
     return false;
   }
   
