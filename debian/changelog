@@ -1,3 +1,10 @@
+sems (1.7.46-3) stable; urgency=low
+
+  * 4685cc8f3 AmArg: process more types in arg2str
+  * 3b649f7a1 AmSipSubscription: fix reply reason on nx subscription
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 25 Jul 2017 18:52:17 +0300
+
 sems (1.7.46-2) stable; urgency=low
 
   * 0c1dc1f3d Fixed core/ampi/BusAPI.h
