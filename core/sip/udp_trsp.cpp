@@ -354,6 +354,10 @@ void udp_trsp::run()
 	    continue;
 	}
 
+	if(buf_len <= 4) {
+		continue;
+	}
+
 	if(buf_len > MAX_UDP_MSGLEN){
 	    ERROR("Message was too big (>%d)\n",MAX_UDP_MSGLEN);
 	    continue;
