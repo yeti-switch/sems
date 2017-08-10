@@ -1,3 +1,9 @@
+sems (1.7.47-1) stable; urgency=low
+
+  * 158c8a046 AmRtpPacket: PacketMem: use atomics for used mask and counter (racing between AmRtpReceiver and AmMediaProcessor)
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 10 Aug 2017 23:09:06 +0300
+
 sems (1.7.46-4) stable; urgency=low
 
   * f2c6d3ac6 udp_trsp: skip logging/parsing for payloads lte 4 bytes
