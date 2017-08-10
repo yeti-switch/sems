@@ -1123,9 +1123,13 @@ void AmRtpStream::recvPacket(int fd)
   AmRtpPacket* p = mem.newPacket();
   if (!p) p = reuseBufferedPacket();
   if (!p) {
-	out_of_buffer_errors++;
-    CLASS_DBG("out of buffers for RTP packets, dropping (stream [%p])\n",
-	this);
+    out_of_buffer_errors++;
+    receive_mut.lock();
+    CLASS_DBG("out of buffers for RTP packets, dropping."
+              "receive_buf: %ld, rtp_ev_qu: %ld",
+              receive_buf.size(),rtp_ev_qu.size());
+    mem.debug();
+    receive_mut.unlock();
     // drop received data
     AmRtpPacket dummy;
     dummy.recv(l_sd);
@@ -1560,14 +1564,17 @@ PacketMem::PacketMem()
 
 inline AmRtpPacket* PacketMem::newPacket() 
 {
+  //bool desired;
+
   if(n_used >= MAX_PACKETS)
     return NULL; // full
 
-  while(used[cur_idx])
-    cur_idx = (cur_idx + 1) & MAX_PACKETS_MASK;
 
-  used[cur_idx] = true;
-  n_used++;
+  while(used[cur_idx].exchange(true)) {
+    cur_idx = (cur_idx + 1) & MAX_PACKETS_MASK;
+  }
+
+  n_used.fetch_add(1);
 
   AmRtpPacket* p = &packets[cur_idx];
   cur_idx = (cur_idx + 1) & MAX_PACKETS_MASK;
@@ -1584,18 +1591,24 @@ inline void PacketMem::freePacket(AmRtpPacket* p)
   assert(idx < MAX_PACKETS);
 
   if(!used[idx]) {
-    CLASS_ERROR("freePacket() double free: n_used = %d, idx = %d",n_used,idx);
+    CLASS_ERROR("freePacket() double free: n_used = %d, idx = %d",
+                n_used.load(),idx);
     return;
   }
 
-  used[p-packets] = false;
-  n_used--;
+  used[p-packets].store(false);
+  n_used.fetch_sub(1);
 }
 
 inline void PacketMem::clear() 
 {
   memset(used, 0, sizeof(used));
-  n_used = cur_idx = 0;
+  n_used.store(0);
+  cur_idx = 0;
+}
+
+void PacketMem::debug() {
+   DBG("cur_idx: %i, n_used: %i",cur_idx,n_used.load());
 }
 
 void AmRtpStream::setLogger(msg_logger* _logger)

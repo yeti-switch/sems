@@ -43,6 +43,7 @@
 #include <map>
 #include <queue>
 #include <memory>
+#include <atomic>
 using std::string;
 using std::auto_ptr;
 using std::pair;
@@ -75,17 +76,18 @@ struct PacketMem {
 #define MAX_PACKETS_MASK (MAX_PACKETS-1)
 
   AmRtpPacket packets[MAX_PACKETS];
-  bool        used[MAX_PACKETS];
+  std::atomic<bool> used[MAX_PACKETS];
 
   PacketMem();
 
   inline AmRtpPacket* newPacket();
   inline void freePacket(AmRtpPacket* p);
   inline void clear();
+  void debug();
 
 private:
   unsigned int cur_idx;
-  unsigned int n_used;
+  std::atomic<unsigned int> n_used;
 };
 
 /** \brief event fired on RTP timeout */
