@@ -1,4 +1,4 @@
-sems (1.7.47-1) stable; urgency=low
+sems (1.7.47-2) stable; urgency=low
 
   * 158c8a046 AmRtpPacket: PacketMem: use atomics for used mask and counter (racing between AmRtpReceiver and AmMediaProcessor)
 
