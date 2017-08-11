@@ -1213,7 +1213,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
   log_rcvd_rtcp_packet((const char *)buffer, recved_bytes,recv_addr);
 
   // clear RTP timer
-  clearRTPTimeout();
+  //clearRTPTimeout();
 
   handleSymmetricRtp(&recv_addr,true);
 
