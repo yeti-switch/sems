@@ -35,7 +35,7 @@ class SctpConnection {
              socklen_t *fromlen, struct sctp_sndrcvinfo *sinfo,
              int *msg_flags);
 
-    operator int() { return fd; }
+    operator int() { return -fd; }
     int get_sock() { return fd; }
     void set_epoll_fd(int efd) { epoll_fd = efd; }
     void set_addr(const sockaddr_storage &a) { addr = a; }

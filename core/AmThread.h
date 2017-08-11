@@ -42,6 +42,8 @@
 #include <string>
 using std::string;
 
+#include "log.h"
+
 /**
  * \brief C++ Wrapper class for pthread mutex
  */
@@ -298,7 +300,7 @@ public:
 
   /** Get internal fd */
   int fd() { return timer_fd; }
-  operator int() { return timer_fd; }
+  operator int() { return -timer_fd; }
 
   /** Set time */
   int set(unsigned int umsec, bool repeat = true){
@@ -315,17 +317,20 @@ public:
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLET;
     if(ptr) ev.data.ptr = this;
-    else ev.data.fd = timer_fd;
+    else ev.data.fd = -timer_fd;
     if(epoll_ctl(fd, EPOLL_CTL_ADD, timer_fd, &ev) == -1){
       throw string("timerfd. epoll_ctl call failed");
     }
   }
 
-  /** clear timer event */
-  void read(){
-    uint64_t u;
+  /** read timer event */
+  uint64_t read(){
+    uint64_t u = 0;
     ssize_t ret = ::read(timer_fd, &u, sizeof(uint64_t));
-    (void)ret;
+    if(!ret) {
+        ERROR("error reading timerfd %d",timer_fd);
+    }
+    return u;
   }
 
   /** Remove from external epoll handler */

@@ -37,7 +37,7 @@ public:
 
   void clear_pending();
 
-  int operator()() { return event_fd; }
+  int operator()() { return -event_fd; }
   int queue_fd() { return event_fd; }
 
   bool is_finalized() { return finalized; }

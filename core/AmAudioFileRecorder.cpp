@@ -56,7 +56,7 @@ void _AmAudioFileRecorderProcessor::run()
             struct epoll_event &e = events[n];
             int f = e.data.fd;
 
-            if(f==queue_fd()){
+            if(f== -queue_fd()){
                 processEvents();
                 clear_pending();
             } else if(f==audio_events_ready){

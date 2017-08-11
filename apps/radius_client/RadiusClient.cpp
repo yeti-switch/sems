@@ -167,7 +167,7 @@ void RadiusClient::run()
             if(f==timer){
                 check_timeouts();
                 timer.read();
-            } else if(f==queue_fd()){
+            } else if(f== -queue_fd()){
                 clear_pending();
                 processEvents();
             } else if(f==stop_event){

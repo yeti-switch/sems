@@ -103,7 +103,7 @@ void AmEventFdQueue::epoll_link(int epoll_fd, bool ptr)
     struct epoll_event ev;
     ev.events = EPOLLIN;
     if(ptr) ev.data.ptr = this;
-    else ev.data.fd = event_fd;
+    else ev.data.fd = -event_fd;
     if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, event_fd, &ev) == -1){
       throw string("eventfd. epoll_ctl call failed");
     }

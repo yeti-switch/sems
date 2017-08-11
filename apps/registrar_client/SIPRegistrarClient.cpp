@@ -186,7 +186,7 @@ void SIPRegistrarClient::run()
             if(f==timer){
                 checkTimeouts();
                 timer.read();
-            } else if(f==queue_fd()){
+            } else if(f== -queue_fd()){
                 clear_pending();
                 processEvents();
             } else if(f==stop_event){

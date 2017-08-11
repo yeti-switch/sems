@@ -237,7 +237,7 @@ void SctpBus::run()
             if(f==timer){
                 on_timer();
                 timer.read();
-            } else if(f==queue_fd()){
+            } else if(f== -queue_fd()){
                 clear_pending();
                 processEvents();
             } else if(f==(int)server_connection) {

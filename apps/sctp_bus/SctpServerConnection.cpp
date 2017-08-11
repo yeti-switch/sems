@@ -60,7 +60,7 @@ int SctpServerConnection::init(int efd, const sockaddr_storage &a)
     struct epoll_event ev = {
         .events = EPOLLIN,
         .data = {
-            .fd = fd
+            .fd = -fd
         }
     };
 
