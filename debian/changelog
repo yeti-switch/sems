@@ -1,3 +1,10 @@
+sems (1.7.49-1) stable; urgency=low
+ 
+  * 10405e4a0 AmSipRegistration: add external registration id to the SIPRegistrationEvents
+  * fa919f715 AmSipRegistration: use handle instead of req.from_tag to generate SIPRegistrationEvents
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 14 Aug 2017 18:14:33 +0300
+
 sems (1.7.48-1) stable; urgency=low
 
   * ab0d9c507 (HEAD -> master, origin/master, origin/HEAD, github/master, didww/master) AmThread, AmEventFdQueue: use negative sign on binding as fd to epoll
