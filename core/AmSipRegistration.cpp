@@ -334,7 +334,7 @@ void AmSIPRegistration::onRegisterExpired() {
   if (sess_link.length()) {
     AmSessionContainer::instance()->postEvent(sess_link,
 					      new SIPRegistrationEvent(SIPRegistrationEvent::RegisterTimeout,
-								       req.from_tag));
+									   handle));
   }
   DBG("Registration '%s' expired.\n", (info.user+"@"+info.domain).c_str());
   active = false;
@@ -353,7 +353,7 @@ void AmSIPRegistration::onRegisterSendTimeout() {
     AmSessionContainer::instance()->
       postEvent(sess_link,
 		new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSendTimeout,
-					 req.from_tag));
+					 handle));
   }
   DBG("Registration '%s' REGISTER request timeout.\n", 
       (info.user+"@"+info.domain).c_str());
@@ -417,7 +417,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
         AmSessionContainer::instance()->postEvent(
           sess_link,
           new SIPRegistrationEvent(SIPRegistrationEvent::RegisterNoContact,
-          req.from_tag,
+          handle,
           reply.code, reply.reason));
       }
     } else {
@@ -482,7 +482,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
               AmSessionContainer::instance()->
                 postEvent(sess_link,
                   new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSuccess,
-                  req.from_tag,
+                  handle,
                   reply.code, reply.reason));
             }
             break;
@@ -494,7 +494,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
           AmSessionContainer::instance()->
             postEvent(sess_link,
               new SIPRegistrationEvent(SIPRegistrationEvent::RegisterNoContact,
-              req.from_tag,
+              handle,
               reply.code, reply.reason));
         }
         DBG("Registration %s(%s) no matching Contact - deregistered",
@@ -515,7 +515,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 postEvent(sess_link,
                     new SIPRegistrationEvent(
                         SIPRegistrationEvent::RegisterNoContact,
-                        req.from_tag,
+                        handle,
                         reply.code,
                         reply.reason));
         }
@@ -535,7 +535,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
         postEvent(sess_link,
             new SIPRegistrationEvent(
                 SIPRegistrationEvent::RegisterFailed,
-                req.from_tag,
+                handle,
                 reply.code,
                 reply.reason));
     }
