@@ -1,3 +1,11 @@
+sems (1.7.48-1) stable; urgency=low
+
+  * ab0d9c507 (HEAD -> master, origin/master, origin/HEAD, github/master, didww/master) AmThread, AmEventFdQueue: use negative sign on binding as fd to epoll
+  * 082b58371 ampi/BusAPI.h: move BusClient class definition to the external module
+  * 0ee8cc025 AmRtpStream: do not clear RTP timeout on RTCP packets
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 14 Aug 2017 11:37:28 +0300
+
 sems (1.7.47-2) stable; urgency=low
 
   * 158c8a046 AmRtpPacket: PacketMem: use atomics for used mask and counter (racing between AmRtpReceiver and AmMediaProcessor)
