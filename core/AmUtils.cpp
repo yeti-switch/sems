@@ -1471,3 +1471,222 @@ void inplaceHeadersErase(string &hdrs,const char *hdrv[])
 		}
 	}
 }
+
+/*
+  http://www.unicode.org/versions/Unicode7.0.0/UnicodeStandard-7.0.pdf
+  page 124, 3.9 "Unicode Encoding Forms", "UTF-8"
+
+
+  Table 3-7. Well-Formed UTF-8 Byte Sequences
+  -----------------------------------------------------------------------------
+  |  Code Points        | First Byte | Second Byte | Third Byte | Fourth Byte |
+  |  U+0000..U+007F     |     00..7F |             |            |             |
+  |  U+0080..U+07FF     |     C2..DF |      80..BF |            |             |
+  |  U+0800..U+0FFF     |         E0 |      A0..BF |     80..BF |             |
+  |  U+1000..U+CFFF     |     E1..EC |      80..BF |     80..BF |             |
+  |  U+D000..U+D7FF     |         ED |      80..9F |     80..BF |             |
+  |  U+E000..U+FFFF     |     EE..EF |      80..BF |     80..BF |             |
+  |  U+10000..U+3FFFF   |         F0 |      90..BF |     80..BF |      80..BF |
+  |  U+40000..U+FFFFF   |     F1..F3 |      80..BF |     80..BF |      80..BF |
+  |  U+100000..U+10FFFF |         F4 |      80..8F |     80..BF |      80..BF |
+  -----------------------------------------------------------------------------
+*/
+bool is_valid_utf8(std::string &s)
+{
+	enum state {
+		ST_COMPLETED = 0,
+
+		ST_C2DF_80BF_2nd,
+
+		ST_E0_A0BF_80BF_2nd,
+		ST_E0_A0BF_80BF_3rd,
+
+		ST_E1EC_80BF_80BF_2nd,
+		ST_E1EC_80BF_80BF_3rd,
+
+		ST_ED_809F_80BF_2nd,
+		ST_ED_809F_80BF_3rd,
+
+		ST_EEEF_80BF_80BF_2nd,
+		ST_EEEF_80BF_80BF_3rd,
+
+		ST_F0_90BF_80BF_80BF_2nd,
+		ST_F0_90BF_80BF_80BF_3rd,
+		ST_F0_90BF_80BF_80BF_4th,
+
+		ST_F1F3_80BF_80BF_80BF_2nd,
+		ST_F1F3_80BF_80BF_80BF_3rd,
+		ST_F1F3_80BF_80BF_80BF_4th,
+
+		ST_F4_808F_80BF_80BF_2nd,
+		ST_F4_808F_80BF_80BF_3rd,
+		ST_F4_808F_80BF_80BF_4th
+	} st = ST_COMPLETED;
+
+	static const struct {
+		unsigned char start;
+		unsigned char end;
+		state next_state;
+	} state2transition[] = {
+		{ 0x00, 0x00, ST_COMPLETED },
+
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0xA0, 0XBF, ST_E0_A0BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x80, 0xBF, ST_E1EC_80BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x80, 0x9F, ST_ED_809F_80BF_3rd },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x80, 0xBF, ST_EEEF_80BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x90, 0xBF, ST_F0_90BF_80BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_F0_90BF_80BF_80BF_4th },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x80, 0xBF, ST_F1F3_80BF_80BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_F1F3_80BF_80BF_80BF_4th },
+		{ 0x80, 0xBF, ST_COMPLETED },
+
+		{ 0x80, 0x8F, ST_F4_808F_80BF_80BF_3rd },
+		{ 0x80, 0xBF, ST_F4_808F_80BF_80BF_4th },
+		{ 0x80, 0xBF, ST_COMPLETED },
+	};
+	(void)state2transition;
+
+	static const char *state2checked_bytes_sequence[] = {
+		"",
+		"C2..DF",
+		"E0", "E0_A0..BF",
+		"E1..EC", "E1..EC_80..BF",
+		"ED", "ED_80..9F",
+		"EE..EF", "EE..EF_80..BF",
+		"F0","FO_90..BF","FO_90..BF_80..BF",
+		"F1..F3","F1..F3_80..BF","F1..F3_80..BF_80..BF",
+		"F4","F4_80..8F","F4_80..8F_80..BF",
+	};
+	(void)state2checked_bytes_sequence;
+
+	/*static const int state2byte_num[] = {
+		0,
+		2,
+		2, 3,
+		2, 3,
+		2, 3,
+		2, 3,
+		2, 3, 4,
+		2, 3, 4,
+		2, 3, 4
+	};
+	(void)state2byte_num;*/
+
+#define VALIDATE_RANGE(condition_state) \
+	case condition_state: \
+		if(IS_IN(c, \
+			state2transition[condition_state].start, \
+			state2transition[condition_state].end)) \
+		{ \
+			st = state2transition[condition_state].next_state; \
+			break; \
+		} else { \
+			DBG("is_valid_utf8(): unexpected byte %02X after %s bytes. " \
+				"expected to be within %02X..%02X", \
+				c,state2checked_bytes_sequence[st], \
+				state2transition[condition_state].start, \
+				state2transition[condition_state].end); \
+			return false; \
+		}
+
+	for(const unsigned char &c: s) {
+		switch(st) {
+
+		case ST_COMPLETED:
+			if(IS_IN(c,0x00,0x7F)) //*00..7F
+				continue;
+
+			switch(c) {
+			case 0xE0: //*E0, A0..BF, 80..BF
+				st = ST_E0_A0BF_80BF_2nd;
+				continue;
+			case 0xED: //*ED, 80..9F, 80..BF
+				st = ST_ED_809F_80BF_2nd;
+				continue;
+			case 0xF0: //*F0, 90..BF, 80..BF, 80..BF
+				st = ST_F0_90BF_80BF_80BF_2nd;
+				continue;
+			case 0xF4: //*F4, 80..8F, 80..BF, 80..BF
+				st = ST_F4_808F_80BF_80BF_2nd;
+				continue;
+			default:
+				if(IS_IN(c,0xC2,0xDF)) { //*C2..DF, 80..BF
+					st = ST_C2DF_80BF_2nd;
+					continue;
+				}
+				if(IS_IN(c,0xE1,0xEC)) { //*E1..EC, 80..BF, 80..BF
+					st = ST_E1EC_80BF_80BF_2nd;
+					continue;
+				}
+				if(IS_IN(c,0xEE,0xEF)) { //*EE..EF, 80..BF, 80..BF
+					st = ST_EEEF_80BF_80BF_3rd;
+					continue;
+				}
+				if(IS_IN(c,0xF1,0xF3)) { //*F1..F3, 80..BF, 80..BF, 80..BF
+					st = ST_F1F3_80BF_80BF_80BF_4th;
+					continue;
+				}
+			} //switch(c)
+
+			DBG("is_valid_utf8(): unexpected sequence first byte %02X",c);
+			return false;
+
+		//C2..DF, 80..BF
+		VALIDATE_RANGE(ST_C2DF_80BF_2nd);
+
+		//E0, A0..BF, 80..BF
+		VALIDATE_RANGE(ST_E0_A0BF_80BF_2nd);
+		VALIDATE_RANGE(ST_E0_A0BF_80BF_3rd);
+
+		//E1..EC, 80..BF, 80..BF
+		VALIDATE_RANGE(ST_E1EC_80BF_80BF_2nd);
+		VALIDATE_RANGE(ST_E1EC_80BF_80BF_3rd);
+
+		//ED, 80..9F, 80..BF
+		VALIDATE_RANGE(ST_ED_809F_80BF_2nd);
+		VALIDATE_RANGE(ST_ED_809F_80BF_3rd);
+
+		//EE..EF, 80..BF, 80..BF
+		VALIDATE_RANGE(ST_EEEF_80BF_80BF_2nd);
+		VALIDATE_RANGE(ST_EEEF_80BF_80BF_3rd);
+
+		//F0, 90..BF, 80..BF, 80..BF
+		VALIDATE_RANGE(ST_F0_90BF_80BF_80BF_2nd);
+		VALIDATE_RANGE(ST_F0_90BF_80BF_80BF_3rd);
+		VALIDATE_RANGE(ST_F0_90BF_80BF_80BF_4th);
+
+		//F1..F3, 80..BF, 80..BF, 80..BF
+		VALIDATE_RANGE(ST_F1F3_80BF_80BF_80BF_2nd);
+		VALIDATE_RANGE(ST_F1F3_80BF_80BF_80BF_3rd);
+		VALIDATE_RANGE(ST_F1F3_80BF_80BF_80BF_4th);
+
+		//F4, 80..8F, 80..BF, 80..BF
+		VALIDATE_RANGE(ST_F4_808F_80BF_80BF_2nd);
+		VALIDATE_RANGE(ST_F4_808F_80BF_80BF_3rd);
+		VALIDATE_RANGE(ST_F4_808F_80BF_80BF_4th);
+		default:
+			DBG("is_valid_utf8(): unknown state: %d",st);
+			return false;
+		} //switch(st)
+	}
+
+	if(st!=ST_COMPLETED) {
+		DBG("is_valid_utf8(): uncompleted utf8 multibyte sequence. st: %d",st);
+		return false;
+	}
+
+	return true;
+#undef VALIDATE_RANGE
+}

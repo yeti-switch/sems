@@ -1,3 +1,9 @@
+sems (1.7.50-1) stable; urgency=low
+
+  * AmUtils: add is_valid_utf8() helper 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 15 Aug 2017 18:40:25 +0300
+
 sems (1.7.49-1) stable; urgency=low
  
   * 10405e4a0 AmSipRegistration: add external registration id to the SIPRegistrationEvents
