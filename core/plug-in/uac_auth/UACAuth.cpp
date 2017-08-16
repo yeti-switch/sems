@@ -254,7 +254,7 @@ bool UACAuth::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 		reply.tt.lock_bucket();
 		const sip_trans *t = reply.tt.get_trans();
 		sip_target_set *targets_copy = NULL;
-		if(t->targets) {
+		if(t && t->targets) {
 			targets_copy = new sip_target_set(*t->targets);
 			targets_copy->prev();
 		}
