@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
 	if(argc<3){
 		printf("%s payload_name file_to_decode\n"
-			   "\tdecode frames in file using choosen codec plugin",argv[0]);
+			   "\tdecode frames in file using choosen codec plugin\n",argv[0]);
 		return EXIT_FAILURE;
 	}
 
