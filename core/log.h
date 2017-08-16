@@ -100,14 +100,14 @@ enum Log_Level {
 # endif
 #else
 # define GET_TID() syscall(SYS_gettid)
-# define LOC_FMT   " [%u/%u] [%s:%d]"
+# define LOC_FMT   " [%u/%u] [%s:%d] "
 # define LOC_DATA  pid, tid, file, line
 #endif
 
 #ifdef LOG_LOC_DATA_ATEND
 #define COMPLETE_LOG_FMT "%s: %s" LOC_FMT "\n", log_level2str[level_], msg_, LOC_DATA
 #else
-#define COMPLETE_LOG_FMT LOC_FMT " %s: %s" "\n", LOC_DATA, log_level2str[level_], msg_
+#define COMPLETE_LOG_FMT LOC_FMT "%s: %s" "\n", LOC_DATA, log_level2str[level_], msg_
 #endif
 
 #ifndef LOG_BUFFER_LEN
