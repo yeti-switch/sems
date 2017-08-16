@@ -1,3 +1,13 @@
+sems (1.7.51-1) stable; urgency=low
+
+  * e30f4e4ce (HEAD -> master) uac_auth: onSipReply(): add check for transaction existence. fixes segfault
+  * f4b1d8b52 core/aux: add utf8_test
+  * 277de1398 AmUtils: add fixup_utf8_inplace() helper
+  * 74cbdfe72 log.h: remove excess preceding 'space' symbol from COMPLETE_LOG_FMT
+  * fe1290a6d aux/decode_test: and newline for usage
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 16 Aug 2017 16:54:55 +0300
+
 sems (1.7.50-1) stable; urgency=low
 
   * AmUtils: add is_valid_utf8() helper 
