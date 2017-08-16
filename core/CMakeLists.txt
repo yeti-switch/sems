@@ -4,7 +4,7 @@ FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c")
 
 SET(SEMS_LIB libsems)
 
-SET(aux_binaries decode_test)
+SET(aux_binaries decode_test utf8_test)
 
 set (audio_files
 beep.wav
