@@ -345,7 +345,8 @@ void inplaceHeaderErase(string &hdrs,const char *hdr);
 /** remove all occurences of the given headers from SIP headers string */
 void inplaceHeadersErase(string &hdrs,const char *hdrv[]);
 
-bool is_valid_utf8(std::string &s);
+bool is_valid_utf8(const std::string &s);
+bool fixup_utf8_inplace(std::string &s);
 
 #endif
 
