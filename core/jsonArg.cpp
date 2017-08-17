@@ -101,6 +101,7 @@ string str2json(const char* str, size_t len)
       }
     }
     result += "\"";
+    fixup_utf8_inplace(result);
     return result;
 }
 
