@@ -1,3 +1,9 @@
+sems (1.7.51-2) stable; urgency=low
+
+  * AmPlayoutBuffer: clear last_ts in SamplesArray on resync
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 17 Aug 2017 13:23:02 +0300
+
 sems (1.7.51-1) stable; urgency=low
 
   * e30f4e4ce (HEAD -> master) uac_auth: onSipReply(): add check for transaction existence. fixes segfault

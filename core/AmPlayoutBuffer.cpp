@@ -80,6 +80,7 @@ void AmPlayoutBuffer::write(u_int32_t ref_ts, u_int32_t rtp_ts,
 	  ref_ts, mapped_ts);
       recv_offset = rtp_ts - ref_ts;
       mapped_ts = r_ts = w_ts = ref_ts;
+      buffer.last_ts = ref_ts;
     }
   }
 
