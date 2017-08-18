@@ -1,3 +1,12 @@
+sems (1.7.51-4) stable; urgency=low
+
+  * f016e319b adjust loglevels
+  * 3660d33b4 aux/decode_test: write decoded samples to file
+  * 3d8704a89 plug-in/uac_auth: UACAuth::do_auth() adjust loglevels
+  * e64dea553 AmMediaProcessor: improve dbg logging
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 18 Aug 2017 17:24:51 +0300
+
 sems (1.7.51-3) stable; urgency=low
 
   * jsonArg: str2json(): erase non-utf8 characters after escaping
