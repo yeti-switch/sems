@@ -231,7 +231,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   info.attempt++;
 
   if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
-    ERROR("failed to send registration.\n");
+    WARN("failed to send registration.\n");
     res = false;
     waiting_result = false;
     error_code = 500;

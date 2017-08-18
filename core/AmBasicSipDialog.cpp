@@ -857,8 +857,11 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				   send_flags,logger,sensor,timers_override,
 				   target_set_override);
   if(res) {
-    ERROR("Could not send request: method=%s; call-id=%s; cseq=%i\n",
-	  req.method.c_str(),req.callid.c_str(),req.cseq);
+    WARN("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
+      req.method.c_str(),
+      req.r_uri.c_str(),
+      req.callid.c_str(),
+      req.cseq);
     return res;
   }
 

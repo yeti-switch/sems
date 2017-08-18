@@ -581,7 +581,7 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
     			   NS_MAXDNAME)      /* Size of result buffer */
     	< 0) {    /* Negative: error       */
 	
-    	ERROR("dns_expand_name failed\n");
+		DBG("dns_expand_name failed\n");
     	return NULL;
     }
     
@@ -1254,7 +1254,7 @@ int _resolver::set_destination_ip(const cstring& next_hop,
 						     h_dns,remote_ip,
 						     IPv4);
 	if(err < 0){
-		ERROR("Unresolvable Request URI domain <%s>\n",nh.c_str());
+		WARN("Unresolvable Request URI domain <%s>\n",nh.c_str());
 	    return -478;
 	}
     }
@@ -1288,7 +1288,7 @@ int _resolver::resolve_targets(const list<sip_destination>& dest_list,
 	    it->trsp.len,it->trsp.s);
 
 	if(set_destination_ip(it->host,it->port,it->trsp,&t.ss,&h_dns) != 0) {
-		ERROR("Unresolvable destination %.*s:%u/%.*s",
+		WARN("Unresolvable destination %.*s:%u/%.*s",
 			  it->host.len,it->host.s,
 			  it->port,
 			  it->trsp.len,it->trsp.s);
