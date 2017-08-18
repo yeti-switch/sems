@@ -83,6 +83,7 @@ AmMediaProcessor* AmMediaProcessor::instance()
 void AmMediaProcessor::addSession(AmMediaSession* s, 
 				  const string& callgroup)
 {
+  DBG("AmMediaProcessor::addSession %p",s);
   s->onMediaProcessingStarted();
  
   // evaluate correct scheduler
@@ -123,6 +124,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
                                   const string &callgroup,
                                   unsigned int sched_thread)
 {
+    DBG("AmMediaProcessor::addSession %p",s);
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::addSession: wrong sched_thread %u for session %p",
               sched_thread,s);
@@ -163,7 +165,7 @@ void AmMediaProcessor::changeCallgroup(AmMediaSession* s,
 
 void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, 
 					   unsigned int r_type) {
-  DBG("AmMediaProcessor::removeSession\n");
+  DBG("AmMediaProcessor::removeSession %p\n",s);
   group_mut.lock();
   // get scheduler
   string callgroup = session2callgroup[s];
@@ -343,8 +345,8 @@ void AmMediaProcessorThread::process(AmEvent* e)
   switch(sr->event_id){
 
   case AmMediaProcessor::InsertSession:
-    DBG("Session inserted to the scheduler\n");
     sessions.insert(sr->s);
+    DBG("[%p] Session %p inserted to the scheduler\n",this,sr->s);
     sr->s->clearRTPTimeout();
     break;
 
@@ -354,7 +356,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
     if(s_it != sessions.end()){
       sessions.erase(s_it);
       s->onMediaProcessingTerminated();
-      DBG("Session removed from the scheduler\n");
+      DBG("[%p] Session %p removed from the scheduler\n",this,s);
     }
   }
     break;
@@ -366,7 +368,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
       sessions.erase(s_it);
       s->clearAudio();
       s->onMediaProcessingTerminated();
-      DBG("Session removed from the scheduler\n");
+      DBG("[%p] Session %p removed from the scheduler\n",this,s);
     }
   }
     break;
@@ -377,7 +379,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
     set<AmMediaSession*>::iterator s_it = sessions.find(s);
     if(s_it != sessions.end()){
       sessions.erase(s_it);
-      DBG("Session removed softly from the scheduler\n");
+      DBG("[%p] Session %p removed softly from the scheduler\n",this,s);
     }
   }
     break;
