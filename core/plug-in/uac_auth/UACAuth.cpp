@@ -408,12 +408,12 @@ bool UACAuth::do_auth(const unsigned int code, const string& auth_hdr,
 		      const AmMimeBody* body, string& result)
 {
   if (!auth_hdr.length()) {
-    ERROR("empty auth header.\n");
+    DBG("empty auth header.\n");
     return false;
   }
 
   if (!parse_header(auth_hdr, challenge)) {
-    ERROR("error parsing auth header '%s'\n", auth_hdr.c_str());
+    DBG("error parsing auth header '%s'\n", auth_hdr.c_str());
     return false;
   }
 
