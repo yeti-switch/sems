@@ -6,9 +6,11 @@
 #include "AmSdp.h"
 #include "AmAudio.h"
 #include "AmUtils.h"
+#include "AmAudioFile.h"
 
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,15 +26,18 @@ int main(int argc, char *argv[])
 	timeval start,end,diff;
 	long h_codec = -1;
 
+	AmAudioFile out_file;
 
-	if(argc<3){
-		printf("%s payload_name file_to_decode\n"
+	if(argc<5){
+		printf("%s plugin_name payload_name file_to_decode out_file\n"
 			   "\tdecode frames in file using choosen codec plugin\n",argv[0]);
 		return EXIT_FAILURE;
 	}
 
 	string plugin = argv[1];
-	string path = argv[2];
+	string payload_name = argv[2];
+	string path = argv[3];
+	char *out_file_path = argv[4];
 
 	if(AmConfig::readConfiguration()){
 		ERROR("Errors occured while reading configuration file: exiting.");
@@ -41,29 +46,37 @@ int main(int argc, char *argv[])
 
 	AmPlugIn &am_plugin = *AmPlugIn::instance();
 
-	INFO("Loading audio plug-in %s\n",plugin.c_str());
 	am_plugin.init();
-	if(am_plugin.load(AmConfig::PlugInPath, plugin)){
+
+	INFO("Loading audio plug-in wav");
+	if(am_plugin.load(AmConfig::PlugInPath, "wav")){
 		ERROR("Can't load plugins. exiting.");
 		return EXIT_FAILURE;
+	}
+	INFO("Loading audio plug-in %s\n",plugin.c_str());
+
+	transform(payload_name.begin(), payload_name.end(), payload_name.begin(), ::tolower);
+	if(payload_name=="pcmu" || payload_name=="pcma") {
+		INFO("%s is built-in codec. skip plugin loading",plugin.c_str());
+	} else {
+		if(am_plugin.load(AmConfig::PlugInPath, plugin)){
+			ERROR("Can't load plugins. exiting.");
+			return EXIT_FAILURE;
+		}
 	}
 
 	vector<SdpPayload> pl_vec;
 	am_plugin.getPayloads(pl_vec);
 
-	if(pl_vec.size()<2){ //first payload is telephone_event
-		ERROR("'%s'' is not audio plugin. exiting",plugin.c_str());
-		return EXIT_FAILURE;
-	}
-
-	for(vector<SdpPayload>::const_iterator i = pl_vec.begin();i!=pl_vec.end();++i){
-		const SdpPayload &p = *i;
-		if(p.encoding_name!="telephone-event"){
+	for(auto const &p: pl_vec) {
+		string e = p.encoding_name;
+		transform(e.begin(), e.end(), e.begin(), ::tolower);
+		if(e==payload_name) {
 			payload = am_plugin.payload(p.payload_type);
 		}
 	}
 	if(!payload){
-		ERROR("can't find loaded payload");
+		ERROR("can't find payload");
 		return EXIT_FAILURE;
 	}
 	codec = am_plugin.codec(payload->codec_id);
@@ -133,12 +146,15 @@ int main(int argc, char *argv[])
 
 	//if(codec->b)
 	if(codec->frames2samples){
+		DBG("use frames2samples to get output buffer size");
 		out_size = PCM16_S2B((*codec->frames2samples)(h_codec,in,in_size));
 	} else {
+		DBG("use bytes2samples to get output buffer size");
 		out_size = PCM16_S2B((*codec->bytes2samples)(h_codec,in_size));
 	}
 	//out_size = PCM16_S2B((*codec->bytes2samples)(h_codec,in_size));
 	INFO("alleged output buffer size: %ld",out_size);
+
 	out = new unsigned char [out_size];
 	if(!out){
 		ERROR("can't allocate memory for output buffer");
@@ -159,6 +175,15 @@ int main(int argc, char *argv[])
 
 	timersub(&end,&start,&diff);
 	INFO("decode() = %d. took: %f seconds",rc,timeval2double(diff));
+
+	if(0!=out_file.open(out_file_path,AmAudioFile::Write)) {
+		ERROR("couldn't init AmAudioFile instance for output file");
+			return EXIT_FAILURE;		goto fail_cleanup;
+	}
+	if(0!=out_file.put(0,out,payload->sample_rate,PCM16_B2S(ret))) {
+		ERROR("couldn't init AmAudioFile instance for output file");
+		goto fail_cleanup;
+	}
 
 	ret = EXIT_SUCCESS;
 
