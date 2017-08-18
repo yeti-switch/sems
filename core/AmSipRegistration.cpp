@@ -231,7 +231,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   info.attempt++;
 
   if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
-    WARN("failed to send registration.\n");
+    WARN("failed to send registration. ruri: %s\n",
+         req.r_uri.c_str());
     res = false;
     waiting_result = false;
     error_code = 500;
@@ -279,7 +280,8 @@ bool AmSIPRegistration::doUnregister()
   }
 
   if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
-    ERROR("failed to send deregistration. mark to remove anyway");
+    ERROR("failed to send deregistration. mark to remove anyway. ruri: %s",
+          req.r_uri.c_str());
     res = false;
     waiting_result = false;
     remove = true;
@@ -445,7 +447,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
         while (contacts.length() != end) {
 
           if (!server_contact.parse_contact(contacts, end, end)) {
-            ERROR("while parsing contact\n");
+            DBG("while parsing contact\n");
             break;
           }
           server_contact.dump();

@@ -85,7 +85,7 @@ void AmSessionFactory::onOoDRequest(const AmSipRequest& req)
     return;
   }
 
-  INFO("sorry, we don't support beginning a new session with "
+  DBG("sorry, we don't support beginning a new session with "
        "a '%s' message\n", req.method.c_str());
 
   AmSipDialog::reply_error(req,501,"Not Implemented");
