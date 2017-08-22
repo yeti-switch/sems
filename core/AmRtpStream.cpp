@@ -68,6 +68,8 @@ using std::set;
 #include <algorithm>
 #include <sstream>
 
+#define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
+
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
 static inline void add_if_no_exist(std::vector<int> &v,int payload){
@@ -1283,7 +1285,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 		//timestamp adjust code
 		unsigned int orig_ts = p->timestamp;
 		unsigned int new_ts = orig_ts+ts_adjust; //adjust ts
-		unsigned int ts_diff = last_sent_ts ? abs(new_ts-last_sent_ts) : 0;
+		unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(new_ts,last_sent_ts) : 0;
 
 		//check if diff changed more than 4 times
 		if(last_sent_ts_diff && (ts_diff > (last_sent_ts_diff<<2))){
@@ -1306,7 +1308,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 			//adjust again
 			new_ts = p->timestamp+ts_adjust;
 
-			last_sent_ts_diff = last_sent_ts ? abs(last_sent_ts-new_ts) : 0;
+			last_sent_ts_diff = last_sent_ts ? ts_unsigned_diff(last_sent_ts,new_ts) : 0;
 		} else { //if (<adjust condition>)
 			//no need to recalc last_sent_ts_diff. we can use value from ts_diff
 			last_sent_ts_diff = ts_diff;
