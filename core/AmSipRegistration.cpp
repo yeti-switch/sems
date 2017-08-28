@@ -64,6 +64,9 @@ AmSIPRegistration::AmSIPRegistration(const string& handle,
   req.to_tag   = "";
   req.callid   = AmSession::getNewId(); 
 
+  reg_timers_override.stimer_f = info.transaction_timeout;
+  reg_timers_override.stimer_m = info.srv_failover_timeout;
+
   patch_transport(req.r_uri,info.transport_protocol_id);
 
   // clear dlg.callid? ->reregister?
@@ -230,7 +233,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
 
   info.attempt++;
 
-  if (dlg.sendRequest(req.method, NULL, hdrs, flags) < 0) {
+  if (dlg.sendRequest(req.method, NULL, hdrs, flags, &reg_timers_override) < 0) {
     WARN("failed to send registration. ruri: %s\n",
          req.r_uri.c_str());
     res = false;

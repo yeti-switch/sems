@@ -125,6 +125,8 @@ class SIPRegistrarClient
         const int& max_attempts,
         const int &transport_protocol_id,
         const int& proxy_transport_protocol_id,
+        const int &transaction_timeout,
+        const int &srv_failover_timeout,
         const string& handle);
     void removeRegistration(const string& handle);
     void removeRegistrationById(const string& id);

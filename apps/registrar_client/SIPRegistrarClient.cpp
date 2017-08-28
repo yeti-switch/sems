@@ -477,6 +477,9 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         DEF_AND_VALIDATE_OPTIONAL_INT(transport_protocol_id,sip_transport::UDP);
         DEF_AND_VALIDATE_OPTIONAL_INT(proxy_transport_protocol_id,sip_transport::UDP);
 
+        DEF_AND_VALIDATE_OPTIONAL_INT(transaction_timeout,0);
+        DEF_AND_VALIDATE_OPTIONAL_INT(srv_failover_timeout,0);
+
         SIPRegistrarClient::instance()->postEvent(
             new SIPNewRegistrationEvent(
                 SIPRegistrationInfo(
@@ -493,7 +496,9 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
                     retry_delay,
                     max_attempts,
                     transport_protocol_id,
-                    proxy_transport_protocol_id),
+                    proxy_transport_protocol_id,
+                    transaction_timeout,
+                    srv_failover_timeout),
                 handle.empty() ? AmSession::getNewId() : handle,
                 sess_link
             )
@@ -662,6 +667,8 @@ string SIPRegistrarClient::createRegistration(
     const int& max_attempts,
     const int& transport_protocol_id,
     const int& proxy_transport_protocol_id,
+    const int &transaction_timeout,
+    const int &srv_failover_timeout,
     const string& handle)
 {
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
@@ -681,7 +688,9 @@ string SIPRegistrarClient::createRegistration(
                 retry_delay,
                 max_attempts,
                 transport_protocol_id,
-                proxy_transport_protocol_id),
+                proxy_transport_protocol_id,
+                transaction_timeout,
+                srv_failover_timeout),
             l_handle,
             sess_link
         )
@@ -773,7 +782,9 @@ void SIPRegistrarClient::invoke(
             retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
             max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
             transport_protocol_id = sip_transport::UDP,
-            proxy_transport_protocol_id = sip_transport::UDP;
+            proxy_transport_protocol_id = sip_transport::UDP,
+            transaction_timeout = 0,
+            srv_failover_timeout = 0;
         bool force_expires_interval = false;
         size_t n = args.size();
 
@@ -843,8 +854,26 @@ void SIPRegistrarClient::invoke(
             }
         } else break;
 
-        if (args.size() > 15)
-            handle = args.get(15).asCStr();
+        if (args.size() > 15) {
+            AmArg &a = args.get(15);
+            if(isArgInt(a)) {
+                transaction_timeout = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), transaction_timeout)){
+                throw AmSession::Exception(500,"wrong transaction_timeout argument");
+            }
+        } else break;
+
+        if (args.size() > 16) {
+            AmArg &a = args.get(16);
+            if(isArgInt(a)) {
+                srv_failover_timeout = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), srv_failover_timeout)){
+                throw AmSession::Exception(500,"wrong srv_failover_timeout argument");
+            }
+        } else break;
+
+        if (args.size() > 17)
+            handle = args.get(17).asCStr();
         else break;
 
         } while(0);
@@ -865,6 +894,8 @@ void SIPRegistrarClient::invoke(
             max_attempts,
             transport_protocol_id,
             proxy_transport_protocol_id,
+            transaction_timeout,
+            srv_failover_timeout,
             handle
         ).c_str());
     } else if(method == "removeRegistration") {
