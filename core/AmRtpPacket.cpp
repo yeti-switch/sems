@@ -304,12 +304,10 @@ void AmRtpPacket::logSent(msg_logger *logger, struct sockaddr_storage *laddr)
 }
 
 void AmRtpPacket::mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr){
-	static const cstring empty;
-	sensor->feed((const char *)buffer, b_size, &addr, laddr, empty);
+    sensor->feed((const char *)buffer, b_size, &addr, laddr, msg_sensor::PTYPE_RTP);
 }
 
 void AmRtpPacket::mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr){
-	static const cstring empty;
-	sensor->feed((const char *)buffer, b_size, laddr, &addr, empty);
+    sensor->feed((const char *)buffer, b_size, laddr, &addr, msg_sensor::PTYPE_RTP);
 }
 

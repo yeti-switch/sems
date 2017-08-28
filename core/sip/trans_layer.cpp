@@ -647,8 +647,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 			}
 		}
 		if(sensor){
-			sensor->feed(reply_buf,reply_len,&src_ip,&remote_ip,
-				req->u.request->method_str,reply_code);
+			sensor->feed(reply_buf,reply_len,&src_ip,&remote_ip,msg_sensor::PTYPE_SIP);
 			if(!t->sensor){
 				t->sensor = sensor;
 				inc_ref(sensor);
@@ -1423,8 +1422,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 		}
 		if(sensor){
 			sensor->feed(msg_buffer,msg_len,
-				&src_ip,&msg->remote_ip,
-				method_str);
+				&src_ip,&msg->remote_ip,msg_sensor::PTYPE_SIP);
 
 			if(tt->_t && !tt->_t->sensor) {
 				tt->_t->sensor = sensor;
@@ -1621,7 +1619,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 		}
 		if(t->sensor){
 			t->sensor->feed(p_msg->buf,p_msg->len,&src_ip,
-						   &p_msg->remote_ip,cancel_str);
+						   &p_msg->remote_ip,msg_sensor::PTYPE_SIP);
 
 			if(!cancel_t->sensor) {
 				cancel_t->sensor = t->sensor;
@@ -1694,7 +1692,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trs
 	    }
 		if(t->sensor) {
 			t->sensor->feed(msg->buf,msg->len,&msg->remote_ip,
-							&msg->local_ip,msg->u.request->method_str);
+							&msg->local_ip,msg_sensor::PTYPE_SIP);
 		}
 
 	    if(msg->u.request->method != t->msg->u.request->method){
@@ -1832,8 +1830,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trs
 	    }
 		if(t->sensor) {
 			t->sensor->feed(msg->buf,msg->len,&msg->remote_ip,
-							&msg->local_ip,get_cseq(msg)->method_str,
-							msg->u.reply->code);
+							&msg->local_ip,msg_sensor::PTYPE_SIP);
 		}
 
 	    string dialog_id(t->dialog_id.s, t->dialog_id.len);
@@ -2434,7 +2431,7 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
 			t->logger->log(ack_buf,ack_len,&src_ip,&inv->remote_ip,method);
 		}
 		if(t->sensor){
-			t->sensor->feed(ack_buf,ack_len,&src_ip,&inv->remote_ip,method);
+			t->sensor->feed(ack_buf,ack_len,&src_ip,&inv->remote_ip,msg_sensor::PTYPE_SIP);
 		}
     }
 
@@ -2465,7 +2462,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 		}
 		if(tr->sensor){
 			tr->sensor->feed(tr->msg->buf,tr->msg->len,&src_ip,&tr->msg->remote_ip,
-					tr->msg->u.request->method_str);
+					msg_sensor::PTYPE_SIP);
 		}
 	}
 
@@ -2627,7 +2624,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 			if(tr->sensor){
 				tr->sensor->feed(tr->msg->buf,tr->msg->len,
 								 &src_ip,&tr->msg->remote_ip,
-								 tr->msg->u.request->method_str);
+								 msg_sensor::PTYPE_SIP);
 			}
 	    }
 	}
@@ -2904,7 +2901,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 		if(tr->sensor){
 			tr->sensor->feed(tr->msg->buf,tr->msg->len,
 							&src_ip,&tr->msg->remote_ip,
-							tr->msg->u.request->method_str);
+							msg_sensor::PTYPE_SIP);
 		}
     }
 

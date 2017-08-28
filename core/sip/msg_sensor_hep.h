@@ -89,7 +89,7 @@ class hep_msg_sensor
 		sockaddr_storage* from,
 		sockaddr_storage* to,
 		unsigned int len,
-		bool is_sip);
+		uint8_t proto);
 public:
 	~hep_msg_sensor();
 
@@ -100,7 +100,7 @@ public:
 	int feed(const char* buf, int len,
 		sockaddr_storage* from,
 		sockaddr_storage* to,
-		cstring method, int reply_code=0);
+		packet_type_t packet_type);
 
 	void getInfo(AmArg &ret);
 };

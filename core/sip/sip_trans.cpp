@@ -130,8 +130,7 @@ void sip_trans::retransmit()
 		if(sensor) {
 			sensor->feed(retr_buf,retr_len,
 					&src_ip,&retr_addr,
-					msg->u.request->method_str,
-					reply_status);
+					msg_sensor::PTYPE_SIP);
 		}
     }
 

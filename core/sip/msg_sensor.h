@@ -27,12 +27,17 @@ class msg_sensor
   : public atomic_ref_cnt
 {
 public:
+  enum packet_type_t {
+    PTYPE_SIP = 0,
+    PTYPE_RTP,
+    PTYPE_RTCP
+  };
   msg_sensor() {}
   virtual ~msg_sensor() {}
   virtual int feed(const char* buf, int len,
 		  sockaddr_storage* src_ip,
 		  sockaddr_storage* dst_ip,
-		  cstring method, int reply_code=0)=0;
+		  packet_type_t packet_type)=0;
   virtual void getInfo(AmArg &ret);
 };
 
@@ -53,7 +58,7 @@ public:
 	int feed(const char* buf, int len,
 		sockaddr_storage* from,
 		sockaddr_storage* to,
-		cstring method, int reply_code=0);
+		packet_type_t packet_type);
 
 	void getInfo(AmArg &ret);
 };
@@ -77,7 +82,7 @@ public:
 	int feed(const char* buf, int len,
 		sockaddr_storage* from,
 		sockaddr_storage* to,
-		cstring method, int reply_code=0);
+		packet_type_t packet_type);
 
 	void getInfo(AmArg &ret);
 };

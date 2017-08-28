@@ -289,7 +289,7 @@ error:
 int ipip_msg_sensor::feed(const char* buf, int len,
 			 sockaddr_storage* from,
 			 sockaddr_storage* to,
-			 cstring method, int reply_code)
+			 packet_type_t packet_type)
 {
 	struct msghdr snd_msg;
 	struct iovec iov[2];
@@ -446,7 +446,7 @@ error:
 int ethernet_msg_sensor::feed(const char* buf, int len,
 			 sockaddr_storage* from,
 			 sockaddr_storage* to,
-			 cstring method, int reply_code)
+			 packet_type_t packet_type)
 {
 	//int ret;
 	struct msghdr snd_msg;

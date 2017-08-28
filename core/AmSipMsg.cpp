@@ -263,7 +263,7 @@ void AmSipRequest::log(msg_logger *logger,msg_sensor *sensor) const
 			&msg->local_ip,msg->u.request->method_str);
 	if(sensor)
 		sensor->feed(msg->buf,msg->len,&msg->remote_ip,
-					 &msg->local_ip,msg->u.request->method_str);
+					 &msg->local_ip,msg_sensor::PTYPE_SIP);
   }
   tt.unlock_bucket();
 }

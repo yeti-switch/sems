@@ -19,6 +19,7 @@
 #define CHUNK_PAYLOAD_Z		0x0010
 
 #define IP_PROTO_UDP		0x11
+
 #define PROTO_TYPE_SIP		0x01
 #define PROTO_TYPE_RTP		0x04
 
@@ -46,7 +47,7 @@ void hep_msg_sensor::prepare_hep_hdr()
 	hep_hdr.time_sec(CHUNK_TS_SEC);
 	hep_hdr.time_usec(CHUNK_TS_USEC);
 
-    hep_hdr.proto_t(CHUNK_PROTO_TYPE,PROTO_TYPE_SIP);
+    hep_hdr.proto_t(CHUNK_PROTO_TYPE);
     hep_hdr.capt_id(CHUNK_CAPTURE_ID,htonl(capt_id));
 
     hep_hdr.payload_chunk.vendor_id = htons(0x0000);
@@ -58,7 +59,7 @@ inline void hep_msg_sensor::upd_hep_hdr(
 	sockaddr_storage* from,
 	sockaddr_storage* to,
 	unsigned int len,
-	bool is_sip)
+	uint8_t proto)
 {
 	struct timeval now;
 	gettimeofday(&now, NULL);
@@ -72,7 +73,7 @@ inline void hep_msg_sensor::upd_hep_hdr(
 	h.time_sec.set(htonl(now.tv_sec));
 	h.time_usec.set(htonl(now.tv_usec));
 
-	//h.proto_t.type_id = is_sip? htons(PROTO_TYPE_SIP) : htons(PROTO_TYPE_RTP);
+	h.proto_t.data = proto;
 
 	h.payload_chunk.length = htons(sizeof(h.payload_chunk) + len);
 	h.header.length = htons(sizeof(h) + len);
@@ -116,22 +117,33 @@ error:
 int hep_msg_sensor::feed(const char* buf, int len,
 			 sockaddr_storage* from,
 			 sockaddr_storage* to,
-			 cstring method, int reply_code)
+			 packet_type_t packet_type)
 {
 	struct msghdr snd_msg;
 	struct iovec iov[2];
 	struct hep_generic hep;
+	uint8_t proto;
 
 	/*DBG("hep_msg_sensor::feed(%p,%d,from,to,method,reply_code)",
 		buf,len);*/
 
-	if(!method.len && !reply_code) {
+	/*if(!method.len && !reply_code) {
 		//skip non-SIP packets
+		return 0;
+	}*/
+	switch(packet_type) {
+	case PTYPE_SIP:
+		proto = PROTO_TYPE_SIP;
+		break;
+	case PTYPE_RTP:
+		proto = PROTO_TYPE_RTP;
+		break;
+	default:
 		return 0;
 	}
 
 	hep = hep_hdr;
-	upd_hep_hdr(hep,from,to,len, method.len || reply_code);
+	upd_hep_hdr(hep,from,to,len, proto);
 
 	memset(&snd_msg, 0, sizeof(snd_msg));
 	snd_msg.msg_name=SAv4(&capt_addr);
