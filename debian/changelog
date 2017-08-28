@@ -1,3 +1,11 @@
+sems (1.7.52-1) stable; urgency=low
+
+  * 49ac39062 msg_sensor_hep: enable RTP packets processing
+  * e2a5b7edd AmSipRegistration, registrar_client: add transaction_timeout and srv_failover_timeout options
+  * d8613525e core/sip: add timerF override. fix timerM override
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 22 Aug 2017 20:51:33 +0300
+
 sems (1.7.51-5) stable; urgency=low
 
   * add HEPv3 sensor
