@@ -162,9 +162,11 @@ const char* timer_name(unsigned int type);
 
 struct sip_timers_override {
 	unsigned int stimer_b;
+	unsigned int stimer_f;
 	unsigned int stimer_m;
 	sip_timers_override():
 		stimer_b(0),
+		stimer_f(0),
 		stimer_m(0)
 	{}
 };

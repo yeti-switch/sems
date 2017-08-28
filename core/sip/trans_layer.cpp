@@ -1375,8 +1375,11 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    tt->_t->targets = targets.release();
 
 	    if(tt->_t->targets->has_next()){
-		tt->_t->reset_timer(STIMER_M,M_TIMER,
-				    tt->_bucket->get_id());
+			tt->_t->timer_m =
+				timers_override && timers_override->stimer_m ?
+				timers_override->stimer_m : M_TIMER;
+			tt->_t->reset_timer(STIMER_M,tt->_t->timer_m,
+				tt->_bucket->get_id());
 	    }
 	}
 
@@ -2225,7 +2228,11 @@ int _trans_layer::update_uac_request(trans_bucket* bucket, sip_trans*& t, sip_ms
 	}
 
 	// for any transport type
-	t->reset_timer(STIMER_F,F_TIMER,bucket->get_id());
+	if(timers_override && timers_override->stimer_f) {
+		t->reset_timer(STIMER_F,timers_override->stimer_f,bucket->get_id());
+	} else {
+		t->reset_timer(STIMER_F,F_TIMER,bucket->get_id());
+	}
 	break;
     }
 
