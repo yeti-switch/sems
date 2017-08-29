@@ -533,13 +533,20 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
 
 void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
 {
-    AmArg &data = bus_event->data;
-    if(isArgArray(data)) {
-        for (size_t i = 0; i < data.size(); i ++) {
-            processAmArgRegistration(data[i]);
+    try {
+        AmArg &data = bus_event->data;
+        if(isArgArray(data)) {
+            for (size_t i = 0; i < data.size(); i ++) {
+                processAmArgRegistration(data[i]);
+            }
+        } else {
+            processAmArgRegistration(data);
         }
-    } else {
-        processAmArgRegistration(data);
+    } catch(AmSession::Exception &e) {
+        ERROR("onBusEvent() exception: %d %s",
+              e.code,e.reason.c_str());
+    } catch(...) {
+        ERROR("onBusEvent(0) unknown exception");
     }
 }
 
