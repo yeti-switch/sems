@@ -162,9 +162,10 @@ struct SIPNewRegistrationEvent : public AmEvent
 
 class SIPRemoveRegistrationEvent : public AmEvent {
   public:
-    string handle;
-    SIPRemoveRegistrationEvent(const string& handle)
-      : handle(handle),
+    string handle_or_id;
+    bool is_id;
+    SIPRemoveRegistrationEvent(const string& handle_or_id, bool is_id = false)
+      : handle_or_id(handle_or_id), is_id(is_id),
         AmEvent(SIPRegistrarClient::RemoveRegistration)
     { }
 };

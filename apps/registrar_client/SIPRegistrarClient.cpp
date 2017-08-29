@@ -402,12 +402,35 @@ void SIPRegistrarClient::onRemoveRegistration(SIPRemoveRegistrationEvent* reg)
 {
     reg_mut.lock();
 
-    map<string, AmSIPRegistration*>::iterator it =
-        registrations.find(reg->handle);
+    RegHash::iterator it;
 
-    if(it==registrations.end()) {
-        reg_mut.unlock();
-        return;
+    if(reg->is_id) {
+        RegHash::iterator id_it = registrations_by_id.find(reg->handle_or_id);
+        if(id_it==registrations_by_id.end()) {
+            reg_mut.unlock();
+            DBG("onRemoveRegistration: remove event with not existent id: %s",
+                reg->handle_or_id.c_str());
+            return;
+        }
+        it = registrations.find(id_it->second->getHandle());
+        if(it==registrations.end()) {
+            ERROR("onRemoveRegistration: inconsistence. "
+                  "handle %s by id %s is not exist in hash by handlers. "
+                  "remove it from registrations_by_id hash",
+                  id_it->second->getHandle().c_str(),
+                  reg->handle_or_id.c_str());
+            registrations_by_id.erase(id_it);
+            reg_mut.unlock();
+            return;
+        }
+    } else {
+        it = registrations.find(reg->handle_or_id);
+        if(it==registrations.end()) {
+            reg_mut.unlock();
+            DBG("onRemoveRegistration: remove event with not existent handle: %s",
+                reg->handle_or_id.c_str());
+            return;
+        }
     }
 
     AmSIPRegistration *_reg = it->second;
@@ -712,13 +735,7 @@ void SIPRegistrarClient::removeRegistration(const string& handle)
 
 void SIPRegistrarClient::removeRegistrationById(const string& id)
 {
-    AmLock l(reg_mut);
-    RegHash::iterator i = registrations_by_id.find(id);
-    if(i==registrations_by_id.end())
-        throw AmSession::Exception(500,"unknown registration id");
-    instance()->postEvent(
-        new SIPRemoveRegistrationEvent(
-            i->second->getHandle()));
+    instance()->postEvent(new SIPRemoveRegistrationEvent(id,true));
 }
 
 bool SIPRegistrarClient::getRegistrationState(
