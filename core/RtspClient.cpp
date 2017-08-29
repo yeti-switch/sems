@@ -73,7 +73,9 @@ bool RtspClient::srv_resolv(string host, int port, sockaddr_storage &_sa)
     }
 
 
-    if( resolver::instance()->resolve_name(host.c_str(), &_dh, &_sa, IPv4, dns_r_srv) < 0)
+    if( resolver::instance()->resolve_name(
+        host.c_str(), &_dh, &_sa, IPv4,
+        config.use_dns_srv ? dns_r_srv: dns_r_a) < 0)
     {
         ERROR("can't resolve destination: '%s'\n", host.c_str());
         return false;
