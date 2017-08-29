@@ -1,3 +1,11 @@
+sems (1.7.52-2) stable; urgency=low
+
+  * e1559685a RtspClient: process 'use_dns_srv' option on resolving
+  * 4d5d2eb29 SIPRegistrarClient: fix removeRegistrationById() racing
+  * d56bd837b SIPRegistrarClient: catch exceptions in onBusEvent()
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 29 Aug 2017 19:01:59 +0300
+
 sems (1.7.52-1) stable; urgency=low
 
   * 49ac39062 msg_sensor_hep: enable RTP packets processing
