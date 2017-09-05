@@ -491,6 +491,7 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
         DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
         DEF_AND_VALIDATE_OPTIONAL_STR(contact);
+        DEF_AND_VALIDATE_OPTIONAL_STR(contact_params);
         DEF_AND_VALIDATE_OPTIONAL_STR(handle);
 
         DEF_AND_VALIDATE_OPTIONAL_INT(expires,0);
@@ -514,6 +515,7 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
                     auth_password,
                     proxy,
                     contact,
+                    contact_params,
                     expires,
                     force_expires_interval,
                     retry_delay,
@@ -713,6 +715,7 @@ string SIPRegistrarClient::createRegistration(
                 pwd,
                 proxy,
                 contact,
+                string(),
                 expires_interval,
                 force_expires_interval,
                 retry_delay,

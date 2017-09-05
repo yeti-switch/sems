@@ -215,8 +215,9 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     info_contact.uri_host = AmConfig::SIP_Ifs[oif].getIP();
     info_contact.uri_port =
       int2str(AmConfig::SIP_Ifs[oif].getLocalPort(dlg.getOutboundTransport()));
+    info_contact.uri_param = info.contact_uri_params;
 
-    info.contact = info_contact.canon_uri_str();
+    info.contact = info_contact.uri_str();
   }
 
   size_t end = 0;

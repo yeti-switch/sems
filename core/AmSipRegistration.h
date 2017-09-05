@@ -49,6 +49,7 @@ struct SIPRegistrationInfo {
   string pwd;
   string proxy;
   string contact;
+  string contact_uri_params;
   int expires_interval;
   int retry_delay;
   int max_attempts;
@@ -68,6 +69,7 @@ struct SIPRegistrationInfo {
     const string& pwd,
     const string& proxy,
     const string& contact,
+    const string& contact_uri_params,
     const int& expires_interval,
     const bool &force_expires_interval,
     const int& retry_delay,
@@ -78,6 +80,7 @@ struct SIPRegistrationInfo {
     const int& srv_failover_timeout)
   : id(id),domain(domain),user(user),name(name),
     auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
+    contact_uri_params(contact_uri_params),
     expires_interval(expires_interval),
     force_expires_interval(force_expires_interval),
     retry_delay(retry_delay),
