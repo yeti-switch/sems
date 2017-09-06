@@ -1,3 +1,10 @@
+sems (1.7.52-3) stable; urgency=low
+
+  * 0635f09e7 jsonrpc: use offset_of template to resolve compiler warning about non-standard memory layout
+  * 2010f0f74 registrar_client: process 'contact_params' attribute
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Sep 2017 10:59:25 +0300
+
 sems (1.7.52-2) stable; urgency=low
 
   * e1559685a RtspClient: process 'use_dns_srv' option on resolving
