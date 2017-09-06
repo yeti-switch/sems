@@ -103,11 +103,29 @@ int setnonblock(int fd)
 //   delete cli;
 // }
 
+
+//https://gist.github.com/graphitemaster/494f21190bb2c63c5516
+template <typename T1, typename T2>
+struct offset_of_impl {
+    static T2 object;
+    static constexpr size_t offset(T1 T2::*member) {
+        return size_t(&(offset_of_impl<T1, T2>::object.*member)) -
+               size_t(&offset_of_impl<T1, T2>::object);
+    }
+};
+template <typename T1, typename T2>
+T2 offset_of_impl<T1, T2>::object("");
+
+template <typename T1, typename T2>
+inline constexpr size_t offset_of(T1 T2::*member) {
+    return offset_of_impl<T1, T2>::offset(member);
+}
+
 static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents) { 	
 
   struct JsonrpcNetstringsConnection *peer= 
     ((struct JsonrpcNetstringsConnection*) 
-     (((char*)w) - offsetof(JsonrpcNetstringsConnection,ev_read)));
+    (((char*)w) - offset_of(&JsonrpcNetstringsConnection::ev_read)));
 
   DBG("read_cb in connection %p\n", peer);
 
