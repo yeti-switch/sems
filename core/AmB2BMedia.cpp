@@ -1218,6 +1218,24 @@ void AmB2BMedia::setMuteFlag(bool a_leg, bool set)
   }
 }
 
+void AmB2BMedia::setRtpTimeout(bool a_leg, unsigned int timeout)
+{
+    AmLock lock(mutex);
+    for (AudioStreamPair &p: audio)
+        p.setRtpTimeout(a_leg,timeout);
+    for (RelayStreamPair * &p: relay_streams)
+        p->setRtpTimeout(a_leg,timeout);
+}
+
+void AmB2BMedia::setRtpTimeout(unsigned int timeout)
+{
+    AmLock lock(mutex);
+    for (AudioStreamPair &p: audio)
+        p.setRtpTimeout(timeout);
+    for (RelayStreamPair * &p: relay_streams)
+        p->setRtpTimeout(timeout);
+}
+
 void AmB2BMedia::setFirstStreamInput(bool a_leg, AmAudio *in)
 {
   AmLock lock(mutex);

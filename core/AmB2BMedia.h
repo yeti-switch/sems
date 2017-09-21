@@ -211,6 +211,7 @@ class AudioStreamData {
     void getSdpAnswer(int media_idx, const SdpMedia &offer, SdpMedia &answer) { if (stream) stream->getSdpAnswer(media_idx, offer, answer); }
     void mute(bool set_mute);
     void setReceiving(bool r);
+    void setRtpTimeout(unsigned int timeout) { if(stream) stream->setRtpTimeout(timeout); }
     void setInput(AmAudio *_in) { in = _in; }
     void setOutput(AmAudio *_in) { out = _in; }
     AmAudio *getInput() { return in; }
@@ -307,8 +308,19 @@ class AmB2BMedia: public AmMediaSession
       int media_idx;
       AudioStreamPair(AmB2BSession *_a, AmB2BSession *_b, int _media_idx): a(_a), b(_b), media_idx(_media_idx) { }
       void setLogger(msg_logger *logger) { a.setLogger(logger); b.setLogger(logger); }
-	  void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
-	  void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
+      void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
+      void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
+      void setRtpTimeout(bool a_leg, unsigned int timeout)
+      {
+        if (a_leg) a.setRtpTimeout(timeout);
+        else b.setRtpTimeout(timeout);
+      }
+      void setRtpTimeout(unsigned int timeout)
+      {
+        a.setRtpTimeout(timeout);
+        b.setRtpTimeout(timeout);
+      }
+
       bool requiresProcessing() { return a.getInput() || b.getInput(); }
     };
 
@@ -316,8 +328,18 @@ class AmB2BMedia: public AmMediaSession
       AmRtpStream a, b;
       RelayStreamPair(AmB2BSession *_a, AmB2BSession *_b);
       void setLogger(msg_logger *logger) { a.setLogger(logger); b.setLogger(logger); }
-	  void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
-	  void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
+      void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
+      void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
+      void setRtpTimeout(bool a_leg, unsigned int timeout)
+      {
+        if (a_leg) a.setRtpTimeout(timeout);
+        else b.setRtpTimeout(timeout);
+      }
+      void setRtpTimeout(unsigned int timeout)
+      {
+        a.setRtpTimeout(timeout);
+        b.setRtpTimeout(timeout);
+      }
     };
 
     typedef std::vector<AudioStreamPair>::iterator AudioStreamIterator;
@@ -490,6 +512,8 @@ class AmB2BMedia: public AmMediaSession
 
     void mute(bool a_leg) { setMuteFlag(a_leg, true); }
     void unmute(bool a_leg) { setMuteFlag(a_leg, false); }
+    void setRtpTimeout(bool a_leg, unsigned int timeout);
+    void setRtpTimeout(unsigned int timeout);
     bool isMuted(bool a_leg) { if (a_leg) return a_leg_muted; else return b_leg_muted; }
 
     void setFirstStreamInput(bool a_leg, AmAudio *in);
