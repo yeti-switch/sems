@@ -1,3 +1,9 @@
+sems (1.7.52-4) stable; urgency=low
+
+  * cd63329a3 AmB2BMedia: add setRtpTimeout stream
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 21 Sep 2017 13:47:23 +0300
+
 sems (1.7.52-3) stable; urgency=low
 
   * 0635f09e7 jsonrpc: use offset_of template to resolve compiler warning about non-standard memory layout
