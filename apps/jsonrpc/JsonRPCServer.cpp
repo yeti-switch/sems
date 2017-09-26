@@ -279,9 +279,81 @@ void JsonRpcServer::execRpc(const AmArg& rpc_params, AmArg& rpc_res) {
     execRpc(method, id, params, rpc_res);
 }
 
+static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmArg &ret) {
+    AmArg methods_list;
+    try {
+        if(method.empty()) di->invoke("_list",args,methods_list);
+        else di->invoke(method,args,methods_list);
+
+        if(!isArgArray(methods_list))
+            return;
+
+        for(size_t i = 0; i < methods_list.size(); i++) {
+            AmArg &entry = methods_list[i];
+            if(isArgArray(entry)) {
+                if(entry.size()>0 && isArgCStr(entry[0])) {
+                    AmArg a = args;
+                    if(a.size()) {
+                        a.pop_back();
+                        a.push(entry[0].asCStr());
+                    }
+                    a.push("_list");
+                    AmArg &r = ret[entry[0].asCStr()];
+                    traverse_tree(di,method.empty() ? entry[0].asCStr() : method,a,r);
+                }
+            } else if(isArgCStr(entry)) {
+                AmArg a = args;
+                if(a.size()) {
+                    a.pop_back();
+                    a.push(entry.asCStr());
+                }
+                a.push("_list");
+                AmArg &r = ret[entry.asCStr()];
+                traverse_tree(di,method.empty() ? entry.asCStr() : method,a,r);
+            }
+        }
+    } catch(...) { }
+}
+
 void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
 
   try  {
+
+    if(method=="_list") {
+        AmPlugIn::instance()->listFactories4Di(rpc_res["result"]);
+        rpc_res["id"] = id;
+        rpc_res["jsonrpc"] = "2.0";
+        return;
+    }
+
+    if(method=="_traverse") {
+        AmArg ret;
+        AmArg fake_args;
+        fake_args.assertArray();
+        AmDynInvoke* di_inst;
+        AmDynInvokeFactory* fact;
+
+        AmPlugIn::instance()->listFactories4Di(ret);
+        if(!isArgArray(ret))
+            return;
+
+        AmArg &result = rpc_res["result"];
+        for(size_t i = 0; i < ret.size(); i++) {
+            AmArg &factory_name = ret[i];
+            if(!isArgCStr(factory_name))
+                continue;
+            fact = AmPlugIn::instance()->getFactory4Di(factory_name.asCStr());
+            if (fact==NULL)
+                continue;
+            di_inst = fact->getInstance();
+            if(!di_inst)
+                continue;
+            DBG("process factory: %s",factory_name.asCStr());
+            traverse_tree(di_inst,string(),fake_args,result[factory_name.asCStr()]);
+        }
+        return;
+    }
+
     size_t dot_pos = method.find('.');
     if (dot_pos == string::npos || dot_pos == method.length()) {
       throw JsonRpcError(-32601, "Method not found", 
@@ -291,12 +363,12 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
     string fact_meth = method.substr(method.find('.')+1);
 
     try {
-      if (factory == "core") {
+      /*if (factory == "core") {
 	runCoreMethod(fact_meth, params, rpc_res["result"]);
 	rpc_res["id"] = id;
 	rpc_res["jsonrpc"] = "2.0";
 	return;
-      }
+	  }*/
       // todo: direct_export
 
       DBG("searching for factory '%s' method '%s'\n",
@@ -362,6 +434,7 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
   }
 }
 
+#if 0
 void JsonRpcServer::runCoreMethod(const string& method, const AmArg& params, AmArg& res) {
   if (method == "_list") {
     AmPlugIn::instance()->listFactories4Di(res);
@@ -376,7 +449,8 @@ void JsonRpcServer::runCoreMethod(const string& method, const AmArg& params, AmA
     res[0] = log_level;
     DBG("get_log_level returns %d\n", log_level);
   } else {
-    throw JsonRpcError(-32601, "Method not found", 
+    throw JsonRpcError(-32601, "Method not found",
 		       "function unknown in core");
   }
 }
+#endif
