@@ -1,3 +1,14 @@
+sems (1.7.53-1) stable; urgency=low
+
+  * 418cffcd5 add system invoke factory CoreRpc
+  * ce9c1b882 JsonRPCServer: remove fake core factory. implement '_list' and '_traverse' processing
+  * f5c3d4ae0 AmB2BSession: a_leg getter
+  * 6dedb7e8f add codecs_bench routines
+  * 149019a8b add RpcTreeHandler template
+  * 3cdb82877 AmConfig: add log_dump_path cfg variable
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 26 Sep 2017 13:47:57 +0300
+
 sems (1.7.52-4) stable; urgency=low
 
   * cd63329a3 AmB2BMedia: add setRtpTimeout stream
