@@ -37,6 +37,7 @@
 #include "AmAudioFileRecorder.h"
 #include "AmAppTimer.h"
 #include "RtspClient.h"
+#include "CoreRpc.h"
 //#include "sip/async_file_writer.h"
 
 #ifdef WITH_ZRTP
@@ -608,6 +609,11 @@ int main(int argc, char* argv[])
       ERROR("Cannot initialize RTSP client\n");
       goto error;
     }
+  }
+
+  if(CoreRpc::instance().onLoad()) {
+    ERROR("failed to initialize CoreRpc");
+    goto error;
   }
 
   INFO("Starting application timer scheduler\n");
