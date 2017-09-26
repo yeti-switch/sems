@@ -62,6 +62,7 @@ string       AmConfig::ExcludePlugins          = "";
 string       AmConfig::ExcludePayloads         = "";
 int          AmConfig::LogLevel                = L_INFO;
 bool         AmConfig::LogStderr               = false;
+string       AmConfig::LogDumpPath             = "/var/spool/sems/logdump";
 
 vector<AmConfig::SIP_interface> AmConfig::SIP_Ifs;
 vector<AmConfig::RTP_interface> AmConfig::RTP_Ifs;
@@ -475,6 +476,8 @@ int AmConfig::readConfiguration()
     }
   }
 
+  if(cfg.hasParameter("log_dump_path"))
+    LogDumpPath = cfg.getParameter("log_dump_path");
 
   // exclude_plugins
   if (cfg.hasParameter("exclude_plugins"))

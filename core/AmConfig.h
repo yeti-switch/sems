@@ -60,6 +60,8 @@ struct AmConfig
   static string ExcludePlugins;
   /** semicolon separated list of payloads to exclude from loading */
   static string ExcludePayloads;  
+  /** Path where to dump buffer from di_log */
+  static string LogDumpPath;
   //static unsigned int MaxRecordTime;
   /** log level */
   static int LogLevel;
