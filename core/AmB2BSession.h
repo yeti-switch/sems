@@ -393,6 +393,8 @@ private:
   bool getRtpRelayTransparentSeqno() { return rtp_relay_transparent_seqno; }
   bool getRtpRelayTransparentSSRC() { return rtp_relay_transparent_ssrc; }
 
+  bool getALeg() { return a_leg; }
+
   virtual bool isRemoteOnHold() { return remote_on_hold; }
 
   /* -------------- media processing -------------- */
