@@ -74,6 +74,7 @@ class SyslogLogFac : public AmLoggingFacility {
     : AmLoggingFacility("syslog",AmConfig::LogLevel),
       facility(LOG_DAEMON)
   {
+    _inc_ref();
     init();
   }
 
@@ -208,7 +209,8 @@ void init_logging()
   log_hooks.clear();
 
 #ifndef DISABLE_SYSLOG_file
-  register_log_hook(&SyslogLogFac::instance());
+  //register_log_hook(&SyslogLogFac::instance());
+  AmPlugIn::registerLoggingFacility("syslog",&SyslogLogFac::instance());
 #endif
 
   INFO("Logging initialized\n");
