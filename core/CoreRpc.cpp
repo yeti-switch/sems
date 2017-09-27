@@ -215,6 +215,25 @@ int CoreRpc::onLoad()
     return 0;
 }
 
+void CoreRpc::invoke(const string& method, const AmArg& args, AmArg& ret)
+{
+    if(method=="_list") {
+        AmArg plugin_cmd;
+        plugin_cmd.push("plugin");
+        plugin_cmd.push("");
+        ret.push(plugin_cmd);
+        RpcTreeHandler::invoke(method,args,ret);
+        return;
+    }
+
+    if(method=="plugin") {
+        plugin(args,ret);
+        return;
+    }
+
+    RpcTreeHandler::invoke(method,args,ret);
+}
+
 void CoreRpc::showVersion(const AmArg& args, AmArg& ret)
 {
     ret["core_build"] = get_sems_version();
@@ -565,4 +584,42 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
     di_log->getInstance()->invoke("dumplogtodisk",di_log_args,ret);
 }
 
+void CoreRpc::plugin(const AmArg& args, AmArg& ret)
+{
+    static const string self_factory("core");
+
+    if(!args.size())
+        return;
+
+    AmArg params = args;
+    AmArg method_arg;
+    params.pop(method_arg);
+    const string &method = method_arg.asCStr();
+
+    if(method=="_list") {
+        AmArg factories_list;
+        AmPlugIn::instance()->listFactories4Di(factories_list);
+        for(size_t i = 0; i < factories_list.size(); i++)
+            if(self_factory!=factories_list.get(i).asCStr())
+                ret.push(factories_list.get(i));
+        return;
+    }
+
+    if(method==self_factory)
+        throw AmSession::Exception(500,"calling 'core' using factory proxy method leads to the loop");
+
+    if(!params.size())
+        throw AmSession::Exception(500,"missed method for factory");
+
+    AmDynInvokeFactory* fact = AmPlugIn::instance()->getFactory4Di(method);
+    if (fact==NULL)
+        throw AmSession::Exception(404,"module not loaded");
+    AmDynInvoke* di_inst = fact->getInstance();
+    if(!di_inst)
+        throw AmSession::Exception(500,"failed to instanciate module");
+
+    AmArg fact_meth;
+    params.pop(fact_meth);
+    di_inst->invoke(fact_meth.asCStr(), params, ret);
+}
 
