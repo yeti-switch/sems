@@ -1,3 +1,11 @@
+sems (1.7.53-2) stable; urgency=low
+
+  * 2ea47a711 log: register SyslogLogFac instance as logging facility instead of implicit registering as hook
+  * 6e1af9c3c CoreRpc: 'plugin' proxy method to access factories
+  * e443ed5bd RpcTreeHandler: allow to specify path to method using dot as separator
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 27 Sep 2017 13:07:03 +0300
+
 sems (1.7.53-1) stable; urgency=low
 
   * 418cffcd5 add system invoke factory CoreRpc
