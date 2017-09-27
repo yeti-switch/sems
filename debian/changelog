@@ -1,3 +1,11 @@
+sems (1.7.53-3) stable; urgency=low
+
+  * f925ce8d7 RpcTreeHandler: avoid to call registered methods with '_list' as last sub-method or parameter
+  * 4afb75d43 CoreRpc: fix 'plugin' proxy method _list processing
+  * 8b347ac23 jsonrpc: fix _traverse method for factories with plain methods list
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 27 Sep 2017 17:38:56 +0300
+
 sems (1.7.53-2) stable; urgency=low
 
   * 2ea47a711 log: register SyslogLogFac instance as logging facility instead of implicit registering as hook
