@@ -291,6 +291,7 @@ static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
         for(size_t i = 0; i < methods_list.size(); i++) {
             AmArg &entry = methods_list[i];
             if(isArgArray(entry)) {
+                //RpcTreeHandler inheritors
                 if(entry.size()>0 && isArgCStr(entry[0])) {
                     AmArg a = args;
                     if(a.size()) {
@@ -302,14 +303,9 @@ static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
                     traverse_tree(di,method.empty() ? entry[0].asCStr() : method,a,r);
                 }
             } else if(isArgCStr(entry)) {
-                AmArg a = args;
-                if(a.size()) {
-                    a.pop_back();
-                    a.push(entry.asCStr());
-                }
-                a.push("_list");
-                AmArg &r = ret[entry.asCStr()];
-                traverse_tree(di,method.empty() ? entry.asCStr() : method,a,r);
+                //old factories with plain methods layout
+                //aviod to call recursive _list for them
+                ret[entry.asCStr()] = AmArg();
             }
         }
     } catch(...) { }
