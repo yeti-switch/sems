@@ -267,7 +267,7 @@ void RpcTreeHandler<C>::invoke(const string& method, const AmArg& args, AmArg& r
     //DBG("%s(%s)", method.c_str(), AmArg::print(args).c_str());
     if(methods_tree || method.find('.')!=string::npos)
         process_rpc_cmds_methods_tree_root(root,method,args,ret);
-    else rocess_rpc_cmds(root,method,args,ret);
+    else process_rpc_cmds(root,method,args,ret);
 }
 
 template<class C>
