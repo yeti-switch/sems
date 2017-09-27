@@ -6,10 +6,22 @@ template<class C>
 class RpcTreeHandler
   : public AmDynInvoke
 {
-    void process_rpc_cmds(const AmArg &cmds, const string& method,
-                          const AmArg& args, AmArg& ret);
+    void process_rpc_cmds(
+        const AmArg &cmds, const string& method,
+        const AmArg& args, AmArg& ret);
+    void process_rpc_cmds_methods_tree(
+        const AmArg &cmds, vector<string> &methods_tree,
+        const AmArg& args, AmArg& ret);
+    void process_rpc_cmds_methods_tree_root(
+        const AmArg &cmds, const string& method,
+        const AmArg& args, AmArg& ret);
+    bool methods_tree;
   public:
-   using rpc_handler = void (const AmArg& args, AmArg& ret);
+    using rpc_handler = void (const AmArg& args, AmArg& ret);
+
+    RpcTreeHandler(bool methods_tree = false)
+      : methods_tree(methods_tree)
+    { }
 
   protected:
     AmArg root;
@@ -34,6 +46,7 @@ class RpcTreeHandler
         bool isMethod(){ return handler!=NULL; }
         bool hasLeafs(){ return leaves.getType()==AmArg::Struct; }
         bool hasLeaf(const char *leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
+        bool hasLeaf(const string &leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
     };
 
 
@@ -146,11 +159,115 @@ void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method
 }
 
 template<class C>
+void RpcTreeHandler<C>::process_rpc_cmds_methods_tree_root(
+    const AmArg &cmds, const string& method,
+    const AmArg& args, AmArg& ret)
+{
+    vector<string> methods_tree = explode(method,".");
+    process_rpc_cmds_methods_tree(cmds,methods_tree,args,ret);
+}
+
+template<class C>
+void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
+    const AmArg &cmds, vector<string> &methods_tree,
+    const AmArg& args, AmArg& ret)
+{
+    const char *list_method = "_list";
+
+    if(methods_tree.empty()) {
+        throw AmDynInvoke::NotImplemented("empty methods tree");
+    }
+
+    string method = *methods_tree.begin();
+    methods_tree.erase(methods_tree.begin());
+
+    if(method==list_method){
+        ret.assertArray();
+        switch(cmds.getType()){
+            case AmArg::Struct: {
+                AmArg::ValueStruct::const_iterator it = cmds.begin();
+                for(;it!=cmds.end();++it){
+                    const AmArg &am_e = it->second;
+                    rpc_entry *e = reinterpret_cast<rpc_entry *>(am_e.asObject());
+                    AmArg f;
+                    f.push(it->first);
+                    f.push(e->leaf_descr);
+                    ret.push(f);
+                }
+            } break;
+
+            case AmArg::AObject: {
+                rpc_entry *e = reinterpret_cast<rpc_entry *>(cmds.asObject());
+                if(!e->func_descr.empty()&&(!e->arg.empty()||e->hasLeafs())){
+                    AmArg f;
+                    f.push("[Enter]");
+                    f.push(e->func_descr);
+                    ret.push(f);
+                }
+                if(!e->arg.empty()){
+                    AmArg f;
+                    f.push(e->arg);
+                    f.push(e->arg_descr);
+                    ret.push(f);
+                }
+                if(e->hasLeafs()){
+                    const AmArg &l = e->leaves;
+                    AmArg::ValueStruct::const_iterator it = l.begin();
+                    for(;it!=l.end();++it){
+                        const AmArg &am_e = it->second;
+                        rpc_entry *e = reinterpret_cast<rpc_entry *>(am_e.asObject());
+                        AmArg f;
+                        f.push(it->first);
+                        f.push(e->leaf_descr);
+                        ret.push(f);
+                    }
+                }
+            } break;
+
+            default:
+                throw AmArg::TypeMismatchException();
+        } //switch
+        return;
+    }
+
+    if(cmds.hasMember(method)){
+        const AmArg &l = cmds[method];
+        if(l.getType()!=AmArg::AObject)
+            throw AmArg::TypeMismatchException();
+
+        rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
+        if(!methods_tree.empty()) {
+            if(e->hasLeaf(methods_tree[0])) {
+                process_rpc_cmds_methods_tree(e->leaves,methods_tree,args,ret);
+                return;
+            } else if(methods_tree[0]==list_method){
+                process_rpc_cmds_methods_tree(l,methods_tree,args,ret);
+                return;
+            }
+        }
+        if(e->isMethod()){
+            if(!methods_tree.empty() && methods_tree[0]==list_method)
+            {
+                if(!e->hasLeafs()&&e->arg.empty())
+                    ret.assertArray();
+                return;
+            }
+            (static_cast<C &>(* this).*(e->handler))(args,ret);
+            return;
+        }
+        throw AmDynInvoke::NotImplemented("missed arg");
+    }
+    throw AmDynInvoke::NotImplemented("no matches with methods tree");
+}
+
+template<class C>
 void RpcTreeHandler<C>::invoke(const string& method, const AmArg& args, AmArg& ret)
 {
     log_invoke(method,args);
     //DBG("%s(%s)", method.c_str(), AmArg::print(args).c_str());
-    process_rpc_cmds(root,method,args,ret);
+    if(methods_tree || method.find('.')!=string::npos)
+        process_rpc_cmds_methods_tree_root(root,method,args,ret);
+    else rocess_rpc_cmds(root,method,args,ret);
 }
 
 template<class C>
