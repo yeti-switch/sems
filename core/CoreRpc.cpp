@@ -600,8 +600,11 @@ void CoreRpc::plugin(const AmArg& args, AmArg& ret)
         AmArg factories_list;
         AmPlugIn::instance()->listFactories4Di(factories_list);
         for(size_t i = 0; i < factories_list.size(); i++)
-            if(self_factory!=factories_list.get(i).asCStr())
-                ret.push(factories_list.get(i));
+            if(self_factory!=factories_list.get(i).asCStr()) {
+                ret.push(AmArg());
+                ret.back().push(factories_list.get(i));
+                ret.back().push("");
+            }
         return;
     }
 
