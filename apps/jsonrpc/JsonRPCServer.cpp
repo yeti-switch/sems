@@ -322,7 +322,7 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
         return;
     }
 
-    if(method=="_traverse") {
+    if(method=="_tree") {
         AmArg ret;
         AmArg fake_args;
         fake_args.assertArray();
