@@ -203,6 +203,7 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
   if(!f_fmt){
     ERROR("while trying to determine the format of '%s'\n",
 	  filename.c_str());
+    close();
     return -1;
   }
   fmt.reset(f_fmt);
