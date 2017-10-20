@@ -1,3 +1,9 @@
+sems (1.7.53-6) stable; urgency=low
+
+  * AmSipRegistration: clear postponed flag on deregistration
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 20 Oct 2017 12:56:02 +0300
+
 sems (1.7.53-5) stable; urgency=low
 
   * e8e224904 sctp_bus: use RpcTreeHandler

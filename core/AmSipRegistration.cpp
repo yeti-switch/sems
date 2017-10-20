@@ -258,6 +258,7 @@ bool AmSIPRegistration::doUnregister()
   }
   waiting_result = true;
   unregistering = true;
+  postponed = false;
 
   req.to_tag     = "";
   req.r_uri      = "sip:"+info.domain;
