@@ -151,6 +151,8 @@ int SctpBus::onLoad() {
         return -1;
     }
 
+    init_rpc();
+
     DBG("SctpBus initialized");
 
     start();
@@ -158,56 +160,15 @@ int SctpBus::onLoad() {
     return 0;
 }
 
-void SctpBus::invoke(const string& method, const AmArg& args, AmArg& ret)
+void SctpBus::init_rpc_tree()
 {
-    AmArg params = args, a;
-    if(method=="show") {
-        if(!params.size()) throw AmDynInvoke::NotImplemented(method);
-        params.pop(a);
-        string section = a.asCStr();
-        if(section=="server") { //show server
-            if(!params.size()) throw AmDynInvoke::NotImplemented(section);
-            params.pop(a);
-            string cmd = a.asCStr();
-            if(cmd=="associations") { //show server associations
-                showServerAssocations(params,ret);
-            } else if(cmd=="_list") {
-                ret.push("associations");
-            } else {
-                throw AmDynInvoke::NotImplemented(cmd);
-            }
-        } else if(section=="client") { //show client
-            if(!params.size()) throw AmDynInvoke::NotImplemented(section);
-            params.pop(a);
-            string cmd = a.asCStr();
-            if(cmd=="connections") { //show client connections
-                showClientConnections(params,ret);
-            } else if(cmd=="_list") {
-                ret.push("connections");
-            } else {
-                throw AmDynInvoke::NotImplemented(cmd);
-            }
-        } else if(section=="_list") {
-            ret.push("server");
-            ret.push("client");
-        }
-    } else if(method=="request") {
-        if(!params.size()) throw AmDynInvoke::NotImplemented(method);
-        params.pop(a);
-        string cmd = a.asCStr();
-        if(cmd=="reload") { //request reload
-            reload(params,ret);
-        } else if(cmd=="_list") {
-            ret.push("reload");
-        } else {
-            throw AmDynInvoke::NotImplemented(cmd);
-        }
-    } else if(method=="_list") {
-        ret.push("show");
-        ret.push("request");
-    } else {
-        throw AmDynInvoke::NotImplemented(method);
-    }
+    AmArg &show = reg_leaf(root,"show");
+        AmArg &show_server = reg_leaf(show,"server");
+            reg_method(show_server,"associations","",&SctpBus::showServerAssocations);
+        AmArg &show_client = reg_leaf(show,"client");
+            reg_method(show_client,"connections","",&SctpBus::showClientConnections);
+    AmArg &request = reg_leaf(root,"request");
+        reg_method(request,"reload","",&SctpBus::reload);
 }
 
 void SctpBus::run()

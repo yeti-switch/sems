@@ -13,6 +13,8 @@
 
 #include <string>
 #include <map>
+#include "RpcTreeHandler.h"
+
 using std::string;
 using std::map;
 
@@ -21,7 +23,7 @@ class SctpBus
   public AmThread,
   public AmEventFdQueue,
   public AmEventHandler,
-  public AmDynInvoke
+  public RpcTreeHandler<SctpBus>
 {
     static SctpBus* _instance;
 
@@ -37,6 +39,9 @@ class SctpBus
 
     int epoll_fd;
 
+  protected:
+    void init_rpc_tree();
+
   public:
     SctpBus(const string& name);
     ~SctpBus();
@@ -44,8 +49,6 @@ class SctpBus
     static SctpBus* instance();
     AmDynInvoke* getInstance() { return SctpBus::instance(); }
 
-    void invoke(const string& method,
-                const AmArg& args, AmArg& ret);
     int onLoad();
     int configure();
 
