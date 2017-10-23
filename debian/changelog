@@ -1,3 +1,9 @@
+sems (1.7.53-7) stable; urgency=low
+
+  * AmB2BMedia: fix non-stream input processing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 23 Oct 2017 18:43:19 +0300
+
 sems (1.7.53-6) stable; urgency=low
 
   * AmSipRegistration: clear postponed flag on deregistration
