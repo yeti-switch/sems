@@ -494,12 +494,12 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                     }
                 }
             }
-            if (got < 0) return -1;
-            if (got > 0) {
-                updateSendStats();
-                //CLASS_DBG("stream->put(%llu,%d)",ts,got);
-                return stream->put(ts, buffer, sample_rate, got);
-            }
+        }
+        if (got < 0) return -1;
+        if (got > 0) {
+            updateSendStats();
+            //CLASS_DBG("stream->put(%llu,%d)",ts,got);
+            return stream->put(ts, buffer, sample_rate, got);
         }
     }
     return 0;
