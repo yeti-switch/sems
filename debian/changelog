@@ -1,3 +1,10 @@
+sems (1.7.53-8) stable; urgency=low
+
+  * 55194cd0d AmB2BSession: separate log messages about AmSession::onSdpCompleted skipping
+  * 9b9e8dbb7 AmPlugIn: move message about not found app to the DBG loglevel
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 24 Oct 2017 18:36:30 +0300
+
 sems (1.7.53-7) stable; urgency=low
 
   * AmB2BMedia: fix non-stream input processing
