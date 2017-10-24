@@ -817,7 +817,7 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     }
 
     if (m_app_name.empty()) {
-      INFO("could not find any application matching configured criteria\n");
+      DBG("could not find any application matching configured criteria\n");
       return NULL;
     }
     
