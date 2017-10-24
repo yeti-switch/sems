@@ -700,10 +700,15 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
   }
 
   if(hasRtpStream() && RTPStream()->getSdpMediaIndex() >= 0) {
-    if(!sip_relay_only && !rtp_stream_shared){
-      return AmSession::onSdpCompleted(local_sdp,remote_sdp);
+    if(sip_relay_only) {
+        DBG("sip_relay_only. skip AmSession::onSdpCompleted");
+        return 0;
     }
-    DBG("sip_relay_only = true: doing nothing!\n");
+    if(rtp_stream_shared) {
+        DBG("rtp_stream_shared. skip AmSession::onSdpCompleted");
+        return 0;
+    }
+    return AmSession::onSdpCompleted(local_sdp,remote_sdp);
   }
 
   return 0;
