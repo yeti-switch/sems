@@ -1,3 +1,9 @@
+sems (1.7.53-9) stable; urgency=low
+
+  * AmRtpAudio::conceal_loss(): replace codec-specific PLC assertion with failover to default PLC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 25 Oct 2017 13:18:21 +0300
+
 sems (1.7.53-8) stable; urgency=low
 
   * 55194cd0d AmB2BSession: separate log messages about AmSession::onSdpCompleted skipping

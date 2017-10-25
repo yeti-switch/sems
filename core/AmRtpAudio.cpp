@@ -422,26 +422,30 @@ int AmRtpAudio::setCurrentPayload(int payload)
 
 unsigned int AmRtpAudio::conceal_loss(unsigned int ts_diff, unsigned char *buffer)
 {
-  int s=0;
-  if(!use_default_plc){
+    int s = 0;
 
-    amci_codec_t* codec = fmt->getCodec();
-    long h_codec = fmt->getHCodec();
+    if(!use_default_plc) {
+        amci_codec_t* codec = fmt->getCodec();
+        assert(codec);
+        if(codec->plc) {
+            DBG("attempt to use codec specific PLC "
+                "for codec(%d) which does not support it. "
+                "failover to default PLC",
+                codec->id);
+            use_default_plc = true;
+            goto _default_plc;
+        }
+        s = (*codec->plc)(buffer, PCM16_S2B(ts_diff),
+                          fmt->channels,getSampleRate(),fmt->getHCodec());
+        //DBG("codec specific PLC (ts_diff = %i; s = %i)\n",ts_diff,s);
+        return s;
+    }
 
-    assert(codec && codec->plc);
-    s = (*codec->plc)(buffer, PCM16_S2B(ts_diff),
-		      fmt->channels,getSampleRate(),h_codec);
-
-    //DBG("codec specific PLC (ts_diff = %i; s = %i)\n",ts_diff,s);
-  }
-  else {
+_default_plc:
     s = default_plc(buffer, PCM16_S2B(ts_diff),
-		    fmt->channels,getSampleRate());
-
+                    fmt->channels,getSampleRate());
     //DBG("default PLC (ts_diff = %i; s = %i)\n",ts_diff,s);
-  }
-    
-  return s;
+    return s;
 }
 
 unsigned int AmRtpAudio::default_plc(unsigned char* out_buf,
