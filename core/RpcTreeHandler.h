@@ -15,6 +15,7 @@ class RpcTreeHandler
     void process_rpc_cmds_methods_tree_root(
         const AmArg &cmds, const string& method,
         const AmArg& args, AmArg& ret);
+    void serialize_methods_tree(AmArg &methods_root, AmArg &tree);
     bool methods_tree;
   public:
     using rpc_handler = void (const AmArg& args, AmArg& ret);
@@ -68,7 +69,10 @@ class RpcTreeHandler
 
   public:
     virtual void invoke(const string& method, const AmArg& args, AmArg& ret);
+    virtual void get_methods_tree(AmArg &tree);
     void init_rpc();
+
+    bool is_methods_tree() { return methods_tree; }
 };
 
 template<class C>
@@ -129,7 +133,6 @@ void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method
         const AmArg &l = cmds[method];
         if(l.getType()!=AmArg::AObject)
             throw AmArg::TypeMismatchException();
-
         rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
         if(args.size()>0){
             if(e->hasLeaf(args[0].asCStr())){
@@ -175,7 +178,7 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
     const char *list_method = "_list";
 
     if(methods_tree.empty()) {
-        throw AmDynInvoke::NotImplemented("empty methods tree");
+        throw AmDynInvoke::Exception(500,"empty methods tree");
     }
 
     string method = *methods_tree.begin();
@@ -243,6 +246,10 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
             } else if(methods_tree[0]==list_method){
                 process_rpc_cmds_methods_tree(l,methods_tree,args,ret);
                 return;
+            } else {
+                throw AmDynInvoke::Exception(404,
+                    string("no matches with methods tree. unknown part: ") +
+                    methods_tree[0]);
             }
         }
         if(e->isMethod()){
@@ -256,19 +263,43 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
             (static_cast<C &>(* this).*(e->handler))(args,ret);
             return;
         }
-        throw AmDynInvoke::NotImplemented("missed arg");
+        throw AmDynInvoke::Exception(404,
+            string("not completed method path. last element: ") + method);
     }
-    throw AmDynInvoke::NotImplemented("no matches with methods tree");
+    throw AmDynInvoke::Exception(404,
+        string("no matches with methods tree. unknown part: ") + method);
 }
 
 template<class C>
 void RpcTreeHandler<C>::invoke(const string& method, const AmArg& args, AmArg& ret)
 {
     log_invoke(method,args);
-    //DBG("%s(%s)", method.c_str(), AmArg::print(args).c_str());
+    DBG("RPC invoke: %s(%s)", method.c_str(), AmArg::print(args).c_str());
     if(methods_tree || method.find('.')!=string::npos)
         process_rpc_cmds_methods_tree_root(root,method,args,ret);
     else process_rpc_cmds(root,method,args,ret);
+}
+
+template<class C>
+void RpcTreeHandler<C>::serialize_methods_tree(AmArg &methods_root, AmArg &tree)
+{
+    if(!isArgAObject(methods_root))
+        return;
+
+    rpc_entry *e = reinterpret_cast<rpc_entry *>(methods_root.asObject());
+
+    if(!e->hasLeafs())
+        return;
+
+    for(auto &l : *e->leaves.asStruct())
+        serialize_methods_tree(l.second,tree[l.first]);
+}
+
+template<class C>
+void RpcTreeHandler<C>::get_methods_tree(AmArg &tree)
+{
+    for(auto &e : *root.asStruct())
+        serialize_methods_tree(e.second,tree[e.first]);
 }
 
 template<class C>

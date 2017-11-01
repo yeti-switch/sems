@@ -55,9 +55,18 @@ class AmDynInvoke
       : what(w) {}
   };
 
+  struct Exception {
+    int code;
+    string reason;
+    Exception(int c, string r)
+      : code(c), reason(r) {}
+  };
+
   AmDynInvoke();
   virtual ~AmDynInvoke();
   virtual void invoke(const string& method, const AmArg& args, AmArg& ret);
+  virtual bool is_methods_tree() { return false; }
+  virtual void get_methods_tree(AmArg &) { }
 };
 
 /**

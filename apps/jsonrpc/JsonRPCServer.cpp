@@ -282,6 +282,12 @@ void JsonRpcServer::execRpc(const AmArg& rpc_params, AmArg& rpc_res) {
 static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmArg &ret) {
     AmArg methods_list;
     try {
+
+        if(di->is_methods_tree()) {
+            di->get_methods_tree(ret);
+            return;
+        }
+
         if(method.empty()) di->invoke("_list",args,methods_list);
         else di->invoke(method,args,methods_list);
 
@@ -291,7 +297,7 @@ static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
         for(size_t i = 0; i < methods_list.size(); i++) {
             AmArg &entry = methods_list[i];
             if(isArgArray(entry)) {
-                //RpcTreeHandler inheritors
+                //non-dotted RpcTreeHandler inheritors
                 if(entry.size()>0 && isArgCStr(entry[0])) {
                     AmArg a = args;
                     if(a.size()) {
@@ -313,7 +319,7 @@ static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
 
 void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
 
-  try  {
+try  {
 
     if(method=="_list") {
         AmPlugIn::instance()->listFactories4Di(rpc_res["result"]);
@@ -352,72 +358,68 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
 
     size_t dot_pos = method.find('.');
     if (dot_pos == string::npos || dot_pos == method.length()) {
-      throw JsonRpcError(-32601, "Method not found", 
-			 "use module.method as rpc method name");    
+        throw JsonRpcError(-32601, "Method not found",
+            "use module.method as rpc method name");
     }
     string factory = method.substr(0, method.find('.'));
     string fact_meth = method.substr(method.find('.')+1);
 
     try {
-      /*if (factory == "core") {
-	runCoreMethod(fact_meth, params, rpc_res["result"]);
-	rpc_res["id"] = id;
-	rpc_res["jsonrpc"] = "2.0";
-	return;
-	  }*/
-      // todo: direct_export
+        DBG("searching for factory '%s' method '%s'\n",
+            factory.c_str(), fact_meth.c_str());
+        AmDynInvokeFactory* fact =
+            AmPlugIn::instance()->getFactory4Di(factory);
+        if (fact==NULL) {
+            throw JsonRpcError(-32601, "Method not found",
+                "module not loaded");
+        }
+        AmDynInvoke* di_inst = fact->getInstance();
+        if(!di_inst) {
+            throw JsonRpcError(-32601, "Method not found",
+                "failed to instanciate module");
+        }
 
-      DBG("searching for factory '%s' method '%s'\n",
-	  factory.c_str(), fact_meth.c_str());
-      
-      AmDynInvokeFactory* fact = 
-	AmPlugIn::instance()->getFactory4Di(factory);
-      if (fact==NULL) {
-	throw JsonRpcError(-32601, "Method not found", 
-			   "module not loaded");
-      }
-      AmDynInvoke* di_inst = fact->getInstance();
-      if(!di_inst) {
-	throw JsonRpcError(-32601, "Method not found", 
-			   "failed to instanciate module");
-      }
-
-      di_inst->invoke(fact_meth, params, rpc_res["result"]);
+        di_inst->invoke(fact_meth, params, rpc_res["result"]);
     } catch (const AmDynInvoke::NotImplemented& ni) {
-      DBG("not implemented DI function '%s'\n",
-	   ni.what.c_str());
-      throw JsonRpcError(-32601, "Method not found", 
-			 "function unknown in module");
-    } catch (const AmArg::OutOfBoundsException& oob) {
-      INFO("out of bounds in  RPC DI call\n");
-      throw JsonRpcError(-32602, "Invalid params",
-			 "out of bounds in function call");
-    } catch (const AmArg::TypeMismatchException& oob) {
-      INFO("type mismatch  in  RPC DI call\n"); 
-     throw JsonRpcError(-32602, "Invalid params",
-			 "parameters type mismatch in function call");
-    } catch (const JsonRpcError& e) {
-      INFO("JsonRpcError \n");
-      throw;
-    } catch (AmSession::Exception &e) {
-      ERROR("got AmSession exception in RPC DI call. method: %s, params: %s, "
+        DBG("not implemented DI function '%s'\n",
+            ni.what.c_str());
+        throw JsonRpcError(-32601, "Method not found",
+            "function unknown in module");
+    } catch (const AmDynInvoke::Exception& e) {
+        ERROR("got AmDynInvoke exception in RPC DI call. method: %s, params: %s, "
             "code: %d, reason: %s",
             method.c_str(),AmArg::print(params).c_str(),
             e.code,e.reason.c_str());
-      throw JsonRpcError(e.code,e.reason,AmArg());
+        throw JsonRpcError(e.code,e.reason,AmArg());
+    } catch (const AmArg::OutOfBoundsException& oob) {
+        INFO("out of bounds in  RPC DI call\n");
+        throw JsonRpcError(-32602, "Invalid params",
+            "out of bounds in function call");
+    } catch (const AmArg::TypeMismatchException& oob) {
+        INFO("type mismatch  in  RPC DI call\n");
+        throw JsonRpcError(-32602, "Invalid params",
+            "parameters type mismatch in function call");
+    } catch (const JsonRpcError& e) {
+        INFO("JsonRpcError \n");
+        throw;
+    } catch (AmSession::Exception &e) {
+        ERROR("got AmSession exception in RPC DI call. method: %s, params: %s, "
+            "code: %d, reason: %s",
+            method.c_str(),AmArg::print(params).c_str(),
+            e.code,e.reason.c_str());
+        throw JsonRpcError(e.code,e.reason,AmArg());
     } catch (...) {
-      ERROR("unexpected Exception in RPC DI call. method: %s, params: %s",
+        ERROR("unexpected Exception in RPC DI call. method: %s, params: %s",
             method.c_str(),AmArg::print(params).c_str());
-      throw JsonRpcError(-32000, "Server error",
-			 "unexpected Exception");      
+        throw JsonRpcError(-32000, "Server error",
+            "unexpected Exception");
     }
-
     // todo: notification!
     rpc_res["id"] = id;
     rpc_res["jsonrpc"] = "2.0";
-  } catch (const JsonRpcError& e) {
+} catch (const JsonRpcError& e) {
     DBG("got JsonRpcError core %d message '%s'\n",
-	 e.code, e.message.c_str());
+        e.code, e.message.c_str());
     rpc_res["error"] = AmArg(); 
     rpc_res["error"]["code"] = e.code;
     rpc_res["error"]["message"] = e.message;
@@ -427,7 +429,8 @@ void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg&
     rpc_res["jsonrpc"] = "2.0";
     rpc_res.erase("result");
     return;
-  }
+}
+
 }
 
 #if 0
