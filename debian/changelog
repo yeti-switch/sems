@@ -1,3 +1,12 @@
+sems (1.7.54-1) stable; urgency=low
+
+  * CoreRpc: force dotted methods usage
+  * JsonRPCServer: process AmDynInvoke:Exception, call get_methods_tree instead of recursive _list if supported
+  * AmApi: AmDynInvoke: add Exception struct. new methods: is_methods_tree and get_methods_tree
+  * RpcTreeHandler: implement get_methods_tree()
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 01 Nov 2017 13:25:54 +0200
+
 sems (1.7.53-9) stable; urgency=low
 
   * AmRtpAudio::conceal_loss(): replace codec-specific PLC assertion with failover to default PLC
