@@ -279,20 +279,20 @@ void JsonRpcServer::execRpc(const AmArg& rpc_params, AmArg& rpc_res) {
     execRpc(method, id, params, rpc_res);
 }
 
-static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmArg &ret) {
+static bool traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmArg &ret) {
     AmArg methods_list;
     try {
 
         if(di->is_methods_tree()) {
             di->get_methods_tree(ret);
-            return;
+            return true;
         }
 
         if(method.empty()) di->invoke("_list",args,methods_list);
         else di->invoke(method,args,methods_list);
 
         if(!isArgArray(methods_list))
-            return;
+            return false;
 
         for(size_t i = 0; i < methods_list.size(); i++) {
             AmArg &entry = methods_list[i];
@@ -314,7 +314,10 @@ static void traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
                 ret[entry.asCStr()] = AmArg();
             }
         }
-    } catch(...) { }
+        return true;
+    } catch(...) {
+        return false;
+    }
 }
 
 void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
@@ -351,7 +354,8 @@ try  {
             if(!di_inst)
                 continue;
             DBG("process factory: %s",factory_name.asCStr());
-            traverse_tree(di_inst,string(),fake_args,result[factory_name.asCStr()]);
+            if(!traverse_tree(di_inst,string(),fake_args,result[factory_name.asCStr()]))
+                result.erase(factory_name.asCStr());
         }
         return;
     }
