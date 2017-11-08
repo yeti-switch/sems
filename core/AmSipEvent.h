@@ -100,6 +100,15 @@ class AmSipReplyEvent: public AmSipEvent
   virtual void operator() (AmBasicSipDialog* dlg);
 };
 
+/** \brief SIP redirect event */
+struct AmSipRedirect
+  : public AmEvent
+{
+    AmSipRedirect()
+      : AmEvent(-1)
+    { }
+};
+
 
 
 #endif

@@ -56,6 +56,7 @@
 #include "AmUtils.h"
 #include "AmConfig.h"
 #include "AmSipEvent.h"
+#include "AmSessionContainer.h"
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -1989,7 +1990,18 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 					if(!try_next_ip(bucket,new_tr.get(),true)) {
 						/* successfull try_next_ip after retarget
 						 * try_next_ip generated new transaction with
-						 * retargeted request. don't pass reply to UA */
+						 * retargeted request */
+
+						/* generate AmSipRedirect event for session */
+						cstring dlg_id = t->to_tag;
+						if(t->dialog_id.len) {
+							dlg_id = t->dialog_id;
+						}
+						AmSessionContainer::instance()->postEvent(
+							c2stlstr(dlg_id),
+							new AmSipRedirect());
+
+						/* don't pass reply to UA */
 						forget_reply = true;
 					} else {
 						/* failed try_next_ip after successfull retarget
