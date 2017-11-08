@@ -1,3 +1,9 @@
+sems (1.7.55-2) stable; urgency=low
+
+  * trans_layer: disable redirect processing by default
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 09 Nov 2017 00:25:13 +0200
+
 sems (1.7.55-1) stable; urgency=low
 
   * 08dbcbdd trans_layer: send AmSipRedirect event to the session on successfull redirect
