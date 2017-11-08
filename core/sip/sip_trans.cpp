@@ -77,7 +77,7 @@ sip_trans::sip_trans()
       canceled(false),
       sensor(NULL),
       timer_m(0),
-      redirects_allowed(0)
+      redirects_allowed(-1)
 {
     memset(timers,0,SIP_TRANS_TIMERS*sizeof(void*));
 }

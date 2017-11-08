@@ -275,7 +275,7 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 				unsigned int flags, msg_logger* logger, msg_sensor *sensor,
 				sip_timers_override *timers_override,
 				sip_target_set* target_set_override,
-				unsigned int redirects_allowed)
+				int redirects_allowed)
 {
 	std::unique_ptr<sip_target_set> target_set(target_set_override);
 

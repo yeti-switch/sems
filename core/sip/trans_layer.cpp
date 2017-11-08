@@ -1238,7 +1238,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 				   msg_logger* logger,msg_sensor *sensor,
 				   sip_timers_override *timers_override,
 				   sip_target_set* target_set_override,
-				   unsigned int redirects_allowed)
+				   int redirects_allowed)
 {
     // Request-URI
     // To
@@ -2206,7 +2206,7 @@ int _trans_layer::update_uac_request(
     trans_bucket* bucket,
     sip_trans*& t, sip_msg* msg,
     sip_timers_override *timers_override,
-    unsigned int redirects_allowed)
+    int redirects_allowed)
 {
     if(msg->u.request->method != sip_request::ACK){
 	t = bucket->add_trans(msg,TT_UAC);
@@ -2990,7 +2990,12 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
 {
     int res = 0;
 
-    if(t->redirects_allowed <= 0) {
+    if(t->redirects_allowed < 0) {
+        //redirects processing is disabled
+        return -1;
+    }
+
+    if(t->redirects_allowed == 0) {
         DBG("retarget: redirect is not allowed");
         update_reply_msg(403, "Redirect is not allowed");
         return -1;

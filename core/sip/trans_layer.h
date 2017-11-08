@@ -185,7 +185,7 @@ public:
 			 unsigned int flags=0, msg_logger* logger=NULL,msg_sensor *sensor=NULL,
 			 sip_timers_override *timers_override = NULL,
 			 sip_target_set* target_set_override = NULL,
-			 unsigned int redirects_allowed = 0);
+			 int redirects_allowed = -1);
 
     /**
      * Cancels a request. 
@@ -294,7 +294,7 @@ protected:
         trans_bucket* bucket,
         sip_trans*& t, sip_msg* msg,
         sip_timers_override *timers_override = NULL,
-        unsigned int redirects_allowed = 0);
+        int redirects_allowed = -1);
 
     /**
      * Implements the state changes for the UAS state machine
