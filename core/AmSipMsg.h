@@ -73,11 +73,16 @@ class AmSipReply : public _AmSipMsgInDlg
   unsigned int code;
   string       reason;
   string       to_uri;
+  bool         local_reply;
 #ifdef PROPAGATE_UNPARSED_REPLY_HEADERS
   list<AmSipHeader> unparsed_headers;
 #endif
 
- AmSipReply() : code(0), _AmSipMsgInDlg() { }
+ AmSipReply()
+   : code(0),
+     local_reply(false),
+     _AmSipMsgInDlg()
+ { }
   ~AmSipReply() { }
   string print() const;
 };

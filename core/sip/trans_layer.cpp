@@ -68,7 +68,8 @@
 
 #define update_reply_msg(new_code, new_reason) \
     msg->u.reply->code = new_code; \
-    msg->u.reply->reason = cstring(new_reason);
+    msg->u.reply->reason = cstring(new_reason); \
+    msg->u.reply->local_reply = true;
 
 static trsp_acl fake_acl;
 static trsp_acl fake_opt_acl;
@@ -963,6 +964,7 @@ static void set_err_reply_from_req(sip_msg* err, sip_msg* req,
     err->u.reply = new sip_reply();
     err->u.reply->code = code;
     err->u.reply->reason = cstring(reason);
+    err->u.reply->local_reply = true;
 
     // pre-parse message
     if(!req->from->p) {
@@ -1050,6 +1052,7 @@ static void gen_error_reply_from_req(sip_msg& reply, const sip_msg* req,
 
     reply.u.reply->code = code;
     reply.u.reply->reason = cstring(reason);
+    reply.u.reply->local_reply = true;
 
     translate_hdr(&reply,reply.from, req,req->from);
     reply.from->p = new sip_from_to();

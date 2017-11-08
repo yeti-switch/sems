@@ -87,13 +87,15 @@ struct sip_reply
 {
     int     code;
     cstring reason;
+    bool local_reply;
 
     sip_reply()
 	: code(0)
     {}
 
     sip_reply(int code, const cstring& reason)
-	: code(code), reason(reason)
+    : code(code), reason(reason),
+      local_reply(false)
     {}
 };
 

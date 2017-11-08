@@ -700,6 +700,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
 
     reply.code   = msg->u.reply->code;
     reply.reason = c2stlstr(msg->u.reply->reason);
+    reply.local_reply = msg->u.reply->local_reply;
 
     if(get_contact(msg) && get_contact(msg)->value.len){
 
