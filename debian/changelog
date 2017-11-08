@@ -1,3 +1,12 @@
+sems (1.7.55-1) stable; urgency=low
+
+  * 08dbcbdd trans_layer: send AmSipRedirect event to the session on successfull redirect
+  * faba1caf sip_reply, AmSipReply: add flag 'local_reply' to mark locally generated replies
+  * 3c0b92d0 jsonrpc: method '_tree': skip factories with failed '_list' method
+  * 1566d44f trans_layer: internal 301/302 redirects processing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 09 Nov 2017 00:08:38 +0200
+
 sems (1.7.54-1) stable; urgency=low
 
   * CoreRpc: force dotted methods usage
