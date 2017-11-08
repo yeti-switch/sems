@@ -49,6 +49,8 @@ using std::string;
 #include <map>
 using std::map;
 
+#include <memory>
+
 struct sip_msg;
 struct sip_uri;
 class sip_trans;
@@ -70,6 +72,8 @@ class msg_logger;
 #define TR_FLAG_NEXT_HOP_RURI 1
 // disable blacklist
 #define TR_FLAG_DISABLE_BL    2
+// allow 301/302 redirrect
+#define TR_FLAG_ALLOW_REDIRECT 4
 
 /* Each counter has a method for incrementing to allow changing implementation
  * of the stats class later without touching the code using it. (One possible
@@ -180,7 +184,8 @@ public:
 		     const cstring& _next_hop, int out_interface = -1,
 			 unsigned int flags=0, msg_logger* logger=NULL,msg_sensor *sensor=NULL,
 			 sip_timers_override *timers_override = NULL,
-			 sip_target_set* target_set_override = NULL);
+			 sip_target_set* target_set_override = NULL,
+			 unsigned int redirects_allowed = 0);
 
     /**
      * Cancels a request. 
@@ -276,13 +281,20 @@ protected:
      */
     int try_next_ip(trans_bucket* bucket, sip_trans* tr, bool use_new_trans);
 
+    int retarget(sip_trans* t, sip_msg* &msg,
+                 std::unique_ptr<sip_trans> &new_tr);
+
     /**
      * Implements the state changes for the UAC state machine
      * @return -1 if errors
      * @return transaction state if successfull
      */
-    int update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* msg);
-	int update_uac_request(trans_bucket* bucket, sip_trans*& t, sip_msg* msg, sip_timers_override *timers_override = NULL);
+    int update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* &msg);
+    int update_uac_request(
+        trans_bucket* bucket,
+        sip_trans*& t, sip_msg* msg,
+        sip_timers_override *timers_override = NULL,
+        unsigned int redirects_allowed = 0);
 
     /**
      * Implements the state changes for the UAS state machine

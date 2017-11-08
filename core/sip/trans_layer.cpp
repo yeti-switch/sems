@@ -66,6 +66,10 @@
 
 #include <algorithm>
 
+#define update_reply_msg(new_code, new_reason) \
+    msg->u.reply->code = new_code; \
+    msg->u.reply->reason = cstring(new_reason);
+
 static trsp_acl fake_acl;
 static trsp_acl fake_opt_acl;
 
@@ -1229,7 +1233,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 			       int out_interface, unsigned int flags,
 				   msg_logger* logger,msg_sensor *sensor,
 				   sip_timers_override *timers_override,
-				   sip_target_set* target_set_override)
+				   sip_target_set* target_set_override,
+				   unsigned int redirects_allowed)
 {
     // Request-URI
     // To
@@ -1358,7 +1363,9 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	int method = p_msg->u.request->method;
 
 	DBG("update_uac_request tt->_t =%p\n", tt->_t);
-	err = update_uac_request(tt->_bucket,tt->_t,p_msg, timers_override);
+	err = update_uac_request(
+		tt->_bucket,tt->_t,p_msg,
+		timers_override, redirects_allowed);
 	if(err < 0){
 	    DBG("Could not update UAC state for request\n");
 	    delete p_msg;
@@ -1876,7 +1883,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trs
 }
 
 
-int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* msg)
+int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* &msg)
 {
     assert(msg->type == SIP_REPLY);
 
@@ -1955,23 +1962,44 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
     if(t->msg->u.request->method == sip_request::INVITE){
     
 	if(reply_code >= 300){
-	
-		bool forget_reply = false;
-		if(reply_code == 503 &&
-			(t->state == TS_CALLING ||
-			t->state == TS_PROCEEDING)) {
-		/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
-						 default_bl_ttl,"503");*/
 
-			if(msg->local_socket) { // remote reply
-				if(!try_next_ip(bucket,t,true))
-					forget_reply = true;
-			} else { //local reply
-				if(!try_next_ip(bucket,t,false))
-					goto end;
+		bool forget_reply = false;
+		if( t->state == TS_CALLING ||
+			t->state == TS_PROCEEDING)
+		{
+			if(reply_code == 503) {
+				/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
+					 default_bl_ttl,"503");*/
+				if(msg->local_socket) { // remote reply
+					if(!try_next_ip(bucket,t,true))
+						forget_reply = true;
+				} else { //local reply
+					if(!try_next_ip(bucket,t,false))
+						goto end;
+				}
+			} else if(msg->local_socket &&
+					  (reply_code==302 ||
+					  reply_code==301))
+			{
+				std::unique_ptr<sip_trans> new_tr;
+				if(!retarget(t,msg,new_tr)) {
+					if(!try_next_ip(bucket,new_tr.get(),true)) {
+						/* successfull try_next_ip after retarget
+						 * try_next_ip generated new transaction with
+						 * retargeted request. don't pass reply to UA */
+						forget_reply = true;
+					} else {
+						/* failed try_next_ip after successfull retarget
+						 * replace code/reason and pass response to UA */
+						update_reply_msg(500, "No redirect destination available");
+					}
+				}
+				/* retarget failed
+				 * reply code/reason were updated by retarget() function
+				 * pass it to UA */
 			}
 		}
-    
+
 	    // Final error reply
 	    switch(t->state){
 		
@@ -2159,7 +2187,11 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
     return 0;
 }
 
-int _trans_layer::update_uac_request(trans_bucket* bucket, sip_trans*& t, sip_msg* msg, sip_timers_override *timers_override)
+int _trans_layer::update_uac_request(
+    trans_bucket* bucket,
+    sip_trans*& t, sip_msg* msg,
+    sip_timers_override *timers_override,
+    unsigned int redirects_allowed)
 {
     if(msg->u.request->method != sip_request::ACK){
 	t = bucket->add_trans(msg,TT_UAC);
@@ -2232,6 +2264,8 @@ int _trans_layer::update_uac_request(trans_bucket* bucket, sip_trans*& t, sip_ms
 	}
 	break;
     }
+
+    t->redirects_allowed = redirects_allowed;
 
     return 0;
 }
@@ -2736,6 +2770,7 @@ sip_trans* _trans_layer::copy_uac_trans(sip_trans* tr)
     
     n_tr->type  = tr->type;
     n_tr->flags = tr->flags;
+    n_tr->redirects_allowed = tr->redirects_allowed;
 
     if(tr->dialog_id.len) {
 	n_tr->dialog_id.s = new char[tr->dialog_id.len];
@@ -2830,7 +2865,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 	}
 
 	bucket->append(tr);	
-    }
+	} //if(use_new_trans)
     else {
 	// copy the new address back
 	memcpy(&tr->msg->remote_ip,&sa,sizeof(sockaddr_storage));
@@ -2931,6 +2966,126 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 			tr->reset_timer(STIMER_M,M_TIMER,bucket->get_id());
 		}
 	}
+
+    return 0;
+}
+
+int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
+                           std::unique_ptr<sip_trans> &new_tr)
+{
+    int res = 0;
+
+    if(t->redirects_allowed <= 0) {
+        DBG("retarget: redirect is not allowed");
+        update_reply_msg(403, "Redirect is not allowed");
+        return -1;
+    }
+
+    t->redirects_allowed--;
+
+    if(msg->contacts.empty()) {
+        DBG("retarget: no contacts in reply");
+        update_reply_msg(403, "No contact in redirect");
+        return -1;
+    }
+
+    //parse first contact
+    sip_header *reply_contact = *msg->contacts.begin();
+    sip_nameaddr contact_nameaddr;
+    const char* c = reply_contact->value.s;
+    if(parse_nameaddr_uri(
+        &contact_nameaddr,
+        &c,
+        reply_contact->value.len))
+    {
+        DBG("retarget: failed to parse first reply contact: '%.*s'",
+            reply_contact->value.len,
+            reply_contact->value.s);
+        update_reply_msg(500, "Failed to parse contact in redirect");
+        return -1;
+    }
+
+    sip_uri &parsed_contact = contact_nameaddr.uri;
+
+    //backup original RURI
+    cstring old_ruri = t->msg->u.request->ruri_str;
+
+    struct sip_uri parsed_r_uri;
+    if(parse_uri(&parsed_r_uri, old_ruri.s, old_ruri.len) < 0) {
+        DBG("retarget: could not parse local R-URI ('%.*s')",
+            old_ruri.len,old_ruri.s);
+        update_reply_msg(500, "Failed to parse request r-uri");
+        return -1;
+    }
+
+    //apply contact to ruri
+    string n_uri = string(old_ruri.s,
+                          parsed_r_uri.user.s - old_ruri.s);
+    if(parsed_contact.user.len) {
+        n_uri+=string(parsed_contact.user.s,
+                      parsed_contact.user.len)
+             + '@';
+    }
+    n_uri+=string(parsed_contact.host.s,
+                  parsed_contact.host.len);
+    if(parsed_contact.port!=5060) {
+        n_uri+= ":"
+             + string(parsed_contact.port_str.s,
+                      parsed_contact.port_str.len);
+    }
+
+    sip_msg tmp_msg(*t->msg);
+    tmp_msg.vias.pop_front();
+
+    std::unique_ptr<sip_trans> n_tr(copy_uac_trans(t));
+
+    tmp_msg.u.request->ruri_str = stl2cstr(n_uri);
+
+    DBG("retarget: '%.*s' -> '%s'",
+        old_ruri.len, old_ruri.s,
+        n_uri.c_str());
+
+    sip_msg* p_msg=NULL;
+
+    res = generate_and_parse_new_msg(&tmp_msg,p_msg);
+    tmp_msg.release();
+
+    //restore original RURI
+    t->msg->u.request->ruri_str = old_ruri;
+
+    if(res) {
+        DBG("retarget: could not generate&parse new message");
+        update_reply_msg(500, "Failed to generate redirected request");
+        return -1;
+    }
+
+    n_tr->msg = p_msg;
+
+    //get next-hop
+    sip_destination dest;
+    list<sip_destination> dest_list;
+    if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp) < 0){
+        DBG("retarget: set_next_hop failed\n");
+        update_reply_msg(500, "Failed to get nexthop for redirected request");
+        return -1;
+    }
+    dest_list.push_back(dest);
+
+    //resolve targets
+    std::unique_ptr<sip_target_set> targets(new sip_target_set());
+    res = resolver::instance()->resolve_targets(dest_list,targets.get());
+    if(res < 0) {
+        DBG("retarget: resolve_targets failed %d",res);
+        update_reply_msg(478, "Unresolvable redirect destination");
+        return res;
+    }
+    targets->reset_iterator();
+    targets->debug();
+
+    //update transaction with resolved targets
+    n_tr->targets = targets.release();
+
+    new_tr.reset(n_tr.release());
 
     return 0;
 }

@@ -400,7 +400,8 @@ public:
 			  const string& hdrs = "",
 			  int flags = 0,
 			  sip_timers_override *timers_override = NULL,
-			  sip_target_set* target_set_override = NULL);
+			  sip_target_set* target_set_override = NULL,
+			  unsigned int redirects_allowed = 0);
 
   /**
    * Terminates pending UAS/UAC transactions

@@ -165,6 +165,9 @@ class sip_trans
 	/** hack to memorize timer_m override */
 	unsigned int timer_m;
 
+    /** how many allowed redirects is left */
+    unsigned int redirects_allowed;
+
     /**
      * Tells if a specific timer is set
      *

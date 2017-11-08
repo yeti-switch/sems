@@ -109,7 +109,8 @@ public:
 		    const string& next_hop = "", int outbound_interface = -1,
 			unsigned int flags = 0, msg_logger* logger = NULL, msg_sensor *sensor = NULL,
 			sip_timers_override *timers_override = NULL,
-			sip_target_set* target_set_override = NULL);
+			sip_target_set* target_set_override = NULL,
+			unsigned int redirects_allowed = 0);
 
     /**
      * Sends a SIP reply. 

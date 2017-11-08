@@ -800,7 +800,8 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				  const string& hdrs,
 				  int flags,
 				  sip_timers_override *timers_override,
-				  sip_target_set* target_set_override)
+				  sip_target_set* target_set_override,
+				  unsigned int redirects_allowed)
 {
   AmSipRequest req;
 
@@ -855,7 +856,8 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				   next_hop : "",
 				   outbound_interface,
 				   send_flags,logger,sensor,timers_override,
-				   target_set_override);
+				   target_set_override,
+				   redirects_allowed);
   if(res) {
     WARN("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
       req.method.c_str(),
