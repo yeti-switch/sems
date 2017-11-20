@@ -75,8 +75,8 @@ unsigned int AmAudioFormat::calcBytesToRead(unsigned int needed_samples) const
 {
   if (codec && codec->samples2bytes)
     return codec->samples2bytes(h_codec, needed_samples) * channels; // FIXME: channels
-
-  WARN("Cannot convert samples to bytes\n");
+  WARN("Cannot convert samples to bytes. codec_id: %d, rate: %u, codec: %p",
+    codec_id,rate,codec);
   return needed_samples * channels;
 }
 
@@ -84,7 +84,8 @@ unsigned int AmAudioFormat::bytes2samples(unsigned int bytes) const
 {
   if (codec && codec->bytes2samples)
     return codec->bytes2samples(h_codec, bytes) / channels;
-  WARN("Cannot convert bytes to samples\n");
+  WARN("Cannot convert bytes to samples. codec_id: %d, rate: %u, codec: %p",
+    codec_id,rate,codec);
   return bytes / channels;
 }
 
