@@ -1,3 +1,10 @@
+sems (1.7.56-1) stable; urgency=low
+
+  * 737c5cb5d AmAudioFormat: show codec_id for warning about bytes2samples/samples2bytes missed handler/context
+  * 00fdeb43a record audio on relay using decoding in media processor
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 20 Nov 2017 19:06:26 +0200
+
 sems (1.7.55-2) stable; urgency=low
 
   * trans_layer: disable redirect processing by default
