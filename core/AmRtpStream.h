@@ -311,6 +311,9 @@ protected:
   /** send initial rtp packet */
   bool            rtp_ping;
 
+  /** force packet buffering after relay */
+  bool            force_buffering;
+
   /** Session owning this stream */
   AmSession*         session;
 
@@ -402,7 +405,7 @@ public:
 		        unsigned int size );
 
   int receive( unsigned char* buffer, unsigned int size,
-	       unsigned int& ts, int& payload );
+           unsigned int& ts, int& payload, bool &relayed);
 
   void recvPacket(int fd);
 
@@ -606,6 +609,8 @@ public:
   /** set destination for logging all received/sent RTP and RTCP packets */
   void setLogger(msg_logger *_logger);
   void setSensor(msg_sensor *_sensor);
+
+  void setForceBuffering(bool buffering) { force_buffering = buffering; }
 
   void debug();
   virtual void getInfo(AmArg &ret);

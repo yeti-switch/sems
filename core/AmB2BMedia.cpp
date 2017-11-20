@@ -253,7 +253,7 @@ void AudioStreamData::resumeStreamProcessing()
   if (stream) stream->resumeReceiving();
 }
 
-void AudioStreamData::setRelayStream(AmRtpStream *other)
+void AudioStreamData::setRelayStream(AmRtpAudio *other)
 {
   if (!stream) return;
 
@@ -265,10 +265,10 @@ void AudioStreamData::setRelayStream(AmRtpStream *other)
 
   if (relay_enabled && other) {
     stream->setRelayStream(other);
+    stream->setForceBuffering(other->isRecordEnabled());
     stream->setRelayPayloads(relay_mask);
     if (!relay_paused)
       stream->enableRtpRelay();
-
     stream->setRAddr(relay_address, relay_port, relay_port+1);
   }
   else {
@@ -487,9 +487,14 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                 if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
                     if (got > 0) {
-                        updateRecvStats(src_stream);
-                        if (dtmf_queue && enable_dtmf_transcoding) {
-                            dtmf_queue->putDtmfAudio(buffer, got, ts);
+                        if(src_stream->isLastSamplesRelayed()) {
+                            stream->record(ts, buffer, sample_rate, got);
+                            return 0;
+                        } else {
+                            updateRecvStats(src_stream);
+                            if (dtmf_queue && enable_dtmf_transcoding) {
+                                dtmf_queue->putDtmfAudio(buffer, got, ts);
+                            }
                         }
                     }
                 }

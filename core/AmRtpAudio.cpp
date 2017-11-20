@@ -171,7 +171,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
   while(true) {
     size = AmRtpStream::receive((unsigned char*)samples,
 				(unsigned int)AUDIO_BUFFER_SIZE, rtp_ts,
-				new_payload);
+				new_payload,last_samples_relayed);
     if(size <= 0) {
 
       switch(size){
@@ -242,13 +242,29 @@ int AmRtpAudio::receive(unsigned long long system_ts)
 			  (ShortSample*)((unsigned char *)samples),
 			  PCM16_B2S(decoded_size), begin_talk);
 
-    if(!active) {
+    if(!active && !last_samples_relayed) {
       DBG("switching to active-mode\t(ts=%u;stream=%p)\n",
 	  rtp_ts,this);
       active = true;
     }
   }
   return size;
+}
+
+void AmRtpAudio::record(
+  unsigned long long system_ts, unsigned char* buffer,
+  int input_sample_rate, unsigned int size)
+{
+  if(!size) return;
+  if (mute) return;
+
+  if(record_enabled) {
+    RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
+  }
+
+  if(stereo_record_enabled) {
+    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+  }
 }
 
 int AmRtpAudio::get(unsigned long long system_ts, unsigned char* buffer, 
@@ -260,7 +276,7 @@ int AmRtpAudio::get(unsigned long long system_ts, unsigned char* buffer,
   if(ret < 0)
     return ret; // like nothing received?
 
-  if (!active) return 0;
+  if (!active && !last_samples_relayed) return 0;
 
   unsigned int user_ts = scaleSystemTS(system_ts);
 

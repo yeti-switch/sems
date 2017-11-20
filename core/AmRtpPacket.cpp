@@ -47,7 +47,8 @@
 #include "sip/msg_logger.h"
 
 AmRtpPacket::AmRtpPacket()
-  : data_offset(0)
+  : data_offset(0),
+    relayed(false)
 {
   // buffer will be overwritten by received packet 
   // of hdr+data - does not need to be set to 0s
@@ -275,6 +276,7 @@ int AmRtpPacket::send(int sd, const AmConfig::RTP_interface &iface,
 
 int AmRtpPacket::recv(int sd)
 {
+  relayed = false;
   socklen_t recv_addr_len = sizeof(struct sockaddr_storage);
   int ret = recvfrom(sd,buffer,sizeof(buffer),0,
 		     (struct sockaddr*)&addr,

@@ -56,6 +56,7 @@ public:
   unsigned int   timestamp;   
   unsigned int   ssrc;
   unsigned char  version;
+  bool           relayed;
 
   struct timeval recv_time;
   struct sockaddr_storage addr;

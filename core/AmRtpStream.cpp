@@ -372,7 +372,7 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
 // @param audio_buffer_ts [in]  current ts at the audio_buffer 
 
 int AmRtpStream::receive( unsigned char* buffer, unsigned int size,
-			  unsigned int& ts, int &out_payload)
+              unsigned int& ts, int &out_payload, bool &relayed)
 {
   AmRtpPacket* rp = NULL;
   int err = nextPacket(rp);
@@ -383,25 +383,29 @@ int AmRtpStream::receive( unsigned char* buffer, unsigned int size,
   if (!rp)
     return 0;
 
-  handleSymmetricRtp(&rp->addr,false);
+  relayed = rp->relayed;
 
-  /* do we have a new talk spurt? */
-  begin_talk = ((last_payload == 13) || rp->marker);
-  last_payload = rp->payload;
+  if(!relayed) {
+    handleSymmetricRtp(&rp->addr,false);
+
+      /* do we have a new talk spurt? */
+    begin_talk = ((last_payload == 13) || rp->marker);
+    last_payload = rp->payload;
+
+    add_if_no_exist(incoming_payloads,rp->payload);
+  }
 
   if(!rp->getDataSize()) {
     mem.freePacket(rp);
     return RTP_EMPTY;
   }
 
-  add_if_no_exist(incoming_payloads,rp->payload);
-
   if (rp->payload == getLocalTelephoneEventPT())
-    {
-	  recvDtmfPacket(rp);
+  {
+      if(!relayed) recvDtmfPacket(rp);
       mem.freePacket(rp);
       return RTP_DTMF;
-    }
+  }
 
   assert(rp->getData());
   if(rp->getDataSize() > size){
@@ -451,6 +455,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 	symmetric_rtp_endless(false),
     force_receive_dtmf(false),
 	rtp_ping(false),
+	force_buffering(false),
 	dead_rtp_time(AmConfig::DeadRtpTime),
     incoming_bytes(0),
 	outgoing_bytes(0),
@@ -933,6 +938,12 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 		{
 			relay_stream->relay(p, is_dtmf_packet,
 								force_receive_dtmf && !force_relay_dtmf);
+			if(force_buffering && p->relayed) {
+				if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
+					mem.freePacket(p);
+				}
+				return;
+			}
 		}
 
 		mem.freePacket(p);
@@ -1329,9 +1340,9 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
   if(p->send(l_sd, AmConfig::RTP_Ifs[l_if], &l_saddr) < 0){
     CLASS_ERROR("while sending RTP packet to '%s':%i\n",
 	  get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
-  }
-  else {
+  } else {
 	//if (logger) p->logSent(logger, &l_saddr);
+	p->relayed = true;
 	log_sent_rtp_packet(*p);
 	if(session) session->onAfterRTPRelay(p,&r_saddr);
 	add_if_no_exist(outgoing_relayed_payloads,p->payload);

@@ -149,7 +149,7 @@ class AudioStreamData {
      *
      * Removes the stream from AmRtpReceiver before updating and returns it back
      * once done. */
-    void setRelayStream(AmRtpStream *other);
+    void setRelayStream(AmRtpAudio *other);
 
     /** computes and stores payloads that can be relayed based on the
      * corresponding 'peer session' remote media line (i.e. what accepts the

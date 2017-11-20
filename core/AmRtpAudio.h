@@ -115,6 +115,7 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
   unsigned long long last_send_ts;
   bool               last_send_ts_i;
 
+  bool               last_samples_relayed;
   //
   // Default packet loss concealment functions
   //
@@ -137,6 +138,10 @@ public:
   int getCurrentPayload();
 
   int receive(unsigned long long system_ts);
+
+  void record(
+    unsigned long long system_ts, unsigned char* buffer,
+    int input_sample_rate, unsigned int size);
 
   // AmAudio interface
   int get(unsigned long long system_ts, unsigned char* buffer, 
@@ -163,6 +168,8 @@ public:
   // Conceals packet loss into the out_buffer
   // @return length in bytes of the recivered segment
   unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer);
+
+  bool isLastSamplesRelayed() { return last_samples_relayed; }
 
 protected:
   int read(unsigned int user_ts, unsigned int size) { return 0; }

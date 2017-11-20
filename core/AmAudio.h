@@ -387,6 +387,7 @@ public:
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
   void setStereoRecorder(const string &id, int channel_id);
+  bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
 };
 
 
