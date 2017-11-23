@@ -1,3 +1,9 @@
+sems (1.7.56-2) stable; urgency=low
+
+  * jsonArg: str2json: erase invalid utf8 bytes from the strings without special characters
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 23 Nov 2017 20:13:23 +0200
+
 sems (1.7.56-1) stable; urgency=low
 
   * 737c5cb5d AmAudioFormat: show codec_id for warning about bytes2samples/samples2bytes missed handler/context
