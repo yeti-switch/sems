@@ -55,8 +55,12 @@ string str2json(const char* str, size_t len)
 {
     // borrowed from jsoncpp
     // Not sure how to handle unicode...
-    if (strpbrk(str, "\"\\\b\f\n\r\t") == NULL)
-      return string("\"") + str + "\"";
+    if (strpbrk(str, "\"\\\b\f\n\r\t") == NULL) {
+      string result = string("\"") + str + "\"";
+      fixup_utf8_inplace(result);
+      return result;
+    }
+
     // We have to walk value and escape any special characters.
     // Appending to std::string is not efficient, but this should be rare.
     // (Note: forward slashes are *not* rare, but I am not escaping them.)
