@@ -1,3 +1,9 @@
+sems (1.7.56-3) stable; urgency=low
+
+  * AmSipSubscription: do not terminate active subscriptions on NOTIFY replies without Expire header
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 25 Nov 2017 15:41:35 +0200
+
 sems (1.7.56-2) stable; urgency=low
 
   * jsonArg: str2json: erase invalid utf8 bytes from the strings without special characters

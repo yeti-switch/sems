@@ -364,7 +364,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
     AmAppTimer::instance()->removeTimer(&timer_n);
 
     sub_state_txt = strip_header_params(sub_state_txt);
-    if(notify_expire && (sub_state_txt == "active")) {
+    if(sub_state_txt == "active"){
       setState(SubState_active);
     }
     else if(notify_expire && (sub_state_txt == "pending")){
