@@ -79,7 +79,7 @@ int _SipCtrlInterface::init_udp_servers(int if_num)
 	new udp_trsp_socket(if_num,AmConfig::SIP_Ifs[if_num].SigSockOpts
 			    | (AmConfig::ForceOutboundIf ? 
 			       trsp_socket::force_outbound_if : 0)
-			    | (AmConfig::UseRawSockets ?
+				| (AmConfig::SIP_Ifs[if_num].SigSockOpts&trsp_socket::use_raw_sockets ?
 			       trsp_socket::use_raw_sockets : 0),
 			    AmConfig::SIP_Ifs[if_num].NetIfIdx);
 	
