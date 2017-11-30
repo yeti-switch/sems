@@ -939,9 +939,11 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 			relay_stream->relay(p, is_dtmf_packet,
 								force_receive_dtmf && !force_relay_dtmf);
 			if(force_buffering && p->relayed) {
+				receive_mut.lock();
 				if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
 					mem.freePacket(p);
 				}
+				receive_mut.unlock();
 				return;
 			}
 		}
