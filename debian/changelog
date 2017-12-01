@@ -1,3 +1,9 @@
+sems (1.7.56-5) stable; urgency=low
+
+  * uac_auth: accept challenge algorithm MD5 in lowercase
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 01 Dec 2017 17:24:40 +0200
+
 sems (1.7.56-4) stable; urgency=low
 
   * 6d7daec6 AmRtpStream.cpp: bufferPacket: guard forced after realy receive_buf insert with receive_mut
