@@ -217,6 +217,14 @@ void AmRtpStream::setLocalPort(unsigned short p)
     throw string ("while setting local address reusable.");
   }
 
+  int tos = AmConfig::RTP_Ifs[l_if].tos_byte;
+  if(tos &&
+     (setsockopt(l_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1 ||
+      setsockopt(l_rtcp_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1))
+  {
+    CLASS_WARN("failed to set IP_TOS for descriptors %d/%d",l_sd,l_rtcp_sd);
+  }
+
   l_port = port;
   l_rtcp_port = port+1;
 
@@ -1246,7 +1254,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
     err = raw_sender::send((char*)buffer,recved_bytes,
 			   AmConfig::RTP_Ifs[l_if].NetIfIdx,
 			   &relay_stream->l_saddr,
-			   &rtcp_raddr);
+			   &rtcp_raddr,AmConfig::RTP_Ifs[l_if].tos_byte);
   }
   else {
     err = sendto(relay_stream->l_rtcp_sd,buffer,recved_bytes,0,

@@ -85,10 +85,14 @@ protected:
     // ORed field of socket_option
     unsigned int socket_options;
 
+    uint8_t tos_byte;
+
 public:
     trsp_socket(unsigned short if_num, unsigned int opts,
 		unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
+
+    int set_tos_byte(uint8_t byte);
 
     /**
      * Binds the transport socket to an address

@@ -169,7 +169,9 @@ static int readInterfaces(AmConfigReader& cfg);
 AmConfig::IP_interface::IP_interface()
   : LocalIP(),
     PublicIP(),
-    NetIfIdx(0)
+    NetIfIdx(0),
+    dscp(0),
+    tos_byte(0)
 {
 }
 
@@ -948,6 +950,11 @@ static int readSIPInterface(AmConfigReader& cfg, const string& i_name)
     return -1;
   }
 
+  if(cfg.hasParameter("sip_dscp" + suffix)) {
+    intf.dscp = cfg.getParameterInt("sip_dscp" + suffix);
+    intf.tos_byte = intf.dscp << 2;
+  }
+
   return AmConfig::insert_SIP_interface(intf);
 }
 
@@ -1051,6 +1058,11 @@ static int readRTPInterface(AmConfigReader& cfg, const string& i_name)
     intf.name = i_name;
   else
     intf.name = "default";
+
+  if(cfg.hasParameter("media_dscp" + suffix)) {
+    intf.dscp = cfg.getParameterInt("media_dscp" + suffix);
+    intf.tos_byte = intf.dscp << 2;
+  }
 
   return AmConfig::insert_RTP_interface(intf);
 }
@@ -1383,13 +1395,14 @@ void AmConfig::dump_Ifs()
     INFO("\t(%i) name='%s'" ";LocalIP='%s'" 
      ";udp_local_port='%u'"
      ";tcp_local_port='%u'"
-     ";PublicIP='%s';TCP=%u/%u",
+     ";PublicIP='%s';TCP=%u/%u;DSCP=%u",
 	 i,it_ref.name.c_str(),it_ref.LocalIP.c_str(),
 	 it_ref.udp_local_port,
 	 it_ref.tcp_local_port,
 	 it_ref.PublicIP.c_str(),
 	 it_ref.tcp_connect_timeout,
-	 it_ref.tcp_idle_timeout);
+	 it_ref.tcp_idle_timeout,
+	 it_ref.dscp);
   }
   
   INFO("Signaling address map:");
@@ -1411,9 +1424,10 @@ void AmConfig::dump_Ifs()
     RTP_interface& it_ref = RTP_Ifs[i];
 
     INFO("\t(%i) name='%s'" ";LocalIP='%s'" 
-	 ";Ports=[%u;%u]" ";PublicIP='%s'",
+     ";Ports=[%u;%u]" ";PublicIP='%s';DSCP=%u",
 	 i,it_ref.name.c_str(),it_ref.LocalIP.c_str(),
 	 it_ref.RtpLowPort,it_ref.RtpHighPort,
-	 it_ref.PublicIP.c_str());
+	 it_ref.PublicIP.c_str(),
+	 it_ref.dscp);
   }
 }

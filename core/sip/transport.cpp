@@ -39,13 +39,44 @@ trsp_socket::trsp_socket(unsigned short if_num, unsigned int opts,
 			 unsigned int sys_if_idx, int sd)
 	: sd(sd), ip(), port(0), actual_ip(), actual_port(0),
       if_num(if_num), sys_if_idx(sys_if_idx),
-      socket_options(opts)
+      socket_options(opts), tos_byte(0)
 {
     memset(&addr,0,sizeof(sockaddr_storage));
 }
 
 trsp_socket::~trsp_socket()
 {
+}
+
+int trsp_socket::set_tos_byte(uint8_t byte)
+{
+    DBG("trying to set IP_TOS for %d socket buffer to 0x%02x",
+        sd,byte);
+
+    int tos = byte;
+
+    int ret = setsockopt(sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos));
+    if(ret < 0) {
+        ERROR("failed to set IP_TOS 0x%0x for socket %d. err: %d",byte,sd,ret);
+        return 1;
+    }
+
+    int set_tos;
+    socklen_t toslen = sizeof(tos);
+    ret = getsockopt(sd, IPPROTO_IP, IP_TOS,  &set_tos, &toslen);
+    if(ret < 0) {
+        ERROR("failed to get IP_TOS for socket %d. err: %d",sd,ret);
+        return 1;
+    }
+
+    if(set_tos != tos) {
+        ERROR("failed to set IP_TOS for %d",sd);
+        return 1;
+    }
+
+    tos_byte = byte;
+
+    return 0;
 }
 
 const char* trsp_socket::get_ip() const

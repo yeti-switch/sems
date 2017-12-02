@@ -102,6 +102,10 @@ int _SipCtrlInterface::init_udp_servers(int if_num)
 	udp_socket->set_recvbuf_size(udp_rcvbuf);
     }
 
+    if(AmConfig::SIP_Ifs[if_num].tos_byte) {
+        udp_socket->set_tos_byte(AmConfig::SIP_Ifs[if_num].tos_byte);
+    }
+
     trans_layer::instance()->register_transport(udp_socket);
     udp_sockets[if_num] = udp_socket;
     inc_ref(udp_socket);
@@ -149,6 +153,10 @@ int _SipCtrlInterface::init_tcp_servers(int if_num)
 
 	delete tcp_socket;
 	return -1;
+    }
+
+    if(AmConfig::SIP_Ifs[if_num].tos_byte) {
+        tcp_socket->set_tos_byte(AmConfig::SIP_Ifs[if_num].tos_byte);
     }
 
     //TODO: add some more threads

@@ -97,6 +97,10 @@ struct AmConfig
     string       NetIf;
     unsigned int NetIfIdx;
 
+    /** DSCP */
+    uint8_t dscp;
+    int tos_byte;
+
     IP_interface();
 
     string getIP() {

@@ -456,11 +456,11 @@ inline static int mk_udp_hdr(struct udphdr* u,
  */
 inline static int mk_ip_hdr(struct ip* iph, struct in_addr* from,
 			    struct in_addr* to, int payload_len,
-			    unsigned char proto)
+				unsigned char proto, int tos)
 {
 	iph->ip_hl = sizeof(struct ip)/4;
 	iph->ip_v = 4;
-	iph->ip_tos = 0;
+	iph->ip_tos = tos;
 	/* on freebsd ip_len _must_ be in _host_ byte order instead
 	   of network byte order. On linux the length is ignored (it's filled
 	   automatically every time). */
@@ -560,7 +560,7 @@ int raw_udp4_send(int rsock, char* buf, unsigned int len,
 int raw_iphdr_udp4_send(int rsock, const char* buf, unsigned int len,
 			const sockaddr_storage* from,
 			const sockaddr_storage* to,
-			unsigned short mtu)
+			unsigned short mtu, int tos)
 {
 	struct msghdr snd_msg;
 	struct iovec iov[2];
@@ -607,7 +607,7 @@ int raw_iphdr_udp4_send(int rsock, const char* buf, unsigned int len,
 	/* prepare the udp & ip headers */
 	mk_udp_hdr(&hdr.udp, from, to, (unsigned char*)buf, len, 1);
 	mk_ip_hdr(&hdr.ip, &SAv4(from)->sin_addr, &SAv4(to)->sin_addr,
-		  len + sizeof(hdr.udp), IPPROTO_UDP);
+		  len + sizeof(hdr.udp), IPPROTO_UDP, tos);
 	iov[0].iov_base=(char*)&hdr;
 	iov[0].iov_len=sizeof(hdr);
 	snd_msg.msg_iovlen=2;

@@ -262,6 +262,8 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         am_iface["use_raw_sockets"] = (iface.SigSockOpts&trsp_socket::use_raw_sockets)!= 0;
         am_iface["force_via_address"] = (iface.SigSockOpts&trsp_socket::force_via_address) != 0;
         am_iface["force_outbound_if"] = (iface.SigSockOpts&trsp_socket::force_outbound_if) != 0;
+        am_iface["dscp"] = iface.dscp;
+        am_iface["tos_byte"] = iface.tos_byte;
         sig[iface.name] = am_iface;
     }
 
@@ -277,6 +279,8 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         am_iface["rtp_low_port"] = iface.RtpLowPort;
         am_iface["rtp_high_port"] = iface.RtpHighPort;
         am_iface["use_raw_sockets"] = (iface.MediaSockOpts&trsp_socket::use_raw_sockets)!= 0;
+        am_iface["dscp"] = iface.dscp;
+        am_iface["tos_byte"] = iface.tos_byte;
         string name = iface.name.empty() ? "default" : iface.name;
         rtp[name] = am_iface;
     }

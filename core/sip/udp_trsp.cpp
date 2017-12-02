@@ -284,7 +284,7 @@ int udp_trsp_socket::send(const sockaddr_storage* sa,
     }
 
     if(socket_options & use_raw_sockets)
-	return raw_sender::send(msg,msg_len,sys_if_idx,&addr,sa);
+    return raw_sender::send(msg,msg_len,sys_if_idx,&addr,sa,tos_byte);
 
     if(socket_options & force_outbound_if)
     	return sendmsg(sa,msg,msg_len);

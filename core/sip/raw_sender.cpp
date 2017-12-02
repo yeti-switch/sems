@@ -41,11 +41,12 @@ err:
 }
 
 int raw_sender::send(const char* buf, unsigned int len, int sys_if_idx,
-		     const sockaddr_storage* from, const sockaddr_storage* to)
+             const sockaddr_storage* from, const sockaddr_storage* to, int tos)
 {
   //TODO: grab the MTU from the interface def
   int ret = raw_iphdr_udp4_send(rsock,buf,len,from,to,
-				AmConfig::SysIfs[sys_if_idx].mtu);
+                AmConfig::SysIfs[sys_if_idx].mtu,
+                tos);
   if(ret < 0) {
     ERROR("send(): %s",strerror(errno));
     return ret;

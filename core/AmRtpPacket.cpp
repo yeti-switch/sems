@@ -264,7 +264,7 @@ int AmRtpPacket::send(int sd, const AmConfig::RTP_interface &iface,
   unsigned int sys_if_idx = iface.NetIfIdx;
 
   if(sys_if_idx && iface.MediaSockOpts&trsp_socket::use_raw_sockets) {
-    return raw_sender::send((char*)buffer,b_size,sys_if_idx,l_saddr,&addr);
+    return raw_sender::send((char*)buffer,b_size,sys_if_idx,l_saddr,&addr,iface.tos_byte);
   }
 
   if(sys_if_idx && AmConfig::ForceOutboundIf) {
