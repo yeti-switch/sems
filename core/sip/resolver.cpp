@@ -192,124 +192,124 @@ public:
 
     int next_ip(dns_handle* h, sockaddr_storage* sa)
     {
-	int& index = h->srv_n;
-	if(index >= (int)ip_vec.size()) return -1;
-	
-	if(h->srv_e != this){
-	    if(h->srv_e) dec_ref(h->srv_e);
-	    h->srv_e = this;
-	    inc_ref(this);
-	    h->srv_n = 0;
-	    h->srv_used = 0;
-	}
-	else if(h->ip_n != -1){
-	    if(h->port) {
-		DBG("setting port to %i",ntohs(h->port));
-		((sockaddr_in*)sa)->sin_port = h->port;
-	    }
-	    else {
-		DBG("setting port to %i",default_service_port);
-		((sockaddr_in*)sa)->sin_port = htons(default_service_port);
-	    }
-	    return h->ip_e->next_ip(h,sa);
-	}
+        int& index = h->srv_n;
+        if(index >= (int)ip_vec.size()) return -1;
 
-	if((index < 0) ||
-	   (index >= (int)ip_vec.size()))
-	    return -1;
-	
-	// reset IP record
-	if(h->ip_e){
-	    dec_ref(h->ip_e);
-	    h->ip_e = NULL;
-	    h->ip_n = 0;
-	}
-	
-	list<pair<unsigned int,int> > srv_lst;
-	int i = index;
-	
-	// fetch current priority
-	unsigned short p = ((srv_entry*)ip_vec[i])->p;
-	unsigned int w_sum = 0;
-	
-	// and fetch records with same priority
-	// which have not been chosen yet
-	int srv_lst_size=0;
-	unsigned int used_mask=(1<<i);
-	while( p==((srv_entry*)ip_vec[i])->p ){
-	    
-	    if(!(used_mask & h->srv_used)){
-		w_sum += ((srv_entry*)ip_vec[i])->w;
-		srv_lst.push_back(std::make_pair(w_sum,i));
-		srv_lst_size++;
-	    }
-	    
-	    if((++i >= (int)ip_vec.size()) ||
-	       (i >= (int)MAX_SRV_RR)){
-		break;
-	    }
-	    
-	    used_mask = used_mask << 1;
-	}
-	
-	srv_entry* e=NULL;
-	if((srv_lst_size > 1) && w_sum){
-	    // multiple records: apply weigthed load balancing
-	    // - remember the entries which have already been used
-	    unsigned int r = random() % (w_sum+1);
-	    
-	    list<pair<unsigned int,int> >::iterator srv_lst_it = srv_lst.begin();
-	    while(srv_lst_it != srv_lst.end()){
-		if(srv_lst_it->first >= r){
-		    h->srv_used |= (1<<(srv_lst_it->second));
-		    e = (srv_entry*)ip_vec[srv_lst_it->second];
-		    break;
-		}
-		++srv_lst_it;
-	    }
-	    
-	    // will only happen if the algorithm
-	    // is broken
-	    if(!e)
-		return -1;
-	}
-	else {
-	    // single record or all weights == 0
-	    e = (srv_entry*)ip_vec[srv_lst.begin()->second];
-	    
-	    if( (i<(int)ip_vec.size()) && (i<(int)MAX_SRV_RR)){
-		index = i;
-	    }
-	    else if(!w_sum){
-		index++;
-	    }
-	    else {
-		index = -1;
-	    }
-	}
-	
-	//TODO: find a solution for IPv6
-	h->port = htons(e->port);
-	if(h->port) {
-	    DBG("setting port to %i",e->port);
-	    ((sockaddr_in*)sa)->sin_port = h->port;
-	}
-	else {
-	    DBG("setting port to 5060");
-	    ((sockaddr_in*)sa)->sin_port = htons(5060);
-	}
+        if(h->srv_e != this) {
+            if(h->srv_e) dec_ref(h->srv_e);
+            h->srv_e = this;
+            inc_ref(this);
+            h->srv_n = 0;
+            h->srv_used = 0;
+        } else if(h->ip_n != -1) {
+            if(h->port) {
+                //DBG("setting port to %i",ntohs(h->port));
+                ((sockaddr_in*)sa)->sin_port = h->port;
+            } else {
+                //DBG("setting port to %i",default_service_port);
+                ((sockaddr_in*)sa)->sin_port = htons(default_service_port);
+            }
+            return h->ip_e->next_ip(h,sa);
+        }
 
-	// check if name is an IP address
-	if(am_inet_pton(e->target.c_str(),sa) == 1) {
-	    DBG("target is an IP address !!! (%i)",
-		ntohs(((sockaddr_in*)sa)->sin_port));
-	    h->ip_n = -1; // flag end of IP list
-	    return 0;
-	}
+        if((index < 0) ||
+           (index >= (int)ip_vec.size()))
+        {
+            return -1;
+        }
 
-	DBG("target must be resolved first !!! (%i)",
-	    ntohs(((sockaddr_in*)sa)->sin_port));
-	return resolver::instance()->resolve_name(e->target.c_str(),h,sa,IPv4);
+        // reset IP record
+        if(h->ip_e) {
+            dec_ref(h->ip_e);
+            h->ip_e = NULL;
+            h->ip_n = 0;
+        }
+
+        list<pair<unsigned int,int> > srv_lst;
+        int i = index;
+
+        // fetch current priority
+        unsigned short p = ((srv_entry*)ip_vec[i])->p;
+        unsigned int w_sum = 0;
+
+        // and fetch records with same priority
+        // which have not been chosen yet
+        int srv_lst_size=0;
+        unsigned int used_mask=(1<<i);
+
+        while(p == ((srv_entry*)ip_vec[i])->p) {
+
+            if(!(used_mask & h->srv_used)) {
+                w_sum += ((srv_entry*)ip_vec[i])->w;
+                srv_lst.push_back(std::make_pair(w_sum,i));
+                srv_lst_size++;
+            }
+
+            if((++i >= (int)ip_vec.size()) ||
+               (i >= (int)MAX_SRV_RR))
+            {
+                break;
+            }
+
+            used_mask = used_mask << 1;
+        }
+
+        srv_entry* e=NULL;
+        if((srv_lst_size > 1) && w_sum) {
+            // multiple records: apply weigthed load balancing
+            // - remember the entries which have already been used
+            unsigned int r = random() % (w_sum+1);
+            list<pair<unsigned int,int> >::iterator srv_lst_it = srv_lst.begin();
+            while(srv_lst_it != srv_lst.end()) {
+                if(srv_lst_it->first >= r) {
+                    h->srv_used |= (1<<(srv_lst_it->second));
+                    e = (srv_entry*)ip_vec[srv_lst_it->second];
+                    break;
+                }
+                ++srv_lst_it;
+            }
+            // will only happen if the algorithm
+            // is broken
+            if(!e)
+                return -1;
+        } else if(srv_lst_size == 0) {
+            //empty srv_lst
+            return -1;
+        } else {
+            // single record or all weights == 0
+            e = (srv_entry*)ip_vec[srv_lst.begin()->second];
+            if( (i<(int)ip_vec.size()) && (i<(int)MAX_SRV_RR)) {
+                index = i;
+            } else if(!w_sum){
+                index++;
+            } else {
+                index = -1;
+            }
+        }
+
+        //TODO: find a solution for IPv6
+        h->port = htons(e->port);
+        if(h->port) {
+            //DBG("setting port to %i",e->port);
+            ((sockaddr_in*)sa)->sin_port = h->port;
+        } else {
+            //DBG("setting port to 5060");
+            ((sockaddr_in*)sa)->sin_port = htons(5060);
+        }
+
+        // check if name is an IP address
+        if(am_inet_pton(e->target.c_str(),sa) == 1) {
+            DBG("target '%s' is an IP address srv_port: %i",
+                e->target.c_str(),
+                ntohs(((sockaddr_in*)sa)->sin_port));
+            h->ip_n = -1; // flag end of IP list
+            return 0;
+        }
+
+        DBG("target '%s' must be resolved first. srv_port: %i",
+            e->target.c_str(),
+            ntohs(((sockaddr_in*)sa)->sin_port));
+        return resolver::instance()->resolve_name(e->target.c_str(),h,sa,IPv4);
     }
 };
 
