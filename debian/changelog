@@ -1,3 +1,10 @@
+sems (1.7.56-6) stable; urgency=low
+
+  * add ability to specify DSCP for SIP and RTP packets
+  * resolver: fix segfault on DNS SRV balancing for mixed zero/non-zero weighted entries
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 12 Dec 2017 15:11:51 +0200
+
 sems (1.7.56-5) stable; urgency=low
 
   * uac_auth: accept challenge algorithm MD5 in lowercase
