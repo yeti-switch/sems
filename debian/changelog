@@ -1,3 +1,9 @@
+sems (1.7.57-1) stable; urgency=low
+
+  * AmBasicSipDialog: sendRequest: pass redirect replies from trans_layer to UA by default
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 14 Dec 2017 17:52:35 +0200
+
 sems (1.7.56-6) stable; urgency=low
 
   * add ability to specify DSCP for SIP and RTP packets
