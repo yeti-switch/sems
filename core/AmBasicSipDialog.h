@@ -401,7 +401,7 @@ public:
 			  int flags = 0,
 			  sip_timers_override *timers_override = NULL,
 			  sip_target_set* target_set_override = NULL,
-			  unsigned int redirects_allowed = 0);
+			  unsigned int redirects_allowed = -1);
 
   /**
    * Terminates pending UAS/UAC transactions
