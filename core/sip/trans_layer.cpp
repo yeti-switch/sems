@@ -3013,10 +3013,17 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     sip_header *reply_contact = *msg->contacts.begin();
     sip_nameaddr contact_nameaddr;
     const char* c = reply_contact->value.s;
+
+    //reject all data after the comma
+    unsigned int contact_len;
+    const char *comma_pos = (const char *)memchr(c,',',reply_contact->value.len);
+    if(NULL==comma_pos) contact_len = reply_contact->value.len;
+    else contact_len = comma_pos-c;
+
     if(parse_nameaddr_uri(
         &contact_nameaddr,
         &c,
-        reply_contact->value.len))
+        contact_len))
     {
         DBG("retarget: failed to parse first reply contact: '%.*s'",
             reply_contact->value.len,
