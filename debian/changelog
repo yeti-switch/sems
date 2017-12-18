@@ -1,3 +1,9 @@
+sems (1.7.56-7) stable; urgency=low
+
+  * 06a73ce8 trans_layer: 301/302 processing: support for comma-separated Contact header values. use the first one
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 18 Dec 2017 22:20:41 +0200
+
 sems (1.7.56-6) stable; urgency=low
 
   * add ability to specify DSCP for SIP and RTP packets
