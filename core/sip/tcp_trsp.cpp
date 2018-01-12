@@ -201,26 +201,30 @@ int tcp_trsp_socket::connect()
     return -1;
   }
 
-  if(socket_options & static_client_port) {
-    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
-        (void*)&true_opt, sizeof (true_opt)) == -1) {
-      ERROR("setsockopt(SO_REUSEADDR): %s\n",strerror(errno));
-      ::close(sd);
-      return -1;
-    }
+  if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
+     (void*)&true_opt, sizeof (true_opt)) == -1)
+  {
+    ERROR("setsockopt(SO_REUSEADDR): %s\n",strerror(errno));
+    ::close(sd);
+    return -1;
+  }
 
+  if(socket_options & static_client_port) {
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
-        (void*)&true_opt, sizeof (true_opt)) == -1) {
+       (void*)&true_opt, sizeof (true_opt)) == -1)
+    {
       ERROR("setsockopt(SO_REUSEPORT): %s\n",strerror(errno));
       ::close(sd);
       return -1;
     }
+  } else {
+      am_set_port(&addr,0);
+  }
 
-    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
-      ERROR("bind: %s\n",strerror(errno));
-      ::close(sd);
-      return -1;
-    }
+  if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
+    ERROR("bind: %s\n",strerror(errno));
+    ::close(sd);
+    return -1;
   }
 
   DBG("connecting to %s:%i...",
