@@ -182,6 +182,8 @@ public:
    */
   int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);
+
+  void getInfo(AmArg &ret);
 };
 
 class tcp_server_worker
@@ -206,6 +208,7 @@ public:
 
   void add_connection(tcp_trsp_socket* client_sock);
   void remove_connection(tcp_trsp_socket* client_sock);
+  void getInfo(AmArg &ret);
 };
 
 class tcp_server_socket: public trsp_socket
@@ -266,6 +269,8 @@ public:
 
   struct timeval* get_connect_timeout();
   struct timeval* get_idle_timeout();
+
+  void getInfo(AmArg &ret);
 };
 
 class tcp_trsp: public transport

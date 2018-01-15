@@ -985,6 +985,18 @@ void _SipCtrlInterface::prepare_routes_uas(const list<sip_header*>& routes, stri
     }
 }
 
+void _SipCtrlInterface::getInfo(AmArg &ret)
+{
+    ret.assertStruct();
+    //if_num
+    for(unsigned int i = 0;i < AmConfig::SIP_Ifs.size(); i++) {
+        tcp_server_socket &tcp_socket = *tcp_sockets[i];
+        AmConfig::SIP_interface &sip_if = AmConfig::SIP_Ifs[tcp_socket.get_if()];
+        AmArg &r = ret[sip_if.name];
+        tcp_socket.getInfo(r);
+    }
+}
+
 /** EMACS **
  * Local variables:
  * mode: c++

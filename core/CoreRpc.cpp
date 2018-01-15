@@ -3,6 +3,7 @@
 #include "sems.h"
 #include "AmSession.h"
 #include "AmEventDispatcher.h"
+#include "SipCtrlInterface.h"
 #include "AmSessionContainer.h"
 #include "ampi/HttpClientAPI.h"
 #include "sip/resolver.h"
@@ -143,6 +144,7 @@ void CoreRpc::init_rpc_tree()
     //show
     AmArg &show = reg_leaf(root,"show");
         reg_method(show,"status","",&CoreRpc::showStatus);
+        reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
         reg_method(show,"payloads","",&CoreRpc::showPayloads);
@@ -396,6 +398,11 @@ void CoreRpc::showStatus(const AmArg&, AmArg& ret)
     time_t now = time(NULL);
     ret["localtime"] = now;
     ret["uptime"] = difftime(now,start_time);
+}
+
+void CoreRpc::showConnections(const AmArg&, AmArg& ret)
+{
+    SipCtrlInterface::instance()->getInfo(ret);
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

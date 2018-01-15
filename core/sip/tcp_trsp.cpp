@@ -530,6 +530,14 @@ void tcp_trsp_socket::on_write(short ev)
   }
 }
 
+void tcp_trsp_socket::getInfo(AmArg &ret)
+{
+    AmLock l(sock_mut);
+
+    ret["sd"] = sd;
+    ret["queue_size"] = send_q.size();
+}
+
 tcp_server_worker::tcp_server_worker(tcp_server_socket* server_sock)
   : server_sock(server_sock)
 {
@@ -618,6 +626,15 @@ int tcp_server_worker::send(const sockaddr_storage* sa, const char* msg,
   dec_ref(sock);
 
   return ret;
+}
+
+void tcp_server_worker::getInfo(AmArg &ret)
+{
+    AmLock l(connections_mut);
+
+    ret.assertStruct();
+    for(auto const &it: connections)
+        it.second->getInfo(ret[it.first]);
 }
 
 void tcp_server_worker::run()
@@ -841,6 +858,14 @@ struct timeval* tcp_server_socket::get_idle_timeout()
     return &idle_timeout;
 
   return NULL;
+}
+
+void tcp_server_socket::getInfo(AmArg &ret)
+{
+    for(unsigned int i=0; i<workers.size(); i++) {
+        AmArg &r = ret[int2str(i)];
+        workers[i]->getInfo(r);
+    }
 }
 
 tcp_trsp::tcp_trsp(tcp_server_socket* sock, trsp_acl &acl, trsp_acl &opt_acl)

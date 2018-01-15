@@ -59,6 +59,7 @@ class CoreRpc final
     rpc_handler setDumpLevelFull;
 
     rpc_handler showStatus;
+    rpc_handler showConnections;
     rpc_handler showSessionsInfo;
     rpc_handler showSessionsCount;
     rpc_handler showSessionsLimit;

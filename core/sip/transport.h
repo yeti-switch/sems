@@ -33,6 +33,7 @@
 #include "../atomic_types.h"
 #include "../AmSubnet.h"
 #include <sys/socket.h>
+#include "AmArg.h"
 
 #include <string>
 using std::string;
@@ -180,6 +181,8 @@ public:
      */
     virtual int send(const sockaddr_storage* sa, const char* msg, 
 		     const int msg_len, unsigned int flags)=0;
+
+	virtual void getInfo(AmArg &) {}
 };
 
 class trsp_acl {
