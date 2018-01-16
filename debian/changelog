@@ -1,3 +1,10 @@
+sems (1.7.58-1) stable; urgency=low
+
+  * 18e0c1d6c CoreRpc: add show.connections method to show TCP workers connections
+  * c976fe126 tcp_trsp: explicit bind to the interface address both for dynamic/static port
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 16 Jan 2018 12:26:28 +0200
+
 sems (1.7.57-2) stable; urgency=low
 
   * 06a73ce8 trans_layer: 301/302 processing: support for comma-separated Contact header values. use the first one
