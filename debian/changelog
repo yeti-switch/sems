@@ -1,3 +1,9 @@
+sems (1.7.58-2) stable; urgency=low
+
+  * CoreRpc: show system status: set shutdown_request_time to null if last_shutdown_time is not set
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 17 Jan 2018 14:24:12 +0200
+
 sems (1.7.58-1) stable; urgency=low
 
   * 18e0c1d6c CoreRpc: add show.connections method to show TCP workers connections

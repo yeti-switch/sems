@@ -390,7 +390,7 @@ void CoreRpc::showStatus(const AmArg&, AmArg& ret)
 {
     ret["shutdown_mode"] = (bool)AmConfig::ShutdownMode;
     ret["shutdown_request_time"] = !timerisset(&last_shutdown_time) ?
-        "nil" : timeval2str(last_shutdown_time);
+        AmArg() : timeval2str(last_shutdown_time);
     ret["core_version"] = SEMS_VERSION;
     ret["sessions"] = (int)AmSession::getSessionNum();
     ret["dump_level"] = dump_level2str(AmConfig::DumpLevel);
