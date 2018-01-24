@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
+//avoid sockets in WAITING state. close() will send RST and immediately remove entry from hashtable
+#define TCP_STATIC_CLIENT_PORT_CLOSE_NOWAIT 1
+
 void tcp_trsp_socket::on_sock_read(int fd, short ev, void* arg)
 {
   if(ev & (EV_READ|EV_TIMEOUT)){
@@ -217,6 +220,18 @@ int tcp_trsp_socket::connect()
       ::close(sd);
       return -1;
     }
+#if TCP_STATIC_CLIENT_PORT_CLOSE_NOWAIT==1
+    struct linger linger_opt = {
+      .l_onoff = 1,
+      .l_linger = 0
+    };
+    if(setsockopt(sd, SOL_SOCKET, SO_LINGER,
+       (void*)&linger_opt, sizeof (struct linger)) == -1)
+    {
+      ERROR("setsockopt(SO_LINGER): %s\n",strerror(errno));
+      return -1;
+    }
+#endif
   } else {
       am_set_port(&addr,0);
   }
