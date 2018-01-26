@@ -45,8 +45,8 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
                       " by peer. callid: %s",req.callid.c_str());
                 AmBasicSipDialog::reply_error(
                     req, 421, SIP_REPLY_EXTENSION_REQUIRED,
-                    SIP_HDR_COLSP(SIP_HDR_REQUIRE)
-                    SIP_EXT_100REL CRLF);
+                    SIP_HDR_COLSP(SIP_HDR_REQUIRE) SIP_EXT_100REL CRLF,
+                    dlg->getMsgLogger());
                 if (hdl) hdl->onFailure();
                 return 0; // has been replied
             }
@@ -56,8 +56,8 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
             if (key_in_list(getHeader(req.hdrs,SIP_HDR_REQUIRE),SIP_EXT_100REL)) {
                 AmBasicSipDialog::reply_error(
                     req, 420, SIP_REPLY_BAD_EXTENSION,
-                    SIP_HDR_COLSP(SIP_HDR_UNSUPPORTED)
-                    SIP_EXT_100REL CRLF);
+                    SIP_HDR_COLSP(SIP_HDR_UNSUPPORTED) SIP_EXT_100REL CRLF,
+                    dlg->getMsgLogger());
                 if (hdl) hdl->onFailure();
                 return 0; // has been replied
             }
