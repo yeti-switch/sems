@@ -1,3 +1,12 @@
+sems (1.7.59-1) stable; urgency=low
+
+  * 6a02747dc Am100rel: split states for UAC/UAS. restore UAS state to the initial value after transaction
+  * b2744d1a6 Am100rel: pass dialog message logger ptr to reply_error
+  * 0cc532c23 Am100rel.cpp: fix identation
+  * 10f64c670 tcp_trsp: set SO_LINGER with timeout 0 for client sockets with static port
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 26 Jan 2018 16:00:01 +0200
+
 sems (1.7.58-2) stable; urgency=low
 
   * CoreRpc: show system status: set shutdown_request_time to null if last_shutdown_time is not set
