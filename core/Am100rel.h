@@ -31,7 +31,9 @@ public:
   };
   
 private:
-  State reliable_1xx;
+  State initial_state;
+  State uac_state;
+  State uas_state;
 
   unsigned rseq;          // RSeq for next request
   bool rseq_confirmed;    // latest RSeq is confirmed
@@ -43,8 +45,10 @@ private:
 public:
   Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl);
 
-  void setState(State s) { reliable_1xx = s; }
-  State getState() { return reliable_1xx; }
+  void setState(State s) { uac_state = uas_state = initial_state = s; }
+  State getInitialState() { return initial_state; }
+  State getUacState() { return uac_state; }
+  State getUasState() { return uas_state; }
 
   bool checkReply(AmSipReply& reply);
 

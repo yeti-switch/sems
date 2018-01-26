@@ -9,8 +9,11 @@
 #include "log.h"
 
 Am100rel::Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl)
-  : dlg(dlg), hdl(hdl), reliable_1xx(AmConfig::rel100),
-    rseq(0), rseq_1st(0), rseq_confirmed(false)
+  : dlg(dlg), hdl(hdl),
+    rseq(0), rseq_1st(0), rseq_confirmed(false),
+    initial_state(AmConfig::rel100),
+    uac_state(AmConfig::rel100),
+    uas_state(AmConfig::rel100)
 {
   // if (reliable_1xx)
   //   rseq = 0;
@@ -18,12 +21,12 @@ Am100rel::Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl)
 
 int  Am100rel::onRequestIn(const AmSipRequest& req)
 {
-    if (reliable_1xx == REL100_IGNORED)
+    if (uas_state == REL100_IGNORED)
         return 1;
 
   /* activate the 100rel, if needed */
   if (req.method == SIP_METH_INVITE) {
-        switch(reliable_1xx) {
+        switch(uas_state) {
         case REL100_SUPPORTED: /* if support is on, enforce if asked by UAC */
         case REL100_SUPPORTED_NOT_ANNOUNCED:
             if (key_in_list(getHeader(req.hdrs, SIP_HDR_SUPPORTED, SIP_HDR_SUPPORTED_COMPACT),
@@ -31,7 +34,7 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
                key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE),
                            SIP_EXT_100REL))
             {
-                reliable_1xx = REL100_REQUIRE;
+                uas_state = REL100_REQUIRE;
                 DBG(SIP_EXT_100REL " now active for callid: %s",req.callid.c_str());
             }
             break;
@@ -64,14 +67,14 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
             break;
         default:
             ERROR("BUG: unexpected value `%d' for '" SIP_EXT_100REL "' switch. callid: %s",
-                  reliable_1xx,req.callid.c_str());
+                  uas_state,req.callid.c_str());
 #ifndef NDEBUG
             abort();
 #endif
         } // switch reliable_1xx
 
     } else if (req.method == SIP_METH_PRACK) {
-        if (reliable_1xx != REL100_REQUIRE) {
+        if (uas_state != REL100_REQUIRE) {
             WARN("unexpected PRACK received while " SIP_EXT_100REL " not active. callid: %s",
                  req.callid.c_str());
             // let if float up
@@ -93,7 +96,7 @@ int  Am100rel::onRequestIn(const AmSipRequest& req)
 
 int  Am100rel::onReplyIn(const AmSipReply& reply)
 {
-    if (reliable_1xx == REL100_IGNORED)
+    if (uac_state == REL100_IGNORED)
         return 1;
 
     if (dlg->getStatus() != AmSipDialog::Trying &&
@@ -105,13 +108,13 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
     }
 
     if (100<reply.code && reply.code<200 && reply.cseq_method==SIP_METH_INVITE) {
-        switch(reliable_1xx) {
+        switch(uac_state) {
         case REL100_SUPPORTED:
         case REL100_SUPPORTED_NOT_ANNOUNCED:
             if (key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE),
                             SIP_EXT_100REL))
             {
-                reliable_1xx = REL100_REQUIRE;
+                uac_state = REL100_REQUIRE;
             }
             // no break!
             else
@@ -135,12 +138,12 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
             break;
         default:
             ERROR("BUG: unexpected value `%d' for " SIP_EXT_100REL " switch. callid: %s",
-                  reliable_1xx,reply.callid.c_str());
+                  uac_state,reply.callid.c_str());
 #ifndef NDEBUG
             abort();
 #endif
         } // switch reliable 1xx
-    } else if (reliable_1xx && reply.cseq_method==SIP_METH_PRACK) {
+    } else if (uas_state && reply.cseq_method==SIP_METH_PRACK) {
         if (300 <= reply.code) {
             // if PRACK fails, tear down session
             dlg->bye();
@@ -161,14 +164,14 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
 
 void Am100rel::onRequestOut(AmSipRequest& req)
 {
-    if (reliable_1xx == REL100_IGNORED ||
-        reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED ||
-        req.method!=SIP_METH_INVITE)
-    {
+    if(req.method!=SIP_METH_INVITE)
         return;
-    }
 
-    switch(reliable_1xx) {
+    switch(uac_state) {
+    case REL100_DISABLED:
+    case REL100_IGNORED:
+    case REL100_SUPPORTED_NOT_ANNOUNCED:
+        return;
     case REL100_SUPPORTED:
         if (! key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL))
             req.hdrs += SIP_HDR_COLSP(SIP_HDR_SUPPORTED) SIP_EXT_100REL CRLF;
@@ -179,23 +182,21 @@ void Am100rel::onRequestOut(AmSipRequest& req)
         break;
     default:
         ERROR("BUG: unexpected reliability switch value of '%d'. callid: %s",
-            reliable_1xx,req.callid.c_str());
-    case 0:
-        break;
+            uac_state,req.callid.c_str());
     }
 }
 
 void Am100rel::onReplyOut(AmSipReply& reply)
 {
-    if (reliable_1xx == REL100_IGNORED ||
-        reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED)
+    if (uas_state == REL100_IGNORED ||
+        uas_state == REL100_SUPPORTED_NOT_ANNOUNCED)
     {
         return;
     }
 
     if (reply.cseq_method == SIP_METH_INVITE) {
         if (100 < reply.code && reply.code < 200) {
-            switch(reliable_1xx) {
+            switch(uas_state) {
             case REL100_SUPPORTED:
                 if (! key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE),SIP_EXT_100REL))
                     reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SUPPORTED) SIP_EXT_100REL CRLF;
@@ -225,24 +226,30 @@ void Am100rel::onReplyOut(AmSipReply& reply)
             default:
                 break;
             } //switch (reliable_1xx)
-        } else if (reply.code < 300 && reliable_1xx == REL100_REQUIRE) { //code = 2xx
-            if (rseq && !rseq_confirmed) {
+        } else if (reply.code < 300) { //code = 2xx
+            if(uas_state == REL100_REQUIRE && rseq && !rseq_confirmed) {
                 // reliable 1xx is pending, 2xx'ing not allowed yet
                 DBG("last reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
                 throw AmSession::Exception(491, "last reliable 1xx not yet PRACKed");
             }
+            //set runtime state to the initial at the end of transaction
+            uas_state = initial_state;
+            DBG("sent 2xx. uas_state is set to the initial_state: %d",uas_state);
+        } else {
+            uas_state = initial_state;
+            DBG("sent final error reply. uas_state is set to the initial_state: %d",uas_state);
         }
     } //if (reply.cseq_method == SIP_METH_INVITE)
 }
 
 void Am100rel::onTimeout(const AmSipRequest& req, const AmSipReply& rpl)
 {
-    if (reliable_1xx == REL100_IGNORED)
+    if (initial_state == REL100_IGNORED)
         return;
 
     INFO("reply <%s> timed out (not PRACKed). callid: %s",
         rpl.print().c_str(),req.callid.c_str());
-    if (100 < rpl.code && rpl.code < 200 && reliable_1xx == REL100_REQUIRE &&
+    if (100 < rpl.code && rpl.code < 200 && uas_state == REL100_REQUIRE &&
         rseq == rpl.rseq && rpl.cseq_method == SIP_METH_INVITE)
     {
         INFO("reliable %d reply timed out; rejecting request. callid: %s",
@@ -255,15 +262,15 @@ void Am100rel::onTimeout(const AmSipRequest& req, const AmSipReply& rpl)
 
 bool Am100rel::checkReply(AmSipReply& reply)
 {
-    if (reliable_1xx == REL100_IGNORED ||
-        reliable_1xx == REL100_SUPPORTED_NOT_ANNOUNCED)
+    if (uas_state == REL100_IGNORED ||
+        uas_state == REL100_SUPPORTED_NOT_ANNOUNCED)
     {
         return false;
     }
 
     if (reply.cseq_method == SIP_METH_INVITE) {
         if (100 < reply.code && reply.code < 200) {
-            switch (reliable_1xx) {
+            switch (uas_state) {
             case REL100_REQUIRE:
                 if(rseq) {
                     if ((! rseq_confirmed) && (rseq_1st == rseq)) {
@@ -277,7 +284,7 @@ bool Am100rel::checkReply(AmSipReply& reply)
             default:
                 break;
             }
-        } else if (reply.code < 300 && reliable_1xx == REL100_REQUIRE) { //code = 2xx
+        } else if (reply.code < 300 && uas_state == REL100_REQUIRE) { //code = 2xx
             if (rseq && !rseq_confirmed) {
                 // reliable 1xx is pending, 2xx'ing not allowed yet
                 DBG("last reliable 1xx not yet PRACKed. callid: %s",reply.callid.c_str());
@@ -289,4 +296,3 @@ bool Am100rel::checkReply(AmSipReply& reply)
 
     return false;
 }
-
