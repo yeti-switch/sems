@@ -139,7 +139,7 @@ void CoreRpc::set_system_shutdown(bool shutdown)
 
     if(AmConfig::ShutdownMode&&!AmSession::getSessionNum()){
         //commit suicide immediatly
-        INFO("no active session on graceful shutdown command. exit immediatly");
+        INFO("no active sessions on graceful shutdown command. exit immediately");
         kill(getpid(),SIGINT);
     }
 }
