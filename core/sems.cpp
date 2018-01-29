@@ -275,8 +275,7 @@ static void signal_handler(int sig)
   WARN("Signal %s (%d) received.\n", strsignal(sig), sig);
 
   if(sig == SIGQUIT) {
-    AmConfig::ShutdownMode = !AmConfig::ShutdownMode;
-    INFO("ShutDownMode changed to %d",AmConfig::ShutdownMode);
+    CoreRpc::set_system_shutdown(!AmConfig::ShutdownMode);
     return;
   }
 

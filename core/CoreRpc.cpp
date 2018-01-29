@@ -18,6 +18,8 @@
 
 static const bool RPC_CMD_SUCC = true;
 
+timeval CoreRpc::last_shutdown_time;
+
 static int check_dir_write_permissions(const string &dir)
 {
     std::ofstream st;
@@ -124,10 +126,16 @@ static void dump_sessions_info(
     AmSession2AmArg(leg,ret[key]);
 }
 
-static void set_system_shutdown(bool shutdown)
+void CoreRpc::set_system_shutdown(bool shutdown)
 {
     AmConfig::ShutdownMode = shutdown;
     INFO("ShutDownMode changed to %d",AmConfig::ShutdownMode);
+
+    if(shutdown) {
+        gettimeofday(&last_shutdown_time,NULL);
+    } else {
+        timerclear(&last_shutdown_time);
+    }
 
     if(AmConfig::ShutdownMode&&!AmSession::getSessionNum()){
         //commit suicide immediatly
@@ -478,14 +486,12 @@ void CoreRpc::requestShutdownImmediate(const AmArg& args, AmArg& ret)
 
 void CoreRpc::requestShutdownGraceful(const AmArg& args, AmArg& ret)
 {
-    gettimeofday(&last_shutdown_time,NULL);
     set_system_shutdown(true);
     ret = RPC_CMD_SUCC;
 }
 
 void CoreRpc::requestShutdownCancel(const AmArg& args, AmArg& ret)
 {
-    timerclear(&last_shutdown_time);
     set_system_shutdown(false);
     ret = RPC_CMD_SUCC;
 }

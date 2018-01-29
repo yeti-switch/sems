@@ -15,7 +15,7 @@ class CoreRpc final
     public AmDynInvokeFactory
 {
     time_t start_time;
-    timeval last_shutdown_time;
+    static timeval last_shutdown_time;
 
     CoreRpc()
       : AmDynInvokeFactory("core"),
@@ -35,6 +35,7 @@ class CoreRpc final
         static CoreRpc _instance;
         return _instance;
     }
+    static void set_system_shutdown(bool shutdown);
 
     CoreRpc(CoreRpc const&) = delete;
     void operator=(CoreRpc const&) = delete;
