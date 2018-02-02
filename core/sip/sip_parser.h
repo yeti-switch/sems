@@ -90,7 +90,8 @@ struct sip_reply
     bool local_reply;
 
     sip_reply()
-	: code(0)
+    : code(0),
+      local_reply(false)
     {}
 
     sip_reply(int code, const cstring& reason)
