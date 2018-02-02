@@ -1,3 +1,9 @@
+sems (1.7.59-2) stable; urgency=low
+
+  * b04879d1f fix missed local_reply initialization in sip_reply() constructor
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 02 Feb 2018 14:54:11 +0200
+
 sems (1.7.59-1) stable; urgency=low
 
   * 6a02747dc Am100rel: split states for UAC/UAS. restore UAS state to the initial value after transaction
