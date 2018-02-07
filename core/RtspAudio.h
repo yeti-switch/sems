@@ -23,4 +23,6 @@ class RtspAudio  :   public AmRtpAudio
         void    initRtpAudio(unsigned short int r_rtp_port);
         int     initRtpAudio_by_sdp(const char *sdp_msg);
         void    play();
+  protected:
+        void onRtpTimeout();
 };

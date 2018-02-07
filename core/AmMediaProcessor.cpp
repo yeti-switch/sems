@@ -321,16 +321,20 @@ void AmMediaProcessorThread::processAudio(unsigned long long ts)
   for(set<AmMediaSession*>::iterator it = sessions.begin();
       it != sessions.end(); it++)
   {
-    if ((*it)->readStreams(ts, buffer) < 0)
+    if ((*it)->readStreams(ts, buffer) < 0) {
+      DBG("readStreams for media session %p returned value < 0",*it);
       postRequest(new SchedRequest(AmMediaProcessor::ClearSession, *it));
+    }
   }
 
   // sending
   for(set<AmMediaSession*>::iterator it = sessions.begin();
       it != sessions.end(); it++)
   {
-    if ((*it)->writeStreams(ts, buffer) < 0)
+    if ((*it)->writeStreams(ts, buffer) < 0) {
+      DBG("writeStreams for media session %p returned value < 0",*it);
       postRequest(new SchedRequest(AmMediaProcessor::ClearSession, *it));
+    }
   }
 }
 
@@ -356,7 +360,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
     if(s_it != sessions.end()){
       sessions.erase(s_it);
       s->onMediaProcessingTerminated();
-      DBG("[%p] Session %p removed from the scheduler\n",this,s);
+      DBG("[%p] Session %p removed from the scheduler on RemoveSession\n",this,s);
     }
   }
     break;
@@ -368,7 +372,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
       sessions.erase(s_it);
       s->clearAudio();
       s->onMediaProcessingTerminated();
-      DBG("[%p] Session %p removed from the scheduler\n",this,s);
+      DBG("[%p] Session %p removed from the scheduler on ClearSession\n",this,s);
     }
   }
     break;

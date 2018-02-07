@@ -174,6 +174,7 @@ public:
 protected:
   int read(unsigned int user_ts, unsigned int size) { return 0; }
   int write(unsigned int user_ts, unsigned int size) { return 0; }
+  void virtual onRtpTimeout();
 };
 
 #endif

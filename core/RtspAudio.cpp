@@ -115,3 +115,8 @@ void RtspAudio::play()
     session->setOutput(this);
     //AmMediaProcessor::instance()->addSession(session, session->getCallgroup());
 }
+
+void RtspAudio::onRtpTimeout() {
+    close();
+    session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+}

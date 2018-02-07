@@ -475,6 +475,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
         int got = 0;
         if (in) {
             got = in->get(ts, buffer, sample_rate, f_size);
+            if (got < 0) return 0;
         } else {
             if (!src.isInitialized()) {
                 //non-stream mode
@@ -499,8 +500,8 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                     }
                 }
             }
+            if (got < 0) return -1;
         }
-        if (got < 0) return -1;
         if (got > 0) {
             updateSendStats();
             //CLASS_DBG("stream->put(%llu,%d)",ts,got);

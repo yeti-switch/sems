@@ -186,7 +186,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
       case RTP_TIMEOUT:
         //FIXME: postRequest(new SchedRequest(AmMediaProcessor::RemoveSession,s));
         // post to the session (FIXME: is session always set? seems to be...)
-        session->postEvent(new AmRtpTimeoutEvent());
+        onRtpTimeout();
         return -1;
 
       case RTP_BUFFER_SIZE:
@@ -532,4 +532,9 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
 	DBG("Simple playout buffer activated\n");
       }
     }
+}
+
+void AmRtpAudio::onRtpTimeout()
+{
+    session->postEvent(new AmRtpTimeoutEvent());
 }
