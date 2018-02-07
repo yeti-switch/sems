@@ -474,7 +474,26 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
         int sample_rate = stream->getSampleRate();
         int got = 0;
         if (in) {
+            //process src_stream even if custom input enabled
+            if(src.isInitialized()) {
+                AmRtpAudio *src_stream = src.getStream();
+                if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
+                    int tmp_got = src_stream->get(ts, buffer, sample_rate, f_size);
+                    //DBG("[%p] stream %p got %d from stream input %p",this,stream,got,src_stream);
+                    if (tmp_got > 0) {
+                        if(src_stream->isLastSamplesRelayed()) {
+                            stream->record(ts, buffer, sample_rate, tmp_got);
+                        } else {
+                            updateRecvStats(src_stream);
+                            if (dtmf_queue && enable_dtmf_transcoding) {
+                                dtmf_queue->putDtmfAudio(buffer, tmp_got, ts);
+                            }
+                        }
+                    }
+                }
+            }
             got = in->get(ts, buffer, sample_rate, f_size);
+            //DBG("[%p] stream %p got %d from non-stream input %p",this,stream,got,in);
             if (got < 0) return 0;
         } else {
             if (!src.isInitialized()) {
@@ -487,6 +506,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                 AmRtpAudio *src_stream = src.getStream();
                 if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
+                    //DBG("[%p] stream %p got %d from stream %p",this,stream,got,src_stream);
                     if (got > 0) {
                         if(src_stream->isLastSamplesRelayed()) {
                             stream->record(ts, buffer, sample_rate, got);
