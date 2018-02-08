@@ -1,3 +1,11 @@
+sems (1.7.60-1) stable; urgency=low
+
+  * 6f7071d8b AmB2BMedia: AudioStreamData::writeStream: process src_stream discarding samples if custom non-stream input is set
+  * 369032022 AmRtpStream: show local endpoint for RTP timeout logging
+  * 6dd7bbf30 AmB2BMedia: supress errors from non-stream input. RtspAudio: close and generate noAudio event on RtpTimeout
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 08 Feb 2018 11:45:59 +0200
+
 sems (1.7.59-2) stable; urgency=low
 
   * b04879d1f fix missed local_reply initialization in sip_reply() constructor
