@@ -1022,6 +1022,11 @@ static int readRTPInterface(AmConfigReader& cfg, const string& i_name)
 	    suffix.c_str(),rtp_low_port_str.c_str());
 	  return -1;
     }
+    if(0 != (intf.RtpLowPort % 2)) {
+      WARN("rtp_low_port%s (%u) expected to be even. increased to %u",
+        suffix.c_str(),intf.RtpLowPort,intf.RtpLowPort+1);
+      intf.RtpLowPort++;
+    }
   }
 
   // rtp_high_port
@@ -1033,6 +1038,17 @@ static int readRTPInterface(AmConfigReader& cfg, const string& i_name)
 	    suffix.c_str(),rtp_high_port_str.c_str());
 	  return -1;
     }
+    if(0 == (intf.RtpHighPort % 2)) {
+      WARN("rtp_high_port%s (%u) expected to be odd. decreased to %u",
+        suffix.c_str(),intf.RtpHighPort,intf.RtpHighPort-1);
+      intf.RtpHighPort--;
+    }
+  }
+
+  if((intf.RtpHighPort - intf.RtpLowPort) < 1) {
+    ERROR("invalid ports range [%u;%u] for interface %s",
+      intf.RtpLowPort, intf.RtpHighPort,i_name.c_str());
+    return -1;
   }
 
   if(cfg.hasParameter("media_sock_opts" + suffix)){
@@ -1072,8 +1088,10 @@ static int readInterfaces(AmConfigReader& cfg)
   if(!cfg.hasParameter("interfaces")) {
     // no interface list defined:
     // read default params
-    readSIPInterface(cfg,"");
-    readRTPInterface(cfg,"");
+    if(-1==readSIPInterface(cfg,""))
+      return -1;
+    if(-1==readRTPInterface(cfg,""))
+      return -1;
     return 0;
   }
 
@@ -1093,8 +1111,10 @@ static int readInterfaces(AmConfigReader& cfg)
   for(vector<string>::iterator it = if_names.begin();
       it != if_names.end(); it++) {
 
-    readSIPInterface(cfg,*it);
-    readRTPInterface(cfg,*it);
+    if(-1==readSIPInterface(cfg,*it))
+      return -1;
+    if(-1==readRTPInterface(cfg,*it))
+      return -1;
 
     if((AmConfig::SIP_If_names.find(*it) == AmConfig::SIP_If_names.end()) &&
        (AmConfig::RTP_If_names.find(*it) == AmConfig::RTP_If_names.end())) {
@@ -1424,9 +1444,10 @@ void AmConfig::dump_Ifs()
     RTP_interface& it_ref = RTP_Ifs[i];
 
     INFO("\t(%i) name='%s'" ";LocalIP='%s'" 
-     ";Ports=[%u;%u]" ";PublicIP='%s';DSCP=%u",
+     ";Ports=[%u;%u];MediaCapacity=%u" ";PublicIP='%s';DSCP=%u",
 	 i,it_ref.name.c_str(),it_ref.LocalIP.c_str(),
 	 it_ref.RtpLowPort,it_ref.RtpHighPort,
+	 (it_ref.RtpHighPort-it_ref.RtpLowPort+1)/2,
 	 it_ref.PublicIP.c_str(),
 	 it_ref.dscp);
   }

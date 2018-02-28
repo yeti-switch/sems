@@ -288,6 +288,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         am_iface["public_ip"] = iface.PublicIP;
         am_iface["rtp_low_port"] = iface.RtpLowPort;
         am_iface["rtp_high_port"] = iface.RtpHighPort;
+        am_iface["capacity"] = (iface.RtpHighPort-iface.RtpLowPort+1)/2;
         am_iface["use_raw_sockets"] = (iface.MediaSockOpts&trsp_socket::use_raw_sockets)!= 0;
         am_iface["dscp"] = iface.dscp;
         am_iface["tos_byte"] = iface.tos_byte;
