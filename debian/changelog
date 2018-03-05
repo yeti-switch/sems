@@ -1,3 +1,9 @@
+sems (1.7.60-2) stable; urgency=low
+
+  * 4accec9e0 AmConfig: validate media ports range
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 05 Mar 2018 13:44:12 +0200
+
 sems (1.7.60-1) stable; urgency=low
 
   * 6f7071d8b AmB2BMedia: AudioStreamData::writeStream: process src_stream discarding samples if custom non-stream input is set
