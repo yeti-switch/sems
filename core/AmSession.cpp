@@ -1386,7 +1386,10 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
   if (stream->sendIntReached()) { // FIXME: shouldn't depend on checkInterval call before!
     unsigned int f_size = stream->getFrameSize();
     int got = 0;
-    if (output) got = output->get(ts, buffer, stream->getSampleRate(), f_size);
+    if (output) {
+        got = output->get(ts, buffer, stream->getSampleRate(), f_size);
+        if(got < 0) got = 0; //suppress errors
+    }
     if (got < 0) res = -1;
     if (got > 0) res = stream->put(ts, buffer, stream->getSampleRate(), got);
   }

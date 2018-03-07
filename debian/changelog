@@ -1,3 +1,9 @@
+sems (1.7.60-3) stable; urgency=low
+
+  * AmSession: writeStreams(): suppress custom audio input errors
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 07 Mar 2018 12:49:41 +0200
+
 sems (1.7.60-2) stable; urgency=low
 
   * 4accec9e0 AmConfig: validate media ports range
