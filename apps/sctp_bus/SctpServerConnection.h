@@ -24,9 +24,10 @@ class SctpServerConnection
 
   public:
     int init(int efd, const sockaddr_storage &a);
-    void process(uint32_t events);
 
-    void handle_notification(const sockaddr_storage &from);
+    int process(uint32_t events) override;
+    void handle_notification(const sockaddr_storage &from) override;
+    int on_timer() override { return 0; }
 
     void getInfo(AmArg &ret);
 };

@@ -339,18 +339,33 @@ int SctpBus::addClientConnection(
 
 void SctpBus::on_timer()
 {
+    int ret;
+
     server_connection.on_timer();
-    for(auto const &c : connections_by_id)
-        c.second->on_timer();
+    for(auto const &c : connections_by_id) {
+        ret = c.second->on_timer();
+        if(ret > 0) {
+            DBG("add fd %d to the client connections sockets map", ret);
+            if(connections_by_sock.find(ret)!=connections_by_sock.end()) {
+                WARN("client connections map already contains key %d. overwrite it",ret);
+            }
+            connections_by_sock[ret] = c.second;
+        }
+    }
 }
 
 void SctpBus::process_client_connection(int sock, uint32_t events)
 {
+    int ret;
     Connections::iterator it = connections_by_sock.find(sock);
     if(it!=connections_by_sock.end()){
         /*DBG("process events %d for connection with socket %d",
             events,it->first);*/
-        it->second->process(events);
+        ret = it->second->process(events);
+        if(ret > 0) {
+            DBG("remove fd %d from the client connections sockets map", ret);
+            connections_by_sock.erase(it);
+        }
         return;
     }
     DBG("socket %d got events (%d) for unknown client connection. close socket",sock,events);

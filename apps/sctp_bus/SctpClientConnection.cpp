@@ -72,10 +72,10 @@ int SctpClientConnection::connect()
     if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sctp_sys_err("epoll_ctl(EPOLL_CTL_ADD)");
 
-    return 0;
+    return fd;
 }
 
-void SctpClientConnection::process(uint32_t events) {
+int SctpClientConnection::process(uint32_t events) {
 
     if(events & ~(EPOLLIN | EPOLLOUT)) {
         int err = 0;
@@ -88,13 +88,7 @@ void SctpClientConnection::process(uint32_t events) {
             err ? strerror(err) : "Peer shutdown");
 
         //state = Closed;
-        close();
-
-        return;
-    }
-
-    if(events & EPOLLIN) {
-        recv();
+        return close();
     }
 
     if(events & EPOLLOUT) {
@@ -112,12 +106,18 @@ void SctpClientConnection::process(uint32_t events) {
         if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1) {
             DBG("epoll_ctl(%d,EPOLL_CTL_MOD,%d,EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR): %m",
                 epoll_fd,fd);
-            close();
+            return close();
         }
     }
+
+    if(events & EPOLLIN) {
+        return recv();
+    }
+
+    return 0;
 }
 
-void SctpClientConnection::recv()
+int SctpClientConnection::recv()
 {
     struct sctp_sndrcvinfo  sinfo;
     int                     flags = 0;
@@ -131,21 +131,22 @@ void SctpClientConnection::recv()
         &sinfo, &flags);
 
     if(nread < 1) {
-        ERROR("sctp_recvmsg(): %m");
-        return;
+        ERROR("sctp_recvmsg(fd=%d): %m",fd);
+        return close();
     }
 
     if( flags & MSG_NOTIFICATION ) {
         handle_notification(from);
-        return;
+        return 0;
     }
 
     if(!(flags & MSG_EOR)) {
         ERROR("Truncated message received");
-        return;
+        return 0;
     }
 
     DBG("got data in client connection. ignore it");
+    return 0;
 }
 
 void SctpClientConnection::handle_notification(const sockaddr_storage &from)
@@ -204,7 +205,7 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
     events_sent++;
 }
 
-void SctpClientConnection::on_timer()
+int SctpClientConnection::on_timer()
 {
     /*DBG("client on timer. state = %d, last connect: %s",
         state,timeval2str_ntp(last_connect_attempt).c_str());*/
@@ -215,15 +216,11 @@ void SctpClientConnection::on_timer()
         if(delta.tv_sec > reconnect_interval) {
             DBG("reconnect timeout for not connected %s:%d",
                 am_inet_ntop(&addr).c_str(),am_get_port(&addr));
-            connect();
+            return connect();
         }
     }
 
-    /*if(state==Connected) {
-        AmSessionContainer::instance()->postEvent(
-            SCTP_BUS_EVENT_QUEUE,
-            new SctpBusSendEvent("fake_src_id","1-some_dst_id",AmArg("test")));
-    }*/
+    return 0;
 }
 
 void SctpClientConnection::getInfo(AmArg &info)

@@ -167,7 +167,7 @@ void SctpServerConnection::handle_notification(const sockaddr_storage &from)
     } //switch(snp->sn_header.sn_type)
 }
 
-void SctpServerConnection::process(uint32_t events)
+int SctpServerConnection::process(uint32_t events)
 {
     int flags = 0, length;
     struct sctp_sndrcvinfo  sinfo;
@@ -182,7 +182,7 @@ void SctpServerConnection::process(uint32_t events)
 
     if( length < 0 ) {
         ERROR("sctp_recvmsg(): %m");
-        return;
+        return errno;
     }
 
     if(0/*reject condition*/) {
@@ -193,20 +193,20 @@ void SctpServerConnection::process(uint32_t events)
 
     if(flags & MSG_NOTIFICATION) {
         handle_notification(from);
-        return;
+        return 0;
     }
 
     // catch only FULL SIZE message
     //!TODO: implement fragments reassembling
     if(!(flags & MSG_EOR) ) {
         ERROR("Truncated message received");
-        return;
+        return 0;
     }
 
     SctpBusEventRequest r;
     if(!r.ParseFromArray(payload,length)){
         ERROR("failed deserialize request");
-        return;
+        return -1;
     }
 
     DBG("RECV sctp_bus event %d:%s -> %d:%s/%d",
@@ -232,7 +232,7 @@ void SctpServerConnection::process(uint32_t events)
     if(!json2arg(r.json_data(),ev->data)){
         ERROR("failed deserialize json payload");
         delete ev;
-        return;
+        return -1;
     }
 
     //DBG("received event data: %s",r.json_data().c_str());
@@ -240,6 +240,8 @@ void SctpServerConnection::process(uint32_t events)
         DBG("failed to post SctpBusEvent for session: %s",
             r.dst_session_id().c_str());
     }
+
+    return 0;
 }
 
 void SctpServerConnection::getInfo(AmArg &ret)

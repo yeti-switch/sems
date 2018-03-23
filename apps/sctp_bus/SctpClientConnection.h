@@ -13,10 +13,10 @@ class SctpClientConnection
     int init(int efd, const sockaddr_storage &a, int reconnect_seconds);
     int connect();
 
-    void process(uint32_t events);
+    int process(uint32_t events) override;
     void handle_notification(const sockaddr_storage &from);
-    void recv();
-    void on_timer();
+    int recv();
+    int on_timer() override;
 
     virtual void send(const SctpBusSendEvent &e);
 

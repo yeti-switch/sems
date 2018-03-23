@@ -40,12 +40,12 @@ class SctpConnection {
     void set_epoll_fd(int efd) { epoll_fd = efd; }
     void set_addr(const sockaddr_storage &a) { addr = a; }
     void set_id(int id) { _id = id; }
-    void close();
+    int close();
 
-    virtual void process(uint32_t events) = 0;
+    virtual int process(uint32_t events) = 0;
     virtual void handle_notification(const sockaddr_storage &from) = 0;
 
-    virtual void on_timer() {}
+    virtual int on_timer() = 0;
     virtual void send(const SctpBusSendEvent &e) {}
 
     virtual void getInfo(AmArg &info) = 0;

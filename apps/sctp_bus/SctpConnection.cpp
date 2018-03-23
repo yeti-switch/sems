@@ -70,11 +70,11 @@ int SctpConnection::sctp_recvmsg(int s, void *msg, size_t len, struct sockaddr *
 }
 
 
-void SctpConnection::close()
+int SctpConnection::close()
 {
-    if(-1==fd) return;
+    if(-1==fd) return fd;
 
-    DBG("close connection %d, socket: %d",_id,fd);
+    DBG("close connection with id %d, socket: %d",_id,fd);
 
     /*if(-1!=epoll_fd) {
         if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL) == -1)
@@ -82,9 +82,13 @@ void SctpConnection::close()
     }*/
 
     //::shutdown(fd, SHUT_RDWR);
+    int old_fd = fd;
+
     ::close(fd);
     fd = -1;
 
     state = Closed;
+
+    return old_fd;
 }
 
