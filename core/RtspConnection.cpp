@@ -10,324 +10,287 @@
 
 
 #include "RtspClient.h"
-#include "RtspConnection.h"
 #include "RtspAudio.h"
+#include "RtspConnection.h"
+
+
+#define likely(expr)              __builtin_expect(!!(expr), 1)
+#define unlikely(expr)            __builtin_expect(!!(expr), 0)
 
 using std::string;
 using std::ostringstream;
+using namespace Rtsp;
+
+static const int RTSP_BUFFER_SIZE = 2048;
 
 
-static const int RTSP_BUFFER_SIZE                = 2048;
+static const char *Method_str[] = { "Unknown",
+                                    "DESCRIBE",
+                                    "PLAY",
+                                    "PAUSE",
+                                    "SETUP",
+                                    "TEARDOWN",
+                                    "OPTIONS",
+                                    "PLAY_NOTIFY" };
+
+static const char *Header_str[] = { "Unknown",
+                                    "Accept",
+                                    "Content-Type",
+                                    "Content-Length",
+                                    "CSeq",
+                                    "Session",
+                                    "Transport",
+                                    "Date",
+                                    "Range",
+                                    "Notify-Reason",
+                                    "RTP-Info" };
+
+static const char *Notify_rsn_str[] = { "unknown",
+                                        "end-of-stream",
+                                        "media-properties-update",
+                                        "scale-change" };
 
 
-static const char *Method_str[] = { "DESCRIBE", "PLAY", "PAUSE", "SETUP", "TEARDOWN", "OPTIONS" };
-static const char *Header_str[] = { "Unknown", "Accept", "Content-Type", "Content-Length", "CSeq", "Session", "Transport", "Date" };
-
-
-RtspMessage::Hdr RtspMessage::str2hdr(const char *hdr)
+static int str2method(const char *str, size_t str_len)
 {
-    for( int i = RtspMessage::HDR_Accept; i< RtspMessage::HEADER_MAX; ++i )
-        if(!strcmp(const_cast<char*>(Header_str[i]), hdr))
-            return (RtspMessage::Hdr)i;
+    for (int i=PLAY_NOTIFY; i > 0; --i)
+        if (!strncasecmp(Method_str[i], str, str_len))
+            return i;
 
-    return HDR_Unknown;
+    return RTSP_UNKNOWN;
 }
 
 
-RtspResponse::RtspResponse(char *msg, int length)
-    : RtspMessage(RtspMessage::Response), size(0),ContentLength(0), CSeq(0), code(0), r_rtp_port(0)
+static int str2hdr(const char *str, size_t str_len)
 {
-    char *p, *s =  msg;
+    for (int i=H_RTP_Info; i > 0; --i)
+        if (!strncasecmp(Header_str[i], str, str_len))
+            return i;
 
-    while( (p=strstr(s, "\r\n")) )
-    {
-        *p = 0;
-        int len = strlen(s);
-
-        if(len)
-        {
-            if( s == msg )
-                parse_status_line(s);
-            else
-                parse_header_line(s,len);
-        }
-        s = (p+2);
-
-        if(!len)
-            break; /** CRLF CRLF*/
-    }
-
-    if(ContentLength)
-        body = string(s, ContentLength);
-
-    size = std::min( static_cast<long>(length), (s + ContentLength) - msg);
+    return H_UNPARSED;
 }
 
 
-void RtspResponse::parse_status_line(char *line)
+static int str2NotifyReason(const char *str, size_t str_len)
 {
-    char *p, *ver=NULL, *code_str=NULL, *reason= NULL;
+    for (int i=NR_scale_change; i > 0 ; --i)
+        if (!strncasecmp(Notify_rsn_str[i], str, str_len))
+            return i;
 
-    if((p=strstr(line, " ")))
-    {
-        *p = 0;
-        ver = line;
-        line = ++p;
-
-        if( (p=strstr(line, " ")) )
-        {
-            *p = 0;
-            code_str = line;
-            reason = ++p;
-        }
-    }
-
-    if(ver && code_str && reason)
-    {
-        version    = ver;
-        code       = atoi(code_str);
-        reason     = reason;
-    }
+    return RTSP_UNKNOWN;
 }
 
 
-void RtspResponse::parse_header_line(char *line, size_t len)
+/** Request-Line = Method SP Request-URI SP RTSP-Version CRLF */
+void RtspMsg::parse_request_line(const char *line, size_t len)
 {
-    char *h=line, *val;
+    const char *sp0 = static_cast<const char *>(memchr(line, ' ', len)),
+               *sp1 = sp0
+                        ? static_cast<const char *>(memchr(sp0+1, ' ', len - (sp0-line)-1))
+                        : NULL;
 
-    if(!(val=strstr(line, ": ")))
+    if (unlikely(!sp0 || !sp1)) {
+        ERROR("Can't parse request line '%s'\n", line);
         return;
+    }
 
-    size_t hdr_len = val-h;
-
-    *val = 0;
-    val +=2;
-
-    Hdr hdr = str2hdr(h);
-
-    process_header(hdr, val, len-hdr_len);
-
-    header[hdr] = val;
+    method = str2method(line, sp0-line);
+    uri     = string(sp0 + 1, sp1-sp0-1);
+    version = string(sp1 + 1, len-(sp1-line)-1);
 }
 
 
-void RtspResponse::process_header(const Hdr hdr, char *v, size_t vl)
+/** Status-Line = RTSP-Version SP Status-Code SP Reason-Phrase CRLF */
+void RtspMsg::parse_status_line(const char *line, size_t len)
+{
+    const char *sp0 = static_cast<const char *>(memchr(line, ' ', len)),
+               *sp1 = sp0
+                        ? static_cast<const char *>(memchr(sp0+1, ' ', len - (sp0-line)-1))
+                        : NULL;
+
+    if (unlikely(!sp0 || !sp1)) {
+        ERROR("Can't parse status line '%s'\n", line);
+        return;
+    }
+
+    version = string(line, sp0 - line);
+    code    = atoi(sp0);
+    reason  = string(sp1 + 1, len-(sp1-line)-1);
+}
+
+
+void RtspMsg::process_header(int hdr, const char *v, size_t vl)
 {
 #define SRV_PORT_PARAM "server_port="
-    char *s, *e;
+#define STREAMID_PARAM "streamid="
+    const char *s;
 
-    switch(hdr)
-    {
-        case HDR_CSeq:              CSeq = atoi(v); break;
+    switch(hdr) {
+    case H_CSeq:              cseq = atoi(v); break;
 
-        case HDR_ContentLength:     ContentLength = atoi(v); break;
+    case H_ContentLength:     ContentLength = atoi(v); break;
 
-        case HDR_Transport:
-        { /** Transport: RTP/AVP;unicast;source=x.x.x.x;client_port=1026-1027;server_port=8000-8001;ssrc=C6237B32 */
-            //search for server_port parameter
+    /** Transport: RTP/AVP;unicast;source=x.x.x.x;client_port=1026-1027;server_port=8000-8001;ssrc=C6237B32 */
+    case H_Transport:  {
+            // search for server_port parameter
             if((s = strstr(v, SRV_PORT_PARAM)) ) {
                 s += sizeof(SRV_PORT_PARAM)-1;
-                //cut params
-                e = (char *)memchr(s, ';', vl - (s-v));
-                if(e) *e = 0;
                 r_rtp_port = atoi(s);
             };
             break;
         }
 
-        case HDR_Session:
-        { /** Session: 21A3F0B1;timeout=65 */
-            //cut parameters
-            char *s = (char *)memchr(v, ';', vl);
-            if(s) *s = 0;
-
-            session_id = v;
+    /** Session: 21A3F0B1;timeout=65 */
+    case H_Session: {
+            const char *s = (const char *)memchr(v, ';', vl);
+            session_id = s ? string(v, s-v) : string(v, vl);
             break;
+        }
+
+    case H_Notify_Reason:
+        notify_reason = str2NotifyReason(v, vl);
+        break;
+
+    case H_RTP_Info:
+        if((s = strstr(v, STREAMID_PARAM)) ) {
+            s += sizeof(STREAMID_PARAM)-1;
+            streamid = atoi(s);
         };
-        default:;
+        break;
+
+    default:;
     }
 
 #undef SRV_PORT_PARAM
+#undef STREAMID_PARAM
 }
 
 
-RtspStream::RtspStream(RtspAudio *_audio, string _uri)
-    : state(RtspStream::Disconnected), server(0), audio(_audio), uri(_uri)
+void RtspMsg::parse_header_line(const char *line, size_t len)
+{
+    const char *val = strchr(line, ':');
+
+    if (!val)
+        return;
+
+    size_t  hdr_len = val-line;
+    int     hdr = str2hdr(line, hdr_len);
+
+    if (hdr == H_UNPARSED)
+        return;
+
+    ++val; // skip ':'
+    len -= hdr_len + 1;
+
+    // ltrim()
+    while (isspace(*val)) {
+        val++; --len;
+    }
+
+    process_header(hdr, val, len);
+
+    header[hdr] = string(val, len);
+}
+
+
+void RtspMsg::parse_msg(int type, const string &data)
+{
+    const char *s = data.data(),
+               *p;
+
+    while ((p=strstr(s, "\r\n"))) {
+
+        size_t len = p - s;
+
+        if (len) {
+            if (s == data.data()) {
+
+                if (type == RTSP_REQUEST)
+                    parse_request_line(s, len);
+                else
+                    parse_status_line(s,len);
+
+            } else
+                parse_header_line(s, len);
+        }
+
+        s = (p+2);
+
+        if (!len)
+            break; /** CRLF CRLF*/
+    }
+
+    ssize_t  processed = s - data.data(),
+             tail = data.length() - processed;
+
+    if (!ContentLength)
+        size = processed;
+    else {
+        /// check if we got all content data
+        if (tail >= ContentLength) {
+            body = string(s, ContentLength);
+            size = processed + ContentLength;
+        } else
+            size = 0;
+    }
+}
+
+
+RtspMsg::RtspMsg(MSG_TYPE _type, const string &data)
+    : type(_type), ContentLength(0), code(0), cseq(0), r_rtp_port(0), size(0)
+
+{
+    parse_msg(type, data);
+}
+
+
+RtspMsg::RtspMsg(int method, const string &_uri, uint64_t owner_id)
+    : type(RTSP_REQUEST), method(method), uri(_uri), owner_id(owner_id), version("RTSP/1.0")
 {}
 
 
-void RtspStream::close()
+
+RtspSession::RtspSession(RtspClient *_agent, const sockaddr_storage &_saddr, int _slot)
+    : agent(_agent), saddr(_saddr), state(Closed), cseq(0), fd(-1), slot(_slot)
 {
-    if(server)
-    {
-        struct RtspRequest req(RtspRequest::METH_TEARDOWN, uri);
-        server->request(req, this);
-    }
-
-    //audio->sendEvent(AmAudioEvent::noAudio);
-}
-
-
-RtspStream::~RtspStream()
-{
-    DBG("####### RtspStream::~RtspStream() %p", this);
-
-    if(server)
-    {
-       server->removeStream(this);
-       DBG("Removed from server");
-    }
-}
-
-void RtspStream::update(const string &_uri)
-{
-    if(server && uri.length()) // state == plaing
-    {
-        struct RtspRequest req(RtspRequest::METH_TEARDOWN, uri);
-        server->request(req, this);
-    }
-
-    uri = _uri;
-}
-
-
-void RtspStream::describe()
-{
-    if(server)
-    {
-        struct RtspRequest req(RtspRequest::METH_DESCRIBE, uri);
-        server->request(req, this);
-    }
-}
-
-
-void RtspStream::setup(int l_port)
-{
-    if(server)
-    {
-        DBG("####### RtspStream::setup() server->state %d", server->get_state());
-
-        struct RtspRequest req(RtspRequest::METH_SETUP, uri);
-        req.header[RtspRequest::HDR_Transport] = "RTP/AVP;unicast;client_port=" + int2str(l_port)+"-"+int2str(l_port + 1);
-        server->request(req, this);
-    }
-}
-
-
-void RtspStream::play(RtspResponse &response)
-{
-    if( !uri.length() )
-    {
-        ERROR("%s Uri must be set by setup()", __func__);
-        return;
-    }
-
-    try
-    {
-        audio->initRtpAudio(response.r_rtp_port);
-
-        if(server)
-        {
-            struct RtspRequest req(RtspRequest::METH_PLAY, uri);
-            server->request(req,this);
-            audio->play();
-        }
-    }
-    catch (AmSession::Exception &e)
-    {
-        DBG("####### catched AmSession::Exception(%d,%s)", e.code, e.reason.c_str());
-    }
-}
-
-
-void RtspStream::response(RtspResponse &response)
-{
-    RtspMessage::HeaderIterator it;
-
-    DBG("####### RtspStream::response() got CSeq %d code %d", response.CSeq, response.code);
-
-    /** Check ContentType header after DESCRIBE request */
-    it = response.header.find(RtspMessage::HDR_ContentType);
-
-    if( it != response.header.end() && strstr(it->second.c_str(), "application/sdp") )
-    {
-        try
-        {
-            int l_port = audio->initRtpAudio_by_sdp(response.body.c_str());
-            setup(l_port);
-
-        } catch (AmSession::Exception &e)
-        {
-            INFO("####### catched AmSession::Exception(%d,%s)", e.code, e.reason.c_str());
-        }
-    }
-
-    /** Check Transport header after SETUP request */
-    it  = response.header.find(RtspMessage::HDR_Transport);
-    if( it != response.header.end() )
-        play(response);
-}
-
-
-
-
-
-
-
-MediaServer::MediaServer(RtspClient *_dispatcher, const sockaddr_storage &_saddr, int _slot)
-    : dispatcher(_dispatcher),saddr( _saddr ), state( Closed ), CSeq(0), slot(_slot)
-{
-    DBG("### %s %s:%d", __func__, am_inet_ntop(&saddr).c_str(), am_get_port(&saddr));
-
-    am_inet_pton(dispatcher->localMediaIP().c_str(), &l_saddr);
+    am_inet_pton(agent->localMediaIP().c_str(), &l_saddr);
+    reconnect_interval = agent->getReconnectInterval();
 
     connect();
 }
 
 
-MediaServer::~MediaServer()
+RtspSession::~RtspSession()
 {
-    DBG("### %s", __func__);
+    if (fd == -1)
+        return;
+
     ::close(fd);
 }
 
 
-void MediaServer::removeStream(RtspStream *stream)
-{
-    for( CSecStreamIterator sit = CSeq2StreamMap.begin(); sit != CSeq2StreamMap.end(); ++sit )
-        if(sit->second == stream)
-            CSeq2StreamMap.erase(sit);
-}
-
-
-void MediaServer::close()
+void RtspSession::close()
 {
     DBG("####### %s %s:%d state=%d", __func__,
         am_inet_ntop(&saddr).c_str(), am_get_port(&saddr), state);
 
-    if( fd != -1 )
-    {
-        ::close(fd);    /** close() delete sockfd from epoll set */
-        fd = -1;
+    state = Closed;
+    cseq = 0;
+    cseq2id_map.clear();
+    buffer.clear();
 
-    }
+    if (fd == -1)
+        return;
 
-    CSeq = 0;
-    state = MediaServer::Closed;
-
-    // We need to send AmAudioEvent::noAudio to all streams on this server
-    //AmEventDispatcher::instance()->post(session->getLocalTag(),
-      //                      new AmAudioEvent(AmAudioEvent::noAudio) );
-
-    CSeq2StreamMap.clear();
+    ::close(fd);    /** close() delete sockfd from epoll set */
+    fd = -1;
 }
 
 
 /** send RTSP OPTIONS as HELLO for starting connection and check server status */
-void MediaServer::init_connection()
+void RtspSession::init_connection()
 {
-    struct RtspRequest req(RtspRequest::METH_OPTIONS, "*");
-    request(req);
+    rtspSendMsg( RtspMsg(OPTIONS, "*") );
 }
 
 
@@ -337,101 +300,117 @@ void MediaServer::init_connection()
     Send formated request structure
     return CSeq
 */
-void MediaServer::request(RtspRequest &request, RtspStream *stream)
+void RtspSession::rtspSendMsg(const RtspMsg &msg)
 {
     ostringstream ss;
 
-    ss << Method_str[request.method] << " rtsp://" << am_inet_ntop(&saddr) \
-        << ":" << am_get_port(&saddr) << "/" + request.uri + " RTSP/1.0\r\n";
+    uint32_t _cseq = (msg.type == RTSP_REQUEST ? ++cseq : msg.cseq);
 
-    ss << "CSeq: " << (++CSeq) << "\r\n";
+    if (msg.type == RTSP_REQUEST)
+        ss << Method_str[msg.method] << " rtsp://" << am_inet_ntop(&saddr) \
+            << ":" << am_get_port(&saddr) << "/" + msg.uri + " " + msg.version + "\r\n";
+    else
+        ss << msg.version << " " << msg.code << " " << msg.reason << "\r\n";
 
-    for(RtspMessage::HeaderIterator it = request.header.begin(); it != request.header.end(); ++it)
-        ss << Header_str[it->first] << ": " << it->second << "\r\n";
+     ss << "CSeq: " << _cseq << "\r\n";
 
-    if(session_id.length())
+    for (auto& hdr : msg.header)
+        ss << Header_str[hdr.first] << ": " << hdr.second << "\r\n";
+
+    if (session_id.length())
         ss << "Session: " + session_id  + "\r\n";
+
+    if (msg.body.length()) {
+        ss << "\r\n" + msg.body + "\r\n";
+    }
 
     ss <<  "\r\n";
 
     string requst_body = ss.str();
 
-    DBG("MediaServer::send_request\n%s", requst_body.c_str());
+    DBG("\n%s", requst_body.c_str());
 
-    if(::send(fd, requst_body.c_str(), requst_body.length(), MSG_NOSIGNAL) == -1)
-    {
-        ERROR("MediaServer::request send(): %s\n", strerror(errno));
+    if (::send(fd, requst_body.c_str(), requst_body.length(), MSG_NOSIGNAL) == -1) {
+        ERROR("RtspSession::request send(): %s\n", strerror(errno));
         close();
         return;
     }
 
     /** Store CSeq for stream */
-    if(stream)
-    {
-        std::pair<CSecStreamIterator, bool> result;
-
-        result = CSeq2StreamMap.insert( std::make_pair(CSeq, stream) );
-
-        DBG("####### MediaServer::request() stream %p", stream);
-
-        if( result.second  )
-            DBG("####### INSERTED %s", stream->uri.c_str());
-        else
-            DBG("####### UPDATED %s ??? ", stream->uri.c_str());
-    }
+    if (msg.owner_id)
+        cseq2id_map.insert(std::pair<uint32_t, uint64_t>(_cseq, msg.owner_id));
 }
 
 
-void MediaServer::process_response(RtspResponse &response)
+void RtspSession::process_response(RtspMsg &msg)
 {
-    if( !response.code )
-    {
-        ERROR("####### MediaServer::process_response() response.code=0, garbage in buffer ???");
+    if (!msg.code) {
+        ERROR("####### RtspSession::process_response() response.code=0, garbage in buffer ???");
         close();
         return;
     }
 
-    if( response.code ==  dispatcher->shutdown_code() )
-    {
-        state = MediaServer::Shuttingdown;
-        DBG("RTSP server in shutdown mode %u %s", response.code, response.reason.c_str());
+    if (msg.code ==  agent->shutdown_code()) {
+        state = RtspSession::Shuttingdown;
+        DBG("RTSP server in shutdown mode %u %s", msg.code, msg.reason.c_str());
+    } else
+        state = RtspSession::Active;
+
+    session_id = msg.session_id;
+
+    if (unlikely(!msg.cseq)) {
+        ERROR("###### NOT found CSeq header in response");
+        return;
     }
-    else
-        state = MediaServer::Active;
 
-    session_id = response.session_id;
+    auto it = cseq2id_map.find(msg.cseq);
 
-    if(response.CSeq)
-    {
-        /** Lookup stream by CSeq id */
-        CSecStreamIterator sit = CSeq2StreamMap.find(response.CSeq);
+    if (it == cseq2id_map.end())
+        return;
 
-        if( sit != CSeq2StreamMap.end() )
-        {
-            RtspStream *stream  = sit->second;
+    cseq2id_map.erase(it);
 
-            if(response.code == 200 )
-                stream->response(response);
-            else
-                AmSessionContainer::instance()->postEvent(
-                            stream->audio->getLocalTag(),
-                            new RtspNoFileEvent(stream->uri));
+    msg.owner_id = it->second;
 
-            //INFO("CSeq2StreamMap.erase %p", stream);
-            //CSeq2StreamMap.erase(sit);
-        }
+    agent->onRtspReplay(msg);
+}
+
+
+void RtspSession::process_server_request(RtspMsg &req)
+{
+    DBG("\n%.*s", (int)buffer.size(), buffer.data());
+
+    RtspMsg msg = RtspMsg(RTSP_REPLY);
+
+    msg.version = req.version;
+    msg.cseq    = req.cseq;
+    msg.session_id = req.session_id;
+
+    if (req.method == PLAY_NOTIFY) {
+
+        msg.code = 200;
+        msg.reason = "OK";
+
+        if (req.notify_reason == NR_end_of_stream)
+            agent->onRtspPlayNotify(msg);
         else
-            DBG("###### NO stream for CSeq %d", response.CSeq);
+            ERROR("Unsupported Notify-reason");
+
+    } else {
+        msg.code = 405;
+        msg.reason = "Method Not Allowed";
     }
-    else
-        DBG("###### NOT found CSeq header in response");
 
-
+    rtspSendMsg(msg);
 }
 
 
 /**
  * RFC 2326
+ *
+ *    Request-Line = Method SP Request-URI SP RTSP-Version CRLF; 6.1 Request Line
+ *
+ *
  *    Response =  Status-Line ; Section 7.1
  *    *( general-header   ; Section 5
  *    | response-header   ; Section 7.1.2
@@ -443,92 +422,117 @@ void MediaServer::process_response(RtspResponse &response)
  *
  *   RTSP-Version = "RTSP" "/" 1*DIGIT "." 1*DIGIT
 */
-void MediaServer::process_response_buffer(char *buffer, int length)
+
+static inline bool is_rtsp_status_line(const char *data, size_t data_length)
 {
-    char *s = buffer;
+    const char  *rtsp_ver_str = "RTSP/";
+    const size_t len = strlen(rtsp_ver_str);
 
-    while(length > 0)
-    {
-        RtspResponse response = RtspResponse(s, length);
+    return data_length > len && strncmp(data, rtsp_ver_str, len) == 0;
+}
 
-        DBG("####### RTSP server response %u %s CSeq=%d", response.code, response.reason.c_str(), response.CSeq);
 
-        if(!response.size)
+size_t  RtspSession::parse_server_response()
+{
+    RtspMsg msg = RtspMsg(RTSP_REPLY, buffer);
+
+    if (msg.size)
+        process_response(msg);
+
+    return msg.size;
+}
+
+
+size_t  RtspSession::parse_server_request()
+{
+    RtspMsg msg = RtspMsg(RTSP_REQUEST, buffer);
+
+    if (msg.size)
+        process_server_request(msg);
+
+    return msg.size;
+}
+
+
+void RtspSession::in_event()
+{
+    for ( ;; ) {
+        char        buf[RTSP_BUFFER_SIZE];
+        ssize_t     bytes = ::recv(fd, buf, sizeof(buf), MSG_NOSIGNAL);
+
+        if (unlikely(bytes == -1)) {
+
+            if (errno != EAGAIN) {
+                ERROR("%s: %s", __func__, strerror(errno));
+                close();
+            }
+
+            return;
+        }
+
+        buffer.assign(buf, bytes);
+
+        if (bytes < RTSP_BUFFER_SIZE)
             break;
+    }
 
-        process_response(response);
+    /**
+    * if we didn't get all body according to Content-Length
+    * processed_bytes is ZERO
+    */
+    // One empty line (CRLF) to indicate the end of the header section;
+    const std::string s {"\r\n\r\n"};
 
-        if(response.size != (size_t)length)
-            DBG("####### MediaServer::process_response_buffer() length=%d size=%ld", length, response.size);
+    while (buffer.find(s) != std::string::npos) {
 
-        s += response.size;
-        length -= response.size;
+        size_t processed_bytes = is_rtsp_status_line(buffer.data(), buffer.size())
+                                    ? parse_server_response()
+                                    : parse_server_request();
+        if (processed_bytes)
+            buffer.erase(0, processed_bytes);
+        else
+            break;
     }
 }
 
 
-void MediaServer::in_event()
-{
-    char buffer[RTSP_BUFFER_SIZE];
-    int length;
-
-    // nread = ::read( fd, &payload, sizeof(payload)-1 );?
-
-    while( (length = ::recv(fd, buffer, RTSP_BUFFER_SIZE-1, MSG_NOSIGNAL)) > 0 )
-    {
-        buffer[length] = 0;
-
-        process_response_buffer(buffer, length);
-    };
-
-    //INFO("####### %s length=%d errno=%d %s", __func__, length, errno, strerror(errno));
-
-    if( length  == -1 &&  errno == EAGAIN)
-        return;
-
-    ERROR("%s: %s", __func__, strerror(errno));
-    close();
-}
-
-
-bool MediaServer::epoll_link(int op, uint32_t events)
+bool RtspSession::epoll_link(int op, uint32_t events)
 {
     struct epoll_event ev;
 
     ev.events   = events;
     ev.data.fd  = slot;
 
-    return dispatcher->link(fd, op, ev);
+    return agent->link(fd, op, ev);
 }
 
 
-void MediaServer::on_timer(uint64_t timer_val)
+void RtspSession::on_timer(uint64_t timer_val)
 {
-    if( state != Active && timer_val - last_activity > (uint64_t)reconnect_interval )
-    {
-        close();
-        connect();
-    }
+    if (state == Active || timer_val - last_activity < (uint64_t)reconnect_interval)
+        return;
+
+     close();
+     connect();
 }
 
 
-void MediaServer::connect()
+void RtspSession::connect()
 {
-    last_activity = dispatcher->get_timer_val();
+    last_activity = agent->get_timer_val();
 
-
-    if( (fd = ::socket(saddr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP )) == -1 ) {
+    if ((fd = ::socket(saddr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP )) == -1) {
         ERROR("socket(): %m");
         return;
     }
 
-    if( ::bind(fd, reinterpret_cast<sockaddr *>(&l_saddr), SA_len(&l_saddr)) == -1 )
+    if (::bind(fd, reinterpret_cast<sockaddr *>(&l_saddr), SA_len(&l_saddr)) == -1)
         ERROR("bind(): %m");
 
     state = Connected;
 
-    if(::connect( fd, reinterpret_cast<sockaddr *>(&saddr), SA_len(&saddr)) == -1) {
-        if( errno == EINPROGRESS )
+    if (::connect(fd, reinterpret_cast<sockaddr *>(&saddr), SA_len(&saddr)) == -1) {
+        if (errno == EINPROGRESS)
             state = Connecting;
         else {
             close();
@@ -538,43 +542,20 @@ void MediaServer::connect()
 
     uint32_t events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
 
-    if(state != Connected)
+    if (state != Connected)
         events |= EPOLLOUT;
 
-    if( !epoll_link(EPOLL_CTL_ADD, events) )
+    if (!epoll_link(EPOLL_CTL_ADD, events))
         close();
 
-    if(state == Connected)
+    if (state == Connected)
         init_connection();
 }
 
 
-void print_events(const char *func, uint32_t events)
+void RtspSession::handler(uint32_t ev)
 {
-
-    char buf[128];
-    int len = 0;
-    buf[0] = 0;
-
-    if(events & EPOLLIN)    len += sprintf(&buf[len],"EPOLLIN ");
-    if(events & EPOLLOUT)   len += sprintf(&buf[len],"EPOLLOUT ");
-    if(events & EPOLLPRI)   len += sprintf(&buf[len],"EPOLLPRI ");
-    if(events & EPOLLERR)   len += sprintf(&buf[len],"EPOLLERR ");
-    if(events & EPOLLHUP)   len += sprintf(&buf[len],"EPOLLHUP ");
-    if(events & EPOLLRDHUP) len += sprintf(&buf[len],"EPOLLRDHUP ");
-
-    // INFO("%s: handler: 0x%08x %s",  func, events, buf);
-}
-
-
-void MediaServer::handler(uint32_t ev)
-{
-    // INFO("%s: fd=%d ",__func__, fd);
-
-    print_events(__func__, ev);
-
-    if(ev & ~(EPOLLIN | EPOLLOUT))
-    {
+    if (ev & ~(EPOLLIN | EPOLLOUT)) {
         int err = 0;
         socklen_t len = sizeof(err);
 
@@ -589,17 +570,16 @@ void MediaServer::handler(uint32_t ev)
         return;
     }
 
-    if( ev & EPOLLIN )
+    if (ev & EPOLLIN)
         in_event();
 
-    if( ev & EPOLLOUT )
-    {
+    if (ev & EPOLLOUT) {
         state = Connected;
 
         DBG("%s fd=%d connected [%s]:%u", __func__, fd,
              am_inet_ntop(&saddr).c_str(), am_get_port(&saddr) );
 
-        if( epoll_link(EPOLL_CTL_MOD, EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR) )
+        if (epoll_link(EPOLL_CTL_MOD, EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             init_connection();
         else
             close();
