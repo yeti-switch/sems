@@ -156,6 +156,8 @@ void RtspAudio::play()
 
 void RtspAudio::onRtpTimeout()
 {
+    DBG("onRtpTimeout() id: %ld, streamid: %d, uri: %s",
+        id,streamid,uri.c_str());
     if (state == Playing)
         session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 
@@ -164,6 +166,8 @@ void RtspAudio::onRtpTimeout()
 
 
 void RtspAudio::onRtspPlayNotify(const RtspMsg &msg) {
+    DBG("onRtspPlayNotify() id: %ld, streamid: %d, uri: %s",
+        id,streamid,uri.c_str());
     state = Ready;
     session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 }
