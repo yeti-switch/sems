@@ -1,3 +1,11 @@
+sems (1.7.62-1) stable; urgency=low
+
+  * 25052f058 RpcTreeHandler: fix error codes for wrong method path exceptions
+  * 9706a86ca RtspClient: onRtspPlayNotify(): log not matched messages streamid
+  * b5f8e781f RtspAudio: logging for onRtpTimeout() and onRtspPlayNotify() handlers
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 03 Apr 2018 17:46:56 +0300
+
 sems (1.7.61-1) stable; urgency=low
 
   * 9df7e2d14 Added PLAY_NOTIFY support to Rtsp client
