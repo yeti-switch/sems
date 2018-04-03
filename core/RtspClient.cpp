@@ -358,5 +358,8 @@ void RtspClient::onRtspPlayNotify(const RtspMsg &msg)
 
     if(it != std::end(streams)) {
         it->second->onRtspPlayNotify(msg);
+    } else {
+        DBG("onRtspPlayNotify(): no matching RtspAudio instance in playing state for streamid: %d",
+            msg.streamid);
     }
 }
