@@ -178,7 +178,7 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
     const char *list_method = "_list";
 
     if(methods_tree.empty()) {
-        throw AmDynInvoke::Exception(500,"empty methods tree");
+        throw AmDynInvoke::Exception(-32603,"empty methods tree");
     }
 
     string method = *methods_tree.begin();
@@ -247,7 +247,7 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
                 process_rpc_cmds_methods_tree(l,methods_tree,args,ret);
                 return;
             } else {
-                throw AmDynInvoke::Exception(404,
+                throw AmDynInvoke::Exception(-32601,
                     string("no matches with methods tree. unknown part: ") +
                     methods_tree[0]);
             }
@@ -263,10 +263,10 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
             (static_cast<C &>(* this).*(e->handler))(args,ret);
             return;
         }
-        throw AmDynInvoke::Exception(404,
+        throw AmDynInvoke::Exception(-32601,
             string("not completed method path. last element: ") + method);
     }
-    throw AmDynInvoke::Exception(404,
+    throw AmDynInvoke::Exception(-32601,
         string("no matches with methods tree. unknown part: ") + method);
 }
 
