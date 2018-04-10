@@ -1,3 +1,9 @@
+sems (1.7.62-2) stable; urgency=low
+
+  * uac_auth: w_MD5Update wrapper: remove size limitation. avoid excess memcpy
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 10 Apr 2018 12:04:56 +0300
+
 sems (1.7.62-1) stable; urgency=low
 
   * 25052f058 RpcTreeHandler: fix error codes for wrong method path exceptions
