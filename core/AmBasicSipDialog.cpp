@@ -562,8 +562,9 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
 
   TransMap::iterator t_it = uac_trans.find(reply.cseq);
   if(t_it == uac_trans.end()){
-    ERROR("could not find any transaction matching reply: %s\n", 
-        ((AmSipReply)reply).print().c_str());
+    _LOG(reply.code < 200 ? L_DBG : L_ERR,
+         "could not find any transaction matching reply: %s\n",
+         ((AmSipReply)reply).print().c_str());
     return;
   }
 
