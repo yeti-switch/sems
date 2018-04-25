@@ -1,3 +1,10 @@
+sems (1.7.62-3) stable; urgency=low
+
+  * 9d5e875a3 fix AmNullAudio::get()
+  * 994751f2d AmBasicSipDialog: use debug loglevel for unmatched provisional replies
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 25 Apr 2018 11:41:10 +0300
+
 sems (1.7.62-2) stable; urgency=low
 
   * uac_auth: w_MD5Update wrapper: remove size limitation. avoid excess memcpy
