@@ -31,9 +31,12 @@
 #include "JsonRPCServer.h"
 #include "JsonRPC.h"
 #include "JsonRPCEvents.h"
+#include "ampi/SctpBusAPI.h"
+#include "jsonArg.h"
 
 #include "AmSession.h"
 #include "AmEventDispatcher.h"
+#include "AmSessionContainer.h"
 
 #include "log.h"
 
@@ -201,8 +204,43 @@ void JsonRPCServerLoop::_processEvents() {
   instance()->processEvents();
 }
 
+void JsonRPCServerLoop::notify(AmEventQueue* sender)
+{
+   ev_async_send(loop, &async_w);
+}
+
 void JsonRPCServerLoop::process(AmEvent* ev) {
   DBG("server loop - processing event\n");
+
+  if(SctpBusRawRequest *sctp_event = dynamic_cast<SctpBusRawRequest *>(ev)) {
+      AmArg params, result;
+      if(!json2arg(sctp_event->data.c_str(),params)) {
+        DBG("failed to parse json from sctp. ignore event");
+        return;
+      }
+      if(!isArgStruct(params)) {
+        DBG("unexpected json request object type");
+        return;
+      }
+      if(!params.hasMember("method")) {
+        DBG("no 'method' key in the request object");
+        return;
+      }
+      if(!params.hasMember("id")) {
+        DBG("missed 'id' key in the request object");
+        return;
+      }
+
+      JsonRpcServer::execRpc(params,result);
+
+      auto reply = new SctpBusRawReply(*sctp_event,arg2json(result));
+      if(!AmSessionContainer::instance()->postEvent(SCTP_BUS_EVENT_QUEUE, reply)) {
+        DBG("failed to post reply to the sctp_bus queue");
+      }
+
+      return;
+  }
+
   JsonServerEvent* server_event=dynamic_cast<JsonServerEvent*>(ev);
   if (server_event==NULL) {
     ERROR("wrong event type received\n");
@@ -358,12 +396,15 @@ void JsonRPCServerLoop::run() {
   ev_async_start (EV_A_ &async_w);
 
   INFO("running event loop\n");
+  setEventNotificationSink(this);
+  AmEventDispatcher::instance()->addEventQueue(JSONRPC_QUEUE_NAME,this);
   ev_loop (loop, 0);
+  AmEventDispatcher::instance()->delEventQueue(JSONRPC_QUEUE_NAME);
   INFO("event loop finished\n");
 }
 
 void JsonRPCServerLoop::on_stop() {
-  INFO("todo\n");
+  //INFO("todo\n");
 }
 
 void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {
@@ -390,7 +431,7 @@ void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {
   DBG("returning connection %p\n", conn);
   instance()->postEvent(new JsonServerEvent(conn, JsonServerEvent::StartReadLoop));
 
-  ev_async_send(loop, &async_w);
+  //ev_async_send(loop, &async_w);
 }
 
 void JsonRPCServerLoop::execRpc(const string& evq_link, 
@@ -467,7 +508,7 @@ void JsonRPCServerLoop::sendMessage(const string& connection_id,
   instance()->postEvent(ev);
 
   // wake up event loop to process message
-  ev_async_send(loop, &async_w);
+  //ev_async_send(loop, &async_w);
 
   ret.push(200);
   ret.push("posted");

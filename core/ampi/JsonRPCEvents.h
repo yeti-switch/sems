@@ -41,6 +41,8 @@ using std::string;
 #define JSONRPC_MSG_ERROR    2
 struct JsonrpcNetstringsConnection;
 
+#define JSONRPC_QUEUE_NAME "jsonrpc"
+
 struct JsonRpcEvent
   : public AmEvent {
   string connection_id;

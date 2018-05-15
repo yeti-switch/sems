@@ -44,7 +44,7 @@
 #include <map>
 
 class JsonRPCServerLoop 
-: public AmThread, public AmEventQueue, public AmEventHandler
+: public AmThread, public AmEventQueue, public AmEventHandler, public AmEventNotificationSink
 {
   static  RpcServerThreadpool threadpool;
   static ev_async async_w;
@@ -88,6 +88,7 @@ class JsonRPCServerLoop
 			  AmArg& ret);
   void run();
   void on_stop();
+  void notify(AmEventQueue* sender);
   void process(AmEvent* ev);
 
   static string newConnectionId();
