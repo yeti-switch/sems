@@ -76,7 +76,7 @@ int JsonRPCServerModule::load() {
   DBG("using %d server threads\n", threads);
 
   DBG("starting server loop thread\n");
-  server_loop = new JsonRPCServerLoop();
+  server_loop = JsonRPCServerLoop::instance();
   server_loop->start();
   
   return 0;
