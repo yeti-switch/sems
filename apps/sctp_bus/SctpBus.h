@@ -60,12 +60,17 @@ class SctpBus
     void process_client_connection(int sock, uint32_t events);
 
     void onSendEvent(const SctpBusSendEvent &e);
+    void onSendRawRequest(const SctpBusRawRequest &e);
+    void onSendRawReply(const SctpBusRawReply &e);
+    void onConnectionAdd(const SctpBusAddConnection &e);
+    void onConnectionRemove(const SctpBusRemoveConnection &e);
     void onReloadEvent();
 
     //client connections management
     int addClientConnection(unsigned int id,
-                            sockaddr_storage &a,
-                            int reconnect_interval);
+                            const sockaddr_storage &a,
+                            int reconnect_interval,
+                            const string &event_sink = string());
 
     void showServerAssocations(const AmArg &args, AmArg &ret);
     void showClientConnections(const AmArg &args, AmArg &ret);

@@ -1,5 +1,5 @@
 #include "SctpServerConnection.h"
-#include "SctpBusEventRequest.pb.h"
+#include "SctpBusPDU.pb.h"
 
 #include "sip/ip_util.h"
 
@@ -203,18 +203,19 @@ int SctpServerConnection::process(uint32_t events)
         return 0;
     }
 
-    SctpBusEventRequest r;
+    SctpBusPDU r;
     if(!r.ParseFromArray(payload,length)){
         ERROR("failed deserialize request");
         return -1;
     }
 
-    DBG("RECV sctp_bus event %d:%s -> %d:%s/%d",
+    DBG("RECV sctp_bus event %d:%s -> %d:%s/%d seq: %ld",
         r.src_node_id(),
         r.src_session_id().c_str(),
         r.dst_node_id(),
         r.dst_session_id().c_str(),
-        sinfo.sinfo_assoc_id);
+        sinfo.sinfo_assoc_id,
+        r.sequence());
 
     clients_mutex.lock();
     ClientsMap::iterator it = clients.find(sinfo.sinfo_assoc_id);
@@ -229,7 +230,7 @@ int SctpServerConnection::process(uint32_t events)
     }
 
     SctpBusEvent *ev = new SctpBusEvent(r.src_node_id(), r.src_session_id());
-    if(!json2arg(r.json_data(),ev->data)){
+    if(!json2arg(r.payload(),ev->data)){
         ERROR("failed deserialize json payload");
         delete ev;
         return -1;

@@ -9,17 +9,20 @@
 #include "jsonArg.h"
 #include "AmUtils.h"
 
-#include "SctpBusEventRequest.pb.h"
+#include "SctpBusPDU.pb.h"
 #include "AmConfig.h"
 
 #include "AmSessionContainer.h"
+#include "AmEventDispatcher.h"
 
-int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_seconds)
+int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_seconds,
+                               const string &sink)
 {
     set_addr(a);
     set_epoll_fd(efd);
     reconnect_interval = reconnect_seconds;
     timerclear(&last_connect_attempt);
+    event_sink = sink;
 
     if(-1 == connect())
         return -1;
@@ -108,6 +111,13 @@ int SctpClientConnection::process(uint32_t events) {
                 epoll_fd,fd);
             return close();
         }
+
+        if(!event_sink.empty()) {
+            AmSessionContainer::instance()->postEvent(
+                event_sink,
+                new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
+        }
+
     }
 
     if(events & EPOLLIN) {
@@ -145,7 +155,15 @@ int SctpClientConnection::recv()
         return 0;
     }
 
-    DBG("got data in client connection. ignore it");
+    SctpBusPDU r;
+    if(!r.ParseFromArray(payload,nread)){
+        ERROR("failed to deserialize PDU from: %s,with len: %ld",
+              am_inet_ntop(&from).c_str(),
+              nread);
+        return 0;
+    }
+    onIncomingPDU(r);
+
     return 0;
 }
 
@@ -171,7 +189,7 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
         return;
     }
 
-    SctpBusEventRequest r;
+    SctpBusPDU r;
 
     if(!AmConfig::node_id) {
         WARN("node_id is 0 (default value). this may cause not intended behavior");
@@ -183,7 +201,8 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
     r.set_dst_session_id(e.dst_session_id);
 
     //!TODO: implement direct serialization AmArg -> protobuf
-    r.set_json_data(arg2json(e.data));
+    r.set_payload(arg2json(e.data));
+    //r.set_json_data(arg2json(e.data));
 
     if(!r.SerializePartialToArray(payload,sizeof(payload))){
         ERROR("event serialization failed");
@@ -202,25 +221,168 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
     if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
        ERROR("send(): %m");
     }
+
     events_sent++;
 }
 
-int SctpClientConnection::on_timer()
+void SctpClientConnection::send(const SctpBusRawRequest &e)
+{
+    if(state!=Connected) {
+        ERROR("attempt to send event to not connected peer %d",_id);
+        //FIXME: maybe wait for connect/reconnect here or send reply event with error
+        if(e.reply_timeout) {
+            AmSessionContainer::instance()->postEvent(
+                e.src_session_id,
+                new SctpBusRawReply(e,SctpBusRawReply::RES_NOT_CONNECTED));
+        }
+        return;
+    }
+
+    SctpBusPDU r;
+
+    r.set_src_node_id(AmConfig::node_id);
+    r.set_src_session_id(e.src_session_id);
+    r.set_dst_node_id(e.dst_id);
+    r.set_dst_session_id(e.dst_session_id);
+
+    last_cseq++;
+    r.set_sequence(last_cseq);
+    sent_requests.emplace(last_cseq, e);
+
+    r.set_payload(e.data.data(),e.data.size());
+
+    if(!r.SerializePartialToArray(payload,sizeof(payload))){
+        ERROR("event serialization failed");
+        return;
+    }
+
+    ssize_t size = r.ByteSize();
+
+    DBG("SEND sctp_bus event request %d:%s/%d -> %d:%s seq: %ld",
+        r.src_node_id(),
+        r.src_session_id().c_str(),
+        assoc_id,
+        r.dst_node_id(),
+        r.dst_session_id().c_str(),
+        r.sequence());
+
+    if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
+       ERROR("send(): %m");
+        sent_requests.erase(last_cseq);
+        AmSessionContainer::instance()->postEvent(
+            e.src_session_id,
+            new SctpBusRawReply(e,SctpBusRawReply::RES_SEND_SOCKET_ERROR));
+        return;
+    }
+
+    events_sent++;
+}
+
+void SctpClientConnection::send(const SctpBusRawReply &e)
+{
+    if(state!=Connected) {
+        ERROR("attempt to send event to not connected peer %d",_id);
+        return;
+    }
+
+    SctpBusPDU r;
+
+    r.set_type(SctpBusPDU::REPLY);
+    r.set_src_node_id(AmConfig::node_id);
+    r.set_src_session_id(e.req.dst_session_id);
+    r.set_dst_node_id(e.req.src_id);
+    r.set_dst_session_id(e.req.src_session_id);
+    r.set_sequence(e.req.cseq);
+
+    r.set_payload(e.data.data(),e.data.size());
+
+    if(!r.SerializePartialToArray(payload,sizeof(payload))){
+        ERROR("event serialization failed");
+        return;
+    }
+
+    ssize_t size = r.ByteSize();
+
+    DBG("SEND sctp_bus event reply %d:%s/%d -> %d:%s",
+        r.src_node_id(),
+        r.src_session_id().c_str(),
+        assoc_id,
+        r.dst_node_id(),
+        r.dst_session_id().c_str());
+
+    if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
+       ERROR("send(): %m");
+       return;
+    }
+
+    events_sent++;
+}
+
+int SctpClientConnection::on_timer(time_t now)
 {
     /*DBG("client on timer. state = %d, last connect: %s",
         state,timeval2str_ntp(last_connect_attempt).c_str());*/
-    if(state==Closed && timerisset(&last_connect_attempt)) {
-        timeval now, delta;
-        gettimeofday(&now,NULL);
-        timersub(&now,&last_connect_attempt,&delta);
-        if(delta.tv_sec > reconnect_interval) {
-            DBG("reconnect timeout for not connected %s:%d",
-                am_inet_ntop(&addr).c_str(),am_get_port(&addr));
-            return connect();
+
+    for(auto it = sent_requests.begin(); it != sent_requests.end(); ) {
+        const sent_info &i = it->second;
+        if(i.expire_time > now) {
+            AmSessionContainer::instance()->postEvent(
+                i.req.src_session_id,
+                new SctpBusRawReply(i.req,SctpBusRawReply::RES_TIMEOUT));
+            it = sent_requests.erase(it);
+            continue;
         }
+        ++it;
+    }
+
+    if(state==Closed
+       && timerisset(&last_connect_attempt)
+       && now > last_connect_attempt.tv_sec)
+    {
+        DBG("reconnect timeout for not connected %s:%d",
+            am_inet_ntop(&addr).c_str(),am_get_port(&addr));
+            return connect();
     }
 
     return 0;
+}
+
+void SctpClientConnection::onIncomingPDU(const SctpBusPDU &e)
+{
+    if(e.type()==SctpBusPDU::REQUEST) {
+        DBG("got request PDU for session %s",e.dst_session_id().c_str());
+        SctpBusRawRequest *r =
+            new SctpBusRawRequest(
+                e.src_session_id(),
+                e.dst_node_id(),
+                e.dst_session_id(),
+                e.payload());
+        r->src_id = _id;
+
+        if(!AmSessionContainer::instance()->postEvent(e.dst_session_id(),r)) {
+            DBG("failed to post SctpBusRawRequest for sesson %s",
+                e.dst_session_id().c_str());
+        }
+
+    } else {
+        if(!e.has_sequence()) {
+            ERROR("got reply PDU without sequence. ignore it");
+            return;
+        }
+        auto it = sent_requests.find(e.sequence());
+        if(it == sent_requests.end()) {
+            ERROR("reply PDU with sequence %ld has not matching sent request. ignore it",
+                  e.sequence());
+            return;
+        }
+        const SctpBusRawRequest &req = it->second.req;
+        sent_requests.erase(it);
+        AmSessionContainer::instance()->postEvent(
+            e.dst_session_id(),
+            new SctpBusRawReply(
+                req,
+                e.payload()));
+    }
 }
 
 void SctpClientConnection::getInfo(AmArg &info)
@@ -233,3 +395,4 @@ void SctpClientConnection::getInfo(AmArg &info)
     info["remote_port"] = am_get_port(&addr);
     info["state"] = status_str[state];
 }
+

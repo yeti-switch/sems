@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+message SctpBusPDU {
+  required int32 src_node_id = 1;
+  required string src_session_id = 2;
+  required int32 dst_node_id = 3;
+  required string dst_session_id = 4;
+
+  enum EventType {
+    REQUEST = 0;
+    REPLY = 1;
+  }
+  optional EventType type = 5 [default = REQUEST];
+
+  /* sequence to match requests/replies within connection.
+     must be set for replies and for requests which are need replies */
+  optional uint64 sequence = 6;
+
+  required bytes payload = 0xf;
+}

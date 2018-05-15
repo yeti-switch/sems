@@ -153,6 +153,8 @@ int SctpBus::onLoad() {
 
     init_rpc();
 
+    AmEventDispatcher::instance()->addEventQueue(SCTP_BUS_EVENT_QUEUE, this);
+
     DBG("SctpBus initialized");
 
     start();
@@ -179,7 +181,7 @@ void SctpBus::run()
 
     setThreadName("sctp-bus");
 
-    AmEventDispatcher::instance()->addEventQueue(SCTP_BUS_EVENT_QUEUE, this);
+    //AmEventDispatcher::instance()->addEventQueue(SCTP_BUS_EVENT_QUEUE, this);
 
     running = true;
     do {
@@ -188,6 +190,7 @@ void SctpBus::run()
         if(ret < 1) {
             if(errno != EINTR){
                 ERROR("epoll_wait: %m");
+                break;
             }
             continue;
         }
@@ -237,11 +240,31 @@ void SctpBus::process(AmEvent* ev)
         }
         return;
     }
-   SctpBusSendEvent *e = dynamic_cast<SctpBusSendEvent *>(ev);
-    if(e){
+
+    if(SctpBusSendEvent *e = dynamic_cast<SctpBusSendEvent *>(ev)) {
         onSendEvent(*e);
         return;
     }
+
+    if(SctpBusRawRequest *e = dynamic_cast<SctpBusRawRequest *>(ev)) {
+        onSendRawRequest(*e);
+        return;
+    }
+
+    if(SctpBusRawReply *e = dynamic_cast<SctpBusRawReply *>(ev)) {
+        onSendRawReply(*e);
+        return;
+    }
+
+    if(SctpBusAddConnection *e = dynamic_cast<SctpBusAddConnection *>(ev)) {
+        onConnectionAdd(*e);
+        return;
+    }
+    if(SctpBusRemoveConnection *e = dynamic_cast<SctpBusRemoveConnection *>(ev)) {
+        onConnectionRemove(*e);
+        return;
+    }
+
     if(dynamic_cast<ReloadEvent *>(ev)) {
         onReloadEvent();
         return;
@@ -290,6 +313,71 @@ void SctpBus::onSendEvent(const SctpBusSendEvent &e)
     }
 }
 
+void SctpBus::onSendRawRequest(const SctpBusRawRequest &e)
+{
+    DBG("process sctp send raw event request %s -> %d:%s ",
+        e.src_session_id.c_str(),
+        e.dst_id,
+        e.dst_session_id.c_str());
+    Connections::iterator it = connections_by_id.find(e.dst_id);
+    if(it==connections_by_id.end()) {
+        DBG("connection with id %d does not exists",e.dst_id);
+        return;
+    }
+    it->second->send(e);
+}
+
+void SctpBus::onSendRawReply(const SctpBusRawReply &e)
+{
+    DBG("process sctp send raw event reply %s -> %d:%s ",
+        e.req.dst_session_id.c_str(),
+        e.req.src_id,
+        e.req.src_session_id.c_str());
+    Connections::iterator it = connections_by_id.find(e.req.src_id);
+    if(it==connections_by_id.end()) {
+        DBG("connection with id %d does not exists",e.req.src_id);
+        return;
+    }
+    it->second->send(e);
+}
+
+void SctpBus::onConnectionAdd(const SctpBusAddConnection &e)
+{
+    if(0!=addClientConnection(
+        e.connection_id,
+        e.remote_address,
+        e.reconnect_interval,
+        e.event_sink))
+    {
+        ERROR("failed to add external client connection with id: %d",e.connection_id);
+    }
+}
+
+void SctpBus::onConnectionRemove(const SctpBusRemoveConnection &e)
+{
+    auto it = connections_by_id.find(e.connection_id);
+    if(it==connections_by_id.end()) {
+        ERROR("request to remove not existent external client connection with id: %d",
+            e.connection_id);
+        return;
+    }
+
+    SctpConnection *c = it->second;
+    int sock = c->get_sock();
+    connections_by_sock.erase(sock);
+    connections_by_id.erase(e.connection_id);
+
+    if(!c->get_event_sink().empty()) {
+        AmSessionContainer::instance()->postEvent(
+            c->get_event_sink(),
+            new SctpBusConnectionStatus(
+                e.connection_id,
+                SctpBusConnectionStatus::Removed));
+    }
+
+    delete c;
+}
+
 void SctpBus::onReloadEvent()
 {
     INFO("cleanup sctp_bus configuration");
@@ -310,8 +398,9 @@ void SctpBus::onReloadEvent()
 
 int SctpBus::addClientConnection(
     unsigned int id,
-    sockaddr_storage &a,
-    int reconnect_interval)
+    const sockaddr_storage &a,
+    int reconnect_interval,
+    const string &event_sink)
 {
     //AmLock l(connections_mutex); (void)l;
 
@@ -321,7 +410,7 @@ int SctpBus::addClientConnection(
     }
 
     auto c = new SctpClientConnection();
-    if(0!=c->init(epoll_fd,a,reconnect_interval))
+    if(0!=c->init(epoll_fd,a,reconnect_interval,event_sink))
     {
         DBG("connection %u initialization error",id);
         delete c;
@@ -341,9 +430,11 @@ void SctpBus::on_timer()
 {
     int ret;
 
-    server_connection.on_timer();
+    time_t now = time(nullptr);
+
+    server_connection.on_timer(now);
     for(auto const &c : connections_by_id) {
-        ret = c.second->on_timer();
+        ret = c.second->on_timer(now);
         if(ret > 0) {
             DBG("add fd %d to the client connections sockets map", ret);
             if(connections_by_sock.find(ret)!=connections_by_sock.end()) {

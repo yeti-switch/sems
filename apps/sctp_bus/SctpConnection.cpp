@@ -1,4 +1,5 @@
 #include "SctpConnection.h"
+#include "AmEventDispatcher.h"
 
 #include <sys/epoll.h>
 
@@ -11,7 +12,8 @@ SctpConnection::SctpConnection()
   : fd(-1),
     epoll_fd(-1),
     _id(0),
-    state(Closed)
+    state(Closed),
+    last_cseq(0)
 {}
 
 SctpConnection::~SctpConnection()
@@ -88,6 +90,12 @@ int SctpConnection::close()
     fd = -1;
 
     state = Closed;
+
+    if(!event_sink.empty()) {
+        AmEventDispatcher::instance()->post(
+            event_sink,
+            new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Closed));
+    }
 
     return old_fd;
 }

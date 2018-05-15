@@ -40,8 +40,8 @@ bool cfg_reader::read(const string &path, cfg_opt_t *opts)
     case CFG_SUCCESS:
         break;
     case CFG_FILE_ERROR:
-        ERROR("configuration file: %s could not be read: %s",path.c_str(),strerror(errno));
-        return false;
+        DBG("configuration file: %s could not be read: %s",path.c_str(),strerror(errno));
+        return true;
     case CFG_PARSE_ERROR:
         ERROR("configuration file %s parse error",path.c_str());
         return false;

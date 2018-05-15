@@ -39,7 +39,7 @@ static cfg_opt_t neighbours_opts[] = {
 };
 
 static cfg_opt_t sctp_bus_opts[] = {
-    CFG_SEC(section_name_listen,listen_opts, CFGF_NODEFAULT),
+    CFG_SEC(section_name_listen,listen_opts, CFGF_NONE),
     CFG_SEC(section_name_neighbours,neighbours_opts, CFGF_NONE),
     CFG_END()
 };
