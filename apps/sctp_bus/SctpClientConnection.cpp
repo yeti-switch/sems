@@ -376,12 +376,12 @@ void SctpClientConnection::onIncomingPDU(const SctpBusPDU &e)
             return;
         }
         const SctpBusRawRequest &req = it->second.req;
-        sent_requests.erase(it);
         AmSessionContainer::instance()->postEvent(
             e.dst_session_id(),
             new SctpBusRawReply(
                 req,
                 e.payload()));
+        sent_requests.erase(it);
     }
 }
 
