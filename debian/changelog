@@ -1,3 +1,9 @@
+sems (1.7.63-1) stable; urgency=low
+
+  * sctp_bus changes for yeti module
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 16 May 2018 13:21:32 +0300
+
 sems (1.7.62-3) stable; urgency=low
 
   * 9d5e875a3 fix AmNullAudio::get()
