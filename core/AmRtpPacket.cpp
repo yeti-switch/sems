@@ -29,8 +29,10 @@
 #include <netinet/in.h>
 
 #include "AmRtpPacket.h"
+#include "rtcp/RtcpPacket.h"
 #include "rtp/rtp.h"
 #include "log.h"
+#include "AmLcConfig.h"
 
 #include "sip/raw_sender.h"
 #include "sip/transport.h"
@@ -44,6 +46,10 @@
 #include <arpa/inet.h>
 
 #include "sip/msg_logger.h"
+
+#define RTCP_PAYLOAD_MIN 72
+#define RTCP_PAYLOAD_MAX 76
+#define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
 AmRtpPacket::AmRtpPacket()
   : data_offset(0),
@@ -70,125 +76,310 @@ void AmRtpPacket::getAddr(struct sockaddr_storage* a)
 
 int AmRtpPacket::parse(AmObject *caller)
 {
-  assert(buffer);
-  assert(b_size);
+    assert(buffer);
+    assert(b_size);
 
-  rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
-  // ZRTP "Hello" packet has version == 0
-  if ((hdr->version != RTP_VERSION) && (hdr->version != 0))
-      {
-    DBG("[%p] received RTP packet with unsupported version (%i).\n",
-        caller,hdr->version);
-	return -1;
-      }
-
-  data_offset = sizeof(rtp_hdr_t) + (hdr->cc*4);
-
-  if(hdr->x != 0) {
-    if (b_size >= data_offset + 4) {
-      data_offset +=
-	ntohs(((rtp_xhdr_t*) (buffer + data_offset))->len)*4;
+    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    // ZRTP "Hello" packet has version == 0
+    if ((hdr->version != RTP_VERSION) && (hdr->version != 0)) {
+        DBG("[%p] received RTP packet with unsupported version (%i).\n",
+            caller,hdr->version);
+        return RTP_PACKET_PARSE_ERROR;
     }
-  }
 
-  payload = hdr->pt;
-  marker = hdr->m;
-  sequence = ntohs(hdr->seq);
-  timestamp = ntohl(hdr->ts);
-  ssrc = ntohl(hdr->ssrc);
-  version = hdr->version;
+    data_offset = sizeof(rtp_hdr_t) + (hdr->cc*4);
 
-  if (data_offset > b_size) {
-    ERROR("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !\n",
-      caller,data_offset,b_size);
-    return -1;
-  }
-  d_size = b_size - data_offset;
-
-  if(hdr->p){
-    if (buffer[b_size-1]>=d_size){
-      ERROR("[%p] bad rtp packet (invalid padding size) !\n",caller);
-      return -1;
+    if(hdr->x != 0) {
+        //#ifndef WITH_ZRTP
+        //if (AmConfig::IgnoreRTPXHdrs) {
+        //  skip the extension header
+        //#endif
+        if (b_size >= data_offset + 4) {
+            data_offset +=
+            ntohs(((rtp_xhdr_t*) (buffer + data_offset))->len)*4;
+        }
+        // #ifndef WITH_ZRTP
+        //   } else {
+        //     DBG("RTP extension headers not supported.\n");
+        //     return -1;
+        //   }
+        // #endif
     }
-    d_size -= buffer[b_size-1];
-  }
 
-  return 0;
+    payload = hdr->pt;
+
+    if(IS_RTCP_PAYLOAD(payload)) {
+        return RTP_PACKET_PARSE_RTCP;
+    }
+
+    marker = hdr->m;
+    sequence = ntohs(hdr->seq);
+    timestamp = ntohl(hdr->ts);
+    ssrc = ntohl(hdr->ssrc);
+    version = hdr->version;
+
+    if (data_offset > b_size) {
+        ERROR("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !\n",
+              caller,data_offset,b_size);
+        return RTP_PACKET_PARSE_ERROR;
+    }
+    d_size = b_size - data_offset;
+
+    if(hdr->p) {
+        if (buffer[b_size-1]>=d_size) {
+            ERROR("[%p] bad rtp packet (invalid padding size) !\n",caller);
+            return RTP_PACKET_PARSE_ERROR;
+        }
+        d_size -= buffer[b_size-1];
+    }
+
+    return RTP_PACKET_PARSE_OK;
 }
+
+int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
+{
+    unsigned char *r, *end, *chunk_end, *p;
+    size_t chunk_size;
+    int idx;
+
+    assert(buffer);
+    assert(b_size);
+
+    r = buffer;
+    end = r + b_size;
+
+    DBG("got RTCP with size: %u",b_size);
+
+    idx = 0;
+    do {
+        chunk_size = end-r;
+        if(chunk_size < sizeof(RtcpCommonHeader)) {
+            DBG("received RTCP packet part %d is too short: %lu (expected %lu)",
+                idx,chunk_size,sizeof(RtcpCommonHeader));
+            return RTP_PACKET_PARSE_ERROR;
+        }
+
+        RtcpCommonHeader &h = *(RtcpCommonHeader *)r;
+
+        if(h.version != RTP_VERSION) {
+            DBG("received RTCP packet with wrong version %u",h.version);
+            return RTP_PACKET_PARSE_ERROR;
+        }
+
+        if(h.p != 0) {
+            DBG("received RTCP packet with non-zero padding bit");
+            return RTP_PACKET_PARSE_ERROR;
+        }
+
+        chunk_end = r + sizeof(uint32_t)*(ntohs(h.length) + 1);
+
+        if(chunk_end > end) {
+            DBG("RTCP%d: too small buffer for provided chunk length value: %d. "
+                "expected at least %lu but tail is %lu",
+                idx,ntohs(h.length),chunk_end-r,chunk_size);
+            return RTP_PACKET_PARSE_ERROR;
+        }
+
+        DBG("RTCP chunk %d > version: %u, pt: %u, p: %u, count: %u, length: %u(%lu), ssrc: 0x%x",
+            idx,
+            h.version,
+            h.pt,
+            h.p,
+            h.count,
+            ntohs(h.length),chunk_end-r,
+            ntohl(h.ssrc));
+
+        switch(h.pt) {
+        case RtcpCommonHeader::RTCP_SR:
+
+            DBG("RTCP: parse Sender Report");
+            if(chunk_size < (sizeof(RtcpCommonHeader)
+                             + sizeof(RtcpSenderReportHeader)
+                             + h.count*sizeof(RtcpReceiverReportHeader)))
+            {
+                DBG("RTCP: chunk is too small (%lu) to be a valid SenderReport",
+                    chunk_size);
+                return RTP_PACKET_PARSE_ERROR;
+            }
+
+            p = r + sizeof(RtcpCommonHeader);
+            process_sender_report(*(RtcpSenderReportHeader*)p,stats);
+
+            if(h.count) {
+                p += sizeof(RtcpSenderReportHeader);
+                parse_receiver_reports(p,chunk_end-p,stats);
+            } else {
+                DBG("SR with empty RR");
+            }
+
+            break;
+
+        case RtcpCommonHeader::RTCP_RR:
+
+            DBG("RTCP: parse Receiver Report");
+            p = r + sizeof(RtcpCommonHeader);
+            if(chunk_size < (sizeof(RtcpCommonHeader)
+                             + h.count*sizeof(RtcpReceiverReportHeader)))
+            {
+                DBG("RTCP: chunk is too small (%lu) to be a valid ReceiverReport. RC = %u",
+                    chunk_size,h.count);
+                return RTP_PACKET_PARSE_ERROR;
+            }
+
+            if(h.count)
+                parse_receiver_reports(p,chunk_end-p,stats);
+            else
+                DBG("got empty RR");
+
+            break;
+
+        default:
+
+            DBG("RTCP: skip parsing unsupported payload type: %d",h.pt);
+
+        } //switch(h.pt)
+
+        DBG("-------------------------------");
+        r = chunk_end;
+        idx++;
+
+    } while(r < end);
+
+    if (r != end) {
+        DBG("wrong format of the RTCP compound packet");
+    }
+/*
+    DBG("RTCP.version: %u",hdr.version);
+    DBG("RTCP.pt: %u",hdr.pt);
+    DBG("RTCP.p: %u",hdr.p);
+    DBG("RTCP.count: %u",hdr.count);
+    DBG("RTCP.length: %u %u",hdr.length,ntohs(hdr.length));
+    DBG("RTCP.ssrc: 0x%x 0x%x",hdr.ssrc,ntohl(hdr.ssrc));
+*/
+    return RTP_PACKET_PARSE_OK;
+}
+
+
+int AmRtpPacket::parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats)
+{
+    DBG("parse_receiver_reports(%p,%zd)",chunk,chunk_size);
+    unsigned char *end = chunk+chunk_size;
+    do {
+        process_receiver_report(*(RtcpReceiverReportHeader *)chunk,stats);
+        chunk+=sizeof(RtcpReceiverReportHeader);
+    } while(chunk < end);
+    if(chunk != end) {
+        DBG("received reports possibly contain garbage");
+    }
+    return 0;
+}
+
+int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirectionalStat &stats)
+{
+    DBG("RTCP process_sender_report(%p)",&sr);
+    DBG("RTCP ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
+        ntohl(sr.ntp_sec),
+        ntohl(sr.ntp_frac),
+        ntohl(sr.rtp_ts),
+        ntohl(sr.sender_pcount),
+        ntohl(sr.sender_bcount)
+    );
+    return 0;
+}
+
+int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats)
+{
+    DBG("RTCP process_receiver_report(%p)",&rr);
+    uint32_t ssrc = ntohl(rr.ssrc);
+    DBG("RTCP ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
+        ssrc,
+        ntohl(rr.last_seq),
+        ntohl(rr.lsr),
+        ntohl(rr.dlsr),
+        ntohl(rr.jitter),
+        rr.fract_lost,
+        rr.total_lost_0,
+        rr.total_lost_1,
+        rr.total_lost_2
+    );
+
+    return 0;
+}
+
 
 unsigned char *AmRtpPacket::getData()
 {
-  return &buffer[data_offset];
+    return &buffer[data_offset];
 }
 
 unsigned char *AmRtpPacket::getBuffer()
 {
-  return &buffer[0];
+    return &buffer[0];
 }
 
 int AmRtpPacket::compile(unsigned char* data_buf, unsigned int size)
 {
-  assert(data_buf);
-  assert(size);
+    assert(data_buf);
+    assert(size);
 
-  d_size = size;
-  b_size = d_size + sizeof(rtp_hdr_t);
-  assert(b_size <= 4096);
-  rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    d_size = size;
+    b_size = d_size + sizeof(rtp_hdr_t);
+    assert(b_size <= 4096);
+    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
 
-  if(b_size>sizeof(buffer)){
-    ERROR("builtin buffer size (%d) exceeded: %d\n",
-	  (int)sizeof(buffer), b_size);
-    return -1;
-  }
+    if(b_size>sizeof(buffer)) {
+        ERROR("builtin buffer size (%d) exceeded: %d\n",
+              (int)sizeof(buffer), b_size);
+        return -1;
+    }
 
-  memset(hdr,0,sizeof(rtp_hdr_t));
-  hdr->version = RTP_VERSION;
-  hdr->m = marker;
-  hdr->pt = payload;
-    
-  hdr->seq = htons(sequence);
-  hdr->ts = htonl(timestamp);
-  hdr->ssrc = htonl(ssrc);
-    
-  data_offset = sizeof(rtp_hdr_t);
-  memcpy(&buffer[data_offset],data_buf,d_size);
+    memset(hdr,0,sizeof(rtp_hdr_t));
+    hdr->version = RTP_VERSION;
+    hdr->m = marker;
+    hdr->pt = payload;
 
-  return 0;
+    hdr->seq = htons(sequence);
+    hdr->ts = htonl(timestamp);
+    hdr->ssrc = htonl(ssrc);
+
+    data_offset = sizeof(rtp_hdr_t);
+    memcpy(&buffer[data_offset],data_buf,d_size);
+
+    return 0;
 }
 
 int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
 {
-  if ((!size) || (!data_buf))
-    return -1;
+    if ((!size) || (!data_buf))
+        return -1;
 
-  if(size>sizeof(buffer)){
-    ERROR("builtin buffer size (%d) exceeded: %d\n",
-	  (int)sizeof(buffer), size);
-    return -1;
-  }
+    if(size>sizeof(buffer)){
+        ERROR("builtin buffer size (%d) exceeded: %d\n",
+              (int)sizeof(buffer), size);
+        return -1;
+    }
 
-  memcpy(&buffer[0], data_buf, size);
-  b_size = size;
+    memcpy(&buffer[0], data_buf, size);
+    b_size = size;
 
-  return size;
+    return size;
 }
 
 int AmRtpPacket::sendto(int sd)
 {
-  int err = ::sendto(sd,buffer,b_size,0,
-		     (const struct sockaddr *)&addr,
-		     SA_len(&addr));
+    int err = ::sendto(sd,buffer,b_size,0,
+                       (const struct sockaddr *)&addr,
+                       SA_len(&addr));
 
-  if(err == -1){
-	ERROR("while sending RTP packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
-		  sd,buffer,b_size,&addr,SA_len(&addr),
-		  strerror(errno));
-	log_stacktrace(L_DBG);
-    return -1;
-  }
+    if(err == -1){
+        ERROR("while sending RTP packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
+              sd,buffer,b_size,&addr,SA_len(&addr),
+              strerror(errno));
+        log_stacktrace(L_DBG);
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
 
 int AmRtpPacket::sendmsg(int sd, unsigned int sys_if_idx)
@@ -284,14 +475,14 @@ int AmRtpPacket::recv(int sd)
 
 void AmRtpPacket::logReceived(msg_logger *logger, struct sockaddr_storage *laddr)
 {
-  static const cstring empty;
-  logger->log((const char *)buffer, b_size, &addr, laddr, empty);
+    static const cstring empty;
+    logger->log((const char *)buffer, b_size, &addr, laddr, empty);
 }
 
 void AmRtpPacket::logSent(msg_logger *logger, struct sockaddr_storage *laddr)
 {
-  static const cstring empty;
-  logger->log((const char *)buffer, b_size, laddr, &addr, empty);
+    static const cstring empty;
+    logger->log((const char *)buffer, b_size, laddr, &addr, empty);
 }
 
 void AmRtpPacket::mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr){

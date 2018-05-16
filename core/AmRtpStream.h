@@ -33,6 +33,7 @@
 #include "AmThread.h"
 #include "SampleArray.h"
 #include "AmRtpPacket.h"
+#include "rtcp/RtcpStat.h"
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
@@ -162,6 +163,8 @@ protected:
 
   // current payload (index into @payloads)
   int payload;
+
+  RtcpBidirectionalStat rtp_stats;
 
   std::vector<int> incoming_payloads;
   std::vector<int> incoming_relayed_payloads;
@@ -417,7 +420,7 @@ public:
 
   void recvPacket(int fd);
 
-  void recvRtcpPacket(AmRtpPacket* p = NULL);
+  void recvRtcpPacket(AmRtpPacket* p);
 
   /** ping the remote side, to open NATs and enable symmetric RTP */
   int ping();

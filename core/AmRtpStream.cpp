@@ -51,7 +51,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>       
+#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -68,8 +68,6 @@ using std::set;
 #include <sstream>
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
-
-#define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
 static inline void add_if_no_exist(std::vector<int> &v,int payload){
 	if(std::find(v.begin(),v.end(),payload)==v.end())
@@ -579,55 +577,48 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port,
 
 void AmRtpStream::handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp) {
 
-  if((!rtcp && passive) || (rtcp && (!symmetric_rtp_ignore_rtcp && passive_rtcp))) {
+    if((!rtcp && passive) || (rtcp && (!symmetric_rtp_ignore_rtcp && passive_rtcp))) {
 
-    struct sockaddr_in* in_recv = (struct sockaddr_in*)recv_addr;
-    struct sockaddr_in6* in6_recv = (struct sockaddr_in6*)recv_addr;
+        struct sockaddr_in* in_recv = (struct sockaddr_in*)recv_addr;
+        struct sockaddr_in6* in6_recv = (struct sockaddr_in6*)recv_addr;
 
-    struct sockaddr_in* in_addr = (struct sockaddr_in*)&r_saddr;
-    struct sockaddr_in6* in6_addr = (struct sockaddr_in6*)&r_saddr;
+        struct sockaddr_in* in_addr = (struct sockaddr_in*)&r_saddr;
+        struct sockaddr_in6* in6_addr = (struct sockaddr_in6*)&r_saddr;
 
-    unsigned short port = am_get_port(recv_addr);
+        unsigned short port = am_get_port(recv_addr);
 
-    // symmetric RTP
-    if ( (!rtcp && (port != r_port)) || (rtcp && (port != r_rtcp_port)) ||
-	 ((recv_addr->ss_family == AF_INET) &&
-	  (in_addr->sin_addr.s_addr != in_recv->sin_addr.s_addr)) ||
-	 ((recv_addr->ss_family == AF_INET6) &&
-	  (memcmp(&in6_addr->sin6_addr,
-		      &in6_recv->sin6_addr,
-		      sizeof(struct in6_addr))))
-	 ) {
+        // symmetric RTP
+        if ( (!rtcp && (port != r_port)) || (rtcp && (port != r_rtcp_port)) ||
+             ( (recv_addr->ss_family == AF_INET) &&
+               (in_addr->sin_addr.s_addr != in_recv->sin_addr.s_addr)) ||
+             ( (recv_addr->ss_family == AF_INET6) &&
+               (memcmp(&in6_addr->sin6_addr,
+                       &in6_recv->sin6_addr,
+                       sizeof(struct in6_addr)))))
+        {
+            string addr_str = get_addr_str(recv_addr);
+            setRAddr(addr_str, !rtcp ? port : 0, rtcp ? port : 0);
+            if(!symmetric_rtp_endless) {
+                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n",
+                    !rtcp ? "RTP" : "RTCP", addr_str.c_str(),port);
+            }
+        } else {
+            if(!symmetric_rtp_endless) {
+                const char* prot = rtcp ? "RTCP" : "RTP";
+                CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
+                    " Leaving passive mode.\n",prot,prot);
+            }
+        }
 
-      string addr_str = get_addr_str(recv_addr);
-      setRAddr(addr_str, !rtcp ? port : 0, rtcp ? port : 0);
-	  if(!symmetric_rtp_endless) {
-		CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n",
-		!rtcp ? "RTP" : "RTCP", addr_str.c_str(),port);
-	  }
-
-    } else {
-	  if(!symmetric_rtp_endless) {
-		  const char* prot = rtcp ? "RTCP" : "RTP";
-		  CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
-			" Leaving passive mode.\n",prot,prot);
-		  /*for(int i = 0;i<127;i++){
-			  if(relay_payloads.get(i)){
-				  CLASS_DBG("payload %d is set for relay",i);
-			  }
-		  }*/
-	  }
+        // avoid comparing each time sender address
+        // don't switch to passive mode if endless switching flag set
+        if(!symmetric_rtp_endless){
+            if(!rtcp)
+                passive = false;
+            else
+                passive_rtcp = false;
+        }
     }
-
-    // avoid comparing each time sender address
-	// don't switch to passive mode if endless switching flag set
-	if(!symmetric_rtp_endless){
-		if(!rtcp)
-			passive = false;
-		else
-			passive_rtcp = false;
-	}
-  }
 }
 
 void AmRtpStream::setPassiveMode(bool p)
@@ -1152,225 +1143,157 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 
 void AmRtpStream::recvPacket(int fd)
 {
-  if(fd == l_rtcp_sd){
-    recvRtcpPacket();
-    return;
-  }
+    AmRtpPacket* p = mem.newPacket();
+    if (!p) p = reuseBufferedPacket();
+    if (!p) {
+        out_of_buffer_errors++;
+        receive_mut.lock();
+        CLASS_DBG("out of buffers for RTP packets, dropping."
+                  "receive_buf: %ld, rtp_ev_qu: %ld",
+                  receive_buf.size(),rtp_ev_qu.size());
+        mem.debug();
+        receive_mut.unlock();
+        // drop received data
+        AmRtpPacket dummy;
+        dummy.recv(fd);
+        return;
+    }
 
-  AmRtpPacket* p = mem.newPacket();
-  if (!p) p = reuseBufferedPacket();
-  if (!p) {
-    out_of_buffer_errors++;
-    receive_mut.lock();
-    CLASS_DBG("out of buffers for RTP packets, dropping."
-              "receive_buf: %ld, rtp_ev_qu: %ld",
-              receive_buf.size(),rtp_ev_qu.size());
-    mem.debug();
-    receive_mut.unlock();
-    // drop received data
-    AmRtpPacket dummy;
-    dummy.recv(l_sd);
-    return;
-  }
-  
-  if(p->recv(l_sd) > 0){
-    int parse_res = 0;
+    if(p->recv(fd) > 0) {
+        int parse_res = 0;
 
-	//if (logger) p->logReceived(logger, &l_saddr);
-	log_rcvd_rtp_packet(*p);
-    incoming_bytes += p->getBufferSize();
+        gettimeofday(&p->recv_time,NULL);
 
-    gettimeofday(&p->recv_time,NULL);
-    
-    if(!relay_raw
+        log_rcvd_rtp_packet(*p);
+        incoming_bytes += p->getBufferSize();
+
+        if(fd == l_rtcp_sd) {
+            recvRtcpPacket(p);
+            mem.freePacket(p);
+            return;
+        }
+
+        if(!relay_raw
 #ifdef WITH_ZRTP
-       && !(session && session->enable_zrtp)
+           && !(session && session->enable_zrtp)
 #endif
-       ) {
-      parse_res = p->parse();
-    }
+        ) {
+            parse_res = p->parse();
+        }
 
-    if (parse_res == -1) {
-	  rtp_parse_errors++;
-	  CLASS_ERROR("error while parsing RTP packet. "
-			"(remote_addr: %s:%i, "
-			"local_ssrc: 0x%x, local_tag: %s)\n",
-			get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
-			l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-      clearRTPTimeout(&p->recv_time);
-	  mem.freePacket(p);
+        if (parse_res == RTP_PACKET_PARSE_ERROR) {
+            rtp_parse_errors++;
+            CLASS_ERROR("error while parsing RTP packet. "
+                        "(remote_addr: %s:%i, "
+                        "local_ssrc: 0x%x, local_tag: %s)\n",
+                        get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
+                        l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            clearRTPTimeout(&p->recv_time);
+            mem.freePacket(p);
+        } else if(parse_res==RTP_PACKET_PARSE_RTCP) {
+            recvRtcpPacket(p);
+            mem.freePacket(p);
+            return;
+        } else {
+            if(rtp_ping)	//clear mark for all packets in stream
+                p->marker = false;
+            bufferPacket(p);
+        }
+
     } else {
-      if(IS_RTCP_PAYLOAD(p->payload)){
-          recvRtcpPacket(p);
-          mem.freePacket(p);
-          return;
-      }
-	  if(rtp_ping)	//clear mark for all packets in stream
-		p->marker = false;
-      bufferPacket(p);
+        mem.freePacket(p);
     }
-  } else {
-    mem.freePacket(p);
-  }
 }
 
 void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
 {
-  struct sockaddr_storage recv_addr;
-  socklen_t recv_addr_len = sizeof(recv_addr);
-  int recved_bytes;
-  unsigned char *buffer;
-  unsigned char local_buffer[4096];
-
-  if(p){
-      buffer = p->getBuffer();
-      recved_bytes = p->getBufferSize();
-      p->getAddr(&recv_addr);
-  } else {
-      buffer = local_buffer;
-      recved_bytes = recvfrom(l_rtcp_sd,local_buffer,sizeof(local_buffer),0,
-                        (struct sockaddr*)&recv_addr,
-                        &recv_addr_len);
-      if(recved_bytes < 0) {
-        if((errno != EINTR) &&
-           (errno != EAGAIN)) {
-          CLASS_ERROR("rtcp recv(%d): %s",l_rtcp_sd,strerror(errno));
-        }
-        return;
-      }
-      else
-        if(!recved_bytes) return;
-
-      if((size_t)recved_bytes > sizeof(local_buffer)) {
-        CLASS_ERROR("recved huge RTCP packet (%d/%ld)",recved_bytes,sizeof(local_buffer));
-        return;
-      }
-  }
-
-  log_rcvd_rtcp_packet((const char *)buffer, recved_bytes,recv_addr);
-
-  // clear RTP timer
-  //clearRTPTimeout();
-
-  handleSymmetricRtp(&recv_addr,true);
-
-  if(!relay_enabled || !relay_stream ||
-     !relay_stream->l_sd)
-    return;
-
-  struct sockaddr_storage rtcp_raddr;
-  memcpy(&rtcp_raddr,&relay_stream->r_saddr,sizeof(rtcp_raddr));
-  am_set_port(&rtcp_raddr, relay_stream->r_rtcp_port);
-
-  int err;
-  if(AmConfig.media_ifs[l_if].proto_info[laddr_if]->sig_sock_opts&trsp_socket::use_raw_sockets) {
-    err = raw_sender::send((char*)buffer,recved_bytes,
-			   AmConfig.media_ifs[l_if].proto_info[laddr_if]->net_if_idx,
-			   &relay_stream->l_saddr,
-			   &rtcp_raddr,AmConfig.media_ifs[l_if].proto_info[laddr_if]->tos_byte);
-  }
-  else {
-    err = sendto(relay_stream->l_rtcp_sd,buffer,recved_bytes,0,
-		 (const struct sockaddr *)&rtcp_raddr,
-		 SA_len(&rtcp_raddr));
-  }
-  
-  if(err < 0){
-    CLASS_ERROR("could not relay RTCP packet: %s\n",strerror(errno));
-    return;
-  }
-
-  log_sent_rtcp_packet((const char *)buffer, recved_bytes, rtcp_raddr);
-  /*if (logger)
-	logger->log((const char *)buffer, recved_bytes, &relay_stream->l_rtcp_saddr, &rtcp_raddr, empty);*/
-
+    handleSymmetricRtp(&p->addr,true);
+    p->rtcp_parse_update_stats(rtp_stats);
 }
 
 void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_queue)
 {
-  // not yet initialized
-  // or muted/on-hold
-  if (!l_port || mute || hold) 
-    return;
-
-  if(session && !session->onBeforeRTPRelay(p,&r_saddr))
-    return;
-
-  if(!relay_raw){
-    rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
-
-    if(process_dtmf_queue && remote_telephone_event_pt.get()){
-      hdr->ssrc = htonl(l_ssrc);
-      if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
+    // not yet initialized
+    // or muted/on-hold
+    if (!l_port || mute || hold)
         return;
-      hdr->seq = htons(sequence++);
+
+    if(session && !session->onBeforeRTPRelay(p,&r_saddr))
+        return;
+
+    if(!relay_raw) {
+        rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
+
+        if(process_dtmf_queue && remote_telephone_event_pt.get()) {
+            hdr->ssrc = htonl(l_ssrc);
+            if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
+                return;
+            hdr->seq = htons(sequence++);
+        } else {
+            if (!relay_transparent_seqno)
+                hdr->seq = htons(sequence++);
+            if (!relay_transparent_ssrc)
+                hdr->ssrc = htonl(l_ssrc);
+        }
+
+        if(is_dtmf_packet && local_telephone_event_pt.get()) {
+            hdr->pt = local_telephone_event_pt->payload_type;
+        }
+
+        if(relay_timestamp_aligning) {
+            //timestamp adjust code
+            unsigned int orig_ts = p->timestamp;
+            unsigned int new_ts = orig_ts+ts_adjust; //adjust ts
+            unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(new_ts,last_sent_ts) : 0;
+
+            //check if diff changed more than 4 times
+            if(last_sent_ts_diff && (ts_diff > (last_sent_ts_diff<<2))) {
+                //it's right time to adjust
+                CLASS_DBG("AmRtpStream::relay()[%p] timestamp adjust condition reached: "
+                    "orig_ts: %i,"
+                    "new_ts: %i, "
+                    "ts_adjust: %d, "
+                    "ts_diff: %i, "
+                    "last_sent_ts_diff: %i",
+                    this,orig_ts,new_ts,ts_adjust,ts_diff,last_sent_ts_diff);
+
+                signed int old_ts_adjust = ts_adjust;
+
+                ts_adjust = (last_sent_ts+last_sent_ts_diff) - orig_ts;
+
+                CLASS_DBG("AmRtpStream::relay()[%p] ts_adjust changed from %d to %d",
+                    this,old_ts_adjust,ts_adjust);
+
+                //adjust again
+                new_ts = p->timestamp+ts_adjust;
+
+                last_sent_ts_diff = last_sent_ts ? ts_unsigned_diff(last_sent_ts,new_ts) : 0;
+            } else { //if (<adjust condition>)
+                //no need to recalc last_sent_ts_diff. we can use value from ts_diff
+                last_sent_ts_diff = ts_diff;
+            }
+
+            p->timestamp = last_sent_ts = new_ts;
+            hdr->ts = htonl(p->timestamp);
+
+            /*CLASS_DBG("AmRtpStream::relay()[%p] packet: orig_ts: %i, ts_adjust: %d, last_sent_ts(new_ts): %i, last_sent_ts_diff: %i",
+                this,orig_ts,ts_adjust,last_sent_ts,last_sent_ts_diff);*/
+
+        } //if(relay_timestamp_aligning)
+
+    } //if(!relay_raw)
+
+    if(p->send(l_sd, *AmConfig.media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
+        CLASS_ERROR("while sending RTP packet to '%s':%i\n",
+        get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
     } else {
-      if (!relay_transparent_seqno)
-        hdr->seq = htons(sequence++);
-      if (!relay_transparent_ssrc)
-        hdr->ssrc = htonl(l_ssrc);
+        //if (logger) p->logSent(logger, &l_saddr);
+        p->relayed = true;
+        log_sent_rtp_packet(*p);
+        if(session) session->onAfterRTPRelay(p,&r_saddr);
+        add_if_no_exist(outgoing_relayed_payloads,p->payload);
+        outgoing_bytes += p->getBufferSize();
     }
-
-	if(is_dtmf_packet && local_telephone_event_pt.get()){
-		hdr->pt = local_telephone_event_pt->payload_type;
-	}
-
-	if(relay_timestamp_aligning){
-		//timestamp adjust code
-		unsigned int orig_ts = p->timestamp;
-		unsigned int new_ts = orig_ts+ts_adjust; //adjust ts
-		unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(new_ts,last_sent_ts) : 0;
-
-		//check if diff changed more than 4 times
-		if(last_sent_ts_diff && (ts_diff > (last_sent_ts_diff<<2))){
-			//it's right time to adjust
-			CLASS_DBG("AmRtpStream::relay()[%p] timestamp adjust condition reached: "
-				"orig_ts: %i,"
-				"new_ts: %i, "
-				"ts_adjust: %d, "
-				"ts_diff: %i, "
-				"last_sent_ts_diff: %i",
-				this,orig_ts,new_ts,ts_adjust,ts_diff,last_sent_ts_diff);
-
-			signed int old_ts_adjust = ts_adjust;
-
-			ts_adjust = (last_sent_ts+last_sent_ts_diff) - orig_ts;
-
-			CLASS_DBG("AmRtpStream::relay()[%p] ts_adjust changed from %d to %d",
-				this,old_ts_adjust,ts_adjust);
-
-			//adjust again
-			new_ts = p->timestamp+ts_adjust;
-
-			last_sent_ts_diff = last_sent_ts ? ts_unsigned_diff(last_sent_ts,new_ts) : 0;
-		} else { //if (<adjust condition>)
-			//no need to recalc last_sent_ts_diff. we can use value from ts_diff
-			last_sent_ts_diff = ts_diff;
-		}
-
-		p->timestamp = last_sent_ts = new_ts;
-		hdr->ts = htonl(p->timestamp);
-
-		/*CLASS_DBG("AmRtpStream::relay()[%p] packet: orig_ts: %i, ts_adjust: %d, last_sent_ts(new_ts): %i, last_sent_ts_diff: %i",
-			this,orig_ts,ts_adjust,last_sent_ts,last_sent_ts_diff);*/
-
-	} //if(relay_timestamp_aligning)
-
-  } //if(!relay_raw)
-
-  p->setAddr(&r_saddr);
-
-  if(p->send(l_sd, *AmConfig.media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
-    CLASS_ERROR("while sending RTP packet to '%s':%i\n",
-	  get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
-  } else {
-	//if (logger) p->logSent(logger, &l_saddr);
-	p->relayed = true;
-	log_sent_rtp_packet(*p);
-	if(session) session->onAfterRTPRelay(p,&r_saddr);
-	add_if_no_exist(outgoing_relayed_payloads,p->payload);
-	outgoing_bytes += p->getBufferSize();
-  }
 }
 
 int AmRtpStream::getLocalTelephoneEventRate()
