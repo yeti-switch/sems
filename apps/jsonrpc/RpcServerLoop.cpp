@@ -241,6 +241,14 @@ void JsonRPCServerLoop::process(AmEvent* ev) {
       return;
   }
 
+  AmSystemEvent* system_event = dynamic_cast<AmSystemEvent *>(ev);
+  if(system_event) {
+      if(system_event->sys_event==AmSystemEvent::ServerShutdown) {
+          stop();
+      }
+      return;
+  }
+
   JsonServerEvent* server_event=dynamic_cast<JsonServerEvent*>(ev);
   if (server_event==NULL) {
     ERROR("wrong event type received\n");
@@ -404,7 +412,8 @@ void JsonRPCServerLoop::run() {
 }
 
 void JsonRPCServerLoop::on_stop() {
-  //INFO("todo\n");
+  ev_break(loop);
+  join();
 }
 
 void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {
