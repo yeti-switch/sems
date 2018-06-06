@@ -1,3 +1,9 @@
+sems (1.7.63-3) stable; urgency=low
+
+  * jsonrpc: process ServerShutdown event
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Jun 2018 15:16:49 +0300
+
 sems (1.7.63-2) stable; urgency=low
 
   * sctp_bus: SctpClientConnection: fix sent_requests queue map erase order"
