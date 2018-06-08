@@ -1,3 +1,9 @@
+sems (1.7.63-4) stable; urgency=low
+
+  * uac_auth: checkAuthentication: add internal_reason to ret
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 08 Jun 2018 16:20:01 +0300
+
 sems (1.7.63-3) stable; urgency=low
 
   * jsonrpc: process ServerShutdown event

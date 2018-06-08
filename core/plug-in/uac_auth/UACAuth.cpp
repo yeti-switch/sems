@@ -676,6 +676,7 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
 
   string auth_hdr = getHeader(req->hdrs, "Authorization");
   bool authenticated = false;
+  string internal_reason;
 
   if (auth_hdr.size()) {
     UACAuthDigestChallenge r_challenge;
@@ -694,21 +695,25 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
 
     if (r_response.size() != HASHHEXLEN) {
       DBG("Auth: response length mismatch (wanted %u hex chars): '%s'\n", HASHHEXLEN, r_response.c_str());
+      internal_reason = "Response length mismatch";
       goto auth_end;
     }
 
     if (realm != r_challenge.realm) {
       DBG("Auth: realm mismatch: required '%s' vs '%s'\n", realm.c_str(), r_challenge.realm.c_str());
+      internal_reason = "Realm mismatch";
       goto auth_end;
     }
 
     if (user != r_username) {
       DBG("Auth: user mismatch: '%s' vs '%s'\n", user.c_str(), r_username.c_str());
+      internal_reason = "User mismatch";
       goto auth_end;
     }
 
     if (!checkNonce(r_challenge.nonce)) {
       DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
+      internal_reason = "Incorrect nonce";
       goto auth_end;
     }
 
@@ -745,6 +750,7 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
 	string nonce_count_str = find_attribute("nc", auth_hdr);
 	if (str2i(nonce_count_str, client_nonce_count)) {
 	  DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
+	  internal_reason = "Error parsing nonce_count";
 	  goto auth_end;
 	}
 
@@ -770,10 +776,14 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
 
     if (tc_isequal((const char*)response, r_response.c_str(), HASHHEXLEN)) {
       DBG("Auth: authentication successfull\n");
+      internal_reason = "Response matched";
       authenticated = true;
     } else {
       DBG("Auth: authentication NOT successfull\n");
+      internal_reason = "Response NOT matched";
     }
+  } else {
+      internal_reason = "no Authorization header";
   }
 
  auth_end: 
@@ -789,6 +799,7 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
 	     "qop=\"auth,auth-int\", "
 	     "nonce=\""+calcNonce()+"\"\r\n");
   }
+  ret.push(internal_reason);
 }
 
 void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& realm,
