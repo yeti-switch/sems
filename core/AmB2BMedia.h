@@ -70,6 +70,9 @@ class AudioStreamData {
     /** Enables inband dtmf detection */
     bool enable_dtmf_transcoding;
 
+    /** filter out samples with inbound dtmf */
+    bool enable_inbound_dtmf_filtering;
+
     /** Enables RTP DTMF (2833/4733) filtering */
     bool enable_dtmf_rtp_filtering;
 

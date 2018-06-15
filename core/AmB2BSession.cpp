@@ -124,6 +124,7 @@ AmB2BSession::AmB2BSession(const string& other_local_tag, AmSipDialog* p_dlg,
 	rtp_ping(false),
 	symmetric_rtp_ignore_rtcp(false),
     enable_dtmf_transcoding(false),
+    enable_inbound_dtmf_filtering(false),
     enable_dtmf_rtp_filtering(false),
     enable_dtmf_rtp_detection(false),
 	enable_dtmf_rtp_force_relay(true),
@@ -1068,6 +1069,10 @@ void AmB2BSession::setIgnoreRelayStreams(bool ignore) {
 
 void AmB2BSession::setEnableDtmfTranscoding(bool enable) {
   enable_dtmf_transcoding = enable;
+}
+
+void AmB2BSession::setEnableInboundDtmfFiltering(bool enable) {
+  enable_inbound_dtmf_filtering = enable;
 }
 
 void AmB2BSession::setEnableDtmfRtpFiltering(bool enable) {

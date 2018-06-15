@@ -301,6 +301,8 @@ private:
   /** If true, transcoded audio is injected into 
       the inband DTMF detector */
   bool enable_dtmf_transcoding;
+  /** Avoid sending samples with detected inbound dtmf */
+  bool enable_inbound_dtmf_filtering;
   /** filter RTP DTMF (2833 / 4733) packets */
   bool enable_dtmf_rtp_filtering;
   /** detect DTMF through RTP DTMF (2833 / 4733) packets */
@@ -364,6 +366,7 @@ private:
   unsigned int getRtpTimeout() const { return dead_rtp_time; }
   bool getRtpSymmetricRtpIgnoreRTCP() const { return symmetric_rtp_ignore_rtcp; }
   bool getEnableDtmfTranscoding() const { return enable_dtmf_transcoding; }
+  bool getEnableInboundDtmfFiltering() const { return enable_inbound_dtmf_filtering; }
   bool getEnableDtmfRtpFiltering() const { return enable_dtmf_rtp_filtering; }
   bool getEnableDtmfRtpDetection() const { return enable_dtmf_rtp_detection; }
   bool getEnableDtmfForceRelay() const { return enable_dtmf_rtp_force_relay; }
@@ -382,6 +385,7 @@ private:
   void setIgnoreRelayStreams(bool ignore);
 
   void setEnableDtmfTranscoding(bool enable);
+  void setEnableInboundDtmfFiltering(bool enable);
   void setEnableDtmfRtpFiltering(bool enable);
   void setEnableDtmfRtpDetection(bool enable);
   void setEnableRtpPing(bool enable);

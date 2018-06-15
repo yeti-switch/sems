@@ -655,7 +655,8 @@ void AmSession::processDtmfEvents()
 
 void AmSession::putDtmfAudio(const unsigned char *buf, int size, unsigned long long system_ts)
 {
-  m_dtmfEventQueue.putDtmfAudio(buf, size, system_ts);
+  bool dtmf_detected;
+  m_dtmfEventQueue.putDtmfAudio(dtmf_detected, buf, size, system_ts);
 }
 
 void AmSession::sendDtmf(int event, unsigned int duration_ms) {

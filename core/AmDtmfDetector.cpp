@@ -57,9 +57,9 @@ void AmDtmfEventQueue::processEvents()
   AmEventQueue::processEvents();
 }
 
-void AmDtmfEventQueue::putDtmfAudio(const unsigned char *buf, int size, unsigned long long system_ts)
+void AmDtmfEventQueue::putDtmfAudio(bool &dtmf_detected,const unsigned char *buf, int size, unsigned long long system_ts)
 {
-  m_detector->putDtmfAudio(buf, size, system_ts);
+  m_detector->putDtmfAudio(dtmf_detected, buf, size, system_ts);
 }
 
 //
@@ -437,10 +437,10 @@ void AmDtmfDetector::reportEvent()
   m_reportLock.unlock();
 }
 
-void AmDtmfDetector::putDtmfAudio(const unsigned char *buf, int size, unsigned long long system_ts)
+void AmDtmfDetector::putDtmfAudio(bool &dtmf_detected, const unsigned char *buf, int size, unsigned long long system_ts)
 {
   if (m_inbandDetector.get()) {
-    m_inbandDetector->streamPut(buf, size, system_ts);
+    m_inbandDetector->streamPut(dtmf_detected, buf, size, system_ts);
   } else if(!non_initiallized_usage){
     DBG("warning: trying to put DTMF into non-initialized DTMF detector\n");
     non_initiallized_usage = true;
@@ -661,95 +661,84 @@ void AmSemsInbandDtmfDetector::isdn_audio_goertzel_relative()
 }
 
 
-void AmSemsInbandDtmfDetector::isdn_audio_eval_dtmf_relative()
+void AmSemsInbandDtmfDetector::isdn_audio_eval_dtmf_relative(bool &dtmf_detected)
 {
-  int silence;
-  int grp[2];
-  char what;
-  int thresh;
+    int silence;
+    int grp[2];
+    char what;
+    int thresh;
 
-  grp[LOGRP] = grp[HIGRP] = -1;
-  silence = 0;
-  thresh = 0;
+    grp[LOGRP] = grp[HIGRP] = -1;
+    silence = 0;
+    thresh = 0;
 
-  for (int i = 0; i < REL_NCOEFF; i++) 
-    {
-      if (m_result[i] > REL_DTMF_TRESH) {
-	if (m_result[i] > thresh)
-	  thresh = m_result[i];
-      }
-      else if (m_result[i] < REL_SILENCE_TRESH)
-	silence++;
+    for (int i = 0; i < REL_NCOEFF; i++) {
+        if (m_result[i] > REL_DTMF_TRESH) {
+            if (m_result[i] > thresh)
+                thresh = m_result[i];
+        } else
+            if (m_result[i] < REL_SILENCE_TRESH)
+                silence++;
     }
-  if (silence == REL_NCOEFF)
-    what = ' ';
-  else {
-    if (thresh > 0)	{
-      thresh = thresh >> 4;  /* touchtones must match within 12 dB */
 
-      for (int i = 0; i < REL_NCOEFF; i++) {
-	if (m_result[i] < thresh)
-	  continue;  /* ignore */
+    if (silence == REL_NCOEFF)
+        what = ' ';
+    else {
+        if (thresh > 0)	{
+            thresh = thresh >> 4;  /* touchtones must match within 12 dB */
+            for (int i = 0; i < REL_NCOEFF; i++) {
+                if (m_result[i] < thresh)
+                    continue;  /* ignore */
+                /* good level found. This is allowed only one time per group */
+                if (i < REL_NCOEFF / 2) {
+                    /* lowgroup*/
+                    if (grp[LOGRP] >= 0) {
+                        // Bad. Another tone found. */
+                        grp[LOGRP] = -1;
+                        break;
+                    } else
+                        grp[LOGRP] = i;
+                } else { /* higroup */
+                    if (grp[HIGRP] >= 0) { // Bad. Another tone found. */
+                        grp[HIGRP] = -1;
+                        break;
+                    } else
+                        grp[HIGRP] = i - REL_NCOEFF/2;
+                }
+            }
 
-	/* good level found. This is allowed only one time per group */
-	if (i < REL_NCOEFF / 2) {
-	  /* lowgroup*/
-	  if (grp[LOGRP] >= 0) {
-	    // Bad. Another tone found. */
-	    grp[LOGRP] = -1;
-	    break;
-	  }
-	  else
-	    grp[LOGRP] = i;
-	}
-	else { /* higroup */
-	  if (grp[HIGRP] >= 0) { // Bad. Another tone found. */
-	    grp[HIGRP] = -1;
-	    break;
-	  }
-	  else
-	    grp[HIGRP] = i - REL_NCOEFF/2;
-	}
-      }
-
-      if ((grp[LOGRP] >= 0) && (grp[HIGRP] >= 0)) {
-	what = dtmf_matrix[grp[LOGRP]][grp[HIGRP]];
-	m_lastCode = IVR_dtmf_matrix[grp[LOGRP]][grp[HIGRP]];
-		
-	if (what != m_last)
-	  {
-	    m_startTime.tv_sec = m_last_ts / SAMPLERATE;
-	    m_startTime.tv_usec = ((m_last_ts * 10000) / (SAMPLERATE/100)) 
-	      % 1000000;
-	  }
-      } else
-	what = '.';
+            if ((grp[LOGRP] >= 0) && (grp[HIGRP] >= 0)) {
+                what = dtmf_matrix[grp[LOGRP]][grp[HIGRP]];
+                m_lastCode = IVR_dtmf_matrix[grp[LOGRP]][grp[HIGRP]];
+                if (what != m_last) {
+                    m_startTime.tv_sec = m_last_ts / SAMPLERATE;
+                    m_startTime.tv_usec = ((m_last_ts * 10000) / (SAMPLERATE/100)) % 1000000;
+                }
+            } else
+                what = '.';
+        } else
+            what = '.';
     }
-    else
-      what = '.';
-  }
-  if (what != ' ' && what != '.')
-    {
-      if (++m_count >= DTMF_INTERVAL)
-        {
-	  m_keysink->registerKeyPressed(m_lastCode, Dtmf::SOURCE_INBAND);
+
+    if (what != ' ' && what != '.') {
+        dtmf_detected = true;
+        if (++m_count >= DTMF_INTERVAL) {
+            m_keysink->registerKeyPressed(m_lastCode, Dtmf::SOURCE_INBAND);
         }
-    }
-  else
-    {
-      if (m_last != ' ' && m_last != '.' && m_count >= DTMF_INTERVAL)
-        {
-	  struct timeval stop;
-	  stop.tv_sec = m_last_ts / SAMPLERATE;
-	  stop.tv_usec = ((m_last_ts * 10000) / (SAMPLERATE/100)) % 1000000;
-	  m_keysink->registerKeyReleased(m_lastCode, Dtmf::SOURCE_INBAND, m_startTime, stop);
+    } else {
+        dtmf_detected = false;
+        if (m_last != ' ' && m_last != '.' && m_count >= DTMF_INTERVAL) {
+            struct timeval stop;
+            stop.tv_sec = m_last_ts / SAMPLERATE;
+            stop.tv_usec = ((m_last_ts * 10000) / (SAMPLERATE/100)) % 1000000;
+            m_keysink->registerKeyReleased(m_lastCode, Dtmf::SOURCE_INBAND, m_startTime, stop);
         }
-      m_count = 0;
+        m_count = 0;
     }
-  m_last = what;
+    m_last = what;
 }
 
-void AmSemsInbandDtmfDetector::isdn_audio_calc_dtmf(const signed short* buf, int len, unsigned int ts)
+void AmSemsInbandDtmfDetector::isdn_audio_calc_dtmf(bool &dtmf_detected, const signed short* buf, int len, unsigned int ts)
 {
   int c;
 
@@ -768,7 +757,7 @@ void AmSemsInbandDtmfDetector::isdn_audio_calc_dtmf(const signed short* buf, int
     }
     if (m_idx == NELEMSOF(m_buf)) {
       isdn_audio_goertzel_relative();
-      isdn_audio_eval_dtmf_relative();
+      isdn_audio_eval_dtmf_relative(dtmf_detected);
       m_idx = 0;
       m_last_ts = ts + c;
     }
@@ -777,13 +766,13 @@ void AmSemsInbandDtmfDetector::isdn_audio_calc_dtmf(const signed short* buf, int
   }
 }
 
-int AmSemsInbandDtmfDetector::streamPut(const unsigned char* samples, unsigned int size, unsigned long long system_ts)
+int AmSemsInbandDtmfDetector::streamPut(bool &dtmf_detected, const unsigned char* samples, unsigned int size, unsigned long long system_ts)
 {
   unsigned long long user_ts =
     system_ts * ((unsigned long long)SAMPLERATE / 100)
     / (WALLCLOCK_RATE / 100);
 
-  isdn_audio_calc_dtmf((const signed short *)samples, size / 2, (unsigned int)user_ts);
+  isdn_audio_calc_dtmf(dtmf_detected, (const signed short *)samples, size / 2, (unsigned int)user_ts);
   return size;
 }
 
@@ -818,8 +807,9 @@ AmSpanDSPInbandDtmfDetector::~AmSpanDSPInbandDtmfDetector() {
 #endif
 }
 
-int AmSpanDSPInbandDtmfDetector::streamPut(const unsigned char* samples, unsigned int size, unsigned long long system_ts) {
+int AmSpanDSPInbandDtmfDetector::streamPut(bool &dtmf_detected, const unsigned char* samples, unsigned int size, unsigned long long system_ts) {
   dtmf_rx(rx_state, (const int16_t*) samples, size/2);
+  dtmf_detected = (0!=dtmf_rx_status(rx_state));
   return size;
 }
 

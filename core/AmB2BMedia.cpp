@@ -180,6 +180,7 @@ void AudioStreamData::initialize(AmB2BSession *session)
     stream->force_receive_dtmf = true;
   force_symmetric_rtp = session->getRtpRelayForceSymmetricRtp();
   enable_dtmf_transcoding = session->getEnableDtmfTranscoding();
+  enable_inbound_dtmf_filtering = session->getEnableInboundDtmfFiltering();
   session->getLowFiPLs(lowfi_payloads);
   stream->setLocalIP(session->localMediaIP());
 }
@@ -449,6 +450,8 @@ void AudioStreamData::updateRecvStats(AmRtpStream *s)
 
 int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, AudioStreamData &src)
 {
+    bool dtmf_detected = false;
+
     if (!initialized) {
         if(!in || !out) return 0;
         //non-stream mode
@@ -486,7 +489,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                         } else {
                             updateRecvStats(src_stream);
                             if (dtmf_queue && enable_dtmf_transcoding) {
-                                dtmf_queue->putDtmfAudio(buffer, tmp_got, ts);
+                                dtmf_queue->putDtmfAudio(dtmf_detected, buffer, tmp_got, ts);
                             }
                         }
                     }
@@ -514,7 +517,12 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                         } else {
                             updateRecvStats(src_stream);
                             if (dtmf_queue && enable_dtmf_transcoding) {
-                                dtmf_queue->putDtmfAudio(buffer, got, ts);
+                                dtmf_queue->putDtmfAudio(dtmf_detected, buffer, got, ts);
+                                if(enable_inbound_dtmf_filtering && dtmf_detected) {
+                                    DBG("cut inbound dtmf from %p",stream);
+                                    memset(buffer,0,got);
+                                    //got = src_stream->conceal_loss(PCM16_B2S(got),buffer);
+                                }
                             }
                         }
                     }

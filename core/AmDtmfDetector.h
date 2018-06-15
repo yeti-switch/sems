@@ -76,7 +76,7 @@ class AmDtmfEventQueue : public AmEventQueue
    * Reimplemented abstract method from AmEventQueue
    */
   void processEvents();
-  void putDtmfAudio(const unsigned char *, int size, unsigned long long system_ts);
+  void putDtmfAudio(bool &dtmf_detected, const unsigned char *, int size, unsigned long long system_ts);
 };
 
 /**
@@ -236,7 +236,7 @@ class AmInbandDtmfDetector
   /**
    * Entry point for audio stream
    */
-  virtual int streamPut(const unsigned char* samples, unsigned int size, unsigned long long system_ts) = 0;
+  virtual int streamPut(bool &dtmf_detected, const unsigned char* samples, unsigned int size, unsigned long long system_ts) = 0;
 };
 
 /**
@@ -278,8 +278,8 @@ class AmSemsInbandDtmfDetector
   int m_count;
 
   void isdn_audio_goertzel_relative();
-  void isdn_audio_eval_dtmf_relative();
-  void isdn_audio_calc_dtmf(const signed short* buf, int len, unsigned int ts);
+  void isdn_audio_eval_dtmf_relative(bool &dtmf_detected);
+  void isdn_audio_calc_dtmf(bool &dtmf_detected, const signed short* buf, int len, unsigned int ts);
 
  public:
   AmSemsInbandDtmfDetector(AmKeyPressSink *keysink, int sample_rate);
@@ -287,7 +287,7 @@ class AmSemsInbandDtmfDetector
   /**
    * Entry point for audio stream
    */
-  int streamPut(const unsigned char* samples, unsigned int size, unsigned long long system_ts);
+  int streamPut(bool &dtmf_detected, const unsigned char* samples, unsigned int size, unsigned long long system_ts);
 };
 
 
@@ -318,7 +318,7 @@ class AmSpanDSPInbandDtmfDetector
   /**
    * Entry point for audio stream
    */
-  int streamPut(const unsigned char* samples, unsigned int size, unsigned long long system_ts);
+  int streamPut(bool &dtmf_detected, const unsigned char* samples, unsigned int size, unsigned long long system_ts);
 };
 #endif // USE_SPANDSP
 
@@ -479,7 +479,7 @@ class AmDtmfDetector
   virtual ~AmDtmfDetector() {}
 
   void checkTimeout();
-  void putDtmfAudio(const unsigned char *, int size, unsigned long long system_ts);
+  void putDtmfAudio(bool &dtmf_detected, const unsigned char *, int size, unsigned long long system_ts);
 
   void setInbandDetector(Dtmf::InbandDetectorType t, int sample_rate);
   friend class AmSipDtmfDetector;
