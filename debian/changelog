@@ -1,3 +1,9 @@
+sems (1.7.64-1) stable; urgency=low
+
+  * 714313a0 inbound dtmf filtering
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 18 Jun 2018 17:03:35 +0300
+
 sems (1.7.63-5) stable; urgency=low
 
   * 596150a0 tcp_trsp: fix deadlock because of racing between session-proc and tcp-worker
