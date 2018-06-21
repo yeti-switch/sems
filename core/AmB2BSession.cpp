@@ -672,10 +672,12 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
 {
   HoldMethod method;
   if(isHoldRequest(remote_sdp,method)) {
+    if(!remote_on_hold) {
       DBG("[%s] got hold request. method: %d",
           getLocalTag().c_str(),method);
       remote_on_hold = true;
       onHoldRequest();
+    }
   } else if(remote_on_hold) {
       DBG("[%s] got resume request. method: %d",
           getLocalTag().c_str(),method);
