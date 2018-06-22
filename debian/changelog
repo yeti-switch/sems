@@ -1,3 +1,9 @@
+sems (1.7.64-2) stable; urgency=low
+
+  * AmB2BSession::onSdpCompleted: check remote_on_hold before calling onHoldRequest()
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 22 Jun 2018 12:33:32 +0300
+
 sems (1.7.64-1) stable; urgency=low
 
   * 714313a0 inbound dtmf filtering
