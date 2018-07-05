@@ -46,7 +46,7 @@ int HttpMultiPartFormConnection::init(CURLM *curl_multi)
             curl_mime_data(field,part.value.c_str(),part.value.size());
             break;
         case HttpPostMultipartFormEvent::Part::FilePath:
-            curl_mime_filename(field,part.value.c_str());
+            curl_mime_filedata(field,part.value.c_str());
             file_path = part.value;
             file_basename = filename_from_fullpath(file_path);
             break;
