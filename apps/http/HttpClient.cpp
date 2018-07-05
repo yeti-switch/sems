@@ -207,12 +207,16 @@ void HttpClient::process(AmEvent* ev)
         }
     } break;
     case HttpEvent::Upload: {
-        HttpUploadEvent *e = dynamic_cast<HttpUploadEvent*>(ev);
-        if(e) on_upload_request(*e);
+        if(HttpUploadEvent *e = dynamic_cast<HttpUploadEvent*>(ev))
+            on_upload_request(*e);
     } break;
     case HttpEvent::Post: {
-        HttpPostEvent *e = dynamic_cast<HttpPostEvent*>(ev);
-        if(e) on_post_request(*e);
+        if(HttpPostEvent *e = dynamic_cast<HttpPostEvent*>(ev))
+            on_post_request(*e);
+    } break;
+    case HttpEvent::MultiPartForm: {
+        if(HttpPostMultipartFormEvent *e = dynamic_cast<HttpPostMultipartFormEvent*>(ev))
+            on_multpart_form_request(*e);
     } break;
     default:
         WARN("unknown event received");
@@ -289,10 +293,43 @@ void HttpClient::on_post_request(const HttpPostEvent &u)
     }
 }
 
+void HttpClient::on_multpart_form_request(const HttpPostMultipartFormEvent &u)
+{
+    HttpDestinationsMap::const_iterator destination = destinations.find(u.destination_name);
+    if(destination==destinations.end()){
+        ERROR("event with unknown destination '%s' from session %s. ignore it",
+            u.destination_name.c_str(),u.session_id.c_str());
+        return;
+    }
+
+    const HttpDestination &d = destination->second;
+    if(d.mode!=HttpDestination::Post) {
+        ERROR("wrong destination '%s' mode for upload request from session %s. 'post' mode expected. ignore it",
+              u.destination_name.c_str(),u.session_id.c_str());
+        return;
+    }
+
+    if(u.token.empty()){
+        DBG("http multipart form request url: %s [%i/%i]",
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt);
+    } else {
+        DBG("http multipart form request url: %s [%i/%i], token: %s",
+            d.url[u.failover_idx].c_str(),
+            u.failover_idx,u.attempt,
+            u.token.c_str());
+    }
+
+    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(u,d,epoll_fd);
+    if(c->init(curl_multi)){
+        ERROR("http multipart form connection intialization error");
+        delete c;
+    }
+}
+
 void HttpClient::on_requeue(CurlConnection *c)
 {
-    HttpUploadConnection *upload_conn = dynamic_cast<HttpUploadConnection *>(c);
-    if(upload_conn) {
+    if(HttpUploadConnection *upload_conn = dynamic_cast<HttpUploadConnection *>(c)) {
         if(resend_queue_max && failed_upload_events.size()>=resend_queue_max){
             ERROR("reached max resend queue size %d. drop failed upload request",resend_queue_max);
             upload_conn->post_response_event();
@@ -302,14 +339,23 @@ void HttpClient::on_requeue(CurlConnection *c)
         return;
     }
 
-    HttpPostConnection *post_conn = dynamic_cast<HttpPostConnection *>(c);
-    if(post_conn) {
+    if(HttpPostConnection *post_conn = dynamic_cast<HttpPostConnection *>(c)) {
         if(resend_queue_max && failed_post_events.size()>=resend_queue_max){
             ERROR("reached max resend queue size %d. drop failed post request",resend_queue_max);
             post_conn->post_response_event();
             return;
         }
         failed_post_events.emplace(new HttpPostEvent(post_conn->get_event()));
+        return;
+    }
+
+    if(HttpMultiPartFormConnection *mpf_conn = dynamic_cast<HttpMultiPartFormConnection *>(c)) {
+        if(resend_queue_max && failed_multipart_form_events.size()>=resend_queue_max){
+            ERROR("reached max resend queue size %d. drop failed multipart form request",resend_queue_max);
+            mpf_conn->post_response_event();
+            return;
+        }
+        failed_multipart_form_events.emplace(new HttpPostMultipartFormEvent(mpf_conn->get_event()));
         return;
     }
 }
@@ -328,6 +374,12 @@ void HttpClient::on_resend_timer_event()
         delete e;
         failed_post_events.pop();
     }
+    while(!failed_multipart_form_events.empty()){
+        HttpPostMultipartFormEvent *e = failed_multipart_form_events.front();
+        on_multpart_form_request(*e);
+        delete e;
+        failed_multipart_form_events.pop();
+    }
 
     resend_timer.read();
 }
@@ -341,6 +393,7 @@ void HttpClient::showStats(AmArg &ret)
 {
     ret["upload_resend_queue_size"] = failed_upload_events.size();
     ret["post_resend_queue_size"] = failed_post_events.size();
+    ret["multipart_form_resend_queue_size"] = failed_multipart_form_events.size();
     ret["resend_queue_max "] = (long int)resend_queue_max;
     ret["resend_interval"] = resend_interval;
 }

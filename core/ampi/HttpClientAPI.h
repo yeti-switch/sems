@@ -8,7 +8,8 @@
 struct HttpEvent {
   enum Type {
       Upload = 0,
-      Post
+      Post,
+      MultiPartForm
   };
 
   string session_id;
@@ -53,6 +54,44 @@ struct HttpUploadEvent
       file_name(src.file_name),
       file_path(src.file_path)
   {}
+};
+
+struct HttpPostMultipartFormEvent
+  : public HttpEvent, AmEvent
+{
+    struct Part {
+        enum Type {
+            ImmediateValue,
+            FilePath
+        } type;
+        string name;
+        string content_type;
+        string value;
+        Part(const string &name,
+             const string &content_type,
+             const string &value,
+             Type type = ImmediateValue)
+          : name(name),
+            content_type(content_type),
+            value(value),
+            type(type)
+        {}
+    };
+    vector<Part> parts;
+    string destination_name;
+
+    HttpPostMultipartFormEvent(string destination_name, string token, string session_id = string())
+      : AmEvent(MultiPartForm),
+        HttpEvent(session_id,token),
+        destination_name(destination_name)
+    { }
+
+    HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
+      : AmEvent(MultiPartForm),
+        HttpEvent(src.session_id,src.token,src.failover_idx,src.attempt),
+        destination_name(src.destination_name),
+        parts(src.parts)
+    { }
 };
 
 struct HttpUploadResponseEvent

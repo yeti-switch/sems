@@ -44,12 +44,14 @@ int DestinationAction::perform(const string &file_path, const string &file_basen
     switch(action){
     case Nothing: break;
     case Remove:
+        if(file_path.empty()) break;
         CDBG("remove '%s' after upload",file_path.c_str());
         if(0!=std::remove(file_path.c_str())){
             ERROR("can't remove '%s': %d",file_path.c_str(),errno);
         }
         break;
     case Move: {
+        if(file_path.empty()) break;
         string destination_path = action_data + "/" + file_basename;
         CDBG("move  '%s'->'%s' after upload",file_path.c_str(),destination_path.c_str());
         if(0!=std::rename(file_path.c_str(),destination_path.c_str())){

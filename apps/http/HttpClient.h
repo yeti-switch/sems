@@ -10,6 +10,7 @@
 #include "HttpDestination.h"
 #include "HttpUploadConnection.h"
 #include "HttpPostConnection.h"
+#include "HttpMultipartFormConnection.h"
 #include "CurlMultiHandler.h"
 
 #include <string>
@@ -37,6 +38,7 @@ class HttpClient
 
     std::queue<HttpUploadEvent *> failed_upload_events;
     std::queue<HttpPostEvent *> failed_post_events;
+    std::queue<HttpPostMultipartFormEvent *> failed_multipart_form_events;
     AmTimerFd resend_timer;
     int resend_interval;
     unsigned int resend_queue_max;
@@ -48,6 +50,7 @@ class HttpClient
 
     void on_upload_request(const HttpUploadEvent &u);
     void on_post_request(const HttpPostEvent &u);
+    void on_multpart_form_request(const HttpPostMultipartFormEvent &u);
     void on_requeue(CurlConnection *c);
     void on_resend_timer_event();
 
