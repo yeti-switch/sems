@@ -324,6 +324,8 @@ foreach( d ${CoreDefsList} )
 endforeach()
 message(STATUS ${CoreDefs})
 
+include(cmake/curl_bundled.cmake)
+
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)
 ADD_SUBDIRECTORY (tools)

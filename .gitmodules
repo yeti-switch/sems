@@ -1,0 +1,4 @@
+[submodule "third/curl"]
+	path = third/curl
+	url = https://github.com/curl/curl.git
+        ignore = dirty

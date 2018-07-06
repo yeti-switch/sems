@@ -1,3 +1,9 @@
+sems (1.7.65-2) stable; urgency=low
+
+  * apps/http: use bundled libcurl
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 06 Jul 2018 10:32:51 +0300
+
 sems (1.7.65-1) stable; urgency=low
 
   * apps/http: add multipart form upload connection type
