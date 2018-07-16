@@ -36,6 +36,7 @@
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
+#include "AmRtpSession.h"
 
 #include <netinet/in.h>
 
@@ -148,7 +149,8 @@ struct Payload {
  * Rtp stream high level interface.
  */
 class AmRtpStream
-  : public AmObject
+  : public AmObject,
+    public AmRtpSession
 {
 protected:
 

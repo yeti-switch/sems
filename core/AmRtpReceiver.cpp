@@ -26,8 +26,6 @@
  */
 
 #include "AmRtpReceiver.h"
-#include "AmRtpStream.h"
-#include "AmRtpPacket.h"
 #include "log.h"
 #include "AmConfig.h"
 
@@ -43,7 +41,7 @@
 
 #define EPOLL_MAX_EVENTS 2048
 
-int StreamCtxMap::ctx_get(int fd, AmRtpStream* s){
+int StreamCtxMap::ctx_get(int fd, AmRtpSession* s){
     int idx = usage.get_free_idx();
     if(-1==idx) return -1;
 
@@ -66,7 +64,7 @@ void StreamCtxMap::ctx_put_immediate(int ctx_idx){
     usage.clear_idx(ctx_idx);
 }
 
-bool StreamCtxMap::is_double_add(int old_ctx_idx, AmRtpStream *stream){
+bool StreamCtxMap::is_double_add(int old_ctx_idx, AmRtpSession *stream){
     return (-1!=old_ctx_idx) && (ctxs[old_ctx_idx].stream==stream);
 }
 
@@ -178,7 +176,7 @@ void AmRtpReceiverThread::run()
   close(poll_fd);
 }
 
-int AmRtpReceiverThread::addStream(int sd, AmRtpStream* stream, int old_ctx_idx)
+int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx)
 {
   AmLock l(streams_mut);
   (void)l;
@@ -228,7 +226,7 @@ void _AmRtpReceiver::start()
     receivers[i].start();
 }
 
-int _AmRtpReceiver::addStream(int sd, AmRtpStream* stream, int old_ctx_idx)
+int _AmRtpReceiver::addStream(int sd, AmRtpSession* stream, int old_ctx_idx)
 {
   unsigned int i = sd % n_receivers;
   return receivers[i].addStream(sd,stream,old_ctx_idx);

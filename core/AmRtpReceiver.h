@@ -29,6 +29,7 @@
 #define _AmRtpReceiver_h_
 
 #include "AmThread.h"
+#include "AmRtpSession.h"
 #include "atomic_types.h"
 #include "singleton.h"
 
@@ -40,7 +41,6 @@ using std::greater;
 
 #include <cstring>
 
-class AmRtpStream;
 class _AmRtpReceiver;
 
 #ifndef MAX_RTP_SESSIONS
@@ -82,7 +82,7 @@ class StreamCtxMap {
     struct StreamCtx {
         bool valid;
         int stream_fd;
-        AmRtpStream* stream;
+        AmRtpSession* stream;
         StreamCtx(): valid(false) {}
     };
   private:
@@ -91,10 +91,10 @@ class StreamCtxMap {
     std::list<int> ctxs_to_put;
   public:
     StreamCtxMap() {}
-    int ctx_get(int fd, AmRtpStream* s);
+    int ctx_get(int fd, AmRtpSession* s);
     void ctx_put(int ctx_idx);
     void ctx_put_immediate(int ctx_idx);
-    bool is_double_add(int old_ctx_idx, AmRtpStream *stream);
+    bool is_double_add(int old_ctx_idx, AmRtpSession *stream);
     void recv(int ctx_idx);
     void put_pended();
 };
@@ -121,7 +121,7 @@ class AmRtpReceiverThread: public AmThread {
   void run();
   void on_stop();
 
-  int addStream(int sd, AmRtpStream* stream, int old_ctx_idx);
+  int addStream(int sd, AmRtpSession* stream, int old_ctx_idx);
   void removeStream(int sd, int ctx_idx);
 
   void stop_and_wait();
@@ -145,7 +145,7 @@ protected:
 public:
   void start();
 
-  int addStream(int sd, AmRtpStream* stream, int old_ctx_idx);
+  int addStream(int sd, AmRtpSession* stream, int old_ctx_idx);
   void removeStream(int sd, int ctx_idx);
 };
 
