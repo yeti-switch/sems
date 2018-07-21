@@ -1,3 +1,11 @@
+sems (1.7.63-5p1) stable; urgency=low
+
+  *  add checking for output buffer overflow in speex decoder
+  *  suppress WARN about missed samples <-> bytes conversion functions
+  *  check for such functions on codec load
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 21 Jul 2018 18:50:57 +0300
+
 sems (1.7.63-5) stable; urgency=low
 
   * 596150a0 tcp_trsp: fix deadlock because of racing between session-proc and tcp-worker
