@@ -411,7 +411,9 @@ int AmAudio::decode(unsigned int size)
     if(s<0) return s;
     samples.swap();
   }
-    
+
+  assert(s < AUDIO_BUFFER_SIZE);
+
   return s;
 }
 

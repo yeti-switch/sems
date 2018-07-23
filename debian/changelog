@@ -1,3 +1,9 @@
+sems (1.7.63-5p2) stable; urgency=low
+
+  *  AmAudio::decode() assert(s < AUDIO_BUFFER_SIZE)
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 23 Jul 2018 18:50:15 +0300
+
 sems (1.7.63-5p1) stable; urgency=low
 
   *  add checking for output buffer overflow in speex decoder
