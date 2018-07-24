@@ -254,6 +254,7 @@ AmAudio::AmAudio()
     rec_time(0),
     input_resampling_state(NULL),
     output_resampling_state(NULL),
+    stereo_record_enabled(false),
     record_enabled(false)
 {
 }
