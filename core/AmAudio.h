@@ -32,6 +32,7 @@
 #include "amci/amci.h"
 #include "amci/codecs.h"
 #include "AmEventQueue.h"
+#include "AmStereoRecorderInfo.h"
 
 #include <stdio.h>
 
@@ -254,9 +255,8 @@ protected:
   string recorder_id;
   bool record_enabled;
 
-  string stereo_recorder_id;
-  int stereo_recorder_channel_id;
   bool stereo_record_enabled;
+  StereoRecordersList stereo_recorders;
 
   /** Sample buffer. */
   DblBuffer samples;
@@ -386,7 +386,9 @@ public:
 
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
-  void setStereoRecorder(const string &id, int channel_id);
+  void addStereoRecorder(const string &id, int channel_id);
+  void delStereoRecorder(const string &id, int channel_id);
+  void setStereoRecorders(const StereoRecordersList &recorders);
   bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
 };
 

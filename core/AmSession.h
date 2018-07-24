@@ -29,6 +29,7 @@
 #define _AmSession_h_
 
 #include "AmRtpStream.h"
+#include "AmStereoRecorderInfo.h"
 #include "AmThread.h"
 #include "AmEventQueue.h"
 #include "AmRtpAudio.h"
@@ -96,9 +97,7 @@ private:
 
   bool record_audio_enabled;
 
-  bool record_stereo_audio_enabled;
-  string record_stereo_audio_recorder_id;
-  int record_stereo_channel_id;
+  StereoRecordersList stereo_recorders;
 
   enum ProcessingStatus {
     SESSION_PROCESSING_EVENTS = 0,
@@ -352,14 +351,14 @@ public:
 
   /** setter for record_audio_enabled */
   void setRecordAudio(bool record_audio);
-  void setRecordStereoAudio(bool record_audio, int channel_id, const string &recorder_id = string());
+  void addStereoRecorder(int channel_id, const string &recorder_id = string());
+  void delStereoRecorder(int channel_id, const string &recorder_id = string());
 
   /** getter for record_audio_enabled  */
   bool getRecordAudio() { return record_audio_enabled; }
 
-  bool getRecordStereoAudio() { return record_stereo_audio_enabled; }
-  int getRecordStereoAudioChannelId() { return record_stereo_channel_id; }
-  const string& getRecordStereoAudioRecorderId() { return record_stereo_audio_recorder_id; }
+  bool getRecordStereoAudio() { return !stereo_recorders.empty(); }
+  const StereoRecordersList& getStereoRecorders() { return stereo_recorders; }
 
   /* ----         Call control                         ---- */
 

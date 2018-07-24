@@ -83,7 +83,6 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     m_dtmfDetector(this), m_dtmfEventQueue(&m_dtmfDetector),
     m_dtmfDetectionEnabled(true),
     record_audio_enabled(false),
-    record_stereo_audio_enabled(false),
     accept_early_session(false),
     rtp_interface(-1),
     refresh_method(REFRESH_UPDATE_FB_REINV),
@@ -259,26 +258,40 @@ void AmSession::setRecordAudio(bool record_audio)
     record_audio_enabled = record_audio;
 }
 
-void AmSession::setRecordStereoAudio(bool record_audio, int channel_id, const string &recorder_id)
+void AmSession::addStereoRecorder(int channel_id, const string &recorder_id)
 {
-    record_stereo_audio_enabled = record_audio;
-    record_stereo_channel_id = channel_id;
-    record_stereo_audio_recorder_id = recorder_id.empty() ? getLocalTag() : recorder_id;
+    CLASS_DBG("add stereo recorder. recorder_id: %s, channel_id: %d",
+        recorder_id.c_str(),channel_id);
 
-    if(record_stereo_audio_enabled)
-        CLASS_DBG("enable stereo recording. recorder_id: %s, channel_id: %d",
-            recorder_id.c_str(),channel_id);
-    else
-        CLASS_DBG("disable stereo recording");
+    stereo_recorders.add(
+        recorder_id.empty() ? getLocalTag() : recorder_id,
+        channel_id);
 
     if(!hasRtpStream()) return;
 
-    DBG("update RTP stream stereo recorder info");
+    DBG("update RTP stream stereo recorders info");
 
-    if(record_stereo_audio_enabled)
-        RTPStream()->setStereoRecorder(record_stereo_audio_recorder_id,record_stereo_channel_id);
-    else
-        RTPStream()->setStereoRecorder(string(),0);
+    lockAudio();
+    RTPStream()->setStereoRecorders(stereo_recorders);
+    unlockAudio();
+}
+
+void AmSession::delStereoRecorder(int channel_id, const string &recorder_id)
+{
+    CLASS_DBG("remove stereo recorder. recorder_id: %s, channel_id: %d",
+        recorder_id.c_str(),channel_id);
+
+    stereo_recorders.del(
+        recorder_id.empty() ? getLocalTag() : recorder_id,
+        channel_id);
+
+    if(!hasRtpStream()) return;
+
+    DBG("update RTP stream stereo recorders info");
+
+    lockAudio();
+    RTPStream()->setStereoRecorders(stereo_recorders);
+    unlockAudio();
 }
 
 #ifdef SESSION_THREADPOOL

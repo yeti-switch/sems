@@ -76,7 +76,3 @@ class AmAudioFileRecorderStereoMP3
     void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id);
 };
 
-#define RecorderPutStereoSamples(id,ts,buffer,size,rate,channel_id)\
-    AmAudioFileRecorderProcessor::instance_unsafe()->putEvent(\
-        new AudioRecorderStereoSamplesEvent(id,ts,buffer,size,rate,channel_id));
-

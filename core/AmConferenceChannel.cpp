@@ -21,7 +21,7 @@ int AmConferenceChannel::put(unsigned long long system_ts, unsigned char* buffer
   memcpy((unsigned char*)samples,buffer,size);
 
   if(stereo_record_enabled) {
-    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+    stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
   }
 
   AmMultiPartyMixer* mixer = status->getMixer();

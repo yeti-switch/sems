@@ -263,7 +263,7 @@ void AmRtpAudio::record(
   }
 
   if(stereo_record_enabled) {
-    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+    stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
   }
 }
 
@@ -314,7 +314,7 @@ int AmRtpAudio::put(unsigned long long system_ts, unsigned char* buffer,
   }
 
   if(stereo_record_enabled) {
-    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+    stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
   }
 
   memcpy((unsigned char*)samples,buffer,size);
@@ -389,8 +389,7 @@ int AmRtpAudio::init(const AmSdp& local,
   }
 
   if(session->getRecordStereoAudio()) {
-    setStereoRecorder(session->getRecordStereoAudioRecorderId(),
-                      session->getRecordStereoAudioChannelId());
+    setStereoRecorders(session->getStereoRecorders());
   }
 
   return 0;

@@ -288,16 +288,24 @@ void AmAudio::setRecorder(const string &id) {
   }
 }
 
-void AmAudio::setStereoRecorder(const string &id, int channel_id) {
-  if(!id.empty()){
-      CLASS_DBG("enable stereo recording. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
-      stereo_record_enabled = true;
-      stereo_recorder_id = id;
-      stereo_recorder_channel_id = channel_id;
-  } else {
-      CLASS_DBG("disable stereo recording");
-      stereo_record_enabled = false;
-  }
+void AmAudio::addStereoRecorder(const string &id, int channel_id) {
+  if(id.empty())
+    return;
+
+  CLASS_DBG("add stereo recorder. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
+  stereo_recorders.add(id,channel_id);
+  stereo_record_enabled = true;
+}
+
+void AmAudio::delStereoRecorder(const string &id, int channel_id)
+{
+  CLASS_DBG("remove stereo recorder. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
+  stereo_record_enabled = stereo_recorders.del(id, channel_id);
+}
+
+void AmAudio::setStereoRecorders(const StereoRecordersList &recorders) {
+    stereo_recorders = recorders;
+    stereo_record_enabled = !stereo_recorders.empty();
 }
 
 void AmAudio::close()
@@ -347,7 +355,7 @@ int AmAudio::put(unsigned long long system_ts, unsigned char* buffer,
     return -1;
 
   if(stereo_record_enabled) {
-    RecorderPutStereoSamples(stereo_recorder_id,system_ts,buffer,size,input_sample_rate,stereo_recorder_channel_id);
+    stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
   }
 
   memcpy((unsigned char*)samples,buffer,size);
