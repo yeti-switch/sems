@@ -90,6 +90,8 @@ class AmRtpPacket
     int parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats);
     int process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirectionalStat &stats);
     int process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats);
+    void update_receiver_stats(RtcpBidirectionalStat &stats);
+    void update_sender_stats(RtcpBidirectionalStat &stats);
 
     unsigned int   getDataSize() const { return d_size; }
     unsigned char* getData();

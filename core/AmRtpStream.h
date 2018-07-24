@@ -375,6 +375,8 @@ private:
   void log_rcvd_rtp_packet(AmRtpPacket &p);
   void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
   void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
+  void update_sender_stats(const AmRtpPacket &p);
+  void update_receiver_stats(const AmRtpPacket &p);
 
 public:
 
