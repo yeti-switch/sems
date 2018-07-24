@@ -28,6 +28,7 @@
 #include "AmRtpStream.h"
 #include "AmRtpPacket.h"
 #include "AmRtpReceiver.h"
+#include "AmLcConfig.h"
 #include "AmPlugIn.h"
 #include "AmAudio.h"
 #include "AmUtils.h"
@@ -903,6 +904,8 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 {
   clearRTPTimeout(&p->recv_time);
 
+  update_receiver_stats(*p);
+
   if (!receiving) {
 
     if (passive) {
@@ -1283,6 +1286,8 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
     } //if(!relay_raw)
 
+    p->setAddr(&r_saddr);
+
     if(p->send(l_sd, *AmConfig.media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
         CLASS_ERROR("while sending RTP packet to '%s':%i\n",
         get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
@@ -1474,7 +1479,7 @@ void AmRtpStream::payloads_id2str(const std::vector<int> i, std::vector<string> 
 }
 
 void AmRtpStream::log_sent_rtp_packet(AmRtpPacket &p){
-	static const cstring empty;
+	update_sender_stats(p);
 	if(logger)
 		p.logSent(logger, &l_saddr);
 	if(sensor)
@@ -1482,7 +1487,6 @@ void AmRtpStream::log_sent_rtp_packet(AmRtpPacket &p){
 }
 
 void AmRtpStream::log_rcvd_rtp_packet(AmRtpPacket &p){
-	static const cstring empty;
 	if(logger)
 		p.logReceived(logger, &l_saddr);
 	if(sensor)
@@ -1640,4 +1644,14 @@ void AmRtpStream::getInfo(AmArg &ret){
 	ret["mute"] = mute;
 	ret["hold"] = hold;
 	ret["receiving"] = receiving;
+}
+
+void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
+{
+	//rtp_stats
+}
+
+void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
+{
+	//rtp_stats
 }
