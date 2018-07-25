@@ -1,3 +1,9 @@
+sems (1.7.67-1) stable; urgency=low
+
+  * 9075dccf7 http_client: syncronization contexts
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 25 Jul 2018 18:08:49 +0300
+
 sems (1.7.66-1) stable; urgency=low
 
   * c8ad649bc AmAudio: write to the multiple recorders
