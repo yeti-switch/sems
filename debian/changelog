@@ -1,3 +1,11 @@
+sems (1.7.66-1) stable; urgency=low
+
+  * c8ad649bc AmAudio: write to the multiple recorders
+  * 7010746e7 AmAudio: fix missed initialization for stereo_record_enabled
+  * 40f43a7cb move recvPacket function to the interface class AmRtpSession
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 25 Jul 2018 12:09:37 +0300
+
 sems (1.7.65-2) stable; urgency=low
 
   * apps/http: use bundled libcurl
