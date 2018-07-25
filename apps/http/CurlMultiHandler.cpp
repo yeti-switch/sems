@@ -71,13 +71,9 @@ void CurlMultiHandler::check_multi_info()
 
 void CurlMultiHandler::on_timer_event()
 {
-#ifdef ENABLE_DEBUG
-    CURLMcode rc;
-#endif
-
     CDBG("on timer()");
 #ifdef ENABLE_DEBUG
-    rc =
+    CURLMcode rc =
 #endif
         curl_multi_socket_action(curl_multi, CURL_SOCKET_TIMEOUT, 0, &curl_running_handles);
     CDBG("curl_multi_socket_action(CURL_SOCKET_TIMEOUT,0) = %d, running_handles = %d",

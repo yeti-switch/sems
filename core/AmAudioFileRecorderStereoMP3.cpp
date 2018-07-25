@@ -1,7 +1,9 @@
 #include "AmAudioFileRecorderStereoMP3.h"
 #include "AmEventDispatcher.h"
+#include "AmSessionContainer.h"
 #include "AmUtils.h"
 #include "AmConfig.h"
+#include "ampi/HttpClientAPI.h"
 
 #include <cstdio>
 
@@ -80,12 +82,22 @@ AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3()
 
 AmAudioFileRecorderStereoMP3::~AmAudioFileRecorderStereoMP3()
 {
+    if(!sync_ctx_id.empty()) {
+        if(!AmSessionContainer::instance()->postEvent(
+           HTTP_EVENT_QUEUE,
+           new HttpTriggerSyncContext(sync_ctx_id,files.size())))
+        {
+            ERROR("AmAudioFileRecorderStereoMP3: can't post HttpTriggerSyncContext event");
+        }
+    }
+
     for(auto &f: files)
         f.close();
 }
 
-int AmAudioFileRecorderStereoMP3::init(const string &path)
+int AmAudioFileRecorderStereoMP3::init(const string &path, const string &sync_ctx)
 {
+    sync_ctx_id = sync_ctx;
     return add_file(path);
 }
 

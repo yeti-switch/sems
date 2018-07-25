@@ -27,7 +27,7 @@ class AmAudioFileRecorderMono
     AmAudioFileRecorderMono();
     ~AmAudioFileRecorderMono();
 
-    int init(const string &path);
+    int init(const string &path, const string &sync_ctx);
     int add_file(const string &path);
     void writeSamples(unsigned char *samples, size_t size, int input_sample_rate);
 };

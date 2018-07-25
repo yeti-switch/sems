@@ -121,9 +121,9 @@ void _AmAudioFileRecorderProcessor::process(AmEvent *ev)
     }
 }
 
-void _AmAudioFileRecorderProcessor::addRecorder(const string &recorder_id,const string &file_path)
+void _AmAudioFileRecorderProcessor::addRecorder(const string &recorder_id,const string &file_path, const string sync_ctx_id)
 {
-    putEvent(new AudioRecorderCtlEvent(recorder_id,AudioRecorderEvent::addRecorder,file_path));
+    putEvent(new AudioRecorderCtlEvent(recorder_id,AudioRecorderEvent::addRecorder,file_path,sync_ctx_id));
 }
 
 void _AmAudioFileRecorderProcessor::removeRecorder(const string &recorder_id)
@@ -166,7 +166,7 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
                 return;
             }
 
-            if(0!=recorder->init(ctl_event->file_path)) {
+            if(0!=recorder->init(ctl_event->file_path,ctl_event->sync_ctx_id)) {
                 ERROR("can't init recorder %s with path '%s'",
                       ev.recorder_id.c_str(),
                       ctl_event->file_path.c_str());

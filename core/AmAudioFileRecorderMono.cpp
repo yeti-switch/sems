@@ -1,4 +1,6 @@
 #include "AmAudioFileRecorderMono.h"
+#include "AmSessionContainer.h"
+#include "ampi/HttpClientAPI.h"
 
 AmAudioFileRecorderMono::AmAudioFileRecorderMono()
   : AmAudioFileRecorder(RecorderMonoAmAudioFile)
@@ -6,6 +8,15 @@ AmAudioFileRecorderMono::AmAudioFileRecorderMono()
 
 AmAudioFileRecorderMono::~AmAudioFileRecorderMono()
 {
+    if(!sync_ctx_id.empty()) {
+        if(!AmSessionContainer::instance()->postEvent(
+           HTTP_EVENT_QUEUE,
+           new HttpTriggerSyncContext(sync_ctx_id,files.size())))
+        {
+            ERROR("AmAudioFileRecorderMono: can't post HttpTriggerSyncContext event");
+        }
+    }
+
     for(vector<AmAudioFile *>::iterator it = files.begin();
         it!=files.end(); ++it)
     {
@@ -13,8 +24,9 @@ AmAudioFileRecorderMono::~AmAudioFileRecorderMono()
     }
 }
 
-int AmAudioFileRecorderMono::init(const string &path)
+int AmAudioFileRecorderMono::init(const string &path, const string &sync_ctx)
 {
+    sync_ctx_id = sync_ctx;
     files.push_back(new AmAudioFile());
     return files.back()->open(path,AmAudioFile::Write);
 }

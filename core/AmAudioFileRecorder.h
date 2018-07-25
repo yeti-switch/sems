@@ -15,8 +15,13 @@ class AmAudioFileRecorder {
         RecorderStereoMP3Internal,
         RecorderTypeMax,
     };
+
   private:
     RecorderType type;
+
+  protected:
+    string sync_ctx_id;
+
   public:
     AmAudioFileRecorder(RecorderType type)
       : type(type)
@@ -25,7 +30,7 @@ class AmAudioFileRecorder {
 
     RecorderType getType() { return type; }
 
-    virtual int init(const string &path) = 0;
+    virtual int init(const string &path, const string &sync_ctx) = 0;
     virtual int add_file(const string &path) = 0;
 
     virtual void writeSamples(unsigned char *samples, size_t size, int input_sample_rate)
@@ -77,14 +82,16 @@ struct AudioRecorderCtlEvent
   : AudioRecorderEvent
 {
     string file_path;
+    string sync_ctx_id;
 
     AudioRecorderCtlEvent(const string &recorder_id,event_type event_id)
       : AudioRecorderEvent(recorder_id,event_id)
     {}
 
-    AudioRecorderCtlEvent(const string &recorder_id,event_type event_id, const string &file_path)
+    AudioRecorderCtlEvent(const string &recorder_id,event_type event_id,
+                          const string &file_path, const string sync_ctx_id)
       : AudioRecorderEvent(recorder_id,event_id),
-        file_path(file_path)
+        file_path(file_path), sync_ctx_id(sync_ctx_id)
     {}
 };
 
@@ -124,7 +131,7 @@ class _AmAudioFileRecorderProcessor
     void process(AmEvent *ev);
 
     //ctl interface
-    void addRecorder(const string &recorder_id, const string &file_path);
+    void addRecorder(const string &recorder_id, const string &file_path, const string sync_ctx_id = string());
     void removeRecorder(const string &recorder_id);
     void putEvent(AudioRecorderEvent *event);
 

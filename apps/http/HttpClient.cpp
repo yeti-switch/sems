@@ -13,6 +13,9 @@ using std::vector;
 #define DEFAULT_RESEND_INTERVAL 5000 //milliseconds
 #define DEFAULT_RESEND_QUEUE_MAX 10000
 
+#define SYNC_CONTEXTS_TIMER_INVERVAL 5000
+#define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
+
 EXPORT_PLUGIN_CLASS_FACTORY(HttpClient, MOD_NAME);
 
 HttpClient* HttpClient::_instance=0;
@@ -67,6 +70,9 @@ int HttpClient::init()
         resend_timer.link(epoll_fd,true);
         resend_timer.set(resend_interval);
     }
+
+    sync_contexts_timer.link(epoll_fd,true);
+    sync_contexts_timer.set(SYNC_CONTEXTS_TIMER_INVERVAL);
 
     if(init_curl(epoll_fd)){
         ERROR("curl init failed");
@@ -154,6 +160,8 @@ void HttpClient::run()
                 on_timer_event();
             } else if(p==&resend_timer){
                 on_resend_timer_event();
+            } else if(p==&sync_contexts_timer) {
+                on_sync_context_timer();
             } else if(p==static_cast<AmEventFdQueue *>(this)){
                 processEvents();
             } else if(p==&stop_event){
@@ -199,13 +207,26 @@ void HttpClient::on_stop()
 
 void HttpClient::process(AmEvent* ev)
 {
-    switch(ev->event_id){
+    switch(ev->event_id) {
     case E_SYSTEM: {
         AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
         if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
             stop_event.fire();
         }
+
     } break;
+    case HttpEvent::TriggerSyncContext: {
+        if(HttpTriggerSyncContext *e = dynamic_cast<HttpTriggerSyncContext*>(ev))
+            on_trigger_sync_context(*e);
+    } break;
+    default:
+        process_http_event(ev);
+    }
+}
+
+void HttpClient::process_http_event(AmEvent * ev)
+{
+    switch(ev->event_id) {
     case HttpEvent::Upload: {
         if(HttpUploadEvent *e = dynamic_cast<HttpUploadEvent*>(ev))
             on_upload_request(*e);
@@ -221,6 +242,128 @@ void HttpClient::process(AmEvent* ev)
     default:
         WARN("unknown event received");
     }
+}
+
+#define PASS_EVENT false
+#define POSTPONE_EVENT true
+template<typename EventType>
+bool HttpClient::check_http_event_sync_ctx(const EventType &u)
+{
+    if(u.attempt) //skip requeued events
+        return PASS_EVENT;
+
+    if(u.sync_ctx_id.empty())
+        return PASS_EVENT;
+
+    auto it = sync_contexts.find(u.sync_ctx_id);
+    if(it == sync_contexts.end()) {
+        DBG("check_http_event_sync_ctx: no context '%s'. create new. postpone event",
+            u.sync_ctx_id.c_str());
+
+        EventType *e = new EventType(u);
+        e->sync_ctx_id.clear();
+        sync_contexts.emplace(u.sync_ctx_id,e);
+        return POSTPONE_EVENT;
+    }
+
+    if(it->second.counter > 0) {
+        DBG("check_http_event_sync_ctx: found positive context %s(%d). postpone event",
+            u.sync_ctx_id.c_str(),it->second.counter);
+
+        EventType *e = new EventType(u);
+        e->sync_ctx_id.clear();
+        it->second.add_event(new EventType(u));
+        return POSTPONE_EVENT;
+    }
+
+    DBG("check_http_event_sync_ctx: found negative context %s(%d). increase counter. pass event",
+        u.sync_ctx_id.c_str(),it->second.counter);
+
+    it->second.counter++;
+
+    if(0==it->second.counter) {
+        DBG("check_http_event_sync_ctx: context %s counter is 0. remove context",
+            u.sync_ctx_id.c_str());
+
+        if(it->second.postponed_events.size()) {
+            auto &postponed_events = it->second.postponed_events;
+            ERROR("check_http_event_sync_ctx: on removing context %s with counter 0. postponed events exist: %ld. reject them",
+                  u.sync_ctx_id.c_str(),postponed_events.size());
+            while(!postponed_events.empty()) {
+                delete postponed_events.front();
+                postponed_events.pop();
+            }
+        }
+
+        sync_contexts.erase(it);
+    }
+
+    return PASS_EVENT;
+}
+
+void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
+{
+    auto it = sync_contexts.find(e.sync_ctx_id);
+    if(it == sync_contexts.end()) {
+        DBG("on_trigger_sync_context: no context '%s'. create new with counter %d",
+            e.sync_ctx_id.c_str(),-e.quantity);
+        sync_contexts.emplace(e.sync_ctx_id,-e.quantity);
+        return;
+    }
+
+    DBG("on_trigger_sync_context: found context %s. counter %d. requeue postponed events and decrease counter by %d",
+        e.sync_ctx_id.c_str(),it->second.counter,e.quantity);
+
+    it->second.counter-=e.quantity;
+
+    auto &postponed_events = it->second.postponed_events;
+    while(!postponed_events.empty()) {
+        process_http_event(postponed_events.front());
+        delete postponed_events.front();
+        postponed_events.pop();
+    }
+
+    if(it->second.counter < 0) {
+        DBG("on_trigger_sync_context: finished. context %s. counter %d",
+            e.sync_ctx_id.c_str(),it->second.counter);
+        return;
+    }
+
+    if(it->second.counter > 0) {
+        ERROR("on_trigger_sync_context: more than expected send events for syncronization context %s. "
+              "remove it anyway. ",
+               e.sync_ctx_id.c_str());
+    }
+
+    DBG("on_trigger_sync_context: remove context %s",
+        e.sync_ctx_id.c_str());
+
+    sync_contexts.erase(it);
+}
+
+void HttpClient::on_sync_context_timer()
+{
+    time_t now = time(nullptr);
+    for(auto it = sync_contexts.begin(); it != sync_contexts.end(); ) {
+        if(now - it->second.created_at > SYNC_CONTEXTS_TIMEOUT_INVERVAL) {
+            auto &postponed_events = it->second.postponed_events;
+
+            DBG("on_sync_context_timer: remove context %s, counter: %d on timeout. requeue postponed events %ld",
+                it->first.c_str(),it->second.counter,postponed_events.size());
+
+            while(!postponed_events.empty()) {
+                process_http_event(postponed_events.front());
+                delete postponed_events.front();
+                postponed_events.pop();
+            }
+
+            it = sync_contexts.erase(it);
+
+        } else {
+            ++it;
+        }
+    }
+    sync_contexts_timer.read();
 }
 
 void HttpClient::on_upload_request(const HttpUploadEvent &u)
@@ -250,6 +393,11 @@ void HttpClient::on_upload_request(const HttpUploadEvent &u)
             d.url[u.failover_idx].c_str(),
             u.failover_idx,u.attempt,
             u.token.c_str());
+    }
+
+    if(check_http_event_sync_ctx(u)) {
+        DBG("http upload request is consumed by synchronization contexts handler");
+        return;
     }
 
     HttpUploadConnection *c = new HttpUploadConnection(u,d,epoll_fd);
@@ -286,6 +434,11 @@ void HttpClient::on_post_request(const HttpPostEvent &u)
             u.token.c_str());
     }
 
+    if(check_http_event_sync_ctx(u)) {
+        DBG("http post request is consumed by synchronization contexts handler");
+        return;
+    }
+
     HttpPostConnection *c = new HttpPostConnection(u,d,epoll_fd);
     if(c->init(curl_multi)){
         ERROR("http post connection intialization error");
@@ -318,6 +471,11 @@ void HttpClient::on_multpart_form_request(const HttpPostMultipartFormEvent &u)
             d.url[u.failover_idx].c_str(),
             u.failover_idx,u.attempt,
             u.token.c_str());
+    }
+
+    if(check_http_event_sync_ctx(u)) {
+        DBG("multipart form request is consumed by synchronization contexts handler");
+        return;
     }
 
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(u,d,epoll_fd);
