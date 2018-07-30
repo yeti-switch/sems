@@ -1,3 +1,11 @@
+sems (1.7.67-2) stable; urgency=low
+
+  * add checking for output buffer overflow in speex decoder
+  * suppress WARN about missed samples <-> bytes conversion functions
+  * check for such functions on codec load
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 30 Jul 2018 15:56:15 +0300
+
 sems (1.7.67-1) stable; urgency=low
 
   * 9075dccf7 http_client: syncronization contexts
