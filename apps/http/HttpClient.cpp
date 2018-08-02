@@ -272,7 +272,7 @@ bool HttpClient::check_http_event_sync_ctx(const EventType &u)
 
         EventType *e = new EventType(u);
         e->sync_ctx_id.clear();
-        it->second.add_event(new EventType(u));
+        it->second.add_event(e);
         return POSTPONE_EVENT;
     }
 
