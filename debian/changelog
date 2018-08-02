@@ -1,3 +1,9 @@
+sems (1.7.67-3) stable; urgency=low
+
+  * http_client: sync contexts: fix adding to the queue for consequenced events
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 02 Aug 2018 14:21:22 +0300
+
 sems (1.7.67-2) stable; urgency=low
 
   * add checking for output buffer overflow in speex decoder
