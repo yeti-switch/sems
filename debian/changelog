@@ -1,3 +1,9 @@
+sems (1.7.68-1) stable; urgency=low
+
+  * 24cef10d4 BusAPI.h: BusMsg: add status attribute
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 03 Aug 2018 12:23:46 +0300
+
 sems (1.7.67-3) stable; urgency=low
 
   * http_client: sync contexts: fix adding to the queue for consequenced events
