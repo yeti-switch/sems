@@ -26,18 +26,22 @@ struct BusMsg
     } msg_state_t;
 
     msg_state_t     state;
-    bool	    is_query;
+    int             status;
+    bool            is_query;
     string          local_tag;
     string          application_method;
     string          body;
     uint64_t        updated;
 
-    BusMsg(bool _is_query,string _local_tag, string _application_method, string _body)
-        : AmEvent(0),
-          state(New), is_query(_is_query),
-          local_tag(_local_tag),
-          application_method(_application_method),
-          body(_body) {}
+    BusMsg(bool _is_query,string _local_tag, string _application_method, string _body, int _status = 0)
+      : AmEvent(0),
+        state(New),
+        status(_status),
+        is_query(_is_query),
+        local_tag(_local_tag),
+        application_method(_application_method),
+        body(_body)
+    {}
 
     ~BusMsg() {}
 };
