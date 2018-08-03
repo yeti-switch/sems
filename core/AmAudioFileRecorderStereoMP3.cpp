@@ -33,6 +33,7 @@ void AmAudioFileRecorderStereoMP3::file_data::close()
     }
     lame_mp3_tags_fid(gfp,fp);
     free(gfp);
+    fflush(fp);
     fclose(fp);
 }
 
@@ -82,6 +83,9 @@ AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3()
 
 AmAudioFileRecorderStereoMP3::~AmAudioFileRecorderStereoMP3()
 {
+    for(auto &f: files)
+        f.close();
+
     if(!sync_ctx_id.empty()) {
         if(!AmSessionContainer::instance()->postEvent(
            HTTP_EVENT_QUEUE,
@@ -90,9 +94,6 @@ AmAudioFileRecorderStereoMP3::~AmAudioFileRecorderStereoMP3()
             ERROR("AmAudioFileRecorderStereoMP3: can't post HttpTriggerSyncContext event");
         }
     }
-
-    for(auto &f: files)
-        f.close();
 }
 
 int AmAudioFileRecorderStereoMP3::init(const string &path, const string &sync_ctx)

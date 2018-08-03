@@ -8,6 +8,12 @@ AmAudioFileRecorderMono::AmAudioFileRecorderMono()
 
 AmAudioFileRecorderMono::~AmAudioFileRecorderMono()
 {
+    for(vector<AmAudioFile *>::iterator it = files.begin();
+        it!=files.end(); ++it)
+    {
+        delete *it;
+    }
+
     if(!sync_ctx_id.empty()) {
         if(!AmSessionContainer::instance()->postEvent(
            HTTP_EVENT_QUEUE,
@@ -15,12 +21,6 @@ AmAudioFileRecorderMono::~AmAudioFileRecorderMono()
         {
             ERROR("AmAudioFileRecorderMono: can't post HttpTriggerSyncContext event");
         }
-    }
-
-    for(vector<AmAudioFile *>::iterator it = files.begin();
-        it!=files.end(); ++it)
-    {
-        delete *it;
     }
 }
 

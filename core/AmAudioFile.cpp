@@ -353,9 +353,10 @@ void AmAudioFile::close()
 {
   if(fp){
     on_close();
-
-    if(close_on_exit)
+    if(close_on_exit) {
+      fflush(fp);
       fclose(fp);
+    }
     fp = 0;
   }
 }
