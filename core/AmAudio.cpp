@@ -308,6 +308,20 @@ void AmAudio::setStereoRecorders(const StereoRecordersList &recorders) {
     stereo_record_enabled = !stereo_recorders.empty();
 }
 
+void AmAudio::setInbandDetector(AmInbandDetector *detector)
+{
+    if(!detector) return;
+
+    inband_detector.reset(detector);
+    inband_detector_enabled = true;
+}
+
+void AmAudio::clearInbandDetector()
+{
+    inband_detector_enabled = false;
+    inband_detector.reset();
+}
+
 void AmAudio::close()
 {
 }

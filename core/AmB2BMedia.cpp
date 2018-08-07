@@ -511,6 +511,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
                     //DBG("[%p] stream %p got %d from stream %p",this,stream,got,src_stream);
                     if (got > 0) {
+                        src_stream->feedInbandDetector(buffer, got, ts);
                         if(src_stream->isLastSamplesRelayed()) {
                             stream->record(ts, buffer, sample_rate, got);
                             return 0;

@@ -33,6 +33,7 @@
 #include "amci/codecs.h"
 #include "AmEventQueue.h"
 #include "AmStereoRecorderInfo.h"
+#include "AmInbandDetector.h"
 
 #include <stdio.h>
 
@@ -258,6 +259,9 @@ protected:
   bool stereo_record_enabled;
   StereoRecordersList stereo_recorders;
 
+  bool inband_detector_enabled;
+  std::unique_ptr<AmInbandDetector> inband_detector;
+
   /** Sample buffer. */
   DblBuffer samples;
   
@@ -390,6 +394,14 @@ public:
   void delStereoRecorder(const string &id, int channel_id);
   void setStereoRecorders(const StereoRecordersList &recorders);
   bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
+
+  void setInbandDetector(AmInbandDetector *detector);
+  void clearInbandDetector();
+  inline void feedInbandDetector(const unsigned char* samples, unsigned int size, unsigned long long system_ts)
+  {
+    if(!inband_detector_enabled) return;
+    inband_detector->streamPut(samples, size, system_ts);
+  }
 };
 
 

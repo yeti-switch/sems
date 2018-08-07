@@ -1382,7 +1382,7 @@ int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
     if (got > 0) {
       if (isDtmfDetectionEnabled())
         putDtmfAudio(buffer, got, ts);
-
+      stream->feedInbandDetector(buffer, got, ts);
       if (input) res = input->put(ts, buffer, stream->getSampleRate(), got);
     }
   }
