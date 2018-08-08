@@ -1,3 +1,10 @@
+sems (1.7.69-1) stable; urgency=low
+
+  * c05e5f7c3 AmAudio: check encode/decode resulting size
+  * a2685dc1a AmAudio: allow to set custom inband detector
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 08 Aug 2018 20:31:27 +0300
+
 sems (1.7.68-2) stable; urgency=low
 
   * audio recorder: flush and close files before sending HttpTriggerSyncContext event
