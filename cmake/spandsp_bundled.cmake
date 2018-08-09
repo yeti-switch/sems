@@ -23,3 +23,7 @@ set(SPANDSP_BUNDLED_INCLUDE_DIRS ${SPANDSP_BIN_DIR}/src)
 add_library(SPANDSP_bundled STATIC IMPORTED)
 set_property(TARGET SPANDSP_bundled PROPERTY IMPORTED_LOCATION ${SPANDSP_BUNDLED_LIB})
 set(SPANDSP_BUNDLED_LIBS -L/lib64 -ltiff -lm ${SPANDSP_BUNDLED_LIB})
+
+install(FILES ${SPANDSP_BIN_DIR}/src/spandsp.h DESTINATION /usr/include/sems)
+install(DIRECTORY ${SPANDSP_BIN_DIR}/src/spandsp DESTINATION /usr/include/sems
+        FILES_MATCHING PATTERN "*.h")

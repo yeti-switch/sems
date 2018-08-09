@@ -1,3 +1,4 @@
+usr/include/sems
 core/*.h usr/include/sems/
 core/*.cc usr/include/sems/
 core/sip/*.h usr/include/sems/sip/
@@ -9,6 +10,3 @@ core/compat/*.c usr/include/sems/compat/
 core/rtp usr/include/sems/
 usr/lib/pkgconfig usr/lib/
 usr/share/cmake/sems usr/share/cmake/
-third/spandsp/src/spandsp.h usr/include/sems/
-third/spandsp/src/spandsp/*.h usr/include/sems/spandsp/
-third/spandsp/src/spandsp/private/*.h usr/include/sems/spandsp/private/
