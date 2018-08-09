@@ -1,3 +1,5 @@
+FIND_PACKAGE(Spandsp REQUIRED)
+
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
 FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c")
@@ -14,6 +16,7 @@ codecs_bench.wav
 
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
+INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
 
 SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
 
@@ -40,7 +43,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAX_RTP_SESSIONS=${MAX_RTP_SESSIONS}")
 
 
 IF(SPANDSP_FOUND)
-	LIST(APPEND common_LIBS spandsp)
+	LIST(APPEND common_LIBS ${SPANDSP_LIBRARIES})
 ENDIF(SPANDSP_FOUND)
 
 IF(LIBSAMPLERATE_FOUND)

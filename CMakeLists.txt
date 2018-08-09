@@ -325,6 +325,7 @@ endforeach()
 message(STATUS ${CoreDefs})
 
 include(cmake/curl_bundled.cmake)
+include(cmake/spandsp_bundled.cmake)
 
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)
