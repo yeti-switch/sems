@@ -12,6 +12,9 @@ set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 PROJECT (SEMS)
 
+include(cmake/curl_bundled.cmake)
+include(cmake/spandsp_bundled.cmake)
+
 SET(SEMS_APP sems)
 SET(PKGCFG_DIR /usr/lib/pkgconfig)
 
@@ -272,6 +275,7 @@ MESSAGE(STATUS "Have res_search: ${HAVE_RES_SEARCH} ")
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/ampi)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core)
+INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
 
 CONFIGURE_FILE( ${SEMS_SOURCE_DIR}/core/sems.h.cmake ${SEMS_SOURCE_DIR}/core/sems.h )
 
@@ -323,9 +327,6 @@ foreach( d ${CoreDefsList} )
     set(CoreDefs "${CoreDefs} -D${d}")
 endforeach()
 message(STATUS ${CoreDefs})
-
-include(cmake/curl_bundled.cmake)
-include(cmake/spandsp_bundled.cmake)
 
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)

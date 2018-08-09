@@ -16,7 +16,6 @@ codecs_bench.wav
 
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
-INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
 
 SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
 
