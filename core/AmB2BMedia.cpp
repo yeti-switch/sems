@@ -581,12 +581,12 @@ AmB2BMedia::AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b):
   bsensor(NULL),
   ignore_relay_streams(false)
 {
-  DBG("AmB2BMedia(%p,%p) this = %p",_a,_b,this);
+  DBG("AmB2BMedia[%p](%p,%p) t",this,_a,_b);
 }
 
 AmB2BMedia::~AmB2BMedia()
 {
-  DBG("~AmB2BMedia() this = %p",this);
+  DBG("~AmB2BMedia[%p]()",this);
   if (logger) dec_ref(logger);
   if (asensor) dec_ref(asensor);
   if (bsensor) dec_ref(bsensor);

@@ -96,13 +96,15 @@ AmSession::AmSession(AmSipDialog* p_dlg)
   , _pid(this)
 #endif
 {
-  DBG("dlg = %p",dlg);
+  DBG("AmSession[%p](%p)",this,dlg);
   if(!dlg) dlg = new AmSipDialog(this);
   else dlg->setEventhandler(this);
 }
 
 AmSession::~AmSession()
 {
+  DBG("~AmSession[%p]",this);
+
   for(vector<AmSessionEventHandler*>::iterator evh = ev_handlers.begin();
       evh != ev_handlers.end(); evh++) {
     
@@ -111,8 +113,6 @@ AmSession::~AmSession()
   }
 
   delete dlg;
-
-  DBG("AmSession destructor finished\n");
 }
 
 AmSipDialog* AmSession::createSipDialog()
