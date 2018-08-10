@@ -1,3 +1,11 @@
+sems (1.7.70-1) stable; urgency=low
+
+  * 08e048bc4 log constructors/desctructor for AmB2BMedia, AmRtpStream, AmSession
+  * d285e2a59 tcp_trsp: fix deadlock between session proc send() and tcp worker generate_transport_errors()
+  * e47c7a3d7 use bundled spandsp
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 10 Aug 2018 14:42:55 +0300
+
 sems (1.7.69-2) stable; urgency=low
 
   * AmAudio: fix assert
