@@ -94,8 +94,14 @@ tcp_trsp_socket* tcp_trsp_socket::new_connection(tcp_server_socket* server_sock,
 tcp_trsp_socket::~tcp_trsp_socket()
 {
   DBG("********* connection destructor ***********");
-  if(read_ev) event_free(read_ev);
-  if(write_ev) event_free(write_ev);
+  if(read_ev) {
+      DBG("%p free read_ev %p",this, read_ev);
+      event_free(read_ev);
+  }
+  if(write_ev) {
+      DBG("%p free write_ev %p",this, write_ev);
+      event_free(write_ev);
+  }
 }
 
 void tcp_trsp_socket::create_events()
@@ -103,10 +109,12 @@ void tcp_trsp_socket::create_events()
   read_ev = event_new(evbase, sd, EV_READ|EV_PERSIST,
 		      tcp_trsp_socket::on_sock_read,
 		      (void *)this);
+  DBG("%p created read_ev %p with base %p",this, read_ev, evbase);
 
   write_ev = event_new(evbase, sd, EV_WRITE,
 		       tcp_trsp_socket::on_sock_write,
 		       (void *)this);
+  DBG("%p created write_ev %p with base %p",this, write_ev, evbase);
 }
 
 void tcp_trsp_socket::add_read_event_ul()
@@ -118,6 +126,7 @@ void tcp_trsp_socket::add_read_event_ul()
 
 void tcp_trsp_socket::add_read_event()
 {
+  DBG("%p add read_ev %p",this, read_ev);
   event_add(read_ev, server_sock->get_idle_timeout());
 }
 
@@ -130,6 +139,7 @@ void tcp_trsp_socket::add_write_event_ul(struct timeval* timeout)
 
 void tcp_trsp_socket::add_write_event(struct timeval* timeout)
 {
+  DBG("%p add write_ev %p",this, write_ev);
   event_add(write_ev, timeout);
 }
 
@@ -319,7 +329,10 @@ void tcp_trsp_socket::close()
   closed = true;
   DBG("********* closing connection ***********");
 
+  DBG("%p del read_ev %p", this, read_ev);
   event_del(read_ev);
+
+  DBG("%p del write_ev %p", this, write_ev);
   event_del(write_ev);
 
   if(sd > 0) {
@@ -804,6 +817,8 @@ void tcp_server_socket::add_event(struct event_base *evbase)
   if(!ev_accept) {
     ev_accept = event_new(evbase, sd, EV_READ|EV_PERSIST,
 			  tcp_server_socket::on_accept, (void *)this);
+	DBG("%p created ev_accept %p with base %p",this, ev_accept, evbase);
+	DBG("%p add ev_accept %p",this, ev_accept);
     event_add(ev_accept, NULL); // no timeout
   }
 }

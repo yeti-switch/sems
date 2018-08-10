@@ -1,3 +1,9 @@
+sems (1.7.70-2) stable; urgency=low
+
+  * tcp_trsp: log libevent functions calls
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 10 Aug 2018 15:54:59 +0300
+
 sems (1.7.70-1) stable; urgency=low
 
   * 08e048bc4 log constructors/desctructor for AmB2BMedia, AmRtpStream, AmSession
