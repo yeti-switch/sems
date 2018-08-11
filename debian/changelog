@@ -1,3 +1,9 @@
+sems (1.7.70-3) stable; urgency=low
+
+  * call evthread_use_pthreads() on application start
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 11 Aug 2018 20:14:37 +0300
+
 sems (1.7.70-2) stable; urgency=low
 
   * tcp_trsp: log libevent functions calls

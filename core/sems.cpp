@@ -58,6 +58,8 @@
 #include <grp.h>
 #include <pwd.h>
 
+#include <event2/thread.h>
+
 //#include <sys/wait.h>
 //#include <sys/socket.h>
 #include <sys/types.h>
@@ -634,10 +636,10 @@ int main(int argc, char* argv[])
 
   // init thread usage with libevent
   // before it's too late
-  /*if(evthread_use_pthreads() != 0) {
+  if(evthread_use_pthreads() != 0) {
     ERROR("cannot init thread usage with libevent");
     goto error;
-  }*/
+  }
 
   // start the asynchronous file writer (sorry, no better place...)
   //async_file_writer::instance()->start();
