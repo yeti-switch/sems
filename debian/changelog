@@ -1,3 +1,9 @@
+sems (1.7.70-4) stable; urgency=low
+
+  * fix logging in AmRtpStream constructor
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sun, 12 Aug 2018 11:17:22 +0300
+
 sems (1.7.70-3) stable; urgency=low
 
   * call evthread_use_pthreads() on application start

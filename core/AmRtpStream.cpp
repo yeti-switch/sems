@@ -475,7 +475,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 	last_sent_ts_diff(0)
 {
 
-  DBG("AmRtpStream[%p](%p [%s])",this,session,session->getLocalTag().c_str());
+  DBG("AmRtpStream[%p](%p)",this,session);
   memset(&r_saddr,0,sizeof(struct sockaddr_storage));
   memset(&l_saddr,0,sizeof(struct sockaddr_storage));
 
