@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <string.h>
 
 #include "eventfd.h"
 #include "log.h"
@@ -30,6 +31,7 @@ bool EventFD::init(int epoll_fd, int flags, int ev_data_fd)
 
     struct epoll_event  ev;
 
+    bzero(&ev,sizeof(struct epoll_event));
     ev.events   = EPOLLIN;
     ev.data.fd  = ev_data_fd;
 

@@ -192,6 +192,7 @@ int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx
       throw string("streams contexts storage exhausted");
   }
   struct epoll_event ev;
+  bzero(&ev, sizeof(struct epoll_event));
   ev.events = EPOLLIN;
   ev.data.fd = ctx_idx;
   if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev)==-1){

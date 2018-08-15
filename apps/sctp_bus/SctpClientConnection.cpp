@@ -47,6 +47,7 @@ int SctpClientConnection::connect()
         sctp_sys_err("setsockopt(IPPROTO_SCTP, SCTP_NODELAY)");
 
     struct sctp_event_subscribe event;
+    bzero(&event, sizeof(struct sctp_event_subscribe));
     event.sctp_association_event = 1;
     event.sctp_shutdown_event = 1;
 

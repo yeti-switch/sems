@@ -1442,6 +1442,9 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 		}
 	}
 
+	if(method == sip_request::ACK && msg->local_socket->is_reliable())
+		delete p_msg; //look: _trans_layer::update_uac_request: 200 ACK
+
 	if(dialog_id.len && tt->_t && !(tt->_t->dialog_id.len)) {
 	    tt->_t->dialog_id.s = new char[dialog_id.len];
 	    tt->_t->dialog_id.len = dialog_id.len;

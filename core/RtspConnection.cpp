@@ -254,6 +254,8 @@ RtspSession::RtspSession(RtspClient *_agent, const sockaddr_storage &_saddr, int
     : agent(_agent), saddr(_saddr), state(Closed), cseq(0), fd(-1), slot(_slot)
 {
     am_inet_pton(agent->localMediaIP().c_str(), &l_saddr);
+    am_set_port(&l_saddr, 0);
+
     reconnect_interval = agent->getReconnectInterval();
 
     connect();
@@ -500,6 +502,7 @@ bool RtspSession::epoll_link(int op, uint32_t events)
 {
     struct epoll_event ev;
 
+    bzero(&ev, sizeof(struct epoll_event));
     ev.events   = events;
     ev.data.fd  = slot;
 

@@ -148,7 +148,7 @@ void AmThread::stop()
     if (res == EINVAL) {
       WARN("pthread_detach failed with code EINVAL: thread already in detached state.\n");
     } else if (res == ESRCH) {
-      WARN("pthread_detach failed with code ESRCH: thread could not be found.\n");
+      DBG("pthread_detach failed with code ESRCH: thread could not be found.\n");
     } else {
       WARN("pthread_detach failed with code %i\n", res);
     }

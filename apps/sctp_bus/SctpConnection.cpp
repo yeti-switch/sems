@@ -1,5 +1,5 @@
 #include "SctpConnection.h"
-#include "AmEventDispatcher.h"
+#include "AmSessionContainer.h"
 
 #include <sys/epoll.h>
 
@@ -14,7 +14,9 @@ SctpConnection::SctpConnection()
     _id(0),
     state(Closed),
     last_cseq(0)
-{}
+{
+    bzero(&addr, sizeof(sockaddr_storage));
+}
 
 SctpConnection::~SctpConnection()
 {
@@ -92,7 +94,7 @@ int SctpConnection::close()
     state = Closed;
 
     if(!event_sink.empty()) {
-        AmEventDispatcher::instance()->post(
+        AmSessionContainer::instance()->postEvent(
             event_sink,
             new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Closed));
     }

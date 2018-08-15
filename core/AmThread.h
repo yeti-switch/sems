@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>
+#include <string.h>
 #include <queue>
 
 #include <string>
@@ -222,6 +223,7 @@ class AmEventFd
 
   void add_to_epoll(int fd, bool ptr) {
     struct epoll_event ev;
+    bzero(&ev, sizeof(struct epoll_event));
 
     ev.events = EPOLLIN;
 
@@ -333,6 +335,7 @@ public:
   /** Add to external epoll handler */
   void link(int fd, bool ptr = false){
     struct epoll_event ev;
+    bzero(&ev, sizeof(struct epoll_event));
     ev.events = EPOLLIN | EPOLLET;
     if(ptr) ev.data.ptr = this;
     else ev.data.fd = -timer_fd;

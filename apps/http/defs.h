@@ -17,7 +17,7 @@
     }
 
 #define multi_setopt(opt,val)\
-    if(CURLE_OK!=curl_multi_setopt(curl_multi,opt,val)){ \
+    if(CURLM_OK!=curl_multi_setopt(curl_multi,opt,val)){ \
         ERROR("curl_multi_setopt error for option" #opt); \
         return -1; \
     }

@@ -145,6 +145,7 @@ void EventQueueWorker::on_stop()
   INFO("requesting worker to stop.\n");
   stop_requested.set(true);
   runcond.set(true);
+  join();
 }
 
 void EventQueueWorker::startEventQueue(AmEventQueue* q) 

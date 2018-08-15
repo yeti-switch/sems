@@ -17,12 +17,28 @@ class RpcTreeHandler
         const AmArg& args, AmArg& ret);
     void serialize_methods_tree(AmArg &methods_root, AmArg &tree);
     bool methods_tree;
+
+    void free_methods_three(AmArg &tree);
+
   public:
     using rpc_handler = void (const AmArg& args, AmArg& ret);
 
     RpcTreeHandler(bool methods_tree = false)
-      : methods_tree(methods_tree)
+      : methods_tree(methods_tree),
+        root_entry(nullptr)
     { }
+
+    virtual ~RpcTreeHandler()
+    {
+        if(!isArgStruct(root))
+            return;
+        for(auto &e : *root.asStruct())
+            free_methods_three(e.second);
+        root.clear();
+        if(root_entry)
+            delete root_entry;
+    }
+
 
   protected:
     AmArg root;
@@ -73,6 +89,9 @@ class RpcTreeHandler
     void init_rpc();
 
     bool is_methods_tree() { return methods_tree; }
+
+  private:
+    rpc_entry *root_entry;
 };
 
 template<class C>
@@ -303,6 +322,24 @@ void RpcTreeHandler<C>::get_methods_tree(AmArg &tree)
 }
 
 template<class C>
+void RpcTreeHandler<C>::free_methods_three(AmArg &tree) {
+    if(!isArgAObject(tree))
+        return;
+
+    rpc_entry *e = reinterpret_cast<rpc_entry *>(tree.asObject());
+
+    if(!e->hasLeafs()) {
+        delete e;
+        return;
+    }
+
+    for(auto &l : *e->leaves.asStruct())
+        free_methods_three(l.second);
+
+    delete e;
+}
+
+template<class C>
 AmArg &RpcTreeHandler<C>::reg_leaf(AmArg &parent,const string &name,const string &desc)
 {
     rpc_entry *e = new rpc_entry(desc);
@@ -336,7 +373,7 @@ AmArg &RpcTreeHandler<C>::reg_method_arg(
 template<class C>
 void RpcTreeHandler<C>::init_rpc()
 {
-    rpc_entry *e = new rpc_entry("root");
-    root = e->leaves;
+    root_entry = new rpc_entry("root");
+    root = root_entry->leaves;
     init_rpc_tree();
 }

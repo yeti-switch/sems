@@ -104,6 +104,7 @@ AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
     playout_buffer(NULL),
     m_playout_type(SIMPLE_PLAYOUT),
     last_check(0),last_check_i(false),send_int(false),
+    last_samples_relayed(false),
     last_send_ts_i(false)
 {
 #ifdef USE_SPANDSP_PLC

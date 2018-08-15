@@ -101,6 +101,7 @@ bool AmEventFdQueue::eventPending() {
 void AmEventFdQueue::epoll_link(int epoll_fd, bool ptr)
 {
     struct epoll_event ev;
+    bzero(&ev, sizeof(struct epoll_event));
     ev.events = EPOLLIN;
     if(ptr) ev.data.ptr = this;
     else ev.data.fd = -event_fd;

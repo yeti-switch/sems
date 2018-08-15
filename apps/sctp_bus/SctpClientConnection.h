@@ -17,6 +17,7 @@ class SctpClientConnection
 
     SctpClientConnection()
       : events_sent(0),
+        assoc_id(-1),
         json_rpc(nullptr)
     {}
 

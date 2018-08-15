@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
+#include <strings.h>
 
 #include "timerfd.h"
 #include "log.h"
@@ -52,6 +53,7 @@ bool TimerFD::init(int epoll_fd, int _timer_interval_usec, int ev_data_fd)
 
     struct epoll_event  ev;
 
+    bzero(&ev,sizeof(struct epoll_event));
     ev.events   = EPOLLIN;
     ev.data.fd  = ev_data_fd;
 

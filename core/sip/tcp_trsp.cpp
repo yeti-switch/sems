@@ -709,6 +709,7 @@ void tcp_server_worker::run()
 void tcp_server_worker::on_stop()
 {
   event_base_loopbreak(evbase);
+  join();
 }
 
 tcp_server_socket::tcp_server_socket(unsigned short if_num, unsigned int opts)
@@ -960,5 +961,6 @@ void tcp_trsp::on_stop()
   event_base_loopbreak(evbase);
   tcp_server_socket* tcp_sock = static_cast<tcp_server_socket*>(sock);
   tcp_sock->stop_threads();
+  join();
 }
 
