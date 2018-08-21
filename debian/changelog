@@ -1,3 +1,9 @@
+sems (1.7.71-2) stable; urgency=low
+
+  * AmAudioFileRecorderStereoMP3: check for channels timestamps max difference in addition to the exact matching
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 21 Aug 2018 19:18:36 +0300
+
 sems (1.7.71-1) stable; urgency=low
 
   * da521dc09 fixes to make compiler and valgrind happy

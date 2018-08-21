@@ -12,6 +12,10 @@
 
 #define MP3_FLUSH_BUFFER_SIZE 7200
 
+#define SCALE_TS(system_ts) ((system_ts) * (MP3_FILE_SAMPLERATE / 100) / (WALLCLOCK_RATE / 100))
+#define SCALED_DIFF(lts,rts) (SCALE_TS(((lts > rts) ? (lts-rts) : (rts-lts))))
+
+#define MAX_TS_DIFF 160
 
 AmAudioFileRecorderStereoMP3::file_data::file_data(FILE* fp, lame_global_flags* gfp, const string &path)
   : fp(fp),
@@ -177,6 +181,7 @@ inline unsigned int resample(
     unsigned char *samples, unsigned int size,
     int input_sample_rate)
 {
+
     if(!state.get()) {
 #ifdef USE_INTERNAL_RESAMPLER
         if (AmConfig::ResamplingImplementationType == AmAudio::INTERNAL_RESAMPLER) {
@@ -192,7 +197,6 @@ inline unsigned int resample(
             WARN("no available resamplers for MP3 stereo recorder. skip audio writing");
             return 0;
         }
-        DBG("resampler inited with %p",state.get());
     }
     return state->resample(
         samples, size,
@@ -201,7 +205,7 @@ inline unsigned int resample(
 
 #define match_buffers(lts,lsize,rts,rsize) \
 (\
-    lts==rts \
+    ((lts==rts) || (SCALED_DIFF(lts,rts) <= MAX_TS_DIFF)) \
     ? ((lsize) < (rsize) ? (lsize) : (rsize)) \
     : 0 \
 )
