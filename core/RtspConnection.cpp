@@ -276,9 +276,13 @@ void RtspSession::close()
     DBG("####### %s %s:%d state=%d", __func__,
         am_inet_ntop(&saddr).c_str(), am_get_port(&saddr), state);
 
+    {
+        AmLock l(cseq2id_mutex);
+        cseq2id_map.clear();
+    }
+
     state = Closed;
     cseq = 0;
-    cseq2id_map.clear();
     buffer.clear();
 
     if (fd == -1)
@@ -339,8 +343,10 @@ void RtspSession::rtspSendMsg(const RtspMsg &msg)
     }
 
     /** Store CSeq for stream */
-    if (msg.owner_id)
+    if (msg.owner_id) {
+        AmLock l(cseq2id_mutex);
         cseq2id_map.insert(std::pair<uint32_t, uint64_t>(_cseq, msg.owner_id));
+    }
 }
 
 
@@ -365,14 +371,18 @@ void RtspSession::process_response(RtspMsg &msg)
         return;
     }
 
-    auto it = cseq2id_map.find(msg.cseq);
+    {
+        AmLock l(cseq2id_mutex);
 
-    if (it == cseq2id_map.end())
-        return;
+        auto it = cseq2id_map.find(msg.cseq);
 
-    cseq2id_map.erase(it);
+        if (it == cseq2id_map.end())
+            return;
 
-    msg.owner_id = it->second;
+        cseq2id_map.erase(it);
+
+        msg.owner_id = it->second;
+    }
 
     agent->onRtspReplay(msg);
 }

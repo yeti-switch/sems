@@ -112,6 +112,7 @@ class RtspSession
 
         typedef std::map<uint32_t, uint64_t> CSec2AudioIdMap;
 
+        AmMutex                 cseq2id_mutex;
         CSec2AudioIdMap         cseq2id_map;
 
         RtspClient              *agent;
