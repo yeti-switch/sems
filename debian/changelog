@@ -1,3 +1,10 @@
+sems (1.7.72-1) stable; urgency=low
+
+  * 73d7fdd43 http/HttpMultipartFormConnection: check for file existence on init
+  * c75c74c6e Fixed cseq2id_map usage race (RtspConnection.cpp)
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 23 Aug 2018 14:01:34 +0300
+
 sems (1.7.71-2) stable; urgency=low
 
   * AmAudioFileRecorderStereoMP3: check for channels timestamps max difference in addition to the exact matching
