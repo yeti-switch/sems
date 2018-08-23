@@ -394,91 +394,101 @@ bool AmSession::processEventsCatchExceptions() {
     this should be called until it returns false. */
 bool AmSession::processingCycle() {
 
-  DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv\n",
-      dlg->getCallid().c_str(),getLocalTag().c_str(),
-      dlg->getStatusStr(),
-      sess_stopped.get()?"stopped":"running",
-      dlg->getUACTransPending(),
-      dlg->getUsages());
+    DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv\n",
+        dlg->getCallid().c_str(),getLocalTag().c_str(),
+        dlg->getStatusStr(),
+        sess_stopped.get()?"stopped":"running",
+        dlg->getUACTransPending(),
+        dlg->getUsages());
 
-  switch (processing_status) {
-  case SESSION_PROCESSING_EVENTS: 
-    {
-      if (!processEventsCatchExceptions()) {
-	// exception occured, stop processing
-	processing_status = SESSION_ENDED_DISCONNECTED;
-	return false;
-      }
-      
-      AmSipDialog::Status dlg_status = dlg->getStatus();
-      bool s_stopped = sess_stopped.get();
-      
-      DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
-	  dlg->getCallid().c_str(),getLocalTag().c_str(),
-	  AmBasicSipDialog::getStatusStr(dlg_status),
-	  s_stopped?"stopped":"running",
-	  dlg->getUACTransPending(),
-	  dlg->getUsages());
-      
-      // session running?
-      if (!s_stopped || (dlg_status == AmSipDialog::Disconnecting)
-	  || dlg->getUsages())
-	return true;
-      
-      // session stopped?
-      if (s_stopped &&
-	  (dlg_status == AmSipDialog::Disconnected)) {
-	processing_status = SESSION_ENDED_DISCONNECTED;
-	return false;
-      }
-      
-      // wait for session's status to be disconnected
-      // todo: set some timer to tear down the session anyway,
-      //       or react properly on negative reply to BYE (e.g. timeout)
-      processing_status = SESSION_WAITING_DISCONNECTED;
-      
-      if ((dlg_status != AmSipDialog::Disconnected) &&
-      (dlg_status != AmSipDialog::Cancelling)&&
-      !no_reply) {
-	DBG("app did not send BYE - do that for the app\n");
-	if (dlg->bye("",SIP_FLAGS_VERBATIM,true) != 0) {
-	  processing_status = SESSION_ENDED_DISCONNECTED;
-	  // BYE sending failed - don't wait for dlg status to go disconnected
-	  return false;
-	}
-      }
-      
-      return true;
-      
-    } break;
-    
-  case SESSION_WAITING_DISCONNECTED: {
-    // processing events until dialog status is Disconnected 
-    
-    if (!processEventsCatchExceptions()) {
-      processing_status = SESSION_ENDED_DISCONNECTED;
-      return false; // exception occured, stop processing
-    }
+    switch (processing_status) {
+    case SESSION_PROCESSING_EVENTS: {
+        if (!processEventsCatchExceptions()) {
+            // exception occured, stop processing
+            processing_status = SESSION_ENDED_DISCONNECTED;
+            return false;
+        }
 
-    bool res = dlg->getStatus() != AmSipDialog::Disconnected;
-    if (!res)
-      processing_status = SESSION_ENDED_DISCONNECTED;
+        AmSipDialog::Status dlg_status = dlg->getStatus();
+        bool s_stopped = sess_stopped.get();
 
-    DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
-	dlg->getCallid().c_str(),getLocalTag().c_str(),
-	dlg->getStatusStr(),
-	sess_stopped.get()?"stopped":"running",
-	dlg->getUACTransPending(),
-	dlg->getUsages());
+        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
+            dlg->getCallid().c_str(),getLocalTag().c_str(),
+            AmBasicSipDialog::getStatusStr(dlg_status),
+            s_stopped?"stopped":"running",
+            dlg->getUACTransPending(),
+            dlg->getUsages());
 
-    return res;
-  }; break;
+        // session running?
+        if (!s_stopped || (dlg_status == AmSipDialog::Disconnecting)
+            || dlg->getUsages())
+        {
+            return true;
+        }
 
-  default: {
-    ERROR("unknown session processing state\n");
-    return false; // stop processing      
-  }
-  }
+        // session stopped?
+        if (s_stopped &&
+            (dlg_status == AmSipDialog::Disconnected))
+        {
+            processing_status = SESSION_ENDED_DISCONNECTED;
+            return false;
+        }
+
+        // wait for session's status to be disconnected
+        // todo: set some timer to tear down the session anyway,
+        //       or react properly on negative reply to BYE (e.g. timeout)
+        processing_status = SESSION_WAITING_DISCONNECTED;
+
+        if ((dlg_status != AmSipDialog::Disconnected) &&
+            (dlg_status != AmSipDialog::Cancelling)&&
+            !no_reply)
+        {
+            DBG("app did not send BYE - do that for the app\n");
+            if (dlg->bye("",SIP_FLAGS_VERBATIM,true) != 0) {
+                processing_status = SESSION_ENDED_DISCONNECTED;
+                // BYE sending failed - don't wait for dlg status to go disconnected
+                return false;
+            }
+            //check if dialog status was changed to Disconnected by dlg->bye()
+            //so we can cleanly end session
+            if (s_stopped &&
+                (dlg->getStatus() == AmSipDialog::Disconnected))
+            {
+                processing_status = SESSION_ENDED_DISCONNECTED;
+                return false;
+            }
+        }
+
+        return true;
+
+    } break; //SESSION_PROCESSING_EVENTS
+
+    case SESSION_WAITING_DISCONNECTED: {
+        // processing events until dialog status is Disconnected
+
+        if (!processEventsCatchExceptions()) {
+            processing_status = SESSION_ENDED_DISCONNECTED;
+            return false; // exception occured, stop processing
+        }
+
+        bool res = dlg->getStatus() != AmSipDialog::Disconnected;
+        if (!res)
+            processing_status = SESSION_ENDED_DISCONNECTED;
+
+        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
+            dlg->getCallid().c_str(),getLocalTag().c_str(),
+            dlg->getStatusStr(),
+            sess_stopped.get()?"stopped":"running",
+            dlg->getUACTransPending(),
+            dlg->getUsages());
+
+        return res;
+    }; break; //SESSION_WAITING_DISCONNECTED
+
+    default: {
+        ERROR("unknown session processing state\n");
+        return false; // stop processing
+    }}
 }
 
 void AmSession::finalize()
