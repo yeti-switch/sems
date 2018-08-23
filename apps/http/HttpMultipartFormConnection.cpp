@@ -48,6 +48,13 @@ int HttpMultiPartFormConnection::init(CURLM *curl_multi)
         case HttpPostMultipartFormEvent::Part::FilePath:
             curl_mime_filedata(field,part.value.c_str());
             file_path = part.value;
+
+            if(!file_exists(file_path)) {
+                ERROR("HttpMultiPartFormConnection: can't open file: %s",file_path.c_str());
+                curl_mime_free(form);
+                return -1;
+            }
+
             file_basename = filename_from_fullpath(file_path);
             break;
         }
