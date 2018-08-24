@@ -16,6 +16,7 @@
 #include "AmSession.h"
 
 #include "amci/amci.h"
+#include "sip/resolver.h"
 #include "log.h"
 
 #include <stdexcept>
@@ -297,6 +298,7 @@ AmSdp::AmSdp(const AmSdp& p_sdp_msg)
 
 int AmSdp::parse(const char* _sdp_msg)
 {
+  struct sockaddr_storage ss;
   char* s = (char*)_sdp_msg;
   clear();
 
@@ -322,6 +324,29 @@ int AmSdp::parse(const char* _sdp_msg)
       }
     }
   }
+
+  //validate connection lines
+  if(!conn.address.empty()) {
+      dns_handle dh;
+      if (resolver::instance()->resolve_name(conn.address.c_str(),&dh,&ss,IPv4) < 0) {
+        ERROR("invalid session level connection line with address: %s",conn.address.c_str());
+        return true;
+      }
+  }
+
+  for(vector<SdpMedia>::iterator it = media.begin();
+      !ret && (it != media.end()); ++it)
+  {
+      const string &addr = it->conn.address;
+      if(!addr.empty()) {
+          dns_handle dh;
+          if (resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,IPv4) < 0) {
+            ERROR("invalid media level connection line with address: %s",addr.c_str());
+            return true;
+          }
+      }
+  }
+
 
   //remove duplicate session attributes
   std::sort(attributes.begin(),attributes.end());
