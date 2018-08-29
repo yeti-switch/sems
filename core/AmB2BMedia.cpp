@@ -237,7 +237,13 @@ void AudioStreamData::clear()
     in = NULL;
   }
   if (stream) {
-    if(!shared_stream) delete stream;
+    if(!shared_stream) {
+        delete stream;
+    } else {
+        //cleanup relay for shared stream
+        stream->disableRtpRelay();
+        stream->setRelayStream(NULL);
+    }
     stream = NULL;
   }
   clearDtmfSink();
