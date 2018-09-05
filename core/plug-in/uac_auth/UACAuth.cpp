@@ -86,6 +86,8 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
     UACAuth::checkAuthentication(req, args.get(1).asCStr(),
 				 args.get(2).asCStr(),
 				 args.get(3).asCStr(), ret);
+  } else if (method == "getChallenge") {
+      ret = UACAuth::getChallengeHeader(args.get(0).asCStr());
   } else if (method == "checkAuthHA1") {
 
     // params: Request realm user pwd
@@ -794,12 +796,17 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
   } else {
     ret.push(401);
     ret.push("Unauthorized");
-    ret.push(SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-	     "realm=\""+realm+"\", "
-	     "qop=\"auth,auth-int\", "
-	     "nonce=\""+calcNonce()+"\"\r\n");
+    ret.push(getChallengeHeader(realm));
   }
   ret.push(internal_reason);
+}
+
+string UACAuth::getChallengeHeader(const string& realm)
+{
+    return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
+           "realm=\""+realm+"\", "
+           "qop=\"auth,auth-int\", "
+           "nonce=\""+calcNonce()+"\"\r\n";
 }
 
 void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& realm,
