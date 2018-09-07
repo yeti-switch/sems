@@ -540,6 +540,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
             }
             if (got < 0) return -1;
         }
+        stream->processRtcpTimers(ts);
         if (got > 0) {
             updateSendStats();
             //CLASS_DBG("stream->put(%llu,%d)",ts,got);

@@ -84,14 +84,17 @@ class AmRtpPacket
   int send(int sd, const MEDIA_info &iface, sockaddr_storage* l_saddr);
   int recv(int sd);
 
-    int parse(AmObject *caller = NULL);
+    int rtp_parse(AmObject *caller = NULL);
 
     int rtcp_parse_update_stats(RtcpBidirectionalStat &stats);
     int parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats);
+    int parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint32_t ssrc, RtcpBidirectionalStat &stats);
+
     int process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirectionalStat &stats);
     int process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats);
-    void update_receiver_stats(RtcpBidirectionalStat &stats);
-    void update_sender_stats(RtcpBidirectionalStat &stats);
+
+    /*void update_receiver_stats(RtcpBidirectionalStat &stats);
+    void update_sender_stats(RtcpBidirectionalStat &stats);*/
 
     unsigned int   getDataSize() const { return d_size; }
     unsigned char* getData();

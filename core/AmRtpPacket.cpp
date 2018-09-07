@@ -51,6 +51,14 @@
 #define RTCP_PAYLOAD_MAX 76
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
+#define RTCP_PARSE_DEBUG 1
+
+#if RTCP_PARSE_DEBUG==1
+#define RTCP_DBG(fmt, args...) DBG(fmt,##args);
+#else
+    #define RTCP_DBG(fmt, args...) ;
+#endif
+
 AmRtpPacket::AmRtpPacket()
   : data_offset(0),
     relayed(false)
@@ -74,7 +82,7 @@ void AmRtpPacket::getAddr(struct sockaddr_storage* a)
   memcpy(a,&addr,sizeof(sockaddr_storage));
 }
 
-int AmRtpPacket::parse(AmObject *caller)
+int AmRtpPacket::rtp_parse(AmObject *caller)
 {
     assert(buffer);
     assert(b_size);
@@ -148,13 +156,13 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
     r = buffer;
     end = r + b_size;
 
-    DBG("got RTCP with size: %u",b_size);
+    RTCP_DBG("got RTCP with size: %u",b_size);
 
     idx = 0;
     do {
         chunk_size = end-r;
         if(chunk_size < sizeof(RtcpCommonHeader)) {
-            DBG("received RTCP packet part %d is too short: %lu (expected %lu)",
+            RTCP_DBG("received RTCP packet part %d is too short: %lu (expected %lu)",
                 idx,chunk_size,sizeof(RtcpCommonHeader));
             return RTP_PACKET_PARSE_ERROR;
         }
@@ -162,25 +170,25 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
         RtcpCommonHeader &h = *(RtcpCommonHeader *)r;
 
         if(h.version != RTP_VERSION) {
-            DBG("received RTCP packet with wrong version %u",h.version);
+            RTCP_DBG("received RTCP packet with wrong version %u",h.version);
             return RTP_PACKET_PARSE_ERROR;
         }
 
         if(h.p != 0) {
-            DBG("received RTCP packet with non-zero padding bit");
+            RTCP_DBG("received RTCP packet with non-zero padding bit");
             return RTP_PACKET_PARSE_ERROR;
         }
 
         chunk_end = r + sizeof(uint32_t)*(ntohs(h.length) + 1);
 
         if(chunk_end > end) {
-            DBG("RTCP%d: too small buffer for provided chunk length value: %d. "
+            RTCP_DBG("RTCP%d: too small buffer for provided chunk length value: %d. "
                 "expected at least %lu but tail is %lu",
                 idx,ntohs(h.length),chunk_end-r,chunk_size);
             return RTP_PACKET_PARSE_ERROR;
         }
 
-        DBG("RTCP chunk %d > version: %u, pt: %u, p: %u, count: %u, length: %u(%lu), ssrc: 0x%x",
+        RTCP_DBG("RTCP chunk %d > version: %u, pt: %u, p: %u, count: %u, length: %u(%lu), ssrc: 0x%x",
             idx,
             h.version,
             h.pt,
@@ -192,12 +200,12 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
         switch(h.pt) {
         case RtcpCommonHeader::RTCP_SR:
 
-            DBG("RTCP: parse Sender Report");
+            RTCP_DBG("RTCP: parse Sender Report");
             if(chunk_size < (sizeof(RtcpCommonHeader)
                              + sizeof(RtcpSenderReportHeader)
                              + h.count*sizeof(RtcpReceiverReportHeader)))
             {
-                DBG("RTCP: chunk is too small (%lu) to be a valid SenderReport",
+                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid SenderReport",
                     chunk_size);
                 return RTP_PACKET_PARSE_ERROR;
             }
@@ -209,19 +217,19 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
                 p += sizeof(RtcpSenderReportHeader);
                 parse_receiver_reports(p,chunk_end-p,stats);
             } else {
-                DBG("SR with empty RR");
+                RTCP_DBG("SR with empty RR");
             }
 
             break;
 
         case RtcpCommonHeader::RTCP_RR:
 
-            DBG("RTCP: parse Receiver Report");
+            RTCP_DBG("RTCP: parse Receiver Report");
             p = r + sizeof(RtcpCommonHeader);
             if(chunk_size < (sizeof(RtcpCommonHeader)
                              + h.count*sizeof(RtcpReceiverReportHeader)))
             {
-                DBG("RTCP: chunk is too small (%lu) to be a valid ReceiverReport. RC = %u",
+                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid ReceiverReport. RC = %u",
                     chunk_size,h.count);
                 return RTP_PACKET_PARSE_ERROR;
             }
@@ -229,33 +237,36 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
             if(h.count)
                 parse_receiver_reports(p,chunk_end-p,stats);
             else
-                DBG("got empty RR");
+                RTCP_DBG("got empty RR");
+
+            break;
+
+        case RtcpCommonHeader::RTCP_SDES:
+
+            RTCP_DBG("RTCP: parse Source Description");
+            p = r + sizeof(RtcpCommonHeader);
+
+            if(parse_sdes(p,chunk_end,h.ssrc,stats)) {
+                DBG("RTCP: failed to parse SDES packet");
+                return RTP_PACKET_PARSE_ERROR;
+            }
 
             break;
 
         default:
-
             DBG("RTCP: skip parsing unsupported payload type: %d",h.pt);
-
         } //switch(h.pt)
 
-        DBG("-------------------------------");
+        RTCP_DBG("-------------------------------");
         r = chunk_end;
         idx++;
 
     } while(r < end);
 
     if (r != end) {
-        DBG("wrong format of the RTCP compound packet");
+        RTCP_DBG("wrong format of the RTCP compound packet");
     }
-/*
-    DBG("RTCP.version: %u",hdr.version);
-    DBG("RTCP.pt: %u",hdr.pt);
-    DBG("RTCP.p: %u",hdr.p);
-    DBG("RTCP.count: %u",hdr.count);
-    DBG("RTCP.length: %u %u",hdr.length,ntohs(hdr.length));
-    DBG("RTCP.ssrc: 0x%x 0x%x",hdr.ssrc,ntohl(hdr.ssrc));
-*/
+
     return RTP_PACKET_PARSE_OK;
 }
 
@@ -271,6 +282,50 @@ int AmRtpPacket::parse_receiver_reports(unsigned char *chunk,size_t chunk_size, 
     if(chunk != end) {
         DBG("received reports possibly contain garbage");
     }
+    return 0;
+}
+
+int AmRtpPacket::parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint32_t ssrc, RtcpBidirectionalStat &)
+{
+    u_int8 sdes_type;
+    u_int8 sdes_len;
+
+    bool prev_item_is_null = false;
+
+    while (chunk < chunk_end) {
+        sdes_type = *chunk++;
+
+        if(chunk==chunk_end)
+            break;
+
+        if(sdes_type == RtcpSourceDescriptionHeader::RTCP_SDES_NULL) {
+            prev_item_is_null = true;
+            continue;
+        } else {
+            if(prev_item_is_null) {
+                prev_item_is_null = false;
+
+                if(chunk + sizeof(uint32_t) > chunk_end)
+                    break;
+
+                ssrc = *(uint32_t *)chunk;
+                chunk+=sizeof(uint32_t);
+
+                continue;
+            }
+        }
+
+        sdes_len = *chunk++;
+
+        if (chunk + sdes_len > chunk_end)
+            break;
+
+        DBG("RTCP: SDES item %d with value '%.*s' for SSRC 0x%x",
+            sdes_type, sdes_len, chunk, ntohl(ssrc));
+
+        chunk += sdes_len;
+    }
+
     return 0;
 }
 
@@ -305,7 +360,6 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 
     return 0;
 }
-
 
 unsigned char *AmRtpPacket::getData()
 {

@@ -70,6 +70,9 @@ using std::set;
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
 
+#define RTCP_SR_SEND_INTERVAL_SECONDS 5
+#define RTCP_RR_SEND_INTERVAL_SECONDS 5
+
 static inline void add_if_no_exist(std::vector<int> &v,int payload){
 	if(std::find(v.begin(),v.end(),payload)==v.end())
 		v.push_back(payload);
@@ -479,7 +482,9 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
 	out_of_buffer_errors(0),
 	ts_adjust(0),
 	last_sent_ts(0),
-	last_sent_ts_diff(0)
+	last_sent_ts_diff(0),
+	last_send_rtcp_SR_ts(0),
+	last_send_rtcp_RR_ts(0)
 {
 
   DBG("AmRtpStream[%p](%p)",this,session);
@@ -848,6 +853,8 @@ int AmRtpStream::init(const AmSdp& local,
 
   if(rtp_ping) ping(); //generate fake initial rtp packet
 
+  gettimeofday(&rtp_stats.start, nullptr);
+
   return 0;
 }
 
@@ -1181,7 +1188,7 @@ void AmRtpStream::recvPacket(int fd)
            && !(session && session->enable_zrtp)
 #endif
         ) {
-            parse_res = p->parse();
+            parse_res = p->rtp_parse();
         }
 
         if (parse_res == RTP_PACKET_PARSE_ERROR) {
@@ -1499,11 +1506,11 @@ void AmRtpStream::log_sent_rtcp_packet(const char *buffer, int len, struct socka
 		logger->log((const char *)buffer, len, &relay_stream->l_rtcp_saddr, &send_addr, empty);
 }
 
-void AmRtpStream::log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr){
+/*void AmRtpStream::log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr){
 	static const cstring empty;
 	if (logger)
 		logger->log(buffer, len, &recv_addr, &l_rtcp_saddr, empty);
-}
+}*/
 
 
 void AmRtpStream::getPayloadsHistory(PayloadsHistory &ph){
@@ -1648,10 +1655,61 @@ void AmRtpStream::getInfo(AmArg &ret){
 
 void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
 {
-	//rtp_stats
+	//CLASS_DBG("update_sender_stats");
+
+	struct timeval now;
+
+	gettimeofday(&now, nullptr);
+
+	rtp_stats.rtp_tx_last_ts = p.timestamp;
+	rtp_stats.rtp_tx_last_seq = p.sequence;
+
+	RtcpUnidirectionalStat &s = rtp_stats.tx;
+
+	s.update = now;
+
+	s.update_cnt++;
+	s.pkt++;
+	s.bytes += p.getDataSize();
+
+	//TODO: maybe it's time to send SR ?
 }
 
 void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
 {
+	//receiver rtp_stats
 	//rtp_stats
+}
+
+void AmRtpStream::processRtcpTimers(unsigned long long ts)
+{
+	unsigned long long scaled_ts = ts/WALLCLOCK_RATE;
+
+	if(!last_send_rtcp_SR_ts) {
+		last_send_rtcp_SR_ts = scaled_ts;
+	} else {
+		if((scaled_ts - last_send_rtcp_SR_ts) > RTCP_SR_SEND_INTERVAL_SECONDS) {
+			last_send_rtcp_SR_ts = scaled_ts;
+			rtcp_send_receiver_report();
+		}
+	}
+
+	if(!last_send_rtcp_RR_ts) {
+		last_send_rtcp_SR_ts = scaled_ts;
+	} else {
+		if((scaled_ts - last_send_rtcp_RR_ts) > RTCP_RR_SEND_INTERVAL_SECONDS) {
+			last_send_rtcp_RR_ts = scaled_ts;
+			rtcp_send_sender_report();
+		}
+	}
+}
+
+void AmRtpStream::rtcp_send_receiver_report()
+{
+	CLASS_DBG("%s",FUNC_NAME);
+}
+
+void AmRtpStream::rtcp_send_sender_report()
+{
+	CLASS_DBG("%s",FUNC_NAME);
 }
