@@ -62,6 +62,20 @@ struct RtcpReceiverReportHeader
     uint32_t    dlsr;           /**< Delay since last SR.   */
 };
 
+struct RtcpSourceDescriptionHeader
+{
+    enum item_type {
+        RTCP_SDES_NULL  = 0,
+        RTCP_SDES_CNAME = 1,
+        RTCP_SDES_NAME  = 2,
+        RTCP_SDES_EMAIL = 3,
+        RTCP_SDES_PHONE = 4,
+        RTCP_SDES_LOC   = 5,
+        RTCP_SDES_TOOL  = 6,
+        RTCP_SDES_NOTE  = 7
+    };
+};
+
 #pragma pack()
 
 class RtcpPacket {

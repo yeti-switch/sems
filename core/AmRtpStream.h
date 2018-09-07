@@ -165,6 +165,8 @@ protected:
   int payload;
 
   RtcpBidirectionalStat rtp_stats;
+  unsigned long long last_send_rtcp_SR_ts;
+  unsigned long long last_send_rtcp_RR_ts;
 
   std::vector<int> incoming_payloads;
   std::vector<int> incoming_relayed_payloads;
@@ -374,9 +376,14 @@ private:
   void log_sent_rtp_packet(AmRtpPacket &p);
   void log_rcvd_rtp_packet(AmRtpPacket &p);
   void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
-  void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
+  //void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
   void update_sender_stats(const AmRtpPacket &p);
   void update_receiver_stats(const AmRtpPacket &p);
+
+  void recvRtcpPacket(AmRtpPacket* p);
+
+  void rtcp_send_receiver_report();
+  void rtcp_send_sender_report();
 
 public:
 
@@ -422,7 +429,7 @@ public:
 
   void recvPacket(int fd);
 
-  void recvRtcpPacket(AmRtpPacket* p);
+  void processRtcpTimers(unsigned long long ts);
 
   /** ping the remote side, to open NATs and enable symmetric RTP */
   int ping();
