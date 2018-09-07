@@ -1695,7 +1695,7 @@ void AmRtpStream::processRtcpTimers(unsigned long long ts)
 	}
 
 	if(!last_send_rtcp_RR_ts) {
-		last_send_rtcp_SR_ts = scaled_ts;
+		last_send_rtcp_RR_ts = scaled_ts;
 	} else {
 		if((scaled_ts - last_send_rtcp_RR_ts) > RTCP_RR_SEND_INTERVAL_SECONDS) {
 			last_send_rtcp_RR_ts = scaled_ts;
