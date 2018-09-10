@@ -165,8 +165,7 @@ protected:
   int payload;
 
   RtcpBidirectionalStat rtp_stats;
-  unsigned long long last_send_rtcp_SR_ts;
-  unsigned long long last_send_rtcp_RR_ts;
+  unsigned long long last_send_rtcp_report_ts;
 
   std::vector<int> incoming_payloads;
   std::vector<int> incoming_relayed_payloads;
@@ -235,6 +234,7 @@ protected:
   struct sockaddr_storage r_saddr;
   struct sockaddr_storage l_saddr;
   struct sockaddr_storage l_rtcp_saddr;
+  struct sockaddr_storage r_rtcp_saddr;
 
   /** Local port */
   unsigned short     l_port;
@@ -364,6 +364,8 @@ protected:
   /** set to true if any data received */
   bool active;
 
+  RtcpReportsPreparedData rtcp_reports;
+
   /** 
    * Select a compatible default payload 
    * @return -1 if none available.
@@ -377,13 +379,16 @@ private:
   void log_rcvd_rtp_packet(AmRtpPacket &p);
   void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
   //void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
-  void update_sender_stats(const AmRtpPacket &p);
-  void update_receiver_stats(const AmRtpPacket &p);
 
   void recvRtcpPacket(AmRtpPacket* p);
 
-  void rtcp_send_receiver_report();
-  void rtcp_send_sender_report();
+  void update_sender_stats(const AmRtpPacket &p);
+  void fill_sender_report(RtcpSenderReportHeader &s);
+
+  void update_receiver_stats(const AmRtpPacket &p);
+  void fill_receiver_report(RtcpReceiverReportHeader &r);
+
+  void rtcp_send_report();
 
 public:
 
