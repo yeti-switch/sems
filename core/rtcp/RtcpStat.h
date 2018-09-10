@@ -48,7 +48,8 @@ struct RtcpBidirectionalStat
     timeval    start;             /**< Time when session was created       */
 
     RtcpUnidirectionalStat    tx; /**< Send stream statistics.             */
-    RxStatMap    rx;              /**< Recv streams statistics.            */
+    //RxStatMap    rx;              /**< Recv streams statistics.            */
+    RtcpUnidirectionalStat    rx; /**< Recv stream statistics.             */
     MathStat     rtt;             /**< Round trip delay statistic(in usec) */
 
     uint32_t    rtp_tx_last_ts;   /**< Last TX RTP timestamp.              */

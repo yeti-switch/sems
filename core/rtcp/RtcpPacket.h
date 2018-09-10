@@ -1,5 +1,7 @@
 #pragma once
 
+#include "RtcpStat.h"
+
 #include <stdint.h>
 #include <netinet/in.h>
 
@@ -74,11 +76,56 @@ struct RtcpSourceDescriptionHeader
         RTCP_SDES_TOOL  = 6,
         RTCP_SDES_NOTE  = 7
     };
+    uint8_t type;
+    uint8_t len;
+};
+
+struct RtcpSdesData {
+    RtcpCommonHeader header;
+    RtcpSourceDescriptionHeader item;
+    unsigned char padding[2];
+};
+
+struct RtcpSenderReportDataFull {
+    struct {
+        RtcpCommonHeader header;
+        RtcpSenderReportHeader sender;
+        RtcpReceiverReportHeader receiver;
+    } sr;
+    RtcpSdesData sdes;
+};
+
+struct RtcpSenderReportDataNoReceiver {
+    struct {
+        RtcpCommonHeader header;
+        RtcpSenderReportHeader sender;
+    } sr;
+    RtcpSdesData sdes;
+};
+
+struct RtcpReceiverReportDataFull {
+    struct {
+        RtcpCommonHeader header;
+        RtcpReceiverReportHeader receiver;
+    } rr;
+    RtcpSdesData sdes;
+};
+
+struct RtcpEmptyReceiverReport {
+    struct {
+        RtcpCommonHeader header;
+    } rr;
+    RtcpSdesData sdes;
+};
+
+struct RtcpReportsPreparedData {
+    RtcpEmptyReceiverReport rr_empty;           //no report blocks
+    RtcpSenderReportDataNoReceiver sr_empty;    //no report blocks
+    RtcpReceiverReportDataFull rr;
+    RtcpSenderReportDataFull sr;
+
+    void init(unsigned int l_ssrc);
+    void update(unsigned int r_ssrc);
 };
 
 #pragma pack()
-
-class RtcpPacket {
-    struct sockaddr_storage addr;
-};
-
