@@ -383,12 +383,12 @@ private:
   void recvRtcpPacket(AmRtpPacket* p);
 
   void update_sender_stats(const AmRtpPacket &p);
-  void fill_sender_report(RtcpSenderReportHeader &s);
+  void fill_sender_report(RtcpSenderReportHeader &s, unsigned int user_ts);
 
   void update_receiver_stats(const AmRtpPacket &p);
   void fill_receiver_report(RtcpReceiverReportHeader &r);
 
-  void rtcp_send_report();
+  void rtcp_send_report(unsigned int user_ts);
 
 public:
 
@@ -434,7 +434,7 @@ public:
 
   void recvPacket(int fd);
 
-  void processRtcpTimers(unsigned long long ts);
+  void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 
   /** ping the remote side, to open NATs and enable symmetric RTP */
   int ping();

@@ -346,11 +346,6 @@ protected:
   unsigned int bytes2samples(unsigned int bytes) const;
 
   /**
-   * Scale a system timestamp down dependent on the sample rate.
-   */
-  unsigned int scaleSystemTS(unsigned long long system_ts);
-
-  /**
    *Get assumed samples count after decoding size bytes from buffer
    */
   unsigned int decoded_samples_count(amci_codec_t* codec, long h_codec, unsigned int size);
@@ -402,6 +397,12 @@ public:
     if(!inband_detector_enabled) return;
     inband_detector->streamPut(samples, size, system_ts);
   }
+
+  /**
+   * Scale a system timestamp down dependent on the sample rate.
+   */
+  unsigned int scaleSystemTS(unsigned long long system_ts);
+
 };
 
 

@@ -72,6 +72,10 @@ using std::set;
 
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
 
+//seconds between 1900-01-01 and 1970-01-01
+//(70*365 + 17)*86400
+#define NTP_TIME_OFFSET 2208988800ULL
+
 static inline void add_if_no_exist(std::vector<int> &v,int payload){
 	if(std::find(v.begin(),v.end(),payload)==v.end())
 		v.push_back(payload);
@@ -1665,6 +1669,8 @@ void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
 
 	gettimeofday(&now, nullptr);
 
+	rtp_stats.lock();
+
 	rtp_stats.rtp_tx_last_ts = p.timestamp;
 	rtp_stats.rtp_tx_last_seq = p.sequence;
 
@@ -1675,23 +1681,29 @@ void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
 
 	s.pkt++;
 	s.bytes += p.getDataSize();
+
+	rtp_stats.unlock();
 }
 
-void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s)
+void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, unsigned int user_ts)
 {
-	s.rtp_ts = htonl(rtp_stats.rtp_tx_last_ts);
+	struct timeval now;
+	uint64_t i;
+
+	gettimeofday(&now, nullptr);
 
 	s.sender_pcount = htonl(rtp_stats.tx.pkt);
-	rtp_stats.tx.pkt = 0;
-
 	s.sender_bcount = htonl(rtp_stats.tx.bytes);
-	rtp_stats.tx.bytes = 0;
+	s.rtp_ts = htonl(user_ts);
 
-#if 0
-	uint32_t    ntp_sec;        /**< NTP time, seconds part.    */
-	uint32_t    ntp_frac;       /**< NTP time, fractions part.  */
-#endif
+	i = now.tv_usec;
+	i <<= 32;
+	i /= 1000000;
+	s.ntp_frac = htonl(i);
 
+	i = now.tv_sec;
+	i += NTP_TIME_OFFSET;
+	s.ntp_sec = htonl(i);
 }
 
 void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
@@ -1707,10 +1719,14 @@ void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
 		}
 	}
 
+	rtp_stats.lock();
+
 	RtcpUnidirectionalStat &s = rtp_stats.rx;
 
 	s.pkt++;
-	s.bytes += p.getBufferSize();
+	s.bytes += p.getDataSize();
+
+	rtp_stats.unlock();
 }
 
 void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r)
@@ -1718,21 +1734,21 @@ void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r)
 	//
 }
 
-void AmRtpStream::processRtcpTimers(unsigned long long ts)
+void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int user_ts)
 {
-	unsigned long long scaled_ts = ts/WALLCLOCK_RATE;
+	unsigned long long scaled_ts = system_ts/WALLCLOCK_RATE;
 
 	if(!last_send_rtcp_report_ts) {
 		last_send_rtcp_report_ts = scaled_ts;
 	} else {
 		if((scaled_ts - last_send_rtcp_report_ts) > RTCP_REPORT_SEND_INTERVAL_SECONDS) {
 			last_send_rtcp_report_ts = scaled_ts;
-			rtcp_send_report();
+			rtcp_send_report(user_ts);
 		}
 	}
 }
 
-void AmRtpStream::rtcp_send_report()
+void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 {
 	CLASS_DBG("%s",FUNC_NAME);
 
@@ -1740,16 +1756,18 @@ void AmRtpStream::rtcp_send_report()
 	void *buf;
 	unsigned int len;
 
+	rtp_stats.lock();
+
 	if(rtp_stats.tx.pkt) {
 		if(rtp_stats.rx.pkt) {
 			//SR with RR data
-			fill_sender_report(rtcp_reports.sr.sr.sender);
+			fill_sender_report(rtcp_reports.sr.sr.sender,user_ts);
 			fill_receiver_report(rtcp_reports.sr.sr.receiver);
 			buf = &rtcp_reports.sr;
 			len = sizeof(rtcp_reports.sr);
 		} else {
 			//SR without RR data
-			fill_sender_report(rtcp_reports.sr_empty.sr.sender);
+			fill_sender_report(rtcp_reports.sr_empty.sr.sender,user_ts);
 			buf = &rtcp_reports.sr_empty;
 			len = sizeof(rtcp_reports.sr_empty);
 		}
@@ -1765,6 +1783,8 @@ void AmRtpStream::rtcp_send_report()
 			len = sizeof(rtcp_reports.rr_empty);
 		}
 	}
+
+	rtp_stats.unlock();
 
 	if(AmConfig::RTP_Ifs[l_if].MediaSockOpts&trsp_socket::use_raw_sockets) {
 		err = raw_sender::send(
