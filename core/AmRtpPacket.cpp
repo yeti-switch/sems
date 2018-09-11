@@ -331,6 +331,8 @@ int AmRtpPacket::parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint3
 
 int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirectionalStat &stats)
 {
+    stats.lock();
+
     DBG("RTCP process_sender_report(%p)",&sr);
     DBG("RTCP ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
         ntohl(sr.ntp_sec),
@@ -339,12 +341,18 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
         ntohl(sr.sender_pcount),
         ntohl(sr.sender_bcount)
     );
+
+    stats.unlock();
+
     return 0;
 }
 
 int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats)
 {
     DBG("RTCP process_receiver_report(%p)",&rr);
+
+    stats.lock();
+
     uint32_t ssrc = ntohl(rr.ssrc);
     DBG("RTCP ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
         ssrc,
@@ -357,6 +365,8 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
         rr.total_lost_1,
         rr.total_lost_2
     );
+
+    stats.unlock();
 
     return 0;
 }

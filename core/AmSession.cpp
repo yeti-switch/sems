@@ -1485,7 +1485,7 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
         got = output->get(ts, buffer, stream->getSampleRate(), f_size);
         if(got < 0) got = 0; //suppress errors
     }
-    stream->processRtcpTimers(ts);
+    stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
     if (got < 0) res = -1;
     if (got > 0) res = stream->put(ts, buffer, stream->getSampleRate(), got);
   }

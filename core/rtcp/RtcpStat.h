@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AmThread.h"
+
 #include <time.h>
 #include <stdint.h>
 
@@ -42,6 +44,7 @@ struct RtcpUnidirectionalStat
 };
 
 struct RtcpBidirectionalStat
+  : public AmMutex
 {
     using RxStatMap = std::unordered_map<unsigned int, RtcpUnidirectionalStat>;
 
