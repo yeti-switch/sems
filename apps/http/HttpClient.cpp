@@ -16,29 +16,49 @@ using std::vector;
 #define SYNC_CONTEXTS_TIMER_INVERVAL 5000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 
-EXPORT_PLUGIN_CLASS_FACTORY(HttpClient, MOD_NAME);
+class HttpClientFactory
+  : public AmDynInvokeFactory
+{
+  public:
+    HttpClientFactory(const string& name)
+      : AmDynInvokeFactory(name)
+    {
+        inc_ref(this);
+        HttpClient::instance();
+    }
+    AmDynInvoke* getInstance()
+    {
+        return HttpClient::instance();
+    }
+    int onLoad()
+    {
+        return HttpClient::instance()->onLoad();
+    }
+    void on_destroy() {
+        HttpClient::instance()->stop();
+    }
+};
+
+EXPORT_PLUGIN_CLASS_FACTORY(HttpClientFactory, MOD_NAME);
 
 HttpClient* HttpClient::_instance=0;
 
 HttpClient* HttpClient::instance()
 {
     if(_instance == NULL){
-        _instance = new HttpClient(MOD_NAME);
+        _instance = new HttpClient();
     }
     return _instance;
 }
 
-HttpClient::HttpClient(const string& name)
-  : AmDynInvokeFactory(name),
-    AmEventFdQueue(this),
+HttpClient::HttpClient()
+  : AmEventFdQueue(this),
     epoll_fd(-1),
     stopped(false)
-{
-    _instance = this;
-}
+{ }
 
 HttpClient::~HttpClient()
-{}
+{ }
 
 int HttpClient::configure()
 {

@@ -22,8 +22,7 @@ using std::map;
 #include "invalid_ptrs.h"
 
 class HttpClient
-: public AmDynInvokeFactory,
-  public AmThread,
+: public AmThread,
   public AmEventFdQueue,
   public AmEventHandler,
   public AmDynInvoke,
@@ -91,7 +90,7 @@ class HttpClient
     bool check_http_event_sync_ctx(const EventType &u);
 
   public:
-    HttpClient(const string& name);
+    HttpClient();
     ~HttpClient();
 
     static HttpClient* instance();
