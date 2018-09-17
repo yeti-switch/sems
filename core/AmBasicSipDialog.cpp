@@ -464,8 +464,11 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     setOutboundInterface( req.local_if );
   }
 
-  if(onRxReqStatus(req) && hdl)
-    hdl->onSipRequest(req);
+  if(onRxReqStatus(req)) {
+    if(hdl) hdl->onSipRequest(req);
+  } else {
+    if(hdl) hdl->onFailure();
+  }
 }
 
 bool AmBasicSipDialog::onRxReplyStatus(const AmSipReply& reply)
