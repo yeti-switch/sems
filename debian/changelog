@@ -1,3 +1,11 @@
+sems (1.7.72-5) stable; urgency=low
+
+  * eb2ec0c4e AmBasicSipDialog: call onFailure hook on error from onRxReqStatus
+  * d14480720 apps/http: fix segfault on termination
+  * cc43f9c67 UACAuth: invok: add getChallenge function
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 17 Sep 2018 14:04:08 +0300
+
 sems (1.7.72-4) stable; urgency=low
 
   * AmB2BMedia: cleanup relay for shared stream on audio clear. fixes segfault on shared stream reuse
