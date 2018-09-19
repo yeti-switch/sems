@@ -213,7 +213,7 @@ class AmArg
   void assertStruct() const;
 
   short getType() const { return type; }
-  const char* getTypeStr() { return t2str(type); }
+  const char* getTypeStr() const { return t2str(type); }
 
   AmArg& operator=(const AmArg& rhs);
 
