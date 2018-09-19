@@ -213,6 +213,7 @@ class AmArg
   void assertStruct() const;
 
   short getType() const { return type; }
+  const char* getTypeStr() { return t2str(type); }
 
   AmArg& operator=(const AmArg& rhs);
 
@@ -367,7 +368,7 @@ class AmArg
 
   static string print(const AmArg &a);
 
-  const char* t2str(int type) const;
+  static const char* t2str(int type);
 };
 
 // equality

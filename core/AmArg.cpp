@@ -29,7 +29,7 @@
 #include "log.h"
 #include "AmUtils.h"
 
-const char* AmArg::t2str(int type) const {
+const char* AmArg::t2str(int type) {
   switch (type) {
   case AmArg::Undef:   return "Undef";
   case AmArg::Int:     return "Int";
