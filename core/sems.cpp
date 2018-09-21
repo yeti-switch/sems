@@ -412,8 +412,9 @@ int main(int argc, char* argv[])
 
   /* load and apply configuration file */
   if(AmConfig::readConfiguration() || 
-     AmLcConfig::GetInstance().readConfiguration()){
-    ERROR("Errors occured while reading configuration file: exiting.");
+    AmLcConfig::GetInstance().readConfiguration())
+  {
+    ERROR("configuration errors. exiting.");
     return -1;
   }
 

@@ -258,16 +258,26 @@ AmLcConfig::~AmLcConfig()
 
 int AmLcConfig::readConfiguration()
 {
-    int err;
     sip_ifs.clear();
-    if((err = cfg_parse(m_cfg, CONF_FILE_PATH)) == CFG_PARSE_ERROR) {
-        ERROR("error parsing\n");
+
+    switch(cfg_parse(m_cfg, CONF_FILE_PATH)) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_FILE_ERROR:
+        ERROR("failed to open configuration file: %s (%s)",
+            CONF_FILE_PATH, strerror(errno));
+        return -1;
+    case CFG_PARSE_ERROR:
+        ERROR("failed to parse configuration file: %s", CONF_FILE_PATH);
+        return -1;
+    default:
+        ERROR("got unexpected error on configuration file processing: %s", CONF_FILE_PATH);
         return -1;
     }
 
     cfg_t* sigif = cfg_getsec(m_cfg, SECTION_SIGIF_NAME);
     if(!sigif) {
-        ERROR(SECTION_SIGIF_NAME "absent\n");
+        ERROR(SECTION_SIGIF_NAME " absent\n");
         return -1;
     }
 
