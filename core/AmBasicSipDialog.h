@@ -349,7 +349,13 @@ public:
    */
   virtual void setOutboundTransport(int transport_id);
 
-  /** 
+  /**
+   * Compute, set and return the outbound uri
+   * based on remote_uri, next_hop_ip, outbound_proxy, route.
+   */
+  std::string getOutboundUri(int& transport_id);
+
+  /**
    * Compute, set and return the outbound interface
    * based on remote_uri, next_hop_ip, outbound_proxy, route.
    */
