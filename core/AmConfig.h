@@ -83,106 +83,6 @@ struct AmConfig
   
   static unsigned int MaxShutdownTime;
 
-  struct IP_interface {
-
-    string name;
-
-    /** Used for binding socket */
-    string       LocalIP;
-        
-    /** Used in Contact-HF */
-    string PublicIP;
-
-    /** Network interface name and index */
-    string       NetIf;
-    unsigned int NetIfIdx;
-
-    /** DSCP */
-    uint8_t dscp;
-    int tos_byte;
-
-    IP_interface();
-
-    string getIP() {
-      return PublicIP.empty() ?	LocalIP : PublicIP;
-    }
-  };
-
-  struct SIP_interface : public IP_interface {
-
-    unsigned int udp_local_port;
-    unsigned int tcp_local_port;
-
-    /** options for the signaling socket 
-     * (@see trsp_socket::socket_options) 
-     */
-    unsigned int SigSockOpts;
-
-    unsigned int tcp_connect_timeout;
-    unsigned int tcp_idle_timeout;
-
-    /** RTP interface index */
-    int RtpInterface;
-
-    trsp_acl acl;
-    trsp_acl opt_acl;
-
-    SIP_interface();
-    unsigned int getLocalPort(int transport_id);
-  };
-
-  struct RTP_interface : public IP_interface {
-
-    /** Lowest local RTP port */
-    int RtpLowPort;
-    /** Highest local RTP port */
-    int RtpHighPort;
-
-	unsigned int MediaSockOpts;
-
-    RTP_interface();
-
-    int getNextRtpPort();
-
-  private:
-    int next_rtp_port;
-    AmMutex next_rtp_port_mut;
-  };
-
-  static vector<SIP_interface>      SIP_Ifs;
-  static vector<RTP_interface>      RTP_Ifs;
-  static map<string,unsigned short> SIP_If_names;
-  static map<string,unsigned short> RTP_If_names;
-  static map<string,unsigned short> LocalSIPIP2If;
-
-  struct IPAddr {
-    string addr;
-    short  family;
-    
-    IPAddr(const string& addr, const short family)
-      : addr(addr), family(family) {}
-
-    IPAddr(const IPAddr& ip)
-      : addr(ip.addr), family(ip.family) {}
-  };
-
-  struct SysIntf {
-    string       name;
-    list<IPAddr> addrs;
-    // identical to those returned by SIOCGIFFLAGS
-    unsigned int flags;
-    unsigned int mtu;
-  };
-
-  static vector<SysIntf> SysIfs;
-
-  static int insert_SIP_interface(const SIP_interface& intf);
-  static int insert_SIP_interface_mapping(const SIP_interface& intf, int idx);
-  static int insert_RTP_interface(const RTP_interface& intf);
-  static int finalizeIPConfig();
-
-  static void dump_Ifs();
-
   /** number of session (signaling/application) processor threads */
   static int SessionProcessorThreads;
   /** number of media processor threads */
@@ -315,16 +215,6 @@ struct AmConfig
   static int readConfiguration();
 
   /* following setters are used to fill config from config file */  
-	
-  /** Setter for SIP Port, returns 0 on invalid value */
-  static int setSIPPort(const string& port);  
-  /** Setter for SmtpServer Port, returns 0 on invalid value */
-  static int setSmtpPort(const string& port);
-  /** Setter for RtpLowPort, returns 0 on invalid value */
-  static int setRtpLowPort(const string& port);
-  /** Setter for RtpHighPort, returns 0 on invalid value */
-  static int setRtpHighPort(const string& port);
-  /** Setter for Loglevel, returns 0 on invalid value */
   static int setLogLevel(const string& level, bool apply=true);
   /** Setter for parameter stderr, returns 0 on invalid value */
   static int setLogStderr(const string& s, bool apply=true);
@@ -349,9 +239,6 @@ struct AmConfig
   static int setDeadRtpTime(const string& drt);
 
 };
-
-/** Get the PF_INET address associated with the network interface */
-string fixIface2IP(const string& dev_name, bool v6_for_sip);
 
 #endif
 

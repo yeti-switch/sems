@@ -1,6 +1,7 @@
-#include "parse_dns.h"
 #include <string.h>
 
+#include "parse_dns.h"
+#include "resolver.h"
 #include "log.h"
 
 #define SECTION_COUNTS_OFF 4
@@ -12,19 +13,43 @@ int dns_expand_name(u_char** ptr, u_char* begin, u_char* end,
 		    u_char* buf, unsigned int len);
 
 
-const char* dns_rr_type_str(dns_rr_type t)
+const char* dns_rr_type_str(dns_rr_type rr_type, unsigned short addr_type)
 {
-  switch(t) {
-  case dns_r_a:     return "A";
+  switch(rr_type) {
   case dns_r_ns:    return "NS";
   case dns_r_cname: return "CNAME";
-  case dns_r_aaaa:  return "AAAA";
   case dns_r_srv:   return "SRV";
   case dns_r_naptr: return "NAPTR";
+  case dns_r_ip:
+  switch((address_type)addr_type) {
+  case IPv4:
+                    return "A";
+  case IPv6:
+                    return "AAAA";
+  default:          return "A or AAAA";
+  };
   default:          return "UNKNOWN";
   };
 }
 
+ns_type dns_rr_type_tons_type(dns_rr_type rr_type, unsigned short addr_type)
+{
+  switch(rr_type) {
+  case dns_r_ns:    return ns_t_ns;
+  case dns_r_cname: return ns_t_cname;
+  case dns_r_srv:   return ns_t_srv;
+  case dns_r_naptr: return ns_t_naptr;
+  case dns_r_ip:
+  switch((address_type)addr_type) {
+  case IPv4:
+                    return ns_t_a;
+  case IPv6:
+                    return ns_t_aaaa;
+  default:;
+  };
+  default:          return ns_t_invalid;
+  };
+}
 
 
 int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)

@@ -56,6 +56,14 @@ public:
 	static_client_port = (1 << 4)
     };
 
+    enum socket_transport {
+        tr_invalid  = 0,
+        udp_ipv4,
+        udp_ipv6,
+        tcp_ipv4,
+        tcp_ipv6
+    };
+
     static int log_level_raw_msgs;
     
 protected:
@@ -80,17 +88,23 @@ protected:
     // internal interface number
     unsigned short   if_num;
 
+    // internal interface addr number
+    unsigned short   addr_num;
+
     // network interface index
     unsigned int sys_if_idx;
 
     // ORed field of socket_option
     unsigned int socket_options;
 
+    // transport interface
+    socket_transport transport;
+
     uint8_t tos_byte;
 
 public:
-    trsp_socket(unsigned short if_num, unsigned int opts,
-		unsigned int sys_if_idx = 0, int sd = 0);
+    trsp_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts,
+		socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
     int set_tos_byte(uint8_t byte);
@@ -105,6 +119,11 @@ public:
      * Getter for the transport name
      */
     virtual const char* get_transport() const = 0;
+
+    /**
+     * Getter for the transport type
+     */
+    socket_transport get_transport_id() const { return transport; }
 
     /**
      * Getter for IP address
@@ -153,6 +172,11 @@ public:
      * Getter for the interface number
      */
     unsigned short get_if() const;
+
+    /**
+     * Getter for the interface addr number
+     */
+    unsigned short get_addr_if() const;
 
     /**
      * Is the transport reliable?

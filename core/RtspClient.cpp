@@ -68,8 +68,18 @@ bool RtspClient::srv_resolv(string host, int port, sockaddr_storage &_sa)
         host = rtsp_srv_prefix + host;
     }
 
-    if (resolver::instance()->resolve_name(host.c_str(), &_dh, &_sa, IPv4,
-        config.use_dns_srv ? dns_r_srv: dns_r_a) < 0) {
+    dns_priority priority = IPv4_only;
+    
+    sockaddr_storage l_saddr;
+    am_inet_pton(localMediaIP().c_str(), &l_saddr);
+    if(l_saddr.ss_family == AF_INET) {
+        priority = IPv4_only;
+    } else {
+        priority = IPv6_only;
+    }
+    
+    if (resolver::instance()->resolve_name(host.c_str(), &_dh, &_sa, priority,
+        config.use_dns_srv ? dns_r_srv : dns_r_ip) < 0) {
         ERROR("can't resolve destination: '%s'\n", host.c_str());
         return false;
     }
@@ -138,15 +148,22 @@ int RtspClient::configure()
     config.media_servers        = cfg.getParameter("media_servers", "");
     config.rtsp_interface_name  = cfg.getParameter("rtsp_interface_name", "rtsp");
 
-    auto if_it = AmConfig::RTP_If_names.find(config.rtsp_interface_name);
+    auto if_it = AmLcConfig::GetInstance().media_if_names.find(config.rtsp_interface_name);
 
-    if (if_it == AmConfig::RTP_If_names.end()) {
+    if (if_it == AmLcConfig::GetInstance().media_if_names.end()) {
         ERROR("RTSP media interface not found\n");
         return -1;
     }
 
     config.l_if = if_it->second;
-    config.l_ip = AmConfig::RTP_Ifs[if_it->second].LocalIP;
+    unsigned int addridx = 0;
+    for(auto& info : AmLcConfig::GetInstance().media_ifs[config.l_if].proto_info) {
+        if(info->mtype == MEDIA_info::RTSP) {
+            config.l_ip = info->local_ip;
+            config.laddr_if = addridx;
+        }
+        addridx++;
+    }
 
     if (cfg.getParameter("use_dns_srv") == "yes")
         config.use_dns_srv = true;

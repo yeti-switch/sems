@@ -73,7 +73,7 @@ int RadiusConnection::init()
     dns_handle dh;
     if(-1==resolver::instance()->resolve_name(
         server.c_str(),
-        &dh,&a,IPv4))
+        &dh,&a,IPv4_only))
     {
         ERROR("can't resolve %s",server.c_str());
         return -1;

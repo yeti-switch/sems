@@ -214,10 +214,16 @@ protected:
 
   /** 
    * Local interface used for this stream
-   * (index into @AmConfig::Ifs)
+   * (index into @AmLcConfig::Ifs)
    */
   int l_if;
 
+  /**
+   * Local addr index from local interface
+   * (index into @AmLcConfig::Ifs.proto_info)
+   */
+  int laddr_if;
+  
   /**
    * Local and remote host addresses
    */
@@ -391,7 +397,7 @@ public:
   bool force_receive_dtmf;
 
   /** Allocates resources for future use of RTP. */
-  AmRtpStream(AmSession* _s, int _if);
+  AmRtpStream(AmSession* _s, int _if, int _addr_if);
 
   /** Stops the stream and frees all resources. */
   virtual ~AmRtpStream();

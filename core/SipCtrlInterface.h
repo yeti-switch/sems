@@ -35,6 +35,7 @@
 
 #include <string>
 #include <list>
+#include "AmLCContainers.h"
 using std::string;
 using std::list;
 
@@ -78,10 +79,10 @@ class _SipCtrlInterface:
     tcp_trsp**        tcp_servers;
 
     int alloc_udp_structs();
-    int init_udp_servers(int if_num);
+    int init_udp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 
     int alloc_tcp_structs();
-    int init_tcp_servers(int if_num);
+    int init_tcp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 
 public:
 
@@ -106,10 +107,10 @@ public:
      *            its ticket is written into req.tt.
      */
     static int send(AmSipRequest &req, const string& dialog_id,
-		    const string& next_hop = "", int outbound_interface = -1,
-			unsigned int flags = 0, msg_logger* logger = NULL, msg_sensor *sensor = NULL,
+		    const string& next_hop, int outbound_interface,
+			unsigned int flags, sip_target_set* target_set_override,
+            msg_logger* logger = NULL, msg_sensor *sensor = NULL,
 			sip_timers_override *timers_override = NULL,
-			sip_target_set* target_set_override = NULL,
 			int redirects_allowed = -1);
 
     /**

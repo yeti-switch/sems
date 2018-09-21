@@ -86,7 +86,7 @@ bool AmSmtpClient::connect(const string& _server_ip, unsigned short _server_port
     dns_handle       _dh;
     
     if(resolver::instance()->resolve_name(server_ip.c_str(),
-					&_dh,&_sa,IPv4) < 0) {
+					&_dh,&_sa,IPv4_only) < 0) {
       ERROR("address not valid (smtp server: %s)\n",server_ip.c_str());
       return false;
     }

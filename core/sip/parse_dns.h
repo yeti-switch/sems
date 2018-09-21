@@ -16,15 +16,15 @@ enum dns_section_type {
 
 enum dns_rr_type {
 
-  dns_r_a     = 1,
-  dns_r_ns    = 2,
-  dns_r_cname = 5,
-  dns_r_aaaa  = 28,
-  dns_r_srv   = 33,
-  dns_r_naptr = 35
+  dns_r_ip,
+  dns_r_ns,
+  dns_r_cname,
+  dns_r_srv,
+  dns_r_naptr 
 };
 
-const char* dns_rr_type_str(dns_rr_type t);
+const char* dns_rr_type_str(dns_rr_type rr_type, unsigned short addr_type);
+ns_type dns_rr_type_tons_type(dns_rr_type rr_type, unsigned short addr_type);
 
 struct dns_record
 {

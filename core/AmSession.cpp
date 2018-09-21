@@ -54,6 +54,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/time.h>
+#include "sip/parse_via.h"
 
 volatile unsigned int AmSession::session_num = 0;
 AmMutex AmSession::session_num_mut;
@@ -85,6 +86,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     record_audio_enabled(false),
     accept_early_session(false),
     rtp_interface(-1),
+    rtp_addr(-1),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     processing_status(SESSION_PROCESSING_EVENTS),
     no_reply(false)
@@ -1254,7 +1256,12 @@ int AmSession::getRtpInterface()
 {
   if(rtp_interface < 0){
     // TODO: get default media interface for signaling IF instead
-    rtp_interface = AmConfig::SIP_Ifs[dlg->getOutboundIf()].RtpInterface;
+    std::string media_interface = AmLcConfig::GetInstance().sip_ifs[dlg->getOutboundIf()].default_media_if;
+    auto media_it = AmLcConfig::GetInstance().media_if_names.find(media_interface);
+    if(media_it == AmLcConfig::GetInstance().media_if_names.end()) {
+        return 0;
+    }
+    rtp_interface = media_it->second;
     if(rtp_interface < 0) {
       DBG("No media interface for signaling interface:\n");
       DBG("Using default media interface instead.\n");
@@ -1269,21 +1276,68 @@ void AmSession::setRtpInterface(int _rtp_interface) {
   rtp_interface = _rtp_interface;
 }
 
+static int str2addrtype(const std::string &s)
+{
+    if(s.find(":") != std::string::npos) {
+        return sip_address_type::IPv6;
+    } else if(s.find(".") != std::string::npos) {
+        return sip_address_type::IPv4;
+    }
+    return sip_address_type::UNPARSED;
+
+}
+
+int AmSession::getRtpAddr()
+{
+    if(rtp_addr < 0) {
+        int rtp_if = getRtpInterface();
+        int rtp_type = dlg->getOutboundAddrType();
+        int index = 0;
+        for(auto& info : AmLcConfig::GetInstance().media_ifs[rtp_if].proto_info) {
+            int addrtype = str2addrtype(info->local_ip);
+            if(rtp_type == addrtype && info->mtype == MEDIA_info::RTP) {
+                setRtpAddr(index);
+                break;
+            }
+            index++;
+        }
+    }
+
+    return rtp_addr;
+}
+
+int AmSession::setRtpAddr(int _rtp_addr)
+{
+  DBG("setting media address of interface to %d\n", _rtp_addr);
+  rtp_addr = _rtp_addr;
+  return 0;
+}
+
 string AmSession::localMediaIP(int addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
+  getRtpAddr();
   
   assert(rtp_interface >= 0);
-  assert((unsigned int)rtp_interface < AmConfig::RTP_Ifs.size());
+  assert((unsigned int)rtp_interface < AmLcConfig::GetInstance().media_ifs.size());
+  assert(rtp_addr >= 0);
+  assert((unsigned int)rtp_addr < AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_interface; i < AmConfig::RTP_Ifs.size(); i++) {
-    set_ip = AmConfig::RTP_Ifs[i].LocalIP; // "media_ip" parameter.
+  for (size_t i = rtp_addr; i < AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info.size(); i++) {
+    IP_info *info = AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info[i];
+    set_ip = info->local_ip; // "media_ip" parameter.
     if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && (set_ip.find(".") != std::string::npos)) ||
-	((addrType == AT_V6) && (set_ip.find(":") != std::string::npos)))
-      return set_ip;
+	((addrType == AT_V4) && info->type_ip == IP_info::IPv4) ||
+	((addrType == AT_V6) && info->type_ip == IP_info::IPv6))
+      break;
+  }
+
+  if( (set_ip[0] == '[') &&
+      (set_ip[set_ip.size() - 1] == ']') ) {
+      set_ip.pop_back();
+      set_ip.erase(set_ip.begin());
   }
   return set_ip;
 }
@@ -1294,18 +1348,29 @@ string AmSession::advertisedIP(int addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
+  getRtpAddr();
   
   assert(rtp_interface >= 0);
-  assert((unsigned int)rtp_interface < AmConfig::RTP_Ifs.size());
+  assert((unsigned int)rtp_interface < AmLcConfig::GetInstance().media_ifs.size());
+  assert(rtp_addr >= 0);
+  assert((unsigned int)rtp_addr < AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_interface; i < AmConfig::RTP_Ifs.size(); i++) {
-    set_ip = AmConfig::RTP_Ifs[i].getIP(); // "media_ip" parameter.
+  for (size_t i = rtp_addr; i < AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info.size(); i++) {
+    IP_info *info = AmLcConfig::GetInstance().media_ifs[rtp_interface].proto_info[i];
+    set_ip = info->local_ip; // "media_ip" parameter.
     if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && (set_ip.find(".") != std::string::npos)) ||
-	((addrType == AT_V6) && (set_ip.find(":") != std::string::npos)))
-      return set_ip;
+	((addrType == AT_V4) && info->type_ip == IP_info::IPv4) ||
+	((addrType == AT_V6) && info->type_ip == IP_info::IPv6))
+      break;
   }
+
+  if( (set_ip[0] == '[') &&
+      (set_ip[set_ip.size() - 1] == ']') ) {
+      set_ip.pop_back();
+      set_ip.erase(set_ip.begin());
+  }
+
   return set_ip;
 }  
 

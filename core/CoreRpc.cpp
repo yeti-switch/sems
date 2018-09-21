@@ -257,58 +257,72 @@ void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)
 void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
 {
     AmArg &sig = ret["sip"];
-    for(int i=0; i<(int)AmConfig::SIP_Ifs.size(); i++) {
-        AmConfig::SIP_interface& iface = AmConfig::SIP_Ifs[i];
+    for(int i=0; i<(int)AmLcConfig::GetInstance().sip_ifs.size(); i++) {
+        SIP_interface& iface = AmLcConfig::GetInstance().sip_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
-        am_iface["media_if_idx"] = iface.RtpInterface;
-        am_iface["sys_name"] = iface.NetIf;
-        am_iface["sys_idx"] = (int)iface.NetIfIdx;
-        am_iface["local_ip"] = iface.LocalIP;
-        am_iface["udp_local_port"] = (int)iface.udp_local_port;
-        am_iface["tcp_local_port"] = (int)iface.tcp_local_port;
-        am_iface["public_ip"] = iface.PublicIP;
-        am_iface["static_client_port"] = (iface.SigSockOpts&trsp_socket::static_client_port)!= 0;
-        am_iface["use_raw_sockets"] = (iface.SigSockOpts&trsp_socket::use_raw_sockets)!= 0;
-        am_iface["force_via_address"] = (iface.SigSockOpts&trsp_socket::force_via_address) != 0;
-        am_iface["force_outbound_if"] = (iface.SigSockOpts&trsp_socket::force_outbound_if) != 0;
-        am_iface["dscp"] = iface.dscp;
-        am_iface["tos_byte"] = iface.tos_byte;
+        am_iface["media_if_name"] = iface.default_media_if;
+        AmArg am_siarr;
+        for(int j = 0; j < (int)iface.proto_info.size(); j++) {
+            AmArg am_sinfo;
+            SIP_info* sinfo = iface.proto_info[j];
+            am_sinfo["type"] = sinfo->toStr();
+            am_sinfo["sys_name"] = sinfo->net_if;
+            am_sinfo["sys_idx"] = (int)sinfo->net_if_idx;
+            am_sinfo["local_ip"] = sinfo->local_ip;
+            am_sinfo["local_port"] = (int)sinfo->local_port;
+            am_sinfo["public_ip"] = sinfo->public_ip;
+            am_sinfo["static_client_port"] = (sinfo->sig_sock_opts&trsp_socket::static_client_port)!= 0;
+            am_sinfo["use_raw_sockets"] = (sinfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
+            am_sinfo["force_via_address"] = (sinfo->sig_sock_opts&trsp_socket::force_via_address) != 0;
+            am_sinfo["force_outbound_if"] = (sinfo->sig_sock_opts&trsp_socket::force_outbound_if) != 0;
+            am_sinfo["dscp"] = sinfo->dscp;
+            am_sinfo["tos_byte"] = sinfo->tos_byte;
+            am_siarr.push(am_sinfo);
+        }
+        am_iface["sip_addrs"] = am_siarr;
         sig[iface.name] = am_iface;
     }
 
     AmArg &rtp = ret["media"];
-    for(int i=0; i<(int)AmConfig::RTP_Ifs.size(); i++) {
-        AmConfig::RTP_interface& iface = AmConfig::RTP_Ifs[i];
+    for(int i=0; i<(int)AmLcConfig::GetInstance().media_ifs.size(); i++) {
+        MEDIA_interface& iface = AmLcConfig::GetInstance().media_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
-        am_iface["sys_name"] = iface.NetIf;
-        am_iface["sys_idx"] = (int)iface.NetIfIdx;
-        am_iface["local_ip"] = iface.LocalIP;
-        am_iface["public_ip"] = iface.PublicIP;
-        am_iface["rtp_low_port"] = iface.RtpLowPort;
-        am_iface["rtp_high_port"] = iface.RtpHighPort;
-        am_iface["capacity"] = (iface.RtpHighPort-iface.RtpLowPort+1)/2;
-        am_iface["use_raw_sockets"] = (iface.MediaSockOpts&trsp_socket::use_raw_sockets)!= 0;
-        am_iface["dscp"] = iface.dscp;
-        am_iface["tos_byte"] = iface.tos_byte;
+        AmArg am_mearr;
+        for(int j = 0; j < (int)iface.proto_info.size(); j++) {
+            AmArg am_minfo;
+            MEDIA_info* minfo = iface.proto_info[j];
+            am_minfo["type"] = minfo->toStr();
+            am_minfo["sys_name"] = minfo->net_if;
+            am_minfo["sys_idx"] = (int)minfo->net_if_idx;
+            am_minfo["local_ip"] = minfo->local_ip;
+            am_minfo["public_ip"] = minfo->public_ip;
+            am_minfo["rtp_low_port"] = (int)minfo->low_port;
+            am_minfo["rtp_high_port"] = (int)minfo->high_port;
+            am_minfo["capacity"] = (double)(minfo->high_port-minfo->low_port+1)/2;
+            am_minfo["use_raw_sockets"] = (minfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
+            am_minfo["dscp"] = minfo->dscp;
+            am_minfo["tos_byte"] = minfo->tos_byte;
+            am_mearr.push(am_minfo);
+        }
         string name = iface.name.empty() ? "default" : iface.name;
         rtp[name] = am_iface;
     }
 
     AmArg &sip_map = ret["sip_ip_map"];
-    for(multimap<string,unsigned short>::iterator it = AmConfig::LocalSIPIP2If.begin();
-        it != AmConfig::LocalSIPIP2If.end(); ++it) {
-        AmConfig::SIP_interface& iface = AmConfig::SIP_Ifs[it->second];
+    for(multimap<string,unsigned short>::iterator it = AmLcConfig::GetInstance().local_sip_ip2if.begin();
+        it != AmLcConfig::GetInstance().local_sip_ip2if.end(); ++it) {
+        SIP_interface& iface = AmLcConfig::GetInstance().sip_ifs[it->second];
         sip_map[it->first] = iface.name.empty() ? "default" : iface.name;
     }
 
     AmArg &sip_names_map = ret["sip_names_map"];
-    for(const auto &m: AmConfig::SIP_If_names)
+    for(const auto &m: AmLcConfig::GetInstance().sip_if_names)
         sip_names_map[m.first] = m.second;
 
     AmArg &media_names_map = ret["media_names_map"];
-    for(const auto &m: AmConfig::RTP_If_names)
+    for(const auto &m: AmLcConfig::GetInstance().media_if_names)
         media_names_map[m.first] = m.second;
 }
 
@@ -558,6 +572,9 @@ void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
         throw AmSession::Exception(500,"missed parameter");
     }
     string target = args[0].asCStr();
+    dns_priority priority = IPv4_only;
+    if(args.size() > 1)
+        priority = string_to_priority(args[1].asCStr());
     if(target.empty()) return;
 
     dns_handle h;
@@ -567,14 +584,17 @@ void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
     if(-1==resolver::instance()->resolve_name(
         target.c_str(),
         &h,&remote_ip,
-        IPv4,
-        target[0]=='_' ? dns_r_srv : dns_r_a))
+        priority,
+        target[0]=='_' ? dns_r_srv : dns_r_ip))
     {
         throw AmSession::Exception(500,"unresolvable destination");
     }
-    ret["address"] = get_addr_str_sip(&remote_ip).c_str();
+    std::string addr = get_addr_str_sip(&remote_ip);
     unsigned short port = am_get_port(&remote_ip);
+    ret["address"] = addr.c_str();
     ret["port"] = port ? port : 5060;
+
+    h.dumpIps(ret["targets"], priority);
     h.dump(ret["handler"]);
 }
 

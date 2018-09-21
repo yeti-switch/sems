@@ -328,7 +328,13 @@ int AmSdp::parse(const char* _sdp_msg)
   //validate connection lines
   if(!conn.address.empty()) {
       dns_handle dh;
-      if (resolver::instance()->resolve_name(conn.address.c_str(),&dh,&ss,IPv4) < 0) {
+      dns_priority priority = Dualstack;
+      if(conn.addrType == AT_V4) {
+          priority = IPv4_only;
+      } else if(conn.addrType == AT_V6) {
+          priority = IPv6_only;
+      }
+      if (resolver::instance()->resolve_name(conn.address.c_str(),&dh,&ss,priority) < 0) {
         ERROR("invalid session level connection line with address: %s",conn.address.c_str());
         return true;
       }
@@ -340,7 +346,13 @@ int AmSdp::parse(const char* _sdp_msg)
       const string &addr = it->conn.address;
       if(!addr.empty()) {
           dns_handle dh;
-          if (resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,IPv4) < 0) {
+          dns_priority priority = Dualstack;
+          if(it->conn.addrType == AT_V4) {
+              priority = IPv4_only;
+          } else if(it->conn.addrType == AT_V6) {
+              priority = IPv6_only;
+          }
+          if (resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,priority) < 0) {
             ERROR("invalid media level connection line with address: %s",addr.c_str());
             return true;
           }

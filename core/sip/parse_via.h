@@ -49,6 +49,19 @@ struct sip_transport
     cstring val;
 };
 
+struct sip_address_type
+{
+    enum {
+	UNPARSED=0,
+	IPv4,
+	IPv6,
+	OTHER
+    };
+
+    int     type;
+    cstring val;
+};
+
 struct sip_via_parm
 {
     const char* eop;

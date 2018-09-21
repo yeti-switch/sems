@@ -137,7 +137,7 @@ int XMLRPC2DI::load() {
   if (bind_ip.empty()) {
     DBG("binding on ANY interface\n");
   } else {
-    bind_ip = fixIface2IP(bind_ip, false);
+    bind_ip = AmLcConfig::GetInstance().fixIface2IP(bind_ip, false);
   }
 
   string conf_xmlrpc_port = cfg.getParameter("xmlrpc_port",XMLRPC_PORT);

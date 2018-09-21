@@ -45,6 +45,7 @@ using std::vector;
 using std::map;
 
 #include <netinet/in.h>
+#include "transport.h"
 
 #define DNS_CACHE_SIZE 128
 
@@ -60,6 +61,18 @@ enum proto_type {
     TCP=1,
     UDP=2
 };
+
+enum dns_priority
+{
+    IPv4_only,
+    IPv6_only,
+    Dualstack,
+    IPv4_pref,
+    IPv6_pref
+};
+
+const char* dns_priority_str(const dns_priority priority);
+dns_priority string_to_priority(const string& priority);
 
 struct dns_handle;
 
@@ -99,14 +112,15 @@ class dns_entry
 public:
     vector<dns_base_entry*> ip_vec;
 
-    static dns_entry* make_entry(dns_rr_type t, unsigned short srv_port = 0);
+    static dns_entry* make_entry(ns_type t, unsigned short srv_port = 0);
 
     dns_entry(dns_rr_type type);
     virtual ~dns_entry();
     virtual void init()=0;
     virtual void add_rr(dns_record* rr, u_char* begin, u_char* end, long now);
-    virtual int next_ip(dns_handle* h, sockaddr_storage* sa)=0;
-    virtual dns_entry *resolve_alias(dns_cache &cache, dns_rr_type t) { return nullptr; }
+    virtual bool union_rr(const vector<dns_base_entry*>& entries) { return false; }
+    virtual int next_ip(dns_handle* h, sockaddr_storage* sa, dns_priority priority)=0;
+    virtual dns_entry *resolve_alias(dns_cache &cache, const dns_priority priority, dns_rr_type rr_type) { return nullptr; }
     dns_rr_type get_type() { return type; }
 
     virtual string to_str();
@@ -121,6 +135,9 @@ struct ip_entry
 	in_addr       addr;
 	in6_addr      addr6;
     };
+
+    bool operator == (const ip_entry& entry);
+    ip_entry* clone();
 
     virtual void to_sa(sockaddr_storage* sa);
     virtual string to_str();
@@ -140,14 +157,15 @@ class dns_ip_entry
 {
 public:
     dns_ip_entry()
-    : dns_entry(dns_r_a)
+    : dns_entry(dns_r_ip)
     {}
 
     void init(){};
+    int next_ip(dns_handle* h, sockaddr_storage* sa, dns_priority priority);
     dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end);
-    int next_ip(dns_handle* h, sockaddr_storage* sa);
+    bool union_rr(const vector<dns_base_entry*>& entries);
 
-    int fill_ip_list(const list<sip_destination>& ip_list);
+    void sort_by_priority(dns_handle* handle, dns_priority priority);
 };
 
 class dns_srv_entry;
@@ -161,9 +179,12 @@ struct dns_handle
     bool valid();
     bool eoip();
 
-    int next_ip(sockaddr_storage* sa);
+    int next_ip(sockaddr_storage* sa, dns_priority priority);
     const dns_handle& operator = (const dns_handle& rh);
     void dump(AmArg &ret);
+    void dumpIps(AmArg &ret, dns_priority priority);
+    void prepare(dns_entry* e, dns_priority priority);
+    void reset(dns_rr_type type);
 private:
     friend class _resolver;
     friend class dns_entry;
@@ -177,6 +198,7 @@ private:
 
     dns_ip_entry*  ip_e;
     int            ip_n;
+    std::vector<unsigned int> ip_indexes;
 };
 
 struct naptr_record
@@ -206,7 +228,7 @@ public:
     dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end);
 
     // not needed
-    int next_ip(dns_handle* h, sockaddr_storage* sa) { return -1; }
+    int next_ip(dns_handle* h, sockaddr_storage* sa, dns_priority priority) { return -1; }
 };
 
 #define SIP_TRSP_SIZE_MAX 4
@@ -225,14 +247,15 @@ struct sip_target
 
 struct sip_target_set
 {
+    dns_priority               priority;
     list<sip_target>           dest_list;
     list<sip_target>::iterator dest_list_it;
 
-    sip_target_set();
+    sip_target_set(dns_priority priority_);
 
     void reset_iterator();
     bool has_next();
-    int  get_next(sockaddr_storage* ss, cstring& next_trsp,
+    int  get_next(sockaddr_storage* ss, trsp_socket::socket_transport& next_trsp,
 		  unsigned int flags);
     bool next();
     void prev();
@@ -270,14 +293,14 @@ public:
     int resolve_name(const char* name, 
 		     dns_handle* h,
 		     sockaddr_storage* sa,
-		     const address_type types,
-		     dns_rr_type t = dns_r_a);
+		     const dns_priority priority,
+             dns_rr_type rr_type = dns_r_ip);
 
     int str2ip(const char* name,
 	       sockaddr_storage* sa,
 	       const address_type types);
 
-    int query_dns(const char* name, dns_entry_map& entry_map, dns_rr_type t);
+    int query_dns(const char* name, dns_rr_type rr_type, address_type addr_type);
 
     /**
      * Transforms all elements of a destination list into
@@ -297,7 +320,14 @@ protected:
 			   unsigned short next_port,
 			   const cstring& next_trsp,
 			   sockaddr_storage* remote_ip,
+               dns_priority priority,
 			   dns_handle* h_dns);
+
+    int resolve_name_cache(const char* name,
+		     dns_handle* h,
+		     sockaddr_storage* sa,
+		     const dns_priority priority,
+             dns_rr_type rr_type);
 
     void run();
     void on_stop() {}

@@ -257,13 +257,13 @@ int AmRtpPacket::sendmsg(int sd, unsigned int sys_if_idx)
 
 /*int AmRtpPacket::send(int sd, unsigned int sys_if_idx,
 			  sockaddr_storage* l_saddr)*/
-int AmRtpPacket::send(int sd, const AmConfig::RTP_interface &iface,
+int AmRtpPacket::send(int sd, const MEDIA_info &iface,
 			  sockaddr_storage* l_saddr)
 
 {
-  unsigned int sys_if_idx = iface.NetIfIdx;
+  unsigned int sys_if_idx = iface.net_if_idx;
 
-  if(sys_if_idx && iface.MediaSockOpts&trsp_socket::use_raw_sockets) {
+  if(sys_if_idx && iface.sig_sock_opts&trsp_socket::use_raw_sockets) {
     return raw_sender::send((char*)buffer,b_size,sys_if_idx,l_saddr,&addr,iface.tos_byte);
   }
 
