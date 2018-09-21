@@ -164,7 +164,7 @@ void B2BMediaStatistics::getReport(const AmArg &args, AmArg &ret)
 
 void AudioStreamData::initialize(AmB2BSession *session)
 {
-  stream = new AmRtpAudio(session, session->getRtpInterface());
+  stream = new AmRtpAudio(session, session->getRtpInterface(), session->getRtpAddr());
   stream->setRtpRelayTransparentSeqno(session->getRtpRelayTransparentSeqno());
   stream->setRtpRelayTransparentSSRC(session->getRtpRelayTransparentSSRC());
   stream->setRtpRelayFilterRtpDtmf(session->getEnableDtmfRtpFiltering());
@@ -568,8 +568,8 @@ void AudioStreamData::setReceiving(bool r) {
 //////////////////////////////////////////////////////////////////////////////////
 
 AmB2BMedia::RelayStreamPair::RelayStreamPair(AmB2BSession *_a, AmB2BSession *_b)
-: a(_a, _a ? _a->getRtpInterface() : -1),
-  b(_b, _b ? _b->getRtpInterface() : -1)
+: a(_a, _a ? _a->getRtpInterface() : -1, _a ? _a->getRtpAddr() : -1),
+  b(_b, _b ? _b->getRtpInterface() : -1, _a ? _a->getRtpAddr() : -1)
 { }
 
 AmB2BMedia::AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b): 

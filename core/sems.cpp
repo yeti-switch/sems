@@ -156,31 +156,35 @@ static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
 static void set_default_interface(const string& iface_name)
 {
   unsigned int idx=0;
-  map<string,unsigned short>::iterator if_it = AmConfig::SIP_If_names.find("default");
-  if(if_it == AmConfig::SIP_If_names.end()) {
-    AmConfig::SIP_interface intf;
+  map<string,unsigned short>::iterator if_it = AmLcConfig::GetInstance().sip_if_names.find("default");
+  if(if_it == AmLcConfig::GetInstance().sip_if_names.end()) {
+    SIP_interface intf;
     intf.name = "default";
-    AmConfig::SIP_Ifs.push_back(intf);
-    AmConfig::SIP_If_names["default"] = AmConfig::SIP_Ifs.size()-1;
-    idx = AmConfig::SIP_Ifs.size()-1;
+    AmLcConfig::GetInstance().sip_ifs.push_back(intf);
+    AmLcConfig::GetInstance().sip_if_names["default"] = AmLcConfig::GetInstance().sip_ifs.size()-1;
+    idx = AmLcConfig::GetInstance().sip_ifs.size()-1;
   }
   else {
     idx = if_it->second;
   }
-  AmConfig::SIP_Ifs[idx].LocalIP = iface_name;
+  SIP_info* sinfo = new SIP_UDP_info();
+  sinfo->local_ip = iface_name;
+  AmLcConfig::GetInstance().sip_ifs.back().proto_info.push_back(sinfo);
 
-  if_it = AmConfig::RTP_If_names.find("default");
-  if(if_it == AmConfig::RTP_If_names.end()) {
-    AmConfig::RTP_interface intf;
+  if_it = AmLcConfig::GetInstance().media_if_names.find("default");
+  if(if_it == AmLcConfig::GetInstance().media_if_names.end()) {
+    MEDIA_interface intf;
     intf.name = "default";
-    AmConfig::RTP_Ifs.push_back(intf);
-    AmConfig::RTP_If_names["default"] = AmConfig::RTP_Ifs.size()-1;
-    idx = AmConfig::RTP_Ifs.size()-1;
+    AmLcConfig::GetInstance().media_ifs.push_back(intf);
+    AmLcConfig::GetInstance().media_if_names["default"] = AmLcConfig::GetInstance().media_ifs.size()-1;
+    idx = AmLcConfig::GetInstance().media_ifs.size()-1;
   }
   else {
     idx = if_it->second;
   }
-  AmConfig::RTP_Ifs[idx].LocalIP = iface_name;
+  RTP_info* rinfo = new RTP_info();
+  rinfo->local_ip = iface_name;
+  AmLcConfig::GetInstance().media_ifs[idx].proto_info.push_back(rinfo);
 }
 
 /* Note: The function should not use logging because it is called before
@@ -407,7 +411,8 @@ int main(int argc, char* argv[])
   }
 
   /* load and apply configuration file */
-  if(AmConfig::readConfiguration()){
+  if(AmConfig::readConfiguration() || 
+     AmLcConfig::GetInstance().readConfiguration()){
     ERROR("Errors occured while reading configuration file: exiting.");
     return -1;
   }
@@ -417,7 +422,7 @@ int main(int argc, char* argv[])
     goto error;
   }
 
-  if(AmConfig::finalizeIPConfig() < 0)
+  if(AmLcConfig::GetInstance().finalizeIpConfig() < 0)
     goto error;
 
   printf("Configuration:\n"
@@ -446,7 +451,7 @@ int main(int argc, char* argv[])
 #endif
 	);
 
-  AmConfig::dump_Ifs();
+  AmLcConfig::GetInstance().dump_Ifs();
 
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");

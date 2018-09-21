@@ -66,6 +66,7 @@
 #include <assert.h>
 
 #include <algorithm>
+#include <AmLcConfig.h>
 
 #define update_reply_msg(new_code, new_reason) \
     msg->u.reply->code = new_code; \
@@ -79,12 +80,6 @@ static const cstring sip_resp_forbidden("Forbidden");
 
 bool _trans_layer::accept_fr_without_totag = false;
 unsigned int _trans_layer::default_bl_ttl = DEFAULT_BL_TTL;
-
-bool _trans_layer::less_case_i::operator () (const string& lhs, const string& rhs) const
-{
-    return lower_cmp_n(lhs.c_str(),lhs.length(),
-		       rhs.c_str(),rhs.length()) < 0;
-}
 
 _trans_layer::_trans_layer()
     : ua(NULL),
@@ -107,13 +102,13 @@ int _trans_layer::register_transport(trsp_socket* trsp)
     if(transports.size() <= (size_t)if_num)
 	transports.resize(if_num+1);
 
-    if(transports[if_num].find(trsp->get_transport())
+    if(transports[if_num].find(trsp->get_transport_id())
        != transports[if_num].end()) {
 	WARN("transport already registered for this interface");
 	return -1;
     }
 
-    transports[if_num][trsp->get_transport()] = trsp;
+    transports[if_num][trsp->get_transport_id()] = trsp;
     return 0;
 }
 
@@ -122,7 +117,7 @@ void _trans_layer::clear_transports()
     transports.clear();
 }
 
-int _trans_layer::set_trsp_socket(sip_msg* msg, const cstring& next_trsp,
+int _trans_layer::set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transport& next_trsp,
 				  int out_interface)
 {
     if((out_interface < 0)
@@ -141,14 +136,21 @@ int _trans_layer::set_trsp_socket(sip_msg* msg, const cstring& next_trsp,
     }
 
     prot_collection::iterator prot_sock_it =
-	transports[out_interface].find(c2stlstr(next_trsp));
+	transports[out_interface].find(next_trsp);
 
     if(prot_sock_it == transports[out_interface].end()) {
 
-	DBG("could not find transport '%.*s' in outbound interface %i",
-	    next_trsp.len,next_trsp.s,out_interface);
+	DBG("could not find transport in outbound interface %i",
+	    out_interface);
 
-	prot_sock_it = transports[out_interface].find("udp");
+    if(msg->remote_ip.ss_family == AF_INET) {
+        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv4);
+    } else if(msg->remote_ip.ss_family == AF_INET6) {
+        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv6);
+    } else {
+        ERROR("incorrect remote ip");
+        return -1;
+    }
 	
 	// if we couldn't find anything, take whatever is there...
 	if(prot_sock_it == transports[out_interface].end()) {
@@ -902,7 +904,6 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 			       unsigned short* next_port,
 			       cstring* next_trsp)
 {
-    static const cstring default_trsp("udp");
     assert(msg);
 
     list<sip_header*>& route_hdrs = msg->route; 
@@ -945,9 +946,8 @@ int _trans_layer::set_next_hop(sip_msg* msg,
     }
 
     if(!next_trsp->len) {
-	DBG("no transport specified, setting default one (%.*s)",
-	    default_trsp.len,default_trsp.s);
-	*next_trsp = default_trsp;
+        DBG("no transport specified, setting default");
+        *next_trsp = "udp";
     }
 
     DBG("next_hop:next_port is <%.*s:%u/%.*s>\n",
@@ -1153,7 +1153,7 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
     if(msg->local_socket->get_actual_port() != 5060)
     via += ":" + int2str(msg->local_socket->get_actual_port());
 
-    cstring trsp(msg->local_socket->get_transport());
+    cstring trsp = msg->local_socket->get_transport();
 
     // patch Contact-HF transport parameter
     vector<string> contact_buffers(msg->contacts.size());
@@ -1237,7 +1237,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 			       int out_interface, unsigned int flags,
 				   msg_logger* logger,msg_sensor *sensor,
 				   sip_timers_override *timers_override,
-				   sip_target_set* target_set_override,
+				   sip_target_set* targets,
 				   int redirects_allowed)
 {
     // Request-URI
@@ -1253,12 +1253,10 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
     assert(msg);
     assert(tt);
+    assert(targets);
 
     int res=0;
     list<sip_destination> dest_list;
-
-    auto_ptr<sip_target_set> targets(
-        target_set_override ? target_set_override: new sip_target_set());
 
     if (_next_hop.len) {
 
@@ -1278,8 +1276,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	dest_list.push_back(dest);
     }
 
-    if(!target_set_override) {
-        res = resolver::instance()->resolve_targets(dest_list,targets.get());
+    if(targets->dest_list.empty()) {
+        res = resolver::instance()->resolve_targets(dest_list,targets);
         if(res < 0){
             DBG("resolve_targets failed\n");
             return res;
@@ -1308,7 +1306,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
     int err = 0;
     string ruri; // buffer needs to be @ function scope
-    cstring next_trsp;
+    trsp_socket::socket_transport next_trsp;
     sip_msg* p_msg=NULL;
 
     tt->_bucket = 0;
@@ -1382,7 +1380,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    tt->_t->flags = flags;
 
 	    if(tt->_t->targets)	delete tt->_t->targets;
-	    tt->_t->targets = targets.release();
+	    tt->_t->targets = targets;
 
 	    if(tt->_t->targets->has_next()){
 			tt->_t->timer_m =
@@ -2762,8 +2760,8 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
     char local_ip[NI_MAXHOST];
     if(am_inet_ntop(&from,local_ip,NI_MAXHOST) != NULL) {
 	map<string,unsigned short>::iterator if_it =
-	    AmConfig::LocalSIPIP2If.find(local_ip);
-	if(if_it == AmConfig::LocalSIPIP2If.end()){
+	           AmLcConfig::GetInstance().local_sip_ip2if.find(local_ip);
+	if(if_it == AmLcConfig::GetInstance().local_sip_ip2if.end()){
 	    ERROR("Could not find a local interface for "
 		  "resolved local IP (local_ip='%s')",
 		  local_ip);
@@ -2813,7 +2811,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 {
     tr->clear_timer(STIMER_M);
 
-    cstring next_trsp;
+    trsp_socket::socket_transport next_trsp;
     sockaddr_storage sa;
 
  try_next_dest:
@@ -3102,7 +3100,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     dest_list.push_back(dest);
 
     //resolve targets
-    std::unique_ptr<sip_target_set> targets(new sip_target_set());
+    std::unique_ptr<sip_target_set> targets(new sip_target_set(t->targets->priority));
     res = resolver::instance()->resolve_targets(dest_list,targets.get());
     if(res < 0) {
         DBG("retarget: resolve_targets failed %d",res);

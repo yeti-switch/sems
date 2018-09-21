@@ -125,7 +125,7 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
 			   unsigned int   rate);
 
 public:
-  AmRtpAudio(AmSession* _s, int _if);
+  AmRtpAudio(AmSession* _s, int _if, int _addr_if);
   ~AmRtpAudio();
 
   unsigned int getFrameSize();

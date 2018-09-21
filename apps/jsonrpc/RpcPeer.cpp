@@ -85,7 +85,7 @@ int JsonrpcNetstringsConnection::connect(const string& host, int port,
     dns_handle       _dh;
 
     if(resolver::instance()->resolve_name(host.c_str(),
-					&_dh,&_sa,IPv4) < 0) {
+					&_dh,&_sa,IPv4_only) < 0) {
       res_str = "resolving '"+host+"' failed\n";
       return 300;
     }

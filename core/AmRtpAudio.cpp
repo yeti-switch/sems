@@ -98,8 +98,8 @@ void AmAudioRtpFormat::initCodec()
 }
 
 
-AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
-  : AmRtpStream(_s,_if), AmAudio(0), 
+AmRtpAudio::AmRtpAudio(AmSession* _s, int _if, int _addr_if)
+  : AmRtpStream(_s,_if, _addr_if), AmAudio(0), 
     /*last_ts_i(false),*/ use_default_plc(true),
     playout_buffer(NULL),
     m_playout_type(SIMPLE_PLAYOUT),

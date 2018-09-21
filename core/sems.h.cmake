@@ -57,8 +57,6 @@
 
 /* Session Timer default configuration: */
 #define DEFAULT_ENABLE_SESSION_TIMER 1
-#define SESSION_EXPIRES              60 // seconds
-#define MINIMUM_TIMER                5   //seconds
 
 // threads to start for signaling/application
 #define NUM_SESSION_PROCESSORS 10
