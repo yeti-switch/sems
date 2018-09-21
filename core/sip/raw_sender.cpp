@@ -28,13 +28,12 @@ int raw_sender::init()
     else {
       ERROR("raw_udp_socket(): %s",strerror(errno));
       goto err;
+    }
   }
 
   if(setsockopt(rsock, SOL_SOCKET, SO_RCVBUF, &rcv_buf_size, sizeof(rcv_buf_size)) < 0) {
       ERROR("setsockopt(): %s",strerror(errno));
       goto err;
-  }
-
   }
 
   rsock6 = raw_udp_socket6(1);
