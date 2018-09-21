@@ -101,3 +101,16 @@ SET(doc_files
 
 #SEMS_INSTALL_DOCS("${doc_files}" "${doc_dirs}")
 SEMS_INSTALL_AUDIO("" "${audio_files}")
+
+add_custom_target(install-dev
+    install -d /usr/include/sems
+    COMMAND install -v -D libsems.pc /usr/lib/pkgconfig/
+    COMMAND install -v -D -t /usr/share/cmake/sems ${CMAKE_SOURCE_DIR}/core/cmake/*.txt ${CMAKE_SOURCE_DIR}/core/cmake/FindSEMS.cmake
+    COMMAND install -v -D -t /usr/include/sems ${CMAKE_SOURCE_DIR}/core/*.cc ${CMAKE_SOURCE_DIR}/core/*.h
+    COMMAND install -v -D -t /usr/include/sems/ampi ${CMAKE_SOURCE_DIR}/core/ampi/*.h
+    COMMAND install -v -D -t /usr/include/sems/amci ${CMAKE_SOURCE_DIR}/core/amci/*.h
+    COMMAND install -v -D -t /usr/include/sems/rtp ${CMAKE_SOURCE_DIR}/core/rtp/*.h
+    COMMAND install -v -D -t /usr/include/sems/compat ${CMAKE_SOURCE_DIR}/core/compat/*.c ${CMAKE_SOURCE_DIR}/core/compat/*.h
+    COMMAND install -v -D -t /usr/include/sems/sip ${CMAKE_SOURCE_DIR}/core/sip/*.h
+    COMMAND install -v -D -t /usr/include/sems/resample ${CMAKE_SOURCE_DIR}/core/resample/*.h
+)
