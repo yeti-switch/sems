@@ -44,6 +44,7 @@
 #define __USE_BSD  /* on linux use bsd version of iphdr (more portable) */
 #endif /* __USE_BSD */
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #define __FAVOR_BSD /* on linux use bsd version of udphdr (more portable) */
 #include <netinet/udp.h>
 #include <netdb.h>
@@ -84,10 +85,13 @@
 #define RAW_IPHDR_IP_OFF(off)  htons((unsigned short)(off))
 /** convert the ip total length in the format expected by the kernel. */
 #define RAW_IPHDR_IP_LEN(tlen) htons((unsigned short)(tlen))
+/** convert the ip flow in the format expected by the kernel. */
+#define RAW_IPHDR_IP_FLOW(tflow) htonl((unsigned int)(tflow))
 
 #endif /* __OS_* */
 
 /** create and return a raw socket.
+ * @param ip_version - ip version used (e.g. PF_INET, PF_INET6)
  * @param proto - protocol used (e.g. IPPROTO_UDP, IPPROTO_RAW)
  * @param ip - if not null the socket will be bound on this ip.
  * @param iphdr_incl - set to 1 if packets send on this socket include
@@ -96,49 +100,80 @@
  *                     fragmentation has to be done in user space).
  * @return socket on success, -1 on error
  */
-int raw_socket(int proto, sockaddr_storage* ip, int iphdr_incl)
+int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
 {
 	int sock;
 	int t;
 	//sockaddr_storage su;
 
-	sock = socket(PF_INET, SOCK_RAW, proto);
+	sock = socket(ip_version, SOCK_RAW, proto);
 	if (sock==-1)
 	  goto error;
 	/* set socket options */
 	if (iphdr_incl) {
 	  t=1;
+      if(ip_version == PF_INET) {
 	  if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &t, sizeof(t))<0){
 	    ERROR("raw_socket: setsockopt(IP_HDRINCL) failed: %s [%d]\n",
 		  strerror(errno), errno);
 	    goto error;
 	  }
+      } else if(ip_version == PF_INET6) {
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_HDRINCL, &t, sizeof(t))<0){
+            ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: %s [%d]\n",
+            strerror(errno), errno);
+            goto error;
+        }
+      }
 	} else {
 	  /* IP_PKTINFO makes no sense if the ip header is included */
 	  /* using IP_PKTINFO */
 	  t=1;
 #ifdef IP_PKTINFO
+      if(ip_version == PF_INET) {
 	  if (setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &t, sizeof(t))<0){
 	    ERROR("raw_socket: setsockopt(IP_PKTINFO) failed: %s [%d]\n",
 		  strerror(errno), errno);
 	    goto error;
 	  }
+      } else if(ip_version == PF_INET6) {
+          if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, &t, sizeof(t))<0){
+            ERROR("raw_socket: setsockopt(IPV6_PKTINFO) failed: %s [%d]\n",
+            strerror(errno), errno);
+            goto error;
+        }
+      }
 #elif defined(IP_RECVDSTADDR)
+      if(ip_version == PF_INET) {
 	  if (setsockopt(sock, IPPROTO_IP, IP_RECVDSTADDR, &t, sizeof(t))<0){
 	    ERROR("raw_socket: setsockop(IP_RECVDSTADDR) failed: %s [%d]\n",
 		  strerror(errno), errno);
 	    goto error;
 	  }
+      } else if(ip_version == PF_INET6) {
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVDSTADDR, &t, sizeof(t))<0){
+            ERROR("raw_socket: setsockop(IPV6_RECVDSTADDR) failed: %s [%d]\n",
+            strerror(errno), errno);
+            goto error;
+        }
+      }
 #else
 #error "no method of getting the destination ip address supported"
 #endif /* IP_RECVDSTADDR / IP_PKTINFO */
 	}
 #if defined (IP_MTU_DISCOVER) && defined (IP_PMTUDISC_DONT)
 	t=IP_PMTUDISC_DONT;
+    if(ip_version == PF_INET) {
 	if(setsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, &t, sizeof(t)) ==-1){
 	  ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s\n", strerror(errno));
 	  goto error;
 	}
+    } else if(ip_version == PF_INET6) {
+        if(setsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, &t, sizeof(t)) ==-1){
+            ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s\n", strerror(errno));
+            goto error;
+        }
+    }
 #endif /* IP_MTU_DISCOVER && IP_PMTUDISC_DONT */
 	/* FIXME: probe_max_receive_buffer(sock) missing */
 	if (ip){
@@ -155,7 +190,17 @@ error:
 	return -1;
 }
 
-
+/** create and return an udp over ipv6  raw socket.
+ * @param iphdr_incl - set to 1 if packets send on this socket include
+ *                     a pre-built ip header (some fields, like the checksum
+ *                     will still be filled by the kernel, OTOH packet
+ *                     fragmentation has to be done in user space).
+ * @return socket on success, -1 on error
+ */
+int raw_udp_socket6(int iphdr_incl)
+{
+  return raw_socket(PF_INET6, IPPROTO_UDP, NULL, iphdr_incl);
+}
 
 /** create and return an udp over ipv4  raw socket.
  * @param iphdr_incl - set to 1 if packets send on this socket include
@@ -166,7 +211,7 @@ error:
  */
 int raw_udp_socket(int iphdr_incl)
 {
-  return raw_socket(IPPROTO_UDP, NULL, iphdr_incl);
+  return raw_socket(PF_INET, IPPROTO_UDP, NULL, iphdr_incl);
 }
 
 
@@ -340,8 +385,6 @@ int raw_udp_socket(int iphdr_incl)
 // 	return n;
 // }
 
-
-
 /** udp checksum helper: compute the pseudo-header 16-bit "sum".
  * Computes the partial checksum (no complement) of the pseudo-header.
  * It is meant to be used by udpv4_chksum().
@@ -371,8 +414,6 @@ inline unsigned short udpv4_vhdr_sum(struct udphdr* uh,
 	/* no complement */
 	return ntohs((unsigned short) sum);
 }
-
-
 
 /** compute the udp over ipv4 checksum.
  * @param u - filled udp header (except checksum).
@@ -407,7 +448,63 @@ inline static unsigned short udpv4_chksum(struct udphdr* u,
 	return (unsigned short)~sum;
 }
 
+static unsigned short udpv6_chksum(struct udphdr* u,
+					  struct in6_addr* src,
+					  struct in6_addr* dst,
+					  unsigned char* data,
+					  unsigned short length)
+{
+	unsigned sum = 0;
+    struct pseudo_header {
+		/* We use a union here to avoid aliasing issues with gcc -O2 */
+		union{
+			struct{
+				struct in6_addr src_ip;
+				struct in6_addr dst_ip;
+				uint32_t length;
+				uint8_t zero[3];
+				uint8_t next_header;
+			} head;
+			uint32_t words[10];
+		} headu;
+#define header_src headu.head.src_ip
+#define header_dst headu.head.dst_ip
+#define header_len headu.head.length
+#define header_zero headu.head.zero
+#define header_proto headu.head.next_header
+	};
 
+    struct pseudo_header header;
+    header.header_src = *src;
+    header.header_dst = *dst;
+    header.header_proto = IPPROTO_UDP;
+    header.header_len = htonl(length + sizeof(struct udphdr));
+    memset(header.header_zero, 0, sizeof(header.header_zero));
+    uint32_t count = sizeof(header);
+    uint16_t* data_ = (uint16_t*)&header;
+    while (count > 1) {
+        sum += *(data_++);
+        count -= 2;
+    }
+
+    /*udp header*/
+    sum += u->uh_sport + u->uh_dport + u->uh_ulen;
+
+    /*data*/
+    count = length;
+    data_ = (uint16_t*)data;
+    while (count > 1) {
+        sum += *(data_++);
+        count -= 2;
+    }
+    if (length&0x1)
+        sum+=htons((*data_)<<8);
+
+	/* fold it */
+    sum=(sum>>16)+(sum&0xffff);
+    sum+=(sum>>16);
+	return htons((unsigned short)~sum);
+}
 
 /** fill in an udp header.
  * @param u - udp header that will be filled.
@@ -419,12 +516,13 @@ inline static unsigned short udpv4_chksum(struct udphdr* u,
  *                 be set to 0.
  * @return 0 on success, < 0 on error.
  */
-inline static int mk_udp_hdr(struct udphdr* u,
+static int mk_udp_hdr(struct udphdr* u,
 			     const sockaddr_storage* from,
 			     const sockaddr_storage* to,
 			     unsigned char* buf, int len, 
 			     int do_chk)
 {
+  if(from->ss_family == AF_INET) {
   struct sockaddr_in *from_v4 = (sockaddr_in*)from;
   struct sockaddr_in *to_v4 = (sockaddr_in*)to;
 
@@ -436,6 +534,19 @@ inline static int mk_udp_hdr(struct udphdr* u,
 				 &to_v4->sin_addr, buf, len));
   else
     u->uh_sum=0; /* no checksum */
+  } else if(from->ss_family == AF_INET6) {
+    struct sockaddr_in6 *from_v6 = (sockaddr_in6*)from;
+    struct sockaddr_in6 *to_v6 = (sockaddr_in6*)to;
+
+    u->uh_ulen = htons((unsigned short)len+sizeof(struct udphdr));
+    u->uh_sport = ((sockaddr_in6*)from)->sin6_port;
+    u->uh_dport = ((sockaddr_in6*)to)->sin6_port;
+    if (do_chk)
+         u->uh_sum=htons(udpv6_chksum(u, &from_v6->sin6_addr,
+                     &to_v6->sin6_addr, buf, len));
+    else
+      u->uh_sum=0; /* no checksum */
+  }
   return 0;
 }
 
@@ -476,7 +587,206 @@ inline static int mk_ip_hdr(struct ip* iph, struct in_addr* from,
 	return 0;
 }
 
+inline static int mk_ip6_hdr(struct ip6_hdr* iph, struct in6_addr* from,
+                struct in6_addr* to, int payload_len,
+				unsigned char proto, int tos)
+{
+    iph->ip6_flow = RAW_IPHDR_IP_FLOW((6<<28)|(tos<<20));
+    iph->ip6_plen = RAW_IPHDR_IP_LEN(payload_len);
+    iph->ip6_nxt = proto;
+    iph->ip6_hlim = 64;
+    iph->ip6_src = *from;
+    iph->ip6_dst = *to;
+    return 0;
+}
 
+inline static int mk_frag_hdr(struct ip6_frag* frag, unsigned char proto, unsigned short frag_offs, bool last_frag, unsigned int id)
+{
+    frag->ip6f_nxt = proto;
+    frag->ip6f_reserved = 0;
+    frag->ip6f_offlg = (frag_offs<<3) | (last_frag ? 0 : 1);
+    frag->ip6f_ident = id;
+    return 0;
+}
+
+static int raw_iphdr_nonfrag_udp6_send(int rsock, const char* buf, unsigned int len,
+            const sockaddr_storage* from, const sockaddr_storage* to, int tos)
+{
+	struct ip6_udp_hdr {
+		struct ip6_hdr ip;
+		struct udphdr udp;
+	} hdr;
+    unsigned int totlen = len + sizeof(hdr);
+	if (unlikely(totlen) > 65535)
+		return -2;
+
+	if(SAv4(to)->sin_family!=AF_INET6){
+		static int complained = 0;
+		if(!complained++){
+			ERROR("raw_iphdr_udp6_send: wrong address family %i for destination address",
+				SAv4(to)->sin_family);
+			log_stacktrace(L_ERR);
+		}
+	}
+
+	if(SAv4(from)->sin_family!=AF_INET6){
+		static int complained = 0;
+		if(!complained++){
+			ERROR("raw_iphdr_udp6_send: wrong address family %i for source address",
+				SAv4(from)->sin_family);
+			log_stacktrace(L_ERR);
+		}
+    }
+
+	/* prepare the udp & ip6 headers */
+	mk_udp_hdr(&hdr.udp, from, to, (unsigned char*)buf, len, 1);
+	mk_ip6_hdr(&hdr.ip, &SAv6(from)->sin6_addr, &SAv6(to)->sin6_addr,
+		  len + sizeof(hdr.udp), IPPROTO_UDP, tos);
+
+	struct iovec iov[2];
+	iov[0].iov_base=(char*)&hdr;
+	iov[0].iov_len=sizeof(hdr);
+    iov[1].iov_base=(void*)buf;
+    iov[1].iov_len=len;
+
+	char msg_ctrl_snd_buf[1024] = {0};
+	struct msghdr snd_msg;
+	memset(&snd_msg, 0, sizeof(snd_msg));
+    sockaddr_in6 to_addr;
+    memcpy(&to_addr, to, sizeof(sockaddr_in6));
+    to_addr.sin6_port = 0;
+	snd_msg.msg_name=&to_addr;
+	snd_msg.msg_namelen=SA_len(to);
+	snd_msg.msg_iov=&iov[0];
+	snd_msg.msg_iovlen=2;
+    snd_msg.msg_control = msg_ctrl_snd_buf;
+    snd_msg.msg_controllen = sizeof(msg_ctrl_snd_buf);
+	/* init pktinfo cmsg */
+ 	struct cmsghdr* cmsg;
+ 	cmsg=CMSG_FIRSTHDR(&snd_msg);
+ 	cmsg->cmsg_level=IPPROTO_IPV6;
+#ifdef IPV6_PKTINFO
+ 	struct in6_pktinfo* snd_pktinfo;
+ 	cmsg->cmsg_type=IPV6_PKTINFO;
+ 	cmsg->cmsg_len=CMSG_LEN(sizeof(struct in6_pktinfo));
+ 	snd_pktinfo=(struct in6_pktinfo*)CMSG_DATA(cmsg);
+ 	snd_pktinfo->ipi6_ifindex=0;
+ 	snd_pktinfo->ipi6_addr=SAv6(from)->sin6_addr;
+#elif defined (IP_SENDSRCADDR)
+ 	cmsg->cmsg_type=IP_SENDSRCADDR;
+ 	cmsg->cmsg_len=CMSG_LEN(sizeof(struct in6_addr));
+#else
+#error "no method of setting the source ip supported"
+#endif /* IP_PKTINFO / IP_SENDSRCADDR */
+    snd_msg.msg_controllen=cmsg->cmsg_len;
+	snd_msg.msg_flags=0;
+    return sendmsg(rsock, &snd_msg, 0);
+}
+
+static int raw_iphdr_frag_udp6_send(int rsock, const char* buf, unsigned int len,
+            const sockaddr_storage* from, const sockaddr_storage* to,
+            unsigned short mtu, int tos)
+{
+	struct ip6_udp_hdr {
+		struct ip6_hdr ip;
+        struct ip6_frag frag;
+		struct udphdr udp;
+	} hdr;
+	unsigned int totlen = len + sizeof(hdr);
+	if (unlikely(totlen) > 65535)
+		return -2;
+
+	if(SAv4(to)->sin_family!=AF_INET6){
+		static int complained = 0;
+		if(!complained++){
+			ERROR("raw_iphdr_udp6_send: wrong address family %i for destination address",
+				SAv4(to)->sin_family);
+			log_stacktrace(L_ERR);
+		}
+	}
+
+	if(SAv4(from)->sin_family!=AF_INET6){
+		static int complained = 0;
+		if(!complained++){
+			ERROR("raw_iphdr_udp6_send: wrong address family %i for source address",
+				SAv4(from)->sin_family);
+			log_stacktrace(L_ERR);
+		}
+    }
+
+    /* a fragment offset must be a multiple of 8 => its size must
+        also be a multiple of 8, except for the last fragment */
+    unsigned int ip_frag_size = (mtu - sizeof(hdr.ip)) & (~7); /* fragment size */
+    unsigned int last_frag_extra = (mtu - sizeof(hdr.ip)) & 7; /* extra bytes possible in the last frag */
+    unsigned int ip_payload = len + sizeof(hdr.udp) + sizeof(struct ip6_frag);
+    int frg_no = ip_payload / ip_frag_size + ((ip_payload % ip_frag_size) > last_frag_extra);
+    unsigned int last_frag_offs = (frg_no - 1) * ip_frag_size;
+    unsigned int id = rand();
+    void* last_frag_start = (void*)(buf + last_frag_offs - sizeof(hdr.udp));
+
+	/* prepare the fragment && udp & ip6 headers */
+    mk_udp_hdr(&hdr.udp, from, to, (unsigned char*)buf, len, 1);
+	mk_frag_hdr(&hdr.frag, IPPROTO_UDP, 0, false, id);
+	mk_ip6_hdr(&hdr.ip, &SAv6(from)->sin6_addr, &SAv6(to)->sin6_addr,
+                ip_frag_size, IPPROTO_FRAGMENT, tos);
+
+	struct iovec iov[2];
+    /* first fragment */
+	iov[0].iov_base=(char*)&hdr;
+	iov[0].iov_len=sizeof(hdr);
+    iov[1].iov_base=(void*)buf;
+    iov[1].iov_len= ip_frag_size-sizeof(hdr.udp)-sizeof(hdr.frag);
+
+	struct msghdr snd_msg;
+	char msg_ctrl_snd_buf[1024];
+	memset(&snd_msg, 0, sizeof(snd_msg));
+    sockaddr_in6 to_addr;
+    memcpy(&to_addr, to, sizeof(sockaddr_in6));
+    to_addr.sin6_port = 0;
+	snd_msg.msg_name=&to_addr;
+	snd_msg.msg_name=SAv6(to);
+	snd_msg.msg_namelen=SA_len(to);
+	snd_msg.msg_iov=&iov[0];
+	snd_msg.msg_iovlen=2;
+	snd_msg.msg_flags=0;
+    snd_msg.msg_control = msg_ctrl_snd_buf;
+    snd_msg.msg_controllen = sizeof(msg_ctrl_snd_buf);
+
+    int bytes_sent;
+	int ret;
+
+	ret = sendmsg(rsock, &snd_msg, 0);
+    if (unlikely(ret < 0))
+        return ret;
+    bytes_sent = ret;
+
+    /* all the other fragments, include only the ip header and fragnet headers */
+    iov[0].iov_len = sizeof(hdr.ip) + sizeof(hdr.frag);
+	iov[1].iov_base =  (char*)iov[1].iov_base + iov[1].iov_len;
+    /* fragments between the first and the last */
+    while(unlikely(iov[1].iov_base < last_frag_start)) {
+        unsigned short offset = RAW_IPHDR_IP_OFF((unsigned short)(((char*)iov[1].iov_base - (char*)buf + sizeof(hdr.udp))/8));
+        mk_frag_hdr(&hdr.frag, IPPROTO_UDP, offset, false, id);
+        mk_ip6_hdr(&hdr.ip, &SAv6(from)->sin6_addr, &SAv6(to)->sin6_addr,
+                    ip_frag_size, IPPROTO_FRAGMENT, tos);
+	    ret=sendmsg(rsock, &snd_msg, 0);
+	    if (unlikely(ret < 0))
+	      return ret;
+	    bytes_sent+=ret;
+        iov[1].iov_base =  (char*)iov[1].iov_base + iov[1].iov_len;
+    }
+    /* last fragment */
+    iov[1].iov_len = buf + len - (char*)iov[1].iov_base;
+    unsigned short offset = RAW_IPHDR_IP_OFF((unsigned short)(((char*)iov[1].iov_base - (char*)buf + sizeof(hdr.udp))/8));
+    mk_frag_hdr(&hdr.frag, IPPROTO_UDP, offset, true, id);
+    mk_ip6_hdr(&hdr.ip, &SAv6(from)->sin6_addr, &SAv6(to)->sin6_addr,
+                    iov[1].iov_len, IPPROTO_FRAGMENT, tos);
+    ret=sendmsg(rsock, &snd_msg, 0);
+    if (unlikely(ret < 0))
+	    return ret;
+    ret+=bytes_sent;
+	return ret;
+}
 
 /** send an udp packet over a non-ip_hdrincl raw socket.
  * @param rsock - raw socket
@@ -690,4 +1000,44 @@ int raw_iphdr_udp4_send(int rsock, const char* buf, unsigned int len,
 end:
 #endif /* RAW_IPHDR_INC_AUTO_FRAG */
 	return ret;
+}
+
+/** send an udp packet over an IP_HDRINCL raw socket.
+ * If needed, send several fragments.
+ * @param rsock - raw socket
+ * @param buf - data
+ * @param len - data len
+ * @param from - source address:port (_must_ be non-null, but the ip address
+ *                can be 0, in which case it will be filled by the kernel).
+ * @param to - destination address:port
+ * @param mtu - maximum datagram size (including the ip header, excluding
+ *              link layer headers). Minimum allowed size is 28
+ *               (sizeof(ip_header + udp_header)). If mtu is lower, it will
+ *               be ignored (the packet will be sent un-fragmented).
+ *              0 can be used to disable fragmentation.
+ * @return  <0 on error (-2: datagram too big, -1: check errno),
+ *          number of bytes sent on success
+ *          (including the ip & udp headers =>
+ *               on success len + udpheader + ipheader size).
+ */
+int raw_iphdr_udp6_send(int rsock, const char* buf, unsigned int len,
+			const sockaddr_storage* from,
+			const sockaddr_storage* to,
+			unsigned short mtu, int tos)
+{
+	/* this part changes for different fragments */
+	/* packets are fragmented if mtu has a valid value (at least an
+	   IP header + UDP header fit in it) and if the total length is greater
+	   then the mtu */
+    unsigned int headlen = sizeof(struct ip6_hdr) + sizeof(struct udphdr);
+    unsigned int totlen = len + headlen;
+#ifndef RAW_IPHDR_INC_AUTO_FRAG
+	if (likely(totlen <= mtu || mtu <= headlen)) {
+#endif /* RAW_IPHDR_INC_AUTO_FRAG */
+        return raw_iphdr_nonfrag_udp6_send(rsock, buf, len, from, to, tos);
+#ifndef RAW_IPHDR_INC_AUTO_FRAG
+	} else {
+        return raw_iphdr_frag_udp6_send(rsock, buf, len, from, to, mtu, tos);
+    }
+#endif /* RAW_IPHDR_INC_AUTO_FRAG */
 }

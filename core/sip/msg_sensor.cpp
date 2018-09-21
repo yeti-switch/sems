@@ -263,7 +263,7 @@ int ipip_msg_sensor::init(const char *src_addr, const char *dst_addr,const char 
 	mk_ipip_hdr(ipip_hdr,&sensor_src_ip,&sensor_dst_ip);
 
 	//open raw socket
-	s = raw_socket(IPPROTO_RAW,NULL,0);
+	s = raw_socket(PF_INET, IPPROTO_RAW,NULL,0);
 	//s = socket(PF_INET, SOCK_RAW, proto);
 	if(s==-1){
 		ERROR("can't create raw socket for ipip sensor. errno: %d",errno);

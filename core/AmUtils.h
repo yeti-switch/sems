@@ -44,6 +44,7 @@ using std::string;
 #include <map>
 
 #include "md5.h"
+#include "sip/resolver.h"
 
 #define HASHLEN 16
 typedef unsigned char HASH[HASHLEN];
@@ -117,6 +118,11 @@ string char2hex(unsigned char val, bool lowercase = false);
  * Convert an unsigned int to a string using hexdecimal representation. 
  */
 string int2hex(unsigned int val, bool lowercase = false);
+
+/**
+ * Convert an int to a string using hexdecimal representation.
+ */
+string int2hexstr(int val);
 
 /** 
  * Convert an unsigned long to a string using hexdecimal representation. 
@@ -266,7 +272,7 @@ string get_addr_str_sip(const sockaddr_storage* addr);
  * local address with getsockname().
  */
 int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local);
-int get_local_addr_for_dest(const string& remote_ip, string& local);
+int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority);
 
 string extract_tag(const string& addr);
 

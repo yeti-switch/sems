@@ -840,10 +840,11 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq,
       req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig::Signature + CRLF;
   }
 
+  sip_target_set targets_set((dns_priority)getResolvePriority());
   int res = SipCtrlInterface::send(req, local_tag,
 				   remote_tag.empty() || !next_hop_1st_req ? 
 				   next_hop : "",
-				   outbound_interface, 0, logger, sensor);
+				   outbound_interface, 0, &targets_set, logger, sensor);
   if (res)
     return res;
 

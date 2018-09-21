@@ -167,6 +167,14 @@ void AmRtpStream::setLocalPort(unsigned short p)
     }
   }
   
+  if(laddr_if < 0) {
+      if(session) laddr_if = session->getRtpAddr();
+      else {
+          CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface addr can be used\n");
+        l_if = 0;
+      }
+  }
+
   int retry = 10;
   unsigned short port = 0;
   for(;retry; --retry){
@@ -175,7 +183,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
       return;
 
     if(!p)
-      port = AmConfig::RTP_Ifs[l_if].getNextRtpPort();
+      port = AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if]->getNextRtpPort();
     else
       port = p;
 
@@ -217,7 +225,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
     throw string ("while setting local address reusable.");
   }
 
-  int tos = AmConfig::RTP_Ifs[l_if].tos_byte;
+  int tos = AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if]->tos_byte;
   if(tos &&
      (setsockopt(l_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1 ||
       setsockopt(l_rtcp_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1))
@@ -264,7 +272,7 @@ int AmRtpStream::ping()
   rp.compile((unsigned char*)ping_chr,2);
 
   rp.setAddr(&r_saddr);
-  if(rp.send(l_sd, AmConfig::RTP_Ifs[l_if],&l_saddr) < 0){
+  if(rp.send(l_sd, *AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if],&l_saddr) < 0){
     CLASS_ERROR("while sending RTP packet.\n");
     return -1;
   }
@@ -320,7 +328,7 @@ int AmRtpStream::compile_and_send(const int payload, bool marker, unsigned int t
   }
 #endif
 
-  if(rp.send(l_sd, AmConfig::RTP_Ifs[l_if], &l_saddr) < 0){
+  if(rp.send(l_sd, *AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
     CLASS_ERROR("while sending RTP packet.\n");
     return -1;
   }
@@ -363,7 +371,7 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
   rp.compile_raw((unsigned char*)packet, length);
   rp.setAddr(&r_saddr);
 
-  if(rp.send(l_sd, AmConfig::RTP_Ifs[l_if], &l_saddr) < 0){
+  if(rp.send(l_sd, *AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
     CLASS_ERROR("while sending raw RTP packet.\n");
     return -1;
   }
@@ -431,9 +439,10 @@ int AmRtpStream::receive( unsigned char* buffer, unsigned int size,
   return res;
 }
 
-AmRtpStream::AmRtpStream(AmSession* _s, int _if) 
+AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
   : r_port(0),
     l_if(_if),
+    laddr_if(_addr_if),
     l_port(0),
     l_sd(0),
     l_sd_ctx(-1),
@@ -547,7 +556,11 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port,
    * 4566 unicast-address, as found in c=, can be an FQDN (or other!).
    */
   dns_handle dh;
-  if (resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,IPv4) < 0) {
+  dns_priority priority = IPv4_only;
+  if(AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if]->type_ip == IP_info::IPv6) {
+      priority = IPv6_only;
+  }
+  if (resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,priority) < 0) {
     CLASS_WARN("Address not valid (host: %s).\n", addr.c_str());
     throw string("invalid address") + addr;
   }
@@ -1252,11 +1265,12 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
 
   int err;
   //if(AmConfig::UseRawSockets) {
-  if(AmConfig::RTP_Ifs[l_if].MediaSockOpts&trsp_socket::use_raw_sockets) {
+  AmLcConfig& config = AmLcConfig::GetInstance();
+  if(config.media_ifs[l_if].proto_info[laddr_if]->sig_sock_opts&trsp_socket::use_raw_sockets) {
     err = raw_sender::send((char*)buffer,recved_bytes,
-			   AmConfig::RTP_Ifs[l_if].NetIfIdx,
+			   config.media_ifs[l_if].proto_info[laddr_if]->net_if_idx,
 			   &relay_stream->l_saddr,
-			   &rtcp_raddr,AmConfig::RTP_Ifs[l_if].tos_byte);
+			   &rtcp_raddr,config.media_ifs[l_if].proto_info[laddr_if]->tos_byte);
   }
   else {
     err = sendto(relay_stream->l_rtcp_sd,buffer,recved_bytes,0,
@@ -1349,7 +1363,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
   p->setAddr(&r_saddr);
 
-  if(p->send(l_sd, AmConfig::RTP_Ifs[l_if], &l_saddr) < 0){
+  if(p->send(l_sd, *AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if], &l_saddr) < 0){
     CLASS_ERROR("while sending RTP packet to '%s':%i\n",
 	  get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
   } else {
@@ -1695,7 +1709,7 @@ void AmRtpStream::getInfo(AmArg &ret){
 
 	if(hasLocalSocket() > 0){
 		AmArg &a = ret["socket"];
-		a["local_ip"] = AmConfig::RTP_Ifs[l_if].getIP();
+		a["local_ip"] = AmLcConfig::GetInstance().media_ifs[l_if].proto_info[laddr_if]->getIP();
 		a["local_port"] = getLocalPort();
 		a["remote_host"] = getRHost();
 		a["remote_port"] = getRPort();

@@ -211,10 +211,26 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   if(info.contact.empty()) {
     //force contact username
     int oif = dlg.getOutboundIf();
+    int oat = dlg.getOutboundAddrType();
     info_contact.uri_user = info.user;
-    info_contact.uri_host = AmConfig::SIP_Ifs[oif].getIP();
-    info_contact.uri_port =
-      int2str(AmConfig::SIP_Ifs[oif].getLocalPort(dlg.getOutboundTransport()));
+    SIP_interface& if_ = AmLcConfig::GetInstance().sip_ifs[oif];
+    for(auto& info : if_.proto_info) {
+        if ((oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
+           info->type == SIP_info::UDP && dlg.getOutboundTransport() == sip_transport::UDP) ||
+
+            (oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
+            info->type == SIP_info::TCP && dlg.getOutboundTransport() == sip_transport::TCP) ||
+
+            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
+            info->type == SIP_info::UDP &&dlg.getOutboundTransport() == sip_transport::UDP) ||
+
+            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
+            info->type == SIP_info::TCP && dlg.getOutboundTransport() == sip_transport::TCP))
+        {
+            info_contact.uri_host = info->getIP();
+            info_contact.uri_port = int2str(info->local_port);
+        }
+    }
     info_contact.uri_param = info.contact_uri_params;
 
     info.contact = info_contact.uri_str();

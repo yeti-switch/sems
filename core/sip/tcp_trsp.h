@@ -80,6 +80,8 @@ class tcp_trsp_socket: public trsp_socket
     return 0;
   }
 
+  const char* get_transport() const { return "tcp"; }
+
   /**
    * Instantiates read_ev & write_ev
    * Warning: call only ONCE!!!
@@ -142,10 +144,8 @@ class tcp_trsp_socket: public trsp_socket
   static void on_sock_read(int fd, short ev, void* arg);
   static void on_sock_write(int fd, short ev, void* arg);
 
-  tcp_trsp_socket(tcp_server_socket* server_sock,
-		  tcp_server_worker* server_worker,
-		  int sd, const sockaddr_storage* sa,
-		  struct event_base* evbase);
+  tcp_trsp_socket(tcp_server_socket* server_sock, tcp_server_worker* server_worker, int sd,
+                  const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
 
 public:
   static void create_connected(tcp_server_socket* server_sock,
@@ -159,7 +159,6 @@ public:
 					 struct event_base* evbase);
   ~tcp_trsp_socket();
 
-  const char* get_transport() const { return "tcp"; }
   bool        is_reliable() const   { return true; }
 
   void copy_peer_addr(sockaddr_storage* sa);
@@ -237,14 +236,13 @@ class tcp_server_socket: public trsp_socket
   static uint32_t hash_addr(const sockaddr_storage* addr);
 
 public:
-  tcp_server_socket(unsigned short if_num, unsigned int opts);
+  tcp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, socket_transport transport);
   ~tcp_server_socket() {}
 
   void add_threads(unsigned int n);
   void start_threads();
   void stop_threads();
 
-  const char* get_transport() const { return "tcp"; }
   bool        is_reliable() const   { return true; }
 
   /* activates libevent on_accept callback */
@@ -254,6 +252,7 @@ public:
   int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);
 
+  const char* get_transport() const { return "tcp"; }
   /**
    * Set timeout in milliseconds for the connection
    * establishement handshake.

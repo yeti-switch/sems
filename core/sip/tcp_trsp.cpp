@@ -14,6 +14,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <AmLcConfig.h>
 
 //avoid sockets in WAITING state. close() will send RST and immediately remove entry from hashtable
 #define TCP_STATIC_CLIENT_PORT_CLOSE_NOWAIT 1
@@ -35,8 +36,8 @@ void tcp_trsp_socket::on_sock_write(int fd, short ev, void* arg)
 tcp_trsp_socket::tcp_trsp_socket(tcp_server_socket* server_sock,
 				 tcp_server_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
-				 struct event_base* evbase)
-  : trsp_socket(server_sock->get_if(),0,0,sd),
+                 trsp_socket::socket_transport transport, struct event_base* evbase)
+  : trsp_socket(server_sock->get_if(),0,0,transport,sd),
     server_sock(server_sock), server_worker(server_worker),
     closed(false), connected(false),
     input_len(0), evbase(evbase),
@@ -72,7 +73,7 @@ void tcp_trsp_socket::create_connected(tcp_server_socket* server_sock,
     return;
 
   tcp_trsp_socket* sock = new tcp_trsp_socket(server_sock,server_worker,
-                          sd,sa,evbase);
+                          sd,sa,server_sock->get_transport_id(),evbase);
 
   inc_ref(sock);
   server_worker->add_connection(sock);
@@ -87,7 +88,7 @@ tcp_trsp_socket* tcp_trsp_socket::new_connection(tcp_server_socket* server_sock,
 						 const sockaddr_storage* sa,
 						 struct event_base* evbase)
 {
-  return new tcp_trsp_socket(server_sock,server_worker,-1,sa,evbase);
+  return new tcp_trsp_socket(server_sock,server_worker,-1,sa, server_sock->get_transport_id(),evbase);
 }
 
 
@@ -497,8 +498,8 @@ int tcp_trsp_socket::parse_input()
     inc_ref(this);
 
     // pass message to the parser / transaction layer
-    struct AmConfig::SIP_interface &iface = AmConfig::SIP_Ifs[server_sock->get_if()];
-    trans_layer::instance()->received_msg(s_msg,iface.acl,iface.opt_acl);
+    SIP_info *iface = AmLcConfig::GetInstance().sip_ifs[server_sock->get_if()].proto_info[server_sock->get_addr_if()];
+    trans_layer::instance()->received_msg(s_msg,iface->acl,iface->opt_acl);
 
     char* msg_end = pst.orig_buf + msg_len;
     char* input_end = (char*)input_buf + input_len;
@@ -712,9 +713,8 @@ void tcp_server_worker::on_stop()
   join();
 }
 
-tcp_server_socket::tcp_server_socket(unsigned short if_num, unsigned int opts)
-  : trsp_socket(if_num,opts),
-    evbase(NULL), ev_accept(NULL)
+tcp_server_socket::tcp_server_socket(short unsigned int if_num, short unsigned int addr_num, unsigned int opts, socket_transport transport)
+: trsp_socket(if_num, addr_num, opts, transport)
 {
 }
 

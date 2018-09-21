@@ -55,7 +55,7 @@
 #include <fstream>
 
 
-static char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6' , '7', '8', '9' };
+static char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6' , '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 void update_min_max(double &min, double &max, double v)
 {
@@ -130,7 +130,7 @@ string int2str(unsigned int val)
   return string((char*)(buffer+i+1));
 }
 
-template<class T, class DT>
+template<class T, class DT, int scale>
 string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
 {
   char buffer[64] = {0,0};
@@ -139,7 +139,7 @@ string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
 
   d.quot = abs_func(val);
   do{
-    d = div_func(d.quot,10);
+    d = div_func(d.quot,scale);
     buffer[i] = _int2str_lookup[d.rem];
   }while(--i && d.quot);
 
@@ -151,9 +151,10 @@ string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
   return string((char*)(buffer+i+1));
 }
 
-string int2str(int val) { return signed2str<int, div_t>(val, abs, div); }
-string long2str(long int val) { return signed2str<long, ldiv_t>(val, labs, ldiv); }
-string longlong2str(long long int val) { return signed2str<long long, lldiv_t>(val, llabs, lldiv); }
+string int2hexstr(int val) { return signed2str<int, div_t, 16>(val, abs, div); }
+string int2str(int val) { return signed2str<int, div_t, 10>(val, abs, div); }
+string long2str(long int val) { return signed2str<long, ldiv_t, 10>(val, labs, ldiv); }
+string longlong2str(long long int val) { return signed2str<long long, lldiv_t, 10>(val, llabs, lldiv); }
 
 void longlong2timespec(struct timespec &ts,unsigned long long msec)
 {
@@ -730,7 +731,7 @@ int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local
   return -1;
 }
 
-int get_local_addr_for_dest(const string& remote_ip, string& local)
+int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority)
 {
   sockaddr_storage remote_ip_ss;
   sockaddr_storage local_ss;
@@ -749,7 +750,7 @@ int get_local_addr_for_dest(const string& remote_ip, string& local)
   if(err == 0){
     // not an IP... try a name.
     dns_handle dh;
-    err = resolver::instance()->resolve_name(remote_ip.c_str(),&dh,&remote_ip_ss,IPv4);
+    err = resolver::instance()->resolve_name(remote_ip.c_str(),&dh,&remote_ip_ss,priority);
   }
 
   if(err == -1){

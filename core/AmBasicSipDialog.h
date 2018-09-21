@@ -122,6 +122,8 @@ protected:
 
   int outbound_interface;
   int outbound_transport;
+  int outbound_address_type;
+  int resolve_priority;
 
   TransMap uas_trans;
   TransMap uac_trans;
@@ -338,6 +340,11 @@ public:
   virtual void setOutboundInterface(int interface_id);
 
   /**
+   * Set outbound_protocol to specific value (-1 = default).
+   */
+  virtual void setOutboundAddrType(int type_id);
+  
+  /**
    * Set outbound_transport to specific value (-1 = default).
    */
   virtual void setOutboundTransport(int transport_id);
@@ -347,6 +354,12 @@ public:
    * based on remote_uri, next_hop_ip, outbound_proxy, route.
    */
   int getOutboundIf();
+
+  /** 
+   * Compute, set and return the outbound ip protocol version
+   * based on remote_uri, next_hop_ip, outbound_proxy, route.
+   */
+  int getOutboundAddrType();
 
   /**
    * Compute, set and return the outbound transport
@@ -359,6 +372,9 @@ public:
    */
   void resetOutboundIf();
 
+  void setResolvePriority(int priority);
+  int getResolvePriority();
+  
   /**
    * Set outbound_interface to specific value (-1 = default).
    */

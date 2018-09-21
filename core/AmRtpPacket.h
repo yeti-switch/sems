@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
+#include "AmLcConfig.h"
 #include "AmConfig.h"
 
 class AmRtpPacketTracer;
@@ -73,7 +74,7 @@ public:
   int compile_raw(unsigned char* data_buf, unsigned int size);
 
   //int send(int sd, unsigned int sys_if_idx, sockaddr_storage* l_saddr);
-  int send(int sd, const AmConfig::RTP_interface &iface, sockaddr_storage* l_saddr);
+  int send(int sd, const MEDIA_info &iface, sockaddr_storage* l_saddr);
   int recv(int sd);
 
   int parse(AmObject *caller = NULL);
