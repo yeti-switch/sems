@@ -463,14 +463,16 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
         //non-stream mode
         if (!src.isInitialized()) return 0; //other leg MUST be initialized with stream
         AmRtpAudio *src_stream = src.getStream();
-        int sample_rate = src_stream->getSampleRate();
-        int got = src_stream->get(ts, buffer, sample_rate, src_stream->getFrameSize());
-        //CLASS_DBG("src_stream->get(%llu,%d)",ts,got);
-        if (got < 0) return -1;
-        if (got > 0) {
-            updateRecvStats(src_stream);
-            //CLASS_DBG("out->put(%llu,%d)",ts,got);
-            return out->put(ts, buffer, sample_rate, got);
+        if(src_stream->checkInterval(ts)) {
+            int sample_rate = src_stream->getSampleRate();
+            int got = src_stream->get(ts, buffer, sample_rate, src_stream->getFrameSize());
+            //CLASS_DBG("src_stream->get(%llu,%d)",ts,got);
+            if (got < 0) return -1;
+            if (got > 0) {
+                updateRecvStats(src_stream);
+                //CLASS_DBG("out->put(%llu,%d)",ts,got);
+                return out->put(ts, buffer, sample_rate, got);
+            }
         }
         return 0;
     }
