@@ -1,3 +1,9 @@
+sems (1.7.72-6) stable; urgency=low
+
+  * AmB2BMedia: fix src RTP stream reading in uninitialized mode
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 24 Sep 2018 17:28:03 +0300
+
 sems (1.7.72-5) stable; urgency=low
 
   * eb2ec0c4e AmBasicSipDialog: call onFailure hook on error from onRxReqStatus
