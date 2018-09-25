@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "AmConfig.h"
 #include "AmSdp.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"

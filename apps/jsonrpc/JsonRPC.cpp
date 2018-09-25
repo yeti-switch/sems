@@ -29,6 +29,7 @@
 
 #include "JsonRPC.h"
 #include "JsonRPCServer.h"
+#include <AmLcConfig.h>
 
 JsonRPCServerModule* JsonRPCServerModule::_instance = NULL;
 
@@ -60,10 +61,10 @@ int JsonRPCServerModule::onLoad() {
 int JsonRPCServerModule::load() {
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + 
+  if(cfg.loadFile(AmConfig_.configs_path + 
 		  string(MOD_NAME ".conf"))) {
 	ERROR("no '%s' configuration file present",
-		(AmConfig::ModConfigPath + string(MOD_NAME ".conf")).c_str());
+		(AmConfig_.configs_path + string(MOD_NAME ".conf")).c_str());
 	return -1;
   } else {
     host = cfg.getParameter("jsonrpc_listen", DEFAULT_JSONRPC_SERVER_HOST);

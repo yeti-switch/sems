@@ -24,8 +24,8 @@
  */
 
 #include "AnnounceB2B.h"
+#include "AmLcConfig.h"
 #include "AmSessionContainer.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmApi.h"
 
@@ -49,7 +49,7 @@ AnnounceB2BFactory::AnnounceB2BFactory(const string& _app_name)
 int AnnounceB2BFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

@@ -31,7 +31,6 @@
 
 #include "AmThread.h"
 #include "AmSipMsg.h"
-#include "AmConfig.h"
 #include "AmConfigReader.h"
 #include "AmArg.h"
 #include "AmEventQueue.h"

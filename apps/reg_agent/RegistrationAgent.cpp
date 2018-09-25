@@ -24,8 +24,8 @@
  */
 
 #include "RegistrationAgent.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
+#include "AmLcConfig.h"
 #include "AmPlugIn.h"
 
 #include "sems.h"
@@ -57,7 +57,7 @@ RegistrationAgentFactory::RegistrationAgentFactory(const string& _app_name)
 int RegistrationAgentFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

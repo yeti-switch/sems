@@ -31,7 +31,6 @@
 #include "AmRtpPacket.h"
 #include "rtp/rtp.h"
 #include "log.h"
-#include "AmConfig.h"
 
 #include "sip/raw_sender.h"
 #include "sip/transport.h"
@@ -86,20 +85,10 @@ int AmRtpPacket::parse(AmObject *caller)
   data_offset = sizeof(rtp_hdr_t) + (hdr->cc*4);
 
   if(hdr->x != 0) {
-    //#ifndef WITH_ZRTP 
-    //if (AmConfig::IgnoreRTPXHdrs) {
-    //  skip the extension header
-    //#endif
     if (b_size >= data_offset + 4) {
       data_offset +=
 	ntohs(((rtp_xhdr_t*) (buffer + data_offset))->len)*4;
     }
-    // #ifndef WITH_ZRTP
-    //   } else {
-    //     DBG("RTP extension headers not supported.\n");
-    //     return -1;
-    //   }
-    // #endif
   }
 
   payload = hdr->pt;
@@ -267,7 +256,7 @@ int AmRtpPacket::send(int sd, const MEDIA_info &iface,
     return raw_sender::send((char*)buffer,b_size,sys_if_idx,l_saddr,&addr,iface.tos_byte);
   }
 
-  if(sys_if_idx && AmConfig::ForceOutboundIf) {
+  if(sys_if_idx && AmConfig_.force_outbound_if) {
     return sendmsg(sd,sys_if_idx);
   }
   

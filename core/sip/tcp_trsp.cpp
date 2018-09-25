@@ -7,7 +7,6 @@
 #include "parse_via.h"
 
 #include "AmUtils.h"
-#include "AmConfig.h"
 
 #include <netdb.h>
 #include <event2/event.h>
@@ -498,7 +497,7 @@ int tcp_trsp_socket::parse_input()
     inc_ref(this);
 
     // pass message to the parser / transaction layer
-    SIP_info *iface = AmLcConfig::GetInstance().sip_ifs[server_sock->get_if()].proto_info[server_sock->get_addr_if()];
+    SIP_info *iface = AmConfig_.sip_ifs[server_sock->get_if()].proto_info[server_sock->get_addr_if()];
     trans_layer::instance()->received_msg(s_msg,iface->acl,iface->opt_acl);
 
     char* msg_end = pst.orig_buf + msg_len;

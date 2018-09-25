@@ -22,10 +22,10 @@
 #include "PySems.h"
 
 #include "AmConfigReader.h"
-#include "AmConfig.h"
 #include "log.h"
 #include "AmApi.h"
 #include "AmUtils.h"
+#include "AmLcConfig.h"
 #include "AmPlugIn.h"
 
 #include "PySemsDialog.h"
@@ -132,7 +132,7 @@ PySemsFactory::PySemsFactory(const string& _app_name)
 // 	add_env_path("PYTHONPATH", python_path);
 //     }
 
-//     add_env_path("PYTHONPATH",AmConfig::PlugInPath);
+//     add_env_path("PYTHONPATH",AmConfig_.plugin_path);
 // }
 
 void PySemsFactory::import_object(PyObject* m, char* name, PyTypeObject* type)
@@ -205,7 +205,7 @@ void PySemsFactory::init_python_interpreter(const string& script_path)
 {
   if(!Py_IsInitialized()){
 
-    add_env_path("PYTHONPATH",AmConfig::PlugInPath);
+    add_env_path("PYTHONPATH",AmConfig_.plugin_path);
     Py_Initialize();
   }
 
@@ -312,7 +312,7 @@ bool PySemsFactory::loadScript(const string& path)
   mod     = PyImport_Import(modName);
 
   AmConfigReader cfg;
-  string cfg_file = add2path(AmConfig::ModConfigPath,1,(path + ".conf").c_str());
+  string cfg_file = add2path(AmConfig_.configs_path,1,(path + ".conf").c_str());
 
   Py_DECREF(modName);
 
@@ -397,7 +397,7 @@ int PySemsFactory::onLoad()
 {
   AmConfigReader cfg;
 
-  if(cfg.loadFile(add2path(AmConfig::ModConfigPath,1,MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig_.configs_path,1,MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

@@ -27,12 +27,10 @@
  */
 
 #include "AmPlugIn.h"
-#include "AmConfig.h"
 #include "AmApi.h"
 #include "AmUtils.h"
-//#include "AmSdp.h"
 #include "AmSipDispatcher.h"
-//#include "AmServer.h"
+#include "AmLcConfig.h"
 #include "sip/defs.h"
 
 #include "amci/amci.h"
@@ -49,6 +47,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include "AmSdp.h"
 using std::set;
 
 static unsigned int pcm16_bytes2samples(long h_codec, unsigned int num_bytes)
@@ -150,11 +149,9 @@ AmPlugIn* AmPlugIn::instance()
 }
 
 void AmPlugIn::init() {
-  vector<string> excluded_payloads_v = 
-    explode(AmConfig::ExcludePayloads, ";");
   for (vector<string>::iterator it = 
-	 excluded_payloads_v.begin(); 
-       it != excluded_payloads_v.end();it++)
+	 AmConfig_.exclude_payloads.begin();
+       it != AmConfig_.exclude_payloads.end();it++)
     excluded_payloads.insert(*it);
 
   DBG("adding built-in codecs...\n");
@@ -163,79 +160,32 @@ void AmPlugIn::init() {
   addPayload(&_payload_tevent);
 }
 
-int AmPlugIn::load(const string& directory, const string& plugins)
+int AmPlugIn::load(const string& directory, const vector<string>& plugins)
 {
   int err=0;
   
   vector<AmPluginFactory*> loaded_plugins;
-
-  if (!plugins.length()) {
-    INFO("AmPlugIn: loading modules in directory '%s':\n", directory.c_str());
-
-    DIR* dir = opendir(directory.c_str());
-    if (!dir){
-      ERROR("while opening plug-in directory (%s): %s\n",
-	    directory.c_str(), strerror(errno));
-      return -1;
-    }
-    
-    vector<string> excluded_plugins = explode(AmConfig::ExcludePlugins, ";");
-    set<string> excluded_plugins_s; 
-    for (vector<string>::iterator it = excluded_plugins.begin(); 
-	 it != excluded_plugins.end();it++)
-      excluded_plugins_s.insert(*it);
-
-    struct dirent* entry;
-
-    while( ((entry = readdir(dir)) != NULL) && (err == 0) ){
-      string plugin_name = string(entry->d_name);
-
-      if(plugin_name.find(".so",plugin_name.length()-3) == string::npos ){
-        continue;
-      }
-      
-      if (excluded_plugins_s.find(plugin_name.substr(0, plugin_name.length()-3)) 
-	  != excluded_plugins_s.end()) {
-	DBG("skipping excluded plugin %s\n", plugin_name.c_str());
-	continue;
-      }
-      
-      string plugin_file = directory + "/" + plugin_name;
-
-      DBG("loading %s ...\n",plugin_file.c_str());
-      if( (err = loadPlugIn(plugin_file, plugin_name, loaded_plugins)) < 0 ) {
-        ERROR("while loading plug-in '%s'\n",plugin_file.c_str());
-        return -1;
-      }
-    }
-    
-    closedir(dir);
-  } 
-  else {
-    INFO("AmPlugIn: loading modules: '%s'\n", plugins.c_str());
-
-    vector<string> plugins_list = explode(plugins, ";");
-    for (vector<string>::iterator it = plugins_list.begin(); 
-       it != plugins_list.end(); it++) {
+  
+  for (vector<string>::const_iterator it = plugins.begin(); 
+      it != plugins.end(); it++) {
       string plugin_file = *it;
       if (plugin_file == "sipctrl") {
-	WARN("sipctrl is integrated into the core, loading sipctrl "
-	     "module is not necessary any more\n");
-	WARN("please update your configuration to not load sipctrl module\n");
-	continue;
+        WARN("sipctrl is integrated into the core, loading sipctrl "
+                "module is not necessary any more\n");
+        WARN("please update your configuration to not load sipctrl module\n");
+        continue;
       }
-
+  
       if(plugin_file.find(".so",plugin_file.length()-3) == string::npos )
-        plugin_file+=".so";
-
+      plugin_file+=".so";
+  
       plugin_file = directory + "/"  + plugin_file;
       DBG("loading %s...\n",plugin_file.c_str());
       if( (err = loadPlugIn(plugin_file, plugin_file, loaded_plugins)) < 0 ) {
-        ERROR("while loading plug-in '%s'\n",plugin_file.c_str());
-        // be strict here: if plugin not loaded, stop!
-        return err; 
+      ERROR("while loading plug-in '%s'\n",plugin_file.c_str());
+      // be strict here: if plugin not loaded, stop!
+      return err; 
       }
-    }
   }
 
   DBG("AmPlugIn: modules loaded.\n");
@@ -272,15 +222,15 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   char* pname = strdup(plugin_name.c_str());
   char* bname = basename(pname);
 
-  // dsm, ivr and py_sems need RTLD_GLOBAL
-  if (!strcmp(bname, "dsm.so") || !strcmp(bname, "ivr.so") ||
-      !strcmp(bname, "py_sems.so") || !strcmp(bname, "sbc.so") ||
-      !strcmp(bname, "diameter_client.so") || !strcmp(bname, "registrar_client.so") ||
-      !strcmp(bname, "uac_auth.so") || !strcmp(bname, "msg_storage.so")
-      ) {
-      dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
-      DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'\n", file.c_str());
-  }
+//   // dsm, ivr and py_sems need RTLD_GLOBAL
+//   if (!strcmp(bname, "dsm.so") || !strcmp(bname, "ivr.so") ||
+//       !strcmp(bname, "py_sems.so") || !strcmp(bname, "sbc.so") ||
+//       !strcmp(bname, "diameter_client.so") || !strcmp(bname, "registrar_client.so") ||
+//       !strcmp(bname, "uac_auth.so") || !strcmp(bname, "msg_storage.so")
+//       ) {
+//       dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
+//       DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'\n", file.c_str());
+//   }
 
   // possibly others
   for (std::set<string>::iterator it=rtld_global_plugins.begin();
@@ -711,10 +661,10 @@ int AmPlugIn::addPayload(amci_payload_t* p)
   payloads.insert(std::make_pair(p->payload_id,p));
   id = p->payload_id;
 
-  for (i = 0; i < AmConfig::CodecOrder.size(); i++) {
-      if (p->name == AmConfig::CodecOrder[i]) break;
+  for (i = 0; i < AmConfig_.codec_order.size(); i++) {
+      if (p->name == AmConfig_.codec_order[i]) break;
   }
-  if (i >= AmConfig::CodecOrder.size()) {
+  if (i >= AmConfig_.codec_order.size()) {
       payload_order.insert(std::make_pair(id + 100, id));
       DBG("payload '%s/%i' inserted with id %i and order %i\n",
 	  p->name, p->sample_rate, id, id + 100);
@@ -794,28 +744,28 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
 {
     string m_app_name;
 
-    if(AmConfig::RegisterApplication.length() && SIP_METH_REGISTER==req.method)
-        m_app_name = AmConfig::RegisterApplication;
-    else if(AmConfig::OptionsApplication.length() && SIP_METH_OPTIONS==req.method)
-        m_app_name = AmConfig::OptionsApplication;
+    if(AmConfig_.register_application.length() && SIP_METH_REGISTER==req.method)
+        m_app_name = AmConfig_.register_application;
+    else if(AmConfig_.options_application.length() && SIP_METH_OPTIONS==req.method)
+        m_app_name = AmConfig_.options_application;
     else {
-        for(const auto &app_selector : AmConfig::Applications) {
-            switch (app_selector.AppSelect) {
-            case AmConfig::App_RURIUSER:
+        for(const auto &app_selector : AmConfig_.applications) {
+            switch (app_selector.app_select) {
+            case AmLcConfig::App_RURIUSER:
                 m_app_name = req.user;
                 break;
-            case AmConfig::App_APPHDR:
+            case AmLcConfig::App_APPHDR:
                 m_app_name = getHeader(req.hdrs, APPNAME_HDR, true);
                 break;
-            case AmConfig::App_RURIPARAM:
+            case AmLcConfig::App_RURIPARAM:
                 m_app_name = get_header_param(req.r_uri, "app");
                 break;
-            case AmConfig::App_MAPPING:
+            case AmLcConfig::App_MAPPING:
                 m_app_name = ""; // no match if not found
-                run_regex_mapping(app_selector.AppMapping, req.r_uri.c_str(), m_app_name);
+                run_regex_mapping(app_selector.app_mapping, req.r_uri.c_str(), m_app_name);
                 break;
-            case AmConfig::App_SPECIFIED:
-                m_app_name = app_selector.Application;
+            case AmLcConfig::App_SPECIFIED:
+                m_app_name = app_selector.application;
                 break;
             }
             if(!m_app_name.empty()) break;

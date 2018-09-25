@@ -29,7 +29,7 @@
 #include "AmSessionContainer.h"
 
 #include "AmConfigReader.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 #include "log.h"
 #include "AmApi.h"
 #include "AmUtils.h"
@@ -101,7 +101,7 @@ extern "C" {
     if(!PyArg_ParseTuple(args,"i",&ignore))
       return NULL;
 
-    AmConfig::IgnoreSIGCHLD = ignore;
+    AmConfig_.ignore_sig_chld = ignore;
     DBG("%sgnoring SIGCHLD.\n", ignore?"I":"Not i");
 
     return Py_None;
@@ -227,7 +227,7 @@ void IvrFactory::init_python_interpreter(const string& script_path)
 {
   if(!Py_IsInitialized()){
 
-    add_env_path("PYTHONPATH",AmConfig::PlugInPath);
+    add_env_path("PYTHONPATH",AmConfig_.plugin_path);
     Py_Initialize();
   }
 
@@ -313,7 +313,7 @@ bool IvrFactory::loadScript(const string& path)
 
   // load module configuration
   AmConfigReader cfg;
-  string cfg_file = add2path(AmConfig::ModConfigPath,1,(path + ".conf").c_str());
+  string cfg_file = add2path(AmConfig_.configs_path,1,(path + ".conf").c_str());
   config = PyDict_New();
   if(!config){
     ERROR("could not allocate new dict for config\n");
@@ -403,7 +403,7 @@ bool IvrFactory::loadScript(const string& path)
  */
 int IvrFactory::onLoad()
 {
-  if(cfg.loadFile(add2path(AmConfig::ModConfigPath,1,MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig_.configs_path,1,MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

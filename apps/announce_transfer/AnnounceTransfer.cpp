@@ -24,7 +24,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "AnnounceTransfer.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 
 #include "sems.h"
@@ -45,7 +45,7 @@ AnnounceTransferFactory::AnnounceTransferFactory(const string& _app_name)
 int AnnounceTransferFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

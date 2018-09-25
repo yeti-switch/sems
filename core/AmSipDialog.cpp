@@ -26,7 +26,6 @@
  */
 
 #include "AmSipDialog.h"
-#include "AmConfig.h"
 #include "AmSession.h"
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
@@ -42,19 +41,19 @@
 static void addTranscoderStats(string &hdrs)
 {
   // add transcoder statistics into request/reply headers
-  if (!AmConfig::TranscoderOutStatsHdr.empty()) {
+  if (!AmConfig_.transcoder_out_stats_hdr.empty()) {
     string usage;
     B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
 
-    hdrs += AmConfig::TranscoderOutStatsHdr + ": ";
+    hdrs += AmConfig_.transcoder_out_stats_hdr + ": ";
     hdrs += usage;
     hdrs += CRLF;
   }
-  if (!AmConfig::TranscoderInStatsHdr.empty()) {
+  if (!AmConfig_.transcoder_in_stats_hdr.empty()) {
     string usage;
     B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
 
-    hdrs += AmConfig::TranscoderInStatsHdr + ": ";
+    hdrs += AmConfig_.transcoder_in_stats_hdr + ": ";
     hdrs += usage;
     hdrs += CRLF;
   }
@@ -836,8 +835,8 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq,
 
   if (!(flags&SIP_FLAGS_VERBATIM)) {
     // add Signature
-    if (AmConfig::Signature.length())
-      req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig::Signature + CRLF;
+    if (AmConfig_.signature.length())
+      req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig_.signature + CRLF;
   }
 
   sip_target_set targets_set((dns_priority)getResolvePriority());

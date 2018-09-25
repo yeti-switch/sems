@@ -41,11 +41,13 @@
 #include "AmApi.h"	/* AmLoggingFacility */
 #include "AmThread.h"   /* AmMutex */
 #include "log.h"
+#include "AmLcConfig.h"
+#include "AmPlugIn.h"
 
 __thread pid_t _self_tid = 0;
 __thread pid_t _self_pid = 0;
 
-int log_level  = AmConfig::LogLevel;	/**< log level */
+int log_level  = L_INFO;	/**< log level */
 
 /** Map log levels to text labels */
 const char* log_level2str[] = { "ERROR", "WARNING", "INFO", "DEBUG" };
@@ -71,7 +73,7 @@ class SyslogLogFac : public AmLoggingFacility {
 
  public:
   SyslogLogFac()
-    : AmLoggingFacility("syslog",AmConfig::LogLevel),
+    : AmLoggingFacility("syslog",AmConfig_.log_level),
       facility(LOG_DAEMON)
   {
     _inc_ref();
@@ -181,7 +183,7 @@ int set_syslog_facility(const char* str)
 class StderrLogFac : public AmLoggingFacility {
     static StderrLogFac *_instance;
     StderrLogFac()
-        : AmLoggingFacility("stderr",AmConfig::LogLevel)
+        : AmLoggingFacility("stderr",AmConfig_.log_level)
     { }
   public:
     static StderrLogFac &instance() {

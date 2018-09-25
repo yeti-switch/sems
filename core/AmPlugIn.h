@@ -143,7 +143,7 @@ class AmPlugIn : public AmPayloadProvider
    * Loads all plug-ins from the directory given as parameter. 
    * @return -1 if failed, else 0.
    */
-  int load(const string& directory, const string& plugins);
+  int load(const string& directory, const vector<string>& plugins);
 
   /** register logging plugins to receive logging messages */
   void registerLoggingPlugins();

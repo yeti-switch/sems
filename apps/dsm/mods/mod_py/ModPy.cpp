@@ -32,6 +32,7 @@
 #include "DSMSession.h"
 #include "AmSession.h"
 #include "PyDSMSession.h"
+#include "AmLcConfig.h"
 #include "PyDSM.h"
 #include "AmArg.h"
    #include <stdio.h>
@@ -61,7 +62,7 @@ SCPyModule::SCPyModule() {
 
 int SCPyModule::preload() {
   if(!Py_IsInitialized()){
-    add_env_path("PYTHONPATH",AmConfig::PlugInPath);
+    add_env_path("PYTHONPATH",AmConfig_.plugin_path);
     Py_Initialize();
     DBG("Python version %s\n", Py_GetVersion());
   }

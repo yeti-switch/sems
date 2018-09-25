@@ -2,7 +2,6 @@
 #include "AmEventDispatcher.h"
 #include "AmSessionContainer.h"
 #include "AmUtils.h"
-#include "AmConfig.h"
 #include "ampi/HttpClientAPI.h"
 
 #include <cstdio>
@@ -184,12 +183,12 @@ inline unsigned int resample(
 
     if(!state.get()) {
 #ifdef USE_INTERNAL_RESAMPLER
-        if (AmConfig::ResamplingImplementationType == AmAudio::INTERNAL_RESAMPLER) {
+        if (AmConfig_.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
             state.reset(new AmInternalResamplerState());
         } else
 #endif
 #ifdef USE_LIBSAMPLERATE
-        if (AmConfig::ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
+        if (AmConfig_.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
             state.reset(new AmLibSamplerateResamplingState());
         } else
 #endif

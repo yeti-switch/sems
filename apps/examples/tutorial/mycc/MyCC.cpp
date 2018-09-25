@@ -6,6 +6,7 @@
 #include "AmUtils.h"
 #include "AmAudioFile.h"
 #include "AmPlugIn.h"
+#include "AmLcConfig.h"
 #include "AmMediaProcessor.h"
 
 #include <sys/time.h>
@@ -33,7 +34,7 @@ MyCCFactory::MyCCFactory(const string& _app_name)
 int MyCCFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
   
   InitialAnnouncement = cfg.getParameter("initial_announcement", "/tmp/hello.wav");

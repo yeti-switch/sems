@@ -33,7 +33,7 @@
 #include <netinet/in.h>
 
 #include "AmLcConfig.h"
-#include "AmConfig.h"
+#include "sip/msg_sensor.h"
 
 class AmRtpPacketTracer;
 class msg_logger;

@@ -63,7 +63,7 @@ HttpClient::~HttpClient()
 int HttpClient::configure()
 {
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
         return -1;
     if(destinations.configure(cfg)){
         ERROR("can't configure destinations");

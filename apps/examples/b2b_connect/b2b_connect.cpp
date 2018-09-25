@@ -30,6 +30,7 @@
 #include "AmMediaProcessor.h"
 #include "AmConfigReader.h"
 #include "AmSessionContainer.h"
+#include "AmLcConfig.h"
 
 bool b2b_connectFactory::TransparentHeaders = true; // default
 bool b2b_connectFactory::TransparentDestination = false; // default
@@ -45,9 +46,9 @@ b2b_connectFactory::b2b_connectFactory(const string& _app_name)
 int b2b_connectFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
     INFO("configuration file '%s' not found. using defaults.\n",
-	 (AmConfig::ModConfigPath + string(MOD_NAME ".conf")).c_str());
+	 (AmConfig_.configs_path + string(MOD_NAME ".conf")).c_str());
     return 0;
   }
 

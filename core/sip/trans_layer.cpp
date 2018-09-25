@@ -49,12 +49,10 @@
 #include "sip_timers.h"
 #include "tr_blacklist.h"
 
-#define DEFAULT_BL_TTL 60000 /* 60s */
-
 #include "log.h"
 
 #include "AmUtils.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 #include "AmSipEvent.h"
 #include "AmSessionContainer.h"
 
@@ -66,7 +64,6 @@
 #include <assert.h>
 
 #include <algorithm>
-#include <AmLcConfig.h>
 
 #define update_reply_msg(new_code, new_reason) \
     msg->u.reply->code = new_code; \
@@ -78,8 +75,7 @@ static trsp_acl fake_opt_acl;
 
 static const cstring sip_resp_forbidden("Forbidden");
 
-bool _trans_layer::accept_fr_without_totag = false;
-unsigned int _trans_layer::default_bl_ttl = DEFAULT_BL_TTL;
+unsigned int _trans_layer::default_bl_ttl;
 
 _trans_layer::_trans_layer()
     : ua(NULL),
@@ -1973,8 +1969,6 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 			t->state == TS_PROCEEDING)
 		{
 			if(reply_code == 503) {
-				/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
-					 default_bl_ttl,"503");*/
 				if(msg->local_socket) { // remote reply
 					if(!try_next_ip(bucket,t,true))
 						forget_reply = true;
@@ -2136,8 +2130,6 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
     else { // non-INVITE transaction
 
 	if(reply_code == 503) {
-		/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
-						 default_bl_ttl,"503");*/
 	    if(!try_next_ip(bucket,t,false))
 		goto end;
 	}
@@ -2700,12 +2692,6 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 
     case STIMER_BL:
 	tr->clear_timer(STIMER_BL);
-	if(!(tr->flags & TR_FLAG_DISABLE_BL)) {
-	    // insert destination to blacklist
-		/*tr_blacklist::instance()->insert(&tr->msg->remote_ip,
-					     default_bl_ttl,
-						 "timeout");*/
-	}
 	bucket->remove(tr);
 	break;
 
@@ -2760,8 +2746,8 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
     char local_ip[NI_MAXHOST];
     if(am_inet_ntop(&from,local_ip,NI_MAXHOST) != NULL) {
 	map<string,unsigned short>::iterator if_it =
-	           AmLcConfig::GetInstance().local_sip_ip2if.find(local_ip);
-	if(if_it == AmLcConfig::GetInstance().local_sip_ip2if.end()){
+	           AmConfig_.local_sip_ip2if.find(local_ip);
+	if(if_it == AmConfig_.local_sip_ip2if.end()){
 	    ERROR("Could not find a local interface for "
 		  "resolved local IP (local_ip='%s')",
 		  local_ip);

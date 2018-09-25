@@ -1,5 +1,5 @@
 #include "Am100rel.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
@@ -11,9 +11,9 @@
 Am100rel::Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl)
   : dlg(dlg), hdl(hdl),
     rseq(0), rseq_1st(0), rseq_confirmed(false),
-    initial_state(AmConfig::rel100),
-    uac_state(AmConfig::rel100),
-    uas_state(AmConfig::rel100)
+    initial_state(AmConfig_.rel100),
+    uac_state(AmConfig_.rel100),
+    uas_state(AmConfig_.rel100)
 {
   // if (reliable_1xx)
   //   rseq = 0;

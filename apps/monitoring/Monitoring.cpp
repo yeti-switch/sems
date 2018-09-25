@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <unistd.h>
+#include <AmLcConfig.h>
 
 //EXPORT_PLUGIN_CLASS_FACTORY(Monitor, MOD_NAME);
 extern "C" void* plugin_class_create()
@@ -66,7 +67,7 @@ Monitor::~Monitor() {
 int Monitor::onLoad() {
   // todo: if GC configured, start thread
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
     DBG("monitoring not starting garbage collector\n");
     return 0;
   }
