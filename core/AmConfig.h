@@ -168,6 +168,7 @@ struct AmConfig
   static bool AcceptForkedDialogs;
 
   static bool ShutdownMode;
+  static bool ShutdownModeAllowUAC;
   static unsigned int ShutdownModeErrCode;
   static string ShutdownModeErrReason;
 
