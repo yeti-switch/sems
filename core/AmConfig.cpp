@@ -126,6 +126,7 @@ string       AmConfig::CPSLimitErrReason   = "Server overload";
 bool         AmConfig::AcceptForkedDialogs     = true;
 
 bool         AmConfig::ShutdownMode            = false;
+bool         AmConfig::ShutdownModeAllowUAC    = false;
 unsigned int AmConfig::ShutdownModeErrCode     = 503;
 string       AmConfig::ShutdownModeErrReason   = "Server shutting down";
   
@@ -663,6 +664,8 @@ int AmConfig::readConfiguration()
       ShutdownModeErrReason = c_reply.substr(spos+1);
     }
   }
+
+  ShutdownModeAllowUAC = (cfg.getParameter("shutdown_mode_allow_uac","no")=="yes");
 
   OptionsTranscoderOutStatsHdr = cfg.getParameter("options_transcoder_out_stats_hdr");
   OptionsTranscoderInStatsHdr = cfg.getParameter("options_transcoder_in_stats_hdr");

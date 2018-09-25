@@ -116,6 +116,7 @@ class AmSessionContainer : public AmThread
    */
   AmSession* createSession(const AmSipRequest& req, 
 			   string& app_name,
+			   bool is_uac = false,
 			   AmArg* session_params = NULL);
 
   /**
