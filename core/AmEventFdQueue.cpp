@@ -1,6 +1,6 @@
 #include "AmEventFdQueue.h"
 #include "log.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 
 #include <typeinfo>
 AmEventFdQueue::AmEventFdQueue(AmEventHandler* handler)
@@ -25,7 +25,7 @@ void AmEventFdQueue::postEvent(AmEvent* event)
 {
   uint64_t u = 1;
 
-  if (AmConfig::LogEvents) 
+  if (AmConfig_.log_events) 
     DBG("AmEventQueue: trying to post event\n");
 
   m_queue.lock();
@@ -38,7 +38,7 @@ void AmEventFdQueue::postEvent(AmEvent* event)
 
   m_queue.unlock();
 
-  if (AmConfig::LogEvents) 
+  if (AmConfig_.log_events) 
     DBG("AmEventQueue: event posted\n");
 }
 
@@ -52,11 +52,11 @@ void AmEventFdQueue::processEvents()
     ev_queue.pop();
     m_queue.unlock();
 
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("before processing event (%s)\n",
 	  typeid(*event).name());
     handler->process(event);
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("event processed (%s)\n",
 	  typeid(*event).name());
     delete event;
@@ -78,10 +78,10 @@ void AmEventFdQueue::processSingleEvent()
       ev_queue.pop();
       m_queue.unlock();
 
-      if (AmConfig::LogEvents)
+      if (AmConfig_.log_events)
         DBG("before processing event\n");
       handler->process(event);
-      if (AmConfig::LogEvents)
+      if (AmConfig_.log_events)
         DBG("event processed\n");
       delete event;
 

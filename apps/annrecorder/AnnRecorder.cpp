@@ -24,11 +24,11 @@
  */
 
 #include "AnnRecorder.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"
 #include "AmPromptCollection.h"
 #include "AmUriParser.h"
+#include "AmLcConfig.h"
 #include "../msg_storage/MsgStorageAPI.h"
 #include "sems.h"
 #include "log.h"
@@ -80,7 +80,7 @@ AnnRecorderFactory::AnnRecorderFactory(const string& _app_name)
 int AnnRecorderFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

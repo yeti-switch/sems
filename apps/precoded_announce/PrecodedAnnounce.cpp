@@ -29,6 +29,7 @@
 
 #include "log.h"
 #include "AmConfigReader.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 
 EXPORT_SESSION_FACTORY(PrecodedFactory,MOD_NAME);
@@ -41,7 +42,7 @@ PrecodedFactory::PrecodedFactory(const string& _app_name)
 int PrecodedFactory::onLoad()
 {
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
 	return -1;
 
     if (precoded_file.open(cfg.getParameter("announcement_file")) < 0) {

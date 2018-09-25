@@ -25,7 +25,6 @@
 
 #include "AmApi.h"
 #include "AmSession.h"
-#include "AmConfig.h"
 #include "AmAudio.h"
 #include "AmConfigReader.h"
 #include "log.h"
@@ -48,7 +47,7 @@ int EchoFactory::onLoad()
 {
   bool useSessionTimer = false;
     
-  if(conf.loadFile(AmConfig::ModConfigPath + string(MODULE_NAME)+ ".conf")){
+  if(conf.loadFile(AmConfig_.configs_path + string(MODULE_NAME)+ ".conf")){
     WARN("Could not open " MODULE_NAME ".conf\n");
     WARN("assuming that default values are fine\n");
   }

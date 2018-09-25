@@ -25,14 +25,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "AmConfig.h"
 #include "AmRtpAudio.h"
 #include "AmAudioFileRecorderMono.h"
 #include "AmAudioFileRecorderStereoMP3.h"
-#include <sys/time.h>
-#include <assert.h>
 #include "AmSession.h"
 #include "AmPlayoutBuffer.h"
+#include "AmUtils.h"
+#include <sys/time.h>
+#include <assert.h>
 #include <sstream>
 
 AmAudioRtpFormat::AmAudioRtpFormat()

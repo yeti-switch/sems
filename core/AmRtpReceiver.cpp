@@ -27,7 +27,6 @@
 
 #include "AmRtpReceiver.h"
 #include "log.h"
-#include "AmConfig.h"
 
 #include <errno.h>
 
@@ -38,6 +37,7 @@
 
 #include <sys/time.h>
 #include <sys/epoll.h>
+#include "AmLcConfig.h"
 
 #define EPOLL_MAX_EVENTS 2048
 
@@ -87,7 +87,7 @@ void StreamCtxMap::put_pended(){
 
 _AmRtpReceiver::_AmRtpReceiver()
 {
-  n_receivers = AmConfig::RTPReceiverThreads;
+  n_receivers = AmConfig_.rtp_recv_threads;
   receivers = new AmRtpReceiverThread[n_receivers];
 }
 

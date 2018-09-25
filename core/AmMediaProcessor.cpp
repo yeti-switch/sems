@@ -26,6 +26,7 @@
 #include "AmMediaProcessor.h"
 #include "AmSession.h"
 #include "AmRtpStream.h"
+#include "AmUtils.h"
 
 #include <assert.h>
 #include <sys/time.h>
@@ -62,7 +63,7 @@ AmMediaProcessor::~AmMediaProcessor()
 
 void AmMediaProcessor::init() {
   // start the threads
-  num_threads = AmConfig::MediaProcessorThreads;
+  num_threads = AmConfig_.media_proc_threads;
   assert(num_threads > 0);
   DBG("Starting %u MediaProcessorThreads.\n", num_threads);
   threads = new AmMediaProcessorThread*[num_threads];

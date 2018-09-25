@@ -27,8 +27,8 @@
 
 #include "AmEventDispatcher.h"
 #include "AmSipEvent.h"
-#include "AmConfig.h"
 #include "sip/hash.h"
+#include "AmLcConfig.h"
 
 unsigned int AmEventDispatcher::hash(const string& s1)
 {
@@ -96,7 +96,7 @@ bool AmEventDispatcher::addEventQueue(const string& local_tag,
 
     // try to find via id_lookup
     string id = callid+remote_tag;
-    if(AmConfig::AcceptForkedDialogs){
+    if(AmConfig_.accept_forked_dialogs){
       id += via_branch;
     }
     unsigned int id_bucket = hash(id);
@@ -177,7 +177,7 @@ bool AmEventDispatcher::post(const string& callid,
 			     AmEvent* ev)
 {
     string id = callid+remote_tag;
-    if(AmConfig::AcceptForkedDialogs){
+    if(AmConfig_.accept_forked_dialogs){
       id += via_branch;
     }
     unsigned int id_bucket = hash(id);
@@ -304,7 +304,7 @@ bool AmEventDispatcher::postSipRequest(const AmSipRequest& req)
     string remote_tag = req.from_tag;
 
     string id = callid+remote_tag;
-    if(AmConfig::AcceptForkedDialogs){
+    if(AmConfig_.accept_forked_dialogs){
       id += req.via_branch;
     }
     unsigned int id_bucket = hash(id);

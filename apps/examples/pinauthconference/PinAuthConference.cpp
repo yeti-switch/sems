@@ -26,6 +26,7 @@
 #include "PinAuthConference.h"
 #include "AmConferenceStatus.h"
 #include "AmUtils.h"
+#include "AmLcConfig.h"
 #include "log.h"
 
 #define APP_NAME "pinauthconference"
@@ -43,7 +44,7 @@ PlayoutType PinAuthConferenceFactory::m_PlayoutType = ADAPTIVE_PLAYOUT;
 int PinAuthConferenceFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

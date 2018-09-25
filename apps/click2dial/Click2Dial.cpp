@@ -25,8 +25,8 @@
  */
 
 #include "Click2Dial.h"
+#include "AmLcConfig.h"
 #include "AmSessionContainer.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmApi.h"
 #include "AmPlugIn.h"
@@ -54,7 +54,7 @@ Click2DialFactory::Click2DialFactory(const string& _app_name)
 int Click2DialFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

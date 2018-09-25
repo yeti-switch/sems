@@ -1,6 +1,7 @@
 #include "RadiusClient.h"
 
 #include "AmSessionContainer.h"
+#include "AmUtils.h"
 #include "log.h"
 
 #define MOD_NAME "radius_client"

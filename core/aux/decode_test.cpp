@@ -1,12 +1,12 @@
 #include "errno.h"
 
 #include "log.h"
-#include "AmConfig.h"
 #include "AmPlugIn.h"
 #include "AmSdp.h"
 #include "AmAudio.h"
 #include "AmUtils.h"
 #include "AmAudioFile.h"
+#include "AmLcConfig.h"
 
 #include <fstream>
 #include <iostream>
@@ -34,12 +34,13 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	string plugin = argv[1];
+	vector<string> plugin;
+    plugin.push_back(argv[1]);
 	string payload_name = argv[2];
 	string path = argv[3];
 	char *out_file_path = argv[4];
 
-	if(AmConfig::readConfiguration()){
+	if(AmConfig_.readConfiguration()){
 		ERROR("Errors occured while reading configuration file: exiting.");
 		return EXIT_FAILURE;
 	}
@@ -49,17 +50,19 @@ int main(int argc, char *argv[])
 	am_plugin.init();
 
 	INFO("Loading audio plug-in wav");
-	if(am_plugin.load(AmConfig::PlugInPath, "wav")){
+	vector<string> wavplugin;
+    wavplugin.push_back("wav");
+	if(am_plugin.load(AmConfig_.modules_path, wavplugin)){
 		ERROR("Can't load plugins. exiting.");
 		return EXIT_FAILURE;
 	}
-	INFO("Loading audio plug-in %s\n",plugin.c_str());
+	INFO("Loading audio plug-in %s\n",plugin[0].c_str());
 
 	transform(payload_name.begin(), payload_name.end(), payload_name.begin(), ::tolower);
 	if(payload_name=="pcmu" || payload_name=="pcma") {
-		INFO("%s is built-in codec. skip plugin loading",plugin.c_str());
+		INFO("%s is built-in codec. skip plugin loading",plugin[0].c_str());
 	} else {
-		if(am_plugin.load(AmConfig::PlugInPath, plugin)){
+		if(am_plugin.load(AmConfig_.modules_path, plugin)){
 			ERROR("Can't load plugins. exiting.");
 			return EXIT_FAILURE;
 		}

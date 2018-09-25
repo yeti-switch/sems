@@ -27,9 +27,9 @@
 
 #include "AmEventQueue.h"
 #include "log.h"
-#include "AmConfig.h"
 
 #include <typeinfo>
+#include "AmLcConfig.h"
 AmEventQueue::AmEventQueue(AmEventHandler* handler)
   : handler(handler),
     wakeup_handler(NULL),
@@ -50,7 +50,7 @@ AmEventQueue::~AmEventQueue()
 
 void AmEventQueue::postEvent(AmEvent* event)
 {
-  if (AmConfig::LogEvents) 
+  if (AmConfig_.log_events) 
     DBG("AmEventQueue: trying to post event\n");
 
   m_queue.lock();
@@ -66,7 +66,7 @@ void AmEventQueue::postEvent(AmEvent* event)
 
   m_queue.unlock();
 
-  if (AmConfig::LogEvents) 
+  if (AmConfig_.log_events) 
     DBG("AmEventQueue: event posted\n");
 }
 
@@ -80,11 +80,11 @@ void AmEventQueue::processEvents()
     ev_queue.pop();
     m_queue.unlock();
 
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("before processing event (%s)\n",
 	  typeid(*event).name());
     handler->process(event);
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("event processed (%s)\n",
 	  typeid(*event).name());
     delete event;
@@ -110,10 +110,10 @@ void AmEventQueue::processSingleEvent()
     ev_queue.pop();
     m_queue.unlock();
 
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("before processing event\n");
     handler->process(event);
-    if (AmConfig::LogEvents) 
+    if (AmConfig_.log_events) 
       DBG("event processed\n");
     delete event;
 

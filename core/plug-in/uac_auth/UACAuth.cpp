@@ -30,6 +30,7 @@
 #include "AmSipMsg.h"
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
+#include "AmLcConfig.h"
 
 #include <map>
 
@@ -114,7 +115,7 @@ int UACAuthFactory::onLoad()
 {
   string secret;
   AmConfigReader conf;
-  string cfg_file_path = AmConfig::ModConfigPath + "uac_auth.conf";
+  string cfg_file_path = AmConfig_.configs_path + "uac_auth.conf";
   if(conf.loadFile(cfg_file_path)){
     WARN("Could not open '%s', assuming that default values are fine\n",
 	 cfg_file_path.c_str());
@@ -234,7 +235,7 @@ bool UACAuth::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 	      // thinks its new dlg
 	      dlg->setRemoteTag(string());
 
-	      if (AmConfig::ProxyStickyAuth) {
+	      if (AmConfig_.proxy_sticky_auth) {
 		// update remote URI to resolved IP
 		size_t hpos = dlg->getRemoteUri().find("@");
 		if (hpos != string::npos && reply.remote_ip.length()) {

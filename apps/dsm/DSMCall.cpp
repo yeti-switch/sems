@@ -29,6 +29,7 @@
 #include "DSMCall.h"
 #include "AmUtils.h"
 #include "AmMediaProcessor.h"
+#include "AmLcConfig.h"
 #include "DSM.h"
 #include "AmConferenceStatus.h"
 #include "AmAdvancedAudio.h"
@@ -585,7 +586,7 @@ void DSMCall::process(AmEvent* event)
   if (timeout_ev) {
     map<string, string> params;
     params["type"] = "rtp_timeout";
-    params["timeout_value"] = int2str(AmConfig::DeadRtpTime);
+    params["timeout_value"] = int2str(AmConfig_.dead_rtp_time);
     engine.runEvent(this, this, DSMCondition::RTPTimeout, &params);
     return;
   }

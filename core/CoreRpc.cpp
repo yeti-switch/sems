@@ -15,6 +15,7 @@
 
 #include "signal.h"
 #include <fstream>
+#include <map>
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -65,9 +66,9 @@ static void setLoggingFacilityLogLevel(const AmArg& args, AmArg& ret,const strin
 
 static void setDumpLevel(int dump_level){
     INFO("change system dump_level from %s to %s",
-        dump_level2str(AmConfig::DumpLevel),
+        dump_level2str(AmConfig_.dump_level),
         dump_level2str(dump_level));
-    AmConfig::DumpLevel = dump_level;
+    AmConfig_.dump_level = dump_level;
 }
 
 static const char *dump_level_names[] = {
@@ -128,8 +129,8 @@ static void dump_sessions_info(
 
 void CoreRpc::set_system_shutdown(bool shutdown)
 {
-    AmConfig::ShutdownMode = shutdown;
-    INFO("ShutDownMode changed to %d",AmConfig::ShutdownMode);
+    AmConfig_.shutdown_mode = shutdown;
+    INFO("ShutDownMode changed to %d",AmConfig_.shutdown_mode);
 
     if(shutdown) {
         gettimeofday(&last_shutdown_time,NULL);
@@ -137,7 +138,7 @@ void CoreRpc::set_system_shutdown(bool shutdown)
         timerclear(&last_shutdown_time);
     }
 
-    if(AmConfig::ShutdownMode&&!AmSession::getSessionNum()){
+    if(AmConfig_.shutdown_mode&&!AmSession::getSessionNum()){
         //commit suicide immediatly
         INFO("no active sessions on graceful shutdown command. exit immediately");
         kill(getpid(),SIGINT);
@@ -210,8 +211,8 @@ int CoreRpc::onLoad()
 {
     _inc_ref();
 
-    if(!AmConfig::LogDumpPath.empty()
-       && check_dir_write_permissions(AmConfig::LogDumpPath))
+    if(!AmConfig_.log_dump_path.empty()
+       && check_dir_write_permissions(AmConfig_.log_dump_path))
     {
         return -1;
     }
@@ -257,8 +258,8 @@ void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)
 void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
 {
     AmArg &sig = ret["sip"];
-    for(int i=0; i<(int)AmLcConfig::GetInstance().sip_ifs.size(); i++) {
-        SIP_interface& iface = AmLcConfig::GetInstance().sip_ifs[i];
+    for(int i=0; i<(int)AmConfig_.sip_ifs.size(); i++) {
+        SIP_interface& iface = AmConfig_.sip_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
         am_iface["media_if_name"] = iface.default_media_if;
@@ -285,8 +286,8 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
     }
 
     AmArg &rtp = ret["media"];
-    for(int i=0; i<(int)AmLcConfig::GetInstance().media_ifs.size(); i++) {
-        MEDIA_interface& iface = AmLcConfig::GetInstance().media_ifs[i];
+    for(int i=0; i<(int)AmConfig_.media_ifs.size(); i++) {
+        MEDIA_interface& iface = AmConfig_.media_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
         AmArg am_mearr;
@@ -311,18 +312,18 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
     }
 
     AmArg &sip_map = ret["sip_ip_map"];
-    for(multimap<string,unsigned short>::iterator it = AmLcConfig::GetInstance().local_sip_ip2if.begin();
-        it != AmLcConfig::GetInstance().local_sip_ip2if.end(); ++it) {
-        SIP_interface& iface = AmLcConfig::GetInstance().sip_ifs[it->second];
+    for(std::multimap<string,unsigned short>::iterator it = AmConfig_.local_sip_ip2if.begin();
+        it != AmConfig_.local_sip_ip2if.end(); ++it) {
+        SIP_interface& iface = AmConfig_.sip_ifs[it->second];
         sip_map[it->first] = iface.name.empty() ? "default" : iface.name;
     }
 
     AmArg &sip_names_map = ret["sip_names_map"];
-    for(const auto &m: AmLcConfig::GetInstance().sip_if_names)
+    for(const auto &m: AmConfig_.sip_if_names)
         sip_names_map[m.first] = m.second;
 
     AmArg &media_names_map = ret["media_names_map"];
-    for(const auto &m: AmLcConfig::GetInstance().media_if_names)
+    for(const auto &m: AmConfig_.media_if_names)
         media_names_map[m.first] = m.second;
 }
 
@@ -382,7 +383,7 @@ void CoreRpc::setLogDiLogLevel(const AmArg& args, AmArg& ret)
 
 void CoreRpc::showDumpLevel(const AmArg&, AmArg& ret)
 {
-    ret = dump_level2str(AmConfig::DumpLevel);
+    ret = dump_level2str(AmConfig_.dump_level);
 }
 
 void CoreRpc::setDumpLevelNone(const AmArg&, AmArg& ret)
@@ -411,12 +412,12 @@ void CoreRpc::setDumpLevelFull(const AmArg&, AmArg& ret)
 
 void CoreRpc::showStatus(const AmArg&, AmArg& ret)
 {
-    ret["shutdown_mode"] = (bool)AmConfig::ShutdownMode;
+    ret["shutdown_mode"] = (bool)AmConfig_.shutdown_mode;
     ret["shutdown_request_time"] = !timerisset(&last_shutdown_time) ?
         AmArg() : timeval2str(last_shutdown_time);
     ret["core_version"] = SEMS_VERSION;
     ret["sessions"] = (int)AmSession::getSessionNum();
-    ret["dump_level"] = dump_level2str(AmConfig::DumpLevel);
+    ret["dump_level"] = dump_level2str(AmConfig_.dump_level);
 
     time_t now = time(NULL);
     ret["localtime"] = now;
@@ -460,9 +461,9 @@ void CoreRpc::showSessionsCount(const AmArg&, AmArg& ret)
 
 void CoreRpc::showSessionsLimit(const AmArg&, AmArg& ret)
 {
-    ret["limit"] = (long int)AmConfig::SessionLimit;
-    ret["limit_error_code"] = (long int)AmConfig::SessionLimitErrCode;
-    ret["limit_error_reason"] = AmConfig::SessionLimitErrReason;
+    ret["limit"] = (long int)AmConfig_.session_limit;
+    ret["limit_error_code"] = (long int)AmConfig_.session_limit_err_code;
+    ret["limit_error_reason"] = AmConfig_.session_limit_err_reason;
 }
 
 void CoreRpc::setSessionsLimit(const AmArg& args, AmArg& ret)
@@ -480,9 +481,9 @@ void CoreRpc::setSessionsLimit(const AmArg& args, AmArg& ret)
         throw AmSession::Exception(500,"non integer value for overload response code");
     }
 
-    AmConfig::SessionLimit = limit;
-    AmConfig::SessionLimitErrCode = code;
-    AmConfig::SessionLimitErrReason = args.get(2).asCStr();
+    AmConfig_.session_limit = limit;
+    AmConfig_.session_limit_err_code = code;
+    AmConfig_.session_limit_err_reason = args.get(2).asCStr();
 
     ret = RPC_CMD_SUCC;
 }
@@ -600,7 +601,7 @@ void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
 
 void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
 {
-    if(AmConfig::LogDumpPath.empty())
+    if(AmConfig_.log_dump_path.empty())
         throw AmSession::Exception(500,"log_dump_path is not set");
 
     AmDynInvokeFactory* di_log = AmPlugIn::instance()->getFactory4Di("di_log");
@@ -610,7 +611,7 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
     struct timeval t;
     gettimeofday(&t,NULL);
 
-    string path = AmConfig::LogDumpPath + "/";
+    string path = AmConfig_.log_dump_path + "/";
     path += int2str((unsigned int)t.tv_sec) + "-";
     path += int2hex(get_random());
     path += int2hex(t.tv_sec) + int2hex(t.tv_usec);

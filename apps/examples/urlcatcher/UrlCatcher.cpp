@@ -24,9 +24,9 @@
  */
 
 #include "UrlCatcher.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"
+#include "AmLcConfig.h"
 
 #include "sems.h"
 #include "log.h"
@@ -49,7 +49,7 @@ int UrlCatcherFactory::onLoad()
 {
 
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
     ExecCmd = DEFAULT_EXEC_CMD;
     return 0;
   }

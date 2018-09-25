@@ -6,6 +6,7 @@
 #include "MsgStorage.h"
 
 #include "AmConfigReader.h"
+#include "AmLcConfig.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -34,7 +35,7 @@ int MsgStorage::onLoad() {
   msg_dir = MSG_DIR;
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
     DBG("no configuration could be loaded, assuming defaults.\n");
   } else {
       msg_dir = cfg.getParameter("storage_dir",MSG_DIR);

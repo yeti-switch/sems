@@ -8,6 +8,7 @@
 #include "AmPlugIn.h"
 #include "AmSession.h"
 #include "AmConfigReader.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 #include "log.h"
 #include "mwi.h"
@@ -43,7 +44,7 @@ int MWI::onLoad()
   MessageStorage->invoke("events_subscribe",es_args,ret);
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + "mwi.conf")) {
+  if(cfg.loadFile(AmConfig_.configs_path + "mwi.conf")) {
     ERROR("can not load configuration file\n");
     return -1;
   };

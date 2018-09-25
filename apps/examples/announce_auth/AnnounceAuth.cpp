@@ -25,7 +25,6 @@
  */
 
 #include "AnnounceAuth.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 
 #include "sems.h"
@@ -34,6 +33,7 @@
 #include "ampi/UACAuthAPI.h"
 #include "AmUAC.h"
 #include "AmPlugIn.h"
+#include "AmLcConfig.h"
 
 #define MOD_NAME "announce_auth"
 
@@ -50,7 +50,7 @@ AnnounceAuthFactory::AnnounceAuthFactory(const string& _app_name)
 int AnnounceAuthFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

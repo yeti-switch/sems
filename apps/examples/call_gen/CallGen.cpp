@@ -29,6 +29,7 @@
 #include "log.h"
 #include "AmUAC.h"
 #include "AmPlugIn.h"
+#include "AmLcConfig.h"
 #include "AmSessionContainer.h"
 #include "AmMediaProcessor.h"
 
@@ -74,7 +75,7 @@ int CallGenFactory::load() {
   configured = true;
 
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

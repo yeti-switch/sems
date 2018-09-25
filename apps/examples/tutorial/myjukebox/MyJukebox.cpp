@@ -5,6 +5,7 @@
 #include "AmConfigReader.h"
 #include "AmUtils.h"
 #include "AmAudioFile.h"
+#include "AmLcConfig.h"
 
 #define MOD_NAME "myjukebox"
 
@@ -20,7 +21,7 @@ MyJukeboxFactory::MyJukeboxFactory(const string& _app_name)
 int MyJukeboxFactory::onLoad()
 {
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
 	return -1;
 
     JukeboxDir = cfg.getParameter("jukebox_dir","/tmp/");

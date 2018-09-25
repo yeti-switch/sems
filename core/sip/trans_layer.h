@@ -135,13 +135,6 @@ private:
 public:
 
     /**
-     * Config option: if true, final replies without 
-     * a to-tag will be accepted for requests which do not
-     * create a dialog.
-     */
-    static bool accept_fr_without_totag;
-
-    /**
      * Config option: default blacklist time-to-live
      */
     static unsigned int default_bl_ttl;

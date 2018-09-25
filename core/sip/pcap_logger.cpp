@@ -1,7 +1,7 @@
 #include "pcap_logger.h"
 
 #include "log.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -90,8 +90,8 @@ static uint16_t _chksum(uint32_t sum)
 
 pcap_logger::pcap_logger()
 {
-  if(!AmConfig::PcapUploadQueueName.empty())
-    upload_destination = &AmConfig::PcapUploadQueueName;
+  if(!AmConfig_.pcap_upload_queue_name.empty())
+    upload_destination = &AmConfig_.pcap_upload_queue_name;
 }
 
 int pcap_logger::write_file_header()

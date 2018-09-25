@@ -29,6 +29,7 @@
 #include "AmPlugIn.h"
 #include "AmSessionContainer.h"
 #include "AmUriParser.h"
+#include "AmLcConfig.h"
 #include "../msg_storage/MsgStorageAPI.h"
 
 #include "VoiceboxDialog.h"
@@ -180,7 +181,7 @@ AmPromptCollection* VoiceboxFactory::loadPrompts(string prompt_base_path,
 int VoiceboxFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

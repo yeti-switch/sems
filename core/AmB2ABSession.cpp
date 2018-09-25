@@ -25,7 +25,6 @@
 
 #include "AmB2ABSession.h"
 #include "AmSessionContainer.h"
-#include "AmConfig.h"
 #include "AmMediaProcessor.h"
 #include "ampi/MonitoringAPI.h"
 

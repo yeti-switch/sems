@@ -29,7 +29,6 @@
 #include "AmSipMsg.h"
 #include "AmSession.h"
 #include "AmSessionContainer.h"
-#include "AmConfig.h"
 
 string AmUAC::dialout(const string& user,
 		      const string& app_name,

@@ -25,13 +25,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "AmConfigReader.h"
-#include "AmConfig.h"
 #include "log.h"
 #include "AmUtils.h"
 #include "md5.h"
 
 #include <errno.h>
 #include <fstream>
+#include "AmLcConfig.h"
 
 #define IS_SPACE(c) ((c == ' ') || (c == '\t'))
 
@@ -108,7 +108,7 @@ int  AmConfigReader::loadFile(const string& path)
 	inc_end = c;
 	string fname = string(inc_beg,inc_end-inc_beg);
 	if (fname.length() && fname[0] != '/')
-	  fname = AmConfig::ModConfigPath + fname;
+	  fname = AmConfig_.configs_path + fname;
 	if(loadFile(fname))
 	    goto error;
 	continue;
@@ -165,7 +165,7 @@ int  AmConfigReader::loadFile(const string& path)
 
       // small hack to make include work with right path
       if (keyname == "plugin_config_path")
-	AmConfig::ModConfigPath = val;
+	AmConfig_.configs_path = val;
 
     } else
       goto syntax_error;
@@ -183,7 +183,7 @@ int  AmConfigReader::loadFile(const string& path)
 
 int  AmConfigReader::loadPluginConf(const string& mod_name)
 {
-  return loadFile(add2path(AmConfig::ModConfigPath,1,
+  return loadFile(add2path(AmConfig_.configs_path,1,
 			   string(mod_name + CONFIG_FILE_SUFFIX).c_str()));
 }
 

@@ -2,7 +2,7 @@
 #include "AmSessionContainer.h"
 #include "AmSession.h"
 #include "AmAudio.h"
-#include "AmConfig.h"
+#include "AmUtils.h"
 
 #include "RtspClient.h"
 #include "RtspAudio.h"

@@ -263,7 +263,7 @@ bool SIPRegistrarClient::configure()
     timer.link(epoll_fd);
 
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
+    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
         DBG("missed or wrong configuration file. shaper will be disabled by default");
         return true;
     }

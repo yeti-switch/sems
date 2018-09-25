@@ -25,10 +25,10 @@
  */
 
 #include "Conference.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 #include "AmConfigReader.h"
 #include "AmConferenceStatus.h"
-#include "AmConfig.h"
 
 #include "AmSessionContainer.h"
 #include "AmMediaProcessor.h"
@@ -155,7 +155,7 @@ int get_audio_file(const string& message, const string& domain, const string& la
 
 int ConferenceFactory::onLoad()
 {
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

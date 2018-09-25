@@ -32,6 +32,7 @@
 #include "AmSession.h"
 #include "log.h"
 #include "AmConfigReader.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 #include <stdlib.h>
 
@@ -54,7 +55,7 @@ void zrtp_log(int level, char *data, int len, int offset) {
   else if (level==1)
     sems_lvl = L_INFO; // ??
   
-  if (sems_lvl==L_DBG && !AmConfig::enable_zrtp_debuglog)
+  if (sems_lvl==L_DBG && !AmConfig_.enable_zrtp_debuglog)
     return;
 
   _LOG(sems_lvl, "%.*s", len, data);
@@ -64,7 +65,7 @@ int AmZRTP::init() {
   zrtp_log_set_log_engine(zrtp_log);
 
   AmConfigReader cfg;
-  string cfgname=add2path(AmConfig::ModConfigPath, 1,  "zrtp.conf");
+  string cfgname=add2path(AmConfig_.configs_path, 1,  "zrtp.conf");
   if(cfg.loadFile(cfgname)) {
     ERROR("No %s config file present.\n", cfgname.c_str());
     return -1;

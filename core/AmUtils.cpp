@@ -29,7 +29,6 @@
 
 #include "AmUtils.h"
 #include "AmThread.h"
-#include "AmConfig.h"
 #include "log.h"
 #include "AmSipMsg.h"
 #include "sip/resolver.h"

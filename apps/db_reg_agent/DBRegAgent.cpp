@@ -26,6 +26,7 @@
 #include "DBRegAgent.h"
 #include "AmSession.h"
 #include "AmEventDispatcher.h"
+#include "AmLcConfig.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -86,7 +87,7 @@ int DBRegAgent::onLoad()
   }
 
   AmConfigReader cfg;
-  if(cfg.loadFile(add2path(AmConfig::ModConfigPath,1, MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig_.configs_path,1, MOD_NAME ".conf")))
     return -1;
 
   expires = cfg.getParameterInt("expires", 7200);

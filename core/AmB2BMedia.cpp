@@ -1,12 +1,13 @@
 #include "AmB2BMedia.h"
 #include "AmAudio.h"
-#include "amci/codecs.h"
-#include <string.h>
-#include <strings.h>
 #include "AmB2BSession.h"
 #include "AmRtpReceiver.h"
+#include "AmUtils.h"
 #include "sip/msg_logger.h"
+#include "amci/codecs.h"
 
+#include <string.h>
+#include <strings.h>
 #include <algorithm>
 #include <stdexcept>
 
@@ -329,7 +330,7 @@ void AudioStreamData::setDtmfSink(AmDtmfSink *dtmf_sink)
   if (dtmf_sink && stream) {
     dtmf_detector = new AmDtmfDetector(dtmf_sink);
     dtmf_queue = new AmDtmfEventQueue(dtmf_detector);
-    dtmf_detector->setInbandDetector(AmConfig::DefaultDTMFDetector, stream->getSampleRate());
+    dtmf_detector->setInbandDetector(AmConfig_.default_dtmf_detector, stream->getSampleRate());
 
     if(!enable_dtmf_transcoding && lowfi_payloads.size()) {
       string selected_payload_name = stream->getPayloadName(stream->getPayloadType());

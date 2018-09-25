@@ -65,7 +65,7 @@ int SctpBus::configure()
     cfg_reader reader;
     sockaddr_storage a;
 
-    if(!reader.read(AmConfig::ModConfigPath + string(MOD_NAME ".conf"),sctp_bus_opts)) {
+    if(!reader.read(AmConfig_.configs_path + string(MOD_NAME ".conf"),sctp_bus_opts)) {
         return -1;
     }
 
@@ -293,7 +293,7 @@ void SctpBus::onSendEvent(const SctpBusSendEvent &e)
         peer_id = 0;
     }
 
-    if(peer_id==AmConfig::node_id) {
+    if(peer_id==AmConfig_.node_id) {
         WARN("destination peer_id is equal with our node_id");
     }
 

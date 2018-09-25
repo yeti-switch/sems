@@ -25,8 +25,8 @@
  */
 
 #include "CacheAnnounce.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
+#include "AmLcConfig.h"
 
 #include "sems.h"
 #include "log.h"
@@ -46,7 +46,7 @@ CacheAnnounceFactory::CacheAnnounceFactory(const string& _app_name)
 int CacheAnnounceFactory::onLoad()
 {
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf")))
+    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
 	return -1;
 
     // get application specific global parameters

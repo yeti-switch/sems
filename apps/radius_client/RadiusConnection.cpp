@@ -2,6 +2,7 @@
 #include "RadiusPacket.h"
 
 #include "AmSessionContainer.h"
+#include "AmUtils.h"
 #include "sip/resolver.h"
 
 #include <fcntl.h>

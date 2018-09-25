@@ -28,6 +28,7 @@
  */
 #include "AmDtmfDetector.h"
 #include "AmSession.h"
+#include "AmUtils.h"
 #include "log.h"
 
 #include <arpa/inet.h>
@@ -216,12 +217,12 @@ AmDtmfDetector::AmDtmfDetector(AmDtmfSink *dtmf_sink)
   //#ifndef USE_SPANDSP
   //  setInbandDetector(Dtmf::SEMSInternal, m_session->RTPStream()->getSampleRate());
   //#else
-  //  setInbandDetector(AmConfig::DefaultDTMFDetector, m_session->RTPStream()->getSampleRate());
+  //  setInbandDetector(AmConfig_.default_dtmf_detector, m_session->RTPStream()->getSampleRate());
   //#endif
 }
 
 void AmDtmfDetector::setInbandDetector(Dtmf::InbandDetectorType t, int sample_rate) {
-  if(!AmConfig::DetectInbandDtmf){
+  if(!AmConfig_.detect_inband_dtmf){
     return;
   }
 #ifndef USE_SPANDSP

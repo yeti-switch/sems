@@ -26,7 +26,6 @@
 #include "AnswerMachine.h"
 #include "AmApi.h"
 #include "AmSession.h"
-#include "AmConfig.h"
 #include "AmMail.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"
@@ -359,7 +358,7 @@ int AnswerMachineFactory::loadEmailTemplates(const string& path)
 int AnswerMachineFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(add2path(AmConfig::ModConfigPath,1, MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig_.configs_path,1, MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

@@ -27,7 +27,6 @@
 
 #include "AmMail.h"
 #include "AmSmtpClient.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "log.h"
 #include "AnswerMachine.h"

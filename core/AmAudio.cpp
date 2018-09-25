@@ -31,7 +31,6 @@
 #include "AmUtils.h"
 #include "AmSdp.h"
 #include "AmRtpStream.h"
-#include "AmConfig.h"
 #include "amci/codecs.h"
 #include "log.h"
 
@@ -482,13 +481,13 @@ unsigned int AmAudio::resampleInput(unsigned char* buffer, unsigned int s, int i
 
   if (!input_resampling_state.get()) {
 #ifdef USE_INTERNAL_RESAMPLER
-    if (AmConfig::ResamplingImplementationType == AmAudio::INTERNAL_RESAMPLER) {
+    if (AmConfig_.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
       DBG("using internal resampler for input");
       input_resampling_state.reset(new AmInternalResamplerState());
     } else
 #endif
 #ifdef USE_LIBSAMPLERATE
-      if (AmConfig::ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
+      if (AmConfig_.ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
 	input_resampling_state.reset(new AmLibSamplerateResamplingState());
       } else
 #endif
@@ -509,13 +508,13 @@ unsigned int AmAudio::resampleOutput(unsigned char* buffer, unsigned int s, int 
 
   if (!output_resampling_state.get()) {
 #ifdef USE_INTERNAL_RESAMPLER
-    if (AmConfig::ResamplingImplementationType == AmAudio::INTERNAL_RESAMPLER) {
+    if (AmConfig_.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
       DBG("using internal resampler for output");
       output_resampling_state.reset(new AmInternalResamplerState());
     } else
 #endif
 #ifdef USE_LIBSAMPLERATE
-      if (AmConfig::ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
+      if (AmConfig_.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
 	output_resampling_state.reset(new AmLibSamplerateResamplingState());
       } else
 #endif
