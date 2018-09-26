@@ -1,3 +1,9 @@
+sems (1.7.72-7p) stable; urgency=low
+
+  * fix RtspAudio stop/reuse racing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 26 Sep 2018 14:54:06 +0300
+
 sems (1.7.72-6) stable; urgency=low
 
   * AmB2BMedia: fix src RTP stream reading in uninitialized mode
