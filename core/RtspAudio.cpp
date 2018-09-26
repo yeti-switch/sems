@@ -59,10 +59,12 @@ void RtspAudio::open(const string& _uri)
 **/
 void RtspAudio::teardown()
 {
-    if (state != Playing)
+    if (state == Ready)
         return;
 
-    agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
+    if(state == Playing) {
+        last_sent_cseq = agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
+    }
 
     state = Ready;
 }
@@ -70,7 +72,8 @@ void RtspAudio::teardown()
 
 void RtspAudio::describe()
 {
-    agent->RtspRequest(RtspMsg(DESCRIBE, uri, id));
+    state = Progress;
+    last_sent_cseq = agent->RtspRequest(RtspMsg(DESCRIBE, uri, id));
 }
 
 
@@ -80,7 +83,7 @@ void RtspAudio::setup(int l_port)
 
     msg.header[H_Transport] = "RTP/AVP;unicast;client_port=" + int2str(l_port)+"-"+int2str(l_port + 1);
 
-    agent->RtspRequest(msg);
+    last_sent_cseq = agent->RtspRequest(msg);
 }
 
 
@@ -94,7 +97,7 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     try {
         initRtpAudio(msg.r_rtp_port);
 
-        agent->RtspRequest(RtspMsg(PLAY, uri, id));
+        last_sent_cseq = agent->RtspRequest(RtspMsg(PLAY, uri, id));
 
         play();
 
@@ -176,6 +179,18 @@ void RtspAudio::onRtspPlayNotify(const RtspMsg &msg) {
 void RtspAudio::onRtspMessage(const RtspMsg &msg)
 {
     RtspMsg::HeaderIterator it;
+
+    if(msg.type == RTSP_REPLY) {
+        if(last_sent_cseq > msg.cseq) {
+            DBG("onRtspMessage(): ignore reply with obsolete cseq: %d (last_sent_cseq: %d)",
+                msg.cseq,last_sent_cseq);
+            return;
+        }
+        if(state != Progress) {
+            DBG("onRtspMessage(): ignore reply received not in the Progress state");
+            return;
+        }
+    }
 
     if (msg.code != 200) {
         session->postEvent(new RtspNoFileEvent(uri));

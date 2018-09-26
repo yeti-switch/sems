@@ -306,7 +306,7 @@ void RtspSession::init_connection()
     Send formated request structure
     return CSeq
 */
-void RtspSession::rtspSendMsg(const RtspMsg &msg)
+int RtspSession::rtspSendMsg(const RtspMsg &msg)
 {
     ostringstream ss;
 
@@ -339,7 +339,7 @@ void RtspSession::rtspSendMsg(const RtspMsg &msg)
     if (::send(fd, requst_body.c_str(), requst_body.length(), MSG_NOSIGNAL) == -1) {
         ERROR("RtspSession::request send(): %s\n", strerror(errno));
         close();
-        return;
+        return 0;
     }
 
     /** Store CSeq for stream */
@@ -347,11 +347,15 @@ void RtspSession::rtspSendMsg(const RtspMsg &msg)
         AmLock l(cseq2id_mutex);
         cseq2id_map.insert(std::pair<uint32_t, uint64_t>(_cseq, msg.owner_id));
     }
+
+    return _cseq;
 }
 
 
 void RtspSession::process_response(RtspMsg &msg)
 {
+    //DBG("\n%.*s", (int)buffer.size(), buffer.data());
+
     if (!msg.code) {
         ERROR("####### RtspSession::process_response() response.code=0, garbage in buffer ???");
         close();
@@ -384,7 +388,7 @@ void RtspSession::process_response(RtspMsg &msg)
         msg.owner_id = it->second;
     }
 
-    agent->onRtspReplay(msg);
+    agent->onRtspReply(msg);
 }
 
 

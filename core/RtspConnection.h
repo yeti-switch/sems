@@ -152,7 +152,7 @@ class RtspSession
         ~RtspSession();
 
         state_t get_state() { return state; }
-        void    rtspSendMsg(const RtspMsg &msg);
+        int     rtspSendMsg(const RtspMsg &msg);
         void    on_timer(uint64_t timer_val);
         void    handler(uint32_t ev);
 };

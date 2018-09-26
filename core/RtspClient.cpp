@@ -311,15 +311,15 @@ void RtspClient::removeStream(uint64_t id)
 
 
 /// TODO: we need failover for media servers
-void RtspClient::RtspRequest(const RtspMsg &msg)
+int RtspClient::RtspRequest(const RtspMsg &msg)
 {
     RtspSession *sess = media_server_lookup();
 
-    sess->rtspSendMsg(msg);
+    return sess->rtspSendMsg(msg);
 }
 
 
-void RtspClient::onRtspReplay(const RtspMsg &msg)
+void RtspClient::onRtspReply(const RtspMsg &msg)
 {
     AmLock l(_streams_mtx);
 
