@@ -14,7 +14,8 @@ class RtspAudio  :   public AmRtpAudio
 {
     typedef enum {
         Ready = 0,
-        Playing,
+        Progress,
+        Playing
     } State;
 
         uint64_t            id;             /** unique RtspAudio ID */
@@ -23,6 +24,7 @@ class RtspAudio  :   public AmRtpAudio
 
         int                 md;             /** media server descriptor */
         int                 streamid;       /** streamid from media server RTP-Info header */
+        int                 last_sent_cseq; /** cseq of the last sent request */
 
         State               state;
         string              uri;

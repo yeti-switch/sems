@@ -98,9 +98,9 @@ public:
         uint64_t    addStream(RtspAudio &audio);
         void        removeStream(uint64_t id);
 
-        void        RtspRequest(const RtspMsg &msg);
+        int         RtspRequest(const RtspMsg &msg);
         void        onRtspPlayNotify(const RtspMsg &msg);
-        void        onRtspReplay(const RtspMsg &msg);
+        void        onRtspReply(const RtspMsg &msg);
 
 
         bool        link(int fd, int op, struct epoll_event &ev);
