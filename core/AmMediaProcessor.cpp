@@ -63,7 +63,7 @@ AmMediaProcessor::~AmMediaProcessor()
 
 void AmMediaProcessor::init() {
   // start the threads
-  num_threads = AmConfig_.media_proc_threads;
+  num_threads = AmConfig.media_proc_threads;
   assert(num_threads > 0);
   DBG("Starting %u MediaProcessorThreads.\n", num_threads);
   threads = new AmMediaProcessorThread*[num_threads];

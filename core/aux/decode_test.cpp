@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	string path = argv[3];
 	char *out_file_path = argv[4];
 
-	if(AmConfig_.readConfiguration()){
+	if(AmConfig.readConfiguration()){
 		ERROR("Errors occured while reading configuration file: exiting.");
 		return EXIT_FAILURE;
 	}
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	INFO("Loading audio plug-in wav");
 	vector<string> wavplugin;
     wavplugin.push_back("wav");
-	if(am_plugin.load(AmConfig_.modules_path, wavplugin)){
+	if(am_plugin.load(AmConfig.modules_path, wavplugin)){
 		ERROR("Can't load plugins. exiting.");
 		return EXIT_FAILURE;
 	}
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	if(payload_name=="pcmu" || payload_name=="pcma") {
 		INFO("%s is built-in codec. skip plugin loading",plugin[0].c_str());
 	} else {
-		if(am_plugin.load(AmConfig_.modules_path, plugin)){
+		if(am_plugin.load(AmConfig.modules_path, plugin)){
 			ERROR("Can't load plugins. exiting.");
 			return EXIT_FAILURE;
 		}

@@ -586,7 +586,7 @@ void DSMCall::process(AmEvent* event)
   if (timeout_ev) {
     map<string, string> params;
     params["type"] = "rtp_timeout";
-    params["timeout_value"] = int2str(AmConfig_.dead_rtp_time);
+    params["timeout_value"] = int2str(AmConfig.dead_rtp_time);
     engine.runEvent(this, this, DSMCondition::RTPTimeout, &params);
     return;
   }

@@ -90,8 +90,8 @@ static uint16_t _chksum(uint32_t sum)
 
 pcap_logger::pcap_logger()
 {
-  if(!AmConfig_.pcap_upload_queue_name.empty())
-    upload_destination = &AmConfig_.pcap_upload_queue_name;
+  if(!AmConfig.pcap_upload_queue_name.empty())
+    upload_destination = &AmConfig.pcap_upload_queue_name;
 }
 
 int pcap_logger::write_file_header()

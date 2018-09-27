@@ -108,7 +108,7 @@ int  AmConfigReader::loadFile(const string& path)
 	inc_end = c;
 	string fname = string(inc_beg,inc_end-inc_beg);
 	if (fname.length() && fname[0] != '/')
-	  fname = AmConfig_.configs_path + fname;
+	  fname = AmConfig.configs_path + fname;
 	if(loadFile(fname))
 	    goto error;
 	continue;
@@ -165,7 +165,7 @@ int  AmConfigReader::loadFile(const string& path)
 
       // small hack to make include work with right path
       if (keyname == "plugin_config_path")
-	AmConfig_.configs_path = val;
+	AmConfig.configs_path = val;
 
     } else
       goto syntax_error;
@@ -183,7 +183,7 @@ int  AmConfigReader::loadFile(const string& path)
 
 int  AmConfigReader::loadPluginConf(const string& mod_name)
 {
-  return loadFile(add2path(AmConfig_.configs_path,1,
+  return loadFile(add2path(AmConfig.configs_path,1,
 			   string(mod_name + CONFIG_FILE_SUFFIX).c_str()));
 }
 

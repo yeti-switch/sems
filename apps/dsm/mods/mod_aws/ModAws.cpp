@@ -60,7 +60,7 @@ MOD_CONDITIONEXPORT_NONE(MOD_CLS_NAME);
 
 int SCAwsModule::preload() {
    AmConfigReader cfg;
-   if(cfg.loadFile(AmConfig_.configs_path + string("aws.conf")))
+   if(cfg.loadFile(AmConfig.configs_path + string("aws.conf")))
      return -1;
 
    string aws_access_key = cfg.getParameter("aws_access_key");

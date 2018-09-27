@@ -87,7 +87,7 @@ void StreamCtxMap::put_pended(){
 
 _AmRtpReceiver::_AmRtpReceiver()
 {
-  n_receivers = AmConfig_.rtp_recv_threads;
+  n_receivers = AmConfig.rtp_recv_threads;
   receivers = new AmRtpReceiverThread[n_receivers];
 }
 

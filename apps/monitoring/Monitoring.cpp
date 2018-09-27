@@ -67,7 +67,7 @@ Monitor::~Monitor() {
 int Monitor::onLoad() {
   // todo: if GC configured, start thread
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
     DBG("monitoring not starting garbage collector\n");
     return 0;
   }

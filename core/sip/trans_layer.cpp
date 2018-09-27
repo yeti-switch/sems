@@ -2746,8 +2746,8 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
     char local_ip[NI_MAXHOST];
     if(am_inet_ntop(&from,local_ip,NI_MAXHOST) != NULL) {
 	map<string,unsigned short>::iterator if_it =
-	           AmConfig_.local_sip_ip2if.find(local_ip);
-	if(if_it == AmConfig_.local_sip_ip2if.end()){
+	           AmConfig.local_sip_ip2if.find(local_ip);
+	if(if_it == AmConfig.local_sip_ip2if.end()){
 	    ERROR("Could not find a local interface for "
 		  "resolved local IP (local_ip='%s')",
 		  local_ip);

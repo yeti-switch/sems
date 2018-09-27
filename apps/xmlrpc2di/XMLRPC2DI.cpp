@@ -75,7 +75,7 @@ int XMLRPC2DI::load() {
 
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   string multithreaded = cfg.getParameter("multithreaded", "yes");
@@ -137,7 +137,7 @@ int XMLRPC2DI::load() {
   if (bind_ip.empty()) {
     DBG("binding on ANY interface\n");
   } else {
-    bind_ip = AmConfig_.fixIface2IP(bind_ip, false);
+    bind_ip = AmConfig.fixIface2IP(bind_ip, false);
   }
 
   string conf_xmlrpc_port = cfg.getParameter("xmlrpc_port",XMLRPC_PORT);
@@ -518,13 +518,13 @@ void XMLRPC2DIServerSetLoglevelMethod::execute(XmlRpcValue& params, XmlRpcValue&
 
 
 void XMLRPC2DIServerGetShutdownmodeMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
-  DBG("XMLRPC2DI: get_shutdownmode returns %s\n", AmConfig_.shutdown_mode?"true":"false");
-  result = (bool)AmConfig_.shutdown_mode;
+  DBG("XMLRPC2DI: get_shutdownmode returns %s\n", AmConfig.shutdown_mode?"true":"false");
+  result = (bool)AmConfig.shutdown_mode;
 }
 
 void XMLRPC2DIServerSetShutdownmodeMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
-  AmConfig_.shutdown_mode = params[0];
-  DBG("XMLRPC2DI: set shutdownmode to %s.\n", AmConfig_.shutdown_mode?"true":"false");
+  AmConfig.shutdown_mode = params[0];
+  DBG("XMLRPC2DI: set shutdownmode to %s.\n", AmConfig.shutdown_mode?"true":"false");
   result = "200 OK";
 }
 

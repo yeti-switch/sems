@@ -20,7 +20,7 @@ MyAnnounceAppFactory::MyAnnounceAppFactory(const string& _app_name)
 int MyAnnounceAppFactory::onLoad()
 {
     AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
+    if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
 	return -1;
 
     AnnouncementFile = cfg.getParameter("announcement_file","/tmp/default.wav");

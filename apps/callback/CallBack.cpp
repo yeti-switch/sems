@@ -49,7 +49,7 @@ PlayoutType CallBackFactory::m_PlayoutType = ADAPTIVE_PLAYOUT;
 int CallBackFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

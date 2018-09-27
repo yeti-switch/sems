@@ -47,7 +47,7 @@ int EchoFactory::onLoad()
 {
   bool useSessionTimer = false;
     
-  if(conf.loadFile(AmConfig_.configs_path + string(MODULE_NAME)+ ".conf")){
+  if(conf.loadFile(AmConfig.configs_path + string(MODULE_NAME)+ ".conf")){
     WARN("Could not open " MODULE_NAME ".conf\n");
     WARN("assuming that default values are fine\n");
   }

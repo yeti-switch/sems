@@ -140,7 +140,7 @@ int RtspClient::configure()
 {
     AmConfigReader cfg;
 
-    if (cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
+    if (cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
         return -1;
 
     config.max_queue_length     = cfg.getParameterInt("max_queue_length", 0);
@@ -149,16 +149,16 @@ int RtspClient::configure()
     config.media_servers        = cfg.getParameter("media_servers", "");
     config.rtsp_interface_name  = cfg.getParameter("rtsp_interface_name", "rtsp");
 
-    auto if_it = AmConfig_.media_if_names.find(config.rtsp_interface_name);
+    auto if_it = AmConfig.media_if_names.find(config.rtsp_interface_name);
 
-    if (if_it == AmConfig_.media_if_names.end()) {
+    if (if_it == AmConfig.media_if_names.end()) {
         ERROR("RTSP media interface not found\n");
         return -1;
     }
 
     config.l_if = if_it->second;
     unsigned int addridx = 0;
-    for(auto& info : AmConfig_.media_ifs[config.l_if].proto_info) {
+    for(auto& info : AmConfig.media_ifs[config.l_if].proto_info) {
         if(info->mtype == MEDIA_info::RTSP) {
             config.l_ip = info->local_ip;
             config.laddr_if = addridx;

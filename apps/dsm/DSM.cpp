@@ -119,7 +119,7 @@ int DSMFactory::onLoad()
     return 0;
   loaded = true;
 
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
     return -1;
  
   // get application specific global parameters
@@ -834,9 +834,9 @@ void DSMFactory::reloadDSMs(const AmArg& args, AmArg& ret) {
   DSMStateDiagramCollection* new_diags = new DSMStateDiagramCollection();
 
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
       ret.push(500);
-      ret.push("loading config file " +AmConfig_.configs_path + string(MOD_NAME ".conf"));
+      ret.push("loading config file " +AmConfig.configs_path + string(MOD_NAME ".conf"));
       return ;
   }
 
@@ -895,9 +895,9 @@ int DSMFactory::preloadModules(AmConfigReader& cfg, string& res, const string& M
 
 void DSMFactory::preloadModules(const AmArg& args, AmArg& ret) {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
       ret.push(500);
-      ret.push("loading config file " +AmConfig_.configs_path + string(MOD_NAME ".conf"));
+      ret.push("loading config file " +AmConfig.configs_path + string(MOD_NAME ".conf"));
       return ;
   }
   string err;
@@ -1036,9 +1036,9 @@ void DSMFactory::loadDSM(const AmArg& args, AmArg& ret) {
   string dsm_name  = args.get(0).asCStr();
 
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
       ret.push(500);
-      ret.push("loading config file " +AmConfig_.configs_path + string(MOD_NAME ".conf"));
+      ret.push("loading config file " +AmConfig.configs_path + string(MOD_NAME ".conf"));
       return;
   }
 

@@ -330,7 +330,7 @@ void AudioStreamData::setDtmfSink(AmDtmfSink *dtmf_sink)
   if (dtmf_sink && stream) {
     dtmf_detector = new AmDtmfDetector(dtmf_sink);
     dtmf_queue = new AmDtmfEventQueue(dtmf_detector);
-    dtmf_detector->setInbandDetector(AmConfig_.default_dtmf_detector, stream->getSampleRate());
+    dtmf_detector->setInbandDetector(AmConfig.default_dtmf_detector, stream->getSampleRate());
 
     if(!enable_dtmf_transcoding && lowfi_payloads.size()) {
       string selected_payload_name = stream->getPayloadName(stream->getPayloadType());

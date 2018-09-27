@@ -44,7 +44,7 @@ int MWI::onLoad()
   MessageStorage->invoke("events_subscribe",es_args,ret);
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + "mwi.conf")) {
+  if(cfg.loadFile(AmConfig.configs_path + "mwi.conf")) {
     ERROR("can not load configuration file\n");
     return -1;
   };

@@ -56,17 +56,17 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
   : status(Disconnected),
     cseq(10),r_cseq_i(false),hdl(h),
 	logger(NULL),sensor(NULL),
-    outbound_proxy(AmConfig_.outbound_proxy),
-    force_outbound_proxy(AmConfig_.force_outbound_proxy),
-    next_hop(AmConfig_.next_hop),
-    next_hop_1st_req(AmConfig_.next_hop_1st_req),
+    outbound_proxy(AmConfig.outbound_proxy),
+    force_outbound_proxy(AmConfig.force_outbound_proxy),
+    next_hop(AmConfig.next_hop),
+    next_hop_1st_req(AmConfig.next_hop_1st_req),
     patch_ruri_next_hop(false),
     next_hop_fixed(false),
     outbound_interface(-1),
     outbound_transport(-1),
     outbound_address_type(0),
     resolve_priority(IPv4_only),
-    nat_handling(AmConfig_.sip_nat_handling),
+    nat_handling(AmConfig.sip_nat_handling),
     usages(0)
 {
   //assert(h);
@@ -151,10 +151,10 @@ string AmBasicSipDialog::getContactUri()
   int oif = getOutboundIf();
   int oat = getOutboundAddrType();
   assert(oif >= 0);
-  assert(oif < (int)AmConfig_.sip_ifs.size());
+  assert(oif < (int)AmConfig.sip_ifs.size());
 
   if(outbound_transport < 0) getOutboundTransport();
-  for(auto& info : AmConfig_.sip_ifs[oif].proto_info) {
+  for(auto& info : AmConfig.sip_ifs[oif].proto_info) {
        if ((oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
            info->type == SIP_info::UDP && outbound_transport == sip_transport::UDP) ||
 
@@ -224,7 +224,7 @@ int AmBasicSipDialog::getOutboundIf()
   if (outbound_interface >= 0)
     return outbound_interface;
 
-  if(AmConfig_.sip_ifs.size() == 1){
+  if(AmConfig.sip_ifs.size() == 1){
     return (outbound_interface = 0);
   }
 
@@ -295,8 +295,8 @@ int AmBasicSipDialog::getOutboundIf()
     goto error;
   }
 
-  if_it = AmConfig_.local_sip_ip2if.find(local_ip);
-  if(if_it == AmConfig_.local_sip_ip2if.end()){
+  if_it = AmConfig.local_sip_ip2if.find(local_ip);
+  if(if_it == AmConfig.local_sip_ip2if.end()){
     ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
 	  local_tag.c_str(), local_ip.c_str());
     goto error;
@@ -516,7 +516,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
   if (r_cseq_i && req.cseq <= r_cseq){
 
     if (req.method == SIP_METH_NOTIFY) {
-      if (!AmConfig_.ignore_notify_lower_cseq) {
+      if (!AmConfig.ignore_notify_lower_cseq) {
 	// clever trick to not break subscription dialog usage
 	// for implementations which follow 3265 instead of 5057
 	string hdrs = SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)  "0"  CRLF;
@@ -880,8 +880,8 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
   }
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig_.signature.length()){
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig_.signature + CRLF;
+  if (AmConfig.signature.length()){
+    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
   }
 
   if ((code > 100 && code < 300) && !(flags & SIP_FLAGS_NOCONTACT)) {
@@ -920,8 +920,8 @@ int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code,
   reply.to_tag = AmSession::getNewId();
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig_.signature.length())
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig_.signature + CRLF;
+  if (AmConfig.signature.length())
+    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
 
   // add transcoder statistics into reply headers
   //addTranscoderStats(reply.hdrs);
@@ -982,8 +982,8 @@ int AmBasicSipDialog::sendRequest(const string& method,
   }
 
   inplaceHeadersErase(req.hdrs,hdrs2remove);
-  if (AmConfig_.signature.length()){
-    req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig_.signature + CRLF;
+  if (AmConfig.signature.length()){
+    req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig.signature + CRLF;
   }
 
   int send_flags = 0;

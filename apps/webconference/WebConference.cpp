@@ -91,7 +91,7 @@ int WebConferenceFactory::load()
     return 0;
   configured = true;
 
-  if(cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters
