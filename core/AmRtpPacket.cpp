@@ -256,7 +256,7 @@ int AmRtpPacket::send(int sd, const MEDIA_info &iface,
     return raw_sender::send((char*)buffer,b_size,sys_if_idx,l_saddr,&addr,iface.tos_byte);
   }
 
-  if(sys_if_idx && AmConfig_.force_outbound_if) {
+  if(sys_if_idx && AmConfig.force_outbound_if) {
     return sendmsg(sd,sys_if_idx);
   }
   

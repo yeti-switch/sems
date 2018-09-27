@@ -225,7 +225,7 @@ int SctpServerConnection::process(uint32_t events)
     }
     clients_mutex.unlock();
 
-    if(!AmConfig_.node_id) {
+    if(!AmConfig.node_id) {
         WARN("node_id is 0 (default value). this may cause not intended behavior");
     }
 

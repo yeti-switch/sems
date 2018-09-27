@@ -49,7 +49,7 @@ int UrlCatcherFactory::onLoad()
 {
 
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf"))) {
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
     ExecCmd = DEFAULT_EXEC_CMD;
     return 0;
   }

@@ -9,7 +9,7 @@
 #include "AmAudio.h"
 #include "AmUtils.h"
 
-#define AmConfig_ AmLcConfig::GetInstance()
+#define AmConfig AmLcConfig::GetInstance()
 
 class AmLcConfig
 {

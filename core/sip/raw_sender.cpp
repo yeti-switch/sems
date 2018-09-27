@@ -65,11 +65,11 @@ int raw_sender::send(const char* buf, unsigned int len, int sys_if_idx,
   int ret = -1;
   if(from->ss_family == PF_INET) {
     ret = raw_iphdr_udp4_send(rsock,buf,len,from,to,
-                AmConfig_.sys_ifs[sys_if_idx].mtu,
+                AmConfig.sys_ifs[sys_if_idx].mtu,
                 tos);
   } else if(from->ss_family == PF_INET6) {
     ret = raw_iphdr_udp6_send(rsock6,buf,len,from,to,
-                AmConfig_.sys_ifs[sys_if_idx].mtu,
+                AmConfig.sys_ifs[sys_if_idx].mtu,
                 tos);
   }
   if(ret < 0) {

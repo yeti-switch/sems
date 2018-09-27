@@ -61,10 +61,10 @@ int JsonRPCServerModule::onLoad() {
 int JsonRPCServerModule::load() {
   
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + 
+  if(cfg.loadFile(AmConfig.configs_path + 
 		  string(MOD_NAME ".conf"))) {
 	ERROR("no '%s' configuration file present",
-		(AmConfig_.configs_path + string(MOD_NAME ".conf")).c_str());
+		(AmConfig.configs_path + string(MOD_NAME ".conf")).c_str());
 	return -1;
   } else {
     host = cfg.getParameter("jsonrpc_listen", DEFAULT_JSONRPC_SERVER_HOST);

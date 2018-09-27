@@ -358,7 +358,7 @@ int AnswerMachineFactory::loadEmailTemplates(const string& path)
 int AnswerMachineFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(add2path(AmConfig_.configs_path,1, MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig.configs_path,1, MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

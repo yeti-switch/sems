@@ -898,7 +898,7 @@ int AmLcConfig::readRoutings()
             app.app_select = App_APPHDR;
         } else if (app_str == "$(mapping)") {
             app.app_select = App_MAPPING;
-            string appcfg_fname = AmConfig_.configs_path + "app_mapping.conf";
+            string appcfg_fname = AmConfig.configs_path + "app_mapping.conf";
             DBG("Loading application mapping...\n");
             if (!read_regex_mapping(appcfg_fname, "=>", "application mapping",
                 app.app_mapping))

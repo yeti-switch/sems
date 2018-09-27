@@ -167,8 +167,8 @@ void AmSessionContainer::on_stop()
 
     for (unsigned int i=0;
 	 (!AmEventDispatcher::instance()->empty() &&
-	  (!AmConfig_.max_shutdown_time ||
-	   i < AmConfig_.max_shutdown_time * 1000 / 10));i++)
+	  (!AmConfig.max_shutdown_time ||
+	   i < AmConfig.max_shutdown_time * 1000 / 10));i++)
       usleep(10000);
 
     if (!AmEventDispatcher::instance()->empty()) {
@@ -186,7 +186,7 @@ void AmSessionContainer::on_stop()
 void AmSessionContainer::stopAndQueue(AmSession* s)
 {
 
-  if (AmConfig_.log_sessions) {    
+  if (AmConfig.log_sessions) {    
     INFO("session cleaner about to stop %s\n",
 	 s->getLocalTag().c_str());
   }
@@ -225,8 +225,8 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
                 // successful case
                 break;
             case AmSessionContainer::ShutDown:
-                throw AmSession::Exception(AmConfig_.shutdown_mode_err_code,
-                                           AmConfig_.shutdown_mode_err_reason);
+                throw AmSession::Exception(AmConfig.shutdown_mode_err_code,
+                                           AmConfig.shutdown_mode_err_reason);
             case AmSessionContainer::AlreadyExist:
                 throw AmSession::Exception(482,
                                            SIP_REPLY_LOOP_DETECTED);
@@ -260,7 +260,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
             }
 #endif
 
-            if (AmConfig_.log_sessions) {
+            if (AmConfig.log_sessions) {
                 INFO("Starting UAC session %s app %s\n",
                     req.from_tag.c_str(), app_name.c_str());
             }
@@ -306,7 +306,7 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 	// by default each session is in its own callgroup
 	session->setCallgroup(local_tag);
 
-	if (AmConfig_.log_sessions) {
+	if (AmConfig.log_sessions) {
 	  INFO("Starting UAS session %s\n",
 	       local_tag.c_str());
 	}
@@ -319,8 +319,8 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 	  break;
 	  
 	case AmSessionContainer::ShutDown:
-	  throw AmSession::Exception(AmConfig_.shutdown_mode_err_code,
-				     AmConfig_.shutdown_mode_err_reason);
+	  throw AmSession::Exception(AmConfig.shutdown_mode_err_code,
+				     AmConfig.shutdown_mode_err_reason);
 	  
 	case AmSessionContainer::AlreadyExist:
 	  throw AmSession::Exception(482,
@@ -495,7 +495,7 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
                                             bool is_uac,
                                             AmArg* session_params)
 {
-  if (AmConfig_.shutdown_mode && (!(is_uac && AmConfig_.shutdown_mode_allow_uac)))
+  if (AmConfig.shutdown_mode && (!(is_uac && AmConfig.shutdown_mode_allow_uac)))
   {
     _run_cond.set(true); // so that thread stops
     DBG("Shutdown mode. Not creating session.\n");
@@ -503,27 +503,27 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
     if(!is_uac) {
       AmSipDialog::reply_error(
         req,
-        AmConfig_.shutdown_mode_err_code,
-        AmConfig_.shutdown_mode_err_reason);
+        AmConfig.shutdown_mode_err_code,
+        AmConfig.shutdown_mode_err_reason);
     }
 
     return NULL;
   }
 
-  if (AmConfig_.session_limit &&
-      AmConfig_.session_limit <= AmSession::session_num) {
+  if (AmConfig.session_limit &&
+      AmConfig.session_limit <= AmSession::session_num) {
       
       DBG("session_limit %d reached. Not creating session.\n", 
-	  AmConfig_.session_limit);
+	  AmConfig.session_limit);
 
-      AmSipDialog::reply_error(req,AmConfig_.session_limit_err_code, 
-			       AmConfig_.session_limit_err_reason);
+	  AmSipDialog::reply_error(req,AmConfig.session_limit_err_code,
+			       AmConfig.session_limit_err_reason);
       return NULL;
   }
 
   if (check_and_add_cps()) {
-      AmSipDialog::reply_error(req,AmConfig_.cps_limit_err_code,
-			       AmConfig_.cps_limit_err_reason);
+      AmSipDialog::reply_error(req,AmConfig.cps_limit_err_code,
+			       AmConfig.cps_limit_err_reason);
       return NULL;
   }
 

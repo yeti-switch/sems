@@ -200,8 +200,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-  } else if (!AmConfig_.outbound_proxy.empty()) {
-    dlg.outbound_proxy = AmConfig_.outbound_proxy;
+  } else if (!AmConfig.outbound_proxy.empty()) {
+    dlg.outbound_proxy = AmConfig.outbound_proxy;
   }
 
   string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
@@ -214,7 +214,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     int oif = dlg.getOutboundIf();
     int oat = dlg.getOutboundAddrType();
     info_contact.uri_user = info.user;
-    SIP_interface& if_ = AmConfig_.sip_ifs[oif];
+    SIP_interface& if_ = AmConfig.sip_ifs[oif];
     for(auto& info : if_.proto_info) {
         if ((oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
            info->type == SIP_info::UDP && dlg.getOutboundTransport() == sip_transport::UDP) ||
@@ -288,8 +288,8 @@ bool AmSIPRegistration::doUnregister()
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-  } else if (!AmConfig_.outbound_proxy.empty()) {
-    dlg.outbound_proxy = AmConfig_.outbound_proxy;
+  } else if (!AmConfig.outbound_proxy.empty()) {
+    dlg.outbound_proxy = AmConfig.outbound_proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
   }
 

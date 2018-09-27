@@ -128,7 +128,7 @@ AmB2BSession::AmB2BSession(const string& other_local_tag, AmSipDialog* p_dlg,
     enable_dtmf_rtp_detection(false),
 	enable_dtmf_rtp_force_relay(true),
 	enable_cn_rtp_force_relay(false),
-	dead_rtp_time(AmConfig_.dead_rtp_time),
+	dead_rtp_time(AmConfig.dead_rtp_time),
 	rtp_relay_transparent_seqno(true), rtp_relay_transparent_ssrc(true),
 	rtp_relay_timestamp_aligning(false),
 	ignore_relay_streams(false),
@@ -1398,7 +1398,7 @@ void AmB2BCallerSession::createCalleeSession() {
   callee_dlg->setRemoteParty(dlg->getLocalParty());
   callee_dlg->setRemoteUri(dlg->getLocalUri());
 
-  if (AmConfig_.log_sessions) {
+  if (AmConfig.log_sessions) {
     INFO("Starting B2B callee session %s\n",
 	 callee_session->getLocalTag().c_str());
   }

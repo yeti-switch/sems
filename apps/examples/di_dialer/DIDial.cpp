@@ -33,7 +33,7 @@ std::map<string, DIDialoutInfo> DIDialFactory::dialout_pins;
 int DIDialFactory::onLoad(){
   
   AmConfigReader cfg;
-  if(!cfg.loadFile(AmConfig_.configs_path + string(APP_NAME)+ ".conf")) {
+  if(!cfg.loadFile(AmConfig.configs_path + string(APP_NAME)+ ".conf")) {
 
     unsigned int i_pin = 0;
     while (i_pin<100) { // only for safety..

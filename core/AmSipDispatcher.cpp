@@ -47,8 +47,8 @@ void AmSipDispatcher::handleSipMsg(const string& dialog_id, AmSipReply &reply)
 
   if(!AmEventDispatcher::instance()->post(id,ev)){
     if ((reply.code >= 100) && (reply.code < 300)) {
-      if (AmConfig_.unhandled_reply_log_level >= 0) {
-	_LOG(AmConfig_.unhandled_reply_log_level,
+      if (AmConfig.unhandled_reply_log_level >= 0) {
+	_LOG(AmConfig.unhandled_reply_log_level,
 	     "unhandled SIP reply: %s\n", reply.print().c_str());
       }
     } else {
@@ -111,9 +111,9 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
 	  return;
   }
 
-  if(AmConfig_.shutdown_mode){
-	  AmSipDialog::reply_error(req,AmConfig_.shutdown_mode_err_code,
-							   AmConfig_.shutdown_mode_err_reason);
+  if(AmConfig.shutdown_mode){
+	  AmSipDialog::reply_error(req,AmConfig.shutdown_mode_err_code,
+							   AmConfig.shutdown_mode_err_reason);
 	  return;
   }
 

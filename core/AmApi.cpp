@@ -94,39 +94,39 @@ void AmSessionFactory::onOoDRequest(const AmSipRequest& req)
 
 void AmSessionFactory::replyOptions(const AmSipRequest& req) {
     string hdrs;
-    if (!AmConfig_.options_transcoder_in_stats_hdr.empty()) {
+    if (!AmConfig.options_transcoder_in_stats_hdr.empty()) {
       string usage;
       B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
 
-      hdrs += AmConfig_.options_transcoder_in_stats_hdr + ": ";
+      hdrs += AmConfig.options_transcoder_in_stats_hdr + ": ";
       hdrs += usage;
       hdrs += CRLF;
     }
-    if (!AmConfig_.options_transcoder_out_stats_hdr.empty()) {
+    if (!AmConfig.options_transcoder_out_stats_hdr.empty()) {
       string usage;
       B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
 
-      hdrs += AmConfig_.options_transcoder_out_stats_hdr + ": ";
+      hdrs += AmConfig.options_transcoder_out_stats_hdr + ": ";
       hdrs += usage;
       hdrs += CRLF;
     }
 
     // Basic OPTIONS support
-    if (AmConfig_.options_session_limit &&
-	(AmSession::getSessionNum() >= AmConfig_.options_session_limit)) {
+    if (AmConfig.options_session_limit &&
+	(AmSession::getSessionNum() >= AmConfig.options_session_limit)) {
       // return error code if near to overload
       AmSipDialog::reply_error(req,
-          AmConfig_.options_session_limit_err_code, 
-          AmConfig_.options_session_limit_err_reason,
+          AmConfig.options_session_limit_err_code, 
+          AmConfig.options_session_limit_err_reason,
           hdrs);
       return;
     }
 
-    if (AmConfig_.shutdown_mode) {
+    if (AmConfig.shutdown_mode) {
       // return error code if in shutdown mode
       AmSipDialog::reply_error(req,
-          AmConfig_.shutdown_mode_err_code,
-          AmConfig_.shutdown_mode_err_reason,
+          AmConfig.shutdown_mode_err_code,
+          AmConfig.shutdown_mode_err_reason,
           hdrs);
       return;
     }

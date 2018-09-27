@@ -133,7 +133,7 @@ int StatsUDPServer::init()
   int    optval;
 
   AmConfigReader cfg;
-  if(cfg.loadFile(add2path(AmConfig_.configs_path,1, MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig.configs_path,1, MOD_NAME ".conf")))
     return -1;
 
   udp_port = (int)cfg.getParameterInt("monit_udp_port",(unsigned int)-1);
@@ -323,7 +323,7 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
   else if (cmd_str.length() > 4 && cmd_str.substr(0, 4) == "set_") {
     // setters 
     if (cmd_str.substr(4, 8) == "loglevel") {
-      if (!AmConfig_.setLogLevel(&cmd_str.c_str()[13])) 
+      if (!AmConfig.setLogLevel(&cmd_str.c_str()[13])) 
 	reply= "invalid loglevel value.\n";
       else 
 	reply= "loglevel set to "+int2str(log_level)+".\n";
@@ -347,12 +347,12 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
 	{
 	  if(tmp)
 	    {
-	      AmConfig_.shutdown_mode = true;
+	      AmConfig.shutdown_mode = true;
 	      reply= "Shutdownmode activated!\n";
 	    }
 	  else
 	    {
-	      AmConfig_.shutdown_mode = false;
+	      AmConfig.shutdown_mode = false;
 	      reply= "Shutdownmode deactivated!\n";
 	    }
 	}
@@ -379,7 +379,7 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
         int2str(sc->getCPSLimit().second) + "\n";
 
     else if (cmd_str.substr(4, 12) == "shutdownmode") {
-      if(AmConfig_.shutdown_mode)
+      if(AmConfig.shutdown_mode)
 	{
 	  reply= "Shutdownmode active!\n";
 	}

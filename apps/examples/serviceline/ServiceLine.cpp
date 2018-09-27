@@ -60,7 +60,7 @@ ServiceLineFactory::ServiceLineFactory(const string& _app_name)
 int ServiceLineFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig_.configs_path + string(MOD_NAME ".conf")))
+  if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

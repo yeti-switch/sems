@@ -183,12 +183,12 @@ inline unsigned int resample(
 
     if(!state.get()) {
 #ifdef USE_INTERNAL_RESAMPLER
-        if (AmConfig_.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
+        if (AmConfig.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
             state.reset(new AmInternalResamplerState());
         } else
 #endif
 #ifdef USE_LIBSAMPLERATE
-        if (AmConfig_.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
+        if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
             state.reset(new AmLibSamplerateResamplingState());
         } else
 #endif

@@ -150,8 +150,8 @@ AmPlugIn* AmPlugIn::instance()
 
 void AmPlugIn::init() {
   for (vector<string>::iterator it = 
-	 AmConfig_.exclude_payloads.begin();
-       it != AmConfig_.exclude_payloads.end();it++)
+	 AmConfig.exclude_payloads.begin();
+       it != AmConfig.exclude_payloads.end();it++)
     excluded_payloads.insert(*it);
 
   DBG("adding built-in codecs...\n");
@@ -661,10 +661,10 @@ int AmPlugIn::addPayload(amci_payload_t* p)
   payloads.insert(std::make_pair(p->payload_id,p));
   id = p->payload_id;
 
-  for (i = 0; i < AmConfig_.codec_order.size(); i++) {
-      if (p->name == AmConfig_.codec_order[i]) break;
+  for (i = 0; i < AmConfig.codec_order.size(); i++) {
+      if (p->name == AmConfig.codec_order[i]) break;
   }
-  if (i >= AmConfig_.codec_order.size()) {
+  if (i >= AmConfig.codec_order.size()) {
       payload_order.insert(std::make_pair(id + 100, id));
       DBG("payload '%s/%i' inserted with id %i and order %i\n",
 	  p->name, p->sample_rate, id, id + 100);
@@ -744,12 +744,12 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
 {
     string m_app_name;
 
-    if(AmConfig_.register_application.length() && SIP_METH_REGISTER==req.method)
-        m_app_name = AmConfig_.register_application;
-    else if(AmConfig_.options_application.length() && SIP_METH_OPTIONS==req.method)
-        m_app_name = AmConfig_.options_application;
+    if(AmConfig.register_application.length() && SIP_METH_REGISTER==req.method)
+        m_app_name = AmConfig.register_application;
+    else if(AmConfig.options_application.length() && SIP_METH_OPTIONS==req.method)
+        m_app_name = AmConfig.options_application;
     else {
-        for(const auto &app_selector : AmConfig_.applications) {
+        for(const auto &app_selector : AmConfig.applications) {
             switch (app_selector.app_select) {
             case AmLcConfig::App_RURIUSER:
                 m_app_name = req.user;

@@ -116,7 +116,7 @@ static void print_usage(bool short_=false)
         "    -D <level>      Set stderr log level (0=error, 1=warning, 2=info, 3=debug; default=%d)\n"
         "    -v              Print version\n"
         "    -h              Print this help\n",
-        progname, AmConfig_.log_level
+        progname, AmConfig.log_level
     );
   }
 }
@@ -155,35 +155,35 @@ static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
 static void set_default_interface(const string& iface_name)
 {
   unsigned int idx=0;
-  map<string,unsigned short>::iterator if_it = AmConfig_.sip_if_names.find("default");
-  if(if_it == AmConfig_.sip_if_names.end()) {
+  map<string,unsigned short>::iterator if_it = AmConfig.sip_if_names.find("default");
+  if(if_it == AmConfig.sip_if_names.end()) {
     SIP_interface intf;
     intf.name = "default";
-    AmConfig_.sip_ifs.push_back(intf);
-    AmConfig_.sip_if_names["default"] = AmConfig_.sip_ifs.size()-1;
-    idx = AmConfig_.sip_ifs.size()-1;
+    AmConfig.sip_ifs.push_back(intf);
+    AmConfig.sip_if_names["default"] = AmConfig.sip_ifs.size()-1;
+    idx = AmConfig.sip_ifs.size()-1;
   }
   else {
     idx = if_it->second;
   }
   SIP_info* sinfo = new SIP_UDP_info();
   sinfo->local_ip = iface_name;
-  AmConfig_.sip_ifs.back().proto_info.push_back(sinfo);
+  AmConfig.sip_ifs.back().proto_info.push_back(sinfo);
 
-  if_it = AmConfig_.media_if_names.find("default");
-  if(if_it == AmConfig_.media_if_names.end()) {
+  if_it = AmConfig.media_if_names.find("default");
+  if(if_it == AmConfig.media_if_names.end()) {
     MEDIA_interface intf;
     intf.name = "default";
-    AmConfig_.media_ifs.push_back(intf);
-    AmConfig_.media_if_names["default"] = AmConfig_.media_ifs.size()-1;
-    idx = AmConfig_.media_ifs.size()-1;
+    AmConfig.media_ifs.push_back(intf);
+    AmConfig.media_if_names["default"] = AmConfig.media_ifs.size()-1;
+    idx = AmConfig.media_ifs.size()-1;
   }
   else {
     idx = if_it->second;
   }
   RTP_info* rinfo = new RTP_info();
   rinfo->local_ip = iface_name;
-  AmConfig_.media_ifs[idx].proto_info.push_back(rinfo);
+  AmConfig.media_ifs[idx].proto_info.push_back(rinfo);
 }
 
 /* Note: The function should not use logging because it is called before
@@ -199,14 +199,14 @@ static bool apply_args(std::map<char,string>& args)
       break;
 
     case 'D':
-      if(!AmConfig_.log_stderr){
+      if(!AmConfig.log_stderr){
           /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
                   progname);*/
-          if (!AmConfig_.setLogStderr("yes")) {
+          if (!AmConfig.setLogStderr("yes")) {
               return false;
           }
       }
-      if (!AmConfig_.setStderrLogLevel(it->second)) {
+      if (!AmConfig.setStderrLogLevel(it->second)) {
           fprintf(stderr, "%s: invalid stderr log level: %s\n",
                   progname, it->second.c_str());
           return false;
@@ -215,32 +215,32 @@ static bool apply_args(std::map<char,string>& args)
 
     case 'E':
 #ifndef DISABLE_DAEMON_MODE
-     AmConfig_.deamon_mode = false;
+     AmConfig.deamon_mode = false;
 #endif
-     if (!AmConfig_.setLogStderr("yes")) {
+     if (!AmConfig.setLogStderr("yes")) {
        return false;
      }
      break;
 
     case 'f':
-      AmConfig_.config_path = it->second;
+      AmConfig.config_path = it->second;
       break;
 
     case 'x':
-      AmConfig_.modules_path = it->second;
+      AmConfig.modules_path = it->second;
       break;
 
 #ifndef DISABLE_DAEMON_MODE
     case 'P':
-      AmConfig_.deamon_pid_file = it->second;
+      AmConfig.deamon_pid_file = it->second;
       break;
 
     case 'u':
-      AmConfig_.deamon_uid = it->second;
+      AmConfig.deamon_uid = it->second;
       break;
 
     case 'g':
-      AmConfig_.deamon_gid = it->second;
+      AmConfig.deamon_gid = it->second;
       break;
 #endif
 
@@ -269,18 +269,18 @@ static void signal_handler(int sig)
     return;
   }
 
-  if (sig == SIGCHLD && AmConfig_.ignore_sig_chld) {
+  if (sig == SIGCHLD && AmConfig.ignore_sig_chld) {
     return;
   }
 
-  if (sig == SIGPIPE && AmConfig_.ignore_sig_pipe) {
+  if (sig == SIGPIPE && AmConfig.ignore_sig_pipe) {
     return;
   }
 
   WARN("Signal %s (%d) received.\n", strsignal(sig), sig);
 
   if(sig == SIGQUIT) {
-    CoreRpc::set_system_shutdown(!AmConfig_.shutdown_mode);
+    CoreRpc::set_system_shutdown(!AmConfig.shutdown_mode);
     return;
   }
 
@@ -327,7 +327,7 @@ int set_sighandler(void (*handler)(int))
 
 static int write_pid_file()
 {
-  FILE* fpid = fopen(AmConfig_.deamon_pid_file.c_str(), "w");
+  FILE* fpid = fopen(AmConfig.deamon_pid_file.c_str(), "w");
 
   if (fpid) {
     string spid = int2str((int)getpid());
@@ -337,7 +337,7 @@ static int write_pid_file()
   }
   else {
     ERROR("Cannot write PID file '%s': %s.\n",
-        AmConfig_.deamon_pid_file.c_str(), strerror(errno));
+        AmConfig.deamon_pid_file.c_str(), strerror(errno));
   }
 
   return -1;
@@ -410,7 +410,7 @@ int main(int argc, char* argv[])
   }
 
   /* load and apply configuration file */
-  if(AmConfig_.readConfiguration())
+  if(AmConfig.readConfiguration())
   {
     ERROR("configuration errors. exiting.");
     return -1;
@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
     goto error;
   }
 
-  if(AmConfig_.finalizeIpConfig() < 0)
+  if(AmConfig.finalizeIpConfig() < 0)
     goto error;
 
   printf("Configuration:\n"
@@ -441,16 +441,16 @@ int main(int argc, char* argv[])
 	 log_level2str[AmConfig::LogLevel], AmConfig::LogLevel,
          AmConfig::LogStderr ? "yes" : "no",
 #endif
-	 AmConfig_.config_path.c_str(),
-	 AmConfig_.modules_path.c_str()
+	 AmConfig.config_path.c_str(),
+	 AmConfig.modules_path.c_str()
 #ifndef DISABLE_DAEMON_MODE
-	 ,AmConfig_.deamon_mode ? "yes" : "no",
-	 AmConfig_.deamon_uid.empty() ? "<not set>" : AmConfig_.deamon_uid.c_str(),
-	 AmConfig_.deamon_gid.empty() ? "<not set>" : AmConfig_.deamon_gid.c_str()
+	 ,AmConfig.deamon_mode ? "yes" : "no",
+	 AmConfig.deamon_uid.empty() ? "<not set>" : AmConfig.deamon_uid.c_str(),
+	 AmConfig.deamon_gid.empty() ? "<not set>" : AmConfig.deamon_gid.c_str()
 #endif
 	);
 
-  AmConfig_.dump_Ifs();
+  AmConfig.dump_Ifs();
 
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");
@@ -458,7 +458,7 @@ int main(int argc, char* argv[])
 
 #ifndef DISABLE_DAEMON_MODE
 
-  if(AmConfig_.deamon_mode){
+  if(AmConfig.deamon_mode){
 #ifdef PROPAGATE_COREDUMP_SETTINGS
     struct rlimit lim;
     bool have_limit = false;
@@ -466,16 +466,16 @@ int main(int argc, char* argv[])
     int dumpable = prctl(PR_GET_DUMPABLE, 0, 0, 0, 0);
 #endif
 
-    if(!AmConfig_.deamon_gid.empty()){
+    if(!AmConfig.deamon_gid.empty()){
       unsigned int gid;
-      if(str2i(AmConfig_.deamon_gid, gid)){
-	struct group* grnam = getgrnam(AmConfig_.deamon_gid.c_str());
+      if(str2i(AmConfig.deamon_gid, gid)){
+	struct group* grnam = getgrnam(AmConfig.deamon_gid.c_str());
 	if(grnam != NULL){
 	  gid = grnam->gr_gid;
 	}
 	else{
 	  ERROR("Cannot find group '%s' in the group database.\n",
-		AmConfig_.deamon_gid.c_str());
+		AmConfig.deamon_gid.c_str());
 	  goto error;
 	}
       }
@@ -487,16 +487,16 @@ int main(int argc, char* argv[])
       }
     }
 
-    if(!AmConfig_.deamon_uid.empty()){
+    if(!AmConfig.deamon_uid.empty()){
       unsigned int uid;
-      if(str2i(AmConfig_.deamon_uid, uid)){
-	struct passwd* pwnam = getpwnam(AmConfig_.deamon_uid.c_str());
+      if(str2i(AmConfig.deamon_uid, uid)){
+	struct passwd* pwnam = getpwnam(AmConfig.deamon_uid.c_str());
 	if(pwnam != NULL){
 	  uid = pwnam->pw_uid;
 	}
 	else{
 	  ERROR("Cannot find user '%s' in the user database.\n",
-		AmConfig_.deamon_uid.c_str());
+		AmConfig.deamon_uid.c_str());
 	  goto error;
 	}
       }
@@ -509,7 +509,7 @@ int main(int argc, char* argv[])
     }
 
 #if defined(__linux__)
-    if(!AmConfig_.deamon_uid.empty() || !AmConfig_.deamon_gid.empty()){
+    if(!AmConfig.deamon_uid.empty() || !AmConfig.deamon_gid.empty()){
       if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0) {
 	WARN("unable to set daemon to dump core after setuid/setgid\n");
       }
@@ -587,7 +587,7 @@ int main(int argc, char* argv[])
       /* continue, leave it open */
     };
     /* close stderr only if log_stderr=0 */
-    if ((!AmConfig_.log_stderr) && (freopen("/dev/null", "w", stderr)==0)){
+    if ((!AmConfig.log_stderr) && (freopen("/dev/null", "w", stderr)==0)){
       ERROR("Cannot replace stderr with /dev/null: %s.\n",
 	    strerror(errno));
       /* continue, leave it open */
@@ -609,7 +609,7 @@ int main(int argc, char* argv[])
     goto error;
   }
 #endif
-  if(AmConfig_.enable_rtsp){
+  if(AmConfig.enable_rtsp){
     if(RtspClient::instance()->onLoad()){
       ERROR("Cannot initialize RTSP client\n");
       goto error;
@@ -629,7 +629,7 @@ int main(int argc, char* argv[])
   
 #ifdef SESSION_THREADPOOL
   INFO("Starting session processor threads\n");
-  AmSessionProcessor::addThreads(AmConfig_.session_proc_threads);
+  AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 #endif 
 
   INFO("Starting audio recorder");
@@ -658,7 +658,7 @@ int main(int argc, char* argv[])
   
   INFO("Loading plug-ins\n");
   AmPlugIn::instance()->init();
-  if(AmPlugIn::instance()->load(AmConfig_.modules_path, AmConfig_.modules))
+  if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
     goto error;
 
   AmPlugIn::instance()->registerLoggingPlugins();
@@ -685,7 +685,7 @@ int main(int argc, char* argv[])
   dumps_transactions();
   DBG("*****************************\n");
 
-  if(AmConfig_.enable_rtsp){
+  if(AmConfig.enable_rtsp){
     INFO("Disposing RTSP client");
     RtspClient::dispose();
   }
@@ -707,8 +707,8 @@ int main(int argc, char* argv[])
   //async_file_writer::instance()->join();
 
 #ifndef DISABLE_DAEMON_MODE
-  if (AmConfig_.deamon_mode) {
-    unlink(AmConfig_.deamon_pid_file.c_str());
+  if (AmConfig.deamon_mode) {
+    unlink(AmConfig.deamon_pid_file.c_str());
   }
   if(fd[1]){
      main_pid = -1;

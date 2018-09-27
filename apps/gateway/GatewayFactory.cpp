@@ -28,9 +28,9 @@ GatewayFactory::GatewayFactory(const string& _app_name)
 int GatewayFactory::onLoad()
 {
     INFO("gateway version %s loading (mISDN) ...\n", GW_VERSION);
-    if (gwconf.loadFile(AmConfig_.configs_path + string(MODULE_NAME)+ ".conf")) {
-//  if (gwconf.loadFile(AmConfig_.configs_path +"gateway.conf")) {
-        DBG("cant load conf file %s/%s.conf\n",AmConfig_.configs_path.c_str(),MODULE_NAME);
+    if (gwconf.loadFile(AmConfig.configs_path + string(MODULE_NAME)+ ".conf")) {
+//  if (gwconf.loadFile(AmConfig.configs_path +"gateway.conf")) {
+        DBG("cant load conf file %s/%s.conf\n",AmConfig.configs_path.c_str(),MODULE_NAME);
         exit(-1);
     }
     configureModule(gwconf);
