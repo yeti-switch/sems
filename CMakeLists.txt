@@ -267,7 +267,7 @@ ELSE(RTMP_FOUND)
 ENDIF(RTMP_FOUND)
 
 # Check for res_search in -lresolv
-include(${CMAKE_SOURCE_DIR}/cmake/CheckSymbolExists.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/_CheckSymbolExists.cmake)
 SET(CMAKE_REQUIRED_LIBRARIES resolv)
 CHECK_SYMBOL_EXISTS(res_search resolv.h HAVE_RES_SEARCH)
 MESSAGE(STATUS "Have res_search: ${HAVE_RES_SEARCH} ")
