@@ -216,7 +216,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
 
     auto_ptr<AmSession> session;
     try {
-        session.reset(createSession(req, app_name, session_params));
+        session.reset(createSession(req, app_name, true, session_params));
         if(session.get() != 0) {
             session->dlg->initFromLocalRequest(req);
             session->setCallgroup(req.from_tag);
@@ -491,15 +491,22 @@ bool AmSessionContainer::check_and_add_cps()
 }
 
 AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
-					     string& app_name,
-					     AmArg* session_params)
+                                            string& app_name,
+                                            bool is_uac,
+                                            AmArg* session_params)
 {
-  if (AmConfig_.shutdown_mode) {
+  if (AmConfig_.shutdown_mode && (!(is_uac && AmConfig_.shutdown_mode_allow_uac)))
+  {
     _run_cond.set(true); // so that thread stops
     DBG("Shutdown mode. Not creating session.\n");
 
-    AmSipDialog::reply_error(req,AmConfig_.shutdown_mode_err_code,
-			     AmConfig_.shutdown_mode_err_reason);
+    if(!is_uac) {
+      AmSipDialog::reply_error(
+        req,
+        AmConfig_.shutdown_mode_err_code,
+        AmConfig_.shutdown_mode_err_reason);
+    }
+
     return NULL;
   }
 

@@ -94,6 +94,7 @@ public:
     bool shutdown_mode;
     unsigned int shutdown_mode_err_code;
     std::string shutdown_mode_err_reason;
+    bool shutdown_mode_allow_uac;
     unsigned int cps_limit_err_code;
     std::string cps_limit_err_reason;
     bool enable_rtsp;

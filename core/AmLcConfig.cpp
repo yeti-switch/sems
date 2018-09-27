@@ -85,6 +85,7 @@
 #define PARAM_CPSLIMIT_REASON_NAME   "cps_limit_err_reason"
 #define PARAM_SDM_ERR_CODE_NAME      "shutdown_mode_err_code"
 #define PARAM_SDM_ERR_REASON_NAME    "shutdown_mode_err_reason"
+#define PARAM_SDM_ALLOW_UAC_NAME     "shutdown_mode_allow_uac"
 #define PARAM_ENABLE_RTSP_NAME       "enable_rtsp"
 #define PARAM_OPT_TRANSCODE_OUT_NAME "options_transcoder_out_stats_hdr"
 #define PARAM_OPT_TRANSCODE_IN_NAME  "options_transcoder_in_stats_hdr"
@@ -492,6 +493,7 @@ AmLcConfig::AmLcConfig()
         CFG_STR(PARAM_OSLIM_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
         CFG_INT(PARAM_SDM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_SDM_ERR_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
+        CFG_STR(PARAM_SDM_ALLOW_UAC_NAME, VALUE_NO, CFGF_NONE),
         CFG_INT(PARAM_CPSLIMIT_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CPSLIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_CPSLIMIT_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
@@ -808,6 +810,8 @@ int AmLcConfig::readGeneral()
     cps_limit_err_reason = cfg_getstr(gen, PARAM_CPSLIMIT_REASON_NAME);
     shutdown_mode_err_code = cfg_getint(gen, PARAM_SDM_ERR_CODE_NAME);
     shutdown_mode_err_reason = cfg_getstr(gen, PARAM_SDM_ERR_REASON_NAME);
+    value = cfg_getstr(gen, PARAM_SDM_ALLOW_UAC_NAME);
+    shutdown_mode_allow_uac = (value == VALUE_YES);
     value = cfg_getstr(gen, PARAM_ENABLE_RTSP_NAME);
     enable_rtsp = (value == VALUE_YES);
     options_transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_OUT_NAME);
