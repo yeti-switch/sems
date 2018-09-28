@@ -174,7 +174,7 @@
 #define VALUE_APP_HEADER             "$(apphdr)"
 #define VALUE_MAPPING                "$(mapping)"
 
-#define CONF_FILE_PATH               "/etc/sems/sems.cfg"
+#define CONF_FILE_PATH               "/etc/sems/sems.conf"
 
 /*******************************************************************************************************/
 /*                                                                                                     */
