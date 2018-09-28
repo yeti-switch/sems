@@ -119,6 +119,11 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
                 goto error;
             }
         } else if(ip_version == PF_INET6) {
+#ifndef IPV6_HDRINCL
+            ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: "
+                  "option is not available for kernels before 4.5");
+            goto error;
+#endif
             if (setsockopt(sock, IPPROTO_IPV6, IPV6_HDRINCL, &t, sizeof(t))<0) {
                 ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: %s [%d]\n",
                     strerror(errno), errno);
