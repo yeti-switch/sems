@@ -123,12 +123,13 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
             ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: "
                   "option is not available for kernels before 4.5");
             goto error;
-#endif
+#else
             if (setsockopt(sock, IPPROTO_IPV6, IPV6_HDRINCL, &t, sizeof(t))<0) {
                 ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: %s [%d]\n",
                     strerror(errno), errno);
                 goto error;
             }
+#endif
         }
     } else {
         /* IP_PKTINFO makes no sense if the ip header is included */
