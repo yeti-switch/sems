@@ -299,7 +299,7 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 
       session.reset(createSession(req,app_name));
       if(session.get() != 0){
-
+    session->dlg->setResolvePriority(Dualstack);
 	// update session's local tag (ID) if not already set
 	session->setLocalTag();
 	const string& local_tag = session->getLocalTag();
