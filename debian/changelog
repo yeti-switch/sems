@@ -1,3 +1,11 @@
+sems (1.8.1-1) stable; urgency=low
+
+  * add general.shutdown_mode_allow_uac parameter
+  * sems.conf: migration to the libconfuse format
+  * IPv6 support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 28 Sep 2018 13:06:52 +0300
+
 sems (1.7.72-5) stable; urgency=low
 
   * eb2ec0c4e AmBasicSipDialog: call onFailure hook on error from onRxReqStatus
