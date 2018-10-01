@@ -86,7 +86,7 @@ int CurlConnection::watch_socket(int socket, int what)
             ev.events&EPOLLOUT? "EPOLLOUT" : "",
             ev.events&EPOLLERR? "EPOLLERR" : "");
         if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, s, &ev)) {
-            ERROR("epoll_ctl_mod(%d) %d",s,errno);
+            DBG("epoll_ctl_mod(%d) %d",s,errno);
         }
     } else {
         CDBG("enable socket %d watching for events %d (%s|%s|%s)",
