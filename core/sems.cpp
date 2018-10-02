@@ -202,7 +202,7 @@ static bool apply_args(std::map<char,string>& args)
       if(!AmConfig.log_stderr){
           /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
                   progname);*/
-          if (!AmConfig.setLogStderr("yes")) {
+          if (!AmConfig.setLogStderr(true)) {
               return false;
           }
       }
@@ -217,7 +217,7 @@ static bool apply_args(std::map<char,string>& args)
 #ifndef DISABLE_DAEMON_MODE
      AmConfig.deamon_mode = false;
 #endif
-     if (!AmConfig.setLogStderr("yes")) {
+     if (!AmConfig.setLogStderr(true)) {
        return false;
      }
      break;
