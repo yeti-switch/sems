@@ -31,7 +31,7 @@ public:
     std::string fixIface2IP(const std::string& dev_name, bool v6_for_sip);
     
     int setLogLevel(const std::string& level, bool apply = true);
-    int setLogStderr(const std::string& s, bool apply = true);
+    int setLogStderr(bool s, bool apply = true);
     int setStderrLogLevel(const std::string& level, bool apply = true);
 
     std::vector<SIP_interface> sip_ifs;

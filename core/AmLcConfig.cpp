@@ -30,6 +30,7 @@
 #define SECTION_GENERAL_NAME         "general"
 #define SECTION_ROUTING_NAME         "routing"
 #define SECTION_APPLICATION_NAME     "application"
+#define SECTION_SESSION_LIMIT_NAME   "session_limit"
 
 #define PARAM_DEFAULT_MEDIAIF_NAME   "default-media-interface"
 #define PARAM_ADDRESS_NAME           "address"
@@ -74,9 +75,9 @@
 #define PARAM_NEXT_HOP_1ST_NAME      "next_hop_1st_req"
 #define PARAM_PROXY_STICKY_AUTH_NAME "proxy_sticky_auth"
 #define PARAM_NOTIFY_LOWER_CSEQ_NAME "ignore_notify_lower_cseq"
-#define PARAM_SLIM_NAME              "session_limit"
-#define PARAM_SLIM_ERR_CODE_NAME     "session_limit_err_code"
-#define PARAM_SLIM_ERR_REASON_NAME   "session_limit_err_reason"
+#define PARAM_LIMIT_NAME             "limit"
+#define PARAM_LIMIT_ERR_CODE_NAME     "code"
+#define PARAM_LIMIT_ERR_REASON_NAME   "reason"
 #define PARAM_OSLIM_NAME             "options_session_limit"
 #define PARAM_OSLIM_ERR_CODE_NAME    "options_session_limit_err_code"
 #define PARAM_OSLIM_ERR_REASON_NAME  "options_session_limit_err_reason"
@@ -93,7 +94,6 @@
 #define PARAM_TRANSCODE_IN_NAME      "transcoder_in_stats_hdr"
 #define PARAM_LOG_SESSIONS_NAME      "log_sessions"
 #define PARAM_LOG_EVENTS_NAME        "log_events"
-#define PARAM_USE_DEF_SIG_NAME       "use_default_signature"
 #define PARAM_SIGNATURE_NAME         "signature"
 #define PARAM_NODE_ID_NAME           "node_id"
 #define PARAM_MAX_FORWARDS_NAME      "max_forwards"
@@ -110,7 +110,7 @@
 #define PARAM_ENABLE_ZRTP_NAME       "enable_zrtp"
 #define PARAM_ENABLE_ZRTP_DLOG_NAME  "enable_zrtp_debuglog"
 #define PARAM_EXCLUDE_PAYLOADS_NAME  "exclude_payloads"
-#define PARAM_DEAMON_NAME            "deamon"
+#define PARAM_DEAMON_NAME            "daemon"
 #define PARAM_DEAMON_UID_NAME        "daemon_uid"
 #define PARAM_DEAMON_GID_NAME        "daemon_gid"
 #define PARAM_SIP_TIMER_NAME         "sip_timer_"
@@ -134,12 +134,6 @@
 #define PARAM_APP_NAME               "application"
 
 #define VALUE_OFF                    "off"
-#define VALUE_ON                     "on"
-#define VALUE_YES                    "yes"
-#define VALUE_NO                     "no"
-#define VALUE_ON                     "on"
-#define VALUE_TRUE                   "true"
-#define VALUE_FALSE                  "false"
 #define VALUE_DROP                   "drop"
 #define VALUE_REJECT                 "reject"
 #define VALUE_BL_TTL                 60000 /* 60s */
@@ -181,36 +175,6 @@
 /*                                       Validation functions                                          */
 /*                                                                                                     */
 /*******************************************************************************************************/
-int validate_on_off_func(cfg_t *cfg, cfg_opt_t *opt)
-{
-    std::string value = cfg_getstr(cfg, opt->name);
-    bool valid = (value == VALUE_OFF || value == VALUE_ON);
-    if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'on\' or \'off\'", value.c_str(), opt->name);
-    }
-    return valid ? 0 : 1;
-}
-
-int validate_yes_no_func(cfg_t *cfg, cfg_opt_t *opt)
-{
-    std::string value = cfg_getstr(cfg, opt->name);
-    bool valid = (value == VALUE_YES || value == VALUE_NO);
-    if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'yes\' or \'no\'", value.c_str(), opt->name);
-    }
-    return valid ? 0 : 1;
-}
-
-int validate_bool_func(cfg_t *cfg, cfg_opt_t *opt)
-{
-    std::string value = cfg_getstr(cfg, opt->name);
-    bool valid = (value == VALUE_TRUE || value == VALUE_FALSE);
-    if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'true\' or \'false\'", value.c_str(), opt->name);
-    }
-    return valid ? 0 : 1;
-}
-
 int parse_log_level(const std::string& level)
 {
     int n;
@@ -363,10 +327,10 @@ AmLcConfig::AmLcConfig()
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_INT(PARAM_HIGH_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_USE_RAW_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OBD_IF_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_VIA_PORT_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_STAT_CL_PORT_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_END()
     };
@@ -377,10 +341,10 @@ AmLcConfig::AmLcConfig()
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
         CFG_INT(PARAM_HIGH_PORT_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_USE_RAW_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OBD_IF_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_VIA_PORT_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_STAT_CL_PORT_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_END()
     };
@@ -389,10 +353,10 @@ AmLcConfig::AmLcConfig()
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_USE_RAW_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OBD_IF_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_VIA_PORT_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_STAT_CL_PORT_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
@@ -404,11 +368,11 @@ AmLcConfig::AmLcConfig()
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_USE_RAW_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OBD_IF_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_VIA_PORT_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_STAT_CL_PORT_NAME, "", CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
@@ -443,7 +407,7 @@ AmLcConfig::AmLcConfig()
 /**********************************************************************************************/
     cfg_opt_t module[] =
     {
-        CFG_STR(PARAM_GLOBAL_NAME, "false", CFGF_NONE),
+        CFG_BOOL(PARAM_GLOBAL_NAME, cfg_false, CFGF_NONE),
         CFG_END()
     };
 
@@ -458,66 +422,70 @@ AmLcConfig::AmLcConfig()
 /**********************************************************************************************/
 /*                                            general section                                 */
 /**********************************************************************************************/
+    cfg_opt_t slimit[] {
+        CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NODEFAULT),
+        CFG_INT(PARAM_LIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NODEFAULT),
+        CFG_STR(PARAM_LIMIT_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
     cfg_opt_t general[] =
     {
+        CFG_SEC(SECTION_SESSION_LIMIT_NAME, slimit, CFGF_NONE),
+        CFG_BOOL(PARAM_LOG_PARS_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_STDERR_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OUTBOUND_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OUTBOUND_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_SYMMETRIC_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_USE_RAW_SOCK_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_DISABLE_DNS_SRV_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_DETECT_INBAND_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_SIP_NAT_HANDLING_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_NEXT_HOP_1ST_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_PROXY_STICKY_AUTH_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_NOTIFY_LOWER_CSEQ_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_RTSP_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_LOG_SESSIONS_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_LOG_EVENTS_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_ACCEPT_FORKED_DLG_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_BL_TTL_NAME, VALUE_BL_TTL, CFGF_NONE),
-        CFG_STR(PARAM_LOG_RAW_NAME, VALUE_LOG_DEBUG, CFGF_NONE),
-        CFG_STR(PARAM_LOG_PARS_NAME, VALUE_YES, CFGF_NONE),
         CFG_INT(PARAM_UDP_RECVBUF_NAME, VALUE_UDP_RECVBUF, CFGF_NONE),
-        CFG_STR(PARAM_DUMP_PATH_NAME, VALUE_LOG_DUMP_PATH, CFGF_NONE),
-        CFG_STR(PARAM_LOG_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
-        CFG_STR(PARAM_STDERR_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_LOG_STDERR_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
-        CFG_STR(PARAM_SL_FACILITY_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_SESS_PROC_THREADS_NAME, VALUE_NUM_SESSION_PROCESSORS, CFGF_NODEFAULT),
         CFG_INT(PARAM_MEDIA_THREADS_NAME, VALUE_NUM_MEDIA_PROCESSORS, CFGF_NONE),
         CFG_INT(PARAM_SIP_SERVERS_NAME, VALUE_NUM_SIP_SERVERS, CFGF_NONE),
         CFG_INT(PARAM_RTP_RECEIVERS_NAME, VALUE_NUM_RTP_RECEIVERS, CFGF_NONE),
-        CFG_STR(PARAM_OUTBOUND_PROXY_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OUTBOUND_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_FORCE_OUTBOUND_IF_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_FORCE_SYMMETRIC_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_USE_RAW_SOCK_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_DISABLE_DNS_SRV_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_DETECT_INBAND_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_SIP_NAT_HANDLING_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_NEXT_HOP_NAME, "", CFGF_NODEFAULT),
-        CFG_STR(PARAM_NEXT_HOP_1ST_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_PROXY_STICKY_AUTH_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_NOTIFY_LOWER_CSEQ_NAME, VALUE_NO, CFGF_NONE),
-        CFG_INT(PARAM_SLIM_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
-        CFG_INT(PARAM_SLIM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_SLIM_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
         CFG_INT(PARAM_OSLIM_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
-        CFG_INT(PARAM_OSLIM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_OSLIM_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
-        CFG_INT(PARAM_SDM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_SDM_ERR_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
-        CFG_STR(PARAM_SDM_ALLOW_UAC_NAME, VALUE_NO, CFGF_NONE),
-        CFG_INT(PARAM_CPSLIMIT_NAME, 0, CFGF_NONE),
-        CFG_INT(PARAM_CPSLIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_CPSLIMIT_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
-        CFG_STR(PARAM_ENABLE_RTSP_NAME, VALUE_YES, CFGF_NONE),
+        CFG_INT(PARAM_NODE_ID_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_MAX_FORWARDS_NAME, 70, CFGF_NONE),
+        CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
+        CFG_INT(PARAM_DEAD_RTP_TIME_NAME, VALUE_DEAD_RTP_TIME, CFGF_NONE),
+        CFG_STR(PARAM_DUMP_PATH_NAME, VALUE_LOG_DUMP_PATH, CFGF_NONE),
+        CFG_STR(PARAM_LOG_RAW_NAME, VALUE_LOG_DEBUG, CFGF_NONE),
+        CFG_STR(PARAM_LOG_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
+        CFG_STR(PARAM_LOG_STDERR_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
+        CFG_STR(PARAM_SL_FACILITY_NAME, "", CFGF_NODEFAULT),
+        CFG_STR(PARAM_OUTBOUND_PROXY_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_NEXT_HOP_NAME, "", CFGF_NODEFAULT),
         CFG_STR(PARAM_OPT_TRANSCODE_OUT_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_OPT_TRANSCODE_IN_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_TRANSCODE_OUT_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_TRANSCODE_IN_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_LOG_SESSIONS_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_LOG_EVENTS_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR(PARAM_USE_DEF_SIG_NAME, VALUE_NO, CFGF_NODEFAULT),
         CFG_STR(PARAM_SIGNATURE_NAME, DEFAULT_SIGNATURE, CFGF_NONE),
-        CFG_INT(PARAM_NODE_ID_NAME, 0, CFGF_NONE),
-        CFG_INT(PARAM_MAX_FORWARDS_NAME, 0, CFGF_NONE),
-        CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
-        CFG_INT(PARAM_DEAD_RTP_TIME_NAME, VALUE_DEAD_RTP_TIME, CFGF_NONE),
         CFG_STR(PARAM_DTMF_DETECTOR_NAME, VALUE_SPANDSP, CFGF_NONE),
-        CFG_STR(PARAM_SINGLE_CODEC_INOK_NAME, VALUE_NO, CFGF_NONE),
-        CFG_STR_LIST(PARAM_CODEC_ORDER_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR_LIST(PARAM_EXCLUDE_PAYLOADS_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_ACCEPT_FORKED_DLG_NAME, VALUE_NO, CFGF_NONE),
         CFG_STR(PARAM_100REL_NAME, VALUE_SUPPORTED, CFGF_NONE),
         CFG_STR(PARAM_UNHDL_REP_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
         CFG_STR(PARAM_PCAP_UPLOAD_QUEUE_NAME, "", CFGF_NONE),
+        CFG_INT(PARAM_OSLIM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_OSLIM_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
+        CFG_BOOL(PARAM_SDM_ALLOW_UAC_NAME, cfg_false, CFGF_NONE),
+        CFG_INT(PARAM_SDM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_SDM_ERR_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
+        CFG_INT(PARAM_CPSLIMIT_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_CPSLIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_CPSLIMIT_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
+        CFG_STR_LIST(PARAM_CODEC_ORDER_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_EXCLUDE_PAYLOADS_NAME, 0, CFGF_NODEFAULT),
         CFG_INT(PARAM_SIP_TIMER_A_NAME, DEFAULT_A_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_B_NAME, DEFAULT_B_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_D_NAME, DEFAULT_D_TIMER, CFGF_NONE),
@@ -547,11 +515,11 @@ AmLcConfig::AmLcConfig()
 #endif
 #endif
 #ifdef WITH_ZRTP
-        CFG_STR(PARAM_ENABLE_ZRTP_NAME, VALUE_YES, CFGF_NONE),
-        CFG_STR(PARAM_ENABLE_ZRTP_DLOG_NAME, VALUE_YES, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_ZRTP_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_ZRTP_DLOG_NAME, cfg_true, CFGF_NONE),
 #endif
 #ifndef DISABLE_DAEMON_MODE
-        CFG_STR(PARAM_DEAMON_NAME, VALUE_YES, CFGF_NONE),
+        CFG_BOOL(PARAM_DEAMON_NAME, cfg_true, CFGF_NONE),
         CFG_STR(PARAM_DEAMON_UID_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_DEAMON_GID_NAME, "", CFGF_NONE),
 #endif /* !DISABLE_DAEMON_MODE */
@@ -587,47 +555,6 @@ AmLcConfig::AmLcConfig()
 /**********************************************************************************************/
 /*                                         validation set                                     */
 /**********************************************************************************************/
-    // signaling interfaces validation
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_TCP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_SIP_UDP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    // media interfaces validation
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTSP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTSP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTSP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|" SECTION_RTSP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
-
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTSP_NAME "|" PARAM_USE_RAW_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTSP_NAME "|" PARAM_FORCE_OBD_IF_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTSP_NAME "|" PARAM_FORCE_VIA_PORT_NAME, validate_on_off_func);
-    cfg_set_validate_func(m_cfg, SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|" SECTION_RTSP_NAME "|" PARAM_STAT_CL_PORT_NAME, validate_on_off_func);
 
     // acl of interfaces validation
     cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
@@ -649,42 +576,14 @@ AmLcConfig::AmLcConfig()
     cfg_set_validate_func(m_cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
                                  SECTION_SIP_UDP_NAME "|" PARAM_ADDRESS_NAME, validate_ip4_func);
 
-    // modules validation
-    cfg_set_validate_func(m_cfg, SECTION_MODULES_NAME "|" SECTION_MODULE_NAME "|" PARAM_GLOBAL_NAME , validate_bool_func);
-
     // general validation
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_RAW_NAME , validate_log_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_LEVEL_NAME , validate_log_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_PARS_NAME , validate_yes_no_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_STDERR_LEVEL_NAME , validate_log_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_STDERR_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_FORCE_OUTBOUND_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_FORCE_OUTBOUND_IF_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_FORCE_SYMMETRIC_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_USE_RAW_SOCK_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_DISABLE_DNS_SRV_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_DETECT_INBAND_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_SIP_NAT_HANDLING_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_NEXT_HOP_1ST_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_PROXY_STICKY_AUTH_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_NOTIFY_LOWER_CSEQ_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_ENABLE_RTSP_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_SESSIONS_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_EVENTS_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_USE_DEF_SIG_NAME , validate_yes_no_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_DTMF_DETECTOR_NAME , validate_dtmf_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_SINGLE_CODEC_INOK_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_ACCEPT_FORKED_DLG_NAME , validate_yes_no_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_100REL_NAME , validate_100rel_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_UNHDL_REP_LOG_LVL_NAME , validate_log_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_RESAMPLE_LIBRARY_NAME , validate_resampling_func);
-#ifdef WITH_ZRTP
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_ENABLE_ZRTP_NAME , validate_yes_no_func);
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_ENABLE_ZRTP_DLOG_NAME , validate_yes_no_func);
-#endif
-#ifndef DISABLE_DAEMON_MODE
-    cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_DEAMON_NAME , validate_yes_no_func);
-#endif
 }
 
 AmLcConfig::~AmLcConfig()
@@ -732,10 +631,10 @@ int AmLcConfig::readGeneral()
     }
     cfg_t* gen = cfg_getsec(m_cfg, SECTION_GENERAL_NAME);
 
+    _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
     _trans_layer::default_bl_ttl = cfg_getint(gen, PARAM_BL_TTL_NAME);
     trsp_socket::log_level_raw_msgs = parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME));
-    std::string logpars = cfg_getstr(gen, PARAM_LOG_PARS_NAME);
-    _SipCtrlInterface::log_parsed_messages = (logpars=="yes");
+    _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
     _SipCtrlInterface::udp_rcvbuf = cfg_getint(gen, PARAM_UDP_RECVBUF_NAME);
     sip_timer_t2 = cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME);
     for (int t = STIMER_A; t < __STIMER_MAX; t++) {
@@ -746,7 +645,7 @@ int AmLcConfig::readGeneral()
 
     log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
     log_level = (Log_Level)parse_log_level(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
-    setLogStderr(cfg_getstr(gen, PARAM_STDERR_NAME));
+    setLogStderr(cfg_getbool(gen, PARAM_STDERR_NAME));
     setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
 #ifndef DISABLE_SYSLOG_LOG
     if (cfg_size(gen, PARAM_SL_FACILITY_NAME)) {
@@ -769,39 +668,45 @@ int AmLcConfig::readGeneral()
 #endif
     }
 
+    max_forwards = cfg_getint(gen, PARAM_MAX_FORWARDS_NAME);
+    if(max_forwards > 70 || max_forwards < 1) {
+        ERROR("invalid max_forwards value specified."
+                  "it must be in range from 1 to 70\n");
+            return -1;
+    }
+
+    _resolver::disable_srv = cfg_getbool(gen, PARAM_DISABLE_DNS_SRV_NAME);
+    force_outbound_proxy = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_NAME);
+    force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
+    force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMMETRIC_NAME);
+    use_raw_sockets = cfg_getbool(gen, PARAM_USE_RAW_SOCK_NAME);
+    detect_inband_dtmf = cfg_getbool(gen, PARAM_DETECT_INBAND_NAME);
+    sip_nat_handling = cfg_getbool(gen, PARAM_SIP_NAT_HANDLING_NAME);
+    proxy_sticky_auth = cfg_getbool(gen, PARAM_PROXY_STICKY_AUTH_NAME);
+    ignore_notify_lower_cseq = cfg_getbool(gen, PARAM_NOTIFY_LOWER_CSEQ_NAME);
+    log_events = cfg_getbool(gen, PARAM_LOG_EVENTS_NAME);
+    single_codec_in_ok = cfg_getbool(gen, PARAM_SINGLE_CODEC_INOK_NAME);
+    enable_rtsp = cfg_getbool(gen, PARAM_ENABLE_RTSP_NAME);
+    shutdown_mode_allow_uac = cfg_getbool(gen, PARAM_SDM_ALLOW_UAC_NAME);
+    log_sessions = cfg_getbool(gen, PARAM_LOG_SESSIONS_NAME);
+    accept_forked_dialogs = cfg_getbool(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
+	if(use_raw_sockets && (raw_sender::init() < 0)) {
+        use_raw_sockets = false;
+	}
+    if(cfg_size(gen, PARAM_NEXT_HOP_NAME)) {
+        next_hop = cfg_getstr(gen, PARAM_NEXT_HOP_NAME);
+        next_hop_1st_req = cfg_getbool(gen, PARAM_NEXT_HOP_1ST_NAME);
+    }
+    if(cfg_size(gen, SECTION_SESSION_LIMIT_NAME)) {
+        cfg_t *slimit = cfg_getsec(gen, SECTION_SESSION_LIMIT_NAME);
+        session_limit =  cfg_getint(slimit, PARAM_LIMIT_NAME);
+        session_limit_err_code = cfg_getint(slimit, PARAM_LIMIT_ERR_CODE_NAME);
+        session_limit_err_reason = cfg_getstr(slimit, PARAM_LIMIT_ERR_REASON_NAME);
+    }
     media_proc_threads = cfg_getint(gen, PARAM_MEDIA_THREADS_NAME);
     rtp_recv_threads = cfg_getint(gen, PARAM_RTP_RECEIVERS_NAME);
     sip_server_threads = cfg_getint(gen, PARAM_SIP_SERVERS_NAME);
     outbound_proxy = cfg_getstr(gen, PARAM_OUTBOUND_PROXY_NAME);
-    std::string value = cfg_getstr(gen, PARAM_FORCE_OUTBOUND_NAME);
-    force_outbound_proxy = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
-    force_outbound_if = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_FORCE_SYMMETRIC_NAME);
-    force_symmetric_rtp = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_USE_RAW_SOCK_NAME);
-    use_raw_sockets = (value == VALUE_YES);
-	if(use_raw_sockets && (raw_sender::init() < 0)) {
-        use_raw_sockets = false;
-	}
-    value = cfg_getstr(gen, PARAM_DISABLE_DNS_SRV_NAME);
-    _resolver::disable_srv = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_DETECT_INBAND_NAME);
-    detect_inband_dtmf = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_SIP_NAT_HANDLING_NAME);
-    sip_nat_handling = (value == VALUE_YES);
-    if(cfg_size(gen, PARAM_NEXT_HOP_NAME)) {
-        next_hop = cfg_getstr(gen, PARAM_NEXT_HOP_NAME);
-        value = cfg_getstr(gen, PARAM_NEXT_HOP_1ST_NAME);
-        next_hop_1st_req = (value == VALUE_YES);
-    }
-    value = cfg_getstr(gen, PARAM_PROXY_STICKY_AUTH_NAME);
-    proxy_sticky_auth = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_NOTIFY_LOWER_CSEQ_NAME);
-    ignore_notify_lower_cseq = (value == VALUE_YES);
-    session_limit =  cfg_getint(gen, PARAM_SLIM_NAME);
-    session_limit_err_code = cfg_getint(gen, PARAM_SLIM_ERR_CODE_NAME);
-    session_limit_err_reason = cfg_getstr(gen, PARAM_SLIM_ERR_REASON_NAME);
     options_session_limit =  cfg_getint(gen, PARAM_OSLIM_NAME);
     options_session_limit_err_code = cfg_getint(gen, PARAM_OSLIM_ERR_CODE_NAME);
     options_session_limit_err_reason = cfg_getstr(gen, PARAM_OSLIM_ERR_REASON_NAME);
@@ -810,42 +715,29 @@ int AmLcConfig::readGeneral()
     cps_limit_err_reason = cfg_getstr(gen, PARAM_CPSLIMIT_REASON_NAME);
     shutdown_mode_err_code = cfg_getint(gen, PARAM_SDM_ERR_CODE_NAME);
     shutdown_mode_err_reason = cfg_getstr(gen, PARAM_SDM_ERR_REASON_NAME);
-    value = cfg_getstr(gen, PARAM_SDM_ALLOW_UAC_NAME);
-    shutdown_mode_allow_uac = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_ENABLE_RTSP_NAME);
-    enable_rtsp = (value == VALUE_YES);
     options_transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_OUT_NAME);
     options_transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_IN_NAME);
     transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_TRANSCODE_OUT_NAME);
     transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_TRANSCODE_IN_NAME);
-    value = cfg_getstr(gen, PARAM_LOG_SESSIONS_NAME);
-    log_sessions = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_LOG_EVENTS_NAME);
-    log_events = (value == VALUE_YES);
-    if(!cfg_size(gen, PARAM_USE_DEF_SIG_NAME) ||
-       strcmp(cfg_getstr(gen, PARAM_USE_DEF_SIG_NAME), VALUE_YES) == 0) {
+    if(!cfg_size(gen, PARAM_SIGNATURE_NAME)) {
         signature = DEFAULT_SIGNATURE;
     } else {
         signature = cfg_getstr(gen, PARAM_SIGNATURE_NAME);
     }
     node_id = cfg_getint(gen, PARAM_NODE_ID_NAME);
     if(node_id!=0) node_id_prefix = int2str(node_id) + "-";
-    max_forwards = cfg_getint(gen, PARAM_MAX_FORWARDS_NAME);
     max_shutdown_time = cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME);
     dead_rtp_time = cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME);
-    value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
+    std::string value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
     if(value == VALUE_SPANDSP) default_dtmf_detector = Dtmf::SpanDSP;
     else default_dtmf_detector = Dtmf::SEMSInternal;
-    value = cfg_getstr(gen, PARAM_SINGLE_CODEC_INOK_NAME);
-    single_codec_in_ok = (value == VALUE_YES);
     for(size_t i = 0; i < cfg_size(gen, PARAM_CODEC_ORDER_NAME); i++) {
         codec_order.push_back(cfg_getnstr(gen, PARAM_CODEC_ORDER_NAME, i));
     }
     for(size_t i = 0; i < cfg_size(gen, PARAM_EXCLUDE_PAYLOADS_NAME); i++) {
         exclude_payloads.push_back(cfg_getnstr(gen, PARAM_EXCLUDE_PAYLOADS_NAME, i));
     }
-    value = cfg_getstr(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
-    accept_forked_dialogs = (value == VALUE_NO);
+
     value = cfg_getstr(gen, PARAM_100REL_NAME);
     if(value == VALUE_DISABLE || value == VALUE_OFF) rel100 = Am100rel::REL100_DISABLED;
     else if(value == VALUE_SUPPORTED) rel100 = Am100rel::REL100_SUPPORTED;
@@ -857,14 +749,11 @@ int AmLcConfig::readGeneral()
     else if(value == VALUE_UNAVAILABLE) resampling_implementation_type = AmAudio::UNAVAILABLE;
     else if(value == VALUE_INTERNAL) resampling_implementation_type = AmAudio::INTERNAL_RESAMPLER;
 #ifdef WITH_ZRTP
-    value = cfg_getstr(gen, PARAM_ENABLE_ZRTP_NAME);
-    enable_zrtp = (value == VALUE_YES);
-    value = cfg_getstr(gen, PARAM_ENABLE_ZRTP_DLOG_NAME);
-    enable_zrtp_debuglog = (value == VALUE_YES);
+    enable_zrtp = cfg_getbool(gen, PARAM_ENABLE_ZRTP_NAME);
+    enable_zrtp_debuglog = cfg_getbool(gen, PARAM_ENABLE_ZRTP_DLOG_NAME);
 #endif
 #ifndef DISABLE_DAEMON_MODE
-    value = cfg_getstr(gen, PARAM_DEAMON_NAME);
-    deamon_mode = (value == VALUE_YES);
+    deamon_mode = cfg_getbool(gen, PARAM_DEAMON_NAME);
     deamon_uid = cfg_getstr(gen, PARAM_DEAMON_UID_NAME);
     deamon_gid = cfg_getstr(gen, PARAM_DEAMON_GID_NAME);
 #endif /* !DISABLE_DAEMON_MODE */
@@ -928,9 +817,8 @@ int AmLcConfig::readModules()
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
         std::string name = module->title;
-        std::string global = cfg_getstr(module, PARAM_GLOBAL_NAME);
         modules.push_back(name);
-        if(global == VALUE_TRUE) {
+        if(cfg_getbool(module, PARAM_GLOBAL_NAME)) {
             AmPlugIn::instance()->set_load_rtld_global(name + ".so");
         }
     }
@@ -1051,30 +939,12 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     if(cfg_size(cfg, PARAM_PUBLIC_ADDR_NAME)) {
         info->public_ip = cfg_getstr(cfg, PARAM_PUBLIC_ADDR_NAME);
     }
-    if(cfg_size(cfg, PARAM_USE_RAW_NAME)) {
-        std::string value = cfg_getstr(cfg, PARAM_USE_RAW_NAME);
-        if(value == VALUE_ON) {
-            info->sig_sock_opts |= trsp_socket::use_raw_sockets;
-        }
-    }
-    if(cfg_size(cfg, PARAM_FORCE_VIA_PORT_NAME)) {
-        std::string value = cfg_getstr(cfg, PARAM_FORCE_VIA_PORT_NAME);
-        if(value == VALUE_ON) {
-            info->sig_sock_opts |= trsp_socket::force_via_address;
-        }
-    }
-    if(cfg_size(cfg, PARAM_STAT_CL_PORT_NAME)) {
-        std::string value = cfg_getstr(cfg, PARAM_STAT_CL_PORT_NAME);
-        if(value == VALUE_ON) {
-            info->sig_sock_opts |= trsp_socket::static_client_port;
-        }
-    }
-    if(cfg_size(cfg, PARAM_FORCE_OBD_IF_NAME)) {
-        std::string value = cfg_getstr(cfg, PARAM_FORCE_OBD_IF_NAME);
-        if(value == VALUE_ON) {
-            info->sig_sock_opts |= trsp_socket::force_outbound_if;
-        }
-    }
+
+    info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_USE_RAW_NAME) ? trsp_socket::use_raw_sockets : 0;
+    info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_OBD_IF_NAME) ? trsp_socket::force_outbound_if : 0;
+    info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_VIA_PORT_NAME) ? trsp_socket::force_via_address : 0;
+    info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_STAT_CL_PORT_NAME) ? trsp_socket::static_client_port : 0;
+
     if(cfg_size(cfg, PARAM_DSCP_NAME)) {
         info->dscp = cfg_getint(cfg, PARAM_DSCP_NAME);
         info->tos_byte = info->dscp << 2;
@@ -1375,13 +1245,13 @@ int AmLcConfig::setStderrLogLevel(const std::string& level, bool apply)
     return 1;
 }
 
-int AmLcConfig::setLogStderr(const std::string& s, bool apply)
+int AmLcConfig::setLogStderr(bool s, bool apply)
 {
-  if (s == VALUE_YES) {
+  if (s) {
     if(apply && !log_stderr)
       register_stderr_facility();
     log_stderr = true;
-  } else if (s == VALUE_NO) {
+  } else if (!s) {
     //deny to disable previously enabled stderr logging
   } else {
     return 0;
