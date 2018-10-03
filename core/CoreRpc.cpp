@@ -155,6 +155,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"status","",&CoreRpc::showStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
+        reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
         reg_method(show,"payloads","",&CoreRpc::showPayloads);
         reg_method(show,"log-level","",&CoreRpc::showLogLevel);
@@ -248,6 +249,11 @@ void CoreRpc::invoke(const string& method, const AmArg& args, AmArg& ret)
 void CoreRpc::showVersion(const AmArg& args, AmArg& ret)
 {
     ret["core_build"] = get_sems_version();
+}
+
+void CoreRpc::showConfig(const AmArg& args, AmArg& ret)
+{
+    ret = AmConfig.serialize();
 }
 
 void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)

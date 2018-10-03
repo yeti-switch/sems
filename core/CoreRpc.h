@@ -45,6 +45,7 @@ class CoreRpc final
 
     //make some of the handlers public for back-compatibility
     rpc_handler showVersion;
+    rpc_handler showConfig;
     rpc_handler showMediaStreams;
     rpc_handler showInterfaces;
 

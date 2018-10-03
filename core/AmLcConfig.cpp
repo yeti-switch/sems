@@ -633,6 +633,7 @@ int AmLcConfig::readConfiguration()
        checkSipInterfaces()) {
         return -1;
     }
+
     return 0;
 }
 
@@ -1402,4 +1403,31 @@ int AmLcConfig::checkSipInterfaces()
     }
 
     return 0;
+}
+
+std::string AmLcConfig::serialize()
+{
+    std::string ret;
+
+    size_t l;
+    char *buf;
+    FILE *f = open_memstream(&buf,&l);
+
+    if(!f) {
+        return std::string("failed to allocate memory stream");
+    }
+
+    if(0!=cfg_print(m_cfg, f)) {
+        fclose(f);
+        if(buf) free(buf);
+        return std::string("failed to serialize config");
+    }
+
+    fclose(f);
+
+    DBG("%p %ld", buf, l);
+    ret = std::string(buf,l);
+    free(buf);
+
+    return ret;
 }
