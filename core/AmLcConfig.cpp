@@ -1417,15 +1417,9 @@ std::string AmLcConfig::serialize()
         return std::string("failed to allocate memory stream");
     }
 
-    if(0!=cfg_print(m_cfg, f)) {
-        fclose(f);
-        if(buf) free(buf);
-        return std::string("failed to serialize config");
-    }
-
+    cfg_print(m_cfg, f);
     fclose(f);
 
-    DBG("%p %ld", buf, l);
     ret = std::string(buf,l);
     free(buf);
 
