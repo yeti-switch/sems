@@ -256,40 +256,74 @@ general {
      */
     100rel = disabled
 
-    /* optional parameter: 100rel
+    /* optional parameter: node_id
      *
-     * unique Identifier of node in cluster
+     * unique identifier of the node in the cluster
      *
-     * no default
+     * default: 0
      */
-    node_id = 120
+    node_id = 1
 
-    /* optional parameters: session_limit, session_limit_err_code, session_limit_err_reason
+    /* optional section: session_limit
      *
-     *  this sets a maximum active session limit. If that limit is
-     * reached, no further calls are accepted, but the error reply
-     * with err code/err reason is sent out.
+     * Reply with configured <code>/<reason> for incoming INVITE requests
+     * if active sessions count reached <limit>
      *
-     * default: session_limit = 0
-     *          session_limit_err_code = 503
-     *          session_limit_err_reason = "Server overload"
      */
+    /*
     session_limit {
-        limit = 4000
-        code = 509
-        reason = "Node overloaded"
+        limit = 0
+        code = 503
+        reason = "Server overload"
     }
+    */
 
-    /* optional parameters: shutdown_mode_err_code, shutdown_mode_err_reason
+    /* optional section: options_session_limit
      *
-     * Error reply that is used as reply to INVITE and OPTION
-     * when SEMS is shutting down.
+     * reply with <code/reason for incoming OPTIONS requests
+     * if active sessions count reached <limit>
      *
-     * default: shutdown_mode_err_code= 503
-     *          shutdown_mode_err_reason = "Server shutting down"
      */
-    shutdown_mode_err_code = 508
-    shutdown_mode_err_reason = "Node in shutdown mode"
+    /*
+    options_session_limit {
+        limit = 0
+        code = 503
+        reason = "Server overload"
+    }
+    */
+
+    /* optional section: cps_limit
+     *
+     * this sets a maximum calls per sec limit. If that limit is
+     * reached, no further calls are accepted, but the error reply
+     * with err code/reason is sent out.
+     *
+     * default: cps_limit = 0
+     *          cps_limit_err_code = 503
+     *          cps_limit_err_reason = "Server overload"
+     */
+    /*
+    cps_limit {
+        limit = 0
+        code = 503
+        reason = "Server overload"
+    }
+    */
+
+    /* optional section: shutdown_mode
+     *
+     * configures code/reason which are used as reply to INVITE and OPTION
+     * when SEMS is shutting down or in graceful shutdown mode
+     *
+     * allow_uac controls whether is allowed to start new UAC sessions in shutdown mode
+     */
+    /*
+    shutdown_mode {
+        code = 503
+        reason = "Server shutting down"
+        allow_uac = false
+    }
+    */
 
     /* optional parameter: default_bl_ttl
      *
@@ -478,34 +512,6 @@ general {
      * default: no
      */
     //ignore_notify_lower_cseq = no
-
-    /* optional parameters: options_session_limit, options_session_limit_err_code, options_session_limit_err_reason
-     *
-     * this sets a custom response to OPTIONS, if the session count reaches
-     * a certain limit. This way health monitor could raise an alarm to syste
-     * administrator.
-     *
-     * default: options_session_limit = 0
-     *          options_session_limit_err_code = 503
-     *          options_session_limit_err_reason = "Server overload"
-     */
-    //options_session_limit = 0
-    //options_session_limit_err_code = 503
-    //options_session_limit_err_reason = "Server overload"
-
-    /* optional parameters: cps_limit, cps_limit_err_code, cps_limit_err_reason
-     *
-     * this sets a maximum calls per sec limit. If that limit is
-     * reached, no further calls are accepted, but the error reply
-     * with err code/err reason is sent out.
-     *
-     * default: cps_limit = 0
-     *          cps_limit_err_code = 503
-     *          cps_limit_err_reason = "Server overload"
-     */
-    //cps_limit = 100
-    //cps_limit_err_code = 503
-    //cps_limit_err_reason = "Server overload"
 
     /* optional parameters: options_transcoder_out_stats_hdr, options_transcoder_in_stats_hdr
      *
