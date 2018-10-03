@@ -1,3 +1,10 @@
+sems (1.8.2-2) stable; urgency=low
+
+  * 6f51c76db CoreRpc: add core.show.config method
+  * 6cacfe848 AmLcConfig: sections: options_session_limit, cps_limit, shutdown_mode
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Oct 2018 16:25:23 +0300
+
 sems (1.8.2-1) stable; urgency=low
 
   * AmLcConfig: remove custom validators for all boolean-like parameters. add section 'session_limit'
