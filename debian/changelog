@@ -1,3 +1,9 @@
+sems (1.8.2-1) stable; urgency=low
+
+  * AmLcConfig: remove custom validators for all boolean-like parameters. add section 'session_limit'
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Oct 2018 11:18:01 +0300
+
 sems (1.8.1-1) stable; urgency=low
 
   * add general.shutdown_mode_allow_uac parameter
