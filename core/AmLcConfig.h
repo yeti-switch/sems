@@ -132,6 +132,8 @@ public:
     std::string deamon_gid;
 #endif
 
+    std::string serialize();
+
 protected:
     int readSigInterfaces();
     int readMediaInterfaces();
