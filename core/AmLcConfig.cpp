@@ -31,6 +31,14 @@
 #define SECTION_ROUTING_NAME         "routing"
 #define SECTION_APPLICATION_NAME     "application"
 #define SECTION_SESSION_LIMIT_NAME   "session_limit"
+#define SECTION_OSLIM_NAME           "options_session_limit"
+#define SECTION_CPS_LIMIT_NAME       "cps_limit"
+#define SECCTION_SDM_NAME            "shutdown_mode"
+
+#define PARAM_LIMIT_NAME             "limit"
+#define PARAM_CODE_NAME              "code"
+#define PARAM_REASON_NAME            "reason"
+#define PARAM_ALLOW_UAC_NAME         "allow_uac"
 
 #define PARAM_DEFAULT_MEDIAIF_NAME   "default-media-interface"
 #define PARAM_ADDRESS_NAME           "address"
@@ -75,18 +83,6 @@
 #define PARAM_NEXT_HOP_1ST_NAME      "next_hop_1st_req"
 #define PARAM_PROXY_STICKY_AUTH_NAME "proxy_sticky_auth"
 #define PARAM_NOTIFY_LOWER_CSEQ_NAME "ignore_notify_lower_cseq"
-#define PARAM_LIMIT_NAME             "limit"
-#define PARAM_LIMIT_ERR_CODE_NAME     "code"
-#define PARAM_LIMIT_ERR_REASON_NAME   "reason"
-#define PARAM_OSLIM_NAME             "options_session_limit"
-#define PARAM_OSLIM_ERR_CODE_NAME    "options_session_limit_err_code"
-#define PARAM_OSLIM_ERR_REASON_NAME  "options_session_limit_err_reason"
-#define PARAM_CPSLIMIT_NAME          "cps_limit"
-#define PARAM_CPSLIMIT_ERR_CODE_NAME "cps_limit_err_code"
-#define PARAM_CPSLIMIT_REASON_NAME   "cps_limit_err_reason"
-#define PARAM_SDM_ERR_CODE_NAME      "shutdown_mode_err_code"
-#define PARAM_SDM_ERR_REASON_NAME    "shutdown_mode_err_reason"
-#define PARAM_SDM_ALLOW_UAC_NAME     "shutdown_mode_allow_uac"
 #define PARAM_ENABLE_RTSP_NAME       "enable_rtsp"
 #define PARAM_OPT_TRANSCODE_OUT_NAME "options_transcoder_out_stats_hdr"
 #define PARAM_OPT_TRANSCODE_IN_NAME  "options_transcoder_in_stats_hdr"
@@ -169,6 +165,8 @@
 #define VALUE_MAPPING                "$(mapping)"
 
 #define CONF_FILE_PATH               "/etc/sems/sems.conf"
+
+#define WITH_SECTION(SECTION_NAME) if(cfg_t *s = cfg_getsec(gen, SECTION_NAME))
 
 /*******************************************************************************************************/
 /*                                                                                                     */
@@ -423,15 +421,39 @@ AmLcConfig::AmLcConfig()
 /*                                            general section                                 */
 /**********************************************************************************************/
     cfg_opt_t slimit[] {
-        CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NODEFAULT),
-        CFG_INT(PARAM_LIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NODEFAULT),
-        CFG_STR(PARAM_LIMIT_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NODEFAULT),
+        CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
+        CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_opt_t options_slimit[] {
+        CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
+        CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_opt_t cps_limit[] {
+        CFG_INT(PARAM_LIMIT_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_opt_t sdm[] {
+        CFG_BOOL(PARAM_ALLOW_UAC_NAME, cfg_false, CFGF_NONE),
+        CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
+        CFG_STR(PARAM_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
         CFG_END()
     };
 
     cfg_opt_t general[] =
     {
         CFG_SEC(SECTION_SESSION_LIMIT_NAME, slimit, CFGF_NONE),
+        CFG_SEC(SECTION_OSLIM_NAME, options_slimit, CFGF_NONE),
+        CFG_SEC(SECTION_CPS_LIMIT_NAME, cps_limit, CFGF_NONE),
+        CFG_SEC(SECCTION_SDM_NAME, sdm, CFGF_NONE),
         CFG_BOOL(PARAM_LOG_PARS_NAME, cfg_true, CFGF_NONE),
         CFG_BOOL(PARAM_STDERR_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_OUTBOUND_NAME, cfg_false, CFGF_NONE),
@@ -455,7 +477,6 @@ AmLcConfig::AmLcConfig()
         CFG_INT(PARAM_MEDIA_THREADS_NAME, VALUE_NUM_MEDIA_PROCESSORS, CFGF_NONE),
         CFG_INT(PARAM_SIP_SERVERS_NAME, VALUE_NUM_SIP_SERVERS, CFGF_NONE),
         CFG_INT(PARAM_RTP_RECEIVERS_NAME, VALUE_NUM_RTP_RECEIVERS, CFGF_NONE),
-        CFG_INT(PARAM_OSLIM_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
         CFG_INT(PARAM_NODE_ID_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_MAX_FORWARDS_NAME, 70, CFGF_NONE),
         CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
@@ -476,14 +497,6 @@ AmLcConfig::AmLcConfig()
         CFG_STR(PARAM_100REL_NAME, VALUE_SUPPORTED, CFGF_NONE),
         CFG_STR(PARAM_UNHDL_REP_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
         CFG_STR(PARAM_PCAP_UPLOAD_QUEUE_NAME, "", CFGF_NONE),
-        CFG_INT(PARAM_OSLIM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_OSLIM_ERR_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
-        CFG_BOOL(PARAM_SDM_ALLOW_UAC_NAME, cfg_false, CFGF_NONE),
-        CFG_INT(PARAM_SDM_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_SDM_ERR_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
-        CFG_INT(PARAM_CPSLIMIT_NAME, 0, CFGF_NONE),
-        CFG_INT(PARAM_CPSLIMIT_ERR_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
-        CFG_STR(PARAM_CPSLIMIT_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
         CFG_STR_LIST(PARAM_CODEC_ORDER_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_EXCLUDE_PAYLOADS_NAME, 0, CFGF_NODEFAULT),
         CFG_INT(PARAM_SIP_TIMER_A_NAME, DEFAULT_A_TIMER, CFGF_NONE),
@@ -687,7 +700,6 @@ int AmLcConfig::readGeneral()
     log_events = cfg_getbool(gen, PARAM_LOG_EVENTS_NAME);
     single_codec_in_ok = cfg_getbool(gen, PARAM_SINGLE_CODEC_INOK_NAME);
     enable_rtsp = cfg_getbool(gen, PARAM_ENABLE_RTSP_NAME);
-    shutdown_mode_allow_uac = cfg_getbool(gen, PARAM_SDM_ALLOW_UAC_NAME);
     log_sessions = cfg_getbool(gen, PARAM_LOG_SESSIONS_NAME);
     accept_forked_dialogs = cfg_getbool(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
 	if(use_raw_sockets && (raw_sender::init() < 0)) {
@@ -697,24 +709,35 @@ int AmLcConfig::readGeneral()
         next_hop = cfg_getstr(gen, PARAM_NEXT_HOP_NAME);
         next_hop_1st_req = cfg_getbool(gen, PARAM_NEXT_HOP_1ST_NAME);
     }
-    if(cfg_size(gen, SECTION_SESSION_LIMIT_NAME)) {
-        cfg_t *slimit = cfg_getsec(gen, SECTION_SESSION_LIMIT_NAME);
-        session_limit =  cfg_getint(slimit, PARAM_LIMIT_NAME);
-        session_limit_err_code = cfg_getint(slimit, PARAM_LIMIT_ERR_CODE_NAME);
-        session_limit_err_reason = cfg_getstr(slimit, PARAM_LIMIT_ERR_REASON_NAME);
+
+    WITH_SECTION(SECTION_SESSION_LIMIT_NAME) {
+        session_limit =  cfg_getint(s, PARAM_LIMIT_NAME);
+        session_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        session_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
     }
+
+    WITH_SECTION(SECTION_OSLIM_NAME) {
+        options_session_limit =  cfg_getint(s, PARAM_LIMIT_NAME);
+        options_session_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        options_session_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
+    }
+
+    WITH_SECTION(SECTION_CPS_LIMIT_NAME) {
+        AmSessionContainer::instance()->setCPSLimit(cfg_getint(s, PARAM_LIMIT_NAME));
+        cps_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        cps_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
+    }
+
+    WITH_SECTION(SECCTION_SDM_NAME) {
+        shutdown_mode_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        shutdown_mode_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
+        shutdown_mode_allow_uac = cfg_getbool(s, PARAM_ALLOW_UAC_NAME);
+    }
+
     media_proc_threads = cfg_getint(gen, PARAM_MEDIA_THREADS_NAME);
     rtp_recv_threads = cfg_getint(gen, PARAM_RTP_RECEIVERS_NAME);
     sip_server_threads = cfg_getint(gen, PARAM_SIP_SERVERS_NAME);
     outbound_proxy = cfg_getstr(gen, PARAM_OUTBOUND_PROXY_NAME);
-    options_session_limit =  cfg_getint(gen, PARAM_OSLIM_NAME);
-    options_session_limit_err_code = cfg_getint(gen, PARAM_OSLIM_ERR_CODE_NAME);
-    options_session_limit_err_reason = cfg_getstr(gen, PARAM_OSLIM_ERR_REASON_NAME);
-    AmSessionContainer::instance()->setCPSLimit(cfg_getint(gen, PARAM_CPSLIMIT_NAME));
-    cps_limit_err_code = cfg_getint(gen, PARAM_CPSLIMIT_ERR_CODE_NAME);
-    cps_limit_err_reason = cfg_getstr(gen, PARAM_CPSLIMIT_REASON_NAME);
-    shutdown_mode_err_code = cfg_getint(gen, PARAM_SDM_ERR_CODE_NAME);
-    shutdown_mode_err_reason = cfg_getstr(gen, PARAM_SDM_ERR_REASON_NAME);
     options_transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_OUT_NAME);
     options_transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_IN_NAME);
     transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_TRANSCODE_OUT_NAME);
