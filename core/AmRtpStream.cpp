@@ -1786,18 +1786,20 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 
 	rtp_stats.unlock();
 
-	if(AmConfig::RTP_Ifs[l_if].MediaSockOpts&trsp_socket::use_raw_sockets) {
+	const MEDIA_info &iface = *AmConfig.media_ifs[l_if].proto_info[laddr_if];
+	if(iface.net_if_idx && iface.sig_sock_opts&trsp_socket::use_raw_sockets) {
 		err = raw_sender::send(
 			(const char *)buf,len,
-			AmConfig::RTP_Ifs[l_if].NetIfIdx,
+			iface.net_if_idx,
 			&l_rtcp_saddr, &r_rtcp_saddr,
-			AmConfig::RTP_Ifs[l_if].tos_byte);
+			iface.tos_byte);
 	} else {
 		err = sendto(l_rtcp_sd,
 			(const char *)buf,len,
 			0,
 			(const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
 	}
+	//TODO: process case with AmConfig.force_outbound_if properly
 
 	if(err < 0) {
 		CLASS_ERROR("failed to send RTCP packet: %s\n",strerror(errno));
