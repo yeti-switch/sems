@@ -1318,9 +1318,13 @@ string AmSession::localMediaIP(int addrType)
   getRtpInterface();
   getRtpAddr();
   
-  assert(rtp_interface >= 0);
+  //assert(rtp_interface >= 0);
+  if(rtp_interface < 0)
+      throw string ("AmSession::localMediaIP: failed to resolve rtp interface index");
   assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
-  assert(rtp_addr >= 0);
+
+  if(rtp_addr < 0)
+      throw string ("AmSession::localMediaIP: failed to resolve  rtp addr type");
   assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
@@ -1349,9 +1353,12 @@ string AmSession::advertisedIP(int addrType)
   getRtpInterface();
   getRtpAddr();
   
-  assert(rtp_interface >= 0);
+  if(rtp_interface < 0)
+      throw string ("AmSession::advertisedIP: failed to resolve rtp interface index");
   assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
-  assert(rtp_addr >= 0);
+
+  if(rtp_addr < 0)
+      throw string ("AmSession::advertisedIP: failed to resolve  rtp addr type");
   assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
