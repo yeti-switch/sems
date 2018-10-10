@@ -1,3 +1,10 @@
+sems (1.8.2-3) stable; urgency=low
+
+  * 7a9a8e524 AmSession: throw exception instead of assertions on RTP interface resolving fail
+  * 447668387 AmLcConfig: remove cfg_print return checking to be comptaible with old libconfuse
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 10 Oct 2018 14:00:26 +0300
+
 sems (1.8.2-2) stable; urgency=low
 
   * 6f51c76db CoreRpc: add core.show.config method
