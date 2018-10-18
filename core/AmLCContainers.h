@@ -6,6 +6,7 @@
 #include <vector>
 #include <list>
 #include "sip/transport.h"
+#include "sip/tls_trsp.h"
 #include "sems.h"
 
 class IP_info
@@ -68,7 +69,8 @@ public:
     enum SIP_type
     {
         UDP,
-        TCP
+        TCP,
+        TLS
     };
 
     SIP_info(SIP_type type)
@@ -93,6 +95,8 @@ public:
             return "TCP";
         } else if(type == SIP_info::UDP) {
             return "UDP";
+        } else if(type == SIP_info::TLS) {
+            return "TLS";
         }
 
         return "";
@@ -125,6 +129,9 @@ public:
 
 class SIP_TCP_info : public SIP_info
 {
+protected:
+    explicit SIP_TCP_info(SIP_info::SIP_type type)
+    : SIP_info(type), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT){}
 public:
     SIP_TCP_info()
     : SIP_info(TCP), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT){}
@@ -145,6 +152,33 @@ public:
 
     virtual IP_info* Clone(){
         return new SIP_TCP_info(*this);
+    }
+};
+
+class SIP_TLS_info : public SIP_TCP_info
+{
+public:
+    SIP_TLS_info()
+    : SIP_TCP_info(TLS){}
+    SIP_TLS_info(const SIP_TLS_info& info)
+    : SIP_TCP_info(info)
+    , server_settings(info.server_settings)
+    , client_settings(info.client_settings){}
+    virtual ~SIP_TLS_info(){}
+
+    tls_server_settings server_settings;
+    tls_client_settings client_settings;
+
+    static SIP_TLS_info* toSIP_TLS(SIP_info* info)
+    {
+        if(info->type == TLS) {
+            return static_cast<SIP_TLS_info*>(info);
+        }
+        return 0;
+    }
+
+    virtual IP_info* Clone(){
+        return new SIP_TLS_info(*this);
     }
 };
 

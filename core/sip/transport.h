@@ -61,7 +61,9 @@ public:
         udp_ipv4,
         udp_ipv6,
         tcp_ipv4,
-        tcp_ipv6
+        tcp_ipv6,
+        tls_ipv4,
+        tls_ipv6
     };
 
     static int log_level_raw_msgs;

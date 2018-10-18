@@ -21,6 +21,7 @@
 #define SECTION_IP6_NAME             "ip6"
 #define SECTION_RTSP_NAME            "rtsp"
 #define SECTION_RTP_NAME             "rtp"
+#define SECTION_SIP_TLS_NAME         "sip-tls"
 #define SECTION_SIP_TCP_NAME         "sip-tcp"
 #define SECTION_SIP_UDP_NAME         "sip-udp"
 #define SECTION_OPT_NAME             "options-acl"
@@ -34,6 +35,8 @@
 #define SECTION_OSLIM_NAME           "options_session_limit"
 #define SECTION_CPS_LIMIT_NAME       "cps_limit"
 #define SECCTION_SDM_NAME            "shutdown_mode"
+#define SECTION_SERVER_NAME          "server"
+#define SECTION_CLIENT_NAME          "client"
 
 #define PARAM_LIMIT_NAME             "limit"
 #define PARAM_CODE_NAME              "code"
@@ -128,6 +131,16 @@
 #define PARAM_APP_REG_NAME           "register_application"
 #define PARAM_APP_OPT_NAME           "options_application"
 #define PARAM_APP_NAME               "application"
+#define PARAM_PROTOCOLS_NAME         "protocols"
+#define PARAM_CERTIFICATE_NAME       "certificate"
+#define PARAM_CERTIFICATE_KEY_NAME   "certificate_key"
+#define PARAM_VERIFY_CERT_NAME       "verify_client_certificate"
+#define PARAM_REQUIRE_CERT_NAME      "require_client_certificate"
+#define PARAM_CA_LIST_NAME           "ca_list"
+#define PARAM_CIPHERS_NAME           "ciphers"
+#define PARAM_DH_PARAM_NAME          "dhparam"
+#define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
+#define PARAM_CERT_CN_NAME           "verify_certificate_cn"
 
 #define VALUE_OFF                    "off"
 #define VALUE_DROP                   "drop"
@@ -377,12 +390,54 @@ AmLcConfig::AmLcConfig()
         CFG_END()
     };
 
+    cfg_opt_t tls_client[] =
+    {
+        CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t tls_server[] =
+    {
+        CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
+        CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t sip_tls[] =
+    {
+        CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
+        CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NONE),
+        CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t ip[] =
     {
         CFG_SEC(SECTION_RTSP_NAME, rtsp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_RTP_NAME, rtp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SIP_TCP_NAME, sip_tcp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SIP_UDP_NAME, sip_udp, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SIP_TLS_NAME, sip_tls, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -876,6 +931,11 @@ int AmLcConfig::readSigInterfaces()
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
                 sip_if.proto_info.push_back(info);
             }
+            if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
+                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                sip_if.proto_info.push_back(info);
+            }
         }
         if(cfg_size(if_, SECTION_IP6_NAME)) {
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
@@ -886,6 +946,11 @@ int AmLcConfig::readSigInterfaces()
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
+                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                sip_if.proto_info.push_back(info);
+            }
+            if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
                 sip_if.proto_info.push_back(info);
             }
@@ -945,11 +1010,14 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     SIP_info* sinfo = 0;
     SIP_UDP_info* suinfo = 0;
     SIP_TCP_info* stinfo = 0;
+    SIP_TLS_info* stlinfo = 0;
     MEDIA_info* mediainfo = 0;
     if(strcmp(cfg->name, SECTION_SIP_UDP_NAME) == 0) {
         info = sinfo = suinfo = new SIP_UDP_info();
     } else if(strcmp(cfg->name, SECTION_SIP_TCP_NAME) == 0) {
         info = sinfo = stinfo = new SIP_TCP_info();
+    } else if(strcmp(cfg->name, SECTION_SIP_TLS_NAME) == 0) {
+        info = sinfo = stinfo = stlinfo = new SIP_TLS_info();
     } else if(strcmp(cfg->name, SECTION_RTP_NAME) == 0) {
         info = mediainfo = new RTP_info();
     } else if(strcmp(cfg->name, SECTION_RTSP_NAME) == 0) {
@@ -1005,6 +1073,42 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             return 0;
         }
     }
+
+    if(stlinfo) {
+        cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
+        for(int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
+            std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
+            stlinfo->server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        stlinfo->server_settings.certificate = cfg_getstr(server, PARAM_CERTIFICATE_NAME);
+        stlinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
+        for(int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
+            std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
+            stlinfo->client_settings.cipher_list.push_back(cipher);
+        }
+        stlinfo->client_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
+        stlinfo->client_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
+        stlinfo->client_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
+        for(int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
+            std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
+            stlinfo->server_settings.ca_list.push_back(ca);
+        }
+
+        cfg_t* client = cfg_getsec(cfg, SECTION_CLIENT_NAME);
+        for(int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
+            std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
+            stlinfo->client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        stlinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+        stlinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+        stlinfo->server_settings.verify_certificate_chain = cfg_getbool(server, PARAM_CERT_CHAIN_NAME);
+        stlinfo->server_settings.verify_certificate_cn = cfg_getbool(server, PARAM_CERT_CN_NAME);
+        for(int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
+            std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
+            stlinfo->client_settings.ca_list.push_back(ca);
+        }
+    }
+
     return info;
 }
 

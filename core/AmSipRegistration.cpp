@@ -222,11 +222,17 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
             (oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
             info->type == SIP_info::TCP && dlg.getOutboundTransport() == sip_transport::TCP) ||
 
+            (oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
+            info->type == SIP_info::TLS && dlg.getOutboundTransport() == sip_transport::TLS) ||
+
             (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
             info->type == SIP_info::UDP &&dlg.getOutboundTransport() == sip_transport::UDP) ||
 
             (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
-            info->type == SIP_info::TCP && dlg.getOutboundTransport() == sip_transport::TCP))
+            info->type == SIP_info::TCP && dlg.getOutboundTransport() == sip_transport::TCP) ||
+
+            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
+            info->type == SIP_info::TLS && dlg.getOutboundTransport() == sip_transport::TLS))
         {
             info_contact.uri_host = info->getIP();
             info_contact.uri_port = int2str(info->local_port);

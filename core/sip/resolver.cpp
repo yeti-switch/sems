@@ -988,6 +988,7 @@ int sip_target_set::get_next(sockaddr_storage* ss, trsp_socket::socket_transport
 
     static string trsp_udp_name("udp");
     static string trsp_tcp_name("tcp");
+    static string trsp_tls_name("tls");
 	sip_target& t = *dest_list_it;
 	memcpy(ss,&t.ss,sizeof(sockaddr_storage));
     if(ss->ss_family == AF_INET && trsp_udp_name == t.trsp) {
@@ -998,6 +999,10 @@ int sip_target_set::get_next(sockaddr_storage* ss, trsp_socket::socket_transport
         next_trsp = trsp_socket::tcp_ipv4;
     } else if(ss->ss_family == AF_INET6 && trsp_tcp_name == t.trsp) {
         next_trsp = trsp_socket::tcp_ipv6;
+    } else if(ss->ss_family == AF_INET && trsp_tls_name == t.trsp) {
+        next_trsp = trsp_socket::tls_ipv4;
+    } else if(ss->ss_family == AF_INET6 && trsp_tls_name == t.trsp) {
+        next_trsp = trsp_socket::tls_ipv6;
     } else {
         next_trsp = trsp_socket::tr_invalid;
     }
