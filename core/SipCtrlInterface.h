@@ -53,6 +53,9 @@ class udp_trsp;
 class tcp_server_socket;
 class tcp_trsp;
 
+class tls_server_socket;
+class tls_trsp;
+
 class _SipCtrlInterface:
     public sip_ua
 {
@@ -78,12 +81,20 @@ class _SipCtrlInterface:
     unsigned short    nr_tcp_servers;
     tcp_trsp**        tcp_servers;
 
+    unsigned short    nr_tls_sockets;
+    tls_server_socket** tls_sockets;
+
+    unsigned short    nr_tls_servers;
+    tls_trsp**        tls_servers;
+
     int alloc_udp_structs();
     int init_udp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 
     int alloc_tcp_structs();
     int init_tcp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 
+    int alloc_tls_structs();
+    int init_tls_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 public:
 
     static string outbound_host;

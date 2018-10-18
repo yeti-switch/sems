@@ -189,7 +189,7 @@ void dns_ip_entry::sort_by_priority(dns_handle* handle, dns_priority priority)
         unsigned int index;
         dns_priority priority;
     };
-
+ 
     map<ip_index, unsigned int> indexes;
 
     int index = 0;
@@ -985,8 +985,9 @@ int sip_target_set::get_next(
         if(!has_next())
             return -1;
 
-        static cstring trsp_udp_name("udp");
-        static cstring trsp_tcp_name("tcp");
+        static string trsp_udp_name("udp");
+        static string trsp_tcp_name("tcp");
+        static string trsp_tls_name("tls");
 
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
@@ -1016,6 +1017,19 @@ int sip_target_set::get_next(
                 break;
             default:
                 //unexpected address family for TCP transport
+                next_trsp = trsp_socket::tr_invalid;
+            }
+        } else if(0==strncasecmp(t.trsp, trsp_tls_name.s, trsp_tls_name.len)) {
+            //TLS
+            switch(ss->ss_family) {
+            case AF_INET:
+                next_trsp = trsp_socket::tls_ipv4;
+                break;
+            case AF_INET6:
+                next_trsp = trsp_socket::tls_ipv6;
+                break;
+            default:
+                //unexpected address family for TLS transport
                 next_trsp = trsp_socket::tr_invalid;
             }
         } else {
@@ -1347,7 +1361,7 @@ int _resolver::resolve_name_cache(
 
     // first attempt to get a valid IP
     // (from the cache)
-    if(e) {
+    if(e){
         if(dns_entry *re = e->resolve_alias(cache, priority, t)) {
             dec_ref(e);
             e = re;

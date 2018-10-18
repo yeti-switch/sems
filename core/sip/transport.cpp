@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "transport.h"
@@ -35,10 +35,10 @@
 
 int trsp_socket::log_level_raw_msgs = L_DBG;
 
-trsp_socket::trsp_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts,
-		socket_transport trans,unsigned int sys_if_idx, int sd)
-	: sd(sd), ip(), port(0), actual_ip(), actual_port(0),
-      if_num(if_num), addr_num(addr_num), sys_if_idx(sys_if_idx),
+trsp_socket::trsp_socket(unsigned short if_num_, unsigned short addr_num_, unsigned int opts,
+		socket_transport trans,unsigned int sys_if_idx_, int sd_)
+	: sd(sd_), ip(), port(0), actual_ip(), actual_port(0),
+      if_num(if_num_), addr_num(addr_num_), sys_if_idx(sys_if_idx_),
       socket_options(opts), transport(trans), tos_byte(0)
 {
     memset(&addr,0,sizeof(sockaddr_storage));
@@ -108,7 +108,7 @@ void trsp_socket::set_public_ip(const string& ip)
 {
     public_ip = ip;
 }
-    
+
 const char* trsp_socket::get_advertised_ip() const
 {
     if(!public_ip.empty())
@@ -134,23 +134,23 @@ void trsp_socket::copy_addr_to(sockaddr_storage* sa) const
  */
 bool trsp_socket::match_addr(sockaddr_storage* other_addr) const
 {
-    
+
     if(addr.ss_family != other_addr->ss_family)
 	return false;
 
     if(addr.ss_family == AF_INET){
-	if( !memcmp(&((sockaddr_in*)&addr)->sin_addr, 
-		    &((sockaddr_in*)other_addr)->sin_addr, 
+	if( !memcmp(&((sockaddr_in*)&addr)->sin_addr,
+		    &((sockaddr_in*)other_addr)->sin_addr,
 		    sizeof(in_addr)) )
 	    return true;
     }
     else if(addr.ss_family == AF_INET6) {
-	if( !memcmp(&((sockaddr_in6*)&addr)->sin6_addr, 
-		    &((sockaddr_in6*)other_addr)->sin6_addr, 
+	if( !memcmp(&((sockaddr_in6*)&addr)->sin6_addr,
+		    &((sockaddr_in6*)other_addr)->sin6_addr,
 		    sizeof(in6_addr)) )
 	    return true;
     }
-    
+
     return false;
 }
 

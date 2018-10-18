@@ -43,3 +43,4 @@ debian/libsems1-dev
 debian/sems-sounds
 debian/sems-modules-base
 debian/tmp
+doc/doxygen_doc
