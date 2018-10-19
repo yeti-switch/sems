@@ -125,37 +125,53 @@ int AmRtpStream::hasLocalSocket() {
 
 int AmRtpStream::getLocalSocket()
 {
-  if (l_sd)
+   if (l_sd)
+        return l_sd;
+
+    int sd=0, rtcp_sd=0;
+    if((sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
+        CLASS_ERROR("%s\n",strerror(errno));
+        throw string ("while creating new socket.");
+    }
+
+    if((rtcp_sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
+        CLASS_ERROR("%s\n",strerror(errno));
+        throw string ("while creating new socket.");
+    }
+
+    int true_opt = 1;
+    if(ioctl(sd, FIONBIO , &true_opt) == -1) {
+        CLASS_ERROR("%s\n",strerror(errno));
+        close(sd);
+        throw string ("while setting RTP socket non blocking.");
+    }
+
+    if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
+                  (void*)&true_opt, sizeof(true_opt)) < 0)
+    {
+        CLASS_ERROR("%s\n",strerror(errno));
+        close(sd);
+        throw string ("while setting RTP socket SO_TIMESTAMP opt");
+    }
+
+    if(ioctl(rtcp_sd, FIONBIO , &true_opt) == -1) {
+        CLASS_ERROR("%s\n",strerror(errno));
+        close(sd);
+        throw string ("while setting RTCP socket non blocking.");
+    }
+
+    if(setsockopt(rtcp_sd,SOL_SOCKET,SO_TIMESTAMP,
+                  (void*)&true_opt, sizeof(true_opt)) < 0)
+    {
+        CLASS_ERROR("%s\n",strerror(errno));
+        close(sd);
+        throw string ("while setting RTCP socket SO_TIMESTAMP opt");
+    }
+
+    l_sd = sd;
+    l_rtcp_sd = rtcp_sd;
+
     return l_sd;
-
-  int sd=0, rtcp_sd=0;
-  if((sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
-    CLASS_ERROR("%s\n",strerror(errno));
-    throw string ("while creating new socket.");
-  } 
-
-  if((rtcp_sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
-    CLASS_ERROR("%s\n",strerror(errno));
-    throw string ("while creating new socket.");
-  } 
-
-  int true_opt = 1;
-  if(ioctl(sd, FIONBIO , &true_opt) == -1){
-    CLASS_ERROR("%s\n",strerror(errno));
-    close(sd);
-    throw string ("while setting socket non blocking.");
-  }
-
-  if(ioctl(rtcp_sd, FIONBIO , &true_opt) == -1){
-    CLASS_ERROR("%s\n",strerror(errno));
-    close(sd);
-    throw string ("while setting socket non blocking.");
-  }
-
-  l_sd = sd;
-  l_rtcp_sd = rtcp_sd;
-
-  return l_sd;
 }
 
 void AmRtpStream::setLocalPort(unsigned short p)
@@ -1182,7 +1198,8 @@ void AmRtpStream::recvPacket(int fd)
     if(p->recv(fd) > 0) {
         int parse_res = 0;
 
-        gettimeofday(&p->recv_time,NULL);
+        // recv_time is set by SO_TIMESTAMP
+        //gettimeofday(&p->recv_time,NULL);
 
         log_rcvd_rtp_packet(*p);
         incoming_bytes += p->getBufferSize();
@@ -1665,32 +1682,27 @@ void AmRtpStream::getInfo(AmArg &ret){
 
 void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
 {
-	struct timeval now;
+	AmLock l(rtp_stats);
 
-	gettimeofday(&now, nullptr);
+	//struct timeval now;
 
-	rtp_stats.lock();
+	//gettimeofday(&now, nullptr);
 
 	rtp_stats.rtp_tx_last_ts = p.timestamp;
 	rtp_stats.rtp_tx_last_seq = p.sequence;
 
 	RtcpUnidirectionalStat &s = rtp_stats.tx;
 
-	s.update = now;
-	s.update_cnt++;
+	//s.update = now;
+	//s.update_cnt++;
 
 	s.pkt++;
 	s.bytes += p.getDataSize();
-
-	rtp_stats.unlock();
 }
 
-void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, unsigned int user_ts)
+void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts)
 {
-	struct timeval now;
 	uint64_t i;
-
-	gettimeofday(&now, nullptr);
 
 	s.sender_pcount = htonl(rtp_stats.tx.pkt);
 	s.sender_bcount = htonl(rtp_stats.tx.bytes);
@@ -1706,111 +1718,151 @@ void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, unsigned int use
 	s.ntp_sec = htonl(i);
 }
 
+void AmRtpStream::init_receiver_info(const AmRtpPacket &p)
+{
+	r_ssrc = p.ssrc;
+	rtcp_reports.update(r_ssrc);
+	r_ssrc_i = true;
+
+	rtp_stats.init_seq(p.sequence);
+	rtp_stats.max_seq--;
+	rtp_stats.probation = MIN_SEQUENTIAL;
+}
+
 void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
 {
-	if(!r_ssrc_i) {
-		r_ssrc = p.ssrc;
-		r_ssrc_i = true;
-		rtcp_reports.update(r_ssrc);
-	} else {
-		if(p.ssrc!=r_ssrc) {
-			r_ssrc = p.ssrc;
-			rtcp_reports.update(r_ssrc);
-		}
-	}
+    AmLock l(rtp_stats);
 
-	rtp_stats.lock();
+    if((!r_ssrc_i) || (p.ssrc!=r_ssrc))
+        init_receiver_info(p);
 
-	RtcpUnidirectionalStat &s = rtp_stats.rx;
+    rtp_stats.rx.pkt++;
+    rtp_stats.rx.bytes += p.getDataSize();
 
-	s.pkt++;
-	s.bytes += p.getDataSize();
+    if(!rtp_stats.update_seq(p.sequence)) {
+        /* skip jitter measurement
+           for duplicated/reordered/unexpected sequence packets */
+        return;
+    }
 
-	rtp_stats.unlock();
+    if(timerisset(&rtp_stats.rx_recv_time)) {
+        timeval diff;
+        timersub(&p.recv_time, &rtp_stats.rx_recv_time, &diff);
+        rtp_stats.rx.jitter.update(
+            (diff.tv_sec * 1000) + (diff.tv_usec / 1000));
+    }
+    rtp_stats.rx_recv_time = p.recv_time;
 }
 
-void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r)
+void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now)
 {
-	//
+    struct timeval delay;
+
+    rtp_stats.update_lost();
+
+    r.total_lost_0 = rtp_stats.total_lost >> 16;
+    r.total_lost_1 = (rtp_stats.total_lost >> 8) & 0xff;
+    r.total_lost_2 = rtp_stats.total_lost & 0xff;
+
+    r.fract_lost = rtp_stats.fraction_lost;
+
+    r.last_seq = ((rtp_stats.cycles << 16) | (rtp_stats.max_seq & 0xffff));
+    r.last_seq = htonl(r.last_seq);
+
+    if(rtp_stats.sr_lsr) {
+        r.lsr = htonl(rtp_stats.sr_lsr);
+
+        timersub(&now,&rtp_stats.sr_recv_time,&delay);
+        r.dlsr = (delay.tv_sec << 16);
+        r.dlsr |= (uint16_t)(delay.tv_usec*65536/1e6);
+        r.dlsr = htonl(r.dlsr);
+    } else {
+        r.lsr = 0;
+        r.dlsr = 0;
+    }
+
+    r.jitter = htonl((uint32_t)rtp_stats.rx.jitter.variance());
 }
+
 
 void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int user_ts)
 {
-	unsigned long long scaled_ts = system_ts/WALLCLOCK_RATE;
+    unsigned long long scaled_ts = system_ts/WALLCLOCK_RATE;
 
-	if(!last_send_rtcp_report_ts) {
-		last_send_rtcp_report_ts = scaled_ts;
-	} else {
-		if((scaled_ts - last_send_rtcp_report_ts) > RTCP_REPORT_SEND_INTERVAL_SECONDS) {
-			last_send_rtcp_report_ts = scaled_ts;
-			rtcp_send_report(user_ts);
-		}
-	}
+    if(!last_send_rtcp_report_ts) {
+        last_send_rtcp_report_ts = scaled_ts;
+    } else {
+        if((scaled_ts - last_send_rtcp_report_ts) > RTCP_REPORT_SEND_INTERVAL_SECONDS) {
+            last_send_rtcp_report_ts = scaled_ts;
+            rtcp_send_report(user_ts);
+        }
+    }
 }
 
 void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 {
-	CLASS_DBG("%s",FUNC_NAME);
+    int err;
+    void *buf;
+    struct timeval now;
+    unsigned int len;
 
-	int err;
-	void *buf;
-	unsigned int len;
+    gettimeofday(&now, nullptr);
 
-	rtp_stats.lock();
+    rtp_stats.lock();
 
-	if(rtp_stats.tx.pkt) {
-		if(rtp_stats.rx.pkt) {
-			//SR with RR data
-			fill_sender_report(rtcp_reports.sr.sr.sender,user_ts);
-			fill_receiver_report(rtcp_reports.sr.sr.receiver);
-			buf = &rtcp_reports.sr;
-			len = sizeof(rtcp_reports.sr);
-		} else {
-			//SR without RR data
-			fill_sender_report(rtcp_reports.sr_empty.sr.sender,user_ts);
-			buf = &rtcp_reports.sr_empty;
-			len = sizeof(rtcp_reports.sr_empty);
-		}
-	} else { //no data sent
-		if(rtp_stats.rx.pkt) {
-			//RR with data
-			fill_receiver_report(rtcp_reports.rr.rr.receiver);
-			buf = &rtcp_reports.rr;
-			len = sizeof(rtcp_reports.rr);
-		} else {
-			//RR without data
-			buf = &rtcp_reports.rr_empty;
-			len = sizeof(rtcp_reports.rr_empty);
-		}
-	}
+    if(rtp_stats.tx.pkt) {
+        if(rtp_stats.rx.pkt) {
+            //SR with RR data
+            fill_sender_report(rtcp_reports.sr.sr.sender,now,user_ts);
+            fill_receiver_report(rtcp_reports.sr.sr.receiver, now);
+            buf = &rtcp_reports.sr;
+            len = sizeof(rtcp_reports.sr);
+        } else {
+            //SR without RR data
+            fill_sender_report(rtcp_reports.sr_empty.sr.sender,now,user_ts);
+            buf = &rtcp_reports.sr_empty;
+            len = sizeof(rtcp_reports.sr_empty);
+        }
+    } else { //no data sent
+        if(rtp_stats.rx.pkt) {
+            //RR with data
+            fill_receiver_report(rtcp_reports.rr.rr.receiver, now);
+            buf = &rtcp_reports.rr;
+            len = sizeof(rtcp_reports.rr);
+        } else {
+            //RR without data
+            buf = &rtcp_reports.rr_empty;
+            len = sizeof(rtcp_reports.rr_empty);
+        }
+    }
 
-	rtp_stats.unlock();
+    rtp_stats.unlock();
 
-	const MEDIA_info &iface = *AmConfig.media_ifs[l_if].proto_info[laddr_if];
-	if(iface.net_if_idx && iface.sig_sock_opts&trsp_socket::use_raw_sockets) {
-		err = raw_sender::send(
-			(const char *)buf,len,
-			iface.net_if_idx,
-			&l_rtcp_saddr, &r_rtcp_saddr,
-			iface.tos_byte);
-	} else {
-		err = sendto(l_rtcp_sd,
-			(const char *)buf,len,
-			0,
-			(const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
-	}
-	//TODO: process case with AmConfig.force_outbound_if properly
+    const MEDIA_info &iface = *AmConfig.media_ifs[l_if].proto_info[laddr_if];
+    if(iface.net_if_idx && iface.sig_sock_opts&trsp_socket::use_raw_sockets) {
+        err = raw_sender::send(
+            (const char *)buf,len,
+            iface.net_if_idx,
+            &l_rtcp_saddr, &r_rtcp_saddr,
+            iface.tos_byte);
+    } else {
+        err = sendto(l_rtcp_sd,
+            (const char *)buf,len,
+            0,
+            (const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
+    }
+    //TODO: process case with AmConfig.force_outbound_if properly
 
-	if(err < 0) {
-		CLASS_ERROR("failed to send RTCP packet: %s\n",strerror(errno));
-		return;
-	}
+    if(err < 0) {
+        CLASS_ERROR("failed to send RTCP packet: %s\n",strerror(errno));
+        return;
+    }
 
 #define ADDR_ARGS(addr) am_inet_ntop(&addr).c_str(),am_get_port(&addr)
 
-	CLASS_DBG("SR is sent from %s:%d to %s:%d",
+	/*CLASS_DBG("RTCP report is sent from %s:%d to %s:%d",
 			  ADDR_ARGS(l_rtcp_saddr),
-			  ADDR_ARGS(r_rtcp_saddr));
+			  ADDR_ARGS(r_rtcp_saddr));*/
 
 	log_sent_rtcp_packet((const char *)buf, len, r_rtcp_saddr);
 }
