@@ -1,3 +1,11 @@
+sems (1.8.3-1) stable; urgency=low
+
+  * ad362bb56 resolver: sip_target_set::get_next: fix next_trsp resolving
+  * 59d74f232 resolver:  sip_target_set::get_next: fix default next_trsp for IPv6
+  * 74b8f0145 tcp_trsp: fix tcp_trsp_socket initialization on incoming TCP connections
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 19 Oct 2018 16:52:58 +0300
+
 sems (1.8.3-0) stable; urgency=low
 
   * initial RTCP support
