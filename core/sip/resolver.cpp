@@ -1009,7 +1009,7 @@ int sip_target_set::get_next(sockaddr_storage* ss, trsp_socket::socket_transport
         if(ss->ss_family == AF_INET) {
             next_trsp = trsp_socket::udp_ipv4;
         } else {
-            next_trsp = trsp_socket::udp_ipv4;
+            next_trsp = trsp_socket::udp_ipv6;
         }
     }
 
