@@ -36,7 +36,7 @@ tcp_trsp_socket::tcp_trsp_socket(tcp_server_socket* server_sock,
 				 tcp_server_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
-  : trsp_socket(server_sock->get_if(),0,0,transport,sd),
+  : trsp_socket(server_sock->get_if(),0,0,transport,0,sd),
     server_sock(server_sock), server_worker(server_worker),
     closed(false), connected(false),
     input_len(0), evbase(evbase),
