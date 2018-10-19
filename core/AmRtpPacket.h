@@ -44,10 +44,13 @@ class msg_logger;
 #define RTP_PACKET_PARSE_OK 0
 #define RTP_PACKET_PARSE_RTCP 1
 
+#define RTP_PACKET_BUF_SIZE 4096
+#define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
+
 /** \brief RTP packet implementation */
 class AmRtpPacket
 {
-    unsigned char  buffer[4096];
+    unsigned char  buffer[RTP_PACKET_BUF_SIZE];
     unsigned int   b_size;
 
     unsigned int   data_offset;
@@ -68,6 +71,10 @@ class AmRtpPacket
 
     struct timeval recv_time;
     struct sockaddr_storage addr;
+
+    msghdr recv_msg;
+    iovec recv_iov[1];
+    unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
 
     AmRtpPacket();
     ~AmRtpPacket();

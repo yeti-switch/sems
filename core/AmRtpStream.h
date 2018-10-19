@@ -378,15 +378,15 @@ private:
   void log_sent_rtp_packet(AmRtpPacket &p);
   void log_rcvd_rtp_packet(AmRtpPacket &p);
   void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
-  //void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
 
   void recvRtcpPacket(AmRtpPacket* p);
 
   void update_sender_stats(const AmRtpPacket &p);
-  void fill_sender_report(RtcpSenderReportHeader &s, unsigned int user_ts);
+  void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
 
+  void init_receiver_info(const AmRtpPacket &p);
   void update_receiver_stats(const AmRtpPacket &p);
-  void fill_receiver_report(RtcpReceiverReportHeader &r);
+  void fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now);
 
   void rtcp_send_report(unsigned int user_ts);
 

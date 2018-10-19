@@ -88,66 +88,65 @@
 int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 {
     if(sd){
-	WARN("re-binding socket\n");
-	close(sd);
+        WARN("re-binding socket\n");
+        close(sd);
     }
-    
+
     if(am_inet_pton(bind_ip.c_str(),&addr) == 0){
-	
-	ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
-	return -1;
+        ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
+        return -1;
     }
     
     if( ((addr.ss_family == AF_INET) && 
-     	 (SAv4(&addr)->sin_addr.s_addr == INADDR_ANY)) ||
-     	((addr.ss_family == AF_INET6) && 
-     	 IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) ){
-
-     	ERROR("Sorry, we cannot bind to 'ANY' address\n");
-     	return -1;
+        (SAv4(&addr)->sin_addr.s_addr == INADDR_ANY)) ||
+        ((addr.ss_family == AF_INET6) &&
+        IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) )
+    {
+        ERROR("Sorry, we cannot bind to 'ANY' address\n");
+        return -1;
     }
 
     am_set_port(&addr,bind_port);
 
     if((sd = socket(addr.ss_family,SOCK_DGRAM,0)) == -1){
-	ERROR("socket: %s\n",strerror(errno));
-	return -1;
-    } 
-    
-    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
+        ERROR("socket: %s\n",strerror(errno));
+        return -1;
+    }
 
-	ERROR("bind: %s\n",strerror(errno));
-	close(sd);
-	return -1;
+    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
+        ERROR("bind: %s\n",strerror(errno));
+        close(sd);
+        return -1;
     }
     
     int true_opt = 1;
 
     if(addr.ss_family == AF_INET) {
-	if(setsockopt(sd, IPPROTO_IP, DSTADDR_SOCKOPT,
-		      (void*)&true_opt, sizeof (true_opt)) == -1) {
-	    
-	    ERROR("%s\n",strerror(errno));
-	    close(sd);
-	    return -1;
-	}
+        if(setsockopt(sd, IPPROTO_IP, DSTADDR_SOCKOPT,
+                      (void*)&true_opt, sizeof (true_opt)) == -1)
+        {
+            ERROR("%s\n",strerror(errno));
+            close(sd);
+            return -1;
+        }
     } else {
-	if(setsockopt(sd, IPPROTO_IPV6, DSTADDR6_SOCKOPT,
-		      (void*)&true_opt, sizeof (true_opt)) == -1) {
-	    
-	    ERROR("%s\n",strerror(errno));
-	    close(sd);
-	    return -1;
-	}
+        if(setsockopt(sd, IPPROTO_IPV6, DSTADDR6_SOCKOPT,
+                  (void*)&true_opt, sizeof (true_opt)) == -1)
+        {
+            ERROR("%s\n",strerror(errno));
+            close(sd);
+            return -1;
+        }
     }
 
 #if defined RECV_SOCKET_TIMESTAMP
-	if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
-				  (void*)&true_opt, sizeof(true_opt)) < 0) {
-		ERROR("%s\n",strerror(errno));
-		close(sd);
-		return -1;
-	}
+    if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
+                  (void*)&true_opt, sizeof(true_opt)) < 0)
+    {
+        ERROR("%s\n",strerror(errno));
+        close(sd);
+        return -1;
+    }
 #endif
 
     actual_port = port = bind_port;

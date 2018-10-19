@@ -63,13 +63,28 @@ AmRtpPacket::AmRtpPacket()
   : data_offset(0),
     relayed(false)
 {
-  // buffer will be overwritten by received packet 
-  // of hdr+data - does not need to be set to 0s
-  //    memset(buffer,0,4096);
+    // buffer will be overwritten by received packet
+    // of hdr+data - does not need to be set to 0s
+    //    memset(buffer,0,4096);
+
+    recv_iov[0].iov_base = buffer;
+    recv_iov[0].iov_len  = RTP_PACKET_BUF_SIZE;
+
+    memset(&recv_msg,0,sizeof(recv_msg));
+
+    recv_msg.msg_name       = &addr;
+    recv_msg.msg_namelen    = sizeof(struct sockaddr_storage);
+
+    recv_msg.msg_iov        = recv_iov;
+    recv_msg.msg_iovlen     = 1;
+
+    recv_msg.msg_control    = recv_ctl_buf;
+    recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
 }
 
 AmRtpPacket::~AmRtpPacket()
 {
+    //
 }
 
 void AmRtpPacket::setAddr(struct sockaddr_storage* a)
@@ -257,7 +272,6 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
             DBG("RTCP: skip parsing unsupported payload type: %d",h.pt);
         } //switch(h.pt)
 
-        RTCP_DBG("-------------------------------");
         r = chunk_end;
         idx++;
 
@@ -273,7 +287,6 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
 
 int AmRtpPacket::parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats)
 {
-    DBG("parse_receiver_reports(%p,%zd)",chunk,chunk_size);
     unsigned char *end = chunk+chunk_size;
     do {
         process_receiver_report(*(RtcpReceiverReportHeader *)chunk,stats);
@@ -333,14 +346,17 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 {
     stats.lock();
 
-    DBG("RTCP process_sender_report(%p)",&sr);
-    DBG("RTCP ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
+    DBG("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
         ntohl(sr.ntp_sec),
         ntohl(sr.ntp_frac),
         ntohl(sr.rtp_ts),
         ntohl(sr.sender_pcount),
         ntohl(sr.sender_bcount)
     );
+
+    stats.sr_lsr = ( (ntohl(sr.ntp_sec) << 16) |
+                     (ntohl(sr.ntp_frac) >> 16) );
+    stats.sr_recv_time = recv_time;
 
     stats.unlock();
 
@@ -349,12 +365,10 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 
 int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats)
 {
-    DBG("RTCP process_receiver_report(%p)",&rr);
-
     stats.lock();
 
     uint32_t ssrc = ntohl(rr.ssrc);
-    DBG("RTCP ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
+    DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
         ssrc,
         ntohl(rr.last_seq),
         ntohl(rr.lsr),
@@ -520,21 +534,35 @@ int AmRtpPacket::send(int sd, const MEDIA_info &iface,
 
 int AmRtpPacket::recv(int sd)
 {
-  relayed = false;
-  socklen_t recv_addr_len = sizeof(struct sockaddr_storage);
-  int ret = recvfrom(sd,buffer,sizeof(buffer),0,
-		     (struct sockaddr*)&addr,
-		     &recv_addr_len);
+    relayed = false;
 
-  if(ret > 0){
+    /*
+    socklen_t recv_addr_len = sizeof(struct sockaddr_storage);
+    int ret = recvfrom(sd,buffer,sizeof(buffer),0,
+                       (struct sockaddr*)&addr, &recv_addr_len);
+    */
 
-    if(ret > 4096)
-      return -1;
+    cmsghdr *cmsgptr;
+    int ret = recvmsg(sd,&recv_msg,0);
 
-    b_size = ret;
-  }
-    
-  return ret;
+    for (cmsgptr = CMSG_FIRSTHDR(&recv_msg);
+        cmsgptr != NULL;
+        cmsgptr = CMSG_NXTHDR(&recv_msg, cmsgptr))
+    {
+        if(cmsgptr->cmsg_level == SOL_SOCKET &&
+           cmsgptr->cmsg_type == SO_TIMESTAMP)
+        {
+            memcpy(&recv_time, CMSG_DATA(cmsgptr), sizeof(struct timeval));
+        }
+    }
+
+    if(ret > 0) {
+        if(ret > 4096)
+            return -1;
+        b_size = ret;
+    }
+
+    return ret;
 }
 
 void AmRtpPacket::logReceived(msg_logger *logger, struct sockaddr_storage *laddr)
