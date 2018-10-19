@@ -1,3 +1,9 @@
+sems (1.8.3-0) stable; urgency=low
+
+  * initial RTCP support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 19 Oct 2018 14:05:23 +0300
+
 sems (1.8.2-3) stable; urgency=low
 
   * 7a9a8e524 AmSession: throw exception instead of assertions on RTP interface resolving fail
