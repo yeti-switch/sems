@@ -1,3 +1,11 @@
+sems (1.8.3-3) stable; urgency=low
+
+  * e1da6756e print cfg dump on load
+  * 75fc7e536 add ACL sections for TCP interface. skip ACL sections processing for media interfaces
+  * 25eb542a2 improve logging for not found/not matched application
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Oct 2018 19:06:42 +0300
+
 sems (1.8.3-2) stable; urgency=low
 
   * resolver: fix priority checking
