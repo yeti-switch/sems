@@ -534,9 +534,16 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
       session_factory = AmPlugIn::instance()->findSessionFactory(req,app_name);
 
   if(!session_factory) {
-
-      ERROR("No session factory for application\n");
-      AmSipDialog::reply_error(req,500,SIP_REPLY_SERVER_INTERNAL_ERROR);
+      if(!is_uac) {
+        ERROR("src_ip: %s callid: %s ruri: %s - no session factory for application '%s'",
+              req.remote_ip.c_str(),
+              req.callid.c_str(),
+              req.r_uri.c_str(),
+              app_name.c_str());
+        AmSipDialog::reply_error(req,500,SIP_REPLY_SERVER_INTERNAL_ERROR);
+      } else {
+        ERROR("uac: no session factory for application '%s'",app_name.c_str());
+      }
 
       return NULL;
   }
