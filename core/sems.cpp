@@ -452,6 +452,11 @@ int main(int argc, char* argv[])
 
   AmConfig.dump_Ifs();
 
+  printf("-----BEGIN CFG DUMP-----\n"
+         "%s\n"
+         "-----END CFG DUMP-----\n",
+         AmConfig.serialize().c_str());
+
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");
   }
