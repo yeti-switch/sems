@@ -398,8 +398,8 @@ public:
         }
 
         DBG("target '%s' must be resolved first. srv_port: %i",
-            e->target.c_str(),
-            ntohs(((sockaddr_in*)sa)->sin_port));
+            e->target.c_str(), ntohs(((sockaddr_in*)sa)->sin_port));
+
         return resolver::instance()->resolve_name(e->target.c_str(),h,sa,priority);
     }
 };
@@ -853,7 +853,10 @@ int dns_handle::next_ip(sockaddr_storage* sa, dns_priority priority)
 
 const dns_handle& dns_handle::operator = (const dns_handle& rh)
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
     memcpy(this,(const void*)&rh,sizeof(dns_handle));
+#pragma GCC diagnostic pop
 
     if(srv_e)
         inc_ref(srv_e);
@@ -1157,7 +1160,7 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
             e->init();
             if(b->insert(it->first,e)) {
                 DBG("new DNS cache entry: '%s' -> %s",
-                it->first.c_str(), it->second->to_str().c_str());
+                    it->first.c_str(), it->second->to_str().c_str());
             }
         } else if(entry->get_type() == e->get_type()) {
             if(entry->union_rr(e->ip_vec)) {
@@ -1203,13 +1206,7 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
 
     // name is NOT an IP address -> try a cache look up
     ret = resolve_name_cache(name, h, sa, priority, rr_type);
-    if(ret > 0) {
-        if((priority == IPv4_pref && sa->ss_family == AF_INET) ||
-           (priority == IPv6_pref && sa->ss_family == AF_INET6))
-        {
-            return ret;
-        }
-    }
+    if(ret > 0) return ret;
 
     // no valid IP, query the DNS
     if((priority != IPv6_only && query_dns(name,rr_type, IPv4) < 0) ||
@@ -1380,6 +1377,21 @@ int _resolver::resolve_name_cache(
         }
         ret = e->next_ip(h, sa, priority);
         dec_ref(e);
+
+        if(ret > 0) {
+            switch(priority) {
+            case IPv4_only:
+                if(sa->ss_family == AF_INET) return ret;
+                break;
+            case IPv6_only:
+                if(sa->ss_family == AF_INET6) return ret;
+                break;
+            default:
+                return ret;
+            }
+            DBG("no entries for given priority: %s", dns_priority_str(priority));
+            return -1;
+        }
         return ret;
     }
     return 0;

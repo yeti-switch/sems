@@ -50,14 +50,12 @@ using std::map;
 #define DNS_CACHE_SIZE 128
 
 enum address_type {
-
     IPnone=0,
     IPv4=1,
     IPv6=2
 };
 
 enum proto_type {
-    
     TCP=1,
     UDP=2
 };
@@ -81,7 +79,7 @@ struct dns_base_entry
     u_int64_t expire;
 
     dns_base_entry()
-	:expire(0)
+      : expire(0)
     {}
 
     virtual ~dns_base_entry() {}
@@ -91,7 +89,7 @@ struct dns_base_entry
 typedef ht_map_bucket<string,dns_entry> dns_bucket_base;
 
 class dns_bucket
-    : protected dns_bucket_base
+  : protected dns_bucket_base
 {
     friend class _resolver;
 public:
@@ -104,8 +102,8 @@ public:
 typedef hash_table<dns_bucket> dns_cache;
 
 class dns_entry
-    : public atomic_ref_cnt,
-      public dns_base_entry
+  : public atomic_ref_cnt,
+    public dns_base_entry
 {
     virtual dns_base_entry* get_rr(dns_record* rr, u_char* begin, u_char* end)=0;
     dns_rr_type type;
@@ -127,13 +125,13 @@ public:
 };
 
 struct ip_entry
-    : public dns_base_entry
+  : public dns_base_entry
 {
     address_type  type;
 
     union {
-	in_addr       addr;
-	in6_addr      addr6;
+        in_addr   addr;
+        in6_addr  addr6;
     };
 
     bool operator == (const ip_entry& entry);
@@ -144,7 +142,7 @@ struct ip_entry
 };
 
 struct ip_port_entry
-    : public ip_entry
+  : public ip_entry
 {
     unsigned short port;
 
@@ -202,7 +200,7 @@ private:
 };
 
 struct naptr_record
-    : public dns_base_entry
+  : public dns_base_entry
 {
     unsigned short order;
     unsigned short pref;
@@ -212,16 +210,15 @@ struct naptr_record
     string regexp;
     string replace;
 
-    virtual string to_str() 
-    { return string(); }
+    virtual string to_str() { return string(); }
 };
 
 class dns_naptr_entry
-    : public dns_entry
+  : public dns_entry
 {
 public:
     dns_naptr_entry()
-    : dns_entry(dns_r_naptr)
+      : dns_entry(dns_r_naptr)
     {}
 
     void init();
@@ -255,8 +252,9 @@ struct sip_target_set
 
     void reset_iterator();
     bool has_next();
-    int  get_next(sockaddr_storage* ss, trsp_socket::socket_transport& next_trsp,
-		  unsigned int flags);
+    int  get_next(sockaddr_storage* ss,
+        trsp_socket::socket_transport& next_trsp,
+        unsigned int flags);
     bool next();
     void prev();
 
@@ -268,7 +266,7 @@ struct sip_target_set
 typedef map<string,dns_entry*> dns_entry_map_base;
 
 class dns_entry_map
-     : public dns_entry_map_base
+  : public dns_entry_map_base
 {
 public:
     dns_entry_map();
@@ -284,21 +282,21 @@ private:
 };
 
 class _resolver
-    : AmThread
+  : AmThread
 {
 public:
     // disable SRV lookups
     static bool disable_srv;
 
     int resolve_name(const char* name, 
-		     dns_handle* h,
-		     sockaddr_storage* sa,
-		     const dns_priority priority,
-             dns_rr_type rr_type = dns_r_ip);
+        dns_handle* h,
+        sockaddr_storage* sa,
+        const dns_priority priority,
+        dns_rr_type rr_type = dns_r_ip);
 
     int str2ip(const char* name,
-	       sockaddr_storage* sa,
-	       const address_type types);
+        sockaddr_storage* sa,
+        const address_type types);
 
     int query_dns(const char* name, dns_rr_type rr_type, address_type addr_type);
 
@@ -308,7 +306,7 @@ public:
      * converting IPs into a sockaddr_storage.
      */
     int resolve_targets(const list<sip_destination>& dest_list,
-			sip_target_set* targets);
+        sip_target_set* targets);
 
     void clear_cache();
 
@@ -317,17 +315,17 @@ protected:
     ~_resolver();
 
     int set_destination_ip(const cstring& next_hop,
-			   unsigned short next_port,
-			   const cstring& next_trsp,
-			   sockaddr_storage* remote_ip,
-               dns_priority priority,
-			   dns_handle* h_dns);
+        unsigned short next_port,
+        const cstring& next_trsp,
+        sockaddr_storage* remote_ip,
+        dns_priority priority,
+        dns_handle* h_dns);
 
     int resolve_name_cache(const char* name,
-		     dns_handle* h,
-		     sockaddr_storage* sa,
-		     const dns_priority priority,
-             dns_rr_type rr_type);
+        dns_handle* h,
+        sockaddr_storage* sa,
+        const dns_priority priority,
+        dns_rr_type rr_type);
 
     void run();
     void on_stop() {}
