@@ -773,7 +773,11 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     }
 
     if (m_app_name.empty()) {
-      DBG("could not find any application matching configured criteria\n");
+      DBG("src_ip: %s callid: %s ruri: %s - "
+          "could not find any application matching configured criteria",
+          req.remote_ip.c_str(),
+          req.callid.c_str(),
+          req.r_uri.c_str());
       return NULL;
     }
     
