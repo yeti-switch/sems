@@ -1,3 +1,9 @@
+sems (1.8.3-2) stable; urgency=low
+
+  * resolver: fix priority checking
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Oct 2018 15:54:37 +0300
+
 sems (1.8.3-1) stable; urgency=low
 
   * ad362bb56 resolver: sip_target_set::get_next: fix next_trsp resolving
