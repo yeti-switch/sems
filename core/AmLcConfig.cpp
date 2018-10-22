@@ -359,6 +359,8 @@ AmLcConfig::AmLcConfig()
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -990,21 +992,24 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         stinfo->tcp_idle_timeout = cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME);
     }
 
-    if(cfg_size(cfg, SECTION_ORIGACL_NAME)) {
-        cfg_t* acl = cfg_getsec(cfg, SECTION_ORIGACL_NAME);
-        if(readAcl(acl, sinfo->acl, if_name)) {
-             ERROR("error parsing invite acl for interface: %s",if_name.c_str());
-             return 0;
+    if(sinfo) {
+        if(cfg_size(cfg, SECTION_ORIGACL_NAME)) {
+            cfg_t* acl = cfg_getsec(cfg, SECTION_ORIGACL_NAME);
+            if(readAcl(acl, sinfo->acl, if_name)) {
+                 ERROR("error parsing invite acl for interface: %s",if_name.c_str());
+                 return 0;
+            }
+        }
+
+        if(cfg_size(cfg, SECTION_OPT_NAME)) {
+            cfg_t* opt_acl = cfg_getsec(cfg, SECTION_OPT_NAME);
+            if(readAcl(opt_acl, sinfo->opt_acl, if_name)) {
+                ERROR("error parsing options acl for interface: %s",if_name.c_str());
+                return 0;
+            }
         }
     }
 
-    if(cfg_size(cfg, SECTION_OPT_NAME)) {
-        cfg_t* opt_acl = cfg_getsec(cfg, SECTION_OPT_NAME);
-        if(readAcl(opt_acl, sinfo->opt_acl, if_name)) {
-            ERROR("error parsing options acl for interface: %s",if_name.c_str());
-            return 0;
-        }
-    }
     return info;
 }
 
