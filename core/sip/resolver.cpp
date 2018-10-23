@@ -511,6 +511,7 @@ bool dns_bucket::remove(const string& name)
 
         return true;
     }
+
     unlock();
     return false;
 }
@@ -987,6 +988,7 @@ int sip_target_set::get_next(
 
         static cstring trsp_udp_name("udp");
         static cstring trsp_tcp_name("tcp");
+        static string trsp_tls_name("tls");
 
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
@@ -1016,6 +1018,19 @@ int sip_target_set::get_next(
                 break;
             default:
                 //unexpected address family for TCP transport
+                next_trsp = trsp_socket::tr_invalid;
+            }
+        } else if(0==strncasecmp(t.trsp, trsp_tls_name.s, trsp_tls_name.len)) {
+            //TLS
+            switch(ss->ss_family) {
+            case AF_INET:
+                next_trsp = trsp_socket::tls_ipv4;
+                break;
+            case AF_INET6:
+                next_trsp = trsp_socket::tls_ipv6;
+                break;
+            default:
+                //unexpected address family for TLS transport
                 next_trsp = trsp_socket::tr_invalid;
             }
         } else {
