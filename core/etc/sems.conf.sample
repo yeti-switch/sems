@@ -924,6 +924,130 @@ signaling-interfaces {
                 */
                 idle-timeout=900000 //optional
             }
+
+            /*
+            * section described TLS transport for SIP stack
+            */
+            sip-tls {
+
+                /* mandatory parameters address, port
+                 * ip and port where its SIP stack is
+                 * bound to or should be bound to.
+                 */
+                address = 2a01:ad00:3:1:a11f:a42d:cf1e:a754
+                port = 50601
+
+                /* optional parameter static-client-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: off
+                */
+                static-client-port = on
+
+                /* optional parameter connect-timeout
+                *
+                * tcp connect timeout
+                *
+                * default: 2000 - 2 seconds
+                */
+                connect-timeout = 1000
+
+                /* optional parameter idle-timeout
+                *
+                * tcp idle timeout
+                *
+                * default: 3600000 - 1 hour
+                */
+                idle-timeout=900000 //optional
+
+               /*
+                * section described TLS client settings
+                */
+                client {
+                    /* mandatory parameters protocols
+                    *
+                    * list of supported protocols
+                    *
+                    * available values: TLSv1, TLSv1.1, TLSv1.2
+                    */
+                    protocols =  { TLSv1, TLSv1.1, TLSv1.2 }
+
+                    /* optional parameters certificate
+                    *
+                    * path to client certificate
+                    */
+                    certificate = /etc/sems/client.crt
+
+                    /* optional parameters certificate_key
+                    *
+                    * path to client certificate key
+                    */
+                    certificate_key = /etc/sems/client.crt
+
+                    /* optional parameters verify_certificate_chain, verify_certificate_cn
+                    *
+                    * not using now
+                    */
+                    //verify_certificate_chain = true/false - проверять ли сертификат сервера при соединении
+                    //verify_certificate_cn = true/false - проверять CN сертификата сервера при соединении
+
+                    /* optional parameters ca_list
+                    *
+                    * path to ca certificates
+                    */
+                    ca_list = /etc/sems/ca/ca.crt
+                }
+
+                /*
+                * section described TLS server settings
+                */
+                server {
+                    /* mandatory parameters protocols
+                    *
+                    * list of supported protocols
+                    *
+                    * available values: TLSv1, TLSv1.1, TLSv1.2
+                    */
+                    protocols =  { TLSv1, TLSv1.1, TLSv1.2 }
+
+                    /* mandatory parameters certificate
+                    *
+                    * path to server certificate
+                    */
+                    certificate = /etc/sems/client.crt
+
+                    /* mandatory parameters certificate_key
+                    *
+                    * path to server certificate key
+                    */
+                    certificate_key = /etc/sems/client.crt
+
+                    /* optional parameters ciphers
+                    *
+                    * list of supported ciphers
+                    *
+                    * available values: EECDH, ECDSA, AESGCM ....
+                    */
+                    ciphers = { EECDH, ECDSA, AESGCM}
+
+                    /* optional parameters dhparam, require_client_certificate, verify_client_certificate
+                    *
+                    * not using now
+                    */
+                    //dhparam = ECDH
+                    //require_client_certificate = true/false
+                    //verify_client_certificate = true/false
+
+                    /* optional parameters ca_list
+                    *
+                    * path to ca certificates
+                    */
+                    ca_list = /etc/sems/ca/ca.crt
+                }
+            }
         }
     }
 }
