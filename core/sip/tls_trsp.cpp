@@ -47,6 +47,8 @@ vector<string> tls_conf::allowed_ciphers() const
     } else if(s_server) {
         return Policy::allowed_ciphers();
     }
+    ERROR("allowed_ciphers: called in unexpected context");
+    return vector<string>();
 }
 
 bool tls_conf::allow_tls10()  const
@@ -233,6 +235,10 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
         send_q.push_back(msg);
         orig_send_q.pop_front();
     }
+    /* doc: https://botan.randombit.net/manual/tls.html
+     * If this function returns false, the session will not be cached for later resumption.
+     */
+    return true;
 }
 
 int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
