@@ -438,8 +438,8 @@ int main(int argc, char* argv[])
 #endif
 	 "\n",
 #ifdef _DEBUG
-	 log_level2str[AmConfig::LogLevel], AmConfig::LogLevel,
-         AmConfig::LogStderr ? "yes" : "no",
+	 log_level2str[AmConfig.log_level], AmConfig.log_level,
+         AmConfig.log_stderr ? "yes" : "no",
 #endif
 	 AmConfig.config_path.c_str(),
 	 AmConfig.modules_path.c_str()
