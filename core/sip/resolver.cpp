@@ -988,7 +988,7 @@ int sip_target_set::get_next(
 
         static cstring trsp_udp_name("udp");
         static cstring trsp_tcp_name("tcp");
-        static string trsp_tls_name("tls");
+        static cstring trsp_tls_name("tls");
 
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
