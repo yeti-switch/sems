@@ -1,3 +1,9 @@
+sems (1.8.4-0) stable; urgency=low
+
+  * tls support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 23 Oct 2018 17:41:26 +0300
+
 sems (1.8.3-3) stable; urgency=low
 
   * e1da6756e print cfg dump on load
