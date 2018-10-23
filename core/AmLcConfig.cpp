@@ -1080,26 +1080,26 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
     if(stlinfo) {
         cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
-        for(int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
             stlinfo->server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
         }
         stlinfo->server_settings.certificate = cfg_getstr(server, PARAM_CERTIFICATE_NAME);
         stlinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
-        for(int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
             stlinfo->client_settings.cipher_list.push_back(cipher);
         }
         stlinfo->client_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
         stlinfo->client_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
         stlinfo->client_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
-        for(int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
             stlinfo->server_settings.ca_list.push_back(ca);
         }
 
         cfg_t* client = cfg_getsec(cfg, SECTION_CLIENT_NAME);
-        for(int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
             stlinfo->client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
         }
@@ -1107,7 +1107,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         stlinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
         stlinfo->server_settings.verify_certificate_chain = cfg_getbool(server, PARAM_CERT_CHAIN_NAME);
         stlinfo->server_settings.verify_certificate_cn = cfg_getbool(server, PARAM_CERT_CN_NAME);
-        for(int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
             stlinfo->client_settings.ca_list.push_back(ca);
         }
