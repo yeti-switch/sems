@@ -189,7 +189,7 @@ void dns_ip_entry::sort_by_priority(dns_handle* handle, dns_priority priority)
         unsigned int index;
         dns_priority priority;
     };
- 
+
     map<ip_index, unsigned int> indexes;
 
     int index = 0;
@@ -511,6 +511,7 @@ bool dns_bucket::remove(const string& name)
 
         return true;
     }
+
     unlock();
     return false;
 }
@@ -985,9 +986,9 @@ int sip_target_set::get_next(
         if(!has_next())
             return -1;
 
-        static string trsp_udp_name("udp");
-        static string trsp_tcp_name("tcp");
-        static string trsp_tls_name("tls");
+        static cstring trsp_udp_name("udp");
+        static cstring trsp_tcp_name("tcp");
+        static cstring trsp_tls_name("tls");
 
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
@@ -1361,7 +1362,7 @@ int _resolver::resolve_name_cache(
 
     // first attempt to get a valid IP
     // (from the cache)
-    if(e){
+    if(e) {
         if(dns_entry *re = e->resolve_alias(cache, priority, t)) {
             dec_ref(e);
             e = re;
