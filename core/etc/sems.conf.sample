@@ -1044,8 +1044,8 @@ signaling-interfaces {
                     *
                     * not using now
                     */
-                    //verify_certificate_chain = true/false - проверять ли сертификат сервера при соединении
-                    //verify_certificate_cn = true/false - проверять CN сертификата сервера при соединении
+                    //verify_certificate_chain = true/false - whether to check server certificate
+                    //verify_certificate_cn = true/false - whether to check server certificate's CN
 
                     /* optional parameters ca_list
                     *
