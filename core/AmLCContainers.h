@@ -6,7 +6,7 @@
 #include <vector>
 #include <list>
 #include "sip/transport.h"
-#include "sip/tls_trsp.h"
+#include "sip/tls_trsp_settings.h"
 #include "sems.h"
 
 class IP_info
