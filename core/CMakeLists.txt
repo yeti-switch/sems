@@ -17,8 +17,9 @@ codecs_bench.wav
 
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
+INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads botan-2 ${Confuse_LIBRARIES})
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads ${BOTAN_BUNDLED_LIBS} ${Confuse_LIBRARIES})
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)
