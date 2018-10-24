@@ -795,6 +795,17 @@ signaling-interfaces {
                 */
                 force-via-address = on
 
+                /* optional parameter static-contact-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: on
+                */
+                //force-contact-transport = on
+
+
                 /* optional parameter dscp
                 *
                 * DiffServ Code Point value in ip protocol
@@ -817,6 +828,17 @@ signaling-interfaces {
                 */
                 address = 10.200.0.120
                 port = 50600
+
+                /* optional parameter static-contact-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: on
+                */
+                //force-contact-transport = on
+
 
                 /* optional parameter connect-timeout
                 *
@@ -864,6 +886,17 @@ signaling-interfaces {
                 address = 2a01:ad00:3:1:a11f:a42d:cf1e:a754
                 port = 50600
 
+                /* optional parameter static-contact-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: on
+                */
+                //force-contact-transport = on
+
+
                 /* optional parameter force-via-address
                 *
                 * force sending replies to 1st Via
@@ -908,6 +941,16 @@ signaling-interfaces {
                 */
                 static-client-port = on
 
+                /* optional parameter static-contact-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: on
+                */
+                //force-contact-transport = on
+
                 /* optional parameter connect-timeout
                 *
                 * tcp connect timeout
@@ -946,6 +989,16 @@ signaling-interfaces {
                 * default: off
                 */
                 static-client-port = on
+
+                /* optional parameter static-contact-port
+                *
+                * use static client port and reused socket
+                *
+                * available values: on, off
+                *
+                * default: on
+                */
+                //force-contact-transport = on
 
                 /* optional parameter connect-timeout
                 *
