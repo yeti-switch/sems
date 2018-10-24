@@ -1040,12 +1040,25 @@ signaling-interfaces {
                     */
                     certificate_key = /etc/sems/client.crt
 
-                    /* optional parameters verify_certificate_chain, verify_certificate_cn
+                    /* optional parameters verify_certificate_cn
                     *
-                    * not using now
+                    * whether to check server certificate
+                    *
+                    * available values: true, false
+                    *
+                    * default: true
                     */
-                    //verify_certificate_chain = true/false - whether to check server certificate
-                    //verify_certificate_cn = true/false - whether to check server certificate's CN
+                    verify_certificate_chain = true
+
+                    /* optional parameter verify_certificate_cn
+                    *
+                    * whether to check common name of server certificate
+                    *
+                    * available values: true, false
+                    *
+                    * default: true
+                    */
+                    verify_certificate_cn = true
 
                     /* optional parameters ca_list
                     *
@@ -1084,15 +1097,33 @@ signaling-interfaces {
                     *
                     * available values: EECDH, ECDSA, AESGCM ....
                     */
-                    ciphers = { EECDH, ECDSA, AESGCM}
+                    ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
 
-                    /* optional parameters dhparam, require_client_certificate, verify_client_certificate
+                    /* optional parameters require_client_certificate
+                    *
+                    * whether to require client certificate
+                    *
+                    * available values: true, false
+                    *
+                    * default: true
+                    */
+                    require_client_certificate = true
+
+                    /* optional parameters verify_certificate_cn
+                    *
+                    * whether to check client certificate
+                    *
+                    * available values: true, false
+                    *
+                    * default: true
+                    */
+                    verify_client_certificate = true
+
+                    /* optional parameter dhparam
                     *
                     * not using now
                     */
                     //dhparam = ECDH
-                    //require_client_certificate = true/false
-                    //verify_client_certificate = true/false
 
                     /* optional parameters ca_list
                     *

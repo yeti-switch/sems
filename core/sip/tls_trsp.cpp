@@ -42,9 +42,9 @@ tls_conf::tls_conf(const tls_conf& conf)
 
 vector<string> tls_conf::allowed_ciphers() const
 {
-    if(s_client) {
-        return s_client->cipher_list;
-    } else if(s_server) {
+    if(s_server) {
+        return s_server->cipher_list;
+    } else if(s_client) {
         return Policy::allowed_ciphers();
     }
     ERROR("allowed_ciphers: called in unexpected context");
@@ -139,7 +139,11 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
         ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
     }
 
-    return ca;
+    if(s_server && !s_server->require_client_certificate) {
+        return std::vector<Botan::Certificate_Store*>();
+    } else {
+        return ca;
+    }
 }
 
 vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
@@ -239,6 +243,24 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
      * If this function returns false, the session will not be cached for later resumption.
      */
     return true;
+}
+
+void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
+                            const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
+                            const std::vector<Botan::Certificate_Store*>& trusted_roots,
+                            Botan::Usage_Type usage,
+                            const std::string& hostname,
+                            const Botan::TLS::Policy& policy)
+{
+    if((settings->s_client && !settings->s_client->verify_certificate_chain) ||
+        (settings->s_server && !settings->s_server->verify_client_certificate)) {
+        return;
+    }
+
+    if(settings->s_client && !settings->s_client->verify_certificate_cn)
+        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
+    else
+        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
 }
 
 int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
