@@ -14,6 +14,7 @@ PROJECT (SEMS)
 
 include(cmake/curl_bundled.cmake)
 include(cmake/spandsp_bundled.cmake)
+include(cmake/botan_bundled.cmake)
 
 SET(SEMS_APP sems)
 SET(PKGCFG_DIR /usr/lib/pkgconfig)
@@ -71,7 +72,6 @@ OPTION(SEMS_USE_TTS           "Build with Text-to-speech support (requires Flite
 OPTION(SEMS_USE_OPENSSL       "Build with OpenSSL" ON)
 OPTION(SEMS_USE_MONITORING    "Build with monitoring support" ON)
 OPTION(SEMS_USE_IPV6          "Build with IPv6 support" OFF)
-OPTION(SEMS_USE_BOTAN2        "Use with botan2" ON)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
 #OPTION(MAX_RTP_SESSIONS:int   "How many rtp sessions SEMS will handle simultaneously? (default 2048)" 2048)
 
@@ -166,17 +166,6 @@ IF(SEMS_USE_ILBC)
 ELSE(SEMS_USE_ILBC)
 	MESSAGE(STATUS "Uusing iLBC library: NO")
 ENDIF(SEMS_USE_ILBC)
-
-IF(SEMS_USE_BOTAN2)
-	FIND_PACKAGE(Botan2 REQUIRED)
-	IF(BOTAN2_FOUND)
-		MESSAGE(STATUS "Using botan-2 library: YES (external)")
-	ELSE(BOTAN2_FOUND)
-		MESSAGE(STATUS "Using botan-2 library: NO (default)")
-	ENDIF(BOTAN2_FOUND)
-ELSE(SEMS_USE_BOTAN2)
-	MESSAGE(STATUS "Uusing botan-2 library: NO")
-ENDIF(SEMS_USE_BOTAN2)
 
 # build in support for monitoring?
 IF(SEMS_USE_MONITORING)
@@ -288,7 +277,6 @@ INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/ampi)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core)
 INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
-INCLUDE_DIRECTORIES (${BOTAN2_INCLUDE_DIRS})
 
 CONFIGURE_FILE( ${SEMS_SOURCE_DIR}/core/sems.h.cmake ${SEMS_SOURCE_DIR}/core/sems.h )
 
