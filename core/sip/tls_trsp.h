@@ -28,6 +28,7 @@ using std::string;
 
 class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
+    friend class tls_trsp_socket;
     tls_client_settings* s_client;
     tls_server_settings* s_server;
     Botan::X509_Certificate certificate;
@@ -104,6 +105,12 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
     void tls_alert(Botan::TLS::Alert alert);
     bool tls_session_established(const Botan::TLS::Session& session);
+    void tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
+                                const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
+                                const std::vector<Botan::Certificate_Store*>& trusted_roots,
+                                Botan::Usage_Type usage,
+                                const std::string& hostname,
+                                const Botan::TLS::Policy& policy);
 public:
     virtual ~tls_trsp_socket();
 

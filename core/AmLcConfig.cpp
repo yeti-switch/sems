@@ -1093,14 +1093,23 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         stlinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
-            stlinfo->client_settings.cipher_list.push_back(cipher);
+            stlinfo->server_settings.cipher_list.push_back(cipher);
         }
-        stlinfo->client_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
-        stlinfo->client_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
-        stlinfo->client_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
+        stlinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
+        stlinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
+        stlinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
             stlinfo->server_settings.ca_list.push_back(ca);
+        }
+
+        if(stlinfo->server_settings.require_client_certificate && stlinfo->server_settings.ca_list.empty()) {
+            ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
+            return 0;
+        }
+        if(stlinfo->server_settings.verify_client_certificate && !stlinfo->server_settings.require_client_certificate) {
+            ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
+            return 0;
         }
 
         cfg_t* client = cfg_getsec(cfg, SECTION_CLIENT_NAME);
@@ -1110,8 +1119,8 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
         stlinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
         stlinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
-        stlinfo->server_settings.verify_certificate_chain = cfg_getbool(server, PARAM_CERT_CHAIN_NAME);
-        stlinfo->server_settings.verify_certificate_cn = cfg_getbool(server, PARAM_CERT_CN_NAME);
+        stlinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
+        stlinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
         for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
             stlinfo->client_settings.ca_list.push_back(ca);
