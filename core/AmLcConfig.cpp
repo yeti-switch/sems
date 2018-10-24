@@ -1215,9 +1215,64 @@ void AmLcConfig::dump_Ifs()
         for(; it != it_ref.proto_info.end(); it++) {
             if((*it)->type == SIP_info::TCP) {
                 SIP_TCP_info* info = SIP_TCP_info::toSIP_TCP(*it);
-                INFO("\t\tTCP%u/%u",
+                INFO("\t\tTCP %u/%u",
                     info->tcp_connect_timeout,
                     info->tcp_idle_timeout);
+            } else if((*it)->type == SIP_info::TLS) {
+                SIP_TLS_info* info = SIP_TLS_info::toSIP_TLS(*it);
+                INFO("\t\tTLS %u/%u",
+                    info->tcp_connect_timeout,
+                    info->tcp_idle_timeout);
+
+                //client settings
+                {
+                    std::string ca_list("{");
+                    for(auto& ca : info->client_settings.ca_list) {
+                        ca_list.append(ca);
+                        ca_list.push_back(',');
+                    }
+                    ca_list.pop_back();
+                    ca_list.push_back('}');
+
+                    std::string protocols("{");
+                    for(auto& protocol : info->client_settings.protocols) {
+                        protocols.append(info->client_settings.protocolToStr(protocol));
+                        protocols.push_back(',');
+                    }
+                    protocols.pop_back();
+                    protocols.push_back('}');
+                    INFO("\t\tclient: certificate='%s'"
+                        ";key='%s';ca='%s'"
+                        ";supported_protocols='%s'",
+                        info->client_settings.certificate.c_str(),
+                        info->client_settings.certificate_key.c_str(),
+                        ca_list.c_str(), protocols.c_str());
+                }
+
+                //server settings
+                {
+                    std::string ca_list("{");
+                    for(auto& ca : info->server_settings.ca_list) {
+                        ca_list.append(ca);
+                        ca_list.push_back(',');
+                    }
+                    ca_list.pop_back();
+                    ca_list.push_back('}');
+
+                    std::string protocols("{");
+                    for(auto& protocol : info->server_settings.protocols) {
+                        protocols.append(info->server_settings.protocolToStr(protocol));
+                        protocols.push_back(',');
+                    }
+                    protocols.pop_back();
+                    protocols.push_back('}');
+                    INFO("\t\tserver: certificate='%s'"
+                        ";key='%s';ca='%s'"
+                        ";supported_protocols='%s'",
+                        info->server_settings.certificate.c_str(),
+                        info->server_settings.certificate_key.c_str(),
+                        ca_list.c_str(), protocols.c_str());
+                }
             } else {
                 INFO("\t\tUDP");
             }

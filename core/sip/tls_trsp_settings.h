@@ -28,6 +28,16 @@ public:
         return TLSv1_2;
     }
 
+    static  std::string protocolToStr(Protocol proto) {
+        if(proto == TLSv1) {
+            return "TLSv1";
+        } else if(proto == TLSv1_1) {
+            return "TLSv1.1";
+        }
+
+        return "TLSv1.2";
+    }
+
     std::vector<Protocol> protocols;
     std::string certificate;
     std::string certificate_key;
