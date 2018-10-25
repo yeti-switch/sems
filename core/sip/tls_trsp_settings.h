@@ -47,22 +47,22 @@ public:
 class tls_client_settings : public tls_settings
 {
 public:
-    tls_client_settings() : require_client_certificate(false), verify_client_certificate(false){}
+    tls_client_settings() : verify_certificate_chain(false), verify_certificate_cn(false){}
     ~tls_client_settings(){}
 
-    std::vector<std::string> cipher_list;
-    std::string dhparam;
-    bool require_client_certificate;
-    bool verify_client_certificate;
+    bool verify_certificate_chain;
+    bool verify_certificate_cn;
 
 };
 
 class tls_server_settings : public tls_settings
 {
 public:
-    tls_server_settings() : verify_certificate_chain(false), verify_certificate_cn(false){}
+    tls_server_settings() : require_client_certificate(false), verify_client_certificate(false){}
     ~tls_server_settings(){}
 
-    bool verify_certificate_chain;
-    bool verify_certificate_cn;
+    bool require_client_certificate;
+    bool verify_client_certificate;
+    std::vector<std::string> cipher_list;
+    std::string dhparam;
 };
