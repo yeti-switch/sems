@@ -898,8 +898,11 @@ static void prepare_strict_routing(sip_msg* msg, string& ext_uri_buffer)
 int _trans_layer::set_next_hop(sip_msg* msg, 
 			       cstring* next_hop,
 			       unsigned short* next_port,
-			       cstring* next_trsp)
+			       cstring* next_trsp,
+                   cstring* next_scheme)
 {
+    static char sip_scheme_name[] = "sip";
+    static char sips_scheme_name[] = "sips";
     assert(msg);
 
     list<sip_header*>& route_hdrs = msg->route; 
@@ -918,9 +921,13 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	if (next_hop->len == 0) {
 	    *next_hop  = route_uri->host;
 	    if(route_uri->port_str.len)
-		*next_port = route_uri->port;
+            *next_port = route_uri->port;
 	    if(route_uri->trsp && route_uri->trsp->value.len)
-		*next_trsp = route_uri->trsp->value;
+            *next_trsp = route_uri->trsp->value;
+        if(route_uri->scheme == sip_uri::SIPS)
+            *next_scheme = sips_scheme_name;
+        else
+            *next_scheme = sip_scheme_name;
 	}
     }
     else {
@@ -939,14 +946,22 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	    *next_port = parsed_r_uri.port;
 	if(parsed_r_uri.trsp)
 	    *next_trsp = parsed_r_uri.trsp->value;
+    if(parsed_r_uri.scheme == sip_uri::SIPS)
+        *next_scheme = sips_scheme_name;
+    else
+        *next_scheme = sip_scheme_name;
+    if(!next_trsp->len && parsed_r_uri.scheme == sip_uri::SIPS)
+        *next_trsp = "tls";
     }
+
 
     if(!next_trsp->len) {
         DBG("no transport specified, setting default");
         *next_trsp = "udp";
     }
 
-    DBG("next_hop:next_port is <%.*s:%u/%.*s>\n",
+    DBG("next_scheme:next_hop:next_port is <%.*s:%.*s:%u/%.*s>\n",
+    next_scheme->len, next_scheme->s,
 	next_hop->len, next_hop->s, *next_port,
 	next_trsp ? next_trsp->len : 0,
 	next_trsp ? next_trsp->s : 0);
@@ -1265,7 +1280,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     }
     else {
 	sip_destination dest;
-	if(set_next_hop(msg,&dest.host,&dest.port,&dest.trsp) < 0){
+	if(set_next_hop(msg,&dest.host,&dest.port,&dest.trsp, &dest.scheme) < 0){
 	    DBG("set_next_hop failed\n");
 	    return -1;
 	}
@@ -3078,7 +3093,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     //get next-hop
     sip_destination dest;
     list<sip_destination> dest_list;
-    if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp) < 0){
+    if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp,&dest.scheme) < 0){
         DBG("retarget: set_next_hop failed\n");
         update_reply_msg(500, "Failed to get nexthop for redirected request");
         return -1;

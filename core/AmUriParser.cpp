@@ -195,10 +195,17 @@ bool AmUriParser::parse_uri() {
     case uS0: {
       switch (c) {
       case '<': { st = uSPROT; } break;
-      default: { 
-	if ((eq<=4)&&(toupper(c) ==sip_prot[eq])) 
-	  eq++; 
+      default: {
+	if ((eq<=4)&&(toupper(c) ==sip_prot[eq]))
+	  eq++;
+    if ((eq1<=4)&&(toupper(c) ==sip_prot1[eq1]))
+	  eq1++;
 	if (eq==4) { // found sip:
+      uri_scheme = "sip";
+	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
+	};
+    if (eq1==5) { // found sips:
+      uri_scheme = "sips";
 	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
 	};
       } break;
@@ -520,6 +527,9 @@ string AmUriParser::uri_str() const
 string AmUriParser::canon_uri_str() const
 {
   string res = "sip:"; // fixme: always SIP...
+  if(!uri_scheme.empty()) {
+      res = uri_scheme + ":";
+  }
   if(!uri_user.empty()) {
     res += uri_user + "@";
   }

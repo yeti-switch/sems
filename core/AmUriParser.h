@@ -35,10 +35,11 @@ using std::string;
 struct AmUriParser {
   string display_name;
   string uri;
-	
-  string uri_user; 
-  string uri_host; 
-  string uri_port; 
+
+  string uri_user;
+  string uri_host;
+  string uri_port;
+  string uri_scheme;
   string uri_headers;
   string uri_param;		// <sip:user@host;uri_param>
                                 // <sip:user;user_param@host>
@@ -65,7 +66,7 @@ struct AmUriParser {
   string uri_str() const;
   string canon_uri_str() const;
   string nameaddr_str() const;
-  
+
   AmUriParser() { }
 
   string print();
