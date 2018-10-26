@@ -314,7 +314,8 @@ protected:
     _resolver();
     ~_resolver();
 
-    int set_destination_ip(const cstring& next_hop,
+    int set_destination_ip(const cstring& next_scheme,
+        const cstring& next_hop,
         unsigned short next_port,
         const cstring& next_trsp,
         sockaddr_storage* remote_ip,
