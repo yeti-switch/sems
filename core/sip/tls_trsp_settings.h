@@ -64,5 +64,6 @@ public:
     bool require_client_certificate;
     bool verify_client_certificate;
     std::vector<std::string> cipher_list;
+    std::vector<std::string> macs_list;
     std::string dhparam;
 };

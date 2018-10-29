@@ -182,7 +182,7 @@ bool AmUriParser::parse_uri() {
   // assuming user@host
   size_t pos = 0; int st = uS0;
   size_t p1 = 0; 
-  int eq = 0; const char* sip_prot = "SIP:";
+  int eq = 0, eq1 = 0; const char* sip_prot = "SIP:", *sip_prot1 = "SIPS:";
   uri_user = ""; uri_host = ""; uri_port = ""; uri_param = "";
 
   if (uri.empty())

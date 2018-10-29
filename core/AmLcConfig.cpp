@@ -139,6 +139,7 @@
 #define PARAM_REQUIRE_CERT_NAME      "require_client_certificate"
 #define PARAM_CA_LIST_NAME           "ca_list"
 #define PARAM_CIPHERS_NAME           "ciphers"
+#define PARAM_MACS_NAME              "macs"
 #define PARAM_DH_PARAM_NAME          "dhparam"
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
@@ -414,6 +415,7 @@ AmLcConfig::AmLcConfig()
         CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NODEFAULT),
         CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_MACS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
         CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
         CFG_END()
@@ -1094,6 +1096,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
             stlinfo->server_settings.cipher_list.push_back(cipher);
+        }
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
+            std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
+            stlinfo->server_settings.macs_list.push_back(mac);
         }
         stlinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
         stlinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);

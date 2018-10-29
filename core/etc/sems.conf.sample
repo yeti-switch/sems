@@ -1091,13 +1091,21 @@ signaling-interfaces {
                     */
                     certificate_key = /etc/sems/client.crt
 
-                    /* optional parameters ciphers
+                    /* mandatory parameters ciphers
                     *
                     * list of supported ciphers
                     *
                     * available values: EECDH, ECDSA, AESGCM ....
                     */
                     ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
+
+                    /* mandatory parameters macs
+                    *
+                    * list of supported macs
+                    *
+                    * available values: AEAD, SHA-256, SHA-384, SHA-1
+                    */
+                    macs = {AEAD, SHA-256, SHA-384, SHA-1}
 
                     /* optional parameters require_client_certificate
                     *
