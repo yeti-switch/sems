@@ -40,6 +40,7 @@ public:
 
     //Policy functions
     vector<string> allowed_ciphers() const override;
+    vector<string> allowed_macs() const override;
     bool allow_tls10()  const override;
     bool allow_tls11()  const override;
     bool allow_tls12()  const override;
