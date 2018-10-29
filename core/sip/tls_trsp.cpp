@@ -51,6 +51,17 @@ vector<string> tls_conf::allowed_ciphers() const
     return vector<string>();
 }
 
+vector<string> tls_conf::allowed_macs() const
+{
+    if(s_server) {
+        return s_server->macs_list;
+    } else if(s_client) {
+        return Policy::allowed_macs();
+    }
+    ERROR("allowed_ciphers: called in unexpected context");
+    return vector<string>();
+}
+
 bool tls_conf::allow_tls10()  const
 {
     tls_settings* settings = 0;

@@ -1277,6 +1277,7 @@ int _resolver::str2ip(
 }
 
 int _resolver::set_destination_ip(
+    const cstring& next_scheme,
     const cstring& next_hop,
     unsigned short next_port,
     const cstring& next_trsp,
@@ -1297,15 +1298,20 @@ int _resolver::set_destination_ip(
             if (disable_srv) {
                 DBG("no port specified, but DNS SRV disabled (skipping).\n");
             } else {
-                string srv_name = "_sip._";
+                string srv_name;
+                if(!lower_cmp_n(next_scheme,"sip")) {
+                    srv_name = "_sip._";
 
-                if(!next_trsp.len || !lower_cmp_n(next_trsp,"udp")){
-                    srv_name += "udp";
-                } else if(!lower_cmp_n(next_trsp,"tcp")) {
-                    srv_name += "tcp";
-                } else {
-                    DBG("unsupported transport: skip SRV lookup");
-                    goto no_SRV;
+                    if(!next_trsp.len || !lower_cmp_n(next_trsp,"udp")){
+                        srv_name += "udp";
+                    } else if(!lower_cmp_n(next_trsp,"tcp")) {
+                        srv_name += "tcp";
+                    } else {
+                        DBG("unsupported transport: skip SRV lookup");
+                        goto no_SRV;
+                    }
+                } else if(!lower_cmp_n(next_scheme,"sips")) {
+                    srv_name = "_sip._tcp";
                 }
 
                 srv_name += "." + nh;
@@ -1422,12 +1428,13 @@ int _resolver::resolve_targets(
         sip_target t;
         dns_handle h_dns;
 
-        DBG("sip_destination: %.*s:%u/%.*s",
+        DBG("sip_destination: %.*s:%.*s:%u/%.*s",
+            it->scheme.len,it->scheme.s,
             it->host.len,it->host.s,
             it->port,
             it->trsp.len,it->trsp.s);
 
-        if(set_destination_ip(it->host,it->port,it->trsp,
+        if(set_destination_ip(it->scheme, it->host,it->port,it->trsp,
                               &t.ss, targets->priority,&h_dns) != 0)
         {
             WARN("Unresolvable destination %.*s:%u/%.*s",

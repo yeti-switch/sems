@@ -182,7 +182,7 @@ bool AmUriParser::parse_uri() {
   // assuming user@host
   size_t pos = 0; int st = uS0;
   size_t p1 = 0; 
-  int eq = 0; const char* sip_prot = "SIP:";
+  int eq = 0, eq1 = 0; const char* sip_prot = "SIP:", *sip_prot1 = "SIPS:";
   uri_user = ""; uri_host = ""; uri_port = ""; uri_param = "";
 
   if (uri.empty())
@@ -195,10 +195,17 @@ bool AmUriParser::parse_uri() {
     case uS0: {
       switch (c) {
       case '<': { st = uSPROT; } break;
-      default: { 
-	if ((eq<=4)&&(toupper(c) ==sip_prot[eq])) 
-	  eq++; 
+      default: {
+	if ((eq<=4)&&(toupper(c) ==sip_prot[eq]))
+	  eq++;
+    if ((eq1<=4)&&(toupper(c) ==sip_prot1[eq1]))
+	  eq1++;
 	if (eq==4) { // found sip:
+      uri_scheme = "sip";
+	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
+	};
+    if (eq1==5) { // found sips:
+      uri_scheme = "sips";
 	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
 	};
       } break;
@@ -520,6 +527,9 @@ string AmUriParser::uri_str() const
 string AmUriParser::canon_uri_str() const
 {
   string res = "sip:"; // fixme: always SIP...
+  if(!uri_scheme.empty()) {
+      res = uri_scheme + ":";
+  }
   if(!uri_user.empty()) {
     res += uri_user + "@";
   }
