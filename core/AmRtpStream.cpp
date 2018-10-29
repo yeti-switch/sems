@@ -1857,7 +1857,6 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
             (const char *)buf,len,
             0,
             (const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
-        DBG("err = %d",err);
     }
     //TODO: process case with AmConfig.force_outbound_if properly
 
