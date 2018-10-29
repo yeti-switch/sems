@@ -588,16 +588,16 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port,
 
   r_host = addr;
 
-  memcpy(&r_saddr,&ss,sizeof(struct sockaddr_storage));
   if(port) {
+    memcpy(&r_saddr,&ss,sizeof(struct sockaddr_storage));
     r_port = port;
     am_set_port(&r_saddr,r_port);
   }
 
-  memcpy(&r_rtcp_saddr,&ss,sizeof(struct sockaddr_storage));
   if(rtcp_port) {
-      r_rtcp_port = rtcp_port;
-      am_set_port(&r_rtcp_saddr,r_rtcp_port);
+    memcpy(&r_rtcp_saddr,&ss,sizeof(struct sockaddr_storage));
+    r_rtcp_port = rtcp_port;
+    am_set_port(&r_rtcp_saddr,r_rtcp_port);
   }
 
   mute = ((r_saddr.ss_family == AF_INET) && 
@@ -1857,14 +1857,16 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
             (const char *)buf,len,
             0,
             (const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
+        DBG("err = %d",err);
     }
     //TODO: process case with AmConfig.force_outbound_if properly
 
     if(err < 0) {
-        CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s, buf: %p:%d",
+        CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s:%d, buf: %p:%d",
                     strerror(errno),
                     l_rtcp_sd,
                     get_addr_str(&r_rtcp_saddr).c_str(),
+                    am_get_port(&r_rtcp_saddr),
                     buf,len);
         return;
     }
