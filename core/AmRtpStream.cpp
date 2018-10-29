@@ -1533,24 +1533,21 @@ void AmRtpStream::log_sent_rtcp_packet(const char *buffer, int len, struct socka
 		logger->log((const char *)buffer, len, &l_rtcp_saddr, &send_addr, empty);
 }
 
-/*void AmRtpStream::log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr){
-	static const cstring empty;
-	if (logger)
-		logger->log(buffer, len, &recv_addr, &l_rtcp_saddr, empty);
-}*/
+void AmRtpStream::getMediaStats(struct MediaStats &s)
+{
+    auto &p = s.payloads;
+    payloads_id2str(incoming_payloads,p.incoming);
+    payloads_id2str(incoming_relayed_payloads,p.incoming_relayed);
+    payloads_id2str(outgoing_payloads,p.outgoing);
+    payloads_id2str(outgoing_relayed_payloads,p.outgoing_relayed);
 
+    auto &e  = s.errors;
+    e.decode_errors = decode_errors;
+    e.rtp_parse_errors = rtp_parse_errors;
+    e.out_of_buffer_errors = out_of_buffer_errors;
 
-void AmRtpStream::getPayloadsHistory(PayloadsHistory &ph){
-	payloads_id2str(incoming_payloads,ph.incoming);
-	payloads_id2str(incoming_relayed_payloads,ph.incoming_relayed);
-	payloads_id2str(outgoing_payloads,ph.outgoing);
-	payloads_id2str(outgoing_relayed_payloads,ph.outgoing_relayed);
-}
-
-void AmRtpStream::getErrorsStats(ErrorsStats &es){
-	es.decode_errors = decode_errors;
-	es.rtp_parse_errors = rtp_parse_errors;
-	es.out_of_buffer_errors = out_of_buffer_errors;
+    s.incoming_bytes = incoming_bytes;
+    s.outgoing_bytes = outgoing_bytes;
 }
 
 PacketMem::PacketMem()
@@ -1745,11 +1742,21 @@ void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
         return;
     }
 
+    //https://tools.ietf.org/html/rfc3550#appendix-A.8
+    uint64_t recv_time_msec = p.recv_time.tv_sec*1000 + p.recv_time.tv_usec/1000;
+    int transit = (recv_time_msec << 3) - p.timestamp;
+    if(rtp_stats.transit) {
+        int d = rtp_stats.transit - transit;
+        if(d < 0) d = -d;
+        rtp_stats.rx.rtcp_jitter += d - ((rtp_stats.rx.rtcp_jitter + 8) >> 4);
+    }
+    rtp_stats.transit = transit;
+
     if(timerisset(&rtp_stats.rx_recv_time)) {
         timeval diff;
         timersub(&p.recv_time, &rtp_stats.rx_recv_time, &diff);
-        rtp_stats.rx.jitter.update(
-            (diff.tv_sec * 1000) + (diff.tv_usec / 1000));
+        int delay_msec = (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
+        rtp_stats.rx.delay_stats.update(delay_msec);
     }
     rtp_stats.rx_recv_time = p.recv_time;
 }
@@ -1781,7 +1788,7 @@ void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r, struct timev
         r.dlsr = 0;
     }
 
-    r.jitter = htonl((uint32_t)rtp_stats.rx.jitter.variance());
+    r.jitter = htonl(rtp_stats.rx.rtcp_jitter >> 4);
 }
 
 
@@ -1854,7 +1861,11 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     //TODO: process case with AmConfig.force_outbound_if properly
 
     if(err < 0) {
-        CLASS_ERROR("failed to send RTCP packet: %s\n",strerror(errno));
+        CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s, buf: %p:%d",
+                    strerror(errno),
+                    l_rtcp_sd,
+                    get_addr_str(&r_rtcp_saddr).c_str(),
+                    buf,len);
         return;
     }
 

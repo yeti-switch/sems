@@ -504,8 +504,6 @@ class AmRtpStream
         std::vector<string> incoming,incoming_relayed,
                             outgoing,outgoing_relayed;
     };
-    void getPayloadsHistory(PayloadsHistory &ph);
-
     struct ErrorsStats {
         int decode_errors;
         int rtp_parse_errors;
@@ -516,7 +514,14 @@ class AmRtpStream
           out_of_buffer_errors(0)
         {}
     };
-    void getErrorsStats(ErrorsStats &es);
+    struct MediaStats {
+        struct PayloadsHistory payloads;
+        struct ErrorsStats     errors;
+        //TODO: rtcp values here
+        unsigned long incoming_bytes;
+        unsigned long outgoing_bytes;
+    };
+    void getMediaStats(struct MediaStats &s);
 
     unsigned long getRcvdBytes() { return incoming_bytes; }
     unsigned long getSentBytes() { return outgoing_bytes; }

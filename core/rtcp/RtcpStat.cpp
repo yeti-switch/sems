@@ -64,6 +64,8 @@ void RtcpBidirectionalStat::init_seq(uint16_t seq)
     received = 0;
     received_prior = 0;
     expected_prior = 0;
+    rx.rtcp_jitter = 0;
+    transit = 0;
 }
 
 int RtcpBidirectionalStat::update_seq(uint16_t seq)
