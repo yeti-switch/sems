@@ -45,7 +45,8 @@ struct RtcpUnidirectionalStat
         unsigned    random:1;  /**< Random packet lost detected.           */
     } loss_type;               /**< Types of loss detected.                */
 
-    MathStat    jitter;        /**< Jitter statistics (in usec)            */
+    int         rtcp_jitter;   /** scaled RTCP jitter                      */
+    MathStat    delay_stats;
 };
 
 struct RtcpBidirectionalStat
