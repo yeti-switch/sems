@@ -1,13 +1,25 @@
+#include <sys/ioctl.h>
 #include "tcp_base_trsp.h"
+#include "socket_ssl.h"
+#include "hash.h"
 #include "ip_util.h"
 #include "trans_layer.h"
 #include "sip_parser.h"
-#include <AmUtils.h>
-#include <sys/ioctl.h>
-#include "hash.h"
 #include "parse_common.h"
 #include "parse_via.h"
-#include <AmLcConfig.h>
+#include "AmLcConfig.h"
+#include "AmUtils.h"
+
+static string generate_ssl_options_string(sockaddr_ssl* sa)
+{
+    string ret;
+    ret += toString(sa->sig);
+    ret += ";";
+    ret += toString(sa->cipher);
+    ret += ";";
+    ret += toString(sa->mac);
+    return ret;
+}
 
 void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
 {
@@ -505,6 +517,9 @@ int tcp_base_trsp::on_connect(short ev)
         return -1;
     }
 
+    DBG("TCP connection from %s:%u",
+        get_peer_ip().c_str(),
+        get_peer_port());
     connected = true;
     add_read_event();
 
@@ -573,6 +588,13 @@ void trsp_server_worker::add_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
+    sockaddr_storage sa = {0};
+    client_sock->copy_peer_addr(&sa);
+    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)&sa;
+    if(sa_ssl->ssl_marker) {
+        conn_id += ";";
+        conn_id += generate_ssl_options_string(sa_ssl);
+    }
 
     DBG("new TCP connection from %s:%u",
         client_sock->get_peer_ip().c_str(),
@@ -595,6 +617,13 @@ void trsp_server_worker::remove_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
+    sockaddr_storage sa = {0};
+    client_sock->copy_peer_addr(&sa);
+    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)&sa;
+    if(sa_ssl->ssl_marker) {
+        conn_id += ";";
+        conn_id += generate_ssl_options_string(sa_ssl);
+    }
 
     DBG("removing TCP connection from %s",conn_id.c_str());
 
@@ -614,17 +643,29 @@ int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
     char host_buf[NI_MAXHOST];
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
-
     tcp_base_trsp* sock = NULL;
 
     bool new_conn=false;
     connections_mut.lock();
-    map<string,tcp_base_trsp*>::iterator sock_it = connections.find(dest);
-    if(sock_it != connections.end()) {
-        sock = sock_it->second;
-        inc_ref(sock);
+    for(auto& conn : connections) {
+        if(strstr(conn.first.c_str(), dest.c_str()) == conn.first.c_str()) {
+            sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+            if(!sa_ssl->ssl_marker) {
+                sock = conn.second;
+                inc_ref(sock);
+                break;
+            }
+
+            sockaddr_storage sa_ = {0};
+            conn.second->copy_peer_addr(&sa_);
+            if(memcmp(&sa_, sa, sizeof(sockaddr_storage)) == 0) {
+                sock = conn.second;
+                inc_ref(sock);
+                break;
+            }
+        }
     }
-    else {
+    if(!sock) {
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
         tcp_base_trsp* new_sock = sock_factory->new_connection(server_sock,this,
                                   sa,evbase);
@@ -830,7 +871,7 @@ void trsp_server_socket::stop_threads()
 
 void trsp_server_socket::on_accept(int sd, short ev)
 {
-    sockaddr_storage src_addr;
+    sockaddr_storage src_addr = {0};
     socklen_t        src_addr_len = sizeof(sockaddr_storage);
 
     int connection_sd = accept(sd,(sockaddr*)&src_addr,&src_addr_len);

@@ -94,6 +94,7 @@ class AmSipRequest : public _AmSipMsgInDlg
  public:
   string method;
 
+  string scheme;
   string user;
   string domain;
   string r_uri;

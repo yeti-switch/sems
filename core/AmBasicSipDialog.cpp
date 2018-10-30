@@ -144,6 +144,10 @@ string AmBasicSipDialog::getContactHdr()
 string AmBasicSipDialog::getContactUri()
 {
   string contact_uri = "sip:";
+  if(!scheme.empty()) {
+      contact_uri = scheme;
+      contact_uri += ":";
+  }
   if(!ext_local_tag.empty()) {
     contact_uri += local_tag + "@";
   }
@@ -498,6 +502,7 @@ void AmBasicSipDialog::initFromLocalRequest(const AmSipRequest& req)
 {
   setRemoteUri(req.r_uri);
 
+  scheme       = req.scheme;
   user         = req.user;
   domain       = req.domain;
 
@@ -595,6 +600,7 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
   // Dlg not yet initialized?
   if(callid.empty()){
 
+    scheme       = req.scheme;
     user         = req.user;
     domain       = req.domain;
 
