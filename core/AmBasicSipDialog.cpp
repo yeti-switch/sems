@@ -712,16 +712,15 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
 {
   TransMap::const_iterator t_it = uas_trans.find(req.cseq);
   if(t_it == uas_trans.end()){
-    ERROR("could not find any transaction matching request cseq\n");
-    ERROR("request cseq=%i; reply code=%i; callid=%s; local_tag=%s; "
-	  "remote_tag=%s\n",
-	  req.cseq,code,callid.c_str(),
-	  local_tag.c_str(),remote_tag.c_str());
-    log_stacktrace(L_ERR);
+    DBG("could not find any transaction matching request "
+        "cseq=%i; reply code=%i; callid=%s; local_tag=%s; "
+        "remote_tag=%s",
+        req.cseq,code,callid.c_str(),
+        local_tag.c_str(),remote_tag.c_str());
     return -1;
   }
-  DBG("reply: transaction found!\n");
-    
+  //DBG("reply: transaction found!\n");
+
   AmSipReply reply;
 
   reply.code = code;
