@@ -30,6 +30,8 @@ void AmAudioFileRecorderStereoMP3::file_data::close()
     int final_samples;
     unsigned char  mp3buffer[MP3_FLUSH_BUFFER_SIZE];
 
+    if(!fp) return;
+
     if((final_samples = lame_encode_flush(gfp,mp3buffer, MP3_FLUSH_BUFFER_SIZE)) > 0) {
         //DBG("MP3: flushing %d bytes from MP3 encoder", final_samples);
         fwrite(mp3buffer, 1, final_samples, fp);
@@ -48,6 +50,8 @@ bool AmAudioFileRecorderStereoMP3::file_data::operator ==(const string &new_path
 int AmAudioFileRecorderStereoMP3::file_data::put(unsigned char *out,unsigned char *lbuf, unsigned char *rbuf, size_t l)
 {
     //DBG("    %s(%p,%p,%ld)",FUNC_NAME,lbuf,rbuf,l);
+    if(!fp)
+        return -5;
 
     int ret =  lame_encode_buffer(
                   gfp,
@@ -71,7 +75,10 @@ int AmAudioFileRecorderStereoMP3::file_data::put(unsigned char *out,unsigned cha
         //write encoded frames
         fwrite(out,ret,1,fp);
         if(ferror(fp)) {
-            ERROR("error writing to file %s",path.c_str());
+            ERROR("error %d on writing to file %s.",errno,path.c_str());
+            free(gfp);
+            fclose(fp);
+            fp = nullptr;
         }
     }
 
