@@ -153,7 +153,7 @@ protected:
 
 public:
     bool        is_reliable() const   { return true; }
-    void copy_peer_addr(sockaddr_storage* sa);
+    virtual void copy_peer_addr(sockaddr_storage* sa);
 
     const string& get_peer_ip() {
         return peer_ip;

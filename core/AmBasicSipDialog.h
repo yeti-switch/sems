@@ -102,6 +102,7 @@ protected:
 
   string contact_params; // params in Contact-HF
 
+  string scheme;       // local scheme(sip or sips)
   string user;         // local user
   string domain;       // local domain
 

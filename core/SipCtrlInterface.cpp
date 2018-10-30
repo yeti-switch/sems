@@ -649,6 +649,10 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
     assert(msg->from && msg->from->p);
     assert(msg->to && msg->to->p);
 
+    if(msg->u.request->ruri.scheme == sip_uri::SIPS)
+        req.scheme   = "sips";
+    else if(msg->u.request->ruri.scheme == sip_uri::SIP)
+        req.scheme   = "sip";
     req.method   = c2stlstr(msg->u.request->method_str);
     req.user     = c2stlstr(msg->u.request->ruri.user);
     req.domain   = c2stlstr(msg->u.request->ruri.host);

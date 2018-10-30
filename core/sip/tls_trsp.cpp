@@ -1,5 +1,6 @@
 #include "tls_trsp.h"
 #include "trans_layer.h"
+#include "socket_ssl.h"
 
 #include "AmUtils.h"
 
@@ -19,6 +20,7 @@ tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
 , certificate(settings->certificate)
 , key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator::instance()))
+, is_optional(false)
 {
 }
 
@@ -26,12 +28,14 @@ tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
 , certificate(settings->certificate)
 , key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator::instance()))
+, is_optional(false)
 {
 }
 
 tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
 , certificate(conf.certificate)
+, is_optional(conf.is_optional)
 {
     if(conf.s_server) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator::instance()));
@@ -40,10 +44,21 @@ tls_conf::tls_conf(const tls_conf& conf)
     }
 }
 
+vector<string> tls_conf::allowed_signature_methods() const
+{
+    if(s_client && is_optional) {
+        return {sig };
+    } else {
+        return Policy::allowed_signature_methods();
+    }
+}
+
 vector<string> tls_conf::allowed_ciphers() const
 {
     if(s_server) {
         return s_server->cipher_list;
+    } else if(s_client && is_optional) {
+        return { cipher };
     } else if(s_client) {
         return Policy::allowed_ciphers();
     }
@@ -55,6 +70,8 @@ vector<string> tls_conf::allowed_macs() const
 {
     if(s_server) {
         return s_server->macs_list;
+    } else if(s_client && is_optional) {
+        return {mac };
     } else if(s_client) {
         return Policy::allowed_macs();
     }
@@ -184,20 +201,31 @@ Botan::Private_Key* tls_conf::private_key_for(const Botan::X509_Certificate& cer
     return nullptr;
 }
 
+void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, std::string mac_)
+{
+    is_optional = true;
+    cipher = cipher_;
+    mac = mac_;
+    sig = sig_;
+}
+
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
 				 trsp_server_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase), tls_connected(false), orig_input_len(0)
+  , settings((sd == -1) ? static_cast<tls_server_socket*>(server_sock)->client_settings : static_cast<tls_server_socket*>(server_sock)->server_settings)
 {
     if(sd == -1) {
-        settings = &static_cast<tls_server_socket*>(server_sock)->client_settings;
-        tls_channel = new Botan::TLS::Client(*this, *session_manager::instance(), *settings, *settings,*rand_generator::instance(),
+        sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+        if(sa_ssl->ssl_marker) {
+            settings.set_optional_parameters(toString(sa_ssl->sig), toString(sa_ssl->cipher), toString(sa_ssl->mac));
+        }
+        tls_channel = new Botan::TLS::Client(*this, *session_manager::instance(), settings, settings,*rand_generator::instance(),
                                             Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
                                             Botan::TLS::Protocol_Version::TLS_V12);
     } else {
-        settings = &static_cast<tls_server_socket*>(server_sock)->server_settings;
-        tls_channel = new Botan::TLS::Server(*this, *session_manager::instance(), *settings, *settings,*rand_generator::instance(), false);
+        tls_channel = new Botan::TLS::Server(*this, *session_manager::instance(), settings, settings,*rand_generator::instance(), false);
     }
 }
 
@@ -218,6 +246,42 @@ int tls_trsp_socket::on_input()
         ERROR("Botan tls error: %s", ex.what());
         return -1;
     }
+}
+
+void tls_trsp_socket::copy_peer_addr(sockaddr_storage* sa)
+{
+    if(tls_connected) {
+        sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+        sa_ssl->ssl_marker = true;
+        Botan::TLS::Ciphersuite cipherst = Botan::TLS::Ciphersuite::by_id(ciphersuite);
+        Botan::TLS::Auth_Method auth = cipherst.auth_method();
+        switch(auth)
+        {
+        case Botan::TLS::Auth_Method::RSA:
+            sa_ssl->sig = sockaddr_ssl::SIG_RSA;
+            break;
+        case Botan::TLS::Auth_Method::ECDSA:
+            sa_ssl->sig = sockaddr_ssl::SIG_ECDSA;
+            break;
+        case Botan::TLS::Auth_Method::DSA:
+            sa_ssl->sig = sockaddr_ssl::SIG_DSA;
+            break;
+        case Botan::TLS::Auth_Method::ANONYMOUS:
+            sa_ssl->sig = sockaddr_ssl::SIG_ANONYMOUS;
+            break;
+        }
+        for(int i = sockaddr_ssl::CIPHER_AES256_OCB12; i <= sockaddr_ssl::CIPHER_3DES; i++) {
+            if(toString((sockaddr_ssl::cipher_method)i) == cipherst.cipher_algo()) {
+                sa_ssl->cipher = (sockaddr_ssl::cipher_method)i;
+            }
+        }
+        for(int i = sockaddr_ssl::MAC_AEAD; i <= sockaddr_ssl::MAC_SHA1; i++) {
+            if(toString((sockaddr_ssl::mac_method)i) == cipherst.mac_algo()) {
+                sa_ssl->mac = (sockaddr_ssl::mac_method)i;
+            }
+        }
+    }
+    return tcp_base_trsp::copy_peer_addr(sa);
 }
 
 void tls_trsp_socket::tls_emit_data(const uint8_t data[], size_t size)
@@ -244,7 +308,17 @@ void tls_trsp_socket::tls_alert(Botan::TLS::Alert alert)
 
 bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session)
 {
+    DBG("************ on_tls_connect() ***********");
+    DBG("new TLS connection from %s:%u",
+        get_peer_ip().c_str(),
+        get_peer_port());
+    inc_ref(this);
+    server_worker->remove_connection(this);
     tls_connected = true;
+    ciphersuite = session.ciphersuite_code();
+    copy_peer_addr(&peer_addr);
+    server_worker->add_connection(this);
+    dec_ref(this);
     while(!orig_send_q.empty()) {
         msg_buf* msg = orig_send_q.front();
         send_q.push_back(msg);
@@ -263,12 +337,12 @@ void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certif
                             const std::string& hostname,
                             const Botan::TLS::Policy& policy)
 {
-    if((settings->s_client && !settings->s_client->verify_certificate_chain) ||
-        (settings->s_server && !settings->s_server->verify_client_certificate)) {
+    if((settings.s_client && !settings.s_client->verify_certificate_chain) ||
+        (settings.s_server && !settings.s_server->verify_client_certificate)) {
         return;
     }
 
-    if(settings->s_client && !settings->s_client->verify_certificate_cn)
+    if(settings.s_client && !settings.s_client->verify_certificate_cn)
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
     else
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);

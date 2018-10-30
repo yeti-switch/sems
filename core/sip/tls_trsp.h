@@ -33,12 +33,19 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     tls_server_settings* s_server;
     Botan::X509_Certificate certificate;
     std::unique_ptr<Botan::Private_Key> key;
+
+    //for optional client connection
+    bool is_optional;
+    std::string cipher;
+    std::string mac;
+    std::string sig;
 public:
     tls_conf(tls_client_settings* settings);
     tls_conf(tls_server_settings* settings);
     tls_conf(const tls_conf& conf);
 
     //Policy functions
+    vector<string> allowed_signature_methods() const override;
     vector<string> allowed_ciphers() const override;
     vector<string> allowed_macs() const override;
     bool allow_tls10()  const override;
@@ -52,6 +59,8 @@ public:
     vector<Botan::Certificate_Store*> trusted_certificate_authorities(const string& type, const string& context) override;
     vector<Botan::X509_Certificate> cert_chain(const vector<string>& cert_key_types, const string& type, const string& context) override;
     Botan::Private_Key* private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context) override;
+
+    void set_optional_parameters(std::string sig_, std::string cipher_, std::string mac_);
 };
 
 class tls_rand_generator
@@ -80,13 +89,14 @@ typedef singleton<tls_session_manager> session_manager;
 class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
 {
     bool tls_connected;
+    uint16_t ciphersuite;
     deque<msg_buf*> orig_send_q;
 
     unsigned char    orig_input_buf[MAX_TCP_MSGLEN];
     int              orig_input_len;
 
     Botan::TLS::Channel* tls_channel;
-    tls_conf* settings;
+    tls_conf settings;
 
     unsigned char*   get_input() { return orig_input_buf + orig_input_len; }
     int              get_input_free_space() {
@@ -119,6 +129,8 @@ public:
     void add_input_len(int len){
         orig_input_len += len;
     }
+
+    void copy_peer_addr(sockaddr_storage* sa);
 
     int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);

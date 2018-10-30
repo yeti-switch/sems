@@ -52,7 +52,6 @@ public:
 
     bool verify_certificate_chain;
     bool verify_certificate_cn;
-
 };
 
 class tls_server_settings : public tls_settings
