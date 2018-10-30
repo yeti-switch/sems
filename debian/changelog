@@ -1,3 +1,11 @@
+sems (1.7.72-8p) stable; urgency=low
+
+  * 77ce34a7c AmBasicSipDialog::reply: ERROR -> DBG on missed uas_trans
+  * 69c858e08 AmAudioFileRecorderStereoMP3: close file on write error
+  * 5b4a50b92 AmUtilsUtf8: WARN -> DBG
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 30 Oct 2018 14:48:04 +0200
+
 sems (1.7.72-7p) stable; urgency=low
 
   * fix RtspAudio stop/reuse racing
