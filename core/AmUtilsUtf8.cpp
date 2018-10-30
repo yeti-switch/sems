@@ -142,7 +142,7 @@ static const int utf8_state2seq_byte_num[] = {
 			st = utf8_state2transition[condition_state].next_state; \
 			break; \
 		} else { \
-			WARN("unexpected value %02X at %d byte in %d bytes sequence. " \
+			DBG("unexpected value %02X at %d byte in %d bytes sequence. " \
 				"expected to be within %02X..%02X. " \
 				"pattern: %s", \
 				c, \
@@ -201,7 +201,7 @@ static const int utf8_state2seq_byte_num[] = {
 			SEQUENCE_CLASSIFIER_RANGE(0xEE,0xEF,ST_EEEF_80BF_80BF_2nd); \
 			SEQUENCE_CLASSIFIER_RANGE(0xF1,0xF3,ST_F1F3_80BF_80BF_80BF_2nd); \
 		} \
-		WARN("unexpected value %02X on sequence start ",c); \
+		DBG("unexpected value %02X on sequence start ",c); \
 		INVALID_SEQUENCE_START_ACTION(); \
 
 
@@ -223,7 +223,7 @@ bool is_valid_utf8(const std::string &s)
 	}
 
 	if(st!=ST_COMPLETED) {
-		WARN("incompleted utf8 multibyte sequence. "
+		DBG("incompleted utf8 multibyte sequence. "
 			"pattern: %s, last checked byte in the sequence: %d",
 			utf8_state2seq_description[st],
 			utf8_state2byte_num[st]-1);
@@ -273,7 +273,7 @@ bool fixup_utf8_inplace(std::string &s)
 	if(st!=ST_COMPLETED) {
 		modified = true;
 		bytes_to_trim = utf8_state2byte_num[st]-1;
-		WARN("incompleted utf8 multibyte sequence. "
+		DBG("incompleted utf8 multibyte sequence. "
 			"pattern: %s, last checked byte in the sequence: %d",
 			utf8_state2seq_description[st],
 			bytes_to_trim);
@@ -282,7 +282,7 @@ bool fixup_utf8_inplace(std::string &s)
 	}
 
 	if(modified) {
-		WARN("fixup_utf8_inplace(): erased %ld invalid bytes. "
+		DBG("fixup_utf8_inplace(): erased %ld invalid bytes. "
 			 "resulting size: %ld. "
 			 "resulting string: \"%s\"",
 			 original_size-s.length(),
