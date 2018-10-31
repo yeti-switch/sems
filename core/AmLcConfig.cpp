@@ -183,6 +183,24 @@
 
 #define WITH_SECTION(SECTION_NAME) if(cfg_t *s = cfg_getsec(gen, SECTION_NAME))
 
+void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
+{
+    char buf[2048];
+    char *s = buf;
+    char *e = s+sizeof(buf);
+
+    if(cfg->title) {
+        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
+            cfg->filename,cfg->line,cfg->name,cfg->title);
+    } else {
+        s += snprintf(s,e-s, "%s:%d [%s]: ",
+            cfg->filename,cfg->line,cfg->name);
+    }
+    s += vsnprintf(s,e-s,fmt,ap);
+
+    ERROR("%.*s",(int)(s-buf),buf);
+}
+
 /*******************************************************************************************************/
 /*                                                                                                     */
 /*                                       Validation functions                                          */
@@ -660,6 +678,8 @@ AmLcConfig::AmLcConfig()
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_100REL_NAME , validate_100rel_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_UNHDL_REP_LOG_LVL_NAME , validate_log_func);
     cfg_set_validate_func(m_cfg, SECTION_GENERAL_NAME "|" PARAM_RESAMPLE_LIBRARY_NAME , validate_resampling_func);
+
+    cfg_set_error_function(m_cfg,cfg_error_callback);
 }
 
 AmLcConfig::~AmLcConfig()
@@ -1011,7 +1031,6 @@ int AmLcConfig::readMediaInterfaces()
     return 0;
 }
 
-
 IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type)
 {
     IP_info* info;
@@ -1020,6 +1039,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     SIP_TCP_info* stinfo = 0;
     SIP_TLS_info* stlinfo = 0;
     MEDIA_info* mediainfo = 0;
+
     if(strcmp(cfg->name, SECTION_SIP_UDP_NAME) == 0) {
         info = sinfo = suinfo = new SIP_UDP_info();
     } else if(strcmp(cfg->name, SECTION_SIP_TCP_NAME) == 0) {
@@ -1034,6 +1054,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         return 0;
     }
 
+    //common opts
     info->type_ip = ip_type;
     info->local_ip = cfg_getstr(cfg, PARAM_ADDRESS_NAME);
     if(cfg_size(cfg, PARAM_PUBLIC_ADDR_NAME)) {
@@ -1044,30 +1065,23 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_OBD_IF_NAME) ? trsp_socket::force_outbound_if : 0;
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_VIA_PORT_NAME) ? trsp_socket::force_via_address : 0;
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_STAT_CL_PORT_NAME) ? trsp_socket::static_client_port : 0;
-    info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_TRANSPORT_NAME) ? 0 : trsp_socket::no_transport_in_contact;
 
     if(cfg_size(cfg, PARAM_DSCP_NAME)) {
         info->dscp = cfg_getint(cfg, PARAM_DSCP_NAME);
         info->tos_byte = info->dscp << 2;
     }
 
-    if(sinfo) {
-        sinfo->local_port = cfg_getint(cfg, PARAM_PORT_NAME);
-    }
+    //MEDIA specific opts
     if(mediainfo) {
         mediainfo->high_port = cfg_getint(cfg, PARAM_HIGH_PORT_NAME);
         mediainfo->low_port = cfg_getint(cfg, PARAM_LOW_PORT_NAME);
     }
 
-    if(stinfo && cfg_size(cfg, PARAM_CONNECT_TIMEOUT_NAME)) {
-        stinfo->tcp_connect_timeout = cfg_getint(cfg, PARAM_CONNECT_TIMEOUT_NAME);
-    }
-
-    if(stinfo && cfg_size(cfg, PARAM_IDLE_TIMEOUT_NAME)) {
-        stinfo->tcp_idle_timeout = cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME);
-    }
-
+    //SIP specific opts
     if(sinfo) {
+        sinfo->local_port = cfg_getint(cfg, PARAM_PORT_NAME);
+        info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_TRANSPORT_NAME) ? 0 : trsp_socket::no_transport_in_contact;
+
         if(cfg_size(cfg, SECTION_ORIGACL_NAME)) {
             cfg_t* acl = cfg_getsec(cfg, SECTION_ORIGACL_NAME);
             if(readAcl(acl, sinfo->acl, if_name)) {
@@ -1085,6 +1099,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
     }
 
+    //TCP specific opts
+    if(stinfo) {
+        stinfo->tcp_connect_timeout = cfg_getint(cfg, PARAM_CONNECT_TIMEOUT_NAME);
+        stinfo->tcp_idle_timeout = cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME);
+    }
+
+    //STL specific opts
     if(stlinfo) {
         cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
         for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
@@ -1533,7 +1554,7 @@ bool AmLcConfig::fillSysIntfList()
             intf_it->flags = p_if->ifa_flags;
 
             struct ifreq ifr;
-            strncpy(ifr.ifr_name,p_if->ifa_name,IFNAMSIZ);
+            strncpy(ifr.ifr_name,p_if->ifa_name,IFNAMSIZ-1);
 
             if (ioctl(fd, SIOCGIFMTU, &ifr) < 0 ) {
                 ERROR("ioctl: %s",strerror(errno));
