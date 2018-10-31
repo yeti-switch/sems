@@ -512,7 +512,13 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp)
     return; // FIXME: throw an exception here?
   }
 
-  media_session->replaceConnectionAddress(sdp, a_leg, localMediaIP(), advertisedIP());
+  int atype = dlg->getOutboundAddrType();
+
+  media_session->replaceConnectionAddress(
+    sdp, a_leg,
+    localMediaIP(atype),
+    advertisedIP(atype),
+    atype);
 }
 
 void AmB2BSession::updateLocalBody(AmMimeBody& body)
