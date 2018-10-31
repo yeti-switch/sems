@@ -6,12 +6,20 @@ std::string toString(sockaddr_ssl::sig_method sig)
     {
     case sockaddr_ssl::SIG_RSA:
         return "RSA";
-    case sockaddr_ssl::SIG_ECDSA:
-        return "ECDSA";
-    case sockaddr_ssl::SIG_DSA:
-        return "DSA";
-    case sockaddr_ssl::SIG_ANONYMOUS:
-        return "ANONYMOUS";
+    case sockaddr_ssl::SIG_DH:
+        return "DH";
+    case sockaddr_ssl::SIG_ECDH:
+        return "ECDH";
+    case sockaddr_ssl::SIG_CECPQ1:
+        return "CECPQ1";
+    case sockaddr_ssl::SIG_PSK:
+        return "PSK";
+    case sockaddr_ssl::SIG_DHE_PSK:
+        return "DHE_PSK";
+    case sockaddr_ssl::SIG_ECDHE_PSK:
+        return "ECDHE_PS";
+    case sockaddr_ssl::SIG_SHA:
+        return "SHA";
     };
     return "";
 }

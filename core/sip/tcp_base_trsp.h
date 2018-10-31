@@ -69,7 +69,8 @@ protected:
     virtual void add_input_len(int len){
         input_len += len;
     }
-    virtual void reset_input() {
+
+    void reset_input() {
         input_len = 0;
     }
 
@@ -93,7 +94,7 @@ protected:
     * Generates a transport error for each request
     * left in send queue.
     */
-    void generate_transport_errors();
+    virtual void generate_transport_errors();
 
     /**
     * Adds persistent read-event to event base.
@@ -136,12 +137,12 @@ protected:
     int check_connection();
 
 
-
     int  on_connect(short ev);
     void on_write(short ev);
     void on_read(short ev);
 
-
+    virtual void pre_write(){}
+    virtual void post_write(){}
     virtual int on_input() = 0;
 
     static void on_sock_read(int fd, short ev, void* arg);
