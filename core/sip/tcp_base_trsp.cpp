@@ -1,4 +1,5 @@
 #include <sys/ioctl.h>
+#include <algorithm>
 #include "tcp_base_trsp.h"
 #include "socket_ssl.h"
 #include "hash.h"
@@ -571,6 +572,26 @@ tcp_base_trsp* trsp_socket_factory::new_connection(trsp_server_socket* server_so
   return create_socket(server_sock, server_worker,-1,sa,evbase);
 }
 
+class trsp_compare
+{
+    string opt_str;
+public:
+    trsp_compare(string opt_string) : opt_str(opt_string){}
+
+    bool operator () (tcp_base_trsp* trsp) {
+        sockaddr_storage sa = {0};
+        sockaddr_ssl* sa_ssl = 0;
+        string ssl_opt;
+
+        trsp->copy_peer_addr(&sa);
+        sa_ssl = (sockaddr_ssl*)&sa;
+        if(sa_ssl->ssl_marker) {
+            ssl_opt = generate_ssl_options_string(sa_ssl);
+        }
+        return ssl_opt == opt_str;
+    }
+};
+
 trsp_server_worker::trsp_server_worker(trsp_server_socket* server_sock, trsp_socket_factory* sock_factory)
     : server_sock(server_sock), sock_factory(sock_factory)
 {
@@ -588,27 +609,36 @@ void trsp_server_worker::add_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
-    sockaddr_storage sa = {0};
-    client_sock->copy_peer_addr(&sa);
-    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)&sa;
-    if(sa_ssl->ssl_marker) {
-        conn_id += ";";
-        conn_id += generate_ssl_options_string(sa_ssl);
-    }
 
     DBG("new TCP connection from %s:%u",
         client_sock->get_peer_ip().c_str(),
         client_sock->get_peer_port());
 
     connections_mut.lock();
-    map<string,tcp_base_trsp*>::iterator sock_it = connections.find(conn_id);
+    bool bfind = false;
+    auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        dec_ref(sock_it->second);
-        sock_it->second = client_sock;
+        sockaddr_storage sa = {0};
+        sockaddr_ssl* sa_ssl = 0;
+        string ssl_opt;
+
+        client_sock->copy_peer_addr(&sa);
+        sa_ssl = (sockaddr_ssl*)&sa;
+        if(sa_ssl->ssl_marker) {
+            ssl_opt = generate_ssl_options_string(sa_ssl);
+        }
+        auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(ssl_opt));
+        if(trsp_it != sock_it->second.end()) {
+                dec_ref(*trsp_it);
+                *trsp_it = client_sock;
+                bfind = true;
+        }
     }
-    else {
-        connections[conn_id] = client_sock;
+
+    if(!bfind){
+        connections[conn_id].push_back(client_sock);
     }
+
     inc_ref(client_sock);
     connections_mut.unlock();
 }
@@ -617,22 +647,33 @@ void trsp_server_worker::remove_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
-    sockaddr_storage sa = {0};
-    client_sock->copy_peer_addr(&sa);
-    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)&sa;
-    if(sa_ssl->ssl_marker) {
-        conn_id += ";";
-        conn_id += generate_ssl_options_string(sa_ssl);
-    }
 
     DBG("removing TCP connection from %s",conn_id.c_str());
 
     connections_mut.lock();
-    map<string,tcp_base_trsp*>::iterator sock_it = connections.find(conn_id);
+    auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        dec_ref(sock_it->second);
-        connections.erase(sock_it);
+        sockaddr_storage sa = {0};
+        sockaddr_ssl* sa_ssl = 0;
+        string ssl_opt;
+
+        client_sock->copy_peer_addr(&sa);
+        sa_ssl = (sockaddr_ssl*)&sa;
+        if(sa_ssl->ssl_marker) {
+            ssl_opt += generate_ssl_options_string(sa_ssl);
+        }
+        auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(ssl_opt));
+        if(trsp_it != sock_it->second.end()) {
+                dec_ref(*trsp_it);
+                sock_it->second.erase(trsp_it);
+        }
+
         DBG("TCP connection from %s removed",conn_id.c_str());
+
+        if(sock_it->second.empty()) {
+            connections.erase(sock_it);
+        }
+
     }
     connections_mut.unlock();
 }
@@ -647,21 +688,17 @@ int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
 
     bool new_conn=false;
     connections_mut.lock();
-    for(auto& conn : connections) {
-        if(strstr(conn.first.c_str(), dest.c_str()) == conn.first.c_str()) {
-            sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
-            if(!sa_ssl->ssl_marker) {
-                sock = conn.second;
+    auto sock_it = connections.find(dest);
+    if(sock_it != connections.end()) {
+        sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+        if(!sa_ssl->ssl_marker) {
+            sock = sock_it->second[0];
+            inc_ref(sock);
+        } else {
+            auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(generate_ssl_options_string(sa_ssl)));
+            if(trsp_it != sock_it->second.end()) {
+                sock = *trsp_it;
                 inc_ref(sock);
-                break;
-            }
-
-            sockaddr_storage sa_ = {0};
-            conn.second->copy_peer_addr(&sa_);
-            if(memcmp(&sa_, sa, sizeof(sockaddr_storage)) == 0) {
-                sock = conn.second;
-                inc_ref(sock);
-                break;
             }
         }
     }
@@ -669,7 +706,7 @@ int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
         tcp_base_trsp* new_sock = sock_factory->new_connection(server_sock,this,
                                   sa,evbase);
-        connections[dest] = new_sock;
+        connections[dest].push_back(new_sock);
         inc_ref(new_sock);
 
         sock = new_sock;
@@ -694,8 +731,10 @@ void trsp_server_worker::getInfo(AmArg &ret)
     AmLock l(connections_mut);
 
     ret.assertStruct();
-    for(auto const &it: connections)
-        it.second->getInfo(ret[it.first]);
+    for(auto const &con_it: connections) {
+        for(auto const &it: con_it.second)
+            it->getInfo(ret[con_it.first]);
+    }
 }
 
 void trsp_server_worker::run()
