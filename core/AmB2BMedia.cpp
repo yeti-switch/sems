@@ -843,9 +843,11 @@ void AmB2BMedia::createStreams(const AmSdp &sdp)
   }
 }
 
-void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, 
-					  const string& relay_address,
-					  const string& relay_public_address)
+void AmB2BMedia::replaceConnectionAddress(
+    AmSdp &parser_sdp, bool a_leg,
+    const string& relay_address,
+    const string& relay_public_address,
+    int addr_type)
 {
   AmLock lock(mutex);
 
@@ -880,6 +882,7 @@ void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg,
       if(it->port) { // if stream active
 	if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
 	  it->conn.address = relay_public_address;
+	  it->conn.addrType = addr_type;
 	  DBG("new stream connection address: %s",it->conn.address.c_str());
 	}
 	try {
@@ -913,6 +916,7 @@ void AmB2BMedia::replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg,
       if(it->port) { // if stream active
 	if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
 	  it->conn.address = relay_public_address;
+	  it->conn.addrType = addr_type;
 	  DBG("new stream connection address: %s",it->conn.address.c_str());
 	}
 	try {
