@@ -1385,8 +1385,8 @@ int AmLcConfig::setNetInterface(IP_info& ip_if)
             addr_it++;
         }
     }
-
-    // not interface found
+    ERROR("failed to find interface with address: %s",
+          ip_if.local_ip.c_str());
     return -1;
 }
 
