@@ -175,6 +175,7 @@ void tcp_base_trsp::close()
 
     closed = true;
     DBG("********* closing connection ***********");
+    DBG("connection type %s", get_transport());
 
     DBG("%p del read_ev %p", this, read_ev);
     event_del(read_ev);
@@ -379,7 +380,7 @@ void tcp_base_trsp::on_read(short ev)
             return;
         }
 
-        DBG("on_read (connected = %i)",connected);
+        DBG("on_read (connected = %i, transport = %s)",connected, get_transport());
 
         bytes = ::read(sd,get_input(),get_input_free_space());
         if(bytes < 0) {
@@ -439,7 +440,7 @@ void tcp_base_trsp::on_write(short ev)
 {
     AmControlledLock _l(sock_mut);
 
-    DBG("on_write (connected = %i)",connected);
+    DBG("on_write (connected = %i, transport = %s)",connected, get_transport());
     if(!connected) {
         if(on_connect(ev) != 0) {
             _l.release_ownership();
@@ -447,6 +448,7 @@ void tcp_base_trsp::on_write(short ev)
         }
     }
 
+    pre_write();
     while(!send_q.empty()) {
 
         msg_buf* msg = send_q.front();
@@ -476,7 +478,8 @@ void tcp_base_trsp::on_write(short ev)
             return;
         }
 
-        DBG("send msg via TCP/%i from %s:%i to %s:%i\n",
+        DBG("send msg via %s/%i from %s:%i to %s:%i\n",
+            get_transport(),
             sd,
             actual_ip.c_str(), actual_port,
             get_addr_str(&msg->addr).c_str(),
@@ -491,11 +494,14 @@ void tcp_base_trsp::on_write(short ev)
         send_q.pop_front();
         delete msg;
     }
+
+    post_write();
 }
 
 int tcp_base_trsp::on_connect(short ev)
 {
     DBG("************ on_connect() ***********");
+    DBG("connection type %s", get_transport());
 
     if(ev & EV_TIMEOUT) {
         DBG("********** connection timeout on sd=%i ************\n",sd);

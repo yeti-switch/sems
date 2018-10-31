@@ -1,6 +1,7 @@
 #include "tls_trsp.h"
 #include "trans_layer.h"
 #include "socket_ssl.h"
+#include "sip_parser.h"
 
 #include "AmUtils.h"
 
@@ -44,10 +45,19 @@ tls_conf::tls_conf(const tls_conf& conf)
     }
 }
 
-vector<string> tls_conf::allowed_signature_methods() const
+vector<string> tls_conf::allowed_key_exchange_methods() const
 {
     if(s_client && is_optional) {
         return {sig };
+    } else {
+        return Policy::allowed_key_exchange_methods();
+    }
+}
+
+vector<string> tls_conf::allowed_signature_methods() const
+{
+    if(s_client && is_optional) {
+        return {"IMPLICIT"};
     } else {
         return Policy::allowed_signature_methods();
     }
@@ -236,6 +246,65 @@ tls_trsp_socket::~tls_trsp_socket()
     }
 }
 
+void tls_trsp_socket::generate_transport_errors()
+{
+    /* avoid deadlock between session processor and tcp worker.
+       it is safe to unlock here because 'closed' flag is set to true and
+       send_q will not be affected by send() anymore.
+       do not forget to avoid double mutex unlock in places where close() is called
+    */
+    sock_mut.unlock();
+
+    while(!orig_send_q.empty()) {
+
+        msg_buf* msg = orig_send_q.front();
+        orig_send_q.pop_front();
+
+        sip_msg s_msg(msg->msg,msg->msg_len);
+        delete msg;
+
+        copy_peer_addr(&s_msg.remote_ip);
+        copy_addr_to(&s_msg.local_ip);
+
+        trans_layer::instance()->transport_error(&s_msg);
+    }
+}
+
+void tls_trsp_socket::pre_write()
+{
+    try {
+        if(tls_connected && !orig_send_q.empty()) {
+            msg_buf* msg = orig_send_q.front();
+            tls_channel->send((const uint8_t*)msg->cursor, msg->bytes_left());
+            msg->cursor += msg->msg_len;
+        }
+    } catch(Botan::Exception& exc) {
+      ERROR("unforseen error in tls: close connection (%s)",
+                      exc.what());
+      close();
+    }
+}
+
+void tls_trsp_socket::post_write()
+{
+    if(tls_connected && send_q.empty()) {
+        msg_buf* msg = 0;
+        while(!orig_send_q.empty()) {
+            msg = orig_send_q.front();
+            if(msg->bytes_left() == 0) {
+                orig_send_q.pop_front();
+                delete msg;
+            } else {
+                break;
+            }
+        }
+    }
+    if(!orig_send_q.empty()) {
+        add_write_event();
+        DBG("write event added...");
+    }
+}
+
 int tls_trsp_socket::on_input()
 {
     try {
@@ -254,21 +323,10 @@ void tls_trsp_socket::copy_peer_addr(sockaddr_storage* sa)
         sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
         sa_ssl->ssl_marker = true;
         Botan::TLS::Ciphersuite cipherst = Botan::TLS::Ciphersuite::by_id(ciphersuite);
-        Botan::TLS::Auth_Method auth = cipherst.auth_method();
-        switch(auth)
-        {
-        case Botan::TLS::Auth_Method::RSA:
-            sa_ssl->sig = sockaddr_ssl::SIG_RSA;
-            break;
-        case Botan::TLS::Auth_Method::ECDSA:
-            sa_ssl->sig = sockaddr_ssl::SIG_ECDSA;
-            break;
-        case Botan::TLS::Auth_Method::DSA:
-            sa_ssl->sig = sockaddr_ssl::SIG_DSA;
-            break;
-        case Botan::TLS::Auth_Method::ANONYMOUS:
-            sa_ssl->sig = sockaddr_ssl::SIG_ANONYMOUS;
-            break;
+        for(int i = sockaddr_ssl::SIG_SHA; i <= sockaddr_ssl::SIG_RSA; i++) {
+            if(toString((sockaddr_ssl::sig_method)i) == cipherst.kex_algo()) {
+                sa_ssl->sig = (sockaddr_ssl::sig_method)i;
+            }
         }
         for(int i = sockaddr_ssl::CIPHER_AES256_OCB12; i <= sockaddr_ssl::CIPHER_3DES; i++) {
             if(toString((sockaddr_ssl::cipher_method)i) == cipherst.cipher_algo()) {
@@ -299,7 +357,6 @@ void tls_trsp_socket::tls_record_received(uint64_t seq_no, const uint8_t data[],
     memcpy(input_buf, data, size);
     tcp_base_trsp::add_input_len(size);
     parse_input();
-    reset_input();
 }
 
 void tls_trsp_socket::tls_alert(Botan::TLS::Alert alert)
@@ -315,14 +372,8 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
     tls_connected = true;
     ciphersuite = session.ciphersuite_code();
     copy_peer_addr(&peer_addr);
-    while(!orig_send_q.empty()) {
-        msg_buf* msg = orig_send_q.front();
-        send_q.push_back(msg);
-        orig_send_q.pop_front();
-    }
-    /* doc: https://botan.randombit.net/manual/tls.html
-     * If this function returns false, the session will not be cached for later resumption.
-     */
+    add_write_event();
+    DBG("write event added...");
     return true;
 }
 
@@ -358,11 +409,7 @@ int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
             am_get_port(sa),
             msg_len,msg);
 
-  if(tls_connected) {
-    tls_channel->send((const uint8_t*)msg, msg_len);
-  } else {
-    orig_send_q.push_back(new msg_buf(sa,msg,msg_len));
-  }
+  orig_send_q.push_back(new msg_buf(sa,msg,msg_len));
 
   if(connected) {
     add_write_event();

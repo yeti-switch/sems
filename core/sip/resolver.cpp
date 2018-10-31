@@ -1452,6 +1452,13 @@ int _resolver::resolve_targets(
         }
 
         do {
+            if(!lower_cmp_n(it->scheme, "sips")) {
+                sockaddr_ssl* sa_ssl = (sockaddr_ssl*)&t.ss;
+                sa_ssl->ssl_marker = true;
+                sa_ssl->sig = sockaddr_ssl::SIG_RSA;
+                sa_ssl->cipher = sockaddr_ssl::CIPHER_AES128;
+                sa_ssl->mac = sockaddr_ssl::MAC_SHA1;
+            }
             targets->dest_list.push_back(t);
         } while(h_dns.next_ip(&t.ss, Dualstack) == 0);
     } //for it: dest_list

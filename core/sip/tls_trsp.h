@@ -45,6 +45,7 @@ public:
     tls_conf(const tls_conf& conf);
 
     //Policy functions
+    vector<string> allowed_key_exchange_methods() const override;
     vector<string> allowed_signature_methods() const override;
     vector<string> allowed_ciphers() const override;
     vector<string> allowed_macs() const override;
@@ -98,14 +99,17 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
     Botan::TLS::Channel* tls_channel;
     tls_conf settings;
 
+    void generate_transport_errors();
+
     unsigned char*   get_input() { return orig_input_buf + orig_input_len; }
     int              get_input_free_space() {
         if(orig_input_len > MAX_TCP_MSGLEN) return 0;
         return MAX_TCP_MSGLEN - orig_input_len;
     }
-    virtual void reset_input() {
+    void reset_input() {
         orig_input_len = 0;
     }
+
 
     friend class tls_socket_factory;
     const char* get_transport() const { return "tls"; }
@@ -126,6 +130,8 @@ public:
     virtual ~tls_trsp_socket();
 
     int on_input();
+    void pre_write();
+    void post_write();
     void add_input_len(int len){
         orig_input_len += len;
     }

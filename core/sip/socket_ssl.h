@@ -9,10 +9,14 @@ struct sockaddr_ssl
     } addr;
     bool ssl_marker;
     enum sig_method{
-        SIG_RSA,
-        SIG_ECDSA,
-        SIG_DSA,
-        SIG_ANONYMOUS
+        SIG_SHA,
+        SIG_ECDHE_PSK,
+        SIG_DHE_PSK,
+        SIG_PSK,
+        SIG_CECPQ1,
+        SIG_ECDH,
+        SIG_DH,
+        SIG_RSA
     } sig;
     enum cipher_method{
         CIPHER_AES256_OCB12,
