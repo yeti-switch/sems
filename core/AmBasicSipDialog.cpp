@@ -964,6 +964,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
   AmSipRequest req;
 
   req.method = method;
+  req.scheme = scheme;
   req.r_uri = remote_uri;
 
   req.from = SIP_HDR_COLSP(SIP_HDR_FROM) + local_party;

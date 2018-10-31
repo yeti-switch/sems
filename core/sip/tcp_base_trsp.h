@@ -203,7 +203,7 @@ class trsp_server_worker
     trsp_socket_factory* sock_factory;
 
     AmMutex                      connections_mut;
-    map<string,tcp_base_trsp*> connections;
+    map<string,std::vector<tcp_base_trsp*>> connections;
 
 protected:
     void run();

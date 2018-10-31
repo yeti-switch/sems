@@ -312,13 +312,9 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
     DBG("new TLS connection from %s:%u",
         get_peer_ip().c_str(),
         get_peer_port());
-    inc_ref(this);
-    server_worker->remove_connection(this);
     tls_connected = true;
     ciphersuite = session.ciphersuite_code();
     copy_peer_addr(&peer_addr);
-    server_worker->add_connection(this);
-    dec_ref(this);
     while(!orig_send_q.empty()) {
         msg_buf* msg = orig_send_q.front();
         send_q.push_back(msg);
