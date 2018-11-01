@@ -57,6 +57,7 @@ using std::make_pair;
 using std::list;
 
 #include "log.h"
+#include "socket_ssl.h"
 
 #define DEFAULT_SIP_PORT 5060
 #define DEFAULT_RTSP_PORT 554
