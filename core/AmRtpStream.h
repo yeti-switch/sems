@@ -505,9 +505,9 @@ class AmRtpStream
                             outgoing,outgoing_relayed;
     };
     struct ErrorsStats {
-        int decode_errors;
-        int rtp_parse_errors;
-        int out_of_buffer_errors;
+        unsigned long decode_errors;
+        unsigned long rtp_parse_errors;
+        unsigned long out_of_buffer_errors;
         ErrorsStats()
          : decode_errors(0),
            rtp_parse_errors(0),
