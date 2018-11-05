@@ -509,9 +509,9 @@ class AmRtpStream
         int rtp_parse_errors;
         int out_of_buffer_errors;
         ErrorsStats()
-        : decode_errors(0),
-          rtp_parse_errors(0),
-          out_of_buffer_errors(0)
+         : decode_errors(0),
+           rtp_parse_errors(0),
+           out_of_buffer_errors(0)
         {}
     };
     struct MediaStats {
@@ -520,6 +520,10 @@ class AmRtpStream
         //TODO: rtcp values here
         unsigned long incoming_bytes;
         unsigned long outgoing_bytes;
+        MediaStats()
+          : incoming_bytes(0),
+            outgoing_bytes(0)
+        {}
     };
     void getMediaStats(struct MediaStats &s);
 
