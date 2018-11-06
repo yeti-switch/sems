@@ -9,6 +9,27 @@
 #include "sip/tls_trsp_settings.h"
 #include "sems.h"
 
+class IPProto
+{
+public:
+    IPProto(const std::string& type_ip, const std::string& transport)
+    : type_ip(type_ip), transport(transport){}
+
+    bool operator < (const IPProto& proto) const {
+        if(proto.type_ip == type_ip)
+            return type_ip < proto.type_ip;
+        else
+            return transport < proto.transport;
+    }
+
+    bool operator == (const IPProto& proto) {
+        return type_ip == proto.type_ip && transport == proto.transport;
+    }
+
+    std::string type_ip;
+    std::string transport;
+};
+
 class IP_info
 {
 public:
@@ -61,6 +82,16 @@ public:
     virtual IP_info* Clone(){
         return new IP_info(*this);
     }
+
+    std::string ipTypeToStr() const {
+        if(type_ip == IP_type::IPv4) {
+            return "IPv4";
+        } else if(type_ip == IP_type::IPv6) {
+            return "IPv6";
+        }
+
+        return "";
+    }
 };
 
 class SIP_info : public IP_info
@@ -90,7 +121,7 @@ public:
     trsp_acl acl;
     trsp_acl opt_acl;
 
-    std::string toStr() const {
+    std::string transportToStr() const {
         if(type == SIP_info::TCP) {
             return "TCP";
         } else if(type == SIP_info::UDP) {
@@ -225,7 +256,7 @@ public:
         return port;
     }
 
-    std::string toStr() const {
+    std::string transportToStr() const {
         if(mtype == MEDIA_info::RTP) {
             return "RTP";
         } else if(mtype == MEDIA_info::RTSP) {
@@ -306,8 +337,22 @@ public:
             proto_info.push_back(dynamic_cast<ProtoInfo>(info->Clone()));
         }
     }
+
+    int insertProtoMapping(const std::string& iptype, const std::string& transport, unsigned short index)
+    {
+        IPProto ipproto(iptype, transport);
+        std::map<IPProto, unsigned short>::iterator it = local_ip_proto2addr_if.find(ipproto);
+        if(it != local_ip_proto2addr_if.end()) {
+            WARN("duplicate local ip protocol %s/%s", iptype.c_str(), transport.c_str());
+            local_ip_proto2addr_if[ipproto] = index;
+        }
+        local_ip_proto2addr_if.insert(std::make_pair(ipproto, index));
+        return 0;
+    }
+
     std::string name;
     std::vector<ProtoInfo> proto_info;
+    std::map<IPProto, unsigned short> local_ip_proto2addr_if;
 };
 
 class SIP_interface : public PI_interface<SIP_info*>

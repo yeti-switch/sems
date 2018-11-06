@@ -1199,6 +1199,7 @@ int AmLcConfig::finalizeIpConfig()
             sip_if_names.insert(std::make_pair(if_iterator->name, if_iterator - sip_ifs.begin()));
         }
 
+        unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
             info->local_ip = fixIface2IP(info->local_ip, true);
@@ -1208,9 +1209,11 @@ int AmLcConfig::finalizeIpConfig()
                 return -1;
             }
             if (insertSIPInterfaceMapping(if_iterator->name, *info,if_iterator - sip_ifs.begin()) < 0 ||
+                (*if_iterator).insertProtoMapping(info->ipTypeToStr(), info->transportToStr(), i) ||
                 setNetInterface(*info)) {
                 return -1;
             }
+            i++;
         }
     }
 
@@ -1223,6 +1226,7 @@ int AmLcConfig::finalizeIpConfig()
             media_if_names.insert(std::make_pair(if_iterator->name, if_iterator - media_ifs.begin()));
         }
 
+        unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
             info->local_ip = fixIface2IP(info->local_ip, true);
@@ -1231,9 +1235,11 @@ int AmLcConfig::finalizeIpConfig()
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if (setNetInterface(*info)) {
+            if ((*if_iterator).insertProtoMapping(info->ipTypeToStr(), info->transportToStr(), i) ||
+                setNetInterface(*info)) {
                 return -1;
             }
+            i++;
         }
     }
 
