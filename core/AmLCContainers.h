@@ -17,9 +17,9 @@ public:
 
     bool operator < (const IPProto& proto) const {
         if(proto.type_ip == type_ip)
-            return type_ip < proto.type_ip;
-        else
             return transport < proto.transport;
+        else
+            return type_ip < proto.type_ip;
     }
 
     bool operator == (const IPProto& proto) {
