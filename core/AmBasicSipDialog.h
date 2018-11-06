@@ -348,13 +348,7 @@ public:
   /**
    * Set outbound_transport to specific value (-1 = default).
    */
-  virtual void setOutboundTransport(int transport_id);
-
-  /**
-   * Compute, set and return the outbound uri
-   * based on remote_uri, next_hop_ip, outbound_proxy, route.
-   */
-  std::string getOutboundUri(int& transport_id);
+  virtual void setOutboundTransport(int transport);
 
   /**
    * Compute, set and return the outbound interface
@@ -379,13 +373,10 @@ public:
    */
   void resetOutboundIf();
 
+  int findOutboundTransport(int oif, int addr_type, int transport_id);
+
   void setResolvePriority(int priority);
   int getResolvePriority();
-
-  /**
-   * Set outbound_interface to specific value (-1 = default).
-   */
-  //void setOutboundInterface(int interface_id);
 
   /** Initialize dialog from locally originated UAC request */
   virtual void initFromLocalRequest(const AmSipRequest& req);
