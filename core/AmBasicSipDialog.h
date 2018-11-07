@@ -373,8 +373,6 @@ public:
    */
   void resetOutboundIf();
 
-  int findOutboundTransport(int oif, int addr_type, int transport_id);
-
   void setResolvePriority(int priority);
   int getResolvePriority();
 

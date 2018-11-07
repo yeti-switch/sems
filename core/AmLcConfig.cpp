@@ -1208,7 +1208,7 @@ int AmLcConfig::finalizeIpConfig()
                 return -1;
             }
             if (insertSIPInterfaceMapping(if_iterator->name, *info,if_iterator - sip_ifs.begin()) < 0 ||
-                (*if_iterator).insertProtoMapping(info->ipTypeToStr(), info->transportToStr(), i) ||
+                (*if_iterator).insertProtoMapping((info->type_ip)|(info->type << 3), i) ||
                 setNetInterface(*info)) {
                 return -1;
             }
@@ -1234,7 +1234,7 @@ int AmLcConfig::finalizeIpConfig()
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if ((*if_iterator).insertProtoMapping(info->ipTypeToStr(), info->transportToStr(), i) ||
+            if ((*if_iterator).insertProtoMapping((info->type_ip)|(info->mtype << 6), i) ||
                 setNetInterface(*info)) {
                 return -1;
             }
