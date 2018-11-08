@@ -47,6 +47,10 @@ class msg_logger;
 #define RTP_PACKET_BUF_SIZE 4096
 #define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
 
+//seconds between 1900-01-01 and 1970-01-01
+//(70*365 + 17)*86400
+#define NTP_TIME_OFFSET 2208988800ULL
+
 /** \brief RTP packet implementation */
 class AmRtpPacket
 {

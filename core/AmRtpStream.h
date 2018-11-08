@@ -162,6 +162,7 @@ class AmRtpStream
     int payload;
 
     RtcpBidirectionalStat rtp_stats;
+    struct timeval start_time;
     unsigned long long last_send_rtcp_report_ts;
 
     std::vector<int> incoming_payloads;
@@ -500,30 +501,40 @@ class AmRtpStream
     int getLastPayload() { return last_payload; }
     string getPayloadName(int payload_type);
 
-    struct PayloadsHistory {
-        std::vector<string> incoming,incoming_relayed,
-                            outgoing,outgoing_relayed;
-    };
-    struct ErrorsStats {
-        unsigned long decode_errors;
-        unsigned long rtp_parse_errors;
-        unsigned long out_of_buffer_errors;
-        ErrorsStats()
-         : decode_errors(0),
-           rtp_parse_errors(0),
-           out_of_buffer_errors(0)
-        {}
-    };
     struct MediaStats {
-        struct PayloadsHistory payloads;
-        struct ErrorsStats     errors;
-        //TODO: rtcp values here
-        unsigned long incoming_bytes;
-        unsigned long outgoing_bytes;
+
+        struct timeval time_start;
+        struct timeval time_end;
+        MathStat<uint32_t> rtt;
+
+        struct rtp_common {
+            unsigned int ssrc;
+            struct sockaddr_storage addr;
+            uint32_t pkt;
+            uint32_t bytes;
+            uint32_t total_lost;
+            std::vector<string> payloads_transcoded;
+            std::vector<string> payloads_relayed;
+        };
+
+        struct rx_stat: public rtp_common {
+            unsigned long decode_errors;
+            unsigned long rtp_parse_errors;
+            unsigned long out_of_buffer_errors;
+
+            MathStat<long> delta;
+            MathStat<double> jitter;
+            MathStat<uint32_t> rtcp_jitter;
+        } rx;
+
+        struct tx_stat: public rtp_common {
+            MathStat<uint32_t> jitter;
+        } tx;
+
         MediaStats()
-          : incoming_bytes(0),
-            outgoing_bytes(0)
-        {}
+        {
+            bzero(this, sizeof(struct MediaStats));
+        }
     };
     void getMediaStats(struct MediaStats &s);
 
