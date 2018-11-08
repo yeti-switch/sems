@@ -171,7 +171,7 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
     r = buffer;
     end = r + b_size;
 
-    RTCP_DBG("got RTCP with size: %u",b_size);
+    //RTCP_DBG("got RTCP with size: %u",b_size);
 
     idx = 0;
     do {
@@ -185,7 +185,7 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
         RtcpCommonHeader &h = *(RtcpCommonHeader *)r;
 
         if(h.version != RTP_VERSION) {
-            RTCP_DBG("received RTCP packet with wrong version %u",h.version);
+            //RTCP_DBG("received RTCP packet with wrong version %u",h.version);
             return RTP_PACKET_PARSE_ERROR;
         }
 
@@ -379,6 +379,25 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
         rr.total_lost_1,
         rr.total_lost_2
     );
+
+    if(rr.dlsr) {
+        uint32_t rtt = (recv_time.tv_sec+NTP_TIME_OFFSET) << 16;
+        uint64_t i = recv_time.tv_usec;
+        i <<= 32;
+        i /= 1000000;
+        rtt |= ((uint32_t)i) >> 16;
+        rtt -= ntohl(rr.dlsr);
+        rtt -= ntohl(rr.lsr);
+        rtt *= 1e6/65536.0;
+        stats.rtt.update(rtt);
+    }
+
+    stats.tx.loss = (rr.total_lost_0 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_2;
+    DBG("stats.tx.loss: %u",stats.tx.loss);
+
+    if(rr.jitter) {
+        stats.rtcp_remote_jitter.update(ntohl(rr.jitter));
+    }
 
     stats.unlock();
 

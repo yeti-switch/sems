@@ -72,10 +72,6 @@ using std::set;
 
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
 
-//seconds between 1900-01-01 and 1970-01-01
-//(70*365 + 17)*86400
-#define NTP_TIME_OFFSET 2208988800ULL
-
 static inline void add_if_no_exist(std::vector<int> &v,int payload){
 	if(std::find(v.begin(),v.end(),payload)==v.end())
 		v.push_back(payload);
@@ -512,6 +508,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
   l_ssrc = get_random();
   sequence = get_random();
   clearRTPTimeout();
+  memcpy(&start_time, &last_recv_time, sizeof(struct timeval));
 
   // by default the system codecs
   payload_provider = AmPlugIn::instance();
@@ -1535,19 +1532,41 @@ void AmRtpStream::log_sent_rtcp_packet(const char *buffer, int len, struct socka
 
 void AmRtpStream::getMediaStats(struct MediaStats &s)
 {
-    auto &p = s.payloads;
-    payloads_id2str(incoming_payloads,p.incoming);
-    payloads_id2str(incoming_relayed_payloads,p.incoming_relayed);
-    payloads_id2str(outgoing_payloads,p.outgoing);
-    payloads_id2str(outgoing_relayed_payloads,p.outgoing_relayed);
+    auto &rx  = s.rx;
+    auto &tx = s.tx;
 
-    auto &e  = s.errors;
-    e.decode_errors = decode_errors;
-    e.rtp_parse_errors = rtp_parse_errors;
-    e.out_of_buffer_errors = out_of_buffer_errors;
+    s.rtt = rtp_stats.rtt;
+    memcpy(&s.time_start, &start_time, sizeof(struct timeval));
+    gettimeofday(&s.time_end, nullptr);
 
-    s.incoming_bytes = incoming_bytes;
-    s.outgoing_bytes = outgoing_bytes;
+    //RX rtp_common
+    rx.ssrc = r_ssrc;
+    memcpy(&rx.addr, &r_saddr, sizeof(struct sockaddr_storage));
+    rx.pkt = rtp_stats.rx.pkt;
+    rx.bytes = rtp_stats.rx.bytes;
+    rx.total_lost = rtp_stats.total_lost;
+    payloads_id2str(incoming_payloads,rx.payloads_transcoded);
+    payloads_id2str(incoming_relayed_payloads,rx.payloads_relayed);
+
+    //RX specific
+    rx.decode_errors = decode_errors;
+    rx.rtp_parse_errors = rtp_parse_errors;
+    rx.out_of_buffer_errors = out_of_buffer_errors;
+    rx.delta = rtp_stats.rx_delta;
+    rx.jitter = rtp_stats.jitter;
+    rx.rtcp_jitter = rtp_stats.rtcp_jitter;
+
+    //TX rtp_comon
+    tx.ssrc = l_ssrc;
+    memcpy(&tx.addr, &l_saddr, sizeof(struct sockaddr_storage));
+    tx.pkt = rtp_stats.tx.pkt;
+    tx.bytes = rtp_stats.tx.bytes;
+    tx.total_lost = rtp_stats.tx.loss;
+    payloads_id2str(outgoing_payloads,tx.payloads_transcoded);
+    payloads_id2str(outgoing_relayed_payloads,tx.payloads_relayed);
+
+    //TX specific
+    tx.jitter = rtp_stats.rtcp_remote_jitter;
 }
 
 PacketMem::PacketMem()
@@ -1755,8 +1774,11 @@ void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
     if(timerisset(&rtp_stats.rx_recv_time)) {
         timeval diff;
         timersub(&p.recv_time, &rtp_stats.rx_recv_time, &diff);
-        int delay_msec = (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
-        rtp_stats.rx.delay_stats.update(delay_msec);
+        rtp_stats.rx_delta.update((diff.tv_sec * 1000000) + diff.tv_usec);
+        if(rtp_stats.rx_delta.n && rtp_stats.rx_delta.n % 250) {
+            //update jitter every 250 packets (5 seconds)
+            rtp_stats.jitter.update(rtp_stats.rx_delta.sd());
+        }
     }
     rtp_stats.rx_recv_time = p.recv_time;
 }
@@ -1788,7 +1810,11 @@ void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r, struct timev
         r.dlsr = 0;
     }
 
-    r.jitter = htonl(rtp_stats.rx.rtcp_jitter >> 4);
+    uint32_t jitter = rtp_stats.rx.rtcp_jitter >> 4;
+    r.jitter = htonl(jitter);
+
+    //update stats
+    rtp_stats.rtcp_jitter.update(jitter);
 }
 
 
