@@ -44,8 +44,8 @@
 #include "AmLcConfig.h"
 #include "AmPlugIn.h"
 
-__thread pid_t _self_tid = 0;
-__thread pid_t _self_pid = 0;
+__thread pthread_t _self_tid = 0;
+__thread pid_t     _self_pid = 0;
 
 int log_level  = L_INFO;	/**< log level */
 
