@@ -1,4 +1,3 @@
-find_package(Confuse REQUIRED)
 find_package(SCTP REQUIRED)
 find_package(Protobuf REQUIRED)
 
@@ -24,7 +23,7 @@ add_library(pb_classes ${PB_LIBS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROTOBUF_INCLUDE_DIRS})
 
 set(sems_module_name sctp_bus)
-set(sems_module_libs ${Confuse_LIBRARIES} ${SCTP_LIBRARIES} ${PROTOBUF_LIBRARIES} pb_classes)
+set(sems_module_libs ${CONFUSE_BUNDLED_LIBS} ${SCTP_LIBRARIES} ${PROTOBUF_LIBRARIES} pb_classes)
 
 file(GLOB sctp_bus_SRCS "*.cpp")
 
