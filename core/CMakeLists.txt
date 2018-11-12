@@ -1,5 +1,4 @@
 FIND_PACKAGE(Spandsp REQUIRED)
-find_package(Confuse REQUIRED)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
@@ -18,8 +17,9 @@ codecs_bench.wav
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
 INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS} ${SRTP_BUNDLED_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES (${CONFUSE_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads ${BOTAN_BUNDLED_LIBS} ${Confuse_LIBRARIES} ${SRTP_BUNDLED_LIBS})
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS})
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)
