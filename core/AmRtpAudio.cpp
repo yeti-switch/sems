@@ -413,6 +413,10 @@ int AmRtpAudio::setCurrentPayload(int payload)
       return -1;
     }
     
+    if(pmt_it->second.remote_pt < 0) {
+        return -1;
+    }
+
     unsigned char index = pmt_it->second.index;
     if(index >= payloads.size()){
       ERROR("Could not set current payload: payload %i maps to invalid index %i\n",
