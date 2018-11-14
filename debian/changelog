@@ -1,3 +1,11 @@
+sems (1.8.5-0) stable; urgency=low
+
+  * sips scheme
+  * implemented RTCP parsing/generation and stats saving
+  * AmRtpAudio: ignore incoming RTP packets with payload not described in remote SDP
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 14 Nov 2018 19:27:26 +0200
+
 sems (1.8.4-0) stable; urgency=low
 
   * tls support
