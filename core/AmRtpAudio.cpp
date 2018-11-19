@@ -238,7 +238,8 @@ int AmRtpAudio::receive(unsigned long long system_ts)
         playout_buffer->write(
             wallclock_ts,
             static_cast<u_int32_t>(adjusted_rtp_ts),
-            reinterpret_cast<ShortSample*>(&samples),
+            reinterpret_cast<ShortSample*>(static_cast<unsigned char*>(samples)),
+            /*reinterpret_cast<ShortSample*>(unsigned char *samples()),*/
             PCM16_B2S(static_cast<u_int32_t>(decoded_size)), begin_talk);
 
         if(!active && !last_samples_relayed) {
@@ -288,16 +289,16 @@ int AmRtpAudio::get(
     u_int32_t size =
         PCM16_S2B(playout_buffer->read(
             user_ts,
-            reinterpret_cast<ShortSample*>(&samples),
+            reinterpret_cast<ShortSample*>(static_cast<unsigned char*>(samples)),
             nb_samples));
 
     if(output_sample_rate != getSampleRate()) {
         size = resampleOutput(
-            reinterpret_cast<unsigned char*>(&samples),
+            static_cast<unsigned char*>(samples),
             size, getSampleRate(), output_sample_rate);
     }
 
-    memcpy(buffer,reinterpret_cast<unsigned char*>(&samples),size);
+    memcpy(buffer,static_cast<unsigned char*>(samples),size);
 
     return static_cast<int>(size);
 }
@@ -321,9 +322,9 @@ int AmRtpAudio::put(
         stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
     }
 
-    memcpy(reinterpret_cast<unsigned char*>(&samples),buffer,size);
+    memcpy(static_cast<unsigned char*>(samples),buffer,size);
     size = resampleInput(
-        reinterpret_cast<unsigned char*>(&samples),
+        static_cast<unsigned char*>(samples),
         size, input_sample_rate, getSampleRate());
 
     int s = encode(size);
@@ -341,7 +342,7 @@ int AmRtpAudio::put(
         / (WALLCLOCK_RATE/100);
 
     return send(static_cast<unsigned int>(user_ts),
-                reinterpret_cast<unsigned char*>(&samples),
+                static_cast<unsigned char*>(samples),
                 static_cast<unsigned int>(s));
 }
 

@@ -1,3 +1,9 @@
+sems (1.8.5-1) stable; urgency=low
+
+  * fix AmRtpAudio samples buffer casting
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 19 Nov 2018 18:29:01 +0200
+
 sems (1.8.5-0) stable; urgency=low
 
   * sips scheme
