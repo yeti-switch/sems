@@ -5,7 +5,7 @@
 #include "transport.h"
 #include "tcp_base_trsp.h"
 #include "sip_parser_async.h"
-#include "tls_trsp_settings.h"
+#include "ssl_settings.h"
 
 #include <vector>
 using std::vector;
@@ -73,19 +73,19 @@ public:
     }
 };
 
-typedef singleton<tls_rand_generator> rand_generator;
+typedef singleton<tls_rand_generator> rand_generator_tls;
 
 class tls_session_manager
 {
 public:
     Botan::TLS::Session_Manager_In_Memory ssm;
-    tls_session_manager() : ssm(*rand_generator::instance()){}
+    tls_session_manager() : ssm(*rand_generator_tls::instance()){}
     operator Botan::TLS::Session_Manager_In_Memory& () {
         return ssm;
     }
 };
 
-typedef singleton<tls_session_manager> session_manager;
+typedef singleton<tls_session_manager> session_manager_tls;
 
 class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
 {
