@@ -9,7 +9,6 @@
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
 , is_optional(false)
-, certificate(0)
 {
 }
 
@@ -144,6 +143,16 @@ bool dtls_conf::allow_dtls12()  const
     return false;
 }
 
+std::vector<uint16_t> dtls_conf::srtp_profiles() const
+{
+    std::vector<uint16_t> profiles;
+    profiles.push_back(srtp_profile_aes128_cm_sha1_80);
+    profiles.push_back(srtp_profile_aes128_cm_sha1_32);
+    profiles.push_back(srtp_profile_null_sha1_80);
+    profiles.push_back(srtp_profile_null_sha1_32);
+    return profiles;
+}
+
 vector<Botan::Certificate_Store*> dtls_conf::trusted_certificate_authorities(const string& type, const string& context)
 {
     dtls_settings* settings = 0;
@@ -208,6 +217,14 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream)
 : rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_channel(0)
 {
+    srtp_init();
+    memset(&srtp_policy, 0, sizeof(srtp_policy_t));
+    mki_id = 1;
+    mkey.key = c_key;
+    mkey.mki_id = &mki_id;
+    mkey.mki_size = MKI_SIZE;
+    srtp_policy.keys[0]  = &mkey;
+    srtp_policy.num_master_keys  = 1;
 }
 
 AmSrtpConnection::~AmSrtpConnection()
@@ -217,18 +234,17 @@ AmSrtpConnection::~AmSrtpConnection()
     }
 }
 
-void AmSrtpConnection::use_dtls(bool dtls_server, dtls_conf settings)
+void AmSrtpConnection::create_dtls()
 {
-    rtp_mode = (dtls_server ? DTLS_SRTP_SERVER : DTLS_SRTP_CLIENT);
-    srtp_settings = settings;
-
     try {
-        if(!dtls_server) {
-            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), settings, settings,*rand_generator_dtls::instance(),
+        if(rtp_mode == DTLS_SRTP_CLIENT) {
+            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
                                                 Botan::TLS::Server_Information(rtp_stream->getRHost().c_str(), rtp_stream->getRPort()),
                                                 Botan::TLS::Protocol_Version::DTLS_V12);
+        } else if(rtp_mode == DTLS_SRTP_SERVER){
+            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), false);
         } else {
-            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), settings, settings,*rand_generator_dtls::instance(), false);
+            ERROR("incorrect mode before creation dtls:%d", rtp_mode);
         }
     } catch(Botan::Exception& exc) {
       ERROR("unforseen error in dtls:%s",
@@ -237,21 +253,60 @@ void AmSrtpConnection::use_dtls(bool dtls_server, dtls_conf settings)
     }
 }
 
-void AmSrtpConnection::use_sdp(unsigned char* key_own, unsigned int key_own_len,
-            unsigned char* key_other, unsigned int key_other_len)
+void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
 {
-    if(key_own_len < SRTP_KEY_SIZE ||
-        key_other_len < SRTP_KEY_SIZE) {
-        ERROR("srtp keys length less then expected: own - %d, other - %d", key_own_len, key_other_len);
+    rtp_mode = DTLS_SRTP_CLIENT;
+    dtls_settings.reset(new dtls_conf(settings));
+    create_dtls();
+}
+
+void AmSrtpConnection::use_dtls(dtls_server_settings* settings)
+{
+    rtp_mode = DTLS_SRTP_SERVER;
+    dtls_settings.reset(new dtls_conf(settings));
+    create_dtls();
+}
+
+void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len)
+{
+    if(key_len < SRTP_KEY_SIZE) {
+        ERROR("srtp keys length less then expected: len - %d", key_len);
         return;
     }
-    rtp_mode = SRTP_EXTERNAL_KEYS;
-    memcpy(c_keys[0], key_own, SRTP_KEY_SIZE);
-    memcpy(c_keys[1], key_other, SRTP_KEY_SIZE);
+    rtp_mode = SRTP_EXTERNAL_KEY;
+    memcpy(c_key, key, SRTP_KEY_SIZE);
+    srtp_crypto_policy_set_from_profile_for_rtp(&srtp_policy.rtp, profile);
+    srtp_create(&srtp_session, &srtp_policy);
+}
+
+void AmSrtpConnection::on_data_recv(uint8_t* data, size_t size)
+{
+    if(!dtls_channel) {
+        return;
+    }
+    if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
+        dtls_channel->received_data(data, size);
+    } else if(rtp_mode == SRTP_EXTERNAL_KEY){
+
+    }
+}
+
+void AmSrtpConnection::on_data_send(uint8_t* data, size_t size)
+{
+    if(!dtls_channel) {
+        return;
+    }
+    if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
+    } else  if(rtp_mode == SRTP_EXTERNAL_KEY){
+
+    }
 }
 
 void AmSrtpConnection::tls_emit_data(const uint8_t data[], size_t size)
 {
+    assert(rtp_stream);
+
+    rtp_stream->send((unsigned char*)data, size);
 }
 
 void AmSrtpConnection::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
@@ -264,6 +319,14 @@ void AmSrtpConnection::tls_alert(Botan::TLS::Alert alert)
 
 bool AmSrtpConnection::tls_session_established(const Botan::TLS::Session& session)
 {
+    DBG("************ on_dtls_connect() ***********");
+    DBG("new DTLS connection from %s:%u",
+        rtp_stream->getRHost().c_str(),
+        rtp_stream->getRPort());
+
+    Botan::SymmetricKey key = dtls_channel->key_material_export(rtp_stream->getRHost().c_str(), "", SRTP_KEY_SIZE);
+    use_key((srtp_profile_t)session.dtls_srtp_profile(), (unsigned char*)key.begin(), key.end() - key.begin());
+    return true;
 }
 
 void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
@@ -273,4 +336,13 @@ void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certi
                             const std::string& hostname,
                             const Botan::TLS::Policy& policy)
 {
+    if((dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_chain) ||
+        (dtls_settings->s_server && !dtls_settings->s_server->verify_client_certificate)) {
+        return;
+    }
+
+    if(dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_cn)
+        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
+    else
+        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
 }

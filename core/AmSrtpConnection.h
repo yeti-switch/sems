@@ -10,13 +10,19 @@
 #include <botan/tls_callbacks.h>
 #include <botan/credentials_manager.h>
 
+#include <srtp.h>
+
+#include <memory>
+using std::auto_ptr;
+
 class AmRtpStream;
 
-#define SRTP_KEY_SIZE 34
+#define SRTP_KEY_SIZE 32
+#define MKI_SIZE      16
 
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
-    friend class tls_trsp_socket;
+    friend class AmSrtpConnection;
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
     Botan::X509_Certificate certificate;
@@ -45,6 +51,7 @@ public:
     bool allow_dtls10() const override;
     bool allow_dtls12() const override;
     bool require_cert_revocation_info() const override { return false; }
+    std::vector<uint16_t> srtp_profiles() const override;
 
     //Credentials_Manager functions
     vector<Botan::Certificate_Store*> trusted_certificate_authorities(const string& type, const string& context) override;
@@ -86,24 +93,32 @@ public:
         RTP_DEFAULT,
         DTLS_SRTP_SERVER,
         DTLS_SRTP_CLIENT,
-        SRTP_EXTERNAL_KEYS
+        SRTP_EXTERNAL_KEY
     };
 private:
     RTP_mode       rtp_mode;
-    unsigned char  c_keys[2][SRTP_KEY_SIZE];          //0 - own, 1 - other
+    unsigned char  c_key[SRTP_KEY_SIZE];
+    srtp_master_key_t mkey;
+    unsigned char mki_id;
 
     Botan::TLS::Channel* dtls_channel;
     AmRtpStream* rtp_stream;
-    dtls_conf srtp_settings;
+    auto_ptr<dtls_conf> dtls_settings;
+    srtp_t srtp_session;
+    srtp_policy_t srtp_policy;
+protected:
+    void create_dtls();
 public:
     AmSrtpConnection(AmRtpStream* stream);
     ~AmSrtpConnection();
 
     RTP_mode get_rtp_mode() { return rtp_mode; }
+    void use_dtls(dtls_client_settings* settings);
+    void use_dtls(dtls_server_settings* settings);
+    void use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len);
 
-    void use_dtls(bool dtls_server, dtls_conf settings);
-    void use_sdp(unsigned char* key_own, unsigned int key_own_len,
-                unsigned char* key_other, unsigned int key_other_len);
+    void on_data_recv(uint8_t* data, size_t size);
+    void on_data_send(uint8_t* data, size_t size);
 
     void tls_emit_data(const uint8_t data[], size_t size);
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
