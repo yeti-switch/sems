@@ -117,8 +117,8 @@ public:
     void use_dtls(dtls_server_settings* settings);
     void use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len);
 
-    void on_data_recv(uint8_t* data, size_t size);
-    void on_data_send(uint8_t* data, size_t size);
+    bool on_data_recv(uint8_t* data, size_t size);
+    bool on_data_send(uint8_t* data, size_t size);
 
     void tls_emit_data(const uint8_t data[], size_t size);
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
