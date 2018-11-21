@@ -35,8 +35,8 @@
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
+#include "sip/ssl_settings.h"
 #include "AmRtpSession.h"
-#include "AmSrtpConnection.h"
 
 #include <netinet/in.h>
 
@@ -63,9 +63,10 @@ using std::pair;
  */
 class  AmAudio;
 class  AmSession;
+class msg_logger;
 struct SdpPayload;
 struct amci_payload_t;
-class msg_logger;
+class  AmSrtpConnection;
 
 /**
  * This provides the memory for the receive buffer.
@@ -275,8 +276,9 @@ class AmRtpStream
     bool           passive_rtcp;
 
     /**  srtp connection mode */
-    AmSrtpConnection srtp_connection;
-    dtls_conf srtp_settings;
+    auto_ptr<AmSrtpConnection> srtp_connection;
+    dtls_server_settings server_settings;
+    dtls_client_settings client_settings;
 
     /** mute && port == 0 */
     bool           hold;
@@ -403,6 +405,10 @@ class AmRtpStream
 
     void rtcp_send_report(unsigned int user_ts);
 
+    friend class AmSrtpConnection;
+    int recv(int fd);
+    int send(unsigned char* buf, int size);
+    int sendmsg(unsigned char* buf, int size);
   public:
 
     /**
@@ -432,8 +438,6 @@ class AmRtpStream
     /** Stops the stream and frees all resources. */
     virtual ~AmRtpStream();
 
-    int send(unsigned char* buf, int size);
-    int sendmsg(unsigned char* buf, int size);
 
     int send( unsigned int ts,
         unsigned char* buffer,
@@ -448,7 +452,6 @@ class AmRtpStream
     int receive( unsigned char* buffer, unsigned int size,
            unsigned int& ts, int& payload, bool &relayed);
 
-    int recv(int fd);
     void recvPacket(int fd);
 
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);

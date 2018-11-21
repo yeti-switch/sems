@@ -26,6 +26,7 @@
  */
 
 #include "AmRtpStream.h"
+#include "AmSrtpConnection.h"
 #include "AmRtpPacket.h"
 #include "AmRtpReceiver.h"
 #include "AmLcConfig.h"
@@ -290,6 +291,11 @@ int AmRtpStream::ping()
     rp.compile((unsigned char*)ping_chr,2);
 
     rp.setAddr(&r_saddr);
+
+    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+    }
+
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
         CLASS_ERROR("while sending RTP packet.\n");
         return -1;
@@ -345,6 +351,10 @@ int AmRtpStream::compile_and_send(
     }
 #endif
 
+    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+    }
+
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
         CLASS_ERROR("while sending RTP packet.\n");
         return -1;
@@ -389,6 +399,10 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
     AmRtpPacket rp;
     rp.compile_raw((unsigned char*)packet, length);
     rp.setAddr(&r_saddr);
+
+    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+    }
 
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
         CLASS_ERROR("while sending raw RTP packet.\n");
@@ -623,7 +637,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_sent_ts(0),
     last_sent_ts_diff(0),
     last_send_rtcp_report_ts(0),
-    srtp_connection(this)
+    srtp_connection(new AmSrtpConnection(this))
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -1026,7 +1040,10 @@ int AmRtpStream::init(const AmSdp& local,
 
 void AmRtpStream::createSrtpConnection(bool dtls_server)
 {
-    srtp_connection.use_dtls(dtls_server, srtp_settings);
+    if(dtls_server)
+        srtp_connection->use_dtls(&server_settings);
+    else
+        srtp_connection->use_dtls(&client_settings);
 }
 
 void AmRtpStream::setReceiving(bool r)
@@ -1187,7 +1204,7 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
                 }
             }
         }	break;
-        case zrtp_status_drop: {
+        case zrtp_status_drop: {receive_buf
             // This is a protocol ZRTP packet or masked RTP media.
             // In either case the packet must be dropped to protect your
             // media codec
@@ -1201,6 +1218,10 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         } break; }
     } else {
 #endif // WITH_ZRTP
+
+        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+            srtp_connection->on_data_recv(p->getBuffer(), p->getBufferSize());
+        }
 
         if(p->payload == getLocalTelephoneEventPT()) {
             rtp_ev_qu.push(p);
@@ -1312,6 +1333,12 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 void AmRtpStream::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
+        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
+           srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT) {
+            srtp_connection->on_data_recv(buffer, b_size);
+            return;
+        }
+
         AmRtpPacket* p = mem.newPacket();
         if (!p) p = reuseBufferedPacket();
         if (!p) {
