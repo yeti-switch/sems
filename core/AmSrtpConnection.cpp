@@ -220,10 +220,10 @@ AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream)
     srtp_init();
     memset(&srtp_policy, 0, sizeof(srtp_policy_t));
     mki_id = 1;
-    mkey.key = c_key;
-    mkey.mki_id = &mki_id;
-    mkey.mki_size = MKI_SIZE;
-    srtp_policy.keys[0]  = &mkey;
+    mkey[0].key = c_key;
+    mkey[0].mki_id = &mki_id;
+    mkey[0].mki_size = MKI_SIZE;
+    srtp_policy.keys  = (srtp_master_key_t**)&mkey;
     srtp_policy.num_master_keys  = 1;
 }
 
