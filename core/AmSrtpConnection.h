@@ -98,7 +98,7 @@ public:
 private:
     RTP_mode       rtp_mode;
     unsigned char  c_key[SRTP_KEY_SIZE];
-    srtp_master_key_t mkey;
+    srtp_master_key_t mkey[MKI_SIZE];
     unsigned char mki_id;
 
     Botan::TLS::Channel* dtls_channel;
