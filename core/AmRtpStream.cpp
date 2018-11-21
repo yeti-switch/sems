@@ -293,7 +293,8 @@ int AmRtpStream::ping()
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize()))
+            return 2;
     }
 
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
@@ -352,7 +353,9 @@ int AmRtpStream::compile_and_send(
 #endif
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize())) {
+            return 0;
+        }
     }
 
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
@@ -401,7 +404,9 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize());
+        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize())) {
+            return 0;
+        }
     }
 
     if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
@@ -1220,7 +1225,10 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 #endif // WITH_ZRTP
 
         if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-            srtp_connection->on_data_recv(p->getBuffer(), p->getBufferSize());
+            if(!srtp_connection->on_data_recv(p->getBuffer(), p->getBufferSize())){
+                mem.freePacket(p);
+                return;
+            }
         }
 
         if(p->payload == getLocalTelephoneEventPT()) {

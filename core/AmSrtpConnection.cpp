@@ -279,27 +279,29 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key, unsig
     srtp_create(&srtp_session, &srtp_policy);
 }
 
-void AmSrtpConnection::on_data_recv(uint8_t* data, size_t size)
+bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t size)
 {
     if(!dtls_channel) {
-        return;
+        return false;
     }
     if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
         dtls_channel->received_data(data, size);
     } else if(rtp_mode == SRTP_EXTERNAL_KEY){
 
     }
+    return false;
 }
 
-void AmSrtpConnection::on_data_send(uint8_t* data, size_t size)
+bool AmSrtpConnection::on_data_send(uint8_t* data, size_t size)
 {
     if(!dtls_channel) {
-        return;
+        return false;
     }
-    if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
-    } else  if(rtp_mode == SRTP_EXTERNAL_KEY){
+
+    if(rtp_mode == SRTP_EXTERNAL_KEY){
 
     }
+    return false;
 }
 
 void AmSrtpConnection::tls_emit_data(const uint8_t data[], size_t size)
