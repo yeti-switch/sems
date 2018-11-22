@@ -38,6 +38,11 @@ using std::map;
 #define LF   '\n'
 #define CRLF "\r\n"
 
+static const string sendonly("sendonly");
+static const string recvonly("recvonly");
+static const string sendrecv("sendrecv");
+static const string inactive("inactive");
+
 static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next);
 static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s);
 static char* parse_sdp_connection(AmSdp* sdp_msg, char* s, char t);
@@ -279,7 +284,9 @@ AmSdp::AmSdp()
     sessionName(),
     conn(),
     media(),
-    version(0)
+    version(0),
+    send(true),
+    recv(true)
 {
   origin.user = "sems";
   origin.sessId = get_random();
@@ -292,7 +299,9 @@ AmSdp::AmSdp(const AmSdp& p_sdp_msg)
     sessionName(p_sdp_msg.sessionName),
     conn(p_sdp_msg.conn),
     media(p_sdp_msg.media),
-    attributes(p_sdp_msg.attributes)
+    attributes(p_sdp_msg.attributes),
+    send(p_sdp_msg.send),
+    recv(p_sdp_msg.recv)
 {
 }
 
@@ -325,7 +334,7 @@ int AmSdp::parse(const char* _sdp_msg)
     }
   }
 
-  //validate connection lines
+  //validate session-level connection line
   if(!conn.address.empty()) {
       dns_handle dh;
       if (resolver::instance()->resolve_name(conn.address.c_str(),&dh,&ss,IPv4) < 0) {
@@ -337,6 +346,10 @@ int AmSdp::parse(const char* _sdp_msg)
   for(vector<SdpMedia>::iterator it = media.begin();
       !ret && (it != media.end()); ++it)
   {
+      //propagate session-level mode attributes to the media-level if not exist
+      it->set_mode_if_missed(send,recv);
+
+      //validate media-level connection line
       const string &addr = it->conn.address;
       if(!addr.empty()) {
           dns_handle dh;
@@ -511,6 +524,12 @@ const SdpPayload *AmSdp::findPayload(const string& name) const
 
 bool AmSdp::operator == (const AmSdp& other) const
 {
+  if(recv != other.recv)
+      return false;
+
+  if(send != other.send)
+      return false;
+
   if (attributes.empty()) {
     if (!other.attributes.empty())
       return false;
@@ -555,6 +574,8 @@ void AmSdp::clear()
   attributes.clear();
   media.clear();
   l_origin = SdpOrigin();
+  send = true;
+  recv = true;
 }
 
 void AmSdp::getInfo(AmArg &ret){
@@ -629,6 +650,14 @@ void SdpMedia::calcAnswer(const AmPayloadProvider* payload_prov,
       }
     }
   }
+}
+
+void SdpMedia::set_mode_if_missed(bool _send, bool _recv)
+{
+    if(has_mode_attribute)
+        return;
+    send = _send;
+    recv = _recv;
 }
 
 //parser
@@ -1044,7 +1073,26 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
 
   if (col == attr_end) {
     // property attribute
-    sdp_msg->attributes.push_back(SdpAttribute(string(s, attr_end-s+1)));
+    SdpAttribute a(string(s, attr_end-s+1));
+
+    // process mode attributes
+    if(a.attribute == sendonly) {
+      sdp_msg->send = true;
+      sdp_msg->recv = false;
+    } else if(a.attribute == inactive) {
+      sdp_msg->send = false;
+      sdp_msg->recv = false;
+    } else if(a.attribute == recvonly) {
+      sdp_msg->send = false;
+      sdp_msg->recv = true;
+    } else if (a.attribute == sendrecv) {
+      sdp_msg->send = true;
+      sdp_msg->recv = true;
+    }
+
+    //add mode attributes to the unparsed ones for back-compatibility
+    //!TODO: rewrite appropriate classes to use send/recv flags
+    sdp_msg->attributes.push_back(a);
     // DBG("got session attribute '%.*s\n", (int)(attr_end-s+1), s);
   } else {
     // value attribute
@@ -1235,18 +1283,22 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     } else {
       DBG("ignoring direction attribute without value\n");
     }
-  } else if (attr == "sendrecv") {
+  } else if (attr == sendrecv) {
     media.send = true;
     media.recv = true;
-  } else if (attr == "sendonly") {
+    media.has_mode_attribute = true;
+  } else if (attr == sendonly) {
     media.send = true;
     media.recv = false;
-  } else if (attr == "recvonly") {
+    media.has_mode_attribute = true;
+  } else if (attr == recvonly) {
     media.send = false;
     media.recv = true;
-  } else if (attr == "inactive") {
+    media.has_mode_attribute = true;
+  } else if (attr == inactive) {
     media.send = false;
     media.recv = false;
+    media.has_mode_attribute = true;
   } else {
     attr_check(attr);
     string value;

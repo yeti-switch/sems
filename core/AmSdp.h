@@ -187,6 +187,7 @@ struct SdpMedia
   // sendrecv|sendonly|recvonly|inactive
   bool          send;
   bool          recv;
+  bool          has_mode_attribute;
 
   std::vector<SdpPayload> payloads;
 
@@ -194,7 +195,10 @@ struct SdpMedia
 
   bool operator == (const SdpMedia& other) const;
 
-  SdpMedia() : conn(), dir(DirUndefined), type(MT_NONE), transport(TP_NONE), send(true), recv(true) {}
+  SdpMedia()
+    : conn(), dir(DirUndefined), type(MT_NONE), transport(TP_NONE),
+      send(true), recv(true), has_mode_attribute(false)
+  {}
 
   /** pretty print */
   string debugPrint() const;
@@ -208,6 +212,8 @@ struct SdpMedia
    */
   void calcAnswer(const AmPayloadProvider* payload_prov, 
 		  SdpMedia& answer) const;
+
+  void set_mode_if_missed(bool _send, bool _recv);
 };
 
 /**
@@ -249,6 +255,9 @@ public:
   string           uri;         // u=
   SdpConnection    conn;        // c=
   std::vector<SdpAttribute> attributes; // unknown session level attributes
+
+  bool send;
+  bool recv;
 
   std::vector<SdpMedia> media;  // m= ... [a=rtpmap:...]+
   //TODO: t= lines
