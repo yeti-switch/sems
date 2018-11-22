@@ -1280,7 +1280,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 
   } else if(attr == "crypto") {
       SdpCrypto crypto;
-      while(parsing) {
+      while(attr_line < line_end) {
           next = parse_until(attr_line, line_end, ' ');
           switch(crypto_st) {
           case TAG:
@@ -1326,6 +1326,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
           }
           attr_line = next;
       }
+      media.crypto.push_back(crypto);
   } else if (attr == "direction") {
     if (parsing) {
       size_t dir_len = 0;
