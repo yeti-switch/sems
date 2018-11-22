@@ -450,6 +450,12 @@ void AmRtpPacket::setBuffer(unsigned char* buf, unsigned int b)
     memcpy(buffer, buf, b);
     b_size = b;
 }
+
+void AmRtpPacket::setBufferSize(unsigned int b)
+{
+    b_size = b;
+}
+
 void AmRtpPacket::logReceived(msg_logger *logger, struct sockaddr_storage *laddr)
 {
     static const cstring empty;

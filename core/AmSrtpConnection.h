@@ -104,12 +104,13 @@ private:
     Botan::TLS::Channel* dtls_channel;
     AmRtpStream* rtp_stream;
     auto_ptr<dtls_conf> dtls_settings;
-    srtp_t srtp_session;
+    srtp_t* srtp_session;
     srtp_policy_t srtp_policy;
+    bool b_srtcp;
 protected:
     void create_dtls();
 public:
-    AmSrtpConnection(AmRtpStream* stream);
+    AmSrtpConnection(AmRtpStream* stream, bool srtcp);
     ~AmSrtpConnection();
 
     RTP_mode get_rtp_mode() { return rtp_mode; }
@@ -117,8 +118,8 @@ public:
     void use_dtls(dtls_server_settings* settings);
     void use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len);
 
-    bool on_data_recv(uint8_t* data, size_t size);
-    bool on_data_send(uint8_t* data, size_t size);
+    bool on_data_recv(uint8_t* data, size_t* size, bool rtcp);
+    bool on_data_send(uint8_t* data, size_t* size, bool rtcp);
 
     void tls_emit_data(const uint8_t data[], size_t size);
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);

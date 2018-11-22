@@ -293,11 +293,13 @@ int AmRtpStream::ping()
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize()))
+        size_t size = rp.getBufferSize();
+        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false))
             return 2;
+        rp.setBufferSize(size);
     }
 
-    if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
+    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
         CLASS_ERROR("while sending RTP packet.\n");
         return -1;
     }
@@ -353,12 +355,14 @@ int AmRtpStream::compile_and_send(
 #endif
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize())) {
+        size_t size = rp.getBufferSize();
+        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
             return 0;
         }
+        rp.setBufferSize(size);
     }
 
-    if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
+    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
         CLASS_ERROR("while sending RTP packet.\n");
         return -1;
     }
@@ -404,12 +408,14 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        if(!srtp_connection->on_data_send(rp.getBuffer(), rp.getBufferSize())) {
+        size_t size = rp.getBufferSize();
+        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
             return 0;
         }
+        rp.setBufferSize(size);
     }
 
-    if(send(rp.getBuffer(), rp.getBufferSize()) < 0){
+    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
         CLASS_ERROR("while sending raw RTP packet.\n");
         return -1;
     }
@@ -477,27 +483,31 @@ int AmRtpStream::sendmsg(unsigned char* buf, int size)
 
 /*int AmRtpPacket::send(int sd, unsigned int sys_if_idx,
 			  sockaddr_storage* l_saddr)*/
-int AmRtpStream::send(unsigned char* buf, int size)
+int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
 
 {
+
   MEDIA_info* iface = AmConfig.media_ifs[l_if].proto_info[laddr_if];
   unsigned int sys_if_idx = iface->net_if_idx;
+  int sd = rtcp ? l_rtcp_sd : l_sd;
+  struct sockaddr_storage* rs_addr = rtcp ? &r_rtcp_saddr : &r_saddr;
+  struct sockaddr_storage* ls_addr = rtcp ? &l_rtcp_saddr : &l_saddr;
 
   if(sys_if_idx && iface->sig_sock_opts&trsp_socket::use_raw_sockets) {
-    return raw_sender::send((char*)buf,size,sys_if_idx,&l_saddr,&r_saddr,iface->tos_byte);
+    return raw_sender::send((char*)buf,size,sys_if_idx, ls_addr, rs_addr,iface->tos_byte);
   }
 
-  if(sys_if_idx && AmConfig.force_outbound_if) {
+
+  //TODO: process case with AmConfig.force_outbound_if properly for rtcp
+  if(!rtcp && sys_if_idx && AmConfig.force_outbound_if) {
     return sendmsg(buf,size);
   }
 
-  int err = ::sendto(l_sd,buf,size,0,
-                       (const struct sockaddr *)&r_saddr,
-                       SA_len(&r_saddr));
+  int err = ::sendto(sd,buf,size,0, (const struct sockaddr*)rs_addr, SA_len(rs_addr));
 
   if(err == -1){
-      ERROR("while sending RTP packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
-              l_sd,buf,size,&r_saddr,SA_len(&r_saddr),
+      ERROR("while sending %s packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
+              rtcp ? "RTCP" : "RTP", sd,buf,size,rs_addr,SA_len(rs_addr),
               strerror(errno));
       log_stacktrace(L_DBG);
       return -1;
@@ -642,7 +652,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_sent_ts(0),
     last_sent_ts_diff(0),
     last_send_rtcp_report_ts(0),
-    srtp_connection(new AmSrtpConnection(this))
+    srtp_connection(new AmSrtpConnection(this, false)),
+    srtcp_connection(new AmSrtpConnection(this, true))
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -1045,10 +1056,13 @@ int AmRtpStream::init(const AmSdp& local,
 
 void AmRtpStream::createSrtpConnection(bool dtls_server)
 {
-    if(dtls_server)
+    if(dtls_server) {
         srtp_connection->use_dtls(&server_settings);
-    else
+        srtcp_connection->use_dtls(&server_settings);
+    } else {
         srtp_connection->use_dtls(&client_settings);
+        srtcp_connection->use_dtls(&client_settings);
+    }
 }
 
 void AmRtpStream::setReceiving(bool r)
@@ -1225,10 +1239,12 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 #endif // WITH_ZRTP
 
         if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-            if(!srtp_connection->on_data_recv(p->getBuffer(), p->getBufferSize())){
+            size_t size = p->getBufferSize();
+            if(!srtp_connection->on_data_recv(p->getBuffer(), &size, false)){
                 mem.freePacket(p);
                 return;
             }
+            p->setBufferSize(size);
         }
 
         if(p->payload == getLocalTelephoneEventPT()) {
@@ -1341,9 +1357,17 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 void AmRtpStream::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
-        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
-           srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT) {
-            srtp_connection->on_data_recv(buffer, b_size);
+        if(fd == l_rtcp_sd &&
+            (srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
+            srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
+            srtcp_connection->on_data_recv(buffer, (size_t*)&b_size, true);
+            return;
+        }
+
+        if(fd == l_sd &&
+            (srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
+            srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
+            srtp_connection->on_data_recv(buffer, (size_t*)&b_size, false);
             return;
         }
 
@@ -1372,6 +1396,15 @@ void AmRtpStream::recvPacket(int fd)
         incoming_bytes += p->getBufferSize();
 
         if(fd == l_rtcp_sd) {
+            if(srtcp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+                size_t size = p->getBufferSize();
+                if(!srtcp_connection->on_data_recv(p->getBuffer(), &size, true)){
+                    mem.freePacket(p);
+                    return;
+                }
+                p->setBufferSize(size);
+            }
+
             recvRtcpPacket(p);
             mem.freePacket(p);
             return;
@@ -1395,6 +1428,14 @@ void AmRtpStream::recvPacket(int fd)
             clearRTPTimeout(&recv_time);
             mem.freePacket(p);
         } else if(parse_res==RTP_PACKET_PARSE_RTCP) {
+            if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+                size_t size = p->getBufferSize();
+                if(!srtp_connection->on_data_recv(p->getBuffer(), &size, true)){
+                    mem.freePacket(p);
+                    return;
+                }
+                p->setBufferSize(size);
+            }
             recvRtcpPacket(p);
             mem.freePacket(p);
             return;
@@ -1486,7 +1527,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
     p->setAddr(&r_saddr);
 
-    if(send(p->getBuffer(), p->getBufferSize()) < 0){
+    if(send(p->getBuffer(), p->getBufferSize(), false) < 0){
         CLASS_ERROR("while sending RTP packet to '%s':%i\n",
         get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr));
     } else {
@@ -2052,22 +2093,13 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 
     rtp_stats.unlock();
 
-    const MEDIA_info &iface = *AmConfig.media_ifs[l_if].proto_info[laddr_if];
-    if(iface.net_if_idx && iface.sig_sock_opts&trsp_socket::use_raw_sockets) {
-        err = raw_sender::send(
-            (const char *)buf,len,
-            iface.net_if_idx,
-            &l_rtcp_saddr, &r_rtcp_saddr,
-            iface.tos_byte);
-    } else {
-        err = sendto(l_rtcp_sd,
-            (const char *)buf,len,
-            0,
-            (const struct sockaddr *)&r_rtcp_saddr, SA_len(&r_rtcp_saddr));
+    if(srtcp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        if(!srtcp_connection->on_data_send((unsigned char*)buf, (size_t*)&len, true)) {
+            return;
+        }
     }
-    //TODO: process case with AmConfig.force_outbound_if properly
 
-    if(err < 0) {
+    if(send((unsigned char*)buf, len, true) < 0) {
         CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s:%d, buf: %p:%d",
                     strerror(errno),
                     l_rtcp_sd,
