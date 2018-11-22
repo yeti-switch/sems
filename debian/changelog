@@ -1,3 +1,9 @@
+sems (1.8.6-1) stable; urgency=low
+
+  * AmSdp: parse session-level mode attributes. propagate to the media-level if not exist
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 22 Nov 2018 15:57:47 +0200
+
 sems (1.8.5-1) stable; urgency=low
 
   * fix AmRtpAudio samples buffer casting
