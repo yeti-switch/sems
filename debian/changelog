@@ -1,3 +1,9 @@
+sems (1.7.73-1p) stable; urgency=low
+
+  * AmSdp: parse session-level mode attributes. propagate to the media-level if not exist
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 22 Nov 2018 16:04:41 +0200
+
 sems (1.7.72-9p) stable; urgency=low
 
   * AmRtpAudio: ignore incoming RTP packets with payload not described in remote SDP
