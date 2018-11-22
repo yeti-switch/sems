@@ -59,12 +59,14 @@ static bool is_wsp(char s);
 
 static MediaType media_type(std::string media);
 static TransProt transport_type(std::string transport);
+static CryptoProfile crypto_profile(std::string profile);
 static bool attr_check(std::string attr);
 
 enum parse_st {SDP_DESCR, SDP_MEDIA};
 enum sdp_connection_st {NET_TYPE, ADDR_TYPE, IP4, IP6};
 enum sdp_media_st {MEDIA, PORT, PROTO, FMT}; 
 enum sdp_attr_rtpmap_st {TYPE, ENC_NAME, CLK_RATE, ENC_PARAM};
+enum sdp_attr_crypto_st {TAG, PROFILE, KEY, SESS_PARAM};
 enum sdp_attr_fmtp_st {FORMAT, FORMAT_PARAM};
 enum sdp_origin_st {USER, ID, VERSION_ST, NETTYPE, ADDR, UNICAST_ADDR};
 
@@ -1125,8 +1127,10 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 
   register sdp_attr_rtpmap_st rtpmap_st;
   register sdp_attr_fmtp_st fmtp_st;
+  register sdp_attr_crypto_st crypto_st;
   rtpmap_st = TYPE;
   fmtp_st = FORMAT;
+  crypto_st = TAG;
   char* attr_line=s;
   char* next=0;
   char* line_end=0;
@@ -1274,6 +1278,54 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     if(pl_it != media.payloads.end())
       pl_it->sdp_format_parameters = params;
 
+  } else if(attr == "crypto") {
+      SdpCrypto crypto;
+      while(parsing) {
+          next = parse_until(attr_line, line_end, ' ');
+          switch(crypto_st) {
+          case TAG:
+          {
+              string tag_number(attr_line, int(next-attr_line)-1);
+              str2i(tag_number, crypto.tag);
+              crypto_st = PROFILE;
+              break;
+          }
+          case PROFILE:
+          {
+              string profile(attr_line, int(next-attr_line)-1);
+              crypto.profile = crypto_profile(profile);
+              crypto_st = KEY;
+              break;
+          }
+          case KEY:
+          {
+              string key(attr_line, int(next-attr_line)-1);
+              char* key_data = parse_until(attr_line, next, ':');
+              if(key_data < line_end) {
+                  string method = string(attr_line, int(key_data-attr_line)-1);
+                  string key_info = string(key_data, int(next-key_data)-1);
+                  if(method == "inline"){
+                      SdpKeyInfo info;
+                      char* key_end = parse_until(key_data, next, '|');
+                      info.key = string(key_data, int(key_end-key_data)-1);
+
+                      //TODO: create parsing parameters as describe in https://tools.ietf.org/html/rfc4568#section-9.2
+                      info.lifetime = 0;
+                      info.mki = 1;
+                      crypto.keys.push_back(info);
+                      break;
+                  }
+              }
+              crypto_st = SESS_PARAM;
+          }
+          case SESS_PARAM:
+          {
+              string param(attr_line, int(next-attr_line)-1);
+              crypto.sp.push_back(param);
+          }
+          }
+          attr_line = next;
+      }
   } else if (attr == "direction") {
     if (parsing) {
       size_t dir_len = 0;
@@ -1625,6 +1677,26 @@ static TransProt transport_type(string transport)
     return TP_UDPTL;
   else 
     return TP_NONE;
+}
+
+
+static CryptoProfile crypto_profile(std::string profile)
+{
+  string profile_uc = profile;
+  std::transform(profile_uc.begin(), profile_uc.end(), profile_uc.begin(), toupper);
+
+  if(profile_uc == "AES_CM_128_HMAC_SHA1_32")
+    return CP_AES128_CM_SHA1_32;
+  else if(profile_uc == "AES_CM_128_HMAC_SHA1_80")
+    return CP_AES128_CM_SHA1_80;
+  else if(profile_uc == "F8_128_HMAC_SHA1_80")
+    return CP_F8128_HMAC_SHA1_80;
+  else if(profile_uc == "NULL_HMAC_SHA1_32")
+    return CP_NULL_SHA1_32;
+  else if(profile_uc == "NULL_HMAC_SHA1_80")
+    return CP_NULL_SHA1_80;
+  else
+    return CP_NONE;
 }
 
 /*
