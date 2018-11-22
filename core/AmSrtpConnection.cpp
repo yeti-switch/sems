@@ -222,7 +222,8 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
 }
 
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
-: rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_channel(0), b_srtcp(srtcp)
+: rtp_mode(RTP_DEFAULT), rtp_stream(stream)
+, dtls_channel(0), srtp_session(0), b_srtcp(srtcp)
 {
     srtp_init();
     memset(&srtp_policy, 0, sizeof(srtp_policy_t));
@@ -240,8 +241,10 @@ AmSrtpConnection::~AmSrtpConnection()
         delete dtls_channel;
     }
 
-    if(srtp_session)
+    if(srtp_session) {
         srtp_dealloc(*srtp_session);
+        srtp_session = 0;
+    }
 }
 
 void AmSrtpConnection::create_dtls()
