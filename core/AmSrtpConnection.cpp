@@ -145,12 +145,19 @@ bool dtls_conf::allow_dtls12()  const
 
 std::vector<uint16_t> dtls_conf::srtp_profiles() const
 {
-    std::vector<uint16_t> profiles;
-    profiles.push_back(srtp_profile_aes128_cm_sha1_80);
-    profiles.push_back(srtp_profile_aes128_cm_sha1_32);
-    profiles.push_back(srtp_profile_null_sha1_80);
-    profiles.push_back(srtp_profile_null_sha1_32);
-    return profiles;
+    dtls_settings* settings = 0;
+    if(s_client) {
+        settings = s_client;
+    } else if(s_server) {
+        settings = s_server;
+    }
+
+    if(!settings) {
+        ERROR("incorrect pointer");
+        return std::vector<uint16_t>();
+    }
+
+    return settings->srtp_profiles;
 }
 
 vector<Botan::Certificate_Store*> dtls_conf::trusted_certificate_authorities(const string& type, const string& context)
@@ -214,8 +221,8 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
     sig = sig_;
 }
 
-AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream)
-: rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_channel(0)
+AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
+: rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_channel(0), b_srtcp(srtcp)
 {
     srtp_init();
     memset(&srtp_policy, 0, sizeof(srtp_policy_t));
@@ -232,6 +239,9 @@ AmSrtpConnection::~AmSrtpConnection()
     if(dtls_channel) {
         delete dtls_channel;
     }
+
+    if(srtp_session)
+        srtp_dealloc(*srtp_session);
 }
 
 void AmSrtpConnection::create_dtls()
@@ -276,30 +286,39 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key, unsig
     rtp_mode = SRTP_EXTERNAL_KEY;
     memcpy(c_key, key, SRTP_KEY_SIZE);
     srtp_crypto_policy_set_from_profile_for_rtp(&srtp_policy.rtp, profile);
-    srtp_create(&srtp_session, &srtp_policy);
+    srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_policy.rtcp, profile);
+    srtp_create(srtp_session, &srtp_policy);
 }
 
-bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t size)
+bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
 {
     if(!dtls_channel) {
         return false;
     }
     if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
-        dtls_channel->received_data(data, size);
+        dtls_channel->received_data(data, *size);
     } else if(rtp_mode == SRTP_EXTERNAL_KEY){
-
+        if(!rtcp)
+            srtp_unprotect(*srtp_session, data, (int*)size);
+        else
+            srtp_unprotect_rtcp(*srtp_session, data, (int*)size);
+        return true;
     }
     return false;
 }
 
-bool AmSrtpConnection::on_data_send(uint8_t* data, size_t size)
+bool AmSrtpConnection::on_data_send(uint8_t* data, size_t* size, bool rtcp)
 {
     if(!dtls_channel) {
         return false;
     }
 
     if(rtp_mode == SRTP_EXTERNAL_KEY){
-
+        if(!rtcp)
+            srtp_protect(*srtp_session, data, (int*)size);
+        else
+            srtp_protect_rtcp(*srtp_session, data, (int*)size);
+        return true;
     }
     return false;
 }
@@ -308,7 +327,7 @@ void AmSrtpConnection::tls_emit_data(const uint8_t data[], size_t size)
 {
     assert(rtp_stream);
 
-    rtp_stream->send((unsigned char*)data, size);
+    rtp_stream->send((unsigned char*)data, size, b_srtcp);
 }
 
 void AmSrtpConnection::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)

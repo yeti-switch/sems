@@ -277,6 +277,7 @@ class AmRtpStream
 
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;
+    auto_ptr<AmSrtpConnection> srtcp_connection;
     dtls_server_settings server_settings;
     dtls_client_settings client_settings;
 
@@ -407,7 +408,7 @@ class AmRtpStream
 
     friend class AmSrtpConnection;
     int recv(int fd);
-    int send(unsigned char* buf, int size);
+    int send(unsigned char* buf, int size, bool rtcp);
     int sendmsg(unsigned char* buf, int size);
   public:
 

@@ -76,6 +76,7 @@ public:
     }
 
     std::vector<Protocol> protocols;
+    std::vector<uint16_t> srtp_profiles;
 };
 
 template<typename settings>

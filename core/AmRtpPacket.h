@@ -107,6 +107,7 @@ class AmRtpPacket
     void mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr);
     void mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr);
     void setBuffer(unsigned char* buf, unsigned int b);
+    void setBufferSize(unsigned int b);
 };
 
 #endif
