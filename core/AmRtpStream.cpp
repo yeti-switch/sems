@@ -653,7 +653,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_sent_ts_diff(0),
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
-    srtcp_connection(new AmSrtpConnection(this, true))
+    srtcp_connection(new AmSrtpConnection(this, true)),
+    b_srtp_server(false)
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -830,11 +831,11 @@ void AmRtpStream::setPassiveMode(bool p)
     }
 }
 
-void AmRtpStream::getSdp(SdpMedia& m)
+void AmRtpStream::getSdp(SdpMedia& m, int transport)
 {
     m.port = getLocalPort();
     m.nports = 0;
-    m.transport = TP_RTPAVP;
+    m.transport = transport;
     m.send = !hold;
     m.recv = receiving;
     m.dir = SdpMedia::DirBoth;
@@ -843,16 +844,23 @@ void AmRtpStream::getSdp(SdpMedia& m)
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
     sdp_media_index = index;
-    getSdp(offer);
+    getSdp(offer, TP_RTPAVP);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
+    b_srtp_server = true;
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
 {
     sdp_media_index = index;
-    getSdp(answer);
+    getSdp(answer, offer.transport);
     offer.calcAnswer(payload_provider,answer);
+    if(answer.transport == TP_RTPSAVP) {
+        answer.crypto.push_back(offer.crypto[0]);
+        answer.crypto.back().keys.clear();
+        answer.crypto.back().keys.push_back(SdpKeyInfo(srtp_connection->gen_base64_key(SRTP_KEY_SIZE), 0, 1));
+    }
+    b_srtp_server = false;
 }
 
 int AmRtpStream::init(const AmSdp& local,
@@ -881,16 +889,63 @@ int AmRtpStream::init(const AmSdp& local,
     vector<SdpPayload>::const_iterator sdp_it = local_media.payloads.begin();
     vector<Payload>::iterator p_it = payloads.begin();
 
+    if(local_media.transport == TP_UDPTLSRTPSAVP) {
+        createSrtpConnection(b_srtp_server);
+    }
+    if(local_media.transport == TP_RTPSAVP) {
+        CryptoProfile cprofile = CP_NONE;
+        if(local_media.crypto.size() == 1) {
+            cprofile = local_media.crypto[0].profile;
+        } else if(remote_media.crypto.size() == 1) {
+            cprofile = remote_media.crypto[0].profile;
+        } else if(local_media.crypto.empty()){
+            CLASS_ERROR("local secure audio stream without encryption details");
+        } else if(remote_media.crypto.empty()){
+            CLASS_ERROR("remote secure audio stream without encryption details");
+        } else {
+            CLASS_WARN("secure audio stream with some encryption details, use local first");
+            cprofile = local_media.crypto[0].profile;
+        }
+
+        unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
+        unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
+        for(auto key : local_media.crypto) {
+            if(cprofile == key.profile) {
+                if(key.keys.empty()) {
+                    CLASS_ERROR("local secure audio stream without master key");
+                    break;
+                }
+                srtp_connection->base64_key(key.keys[0].key, local_key, local_key_size);
+                break;
+            }
+        }
+        for(auto key : remote_media.crypto) {
+            if(cprofile == key.profile) {
+                if(key.keys.empty()) {
+                    CLASS_ERROR("local secure audio stream without master key");
+                    break;
+                }
+
+                srtp_connection->base64_key(key.keys[0].key, remote_key, remote_key_size);
+                break;
+            }
+        }
+
+        srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
+    }
     // first pass on local SDP - fill pl_map with intersection of codecs
     while(sdp_it != local_media.payloads.end()) {
 
         int int_pt;
 
-        if (local_media.transport == TP_RTPAVP && sdp_it->payload_type < 20)
+        if ((local_media.transport == TP_RTPAVP ||
+            local_media.transport == TP_UDPTLSRTPSAVP ||
+            local_media.transport == TP_RTPSAVP) && sdp_it->payload_type < 20)
             int_pt = sdp_it->payload_type;
         else int_pt = payload_provider->getDynPayload(sdp_it->encoding_name,
                                                       sdp_it->clock_rate,
                                                       sdp_it->encoding_param);
+
 
         amci_payload_t* a_pl = NULL;
         if(int_pt >= 0)
@@ -2056,7 +2111,6 @@ void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int u
 
 void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 {
-    int err;
     void *buf;
     struct timeval now;
     unsigned int len;

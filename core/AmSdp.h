@@ -120,6 +120,8 @@ struct SdpKeyInfo
     SdpKeyInfo(const SdpKeyInfo& key)
         : key(key.key), lifetime(key.lifetime)
         , mki(key.mki){}
+
+    string print() const;
 };
 
 /**
@@ -139,6 +141,8 @@ struct SdpCrypto
     SdpCrypto(const SdpCrypto& crypto)
         : tag(crypto.tag), profile(crypto.profile)
         , keys(crypto.keys), sp(crypto.sp){}
+
+    string print() const;
 };
 
 /** 

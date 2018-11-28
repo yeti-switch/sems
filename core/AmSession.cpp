@@ -1011,7 +1011,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
     SdpMedia& answer_media = answer.media.back();
 
     if( m_it->type == MT_AUDIO
-	&& m_it->transport == TP_RTPAVP
+	&& m_it->transport != TP_UDPTL
         && audio_1st_stream 
         && (m_it->port != 0) ) {
 
