@@ -96,16 +96,20 @@ public:
         SRTP_EXTERNAL_KEY
     };
 private:
+    static unsigned char mki_id;
     RTP_mode       rtp_mode;
-    unsigned char  c_key[SRTP_KEY_SIZE];
-    srtp_master_key_t mkey[MKI_SIZE];
-    unsigned char mki_id;
+    unsigned char  c_key_s[SRTP_KEY_SIZE];
+    srtp_master_key_t mkey_s[MKI_SIZE];
+    srtp_policy_t srtp_s_policy;
+    srtp_t* srtp_s_session;
+    unsigned char  c_key_r[SRTP_KEY_SIZE];
+    srtp_master_key_t mkey_r[MKI_SIZE];
+    srtp_policy_t srtp_r_policy;
+    srtp_t* srtp_r_session;
 
     Botan::TLS::Channel* dtls_channel;
     AmRtpStream* rtp_stream;
     auto_ptr<dtls_conf> dtls_settings;
-    srtp_t* srtp_session;
-    srtp_policy_t srtp_policy;
     bool b_srtcp;
 protected:
     void create_dtls();
@@ -116,7 +120,10 @@ public:
     RTP_mode get_rtp_mode() { return rtp_mode; }
     void use_dtls(dtls_client_settings* settings);
     void use_dtls(dtls_server_settings* settings);
-    void use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len);
+    void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);
+
+    void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
+    std::string gen_base64_key(unsigned int key_s_len);
 
     bool on_data_recv(uint8_t* data, size_t* size, bool rtcp);
     bool on_data_send(uint8_t* data, size_t* size, bool rtcp);

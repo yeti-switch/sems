@@ -223,6 +223,7 @@ class AmRtpStream
     string             r_host;
     unsigned short     r_port;
     unsigned short     r_rtcp_port;
+    bool               b_srtp_server;
 
     /**
     * Local interface used for this stream
@@ -368,7 +369,7 @@ class AmRtpStream
     void relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_queue);
 
     /** Sets generic parameters on SDP media */
-    void getSdp(SdpMedia& m);
+    void getSdp(SdpMedia& m, int transport);
 
     /** Clear RTP timeout at time recv_time */
     void clearRTPTimeout(struct timeval* recv_time);

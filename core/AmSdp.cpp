@@ -118,6 +118,18 @@ inline string transport_p_2_str(int tp)
   }
 }
 
+inline string profile_t_2_str(int pt)
+{
+  switch(pt){
+  case CP_AES128_CM_SHA1_80: return "AES_CM_128_HMAC_SHA1_80";
+  case CP_AES128_CM_SHA1_32: return "AES_CM_128_HMAC_SHA1_32";
+  case CP_F8128_HMAC_SHA1_80: return "F8_128_HMAC_SHA1_80";
+  case CP_NULL_SHA1_80: return "NULL_HMAC_SHA1_32";
+  case CP_NULL_SHA1_32: return "NULL_HMAC_SHA1_80";
+  default: return "<unknown profile type>";
+  }
+}
+
 bool SdpConnection::operator == (const SdpConnection& other) const
 {
   return network == other.network && addrType == other.addrType 
@@ -160,6 +172,24 @@ bool SdpPayload::operator == (int r)
 {
   DBG("pl == r: payload_type = %i; r = %i\n", payload_type, r);
   return payload_type == r;
+}
+
+string SdpKeyInfo::print() const
+{
+    return "inline:"+ key;
+}
+
+string SdpCrypto::print() const
+{
+    string ret("a=crypto:");
+    ret += int2str(tag);
+    ret += " ";
+    ret += profile_t_2_str(profile);
+    for(auto key:keys) {
+        ret += " ";
+        ret += key.print();
+    }
+    return ret + CRLF;
 }
 
 string SdpAttribute::print() const
@@ -431,39 +461,38 @@ void AmSdp::print(string& body) const
 	 attributes.begin(); a_it != attributes.end(); a_it++) {
     out_buf += a_it->print();
   }
+    for(std::vector<SdpMedia>::const_iterator media_it = media.begin();
+            media_it != media.end(); media_it++) {
 
-  for(std::vector<SdpMedia>::const_iterator media_it = media.begin();
-      media_it != media.end(); media_it++) {
-      
-      out_buf += "m=" + media_t_2_str(media_it->type) + " " + int2str(media_it->port) + " " + transport_p_2_str(media_it->transport);
+        out_buf += "m=" + media_t_2_str(media_it->type) + " " + int2str(media_it->port) + " " + transport_p_2_str(media_it->transport);
 
-      string options;
+        string options;
 
-      if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPAVPF || media_it->transport == TP_RTPSAVP || media_it->transport == TP_RTPSAVPF || media_it->transport == TP_UDPTLSRTPSAVP || media_it->transport == TP_UDPTLSRTPSAVPF) {
-	for(std::vector<SdpPayload>::const_iterator pl_it = media_it->payloads.begin();
-	    pl_it != media_it->payloads.end(); pl_it++) {
+        if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPAVPF || media_it->transport == TP_RTPSAVP || media_it->transport == TP_RTPSAVPF || media_it->transport == TP_UDPTLSRTPSAVP || media_it->transport == TP_UDPTLSRTPSAVPF) {
+            for(std::vector<SdpPayload>::const_iterator pl_it = media_it->payloads.begin();
+                    pl_it != media_it->payloads.end(); pl_it++) {
 
-	  out_buf += " " + int2str(pl_it->payload_type);
+                out_buf += " " + int2str(pl_it->payload_type);
 
-	  // "a=rtpmap:" line
-	  if (!pl_it->encoding_name.empty()) {
-	    options += "a=rtpmap:" + int2str(pl_it->payload_type) + " "
-	      + pl_it->encoding_name + "/" + int2str(pl_it->clock_rate);
+                // "a=rtpmap:" line
+                if (!pl_it->encoding_name.empty()) {
+                    options += "a=rtpmap:" + int2str(pl_it->payload_type) + " "
+                               + pl_it->encoding_name + "/" + int2str(pl_it->clock_rate);
 
-	    if(pl_it->encoding_param > 0){
-	      options += "/" + int2str(pl_it->encoding_param);
-	    }
+                    if(pl_it->encoding_param > 0) {
+                        options += "/" + int2str(pl_it->encoding_param);
+                    }
 
-	    options += "\r\n";
-	  }
-	  
-	  // "a=fmtp:" line
-	  if(pl_it->sdp_format_parameters.size()){
-	    options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
-	      + pl_it->sdp_format_parameters + "\r\n";
-	  }
-	  
-	}
+                    options += "\r\n";
+                }
+
+                // "a=fmtp:" line
+                if(pl_it->sdp_format_parameters.size()) {
+                    options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
+                               + pl_it->sdp_format_parameters + "\r\n";
+                }
+
+            }
       }
       else {
         // for other transports (UDP/UDPTL) just print out fmt
@@ -477,6 +506,10 @@ void AmSdp::print(string& body) const
 
       out_buf += "\r\n" + options;
 
+      for (std::vector<SdpCrypto>::const_iterator c_it=
+                        media_it->crypto.begin(); c_it != media_it->crypto.end(); c_it++) {
+                out_buf += c_it->print();
+      }
       if(media_it->send){
 	if(media_it->recv){
 	  out_buf += "a=sendrecv\r\n";

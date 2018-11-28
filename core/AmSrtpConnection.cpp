@@ -5,6 +5,8 @@
 #include <botan/tls_server.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
+#include <botan/base64.h>
+#include <botan/uuid.h>
 
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
@@ -221,18 +223,28 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
     sig = sig_;
 }
 
+
+unsigned char AmSrtpConnection::mki_id = 1;
+
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
 : rtp_mode(RTP_DEFAULT), rtp_stream(stream)
-, dtls_channel(0), srtp_session(0), b_srtcp(srtcp)
+, dtls_channel(0), srtp_s_session(0), srtp_r_session(0), b_srtcp(srtcp)
 {
     srtp_init();
-    memset(&srtp_policy, 0, sizeof(srtp_policy_t));
-    mki_id = 1;
-    mkey[0].key = c_key;
-    mkey[0].mki_id = &mki_id;
-    mkey[0].mki_size = MKI_SIZE;
-    srtp_policy.keys  = (srtp_master_key_t**)&mkey;
-    srtp_policy.num_master_keys  = 1;
+
+    memset(&srtp_s_policy, 0, sizeof(srtp_policy_t));
+    mkey_s[0].key = c_key_s;
+    mkey_s[0].mki_id = &mki_id;
+    mkey_s[0].mki_size = MKI_SIZE;
+    srtp_s_policy.keys  = (srtp_master_key_t**)&mkey_s;
+    srtp_s_policy.num_master_keys  = 1;
+
+    memset(&srtp_s_policy, 0, sizeof(srtp_policy_t));
+    mkey_r[0].key = c_key_r;
+    mkey_r[0].mki_id = &mki_id;
+    mkey_r[0].mki_size = MKI_SIZE;
+    srtp_r_policy.keys  = (srtp_master_key_t**)&mkey_r;
+    srtp_r_policy.num_master_keys  = 1;
 }
 
 AmSrtpConnection::~AmSrtpConnection()
@@ -241,9 +253,13 @@ AmSrtpConnection::~AmSrtpConnection()
         delete dtls_channel;
     }
 
-    if(srtp_session) {
-        srtp_dealloc(*srtp_session);
-        srtp_session = 0;
+    if(srtp_s_session) {
+        srtp_dealloc(*srtp_s_session);
+        srtp_s_session = 0;
+    }
+    if(srtp_r_session) {
+        srtp_dealloc(*srtp_r_session);
+        srtp_r_session = 0;
     }
 }
 
@@ -268,6 +284,9 @@ void AmSrtpConnection::create_dtls()
 
 void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
 {
+    if(rtp_mode == DTLS_SRTP_SERVER) {
+        return;
+    }
     rtp_mode = DTLS_SRTP_CLIENT;
     dtls_settings.reset(new dtls_conf(settings));
     create_dtls();
@@ -275,22 +294,53 @@ void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
 
 void AmSrtpConnection::use_dtls(dtls_server_settings* settings)
 {
+    if(rtp_mode == DTLS_SRTP_SERVER) {
+        return;
+    }
     rtp_mode = DTLS_SRTP_SERVER;
     dtls_settings.reset(new dtls_conf(settings));
     create_dtls();
 }
 
-void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key, unsigned int key_len)
+void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len)
 {
-    if(key_len < SRTP_KEY_SIZE) {
-        ERROR("srtp keys length less then expected: len - %d", key_len);
+    if(key_s_len < SRTP_KEY_SIZE || key_r_len < SRTP_KEY_SIZE) {
+        ERROR("srtp keys length less then expected: len - %d, %d", key_s_len, key_r_len);
         return;
     }
+
+    memcpy(c_key_s, key_s, SRTP_KEY_SIZE);
+    srtp_crypto_policy_set_from_profile_for_rtp(&srtp_s_policy.rtp, profile);
+    srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_s_policy.rtcp, profile);
+    srtp_create(srtp_s_session, &srtp_s_policy);
+
+    memcpy(c_key_r, key_r, SRTP_KEY_SIZE);
+    srtp_crypto_policy_set_from_profile_for_rtp(&srtp_r_policy.rtp, profile);
+    srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_r_policy.rtcp, profile);
+    srtp_create(srtp_r_session, &srtp_r_policy);
+
     rtp_mode = SRTP_EXTERNAL_KEY;
-    memcpy(c_key, key, SRTP_KEY_SIZE);
-    srtp_crypto_policy_set_from_profile_for_rtp(&srtp_policy.rtp, profile);
-    srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_policy.rtcp, profile);
-    srtp_create(srtp_session, &srtp_policy);
+}
+
+
+void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len)
+{
+    Botan::secure_vector<uint8_t> data = Botan::base64_decode(key);
+    if(data.size() > key_s_len) {
+        CLASS_ERROR("key buffer less base64 decoded key");
+        return;
+    }
+    key_s_len = data.size();
+    memcpy(key_s, data.data(), key_s_len);
+}
+
+std::string AmSrtpConnection::gen_base64_key(unsigned int key_s_len)
+{
+    const Botan::UUID random_uuid(*rand_generator_dtls::instance());
+    const Botan::UUID random_uuid1(*rand_generator_dtls::instance());
+    std::vector<uint8_t> data = random_uuid.binary_value();
+    data.insert(data.end(), random_uuid1.binary_value().begin(), random_uuid1.binary_value().end());
+    return Botan::base64_encode(data);
 }
 
 bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
@@ -302,9 +352,9 @@ bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
         dtls_channel->received_data(data, *size);
     } else if(rtp_mode == SRTP_EXTERNAL_KEY){
         if(!rtcp)
-            srtp_unprotect(*srtp_session, data, (int*)size);
+            srtp_unprotect(*srtp_r_session, data, (int*)size);
         else
-            srtp_unprotect_rtcp(*srtp_session, data, (int*)size);
+            srtp_unprotect_rtcp(*srtp_r_session, data, (int*)size);
         return true;
     }
     return false;
@@ -318,9 +368,9 @@ bool AmSrtpConnection::on_data_send(uint8_t* data, size_t* size, bool rtcp)
 
     if(rtp_mode == SRTP_EXTERNAL_KEY){
         if(!rtcp)
-            srtp_protect(*srtp_session, data, (int*)size);
+            srtp_protect(*srtp_s_session, data, (int*)size);
         else
-            srtp_protect_rtcp(*srtp_session, data, (int*)size);
+            srtp_protect_rtcp(*srtp_s_session, data, (int*)size);
         return true;
     }
     return false;
@@ -349,7 +399,7 @@ bool AmSrtpConnection::tls_session_established(const Botan::TLS::Session& sessio
         rtp_stream->getRPort());
 
     Botan::SymmetricKey key = dtls_channel->key_material_export(rtp_stream->getRHost().c_str(), "", SRTP_KEY_SIZE);
-    use_key((srtp_profile_t)session.dtls_srtp_profile(), (unsigned char*)key.begin(), key.end() - key.begin());
+    use_key((srtp_profile_t)session.dtls_srtp_profile(), (unsigned char*)key.begin(), key.end() - key.begin(), (unsigned char*)key.begin(), key.end() - key.begin());
     return true;
 }
 
