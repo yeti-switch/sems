@@ -223,9 +223,6 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
     sig = sig_;
 }
 
-
-unsigned char AmSrtpConnection::mki_id = 1;
-
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
 : rtp_mode(RTP_DEFAULT), rtp_stream(stream)
 , dtls_channel(0), srtp_s_session(0), srtp_r_session(0), b_srtcp(srtcp)
@@ -233,17 +230,15 @@ AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
     srtp_init();
 
     memset(&srtp_s_policy, 0, sizeof(srtp_policy_t));
-    mkey_s[0].key = c_key_s;
-    mkey_s[0].mki_id = &mki_id;
-    mkey_s[0].mki_size = MKI_SIZE;
-    srtp_s_policy.keys  = (srtp_master_key_t**)&mkey_s;
+    srtp_s_policy.ssrc.value = stream->get_ssrc();
+    srtp_s_policy.ssrc.type = ssrc_any_outbound;
+    srtp_s_policy.key = c_key_s;
     srtp_s_policy.num_master_keys  = 1;
 
-    memset(&srtp_s_policy, 0, sizeof(srtp_policy_t));
-    mkey_r[0].key = c_key_r;
-    mkey_r[0].mki_id = &mki_id;
-    mkey_r[0].mki_size = MKI_SIZE;
-    srtp_r_policy.keys  = (srtp_master_key_t**)&mkey_r;
+    memset(&srtp_r_policy, 0, sizeof(srtp_policy_t));
+    srtp_r_policy.ssrc.value = stream->get_ssrc();
+    srtp_r_policy.ssrc.type = ssrc_any_inbound;
+    srtp_r_policy.key = c_key_r;
     srtp_r_policy.num_master_keys  = 1;
 }
 
@@ -254,11 +249,11 @@ AmSrtpConnection::~AmSrtpConnection()
     }
 
     if(srtp_s_session) {
-        srtp_dealloc(*srtp_s_session);
+        srtp_dealloc(srtp_s_session);
         srtp_s_session = 0;
     }
     if(srtp_r_session) {
-        srtp_dealloc(*srtp_r_session);
+        srtp_dealloc(srtp_r_session);
         srtp_r_session = 0;
     }
 }
@@ -304,20 +299,30 @@ void AmSrtpConnection::use_dtls(dtls_server_settings* settings)
 
 void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len)
 {
-    if(key_s_len < SRTP_KEY_SIZE || key_r_len < SRTP_KEY_SIZE) {
-        ERROR("srtp keys length less then expected: len - %d, %d", key_s_len, key_r_len);
+//    if(key_s_len < SRTP_KEY_SIZE || key_r_len < SRTP_KEY_SIZE) {
+//        ERROR("srtp keys length less then expected: len - %d, %d", key_s_len, key_r_len);
+//        return;
+//    }
+
+    if(srtp_s_session || srtp_r_session) {
         return;
     }
 
     memcpy(c_key_s, key_s, SRTP_KEY_SIZE);
     srtp_crypto_policy_set_from_profile_for_rtp(&srtp_s_policy.rtp, profile);
     srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_s_policy.rtcp, profile);
-    srtp_create(srtp_s_session, &srtp_s_policy);
+    srtp_create(&srtp_s_session, &srtp_s_policy);
+    if(!srtp_s_session) {
+        CLASS_ERROR("srtp session not created");
+    }
 
     memcpy(c_key_r, key_r, SRTP_KEY_SIZE);
     srtp_crypto_policy_set_from_profile_for_rtp(&srtp_r_policy.rtp, profile);
     srtp_crypto_policy_set_from_profile_for_rtcp(&srtp_r_policy.rtcp, profile);
-    srtp_create(srtp_r_session, &srtp_r_policy);
+    srtp_create(&srtp_r_session, &srtp_r_policy);
+    if(!srtp_r_session) {
+        CLASS_ERROR("srtp session not created");
+    }
 
     rtp_mode = SRTP_EXTERNAL_KEY;
 }
@@ -336,42 +341,40 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
 
 std::string AmSrtpConnection::gen_base64_key(unsigned int key_s_len)
 {
-    const Botan::UUID random_uuid(*rand_generator_dtls::instance());
-    const Botan::UUID random_uuid1(*rand_generator_dtls::instance());
-    std::vector<uint8_t> data = random_uuid.binary_value();
-    data.insert(data.end(), random_uuid1.binary_value().begin(), random_uuid1.binary_value().end());
+    unsigned int len = 0;
+    std::vector<uint8_t> data;
+    while(len != key_s_len) {
+        const Botan::UUID random_uuid(*rand_generator_dtls::instance());
+        if(key_s_len < len + random_uuid.binary_value().size()) {
+            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (key_s_len - len));
+        } else {
+            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().end());
+        }
+        len = data.size();
+    }
     return Botan::base64_encode(data);
 }
 
 bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
 {
-    if(!dtls_channel) {
-        return false;
-    }
-    if(rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) {
+    if((rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) && dtls_channel) {
         dtls_channel->received_data(data, *size);
-    } else if(rtp_mode == SRTP_EXTERNAL_KEY){
+    } else if(rtp_mode == SRTP_EXTERNAL_KEY && srtp_r_session){
         if(!rtcp)
-            srtp_unprotect(*srtp_r_session, data, (int*)size);
+            return srtp_unprotect(srtp_r_session, data, (int*)size) == srtp_err_status_ok;
         else
-            srtp_unprotect_rtcp(*srtp_r_session, data, (int*)size);
-        return true;
+            return srtp_unprotect_rtcp(srtp_r_session, data, (int*)size) == srtp_err_status_ok;
     }
     return false;
 }
 
 bool AmSrtpConnection::on_data_send(uint8_t* data, size_t* size, bool rtcp)
 {
-    if(!dtls_channel) {
-        return false;
-    }
-
-    if(rtp_mode == SRTP_EXTERNAL_KEY){
+    if(rtp_mode == SRTP_EXTERNAL_KEY && srtp_s_session){
         if(!rtcp)
-            srtp_protect(*srtp_s_session, data, (int*)size);
+            return srtp_protect(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
         else
-            srtp_protect_rtcp(*srtp_s_session, data, (int*)size);
-        return true;
+            return srtp_protect_rtcp(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
     }
     return false;
 }
