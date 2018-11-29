@@ -932,6 +932,7 @@ int AmRtpStream::init(const AmSdp& local,
         }
 
         srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
+        srtcp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
     }
     // first pass on local SDP - fill pl_map with intersection of codecs
     while(sdp_it != local_media.payloads.end()) {
@@ -1187,6 +1188,15 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         return;
     }
 
+    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+        size_t size = p->getBufferSize();
+        if(!srtp_connection->on_data_recv(p->getBuffer(), &size, false)){
+            mem.freePacket(p);
+            return;
+        }
+        p->setBufferSize(size);
+    }
+
     if (relay_enabled) {
         if (force_receive_dtmf) recvDtmfPacket(p);
 
@@ -1292,15 +1302,6 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         } break; }
     } else {
 #endif // WITH_ZRTP
-
-        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-            size_t size = p->getBufferSize();
-            if(!srtp_connection->on_data_recv(p->getBuffer(), &size, false)){
-                mem.freePacket(p);
-                return;
-            }
-            p->setBufferSize(size);
-        }
 
         if(p->payload == getLocalTelephoneEventPT()) {
             rtp_ev_qu.push(p);
@@ -1517,6 +1518,14 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
     if(session && !session->onBeforeRTPRelay(p,&r_saddr))
         return;
+
+    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+        size_t size = p->getBufferSize();
+        if(!srtp_connection->on_data_send(p->getBuffer(), &size, true)){
+            return;
+        }
+        p->setBufferSize(size);
+    }
 
     if(!relay_raw) {
         rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();

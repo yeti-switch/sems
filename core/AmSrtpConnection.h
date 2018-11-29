@@ -18,7 +18,6 @@ using std::auto_ptr;
 class AmRtpStream;
 
 #define SRTP_KEY_SIZE 32
-#define MKI_SIZE      16
 
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
@@ -96,16 +95,13 @@ public:
         SRTP_EXTERNAL_KEY
     };
 private:
-    static unsigned char mki_id;
     RTP_mode       rtp_mode;
     unsigned char  c_key_s[SRTP_KEY_SIZE];
-    srtp_master_key_t mkey_s[MKI_SIZE];
     srtp_policy_t srtp_s_policy;
-    srtp_t* srtp_s_session;
+    srtp_t srtp_s_session;
     unsigned char  c_key_r[SRTP_KEY_SIZE];
-    srtp_master_key_t mkey_r[MKI_SIZE];
     srtp_policy_t srtp_r_policy;
-    srtp_t* srtp_r_session;
+    srtp_t srtp_r_session;
 
     Botan::TLS::Channel* dtls_channel;
     AmRtpStream* rtp_stream;
