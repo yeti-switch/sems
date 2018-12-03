@@ -1585,7 +1585,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
     if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
         size_t size = p->getBufferSize();
-        if(!srtp_connection->on_data_send(p->getBuffer(), &size, true)){
+        if(!srtp_connection->on_data_send(p->getBuffer(), &size, false)){
             return;
         }
         p->setBufferSize(size);
