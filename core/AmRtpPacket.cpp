@@ -389,12 +389,12 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 
 unsigned char *AmRtpPacket::getData()
 {
-    return &buffer[data_offset];
+    return buffer+data_offset;
 }
 
 unsigned char *AmRtpPacket::getBuffer()
 {
-    return &buffer[0];
+    return buffer;
 }
 
 int AmRtpPacket::compile(unsigned char* data_buf, unsigned int size)
