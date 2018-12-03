@@ -223,12 +223,33 @@ void dtls_conf::set_optional_parameters(std::string sig_, std::string cipher_, s
     sig = sig_;
 }
 
+static void log_handler(srtp_log_level_t level, const char *msg, void *data)
+{
+    char level_char = '?';
+    switch (level) {
+    case srtp_log_level_error:
+        level_char = 'e';
+        break;
+    case srtp_log_level_warning:
+        level_char = 'w';
+        break;
+    case srtp_log_level_info:
+        level_char = 'i';
+        break;
+    case srtp_log_level_debug:
+        level_char = 'd';
+        break;
+    }
+    printf("SRTP-LOG [%c]: %s\n", level_char, msg);
+}
+
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
 : rtp_mode(RTP_DEFAULT), rtp_stream(stream)
 , dtls_channel(0), srtp_s_session(0), srtp_r_session(0), srtp_profile(srtp_profile_reserved), b_srtcp(srtcp)
 {
     srtp_init();
     memset(b_init, 0, sizeof(b_init));
+    srtp_install_log_handler(log_handler, NULL);
 }
 
 AmSrtpConnection::~AmSrtpConnection()
