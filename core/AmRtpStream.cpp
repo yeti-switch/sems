@@ -1513,19 +1513,11 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 {
     // not yet initialized
     // or muted/on-hold
-    if (!l_port || mute || hold)
+    if (!l_port || /*mute ||*/ hold)
         return;
 
     if(session && !session->onBeforeRTPRelay(p,&r_saddr))
         return;
-
-    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-        size_t size = p->getBufferSize();
-        if(!srtp_connection->on_data_send(p->getBuffer(), &size, true)){
-            return;
-        }
-        p->setBufferSize(size);
-    }
 
     if(!relay_raw) {
         rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
@@ -1590,6 +1582,14 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
     } //if(!relay_raw)
 
     p->setAddr(&r_saddr);
+
+    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+        size_t size = p->getBufferSize();
+        if(!srtp_connection->on_data_send(p->getBuffer(), &size, true)){
+            return;
+        }
+        p->setBufferSize(size);
+    }
 
     if(send(p->getBuffer(), p->getBufferSize(), false) < 0){
         CLASS_ERROR("while sending RTP packet to '%s':%i\n",
