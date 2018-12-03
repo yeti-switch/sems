@@ -654,7 +654,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
     srtcp_connection(new AmSrtpConnection(this, true)),
-    b_srtp_server(false)
+    b_srtp_server(false),
+    transport(RTP_AVP)
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -831,7 +832,7 @@ void AmRtpStream::setPassiveMode(bool p)
     }
 }
 
-void AmRtpStream::getSdp(SdpMedia& m, int transport)
+void AmRtpStream::getSdp(SdpMedia& m)
 {
     m.port = getLocalPort();
     m.nports = 0;
@@ -844,18 +845,26 @@ void AmRtpStream::getSdp(SdpMedia& m, int transport)
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
     sdp_media_index = index;
-    getSdp(offer, TP_RTPAVP);
+    getSdp(offer);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
+    if(transport == RTP_SAVP) {
+        SdpCrypto crypto;
+        crypto.tag = 1;
+        crypto.profile = CryptoProfile::CP_AES128_CM_SHA1_80;
+        offer.crypto.push_back(crypto);
+        offer.crypto.back().keys.push_back(SdpKeyInfo(srtp_connection->gen_base64_key(SRTP_KEY_SIZE), 0, 1));
+    }
     b_srtp_server = true;
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
 {
     sdp_media_index = index;
-    getSdp(answer, offer.transport);
+    transport = (MediaTransport)offer.transport;
+    getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    if(answer.transport == TP_RTPSAVP) {
+    if(transport == RTP_SAVP) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         answer.crypto.back().keys.push_back(SdpKeyInfo(srtp_connection->gen_base64_key(SRTP_KEY_SIZE), 0, 1));

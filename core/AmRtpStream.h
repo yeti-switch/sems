@@ -276,6 +276,14 @@ class AmRtpStream
     bool           passive;
     bool           passive_rtcp;
 
+    /**type of rtp transport**/
+    enum MediaTransport
+    {
+        RTP_AVP = TransProt::TP_RTPAVP,
+        RTP_SAVP = TransProt::TP_RTPSAVP,
+        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP
+    } transport;
+
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;
     auto_ptr<AmSrtpConnection> srtcp_connection;
@@ -369,7 +377,7 @@ class AmRtpStream
     void relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_queue);
 
     /** Sets generic parameters on SDP media */
-    void getSdp(SdpMedia& m, int transport);
+    void getSdp(SdpMedia& m);
 
     /** Clear RTP timeout at time recv_time */
     void clearRTPTimeout(struct timeval* recv_time);
@@ -513,6 +521,9 @@ class AmRtpStream
     /** Symmetric RTP & RTCP: passive mode ? */
     void setPassiveMode(bool p);
     bool getPassiveMode() { return passive || passive_rtcp; }
+
+    /** Set using transport */
+    void setTransport(MediaTransport trans) { transport = trans; }
 
     unsigned int get_ssrc() { return l_ssrc; }
 
