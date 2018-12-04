@@ -1,3 +1,10 @@
+sems (1.8.6-2) stable; urgency=low
+
+  * 6c4a5b48b AmLcConfig: fix loglevel applying
+  * e1619f96e AmRtpReceiver: removeStream: put stream context on failed EPOLL_CTL_DEL
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 04 Dec 2018 18:18:11 +0200
+
 sems (1.8.6-1) stable; urgency=low
 
   * AmSdp: parse session-level mode attributes. propagate to the media-level if not exist
