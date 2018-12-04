@@ -741,7 +741,7 @@ int AmLcConfig::readGeneral()
     }
 
     log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
-    log_level = (Log_Level)parse_log_level(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
+    setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
     setLogStderr(cfg_getbool(gen, PARAM_STDERR_NAME));
     setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
 #ifndef DISABLE_SYSLOG_LOG
