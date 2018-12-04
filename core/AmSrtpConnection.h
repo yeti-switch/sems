@@ -135,7 +135,7 @@ public:
     void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);
 
     void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
-    std::string gen_base64_key(unsigned int key_s_len);
+    std::string gen_base64_key(srtp_profile_t profile);
 
     bool on_data_recv(uint8_t* data, size_t* size, bool rtcp);
     bool on_data_send(uint8_t* data, size_t* size, bool rtcp);

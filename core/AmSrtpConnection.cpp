@@ -337,14 +337,16 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
     memcpy(key_s, data.data(), key_s_len);
 }
 
-std::string AmSrtpConnection::gen_base64_key(unsigned int key_s_len)
+std::string AmSrtpConnection::gen_base64_key(srtp_profile_t profile)
 {
     unsigned int len = 0;
     std::vector<uint8_t> data;
-    while(len != key_s_len) {
+    unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
+    master_key_len += srtp_profile_get_master_salt_length(profile);
+    while(len != master_key_len) {
         const Botan::UUID random_uuid(*rand_generator_dtls::instance());
-        if(key_s_len < len + random_uuid.binary_value().size()) {
-            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (key_s_len - len));
+        if(master_key_len < len + random_uuid.binary_value().size()) {
+            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (master_key_len - len));
         } else {
             data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().end());
         }
