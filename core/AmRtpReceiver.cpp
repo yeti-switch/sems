@@ -214,8 +214,6 @@ void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
   if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,NULL)==-1){
       ERROR("removeStream epoll_ctl_del sd = %i error %s",
             sd,strerror(errno));
-      //FIXME: maybe we should put context even after epoll del failure
-      return;
   }
   streams.ctx_put(ctx_idx);
   stream_remove_event.fire();
