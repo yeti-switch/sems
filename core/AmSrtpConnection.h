@@ -19,6 +19,10 @@ class AmRtpStream;
 
 #define SRTP_KEY_SIZE 30
 
+#define SRTP_PACKET_PARSE_ERROR -1
+#define SRTP_PACKET_PARSE_OK 0
+#define SRTP_PACKET_PARSE_RTP 1
+
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
@@ -125,6 +129,7 @@ private:
     bool b_srtcp;
 protected:
     void create_dtls();
+    bool isRtpPacket(uint8_t* data, unsigned int size);
 public:
     AmSrtpConnection(AmRtpStream* stream, bool srtcp);
     ~AmSrtpConnection();
@@ -134,11 +139,11 @@ public:
     void use_dtls(dtls_server_settings* settings);
     void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);
 
-    void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
-    std::string gen_base64_key(srtp_profile_t profile);
+    static void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
+    static std::string gen_base64_key(srtp_profile_t profile);
 
-    bool on_data_recv(uint8_t* data, size_t* size, bool rtcp);
-    bool on_data_send(uint8_t* data, size_t* size, bool rtcp);
+    int on_data_recv(uint8_t* data, unsigned int* size, bool rtcp);
+    bool on_data_send(uint8_t* data, unsigned int* size, bool rtcp);
 
     void tls_emit_data(const uint8_t data[], size_t size);
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
@@ -150,6 +155,7 @@ public:
                                 Botan::Usage_Type usage,
                                 const std::string& hostname,
                                 const Botan::TLS::Policy& policy);
+    virtual void tls_session_activated();
 };
 
 #endif/*AM_SRTP_CONNECTION_H*/
