@@ -293,7 +293,7 @@ int AmRtpStream::ping()
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        size_t size = rp.getBufferSize();
+        unsigned int size = rp.getBufferSize();
         if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false))
             return 2;
         rp.setBufferSize(size);
@@ -355,7 +355,7 @@ int AmRtpStream::compile_and_send(
 #endif
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        size_t size = rp.getBufferSize();
+        unsigned int size = rp.getBufferSize();
         if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
             return 0;
         }
@@ -408,7 +408,7 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
     rp.setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        size_t size = rp.getBufferSize();
+        unsigned int size = rp.getBufferSize();
         if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
             return 0;
         }
@@ -683,6 +683,28 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
 
     recv_msg.msg_control    = recv_ctl_buf;
     recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
+
+    server_settings.protocols.push_back(dtls_settings::DTLSv1);
+    server_settings.protocols.push_back(dtls_settings::DTLSv1_2);
+    server_settings.ca_list.push_back("/etc/sems/ca/ca.crt");
+    server_settings.certificate = "/etc/sems/test.crt";
+    server_settings.certificate_key = "/etc/sems/test.key";
+    server_settings.cipher_list.push_back("AES-256/GCM");
+    server_settings.cipher_list.push_back("AES-256/CCM");
+    server_settings.cipher_list.push_back("AES-256");
+    server_settings.srtp_profiles.push_back(CryptoProfile::CP_AES128_CM_SHA1_32);
+    server_settings.srtp_profiles.push_back(CryptoProfile::CP_AES128_CM_SHA1_80);
+    server_settings.macs_list.push_back("AEAD");
+    server_settings.require_client_certificate = false;
+    server_settings.verify_client_certificate = false;
+
+    client_settings.protocols.push_back(dtls_settings::DTLSv1);
+    client_settings.protocols.push_back(dtls_settings::DTLSv1_2);
+    client_settings.certificate = "/etc/sems/test.crt";
+    client_settings.certificate_key = "/etc/sems/test.key";
+    client_settings.ca_list.push_back("/etc/sems/ca/ca.crt");
+    client_settings.verify_certificate_chain = false;
+    client_settings.verify_certificate_cn = false;
 }
 
 AmRtpStream::~AmRtpStream()
@@ -853,7 +875,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         crypto.tag = 1;
         crypto.profile = CryptoProfile::CP_AES128_CM_SHA1_80;
         offer.crypto.push_back(crypto);
-        offer.crypto.back().keys.push_back(SdpKeyInfo(srtp_connection->gen_base64_key((srtp_profile_t)crypto.profile), 0, 1));
+        offer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile), 0, 1));
     }
     b_srtp_server = true;
 }
@@ -867,9 +889,9 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     if(transport == RTP_SAVP) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
-        answer.crypto.back().keys.push_back(SdpKeyInfo(srtp_connection->gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+        answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
     }
-    b_srtp_server = false;
+    b_srtp_server = true;
 }
 
 int AmRtpStream::init(const AmSdp& local,
@@ -898,51 +920,6 @@ int AmRtpStream::init(const AmSdp& local,
     vector<SdpPayload>::const_iterator sdp_it = local_media.payloads.begin();
     vector<Payload>::iterator p_it = payloads.begin();
 
-    if(local_media.transport == TP_UDPTLSRTPSAVP) {
-        createSrtpConnection(b_srtp_server);
-    }
-    if(local_media.transport == TP_RTPSAVP) {
-        CryptoProfile cprofile = CP_NONE;
-        if(local_media.crypto.size() == 1) {
-            cprofile = local_media.crypto[0].profile;
-        } else if(remote_media.crypto.size() == 1) {
-            cprofile = remote_media.crypto[0].profile;
-        } else if(local_media.crypto.empty()){
-            CLASS_ERROR("local secure audio stream without encryption details");
-        } else if(remote_media.crypto.empty()){
-            CLASS_ERROR("remote secure audio stream without encryption details");
-        } else {
-            CLASS_WARN("secure audio stream with some encryption details, use local first");
-            cprofile = local_media.crypto[0].profile;
-        }
-
-        unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
-        unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
-        for(auto key : local_media.crypto) {
-            if(cprofile == key.profile) {
-                if(key.keys.empty()) {
-                    CLASS_ERROR("local secure audio stream without master key");
-                    break;
-                }
-                srtp_connection->base64_key(key.keys[0].key, local_key, local_key_size);
-                break;
-            }
-        }
-        for(auto key : remote_media.crypto) {
-            if(cprofile == key.profile) {
-                if(key.keys.empty()) {
-                    CLASS_ERROR("local secure audio stream without master key");
-                    break;
-                }
-
-                srtp_connection->base64_key(key.keys[0].key, remote_key, remote_key_size);
-                break;
-            }
-        }
-
-        srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
-        srtcp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
-    }
     // first pass on local SDP - fill pl_map with intersection of codecs
     while(sdp_it != local_media.payloads.end()) {
 
@@ -1072,6 +1049,54 @@ int AmRtpStream::init(const AmSdp& local,
 
     local_telephone_event_pt.reset(local.telephoneEventPayload());
 
+    CLASS_DBG("use transport = %d",
+        local_media.transport);
+    if(local_media.transport == TP_UDPTLSRTPSAVP) {
+        createSrtpConnection(b_srtp_server);
+    }
+    else if(local_media.transport == TP_RTPSAVP) {
+        CryptoProfile cprofile = CP_NONE;
+        if(local_media.crypto.size() == 1) {
+            cprofile = local_media.crypto[0].profile;
+        } else if(remote_media.crypto.size() == 1) {
+            cprofile = remote_media.crypto[0].profile;
+        } else if(local_media.crypto.empty()){
+            CLASS_ERROR("local secure audio stream without encryption details");
+        } else if(remote_media.crypto.empty()){
+            CLASS_ERROR("remote secure audio stream without encryption details");
+        } else {
+            CLASS_WARN("secure audio stream with some encryption details, use local first");
+            cprofile = local_media.crypto[0].profile;
+        }
+
+        unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
+        unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
+        for(auto key : local_media.crypto) {
+            if(cprofile == key.profile) {
+                if(key.keys.empty()) {
+                    CLASS_ERROR("local secure audio stream without master key");
+                    break;
+                }
+                AmSrtpConnection::base64_key(key.keys[0].key, local_key, local_key_size);
+                break;
+            }
+        }
+        for(auto key : remote_media.crypto) {
+            if(cprofile == key.profile) {
+                if(key.keys.empty()) {
+                    CLASS_ERROR("local secure audio stream without master key");
+                    break;
+                }
+
+                AmSrtpConnection::base64_key(key.keys[0].key, remote_key, remote_key_size);
+                break;
+            }
+        }
+
+        srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
+        srtcp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
+    }
+
     CLASS_DBG("recv = %d, send = %d",
         local_media.recv, local_media.send);
 
@@ -1198,8 +1223,8 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
     }
 
     if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-        size_t size = p->getBufferSize();
-        if(!srtp_connection->on_data_recv(p->getBuffer(), &size, false)){
+        unsigned int size = p->getBufferSize();
+        if(srtp_connection->on_data_recv(p->getBuffer(), &size, false) == SRTP_PACKET_PARSE_ERROR){
             mem.freePacket(p);
             return;
         }
@@ -1425,15 +1450,13 @@ void AmRtpStream::recvPacket(int fd)
         if(fd == l_rtcp_sd &&
             (srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
             srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
-            srtcp_connection->on_data_recv(buffer, (size_t*)&b_size, true);
-            return;
+            if(srtcp_connection->on_data_recv(buffer, &b_size, true) != SRTP_PACKET_PARSE_RTP) return;
         }
 
         if(fd == l_sd &&
             (srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
             srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
-            srtp_connection->on_data_recv(buffer, (size_t*)&b_size, false);
-            return;
+            if(srtp_connection->on_data_recv(buffer, &b_size, false) != SRTP_PACKET_PARSE_RTP) return;
         }
 
         AmRtpPacket* p = mem.newPacket();
@@ -1462,8 +1485,8 @@ void AmRtpStream::recvPacket(int fd)
 
         if(fd == l_rtcp_sd) {
             if(srtcp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-                size_t size = p->getBufferSize();
-                if(!srtcp_connection->on_data_recv(p->getBuffer(), &size, true)){
+                unsigned int size = p->getBufferSize();
+                if(srtcp_connection->on_data_recv(p->getBuffer(), &size, true) == SRTP_PACKET_PARSE_ERROR){
                     mem.freePacket(p);
                     return;
                 }
@@ -1494,8 +1517,8 @@ void AmRtpStream::recvPacket(int fd)
             mem.freePacket(p);
         } else if(parse_res==RTP_PACKET_PARSE_RTCP) {
             if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-                size_t size = p->getBufferSize();
-                if(!srtp_connection->on_data_recv(p->getBuffer(), &size, true)){
+                unsigned int size = p->getBufferSize();
+                if(srtp_connection->on_data_recv(p->getBuffer(), &size, true) == SRTP_PACKET_PARSE_ERROR){
                     mem.freePacket(p);
                     return;
                 }
@@ -1593,7 +1616,7 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
     p->setAddr(&r_saddr);
 
     if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-        size_t size = p->getBufferSize();
+        unsigned int size = p->getBufferSize();
         if(!srtp_connection->on_data_send(p->getBuffer(), &size, false)){
             return;
         }
@@ -2166,7 +2189,7 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     rtp_stats.unlock();
 
     if(srtcp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        if(!srtcp_connection->on_data_send((unsigned char*)buf, (size_t*)&len, true)) {
+        if(!srtcp_connection->on_data_send((unsigned char*)buf, &len, true)) {
             return;
         }
     }

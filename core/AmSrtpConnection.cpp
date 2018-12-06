@@ -7,6 +7,7 @@
 #include <botan/dl_group.h>
 #include <botan/base64.h>
 #include <botan/uuid.h>
+#include "rtp/rtp.h"
 
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
@@ -244,7 +245,7 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
 }
 
 AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
-: rtp_mode(RTP_DEFAULT), rtp_stream(stream)
+: rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_settings(0)
 , dtls_channel(0), srtp_s_session(0), srtp_r_session(0), srtp_profile(srtp_profile_reserved), b_srtcp(srtcp)
 {
     srtp_init();
@@ -276,14 +277,22 @@ void AmSrtpConnection::create_dtls()
                                                 Botan::TLS::Server_Information(rtp_stream->getRHost().c_str(), rtp_stream->getRPort()),
                                                 Botan::TLS::Protocol_Version::DTLS_V12);
         } else if(rtp_mode == DTLS_SRTP_SERVER){
-            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), false);
+            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), true);
         } else {
             ERROR("incorrect mode before creation dtls:%d", rtp_mode);
         }
     } catch(Botan::Exception& exc) {
-      ERROR("unforseen error in dtls:%s",
-                      exc.what());
-      dtls_channel = 0;
+        ERROR("unforseen error in dtls:%s",
+                        exc.what());
+        dtls_channel = 0;
+    }
+}
+
+bool AmSrtpConnection::isRtpPacket(uint8_t* data, unsigned int size)
+{
+    rtp_hdr_t* rtp = (rtp_hdr_t*)data;
+    if(rtp->version == RTP_VERSION) {
+        return true;
     }
 }
 
@@ -293,7 +302,14 @@ void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
         return;
     }
     rtp_mode = DTLS_SRTP_CLIENT;
-    dtls_settings.reset(new dtls_conf(settings));
+    try {
+        dtls_settings.reset(new dtls_conf(settings));
+    } catch(Botan::Exception& exc) {
+        ERROR("unforseen error in dtls:%s",
+                        exc.what());
+        return;
+    }
+
     create_dtls();
 }
 
@@ -303,7 +319,13 @@ void AmSrtpConnection::use_dtls(dtls_server_settings* settings)
         return;
     }
     rtp_mode = DTLS_SRTP_SERVER;
-    dtls_settings.reset(new dtls_conf(settings));
+    try {
+        dtls_settings.reset(new dtls_conf(settings));
+    } catch(Botan::Exception& exc) {
+        ERROR("unforseen error in dtls:%s",
+                        exc.what());
+        return;
+    }
     create_dtls();
 }
 
@@ -313,14 +335,23 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, uns
         return;
     }
 
+    unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
+    master_key_len += srtp_profile_get_master_salt_length(profile);
+    if(master_key_len != key_s_len || master_key_len != key_r_len) {
+        CLASS_ERROR("srtp key not corrected, another size: needed %u in fact local-%u, remote-%u",
+                    master_key_len, key_s_len, key_r_len);
+        return;
+    }
 
     if (srtp_create(&srtp_s_session, NULL) != srtp_err_status_ok ||
         srtp_create(&srtp_r_session, NULL) != srtp_err_status_ok) {
         CLASS_ERROR("srtp session not created");
         return;
     }
-    memcpy(c_key_s, key_s, SRTP_KEY_SIZE);
-    memcpy(c_key_r, key_r, SRTP_KEY_SIZE);
+
+
+    memcpy(c_key_s, key_s, key_s_len);
+    memcpy(c_key_r, key_r, key_r_len);
     srtp_profile = profile;
     rtp_mode = SRTP_EXTERNAL_KEY;
 }
@@ -330,7 +361,7 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
 {
     Botan::secure_vector<uint8_t> data = Botan::base64_decode(key);
     if(data.size() > key_s_len) {
-        CLASS_ERROR("key buffer less base64 decoded key");
+        ERROR("key buffer less base64 decoded key");
         return;
     }
     key_s_len = data.size();
@@ -355,7 +386,7 @@ std::string AmSrtpConnection::gen_base64_key(srtp_profile_t profile)
     return Botan::base64_encode(data);
 }
 
-bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
+int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
 {
     if(!b_init[1] && rtp_mode == SRTP_EXTERNAL_KEY) {
         CLASS_INFO("create srtp stream for receving stream");
@@ -370,23 +401,31 @@ bool AmSrtpConnection::on_data_recv(uint8_t* data, size_t* size, bool rtcp)
         policy.ssrc.type = ssrc_any_inbound;
         if(srtp_add_stream(srtp_r_session, &policy) != srtp_err_status_ok) {
             CLASS_ERROR("srtp recv stream not added");
-            return false;
+            return SRTP_PACKET_PARSE_ERROR;
         }
         b_init[1] = true;
     }
 
     if((rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) && dtls_channel) {
-        dtls_channel->received_data(data, *size);
+        if(isRtpPacket(data, *size)) return SRTP_PACKET_PARSE_RTP;
+        try {
+            dtls_channel->received_data(data, *size);
+        } catch(Botan::Exception& exc) {
+            ERROR("unforseen error in dtls:%s",
+                            exc.what());
+            return SRTP_PACKET_PARSE_ERROR;
+        }
+        return SRTP_PACKET_PARSE_OK;
     } else if(rtp_mode == SRTP_EXTERNAL_KEY && srtp_r_session){
         if(!rtcp)
-            return srtp_unprotect(srtp_r_session, data, (int*)size) == srtp_err_status_ok;
+            return (srtp_unprotect(srtp_r_session, data, (int*)size) == srtp_err_status_ok) ? SRTP_PACKET_PARSE_OK : SRTP_PACKET_PARSE_ERROR;
         else
-            return srtp_unprotect_rtcp(srtp_r_session, data, (int*)size) == srtp_err_status_ok;
+            return (srtp_unprotect_rtcp(srtp_r_session, data, (int*)size) == srtp_err_status_ok) ? SRTP_PACKET_PARSE_OK : SRTP_PACKET_PARSE_ERROR;
     }
-    return false;
+    return SRTP_PACKET_PARSE_ERROR;
 }
 
-bool AmSrtpConnection::on_data_send(uint8_t* data, size_t* size, bool rtcp)
+bool AmSrtpConnection::on_data_send(uint8_t* data, unsigned int* size, bool rtcp)
 {
 
     if(!b_init[0] && rtp_mode == SRTP_EXTERNAL_KEY) {
@@ -437,9 +476,29 @@ bool AmSrtpConnection::tls_session_established(const Botan::TLS::Session& sessio
         rtp_stream->getRHost().c_str(),
         rtp_stream->getRPort());
 
-    Botan::SymmetricKey key = dtls_channel->key_material_export(rtp_stream->getRHost().c_str(), "", SRTP_KEY_SIZE);
-    use_key((srtp_profile_t)session.dtls_srtp_profile(), (unsigned char*)key.begin(), key.end() - key.begin(), (unsigned char*)key.begin(), key.end() - key.begin());
+    srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();
     return true;
+}
+
+void AmSrtpConnection::tls_session_activated()
+{
+    unsigned int key_len = srtp_profile_get_master_key_length(srtp_profile);
+    unsigned int salt_size = srtp_profile_get_master_salt_length(srtp_profile);
+    unsigned int export_key_size = key_len*2 + salt_size*2;
+    Botan::SymmetricKey key = dtls_channel->key_material_export("EXTRACTOR-dtls_srtp", "", export_key_size);
+    std::vector<uint8_t> local_key, remote_key;
+    if(dtls_settings->s_server) {
+        remote_key.insert(remote_key.end(), key.begin(), key.begin() + key_len);
+        local_key.insert(local_key.end(), key.begin() + key_len, key.begin() + key_len*2);
+        remote_key.insert(remote_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
+        local_key.insert(local_key.end(), key.begin() + key_len*2 + salt_size, key.end());
+    } else {
+        local_key.insert(local_key.end(), key.begin(), key.begin() + key_len);
+        remote_key.insert(remote_key.end(), key.begin() + key_len, key.begin() + key_len*2);
+        local_key.insert(local_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
+        remote_key.insert(remote_key.end(), key.begin() + key_len*2 + salt_size, key.end());
+    }
+    use_key(srtp_profile, (unsigned char*)local_key.data(), local_key.size(), (unsigned char*)remote_key.data(), remote_key.size());
 }
 
 void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
