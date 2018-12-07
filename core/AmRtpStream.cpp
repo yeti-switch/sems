@@ -875,6 +875,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         crypto.profile = CryptoProfile::CP_AES128_CM_SHA1_80;
         offer.crypto.push_back(crypto);
         offer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile), 0, 1));
+    } else {
         offer.setup = SdpMedia::DirPassive;
     }
 }
@@ -889,6 +890,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+    } else if(transport == RTP_UDPTLSAVP) {
         answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
     }
 }
