@@ -168,6 +168,11 @@ string SdpMedia::type2str(int type)
   return media_t_2_str(type);
 }
 
+TransProt SdpMedia::str2transport(string type)
+{
+    return transport_type(type);
+}
+
 bool SdpPayload::operator == (int r)
 {
   DBG("pl == r: payload_type = %i; r = %i\n", payload_type, r);
@@ -537,6 +542,13 @@ void AmSdp::print(string& body) const
       case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
       case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
       case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
+      case SdpMedia::DirUndefined: break;
+      }
+
+      switch (media_it->setup) {
+      case SdpMedia::DirActive:  out_buf += "a=setup:active\r\n"; break;
+      case SdpMedia::DirPassive: out_buf += "a=setup:passive\r\n"; break;
+      case SdpMedia::DirBoth:
       case SdpMedia::DirUndefined: break;
       }
   }
@@ -1360,19 +1372,29 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
           attr_line = next;
       }
       media.crypto.push_back(crypto);
-  } else if (attr == "direction") {
+  } else if (attr == "direction" ||
+            attr == "setup") {
     if (parsing) {
       size_t dir_len = 0;
       next = skip_till_next_line(attr_line, dir_len);
       string value(attr_line, dir_len);
       if (value == "active") {
-	media.dir=SdpMedia::DirActive;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirActive;
+          else
+            media.setup=SdpMedia::DirActive;
 	// DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (value == "passive") {
-	media.dir=SdpMedia::DirPassive;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirPassive;
+          else
+            media.setup=SdpMedia::DirPassive;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (attr == "both") {
-	media.dir=SdpMedia::DirBoth;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirBoth;
+          else
+            media.setup=SdpMedia::DirBoth;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else {
 	DBG("found unknown value for media attribute 'direction'\n");

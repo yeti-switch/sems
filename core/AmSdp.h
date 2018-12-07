@@ -229,6 +229,7 @@ struct SdpMedia
   int           transport;
   SdpConnection conn; // c=
   Direction     dir;  // a=direction
+  Direction     setup;
   string        fmt;  // format in case proto != RTP/AVP or RTP/SAVP
 
   // sendrecv|sendonly|recvonly|inactive
@@ -245,15 +246,15 @@ struct SdpMedia
   bool operator == (const SdpMedia& other) const;
 
   SdpMedia()
-    : conn(), dir(DirUndefined), type(MT_NONE), transport(TP_NONE),
-      send(true), recv(true), has_mode_attribute(false)
+    : conn(), dir(DirUndefined), type(MT_NONE), setup(DirUndefined),
+      transport(TP_NONE), send(true), recv(true), has_mode_attribute(false)
   {}
 
   /** pretty print */
   string debugPrint() const;
 
   static string type2str(int type);
-
+  static TransProt str2transport(string type);
   /**
    * Checks which payloads are compatible with the payload provider,
    * inserts them into the answer, compute send/recv attributes
