@@ -273,9 +273,9 @@ void AmSrtpConnection::create_dtls()
 {
     try {
         if(rtp_mode == DTLS_SRTP_CLIENT) {
-            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
-                                                Botan::TLS::Server_Information(rtp_stream->getRHost().c_str(), rtp_stream->getRPort()),
-                                                Botan::TLS::Protocol_Version::DTLS_V12);
+           dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
+                                               Botan::TLS::Server_Information(rtp_stream->getRHost().c_str(), rtp_stream->getRPort()),
+                                               Botan::TLS::Protocol_Version::DTLS_V12);
         } else if(rtp_mode == DTLS_SRTP_SERVER){
             dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), true);
         } else {
@@ -409,7 +409,10 @@ int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
     if((rtp_mode == DTLS_SRTP_SERVER || rtp_mode == DTLS_SRTP_CLIENT) && dtls_channel) {
         if(isRtpPacket(data, *size)) return SRTP_PACKET_PARSE_RTP;
         try {
-            dtls_channel->received_data(data, *size);
+            size_t res = dtls_channel->received_data(data, *size);
+            if(res > 0) {
+                CLASS_DBG("need else %llu", res);
+            }
         } catch(Botan::Exception& exc) {
             ERROR("unforseen error in dtls:%s",
                             exc.what());
@@ -492,7 +495,7 @@ void AmSrtpConnection::tls_session_activated()
         local_key.insert(local_key.end(), key.begin() + key_len, key.begin() + key_len*2);
         remote_key.insert(remote_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
         local_key.insert(local_key.end(), key.begin() + key_len*2 + salt_size, key.end());
-    } else {
+    } else {//TODO: need approve for client side,
         local_key.insert(local_key.end(), key.begin(), key.begin() + key_len);
         remote_key.insert(remote_key.end(), key.begin() + key_len, key.begin() + key_len*2);
         local_key.insert(local_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);

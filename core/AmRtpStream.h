@@ -223,7 +223,6 @@ class AmRtpStream
     string             r_host;
     unsigned short     r_port;
     unsigned short     r_rtcp_port;
-    bool               b_srtp_server;
 
     /**
     * Local interface used for this stream
@@ -523,7 +522,7 @@ class AmRtpStream
     bool getPassiveMode() { return passive || passive_rtcp; }
 
     /** Set using transport */
-    void setTransport(MediaTransport trans) { transport = trans; }
+    void setTransport(TransProt trans) { transport = (MediaTransport)trans; }
 
     unsigned int get_ssrc() { return l_ssrc; }
 

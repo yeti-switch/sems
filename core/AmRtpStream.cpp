@@ -654,7 +654,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
     srtcp_connection(new AmSrtpConnection(this, true)),
-    b_srtp_server(false),
     transport(RTP_AVP)
 {
 
@@ -876,8 +875,8 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         crypto.profile = CryptoProfile::CP_AES128_CM_SHA1_80;
         offer.crypto.push_back(crypto);
         offer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile), 0, 1));
+        offer.setup = SdpMedia::DirPassive;
     }
-    b_srtp_server = true;
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
@@ -890,8 +889,8 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+        answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
     }
-    b_srtp_server = true;
 }
 
 int AmRtpStream::init(const AmSdp& local,
@@ -1051,8 +1050,20 @@ int AmRtpStream::init(const AmSdp& local,
 
     CLASS_DBG("use transport = %d",
         local_media.transport);
+    CLASS_DBG("local direction = %u, remote direction = %u",
+        local_media.dir, remote_media.dir);
+    CLASS_DBG("local setup = %u, remote setup = %u",
+        local_media.setup, remote_media.setup);
+
     if(local_media.transport == TP_UDPTLSRTPSAVP) {
-        createSrtpConnection(b_srtp_server);
+        if((local_media.setup == SdpMedia::DirActive && remote_media.setup != SdpMedia::DirActive) ||
+           (remote_media.setup == SdpMedia::DirPassive && local_media.setup != SdpMedia::DirPassive))
+            createSrtpConnection(false);
+        else if((local_media.setup == SdpMedia::DirPassive && remote_media.setup != SdpMedia::DirPassive) ||
+                (remote_media.setup == SdpMedia::DirActive && local_media.setup != SdpMedia::DirActive))
+            createSrtpConnection(true);
+        else
+            CLASS_ERROR("dtls setup in sdp attribute not negitiate");
     }
     else if(local_media.transport == TP_RTPSAVP) {
         CryptoProfile cprofile = CP_NONE;
