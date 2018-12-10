@@ -193,6 +193,11 @@ void AmRtpStream::setLocalPort(unsigned short p)
         }
     }
 
+    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[laddr_if]);
+    server_settings = rtpinfo->server_settings;
+    client_settings = rtpinfo->client_settings;
+    srtp_profiles = rtpinfo->profiles;
+
     int retry = 10;
     unsigned short port = 0;
 
@@ -682,28 +687,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
 
     recv_msg.msg_control    = recv_ctl_buf;
     recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
-
-    server_settings.protocols.push_back(dtls_settings::DTLSv1);
-    server_settings.protocols.push_back(dtls_settings::DTLSv1_2);
-    server_settings.ca_list.push_back("/etc/sems/ca/ca.crt");
-    server_settings.certificate = "/etc/sems/test.crt";
-    server_settings.certificate_key = "/etc/sems/test.key";
-    server_settings.cipher_list.push_back("AES-256/GCM");
-    server_settings.cipher_list.push_back("AES-256/CCM");
-    server_settings.cipher_list.push_back("AES-256");
-    server_settings.srtp_profiles.push_back(CryptoProfile::CP_AES128_CM_SHA1_32);
-    server_settings.srtp_profiles.push_back(CryptoProfile::CP_AES128_CM_SHA1_80);
-    server_settings.macs_list.push_back("AEAD");
-    server_settings.require_client_certificate = false;
-    server_settings.verify_client_certificate = false;
-
-    client_settings.protocols.push_back(dtls_settings::DTLSv1);
-    client_settings.protocols.push_back(dtls_settings::DTLSv1_2);
-    client_settings.certificate = "/etc/sems/test.crt";
-    client_settings.certificate_key = "/etc/sems/test.key";
-    client_settings.ca_list.push_back("/etc/sems/ca/ca.crt");
-    client_settings.verify_certificate_chain = false;
-    client_settings.verify_certificate_cn = false;
 }
 
 AmRtpStream::~AmRtpStream()
@@ -870,11 +853,17 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
     if(transport == RTP_SAVP) {
-        SdpCrypto crypto;
-        crypto.tag = 1;
-        crypto.profile = CryptoProfile::CP_AES128_CM_SHA1_80;
-        offer.crypto.push_back(crypto);
-        offer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile), 0, 1));
+        for(auto profile : srtp_profiles) {
+            SdpCrypto crypto;
+            crypto.tag = 1;
+            crypto.profile = profile;
+            std::string key = AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile);
+            if(key.empty()) {
+                continue;
+            }
+            offer.crypto.push_back(crypto);
+            offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
+        }
     } else {
         offer.setup = SdpMedia::DirPassive;
     }
@@ -899,7 +888,6 @@ int AmRtpStream::init(const AmSdp& local,
     const AmSdp& remote,
     bool force_passive_mode)
 {
-
     if((sdp_media_index < 0) ||
        ((unsigned)sdp_media_index >= local.media.size()) ||
        ((unsigned)sdp_media_index >= remote.media.size()))
