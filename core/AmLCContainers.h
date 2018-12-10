@@ -8,6 +8,7 @@
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 #include "sems.h"
+#include "AmSdp.h"
 
 class IP_info
 {
@@ -258,7 +259,11 @@ class RTP_info : public MEDIA_info
 {
 public:
     RTP_info() : MEDIA_info(RTP){}
-    RTP_info(const RTP_info& info) : MEDIA_info(info){}
+    RTP_info(const RTP_info& info)
+    : MEDIA_info(info)
+    , profiles(info.profiles)
+    , server_settings(info.server_settings)
+    , client_settings(info.client_settings){}
     virtual ~RTP_info(){}
 
     static RTP_info* toMEDIA_RTP(MEDIA_info* info)
@@ -266,12 +271,17 @@ public:
         if(info->mtype == RTP) {
             return static_cast<RTP_info*>(info);
         }
+
         return 0;
     }
 
     virtual IP_info* Clone(){
         return new RTP_info(*this);
     }
+
+    dtls_client_settings client_settings;
+    dtls_server_settings server_settings;
+    std::vector<CryptoProfile> profiles;
 };
 
 class RTSP_info : public MEDIA_info

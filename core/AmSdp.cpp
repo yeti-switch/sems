@@ -197,6 +197,11 @@ string SdpCrypto::print() const
     return ret + CRLF;
 }
 
+CryptoProfile SdpCrypto::str2profile(string str)
+{
+    return crypto_profile(str);
+}
+
 string SdpAttribute::print() const
 {
   if (value.empty())
