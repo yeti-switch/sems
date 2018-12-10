@@ -143,6 +143,8 @@ struct SdpCrypto
         , keys(crypto.keys), sp(crypto.sp){}
 
     string print() const;
+
+    static CryptoProfile str2profile(string str);
 };
 
 /** 
