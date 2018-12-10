@@ -878,7 +878,14 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     if(transport == RTP_SAVP) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
-        answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+        for(auto profile : srtp_profiles) {
+            if(profile == answer.crypto[0].profile) {
+                answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+            }
+        }
+        if(answer.crypto.back().keys.empty()) {
+            throw AmSession::Exception(488,"no compatible srtp profile");
+        }
     } else if(transport == RTP_UDPTLSAVP) {
         answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
     }
