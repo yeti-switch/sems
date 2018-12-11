@@ -197,6 +197,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
     server_settings = rtpinfo->server_settings;
     client_settings = rtpinfo->client_settings;
     srtp_profiles = rtpinfo->profiles;
+    srtp_enable = rtpinfo->srtp_enable;
 
     int retry = 10;
     unsigned short port = 0;
@@ -659,7 +660,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
     srtcp_connection(new AmSrtpConnection(this, true)),
-    transport(RTP_AVP)
+    transport(RTP_AVP),
+    srtp_enable(true)
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -852,7 +854,9 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     getSdp(offer);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
-    if(transport == RTP_SAVP) {
+    if(transport != RTP_AVP && !srtp_enable) {
+        offer.transport = RTP_AVP;
+    } else if(transport == RTP_SAVP) {
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -864,7 +868,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
             offer.crypto.push_back(crypto);
             offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else {
+    } else if(transport == RTP_UDPTLSAVP){
         offer.setup = SdpMedia::DirPassive;
     }
 }
@@ -875,7 +879,9 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     transport = (MediaTransport)offer.transport;
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    if(transport == RTP_SAVP) {
+    if(transport != RTP_AVP && !srtp_enable) {
+        answer.transport = RTP_AVP;
+    } else if(transport == RTP_SAVP) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         for(auto profile : srtp_profiles) {
