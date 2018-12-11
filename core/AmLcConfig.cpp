@@ -1135,6 +1135,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     //RTP specific opts
     if(rtpinfo) {
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
+        rtpinfo->srtp_enable = cfg_getbool(srtp, PARAM_ENABLE_SRTP_NAME);
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
         for(int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
             rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));

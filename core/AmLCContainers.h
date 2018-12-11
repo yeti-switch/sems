@@ -258,12 +258,13 @@ private:
 class RTP_info : public MEDIA_info
 {
 public:
-    RTP_info() : MEDIA_info(RTP){}
+    RTP_info() : MEDIA_info(RTP), srtp_enable(true){}
     RTP_info(const RTP_info& info)
     : MEDIA_info(info)
     , profiles(info.profiles)
     , server_settings(info.server_settings)
-    , client_settings(info.client_settings){}
+    , client_settings(info.client_settings)
+    , srtp_enable(info.srtp_enable){}
     virtual ~RTP_info(){}
 
     static RTP_info* toMEDIA_RTP(MEDIA_info* info)
@@ -282,6 +283,7 @@ public:
     dtls_client_settings client_settings;
     dtls_server_settings server_settings;
     std::vector<CryptoProfile> profiles;
+    bool srtp_enable;
 };
 
 class RTSP_info : public MEDIA_info

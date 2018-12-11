@@ -289,6 +289,7 @@ class AmRtpStream
     dtls_server_settings server_settings;
     dtls_client_settings client_settings;
     vector<CryptoProfile> srtp_profiles;
+    bool srtp_enable;
 
     /** mute && port == 0 */
     bool           hold;
