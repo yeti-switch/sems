@@ -64,7 +64,7 @@ Please delete them.")
 ENDIF(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
 
 OPTION(SEMS_USE_SPANDSP       "Build with spandsp" ON)
-OPTION(SEMS_USE_LIBSAMPLERATE "Build with libsamplerate" OFF)
+OPTION(SEMS_USE_LIBSAMPLERATE "Build with libsamplerate" ON)
 OPTION(SEMS_USE_ZRTP          "Build with ZRTP" OFF)
 OPTION(SEMS_USE_MP3           "Build with Lame MP3" ON)
 OPTION(SEMS_USE_ILBC          "Build with iLBC library (fallback to bundled)" ON)

@@ -487,7 +487,7 @@ unsigned int AmAudio::resampleInput(unsigned char* buffer, unsigned int s, int i
     } else
 #endif
 #ifdef USE_LIBSAMPLERATE
-      if (AmConfig.ResamplingImplementationType == AmAudio::LIBSAMPLERATE) {
+      if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
 	input_resampling_state.reset(new AmLibSamplerateResamplingState());
       } else
 #endif
