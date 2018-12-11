@@ -80,7 +80,13 @@ void AmRtpPacket::getAddr(struct sockaddr_storage* a)
   memcpy(a,&saddr,sizeof(sockaddr_storage));
 }
 
-int AmRtpPacket::rtp_parse(AmObject *caller)
+bool AmRtpPacket::isRtsp()
+{
+    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    return IS_RTCP_PAYLOAD(hdr->pt);
+}
+
+int AmRtpPacket::rtp_parse(bool srtp, AmObject *caller)
 {
     assert(buffer);
     assert(b_size);
@@ -129,6 +135,7 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
               caller,data_offset,b_size);
         return RTP_PACKET_PARSE_ERROR;
     }
+
     d_size = b_size - data_offset;
 
     if(hdr->p) {

@@ -1236,15 +1236,6 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         return;
     }
 
-    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-        unsigned int size = p->getBufferSize();
-        if(srtp_connection->on_data_recv(p->getBuffer(), &size, false) == SRTP_PACKET_PARSE_ERROR){
-            mem.freePacket(p);
-            return;
-        }
-        p->setBufferSize(size);
-    }
-
     if (relay_enabled) {
         if (force_receive_dtmf) recvDtmfPacket(p);
 
@@ -1512,6 +1503,15 @@ void AmRtpStream::recvPacket(int fd)
             return;
         }
 
+        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+            unsigned int size = p->getBufferSize();
+            if(srtp_connection->on_data_recv(p->getBuffer(), &size, p->isRtsp()) == SRTP_PACKET_PARSE_ERROR){
+                mem.freePacket(p);
+                return;
+            }
+            p->setBufferSize(size);
+        }
+
         if(!relay_raw
 #ifdef WITH_ZRTP
         && !(session && session->enable_zrtp)
@@ -1530,14 +1530,6 @@ void AmRtpStream::recvPacket(int fd)
             clearRTPTimeout(&recv_time);
             mem.freePacket(p);
         } else if(parse_res==RTP_PACKET_PARSE_RTCP) {
-            if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-                unsigned int size = p->getBufferSize();
-                if(srtp_connection->on_data_recv(p->getBuffer(), &size, true) == SRTP_PACKET_PARSE_ERROR){
-                    mem.freePacket(p);
-                    return;
-                }
-                p->setBufferSize(size);
-            }
             recvRtcpPacket(p);
             mem.freePacket(p);
             return;
