@@ -46,6 +46,15 @@ struct SchedRequest :
     : AmEvent(id), s(s) {}
 };
 
+struct SchedTailRequest
+  : public AmEvent
+{
+  AmMediaTailHandler* h;
+
+  SchedTailRequest(int id, AmMediaTailHandler* h)
+    : AmEvent(id), h(h) {}
+};
+
 /*         session scheduler              */
 
 AmMediaProcessor* AmMediaProcessor::_instance = NULL;
@@ -336,62 +345,76 @@ void AmMediaProcessorThread::processAudio(unsigned long long ts)
       postRequest(new SchedRequest(AmMediaProcessor::ClearSession, *it));
     }
   }
+
+  // process tail
+  for(auto &h : tail_handlers)
+    h->processMediaTail(ts);
 }
 
 void AmMediaProcessorThread::process(AmEvent* e)
 {
-  SchedRequest* sr = dynamic_cast<SchedRequest*>(e);
-  if(!sr){
-    ERROR("AmMediaProcessorThread::process: wrong event type\n");
-    return;
-  }
-
-  switch(sr->event_id){
-
-  case AmMediaProcessor::InsertSession:
-    sessions.insert(sr->s);
-    DBG("[%p] Session %p inserted to the scheduler\n",this,sr->s);
-    sr->s->clearRTPTimeout();
-    break;
-
-  case AmMediaProcessor::RemoveSession:{
-    AmMediaSession* s = sr->s;
-    set<AmMediaSession*>::iterator s_it = sessions.find(s);
-    if(s_it != sessions.end()){
-      sessions.erase(s_it);
-      s->onMediaProcessingTerminated();
-      DBG("[%p] Session %p removed from the scheduler on RemoveSession\n",this,s);
+    if(SchedRequest* sr = dynamic_cast<SchedRequest*>(e)) {
+        switch(sr->event_id){
+        case AmMediaProcessor::InsertSession:
+            sessions.insert(sr->s);
+            DBG("[%p] Session %p inserted to the scheduler\n",this,sr->s);
+            sr->s->clearRTPTimeout();
+            break;
+        case AmMediaProcessor::RemoveSession: {
+            AmMediaSession* s = sr->s;
+            set<AmMediaSession*>::iterator s_it = sessions.find(s);
+            if(s_it != sessions.end()) {
+                sessions.erase(s_it);
+                s->onMediaProcessingTerminated();
+                DBG("[%p] Session %p removed from the scheduler on RemoveSession\n",this,s);
+            }
+        } break;
+        case AmMediaProcessor::ClearSession: {
+            AmMediaSession* s = sr->s;
+            set<AmMediaSession*>::iterator s_it = sessions.find(s);
+            if(s_it != sessions.end()) {
+                sessions.erase(s_it);
+                s->clearAudio();
+                s->onMediaProcessingTerminated();
+                DBG("[%p] Session %p removed from the scheduler on ClearSession\n",this,s);
+            }
+        } break;
+        case AmMediaProcessor::SoftRemoveSession: {
+            AmMediaSession* s = sr->s;
+            set<AmMediaSession*>::iterator s_it = sessions.find(s);
+            if(s_it != sessions.end()) {
+                sessions.erase(s_it);
+                DBG("[%p] Session %p removed softly from the scheduler\n",this,s);
+            }
+        } break;
+        default:
+            ERROR("AmMediaProcessorThread::process: unknown SchedRequest event id.");
+            break;
+        } //switch(sr->event_id)
+    } else if(SchedTailRequest* sr = dynamic_cast<SchedTailRequest*>(e)) {
+        switch(sr->event_id){
+        case AmMediaProcessor::InsertSession:
+            tail_handlers.insert(sr->h);
+            DBG("[%p] TailHandler %p inserted to the scheduler\n",
+                this, sr->h);
+            break;
+        case AmMediaProcessor::RemoveSession: {
+            auto h = sr->h;
+            auto h_it = tail_handlers.find(h);
+            if(h_it != tail_handlers.end()) {
+                tail_handlers.erase(h_it);
+                h->onMediaTailProcessingTerminated();
+                DBG("[%p] TailHandler %p removed from the scheduler on RemoveSession\n",
+                    this, h);
+            }
+        } break;
+        default:
+            ERROR("AmMediaProcessorThread::process: unknown SchedTailRequest event id.");
+            break;
+        } //switch(sr->event_id)
+    } else {
+        ERROR("AmMediaProcessorThread::process: wrong event type\n");
     }
-  }
-    break;
-
-  case AmMediaProcessor::ClearSession:{
-    AmMediaSession* s = sr->s;
-    set<AmMediaSession*>::iterator s_it = sessions.find(s);
-    if(s_it != sessions.end()){
-      sessions.erase(s_it);
-      s->clearAudio();
-      s->onMediaProcessingTerminated();
-      DBG("[%p] Session %p removed from the scheduler on ClearSession\n",this,s);
-    }
-  }
-    break;
-
-
-  case AmMediaProcessor::SoftRemoveSession:{
-    AmMediaSession* s = sr->s;
-    set<AmMediaSession*>::iterator s_it = sessions.find(s);
-    if(s_it != sessions.end()){
-      sessions.erase(s_it);
-      DBG("[%p] Session %p removed softly from the scheduler\n",this,s);
-    }
-  }
-    break;
-
-  default:
-    ERROR("AmMediaProcessorThread::process: unknown event id.");
-    break;
-  }
 }
 
 unsigned int AmMediaProcessorThread::getLoad() {
@@ -414,3 +437,31 @@ void AmMediaProcessorThread::getInfo(AmArg &ret){
 inline void AmMediaProcessorThread::postRequest(SchedRequest* sr) {
   events.postEvent(sr);
 }
+
+inline void AmMediaProcessorThread::postTailRequest(SchedTailRequest* sr) {
+  events.postEvent(sr);
+}
+
+void AmMediaProcessor::addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread)
+{
+    DBG("AmMediaProcessor::addTailHandler %p to the thread %u",h,sched_thread);
+    if(sched_thread >= num_threads) {
+        ERROR("AmMediaProcessor::addTailHandler: wrong sched_thread %u for session %p",
+            sched_thread,h);
+        return;
+    }
+    threads[sched_thread]->postTailRequest(new SchedTailRequest(InsertSession,h));
+}
+
+void AmMediaProcessor::removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread)
+{
+    DBG("AmMediaProcessor::removeTailHandler %p from the thread %u",h,sched_thread);
+    if(sched_thread >= num_threads) {
+        ERROR("AmMediaProcessor::removeTailHandler: wrong sched_thread %u for session %p",
+            sched_thread,h);
+        return;
+    }
+    h->onMediaTailProcessingStarted();
+    threads[sched_thread]->postTailRequest(new SchedTailRequest(RemoveSession,h));
+}
+
