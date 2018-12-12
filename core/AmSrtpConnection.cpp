@@ -420,10 +420,12 @@ int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
         }
         return SRTP_PACKET_PARSE_OK;
     } else if(rtp_mode == SRTP_EXTERNAL_KEY && srtp_r_session){
+        srtp_err_status_t ret;
         if(!rtcp)
-            return (srtp_unprotect(srtp_r_session, data, (int*)size) == srtp_err_status_ok) ? SRTP_PACKET_PARSE_OK : SRTP_PACKET_PARSE_ERROR;
+            ret = srtp_unprotect(srtp_r_session, data, (int*)size);
         else
-            return (srtp_unprotect_rtcp(srtp_r_session, data, (int*)size) == srtp_err_status_ok) ? SRTP_PACKET_PARSE_OK : SRTP_PACKET_PARSE_ERROR;
+            ret = srtp_unprotect_rtcp(srtp_r_session, data, (int*)size);
+        return (ret == srtp_err_status_ok) ? SRTP_PACKET_PARSE_OK : SRTP_PACKET_PARSE_ERROR;
     }
     return SRTP_PACKET_PARSE_ERROR;
 }

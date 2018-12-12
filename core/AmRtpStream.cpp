@@ -1488,28 +1488,29 @@ void AmRtpStream::recvPacket(int fd)
         log_rcvd_rtp_packet(*p);
         incoming_bytes += p->getBufferSize();
 
-        if(fd == l_rtcp_sd) {
-            if(srtcp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-                unsigned int size = p->getBufferSize();
-                if(srtcp_connection->on_data_recv(p->getBuffer(), &size, true) == SRTP_PACKET_PARSE_ERROR){
-                    mem.freePacket(p);
-                    return;
-                }
-                p->setBufferSize(size);
+        bool isRtcp = ((fd == l_rtcp_sd) || p->isRtcp());
+        if(isRtcp){
+            INFO("rtcp\n");
+        }
+        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
+            unsigned int size = p->getBufferSize();
+            if(srtp_connection->on_data_recv(p->getBuffer(), &size, isRtcp) == SRTP_PACKET_PARSE_ERROR){
+                CLASS_WARN("error parsing: incorrect srtp packet"
+                "(remote_addr: %s:%i, "
+                "local_ssrc: 0x%x, local_tag: %s, rtcp-%s)\n",
+                get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
+                l_ssrc,session ? session->getLocalTag().c_str() : "no session",
+                isRtcp ? "true" : "false");
+//                mem.freePacket(p);
+//                return;
             }
+            p->setBufferSize(size);
+        }
 
+        if(isRtcp) {
             recvRtcpPacket(p);
             mem.freePacket(p);
             return;
-        }
-
-        if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
-            unsigned int size = p->getBufferSize();
-            if(srtp_connection->on_data_recv(p->getBuffer(), &size, p->isRtsp()) == SRTP_PACKET_PARSE_ERROR){
-                mem.freePacket(p);
-                return;
-            }
-            p->setBufferSize(size);
         }
 
         if(!relay_raw
@@ -1529,14 +1530,18 @@ void AmRtpStream::recvPacket(int fd)
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session");
             clearRTPTimeout(&recv_time);
             mem.freePacket(p);
-        } else if(parse_res==RTP_PACKET_PARSE_RTCP) {
-            recvRtcpPacket(p);
-            mem.freePacket(p);
-            return;
-        } else {
+        } else if(parse_res==RTP_PACKET_PARSE_OK) {
             if(rtp_ping)	//clear mark for all packets in stream
                 p->marker = false;
             bufferPacket(p);
+        } else {
+            CLASS_ERROR("error parsing: rtp packet is RTCP"
+                "(remote_addr: %s:%i, "
+                "local_ssrc: 0x%x, local_tag: %s)\n",
+                get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
+                l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            mem.freePacket(p);
+            return;
         }
     }
 }
