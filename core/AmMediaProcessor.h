@@ -36,6 +36,7 @@ using std::set;
 #include <map>
 
 struct SchedRequest;
+struct SchedTailRequest;
 
 /** Interface for basic media session processing.
  *
@@ -149,6 +150,23 @@ class AmMediaSession
 	virtual void getInfo(AmArg &ret) { ret = "not implemented"; }
 };
 
+class AmMediaTailHandler
+{
+  private:
+    AmCondition<bool> processing_media_tail;
+
+  public:
+    AmMediaTailHandler(): processing_media_tail(false) { }
+    virtual ~AmMediaTailHandler() { }
+
+    virtual int processMediaTail(unsigned long long ts) = 0;
+
+    virtual void onMediaTailProcessingStarted() { processing_media_tail.set(true); }
+    virtual void onMediaTailProcessingTerminated() { processing_media_tail.set(false); }
+
+    virtual bool isProcessingMedia() { return processing_media_tail.get(); }
+};
+
 /**
  * \brief Media processing thread
  * 
@@ -163,7 +181,8 @@ class AmMediaProcessorThread :
   AmEventQueue    events;
   unsigned char   buffer[AUDIO_BUFFER_SIZE];
   set<AmMediaSession*> sessions;
-  
+  set<AmMediaTailHandler *> tail_handlers;
+
   void processAudio(unsigned long long ts);
   /**
    * Process pending DTMF events
@@ -182,7 +201,8 @@ public:
   ~AmMediaProcessorThread();
 
   inline void postRequest(SchedRequest* sr);
-  
+  inline void postTailRequest(SchedTailRequest* sr);
+
   unsigned int getLoad();
   void getInfo(AmArg &ret);
 };
@@ -236,6 +256,9 @@ public:
   /** Change the callgroup of a session (use with caution) */
   void changeCallgroup(AmMediaSession* s, 
 		       const string& new_callgroup);
+
+  void addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
+  void removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
 
   void stop();
   static void dispose();
