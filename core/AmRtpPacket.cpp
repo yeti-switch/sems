@@ -86,7 +86,7 @@ bool AmRtpPacket::isRtcp()
     return IS_RTCP_PAYLOAD(hdr->pt);
 }
 
-int AmRtpPacket::rtp_parse(bool srtp, AmObject *caller)
+int AmRtpPacket::rtp_parse(AmObject *caller)
 {
     assert(buffer);
     assert(b_size);
