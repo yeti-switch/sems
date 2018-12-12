@@ -4,6 +4,7 @@
 #include "AmEventFdQueue.h"
 #include "AmSession.h"
 
+#include <atomic>
 #include <memory>
 #include <functional>
 #include <map>
@@ -30,13 +31,46 @@ class RxRing;
 #define MAX_CHANNEL_CTX MAX_RTP_SESSIONS
 #define CONFERENCE_NAMESPACE_ID	100
 
+#define MIXER_BACKLOG_ORDER     3
+#define MIXER_BACKLOG_SIZE      (1<<MIXER_BACKLOG_ORDER)
+#define MIXER_BACKLOG_MASK      (MIXER_BACKLOG_SIZE-1)
+
+
+#pragma pack (1)
+typedef struct {
+    uint64_t            id;
+    int                 sample_rate;
+    unsigned            length;
+} MixerFrameHdr;
+#pragma pack ()
+
+
+typedef struct {
+    union {
+        MixerFrameHdr       hdr;
+        unsigned char       *data;
+    };
+} MixerFrame;
+
+
+typedef struct {
+    int             neighbor_id;
+    union {
+        MixerFrameHdr   *hdr;
+        unsigned char   *data;
+    };
+} RxFrame;
+
 
 using mixer_ptr = std::shared_ptr<MultiPartyMixer>;
 
 struct backlog {
     int64_t     id;
-    uint64_t    *status;
     mixer_ptr   mixer;
+
+    atomic_int  start; /** if start == end => frame queue is empty */
+    atomic_int  end;
+    RxFrame     frame[MIXER_BACKLOG_SIZE];
 };
 
 
@@ -159,19 +193,17 @@ public:
     channel_ptr getConferenceChannel(const string &channel_id, int64_t channel_ext_id, const string &local_tag, int sample_rate);
     void        releaseConferenceChannel(const channel_ptr &p, const string &local_tag);
 
-    void        init_backlog(int num);
-    void        release_backlog();
-
     int         onLoad();
     void        process(AmEvent* ev);
     void        run();
     void        on_stop();
 
     friend      class ConferenceMedia;
+    friend      class RxRing;
     friend      int             getNeighbors_num();
     friend      bool            isNeighbor(const sockaddr_storage &from, int &idx);
     friend      struct backlog* get_backlog(unsigned nr);
-    friend      uint64_t*       find_backlog_by_id(int64_t id);
+    friend      struct backlog* find_backlog_by_id(uint64_t id);
     friend      void            clear_backlog(unsigned nr);
 
 };
@@ -190,6 +222,8 @@ inline struct backlog* get_backlog(unsigned nr)
               : nullptr;
 }
 
-extern bool         isNeighbor(const sockaddr_storage &from, int &idx);
-extern uint64_t*    find_backlog_by_id(int64_t id);
-extern void         clear_backlog(unsigned nr);
+extern bool             isNeighbor(const sockaddr_storage &from, int &idx);
+
+extern struct backlog   *find_backlog_by_id(uint64_t id);
+
+extern void             clear_backlog(unsigned nr);
