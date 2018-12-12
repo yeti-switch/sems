@@ -85,7 +85,7 @@ class AmRtpPacket
     int compile_raw(unsigned char* data_buf, unsigned int size);
 
     int rtp_parse(bool srtp = false, AmObject *caller = NULL);
-    bool isRtsp();
+    bool isRtcp();
 
     int rtcp_parse_update_stats(RtcpBidirectionalStat &stats);
     int parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats);

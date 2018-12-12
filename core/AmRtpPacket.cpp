@@ -80,7 +80,7 @@ void AmRtpPacket::getAddr(struct sockaddr_storage* a)
   memcpy(a,&saddr,sizeof(sockaddr_storage));
 }
 
-bool AmRtpPacket::isRtsp()
+bool AmRtpPacket::isRtcp()
 {
     rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
     return IS_RTCP_PAYLOAD(hdr->pt);
