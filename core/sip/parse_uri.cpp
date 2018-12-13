@@ -56,7 +56,7 @@ sip_uri::~sip_uri()
 }
 
 
-static int parse_sip_uri(sip_uri* uri, const char* beg, int len)
+static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
 {
     enum {
 	URI_USER=0, 
@@ -330,8 +330,8 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len)
 	    uri->port = uri->port*10 + (uri->port_str.s[i] - '0');
 	}
     }
-    else {
-	uri->port = 5060;
+    else if(!no_default_port) {
+        uri->port = 5060;
     }
 
     DBG("Converted URI port (%.*s) to int (%i)\n",
@@ -349,7 +349,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len)
     return 0;
 }
 
-int parse_uri(sip_uri* uri, const char* beg, int len)
+int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
 {
     enum {
 	URI_BEG=0,
@@ -402,7 +402,7 @@ int parse_uri(sip_uri* uri, const char* beg, int len)
 	    case HCOLON:
 		//DBG("scheme: sip\n");
 		uri->scheme = sip_uri::SIP;
-		return parse_sip_uri(uri,c+1,len-(c+1-beg));
+		return parse_sip_uri(uri,c+1,len-(c+1-beg),no_default_port);
 	    case 's':
 	    case 'S':
 		st = SIPS_S;
@@ -417,7 +417,7 @@ int parse_uri(sip_uri* uri, const char* beg, int len)
 	    case HCOLON:
 		//DBG("scheme: sips\n");
 		uri->scheme = sip_uri::SIPS;
-		return parse_sip_uri(uri,c+1,len-(c+1-beg));
+		return parse_sip_uri(uri,c+1,len-(c+1-beg),no_default_port);
 	    default:
 		DBG("Unknown URI scheme\n");
 		return MALFORMED_URI;

@@ -33,7 +33,9 @@
 #include "AmSipMsg.h"
 #include "sip/resolver.h"
 #include "sip/ip_util.h"
+#include "sip/parse_uri.h"
 #include "sip/parse_common.h"
+#include "sip/resolver.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -782,6 +784,86 @@ int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority
   }
   
   return -1;
+}
+
+int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns_priority priority)
+{
+    sockaddr_storage remote_ip_ss;
+    sockaddr_storage local_ss;
+    sip_target_set targets(priority);
+    static cstring sip_scheme("sip");
+    static cstring sips_scheme("sips");
+    static cstring udp_transport("udp");
+
+    int err = inet_pton(AF_INET,remote_uri.host.s,&((sockaddr_in*)&remote_ip_ss)->sin_addr);
+    if(err == 1) {
+        remote_ip_ss.ss_family = AF_INET;
+    } else if(err == 0) {
+        err = inet_pton(AF_INET6,remote_uri.host.s,&((sockaddr_in6*)&remote_ip_ss)->sin6_addr);
+        if(err == 1) {
+            remote_ip_ss.ss_family = AF_INET6;
+        }
+    }
+
+    if(err == 0) {
+        list<sip_destination> dest_list;
+        dest_list.resize(1);
+        sip_destination &dest = dest_list.back();
+
+        dest.host = remote_uri.host;
+        dest.port = remote_uri.port;
+
+        if(remote_uri.scheme != sip_uri::SIPS) {
+            dest.scheme = sip_scheme;
+        } else {
+            dest.scheme = sips_scheme;
+        }
+
+        if(remote_uri.trsp) {
+            dest.trsp = remote_uri.trsp->value;
+        } else {
+            dest.trsp = udp_transport;
+        }
+
+        err = resolver::instance()->resolve_targets(dest_list, &targets);
+
+        if(targets.dest_list.empty()) {
+            DBG("no resolved targets for host: '%s'", c2stlstr(remote_uri.host).c_str());
+            return -1;
+        }
+        memcpy(&remote_ip_ss, &targets.dest_list.begin()->ss, sizeof(remote_ip_ss));
+        //DBG("remote_ip_ss: %s",get_addr_str(&remote_ip_ss).c_str());
+  }
+
+    if(err == -1) {
+        ERROR("While converting uri with host: '%s'", c2stlstr(remote_uri.host).c_str());
+        return -1;
+    }
+
+    if(remote_ip_ss.ss_family==AF_INET) {
+#if defined(BSD44SOCKETS)
+        ((sockaddr_in*)&remote_ip_ss)->sin_len = sizeof(sockaddr_in);
+#endif
+        ((sockaddr_in*)&remote_ip_ss)->sin_port = htons(5060); // fake port number
+    } else {
+#if defined(BSD44SOCKETS)
+        ((sockaddr_in6*)&remote_ip_ss)->sin6_len = sizeof(sockaddr_in6);
+#endif
+        ((sockaddr_in6*)&remote_ip_ss)->sin6_port = htons(5060); // fake port number
+    }
+
+    err = get_local_addr_for_dest(&remote_ip_ss, &local_ss);
+    if(err < 0) {
+        return -1;
+    }
+
+    char tmp_addr[NI_MAXHOST];
+    if(am_inet_ntop(&local_ss,tmp_addr,NI_MAXHOST) != NULL) {
+        local = tmp_addr;
+        return 0;
+    }
+
+    return -1;
 }
 
 string extract_tag(const string& addr)

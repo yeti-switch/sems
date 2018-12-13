@@ -247,6 +247,7 @@ int AmBasicSipDialog::getOutboundIf()
   string dest_uri;
   string dest_ip;
   string local_ip;
+  sip_uri d_uri;
   int transport_id = sip_transport::UDP;
   int addrType = sip_address_type::IPv4;
   std::multimap<string,unsigned short>::iterator if_it;
@@ -288,8 +289,7 @@ int AmBasicSipDialog::getOutboundIf()
   }
 
   if(!dest_uri.empty()){
-    sip_uri d_uri;
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
+    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length(),true) < 0){
       ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
 	    local_tag.c_str(),dest_uri.c_str());
       goto error;
@@ -300,7 +300,7 @@ int AmBasicSipDialog::getOutboundIf()
     if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
   }
 
-  if(get_local_addr_for_dest(dest_ip,local_ip, (dns_priority)resolve_priority) < 0){
+  if(get_local_addr_for_dest(d_uri,local_ip, (dns_priority)resolve_priority) < 0){
     ERROR("No local address for dest '%s' (local_tag='%s')",dest_ip.c_str(),local_tag.c_str());
     goto error;
   }
@@ -345,6 +345,7 @@ int AmBasicSipDialog::getOutboundAddrType()
   string dest_uri;
   string dest_ip;
   string local_ip;
+  sip_uri d_uri;
   int addrType;
   std::multimap<string,unsigned short>::iterator if_it;
 
@@ -382,8 +383,7 @@ int AmBasicSipDialog::getOutboundAddrType()
   }
 
   if(!dest_uri.empty()){
-    sip_uri d_uri;
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
+    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length(),true) < 0){
       ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
 	    local_tag.c_str(),dest_uri.c_str());
       goto error;
@@ -392,7 +392,7 @@ int AmBasicSipDialog::getOutboundAddrType()
     dest_ip = c2stlstr(d_uri.host);
   }
 
-  if(get_local_addr_for_dest(dest_ip,local_ip, (dns_priority)resolve_priority) < 0){
+  if(get_local_addr_for_dest(d_uri,local_ip, (dns_priority)resolve_priority) < 0){
     ERROR("No local address for dest '%s' (local_tag='%s')",dest_ip.c_str(),local_tag.c_str());
     goto error;
   }
