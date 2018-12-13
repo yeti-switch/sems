@@ -1320,9 +1320,11 @@ int _resolver::set_destination_ip(
                 DBG("no port specified, looking up SRV '%s'...\n",
                     srv_name.c_str());
 
-                if(!resolver::instance()->resolve_name(srv_name.c_str(),
+                if(resolver::instance()->resolve_name(srv_name.c_str(),
                                        h_dns,remote_ip,
-                                       priority,dns_r_srv)){
+                                       priority,dns_r_srv) >= 0)
+                {
+                    DBG("target %s was resolved by SRV",srv_name.c_str());
                     return 0;
                 }
 
