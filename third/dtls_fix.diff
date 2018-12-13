@@ -1,0 +1,13 @@
+diff --git a/src/lib/tls/tls_channel.cpp b/src/lib/tls/tls_channel.cpp
+index 37f3ec415..98edb618f 100644
+--- a/src/lib/tls/tls_channel.cpp
++++ b/src/lib/tls/tls_channel.cpp
+@@ -408,7 +408,7 @@ void Channel::process_handshake_ccs(const secure_vector<uint8_t>& record,
+                                                          record_sequence);
+                }
+             }
+-         else if(record_sequence == 0)
++         else/* if(record_sequence == 0)*/
+             {
+             create_handshake_state(record_version);
+             }
