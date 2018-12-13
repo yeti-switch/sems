@@ -61,7 +61,7 @@ struct sip_uri
     ~sip_uri();
 };
 
-int parse_uri(sip_uri* uri, const char* beg, int len);
+int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port = false);
 
 #endif
 

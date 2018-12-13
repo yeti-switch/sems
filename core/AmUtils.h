@@ -273,6 +273,7 @@ string get_addr_str_sip(const sockaddr_storage* addr);
  */
 int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local);
 int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority);
+int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns_priority priority);
 
 string extract_tag(const string& addr);
 
