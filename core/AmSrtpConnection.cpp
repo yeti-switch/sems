@@ -451,10 +451,16 @@ bool AmSrtpConnection::on_data_send(uint8_t* data, unsigned int* size, bool rtcp
         b_init[0] = true;
     }
     if(rtp_mode == SRTP_EXTERNAL_KEY && srtp_s_session){
-        if(!rtcp)
-            return srtp_protect(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
-        else
+        if(!rtcp) {
+            uint32_t trailer_len = 0;
+            srtp_get_protect_trailer_length(srtp_s_session, false, 0, &trailer_len);
+            if(*size + trailer_len <= RTP_PACKET_BUF_SIZE)
+                return srtp_protect(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
+            else
+                return false;
+        } else {
             return srtp_protect_rtcp(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
+        }
     }
     return false;
 }

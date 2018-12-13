@@ -1501,8 +1501,8 @@ void AmRtpStream::recvPacket(int fd)
                 get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session",
                 isRtcp ? "true" : "false");
-//                mem.freePacket(p);
-//                return;
+                mem.freePacket(p);
+                return;
             }
             p->setBufferSize(size);
         }
