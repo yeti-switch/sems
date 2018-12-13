@@ -205,8 +205,8 @@ class AmLibSamplerateResamplingState: public AmResamplingState
 {
 private:
   SRC_STATE* resample_state;
-  float resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE)*2];
-  float resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE)];
+  float resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE)*2*8];
+  float resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE)*8];
   size_t resample_buf_samples;
   size_t resample_out_buf_samples;
 public:
