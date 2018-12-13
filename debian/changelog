@@ -1,3 +1,15 @@
+sems (1.8.8-0) stable; urgency=low
+
+  * increased resample buffer *8
+  * mixer refactoring: Refactored backlog receive logic, added queue per mixer
+  * resolver: set_destination_ip: fix return code checking for SRV entry
+  * use resolver::resolve_targets in AmBasicSipDialog getOutboundIf, getOutboundAddrType
+  * AmMediaProcessor: add AmMediaTailHandler
+  * AmAudio: AmLibSamplerateResamplingState::resample: fix segfault on output_frames_gen less than incoming samples count
+  * use libsamplerate
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 10 Dec 2018 19:41:53 +0200
+
 sems (1.8.7-0) stable; urgency=low
 
   * mixer refactoring
