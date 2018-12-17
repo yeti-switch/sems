@@ -49,6 +49,7 @@ public:
     vector<string> allowed_signature_methods() const override;
     vector<string> allowed_ciphers() const override;
     vector<string> allowed_macs() const override;
+    size_t minimum_rsa_bits() const override;
     bool allow_tls10()  const override;
     bool allow_tls11()  const override;
     bool allow_tls12()  const override;

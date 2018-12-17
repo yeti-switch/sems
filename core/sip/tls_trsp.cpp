@@ -89,6 +89,11 @@ vector<string> tls_conf::allowed_macs() const
     return vector<string>();
 }
 
+size_t tls_conf::minimum_rsa_bits() const
+{
+    return 1024;
+}
+
 bool tls_conf::allow_tls10()  const
 {
     tls_settings* settings = 0;
