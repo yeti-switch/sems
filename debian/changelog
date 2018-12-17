@@ -1,3 +1,9 @@
+sems (1.7.74-1p) stable; urgency=low
+
+  * AmRtpAudio: fix segfault on failover to default PLC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 17 Dec 2018 18:02:12 +0200
+
 sems (1.7.74-0p) stable; urgency=low
 
   * use libsamplerate
