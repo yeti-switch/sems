@@ -447,7 +447,7 @@ unsigned int AmRtpAudio::conceal_loss(unsigned int ts_diff, unsigned char *buffe
     if(!use_default_plc) {
         amci_codec_t* codec = fmt->getCodec();
         assert(codec);
-        if(codec->plc) {
+        if(!codec->plc) {
             DBG("attempt to use codec specific PLC "
                 "for codec(%d) which does not support it. "
                 "failover to default PLC",
