@@ -41,29 +41,8 @@ modules {
      *
      * describe name and load mode of plugin
      */
-    module "bus_client" {
-        /* optional parameter global
-         * load these plugins with RTLD_GLOBAL (by default py_sems,
-         * dsm, ivr, sbc, diameter_client, registrar_client, uac_auth)
-         *
-         * available values: true, false
-         *
-         * default: false
-         */
-        global = true
-    }
-
-    module "conference_mixer" {
-        /* optional parameter global
-         * load these plugins with RTLD_GLOBAL (by default py_sems,
-         * dsm, ivr, sbc, diameter_client, registrar_client, uac_auth)
-         *
-         * available values: true, false
-         *
-         * default: false
-         */
-        global = true
-    }
+    module-global "bus_client" {}
+    module-global "conference_mixer" {}
     module "mp3"{}
     module "opus"{}
     module "wav"{}
@@ -74,18 +53,12 @@ modules {
     module "g722"{}
     module "sctp_bus"{}
     module "session_timer"{}
-    module "uac_auth" {
-        global = true
-    }
+    module-global "uac_auth" {}
     module "monitoring"{}
-    module "registrar_client" {
-        global = true
-    }
+    module-global "registrar_client" {}
     module "jsonrpc"{}
     module "http_client"{}
-    module "dsm" {
-        global = true
-    }
+    module-global "dsm" {}
 }
 
 /**********************************************************/
