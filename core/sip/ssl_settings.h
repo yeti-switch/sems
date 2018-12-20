@@ -13,6 +13,8 @@ public:
     std::string certificate;
     std::string certificate_key;
     std::vector<std::string> ca_list;
+    bool checkCertificateAndKey();
+    virtual std::string getProtocolSettings() = 0;
 };
 
 class tls_settings : public settings
@@ -46,6 +48,8 @@ public:
         return "TLSv1.2";
     }
 
+    virtual std::string getProtocolSettings() { return "tls"; };
+
     std::vector<Protocol> protocols;
 };
 
@@ -74,6 +78,8 @@ public:
             return "DTLSv1.2";
         }
     }
+
+    virtual std::string getProtocolSettings() { return "dtls"; };
 
     std::vector<Protocol> protocols;
     std::vector<uint16_t> srtp_profiles;
