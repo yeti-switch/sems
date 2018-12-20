@@ -430,7 +430,7 @@ AmLcConfig::AmLcConfig()
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
-        CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NONE),
+        CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -1133,7 +1133,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     }
 
     //RTP specific opts
-    if(rtpinfo) {
+    if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
         rtpinfo->srtp_enable = cfg_getbool(srtp, PARAM_ENABLE_SRTP_NAME);
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
