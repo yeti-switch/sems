@@ -1330,6 +1330,14 @@ int AmLcConfig::finalizeIpConfig()
                 setNetInterface(*info)) {
                 return -1;
             }
+
+            SIP_TLS_info* tls_info = SIP_TLS_info::toSIP_TLS(info);
+            if(tls_info) {
+                if(!tls_info->client_settings.checkCertificateAndKey() ||
+                    !tls_info->server_settings.checkCertificateAndKey()) {
+                    return -1;
+                }
+            }
             i++;
         }
     }
@@ -1355,6 +1363,14 @@ int AmLcConfig::finalizeIpConfig()
             if ((*if_iterator).insertProtoMapping((info->type_ip)|(info->mtype << 6), i) ||
                 setNetInterface(*info)) {
                 return -1;
+            }
+
+            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(info);
+            if(rtp_info && rtp_info->srtp_enable) {
+                if(!rtp_info->client_settings.checkCertificateAndKey() ||
+                    !rtp_info->server_settings.checkCertificateAndKey()) {
+                    return -1;
+                }
             }
             i++;
         }

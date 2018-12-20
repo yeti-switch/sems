@@ -258,7 +258,7 @@ private:
 class RTP_info : public MEDIA_info
 {
 public:
-    RTP_info() : MEDIA_info(RTP), srtp_enable(true){}
+    RTP_info() : MEDIA_info(RTP), srtp_enable(false){}
     RTP_info(const RTP_info& info)
     : MEDIA_info(info)
     , profiles(info.profiles)
