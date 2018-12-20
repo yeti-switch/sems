@@ -1,6 +1,7 @@
 MESSAGE(STATUS "Enable building of the bundled libbotan")
 
 set (BOTAN_DIR third/botan)
+set (BOTAN_PATCH_FILE ${PROJECT_SOURCE_DIR}/third/dtls_fix.diff)
 set (BOTAN_SRC_DIR ${PROJECT_SOURCE_DIR}/${BOTAN_DIR})
 set (BOTAN_BIN_DIR ${PROJECT_BINARY_DIR}/${BOTAN_DIR})
 set (BOTAN_BUNDLED_LIB ${BOTAN_BIN_DIR}/libbotan-2.a)
@@ -13,6 +14,7 @@ file(MAKE_DIRECTORY ${BOTAN_BIN_DIR})
 add_custom_command(OUTPUT ${BOTAN_BUNDLED_LIB}
     PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${BOTAN_SRC_DIR} ${BOTAN_BIN_DIR}
+    COMMAND git apply ${BOTAN_PATCH_FILE}
     COMMAND ./configure.py ${BOTAN_CONFIG_ARGS}
     COMMAND $(MAKE)
     WORKING_DIRECTORY ${BOTAN_BIN_DIR})
