@@ -22,11 +22,11 @@ static const char *hdrs2remove[] = {
 static int str2addrtype(const std::string &s)
 {
     if(s.find(":") != std::string::npos) {
-        return sip_address_type::IPv6;
+        return IP_info::IPv6;
     } else if(s.find(".") != std::string::npos) {
-        return sip_address_type::IPv4;
+        return IP_info::IPv4;
     }
-    return sip_address_type::UNPARSED;
+    return IP_info::UNDEFINED;
 
 }
 
@@ -35,10 +35,12 @@ static int str2transport(cstring &s)
 #define cmp_cond(trsp) 0==strncasecmp(s.s,trsp.s,trsp.len <= s.len ? trsp.len : s.len)
     static cstring udp("udp");
     static cstring tcp("tcp");
+    static cstring tls("tls");
     DBG("str2transport(cstring &s [%.*s])",s.len,s.s);
-    if(cmp_cond(udp)) return sip_transport::UDP;
-    else if(cmp_cond(tcp)) return sip_transport::TCP;
-    return sip_transport::UNPARSED;
+    if(cmp_cond(udp)) return SIP_info::UDP;
+    else if(cmp_cond(tcp)) return SIP_info::TCP;
+    else if(cmp_cond(tls)) return SIP_info::TLS;
+    return SIP_info::UNDEFINED;
 #undef cmp_cond
 }
 
@@ -153,34 +155,13 @@ string AmBasicSipDialog::getContactUri()
   }
 
   int oif = getOutboundIf();
-  int oat = getOutboundAddrType();
+  int ot  = getOutboundTransport();
   assert(oif >= 0);
   assert(oif < (int)AmConfig.sip_ifs.size());
+  assert(ot < (int)AmConfig.sip_ifs[oif].proto_info.size());
 
-  if(outbound_transport < 0) getOutboundTransport();
-  for(auto& info : AmConfig.sip_ifs[oif].proto_info) {
-       if ((oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
-           info->type == SIP_info::UDP && outbound_transport == sip_transport::UDP) ||
-
-            (oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
-            info->type == SIP_info::TCP && outbound_transport == sip_transport::TCP) ||
-
-            (oat == sip_address_type::IPv4 && info->type_ip == IP_info::IPv4 &&
-            info->type == SIP_info::TLS && outbound_transport == sip_transport::TLS) ||
-
-            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
-            info->type == SIP_info::UDP &&outbound_transport == sip_transport::UDP) ||
-
-            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
-            info->type == SIP_info::TCP && outbound_transport == sip_transport::TCP) ||
-
-            (oat == sip_address_type::IPv6 && info->type_ip == IP_info::IPv6 &&
-            info->type == SIP_info::TLS && outbound_transport == sip_transport::TLS)) {
-
-            contact_uri += info->local_ip;
-            contact_uri += ":" + int2str(info->local_port);
-      }
-  }
+  contact_uri += AmConfig.sip_ifs[oif].proto_info[ot]->local_ip;
+  contact_uri += ":" + int2str(AmConfig.sip_ifs[oif].proto_info[ot]->local_port);
 
   if(!contact_params.empty()) {
     contact_uri += ";" + contact_params;
@@ -217,7 +198,8 @@ void AmBasicSipDialog::setOutboundInterface(int interface_id) {
 void AmBasicSipDialog::setOutboundAddrType(int type_id)
 {
   DBG("setting outbound address type to %i\n",  type_id);
-  outbound_address_type = type_id;
+  if(type_id == IP_info::IPv4) outbound_address_type = sip_address_type::IPv4;
+  else if(type_id == IP_info::IPv6) outbound_address_type = sip_address_type::IPv6;
 }
 
 void AmBasicSipDialog::setOutboundTransport(int transport_id) {
@@ -234,23 +216,19 @@ int AmBasicSipDialog::getOutboundIf()
   if (outbound_interface >= 0)
     return outbound_interface;
 
-  if(AmConfig.sip_ifs.size() == 1){
-    return (outbound_interface = 0);
-  }
-
   // Destination priority:
   // 1. next_hop
   // 2. outbound_proxy (if 1st req or force_outbound_proxy)
   // 3. first route
   // 4. remote URI
-
   string dest_uri;
   string dest_ip;
   string local_ip;
   sip_uri d_uri;
-  int transport_id = sip_transport::UDP;
   int addrType = sip_address_type::IPv4;
   std::multimap<string,unsigned short>::iterator if_it;
+  unsigned char ipproto = IPv4_UDP;
+  std::map<unsigned char, unsigned short>::iterator addrif_it;
 
   list<sip_destination> ip_list;
   if(!next_hop.empty() &&
@@ -258,7 +236,7 @@ int AmBasicSipDialog::getOutboundIf()
      !ip_list.empty()) {
 
     dest_ip = c2stlstr(ip_list.front().host);
-    transport_id = str2transport(ip_list.front().trsp);
+    ipproto = (ipproto&0x7)|(str2transport(ip_list.front().trsp)<<3);
   }
   else if(!outbound_proxy.empty() &&
 	  (remote_tag.empty() || force_outbound_proxy)) {
@@ -277,7 +255,7 @@ int AmBasicSipDialog::getOutboundIf()
 
     dest_ip = c2stlstr(route_uri->host);
 
-    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
+    if(route_uri->trsp) ipproto = (ipproto&0x7)|(str2transport(route_uri->trsp->value)<<3);
   }
   else {
     dest_uri = remote_uri;
@@ -297,7 +275,7 @@ int AmBasicSipDialog::getOutboundIf()
 
     dest_ip = c2stlstr(d_uri.host);
 
-    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
+    if(d_uri.trsp) ipproto = (ipproto&0x7)|(str2transport(d_uri.trsp->value)<<3);
   }
 
   if(get_local_addr_for_dest(d_uri,local_ip, (dns_priority)resolve_priority) < 0){
@@ -308,174 +286,67 @@ int AmBasicSipDialog::getOutboundIf()
   if_it = AmConfig.local_sip_ip2if.find(local_ip);
   if(if_it == AmConfig.local_sip_ip2if.end()){
     ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
-	  local_tag.c_str(), local_ip.c_str());
+            local_tag.c_str(), local_ip.c_str());
     goto error;
   }
 
   addrType = str2addrtype(local_ip);
-  if(addrType) {
-      setOutboundAddrType(addrType);
+  if(!addrType) {
+    ERROR("Could not resolve a address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
+            local_tag.c_str(), local_ip.c_str());
   }
+  ipproto = (ipproto&0x38)|addrType;
+
+  addrif_it = AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.find(ipproto);
+  if(addrif_it == AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.end()) {
+    ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
+            local_tag.c_str(), local_ip.c_str());
+    goto error;
+  }
+
   setOutboundInterface(if_it->second);
-  if(transport_id > 0) setOutboundTransport(transport_id);
+  setOutboundAddrType(addrType);
+  setOutboundTransport(addrif_it->second);
+
   return if_it->second;
 
  error:
   WARN("Error while computing outbound interface: default interface will be used instead.");
   setOutboundInterface(0);
+  setOutboundTransport(0);
   return 0;
 }
 
 int AmBasicSipDialog::getOutboundAddrType()
 {
   int out_if = getOutboundIf();
+  int out_addr_if = getOutboundTransport();
 
   if (outbound_address_type > 0)
     return outbound_address_type;
 
-  if(out_if < 0) {
-      return 0;
+  if(out_if < 0 || out_addr_if < 0) {
+      return sip_address_type::UNPARSED;
   }
 
-  // Destination priority:
-  // 1. next_hop
-  // 2. outbound_proxy (if 1st req or force_outbound_proxy)
-  // 3. first route
-  // 4. remote URI
-  string dest_uri;
-  string dest_ip;
-  string local_ip;
-  sip_uri d_uri;
-  int addrType;
-  std::multimap<string,unsigned short>::iterator if_it;
-
-  list<sip_destination> ip_list;
-  if(!next_hop.empty() &&
-     !parse_next_hop(stl2cstr(next_hop),ip_list) &&
-     !ip_list.empty()) {
-
-    dest_ip = c2stlstr(ip_list.front().host);
-  }
-  else if(!outbound_proxy.empty() &&
-	  (remote_tag.empty() || force_outbound_proxy)) {
-    dest_uri = outbound_proxy;
-  }
-  else if(!route.empty()){
-    // parse first route
-    sip_header fr;
-    fr.value = stl2cstr(route);
-    sip_uri* route_uri = get_first_route_uri(&fr);
-    if(!route_uri){
-      ERROR("Could not parse route (local_tag='%s';route='%s')",
-	    local_tag.c_str(),route.c_str());
-      goto error;
-    }
-
-    dest_ip = c2stlstr(route_uri->host);
-  }
-  else {
-    dest_uri = remote_uri;
-  }
-
-  if(dest_uri.empty() && dest_ip.empty()) {
-    ERROR("No destination found (local_tag='%s')",local_tag.c_str());
-    goto error;
-  }
-
-  if(!dest_uri.empty()){
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length(),true) < 0){
-      ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
-	    local_tag.c_str(),dest_uri.c_str());
-      goto error;
-    }
-
-    dest_ip = c2stlstr(d_uri.host);
-  }
-
-  if(get_local_addr_for_dest(d_uri,local_ip, (dns_priority)resolve_priority) < 0){
-    ERROR("No local address for dest '%s' (local_tag='%s')",dest_ip.c_str(),local_tag.c_str());
-    goto error;
-  }
-
-  addrType = str2addrtype(local_ip);
+  std::string local_ip = AmConfig.sip_ifs[out_if].proto_info[out_addr_if]->getIP();
+  int addrType = str2addrtype(local_ip);
   if(addrType) {
       setOutboundAddrType(addrType);
   } else {
       ERROR("Could not parse local URI (local_tag='%s';local_ip='%s')",
 	    local_tag.c_str(),local_ip.c_str());
-      goto error;
   }
 
   return outbound_address_type;
-error:
-  WARN("Error while computing outbound interface: default interface will be used instead.");
-  setOutboundInterface(0);
-  return 0;
 }
 
 int AmBasicSipDialog::getOutboundTransport()
 {
-  if(outbound_transport > 0)
+    if(outbound_transport < 0) {
+        getOutboundIf();
+    }
     return outbound_transport;
-
-  // 1. next_hop
-  // 2. outbound_proxy (if 1st req or force_outbound_proxy)
-  // 3. first route
-  // 4. remote URI
-
-  string dest_uri;
-  int transport_id = 0;
-  list<sip_destination> ip_list;
-
-  if(!next_hop.empty() &&
-     !parse_next_hop(stl2cstr(next_hop),ip_list) &&
-     !ip_list.empty())
-  {
-    transport_id = str2transport(ip_list.front().trsp);
-  } else if(!outbound_proxy.empty() &&
-            (remote_tag.empty() || force_outbound_proxy))
-  {
-    dest_uri = outbound_proxy;
-  } else if(!route.empty()) {
-    // parse first route
-    sip_header fr;
-    fr.value = stl2cstr(route);
-    sip_uri* route_uri = get_first_route_uri(&fr);
-    if(!route_uri){
-      ERROR("Could not parse route (local_tag='%s';route='%s')",
-        local_tag.c_str(),route.c_str());
-      goto error;
-    }
-
-    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
-    else transport_id = sip_transport::UDP;
-
-  } else {
-    dest_uri = remote_uri;
-  }
-
-  if(!dest_uri.empty()){
-    sip_uri d_uri;
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
-      ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
-        local_tag.c_str(),dest_uri.c_str());
-      goto error;
-    }
-
-    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
-    else transport_id = sip_transport::UDP;
-
-  }
-
-  if(!transport_id) goto error;
-
-  setOutboundTransport(transport_id);
-  return outbound_transport;
-
-error:
-  WARN("Error while computing outbound transport: UDP will be used instead.");
-  setOutboundTransport(sip_transport::UDP);
-  return outbound_transport;
 }
 
 void AmBasicSipDialog::resetOutboundIf()
@@ -612,8 +483,8 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     setRouteSet(    req.route    );
     set1stBranch(   req.via_branch );
     setOutboundInterface( req.local_if );
-    setOutboundAddrType(str2addrtype(req.local_ip));
-    setOutboundTransport(req.transport_id);
+    setOutboundAddrType( str2addrtype(req.local_ip) );
+    setOutboundTransport( req.addr_if );
   }
 
   if(onRxReqStatus(req)) {

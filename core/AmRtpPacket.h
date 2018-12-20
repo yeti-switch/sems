@@ -38,6 +38,7 @@
 #include "rtcp/RtcpPacket.h"
 
 class AmRtpPacketTracer;
+class AmSrtpConnection;
 class msg_logger;
 
 #define RTP_PACKET_PARSE_ERROR -1
@@ -60,11 +61,7 @@ class AmRtpPacket
     unsigned int   data_offset;
     unsigned int   d_size;
 
-    int sendto(int sd);
-    int sendmsg(int sd, unsigned int sys_if_idx);
-
   public:
-
     unsigned char  payload;
     bool           marker;
     unsigned short sequence;
@@ -73,12 +70,8 @@ class AmRtpPacket
     unsigned char  version;
     bool           relayed;
 
+    struct sockaddr_storage saddr;
     struct timeval recv_time;
-    struct sockaddr_storage addr;
-
-    msghdr recv_msg;
-    iovec recv_iov[1];
-    unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
 
     AmRtpPacket();
     ~AmRtpPacket();
@@ -91,11 +84,8 @@ class AmRtpPacket
     // returns -1 if error, else 0
     int compile_raw(unsigned char* data_buf, unsigned int size);
 
-  //int send(int sd, unsigned int sys_if_idx, sockaddr_storage* l_saddr);
-  int send(int sd, const MEDIA_info &iface, sockaddr_storage* l_saddr);
-  int recv(int sd);
-
     int rtp_parse(AmObject *caller = NULL);
+    bool isRtcp();
 
     int rtcp_parse_update_stats(RtcpBidirectionalStat &stats);
     int parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats);
@@ -112,14 +102,13 @@ class AmRtpPacket
 
     unsigned int   getBufferSize() const { return b_size; }
     unsigned char* getBuffer();
-    void setBufferSize(unsigned int b) { b_size = b; }
-
     void logReceived(msg_logger *logger, struct sockaddr_storage *laddr);
     void logSent(msg_logger *logger, struct sockaddr_storage *laddr);
 
     void mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr);
     void mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr);
-
+    void setBuffer(unsigned char* buf, unsigned int b);
+    void setBufferSize(unsigned int b);
 };
 
 #endif

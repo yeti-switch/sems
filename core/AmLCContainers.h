@@ -6,15 +6,16 @@
 #include <vector>
 #include <list>
 #include "sip/transport.h"
-#include "sip/tls_trsp_settings.h"
+#include "sip/ssl_settings.h"
 #include "sems.h"
+#include "AmSdp.h"
 
 class IP_info
 {
 public:
     enum IP_type
     {
-        UNDEFINED,
+        UNDEFINED = 0,
         IPv4,
         IPv6
     };
@@ -61,6 +62,16 @@ public:
     virtual IP_info* Clone(){
         return new IP_info(*this);
     }
+
+    std::string ipTypeToStr() const {
+        if(type_ip == IP_type::IPv4) {
+            return "IPv4";
+        } else if(type_ip == IP_type::IPv6) {
+            return "IPv6";
+        }
+
+        return "";
+    }
 };
 
 class SIP_info : public IP_info
@@ -68,6 +79,7 @@ class SIP_info : public IP_info
 public:
     enum SIP_type
     {
+        UNDEFINED = 0,
         UDP,
         TCP,
         TLS
@@ -90,7 +102,7 @@ public:
     trsp_acl acl;
     trsp_acl opt_acl;
 
-    std::string toStr() const {
+    std::string transportToStr() const {
         if(type == SIP_info::TCP) {
             return "TCP";
         } else if(type == SIP_info::UDP) {
@@ -187,7 +199,7 @@ class MEDIA_info : public IP_info
 public:
     enum MEDIA_type
     {
-        RTP,
+        RTP = 0,
         RTSP
     };
 
@@ -225,7 +237,7 @@ public:
         return port;
     }
 
-    std::string toStr() const {
+    std::string transportToStr() const {
         if(mtype == MEDIA_info::RTP) {
             return "RTP";
         } else if(mtype == MEDIA_info::RTSP) {
@@ -246,8 +258,13 @@ private:
 class RTP_info : public MEDIA_info
 {
 public:
-    RTP_info() : MEDIA_info(RTP){}
-    RTP_info(const RTP_info& info) : MEDIA_info(info){}
+    RTP_info() : MEDIA_info(RTP), srtp_enable(true){}
+    RTP_info(const RTP_info& info)
+    : MEDIA_info(info)
+    , profiles(info.profiles)
+    , server_settings(info.server_settings)
+    , client_settings(info.client_settings)
+    , srtp_enable(info.srtp_enable){}
     virtual ~RTP_info(){}
 
     static RTP_info* toMEDIA_RTP(MEDIA_info* info)
@@ -255,12 +272,18 @@ public:
         if(info->mtype == RTP) {
             return static_cast<RTP_info*>(info);
         }
+
         return 0;
     }
 
     virtual IP_info* Clone(){
         return new RTP_info(*this);
     }
+
+    dtls_client_settings client_settings;
+    dtls_server_settings server_settings;
+    std::vector<CryptoProfile> profiles;
+    bool srtp_enable;
 };
 
 class RTSP_info : public MEDIA_info
@@ -282,6 +305,22 @@ public:
         return new RTSP_info(*this);
     }
 };
+
+/*****************************************************************************/
+/*                   address type with transport id(ipprotoid)               */
+/*             0     1     2     3     4     5     6     7     8             */
+/*          |   address type   |  sip_transport | media_transport |          */
+/*****************************************************************************/
+#define IPv4_UDP    (IP_info::IPv4) | (SIP_info::UDP<<3)
+#define IPv4_TCP    (IP_info::IPv4) | (SIP_info::TCP<<3)
+#define IPv4_TLS    (IP_info::IPv4) | (SIP_info::TLS<<3)
+#define IPv6_UDP    (IP_info::IPv6) | (SIP_info::UDP<<3)
+#define IPv6_TCP    (IP_info::IPv6) | (SIP_info::TCP<<3)
+#define IPv6_TLS    (IP_info::IPv6) | (SIP_info::TLS<<3)
+#define IPv4_RTP    (IP_info::IPv4) | (MEDIA_info::RTP<<6)
+#define IPv4_RTSP   (IP_info::IPv4) | (MEDIA_info::RTSP<<6)
+#define IPv6_RTP    (IP_info::IPv6) | (MEDIA_info::RTP<<6)
+#define IPv6_RTSP   (IP_info::IPv6) | (MEDIA_info::RTSP<<6)
 
 template<typename ProtoInfo>
 class PI_interface
@@ -306,8 +345,23 @@ public:
             proto_info.push_back(dynamic_cast<ProtoInfo>(info->Clone()));
         }
     }
+
+    int insertProtoMapping(unsigned char ipproto, unsigned short index)
+    {
+        std::map<unsigned char, unsigned short>::iterator it = local_ip_proto2addr_if.find(ipproto);
+        if(it != local_ip_proto2addr_if.end()) {
+            WARN("duplicate local ip protocol %s/%s",
+                 proto_info[index]->ipTypeToStr().c_str(),
+                 proto_info[index]->transportToStr().c_str());
+            local_ip_proto2addr_if[ipproto] = index;
+        }
+        local_ip_proto2addr_if.insert(std::make_pair(ipproto, index));
+        return 0;
+    }
+
     std::string name;
     std::vector<ProtoInfo> proto_info;
+    std::map<unsigned char, unsigned short> local_ip_proto2addr_if;
 };
 
 class SIP_interface : public PI_interface<SIP_info*>

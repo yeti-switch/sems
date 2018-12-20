@@ -35,6 +35,7 @@
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
+#include "sip/ssl_settings.h"
 #include "AmRtpSession.h"
 
 #include <netinet/in.h>
@@ -57,15 +58,15 @@ using std::pair;
 #define RTP_BUFFER_SIZE -5 // buffer overrun
 #define RTP_UNKNOWN_PL  -6 // unknown payload
 
-
 /**
  * Forward declarations
  */
 class  AmAudio;
 class  AmSession;
+class msg_logger;
 struct SdpPayload;
 struct amci_payload_t;
-class msg_logger;
+class  AmSrtpConnection;
 
 /**
  * This provides the memory for the receive buffer.
@@ -194,6 +195,14 @@ class AmRtpStream
     typedef std::queue<AmRtpPacket*>                      RtpEventQueue;
     typedef std::map<unsigned char, PayloadMapping>       PayloadMappingTable;
 
+    msghdr recv_msg;
+    iovec recv_iov[1];
+    unsigned int   b_size;
+    unsigned char  buffer[RTP_PACKET_BUF_SIZE];
+    unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
+    struct timeval recv_time;
+    struct sockaddr_storage saddr;
+
     // mapping from local payload type to PayloadMapping
     PayloadMappingTable pl_map;
 
@@ -253,6 +262,7 @@ class AmRtpStream
     /** Context index in receiver for local RTCP socket */
     int          l_rtcp_sd_ctx;
 
+
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
 
@@ -264,6 +274,22 @@ class AmRtpStream
     /** symmetric RTP & RTCP */
     bool           passive;
     bool           passive_rtcp;
+
+    /**type of rtp transport**/
+    enum MediaTransport
+    {
+        RTP_AVP = TransProt::TP_RTPAVP,
+        RTP_SAVP = TransProt::TP_RTPSAVP,
+        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP
+    } transport;
+
+    /**  srtp connection mode */
+    auto_ptr<AmSrtpConnection> srtp_connection;
+    auto_ptr<AmSrtpConnection> srtcp_connection;
+    dtls_server_settings server_settings;
+    dtls_client_settings client_settings;
+    vector<CryptoProfile> srtp_profiles;
+    bool srtp_enable;
 
     /** mute && port == 0 */
     bool           hold;
@@ -390,6 +416,10 @@ class AmRtpStream
 
     void rtcp_send_report(unsigned int user_ts);
 
+    friend class AmSrtpConnection;
+    int recv(int fd);
+    int send(unsigned char* buf, int size, bool rtcp);
+    int sendmsg(unsigned char* buf, int size);
   public:
 
     /**
@@ -418,6 +448,7 @@ class AmRtpStream
 
     /** Stops the stream and frees all resources. */
     virtual ~AmRtpStream();
+
 
     int send( unsigned int ts,
         unsigned char* buffer,
@@ -491,6 +522,9 @@ class AmRtpStream
     /** Symmetric RTP & RTCP: passive mode ? */
     void setPassiveMode(bool p);
     bool getPassiveMode() { return passive || passive_rtcp; }
+
+    /** Set using transport */
+    void setTransport(TransProt trans) { transport = (MediaTransport)trans; }
 
     unsigned int get_ssrc() { return l_ssrc; }
 
@@ -574,6 +608,8 @@ class AmRtpStream
     * @warning so that the internal SDP media line index is set properly.
     */
     virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
+
+    void createSrtpConnection(bool dtls_server);
 
     /** set the RTP stream on hold */
     void setOnHold(bool on_hold);

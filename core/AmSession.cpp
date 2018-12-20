@@ -1011,7 +1011,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
     SdpMedia& answer_media = answer.media.back();
 
     if( m_it->type == MT_AUDIO
-	&& m_it->transport == TP_RTPAVP
+	&& m_it->transport != TP_UDPTL
         && audio_1st_stream 
         && (m_it->port != 0) ) {
 
@@ -1291,14 +1291,10 @@ int AmSession::getRtpAddr()
     if(rtp_addr < 0) {
         int rtp_if = getRtpInterface();
         int rtp_type = dlg->getOutboundAddrType();
-        int index = 0;
-        for(auto& info : AmConfig.media_ifs[rtp_if].proto_info) {
-            int addrtype = str2addrtype(info->local_ip);
-            if(rtp_type == addrtype && info->mtype == MEDIA_info::RTP) {
-                setRtpAddr(index);
-                break;
-            }
-            index++;
+        unsigned char ipproto = rtp_type | (MEDIA_info::RTP<<6);
+        auto addr_it = AmConfig.media_ifs[rtp_if].local_ip_proto2addr_if.find(ipproto);
+        if(addr_it != AmConfig.media_ifs[rtp_if].local_ip_proto2addr_if.end()) {
+            setRtpAddr(addr_it->second);
         }
     }
 
@@ -1328,13 +1324,14 @@ string AmSession::localMediaIP(int addrType)
   assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_addr; i < AmConfig.media_ifs[rtp_interface].proto_info.size(); i++) {
-    IP_info *info = AmConfig.media_ifs[rtp_interface].proto_info[i];
-    set_ip = info->local_ip; // "media_ip" parameter.
-    if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && info->type_ip == IP_info::IPv4) ||
-	((addrType == AT_V6) && info->type_ip == IP_info::IPv6))
-      break;
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->type_ip && addrType != IP_info::UNDEFINED) {
+    unsigned char ipproto = addrType | (MEDIA_info::RTP<<6);
+    auto addr_it = AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.find(ipproto);
+    if(addr_it != AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.end()) {
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->local_ip;
+    }
+  } else {
+    set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->local_ip;
   }
 
   if( (set_ip[0] == '[') &&
@@ -1362,13 +1359,14 @@ string AmSession::advertisedIP(int addrType)
   assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_addr; i < AmConfig.media_ifs[rtp_interface].proto_info.size(); i++) {
-    IP_info *info = AmConfig.media_ifs[rtp_interface].proto_info[i];
-    set_ip = info->local_ip; // "media_ip" parameter.
-    if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && info->type_ip == IP_info::IPv4) ||
-	((addrType == AT_V6) && info->type_ip == IP_info::IPv6))
-      break;
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->type_ip && addrType != IP_info::UNDEFINED) {
+    unsigned char ipproto = addrType | (MEDIA_info::RTP<<6);
+    auto addr_it = AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.find(ipproto);
+    if(addr_it != AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.end()) {
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->local_ip;
+    }
+  } else {
+      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->local_ip;
   }
 
   if( (set_ip[0] == '[') &&

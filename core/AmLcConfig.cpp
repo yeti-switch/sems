@@ -37,6 +37,9 @@
 #define SECCTION_SDM_NAME            "shutdown_mode"
 #define SECTION_SERVER_NAME          "server"
 #define SECTION_CLIENT_NAME          "client"
+#define SECTION_SRTP_NAME            "srtp"
+#define SECTION_SDES_NAME            "sdes"
+#define SECTION_DTLS_NAME            "dtls"
 
 #define PARAM_LIMIT_NAME             "limit"
 #define PARAM_CODE_NAME              "code"
@@ -143,6 +146,8 @@
 #define PARAM_DH_PARAM_NAME          "dhparam"
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
+#define PARAM_ENABLE_SRTP_NAME       "enable-srtp"
+#define PARAM_PROFILES_NAME          "profiles"
 
 #define VALUE_OFF                    "off"
 #define VALUE_DROP                   "drop"
@@ -366,6 +371,54 @@ AmLcConfig::AmLcConfig()
         CFG_END()
     };
 
+    cfg_opt_t dtls_client[] =
+    {
+        CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t dtls_server[] =
+    {
+        CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_MACS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
+        CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t dtls[] =
+    {
+        CFG_SEC(SECTION_CLIENT_NAME, dtls_client, CFGF_NONE),
+        CFG_SEC(SECTION_SERVER_NAME, dtls_server, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_opt_t sdes[] =
+    {
+        CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t srtp[] =
+    {
+        CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
+        CFG_SEC(SECTION_SDES_NAME, sdes, CFGF_NONE),
+        CFG_SEC(SECTION_DTLS_NAME, dtls, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t rtp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
@@ -377,6 +430,7 @@ AmLcConfig::AmLcConfig()
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
+        CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NONE),
         CFG_END()
     };
 
@@ -1039,6 +1093,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     SIP_TCP_info* stinfo = 0;
     SIP_TLS_info* stlinfo = 0;
     MEDIA_info* mediainfo = 0;
+    RTP_info* rtpinfo = 0;
 
     if(strcmp(cfg->name, SECTION_SIP_UDP_NAME) == 0) {
         info = sinfo = suinfo = new SIP_UDP_info();
@@ -1047,7 +1102,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     } else if(strcmp(cfg->name, SECTION_SIP_TLS_NAME) == 0) {
         info = sinfo = stinfo = stlinfo = new SIP_TLS_info();
     } else if(strcmp(cfg->name, SECTION_RTP_NAME) == 0) {
-        info = mediainfo = new RTP_info();
+        info = mediainfo = rtpinfo = new RTP_info();
     } else if(strcmp(cfg->name, SECTION_RTSP_NAME) == 0) {
         info = mediainfo = new RTSP_info();
     } else {
@@ -1075,6 +1130,69 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     if(mediainfo) {
         mediainfo->high_port = cfg_getint(cfg, PARAM_HIGH_PORT_NAME);
         mediainfo->low_port = cfg_getint(cfg, PARAM_LOW_PORT_NAME);
+    }
+
+    //RTP specific opts
+    if(rtpinfo) {
+        cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
+        rtpinfo->srtp_enable = cfg_getbool(srtp, PARAM_ENABLE_SRTP_NAME);
+        cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
+        for(int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
+            rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));
+        }
+
+        cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
+        cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
+            std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
+            rtpinfo->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+        }
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
+            rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
+        }
+        rtpinfo->server_settings.certificate = cfg_getstr(server, PARAM_CERTIFICATE_NAME);
+        rtpinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
+            std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
+            rtpinfo->server_settings.cipher_list.push_back(cipher);
+        }
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
+            std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
+            rtpinfo->server_settings.macs_list.push_back(mac);
+        }
+        rtpinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
+        rtpinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
+        rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
+        for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
+            std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
+            rtpinfo->server_settings.ca_list.push_back(ca);
+        }
+
+        if(rtpinfo->server_settings.require_client_certificate && rtpinfo->server_settings.ca_list.empty()) {
+            ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
+            return 0;
+        }
+        if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
+            ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
+            return 0;
+        }
+
+        cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
+        for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
+            std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
+            rtpinfo->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+        }
+        for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
+            rtpinfo->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
+        }
+        rtpinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+        rtpinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+        rtpinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
+        rtpinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
+        for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
+            std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
+            rtpinfo->client_settings.ca_list.push_back(ca);
+        }
     }
 
     //SIP specific opts
@@ -1199,6 +1317,7 @@ int AmLcConfig::finalizeIpConfig()
             sip_if_names.insert(std::make_pair(if_iterator->name, if_iterator - sip_ifs.begin()));
         }
 
+        unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
             info->local_ip = fixIface2IP(info->local_ip, true);
@@ -1208,9 +1327,11 @@ int AmLcConfig::finalizeIpConfig()
                 return -1;
             }
             if (insertSIPInterfaceMapping(if_iterator->name, *info,if_iterator - sip_ifs.begin()) < 0 ||
+                (*if_iterator).insertProtoMapping((info->type_ip)|(info->type << 3), i) ||
                 setNetInterface(*info)) {
                 return -1;
             }
+            i++;
         }
     }
 
@@ -1223,6 +1344,7 @@ int AmLcConfig::finalizeIpConfig()
             media_if_names.insert(std::make_pair(if_iterator->name, if_iterator - media_ifs.begin()));
         }
 
+        unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
             info->local_ip = fixIface2IP(info->local_ip, true);
@@ -1231,9 +1353,11 @@ int AmLcConfig::finalizeIpConfig()
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if (setNetInterface(*info)) {
+            if ((*if_iterator).insertProtoMapping((info->type_ip)|(info->mtype << 6), i) ||
+                setNetInterface(*info)) {
                 return -1;
             }
+            i++;
         }
     }
 

@@ -59,12 +59,14 @@ static bool is_wsp(char s);
 
 static MediaType media_type(std::string media);
 static TransProt transport_type(std::string transport);
+static CryptoProfile crypto_profile(std::string profile);
 static bool attr_check(std::string attr);
 
 enum parse_st {SDP_DESCR, SDP_MEDIA};
 enum sdp_connection_st {NET_TYPE, ADDR_TYPE, IP4, IP6};
 enum sdp_media_st {MEDIA, PORT, PROTO, FMT}; 
 enum sdp_attr_rtpmap_st {TYPE, ENC_NAME, CLK_RATE, ENC_PARAM};
+enum sdp_attr_crypto_st {TAG, PROFILE, KEY, SESS_PARAM};
 enum sdp_attr_fmtp_st {FORMAT, FORMAT_PARAM};
 enum sdp_origin_st {USER, ID, VERSION_ST, NETTYPE, ADDR, UNICAST_ADDR};
 
@@ -116,6 +118,18 @@ inline string transport_p_2_str(int tp)
   }
 }
 
+inline string profile_t_2_str(int pt)
+{
+  switch(pt){
+  case CP_AES128_CM_SHA1_80: return "AES_CM_128_HMAC_SHA1_80";
+  case CP_AES128_CM_SHA1_32: return "AES_CM_128_HMAC_SHA1_32";
+  case CP_F8128_HMAC_SHA1_80: return "F8_128_HMAC_SHA1_80";
+  case CP_NULL_SHA1_80: return "NULL_HMAC_SHA1_32";
+  case CP_NULL_SHA1_32: return "NULL_HMAC_SHA1_80";
+  default: return "<unknown profile type>";
+  }
+}
+
 bool SdpConnection::operator == (const SdpConnection& other) const
 {
   return network == other.network && addrType == other.addrType 
@@ -154,10 +168,38 @@ string SdpMedia::type2str(int type)
   return media_t_2_str(type);
 }
 
+TransProt SdpMedia::str2transport(string type)
+{
+    return transport_type(type);
+}
+
 bool SdpPayload::operator == (int r)
 {
   DBG("pl == r: payload_type = %i; r = %i\n", payload_type, r);
   return payload_type == r;
+}
+
+string SdpKeyInfo::print() const
+{
+    return "inline:"+ key;
+}
+
+string SdpCrypto::print() const
+{
+    string ret("a=crypto:");
+    ret += int2str(tag);
+    ret += " ";
+    ret += profile_t_2_str(profile);
+    for(auto key:keys) {
+        ret += " ";
+        ret += key.print();
+    }
+    return ret + CRLF;
+}
+
+CryptoProfile SdpCrypto::str2profile(string str)
+{
+    return crypto_profile(str);
 }
 
 string SdpAttribute::print() const
@@ -429,39 +471,38 @@ void AmSdp::print(string& body) const
 	 attributes.begin(); a_it != attributes.end(); a_it++) {
     out_buf += a_it->print();
   }
+    for(std::vector<SdpMedia>::const_iterator media_it = media.begin();
+            media_it != media.end(); media_it++) {
 
-  for(std::vector<SdpMedia>::const_iterator media_it = media.begin();
-      media_it != media.end(); media_it++) {
-      
-      out_buf += "m=" + media_t_2_str(media_it->type) + " " + int2str(media_it->port) + " " + transport_p_2_str(media_it->transport);
+        out_buf += "m=" + media_t_2_str(media_it->type) + " " + int2str(media_it->port) + " " + transport_p_2_str(media_it->transport);
 
-      string options;
+        string options;
 
-      if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPAVPF || media_it->transport == TP_RTPSAVP || media_it->transport == TP_RTPSAVPF || media_it->transport == TP_UDPTLSRTPSAVP || media_it->transport == TP_UDPTLSRTPSAVPF) {
-	for(std::vector<SdpPayload>::const_iterator pl_it = media_it->payloads.begin();
-	    pl_it != media_it->payloads.end(); pl_it++) {
+        if (media_it->transport == TP_RTPAVP || media_it->transport == TP_RTPAVPF || media_it->transport == TP_RTPSAVP || media_it->transport == TP_RTPSAVPF || media_it->transport == TP_UDPTLSRTPSAVP || media_it->transport == TP_UDPTLSRTPSAVPF) {
+            for(std::vector<SdpPayload>::const_iterator pl_it = media_it->payloads.begin();
+                    pl_it != media_it->payloads.end(); pl_it++) {
 
-	  out_buf += " " + int2str(pl_it->payload_type);
+                out_buf += " " + int2str(pl_it->payload_type);
 
-	  // "a=rtpmap:" line
-	  if (!pl_it->encoding_name.empty()) {
-	    options += "a=rtpmap:" + int2str(pl_it->payload_type) + " "
-	      + pl_it->encoding_name + "/" + int2str(pl_it->clock_rate);
+                // "a=rtpmap:" line
+                if (!pl_it->encoding_name.empty()) {
+                    options += "a=rtpmap:" + int2str(pl_it->payload_type) + " "
+                               + pl_it->encoding_name + "/" + int2str(pl_it->clock_rate);
 
-	    if(pl_it->encoding_param > 0){
-	      options += "/" + int2str(pl_it->encoding_param);
-	    }
+                    if(pl_it->encoding_param > 0) {
+                        options += "/" + int2str(pl_it->encoding_param);
+                    }
 
-	    options += "\r\n";
-	  }
-	  
-	  // "a=fmtp:" line
-	  if(pl_it->sdp_format_parameters.size()){
-	    options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
-	      + pl_it->sdp_format_parameters + "\r\n";
-	  }
-	  
-	}
+                    options += "\r\n";
+                }
+
+                // "a=fmtp:" line
+                if(pl_it->sdp_format_parameters.size()) {
+                    options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
+                               + pl_it->sdp_format_parameters + "\r\n";
+                }
+
+            }
       }
       else {
         // for other transports (UDP/UDPTL) just print out fmt
@@ -475,6 +516,10 @@ void AmSdp::print(string& body) const
 
       out_buf += "\r\n" + options;
 
+      for (std::vector<SdpCrypto>::const_iterator c_it=
+                        media_it->crypto.begin(); c_it != media_it->crypto.end(); c_it++) {
+                out_buf += c_it->print();
+      }
       if(media_it->send){
 	if(media_it->recv){
 	  out_buf += "a=sendrecv\r\n";
@@ -502,6 +547,13 @@ void AmSdp::print(string& body) const
       case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
       case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
       case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
+      case SdpMedia::DirUndefined: break;
+      }
+
+      switch (media_it->setup) {
+      case SdpMedia::DirActive:  out_buf += "a=setup:active\r\n"; break;
+      case SdpMedia::DirPassive: out_buf += "a=setup:passive\r\n"; break;
+      case SdpMedia::DirBoth:
       case SdpMedia::DirUndefined: break;
       }
   }
@@ -1125,8 +1177,10 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 
   register sdp_attr_rtpmap_st rtpmap_st;
   register sdp_attr_fmtp_st fmtp_st;
+  register sdp_attr_crypto_st crypto_st;
   rtpmap_st = TYPE;
   fmtp_st = FORMAT;
+  crypto_st = TAG;
   char* attr_line=s;
   char* next=0;
   char* line_end=0;
@@ -1274,19 +1328,78 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     if(pl_it != media.payloads.end())
       pl_it->sdp_format_parameters = params;
 
-  } else if (attr == "direction") {
+  } else if(attr == "crypto") {
+      SdpCrypto crypto;
+      while(attr_line < line_end) {
+          next = parse_until(attr_line, line_end, ' ');
+          switch(crypto_st) {
+          case TAG:
+          {
+              string tag_number(attr_line, int(next-attr_line)-1);
+              str2i(tag_number, crypto.tag);
+              crypto_st = PROFILE;
+              break;
+          }
+          case PROFILE:
+          {
+              string profile(attr_line, int(next-attr_line)-1);
+              crypto.profile = crypto_profile(profile);
+              crypto_st = KEY;
+              break;
+          }
+          case KEY:
+          {
+              string key(attr_line, int(next-attr_line)-1);
+              char* key_data = parse_until(attr_line, next, ':');
+              if(key_data < line_end) {
+                  string method = string(attr_line, int(key_data-attr_line)-1);
+                  string key_info = string(key_data, int(next-key_data)-1);
+                  if(method == "inline"){
+                      SdpKeyInfo info;
+                      char* key_end = parse_until(key_data, next, '|');
+                      info.key = string(key_data, int(key_end-key_data)-1);
+
+                      //TODO: create parsing parameters as describe in https://tools.ietf.org/html/rfc4568#section-9.2
+                      info.lifetime = 0;
+                      info.mki = 1;
+                      crypto.keys.push_back(info);
+                      break;
+                  }
+              }
+              crypto_st = SESS_PARAM;
+          }
+          case SESS_PARAM:
+          {
+              string param(attr_line, int(next-attr_line)-1);
+              crypto.sp.push_back(param);
+          }
+          }
+          attr_line = next;
+      }
+      media.crypto.push_back(crypto);
+  } else if (attr == "direction" ||
+            attr == "setup") {
     if (parsing) {
       size_t dir_len = 0;
       next = skip_till_next_line(attr_line, dir_len);
       string value(attr_line, dir_len);
       if (value == "active") {
-	media.dir=SdpMedia::DirActive;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirActive;
+          else
+            media.setup=SdpMedia::DirActive;
 	// DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (value == "passive") {
-	media.dir=SdpMedia::DirPassive;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirPassive;
+          else
+            media.setup=SdpMedia::DirPassive;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (attr == "both") {
-	media.dir=SdpMedia::DirBoth;
+          if(attr == "direction")
+            media.dir=SdpMedia::DirBoth;
+          else
+            media.setup=SdpMedia::DirBoth;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else {
 	DBG("found unknown value for media attribute 'direction'\n");
@@ -1625,6 +1738,26 @@ static TransProt transport_type(string transport)
     return TP_UDPTL;
   else 
     return TP_NONE;
+}
+
+
+static CryptoProfile crypto_profile(std::string profile)
+{
+  string profile_uc = profile;
+  std::transform(profile_uc.begin(), profile_uc.end(), profile_uc.begin(), toupper);
+
+  if(profile_uc == "AES_CM_128_HMAC_SHA1_32")
+    return CP_AES128_CM_SHA1_32;
+  else if(profile_uc == "AES_CM_128_HMAC_SHA1_80")
+    return CP_AES128_CM_SHA1_80;
+  else if(profile_uc == "F8_128_HMAC_SHA1_80")
+    return CP_F8128_HMAC_SHA1_80;
+  else if(profile_uc == "NULL_HMAC_SHA1_32")
+    return CP_NULL_SHA1_32;
+  else if(profile_uc == "NULL_HMAC_SHA1_80")
+    return CP_NULL_SHA1_80;
+  else
+    return CP_NONE;
 }
 
 /*

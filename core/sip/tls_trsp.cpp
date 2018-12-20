@@ -20,7 +20,7 @@
 tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
 , certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator::instance()))
+, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
 , is_optional(false)
 {
 }
@@ -28,7 +28,7 @@ tls_conf::tls_conf(tls_client_settings* settings)
 tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
 , certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator::instance()))
+, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
 , is_optional(false)
 {
 }
@@ -39,9 +39,9 @@ tls_conf::tls_conf(const tls_conf& conf)
 , is_optional(conf.is_optional)
 {
     if(conf.s_server) {
-        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator::instance()));
+        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_tls::instance()));
     } else if(conf.s_client) {
-        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator::instance()));
+        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_tls::instance()));
     }
 }
 
@@ -87,6 +87,11 @@ vector<string> tls_conf::allowed_macs() const
     }
     ERROR("allowed_ciphers: called in unexpected context");
     return vector<string>();
+}
+
+size_t tls_conf::minimum_rsa_bits() const
+{
+    return 1024;
 }
 
 bool tls_conf::allow_tls10()  const
@@ -231,11 +236,11 @@ tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
         if(sa_ssl->ssl_marker) {
             settings.set_optional_parameters(toString(sa_ssl->sig), toString(sa_ssl->cipher), toString(sa_ssl->mac));
         }
-        tls_channel = new Botan::TLS::Client(*this, *session_manager::instance(), settings, settings,*rand_generator::instance(),
+        tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), settings, settings,*rand_generator_tls::instance(),
                                             Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
                                             Botan::TLS::Protocol_Version::TLS_V12);
     } else {
-        tls_channel = new Botan::TLS::Server(*this, *session_manager::instance(), settings, settings,*rand_generator::instance(), false);
+        tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), settings, settings,*rand_generator_tls::instance(), false);
     }
 }
 

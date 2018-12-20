@@ -273,7 +273,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         for(int j = 0; j < (int)iface.proto_info.size(); j++) {
             AmArg am_sinfo;
             SIP_info* sinfo = iface.proto_info[j];
-            am_sinfo["type"] = sinfo->toStr();
+            am_sinfo["type"] = sinfo->transportToStr();
             am_sinfo["sys_name"] = sinfo->net_if;
             am_sinfo["sys_idx"] = (int)sinfo->net_if_idx;
             am_sinfo["local_ip"] = sinfo->local_ip;
@@ -300,7 +300,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         for(int j = 0; j < (int)iface.proto_info.size(); j++) {
             AmArg am_minfo;
             MEDIA_info* minfo = iface.proto_info[j];
-            am_minfo["type"] = minfo->toStr();
+            am_minfo["type"] = minfo->transportToStr();
             am_minfo["sys_name"] = minfo->net_if;
             am_minfo["sys_idx"] = (int)minfo->net_if_idx;
             am_minfo["local_ip"] = minfo->local_ip;
