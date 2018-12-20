@@ -1,3 +1,9 @@
+sems (1.8.9-1) stable; urgency=low
+
+  * fix SRTP related crashes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Dec 2018 17:44:30 +0200
+
 sems (1.8.9-0) stable; urgency=low
 
   * SRTP support
