@@ -1,3 +1,11 @@
+sems (1.8.9-0) stable; urgency=low
+
+  * SRTP support
+  * optimize proto info
+  * AmRtpAudio: fix segfault on failover to default PLC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Dec 2018 13:49:09 +0200
+
 sems (1.8.8-0) stable; urgency=low
 
   * increased resample buffer *8
