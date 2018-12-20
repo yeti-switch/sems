@@ -194,10 +194,12 @@ void AmRtpStream::setLocalPort(unsigned short p)
     }
 
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[laddr_if]);
-    server_settings = rtpinfo->server_settings;
-    client_settings = rtpinfo->client_settings;
-    srtp_profiles = rtpinfo->profiles;
-    srtp_enable = rtpinfo->srtp_enable;
+    if(rtpinfo) {
+        server_settings = rtpinfo->server_settings;
+        client_settings = rtpinfo->client_settings;
+        srtp_profiles = rtpinfo->profiles;
+        srtp_enable = rtpinfo->srtp_enable;
+    }
 
     int retry = 10;
     unsigned short port = 0;
