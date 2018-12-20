@@ -1,9 +1,9 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.7.2)
 
 IF(COMMAND cmake_policy)
-	# Don't do automatic escaping of variables
+#	# Don't do automatic escaping of variables
 	CMAKE_POLICY(SET CMP0005 OLD)
-	CMAKE_POLICY(SET CMP0003 NEW)
+#	CMAKE_POLICY(SET CMP0003 NEW)
 ENDIF(COMMAND cmake_policy)
 
 
@@ -272,7 +272,7 @@ ENDIF(RTMP_FOUND)
 include(${CMAKE_SOURCE_DIR}/cmake/_CheckSymbolExists.cmake)
 SET(CMAKE_REQUIRED_LIBRARIES resolv)
 CHECK_SYMBOL_EXISTS(res_search resolv.h HAVE_RES_SEARCH)
-MESSAGE(STATUS "Have res_search: ${HAVE_RES_SEARCH} ")
+MESSAGE(STATUS "Have res_search:" ${HAVE_RES_SEARCH})
 
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/ampi)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
@@ -309,7 +309,7 @@ ADD_DEFINITIONS(-DSESSION_THREADPOOL)
 
 #ADD_DEFINITIONS(-DNO_THREADID_LOG)
 #ADD_DEFINITIONS(-DLOG_LOC_DATA_ATEND)
-ADD_DEFINITIONS(-DSEMS_APP_NAME='"${SEMS_APP}"')
+ADD_DEFINITIONS(-DSEMS_APP_NAME=${SEMS_APP})
 
 # Support for long debug messages? (useful for debugging SIP messages' contents)
 #
@@ -328,7 +328,7 @@ foreach( d ${CoreDefsList} )
 #    message( STATUS "Define: " ${d} )
     set(CoreDefs "${CoreDefs} -D${d}")
 endforeach()
-message(STATUS ${CoreDefs})
+message(STATUS CoreDefs: ${CoreDefs})
 
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)
