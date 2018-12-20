@@ -28,6 +28,7 @@
 #define SECTION_ORIGACL_NAME         "origination-acl"
 #define SECTION_MODULES_NAME         "modules"
 #define SECTION_MODULE_NAME          "module"
+#define SECTION_MODULE_GLOBAL_NAME   "module-global"
 #define SECTION_GENERAL_NAME         "general"
 #define SECTION_ROUTING_NAME         "routing"
 #define SECTION_APPLICATION_NAME     "application"
@@ -64,7 +65,6 @@
 #define PARAM_METHOD_NAME            "method"
 #define PARAM_PATH_NAME              "path"
 #define PARAM_CPATH_NAME             "config_path"
-#define PARAM_GLOBAL_NAME            "global"
 #define PARAM_BL_TTL_NAME            "default_bl_ttl"
 #define PARAM_LOG_RAW_NAME           "log_raw_messages"
 #define PARAM_LOG_PARS_NAME          "log_parsed_messages"
@@ -540,7 +540,6 @@ AmLcConfig::AmLcConfig()
 /**********************************************************************************************/
     cfg_opt_t module[] =
     {
-        CFG_BOOL(PARAM_GLOBAL_NAME, cfg_false, CFGF_NONE),
         CFG_END()
     };
 
@@ -549,6 +548,7 @@ AmLcConfig::AmLcConfig()
         CFG_STR(PARAM_PATH_NAME, "/usr/lib/sems/plug-in", CFGF_NONE),
         CFG_STR(PARAM_CPATH_NAME, "/etc/sems/etc/", CFGF_NONE),
         CFG_SEC(SECTION_MODULE_NAME, module, CFGF_MULTI | CFGF_TITLE),
+        CFG_SEC(SECTION_MODULE_GLOBAL_NAME, module, CFGF_MULTI | CFGF_TITLE),
         CFG_END()
     };
 
@@ -972,16 +972,21 @@ int AmLcConfig::readModules()
     }
     cfg_t* modules_ = cfg_getsec(m_cfg, SECTION_MODULES_NAME);
 
+    int mCount;
     modules_path = cfg_getstr(modules_, PARAM_PATH_NAME);
     configs_path = cfg_getstr(modules_, PARAM_CPATH_NAME);
-    int mCount = cfg_size(modules_, SECTION_MODULE_NAME);
+    mCount = cfg_size(modules_, SECTION_MODULE_NAME);
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
         std::string name = module->title;
         modules.push_back(name);
-        if(cfg_getbool(module, PARAM_GLOBAL_NAME)) {
-            AmPlugIn::instance()->set_load_rtld_global(name + ".so");
-        }
+    }
+    mCount = cfg_size(modules_, SECTION_MODULE_GLOBAL_NAME);
+    for(int i = 0; i < mCount; i++) {
+        cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_GLOBAL_NAME, i);
+        std::string name = module->title;
+        modules.push_back(name);
+        AmPlugIn::instance()->set_load_rtld_global(name + ".so");
     }
 
     return 0;
