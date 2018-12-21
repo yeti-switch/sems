@@ -29,4 +29,4 @@ set(CURL_BUNDLED_INCLUDE_DIRS ${CURL_BIN_DIR}/include)
 
 add_library(curl_bundled STATIC IMPORTED)
 set_property(TARGET curl_bundled PROPERTY IMPORTED_LOCATION ${CURL_BUNDLED_LIB})
-set(CURL_BUNDLED_LIBS -L/lib64 -lgssapi_krb5 ssl cares crypto z ${CURL_BUNDLED_LIB})
+set(CURL_BUNDLED_LIBS -L/lib64 -lgssapi_krb5 ssl cares crypto z nghttp2 ${CURL_BUNDLED_LIB})
