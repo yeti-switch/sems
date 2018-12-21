@@ -10,7 +10,7 @@ class RtspClient;
 using Rtsp::RtspMsg;
 using Rtsp::RtspSession;
 
-class RtspAudio  :   public AmRtpAudio
+class RtspAudio : public AmRtpAudio
 {
     typedef enum {
         Ready = 0,
@@ -32,6 +32,7 @@ class RtspAudio  :   public AmRtpAudio
         // RtspMsg             req;
 
     private:
+        bool    initSdpAnswer();
         void    initRtpAudio(unsigned short int r_rtp_port);
         int     initRtpAudio_by_sdp(const char *sdp_msg);
         void    describe();
