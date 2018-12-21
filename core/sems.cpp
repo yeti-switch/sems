@@ -367,6 +367,24 @@ int set_fd_limit()
   return 0;
 }
 
+static void log_handler(srtp_log_level_t level, const char *msg, void *data)
+{
+    switch (level) {
+    case srtp_log_level_error:
+        ERROR("SRTP-LOG: %s\n", msg);
+        break;
+    case srtp_log_level_warning:
+        WARN("SRTP-LOG: %s\n", msg);
+        break;
+    case srtp_log_level_info:
+        INFO("SRTP-LOG: %s\n", msg);
+        break;
+    case srtp_log_level_debug:
+        DBG("SRTP-LOG: %s\n", msg);
+        break;
+    }
+}
+
 /*
  * Main
  */
@@ -614,6 +632,7 @@ int main(int argc, char* argv[])
             ERROR("Cannot initialize SRTP library\n");
             goto error;
         }
+        srtp_install_log_handler(log_handler, NULL);
   }
 
 #ifdef WITH_ZRTP
