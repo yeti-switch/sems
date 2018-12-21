@@ -78,7 +78,7 @@ void RtspAudio::describe()
 
 
 void RtspAudio::setup(int l_port)
-{
+    {
     struct RtspMsg msg = RtspMsg(SETUP, uri, id) ;
 
     msg.header[H_Transport] = "RTP/AVP;unicast;client_port=" + int2str(l_port)+"-"+int2str(l_port + 1);
@@ -107,6 +107,46 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
 }
 
 
+bool RtspAudio::initSdpAnswer()
+{
+    if(offer.media.empty()) {
+        ERROR("empty offer");
+        return false;
+    }
+
+    SdpMedia& offer_media = offer.media.front();
+    if(offer_media.type != MT_AUDIO || offer_media.transport != TP_RTPAVP) {
+        ERROR("unsupported media format");
+        return false;
+    }
+
+    if(offer_media.port == 0) {
+        ERROR("offer port is 0");
+        return false;
+    }
+
+    answer.version = 0;
+    answer.origin.user = "sems";
+    answer.sessionName = "sems";
+    answer.conn.network = NT_IN;
+    answer.conn.addrType = offer.conn.address.empty() ? AT_V4 : offer.conn.addrType;
+    answer.conn.address = agent->localMediaIP();
+
+    answer.media.clear();
+    answer.media.push_back(SdpMedia());
+
+    SdpMedia &answer_media = answer.media.back();
+
+    AmRtpAudio::getSdpAnswer(0, offer_media, answer_media);
+
+    if(answer_media.payloads.empty()) {
+        ERROR("no compatible payload");
+        return false;
+    }
+
+    return true;
+}
+
 void RtspAudio::initRtpAudio(unsigned short int  r_rtp_port)
 {
     if (!offer.media.size()) {
@@ -117,8 +157,11 @@ void RtspAudio::initRtpAudio(unsigned short int  r_rtp_port)
     if (!offer.media[0].port && r_rtp_port) // Got SDP m=audio 0, set port from header Transport: server_port=xxxxx
         offer.media[0].port = r_rtp_port;
 
-    session->getSdpAnswer(offer, answer);
-    AmRtpAudio::getSdpAnswer(0, answer.media[0], offer.media[0]);
+    if(!initSdpAnswer()) {
+        ERROR("failed to init SDP answer");
+        return;
+    }
+
     AmRtpAudio::init(answer, offer);
 }
 
@@ -134,17 +177,16 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 
     //INFO("******* SDP offer body:\n%s\n", sdp_body.c_str());
 
-    session->getSdpAnswer(offer, answer);
+    if(!initSdpAnswer()) {
+        ERROR("failed to init SDP answer");
+        throw AmSession::Exception(488, "failed to init SDP answer");
+    }
 
     answer.print(sdp_body);
 
     //INFO("******* SDP answer body:\n%s\n", sdp_body.c_str());
 
-    if(offer.media[0].port) // Got SDP m=audio <port>
-    {
-        AmRtpAudio::getSdpAnswer(0, answer.media[0], offer.media[0]);
-        AmRtpAudio::init(answer, offer);
-    }
+    AmRtpAudio::init(answer, offer);
 
     return getLocalPort();
 }
