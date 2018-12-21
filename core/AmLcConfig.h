@@ -147,6 +147,9 @@ protected:
     int setNetInterface(IP_info& ip_if);
     void fillMissingLocalSIPIPfromSysIntfs();
     int checkSipInterfaces();
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data);
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data);
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
 private:
     cfg_t *m_cfg;
 };
