@@ -91,6 +91,7 @@
 #define PARAM_PROXY_STICKY_AUTH_NAME "proxy_sticky_auth"
 #define PARAM_NOTIFY_LOWER_CSEQ_NAME "ignore_notify_lower_cseq"
 #define PARAM_ENABLE_RTSP_NAME       "enable_rtsp"
+#define PARAM_ENABLE_SRTP_NAME       "enable_srtp"
 #define PARAM_OPT_TRANSCODE_OUT_NAME "options_transcoder_out_stats_hdr"
 #define PARAM_OPT_TRANSCODE_IN_NAME  "options_transcoder_in_stats_hdr"
 #define PARAM_TRANSCODE_OUT_NAME     "transcoder_out_stats_hdr"
@@ -146,7 +147,6 @@
 #define PARAM_DH_PARAM_NAME          "dhparam"
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
-#define PARAM_ENABLE_SRTP_NAME       "enable-srtp"
 #define PARAM_PROFILES_NAME          "profiles"
 
 #define VALUE_OFF                    "off"
@@ -602,6 +602,7 @@ AmLcConfig::AmLcConfig()
         CFG_BOOL(PARAM_PROXY_STICKY_AUTH_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_NOTIFY_LOWER_CSEQ_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_ENABLE_RTSP_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
         CFG_BOOL(PARAM_LOG_SESSIONS_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_LOG_EVENTS_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
@@ -838,6 +839,7 @@ int AmLcConfig::readGeneral()
     log_events = cfg_getbool(gen, PARAM_LOG_EVENTS_NAME);
     single_codec_in_ok = cfg_getbool(gen, PARAM_SINGLE_CODEC_INOK_NAME);
     enable_rtsp = cfg_getbool(gen, PARAM_ENABLE_RTSP_NAME);
+    enable_srtp = cfg_getbool(gen, PARAM_ENABLE_SRTP_NAME);
     log_sessions = cfg_getbool(gen, PARAM_LOG_SESSIONS_NAME);
     accept_forked_dialogs = cfg_getbool(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
 	if(use_raw_sockets && (raw_sender::init() < 0)) {
