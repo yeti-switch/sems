@@ -248,7 +248,6 @@ AmSrtpConnection::AmSrtpConnection(AmRtpStream* stream, bool srtcp)
 : rtp_mode(RTP_DEFAULT), rtp_stream(stream), dtls_settings(0)
 , dtls_channel(0), srtp_s_session(0), srtp_r_session(0), srtp_profile(srtp_profile_reserved), b_srtcp(srtcp)
 {
-    srtp_init();
     memset(b_init, 0, sizeof(b_init));
     srtp_install_log_handler(log_handler, NULL);
 }

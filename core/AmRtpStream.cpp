@@ -198,7 +198,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
         server_settings = rtpinfo->server_settings;
         client_settings = rtpinfo->client_settings;
         srtp_profiles = rtpinfo->profiles;
-        srtp_enable = rtpinfo->srtp_enable;
+        srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
     }
 
     int retry = 10;
@@ -1060,7 +1060,7 @@ int AmRtpStream::init(const AmSdp& local,
     CLASS_DBG("local setup = %u, remote setup = %u",
         local_media.setup, remote_media.setup);
 
-    if(local_media.transport == TP_UDPTLSRTPSAVP) {
+    if(local_media.transport == TP_UDPTLSRTPSAVP && AmConfig.enable_srtp) {
         if((local_media.setup == SdpMedia::DirActive && remote_media.setup != SdpMedia::DirActive) ||
            (remote_media.setup == SdpMedia::DirPassive && local_media.setup != SdpMedia::DirPassive))
             createSrtpConnection(false);
@@ -1070,7 +1070,7 @@ int AmRtpStream::init(const AmSdp& local,
         else
             CLASS_ERROR("dtls setup in sdp attribute not negitiate");
     }
-    else if(local_media.transport == TP_RTPSAVP) {
+    else if(local_media.transport == TP_RTPSAVP && AmConfig.enable_srtp) {
         CryptoProfile cprofile = CP_NONE;
         if(local_media.crypto.size() == 1) {
             cprofile = local_media.crypto[0].profile;

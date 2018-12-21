@@ -219,6 +219,15 @@ general {
      */
     enable_rtsp = yes
 
+    /* optional parameter: enable_srtp
+     * enable srtp protocol
+     *
+     * available values: yes, no
+     *
+     * default=no
+    */
+    enable_srtp=yes
+
     /* optional parameter: pcap_upload_queue
      *
      * http_client destination name
@@ -1183,7 +1192,7 @@ media-interfaces {
                     /* mandatory parameter enable-srtp
                      * use secure rtp
                      */
-                    enable-srtp=on
+                    enable_srtp=on
 
                     /*
                     * section described settings secure RTP parameters getting by sdp (sdes)
@@ -1414,7 +1423,7 @@ media-interfaces {
                     /* mandatory parameter enable-srtp
                      * use secure rtp
                      */
-                    enable-srtp=on
+                    enable_srtp=on
 
                     /*
                     * section described settings secure RTP parameters getting by sdp (sdes)

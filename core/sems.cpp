@@ -75,6 +75,7 @@ using std::string;
 
 #if defined(__linux__)
 #include <sys/prctl.h>
+#include <srtp.h>
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
@@ -608,6 +609,13 @@ int main(int argc, char* argv[])
   if(set_sighandler(signal_handler))
     goto error;
     
+  if(AmConfig.enable_srtp) {
+        if(srtp_init() != srtp_err_status_ok) {
+            ERROR("Cannot initialize SRTP library\n");
+            goto error;
+        }
+  }
+
 #ifdef WITH_ZRTP
   if (AmZRTP::init()) {
     ERROR("Cannot initialize ZRTP\n");
