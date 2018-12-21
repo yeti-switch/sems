@@ -375,10 +375,10 @@ AmLcConfig::AmLcConfig()
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
-        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NONE),
         CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
         CFG_END()
     };
@@ -389,8 +389,8 @@ AmLcConfig::AmLcConfig()
         CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NONE),
         CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_MACS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
@@ -400,8 +400,8 @@ AmLcConfig::AmLcConfig()
 
     cfg_opt_t dtls[] =
     {
-        CFG_SEC(SECTION_CLIENT_NAME, dtls_client, CFGF_NONE),
-        CFG_SEC(SECTION_SERVER_NAME, dtls_server, CFGF_NONE),
+        CFG_SEC(SECTION_CLIENT_NAME, dtls_client, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SERVER_NAME, dtls_server, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -471,10 +471,10 @@ AmLcConfig::AmLcConfig()
     cfg_opt_t tls_client[] =
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
-        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
-        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_CERT_CHAIN_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_CERT_CN_NAME, cfg_true, CFGF_NONE),
         CFG_STR_LIST(PARAM_CA_LIST_NAME, 0, CFGF_NODEFAULT),
         CFG_END()
     };
@@ -484,8 +484,8 @@ AmLcConfig::AmLcConfig()
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NODEFAULT),
-        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NONE),
         CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_MACS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
@@ -506,8 +506,8 @@ AmLcConfig::AmLcConfig()
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
-        CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NONE),
-        CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NONE),
+        CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -1006,16 +1006,25 @@ int AmLcConfig::readSigInterfaces()
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
         }
@@ -1024,16 +1033,25 @@ int AmLcConfig::readSigInterfaces()
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
                 SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                if(!info) {
+                    return -1;
+                }
                 sip_if.proto_info.push_back(info);
             }
         }
@@ -1057,11 +1075,17 @@ int AmLcConfig::readMediaInterfaces()
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
                 MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv4);
+                if(!info) {
+                    return -1;
+                }
                 media_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
                 MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv4);
+                if(!info) {
+                    return -1;
+                }
                 media_if.proto_info.push_back(info);
             }
         }
@@ -1070,11 +1094,17 @@ int AmLcConfig::readMediaInterfaces()
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
                 MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv6);
+                if(!info) {
+                    return -1;
+                }
                 media_if.proto_info.push_back(info);
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
                 MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv6);
+                if(!info) {
+                    return -1;
+                }
                 media_if.proto_info.push_back(info);
             }
         }
@@ -1111,7 +1141,9 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
     //common opts
     info->type_ip = ip_type;
-    info->local_ip = cfg_getstr(cfg, PARAM_ADDRESS_NAME);
+    if(getMandatoryParameter(cfg, PARAM_ADDRESS_NAME, info->local_ip)) {
+        return 0;
+    }
     if(cfg_size(cfg, PARAM_PUBLIC_ADDR_NAME)) {
         info->public_ip = cfg_getstr(cfg, PARAM_PUBLIC_ADDR_NAME);
     }
@@ -1128,14 +1160,18 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
     //MEDIA specific opts
     if(mediainfo) {
-        mediainfo->high_port = cfg_getint(cfg, PARAM_HIGH_PORT_NAME);
-        mediainfo->low_port = cfg_getint(cfg, PARAM_LOW_PORT_NAME);
+        if(getMandatoryParameter(cfg, PARAM_HIGH_PORT_NAME, (int&)mediainfo->high_port) ||
+           getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, (int&)mediainfo->low_port)) {
+            return 0;
+        }
     }
 
     //RTP specific opts
     if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
-        rtpinfo->srtp_enable = cfg_getbool(srtp, PARAM_ENABLE_SRTP_NAME);
+        if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, rtpinfo->srtp_enable)) {
+            return 0;
+        }
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
         for(int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
             rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));
@@ -1143,6 +1179,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
         cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
         cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
+        if(!server) {
+            ERROR("absent mandatory section 'server' in dtls configuration");
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
             rtpinfo->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
@@ -1150,8 +1190,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
             rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
         }
-        rtpinfo->server_settings.certificate = cfg_getstr(server, PARAM_CERTIFICATE_NAME);
-        rtpinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
+        if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate) ||
+           getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key)){
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
             rtpinfo->server_settings.cipher_list.push_back(cipher);
@@ -1178,6 +1220,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
 
         cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
+        if(!client) {
+            ERROR("absent mandatory section 'client' in dtls configuration");
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
             rtpinfo->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
@@ -1197,7 +1243,9 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
     //SIP specific opts
     if(sinfo) {
-        sinfo->local_port = cfg_getint(cfg, PARAM_PORT_NAME);
+        if(getMandatoryParameter(cfg, PARAM_PORT_NAME, (int&)sinfo->local_port)) {
+            return 0;
+        }
         info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_TRANSPORT_NAME) ? 0 : trsp_socket::no_transport_in_contact;
 
         if(cfg_size(cfg, SECTION_ORIGACL_NAME)) {
@@ -1226,12 +1274,18 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     //STL specific opts
     if(stlinfo) {
         cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
+        if(!server) {
+            ERROR("absent mandatory section 'server' in tls configuration");
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
             stlinfo->server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
         }
-        stlinfo->server_settings.certificate = cfg_getstr(server, PARAM_CERTIFICATE_NAME);
-        stlinfo->server_settings.certificate_key = cfg_getstr(server, PARAM_CERTIFICATE_KEY_NAME);
+        if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, stlinfo->server_settings.certificate) ||
+           getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, stlinfo->server_settings.certificate_key)) {
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
             stlinfo->server_settings.cipher_list.push_back(cipher);
@@ -1258,6 +1312,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
 
         cfg_t* client = cfg_getsec(cfg, SECTION_CLIENT_NAME);
+        if(!client) {
+            ERROR("absent mandatory section 'client' in tls configuration");
+            return 0;
+        }
         for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
             stlinfo->client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
@@ -1747,6 +1805,32 @@ int AmLcConfig::checkSipInterfaces()
         }
     }
 
+    return 0;
+}
+
+#define checkMandatoryParameter(cfg, ifname) if(!cfg_size(cfg, ifname.c_str())) { \
+                                                ERROR("absent mandatory parameter %s in section %s", ifname.c_str(), cfg->name);\
+                                                return -1;\
+                                             }
+
+int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data)
+{
+    checkMandatoryParameter(cfg, if_name);
+    data = cfg_getstr(cfg, if_name.c_str());
+    return 0;
+}
+
+int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data)
+{
+    checkMandatoryParameter(cfg, if_name);
+    data = cfg_getint(cfg, if_name.c_str());
+    return 0;
+}
+
+int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data)
+{
+    checkMandatoryParameter(cfg, if_name);
+    data = cfg_getbool(cfg, if_name.c_str());
     return 0;
 }
 

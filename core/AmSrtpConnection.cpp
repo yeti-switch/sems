@@ -36,9 +36,9 @@ dtls_conf::dtls_conf(const dtls_conf& conf)
 , certificate(conf.certificate)
 , is_optional(conf.is_optional)
 {
-    if(conf.s_server) {
+    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_dtls::instance()));
-    } else if(conf.s_client) {
+    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_dtls::instance()));
     }
 }
@@ -49,9 +49,9 @@ void dtls_conf::operator=(const dtls_conf& conf)
     s_server = conf.s_server;
     certificate = conf.certificate;
     is_optional = conf.is_optional;
-    if(conf.s_server) {
+    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_dtls::instance()));
-    } else if(conf.s_client) {
+    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_dtls::instance()));
     }
 }
