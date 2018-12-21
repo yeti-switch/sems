@@ -17,20 +17,27 @@
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
 
+
 tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
-, certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
+, key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
 , is_optional(false)
 {
+    if(!settings->certificate.empty()){
+        Botan::X509_Certificate cert(settings->certificate);
+        certificate = cert;
+    }
 }
 
 tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
-, certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
+, key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
 , is_optional(false)
 {
+    if(!settings->certificate.empty()){
+        Botan::X509_Certificate cert(settings->certificate);
+        certificate = cert;
+    }
 }
 
 tls_conf::tls_conf(const tls_conf& conf)
@@ -38,9 +45,9 @@ tls_conf::tls_conf(const tls_conf& conf)
 , certificate(conf.certificate)
 , is_optional(conf.is_optional)
 {
-    if(conf.s_server) {
+    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_tls::instance()));
-    } else if(conf.s_client) {
+    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_tls::instance()));
     }
 }
