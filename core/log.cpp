@@ -42,7 +42,7 @@
 #include "AmThread.h"   /* AmMutex */
 #include "log.h"
 
-__thread pid_t _self_tid = 0;
+__thread pthread_t _self_tid = 0;
 __thread pid_t _self_pid = 0;
 
 int log_level  = AmConfig::LogLevel;	/**< log level */

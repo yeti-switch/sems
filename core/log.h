@@ -39,7 +39,7 @@
 #include <cxxabi.h> /* __cxa_demangle() */
 #endif
 
-extern __thread pid_t _self_tid;
+extern __thread pthread_t _self_tid;
 extern __thread pid_t _self_pid;
 
 #ifdef __cplusplus
