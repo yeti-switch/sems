@@ -1491,9 +1491,6 @@ void AmRtpStream::recvPacket(int fd)
         incoming_bytes += p->getBufferSize();
 
         bool isRtcp = ((fd == l_rtcp_sd) || p->isRtcp());
-        if(isRtcp){
-            INFO("rtcp\n");
-        }
         if(srtp_connection->get_rtp_mode() == AmSrtpConnection::SRTP_EXTERNAL_KEY) {
             unsigned int size = p->getBufferSize();
             if(srtp_connection->on_data_recv(p->getBuffer(), &size, isRtcp) == SRTP_PACKET_PARSE_ERROR){
