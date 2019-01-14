@@ -228,8 +228,8 @@ void RtspAudio::onRtspMessage(const RtspMsg &msg)
                 msg.cseq,last_sent_cseq);
             return;
         }
-        if(state != Progress) {
-            DBG("onRtspMessage(): ignore reply received not in the Progress state");
+        if(state == Ready) {
+            DBG("onRtspMessage(): ignore reply received in Ready state");
             return;
         }
     }
