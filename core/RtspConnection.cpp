@@ -354,7 +354,7 @@ int RtspSession::rtspSendMsg(const RtspMsg &msg)
 
 void RtspSession::process_response(RtspMsg &msg)
 {
-    //DBG("\n%.*s", (int)buffer.size(), buffer.data());
+    DBG("\n%.*s", (int)buffer.size(), buffer.data());
 
     if (!msg.code) {
         ERROR("####### RtspSession::process_response() response.code=0, garbage in buffer ???");
@@ -408,7 +408,7 @@ void RtspSession::process_server_request(RtspMsg &req)
         msg.reason = "OK";
 
         if (req.notify_reason == NR_end_of_stream)
-            agent->onRtspPlayNotify(msg);
+            agent->onRtspPlayNotify(req);
         else
             ERROR("Unsupported Notify-reason");
 
