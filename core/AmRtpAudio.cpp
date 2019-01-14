@@ -43,7 +43,7 @@ AmAudioRtpFormat::AmAudioRtpFormat()
 AmAudioRtpFormat::~AmAudioRtpFormat()
 {}
 
-int AmAudioRtpFormat::setCurrentPayload(Payload pl)
+int AmAudioRtpFormat::setCurrentPayload(Payload pl, int frame_size)
 {
     if (this->codec_id != pl.codec_id) {
         this->codec_id = pl.codec_id;
@@ -53,7 +53,7 @@ int AmAudioRtpFormat::setCurrentPayload(Payload pl)
         DBG("fmt.rate = %d", this->rate);
         this->advertized_rate = pl.advertised_clock_rate;
         DBG("fmt.advertized_rate = %d", this->advertized_rate);
-        this->frame_size = 20*this->rate/1000;
+        this->frame_size = frame_size*this->rate/1000;
         DBG("fmt.sdp_format_parameters = %s", this->sdp_format_parameters.c_str());
         if (this->codec != nullptr) {
             destroyCodec();
@@ -66,7 +66,11 @@ void AmAudioRtpFormat::initCodec()
 {
     amci_codec_fmt_info_t fmt_i[4];
 
-    fmt_i[0].id=0;
+    fmt_i[0].id=AMCI_FMT_FRAME_LENGTH;
+    fmt_i[0].value=frame_size*1000/getRate();
+    fmt_i[1].id=AMCI_FMT_FRAME_SIZE;
+    fmt_i[1].value=frame_size;
+    fmt_i[2].id = 0;
 
     if( codec && codec->init ) {
         if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
@@ -202,7 +206,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             // ignore CN
             COMFORT_NOISE_PAYLOAD_TYPE == new_payload  ||
             // ignore packet if payload not found
-            setCurrentPayload(new_payload))
+            setCurrentPayload(new_payload, frame_size))
         {
             playout_buffer->clearLastTs();
             continue;
@@ -380,7 +384,9 @@ int AmRtpAudio::init(
         return -1;
     }
 
-    fmt_p->setCurrentPayload(payloads[pl_it->second.index]);
+    const SdpMedia& local_media = local.media[sdp_media_index];
+    frame_size = local_media.frame_size;
+    fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
     fmt.reset(fmt_p);
     amci_codec_t* codec = fmt->getCodec();
     use_default_plc = ((codec==nullptr) || (codec->plc == nullptr));
@@ -416,7 +422,7 @@ unsigned int AmRtpAudio::getFrameSize()
     return static_cast<AmAudioRtpFormat*>(fmt.get())->getFrameSize();
 }
 
-int AmRtpAudio::setCurrentPayload(int payload)
+int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
 {
     if(payload != this->payload) {
         PayloadMappingTable::iterator pmt_it =
@@ -464,7 +470,7 @@ int AmRtpAudio::setCurrentPayload(int payload)
         amci_codec_t* codec = fmt->getCodec();
         use_default_plc = ((codec==nullptr) || (codec->plc == nullptr));
 
-        return static_cast<AmAudioRtpFormat*>(fmt.get())->setCurrentPayload(payloads[index]);
+        return static_cast<AmAudioRtpFormat*>(fmt.get())->setCurrentPayload(payloads[index], frame_size);
     } else {
         return 0;
     }

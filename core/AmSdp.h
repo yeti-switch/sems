@@ -229,6 +229,7 @@ struct SdpMedia
   unsigned int  port;
   unsigned int  nports;
   int           transport;
+  int           frame_size;
   SdpConnection conn; // c=
   Direction     dir;  // a=direction
   Direction     setup;
@@ -249,7 +250,7 @@ struct SdpMedia
 
   SdpMedia()
     : conn(), dir(DirUndefined), type(MT_NONE), setup(DirUndefined),
-      transport(TP_NONE), send(true), recv(true), has_mode_attribute(false)
+      transport(TP_NONE), frame_size(20), send(true), recv(true), has_mode_attribute(false)
   {}
 
   /** pretty print */

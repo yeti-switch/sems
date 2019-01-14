@@ -123,6 +123,7 @@ END_EXPORTS
 typedef struct {
   OpusEncoder* opus_enc;
   OpusDecoder* opus_dec;
+  unsigned int frame_size;
 } opus_state_t;
 
 long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_description) {
@@ -133,16 +134,51 @@ long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
     DBG("OPUS params: >>%s<<.\n", format_parameters);
   } 
 
-  format_description[0].id = AMCI_FMT_FRAME_LENGTH ;
-  format_description[0].value = 20;
-  format_description[1].id = AMCI_FMT_FRAME_SIZE;
-  format_description[1].value = 20 * _OPUS_RATE / 1000;
-  format_description[2].id = 0;
-    
   codec_inst = (opus_state_t*)malloc(sizeof(opus_state_t));
 
-  if (!codec_inst) 
+  if (!codec_inst)
     return -1;
+
+  /* frame_size(ms) frame_size
+   *    2.5         rate/400
+   *    5           rate/200
+   *    10          rate/100
+   *    20          rate/50
+   *    40          rate/25
+   *    60          3*rate/50
+   */
+  switch(format_description[0].value) {
+    case 5:
+        codec_inst->frame_size = _OPUS_RATE/200;
+        format_description[0].value = 5;
+        format_description[1].value = 5 * _OPUS_RATE / 1000;
+        break;
+    case 10:
+        codec_inst->frame_size = _OPUS_RATE/100;
+        format_description[0].value = 10;
+        format_description[1].value = 10 * _OPUS_RATE / 1000;
+        break;
+    case 20:
+        codec_inst->frame_size = _OPUS_RATE/50;
+        format_description[0].value = 20;
+        format_description[1].value = 20 * _OPUS_RATE / 1000;
+        break;
+    case 40:
+        codec_inst->frame_size = _OPUS_RATE/25;
+        format_description[0].value = 40;
+        format_description[1].value = 40 * _OPUS_RATE / 1000;
+        break;
+    case 60:
+        codec_inst->frame_size = 3*_OPUS_RATE/50;
+        format_description[0].value = 60;
+        format_description[1].value = 60 * _OPUS_RATE / 1000;
+        break;
+    default:
+        codec_inst->frame_size = _OPUS_RATE/50;
+        format_description[0].value = 20;
+        format_description[1].value = 20 * _OPUS_RATE / 1000;
+  };
+
 
   codec_inst->opus_enc = opus_encoder_create(_OPUS_RATE,1,_OPUS_APPLICATION_,&error);
   if (error) {
@@ -192,17 +228,8 @@ int pcm16_2_opus( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
 
 
   //DBG("OPUS encode: frame_size: %d, st->Fs = %d",size/2/channels,_OPUS_RATE);
-
-  /* frame_size(ms) frame_size
-   *    2.5         rate/400
-   *    5           rate/200
-   *    10          rate/100
-   *    20          rate/50
-   *    40          rate/25
-   *    60          3*rate/50
-   */
   //res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, size/2/channels, out_buf, AUDIO_BUFFER_SIZE);
-  res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, _OPUS_RATE / 50, out_buf, AUDIO_BUFFER_SIZE);
+  res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, codec_inst->frame_size, out_buf, AUDIO_BUFFER_SIZE);
 
   //DBG ("OPUS encode: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res);
   /* returns bytes in encoded frame */
