@@ -88,7 +88,7 @@ public:
   /**
    * changes payload. returns != 0 on error.
    */
-  int setCurrentPayload(Payload pl);
+  int setCurrentPayload(Payload pl, int frame_size = 20);
 };
 
 
@@ -99,6 +99,8 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
 {
   PlayoutType m_playout_type;
   auto_ptr<AmPlayoutBuffer> playout_buffer;
+
+  unsigned int frame_size;
 
 #ifdef USE_SPANDSP_PLC
     plc_state_t* plc_state;
@@ -134,7 +136,7 @@ public:
   bool sendIntReached();
   bool sendIntReached(unsigned long long ts);
 
-  int setCurrentPayload(int payload);
+  int setCurrentPayload(int payload, int frame_size = 20);
   int getCurrentPayload();
 
   int receive(unsigned long long system_ts);

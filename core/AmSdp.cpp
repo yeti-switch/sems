@@ -41,6 +41,7 @@ static const string sendonly("sendonly");
 static const string recvonly("recvonly");
 static const string sendrecv("sendrecv");
 static const string inactive("inactive");
+static const string ptime("ptime");
 
 static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next);
 static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s);
@@ -1423,6 +1424,12 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     media.send = false;
     media.recv = false;
     media.has_mode_attribute = true;
+  } else if (attr == ptime) {
+    size_t attr_len = 0;
+    string value;
+    next = skip_till_next_line(attr_line, attr_len);
+    value = string (attr_line, attr_len);
+    str2int(value, media.frame_size);
   } else {
     attr_check(attr);
     string value;
