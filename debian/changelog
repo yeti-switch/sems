@@ -1,3 +1,13 @@
+sems (1.7.75-0) stable; urgency=low
+
+  * e01044722 RtspAudio: fix PLAY_NOTIFY processing
+  * 867230a75 opus: disable DTX
+  * d577ffc02 log: change type pid_t -> pthread_t for _self_tid global variable
+  * 79ebb8d6d RtspAudio: avid using session getSdpAnswer
+  * f47946733 curl_bundled.cmake: link with nghttp2
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 14 Jan 2019 13:10:23 +0200
+
 sems (1.7.74-1p) stable; urgency=low
 
   * AmRtpAudio: fix segfault on failover to default PLC
