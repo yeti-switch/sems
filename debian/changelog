@@ -1,3 +1,11 @@
+sems (1.8.10-1) stable; urgency=low
+
+  * c7175a50c RtspAudio: fix PLAY_NOTIFY processing
+  * 668d55a8c AmRtpStream: remove obsolete dbg
+  * e82583ef0 opus: disable DTX
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 22 Dec 2018 11:07:16 +0200
+
 sems (1.8.10-0) stable; urgency=low
 
   * fix SRTP related crashes
