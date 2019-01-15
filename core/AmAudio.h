@@ -163,6 +163,9 @@ public:
   /** set the frame size */
   void setFrameSize(unsigned int frame_size);
 
+  /** return the frame size */
+  unsigned int getFrameTime() { return frame_time; }
+
   /** @return Handler returned by the codec's init function.*/
   long             getHCodec();
   long             getHCodecNoInit() { return h_codec; } // do not initialize
@@ -184,6 +187,9 @@ protected:
 
   /* frame size in samples */
   unsigned int frame_size;
+
+  /* frame size in ms */
+  unsigned int frame_time;
 
   /** ==0 if not yet initialized. */
   amci_codec_t*   codec;

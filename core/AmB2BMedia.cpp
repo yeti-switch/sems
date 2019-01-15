@@ -489,9 +489,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
             //process src_stream even if custom input enabled
             if(src.isInitialized()) {
                 AmRtpAudio *src_stream = src.getStream();
-                int ourTime = f_size/stream->getSampleRate()*1000,
-                    srcTime = src_stream->getFrameSize()/src_stream->getSampleRate()*1000;
-                if (src_stream->checkInterval(ts)|| ourTime <= srcTime) {
+                if (src_stream->checkInterval(ts)||stream->getFrameTime() <= src_stream->getFrameTime()) {
                     int tmp_got = src_stream->get(ts, buffer, sample_rate, f_size);
                     //DBG("[%p] stream %p got %d from stream input %p",this,stream,got,src_stream);
                     if (tmp_got > 0) {
@@ -518,9 +516,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                 //CLASS_DBG("src_in->get(%llu,%d)",ts,got);
             } else {
                 AmRtpAudio *src_stream = src.getStream();
-                int ourTime = f_size/stream->getSampleRate()*1000,
-                    srcTime = src_stream->getFrameSize()/src_stream->getSampleRate()*1000;
-                if (src_stream->checkInterval(ts)|| ourTime <= srcTime) {
+                if (src_stream->checkInterval(ts)|| stream->getFrameTime() <= src_stream->getFrameTime()) {
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
                     //DBG("[%p] stream %p got %d from stream %p",this,stream,got,src_stream);
                     if (got > 0) {
