@@ -502,7 +502,6 @@ void AmSdp::print(string& body) const
                     options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
                                + pl_it->sdp_format_parameters + "\r\n";
                 }
-
             }
       }
       else {
@@ -521,21 +520,25 @@ void AmSdp::print(string& body) const
                         media_it->crypto.begin(); c_it != media_it->crypto.end(); c_it++) {
                 out_buf += c_it->print();
       }
+      // "a=ptime:" line
+      if(media_it->frame_size) {
+          out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
+      }
       if(media_it->send){
-	if(media_it->recv){
-	  out_buf += "a=sendrecv\r\n";
-	}
-	else {
-	  out_buf += "a=sendonly\r\n";
-	}
+        if(media_it->recv){
+        out_buf += "a=sendrecv\r\n";
+        }
+        else {
+        out_buf += "a=sendonly\r\n";
+        }
       }
       else {
-	if(media_it->recv){
-	  out_buf += "a=recvonly\r\n";
-	}
-	else {
-	  out_buf += "a=inactive\r\n";
-	}
+        if(media_it->recv){
+        out_buf += "a=recvonly\r\n";
+        }
+        else {
+        out_buf += "a=inactive\r\n";
+        }
       }
 
       // add attributes (media level)
