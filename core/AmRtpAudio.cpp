@@ -296,6 +296,11 @@ int AmRtpAudio::get(
             reinterpret_cast<ShortSample*>(static_cast<unsigned char*>(samples)),
             nb_samples));
 
+    std::string path("/tmp/");
+    FILE* f = fopen((path + session->getCallID()).c_str(), "a+b");
+    fwrite(samples, 1, size, f);
+    fclose(f);
+
     if(output_sample_rate != getSampleRate()) {
         size = resampleOutput(
             static_cast<unsigned char*>(samples),
@@ -384,8 +389,8 @@ int AmRtpAudio::init(
         return -1;
     }
 
-    const SdpMedia& local_media = local.media[sdp_media_index];
-    frame_size = local_media.frame_size;
+    const SdpMedia& remote_media = remote.media[sdp_media_index];
+    frame_size = remote_media.frame_size;
     fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
     fmt.reset(fmt_p);
     amci_codec_t* codec = fmt->getCodec();
