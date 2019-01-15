@@ -71,9 +71,6 @@ class AmAudioRtpFormat: public AmAudioFormat
   unsigned int advertized_rate;
 
 protected:
-  /* frame size in samples */
-  unsigned int frame_size;
-
   /** from AmAudioFormat */
   void initCodec();
 

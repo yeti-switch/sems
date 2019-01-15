@@ -131,9 +131,11 @@ bool AmRtpAudio::checkInterval(unsigned long long ts)
         last_check   = ts;
     } else {
         if(scaleSystemTS(ts - last_check) >= getFrameSize()) {
+            INFO("this %x, AmRtpAudio::checkInterval(%llu), scaleSystemTS(ts - last_check) - %u, framesize - %u", this, ts, scaleSystemTS(ts - last_check), getFrameSize());
             send_int = true;
             last_check = ts;
         } else {
+            INFO("this %x, AmRtpAudio::checkInterval(%llu), scaleSystemTS(ts - last_check) - %u", this, ts, scaleSystemTS(ts - last_check));
             send_int = false;
         }
     }
@@ -147,6 +149,7 @@ bool AmRtpAudio::sendIntReached()
 
 bool AmRtpAudio::sendIntReached(unsigned long long ts)
 {
+    INFO("AmRtpAudio::sendIntReached(%llu), scaleSystemTS(ts - last_send_ts) - %u, getFrameSize() - %u", ts, scaleSystemTS(ts - last_send_ts), getFrameSize());
     if (!last_send_ts_i) return true;
     else return (scaleSystemTS(ts - last_send_ts) >= getFrameSize());
 }
@@ -286,6 +289,8 @@ int AmRtpAudio::get(
 
     unsigned int user_ts = scaleSystemTS(system_ts);
 
+    INFO("this %x, AmRtpAudio::get(%llu, %x, %d, %u), user_ts %u", this, system_ts, buffer, output_sample_rate, nb_samples, user_ts);
+
     nb_samples = static_cast<unsigned int>(
         static_cast<float>(nb_samples) * static_cast<float>(getSampleRate())
         / static_cast<float>(output_sample_rate));
@@ -295,11 +300,6 @@ int AmRtpAudio::get(
             user_ts,
             reinterpret_cast<ShortSample*>(static_cast<unsigned char*>(samples)),
             nb_samples));
-
-    std::string path("/tmp/");
-    FILE* f = fopen((path + session->getCallID()).c_str(), "a+b");
-    fwrite(samples, 1, size, f);
-    fclose(f);
 
     if(output_sample_rate != getSampleRate()) {
         size = resampleOutput(
@@ -316,6 +316,7 @@ int AmRtpAudio::put(
     unsigned long long system_ts, unsigned char* buffer,
     int input_sample_rate, unsigned int size)
 {
+    INFO("this %x, AmRtpAudio::put(%llu, %x, %d, %u)", this, system_ts, buffer, input_sample_rate, size);
     last_send_ts_i = true;
     last_send_ts = system_ts;
 
@@ -349,6 +350,8 @@ int AmRtpAudio::put(
     unsigned long long user_ts =
         system_ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
         / (WALLCLOCK_RATE/100);
+
+    INFO("AmRtpAudio::put - user_ts %u", user_ts);
 
     return send(static_cast<unsigned int>(user_ts),
                 static_cast<unsigned char*>(samples),
