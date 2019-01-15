@@ -128,6 +128,7 @@ public:
   ~AmRtpAudio();
 
   unsigned int getFrameSize();
+  unsigned int getFrameTime();
 
   bool checkInterval(unsigned long long ts);
   bool sendIntReached();

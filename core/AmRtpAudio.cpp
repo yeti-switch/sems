@@ -53,6 +53,7 @@ int AmAudioRtpFormat::setCurrentPayload(Payload pl, int frame_size)
         DBG("fmt.rate = %d", this->rate);
         this->advertized_rate = pl.advertised_clock_rate;
         DBG("fmt.advertized_rate = %d", this->advertized_rate);
+        this->frame_time = frame_size;
         this->frame_size = frame_size*this->rate/1000;
         DBG("fmt.sdp_format_parameters = %s", this->sdp_format_parameters.c_str());
         if (this->codec != nullptr) {
@@ -85,6 +86,7 @@ void AmAudioRtpFormat::initCodec()
                 } break;
                 case AMCI_FMT_FRAME_SIZE: {
                     frame_size=static_cast<unsigned int>(fmt_i[i].value);
+                    frame_time=frame_size/rate*1000;
                 } break;
                 case AMCI_FMT_ENCODED_FRAME_SIZE: {
                 //   frame_encoded_size=fmt_i[i].value;
@@ -420,6 +422,14 @@ unsigned int AmRtpAudio::getFrameSize()
         return 0;
 
     return static_cast<AmAudioRtpFormat*>(fmt.get())->getFrameSize();
+}
+
+unsigned int AmRtpAudio::getFrameTime()
+{
+    if (!fmt.get())
+        return 0;
+
+    return static_cast<AmAudioRtpFormat*>(fmt.get())->getFrameTime();
 }
 
 int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
