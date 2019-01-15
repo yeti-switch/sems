@@ -70,6 +70,11 @@ void AmAudioFormat::setRate(unsigned int sample_rate)
   rate = sample_rate;
 }
 
+void AmAudioFormat::setFrameSize(unsigned int frame_size_)
+{
+    frame_size = frame_size_;
+}
+
 unsigned int AmAudioFormat::calcBytesToRead(unsigned int needed_samples) const
 {
   if (codec && codec->samples2bytes)
@@ -105,7 +110,11 @@ bool AmAudioFormat::operator != (const AmAudioFormat& r) const
 void AmAudioFormat::initCodec()
 {
   amci_codec_fmt_info_t fmt_i[4];
-  fmt_i[0].id=0;
+    fmt_i[0].id=AMCI_FMT_FRAME_LENGTH;
+    fmt_i[0].value=frame_size*1000/getRate();
+    fmt_i[1].id=AMCI_FMT_FRAME_SIZE;
+    fmt_i[1].value=frame_size;
+    fmt_i[2].id = 0;
 
   if( codec && codec->init ) {
     if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
