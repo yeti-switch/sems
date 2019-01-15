@@ -271,7 +271,8 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
     return;
   }
 
-  if (relay_enabled && other) {
+  if (relay_enabled && other &&
+      other->getFrameTime() == stream->getFrameTime()) {
     stream->setRelayStream(other);
     stream->setForceBuffering(other->isRecordEnabled());
     stream->setRelayPayloads(relay_mask);
