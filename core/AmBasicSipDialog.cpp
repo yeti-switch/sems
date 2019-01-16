@@ -862,7 +862,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				   target_set_override,
 				   redirects_allowed);
   if(res) {
-    WARN("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
+    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
       req.method.c_str(),
       req.r_uri.c_str(),
       req.callid.c_str(),

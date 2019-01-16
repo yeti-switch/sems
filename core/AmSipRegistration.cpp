@@ -235,7 +235,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   info.attempt++;
 
   if (dlg.sendRequest(req.method, NULL, hdrs, flags, &reg_timers_override) < 0) {
-    WARN("failed to send registration. ruri: %s\n",
+    DBG("failed to send registration. ruri: %s\n",
          req.r_uri.c_str());
     res = false;
     waiting_result = false;
