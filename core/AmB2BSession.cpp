@@ -1154,7 +1154,7 @@ void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask
                 for(auto payload : media.payloads) {
                     if(payload.encoding_name == i->encoding_name) {
                         mask.set(payload.payload_type);
-                        map.set(payload.payload_type, i->payload_type);
+                        map.set(i->payload_type, payload.payload_type);
                         break;
                     }
                 }
