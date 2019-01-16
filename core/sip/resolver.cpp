@@ -1339,7 +1339,7 @@ int _resolver::set_destination_ip(
                 h_dns,remote_ip,
                 priority);
             if(err < 0) {
-                WARN("Unresolvable Request URI domain <%s>\n",nh.c_str());
+                DBG("Unresolvable Request URI domain <%s>\n",nh.c_str());
                 return -478;
             }
     } else { //if (am_inet_pton(nh.c_str(), remote_ip) != 1)
@@ -1440,7 +1440,7 @@ int _resolver::resolve_targets(
         if(set_destination_ip(it->scheme, it->host,it->port,it->trsp,
                               &t.ss, targets->priority,&h_dns) != 0)
         {
-            WARN("Unresolvable destination %.*s:%u/%.*s",
+            DBG("Unresolvable destination %.*s:%u/%.*s",
                 it->host.len,it->host.s,
                 it->port,
                 it->trsp.len,it->trsp.s);
