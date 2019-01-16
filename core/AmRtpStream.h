@@ -112,7 +112,6 @@ class PayloadMask
     // clear flag for all payloads
     void clear();
 
-    // set given flag (TODO: once it shows to be working, change / and % to >> and &)
     void set(unsigned char payload_id) { if (payload_id < 128) bits[payload_id / 8] |= 1 << (payload_id % 8); }
 
     // set all flags to 'true'
@@ -127,6 +126,24 @@ class PayloadMask
     PayloadMask() { clear(); }
     PayloadMask(bool _set_all) { if (_set_all) set_all(); else clear(); }
     PayloadMask(const PayloadMask &src);
+};
+
+class PayloadRelayMap
+{
+  private:
+    unsigned char map[128];
+
+  public:
+    void clear();
+
+    // set given flag (TODO: once it shows to be working, change / and % to >> and &)
+    void set(unsigned char payload_id, unsigned char mapped_payload_id) { map[payload_id] = mapped_payload_id; }
+
+    // get given flag
+    unsigned char get(unsigned char payload_id) { if(map[payload_id] == 0) { ERROR("not set relay mapped payload %u", payload_id); return payload_id; } return map[payload_id]; }
+
+    PayloadRelayMap() { clear(); }
+    PayloadRelayMap(const PayloadRelayMap &src);
 };
 
 /**
@@ -384,6 +401,7 @@ class AmRtpStream
     void clearRTPTimeout(struct timeval* recv_time);
 
     PayloadMask relay_payloads;
+    PayloadRelayMap relay_map;
     bool offer_answer_used;
 
     /** set to true if any data received */
@@ -632,6 +650,7 @@ class AmRtpStream
 
     /** set relay payloads for  RTP relaying */
     void setRelayPayloads(const PayloadMask &_relay_payloads);
+    void setRelayPayloadMap(const PayloadRelayMap & relay_map);
 
     /** ensable RTP relaying through relay stream */
     void enableRtpRelay();

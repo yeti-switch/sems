@@ -1132,7 +1132,7 @@ void AmB2BSession::clearRtpReceiverRelay() {
   }
 }
 
-void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask)
+void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map)
 {
   int te_pl = -1;
   enable = false;
@@ -1148,20 +1148,33 @@ void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask
       te_pl = i->payload_type;
     }
     else {
-      enable = true;
+        AmSdp sdp = media_session->getRemoteSdp(!a_leg);
+        for(auto media : sdp.media) {
+            if(media.type == m.type) {
+                for(auto payload : media.payloads) {
+                    if(payload.encoding_name == i->encoding_name) {
+                        mask.set(payload.payload_type);
+                        map.set(payload.payload_type, i->payload_type);
+                        break;
+                    }
+                }
+            }
+            break;
+        }
     }
   }
+  enable = true;
 
   if(!enable)
     return;
 
-  if(te_pl > 0) {
-    DBG("unmarking telephone-event payload %d for relay\n", te_pl);
-    mask.set(te_pl);
-  }
+//  if(te_pl > 0) {
+//    DBG("unmarking telephone-event payload %d for relay\n", te_pl);
+//    mask.set(te_pl);
+//  }
 
-  DBG("marking all other payloads for relay\n");
-  mask.invert();
+//  DBG("marking all other payloads for relay\n");
+//  mask.invert();
 }
 
 void  AmB2BSession::onSessionChange(AmB2BSession *new_session)
