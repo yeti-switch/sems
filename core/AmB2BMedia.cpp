@@ -276,6 +276,7 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
     stream->setRelayStream(other);
     stream->setForceBuffering(other->isRecordEnabled());
     stream->setRelayPayloads(relay_mask);
+    stream->setRelayPayloadMap(relay_map);
     if (!relay_paused)
       stream->enableRtpRelay();
     stream->setRAddr(relay_address, relay_port, relay_port+1);
@@ -287,7 +288,7 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
 }
 
 void AudioStreamData::setRelayPayloads(const SdpMedia &m, RelayController *ctrl) {
-  ctrl->computeRelayMask(m, relay_enabled, relay_mask);
+  ctrl->computeRelayMask(m, relay_enabled, relay_mask, relay_map);
 }
 
 void AudioStreamData::setRelayDestination(const string& connection_address, int port) {
@@ -1094,21 +1095,6 @@ void AmB2BMedia::updateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &
   AmLock lock(mutex);
   // streams should be created already (replaceConnectionAddress called
   // before updateLocalSdp uses/assignes their port numbers)
-
-  // save SDP: FIXME: really needed to store instead of just to use?
-  if (a_leg) {
-    a_leg_local_sdp = local_sdp;
-    a_leg_remote_sdp = remote_sdp;
-    have_a_leg_local_sdp = true;
-    have_a_leg_remote_sdp = true;
-  }
-  else {
-    b_leg_local_sdp = local_sdp;
-    b_leg_remote_sdp = remote_sdp;
-    have_b_leg_local_sdp = true;
-    have_b_leg_remote_sdp = true;
-  }
-
   // create missing streams
   createStreams(local_sdp); // FIXME: remote_sdp?
 
@@ -1179,6 +1165,20 @@ void AmB2BMedia::setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream,
     AudioStreamPair &pair = *audio.begin();
     AudioStreamData &adata = a_leg ? pair.a : pair.b;
     adata.setStreamUnsafe(stream);
+
+    // save SDP: FIXME: really needed to store instead of just to use?
+    if (a_leg) {
+        a_leg_local_sdp = local_sdp;
+        a_leg_remote_sdp = remote_sdp;
+        have_a_leg_local_sdp = true;
+        have_a_leg_remote_sdp = true;
+    }
+    else {
+        b_leg_local_sdp = local_sdp;
+        b_leg_remote_sdp = remote_sdp;
+        have_b_leg_local_sdp = true;
+        have_b_leg_remote_sdp = true;
+    }
 }
 
 void AmB2BMedia::stop(bool a_leg)

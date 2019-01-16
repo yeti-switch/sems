@@ -35,7 +35,7 @@ class B2BMediaStatistics
  * */
 class RelayController {
   public:
-    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask) = 0;
+    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map) = 0;
     virtual ~RelayController() { }
 };
 
@@ -93,6 +93,7 @@ class AudioStreamData {
     AmDtmfEventQueue *dtmf_queue;
 
     PayloadMask relay_mask;
+    PayloadRelayMap relay_map;
     bool relay_enabled;
     std::string relay_address;
     int relay_port;

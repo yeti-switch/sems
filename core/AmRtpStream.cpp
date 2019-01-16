@@ -102,6 +102,16 @@ PayloadMask::PayloadMask(const PayloadMask &src)
     memcpy(bits, src.bits, sizeof(bits));
 }
 
+void PayloadRelayMap::clear()
+{
+    memset(map, 0, sizeof(map));
+}
+
+PayloadRelayMap::PayloadRelayMap(const PayloadRelayMap &src)
+{
+    memcpy(map, src.map, sizeof(map));
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -1249,12 +1259,10 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
             ) ||
             //can relay
             (relay_payloads.get(p->payload) &&
-             NULL != relay_stream &&
-             //avoid asymmetric payloads
-             (p->payload == relay_stream->getLastPayload() ||
+             NULL != relay_stream) ||
               //force CN relay
               (force_relay_cn &&
-               p->payload == COMFORT_NOISE_PAYLOAD_TYPE))))
+               p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
         {
             if(active) {
                 CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)\n",p->timestamp,this);
@@ -1578,6 +1586,8 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
         if(is_dtmf_packet && local_telephone_event_pt.get()) {
             hdr->pt = local_telephone_event_pt->payload_type;
+        } else {
+            hdr->pt = relay_map.get(hdr->pt);
         }
 
         if(relay_timestamp_aligning) {
@@ -1680,6 +1690,11 @@ void AmRtpStream::setRelayStream(AmRtpStream* stream)
 void AmRtpStream::setRelayPayloads(const PayloadMask &_relay_payloads)
 {
     relay_payloads = _relay_payloads;
+}
+
+void AmRtpStream::setRelayPayloadMap(const PayloadRelayMap & _relay_map)
+{
+    relay_map = _relay_map;
 }
 
 void AmRtpStream::enableRtpRelay()
