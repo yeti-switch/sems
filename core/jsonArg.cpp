@@ -55,11 +55,11 @@ string str2json(const char* str, size_t len)
 {
     // borrowed from jsoncpp
     // Not sure how to handle unicode...
-    if (strpbrk(str, "\"\\\b\f\n\r\t") == NULL) {
+    /*if (strpbrk(str, "\"\\\b\f\n\r\t") == NULL) {
       string result = string("\"") + str + "\"";
       fixup_utf8_inplace(result);
       return result;
-    }
+    }*/
 
     // We have to walk value and escape any special characters.
     // Appending to std::string is not efficient, but this should be rare.
@@ -69,43 +69,45 @@ string str2json(const char* str, size_t len)
     result.reserve(maxsize); // to avoid lots of mallocs
     result += "\"";
     const char* end = str + len;
-    for (const char* c = str; (c != end) && (*c != 0); ++c){
-      switch(*c){
-      case '\"':
-	result += "\\\"";
-	break;
-      case '\\':
-	result += "\\\\";
-	break;
-      case '\b':
-	result += "\\b";
-	break;
-      case '\f':
-	 result += "\\f";
-	 break;
-      case '\n':
-	result += "\\n";
-	break;
-      case '\r':
-	result += "\\r";
-	break;
-      case '\t':
-	result += "\\t";
-	break;
-      case '/':
-	// Even though \/ is considered a legal escape in JSON, a bare
-	// slash is also legal, so I see no reason to escape it.
-	// (I hope I am not misunderstanding something.)
-      default:{
-	if (*c < ' ') 
-	  result += "\\u00" + hex_chars[*c >> 4] + hex_chars[*c & 0xf];
-	else 
-	  result += *c;
-      } break;
-      }
+    for (const char* c = str; (c != end) && (*c != 0); ++c) {
+        switch(*c) {
+        case '\"':
+            result += "\\\"";
+            break;
+        case '\\':
+            result += "\\\\";
+            break;
+        case '\b':
+            result += "\\b";
+            break;
+        case '\f':
+            result += "\\f";
+            break;
+        case '\n':
+            result += "\\n";
+            break;
+        case '\r':
+            result += "\\r";
+            break;
+        case '\t':
+            result += "\\t";
+            break;
+        case '/':
+            // Even though \/ is considered a legal escape in JSON, a bare
+            // slash is also legal, so I see no reason to escape it.
+            // (I hope I am not misunderstanding something.)
+        default: {
+            if (*c < ' ')
+                result += "\\u00" + hex_chars[*c >> 4] + hex_chars[*c & 0xf];
+            else
+                result += *c;
+        } break;
+        } //switch(*c)
     }
     result += "\"";
+
     fixup_utf8_inplace(result);
+
     return result;
 }
 
