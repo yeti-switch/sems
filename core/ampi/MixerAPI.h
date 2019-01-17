@@ -3,6 +3,7 @@
 
 #include "AmEventFdQueue.h"
 #include "AmSession.h"
+#include "RpcTreeHandler.h"
 
 #include <atomic>
 #include <memory>
@@ -114,7 +115,8 @@ using channel_ptr       = std::unique_ptr<ConferenceChannel,std::function<void(C
 
 
 class Mixer :
-        public AmPluginFactory,
+        public RpcTreeHandler<Mixer>,
+        public AmDynInvokeFactory,
         public AmThread,
         public AmEventFdQueue,
         public AmEventHandler
@@ -168,6 +170,7 @@ private:
     bool    resolve_name(const string &address, sockaddr_storage &_sa);
     int     bind_socket();
     int     init();
+    void    reload(const AmArg& args, AmArg& ret);
     void    processRequests();
     int    read_neighbor(cfg_t* cfg);
 
@@ -181,7 +184,10 @@ private:
 public:
     Mixer(const string& name);
 
+    AmDynInvoke* getInstance() { return instance(); }
     static  Mixer *instance();
+
+    virtual void init_rpc_tree();
 
     const vector<sockaddr_storage>&
     getNeighbors() { return neighbor_saddr; }
@@ -191,6 +197,7 @@ public:
 
     channel_ptr getConferenceChannel(const string &channel_id, int64_t channel_ext_id, const string &local_tag, int sample_rate);
     void        releaseConferenceChannel(const channel_ptr &p, const string &local_tag);
+
 
     int         onLoad();
     void        process(AmEvent* ev);
