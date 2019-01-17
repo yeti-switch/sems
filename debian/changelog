@@ -1,3 +1,9 @@
+sems (1.7.75-1) stable; urgency=low
+
+  * http_client: use DBG level for EPOLL_CTL_MOD errors reporting
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 17 Jan 2019 13:15:51 +0200
+
 sems (1.7.75-0) stable; urgency=low
 
   * e01044722 RtspAudio: fix PLAY_NOTIFY processing
