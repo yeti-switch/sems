@@ -1,3 +1,9 @@
+sems (1.7.75-3) stable; urgency=low
+
+  * adjust loglevels for failed resolving, registrations, sendRequest
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 17 Jan 2019 15:11:33 +0200
+
 sems (1.7.75-2) stable; urgency=low
 
   * jsonArg: disable escaping optimization. always escape
