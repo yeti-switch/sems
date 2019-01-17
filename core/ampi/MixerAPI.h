@@ -169,8 +169,7 @@ private:
     int     bind_socket();
     int     init();
     void    processRequests();
-    void    read_neighbor(AmConfigReader &cfg, const string &n_name);
-    bool    read_neighbors(AmConfigReader &cfg);
+    int    read_neighbor(cfg_t* cfg);
 
     void    addParticipant(const string& channel_id,const string& local_tag);
     void    removeParticipant(const string& channel_id,const string& local_tag);
