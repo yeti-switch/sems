@@ -1,3 +1,9 @@
+sems (1.8.10-3) stable; urgency=low
+
+  * jsonArg: apply fixes for UTF escaping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 18 Jan 2019 17:22:03 +0200
+
 sems (1.8.10-2) stable; urgency=low
 
   * 61c04a18a jsonArg: disable escaping optimization. always escape
