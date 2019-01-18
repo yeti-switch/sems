@@ -1,3 +1,9 @@
+sems (1.7.75-5) stable; urgency=low
+
+  * jsonArg: apply fixes for UTF escaping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 18 Jan 2019 17:29:00 +0200
+
 sems (1.7.75-3) stable; urgency=low
 
   * adjust loglevels for failed resolving, registrations, sendRequest
