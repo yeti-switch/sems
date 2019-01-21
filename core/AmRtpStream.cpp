@@ -1269,7 +1269,7 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 
             if (NULL != relay_stream) //packet is not dtmf or relay dtmf is not filtered
             {
-                relay_stream->relay(p);
+                relay_stream->relay(p, force_receive_dtmf && !force_relay_dtmf);
                 if(force_buffering && p->relayed) {
                     receive_mut.lock();
                     if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
@@ -1553,7 +1553,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
     p->rtcp_parse_update_stats(rtp_stats);
 }
 
-void AmRtpStream::relay(AmRtpPacket* p)
+void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
 {
     // not yet initialized
     // or muted/on-hold
@@ -1565,7 +1565,11 @@ void AmRtpStream::relay(AmRtpPacket* p)
 
     if(!relay_raw) {
         rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
-
+        if(process_dtmf_queue && remote_telephone_event_pt.get()) {
+            hdr->ssrc = htonl(l_ssrc);
+            if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
+                return;
+        }
 
         if (!relay_transparent_seqno)
             hdr->seq = htons(sequence++);
