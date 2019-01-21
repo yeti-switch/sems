@@ -271,7 +271,8 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
     return;
   }
 
-  if (relay_enabled && other) {
+  if (relay_enabled && other &&
+      other->getFrameTime() == stream->getFrameTime()) {
     stream->setRelayStream(other);
     stream->setForceBuffering(other->isRecordEnabled());
     stream->setRelayPayloads(relay_mask);
@@ -489,7 +490,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
             //process src_stream even if custom input enabled
             if(src.isInitialized()) {
                 AmRtpAudio *src_stream = src.getStream();
-                if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
+                if (src_stream->checkInterval(ts)||stream->getFrameTime() <= src_stream->getFrameTime()) {
                     int tmp_got = src_stream->get(ts, buffer, sample_rate, f_size);
                     //DBG("[%p] stream %p got %d from stream input %p",this,stream,got,src_stream);
                     if (tmp_got > 0) {
@@ -516,7 +517,7 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
                 //CLASS_DBG("src_in->get(%llu,%d)",ts,got);
             } else {
                 AmRtpAudio *src_stream = src.getStream();
-                if (src_stream->checkInterval(ts)||src_stream->getFrameSize()>f_size) {
+                if (src_stream->checkInterval(ts)|| stream->getFrameTime() <= src_stream->getFrameTime()) {
                     got = src_stream->get(ts, buffer, sample_rate, f_size);
                     //DBG("[%p] stream %p got %d from stream %p",this,stream,got,src_stream);
                     if (got > 0) {

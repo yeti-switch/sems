@@ -41,6 +41,7 @@ static const string sendonly("sendonly");
 static const string recvonly("recvonly");
 static const string sendrecv("sendrecv");
 static const string inactive("inactive");
+static const string ptime("ptime");
 
 static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next);
 static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s);
@@ -501,7 +502,6 @@ void AmSdp::print(string& body) const
                     options += "a=fmtp:" + int2str(pl_it->payload_type) + " "
                                + pl_it->sdp_format_parameters + "\r\n";
                 }
-
             }
       }
       else {
@@ -520,21 +520,25 @@ void AmSdp::print(string& body) const
                         media_it->crypto.begin(); c_it != media_it->crypto.end(); c_it++) {
                 out_buf += c_it->print();
       }
+      // "a=ptime:" line
+      if(media_it->frame_size) {
+          out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
+      }
       if(media_it->send){
-	if(media_it->recv){
-	  out_buf += "a=sendrecv\r\n";
-	}
-	else {
-	  out_buf += "a=sendonly\r\n";
-	}
+        if(media_it->recv){
+        out_buf += "a=sendrecv\r\n";
+        }
+        else {
+        out_buf += "a=sendonly\r\n";
+        }
       }
       else {
-	if(media_it->recv){
-	  out_buf += "a=recvonly\r\n";
-	}
-	else {
-	  out_buf += "a=inactive\r\n";
-	}
+        if(media_it->recv){
+        out_buf += "a=recvonly\r\n";
+        }
+        else {
+        out_buf += "a=inactive\r\n";
+        }
       }
 
       // add attributes (media level)
@@ -1423,6 +1427,12 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     media.send = false;
     media.recv = false;
     media.has_mode_attribute = true;
+  } else if (attr == ptime) {
+    size_t attr_len = 0;
+    string value;
+    next = skip_till_next_line(attr_line, attr_len);
+    value = string (attr_line, attr_len);
+    str2int(value, media.frame_size);
   } else {
     attr_check(attr);
     string value;
