@@ -71,7 +71,6 @@ void _PcapFileRecorderProcessor::run()
     } while(running);
 
     AmEventDispatcher::instance()->delEventQueue(PCAP_QUEUE_NAME);
-
     pcap_events_lock.lock();
     DBG("%ld unprocessed events on stop",pcap_events.size());
     for(PcapEventsQueue::iterator it = pcap_events.begin();
@@ -104,9 +103,9 @@ void _PcapFileRecorderProcessor::process(AmEvent *ev)
 void _PcapFileRecorderProcessor::processRecorderEvent(PcapRecorderEvent &ev)
 {
     if(((sockaddr_in*)&ev.srcaddr)->sin_family == AF_INET) {
-        ev.logger->logv4(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in));
+        ev.logger->logv4(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in), ev.event_time);
     } else if(((sockaddr_in6*)&ev.srcaddr)->sin6_family == AF_INET6) {
-        ev.logger->logv6(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in6));
+        ev.logger->logv6(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in6), ev.event_time);
     }
 }
 

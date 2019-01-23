@@ -15,6 +15,7 @@ struct PcapRecorderEvent
     std::vector<char> data;
     struct sockaddr srcaddr;
     struct sockaddr dstaddr;
+    struct timeval event_time;
     PcapRecorderEvent(pcap_logger* logger, std::vector<char> data,
                       struct sockaddr *src, struct sockaddr *dst)
       : logger(logger)
@@ -33,6 +34,8 @@ struct PcapRecorderEvent
         }
 
         inc_ref(logger);
+
+        gettimeofday(&event_time, NULL);
     }
 
     ~PcapRecorderEvent()
