@@ -76,6 +76,7 @@ using std::string;
 #if defined(__linux__)
 #include <sys/prctl.h>
 #include <srtp.h>
+#include "PcapFileRecorder.h"
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
@@ -666,6 +667,9 @@ int main(int argc, char* argv[])
 
   INFO("Starting audio recorder");
   AmAudioFileRecorderProcessor::instance()->start();
+
+  INFO("Starting pcap recorder");
+  PcapFileRecorderProcessor::instance()->start();
 
   INFO("Starting media processor\n");
   AmMediaProcessor::instance()->init();

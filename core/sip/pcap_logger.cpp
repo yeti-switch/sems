@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <PcapFileRecorder.h>
 
 using namespace std;
 
@@ -114,11 +115,9 @@ int pcap_logger::log(const char* buf, int len,
             sockaddr_storage* dst_ip,
             cstring method, int reply_code)
 {
-  if (((sockaddr_in*)src_ip)->sin_family == AF_INET) {
-    return logv4(buf, len, (sockaddr*)src_ip, (sockaddr*)dst_ip, sizeof(sockaddr_storage));
-  } else {
-      return logv6(buf, len, (sockaddr*)src_ip, (sockaddr*)dst_ip, sizeof(sockaddr_storage));
-  }
+    PcapRecorderEvent *event = new PcapRecorderEvent(this, std::vector<char>(buf, buf + len), (struct sockaddr*)src_ip, (struct sockaddr*)dst_ip);
+    PcapFileRecorderProcessor::instance()->putEvent(event);
+    return 0;
 }
 
 int pcap_logger::logv4(const char *data, int data_len, struct sockaddr *src, struct sockaddr *dst, size_t addr_len)
@@ -224,4 +223,3 @@ int pcap_logger::logv6(const char *data, int data_len, struct sockaddr *src, str
   }
   return 0;
 }
-
