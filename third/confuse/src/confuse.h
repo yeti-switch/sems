@@ -78,23 +78,28 @@ enum cfg_type_t {
 };
 typedef enum cfg_type_t cfg_type_t;
 
+extern const char *cfg_get_current_buf_ptr();
+
+#define MASK_BY_BIT(BIT_NUMBER) (1 << BIT_NUMBER)
+
 /** Flags. */
 #define CFGF_NONE 0
-#define CFGF_MULTI 1       /**< option may be specified multiple times (only applies to sections) */
-#define CFGF_LIST 2        /**< option is a list */
-#define CFGF_NOCASE 4      /**< configuration file is case insensitive */
-#define CFGF_TITLE 8       /**< option has a title (only applies to sections) */
-#define CFGF_NODEFAULT 16  /**< option has no default value */
-#define CFGF_NO_TITLE_DUPES 32  /**< multiple section titles must be unique
-                                  (duplicates raises an error, only applies to
-                                  sections) */
+#define CFGF_MULTI          MASK_BY_BIT(0) /**< option may be specified multiple times (only applies to sections) */
+#define CFGF_LIST           MASK_BY_BIT(1) /**< option is a list */
+#define CFGF_NOCASE         MASK_BY_BIT(2) /**< configuration file is case insensitive */
+#define CFGF_TITLE          MASK_BY_BIT(3) /**< option has a title (only applies to sections) */
+#define CFGF_NODEFAULT      MASK_BY_BIT(4) /**< option has no default value */
+#define CFGF_NO_TITLE_DUPES MASK_BY_BIT(5) /**< multiple section titles must be unique
+                                                (duplicates raises an error, only applies to
+                                                sections) */
 
-#define CFGF_RESET 64
-#define CFGF_DEFINIT 128
-#define CFGF_IGNORE_UNKNOWN 256 /**< ignore unknown options in configuration files */
-#define CFGF_DEPRECATED     512  /**< option is deprecated and should be ignored. */
-#define CFGF_DROP           1024 /**< option should be dropped after parsing */
-#define CFGF_COMMENTS       2048 /**< Enable option annotation/comments support */
+#define CFGF_RESET          MASK_BY_BIT(6)
+#define CFGF_DEFINIT        MASK_BY_BIT(7)
+#define CFGF_IGNORE_UNKNOWN MASK_BY_BIT(8)  /**< ignore unknown options in configuration files */
+#define CFGF_DEPRECATED     MASK_BY_BIT(9)  /**< option is deprecated and should be ignored. */
+#define CFGF_DROP           MASK_BY_BIT(10) /**< option should be dropped after parsing */
+#define CFGF_COMMENTS       MASK_BY_BIT(11) /**< Enable option annotation/comments support */
+#define CFGF_RAW            MASK_BY_BIT(12) /**< Skip section parsing and set raw content as value */
 
 /** Return codes from cfg_parse(), cfg_parse_boolean(), and cfg_set*() functions. */
 #define CFG_SUCCESS     0
@@ -243,6 +248,7 @@ struct cfg_t {
 	char *title;	        /**< Optional title for this section, only
 				 * set if CFGF_TITLE flag is set */
 	char *filename;		/**< Name of the file being parsed */
+	char *raw;		/**< raw section body if CFGF_RAW set */
 	int line;		/**< Line number in the config file */
 	cfg_errfunc_t errfunc;	/**< This function (if set with
 				 * cfg_set_error_function) is called for
