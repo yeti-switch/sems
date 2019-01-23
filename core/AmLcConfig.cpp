@@ -547,8 +547,8 @@ AmLcConfig::AmLcConfig()
     {
         CFG_STR(PARAM_PATH_NAME, "/usr/lib/sems/plug-in", CFGF_NONE),
         CFG_STR(PARAM_CPATH_NAME, "/etc/sems/etc/", CFGF_NONE),
-        CFG_SEC(SECTION_MODULE_NAME, module, CFGF_MULTI | CFGF_TITLE),
-        CFG_SEC(SECTION_MODULE_GLOBAL_NAME, module, CFGF_MULTI | CFGF_TITLE),
+        CFG_SEC(SECTION_MODULE_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
+        CFG_SEC(SECTION_MODULE_GLOBAL_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
         CFG_END()
     };
 
@@ -987,6 +987,7 @@ int AmLcConfig::readModules()
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_GLOBAL_NAME, i);
         std::string name = module->title;
+        //ERROR("raw secion value: %s",module->raw);
         modules.push_back(name);
         AmPlugIn::instance()->set_load_rtld_global(name + ".so");
     }
