@@ -816,6 +816,15 @@ DLLIMPORT cfg_value_t *cfg_setopt(cfg_t *cfg, cfg_opt_t *opt, const char *value)
 			}
 
 			val->section->flags = cfg->flags;
+
+			//preserve CFGF_RAW flag
+			if(is_set(CFGF_RAW, opt->flags))
+				val->section->flags |= CFGF_RAW;
+
+			//preserve CFGF_IGNORE_UNKNOWN flag
+			if(is_set(CFGF_IGNORE_UNKNOWN, opt->flags))
+				val->section->flags |= CFGF_IGNORE_UNKNOWN;
+
 			val->section->filename = cfg->filename ? strdup(cfg->filename) : NULL;
 			if (cfg->filename && !val->section->filename) {
 				free(val->section->name);
@@ -1011,7 +1020,7 @@ static int call_function(cfg_t *cfg, cfg_opt_t *opt, cfg_opt_t *funcopt)
 		errno = EINVAL;
 		return CFG_FAIL;
 	}
-		
+
 	/*
 	 * create am argv string vector and call the registered function
 	 */
@@ -1044,6 +1053,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 	int state = 0;
 	char *comment = NULL;
 	char *opttitle = NULL;
+	const char *raw_ptr = NULL;
 	cfg_opt_t *opt = NULL;
 	cfg_value_t *val = NULL;
 	cfg_opt_t funcopt = CFG_STR(0, 0, 0);
@@ -1053,6 +1063,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 
 	if (force_state != -1)
 		state = force_state;
+
 	if (force_opt)
 		opt = force_opt;
 
@@ -1246,9 +1257,19 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			val->section->path = cfg->path; /* Remember global search path */
 			val->section->line = cfg->line;
 			val->section->errfunc = cfg->errfunc;
+
+			if(is_set(CFGF_RAW,val->section->flags)) {
+				raw_ptr = cfg_get_current_buf_ptr();
+			}
+
 			rc = cfg_parse_internal(val->section, level + 1, -1, 0);
 			if (rc != STATE_EOF)
 				goto error;
+
+			if(is_set(CFGF_RAW,val->section->flags)) {
+				size_t buf_len = cfg_get_current_buf_ptr()-raw_ptr;
+				val->section->raw = strndup(raw_ptr, cfg_get_current_buf_ptr()-raw_ptr-1);
+			}
 
 			cfg->line = val->section->line;
 			if (opt && opt->validcb && (*opt->validcb) (cfg, opt) != 0)
@@ -1371,6 +1392,10 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				return STATE_CONTINUE;
 			}
 
+			if(tok = '}') {
+				return STATE_EOF;
+			}
+
 			ignore = 0;
 			state = 0;
 			break;
@@ -1395,6 +1420,9 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			break;
 
 		case 15: /* unknown option, dummy read of next parameter in sub-section */
+			if(tok == '}') {
+				return STATE_CONTINUE;
+			}
 			state = 10;
 			break;
 
@@ -1674,6 +1702,9 @@ DLLIMPORT int cfg_free_value(cfg_opt_t *opt)
 				free((void *)opt->values[i]->string);
 			} else if (opt->type == CFGT_SEC) {
 				opt->values[i]->section->path = NULL; /* Global search path */
+				if(opt->values[i]->section->raw) {
+					free(opt->values[i]->section->raw);
+				}
 				cfg_free(opt->values[i]->section);
 			} else if (opt->type == CFGT_PTR && opt->freecb && opt->values[i]->ptr) {
 				(opt->freecb) (opt->values[i]->ptr);
