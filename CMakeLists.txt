@@ -16,6 +16,7 @@ include(cmake/srtp_bundled.cmake)
 include(cmake/curl_bundled.cmake)
 include(cmake/spandsp_bundled.cmake)
 include(cmake/botan_bundled.cmake)
+include(cmake/confuse_bundled.cmake)
 
 SET(SEMS_APP sems)
 SET(PKGCFG_DIR /usr/lib/pkgconfig)
