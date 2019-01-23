@@ -103,10 +103,10 @@ void _PcapFileRecorderProcessor::process(AmEvent *ev)
 
 void _PcapFileRecorderProcessor::processRecorderEvent(PcapRecorderEvent &ev)
 {
-    if(((sockaddr_in*)ev.srcaddr)->sin_family == AF_INET) {
-        ev.logger->logv4(ev.data.data(), ev.data.size(), ev.srcaddr, ev.dstaddr, sizeof(sockaddr_in));
-    } else if(((sockaddr_in6*)ev.srcaddr)->sin6_family == AF_INET6) {
-        ev.logger->logv6(ev.data.data(), ev.data.size(), ev.srcaddr, ev.dstaddr, sizeof(sockaddr_in6));
+    if(((sockaddr_in*)&ev.srcaddr)->sin_family == AF_INET) {
+        ev.logger->logv4(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in));
+    } else if(((sockaddr_in6*)&ev.srcaddr)->sin6_family == AF_INET6) {
+        ev.logger->logv6(ev.data.data(), ev.data.size(), &ev.srcaddr, &ev.dstaddr, sizeof(sockaddr_in6));
     }
 }
 
