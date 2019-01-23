@@ -23,4 +23,4 @@ add_library(CONFUSE_bundled STATIC IMPORTED)
 set_property(TARGET CONFUSE_bundled PROPERTY IMPORTED_LOCATION ${CONFUSE_BUNDLED_LIB})
 set(CONFUSE_BUNDLED_LIBS ${CONFUSE_BUNDLED_LIB})
 
-install(DIRECTORY ${CONFUSE_BIN_DIR}/src/ DESTINATION /usr/include/sems/confuse/confuse)
+install(FILES ${CONFUSE_BIN_DIR}/src/confuse.h DESTINATION /usr/include/sems/)
