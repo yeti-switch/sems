@@ -535,6 +535,11 @@ static char *yy_c_buf_p = NULL;
 static int yy_init = 0;		/* whether we need to initialize */
 static int yy_start = 0;	/* start state number */
 
+const char *cfg_get_current_buf_ptr()
+{
+    return yy_c_buf_p;
+}
+
 /* Flag which is used to allow yywrap()'s to do buffer switches
  * instead of setting up a fresh yyin.  A bit of a hack ...
  */
