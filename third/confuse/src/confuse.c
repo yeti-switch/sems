@@ -2246,7 +2246,15 @@ DLLIMPORT int cfg_opt_print_indent(cfg_opt_t *opt, FILE *fp, int indent)
 				fprintf(fp, "%s \"%s\" {\n", opt->name, cfg_title(sec));
 			else
 				fprintf(fp, "%s {\n", opt->name);
-			cfg_print_indent(sec, fp, indent + 1);
+
+			if (is_set(CFGF_RAW,sec->flags) && sec->raw) {
+				const char *end = sec->raw + strlen(sec->raw) -1;
+				for(; end > sec->raw && isspace(*end); end--);
+				fprintf(fp, "%.*s\n", end - sec->raw, sec->raw);
+			} else {
+				cfg_print_indent(sec, fp, indent + 1);
+			}
+
 			cfg_indent(fp, indent);
 			fprintf(fp, "}\n");
 		}
