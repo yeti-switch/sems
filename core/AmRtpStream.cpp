@@ -102,6 +102,16 @@ PayloadMask::PayloadMask(const PayloadMask &src)
     memcpy(bits, src.bits, sizeof(bits));
 }
 
+void PayloadRelayMap::clear()
+{
+    memset(map, 0, sizeof(map));
+}
+
+PayloadRelayMap::PayloadRelayMap(const PayloadRelayMap &src)
+{
+    memcpy(map, src.map, sizeof(map));
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -1241,20 +1251,13 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
     if (relay_enabled) {
         if (force_receive_dtmf) recvDtmfPacket(p);
 
-        bool is_dtmf_packet = (p->payload == getLocalTelephoneEventPT());
-
         if (relay_raw ||
-            (is_dtmf_packet &&
-             (force_relay_dtmf ||!active)
-            ) ||
             //can relay
             (relay_payloads.get(p->payload) &&
-             NULL != relay_stream &&
-             //avoid asymmetric payloads
-             (p->payload == relay_stream->getLastPayload() ||
+             NULL != relay_stream) ||
               //force CN relay
               (force_relay_cn &&
-               p->payload == COMFORT_NOISE_PAYLOAD_TYPE))))
+               p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
         {
             if(active) {
                 CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)\n",p->timestamp,this);
@@ -1264,10 +1267,9 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
             handleSymmetricRtp(&p->saddr,false);
             add_if_no_exist(incoming_relayed_payloads,p->payload);
 
-            if (NULL != relay_stream && //we have relay stream
-               (!(relay_filter_dtmf&& is_dtmf_packet))) //packet is not dtmf or relay dtmf is not filtered
+            if (NULL != relay_stream) //packet is not dtmf or relay dtmf is not filtered
             {
-                relay_stream->relay(p, is_dtmf_packet, force_receive_dtmf && !force_relay_dtmf);
+                relay_stream->relay(p, force_receive_dtmf && !force_relay_dtmf);
                 if(force_buffering && p->relayed) {
                     receive_mut.lock();
                     if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
@@ -1551,7 +1553,7 @@ void AmRtpStream::recvRtcpPacket(AmRtpPacket* p)
     p->rtcp_parse_update_stats(rtp_stats);
 }
 
-void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_queue)
+void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
 {
     // not yet initialized
     // or muted/on-hold
@@ -1563,22 +1565,18 @@ void AmRtpStream::relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_q
 
     if(!relay_raw) {
         rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
-
         if(process_dtmf_queue && remote_telephone_event_pt.get()) {
             hdr->ssrc = htonl(l_ssrc);
             if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
                 return;
-            hdr->seq = htons(sequence++);
-        } else {
-            if (!relay_transparent_seqno)
-                hdr->seq = htons(sequence++);
-            if (!relay_transparent_ssrc)
-                hdr->ssrc = htonl(l_ssrc);
         }
 
-        if(is_dtmf_packet && local_telephone_event_pt.get()) {
-            hdr->pt = local_telephone_event_pt->payload_type;
-        }
+        if (!relay_transparent_seqno)
+            hdr->seq = htons(sequence++);
+        if (!relay_transparent_ssrc)
+            hdr->ssrc = htonl(l_ssrc);
+
+        hdr->pt = relay_map.get(hdr->pt);
 
         if(relay_timestamp_aligning) {
             //timestamp adjust code
@@ -1680,6 +1678,11 @@ void AmRtpStream::setRelayStream(AmRtpStream* stream)
 void AmRtpStream::setRelayPayloads(const PayloadMask &_relay_payloads)
 {
     relay_payloads = _relay_payloads;
+}
+
+void AmRtpStream::setRelayPayloadMap(const PayloadRelayMap & _relay_map)
+{
+    relay_map = _relay_map;
 }
 
 void AmRtpStream::enableRtpRelay()

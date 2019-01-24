@@ -413,7 +413,7 @@ private:
     void onSessionChange(AmB2BSession *new_session);
 
     // see RelayController
-    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask);
+    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map);
 };
 
 class AmB2BCalleeSession;
