@@ -148,7 +148,7 @@
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
 #define PARAM_PROFILES_NAME          "profiles"
-#define PARAM_DTMF_ENABLE_MRATE_NAME "dtmf_enable_multirate"
+#define PARAM_DTMF_OFFER_MRATE_NAME "dtmf_offer_multirate"
 
 #define VALUE_OFF                    "off"
 #define VALUE_DROP                   "drop"
@@ -609,7 +609,7 @@ AmLcConfig::AmLcConfig()
         CFG_BOOL(PARAM_LOG_EVENTS_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_ACCEPT_FORKED_DLG_NAME, cfg_false, CFGF_NONE),
-        CFG_BOOL(PARAM_DTMF_ENABLE_MRATE_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_DTMF_OFFER_MRATE_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_BL_TTL_NAME, VALUE_BL_TTL, CFGF_NONE),
         CFG_INT(PARAM_UDP_RECVBUF_NAME, VALUE_UDP_RECVBUF, CFGF_NONE),
         CFG_INT(PARAM_SESS_PROC_THREADS_NAME, VALUE_NUM_SESSION_PROCESSORS, CFGF_NODEFAULT),
@@ -897,7 +897,7 @@ int AmLcConfig::readGeneral()
     std::string value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
     if(value == VALUE_SPANDSP) default_dtmf_detector = Dtmf::SpanDSP;
     else default_dtmf_detector = Dtmf::SEMSInternal;
-    dtmf_enable_multirate = cfg_getbool(gen, PARAM_DTMF_ENABLE_MRATE_NAME);
+    dtmf_offer_multirate = cfg_getbool(gen, PARAM_DTMF_OFFER_MRATE_NAME);
     for(size_t i = 0; i < cfg_size(gen, PARAM_CODEC_ORDER_NAME); i++) {
         codec_order.push_back(cfg_getnstr(gen, PARAM_CODEC_ORDER_NAME, i));
     }
