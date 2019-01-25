@@ -92,14 +92,54 @@ amci_codec_t _codec_tevent = {
   tevent_samples2bytes
 };
 
-amci_payload_t _payload_tevent = { 
+amci_payload_t _payload_tevent_8 = {
   -1,
   "telephone-event",
-  8000, // telephone-event has always SR 8000 
+  8000, // telephone-event with SR 8000
   8000,
   -1,
   CODEC_TELEPHONE_EVENT,
   -1 
+};
+
+amci_payload_t _payload_tevent_16 = {
+  -1,
+  "telephone-event",
+  8000,
+  16000, // telephone-event with SR 16000
+  -1,
+  CODEC_TELEPHONE_EVENT,
+  -1
+};
+
+amci_payload_t _payload_tevent_24 = {
+  -1,
+  "telephone-event",
+  8000,
+  24000, // telephone-event with SR 24000
+  -1,
+  CODEC_TELEPHONE_EVENT,
+  -1
+};
+
+amci_payload_t _payload_tevent_32 = {
+  -1,
+  "telephone-event",
+  8000,
+  32000, // telephone-event with SR 32000
+  -1,
+  CODEC_TELEPHONE_EVENT,
+  -1
+};
+
+amci_payload_t _payload_tevent_48 = {
+  -1,
+  "telephone-event",
+  8000,
+  48000, // telephone-event with SR 48000
+  -1,
+  CODEC_TELEPHONE_EVENT,
+  -1
 };
 
 AmPlugIn* AmPlugIn::_instance=0;
@@ -157,7 +197,11 @@ void AmPlugIn::init() {
   DBG("adding built-in codecs...\n");
   addCodec(&_codec_pcm16);
   addCodec(&_codec_tevent);
-  addPayload(&_payload_tevent);
+  addPayload(&_payload_tevent_8);
+  addPayload(&_payload_tevent_16);
+  addPayload(&_payload_tevent_24);
+  addPayload(&_payload_tevent_32);
+  addPayload(&_payload_tevent_48);
 }
 
 int AmPlugIn::load(const string& directory, const vector<string>& plugins)
@@ -370,14 +414,25 @@ int AmPlugIn::getDynPayload(const string& name, int rate, int encoding_param) co
 /** return 0, or -1 in case of error. */
 void AmPlugIn::getPayloads(vector<SdpPayload>& pl_vec) const
 {
+  int te_pl_pos = 0;
+  std::map<int,amci_payload_t*>::const_iterator te_pl_it = payloads.end();
   for (std::map<int,int>::const_iterator it = payload_order.begin(); it != payload_order.end(); ++it) {
     std::map<int,amci_payload_t*>::const_iterator pl_it = payloads.find(it->second);
     if(pl_it != payloads.end()){
+        if(AmConfig.dtmf_enable_multirate && strcmp(pl_it->second->name, "telephone-event") == 0 &&
+            (te_pl_it == payloads.end() || te_pl_it->second->advertised_sample_rate > pl_it->second->advertised_sample_rate)) {
+            te_pl_it = pl_it;
+            te_pl_pos = pl_vec.size();
+            continue;
+        }
       // if channels==2 use that value; otherwise don't add channels param
       pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate, pl_it->second->channels==2?2:0));
     } else {
       ERROR("Payload %d (from the payload_order map) was not found in payloads map!\n", it->second);
     }
+  }
+  if(te_pl_it != payloads.end()) {
+      pl_vec.insert(pl_vec.begin() + te_pl_pos, SdpPayload(te_pl_it->first, te_pl_it->second->name, te_pl_it->second->advertised_sample_rate, te_pl_it->second->channels==2?2:0));
   }
 }
 

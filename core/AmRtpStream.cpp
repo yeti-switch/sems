@@ -1053,15 +1053,37 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    remote_telephone_event_pt.reset(remote.telephoneEventPayload());
+    vector<const SdpPayload*> remote_payloads = remote.telephoneEventPayload();
+    vector<const SdpPayload*> local_payloads = local.telephoneEventPayload();
+    for(vector<const SdpPayload*>::iterator rpayload_it = remote_payloads.begin();
+        rpayload_it != remote_payloads.end() && !remote_telephone_event_pt.get(); rpayload_it++) {
+        for(vector<const SdpPayload*>::iterator lpayload_it = local_payloads.begin();
+            lpayload_it != local_payloads.end() && !local_telephone_event_pt.get();
+            lpayload_it++) {
+            if((*rpayload_it)->clock_rate == (*lpayload_it)->clock_rate) {
+                local_telephone_event_pt.reset(*lpayload_it);
+                local_payloads.erase(lpayload_it);
+            }
+        }
+
+        if(local_telephone_event_pt.get()) {
+            remote_telephone_event_pt.reset(*rpayload_it);
+            remote_payloads.erase(rpayload_it);
+        }
+    }
+    for(auto& lpayload : local_payloads) {
+        delete lpayload;
+    }
+    for(auto& rpayload : remote_payloads) {
+        delete rpayload;
+    }
+
     if (remote_telephone_event_pt.get()) {
         CLASS_DBG("remote party supports telephone events (pt=%i)\n",
             remote_telephone_event_pt->payload_type);
     } else {
         CLASS_DBG("remote party doesn't support telephone events\n");
     }
-
-    local_telephone_event_pt.reset(local.telephoneEventPayload());
 
     CLASS_DBG("use transport = %d",
         local_media.transport);

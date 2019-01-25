@@ -298,7 +298,7 @@ class AmSdp
   /**
    * Find payload by name, return cloned object
    */
-  const SdpPayload *findPayload(const string& name) const;
+  vector<const SdpPayload*> findPayload(const string& name) const;
 
 public:
   // parsed SDP definition
@@ -333,7 +333,7 @@ public:
   void print(string& body) const;
 
   /** get telephone event payload */
-  const SdpPayload *telephoneEventPayload() const;
+  vector<const SdpPayload*> telephoneEventPayload() const;
 
   /**
    * Test if remote UA supports 'telefone_event'.
