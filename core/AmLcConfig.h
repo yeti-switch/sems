@@ -112,6 +112,7 @@ public:
     unsigned int max_shutdown_time;
     unsigned int dead_rtp_time;
     Dtmf::InbandDetectorType default_dtmf_detector;
+    bool dtmf_enable_multirate;
     bool single_codec_in_ok;
     std::vector<std::string> codec_order;
     std::vector<std::string> exclude_payloads;

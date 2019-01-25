@@ -565,13 +565,14 @@ void AmSdp::print(string& body) const
   body = out_buf;
 }
 
-const SdpPayload* AmSdp::telephoneEventPayload() const
+vector<const SdpPayload*> AmSdp::telephoneEventPayload() const
 {
   return findPayload("telephone-event");
 }
 
-const SdpPayload *AmSdp::findPayload(const string& name) const
+vector<const SdpPayload*> AmSdp::findPayload(const string& name) const
 {
+  vector<const SdpPayload*> payloads;
   vector<SdpMedia>::const_iterator m_it;
 
   for (m_it = media.begin(); m_it != media.end(); ++m_it)
@@ -582,11 +583,11 @@ const SdpPayload *AmSdp::findPayload(const string& name) const
 	{
 	  if (it->encoding_name == name)
 	    {
-	      return new SdpPayload(*it);
+	      payloads.push_back(new SdpPayload(*it));
 	    }
 	}
     }
-  return NULL;
+  return payloads;
 }
 
 bool AmSdp::operator == (const AmSdp& other) const
