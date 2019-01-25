@@ -87,15 +87,13 @@ class WebConferenceFactory
 
   WebConferenceCleaner* cleaner;
  
-  // for DI 
-  static WebConferenceFactory* _instance;
   bool configured;
   AmConfigReader cfg;
 
   string getServerInfoString();
   string getRandomPin();
   /** @return NULL if adminpin wrong */
-  ConferenceRoom* getRoom(const string& room, 
+  ConferenceRoom* getRoom(const string& room,
 			  const string& adminpin,
 			  bool ignore_adminpin);
   void postConfEvent(const AmArg& args, AmArg& ret,
@@ -120,7 +118,7 @@ class WebConferenceFactory
   void sweepRooms();
 
   int load();
-  
+
   void setupSessionTimer(AmSession* s);
 
 public:
@@ -128,11 +126,11 @@ public:
   static PlayoutType m_PlayoutType;
   static string urlbase;
   static string MasterPassword;
-  
+
   static int ParticipantExpiredDelay;
   static int RoomExpiredDelay;
   static int RoomSweepInterval;
-  
+
   static bool ignore_pin;
 
   static bool PrivateRoomsMode;
@@ -140,12 +138,13 @@ public:
 
   static unsigned int LonelyUserTimer;
 
-  // P-App-Param parameter to get participant ID from 
+  // P-App-Param parameter to get participant ID from
   static string participant_id_paramname;
   // if participant_id_paramname not configured:
   // header to get participant ID from
   static string participant_id_hdr;
 
+  DECLARE_FACTORY_INSTANCE(WebConferenceFactory);
 
   WebConferenceFactory(const string& _app_name);
   AmSession* onInvite(const AmSipRequest&, const string& app_name,

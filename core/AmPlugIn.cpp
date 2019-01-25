@@ -115,7 +115,6 @@ static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
 {
   DBG("decreasing reference to plug-in factory: %s\n", pf.first.c_str());
   dec_ref(pf.second);
-
 }
 
 AmPlugIn::~AmPlugIn()
@@ -284,6 +283,14 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CLASS_EXPORT_STR)) != NULL){
     plugin = (AmPluginFactory*)fc();
     if(loadDiPlugIn(plugin))
+      goto error;
+    has_sym=true;
+    if (NULL != plugin) plugins.push_back(plugin);
+  }
+
+  if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CONF_EXPORT_STR)) != NULL){
+    plugin = (AmPluginFactory*)fc();
+    if(loadConfPlugIn(plugin))
       goto error;
     has_sym=true;
     if (NULL != plugin) plugins.push_back(plugin);
@@ -587,6 +594,19 @@ int AmPlugIn::loadDiPlugIn(AmPluginFactory* f)
 
   return 0;
 
+ error:
+  return -1;
+}
+
+int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
+{
+  AmConfigFactory* sf = dynamic_cast<AmConfigFactory*>(f);
+  if(!sf){
+    ERROR("invalid component plug-in!\n");
+    goto error;
+  }
+
+  return 0;
  error:
   return -1;
 }

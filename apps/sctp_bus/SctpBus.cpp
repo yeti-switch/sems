@@ -26,25 +26,13 @@ struct ReloadEvent
   {}
 };
 
-//EXPORT_PLUGIN_CLASS_FACTORY(SctpBus, MOD_NAME);
-
-EXPORT_MODULE_FACTORY(SctpBus);
-DEFINE_MODULE_INSTANCE(SctpBus, MOD_NAME);
-
-//SctpBus* SctpBus::_instance=0;
-
-/*SctpBus* SctpBus::instance()
-{
-    DBG("> instance = %p",_instance);
-    if(_instance == NULL){
-        _instance = new SctpBus(MOD_NAME);
-    }
-    DBG("instance = %p",_instance);
-    return _instance;
-}*/
+EXPORT_PLUGIN_CLASS_FACTORY(SctpBus);
+EXPORT_PLUGIN_CONF_FACTORY(SctpBus);
+DEFINE_FACTORY_INSTANCE(SctpBus, MOD_NAME);
 
 SctpBus::SctpBus(const string& name)
   : AmDynInvokeFactory(name),
+    AmConfigFactory(name),
     AmEventFdQueue(this),
     epoll_fd(-1),
     stopped(false)
@@ -60,12 +48,12 @@ SctpBus::~SctpBus()
     }
 }
 
-int SctpBus::configure()
+int SctpBus::configure(const std::string& config)
 {
-    cfg_reader reader;
+    cfg_reader reader(MOD_NAME);
     sockaddr_storage a;
 
-    if(!reader.read(AmConfig.configs_path + string(MOD_NAME ".conf"),sctp_bus_opts)) {
+    if(!reader.read(config,sctp_bus_opts)) {
         return -1;
     }
 
@@ -134,7 +122,7 @@ int SctpBus::configure()
 
 int SctpBus::onLoad() {
 
-    AmPlugIn::registerDIInterface(getName(),this);
+    AmPlugIn::registerDIInterface(MOD_NAME, this);
 
     if((epoll_fd = epoll_create(10)) == -1) {
         ERROR("epoll_create failed");
@@ -146,10 +134,6 @@ int SctpBus::onLoad() {
     epoll_link(epoll_fd);
     stop_event.link(epoll_fd);
     timer.link(epoll_fd);
-
-    if(-1==configure()) {
-        return -1;
-    }
 
     init_rpc();
 
@@ -388,12 +372,12 @@ void SctpBus::onReloadEvent()
     connections_by_id.clear();
     connections_by_sock.clear();
 
-    INFO("load sctp_bus configuration");
-    if(-1==configure()) {
-        ERROR("SctpBus configuration error. please fix config and do reload again");
-    } else {
-        INFO("SctpBus configuration successfully reloaded");
-    }
+//     INFO("load sctp_bus configuration");
+//     if(-1==configure()) {
+//         ERROR("SctpBus configuration error. please fix config and do reload again");
+//     } else {
+//         INFO("SctpBus configuration successfully reloaded");
+//     }
 }
 
 int SctpBus::addClientConnection(

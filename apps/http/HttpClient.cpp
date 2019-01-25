@@ -19,13 +19,14 @@ using std::vector;
 class HttpClientFactory
   : public AmDynInvokeFactory
 {
-  public:
     HttpClientFactory(const string& name)
       : AmDynInvokeFactory(name)
     {
         inc_ref(this);
         HttpClient::instance();
     }
+  public:
+    DECLARE_FACTORY_INSTANCE(HttpClientFactory);
     AmDynInvoke* getInstance()
     {
         return HttpClient::instance();
@@ -39,7 +40,8 @@ class HttpClientFactory
     }
 };
 
-EXPORT_PLUGIN_CLASS_FACTORY(HttpClientFactory, MOD_NAME);
+EXPORT_PLUGIN_CLASS_FACTORY(HttpClientFactory);
+DEFINE_FACTORY_INSTANCE(HttpClientFactory, MOD_NAME);
 
 HttpClient* HttpClient::_instance=0;
 

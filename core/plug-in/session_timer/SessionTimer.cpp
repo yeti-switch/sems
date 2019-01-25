@@ -29,7 +29,8 @@
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
 
-EXPORT_SESSION_EVENT_HANDLER_FACTORY(SessionTimerFactory, MOD_NAME);
+EXPORT_SESSION_EVENT_HANDLER_FACTORY(SessionTimerFactory);
+DEFINE_FACTORY_INSTANCE(SessionTimerFactory, MOD_NAME);
 
 int SessionTimerFactory::onLoad()
 {

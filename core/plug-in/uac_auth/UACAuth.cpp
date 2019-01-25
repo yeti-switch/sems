@@ -46,8 +46,8 @@ using std::string;
 
 #define MOD_NAME "uac_auth"
 
-EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory, MOD_NAME);
-EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory, MOD_NAME);
+EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory);
+EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory);
 
 UACAuthFactory* UACAuthFactory::_instance=0;
 string UACAuth::server_nonce_secret = "CKASLD§$>NLKJSLDKFJ"; // replaced on load

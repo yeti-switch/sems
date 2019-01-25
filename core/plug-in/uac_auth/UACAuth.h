@@ -58,11 +58,11 @@ class UACAuthFactory
   static UACAuthFactory* _instance;
   AmSessionEventHandler* getHandler(AmBasicSipDialog* dlg, 
 				    CredentialHolder* s);
- public:
   UACAuthFactory(const string& name)
     : AmSessionEventHandlerFactory(name),
     AmDynInvokeFactory(name)
     { }
+ public:
 	
   int onLoad();
 

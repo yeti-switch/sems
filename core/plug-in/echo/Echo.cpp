@@ -34,7 +34,8 @@
 
 #include "AmPlugIn.h"
 
-EXPORT_SESSION_FACTORY(EchoFactory,"echo");
+EXPORT_SESSION_FACTORY(EchoFactory);
+DEFINE_FACTORY_INSTANCE(EchoFactory,"echo");
 
 #define STAR_SWITCHES_PLAYOUTBUFFER
 
