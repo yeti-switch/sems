@@ -394,7 +394,7 @@ void AmPlugIn::getPayloads(vector<SdpPayload>& pl_vec) const
     {
         std::map<int,amci_payload_t*>::const_iterator pl_it = payloads.find(it->second);
         if(pl_it != payloads.end()) {
-            if(AmConfig.dtmf_enable_multirate
+            if(!AmConfig.dtmf_offer_multirate
                && strcmp(pl_it->second->name, "telephone-event") == 0
                && (te_pl_it == payloads.end() || te_pl_it->second->advertised_sample_rate > pl_it->second->advertised_sample_rate))
             {
