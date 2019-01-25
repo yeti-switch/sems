@@ -20,6 +20,7 @@ using std::map;
 
 class SctpBus
 : public AmDynInvokeFactory,
+  public AmConfigFactory,
   public AmThread,
   public AmEventFdQueue,
   public AmEventHandler,
@@ -50,7 +51,7 @@ class SctpBus
     AmDynInvoke* getInstance() { return SctpBus::instance(); }
 
     int onLoad();
-    int configure();
+    int configure(const std::string& config);
 
     void run();
     void on_stop();

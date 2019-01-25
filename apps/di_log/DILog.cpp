@@ -14,15 +14,15 @@ using namespace std;
 #define MOD_NAME "di_log"
 #include "log.h"
 
-EXPORT_LOG_FACILITY_FACTORY(DILog, MOD_NAME);
-EXPORT_PLUGIN_CLASS_FACTORY(DILog, MOD_NAME);
+EXPORT_LOG_FACILITY_FACTORY(DILog);
+EXPORT_PLUGIN_CLASS_FACTORY(DILog);
 
 char DILog::ring_buf[MAX_LINES][MAX_LINE_LEN] = {{0}};
 int DILog::pos = 0;
 
 DILog::DILog(const string& name)
-    : AmLoggingFacility(name,L_DBG),
-      AmDynInvokeFactory(name)
+    : AmDynInvokeFactory(name),
+      AmLoggingFacility(name, L_DBG)
 { }
 
 DILog* DILog::_instance=0;

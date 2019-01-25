@@ -44,6 +44,11 @@ AmDynInvokeFactory::AmDynInvokeFactory(const string& name)
 {
 }
 
+AmConfigFactory::AmConfigFactory(const string& name)
+  : AmPluginFactory(name)
+{
+}
+
 AmSessionFactory::AmSessionFactory(const string& name)
   : AmPluginFactory(name)
 {

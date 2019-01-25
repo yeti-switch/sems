@@ -37,7 +37,7 @@ string JsonRPCServerModule::host = DEFAULT_JSONRPC_SERVER_HOST;
 int JsonRPCServerModule::port = DEFAULT_JSONRPC_SERVER_PORT;
 int JsonRPCServerModule::threads = DEFAULT_JSONRPC_SERVER_THREADS;
 
-EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule, MOD_NAME)
+EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule)
 JsonRPCServerModule* JsonRPCServerModule::instance()
 {
   if(_instance == NULL){

@@ -97,6 +97,8 @@ public:
   static mysqlpp::Connection Connection;
 #endif
 
+  DECLARE_FACTORY_INSTANCE(AnswerMachineFactory);
+
   AnswerMachineFactory(const string& _app_name);
 
   int onLoad();

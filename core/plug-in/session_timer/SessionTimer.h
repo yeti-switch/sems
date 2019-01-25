@@ -59,9 +59,10 @@ class SessionTimerFactory: public AmSessionEventHandlerFactory
 {
   bool checkSessionExpires(const AmSipRequest& req, AmConfigReader& cfg);
 
- public:
   SessionTimerFactory(const string& name)
     : AmSessionEventHandlerFactory(name) {}
+ public:
+  DECLARE_FACTORY_INSTANCE(SessionTimerFactory);
 
   int onLoad();
   bool onInvite(const AmSipRequest& req, AmConfigReader& cfg);

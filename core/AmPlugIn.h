@@ -123,6 +123,7 @@ class AmPlugIn : public AmPayloadProvider
   int loadSehPlugIn(AmPluginFactory* cb);
   int loadBasePlugIn(AmPluginFactory* cb);
   int loadDiPlugIn(AmPluginFactory* cb);
+  int loadConfPlugIn(AmPluginFactory* cb);
   int loadLogFacPlugIn(AmPluginFactory* f);
 
   int initLoggingModules();
