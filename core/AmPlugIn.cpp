@@ -95,7 +95,7 @@ static amci_codec_t _codec_tevent = {
 };
 
 #define tevent_payload_initializer(RATE) \
-    { -1, "telephone-event", RATE, 8000, -1, CODEC_TELEPHONE_EVENT, -1 }
+    { -1, "telephone-event", 800, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
 
 static amci_payload_t _payload_tevent_8 = tevent_payload_initializer(8000);
 static amci_payload_t _payload_tevent_16 = tevent_payload_initializer(16000);
