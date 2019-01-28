@@ -116,6 +116,7 @@ using channel_ptr       = std::unique_ptr<ConferenceChannel,std::function<void(C
 
 class Mixer :
         public AmDynInvokeFactory,
+        public AmConfigFactory,
         public RpcTreeHandler<Mixer>,
         public AmThread,
         public AmEventFdQueue,
@@ -166,7 +167,7 @@ private:
     Mixer();
     ~Mixer();
 
-    int     configure();
+    int     configure(const std::string& config);
     bool    resolve_name(const string &address, sockaddr_storage &_sa);
     int     bind_socket();
     int     init();
