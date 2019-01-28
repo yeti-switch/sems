@@ -163,15 +163,15 @@ void AmPlugIn::init() {
     addPayload(&_payload_tevent_48);
 }
 
-int AmPlugIn::load(const string& directory, const vector<string>& plugins)
+int AmPlugIn::load(const string& directory, const std::map<string, string>& plugins)
 {
   int err=0;
   
   vector<AmPluginFactory*> loaded_plugins;
   
-  for (vector<string>::const_iterator it = plugins.begin(); 
+  for (std::map<string, string>::const_iterator it = plugins.begin();
       it != plugins.end(); it++) {
-      string plugin_file = *it;
+      string plugin_file = it->first;
       if (plugin_file == "sipctrl") {
         WARN("sipctrl is integrated into the core, loading sipctrl "
                 "module is not necessary any more\n");
@@ -212,10 +212,6 @@ void AmPlugIn::registerLoggingPlugins() {
   }  
 }
 
-void AmPlugIn::set_load_rtld_global(const string& plugin_name) {
-  rtld_global_plugins.insert(plugin_name);
-}
-
 int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
 			 vector<AmPluginFactory*>& plugins)
 {
@@ -236,8 +232,8 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
 //   }
 
   // possibly others
-  for (std::set<string>::iterator it=rtld_global_plugins.begin();
-       it!=rtld_global_plugins.end();it++) {
+  for (std::set<string>::iterator it=AmConfig.rtld_global_plugins.begin();
+       it!=AmConfig.rtld_global_plugins.end();it++) {
     if (!strcmp(bname, it->c_str())) {
       dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
       DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'\n", file.c_str());
@@ -604,9 +600,21 @@ int AmPlugIn::loadDiPlugIn(AmPluginFactory* f)
 
 int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
 {
+  std::map<std::string, std::string>::iterator module_it;
   AmConfigFactory* sf = dynamic_cast<AmConfigFactory*>(f);
   if(!sf){
-    ERROR("invalid component plug-in!\n");
+    ERROR("invalid component plug-in %s!\n", f->getName().c_str());
+    goto error;
+  }
+
+  module_it = AmConfig.modules.find(f->getName());
+  if(module_it == AmConfig.modules.end()) {
+    ERROR("don't have plug-in %s configuration!\n", f->getName().c_str());
+    goto error;
+  }
+
+  if(sf->configure(module_it->second)) {
+    ERROR("error in plug-in %s configuration!\n", f->getName().c_str());
     goto error;
   }
 
@@ -775,20 +783,20 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     else {
         for(const auto &app_selector : AmConfig.applications) {
             switch (app_selector.app_select) {
-            case AmLcConfig::App_RURIUSER:
+            case ConfigContainer::App_RURIUSER:
                 m_app_name = req.user;
                 break;
-            case AmLcConfig::App_APPHDR:
+            case ConfigContainer::App_APPHDR:
                 m_app_name = getHeader(req.hdrs, APPNAME_HDR, true);
                 break;
-            case AmLcConfig::App_RURIPARAM:
+            case ConfigContainer::App_RURIPARAM:
                 m_app_name = get_header_param(req.r_uri, "app");
                 break;
-            case AmLcConfig::App_MAPPING:
+            case ConfigContainer::App_MAPPING:
                 m_app_name = ""; // no match if not found
                 run_regex_mapping(app_selector.app_mapping, req.r_uri.c_str(), m_app_name);
                 break;
-            case AmLcConfig::App_SPECIFIED:
+            case ConfigContainer::App_SPECIFIED:
                 m_app_name = app_selector.application;
                 break;
             }

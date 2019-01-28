@@ -204,11 +204,11 @@ static bool apply_args(std::map<char,string>& args)
       if(!AmConfig.log_stderr){
           /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
                   progname);*/
-          if (!AmConfig.setLogStderr(true)) {
+          if (!AmLcConfig::GetInstance().setLogStderr(true)) {
               return false;
           }
       }
-      if (!AmConfig.setStderrLogLevel(it->second)) {
+      if (!AmLcConfig::GetInstance().setStderrLogLevel(it->second)) {
           fprintf(stderr, "%s: invalid stderr log level: %s\n",
                   progname, it->second.c_str());
           return false;
@@ -219,13 +219,13 @@ static bool apply_args(std::map<char,string>& args)
 #ifndef DISABLE_DAEMON_MODE
      AmConfig.deamon_mode = false;
 #endif
-     if (!AmConfig.setLogStderr(true)) {
+     if (!AmLcConfig::GetInstance().setLogStderr(true)) {
        return false;
      }
      break;
 
     case 'f':
-      AmConfig.config_path = it->second;
+      AmConfig.configs_path = it->second;
       break;
 
     case 'x':
@@ -430,7 +430,7 @@ int main(int argc, char* argv[])
   }
 
   /* load and apply configuration file */
-  if(AmConfig.readConfiguration())
+  if(AmLcConfig::GetInstance().readConfiguration())
   {
     ERROR("configuration errors. exiting.");
     return -1;
@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
     goto error;
   }
 
-  if(AmConfig.finalizeIpConfig() < 0)
+  if(AmLcConfig::GetInstance().finalizeIpConfig() < 0)
     goto error;
 
   printf("Configuration:\n"
@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
 	 log_level2str[AmConfig.log_level], AmConfig.log_level,
          AmConfig.log_stderr ? "yes" : "no",
 #endif
-	 AmConfig.config_path.c_str(),
+	 AmLcConfig::GetInstance().config_path.c_str(),
 	 AmConfig.modules_path.c_str()
 #ifndef DISABLE_DAEMON_MODE
 	 ,AmConfig.deamon_mode ? "yes" : "no",
@@ -470,12 +470,12 @@ int main(int argc, char* argv[])
 #endif
 	);
 
-  AmConfig.dump_Ifs();
+  AmLcConfig::GetInstance().dump_Ifs();
 
   printf("-----BEGIN CFG DUMP-----\n"
          "%s\n"
          "-----END CFG DUMP-----\n",
-         AmConfig.serialize().c_str());
+         AmLcConfig::GetInstance().serialize().c_str());
 
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");

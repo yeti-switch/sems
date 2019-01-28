@@ -253,7 +253,7 @@ void CoreRpc::showVersion(const AmArg& args, AmArg& ret)
 
 void CoreRpc::showConfig(const AmArg& args, AmArg& ret)
 {
-    ret = AmConfig.serialize();
+    ret = AmLcConfig::GetInstance().serialize();
 }
 
 void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)
