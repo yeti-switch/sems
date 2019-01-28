@@ -89,7 +89,6 @@ class AmPlugIn : public AmPayloadProvider
  private:
   static AmPlugIn* _instance;
 
-  std::set<string>                  rtld_global_plugins;
   vector<void*> dlls;
 
   std::map<int,amci_codec_t*>       codecs;
@@ -144,7 +143,7 @@ class AmPlugIn : public AmPayloadProvider
    * Loads all plug-ins from the directory given as parameter. 
    * @return -1 if failed, else 0.
    */
-  int load(const string& directory, const vector<string>& plugins);
+  int load(const string& directory, const std::map<string, string>& plugins);
 
   /** register logging plugins to receive logging messages */
   void registerLoggingPlugins();

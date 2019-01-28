@@ -31,6 +31,7 @@ void cfg_reader_error(cfg_t *cfg, const char *fmt, va_list ap)
 
 bool cfg_reader::read(const string &config, cfg_opt_t *opts)
 {
+    if(cfg)  cfg_free(cfg);
     cfg =  cfg_init(opts, CFGF_NONE);
     if(!cfg) return false;
 
