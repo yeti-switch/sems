@@ -1370,8 +1370,8 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
 			if (rc != STATE_CONTINUE)
 				goto error;
-			ignore = '}';
-			state = 13;
+			//ignore = '}';
+			state = 15;
 			break;
 
 		case 13: /* unknown option, consume tokens silently until end of func/list */
@@ -1421,7 +1421,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 
 		case 15: /* unknown option, dummy read of next parameter in sub-section */
 			if(tok == '}') {
-				return STATE_CONTINUE;
+				return force_state == 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			state = 10;
 			break;
