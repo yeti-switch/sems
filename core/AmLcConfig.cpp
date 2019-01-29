@@ -801,21 +801,21 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
         return -1;
     }
     cfg_t* gen = cfg_getsec(cfg, SECTION_GENERAL_NAME);
-
-    _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
-    _trans_layer::default_bl_ttl = cfg_getint(gen, PARAM_BL_TTL_NAME);
-    trsp_socket::log_level_raw_msgs = parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME));
-    _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
-    _SipCtrlInterface::udp_rcvbuf = cfg_getint(gen, PARAM_UDP_RECVBUF_NAME);
-    sip_timer_t2 = cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME);
-    for (int t = STIMER_A; t < __STIMER_MAX; t++) {
-        std::string timer_cfg = std::string("sip_timer_") + (char)tolower(*timer_name(t));
-        sip_timers[t] = cfg_getint(gen, timer_cfg.c_str());
-	    DBG("Set SIP Timer '%s' to %u ms\n", timer_name(t), sip_timers[t]);
-    }
-
     config->log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
+
     if(config == &m_config) {
+        _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
+        _trans_layer::default_bl_ttl = cfg_getint(gen, PARAM_BL_TTL_NAME);
+        trsp_socket::log_level_raw_msgs = parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME));
+        _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
+        _SipCtrlInterface::udp_rcvbuf = cfg_getint(gen, PARAM_UDP_RECVBUF_NAME);
+        sip_timer_t2 = cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME);
+        for (int t = STIMER_A; t < __STIMER_MAX; t++) {
+            std::string timer_cfg = std::string("sip_timer_") + (char)tolower(*timer_name(t));
+            sip_timers[t] = cfg_getint(gen, timer_cfg.c_str());
+            DBG("Set SIP Timer '%s' to %u ms\n", timer_name(t), sip_timers[t]);
+        }
+
         setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
         setLogStderr(cfg_getbool(gen, PARAM_STDERR_NAME));
         setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
@@ -824,6 +824,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             set_syslog_facility(cfg_getstr(gen, PARAM_SL_FACILITY_NAME));
         }
 #endif
+        _resolver::disable_srv = cfg_getbool(gen, PARAM_DISABLE_DNS_SRV_NAME);
     }
     if (cfg_size(gen, PARAM_SESS_PROC_THREADS_NAME)) {
 #ifdef SESSION_THREADPOOL
@@ -848,8 +849,6 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             return -1;
     }
 
-    if(config == &m_config)
-        _resolver::disable_srv = cfg_getbool(gen, PARAM_DISABLE_DNS_SRV_NAME);
     config->force_outbound_proxy = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_NAME);
     config->force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
     config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMMETRIC_NAME);
