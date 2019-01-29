@@ -217,16 +217,6 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   char* pname = strdup(plugin_name.c_str());
   char* bname = basename(pname);
 
-//   // dsm, ivr and py_sems need RTLD_GLOBAL
-//   if (!strcmp(bname, "dsm.so") || !strcmp(bname, "ivr.so") ||
-//       !strcmp(bname, "py_sems.so") || !strcmp(bname, "sbc.so") ||
-//       !strcmp(bname, "diameter_client.so") || !strcmp(bname, "registrar_client.so") ||
-//       !strcmp(bname, "uac_auth.so") || !strcmp(bname, "msg_storage.so")
-//       ) {
-//       dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
-//       DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'\n", file.c_str());
-//   }
-
   // possibly others
   for (std::set<string>::iterator it=AmConfig.rtld_global_plugins.begin();
        it!=AmConfig.rtld_global_plugins.end();it++) {
@@ -260,28 +250,24 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
     if(loadAppPlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_SESSION_EVENT_HANDLER_EXPORT_STR)) != NULL){
     plugin = (AmPluginFactory*)fc();
     if(loadSehPlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_EXPORT_STR)) != NULL){
     plugin = (AmPluginFactory*)fc();
     if(loadBasePlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CLASS_EXPORT_STR)) != NULL){
     plugin = (AmPluginFactory*)fc();
     if(loadDiPlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
 
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CONF_EXPORT_STR)) != NULL){
@@ -289,7 +275,6 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
     if(loadConfPlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
 
   if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_LOG_FACILITY_EXPORT_STR)) != NULL){
@@ -297,8 +282,9 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
     if(loadLogFacPlugIn(plugin))
       goto error;
     has_sym=true;
-    if (NULL != plugin) plugins.push_back(plugin);
   }
+
+  if (NULL != plugin) plugins.push_back(plugin);
 
   if(!has_sym){
     ERROR("Plugin type could not be detected (%s)(%s)\n",file.c_str(),dlerror());
