@@ -141,6 +141,9 @@ public:
     int setStderrLogLevel(const std::string& level, bool apply = true);
     std::string serialize();
 
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data);
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data);
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
 protected:
     void setValidationFunction(cfg_t* cfg);
     int readSigInterfaces(cfg_t* cfg, ConfigContainer* config);
@@ -156,10 +159,6 @@ protected:
     void fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config);
     int insertSIPInterfaceMapping(ConfigContainer* config, SIP_info& intf, int idx);
     int setNetInterface(ConfigContainer* config, IP_info& ip_if);
-
-    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data);
-    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data);
-    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
 private:
     cfg_t* m_cfg;
 };
