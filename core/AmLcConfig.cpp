@@ -818,14 +818,16 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     }
 
     config->log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
-    setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
-    setLogStderr(cfg_getbool(gen, PARAM_STDERR_NAME));
-    setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
+    if(config == &m_config) {
+        setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
+        setLogStderr(cfg_getbool(gen, PARAM_STDERR_NAME));
+        setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
 #ifndef DISABLE_SYSLOG_LOG
-    if (cfg_size(gen, PARAM_SL_FACILITY_NAME)) {
-        set_syslog_facility(cfg_getstr(gen, PARAM_SL_FACILITY_NAME));
-    }
+        if (cfg_size(gen, PARAM_SL_FACILITY_NAME)) {
+            set_syslog_facility(cfg_getstr(gen, PARAM_SL_FACILITY_NAME));
+        }
 #endif
+    }
     if (cfg_size(gen, PARAM_SESS_PROC_THREADS_NAME)) {
 #ifdef SESSION_THREADPOOL
         config->session_proc_threads = cfg_getint(gen, PARAM_SESS_PROC_THREADS_NAME);
