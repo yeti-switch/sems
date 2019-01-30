@@ -1370,7 +1370,6 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
 			if (rc != STATE_CONTINUE)
 				goto error;
-			//ignore = '}';
 			state = 15;
 			break;
 
@@ -1384,25 +1383,17 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				break;
 			}
 
-			/* Are we done with recursive ignore of sub-section? */
-			if (force_state == 10) {
-				if (comment)
-					free(comment);
-
-				return STATE_CONTINUE;
-			}
-
-			if(tok = '}') {
-				return STATE_EOF;
-			}
-
 			ignore = 0;
-			state = 0;
+            if(force_state == 10)
+                state = 15;
+            else {
+                state = 0;
+            }
 			break;
 
 		case 14: /* unknown option, assuming value or start of list */
 			if (tok == '{') {
-				ignore = '}';
+                		ignore = '}';
 				state = 13;
 				break;
 			}
