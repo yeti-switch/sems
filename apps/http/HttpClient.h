@@ -28,6 +28,7 @@ class HttpClient
   public AmDynInvoke,
   public CurlMultiHandler
 {
+    friend class HttpClientFactory;
     static HttpClient* _instance;
 
     AmEventFd stop_event;
@@ -69,7 +70,7 @@ class HttpClient
     SyncContextsMap sync_contexts;
     AmTimerFd sync_contexts_timer;
 
-    int configure();
+    int configure(const string& config);
     int init();
 
     HttpDestinationsMap destinations;
