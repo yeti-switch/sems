@@ -8,25 +8,31 @@
 #define MOD_NAME "http_client"
 
 #include <vector>
+#include "http_client_cfg.h"
 using std::vector;
-
-#define DEFAULT_RESEND_INTERVAL 5000 //milliseconds
-#define DEFAULT_RESEND_QUEUE_MAX 10000
 
 #define SYNC_CONTEXTS_TIMER_INVERVAL 5000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 
 class HttpClientFactory
   : public AmDynInvokeFactory
+  , public AmConfigFactory
 {
     HttpClientFactory(const string& name)
       : AmDynInvokeFactory(name)
+      , AmConfigFactory(name)
     {
         inc_ref(this);
         HttpClient::instance();
     }
   public:
     DECLARE_FACTORY_INSTANCE(HttpClientFactory);
+
+    int configure(const string& config)
+    {
+        return HttpClient::instance()->configure(config);
+    }
+
     AmDynInvoke* getInstance()
     {
         return HttpClient::instance();
@@ -41,6 +47,7 @@ class HttpClientFactory
 };
 
 EXPORT_PLUGIN_CLASS_FACTORY(HttpClientFactory);
+EXPORT_PLUGIN_CONF_FACTORY(HttpClientFactory);
 DEFINE_FACTORY_INSTANCE(HttpClientFactory, MOD_NAME);
 
 HttpClient* HttpClient::_instance=0;
@@ -62,21 +69,54 @@ HttpClient::HttpClient()
 HttpClient::~HttpClient()
 { }
 
-int HttpClient::configure()
+int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
 {
-    AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
+    std::string value = cfg_getstr(cfg, opt->name);
+    HttpDestination::Mode mode = HttpDestination::str2Mode(value);
+    if(mode == HttpDestination::Unknown) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'put\' or \'post\'", value.c_str(), opt->name);
+        return 1;
+    }
+    return 0;
+}
+
+int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    DestinationAction::HttpAction action = DestinationAction::str2Action(value);
+    if(action == DestinationAction::Unknown) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'move\', \'nothing\', \'remove\' or \'requeue\'", value.c_str(), opt->name);
+        return 1;
+    }
+    return 0;
+}
+
+int HttpClient::configure(const string& config)
+{
+    cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ACTION_NAME "|" PARAM_ACTION_VALUE_NAME, validate_action_func);
+
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
         return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
+
+    resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME);
+    resend_interval *= 1000;
+    resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
+
     if(destinations.configure(cfg)){
         ERROR("can't configure destinations");
         return -1;
     }
     destinations.dump();
-
-    resend_interval = cfg.getParameterInt("resend_interval",DEFAULT_RESEND_INTERVAL);
-    resend_interval *= 1000;
-
-    resend_queue_max = cfg.getParameterInt("resend_queue_max",DEFAULT_RESEND_QUEUE_MAX);
 
     return 0;
 }
@@ -110,10 +150,6 @@ int HttpClient::init()
 
 int HttpClient::onLoad()
 {
-    if(configure()){
-        ERROR("configuration error");
-        return -1;
-    }
     if(init()){
         ERROR("initialization error");
         return -1;

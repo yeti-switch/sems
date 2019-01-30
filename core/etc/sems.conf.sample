@@ -43,6 +43,8 @@ modules {
      */
     include("/etc/sems/etc/bus_client.conf")
     include("/etc/sems/etc/conference_mixer.conf")
+    include("/etc/sems/etc/sctp_bus.conf")
+    include("/etc/sems/etc/http_client.conf")
     module "mp3"{}
     module "opus"{}
     module "wav"{}
@@ -51,13 +53,11 @@ modules {
     module "adpcm"{}
     module "l16"{}
     module "g722"{}
-    include("/etc/sems/etc/sctp_bus.conf")
     module "session_timer"{}
     module-global "uac_auth" {}
     module "monitoring"{}
     module-global "registrar_client" {}
     module "jsonrpc"{}
-    module "http_client"{}
     module-global "dsm" {}
 }
 
