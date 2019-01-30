@@ -866,6 +866,18 @@ int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns
     return -1;
 }
 
+void ensure_ipv6_reference(std::string &s)
+{
+    sockaddr_in6 addr;
+    if(s.size() > 2 &&
+       s[0] != '[' &&
+       1 == inet_pton(AF_INET6, s.c_str(), &addr))
+    {
+        s.insert(0,"[");
+        s.append("]");
+    }
+}
+
 string extract_tag(const string& addr)
 {
   string::size_type p = addr.find(";tag=");
