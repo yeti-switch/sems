@@ -118,11 +118,7 @@ static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
 
 AmPlugIn::~AmPlugIn()
 {
-  std::for_each(module_objects.begin(), module_objects.end(), delete_plugin_factory);
-  std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
-  std::for_each(name2base.begin(), name2base.end(), delete_plugin_factory);
-  std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
-  std::for_each(name2logfac.begin(), name2logfac.end(), delete_plugin_factory);
+  std::for_each(plugins_objects.begin(), plugins_objects.end(), delete_plugin_factory);
 
   // if _DEBUG is set do not unload shared libs to allow better debugging
 #ifndef _DEBUG
@@ -288,7 +284,10 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
     has_sym=true;
   }
 
-  if (NULL != plugin) plugins.push_back(plugin);
+  if (NULL != plugin) {
+      plugins.push_back(plugin);
+      plugins_objects[plugin_name] = plugin;
+  }
 
   if(!has_sym){
     ERROR("Plugin type could not be detected (%s)(%s)\n",file.c_str(),dlerror());

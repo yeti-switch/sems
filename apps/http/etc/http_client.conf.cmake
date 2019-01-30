@@ -46,16 +46,13 @@ module "http_client" {
         # Default: 2xx
         #succ_codes={2xx}
 
-        # action "<action name>"
-        #
-        # available names: success, fail
-        action "success" {
-            # value=<action value>
+        on_success {
+            # action=<action value>
             #
             # available actions: remove, move, nothing
             #
             # Default: remove
-            value=remove
+            action=remove
 
             # args=<args>
             #
@@ -65,13 +62,13 @@ module "http_client" {
             #
             # args=/tmp
         }
-        action "fail" {
+        on_failure {
             # value=<action value>
             #
             # available actions: remove, move, nothing, requeue
             #
             # Default: requeue
-            value=requeue
+            action=requeue
 
             # args=<args>
             #

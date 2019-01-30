@@ -3,17 +3,18 @@
 
 #include <confuse.h>
 
-#define SECTION_DIST_NAME   "destination"
-#define SECTION_ACTION_NAME "action"
+#define SECTION_DIST_NAME           "destination"
+#define SECTION_ON_SUCCESS_NAME     "on_success"
+#define SECTION_ON_FAIL_NAME        "on_failure"
 
 #define PARAM_RESEND_INTERVAL_NAME  "resend_interval"
 #define PARAM_RESEND_QUEUE_MAX_NAME "resend_queue_max"
 #define PARAM_MODE_NAME             "mode"
-#define PARAM_URL_NAME              "url"
+#define PARAM_URL_NAME              "urls"
 #define PARAM_REQUEUE_LIMIT_NAME    "requeue_limit"
 #define PARAM_SUCCESS_CODES_NAME    "succ_codes"
 #define PARAM_SUCCESS_ACTION_NAME   "succ_action"
-#define PARAM_ACTION_VALUE_NAME     "value"
+#define PARAM_ACTION_NAME           "action"
 #define PARAM_ACTION_ARGS_NAME      "args"
 #define PARAM_CONTENT_TYPE_NAME     "content_type"
 

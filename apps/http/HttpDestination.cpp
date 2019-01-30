@@ -12,10 +12,10 @@ using std::vector;
 
 int DestinationAction::parse(const string &default_action, cfg_t* cfg)
 {
-    if(!cfg_size(cfg, PARAM_ACTION_VALUE_NAME)) {
+    if(!cfg_size(cfg, PARAM_ACTION_NAME)) {
         action_str = default_action;
     } else {
-        action_str = cfg_getstr(cfg, PARAM_ACTION_VALUE_NAME);
+        action_str = cfg_getstr(cfg, PARAM_ACTION_NAME);
     }
 
     action = str2Action(action_str);
@@ -167,22 +167,26 @@ int HttpDestination::parse(const string &name, cfg_t *cfg)
         return -1;
     }
 
-    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_ACTION_NAME); i++) {
-        cfg_t* action = cfg_getnsec(cfg, SECTION_ACTION_NAME, i);
-        if(strcmp(action->title,ACTION_SUCCESS_TITLE) == 0) {
-            if(succ_action.parse(ACTION_REMOVE_VALUE, action)) {
-                ERROR("can't parse post_upload action");
-                return -1;
-            }
-        } else if(strcmp(action->title, ACTION_FAIL_TITLE) == 0) {
-            if(fail_action.parse(ACTION_NOTHING_VALUE, action) ) {
-                ERROR("can't parse failed_upload action");
-                return -1;
-            }
-        } else {
-            ERROR("incorrect action name for destination %s", name.c_str());
-            return -1;
-        }
+    if(!cfg_size(cfg, SECTION_ON_SUCCESS_NAME)) {
+        ERROR("absent post_upload action");
+        return -1;
+    }
+
+    cfg_t* saction = cfg_getsec(cfg, SECTION_ON_SUCCESS_NAME);
+    if(succ_action.parse(ACTION_REMOVE_VALUE, saction)) {
+        ERROR("can't parse post_upload action");
+        return -1;
+    }
+
+    if(!cfg_size(cfg, SECTION_ON_FAIL_NAME)) {
+        ERROR("absent failed_upload action");
+        return -1;
+    }
+
+    cfg_t* faction = cfg_getsec(cfg, SECTION_ON_FAIL_NAME);
+    if(fail_action.parse(ACTION_REMOVE_VALUE, faction)) {
+        ERROR("can't parse failed_upload action");
+        return -1;
     }
 
     if(succ_action.requeue()){
