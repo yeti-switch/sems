@@ -275,6 +275,8 @@ int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local
 int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority);
 int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns_priority priority);
 
+void ensure_ipv6_reference(std::string &s);
+
 string extract_tag(const string& addr);
 
 /** returns true if key is in s_list, a list of items delimited by list_delim

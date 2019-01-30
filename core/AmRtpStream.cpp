@@ -1053,29 +1053,24 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    vector<const SdpPayload*> remote_payloads = remote.telephoneEventPayload();
-    vector<const SdpPayload*> local_payloads = local.telephoneEventPayload();
-    for(vector<const SdpPayload*>::iterator rpayload_it = remote_payloads.begin();
-        rpayload_it != remote_payloads.end() && !remote_telephone_event_pt.get(); rpayload_it++) {
-        for(vector<const SdpPayload*>::iterator lpayload_it = local_payloads.begin();
-            lpayload_it != local_payloads.end() && !local_telephone_event_pt.get();
-            lpayload_it++) {
-            if((*rpayload_it)->clock_rate == (*lpayload_it)->clock_rate) {
-                local_telephone_event_pt.reset(*lpayload_it);
-                local_payloads.erase(lpayload_it);
-            }
-        }
 
-        if(local_telephone_event_pt.get()) {
-            remote_telephone_event_pt.reset(*rpayload_it);
-            remote_payloads.erase(rpayload_it);
+    //find telephone-event intersections
+    local_telephone_event_pt.reset(nullptr);
+    remote_telephone_event_pt.reset(nullptr);
+    for(auto const &remote_payload: remote_media.payloads) {
+        if(remote_payload.encoding_name == "telephone-event") {
+            for(auto const &local_payload: local_media.payloads) {
+                if(local_payload.encoding_name == "telephone-event"
+                   && remote_payload.clock_rate == local_payload.clock_rate)
+                {
+                    local_telephone_event_pt.reset(new SdpPayload(local_payload));
+                    remote_telephone_event_pt.reset(new SdpPayload(remote_payload));
+                    break;
+                }
+            }
+            if(local_telephone_event_pt.get()) //use first matched pair
+                break;
         }
-    }
-    for(auto& lpayload : local_payloads) {
-        delete lpayload;
-    }
-    for(auto& rpayload : remote_payloads) {
-        delete rpayload;
     }
 
     if (remote_telephone_event_pt.get()) {
