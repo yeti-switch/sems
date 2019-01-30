@@ -1390,13 +1390,13 @@ int AmLcConfig::finalizeIpConfig()
         unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
-            info->local_ip = fixIface2IP(info->local_ip, true);
+            info->local_ip = fixIface2IP(info->local_ip, false);
             if(info->local_ip.empty()) {
                 ERROR("could not determine signaling IP %s for "
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if (insertSIPInterfaceMapping(if_iterator->name, *info,if_iterator - sip_ifs.begin()) < 0 ||
+            if (insertSIPInterfaceMapping(*info,if_iterator - sip_ifs.begin()) < 0 ||
                 (*if_iterator).insertProtoMapping((info->type_ip)|(info->type << 3), i) ||
                 setNetInterface(*info)) {
                 return -1;
@@ -1621,17 +1621,17 @@ int AmLcConfig::setNetInterface(IP_info& ip_if)
     return -1;
 }
 
-int AmLcConfig::insertSIPInterfaceMapping(const std::string& ifname, const SIP_info& intf, int idx) {
+int AmLcConfig::insertSIPInterfaceMapping(const SIP_info& intf, int idx) {
     //SIP_If_names[intf.name] = idx;
-    const std::string &if_local_ip = intf.local_ip;
+    std::string if_local_ip = intf.local_ip;
 
-    std::map<std::string,unsigned short>::iterator it = local_sip_ip2if.find(if_local_ip);
-    if(it == local_sip_ip2if.end()) {
+    if(local_sip_ip2if.find(if_local_ip) == local_sip_ip2if.end()
+       || intf.local_port == 5060) // when two interfaces on the same IP
+    {                                   // the one with port 5060 has priority
         local_sip_ip2if.emplace(if_local_ip,idx);
-    } else {
-        // two interfaces on the sample IP - the one on port 5060 has priority
-        if (intf.local_port == 5060)
-            local_sip_ip2if.insert(make_pair(if_local_ip,idx));
+        //add mapping for IPv6 reference as well
+        ensure_ipv6_reference(if_local_ip);
+        local_sip_ip2if.emplace(if_local_ip,idx);
     }
     return 0;
 }
@@ -1654,14 +1654,14 @@ std::string AmLcConfig::fixIface2IP(const std::string& dev_name, bool v6_for_sip
 
         if(intf_it->addrs.empty()) {
             ERROR("No IP address for interface '%s'\n",intf_it->name.c_str());
-            return "";
+            return string();
         }
 
         DBG("dev_name = '%s'\n",dev_name.c_str());
         return intf_it->addrs.front().addr;
     }
 
-    return "";
+    return string();
 }
 
 int AmLcConfig::setLogLevel(const std::string& level, bool apply)
