@@ -103,8 +103,9 @@ class AmPlugIn : public AmPayloadProvider
   std::map<string,AmPluginFactory*>              name2base;
   std::map<string,AmDynInvokeFactory*>           name2di;
   std::map<string,AmLoggingFacility*>            name2logfac;
+  std::map<string,AmPluginFactory*>              module_objects;
 
-  std::map<string,AmPluginFactory*>             module_objects;
+  std::map<string,AmPluginFactory*>              plugins_objects;
 
   //AmCtrlInterfaceFactory *ctrlIface;
 

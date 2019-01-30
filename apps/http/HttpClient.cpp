@@ -91,11 +91,31 @@ int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
     return 0;
 }
 
+void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
+{
+    char buf[2048];
+    char *s = buf;
+    char *e = s+sizeof(buf);
+
+    if(cfg->title) {
+        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
+            cfg->filename,cfg->line,cfg->name,cfg->title);
+    } else {
+        s += snprintf(s,e-s, "%s:%d [%s]: ",
+            cfg->filename,cfg->line,cfg->name);
+    }
+    s += vsnprintf(s,e-s,fmt,ap);
+
+    ERROR("%.*s",(int)(s-buf),buf);
+}
+
 int HttpClient::configure(const string& config)
 {
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ACTION_NAME "|" PARAM_ACTION_VALUE_NAME, validate_action_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
+    cfg_set_error_function(cfg,cfg_error_callback);
 
     switch(cfg_parse_buf(cfg, config.c_str())) {
     case CFG_SUCCESS:
