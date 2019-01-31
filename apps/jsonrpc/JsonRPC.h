@@ -38,6 +38,7 @@
 
 class JsonRPCServerModule
 : public AmDynInvokeFactory, 
+  public AmConfigFactory,
   public AmDynInvoke 
 {
   static JsonRPCServerModule* _instance;
@@ -54,6 +55,9 @@ class JsonRPCServerModule
   JsonRPCServerModule(const string& mod_name);
   ~JsonRPCServerModule();
   int onLoad();
+
+  // Config factory
+  int configure(const std::string & config) override;
   // DI factory
   AmDynInvoke* getInstance() { return instance(); }
 
