@@ -138,6 +138,7 @@ int HttpClient::configure(const string& config)
     }
     destinations.dump();
 
+    cfg_free(cfg);
     return 0;
 }
 
