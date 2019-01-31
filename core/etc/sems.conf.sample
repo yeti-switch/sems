@@ -45,6 +45,7 @@ modules {
     include("/etc/sems/etc/conference_mixer.conf")
     include("/etc/sems/etc/sctp_bus.conf")
     include("/etc/sems/etc/http_client.conf")
+    include("/etc/sems/etc/jsonrpc.conf")
     module "mp3"{}
     module "opus"{}
     module "wav"{}
@@ -57,7 +58,6 @@ modules {
     module-global "uac_auth" {}
     module "monitoring"{}
     module-global "registrar_client" {}
-    module "jsonrpc"{}
     module-global "dsm" {}
 }
 
