@@ -46,11 +46,12 @@ struct SIPNewRegistrationEvent;
 class SIPRemoveRegistrationEvent;
 
 class SIPRegistrarClient
-  : public AmThread,
-    public AmEventFdQueue,
-    public AmEventHandler,
+  : public AmDynInvokeFactory,
+    public AmConfigFactory,
     public AmDynInvoke,
-    public AmDynInvokeFactory
+    public AmThread,
+    public AmEventFdQueue,
+    public AmEventHandler
 {
     int epoll_fd;
     AmTimerFd timer;
@@ -91,9 +92,11 @@ class SIPRegistrarClient
 
     void checkTimeouts();
     void onServerShutdown();
-    bool configure();
   public:
     SIPRegistrarClient(const string& name);
+
+    // Config factory
+    int configure(const std::string & config) override;
     // DI factory
     AmDynInvoke* getInstance() { return instance(); }
     // DI API
