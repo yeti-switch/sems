@@ -145,7 +145,7 @@ protected:
     IP_info* readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type);
     int readAcl(cfg_t* cfg, trsp_acl& acl, const std::string& if_name);
     bool fillSysIntfList();
-    int insertSIPInterfaceMapping(const SIP_info& intf, int idx);
+    int insertSIPInterfaceMapping(SIP_info& intf, int idx);
     int setNetInterface(IP_info& ip_if);
     void fillMissingLocalSIPIPfromSysIntfs();
     int checkSipInterfaces();

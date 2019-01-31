@@ -1391,6 +1391,7 @@ int AmLcConfig::finalizeIpConfig()
         unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
+            //IPv6 reference in local_ip will be ensured by insertSIPInterfaceMapping
             info->local_ip = fixIface2IP(info->local_ip, false);
             if(info->local_ip.empty()) {
                 ERROR("could not determine signaling IP %s for "
@@ -1609,7 +1610,11 @@ int AmLcConfig::setNetInterface(IP_info& ip_if)
     for(unsigned int i=0; i < sys_ifs.size(); i++) {
         std::list<IPAddr>::iterator addr_it = sys_ifs[i].addrs.begin();
         while(addr_it != sys_ifs[i].addrs.end()) {
-            if(ip_if.local_ip == addr_it->addr) {
+            auto &l_ip = ip_if.local_ip;
+            if(l_ip == addr_it->addr
+               || (l_ip[0] == '['
+                   && l_ip.substr(1,l_ip.size()-2)==addr_it->addr))
+            {
                 ip_if.net_if = sys_ifs[i].name;
                 ip_if.net_if_idx = i;
                 return 0;
@@ -1622,17 +1627,15 @@ int AmLcConfig::setNetInterface(IP_info& ip_if)
     return -1;
 }
 
-int AmLcConfig::insertSIPInterfaceMapping(const SIP_info& intf, int idx) {
-    //SIP_If_names[intf.name] = idx;
-    std::string if_local_ip = intf.local_ip;
-
-    if(local_sip_ip2if.find(if_local_ip) == local_sip_ip2if.end()
+int AmLcConfig::insertSIPInterfaceMapping(SIP_info& intf, int idx) {
+    if(local_sip_ip2if.find(intf.local_ip) == local_sip_ip2if.end()
        || intf.local_port == 5060) // when two interfaces on the same IP
-    {                                   // the one with port 5060 has priority
-        local_sip_ip2if.emplace(if_local_ip,idx);
+    {                              // the one with port 5060 has priority
+        local_sip_ip2if.emplace(intf.local_ip,idx);
+        //convert to IPv6 reference
+        ensure_ipv6_reference(intf.local_ip);
         //add mapping for IPv6 reference as well
-        ensure_ipv6_reference(if_local_ip);
-        local_sip_ip2if.emplace(if_local_ip,idx);
+        local_sip_ip2if.emplace(intf.local_ip,idx);
     }
     return 0;
 }
@@ -1779,7 +1782,7 @@ bool AmLcConfig::fillSysIntfList()
         }
 
         DBG("iface='%s';ip='%s';flags=0x%x\n",p_if->ifa_name,host,p_if->ifa_flags);
-        intf_it->addrs.push_back(IPAddr(fixIface2IP(host, true),p_if->ifa_addr->sa_family));
+        intf_it->addrs.push_back(IPAddr(fixIface2IP(host, false),p_if->ifa_addr->sa_family));
     }
 
     freeifaddrs(ifap);
