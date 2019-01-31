@@ -84,6 +84,7 @@ int JsonRPCServerModule::configure(const std::string & config)
     host = cfg_getstr(cfg, "jsonrpc_listen");
     port = cfg_getint(cfg, "jsonrpc_port");
     threads = cfg_getint(cfg, "server_threads");
+    cfg_free(cfg);
     return 0;
 }
 

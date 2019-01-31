@@ -68,6 +68,7 @@ class MonitorGarbageCollector;
 
 class Monitor 
 : public AmDynInvokeFactory,
+  public AmConfigFactory,
   public AmDynInvoke   
 {
   static Monitor* _instance;
@@ -115,6 +116,9 @@ class Monitor
 
   Monitor(const string& name);
   ~Monitor();
+
+  // Config factory
+  int configure(const string& config) override;
   // DI factory
   AmDynInvoke* getInstance() { return instance(); }
   // DI API
@@ -123,6 +127,7 @@ class Monitor
 	      const AmArg& args, AmArg& ret);
   int onLoad();
   static unsigned int gcInterval;
+  static bool gcRun;
 
   friend class MonitorGarbageCollector;
 };

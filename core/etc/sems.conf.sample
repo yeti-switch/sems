@@ -46,6 +46,7 @@ modules {
     include("/etc/sems/etc/sctp_bus.conf")
     include("/etc/sems/etc/http_client.conf")
     include("/etc/sems/etc/jsonrpc.conf")
+    include("/etc/sems/etc/monitoring.conf")
     module "mp3"{}
     module "opus"{}
     module "wav"{}
@@ -56,7 +57,6 @@ modules {
     module "g722"{}
     module "session_timer"{}
     module-global "uac_auth" {}
-    module "monitoring"{}
     module-global "registrar_client" {}
     module-global "dsm" {}
 }
