@@ -989,69 +989,87 @@ public:
 /** Hook called when an SDP answer is required */
 bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 {
-  DBG("AmSession::getSdpAnswer(...) ...\n");
+    CLASS_DBG("AmSession::getSdpAnswer(...) ...\n");
 
-  answer.version = 0;
-  answer.origin.user = "sems";
-  //answer.origin.sessId = 1;
-  //answer.origin.sessV = 1;
-  answer.sessionName = "sems";
-  answer.conn.network = NT_IN;
-  if (offer.conn.address.empty()) answer.conn.addrType = AT_V4; // or use first stream connection?
-  else answer.conn.addrType = offer.conn.addrType;
-  answer.conn.address = advertisedIP(answer.conn.addrType);
-  answer.media.clear();
-  
-  bool audio_1st_stream = true;
-  unsigned int media_index = 0;
-  for(vector<SdpMedia>::const_iterator m_it = offer.media.begin();
-      m_it != offer.media.end(); ++m_it) {
+    bool connection_line_is_processed = false;
 
-    answer.media.push_back(SdpMedia());
-    SdpMedia& answer_media = answer.media.back();
+    answer.version = 0;
+    answer.origin.user = "sems";
+    //answer.origin.sessId = 1;
+    //answer.origin.sessV = 1;
+    answer.sessionName = "sems";
+    answer.conn.network = NT_IN;
 
-    if( m_it->type == MT_AUDIO
-	&& m_it->transport != TP_UDPTL
-        && audio_1st_stream 
-        && (m_it->port != 0) ) {
-
-      RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
-      RTPStream()->getSdpAnswer(media_index,*m_it,answer_media);
-      if(answer_media.payloads.empty() ||
-	 ((answer_media.payloads.size() == 1) &&
-	  (answer_media.payloads[0].encoding_name == "telephone-event"))
-	 ){
-	// no compatible media found
-	throw Exception(488,"no compatible payload");
-      }
-      audio_1st_stream = false;
-    }
-    else {
-      
-      answer_media.type = m_it->type;
-      answer_media.port = 0;
-      answer_media.nports = 0;
-      answer_media.transport = m_it->transport;
-      answer_media.send = false;
-      answer_media.recv = false;
-      answer_media.frame_size = m_it->frame_size;
-      answer_media.payloads.clear();
-      if(!m_it->payloads.empty()) {
-	SdpPayload dummy_pl = m_it->payloads.front();
-	dummy_pl.encoding_name.clear();
-	dummy_pl.sdp_format_parameters.clear();
-	answer_media.payloads.push_back(dummy_pl);
-      }
-      answer_media.attributes.clear();
+    if(!offer.conn.address.empty()) {
+        answer.conn.addrType = offer.conn.addrType;
+        answer.conn.address = advertisedIP(answer.conn.addrType);
+        connection_line_is_processed = true;
     }
 
-    // sort payload type in the answer according to the priority given in the codec_order configuration key
-    std::stable_sort(answer_media.payloads.begin(),answer_media.payloads.end(),codec_priority_cmp());
+    if (offer.conn.address.empty()) answer.conn.addrType = AT_V4; // or use first stream connection?
+    else answer.conn.addrType = offer.conn.addrType;
+    answer.conn.address = advertisedIP(answer.conn.addrType);
 
-    media_index++;
-  }
+    answer.media.clear();
 
-  return true;
+    bool audio_1st_stream = true;
+    unsigned int media_index = 0;
+
+    for(const auto &m: offer.media) {
+        answer.media.push_back(SdpMedia());
+        SdpMedia& answer_media = answer.media.back();
+        auto &answer_payloads = answer_media.payloads;
+
+        if( m.type == MT_AUDIO
+            && m.transport != TP_UDPTL
+            && audio_1st_stream
+            && (m.port != 0) )
+        {
+            /* TODO: here could be issue when multiple media streams
+               use different address families. add additional checks */
+            if(!connection_line_is_processed) {
+                if(m.conn.address.empty()) {
+                    throw Exception(488, "missed c= line");
+                }
+                answer.conn.addrType = m.conn.addrType;
+                answer.conn.address = advertisedIP(answer.conn.addrType);
+                connection_line_is_processed = true;
+            }
+
+            RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
+            RTPStream()->getSdpAnswer(media_index,m,answer_media);
+
+            if(answer_payloads.empty() ||
+               ((answer_payloads.size() == 1) &&
+               (answer_payloads[0].encoding_name == "telephone-event")))
+            {
+                // no compatible media found
+                throw Exception(488,"no compatible payload");
+            }
+
+            audio_1st_stream = false;
+        } else {
+            answer_media.type = m.type;
+            answer_media.port = 0;
+            answer_media.nports = 0;
+            answer_media.transport = m.transport;
+            answer_media.send = false;
+            answer_media.recv = false;
+            answer_media.frame_size = m.frame_size;
+            answer_payloads.clear();
+            if(!m.payloads.empty()) {
+                SdpPayload dummy_pl = m.payloads.front();
+                dummy_pl.encoding_name.clear();
+                dummy_pl.sdp_format_parameters.clear();
+                answer_payloads.push_back(dummy_pl);
+            }
+            answer_media.attributes.clear();
+        }
+        // sort payload type in the answer according to the priority given in the codec_order configuration key
+        std::stable_sort(answer_payloads.begin(),answer_payloads.end(),codec_priority_cmp());
+        media_index++;
+    } //
+    return true;
 }
 
 int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
