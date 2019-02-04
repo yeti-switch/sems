@@ -1,3 +1,10 @@
+sems (1.8.12-1) stable; urgency=low
+
+  * 00e24838d AmSession::getSdpAnswer: fix processing of the c= line on media level. fix identation
+  * 26d109cc3 AmRtpStream: PayloadRelayMap::get(): remove debug message about unmapped payload
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 04 Feb 2019 18:16:55 +0200
+
 sems (1.8.11-1) stable; urgency=low
 
   * async pcap logger
