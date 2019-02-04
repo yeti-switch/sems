@@ -28,6 +28,7 @@
 #include "SessionTimer.h"
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
+#include <confuse.h>
 
 EXPORT_SESSION_EVENT_HANDLER_FACTORY(SessionTimerFactory);
 DEFINE_FACTORY_INSTANCE(SessionTimerFactory, MOD_NAME);
@@ -42,21 +43,40 @@ bool SessionTimerFactory::onInvite(const AmSipRequest& req, AmConfigReader& cfg)
   return checkSessionExpires(req, cfg);
 }
 
+int SessionTimerFactory::configure(const std::string& config)
+{
+    return cfg.readFromConfig(config);
+}
 
 AmSessionEventHandler* SessionTimerFactory::getHandler(AmSession* s)
 {
-  return new SessionTimer(s);
+  return new SessionTimer(s, cfg);
 }
 
 
-SessionTimer::SessionTimer(AmSession* s)
+SessionTimer::SessionTimer(AmSession* s, const AmSessionTimerConfig& conf)
   :AmSessionEventHandler(),
    s(s),
-   session_interval(0),
+   session_timer_conf(conf),
    min_se(0),
+   session_interval(0),
    session_refresher(refresh_remote),
    accept_501_reply(true)
 {
+    session_interval = session_timer_conf.getSessionExpires();
+    min_se = session_timer_conf.getMinimumTimer();
+
+    DBG("Configured session with EnableSessionTimer = %s, "
+        "SessionExpires = %u, MinimumTimer = %u\n",
+        session_timer_conf.getEnableSessionTimer() ? "yes":"no",
+        session_timer_conf.getSessionExpires(),
+        session_timer_conf.getMinimumTimer()
+        );
+
+    accept_501_reply = session_timer_conf.getAccept501Reply();
+    if(session_timer_conf.haveRefreshMethod()) {
+            s->refresh_method = session_timer_conf.getRefreshMethod();
+    }
 }
 
 SessionTimer::~SessionTimer(){
@@ -208,23 +228,10 @@ int SessionTimer::configure(AmConfigReader& conf)
       session_timer_conf.getMinimumTimer()
       );
 
-  if (conf.hasParameter("session_refresh_method")) {
-    string refresh_method_s = conf.getParameter("session_refresh_method");
-    if (refresh_method_s == "UPDATE") {
-      s->refresh_method = AmSession::REFRESH_UPDATE;
-    } else if (refresh_method_s == "UPDATE_FALLBACK_INVITE") {
-      s->refresh_method = AmSession::REFRESH_UPDATE_FB_REINV;
-    } else if (refresh_method_s == "INVITE") {
-      s->refresh_method = AmSession::REFRESH_REINVITE;
-    } else {
-      ERROR("unknown setting for 'session_refresh_method' config option.\n");
-      return -1;
-    }
-    DBG("set session refresh method: %d.\n", s->refresh_method);
+  accept_501_reply = session_timer_conf.getAccept501Reply();
+  if(session_timer_conf.haveRefreshMethod()) {
+        s->refresh_method = session_timer_conf.getRefreshMethod();
   }
-
-  if (conf.getParameter("accept_501_reply")=="no")
-    accept_501_reply = false;
 
   return 0;
 }
@@ -443,7 +450,9 @@ AmSessionTimerConfig::AmSessionTimerConfig()
   : EnableSessionTimer(DEFAULT_ENABLE_SESSION_TIMER), 
     SessionExpires(SESSION_EXPIRES), 
     MinimumTimer(MINIMUM_TIMER),
-    MaximumTimer(MAXIMUM_TIMER)
+    MaximumTimer(MAXIMUM_TIMER),
+    HaveRefreshMethod(false),
+    Accept501Reply(true)
 {
 }
 
@@ -451,10 +460,87 @@ AmSessionTimerConfig::~AmSessionTimerConfig()
 {
 }
 
+#define PARAM_ENABLE_SESSION_TIMER_NAME "enable_session_timer"
+#define PARAM_SESSION_EXPIRES_NAME      "session_expires"
+#define PARAM_MINIMUM_TIMER_NAME        "minimum_timer"
+#define PARAM_MAXIMUM_TIMER_NAME        "maximum_timer"
+#define PARAM_SREFRESH_METHOD_NAME      "session_refresh_method"
+#define PARAM_ACCEPT_501_REPLY_NAME     "accept_501_reply"
+
+int AmSessionTimerConfig::readFromConfig(const string& config)
+{
+    cfg_opt_t stmr_opt[]  =
+    {
+        CFG_BOOL(PARAM_ENABLE_SESSION_TIMER_NAME, cfg_true, CFGF_NODEFAULT),
+        CFG_INT(PARAM_SESSION_EXPIRES_NAME, 0, CFGF_NODEFAULT),
+        CFG_INT(PARAM_MINIMUM_TIMER_NAME, 0, CFGF_NODEFAULT),
+        CFG_INT(PARAM_MAXIMUM_TIMER_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR(PARAM_SREFRESH_METHOD_NAME, "", CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_ACCEPT_501_REPLY_NAME, cfg_true, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_t* cfg = cfg_init(stmr_opt, CFGF_NONE);
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
+
+    // enable_session_timer
+    if(cfg_size(cfg, PARAM_ENABLE_SESSION_TIMER_NAME)){
+        EnableSessionTimer = cfg_getbool(cfg, PARAM_ENABLE_SESSION_TIMER_NAME);
+    }
+    // session_expires
+    if(cfg_size(cfg, PARAM_SESSION_EXPIRES_NAME)) {
+        SessionExpires = cfg_getint(cfg, PARAM_SESSION_EXPIRES_NAME);
+    }
+
+    // minimum_timer
+    if(cfg_size(cfg, PARAM_MINIMUM_TIMER_NAME)) {
+        MinimumTimer = cfg_getint(cfg, PARAM_MINIMUM_TIMER_NAME);
+    }
+
+    if (cfg_size(cfg, PARAM_MAXIMUM_TIMER_NAME)) {
+        int maximum_timer = cfg_getint(cfg, PARAM_MAXIMUM_TIMER_NAME);
+        if (maximum_timer<=0) {
+        ERROR("invalid value for maximum_timer '%d'\n",maximum_timer);
+        return -1;
+        }
+        MaximumTimer = (unsigned int) maximum_timer;
+    }
+
+    if (cfg_size(cfg, PARAM_SREFRESH_METHOD_NAME)) {
+        string refresh_method_s = cfg_getstr(cfg, PARAM_SREFRESH_METHOD_NAME);
+        if (refresh_method_s == "UPDATE") {
+            RefreshMethod = AmSession::REFRESH_UPDATE;
+        } else if (refresh_method_s == "UPDATE_FALLBACK_INVITE") {
+            RefreshMethod = AmSession::REFRESH_UPDATE_FB_REINV;
+        } else if (refresh_method_s == "INVITE") {
+            RefreshMethod = AmSession::REFRESH_REINVITE;
+        } else {
+            ERROR("unknown setting for 'session_refresh_method' config option.\n");
+            return -1;
+        }
+        HaveRefreshMethod = true;
+        DBG("set session refresh method: %d.\n", RefreshMethod);
+    } else {
+        HaveRefreshMethod = false;
+    }
+
+    Accept501Reply = cfg_getbool(cfg, PARAM_ACCEPT_501_REPLY_NAME);
+    return 0;
+}
+
 int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
 {
   // enable_session_timer
-  if(cfg.hasParameter("enable_session_timer")){
+  if(cfg.hasParameter("enable_session_timer")) {
     if(!setEnableSessionTimer(cfg.getParameter("enable_session_timer"))){
       ERROR("invalid enable_session_timer specified\n");
       return -1;
@@ -487,6 +573,27 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
     }
     MaximumTimer = (unsigned int) maximum_timer;
   }
+
+  if (cfg.hasParameter("session_refresh_method")) {
+    string refresh_method_s = cfg.getParameter("session_refresh_method");
+    if (refresh_method_s == "UPDATE") {
+      RefreshMethod = AmSession::REFRESH_UPDATE;
+    } else if (refresh_method_s == "UPDATE_FALLBACK_INVITE") {
+      RefreshMethod = AmSession::REFRESH_UPDATE_FB_REINV;
+    } else if (refresh_method_s == "INVITE") {
+      RefreshMethod = AmSession::REFRESH_REINVITE;
+    } else {
+      ERROR("unknown setting for 'session_refresh_method' config option.\n");
+      return -1;
+    }
+    HaveRefreshMethod = true;
+    DBG("set session refresh method: %d.\n", RefreshMethod);
+  } else {
+    HaveRefreshMethod = false;
+  }
+
+  if (cfg.getParameter("accept_501_reply")=="no")
+    Accept501Reply = false;
 
   return 0;
 }
