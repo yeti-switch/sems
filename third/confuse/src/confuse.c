@@ -1350,11 +1350,11 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				state = 12; /* Section, ignore all until closing brace */
 			} else if (tok == CFGT_STR) {
 				state = 11; /* No '=' ... must be a titled section */
-			} else if (tok == '}' && force_state == 10) {
+			} else if (tok == '}') {
 				if (comment)
 					free(comment);
 
-				return STATE_CONTINUE;
+				return  force_state == 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			break;
 

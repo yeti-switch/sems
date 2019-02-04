@@ -390,6 +390,7 @@ namespace Config {
 /**********************************************************************************************/
     cfg_opt_t module[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_END()
     };
 
