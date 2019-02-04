@@ -276,6 +276,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_sinfo["type"] = sinfo->transportToStr();
             am_sinfo["sys_name"] = sinfo->net_if;
             am_sinfo["sys_idx"] = (int)sinfo->net_if_idx;
+            am_sinfo["ip_type"] = sinfo->ipTypeToStr();
             am_sinfo["local_ip"] = sinfo->local_ip;
             am_sinfo["local_port"] = (int)sinfo->local_port;
             am_sinfo["public_ip"] = sinfo->public_ip;
@@ -297,12 +298,14 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         AmArg am_iface;
         am_iface["idx"] = i;
         AmArg am_mearr;
+        am_mearr.assertArray();
         for(int j = 0; j < (int)iface.proto_info.size(); j++) {
             AmArg am_minfo;
             MEDIA_info* minfo = iface.proto_info[j];
             am_minfo["type"] = minfo->transportToStr();
             am_minfo["sys_name"] = minfo->net_if;
             am_minfo["sys_idx"] = (int)minfo->net_if_idx;
+            am_minfo["ip_type"] = minfo->ipTypeToStr();
             am_minfo["local_ip"] = minfo->local_ip;
             am_minfo["public_ip"] = minfo->public_ip;
             am_minfo["rtp_low_port"] = (int)minfo->low_port;
@@ -313,6 +316,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_minfo["tos_byte"] = minfo->tos_byte;
             am_mearr.push(am_minfo);
         }
+        am_iface["media_addrs"] = am_mearr;
         string name = iface.name.empty() ? "default" : iface.name;
         rtp[name] = am_iface;
     }
