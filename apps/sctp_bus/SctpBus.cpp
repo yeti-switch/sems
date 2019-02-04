@@ -385,7 +385,7 @@ void SctpBus::onReloadEvent()
     INFO("load sctp_bus configuration");
     ConfigContainer config;
     if(AmLcConfig::GetInstance().readConfiguration(&config) ||
-        configure(config.modules[MOD_NAME]) ||
+        configure(config.module_config[MOD_NAME]) ||
         configure() ) {
         ERROR("SctpBus configuration error. please fix config and do reload again");
     } else {

@@ -40,7 +40,9 @@ struct ConfigContainer
     };
 
     std::vector<app_selector> applications;
-    std::map<std::string, std::string> modules;
+
+    std::vector<std::string> modules;
+    std::map<std::string, std::string> module_config;
     std::set<string> rtld_global_plugins;
     std::string modules_path;
     std::string configs_path;

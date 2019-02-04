@@ -1411,7 +1411,9 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			break;
 
 		case 15: /* unknown option, dummy read of next parameter in sub-section */
-			if(tok == '}') {
+            if(tok == CFGT_COMMENT) {
+                continue;
+            } else if(tok == '}') {
 				return force_state == 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			state = 10;
