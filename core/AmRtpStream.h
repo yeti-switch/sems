@@ -140,7 +140,7 @@ class PayloadRelayMap
     void set(unsigned char payload_id, unsigned char mapped_payload_id) { map[payload_id] = mapped_payload_id; }
 
     // get given flag
-    unsigned char get(unsigned char payload_id) { if(map[payload_id] == 0) { ERROR("not set relay mapped payload %u", payload_id); return payload_id; } return map[payload_id]; }
+    unsigned char get(unsigned char payload_id) { if(map[payload_id] == 0) { return payload_id; } return map[payload_id]; }
 
     PayloadRelayMap() { clear(); }
     PayloadRelayMap(const PayloadRelayMap &src);
