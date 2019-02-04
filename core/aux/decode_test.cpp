@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	map<string, string> plugin;
-    plugin.insert(std::make_pair(argv[1], ""));
+	vector<string> plugin;
+    plugin.push_back(argv[1]);
 	string payload_name = argv[2];
 	string path = argv[3];
 	char *out_file_path = argv[4];
@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
 	am_plugin.init();
 
 	INFO("Loading audio plug-in wav");
-	std::map<string, string> wavplugin;
-    wavplugin.insert(std::make_pair("wav", ""));
+	std::vector<string> wavplugin;
+    wavplugin.push_back("wav");
 	if(am_plugin.load(AmConfig.modules_path, wavplugin)){
 		ERROR("Can't load plugins. exiting.");
 		return EXIT_FAILURE;

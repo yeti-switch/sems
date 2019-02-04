@@ -1005,7 +1005,8 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
         std::string name = module->title;
         INFO("raw section value for module '%s':\n---%s\n---",
               module->title, module->raw);
-        config->modules.insert(std::make_pair(name, module->raw));
+        config->modules.push_back(name);
+        config->module_config.insert(std::make_pair(name, module->raw));
     }
     mCount = cfg_size(modules_, SECTION_MODULE_GLOBAL_NAME);
     for(int i = 0; i < mCount; i++) {
@@ -1013,7 +1014,8 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
         std::string name = module->title;
         INFO("raw section value for module '%s':\n---%s\n---",
               module->title, module->raw);
-        config->modules.insert(std::make_pair(name, module->raw));
+        config->modules.push_back(name);
+        config->module_config.insert(std::make_pair(name, module->raw));
         config->rtld_global_plugins.insert(name + ".so");
     }
 

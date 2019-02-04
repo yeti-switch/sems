@@ -155,15 +155,15 @@ void AmPlugIn::init() {
   addPayload(&_payload_tevent);
 }
 
-int AmPlugIn::load(const string& directory, const std::map<string, string>& plugins)
+int AmPlugIn::load(const string& directory, const std::vector<std::string>& plugins)
 {
   int err=0;
   
   vector<AmPluginFactory*> loaded_plugins;
   
-  for (std::map<string, string>::const_iterator it = plugins.begin();
+  for (std::vector<string>::const_iterator it = plugins.begin();
       it != plugins.end(); it++) {
-      string plugin_file = it->first;
+      string plugin_file = *it;
       if (plugin_file == "sipctrl") {
         WARN("sipctrl is integrated into the core, loading sipctrl "
                 "module is not necessary any more\n");
@@ -588,8 +588,8 @@ int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
     goto error;
   }
 
-  module_it = AmConfig.modules.find(f->getName());
-  if(module_it == AmConfig.modules.end()) {
+  module_it = AmConfig.module_config.find(f->getName());
+  if(module_it == AmConfig.module_config.end()) {
     ERROR("don't have plug-in %s configuration!\n", f->getName().c_str());
     goto error;
   }
