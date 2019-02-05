@@ -1636,6 +1636,8 @@ int AmLcConfig::insertSIPInterfaceMapping(SIP_info& intf, int idx) {
         ensure_ipv6_reference(intf.local_ip);
         //add mapping for IPv6 reference as well
         local_sip_ip2if.emplace(intf.local_ip,idx);
+    } else {
+        ensure_ipv6_reference(intf.local_ip);
     }
     return 0;
 }
