@@ -1,3 +1,9 @@
+sems (1.8.12-3) stable; urgency=low
+
+  * AmLcConfig::insertSIPInterfaceMapping: always ensure IPv6 reference for intf.local_ip
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 05 Feb 2019 11:15:32 +0200
+
 sems (1.8.12-2) stable; urgency=low
 
   * CoreRpc: fix show.interfaces output for media interfaces
