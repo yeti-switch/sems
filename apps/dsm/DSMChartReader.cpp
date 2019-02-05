@@ -240,19 +240,21 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
     return false;
   }
 
-  SCFactoryCreate fc = NULL;
-  if ((fc = (SCFactoryCreate)dlsym(h_dl,SC_FACTORY_EXPORT_STR)) == NULL) {
+  SCFactoryCreate sc_fc = NULL;
+  if ((sc_fc = (SCFactoryCreate)dlsym(h_dl,SC_FACTORY_EXPORT_STR)) == NULL) {
     ERROR("invalid SC module '%s' (SC_EXPORT missing?)\n", fname.c_str());
     return false;
   }
    
-  DSMModule* mod = (DSMModule*)fc();
+  DSMModule* dsm_mod = (DSMModule*)sc_fc();
   if (!mod) {
     ERROR("module '%s' did not return functions.\n", 
 	  fname.c_str());
     return false;
   }
-  mods.push_back(mod);
+
+  mods.push_back(dsm_mod);
+
   DBG("loaded module '%s' from '%s'\n", 
       params.c_str(), fname.c_str());
   return true;
