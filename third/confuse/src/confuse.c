@@ -1354,7 +1354,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				if (comment)
 					free(comment);
 
-				return  force_state == 10 ? STATE_CONTINUE : STATE_EOF;
+				return  force_state >= 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			break;
 
@@ -1367,10 +1367,25 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			break;
 
 		case 12: /* unknown option, recursively ignore entire sub-section */
-			rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
-			if (rc != STATE_CONTINUE)
-				goto error;
-			state = 15;
+			if (tok == '}') {
+                if(force_state >= 10)
+                    state = 15;
+                else {
+                    state = 0;
+                }
+                break;
+			} else if(tok == CFGT_COMMENT) {
+                state = 15;
+                rc = cfg_parse_internal(cfg, level + 1, 15, NULL);
+                if (rc != STATE_CONTINUE)
+                    goto error;
+                break;
+            } else {
+                rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
+                if (rc != STATE_CONTINUE)
+                    goto error;
+                state = 15;
+            }
 			break;
 
 		case 13: /* unknown option, consume tokens silently until end of func/list */
@@ -1384,7 +1399,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			}
 
 			ignore = 0;
-            if(force_state == 10)
+            if(force_state >= 10)
                 state = 15;
             else {
                 state = 0;
@@ -1404,7 +1419,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			}
 
 			ignore = 0;
-			if (force_state == 10)
+			if (force_state >= 10)
 				state = 15;
 			else
 				state = 0;
@@ -1414,7 +1429,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
             if(tok == CFGT_COMMENT) {
                 continue;
             } else if(tok == '}') {
-				return force_state == 10 ? STATE_CONTINUE : STATE_EOF;
+				return force_state >= 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			state = 10;
 			break;
