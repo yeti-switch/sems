@@ -1007,8 +1007,8 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
         std::string name = module->title;
-        INFO("raw section value for module '%s':\n---%s\n---",
-              module->title, module->raw);
+        /*INFO("raw section value for module '%s':\n---%s\n---",
+              module->title, module->raw);*/
         config->modules.push_back(name);
         config->module_config.insert(std::make_pair(name, module->raw));
     }
