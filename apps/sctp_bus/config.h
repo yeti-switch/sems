@@ -6,10 +6,11 @@
 #include "AmArg.h"
 
 class cfg_reader {
+    string mod_name;
   public:
-    cfg_reader();
+    cfg_reader(const string& mod_name);
     ~cfg_reader();
 
     cfg_t *cfg;
-    bool read(const string &path, cfg_opt_t *opts);
+    bool read(const string &config, cfg_opt_t *opts);
 };

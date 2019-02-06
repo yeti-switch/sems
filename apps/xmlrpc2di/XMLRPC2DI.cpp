@@ -39,7 +39,7 @@
 #define MOD_NAME "xmlrpc2di"
 
 #define XMLRPC_PORT   "8090" // default port
-EXPORT_PLUGIN_CLASS_FACTORY(XMLRPC2DI, MOD_NAME)
+EXPORT_PLUGIN_CLASS_FACTORY(XMLRPC2DI)
 
 XMLRPC2DI* XMLRPC2DI::_instance=0;
 
@@ -137,7 +137,7 @@ int XMLRPC2DI::load() {
   if (bind_ip.empty()) {
     DBG("binding on ANY interface\n");
   } else {
-    bind_ip = AmConfig.fixIface2IP(bind_ip, false);
+    bind_ip = AmLcConfig::GetInstance().fixIface2IP(bind_ip, false);
   }
 
   string conf_xmlrpc_port = cfg.getParameter("xmlrpc_port",XMLRPC_PORT);

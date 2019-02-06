@@ -68,7 +68,8 @@
 #define DEFAULT_TYPE "vm"
 #define DOMAIN_PROMPT_SUFFIX "-prompts"
 
-EXPORT_SESSION_FACTORY(AnswerMachineFactory,MOD_NAME);
+EXPORT_SESSION_FACTORY(AnswerMachineFactory);
+DEFINE_FACTORY_INSTANCE(AnswerMachineFactory, MOD_NAME);
 
 string AnswerMachineFactory::EmailAddress;
 string AnswerMachineFactory::RecFileExt;

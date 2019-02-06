@@ -1,38 +1,35 @@
 #include "HttpDestination.h"
-#include "defs.h"
-
+#include "http_client_cfg.h"
+#include "AmLcConfig.h"
 #include "AmUtils.h"
 #include "log.h"
+#include "defs.h"
 
 #include <algorithm>
-
 #include <vector>
 using std::vector;
-
 #include <cstdio>
 
-int DestinationAction::parse(const string &prefix, const string &default_action, AmConfigReader &cfg)
+int DestinationAction::parse(const string &default_action, cfg_t* cfg)
 {
-    action_str = cfg.getParameter(prefix + "_action",default_action);
-
-    if(action_str=="remove"){
-        action = Remove;
-    } else if(action_str=="nothing"){
-        action = Nothing;
-    } else if(action_str=="move"){
-        action = Move;
-        need_data = true;
-    } else if(action_str=="requeue") {
-        action = Requeue;
+    if(!cfg_size(cfg, PARAM_ACTION_NAME)) {
+        action_str = default_action;
     } else {
+        action_str = cfg_getstr(cfg, PARAM_ACTION_NAME);
+    }
+
+    action = str2Action(action_str);
+    if(action == Move){
+        need_data = true;
+    } else if(action == Unknown){
         ERROR("uknown post-upload action: %s", action_str.c_str());
         return -1;
     }
 
-    action_data = cfg.getParameter(prefix + "_action_arg");
+    action_data = cfg_getstr(cfg, PARAM_ACTION_ARGS_NAME);
     if(need_data && action_data.empty()){
         ERROR("%s: missed action_arg for post upload action: %s",
-              prefix.c_str(),action_str.c_str());
+              cfg->title, action_str.c_str());
         return -1;
     }
 
@@ -60,6 +57,7 @@ int DestinationAction::perform(const string &file_path, const string &file_basen
     } break;
     case Requeue:
         return 1;
+    default:
         break;
     }
     return 0;
@@ -77,22 +75,36 @@ int DestinationAction::perform() const
     return 0;
 }
 
+DestinationAction::HttpAction DestinationAction::str2Action(const string& action)
+{
+    if(action==ACTION_REMOVE_VALUE){
+        return Remove;
+    } else if(action==ACTION_NOTHING_VALUE){
+       return Nothing;
+    } else if(action==ACTION_MOVE_VALUE){
+        return Move;
+    } else if(action==ACTION_REQUEUE_VALUE) {
+        return Requeue;
+    } else {
+        return Unknown;
+    }
+}
+
 HttpCodesMap::HttpCodesMap()
 {
     bzero(codes,sizeof(codes));
 }
 
-int HttpCodesMap::parse(const string &name, AmConfigReader &cfg)
+int HttpCodesMap::parse(cfg_t* cfg)
 {
-    if(!cfg.hasParameter(name)) {
+    if(!cfg_size(cfg, PARAM_SUCCESS_CODES_NAME)) {
         //2xx
         memset(codes+200,true,sizeof(bool)*100);
         return 0;
     }
 
-    string mask_list_str = cfg.getParameter(name);
-    vector<string> mask_list = explode(mask_list_str,",");
-    for(const string & mask : mask_list) {
+    for(unsigned int i = 0; i < cfg_size(cfg, PARAM_SUCCESS_CODES_NAME); i++) {
+        string mask = cfg_getnstr(cfg, PARAM_SUCCESS_CODES_NAME, i);
         if(mask.find('x')!=string::npos) {
             string mins =  mask, maxs = mask;
             int min,max;
@@ -129,53 +141,61 @@ bool HttpCodesMap::operator ()(long int code) const
     else return false;
 }
 
-int HttpDestination::parse(const string &name, AmConfigReader &cfg)
+int HttpDestination::parse(const string &name, cfg_t *cfg)
 {
-    string mode_str = cfg.getParameter(name + "_mode","put");
-    if(mode_str.empty()) {
-        ERROR("missed upload mode for destination %s",name.c_str());
-        return -1;
-    }
-    if(mode_str=="put") {
-        mode = Put;
-    } else if(mode_str=="post") {
-        mode = Post;
-    } else {
+    AmLcConfig::GetInstance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
+    mode = str2Mode(mode_str);
+    if(mode == Unknown) {
         ERROR("%s: uknown mode: %s",name.c_str(),mode_str.c_str());
         return -1;
     }
 
-    url_list = cfg.getParameter(name + "_url");
-    if(url_list.empty()){
+    for(unsigned int i = 0; i < cfg_size(cfg, PARAM_URL_NAME); i++) {
+        string url_ = cfg_getnstr(cfg, PARAM_URL_NAME, i);
+        url.push_back(url_);
+    }
+    if(url.empty()){
         ERROR("missed url for destination %s",name.c_str());
         return -1;
     }
-    url = explode(url_list,",");
     max_failover_idx = url.size()-1;
 
-    attempts_limit = cfg.getParameterInt(name + "_requeue_limit",0);
+    attempts_limit = cfg_getint(cfg, PARAM_REQUEUE_LIMIT_NAME);
 
-    if(succ_codes.parse(name+"_succ_codes",cfg)) {
+    if(succ_codes.parse(cfg)) {
         ERROR("can't parse succ codes map");
         return -1;
     }
 
-    if(succ_action.parse(name + "_succ","remove",cfg)){
+    if(!cfg_size(cfg, SECTION_ON_SUCCESS_NAME)) {
+        ERROR("absent post_upload action");
+        return -1;
+    }
+
+    cfg_t* saction = cfg_getsec(cfg, SECTION_ON_SUCCESS_NAME);
+    if(succ_action.parse(ACTION_REMOVE_VALUE, saction)) {
         ERROR("can't parse post_upload action");
         return -1;
     }
+
+    if(!cfg_size(cfg, SECTION_ON_FAIL_NAME)) {
+        ERROR("absent failed_upload action");
+        return -1;
+    }
+
+    cfg_t* faction = cfg_getsec(cfg, SECTION_ON_FAIL_NAME);
+    if(fail_action.parse(ACTION_REMOVE_VALUE, faction)) {
+        ERROR("can't parse failed_upload action");
+        return -1;
+    }
+
     if(succ_action.requeue()){
         ERROR("forbidden action 'requeue' for succ action");
         return -1;
     }
 
-    if(fail_action.parse(name + "_fail","nothing",cfg)){
-        ERROR("can't parse failed_upload action");
-        return -1;
-    }
-
     if(mode==Post) {
-        content_type = cfg.getParameter(name + "_content_type");
+        content_type = cfg_getstr(cfg, "content_type");
     }
 
     return 0;
@@ -183,6 +203,12 @@ int HttpDestination::parse(const string &name, AmConfigReader &cfg)
 
 void HttpDestination::dump(const string &key) const
 {
+    string url_list;
+    for(auto& url_ : url) {
+        if(!url_list.empty())
+            url_list += ",";
+        url_list += url_;
+    }
     DBG("destination %s: %s %s, post_upload = %s %s, failed_upload = %s %s",
         key.c_str(),
         mode_str.c_str(),url_list.c_str(),
@@ -192,6 +218,12 @@ void HttpDestination::dump(const string &key) const
 
 void HttpDestination::dump(const string &key, AmArg &ret) const
 {
+    string url_list;
+    for(auto& url_ : url) {
+        if(!url_list.empty())
+            url_list += ",";
+        url_list += url_;
+    }
     ret["url"] = url_list;
     ret["mode"] = mode_str.c_str();
     ret["action"] = succ_action.str();
@@ -205,6 +237,17 @@ void HttpDestination::dump(const string &key, AmArg &ret) const
     if(mode==Post && !content_type.empty()) {
         ret["content_type"] = content_type;
     }
+}
+
+
+HttpDestination::Mode HttpDestination::str2Mode(const string& mode)
+{
+    if(mode == MODE_PUT_VALUE) {
+        return Put;
+    } else if(mode == MODE_POST_VALUE) {
+        return Post;
+    }
+    return Unknown;
 }
 
 int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const
@@ -233,7 +276,7 @@ int HttpDestination::post_upload(bool failed) const
     return requeue;
 }
 
-int HttpDestinationsMap::configure_destination(const string &name, AmConfigReader &cfg)
+int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg)
 {
     HttpDestination d;
     if(d.parse(name,cfg)){
@@ -248,17 +291,16 @@ int HttpDestinationsMap::configure_destination(const string &name, AmConfigReade
     return 0;
 }
 
-int HttpDestinationsMap::configure(AmConfigReader &cfg)
+int HttpDestinationsMap::configure(cfg_t * cfg)
 {
-    vector<string> destinations = explode(cfg.getParameter("destinations",""),",",false);
-    for(vector<string>::const_iterator d = destinations.begin();
-        d!= destinations.end(); d++)
-    {
-        if(configure_destination(*d,cfg)){
-            ERROR("can't configure destination %s",d->c_str());
+    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DIST_NAME); i++) {
+        cfg_t *dist = cfg_getnsec(cfg, SECTION_DIST_NAME, i);
+        if(configure_destination(dist->title, dist)) {
+            ERROR("can't configure destination %s",dist->title);
             return -1;
         }
     }
+
     return 0;
 }
 

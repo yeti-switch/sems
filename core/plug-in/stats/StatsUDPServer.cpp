@@ -323,7 +323,7 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
   else if (cmd_str.length() > 4 && cmd_str.substr(0, 4) == "set_") {
     // setters 
     if (cmd_str.substr(4, 8) == "loglevel") {
-      if (!AmConfig.setLogLevel(&cmd_str.c_str()[13])) 
+      if (!AmLcConfig::GetInstance().setLogLevel(&cmd_str.c_str()[13]))
 	reply= "invalid loglevel value.\n";
       else 
 	reply= "loglevel set to "+int2str(log_level)+".\n";

@@ -39,8 +39,8 @@ class RadiusClient
 
     int epoll_fd;
 
-  public:
     RadiusClient(const string& name);
+  public:
     ~RadiusClient();
 
     static RadiusClient* instance();

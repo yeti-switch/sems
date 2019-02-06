@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	string path = argv[3];
 	char *out_file_path = argv[4];
 
-	if(AmConfig.readConfiguration()){
+	if(AmLcConfig::GetInstance().readConfiguration()){
 		ERROR("Errors occured while reading configuration file: exiting.");
 		return EXIT_FAILURE;
 	}
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	am_plugin.init();
 
 	INFO("Loading audio plug-in wav");
-	vector<string> wavplugin;
+	std::vector<string> wavplugin;
     wavplugin.push_back("wav");
 	if(am_plugin.load(AmConfig.modules_path, wavplugin)){
 		ERROR("Can't load plugins. exiting.");

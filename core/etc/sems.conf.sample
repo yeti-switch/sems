@@ -41,8 +41,12 @@ modules {
      *
      * describe name and load mode of plugin
      */
-    module-global "bus_client" {}
-    module-global "conference_mixer" {}
+    include("/etc/sems/etc/bus_client.conf")
+    include("/etc/sems/etc/conference_mixer.conf")
+    include("/etc/sems/etc/sctp_bus.conf")
+    include("/etc/sems/etc/http_client.conf")
+    include("/etc/sems/etc/jsonrpc.conf")
+    include("/etc/sems/etc/monitoring.conf")
     module "mp3"{}
     module "opus"{}
     module "wav"{}
@@ -51,13 +55,10 @@ modules {
     module "adpcm"{}
     module "l16"{}
     module "g722"{}
-    module "sctp_bus"{}
+    module-global "registrar_client" {}
+
     module "session_timer"{}
     module-global "uac_auth" {}
-    module "monitoring"{}
-    module-global "registrar_client" {}
-    module "jsonrpc"{}
-    module "http_client"{}
     module-global "dsm" {}
 }
 

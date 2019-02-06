@@ -37,7 +37,8 @@ string JsonRPCServerModule::host = DEFAULT_JSONRPC_SERVER_HOST;
 int JsonRPCServerModule::port = DEFAULT_JSONRPC_SERVER_PORT;
 int JsonRPCServerModule::threads = DEFAULT_JSONRPC_SERVER_THREADS;
 
-EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule, MOD_NAME)
+EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule)
+EXPORT_PLUGIN_CONF_FACTORY(JsonRPCServerModule)
 JsonRPCServerModule* JsonRPCServerModule::instance()
 {
   if(_instance == NULL){
@@ -47,7 +48,7 @@ JsonRPCServerModule* JsonRPCServerModule::instance()
 }
 
 JsonRPCServerModule::JsonRPCServerModule(const string& mod_name) 
-  : AmDynInvokeFactory(mod_name)
+  : AmDynInvokeFactory(mod_name), AmConfigFactory(mod_name)
 {
 }
 
@@ -58,24 +59,39 @@ int JsonRPCServerModule::onLoad() {
   return instance()->load();
 }
 
-int JsonRPCServerModule::load() {
-  
-  AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig.configs_path + 
-		  string(MOD_NAME ".conf"))) {
-	ERROR("no '%s' configuration file present",
-		(AmConfig.configs_path + string(MOD_NAME ".conf")).c_str());
-	return -1;
-  } else {
-    host = cfg.getParameter("jsonrpc_listen", DEFAULT_JSONRPC_SERVER_HOST);
-    port = cfg.getParameterInt("jsonrpc_port", DEFAULT_JSONRPC_SERVER_PORT);
-    threads = cfg.getParameterInt("server_threads", DEFAULT_JSONRPC_SERVER_THREADS);
-  }
 
+int JsonRPCServerModule::configure(const std::string & config)
+{
+    cfg_opt_t opt[] = {
+        CFG_STR("jsonrpc_listen", DEFAULT_JSONRPC_SERVER_HOST, CFGF_NONE),
+        CFG_INT("jsonrpc_port", DEFAULT_JSONRPC_SERVER_PORT, CFGF_NONE),
+        CFG_INT("server_threads", DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_t *cfg = cfg_init(opt, CFGF_NONE);
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
+
+    host = cfg_getstr(cfg, "jsonrpc_listen");
+    port = cfg_getint(cfg, "jsonrpc_port");
+    threads = cfg_getint(cfg, "server_threads");
+    cfg_free(cfg);
+    return 0;
+}
+
+int JsonRPCServerModule::load() {
   DBG("using server listen address %s\n", host.c_str());
   DBG("using server port %d\n", port);
   DBG("using %d server threads\n", threads);
-
   DBG("starting server loop thread\n");
   server_loop = JsonRPCServerLoop::instance();
   server_loop->start();

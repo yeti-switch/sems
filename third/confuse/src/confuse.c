@@ -1350,11 +1350,11 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				state = 12; /* Section, ignore all until closing brace */
 			} else if (tok == CFGT_STR) {
 				state = 11; /* No '=' ... must be a titled section */
-			} else if (tok == '}' && force_state == 10) {
+			} else if (tok == '}') {
 				if (comment)
 					free(comment);
 
-				return STATE_CONTINUE;
+				return  force_state >= 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			break;
 
@@ -1367,11 +1367,25 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			break;
 
 		case 12: /* unknown option, recursively ignore entire sub-section */
-			rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
-			if (rc != STATE_CONTINUE)
-				goto error;
-			ignore = '}';
-			state = 13;
+			if (tok == '}') {
+                if(force_state >= 10)
+                    state = 15;
+                else {
+                    state = 0;
+                }
+                break;
+			} else if(tok == CFGT_COMMENT) {
+                state = 15;
+                rc = cfg_parse_internal(cfg, level + 1, 15, NULL);
+                if (rc != STATE_CONTINUE)
+                    goto error;
+                break;
+            } else {
+                rc = cfg_parse_internal(cfg, level + 1, 10, NULL);
+                if (rc != STATE_CONTINUE)
+                    goto error;
+                state = 15;
+            }
 			break;
 
 		case 13: /* unknown option, consume tokens silently until end of func/list */
@@ -1384,25 +1398,17 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				break;
 			}
 
-			/* Are we done with recursive ignore of sub-section? */
-			if (force_state == 10) {
-				if (comment)
-					free(comment);
-
-				return STATE_CONTINUE;
-			}
-
-			if(tok = '}') {
-				return STATE_EOF;
-			}
-
 			ignore = 0;
-			state = 0;
+            if(force_state >= 10)
+                state = 15;
+            else {
+                state = 0;
+            }
 			break;
 
 		case 14: /* unknown option, assuming value or start of list */
 			if (tok == '{') {
-				ignore = '}';
+                		ignore = '}';
 				state = 13;
 				break;
 			}
@@ -1413,15 +1419,17 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			}
 
 			ignore = 0;
-			if (force_state == 10)
+			if (force_state >= 10)
 				state = 15;
 			else
 				state = 0;
 			break;
 
 		case 15: /* unknown option, dummy read of next parameter in sub-section */
-			if(tok == '}') {
-				return STATE_CONTINUE;
+            if(tok == CFGT_COMMENT) {
+                continue;
+            } else if(tok == '}') {
+				return force_state >= 10 ? STATE_CONTINUE : STATE_EOF;
 			}
 			state = 10;
 			break;

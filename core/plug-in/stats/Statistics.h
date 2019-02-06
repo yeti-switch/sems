@@ -34,6 +34,7 @@
 class StatsFactory: public AmPluginFactory
 {
 public:
+  DECLARE_FACTORY_INSTANCE(StatsFactory);
   StatsFactory(const std::string& _app_name);
     
   // AmPluginFactory interface

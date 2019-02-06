@@ -9,31 +9,11 @@
 #include "AmAudio.h"
 #include "AmUtils.h"
 
-#define AmConfig AmLcConfig::GetInstance()
+#define AmConfig AmLcConfig::GetInstance().m_config
 
-class AmLcConfig
+struct ConfigContainer
 {
-    AmLcConfig();
-public:
-    ~AmLcConfig();
-
-    static AmLcConfig& GetInstance()
-    {
-        static AmLcConfig config;
-        return config;
-    }
-    
-    std::string config_path;
-
-    int readConfiguration();
-    int finalizeIpConfig();
-    void dump_Ifs();
-    std::string fixIface2IP(const std::string& dev_name, bool v6_for_sip);
-    
-    int setLogLevel(const std::string& level, bool apply = true);
-    int setLogStderr(bool s, bool apply = true);
-    int setStderrLogLevel(const std::string& level, bool apply = true);
-
+    ConfigContainer();
     std::vector<SIP_interface> sip_ifs;
     std::vector<MEDIA_interface> media_ifs;
     std::map<std::string, unsigned short> sip_if_names;
@@ -60,11 +40,14 @@ public:
     };
 
     std::vector<app_selector> applications;
+
     std::vector<std::string> modules;
+    std::map<std::string, std::string> module_config;
+    std::set<string> rtld_global_plugins;
     std::string modules_path;
     std::string configs_path;
     std::string plugin_path;
-    
+
     std::string log_dump_path;
     Log_Level log_level;
     bool log_stderr;
@@ -133,27 +116,53 @@ public:
     std::string deamon_uid;
     std::string deamon_gid;
 #endif
+};
 
+class AmLcConfig
+{
+    AmLcConfig();
+public:
+    ~AmLcConfig();
+
+    static AmLcConfig& GetInstance()
+    {
+        static AmLcConfig config;
+        return config;
+    }
+
+    std::string config_path;
+    ConfigContainer m_config;
+
+    int readConfiguration(ConfigContainer* config = &AmConfig);
+    int finalizeIpConfig(ConfigContainer* config = &AmConfig);
+    void dump_Ifs(ConfigContainer* config = &AmConfig);
+    std::string fixIface2IP(const std::string& dev_name, bool v6_for_sip, ConfigContainer* config = &AmConfig);
+    
+    int setLogLevel(const std::string& level, bool apply = true);
+    int setLogStderr(bool s, bool apply = true);
+    int setStderrLogLevel(const std::string& level, bool apply = true);
     std::string serialize();
 
-protected:
-    int readSigInterfaces();
-    int readMediaInterfaces();
-    int readModules();
-    int readGeneral();
-    int readRoutings();
-    IP_info* readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type);
-    int readAcl(cfg_t* cfg, trsp_acl& acl, const std::string& if_name);
-    bool fillSysIntfList();
-    int insertSIPInterfaceMapping(SIP_info& intf, int idx);
-    int setNetInterface(IP_info& ip_if);
-    void fillMissingLocalSIPIPfromSysIntfs();
-    int checkSipInterfaces();
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
+protected:
+    void setValidationFunction(cfg_t* cfg);
+    int readSigInterfaces(cfg_t* cfg, ConfigContainer* config);
+    int readMediaInterfaces(cfg_t* cfg, ConfigContainer* config);
+    int readModules(cfg_t* cfg, ConfigContainer* config);
+    int readGeneral(cfg_t* cfg, ConfigContainer* config);
+    int readRoutings(cfg_t* cfg, ConfigContainer* config);
+    int checkSipInterfaces(ConfigContainer* config);
+    IP_info* readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type);
+    int readAcl(cfg_t* cfg, trsp_acl& acl, const std::string& if_name);
+
+    bool fillSysIntfList(ConfigContainer* config);
+    void fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config);
+    int insertSIPInterfaceMapping(ConfigContainer* config, SIP_info& intf, int idx);
+    int setNetInterface(ConfigContainer* config, IP_info& ip_if);
 private:
-    cfg_t *m_cfg;
+    cfg_t* m_cfg;
 };
 
 #endif/*AM_LC_CONFIG_H*/
