@@ -15,6 +15,13 @@
 
 #define EPOLL_MAX_EVENTS    256
 
+#define PARAM_MAX_QUEUE_LENGTH_NAME     "max_queue_length"
+#define PARAM_RECONNECT_INTERVAL_NAME   "reconnect_interval"
+#define PARAM_SHUTDOWN_CODE_NAME        "shutdown_code"
+#define PARAM_MEDIA_SERVERS_NAME        "media_servers"
+#define PARAM_USE_DNS_SRV_NAME          "use_dns_srv"
+#define PARAM_RTSP_INTERFACE_NAME_NAME  "rtsp_interface_name"
+
 RtspClient* RtspClient::_instance=0;
 
 
@@ -118,10 +125,12 @@ void RtspClient::parse_host_str(const string& host_port)
 }
 
 
-size_t RtspClient::load_media_servers(const string& servers)
+size_t RtspClient::load_media_servers(cfg_t* cfg)
 {
-    for (auto &host : explode(servers, ";,"))
+    for (int i = 0; i < cfg_size(cfg, PARAM_MEDIA_SERVERS_NAME); i++) {
+        string host = cfg_getnstr(cfg, PARAM_MEDIA_SERVERS_NAME, i);
         parse_host_str(host);
+    }
 
     return media_nodes.size();
 }
@@ -135,47 +144,94 @@ void RtspClient::init_connections()
         rtsp_session.emplace_back(this, saddr, active_connections++);
 }
 
-
-int RtspClient::configure()
+static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 {
-    AmConfigReader cfg;
+    char buf[2048];
+    char *s = buf;
+    char *e = s+sizeof(buf);
 
-    if (cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf")))
+    if(cfg->title) {
+        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
+            cfg->filename,cfg->line,cfg->name,cfg->title);
+    } else {
+        s += snprintf(s,e-s, "%s:%d [%s]: ",
+            cfg->filename,cfg->line,cfg->name);
+    }
+    s += vsnprintf(s,e-s,fmt,ap);
+
+    ERROR("%.*s",(int)(s-buf),buf);
+}
+
+int RtspClient::configure(const std::string& conf)
+{
+    cfg_opt_t cfg_opt[] ={
+        CFG_INT(PARAM_MAX_QUEUE_LENGTH_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_RECONNECT_INTERVAL_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_SHUTDOWN_CODE_NAME, 503, CFGF_NONE),
+        CFG_STR_LIST(PARAM_MEDIA_SERVERS_NAME, 0, CFGF_NONE),
+        CFG_BOOL(PARAM_USE_DNS_SRV_NAME, cfg_false, CFGF_NONE),
+        CFG_STR(PARAM_RTSP_INTERFACE_NAME_NAME, "", CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_t *cfg = cfg_init(cfg_opt, CFGF_NONE);
+    cfg_set_error_function(cfg, cfg_error_callback);
+    switch(cfg_parse_buf(cfg, conf.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
         return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
 
-    config.max_queue_length     = cfg.getParameterInt("max_queue_length", 0);
-    config.reconnect_interval   = cfg.getParameterInt("reconnect_interval", 10);
-    config.shutdown_code        = cfg.getParameterInt("shutdown_code", 503);
-    config.media_servers        = cfg.getParameter("media_servers", "");
-    config.rtsp_interface_name  = cfg.getParameter("rtsp_interface_name", "rtsp");
+    config.max_queue_length     = cfg_getint(cfg, PARAM_MAX_QUEUE_LENGTH_NAME);
+    config.reconnect_interval   = cfg_getint(cfg, PARAM_RECONNECT_INTERVAL_NAME);
+    config.shutdown_code        = cfg_getint(cfg, PARAM_SHUTDOWN_CODE_NAME);
+    AmLcConfig::GetInstance().getMandatoryParameter(cfg, PARAM_RTSP_INTERFACE_NAME_NAME, config.rtsp_interface_name);
 
-    auto if_it = AmConfig.media_if_names.find(config.rtsp_interface_name);
+    int i = 0;
+    config.l_if = -1;
+    for(auto& intf : AmConfig.media_ifs) {
+        if(intf.name == config.rtsp_interface_name) {
+            config.l_if = i;
+            break;
+        } else {
+            i++;
+        }
+    }
 
-    if (if_it == AmConfig.media_if_names.end()) {
+    if (config.l_if == -1) {
         ERROR("RTSP media interface not found\n");
         return -1;
     }
 
-    config.l_if = if_it->second;
     unsigned int addridx = 0;
+    config.laddr_if = -1;
     for(auto& info : AmConfig.media_ifs[config.l_if].proto_info) {
         if(info->mtype == MEDIA_info::RTSP) {
             config.l_ip = info->local_ip;
             config.laddr_if = addridx;
+            break;
         }
         addridx++;
     }
 
-    if (cfg.getParameter("use_dns_srv") == "yes")
-        config.use_dns_srv = true;
-    else
-        config.use_dns_srv = false;
-
-    if (!load_media_servers(config.media_servers)) {
-        ERROR("Can't parse media_servers: %s\n", config.media_servers.c_str());
+    if(config.laddr_if == -1) {
+        ERROR("RTSP addr interface not found\n");
         return -1;
     }
 
+    config.use_dns_srv = cfg_getbool(cfg, PARAM_USE_DNS_SRV_NAME);
+
+    if (!load_media_servers(cfg)) {
+        ERROR("Can't parse media_servers\n");
+        return -1;
+    }
+
+    cfg_free(cfg);
     return 0;
 }
 
@@ -197,11 +253,6 @@ int RtspClient::init()
 
 int RtspClient::onLoad()
 {
-    if (configure()) {
-        ERROR("configuration error");
-        return -1;
-    }
-
     if (init()) {
         ERROR("initialization error");
         return -1;
