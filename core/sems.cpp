@@ -128,7 +128,7 @@ static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
 {
 #ifndef DISABLE_DAEMON_MODE
     static const char* opts = ":hvEf:x:d:D:u:g:P:";
-#else    
+#else
     static const char* opts = ":hvEf:x:d:D:";
 #endif    
 
@@ -225,7 +225,7 @@ static bool apply_args(std::map<char,string>& args)
      break;
 
     case 'f':
-      AmConfig.configs_path = it->second;
+      AmLcConfig::GetInstance().config_path = it->second;
       break;
 
     case 'x':
