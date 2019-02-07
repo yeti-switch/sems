@@ -1,3 +1,9 @@
+sems (1.8.13-1) stable; urgency=low
+
+  * AmLcConfig: use hierarchical config for modules
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Feb 2019 16:46:09 +0200
+
 sems (1.8.12-3) stable; urgency=low
 
   * AmLcConfig::insertSIPInterfaceMapping: always ensure IPv6 reference for intf.local_ip
