@@ -76,19 +76,20 @@ class RtspClient : public AmThread, public AmEventQueueInterface,
 
         bool        srv_resolv(string host, int port, sockaddr_storage &_sa);
         void        parse_host_str(const string& host_port);
-        size_t      load_media_servers(const string& servers);
+        size_t      load_media_servers(cfg_t* cfg);
         void        init_connections();
         RtspSession *media_server_lookup();
 
-        int         configure();
         int         init();
         void        event_fire() { EventFD::pushEvent(); }
 
 public:
         RtspClient(const string& name);
         static RtspClient *instance();
-        static void dispose();
 
+        int         configure(const std::string& config);
+
+        static void dispose();
         int         shutdown_code() { return config.shutdown_code; }
         const string& localMediaIP() { return config.l_ip; }
         int         getRtpInterface() { return config.l_if; }

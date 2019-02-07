@@ -13,6 +13,7 @@
 #include "SipCtrlInterface.h"
 #include "AmUtils.h"
 #include "AmSessionContainer.h"
+#include "RtspClient.h"
 
 #define SECTION_SIGIF_NAME           "signaling-interfaces"
 #define SECTION_MEDIAIF_NAME         "media-interfaces"
@@ -556,7 +557,7 @@ namespace Config {
 /*                                       error functions                                               */
 /*                                                                                                     */
 /*******************************************************************************************************/
-void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
+static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 {
     char buf[2048];
     char *s = buf;
@@ -785,11 +786,11 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
         return -1;
     }
 
-    if(readModules(m_cfg, config) ||
-       readRoutings(m_cfg, config)||
+    if(readRoutings(m_cfg, config)||
        readGeneral(m_cfg, config) ||
        readSigInterfaces(m_cfg, config) ||
        readMediaInterfaces(m_cfg, config) ||
+       readModules(m_cfg, config) ||
        checkSipInterfaces(config)) {
         return -1;
     }
@@ -1006,10 +1007,15 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
         std::string name = module->title;
-        /*INFO("raw section value for module '%s':\n---%s\n---",
-              module->title, module->raw);*/
-        config->modules.push_back(name);
-        config->module_config.insert(std::make_pair(name, module->raw));
+        if(name == "rtsp_client") {
+            if(RtspClient::instance()->configure(module->raw)){
+                ERROR("error in cofiguration of rtsp client");
+                return -1;
+            }
+        } else {
+            config->modules.push_back(name);
+            config->module_config.insert(std::make_pair(name, module->raw));
+        }
     }
     mCount = cfg_size(modules_, SECTION_MODULE_GLOBAL_NAME);
     for(int i = 0; i < mCount; i++) {
