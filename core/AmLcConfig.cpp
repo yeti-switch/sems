@@ -1108,6 +1108,10 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
 
 int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
 {
+    if(!cfg_size(cfg, SECTION_MEDIAIF_NAME)) {
+        ERROR(SECTION_MEDIAIF_NAME " absent\n");
+        return -1;
+    }
     cfg_t* mediaif = cfg_getsec(cfg, SECTION_MEDIAIF_NAME);
     int ifCount = cfg_size(mediaif, SECTION_IF_NAME);
     for(int i = 0; i < ifCount; i++) {
