@@ -1,3 +1,10 @@
+sems (1.8.14-1) stable; urgency=low
+
+  * migrate rtsp client to new config
+  * AmLcConfig: fix config path parameter
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 07 Feb 2019 15:09:09 +0200
+
 sems (1.8.13-1) stable; urgency=low
 
   * AmLcConfig: use hierarchical config for modules
