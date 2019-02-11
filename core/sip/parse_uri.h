@@ -46,6 +46,7 @@ struct sip_uri
     };
 
     uri_scheme scheme;
+    cstring    name_addr;
     cstring    user;
     cstring    passwd;
     cstring    host;
@@ -54,6 +55,7 @@ struct sip_uri
     short unsigned int  port;
 
     list<sip_avp*> params;
+    list<sip_avp*> uri_params;
     list<sip_avp*> hdrs;
     sip_avp*       trsp;
 
@@ -62,6 +64,7 @@ struct sip_uri
 };
 
 int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port = false);
+int parse_nameaddr(sip_uri* uri, const char* beg, int len, bool no_default_port = false);
 
 #endif
 

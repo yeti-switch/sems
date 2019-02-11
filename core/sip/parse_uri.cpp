@@ -53,6 +53,12 @@ sip_uri::~sip_uri()
 
 	delete *it;
     }
+    
+    for(it = uri_params.begin();
+	it != uri_params.end(); ++it) {
+
+	delete *it;
+    }
 }
 
 
@@ -85,6 +91,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
 	// user part present in URI
 	if(*c == '@') {
 	    st = URI_USER;
+        break;
 	}
     }
 
@@ -163,6 +170,13 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
 		tmp1.set(c+1,0);
 		break; 
 
+	    case URI_HNAME:
+        tmp1.len = c - tmp1.s;
+        uri->hdrs.push_back(new sip_avp(tmp1,cstring(0,0)));
+        st = URI_PNAME;
+        tmp1.set(c+1,0);
+        break;
+        
 	    case URI_PNAME:
 		//DBG("Empty URI parameter\n");
 		//return MALFORMED_URI;
@@ -217,7 +231,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
 		//    tmp2.len, tmp2.s);
 
 		tmp1.s = c+1;
-		st = URI_HNAME;
+		st = URI_PNAME;
 		break;
 	    }
 	    break;
@@ -346,6 +360,108 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
 	}
     }
 
+    return 0;
+}
+
+int parse_nameaddr(sip_uri* uri, const char* beg, int len, bool no_default_port)
+{
+    enum {
+	NAMEADDR_BEG=0,
+    NAMEAADDR,
+    URI,
+    PARAMS,
+    PNAME,
+    PVALUE,
+    };
+
+    int st = NAMEADDR_BEG;
+    const char* c = beg;
+    const char* uri_str = 0;
+    char quote = ' ';
+    
+    cstring tmp1, tmp2;
+
+    for(;c!=beg+len;c++){
+        switch(st){
+        case NAMEADDR_BEG:
+            switch(*c){
+            case 's':
+            case 'S':
+                return parse_uri(uri, beg, len, no_default_port);
+            case ' ':
+                break;
+            case '\"':
+            case '\'':
+                quote = *c;
+                st = NAMEAADDR;
+                uri->name_addr.s = c+1;
+                break;
+            case '<':
+                uri_str = c+1;
+                st = URI;
+                break;
+            }
+            default:
+                st = NAMEAADDR;
+                uri->name_addr.s = c;
+            break;
+        case NAMEAADDR:
+            if(*c == quote){
+                st = URI;
+                uri->name_addr.len = c - uri->name_addr.s;
+            }
+            break;
+            
+        case URI:
+            if(*c == '<'){
+                uri_str = c+1;
+            }
+            if(*c == '>'){
+                if(parse_uri(uri, uri_str, c-uri_str, no_default_port)) {
+                    return MALFORMED_URI;
+                }
+                st = PARAMS;
+            }
+            break;
+        case PARAMS:
+            if(*c == ';'){
+                tmp1.set(c+1, 0);
+                st = PNAME;
+            }
+            break;
+        case PNAME:
+            if(*c == ';') {
+                if(c - tmp1.s ) {
+                    tmp1.len = c - tmp1.s;
+                    uri->uri_params.push_back(new sip_avp(tmp1, {0, 0}));
+                }
+                tmp1.set(c+1, 0);
+            } else if(*c == '=') {
+                tmp1.len = c - tmp1.s;
+                tmp2.set(c+1, 0);
+                st = PVALUE;
+            }
+            break;
+        case PVALUE:
+            if(*c == ';') {
+                tmp2.len = c - tmp2.s;
+                uri->uri_params.push_back(new sip_avp(tmp1, tmp2));
+                st = PNAME;
+            }
+            break;
+        }
+    }
+    
+    switch(st) {
+    case PNAME:
+        tmp1.len = beg+len-tmp1.s;
+        uri->uri_params.push_back(new sip_avp(tmp1, {0, 0}));
+        break;
+    case PVALUE:
+        tmp2.len = beg+len-tmp2.s;
+        uri->uri_params.push_back(new sip_avp(tmp1, tmp2));
+        break;
+    }
     return 0;
 }
 
