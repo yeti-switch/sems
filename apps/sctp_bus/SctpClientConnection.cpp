@@ -337,7 +337,7 @@ int SctpClientConnection::on_timer(time_t now)
 
     if(state==Closed
        && timerisset(&last_connect_attempt)
-       && now > last_connect_attempt.tv_sec)
+       && now > last_connect_attempt.tv_sec + reconnect_interval)
     {
         DBG("reconnect timeout for not connected %s:%d",
             am_inet_ntop(&addr).c_str(),am_get_port(&addr));
