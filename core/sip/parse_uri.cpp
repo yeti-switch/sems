@@ -85,6 +85,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
 	// user part present in URI
 	if(*c == '@') {
 	    st = URI_USER;
+        break;
 	}
     }
 
