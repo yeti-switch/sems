@@ -62,10 +62,20 @@ int JsonRPCServerModule::onLoad() {
 
 int JsonRPCServerModule::configure(const std::string & config)
 {
+    static const char opt_address[] = "address";
+    static const char opt_port[] = "port";
+    static const char opt_server_threads[] = "server_threads";
+    static const char sec_listen[] = "listen";
+
+    cfg_opt_t listen_sec[] = {
+        CFG_STR(opt_address, DEFAULT_JSONRPC_SERVER_HOST, CFGF_NONE),
+        CFG_INT(opt_port, DEFAULT_JSONRPC_SERVER_PORT, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t opt[] = {
-        CFG_STR("jsonrpc_listen", DEFAULT_JSONRPC_SERVER_HOST, CFGF_NONE),
-        CFG_INT("jsonrpc_port", DEFAULT_JSONRPC_SERVER_PORT, CFGF_NONE),
-        CFG_INT("server_threads", DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
+        CFG_SEC(sec_listen,listen_sec, CFGF_NONE),
+        CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
         CFG_END()
     };
 
@@ -81,9 +91,11 @@ int JsonRPCServerModule::configure(const std::string & config)
         return -1;
     }
 
-    host = cfg_getstr(cfg, "jsonrpc_listen");
-    port = cfg_getint(cfg, "jsonrpc_port");
-    threads = cfg_getint(cfg, "server_threads");
+    cfg_t *listen = cfg_getsec(cfg, sec_listen);
+    host = cfg_getstr(listen, opt_address);
+    port = cfg_getint(listen, opt_port);
+    threads = cfg_getint(cfg, opt_server_threads);
+
     cfg_free(cfg);
     return 0;
 }
