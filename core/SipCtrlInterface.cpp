@@ -137,6 +137,25 @@ int _SipCtrlInterface::init_udp_servers(unsigned short if_num, unsigned short ad
     return 0;
 }
 
+int _SipCtrlInterface::alloc_trsp_worker_structs()
+{
+    nr_trsp_workers = AmConfig.sip_server_threads;
+    trsp_workers = new trsp_worker*[nr_trsp_workers];
+    if(trsp_workers) {
+        return 0;
+    }
+    return -1;
+}
+
+int _SipCtrlInterface::init_trsp_workers()
+{
+    unsigned short socketsCount = 0;
+    for(int i= 0; i < nr_trsp_workers; i++) {
+        trsp_workers[i] = new trsp_worker();
+    }
+    return 0;
+}
+
 int _SipCtrlInterface::alloc_tcp_structs()
 {
     unsigned short socketsCount = 0;
@@ -195,7 +214,7 @@ int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short ad
     }
 
     //TODO: add some more threads
-    tcp_socket->add_threads(AmConfig.sip_server_threads);
+    tcp_socket->add_workers(trsp_workers, nr_trsp_workers);
 
     trans_layer::instance()->register_transport(tcp_socket);
     tcp_sockets[nr_tcp_sockets] = tcp_socket;
@@ -279,7 +298,7 @@ int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short ad
     }
 
     //TODO: add some more threads
-    tls_socket->add_threads(AmConfig.sip_server_threads);
+    tls_socket->add_workers(trsp_workers, nr_trsp_workers);
 
     trans_layer::instance()->register_transport(tls_socket);
     tls_sockets[nr_tls_sockets] = tls_socket;
@@ -323,6 +342,15 @@ int _SipCtrlInterface::load()
             addr_idx++;
         }
         udp_idx++;
+    }
+
+    if(alloc_trsp_worker_structs() < 0) {
+        ERROR("no enough memory to alloc sip workers structs");
+        return -1;
+    }
+    
+    if(init_trsp_workers() < 0) {
+        return -1;
     }
 
     if(alloc_tcp_structs() < 0) {
@@ -372,6 +400,7 @@ _SipCtrlInterface::_SipCtrlInterface()
     : stopped(false),
       nr_udp_sockets(0), udp_sockets(NULL),
       nr_udp_servers(0), udp_servers(NULL),
+      nr_trsp_workers(0), trsp_workers(NULL),
       nr_tcp_sockets(0), tcp_sockets(NULL),
       nr_tcp_servers(0), tcp_servers(NULL),
       nr_tls_sockets(0), tls_sockets(NULL),
@@ -515,6 +544,12 @@ int _SipCtrlInterface::run()
 	}
     }
 
+    if (NULL != trsp_workers) {
+	for(int i=0; i<nr_trsp_workers;i++){
+	    trsp_workers[i]->start();
+	}
+    }
+	
     if (NULL != tcp_servers) {
 	for(int i=0; i<nr_tcp_servers;i++){
 	    tcp_servers[i]->start();
@@ -555,6 +590,7 @@ void _SipCtrlInterface::cleanup()
 	nr_udp_servers = 0;
     }
 
+    
     if (NULL != tcp_servers) {
 	for(int i=0; i<nr_tcp_servers;i++){
 	    tcp_servers[i]->stop();
@@ -567,6 +603,29 @@ void _SipCtrlInterface::cleanup()
 	nr_tcp_servers = 0;
     }
 
+    if (NULL != tls_servers) {
+	for(int i=0; i<nr_tls_servers;i++){
+	    tls_servers[i]->stop();
+	    tls_servers[i]->join();
+	    delete tls_servers[i];
+	}
+
+	delete [] tls_servers;
+	tls_servers = NULL;
+	nr_tls_servers = 0;
+    }
+    
+    if (NULL != trsp_workers) {
+	for(int i=0; i<nr_trsp_workers;i++){
+	    trsp_workers[i]->stop();
+	    trsp_workers[i]->join();
+	    delete trsp_workers[i];
+	}
+	delete [] trsp_workers;
+	trsp_workers = NULL;
+	nr_trsp_workers = 0;
+    }
+	
     trans_layer::instance()->clear_transports();
 
     if (NULL != udp_sockets) {
@@ -590,6 +649,17 @@ void _SipCtrlInterface::cleanup()
 	delete [] tcp_sockets;
 	tcp_sockets = NULL;
 	nr_tcp_sockets = 0;
+    }
+    
+    if (NULL != tls_sockets) {
+	for(int i=0; i<nr_tls_sockets;i++){
+	    DBG("dec_ref(%p)",tls_sockets[i]);
+	    dec_ref(tls_sockets[i]);
+	}
+
+	delete [] tls_sockets;
+	tls_sockets = NULL;
+	nr_tls_sockets = 0;
     }
 }
 

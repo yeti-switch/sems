@@ -20,7 +20,7 @@
 
 
 tcp_trsp_socket::tcp_trsp_socket(trsp_server_socket* server_sock,
-				 trsp_server_worker* server_worker,
+				 trsp_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase)
@@ -62,7 +62,7 @@ tcp_socket_factory::tcp_socket_factory(tcp_base_trsp::socket_transport transport
  : trsp_socket_factory(transport)
 {}
 
-tcp_base_trsp* tcp_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker,
+tcp_base_trsp* tcp_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
                                                 int sd, const sockaddr_storage* sa, event_base* evbase)
 {
     return new tcp_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
@@ -96,7 +96,6 @@ void tcp_trsp::run()
   }
 
   tcp_server_socket* tcp_sock = static_cast<tcp_server_socket*>(sock);
-  tcp_sock->start_threads();
 
   INFO("Started SIP server TCP transport on %s:%i\n",
        sock->get_ip(),sock->get_port());
@@ -115,7 +114,6 @@ void tcp_trsp::on_stop()
 {
   event_base_loopbreak(evbase);
   tcp_server_socket* tcp_sock = static_cast<tcp_server_socket*>(sock);
-  tcp_sock->stop_threads();
   join();
 }
 

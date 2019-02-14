@@ -232,7 +232,7 @@ void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, st
 }
 
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
-				 trsp_server_worker* server_worker,
+				 trsp_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase), tls_connected(false), orig_input_len(0)
@@ -434,8 +434,7 @@ int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
 tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport)
  : trsp_socket_factory(transport){}
 
-tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker,
-                                                int sd, const sockaddr_storage* sa, event_base* evbase)
+tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd, const sockaddr_storage* sa, event_base* evbase)
 {
     try {
         return new tls_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
@@ -479,7 +478,6 @@ void tls_trsp::run()
   }
 
   trsp_server_socket* tcp_sock = static_cast<trsp_server_socket*>(sock);
-  tcp_sock->start_threads();
 
   INFO("Started SIP server TLS transport on %s:%i\n",
        sock->get_ip(),sock->get_port());
@@ -498,6 +496,5 @@ void tls_trsp::on_stop()
 {
   event_base_loopbreak(evbase);
   trsp_server_socket* tcp_sock = static_cast<trsp_server_socket*>(sock);
-  tcp_sock->stop_threads();
   join();
 }

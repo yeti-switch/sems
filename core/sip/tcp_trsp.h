@@ -31,7 +31,7 @@ class tcp_trsp_socket: public tcp_base_trsp
 
   friend class tcp_socket_factory;
   const char* get_transport() const { return "tcp"; }
-  tcp_trsp_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker, int sd,
+  tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
 
 public:
@@ -48,7 +48,7 @@ class tcp_socket_factory : public trsp_socket_factory
 public:
     tcp_socket_factory(tcp_base_trsp::socket_transport transport);
 
-    tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker,
+    tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
                                          int sd, const sockaddr_storage* sa, event_base* evbase);
 };
 
