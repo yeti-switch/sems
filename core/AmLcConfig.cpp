@@ -1221,7 +1221,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             return 0;
         }
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
-        for(int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
             rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));
         }
 
