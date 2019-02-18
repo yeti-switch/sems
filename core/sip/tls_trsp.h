@@ -166,20 +166,4 @@ public:
     tls_conf server_settings;
 };
 
-class tls_trsp: public transport
-{
-  struct event_base *evbase;
-
-protected:
-  /** @see AmThread */
-  void run();
-  /** @see AmThread */
-  void on_stop();
-
-public:
-  /** @see transport */
-  tls_trsp(trsp_server_socket* sock, trsp_acl &acl, trsp_acl &opt_acl);
-  ~tls_trsp();
-};
-
 #endif/*_tls_trsp_h_*/
