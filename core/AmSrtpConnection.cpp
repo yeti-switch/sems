@@ -272,6 +272,7 @@ bool AmSrtpConnection::isRtpPacket(uint8_t* data, unsigned int size)
     if(rtp->version == RTP_VERSION) {
         return true;
     }
+    return false;
 }
 
 void AmSrtpConnection::use_dtls(dtls_client_settings* settings)

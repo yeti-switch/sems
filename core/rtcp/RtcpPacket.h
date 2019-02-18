@@ -4,14 +4,13 @@
 
 #include <stdint.h>
 #include <netinet/in.h>
+#include <srtp.h>
 
 // srtcp data size injected after rtcp packet
 // see rfc 3711 sec 3.4
 // 4 bt - index
 // we are not using mki
 // and 16 bt max auth tag see srtp.h SRTP_MAX_TAG_LEN
-#define SRTP_MAX_TRAILER_LEN 20
-
 #pragma pack(1)
 
 /**
