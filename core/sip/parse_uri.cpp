@@ -33,10 +33,10 @@
 #include "log.h"
 
 sip_uri::sip_uri()
-    : scheme(UNKNOWN),
-      trsp(NULL)
-{   
-}
+ : scheme(UNKNOWN),
+   port(0),
+   trsp(nullptr)
+{ }
 
 sip_uri::~sip_uri()
 {
