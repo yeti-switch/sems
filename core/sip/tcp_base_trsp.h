@@ -208,6 +208,9 @@ protected:
     void run();
     void on_stop();
 
+    friend class trsp_server_socket;
+    void create_connected(trsp_server_socket* server_sock, int sd, const sockaddr_storage* sa);
+    tcp_base_trsp* new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa);
 public:
     trsp_worker();
     ~trsp_worker();
@@ -215,9 +218,6 @@ public:
     int send(trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
         const int msg_len, unsigned int flags);
     
-    void create_connected(trsp_server_socket* server_sock, int sd, const sockaddr_storage* sa);
-    tcp_base_trsp* new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa);
-
     void add_connection(tcp_base_trsp* client_sock);
     void remove_connection(tcp_base_trsp* client_sock);
     void getInfo(AmArg &ret);
@@ -283,6 +283,24 @@ public:
     struct timeval* get_idle_timeout();
 
     void getInfo(AmArg &ret);
+};
+
+class trsp: public AmThread
+{
+  struct event_base *evbase;
+
+protected:
+  /** @see AmThread */
+  void run();
+  /** @see AmThread */
+  void on_stop();
+  
+public:
+  /** @see transport */
+  trsp();
+  ~trsp();
+  
+  void add_socket(trsp_server_socket* sock);
 };
 
 #endif/*_tcp_base_trsp_h_*/

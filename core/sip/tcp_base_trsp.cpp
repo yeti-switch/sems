@@ -701,7 +701,6 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
             }
         }
     }
-    connections_mut.unlock();
     
     if(!sock) {
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
@@ -710,6 +709,7 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
         inc_ref(sock);
         new_conn = true;
     }
+    connections_mut.unlock();
 
     // must be done outside from connections_mut
     // to avoid dead-lock with the event base
@@ -731,7 +731,6 @@ void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, cons
 
 tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa)
 {
-    connections_mut.lock();
     char host_buf[NI_MAXHOST];
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
@@ -739,7 +738,7 @@ tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, cons
                                 sa,evbase);
     connections[dest].push_back(new_sock);
     inc_ref(new_sock);
-    connections_mut.unlock();
+    return new_sock;
 }
 
 void trsp_worker::getInfo(AmArg &ret)
@@ -825,7 +824,6 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     int true_opt = 1;
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
                   (void*)&true_opt, sizeof (true_opt)) == -1) {
-
         ERROR("%s\n",strerror(errno));
         close(sd);
         return -1;
@@ -975,4 +973,42 @@ void trsp_server_socket::getInfo(AmArg &ret)
         AmArg &r = ret[int2str(i)];
         workers[i]->getInfo(r);
     }
+}
+
+trsp::trsp()
+{
+  evbase = event_base_new();
+}
+
+trsp::~trsp()
+{
+  if(evbase) {
+    event_base_free(evbase);
+  }
+}
+
+void trsp::add_socket(trsp_server_socket* sock)
+{
+    sock->add_event(evbase);
+    INFO("Added SIP server %s transport on %s:%i\n",
+        sock->get_transport(), sock->get_ip(),sock->get_port());
+}
+
+/** @see AmThread */
+void trsp::run()
+{
+    INFO("Started SIP server thread\n");
+    setThreadName("sip-server-trsp");
+
+    /* Start the event loop. */
+    event_base_dispatch(evbase);
+
+    INFO("SIP server thread finished");
+}
+
+/** @see AmThread */
+void trsp::on_stop()
+{
+  event_base_loopbreak(evbase);
+  join();
 }

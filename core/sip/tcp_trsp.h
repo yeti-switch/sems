@@ -60,20 +60,4 @@ public:
   const char* get_transport() const { return "tcp"; }
 };
 
-class tcp_trsp: public transport
-{
-  struct event_base *evbase;
-
-protected:
-  /** @see AmThread */
-  void run();
-  /** @see AmThread */
-  void on_stop();
-    
-public:
-  /** @see transport */
-  tcp_trsp(tcp_server_socket* sock, trsp_acl &acl, trsp_acl &opt_acl);
-  ~tcp_trsp();
-};
-
-#endif
+#endif/*_tcp_trsp_h_*/
