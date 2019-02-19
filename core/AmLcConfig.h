@@ -54,7 +54,8 @@ struct ConfigContainer
     int session_proc_threads;
     int media_proc_threads;
     int rtp_recv_threads;
-    int sip_server_threads;
+    int sip_tcp_server_threads;
+    int sip_udp_server_threads;
     std::string outbound_proxy;
     bool force_outbound_proxy;
     bool force_outbound_if;

@@ -73,7 +73,7 @@ int _SipCtrlInterface::alloc_udp_structs()
         }
     }
     udp_sockets = new udp_trsp_socket* [socketsCount];
-    udp_servers = new udp_trsp* [AmConfig.sip_server_threads];
+    udp_servers = new udp_trsp* [AmConfig.sip_udp_server_threads];
 
     if(udp_sockets && udp_servers)
 	return 0;
@@ -132,7 +132,7 @@ int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short ad
 
 int _SipCtrlInterface::init_udp_servers()
 {
-    for(int i=0; i<AmConfig.sip_server_threads;i++){
+    for(int i=0; i<AmConfig.sip_udp_server_threads;i++){
         udp_servers[nr_udp_servers] = new udp_trsp();
         for(int j=0; j<nr_udp_sockets;j++) {
             udp_servers[nr_udp_servers]->add_socket(udp_sockets[j]);
@@ -144,7 +144,7 @@ int _SipCtrlInterface::init_udp_servers()
 
 int _SipCtrlInterface::alloc_trsp_worker_structs()
 {
-    nr_trsp_workers = AmConfig.sip_server_threads;
+    nr_trsp_workers = AmConfig.sip_tcp_server_threads;
     trsp_workers = new trsp_worker*[nr_trsp_workers];
     if(trsp_workers) {
         return 0;

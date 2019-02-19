@@ -154,13 +154,14 @@ general {
     */
     media_processor_threads = 1
 
-    /* optional parameter: sip_server_threads
+    /* optional parameters: sip_udp_server_threads, sip_tcp_server_threads
      *
-     * Number of SIP UDP receiver threads
+     * Number of SIP TCP and UDP receiver threads
      *
      * default: 4
      */
-    sip_server_threads = 1
+    sip_tcp_server_threads = 1
+    sip_udp_server_threads = 1
 
     /* optional parameter: signature
      *
