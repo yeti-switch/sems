@@ -182,10 +182,6 @@ trsp_acl::action_t trsp_acl::check(const sockaddr_storage &ip) const
     return action;
 }
 
-transport::~transport()
-{
-}
-
 /** EMACS **
  * Local variables:
  * mode: c++

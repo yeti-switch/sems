@@ -87,7 +87,8 @@ class _SipCtrlInterface:
 
 
     int alloc_udp_structs();
-    int init_udp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
+    int init_udp_sockets(unsigned short if_num, unsigned short addr_num, SIP_info& info);
+    int init_udp_servers();
 
     int alloc_trsp_worker_structs();
     int init_trsp_workers();

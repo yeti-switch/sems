@@ -143,10 +143,10 @@ class SIP_TCP_info : public SIP_info
 {
 protected:
     explicit SIP_TCP_info(SIP_info::SIP_type type)
-    : SIP_info(type), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT){}
+    : SIP_info(type), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_IDLE_TIMEOUT){}
 public:
     SIP_TCP_info()
-    : SIP_info(TCP), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_TCP_IDLE_TIMEOUT){}
+    : SIP_info(TCP), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_IDLE_TIMEOUT){}
     SIP_TCP_info(const SIP_TCP_info& info)
     : SIP_info(info), tcp_connect_timeout(info.tcp_connect_timeout), tcp_idle_timeout(info.tcp_idle_timeout){}
     virtual ~SIP_TCP_info(){}
