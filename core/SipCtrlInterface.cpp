@@ -73,7 +73,7 @@ int _SipCtrlInterface::alloc_udp_structs()
         }
     }
     udp_sockets = new udp_trsp_socket* [socketsCount];
-    udp_servers = new udp_trsp* [AmConfig.sip_server_threads * socketsCount];
+    udp_servers = new udp_trsp* [AmConfig.sip_server_threads];
 
     if(udp_sockets && udp_servers)
 	return 0;
@@ -81,7 +81,7 @@ int _SipCtrlInterface::alloc_udp_structs()
     return -1;
 }
 
-int _SipCtrlInterface::init_udp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info)
+int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short addr_num, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
     if(info.type_ip == IP_info::IPv4) {
@@ -127,13 +127,18 @@ int _SipCtrlInterface::init_udp_servers(unsigned short if_num, unsigned short ad
     udp_sockets[nr_udp_sockets] = udp_socket;
     inc_ref(udp_socket);
     nr_udp_sockets++;
+    return 0;
+}
 
-    for(int j=0; j<AmConfig.sip_server_threads;j++){
-        udp_servers[nr_udp_servers] =
-            new udp_trsp(udp_socket, info.acl, info.opt_acl);
+int _SipCtrlInterface::init_udp_servers()
+{
+    for(int i=0; i<AmConfig.sip_server_threads;i++){
+        udp_servers[nr_udp_servers] = new udp_trsp();
+        for(int j=0; j<nr_udp_sockets;j++) {
+            udp_servers[nr_udp_servers]->add_socket(udp_sockets[j]);
+        }
         nr_udp_servers++;
     }
-
     return 0;
 }
 
@@ -326,13 +331,17 @@ int _SipCtrlInterface::load()
         unsigned short addr_idx = 0;
         for(auto& info : interface.proto_info) {
             if(info->type == SIP_info::UDP) {
-                if(init_udp_servers(udp_idx, addr_idx, *info) < 0) {
+                if(init_udp_sockets(udp_idx, addr_idx, *info) < 0) {
                     return -1;
                 }
             }
             addr_idx++;
         }
         udp_idx++;
+    }
+    
+    if(init_udp_servers() < 0) {
+        return -1;
     }
 
     if(alloc_trsp_worker_structs() < 0) {
@@ -576,6 +585,8 @@ void _SipCtrlInterface::cleanup()
     }
 
     if(NULL != trsp_server){
+    trsp_server->stop();
+    trsp_server->join();
 	delete trsp_server;
 	trsp_server = NULL;
     }

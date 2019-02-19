@@ -778,7 +778,6 @@ void trsp_worker::run()
 void trsp_worker::on_stop()
 {
     event_base_loopbreak(evbase);
-    join();
 }
 
 trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory)

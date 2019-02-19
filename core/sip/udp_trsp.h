@@ -30,6 +30,7 @@
 #define _udp_trsp_h_
 
 #include "transport.h"
+#include <sys/epoll.h>
 
 /**
  * Maximum message length for UDP
@@ -52,7 +53,9 @@ public:
 		    socket_transport transport, unsigned int sys_if_idx = 0)
 	: trsp_socket(if_num, addr_num,opts,transport,sys_if_idx) {}
 
-    ~udp_trsp_socket() {}
+    ~udp_trsp_socket() {
+        close(sd);
+    }
 
     /**
      * Binds the transport socket to an address
@@ -70,20 +73,25 @@ public:
      */
     int send(const sockaddr_storage* sa, const char* msg,
 	     const int msg_len, unsigned int flags);
+    
+    int recv();
 };
 
-class udp_trsp: public transport
+class udp_trsp: public AmThread
 {
+    std::vector<udp_trsp_socket*> sockets;
+    int ev;
 protected:
     /** @see AmThread */
     void run();
     /** @see AmThread */
-    void on_stop();
-    
+    void on_stop();    
 public:
     /** @see transport */
-    udp_trsp(udp_trsp_socket* sock, trsp_acl &acl, trsp_acl &opt_acl);
+    udp_trsp();
     ~udp_trsp();
+    
+    void add_socket(udp_trsp_socket* sock);
 };
 
 #endif
