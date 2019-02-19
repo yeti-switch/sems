@@ -277,8 +277,9 @@ private:
    */
   virtual bool onOtherReply(const AmSipReply& reply);
 
-  AmB2BSession(const string& other_local_tag = "", AmSipDialog* p_dlg=NULL,
-	       AmSipSubscription* p_subs=NULL);
+  AmB2BSession(const string& other_local_tag = "",
+               AmSipDialog* p_dlg=nullptr,
+               AmSipSubscription* p_subs=nullptr);
 
   virtual ~AmB2BSession();
 
@@ -315,6 +316,7 @@ private:
   unsigned int dead_rtp_time;
 
   bool ignore_relay_streams;
+  TransProt media_transport;
 
   /** Low fidelity payloads for which inband DTMF 
       transcoding should be used */
@@ -374,6 +376,7 @@ private:
   bool getRtpRelayTimestampAligning() const { return rtp_relay_timestamp_aligning; }
   bool getIgnoreRelayStreams() const { return ignore_relay_streams; }
   void getLowFiPLs(vector<SdpPayload>& lowfi_payloads) const;
+  TransProt getMediaTransport() const { return media_transport; }
 
   virtual void setRtpInterface(int relay_interface);
   virtual void setRtpRelayForceSymmetricRtp(bool force_symmetric);
@@ -393,7 +396,8 @@ private:
   void setEnableDtmfForceRelay(bool enable);
   void setEnableCNForceRelay(bool enable);
   void setLowFiPLs(const vector<SdpPayload>& lowfi_payloads);
-  
+  void setMediaTransport(TransProt trsp);
+
   bool getRtpRelayTransparentSeqno() { return rtp_relay_transparent_seqno; }
   bool getRtpRelayTransparentSSRC() { return rtp_relay_transparent_ssrc; }
 

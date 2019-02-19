@@ -542,7 +542,7 @@ class AmRtpStream
     bool getPassiveMode() { return passive || passive_rtcp; }
 
     /** Set using transport */
-    void setTransport(TransProt trans) { transport = (MediaTransport)trans; }
+    void setTransport(TransProt trans);
 
     unsigned int get_ssrc() { return l_ssrc; }
 

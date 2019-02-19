@@ -850,6 +850,11 @@ void AmRtpStream::setPassiveMode(bool p)
     }
 }
 
+void AmRtpStream::setTransport(TransProt trans) {
+    CLASS_DBG("set transport to: %d(%s)",trans, transport_p_2_str(trans).c_str());
+    transport = (MediaTransport)trans;
+}
+
 void AmRtpStream::getSdp(SdpMedia& m)
 {
     m.port = getLocalPort();
