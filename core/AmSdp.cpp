@@ -104,7 +104,7 @@ inline string media_t_2_str(int mt)
   }
 }
 
-inline string transport_p_2_str(int tp)
+string transport_p_2_str(int tp)
 {
   switch(tp){
   case TP_RTPAVP: return "RTP/AVP";

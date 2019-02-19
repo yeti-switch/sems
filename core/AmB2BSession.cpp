@@ -109,31 +109,35 @@ static void errCode2RelayedReply(AmSipReply &reply, int err_code, unsigned defau
 // AmB2BSession methods
 //
 
-AmB2BSession::AmB2BSession(const string& other_local_tag, AmSipDialog* p_dlg,
-			   AmSipSubscription* p_subs)
+AmB2BSession::AmB2BSession(
+    const string& other_local_tag,
+    AmSipDialog* p_dlg, AmSipSubscription* p_subs)
   : AmSession(p_dlg),
     other_id(other_local_tag),
     sip_relay_only(true),
+    remote_on_hold(false),
+    rtp_stream_shared(false),
+    est_invite_cseq(0),
+    est_invite_other_cseq(0),
     subs(p_subs),
     rtp_relay_mode(RTP_Direct),
     rtp_relay_force_symmetric_rtp(false),
-	symmetric_rtp_endless(false),
-	remote_on_hold(false),
-	rtp_stream_shared(false),
-	rtp_ping(false),
-	symmetric_rtp_ignore_rtcp(false),
+    symmetric_rtp_ignore_rtcp(false),
+    symmetric_rtp_endless(false),
+    rtp_ping(false),
+    rtp_relay_transparent_seqno(true),
+    rtp_relay_transparent_ssrc(true),
+    rtp_relay_timestamp_aligning(false),
     enable_dtmf_transcoding(false),
     enable_inbound_dtmf_filtering(false),
     enable_dtmf_rtp_filtering(false),
     enable_dtmf_rtp_detection(false),
-	enable_dtmf_rtp_force_relay(true),
-	enable_cn_rtp_force_relay(false),
-	dead_rtp_time(AmConfig.dead_rtp_time),
-	rtp_relay_transparent_seqno(true), rtp_relay_transparent_ssrc(true),
-	rtp_relay_timestamp_aligning(false),
-	ignore_relay_streams(false),
-    est_invite_cseq(0),est_invite_other_cseq(0),
-    media_session(NULL)
+    enable_dtmf_rtp_force_relay(true),
+    enable_cn_rtp_force_relay(false),
+    dead_rtp_time(AmConfig.dead_rtp_time),
+    ignore_relay_streams(false),
+    media_transport(TransProt::TP_NONE),
+    media_session(nullptr)
 {
   if(!subs) subs = new AmSipSubscription(dlg,this);
 }
@@ -1112,6 +1116,12 @@ void AmB2BSession::getLowFiPLs(vector<SdpPayload>& lowfi_payloads) const {
 
 void AmB2BSession::setLowFiPLs(const vector<SdpPayload>& lowfi_payloads) {
   this->lowfi_payloads = lowfi_payloads;
+}
+
+void AmB2BSession::setMediaTransport(TransProt trsp)
+{
+    CLASS_DBG("set transport to: %d(%s)",trsp, transport_p_2_str(trsp).c_str());
+    media_transport = trsp;
 }
 
 void AmB2BSession::clearRtpReceiverRelay() {

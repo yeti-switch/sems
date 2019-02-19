@@ -177,6 +177,9 @@ void AudioStreamData::initialize(AmB2BSession *session)
   stream->setRtpPing(session->getRtpPing());
   stream->setRtpRelayTimestampAligning(session->getRtpRelayTimestampAligning());
 
+  TransProt trsp = session->getMediaTransport();
+  if(TP_NONE!=trsp) stream->setTransport(trsp);
+
   if (session->getEnableDtmfRtpDetection())
     stream->force_receive_dtmf = true;
   force_symmetric_rtp = session->getRtpRelayForceSymmetricRtp();
