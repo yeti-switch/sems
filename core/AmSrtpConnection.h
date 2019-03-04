@@ -162,6 +162,7 @@ public:
 
     static void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
     static std::string gen_base64_key(srtp_profile_t profile);
+    static std::string gen_base64(unsigned int key_s_len);
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
     int on_data_recv(uint8_t* data, unsigned int* size, bool rtcp);

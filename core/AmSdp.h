@@ -34,6 +34,7 @@
 #include "AmPlugIn.h"
 #include "AmArg.h"
 #include <memory>
+#include "AmUtils.h"
 using std::string;
 
 
@@ -58,6 +59,10 @@ enum MediaType { MT_NONE=0, MT_AUDIO, MT_VIDEO, MT_APPLICATION, MT_TEXT, MT_MESS
 enum TransProt { TP_NONE=0, TP_RTPAVP, TP_RTPAVPF, TP_UDP, TP_RTPSAVP, TP_UDPTL, TP_RTPSAVPF, TP_UDPTLSRTPSAVP, TP_UDPTLSRTPSAVPF };
 /** srtp profile */
 enum CryptoProfile { CP_NONE=0, CP_AES128_CM_SHA1_80 = 1, CP_AES128_CM_SHA1_32 = 2, CP_F8128_HMAC_SHA1_80 = 4, CP_NULL_SHA1_80 = 5, CP_NULL_SHA1_32 = 6 };
+
+enum IceCandidateType { ICT_NONE = 0, ICT_HOST, ICT_SRFLX, ICT_PRFLX, ICT_RELAY }; 
+
+enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP };
 
 string transport_p_2_str(int tp);
 
@@ -159,6 +164,30 @@ struct SdpFingerPrint
     SdpFingerPrint(const SdpFingerPrint& fp) : hash(fp.hash), value(fp.value) {}
 };
 
+struct SdpIceCandidate
+{
+    string foundation;
+    unsigned int  comp_id;
+    IceCandidateTransport transport;
+    int priority;
+    SdpConnection conn;
+    IceCandidateType type;
+    SdpConnection rel_conn;
+    std::map<string, string> attrs;
+    
+    SdpIceCandidate() 
+        : foundation(int2str(rand())), comp_id(1)
+        , priority(1), transport(ICTR_UDP), type(ICT_HOST) {}
+    
+    SdpIceCandidate(const SdpIceCandidate& ic)
+        : foundation(ic.foundation), comp_id(ic.comp_id)
+        , transport(ic.transport), priority(ic.priority)
+        , conn(ic.conn), type(ic.type)
+        , rel_conn(ic.rel_conn), attrs(ic.attrs){}
+        
+    string print() const;
+};
+
 /** 
  * \brief sdp payload
  *
@@ -253,9 +282,15 @@ struct SdpMedia
   bool          has_mode_attribute;
 
   std::vector<SdpPayload> payloads;
-
+  /* rtp/savr transport attribute*/
   std::vector<SdpCrypto> crypto;
+  /* udp/tls/rtp/savr  transport attribute*/
   SdpFingerPrint fingerprint;
+  // ice attribute
+  bool is_ice;
+  string ice_pwd;
+  string ice_ufrag;
+  std::vector<SdpIceCandidate> ice_candidate;
 
   std::vector<SdpAttribute> attributes; // unknown attributes
 

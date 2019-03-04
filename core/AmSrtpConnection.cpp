@@ -1,6 +1,7 @@
 #include "AmSrtpConnection.h"
 #include "AmRtpStream.h"
 
+#include <algorithm>
 #include <botan/tls_client.h>
 #include <botan/tls_server.h>
 #include <botan/pkcs8.h>
@@ -351,14 +352,19 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
 
 std::string AmSrtpConnection::gen_base64_key(srtp_profile_t profile)
 {
-    unsigned int len = 0;
-    std::vector<uint8_t> data;
     unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
     master_key_len += srtp_profile_get_master_salt_length(profile);
-    while(len != master_key_len) {
+    return gen_base64(master_key_len);
+}
+
+std::string AmSrtpConnection::gen_base64(unsigned int key_s_len)
+{
+    unsigned int len = 0;
+    std::vector<uint8_t> data;
+    while(len != key_s_len) {
         const Botan::UUID random_uuid(*rand_generator_dtls::instance());
-        if(master_key_len < len + random_uuid.binary_value().size()) {
-            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (master_key_len - len));
+        if(key_s_len < len + random_uuid.binary_value().size()) {
+            data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (key_s_len - len));
         } else {
             data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().end());
         }
@@ -517,6 +523,7 @@ void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certi
     else
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
     
+    std::transform(fingerprint.hash.begin(), fingerprint.hash.end(), fingerprint.hash.begin(), static_cast<int(*)(int)>(std::toupper));
     if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
         throw Botan::Exception("fingerprint is not equal");
 }

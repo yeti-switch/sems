@@ -127,7 +127,7 @@ void RtspClient::parse_host_str(const string& host_port)
 
 size_t RtspClient::load_media_servers(cfg_t* cfg)
 {
-    for (unsigned int i = 0; i < cfg_size(cfg, PARAM_MEDIA_SERVERS_NAME); i++) {
+    for (size_t i = 0; i < cfg_size(cfg, PARAM_MEDIA_SERVERS_NAME); i++) {
         string host = cfg_getnstr(cfg, PARAM_MEDIA_SERVERS_NAME, i);
         parse_host_str(host);
     }

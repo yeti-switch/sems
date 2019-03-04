@@ -131,6 +131,26 @@ inline string profile_t_2_str(int pt)
     }
 }
 
+inline string transport_ice_2_str(int tp)
+{
+  switch(tp){
+  case ICTR_UDP: return "udp";
+  case ICTR_TCP: return "tcp";
+  default: return "<unknown transport type>";
+  }
+}
+
+inline string ice_candidate_2_str(int ic)
+{
+  switch(ic){
+  case ICT_HOST: return "host";
+  case ICT_PRFLX: return "prflx";
+  case ICT_SRFLX: return "srflx";
+  case ICT_RELAY: return "relay";
+  default: return "<unknown candidate type>";
+  }
+}
+
 bool SdpConnection::operator == (const SdpConnection& other) const
 {
     return network == other.network && addrType == other.addrType
@@ -202,6 +222,23 @@ string SdpCrypto::print() const
 CryptoProfile SdpCrypto::str2profile(string str)
 {
     return crypto_profile(str);
+}
+
+string SdpIceCandidate::print() const
+{
+    string data("a=candidate:");
+    data += foundation + " " + int2str(comp_id) + " ";
+    data += transport_ice_2_str(transport) + " ";
+    data += int2str(priority) + " " + conn.address + " ";
+    data += "typ " + ice_candidate_2_str(type);
+    if(type != ICT_HOST) {
+        data += " " + rel_conn.address;
+    }
+    for(auto attr : attrs) {
+        data += " " + attr.first + " " + attr.second;
+    }
+    data += CRLF;
+    return data;
 }
 
 string SdpAttribute::print() const
@@ -526,6 +563,14 @@ void AmSdp::print(string& body) const
         if(media_it->is_dtls_srtp() || media_it->is_simple_srtp())
             out_buf += "a=fingerprint:" + media_it->fingerprint.hash + " " + media_it->fingerprint.value + "\r\n";
 
+      if(media_it->is_ice) {
+          out_buf += "a=ice-pwd:" + media_it->ice_pwd + CRLF;
+          out_buf += "a=ice-ufrag:" + media_it->ice_ufrag + CRLF;
+          for (std::vector<SdpIceCandidate>::const_iterator c_it=
+                        media_it->ice_candidate.begin(); c_it != media_it->ice_candidate.end(); c_it++) {
+                out_buf += c_it->print();
+          }
+      }
         // "a=ptime:" line
         if(media_it->frame_size) {
             out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
@@ -1360,6 +1405,16 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
         size_t val_len = 0;
         next = skip_till_next_line(attr_line, val_len);
         media.fingerprint.value = string(attr_line, val_len);
+  } else if(attr == "ice-pwd") {
+    size_t val_len = 0;
+    next = skip_till_next_line(attr_line, val_len);
+    media.ice_pwd = string(attr_line, val_len);
+    media.is_ice = true;
+  } else if(attr == "ice-ufrag") {
+    size_t val_len = 0;
+    next = skip_till_next_line(attr_line, val_len);
+    media.ice_ufrag = string(attr_line, val_len);
+    media.is_ice = true;
     } else if (attr == "direction" ||
                attr == "setup")
     {

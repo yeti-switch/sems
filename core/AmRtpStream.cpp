@@ -73,6 +73,8 @@ using std::set;
 
 #define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF 1000
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
+#define ICE_PWD_SIZE    22
+#define ICE_UFRAG_SIZE  4
 
 static inline void add_if_no_exist(std::vector<int> &v,int payload)
 {
@@ -928,6 +930,26 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         answer.fingerprint.value = fp.value;
         answer.setup = SdpMedia::DirPassive;
         answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
+        if(offer.is_ice) {
+            answer.is_ice = true;
+            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+            answer.ice_pwd.clear();
+            answer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+            data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+            answer.ice_ufrag.clear();
+            answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+            SdpIceCandidate candidate;
+            sockaddr_storage addr = l_saddr;
+            if(l_saddr.ss_family == AF_INET) {
+                candidate.conn.addrType = AT_V4;
+                memcpy(&candidate.conn.ipv4, &l_saddr, sizeof(struct sockaddr_in));
+            } else {
+                candidate.conn.addrType = AT_V6;
+                memcpy(&candidate.conn.ipv6, &l_saddr, sizeof(struct sockaddr_in6));
+            }
+            candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
+            answer.ice_candidate.push_back(candidate);
+        }
     }
 }
 
