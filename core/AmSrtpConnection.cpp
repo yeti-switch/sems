@@ -275,11 +275,12 @@ bool AmSrtpConnection::isRtpPacket(uint8_t* data, unsigned int size)
     return false;
 }
 
-void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
+void AmSrtpConnection::use_dtls(dtls_client_settings* settings, const srtp_fingerprint_p& fp)
 {
     if(rtp_mode == DTLS_SRTP_SERVER) {
         return;
     }
+    fingerprint = fp;
     rtp_mode = DTLS_SRTP_CLIENT;
     try {
         dtls_settings.reset(new dtls_conf(settings));
@@ -292,11 +293,12 @@ void AmSrtpConnection::use_dtls(dtls_client_settings* settings)
     create_dtls();
 }
 
-void AmSrtpConnection::use_dtls(dtls_server_settings* settings)
+void AmSrtpConnection::use_dtls(dtls_server_settings* settings, const srtp_fingerprint_p& fp)
 {
     if(rtp_mode == DTLS_SRTP_SERVER) {
         return;
     }
+    fingerprint = fp;
     rtp_mode = DTLS_SRTP_SERVER;
     try {
         dtls_settings.reset(new dtls_conf(settings));
@@ -363,6 +365,13 @@ std::string AmSrtpConnection::gen_base64_key(srtp_profile_t profile)
         len = data.size();
     }
     return Botan::base64_encode(data);
+}
+
+srtp_fingerprint_p AmSrtpConnection::gen_fingerprint(class dtls_settings* settings)
+{
+    Botan::X509_Certificate cert(settings->certificate);
+    std::string hash("SHA-256");
+    return srtp_fingerprint_p(hash, cert.fingerprint(hash));
 }
 
 int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
@@ -502,9 +511,12 @@ void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certi
         (dtls_settings->s_server && !dtls_settings->s_server->verify_client_certificate)) {
         return;
     }
-
+    
     if(dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_cn)
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
     else
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
+    
+    if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
+        throw Botan::Exception("fingerprint is not equal");
 }

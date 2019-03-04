@@ -102,6 +102,26 @@ public:
     srtp_master_key_t master_key;
 };
 
+class srtp_fingerprint_p
+{
+public:
+    bool is_use;
+    std::string hash;
+    std::string value;
+    
+    srtp_fingerprint_p()
+    : is_use(false){}
+    srtp_fingerprint_p(const std::string& hash_, const std::string& value_)
+    : is_use(value_.size() &&  hash_.size()), hash(hash_),value(value_){}
+    srtp_fingerprint_p(const srtp_fingerprint_p& fa)
+    : is_use(fa.is_use), hash(fa.hash),value(fa.value){}
+    
+    void operator=(const srtp_fingerprint_p& fa) {
+        is_use = fa.is_use;
+        hash = fa.hash;
+        value = fa.value;
+    }
+};
 
 class AmSrtpConnection : public Botan::TLS::Callbacks
 {
@@ -120,6 +140,7 @@ private:
     unsigned char  c_key_r[SRTP_KEY_SIZE];
     bool b_init[2];
     srtp_profile_t srtp_profile;
+    srtp_fingerprint_p fingerprint;
     srtp_t srtp_s_session;
     srtp_t srtp_r_session;
 
@@ -135,12 +156,13 @@ public:
     ~AmSrtpConnection();
 
     RTP_mode get_rtp_mode() { return rtp_mode; }
-    void use_dtls(dtls_client_settings* settings);
-    void use_dtls(dtls_server_settings* settings);
+    void use_dtls(dtls_client_settings* settings, const srtp_fingerprint_p& fingerprint);
+    void use_dtls(dtls_server_settings* settings, const srtp_fingerprint_p& fingerprint);
     void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);
 
     static void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
     static std::string gen_base64_key(srtp_profile_t profile);
+    static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
     int on_data_recv(uint8_t* data, unsigned int* size, bool rtcp);
     bool on_data_send(uint8_t* data, unsigned int* size, bool rtcp);

@@ -880,7 +880,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     payload_provider->getPayloads(offer.payloads);
     if(transport != RTP_AVP && !srtp_enable) {
         offer.transport = RTP_AVP;
-    } else if(transport == RTP_SAVP) {
+    } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -892,7 +892,10 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
             offer.crypto.push_back(crypto);
             offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else if(transport == RTP_UDPTLSAVP){
+    } else if(transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF){
+        srtp_fingerprint_p fp = AmSrtpConnection::gen_fingerprint(&server_settings);
+        offer.fingerprint.hash = fp.hash;
+        offer.fingerprint.value = fp.value;
         offer.setup = SdpMedia::DirPassive;
     }
 }
@@ -905,7 +908,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     offer.calcAnswer(payload_provider,answer);
     if(transport != RTP_AVP && !srtp_enable) {
         answer.transport = RTP_AVP;
-    } else if(transport == RTP_SAVP) {
+    } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         for(auto profile : srtp_profiles) {
@@ -916,7 +919,14 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         if(answer.crypto.back().keys.empty()) {
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
-    } else if(transport == RTP_UDPTLSAVP) {
+    } else if(transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF) {
+        dtls_settings* settings = (offer.setup == SdpMedia::DirActive) ?
+                                                    (dtls_settings*)(&server_settings) :
+                                                    (dtls_settings*)(&client_settings);
+        srtp_fingerprint_p fp = AmSrtpConnection::gen_fingerprint(settings);
+        answer.fingerprint.hash = fp.hash;
+        answer.fingerprint.value = fp.value;
+        answer.setup = SdpMedia::DirPassive;
         answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
     }
 }
@@ -1099,17 +1109,17 @@ int AmRtpStream::init(const AmSdp& local,
     CLASS_DBG("local setup = %u, remote setup = %u",
         local_media.setup, remote_media.setup);
 
-    if(local_media.transport == TP_UDPTLSRTPSAVP && AmConfig.enable_srtp) {
+    if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
         if((local_media.setup == SdpMedia::DirActive && remote_media.setup != SdpMedia::DirActive) ||
            (remote_media.setup == SdpMedia::DirPassive && local_media.setup != SdpMedia::DirPassive))
-            createSrtpConnection(false);
+            createSrtpConnection(false, remote_media.fingerprint);
         else if((local_media.setup == SdpMedia::DirPassive && remote_media.setup != SdpMedia::DirPassive) ||
                 (remote_media.setup == SdpMedia::DirActive && local_media.setup != SdpMedia::DirActive))
-            createSrtpConnection(true);
+            createSrtpConnection(true, remote_media.fingerprint);
         else
             CLASS_ERROR("dtls setup in sdp attribute not negitiate");
     }
-    else if(local_media.transport == TP_RTPSAVP && AmConfig.enable_srtp) {
+    else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
         CryptoProfile cprofile = CP_NONE;
         if(local_media.crypto.size() == 1) {
             cprofile = local_media.crypto[0].profile;
@@ -1199,14 +1209,15 @@ int AmRtpStream::init(const AmSdp& local,
     return 0;
 }
 
-void AmRtpStream::createSrtpConnection(bool dtls_server)
+void AmRtpStream::createSrtpConnection(bool dtls_server, const SdpFingerPrint& fp)
 {
+    srtp_fingerprint_p fingerprint(fp.hash, fp.value);
     if(dtls_server) {
-        srtp_connection->use_dtls(&server_settings);
-        srtcp_connection->use_dtls(&server_settings);
+        srtp_connection->use_dtls(&server_settings, fingerprint);
+        srtcp_connection->use_dtls(&server_settings, fingerprint);
     } else {
-        srtp_connection->use_dtls(&client_settings);
-        srtcp_connection->use_dtls(&client_settings);
+        srtp_connection->use_dtls(&client_settings, fingerprint);
+        srtcp_connection->use_dtls(&client_settings, fingerprint);
     }
 }
 

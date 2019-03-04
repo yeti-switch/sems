@@ -523,6 +523,9 @@ void AmSdp::print(string& body) const
             out_buf += c_it->print();
         }
 
+        if(media_it->is_dtls_srtp() || media_it->is_simple_srtp())
+            out_buf += "a=fingerprint:" + media_it->fingerprint.hash + " " + media_it->fingerprint.value + "\r\n";
+
         // "a=ptime:" line
         if(media_it->frame_size) {
             out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
@@ -1350,6 +1353,13 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
             attr_line = next;
         } //while(attr_line < line_end)
         media.crypto.push_back(crypto);
+    } else if(attr == "fingerprint") {
+        next = parse_until(attr_line, line_end, ' ');
+        media.fingerprint.hash = string(attr_line, int(next-attr_line)-1);
+        attr_line = next;
+        size_t val_len = 0;
+        next = skip_till_next_line(attr_line, val_len);
+        media.fingerprint.value = string(attr_line, val_len);
     } else if (attr == "direction" ||
                attr == "setup")
     {

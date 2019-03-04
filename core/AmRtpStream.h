@@ -297,7 +297,9 @@ class AmRtpStream
     {
         RTP_AVP = TransProt::TP_RTPAVP,
         RTP_SAVP = TransProt::TP_RTPSAVP,
-        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP
+        RTP_SAVPF = TransProt::TP_RTPSAVPF,
+        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP,
+        RTP_UDPTLSAVPF = TransProt::TP_UDPTLSRTPSAVPF
     } transport;
 
     /**  srtp connection mode */
@@ -629,7 +631,7 @@ class AmRtpStream
     */
     virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
-    void createSrtpConnection(bool dtls_server);
+    void createSrtpConnection(bool dtls_server, const SdpFingerPrint& fp);
 
     /** set the RTP stream on hold */
     void setOnHold(bool on_hold);

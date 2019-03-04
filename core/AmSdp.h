@@ -150,6 +150,15 @@ struct SdpCrypto
     static CryptoProfile str2profile(string str);
 };
 
+struct SdpFingerPrint
+{
+    string hash;
+    string value;
+    
+    SdpFingerPrint(){}
+    SdpFingerPrint(const SdpFingerPrint& fp) : hash(fp.hash), value(fp.value) {}
+};
+
 /** 
  * \brief sdp payload
  *
@@ -246,6 +255,7 @@ struct SdpMedia
   std::vector<SdpPayload> payloads;
 
   std::vector<SdpCrypto> crypto;
+  SdpFingerPrint fingerprint;
 
   std::vector<SdpAttribute> attributes; // unknown attributes
 
@@ -276,6 +286,16 @@ struct SdpMedia
 		  SdpMedia& answer) const;
 
   void set_mode_if_missed(bool _send, bool _recv);
+  
+  bool is_dtls_srtp() const {
+      return transport == TP_UDPTLSRTPSAVP ||
+             transport == TP_UDPTLSRTPSAVPF;
+  }
+  
+  bool is_simple_srtp() const {
+      return transport == TP_RTPSAVP ||
+             transport == TP_RTPSAVPF;
+  }
 };
 
 /**
