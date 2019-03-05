@@ -292,6 +292,13 @@ class AmRtpStream
     bool           passive;
     bool           passive_rtcp;
 
+    /**type of rtp init state**/
+    enum RtpInit
+    {
+        RTP_DEFAULT,
+        ICE_CHECK
+    } init_state;
+    
     /**type of rtp transport**/
     enum MediaTransport
     {

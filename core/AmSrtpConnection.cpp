@@ -250,6 +250,13 @@ AmSrtpConnection::~AmSrtpConnection()
 
 void AmSrtpConnection::create_dtls()
 {
+    if(rtp_mode != DTLS_SRTP_SERVER && rtp_mode != DTLS_SRTP_CLIENT){
+        ERROR("don't create dtls connection: incorrect rtp mode");
+        return;
+    }
+    if(dtls_channel) {
+        return;
+    }
     try {
         if(rtp_mode == DTLS_SRTP_CLIENT) {
            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
@@ -290,8 +297,6 @@ void AmSrtpConnection::use_dtls(dtls_client_settings* settings, const srtp_finge
                         exc.what());
         return;
     }
-
-    create_dtls();
 }
 
 void AmSrtpConnection::use_dtls(dtls_server_settings* settings, const srtp_fingerprint_p& fp)
@@ -308,7 +313,6 @@ void AmSrtpConnection::use_dtls(dtls_server_settings* settings, const srtp_finge
                         exc.what());
         return;
     }
-    create_dtls();
 }
 
 void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len)
@@ -426,7 +430,6 @@ int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
 
 bool AmSrtpConnection::on_data_send(uint8_t* data, unsigned int* size, bool rtcp)
 {
-
     if(!b_init[0] && rtp_mode == SRTP_EXTERNAL_KEY) {
         CLASS_INFO("create srtp stream for sending stream");
         srtp_policy_t policy;

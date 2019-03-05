@@ -681,6 +681,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
     srtcp_connection(new AmSrtpConnection(this, true)),
+    init_state(RTP_DEFAULT),
     transport(RTP_AVP),
     srtp_enable(true)
 {
@@ -898,7 +899,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         srtp_fingerprint_p fp = AmSrtpConnection::gen_fingerprint(&server_settings);
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
-        offer.setup = SdpMedia::DirPassive;
+        offer.setup = SdpMedia::SetupActPass;
     }
 }
 
@@ -922,14 +923,17 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
     } else if(transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF) {
-        dtls_settings* settings = (offer.setup == SdpMedia::DirActive) ?
+        dtls_settings* settings = (offer.setup == SdpMedia::SetupActive) ?
                                                     (dtls_settings*)(&server_settings) :
                                                     (dtls_settings*)(&client_settings);
         srtp_fingerprint_p fp = AmSrtpConnection::gen_fingerprint(settings);
         answer.fingerprint.hash = fp.hash;
         answer.fingerprint.value = fp.value;
-        answer.setup = SdpMedia::DirPassive;
-        answer.setup = (offer.setup == SdpMedia::DirActive) ? SdpMedia::DirPassive : SdpMedia::DirActive;
+        answer.setup = SdpMedia::SetupPassive;
+        if(offer.setup == SdpMedia::SetupPassive)
+            answer.setup = SdpMedia::SetupActive;
+        if(offer.setup == SdpMedia::SetupHold)
+            throw AmSession::Exception(488,"hold connections");
         if(offer.is_ice) {
             answer.is_ice = true;
             string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
@@ -1127,14 +1131,10 @@ int AmRtpStream::init(const AmSdp& local,
         local_media.setup, remote_media.setup);
 
     if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
-        if((local_media.setup == SdpMedia::DirActive && remote_media.setup != SdpMedia::DirActive) ||
-           (remote_media.setup == SdpMedia::DirPassive && local_media.setup != SdpMedia::DirPassive))
+        if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive)
             createSrtpConnection(false, remote_media.fingerprint);
-        else if((local_media.setup == SdpMedia::DirPassive && remote_media.setup != SdpMedia::DirPassive) ||
-                (remote_media.setup == SdpMedia::DirActive && local_media.setup != SdpMedia::DirActive))
+        else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive)
             createSrtpConnection(true, remote_media.fingerprint);
-        else
-            CLASS_ERROR("dtls setup in sdp attribute not negitiate");
     }
     else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
         CryptoProfile cprofile = CP_NONE;
@@ -1177,6 +1177,13 @@ int AmRtpStream::init(const AmSdp& local,
 
         srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
         srtcp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
+    }
+    
+    if(local_media.is_dtls_srtp() && !remote_media.is_use_ice()) {
+        srtp_connection->create_dtls();
+        srtcp_connection->create_dtls();
+    } else if(remote_media.is_use_ice()) {
+        init_state = ICE_CHECK;
     }
 
     CLASS_DBG("recv = %d, send = %d",

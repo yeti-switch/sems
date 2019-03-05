@@ -149,13 +149,13 @@ private:
     auto_ptr<dtls_conf> dtls_settings;
     bool b_srtcp;
 protected:
-    void create_dtls();
     bool isRtpPacket(uint8_t* data, unsigned int size);
 public:
     AmSrtpConnection(AmRtpStream* stream, bool srtcp);
     ~AmSrtpConnection();
 
     RTP_mode get_rtp_mode() { return rtp_mode; }
+    void create_dtls();
     void use_dtls(dtls_client_settings* settings, const srtp_fingerprint_p& fingerprint);
     void use_dtls(dtls_server_settings* settings, const srtp_fingerprint_p& fingerprint);
     void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);

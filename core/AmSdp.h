@@ -266,6 +266,12 @@ struct SdpMedia
     DirPassive=2,
     DirUndefined=3
   };
+  enum Setup {
+    SetupHold=0,
+    SetupActive=1,
+    SetupPassive=2,
+    SetupActPass=3
+  };
 
   int           type;
   unsigned int  port;
@@ -274,7 +280,7 @@ struct SdpMedia
   int           frame_size;
   SdpConnection conn; // c=
   Direction     dir;  // a=direction
-  Direction     setup;
+  Setup         setup;
   string        fmt;  // format in case proto != RTP/AVP or RTP/SAVP
 
   // sendrecv|sendonly|recvonly|inactive
@@ -299,10 +305,12 @@ struct SdpMedia
 
   SdpMedia()
     : type(MT_NONE),
+      port(0),
+      nports(0),
       transport(TP_NONE),
       frame_size(20),
       dir(DirUndefined),
-      setup(DirUndefined),
+      setup(SetupActPass),
       send(true),
       recv(true),
       has_mode_attribute(false),
@@ -332,6 +340,10 @@ struct SdpMedia
   bool is_simple_srtp() const {
       return transport == TP_RTPSAVP ||
              transport == TP_RTPSAVPF;
+  }
+  
+  bool is_use_ice() const {
+      return is_ice;
   }
 };
 

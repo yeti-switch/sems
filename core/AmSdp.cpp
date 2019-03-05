@@ -622,10 +622,10 @@ void AmSdp::print(string& body) const
         }
 
         switch (media_it->setup) {
-            case SdpMedia::DirActive:  out_buf += "a=setup:active\r\n"; break;
-            case SdpMedia::DirPassive: out_buf += "a=setup:passive\r\n"; break;
-            case SdpMedia::DirBoth:
-            case SdpMedia::DirUndefined: break;
+            case SdpMedia::SetupActive:  out_buf += "a=setup:active\r\n"; break;
+            case SdpMedia::SetupPassive: out_buf += "a=setup:passive\r\n"; break;
+            case SdpMedia::SetupActPass:
+            case SdpMedia::SetupHold: break;
         }
     }
 
@@ -1434,29 +1434,38 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     media.is_ice = true;
   } else if(attr == "candidate") {
     next = parse_ice_candidate(&media, attr_line);
-  } else if (attr == "direction" ||
-            attr == "setup") {
+  } else if (attr == "setup") {
     if (parsing) {
       size_t dir_len = 0;
       next = skip_till_next_line(attr_line, dir_len);
       string value(attr_line, dir_len);
       if (value == "active") {
-          if(attr == "direction")
-            media.dir=SdpMedia::DirActive;
-          else
-            media.setup=SdpMedia::DirActive;
+        media.setup=SdpMedia::SetupActive;
+      } else if (value == "passive") {
+        media.setup=SdpMedia::SetupPassive;
+      } else if (attr == "actpass") {
+        media.setup=SdpMedia::SetupActPass;
+      } else if (attr == "holdconn") {
+        media.setup=SdpMedia::SetupHold;
+      } else {
+            DBG("found unknown value for media attribute 'setup'\n");
+      }
+    } else {
+      DBG("ignoring direction attribute without value\n");
+    }
+  } else if (attr == "direction") {
+    if (parsing) {
+      size_t dir_len = 0;
+      next = skip_till_next_line(attr_line, dir_len);
+      string value(attr_line, dir_len);
+      if (value == "active") {
+        media.dir=SdpMedia::DirActive;
 	// DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (value == "passive") {
-          if(attr == "direction")
-            media.dir=SdpMedia::DirPassive;
-          else
-            media.setup=SdpMedia::DirPassive;
+        media.dir=SdpMedia::DirPassive;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else if (attr == "both") {
-          if(attr == "direction")
             media.dir=SdpMedia::DirBoth;
-          else
-            media.setup=SdpMedia::DirBoth;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else {
 	DBG("found unknown value for media attribute 'direction'\n");
