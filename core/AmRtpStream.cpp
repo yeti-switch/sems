@@ -940,13 +940,8 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
             answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
             SdpIceCandidate candidate;
             sockaddr_storage addr = l_saddr;
-            if(l_saddr.ss_family == AF_INET) {
-                candidate.conn.addrType = AT_V4;
-                memcpy(&candidate.conn.ipv4, &l_saddr, sizeof(struct sockaddr_in));
-            } else {
-                candidate.conn.addrType = AT_V6;
-                memcpy(&candidate.conn.ipv6, &l_saddr, sizeof(struct sockaddr_in6));
-            }
+            candidate.conn.network = NT_IN;
+            candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
             candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
             answer.ice_candidate.push_back(candidate);
         }

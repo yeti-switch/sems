@@ -48,6 +48,7 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s);
 static char* parse_sdp_connection(AmSdp* sdp_msg, char* s, char t);
 static void parse_sdp_media(AmSdp* sdp_msg, char* s);
 static char* parse_sdp_attr(AmSdp* sdp_msg, char* s);
+static char* parse_ice_candidate(SdpMedia* media, char* s);
 static void parse_sdp_origin(AmSdp* sdp_masg, char* s);
 
 inline char* get_next_line(char* s);
@@ -68,6 +69,7 @@ enum sdp_connection_st {NET_TYPE, ADDR_TYPE, IP4, IP6};
 enum sdp_media_st {MEDIA, PORT, PROTO, FMT}; 
 enum sdp_attr_rtpmap_st {TYPE, ENC_NAME, CLK_RATE, ENC_PARAM};
 enum sdp_attr_crypto_st {TAG, PROFILE, KEY, SESS_PARAM};
+enum sdp_attr_candidate_st {FND, COMPID, TRANSPORT, PRIORITY, CADDR, CPORT, CTYPE, RADDR, RPORT, ATTR_NAME, ATTR_VALUE};
 enum sdp_attr_fmtp_st {FORMAT, FORMAT_PARAM};
 enum sdp_origin_st {USER, ID, VERSION_ST, NETTYPE, ADDR, UNICAST_ADDR};
 
@@ -239,6 +241,21 @@ string SdpIceCandidate::print() const
     }
     data += CRLF;
     return data;
+}
+
+IceCandidateType SdpIceCandidate::str2type(string str)
+{
+    if(str == "host") {
+        return ICT_HOST;
+    } else if(str == "prflx") {
+        return ICT_PRFLX;
+    } else if(str == "srflx") {
+        return ICT_SRFLX;
+    } else if(str == "relay") {
+        return ICT_RELAY;
+    } else {
+        return ICT_NONE;
+    }
 }
 
 string SdpAttribute::print() const
@@ -1415,58 +1432,59 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     next = skip_till_next_line(attr_line, val_len);
     media.ice_ufrag = string(attr_line, val_len);
     media.is_ice = true;
-    } else if (attr == "direction" ||
-               attr == "setup")
-    {
-        if (parsing) {
-            size_t dir_len = 0;
-            next = skip_till_next_line(attr_line, dir_len);
-            string value(attr_line, dir_len);
-            if (value == "active") {
-                if(attr == "direction")
-                    media.dir=SdpMedia::DirActive;
-                else
-                    media.setup=SdpMedia::DirActive;
-                // DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-            } else if (value == "passive") {
-                if(attr == "direction")
-                    media.dir=SdpMedia::DirPassive;
-                else
-                    media.setup=SdpMedia::DirPassive;
-                //DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-            } else if (attr == "both") {
-                if(attr == "direction")
-                    media.dir=SdpMedia::DirBoth;
-                else
-                    media.setup=SdpMedia::DirBoth;
-                //DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-            } else {
-                DBG("found unknown value for media attribute 'direction'\n");
-            }
-        } else {
-            DBG("ignoring direction attribute without value\n");
-        }
-    } else if (attr == sendrecv) {
-        media.send = true;
-        media.recv = true;
-        media.has_mode_attribute = true;
-    } else if (attr == sendonly) {
-        media.send = true;
-        media.recv = false;
-        media.has_mode_attribute = true;
-    } else if (attr == recvonly) {
-        media.send = false;
-        media.recv = true;
-        media.has_mode_attribute = true;
-    } else if (attr == inactive) {
-        media.send = false;
-        media.recv = false;
-        media.has_mode_attribute = true;
-    } else if (attr == ptime) {
-        size_t attr_len = 0;
-        string value;
-        next = skip_till_next_line(attr_line, attr_len);
-        value = string (attr_line, attr_len);
+  } else if(attr == "candidate") {
+    next = parse_ice_candidate(&media, attr_line);
+  } else if (attr == "direction" ||
+            attr == "setup") {
+    if (parsing) {
+      size_t dir_len = 0;
+      next = skip_till_next_line(attr_line, dir_len);
+      string value(attr_line, dir_len);
+      if (value == "active") {
+          if(attr == "direction")
+            media.dir=SdpMedia::DirActive;
+          else
+            media.setup=SdpMedia::DirActive;
+	// DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
+      } else if (value == "passive") {
+          if(attr == "direction")
+            media.dir=SdpMedia::DirPassive;
+          else
+            media.setup=SdpMedia::DirPassive;
+	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
+      } else if (attr == "both") {
+          if(attr == "direction")
+            media.dir=SdpMedia::DirBoth;
+          else
+            media.setup=SdpMedia::DirBoth;
+	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
+      } else {
+	DBG("found unknown value for media attribute 'direction'\n");
+      }
+    } else {
+      DBG("ignoring direction attribute without value\n");
+    }
+  } else if (attr == sendrecv) {
+    media.send = true;
+    media.recv = true;
+    media.has_mode_attribute = true;
+  } else if (attr == sendonly) {
+    media.send = true;
+    media.recv = false;
+    media.has_mode_attribute = true;
+  } else if (attr == recvonly) {
+    media.send = false;
+    media.recv = true;
+    media.has_mode_attribute = true;
+  } else if (attr == inactive) {
+    media.send = false;
+    media.recv = false;
+    media.has_mode_attribute = true;
+  } else if (attr == ptime) {
+    size_t attr_len = 0;
+    string value;
+    next = skip_till_next_line(attr_line, attr_len);
+    value = string (attr_line, attr_len);
     str2int(value, media.frame_size);
   } else {
     attr_check(attr);
@@ -1485,6 +1503,140 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     media.attributes.push_back(SdpAttribute(attr, value));
   }
   return line_end;
+}
+
+static char* parse_ice_candidate(SdpMedia* media, char* s)
+{
+    SdpIceCandidate candidate;
+    sdp_attr_candidate_st cd_st = FND;
+    size_t line_len;
+    int idata;
+    char *line_end = skip_till_next_line(s, line_len), *next = s, *param = s;
+    int parsing = 1;
+    string data, attr;
+    while(parsing) {
+        next = parse_until(param, line_end, ' ');
+        if(param == next) {
+            break;
+        }
+        switch(cd_st) {
+            case FND:
+                candidate.foundation = string(param, int(next-param)-1);
+                cd_st = COMPID;
+                break;
+            case COMPID:
+                data = string(param, int(next-param)-1);
+                if(!str2int(data, (int&)candidate.comp_id)) {
+                    ERROR("invalid component id of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                cd_st = TRANSPORT;
+                break;
+            case TRANSPORT:
+                data = string(param, int(next-param)-1);
+                if(data == "tcp") {
+                    candidate.transport = ICTR_TCP;
+                } else if(data == "udp") {
+                    candidate.transport = ICTR_UDP;
+                } else {
+                    ERROR("invalid transport of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                cd_st = PRIORITY;
+                break;
+            case PRIORITY:
+                data = string(param, int(next-param)-1);
+                if(!str2int(data, (int&)candidate.priority)) {
+                    ERROR("invalid priority of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                cd_st = CADDR;
+                break;
+            case CADDR:
+            case RADDR:
+                data = string(param, int(next-param)-1);
+                if(cd_st == RADDR && data == "raddr") {
+                    break;
+                }
+                if(cd_st == CADDR)
+                    candidate.conn.network = NT_IN;
+                else if(cd_st == RADDR)
+                    candidate.rel_conn.network = NT_IN;
+                if(data.find_first_of(":") != string::npos) {
+                    if(cd_st == CADDR)
+                        candidate.conn.addrType = AT_V6;
+                    else if(cd_st == RADDR)
+                        candidate.rel_conn.addrType = AT_V6;
+                } else if(data.find_first_of(".") != string::npos) {
+                    if(cd_st == CADDR)
+                        candidate.conn.addrType = AT_V4;
+                    else if(cd_st == RADDR)
+                        candidate.rel_conn.addrType = AT_V4;
+                } else {
+                    ERROR("invalid address of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                attr = data + " ";
+                cd_st = (cd_st == CADDR) ? CPORT : RPORT;
+                break;
+            case CPORT:
+            case RPORT:
+                data = string(param, int(next-param)-1);
+                if(cd_st == RPORT && data == "rport") {
+                    break;
+                }
+                if(!str2int(data, idata)) {
+                    ERROR("invalid port of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                attr += data;
+                if(cd_st == CPORT)
+                    candidate.conn.address = attr;
+                else if(cd_st == RPORT)
+                    candidate.rel_conn.address = attr;
+                cd_st = (cd_st == CPORT) ? CTYPE : ATTR_NAME;
+                break;
+            case CTYPE:
+                data = string(param, int(next-param)-1);
+                if(data != "typ") {
+                    ERROR("invalid argument of ice candidate attribute %s must be \'typ\'", data.c_str());
+                    parsing = 0;
+                    break;
+                }
+                param = next;
+                next = parse_until(param, line_end, ' ');
+                if(next != param) {
+                    data = string(param, int(next-param)-1);
+                }
+                candidate.type = SdpIceCandidate::str2type(data);
+                if(candidate.type == ICT_NONE) {
+                    ERROR("invalid candidate type of ice candidate attribute %s", data.c_str());
+                    parsing = 0;
+                } else if(candidate.type == ICT_HOST) {
+                    cd_st = ATTR_NAME;
+                } else {
+                    cd_st = RADDR;
+                }
+                break;
+            case ATTR_NAME:
+                attr = string(param, next);
+                cd_st = ATTR_VALUE;
+                break;
+            case ATTR_VALUE:
+                data = string(param, int(next-param)-1);
+                candidate.attrs.insert(std::make_pair(attr, data));
+                cd_st = ATTR_NAME;
+                break;
+        }
+        param = next;
+    }
+    media->ice_candidate.push_back(candidate);
+    return line_end;
 }
 
 static void parse_sdp_origin(AmSdp* sdp_msg, char* s)

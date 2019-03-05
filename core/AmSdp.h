@@ -186,6 +186,7 @@ struct SdpIceCandidate
         , rel_conn(ic.rel_conn), attrs(ic.attrs){}
         
     string print() const;
+    static IceCandidateType str2type(string str);
 };
 
 /** 
@@ -304,7 +305,8 @@ struct SdpMedia
       setup(DirUndefined),
       send(true),
       recv(true),
-      has_mode_attribute(false)
+      has_mode_attribute(false),
+      is_ice(false)
   {}
 
   /** pretty print */
