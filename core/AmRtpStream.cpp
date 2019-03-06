@@ -1843,6 +1843,68 @@ string AmRtpStream::getPayloadName(int payload_type)
     return string("");
 }
 
+void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_address)
+{
+    CLASS_DBG("replaceAudioMediaParameters() relay_address: %s",
+              relay_address.c_str());
+
+    if(!hasLocalSocket()) {
+        setLocalIP(relay_address);
+    }
+    m.port = static_cast<unsigned int>(getLocalPort());
+    //replace rtcp attribute
+    for(auto &a : m.attributes) {
+        try {
+            if (a.attribute == "rtcp") {
+                RtcpAddress addr(a.value);
+                addr.setPort(getLocalRtcpPort());
+                if (addr.hasAddress()) addr.setAddress(relay_address);
+                a.value = addr.print();
+            }
+        } catch (const std::exception &e) {
+            DBG("can't replace RTCP address: %s\n", e.what());
+        }
+    }
+
+    //ensure correct crypto parameters
+    m.crypto.clear();
+    m.dir = SdpMedia::DirUndefined;
+
+    switch(static_cast<int>(transport)) {
+    case RTP_AVP:
+        break;
+    case RTP_SAVP:
+    case RTP_UDPTLSAVP:
+        if(!srtp_enable) {
+            CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
+                       AmConfig.media_ifs[l_if].name.c_str());
+            transport = RTP_AVP;
+        }
+        break;
+    default:
+        CLASS_WARN("unsupported transport id: %d. failover to RTPAVP profile",transport);
+        transport = RTP_AVP;
+        break;
+    }
+
+    m.transport = transport;
+    if(RTP_SAVP == transport) {
+        for(auto profile : srtp_profiles) {
+            SdpCrypto crypto;
+            crypto.tag = 1;
+            crypto.profile = profile;
+            std::string key = AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile);
+            if(key.empty()) {
+                continue;
+            }
+            m.crypto.push_back(crypto);
+            m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
+        }
+    } else if(RTP_UDPTLSAVP == transport) {
+        m.setup = SdpMedia::DirPassive;
+    }
+}
+
 void AmRtpStream::payloads_id2str(const std::vector<int> i, std::vector<string> &s)
 {
     std::vector<int>::const_iterator it = i.begin();

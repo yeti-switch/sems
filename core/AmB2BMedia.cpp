@@ -919,13 +919,9 @@ void AmB2BMedia::replaceConnectionAddress(
                 }
                 try {
                     if (a_leg) {
-                        audio_stream_it->a.setLocalIP(relay_address);
-                        it->port = static_cast<unsigned int>(audio_stream_it->a.getLocalPort());
-                        replaceRtcpAttr(*it, relay_address, audio_stream_it->a.getLocalRtcpPort());
+                        audio_stream_it->a.replaceAudioMediaParameters(*it, relay_address);
                     } else {
-                        audio_stream_it->b.setLocalIP(relay_address);
-                        it->port = static_cast<unsigned int>(audio_stream_it->b.getLocalPort());
-                        replaceRtcpAttr(*it, relay_address, audio_stream_it->b.getLocalRtcpPort());
+                        audio_stream_it->b.replaceAudioMediaParameters(*it, relay_address);
                     }
                     if(!replaced_ports.empty()) replaced_ports += "/";
                     replaced_ports += int2str(it->port);
