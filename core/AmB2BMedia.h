@@ -196,6 +196,10 @@ class AudioStreamData {
       else return 0; 
     }
 
+    void replaceAudioMediaParameters(SdpMedia &m, const string& relay_address) {
+      if(stream) stream->replaceAudioMediaParameters(m, relay_address);
+    }
+
     int getLocalRtcpPort() {
       if (stream) return stream->getLocalRtcpPort();
       else return 0;
