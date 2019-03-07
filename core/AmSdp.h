@@ -60,7 +60,7 @@ enum TransProt { TP_NONE=0, TP_RTPAVP, TP_RTPAVPF, TP_UDP, TP_RTPSAVP, TP_UDPTL,
 /** srtp profile */
 enum CryptoProfile { CP_NONE=0, CP_AES128_CM_SHA1_80 = 1, CP_AES128_CM_SHA1_32 = 2, CP_F8128_HMAC_SHA1_80 = 4, CP_NULL_SHA1_80 = 5, CP_NULL_SHA1_32 = 6 };
 
-enum IceCandidateType { ICT_NONE = 0, ICT_HOST, ICT_SRFLX, ICT_PRFLX, ICT_RELAY }; 
+enum IceCandidateType { ICT_NONE = 0, ICT_HOST = 0x7E, ICT_SRFLX = 0x64, ICT_PRFLX = 0x5A, ICT_RELAY = 0x40 }; // see rfc5245 4.1.2.1
 
 enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP };
 
@@ -177,7 +177,8 @@ struct SdpIceCandidate
     
     SdpIceCandidate() 
         : foundation(int2str(rand())), comp_id(1)
-        , priority(1), transport(ICTR_UDP), type(ICT_HOST) {}
+        , priority((ICT_HOST << 24) | ((rand() << 16) >> 8) | (256 - comp_id)) // see rfc5245 4.1.2.1
+        , transport(ICTR_UDP), type(ICT_HOST) {}
     
     SdpIceCandidate(const SdpIceCandidate& ic)
         : foundation(ic.foundation), comp_id(ic.comp_id)
@@ -270,7 +271,8 @@ struct SdpMedia
     SetupHold=0,
     SetupActive=1,
     SetupPassive=2,
-    SetupActPass=3
+    SetupActPass=3,
+    SetupUndefined=4
   };
 
   int           type;
@@ -310,7 +312,7 @@ struct SdpMedia
       transport(TP_NONE),
       frame_size(20),
       dir(DirUndefined),
-      setup(SetupActPass),
+      setup(SetupUndefined),
       send(true),
       recv(true),
       has_mode_attribute(false),

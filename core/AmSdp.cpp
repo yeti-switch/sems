@@ -614,17 +614,19 @@ void AmSdp::print(string& body) const
             out_buf += a_it->print();
         }
 
-        switch (media_it->dir) {
-            case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
-            case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
-            case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
-            case SdpMedia::DirUndefined: break;
+        if(media_it->setup == SdpMedia::SetupUndefined) {
+            switch (media_it->dir) {
+                case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
+                case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
+                case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
+                case SdpMedia::DirUndefined: break;
+            }
         }
 
         switch (media_it->setup) {
             case SdpMedia::SetupActive:  out_buf += "a=setup:active\r\n"; break;
             case SdpMedia::SetupPassive: out_buf += "a=setup:passive\r\n"; break;
-            case SdpMedia::SetupActPass:
+            case SdpMedia::SetupActPass: out_buf += "a=setup:actpass\r\n"; break;
             case SdpMedia::SetupHold: break;
         }
     }
@@ -1443,9 +1445,9 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
         media.setup=SdpMedia::SetupActive;
       } else if (value == "passive") {
         media.setup=SdpMedia::SetupPassive;
-      } else if (attr == "actpass") {
+      } else if (value == "actpass") {
         media.setup=SdpMedia::SetupActPass;
-      } else if (attr == "holdconn") {
+      } else if (value == "holdconn") {
         media.setup=SdpMedia::SetupHold;
       } else {
             DBG("found unknown value for media attribute 'setup'\n");
@@ -1464,7 +1466,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
       } else if (value == "passive") {
         media.dir=SdpMedia::DirPassive;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
-      } else if (attr == "both") {
+      } else if (value == "both") {
             media.dir=SdpMedia::DirBoth;
 	//DBG("found media attr 'direction' value '%s'\n", (char*)value.c_str());
       } else {

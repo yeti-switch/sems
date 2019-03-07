@@ -45,6 +45,7 @@
 #include <queue>
 #include <memory>
 #include <atomic>
+
 using std::string;
 using std::auto_ptr;
 using std::pair;
@@ -67,6 +68,7 @@ class msg_logger;
 struct SdpPayload;
 struct amci_payload_t;
 class  AmSrtpConnection;
+class AmStunClient;
 
 /**
  * This provides the memory for the receive buffer.
@@ -312,6 +314,7 @@ class AmRtpStream
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;
     auto_ptr<AmSrtpConnection> srtcp_connection;
+    auto_ptr<AmStunClient> stun_client;
     dtls_server_settings server_settings;
     dtls_client_settings client_settings;
     vector<CryptoProfile> srtp_profiles;
@@ -445,6 +448,8 @@ class AmRtpStream
 
     friend class AmSrtpConnection;
     int recv(int fd);
+    //function for rtp. TODO(): add support for rtcp
+    int send(int sd, sockaddr_storage* laddr, sockaddr_storage* raddr, unsigned char* buf, int size);
     int send(unsigned char* buf, int size, bool rtcp);
     int sendmsg(unsigned char* buf, int size);
   public:

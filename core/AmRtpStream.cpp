@@ -27,6 +27,7 @@
 
 #include "AmRtpStream.h"
 #include "AmSrtpConnection.h"
+#include "AmStunClient.h"
 #include "AmRtpPacket.h"
 #include "AmRtpReceiver.h"
 #include "AmLcConfig.h"
@@ -681,6 +682,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     last_send_rtcp_report_ts(0),
     srtp_connection(new AmSrtpConnection(this, false)),
     srtcp_connection(new AmSrtpConnection(this, true)),
+    stun_client(new AmStunClient(this)),
     init_state(RTP_DEFAULT),
     transport(RTP_AVP),
     srtp_enable(true)
@@ -932,8 +934,10 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         answer.setup = SdpMedia::SetupPassive;
         if(offer.setup == SdpMedia::SetupPassive)
             answer.setup = SdpMedia::SetupActive;
-        if(offer.setup == SdpMedia::SetupHold)
+        else if(offer.setup == SdpMedia::SetupHold)
             throw AmSession::Exception(488,"hold connections");
+        else if(offer.setup == SdpMedia::SetupUndefined)
+            throw AmSession::Exception(488,"setup not defined");
         if(offer.is_ice) {
             answer.is_ice = true;
             string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
@@ -943,7 +947,6 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
             answer.ice_ufrag.clear();
             answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
             SdpIceCandidate candidate;
-            sockaddr_storage addr = l_saddr;
             candidate.conn.network = NT_IN;
             candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
             candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
@@ -1078,7 +1081,9 @@ int AmRtpStream::init(const AmSdp& local,
         setLocalPort(local_media.port);
     }
 
-    setPassiveMode(remote_media.dir == SdpMedia::DirActive || force_passive_mode);
+    setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
+                   remote_media.setup == SdpMedia::SetupActive ||
+                   force_passive_mode);
 
     // set remote address - media c-line having precedence over session c-line
     if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
@@ -1524,6 +1529,10 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 void AmRtpStream::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
+        if(init_state == ICE_CHECK) {
+            stun_client->on_data_recv(buffer, &b_size);
+            return;
+        }
         if(fd == l_rtcp_sd &&
             (srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
             srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
