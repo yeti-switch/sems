@@ -21,14 +21,14 @@ using std::string;
 #include <event2/event.h>
 
 class trsp_server_socket;
-class trsp_server_worker;
+class trsp_worker;
 
 class tcp_base_trsp : public trsp_socket
 {
 protected:
     friend class trsp_socket_factory;
     trsp_server_socket* server_sock;
-    trsp_server_worker* server_worker;
+    trsp_worker* server_worker;
 
     bool             closed;
     bool             connected;
@@ -148,7 +148,7 @@ protected:
     static void on_sock_read(int fd, short ev, void* arg);
     static void on_sock_write(int fd, short ev, void* arg);
 
-    tcp_base_trsp(trsp_server_socket* server_sock, trsp_server_worker* server_worker, int sd,
+    tcp_base_trsp(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
     virtual ~tcp_base_trsp();
 
@@ -180,28 +180,26 @@ protected:
 public:
     virtual ~trsp_socket_factory(){}
 
-    void create_connected(trsp_server_socket* server_sock,
-                    trsp_server_worker* server_worker,
+    tcp_base_trsp* create_connected(trsp_server_socket* server_sock,
+                    trsp_worker* server_worker,
                     int sd, const sockaddr_storage* sa,
                     struct event_base* evbase);
 
     tcp_base_trsp* new_connection(trsp_server_socket* server_sock,
-                        trsp_server_worker* server_worker,
+                        trsp_worker* server_worker,
                         const sockaddr_storage* sa,
                         struct event_base* evbase);
 
-    virtual tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker, int sd,
+    virtual tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                                         const sockaddr_storage* sa, event_base* evbase) = 0;
 
     tcp_base_trsp::socket_transport transport;
 };
 
-class trsp_server_worker
+class trsp_worker
   : public AmThread
 {
     struct event_base* evbase;
-    trsp_server_socket* server_sock;
-    trsp_socket_factory* sock_factory;
 
     AmMutex                      connections_mut;
     map<string,std::vector<tcp_base_trsp*>> connections;
@@ -210,13 +208,16 @@ protected:
     void run();
     void on_stop();
 
+    friend class trsp_server_socket;
+    void create_connected(trsp_server_socket* server_sock, int sd, const sockaddr_storage* sa);
+    tcp_base_trsp* new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa);
 public:
-    trsp_server_worker(trsp_server_socket* server_sock, trsp_socket_factory* sock_factory);
-    ~trsp_server_worker();
+    trsp_worker();
+    ~trsp_worker();
 
-    int send(const sockaddr_storage* sa, const char* msg,
+    int send(trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
         const int msg_len, unsigned int flags);
-
+    
     void add_connection(tcp_base_trsp* client_sock);
     void remove_connection(tcp_base_trsp* client_sock);
     void getInfo(AmArg &ret);
@@ -227,9 +228,10 @@ class trsp_server_socket : public trsp_socket
 protected:
     struct event_base* evbase;
     struct event*      ev_accept;
+    
+    friend class trsp_worker;
     trsp_socket_factory* sock_factory;
-
-    vector<trsp_server_worker*> workers;
+    vector<trsp_worker*> workers;
 
     /**
     * Timeout while connecting to a remote peer.
@@ -253,9 +255,7 @@ protected:
     ~trsp_server_socket();
 
 public:
-    void add_threads(unsigned int n);
-    void start_threads();
-    void stop_threads();
+    void add_workers(trsp_worker **trsp_workers, unsigned short n_trsp_workers);
 
     bool        is_reliable() const   { return true; }
 
@@ -283,6 +283,24 @@ public:
     struct timeval* get_idle_timeout();
 
     void getInfo(AmArg &ret);
+};
+
+class trsp: public AmThread
+{
+  struct event_base *evbase;
+
+protected:
+  /** @see AmThread */
+  void run();
+  /** @see AmThread */
+  void on_stop();
+  
+public:
+  /** @see transport */
+  trsp();
+  ~trsp();
+  
+  void add_socket(trsp_server_socket* sock);
 };
 
 #endif/*_tcp_base_trsp_h_*/

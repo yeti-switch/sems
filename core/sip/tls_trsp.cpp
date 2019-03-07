@@ -232,7 +232,7 @@ void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, st
 }
 
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
-				 trsp_server_worker* server_worker,
+				 trsp_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase), tls_connected(false), orig_input_len(0)
@@ -434,8 +434,7 @@ int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
 tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport)
  : trsp_socket_factory(transport){}
 
-tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker,
-                                                int sd, const sockaddr_storage* sa, event_base* evbase)
+tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd, const sockaddr_storage* sa, event_base* evbase)
 {
     try {
         return new tls_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
@@ -452,52 +451,4 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short addr_
 : trsp_server_socket(if_num, addr_num, opts, new tls_socket_factory(transport))
 , client_settings(s_client), server_settings(s_server)
 {
-}
-
-
-tls_trsp::tls_trsp(trsp_server_socket* sock, trsp_acl &acl, trsp_acl &opt_acl)
-    : transport(sock, acl, opt_acl)
-{
-  evbase = event_base_new();
-  sock->add_event(evbase);
-}
-
-tls_trsp::~tls_trsp()
-{
-  if(evbase) {
-    event_base_free(evbase);
-  }
-}
-
-/** @see AmThread */
-void tls_trsp::run()
-{
-  int server_sd = sock->get_sd();
-  if(server_sd <= 0){
-    ERROR("Transport instance not bound\n");
-    return;
-  }
-
-  trsp_server_socket* tcp_sock = static_cast<trsp_server_socket*>(sock);
-  tcp_sock->start_threads();
-
-  INFO("Started SIP server TLS transport on %s:%i\n",
-       sock->get_ip(),sock->get_port());
-
-  setThreadName("sip-tls-trsp");
-
-  /* Start the event loop. */
-  int ret = event_base_dispatch(evbase);
-
-  INFO("TLS SIP server on %s:%i finished (%i)",
-       sock->get_ip(),sock->get_port(),ret);
-}
-
-/** @see AmThread */
-void tls_trsp::on_stop()
-{
-  event_base_loopbreak(evbase);
-  trsp_server_socket* tcp_sock = static_cast<trsp_server_socket*>(sock);
-  tcp_sock->stop_threads();
-  join();
 }

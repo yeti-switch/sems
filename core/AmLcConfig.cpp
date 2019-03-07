@@ -77,7 +77,8 @@
 #define PARAM_SL_FACILITY_NAME       "syslog_facility"
 #define PARAM_SESS_PROC_THREADS_NAME "session_processor_threads"
 #define PARAM_MEDIA_THREADS_NAME     "media_processor_threads"
-#define PARAM_SIP_SERVERS_NAME       "sip_server_threads"
+#define PARAM_SIP_UDP_SERVERS_NAME   "sip_udp_server_threads"
+#define PARAM_SIP_TCP_SERVERS_NAME   "sip_tcp_server_threads"
 #define PARAM_RTP_RECEIVERS_NAME     "rtp_receiver_threads"
 #define PARAM_OUTBOUND_PROXY_NAME    "outbound_proxy"
 #define PARAM_FORCE_OUTBOUND_NAME    "force_outbound_proxy"
@@ -465,7 +466,8 @@ namespace Config {
         CFG_INT(PARAM_UDP_RECVBUF_NAME, VALUE_UDP_RECVBUF, CFGF_NONE),
         CFG_INT(PARAM_SESS_PROC_THREADS_NAME, VALUE_NUM_SESSION_PROCESSORS, CFGF_NODEFAULT),
         CFG_INT(PARAM_MEDIA_THREADS_NAME, VALUE_NUM_MEDIA_PROCESSORS, CFGF_NONE),
-        CFG_INT(PARAM_SIP_SERVERS_NAME, VALUE_NUM_SIP_SERVERS, CFGF_NONE),
+        CFG_INT(PARAM_SIP_TCP_SERVERS_NAME, VALUE_NUM_SIP_SERVERS, CFGF_NONE),
+        CFG_INT(PARAM_SIP_UDP_SERVERS_NAME, VALUE_NUM_SIP_SERVERS, CFGF_NONE),
         CFG_INT(PARAM_RTP_RECEIVERS_NAME, VALUE_NUM_RTP_RECEIVERS, CFGF_NONE),
         CFG_INT(PARAM_NODE_ID_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_MAX_FORWARDS_NAME, 70, CFGF_NONE),
@@ -901,7 +903,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
 
     config->media_proc_threads = cfg_getint(gen, PARAM_MEDIA_THREADS_NAME);
     config->rtp_recv_threads = cfg_getint(gen, PARAM_RTP_RECEIVERS_NAME);
-    config->sip_server_threads = cfg_getint(gen, PARAM_SIP_SERVERS_NAME);
+    config->sip_tcp_server_threads = cfg_getint(gen, PARAM_SIP_TCP_SERVERS_NAME);
+    config->sip_udp_server_threads = cfg_getint(gen, PARAM_SIP_UDP_SERVERS_NAME);
     config->outbound_proxy = cfg_getstr(gen, PARAM_OUTBOUND_PROXY_NAME);
     config->options_transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_OUT_NAME);
     config->options_transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_IN_NAME);
@@ -1221,7 +1224,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             return 0;
         }
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
-        for(int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
             rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));
         }
 

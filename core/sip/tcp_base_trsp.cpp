@@ -36,7 +36,7 @@ void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
     }
 }
 
-tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_server_worker* server_worker_,
+tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
                              int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
                              event_base* evbase_)
     : trsp_socket(server_sock_->get_if(),0,0,transport,0,sd),
@@ -552,26 +552,22 @@ void tcp_base_trsp::copy_peer_addr(sockaddr_storage* sa)
     memcpy(sa,&peer_addr,sizeof(sockaddr_storage));
 }
 
-void trsp_socket_factory::create_connected(trsp_server_socket* server_sock,
-				       trsp_server_worker* server_worker,
+tcp_base_trsp* trsp_socket_factory::create_connected(trsp_server_socket* server_sock,
+				       trsp_worker* server_worker,
 				       int sd, const sockaddr_storage* sa,
 					   struct event_base* evbase)
 {
   if(sd < 0)
-    return;
+    return 0;
 
   tcp_base_trsp* sock = create_socket(server_sock, server_worker,sd,sa,evbase);
-
-  inc_ref(sock);
-  server_worker->add_connection(sock);
-
   sock->connected = true;
   sock->add_read_event();
-  dec_ref(sock);
+  return sock;
 }
 
 tcp_base_trsp* trsp_socket_factory::new_connection(trsp_server_socket* server_sock,
-						 trsp_server_worker* server_worker,
+						 trsp_worker* server_worker,
 						 const sockaddr_storage* sa,
 						 struct event_base* evbase)
 {
@@ -598,20 +594,17 @@ public:
     }
 };
 
-trsp_server_worker::trsp_server_worker(trsp_server_socket* server_sock, trsp_socket_factory* sock_factory)
-    : server_sock(server_sock), sock_factory(sock_factory)
+trsp_worker::trsp_worker()
 {
-    inc_ref(sock_factory);
     evbase = event_base_new();
 }
 
-trsp_server_worker::~trsp_server_worker()
+trsp_worker::~trsp_worker()
 {
     event_base_free(evbase);
-    dec_ref(sock_factory);
 }
 
-void trsp_server_worker::add_connection(tcp_base_trsp* client_sock)
+void trsp_worker::add_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
@@ -649,7 +642,7 @@ void trsp_server_worker::add_connection(tcp_base_trsp* client_sock)
     connections_mut.unlock();
 }
 
-void trsp_server_worker::remove_connection(tcp_base_trsp* client_sock)
+void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
 {
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
@@ -684,7 +677,7 @@ void trsp_server_worker::remove_connection(tcp_base_trsp* client_sock)
     connections_mut.unlock();
 }
 
-int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
+int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
                              const int msg_len, unsigned int flags)
 {
     char host_buf[NI_MAXHOST];
@@ -708,13 +701,10 @@ int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
             }
         }
     }
+    
     if(!sock) {
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
-        tcp_base_trsp* new_sock = sock_factory->new_connection(server_sock,this,
-                                  sa,evbase);
-        connections[dest].push_back(new_sock);
-        inc_ref(new_sock);
-
+        tcp_base_trsp* new_sock = new_connection(server_sock, sa);
         sock = new_sock;
         inc_ref(sock);
         new_conn = true;
@@ -732,7 +722,26 @@ int trsp_server_worker::send(const sockaddr_storage* sa, const char* msg,
     return ret;
 }
 
-void trsp_server_worker::getInfo(AmArg &ret)
+void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, const sockaddr_storage* sa)
+{
+    tcp_base_trsp* new_sock = server_sock->sock_factory->create_connected(server_sock,this,sd,sa,evbase);
+    add_connection(new_sock);
+}
+
+
+tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa)
+{
+    char host_buf[NI_MAXHOST];
+    string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
+    dest += ":" + int2str(am_get_port(sa));
+    tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,
+                                sa,evbase);
+    connections[dest].push_back(new_sock);
+    inc_ref(new_sock);
+    return new_sock;
+}
+
+void trsp_worker::getInfo(AmArg &ret)
 {
     AmLock l(connections_mut);
 
@@ -743,7 +752,7 @@ void trsp_server_worker::getInfo(AmArg &ret)
     }
 }
 
-void trsp_server_worker::run()
+void trsp_worker::run()
 {
     // fake event to prevent the event loop from exiting
     int fake_fds[2];
@@ -755,8 +764,7 @@ void trsp_server_worker::run()
                   NULL,NULL);
     event_add(ev_default,NULL);
 
-    std::string threadName("sip-");
-    setThreadName((threadName + server_sock->get_transport() + "-worker").c_str());
+    setThreadName("sip-worker");
 
     /* Start the event loop. */
     /*int ret = */event_base_dispatch(evbase);
@@ -767,10 +775,9 @@ void trsp_server_worker::run()
     close(fake_fds[1]);
 }
 
-void trsp_server_worker::on_stop()
+void trsp_worker::on_stop()
 {
     event_base_loopbreak(evbase);
-    join();
 }
 
 trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory)
@@ -782,9 +789,6 @@ trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short add
 trsp_server_socket::~trsp_server_socket()
 {
     dec_ref(sock_factory);
-    for(auto& worker : workers) {
-        delete worker;
-    }
 }
 
 int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
@@ -819,7 +823,6 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     int true_opt = 1;
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
                   (void*)&true_opt, sizeof (true_opt)) == -1) {
-
         ERROR("%s\n",strerror(errno));
         close(sd);
         return -1;
@@ -893,24 +896,10 @@ void trsp_server_socket::add_event(struct event_base *evbase)
     }
 }
 
-void trsp_server_socket::add_threads(unsigned int n)
+void trsp_server_socket::add_workers(trsp_worker **trsp_workers, unsigned short n_trsp_workers)
 {
-    for(unsigned int i=0; i<n; i++) {
-        workers.push_back(new trsp_server_worker(this, sock_factory));
-    }
-}
-
-void trsp_server_socket::start_threads()
-{
-    for(unsigned int i=0; i<workers.size(); i++) {
-        workers[i]->start();
-    }
-}
-
-void trsp_server_socket::stop_threads()
-{
-    for(unsigned int i=0; i<workers.size(); i++) {
-        workers[i]->stop();
+    for(unsigned int i=0; i<n_trsp_workers; i++) {
+        workers.push_back(trsp_workers[i]);
     }
 }
 
@@ -937,8 +926,7 @@ void trsp_server_socket::on_accept(int sd, short ev)
 
     // in case of thread pooling, do following in worker thread
     DBG("trsp_server_socket::create_connected (idx = %u)",idx);
-    sock_factory->create_connected(this,workers[idx],connection_sd,
-                                    &src_addr,evbase);
+    workers[idx]->create_connected(this, connection_sd,&src_addr);
 }
 
 int trsp_server_socket::send(const sockaddr_storage* sa, const char* msg,
@@ -947,7 +935,7 @@ int trsp_server_socket::send(const sockaddr_storage* sa, const char* msg,
     uint32_t h = hash_addr(sa);
     unsigned int idx = h % workers.size();
     DBG("trsp_server_socket::send: idx = %u",idx);
-    return workers[idx]->send(sa,msg,msg_len,flags);
+    return workers[idx]->send(this, sa,msg,msg_len,flags);
 }
 
 void trsp_server_socket::set_connect_timeout(unsigned int ms)
@@ -984,4 +972,42 @@ void trsp_server_socket::getInfo(AmArg &ret)
         AmArg &r = ret[int2str(i)];
         workers[i]->getInfo(r);
     }
+}
+
+trsp::trsp()
+{
+  evbase = event_base_new();
+}
+
+trsp::~trsp()
+{
+  if(evbase) {
+    event_base_free(evbase);
+  }
+}
+
+void trsp::add_socket(trsp_server_socket* sock)
+{
+    sock->add_event(evbase);
+    INFO("Added SIP server %s transport on %s:%i\n",
+        sock->get_transport(), sock->get_ip(),sock->get_port());
+}
+
+/** @see AmThread */
+void trsp::run()
+{
+    INFO("Started SIP server thread\n");
+    setThreadName("sip-server-trsp");
+
+    /* Start the event loop. */
+    event_base_dispatch(evbase);
+
+    INFO("SIP server thread finished");
+}
+
+/** @see AmThread */
+void trsp::on_stop()
+{
+  event_base_loopbreak(evbase);
+  join();
 }

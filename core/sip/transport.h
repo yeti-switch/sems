@@ -41,8 +41,8 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#define DEFAULT_IDLE_TIMEOUT 3600000 /* 1 hour */
 #define DEFAULT_TCP_CONNECT_TIMEOUT 2000 /* 2 seconds */
-#define DEFAULT_TCP_IDLE_TIMEOUT 3600000 /* 1 hour */
 
 class trsp_socket
     : public atomic_ref_cnt
@@ -229,21 +229,6 @@ class trsp_acl {
 
     void set_action(action_t a) { action = a; }
     void add_network(AmSubnet net) { networks.push_back(net); }
-};
-
-class transport: public AmThread
-{
-protected:
-    trsp_socket* sock;
-    trsp_acl &acl;
-    trsp_acl &opt_acl;
-public:
-    transport(trsp_socket* sock, trsp_acl &acl, trsp_acl &opt_acl)
-      : sock(sock),
-        acl(acl),
-        opt_acl(opt_acl)
-    {}
-    virtual ~transport();
 };
 
 #endif

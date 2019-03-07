@@ -114,7 +114,7 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
 
     friend class tls_socket_factory;
     const char* get_transport() const { return "tls"; }
-    tls_trsp_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker, int sd,
+    tls_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
 
     void tls_emit_data(const uint8_t data[], size_t size);
@@ -148,7 +148,7 @@ class tls_socket_factory : public trsp_socket_factory
 public:
     tls_socket_factory(tcp_base_trsp::socket_transport transport);
 
-    tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_server_worker* server_worker,
+    tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
                                          int sd, const sockaddr_storage* sa, event_base* evbase);
 };
 
@@ -164,22 +164,6 @@ public:
 
     tls_conf client_settings;
     tls_conf server_settings;
-};
-
-class tls_trsp: public transport
-{
-  struct event_base *evbase;
-
-protected:
-  /** @see AmThread */
-  void run();
-  /** @see AmThread */
-  void on_stop();
-
-public:
-  /** @see transport */
-  tls_trsp(trsp_server_socket* sock, trsp_acl &acl, trsp_acl &opt_acl);
-  ~tls_trsp();
 };
 
 #endif/*_tls_trsp_h_*/
