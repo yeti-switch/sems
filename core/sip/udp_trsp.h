@@ -81,6 +81,8 @@ class udp_trsp: public AmThread
 {
     std::vector<udp_trsp_socket*> sockets;
     int ev;
+    AmEventFd stop_event;
+    AmCondition<bool> stopped;
 protected:
     /** @see AmThread */
     void run();
@@ -90,7 +92,7 @@ public:
     /** @see transport */
     udp_trsp();
     ~udp_trsp();
-    
+
     void add_socket(udp_trsp_socket* sock);
 };
 

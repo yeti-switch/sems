@@ -49,6 +49,8 @@
 #include <string.h>
 #include <AmLcConfig.h>
 
+#include <algorithm>
+
 #if defined IP_RECVDSTADDR
 # define DSTADDR_SOCKOPT IP_RECVDSTADDR
 # define DSTADDR_DATASIZE (CMSG_SPACE(sizeof(struct in_addr)))
@@ -415,56 +417,73 @@ udp_trsp::~udp_trsp()
 void udp_trsp::run()
 {
     setThreadName("sip-udp-rx");
-    
+
     INFO("Started SIP server UDP transport");
- 
-    int socket_count = sockets.size();
+
+    int ret;
+    udp_trsp_socket *sock;
+    bool running = true;
+    int socket_count = static_cast<int>(sockets.size());
     struct epoll_event *events = new epoll_event[socket_count];
-    while(epoll_wait(ev, events, socket_count, -1) > 0){
-        for(int i = 0; i < socket_count; i++) {
-            udp_trsp_socket *error_sock = 0, *read_sock = 0;
+
+    stop_event.link(ev, true);
+
+    while(running) {
+        ret = epoll_wait(ev, events, socket_count, -1);
+
+        if (ret < 0 && errno != EINTR)
+            ERROR("%s: epoll_wait(): %m", __func__);
+
+        for(int i = 0; i < ret; i++) {
+
+            if(events[i].data.ptr == &stop_event) {
+                stop_event.read();
+                running = false;
+                break;
+            }
+
+            sock = static_cast<udp_trsp_socket*>(events[i].data.ptr);
+
             if ((events[i].events & EPOLLERR) ||
-               (events[i].events & EPOLLHUP)) {
-                error_sock = (udp_trsp_socket*)events[i].data.ptr;
-                ERROR("epoll error on socket %s:%d", error_sock->get_ip(), error_sock->get_port());
-            } else if((events[i].events & EPOLLIN)) {
-                read_sock = (udp_trsp_socket*)events[i].data.ptr;
-            }
-            
-            std::vector<udp_trsp_socket*>::iterator sock_it = sockets.begin();
-            for(; sock_it != sockets.end() && error_sock; sock_it++) {
-                if(error_sock == *sock_it) {
-                    sock_it = sockets.erase(sock_it);
-                    if (epoll_ctl(ev, EPOLL_CTL_DEL, error_sock->get_sd(), NULL) == -1) {
-                        ERROR("epoll_ctl: remove read sock error");
+                (events[i].events & EPOLLHUP))
+            {
+                ERROR("epoll error on socket %s:%d",
+                      sock->get_ip(), sock->get_port());
+
+                auto sock_it = std::find(sockets.begin(),sockets.end(),sock);
+                if(sock_it != sockets.end()) {
+                    sockets.erase(sock_it);
+                    if (epoll_ctl(ev, EPOLL_CTL_DEL, sock->get_sd(), nullptr) == -1) {
+                        ERROR("epoll_ctl: remove read sock %d error: %d",
+                              sock->get_sd(),errno);
                     }
-                    dec_ref(error_sock);
+                    dec_ref(sock);
                 }
-            }
-            
-            if(read_sock) {
-                read_sock->recv();
+            } else if((events[i].events & EPOLLIN)) {
+                sock->recv();
             }
         }
     }
-    
-    INFO("Finished SIP server UDP transport");
-    
+
+    for(auto& sock : sockets) {
+        INFO("Removed SIP server UDP transport on %s:%d",
+             sock->get_ip(), sock->get_port());
+        dec_ref(sock);
+    }
+    sockets.clear();
     delete[] events;
+
+    INFO("Finished SIP server UDP transport");
+
+    stopped.set(true);
 }
 
 /** @see AmThread */
 void udp_trsp::on_stop()
 {
-    for(auto& sock : sockets) {
-        INFO("Removed SIP server UDP transport on %s:%d", sock->get_ip(), sock->get_port());
-        if (epoll_ctl(ev, EPOLL_CTL_DEL, sock->get_sd(), NULL) == -1) {
-            ERROR("epoll_ctl: remove read sock error");
-        }
-        dec_ref(sock);
-    }
-    sockets.clear();
     close(ev);
+    stop_event.fire();
+    stopped.wait_for();
 }
 
 void udp_trsp::add_socket(udp_trsp_socket* sock)
