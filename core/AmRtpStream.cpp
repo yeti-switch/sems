@@ -1189,6 +1189,25 @@ int AmRtpStream::init(const AmSdp& local,
         srtcp_connection->create_dtls();
     } else if(remote_media.is_use_ice()) {
         init_state = ICE_CHECK;
+        stun_client->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
+        for(auto candidate : remote_media.ice_candidate) {
+            if(candidate.transport == ICTR_UDP) {
+                string addr = candidate.conn.address;
+                vector<string> addr_port = explode(addr, " ");
+                sockaddr_storage sa = {0};
+                sa.ss_family = (candidate.conn.addrType == AT_V4) ? AF_INET : AF_INET6;
+                
+                if(addr_port.size() != 2) continue;
+                if(sa.ss_family != l_saddr.ss_family) continue;
+                
+                am_inet_pton(addr_port[0].c_str(), &sa);
+                int port = 0;
+                str2int(addr_port[1], port);
+                am_set_port(&sa, port);
+                stun_client->add_candidate(candidate.priority, l_saddr, sa);
+            }
+        }
+        form_ice_candidates(local_media, remote_media);
     }
 
     CLASS_DBG("recv = %d, send = %d",
@@ -1530,7 +1549,7 @@ void AmRtpStream::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
         if(init_state == ICE_CHECK) {
-            stun_client->on_data_recv(buffer, &b_size);
+            stun_client->on_data_recv(buffer, b_size, &saddr);
             return;
         }
         if(fd == l_rtcp_sd &&
@@ -2353,4 +2372,8 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
         ADDR_ARGS(r_rtcp_saddr));*/
 
     log_sent_rtcp_packet((const char *)buf, len, r_rtcp_saddr);
+}
+
+void AmRtpStream::form_ice_candidates(const SdpMedia& local, const SdpMedia& remote)
+{
 }

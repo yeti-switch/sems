@@ -447,11 +447,13 @@ class AmRtpStream
     void rtcp_send_report(unsigned int user_ts);
 
     friend class AmSrtpConnection;
+    friend class AmStunClient;
     int recv(int fd);
-    //function for rtp. TODO(): add support for rtcp
-    int send(int sd, sockaddr_storage* laddr, sockaddr_storage* raddr, unsigned char* buf, int size);
+    int send(sockaddr_storage* raddr, unsigned char* buf, int size, bool rtcp);
     int send(unsigned char* buf, int size, bool rtcp);
     int sendmsg(unsigned char* buf, int size);
+    
+    void form_ice_candidates(const SdpMedia& local, const SdpMedia& remote);
   public:
 
     /**
