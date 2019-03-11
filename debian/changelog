@@ -1,3 +1,17 @@
+sems (1.8.15-1) stable; urgency=low
+
+  * fix system sip uri parser
+  * sctp_bus: fix reconnect interval processing
+  * jsonrpc: rename cfg variables
+  * sems.service: add After=postgresql.service
+  * tcp/tls/udp signalling threads refactoring
+  * sems.conf: add sip_tcp_server_threads, sip_udp_server_threads global options
+  * AmB2BSession: add media_transport attribute
+  * function AmRtpStream::replaceAudioMediaParameters to replace media parameters in addition to the media address/port only
+  * build fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 11 Mar 2019 10:36:07 +0200
+
 sems (1.8.14-1) stable; urgency=low
 
   * migrate rtsp client to new config
