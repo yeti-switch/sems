@@ -1,3 +1,9 @@
+sems (1.8.16-1) stable; urgency=low
+
+  * sip/udp_trsp: fixes 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 11 Mar 2019 14:55:04 +0200
+
 sems (1.8.15-1) stable; urgency=low
 
   * fix system sip uri parser
