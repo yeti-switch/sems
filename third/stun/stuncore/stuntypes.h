@@ -52,6 +52,8 @@ const uint16_t STUN_ATTRIBUTE_REALM = 0x0014;
 const uint16_t STUN_ATTRIBUTE_NONCE = 0x0015;
 const uint16_t STUN_ATTRIBUTE_XORMAPPEDADDRESS = 0x0020;
 
+const uint16_t STUN_ATTRIBUTE_ICE_PRIORITY = 0x0024;
+
 const uint16_t STUN_ATTRIBUTE_PADDING = 0x0026;
 const uint16_t STUN_ATTRIBUTE_RESPONSE_PORT = 0x0027;
 
@@ -148,7 +150,7 @@ const uint16_t STUN_ATTRIBUTE_CHANGEREQUEST_SIZE = 4;
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == 0x0100)
 #define STUN_IS_ERR_RESP(msg_type)      (((msg_type) & 0x0110) == 0x0110)
 
-#define IS_STUN_MESSAGE(msg_type)       (((msg_type) & 0xFFFC) == 0x0101 || ((msg_type) & 0xFFFC) == 0x0001 || ((msg_type) & 0xFFFC) == 0x0111)
+#define IS_STUN_MESSAGE(msg_type)       (((msg_type) & 0x3FFF) == 0x0101 || ((msg_type) & 0x3FFF) == 0x0001 || ((msg_type) & 0x3FFF) == 0x0111)
 
 struct StunTransactionId
 {

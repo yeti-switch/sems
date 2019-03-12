@@ -105,6 +105,7 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
         WARN("%s, stun packet is dropped, %s", error_str.c_str(), username.c_str());
         builder.AddErrorCode(err_code, error_str.c_str());
     } else {
+        builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&it->priority, 4);
         builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, (char*)reader->GetStream().GetDataPointerUnsafe() + controlling.offset, controlling.size);
         builder.AddFingerprintAttribute();
     }

@@ -390,6 +390,7 @@ public:
   string           sessionName; // s= 
   string           uri;         // u=
   SdpConnection    conn;        // c=
+  bool use_ice;
   std::vector<SdpAttribute> attributes; // unknown session level attributes
 
   bool send;

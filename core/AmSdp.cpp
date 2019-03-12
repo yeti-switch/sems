@@ -503,6 +503,9 @@ void AmSdp::print(string& body) const
     else
         out_buf += "IP4 0.0.0.0\r\n";
 
+    if(use_ice) 
+        out_buf += "a=ice-lite\r\n";
+
     out_buf +=
         "s="+sessionName+"\r\n";
     if (!conn.address.empty()) {
@@ -1449,7 +1452,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     size_t val_len = 0;
     next = skip_till_next_line(attr_line, val_len);
     media.ice_ufrag = string(attr_line, val_len);
-    media.is_ice = true;
+    media.is_ice = sdp_msg->use_ice = true;
   } else if(attr == "candidate") {
     next = parse_ice_candidate(&media, attr_line);
   } else if (attr == "setup") {

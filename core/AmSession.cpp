@@ -1038,6 +1038,10 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 
             RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
+            
+            if(answer_media.is_use_ice()) {
+                answer.use_ice = true;
+            }
 
             if(answer_payloads.empty() ||
                ((answer_payloads.size() == 1) &&

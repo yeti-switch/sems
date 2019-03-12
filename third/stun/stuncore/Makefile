@@ -10,7 +10,7 @@ clean:
 	rm -f $(PROJECT_OBJS) $(PROJECT_TARGET)
 
 $(PROJECT_TARGET): $(PROJECT_OBJS)
-#	rm -f $@
+	rm -f $@
 	$(AR) rv $@ $^ 
 
 
