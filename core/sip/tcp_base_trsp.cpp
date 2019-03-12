@@ -781,7 +781,9 @@ void trsp_worker::on_stop()
 }
 
 trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory)
-    : trsp_socket(if_num, addr_num, opts, sock_factory->transport), sock_factory(sock_factory)
+    : trsp_socket(if_num, addr_num, opts, sock_factory->transport),
+      ev_accept(nullptr),
+      sock_factory(sock_factory)
 {
     inc_ref(sock_factory);
 }
