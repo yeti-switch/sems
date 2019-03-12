@@ -20,7 +20,6 @@ class RtspAudio : public AmRtpAudio
 
         uint64_t            id;             /** unique RtspAudio ID */
         RtspClient          *agent;
-        AmSession           *session;       /** Session owning this stream */
 
         int                 md;             /** media server descriptor */
         int                 streamid;       /** streamid from media server RTP-Info header */
