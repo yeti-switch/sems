@@ -25,8 +25,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __SdpParser__
-#define __SdpParser__
+#pragma once
 
 #include <string>
 #include <map>
@@ -75,7 +74,9 @@ struct SdpConnection
   /** IP address */
   string address;
 
-  SdpConnection() : address(), addrType(AT_NONE), network(NT_OTHER) {
+  SdpConnection()
+    : network(NT_OTHER), addrType(AT_NONE)
+  {
       bzero(&ipv4, sizeof(struct sockaddr_in));
       bzero(&ipv6, sizeof(struct sockaddr_in));
   }
@@ -251,8 +252,14 @@ struct SdpMedia
   bool operator == (const SdpMedia& other) const;
 
   SdpMedia()
-    : conn(), dir(DirUndefined), type(MT_NONE), setup(DirUndefined),
-      transport(TP_NONE), frame_size(20), send(true), recv(true), has_mode_attribute(false)
+    : type(MT_NONE),
+      transport(TP_NONE),
+      frame_size(20),
+      dir(DirUndefined),
+      setup(DirUndefined),
+      send(true),
+      recv(true),
+      has_mode_attribute(false)
   {}
 
   /** pretty print */
@@ -351,8 +358,6 @@ public:
 
   void getInfo(AmArg &ret);
 };
-
-#endif
 
 // Local Variables:
 // mode:C++
