@@ -15,8 +15,12 @@ static const int RTP_TIMEOUT_SEC =  1;
 
 
 RtspAudio::RtspAudio(AmSession* _s, const string &uri)
-    :  streamid(-1), md(0), session(_s), agent(RtspClient::instance()),
-      AmRtpAudio(_s, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpAddr())
+  : AmRtpAudio(_s,
+               RtspClient::instance()->getRtpInterface(),
+               RtspClient::instance()->getRtpAddr()),
+    agent(RtspClient::instance()),
+    md(0),
+    streamid(-1)
 {
     id = agent->addStream(*this);
 
@@ -210,7 +214,7 @@ void RtspAudio::onRtpTimeout()
 }
 
 
-void RtspAudio::onRtspPlayNotify(const RtspMsg &msg) {
+void RtspAudio::onRtspPlayNotify(const RtspMsg &) {
     DBG("onRtspPlayNotify() id: %ld, streamid: %d, uri: %s",
         id,streamid,uri.c_str());
     state = Ready;
