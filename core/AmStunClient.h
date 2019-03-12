@@ -3,7 +3,6 @@
 
 #include "AmSdp.h"
 #include <commonincludes.hpp>
-#include <stunauth.h>
 #include <stunreader.h>
 
 class AmRtpStream;
@@ -34,8 +33,9 @@ class AmStunClient
     string local_user;
     string remote_user;
     AmRtpStream* rtp_stream;
+    bool isrtcp;
 public:
-    AmStunClient(AmRtpStream* rtp_stream);
+    AmStunClient(AmRtpStream* rtp_stream, bool b_rtcp);
     ~AmStunClient();
     
     void set_credentials(const string& luser, const string& lpassword,

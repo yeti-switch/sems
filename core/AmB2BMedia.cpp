@@ -293,7 +293,7 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
             stream->setRelayPayloadMap(relay_map);
             if (!relay_paused)
                 stream->enableRtpRelay();
-            stream->setRAddr(relay_address,
+            stream->setRAddr(relay_address, relay_address,
                 static_cast<unsigned short>(relay_port),
                 static_cast<unsigned short>(relay_port+1));
         } else {
@@ -1084,9 +1084,9 @@ void AmB2BMedia::updateRelayStream(
         stream->setRelayStream(relay_to);
         stream->setRelayPayloads(true_mask);
         if (!relay_paused) stream->enableRtpRelay();
-        stream->setRAddr(connection_address,
+        stream->setRAddr(connection_address, connection_address,
                          static_cast<unsigned short>(m.port),
-                         static_cast<unsigned short>(m.port+1));
+                         m.rtcp_port != 0 ? static_cast<unsigned short>(m.rtcp_port+1) : static_cast<unsigned short>(m.port+1));
         if((m.transport != TP_RTPAVP) && (m.transport != TP_RTPSAVP)) stream->enableRawRelay();
         stream->resumeReceiving();
     } else {

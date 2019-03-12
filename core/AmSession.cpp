@@ -1205,7 +1205,7 @@ string AmSession::sid4dbg()
   dbg = dlg->getCallid() + "/" + dlg->getLocalTag() + "/" 
     + dlg->getRemoteTag() + "/" 
     + int2str(RTPStream()->getLocalPort()) + "/" 
-    + RTPStream()->getRHost() + ":" + int2str(RTPStream()->getRPort());
+    + RTPStream()->getRHost(false) + ":" + int2str(RTPStream()->getRPort());
   return dbg;
 }
 

@@ -569,6 +569,13 @@ void AmSdp::print(string& body) const
             out_buf += "\r\nc=IN " + addr_t_2_str(media_it->conn.addrType) +
                        " " + media_it->conn.address;
 
+        if (media_it->rtcp_port)
+            out_buf += "\r\na=rtcp:" + int2str(media_it->rtcp_port);
+      
+        if (!media_it->rtcp_conn.address.empty())
+            out_buf += " IN " + addr_t_2_str(media_it->rtcp_conn.addrType) + 
+                    " " + media_it->rtcp_conn.address;
+
         out_buf += "\r\n" + options;
 
         for (std::vector<SdpCrypto>::const_iterator c_it=
@@ -1371,7 +1378,16 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 
         if(pl_it != media.payloads.end())
             pl_it->sdp_format_parameters = params;
-
+    } else if(attr == "rtcp") {
+        next = parse_until(attr_line, line_end, ' ');
+        string port(attr_line, int(next-attr_line)-1);
+        str2int(port, (int&)media.rtcp_port);
+        if(next != line_end) {
+            attr_line = next;
+            AmSdp tmpsdp;
+            parse_sdp_connection(&tmpsdp, attr_line, 'd');
+            media.rtcp_conn = tmpsdp.conn;
+        }
     } else if(attr == "crypto") {
         SdpCrypto crypto;
         while(attr_line < line_end) {

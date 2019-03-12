@@ -240,6 +240,7 @@ class AmRtpStream
 
     /** Remote host information */
     string             r_host;
+    string             r_rtcp_host;
     unsigned short     r_port;
     unsigned short     r_rtcp_port;
 
@@ -295,11 +296,11 @@ class AmRtpStream
     bool           passive_rtcp;
 
     /**type of rtp init state**/
-    enum RtpInit
+    enum RtpMode
     {
         RTP_DEFAULT,
-        ICE_CHECK
-    } init_state;
+        ICE_RTP
+    } rtp_mode;
     
     /**type of rtp transport**/
     enum MediaTransport
@@ -314,7 +315,8 @@ class AmRtpStream
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;
     auto_ptr<AmSrtpConnection> srtcp_connection;
-    auto_ptr<AmStunClient> stun_client;
+    auto_ptr<AmStunClient> rtp_stun_client;
+    auto_ptr<AmStunClient> rtcp_stun_client;
     dtls_server_settings server_settings;
     dtls_client_settings client_settings;
     vector<CryptoProfile> srtp_profiles;
@@ -445,6 +447,8 @@ class AmRtpStream
     void fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now);
 
     void rtcp_send_report(unsigned int user_ts);
+    
+    bool isStunMessage(unsigned char* buf, int size);
 
     friend class AmSrtpConnection;
     friend class AmStunClient;
@@ -453,7 +457,6 @@ class AmRtpStream
     int send(unsigned char* buf, int size, bool rtcp);
     int sendmsg(unsigned char* buf, int size);
     
-    void form_ice_candidates(const SdpMedia& local, const SdpMedia& remote);
   public:
 
     /**
@@ -545,13 +548,13 @@ class AmRtpStream
     * Gets remote host IP.
     * @return remote host IP.
     */
-    string getRHost();
+    string getRHost(bool rtcp);
 
     /**
     * Set remote IP & port.
     */
-    void setRAddr(const string& addr, unsigned short port,
-        unsigned short rtcp_port = 0);
+    void setRAddr(const string& addr, const string& rtcp_addr,
+                  unsigned short port = 0, unsigned short rtcp_port = 0);
 
     /** Symmetric RTP & RTCP: passive mode ? */
     void setPassiveMode(bool p);

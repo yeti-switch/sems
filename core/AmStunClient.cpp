@@ -2,8 +2,8 @@
 #include <stunbuilder.h>
 #include "AmRtpStream.h"
 
-AmStunClient::AmStunClient(AmRtpStream* stream)
-: rtp_stream(stream)
+AmStunClient::AmStunClient(AmRtpStream* stream, bool b_rtcp)
+: rtp_stream(stream), isrtcp(b_rtcp)
 {
 }
 
@@ -112,6 +112,6 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
     CRefCountedBuffer buffer;
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
-        rtp_stream->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), false);
+        rtp_stream->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
     }
 }

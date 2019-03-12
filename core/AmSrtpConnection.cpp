@@ -260,7 +260,7 @@ void AmSrtpConnection::create_dtls()
     try {
         if(rtp_mode == DTLS_SRTP_CLIENT) {
            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
-                                               Botan::TLS::Server_Information(rtp_stream->getRHost().c_str(), rtp_stream->getRPort()),
+                                               Botan::TLS::Server_Information(rtp_stream->getRHost(b_srtcp).c_str(), rtp_stream->getRPort()),
                                                Botan::TLS::Protocol_Version::DTLS_V12);
         } else if(rtp_mode == DTLS_SRTP_SERVER){
             dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), true);
@@ -481,7 +481,7 @@ bool AmSrtpConnection::tls_session_established(const Botan::TLS::Session& sessio
 {
     DBG("************ on_dtls_connect() ***********");
     DBG("new DTLS connection from %s:%u",
-        rtp_stream->getRHost().c_str(),
+        rtp_stream->getRHost(b_srtcp).c_str(),
         rtp_stream->getRPort());
 
     srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();

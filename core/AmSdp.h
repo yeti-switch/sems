@@ -176,7 +176,7 @@ struct SdpIceCandidate
     std::map<string, string> attrs;
     
     SdpIceCandidate() 
-        : foundation(int2str(rand())), comp_id(1)
+        : foundation(int2str(rand())), comp_id(0)
         , priority((ICT_HOST << 24) | ((rand() << 16) >> 8) | (256 - comp_id)) // see rfc5245 4.1.2.1
         , transport(ICTR_UDP), type(ICT_HOST) {}
     
@@ -277,10 +277,12 @@ struct SdpMedia
 
   int           type;
   unsigned int  port;
+  unsigned int  rtcp_port; // a=rtcp:
   unsigned int  nports;
   int           transport;
   int           frame_size;
   SdpConnection conn; // c=
+  SdpConnection rtcp_conn; // a=rtcp:
   Direction     dir;  // a=direction
   Setup         setup;
   string        fmt;  // format in case proto != RTP/AVP or RTP/SAVP
@@ -308,6 +310,7 @@ struct SdpMedia
   SdpMedia()
     : type(MT_NONE),
       port(0),
+      rtcp_port(0),
       nports(0),
       transport(TP_NONE),
       frame_size(20),

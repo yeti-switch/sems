@@ -69,7 +69,8 @@ const uint16_t STUN_ATTRIBUTE_FINGERPRINT = 0x8028;
 const uint16_t STUN_ATTRIBUTE_RESPONSE_ORIGIN = 0x802b;
 const uint16_t STUN_ATTRIBUTE_OTHER_ADDRESS = 0x802c;
 
-
+const uint16_t STUN_ATTRIBUTE_ICE_CONTROLLING = 0x802A;
+const uint16_t STUN_ATTRIBUTE_ICE_CONTROLLED = 0x8029;
 
 
 const uint16_t STUN_TRANSACTION_ID_LENGTH = 16;
@@ -147,7 +148,7 @@ const uint16_t STUN_ATTRIBUTE_CHANGEREQUEST_SIZE = 4;
 #define STUN_IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == 0x0100)
 #define STUN_IS_ERR_RESP(msg_type)      (((msg_type) & 0x0110) == 0x0110)
 
-
+#define IS_STUN_MESSAGE(msg_type)       (((msg_type) & 0xFFFC) == 0x0101 || ((msg_type) & 0xFFFC) == 0x0001 || ((msg_type) & 0xFFFC) == 0x0111)
 
 struct StunTransactionId
 {
