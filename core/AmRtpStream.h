@@ -648,7 +648,8 @@ class AmRtpStream
     */
     virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
-    void createSrtpConnection(bool dtls_server, const SdpFingerPrint& fp);
+    void initSrtpConnection(bool dtls_server, const SdpFingerPrint& fp);
+    void createSrtpConnection();
 
     /** set the RTP stream on hold */
     void setOnHold(bool on_hold);

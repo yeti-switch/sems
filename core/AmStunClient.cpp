@@ -1,6 +1,7 @@
 #include "AmStunClient.h"
 #include <stunbuilder.h>
 #include "AmRtpStream.h"
+#include "AmSrtpConnection.h"
 
 AmStunClient::AmStunClient(AmRtpStream* stream, bool b_rtcp)
 : rtp_stream(stream), isrtcp(b_rtcp)
@@ -105,7 +106,7 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
     } else {
         CSocketAddress addr((*it).r_sa);
         builder.AddXorMappedAddress(addr);
-        builder.AddMessageIntegrityShortTerm(remote_password.c_str());
+        builder.AddMessageIntegrityShortTerm(local_password.c_str());
         builder.AddFingerprintAttribute();
     }
     
@@ -120,6 +121,42 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
 
 void AmStunClient::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
 {
+    bool valid = true;
+    int err_code = 0;
+    std::string error_str;
+    
+    if(valid && !reader->HasMessageIntegrityAttribute()) {
+        err_code = STUN_ERROR_UNAUTHORIZED;
+        error_str = "absent message integrity attribute";
+        valid = false;
+    }
+    if(valid && reader->ValidateMessageIntegrityShort(remote_password.c_str()) != S_OK) {
+        err_code = STUN_ERROR_UNAUTHORIZED;
+        error_str = "message integrity attribute validation failed";
+        valid = false;
+    }
+    if(valid && (!reader->HasFingerprintAttribute() || !reader->IsFingerprintAttributeValid())) {
+        err_code = STUN_ERROR_BADREQUEST;
+        error_str = "fingerprint attribute validation failed";
+        valid = false;
+    }
+    
+    auto it = std::find(pairs.begin(), pairs.end(), addr);
+    if(it != pairs.end()) {
+        it->state = StunCandidate::CHECK_OTHER;
+    } else {
+        WARN("not found ice pair %s:%d", am_inet_ntop(addr).c_str(), am_get_port(addr));
+    }
+    
+    
+    if(valid && (*it).state != StunCandidate::ALLOW) {
+        (*it).state = StunCandidate::ALLOW;
+        rtp_stream->setRAddr(!isrtcp ? am_inet_ntop(&(*it).r_sa) : "", isrtcp ? am_inet_ntop(&(*it).r_sa) : "",
+                             !isrtcp ? am_get_port(&(*it).r_sa) : 0, isrtcp ? am_get_port(&(*it).r_sa) : 0);
+        rtp_stream->createSrtpConnection();
+    } else if((*it).state == StunCandidate::ALLOW){
+        WARN("valid stun message is false ERR = %s", error_str.c_str());
+    }
 }
 
 void AmStunClient::send_request(StunCandidate candidate)
@@ -151,7 +188,6 @@ void AmStunClient::send_request(StunCandidate candidate)
     
     CRefCountedBuffer buffer;
     HRESULT ret = builder.GetResult(&buffer);
-    INFO("send stun request to %s:%d", am_inet_ntop(&candidate.r_sa).c_str(), am_get_port(&candidate.r_sa));
     if(ret == S_OK) {
         rtp_stream->send(&candidate.r_sa, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
     }

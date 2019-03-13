@@ -1154,9 +1154,9 @@ int AmRtpStream::init(const AmSdp& local,
 
     if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
         if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive)
-            createSrtpConnection(false, remote_media.fingerprint);
+            initSrtpConnection(false, remote_media.fingerprint);
         else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive)
-            createSrtpConnection(true, remote_media.fingerprint);
+            initSrtpConnection(true, remote_media.fingerprint);
     }
     else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
         CryptoProfile cprofile = CP_NONE;
@@ -1208,9 +1208,8 @@ int AmRtpStream::init(const AmSdp& local,
                                                                             remote_media.is_dtls_srtp()?"true":"false",
                                                                             remote_media.is_simple_srtp()?"true":"false");
     
-    if(local_media.is_dtls_srtp()) {
-        srtp_connection->create_dtls();
-        srtcp_connection->create_dtls();
+    if(local_media.is_dtls_srtp() && !remote_media.is_use_ice()) {
+        createSrtpConnection();
     }
     if(remote_media.is_use_ice()) {
         rtp_mode = ICE_RTP;
@@ -1285,7 +1284,7 @@ int AmRtpStream::init(const AmSdp& local,
     return 0;
 }
 
-void AmRtpStream::createSrtpConnection(bool dtls_server, const SdpFingerPrint& fp)
+void AmRtpStream::initSrtpConnection(bool dtls_server, const SdpFingerPrint& fp)
 {
     srtp_fingerprint_p fingerprint(fp.hash, fp.value);
     if(dtls_server) {
@@ -1294,6 +1293,18 @@ void AmRtpStream::createSrtpConnection(bool dtls_server, const SdpFingerPrint& f
     } else {
         srtp_connection->use_dtls(&client_settings, fingerprint);
         srtcp_connection->use_dtls(&client_settings, fingerprint);
+    }
+}
+
+void AmRtpStream::createSrtpConnection()
+{
+    if(srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT ||
+       srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER) {
+        srtp_connection->create_dtls();
+    }
+    if(srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT ||
+       srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER) {
+        srtcp_connection->create_dtls();
     }
 }
 
