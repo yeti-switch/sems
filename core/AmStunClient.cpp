@@ -43,9 +43,7 @@ void AmStunClient::on_data_recv(uint8_t* data, unsigned int size, sockaddr_stora
     if(msgClass == StunMsgClassRequest) {
         check_request(&reader, addr);
     } else if(msgClass == StunMsgClassSuccessResponse) {
-
-    } else if(msgClass == StunMsgClassFailureResponse) {
-    
+        check_response(&reader, addr);
     }
 }
 
@@ -105,8 +103,9 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
         WARN("%s, stun packet is dropped, %s", error_str.c_str(), username.c_str());
         builder.AddErrorCode(err_code, error_str.c_str());
     } else {
-        builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&it->priority, 4);
-        builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, (char*)reader->GetStream().GetDataPointerUnsafe() + controlling.offset, controlling.size);
+        CSocketAddress addr((*it).r_sa);
+        builder.AddXorMappedAddress(addr);
+        builder.AddMessageIntegrityShortTerm(remote_password.c_str());
         builder.AddFingerprintAttribute();
     }
     
@@ -114,5 +113,46 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         rtp_stream->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
+    }
+    
+    send_request(*it);
+}
+
+void AmStunClient::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
+{
+}
+
+void AmStunClient::send_request(StunCandidate candidate)
+{
+    CStunMessageBuilder builder;
+    builder.AddBindingRequestHeader();
+    StunTransactionId trnsId;
+    *(int*)trnsId.id = htonl(STUN_COOKIE);
+    for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
+        trnsId.id[i] = (uint8_t)rand();
+    }
+    builder.AddTransactionId(trnsId);
+    string username = remote_user + ":" + local_user;
+    builder.AddUserName(username.c_str());
+    
+    uint16_t nt_info[2] = {0};
+    nt_info[0] = htons(1);
+    builder.AddAttribute(STUN_ATTRIBUTE_NETWORK_INFO, &nt_info, 4);
+    
+    char data[STUN_TIE_BREAKER_LENGTH];
+    for(int i = 0; i < STUN_TIE_BREAKER_LENGTH; i++) {
+        data[i] = (uint8_t)rand();
+    }
+    builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, data, STUN_TIE_BREAKER_LENGTH);
+    int priority = htonl(candidate.priority);
+    builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority, 4);
+    builder.AddMessageIntegrityShortTerm(remote_password.c_str());
+    builder.AddFingerprintAttribute();
+    
+    CRefCountedBuffer buffer;
+    HRESULT ret = builder.GetResult(&buffer);
+    INFO("send stun request to %s:%d", am_inet_ntop(&candidate.r_sa).c_str(), am_get_port(&candidate.r_sa));
+    if(ret == S_OK) {
+        rtp_stream->send(&candidate.r_sa, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
     }
 }

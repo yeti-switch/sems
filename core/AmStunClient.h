@@ -47,6 +47,8 @@ public:
     
 private:
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
+    void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
+    void send_request(StunCandidate candidate);
 };
 
 #endif/*AM_STUN_CLIENT_H*/
