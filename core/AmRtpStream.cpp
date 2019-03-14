@@ -213,6 +213,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
         client_settings = rtpinfo->client_settings;
         srtp_profiles = rtpinfo->profiles;
         srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
+        dtls_enable = srtp_enable && rtpinfo->dtls_enable;
     }
 
     int retry = 10;
@@ -686,7 +687,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     rtcp_stun_client(new AmStunClient(this, true)),
     rtp_mode(RTP_DEFAULT),
     transport(RTP_AVP),
-    srtp_enable(true)
+    srtp_enable(false),
+    dtls_enable(false)
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -892,7 +894,13 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     getSdp(offer);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
-    if(transport != RTP_AVP && !srtp_enable) {
+    if((transport == RTP_SAVP || transport == RTP_SAVPF) && !srtp_enable) {
+        CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
+                    AmConfig.media_ifs[l_if].name.c_str());
+        offer.transport = RTP_AVP;
+    } else if((transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF) && !dtls_enable) {
+        CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
+                    AmConfig.media_ifs[l_if].name.c_str());
         offer.transport = RTP_AVP;
     } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
         for(auto profile : srtp_profiles) {
@@ -921,8 +929,10 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     answer.rtcp_port = getLocalRtcpPort();
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    if(transport != RTP_AVP && !srtp_enable) {
-        answer.transport = RTP_AVP;
+    if((offer.is_simple_srtp() && !srtp_enable) ||
+       (offer.is_dtls_srtp() && !dtls_enable) ||
+       (offer.is_use_ice() && !AmConfig.enable_ice)) {
+        throw AmSession::Exception(488,"transport not supported");
     } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
@@ -1978,12 +1988,19 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
     case RTP_AVP:
         break;
     case RTP_SAVP:
-    case RTP_UDPTLSAVP:
+    case RTP_SAVPF:
         if(!srtp_enable) {
-            CLASS_ERROR("srtp is disabled on related interface (%s). raise exception",
+            CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
                        AmConfig.media_ifs[l_if].name.c_str());
-            throw std::string("srtp is disabled on related interface: " + AmConfig.media_ifs[l_if].name);
-            //transport = RTP_AVP;
+            transport = RTP_AVP;
+        }
+        break;
+    case RTP_UDPTLSAVP:
+    case RTP_UDPTLSAVPF:
+        if(!dtls_enable) {
+            CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
+                       AmConfig.media_ifs[l_if].name.c_str());
+            transport = RTP_AVP;
         }
         break;
     default:
@@ -1992,7 +2009,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
     }
 
     m.transport = transport;
-    if(RTP_SAVP == transport) {
+    if(RTP_SAVP == transport || RTP_SAVPF == transport) {
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -2004,8 +2021,8 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
             m.crypto.push_back(crypto);
             m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else if(RTP_UDPTLSAVP == transport) {
-        m.setup = SdpMedia::DirPassive;
+    } else if(RTP_UDPTLSAVP == transport || RTP_UDPTLSAVPF == transport) {
+        m.setup = SdpMedia::SetupPassive;
     }
 }
 

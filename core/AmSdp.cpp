@@ -617,13 +617,6 @@ void AmSdp::print(string& body) const
             }
         }
 
-        // add attributes (media level)
-        for (std::vector<SdpAttribute>::const_iterator a_it=
-             media_it->attributes.begin(); a_it != media_it->attributes.end(); a_it++)
-        {
-            out_buf += a_it->print();
-        }
-
         if(media_it->setup == SdpMedia::SetupUndefined) {
             switch (media_it->dir) {
                 case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
@@ -640,8 +633,14 @@ void AmSdp::print(string& body) const
             case SdpMedia::SetupHold: out_buf += "a=setup:hold\r\n"; break;
             case SdpMedia::SetupUndefined: break;
         }
-    }
 
+        // add attributes (media level)
+        for (std::vector<SdpAttribute>::const_iterator a_it=
+            media_it->attributes.begin(); a_it != media_it->attributes.end(); a_it++)
+        {
+            out_buf += a_it->print();
+        }
+    }
     body = out_buf;
 }
 

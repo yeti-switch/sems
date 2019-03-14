@@ -82,6 +82,7 @@ struct ConfigContainer
     unsigned int cps_limit_err_code;
     std::string cps_limit_err_reason;
     bool enable_srtp;
+    bool enable_ice;
     bool enable_rtsp;
     std::string options_transcoder_out_stats_hdr;
     std::string options_transcoder_in_stats_hdr;

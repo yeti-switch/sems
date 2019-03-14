@@ -94,6 +94,7 @@
 #define PARAM_NOTIFY_LOWER_CSEQ_NAME "ignore_notify_lower_cseq"
 #define PARAM_ENABLE_RTSP_NAME       "enable_rtsp"
 #define PARAM_ENABLE_SRTP_NAME       "enable_srtp"
+#define PARAM_ENABLE_ICE_NAME        "enable_ice"
 #define PARAM_OPT_TRANSCODE_OUT_NAME "options_transcoder_out_stats_hdr"
 #define PARAM_OPT_TRANSCODE_IN_NAME  "options_transcoder_in_stats_hdr"
 #define PARAM_TRANSCODE_OUT_NAME     "transcoder_out_stats_hdr"
@@ -267,7 +268,7 @@ namespace Config {
     {
         CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
         CFG_SEC(SECTION_SDES_NAME, sdes, CFGF_NONE),
-        CFG_SEC(SECTION_DTLS_NAME, dtls, CFGF_NONE),
+        CFG_SEC(SECTION_DTLS_NAME, dtls, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -455,8 +456,9 @@ namespace Config {
         CFG_BOOL(PARAM_NEXT_HOP_1ST_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_PROXY_STICKY_AUTH_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_NOTIFY_LOWER_CSEQ_NAME, cfg_false, CFGF_NONE),
-        CFG_BOOL(PARAM_ENABLE_RTSP_NAME, cfg_true, CFGF_NONE),
-        CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_RTSP_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_ICE_NAME, cfg_true, CFGF_NONE),
         CFG_BOOL(PARAM_LOG_SESSIONS_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_LOG_EVENTS_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
@@ -868,6 +870,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->single_codec_in_ok = cfg_getbool(gen, PARAM_SINGLE_CODEC_INOK_NAME);
     config->enable_rtsp = cfg_getbool(gen, PARAM_ENABLE_RTSP_NAME);
     config->enable_srtp = cfg_getbool(gen, PARAM_ENABLE_SRTP_NAME);
+    config->enable_ice = cfg_getbool(gen, PARAM_ENABLE_ICE_NAME);
     config->log_sessions = cfg_getbool(gen, PARAM_LOG_SESSIONS_NAME);
     config->accept_forked_dialogs = cfg_getbool(gen, PARAM_ACCEPT_FORKED_DLG_NAME);
 	if(config->use_raw_sockets && (raw_sender::init() < 0)) {
@@ -1230,66 +1233,71 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
 
         cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
-        cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
-        if(!server) {
-            ERROR("absent mandatory section 'server' in dtls configuration");
-            return 0;
-        }
-        for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
-            std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
-            rtpinfo->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
-        }
-        for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
-            rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
-        }
-        if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate) ||
-           getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key)){
-            return 0;
-        }
-        for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
-            std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
-            rtpinfo->server_settings.cipher_list.push_back(cipher);
-        }
-        for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
-            std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
-            rtpinfo->server_settings.macs_list.push_back(mac);
-        }
-        rtpinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
-        rtpinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
-        rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
-        for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
-            std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
-            rtpinfo->server_settings.ca_list.push_back(ca);
-        }
+        if(!dtls) {
+            rtpinfo->dtls_enable = false;
+        } else {
+            rtpinfo->dtls_enable = true;
+            cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
+            if(!server) {
+                ERROR("absent mandatory section 'server' in dtls configuration");
+                return 0;
+            }
+            for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
+                std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
+                rtpinfo->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+            }
+            for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
+                rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
+            }
+            if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate) ||
+            getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key)){
+                return 0;
+            }
+            for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
+                std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
+                rtpinfo->server_settings.cipher_list.push_back(cipher);
+            }
+            for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
+                std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
+                rtpinfo->server_settings.macs_list.push_back(mac);
+            }
+            rtpinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
+            rtpinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
+            rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
+            for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
+                std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
+                rtpinfo->server_settings.ca_list.push_back(ca);
+            }
 
-        if(rtpinfo->server_settings.require_client_certificate && rtpinfo->server_settings.ca_list.empty()) {
-            ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
-            return 0;
-        }
-        if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
-            ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
-            return 0;
-        }
+            if(rtpinfo->server_settings.require_client_certificate && rtpinfo->server_settings.ca_list.empty()) {
+                ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
+                return 0;
+            }
+            if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
+                ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
+                return 0;
+            }
 
-        cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
-        if(!client) {
-            ERROR("absent mandatory section 'client' in dtls configuration");
-            return 0;
-        }
-        for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
-            std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
-            rtpinfo->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
-        }
-        for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
-            rtpinfo->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
-        }
-        rtpinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
-        rtpinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
-        rtpinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
-        rtpinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
-        for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
-            std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
-            rtpinfo->client_settings.ca_list.push_back(ca);
+            cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
+            if(!client) {
+                ERROR("absent mandatory section 'client' in dtls configuration");
+                return 0;
+            }
+            for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
+                std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
+                rtpinfo->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+            }
+            for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
+                rtpinfo->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
+            }
+            rtpinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+            rtpinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+            rtpinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
+            rtpinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
+            for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
+                std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
+                rtpinfo->client_settings.ca_list.push_back(ca);
+            }
         }
     }
 
