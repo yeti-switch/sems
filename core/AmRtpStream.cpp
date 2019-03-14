@@ -527,7 +527,7 @@ int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
 
 
   //TODO: process case with AmConfig.force_outbound_if properly for rtcp
-  if(!rtcp && sys_if_idx && AmConfig.force_outbound_if) {
+  if(sys_if_idx && AmConfig.force_outbound_if) {
     return sendmsg(buf,size);
   }
 
