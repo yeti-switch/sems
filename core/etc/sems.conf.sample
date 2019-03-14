@@ -203,6 +203,15 @@ general {
     */
     enable_srtp=yes
 
+    /* optional parameter: enable_ice
+     * enable ice protocol
+     *
+     * available values: yes, no
+     *
+     * default=no
+    */
+    enable_ice=yes
+    
     /* optional parameter: pcap_upload_queue
      *
      * http_client destination name
@@ -1186,145 +1195,147 @@ media-interfaces {
                     /*
                     * section described DTLS client settings
                     */
-                    client {
-                        /* mandatory parameters protocols
-                        *
-                        * list of supported protocols
-                        *
-                        * available values: DTLSv1, DTLSv1.2
-                        */
-                        protocols =  { DTLSv1, DTLSv1.2 }
+                    dtls {
+                        client {
+                            /* mandatory parameters protocols
+                            *
+                            * list of supported protocols
+                            *
+                            * available values: DTLSv1, DTLSv1.2
+                            */
+                            protocols =  { DTLSv1, DTLSv1.2 }
 
-                        /* optional parameters certificate
-                        *
-                        * path to client certificate
-                        */
-                        certificate = /etc/sems/client.crt
+                            /* optional parameters certificate
+                            *
+                            * path to client certificate
+                            */
+                            certificate = /etc/sems/client.crt
 
-                        /* optional parameters certificate_key
-                        *
-                        * path to client certificate key
-                        */
-                        certificate_key = /etc/sems/client.crt
+                            /* optional parameters certificate_key
+                            *
+                            * path to client certificate key
+                            */
+                            certificate_key = /etc/sems/client.crt
 
-                        /* mandatory parameter: profiles
-                        *
-                        *  srtp profile
-                        *
-                        *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
-                        *
-                        *  default: no default
-                        */
-                        profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
+                            /* mandatory parameter: profiles
+                            *
+                            *  srtp profile
+                            *
+                            *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
+                            *
+                            *  default: no default
+                            */
+                            profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
 
-                        /* optional parameters verify_certificate_cn
-                        *
-                        * whether to check server certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_certificate_chain = true
+                            /* optional parameters verify_certificate_cn
+                            *
+                            * whether to check server certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_certificate_chain = true
 
-                        /* optional parameter verify_certificate_cn
-                        *
-                        * whether to check common name of server certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_certificate_cn = true
+                            /* optional parameter verify_certificate_cn
+                            *
+                            * whether to check common name of server certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_certificate_cn = true
 
-                        /* optional parameters ca_list
-                        *
-                        * path to ca certificates
-                        */
-                        ca_list = /etc/sems/ca/ca.crt
-                    }
+                            /* optional parameters ca_list
+                            *
+                            * path to ca certificates
+                            */
+                            ca_list = /etc/sems/ca/ca.crt
+                        }
 
-                    /*
-                    * section described TLS server settings
-                    */
-                    server {
-                        /* mandatory parameters protocols
-                        *
-                        * list of supported protocols
-                        *
-                        * available values: DTLSv1, DTLSv1.2
+                        /*
+                        * section described TLS server settings
                         */
-                        protocols =  { DTLSv1, DTLSv1.2 }
+                        server {
+                            /* mandatory parameters protocols
+                            *
+                            * list of supported protocols
+                            *
+                            * available values: DTLSv1, DTLSv1.2
+                            */
+                            protocols =  { DTLSv1, DTLSv1.2 }
 
-                        /* mandatory parameters certificate
-                        *
-                        * path to server certificate
-                        */
-                        certificate = /etc/sems/client.crt
+                            /* mandatory parameters certificate
+                            *
+                            * path to server certificate
+                            */
+                            certificate = /etc/sems/client.crt
 
-                        /* mandatory parameters certificate_key
-                        *
-                        * path to server certificate key
-                        */
-                        certificate_key = /etc/sems/client.crt
+                            /* mandatory parameters certificate_key
+                            *
+                            * path to server certificate key
+                            */
+                            certificate_key = /etc/sems/client.crt
 
-                        /* mandatory parameters ciphers
-                        *
-                        * list of supported ciphers
-                        *
-                        * available values: EECDH, ECDSA, AESGCM ....
-                        */
-                        ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
+                            /* mandatory parameters ciphers
+                            *
+                            * list of supported ciphers
+                            *
+                            * available values: EECDH, ECDSA, AESGCM ....
+                            */
+                            ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
 
-                        /* mandatory parameters macs
-                        *
-                        * list of supported macs
-                        *
-                        * available values: AEAD, SHA-256, SHA-384, SHA-1
-                        */
-                        macs = {AEAD, SHA-256, SHA-384, SHA-1}
+                            /* mandatory parameters macs
+                            *
+                            * list of supported macs
+                            *
+                            * available values: AEAD, SHA-256, SHA-384, SHA-1
+                            */
+                            macs = {AEAD, SHA-256, SHA-384, SHA-1}
 
-                        /* mandatory parameter: profiles
-                        *
-                        *  srtp profile
-                        *
-                        *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
-                        *
-                        *  default: no default
-                        */
-                        profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
+                            /* mandatory parameter: profiles
+                            *
+                            *  srtp profile
+                            *
+                            *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
+                            *
+                            *  default: no default
+                            */
+                            profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
 
-                        /* optional parameters require_client_certificate
-                        *
-                        * whether to require client certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        require_client_certificate = true
+                            /* optional parameters require_client_certificate
+                            *
+                            * whether to require client certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            require_client_certificate = true
 
-                        /* optional parameters verify_certificate_cn
-                        *
-                        * whether to check client certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_client_certificate = true
+                            /* optional parameters verify_certificate_cn
+                            *
+                            * whether to check client certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_client_certificate = true
 
-                        /* optional parameter dhparam
-                        *
-                        * not using now
-                        */
-                        //dhparam = ECDH
+                            /* optional parameter dhparam
+                            *
+                            * not using now
+                            */
+                            //dhparam = ECDH
 
-                        /* optional parameters ca_list
-                        *
-                        * path to ca certificates
-                        */
-                        ca_list = /etc/sems/ca/ca.crt
+                            /* optional parameters ca_list
+                            *
+                            * path to ca certificates
+                            */
+                            ca_list = /etc/sems/ca/ca.crt
+                        }
                     }
                 }
                 /* optional parameter dscp
@@ -1414,148 +1425,150 @@ media-interfaces {
                         */
                         profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
                     }
-                    /*
-                    * section described DTLS client settings
-                    */
-                    client {
-                        /* mandatory parameters protocols
-                        *
-                        * list of supported protocols
-                        *
-                        * available values: DTLSv1, DTLSv1.2
+                    dtls {
+                        /*
+                        * section described DTLS client settings
                         */
-                        protocols =  { DTLSv1, DTLSv1.2 }
+                        client {
+                            /* mandatory parameters protocols
+                            *
+                            * list of supported protocols
+                            *
+                            * available values: DTLSv1, DTLSv1.2
+                            */
+                            protocols =  { DTLSv1, DTLSv1.2 }
 
-                        /* optional parameters certificate
-                        *
-                        * path to client certificate
-                        */
-                        certificate = /etc/sems/client.crt
+                            /* optional parameters certificate
+                            *
+                            * path to client certificate
+                            */
+                            certificate = /etc/sems/client.crt
 
-                        /* optional parameters certificate_key
-                        *
-                        * path to client certificate key
-                        */
-                        certificate_key = /etc/sems/client.crt
+                            /* optional parameters certificate_key
+                            *
+                            * path to client certificate key
+                            */
+                            certificate_key = /etc/sems/client.crt
 
-                        /* mandatory parameter: profiles
-                        *
-                        *  srtp profile
-                        *
-                        *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
-                        *
-                        *  default: no default
-                        */
-                        profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
+                            /* mandatory parameter: profiles
+                            *
+                            *  srtp profile
+                            *
+                            *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
+                            *
+                            *  default: no default
+                            */
+                            profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
 
-                        /* optional parameters verify_certificate_cn
-                        *
-                        * whether to check server certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_certificate_chain = true
+                            /* optional parameters verify_certificate_cn
+                            *
+                            * whether to check server certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_certificate_chain = true
 
-                        /* optional parameter verify_certificate_cn
-                        *
-                        * whether to check common name of server certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_certificate_cn = true
+                            /* optional parameter verify_certificate_cn
+                            *
+                            * whether to check common name of server certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_certificate_cn = true
 
-                        /* optional parameters ca_list
-                        *
-                        * path to ca certificates
-                        */
-                        ca_list = /etc/sems/ca/ca.crt
-                    }
+                            /* optional parameters ca_list
+                            *
+                            * path to ca certificates
+                            */
+                            ca_list = /etc/sems/ca/ca.crt
+                        }
 
-                    /*
-                    * section described TLS server settings
-                    */
-                    server {
-                        /* mandatory parameters protocols
-                        *
-                        * list of supported protocols
-                        *
-                        * available values: DTLSv1, DTLSv1.2
+                        /*
+                        * section described TLS server settings
                         */
-                        protocols =  { DTLSv1, DTLSv1.2 }
+                        server {
+                            /* mandatory parameters protocols
+                            *
+                            * list of supported protocols
+                            *
+                            * available values: DTLSv1, DTLSv1.2
+                            */
+                            protocols =  { DTLSv1, DTLSv1.2 }
 
-                        /* mandatory parameters certificate
-                        *
-                        * path to server certificate
-                        */
-                        certificate = /etc/sems/client.crt
+                            /* mandatory parameters certificate
+                            *
+                            * path to server certificate
+                            */
+                            certificate = /etc/sems/client.crt
 
-                        /* mandatory parameters certificate_key
-                        *
-                        * path to server certificate key
-                        */
-                        certificate_key = /etc/sems/client.crt
+                            /* mandatory parameters certificate_key
+                            *
+                            * path to server certificate key
+                            */
+                            certificate_key = /etc/sems/client.crt
 
-                        /* mandatory parameters ciphers
-                        *
-                        * list of supported ciphers
-                        *
-                        * available values: EECDH, ECDSA, AESGCM ....
-                        */
-                        ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
+                            /* mandatory parameters ciphers
+                            *
+                            * list of supported ciphers
+                            *
+                            * available values: EECDH, ECDSA, AESGCM ....
+                            */
+                            ciphers = {ChaCha20Poly1305, AES-256/GCM, AES-128/GCM, AES-256/CCM, AES-128/CCM, AES-256, AES-128}
 
-                        /* mandatory parameters macs
-                        *
-                        * list of supported macs
-                        *
-                        * available values: AEAD, SHA-256, SHA-384, SHA-1
-                        */
-                        macs = {AEAD, SHA-256, SHA-384, SHA-1}
+                            /* mandatory parameters macs
+                            *
+                            * list of supported macs
+                            *
+                            * available values: AEAD, SHA-256, SHA-384, SHA-1
+                            */
+                            macs = {AEAD, SHA-256, SHA-384, SHA-1}
 
-                        /* mandatory parameter: profiles
-                        *
-                        *  srtp profile
-                        *
-                        *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
-                        *
-                        *  default: no default
-                        */
-                        profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
+                            /* mandatory parameter: profiles
+                            *
+                            *  srtp profile
+                            *
+                            *  available values: AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
+                            *
+                            *  default: no default
+                            */
+                            profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
 
-                        /* optional parameters require_client_certificate
-                        *
-                        * whether to require client certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        require_client_certificate = true
+                            /* optional parameters require_client_certificate
+                            *
+                            * whether to require client certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            require_client_certificate = true
 
-                        /* optional parameters verify_certificate_cn
-                        *
-                        * whether to check client certificate
-                        *
-                        * available values: true, false
-                        *
-                        * default: true
-                        */
-                        verify_client_certificate = true
+                            /* optional parameters verify_certificate_cn
+                            *
+                            * whether to check client certificate
+                            *
+                            * available values: true, false
+                            *
+                            * default: true
+                            */
+                            verify_client_certificate = true
 
-                        /* optional parameter dhparam
-                        *
-                        * not using now
-                        */
-                        //dhparam = ECDH
+                            /* optional parameter dhparam
+                            *
+                            * not using now
+                            */
+                            //dhparam = ECDH
 
-                        /* optional parameters ca_list
-                        *
-                        * path to ca certificates
-                        */
-                        ca_list = /etc/sems/ca/ca.crt
+                            /* optional parameters ca_list
+                            *
+                            * path to ca certificates
+                            */
+                            ca_list = /etc/sems/ca/ca.crt
+                        }
                     }
                 }
                 /* optional parameter dscp
