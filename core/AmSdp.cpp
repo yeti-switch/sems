@@ -637,7 +637,8 @@ void AmSdp::print(string& body) const
             case SdpMedia::SetupActive:  out_buf += "a=setup:active\r\n"; break;
             case SdpMedia::SetupPassive: out_buf += "a=setup:passive\r\n"; break;
             case SdpMedia::SetupActPass: out_buf += "a=setup:actpass\r\n"; break;
-            case SdpMedia::SetupHold: break;
+            case SdpMedia::SetupHold: out_buf += "a=setup:hold\r\n"; break;
+            case SdpMedia::SetupUndefined: break;
         }
     }
 
