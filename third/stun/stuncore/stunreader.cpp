@@ -22,21 +22,10 @@
 #include "stunutils.h"
 #include "socketaddress.h"
 #include <boost/crc.hpp>
-
-#ifndef __APPLE__
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
-#include <openssl/md5.h>
-#else
-#define COMMON_DIGEST_FOR_OPENSSL
-#include <CommonCrypto/CommonCrypto.h>
-#endif
-
+#include <botan/mac.h>
+#include <botan/hash.h>
 #include "stunauth.h"
 #include "fasthash.h"
-
-
-
 
 
 CStunMessageReader::CStunMessageReader()
@@ -149,25 +138,8 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
     int lastAttributeIndex = _countAttributes - 1;
     bool fFingerprintAdjustment = false;
     bool fNoOtherAttributesAfterIntegrity = false;
-    const size_t c_hmacsize = 20;
-    uint8_t hmaccomputed[c_hmacsize] = {}; // zero-init
-    unsigned int hmaclength = c_hmacsize;
-#ifndef __APPLE__
-    HMAC_CTX* ctx = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    HMAC_CTX ctxData = {};
-    ctx = &ctxData;
-    HMAC_CTX_init(ctx);
-#else
-    ctx = HMAC_CTX_new();
-#endif
-#else
-    CCHmacContext* ctx = NULL;
-    CCHmacContext ctxData = {};
-    ctx = &ctxData;
-    
-    UNREFERENCED_VARIABLE(hmaclength);
-#endif
+    std::unique_ptr<Botan::MessageAuthenticationCode> sha1_hmac = Botan::MessageAuthenticationCode::create("HMAC(SHA-1)");
+    Botan::secure_vector<uint8_t> hmaccomputed;
     uint32_t chunk32;
     uint16_t chunk16;
     size_t len, nChunks;
@@ -176,7 +148,6 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
     StunAttribute* pAttribIntegrity=NULL;
     
     int cmp = 0;
-    bool fContextInit = false;
     
     
     ChkIf(_state != BodyValidated, E_FAIL);
@@ -192,7 +163,7 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
     
     ChkIf(pAttribIntegrity == NULL, E_FAIL);
 
-    ChkIf(pAttribIntegrity->size != c_hmacsize, E_FAIL);
+    ChkIf(pAttribIntegrity->size != sha1_hmac->output_length(), E_FAIL);
     
     // first, check to make sure that no other attributes (other than fingerprint) follow the message integrity
     fNoOtherAttributesAfterIntegrity = (_indexMessageIntegrity == lastAttributeIndex) || ((_indexMessageIntegrity == (lastAttributeIndex-1)) && (_indexFingerprint == lastAttributeIndex));
@@ -204,25 +175,12 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
     stream.Attach(spBuffer, false);
     
     // Here comes the fun part.  If there is a fingerprint attribute, we have to adjust the length header in computing the hash
-#ifndef __APPLE__
-#if OPENSSL_VERSION_NUMBER < 0x10100000L // could be lower!
-    HMAC_Init(ctx, key, keylength, EVP_sha1());
-#else
-    HMAC_Init_ex(ctx, key, keylength, EVP_sha1(), NULL);
-#endif
-#else
-    CCHmacInit(ctx, kCCHmacAlgSHA1, key, keylength);
-#endif
-    fContextInit = true;
+    
+    sha1_hmac->set_key(Botan::SymmetricKey(key, keylength));
     
     // message type
     Chk(stream.ReadUint16(&chunk16));
-#ifndef __APPLE__
-    HMAC_Update(ctx, (unsigned char*)&chunk16, sizeof(chunk16));
-#else
-    CCHmacUpdate(ctx, &chunk16, sizeof(chunk16));
-#endif
-    
+    sha1_hmac->update((unsigned char*)&chunk16, sizeof(chunk16));
     // message length
     Chk(stream.ReadUint16(&chunk16));
     if (fFingerprintAdjustment)
@@ -237,11 +195,7 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
         chunk16 = htons(adjustedlengthHeader);
     }
     
-#ifndef __APPLE__
-    HMAC_Update(ctx, (unsigned char*)&chunk16, sizeof(chunk16));
-#else
-    CCHmacUpdate(ctx, &chunk16, sizeof(chunk16));
-#endif
+    sha1_hmac->update((unsigned char*)&chunk16, sizeof(chunk16));
     
     // now include everything up to the hash attribute itself.
     len = pAttribIntegrity->offset;
@@ -255,39 +209,16 @@ HRESULT CStunMessageReader::ValidateMessageIntegrity(uint8_t* key, size_t keylen
     for (size_t count = 0; count < nChunks; count++)
     {
         Chk(stream.ReadUint32(&chunk32));
-#ifndef __APPLE__
-        HMAC_Update(ctx, (unsigned char*)&chunk32, sizeof(chunk32));
-#else
-        CCHmacUpdate(ctx, &chunk32, sizeof(chunk32));
-#endif
+        sha1_hmac->update((unsigned char*)&chunk32, sizeof(chunk32));
     }
     
-#ifndef __APPLE__
-    HMAC_Final(ctx, hmaccomputed, &hmaclength);
-#else
-    CCHmacFinal(ctx, hmaccomputed);
-#endif
-    
-    
+    hmaccomputed = sha1_hmac->final();
     // now compare the bytes
-    cmp = memcmp(hmaccomputed, spBuffer->GetData() + pAttribIntegrity->offset, c_hmacsize);
+    cmp = memcmp(hmaccomputed.data(), spBuffer->GetData() + pAttribIntegrity->offset, hmaccomputed.size());
     
     hr = (cmp == 0 ? S_OK : E_FAIL);
     
 Cleanup:
-    if (fContextInit)
-    {
-#ifndef __APPLE__
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-        HMAC_CTX_cleanup(ctx);
-#else
-        HMAC_CTX_free(ctx);
-#endif
-#else
-        UNREFERENCED_VARIABLE(fContextInit);
-#endif
-    }
-        
     return hr;
 }
 
@@ -304,12 +235,14 @@ HRESULT CStunMessageReader::ValidateMessageIntegrityLong(const char* pszUser, co
     uint8_t* pData = NULL;
     uint8_t* pDst = key;
     size_t totallength = 0;
+    std::unique_ptr<Botan::HashFunction> md5 = Botan::HashFunction::create("MD5");
+    Botan::secure_vector<uint8_t> md5data;
     
     size_t passwordlength = pszPassword ? strlen(pszPassword) : 0;
     size_t userLength = pszUser ? strlen(pszUser)  : 0;
     size_t realmLength = pszRealm ? strlen(pszRealm) : 0;
     
-    uint8_t hash[MD5_DIGEST_LENGTH] = {};
+    
     
     ChkIf(_state != BodyValidated, E_FAIL);
    
@@ -344,15 +277,9 @@ HRESULT CStunMessageReader::ValidateMessageIntegrityLong(const char* pszUser, co
     
     ASSERT((pDst-key) == totallength);
     
-#ifndef __APPLE__
-    ChkIfA(NULL == MD5(key, totallength, hash), E_FAIL);
-#else
-        CC_MD5(key, totallength, hash);
-#endif
-    
-    
-    
-    Chk(ValidateMessageIntegrity(hash, ARRAYSIZE(hash)));
+    md5->update(key, totallength);
+    md5data = md5->final();
+    Chk(ValidateMessageIntegrity(md5data.data(), md5data.size()));
     
 Cleanup:
     return hr;    

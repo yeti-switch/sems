@@ -23,15 +23,8 @@
 
 #include "stunbuilder.h"
 #include <boost/crc.hpp>
-
-#ifndef __APPLE__
-#include <openssl/md5.h>
-#include <openssl/hmac.h>
-#else
-#define COMMON_DIGEST_FOR_OPENSSL
-#include <CommonCrypto/CommonCrypto.h>
-#endif
-
+#include <botan/mac.h>
+#include <botan/hash.h>
 
 #include "stunauth.h"
 
@@ -480,6 +473,8 @@ HRESULT CStunMessageBuilder::AddMessageIntegrityImpl(uint8_t* key, size_t keysiz
     uint8_t hmacvaluedummy[c_hmacsize] = {}; // zero-init
     unsigned int resultlength = c_hmacsize;
     uint8_t* pDstBuf = NULL;
+    std::unique_ptr<Botan::MessageAuthenticationCode> sha1_hmac = Botan::MessageAuthenticationCode::create("HMAC(SHA-1)");
+    Botan::secure_vector<uint8_t> hmaccomputed;
     
     CRefCountedBuffer spBuffer;
     void* pData = NULL;
@@ -506,15 +501,11 @@ HRESULT CStunMessageBuilder::AddMessageIntegrityImpl(uint8_t* key, size_t keysiz
     // now do a little pointer math so that HMAC can write exactly to where the hash bytes will appear
     pDstBuf = ((uint8_t*)pData) + length + 4;
     
-#ifndef __APPLE__
-    pHashResult = HMAC(EVP_sha1(), key, keysize, (uint8_t*)pData, length, pDstBuf, &resultlength);
-    ASSERT(resultlength == 20);
-    ASSERT(pHashResult != NULL);
-#else
-    CCHmac(kCCHmacAlgSHA1, key, keysize,(uint8_t*)pData, length, pDstBuf);
-    UNREFERENCED_VARIABLE(resultlength);
-#endif
-    
+    sha1_hmac->set_key(Botan::SymmetricKey(key, keysize));
+    sha1_hmac->update((uint8_t*)pData, length);
+    hmaccomputed = sha1_hmac->final();
+    resultlength = hmaccomputed.size();
+    memcpy(pDstBuf, hmaccomputed.data(), resultlength);    
 Cleanup:
     return hr;
 }
@@ -530,7 +521,8 @@ HRESULT CStunMessageBuilder::AddMessageIntegrityLongTerm(const char* pszUserName
     const size_t MAX_KEY_SIZE = MAX_STUN_AUTH_STRING_SIZE*3 + 2;
     uint8_t key[MAX_KEY_SIZE + 1]; // long enough for 64-char strings and two semicolons and a null char for debugging
     
-    uint8_t hash[MD5_DIGEST_LENGTH] = {};
+    std::unique_ptr<Botan::HashFunction> md5 = Botan::HashFunction::create("MD5");
+    Botan::secure_vector<uint8_t> md5data;
     uint8_t* pResult = NULL;
     uint8_t* pDst = key;
     
@@ -570,14 +562,9 @@ HRESULT CStunMessageBuilder::AddMessageIntegrityLongTerm(const char* pszUserName
     
     ASSERT((pDst-key) == lenTotal);
 
-#ifndef __APPLE__
-    pResult = MD5(key, lenTotal, hash);
-#else
-    pResult = CC_MD5(key, lenTotal, hash);
-#endif
-    
-    ASSERT(pResult != NULL);
-    hr= AddMessageIntegrityImpl(hash, MD5_DIGEST_LENGTH);
+    md5->update(key, lenTotal);
+    md5data = md5->final();
+    hr= AddMessageIntegrityImpl(md5data.data(), md5data.size());
     
 Cleanup:
     return hr;

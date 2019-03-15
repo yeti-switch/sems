@@ -15,7 +15,7 @@
 */
 
 #include "commonincludes.hpp"
-#include <openssl/hmac.h>
+#include <botan/mac.h>
 #include "stuncore.h"
 #include "stunsocket.h"
 #include "stunsocketthread.h"
@@ -161,16 +161,18 @@ HRESULT CLongTermAuth::CreateNonce(char *pszNonce)
     // If you use this code, make sure you change the value of c_szPrivateKey!
     
     time_t thetime = time(NULL);
-    uint8_t hmacresult[20] = {};
-    char szHMAC[20*2+1];
+    Botan::secure_vector<uint8_t> hmacresult;
     char szTime[sizeof(time_t)*4];
     unsigned int len = ARRAYSIZE(hmacresult);
     
     sprintf(szTime, "%u:", (unsigned int)thetime);
     
-    HMAC(::EVP_sha1(), (unsigned char*)c_szPrivateKey, strlen(c_szPrivateKey), (unsigned char*)szTime, strlen(szTime), hmacresult, &len);
+    std::unique_ptr<Botan::MessageAuthenticationCode> sha1_hmac = Botan::MessageAuthenticationCode::create("HMAC(SHA-1)");
+    sha1_hmac->set_key(Botan::SymmetricKey(c_szPrivateKey, strlen(c_szPrivateKey)));
+    sha1_hmac->update((unsigned char*)&szTime, strlen(szTime);
+    hmacresult = sha1_hmac->final();
     
-    HmacToString(hmacresult, szHMAC);
+    HmacToString(hmacresult.data(), hmacresult.size());
 
     strcpy(pszNonce, szTime);
     strcat(pszNonce, szHMAC);
@@ -182,7 +184,6 @@ HRESULT CLongTermAuth::ValidateNonce(char* pszNonce)
 {
     time_t thecurrenttime = time(NULL);
     time_t thetime;
-    uint8_t hmacresult[20] = {};
     char szHMAC[20*2+1];
     char szNonce[100];
     char *pRightHalf = NULL;
@@ -210,9 +211,12 @@ HRESULT CLongTermAuth::ValidateNonce(char* pszNonce)
         return E_FAIL;
     }
     
-    // nonce timestamp is valid, but was it signed by this server?
-    HMAC(::EVP_sha1(), (unsigned char*)c_szPrivateKey, strlen(c_szPrivateKey), (unsigned char*)szNonce, strlen(szNonce), hmacresult, &len);
-    HmacToString(hmacresult, szHMAC);
+    Botan::secure_vector<uint8_t> hmacresult;
+    std::unique_ptr<Botan::MessageAuthenticationCode> sha1_hmac = Botan::MessageAuthenticationCode::create("HMAC(SHA-1)");
+    sha1_hmac->set_key(Botan::SymmetricKey(c_szPrivateKey, strlen(c_szPrivateKey)));
+    sha1_hmac->update((unsigned char*)&szNonce, strlen(szNonce);
+    hmacresult = sha1_hmac->final();
+    HmacToString(hmacresult.data(), hmacresult.size());
     if (strcmp(szHMAC, pRightHalf))
     {
         return E_FAIL;

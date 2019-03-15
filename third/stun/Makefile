@@ -6,15 +6,15 @@ everything:
 	$(MAKE) $(T) --directory=common
 	$(MAKE) $(T) --directory=stuncore
 	$(MAKE) $(T) --directory=networkutils
-	$(MAKE) $(T) --directory=testcode
-	$(MAKE) $(T) --directory=client
-	$(MAKE) $(T) --directory=server
+#	$(MAKE) $(T) --directory=testcode
+#	$(MAKE) $(T) --directory=client
+#	$(MAKE) $(T) --directory=server
 
 copybin: everything
-	rm -f ./stunserver ./stunclient ./stuntestcode
-	cp server/stunserver .
-	cp client/stunclient .
-	cp testcode/stuntestcode .
+#	rm -f ./stunserver ./stunclient ./stuntestcode
+#	cp server/stunserver .
+#	cp client/stunclient .
+#	cp testcode/stuntestcode .
 
 
 debug: T := debug
@@ -25,7 +25,7 @@ profile: all
 
 clean:	T := clean
 clean: everything
-	rm -f stunserver stunclient stuntestcode
+#	rm -f stunserver stunclient stuntestcode
 
 
 

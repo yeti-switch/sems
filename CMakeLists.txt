@@ -12,11 +12,11 @@ set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 PROJECT (SEMS)
 
+include(cmake/botan_bundled.cmake)
 include(cmake/stun_bundled.cmake)
 include(cmake/srtp_bundled.cmake)
 include(cmake/curl_bundled.cmake)
 include(cmake/spandsp_bundled.cmake)
-include(cmake/botan_bundled.cmake)
 include(cmake/confuse_bundled.cmake)
 
 SET(SEMS_APP sems)

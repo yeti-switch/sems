@@ -21,7 +21,7 @@ INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS}
                      ${CONFUSE_BUNDLED_INCLUDE_DIRS}
                      ${STUN_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads ssl
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads
     ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS} ${STUN_BUNDLED_LIBS})
 
 SET(sems_LIB_SRCS ${sems_SRCS})
