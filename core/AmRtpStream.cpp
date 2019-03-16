@@ -1274,12 +1274,14 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         if (force_receive_dtmf) recvDtmfPacket(p);
 
         if (relay_raw ||
+            (p->payload == getLocalTelephoneEventPT()
+             && (force_relay_dtmf || !active)) ||
             //can relay
             (relay_payloads.get(p->payload) &&
-             NULL != relay_stream) ||
-              //force CN relay
-              (force_relay_cn &&
-               p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
+             nullptr != relay_stream) ||
+            //force CN relay
+            (force_relay_cn &&
+             p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
         {
             if(active) {
                 CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)\n",p->timestamp,this);
