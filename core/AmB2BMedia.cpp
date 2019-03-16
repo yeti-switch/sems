@@ -280,23 +280,25 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
     if(!stream) return;
 
     if(relay_address.empty()) {
-        DBG("not setting relay for empty relay address\n");
+        DBG("not setting relay for empty relay address");
         stream->disableRtpRelay();
         return;
     }
 
-    if(relay_enabled && other &&
-       other->getFrameTime() == stream->getFrameTime())
-    {
-        stream->setRelayStream(other);
-        stream->setForceBuffering(other->isRecordEnabled());
-        stream->setRelayPayloads(relay_mask);
-        stream->setRelayPayloadMap(relay_map);
-        if (!relay_paused)
-            stream->enableRtpRelay();
-        stream->setRAddr(relay_address,
-            static_cast<unsigned short>(relay_port),
-            static_cast<unsigned short>(relay_port+1));
+    if(relay_enabled && other) {
+        if(other->getFrameTime() == stream->getFrameTime()) {
+            stream->setRelayStream(other);
+            stream->setForceBuffering(other->isRecordEnabled());
+            stream->setRelayPayloads(relay_mask);
+            stream->setRelayPayloadMap(relay_map);
+            if (!relay_paused)
+                stream->enableRtpRelay();
+            stream->setRAddr(relay_address,
+                static_cast<unsigned short>(relay_port),
+                static_cast<unsigned short>(relay_port+1));
+        } else {
+            DBG("not setting relay for streams with different frame sizes");
+        }
     } else {
         // nothing to relay or other stream not set
         stream->disableRtpRelay();
@@ -992,16 +994,20 @@ void AmB2BMedia::updateStreamPair(AudioStreamPair &pair)
     bool have_b = have_b_leg_local_sdp && have_b_leg_remote_sdp;
 
     TRACE("updating stream in A leg");
-    pair.a.setDtmfSink(b);
-    if (pair.b.getInput()) pair.a.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
-    else pair.a.setRelayStream(pair.b.getStream());
     if (have_a) pair.a.initStream(playout_type, a_leg_local_sdp, a_leg_remote_sdp, pair.media_idx);
+    pair.a.setDtmfSink(b);
 
     TRACE("updating stream in B leg");
     pair.b.setDtmfSink(a);
+    if (have_b) pair.b.initStream(playout_type, b_leg_local_sdp, b_leg_remote_sdp, pair.media_idx);
+
+    TRACE("update relay for stream in A leg");
+    if (pair.b.getInput()) pair.a.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
+    else pair.a.setRelayStream(pair.b.getStream());
+
+    TRACE("update relay for stream in B leg");
     if (pair.a.getInput()) pair.b.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
     else pair.b.setRelayStream(pair.a.getStream());
-    if (have_b) pair.b.initStream(playout_type, b_leg_local_sdp, b_leg_remote_sdp, pair.media_idx);
 
     TRACE("[%p] audio streams %p/%p updated\n",
           static_cast<void *>(this),
@@ -1101,6 +1107,19 @@ void AmB2BMedia::updateStreams(
     INFO("remote SDP: %s\n", s.c_str());*/
 
     AmLock lock(mutex);
+
+    if (a_leg) {
+        a_leg_local_sdp = local_sdp;
+        a_leg_remote_sdp = remote_sdp;
+        have_a_leg_local_sdp = true;
+        have_a_leg_remote_sdp = true;
+    } else {
+        b_leg_local_sdp = local_sdp;
+        b_leg_remote_sdp = remote_sdp;
+        have_b_leg_local_sdp = true;
+        have_b_leg_remote_sdp = true;
+    }
+
     // streams should be created already (replaceConnectionAddress called
     // before updateLocalSdp uses/assignes their port numbers)
     // create missing streams
