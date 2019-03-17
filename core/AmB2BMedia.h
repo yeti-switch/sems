@@ -469,7 +469,8 @@ class AmB2BMedia: public AmMediaSession
 	const AmSdp &getRemoteSdp(bool a_leg);
 
     /** Update media session with local & remote SDP. */
-    void updateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
+    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
+    void updateStreams(bool a_leg, RelayController *ctrl);
     void setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
     /** Clear audio for given leg and stop processing if both legs stopped. 

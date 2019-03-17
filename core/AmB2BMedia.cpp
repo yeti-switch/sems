@@ -1091,12 +1091,12 @@ void AmB2BMedia::updateRelayStream(
     }
 }
 
-void AmB2BMedia::updateStreams(
+void AmB2BMedia::createUpdateStreams(
     bool a_leg,
     const AmSdp &local_sdp, const AmSdp &remote_sdp,
     RelayController *ctrl)
 {
-    TRACE("%s (%c): updating streams with local & remote SDP\n",
+    TRACE("%s (%c): create/updating streams with local & remote SDP\n",
           a_leg ? (a ? a->getLocalTag().c_str() : NULL) : (b ? b->getLocalTag().c_str() : NULL),
           a_leg ? 'A': 'B');
 
@@ -1124,6 +1124,14 @@ void AmB2BMedia::updateStreams(
     // before updateLocalSdp uses/assignes their port numbers)
     // create missing streams
     createStreams(local_sdp); // FIXME: remote_sdp?
+
+    updateStreams(a_leg, ctrl);
+}
+
+void AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl)
+{
+    //const AmSdp &local_sdp = a_leg ? a_leg_local_sdp : b_leg_local_sdp;
+    const AmSdp &remote_sdp = a_leg ? a_leg_remote_sdp : b_leg_remote_sdp;
 
     // compute relay mask for every stream
     // Warning: do not apply the new mask unless the offer answer succeeds?

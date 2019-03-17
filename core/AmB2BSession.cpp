@@ -707,7 +707,8 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
           local_sdp,
           remote_sdp);
       }
-      media_session->updateStreams(a_leg, local_sdp, remote_sdp, this);
+      DBG("media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this); aleg = %d, this = %p",a_leg,this);
+      media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this);
     }
   }
 
@@ -1144,32 +1145,52 @@ void AmB2BSession::clearRtpReceiverRelay() {
 
 void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map)
 {
-  enable = false;
+    enable = false;
 
-  mask.clear();
+    mask.clear();
+    map.clear();
 
-  // walk through the media lines and find the telephone-event payload
-  for (std::vector<SdpPayload>::const_iterator i = m.payloads.begin();
-      i != m.payloads.end(); ++i)
-  {
-    AmSdp sdp = media_session->getRemoteSdp(!a_leg);
-    for(auto media : sdp.media) {
-        if(media.type == m.type) {
-            for(auto payload : media.payloads) {
-                if(payload.encoding_name == i->encoding_name && payload.clock_rate == i->clock_rate) {
-                    mask.set(payload.payload_type);
-                    map.set(i->payload_type, payload.payload_type);
+    const AmSdp &other_remote_sdp = media_session->getRemoteSdp(!a_leg);
+
+    DBG("m.payloads.size = %zd",m.payloads.size());
+    DBG("other_remote_sdp.media.size = %zd",other_remote_sdp.media.size());
+
+    for(const auto &local_payload: m.payloads) {
+        DBG("local_payload = %s %d",local_payload.encoding_name.c_str(), local_payload.payload_type);
+        if(local_payload.encoding_name=="telephone-event") {
+            //never mark telephone-event for relay
+            continue;
+        }
+        for(auto const &other_remote_media : other_remote_sdp.media) {
+            if(other_remote_media.type != m.type) continue; //TODO: use explicit stream index of the other's remote media
+            for(const auto &other_remote_payload : other_remote_media.payloads) {
+                DBG("other_remote_payload = %s %d",other_remote_payload.encoding_name.c_str(), other_remote_payload.payload_type);
+                if(local_payload.payload_type < DYNAMIC_PAYLOAD_TYPE_START) {
+                    if(local_payload.payload_type ==  other_remote_payload.payload_type) {
+                        CLASS_DBG("mark static payload %d for relay", local_payload.payload_type);
+                        mask.set(static_cast<unsigned char>(other_remote_payload.payload_type));
+                        enable = true;
+                        break;
+                    }
+                } else if(local_payload.encoding_name == other_remote_payload.encoding_name &&
+                          local_payload.clock_rate ==  other_remote_payload.clock_rate)
+                {
+                    mask.set(static_cast<unsigned char>(other_remote_payload.payload_type));
+                    if(other_remote_payload.payload_type != local_payload.payload_type) {
+                        map.set(static_cast<unsigned char>(local_payload.payload_type),
+                                static_cast<unsigned char>(other_remote_payload.payload_type));
+                        CLASS_DBG("mark dynamic payload %d for relay with mapping to %d",
+                                  other_remote_payload.payload_type, other_remote_payload.payload_type);
+                    } else {
+                        CLASS_DBG("mark dynamic payload %d for relay",other_remote_payload.payload_type);
+                    }
+                    enable = true;
                     break;
                 }
-            }
+            } //for(const auto &other_remote_payload : other_remote_media.payloads)
             break;
-        }
+        } //for(auto const &other_remote_media : other_remote_sdp.media)
     }
-  }
-  enable = true;
-
-  if(!enable)
-    return;
 }
 
 void  AmB2BSession::onSessionChange(AmB2BSession *new_session)
