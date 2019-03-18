@@ -1662,7 +1662,7 @@ int AmLcConfig::setNetInterface(ConfigContainer* config, IP_info& ip_if)
 }
 
 int AmLcConfig::insertSIPInterfaceMapping(ConfigContainer* config, SIP_info& intf, int idx) {
-    if(local_sip_ip2if.find(intf.local_ip) == local_sip_ip2if.end()
+    if(config->local_sip_ip2if.find(intf.local_ip) == config->local_sip_ip2if.end()
        || intf.local_port == 5060) // when two interfaces on the same IP
     {                              // the one with port 5060 has priority
         config->local_sip_ip2if.emplace(intf.local_ip,idx);
