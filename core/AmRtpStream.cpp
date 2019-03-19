@@ -346,11 +346,16 @@ int AmRtpStream::send( unsigned int ts, unsigned char* buffer, unsigned int size
  if(!size)
     return -1;
 
-  PayloadMappingTable::iterator it = pl_map.find(payload);
-  if ((it == pl_map.end()) || (it->second.remote_pt < 0)) {
-    CLASS_ERROR("sending packet with unsupported remote payload type %d\n", payload);
-    return -1;
-  }
+    PayloadMappingTable::const_iterator it = pl_map.find(payload);
+    if ((it == pl_map.end()) || (it->second.remote_pt < 0)) {
+        if(!not_supported_tx_payload_reported) {
+            CLASS_DBG("attempt to send packet with unsupported remote payload type %d\n", payload);
+            not_supported_tx_payload_reported = true;
+        }
+        return 0;
+    } else {
+        not_supported_tx_payload_reported = false;
+    }
   
   return compile_and_send(it->second.remote_pt, false, ts, buffer, size);
 }
@@ -470,6 +475,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 	outgoing_bytes(0),
 	decode_errors(0),
 	rtp_parse_errors(0),
+	not_supported_tx_payload_reported(false),
 	out_of_buffer_errors(0),
 	ts_adjust(0),
 	last_sent_ts(0)

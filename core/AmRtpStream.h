@@ -173,6 +173,8 @@ protected:
   unsigned long rtp_parse_errors;
   unsigned long out_of_buffer_errors;
 
+  bool not_supported_tx_payload_reported;
+
   unsigned int dead_rtp_time;
 
   long int ts_adjust;
