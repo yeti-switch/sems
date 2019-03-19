@@ -438,28 +438,28 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
         PayloadMappingTable::iterator pmt_it =
             pl_map.find(static_cast<PayloadMappingTable::key_type>(payload));
         if(pmt_it == pl_map.end()) {
-            if(!not_supported_payload_local_reported) {
+            if(!not_supported_rx_payload_local_reported) {
                 CLASS_DBG("received payload %i is not described in local SDP. ignore it. "
                     "remote_addr: %s:%i, "
                     "local_ssrc: 0x%x, local_tag: %s",
                     payload,
                     get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                     l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-                not_supported_payload_local_reported = true;
+                not_supported_rx_payload_local_reported = true;
             }
             wrong_payload_errors++;
             return -1;
         }
 
         if(pmt_it->second.remote_pt < 0) {
-            if(!not_supported_payload_remote_reported) {
+            if(!not_supported_rx_payload_remote_reported) {
                 CLASS_DBG("received payload %i is not described in remote SDP. ignore it. "
                     "remote_addr: %s:%i, "
                     "local_ssrc: 0x%x, local_tag: %s",
                     payload,
                     get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                     l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-                not_supported_payload_remote_reported = true;
+                not_supported_rx_payload_remote_reported = true;
             }
             wrong_payload_errors++;
             return -1;
@@ -474,8 +474,8 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
 
         this->payload = payload;
 
-        not_supported_payload_local_reported = false;
-        not_supported_payload_remote_reported = false;
+        not_supported_rx_payload_local_reported = false;
+        not_supported_rx_payload_remote_reported = false;
 
         amci_codec_t* codec = fmt->getCodec();
         use_default_plc = ((codec==nullptr) || (codec->plc == nullptr));
