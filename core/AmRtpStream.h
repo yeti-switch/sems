@@ -199,9 +199,8 @@ class AmRtpStream
 
     unsigned int dead_rtp_time;
 
-    signed int ts_adjust;
+    long int ts_adjust;
     unsigned int last_sent_ts;
-    unsigned int last_sent_ts_diff;
 
     struct PayloadMapping {
         int8_t remote_pt; // remote payload type
