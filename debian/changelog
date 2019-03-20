@@ -1,3 +1,10 @@
+sems (1.7.76-1) stable; urgency=low
+
+  * AmRtpStream::send(): suppress error on unknown remote payload
+  * AmRtpStream: remove last_sent_ts_diff. use hardcoded value 1000 as timestamp aligning threshold
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 20 Mar 2019 15:57:56 +0200
+
 sems (1.7.75-5) stable; urgency=low
 
   * jsonArg: apply fixes for UTF escaping
