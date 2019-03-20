@@ -95,6 +95,7 @@ class HttpClient
     ~HttpClient();
 
     static HttpClient* instance();
+    static void dispose();
     AmDynInvoke* getInstance() { return instance(); }
 
     void invoke(const string& method,

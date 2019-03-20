@@ -451,7 +451,7 @@ class AmB2BCallerSession: public AmB2BSession
   bool sip_relay_early_media_sdp;
 
  public:
-  AmB2BCallerSession();
+  AmB2BCallerSession(const string& other_local_tag = "", AmSipDialog* p_dlg = nullptr);
   virtual ~AmB2BCallerSession();
     
   CalleeStatus getCalleeStatus() { return callee_status; }

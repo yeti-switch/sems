@@ -482,6 +482,13 @@ dns_bucket::dns_bucket(unsigned long id)
   : dns_bucket_base(id) 
 {}
 
+dns_bucket::~dns_bucket()
+{
+    for(auto el : elmts) {
+        dec_ref(el.second);
+    }
+}
+
 bool dns_bucket::insert(const string& name, dns_entry* e)
 {
     if(!e) return false;
@@ -803,7 +810,9 @@ int rr_to_dns_entry(dns_record* rr, dns_section_type t,
             // unsupported record type
             return 0;
         }
-        h->entry_map.insert(name,dns_e);
+        if(!h->entry_map.insert(name,dns_e)) {
+            delete dns_e;
+        }
     } else {
         dns_e = it->second;
     }
@@ -1130,12 +1139,20 @@ bool _resolver::disable_srv = false;
 _resolver::_resolver()
     : cache(DNS_CACHE_SIZE)
 {
+    b_stopped.set(true);
     start();
 }
 
 _resolver::~_resolver()
-{}
+{
+    cache.cleanup();
+}
 
+void _resolver::dispose() { 
+    stop();
+    b_stopped.wait_for();
+}
+    
 int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type addr_type)
 {
     u_char dns_res[NS_PACKETSZ];
@@ -1501,7 +1518,9 @@ void _resolver::run()
     unsigned long i = 0;
     setThreadName("resolver");
 
-    for(;;) {
+    b_stopped.set(false);
+    b_stop.set(false);
+    while(!b_stop.get()) {
         nanosleep(&tick,&rem);
 
         u_int64_t now = wheeltimer::instance()->unix_clock.get();
@@ -1535,6 +1554,9 @@ void _resolver::run()
 
         if(++i >= cache.get_size()) i = 0;
     }
+    
+    DBG("resolver thread finished");
+    b_stopped.set(true);
 }
 
 void dns_handle::dump(AmArg &ret)

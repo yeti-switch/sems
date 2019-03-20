@@ -427,6 +427,7 @@ class AmThreadWatcher: public AmThread
 public:
   static AmThreadWatcher* instance();
   void add(AmThread*);
+  void cleanup();
 };
 
 template<class T>

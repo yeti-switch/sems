@@ -1206,8 +1206,8 @@ void  AmB2BSession::onSessionChange(AmB2BSession *new_session)
 // AmB2BCallerSession methods
 //
 
-AmB2BCallerSession::AmB2BCallerSession()
-  : AmB2BSession(),
+AmB2BCallerSession::AmB2BCallerSession(const string& other_local_tag, AmSipDialog* p_dlg)
+  : AmB2BSession(other_local_tag, p_dlg),
     callee_status(None), sip_relay_early_media_sdp(false)
 {
   a_leg = true;

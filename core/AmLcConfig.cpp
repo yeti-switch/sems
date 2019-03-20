@@ -724,6 +724,7 @@ AmLcConfig::AmLcConfig()
 
 AmLcConfig::~AmLcConfig()
 {
+    INFO("~AmLcConfig");
     if(m_cfg) {
         cfg_free(m_cfg);
     }
@@ -770,6 +771,7 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
     if(m_cfg)
         cfg_free(m_cfg);
     m_cfg = cfg_init(Config::opt, 0);
+    if(!m_cfg) return -1;
     setValidationFunction(m_cfg);
 
     config->sip_ifs.clear();
@@ -798,6 +800,9 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
         return -1;
     }
 
+    if(m_cfg)
+        cfg_free(m_cfg);
+    m_cfg = 0;
     return 0;
 }
 

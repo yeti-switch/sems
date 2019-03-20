@@ -47,6 +47,7 @@ SctpBus::~SctpBus()
     for(auto const &c: connections_by_id) {
         delete c.second;
     }
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 int SctpBus::configure(const std::string& config)
@@ -59,8 +60,11 @@ int SctpBus::configure(const std::string& config)
 
 int SctpBus::configure()
 {
-    sockaddr_storage addr;
+    sockaddr_storage addr = {0};
     //apply 'listen' section settings
+    if(!reader.cfg) {
+        return -1;
+    }
     cfg_t *listen_cfg = cfg_getsec(reader.cfg,section_name_listen);
     if(!listen_cfg) {
         ERROR("configuration error. missed section: listen");
@@ -127,7 +131,7 @@ int SctpBus::configure()
 
 int SctpBus::onLoad() {
 
-    AmPlugIn::registerDIInterface(MOD_NAME, this);
+ //   AmPlugIn::registerDIInterface(MOD_NAME, this);
 
     if((epoll_fd = epoll_create(10)) == -1) {
         ERROR("epoll_create failed");

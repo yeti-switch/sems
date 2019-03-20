@@ -203,6 +203,7 @@ class trsp_worker
 
     AmMutex                      connections_mut;
     map<string,std::vector<tcp_base_trsp*>> connections;
+    AmCondition<bool> stopped;
 
 protected:
     void run();
@@ -213,7 +214,7 @@ protected:
     tcp_base_trsp* new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa);
 public:
     trsp_worker();
-    ~trsp_worker();
+    virtual ~trsp_worker();
 
     int send(trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
         const int msg_len, unsigned int flags);

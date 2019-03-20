@@ -72,6 +72,8 @@ public:
     operator Botan::RandomNumberGenerator& () {
         return rng;
     }
+    
+    void dispose(){}
 };
 
 typedef singleton<tls_rand_generator> rand_generator_tls;
@@ -84,6 +86,8 @@ public:
     operator Botan::TLS::Session_Manager_In_Memory& () {
         return ssm;
     }
+    
+    void dispose(){}
 };
 
 typedef singleton<tls_session_manager> session_manager_tls;
@@ -165,5 +169,7 @@ public:
     tls_conf client_settings;
     tls_conf server_settings;
 };
+
+void tls_cleanup();
 
 #endif/*_tls_trsp_h_*/

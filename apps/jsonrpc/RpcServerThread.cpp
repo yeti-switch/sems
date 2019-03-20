@@ -49,14 +49,19 @@ RpcServerThread::~RpcServerThread() {
 
 void RpcServerThread::run() {
     setThreadName("rpc-worker");
-  while (true) {
-    waitForEvent();
-    processEvents();
-  }
+    is_stop.set(false);
+    while (!is_stop.get()) {
+        waitForEvent();
+        if(!is_stop.get())
+            processEvents();
+    }
 }
 
 void RpcServerThread::on_stop() {
   INFO("TODO: stop server thread\n");
+  ev_pending.set(true);
+  is_stop.set(true);
+  join();
 }
 
 void RpcServerThread::process(AmEvent* event) {
@@ -205,3 +210,13 @@ void RpcServerThreadpool::addThreads(unsigned int cnt) {
   threads_mut.unlock();
 }
 
+void RpcServerThreadpool::cleanup() {
+  DBG("cleanup RPC server threads %u\n", threads.size());
+    threads_mut.lock();
+    for(auto thread : threads) {
+        thread->stop();
+        delete thread;
+    }
+    threads.clear();
+    threads_mut.unlock();
+}

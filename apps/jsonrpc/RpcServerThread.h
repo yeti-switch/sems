@@ -40,6 +40,7 @@ class RpcServerThread
 {
 
   char rcvbuf[MAX_RPC_MSG_SIZE];
+  AmCondition<bool> is_stop;
 
  public:
   RpcServerThread();
@@ -63,6 +64,7 @@ class RpcServerThreadpool
   
   void dispatch(AmEvent* ev);
   void addThreads(unsigned int cnt);
+  void cleanup();
 };
 
 #endif

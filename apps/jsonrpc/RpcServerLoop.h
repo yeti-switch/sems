@@ -63,6 +63,7 @@ class JsonRPCServerLoop
   ~JsonRPCServerLoop();
 
   static JsonRPCServerLoop* instance();
+  static void dispose();
 
   static void returnConnection(JsonrpcNetstringsConnection* conn);
   static void dispatchServerEvent(AmEvent* ev);

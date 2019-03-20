@@ -93,6 +93,7 @@ class _wheeltimer:
     //the timer wheel
     base_timer wheels[WHEELS][ELMTS_PER_WHEEL];
 
+    AmCondition<bool> is_stop;
     // request backlog lock (insert/remove)
     AmMutex               reqs_m;
     std::deque<timer_req> reqs_backlog;
@@ -111,10 +112,11 @@ class _wheeltimer:
 
 protected:
     void run();
-    void on_stop(){}
+    void on_stop(){is_stop.set(true);}
 
     _wheeltimer();
     ~_wheeltimer();
+    void dispose(){}
 
 public:
     //clock reference

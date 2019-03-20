@@ -298,6 +298,7 @@ protected:
     /** Avoid external instantiation. @see singleton. */
     _trans_layer();
     ~_trans_layer();
+    void dispose(){}
 
     /**
      * Processes a parsed SIP message

@@ -40,6 +40,11 @@ AmSipDispatcher* AmSipDispatcher::instance()
   return _instance ? _instance : ((_instance = new AmSipDispatcher()));
 }
 
+void AmSipDispatcher::dispose()
+{
+    _instance ? delete _instance : void();
+}
+
 void AmSipDispatcher::handleSipMsg(const string& dialog_id, AmSipReply &reply)
 {
   const string& id = dialog_id.empty() ? reply.from_tag : dialog_id;

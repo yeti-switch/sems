@@ -88,6 +88,7 @@ class _tr_blacklist
 protected:
   _tr_blacklist();
   ~_tr_blacklist();
+  void dispose(){}
 
 public:
   // public blacklist API:

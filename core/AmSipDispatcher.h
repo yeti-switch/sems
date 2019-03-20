@@ -39,6 +39,7 @@ class AmSipDispatcher
     void handleSipMsg(const string& dialog_id, AmSipReply &);
 
     static AmSipDispatcher* instance();
+    static void dispose();
 };
 
 #endif /* __AMDISPATCHER_H__ */

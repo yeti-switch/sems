@@ -137,6 +137,9 @@ class _AmAudioFileRecorderProcessor
 
     //rpc commands
     void getStats(AmArg &ret);
+    
+    //singleton function
+    void dispose(){}
 };
 
 typedef singleton<_AmAudioFileRecorderProcessor> AmAudioFileRecorderProcessor;

@@ -40,6 +40,9 @@ DSMChartReader::DSMChartReader() {
 }
 
 DSMChartReader::~DSMChartReader() {
+    for(auto mod : mods) {
+        dec_ref(mod);
+    }
 }
 
 bool DSMChartReader::is_wsp(const char c) {
@@ -254,6 +257,7 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
   }
 
   mods.push_back(dsm_mod);
+  inc_ref(dsm_mod);
 
   DBG("loaded module '%s' from '%s'\n", 
       params.c_str(), fname.c_str());
@@ -747,6 +751,6 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 
 void DSMChartReader::cleanup() {
   for (vector<DSMModule*>::iterator it=mods.begin(); it != mods.end(); it++)
-    delete *it;
+    dec_ref(*it);
   mods.clear();  
 }

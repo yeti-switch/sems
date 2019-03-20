@@ -42,9 +42,13 @@ bool cfg_reader::read(const string &config, cfg_opt_t *opts)
         break;
     case CFG_PARSE_ERROR:
         ERROR("configuration of module %s parse error",mod_name.c_str());
+        cfg_free(cfg);
+        cfg = 0;
         return false;
     default:
         ERROR("unexpected error on configuration of module %s processing",mod_name.c_str());
+        cfg_free(cfg);
+        cfg = 0;
         return false;
     }
     return true;
