@@ -1,3 +1,9 @@
+sems (1.7.76-2) stable; urgency=low
+
+  * AmSipDialog::onRxReqSanity: check pending_invites for UPDATE method. pass logger ptr on reply_error calls
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 28 Mar 2019 11:18:36 +0200
+
 sems (1.7.76-1) stable; urgency=low
 
   * AmRtpStream::send(): suppress error on unknown remote payload
