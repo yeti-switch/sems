@@ -1872,15 +1872,15 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
     case RTP_SAVP:
     case RTP_UDPTLSAVP:
         if(!srtp_enable) {
-            CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
+            CLASS_ERROR("srtp is disabled on related interface (%s). raise exception",
                        AmConfig.media_ifs[l_if].name.c_str());
-            transport = RTP_AVP;
+            throw std::string("srtp is disabled on related interface: " + AmConfig.media_ifs[l_if].name);
+            //transport = RTP_AVP;
         }
         break;
     default:
-        CLASS_WARN("unsupported transport id: %d. failover to RTPAVP profile",transport);
-        transport = RTP_AVP;
-        break;
+        CLASS_ERROR("unsupported transport id: %d. raise exception",transport);
+        throw std::string("unsupported transport id: " + int2str(transport));
     }
 
     m.transport = transport;
