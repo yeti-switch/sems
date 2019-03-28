@@ -371,7 +371,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
      (req.from_tag != remote_tag)){
     DBG("remote_tag = '%s'; req.from_tag = '%s'\n",
 	remote_tag.c_str(), req.from_tag.c_str());
-    reply_error(req, 481, SIP_REPLY_NOT_EXIST);
+	reply_error(req, 481, SIP_REPLY_NOT_EXIST,string(),logger);
     return false;
   }
 
@@ -387,7 +387,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 		 "method = %s, call-id = '%s'\n",
 		 req.method.c_str(),callid.c_str());
 	// see 12.2.2
-	reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, hdrs);
+	reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, hdrs, logger);
 	return false;
       }
     }
@@ -396,7 +396,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 		   "method = %s, call-id = '%s'\n",
 		   req.method.c_str(),callid.c_str());
       // see 12.2.2
-      reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+      reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, string(),logger);
       return false;
     }
   }

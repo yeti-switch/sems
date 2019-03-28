@@ -85,7 +85,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   if (req.method == SIP_METH_CANCEL) {
 
     if (uas_trans.find(req.cseq) == uas_trans.end()) {
-      reply_error(req,481,SIP_REPLY_NOT_EXIST);
+      reply_error(req,481,SIP_REPLY_NOT_EXIST,string(),logger);
       return false;
     }
 
@@ -98,7 +98,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   if(!AmBasicSipDialog::onRxReqSanity(req))
     return false;
 
-  if (req.method == SIP_METH_INVITE) {
+  if (req.method == SIP_METH_INVITE || req.method == SIP_METH_UPDATE) {
     bool pending = pending_invites;
     if (offeranswer_enabled) {
       // not sure this is needed here: could be in AmOfferAnswer as well
@@ -109,11 +109,11 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
     if (pending) {
       reply_error(req, 491, SIP_REPLY_PENDING,
 		  SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) 
-		  + int2str(get_random() % 10) + CRLF);
+		  + int2str(get_random() % 10) + CRLF, logger);
       return false;
     }
-
-    pending_invites++;
+    if(req.method == SIP_METH_INVITE)
+      pending_invites++;
   }
 
   return rel100.onRequestIn(req);
