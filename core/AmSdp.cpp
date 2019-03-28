@@ -115,7 +115,7 @@ string transport_p_2_str(int tp)
         case TP_UDPTLSRTPSAVP: return "UDP/TLS/RTP/SAVP";
         case TP_UDPTLSRTPSAVPF: return "UDP/TLS/RTP/SAVPF";
         case TP_UDPTL: return "udptl";
-        default: return "<unknown media type>";
+        default: return "<unknown_media_type>";
     }
 }
 
@@ -127,7 +127,7 @@ inline string profile_t_2_str(int pt)
         case CP_F8128_HMAC_SHA1_80: return "F8_128_HMAC_SHA1_80";
         case CP_NULL_SHA1_80: return "NULL_HMAC_SHA1_32";
         case CP_NULL_SHA1_32: return "NULL_HMAC_SHA1_80";
-        default: return "<unknown profile type>";
+        default: return "<unknown_profile_type>";
     }
 }
 
@@ -350,6 +350,8 @@ int AmSdp::parse(const char* _sdp_msg)
         ret = parse_sdp_line_ex(this,s);
     } catch(const std::out_of_range &oor){
         ERROR("AmSdp::parse() got Out of Range exception: %s",oor.what());
+    } catch(std::exception &e){
+        ERROR("AmSdp::parse() got generic exception: %s",e.what());
     } catch(...){
         ERROR("AmSdp::parse() got unknown exception");
     }
