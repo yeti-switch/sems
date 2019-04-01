@@ -86,6 +86,9 @@
 # error "cant't determine v6 socket option (IPV6_RECVPKTINFO or IPV6_PKTINFO)"
 #endif
 
+#ifndef EPOLLEXCLUSIVE
+#define EPOLLEXCLUSIVE (1 << 28)
+#endif
 
 /** @see trsp_socket */
 int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
