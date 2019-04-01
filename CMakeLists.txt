@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.7.2)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.6.2)
 
 IF(COMMAND cmake_policy)
 #	# Don't do automatic escaping of variables
