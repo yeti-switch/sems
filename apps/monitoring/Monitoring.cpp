@@ -35,19 +35,15 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <unistd.h>
+#include <AmLcConfig.h>
 
-//EXPORT_PLUGIN_CLASS_FACTORY(Monitor, MOD_NAME);
-extern "C" void* plugin_class_create()
-{
-    Monitor* m_inst = Monitor::instance();
-    assert(dynamic_cast<AmDynInvokeFactory*>(m_inst));
-
-    return m_inst;
-}
+EXPORT_PLUGIN_CLASS_FACTORY(Monitor);
+EXPORT_PLUGIN_CONF_FACTORY(Monitor)
 
 Monitor* Monitor::_instance=0;
 unsigned int Monitor::gcInterval = 10;
 unsigned int Monitor::retain_samples_s = 10;
+bool Monitor::gcRun = true;
 
 Monitor* Monitor::instance()
 {
@@ -57,22 +53,44 @@ Monitor* Monitor::instance()
 }
 
 Monitor::Monitor(const string& name) 
-  : AmDynInvokeFactory(MOD_NAME), gc_thread(NULL) {
+  : AmDynInvokeFactory(MOD_NAME), AmConfigFactory(MOD_NAME), gc_thread(NULL) {
 }
 
 Monitor::~Monitor() {
 }
 
+int Monitor::configure(const string& config)
+{
+    cfg_opt_t opt[] = {
+        CFG_BOOL("run_garbage_collector", cfg_true, CFGF_NONE),
+        CFG_INT("garbage_collector_interval", 10, CFGF_NONE),
+        CFG_INT("retain_samples_s", 10, CFGF_NONE),
+        CFG_END()
+    };
+
+    cfg_t *cfg = cfg_init(opt, CFGF_NONE);
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
+
+    gcRun = cfg_getbool(cfg, "run_garbage_collector");
+    gcInterval = cfg_getint(cfg, "garbage_collector_interval");
+    retain_samples_s = cfg_getint(cfg, "retain_samples_s");
+
+    cfg_free(cfg);
+    return 0;
+}
+
 int Monitor::onLoad() {
   // todo: if GC configured, start thread
-  AmConfigReader cfg;
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
-    DBG("monitoring not starting garbage collector\n");
-    return 0;
-  }
-
-  if (cfg.getParameter("run_garbage_collector","no") == "yes") {
-    gcInterval = cfg.getParameterInt("garbage_collector_interval", 10);
+  if (gcRun) {
     DBG("Running garbage collection for monitoring every %u seconds\n", 
 	gcInterval);
     gc_thread.reset(new MonitorGarbageCollector());
@@ -81,8 +99,6 @@ int Monitor::onLoad() {
 //     // add garbage collector to garbage collector...
 //     AmThreadWatcher::instance()->add(gc_thread);
   }
-
-  retain_samples_s = cfg.getParameterInt("retain_samples_s", 10);
 
   return 0;
 }

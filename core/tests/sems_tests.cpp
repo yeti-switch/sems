@@ -8,8 +8,6 @@
 
 #include <string.h>
 
-#include "AmConfig.h"
-
 #include "fct.h"      /* FCTX is installed! */
   
 #include "AmSipMsg.h"

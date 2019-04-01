@@ -128,19 +128,11 @@ private:
     trans_stats stats;
     sip_ua*     ua;
 
-    struct less_case_i { bool operator ()(const string& lhs, const string& rhs) const; };
-    typedef map<string,trsp_socket*,less_case_i> prot_collection;
+    typedef map<trsp_socket::socket_transport,trsp_socket*> prot_collection;
 
     vector<prot_collection> transports;
 
 public:
-
-    /**
-     * Config option: if true, final replies without 
-     * a to-tag will be accepted for requests which do not
-     * create a dialog.
-     */
-    static bool accept_fr_without_totag;
 
     /**
      * Config option: default blacklist time-to-live
@@ -261,14 +253,15 @@ protected:
      * R-URI and Route headers as needed.
      */
     int set_next_hop(sip_msg* msg, cstring* next_hop,
-		     unsigned short* next_port, cstring* next_trsp);
+		     unsigned short* next_port, cstring* next_trsp,
+             cstring* scheme);
 
     /**
      * Fills the local_socket attribute using the given
      * transport and interface. If out_interface == -1,
      * we will try hard to find an interface based on msg->remote_ip.
      */
-    int set_trsp_socket(sip_msg* msg, const cstring& next_trsp,
+    int set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transport& next_trsp,
 			int out_interface);
 
     sip_trans* copy_uac_trans(sip_trans* tr);

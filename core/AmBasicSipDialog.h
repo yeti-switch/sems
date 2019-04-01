@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _AmBasicSipDialog_h_
@@ -38,7 +38,7 @@ using std::string;
 #include <sip/sip_timers.h>
 
 // flags which may be used when sending request/reply
-#define SIP_FLAGS_VERBATIM     1 // send request verbatim, 
+#define SIP_FLAGS_VERBATIM     1 // send request verbatim,
                                  // i.e. modify as little as possible
 
 #define SIP_FLAGS_NOAUTH       1<<1 // don't add authentication header
@@ -75,7 +75,7 @@ class AmBasicSipDialog
   : public AmObject
 {
 public:
-  enum Status {	
+  enum Status {
     Disconnected=0,
     Trying,
     Proceeding,
@@ -96,12 +96,13 @@ protected:
 
   string local_tag;
   string ext_local_tag;
-  
+
   string remote_tag;
   string first_branch;
 
   string contact_params; // params in Contact-HF
 
+  string scheme;       // local scheme(sip or sips)
   string user;         // local user
   string domain;       // local domain
 
@@ -122,6 +123,8 @@ protected:
 
   int outbound_interface;
   int outbound_transport;
+  int outbound_address_type;
+  int resolve_priority;
 
   TransMap uas_trans;
   TransMap uac_trans;
@@ -164,16 +167,16 @@ protected:
   /**
    * Basic sanity check on received requests
    *
-   * Note: At this point in the processing, 
+   * Note: At this point in the processing,
    *       the request has not been inserted yet
    *       into the uas_trans container.
-   *       Thus, reply_error() should be used 
+   *       Thus, reply_error() should be used
    *       instead of reply() method.
-   *       
+   *
    * @return true to continue processing, false otherwise
    */
   virtual bool onRxReqSanity(const AmSipRequest& req);
-  
+
   /**
    * Executed from onRxRequest() to allow inherited classes
    * to extend the basic behavior.
@@ -216,13 +219,13 @@ public:
 
   unsigned int cseq; // Local CSeq for next request
   bool r_cseq_i;
-  unsigned int r_cseq; // last remote CSeq  
+  unsigned int r_cseq; // last remote CSeq
 
   AmBasicSipDialog(AmBasicSipEventHandler* h=NULL);
   virtual ~AmBasicSipDialog();
 
   void setEventhandler(AmBasicSipEventHandler* h) { hdl = h; }
-  
+
   /** @return UAC request coresponding to cseq or NULL */
   AmSipRequest* getUACTrans(unsigned int t_cseq);
 
@@ -243,7 +246,7 @@ public:
 
   virtual const char* getStatusStr();
   static const char* getStatusStr(Status st);
-  
+
   unsigned int getUsages() { return usages; }
   void incUsages() { usages++; }
   void decUsages() { usages--; }
@@ -338,15 +341,26 @@ public:
   virtual void setOutboundInterface(int interface_id);
 
   /**
+   * Set outbound_protocol to specific value (-1 = default).
+   */
+  virtual void setOutboundAddrType(int type_id);
+
+  /**
    * Set outbound_transport to specific value (-1 = default).
    */
-  virtual void setOutboundTransport(int transport_id);
+  virtual void setOutboundTransport(int transport);
 
-  /** 
+  /**
    * Compute, set and return the outbound interface
    * based on remote_uri, next_hop_ip, outbound_proxy, route.
    */
   int getOutboundIf();
+
+  /**
+   * Compute, set and return the outbound ip protocol version
+   * based on remote_uri, next_hop_ip, outbound_proxy, route.
+   */
+  int getOutboundAddrType();
 
   /**
    * Compute, set and return the outbound transport
@@ -359,10 +373,8 @@ public:
    */
   void resetOutboundIf();
 
-  /**
-   * Set outbound_interface to specific value (-1 = default).
-   */
-  //void setOutboundInterface(int interface_id);
+  void setResolvePriority(int priority);
+  int getResolvePriority();
 
   /** Initialize dialog from locally originated UAC request */
   virtual void initFromLocalRequest(const AmSipRequest& req);
@@ -388,7 +400,7 @@ public:
 
   /** @return 0 on success */
   virtual int reply(const AmSipRequest& req,
-		    unsigned int  code, 
+		    unsigned int  code,
 		    const string& reason,
 		    const AmMimeBody* body = NULL,
 		    const string& hdrs = "",
@@ -417,8 +429,8 @@ public:
    * This method should only be used to send responses
    * to requests which are not referenced by any dialog.
    *
-   * WARNING: If the request has already been referenced 
-   * (see uas_trans), this method cannot mark the request 
+   * WARNING: If the request has already been referenced
+   * (see uas_trans), this method cannot mark the request
    * as replied, thus leaving it in the pending state forever.
    */
   static int reply_error(const AmSipRequest& req,
@@ -460,9 +472,9 @@ class AmBasicSipEventHandler
 
   /** Hook called before a request is sent */
   virtual void onSendRequest(AmSipRequest& req, int& flags) {}
-    
+
   /** Hook called before a reply is sent */
-  virtual void onSendReply(const AmSipRequest& req, 
+  virtual void onSendReply(const AmSipRequest& req,
 			   AmSipReply& reply, int& flags) {}
 
   /** Hook called after a request has been sent */
@@ -470,7 +482,7 @@ class AmBasicSipEventHandler
 
   /** Hook called after a reply has been sent */
   virtual void onReplySent(const AmSipRequest& req, const AmSipReply& reply) {}
-    
+
   /**
    * Hook called when the all dialog usages should be terminated
    * after a reply received from the far end, or a locally generated
@@ -478,14 +490,14 @@ class AmBasicSipEventHandler
    */
   virtual void onRemoteDisappeared(const AmSipReply& reply) {}
 
-  /** 
-   * Hook called when the all dialog usages should be terminated 
+  /**
+   * Hook called when the all dialog usages should be terminated
    * before a local reply is sent.
    */
   virtual void onLocalTerminate(const AmSipReply& reply) {}
 
-  /** 
-   * Hook called when either a received request or 
+  /**
+   * Hook called when either a received request or
    * reply has been rejected by the local SIP UA layer.
    */
   virtual void onFailure() {}

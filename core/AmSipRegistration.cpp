@@ -28,6 +28,7 @@
 
 #include "AmSipRegistration.h"
 #include "AmSession.h"
+#include "AmUtils.h"
 #include "AmSessionContainer.h"
 #include "sip/parse_via.h"
 
@@ -199,8 +200,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-  } else if (!AmConfig::OutboundProxy.empty()) {
-    dlg.outbound_proxy = AmConfig::OutboundProxy;
+  } else if (!AmConfig.outbound_proxy.empty()) {
+    dlg.outbound_proxy = AmConfig.outbound_proxy;
   }
 
   string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
@@ -211,12 +212,11 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   if(info.contact.empty()) {
     //force contact username
     int oif = dlg.getOutboundIf();
+    int ot = dlg.getOutboundTransport();
     info_contact.uri_user = info.user;
-    info_contact.uri_host = AmConfig::SIP_Ifs[oif].getIP();
-    info_contact.uri_port =
-      int2str(AmConfig::SIP_Ifs[oif].getLocalPort(dlg.getOutboundTransport()));
+    info_contact.uri_host = AmConfig.sip_ifs[oif].proto_info[ot]->getIP();
+    info_contact.uri_port = int2str(AmConfig.sip_ifs[oif].proto_info[ot]->local_port);
     info_contact.uri_param = info.contact_uri_params;
-
     info.contact = info_contact.uri_str();
   }
 
@@ -235,7 +235,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
   info.attempt++;
 
   if (dlg.sendRequest(req.method, NULL, hdrs, flags, &reg_timers_override) < 0) {
-    WARN("failed to send registration. ruri: %s\n",
+    DBG("failed to send registration. ruri: %s\n",
          req.r_uri.c_str());
     res = false;
     waiting_result = false;
@@ -271,8 +271,8 @@ bool AmSIPRegistration::doUnregister()
   if (!info.proxy.empty()) {
     dlg.outbound_proxy = info.proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-  } else if (!AmConfig::OutboundProxy.empty()) {
-    dlg.outbound_proxy = AmConfig::OutboundProxy;
+  } else if (!AmConfig.outbound_proxy.empty()) {
+    dlg.outbound_proxy = AmConfig.outbound_proxy;
     patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
   }
 

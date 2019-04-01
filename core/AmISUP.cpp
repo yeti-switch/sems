@@ -432,11 +432,11 @@ static void isup_put_number(unsigned char *dest, string &src, int *len, int *odd
 }
 
 
-#define FUNC_DUMP(name) int ((name))(AmISUP *msg, int messagetype, unsigned char *parm, int len)
+#define FUNC_DUMP(name) int (name)(AmISUP *msg, int messagetype, unsigned char *parm, int len)
 /* Length here is paramter length */
-#define FUNC_RECV(name) int ((name))(AmISUP *msg, int messagetype, unsigned char *parm, int len)
+#define FUNC_RECV(name) int (name)(AmISUP *msg, int messagetype, unsigned char *parm, int len)
 /* Length here is maximum length */
-#define FUNC_SEND(name) int ((name))(AmISUP *msg, int messagetype, unsigned char *parm, int len)
+#define FUNC_SEND(name) int (name)(AmISUP *msg, int messagetype, unsigned char *parm, int len)
 
 
 static FUNC_SEND(nature_of_connection_ind_transmit)

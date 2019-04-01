@@ -26,26 +26,15 @@ struct ReloadEvent
   {}
 };
 
-//EXPORT_PLUGIN_CLASS_FACTORY(SctpBus, MOD_NAME);
-
-EXPORT_MODULE_FACTORY(SctpBus);
-DEFINE_MODULE_INSTANCE(SctpBus, MOD_NAME);
-
-//SctpBus* SctpBus::_instance=0;
-
-/*SctpBus* SctpBus::instance()
-{
-    DBG("> instance = %p",_instance);
-    if(_instance == NULL){
-        _instance = new SctpBus(MOD_NAME);
-    }
-    DBG("instance = %p",_instance);
-    return _instance;
-}*/
+EXPORT_PLUGIN_CLASS_FACTORY(SctpBus);
+EXPORT_PLUGIN_CONF_FACTORY(SctpBus);
+DEFINE_FACTORY_INSTANCE(SctpBus, MOD_NAME);
 
 SctpBus::SctpBus(const string& name)
   : AmDynInvokeFactory(name),
+    AmConfigFactory(name),
     AmEventFdQueue(this),
+    reader(MOD_NAME),
     epoll_fd(-1),
     stopped(false)
 {}
@@ -60,31 +49,29 @@ SctpBus::~SctpBus()
     }
 }
 
-int SctpBus::configure()
+int SctpBus::configure(const std::string& config)
 {
-    cfg_reader reader;
-    sockaddr_storage a;
-
-    if(!reader.read(AmConfig::ModConfigPath + string(MOD_NAME ".conf"),sctp_bus_opts)) {
+    if(!reader.read(config,sctp_bus_opts)) {
         return -1;
     }
+    return 0;
+}
 
+int SctpBus::configure()
+{
+    sockaddr_storage addr;
     //apply 'listen' section settings
     cfg_t *listen_cfg = cfg_getsec(reader.cfg,section_name_listen);
     if(!listen_cfg) {
         ERROR("configuration error. missed section: listen");
         return -1;
     }
-    if(!am_inet_pton(cfg_getstr(listen_cfg,opt_name_address),&a)) {
+    if(!am_inet_pton(cfg_getstr(listen_cfg,opt_name_address),&addr)) {
         ERROR("configuration error. invalid address '%s' in listen section",
               cfg_getstr(listen_cfg,opt_name_address));
         return -1;
     }
-    am_set_port(&a,cfg_getint(listen_cfg,opt_name_port));
-    if(0!=server_connection.init(epoll_fd,a)) {
-        ERROR("failed to init sctp server connection");
-        return -1;
-    }
+    am_set_port(&addr,cfg_getint(listen_cfg,opt_name_port));
 
     //apply 'neighbours' section settings
     cfg_t *neighbours_cfg = cfg_getsec(reader.cfg,section_name_neighbours);
@@ -96,6 +83,11 @@ int SctpBus::configure()
         default_port = cfg_getint(neighbours_cfg,opt_name_default_port);
         reconnect_interval = cfg_getint(neighbours_cfg,opt_name_reconnect_interval);
         default_address = cfg_getstr(neighbours_cfg,opt_name_default_address);
+
+        if(0!=server_connection.init(epoll_fd,addr)) {
+            ERROR("failed to init sctp server connection");
+            return -1;
+        }
 
         //iterate nodes
         for(unsigned int j = 0; j < cfg_size(neighbours_cfg, section_name_node); j++) {
@@ -113,15 +105,15 @@ int SctpBus::configure()
                 }
                 address = default_address;
             }
-            if(!am_inet_pton(address,&a)) {
+            if(!am_inet_pton(address,&addr)) {
                 ERROR("configuration error. invalid address '%s' for neighbour node %d",
                       address,node_id);
                 return -1;
             }
             port = cfg_getint(node_cfg,opt_name_port);
-            am_set_port(&a,0==port ? default_port : port);
+            am_set_port(&addr,0==port ? default_port : port);
 
-            if(0!=addClientConnection(node_id,a,reconnect_interval)) {
+            if(0!=addClientConnection(node_id,addr,reconnect_interval)) {
                 ERROR("neigbour connection %d initialization error",node_id);
                 return -1;
             }
@@ -129,12 +121,13 @@ int SctpBus::configure()
     } //if(neighbours_cfg)
 
     DBG("SctpBus configured");
+
     return 0;
 }
 
 int SctpBus::onLoad() {
 
-    AmPlugIn::registerDIInterface(getName(),this);
+    AmPlugIn::registerDIInterface(MOD_NAME, this);
 
     if((epoll_fd = epoll_create(10)) == -1) {
         ERROR("epoll_create failed");
@@ -147,7 +140,8 @@ int SctpBus::onLoad() {
     stop_event.link(epoll_fd);
     timer.link(epoll_fd);
 
-    if(-1==configure()) {
+    if(configure()) {
+        ERROR("failed to configure sctp server");
         return -1;
     }
 
@@ -293,7 +287,7 @@ void SctpBus::onSendEvent(const SctpBusSendEvent &e)
         peer_id = 0;
     }
 
-    if(peer_id==AmConfig::node_id) {
+    if(peer_id==AmConfig.node_id) {
         WARN("destination peer_id is equal with our node_id");
     }
 
@@ -389,7 +383,10 @@ void SctpBus::onReloadEvent()
     connections_by_sock.clear();
 
     INFO("load sctp_bus configuration");
-    if(-1==configure()) {
+    ConfigContainer config;
+    if(AmLcConfig::GetInstance().readConfiguration(&config) ||
+        configure(config.module_config[MOD_NAME]) ||
+        configure() ) {
         ERROR("SctpBus configuration error. please fix config and do reload again");
     } else {
         INFO("SctpBus configuration successfully reloaded");

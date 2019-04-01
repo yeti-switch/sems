@@ -1,8 +1,8 @@
 #include "AmBasicSipDialog.h"
 
-#include "AmConfig.h"
 #include "AmSipHeaders.h"
 #include "SipCtrlInterface.h"
+#include "AmUtils.h"
 #include "AmSession.h"
 
 #include "sip/parse_common.h"
@@ -19,15 +19,28 @@ static const char *hdrs2remove[] = {
     NULL,
 };
 
+static int str2addrtype(const std::string &s)
+{
+    if(s.find(":") != std::string::npos) {
+        return IP_info::IPv6;
+    } else if(s.find(".") != std::string::npos) {
+        return IP_info::IPv4;
+    }
+    return IP_info::UNDEFINED;
+
+}
+
 static int str2transport(cstring &s)
 {
 #define cmp_cond(trsp) 0==strncasecmp(s.s,trsp.s,trsp.len <= s.len ? trsp.len : s.len)
     static cstring udp("udp");
     static cstring tcp("tcp");
+    static cstring tls("tls");
     DBG("str2transport(cstring &s [%.*s])",s.len,s.s);
-    if(cmp_cond(udp)) return sip_transport::UDP;
-    else if(cmp_cond(tcp)) return sip_transport::TCP;
-    return sip_transport::UNPARSED;
+    if(cmp_cond(udp)) return SIP_info::UDP;
+    else if(cmp_cond(tcp)) return SIP_info::TCP;
+    else if(cmp_cond(tls)) return SIP_info::TLS;
+    return SIP_info::UNDEFINED;
 #undef cmp_cond
 }
 
@@ -45,15 +58,17 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
   : status(Disconnected),
     cseq(10),r_cseq_i(false),hdl(h),
 	logger(NULL),sensor(NULL),
-    outbound_proxy(AmConfig::OutboundProxy),
-    force_outbound_proxy(AmConfig::ForceOutboundProxy),
-    next_hop(AmConfig::NextHop),
-    next_hop_1st_req(AmConfig::NextHop1stReq),
+    outbound_proxy(AmConfig.outbound_proxy),
+    force_outbound_proxy(AmConfig.force_outbound_proxy),
+    next_hop(AmConfig.next_hop),
+    next_hop_1st_req(AmConfig.next_hop_1st_req),
     patch_ruri_next_hop(false),
     next_hop_fixed(false),
     outbound_interface(-1),
     outbound_transport(-1),
-    nat_handling(AmConfig::SipNATHandling),
+    outbound_address_type(0),
+    resolve_priority(IPv4_only),
+    nat_handling(AmConfig.sip_nat_handling),
     usages(0)
 {
   //assert(h);
@@ -73,7 +88,7 @@ AmSipRequest* AmBasicSipDialog::getUACTrans(unsigned int t_cseq)
   TransMap::iterator it = uac_trans.find(t_cseq);
   if(it == uac_trans.end())
     return NULL;
-  
+
   return &(it->second);
 }
 
@@ -82,7 +97,7 @@ AmSipRequest* AmBasicSipDialog::getUASTrans(unsigned int t_cseq)
   TransMap::iterator it = uas_trans.find(t_cseq);
   if(it == uas_trans.end())
     return NULL;
-  
+
   return &(it->second);
 }
 
@@ -100,7 +115,7 @@ bool AmBasicSipDialog::getUACTransPending()
   return !uac_trans.empty();
 }
 
-void AmBasicSipDialog::setStatus(Status new_status) 
+void AmBasicSipDialog::setStatus(Status new_status)
 {
   DBG("setting SIP dialog status: %s->%s\n",
       getStatusStr(), getStatusStr(new_status));
@@ -131,17 +146,22 @@ string AmBasicSipDialog::getContactHdr()
 string AmBasicSipDialog::getContactUri()
 {
   string contact_uri = "sip:";
+  if(!scheme.empty()) {
+      contact_uri = scheme;
+      contact_uri += ":";
+  }
   if(!ext_local_tag.empty()) {
     contact_uri += local_tag + "@";
   }
 
   int oif = getOutboundIf();
+  int ot  = getOutboundTransport();
   assert(oif >= 0);
-  assert(oif < (int)AmConfig::SIP_Ifs.size());
+  assert(oif < (int)AmConfig.sip_ifs.size());
+  assert(ot < (int)AmConfig.sip_ifs[oif].proto_info.size());
 
-  contact_uri += AmConfig::SIP_Ifs[oif].getIP();
-  if(outbound_transport < 0) getOutboundTransport();
-  contact_uri += ":" + int2str(AmConfig::SIP_Ifs[oif].getLocalPort(outbound_transport));
+  contact_uri += AmConfig.sip_ifs[oif].proto_info[ot]->local_ip;
+  contact_uri += ":" + int2str(AmConfig.sip_ifs[oif].proto_info[ot]->local_port);
 
   if(!contact_params.empty()) {
     contact_uri += ";" + contact_params;
@@ -149,7 +169,7 @@ string AmBasicSipDialog::getContactUri()
   return contact_uri;
 }
 
-string AmBasicSipDialog::getRoute() 
+string AmBasicSipDialog::getRoute()
 {
   string res;
 
@@ -175,12 +195,19 @@ void AmBasicSipDialog::setOutboundInterface(int interface_id) {
   outbound_interface = interface_id;
 }
 
+void AmBasicSipDialog::setOutboundAddrType(int type_id)
+{
+  DBG("setting outbound address type to %i\n",  type_id);
+  if(type_id == IP_info::IPv4) outbound_address_type = sip_address_type::IPv4;
+  else if(type_id == IP_info::IPv6) outbound_address_type = sip_address_type::IPv6;
+}
+
 void AmBasicSipDialog::setOutboundTransport(int transport_id) {
   DBG("setting outbound transport to %i\n",  transport_id);
   outbound_transport = transport_id;
 }
 
-/** 
+/**
  * Computes, set and return the outbound interface
  * based on remote_uri, next_hop_ip, outbound_proxy, route.
  */
@@ -189,29 +216,27 @@ int AmBasicSipDialog::getOutboundIf()
   if (outbound_interface >= 0)
     return outbound_interface;
 
-  if(AmConfig::SIP_Ifs.size() == 1){
-    return (outbound_interface = 0);
-  }
-
   // Destination priority:
   // 1. next_hop
   // 2. outbound_proxy (if 1st req or force_outbound_proxy)
   // 3. first route
   // 4. remote URI
-  
   string dest_uri;
   string dest_ip;
   string local_ip;
-  int transport_id = sip_transport::UDP;
-  multimap<string,unsigned short>::iterator if_it;
+  sip_uri d_uri;
+  int addrType = sip_address_type::IPv4;
+  std::multimap<string,unsigned short>::iterator if_it;
+  unsigned char ipproto = IPv4_UDP;
+  std::map<unsigned char, unsigned short>::iterator addrif_it;
 
   list<sip_destination> ip_list;
-  if(!next_hop.empty() && 
+  if(!next_hop.empty() &&
      !parse_next_hop(stl2cstr(next_hop),ip_list) &&
      !ip_list.empty()) {
 
     dest_ip = c2stlstr(ip_list.front().host);
-    transport_id = str2transport(ip_list.front().trsp);
+    ipproto = (ipproto&0x7)|(str2transport(ip_list.front().trsp)<<3);
   }
   else if(!outbound_proxy.empty() &&
 	  (remote_tag.empty() || force_outbound_proxy)) {
@@ -230,7 +255,7 @@ int AmBasicSipDialog::getOutboundIf()
 
     dest_ip = c2stlstr(route_uri->host);
 
-    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
+    if(route_uri->trsp) ipproto = (ipproto&0x7)|(str2transport(route_uri->trsp->value)<<3);
   }
   else {
     dest_uri = remote_uri;
@@ -240,10 +265,9 @@ int AmBasicSipDialog::getOutboundIf()
     ERROR("No destination found (local_tag='%s')",local_tag.c_str());
     goto error;
   }
-  
+
   if(!dest_uri.empty()){
-    sip_uri d_uri;
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
+    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length(),true) < 0){
       ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
 	    local_tag.c_str(),dest_uri.c_str());
       goto error;
@@ -251,100 +275,95 @@ int AmBasicSipDialog::getOutboundIf()
 
     dest_ip = c2stlstr(d_uri.host);
 
-    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
+    if(d_uri.trsp) ipproto = (ipproto&0x7)|(str2transport(d_uri.trsp->value)<<3);
   }
 
-  if(get_local_addr_for_dest(dest_ip,local_ip) < 0){
+  if(get_local_addr_for_dest(d_uri,local_ip, (dns_priority)resolve_priority) < 0){
     ERROR("No local address for dest '%s' (local_tag='%s')",dest_ip.c_str(),local_tag.c_str());
     goto error;
   }
 
-  if_it = AmConfig::LocalSIPIP2If.find(local_ip);
-  if(if_it == AmConfig::LocalSIPIP2If.end()){
+  if_it = AmConfig.local_sip_ip2if.find(local_ip);
+  if(if_it == AmConfig.local_sip_ip2if.end()){
     ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
-	  local_tag.c_str(), local_ip.c_str());
+            local_tag.c_str(), local_ip.c_str());
+    goto error;
+  }
+
+  addrType = str2addrtype(local_ip);
+  if(!addrType) {
+    ERROR("Could not resolve a address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
+            local_tag.c_str(), local_ip.c_str());
+  }
+  ipproto = (ipproto&0x38)|addrType;
+
+  addrif_it = AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.find(ipproto);
+  if(addrif_it == AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.end()) {
+    ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
+            local_tag.c_str(), local_ip.c_str());
     goto error;
   }
 
   setOutboundInterface(if_it->second);
-  if(transport_id > 0) setOutboundTransport(transport_id);
+  setOutboundAddrType(addrType);
+  setOutboundTransport(addrif_it->second);
+
   return if_it->second;
 
  error:
   WARN("Error while computing outbound interface: default interface will be used instead.");
   setOutboundInterface(0);
+  setOutboundTransport(0);
   return 0;
+}
+
+int AmBasicSipDialog::getOutboundAddrType()
+{
+  int out_if = getOutboundIf();
+  int out_addr_if = getOutboundTransport();
+
+  if (outbound_address_type > 0)
+    return outbound_address_type;
+
+  if(out_if < 0 || out_addr_if < 0) {
+      return sip_address_type::UNPARSED;
+  }
+
+  std::string local_ip = AmConfig.sip_ifs[out_if].proto_info[out_addr_if]->getIP();
+  int addrType = str2addrtype(local_ip);
+  if(addrType) {
+      setOutboundAddrType(addrType);
+  } else {
+      ERROR("Could not parse local URI (local_tag='%s';local_ip='%s')",
+	    local_tag.c_str(),local_ip.c_str());
+  }
+
+  return outbound_address_type;
 }
 
 int AmBasicSipDialog::getOutboundTransport()
 {
-  if(outbound_transport > 0)
+    if(outbound_transport < 0) {
+        getOutboundIf();
+    }
     return outbound_transport;
-
-  // 1. next_hop
-  // 2. outbound_proxy (if 1st req or force_outbound_proxy)
-  // 3. first route
-  // 4. remote URI
-
-  string dest_uri;
-  int transport_id = 0;
-  list<sip_destination> ip_list;
-
-  if(!next_hop.empty() &&
-     !parse_next_hop(stl2cstr(next_hop),ip_list) &&
-     !ip_list.empty())
-  {
-    transport_id = str2transport(ip_list.front().trsp);
-  } else if(!outbound_proxy.empty() &&
-            (remote_tag.empty() || force_outbound_proxy))
-  {
-    dest_uri = outbound_proxy;
-  } else if(!route.empty()) {
-    // parse first route
-    sip_header fr;
-    fr.value = stl2cstr(route);
-    sip_uri* route_uri = get_first_route_uri(&fr);
-    if(!route_uri){
-      ERROR("Could not parse route (local_tag='%s';route='%s')",
-        local_tag.c_str(),route.c_str());
-      goto error;
-    }
-
-    if(route_uri->trsp) transport_id = str2transport(route_uri->trsp->value);
-    else transport_id = sip_transport::UDP;
-
-  } else {
-    dest_uri = remote_uri;
-  }
-
-  if(!dest_uri.empty()){
-    sip_uri d_uri;
-    if(parse_uri(&d_uri,dest_uri.c_str(),dest_uri.length()) < 0){
-      ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
-        local_tag.c_str(),dest_uri.c_str());
-      goto error;
-    }
-
-    if(d_uri.trsp) transport_id = str2transport(d_uri.trsp->value);
-    else transport_id = sip_transport::UDP;
-
-  }
-
-  if(!transport_id) goto error;
-
-  setOutboundTransport(transport_id);
-  return outbound_transport;
-
-error:
-  WARN("Error while computing outbound transport: UDP will be used instead.");
-  setOutboundTransport(sip_transport::UDP);
-  return outbound_transport;
 }
 
 void AmBasicSipDialog::resetOutboundIf()
 {
   setOutboundInterface(-1);
   setOutboundTransport(-1);
+  setOutboundAddrType(0);
+}
+
+void AmBasicSipDialog::setResolvePriority(int priority)
+{
+    resolve_priority = priority;
+}
+
+int AmBasicSipDialog::getResolvePriority()
+{
+    return resolve_priority;
 }
 
 /**
@@ -354,6 +373,7 @@ void AmBasicSipDialog::initFromLocalRequest(const AmSipRequest& req)
 {
   setRemoteUri(req.r_uri);
 
+  scheme       = req.scheme;
   user         = req.user;
   domain       = req.domain;
 
@@ -371,14 +391,14 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
      (req.from_tag != remote_tag)){
     DBG("remote_tag = '%s'; req.from_tag = '%s'\n",
 	remote_tag.c_str(), req.from_tag.c_str());
-    reply_error(req, 481, SIP_REPLY_NOT_EXIST);
+	reply_error(req, 481, SIP_REPLY_NOT_EXIST,string(),logger);
     return false;
   }
 
   if (r_cseq_i && req.cseq <= r_cseq){
 
     if (req.method == SIP_METH_NOTIFY) {
-      if (!AmConfig::IgnoreNotifyLowerCSeq) {
+      if (!AmConfig.ignore_notify_lower_cseq) {
 	// clever trick to not break subscription dialog usage
 	// for implementations which follow 3265 instead of 5057
 	string hdrs = SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)  "0"  CRLF;
@@ -387,7 +407,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 		 "method = %s, call-id = '%s'\n",
 		 req.method.c_str(),callid.c_str());
 	// see 12.2.2
-	reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, hdrs);
+	reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, hdrs, logger);
 	return false;
       }
     }
@@ -396,7 +416,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 		   "method = %s, call-id = '%s'\n",
 		   req.method.c_str(),callid.c_str());
       // see 12.2.2
-      reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+      reply_error(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR, string(),logger);
       return false;
     }
   }
@@ -421,17 +441,17 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
 
   if(!onRxReqSanity(req))
     return;
-    
+
   uas_trans[req.cseq] = req;
-    
+
   // target refresh requests
-  if (req.from_uri.length() && 
+  if (req.from_uri.length() &&
       (remote_uri.empty() ||
-       (req.method == SIP_METH_INVITE || 
+       (req.method == SIP_METH_INVITE ||
 	req.method == SIP_METH_UPDATE ||
 	req.method == SIP_METH_SUBSCRIBE ||
 	req.method == SIP_METH_NOTIFY))) {
-    
+
     // refresh the target
     if (remote_uri != req.from_uri) {
       setRemoteUri(req.from_uri);
@@ -447,10 +467,11 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     string ua = getHeader(req.hdrs,"User-Agent");
     setRemoteUA(ua);
   }
-  
+
   // Dlg not yet initialized?
   if(callid.empty()){
 
+    scheme       = req.scheme;
     user         = req.user;
     domain       = req.domain;
 
@@ -462,6 +483,8 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     setRouteSet(    req.route    );
     set1stBranch(   req.via_branch );
     setOutboundInterface( req.local_if );
+    setOutboundAddrType( str2addrtype(req.local_ip) );
+    setOutboundTransport( req.addr_if );
   }
 
   if(onRxReqStatus(req)) {
@@ -495,7 +518,7 @@ bool AmBasicSipDialog::onRxReplyStatus(const AmSipReply& reply)
     if(hdl) hdl->onRemoteDisappeared(reply);
     break;
   }
-  
+
   return true;
 }
 
@@ -588,7 +611,7 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
   }
 
   updateDialogTarget(reply);
-  
+
   Status saved_status = status;
   AmSipRequest orig_req(t_it->second);
 
@@ -600,7 +623,7 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
      // but not for 2xx INV reply (wait for 200 ACK)
      ((reply.cseq_method != SIP_METH_INVITE) ||
       (reply.code >= 300))) {
-       
+
     uac_trans.erase(reply.cseq);
     if (hdl) hdl->onTransFinished();
   }
@@ -617,10 +640,10 @@ void AmBasicSipDialog::updateDialogTarget(const AmSipReply& reply)
 	 (reply.cseq_method == SIP_METH_UPDATE) ||
 	 (reply.cseq_method == SIP_METH_NOTIFY))) ||
        (reply.cseq_method == SIP_METH_SUBSCRIBE)) ) {
-    
+
     setRemoteUri(reply.to_uri);
     if(!getNextHop().empty()) {
-      string nh = reply.remote_ip 
+      string nh = reply.remote_ip
 	+ ":" + int2str(reply.remote_port)
 	+ "/" + reply.trsp;
       setNextHop(nh);
@@ -645,7 +668,7 @@ int AmBasicSipDialog::onTxRequest(AmSipRequest& req, int& flags)
   return 0;
 }
 
-int AmBasicSipDialog::onTxReply(const AmSipRequest& req, 
+int AmBasicSipDialog::onTxReply(const AmSipRequest& req,
 				AmSipReply& reply, int& flags)
 {
   if(hdl) hdl->onSendReply(req,reply,flags);
@@ -653,7 +676,7 @@ int AmBasicSipDialog::onTxReply(const AmSipRequest& req,
   return 0;
 }
 
-void AmBasicSipDialog::onReplyTxed(const AmSipRequest& req, 
+void AmBasicSipDialog::onReplyTxed(const AmSipRequest& req,
 				   const AmSipReply& reply)
 {
   if(hdl) hdl->onReplySent(req, reply);
@@ -681,9 +704,9 @@ void AmBasicSipDialog::onReplyTxed(const AmSipRequest& req,
     break;
   }
 
-  if ((reply.code >= 200) && 
+  if ((reply.code >= 200) &&
       (reply.cseq_method != SIP_METH_CANCEL)) {
-    
+
     uas_trans.erase(reply.cseq);
     if (hdl) hdl->onTransFinished();
   }
@@ -712,16 +735,15 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
 {
   TransMap::const_iterator t_it = uas_trans.find(req.cseq);
   if(t_it == uas_trans.end()){
-    ERROR("could not find any transaction matching request cseq\n");
-    ERROR("request cseq=%i; reply code=%i; callid=%s; local_tag=%s; "
-	  "remote_tag=%s\n",
-	  req.cseq,code,callid.c_str(),
-	  local_tag.c_str(),remote_tag.c_str());
-    log_stacktrace(L_ERR);
+    DBG("could not find any transaction matching request "
+        "cseq=%i; reply code=%i; callid=%s; local_tag=%s; "
+        "remote_tag=%s",
+        req.cseq,code,callid.c_str(),
+        local_tag.c_str(),remote_tag.c_str());
     return -1;
   }
-  DBG("reply: transaction found!\n");
-    
+  //DBG("reply: transaction found!\n");
+
   AmSipReply reply;
 
   reply.code = code;
@@ -742,8 +764,8 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
   }
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig::Signature.length()){
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig::Signature + CRLF;
+  if (AmConfig.signature.length()){
+    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
   }
 
   if ((code > 100 && code < 300) && !(flags & SIP_FLAGS_NOCONTACT)) {
@@ -769,7 +791,7 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
 
 
 /* static */
-int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code, 
+int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code,
 				  const string& reason, const string& hdrs,
 				  msg_logger* logger, msg_sensor *sensor)
 {
@@ -782,8 +804,8 @@ int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code,
   reply.to_tag = AmSession::getNewId();
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig::Signature.length())
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig::Signature + CRLF;
+  if (AmConfig.signature.length())
+    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
 
   // add transcoder statistics into reply headers
   //addTranscoderStats(reply.hdrs);
@@ -799,7 +821,7 @@ int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code,
   return ret;
 }
 
-int AmBasicSipDialog::sendRequest(const string& method, 
+int AmBasicSipDialog::sendRequest(const string& method,
 				  const AmMimeBody* body,
 				  const string& hdrs,
 				  int flags,
@@ -807,9 +829,13 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				  sip_target_set* target_set_override,
 				  unsigned int redirects_allowed)
 {
+    auto_ptr<sip_target_set> targets(
+        target_set_override ? target_set_override: new sip_target_set((dns_priority)getResolvePriority()));
+
   AmSipRequest req;
 
   req.method = method;
+  req.scheme = scheme;
   req.r_uri = remote_uri;
 
   req.from = SIP_HDR_COLSP(SIP_HDR_FROM) + local_party;
@@ -817,14 +843,14 @@ int AmBasicSipDialog::sendRequest(const string& method,
     req.from += ";tag=" + ext_local_tag;
   else if(!local_tag.empty())
     req.from += ";tag=" + local_tag;
-    
+
   req.to = SIP_HDR_COLSP(SIP_HDR_TO) + remote_party;
-  if(!remote_tag.empty()) 
+  if(!remote_tag.empty())
     req.to += ";tag=" + remote_tag;
-    
+
   req.cseq = cseq;
   req.callid = callid;
-    
+
   req.hdrs = hdrs;
 
   req.route = getRoute();
@@ -841,8 +867,8 @@ int AmBasicSipDialog::sendRequest(const string& method,
   }
 
   inplaceHeadersErase(req.hdrs,hdrs2remove);
-  if (AmConfig::Signature.length()){
-    req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig::Signature + CRLF;
+  if (AmConfig.signature.length()){
+    req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig.signature + CRLF;
   }
 
   int send_flags = 0;
@@ -859,11 +885,11 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				   remote_tag.empty() || !next_hop_1st_req ?
 				   next_hop : "",
 				   outbound_interface,
-				   send_flags,logger,sensor,timers_override,
-				   target_set_override,
+				   send_flags, targets.release(),
+                   logger,sensor,timers_override,
 				   redirects_allowed);
   if(res) {
-    WARN("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
+    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
       req.method.c_str(),
       req.r_uri.c_str(),
       req.callid.c_str(),
@@ -883,7 +909,7 @@ void AmBasicSipDialog::dump()
   if(uac_trans.size()){
     for(TransMap::iterator it = uac_trans.begin();
 	it != uac_trans.end(); it++){
-	    
+
       DBG("    cseq = %i; method = %s\n",it->first,it->second.method.c_str());
     }
   }
@@ -891,7 +917,7 @@ void AmBasicSipDialog::dump()
   if(uas_trans.size()){
     for(TransMap::iterator it = uas_trans.begin();
 	it != uas_trans.end(); it++){
-	    
+
       DBG("    cseq = %i; method = %s\n",it->first,it->second.method.c_str());
     }
   }

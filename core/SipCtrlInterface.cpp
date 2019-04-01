@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "SipCtrlInterface.h"
@@ -47,25 +47,33 @@
 #include "sip/udp_trsp.h"
 #include "sip/ip_util.h"
 #include "sip/tcp_trsp.h"
+#include "sip/tls_trsp.h"
 
 #include "log.h"
 
 #include <assert.h>
 
 #include "AmApi.h"
-#include "AmConfigReader.h"
 #include "AmSipDispatcher.h"
 #include "AmEventDispatcher.h"
 #include "AmSipEvent.h"
+#include "AmLcConfig.h"
 
 bool _SipCtrlInterface::log_parsed_messages = true;
 int _SipCtrlInterface::udp_rcvbuf = -1;
 
 int _SipCtrlInterface::alloc_udp_structs()
 {
-    udp_sockets = new udp_trsp_socket*[ AmConfig::SIP_Ifs.size() ];
-    udp_servers = new udp_trsp* [ AmConfig::SIPServerThreads
-				  * AmConfig::SIP_Ifs.size() ];
+    unsigned short socketsCount = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::UDP) {
+                socketsCount++;
+            }
+        }
+    }
+    udp_sockets = new udp_trsp_socket* [socketsCount];
+    udp_servers = new udp_trsp* [AmConfig.sip_udp_server_threads];
 
     if(udp_sockets && udp_servers)
 	return 0;
@@ -73,26 +81,35 @@ int _SipCtrlInterface::alloc_udp_structs()
     return -1;
 }
 
-int _SipCtrlInterface::init_udp_servers(int if_num)
+int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short addr_num, SIP_info& info)
 {
-    udp_trsp_socket* udp_socket = 
-	new udp_trsp_socket(if_num,AmConfig::SIP_Ifs[if_num].SigSockOpts
-			    | (AmConfig::ForceOutboundIf ? 
-			       trsp_socket::force_outbound_if : 0)
-				| (AmConfig::SIP_Ifs[if_num].SigSockOpts&trsp_socket::use_raw_sockets ?
-			       trsp_socket::use_raw_sockets : 0),
-			    AmConfig::SIP_Ifs[if_num].NetIfIdx);
-	
-    if(!AmConfig::SIP_Ifs[if_num].PublicIP.empty()) {
-	udp_socket->set_public_ip(AmConfig::SIP_Ifs[if_num].PublicIP);
+    trsp_socket::socket_transport trans;
+    if(info.type_ip == IP_info::IPv4) {
+        trans = trsp_socket::udp_ipv4;
+    } else if(info.type_ip == IP_info::IPv6) {
+        trans = trsp_socket::udp_ipv6;
+    } else {
+        ERROR("Unknown transport type in udp server");
+        return -1;
     }
 
-    if(udp_socket->bind(AmConfig::SIP_Ifs[if_num].LocalIP,
-            AmConfig::SIP_Ifs[if_num].udp_local_port) < 0){
+    udp_trsp_socket* udp_socket =
+        new udp_trsp_socket(if_num, addr_num, info.sig_sock_opts
+			    | (AmConfig.force_outbound_if ?
+			       trsp_socket::force_outbound_if : 0)
+                            | (info.sig_sock_opts & trsp_socket::use_raw_sockets ?
+                               trsp_socket::use_raw_sockets : 0),trans,
+                            info.net_if_idx);
 
+    if(!info.public_ip.empty()) {
+        udp_socket->set_public_ip(info.public_ip);
+    }
+
+    if(udp_socket->bind(info.local_ip,
+                        info.local_port) < 0) {
 	ERROR("Could not bind SIP/UDP socket to %s:%i",
-	      AmConfig::SIP_Ifs[if_num].LocalIP.c_str(),
-		  AmConfig::SIP_Ifs[if_num].udp_local_port);
+              info.local_ip.c_str(),
+              info.local_port);
 
 	delete udp_socket;
 	return -1;
@@ -102,171 +119,293 @@ int _SipCtrlInterface::init_udp_servers(int if_num)
 	udp_socket->set_recvbuf_size(udp_rcvbuf);
     }
 
-    if(AmConfig::SIP_Ifs[if_num].tos_byte) {
-        udp_socket->set_tos_byte(AmConfig::SIP_Ifs[if_num].tos_byte);
+    if(info.tos_byte) {
+        udp_socket->set_tos_byte(info.tos_byte);
     }
 
     trans_layer::instance()->register_transport(udp_socket);
-    udp_sockets[if_num] = udp_socket;
+    udp_sockets[nr_udp_sockets] = udp_socket;
     inc_ref(udp_socket);
     nr_udp_sockets++;
+    return 0;
+}
 
-    for(int j=0; j<AmConfig::SIPServerThreads;j++){
-	udp_servers[if_num * AmConfig::SIPServerThreads + j] = 
-		new udp_trsp(udp_socket,
-					 AmConfig::SIP_Ifs[if_num].acl,
-					 AmConfig::SIP_Ifs[if_num].opt_acl);
-	nr_udp_servers++;
+int _SipCtrlInterface::init_udp_servers()
+{
+    for(int i=0; i<AmConfig.sip_udp_server_threads;i++){
+        udp_servers[nr_udp_servers] = new udp_trsp();
+        for(int j=0; j<nr_udp_sockets;j++) {
+            udp_servers[nr_udp_servers]->add_socket(udp_sockets[j]);
+        }
+        nr_udp_servers++;
     }
+    return 0;
+}
 
+int _SipCtrlInterface::alloc_trsp_worker_structs()
+{
+    nr_trsp_workers = AmConfig.sip_tcp_server_threads;
+    trsp_workers = new trsp_worker*[nr_trsp_workers];
+    if(trsp_workers) {
+        return 0;
+    }
+    
+    return -1;
+}
+
+int _SipCtrlInterface::init_trsp_workers()
+{
+    for(int i= 0; i < nr_trsp_workers; i++) {
+        trsp_workers[i] = new trsp_worker();
+    }
     return 0;
 }
 
 int _SipCtrlInterface::alloc_tcp_structs()
 {
-    tcp_sockets = new tcp_server_socket*[ AmConfig::SIP_Ifs.size() ];
-    tcp_servers = new tcp_trsp* [ AmConfig::SIP_Ifs.size() ];
+    unsigned short socketsCount = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::TCP) {
+                socketsCount++;
+            }
+        }
+    }
+    tcp_sockets = new tcp_server_socket* [socketsCount];
 
-    if(tcp_sockets && tcp_servers)
+    if(tcp_sockets)
 	return 0;
 
     return -1;
 }
 
-int _SipCtrlInterface::init_tcp_servers(int if_num)
+int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info)
 {
-    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num,AmConfig::SIP_Ifs[if_num].SigSockOpts);
+    trsp_socket::socket_transport trans;
+    if(info.type_ip == IP_info::IPv4) {
+        trans = trsp_socket::tcp_ipv4;
+    } else if(info.type_ip == IP_info::IPv6) {
+        trans = trsp_socket::tcp_ipv6;
+    } else {
+        ERROR("Unknown transport type in udp server");
+        return -1;
+    }
+    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num, addr_num,info.sig_sock_opts,trans);
 
-    if(!AmConfig::SIP_Ifs[if_num].PublicIP.empty()) {
-     	tcp_socket->set_public_ip(AmConfig::SIP_Ifs[if_num].PublicIP);
+    if(!info.public_ip.empty()) {
+        tcp_socket->set_public_ip(info.public_ip);
     }
 
-    tcp_socket->set_connect_timeout(AmConfig::SIP_Ifs[if_num].tcp_connect_timeout);
-    tcp_socket->set_idle_timeout(AmConfig::SIP_Ifs[if_num].tcp_idle_timeout);
+    SIP_TCP_info* tcp_info = SIP_TCP_info::toSIP_TCP(&info);
+    if(!tcp_info) {
+        ERROR("incorrect type of sip info - not TCP");
+        return -1;
+    }
+    tcp_socket->set_connect_timeout(tcp_info->tcp_connect_timeout);
+    tcp_socket->set_idle_timeout(tcp_info->tcp_idle_timeout);
 
-    if(tcp_socket->bind(AmConfig::SIP_Ifs[if_num].LocalIP,
-            AmConfig::SIP_Ifs[if_num].tcp_local_port) < 0){
-
+    if(tcp_socket->bind(info.local_ip, info.local_port) < 0) {
 	ERROR("Could not bind SIP/TCP socket to %s:%i",
-	      AmConfig::SIP_Ifs[if_num].LocalIP.c_str(),
-		  AmConfig::SIP_Ifs[if_num].tcp_local_port);
+              info.local_ip.c_str(),
+              info.local_port);
 
 	delete tcp_socket;
 	return -1;
     }
 
-    if(AmConfig::SIP_Ifs[if_num].tos_byte) {
-        tcp_socket->set_tos_byte(AmConfig::SIP_Ifs[if_num].tos_byte);
+    if(info.tos_byte) {
+        tcp_socket->set_tos_byte(info.tos_byte);
     }
 
     //TODO: add some more threads
-    tcp_socket->add_threads(AmConfig::SIPServerThreads);
+    tcp_socket->add_workers(trsp_workers, nr_trsp_workers);
 
     trans_layer::instance()->register_transport(tcp_socket);
-    tcp_sockets[if_num] = tcp_socket;
+    tcp_sockets[nr_tcp_sockets] = tcp_socket;
     inc_ref(tcp_socket);
     nr_tcp_sockets++;
 
-    tcp_servers[if_num] = new tcp_trsp(tcp_socket,
-                                       AmConfig::SIP_Ifs[if_num].acl,
-                                       AmConfig::SIP_Ifs[if_num].opt_acl);
-    nr_tcp_servers++;
+    trsp_server->add_socket(tcp_socket);
+    return 0;
+}
+
+int _SipCtrlInterface::alloc_tls_structs()
+{
+    unsigned short socketsCount = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::TLS) {
+                socketsCount++;
+            }
+        }
+    }
+    tls_sockets = new tls_server_socket* [socketsCount];
+
+    if(tls_sockets)
+	return 0;
+
+    return -1;
+}
+
+int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info)
+{
+    trsp_socket::socket_transport trans;
+    if(info.type_ip == IP_info::IPv4) {
+        trans = trsp_socket::tls_ipv4;
+    } else if(info.type_ip == IP_info::IPv6) {
+        trans = trsp_socket::tls_ipv6;
+    } else {
+        ERROR("Unknown transport type in tls server");
+        return -1;
+    }
+
+    SIP_TLS_info* tls_info = SIP_TLS_info::toSIP_TLS(&info);
+    if(!tls_info) {
+        ERROR("incorrect type of sip info - not TCP");
+        return -1;
+    }
+
+    tls_server_socket* tls_socket = 0;
+    try {
+        tls_socket = new tls_server_socket(if_num, addr_num,info.sig_sock_opts,trans, &tls_info->client_settings, &tls_info->server_settings);
+    } catch(Botan::Exception& ex) {
+        ERROR("Botan Exception: %s", ex.what());
+    }
+
+    if(!tls_socket) {
+        return -1;
+    }
+
+    if(!info.public_ip.empty()) {
+        tls_socket->set_public_ip(info.public_ip);
+    }
+
+    tls_socket->set_connect_timeout(tls_info->tcp_connect_timeout);
+    tls_socket->set_idle_timeout(tls_info->tcp_idle_timeout);
+
+    if(tls_socket->bind(info.local_ip, info.local_port) < 0) {
+	ERROR("Could not bind SIP/TCP socket to %s:%i",
+              info.local_ip.c_str(),
+              info.local_port);
+
+	delete tls_socket;
+	return -1;
+    }
+
+    if(info.tos_byte) {
+        tls_socket->set_tos_byte(info.tos_byte);
+    }
+
+    //TODO: add some more threads
+    tls_socket->add_workers(trsp_workers, nr_trsp_workers);
+
+    trans_layer::instance()->register_transport(tls_socket);
+    tls_sockets[nr_tls_sockets] = tls_socket;
+    inc_ref(tls_socket);
+    nr_tls_sockets++;
+
+    trsp_server->add_socket(tls_socket);
 
     return 0;
 }
 
 int _SipCtrlInterface::load()
 {
-    if (!AmConfig::OutboundProxy.empty()) {
-	sip_uri parsed_uri;
-	if (parse_uri(&parsed_uri, (char *)AmConfig::OutboundProxy.c_str(),
-		      AmConfig::OutboundProxy.length()) < 0) {
-	    ERROR("invalid outbound_proxy specified\n");
-	    return -1;
-	}
-    }
-
-    AmConfigReader cfg;
-    string cfgfile = AmConfig::ConfigurationFile.c_str();
-    if (file_exists(cfgfile) && !cfg.loadFile(cfgfile)) {
-	if (cfg.hasParameter("accept_fr_without_totag")) {
-	    trans_layer::accept_fr_without_totag = 
-		cfg.getParameter("accept_fr_without_totag") == "yes";
-	}
-	DBG("accept_fr_without_totag = %s\n", 
-	    trans_layer::accept_fr_without_totag?"yes":"no");
-
-	if (cfg.hasParameter("default_bl_ttl")) {
-	    trans_layer::default_bl_ttl = 
-		cfg.getParameterInt("default_bl_ttl",
-				    trans_layer::default_bl_ttl);
-	}
-	DBG("default_bl_ttl = %u\n",trans_layer::default_bl_ttl);
-
-	if (cfg.hasParameter("log_raw_messages")) {
-	    string msglog = cfg.getParameter("log_raw_messages");
-	    if (msglog == "no") trsp_socket::log_level_raw_msgs = -1;
-	    else if (msglog == "error") trsp_socket::log_level_raw_msgs = L_ERR;
-	    else if (msglog == "warn")  trsp_socket::log_level_raw_msgs = L_WARN;
-	    else if (msglog == "info")  trsp_socket::log_level_raw_msgs = L_INFO;
-	    else if (msglog == "debug") trsp_socket::log_level_raw_msgs = L_DBG;
-	}
-	DBG("log_raw_messages level = %d\n", 
-	    trsp_socket::log_level_raw_msgs);
-
-	if (cfg.hasParameter("log_parsed_messages")) {
-	    log_parsed_messages = cfg.getParameter("log_parsed_messages")=="yes";
-	}
-	DBG("log_parsed_messages = %s\n", 
-	    log_parsed_messages?"yes":"no");
-
-	if (cfg.hasParameter("udp_rcvbuf")) {
-	    unsigned int config_udp_rcvbuf = -1;
-	    if (str2i(cfg.getParameter("udp_rcvbuf"), config_udp_rcvbuf)) {
-		ERROR("invalid value specified for udp_rcvbuf\n");
-		return false;
-	    }
-	    udp_rcvbuf = config_udp_rcvbuf;
-	    DBG("udp_rcvbuf = %d\n", udp_rcvbuf);
-	}
-
-    } else {
-	DBG("assuming SIP default settings.\n");
+    if (!AmConfig.outbound_proxy.empty()) {
+        sip_uri parsed_uri;
+        if (parse_uri(&parsed_uri, (char *)AmConfig.outbound_proxy.c_str(),
+                      AmConfig.outbound_proxy.length()) < 0) {
+            ERROR("invalid outbound_proxy specified\n");
+            return -1;
+        }
     }
 
     if(alloc_udp_structs() < 0) {
-	ERROR("no enough memory to alloc UDP structs");
-	return -1;
+        ERROR("no enough memory to alloc UDP structs");
+        return -1;
     }
 
     // Init UDP transport instances
-    for(unsigned int i=0; i<AmConfig::SIP_Ifs.size();i++) {
-	if(init_udp_servers(i) < 0) {
-	    return -1;
-	}
+    unsigned short udp_idx = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        unsigned short addr_idx = 0;
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::UDP) {
+                if(init_udp_sockets(udp_idx, addr_idx, *info) < 0) {
+                    return -1;
+                }
+            }
+            addr_idx++;
+        }
+        udp_idx++;
+    }
+    
+    if(init_udp_servers() < 0) {
+        return -1;
     }
 
+    if(alloc_trsp_worker_structs() < 0) {
+        ERROR("no enough memory to alloc sip workers structs");
+        return -1;
+    }
+    
+    if(init_trsp_workers() < 0) {
+        return -1;
+    }
+    
+    trsp_server = new trsp();
+
     if(alloc_tcp_structs() < 0) {
-	ERROR("no enough memory to alloc TCP structs");
-	return -1;
+        ERROR("no enough memory to alloc TCP structs");
+        return -1;
     }
 
     // Init TCP transport instances
-    for(unsigned int i=0; i<AmConfig::SIP_Ifs.size();i++) {
-	if(init_tcp_servers(i) < 0) {
-	    return -1;
-	}
+    unsigned short tcp_idx = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        unsigned short addr_idx = 0;
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::TCP) {
+                if(init_tcp_servers(tcp_idx, addr_idx, *info) < 0) {
+                    return -1;
+                }
+            }
+            addr_idx++;
+        }
+        tcp_idx++;
     }
 
-    return 0;    
+    if(alloc_tls_structs() < 0) {
+        ERROR("no enough memory to alloc TCP structs");
+        return -1;
+    }
+
+    // Init TCP transport instances
+    unsigned short tls_idx = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        unsigned short addr_idx = 0;
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::TLS) {
+                if(init_tls_servers(tls_idx, addr_idx, *info) < 0) {
+                    return -1;
+                }
+            }
+            addr_idx++;
+        }
+        tls_idx++;
+    }
+
+    return 0;
 }
 
 _SipCtrlInterface::_SipCtrlInterface()
     : stopped(false),
-      udp_servers(NULL), udp_sockets(NULL),
-      nr_udp_sockets(0), nr_udp_servers(0),
-      tcp_servers(NULL), tcp_sockets(NULL),
-      nr_tcp_sockets(0), nr_tcp_servers(0)
+      nr_udp_sockets(0), udp_sockets(NULL),
+      nr_udp_servers(0), udp_servers(NULL),
+      nr_tcp_sockets(0), tcp_sockets(NULL),
+      nr_tls_sockets(0), tls_sockets(NULL),
+      nr_trsp_workers(0), trsp_workers(NULL),
+      trsp_server(NULL)
 {
     trans_layer::instance()->register_ua(this);
 }
@@ -280,9 +419,9 @@ int _SipCtrlInterface::cancel(trans_ticket* tt, const string& dialog_id,
 
 int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 			    const string& next_hop, int out_interface,
-				unsigned int flags, msg_logger* logger, msg_sensor *sensor,
+                            unsigned int flags, sip_target_set* target_set_override,
+                            msg_logger* logger, msg_sensor *sensor,
 				sip_timers_override *timers_override,
-				sip_target_set* target_set_override,
 				int redirects_allowed)
 {
 	std::unique_ptr<sip_target_set> target_set(target_set_override);
@@ -291,7 +430,7 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 	return cancel(&req.tt, dialog_id, req.cseq, req.hdrs);
 
     sip_msg* msg = new sip_msg();
-    
+
     msg->type = SIP_REQUEST;
     msg->u.request = new sip_request();
 
@@ -304,7 +443,7 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
     // CSeq
     // Contact
     // Max-Forwards
-    
+
     char* c = (char*)req.from.c_str();
     int err = parse_headers(msg,&c,c+req.from.length());
 
@@ -336,12 +475,12 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 	    return -1;
 	}
     }
-    
+
     if(!req.route.empty()){
-	
+
  	c = (char*)req.route.c_str();
 	err = parse_headers(msg,&c,c+req.route.length());
-	
+
 	if(err){
 	    ERROR("Route headers parsing failed\n");
 	    ERROR("Faulty headers were: <%s>\n",req.route.c_str());
@@ -351,18 +490,18 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
     }
 
     if(req.max_forwards < 0) {
-	req.max_forwards = AmConfig::MaxForwards;
+	req.max_forwards = AmConfig.max_forwards;
     }
 
     string mf = int2str(req.max_forwards);
     msg->hdrs.push_back(new sip_header(0,SIP_HDR_MAX_FORWARDS,stl2cstr(mf)));
 
     if(!req.hdrs.empty()) {
-	
+
  	c = (char*)req.hdrs.c_str();
-	
+
  	err = parse_headers(msg,&c,c+req.hdrs.length());
-	
+
 	if(err){
 	    ERROR("Additional headers parsing failed\n");
 	    ERROR("Faulty headers were: <%s>\n",req.hdrs.c_str());
@@ -406,10 +545,14 @@ int _SipCtrlInterface::run()
 	}
     }
 
-    if (NULL != tcp_servers) {
-	for(int i=0; i<nr_tcp_servers;i++){
-	    tcp_servers[i]->start();
+    if (NULL != trsp_workers) {
+	for(int i=0; i<nr_trsp_workers;i++){
+	    trsp_workers[i]->start();
 	}
+    }
+	
+    if (NULL != trsp_server) {
+        trsp_server->start();
     }
 
     while (!stopped.get()) {
@@ -441,18 +584,24 @@ void _SipCtrlInterface::cleanup()
 	nr_udp_servers = 0;
     }
 
-    if (NULL != tcp_servers) {
-	for(int i=0; i<nr_tcp_servers;i++){
-	    tcp_servers[i]->stop();
-	    tcp_servers[i]->join();
-	    delete tcp_servers[i];
-	}
-
-	delete [] tcp_servers;
-	tcp_servers = NULL;
-	nr_tcp_servers = 0;
+    if(NULL != trsp_server){
+    trsp_server->stop();
+    trsp_server->join();
+	delete trsp_server;
+	trsp_server = NULL;
     }
-
+    
+    if (NULL != trsp_workers) {
+	for(int i=0; i<nr_trsp_workers;i++){
+	    trsp_workers[i]->stop();
+	    trsp_workers[i]->join();
+	    delete trsp_workers[i];
+	}
+	delete [] trsp_workers;
+	trsp_workers = NULL;
+	nr_trsp_workers = 0;
+    }
+	
     trans_layer::instance()->clear_transports();
 
     if (NULL != udp_sockets) {
@@ -476,6 +625,17 @@ void _SipCtrlInterface::cleanup()
 	delete [] tcp_sockets;
 	tcp_sockets = NULL;
 	nr_tcp_sockets = 0;
+    }
+    
+    if (NULL != tls_sockets) {
+	for(int i=0; i<nr_tls_sockets;i++){
+	    DBG("dec_ref(%p)",tls_sockets[i]);
+	    dec_ref(tls_sockets[i]);
+	}
+
+	delete [] tls_sockets;
+	tls_sockets = NULL;
+	nr_tls_sockets = 0;
     }
 }
 
@@ -529,14 +689,18 @@ int _SipCtrlInterface::send(const AmSipReply &rep, const string& dialog_id,
 }
 
 
-inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg, 
+inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 						 const trans_ticket& tt,
 						 AmSipRequest &req)
 {
     assert(msg);
     assert(msg->from && msg->from->p);
     assert(msg->to && msg->to->p);
-    
+
+    if(msg->u.request->ruri.scheme == sip_uri::SIPS)
+        req.scheme   = "sips";
+    else if(msg->u.request->ruri.scheme == sip_uri::SIP)
+        req.scheme   = "sip";
     req.method   = c2stlstr(msg->u.request->method_str);
     req.user     = c2stlstr(msg->u.request->ruri.user);
     req.domain   = c2stlstr(msg->u.request->ruri.host);
@@ -552,7 +716,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 	    WARN("\tcontact = '%.*s'\n",contact.len,contact.s);
 	    WARN("\trequest = '%.*s'\n",msg->len,msg->buf);
 
-	    trans_layer::instance()->send_sf_error_reply(&tt, msg, 400, 
+	    trans_layer::instance()->send_sf_error_reply(&tt, msg, 400,
 							 "Bad Contact");
 	    return false;
 	}
@@ -590,7 +754,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 	    return false;
 	}
     }
-    
+
     if(req.from_uri.empty()) {
 	req.from_uri = c2stlstr(get_from(msg)->nameaddr.addr);
     }
@@ -629,18 +793,18 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
     }
 
     prepare_routes_uas(msg->record_route, req.route);
-	
-    for (list<sip_header *>::const_iterator it = msg->hdrs.begin(); 
+
+    for (list<sip_header *>::const_iterator it = msg->hdrs.begin();
 	 it != msg->hdrs.end(); ++it) {
 
 	switch((*it)->type) {
 	case sip_header::H_OTHER:
 	case sip_header::H_REQUIRE:
-	    req.hdrs += c2stlstr((*it)->name) + ": " 
+	    req.hdrs += c2stlstr((*it)->name) + ": "
 		+ c2stlstr((*it)->value) + CRLF;
 	    break;
 	case sip_header::H_VIA:
-	    req.vias += c2stlstr((*it)->name) + ": " 
+	    req.vias += c2stlstr((*it)->name) + ": "
 		+ c2stlstr((*it)->value) + CRLF;
 	    break;
 	case sip_header::H_MAX_FORWARDS:
@@ -656,7 +820,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
     }
 
     if(req.max_forwards < 0)
-	req.max_forwards = AmConfig::MaxForwards;
+	req.max_forwards = AmConfig.max_forwards;
 
     req.remote_ip = get_addr_str(&msg->remote_ip);
     req.remote_port = am_get_port(&msg->remote_ip);
@@ -666,11 +830,12 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 
     req.trsp = msg->local_socket->get_transport();
     req.local_if = msg->local_socket->get_if();
+    req.addr_if = msg->local_socket->get_addr_if();
 
     req.via1 = c2stlstr(msg->via1->value);
     if(msg->vias.size() > 1) {
 	req.first_hop = false;
-    } 
+    }
     else {
 	sip_via* via1 = (sip_via*)msg->via1->p;
 	assert(via1); // gets parsed in parse_sip_msg()
@@ -716,7 +881,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
 	sip_nameaddr na;
 	cstring contact = get_contact(msg)->value;
 	if(parse_first_nameaddr(&na,contact.s,contact.len) < 0) {
-	    
+
 	    ERROR("Contact nameaddr parsing failed ('%.*s')\n",
 		  contact.len,contact.s);
 	}
@@ -734,7 +899,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
     }
 
     reply.callid = c2stlstr(msg->callid->value);
-    
+
     reply.to_tag = c2stlstr(((sip_from_to*)msg->to->p)->tag);
     reply.from_tag  = c2stlstr(((sip_from_to*)msg->from->p)->tag);
 
@@ -742,7 +907,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
     prepare_routes_uac(msg->record_route, reply.route);
 
     unsigned rseq;
-    for (list<sip_header*>::iterator it = msg->hdrs.begin(); 
+    for (list<sip_header*>::iterator it = msg->hdrs.begin();
 	 it != msg->hdrs.end(); ++it) {
 #ifdef PROPAGATE_UNPARSED_REPLY_HEADERS
         reply.unparsed_headers.push_back(AmSipHeader((*it)->name, (*it)->value));
@@ -750,7 +915,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
         switch ((*it)->type) {
           case sip_header::H_OTHER:
           case sip_header::H_REQUIRE:
-	      reply.hdrs += c2stlstr((*it)->name) + ": " 
+	      reply.hdrs += c2stlstr((*it)->name) + ": "
                   + c2stlstr((*it)->value) + CRLF;
               break;
           case sip_header::H_RSEQ:
@@ -789,7 +954,7 @@ void _SipCtrlInterface::handle_sip_request(const trans_ticket& tt, sip_msg* msg)
     assert(msg);
     assert(msg->from && msg->from->p);
     assert(msg->to && msg->to->p);
-    
+
     AmSipRequest req;
 
     if(!sip_msg2am_request(msg, tt, req))
@@ -826,7 +991,7 @@ void _SipCtrlInterface::handle_sip_reply(const trans_ticket& tt, const string& d
 {
     assert(msg->from && msg->from->p);
     assert(msg->to && msg->to->p);
-    
+
     AmSipReply   reply;
 
 
@@ -845,7 +1010,7 @@ void _SipCtrlInterface::handle_sip_reply(const trans_ticket& tt, const string& d
     }
 
     reply.tt = tt;
-    
+
     DBG("Received reply: %i %s\n",reply.code,reply.reason.c_str());
     DBG_PARAM(reply.callid);
     DBG_PARAM(reply.from_tag);
@@ -868,7 +1033,7 @@ void _SipCtrlInterface::handle_reply_timeout(AmSipTimeoutEvent::EvType evt,
     sip_trans *tr, trans_bucket *buk)
 {
   AmSipTimeoutEvent *tmo_evt;
-  
+
   switch (evt) {
   case AmSipTimeoutEvent::noACK: {
       sip_cseq* cseq = dynamic_cast<sip_cseq*>(tr->msg->cseq->p);
@@ -887,7 +1052,7 @@ void _SipCtrlInterface::handle_reply_timeout(AmSipTimeoutEvent::EvType evt,
       char* err_msg=0;
       int err = parse_sip_msg(&msg, err_msg);
       if (err) {
-          ERROR("failed to parse (own) reply[%d]: %s.\n", err, 
+          ERROR("failed to parse (own) reply[%d]: %s.\n", err,
               err_msg ? err_msg : "???");
           return;
       }
@@ -933,7 +1098,7 @@ void _SipCtrlInterface::prepare_routes_uac(const list<sip_header*>& routes, stri
 {
     if(routes.empty())
 	return;
-	
+
     list<sip_header*>::const_reverse_iterator it_rh = routes.rbegin();
     if(parse_route(*it_rh) < 0){
 	DBG("Could not parse route header [%.*s]\n",
@@ -944,9 +1109,9 @@ void _SipCtrlInterface::prepare_routes_uac(const list<sip_header*>& routes, stri
 
     list<route_elmt*>::const_reverse_iterator it_re = route->elmts.rbegin();
     route_field = c2stlstr((*it_re)->route);
-    
+
     while(true) {
-	
+
 	if(++it_re == route->elmts.rend()) {
 	    if(++it_rh == routes.rend()){
 		DBG("route_field = [%s]\n",route_field.c_str());
@@ -963,7 +1128,7 @@ void _SipCtrlInterface::prepare_routes_uac(const list<sip_header*>& routes, stri
 		return;
 	    it_re = route->elmts.rbegin();
 	}
-	
+
 	route_field += ", " + c2stlstr((*it_re)->route);
     }
 
@@ -972,14 +1137,14 @@ void _SipCtrlInterface::prepare_routes_uac(const list<sip_header*>& routes, stri
 void _SipCtrlInterface::prepare_routes_uas(const list<sip_header*>& routes, string& route_field)
 {
     if(!routes.empty()){
-	
+
 	list<sip_header*>::const_iterator it = routes.begin();
 
 	route_field = c2stlstr((*it)->value);
 	++it;
 
 	for(; it != routes.end(); ++it) {
-		
+
 	    route_field += ", " + c2stlstr((*it)->value);
 	}
     }
@@ -989,9 +1154,9 @@ void _SipCtrlInterface::getInfo(AmArg &ret)
 {
     ret.assertStruct();
     //if_num
-    for(unsigned int i = 0;i < AmConfig::SIP_Ifs.size(); i++) {
+    for(unsigned int i = 0; i < AmConfig.sip_ifs.size(); i++) {
         tcp_server_socket &tcp_socket = *tcp_sockets[i];
-        AmConfig::SIP_interface &sip_if = AmConfig::SIP_Ifs[tcp_socket.get_if()];
+        SIP_interface &sip_if = AmConfig.sip_ifs[tcp_socket.get_if()];
         AmArg &r = ret[sip_if.name];
         tcp_socket.getInfo(r);
     }

@@ -2,3 +2,10 @@
 	path = third/curl
 	url = https://github.com/curl/curl.git
         ignore = dirty
+[submodule "third/botan"]
+	path = third/botan
+	url = https://github.com/randombit/botan
+	branch = release-2
+[submodule "third/srtp"]
+	path = third/srtp
+	url = https://github.com/cisco/libsrtp.git

@@ -41,8 +41,8 @@ using std::string;
 #include <vector>
 using std::vector;
 
+#define DEFAULT_IDLE_TIMEOUT 3600000 /* 1 hour */
 #define DEFAULT_TCP_CONNECT_TIMEOUT 2000 /* 2 seconds */
-#define DEFAULT_TCP_IDLE_TIMEOUT 3600000 /* 1 hour */
 
 class trsp_socket
     : public atomic_ref_cnt
@@ -54,6 +54,16 @@ public:
 	use_raw_sockets         = (1 << 2),
 	no_transport_in_contact = (1 << 3),
 	static_client_port = (1 << 4)
+    };
+
+    enum socket_transport {
+        tr_invalid  = 0,
+        udp_ipv4,
+        udp_ipv6,
+        tcp_ipv4,
+        tcp_ipv6,
+        tls_ipv4,
+        tls_ipv6
     };
 
     static int log_level_raw_msgs;
@@ -80,17 +90,23 @@ protected:
     // internal interface number
     unsigned short   if_num;
 
+    // internal interface addr number
+    unsigned short   addr_num;
+
     // network interface index
     unsigned int sys_if_idx;
 
     // ORed field of socket_option
     unsigned int socket_options;
 
+    // transport interface
+    socket_transport transport;
+
     uint8_t tos_byte;
 
 public:
-    trsp_socket(unsigned short if_num, unsigned int opts,
-		unsigned int sys_if_idx = 0, int sd = 0);
+    trsp_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts,
+		socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
     int set_tos_byte(uint8_t byte);
@@ -105,6 +121,11 @@ public:
      * Getter for the transport name
      */
     virtual const char* get_transport() const = 0;
+
+    /**
+     * Getter for the transport type
+     */
+    socket_transport get_transport_id() const { return transport; }
 
     /**
      * Getter for IP address
@@ -155,6 +176,11 @@ public:
     unsigned short get_if() const;
 
     /**
+     * Getter for the interface addr number
+     */
+    unsigned short get_addr_if() const;
+
+    /**
      * Is the transport reliable?
      */
     virtual bool is_reliable() const { return false; }
@@ -203,21 +229,6 @@ class trsp_acl {
 
     void set_action(action_t a) { action = a; }
     void add_network(AmSubnet net) { networks.push_back(net); }
-};
-
-class transport: public AmThread
-{
-protected:
-    trsp_socket* sock;
-    trsp_acl &acl;
-    trsp_acl &opt_acl;
-public:
-    transport(trsp_socket* sock, trsp_acl &acl, trsp_acl &opt_acl)
-      : sock(sock),
-        acl(acl),
-        opt_acl(opt_acl)
-    {}
-    virtual ~transport();
 };
 
 #endif

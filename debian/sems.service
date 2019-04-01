@@ -1,6 +1,7 @@
 [Unit]
 Description=SEMS for YETI project
 Documentation=https://yeti-switch.org/docs/
+After=postgresql.service
 
 [Install]
 WantedBy=multi-user.target

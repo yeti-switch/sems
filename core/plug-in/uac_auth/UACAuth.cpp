@@ -30,6 +30,7 @@
 #include "AmSipMsg.h"
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
+#include "AmLcConfig.h"
 
 #include <map>
 
@@ -45,8 +46,8 @@ using std::string;
 
 #define MOD_NAME "uac_auth"
 
-EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory, MOD_NAME);
-EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory, MOD_NAME);
+EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory);
+EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory);
 
 UACAuthFactory* UACAuthFactory::_instance=0;
 string UACAuth::server_nonce_secret = "CKASLD§$>NLKJSLDKFJ"; // replaced on load
@@ -114,7 +115,7 @@ int UACAuthFactory::onLoad()
 {
   string secret;
   AmConfigReader conf;
-  string cfg_file_path = AmConfig::ModConfigPath + "uac_auth.conf";
+  string cfg_file_path = AmConfig.configs_path + "uac_auth.conf";
   if(conf.loadFile(cfg_file_path)){
     WARN("Could not open '%s', assuming that default values are fine\n",
 	 cfg_file_path.c_str());
@@ -234,7 +235,7 @@ bool UACAuth::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 	      // thinks its new dlg
 	      dlg->setRemoteTag(string());
 
-	      if (AmConfig::ProxyStickyAuth) {
+	      if (AmConfig.proxy_sticky_auth) {
 		// update remote URI to resolved IP
 		size_t hpos = dlg->getRemoteUri().find("@");
 		if (hpos != string::npos && reply.remote_ip.length()) {

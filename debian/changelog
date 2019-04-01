@@ -1,3 +1,229 @@
+sems (1.8.18-1) stable; urgency=low
+
+  * code rebase from merge-base with master
+  * AmRtpStream: fix relay RTP timestamp aligning
+  * AmSipDialog::onRxReqSanity: check pending_invites for UPDATE method
+  * sems-dev: fix libbotan headers
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Apr 2019 15:31:45 +0300
+
+sems (1.8.17-1) stable; urgency=low
+
+  * modules build/segfault fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 12 Mar 2019 18:40:58 +0200
+
+sems (1.8.16-1) stable; urgency=low
+
+  * sip/udp_trsp: fixes 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 11 Mar 2019 14:55:04 +0200
+
+sems (1.8.15-1) stable; urgency=low
+
+  * fix system sip uri parser
+  * sctp_bus: fix reconnect interval processing
+  * jsonrpc: rename cfg variables
+  * sems.service: add After=postgresql.service
+  * tcp/tls/udp signalling threads refactoring
+  * sems.conf: add sip_tcp_server_threads, sip_udp_server_threads global options
+  * AmB2BSession: add media_transport attribute
+  * function AmRtpStream::replaceAudioMediaParameters to replace media parameters in addition to the media address/port only
+  * build fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 11 Mar 2019 10:36:07 +0200
+
+sems (1.8.14-1) stable; urgency=low
+
+  * migrate rtsp client to new config
+  * AmLcConfig: fix config path parameter
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 07 Feb 2019 15:09:09 +0200
+
+sems (1.8.13-1) stable; urgency=low
+
+  * AmLcConfig: use hierarchical config for modules
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Feb 2019 16:46:09 +0200
+
+sems (1.8.12-3) stable; urgency=low
+
+  * AmLcConfig::insertSIPInterfaceMapping: always ensure IPv6 reference for intf.local_ip
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 05 Feb 2019 11:15:32 +0200
+
+sems (1.8.12-2) stable; urgency=low
+
+  * CoreRpc: fix show.interfaces output for media interfaces
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 04 Feb 2019 19:00:47 +0200
+
+sems (1.8.12-1) stable; urgency=low
+
+  * 00e24838d AmSession::getSdpAnswer: fix processing of the c= line on media level. fix identation
+  * 26d109cc3 AmRtpStream: PayloadRelayMap::get(): remove debug message about unmapped payload
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 04 Feb 2019 18:16:55 +0200
+
+sems (1.8.11-1) stable; urgency=low
+
+  * async pcap logger
+  * ptime support
+  * fixed relay for codecs with different payload id
+  * fixed SIP interfaces mapping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 31 Jan 2019 12:19:35 +0200
+
+sems (1.8.10-3) stable; urgency=low
+
+  * jsonArg: apply fixes for UTF escaping
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 18 Jan 2019 17:22:03 +0200
+
+sems (1.8.10-2) stable; urgency=low
+
+  * 61c04a18a jsonArg: disable escaping optimization. always escape
+  * 095fe62df adjust loglevels for failed resolving, registrations, sendRequest
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 18 Jan 2019 13:11:56 +0200
+
+sems (1.8.10-1) stable; urgency=low
+
+  * c7175a50c RtspAudio: fix PLAY_NOTIFY processing
+  * 668d55a8c AmRtpStream: remove obsolete dbg
+  * e82583ef0 opus: disable DTX
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 22 Dec 2018 11:07:16 +0200
+
+sems (1.8.10-0) stable; urgency=low
+
+  * fix SRTP related crashes
+  * RtspAudio: avoid using session getSdpAnswer
+  * add global enable_srtp
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 22 Dec 2018 11:07:16 +0200
+
+sems (1.8.9-1) stable; urgency=low
+
+  * fix SRTP related crashes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Dec 2018 17:44:30 +0200
+
+sems (1.8.9-0) stable; urgency=low
+
+  * SRTP support
+  * optimize proto info
+  * AmRtpAudio: fix segfault on failover to default PLC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Dec 2018 13:49:09 +0200
+
+sems (1.8.8-0) stable; urgency=low
+
+  * increased resample buffer *8
+  * mixer refactoring: Refactored backlog receive logic, added queue per mixer
+  * resolver: set_destination_ip: fix return code checking for SRV entry
+  * use resolver::resolve_targets in AmBasicSipDialog getOutboundIf, getOutboundAddrType
+  * AmMediaProcessor: add AmMediaTailHandler
+  * AmAudio: AmLibSamplerateResamplingState::resample: fix segfault on output_frames_gen less than incoming samples count
+  * use libsamplerate
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 10 Dec 2018 19:41:53 +0200
+
+sems (1.8.7-0) stable; urgency=low
+
+  * mixer refactoring
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 10 Dec 2018 19:41:53 +0200
+
+sems (1.8.6-2) stable; urgency=low
+
+  * 6c4a5b48b AmLcConfig: fix loglevel applying
+  * e1619f96e AmRtpReceiver: removeStream: put stream context on failed EPOLL_CTL_DEL
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 04 Dec 2018 18:18:11 +0200
+
+sems (1.8.6-1) stable; urgency=low
+
+  * AmSdp: parse session-level mode attributes. propagate to the media-level if not exist
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 22 Nov 2018 15:57:47 +0200
+
+sems (1.8.5-1) stable; urgency=low
+
+  * fix AmRtpAudio samples buffer casting
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 19 Nov 2018 18:29:01 +0200
+
+sems (1.8.5-0) stable; urgency=low
+
+  * sips scheme
+  * implemented RTCP parsing/generation and stats saving
+  * AmRtpAudio: ignore incoming RTP packets with payload not described in remote SDP
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 14 Nov 2018 19:27:26 +0200
+
+sems (1.8.4-0) stable; urgency=low
+
+  * tls support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 23 Oct 2018 17:41:26 +0300
+
+sems (1.8.3-3) stable; urgency=low
+
+  * e1da6756e print cfg dump on load
+  * 75fc7e536 add ACL sections for TCP interface. skip ACL sections processing for media interfaces
+  * 25eb542a2 improve logging for not found/not matched application
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Oct 2018 19:06:42 +0300
+
+sems (1.8.3-2) stable; urgency=low
+
+  * resolver: fix priority checking
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Oct 2018 15:54:37 +0300
+
+sems (1.8.3-1) stable; urgency=low
+
+  * ad362bb56 resolver: sip_target_set::get_next: fix next_trsp resolving
+  * 59d74f232 resolver:  sip_target_set::get_next: fix default next_trsp for IPv6
+  * 74b8f0145 tcp_trsp: fix tcp_trsp_socket initialization on incoming TCP connections
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 19 Oct 2018 16:52:58 +0300
+
+sems (1.8.3-0) stable; urgency=low
+
+  * initial RTCP support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 19 Oct 2018 14:05:23 +0300
+
+sems (1.8.2-3) stable; urgency=low
+
+  * 7a9a8e524 AmSession: throw exception instead of assertions on RTP interface resolving fail
+  * 447668387 AmLcConfig: remove cfg_print return checking to be comptaible with old libconfuse
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 10 Oct 2018 14:00:26 +0300
+
+sems (1.8.2-2) stable; urgency=low
+
+  * 6f51c76db CoreRpc: add core.show.config method
+  * 6cacfe848 AmLcConfig: sections: options_session_limit, cps_limit, shutdown_mode
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Oct 2018 16:25:23 +0300
+
+sems (1.8.2-1) stable; urgency=low
+
+  * AmLcConfig: remove custom validators for all boolean-like parameters. add section 'session_limit'
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Oct 2018 11:18:01 +0300
+
+sems (1.8.1-1) stable; urgency=low
+
+  * add general.shutdown_mode_allow_uac parameter
+  * sems.conf: migration to the libconfuse format
+  * IPv6 support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 28 Sep 2018 13:06:52 +0300
+
 sems (1.7.72-6) stable; urgency=low
 
   * AmB2BMedia: fix src RTP stream reading in uninitialized mode

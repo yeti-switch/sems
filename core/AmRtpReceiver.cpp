@@ -27,7 +27,6 @@
 
 #include "AmRtpReceiver.h"
 #include "log.h"
-#include "AmConfig.h"
 
 #include <errno.h>
 
@@ -38,6 +37,7 @@
 
 #include <sys/time.h>
 #include <sys/epoll.h>
+#include "AmLcConfig.h"
 
 #define EPOLL_MAX_EVENTS 2048
 
@@ -87,7 +87,7 @@ void StreamCtxMap::put_pended(){
 
 _AmRtpReceiver::_AmRtpReceiver()
 {
-  n_receivers = AmConfig::RTPReceiverThreads;
+  n_receivers = AmConfig.rtp_recv_threads;
   receivers = new AmRtpReceiverThread[n_receivers];
 }
 
@@ -214,8 +214,6 @@ void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
   if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,NULL)==-1){
       ERROR("removeStream epoll_ctl_del sd = %i error %s",
             sd,strerror(errno));
-      //FIXME: maybe we should put context even after epoll del failure
-      return;
   }
   streams.ctx_put(ctx_idx);
   stream_remove_event.fire();

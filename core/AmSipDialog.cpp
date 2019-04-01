@@ -26,7 +26,6 @@
  */
 
 #include "AmSipDialog.h"
-#include "AmConfig.h"
 #include "AmSession.h"
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
@@ -42,19 +41,19 @@
 static void addTranscoderStats(string &hdrs)
 {
   // add transcoder statistics into request/reply headers
-  if (!AmConfig::TranscoderOutStatsHdr.empty()) {
+  if (!AmConfig.transcoder_out_stats_hdr.empty()) {
     string usage;
     B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
 
-    hdrs += AmConfig::TranscoderOutStatsHdr + ": ";
+    hdrs += AmConfig.transcoder_out_stats_hdr + ": ";
     hdrs += usage;
     hdrs += CRLF;
   }
-  if (!AmConfig::TranscoderInStatsHdr.empty()) {
+  if (!AmConfig.transcoder_in_stats_hdr.empty()) {
     string usage;
     B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
 
-    hdrs += AmConfig::TranscoderInStatsHdr + ": ";
+    hdrs += AmConfig.transcoder_in_stats_hdr + ": ";
     hdrs += usage;
     hdrs += CRLF;
   }
@@ -85,7 +84,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   if (req.method == SIP_METH_CANCEL) {
 
     if (uas_trans.find(req.cseq) == uas_trans.end()) {
-      reply_error(req,481,SIP_REPLY_NOT_EXIST);
+      reply_error(req,481,SIP_REPLY_NOT_EXIST,string(),logger);
       return false;
     }
 
@@ -98,7 +97,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   if(!AmBasicSipDialog::onRxReqSanity(req))
     return false;
 
-  if (req.method == SIP_METH_INVITE) {
+  if (req.method == SIP_METH_INVITE || req.method == SIP_METH_UPDATE) {
     bool pending = pending_invites;
     if (offeranswer_enabled) {
       // not sure this is needed here: could be in AmOfferAnswer as well
@@ -109,11 +108,11 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
     if (pending) {
       reply_error(req, 491, SIP_REPLY_PENDING,
 		  SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) 
-		  + int2str(get_random() % 10) + CRLF);
+		  + int2str(get_random() % 10) + CRLF, logger);
       return false;
     }
-
-    pending_invites++;
+    if(req.method == SIP_METH_INVITE)
+      pending_invites++;
   }
 
   return rel100.onRequestIn(req);
@@ -836,14 +835,15 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq,
 
   if (!(flags&SIP_FLAGS_VERBATIM)) {
     // add Signature
-    if (AmConfig::Signature.length())
-      req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig::Signature + CRLF;
+    if (AmConfig.signature.length())
+      req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig.signature + CRLF;
   }
 
+  sip_target_set targets_set((dns_priority)getResolvePriority());
   int res = SipCtrlInterface::send(req, local_tag,
 				   remote_tag.empty() || !next_hop_1st_req ? 
 				   next_hop : "",
-				   outbound_interface, 0, logger, sensor);
+				   outbound_interface, 0, &targets_set, logger, sensor);
   if (res)
     return res;
 

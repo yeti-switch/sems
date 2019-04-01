@@ -1,9 +1,9 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.7.2)
 
 IF(COMMAND cmake_policy)
-	# Don't do automatic escaping of variables
+#	# Don't do automatic escaping of variables
 	CMAKE_POLICY(SET CMP0005 OLD)
-	CMAKE_POLICY(SET CMP0003 NEW)
+#	CMAKE_POLICY(SET CMP0003 NEW)
 ENDIF(COMMAND cmake_policy)
 
 
@@ -12,8 +12,11 @@ set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 PROJECT (SEMS)
 
+include(cmake/srtp_bundled.cmake)
 include(cmake/curl_bundled.cmake)
 include(cmake/spandsp_bundled.cmake)
+include(cmake/botan_bundled.cmake)
+include(cmake/confuse_bundled.cmake)
 
 SET(SEMS_APP sems)
 SET(PKGCFG_DIR /usr/lib/pkgconfig)
@@ -63,7 +66,7 @@ Please delete them.")
 ENDIF(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
 
 OPTION(SEMS_USE_SPANDSP       "Build with spandsp" ON)
-OPTION(SEMS_USE_LIBSAMPLERATE "Build with libsamplerate" OFF)
+OPTION(SEMS_USE_LIBSAMPLERATE "Build with libsamplerate" ON)
 OPTION(SEMS_USE_ZRTP          "Build with ZRTP" OFF)
 OPTION(SEMS_USE_MP3           "Build with Lame MP3" ON)
 OPTION(SEMS_USE_ILBC          "Build with iLBC library (fallback to bundled)" ON)
@@ -198,7 +201,7 @@ ELSE(SPEEX_FOUND)
 ENDIF(SPEEX_FOUND)
 
 IF(SEMS_USE_OPENSSL)
-	FIND_PACKAGE(OpenSSL REQUIRED QUIETLY)
+	FIND_PACKAGE(OpenSSL REQUIRED)
 	MESSAGE(STATUS "Found OpenSSL includes:	${OPENSSL_INCLUDE_DIR}/openssl/ssl.h")
 	MESSAGE(STATUS "Found OpenSSL library: ${OPENSSL_LIBRARIES}")
 	MESSAGE(STATUS "Using OpenSSL: YES")
@@ -267,10 +270,10 @@ ELSE(RTMP_FOUND)
 ENDIF(RTMP_FOUND)
 
 # Check for res_search in -lresolv
-include(${CMAKE_SOURCE_DIR}/cmake/CheckSymbolExists.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/_CheckSymbolExists.cmake)
 SET(CMAKE_REQUIRED_LIBRARIES resolv)
 CHECK_SYMBOL_EXISTS(res_search resolv.h HAVE_RES_SEARCH)
-MESSAGE(STATUS "Have res_search: ${HAVE_RES_SEARCH} ")
+MESSAGE(STATUS "Have res_search:" ${HAVE_RES_SEARCH})
 
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/ampi)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
@@ -326,7 +329,7 @@ foreach( d ${CoreDefsList} )
 #    message( STATUS "Define: " ${d} )
     set(CoreDefs "${CoreDefs} -D${d}")
 endforeach()
-message(STATUS ${CoreDefs})
+message(STATUS CoreDefs: ${CoreDefs})
 
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)

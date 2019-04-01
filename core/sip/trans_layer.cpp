@@ -49,12 +49,10 @@
 #include "sip_timers.h"
 #include "tr_blacklist.h"
 
-#define DEFAULT_BL_TTL 60000 /* 60s */
-
 #include "log.h"
 
 #include "AmUtils.h"
-#include "AmConfig.h"
+#include "AmLcConfig.h"
 #include "AmSipEvent.h"
 #include "AmSessionContainer.h"
 
@@ -77,14 +75,7 @@ static trsp_acl fake_opt_acl;
 
 static const cstring sip_resp_forbidden("Forbidden");
 
-bool _trans_layer::accept_fr_without_totag = false;
-unsigned int _trans_layer::default_bl_ttl = DEFAULT_BL_TTL;
-
-bool _trans_layer::less_case_i::operator () (const string& lhs, const string& rhs) const
-{
-    return lower_cmp_n(lhs.c_str(),lhs.length(),
-		       rhs.c_str(),rhs.length()) < 0;
-}
+unsigned int _trans_layer::default_bl_ttl;
 
 _trans_layer::_trans_layer()
     : ua(NULL),
@@ -107,13 +98,13 @@ int _trans_layer::register_transport(trsp_socket* trsp)
     if(transports.size() <= (size_t)if_num)
 	transports.resize(if_num+1);
 
-    if(transports[if_num].find(trsp->get_transport())
+    if(transports[if_num].find(trsp->get_transport_id())
        != transports[if_num].end()) {
 	WARN("transport already registered for this interface");
 	return -1;
     }
 
-    transports[if_num][trsp->get_transport()] = trsp;
+    transports[if_num][trsp->get_transport_id()] = trsp;
     return 0;
 }
 
@@ -122,7 +113,7 @@ void _trans_layer::clear_transports()
     transports.clear();
 }
 
-int _trans_layer::set_trsp_socket(sip_msg* msg, const cstring& next_trsp,
+int _trans_layer::set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transport& next_trsp,
 				  int out_interface)
 {
     if((out_interface < 0)
@@ -141,14 +132,21 @@ int _trans_layer::set_trsp_socket(sip_msg* msg, const cstring& next_trsp,
     }
 
     prot_collection::iterator prot_sock_it =
-	transports[out_interface].find(c2stlstr(next_trsp));
+	transports[out_interface].find(next_trsp);
 
     if(prot_sock_it == transports[out_interface].end()) {
 
-	DBG("could not find transport '%.*s' in outbound interface %i",
-	    next_trsp.len,next_trsp.s,out_interface);
+	DBG("could not find transport in outbound interface %i",
+	    out_interface);
 
-	prot_sock_it = transports[out_interface].find("udp");
+    if(msg->remote_ip.ss_family == AF_INET) {
+        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv4);
+    } else if(msg->remote_ip.ss_family == AF_INET6) {
+        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv6);
+    } else {
+        ERROR("incorrect remote ip");
+        return -1;
+    }
 	
 	// if we couldn't find anything, take whatever is there...
 	if(prot_sock_it == transports[out_interface].end()) {
@@ -900,9 +898,11 @@ static void prepare_strict_routing(sip_msg* msg, string& ext_uri_buffer)
 int _trans_layer::set_next_hop(sip_msg* msg, 
 			       cstring* next_hop,
 			       unsigned short* next_port,
-			       cstring* next_trsp)
+			       cstring* next_trsp,
+                   cstring* next_scheme)
 {
-    static const cstring default_trsp("udp");
+    static char sip_scheme_name[] = "sip";
+    static char sips_scheme_name[] = "sips";
     assert(msg);
 
     list<sip_header*>& route_hdrs = msg->route; 
@@ -921,9 +921,13 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	if (next_hop->len == 0) {
 	    *next_hop  = route_uri->host;
 	    if(route_uri->port_str.len)
-		*next_port = route_uri->port;
+            *next_port = route_uri->port;
 	    if(route_uri->trsp && route_uri->trsp->value.len)
-		*next_trsp = route_uri->trsp->value;
+            *next_trsp = route_uri->trsp->value;
+        if(route_uri->scheme == sip_uri::SIPS)
+            *next_scheme = sips_scheme_name;
+        else
+            *next_scheme = sip_scheme_name;
 	}
     }
     else {
@@ -942,15 +946,22 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	    *next_port = parsed_r_uri.port;
 	if(parsed_r_uri.trsp)
 	    *next_trsp = parsed_r_uri.trsp->value;
+    if(parsed_r_uri.scheme == sip_uri::SIPS)
+        *next_scheme = sips_scheme_name;
+    else
+        *next_scheme = sip_scheme_name;
+    if(!next_trsp->len && parsed_r_uri.scheme == sip_uri::SIPS)
+        *next_trsp = "tls";
     }
+
 
     if(!next_trsp->len) {
-	DBG("no transport specified, setting default one (%.*s)",
-	    default_trsp.len,default_trsp.s);
-	*next_trsp = default_trsp;
+        DBG("no transport specified, setting default");
+        *next_trsp = "udp";
     }
 
-    DBG("next_hop:next_port is <%.*s:%u/%.*s>\n",
+    DBG("next_scheme:next_hop:next_port is <%.*s:%.*s:%u/%.*s>\n",
+    next_scheme->len, next_scheme->s,
 	next_hop->len, next_hop->s, *next_port,
 	next_trsp ? next_trsp->len : 0,
 	next_trsp ? next_trsp->s : 0);
@@ -1153,7 +1164,7 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
     if(msg->local_socket->get_actual_port() != 5060)
     via += ":" + int2str(msg->local_socket->get_actual_port());
 
-    cstring trsp(msg->local_socket->get_transport());
+    cstring trsp = msg->local_socket->get_transport();
 
     // patch Contact-HF transport parameter
     vector<string> contact_buffers(msg->contacts.size());
@@ -1237,7 +1248,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 			       int out_interface, unsigned int flags,
 				   msg_logger* logger,msg_sensor *sensor,
 				   sip_timers_override *timers_override,
-				   sip_target_set* target_set_override,
+				   sip_target_set* targets,
 				   int redirects_allowed)
 {
     // Request-URI
@@ -1253,12 +1264,10 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
     assert(msg);
     assert(tt);
+    assert(targets);
 
     int res=0;
     list<sip_destination> dest_list;
-
-    auto_ptr<sip_target_set> targets(
-        target_set_override ? target_set_override: new sip_target_set());
 
     if (_next_hop.len) {
 
@@ -1271,15 +1280,15 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     }
     else {
 	sip_destination dest;
-	if(set_next_hop(msg,&dest.host,&dest.port,&dest.trsp) < 0){
+	if(set_next_hop(msg,&dest.host,&dest.port,&dest.trsp, &dest.scheme) < 0){
 	    DBG("set_next_hop failed\n");
 	    return -1;
 	}
 	dest_list.push_back(dest);
     }
 
-    if(!target_set_override) {
-        res = resolver::instance()->resolve_targets(dest_list,targets.get());
+    if(targets->dest_list.empty()) {
+        res = resolver::instance()->resolve_targets(dest_list,targets);
         if(res < 0){
             DBG("resolve_targets failed\n");
             return res;
@@ -1308,7 +1317,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
     int err = 0;
     string ruri; // buffer needs to be @ function scope
-    cstring next_trsp;
+    trsp_socket::socket_transport next_trsp;
     sip_msg* p_msg=NULL;
 
     tt->_bucket = 0;
@@ -1353,7 +1362,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	p_msg = NULL;
 
 	if(default_bl_ttl) {
-	    tr_blacklist::instance()->insert(&tt->_t->msg->remote_ip,
+	    tr_blacklist::instance()->insert(&msg->remote_ip,
 					     default_bl_ttl,"503");
 	}
 	tt->_bucket->unlock();
@@ -1382,7 +1391,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    tt->_t->flags = flags;
 
 	    if(tt->_t->targets)	delete tt->_t->targets;
-	    tt->_t->targets = targets.release();
+	    tt->_t->targets = targets;
 
 	    if(tt->_t->targets->has_next()){
 			tt->_t->timer_m =
@@ -1975,8 +1984,6 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 			t->state == TS_PROCEEDING)
 		{
 			if(reply_code == 503) {
-				/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
-					 default_bl_ttl,"503");*/
 				if(msg->local_socket) { // remote reply
 					if(!try_next_ip(bucket,t,true))
 						forget_reply = true;
@@ -2138,8 +2145,6 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
     else { // non-INVITE transaction
 
 	if(reply_code == 503) {
-		/*tr_blacklist::instance()->insert(&t->msg->remote_ip,
-						 default_bl_ttl,"503");*/
 	    if(!try_next_ip(bucket,t,false))
 		goto end;
 	}
@@ -2702,12 +2707,6 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 
     case STIMER_BL:
 	tr->clear_timer(STIMER_BL);
-	if(!(tr->flags & TR_FLAG_DISABLE_BL)) {
-	    // insert destination to blacklist
-		/*tr_blacklist::instance()->insert(&tr->msg->remote_ip,
-					     default_bl_ttl,
-						 "timeout");*/
-	}
 	bucket->remove(tr);
 	break;
 
@@ -2762,8 +2761,8 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
     char local_ip[NI_MAXHOST];
     if(am_inet_ntop(&from,local_ip,NI_MAXHOST) != NULL) {
 	map<string,unsigned short>::iterator if_it =
-	    AmConfig::LocalSIPIP2If.find(local_ip);
-	if(if_it == AmConfig::LocalSIPIP2If.end()){
+	           AmConfig.local_sip_ip2if.find(local_ip);
+	if(if_it == AmConfig.local_sip_ip2if.end()){
 	    ERROR("Could not find a local interface for "
 		  "resolved local IP (local_ip='%s')",
 		  local_ip);
@@ -2813,7 +2812,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 {
     tr->clear_timer(STIMER_M);
 
-    cstring next_trsp;
+    trsp_socket::socket_transport next_trsp;
     sockaddr_storage sa;
 
  try_next_dest:
@@ -3094,7 +3093,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     //get next-hop
     sip_destination dest;
     list<sip_destination> dest_list;
-    if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp) < 0){
+    if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp,&dest.scheme) < 0){
         DBG("retarget: set_next_hop failed\n");
         update_reply_msg(500, "Failed to get nexthop for redirected request");
         return -1;
@@ -3102,7 +3101,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     dest_list.push_back(dest);
 
     //resolve targets
-    std::unique_ptr<sip_target_set> targets(new sip_target_set());
+    std::unique_ptr<sip_target_set> targets(new sip_target_set(t->targets->priority));
     res = resolver::instance()->resolve_targets(dest_list,targets.get());
     if(res < 0) {
         DBG("retarget: resolve_targets failed %d",res);

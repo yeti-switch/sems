@@ -38,8 +38,9 @@ class EchoFactory: public AmSessionFactory
   AmSessionEventHandlerFactory* session_timer_f;
   AmConfigReader conf;
 
-public:
   EchoFactory(const string& _app_name);
+public:
+  DECLARE_FACTORY_INSTANCE(EchoFactory);
   virtual int onLoad();
   virtual AmSession* onInvite(const AmSipRequest& req, const string& app_name,
 			      const map<string,string>& app_params);

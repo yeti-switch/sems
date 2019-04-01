@@ -29,12 +29,13 @@
 
 #include "AmUtils.h"
 #include "AmThread.h"
-#include "AmConfig.h"
 #include "log.h"
 #include "AmSipMsg.h"
 #include "sip/resolver.h"
 #include "sip/ip_util.h"
+#include "sip/parse_uri.h"
 #include "sip/parse_common.h"
+#include "sip/resolver.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -55,7 +56,7 @@
 #include <fstream>
 
 
-static char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6' , '7', '8', '9' };
+static char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6' , '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 void update_min_max(double &min, double &max, double v)
 {
@@ -130,7 +131,7 @@ string int2str(unsigned int val)
   return string((char*)(buffer+i+1));
 }
 
-template<class T, class DT>
+template<class T, class DT, int scale>
 string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
 {
   char buffer[64] = {0,0};
@@ -139,7 +140,7 @@ string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
 
   d.quot = abs_func(val);
   do{
-    d = div_func(d.quot,10);
+    d = div_func(d.quot,scale);
     buffer[i] = _int2str_lookup[d.rem];
   }while(--i && d.quot);
 
@@ -151,9 +152,10 @@ string signed2str(T val, T (*abs_func) (T), DT (*div_func) (T, T))
   return string((char*)(buffer+i+1));
 }
 
-string int2str(int val) { return signed2str<int, div_t>(val, abs, div); }
-string long2str(long int val) { return signed2str<long, ldiv_t>(val, labs, ldiv); }
-string longlong2str(long long int val) { return signed2str<long long, lldiv_t>(val, llabs, lldiv); }
+string int2hexstr(int val) { return signed2str<int, div_t, 16>(val, abs, div); }
+string int2str(int val) { return signed2str<int, div_t, 10>(val, abs, div); }
+string long2str(long int val) { return signed2str<long, ldiv_t, 10>(val, labs, ldiv); }
+string longlong2str(long long int val) { return signed2str<long long, lldiv_t, 10>(val, llabs, lldiv); }
 
 void longlong2timespec(struct timespec &ts,unsigned long long msec)
 {
@@ -730,7 +732,7 @@ int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local
   return -1;
 }
 
-int get_local_addr_for_dest(const string& remote_ip, string& local)
+int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority)
 {
   sockaddr_storage remote_ip_ss;
   sockaddr_storage local_ss;
@@ -749,7 +751,7 @@ int get_local_addr_for_dest(const string& remote_ip, string& local)
   if(err == 0){
     // not an IP... try a name.
     dns_handle dh;
-    err = resolver::instance()->resolve_name(remote_ip.c_str(),&dh,&remote_ip_ss,IPv4);
+    err = resolver::instance()->resolve_name(remote_ip.c_str(),&dh,&remote_ip_ss,priority);
   }
 
   if(err == -1){
@@ -782,6 +784,98 @@ int get_local_addr_for_dest(const string& remote_ip, string& local)
   }
   
   return -1;
+}
+
+int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns_priority priority)
+{
+    sockaddr_storage remote_ip_ss;
+    sockaddr_storage local_ss;
+    sip_target_set targets(priority);
+    static cstring sip_scheme("sip");
+    static cstring sips_scheme("sips");
+    static cstring udp_transport("udp");
+
+    int err = inet_pton(AF_INET,remote_uri.host.s,&((sockaddr_in*)&remote_ip_ss)->sin_addr);
+    if(err == 1) {
+        remote_ip_ss.ss_family = AF_INET;
+    } else if(err == 0) {
+        err = inet_pton(AF_INET6,remote_uri.host.s,&((sockaddr_in6*)&remote_ip_ss)->sin6_addr);
+        if(err == 1) {
+            remote_ip_ss.ss_family = AF_INET6;
+        }
+    }
+
+    if(err == 0) {
+        list<sip_destination> dest_list;
+        dest_list.resize(1);
+        sip_destination &dest = dest_list.back();
+
+        dest.host = remote_uri.host;
+        dest.port = remote_uri.port;
+
+        if(remote_uri.scheme != sip_uri::SIPS) {
+            dest.scheme = sip_scheme;
+        } else {
+            dest.scheme = sips_scheme;
+        }
+
+        if(remote_uri.trsp) {
+            dest.trsp = remote_uri.trsp->value;
+        } else {
+            dest.trsp = udp_transport;
+        }
+
+        err = resolver::instance()->resolve_targets(dest_list, &targets);
+
+        if(targets.dest_list.empty()) {
+            DBG("no resolved targets for host: '%s'", c2stlstr(remote_uri.host).c_str());
+            return -1;
+        }
+        memcpy(&remote_ip_ss, &targets.dest_list.begin()->ss, sizeof(remote_ip_ss));
+        //DBG("remote_ip_ss: %s",get_addr_str(&remote_ip_ss).c_str());
+  }
+
+    if(err == -1) {
+        ERROR("While converting uri with host: '%s'", c2stlstr(remote_uri.host).c_str());
+        return -1;
+    }
+
+    if(remote_ip_ss.ss_family==AF_INET) {
+#if defined(BSD44SOCKETS)
+        ((sockaddr_in*)&remote_ip_ss)->sin_len = sizeof(sockaddr_in);
+#endif
+        ((sockaddr_in*)&remote_ip_ss)->sin_port = htons(5060); // fake port number
+    } else {
+#if defined(BSD44SOCKETS)
+        ((sockaddr_in6*)&remote_ip_ss)->sin6_len = sizeof(sockaddr_in6);
+#endif
+        ((sockaddr_in6*)&remote_ip_ss)->sin6_port = htons(5060); // fake port number
+    }
+
+    err = get_local_addr_for_dest(&remote_ip_ss, &local_ss);
+    if(err < 0) {
+        return -1;
+    }
+
+    char tmp_addr[NI_MAXHOST];
+    if(am_inet_ntop(&local_ss,tmp_addr,NI_MAXHOST) != NULL) {
+        local = tmp_addr;
+        return 0;
+    }
+
+    return -1;
+}
+
+void ensure_ipv6_reference(std::string &s)
+{
+    sockaddr_in6 addr;
+    if(s.size() > 2 &&
+       s[0] != '[' &&
+       1 == inet_pton(AF_INET6, s.c_str(), &addr))
+    {
+        s.insert(0,"[");
+        s.append("]");
+    }
 }
 
 string extract_tag(const string& addr)

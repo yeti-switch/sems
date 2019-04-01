@@ -71,9 +71,6 @@ class AmAudioRtpFormat: public AmAudioFormat
   unsigned int advertized_rate;
 
 protected:
-  /* frame size in samples */
-  unsigned int frame_size;
-
   /** from AmAudioFormat */
   void initCodec();
 
@@ -88,7 +85,7 @@ public:
   /**
    * changes payload. returns != 0 on error.
    */
-  int setCurrentPayload(Payload pl);
+  int setCurrentPayload(Payload pl, int frame_size = 20);
 };
 
 
@@ -99,6 +96,8 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
 {
   PlayoutType m_playout_type;
   auto_ptr<AmPlayoutBuffer> playout_buffer;
+
+  unsigned int frame_size;
 
 #ifdef USE_SPANDSP_PLC
     plc_state_t* plc_state;
@@ -125,16 +124,17 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
 			   unsigned int   rate);
 
 public:
-  AmRtpAudio(AmSession* _s, int _if);
+  AmRtpAudio(AmSession* _s, int _if, int _addr_if);
   ~AmRtpAudio();
 
   unsigned int getFrameSize();
+  unsigned int getFrameTime();
 
   bool checkInterval(unsigned long long ts);
   bool sendIntReached();
   bool sendIntReached(unsigned long long ts);
 
-  int setCurrentPayload(int payload);
+  int setCurrentPayload(int payload, int frame_size = 20);
   int getCurrentPayload();
 
   int receive(unsigned long long system_ts);

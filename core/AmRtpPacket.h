@@ -32,65 +32,83 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-#include "AmConfig.h"
+#include "AmLcConfig.h"
+#include "sip/msg_sensor.h"
+#include "rtcp/RtcpStat.h"
+#include "rtcp/RtcpPacket.h"
 
 class AmRtpPacketTracer;
+class AmSrtpConnection;
 class msg_logger;
 
+#define RTP_PACKET_PARSE_ERROR -1
+#define RTP_PACKET_PARSE_OK 0
+#define RTP_PACKET_PARSE_RTCP 1
+
+#define RTP_PACKET_BUF_SIZE 4096
+#define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
+
+//seconds between 1900-01-01 and 1970-01-01
+//(70*365 + 17)*86400
+#define NTP_TIME_OFFSET 2208988800ULL
+
 /** \brief RTP packet implementation */
-class AmRtpPacket {
+class AmRtpPacket
+{
+    unsigned char  buffer[RTP_PACKET_BUF_SIZE];
+    unsigned int   b_size;
 
-  unsigned char  buffer[4096];
-  unsigned int   b_size;
+    unsigned int   data_offset;
+    unsigned int   d_size;
 
-  unsigned int   data_offset;
-  unsigned int   d_size;
+  public:
+    unsigned char  payload;
+    bool           marker;
+    unsigned short sequence;
+    unsigned int   timestamp;
+    unsigned int   ssrc;
+    unsigned char  version;
+    bool           relayed;
 
-  int sendto(int sd);
-  int sendmsg(int sd, unsigned int sys_if_idx);
+    struct sockaddr_storage saddr;
+    struct timeval recv_time;
 
-public:
-  unsigned char  payload;
-  bool           marker;
-  unsigned short sequence;    
-  unsigned int   timestamp;   
-  unsigned int   ssrc;
-  unsigned char  version;
-  bool           relayed;
+    AmRtpPacket();
+    ~AmRtpPacket();
 
-  struct timeval recv_time;
-  struct sockaddr_storage addr;
+    void setAddr(struct sockaddr_storage* a);
+    void getAddr(struct sockaddr_storage* a);
 
-  AmRtpPacket();
-  ~AmRtpPacket();
+    // returns -1 if error, else 0
+    int compile(unsigned char* data_buf, unsigned int size);
+    // returns -1 if error, else 0
+    int compile_raw(unsigned char* data_buf, unsigned int size);
 
-  void setAddr(struct sockaddr_storage* a);
-  void getAddr(struct sockaddr_storage* a);
+    int rtp_parse(AmObject *caller = NULL);
+    bool isRtcp();
 
-  // returns -1 if error, else 0
-  int compile(unsigned char* data_buf, unsigned int size);
-  // returns -1 if error, else 0
-  int compile_raw(unsigned char* data_buf, unsigned int size);
+    int rtcp_parse_update_stats(RtcpBidirectionalStat &stats);
+    int parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats);
+    int parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint32_t ssrc, RtcpBidirectionalStat &stats);
 
-  //int send(int sd, unsigned int sys_if_idx, sockaddr_storage* l_saddr);
-  int send(int sd, const AmConfig::RTP_interface &iface, sockaddr_storage* l_saddr);
-  int recv(int sd);
+    int process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirectionalStat &stats);
+    int process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats);
 
-  int parse(AmObject *caller = NULL);
+    /*void update_receiver_stats(RtcpBidirectionalStat &stats);
+    void update_sender_stats(RtcpBidirectionalStat &stats);*/
 
-  unsigned int   getDataSize() const { return d_size; }
-  unsigned char* getData();
+    unsigned int   getDataSize() const { return d_size; }
+    unsigned char* getData();
 
-  unsigned int   getBufferSize() const { return b_size; }
-  unsigned char* getBuffer();
-  void setBufferSize(unsigned int b) { b_size = b; }
+    unsigned int   getBufferSize() const { return b_size; }
+    unsigned char* getBuffer();
+    void logReceived(msg_logger *logger, struct sockaddr_storage *laddr);
+    void logSent(msg_logger *logger, struct sockaddr_storage *laddr);
 
-  void logReceived(msg_logger *logger, struct sockaddr_storage *laddr);
-  void logSent(msg_logger *logger, struct sockaddr_storage *laddr);
-
-  void mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr);
-  void mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr);
-
+    void mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr);
+    void mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr);
+    void setBuffer(unsigned char* buf, unsigned int b);
+    void setBufferSize(unsigned int b);
 };
 
 #endif

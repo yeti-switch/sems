@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -38,7 +38,7 @@ using namespace std;
 
 bool AmUriParser::isEqual(const AmUriParser& c) const {
   return (uri_user == c.uri_user) &&
-    (!strcasecmp(uri_host.c_str(), 
+    (!strcasecmp(uri_host.c_str(),
 		 c.uri_host.c_str())) &&
     (uri_port == c.uri_port);
 }
@@ -50,7 +50,7 @@ static inline int skip_name(const string& s, unsigned int pos)
 {
   size_t i;
   int last_wsp __attribute__((unused)), quoted = 0;
-	
+
   for(i = pos; i < s.length(); i++) {
     char c = s[i];
     if (!quoted) {
@@ -73,7 +73,7 @@ static inline int skip_name(const string& s, unsigned int pos)
   if (quoted) {
     ERROR("skip_name(): Closing quote missing in name part of URI\n");
     return -1;
-  } 
+  }
 
   return pos; // no name to skip
 }
@@ -117,17 +117,17 @@ static inline int skip_uri(const string& s, unsigned int pos)
     case '<':
       switch(st) {
       case ST1: st = ST3; break;
-      case ST3: 
+      case ST3:
 	DBG("ERROR skip_uri(): Second < found\n");
 	return -1;
       case ST5: st = ST2; break;
       case ST6: st = ST4; break;
       }
       break;
-			
+
     case '>':
       switch(st) {
-      case ST1: 
+      case ST1:
 	DBG("ERROR skip_uri(): > is first\n");
 	return -2;
 
@@ -155,7 +155,7 @@ static inline int skip_uri(const string& s, unsigned int pos)
   }
 
   if (st != ST1) {
-    DBG("ERROR skip_uri(): < or \" not closed\n"); 
+    DBG("ERROR skip_uri(): < or \" not closed\n");
     return -3;
   }
   return p;
@@ -163,7 +163,7 @@ static inline int skip_uri(const string& s, unsigned int pos)
 enum {
   uS0=       0, // start
   uSPROT,       // protocol
-  uSUSER,       // user 
+  uSUSER,       // user
   uSHOST,       // host
   uSHOSTWSP,    // wsp after host
   uSPORT,       // port
@@ -181,8 +181,8 @@ enum {
 bool AmUriParser::parse_uri() {
   // assuming user@host
   size_t pos = 0; int st = uS0;
-  size_t p1 = 0; 
-  int eq = 0; const char* sip_prot = "SIP:";
+  size_t p1 = 0;
+  int eq = 0, eq1 = 0; const char* sip_prot = "SIP:", *sip_prot1 = "SIPS:";
   uri_user = ""; uri_host = ""; uri_port = ""; uri_param = "";
 
   if (uri.empty())
@@ -195,17 +195,24 @@ bool AmUriParser::parse_uri() {
     case uS0: {
       switch (c) {
       case '<': { st = uSPROT; } break;
-      default: { 
-	if ((eq<=4)&&(toupper(c) ==sip_prot[eq])) 
-	  eq++; 
+      default: {
+	if ((eq<=4)&&(toupper(c) ==sip_prot[eq]))
+	  eq++;
+    if ((eq1<=4)&&(toupper(c) ==sip_prot1[eq1]))
+	  eq1++;
 	if (eq==4) { // found sip:
+      uri_scheme = "sip";
+	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
+	};
+    if (eq1==5) { // found sips:
+      uri_scheme = "sips";
 	  uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;
 	};
       } break;
-      }; 
+      };
     } break;
-    case uSPROT: { 
-      if (c ==  ':')  { uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;} 
+    case uSPROT: {
+      if (c ==  ':')  { uri.find('@', pos+1) == string::npos? st = uSHOST : st = uSUSER; p1 = pos;}
     } break;
     case uSUSER: {
       switch(c) {
@@ -217,17 +224,17 @@ bool AmUriParser::parse_uri() {
     } break;
     case uSHOST: {
       switch (c) {
-      case ':': { uri_host = uri.substr(p1+1, pos-p1-1); 
+      case ':': { uri_host = uri.substr(p1+1, pos-p1-1);
 	  st = uSPORT; p1 = pos; } break;
       case '?': { uri_host = uri.substr(p1+1, pos-p1-1);
 	  st = uSHDR; p1 = pos; } break;
       case ';': { uri_host = uri.substr(p1+1, pos-p1-1);
 	  st = uSPARAM; p1 = pos; } break;
-      case '>': { uri_host = uri.substr(p1+1, pos-p1-1); 
+      case '>': { uri_host = uri.substr(p1+1, pos-p1-1);
 	  st = uS6; p1 = pos; } break;
-      case ' ': 
-      case '\t': { uri_host = uri.substr(p1+1, pos-p1-1); 
-	  st = uSHOSTWSP; p1 = pos; } 
+      case ' ':
+      case '\t': { uri_host = uri.substr(p1+1, pos-p1-1);
+	  st = uSHOSTWSP; p1 = pos; }
 	break;
       };
     } break;
@@ -242,14 +249,14 @@ bool AmUriParser::parse_uri() {
 
     case uSPORT: {
       switch (c) {
-      case ';': { uri_port = uri.substr(p1+1, pos-p1-1); 
+      case ';': { uri_port = uri.substr(p1+1, pos-p1-1);
 	  st = uSPARAM; p1 = pos; } break;
-      case '?': { uri_port = uri.substr(p1+1, pos-p1-1); 
+      case '?': { uri_port = uri.substr(p1+1, pos-p1-1);
 	  st = uSHDR;   p1 = pos; } break;
-      case '>': { uri_port = uri.substr(p1+1, pos-p1-1); 
+      case '>': { uri_port = uri.substr(p1+1, pos-p1-1);
 	  st = uS6;     p1 = pos; } break;
-      case ' ': 
-      case '\t':{ uri_port = uri.substr(p1+1, pos-p1-1); 
+      case ' ':
+      case '\t':{ uri_port = uri.substr(p1+1, pos-p1-1);
 	  st = uSPORTWSP; p1 = pos; } break;
       };
     } break;
@@ -264,20 +271,20 @@ bool AmUriParser::parse_uri() {
     case uSHDR: {
       switch (c) {
       case ';': { uri_headers = uri.substr(p1+1, pos-p1-1);
-	  st = uSPARAM; p1 = pos; }; break; 
+	  st = uSPARAM; p1 = pos; }; break;
       case '>': { uri_headers = uri.substr(p1+1, pos-p1-1);
       st = uS6; p1 = pos; } break;
       case '\t':
       case ' ': { uri_headers = uri.substr(p1+1, pos-p1-1);
-	  st = uSHDRWSP; p1 = pos; } break;      
-      } 
-    } break; 
+	  st = uSHDRWSP; p1 = pos; } break;
+      }
+    } break;
     case uSHDRWSP: {
       switch (c) {
-      case ';': { st = uSPARAM; p1 = pos; }; break; 
+      case ';': { st = uSPARAM; p1 = pos; }; break;
       case '>': { st = uS6;     p1 = pos; } break;
       }
-    } break; 
+    } break;
 
     case uSPARAM: {
       switch (c) {
@@ -287,9 +294,9 @@ bool AmUriParser::parse_uri() {
       st = uSHDR; p1 = pos; } break;
       case '\t':
       case ' ': { uri_param = uri.substr(p1+1, pos-p1-1);
-      st = uSPARAMWSP; p1 = pos; } break;      
+      st = uSPARAMWSP; p1 = pos; } break;
       };
-    } break; 
+    } break;
     case uSPARAMWSP: {
       switch (c) {
       case '>': { st = uS6; p1 = pos; } break;
@@ -386,11 +393,11 @@ bool AmUriParser::parse_params(const string& line, int& pos) {
     last_c = c;
     pos++;
   }
-	
+
   if (st == pS2) {
     if (hit_comma)
       add_param(params, line.substr(p1, p2-p1), line.substr(p2+1, pos-p2 -1));
-    else 
+    else
       add_param(params, line.substr(p1, p2-p1), line.substr(p2+1, pos-p2));
   } else if (st == pS1) {
 	  add_param(params, line.substr(p1, pos-p1), "");
@@ -491,7 +498,7 @@ void AmUriParser::dump() const {
   DBG(" uri_port      '%s'\n", uri_port.c_str());
   DBG(" uri_hdr       '%s'\n", uri_headers.c_str());
   DBG(" uri_param     '%s'\n", uri_param.c_str());
-  for (map<string, string>::const_iterator it = params.begin(); 
+  for (map<string, string>::const_iterator it = params.begin();
        it != params.end(); it++) {
 
     if (it->second.empty())
@@ -519,7 +526,10 @@ string AmUriParser::uri_str() const
 
 string AmUriParser::canon_uri_str() const
 {
-  string res = "sip:"; // fixme: always SIP...
+  string res = "sip:";
+  if(!uri_scheme.empty()) {
+      res = uri_scheme + ":";
+  }
   if(!uri_user.empty()) {
     res += uri_user + "@";
   }
@@ -539,7 +549,7 @@ string AmUriParser::nameaddr_str() const
   if(!display_name.empty())
     res = "\"" + display_name + "\" " + res;
 
-  for (map<string, string>::const_iterator it = params.begin(); 
+  for (map<string, string>::const_iterator it = params.begin();
        it != params.end(); it++) {
 
     res += ";"+it->first;

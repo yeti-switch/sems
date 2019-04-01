@@ -2,6 +2,7 @@
 #include "RadiusPacket.h"
 
 #include "AmSessionContainer.h"
+#include "AmUtils.h"
 #include "sip/resolver.h"
 
 #include <fcntl.h>
@@ -73,7 +74,7 @@ int RadiusConnection::init()
     dns_handle dh;
     if(-1==resolver::instance()->resolve_name(
         server.c_str(),
-        &dh,&a,IPv4))
+        &dh,&a,IPv4_only))
     {
         ERROR("can't resolve %s",server.c_str());
         return -1;

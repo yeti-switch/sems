@@ -10,19 +10,20 @@ class RtspClient;
 using Rtsp::RtspMsg;
 using Rtsp::RtspSession;
 
-class RtspAudio  :   public AmRtpAudio
+class RtspAudio : public AmRtpAudio
 {
     typedef enum {
         Ready = 0,
-        Playing,
+        Progress,
+        Playing
     } State;
 
         uint64_t            id;             /** unique RtspAudio ID */
         RtspClient          *agent;
-        AmSession           *session;       /** Session owning this stream */
 
         int                 md;             /** media server descriptor */
         int                 streamid;       /** streamid from media server RTP-Info header */
+        int                 last_sent_cseq; /** cseq of the last sent request */
 
         State               state;
         string              uri;
@@ -30,6 +31,7 @@ class RtspAudio  :   public AmRtpAudio
         // RtspMsg             req;
 
     private:
+        bool    initSdpAnswer();
         void    initRtpAudio(unsigned short int r_rtp_port);
         int     initRtpAudio_by_sdp(const char *sdp_msg);
         void    describe();

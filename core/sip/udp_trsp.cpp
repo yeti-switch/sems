@@ -47,6 +47,9 @@
 
 #include <errno.h>
 #include <string.h>
+#include <AmLcConfig.h>
+
+#include <algorithm>
 
 #if defined IP_RECVDSTADDR
 # define DSTADDR_SOCKOPT IP_RECVDSTADDR
@@ -88,66 +91,65 @@
 int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 {
     if(sd){
-	WARN("re-binding socket\n");
-	close(sd);
+        WARN("re-binding socket\n");
+        close(sd);
     }
-    
+
     if(am_inet_pton(bind_ip.c_str(),&addr) == 0){
-	
-	ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
-	return -1;
+        ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
+        return -1;
     }
     
     if( ((addr.ss_family == AF_INET) && 
-     	 (SAv4(&addr)->sin_addr.s_addr == INADDR_ANY)) ||
-     	((addr.ss_family == AF_INET6) && 
-     	 IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) ){
-
-     	ERROR("Sorry, we cannot bind to 'ANY' address\n");
-     	return -1;
+        (SAv4(&addr)->sin_addr.s_addr == INADDR_ANY)) ||
+        ((addr.ss_family == AF_INET6) &&
+        IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) )
+    {
+        ERROR("Sorry, we cannot bind to 'ANY' address\n");
+        return -1;
     }
 
     am_set_port(&addr,bind_port);
 
     if((sd = socket(addr.ss_family,SOCK_DGRAM,0)) == -1){
-	ERROR("socket: %s\n",strerror(errno));
-	return -1;
-    } 
-    
-    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
+        ERROR("socket: %s\n",strerror(errno));
+        return -1;
+    }
 
-	ERROR("bind: %s\n",strerror(errno));
-	close(sd);
-	return -1;
+    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
+        ERROR("bind: %s\n",strerror(errno));
+        close(sd);
+        return -1;
     }
     
     int true_opt = 1;
 
     if(addr.ss_family == AF_INET) {
-	if(setsockopt(sd, IPPROTO_IP, DSTADDR_SOCKOPT,
-		      (void*)&true_opt, sizeof (true_opt)) == -1) {
-	    
-	    ERROR("%s\n",strerror(errno));
-	    close(sd);
-	    return -1;
-	}
+        if(setsockopt(sd, IPPROTO_IP, DSTADDR_SOCKOPT,
+                      (void*)&true_opt, sizeof (true_opt)) == -1)
+        {
+            ERROR("%s\n",strerror(errno));
+            close(sd);
+            return -1;
+        }
     } else {
-	if(setsockopt(sd, IPPROTO_IPV6, DSTADDR6_SOCKOPT,
-		      (void*)&true_opt, sizeof (true_opt)) == -1) {
-	    
-	    ERROR("%s\n",strerror(errno));
-	    close(sd);
-	    return -1;
-	}
+        if(setsockopt(sd, IPPROTO_IPV6, DSTADDR6_SOCKOPT,
+                  (void*)&true_opt, sizeof (true_opt)) == -1)
+        {
+            ERROR("%s\n",strerror(errno));
+            close(sd);
+            return -1;
+        }
     }
 
 #if defined RECV_SOCKET_TIMESTAMP
-	if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
-				  (void*)&true_opt, sizeof(true_opt)) < 0) {
-		ERROR("%s\n",strerror(errno));
-		close(sd);
-		return -1;
-	}
+    if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
+                  (void*)&true_opt, sizeof(true_opt)) < 0)
+    {
+        ERROR("%s\n",strerror(errno));
+        close(sd);
+        return -1;
+    }
 #endif
 
     actual_port = port = bind_port;
@@ -292,32 +294,16 @@ int udp_trsp_socket::send(const sockaddr_storage* sa,
     return sendto(sa,msg,msg_len);
 }
 
-
-/** @see trsp_socket */
-
-udp_trsp::udp_trsp(udp_trsp_socket* sock, trsp_acl &acl, trsp_acl &opt_acl)
-    : transport(sock,acl,opt_acl)
-{
-}
-
-udp_trsp::~udp_trsp()
-{
-}
-
-
-/** @see AmThread */
-void udp_trsp::run()
+int udp_trsp_socket::recv()
 {
     char buf[MAX_UDP_MSGLEN];
     int buf_len;
-
+    
     msghdr           msg;
     cmsghdr*         cmsgptr; 
     sockaddr_storage from_addr;
     iovec            iov[1];
-
-    setThreadName("sip-udp-rx");
-
+    
     iov[0].iov_base = buf;
     iov[0].iov_len  = MAX_UDP_MSGLEN;
 
@@ -328,45 +314,33 @@ void udp_trsp::run()
     msg.msg_iovlen     = 1;
     msg.msg_control    = new u_char[DSTADDR_DATASIZE];
     msg.msg_controllen = DSTADDR_DATASIZE;
-
-    if(sock->get_sd()<=0){
-	ERROR("Transport instance not bound\n");
-	return;
-    }
-
-    INFO("Started SIP server UDP transport on %s:%i\n",
-	 sock->get_ip(),sock->get_port());
-
-    while(true){
-
-	//DBG("before recvmsg (%s:%i)\n",sock->get_ip(),sock->get_port());
-
-	buf_len = recvmsg(sock->get_sd(),&msg,0);
+    
+	buf_len = recvmsg(get_sd(),&msg,0);
 	if(buf_len <= 0){
-	    if(!buf_len) continue;
+	    if(!buf_len) return 0;
 	    ERROR("recvfrom returned %d: %s\n",buf_len,strerror(errno));
 	    switch(errno){
 	    case EBADF:
 	    case ENOTSOCK:
 	    case EOPNOTSUPP:
-		return;
+		return 0;
 	    }
-	    continue;
+	    return errno;
 	}
 
 	if(buf_len <= 4) {
-		continue;
+		return 0;
 	}
 
 	if(buf_len > MAX_UDP_MSGLEN){
 	    ERROR("Message was too big (>%d)\n",MAX_UDP_MSGLEN);
-	    continue;
+		return 0;
 	}
 
 	sockaddr_storage* sa = (sockaddr_storage*)msg.msg_name;
 	if(!am_get_port(sa)) {
 	    DBG("Source port is 0: dropping");
-	    continue;
+		return 0;
 	}
 
 	sip_msg* s_msg = new sip_msg(buf,buf_len);
@@ -383,8 +357,8 @@ void udp_trsp::run()
 		 s_msg->len, s_msg->buf);
 	}
 
-	s_msg->local_socket = sock;
-	inc_ref(sock);
+	s_msg->local_socket = this;
+	inc_ref(this);
 
 	for (cmsgptr = CMSG_FIRSTHDR(&msg);
 		cmsgptr != NULL;
@@ -394,14 +368,14 @@ void udp_trsp::run()
 			cmsgptr->cmsg_type == DSTADDR_SOCKOPT)
 		{
 				s_msg->local_ip.ss_family = AF_INET;
-				am_set_port(&s_msg->local_ip,sock->get_port());
+				am_set_port(&s_msg->local_ip,get_port());
 				memcpy(&((sockaddr_in*)(&s_msg->local_ip))->sin_addr,
 				dstaddr(cmsgptr),sizeof(in_addr));
 		} else if(cmsgptr->cmsg_level == IPPROTO_IPV6 &&
 				  cmsgptr->cmsg_type == IPV6_PKTINFO)
 		{
 			s_msg->local_ip.ss_family = AF_INET6;
-			am_set_port(&s_msg->local_ip,sock->get_port());
+			am_set_port(&s_msg->local_ip,get_port());
 			memcpy(&((sockaddr_in6*)(&s_msg->local_ip))->sin6_addr,
 			dstaddr6(cmsgptr),sizeof(in6_addr));
 		}
@@ -420,17 +394,112 @@ void udp_trsp::run()
 #endif
 
 	// pass message to the parser / transaction layer
-	trans_layer::instance()->received_msg(s_msg,acl,opt_acl);
+    SIP_info* info = AmConfig.sip_ifs[get_if()].proto_info[get_addr_if()];
+	trans_layer::instance()->received_msg(s_msg, info->acl, info->opt_acl);
+    return 1;
+}
+
+/** @see trsp_socket */
+
+udp_trsp::udp_trsp()
+{
+    ev = epoll_create1(0);
+}
+
+udp_trsp::~udp_trsp()
+{
+    if(ev)
+        close(ev);
+}
+
+
+/** @see AmThread */
+void udp_trsp::run()
+{
+    setThreadName("sip-udp-rx");
+
+    INFO("Started SIP server UDP transport");
+
+    int ret;
+    udp_trsp_socket *sock;
+    bool running = true;
+    int socket_count = static_cast<int>(sockets.size());
+    struct epoll_event *events = new epoll_event[socket_count];
+
+    stop_event.link(ev, true);
+
+    while(running) {
+        ret = epoll_wait(ev, events, socket_count, -1);
+
+        if (ret < 0 && errno != EINTR)
+            ERROR("%s: epoll_wait(): %m", __func__);
+
+        for(int i = 0; i < ret; i++) {
+
+            if(events[i].data.ptr == &stop_event) {
+                stop_event.read();
+                running = false;
+                break;
+            }
+
+            sock = static_cast<udp_trsp_socket*>(events[i].data.ptr);
+
+            if ((events[i].events & EPOLLERR) ||
+                (events[i].events & EPOLLHUP))
+            {
+                ERROR("epoll error on socket %s:%d",
+                      sock->get_ip(), sock->get_port());
+
+                auto sock_it = std::find(sockets.begin(),sockets.end(),sock);
+                if(sock_it != sockets.end()) {
+                    sockets.erase(sock_it);
+                    if (epoll_ctl(ev, EPOLL_CTL_DEL, sock->get_sd(), nullptr) == -1) {
+                        ERROR("epoll_ctl: remove read sock %d error: %d",
+                              sock->get_sd(),errno);
+                    }
+                    dec_ref(sock);
+                }
+            } else if((events[i].events & EPOLLIN)) {
+                sock->recv();
+            }
+        }
     }
+
+    for(auto& sock : sockets) {
+        INFO("Removed SIP server UDP transport on %s:%d",
+             sock->get_ip(), sock->get_port());
+        dec_ref(sock);
+    }
+    sockets.clear();
+    delete[] events;
+
+    INFO("Finished SIP server UDP transport");
+
+    stopped.set(true);
 }
 
 /** @see AmThread */
 void udp_trsp::on_stop()
 {
-
+    close(ev);
+    stop_event.fire();
+    stopped.wait_for();
 }
 
+void udp_trsp::add_socket(udp_trsp_socket* sock)
+{
+    INFO("Added SIP server UDP transport on %s:%d", sock->get_ip(), sock->get_port());
+    struct epoll_event event;
+    event.events = EPOLLIN | EPOLLEXCLUSIVE | EPOLLERR;
+    event.data.ptr = sock;
+    if (epoll_ctl(ev, EPOLL_CTL_ADD, sock->get_sd(), &event) == -1) {
+        ERROR("epoll_ctl: add read sock error");
+        return;
+    }
     
+    sockets.push_back(sock);
+    inc_ref(sock);
+}
 
 /** EMACS **
  * Local variables:

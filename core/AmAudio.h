@@ -157,6 +157,15 @@ public:
   /** set the sampling rate */
   void setRate(unsigned int sample_rate);
 
+  /** return the frame size */
+  unsigned int getFrameSize() { return frame_size; }
+
+  /** set the frame size */
+  void setFrameSize(unsigned int frame_size);
+
+  /** return the frame size */
+  unsigned int getFrameTime() { return frame_time; }
+
   /** @return Handler returned by the codec's init function.*/
   long             getHCodec();
   long             getHCodecNoInit() { return h_codec; } // do not initialize
@@ -175,6 +184,12 @@ protected:
 
   /** Sampling rate. */
   unsigned int rate;
+
+  /* frame size in samples */
+  unsigned int frame_size;
+
+  /* frame size in ms */
+  unsigned int frame_time;
 
   /** ==0 if not yet initialized. */
   amci_codec_t*   codec;
@@ -205,8 +220,8 @@ class AmLibSamplerateResamplingState: public AmResamplingState
 {
 private:
   SRC_STATE* resample_state;
-  float resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE)*2];
-  float resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE)];
+  float resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE)*2*8];
+  float resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE)*8];
   size_t resample_buf_samples;
   size_t resample_out_buf_samples;
 public:
@@ -346,11 +361,6 @@ protected:
   unsigned int bytes2samples(unsigned int bytes) const;
 
   /**
-   * Scale a system timestamp down dependent on the sample rate.
-   */
-  unsigned int scaleSystemTS(unsigned long long system_ts);
-
-  /**
    *Get assumed samples count after decoding size bytes from buffer
    */
   unsigned int decoded_samples_count(amci_codec_t* codec, long h_codec, unsigned int size);
@@ -402,6 +412,12 @@ public:
     if(!inband_detector_enabled) return;
     inband_detector->streamPut(samples, size, system_ts);
   }
+
+  /**
+   * Scale a system timestamp down dependent on the sample rate.
+   */
+  unsigned int scaleSystemTS(unsigned long long system_ts);
+
 };
 
 

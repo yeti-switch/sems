@@ -31,7 +31,6 @@
 
 #include "AmThread.h"
 #include "AmSipMsg.h"
-#include "AmConfig.h"
 #include "AmConfigReader.h"
 #include "AmArg.h"
 #include "AmEventQueue.h"
@@ -107,6 +106,18 @@ class AmDynInvokeFactory: public AmPluginFactory
   virtual AmDynInvoke* getInstance()=0;
 };
 
+/**
+ * \brief Interface of factory for plugins that have to configurate
+ *
+ * Factory for multi-purpose plugin classes,
+ * classes that provide a DynInvoke (DI) API
+ */
+class AmConfigFactory: public AmPluginFactory
+{
+ public:
+  AmConfigFactory(const string& name);
+  virtual int configure(const std::string& config)=0;
+};
 
 class AmSession;
 class AmSessionEventHandler;
@@ -227,7 +238,7 @@ class AmLoggingFacility : public AmPluginFactory
    * @param pid   process ID
    * @param tid   thread ID
    * @param func  function name
-   * @param file  file name
+   * @param file  file nameAmPluginFactory
    * @param line  line number
    * @param msg   message
    */
@@ -238,17 +249,17 @@ class AmLoggingFacility : public AmPluginFactory
 };
 
 #if  __GNUC__ < 3
-#define EXPORT_FACTORY(fctname,class_name,args...) \
+#define EXPORT_FACTORY(fctname,class_name,class_export) \
             extern "C" void* fctname()\
             {\
-		return new class_name(##args);\
-	    }
+                return static_cast<class_export*>(class_name::instance());		\
+            }
 #else
-#define EXPORT_FACTORY(fctname,class_name,...) \
+#define EXPORT_FACTORY(fctname,class_name,class_export) \
             extern "C" void* fctname()\
             {\
-		return new class_name(__VA_ARGS__);\
-	    }
+                return static_cast<class_export*>(class_name::instance());		\
+            }
 #endif
 
 typedef void* (*FactoryCreate)();
@@ -259,58 +270,54 @@ typedef void* (*FactoryCreate)();
 #define FACTORY_SESSION_EXPORT      session_factory_create
 #define FACTORY_SESSION_EXPORT_STR  XSTR(FACTORY_SESSION_EXPORT)
 
-#define EXPORT_SESSION_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_SESSION_EXPORT,class_name,app_name)
+#define EXPORT_SESSION_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_SESSION_EXPORT,class_name, AmSessionFactory)
 
 #define FACTORY_SESSION_EVENT_HANDLER_EXPORT     sess_evh_factory_create
 #define FACTORY_SESSION_EVENT_HANDLER_EXPORT_STR XSTR(FACTORY_SESSION_EVENT_HANDLER_EXPORT)
 
-#define EXPORT_SESSION_EVENT_HANDLER_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_SESSION_EVENT_HANDLER_EXPORT,class_name,app_name)
+#define EXPORT_SESSION_EVENT_HANDLER_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_SESSION_EVENT_HANDLER_EXPORT,class_name, AmSessionEventHandlerFactory)
 
 #define FACTORY_PLUGIN_EXPORT     base_plugin_create
 #define FACTORY_PLUGIN_EXPORT_STR XSTR(FACTORY_PLUGIN_EXPORT)
 
-#define EXPORT_PLUGIN_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_PLUGIN_EXPORT,class_name,app_name)
+#define EXPORT_PLUGIN_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_PLUGIN_EXPORT,class_name, AmPluginFactory)
 
 #define FACTORY_PLUGIN_CLASS_EXPORT     plugin_class_create
 #define FACTORY_PLUGIN_CLASS_EXPORT_STR XSTR(FACTORY_PLUGIN_CLASS_EXPORT)
 
-#define EXPORT_PLUGIN_CLASS_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_PLUGIN_CLASS_EXPORT,class_name,app_name)
+#define EXPORT_PLUGIN_CLASS_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_PLUGIN_CLASS_EXPORT,class_name, AmDynInvokeFactory)
+
+#define FACTORY_PLUGIN_CONF_EXPORT     plugin_conf_create
+#define FACTORY_PLUGIN_CONF_EXPORT_STR XSTR(FACTORY_PLUGIN_CONF_EXPORT)
+
+#define EXPORT_PLUGIN_CONF_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_PLUGIN_CONF_EXPORT,class_name, AmConfigFactory)
 
 #define FACTORY_SIP_EVENT_HANDLER_EXPORT     sip_evh_factory_create
 #define FACTORY_SIP_EVENT_HANDLER_EXPORT_STR XSTR(FACTORY_SIP_EVENT_HANDLER_EXPORT)
 
-#define EXPORT_SIP_EVENT_HANDLER_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_SIP_EVENT_HANDLER_EXPORT,class_name,app_name)
+#define EXPORT_SIP_EVENT_HANDLER_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_SIP_EVENT_HANDLER_EXPORT,class_name, AmPluginFactory)
 
 #define FACTORY_LOG_FACILITY_EXPORT     log_facilty_factory_create
 #define FACTORY_LOG_FACILITY_EXPORT_STR XSTR(FACTORY_LOG_FACILITY_EXPORT)
 
-#define EXPORT_LOG_FACILITY_FACTORY(class_name,app_name) \
-            EXPORT_FACTORY(FACTORY_LOG_FACILITY_EXPORT,class_name,app_name)
+#define EXPORT_LOG_FACILITY_FACTORY(class_name) \
+            EXPORT_FACTORY(FACTORY_LOG_FACILITY_EXPORT,class_name, AmLoggingFacility)
 
 // ---------------- simplified SEMS plug-in interface  --------------------------
 // - export module as basic SEMS plugin with EXPORT_MODULE_FUNC
 // - in onLoad, register the capabilities you provide,
 //    e.g. AmPlugIn::registerApplication(...), AmPlugIn::registerDIInterface(...) etc
 
-#define EXPORT_MODULE_FUNC(class_name)	\
-  extern "C" void* base_plugin_create()		\
-  {						\
-    return class_name::instance();		\
-  }
-
-#define EXPORT_MODULE_FACTORY(class_name) \
-            EXPORT_MODULE_FUNC(class_name)
-
-
 // - use DECLARE_MODULE_INSTANCE/DEFINE_MODULE_INSTANCE to save some typing when
 //   creating plugins with DI Interface
 
-#define DEFINE_MODULE_INSTANCE(class_name, mod_name)	\
+#define DEFINE_FACTORY_INSTANCE(class_name, mod_name)	\
 							\
   class_name* class_name::_instance=0;			\
 							\
@@ -321,7 +328,7 @@ typedef void* (*FactoryCreate)();
   return _instance;					\
   }
 
-#define DECLARE_MODULE_INSTANCE(class_name)	\
+#define DECLARE_FACTORY_INSTANCE(class_name)	\
   static class_name* _instance;			\
   static class_name* instance();
 

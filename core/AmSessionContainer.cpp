@@ -29,7 +29,6 @@
 #include "AmSessionContainer.h"
 #include "AmPlugIn.h"
 #include "AmApi.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmEventDispatcher.h"
 
@@ -168,8 +167,8 @@ void AmSessionContainer::on_stop()
 
     for (unsigned int i=0;
 	 (!AmEventDispatcher::instance()->empty() &&
-	  (!AmConfig::MaxShutdownTime ||
-	   i < AmConfig::MaxShutdownTime * 1000 / 10));i++)
+	  (!AmConfig.max_shutdown_time ||
+	   i < AmConfig.max_shutdown_time * 1000 / 10));i++)
       usleep(10000);
 
     if (!AmEventDispatcher::instance()->empty()) {
@@ -187,7 +186,7 @@ void AmSessionContainer::on_stop()
 void AmSessionContainer::stopAndQueue(AmSession* s)
 {
 
-  if (AmConfig::LogSessions) {    
+  if (AmConfig.log_sessions) {    
     INFO("session cleaner about to stop %s\n",
 	 s->getLocalTag().c_str());
   }
@@ -217,7 +216,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
 
     auto_ptr<AmSession> session;
     try {
-        session.reset(createSession(req, app_name, session_params));
+        session.reset(createSession(req, app_name, true, session_params));
         if(session.get() != 0) {
             session->dlg->initFromLocalRequest(req);
             session->setCallgroup(req.from_tag);
@@ -226,8 +225,8 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
                 // successful case
                 break;
             case AmSessionContainer::ShutDown:
-                throw AmSession::Exception(AmConfig::ShutdownModeErrCode,
-                                           AmConfig::ShutdownModeErrReason);
+                throw AmSession::Exception(AmConfig.shutdown_mode_err_code,
+                                           AmConfig.shutdown_mode_err_reason);
             case AmSessionContainer::AlreadyExist:
                 throw AmSession::Exception(482,
                                            SIP_REPLY_LOOP_DETECTED);
@@ -261,7 +260,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
             }
 #endif
 
-            if (AmConfig::LogSessions) {
+            if (AmConfig.log_sessions) {
                 INFO("Starting UAC session %s app %s\n",
                     req.from_tag.c_str(), app_name.c_str());
             }
@@ -300,14 +299,14 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 
       session.reset(createSession(req,app_name));
       if(session.get() != 0){
-
+    session->dlg->setResolvePriority(Dualstack);
 	// update session's local tag (ID) if not already set
 	session->setLocalTag();
 	const string& local_tag = session->getLocalTag();
 	// by default each session is in its own callgroup
 	session->setCallgroup(local_tag);
 
-	if (AmConfig::LogSessions) {
+	if (AmConfig.log_sessions) {
 	  INFO("Starting UAS session %s\n",
 	       local_tag.c_str());
 	}
@@ -320,8 +319,8 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 	  break;
 	  
 	case AmSessionContainer::ShutDown:
-	  throw AmSession::Exception(AmConfig::ShutdownModeErrCode,
-				     AmConfig::ShutdownModeErrReason);
+	  throw AmSession::Exception(AmConfig.shutdown_mode_err_code,
+				     AmConfig.shutdown_mode_err_reason);
 	  
 	case AmSessionContainer::AlreadyExist:
 	  throw AmSession::Exception(482,
@@ -492,32 +491,39 @@ bool AmSessionContainer::check_and_add_cps()
 }
 
 AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
-					     string& app_name,
-					     AmArg* session_params)
+                                            string& app_name,
+                                            bool is_uac,
+                                            AmArg* session_params)
 {
-  if (AmConfig::ShutdownMode) {
+  if (AmConfig.shutdown_mode && (!(is_uac && AmConfig.shutdown_mode_allow_uac)))
+  {
     _run_cond.set(true); // so that thread stops
     DBG("Shutdown mode. Not creating session.\n");
 
-    AmSipDialog::reply_error(req,AmConfig::ShutdownModeErrCode,
-			     AmConfig::ShutdownModeErrReason);
+    if(!is_uac) {
+      AmSipDialog::reply_error(
+        req,
+        AmConfig.shutdown_mode_err_code,
+        AmConfig.shutdown_mode_err_reason);
+    }
+
     return NULL;
   }
 
-  if (AmConfig::SessionLimit &&
-      AmConfig::SessionLimit <= AmSession::session_num) {
+  if (AmConfig.session_limit &&
+      AmConfig.session_limit <= AmSession::session_num) {
       
       DBG("session_limit %d reached. Not creating session.\n", 
-	  AmConfig::SessionLimit);
+	  AmConfig.session_limit);
 
-      AmSipDialog::reply_error(req,AmConfig::SessionLimitErrCode, 
-			       AmConfig::SessionLimitErrReason);
+	  AmSipDialog::reply_error(req,AmConfig.session_limit_err_code,
+			       AmConfig.session_limit_err_reason);
       return NULL;
   }
 
   if (check_and_add_cps()) {
-      AmSipDialog::reply_error(req,AmConfig::CPSLimitErrCode, 
-			       AmConfig::CPSLimitErrReason);
+      AmSipDialog::reply_error(req,AmConfig.cps_limit_err_code,
+			       AmConfig.cps_limit_err_reason);
       return NULL;
   }
 
@@ -528,9 +534,16 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
       session_factory = AmPlugIn::instance()->findSessionFactory(req,app_name);
 
   if(!session_factory) {
-
-      ERROR("No session factory for application\n");
-      AmSipDialog::reply_error(req,500,SIP_REPLY_SERVER_INTERNAL_ERROR);
+      if(!is_uac) {
+        ERROR("src_ip: %s callid: %s ruri: %s - no session factory for application '%s'",
+              req.remote_ip.c_str(),
+              req.callid.c_str(),
+              req.r_uri.c_str(),
+              app_name.c_str());
+        AmSipDialog::reply_error(req,500,SIP_REPLY_SERVER_INTERNAL_ERROR);
+      } else {
+        ERROR("uac: no session factory for application '%s'",app_name.c_str());
+      }
 
       return NULL;
   }

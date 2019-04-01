@@ -6,6 +6,7 @@ struct sockaddr_storage;
 class raw_sender
 {
   static int rsock;
+  static int rsock6;
 
   raw_sender() {}
   ~raw_sender() {}

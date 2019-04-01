@@ -1,0 +1,84 @@
+.TH "cfg_opt_t" 3 "Sun Aug 19 2018" "Version 3.2.2" "confuse" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+cfg_opt_t \- Data structure holding information about an option\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fC#include <confuse\&.h>\fP
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "const char * \fBname\fP"
+.br
+.RI "The name of the option\&. "
+.ti -1c
+.RI "char * \fBcomment\fP"
+.br
+.RI "Optional comment/annotation\&. "
+.ti -1c
+.RI "\fBcfg_type_t\fP \fBtype\fP"
+.br
+.RI "Type of option\&. "
+.ti -1c
+.RI "unsigned int \fBnvalues\fP"
+.br
+.RI "Number of values parsed\&. "
+.ti -1c
+.RI "\fBcfg_value_t\fP ** \fBvalues\fP"
+.br
+.RI "Array of found values\&. "
+.ti -1c
+.RI "cfg_flag_t \fBflags\fP"
+.br
+.RI "Flags\&. "
+.ti -1c
+.RI "\fBcfg_opt_t\fP * \fBsubopts\fP"
+.br
+.RI "Suboptions (only applies to sections) "
+.ti -1c
+.RI "\fBcfg_defvalue_t\fP \fBdef\fP"
+.br
+.RI "Default value\&. "
+.ti -1c
+.RI "\fBcfg_func_t\fP \fBfunc\fP"
+.br
+.RI "Function callback for CFGT_FUNC options\&. "
+.ti -1c
+.RI "\fBcfg_simple_t\fP \fBsimple_value\fP"
+.br
+.RI "Pointer to user-specified variable to store simple values (created with the CFG_SIMPLE_* initializers) "
+.ti -1c
+.RI "\fBcfg_callback_t\fP \fBparsecb\fP"
+.br
+.RI "Value parsing callback function\&. "
+.ti -1c
+.RI "\fBcfg_validate_callback_t\fP \fBvalidcb\fP"
+.br
+.RI "Value validating parsing callback function\&. "
+.ti -1c
+.RI "\fBcfg_validate_callback2_t\fP \fBvalidcb2\fP"
+.br
+.RI "Value validating set callback function\&. "
+.ti -1c
+.RI "\fBcfg_print_func_t\fP \fBpf\fP"
+.br
+.RI "print callback function "
+.in -1c
+.SH "Detailed Description"
+.PP 
+Data structure holding information about an option\&. 
+
+The value(s) are stored as an array of fundamental values (strings, numbers, etc)\&. 
+.PP
+\fBExamples: \fP
+.in +1c
+\fBftpconf\&.c\fP, \fBreread\&.c\fP, and \fBsimple\&.c\fP\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for confuse from the source code\&.

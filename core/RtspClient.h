@@ -41,6 +41,7 @@ class RtspClient : public AmThread, public AmEventQueueInterface,
 
         typedef struct {
             int         l_if;
+            int         laddr_if;
             string      l_ip;
             string      rtsp_interface_name;
             string      media_servers;
@@ -75,30 +76,32 @@ class RtspClient : public AmThread, public AmEventQueueInterface,
 
         bool        srv_resolv(string host, int port, sockaddr_storage &_sa);
         void        parse_host_str(const string& host_port);
-        size_t      load_media_servers(const string& servers);
+        size_t      load_media_servers(cfg_t* cfg);
         void        init_connections();
         RtspSession *media_server_lookup();
 
-        int         configure();
         int         init();
         void        event_fire() { EventFD::pushEvent(); }
 
 public:
         RtspClient(const string& name);
         static RtspClient *instance();
-        static void dispose();
 
+        int         configure(const std::string& config);
+
+        static void dispose();
         int         shutdown_code() { return config.shutdown_code; }
         const string& localMediaIP() { return config.l_ip; }
         int         getRtpInterface() { return config.l_if; }
+        int         getRtpAddr() { return config.laddr_if; }
         int         getReconnectInterval() { return config.reconnect_interval; }
 
         uint64_t    addStream(RtspAudio &audio);
         void        removeStream(uint64_t id);
 
-        void        RtspRequest(const RtspMsg &msg);
+        int         RtspRequest(const RtspMsg &msg);
         void        onRtspPlayNotify(const RtspMsg &msg);
-        void        onRtspReplay(const RtspMsg &msg);
+        void        onRtspReply(const RtspMsg &msg);
 
 
         bool        link(int fd, int op, struct epoll_event &ev);

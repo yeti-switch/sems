@@ -15,6 +15,7 @@
 
 #include "signal.h"
 #include <fstream>
+#include <map>
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -65,9 +66,9 @@ static void setLoggingFacilityLogLevel(const AmArg& args, AmArg& ret,const strin
 
 static void setDumpLevel(int dump_level){
     INFO("change system dump_level from %s to %s",
-        dump_level2str(AmConfig::DumpLevel),
+        dump_level2str(AmConfig.dump_level),
         dump_level2str(dump_level));
-    AmConfig::DumpLevel = dump_level;
+    AmConfig.dump_level = dump_level;
 }
 
 static const char *dump_level_names[] = {
@@ -128,8 +129,8 @@ static void dump_sessions_info(
 
 void CoreRpc::set_system_shutdown(bool shutdown)
 {
-    AmConfig::ShutdownMode = shutdown;
-    INFO("ShutDownMode changed to %d",AmConfig::ShutdownMode);
+    AmConfig.shutdown_mode = shutdown;
+    INFO("ShutDownMode changed to %d",AmConfig.shutdown_mode);
 
     if(shutdown) {
         gettimeofday(&last_shutdown_time,NULL);
@@ -137,7 +138,7 @@ void CoreRpc::set_system_shutdown(bool shutdown)
         timerclear(&last_shutdown_time);
     }
 
-    if(AmConfig::ShutdownMode&&!AmSession::getSessionNum()){
+    if(AmConfig.shutdown_mode&&!AmSession::getSessionNum()){
         //commit suicide immediatly
         INFO("no active sessions on graceful shutdown command. exit immediately");
         kill(getpid(),SIGINT);
@@ -154,6 +155,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"status","",&CoreRpc::showStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
+        reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
         reg_method(show,"payloads","",&CoreRpc::showPayloads);
         reg_method(show,"log-level","",&CoreRpc::showLogLevel);
@@ -210,8 +212,8 @@ int CoreRpc::onLoad()
 {
     _inc_ref();
 
-    if(!AmConfig::LogDumpPath.empty()
-       && check_dir_write_permissions(AmConfig::LogDumpPath))
+    if(!AmConfig.log_dump_path.empty()
+       && check_dir_write_permissions(AmConfig.log_dump_path))
     {
         return -1;
     }
@@ -249,6 +251,11 @@ void CoreRpc::showVersion(const AmArg& args, AmArg& ret)
     ret["core_build"] = get_sems_version();
 }
 
+void CoreRpc::showConfig(const AmArg& args, AmArg& ret)
+{
+    ret = AmLcConfig::GetInstance().serialize();
+}
+
 void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)
 {
     AmMediaProcessor::instance()->getInfo(ret);
@@ -257,58 +264,76 @@ void CoreRpc::showMediaStreams(const AmArg& args, AmArg& ret)
 void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
 {
     AmArg &sig = ret["sip"];
-    for(int i=0; i<(int)AmConfig::SIP_Ifs.size(); i++) {
-        AmConfig::SIP_interface& iface = AmConfig::SIP_Ifs[i];
+    for(int i=0; i<(int)AmConfig.sip_ifs.size(); i++) {
+        SIP_interface& iface = AmConfig.sip_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
-        am_iface["media_if_idx"] = iface.RtpInterface;
-        am_iface["sys_name"] = iface.NetIf;
-        am_iface["sys_idx"] = (int)iface.NetIfIdx;
-        am_iface["local_ip"] = iface.LocalIP;
-        am_iface["udp_local_port"] = (int)iface.udp_local_port;
-        am_iface["tcp_local_port"] = (int)iface.tcp_local_port;
-        am_iface["public_ip"] = iface.PublicIP;
-        am_iface["static_client_port"] = (iface.SigSockOpts&trsp_socket::static_client_port)!= 0;
-        am_iface["use_raw_sockets"] = (iface.SigSockOpts&trsp_socket::use_raw_sockets)!= 0;
-        am_iface["force_via_address"] = (iface.SigSockOpts&trsp_socket::force_via_address) != 0;
-        am_iface["force_outbound_if"] = (iface.SigSockOpts&trsp_socket::force_outbound_if) != 0;
-        am_iface["dscp"] = iface.dscp;
-        am_iface["tos_byte"] = iface.tos_byte;
+        am_iface["media_if_name"] = iface.default_media_if;
+        AmArg am_siarr;
+        for(int j = 0; j < (int)iface.proto_info.size(); j++) {
+            AmArg am_sinfo;
+            SIP_info* sinfo = iface.proto_info[j];
+            am_sinfo["type"] = sinfo->transportToStr();
+            am_sinfo["sys_name"] = sinfo->net_if;
+            am_sinfo["sys_idx"] = (int)sinfo->net_if_idx;
+            am_sinfo["ip_type"] = sinfo->ipTypeToStr();
+            am_sinfo["local_ip"] = sinfo->local_ip;
+            am_sinfo["local_port"] = (int)sinfo->local_port;
+            am_sinfo["public_ip"] = sinfo->public_ip;
+            am_sinfo["static_client_port"] = (sinfo->sig_sock_opts&trsp_socket::static_client_port)!= 0;
+            am_sinfo["use_raw_sockets"] = (sinfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
+            am_sinfo["force_via_address"] = (sinfo->sig_sock_opts&trsp_socket::force_via_address) != 0;
+            am_sinfo["force_outbound_if"] = (sinfo->sig_sock_opts&trsp_socket::force_outbound_if) != 0;
+            am_sinfo["dscp"] = sinfo->dscp;
+            am_sinfo["tos_byte"] = sinfo->tos_byte;
+            am_siarr.push(am_sinfo);
+        }
+        am_iface["sip_addrs"] = am_siarr;
         sig[iface.name] = am_iface;
     }
 
     AmArg &rtp = ret["media"];
-    for(int i=0; i<(int)AmConfig::RTP_Ifs.size(); i++) {
-        AmConfig::RTP_interface& iface = AmConfig::RTP_Ifs[i];
+    for(int i=0; i<(int)AmConfig.media_ifs.size(); i++) {
+        MEDIA_interface& iface = AmConfig.media_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
-        am_iface["sys_name"] = iface.NetIf;
-        am_iface["sys_idx"] = (int)iface.NetIfIdx;
-        am_iface["local_ip"] = iface.LocalIP;
-        am_iface["public_ip"] = iface.PublicIP;
-        am_iface["rtp_low_port"] = iface.RtpLowPort;
-        am_iface["rtp_high_port"] = iface.RtpHighPort;
-        am_iface["capacity"] = (iface.RtpHighPort-iface.RtpLowPort+1)/2;
-        am_iface["use_raw_sockets"] = (iface.MediaSockOpts&trsp_socket::use_raw_sockets)!= 0;
-        am_iface["dscp"] = iface.dscp;
-        am_iface["tos_byte"] = iface.tos_byte;
+        AmArg am_mearr;
+        am_mearr.assertArray();
+        for(int j = 0; j < (int)iface.proto_info.size(); j++) {
+            AmArg am_minfo;
+            MEDIA_info* minfo = iface.proto_info[j];
+            am_minfo["type"] = minfo->transportToStr();
+            am_minfo["sys_name"] = minfo->net_if;
+            am_minfo["sys_idx"] = (int)minfo->net_if_idx;
+            am_minfo["ip_type"] = minfo->ipTypeToStr();
+            am_minfo["local_ip"] = minfo->local_ip;
+            am_minfo["public_ip"] = minfo->public_ip;
+            am_minfo["rtp_low_port"] = (int)minfo->low_port;
+            am_minfo["rtp_high_port"] = (int)minfo->high_port;
+            am_minfo["capacity"] = (double)(minfo->high_port-minfo->low_port+1)/2;
+            am_minfo["use_raw_sockets"] = (minfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
+            am_minfo["dscp"] = minfo->dscp;
+            am_minfo["tos_byte"] = minfo->tos_byte;
+            am_mearr.push(am_minfo);
+        }
+        am_iface["media_addrs"] = am_mearr;
         string name = iface.name.empty() ? "default" : iface.name;
         rtp[name] = am_iface;
     }
 
     AmArg &sip_map = ret["sip_ip_map"];
-    for(multimap<string,unsigned short>::iterator it = AmConfig::LocalSIPIP2If.begin();
-        it != AmConfig::LocalSIPIP2If.end(); ++it) {
-        AmConfig::SIP_interface& iface = AmConfig::SIP_Ifs[it->second];
+    for(std::multimap<string,unsigned short>::iterator it = AmConfig.local_sip_ip2if.begin();
+        it != AmConfig.local_sip_ip2if.end(); ++it) {
+        SIP_interface& iface = AmConfig.sip_ifs[it->second];
         sip_map[it->first] = iface.name.empty() ? "default" : iface.name;
     }
 
     AmArg &sip_names_map = ret["sip_names_map"];
-    for(const auto &m: AmConfig::SIP_If_names)
+    for(const auto &m: AmConfig.sip_if_names)
         sip_names_map[m.first] = m.second;
 
     AmArg &media_names_map = ret["media_names_map"];
-    for(const auto &m: AmConfig::RTP_If_names)
+    for(const auto &m: AmConfig.media_if_names)
         media_names_map[m.first] = m.second;
 }
 
@@ -368,7 +393,7 @@ void CoreRpc::setLogDiLogLevel(const AmArg& args, AmArg& ret)
 
 void CoreRpc::showDumpLevel(const AmArg&, AmArg& ret)
 {
-    ret = dump_level2str(AmConfig::DumpLevel);
+    ret = dump_level2str(AmConfig.dump_level);
 }
 
 void CoreRpc::setDumpLevelNone(const AmArg&, AmArg& ret)
@@ -397,12 +422,12 @@ void CoreRpc::setDumpLevelFull(const AmArg&, AmArg& ret)
 
 void CoreRpc::showStatus(const AmArg&, AmArg& ret)
 {
-    ret["shutdown_mode"] = (bool)AmConfig::ShutdownMode;
+    ret["shutdown_mode"] = (bool)AmConfig.shutdown_mode;
     ret["shutdown_request_time"] = !timerisset(&last_shutdown_time) ?
         AmArg() : timeval2str(last_shutdown_time);
     ret["core_version"] = SEMS_VERSION;
     ret["sessions"] = (int)AmSession::getSessionNum();
-    ret["dump_level"] = dump_level2str(AmConfig::DumpLevel);
+    ret["dump_level"] = dump_level2str(AmConfig.dump_level);
 
     time_t now = time(NULL);
     ret["localtime"] = now;
@@ -446,9 +471,9 @@ void CoreRpc::showSessionsCount(const AmArg&, AmArg& ret)
 
 void CoreRpc::showSessionsLimit(const AmArg&, AmArg& ret)
 {
-    ret["limit"] = (long int)AmConfig::SessionLimit;
-    ret["limit_error_code"] = (long int)AmConfig::SessionLimitErrCode;
-    ret["limit_error_reason"] = AmConfig::SessionLimitErrReason;
+    ret["limit"] = (long int)AmConfig.session_limit;
+    ret["limit_error_code"] = (long int)AmConfig.session_limit_err_code;
+    ret["limit_error_reason"] = AmConfig.session_limit_err_reason;
 }
 
 void CoreRpc::setSessionsLimit(const AmArg& args, AmArg& ret)
@@ -466,9 +491,9 @@ void CoreRpc::setSessionsLimit(const AmArg& args, AmArg& ret)
         throw AmSession::Exception(500,"non integer value for overload response code");
     }
 
-    AmConfig::SessionLimit = limit;
-    AmConfig::SessionLimitErrCode = code;
-    AmConfig::SessionLimitErrReason = args.get(2).asCStr();
+    AmConfig.session_limit = limit;
+    AmConfig.session_limit_err_code = code;
+    AmConfig.session_limit_err_reason = args.get(2).asCStr();
 
     ret = RPC_CMD_SUCC;
 }
@@ -558,6 +583,9 @@ void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
         throw AmSession::Exception(500,"missed parameter");
     }
     string target = args[0].asCStr();
+    dns_priority priority = IPv4_only;
+    if(args.size() > 1)
+        priority = string_to_priority(args[1].asCStr());
     if(target.empty()) return;
 
     dns_handle h;
@@ -567,20 +595,23 @@ void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
     if(-1==resolver::instance()->resolve_name(
         target.c_str(),
         &h,&remote_ip,
-        IPv4,
-        target[0]=='_' ? dns_r_srv : dns_r_a))
+        priority,
+        target[0]=='_' ? dns_r_srv : dns_r_ip))
     {
         throw AmSession::Exception(500,"unresolvable destination");
     }
-    ret["address"] = get_addr_str_sip(&remote_ip).c_str();
+    std::string addr = get_addr_str_sip(&remote_ip);
     unsigned short port = am_get_port(&remote_ip);
+    ret["address"] = addr.c_str();
     ret["port"] = port ? port : 5060;
+
+    h.dumpIps(ret["targets"], priority);
     h.dump(ret["handler"]);
 }
 
 void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
 {
-    if(AmConfig::LogDumpPath.empty())
+    if(AmConfig.log_dump_path.empty())
         throw AmSession::Exception(500,"log_dump_path is not set");
 
     AmDynInvokeFactory* di_log = AmPlugIn::instance()->getFactory4Di("di_log");
@@ -590,7 +621,7 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
     struct timeval t;
     gettimeofday(&t,NULL);
 
-    string path = AmConfig::LogDumpPath + "/";
+    string path = AmConfig.log_dump_path + "/";
     path += int2str((unsigned int)t.tv_sec) + "-";
     path += int2hex(get_random());
     path += int2hex(t.tv_sec) + int2hex(t.tv_usec);

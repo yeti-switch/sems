@@ -33,7 +33,7 @@
 #include "AmArg.h"
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <set>
 #include <list>
@@ -89,7 +89,6 @@ class AmPlugIn : public AmPayloadProvider
  private:
   static AmPlugIn* _instance;
 
-  std::set<string>                  rtld_global_plugins;
   vector<void*> dlls;
 
   std::map<int,amci_codec_t*>       codecs;
@@ -104,8 +103,9 @@ class AmPlugIn : public AmPayloadProvider
   std::map<string,AmPluginFactory*>              name2base;
   std::map<string,AmDynInvokeFactory*>           name2di;
   std::map<string,AmLoggingFacility*>            name2logfac;
+  std::map<string,AmPluginFactory*>              module_objects;
 
-  std::map<string,AmPluginFactory*>             module_objects;
+  std::map<string,AmPluginFactory*>              plugins_objects;
 
   //AmCtrlInterfaceFactory *ctrlIface;
 
@@ -123,6 +123,7 @@ class AmPlugIn : public AmPayloadProvider
   int loadSehPlugIn(AmPluginFactory* cb);
   int loadBasePlugIn(AmPluginFactory* cb);
   int loadDiPlugIn(AmPluginFactory* cb);
+  int loadConfPlugIn(AmPluginFactory* cb);
   int loadLogFacPlugIn(AmPluginFactory* f);
 
   int initLoggingModules();
@@ -143,7 +144,7 @@ class AmPlugIn : public AmPayloadProvider
    * Loads all plug-ins from the directory given as parameter. 
    * @return -1 if failed, else 0.
    */
-  int load(const string& directory, const string& plugins);
+  int load(const string& directory, const std::vector<std::string>& plugins);
 
   /** register logging plugins to receive logging messages */
   void registerLoggingPlugins();

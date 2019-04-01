@@ -27,7 +27,6 @@
 
 #include "AmSession.h"
 #include "AmSdp.h"
-#include "AmConfig.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"
 #include "AmApi.h"
@@ -54,6 +53,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/time.h>
+#include "sip/parse_via.h"
 
 volatile unsigned int AmSession::session_num = 0;
 AmMutex AmSession::session_num_mut;
@@ -85,6 +85,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     record_audio_enabled(false),
     accept_early_session(false),
     rtp_interface(-1),
+    rtp_addr(-1),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     processing_status(SESSION_PROCESSING_EVENTS),
     no_reply(false)
@@ -552,7 +553,7 @@ string AmSession::getNewId() {
   struct timeval t;
   gettimeofday(&t,NULL);
 
-  string id = AmConfig::node_id_prefix;
+  string id = AmConfig.node_id_prefix;
 
   id += int2hex(get_random()) + "-";
   id += int2hex(t.tv_sec) + int2hex(t.tv_usec) + "-";
@@ -590,7 +591,7 @@ void AmSession::session_stopped() {
   avg_last_timestamp = now;
   //current session number
   session_num--;
-  if(AmConfig::ShutdownMode&&!session_num){
+  if(AmConfig.shutdown_mode&&!session_num){
 	//commit suicide if shutdown mode is enabled
 	INFO("last session stopped in graceful shutdown mode. shutdown");
 	kill(getpid(),SIGINT);
@@ -974,7 +975,7 @@ public:
 
   bool operator()(const SdpPayload& left, const SdpPayload& right)
   {
-    for (vector<string>::iterator it = AmConfig::CodecOrder.begin(); it != AmConfig::CodecOrder.end(); it++) {
+    for (vector<string>::iterator it = AmConfig.codec_order.begin(); it != AmConfig.codec_order.end(); it++) {
       if (strcasecmp(left.encoding_name.c_str(),it->c_str())==0 && strcasecmp(right.encoding_name.c_str(), it->c_str())!=0)
 	return true;
       if (strcasecmp(right.encoding_name.c_str(),it->c_str())==0)
@@ -988,68 +989,87 @@ public:
 /** Hook called when an SDP answer is required */
 bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 {
-  DBG("AmSession::getSdpAnswer(...) ...\n");
+    CLASS_DBG("AmSession::getSdpAnswer(...) ...\n");
 
-  answer.version = 0;
-  answer.origin.user = "sems";
-  //answer.origin.sessId = 1;
-  //answer.origin.sessV = 1;
-  answer.sessionName = "sems";
-  answer.conn.network = NT_IN;
-  if (offer.conn.address.empty()) answer.conn.addrType = AT_V4; // or use first stream connection?
-  else answer.conn.addrType = offer.conn.addrType;
-  answer.conn.address = advertisedIP(answer.conn.addrType);
-  answer.media.clear();
-  
-  bool audio_1st_stream = true;
-  unsigned int media_index = 0;
-  for(vector<SdpMedia>::const_iterator m_it = offer.media.begin();
-      m_it != offer.media.end(); ++m_it) {
+    bool connection_line_is_processed = false;
 
-    answer.media.push_back(SdpMedia());
-    SdpMedia& answer_media = answer.media.back();
+    answer.version = 0;
+    answer.origin.user = "sems";
+    //answer.origin.sessId = 1;
+    //answer.origin.sessV = 1;
+    answer.sessionName = "sems";
+    answer.conn.network = NT_IN;
 
-    if( m_it->type == MT_AUDIO
-	&& m_it->transport == TP_RTPAVP
-        && audio_1st_stream 
-        && (m_it->port != 0) ) {
-
-      RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
-      RTPStream()->getSdpAnswer(media_index,*m_it,answer_media);
-      if(answer_media.payloads.empty() ||
-	 ((answer_media.payloads.size() == 1) &&
-	  (answer_media.payloads[0].encoding_name == "telephone-event"))
-	 ){
-	// no compatible media found
-	throw Exception(488,"no compatible payload");
-      }
-      audio_1st_stream = false;
-    }
-    else {
-      
-      answer_media.type = m_it->type;
-      answer_media.port = 0;
-      answer_media.nports = 0;
-      answer_media.transport = m_it->transport;
-      answer_media.send = false;
-      answer_media.recv = false;
-      answer_media.payloads.clear();
-      if(!m_it->payloads.empty()) {
-	SdpPayload dummy_pl = m_it->payloads.front();
-	dummy_pl.encoding_name.clear();
-	dummy_pl.sdp_format_parameters.clear();
-	answer_media.payloads.push_back(dummy_pl);
-      }
-      answer_media.attributes.clear();
+    if(!offer.conn.address.empty()) {
+        answer.conn.addrType = offer.conn.addrType;
+        answer.conn.address = advertisedIP(answer.conn.addrType);
+        connection_line_is_processed = true;
     }
 
-    // sort payload type in the answer according to the priority given in the codec_order configuration key
-    std::stable_sort(answer_media.payloads.begin(),answer_media.payloads.end(),codec_priority_cmp());
+    if (offer.conn.address.empty()) answer.conn.addrType = AT_V4; // or use first stream connection?
+    else answer.conn.addrType = offer.conn.addrType;
+    answer.conn.address = advertisedIP(answer.conn.addrType);
 
-    media_index++;
-  }
+    answer.media.clear();
 
-  return true;
+    bool audio_1st_stream = true;
+    unsigned int media_index = 0;
+
+    for(const auto &m: offer.media) {
+        answer.media.push_back(SdpMedia());
+        SdpMedia& answer_media = answer.media.back();
+        auto &answer_payloads = answer_media.payloads;
+
+        if( m.type == MT_AUDIO
+            && m.transport != TP_UDPTL
+            && audio_1st_stream
+            && (m.port != 0) )
+        {
+            /* TODO: here could be issue when multiple media streams
+               use different address families. add additional checks */
+            if(!connection_line_is_processed) {
+                if(m.conn.address.empty()) {
+                    throw Exception(488, "missed c= line");
+                }
+                answer.conn.addrType = m.conn.addrType;
+                answer.conn.address = advertisedIP(answer.conn.addrType);
+                connection_line_is_processed = true;
+            }
+
+            RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
+            RTPStream()->getSdpAnswer(media_index,m,answer_media);
+
+            if(answer_payloads.empty() ||
+               ((answer_payloads.size() == 1) &&
+               (answer_payloads[0].encoding_name == "telephone-event")))
+            {
+                // no compatible media found
+                throw Exception(488,"no compatible payload");
+            }
+
+            audio_1st_stream = false;
+        } else {
+            answer_media.type = m.type;
+            answer_media.port = 0;
+            answer_media.nports = 0;
+            answer_media.transport = m.transport;
+            answer_media.send = false;
+            answer_media.recv = false;
+            answer_media.frame_size = m.frame_size;
+            answer_payloads.clear();
+            if(!m.payloads.empty()) {
+                SdpPayload dummy_pl = m.payloads.front();
+                dummy_pl.encoding_name.clear();
+                dummy_pl.sdp_format_parameters.clear();
+                answer_payloads.push_back(dummy_pl);
+            }
+            answer_media.attributes.clear();
+        }
+        // sort payload type in the answer according to the priority given in the codec_order configuration key
+        std::stable_sort(answer_payloads.begin(),answer_payloads.end(),codec_priority_cmp());
+        media_index++;
+    } //
+    return true;
 }
 
 int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
@@ -1091,7 +1111,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   int ret = 0;
 
   try {
-    ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig::ForceSymmetricRtp);
+    ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig.force_symmetric_rtp);
   } catch (const string& s) {
     ERROR("Error while initializing RTP stream: '%s'\n", s.c_str());
     ret = -1;
@@ -1102,7 +1122,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   unlockAudio();
 
   if (!isProcessingMedia()) {
-    setInbandDetector(AmConfig::DefaultDTMFDetector);
+    setInbandDetector(AmConfig.default_dtmf_detector);
   }
 
   return ret;
@@ -1254,7 +1274,12 @@ int AmSession::getRtpInterface()
 {
   if(rtp_interface < 0){
     // TODO: get default media interface for signaling IF instead
-    rtp_interface = AmConfig::SIP_Ifs[dlg->getOutboundIf()].RtpInterface;
+    std::string media_interface = AmConfig.sip_ifs[dlg->getOutboundIf()].default_media_if;
+    auto media_it = AmConfig.media_if_names.find(media_interface);
+    if(media_it == AmConfig.media_if_names.end()) {
+        return 0;
+    }
+    rtp_interface = media_it->second;
     if(rtp_interface < 0) {
       DBG("No media interface for signaling interface:\n");
       DBG("Using default media interface instead.\n");
@@ -1269,21 +1294,69 @@ void AmSession::setRtpInterface(int _rtp_interface) {
   rtp_interface = _rtp_interface;
 }
 
+static int str2addrtype(const std::string &s)
+{
+    if(s.find(":") != std::string::npos) {
+        return sip_address_type::IPv6;
+    } else if(s.find(".") != std::string::npos) {
+        return sip_address_type::IPv4;
+    }
+    return sip_address_type::UNPARSED;
+
+}
+
+int AmSession::getRtpAddr()
+{
+    if(rtp_addr < 0) {
+        int rtp_if = getRtpInterface();
+        int rtp_type = dlg->getOutboundAddrType();
+        unsigned char ipproto = rtp_type | (MEDIA_info::RTP<<6);
+        auto addr_it = AmConfig.media_ifs[rtp_if].local_ip_proto2addr_if.find(ipproto);
+        if(addr_it != AmConfig.media_ifs[rtp_if].local_ip_proto2addr_if.end()) {
+            setRtpAddr(addr_it->second);
+        }
+    }
+
+    return rtp_addr;
+}
+
+int AmSession::setRtpAddr(int _rtp_addr)
+{
+  DBG("setting media address of interface to %d\n", _rtp_addr);
+  rtp_addr = _rtp_addr;
+  return 0;
+}
+
 string AmSession::localMediaIP(int addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
+  getRtpAddr();
   
-  assert(rtp_interface >= 0);
-  assert((unsigned int)rtp_interface < AmConfig::RTP_Ifs.size());
+  //assert(rtp_interface >= 0);
+  if(rtp_interface < 0)
+      throw string ("AmSession::localMediaIP: failed to resolve rtp interface index");
+  assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
+
+  if(rtp_addr < 0)
+      throw string ("AmSession::localMediaIP: failed to resolve  rtp addr type");
+  assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_interface; i < AmConfig::RTP_Ifs.size(); i++) {
-    set_ip = AmConfig::RTP_Ifs[i].LocalIP; // "media_ip" parameter.
-    if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && (set_ip.find(".") != std::string::npos)) ||
-	((addrType == AT_V6) && (set_ip.find(":") != std::string::npos)))
-      return set_ip;
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->type_ip && addrType != IP_info::UNDEFINED) {
+    unsigned char ipproto = addrType | (MEDIA_info::RTP<<6);
+    auto addr_it = AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.find(ipproto);
+    if(addr_it != AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.end()) {
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->local_ip;
+    }
+  } else {
+    set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->local_ip;
+  }
+
+  if( (set_ip[0] == '[') &&
+      (set_ip[set_ip.size() - 1] == ']') ) {
+      set_ip.pop_back();
+      set_ip.erase(set_ip.begin());
   }
   return set_ip;
 }
@@ -1294,18 +1367,33 @@ string AmSession::advertisedIP(int addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
+  getRtpAddr();
   
-  assert(rtp_interface >= 0);
-  assert((unsigned int)rtp_interface < AmConfig::RTP_Ifs.size());
+  if(rtp_interface < 0)
+      throw string ("AmSession::advertisedIP: failed to resolve rtp interface index");
+  assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
+
+  if(rtp_addr < 0)
+      throw string ("AmSession::advertisedIP: failed to resolve  rtp addr type");
+  assert((unsigned int)rtp_addr < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  for (size_t i = rtp_interface; i < AmConfig::RTP_Ifs.size(); i++) {
-    set_ip = AmConfig::RTP_Ifs[i].getIP(); // "media_ip" parameter.
-    if ((addrType == AT_NONE) ||
-	((addrType == AT_V4) && (set_ip.find(".") != std::string::npos)) ||
-	((addrType == AT_V6) && (set_ip.find(":") != std::string::npos)))
-      return set_ip;
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->type_ip && addrType != IP_info::UNDEFINED) {
+    unsigned char ipproto = addrType | (MEDIA_info::RTP<<6);
+    auto addr_it = AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.find(ipproto);
+    if(addr_it != AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.end()) {
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->local_ip;
+    }
+  } else {
+      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->local_ip;
   }
+
+  if( (set_ip[0] == '[') &&
+      (set_ip[set_ip.size() - 1] == ']') ) {
+      set_ip.pop_back();
+      set_ip.erase(set_ip.begin());
+  }
+
   return set_ip;
 }  
 
@@ -1414,6 +1502,7 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
         got = output->get(ts, buffer, stream->getSampleRate(), f_size);
         if(got < 0) got = 0; //suppress errors
     }
+    stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
     if (got < 0) res = -1;
     if (got > 0) res = stream->put(ts, buffer, stream->getSampleRate(), got);
   }

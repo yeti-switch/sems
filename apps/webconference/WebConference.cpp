@@ -40,8 +40,9 @@
 
 #define APP_NAME "webconference"
 
-EXPORT_SESSION_FACTORY(WebConferenceFactory,APP_NAME);
-EXPORT_PLUGIN_CLASS_FACTORY(WebConferenceFactory,APP_NAME);
+EXPORT_SESSION_FACTORY(WebConferenceFactory);
+EXPORT_PLUGIN_CLASS_FACTORY(WebConferenceFactory);
+DEFINE_FACTORY_INSTANCE(WebConferenceFactory, APP_NAME);
 
 WebConferenceFactory::WebConferenceFactory(const string& _app_name)
   : AmSessionFactory(_app_name),
@@ -56,8 +57,6 @@ WebConferenceFactory::WebConferenceFactory(const string& _app_name)
     _instance = this;
   }
 }
-
-WebConferenceFactory* WebConferenceFactory::_instance=0;
 
 string WebConferenceFactory::DigitsDir;
 PlayoutType WebConferenceFactory::m_PlayoutType = ADAPTIVE_PLAYOUT;
@@ -91,7 +90,7 @@ int WebConferenceFactory::load()
     return 0;
   configured = true;
 
-  if(cfg.loadFile(AmConfig::ModConfigPath + string(APP_NAME)+ ".conf"))
+  if(cfg.loadFile(AmConfig.configs_path + string(APP_NAME)+ ".conf"))
     return -1;
 
   // get application specific global parameters

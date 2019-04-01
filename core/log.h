@@ -39,8 +39,8 @@
 #include <cxxabi.h> /* __cxa_demangle() */
 #endif
 
-extern __thread pid_t _self_tid;
-extern __thread pid_t _self_pid;
+extern __thread pthread_t _self_tid;
+extern __thread pid_t     _self_pid;
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,7 +164,7 @@ _LOG(L_WARN, error_category fmt, ##args)
 #define DBG(fmt, args...)   CAT_DBG(ERROR_CATEGORY_DGENERAL, fmt, ##args)
 
 #define CLASS_LOG_FMT "[%p] "
-#define CLASS_ARGS this
+#define CLASS_ARGS static_cast<void *>(this)
 #define CLASS_ERROR(fmt, args...) ERROR(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_WARN(fmt, args...)  WARN(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_INFO(fmt, args...)  INFO(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)

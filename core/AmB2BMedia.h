@@ -35,7 +35,7 @@ class B2BMediaStatistics
  * */
 class RelayController {
   public:
-    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask) = 0;
+    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map) = 0;
     virtual ~RelayController() { }
 };
 
@@ -93,6 +93,7 @@ class AudioStreamData {
     AmDtmfEventQueue *dtmf_queue;
 
     PayloadMask relay_mask;
+    PayloadRelayMap relay_map;
     bool relay_enabled;
     std::string relay_address;
     int relay_port;
@@ -193,6 +194,10 @@ class AudioStreamData {
     int getLocalPort() { 
       if (stream) return stream->getLocalPort(); 
       else return 0; 
+    }
+
+    void replaceAudioMediaParameters(SdpMedia &m, const string& relay_address) {
+      if(stream) stream->replaceAudioMediaParameters(m, relay_address);
     }
 
     int getLocalRtcpPort() {
@@ -451,7 +456,8 @@ class AmB2BMedia: public AmMediaSession
      * Throws an exception (string) in case of error. (FIXME?) */
     void replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, 
 				  const string& relay_address,
-				  const string& relay_public_address);
+				  const string& relay_public_address,
+				  int addr_type);
 
     /** replace offer inside given SDP with locally generated one (media streams
      * etc must be initialised like in case replaceConnectionAddress) */
@@ -463,7 +469,8 @@ class AmB2BMedia: public AmMediaSession
 	const AmSdp &getRemoteSdp(bool a_leg);
 
     /** Update media session with local & remote SDP. */
-    void updateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
+    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
+    void updateStreams(bool a_leg, RelayController *ctrl);
     void setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
     /** Clear audio for given leg and stop processing if both legs stopped. 

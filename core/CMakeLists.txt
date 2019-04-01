@@ -2,7 +2,7 @@ FIND_PACKAGE(Spandsp REQUIRED)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
-FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c")
+FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c" "rtcp/*.cpp")
 
 SET(SEMS_LIB libsems)
 
@@ -16,8 +16,10 @@ codecs_bench.wav
 
 INCLUDE_DIRECTORIES (ampi)
 INCLUDE_DIRECTORIES (amci)
+INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS} ${SRTP_BUNDLED_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES (${CONFUSE_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS})
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)
@@ -100,3 +102,17 @@ SET(doc_files
 
 #SEMS_INSTALL_DOCS("${doc_files}" "${doc_dirs}")
 SEMS_INSTALL_AUDIO("" "${audio_files}")
+
+add_custom_target(install-dev
+    install -d /usr/include/sems
+    COMMAND install -v -D libsems.pc /usr/lib/pkgconfig/
+    COMMAND install -v -D -t /usr/share/cmake/sems ${CMAKE_SOURCE_DIR}/core/cmake/*.txt ${CMAKE_SOURCE_DIR}/core/cmake/FindSEMS.cmake
+    COMMAND install -v -D -t /usr/include/sems ${CMAKE_SOURCE_DIR}/core/*.cc ${CMAKE_SOURCE_DIR}/core/*.h ${CONFUSE_BIN_DIR}/src/confuse.h
+    COMMAND install -v -D -t /usr/include/sems/rtcp ${CMAKE_SOURCE_DIR}/core/rtcp/*.h
+    COMMAND install -v -D -t /usr/include/sems/ampi ${CMAKE_SOURCE_DIR}/core/ampi/*.h
+    COMMAND install -v -D -t /usr/include/sems/amci ${CMAKE_SOURCE_DIR}/core/amci/*.h
+    COMMAND install -v -D -t /usr/include/sems/rtp ${CMAKE_SOURCE_DIR}/core/rtp/*.h
+    COMMAND install -v -D -t /usr/include/sems/compat ${CMAKE_SOURCE_DIR}/core/compat/*.c ${CMAKE_SOURCE_DIR}/core/compat/*.h
+    COMMAND install -v -D -t /usr/include/sems/sip ${CMAKE_SOURCE_DIR}/core/sip/*.h
+    COMMAND install -v -D -t /usr/include/sems/resample ${CMAKE_SOURCE_DIR}/core/resample/*.h
+)

@@ -20,6 +20,7 @@ using std::map;
 
 class SctpBus
 : public AmDynInvokeFactory,
+  public AmConfigFactory,
   public AmThread,
   public AmEventFdQueue,
   public AmEventHandler,
@@ -32,6 +33,7 @@ class SctpBus
     Connections connections_by_id;
 
     SctpServerConnection server_connection;
+    cfg_reader reader;
 
     AmEventFd stop_event;
     AmTimerFd timer;
@@ -41,6 +43,7 @@ class SctpBus
 
   protected:
     void init_rpc_tree();
+    int configure();
 
   public:
     SctpBus(const string& name);
@@ -50,7 +53,7 @@ class SctpBus
     AmDynInvoke* getInstance() { return SctpBus::instance(); }
 
     int onLoad();
-    int configure();
+    int configure(const std::string& config);
 
     void run();
     void on_stop();

@@ -25,17 +25,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmRtpStream.h */
-#ifndef _RtpStream_h_
-#define _RtpStream_h_
-
+#pragma once
 
 #include "AmSdp.h"
 #include "AmThread.h"
 #include "SampleArray.h"
 #include "AmRtpPacket.h"
+#include "rtcp/RtcpStat.h"
 #include "AmEvent.h"
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
+#include "sip/ssl_settings.h"
 #include "AmRtpSession.h"
 
 #include <netinet/in.h>
@@ -58,15 +58,15 @@ using std::pair;
 #define RTP_BUFFER_SIZE -5 // buffer overrun
 #define RTP_UNKNOWN_PL  -6 // unknown payload
 
-
 /**
  * Forward declarations
  */
 class  AmAudio;
 class  AmSession;
+class msg_logger;
 struct SdpPayload;
 struct amci_payload_t;
-class msg_logger;
+class  AmSrtpConnection;
 
 /**
  * This provides the memory for the receive buffer.
@@ -76,30 +76,29 @@ struct PacketMem {
 #define MAX_PACKETS (1<<MAX_PACKETS_BITS)
 #define MAX_PACKETS_MASK (MAX_PACKETS-1)
 
-  AmRtpPacket packets[MAX_PACKETS];
-  std::atomic<bool> used[MAX_PACKETS];
+    AmRtpPacket packets[MAX_PACKETS];
+    std::atomic<bool> used[MAX_PACKETS];
 
-  PacketMem();
+      PacketMem();
 
-  inline AmRtpPacket* newPacket();
-  inline void freePacket(AmRtpPacket* p);
-  inline void clear();
-  void debug();
+    inline AmRtpPacket* newPacket();
+    inline void freePacket(AmRtpPacket* p);
+    inline void clear();
+    void debug();
 
-private:
-  unsigned int cur_idx;
-  std::atomic<unsigned int> n_used;
+  private:
+    unsigned int cur_idx;
+    std::atomic<unsigned int> n_used;
 };
 
 /** \brief event fired on RTP timeout */
 class AmRtpTimeoutEvent
   : public AmEvent
 {
-	
-public:
-  AmRtpTimeoutEvent() 
-    : AmEvent(0) { }
-  ~AmRtpTimeoutEvent() { }
+  public:
+    AmRtpTimeoutEvent()
+      : AmEvent(0) { }
+    ~AmRtpTimeoutEvent() { }
 };
 
 /** helper class for assigning boolean floag to a payload ID
@@ -113,7 +112,6 @@ class PayloadMask
     // clear flag for all payloads
     void clear();
 
-    // set given flag (TODO: once it shows to be working, change / and % to >> and &)
     void set(unsigned char payload_id) { if (payload_id < 128) bits[payload_id / 8] |= 1 << (payload_id % 8); }
 
     // set all flags to 'true'
@@ -130,17 +128,35 @@ class PayloadMask
     PayloadMask(const PayloadMask &src);
 };
 
+class PayloadRelayMap
+{
+  private:
+    unsigned char map[128];
+
+  public:
+    void clear();
+
+    // set given flag (TODO: once it shows to be working, change / and % to >> and &)
+    void set(unsigned char payload_id, unsigned char mapped_payload_id) { map[payload_id] = mapped_payload_id; }
+
+    // get given flag
+    unsigned char get(unsigned char payload_id) { if(map[payload_id] == 0) { return payload_id; } return map[payload_id]; }
+
+    PayloadRelayMap() { clear(); }
+    PayloadRelayMap(const PayloadRelayMap &src);
+};
+
 /**
  * \brief represents one admissible payload type
  *
  *
  */
 struct Payload {
-  unsigned char pt;
-  string        name;
-  unsigned int  clock_rate;
-  unsigned int  advertised_clock_rate; // differs for G722
-  int           codec_id;
+    unsigned char pt;
+    string        name;
+    unsigned int  clock_rate;
+    unsigned int  advertised_clock_rate; // differs for G722
+    int           codec_id;
 };
 
 /**
@@ -152,475 +168,559 @@ class AmRtpStream
   : public AmObject,
     public AmRtpSession
 {
-protected:
+  protected:
 
-  // payload collection
-  typedef std::vector<Payload> PayloadCollection;
-  
-  // list of locally supported payloads
-  PayloadCollection payloads;
+    // payload collection
+    typedef std::vector<Payload> PayloadCollection;
 
-  // current payload (index into @payloads)
-  int payload;
+    // list of locally supported payloads
+    PayloadCollection payloads;
 
-  std::vector<int> incoming_payloads;
-  std::vector<int> incoming_relayed_payloads;
-  std::vector<int> outgoing_payloads;
-  std::vector<int> outgoing_relayed_payloads;
-  unsigned long incoming_bytes;
-  unsigned long outgoing_bytes;
-  unsigned long decode_errors;
-  unsigned long rtp_parse_errors;
-  unsigned long out_of_buffer_errors;
+    // current payload (index into @payloads)
+    int payload;
 
-  unsigned int dead_rtp_time;
+    RtcpBidirectionalStat rtp_stats;
+    struct timeval start_time;
+    unsigned long long last_send_rtcp_report_ts;
 
-  signed int ts_adjust;
-  unsigned int last_sent_ts;
-  unsigned int last_sent_ts_diff;
+    std::vector<int> incoming_payloads;
+    std::vector<int> incoming_relayed_payloads;
+    std::vector<int> outgoing_payloads;
+    std::vector<int> outgoing_relayed_payloads;
+    unsigned long incoming_bytes;
+    unsigned long outgoing_bytes;
+    unsigned long decode_errors;
+    unsigned long rtp_parse_errors;
+    unsigned long out_of_buffer_errors;
 
-  struct PayloadMapping {
-    // remote payload type
-    int8_t remote_pt;
+    bool not_supported_rx_payload_local_reported;
+    bool not_supported_rx_payload_remote_reported;
+    bool not_supported_tx_payload_reported;
+    unsigned long wrong_payload_errors;
 
-    // index in payloads vector
-    uint8_t index;
-  };
+    unsigned int dead_rtp_time;
 
-  typedef std::map<unsigned int, AmRtpPacket*, ts_less> ReceiveBuffer;
-  typedef std::queue<AmRtpPacket*>                      RtpEventQueue;
-  typedef std::map<unsigned char, PayloadMapping>       PayloadMappingTable;
-  
-  // mapping from local payload type to PayloadMapping
-  PayloadMappingTable pl_map;
+    long int ts_adjust;
+    unsigned int last_sent_ts;
 
-  /** SDP media slot number (n-th media line) */
-  int sdp_media_index;
+    struct PayloadMapping {
+        int8_t remote_pt; // remote payload type
+        uint8_t    index; // index in payloads vector
+    };
 
-  /** RTP sequence number */
-  unsigned int sequence;
+    typedef std::map<unsigned int, AmRtpPacket*, ts_less> ReceiveBuffer;
+    typedef std::queue<AmRtpPacket*>                      RtpEventQueue;
+    typedef std::map<unsigned char, PayloadMapping>       PayloadMappingTable;
 
-  /**
+    msghdr recv_msg;
+    iovec recv_iov[1];
+    unsigned int   b_size;
+    unsigned char  buffer[RTP_PACKET_BUF_SIZE];
+    unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
+    struct timeval recv_time;
+    struct sockaddr_storage saddr;
+
+    // mapping from local payload type to PayloadMapping
+    PayloadMappingTable pl_map;
+
+    /** SDP media slot number (n-th media line) */
+    int sdp_media_index;
+
+    /** RTP sequence number */
+    unsigned int sequence;
+
+    /**
      Payload of last received packet.
-     Usefull to detect talk spurt, looking 
+     Usefull to detect talk spurt, looking
      for comfort noise packets.
-  */
-  int         last_payload;
+    */
+    int         last_payload;
 
-  /** Remote host information */
-  string             r_host;
-  unsigned short     r_port;
-  unsigned short     r_rtcp_port;
+    /** Remote host information */
+    string             r_host;
+    unsigned short     r_port;
+    unsigned short     r_rtcp_port;
 
-  /** 
-   * Local interface used for this stream
-   * (index into @AmConfig::Ifs)
-   */
-  int l_if;
+    /**
+    * Local interface used for this stream
+    * (index into @AmLcConfig::Ifs)
+    */
+    int l_if;
 
-  /**
-   * Local and remote host addresses
-   */
-  struct sockaddr_storage r_saddr;
-  struct sockaddr_storage l_saddr;
-  struct sockaddr_storage l_rtcp_saddr;
+    /**
+    * Local addr index from local interface
+    * (index into @AmLcConfig::Ifs.proto_info)
+    */
+    int laddr_if;
 
-  /** Local port */
-  unsigned short     l_port;
+    /**
+    * Local and remote host addresses
+    */
+    struct sockaddr_storage r_saddr;
+    struct sockaddr_storage l_saddr;
+    struct sockaddr_storage l_rtcp_saddr;
+    struct sockaddr_storage r_rtcp_saddr;
 
-  /** Local socket */
-  int                l_sd;
+    /** Local port */
+    unsigned short     l_port;
 
-  /** Context index in receiver for local socket */
-  int                l_sd_ctx;
+    /** Local socket */
+    int                l_sd;
 
-  /** Local RTCP port */
-  unsigned int l_rtcp_port;
+    /** Context index in receiver for local socket */
+    int                l_sd_ctx;
 
-  /** Local RTCP socket */
-  int          l_rtcp_sd;
+    /** Local RTCP port */
+    unsigned int l_rtcp_port;
 
-  /** Context index in receiver for local RTCP socket */
-  int          l_rtcp_sd_ctx;
+    /** Local RTCP socket */
+    int          l_rtcp_sd;
 
-  /** Timestamp of the last received RTP packet */
-  struct timeval last_recv_time;
+    /** Context index in receiver for local RTCP socket */
+    int          l_rtcp_sd_ctx;
 
-  /** Local and remote SSRC information */
-  unsigned int   l_ssrc;
-  unsigned int   r_ssrc;
-  bool           r_ssrc_i;
 
-  /** symmetric RTP & RTCP */
-  bool           passive;
-  bool           passive_rtcp;
+    /** Timestamp of the last received RTP packet */
+    struct timeval last_recv_time;
 
-  /** mute && port == 0 */
-  bool           hold;
+    /** Local and remote SSRC information */
+    unsigned int   l_ssrc;
+    unsigned int   r_ssrc;
+    bool           r_ssrc_i;
 
-  /** marker flag */
-  bool           begin_talk;
+    /** symmetric RTP & RTCP */
+    bool           passive;
+    bool           passive_rtcp;
 
-  /** do check rtp timeout */
-  bool           monitor_rtp_timeout;
+    /**type of rtp transport**/
+    enum MediaTransport
+    {
+        RTP_AVP = TransProt::TP_RTPAVP,
+        RTP_SAVP = TransProt::TP_RTPSAVP,
+        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP
+    } transport;
 
-  /** Payload type for telephone event */
-  auto_ptr<const SdpPayload> remote_telephone_event_pt;
-  auto_ptr<const SdpPayload> local_telephone_event_pt;
+    /**  srtp connection mode */
+    auto_ptr<AmSrtpConnection> srtp_connection;
+    auto_ptr<AmSrtpConnection> srtcp_connection;
+    dtls_server_settings server_settings;
+    dtls_client_settings client_settings;
+    vector<CryptoProfile> srtp_profiles;
+    bool srtp_enable;
 
-  /** DTMF sender */
-  AmDtmfSender   dtmf_sender;
+    /** mute && port == 0 */
+    bool           hold;
 
-  /**
-   * Receive buffer, queue and mutex
-   */
-  PacketMem       mem;
-  ReceiveBuffer   receive_buf;
-  RtpEventQueue   rtp_ev_qu;
-  AmMutex         receive_mut;
+    /** marker flag */
+    bool           begin_talk;
 
-  /** should we receive packets? if not -> drop */
-  bool receiving;
+    /** do check rtp timeout */
+    bool           monitor_rtp_timeout;
 
-  /** if relay_stream is initialized, received RTP is relayed there */
-  bool            relay_enabled;
-  /** if true, packets are note parsed or checked */
-  bool            relay_raw;
-  /** pointer to relay stream.
+    /** Payload type for telephone event */
+    auto_ptr<const SdpPayload> remote_telephone_event_pt;
+    auto_ptr<const SdpPayload> local_telephone_event_pt;
+
+    /** DTMF sender */
+    AmDtmfSender   dtmf_sender;
+
+    /**
+    * Receive buffer, queue and mutex
+    */
+    PacketMem       mem;
+    ReceiveBuffer   receive_buf;
+    RtpEventQueue   rtp_ev_qu;
+    AmMutex         receive_mut;
+
+    /** should we receive packets? if not -> drop */
+    bool receiving;
+
+    /** if relay_stream is initialized, received RTP is relayed there */
+    bool            relay_enabled;
+    /** if true, packets are note parsed or checked */
+    bool            relay_raw;
+    /** pointer to relay stream.
       NOTE: This may only be accessed in initialization
       or by the AmRtpReceiver thread while relaying!  */
-  AmRtpStream*    relay_stream;
-  /** control transparency for RTP seqno in RTP relay mode */
-  bool            relay_transparent_seqno;
-  /** control transparency for RTP ssrc in RTP relay mode */
-  bool            relay_transparent_ssrc;
-  /** filter RTP DTMF (2833 / 4733) in relaying */
-  bool            relay_filter_dtmf;
-  /** Realy RTP DTMF
-  bool filter (2833 / 4733) in active even in active state */
+    AmRtpStream*    relay_stream;
+    /** control transparency for RTP seqno in RTP relay mode */
+    bool            relay_transparent_seqno;
+    /** control transparency for RTP ssrc in RTP relay mode */
+    bool            relay_transparent_ssrc;
+    /** filter RTP DTMF (2833 / 4733) in relaying */
+    bool            relay_filter_dtmf;
+    /** Realy RTP DTMF
+    bool filter (2833 / 4733) in active even in active state */
 
-  bool            force_relay_dtmf;
-  bool            relay_timestamp_aligning;
+    bool            force_relay_dtmf;
+    bool            relay_timestamp_aligning;
 
-  /** relay CN payload type  */
-  bool            force_relay_cn;
+    /** relay CN payload type  */
+    bool            force_relay_cn;
 
 
-  /** ignore rtcp for symmetric rtp switching */
-  bool            symmetric_rtp_ignore_rtcp;
-  /** endless symmetric rtp switching */
-  bool            symmetric_rtp_endless;
-  /** send initial rtp packet */
-  bool            rtp_ping;
+    /** ignore rtcp for symmetric rtp switching */
+    bool            symmetric_rtp_ignore_rtcp;
+    /** endless symmetric rtp switching */
+    bool            symmetric_rtp_endless;
+    /** send initial rtp packet */
+    bool            rtp_ping;
 
-  /** force packet buffering after relay */
-  bool            force_buffering;
+    /** force packet buffering after relay */
+    bool            force_buffering;
 
-  /** Session owning this stream */
-  AmSession*         session;
+    /** Session owning this stream */
+    AmSession*         session;
 
-  msg_logger *logger;
-  msg_sensor *sensor;
+    msg_logger *logger;
+    msg_sensor *sensor;
 
-  /** Payload provider */
-  AmPayloadProvider* payload_provider;
+    /** Payload provider */
+    AmPayloadProvider* payload_provider;
 
-  /** insert packet in DTMF queue if correct payload */
-  void recvDtmfPacket(AmRtpPacket* p);
+    /** insert packet in DTMF queue if correct payload */
+    void recvDtmfPacket(AmRtpPacket* p);
 
-  /** Insert an RTP packet to the buffer queue */
-  void bufferPacket(AmRtpPacket* p);
-  /* Get next packet from the buffer queue */
-  int nextPacket(AmRtpPacket*& p);
-  
-  /** Try to reuse oldest buffered packet for newly coming packet */
-  AmRtpPacket *reuseBufferedPacket();
+    /** Insert an RTP packet to the buffer queue */
+    void bufferPacket(AmRtpPacket* p);
+    /* Get next packet from the buffer queue */
+    int nextPacket(AmRtpPacket*& p);
 
-  /** handle symmetric RTP/RTCP - if in passive mode, update raddr from rp */
-  void handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp);
+    /** Try to reuse oldest buffered packet for newly coming packet */
+    AmRtpPacket *reuseBufferedPacket();
 
-  void relay(AmRtpPacket* p, bool is_dtmf_packet, bool process_dtmf_queue);
+    /** handle symmetric RTP/RTCP - if in passive mode, update raddr from rp */
+    void handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp);
 
-  /** Sets generic parameters on SDP media */
-  void getSdp(SdpMedia& m);
+    void relay(AmRtpPacket* p, bool process_dtmf_queue);
 
-  /** Clear RTP timeout at time recv_time */
-  void clearRTPTimeout(struct timeval* recv_time);
+    /** Sets generic parameters on SDP media */
+    void getSdp(SdpMedia& m);
 
-  PayloadMask relay_payloads;
-  bool offer_answer_used;
+    /** Clear RTP timeout at time recv_time */
+    void clearRTPTimeout(struct timeval* recv_time);
 
-  /** set to true if any data received */
-  bool active;
+    PayloadMask relay_payloads;
+    PayloadRelayMap relay_map;
+    bool offer_answer_used;
 
-  /** 
-   * Select a compatible default payload 
-   * @return -1 if none available.
-   */
-  int getDefaultPT();
+    /** set to true if any data received */
+    bool active;
 
-  void payloads_id2str(const std::vector<int> i, std::vector<string> &s);
+    RtcpReportsPreparedData rtcp_reports;
 
-private:
-  void log_sent_rtp_packet(AmRtpPacket &p);
-  void log_rcvd_rtp_packet(AmRtpPacket &p);
-  void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
-  void log_rcvd_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr);
+    /**
+    * Select a compatible default payload
+    * @return -1 if none available.
+    */
+    int getDefaultPT();
 
-public:
+    void payloads_id2str(const std::vector<int> i, std::vector<string> &s);
 
-  /**
-   * Set whether RTP stream will receive RTP packets internally (received packets will be dropped or not).
-   */
-  void setReceiving(bool r);
+  private:
 
-  /**
-   * Stops RTP stream receiving RTP packets internally (received packets will be dropped).
-   */
-  void pause();
+    void log_sent_rtp_packet(AmRtpPacket &p);
+    void log_rcvd_rtp_packet(AmRtpPacket &p);
+    void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
 
-  /**
-   * Resume a paused RTP stream internally (received packets will be processed).
-   */
-  void resume();
+    void recvRtcpPacket(AmRtpPacket* p);
 
-  /** Mute */
-  bool mute;
+    void update_sender_stats(const AmRtpPacket &p);
+    void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
 
-  /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
-  bool force_receive_dtmf;
+    void init_receiver_info(const AmRtpPacket &p);
+    void update_receiver_stats(const AmRtpPacket &p);
+    void fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now);
 
-  /** Allocates resources for future use of RTP. */
-  AmRtpStream(AmSession* _s, int _if);
+    void rtcp_send_report(unsigned int user_ts);
 
-  /** Stops the stream and frees all resources. */
-  virtual ~AmRtpStream();
+    friend class AmSrtpConnection;
+    int recv(int fd);
+    int send(unsigned char* buf, int size, bool rtcp);
+    int sendmsg(unsigned char* buf, int size);
+  public:
 
-  int send( unsigned int ts,
-	    unsigned char* buffer,
-	    unsigned int   size );
-  
-  int send_raw( char* packet, unsigned int length );
+    /**
+    * Set whether RTP stream will receive RTP packets internally (received packets will be dropped or not).
+    */
+    void setReceiving(bool r);
 
-  int compile_and_send( const int payload, bool marker, 
-		        unsigned int ts, unsigned char* buffer, 
-		        unsigned int size );
+    /**
+    * Stops RTP stream receiving RTP packets internally (received packets will be dropped).
+    */
+    void pause();
 
-  int receive( unsigned char* buffer, unsigned int size,
+    /**
+    * Resume a paused RTP stream internally (received packets will be processed).
+    */
+    void resume();
+
+    /** Mute */
+    bool mute;
+
+    /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
+    bool force_receive_dtmf;
+
+    /** Allocates resources for future use of RTP. */
+    AmRtpStream(AmSession* _s, int _if, int _addr_if);
+
+    /** Stops the stream and frees all resources. */
+    virtual ~AmRtpStream();
+
+
+    int send( unsigned int ts,
+        unsigned char* buffer,
+        unsigned int   size );
+
+    int send_raw( char* packet, unsigned int length );
+
+    int compile_and_send( const int payload, bool marker,
+                unsigned int ts, unsigned char* buffer,
+                unsigned int size );
+
+    int receive( unsigned char* buffer, unsigned int size,
            unsigned int& ts, int& payload, bool &relayed);
 
-  void recvPacket(int fd);
+    void recvPacket(int fd);
 
-  void recvRtcpPacket(AmRtpPacket* p = NULL);
+    void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 
-  /** ping the remote side, to open NATs and enable symmetric RTP */
-  int ping();
+    /** ping the remote side, to open NATs and enable symmetric RTP */
+    int ping();
 
-  /** returns the socket descriptor for local socket (initialized or not) */
-  int hasLocalSocket();
+    /** returns the socket descriptor for local socket (initialized or not) */
+    int hasLocalSocket();
 
-  /** initializes and gets the socket descriptor for local socket */
-  int getLocalSocket();
+    /** initializes and gets the socket descriptor for local socket */
+    int getLocalSocket();
 
-  /**
-   * This function must be called before setLocalPort, because
-   * setLocalPort will bind the socket and it will be not
-   * possible to change the IP later
-   */
-  void setLocalIP(const string& ip);
-	    
-  /** 
-   * Initializes with a new random local port if 'p' is 0,
-   * else binds the given port, and sets own attributes properly. 
-   */
-  void setLocalPort(unsigned short p = 0);
+    /**
+    * This function must be called before setLocalPort, because
+    * setLocalPort will bind the socket and it will be not
+    * possible to change the IP later
+    */
+    void setLocalIP(const string& ip);
 
-  /** 
-   * Gets RTP port number. If no RTP port in assigned, assigns a new one.
-   * @return local RTP port. 
-   */
-  int getLocalPort();
+    /**
+    * Initializes with a new random local port if 'p' is 0,
+    * else binds the given port, and sets own attributes properly.
+    */
+    void setLocalPort(unsigned short p = 0);
 
-  /** 
-   * Gets RTCP port number. If no RTP/RTCP port in assigned, assigns a new one.
-   * @return local RTCP port. 
-   */
-  int getLocalRtcpPort();
+    /**
+    * Gets RTP port number. If no RTP port in assigned, assigns a new one.
+    * @return local RTP port.
+    */
+    int getLocalPort();
 
-  /** 
-   * Gets remote RTP port.
-   * @return remote RTP port.
-   */
-  int getRPort();
-    
-  /**
-   * Gets remote host IP.
-   * @return remote host IP.
-   */
-  string getRHost();
+    /**
+    * Gets RTCP port number. If no RTP/RTCP port in assigned, assigns a new one.
+    * @return local RTCP port.
+    */
+    int getLocalRtcpPort();
 
-  /**
-   * Set remote IP & port.
-   */
-  void setRAddr(const string& addr, unsigned short port,
-		unsigned short rtcp_port = 0);
+    /**
+    * Gets remote RTP port.
+    * @return remote RTP port.
+    */
+    int getRPort();
 
-  /** Symmetric RTP & RTCP: passive mode ? */
-  void setPassiveMode(bool p);
-  bool getPassiveMode() { return passive || passive_rtcp; }
+    /**
+    * Gets remote host IP.
+    * @return remote host IP.
+    */
+    string getRHost();
 
-  unsigned int get_ssrc() { return l_ssrc; }
+    /**
+    * Set remote IP & port.
+    */
+    void setRAddr(const string& addr, unsigned short port,
+        unsigned short rtcp_port = 0);
 
-  int getLocalTelephoneEventPT();
-  int getLocalTelephoneEventRate();
+    /** Symmetric RTP & RTCP: passive mode ? */
+    void setPassiveMode(bool p);
+    bool getPassiveMode() { return passive || passive_rtcp; }
 
-  void setPayloadProvider(AmPayloadProvider* pl_prov);
+    /** Set using transport */
+    void setTransport(TransProt trans);
 
-  int getSdpMediaIndex() { return sdp_media_index; }
-  void forceSdpMediaIndex(int idx) { sdp_media_index = idx; offer_answer_used = false; }
-  int getPayloadType() { return payload; }
-  int getLastPayload() { return last_payload; }
-  string getPayloadName(int payload_type);
+    unsigned int get_ssrc() { return l_ssrc; }
 
-  struct PayloadsHistory {
-	  std::vector<string> incoming,incoming_relayed,
-						  outgoing,outgoing_relayed;
-  };
-  void getPayloadsHistory(PayloadsHistory &ph);
+    int getLocalTelephoneEventPT();
+    int getLocalTelephoneEventRate();
 
-  struct ErrorsStats {
-	  int decode_errors;
-	  int rtp_parse_errors;
-	  int out_of_buffer_errors;
-	  ErrorsStats(): decode_errors(0), rtp_parse_errors(0), out_of_buffer_errors(0) {}
-  };
-  void getErrorsStats(ErrorsStats &es);
+    void setPayloadProvider(AmPayloadProvider* pl_prov);
 
-  unsigned long getRcvdBytes() { return incoming_bytes; }
-  unsigned long getSentBytes() { return outgoing_bytes; }
-  /**
-   * send a DTMF as RTP payload (RFC4733)
-   * @param event event ID (e.g. key press), see rfc
-   * @param duration_ms duration in milliseconds
-   */
-  void sendDtmf(int event, unsigned int duration_ms);
+    int getSdpMediaIndex() { return sdp_media_index; }
+    void forceSdpMediaIndex(int idx) { sdp_media_index = idx; offer_answer_used = false; }
+    int getPayloadType() { return payload; }
+    int getLastPayload() { return last_payload; }
+    string getPayloadName(int payload_type);
 
-  /**
-   * Generate an SDP offer based on the stream capabilities.
-   * @param index index of the SDP media within the SDP.
-   * @param offer the local offer to be filled/completed.
-   */
-  virtual void getSdpOffer(unsigned int index, SdpMedia& offer);
+    void replaceAudioMediaParameters(SdpMedia &m, const string& relay_address);
 
-  /**
-   * Generate an answer for the given SDP media based on the stream capabilities.
-   * @param index index of the SDP media within the SDP.
-   * @param offer the remote offer.
-   * @param answer the local answer to be filled/completed.
-   */
-  virtual void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer);
+    struct MediaStats {
 
-  /**
-   * Enables RTP stream.
-   * @param local the SDP message generated by the local UA.
-   * @param remote the SDP message generated by the remote UA.
-   * @warning It is necessary to call getSdpOffer/getSdpAnswer prior to init(...)
-   * @warning so that the internal SDP media line index is set properly.
-   */
-  virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
+        struct timeval time_start;
+        struct timeval time_end;
+        MathStat<uint32_t> rtt;
 
-  /** set the RTP stream on hold */
-  void setOnHold(bool on_hold);
-  
-  /** get whether RTP stream is on hold  */
-  bool getOnHold();
+        struct rtp_common {
+            unsigned int ssrc;
+            struct sockaddr_storage addr;
+            uint32_t pkt;
+            uint32_t bytes;
+            uint32_t total_lost;
+            std::vector<string> payloads_transcoded;
+            std::vector<string> payloads_relayed;
+        };
 
-  /** setter for monitor_rtp_timeout */
-  void setMonitorRTPTimeout(bool m) { monitor_rtp_timeout = m; }
-  /** getter for monitor_rtp_timeout */
-  bool getMonitorRTPTimeout() { return monitor_rtp_timeout; }
+        struct rx_stat: public rtp_common {
+            unsigned long decode_errors;
+            unsigned long rtp_parse_errors;
+            unsigned long out_of_buffer_errors;
 
-  /*
-   * clear RTP timeout to current time
-   */
-  void clearRTPTimeout();
+            MathStat<long> delta;
+            MathStat<double> jitter;
+            MathStat<uint32_t> rtcp_jitter;
+        } rx;
 
-  /** set relay stream for  RTP relaying */
-  void setRelayStream(AmRtpStream* stream);
+        struct tx_stat: public rtp_common {
+            MathStat<uint32_t> jitter;
+        } tx;
 
-  /** set relay payloads for  RTP relaying */
-  void setRelayPayloads(const PayloadMask &_relay_payloads);
+        MediaStats()
+        {
+            bzero(this, sizeof(struct MediaStats));
+        }
+    };
+    void getMediaStats(struct MediaStats &s);
 
-  /** ensable RTP relaying through relay stream */
-  void enableRtpRelay();
+    unsigned long getRcvdBytes() { return incoming_bytes; }
+    unsigned long getSentBytes() { return outgoing_bytes; }
+    /**
+    * send a DTMF as RTP payload (RFC4733)
+    * @param event event ID (e.g. key press), see rfc
+    * @param duration_ms duration in milliseconds
+    */
+    void sendDtmf(int event, unsigned int duration_ms);
 
-  /** disable RTP relaying through relay stream */
-  void disableRtpRelay();
+    /**
+    * Generate an SDP offer based on the stream capabilities.
+    * @param index index of the SDP media within the SDP.
+    * @param offer the local offer to be filled/completed.
+    */
+    virtual void getSdpOffer(unsigned int index, SdpMedia& offer);
 
-  /** enable raw UDP relaying through relay stream */
-  void enableRawRelay();
+    /**
+    * Generate an answer for the given SDP media based on the stream capabilities.
+    * @param index index of the SDP media within the SDP.
+    * @param offer the remote offer.
+    * @param answer the local answer to be filled/completed.
+    */
+    virtual void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer);
 
-  /** disable raw UDP relaying through relay stream */
-  void disableRawRelay();
+    /**
+    * Enables RTP stream.
+    * @param local the SDP message generated by the local UA.
+    * @param remote the SDP message generated by the remote UA.
+    * @warning It is necessary to call getSdpOffer/getSdpAnswer prior to init(...)
+    * @warning so that the internal SDP media line index is set properly.
+    */
+    virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
-  /** enable or disable transparent RTP seqno for relay */
-  void setRtpRelayTransparentSeqno(bool transparent);
+    void createSrtpConnection(bool dtls_server);
 
-  /** enable or disable transparent SSRC seqno for relay */
-  void setRtpRelayTransparentSSRC(bool transparent);
+    /** set the RTP stream on hold */
+    void setOnHold(bool on_hold);
 
-  /** enable or disable filtering of RTP DTMF for relay */
-  void setRtpRelayFilterRtpDtmf(bool filter);
+    /** get whether RTP stream is on hold  */
+    bool getOnHold();
 
-  /** enable or disable timestamp aligning for relay */
-  void setRtpRelayTimestampAligning(bool enable_aligning);
+    /** setter for monitor_rtp_timeout */
+    void setMonitorRTPTimeout(bool m) { monitor_rtp_timeout = m; }
+    /** getter for monitor_rtp_timeout */
+    bool getMonitorRTPTimeout() { return monitor_rtp_timeout; }
 
-  /** enable or disable relay of RTP DTMF in active state */
-  void setRtpForceRelayDtmf(bool relay);
+    /*
+    * clear RTP timeout to current time
+    */
+    void clearRTPTimeout();
 
-  /** enable or disable relay of CN payload */
-  void setRtpForceRelayCN(bool relay);
+    /** set relay stream for  RTP relaying */
+    void setRelayStream(AmRtpStream* stream);
 
-  /** enable or disable endless symmetric rtp switching */
-  void setSymmetricRtpEndless(bool endless);
+    /** set relay payloads for  RTP relaying */
+    void setRelayPayloads(const PayloadMask &_relay_payloads);
+    void setRelayPayloadMap(const PayloadRelayMap & relay_map);
 
-  /** enable or disable ignore RTCP packets for symmetric rtp */
-  void setSymmetricRtpIgnoreRTCP(bool ignore);
+    /** ensable RTP relaying through relay stream */
+    void enableRtpRelay();
 
-  /** enable or disable initial rtp ping on stream initialization.
-	  also it will set mark for all packets to zero */
-  void setRtpPing(bool enable);
+    /** disable RTP relaying through relay stream */
+    void disableRtpRelay();
 
-  /** set dead rtp time for stream */
-  void setRtpTimeout(unsigned int timeout);
+    /** enable raw UDP relaying through relay stream */
+    void enableRawRelay();
 
-  /** get dead rtp time */
-  unsigned int getRtpTimeout();
+    /** disable raw UDP relaying through relay stream */
+    void disableRawRelay();
 
-  /** remove from RTP receiver */
-  void stopReceiving();
+    /** enable or disable transparent RTP seqno for relay */
+    void setRtpRelayTransparentSeqno(bool transparent);
 
-  /** (re-)insert into RTP receiver */
-  void resumeReceiving();
+    /** enable or disable transparent SSRC seqno for relay */
+    void setRtpRelayTransparentSSRC(bool transparent);
 
-  /** Quick hack to assign existing stream to another session. The stream should
-   * not be reinitialised implicitly (it might be used for media traffic
-   * already). */
-  void changeSession(AmSession *_s) { session = _s; }
+    /** enable or disable filtering of RTP DTMF for relay */
+    void setRtpRelayFilterRtpDtmf(bool filter);
 
-  /** set destination for logging all received/sent RTP and RTCP packets */
-  void setLogger(msg_logger *_logger);
-  void setSensor(msg_sensor *_sensor);
+    /** enable or disable timestamp aligning for relay */
+    void setRtpRelayTimestampAligning(bool enable_aligning);
 
-  void setForceBuffering(bool buffering) { force_buffering = buffering; }
+    /** enable or disable relay of RTP DTMF in active state */
+    void setRtpForceRelayDtmf(bool relay);
 
-  void debug();
-  virtual void getInfo(AmArg &ret);
+    /** enable or disable relay of CN payload */
+    void setRtpForceRelayCN(bool relay);
+
+    /** enable or disable endless symmetric rtp switching */
+    void setSymmetricRtpEndless(bool endless);
+
+    /** enable or disable ignore RTCP packets for symmetric rtp */
+    void setSymmetricRtpIgnoreRTCP(bool ignore);
+
+    /** enable or disable initial rtp ping on stream initialization.
+      also it will set mark for all packets to zero */
+    void setRtpPing(bool enable);
+
+    /** set dead rtp time for stream */
+    void setRtpTimeout(unsigned int timeout);
+
+    /** get dead rtp time */
+    unsigned int getRtpTimeout();
+
+    /** remove from RTP receiver */
+    void stopReceiving();
+
+    /** (re-)insert into RTP receiver */
+    void resumeReceiving();
+
+    /** Quick hack to assign existing stream to another session. The stream should
+    * not be reinitialised implicitly (it might be used for media traffic
+    * already). */
+    void changeSession(AmSession *_s) { session = _s; }
+
+    /** set destination for logging all received/sent RTP and RTCP packets */
+    void setLogger(msg_logger *_logger);
+    void setSensor(msg_sensor *_sensor);
+
+    void setForceBuffering(bool buffering) { force_buffering = buffering; }
+
+    void debug();
+    virtual void getInfo(AmArg &ret);
 };
-
-#endif
 
 // Local Variables:
 // mode:C++
 // End:
-

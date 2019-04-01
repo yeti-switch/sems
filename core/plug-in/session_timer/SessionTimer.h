@@ -49,25 +49,10 @@ class AmTimeoutEvent;
 
 /* Session Timer default configuration: */
 #define DEFAULT_ENABLE_SESSION_TIMER 1
-#define SESSION_EXPIRES              120  // seconds
-#define MINIMUM_TIMER                90   // seconds
+#define SESSION_EXPIRES              60  // seconds
+#define MINIMUM_TIMER                5   // seconds
 
 #define MAXIMUM_TIMER                900   // seconds - 15 min
-
-/** \brief Factory of the session timer event handler */
-class SessionTimerFactory: public AmSessionEventHandlerFactory
-{
-  bool checkSessionExpires(const AmSipRequest& req, AmConfigReader& cfg);
-
- public:
-  SessionTimerFactory(const string& name)
-    : AmSessionEventHandlerFactory(name) {}
-
-  int onLoad();
-  bool onInvite(const AmSipRequest& req, AmConfigReader& cfg);
-
-  AmSessionEventHandler* getHandler(AmSession* s);
-};
 
 /** \brief config for the session timer */
 class AmSessionTimerConfig
@@ -82,18 +67,23 @@ class AmSessionTimerConfig
 
   unsigned int MaximumTimer;
 
+  bool HaveRefreshMethod;
+  AmSession::SessionRefreshMethod RefreshMethod;
+
+  bool                 Accept501Reply;
+
 public:
   AmSessionTimerConfig();
   ~AmSessionTimerConfig();
-  
+
 
   /** Session Timer: Enable Session Timer?
       returns 0 on invalid value */
   int setEnableSessionTimer(const string& enable);
-  /** Session Timer: Setter for Desired Session-Expires, 
+  /** Session Timer: Setter for Desired Session-Expires,
       returns 0 on invalid value */
   int setSessionExpires(const string& se);
-  /** Session Timer: Setter for Minimum Session-Expires, 
+  /** Session Timer: Setter for Minimum Session-Expires,
       returns 0 on invalid value */
   int setMinimumTimer(const string& minse);
 
@@ -106,8 +96,31 @@ public:
   unsigned int getSessionExpires() const { return SessionExpires; }
   unsigned int getMinimumTimer() const { return MinimumTimer; }
   unsigned int getMaximumTimer() const { return MaximumTimer; }
+  bool getAccept501Reply() const { return Accept501Reply; }
+  bool haveRefreshMethod() const { return HaveRefreshMethod; }
+  AmSession::SessionRefreshMethod getRefreshMethod() { return RefreshMethod; }
 
+  int readFromConfig(const string& cfg);
   int readFromConfig(AmConfigReader& cfg);
+};
+
+/** \brief Factory of the session timer event handler */
+class SessionTimerFactory: public AmSessionEventHandlerFactory,
+                           public AmConfigFactory
+{
+  AmSessionTimerConfig cfg;
+  bool checkSessionExpires(const AmSipRequest& req, AmConfigReader& cfg);
+
+  SessionTimerFactory(const string& name)
+    : AmSessionEventHandlerFactory(name), AmConfigFactory(name) {}
+ public:
+  DECLARE_FACTORY_INSTANCE(SessionTimerFactory);
+
+  int configure(const std::string & config);
+  int onLoad();
+  bool onInvite(const AmSipRequest& req, AmConfigReader& cfg);
+
+  AmSessionEventHandler* getHandler(AmSession* s);
 };
 
 struct SIPRequestInfo;
@@ -155,7 +168,7 @@ protected:
   void onTimeoutEvent(AmTimeoutEvent* timeout_ev);
 
  public:
-  SessionTimer(AmSession*);
+  SessionTimer(AmSession*, const AmSessionTimerConfig&);
   virtual ~SessionTimer();
 
   /* @see AmSessionEventHandler */

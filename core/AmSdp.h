@@ -25,8 +25,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __SdpParser__
-#define __SdpParser__
+#pragma once
 
 #include <string>
 #include <map>
@@ -57,6 +56,10 @@ enum AddressType { AT_NONE=0, AT_V4, AT_V6 };
 enum MediaType { MT_NONE=0, MT_AUDIO, MT_VIDEO, MT_APPLICATION, MT_TEXT, MT_MESSAGE, MT_IMAGE };
 /** transport protocol */
 enum TransProt { TP_NONE=0, TP_RTPAVP, TP_RTPAVPF, TP_UDP, TP_RTPSAVP, TP_UDPTL, TP_RTPSAVPF, TP_UDPTLSRTPSAVP, TP_UDPTLSRTPSAVPF };
+/** srtp profile */
+enum CryptoProfile { CP_NONE=0, CP_AES128_CM_SHA1_80 = 1, CP_AES128_CM_SHA1_32 = 2, CP_F8128_HMAC_SHA1_80 = 4, CP_NULL_SHA1_80 = 5, CP_NULL_SHA1_32 = 6 };
+
+string transport_p_2_str(int tp);
 
 /** \brief c=... line in SDP*/
 struct SdpConnection
@@ -71,7 +74,9 @@ struct SdpConnection
   /** IP address */
   string address;
 
-  SdpConnection() : address(), addrType(AT_NONE), network(NT_OTHER) {
+  SdpConnection()
+    : network(NT_OTHER), addrType(AT_NONE)
+  {
       bzero(&ipv4, sizeof(struct sockaddr_in));
       bzero(&ipv6, sizeof(struct sockaddr_in));
   }
@@ -98,6 +103,53 @@ struct SdpOrigin
 
   bool operator == (const SdpOrigin& other) const;
 };
+
+/**
+ * \brief sdp crypto key info
+ *
+ * this binds together key, lifetime, mki
+ */
+struct SdpKeyInfo
+{
+    string key;
+    unsigned int lifetime;
+    unsigned short mki;
+
+    SdpKeyInfo() : lifetime(0), mki(0) {}
+
+    SdpKeyInfo(const string& key_, unsigned int lifetime_, unsigned short mki_)
+        : key(key_), lifetime(lifetime_), mki(mki_) {}
+
+    SdpKeyInfo(const SdpKeyInfo& key)
+        : key(key.key), lifetime(key.lifetime)
+        , mki(key.mki){}
+
+    string print() const;
+};
+
+/**
+ * \brief sdp crypto attrribute
+ *
+ * this binds together tag, crypto suite(profile), keys info(keys), session parameters(sp)
+ */
+struct SdpCrypto
+{
+    unsigned int tag;
+    CryptoProfile profile;
+    vector<SdpKeyInfo> keys;
+    vector<string> sp;
+
+    SdpCrypto() : tag(0), profile(CP_NONE) {}
+
+    SdpCrypto(const SdpCrypto& crypto)
+        : tag(crypto.tag), profile(crypto.profile)
+        , keys(crypto.keys), sp(crypto.sp){}
+
+    string print() const;
+
+    static CryptoProfile str2profile(string str);
+};
+
 /** 
  * \brief sdp payload
  *
@@ -180,27 +232,41 @@ struct SdpMedia
   unsigned int  port;
   unsigned int  nports;
   int           transport;
+  int           frame_size;
   SdpConnection conn; // c=
   Direction     dir;  // a=direction
+  Direction     setup;
   string        fmt;  // format in case proto != RTP/AVP or RTP/SAVP
 
   // sendrecv|sendonly|recvonly|inactive
   bool          send;
   bool          recv;
+  bool          has_mode_attribute;
 
   std::vector<SdpPayload> payloads;
+
+  std::vector<SdpCrypto> crypto;
 
   std::vector<SdpAttribute> attributes; // unknown attributes
 
   bool operator == (const SdpMedia& other) const;
 
-  SdpMedia() : conn(), dir(DirUndefined), type(MT_NONE), transport(TP_NONE), send(true), recv(true) {}
+  SdpMedia()
+    : type(MT_NONE),
+      transport(TP_NONE),
+      frame_size(20),
+      dir(DirUndefined),
+      setup(DirUndefined),
+      send(true),
+      recv(true),
+      has_mode_attribute(false)
+  {}
 
   /** pretty print */
   string debugPrint() const;
 
   static string type2str(int type);
-
+  static TransProt str2transport(string type);
   /**
    * Checks which payloads are compatible with the payload provider,
    * inserts them into the answer, compute send/recv attributes
@@ -208,6 +274,8 @@ struct SdpMedia
    */
   void calcAnswer(const AmPayloadProvider* payload_prov, 
 		  SdpMedia& answer) const;
+
+  void set_mode_if_missed(bool _send, bool _recv);
 };
 
 /**
@@ -239,7 +307,7 @@ class AmSdp
   /**
    * Find payload by name, return cloned object
    */
-  const SdpPayload *findPayload(const string& name) const;
+  vector<const SdpPayload*> findPayload(const string& name) const;
 
 public:
   // parsed SDP definition
@@ -249,6 +317,9 @@ public:
   string           uri;         // u=
   SdpConnection    conn;        // c=
   std::vector<SdpAttribute> attributes; // unknown session level attributes
+
+  bool send;
+  bool recv;
 
   std::vector<SdpMedia> media;  // m= ... [a=rtpmap:...]+
   //TODO: t= lines
@@ -271,7 +342,7 @@ public:
   void print(string& body) const;
 
   /** get telephone event payload */
-  const SdpPayload *telephoneEventPayload() const;
+  vector<const SdpPayload*> telephoneEventPayload() const;
 
   /**
    * Test if remote UA supports 'telefone_event'.
@@ -287,8 +358,6 @@ public:
 
   void getInfo(AmArg &ret);
 };
-
-#endif
 
 // Local Variables:
 // mode:C++

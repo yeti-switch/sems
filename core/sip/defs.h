@@ -83,7 +83,4 @@
 #define SIP_REPLY_TOO_MANY_HOPS         "Too Many Hops"
 #define SIP_REPLY_RINGING               "Ringing"
 
-#define RTCP_PAYLOAD_MIN 72
-#define RTCP_PAYLOAD_MAX 76
-
 #endif

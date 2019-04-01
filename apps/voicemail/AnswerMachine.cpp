@@ -26,7 +26,6 @@
 #include "AnswerMachine.h"
 #include "AmApi.h"
 #include "AmSession.h"
-#include "AmConfig.h"
 #include "AmMail.h"
 #include "AmUtils.h"
 #include "AmPlugIn.h"
@@ -69,7 +68,8 @@
 #define DEFAULT_TYPE "vm"
 #define DOMAIN_PROMPT_SUFFIX "-prompts"
 
-EXPORT_SESSION_FACTORY(AnswerMachineFactory,MOD_NAME);
+EXPORT_SESSION_FACTORY(AnswerMachineFactory);
+DEFINE_FACTORY_INSTANCE(AnswerMachineFactory, MOD_NAME);
 
 string AnswerMachineFactory::EmailAddress;
 string AnswerMachineFactory::RecFileExt;
@@ -359,7 +359,7 @@ int AnswerMachineFactory::loadEmailTemplates(const string& path)
 int AnswerMachineFactory::onLoad()
 {
   AmConfigReader cfg;
-  if(cfg.loadFile(add2path(AmConfig::ModConfigPath,1, MOD_NAME ".conf")))
+  if(cfg.loadFile(add2path(AmConfig.configs_path,1, MOD_NAME ".conf")))
     return -1;
 
   // get application specific global parameters

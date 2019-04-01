@@ -10,7 +10,6 @@
 #include "AmUtils.h"
 
 #include "SctpBusPDU.pb.h"
-#include "AmConfig.h"
 
 #include "AmSessionContainer.h"
 #include "AmEventDispatcher.h"
@@ -192,11 +191,11 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
 
     SctpBusPDU r;
 
-    if(!AmConfig::node_id) {
+    if(!AmConfig.node_id) {
         WARN("node_id is 0 (default value). this may cause not intended behavior");
     }
 
-    r.set_src_node_id(AmConfig::node_id);
+    r.set_src_node_id(AmConfig.node_id);
     r.set_src_session_id(e.src_session_id);
     r.set_dst_node_id(_id);
     r.set_dst_session_id(e.dst_session_id);
@@ -241,7 +240,7 @@ void SctpClientConnection::send(const SctpBusRawRequest &e)
 
     SctpBusPDU r;
 
-    r.set_src_node_id(AmConfig::node_id);
+    r.set_src_node_id(AmConfig.node_id);
     r.set_src_session_id(e.src_session_id);
     r.set_dst_node_id(e.dst_id);
     r.set_dst_session_id(e.dst_session_id);
@@ -289,7 +288,7 @@ void SctpClientConnection::send(const SctpBusRawReply &e)
     SctpBusPDU r;
 
     r.set_type(SctpBusPDU::REPLY);
-    r.set_src_node_id(AmConfig::node_id);
+    r.set_src_node_id(AmConfig.node_id);
     r.set_src_session_id(e.req.dst_session_id);
     r.set_dst_node_id(e.req.src_id);
     r.set_dst_session_id(e.req.src_session_id);
@@ -338,7 +337,7 @@ int SctpClientConnection::on_timer(time_t now)
 
     if(state==Closed
        && timerisset(&last_connect_attempt)
-       && now > last_connect_attempt.tv_sec)
+       && now > last_connect_attempt.tv_sec + reconnect_interval)
     {
         DBG("reconnect timeout for not connected %s:%d",
             am_inet_ntop(&addr).c_str(),am_get_port(&addr));

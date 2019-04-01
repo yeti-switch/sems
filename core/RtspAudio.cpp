@@ -2,7 +2,7 @@
 #include "AmSessionContainer.h"
 #include "AmSession.h"
 #include "AmAudio.h"
-#include "AmConfig.h"
+#include "AmUtils.h"
 
 #include "RtspClient.h"
 #include "RtspAudio.h"
@@ -15,8 +15,12 @@ static const int RTP_TIMEOUT_SEC =  1;
 
 
 RtspAudio::RtspAudio(AmSession* _s, const string &uri)
-    :  streamid(-1), md(0), session(_s), agent(RtspClient::instance()),
-      AmRtpAudio(_s, RtspClient::instance()->getRtpInterface() )
+  : AmRtpAudio(_s,
+               RtspClient::instance()->getRtpInterface(),
+               RtspClient::instance()->getRtpAddr()),
+    agent(RtspClient::instance()),
+    md(0),
+    streamid(-1)
 {
     id = agent->addStream(*this);
 
@@ -59,10 +63,12 @@ void RtspAudio::open(const string& _uri)
 **/
 void RtspAudio::teardown()
 {
-    if (state != Playing)
+    if (state == Ready)
         return;
 
-    agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
+    if(state == Playing) {
+        last_sent_cseq = agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
+    }
 
     state = Ready;
 }
@@ -70,17 +76,18 @@ void RtspAudio::teardown()
 
 void RtspAudio::describe()
 {
-    agent->RtspRequest(RtspMsg(DESCRIBE, uri, id));
+    state = Progress;
+    last_sent_cseq = agent->RtspRequest(RtspMsg(DESCRIBE, uri, id));
 }
 
 
 void RtspAudio::setup(int l_port)
-{
+    {
     struct RtspMsg msg = RtspMsg(SETUP, uri, id) ;
 
     msg.header[H_Transport] = "RTP/AVP;unicast;client_port=" + int2str(l_port)+"-"+int2str(l_port + 1);
 
-    agent->RtspRequest(msg);
+    last_sent_cseq = agent->RtspRequest(msg);
 }
 
 
@@ -94,7 +101,7 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     try {
         initRtpAudio(msg.r_rtp_port);
 
-        agent->RtspRequest(RtspMsg(PLAY, uri, id));
+        last_sent_cseq = agent->RtspRequest(RtspMsg(PLAY, uri, id));
 
         play();
 
@@ -103,6 +110,46 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     }
 }
 
+
+bool RtspAudio::initSdpAnswer()
+{
+    if(offer.media.empty()) {
+        ERROR("empty offer");
+        return false;
+    }
+
+    SdpMedia& offer_media = offer.media.front();
+    if(offer_media.type != MT_AUDIO || offer_media.transport != TP_RTPAVP) {
+        ERROR("unsupported media format");
+        return false;
+    }
+
+    if(offer_media.port == 0) {
+        ERROR("offer port is 0");
+        return false;
+    }
+
+    answer.version = 0;
+    answer.origin.user = "sems";
+    answer.sessionName = "sems";
+    answer.conn.network = NT_IN;
+    answer.conn.addrType = offer.conn.address.empty() ? AT_V4 : offer.conn.addrType;
+    answer.conn.address = agent->localMediaIP();
+
+    answer.media.clear();
+    answer.media.push_back(SdpMedia());
+
+    SdpMedia &answer_media = answer.media.back();
+
+    AmRtpAudio::getSdpAnswer(0, offer_media, answer_media);
+
+    if(answer_media.payloads.empty()) {
+        ERROR("no compatible payload");
+        return false;
+    }
+
+    return true;
+}
 
 void RtspAudio::initRtpAudio(unsigned short int  r_rtp_port)
 {
@@ -114,8 +161,11 @@ void RtspAudio::initRtpAudio(unsigned short int  r_rtp_port)
     if (!offer.media[0].port && r_rtp_port) // Got SDP m=audio 0, set port from header Transport: server_port=xxxxx
         offer.media[0].port = r_rtp_port;
 
-    session->getSdpAnswer(offer, answer);
-    AmRtpAudio::getSdpAnswer(0, answer.media[0], offer.media[0]);
+    if(!initSdpAnswer()) {
+        ERROR("failed to init SDP answer");
+        return;
+    }
+
     AmRtpAudio::init(answer, offer);
 }
 
@@ -131,17 +181,16 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 
     //INFO("******* SDP offer body:\n%s\n", sdp_body.c_str());
 
-    session->getSdpAnswer(offer, answer);
+    if(!initSdpAnswer()) {
+        ERROR("failed to init SDP answer");
+        throw AmSession::Exception(488, "failed to init SDP answer");
+    }
 
     answer.print(sdp_body);
 
     //INFO("******* SDP answer body:\n%s\n", sdp_body.c_str());
 
-    if(offer.media[0].port) // Got SDP m=audio <port>
-    {
-        AmRtpAudio::getSdpAnswer(0, answer.media[0], offer.media[0]);
-        AmRtpAudio::init(answer, offer);
-    }
+    AmRtpAudio::init(answer, offer);
 
     return getLocalPort();
 }
@@ -165,7 +214,7 @@ void RtspAudio::onRtpTimeout()
 }
 
 
-void RtspAudio::onRtspPlayNotify(const RtspMsg &msg) {
+void RtspAudio::onRtspPlayNotify(const RtspMsg &) {
     DBG("onRtspPlayNotify() id: %ld, streamid: %d, uri: %s",
         id,streamid,uri.c_str());
     state = Ready;
@@ -176,6 +225,18 @@ void RtspAudio::onRtspPlayNotify(const RtspMsg &msg) {
 void RtspAudio::onRtspMessage(const RtspMsg &msg)
 {
     RtspMsg::HeaderIterator it;
+
+    if(msg.type == RTSP_REPLY) {
+        if(last_sent_cseq > msg.cseq) {
+            DBG("onRtspMessage(): ignore reply with obsolete cseq: %d (last_sent_cseq: %d)",
+                msg.cseq,last_sent_cseq);
+            return;
+        }
+        if(state == Ready) {
+            DBG("onRtspMessage(): ignore reply received in Ready state");
+            return;
+        }
+    }
 
     if (msg.code != 200) {
         session->postEvent(new RtspNoFileEvent(uri));

@@ -94,6 +94,7 @@ class AmSipRequest : public _AmSipMsgInDlg
  public:
   string method;
 
+  string scheme;
   string user;
   string domain;
   string r_uri;
@@ -110,6 +111,7 @@ class AmSipRequest : public _AmSipMsgInDlg
   int max_forwards;
 
   unsigned short local_if;
+  unsigned short addr_if;
 
   AmSipRequest();
   ~AmSipRequest() { }

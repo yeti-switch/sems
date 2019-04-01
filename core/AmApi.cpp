@@ -44,6 +44,11 @@ AmDynInvokeFactory::AmDynInvokeFactory(const string& name)
 {
 }
 
+AmConfigFactory::AmConfigFactory(const string& name)
+  : AmPluginFactory(name)
+{
+}
+
 AmSessionFactory::AmSessionFactory(const string& name)
   : AmPluginFactory(name)
 {
@@ -94,39 +99,39 @@ void AmSessionFactory::onOoDRequest(const AmSipRequest& req)
 
 void AmSessionFactory::replyOptions(const AmSipRequest& req) {
     string hdrs;
-    if (!AmConfig::OptionsTranscoderInStatsHdr.empty()) {
+    if (!AmConfig.options_transcoder_in_stats_hdr.empty()) {
       string usage;
       B2BMediaStatistics::instance()->reportCodecReadUsage(usage);
 
-      hdrs += AmConfig::OptionsTranscoderInStatsHdr + ": ";
+      hdrs += AmConfig.options_transcoder_in_stats_hdr + ": ";
       hdrs += usage;
       hdrs += CRLF;
     }
-    if (!AmConfig::OptionsTranscoderOutStatsHdr.empty()) {
+    if (!AmConfig.options_transcoder_out_stats_hdr.empty()) {
       string usage;
       B2BMediaStatistics::instance()->reportCodecWriteUsage(usage);
 
-      hdrs += AmConfig::OptionsTranscoderOutStatsHdr + ": ";
+      hdrs += AmConfig.options_transcoder_out_stats_hdr + ": ";
       hdrs += usage;
       hdrs += CRLF;
     }
 
     // Basic OPTIONS support
-    if (AmConfig::OptionsSessionLimit &&
-	(AmSession::getSessionNum() >= AmConfig::OptionsSessionLimit)) {
+    if (AmConfig.options_session_limit &&
+	(AmSession::getSessionNum() >= AmConfig.options_session_limit)) {
       // return error code if near to overload
       AmSipDialog::reply_error(req,
-          AmConfig::OptionsSessionLimitErrCode, 
-          AmConfig::OptionsSessionLimitErrReason,
+          AmConfig.options_session_limit_err_code, 
+          AmConfig.options_session_limit_err_reason,
           hdrs);
       return;
     }
 
-    if (AmConfig::ShutdownMode) {
+    if (AmConfig.shutdown_mode) {
       // return error code if in shutdown mode
       AmSipDialog::reply_error(req,
-          AmConfig::ShutdownModeErrCode,
-          AmConfig::ShutdownModeErrReason,
+          AmConfig.shutdown_mode_err_code,
+          AmConfig.shutdown_mode_err_reason,
           hdrs);
       return;
     }

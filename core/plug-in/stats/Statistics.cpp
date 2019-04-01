@@ -29,7 +29,8 @@
 #include <string>
 using std::string;
 
-EXPORT_PLUGIN_FACTORY(StatsFactory,MOD_NAME);
+EXPORT_PLUGIN_FACTORY(StatsFactory);
+DEFINE_FACTORY_INSTANCE(StatsFactory, MOD_NAME);
 
 StatsFactory::StatsFactory(const std::string& _app_name)
   : AmPluginFactory(_app_name)

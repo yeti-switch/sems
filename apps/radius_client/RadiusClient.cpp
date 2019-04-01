@@ -1,6 +1,7 @@
 #include "RadiusClient.h"
 
 #include "AmSessionContainer.h"
+#include "AmUtils.h"
 #include "log.h"
 
 #define MOD_NAME "radius_client"
@@ -11,7 +12,7 @@ using std::vector;
 #define EPOLL_MAX_EVENTS    2048
 #define TIMEOUT_CHECKING_INTERVAL 10000 //microseconds
 
-EXPORT_PLUGIN_CLASS_FACTORY(RadiusClient, MOD_NAME);
+EXPORT_PLUGIN_CLASS_FACTORY(RadiusClient);
 
 #define SHOW_METHOD_MACRO(container,container_type,method) \
     ret.assertArray(); \

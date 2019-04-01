@@ -35,6 +35,7 @@
 
 #include <string>
 #include <list>
+#include "AmLCContainers.h"
 using std::string;
 using std::list;
 
@@ -50,7 +51,9 @@ class udp_trsp_socket;
 class udp_trsp;
 
 class tcp_server_socket;
-class tcp_trsp;
+class tls_server_socket;
+class trsp_worker;
+class trsp;
 
 class _SipCtrlInterface:
     public sip_ua
@@ -74,15 +77,27 @@ class _SipCtrlInterface:
     unsigned short    nr_tcp_sockets;
     tcp_server_socket** tcp_sockets;
 
-    unsigned short    nr_tcp_servers;
-    tcp_trsp**        tcp_servers;
+    unsigned short    nr_tls_sockets;
+    tls_server_socket** tls_sockets;
+
+    unsigned short    nr_trsp_workers;
+    trsp_worker** trsp_workers;
+    
+    trsp* trsp_server;
+
 
     int alloc_udp_structs();
-    int init_udp_servers(int if_num);
+    int init_udp_sockets(unsigned short if_num, unsigned short addr_num, SIP_info& info);
+    int init_udp_servers();
 
+    int alloc_trsp_worker_structs();
+    int init_trsp_workers();
+    
     int alloc_tcp_structs();
-    int init_tcp_servers(int if_num);
-
+    int init_tcp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
+    
+    int alloc_tls_structs();
+    int init_tls_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info);
 public:
 
     static string outbound_host;
@@ -106,10 +121,10 @@ public:
      *            its ticket is written into req.tt.
      */
     static int send(AmSipRequest &req, const string& dialog_id,
-		    const string& next_hop = "", int outbound_interface = -1,
-			unsigned int flags = 0, msg_logger* logger = NULL, msg_sensor *sensor = NULL,
+		    const string& next_hop, int outbound_interface,
+			unsigned int flags, sip_target_set* target_set_override,
+            msg_logger* logger = NULL, msg_sensor *sensor = NULL,
 			sip_timers_override *timers_override = NULL,
-			sip_target_set* target_set_override = NULL,
 			int redirects_allowed = -1);
 
     /**

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AmApi.h"
+#include "AmUtils.h"
 
 template<class C>
 class RpcTreeHandler

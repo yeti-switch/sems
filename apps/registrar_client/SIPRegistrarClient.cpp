@@ -43,8 +43,8 @@
 #define TIMEOUT_CHECKING_INTERVAL 200000 //microseconds
 #define EPOLL_MAX_EVENTS    2048
 
-//EXPORT_SIP_EVENT_HANDLER_FACTORY(SIPRegistrarClient, MOD_NAME);
-//EXPORT_PLUGIN_CLASS_FACTORY(SIPRegistrarClient, MOD_NAME);
+EXPORT_PLUGIN_CLASS_FACTORY(SIPRegistrarClient);
+EXPORT_PLUGIN_CONF_FACTORY(SIPRegistrarClient);
 
 static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &ret, const RegShaper::timep &now) {
     AmArg r;
@@ -100,13 +100,6 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     ret.push(r);
 }
 
-extern "C" void* plugin_class_create()
-{
-    SIPRegistrarClient* reg_c = SIPRegistrarClient::instance();
-    assert(dynamic_cast<AmDynInvokeFactory*>(reg_c));
-    return (AmPluginFactory*)reg_c;
-}
-
 //-----------------------------------------------------------
 SIPRegistrarClient* SIPRegistrarClient::_instance=0;
 
@@ -119,12 +112,50 @@ SIPRegistrarClient* SIPRegistrarClient::instance()
 }
 
 SIPRegistrarClient::SIPRegistrarClient(const string& name)
-  : AmEventFdQueue(this),
+  : AmDynInvokeFactory(MOD_NAME),
+    AmConfigFactory(MOD_NAME),
+    AmEventFdQueue(this),
     uac_auth_i(NULL),
-    AmDynInvokeFactory(MOD_NAME),
     stopped(false),
     default_expires(DEFAULT_EXPIRES)
 { }
+
+int SIPRegistrarClient::configure(const std::string& config)
+{
+    cfg_opt_t opt[] = {
+        CFG_INT(CFG_OPT_NAME_SHAPER_MIN_INTERVAL, 0, CFGF_NODEFAULT),
+        CFG_INT(CFG_OPT_NAME_DEFAULT_EXPIRES, DEFAULT_EXPIRES, CFGF_NONE),
+        CFG_END()
+    };
+    cfg_t *cfg = cfg_init(opt, CFGF_NONE);
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        return -1;
+    }
+
+    if(cfg_size(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL)) {
+        int i = cfg_getint(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL);
+        if(i) {
+            DBG("set shaper min interval to %dmsec",i);
+            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
+                WARN("shaper min interval %dmsec is less than timer interval %dmsec. "
+                     "set it to timer interval",
+                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
+                i = TIMEOUT_CHECKING_INTERVAL/1000;
+            }
+            shaper.set_min_interval(i);
+        }
+    }
+    default_expires = cfg_getint(cfg, CFG_OPT_NAME_DEFAULT_EXPIRES);
+    cfg_free(cfg);
+    return 0;
+}
 
 void SIPRegistrarClient::run()
 {
@@ -249,7 +280,7 @@ void SIPRegistrarClient::checkTimeouts()
     reg_mut.unlock();
 }
 
-bool SIPRegistrarClient::configure()
+int SIPRegistrarClient::onLoad()
 {
     if((epoll_fd = epoll_create(3)) == -1){
         ERROR("epoll_create call failed");
@@ -262,34 +293,6 @@ bool SIPRegistrarClient::configure()
     timer.set(TIMEOUT_CHECKING_INTERVAL);
     timer.link(epoll_fd);
 
-    AmConfigReader cfg;
-    if(cfg.loadFile(AmConfig::ModConfigPath + string(MOD_NAME ".conf"))) {
-        DBG("missed or wrong configuration file. shaper will be disabled by default");
-        return true;
-    }
-    if(cfg.hasParameter(CFG_OPT_NAME_SHAPER_MIN_INTERVAL)) {
-        int i = cfg.getParameterInt(CFG_OPT_NAME_SHAPER_MIN_INTERVAL);
-        if(i) {
-            DBG("set shaper min interval to %dmsec",i);
-            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
-                WARN("shaper min interval %dmsec is less than timer interval %dmsec. "
-                     "set it to timer interval",
-                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
-                i = TIMEOUT_CHECKING_INTERVAL/1000;
-            }
-            shaper.set_min_interval(i);
-        }
-    }
-    default_expires = cfg.getParameterInt(CFG_OPT_NAME_DEFAULT_EXPIRES,DEFAULT_EXPIRES);
-    return true;
-}
-
-int SIPRegistrarClient::onLoad()
-{
-    if(!instance()->configure()) {
-        ERROR("registrar_client configuration error");
-        return -1;
-    }
     instance()->start();
     return 0;
 }

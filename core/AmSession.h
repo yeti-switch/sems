@@ -157,6 +157,7 @@ protected:
 
   /** Local IP interface to be used for RTP streams */
   int rtp_interface;
+  int rtp_addr;
 
   /** Session event handlers (ex: session timer, UAC auth, etc...) */
   vector<AmSessionEventHandler*> ev_handlers;
@@ -647,13 +648,15 @@ public:
 
   int getRtpInterface();
   void setRtpInterface(int _rtp_interface);
+  int getRtpAddr();
+  int setRtpAddr(int _rtp_addr);
 };
 
 inline AmRtpAudio* AmSession::RTPStream() {
   if (NULL == _rtp_str.get()) {
     DBG("creating RTP stream instance for session [%p]\n", 
 	this);
-    _rtp_str.reset(new AmRtpAudio(this,rtp_interface));
+    _rtp_str.reset(new AmRtpAudio(this, rtp_interface, rtp_addr));
   }
   return _rtp_str.get();
 }
