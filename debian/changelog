@@ -1,3 +1,12 @@
+sems (1.8.18-1) stable; urgency=low
+
+  * code rebase from merge-base with master
+  * AmRtpStream: fix relay RTP timestamp aligning
+  * AmSipDialog::onRxReqSanity: check pending_invites for UPDATE method
+  * sems-dev: fix libbotan headers
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Apr 2019 15:31:45 +0300
+
 sems (1.8.17-1) stable; urgency=low
 
   * modules build/segfault fixes
