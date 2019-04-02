@@ -510,6 +510,7 @@ int AmRtpStream::sendmsg(unsigned char* buf, int size)
 int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
 
 {
+  if(l_if < 0 || laddr_if < 0) return 0;
 
   MEDIA_info* iface = AmConfig.media_ifs[l_if].proto_info[laddr_if];
   unsigned int sys_if_idx = iface->net_if_idx;
@@ -2248,6 +2249,8 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     void *buf;
     struct timeval now;
     unsigned int len;
+
+    if(l_if < 0 || laddr_if < 0) return;
 
     gettimeofday(&now, nullptr);
 
