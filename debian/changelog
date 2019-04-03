@@ -1,3 +1,9 @@
+sems (1.8.18-2) stable; urgency=low
+
+  * AmRtpStream::send, AmRtpStream::rtcp_send_report: skip if l_if,l_addr not set. fixes segfault on RTCP report timer
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Apr 2019 14:45:30 +0300
+
 sems (1.8.18-1) stable; urgency=low
 
   * code rebase from merge-base with master
