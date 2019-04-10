@@ -1463,7 +1463,7 @@ int _resolver::resolve_targets(
                 sa_ssl->mac = sockaddr_ssl::MAC_SHA1;
             }
             targets->dest_list.push_back(t);
-        } while(h_dns.next_ip(&t.ss, Dualstack) == 0);
+        } while(h_dns.next_ip(&t.ss, Dualstack) > 0);
     } //for it: dest_list
 
     return 0;
