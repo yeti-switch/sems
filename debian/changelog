@@ -1,3 +1,9 @@
+sems (1.8.18-4) stable; urgency=low
+
+  * DNS resolver fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 12 Apr 2019 12:50:26 +0300
+
 sems (1.8.18-3) stable; urgency=low
 
   * fix infinite loop in _ resolver::resolve_targets
