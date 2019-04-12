@@ -311,7 +311,7 @@ int AmBasicSipDialog::getOutboundIf()
   return if_it->second;
 
  error:
-  WARN("Error while computing outbound interface: default interface will be used instead.");
+  DBG("Error while computing outbound interface: default interface will be used instead.");
   setOutboundInterface(0);
   setOutboundTransport(0);
   return 0;
