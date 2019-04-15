@@ -1172,8 +1172,9 @@ void AmB2BSession::computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask
                         enable = true;
                         break;
                     }
-                } else if(local_payload.encoding_name == other_remote_payload.encoding_name &&
-                          local_payload.clock_rate ==  other_remote_payload.clock_rate)
+                } else if(local_payload.clock_rate == other_remote_payload.clock_rate &&
+                          0==strcasecmp(local_payload.encoding_name.c_str(),
+                                        other_remote_payload.encoding_name.c_str()))
                 {
                     mask.set(static_cast<unsigned char>(other_remote_payload.payload_type));
                     if(other_remote_payload.payload_type != local_payload.payload_type) {
