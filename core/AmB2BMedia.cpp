@@ -401,7 +401,10 @@ bool AudioStreamData::initStream(PlayoutType playout_type,
         // to be relayed this needs not to be an error)
     }
     stream->setOnHold(muted);
-    stream->setReceiving(receiving);
+
+    // NOTE: commented out because of incorrect overriding of the stream state negotiated by SDP
+    // this change breaks setReceiving(bool receiving_a, bool receiving_b) behavior
+    // stream->setReceiving(receiving);
 
     return initialized;
 }
