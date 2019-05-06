@@ -1,3 +1,9 @@
+sems (1.8.18-6) stable; urgency=low
+
+  * fix false RTP timeout for passive stream in sendonly mode
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 06 May 2019 13:32:57 +0300
+
 sems (1.8.18-5) stable; urgency=low
 
   * 975b64cc AmB2BSession::computeRelayMask: ignore encoding_name case on matching

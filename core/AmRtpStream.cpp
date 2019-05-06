@@ -1422,7 +1422,9 @@ int AmRtpStream::getDefaultPT()
 
 int AmRtpStream::nextPacket(AmRtpPacket*& p)
 {
-    if (!receiving && !passive)
+    //if (!receiving && !passive)
+    // ignore 'passive' flag to avoid false RTP timeout for passive stream in sendonly mode
+    if (!receiving)
         return RTP_EMPTY;
 
     struct timeval now;
