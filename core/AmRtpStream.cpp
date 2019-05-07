@@ -1281,8 +1281,8 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         if (force_receive_dtmf) recvDtmfPacket(p);
 
         if (relay_raw ||
-            (p->payload == getLocalTelephoneEventPT()
-             && (force_relay_dtmf || !active)) ||
+            /*(p->payload == getLocalTelephoneEventPT()
+             && (force_relay_dtmf || !active)) ||*/
             //can relay
             (relay_payloads.get(p->payload) &&
              nullptr != relay_stream) ||
