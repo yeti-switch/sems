@@ -1,3 +1,9 @@
+sems (1.8.18-8) stable; urgency=low
+
+  * AmRtpStream: disable force_relay_dtmf processing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 07 May 2019 16:48:11 +0300
+
 sems (1.8.18-7) stable; urgency=low
 
   * fix incorrect overriding of the stream receiving flag negotiated by SDP
