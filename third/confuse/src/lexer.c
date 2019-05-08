@@ -540,6 +540,10 @@ const char *cfg_get_current_buf_ptr()
     return yy_c_buf_p;
 }
 
+const char *cfg_get_current_buf()
+{
+    return YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
+}
 /* Flag which is used to allow yywrap()'s to do buffer switches
  * instead of setting up a fresh yyin.  A bit of a hack ...
  */
@@ -1586,6 +1590,8 @@ ECHO;
 			YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
 			YY_CURRENT_BUFFER_LVALUE->yy_buffer_status = YY_BUFFER_NORMAL;
 			}
+        else
+            cfg_endbuffer(cfg, YY_CURRENT_BUFFER_LVALUE->yy_ch_buf);
 
 		/* Note that here we test for yy_c_buf_p "<=" to the position
 		 * of the first EOB in the buffer, since yy_c_buf_p will
