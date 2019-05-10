@@ -1028,8 +1028,8 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
     for(int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_GLOBAL_NAME, i);
         std::string name = module->title;
-        printf("raw section value for module '%s':\n---%.*s\n---\n",
-              module->title, (int)module->raw_info->raw_len, module->raw_info->raw);
+        /*printf("raw section value for module '%s':\n---%.*s\n---\n",
+              module->title, (int)module->raw_info->raw_len, module->raw_info->raw);*/
         config->modules.push_back(name);
         config->module_config.insert(std::make_pair(name, module->raw_info->raw));
         config->rtld_global_plugins.insert(name + ".so");
