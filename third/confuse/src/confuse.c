@@ -1010,6 +1010,73 @@ DLLIMPORT void cfg_error(cfg_t *cfg, const char *fmt, ...)
 	va_end(ap);
 }
 
+//type parameter of cfg_raw_update function
+#define INCLUDE_FILE    0
+#define BEGIN_FUNCTION  1
+#define END_DATA        2
+#define BEGIN_DATA      3
+
+void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
+{
+    size_t buflen = 0;
+    char* data = 0;
+    struct cfg_raw_t* raw_info = 0;
+    switch(type)
+    {
+    case INCLUDE_FILE:
+        cfg->raw_info->ptr = raw;
+        raw_info = cfg->raw_info;
+    case BEGIN_DATA:
+        cfg->raw_info = malloc(sizeof(struct cfg_raw_t));
+        cfg->raw_info->raw = malloc(1);
+        cfg->raw_info->raw_len = 0;
+        cfg->raw_info->previous = raw_info;
+        cfg->raw_info->ptr = cfg_get_current_buf_ptr();
+        cfg->raw_info->cur_buf = cfg_get_current_buf();
+        break;
+    case END_DATA:
+        while(cfg->raw_info->cur_buf != cfg_get_current_buf()) {
+            buflen = cfg->raw_info->raw_len + cfg->raw_info->previous->raw_len;
+            printf("%zu\n", buflen);
+            raw_info = cfg->raw_info->previous;
+            data = malloc(buflen);
+            strncpy(data, raw_info->raw, raw_info->raw_len);
+            strncpy(data + raw_info->raw_len, cfg->raw_info->raw, cfg->raw_info->raw_len);
+            raw_info->raw_len = buflen;
+            raw_info->raw = data;
+            free(cfg->raw_info);
+            cfg->raw_info = raw_info;
+        }
+    case BEGIN_FUNCTION:
+        raw_info = cfg->raw_info;
+        raw_info = cfg->raw_info;
+        if(raw == cfg->raw_info->ptr) // append full buffer(include file)
+            buflen = strlen(raw);
+        else if(raw > cfg->raw_info->ptr) //append string from current buffer
+            buflen = raw - cfg->raw_info->ptr - 1; 
+        else //end current buffer
+            buflen = cfg_get_current_buf_ptr() - cfg->raw_info->ptr - 1;
+        buflen += cfg->raw_info->raw_len;
+        printf("%zu\n", buflen);
+        data = malloc(buflen + 1);
+        strncpy(data, raw_info->raw, raw_info->raw_len);
+        strncpy(data + raw_info->raw_len, cfg->raw_info->ptr, buflen - cfg->raw_info->raw_len);
+        data[buflen] = 0;
+        free(cfg->raw_info->raw);
+        cfg->raw_info->raw = data;
+        cfg->raw_info->raw_len = buflen;
+        cfg->raw_info->ptr = raw;
+        break;
+    }
+}
+
+DLLIMPORT void cfg_endbuffer(cfg_t *cfg, const char* raw)
+{
+	if(is_set(CFGF_RAW,cfg->flags) && raw){
+        cfg_raw_update(cfg, raw, END_DATA);
+    }
+}
+
 static int call_function(cfg_t *cfg, cfg_opt_t *opt, cfg_opt_t *funcopt)
 {
 	int ret;
@@ -1053,7 +1120,6 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 	int state = 0;
 	char *comment = NULL;
 	char *opttitle = NULL;
-	const char *raw_ptr = NULL;
 	cfg_opt_t *opt = NULL;
 	cfg_value_t *val = NULL;
 	cfg_opt_t funcopt = CFG_STR(0, 0, 0);
@@ -1139,6 +1205,9 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				else
 					state = 5;
 			} else if (opt->type == CFGT_FUNC) {
+                if(is_set(CFGF_RAW, cfg->flags)) {
+                    cfg_raw_update(cfg, cfg_get_current_buf_ptr() - strlen(cfg_yylval), BEGIN_FUNCTION);
+                }
 				state = 7;
 			} else {
 				state = 1;
@@ -1259,7 +1328,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 			val->section->errfunc = cfg->errfunc;
 
 			if(is_set(CFGF_RAW,val->section->flags)) {
-				raw_ptr = cfg_get_current_buf_ptr();
+                cfg_raw_update(val->section, cfg_get_current_buf_ptr(), BEGIN_DATA);
 			}
 
 			rc = cfg_parse_internal(val->section, level + 1, -1, 0);
@@ -1267,8 +1336,7 @@ static int cfg_parse_internal(cfg_t *cfg, int level, int force_state, cfg_opt_t 
 				goto error;
 
 			if(is_set(CFGF_RAW,val->section->flags)) {
-				size_t buf_len = cfg_get_current_buf_ptr()-raw_ptr;
-				val->section->raw = strndup(raw_ptr, cfg_get_current_buf_ptr()-raw_ptr-1);
+				cfg_raw_update(val->section, cfg_get_current_buf_ptr(), END_DATA);
 			}
 
 			cfg->line = val->section->line;
@@ -1710,8 +1778,8 @@ DLLIMPORT int cfg_free_value(cfg_opt_t *opt)
 				free((void *)opt->values[i]->string);
 			} else if (opt->type == CFGT_SEC) {
 				opt->values[i]->section->path = NULL; /* Global search path */
-				if(opt->values[i]->section->raw) {
-					free(opt->values[i]->section->raw);
+				if(opt->values[i]->section->raw_info) {
+					free(opt->values[i]->section->raw_info);
 				}
 				cfg_free(opt->values[i]->section);
 			} else if (opt->type == CFGT_PTR && opt->freecb && opt->values[i]->ptr) {
@@ -1796,6 +1864,11 @@ DLLIMPORT int cfg_include(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **arg
 {
 	(void)opt;		/* Unused in this predefined include FUNC */
 
+	const char* ptr = 0;
+	if(is_set(CFGF_RAW, cfg->flags)) {
+        ptr = cfg_get_current_buf_ptr();
+    }
+
 	if (!cfg || !argv) {
 		errno = EINVAL;
 		return CFG_FAIL;
@@ -1806,7 +1879,13 @@ DLLIMPORT int cfg_include(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **arg
 		return 1;
 	}
 
-	return cfg_lexer_include(cfg, argv[0]);
+	int ret = cfg_lexer_include(cfg, argv[0]);
+
+	if(is_set(CFGF_RAW, cfg->flags)) {
+        cfg_raw_update(cfg, ptr, INCLUDE_FILE);
+    }
+
+    return ret;
 }
 
 static cfg_value_t *cfg_opt_getval(cfg_opt_t *opt, unsigned int index)
@@ -2255,10 +2334,10 @@ DLLIMPORT int cfg_opt_print_indent(cfg_opt_t *opt, FILE *fp, int indent)
 			else
 				fprintf(fp, "%s {\n", opt->name);
 
-			if (is_set(CFGF_RAW,sec->flags) && sec->raw) {
-				const char *end = sec->raw + strlen(sec->raw) -1;
-				for(; end > sec->raw && isspace(*end); end--);
-				fprintf(fp, "%.*s\n", end - sec->raw, sec->raw);
+			if (is_set(CFGF_RAW,sec->flags) && sec->raw_info) {
+				const char *end = sec->raw_info->raw + sec->raw_info->raw_len;
+				for(; end > sec->raw_info->raw && isspace(*end); end--);
+				fprintf(fp, "%.*s\n", end - sec->raw_info->raw, sec->raw_info->raw);
 			} else {
 				cfg_print_indent(sec, fp, indent + 1);
 			}

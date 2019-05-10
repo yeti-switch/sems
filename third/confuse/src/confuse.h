@@ -79,6 +79,7 @@ enum cfg_type_t {
 typedef enum cfg_type_t cfg_type_t;
 
 extern const char *cfg_get_current_buf_ptr();
+extern const char *cfg_get_current_buf();
 
 #define MASK_BY_BIT(BIT_NUMBER) (1 << BIT_NUMBER)
 
@@ -110,6 +111,7 @@ extern const char *cfg_get_current_buf_ptr();
 typedef union cfg_value_t cfg_value_t;
 typedef union cfg_simple_t cfg_simple_t;
 typedef struct cfg_opt_t cfg_opt_t;
+typedef struct cfg_raw_t cfg_raw_t;
 typedef struct cfg_t cfg_t;
 typedef struct cfg_defvalue_t cfg_defvalue_t;
 typedef int cfg_flag_t;
@@ -234,6 +236,17 @@ typedef enum { cfg_false, cfg_true } cfg_bool_t;
 /** Error reporting function. */
 typedef void (*cfg_errfunc_t)(cfg_t *cfg, const char *fmt, va_list ap);
 
+typedef void (*cfg_endbuffer_func_t)(cfg_t *cfg);
+
+struct cfg_raw_t
+{
+    char *raw;
+	size_t raw_len;
+    const char* ptr;
+    const char *cur_buf;
+    cfg_raw_t* previous;
+};
+
 /** Data structure holding information about a "section". Sections can
  * be nested. A section has a list of options (strings, numbers,
  * booleans or other sections) grouped together.
@@ -248,7 +261,7 @@ struct cfg_t {
 	char *title;	        /**< Optional title for this section, only
 				 * set if CFGF_TITLE flag is set */
 	char *filename;		/**< Name of the file being parsed */
-	char *raw;		/**< raw section body if CFGF_RAW set */
+	cfg_raw_t *raw_info;		/**< raw info if CFGF_RAW set */
 	int line;		/**< Line number in the config file */
 	cfg_errfunc_t errfunc;	/**< This function (if set with
 				 * cfg_set_error_function) is called for
@@ -691,6 +704,8 @@ DLLIMPORT cfg_errfunc_t __export cfg_set_error_function(cfg_t *cfg, cfg_errfunc_
  * @see cfg_set_error_function
  */
 DLLIMPORT void __export cfg_error(cfg_t *cfg, const char *fmt, ...);
+
+DLLIMPORT void cfg_endbuffer(cfg_t *cfg, const char* data);
 
 /** Returns the option comment
  * @param opt The option structure (eg, as returned from cfg_getopt())
