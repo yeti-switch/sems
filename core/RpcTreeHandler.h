@@ -274,7 +274,7 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
         }
         if(e->isMethod()){
             if((!methods_tree.empty() && methods_tree.back()==list_method)
-               || (args.size()&&strcmp(args.back().asCStr(),list_method)==0))
+               || (args.getType() == AmArg::Array && args.size()&&strcmp(args.back().asCStr(),list_method)==0))
             {
                 if(!e->hasLeafs()&&e->arg.empty())
                     ret.assertArray();
