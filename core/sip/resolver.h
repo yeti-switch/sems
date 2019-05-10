@@ -94,6 +94,8 @@ class dns_bucket
     friend class _resolver;
 public:
     dns_bucket(unsigned long id);
+    virtual ~dns_bucket();
+    void cleanup(){}
     bool insert(const string& name, dns_entry* e);
     bool remove(const string& name);
     dns_entry* find(const string& name);
@@ -313,6 +315,7 @@ public:
 protected:
     _resolver();
     ~_resolver();
+    void dispose();
 
     int set_destination_ip(const cstring& next_scheme,
         const cstring& next_hop,
@@ -329,10 +332,14 @@ protected:
         dns_rr_type rr_type);
 
     void run();
-    void on_stop() {}
+    void on_stop() {
+        b_stop.set(true);
+    }
 
 private:
     dns_cache cache;
+    AmCondition<bool> b_stop;
+    AmCondition<bool> b_stopped;
 };
 
 typedef singleton<_resolver> resolver;

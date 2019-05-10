@@ -76,6 +76,14 @@ JsonRPCServerLoop* JsonRPCServerLoop::instance() {
   return _instance;
 }
 
+void JsonRPCServerLoop::dispose()
+{
+    if(_instance) {
+        delete _instance;
+    }
+    _instance = NULL;
+}
+
 int setnonblock(int fd)
 {
   int flags;
@@ -348,6 +356,7 @@ JsonRPCServerLoop::JsonRPCServerLoop()
 
 
 JsonRPCServerLoop::~JsonRPCServerLoop() {
+    ev_default_destroy();
 }
 
 void JsonRPCServerLoop::run() {
@@ -409,6 +418,9 @@ void JsonRPCServerLoop::run() {
   ev_loop (loop, 0);
   AmEventDispatcher::instance()->delEventQueue(JSONRPC_QUEUE_NAME);
   INFO("event loop finished\n");
+  
+  threadpool.cleanup();
+  INFO("rpc server loop finished\n");
 }
 
 void JsonRPCServerLoop::on_stop() {

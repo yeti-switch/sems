@@ -452,3 +452,10 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short addr_
 , client_settings(s_client), server_settings(s_server)
 {
 }
+
+
+void tls_cleanup()
+{
+    rand_generator_tls::dispose();
+    session_manager_tls::dispose();
+}

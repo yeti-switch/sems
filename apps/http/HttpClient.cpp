@@ -22,8 +22,12 @@ class HttpClientFactory
       : AmDynInvokeFactory(name)
       , AmConfigFactory(name)
     {
-        inc_ref(this);
         HttpClient::instance();
+    }
+    ~HttpClientFactory()
+    {
+        INFO("~HttpClientFactory");
+        HttpClient::dispose();
     }
   public:
     DECLARE_FACTORY_INSTANCE(HttpClientFactory);
@@ -58,6 +62,15 @@ HttpClient* HttpClient::instance()
         _instance = new HttpClient();
     }
     return _instance;
+}
+
+
+void HttpClient::dispose()
+{
+    if(_instance != NULL){
+        delete _instance;
+    }
+    _instance = NULL;
 }
 
 HttpClient::HttpClient()
@@ -112,6 +125,7 @@ void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 int HttpClient::configure(const string& config)
 {
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
+    if(!cfg) return -1;
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
@@ -122,9 +136,11 @@ int HttpClient::configure(const string& config)
         break;
     case CFG_PARSE_ERROR:
         ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     default:
         ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     }
 
@@ -134,6 +150,7 @@ int HttpClient::configure(const string& config)
 
     if(destinations.configure(cfg)){
         ERROR("can't configure destinations");
+        cfg_free(cfg);
         return -1;
     }
     destinations.dump();

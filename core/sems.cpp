@@ -78,6 +78,8 @@ using std::string;
 #include <sys/prctl.h>
 #include <srtp.h>
 #include "PcapFileRecorder.h"
+#include "sip/tls_trsp.h"
+#include "sip/tr_blacklist.h"
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
@@ -650,7 +652,8 @@ int main(int argc, char* argv[])
     }
     DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
   }
-
+    
+  AmThreadWatcher::instance();
   if(CoreRpc::instance().onLoad()) {
     ERROR("failed to initialize CoreRpc");
     goto error;
@@ -715,14 +718,20 @@ int main(int argc, char* argv[])
   if(sip_ctrl.run() != -1)
     success = true;
 
+ error:
   // session container stops active sessions
   INFO("Disposing session container\n");
   AmSessionContainer::dispose();
 
+  INFO("Disposing app timer\n");
+  AmAppTimer::dispose();
+  
   DBG("** Transaction table dump: **\n");
   dumps_transactions();
   DBG("*****************************\n");
 
+  cleanup_transaction();
+  
   if(AmConfig.enable_rtsp){
     INFO("Disposing RTSP client");
     RtspClient::dispose();
@@ -734,10 +743,15 @@ int main(int argc, char* argv[])
   INFO("Disposing media processor\n");
   AmMediaProcessor::dispose();
 
+  INFO("Disposing audio file recorder\n");
+  AmAudioFileRecorderProcessor::dispose();
+  
+  INFO("Disposing pcap file recorder\n");
+  PcapFileRecorderProcessor::dispose();
+  
   INFO("Disposing event dispatcher\n");
   AmEventDispatcher::dispose();
 
- error:
   INFO("Disposing plug-ins\n");
   AmPlugIn::dispose();
 
@@ -755,9 +769,20 @@ int main(int argc, char* argv[])
      close(fd[1]);
   }
 #endif
+  AmThreadWatcher::instance()->cleanup();
 
   sip_ctrl.cleanup();
+  resolver::instance()->clear_cache();
+  resolver::dispose();
+  wheeltimer::dispose();
+  SipCtrlInterface::dispose();
+  tr_blacklist::dispose();
 
+  tls_cleanup();
+  srtp_shutdown();
+  libevent_global_shutdown();
+  
   INFO("Exiting (%s)\n", success ? "success" : "failure");
+  
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }

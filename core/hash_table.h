@@ -48,7 +48,16 @@ public:
     typedef list<Value*> value_list;
 
     ht_bucket(unsigned long id) : id(id) {}
-    virtual ~ht_bucket() {}
+    virtual ~ht_bucket() {
+        cleanup();
+    }
+    
+    virtual void cleanup(){
+        for(typename value_list::const_iterator it = elmts.begin(); it != elmts.end(); ++it) {
+            delete *it;
+        }
+        elmts.clear();
+    }
     
     /**
      * Caution: The bucket MUST be locked before you can 
@@ -160,6 +169,8 @@ public:
     ht_map_bucket(unsigned long id) : id(id) {}
     virtual ~ht_map_bucket() {}
     
+    virtual void cleanup(){}
+    
     /**
      * Caution: The bucket MUST be locked before you can 
      * do anything with it.
@@ -259,9 +270,9 @@ public:
     }
 
     ~hash_table() {
-	for(unsigned long i=0; i<size; i++)
-	    delete _table[i];
-	delete [] _table;
+        for(unsigned long i=0; i<size; i++)
+            delete _table[i];
+        delete [] _table;
     }
 
     Bucket* operator [](unsigned long hash) const {
@@ -269,7 +280,9 @@ public:
     }
 
     Bucket* get_bucket(unsigned long hash) const {
-	return _table[hash % size];
+    if(size != 0)
+        return _table[hash % size];
+    return 0;
     }
 
     void dump() const {
@@ -278,6 +291,11 @@ public:
 	    _table[l]->dump();
 	    _table[l]->unlock();
 	}
+    }
+    
+    void cleanup() {
+        for(unsigned long i=0; i<size; i++)
+            _table[i]->cleanup();
     }
 
     unsigned long get_size() { return size; }

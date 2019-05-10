@@ -76,7 +76,6 @@ class SyslogLogFac : public AmLoggingFacility {
     : AmLoggingFacility("syslog",AmConfig.log_level),
       facility(LOG_DAEMON)
   {
-    _inc_ref();
     init();
   }
 
@@ -190,7 +189,7 @@ class StderrLogFac : public AmLoggingFacility {
         if(!_instance) _instance = new StderrLogFac();
         return *_instance;
     }
-    ~StderrLogFac() { }
+    ~StderrLogFac() {}
     int onLoad() {  return 0; }
     void log(int level_, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg_)
     {
@@ -242,15 +241,20 @@ void run_log_hooks(int level, pid_t pid, pthread_t tid, const char* func, const 
 void register_log_hook(AmLoggingFacility* fac)
 {
   AmLock lock(log_hooks_mutex);
-  log_hooks.push_back(fac);
-  inc_ref(fac);
+  vector<AmLoggingFacility*>::iterator fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
+  if(fac_it==log_hooks.end()) {
+    log_hooks.push_back(fac);
+    inc_ref(fac);
+  }
 }
 
 void unregister_log_hook(AmLoggingFacility* fac){
 	AmLock lock(log_hooks_mutex);
 	vector<AmLoggingFacility*>::iterator fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
-	if(fac_it!=log_hooks.end())
+	if(fac_it!=log_hooks.end()) {
+        dec_ref(fac);
 		log_hooks.erase(fac_it);
+    }
 }
 
 bool has_higher_levels(int log_level_arg){
@@ -273,7 +277,10 @@ void set_log_level(int log_level_arg){
 }
 
 void register_stderr_facility() {
-	register_log_hook(&StderrLogFac::instance());
+    StderrLogFac& errlog = StderrLogFac::instance();
+	register_log_hook(&errlog);
+    AmPlugIn::registerLoggingFacility(errlog.getName(), &errlog);
+    
 }
 
 void set_stderr_log_level(int log_level_arg) {

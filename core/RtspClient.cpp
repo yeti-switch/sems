@@ -175,15 +175,18 @@ int RtspClient::configure(const std::string& conf)
     };
 
     cfg_t *cfg = cfg_init(cfg_opt, CFGF_NONE);
+    if(!cfg) return -1;
     cfg_set_error_function(cfg, cfg_error_callback);
     switch(cfg_parse_buf(cfg, conf.c_str())) {
     case CFG_SUCCESS:
         break;
     case CFG_PARSE_ERROR:
         ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     default:
         ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     }
 
@@ -205,6 +208,7 @@ int RtspClient::configure(const std::string& conf)
 
     if (config.l_if == -1) {
         ERROR("RTSP media interface not found\n");
+        cfg_free(cfg);
         return -1;
     }
 
@@ -221,6 +225,7 @@ int RtspClient::configure(const std::string& conf)
 
     if(config.laddr_if == -1) {
         ERROR("RTSP addr interface not found\n");
+        cfg_free(cfg);
         return -1;
     }
 
@@ -228,6 +233,7 @@ int RtspClient::configure(const std::string& conf)
 
     if (!load_media_servers(cfg)) {
         ERROR("Can't parse media_servers\n");
+        cfg_free(cfg);
         return -1;
     }
 

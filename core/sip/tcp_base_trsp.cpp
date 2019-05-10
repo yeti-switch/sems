@@ -773,11 +773,13 @@ void trsp_worker::run()
     event_free(ev_default);
     close(fake_fds[0]);
     close(fake_fds[1]);
+    stopped.set(true);
 }
 
 void trsp_worker::on_stop()
 {
     event_base_loopbreak(evbase);
+    stopped.wait_for();
 }
 
 trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory)
@@ -791,6 +793,9 @@ trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short add
 trsp_server_socket::~trsp_server_socket()
 {
     dec_ref(sock_factory);
+    if(ev_accept) {
+        event_free(ev_accept);
+    }
 }
 
 int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)

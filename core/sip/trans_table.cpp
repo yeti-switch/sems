@@ -574,6 +574,12 @@ void dumps_transactions()
 }
 
 
+void cleanup_transaction()
+{
+    _trans_table.cleanup();
+}
+
+
 /** EMACS **
  * Local variables:
  * mode: c++

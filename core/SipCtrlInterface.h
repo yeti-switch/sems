@@ -106,13 +106,14 @@ public:
     static int udp_rcvbuf;
 
     _SipCtrlInterface();
-    ~_SipCtrlInterface(){}
+    ~_SipCtrlInterface();
 
     int load();
 
     int run();
     void stop();
     void cleanup();
+    void dispose(){};
 
     /**
      * Sends a SIP request.

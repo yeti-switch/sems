@@ -481,14 +481,17 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
     };
 
     cfg_t* cfg = cfg_init(stmr_opt, CFGF_NONE);
+    if(!cfg) return -1;
     switch(cfg_parse_buf(cfg, config.c_str())) {
     case CFG_SUCCESS:
         break;
     case CFG_PARSE_ERROR:
         ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     default:
         ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
         return -1;
     }
 
@@ -510,6 +513,7 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
         int maximum_timer = cfg_getint(cfg, PARAM_MAXIMUM_TIMER_NAME);
         if (maximum_timer<=0) {
         ERROR("invalid value for maximum_timer '%d'\n",maximum_timer);
+        cfg_free(cfg);
         return -1;
         }
         MaximumTimer = (unsigned int) maximum_timer;
@@ -525,6 +529,7 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
             RefreshMethod = AmSession::REFRESH_REINVITE;
         } else {
             ERROR("unknown setting for 'session_refresh_method' config option.\n");
+            cfg_free(cfg);
             return -1;
         }
         HaveRefreshMethod = true;
@@ -534,6 +539,7 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
     }
 
     Accept501Reply = cfg_getbool(cfg, PARAM_ACCEPT_501_REPLY_NAME);
+    cfg_free(cfg);
     return 0;
 }
 

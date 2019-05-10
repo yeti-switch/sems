@@ -103,6 +103,7 @@ class AmDynInvokeFactory: public AmPluginFactory
 {
  public:
   AmDynInvokeFactory(const string& name);
+  virtual ~AmDynInvokeFactory(){}
   virtual AmDynInvoke* getInstance()=0;
 };
 
@@ -116,6 +117,7 @@ class AmConfigFactory: public AmPluginFactory
 {
  public:
   AmConfigFactory(const string& name);
+  virtual ~AmConfigFactory(){}
   virtual int configure(const std::string& config)=0;
 };
 
@@ -128,6 +130,7 @@ class AmSessionEventHandlerFactory: public AmPluginFactory
 {
  public:
   AmSessionEventHandlerFactory(const string& name);
+  virtual ~AmSessionEventHandlerFactory(){}
 
   virtual AmSessionEventHandler* getHandler(AmSession*)=0;
 

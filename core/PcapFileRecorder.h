@@ -64,6 +64,9 @@ public:
     //AmThread
     void run() override;
     void on_stop() override;
+    
+    //singleton
+    void dispose(){}
 
     //AmEventHandler
     void process(AmEvent *ev) override;

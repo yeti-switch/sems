@@ -248,6 +248,19 @@ void AmThreadWatcher::add(AmThread* t)
   DBG("added thread %lu to thread watcher.\n", (unsigned long int) t->_pid);
 }
 
+void AmThreadWatcher::cleanup()
+{
+  DBG("cleanup garbage collector.\n");
+  bool iscleanup = false;
+  do {
+    _run_cond.set(true);
+    sleep(10);
+    q_mut.lock();
+    iscleanup = thread_queue.empty();
+    q_mut.unlock();
+  } while(!iscleanup);
+}
+
 void AmThreadWatcher::on_stop()
 {
 }

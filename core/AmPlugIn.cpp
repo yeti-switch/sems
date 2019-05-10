@@ -118,12 +118,20 @@ static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
 
 AmPlugIn::~AmPlugIn()
 {
+  for(std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.begin();
+      it != name2logfac.end(); it++){
+    // register for receiving logging messages
+    unregister_log_hook(it->second);
+  }
+  std::for_each(name2logfac.begin(), name2logfac.end(), delete_plugin_factory);
+  std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
+  std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
   std::for_each(plugins_objects.begin(), plugins_objects.end(), delete_plugin_factory);
 
   // if _DEBUG is set do not unload shared libs to allow better debugging
 #ifndef _DEBUG
-  for(vector<void*>::iterator it=dlls.begin();it!=dlls.end();++it)
-    dlclose(*it);
+//  for(vector<void*>::iterator it=dlls.begin();it!=dlls.end();++it)
+    //dlclose(*it);
 #endif
 }
 
@@ -286,6 +294,7 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
 
   if (NULL != plugin) {
       plugins.push_back(plugin);
+      inc_ref(plugin);
       plugins_objects[plugin_name] = plugin;
   }
 
@@ -573,8 +582,9 @@ int AmPlugIn::loadDiPlugIn(AmPluginFactory* f)
     ERROR("component '%s' already loaded !\n",sf->getName().c_str());
     goto error;
   }
-      
+  
   name2di.insert(std::make_pair(sf->getName(),sf));
+  inc_ref(sf);
   DBG("component '%s' loaded.\n",sf->getName().c_str());
 
   return 0;
@@ -623,6 +633,7 @@ int AmPlugIn::loadLogFacPlugIn(AmPluginFactory* f)
   }
       
   name2logfac.insert(std::make_pair(sf->getName(),sf));
+  inc_ref(sf);
   DBG("logging facility component '%s' loaded.\n",sf->getName().c_str());
 
   return 0;

@@ -52,6 +52,8 @@ _wheeltimer::_wheeltimer()
 
 _wheeltimer::~_wheeltimer()
 {
+    stop();
+    join();
 }
 
 void _wheeltimer::insert_timer(timer* t)
@@ -76,6 +78,7 @@ void _wheeltimer::remove_timer(timer* t)
 
 void _wheeltimer::run()
 {
+  is_stop.set(false);
   struct timeval now,next_tick,diff,tick;
 
   setThreadName("sip-wheeltimer");
@@ -86,7 +89,7 @@ void _wheeltimer::run()
   gettimeofday(&now, NULL);
   timeradd(&tick,&now,&next_tick);
 
-  while(true){
+  while(!is_stop.get()){
 
     gettimeofday(&now,NULL);
 

@@ -300,6 +300,7 @@ int udp_trsp_socket::send(const sockaddr_storage* sa,
 int udp_trsp_socket::recv()
 {
     char buf[MAX_UDP_MSGLEN];
+    u_char mctrl[DSTADDR_DATASIZE];
     int buf_len;
     
     msghdr           msg;
@@ -315,7 +316,7 @@ int udp_trsp_socket::recv()
     msg.msg_namelen    = sizeof(sockaddr_storage);
     msg.msg_iov        = iov;
     msg.msg_iovlen     = 1;
-    msg.msg_control    = new u_char[DSTADDR_DATASIZE];
+    msg.msg_control    = mctrl;
     msg.msg_controllen = DSTADDR_DATASIZE;
     
 	buf_len = recvmsg(get_sd(),&msg,0);
@@ -431,11 +432,16 @@ void udp_trsp::run()
 
     stop_event.link(ev, true);
 
-    while(running) {
+    while(running && ev) {
         ret = epoll_wait(ev, events, socket_count, -1);
 
-        if (ret < 0 && errno != EINTR)
+        if (ret < 0 && errno != EINTR) {
             ERROR("%s: epoll_wait(): %m", __func__);
+        }
+
+        if (ret < 1) {
+            continue;
+        }
 
         for(int i = 0; i < ret; i++) {
 
@@ -484,8 +490,15 @@ void udp_trsp::run()
 /** @see AmThread */
 void udp_trsp::on_stop()
 {
-    close(ev);
     stop_event.fire();
+    for(auto sock : sockets) {
+        if (epoll_ctl(ev, EPOLL_CTL_DEL, sock->get_sd(), nullptr) == -1) {
+            ERROR("epoll_ctl: remove read sock %d error: %d",
+                    sock->get_sd(),errno);
+        }
+        dec_ref(sock);
+    }
+    sockets.clear();
     stopped.wait_for();
 }
 

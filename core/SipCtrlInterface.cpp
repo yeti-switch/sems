@@ -410,6 +410,13 @@ _SipCtrlInterface::_SipCtrlInterface()
     trans_layer::instance()->register_ua(this);
 }
 
+_SipCtrlInterface::~_SipCtrlInterface()
+{
+    INFO("~_SipCtrlInterface");
+    AmSipDispatcher::dispose();
+    trans_layer::dispose();
+}
+
 int _SipCtrlInterface::cancel(trans_ticket* tt, const string& dialog_id,
 			      unsigned int inv_cseq, const string& hdrs)
 {
