@@ -509,40 +509,48 @@ int AmRtpStream::sendmsg(unsigned char* buf, int size)
   return 0;
 }
 
-/*int AmRtpPacket::send(int sd, unsigned int sys_if_idx,
-			  sockaddr_storage* l_saddr)*/
-int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
 
+int AmRtpStream::send(sockaddr_storage* raddr, unsigned char* buf, int size, bool rtcp)
 {
-  if(l_if < 0 || laddr_if < 0) return 0;
+    MEDIA_info* iface = AmConfig.media_ifs[static_cast<size_t>(l_if)]
+        .proto_info[static_cast<size_t>(laddr_if)];
 
-  MEDIA_info* iface = AmConfig.media_ifs[l_if].proto_info[laddr_if];
-  unsigned int sys_if_idx = iface->net_if_idx;
-  int sd = rtcp ? l_rtcp_sd : l_sd;
-  struct sockaddr_storage* rs_addr = rtcp ? &r_rtcp_saddr : &r_saddr;
-  struct sockaddr_storage* ls_addr = rtcp ? &l_rtcp_saddr : &l_saddr;
+    if(iface->net_if_idx) {
+        if(iface->sig_sock_opts&trsp_socket::use_raw_sockets) {
+            return raw_sender::send(
+                reinterpret_cast<char*>(buf),static_cast<unsigned int>(size),
+                static_cast<int>(iface->net_if_idx),
+                rtcp ? &l_rtcp_saddr : &l_saddr,
+                raddr,
+                iface->tos_byte);
+        }
+        //TODO: process case with AmConfig.force_outbound_if properly for rtcp
+        if(AmConfig.force_outbound_if) {
+            return sendmsg(buf,size);
+        }
+    }
 
-  if(sys_if_idx && iface->sig_sock_opts&trsp_socket::use_raw_sockets) {
-    return raw_sender::send((char*)buf,size,sys_if_idx, ls_addr, rs_addr,iface->tos_byte);
-  }
+    ssize_t err = ::sendto(
+        rtcp ? l_rtcp_sd : l_sd,
+        buf, static_cast<size_t>(size), 0,
+        reinterpret_cast<const struct sockaddr*>(raddr), SA_len(raddr));
 
+    if(err == -1) {
+        ERROR("while sending %s packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
+            rtcp ? "RTCP" : "RTP", rtcp ? l_rtcp_sd : l_sd,
+            static_cast<void *>(buf),size,
+            static_cast<void *>(raddr),SA_len(raddr),
+            strerror(errno));
+        log_stacktrace(L_DBG);
+        return -1;
+    }
+    return 0;
+}
 
-  //TODO: process case with AmConfig.force_outbound_if properly for rtcp
-  if(sys_if_idx && AmConfig.force_outbound_if) {
-    return sendmsg(buf,size);
-  }
-
-  int err = ::sendto(sd,buf,size,0, (const struct sockaddr*)rs_addr, SA_len(rs_addr));
-
-  if(err == -1){
-      ERROR("while sending %s packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
-              rtcp ? "RTCP" : "RTP", sd,buf,size,rs_addr,SA_len(rs_addr),
-              strerror(errno));
-      log_stacktrace(L_DBG);
-      return -1;
-  }
-
-  return 0;
+int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
+{
+    struct sockaddr_storage* rs_addr = rtcp ? &r_rtcp_saddr : &r_saddr;
+    return send(rs_addr, buf, size, rtcp);
 }
 
 int AmRtpStream::recv(int sd)
