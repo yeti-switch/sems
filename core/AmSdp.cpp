@@ -111,12 +111,12 @@ string transport_p_2_str(int tp)
     switch(tp) {
         case TP_RTPAVP: return "RTP/AVP";
         case TP_RTPAVPF: return "RTP/AVPF";
-        case TP_UDP: return "udp";
+        case TP_UDP: return "UDP";
         case TP_RTPSAVP: return "RTP/SAVP";
         case TP_RTPSAVPF: return "RTP/SAVPF";
         case TP_UDPTLSRTPSAVP: return "UDP/TLS/RTP/SAVP";
         case TP_UDPTLSRTPSAVPF: return "UDP/TLS/RTP/SAVPF";
-        case TP_UDPTL: return "udptl";
+        case TP_UDPTL: return "UDPTL";
         default: return "<unknown_media_type>";
     }
 }
@@ -136,8 +136,8 @@ inline string profile_t_2_str(int pt)
 inline string transport_ice_2_str(int tp)
 {
   switch(tp){
-  case ICTR_UDP: return "udp";
-  case ICTR_TCP: return "tcp";
+  case ICTR_UDP: return "UDP";
+  case ICTR_TCP: return "TCP";
   default: return "<unknown transport type>";
   }
 }
@@ -1565,9 +1565,9 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                 break;
             case TRANSPORT:
                 data = string(param, int(next-param)-1);
-                if(data == "tcp") {
+                if(strcasecmp(data.c_str(),"tcp") == 0) {
                     candidate.transport = ICTR_TCP;
-                } else if(data == "udp") {
+                } else if(strcasecmp(data.c_str(), "udp") == 0) {
                     candidate.transport = ICTR_UDP;
                 } else {
                     ERROR("invalid transport of ice candidate attribute %s", data.c_str());
