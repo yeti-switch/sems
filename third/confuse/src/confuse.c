@@ -1034,6 +1034,7 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
         cfg->raw_info->ptr = cfg_get_current_buf_ptr();
         cfg->raw_info->cur_buf = cfg_get_current_buf();
         break;
+    case BEGIN_FUNCTION:
     case END_DATA:
         while(cfg->raw_info->cur_buf != cfg_get_current_buf()) {
             buflen = cfg->raw_info->raw_len + cfg->raw_info->previous->raw_len;
@@ -1047,7 +1048,6 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
             free(cfg->raw_info);
             cfg->raw_info = raw_info;
         }
-    case BEGIN_FUNCTION:
         raw_info = cfg->raw_info;
         raw_info = cfg->raw_info;
         if(raw == cfg->raw_info->ptr) // append full buffer(include file)
