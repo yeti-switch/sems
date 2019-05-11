@@ -1038,7 +1038,7 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
     case END_DATA:
         while(cfg->raw_info->cur_buf != cfg_get_current_buf()) {
             buflen = cfg->raw_info->raw_len + cfg->raw_info->previous->raw_len;
-            printf("%zu\n", buflen);
+            //printf("%zu\n", buflen);
             raw_info = cfg->raw_info->previous;
             data = malloc(buflen);
             strncpy(data, raw_info->raw, raw_info->raw_len);
@@ -1057,7 +1057,7 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
         else //end current buffer
             buflen = cfg_get_current_buf_ptr() - cfg->raw_info->ptr - 1;
         buflen += cfg->raw_info->raw_len;
-        printf("%zu\n", buflen);
+        //printf("%zu\n", buflen);
         data = malloc(buflen + 1);
         strncpy(data, raw_info->raw, raw_info->raw_len);
         strncpy(data + raw_info->raw_len, cfg->raw_info->ptr, buflen - cfg->raw_info->raw_len);
