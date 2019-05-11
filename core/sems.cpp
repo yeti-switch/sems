@@ -752,9 +752,6 @@ int main(int argc, char* argv[])
   INFO("Disposing event dispatcher\n");
   AmEventDispatcher::dispose();
 
-  INFO("Disposing plug-ins\n");
-  AmPlugIn::dispose();
-
   //async_file_writer::instance()->stop();
   //async_file_writer::instance()->join();
 
@@ -777,6 +774,9 @@ int main(int argc, char* argv[])
   wheeltimer::dispose();
   SipCtrlInterface::dispose();
   tr_blacklist::dispose();
+
+  INFO("Disposing plug-ins\n");
+  AmPlugIn::dispose();
 
   tls_cleanup();
   srtp_shutdown();
