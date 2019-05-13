@@ -1653,8 +1653,9 @@ void AmRtpStream::recvPacket(int fd)
             unsigned int size = p->getBufferSize();
             if(srtp_connection->on_data_recv(p->getBuffer(), &size, isRtcp) == SRTP_PACKET_PARSE_ERROR){
                 CLASS_WARN("error parsing: incorrect srtp packet"
-                "(remote_addr: %s:%i, "
+                "(src_addr: %s:%i, remote_addr: %s:%i, "
                 "local_ssrc: 0x%x, local_tag: %s, rtcp-%s)\n",
+                get_addr_str(&saddr).c_str(),am_get_port(&saddr),
                 get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session",
                 isRtcp ? "true" : "false");
@@ -1681,8 +1682,9 @@ void AmRtpStream::recvPacket(int fd)
         if (parse_res == RTP_PACKET_PARSE_ERROR) {
             rtp_parse_errors++;
             CLASS_ERROR("error while parsing RTP packet. "
-                "(remote_addr: %s:%i, "
+                "(src_addr: %s:%i, remote_addr: %s:%i, "
                 "local_ssrc: 0x%x, local_tag: %s)\n",
+                get_addr_str(&saddr).c_str(),am_get_port(&saddr),
                 get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session");
             clearRTPTimeout(&recv_time);
@@ -1693,8 +1695,9 @@ void AmRtpStream::recvPacket(int fd)
             bufferPacket(p);
         } else {
             CLASS_ERROR("error parsing: rtp packet is RTCP"
-                "(remote_addr: %s:%i, "
+                "(src_addr: %s:%i, remote_addr: %s:%i, "
                 "local_ssrc: 0x%x, local_tag: %s)\n",
+                get_addr_str(&saddr).c_str(),am_get_port(&saddr),
                 get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session");
             mem.freePacket(p);
