@@ -1,3 +1,14 @@
+sems (1.8.19-1) stable; urgency=low
+
+  * ICE support
+  * libconfuse fixes
+  * lot of crash/memory leaks fixes
+  * RpcTreeHandler: allow non-array params
+  * AmRtpStream::recvPacket: log src IP addr for RTP packet on parse errors
+  * sems.service: add deps from redis-server.service yeti-management.service network.target
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 13 May 2019 14:20:51 +0300
+
 sems (1.8.18-8) stable; urgency=low
 
   * AmRtpStream: disable force_relay_dtmf processing
