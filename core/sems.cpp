@@ -766,7 +766,6 @@ int main(int argc, char* argv[])
      close(fd[1]);
   }
 #endif
-  AmThreadWatcher::instance()->cleanup();
 
   sip_ctrl.cleanup();
   resolver::instance()->clear_cache();
@@ -778,6 +777,7 @@ int main(int argc, char* argv[])
   INFO("Disposing plug-ins\n");
   AmPlugIn::dispose();
 
+  AmThreadWatcher::instance()->cleanup();
   tls_cleanup();
   srtp_shutdown();
   libevent_global_shutdown();

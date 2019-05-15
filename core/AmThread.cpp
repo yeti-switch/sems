@@ -82,14 +82,15 @@ void * AmThread::_start(void * _t)
   _this->_pid = (unsigned long) _this->_td;
   _self_pid = GET_PID();
   _self_tid = GET_TID();
-  INFO("Thread %lu is starting.\n", (unsigned long) _this->_pid);
+  unsigned long _tid = _this->_pid;
+  INFO("Thread %lu is starting.\n", (unsigned long) _tid);
   _this->run();
 
   char thread_name[16];
-  pthread_getname_np(_this->_td, thread_name,16);
+  pthread_getname_np(_tid, thread_name,16);
   INFO("Thread %s %lu is ending.\n",
       thread_name,
-      (unsigned long) _this->_pid);
+      (unsigned long) _tid);
   _this->_stopped.set(true);
     
   return NULL;
