@@ -53,6 +53,7 @@ JsonRPCServerModule::JsonRPCServerModule(const string& mod_name)
 }
 
 JsonRPCServerModule::~JsonRPCServerModule() {
+    JsonRPCServerLoop::instance()->stop();
     JsonRPCServerLoop::dispose();
 }
 
