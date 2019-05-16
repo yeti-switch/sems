@@ -1,6 +1,14 @@
+sems (1.8.19-3) stable; urgency=low
+
+  * AmEventDispatcher: use AmLock for iterate, apply methods to avoid deadlocks on exceptions
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 16 May 2019 14:39:23 +0300
+
 sems (1.8.19-2) stable; urgency=low
 
   * fix crash and freeze on exit
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 16 May 2019 14:12:02 +0300
 
 sems (1.8.19-1) stable; urgency=low
 
@@ -11,7 +19,7 @@ sems (1.8.19-1) stable; urgency=low
   * AmRtpStream::recvPacket: log src IP addr for RTP packet on parse errors
   * sems.service: add deps from redis-server.service yeti-management.service network.target
 
- --  <>  Thu, 16 May 2019 13:00:55 +0300
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 16 May 2019 13:00:55 +0300
 
 sems (1.8.18-8) stable; urgency=low
 
