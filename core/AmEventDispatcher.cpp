@@ -259,13 +259,12 @@ void AmEventDispatcher::dump()
 void AmEventDispatcher::iterate(QueueEntryIterateHandlerPtr callback, void *arg)
 {
     for(size_t i=0;i<EVENT_DISPATCHER_BUCKETS;i++) {
-        queues_mut[i].lock();
+        AmLock l(queues_mut[i]);
         if(!queues[i].empty()) {
             for(EvQueueMapIter it = queues[i].begin();
                 it != queues[i].end(); it++)
             callback(it->first,it->second,arg);
         }
-        queues_mut[i].unlock();
     }
 }
 
@@ -273,13 +272,12 @@ bool AmEventDispatcher::apply(const string& local_tag, QueueEntryHandler callbac
 {
     bool found = false;
     unsigned int queue_bucket = hash(local_tag);
-    queues_mut[queue_bucket].lock();
+    AmLock l(queues_mut[queue_bucket]);
     EvQueueMapIter it = queues[queue_bucket].find(local_tag);
     if(it != queues[queue_bucket].end()){
         callback(it->second,arg);
         found = true;
     }
-    queues_mut[queue_bucket].unlock();
     return found;
 }
 
