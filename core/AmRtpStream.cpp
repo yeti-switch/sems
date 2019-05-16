@@ -966,26 +966,26 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
             throw AmSession::Exception(488,"hold connections");
         else if(offer.setup == SdpMedia::SetupUndefined)
             throw AmSession::Exception(488,"setup not defined");
-        if(offer.is_ice) {
-            answer.is_ice = true;
-            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
-            answer.ice_pwd.clear();
-            answer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
-            data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
-            answer.ice_ufrag.clear();
-            answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
-            SdpIceCandidate candidate;
-            candidate.comp_id = 1;
-            candidate.conn.network = NT_IN;
-            candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
-            candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
-            answer.ice_candidate.push_back(candidate);
-            candidate.comp_id = 2;
-            candidate.conn.network = NT_IN;
-            candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
-            candidate.conn.address = am_inet_ntop(&l_rtcp_saddr) + " " + int2str(getLocalRtcpPort());
-            answer.ice_candidate.push_back(candidate);
-        }
+    }
+    if(offer.is_ice) {
+        answer.is_ice = true;
+        string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+        answer.ice_pwd.clear();
+        answer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+        data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+        answer.ice_ufrag.clear();
+        answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        SdpIceCandidate candidate;
+        candidate.comp_id = 1;
+        candidate.conn.network = NT_IN;
+        candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+        candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
+        answer.ice_candidate.push_back(candidate);
+        candidate.comp_id = 2;
+        candidate.conn.network = NT_IN;
+        candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+        candidate.conn.address = am_inet_ntop(&l_rtcp_saddr) + " " + int2str(getLocalRtcpPort());
+        answer.ice_candidate.push_back(candidate);
     }
 }
 

@@ -231,7 +231,7 @@ string SdpIceCandidate::print() const
     string data("a=candidate:");
     data += foundation + " " + int2str(comp_id) + " ";
     data += transport_ice_2_str(transport) + " ";
-    data += int2str(priority) + " " + conn.address + " ";
+    data += int2str((unsigned int)priority) + " " + conn.address + " ";
     data += "typ " + ice_candidate_2_str(type);
     if(type != ICT_HOST) {
         data += " " + rel_conn.address;
@@ -375,7 +375,8 @@ AmSdp::AmSdp()
     conn(),
     send(true),
     recv(true),
-    media()
+    media(),
+    use_ice(false)
 {
     origin.user = "sems";
     origin.sessId = get_random();
@@ -420,6 +421,22 @@ int AmSdp::parse(const char* _sdp_msg)
                 ERROR("A connection field must be field must be present in every "
                       "media description or at the session level");
                 break;
+            }
+        }
+    }
+
+    if(!ret && use_ice) {
+        for(vector<SdpMedia>::iterator it = media.begin();
+            !ret && (it != media.end()); ++it)
+        {
+            if(!it->is_use_ice()) {
+                if(ice_pwd.empty() || ice_ufrag.empty()) {
+                    ERROR("absent ice parameter on session level");
+                    return true;
+                }
+                it->is_ice = true;
+                it->ice_pwd = ice_pwd;
+                it->ice_ufrag = ice_ufrag;
             }
         }
     }
@@ -503,9 +520,6 @@ void AmSdp::print(string& body) const
     else
         out_buf += "IP4 0.0.0.0\r\n";
 
-    if(use_ice) 
-        out_buf += "a=ice-lite\r\n";
-
     out_buf +=
         "s="+sessionName+"\r\n";
     if (!conn.address.empty()) {
@@ -587,7 +601,7 @@ void AmSdp::print(string& body) const
             out_buf += c_it->print();
         }
 
-        if(media_it->is_dtls_srtp() || media_it->is_simple_srtp())
+        if(media_it->is_dtls_srtp())
             out_buf += "a=fingerprint:" + media_it->fingerprint.hash + " " + media_it->fingerprint.value + "\r\n";
 
       if(media_it->is_ice) {
@@ -1225,11 +1239,20 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
         sdp_msg->attributes.push_back(a);
         // DBG("got session attribute '%.*s\n", (int)(attr_end-s+1), s);
     } else {
+        SdpAttribute a(string(s, static_cast<size_t>(col-s)-1), string(col, static_cast<size_t>(attr_end-col)+1));
+        if(a.attribute == "ice-pwd") {
+            sdp_msg->use_ice = true;
+            sdp_msg->ice_pwd = a.value;
+            DBG("SDP: got ice request session ice_pwd %s\n", a.value.c_str());
+            return;
+        } else if(a.attribute == "ice-ufrag") {
+            sdp_msg->use_ice = true;
+            sdp_msg->ice_ufrag = a.value;
+            DBG("SDP: got ice request session ice_ufrag %s\n", a.value.c_str());
+            return;
+        }
         // value attribute
-        sdp_msg->attributes.push_back(
-            SdpAttribute(
-                string(s, static_cast<size_t>(col-s)-1),
-                string(col, static_cast<size_t>(attr_end-col)+1)));
+        sdp_msg->attributes.push_back(a);
         // DBG("got session attribute '%.*s:%.*s'\n", (int)(col-s-1), s, (int)(attr_end-col+1), col);
     }
 }
@@ -1448,11 +1471,13 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     next = skip_till_next_line(attr_line, val_len);
     media.ice_pwd = string(attr_line, val_len);
     media.is_ice = true;
+    DBG("SDP: got ice request media ice_pwd %s\n", media.ice_pwd.c_str());
   } else if(attr == "ice-ufrag") {
     size_t val_len = 0;
     next = skip_till_next_line(attr_line, val_len);
     media.ice_ufrag = string(attr_line, val_len);
-    media.is_ice = sdp_msg->use_ice = true;
+    media.is_ice = true;
+    DBG("SDP: got ice request media ufrag %s\n", media.ice_ufrag.c_str());
   } else if(attr == "candidate") {
     next = parse_ice_candidate(&media, attr_line);
   } else if (attr == "setup") {
@@ -1546,6 +1571,9 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
     string data, attr;
     while(parsing) {
         next = parse_until(param, line_end, ' ');
+        if((next - s) > (int)line_len) {
+            next -= (next - s) - line_len - 1;
+        }
         if(param == next) {
             break;
         }
@@ -1640,6 +1668,9 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                 }
                 param = next;
                 next = parse_until(param, line_end, ' ');
+                if((next - s) > (int)line_len) {
+                    next -= (next - s) - line_len - 1;
+                }
                 if(next != param) {
                     data = string(param, int(next-param)-1);
                 }
@@ -1666,6 +1697,9 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
         param = next;
     }
     media->ice_candidate.push_back(candidate);
+
+    DBG("SDP: got ice candidate: type %s via %s %s\n",
+        ice_candidate_2_str(candidate.type).c_str(), transport_ice_2_str(candidate.transport).c_str(), candidate.conn.debugPrint().c_str());
     return line_end;
 }
 

@@ -391,6 +391,8 @@ public:
   string           uri;         // u=
   SdpConnection    conn;        // c=
   bool use_ice;
+  string ice_pwd;
+  string ice_ufrag;
   std::vector<SdpAttribute> attributes; // unknown session level attributes
 
   bool send;
