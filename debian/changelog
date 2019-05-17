@@ -1,3 +1,11 @@
+sems (1.8.20-1) stable; urgency=low
+
+  * AmRtpStream: fix uninitalized l_rtcp_port
+  * configurable Symmetric RTP behavior
+  * ICE-related SDP fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 17 May 2019 17:05:11 +0300
+
 sems (1.8.19-3) stable; urgency=low
 
   * AmEventDispatcher: use AmLock for iterate, apply methods to avoid deadlocks on exceptions
