@@ -647,6 +647,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     l_if(_if),
     laddr_if(_addr_if),
     l_port(0),
+    l_rtcp_port(0),
     l_sd(0),
     l_sd_ctx(-1),
     l_rtcp_sd_ctx(-1),
