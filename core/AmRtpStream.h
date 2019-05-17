@@ -294,6 +294,8 @@ class AmRtpStream
     /** symmetric RTP & RTCP */
     bool           passive;
     bool           passive_rtcp;
+    struct timeval passive_set_time;
+    unsigned int   passive_packets;
 
     /**type of rtp init state**/
     enum RtpMode

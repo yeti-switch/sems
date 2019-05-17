@@ -29,6 +29,11 @@ struct ConfigContainer
         App_SPECIFIED
     };
 
+    enum SymmetricRtpMode {
+        SM_RTP_PACKETS,
+        SM_RTP_DELAY
+    };
+
     std::string register_application;
     std::string options_application;
     struct app_selector {
@@ -60,6 +65,9 @@ struct ConfigContainer
     bool force_outbound_proxy;
     bool force_outbound_if;
     bool force_symmetric_rtp;
+    SymmetricRtpMode symmetric_rtp_mode;
+    int symmetric_rtp_delay;
+    int symmetric_rtp_packets;
     bool use_raw_sockets;
     bool detect_inband_dtmf;
     bool sip_nat_handling;

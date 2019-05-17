@@ -151,7 +151,10 @@
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
 #define PARAM_PROFILES_NAME          "profiles"
-#define PARAM_DTMF_OFFER_MRATE_NAME "dtmf_offer_multirate"
+#define PARAM_DTMF_OFFER_MRATE_NAME  "dtmf_offer_multirate"
+#define PARAM_SYMMETRIC_MODE_NAME    "symmetric_rtp_mode"
+#define PARAM_SYMMETRIC_PACKETS_NAME "symmetric_rtp_packets"
+#define PARAM_SYMMETRIC_DELAY_NAME   "symmetric_rtp_delay"
 
 #define VALUE_OFF                    "off"
 #define VALUE_DROP                   "drop"
@@ -187,6 +190,9 @@
 #define VALUE_RURI_PARAM             "$(ruri.param)"
 #define VALUE_APP_HEADER             "$(apphdr)"
 #define VALUE_MAPPING                "$(mapping)"
+#define VALUE_PACKETS                "packets"
+#define VALUE_DELAY                  "delay"
+#define VALUE_SYMMETRIC_RTP_DELAY    250
 
 #define CONF_FILE_PATH               "/etc/sems/sems.conf"
 
@@ -475,6 +481,9 @@ namespace Config {
         CFG_INT(PARAM_MAX_FORWARDS_NAME, 70, CFGF_NONE),
         CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
         CFG_INT(PARAM_DEAD_RTP_TIME_NAME, VALUE_DEAD_RTP_TIME, CFGF_NONE),
+        CFG_INT(PARAM_SYMMETRIC_DELAY_NAME, VALUE_SYMMETRIC_RTP_DELAY, CFGF_NONE),
+        CFG_INT(PARAM_SYMMETRIC_PACKETS_NAME, 0, CFGF_NONE),
+        CFG_STR(PARAM_SYMMETRIC_MODE_NAME, VALUE_PACKETS, CFGF_NONE),
         CFG_STR(PARAM_DUMP_PATH_NAME, VALUE_LOG_DUMP_PATH, CFGF_NONE),
         CFG_STR(PARAM_LOG_RAW_NAME, VALUE_LOG_DEBUG, CFGF_NONE),
         CFG_STR(PARAM_LOG_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
@@ -701,6 +710,17 @@ int validate_resampling_func(cfg_t *cfg, cfg_opt_t *opt)
     return valid ? 0 : 1;
 }
 
+int validate_symmetric_mode_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    bool valid = (value == VALUE_PACKETS ||
+                  value == VALUE_DELAY);
+    if(!valid) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'packets\' or \'delay\'", value.c_str(), opt->name);
+    }
+    return valid ? 0 : 1;
+}
+
 ConfigContainer::ConfigContainer()
 : plugin_path(PLUG_IN_PATH)
 , log_dump_path()
@@ -762,6 +782,7 @@ void AmLcConfig::setValidationFunction(cfg_t* cfg)
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_100REL_NAME , validate_100rel_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_UNHDL_REP_LOG_LVL_NAME , validate_log_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_RESAMPLE_LIBRARY_NAME , validate_resampling_func);
+    cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_SYMMETRIC_MODE_NAME , validate_symmetric_mode_func);
 
     cfg_set_error_function(cfg,cfg_error_callback);
 }
@@ -863,9 +884,15 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             return -1;
     }
 
+    std::string value = cfg_getstr(gen, PARAM_SYMMETRIC_MODE_NAME);
+    if(value == VALUE_PACKETS) config->symmetric_rtp_mode = ConfigContainer::SM_RTP_PACKETS;
+    else config->symmetric_rtp_mode = ConfigContainer::SM_RTP_DELAY;
+
     config->force_outbound_proxy = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_NAME);
     config->force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
     config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMMETRIC_NAME);
+    config->symmetric_rtp_packets = cfg_getint(gen, PARAM_SYMMETRIC_PACKETS_NAME);
+    config->symmetric_rtp_delay = cfg_getint(gen, PARAM_SYMMETRIC_DELAY_NAME);
     config->use_raw_sockets = cfg_getbool(gen, PARAM_USE_RAW_SOCK_NAME);
     config->detect_inband_dtmf = cfg_getbool(gen, PARAM_DETECT_INBAND_NAME);
     config->sip_nat_handling = cfg_getbool(gen, PARAM_SIP_NAT_HANDLING_NAME);
@@ -928,7 +955,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(config->node_id!=0) config->node_id_prefix = int2str(config->node_id) + "-";
     config->max_shutdown_time = cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME);
     config->dead_rtp_time = cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME);
-    std::string value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
+    value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
     if(value == VALUE_SPANDSP) config->default_dtmf_detector = Dtmf::SpanDSP;
     else config->default_dtmf_detector = Dtmf::SEMSInternal;
     config->dtmf_offer_multirate = cfg_getbool(gen, PARAM_DTMF_OFFER_MRATE_NAME);

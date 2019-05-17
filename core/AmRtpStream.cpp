@@ -656,6 +656,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     sensor(NULL),
     passive(false),
     passive_rtcp(false),
+    passive_set_time{0},
+    passive_packets(0),
     offer_answer_used(true),
     active(false), // do not return any data unless something really received
     mute(false),
@@ -829,6 +831,16 @@ void AmRtpStream::handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rt
 
     if((!rtcp && passive) || (rtcp && (!symmetric_rtp_ignore_rtcp && passive_rtcp)))
     {
+        uint64_t now = last_recv_time.tv_sec*1000-last_recv_time.tv_usec/1000,
+                 set_time = passive_set_time.tv_sec*1000-passive_set_time.tv_usec/1000;
+        if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_PACKETS &&
+           passive_packets < AmConfig.symmetric_rtp_packets) {
+            passive_packets++;
+            return;
+        } else if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_DELAY &&
+           now - set_time < AmConfig.symmetric_rtp_delay) {
+            return;
+        }
         struct sockaddr_in* in_recv = (struct sockaddr_in*)recv_addr;
         struct sockaddr_in6* in6_recv = (struct sockaddr_in6*)recv_addr;
 
@@ -873,6 +885,10 @@ void AmRtpStream::handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rt
 
 void AmRtpStream::setPassiveMode(bool p)
 {
+    if(p) {
+        memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
+        passive_packets = 0;
+    }
     passive_rtcp = passive = p;
     if (p) {
         CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.\n");
