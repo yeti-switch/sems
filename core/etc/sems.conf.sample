@@ -235,6 +235,39 @@ general {
      */
     force_symmetric_rtp = yes
 
+    /* optional parameter: symmetric_rtp_mode
+     *
+     * Symmetric RTP behavior
+     *
+     * in 'packets' mode passive stream has to wait for N packets from the same new raddr before applying it.
+     * in 'delay' mode stream has to skip symmetric RTP processing for N seconds after passive mode was set
+     *
+     * available values: packets, delay
+     *
+     * default: packets
+     */
+    symmetric_rtp_mode = packets
+
+    /* optional parameter: symmetric_rtp_packets
+     *
+     * Symmetric RTP behavior
+     *
+     * passive stream has to wait for N packets from the same new raddr before applying it.
+     *
+     * default: 0
+     */
+    symmetric_rtp_packets = 0
+
+    /* optional parameter: symmetric_rtp_packets
+     *
+     * Symmetric RTP behavior
+     *
+     * skip symmetric RTP processing for N seconds after passive mode was set
+     *
+     * default: 250
+     */
+    symmetric_rtp_delay = 250
+
     /* optional parameter: 100rel
      *
      * support 100rel (PRACK) extension (RFC3262)?
