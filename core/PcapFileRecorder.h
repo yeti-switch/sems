@@ -13,8 +13,8 @@ struct PcapRecorderEvent
 {
     pcap_logger *logger;
     std::vector<char> data;
-    struct sockaddr srcaddr;
-    struct sockaddr dstaddr;
+    struct sockaddr_storage srcaddr;
+    struct sockaddr_storage dstaddr;
     struct timeval event_time;
     PcapRecorderEvent(pcap_logger* logger, std::vector<char> data,
                       struct sockaddr *src, struct sockaddr *dst)
