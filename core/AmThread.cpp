@@ -100,8 +100,6 @@ void * AmThread::_start(void * _t)
 
     _this->_stopped.set(true);
 
-    AmThreadWatcher::instance()->check();
-
     return nullptr;
 }
 
@@ -261,21 +259,17 @@ void AmThreadWatcher::add(AmThread* t)
         static_cast<unsigned long int>(t->_pid));
     q_mut.lock();
     thread_queue.push(t);
+    _run_cond.set(true);
     q_mut.unlock();
     DBG("added thread %lu to thread watcher",
         static_cast<unsigned long int>(t->_pid));
 }
 
-void AmThreadWatcher::check()
-{
-    _run_cond.set(thread_queue.empty());
-}
-
 void AmThreadWatcher::cleanup()
 {
-    DBG("cleanup garbage collector.\n");
+    DBG("cleanup threads garbage collector");
+    _cleanup.set(true);
     _run_cond.set(true);
-    _cleanup = true;
     join();
 }
 
@@ -286,29 +280,32 @@ void AmThreadWatcher::run()
 {
     setThreadName("AmThreadWatcher");
 
-    while(!thread_queue.empty() || !_cleanup.get()) {
+    while(!_cleanup.get()) {
+
         _run_cond.wait_for();
 
-        q_mut.lock();
         DBG("Thread watcher starting its work\n");
 
         try {
             std::queue<AmThread*> n_thread_queue;
+
+            AmLock l(q_mut);
 
             while(!thread_queue.empty()) {
 
                 AmThread* cur_thread = thread_queue.front();
                 thread_queue.pop();
 
-                q_mut.unlock();
+                DBG("thread %lu is to be processed in thread watcher",
+                    static_cast<unsigned long int>(cur_thread->_pid));
 
                 if(_cleanup.get()) {
+                    DBG("request thread %lu to stop and join it",
+                        static_cast<unsigned long int>(cur_thread->_pid));
                     cur_thread->stop();
                     cur_thread->join();
                 }
 
-                DBG("thread %lu is to be processed in thread watcher",
-                    static_cast<unsigned long int>(cur_thread->_pid));
                 if(cur_thread->is_stopped()) {
                     DBG("thread %lu has been destroyed",
                         static_cast<unsigned long int>(cur_thread->_pid));
@@ -318,19 +315,17 @@ void AmThreadWatcher::run()
                         static_cast<unsigned long int>(cur_thread->_pid));
                     n_thread_queue.push(cur_thread);
                 }
-
-                q_mut.lock();
             } //while(!thread_queue.empty())
 
             swap(thread_queue,n_thread_queue);
 
-        } catch(...){
+        } catch(...) {
             /* this one is IMHO very important, as lock is called in try block! */
             ERROR("unexpected exception, state may be invalid!");
         }
 
-        q_mut.unlock();
         DBG("Thread watcher completed");
+        _run_cond.set(thread_queue.empty());
     }
 
     DBG("Thread watcher finished");

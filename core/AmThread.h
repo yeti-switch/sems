@@ -434,7 +434,6 @@ class AmThreadWatcher: public AmThread
 public:
     static AmThreadWatcher* instance();
     void add(AmThread*);
-    void check();
     void cleanup();
 };
 
