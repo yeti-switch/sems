@@ -25,8 +25,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmThread.h */
-#ifndef _AmThread_h_
-#define _AmThread_h_
+#pragma once
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -50,13 +49,13 @@ using std::string;
  */
 class AmMutex
 {
-  pthread_mutex_t m;
+    pthread_mutex_t m;
 
-public:
-  AmMutex(bool recursive = false);
-  ~AmMutex();
-  void lock();
-  void unlock();
+  public:
+    AmMutex(bool recursive = false);
+    ~AmMutex();
+    void lock();
+    void unlock();
 };
 
 /**
@@ -64,14 +63,14 @@ public:
  */
 class AmLock
 {
-  AmMutex& m;
-public:
-  AmLock(AmMutex& _m) : m(_m) {
-    m.lock();
-  }
-  ~AmLock(){
-    m.unlock();
-  }
+    AmMutex& m;
+  public:
+    AmLock(AmMutex& _m) : m(_m) {
+        m.lock();
+    }
+    ~AmLock(){
+        m.unlock();
+    }
 };
 
 /**
@@ -79,17 +78,17 @@ public:
  */
 class AmControlledLock
 {
-  AmMutex& m;
-  bool ownership;
-public:
-  AmControlledLock(AmMutex& _m) : m(_m), ownership(true) {
-    m.lock();
-  }
-  ~AmControlledLock(){
-    if(ownership)
-      m.unlock();
-  }
-  void release_ownership() { ownership = false; }
+    AmMutex& m;
+    bool ownership;
+  public:
+    AmControlledLock(AmMutex& _m) : m(_m), ownership(true) {
+        m.lock();
+    }
+    ~AmControlledLock(){
+        if(ownership)
+            m.unlock();
+    }
+    void release_ownership() { ownership = false; }
 };
 
 /**
@@ -103,31 +102,31 @@ public:
 template<class T>
 class AmSharedVar
 {
-  T       t;
-  AmMutex m;
+    T t;
+    AmMutex m;
 
-public:
-  AmSharedVar(const T& _t) : t(_t) {}
-  AmSharedVar() {}
+  public:
+    AmSharedVar(const T& _t) : t(_t) {}
+    AmSharedVar() {}
 
-  T get() {
-    lock();
-    T res = unsafe_get();
-    unlock();
-    return res;
-  }
+    T get() {
+        lock();
+        T res = unsafe_get();
+        unlock();
+        return res;
+    }
 
-  void set(const T& new_val) {
-    lock();
-    unsafe_set(new_val);
-    unlock();
-  }
+    void set(const T& new_val) {
+        lock();
+        unsafe_set(new_val);
+        unlock();
+    }
 
-  void lock() { m.lock(); }
-  void unlock() { m.unlock(); }
+    void lock() { m.lock(); }
+    void unlock() { m.unlock(); }
 
-  const T& unsafe_get() { return t; }
-  void unsafe_set(const T& new_val) { t = new_val; }
+    const T& unsafe_get() { return t; }
+    void unsafe_set(const T& new_val) { t = new_val; }
 };
 
 /**
@@ -136,80 +135,80 @@ public:
 template<class T>
 class AmCondition
 {
-  T               t;
-  pthread_mutex_t m;
-  pthread_cond_t  cond;
+    T t;
+    pthread_mutex_t m;
+    pthread_cond_t  cond;
 
-  void init_cond() {
-    pthread_mutex_init(&m,NULL);
-    pthread_cond_init(&cond,NULL);
-  }
-
-public:
-  AmCondition() : t() { init_cond(); }
-  AmCondition(const T& _t) : t(_t) { init_cond(); }
-    
-  ~AmCondition()
-  {
-    pthread_cond_destroy(&cond);
-    pthread_mutex_destroy(&m);
-  }
-    
-  /** Change the condition's value. */
-  void set(const T& newval)
-  {
-    pthread_mutex_lock(&m);
-    t = newval;
-    if(t)
-      pthread_cond_broadcast(&cond);
-    pthread_mutex_unlock(&m);
-  }
-    
-  T get()
-  {
-    T val;
-    pthread_mutex_lock(&m);
-    val = t;
-    pthread_mutex_unlock(&m);
-    return val;
-  }
-    
-  /** Waits for the condition to be true. */
-  void wait_for()
-  {
-    pthread_mutex_lock(&m);
-    while(!t){
-      pthread_cond_wait(&cond,&m);
-    }
-    pthread_mutex_unlock(&m);
-  }
-  
-  /** Waits for the condition to be true or a timeout. */
-  bool wait_for_to(unsigned long msec)
-  {
-    struct timeval now;
-    struct timespec timeout;
-    int retcode = 0;
-    bool ret = false;
-
-    gettimeofday(&now, NULL);
-    timeout.tv_sec = now.tv_sec + (msec / 1000);
-    timeout.tv_nsec = (now.tv_usec + (msec % 1000)*1000)*1000;
-    if(timeout.tv_nsec >= 1000000000){
-      timeout.tv_sec++;
-      timeout.tv_nsec -= 1000000000;
+    void init_cond() {
+        pthread_mutex_init(&m,NULL);
+        pthread_cond_init(&cond,NULL);
     }
 
-    pthread_mutex_lock(&m);
-    while(!t && !retcode){
-      retcode = pthread_cond_timedwait(&cond,&m, &timeout);
+  public:
+    AmCondition() : t() { init_cond(); }
+    AmCondition(const T& _t) : t(_t) { init_cond(); }
+
+    ~AmCondition()
+    {
+        pthread_cond_destroy(&cond);
+        pthread_mutex_destroy(&m);
     }
 
-    if(t) ret = true;
-    pthread_mutex_unlock(&m);
+    /** Change the condition's value. */
+    void set(const T& newval)
+    {
+        pthread_mutex_lock(&m);
+        t = newval;
+        if(t)
+            pthread_cond_broadcast(&cond);
+        pthread_mutex_unlock(&m);
+    }
 
-    return ret;
-  }
+    T get()
+    {
+        T val;
+        pthread_mutex_lock(&m);
+        val = t;
+        pthread_mutex_unlock(&m);
+        return val;
+    }
+
+    /** Waits for the condition to be true. */
+    void wait_for()
+    {
+        pthread_mutex_lock(&m);
+        while(!t) {
+            pthread_cond_wait(&cond,&m);
+        }
+        pthread_mutex_unlock(&m);
+    }
+
+    /** Waits for the condition to be true or a timeout. */
+    bool wait_for_to(unsigned long msec)
+    {
+        struct timeval now;
+        struct timespec timeout;
+        int retcode = 0;
+        bool ret = false;
+
+        gettimeofday(&now, nullptr);
+        timeout.tv_sec = now.tv_sec + static_cast<__time_t>(msec / 1000);
+        timeout.tv_nsec = (now.tv_usec + static_cast<__suseconds_t>(msec % 1000)*1000)*1000;
+        if(timeout.tv_nsec >= 1000000000){
+            timeout.tv_sec++;
+            timeout.tv_nsec -= 1000000000;
+        }
+
+        pthread_mutex_lock(&m);
+        while(!t && !retcode){
+            retcode = pthread_cond_timedwait(&cond,&m, &timeout);
+        }
+
+        if(t) ret = true;
+        pthread_mutex_unlock(&m);
+
+        return ret;
+    }
 };
 
 /**
@@ -217,82 +216,83 @@ public:
  */
 class AmEventFd
 {
-  int event_fd;
-  int epoll_fd;
-  bool external;
+    int event_fd;
+    int epoll_fd;
+    bool external;
 
-  void add_to_epoll(int fd, bool ptr) {
-    struct epoll_event ev;
-    bzero(&ev, sizeof(struct epoll_event));
+    void add_to_epoll(int fd, bool ptr)
+    {
+        struct epoll_event ev;
+        bzero(&ev, sizeof(struct epoll_event));
 
-    ev.events = EPOLLIN;
+        ev.events = EPOLLIN;
 
-    if(ptr) ev.data.ptr = this;
-    else ev.data.fd = -event_fd;
+        if(ptr) ev.data.ptr = this;
+        else ev.data.fd = -event_fd;
 
-    if(epoll_ctl(fd, EPOLL_CTL_ADD, event_fd, &ev) == -1){
-      throw string("eventfd. epoll_ctl call failed");
+        if(epoll_ctl(fd, EPOLL_CTL_ADD, event_fd, &ev) == -1){
+            throw string("eventfd. epoll_ctl call failed");
+        }
     }
-  }
 
-public:
-  AmEventFd(bool semaphore = true, bool external_epoll = true)
-    : external(external_epoll)
-  {
-    int flags = EFD_NONBLOCK;
-    if(semaphore)
-      flags |= EFD_SEMAPHORE;
-    if((event_fd = eventfd(0, flags)) == -1)
-      throw string("eventfd. eventfd call failed");
-    if(!external) {
-      if((epoll_fd = epoll_create1(0)) == -1)
-        throw string("eventfd. epoll_create call failed");
-      add_to_epoll(event_fd,false);
+  public:
+    AmEventFd(bool semaphore = true, bool external_epoll = true)
+      : external(external_epoll)
+    {
+        int flags = EFD_NONBLOCK;
+        if(semaphore)
+            flags |= EFD_SEMAPHORE;
+        if((event_fd = eventfd(0, flags)) == -1)
+            throw string("eventfd. eventfd call failed");
+        if(!external) {
+            if((epoll_fd = epoll_create1(0)) == -1)
+                throw string("eventfd. epoll_create call failed");
+            add_to_epoll(event_fd,false);
+        }
     }
-  }
 
-  ~AmEventFd()
-  {
-    if(!external) close(epoll_fd);
-    close(event_fd);
-  }
+    ~AmEventFd()
+    {
+        if(!external) close(epoll_fd);
+        close(event_fd);
+    }
 
-  /** Get internal fd */
-  operator int() { return -event_fd; }
+    /** Get internal fd */
+    operator int() { return -event_fd; }
 
-  /** Add to external epoll handler */
-  void link(int fd, bool ptr = false){
-    if(!external) return;
-    add_to_epoll(fd,ptr);
-  }
+    /** Add to external epoll handler */
+    void link(int fd, bool ptr = false){
+        if(!external) return;
+        add_to_epoll(fd,ptr);
+    }
 
-  /** Remove from external epoll handler */
-  void unlink(int fd){
-    if(!external) return;
-    epoll_ctl(fd,EPOLL_CTL_DEL,event_fd,NULL);
-  }
+    /** Remove from external epoll handler */
+    void unlink(int fd){
+        if(!external) return;
+        epoll_ctl(fd,EPOLL_CTL_DEL,event_fd,nullptr);
+    }
 
-  /** Change the condition's value. */
-  void fire()
-  {
-    uint64_t u = 1;
-    ssize_t ret = write(event_fd, &u, sizeof(uint64_t));
-    (void)ret;
-  }
+    /** Change the condition's value. */
+    void fire()
+    {
+        uint64_t u = 1;
+        ssize_t ret = write(event_fd, &u, sizeof(uint64_t));
+        (void)ret;
+    }
 
-  bool read(){
-    uint64_t u;
-    return ::read(event_fd, &u, sizeof(uint64_t)) == sizeof(uint64_t);
-  }
+    bool read(){
+        uint64_t u;
+        return ::read(event_fd, &u, sizeof(uint64_t)) == sizeof(uint64_t);
+    }
 
-  /** Waits for the event or a timeout. */
-  bool wait_for(unsigned long msec = -1)
-  {
-    if(external) return false;
-    struct epoll_event events[1];
-    int ret = epoll_wait(epoll_fd, events, 1, msec);
-    return 1==ret;
-  }
+    /** Waits for the event or a timeout. */
+    bool wait_for(int msec = -1)
+    {
+        if(external) return false;
+        struct epoll_event events[1];
+        int ret = epoll_wait(epoll_fd, events, 1, msec);
+        return 1==ret;
+    }
 };
 
 /**
@@ -300,65 +300,71 @@ public:
  */
 class AmTimerFd
 {
-  int timer_fd;
+    int timer_fd;
 
-  int settime(unsigned int umsec, unsigned int repeat_umsec);
+    int settime(unsigned int umsec, unsigned int repeat_umsec);
 
-public:
-  AmTimerFd(unsigned int umsec = 0, bool repeat = true)
-  {
-    if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
-      throw string("timerfd. timerfd_create call failed");
-    if(settime(umsec,repeat?umsec:0))
-      throw string("timerfd. timer set failed");
-  }
-
-  ~AmTimerFd()
-  {
-    close(timer_fd);
-  }
-
-  /** Get internal fd */
-  int fd() { return timer_fd; }
-  operator int() { return -timer_fd; }
-
-  /** Set time */
-  int set(unsigned int umsec, bool repeat = true){
-    return settime(umsec,repeat?umsec:0);
-  }
-
-  /** Set time with explicit repeat interval */
-  int set(unsigned int umsec, unsigned int repeat_umsec) {
-    return settime(umsec,repeat_umsec);
-  }
-
-  /** Add to external epoll handler */
-  void link(int fd, bool ptr = false){
-    struct epoll_event ev;
-    bzero(&ev, sizeof(struct epoll_event));
-    ev.events = EPOLLIN | EPOLLET;
-    if(ptr) ev.data.ptr = this;
-    else ev.data.fd = -timer_fd;
-    if(epoll_ctl(fd, EPOLL_CTL_ADD, timer_fd, &ev) == -1){
-      throw string("timerfd. epoll_ctl call failed");
+  public:
+    AmTimerFd(unsigned int umsec = 0, bool repeat = true)
+    {
+        if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
+            throw string("timerfd. timerfd_create call failed");
+        if(settime(umsec,repeat?umsec:0))
+            throw string("timerfd. timer set failed");
     }
-  }
 
-  /** read timer event */
-  uint64_t read(){
-    uint64_t u = 0;
-    ssize_t ret = ::read(timer_fd, &u, sizeof(uint64_t));
-    if(!ret) {
-        ERROR("error reading timerfd %d",timer_fd);
+    ~AmTimerFd()
+    {
+        close(timer_fd);
     }
-    return u;
-  }
 
-  /** Remove from external epoll handler */
-  void unlink(int fd){
-    epoll_ctl(fd,EPOLL_CTL_DEL,timer_fd,NULL);
-  }
+    /** Get internal fd */
+    int fd() { return timer_fd; }
+    operator int() { return -timer_fd; }
 
+    /** Set time */
+    int set(unsigned int umsec, bool repeat = true)
+    {
+        return settime(umsec,repeat?umsec:0);
+    }
+
+    /** Set time with explicit repeat interval */
+    int set(unsigned int umsec, unsigned int repeat_umsec)
+    {
+        return settime(umsec,repeat_umsec);
+    }
+
+    /** Add to external epoll handler */
+    void link(int fd, bool ptr = false)
+    {
+        struct epoll_event ev;
+        bzero(&ev, sizeof(struct epoll_event));
+        ev.events = EPOLLIN | EPOLLET;
+
+        if(ptr) ev.data.ptr = this;
+        else ev.data.fd = -timer_fd;
+
+        if(epoll_ctl(fd, EPOLL_CTL_ADD, timer_fd, &ev) == -1){
+            throw string("timerfd. epoll_ctl call failed");
+        }
+    }
+
+    /** read timer event */
+    uint64_t read()
+    {
+        uint64_t u = 0;
+        ssize_t ret = ::read(timer_fd, &u, sizeof(uint64_t));
+        if(!ret) {
+            ERROR("error reading timerfd %d",timer_fd);
+        }
+        return u;
+    }
+
+      /** Remove from external epoll handler */
+    void unlink(int fd)
+    {
+        epoll_ctl(fd,EPOLL_CTL_DEL,timer_fd,nullptr);
+    }
 };
 
 /**
@@ -366,38 +372,38 @@ public:
  */
 class AmThread
 {
-  pthread_t _td;
-  AmMutex   _m_td;
+    pthread_t _td;
+    AmMutex   _m_td;
 
-  AmSharedVar<bool> _stopped;
+    AmSharedVar<bool> _stopped;
 
-  static void* _start(void*);
+    static void* _start(void*);
 
-protected:
-  virtual void run()=0;
-  virtual void on_stop()=0;
+  protected:
+    virtual void run()=0;
+    virtual void on_stop()=0;
 
-public:
-  unsigned long _pid;
+  public:
+    unsigned long _pid;
 
-  AmThread();
-  virtual ~AmThread() {}
+    AmThread();
+    virtual ~AmThread();
 
-  virtual void onIdle() {}
+    virtual void onIdle();
 
-  /** Start it ! */
-  void start();
-  /** Stop it ! */
-  void stop();
-  /** @return true if this thread doesn't run. */
-  bool is_stopped() { return _stopped.get(); }
-  /** Wait for this thread to finish */
-  void join();
-  /** kill the thread (if pthread_setcancelstate(PTHREAD_CANCEL_ENABLED) has been set) **/ 
-  void cancel();
+    /** Start it ! */
+    void start();
+    /** Stop it ! */
+    void stop();
+    /** @return true if this thread doesn't run. */
+    bool is_stopped() { return _stopped.get(); }
+    /** Wait for this thread to finish */
+    void join();
+    /** kill the thread (if pthread_setcancelstate(PTHREAD_CANCEL_ENABLED) has been set) **/
+    void cancel();
 
-  int setRealtime();
-  void setThreadName(const char *thread_name);
+    int setRealtime();
+    void setThreadName(const char *thread_name);
 };
 
 /**
@@ -411,55 +417,53 @@ public:
  */
 class AmThreadWatcher: public AmThread
 {
-  static AmThreadWatcher* _instance;
-  static AmMutex          _inst_mut;
+    static AmThreadWatcher* _instance;
+    static AmMutex          _inst_mut;
 
-  std::queue<AmThread*> thread_queue;
-  AmMutex          q_mut;
+    std::queue<AmThread*> thread_queue;
+    AmMutex          q_mut;
 
-  /** the daemon only runs if this is true */
-  AmCondition<bool> _run_cond;
-  AmCondition<bool> _cleanup;
-    
-  AmThreadWatcher();
-  void run();
-  void on_stop();
+    /** the daemon only runs if this is true */
+    AmCondition<bool> _run_cond;
+    AmCondition<bool> _cleanup;
+
+    AmThreadWatcher();
+    void run();
+    void on_stop();
 
 public:
-  static AmThreadWatcher* instance();
-  void add(AmThread*);
-  void check();
-  void cleanup();
+    static AmThreadWatcher* instance();
+    void add(AmThread*);
+    void check();
+    void cleanup();
 };
 
 template<class T>
 class AmThreadLocalStorage
 {
-  pthread_key_t key;
-  
-  static void __del_tls_obj(void* obj) {
-    delete static_cast<T*>(obj);
-  }
+    pthread_key_t key;
 
-public:
-  AmThreadLocalStorage() {
-    pthread_key_create(&key,__del_tls_obj);
-  }
+    static void __del_tls_obj(void* obj) {
+        delete static_cast<T*>(obj);
+    }
 
-  ~AmThreadLocalStorage() {
-    pthread_key_delete(key);
-  }
+  public:
+    AmThreadLocalStorage() {
+        pthread_key_create(&key,__del_tls_obj);
+    }
 
-  T* get() {
-    return static_cast<T*>(pthread_getspecific(key));
-  }
+    ~AmThreadLocalStorage() {
+        pthread_key_delete(key);
+    }
 
-  void set(T* p) {
-    pthread_setspecific(key,(void*)p);
-  }
+    T* get() {
+        return static_cast<T*>(pthread_getspecific(key));
+    }
+
+    void set(T* p) {
+        pthread_setspecific(key,reinterpret_cast<void*>(p));
+    }
 };
-
-#endif
 
 // Local Variables:
 // mode:C++
