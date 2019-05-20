@@ -51,10 +51,7 @@ _wheeltimer::_wheeltimer()
 }
 
 _wheeltimer::~_wheeltimer()
-{
-    stop();
-    join();
-}
+{}
 
 void _wheeltimer::insert_timer(timer* t)
 {

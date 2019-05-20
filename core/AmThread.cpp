@@ -259,7 +259,7 @@ void AmThreadWatcher::add(AmThread* t)
         static_cast<unsigned long int>(t->_pid));
     q_mut.lock();
     thread_queue.push(t);
-    _run_cond.set(true);
+    //_run_cond.set(true);
     q_mut.unlock();
     DBG("added thread %lu to thread watcher",
         static_cast<unsigned long int>(t->_pid));

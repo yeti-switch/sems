@@ -544,7 +544,9 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 int _SipCtrlInterface::run()
 {
     DBG("Starting SIP control interface\n");
+
     wheeltimer::instance()->start();
+    AmThreadWatcher::instance()->add(wheeltimer::instance());
 
     if (NULL != udp_servers) {
 	for(int i=0; i<nr_udp_servers;i++){

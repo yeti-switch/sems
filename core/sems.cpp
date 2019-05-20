@@ -770,7 +770,6 @@ int main(int argc, char* argv[])
   sip_ctrl.cleanup();
   resolver::instance()->clear_cache();
   resolver::dispose();
-  wheeltimer::dispose();
   SipCtrlInterface::dispose();
   tr_blacklist::dispose();
 
