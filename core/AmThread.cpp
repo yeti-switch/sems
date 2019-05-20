@@ -92,6 +92,7 @@ void * AmThread::_start(void * _t)
       thread_name,
       (unsigned long) _tid);
   _this->_stopped.set(true);
+  AmThreadWatcher::instance()->check();
     
   return NULL;
 }
@@ -224,6 +225,7 @@ AmMutex AmThreadWatcher::_inst_mut;
 
 AmThreadWatcher::AmThreadWatcher()
   : _run_cond(false)
+  , _cleanup(false)
 {
 }
 
@@ -244,22 +246,21 @@ void AmThreadWatcher::add(AmThread* t)
   DBG("trying to add thread %lu to thread watcher.\n", (unsigned long int) t->_pid);
   q_mut.lock();
   thread_queue.push(t);
-  _run_cond.set(true);
   q_mut.unlock();
   DBG("added thread %lu to thread watcher.\n", (unsigned long int) t->_pid);
+}
+
+void AmThreadWatcher::check()
+{
+    _run_cond.set(thread_queue.empty());
 }
 
 void AmThreadWatcher::cleanup()
 {
   DBG("cleanup garbage collector.\n");
-  bool iscleanup = false;
-  do {
-    _run_cond.set(true);
-    sleep(10);
-    q_mut.lock();
-    iscleanup = thread_queue.empty();
-    q_mut.unlock();
-  } while(!iscleanup);
+  _run_cond.set(true);
+  _cleanup = true;
+  join();
 }
 
 void AmThreadWatcher::on_stop()
@@ -269,12 +270,8 @@ void AmThreadWatcher::on_stop()
 void AmThreadWatcher::run()
 {
   setThreadName("AmThreadWatcher");
-  for(;;){
-
+  for(;!thread_queue.empty() || !_cleanup.get();){
     _run_cond.wait_for();
-    // Let some time for to threads 
-    // to stop by themselves
-    sleep(10);
 
     q_mut.lock();
     DBG("Thread watcher starting its work\n");
@@ -284,21 +281,26 @@ void AmThreadWatcher::run()
 
       while(!thread_queue.empty()){
 
-	AmThread* cur_thread = thread_queue.front();
-	thread_queue.pop();
+        AmThread* cur_thread = thread_queue.front();
+        thread_queue.pop();
 
-	q_mut.unlock();
-	DBG("thread %lu is to be processed in thread watcher.\n", (unsigned long int) cur_thread->_pid);
-	if(cur_thread->is_stopped()){
-	  DBG("thread %lu has been destroyed.\n", (unsigned long int) cur_thread->_pid);
-	  delete cur_thread;
-	}
-	else {
-	  DBG("thread %lu still running.\n", (unsigned long int) cur_thread->_pid);
-	  n_thread_queue.push(cur_thread);
-	}
+        q_mut.unlock();
+        if(_cleanup.get()) {
+            cur_thread->stop();
+            cur_thread->join();
+        }
 
-	q_mut.lock();
+        DBG("thread %lu is to be processed in thread watcher.\n", (unsigned long int) cur_thread->_pid);
+        if(cur_thread->is_stopped()){
+            DBG("thread %lu has been destroyed.\n", (unsigned long int) cur_thread->_pid);
+            delete cur_thread;
+        }
+        else {
+            DBG("thread %lu still running.\n", (unsigned long int) cur_thread->_pid);
+            n_thread_queue.push(cur_thread);
+        }
+
+        q_mut.lock();
       }
 
       swap(thread_queue,n_thread_queue);
@@ -308,12 +310,10 @@ void AmThreadWatcher::run()
       ERROR("unexpected exception, state may be invalid!\n");
     }
 
-    bool more = !thread_queue.empty();
-    q_mut.unlock();
-
-    DBG("Thread watcher finished\n");
-    if(!more)
-      _run_cond.set(false);
+     q_mut.unlock();
+     DBG("Thread watcher completed\n");
   }
+
+  DBG("Thread watcher finished\n");
 }
 

@@ -419,6 +419,7 @@ class AmThreadWatcher: public AmThread
 
   /** the daemon only runs if this is true */
   AmCondition<bool> _run_cond;
+  AmCondition<bool> _cleanup;
     
   AmThreadWatcher();
   void run();
@@ -427,6 +428,7 @@ class AmThreadWatcher: public AmThread
 public:
   static AmThreadWatcher* instance();
   void add(AmThread*);
+  void check();
   void cleanup();
 };
 
