@@ -774,10 +774,11 @@ int main(int argc, char* argv[])
   SipCtrlInterface::dispose();
   tr_blacklist::dispose();
 
+  AmThreadWatcher::instance()->cleanup();
+
   INFO("Disposing plug-ins\n");
   AmPlugIn::dispose();
 
-  AmThreadWatcher::instance()->cleanup();
   tls_cleanup();
   srtp_shutdown();
   libevent_global_shutdown();
