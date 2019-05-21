@@ -1369,7 +1369,7 @@ int _resolver::set_destination_ip(
                 priority);
             if(err < 0) {
                 DBG("Unresolvable Request URI domain <%s>\n",nh.c_str());
-                return -478;
+                return RESOLVING_ERROR_CODE;
             }
     } else { //if (am_inet_pton(nh.c_str(), remote_ip) != 1)
         am_set_port(remote_ip,next_port);
@@ -1473,7 +1473,7 @@ int _resolver::resolve_targets(
                 it->host.len,it->host.s,
                 it->port,
                 it->trsp.len,it->trsp.s);
-            return -478;
+            return RESOLVING_ERROR_CODE;
         }
 
         if(it->trsp.len && (it->trsp.len <= SIP_TRSP_SIZE_MAX)) {

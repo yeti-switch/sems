@@ -48,6 +48,7 @@ using std::map;
 #include "transport.h"
 
 #define DNS_CACHE_SIZE 128
+#define RESOLVING_ERROR_CODE -478
 
 enum address_type {
     IPnone=0,
