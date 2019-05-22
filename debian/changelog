@@ -1,3 +1,12 @@
+sems (1.8.21-1) stable; urgency=low
+
+  * fix wrong IPv6 src/dst addrs in pcap files
+  * optimize AmThreadWatcher
+  * use AmThreadWatcher to dispose wheeltimer
+  * resolver: add resolving error code
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 22 May 2019 12:15:37 +0300
+
 sems (1.8.20-1) stable; urgency=low
 
   * AmRtpStream: fix uninitalized l_rtcp_port
