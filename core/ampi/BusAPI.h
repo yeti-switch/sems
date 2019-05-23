@@ -32,15 +32,17 @@ struct BusMsg
     string          application_method;
     string          body;
     uint64_t        updated;
+    uint64_t        timeout;
 
-    BusMsg(bool _is_query,string _local_tag, string _application_method, string _body, int _status = 0)
+    BusMsg(bool _is_query,string _local_tag, string _application_method, string _body, uint64_t _timeout = 0, int _status = 0)
       : AmEvent(0),
         state(New),
         status(_status),
         is_query(_is_query),
         local_tag(_local_tag),
         application_method(_application_method),
-        body(_body)
+        body(_body),
+        timeout(_timeout)
     {}
 
     ~BusMsg() {}
