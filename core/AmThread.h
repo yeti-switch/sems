@@ -394,7 +394,7 @@ class AmThread
     /** Start it ! */
     void start();
     /** Stop it ! */
-    void stop();
+    void stop(bool join_afer_stop = false);
     /** @return true if this thread doesn't run. */
     bool is_stopped() { return _stopped.get(); }
     /** Wait for this thread to finish */

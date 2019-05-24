@@ -132,7 +132,7 @@ void AmThread::start()
     //DBG("Thread %lu is just created.\n", (unsigned long int) _pid);
 }
 
-void AmThread::stop()
+void AmThread::stop(bool join_afer_stop)
 {
     _m_td.lock();
 
@@ -152,14 +152,19 @@ void AmThread::stop()
 
     try { on_stop(); } catch(...) {}
 
-    int res;
-    if ((res = pthread_detach(_td)) != 0) {
-        if (res == EINVAL) {
-            WARN("pthread_detach failed with code EINVAL: thread already in detached state");
-        } else if (res == ESRCH) {
-            DBG("pthread_detach failed with code ESRCH: thread could not be found");
-        } else {
-            WARN("pthread_detach failed with code %i\n", res);
+    if(join_afer_stop) {
+        DBG("join thread %lu",static_cast<unsigned long int>(_td));
+        join();
+    } else {
+        int res;
+        if ((res = pthread_detach(_td)) != 0) {
+            if (res == EINVAL) {
+                WARN("pthread_detach failed with code EINVAL: thread already in detached state");
+            } else if (res == ESRCH) {
+                DBG("pthread_detach failed with code ESRCH: thread could not be found");
+            } else {
+                WARN("pthread_detach failed with code %i\n", res);
+            }
         }
     }
 
@@ -302,8 +307,7 @@ void AmThreadWatcher::run()
                 if(_cleanup.get()) {
                     DBG("request thread %lu to stop and join it",
                         static_cast<unsigned long int>(cur_thread->_pid));
-                    cur_thread->stop();
-                    cur_thread->join();
+                    cur_thread->stop(true);
                 }
 
                 if(cur_thread->is_stopped()) {
