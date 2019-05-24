@@ -661,6 +661,7 @@ int main(int argc, char* argv[])
 
   INFO("Starting application timer scheduler\n");
   AmAppTimer::instance()->start();
+  AmThreadWatcher::instance()->add(AmAppTimer::instance());
 
   INFO("Starting session container\n");
   AmSessionContainer::instance()->start();
@@ -723,8 +724,8 @@ int main(int argc, char* argv[])
   INFO("Disposing session container\n");
   AmSessionContainer::dispose();
 
-  INFO("Disposing app timer\n");
-  AmAppTimer::dispose();
+  /*INFO("Disposing app timer\n");
+  AmAppTimer::dispose();*/
   
   DBG("** Transaction table dump: **\n");
   dumps_transactions();
