@@ -46,8 +46,6 @@ _wheeltimer::_wheeltimer(const char *thread_name)
     : wall_clock(0),
       thread_name(thread_name)
 {
-    DBG("_wheeltimer::_wheeltimer() this %p",this);
-    log_stacktrace(L_ERR);
     struct timeval now;
     gettimeofday(&now,NULL);
     unix_clock.set(now.tv_sec);
