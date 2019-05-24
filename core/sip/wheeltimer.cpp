@@ -42,9 +42,12 @@ timer::~timer()
     // DBG("timer::~timer(this=%p)\n",this);
 }
 
-_wheeltimer::_wheeltimer()
-    : wall_clock(0)
+_wheeltimer::_wheeltimer(const char *thread_name)
+    : wall_clock(0),
+      thread_name(thread_name)
 {
+    DBG("_wheeltimer::_wheeltimer() this %p",this);
+    log_stacktrace(L_ERR);
     struct timeval now;
     gettimeofday(&now,NULL);
     unix_clock.set(now.tv_sec);
@@ -78,7 +81,7 @@ void _wheeltimer::run()
   is_stop.set(false);
   struct timeval now,next_tick,diff,tick;
 
-  setThreadName("sip-wheeltimer");
+  setThreadName(thread_name);
 
   tick.tv_sec = 0;
   tick.tv_usec = TIMER_RESOLUTION;

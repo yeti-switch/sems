@@ -69,7 +69,8 @@ public:
 };
 
 _AmAppTimer::_AmAppTimer()
-  : direct_timers_mut(true)
+  : _wheeltimer("app-wheeltimer"),
+    direct_timers_mut(true)
 {
 }
 

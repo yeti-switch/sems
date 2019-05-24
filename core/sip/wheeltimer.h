@@ -90,6 +90,7 @@ class _wheeltimer:
 	{}
     };
 
+    const char *thread_name;
     //the timer wheel
     base_timer wheels[WHEELS][ELMTS_PER_WHEEL];
 
@@ -114,7 +115,7 @@ protected:
     void run();
     void on_stop(){is_stop.set(true);}
 
-    _wheeltimer();
+    _wheeltimer(const char *thread_name = "sip-wheeltimer");
     ~_wheeltimer();
     void dispose(){}
 
