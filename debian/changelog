@@ -1,3 +1,10 @@
+sems (1.8.22-1) stable; urgency=low
+
+  * fix AmAppTimer finalization
+  * add timeout in BusMsg
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 27 May 2019 17:54:43 +0300
+
 sems (1.8.21-1) stable; urgency=low
 
   * fix wrong IPv6 src/dst addrs in pcap files
