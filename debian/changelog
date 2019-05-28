@@ -1,3 +1,9 @@
+sems (1.8.22-2) stable; urgency=low
+
+  * jsonrpc: fix freeze on SIGTERM
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 28 May 2019 16:32:25 +0300
+
 sems (1.8.22-1) stable; urgency=low
 
   * fix AmAppTimer finalization
