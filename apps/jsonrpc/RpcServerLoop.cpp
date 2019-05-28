@@ -404,7 +404,7 @@ void JsonRPCServerLoop::run() {
     ERROR("failed to set server socket to non-blocking\n");
     return;
   }
-	 
+
   ev_io_init(&ev_accept,accept_cb,listen_fd,EV_READ);
   ev_io_start(loop,&ev_accept);
 
@@ -424,8 +424,9 @@ void JsonRPCServerLoop::run() {
 }
 
 void JsonRPCServerLoop::on_stop() {
+  ev_io_stop(loop, &ev_accept);
+  ev_async_stop(loop, &async_w);
   ev_break(loop);
-  join();
 }
 
 void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {
