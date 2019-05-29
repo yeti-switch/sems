@@ -996,26 +996,30 @@ void AmB2BMedia::updateStreamPair(AudioStreamPair &pair)
     bool have_a = have_a_leg_local_sdp && have_a_leg_remote_sdp;
     bool have_b = have_b_leg_local_sdp && have_b_leg_remote_sdp;
 
-    TRACE("updating stream in A leg");
-    if (have_a) pair.a.initStream(playout_type, a_leg_local_sdp, a_leg_remote_sdp, pair.media_idx);
-    pair.a.setDtmfSink(b);
+    try {
+        TRACE("updating stream in A leg");
+        if (have_a) pair.a.initStream(playout_type, a_leg_local_sdp, a_leg_remote_sdp, pair.media_idx);
+        pair.a.setDtmfSink(b);
 
-    TRACE("updating stream in B leg");
-    pair.b.setDtmfSink(a);
-    if (have_b) pair.b.initStream(playout_type, b_leg_local_sdp, b_leg_remote_sdp, pair.media_idx);
+        TRACE("updating stream in B leg");
+        pair.b.setDtmfSink(a);
+        if (have_b) pair.b.initStream(playout_type, b_leg_local_sdp, b_leg_remote_sdp, pair.media_idx);
 
-    TRACE("update relay for stream in A leg");
-    if (pair.b.getInput()) pair.a.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
-    else pair.a.setRelayStream(pair.b.getStream());
+        TRACE("update relay for stream in A leg");
+        if (pair.b.getInput()) pair.a.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
+        else pair.a.setRelayStream(pair.b.getStream());
 
-    TRACE("update relay for stream in B leg");
-    if (pair.a.getInput()) pair.b.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
-    else pair.b.setRelayStream(pair.a.getStream());
+        TRACE("update relay for stream in B leg");
+        if (pair.a.getInput()) pair.b.setRelayStream(nullptr); // don't mix relayed RTP into the other's input
+        else pair.b.setRelayStream(pair.a.getStream());
 
-    TRACE("[%p] audio streams %p/%p updated\n",
-          static_cast<void *>(this),
-          static_cast<void *>(pair.a.getStream()),
-          static_cast<void *>(pair.b.getStream()));
+        TRACE("[%p] audio streams %p/%p updated\n",
+            static_cast<void *>(this),
+            static_cast<void *>(pair.a.getStream()),
+            static_cast<void *>(pair.b.getStream()));
+    } catch(const string& err) {
+        ERROR("updateStreamPair failed: %s", err.c_str());
+    }
 }
 
 void AmB2BMedia::updateAudioStreams()
