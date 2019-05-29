@@ -139,7 +139,7 @@ class _AmAudioFileRecorderProcessor
     void getStats(AmArg &ret);
     
     //singleton function
-    void dispose(){}
+    void dispose(){ stop(); }
 };
 
 typedef singleton<_AmAudioFileRecorderProcessor> AmAudioFileRecorderProcessor;

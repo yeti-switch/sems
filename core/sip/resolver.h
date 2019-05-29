@@ -340,7 +340,6 @@ protected:
 private:
     dns_cache cache;
     AmCondition<bool> b_stop;
-    AmCondition<bool> b_stopped;
 };
 
 typedef singleton<_resolver> resolver;

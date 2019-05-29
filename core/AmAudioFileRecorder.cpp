@@ -107,6 +107,7 @@ void _AmAudioFileRecorderProcessor::run()
 
 void _AmAudioFileRecorderProcessor::on_stop()
 {
+    stop_event.fire();
     stopped.wait_for();
 }
 
