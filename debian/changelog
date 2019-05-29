@@ -1,3 +1,10 @@
+sems (1.8.23-1) stable; urgency=low
+
+  * 15224e02f AmB2BMedia::updateStreamPair: catch exceptions. fixes crash
+  * 3477eb10d AmAudioFileRecorderProcessorm, resolver: fix freeze on SIGTERM
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 29 May 2019 14:06:53 +0300
+
 sems (1.8.22-2) stable; urgency=low
 
   * jsonrpc: fix freeze on SIGTERM
