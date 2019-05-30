@@ -26,7 +26,7 @@ class trsp_worker;
 class tcp_base_trsp : public trsp_socket
 {
 protected:
-    friend class trsp_socket_factory;
+    friend class trsp_worker;
     trsp_server_socket* server_sock;
     trsp_worker* server_worker;
 
@@ -180,13 +180,8 @@ protected:
 public:
     virtual ~trsp_socket_factory(){}
 
-    tcp_base_trsp* create_connected(trsp_server_socket* server_sock,
-                    trsp_worker* server_worker,
-                    int sd, const sockaddr_storage* sa,
-                    struct event_base* evbase);
-
     tcp_base_trsp* new_connection(trsp_server_socket* server_sock,
-                        trsp_worker* server_worker,
+                        trsp_worker* server_worker, int sd,
                         const sockaddr_storage* sa,
                         struct event_base* evbase);
 

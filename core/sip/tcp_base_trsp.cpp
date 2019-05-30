@@ -552,26 +552,12 @@ void tcp_base_trsp::copy_peer_addr(sockaddr_storage* sa)
     memcpy(sa,&peer_addr,sizeof(sockaddr_storage));
 }
 
-tcp_base_trsp* trsp_socket_factory::create_connected(trsp_server_socket* server_sock,
-				       trsp_worker* server_worker,
-				       int sd, const sockaddr_storage* sa,
-					   struct event_base* evbase)
-{
-  if(sd < 0)
-    return 0;
-
-  tcp_base_trsp* sock = create_socket(server_sock, server_worker,sd,sa,evbase);
-  sock->connected = true;
-  sock->add_read_event();
-  return sock;
-}
-
 tcp_base_trsp* trsp_socket_factory::new_connection(trsp_server_socket* server_sock,
 						 trsp_worker* server_worker,
-						 const sockaddr_storage* sa,
+						  int sd, const sockaddr_storage* sa,
 						 struct event_base* evbase)
 {
-  return create_socket(server_sock, server_worker,-1,sa,evbase);
+  return create_socket(server_sock, server_worker,sd,sa,evbase);
 }
 
 class trsp_compare
@@ -724,8 +710,17 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
 
 void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, const sockaddr_storage* sa)
 {
-    tcp_base_trsp* new_sock = server_sock->sock_factory->create_connected(server_sock,this,sd,sa,evbase);
-    add_connection(new_sock);
+    if(sd < 0) {
+        return;
+    }
+    tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,sd,sa,evbase);
+    if(new_sock) {
+        add_connection(new_sock);
+        new_sock->connected = true;
+        new_sock->add_read_event();
+    } else {
+        close(sd);
+    }
 }
 
 
@@ -734,8 +729,7 @@ tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, cons
     char host_buf[NI_MAXHOST];
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
-    tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,
-                                sa,evbase);
+    tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,-1,sa,evbase);
     connections[dest].push_back(new_sock);
     inc_ref(new_sock);
     return new_sock;
