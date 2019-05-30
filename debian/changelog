@@ -1,3 +1,9 @@
+sems (1.8.24-1) stable; urgency=low
+
+  * fix tls crash
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 30 May 2019 15:07:22 +0300
+
 sems (1.8.23-1) stable; urgency=low
 
   * 15224e02f AmB2BMedia::updateStreamPair: catch exceptions. fixes crash
