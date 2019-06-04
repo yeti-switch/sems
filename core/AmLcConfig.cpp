@@ -1804,7 +1804,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
                 (p_if->ifa_addr->sa_family != AF_INET6) )
             continue;
 
-        if( !(p_if->ifa_flags & IFF_UP) || !(p_if->ifa_flags & IFF_RUNNING) )
+        if(!(p_if->ifa_flags & IFF_UP))
             continue;
 
         if(p_if->ifa_addr->sa_family == AF_INET6) {
