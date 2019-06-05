@@ -1,3 +1,9 @@
+sems (1.8.24-2) stable; urgency=low
+
+  * sctp_bus/SctpClientConnection: connect(): send SctpBusConnectionStatus event on immediate connect
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 05 Jun 2019 15:45:11 +0300
+
 sems (1.8.24-1) stable; urgency=low
 
   * fix tls crash
