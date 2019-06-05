@@ -69,8 +69,15 @@ int SctpClientConnection::connect()
         }
     };
 
-    if(state != Connected)
+    if(state != Connected) {
         ev.events |= EPOLLOUT;
+    } else {
+        if(!event_sink.empty()) {
+            AmSessionContainer::instance()->postEvent(
+                event_sink,
+                new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
+        }
+    }
 
     if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sctp_sys_err("epoll_ctl(EPOLL_CTL_ADD)");
