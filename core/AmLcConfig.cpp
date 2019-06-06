@@ -59,7 +59,7 @@
 #define PARAM_FORCE_VIA_PORT_NAME    "force-via-address"
 #define PARAM_FORCE_OBD_IF_NAME      "force_outbound_if"
 #define PARAM_FORCE_TRANSPORT_NAME   "force-contact-transport"
-#define PARAM_PUBLIC_ADDR_NAME       "public_address"
+#define PARAM_PUBLIC_ADDR_NAME       "public-address"
 #define PARAM_CONNECT_TIMEOUT_NAME   "connect-timeout"
 #define PARAM_IDLE_TIMEOUT_NAME      "idle-timeout"
 #define PARAM_WHITELIST_NAME         "whitelist"
