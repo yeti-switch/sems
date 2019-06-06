@@ -1,3 +1,12 @@
+sems (1.8.24-3) stable; urgency=low
+
+  * 066cd2145 AmRtpStream, tls_trsp: adjust loglevels
+  * f7d2bf3a4 rename interface opt public_address -> public-address
+  * f26e84485 AmSession::advertisedIP: fix public_ip processing
+  * 498bed0e7 AmBasicSipDialog: fix interface public_ip processing for Contact
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 06 Jun 2019 15:00:59 +0300
+
 sems (1.8.24-2) stable; urgency=low
 
   * sctp_bus/SctpClientConnection: connect(): send SctpBusConnectionStatus event on immediate connect
