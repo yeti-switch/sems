@@ -1386,10 +1386,10 @@ string AmSession::advertisedIP(int addrType)
     unsigned char ipproto = addrType | (MEDIA_info::RTP<<6);
     auto addr_it = AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.find(ipproto);
     if(addr_it != AmConfig.media_ifs[rtp_interface].local_ip_proto2addr_if.end()) {
-        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->local_ip;
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[addr_it->second]->getIP();
     }
   } else {
-      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->local_ip;
+      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_addr]->getIP();
   }
 
   if( (set_ip[0] == '[') &&
