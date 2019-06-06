@@ -1235,14 +1235,16 @@ int AmRtpStream::init(const AmSdp& local,
         srtp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
         srtcp_connection->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
     }
-    
-    INFO("local media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s", local_media.is_use_ice()?"true":"false",
-                                                                            local_media.is_dtls_srtp()?"true":"false",
-                                                                            local_media.is_simple_srtp()?"true":"false");
-    INFO("remote media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s", remote_media.is_use_ice()?"true":"false",
-                                                                            remote_media.is_dtls_srtp()?"true":"false",
-                                                                            remote_media.is_simple_srtp()?"true":"false");
-    
+
+    DBG("local media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s",
+        local_media.is_use_ice()?"true":"false",
+        local_media.is_dtls_srtp()?"true":"false",
+        local_media.is_simple_srtp()?"true":"false");
+    DBG("remote media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s",
+        remote_media.is_use_ice()?"true":"false",
+        remote_media.is_dtls_srtp()?"true":"false",
+        remote_media.is_simple_srtp()?"true":"false");
+
     if(local_media.is_dtls_srtp() && !remote_media.is_use_ice()) {
         createSrtpConnection();
     }

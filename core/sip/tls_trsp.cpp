@@ -202,14 +202,14 @@ vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_
     std::string algorithm = certificate.load_subject_public_key()->algo_name();
     for(auto& key : cert_key_types) {
         if(algorithm == key) {
-            INFO("loaded certificate with algorithm %s", algorithm.c_str());
+            DBG("loaded certificate with algorithm %s", algorithm.c_str());
             certs.push_back(certificate);
         }
     }
 
     if(certs.empty()) {
         for(auto& key : cert_key_types) {
-            WARN("nothing certificates for algorithms %s", key.c_str());
+            DBG("no certificates for algorithm %s", key.c_str());
         }
     }
     return certs;
