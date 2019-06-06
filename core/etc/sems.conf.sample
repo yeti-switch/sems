@@ -789,7 +789,7 @@ signaling-interfaces {
                 address = 10.200.0.120
                 port = 50600
 
-                /* optional parameter public_address
+                /* optional parameter public-address
                 * when running SEMS behind certain simple NAT configurations,
                 * you can use this parameter to inform SEMS of its public IP
                 * address. If this parameter is set, SEMS will write this value
@@ -798,7 +798,7 @@ signaling-interfaces {
                 * N.B., there is no support for port translation; the local
                 * RTP port is advertised in SDP in either case.
                 */
-                public_address = 195.138.65.189
+                public-address = 195.138.65.189
 
                 /* optional parameter use-raw-sockets
                 *
