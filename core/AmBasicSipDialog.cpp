@@ -160,8 +160,9 @@ string AmBasicSipDialog::getContactUri()
   assert(oif < (int)AmConfig.sip_ifs.size());
   assert(ot < (int)AmConfig.sip_ifs[oif].proto_info.size());
 
-  contact_uri += AmConfig.sip_ifs[oif].proto_info[ot]->local_ip;
-  contact_uri += ":" + int2str(AmConfig.sip_ifs[oif].proto_info[ot]->local_port);
+  const auto pi = AmConfig.sip_ifs[oif].proto_info[ot];
+  contact_uri += pi->getIP();
+  contact_uri += ":" + int2str(pi->local_port);
 
   if(!contact_params.empty()) {
     contact_uri += ";" + contact_params;
