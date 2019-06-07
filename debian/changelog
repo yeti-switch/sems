@@ -1,3 +1,9 @@
+sems (1.8.24-4) stable; urgency=low
+
+  * AmBasicSipDialog::getOutboundIf(): fix sefgault on specified next_hop or non-empty route-set
+ 
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 07 Jun 2019 13:18:26 +0300
+
 sems (1.8.24-3) stable; urgency=low
 
   * 066cd2145 AmRtpStream, tls_trsp: adjust loglevels
