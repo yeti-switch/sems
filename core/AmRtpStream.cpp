@@ -1420,7 +1420,10 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
              && (force_relay_dtmf || !active)) ||*/
             //can relay
             (relay_payloads.get(p->payload) &&
-             nullptr != relay_stream) ||
+             nullptr != relay_stream &&
+             //check if actual remote payload mapping to local payload are equal
+             p->payload == relay_map.get(
+                static_cast<unsigned char>(relay_stream->getLastPayload()))) ||
             //force CN relay
             (force_relay_cn &&
              p->payload == COMFORT_NOISE_PAYLOAD_TYPE))

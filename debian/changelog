@@ -1,3 +1,9 @@
+sems (1.8.24-7) stable; urgency=low
+
+  * AmRtpStream: fix assymetric payloads on relay
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Jun 2019 18:17:40 +0300
+
 sems (1.8.24-6) stable; urgency=low
 
   * AmSdp: basic ptime validation
