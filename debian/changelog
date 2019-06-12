@@ -1,3 +1,9 @@
+sems (1.8.24-6) stable; urgency=low
+
+  * AmSdp: basic ptime validation
+ 
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Jun 2019 16:57:58 +0300
+
 sems (1.8.24-5) stable; urgency=low
 
   * fix botan tls error

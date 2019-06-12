@@ -1257,6 +1257,19 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
     }
 }
 
+static void adjust_media_frame_size(int &frame_size)
+{
+#define MEDIA_FRAME_SIZE_MAX 200
+#define MEDIA_FRAME_SIZE_MIN 10
+#define MEDIA_FRAME_SIZE_FAILOVER 20
+    if(frame_size < MEDIA_FRAME_SIZE_MIN ||
+       frame_size > MEDIA_FRAME_SIZE_MAX ||
+       frame_size % 10 != 0)
+    {
+        frame_size = MEDIA_FRAME_SIZE_FAILOVER;
+    }
+}
+
 // media level attribute
 static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 {
@@ -1541,6 +1554,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     next = skip_till_next_line(attr_line, attr_len);
     value = string (attr_line, attr_len);
     str2int(value, media.frame_size);
+    adjust_media_frame_size(media.frame_size);
   } else {
     attr_check(attr);
     string value;
