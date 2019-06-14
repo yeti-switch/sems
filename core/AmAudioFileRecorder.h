@@ -13,6 +13,7 @@ class AmAudioFileRecorder {
     enum RecorderType {
         RecorderMonoAmAudioFile = 0,
         RecorderStereoMP3Internal,
+        RecorderStereoWawInternal,
         RecorderTypeMax,
     };
 
