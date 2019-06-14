@@ -285,24 +285,33 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
         return;
     }
 
-    if(relay_enabled && other) {
-        if(other->getFrameTime() == stream->getFrameTime()) {
-            stream->setRelayStream(other);
-            stream->setForceBuffering(other->isRecordEnabled());
-            stream->setRelayPayloads(relay_mask);
-            stream->setRelayPayloadMap(relay_map);
-            if (!relay_paused)
-                stream->enableRtpRelay();
-            stream->setRAddr(relay_address, relay_address,
-                static_cast<unsigned short>(relay_port),
-                static_cast<unsigned short>(relay_port+1));
-        } else {
-            DBG("not setting relay for streams with different frame sizes");
-        }
-    } else {
+    if(!relay_enabled || !other) {
         // nothing to relay or other stream not set
         stream->disableRtpRelay();
+        return;
     }
+
+    if(other->getFrameTime() != stream->getFrameTime()) {
+        DBG("not setting relay for streams with different frame sizes");
+        stream->disableRtpRelay();
+        return;
+    }
+
+    if(stream->isRecordEnabled() || other->isRecordEnabled()) {
+        DBG("disable relay because of enabled recording");
+        stream->disableRtpRelay();
+        return;
+    }
+
+    stream->setRelayStream(other);
+    stream->setForceBuffering(other->isRecordEnabled());
+    stream->setRelayPayloads(relay_mask);
+    stream->setRelayPayloadMap(relay_map);
+    if (!relay_paused)
+        stream->enableRtpRelay();
+    stream->setRAddr(relay_address, relay_address,
+        static_cast<unsigned short>(relay_port),
+        static_cast<unsigned short>(relay_port+1));
 }
 
 void AudioStreamData::setRelayPayloads(const SdpMedia &m, RelayController *ctrl)

@@ -1,3 +1,9 @@
+sems (1.8.24-8) stable; urgency=low
+
+  * AmB2BMedia: disable relay on renabled recording
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 14 Jun 2019 19:09:06 +0300
+
 sems (1.8.24-7) stable; urgency=low
 
   * AmRtpStream: fix assymetric payloads on relay
