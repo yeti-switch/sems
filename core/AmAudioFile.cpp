@@ -197,7 +197,10 @@ int AmAudioFile::fpopen(const string& filename, OpenMode mode, FILE* n_fp)
 int AmAudioFile::fpopen_int(const string& filename, OpenMode mode, 
 			    FILE* n_fp, const string& subtype)
 {
- _filename = filename;
+  _filename = filename;
+  open_mode = mode;
+  fp = n_fp;
+  fseek(fp,0L,SEEK_SET);
 
   AmAudioFileFormat* f_fmt = fileName2Fmt(filename, subtype);
   if(!f_fmt){
@@ -207,10 +210,6 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
     return -1;
   }
   fmt.reset(f_fmt);
-
-  open_mode = mode;
-  fp = n_fp;
-  fseek(fp,0L,SEEK_SET);
 
   amci_file_desc_t fd;
   memset(&fd, 0, sizeof(amci_file_desc_t));
