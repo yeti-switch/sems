@@ -19,6 +19,7 @@ AmAudioFileRecorderStereoWav::wav_file_data::~wav_file_data()
         audioFile->close();
         fp = 0;
         delete audioFile;
+        audioFile = 0;
     }
 }
 
@@ -38,7 +39,7 @@ int AmAudioFileRecorderStereoWav::wav_file_data::put(unsigned char* out, unsigne
 }
 
 AmAudioFileRecorderStereoWav::AmAudioFileRecorderStereoWav()
-  : AmAudioFileRecorderStereo(StereoMP3Internal, WAV_FILE_SAMPLERATE)
+  : AmAudioFileRecorderStereo(StereoWavInternal, WAV_FILE_SAMPLERATE)
 { }
 
 AmAudioFileRecorderStereoWav::~AmAudioFileRecorderStereoWav()

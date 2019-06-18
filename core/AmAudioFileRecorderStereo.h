@@ -66,7 +66,7 @@ class AmAudioFileRecorderStereo
     }
     
     AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate);
-    ~AmAudioFileRecorderStereo();
+    virtual ~AmAudioFileRecorderStereo();
 protected:
     class file_data {
       protected:
