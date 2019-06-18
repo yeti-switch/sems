@@ -1262,6 +1262,11 @@ static void adjust_media_frame_size(int &frame_size)
 #define MEDIA_FRAME_SIZE_MAX 200
 #define MEDIA_FRAME_SIZE_MIN 10
 #define MEDIA_FRAME_SIZE_FAILOVER 20
+
+    //temporary ptime processing disabling till audio recorder fixes 
+    frame_size = MEDIA_FRAME_SIZE_FAILOVER;
+    return;
+
     if(frame_size < MEDIA_FRAME_SIZE_MIN ||
        frame_size > MEDIA_FRAME_SIZE_MAX ||
        frame_size % 10 != 0)

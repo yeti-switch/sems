@@ -1,3 +1,9 @@
+sems (1.8.24-9) stable; urgency=low
+
+  * temporary ptime processing disabling till audio recorder fixes 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 18 Jun 2019 18:52:04 +0300
+
 sems (1.8.24-8) stable; urgency=low
 
   * AmB2BMedia: disable relay on renabled recording
