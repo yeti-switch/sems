@@ -29,7 +29,7 @@ int AmAudioFileRecorderStereoWav::wav_file_data::put(unsigned char* out, unsigne
         return -1;
     }
 
-    for(int i = 0, j = 0; i < l/2; i++, j+=2) {
+    for(size_t i = 0, j = 0; i < l/2; i++, j+=2) {
         ((unsigned short*)out)[j] = ((unsigned short*)lbuf)[i];
         ((unsigned short*)out)[j+1] = ((unsigned short*)rbuf)[i];
     }
