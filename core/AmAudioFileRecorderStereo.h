@@ -60,7 +60,7 @@ class AmAudioFileRecorderStereo
             case StereoMP3Internal:
                 return RecorderStereoMP3Internal;
             case StereoWavInternal:
-                return RecorderStereoWawInternal;
+                return RecorderStereoWavInternal;
         }
         return RecorderTypeMax;
     }

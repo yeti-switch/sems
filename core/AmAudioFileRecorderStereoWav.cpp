@@ -29,8 +29,10 @@ int AmAudioFileRecorderStereoWav::wav_file_data::put(unsigned char* out, unsigne
         return -1;
     }
 
-    memcpy(out, lbuf, l);
-    memcpy(out + l, rbuf, l);
+    for(int i = 0, j = 0; i < l/2; i++, j+=2) {
+        ((unsigned short*)out)[j] = ((unsigned short*)lbuf)[i];
+        ((unsigned short*)out)[j+1] = ((unsigned short*)rbuf)[i];
+    }
     audioFile->put(0,out,WAV_FILE_SAMPLERATE,l*2);
     return 0;
 }

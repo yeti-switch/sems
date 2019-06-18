@@ -163,7 +163,7 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
                 recorder = new AmAudioFileRecorderMono();
             else if(rtype == AmAudioFileRecorder::RecorderStereoMP3Internal)
                 recorder = new AmAudioFileRecorderStereoMP3();
-            else if(rtype == AmAudioFileRecorder::RecorderStereoWawInternal)
+            else if(rtype == AmAudioFileRecorder::RecorderStereoWavInternal)
                 recorder = new AmAudioFileRecorderStereoWav();
             else {
                 ERROR("unknown recorder type: %d",rtype);
