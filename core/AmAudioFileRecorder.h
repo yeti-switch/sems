@@ -13,6 +13,7 @@ class AmAudioFileRecorder {
     enum RecorderType {
         RecorderMonoAmAudioFile = 0,
         RecorderStereoMP3Internal,
+        RecorderStereoRaw,
         RecorderTypeMax,
     };
 
@@ -21,10 +22,11 @@ class AmAudioFileRecorder {
 
   protected:
     string sync_ctx_id;
+    string recorder_id;
 
   public:
-    AmAudioFileRecorder(RecorderType type)
-      : type(type)
+    AmAudioFileRecorder(RecorderType type, const string& id)
+      : type(type), recorder_id(id)
     {}
     virtual ~AmAudioFileRecorder() { }
 
@@ -71,7 +73,7 @@ struct AudioRecorderEvent
         case addStereoRecorder:
         case delStereoRecorder:
         case putStereoSamples:
-            return AmAudioFileRecorder::RecorderStereoMP3Internal;
+            return AmAudioFileRecorder::RecorderStereoRaw;
         default:
             throw std::logic_error("unknown event type");
         }

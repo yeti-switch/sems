@@ -24,7 +24,7 @@ class AmAudioFileRecorderMono
     vector<AmAudioFile *> files;
 
   public:
-    AmAudioFileRecorderMono();
+    AmAudioFileRecorderMono(const string& id);
     ~AmAudioFileRecorderMono();
 
     int init(const string &path, const string &sync_ctx);

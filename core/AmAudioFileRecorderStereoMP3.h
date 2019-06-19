@@ -68,7 +68,7 @@ class AmAudioFileRecorderStereoMP3
     int put(unsigned char *lbuf, unsigned char *rbuf, size_t l);
 
   public:
-    AmAudioFileRecorderStereoMP3();
+    AmAudioFileRecorderStereoMP3(const string& id);
     ~AmAudioFileRecorderStereoMP3();
 
     int init(const string &path, const string &sync_ctx);

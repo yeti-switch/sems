@@ -85,8 +85,8 @@ int AmAudioFileRecorderStereoMP3::file_data::put(unsigned char *out,unsigned cha
     return ret;
 }
 
-AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3()
-  : AmAudioFileRecorder(RecorderStereoMP3Internal),
+AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3(const string& id)
+  : AmAudioFileRecorder(RecorderStereoMP3Internal, id),
     ts_l(0),
     ts_r(0)
 { }
