@@ -158,7 +158,6 @@ public:
 
   int init(const AmSdp& local,
 	   const AmSdp& remote,
-       unsigned int override_frame_size = 0,
        bool force_symmetric_rtp = false);
 
   void setPlayoutType(PlayoutType type);

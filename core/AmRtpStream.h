@@ -649,8 +649,7 @@ class AmRtpStream
     * @warning It is necessary to call getSdpOffer/getSdpAnswer prior to init(...)
     * @warning so that the internal SDP media line index is set properly.
     */
-    virtual int init(const AmSdp& local, const AmSdp& remote,
-                     unsigned int override_frame_size = 0, bool force_passive_mode = false);
+    virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
     void initSrtpConnection(bool dtls_server, const SdpFingerPrint& fp);
     void createSrtpConnection();

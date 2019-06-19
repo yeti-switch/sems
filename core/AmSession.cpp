@@ -236,6 +236,16 @@ void AmSession::setRtpFrameSize(unsigned int frame_size)
   override_frame_size = frame_size;
 }
 
+bool AmSession::getRtpFrameSize(unsigned int& frame_size)
+{
+    if(override_frame_size) {
+        frame_size = override_frame_size;
+        return true;
+    }
+
+    return false;
+}
+
 void AmSession::setLocalTag()
 {
   if (dlg->getLocalTag().empty()) {
@@ -1122,7 +1132,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   int ret = 0;
 
   try {
-    ret = RTPStream()->init(local_sdp, remote_sdp, override_frame_size, AmConfig.force_symmetric_rtp);
+    ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig.force_symmetric_rtp);
   } catch (const string& s) {
     ERROR("Error while initializing RTP stream: '%s'\n", s.c_str());
     ret = -1;

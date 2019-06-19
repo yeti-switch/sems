@@ -371,11 +371,10 @@ void AmRtpAudio::getSdpAnswer(
 int AmRtpAudio::init(
     const AmSdp& local,
     const AmSdp& remote,
-    unsigned int override_frame_size,
     bool force_symmetric_rtp)
 {
     DBG("AmRtpAudio::init(...)\n");
-    if(AmRtpStream::init(local,remote, override_frame_size,force_symmetric_rtp)){
+    if(AmRtpStream::init(local,remote,force_symmetric_rtp)){
         return -1;
     }
 
@@ -389,8 +388,7 @@ int AmRtpAudio::init(
     }
 
     const SdpMedia& remote_media = remote.media[sdp_media_index];
-    if(override_frame_size) frame_size = override_frame_size;
-    else frame_size = remote_media.frame_size;
+    if(!session->getRtpFrameSize(frame_size)) frame_size = remote_media.frame_size;
     fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
     fmt.reset(fmt_p);
     amci_codec_t* codec = fmt->getCodec();

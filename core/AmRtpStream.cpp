@@ -1008,7 +1008,6 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
 
 int AmRtpStream::init(const AmSdp& local,
     const AmSdp& remote,
-    unsigned int override_frame_size,
     bool force_passive_mode)
 {
     if((sdp_media_index < 0) ||

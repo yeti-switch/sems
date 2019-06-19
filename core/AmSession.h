@@ -347,6 +347,7 @@ public:
 
   /** Sets the frame size for the rtp packets */
   void setRtpFrameSize(unsigned int frame_size);
+  bool getRtpFrameSize(unsigned int& frame_size);
 
   /* ----         RTP stream attributes                  ---- */
 
