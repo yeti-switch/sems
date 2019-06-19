@@ -155,6 +155,9 @@ protected:
   /** do accept early session? */
   bool accept_early_session;
 
+  /** override frame_size */
+  int override_frame_size;
+
   /** Local IP interface to be used for RTP streams */
   int rtp_interface;
   int rtp_addr;
@@ -341,6 +344,9 @@ public:
 
   /** Sets the URI for the session */
   void setUri(const string& uri);
+
+  /** Sets the frame size for the rtp packets */
+  void setRtpFrameSize(unsigned int frame_size);
 
   /* ----         RTP stream attributes                  ---- */
 

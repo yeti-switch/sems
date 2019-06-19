@@ -157,7 +157,9 @@ public:
   void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer);
 
   int init(const AmSdp& local,
-	   const AmSdp& remote, bool force_symmetric_rtp = false);
+	   const AmSdp& remote,
+       unsigned int override_frame_size = 0,
+       bool force_symmetric_rtp = false);
 
   void setPlayoutType(PlayoutType type);
 

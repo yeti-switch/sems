@@ -460,6 +460,10 @@ int AmAudio::decode(unsigned int size)
 int AmAudio::encode(unsigned int size)
 {
   int s = size;
+  if(!fmt.get()){
+    DBG("no fmt !\n");
+    return -1;
+  }
 
   amci_codec_t* codec = fmt->getCodec();
   long h_codec = fmt->getHCodec();

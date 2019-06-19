@@ -88,7 +88,8 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtp_addr(-1),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     processing_status(SESSION_PROCESSING_EVENTS),
-    no_reply(false)
+    no_reply(false),
+    override_frame_size(0)
 #ifdef WITH_ZRTP
   ,  zrtp_session(NULL), zrtp_audio(NULL), enable_zrtp(true)
 #endif
@@ -227,6 +228,12 @@ void AmSession::setUri(const string& uri)
 {
   DBG("AmSession::setUri(%s)\n",uri.c_str());
   /* TODO: sdp.uri = uri;*/
+}
+
+void AmSession::setRtpFrameSize(unsigned int frame_size)
+{
+  DBG("AmSession::setRtpFrameSize(%u)\n",frame_size);
+  override_frame_size = frame_size;
 }
 
 void AmSession::setLocalTag()
@@ -1115,7 +1122,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   int ret = 0;
 
   try {
-    ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig.force_symmetric_rtp);
+    ret = RTPStream()->init(local_sdp, remote_sdp, override_frame_size, AmConfig.force_symmetric_rtp);
   } catch (const string& s) {
     ERROR("Error while initializing RTP stream: '%s'\n", s.c_str());
     ret = -1;
