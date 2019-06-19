@@ -134,6 +134,8 @@ class AmAudio;
  * </ul>
  */
 
+void adjust_media_frame_size(int &frame_size);
+
 class AmAudioFormat
 {
 public:
