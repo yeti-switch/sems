@@ -1,3 +1,9 @@
+sems (1.7.76-4) stable; urgency=low
+
+  * AmSipRegistration: fix behavior on missed expires parameter in reply. use Expires header as failover
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 19 Jun 2019 17:44:51 +0300
+
 sems (1.7.76-3) stable; urgency=low
 
   * fix version in build
