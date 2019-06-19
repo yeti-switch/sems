@@ -450,7 +450,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
             string local_contact_hdr = dlg.getContactUri();
 
             local_contact.parse_contact(local_contact_hdr, 0, end);
-            local_contact.dump();
+            //local_contact.dump();
             reply_contacts.clear();
 
             bool found = false;
@@ -462,7 +462,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 active = false;
                 error_code = 500;
                 error_reason = "no Contacts in positive reply";
-                error_initiatior = REG_ERROR_LOCAL;;
+                error_initiatior = REG_ERROR_LOCAL;
             } else {
                 end = 0;
                 while(contacts.length() != end) {
@@ -470,7 +470,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                         DBG("while parsing contact\n");
                         break;
                     }
-                    server_contact.dump();
+                    //server_contact.dump();
 
                     if(!reply_contacts.empty())
                         reply_contacts+=", ";
@@ -481,20 +481,50 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                     if(server_contact.isEqual(local_contact) ||
                        (!info.contact.empty()&&server_contact.isEqual(info_contact)))
                     {
-                        DBG("contact found\n");
+                        DBG("contact found");
+
+                        const auto contact_expires = server_contact.params.find("expires");
+                        if(contact_expires == server_contact.params.end()) {
+                            DBG("no 'expires' param in matched Contact header. check for Expires header");
+                             auto expires_header = getHeader(reply.hdrs, SIP_HDR_EXPIRES, true);
+                             if(expires_header.empty()) {
+                                 ERROR("missed both 'expires' param on macthed contact and Expires header");
+                                 active = false;
+                                 error_code = 500;
+                                 error_reason = "Failed to extract expires value from matched contact";
+                                 error_initiatior =  REG_ERROR_LOCAL;
+                                 return;
+                             }
+                             if (str2i(expires_header, reg_expires)) {
+                                 ERROR("could not extract Expires header value");
+                                 active = false;
+                                 error_code = 500;
+                                 error_reason = "Failed to extract Expires header value on missed 'expires' param";
+                                 error_initiatior =  REG_ERROR_LOCAL;
+                                 return;
+                             }
+                        } else {
+                            if (str2i(contact_expires->second, reg_expires)) {
+                                ERROR("could not extract expires value");
+                                active = false;
+                                error_code = 500;
+                                error_reason = "Failed to extract expires value from matched contact";
+                                error_initiatior =  REG_ERROR_LOCAL;
+                                return;
+                            }
+                        }
+
+                        DBG("got an expires of %d", reg_expires);
+
+                        if(force_expires_interval) {
+                            reg_expires = expires_interval;
+                            DBG("expires forced to %d", reg_expires);
+                        }
+
                         found = active = true;
                         info.attempt = 0;
                         error_code = 0;
-                        if (str2i(server_contact.params["expires"], reg_expires)) {
-                            ERROR("could not extract expires value, default to 300.\n");
-                            reg_expires = 300;
-                        }
 
-                        DBG("got an expires of %d\n", reg_expires);
-                        if(force_expires_interval) {
-                            reg_expires = expires_interval;
-                            DBG("force expires to %d", reg_expires);
-                        }
                         // save TS
                         reg_begin = time(nullptr);
 
