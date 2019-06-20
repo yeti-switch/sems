@@ -66,6 +66,19 @@ int HttpMultiPartFormConnection::init(CURLM *curl_multi)
     return 0;
 }
 
+static void dump_event(const HttpPostMultipartFormEvent &event)
+{
+    auto event_ptr = static_cast<const void *>(&event);
+    ERROR("%p parts: %ld, failover_idx: %d, attempt: %d",event_ptr,
+          event.parts.size(), event.failover_idx, event.attempt);
+    int i = 0;
+    for(const auto &part : event.parts) {
+        ERROR("%p parts[%d] name: %s, type: %d, content_type: %s, value: %s",event_ptr, i,
+              part.name.c_str(), part.type, part.content_type.c_str(), part.value.c_str());
+        i++;
+    }
+}
+
 int HttpMultiPartFormConnection::on_finished(CURLcode result)
 {
     int requeue = 0;
@@ -83,8 +96,9 @@ int HttpMultiPartFormConnection::on_finished(CURLcode result)
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(file_path,file_basename, false);
     } else {
-        ERROR("failed to post multipart form  to '%s'. curl_code: %d, http_code %ld",
-              eff_url,result,http_response_code);
+        ERROR("failed to post multipart form to '%s'. curl_code: %d, http_code %ld. event ptr: %p",
+              eff_url,result,http_response_code,static_cast<void *>(&event));
+        dump_event(event);
         if(event.failover_idx < destination.max_failover_idx) {
             event.failover_idx++;
             DBG("faiolver to the next destination. new failover index is %i",
