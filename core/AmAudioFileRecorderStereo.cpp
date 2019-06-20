@@ -51,16 +51,18 @@ AmAudioFileRecorderStereo::AmAudioFileRecorderStereo(StereoRecorderType type, un
 
 AmAudioFileRecorderStereo::~AmAudioFileRecorderStereo()
 {
+    auto files_count = files.size();
+
+    for(auto file : files) delete file;
+
     if(!sync_ctx_id.empty()) {
         if(!AmSessionContainer::instance()->postEvent(
            HTTP_EVENT_QUEUE,
-           new HttpTriggerSyncContext(sync_ctx_id,files.size())))
+           new HttpTriggerSyncContext(sync_ctx_id,files_count)))
         {
             ERROR("AmAudioFileRecorderStereo: can't post HttpTriggerSyncContext event");
         }
     }
-    
-    for(auto file : files) delete file;
 }
 
 int AmAudioFileRecorderStereo::init(const string &path, const string &sync_ctx)
