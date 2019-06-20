@@ -111,9 +111,12 @@ BEGIN_EXPORTS( "wav" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
      BEGIN_FILE_FORMATS
        BEGIN_FILE_FORMAT( "Wav", "wav", "audio/x-wav", wav_open, wav_close, wav_mem_open, wav_mem_close)
          BEGIN_SUBTYPES
-           SUBTYPE( WAV_PCM,  "Pcm16",  8000, 1, CODEC_PCM16 ) // we only support 8000/1 channel !
+           SUBTYPE( WAV_PCM,  "Pcm16",  8000, 1, CODEC_PCM16 )
            SUBTYPE( WAV_ALAW, "A-Law",  8000, 1, CODEC_ALAW )
            SUBTYPE( WAV_ULAW, "Mu-Law", 8000, 1, CODEC_ULAW )
+           SUBTYPE( WAV_PCM,  "Pcm16_2",  8000, 2, CODEC_PCM16 )
+           SUBTYPE( WAV_ALAW, "A-Law_2",  8000, 2, CODEC_ALAW )
+           SUBTYPE( WAV_ULAW, "Mu-Law_2", 8000, 2, CODEC_ULAW )
          END_SUBTYPES
        END_FILE_FORMAT
      END_FILE_FORMATS

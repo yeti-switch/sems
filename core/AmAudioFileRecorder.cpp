@@ -2,6 +2,7 @@
 #include "AmAudioFileRecorderMono.h"
 #include "AmAudioFileRecorderStereoMP3.h"
 #include "AmEventDispatcher.h"
+#include "AmAudioFileRecorderStereoWav.h"
 
 #define RECORDER_QUEUE_NAME "AmAudioFileRecorder"
 #define EPOLL_MAX_EVENTS  2048
@@ -162,6 +163,8 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
                 recorder = new AmAudioFileRecorderMono();
             else if(rtype == AmAudioFileRecorder::RecorderStereoMP3Internal)
                 recorder = new AmAudioFileRecorderStereoMP3();
+            else if(rtype == AmAudioFileRecorder::RecorderStereoWavInternal)
+                recorder = new AmAudioFileRecorderStereoWav();
             else {
                 ERROR("unknown recorder type: %d",rtype);
                 return;
