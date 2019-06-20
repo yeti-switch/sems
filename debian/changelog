@@ -1,3 +1,12 @@
+sems (1.8.25-1) stable; urgency=low
+
+  * enable ptime processing. add possibility to override ptime
+  * add stereo recording to wav
+  * AmSipRegistration: fix behavior on missed expires parameter in reply. use Expires header as failover
+  * HttpMultipartFormConnection: dump event data on failed HTTP request
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Jun 2019 16:58:54 +0300
+
 sems (1.8.24-9) stable; urgency=low
 
   * temporary ptime processing disabling till audio recorder fixes 
