@@ -88,7 +88,8 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtp_addr(-1),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     processing_status(SESSION_PROCESSING_EVENTS),
-    no_reply(false)
+    no_reply(false),
+    override_frame_size(0)
 #ifdef WITH_ZRTP
   ,  zrtp_session(NULL), zrtp_audio(NULL), enable_zrtp(true)
 #endif
@@ -227,6 +228,22 @@ void AmSession::setUri(const string& uri)
 {
   DBG("AmSession::setUri(%s)\n",uri.c_str());
   /* TODO: sdp.uri = uri;*/
+}
+
+void AmSession::setRtpFrameSize(unsigned int frame_size)
+{
+  DBG("AmSession::setRtpFrameSize(%u)\n",frame_size);
+  override_frame_size = frame_size;
+}
+
+bool AmSession::getRtpFrameSize(unsigned int& frame_size)
+{
+    if(override_frame_size) {
+        frame_size = override_frame_size;
+        return true;
+    }
+
+    return false;
 }
 
 void AmSession::setLocalTag()

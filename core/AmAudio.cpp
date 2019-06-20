@@ -41,6 +41,19 @@
 
 #include <typeinfo>
 
+void adjust_media_frame_size(int &frame_size)
+{
+#define MEDIA_FRAME_SIZE_MAX 200
+#define MEDIA_FRAME_SIZE_MIN 10
+#define MEDIA_FRAME_SIZE_FAILOVER 20
+    if(frame_size < MEDIA_FRAME_SIZE_MIN ||
+       frame_size > MEDIA_FRAME_SIZE_MAX ||
+       frame_size % 10 != 0)
+    {
+        frame_size = MEDIA_FRAME_SIZE_FAILOVER;
+    }
+}
+
 /** \brief structure to hold loaded codec instances */
 struct CodecContainer
 {
@@ -460,6 +473,10 @@ int AmAudio::decode(unsigned int size)
 int AmAudio::encode(unsigned int size)
 {
   int s = size;
+  if(!fmt.get()){
+    DBG("no fmt !\n");
+    return -1;
+  }
 
   amci_codec_t* codec = fmt->getCodec();
   long h_codec = fmt->getHCodec();

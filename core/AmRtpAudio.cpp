@@ -111,7 +111,8 @@ AmRtpAudio::AmRtpAudio(AmSession* _s, int _if, int _addr_if)
     /*last_ts_i(false),*/ use_default_plc(true),
     last_check(0),last_check_i(false),send_int(false),
     last_send_ts_i(false),
-    last_samples_relayed(false)
+    last_samples_relayed(false),
+    frame_size(0)
 {
 #ifdef USE_SPANDSP_PLC
     plc_state = plc_init(NULL);
@@ -387,7 +388,7 @@ int AmRtpAudio::init(
     }
 
     const SdpMedia& remote_media = remote.media[sdp_media_index];
-    frame_size = remote_media.frame_size;
+    if(!session->getRtpFrameSize(frame_size)) frame_size = remote_media.frame_size;
     fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
     fmt.reset(fmt_p);
     amci_codec_t* codec = fmt->getCodec();
