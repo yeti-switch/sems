@@ -395,6 +395,9 @@ int AmAudio::put(unsigned long long system_ts, unsigned char* buffer,
     return 0;
   }
 
+  if(!fmt.get())
+    return 0;
+
   if(max_rec_time > -1 && rec_time >= max_rec_time)
     return -1;
 
@@ -473,10 +476,6 @@ int AmAudio::decode(unsigned int size)
 int AmAudio::encode(unsigned int size)
 {
   int s = size;
-  if(!fmt.get()){
-    DBG("no fmt !\n");
-    return -1;
-  }
 
   amci_codec_t* codec = fmt->getCodec();
   long h_codec = fmt->getHCodec();

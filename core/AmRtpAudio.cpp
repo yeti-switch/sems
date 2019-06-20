@@ -321,6 +321,9 @@ int AmRtpAudio::put(
 
     if(mute) return 0;
 
+    if(!fmt.get())
+      return 0;
+
     if(record_enabled) {
         RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
     }
