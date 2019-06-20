@@ -188,22 +188,8 @@ inline unsigned int resample(
     int input_sample_rate)
 {
 
-    if(!state.get()) {
-#ifdef USE_INTERNAL_RESAMPLER
-        if (AmConfig.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
-            state.reset(new AmInternalResamplerState());
-        } else
-#endif
-#ifdef USE_LIBSAMPLERATE
-        if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
-            state.reset(new AmLibSamplerateResamplingState());
-        } else
-#endif
-        {
-            WARN("no available resamplers for MP3 stereo recorder. skip audio writing");
-            return 0;
-        }
-    }
+    if(!state.get()) state.reset(AmAudio::makeResamplingState());
+    if(!state.get()) return 0;
     return state->resample(
         samples, size,
         ((double)MP3_FILE_SAMPLERATE) / ((double)input_sample_rate));

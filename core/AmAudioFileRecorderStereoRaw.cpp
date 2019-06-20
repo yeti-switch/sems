@@ -1,4 +1,5 @@
 #include "AmAudioFileRecorderStereoRaw.h"
+#include "rsr.h"
 
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 : AmAudioFileRecorder(RecorderStereoRaw, id)
@@ -18,11 +19,11 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
     if(!fp) return;
 
     for(auto& file : files) {
-        file_metadata data;
-        data.offset = file.second;
+        chunk data;
+        data.data.file.offset = file.second;
         data.header.type = DATA_META;
-        data.header.size = file.first.size() + sizeof(file_metadata);
-        fwrite(&data, 1, sizeof(file_metadata), fp);
+        data.header.size = file.first.size() + sizeof(file_metadata) - sizeof(data_chunk);
+        fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
     }
 
@@ -54,12 +55,12 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
     last_ts[channel_id] = ts;
     if(!fp) return;
 
-    samples_chunkdata data;
-    data.channel_id = channel_id;
-    data.sample_rate = input_sample_rate;
-    data.ts = ts;
+    chunk data;
+    data.data.samples.channel_id = channel_id;
+    data.data.samples.sample_rate = input_sample_rate;
+    data.data.samples.ts = ts;
     data.header.type = DATA_SAMPLES;
-    data.header.size = size + sizeof(samples_chunkdata);
-    fwrite(&data, 1, sizeof(samples_chunkdata), fp);
+    data.header.size = size + sizeof(samples_data) - sizeof(data_chunk);
+    fwrite(&data, 1, sizeof(data_chunk) + sizeof(samples_data), fp);
     fwrite(samples, 1, size, fp);
 }
