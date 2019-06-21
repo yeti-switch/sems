@@ -378,7 +378,7 @@ AmSdp::AmSdp()
     media(),
     use_ice(false)
 {
-    origin.user = "sems";
+    origin.user = AmConfig.sdp_origin;
     origin.sessId = get_random();
     origin.sessV = get_random();
 }

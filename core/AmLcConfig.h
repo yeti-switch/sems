@@ -99,6 +99,8 @@ struct ConfigContainer
     bool log_sessions;
     bool log_events;
     std::string signature;
+    std::string sdp_origin;
+    std::string sdp_session_name;
     int node_id;
     std::string node_id_prefix;
     unsigned int max_forwards;

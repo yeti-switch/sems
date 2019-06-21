@@ -130,8 +130,8 @@ bool RtspAudio::initSdpAnswer()
     }
 
     answer.version = 0;
-    answer.origin.user = "sems";
-    answer.sessionName = "sems";
+    answer.origin.user = AmConfig.sdp_origin;
+    answer.sessionName = AmConfig.sdp_session_name;
     answer.conn.network = NT_IN;
     answer.conn.addrType = offer.conn.address.empty() ? AT_V4 : offer.conn.addrType;
     answer.conn.address = agent->localMediaIP();

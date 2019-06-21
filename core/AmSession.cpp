@@ -956,10 +956,10 @@ bool AmSession::getSdpOffer(AmSdp& offer)
   DBG("AmSession::getSdpOffer(...) ...\n");
 
   offer.version = 0;
-  offer.origin.user = "sems";
+  offer.origin.user = AmConfig.sdp_origin;
   //offer.origin.sessId = 1;
   //offer.origin.sessV = 1;
-  offer.sessionName = "sems";
+  offer.sessionName = AmConfig.sdp_session_name;
   offer.conn.network = NT_IN;
   offer.conn.addrType = AT_V4;
   offer.conn.address = advertisedIP();
@@ -1011,10 +1011,10 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
     bool connection_line_is_processed = false;
 
     answer.version = 0;
-    answer.origin.user = "sems";
+    answer.origin.user = AmConfig.sdp_origin;
     //answer.origin.sessId = 1;
     //answer.origin.sessV = 1;
-    answer.sessionName = "sems";
+    answer.sessionName = AmConfig.sdp_session_name;
     answer.conn.network = NT_IN;
 
     if(!offer.conn.address.empty()) {

@@ -102,6 +102,8 @@
 #define PARAM_LOG_SESSIONS_NAME      "log_sessions"
 #define PARAM_LOG_EVENTS_NAME        "log_events"
 #define PARAM_SIGNATURE_NAME         "signature"
+#define PARAM_SDP_ORIGIN_NAME        "sdp_origin"
+#define PARAM_SDP_SESSION_NAME       "sdp_session_name"
 #define PARAM_NODE_ID_NAME           "node_id"
 #define PARAM_MAX_FORWARDS_NAME      "max_forwards"
 #define PARAM_MAX_SHUTDOWN_TIME_NAME "max_shutdown_time"
@@ -496,6 +498,8 @@ namespace Config {
         CFG_STR(PARAM_TRANSCODE_OUT_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_TRANSCODE_IN_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_SIGNATURE_NAME, DEFAULT_SIGNATURE, CFGF_NONE),
+        CFG_STR(PARAM_SDP_ORIGIN_NAME, DEFAULT_SDP_ORIGIN, CFGF_NONE),
+        CFG_STR(PARAM_SDP_SESSION_NAME, DEFAULT_SDP_SESSION_NAME, CFGF_NONE),
         CFG_STR(PARAM_DTMF_DETECTOR_NAME, VALUE_SPANDSP, CFGF_NONE),
         CFG_STR(PARAM_100REL_NAME, VALUE_SUPPORTED, CFGF_NONE),
         CFG_STR(PARAM_UNHDL_REP_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
@@ -951,6 +955,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     } else {
         config->signature = cfg_getstr(gen, PARAM_SIGNATURE_NAME);
     }
+    config->sdp_origin = cfg_getstr(gen, PARAM_SDP_ORIGIN_NAME);
+    config->sdp_session_name = cfg_getstr(gen, PARAM_SDP_SESSION_NAME);
     config->node_id = cfg_getint(gen, PARAM_NODE_ID_NAME);
     if(config->node_id!=0) config->node_id_prefix = int2str(config->node_id) + "-";
     config->max_shutdown_time = cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME);
