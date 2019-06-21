@@ -10,14 +10,14 @@ enum DataType
 
 struct data_chunk
 {
-    unsigned char   type;
+    unsigned int   type;
     unsigned int    size;
 };
 
 struct samples_data
 {
     unsigned long long  ts;
-    unsigned char       channel_id;
+    unsigned int        channel_id;
     unsigned int        sample_rate;
 };
 

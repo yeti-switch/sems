@@ -22,7 +22,7 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
         chunk data;
         data.data.file.offset = file.second;
         data.header.type = DATA_META;
-        data.header.size = file.first.size() + sizeof(file_metadata) - sizeof(data_chunk);
+        data.header.size = file.first.size() + sizeof(file_metadata);
         fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
     }
@@ -60,7 +60,7 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
     data.data.samples.sample_rate = input_sample_rate;
     data.data.samples.ts = ts;
     data.header.type = DATA_SAMPLES;
-    data.header.size = size + sizeof(samples_data) - sizeof(data_chunk);
+    data.header.size = size + sizeof(samples_data);
     fwrite(&data, 1, sizeof(data_chunk) + sizeof(samples_data), fp);
     fwrite(samples, 1, size, fp);
 }
