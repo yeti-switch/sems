@@ -200,6 +200,8 @@
 
 #define WITH_SECTION(SECTION_NAME) if(cfg_t *s = cfg_getsec(gen, SECTION_NAME))
 
+#define cuint(expr) static_cast<unsigned int>(expr)
+#define cint(expr) static_cast<int>(expr)
 
 /*******************************************************************************************************/
 /*                                                                                                     */
@@ -211,14 +213,17 @@ namespace Config {
 /**********************************************************************************************/
 /*                                     interfaces section                                     */
 /**********************************************************************************************/
-    cfg_opt_t acl[]
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
+
+    static cfg_opt_t acl[]
     {
         CFG_STR_LIST(PARAM_WHITELIST_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_METHOD_NAME, "", CFGF_NODEFAULT),
         CFG_END()
     };
 
-    cfg_opt_t rtsp[] =
+    static cfg_opt_t rtsp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
@@ -232,7 +237,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t dtls_client[] =
+    static cfg_opt_t dtls_client[] =
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
@@ -244,7 +249,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t dtls_server[] =
+    static cfg_opt_t dtls_server[] =
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
@@ -259,20 +264,20 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t dtls[] =
+    static cfg_opt_t dtls[] =
     {
         CFG_SEC(SECTION_CLIENT_NAME, dtls_client, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SERVER_NAME, dtls_server, CFGF_NODEFAULT),
         CFG_END()
     };
 
-    cfg_opt_t sdes[] =
+    static cfg_opt_t sdes[] =
     {
         CFG_STR_LIST(PARAM_PROFILES_NAME, 0, CFGF_NODEFAULT),
         CFG_END()
     };
 
-    cfg_opt_t srtp[] =
+    static cfg_opt_t srtp[] =
     {
         CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
         CFG_SEC(SECTION_SDES_NAME, sdes, CFGF_NONE),
@@ -280,7 +285,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t rtp[] =
+    static cfg_opt_t rtp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
@@ -295,7 +300,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t sip_tcp[] =
+    static cfg_opt_t sip_tcp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
@@ -313,7 +318,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t sip_udp[] =
+    static cfg_opt_t sip_udp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
@@ -329,7 +334,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t tls_client[] =
+    static cfg_opt_t tls_client[] =
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NONE),
@@ -340,7 +345,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t tls_server[] =
+    static cfg_opt_t tls_server[] =
     {
         CFG_STR_LIST(PARAM_PROTOCOLS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
@@ -354,7 +359,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t sip_tls[] =
+    static cfg_opt_t sip_tls[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
@@ -372,7 +377,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t ip[] =
+    static cfg_opt_t ip[] =
     {
         CFG_SEC(SECTION_RTSP_NAME, rtsp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_RTP_NAME, rtp, CFGF_NODEFAULT),
@@ -382,7 +387,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t interface[] =
+    static cfg_opt_t interface[] =
     {
         CFG_STR(PARAM_DEFAULT_MEDIAIF_NAME, "", CFGF_NONE),
         CFG_SEC(SECTION_IP4_NAME, ip, CFGF_NODEFAULT),
@@ -390,7 +395,7 @@ namespace Config {
         CFG_END()
     };
 
-    cfg_opt_t interfaces[] =
+    static cfg_opt_t interfaces[] =
     {
         CFG_SEC(SECTION_IF_NAME, interface, CFGF_MULTI | CFGF_TITLE),
         CFG_END()
@@ -399,13 +404,13 @@ namespace Config {
 /**********************************************************************************************/
 /*                                            modules section                                 */
 /**********************************************************************************************/
-    cfg_opt_t module[] =
+    static cfg_opt_t module[] =
     {
         CFG_FUNC("include", &cfg_include),
         CFG_END()
     };
 
-    cfg_opt_t modules[] =
+    static cfg_opt_t modules[] =
     {
         CFG_STR(PARAM_PATH_NAME, "/usr/lib/sems/plug-in", CFGF_NONE),
         CFG_STR(PARAM_CPATH_NAME, "/etc/sems/etc/", CFGF_NONE),
@@ -418,35 +423,35 @@ namespace Config {
 /**********************************************************************************************/
 /*                                            general section                                 */
 /**********************************************************************************************/
-    cfg_opt_t slimit[] {
+    static cfg_opt_t slimit[] {
         CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
         CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
         CFG_END()
     };
 
-    cfg_opt_t options_slimit[] {
+    static cfg_opt_t options_slimit[] {
         CFG_INT(PARAM_LIMIT_NAME, VALUE_SESSION_LIMIT, CFGF_NONE),
         CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_REASON_NAME, VALUE_SESSION_LIMIT_ERR, CFGF_NONE),
         CFG_END()
     };
 
-    cfg_opt_t cps_limit[] {
+    static cfg_opt_t cps_limit[] {
         CFG_INT(PARAM_LIMIT_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_REASON_NAME, VALUE_CPSLIMIT_ERR, CFGF_NONE),
         CFG_END()
     };
 
-    cfg_opt_t sdm[] {
+    static cfg_opt_t sdm[] {
         CFG_BOOL(PARAM_ALLOW_UAC_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_CODE_NAME, VALUE_503_ERR_CODE, CFGF_NONE),
         CFG_STR(PARAM_REASON_NAME, VALUE_SDM_ERR_REASON, CFGF_NONE),
         CFG_END()
     };
 
-    cfg_opt_t general[] =
+    static cfg_opt_t general[] =
     {
         CFG_SEC(SECTION_SESSION_LIMIT_NAME, slimit, CFGF_NONE),
         CFG_SEC(SECTION_OSLIM_NAME, options_slimit, CFGF_NONE),
@@ -548,7 +553,7 @@ namespace Config {
 /**********************************************************************************************/
 /*                                        routing section                                     */
 /**********************************************************************************************/
-    cfg_opt_t routing[] =
+    static cfg_opt_t routing[] =
     {
         CFG_STR(PARAM_APP_REG_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_APP_OPT_NAME, "", CFGF_NONE),
@@ -559,7 +564,7 @@ namespace Config {
 /**********************************************************************************************/
 /*                                         global section                                     */
 /**********************************************************************************************/
-    cfg_opt_t opt[] =
+    static cfg_opt_t opt[] =
     {
         CFG_SEC(SECTION_SIGIF_NAME, interfaces, CFGF_NODEFAULT),
         CFG_SEC(SECTION_MEDIAIF_NAME, interfaces, CFGF_NODEFAULT),
@@ -569,6 +574,9 @@ namespace Config {
         CFG_END()
     };
 };
+
+#pragma GCC diagnostic pop
+
 /*******************************************************************************************************/
 /*                                                                                                     */
 /*                                       error functions                                               */
@@ -581,15 +589,15 @@ static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
     char *e = s+sizeof(buf);
 
     if(cfg->title) {
-        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
+        s += snprintf(s,static_cast<size_t>(e-s), "%s:%d [%s/%s]: ",
             cfg->filename,cfg->line,cfg->name,cfg->title);
     } else {
-        s += snprintf(s,e-s, "%s:%d [%s]: ",
+        s += snprintf(s,static_cast<size_t>(e-s), "%s:%d [%s]: ",
             cfg->filename,cfg->line,cfg->name);
     }
-    s += vsnprintf(s,e-s,fmt,ap);
+    s += vsnprintf(s,static_cast<size_t>(e-s),fmt,ap);
 
-    ERROR("%.*s",(int)(s-buf),buf);
+    ERROR("%.*s",cint(s-buf),buf);
 }
 
 /*******************************************************************************************************/
@@ -829,7 +837,7 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
 
     if(m_cfg)
         cfg_free(m_cfg);
-    m_cfg = 0;
+    m_cfg = nullptr;
     return 0;
 }
 
@@ -844,15 +852,16 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
 
     if(config == &m_config) {
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
-        _trans_layer::default_bl_ttl = cfg_getint(gen, PARAM_BL_TTL_NAME);
+        _trans_layer::default_bl_ttl = cuint(cfg_getint(gen, PARAM_BL_TTL_NAME));
         trsp_socket::log_level_raw_msgs = parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME));
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
-        _SipCtrlInterface::udp_rcvbuf = cfg_getint(gen, PARAM_UDP_RECVBUF_NAME);
-        sip_timer_t2 = cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME);
+        _SipCtrlInterface::udp_rcvbuf = static_cast<int>(cfg_getint(gen, PARAM_UDP_RECVBUF_NAME));
+        sip_timer_t2 = cuint(cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME));
         for (int t = STIMER_A; t < __STIMER_MAX; t++) {
-            std::string timer_cfg = std::string("sip_timer_") + (char)tolower(*timer_name(t));
-            sip_timers[t] = cfg_getint(gen, timer_cfg.c_str());
-            DBG("Set SIP Timer '%s' to %u ms\n", timer_name(t), sip_timers[t]);
+            std::string timer_cfg = std::string("sip_timer_") +
+                static_cast<char>(tolower(*timer_name(cuint(t))));
+            sip_timers[t] = cuint(cfg_getint(gen, timer_cfg.c_str()));
+            DBG("Set SIP Timer '%s' to %u ms\n", timer_name(cuint(t)), sip_timers[t]);
         }
 
         setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
@@ -867,7 +876,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     }
     if (cfg_size(gen, PARAM_SESS_PROC_THREADS_NAME)) {
 #ifdef SESSION_THREADPOOL
-        config->session_proc_threads = cfg_getint(gen, PARAM_SESS_PROC_THREADS_NAME);
+        config->session_proc_threads = cint(cfg_getint(gen, PARAM_SESS_PROC_THREADS_NAME));
         if (config->session_proc_threads < 1) {
             ERROR("invalid session_processor_threads value specified."
                   " need at least one thread\n");
@@ -881,7 +890,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
 #endif
     }
 
-    config->max_forwards = cfg_getint(gen, PARAM_MAX_FORWARDS_NAME);
+    config->max_forwards = cuint(cfg_getint(gen, PARAM_MAX_FORWARDS_NAME));
     if(config->max_forwards > 70 || config->max_forwards < 1) {
         ERROR("invalid max_forwards value specified."
                   "it must be in range from 1 to 70\n");
@@ -895,8 +904,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->force_outbound_proxy = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_NAME);
     config->force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
     config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMMETRIC_NAME);
-    config->symmetric_rtp_packets = cfg_getint(gen, PARAM_SYMMETRIC_PACKETS_NAME);
-    config->symmetric_rtp_delay = cfg_getint(gen, PARAM_SYMMETRIC_DELAY_NAME);
+    config->symmetric_rtp_packets = cint(cfg_getint(gen, PARAM_SYMMETRIC_PACKETS_NAME));
+    config->symmetric_rtp_delay = cint(cfg_getint(gen, PARAM_SYMMETRIC_DELAY_NAME));
     config->use_raw_sockets = cfg_getbool(gen, PARAM_USE_RAW_SOCK_NAME);
     config->detect_inband_dtmf = cfg_getbool(gen, PARAM_DETECT_INBAND_NAME);
     config->sip_nat_handling = cfg_getbool(gen, PARAM_SIP_NAT_HANDLING_NAME);
@@ -918,33 +927,33 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     }
 
     WITH_SECTION(SECTION_SESSION_LIMIT_NAME) {
-        config->session_limit =  cfg_getint(s, PARAM_LIMIT_NAME);
-        config->session_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        config->session_limit =  cuint(cfg_getint(s, PARAM_LIMIT_NAME));
+        config->session_limit_err_code = cuint(cfg_getint(s, PARAM_CODE_NAME));
         config->session_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
     }
 
     WITH_SECTION(SECTION_OSLIM_NAME) {
-        config->options_session_limit =  cfg_getint(s, PARAM_LIMIT_NAME);
-        config->options_session_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        config->options_session_limit = cuint(cfg_getint(s, PARAM_LIMIT_NAME));
+        config->options_session_limit_err_code = cuint(cfg_getint(s, PARAM_CODE_NAME));
         config->options_session_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
     }
 
     WITH_SECTION(SECTION_CPS_LIMIT_NAME) {
-        AmSessionContainer::instance()->setCPSLimit(cfg_getint(s, PARAM_LIMIT_NAME));
-        config->cps_limit_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        AmSessionContainer::instance()->setCPSLimit(cuint(cfg_getint(s, PARAM_LIMIT_NAME)));
+        config->cps_limit_err_code = cuint(cfg_getint(s, PARAM_CODE_NAME));
         config->cps_limit_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
     }
 
     WITH_SECTION(SECCTION_SDM_NAME) {
-        config->shutdown_mode_err_code = cfg_getint(s, PARAM_CODE_NAME);
+        config->shutdown_mode_err_code = cuint(cfg_getint(s, PARAM_CODE_NAME));
         config->shutdown_mode_err_reason = cfg_getstr(s, PARAM_REASON_NAME);
         config->shutdown_mode_allow_uac = cfg_getbool(s, PARAM_ALLOW_UAC_NAME);
     }
 
-    config->media_proc_threads = cfg_getint(gen, PARAM_MEDIA_THREADS_NAME);
-    config->rtp_recv_threads = cfg_getint(gen, PARAM_RTP_RECEIVERS_NAME);
-    config->sip_tcp_server_threads = cfg_getint(gen, PARAM_SIP_TCP_SERVERS_NAME);
-    config->sip_udp_server_threads = cfg_getint(gen, PARAM_SIP_UDP_SERVERS_NAME);
+    config->media_proc_threads = cint(cfg_getint(gen, PARAM_MEDIA_THREADS_NAME));
+    config->rtp_recv_threads = cint(cfg_getint(gen, PARAM_RTP_RECEIVERS_NAME));
+    config->sip_tcp_server_threads = cint(cfg_getint(gen, PARAM_SIP_TCP_SERVERS_NAME));
+    config->sip_udp_server_threads = cint(cfg_getint(gen, PARAM_SIP_UDP_SERVERS_NAME));
     config->outbound_proxy = cfg_getstr(gen, PARAM_OUTBOUND_PROXY_NAME);
     config->options_transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_OUT_NAME);
     config->options_transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_IN_NAME);
@@ -957,18 +966,18 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     }
     config->sdp_origin = cfg_getstr(gen, PARAM_SDP_ORIGIN_NAME);
     config->sdp_session_name = cfg_getstr(gen, PARAM_SDP_SESSION_NAME);
-    config->node_id = cfg_getint(gen, PARAM_NODE_ID_NAME);
+    config->node_id = cint(cfg_getint(gen, PARAM_NODE_ID_NAME));
     if(config->node_id!=0) config->node_id_prefix = int2str(config->node_id) + "-";
-    config->max_shutdown_time = cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME);
-    config->dead_rtp_time = cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME);
+    config->max_shutdown_time = cuint(cfg_getint(gen, PARAM_MAX_SHUTDOWN_TIME_NAME));
+    config->dead_rtp_time = cuint(cfg_getint(gen, PARAM_DEAD_RTP_TIME_NAME));
     value = cfg_getstr(gen, PARAM_DTMF_DETECTOR_NAME);
     if(value == VALUE_SPANDSP) config->default_dtmf_detector = Dtmf::SpanDSP;
     else config->default_dtmf_detector = Dtmf::SEMSInternal;
     config->dtmf_offer_multirate = cfg_getbool(gen, PARAM_DTMF_OFFER_MRATE_NAME);
-    for(size_t i = 0; i < cfg_size(gen, PARAM_CODEC_ORDER_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(gen, PARAM_CODEC_ORDER_NAME); i++) {
         config->codec_order.push_back(cfg_getnstr(gen, PARAM_CODEC_ORDER_NAME, i));
     }
-    for(size_t i = 0; i < cfg_size(gen, PARAM_EXCLUDE_PAYLOADS_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(gen, PARAM_EXCLUDE_PAYLOADS_NAME); i++) {
         config->exclude_payloads.push_back(cfg_getnstr(gen, PARAM_EXCLUDE_PAYLOADS_NAME, i));
     }
 
@@ -976,7 +985,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(value == VALUE_DISABLE || value == VALUE_OFF) config->rel100 = Am100rel::REL100_DISABLED;
     else if(value == VALUE_SUPPORTED) config->rel100 = Am100rel::REL100_SUPPORTED;
     else if(value == VALUE_REQUIRE) config->rel100 = Am100rel::REL100_REQUIRE;
-    config->unhandled_reply_log_level = (Log_Level)parse_log_level(cfg_getstr(gen, PARAM_UNHDL_REP_LOG_LVL_NAME));
+    config->unhandled_reply_log_level = static_cast<Log_Level>(parse_log_level(cfg_getstr(gen, PARAM_UNHDL_REP_LOG_LVL_NAME)));
     config->pcap_upload_queue_name = cfg_getstr(gen, PARAM_PCAP_UPLOAD_QUEUE_NAME);
     value = cfg_getstr(gen, PARAM_RESAMPLE_LIBRARY_NAME);
     if(value == VALUE_LIBSAMPLERATE) config->resampling_implementation_type = AmAudio::LIBSAMPLERATE;
@@ -1011,7 +1020,7 @@ int AmLcConfig::readRoutings(cfg_t* cfg, ConfigContainer* config)
     config->applications.resize(apps.size());
     int app_selector_id = 0;
     for(const auto &app_str: apps) {
-        ConfigContainer::app_selector &app = config->applications[app_selector_id];
+        ConfigContainer::app_selector &app = config->applications[static_cast<size_t>(app_selector_id)];
         app.application = app_str;
         if (app_str == "$(ruri.user)") {
             app.app_select = ConfigContainer::App_RURIUSER;
@@ -1045,11 +1054,11 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
     }
     cfg_t* modules_ = cfg_getsec(cfg, SECTION_MODULES_NAME);
 
-    int mCount;
+    unsigned int mCount;
     config->modules_path = cfg_getstr(modules_, PARAM_PATH_NAME);
     config->configs_path = cfg_getstr(modules_, PARAM_CPATH_NAME);
     mCount = cfg_size(modules_, SECTION_MODULE_NAME);
-    for(int i = 0; i < mCount; i++) {
+    for(unsigned int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
         std::string name = module->title;
         if(name == "rtsp_client") {
@@ -1063,7 +1072,7 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
         }
     }
     mCount = cfg_size(modules_, SECTION_MODULE_GLOBAL_NAME);
-    for(int i = 0; i < mCount; i++) {
+    for(unsigned int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_GLOBAL_NAME, i);
         std::string name = module->title;
         /*printf("raw section value for module '%s':\n---%.*s\n---\n",
@@ -1084,8 +1093,8 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
     }
     cfg_t* sigif = cfg_getsec(cfg, SECTION_SIGIF_NAME);
 
-    int ifCount = cfg_size(sigif, SECTION_IF_NAME);
-    for(int i = 0; i < ifCount; i++) {
+    unsigned int ifCount = cfg_size(sigif, SECTION_IF_NAME);
+    for(unsigned int i = 0; i < ifCount; i++) {
         SIP_interface sip_if;
         cfg_t* if_ = cfg_getnsec(sigif, SECTION_IF_NAME, i);
         sip_if.name = if_->title;
@@ -1094,7 +1103,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
                 if(!info) {
                     return -1;
                 }
@@ -1102,7 +1111,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
                 if(!info) {
                     return -1;
                 }
@@ -1110,7 +1119,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv4);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
                 if(!info) {
                     return -1;
                 }
@@ -1121,7 +1130,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
                 if(!info) {
                     return -1;
                 }
@@ -1129,7 +1138,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
                 if(!info) {
                     return -1;
                 }
@@ -1137,7 +1146,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
-                SIP_info* info = (SIP_info*)readInterface(cfg, sip_if.name, IP_info::IPv6);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
                 if(!info) {
                     return -1;
                 }
@@ -1158,8 +1167,8 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
         return -1;
     }
     cfg_t* mediaif = cfg_getsec(cfg, SECTION_MEDIAIF_NAME);
-    int ifCount = cfg_size(mediaif, SECTION_IF_NAME);
-    for(int i = 0; i < ifCount; i++) {
+    unsigned int ifCount = cfg_size(mediaif, SECTION_IF_NAME);
+    for(unsigned int i = 0; i < ifCount; i++) {
         MEDIA_interface media_if;
         cfg_t* if_ = cfg_getnsec(mediaif, SECTION_IF_NAME, i);
         media_if.name = if_->title;
@@ -1167,7 +1176,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
-                MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv4);
+                MEDIA_info* info =  dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv4));
                 if(!info) {
                     return -1;
                 }
@@ -1175,7 +1184,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
-                MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv4);
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv4));
                 if(!info) {
                     return -1;
                 }
@@ -1186,7 +1195,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
-                MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv6);
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv6));
                 if(!info) {
                     return -1;
                 }
@@ -1194,7 +1203,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
-                MEDIA_info* info = (MEDIA_info*)readInterface(cfg, media_if.name, IP_info::IPv6);
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv6));
                 if(!info) {
                     return -1;
                 }
@@ -1211,12 +1220,12 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
 IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type)
 {
     IP_info* info;
-    SIP_info* sinfo = 0;
-    SIP_UDP_info* suinfo = 0;
-    SIP_TCP_info* stinfo = 0;
-    SIP_TLS_info* stlinfo = 0;
-    MEDIA_info* mediainfo = 0;
-    RTP_info* rtpinfo = 0;
+    SIP_info* sinfo = nullptr;
+    SIP_UDP_info* suinfo = nullptr;
+    SIP_TCP_info* stinfo = nullptr;
+    SIP_TLS_info* stlinfo = nullptr;
+    MEDIA_info* mediainfo = nullptr;
+    RTP_info* rtpinfo = nullptr;
 
     if(strcmp(cfg->name, SECTION_SIP_UDP_NAME) == 0) {
         info = sinfo = suinfo = new SIP_UDP_info();
@@ -1229,13 +1238,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     } else if(strcmp(cfg->name, SECTION_RTSP_NAME) == 0) {
         info = mediainfo = new RTSP_info();
     } else {
-        return 0;
+        return nullptr;
     }
 
     //common opts
     info->type_ip = ip_type;
     if(getMandatoryParameter(cfg, PARAM_ADDRESS_NAME, info->local_ip)) {
-        return 0;
+        return nullptr;
     }
     if(cfg_size(cfg, PARAM_PUBLIC_ADDR_NAME)) {
         info->public_ip = cfg_getstr(cfg, PARAM_PUBLIC_ADDR_NAME);
@@ -1247,15 +1256,15 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_STAT_CL_PORT_NAME) ? trsp_socket::static_client_port : 0;
 
     if(cfg_size(cfg, PARAM_DSCP_NAME)) {
-        info->dscp = cfg_getint(cfg, PARAM_DSCP_NAME);
+        info->dscp = static_cast<uint8_t>(cfg_getint(cfg, PARAM_DSCP_NAME));
         info->tos_byte = info->dscp << 2;
     }
 
     //MEDIA specific opts
     if(mediainfo) {
-        if(getMandatoryParameter(cfg, PARAM_HIGH_PORT_NAME, (int&)mediainfo->high_port) ||
-           getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, (int&)mediainfo->low_port)) {
-            return 0;
+        if(getMandatoryParameter(cfg, PARAM_HIGH_PORT_NAME, mediainfo->high_port) ||
+           getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, mediainfo->low_port)) {
+            return nullptr;
         }
     }
 
@@ -1263,7 +1272,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
     if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
         if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, rtpinfo->srtp_enable)) {
-            return 0;
+            return nullptr;
         }
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
         for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
@@ -1278,7 +1287,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
             if(!server) {
                 ERROR("absent mandatory section 'server' in dtls configuration");
-                return 0;
+                return nullptr;
             }
             for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
                 std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
@@ -1289,7 +1298,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             }
             if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate) ||
             getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key)){
-                return 0;
+                return nullptr;
             }
             for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
                 std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
@@ -1309,17 +1318,17 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
             if(rtpinfo->server_settings.require_client_certificate && rtpinfo->server_settings.ca_list.empty()) {
                 ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
-                return 0;
+                return nullptr;
             }
             if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
                 ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
-                return 0;
+                return nullptr;
             }
 
             cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
             if(!client) {
                 ERROR("absent mandatory section 'client' in dtls configuration");
-                return 0;
+                return nullptr;
             }
             for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
                 std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
@@ -1341,8 +1350,8 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
     //SIP specific opts
     if(sinfo) {
-        if(getMandatoryParameter(cfg, PARAM_PORT_NAME, (int&)sinfo->local_port)) {
-            return 0;
+        if(getMandatoryParameter(cfg, PARAM_PORT_NAME, sinfo->local_port)) {
+            return nullptr;
         }
         info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_TRANSPORT_NAME) ? 0 : trsp_socket::no_transport_in_contact;
 
@@ -1350,7 +1359,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             cfg_t* acl = cfg_getsec(cfg, SECTION_ORIGACL_NAME);
             if(readAcl(acl, sinfo->acl, if_name)) {
                  ERROR("error parsing invite acl for interface: %s",if_name.c_str());
-                 return 0;
+                 return nullptr;
             }
         }
 
@@ -1358,15 +1367,15 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
             cfg_t* opt_acl = cfg_getsec(cfg, SECTION_OPT_NAME);
             if(readAcl(opt_acl, sinfo->opt_acl, if_name)) {
                 ERROR("error parsing options acl for interface: %s",if_name.c_str());
-                return 0;
+                return nullptr;
             }
         }
     }
 
     //TCP specific opts
     if(stinfo) {
-        stinfo->tcp_connect_timeout = cfg_getint(cfg, PARAM_CONNECT_TIMEOUT_NAME);
-        stinfo->tcp_idle_timeout = cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME);
+        stinfo->tcp_connect_timeout = cuint(cfg_getint(cfg, PARAM_CONNECT_TIMEOUT_NAME));
+        stinfo->tcp_idle_timeout = cuint(cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME));
     }
 
     //STL specific opts
@@ -1374,7 +1383,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
         if(!server) {
             ERROR("absent mandatory section 'server' in tls configuration");
-            return 0;
+            return nullptr;
         }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
@@ -1382,7 +1391,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
         }
         if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, stlinfo->server_settings.certificate) ||
            getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, stlinfo->server_settings.certificate_key)) {
-            return 0;
+            return nullptr;
         }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
             std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
@@ -1402,17 +1411,17 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_in
 
         if(stlinfo->server_settings.require_client_certificate && stlinfo->server_settings.ca_list.empty()) {
             ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
-            return 0;
+            return nullptr;
         }
         if(stlinfo->server_settings.verify_client_certificate && !stlinfo->server_settings.require_client_certificate) {
             ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
-            return 0;
+            return nullptr;
         }
 
         cfg_t* client = cfg_getsec(cfg, SECTION_CLIENT_NAME);
         if(!client) {
             ERROR("absent mandatory section 'client' in tls configuration");
-            return 0;
+            return nullptr;
         }
         for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
             std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
@@ -1467,9 +1476,12 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
         auto if_names_iterator = config->sip_if_names.find(if_iterator->name);
         if(if_names_iterator != config->sip_if_names.end()) {
             WARN("duplicate sip name interface %s", if_iterator->name.c_str());
-            config->sip_if_names[if_iterator->name] = if_iterator - config->sip_ifs.begin();
+            config->sip_if_names[if_iterator->name] =
+                static_cast<unsigned short>(if_iterator - config->sip_ifs.begin());
         } else {
-            config->sip_if_names.insert(std::make_pair(if_iterator->name, if_iterator - config->sip_ifs.begin()));
+            config->sip_if_names.insert(std::make_pair(
+                if_iterator->name,
+                static_cast<unsigned short>(if_iterator - config->sip_ifs.begin())));
         }
 
         unsigned short i = 0;
@@ -1482,8 +1494,8 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if (insertSIPInterfaceMapping(config, *info,if_iterator - config->sip_ifs.begin()) < 0 ||
-                (*if_iterator).insertProtoMapping((info->type_ip)|(info->type << 3), i) ||
+            if (insertSIPInterfaceMapping(config, *info,cint(if_iterator - config->sip_ifs.begin())) < 0 ||
+                (*if_iterator).insertProtoMapping(static_cast<unsigned char>((info->type_ip)|(info->type << 3)), i) ||
                 setNetInterface(config, *info)) {
                 return -1;
             }
@@ -1503,9 +1515,12 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
         auto if_names_iterator = config->media_if_names.find(if_iterator->name);
         if(if_names_iterator != config->media_if_names.end()) {
             WARN("duplicate media name interface %s", if_iterator->name.c_str());
-            config->media_if_names[if_iterator->name] = if_iterator - config->media_ifs.begin();
+            config->media_if_names[if_iterator->name] =
+                static_cast<unsigned short>(if_iterator - config->media_ifs.begin());
         } else {
-            config->media_if_names.insert(std::make_pair(if_iterator->name, if_iterator - config->media_ifs.begin()));
+            config->media_if_names.insert(std::make_pair(
+                if_iterator->name,
+                static_cast<unsigned short>(if_iterator - config->media_ifs.begin())));
         }
 
         unsigned short i = 0;
@@ -1517,7 +1532,8 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if ((*if_iterator).insertProtoMapping((info->type_ip)|(info->mtype << 6), i) ||
+            if ((*if_iterator).insertProtoMapping(
+                    static_cast<unsigned char>((info->type_ip)|(info->mtype << 6)), i) ||
                 setNetInterface(config, *info)) {
                 return -1;
             }
@@ -1540,7 +1556,7 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
 void AmLcConfig::dump_Ifs(ConfigContainer* config)
 {
     INFO("Signaling interfaces:");
-    for(int i=0; i<(int)config->sip_ifs.size(); i++) {
+    for(unsigned int i=0; i<config->sip_ifs.size(); i++) {
         SIP_interface& it_ref = config->sip_ifs[i];
         INFO("\t(%i) name='%s'", i,it_ref.name.c_str());
         std::vector<SIP_info*>::iterator it = it_ref.proto_info.begin();
@@ -1631,7 +1647,7 @@ void AmLcConfig::dump_Ifs(ConfigContainer* config)
     }
 
     INFO("Media interfaces:");
-    for(int i=0; i<(int)config->media_ifs.size(); i++) {
+    for(unsigned int i=0; i<config->media_ifs.size(); i++) {
 
         MEDIA_interface& it_ref = config->media_ifs[i];
         INFO("\t(%i) name='%s'", i,it_ref.name.c_str());
@@ -1682,7 +1698,8 @@ void AmLcConfig::fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config)
                 if(config->local_sip_ip2if.find(intf_it->addrs.front().addr) == config->local_sip_ip2if.end()) {
                     DBG("mapping unmapped IP address '%s' to interface #%u \n",
                         intf_it->addrs.front().addr.c_str(), idx);
-                    config->local_sip_ip2if[intf_it->addrs.front().addr] = idx;
+                    config->local_sip_ip2if[intf_it->addrs.front().addr] =
+                        static_cast<unsigned short>(idx);
                 }
             }
         }
@@ -1754,7 +1771,7 @@ int AmLcConfig::setLogLevel(const std::string& level, bool apply)
 {
     int n;
     if(-1==(n = parse_log_level(level))) return 0;
-    log_level = (Log_Level)n;
+    log_level = static_cast<Log_Level>(n);
     if (apply)
         set_log_level(log_level);
     return 1;
@@ -1764,7 +1781,7 @@ int AmLcConfig::setStderrLogLevel(const std::string& level, bool apply)
 {
     int n;
     if(-1==(n = parse_log_level(level))) return 0;
-    log_level = (Log_Level)n;
+    log_level = static_cast<Log_Level>(n);
     if (apply && m_config.log_stderr)
         set_stderr_log_level(log_level);
     return 1;
@@ -1787,7 +1804,7 @@ int AmLcConfig::setLogStderr(bool s, bool apply)
 /** Get the list of network interfaces with the associated addresses & flags */
 bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
 {
-    struct ifaddrs *ifap = NULL;
+    struct ifaddrs *ifap = nullptr;
 
     // socket to grab MTU
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -1802,8 +1819,8 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
     }
 
     char host[NI_MAXHOST];
-    for(struct ifaddrs *p_if = ifap; p_if != NULL; p_if = p_if->ifa_next) {
-        if(p_if->ifa_addr == NULL)
+    for(struct ifaddrs *p_if = ifap; p_if != nullptr; p_if = p_if->ifa_next) {
+        if(p_if->ifa_addr == nullptr)
             continue;
 
         if( (p_if->ifa_addr->sa_family != AF_INET) &&
@@ -1814,7 +1831,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
             continue;
 
         if(p_if->ifa_addr->sa_family == AF_INET6) {
-            struct sockaddr_in6 *addr = (struct sockaddr_in6 *)p_if->ifa_addr;
+            struct sockaddr_in6 *addr = reinterpret_cast<struct sockaddr_in6 *>(p_if->ifa_addr);
             if(IN6_IS_ADDR_LINKLOCAL(&addr->sin6_addr)) {
                 // sorry, we don't support link-local addresses...
                 continue;
@@ -1825,7 +1842,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
             }
         }
 
-        if (am_inet_ntop((const sockaddr_storage*)p_if->ifa_addr, host, NI_MAXHOST) == NULL) {
+        if (am_inet_ntop(reinterpret_cast<const sockaddr_storage*>(p_if->ifa_addr), host, NI_MAXHOST) == nullptr) {
             ERROR("am_inet_ntop() failed\n");
             continue;
             // freeifaddrs(ifap);
@@ -1859,12 +1876,13 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
                 intf_it->mtu = 1500;
             }
             else {
-                intf_it->mtu = ifr.ifr_mtu;
+                intf_it->mtu = cuint(ifr.ifr_mtu);
             }
         }
 
         DBG("iface='%s';ip='%s';flags=0x%x\n",p_if->ifa_name,host,p_if->ifa_flags);
-        intf_it->addrs.push_back(IPAddr(fixIface2IP(host, true),p_if->ifa_addr->sa_family));
+        intf_it->addrs.push_back(IPAddr(fixIface2IP(host, true),
+            static_cast<short>(p_if->ifa_addr->sa_family)));
     }
 
     freeifaddrs(ifap);
@@ -1921,7 +1939,14 @@ int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, st
 int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data)
 {
     checkMandatoryParameter(cfg, if_name);
-    data = cfg_getint(cfg, if_name.c_str());
+    data = cint(cfg_getint(cfg, if_name.c_str()));
+    return 0;
+}
+
+int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned int& data)
+{
+    checkMandatoryParameter(cfg, if_name);
+    data = cuint(cfg_getint(cfg, if_name.c_str()));
     return 0;
 }
 
