@@ -752,6 +752,22 @@ general {
      * default: yes
      */
     //enable_zrtp_debuglog = yes
+
+    /* optional parameter: sdp_origin
+     *
+     * user part for o= line in SDP
+     *
+     * default=sems
+     */
+    //use_raw_sockets = sems
+
+    /* optional parameter: sdp_session_name
+     *
+     * value for s= line in SDP
+     *
+     * default=sems
+     */
+    //sdp_session_name = sems
 }
 
 /**********************************************************/
