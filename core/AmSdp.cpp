@@ -617,6 +617,11 @@ void AmSdp::print(string& body) const
             out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
         }
 
+        // "a=rtcp-mux" line
+        if(media_it->is_multiplex) {
+            out_buf += "a=rtcp-mux\r\n";
+        }
+
         if(media_it->send){
             if(media_it->recv){
                 out_buf += "a=sendrecv\r\n";
@@ -1407,13 +1412,21 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     } else if(attr == "rtcp") {
         next = parse_until(attr_line, line_end, ' ');
         string port(attr_line, int(next-attr_line)-1);
-        str2int(port, (int&)media.rtcp_port);
-        if(next != line_end) {
-            attr_line = next;
-            AmSdp tmpsdp;
-            parse_sdp_connection(&tmpsdp, attr_line, 'd');
-            media.rtcp_conn = tmpsdp.conn;
+        int rtcpport;
+        str2int(port, rtcpport);
+        if(rtcpport != 9) {
+            media.rtcp_port = rtcpport;
+            if(next != line_end) {
+                attr_line = next;
+                AmSdp tmpsdp;
+                parse_sdp_connection(&tmpsdp, attr_line, 'd');
+                media.rtcp_conn = tmpsdp.conn;
+            }
+        } else {
+            DBG("Ignore rtcp attribute");
         }
+    } else if(attr == "rtcp-mux") {
+        media.is_multiplex = true;
     } else if(attr == "crypto") {
         SdpCrypto crypto;
         while(attr_line < line_end) {
@@ -1653,6 +1666,11 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                     parsing = 0;
                     break;
                 }
+                else if(idata == 9) {
+                    DBG("ingnore port 9 for ice candidate");
+                    parsing = 0;
+                    break;
+                }
                 attr += data;
                 if(cd_st == CPORT)
                     candidate.conn.address = attr;
@@ -1697,10 +1715,11 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
         }
         param = next;
     }
-    media->ice_candidate.push_back(candidate);
-
-    DBG("SDP: got ice candidate: type %s via %s %s\n",
-        ice_candidate_2_str(candidate.type).c_str(), transport_ice_2_str(candidate.transport).c_str(), candidate.conn.debugPrint().c_str());
+    if(parsing) {
+        media->ice_candidate.push_back(candidate);
+        DBG("SDP: got ice candidate: type %s via %s %s\n",
+            ice_candidate_2_str(candidate.type).c_str(), transport_ice_2_str(candidate.transport).c_str(), candidate.conn.debugPrint().c_str());
+    }
     return line_end;
 }
 

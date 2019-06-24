@@ -549,7 +549,7 @@ int AmRtpStream::send(sockaddr_storage* raddr, unsigned char* buf, int size, boo
 
 int AmRtpStream::send(unsigned char* buf, int size, bool rtcp)
 {
-    struct sockaddr_storage* rs_addr = rtcp ? &r_rtcp_saddr : &r_saddr;
+    struct sockaddr_storage* rs_addr = (rtcp && !multiplexing) ? &r_rtcp_saddr : &r_saddr;
     return send(rs_addr, buf, size, rtcp);
 }
 
@@ -699,7 +699,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     rtp_mode(RTP_DEFAULT),
     transport(RTP_AVP),
     srtp_enable(false),
-    dtls_enable(false)
+    dtls_enable(false),
+    multiplexing(false)
 {
 
     DBG("AmRtpStream[%p](%p)",this,session);
@@ -830,7 +831,7 @@ void AmRtpStream::setRAddr(
 void AmRtpStream::handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp)
 {
 
-    if((!rtcp && passive) || (rtcp && (!symmetric_rtp_ignore_rtcp && passive_rtcp)))
+    if((!rtcp && passive) || (rtcp && (!symmetric_rtp_ignore_rtcp && passive_rtcp && !multiplexing)))
     {
         uint64_t now = last_recv_time.tv_sec*1000-last_recv_time.tv_usec/1000,
                  set_time = passive_set_time.tv_sec*1000-passive_set_time.tv_usec/1000;
@@ -952,6 +953,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     sdp_media_index = index;
     transport = (MediaTransport)offer.transport;
     answer.rtcp_port = getLocalRtcpPort();
+    answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
     if((offer.is_simple_srtp() && !srtp_enable) ||
@@ -998,11 +1000,13 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
         candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
         answer.ice_candidate.push_back(candidate);
-        candidate.comp_id = 2;
-        candidate.conn.network = NT_IN;
-        candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
-        candidate.conn.address = am_inet_ntop(&l_rtcp_saddr) + " " + int2str(getLocalRtcpPort());
-        answer.ice_candidate.push_back(candidate);
+        if(!answer.is_multiplex) {
+            candidate.comp_id = 2;
+            candidate.conn.network = NT_IN;
+            candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+            candidate.conn.address = am_inet_ntop(&l_rtcp_saddr) + " " + int2str(getLocalRtcpPort());
+            answer.ice_candidate.push_back(candidate);
+        }
     }
 }
 
@@ -1142,10 +1146,11 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
+    multiplexing = local_media.is_multiplex;
     string address = remote_media.conn.address.empty() ? remote.conn.address : remote_media.conn.address;
     string rtcp_address = remote_media.rtcp_conn.address.empty() ? remote.conn.address : remote_media.rtcp_conn.address;
     int port = remote_media.port;
-    int rtcp_port = remote_media.rtcp_port ? remote_media.rtcp_port : remote_media.port+1;
+    int rtcp_port = remote_media.rtcp_port ? remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1);
     setRAddr(address, rtcp_address, port, rtcp_port);
 
     if(local_media.payloads.empty()) {
@@ -1326,10 +1331,10 @@ void AmRtpStream::initSrtpConnection(bool dtls_server, const SdpFingerPrint& fp)
     srtp_fingerprint_p fingerprint(fp.hash, fp.value);
     if(dtls_server) {
         srtp_connection->use_dtls(&server_settings, fingerprint);
-        srtcp_connection->use_dtls(&server_settings, fingerprint);
+        if(!multiplexing) srtcp_connection->use_dtls(&server_settings, fingerprint);
     } else {
         srtp_connection->use_dtls(&client_settings, fingerprint);
-        srtcp_connection->use_dtls(&client_settings, fingerprint);
+        if(!multiplexing) srtcp_connection->use_dtls(&client_settings, fingerprint);
     }
 }
 
@@ -1339,6 +1344,9 @@ void AmRtpStream::createSrtpConnection()
        srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER) {
         srtp_connection->create_dtls();
     }
+
+    if(multiplexing) return;
+
     if(srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT ||
        srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER) {
         srtcp_connection->create_dtls();
@@ -2441,8 +2449,9 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 
     rtp_stats.unlock();
 
-    if(srtcp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        if(!srtcp_connection->on_data_send((unsigned char*)buf, &len, true)) {
+    AmSrtpConnection* conn = multiplexing ? srtp_connection.get() : srtcp_connection.get();
+    if(conn->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        if(!conn->on_data_send((unsigned char*)buf, &len, true)) {
             return;
         }
     }
@@ -2450,20 +2459,19 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     if(send((unsigned char*)buf, len, true) < 0) {
         CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s:%d, buf: %p:%d",
                     strerror(errno),
-                    l_rtcp_sd,
-                    get_addr_str(&r_rtcp_saddr).c_str(),
-                    am_get_port(&r_rtcp_saddr),
+                    multiplexing ?  l_rtcp_sd : l_port,
+                    get_addr_str(multiplexing ? &r_rtcp_saddr : &r_saddr).c_str(),
+                    am_get_port(multiplexing ? &r_rtcp_saddr : &r_saddr),
                     buf,len);
         return;
     }
 
-#define ADDR_ARGS(addr) am_inet_ntop(&addr).c_str(),am_get_port(&addr)
+    log_sent_rtcp_packet((const char *)buf, len, multiplexing ? r_rtcp_saddr : r_saddr);
 
+    //#define ADDR_ARGS(addr) am_inet_ntop(&addr).c_str(),am_get_port(&addr)
     /*CLASS_DBG("RTCP report is sent from %s:%d to %s:%d",
         ADDR_ARGS(l_rtcp_saddr),
         ADDR_ARGS(r_rtcp_saddr));*/
-
-    log_sent_rtcp_packet((const char *)buf, len, r_rtcp_saddr);
 }
 
 bool AmRtpStream::isStunMessage(unsigned char* buf, int size)
