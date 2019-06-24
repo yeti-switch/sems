@@ -1,11 +1,12 @@
 #include "AmAudioFileRecorderStereoRaw.h"
+#include "AmLcConfig.h"
 #include "rsr.h"
 
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 : AmAudioFileRecorder(RecorderStereoRaw, id)
 {
-    string filePath("/tmp/");
-    filePath = filePath + id + ".rsr";
+    string filePath(AmConfig.rsr_path);
+    filePath = "/" + id + ".rsr";
     fp = fopen(filePath.c_str(),"w+");
     if(!fp) {
         ERROR("could not create/overwrite file: %s",filePath.c_str());

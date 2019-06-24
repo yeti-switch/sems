@@ -71,6 +71,7 @@
 #define PARAM_LOG_PARS_NAME          "log_parsed_messages"
 #define PARAM_UDP_RECVBUF_NAME       "udp_rcvbuf"
 #define PARAM_DUMP_PATH_NAME         "log_dump_path"
+#define PARAM_RSR_PATH_NAME          "rsr_path"
 #define PARAM_LOG_LEVEL_NAME         "syslog_loglevel"
 #define PARAM_STDERR_NAME            "stderr"
 #define PARAM_LOG_STDERR_LEVEL_NAME  "stderr_loglevel"
@@ -169,6 +170,7 @@
 #define VALUE_LOG_INFO               "info"
 #define VALUE_UDP_RECVBUF            -1
 #define VALUE_LOG_DUMP_PATH          "/var/spool/sems/logdump"
+#define VALUE_RSR_PATH               "/var/spool/sems/rsr/"
 #define VALUE_NUM_SESSION_PROCESSORS 10
 #define VALUE_NUM_SESSION_PROCESSORS 10
 #define VALUE_NUM_MEDIA_PROCESSORS   1
@@ -491,6 +493,7 @@ namespace Config {
         CFG_INT(PARAM_SYMMETRIC_DELAY_NAME, VALUE_SYMMETRIC_RTP_DELAY, CFGF_NONE),
         CFG_INT(PARAM_SYMMETRIC_PACKETS_NAME, 0, CFGF_NONE),
         CFG_STR(PARAM_SYMMETRIC_MODE_NAME, VALUE_PACKETS, CFGF_NONE),
+        CFG_STR(PARAM_RSR_PATH_NAME, VALUE_RSR_PATH, CFGF_NONE),
         CFG_STR(PARAM_DUMP_PATH_NAME, VALUE_LOG_DUMP_PATH, CFGF_NONE),
         CFG_STR(PARAM_LOG_RAW_NAME, VALUE_LOG_DEBUG, CFGF_NONE),
         CFG_STR(PARAM_LOG_LEVEL_NAME, VALUE_LOG_INFO, CFGF_NONE),
@@ -849,6 +852,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     }
     cfg_t* gen = cfg_getsec(cfg, SECTION_GENERAL_NAME);
     config->log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
+    config->rsr_path = cfg_getstr(gen, PARAM_RSR_PATH_NAME);
 
     if(config == &m_config) {
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);

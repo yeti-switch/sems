@@ -53,6 +53,7 @@ struct ConfigContainer
     std::string configs_path;
     std::string plugin_path;
 
+    std::string rsr_path;
     std::string log_dump_path;
     Log_Level log_level;
     bool log_stderr;

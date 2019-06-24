@@ -408,6 +408,14 @@ general {
      */
     //stderr_loglevel = 2
 
+    /*  optional parameter: rsr_path
+     *
+     *  Path where to rsr file will be wrote
+     *
+     * default: /var/spool/sems/rsr
+     */
+    //rsr_path = /var/spool/sems/rsr
+
     /* optional parameter: rtp_receiver_threads
      *
      * controls how many threads should be created that
