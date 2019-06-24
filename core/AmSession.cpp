@@ -1060,6 +1060,8 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
                 answer.use_ice = true;
             }
 
+            answer_media.frame_size = override_frame_size ? override_frame_size : m.frame_size;
+
             if(answer_payloads.empty() ||
                ((answer_payloads.size() == 1) &&
                (answer_payloads[0].encoding_name == "telephone-event")))
