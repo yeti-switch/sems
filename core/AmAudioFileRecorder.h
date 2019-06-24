@@ -64,17 +64,22 @@ struct AudioRecorderEvent
         event_id(event_id)
     {}
 
-    inline AmAudioFileRecorder::RecorderType getRecorderType()
+    enum recorder_class {
+        RecorderClassMono,
+        RecorderClassStereo
+    };
+
+    inline recorder_class getRecorderClassByEventId()
     {
         switch(event_id) {
         case addRecorder:
         case delRecorder:
         case putSamples:
-            return AmAudioFileRecorder::RecorderMonoAmAudioFile;
+            return RecorderClassMono;
         case addStereoRecorder:
         case delStereoRecorder:
         case putStereoSamples:
-            return AmAudioFileRecorder::RecorderStereoRaw;
+            return RecorderClassStereo;
         default:
             throw std::logic_error("unknown event type");
         }
@@ -86,15 +91,20 @@ struct AudioRecorderCtlEvent
 {
     string file_path;
     string sync_ctx_id;
+    AmAudioFileRecorder::RecorderType rtype;
 
     AudioRecorderCtlEvent(const string &recorder_id,event_type event_id)
-      : AudioRecorderEvent(recorder_id,event_id)
+      : AudioRecorderEvent(recorder_id,event_id),
+        rtype(AmAudioFileRecorder::RecorderTypeMax)
     {}
 
-    AudioRecorderCtlEvent(const string &recorder_id,event_type event_id,
+    AudioRecorderCtlEvent(const string &recorder_id,
+                          event_type event_id,
+                          AmAudioFileRecorder::RecorderType rtype,
                           const string &file_path, const string sync_ctx_id)
       : AudioRecorderEvent(recorder_id,event_id),
-        file_path(file_path), sync_ctx_id(sync_ctx_id)
+        file_path(file_path), sync_ctx_id(sync_ctx_id),
+        rtype(rtype)
     {}
 };
 
@@ -109,8 +119,8 @@ class _AmAudioFileRecorderProcessor
     typedef std::list<AudioRecorderEvent *> AudioEventsQueue;
     typedef std::map<string, AmAudioFileRecorder *> RecordersMap;
 
-    RecordersMap recorders[AmAudioFileRecorder::RecorderTypeMax];
-    //vector<RecordersMap> recorders;
+    RecordersMap mono_recorders;
+    RecordersMap stereo_recorders;
 
     AudioEventsQueue audio_events;
     AmEventFd audio_events_ready, stop_event;
@@ -134,7 +144,9 @@ class _AmAudioFileRecorderProcessor
     void process(AmEvent *ev);
 
     //ctl interface
-    void addRecorder(const string &recorder_id, const string &file_path, const string sync_ctx_id = string());
+    void addRecorder(const string &recorder_id,
+                     const string &file_path,
+                     const string sync_ctx_id = string());
     void removeRecorder(const string &recorder_id);
     void putEvent(AudioRecorderEvent *event);
 

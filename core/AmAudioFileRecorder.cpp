@@ -94,14 +94,13 @@ void _AmAudioFileRecorderProcessor::run()
     }
     audio_events_lock.unlock();
 
-    for(int i = 0; i < AmAudioFileRecorder::RecorderTypeMax; i++) {
-        RecordersMap &r = recorders[i];
-        DBG("%ld recorders of type %d on stop",r.size(),i);
-        if(r.empty()) continue;
-        for(RecordersMap::iterator it = r.begin(); it!=r.end(); ++it)
-            delete it->second;
-        r.clear();
-    }
+    DBG("%ld mono recorders on stop",mono_recorders.size());
+    for(auto r: mono_recorders)
+        delete r.second;
+
+    DBG("%ld stereo recorders on stop",stereo_recorders.size());
+    for(auto r: stereo_recorders)
+        delete r.second;
 
     DBG("Audio recorder stopped");
     stopped.set(true);
@@ -124,9 +123,16 @@ void _AmAudioFileRecorderProcessor::process(AmEvent *ev)
     }
 }
 
-void _AmAudioFileRecorderProcessor::addRecorder(const string &recorder_id,const string &file_path, const string sync_ctx_id)
+void _AmAudioFileRecorderProcessor::addRecorder(
+    const string &recorder_id,
+    const string &file_path,
+    const string sync_ctx_id)
 {
-    putEvent(new AudioRecorderCtlEvent(recorder_id,AudioRecorderEvent::addRecorder,file_path,sync_ctx_id));
+    putEvent(new AudioRecorderCtlEvent(
+        recorder_id,
+        AudioRecorderEvent::addRecorder,
+        AmAudioFileRecorder::RecorderMonoAmAudioFile,
+        file_path,sync_ctx_id));
 }
 
 void _AmAudioFileRecorderProcessor::removeRecorder(const string &recorder_id)
@@ -146,10 +152,10 @@ void _AmAudioFileRecorderProcessor::putEvent(AudioRecorderEvent *event)
 void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
 {
     AmAudioFileRecorder *recorder;
-    AudioRecorderCtlEvent *ctl_event = NULL;
+    AudioRecorderCtlEvent *ctl_event = nullptr;
 
-    AmAudioFileRecorder::RecorderType rtype = ev.getRecorderType();
-    RecordersMap &r = recorders[rtype];
+    RecordersMap &r = ev.getRecorderClassByEventId()==AudioRecorderCtlEvent::RecorderClassMono ?
+        mono_recorders : stereo_recorders;
 
     RecordersMap::iterator recorder_it = r.find(ev.recorder_id);
     if(recorder_it == r.end()) {
@@ -157,6 +163,7 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
            ev.event_id == AudioRecorderEvent::addStereoRecorder)
         {
             ctl_event = static_cast<AudioRecorderCtlEvent *>(&ev);
+            auto rtype = ctl_event->rtype;
 
             DBG("add recorder %s with type: %d",ev.recorder_id.c_str(),rtype);
 
@@ -235,8 +242,8 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
 
 void _AmAudioFileRecorderProcessor::getStats(AmArg &ret)
 {
-    ret["active_mono"] = recorders[AmAudioFileRecorder::RecorderMonoAmAudioFile].size();
-    ret["active_stereo_mp3"] = recorders[AmAudioFileRecorder::RecorderStereoMP3Internal].size();
+    ret["active_mono"] = mono_recorders.size();
+    ret["active_stereo"] = stereo_recorders.size();
     ret["opened"] = recorders_opened;
     ret["closed"] = recorders_closed;
 }
