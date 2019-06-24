@@ -292,6 +292,8 @@ struct SdpMedia
   bool          recv;
   bool          has_mode_attribute;
 
+  bool          is_multiplex; // a=rtcp-mux
+
   std::vector<SdpPayload> payloads;
   /* rtp/savr transport attribute*/
   std::vector<SdpCrypto> crypto;
@@ -319,7 +321,8 @@ struct SdpMedia
       send(true),
       recv(true),
       has_mode_attribute(false),
-      is_ice(false)
+      is_ice(false),
+      is_multiplex(false)
   {}
 
   /** pretty print */

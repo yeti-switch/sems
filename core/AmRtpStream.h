@@ -424,6 +424,9 @@ class AmRtpStream
     /** set to true if any data received */
     bool active;
 
+    /* RTP and RTCP multiplexing mode*/
+    bool multiplexing;
+
     RtcpReportsPreparedData rtcp_reports;
 
     /**

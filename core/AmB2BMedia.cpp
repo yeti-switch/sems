@@ -310,8 +310,7 @@ void AudioStreamData::setRelayStream(AmRtpAudio *other)
     if (!relay_paused)
         stream->enableRtpRelay();
     stream->setRAddr(relay_address, relay_address,
-        static_cast<unsigned short>(relay_port),
-        static_cast<unsigned short>(relay_port+1));
+        static_cast<unsigned short>(relay_port), 0);
 }
 
 void AudioStreamData::setRelayPayloads(const SdpMedia &m, RelayController *ctrl)
