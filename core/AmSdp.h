@@ -279,7 +279,7 @@ struct SdpMedia
   unsigned int  port;
   unsigned int  rtcp_port; // a=rtcp:
   unsigned int  nports;
-  int           transport;
+  TransProt     transport;
   int           frame_size;
   SdpConnection conn; // c=
   SdpConnection rtcp_conn; // a=rtcp:

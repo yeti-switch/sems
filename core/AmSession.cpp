@@ -77,25 +77,26 @@ static const char* ProcessingStatusStr[] = {
 // AmSession methods
 
 AmSession::AmSession(AmSipDialog* p_dlg)
-  : AmEventQueue(this), dlg(p_dlg),
-    input(NULL), output(NULL),
-    sess_stopped(false),
+  : AmEventQueue(this),
     m_dtmfDetector(this), m_dtmfEventQueue(&m_dtmfDetector),
     m_dtmfDetectionEnabled(true),
     record_audio_enabled(false),
+    processing_status(SESSION_PROCESSING_EVENTS),
+#ifdef SESSION_THREADPOOL
+    _pid(this),
+#endif
+    no_reply(false),
+    sess_stopped(false),
     accept_early_session(false),
+    override_frame_size(0),
+    media_transport(TransProt::TP_NONE),
     rtp_interface(-1),
     rtp_addr(-1),
+    input(nullptr), output(nullptr),
     refresh_method(REFRESH_UPDATE_FB_REINV),
-    processing_status(SESSION_PROCESSING_EVENTS),
-    no_reply(false),
-    override_frame_size(0)
+    dlg(p_dlg)
 #ifdef WITH_ZRTP
   ,  zrtp_session(NULL), zrtp_audio(NULL), enable_zrtp(true)
-#endif
-
-#ifdef SESSION_THREADPOOL
-  , _pid(this)
 #endif
 {
   DBG("AmSession[%p](%p)",this,dlg);
@@ -155,6 +156,12 @@ void AmSession::stopMediaProcessing()
     return;
 
   AmMediaProcessor::instance()->removeSession(this);
+}
+
+void AmSession::setMediaTransport(TransProt trsp)
+{
+    CLASS_DBG("set transport to: %d(%s)",trsp, transport_p_2_str(trsp).c_str());
+    media_transport = trsp;
 }
 
 void AmSession::addHandler(AmSessionEventHandler* sess_evh)

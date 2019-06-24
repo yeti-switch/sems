@@ -136,7 +136,6 @@ AmB2BSession::AmB2BSession(
     enable_cn_rtp_force_relay(false),
     dead_rtp_time(AmConfig.dead_rtp_time),
     ignore_relay_streams(false),
-    media_transport(TransProt::TP_NONE),
     media_session(nullptr)
 {
   if(!subs) subs = new AmSipSubscription(dlg,this);
@@ -1117,12 +1116,6 @@ void AmB2BSession::getLowFiPLs(vector<SdpPayload>& lowfi_payloads) const {
 
 void AmB2BSession::setLowFiPLs(const vector<SdpPayload>& lowfi_payloads) {
   this->lowfi_payloads = lowfi_payloads;
-}
-
-void AmB2BSession::setMediaTransport(TransProt trsp)
-{
-    CLASS_DBG("set transport to: %d(%s)",trsp, transport_p_2_str(trsp).c_str());
-    media_transport = trsp;
 }
 
 void AmB2BSession::clearRtpReceiverRelay() {

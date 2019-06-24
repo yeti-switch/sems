@@ -303,16 +303,8 @@ class AmRtpStream
         RTP_DEFAULT,
         ICE_RTP
     } rtp_mode;
-    
-    /**type of rtp transport**/
-    enum MediaTransport
-    {
-        RTP_AVP = TransProt::TP_RTPAVP,
-        RTP_SAVP = TransProt::TP_RTPSAVP,
-        RTP_SAVPF = TransProt::TP_RTPSAVPF,
-        RTP_UDPTLSAVP = TransProt::TP_UDPTLSRTPSAVP,
-        RTP_UDPTLSAVPF = TransProt::TP_UDPTLSRTPSAVPF
-    } transport;
+
+    TransProt transport;
 
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;

@@ -158,6 +158,9 @@ protected:
   /** override frame_size */
   int override_frame_size;
 
+  /** media transport **/
+  TransProt media_transport;
+
   /** Local IP interface to be used for RTP streams */
   int rtp_interface;
   int rtp_addr;
@@ -271,6 +274,9 @@ public:
 
   ProcessingStatus getProcessingStatus() const { return processing_status; }
   const char *getProcessingStatusStr() const;
+
+  TransProt getMediaTransport() const { return media_transport; }
+  void setMediaTransport(TransProt trsp);
 
   /* ----         audio input and output        ---- */
 

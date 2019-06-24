@@ -697,7 +697,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     rtp_stun_client(new AmStunClient(this, false)),
     rtcp_stun_client(new AmStunClient(this, true)),
     rtp_mode(RTP_DEFAULT),
-    transport(RTP_AVP),
+    transport(TP_RTPAVP),
     srtp_enable(false),
     dtls_enable(false),
     multiplexing(false)
@@ -901,7 +901,7 @@ void AmRtpStream::setPassiveMode(bool p)
 
 void AmRtpStream::setTransport(TransProt trans) {
     CLASS_DBG("set transport to: %d(%s)",trans, transport_p_2_str(trans).c_str());
-    transport = (MediaTransport)trans;
+    transport = trans;
 }
 
 void AmRtpStream::getSdp(SdpMedia& m)
@@ -917,18 +917,24 @@ void AmRtpStream::getSdp(SdpMedia& m)
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
     sdp_media_index = index;
+    if(session) {
+        auto session_trsp = session->getMediaTransport();
+        if(session_trsp != TP_NONE) {
+            transport = session_trsp;
+        }
+    }
     getSdp(offer);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
-    if((transport == RTP_SAVP || transport == RTP_SAVPF) && !srtp_enable) {
+    if((transport == TP_RTPSAVP || transport == TP_RTPSAVPF) && !srtp_enable) {
         CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
                     AmConfig.media_ifs[l_if].name.c_str());
-        offer.transport = RTP_AVP;
-    } else if((transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF) && !dtls_enable) {
+        offer.transport = TP_RTPAVP;
+    } else if((transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) && !dtls_enable) {
         CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
                     AmConfig.media_ifs[l_if].name.c_str());
-        offer.transport = RTP_AVP;
-    } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
+        offer.transport = TP_RTPAVP;
+    } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -940,7 +946,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
             offer.crypto.push_back(crypto);
             offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else if(transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF){
+    } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF){
         srtp_fingerprint_p fp = AmSrtpConnection::gen_fingerprint(&server_settings);
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
@@ -951,7 +957,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
 {
     sdp_media_index = index;
-    transport = (MediaTransport)offer.transport;
+    transport = offer.transport;
     answer.rtcp_port = getLocalRtcpPort();
     answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
@@ -960,7 +966,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
        (offer.is_dtls_srtp() && !dtls_enable) ||
        (offer.is_use_ice() && !AmConfig.enable_ice)) {
         throw AmSession::Exception(488,"transport not supported");
-    } else if(transport == RTP_SAVP || transport == RTP_SAVPF) {
+    } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         for(auto profile : srtp_profiles) {
@@ -971,7 +977,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         if(answer.crypto.back().keys.empty()) {
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
-    } else if(transport == RTP_UDPTLSAVP || transport == RTP_UDPTLSAVPF) {
+    } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
         dtls_settings* settings = (offer.setup == SdpMedia::SetupActive) ?
                                                     (dtls_settings*)(&server_settings) :
                                                     (dtls_settings*)(&client_settings);
@@ -2025,23 +2031,23 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
     m.crypto.clear();
     m.dir = SdpMedia::DirUndefined;
 
-    switch(static_cast<int>(transport)) {
-    case RTP_AVP:
+    switch(transport) {
+    case TP_RTPAVP:
         break;
-    case RTP_SAVP:
-    case RTP_SAVPF:
+    case TP_RTPSAVP:
+    case TP_RTPSAVPF:
         if(!srtp_enable) {
             CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
                        AmConfig.media_ifs[l_if].name.c_str());
-            transport = RTP_AVP;
+            transport = TP_RTPAVP;
         }
         break;
-    case RTP_UDPTLSAVP:
-    case RTP_UDPTLSAVPF:
+    case TP_UDPTLSRTPSAVP:
+    case TP_UDPTLSRTPSAVPF:
         if(!dtls_enable) {
             CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
                        AmConfig.media_ifs[l_if].name.c_str());
-            transport = RTP_AVP;
+            transport = TP_RTPAVP;
         }
         break;
     default:
@@ -2050,7 +2056,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
     }
 
     m.transport = transport;
-    if(RTP_SAVP == transport || RTP_SAVPF == transport) {
+    if(TP_RTPSAVP == transport || TP_RTPSAVPF == transport) {
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -2062,7 +2068,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
             m.crypto.push_back(crypto);
             m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else if(RTP_UDPTLSAVP == transport || RTP_UDPTLSAVPF == transport) {
+    } else if(TP_UDPTLSRTPSAVP == transport || TP_UDPTLSRTPSAVPF == transport) {
         m.setup = SdpMedia::SetupPassive;
     }
 }
