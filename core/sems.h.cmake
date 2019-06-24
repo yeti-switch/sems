@@ -51,6 +51,8 @@
 #endif
 
 #define DEFAULT_SIGNATURE "SBC " SEMS_VERSION
+#define DEFAULT_SDP_ORIGIN "sems"
+#define DEFAULT_SDP_SESSION_NAME "sems"
 
 // session considered dead after 5 minutes no RTP
 #define DEAD_RTP_TIME       5*60
