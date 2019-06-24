@@ -1,8 +1,9 @@
 #include "AmAudioFileRecorder.h"
 #include "AmAudioFileRecorderMono.h"
 #include "AmAudioFileRecorderStereoMP3.h"
-#include "AmEventDispatcher.h"
 #include "AmAudioFileRecorderStereoWav.h"
+#include "AmAudioFileRecorderStereoRaw.h"
+#include "AmEventDispatcher.h"
 
 #define RECORDER_QUEUE_NAME "AmAudioFileRecorder"
 #define EPOLL_MAX_EVENTS  2048
@@ -160,11 +161,13 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
             DBG("add recorder %s with type: %d",ev.recorder_id.c_str(),rtype);
 
             if(rtype == AmAudioFileRecorder::RecorderMonoAmAudioFile)
-                recorder = new AmAudioFileRecorderMono();
+                recorder = new AmAudioFileRecorderMono(ev.recorder_id);
             else if(rtype == AmAudioFileRecorder::RecorderStereoMP3Internal)
-                recorder = new AmAudioFileRecorderStereoMP3();
+                recorder = new AmAudioFileRecorderStereoMP3(ev.recorder_id);
             else if(rtype == AmAudioFileRecorder::RecorderStereoWavInternal)
-                recorder = new AmAudioFileRecorderStereoWav();
+                recorder = new AmAudioFileRecorderStereoWav(ev.recorder_id);
+            else if(rtype == AmAudioFileRecorder::RecorderStereoRaw)
+                recorder = new AmAudioFileRecorderStereoRaw(ev.recorder_id);
             else {
                 ERROR("unknown recorder type: %d",rtype);
                 return;

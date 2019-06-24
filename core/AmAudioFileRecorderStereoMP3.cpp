@@ -98,8 +98,8 @@ int AmAudioFileRecorderStereoMP3::mp3_file_data::put(unsigned char *out,unsigned
     return ret;
 }
 
-AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3()
-  : AmAudioFileRecorderStereo(StereoMP3Internal, MP3_FILE_SAMPLERATE)
+AmAudioFileRecorderStereoMP3::AmAudioFileRecorderStereoMP3(const string& id)
+  : AmAudioFileRecorderStereo(StereoMP3Internal, MP3_FILE_SAMPLERATE, id)
 { }
 
 AmAudioFileRecorderStereoMP3::~AmAudioFileRecorderStereoMP3()

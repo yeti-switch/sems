@@ -20,7 +20,7 @@ class AmAudioFileRecorderStereoWav
     file_data* create_file_data(const string &path);
 
   public:
-    AmAudioFileRecorderStereoWav();
+    AmAudioFileRecorderStereoWav(const string& id);
     ~AmAudioFileRecorderStereoWav();
 };
 

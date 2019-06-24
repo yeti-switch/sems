@@ -2,8 +2,8 @@
 #include "AmSessionContainer.h"
 #include "ampi/HttpClientAPI.h"
 
-AmAudioFileRecorderMono::AmAudioFileRecorderMono()
-  : AmAudioFileRecorder(RecorderMonoAmAudioFile)
+AmAudioFileRecorderMono::AmAudioFileRecorderMono(const string& id)
+  : AmAudioFileRecorder(RecorderMonoAmAudioFile, id)
 { }
 
 AmAudioFileRecorderMono::~AmAudioFileRecorderMono()

@@ -22,7 +22,7 @@ class AmAudioFileRecorderStereoMP3
     file_data* create_file_data(const string &path);
 
   public:
-    AmAudioFileRecorderStereoMP3();
+    AmAudioFileRecorderStereoMP3(const string& id);
     ~AmAudioFileRecorderStereoMP3();
 };
 

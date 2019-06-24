@@ -1,5 +1,4 @@
-#ifndef _AM_AUDIO_FILE_RECORDER_STEREO_H_
-#define _AM_AUDIO_FILE_RECORDER_STEREO_H_
+#pragma once
 
 #include "AmAudioFileRecorder.h"
 
@@ -53,7 +52,7 @@ class AmAudioFileRecorderStereo
         StereoMP3Internal,
         StereoWavInternal
     };
-    
+
     static RecorderType stereoRecorderTypeToRecorderType(StereoRecorderType type)
     {
         switch(type) {
@@ -64,9 +63,10 @@ class AmAudioFileRecorderStereo
         }
         return RecorderTypeMax;
     }
-    
-    AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate);
+
+    AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate, const string& id);
     virtual ~AmAudioFileRecorderStereo();
+
 protected:
     class file_data {
       protected:
@@ -94,17 +94,18 @@ protected:
                        resampling_state_r;
 
     vector<file_data*> files;
-    int file_sp;
-    
+    unsigned int file_sp;
+
     virtual file_data* create_file_data(const string &path) = 0;
+
 public:
     int init(const string &path, const string &sync_ctx);
     int add_file(const string &path);
     int put(unsigned char *lbuf, unsigned char *rbuf, size_t l);
-    
+
     void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id);
+
 private:
     unsigned int resample(ResamplingStatePtr &state, unsigned char *samples, unsigned int size, int input_sample_rate);
 };
 
-#endif/*_AM_AUDIO_FILE_RECORDER_STEREO_H_*/

@@ -38,8 +38,8 @@ int AmAudioFileRecorderStereoWav::wav_file_data::put(unsigned char* out, unsigne
     return 0;
 }
 
-AmAudioFileRecorderStereoWav::AmAudioFileRecorderStereoWav()
-  : AmAudioFileRecorderStereo(StereoWavInternal, WAV_FILE_SAMPLERATE)
+AmAudioFileRecorderStereoWav::AmAudioFileRecorderStereoWav(const string& id)
+  : AmAudioFileRecorderStereo(StereoWavInternal, WAV_FILE_SAMPLERATE, id)
 { }
 
 AmAudioFileRecorderStereoWav::~AmAudioFileRecorderStereoWav()

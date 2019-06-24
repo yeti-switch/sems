@@ -41,11 +41,11 @@ bool AmAudioFileRecorderStereo::file_data::operator ==(const string &new_path)
     return path==new_path;
 }
 
-AmAudioFileRecorderStereo::AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate)
-  : AmAudioFileRecorder(stereoRecorderTypeToRecorderType(type)),
-    file_sp(file_samplerate),
+AmAudioFileRecorderStereo::AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate, const string& id)
+  : AmAudioFileRecorder(stereoRecorderTypeToRecorderType(type),id),
     ts_l(0),
-    ts_r(0)
+    ts_r(0),
+    file_sp(file_samplerate)
 {
 }
 

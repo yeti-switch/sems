@@ -268,6 +268,8 @@ public:
 	INTERNAL_RESAMPLER,
 	UNAVAILABLE
   };
+  
+  static AmResamplingState* makeResamplingState();
 
 protected:
   string recorder_id;

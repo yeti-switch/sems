@@ -504,6 +504,23 @@ unsigned int AmAudio::downMix(unsigned int size)
   return s;
 }
 
+
+AmResamplingState* AmAudio::makeResamplingState()
+{
+#ifdef USE_INTERNAL_RESAMPLER
+    if (AmConfig.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
+        DBG("using internal resampler for input");
+        return new AmInternalResamplerState();
+    } else
+#endif
+#ifdef USE_LIBSAMPLERATE
+      if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
+        return new AmLibSamplerateResamplingState();
+      } else
+#endif
+          return 0;
+}
+
 unsigned int AmAudio::resampleInput(unsigned char* buffer, unsigned int s, int input_sample_rate, int output_sample_rate)
 {
   if ((input_sample_rate == output_sample_rate) && !input_resampling_state.get()) {
@@ -511,20 +528,11 @@ unsigned int AmAudio::resampleInput(unsigned char* buffer, unsigned int s, int i
   }
 
   if (!input_resampling_state.get()) {
-#ifdef USE_INTERNAL_RESAMPLER
-    if (AmConfig.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
-      DBG("using internal resampler for input");
-      input_resampling_state.reset(new AmInternalResamplerState());
-    } else
-#endif
-#ifdef USE_LIBSAMPLERATE
-      if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
-	input_resampling_state.reset(new AmLibSamplerateResamplingState());
-      } else
-#endif
-	{
-	  return s;
-	}
+      input_resampling_state.reset(makeResamplingState());
+      if(!input_resampling_state.get())
+      {
+        return s;
+      }
   }
 
   return resample(*input_resampling_state, buffer, s, input_sample_rate, output_sample_rate);
@@ -538,20 +546,11 @@ unsigned int AmAudio::resampleOutput(unsigned char* buffer, unsigned int s, int 
   }
 
   if (!output_resampling_state.get()) {
-#ifdef USE_INTERNAL_RESAMPLER
-    if (AmConfig.resampling_implementation_type == AmAudio::INTERNAL_RESAMPLER) {
-      DBG("using internal resampler for output");
-      output_resampling_state.reset(new AmInternalResamplerState());
-    } else
-#endif
-#ifdef USE_LIBSAMPLERATE
-      if (AmConfig.resampling_implementation_type == AmAudio::LIBSAMPLERATE) {
-	output_resampling_state.reset(new AmLibSamplerateResamplingState());
-      } else
-#endif
-	{
-	  return s;
-	}
+      output_resampling_state.reset(makeResamplingState());
+      if(!output_resampling_state.get())
+      {
+        return s;
+      }
   }
 
   return resample(*output_resampling_state, buffer, s, input_sample_rate, output_sample_rate);
