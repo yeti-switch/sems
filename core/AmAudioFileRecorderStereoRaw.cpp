@@ -6,10 +6,10 @@ AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 : AmAudioFileRecorder(RecorderStereoRaw, id)
 {
     string filePath(AmConfig.rsr_path);
-    filePath = "/" + id + ".rsr";
+    filePath += "/" + id + ".rsr";
     fp = fopen(filePath.c_str(),"w+");
     if(!fp) {
-        ERROR("could not create/overwrite file: %s",filePath.c_str());
+        ERROR("could not create/overwrite file: %s: %d",filePath.c_str(),errno);
         return;
     }
     fseek(fp,0L,SEEK_SET);
