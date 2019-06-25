@@ -424,7 +424,7 @@ int main(int argc, char* argv[])
   // Init default interface
   //AmConfig::Ifs.push_back(AmConfig::IP_interface());
 
-  init_logging();
+  init_logging(SEMS_APP_NAME);
 
   /* apply command-line options */
   if(!apply_args(args)){

@@ -64,10 +64,6 @@ static AmMutex log_hooks_mutex;
 class SyslogLogFac : public AmLoggingFacility {
   int facility;		/**< syslog facility */
 
-  void init() {
-    openlog(SEMS_APP_NAME, LOG_PID | LOG_CONS, facility);
-    setlogmask(-1);
-  }
 
  static SyslogLogFac *_instance;
 
@@ -76,19 +72,23 @@ class SyslogLogFac : public AmLoggingFacility {
     : AmLoggingFacility("syslog",AmConfig.log_level),
       facility(LOG_DAEMON)
   {
-    init();
   }
 
   ~SyslogLogFac() {
     closelog();
   }
 
+  void init(const char* name) {
+    openlog(name, LOG_PID | LOG_CONS, facility);
+    setlogmask(-1);
+  }
+  
   int onLoad() {
     /* unused (because it is a built-in plug-in */
     return 0;
   }
 
-  bool setFacility(const char* str);
+  bool setFacility(const char* str, const char* name);
   void log(int, pid_t, pid_t, const char*, const char*, int, char*);
 
   static SyslogLogFac &instance(){
@@ -100,7 +100,7 @@ class SyslogLogFac : public AmLoggingFacility {
 SyslogLogFac *SyslogLogFac::_instance = NULL;
 
 /** Set syslog facility */
-bool SyslogLogFac::setFacility(const char* str) {
+bool SyslogLogFac::setFacility(const char* str, const char* name) {
   static int local_fac[] = {
     LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3,
     LOG_LOCAL4, LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7,
@@ -126,7 +126,7 @@ bool SyslogLogFac::setFacility(const char* str) {
   if (new_facility != facility) {
     facility = new_facility;
     closelog();
-    init();
+    init(name);
   }
 
   return true;
@@ -172,9 +172,9 @@ void SyslogLogFac::log(int level, pid_t pid, pid_t tid, const char* func, const 
 #endif /* !_DEBUG */
 }
 
-int set_syslog_facility(const char* str)
+int set_syslog_facility(const char* str, const char* name)
 {
-  return (SyslogLogFac::instance().setFacility(str) == true);
+  return (SyslogLogFac::instance().setFacility(str, name) == true);
 }
 
 #endif /* !DISABLE_SYSLOG_LOG */
@@ -202,7 +202,7 @@ StderrLogFac *StderrLogFac::_instance = NULL;
 /**
  * Initialize logging
  */
-void init_logging()
+void init_logging(const char* name)
 {
   _self_pid = GET_PID();
   _self_tid = GET_TID();
@@ -211,7 +211,9 @@ void init_logging()
 
 #ifndef DISABLE_SYSLOG_file
   //register_log_hook(&SyslogLogFac::instance());
-  AmPlugIn::registerLoggingFacility("syslog",&SyslogLogFac::instance());
+  SyslogLogFac& log = SyslogLogFac::instance();
+  log.init(name);
+  AmPlugIn::registerLoggingFacility("syslog",&log);
 #endif
 
   INFO("Logging initialized\n");
@@ -280,7 +282,6 @@ void register_stderr_facility() {
     StderrLogFac& errlog = StderrLogFac::instance();
 	register_log_hook(&errlog);
     AmPlugIn::registerLoggingFacility(errlog.getName(), &errlog);
-    
 }
 
 void set_stderr_log_level(int log_level_arg) {

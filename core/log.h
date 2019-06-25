@@ -175,11 +175,11 @@ _LOG(L_WARN, error_category fmt, ##args)
 extern int log_level;
 extern const char* log_level2str[];
 
-void init_logging(void);
+void init_logging(const char* name);
 void run_log_hooks(int, pid_t, pthread_t, const char*, const char*, int, char*);
 
 #ifndef DISABLE_SYSLOG_LOG
-int set_syslog_facility(const char*);
+int set_syslog_facility(const char*, const char* );
 #endif
 
 void log_stacktrace(int ll);

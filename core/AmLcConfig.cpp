@@ -873,7 +873,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
         setStderrLogLevel(cfg_getstr(gen, PARAM_LOG_STDERR_LEVEL_NAME));
 #ifndef DISABLE_SYSLOG_LOG
         if (cfg_size(gen, PARAM_SL_FACILITY_NAME)) {
-            set_syslog_facility(cfg_getstr(gen, PARAM_SL_FACILITY_NAME));
+            set_syslog_facility(cfg_getstr(gen, PARAM_SL_FACILITY_NAME), SEMS_APP_NAME);
         }
 #endif
         _resolver::disable_srv = cfg_getbool(gen, PARAM_DISABLE_DNS_SRV_NAME);
