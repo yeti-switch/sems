@@ -15,6 +15,8 @@
 #include "AmSessionContainer.h"
 #include "RtspClient.h"
 
+#include <fstream>
+
 #define SECTION_SIGIF_NAME           "signaling-interfaces"
 #define SECTION_MEDIAIF_NAME         "media-interfaces"
 #define SECTION_IF_NAME              "interface"
@@ -736,6 +738,23 @@ int validate_symmetric_mode_func(cfg_t *cfg, cfg_opt_t *opt)
     return valid ? 0 : 1;
 }
 
+static int check_dir_write_permissions(const string &dir, const char *opt_name)
+{
+    std::ofstream st;
+    string testfile = dir + "/test";
+    st.open(testfile.c_str(),std::ofstream::out | std::ofstream::trunc);
+    if(!st.is_open()){
+        ERROR("failed to write test file in %s directory: %s",
+              opt_name, dir.c_str());
+        return 1;
+    }
+    st.close();
+    std::remove(testfile.c_str());
+    return 0;
+}
+#define ENSURE_CFG_DIR_IS_WRITABLE(var) if(check_dir_write_permissions(config->var,#var)) return -1;
+
+
 ConfigContainer::ConfigContainer()
 : plugin_path(PLUG_IN_PATH)
 , log_dump_path()
@@ -851,8 +870,12 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
         return -1;
     }
     cfg_t* gen = cfg_getsec(cfg, SECTION_GENERAL_NAME);
+
     config->log_dump_path = cfg_getstr(gen, PARAM_DUMP_PATH_NAME);
+    ENSURE_CFG_DIR_IS_WRITABLE(log_dump_path);
+
     config->rsr_path = cfg_getstr(gen, PARAM_RSR_PATH_NAME);
+    ENSURE_CFG_DIR_IS_WRITABLE(rsr_path);
 
     if(config == &m_config) {
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
