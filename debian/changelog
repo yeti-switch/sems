@@ -1,3 +1,14 @@
+sems (1.8.26-1) stable; urgency=low
+
+  * AmLcConfig: check log_dump_path and rsr_path dirs to be writable on start
+  * AmSession::setMediaTransport
+  * rtcp-mux attribute support
+  * add rsr_path global parameter
+  * raw recording support (optimizes recording leaving postprocessing to separate utility)
+  * add general.sdp_origin and general.sdp_session_name params
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 26 Jun 2019 11:39:17 +0300
+
 sems (1.8.25-1) stable; urgency=low
 
   * enable ptime processing. add possibility to override ptime
