@@ -780,7 +780,7 @@ AmLcConfig::AmLcConfig()
 
 AmLcConfig::~AmLcConfig()
 {
-    INFO("~AmLcConfig");
+    //INFO("~AmLcConfig");
     if(m_cfg) {
         cfg_free(m_cfg);
     }

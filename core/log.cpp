@@ -273,9 +273,9 @@ bool has_higher_levels(int log_level_arg){
 }
 
 void set_log_level(int log_level_arg){
-	ERROR("set syslog loglevel to %d",log_level_arg);
+	DBG("set syslog loglevel to %d",log_level_arg);
 	SyslogLogFac::instance().setLogLevel(log_level_arg);
-	ERROR("global log_level is %d",log_level);
+	DBG("global log_level is %d",log_level);
 }
 
 void register_stderr_facility() {
