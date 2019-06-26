@@ -1,6 +1,8 @@
 #include "AmAudioFileRecorderStereoRaw.h"
 #include "AmLcConfig.h"
 #include "rsr.h"
+#include "AmSessionContainer.h"
+#include "ampi/HttpClientAPI.h"
 
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 : AmAudioFileRecorder(RecorderStereoRaw, id)
@@ -30,6 +32,15 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
 
     fflush(fp);
     fclose(fp);
+
+    if(!sync_ctx_id.empty()) {
+        if(!AmSessionContainer::instance()->postEvent(
+           HTTP_EVENT_QUEUE,
+           new HttpTriggerSyncContext(sync_ctx_id,1)))
+        {
+            ERROR("AmAudioFileRecorderStereo: can't post HttpTriggerSyncContext event");
+        }
+    }
 }
 
 int AmAudioFileRecorderStereoRaw::init(const string &path, const string &sync_ctx)
