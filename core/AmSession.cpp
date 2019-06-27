@@ -90,6 +90,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     accept_early_session(false),
     override_frame_size(0),
     media_transport(TransProt::TP_NONE),
+    use_ice_media_stream(false),
     rtp_interface(-1),
     rtp_proto_id(-1),
     input(nullptr), output(nullptr),

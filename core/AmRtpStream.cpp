@@ -719,6 +719,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
     rtcp_stun_client(new AmStunClient(this, true)),
     rtp_mode(RTP_DEFAULT),
     transport(TP_RTPAVP),
+    is_ice_stream(false),
     srtp_enable(false),
     dtls_enable(false),
     multiplexing(false)
@@ -925,6 +926,12 @@ void AmRtpStream::setTransport(TransProt trans) {
     transport = trans;
 }
 
+void AmRtpStream::useIce()
+{
+    CLASS_DBG("set using ice protocol");
+    is_ice_stream = true;
+}
+
 void AmRtpStream::getSdp(SdpMedia& m)
 {
     m.port = getLocalPort();
@@ -943,6 +950,8 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         if(session_trsp != TP_NONE) {
             transport = session_trsp;
         }
+
+        is_ice_stream = session->isUseIceMediaStream();
     }
     getSdp(offer);
     offer.payloads.clear();
@@ -973,12 +982,35 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         offer.fingerprint.value = fp.value;
         offer.setup = SdpMedia::SetupActPass;
     }
+
+    if(is_ice_stream) {
+        offer.is_ice = true;
+        string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+        offer.ice_pwd.clear();
+        offer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+        data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+        offer.ice_ufrag.clear();
+        offer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        SdpIceCandidate candidate;
+        candidate.comp_id = 1;
+        candidate.conn.network = NT_IN;
+        candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+        candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(getLocalPort());
+        offer.ice_candidate.push_back(candidate);
+        candidate.comp_id = 2;
+        candidate.conn.network = NT_IN;
+        candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+        candidate.conn.address = am_inet_ntop(&l_rtcp_saddr) + " " + int2str(getLocalRtcpPort());
+        offer.ice_candidate.push_back(candidate);
+        offer.is_multiplex = true;
+    }
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
 {
     sdp_media_index = index;
     transport = offer.transport;
+    is_ice_stream = offer.is_ice;
     answer.rtcp_port = getLocalRtcpPort();
     answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
@@ -1013,7 +1045,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
         else if(offer.setup == SdpMedia::SetupUndefined)
             throw AmSession::Exception(488,"setup not defined");
     }
-    if(offer.is_ice) {
+    if(is_ice_stream) {
         answer.is_ice = true;
         string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
         answer.ice_pwd.clear();
