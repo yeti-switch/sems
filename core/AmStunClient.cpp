@@ -2,6 +2,7 @@
 #include <stunbuilder.h>
 #include "AmRtpStream.h"
 #include "AmSrtpConnection.h"
+#include "sip/msg_logger.h"
 
 AmStunClient::AmStunClient(AmRtpStream* stream, bool b_rtcp)
 : rtp_stream(stream), isrtcp(b_rtcp)
@@ -10,6 +11,11 @@ AmStunClient::AmStunClient(AmRtpStream* stream, bool b_rtcp)
 
 AmStunClient::~AmStunClient()
 {
+}
+
+void AmStunClient::setLocalAddr(struct sockaddr_storage& saddr)
+{
+    memcpy(&l_saddr,&saddr, sizeof(sockaddr_storage));
 }
 
 void AmStunClient::set_credentials(const string& luser, const string& lpassword,
@@ -46,6 +52,11 @@ void AmStunClient::on_data_recv(uint8_t* data, unsigned int size, sockaddr_stora
     } else if(msgClass == StunMsgClassSuccessResponse) {
         check_response(&reader, addr);
     }
+}
+void AmStunClient::logReceivedPacket(msg_logger* logger, uint8_t* data, unsigned int size, sockaddr_storage* addr)
+{
+    static const cstring empty;
+    logger->log((const char *)data, size, addr, &l_saddr, empty);
 }
 
 void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* addr)
@@ -115,6 +126,7 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         rtp_stream->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
+        rtp_stream->log_sent_stun_packet(this, (char*)buffer->GetData(), buffer->GetSize(), *addr);
     }
     
     if(valid && (*it).state != StunCandidate::ALLOW) {
@@ -197,5 +209,6 @@ void AmStunClient::send_request(StunCandidate candidate)
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         rtp_stream->send(&candidate.r_sa, (unsigned char*)buffer->GetData(), buffer->GetSize(), isrtcp);
+        rtp_stream->log_sent_stun_packet(this, (char*)buffer->GetData(), buffer->GetSize(), candidate.r_sa);
     }
 }

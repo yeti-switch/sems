@@ -6,6 +6,7 @@
 #include <stunreader.h>
 
 class AmRtpStream;
+class msg_logger;
 
 struct StunCandidate
 {
@@ -34,17 +35,22 @@ class AmStunClient
     string remote_user;
     AmRtpStream* rtp_stream;
     bool isrtcp;
+    sockaddr_storage l_saddr;
 public:
     AmStunClient(AmRtpStream* rtp_stream, bool b_rtcp);
     ~AmStunClient();
     
+    void setLocalAddr(struct sockaddr_storage& saddr);
+
     void set_credentials(const string& luser, const string& lpassword,
                         const string& ruser, const string& rpassword);
     
     void add_candidate(int priority, sockaddr_storage l_sa, sockaddr_storage r_sa);
     
     void on_data_recv(uint8_t* data, unsigned int size, sockaddr_storage* addr);
-    
+
+    void logReceivedPacket(msg_logger* logger, uint8_t* data, unsigned int size, sockaddr_storage* addr);
+
 private:
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);

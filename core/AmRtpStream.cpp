@@ -128,6 +128,7 @@ void AmRtpStream::setLocalIP(const string& ip)
     if (!am_inet_pton(ip.c_str(), &l_saddr)) {
         throw string ("AmRtpStream::setLocalIP: Invalid IP address: ") + ip;
     }
+    memcpy(&l_rtcp_saddr, &l_saddr, sizeof(l_saddr));
 
     CLASS_DBG("ip = %s\n",ip.c_str());
 
@@ -150,6 +151,8 @@ void AmRtpStream::setLocalIP(const string& ip)
     }
 
     CLASS_DBG("lproto_id = %d\n", lproto_id);
+    rtp_stun_client->setLocalAddr(l_saddr);
+    rtcp_stun_client->setLocalAddr(l_rtcp_saddr);
 }
 
 int AmRtpStream::hasLocalSocket() {
@@ -1673,10 +1676,11 @@ void AmRtpStream::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
         if(rtp_mode == ICE_RTP && isStunMessage(buffer, b_size)) {
-            if(fd == l_rtcp_sd)
-                rtcp_stun_client->on_data_recv(buffer, b_size, &saddr);
-            else if(fd == l_sd)
-                rtp_stun_client->on_data_recv(buffer, b_size, &saddr);
+            AmStunClient* client = 0;
+            if(fd == l_rtcp_sd) client = rtcp_stun_client.get();
+            else if(fd == l_sd) client = rtp_stun_client.get();
+            log_rcvd_stun_packet(client, (char*)buffer, b_size);
+            client->on_data_recv(buffer, b_size, &saddr);
             return;
         }
         if(fd == l_rtcp_sd &&
@@ -2137,6 +2141,19 @@ void AmRtpStream::log_rcvd_rtp_packet(AmRtpPacket &p)
         p.logReceived(logger, &l_saddr);
     if(sensor)
         p.mirrorReceived(sensor, &l_saddr);
+}
+
+void AmRtpStream::log_rcvd_stun_packet(AmStunClient* client, const char *buffer, int len)
+{
+    if (logger)
+        client->logReceivedPacket(logger, (uint8_t*)buffer, len, &saddr);
+}
+
+void AmRtpStream::log_sent_stun_packet(AmStunClient* client, const char *buffer, int len, struct sockaddr_storage &send_addr)
+{
+    static const cstring empty;
+    if (logger)
+        logger->log((const char *)buffer, len, (rtp_stun_client.get() == client) ? &l_saddr : &l_rtcp_saddr, &send_addr, empty);
 }
 
 void AmRtpStream::log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr)
