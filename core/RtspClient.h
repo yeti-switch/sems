@@ -41,7 +41,7 @@ class RtspClient : public AmThread, public AmEventQueueInterface,
 
         typedef struct {
             int         l_if;
-            int         laddr_if;
+            int         lproto_id;
             string      l_ip;
             string      rtsp_interface_name;
             string      media_servers;
@@ -93,7 +93,7 @@ public:
         int         shutdown_code() { return config.shutdown_code; }
         const string& localMediaIP() { return config.l_ip; }
         int         getRtpInterface() { return config.l_if; }
-        int         getRtpAddr() { return config.laddr_if; }
+        int         getRtpProtoId() { return config.lproto_id; }
         int         getReconnectInterval() { return config.reconnect_interval; }
 
         uint64_t    addStream(RtspAudio &audio);

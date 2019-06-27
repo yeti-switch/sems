@@ -17,7 +17,7 @@ static const int RTP_TIMEOUT_SEC =  1;
 RtspAudio::RtspAudio(AmSession* _s, const string &uri)
   : AmRtpAudio(_s,
                RtspClient::instance()->getRtpInterface(),
-               RtspClient::instance()->getRtpAddr()),
+               RtspClient::instance()->getRtpProtoId()),
     agent(RtspClient::instance()),
     md(0),
     streamid(-1)

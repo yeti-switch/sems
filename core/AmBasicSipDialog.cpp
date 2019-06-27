@@ -230,7 +230,7 @@ int AmBasicSipDialog::getOutboundIf()
     int addrType = sip_address_type::IPv4;
     std::multimap<string,unsigned short>::iterator if_it;
     unsigned char ipproto = IPv4_UDP;
-    std::map<unsigned char, unsigned short>::iterator addrif_it;
+    int addrif;
     list<sip_destination> ip_list;
 
     if(!next_hop.empty() &&
@@ -294,10 +294,9 @@ int AmBasicSipDialog::getOutboundIf()
         ERROR("Could not resolve a address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
               local_tag.c_str(), local_ip.c_str());
     }
-    ipproto = (ipproto&0x38)|static_cast<unsigned char>(addrType);
 
-    addrif_it = AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.find(ipproto);
-    if(addrif_it == AmConfig.sip_ifs[if_it->second].local_ip_proto2addr_if.end()) {
+    addrif = AmConfig.sip_ifs[if_it->second].findProto((ipproto&0x38)|static_cast<unsigned char>(addrType));
+    if(addrif < 0) {
         ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
               local_tag.c_str(), local_ip.c_str());
         goto error;
@@ -305,7 +304,7 @@ int AmBasicSipDialog::getOutboundIf()
 
     setOutboundInterface(if_it->second);
     setOutboundAddrType(addrType);
-    setOutboundTransport(addrif_it->second);
+    setOutboundTransport(addrif);
 
     return if_it->second;
 

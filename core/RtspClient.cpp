@@ -213,17 +213,17 @@ int RtspClient::configure(const std::string& conf)
     }
 
     unsigned int addridx = 0;
-    config.laddr_if = -1;
+    config.lproto_id = -1;
     for(auto& info : AmConfig.media_ifs[config.l_if].proto_info) {
         if(info->mtype == MEDIA_info::RTSP) {
             config.l_ip = info->local_ip;
-            config.laddr_if = addridx;
+            config.lproto_id = addridx;
             break;
         }
         addridx++;
     }
 
-    if(config.laddr_if == -1) {
+    if(config.lproto_id == -1) {
         ERROR("RTSP addr interface not found\n");
         cfg_free(cfg);
         return -1;

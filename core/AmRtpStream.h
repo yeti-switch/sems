@@ -254,7 +254,7 @@ class AmRtpStream
     * Local addr index from local interface
     * (index into @AmLcConfig::Ifs.proto_info)
     */
-    int laddr_if;
+    int lproto_id;
 
     /**
     * Local and remote host addresses

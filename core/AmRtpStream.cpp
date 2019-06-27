@@ -128,7 +128,28 @@ void AmRtpStream::setLocalIP(const string& ip)
     if (!am_inet_pton(ip.c_str(), &l_saddr)) {
         throw string ("AmRtpStream::setLocalIP: Invalid IP address: ") + ip;
     }
+
     CLASS_DBG("ip = %s\n",ip.c_str());
+
+    if(!hasLocalSocket()) {
+        getLocalSocket();
+    }
+
+    if(l_if < 0 || lproto_id < 0) {
+        CLASS_ERROR("BUG: no initializing RTP stream, invalid interface or proto id can be used\n");
+        return;
+    }
+
+    int addrType = IP_info::UNDEFINED;
+    if(l_saddr.ss_family == AF_INET) addrType = IP_info::IPv4;
+    if(l_saddr.ss_family == AF_INET6) addrType = IP_info::IPv6;
+    int media = AmConfig.media_ifs[l_if].proto_info[lproto_id]->mtype;
+    int proto_id = AmConfig.media_ifs[l_if].findProto(addrType | (media<<6));
+    if(proto_id >= 0) {
+        lproto_id = proto_id;
+    }
+
+    CLASS_DBG("lproto_id = %d\n", lproto_id);
 }
 
 int AmRtpStream::hasLocalSocket() {
@@ -199,15 +220,15 @@ void AmRtpStream::setLocalPort(unsigned short p)
         }
     }
 
-    if(laddr_if < 0) {
-        if(session) laddr_if = session->getRtpAddr();
+    if(lproto_id < 0) {
+        if(session) lproto_id = session->getRtpProtoId();
         else {
             CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface addr can be used\n");
             l_if = 0;
         }
     }
 
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[laddr_if]);
+    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[lproto_id]);
     if(rtpinfo) {
         server_settings = rtpinfo->server_settings;
         client_settings = rtpinfo->client_settings;
@@ -225,7 +246,7 @@ void AmRtpStream::setLocalPort(unsigned short p)
             return;
 
         if(!p)
-            port = AmConfig.media_ifs[l_if].proto_info[laddr_if]->getNextRtpPort();
+            port = AmConfig.media_ifs[l_if].proto_info[lproto_id]->getNextRtpPort();
         else
             port = p;
 
@@ -267,7 +288,7 @@ try_another_port:
         throw string ("while setting local address reusable.");
     }
 
-    int tos = AmConfig.media_ifs[l_if].proto_info[laddr_if]->tos_byte;
+    int tos = AmConfig.media_ifs[l_if].proto_info[lproto_id]->tos_byte;
     if(tos &&
         (setsockopt(l_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1 ||
         setsockopt(l_rtcp_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1))
@@ -455,7 +476,7 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
 
 int AmRtpStream::sendmsg(unsigned char* buf, int size)
 {
-  MEDIA_info* iface = AmConfig.media_ifs[l_if].proto_info[laddr_if];
+  MEDIA_info* iface = AmConfig.media_ifs[l_if].proto_info[lproto_id];
   unsigned int sys_if_idx = iface->net_if_idx;
 
   struct msghdr hdr;
@@ -513,7 +534,7 @@ int AmRtpStream::sendmsg(unsigned char* buf, int size)
 int AmRtpStream::send(sockaddr_storage* raddr, unsigned char* buf, int size, bool rtcp)
 {
     MEDIA_info* iface = AmConfig.media_ifs[static_cast<size_t>(l_if)]
-        .proto_info[static_cast<size_t>(laddr_if)];
+        .proto_info[static_cast<size_t>(lproto_id)];
 
     if(iface->net_if_idx) {
         if(iface->sig_sock_opts&trsp_socket::use_raw_sockets) {
@@ -645,7 +666,7 @@ int AmRtpStream::receive(
 AmRtpStream::AmRtpStream(AmSession* _s, int _if, int _addr_if)
   : r_port(0),
     l_if(_if),
-    laddr_if(_addr_if),
+    lproto_id(_addr_if),
     l_port(0),
     l_rtcp_port(0),
     l_sd(0),
@@ -793,7 +814,7 @@ void AmRtpStream::setRAddr(
      */
     dns_handle dh;
     dns_priority priority = IPv4_only;
-    if(AmConfig.media_ifs[l_if].proto_info[laddr_if]->type_ip == IP_info::IPv6) {
+    if(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == IP_info::IPv6) {
         priority = IPv6_only;
     }
     if (!addr.empty() && resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,priority) < 0) {
@@ -1130,7 +1151,7 @@ int AmRtpStream::init(const AmSdp& local,
     if(!l_port) {
         // only if socket not yet bound:
         if(session) {
-            setLocalIP(session->localMediaIP());
+            setLocalIP(session->localMediaIP(local_media.conn.addrType));
         } else {
             // set local address - media c-line having precedence over session c-line
             if (local_media.conn.address.empty())
@@ -1273,6 +1294,16 @@ int AmRtpStream::init(const AmSdp& local,
                 if(addr_port.size() != 2) continue;
                 if(sa.ss_family != l_saddr.ss_family) continue;
                 
+                if(!addr_port[0].empty()) {
+                    dns_handle dh;
+                    dns_priority priority = Dualstack;
+                    if(candidate.conn.addrType == AT_V4) priority = IPv4_only;
+                    else if(candidate.conn.addrType == AT_V6) priority = IPv6_only;
+                    if (resolver::instance()->resolve_name(addr_port[0].c_str(),&dh,&sa,priority) < 0) {
+                        ERROR("invalid ice candidate address: %s",addr_port[0].c_str());
+                        continue;
+                    }
+                }
                 am_inet_pton(addr_port[0].c_str(), &sa);
                 int port = 0;
                 str2int(addr_port[1], port);
@@ -2266,7 +2297,7 @@ void AmRtpStream::getInfo(AmArg &ret){
 
     if(hasLocalSocket() > 0) {
         AmArg &a = ret["socket"];
-        a["local_ip"] = AmConfig.media_ifs[l_if].proto_info[laddr_if]->getIP();
+        a["local_ip"] = AmConfig.media_ifs[l_if].proto_info[lproto_id]->getIP();
         a["local_port"] = getLocalPort();
         a["remote_host"] = getRHost(false);
         a["remote_port"] = getRPort();
@@ -2421,7 +2452,7 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     struct timeval now;
     unsigned int len;
 
-    if(l_if < 0 || laddr_if < 0) return;
+    if(l_if < 0 || lproto_id < 0) return;
 
     gettimeofday(&now, nullptr);
 

@@ -361,6 +361,14 @@ public:
         return 0;
     }
 
+    int findProto(unsigned char ipproto) {
+        auto addr_it = local_ip_proto2addr_if.find(ipproto);
+        if(addr_it != local_ip_proto2addr_if.end()) {
+            return addr_it->second;
+        }
+        return -1;
+    }
+
     std::string name;
     std::vector<ProtoInfo> proto_info;
     std::map<unsigned char, unsigned short> local_ip_proto2addr_if;

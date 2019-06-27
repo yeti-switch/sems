@@ -95,6 +95,7 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
         it->state = StunCandidate::CHECK_OTHER;
     } else {
         WARN("not found ice pair %s:%d", am_inet_ntop(addr).c_str(), am_get_port(addr));
+        return;
     }
     
     CStunMessageBuilder builder;
