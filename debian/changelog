@@ -1,3 +1,9 @@
+sems (1.8.27-2) stable; urgency=low
+
+  * AmRtpStream::setLocalIP: fix l_if, lproto_id initialization
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Jul 2019 14:46:12 +0300
+
 sems (1.8.27-1) stable; urgency=low
 
   * resolver: use default port 5061 for tls transport
