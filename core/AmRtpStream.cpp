@@ -132,13 +132,10 @@ void AmRtpStream::setLocalIP(const string& ip)
 
     CLASS_DBG("ip = %s\n",ip.c_str());
 
-    if(!hasLocalSocket()) {
-        getLocalSocket();
-    }
+    getLocalPort();
 
     if(l_if < 0 || lproto_id < 0) {
-        CLASS_ERROR("BUG: no initializing RTP stream, invalid interface or proto id can be used\n");
-        return;
+        throw string("AmRtpStream:setLocalIP. failed to get interface/proto id");
     }
 
     int addrType = IP_info::UNDEFINED;
