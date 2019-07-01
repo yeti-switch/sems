@@ -1,3 +1,12 @@
+sems (1.8.27-1) stable; urgency=low
+
+  * resolver: use default port 5061 for tls transport
+  * AmRtpStream: pass STUN messages to msg_logger
+  * AmSession: add useIceMediaStream() method
+  * AmSession, AmRtpStream: proto_id (index in interface protocols map) usage refactoring
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Jul 2019 13:39:14 +0300
+
 sems (1.8.26-1) stable; urgency=low
 
   * AmLcConfig: check log_dump_path and rsr_path dirs to be writable on start
