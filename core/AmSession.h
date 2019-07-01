@@ -161,6 +161,9 @@ protected:
   /** media transport **/
   TransProt media_transport;
 
+  /** use ice protocol in media stream **/
+  bool use_ice_media_stream;
+
   /** Local IP interface to be used for RTP streams */
   int rtp_interface;
   int rtp_proto_id;
@@ -277,6 +280,9 @@ public:
 
   TransProt getMediaTransport() const { return media_transport; }
   void setMediaTransport(TransProt trsp);
+
+  bool isUseIceMediaStream() const { return use_ice_media_stream; }
+  void useIceMediaStream() { use_ice_media_stream = true; }
 
   /* ----         audio input and output        ---- */
 

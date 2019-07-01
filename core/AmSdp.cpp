@@ -2053,6 +2053,8 @@ static bool attr_check(std::string attr)
         return true;
     else if(attr == "passive")
         return true;
+    else if(attr == "rtcp-mux")
+        return true;
     else {
         DBG("unknown attribute: %s", attr.c_str());
         return false;

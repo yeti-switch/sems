@@ -1375,7 +1375,10 @@ int _resolver::set_destination_ip(
     }
 
     if(!am_get_port(remote_ip)) {
-        if(!next_port) next_port = 5060;
+        if(!next_port) {
+            if(!lower_cmp_n(next_trsp,"tls")) next_port = 5061;
+            else next_port = 5060;
+        }
         am_set_port(remote_ip,next_port);
     }
 

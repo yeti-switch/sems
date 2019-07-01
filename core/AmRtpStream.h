@@ -305,6 +305,7 @@ class AmRtpStream
     } rtp_mode;
 
     TransProt transport;
+    bool is_ice_stream;
 
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;
@@ -562,6 +563,9 @@ class AmRtpStream
 
     /** Set using transport */
     void setTransport(TransProt trans);
+
+    /** Set using ice protocol */
+    void useIce();
 
     unsigned int get_ssrc() { return l_ssrc; }
 
