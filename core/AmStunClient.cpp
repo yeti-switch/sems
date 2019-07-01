@@ -35,7 +35,7 @@ void AmStunClient::add_candidate(int priority, sockaddr_storage l_sa, sockaddr_s
     candidate.r_sa = r_sa;
     candidate.state = StunCandidate::NO_AUTH;
     pairs.push_back(candidate);
-    INFO("add ice candidate %s:%d - %s:%d", am_inet_ntop(&l_sa).c_str(), am_get_port(&l_sa),
+    DBG("add ice candidate %s:%d - %s:%d", am_inet_ntop(&l_sa).c_str(), am_get_port(&l_sa),
                                             am_inet_ntop(&r_sa).c_str(), am_get_port(&r_sa));
 }
 

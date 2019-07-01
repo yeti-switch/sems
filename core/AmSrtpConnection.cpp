@@ -196,14 +196,14 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert
     std::string algorithm = certificate.load_subject_public_key()->algo_name();
     for(auto& key : cert_key_types) {
         if(algorithm == key) {
-            INFO("loaded certificate with algorithm %s", algorithm.c_str());
+            DBG("loaded certificate with algorithm %s", algorithm.c_str());
             certs.push_back(certificate);
         }
     }
 
     if(certs.empty()) {
         for(auto& key : cert_key_types) {
-            WARN("nothing certificates for algorithms %s", key.c_str());
+            DBG("no certificates for algorithms %s", key.c_str());
         }
     }
     return certs;
@@ -387,7 +387,7 @@ srtp_fingerprint_p AmSrtpConnection::gen_fingerprint(class dtls_settings* settin
 int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
 {
     if(!b_init[1] && rtp_mode == SRTP_EXTERNAL_KEY) {
-        CLASS_INFO("create srtp stream for receving stream");
+        CLASS_DBG("create srtp stream for receving stream");
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
         srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
@@ -431,7 +431,7 @@ int AmSrtpConnection::on_data_recv(uint8_t* data, unsigned int* size, bool rtcp)
 bool AmSrtpConnection::on_data_send(uint8_t* data, unsigned int* size, bool rtcp)
 {
     if(!b_init[0] && rtp_mode == SRTP_EXTERNAL_KEY) {
-        CLASS_INFO("create srtp stream for sending stream");
+        CLASS_DBG("create srtp stream for sending stream");
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
         srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
