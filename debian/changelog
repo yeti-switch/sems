@@ -1,3 +1,11 @@
+sems (1.8.28-1) stable; urgency=low
+
+  * fix outbound transport selection for TCP sockets
+  * fix media streams reinitialization on ICE usage
+  * fix media stream init beafore ICE candidate choosen
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Jul 2019 19:14:46 +0300
+
 sems (1.8.27-2) stable; urgency=low
 
   * AmRtpStream::setLocalIP: fix l_if, lproto_id initialization
