@@ -7,14 +7,18 @@ using std::vector;
 using std::map;
 using std::string;
 
-class settings
+struct settings
 {
-public:
     std::string certificate;
     std::string certificate_key;
     std::vector<std::string> ca_list;
-    bool checkCertificateAndKey();
-    virtual std::string getProtocolSettings() = 0;
+
+    virtual ~settings();
+
+    bool checkCertificateAndKey(const char *interface_name,
+                                const char* interface_type,
+                                const char *role_name);
+    virtual const char *getProtocolName() = 0;
 };
 
 class tls_settings : public settings
@@ -48,7 +52,7 @@ public:
         return "TLSv1.2";
     }
 
-    virtual std::string getProtocolSettings() { return "tls"; };
+    virtual const char *getProtocolName();
 
     std::vector<Protocol> protocols;
 };
@@ -79,17 +83,20 @@ public:
         }
     }
 
-    virtual std::string getProtocolSettings() { return "dtls"; };
+    virtual const char *getProtocolName();
 
     std::vector<Protocol> protocols;
     std::vector<uint16_t> srtp_profiles;
 };
 
-template<typename settings>
-class ssl_client_settings : public settings
+template<class SettingsType>
+class ssl_client_settings : public SettingsType
 {
 public:
-    ssl_client_settings() : verify_certificate_chain(false), verify_certificate_cn(false){}
+    ssl_client_settings()
+      : verify_certificate_chain(false),
+        verify_certificate_cn(false)
+    {}
     ~ssl_client_settings(){}
 
     bool verify_certificate_chain;
@@ -99,11 +106,14 @@ public:
 typedef ssl_client_settings<tls_settings> tls_client_settings;
 typedef ssl_client_settings<dtls_settings> dtls_client_settings;
 
-template<typename settings>
-class ssl_server_settings : public settings
+template<class SettingsType>
+class ssl_server_settings : public SettingsType
 {
 public:
-    ssl_server_settings() : require_client_certificate(false), verify_client_certificate(false){}
+    ssl_server_settings()
+      : require_client_certificate(false),
+        verify_client_certificate(false)
+    {}
     ~ssl_server_settings(){}
 
     bool require_client_certificate;

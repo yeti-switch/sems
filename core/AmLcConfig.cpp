@@ -1529,8 +1529,11 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
 
             SIP_TLS_info* tls_info = SIP_TLS_info::toSIP_TLS(info);
             if(tls_info) {
-                if(!tls_info->client_settings.checkCertificateAndKey() ||
-                    !tls_info->server_settings.checkCertificateAndKey()) {
+                if(!tls_info->client_settings.checkCertificateAndKey(
+                        if_iterator->name.c_str(),"SIP","client") ||
+                    !tls_info->server_settings.checkCertificateAndKey(
+                        if_iterator->name.c_str(),"SIP","server"))
+                {
                     return -1;
                 }
             }
@@ -1567,8 +1570,11 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
 
             RTP_info* rtp_info = RTP_info::toMEDIA_RTP(info);
             if(rtp_info && rtp_info->srtp_enable) {
-                if(!rtp_info->client_settings.checkCertificateAndKey() ||
-                    !rtp_info->server_settings.checkCertificateAndKey()) {
+                if(!rtp_info->client_settings.checkCertificateAndKey(
+                        if_iterator->name.c_str(),"media","client") ||
+                    !rtp_info->server_settings.checkCertificateAndKey(
+                        if_iterator->name.c_str(),"media","server"))
+                {
                     return -1;
                 }
             }
