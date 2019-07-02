@@ -1206,11 +1206,13 @@ int AmRtpStream::init(const AmSdp& local,
     }
 
     multiplexing = local_media.is_multiplex;
-    string address = remote_media.conn.address.empty() ? remote.conn.address : remote_media.conn.address;
-    string rtcp_address = remote_media.rtcp_conn.address.empty() ? remote.conn.address : remote_media.rtcp_conn.address;
-    int port = remote_media.port;
-    int rtcp_port = remote_media.rtcp_port ? remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1);
-    setRAddr(address, rtcp_address, port, rtcp_port);
+    if(!is_ice_stream) {
+        string address = remote_media.conn.address.empty() ? remote.conn.address : remote_media.conn.address;
+        string rtcp_address = remote_media.rtcp_conn.address.empty() ? remote.conn.address : remote_media.rtcp_conn.address;
+        int port = remote_media.port;
+        int rtcp_port = remote_media.rtcp_port ? remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1);
+        setRAddr(address, rtcp_address, port, rtcp_port);
+    }
 
     if(local_media.payloads.empty()) {
         CLASS_DBG("local_media.payloads.empty()\n");

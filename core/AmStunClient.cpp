@@ -102,9 +102,7 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
     reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLING, &controlling);
     
     auto it = std::find(pairs.begin(), pairs.end(), addr);
-    if(it != pairs.end()) {
-        it->state = StunCandidate::CHECK_OTHER;
-    } else {
+    if(it == pairs.end()) {
         WARN("not found ice pair %s:%d", am_inet_ntop(addr).c_str(), am_get_port(addr));
         return;
     }
@@ -134,8 +132,6 @@ void AmStunClient::check_request(CStunMessageReader* reader, sockaddr_storage* a
         rtp_stream->setRAddr(!isrtcp ? am_inet_ntop(&(*it).r_sa) : "", isrtcp ? am_inet_ntop(&(*it).r_sa) : "",
                              !isrtcp ? am_get_port(&(*it).r_sa) : 0, isrtcp ? am_get_port(&(*it).r_sa) : 0);
         rtp_stream->createSrtpConnection();
-    } else if((*it).state == StunCandidate::ALLOW){
-        WARN("valid stun message is false ERR = %s", error_str.c_str());
     }
     //send_request(*it);
 }

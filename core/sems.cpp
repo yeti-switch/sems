@@ -384,7 +384,7 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
         INFO("SRTP-LOG: %s\n", msg);
         break;
     case srtp_log_level_debug:
-        DBG("SRTP-LOG: %s\n", msg);
+//        DBG("SRTP-LOG: %s\n", msg);
         break;
     }
 }
