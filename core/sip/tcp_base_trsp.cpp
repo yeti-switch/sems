@@ -39,7 +39,7 @@ void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
 tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
                              int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
                              event_base* evbase_)
-    : trsp_socket(server_sock_->get_if(),0,0,transport,0,sd),
+    : trsp_socket(server_sock_->get_if(),server_sock_->get_addr_if(),0,transport,0,sd),
       server_sock(server_sock_), server_worker(server_worker_),
       closed(false), connected(false),
       input_len(0), evbase(evbase_),
@@ -120,12 +120,16 @@ int tcp_base_trsp::parse_input()
     sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
 
     gettimeofday(&s_msg->recv_timestamp,NULL);
-    if(get_transport_id() == tls_ipv4 || get_transport_id() == tls_ipv6)
+    string transportstr;
+    if(get_transport_id() == tls_ipv4 || get_transport_id() == tls_ipv6) {
         s_msg->transport_id = sip_transport::TLS;
-    else if(get_transport_id() == tcp_ipv4 || get_transport_id() == tcp_ipv6) {
+        transportstr = "TLS";
+    } else if(get_transport_id() == tcp_ipv4 || get_transport_id() == tcp_ipv6) {
         s_msg->transport_id = sip_transport::TCP;
+        transportstr = "TCP";
     } else {
         s_msg->transport_id = sip_transport::TCP;
+        transportstr = "TCP";
         ERROR("socket doesn't have transport id");
     }
 
@@ -133,8 +137,9 @@ int tcp_base_trsp::parse_input()
     copy_addr_to(&s_msg->local_ip);
 
     char host[NI_MAXHOST] = "";
-    DBG("vv M [|] u recvd msg via TCP/%i from %s:%i to %s:%i vv\n"
+    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i vv\n"
         "--++--\n%.*s--++--\n",
+        transportstr.c_str(),
         sd,
         am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
         am_get_port(&s_msg->remote_ip),
