@@ -306,6 +306,8 @@ class AmRtpStream
 
     TransProt transport;
     bool is_ice_stream;
+    string ice_pwd;
+    string ice_ufrag;
 
     /**  srtp connection mode */
     auto_ptr<AmSrtpConnection> srtp_connection;

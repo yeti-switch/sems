@@ -285,9 +285,11 @@ bool AmSrtpConnection::isRtpPacket(uint8_t* data, unsigned int size)
 
 void AmSrtpConnection::use_dtls(dtls_client_settings* settings, const srtp_fingerprint_p& fp)
 {
-    if(rtp_mode == DTLS_SRTP_SERVER) {
+    if(rtp_mode != RTP_DEFAULT) {
         return;
     }
+
+    DBG("set to use dtls as client");
     fingerprint = fp;
     rtp_mode = DTLS_SRTP_CLIENT;
     try {
@@ -301,9 +303,11 @@ void AmSrtpConnection::use_dtls(dtls_client_settings* settings, const srtp_finge
 
 void AmSrtpConnection::use_dtls(dtls_server_settings* settings, const srtp_fingerprint_p& fp)
 {
-    if(rtp_mode == DTLS_SRTP_SERVER) {
+    if(rtp_mode != RTP_DEFAULT) {
         return;
     }
+
+    DBG("set to use dtls as server");
     fingerprint = fp;
     rtp_mode = DTLS_SRTP_SERVER;
     try {

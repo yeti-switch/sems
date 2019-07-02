@@ -20,9 +20,14 @@ struct StunCandidate
     int priority;
     sockaddr_storage l_sa;
     sockaddr_storage r_sa;
-    
+
     bool operator == (sockaddr_storage* sa) {
         return memcmp(sa, &r_sa, (sa->ss_family == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6)) == 0;
+    }
+
+    bool operator == (const StunCandidate& cand) {
+        return memcmp(&cand.r_sa, &r_sa, (cand.r_sa.ss_family == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6)) == 0 &&
+               memcmp(&cand.l_sa, &l_sa, (cand.l_sa.ss_family == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6)) == 0;
     }
 };
 

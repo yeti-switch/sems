@@ -34,9 +34,16 @@ void AmStunClient::add_candidate(int priority, sockaddr_storage l_sa, sockaddr_s
     candidate.l_sa = l_sa;
     candidate.r_sa = r_sa;
     candidate.state = StunCandidate::NO_AUTH;
-    pairs.push_back(candidate);
-    DBG("add ice candidate %s:%d - %s:%d", am_inet_ntop(&l_sa).c_str(), am_get_port(&l_sa),
+    auto cand_it = std::find(pairs.begin(), pairs.end(), candidate);
+    if(cand_it != pairs.end()) {
+        *cand_it = candidate;
+        DBG("change ice candidate %s:%d - %s:%d", am_inet_ntop(&l_sa).c_str(), am_get_port(&l_sa),
                                             am_inet_ntop(&r_sa).c_str(), am_get_port(&r_sa));
+    } else {
+        pairs.push_back(candidate);
+        DBG("add ice candidate %s:%d - %s:%d", am_inet_ntop(&l_sa).c_str(), am_get_port(&l_sa),
+                                            am_inet_ntop(&r_sa).c_str(), am_get_port(&r_sa));
+    }
 }
 
 void AmStunClient::on_data_recv(uint8_t* data, unsigned int size, sockaddr_storage* addr)

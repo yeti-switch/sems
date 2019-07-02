@@ -985,12 +985,18 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 
     if(is_ice_stream) {
         offer.is_ice = true;
-        string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
-        offer.ice_pwd.clear();
-        offer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
-        data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
-        offer.ice_ufrag.clear();
-        offer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        if(ice_pwd.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+            ice_pwd.clear();
+            ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+        }
+        offer.ice_pwd = ice_pwd;
+        if(ice_ufrag.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+            ice_ufrag.clear();
+            ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        }
+        offer.ice_ufrag = ice_ufrag;
         SdpIceCandidate candidate;
         candidate.comp_id = 1;
         candidate.conn.network = NT_IN;
@@ -1047,12 +1053,18 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     }
     if(is_ice_stream) {
         answer.is_ice = true;
-        string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
-        answer.ice_pwd.clear();
-        answer.ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
-        data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
-        answer.ice_ufrag.clear();
-        answer.ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        if(ice_pwd.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+            ice_pwd.clear();
+            ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+        }
+        answer.ice_pwd = ice_pwd;
+        if(ice_ufrag.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+            ice_ufrag.clear();
+            ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        }
+        answer.ice_ufrag = ice_ufrag;
         SdpIceCandidate candidate;
         candidate.comp_id = 1;
         candidate.conn.network = NT_IN;
@@ -1314,7 +1326,7 @@ int AmRtpStream::init(const AmSdp& local,
     if(local_media.is_dtls_srtp() && !remote_media.is_use_ice()) {
         createSrtpConnection();
     }
-    if(remote_media.is_use_ice()) {
+    if(remote_media.is_use_ice() && rtp_mode != ICE_RTP/*for reinvite*/) {
         rtp_mode = ICE_RTP;
         rtp_stun_client->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
         rtcp_stun_client->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
