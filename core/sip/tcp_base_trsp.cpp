@@ -120,32 +120,34 @@ int tcp_base_trsp::parse_input()
     sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
 
     gettimeofday(&s_msg->recv_timestamp,NULL);
-    string transportstr;
-    if(get_transport_id() == tls_ipv4 || get_transport_id() == tls_ipv6) {
+
+    //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
+    switch(get_transport_id()) {
+    case tls_ipv4:
+    case tls_ipv6:
         s_msg->transport_id = sip_transport::TLS;
-        transportstr = "TLS";
-    } else if(get_transport_id() == tcp_ipv4 || get_transport_id() == tcp_ipv6) {
+        break;
+    case tcp_ipv4:
+    case tcp_ipv6:
         s_msg->transport_id = sip_transport::TCP;
-        transportstr = "TCP";
-    } else {
+        break;
+    default:
+        ERROR("unexpected socket transport_id: %d. set TCP as fallback", get_transport_id());
         s_msg->transport_id = sip_transport::TCP;
-        transportstr = "TCP";
-        ERROR("socket doesn't have transport id");
     }
 
     copy_peer_addr(&s_msg->remote_ip);
     copy_addr_to(&s_msg->local_ip);
 
     char host[NI_MAXHOST] = "";
-    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i vv\n"
+    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv\n"
         "--++--\n%.*s--++--\n",
-        transportstr.c_str(),
+        get_transport(),
         sd,
         am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
         am_get_port(&s_msg->remote_ip),
         actual_ip.c_str(), actual_port,
-        /*am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
-        am_get_port(&s_msg->local_ip),*/
+        s_msg->len,
         s_msg->len, s_msg->buf);
 
     s_msg->local_socket = this;
@@ -483,12 +485,14 @@ void tcp_base_trsp::on_write(short ev)
             return;
         }
 
-        DBG("send msg via %s/%i from %s:%i to %s:%i\n",
+        DBG("sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d\n",
             get_transport(),
             sd,
             actual_ip.c_str(), actual_port,
             get_addr_str(&msg->addr).c_str(),
-            am_get_port(&msg->addr));
+            am_get_port(&msg->addr),
+            bytes,
+            msg->bytes_left());
 
         if(bytes < msg->bytes_left()) {
             msg->cursor += bytes;
