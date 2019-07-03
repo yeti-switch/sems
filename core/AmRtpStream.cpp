@@ -150,6 +150,8 @@ void AmRtpStream::setLocalIP(const string& ip)
     CLASS_DBG("lproto_id = %d\n", lproto_id);
     rtp_stun_client->setLocalAddr(l_saddr);
     rtcp_stun_client->setLocalAddr(l_rtcp_saddr);
+    srtp_connection->setLocalAddr(l_saddr);
+    srtcp_connection->setLocalAddr(l_rtcp_saddr);
 }
 
 int AmRtpStream::hasLocalSocket() {
@@ -1729,12 +1731,14 @@ void AmRtpStream::recvPacket(int fd)
         if(fd == l_rtcp_sd &&
             (srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
             srtcp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
+            log_rcvd_dtls_packet(srtcp_connection.get(), (char*)buffer, b_size);
             if(srtcp_connection->on_data_recv(buffer, &b_size, true) != SRTP_PACKET_PARSE_RTP) return;
         }
 
         if(fd == l_sd &&
             (srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_SERVER ||
             srtp_connection->get_rtp_mode() == AmSrtpConnection::DTLS_SRTP_CLIENT)) {
+            log_rcvd_dtls_packet(srtp_connection.get(), (char*)buffer, b_size);
             if(srtp_connection->on_data_recv(buffer, &b_size, false) != SRTP_PACKET_PARSE_RTP) return;
         }
 
@@ -2197,6 +2201,19 @@ void AmRtpStream::log_sent_stun_packet(AmStunClient* client, const char *buffer,
     static const cstring empty;
     if (logger)
         logger->log((const char *)buffer, len, (rtp_stun_client.get() == client) ? &l_saddr : &l_rtcp_saddr, &send_addr, empty);
+}
+
+void AmRtpStream::log_rcvd_dtls_packet(AmSrtpConnection* client, const char *buffer, int len)
+{
+    if (logger)
+        client->logReceivedPacket(logger, (uint8_t*)buffer, len, &saddr);
+}
+
+void AmRtpStream::log_sent_dtls_packet(AmSrtpConnection* client, const char* buffer, int len)
+{
+    static const cstring empty;
+    if (logger)
+        logger->log((const char *)buffer, len, (srtp_connection.get() == client) ? &l_saddr : &l_rtcp_saddr, (srtp_connection.get() == client) ? &r_saddr : &r_rtcp_saddr, empty);
 }
 
 void AmRtpStream::log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr)
