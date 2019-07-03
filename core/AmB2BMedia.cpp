@@ -1228,7 +1228,7 @@ void AmB2BMedia::setFirstAudioPairStream(
 
     AudioStreamPair &pair = *audio.begin();
     AudioStreamData &adata = a_leg ? pair.a : pair.b;
-    adata.setStreamUnsafe(stream);
+    adata.setStreamUnsafe(stream, a_leg ? a : b);
 
     // save SDP: FIXME: really needed to store instead of just to use?
     if (a_leg) {
@@ -1585,11 +1585,13 @@ void AmB2BMedia::restartRelay()
     }
 }
 
-void AudioStreamData::setStreamUnsafe(AmRtpAudio *s)
+void AudioStreamData::setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session)
 {
     stream = s;
     shared_stream = true;
-    force_symmetric_rtp = stream->getPassiveMode();
+    if(session) {
+        force_symmetric_rtp = session->getRtpRelayForceSymmetricRtp();
+    }
     initialized = true;
 }
 
