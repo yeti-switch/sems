@@ -1,3 +1,9 @@
+sems (1.8.29-1) stable; urgency=low
+
+  * AmB2BMedia: fix symmetric RTP mode set in shared stream mode
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 03 Jul 2019 17:02:12 +0300
+
 sems (1.8.28-1) stable; urgency=low
 
   * fix outbound transport selection for TCP sockets
