@@ -10,12 +10,15 @@
 #include <botan/tls_callbacks.h>
 #include <botan/credentials_manager.h>
 
+#include <netinet/in.h>
+
 #include <srtp.h>
 
 #include <memory>
 using std::auto_ptr;
 
 class AmRtpStream;
+class msg_logger;
 
 #define SRTP_KEY_SIZE 30
 
@@ -148,11 +151,14 @@ private:
     AmRtpStream* rtp_stream;
     auto_ptr<dtls_conf> dtls_settings;
     bool b_srtcp;
+    struct sockaddr_storage l_saddr;
 protected:
     bool isRtpPacket(uint8_t* data, unsigned int size);
 public:
     AmSrtpConnection(AmRtpStream* stream, bool srtcp);
     ~AmSrtpConnection();
+
+    void setLocalAddr(struct sockaddr_storage& saddr);
 
     RTP_mode get_rtp_mode() { return rtp_mode; }
     void create_dtls();
@@ -179,6 +185,8 @@ public:
                                 const std::string& hostname,
                                 const Botan::TLS::Policy& policy);
     virtual void tls_session_activated();
+
+    void logReceivedPacket(msg_logger* logger, uint8_t* data, unsigned int size, struct sockaddr_storage* addr);
 };
 
 #endif/*AM_SRTP_CONNECTION_H*/

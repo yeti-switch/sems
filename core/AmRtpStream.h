@@ -439,6 +439,8 @@ class AmRtpStream
     void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
     void log_rcvd_stun_packet(AmStunClient* client, const char *buffer, int len);
     void log_sent_stun_packet(AmStunClient* client, const char *buffer, int len, struct sockaddr_storage &send_addr);
+    void log_rcvd_dtls_packet(AmSrtpConnection* client, const char *buffer, int len);
+    void log_sent_dtls_packet(AmSrtpConnection* client, const char *buffer, int len);
 
     void recvRtcpPacket(AmRtpPacket* p);
 

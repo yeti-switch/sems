@@ -9,6 +9,7 @@
 #include <botan/base64.h>
 #include <botan/uuid.h>
 #include "rtp/rtp.h"
+#include <sip/msg_logger.h>
 
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
@@ -248,6 +249,11 @@ AmSrtpConnection::~AmSrtpConnection()
     }
 }
 
+void AmSrtpConnection::setLocalAddr(struct sockaddr_storage& saddr)
+{
+    memcpy(&l_saddr,&saddr, sizeof(sockaddr_storage));
+}
+
 void AmSrtpConnection::create_dtls()
 {
     if(rtp_mode != DTLS_SRTP_SERVER && rtp_mode != DTLS_SRTP_CLIENT){
@@ -470,6 +476,9 @@ void AmSrtpConnection::tls_emit_data(const uint8_t data[], size_t size)
 {
     assert(rtp_stream);
 
+    if(rtp_mode != SRTP_EXTERNAL_KEY && rtp_mode != RTP_DEFAULT) {
+        rtp_stream->log_sent_dtls_packet(this, (char*)data, size);
+    }
     rtp_stream->send((unsigned char*)data, size, b_srtcp);
 }
 
@@ -512,7 +521,6 @@ void AmSrtpConnection::tls_session_activated()
     }
     use_key(srtp_profile, (unsigned char*)local_key.data(), local_key.size(), (unsigned char*)remote_key.data(), remote_key.size());
 }
-
 void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
                             const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
                             const std::vector<Botan::Certificate_Store*>& trusted_roots,
@@ -534,3 +542,10 @@ void AmSrtpConnection::tls_verify_cert_chain(const std::vector<Botan::X509_Certi
     if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
         throw Botan::Exception("fingerprint is not equal");
 }
+
+void AmSrtpConnection::logReceivedPacket(msg_logger* logger, uint8_t* data, unsigned int size, struct sockaddr_storage* addr)
+{
+    static const cstring empty;
+    logger->log((const char *)data, size, addr, &l_saddr, empty);
+}
+
