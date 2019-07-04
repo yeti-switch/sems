@@ -58,7 +58,7 @@
 #elif defined IP_PKTINFO
 # define DSTADDR_SOCKOPT IP_PKTINFO
 # define DSTADDR_DATASIZE (CMSG_SPACE(sizeof(struct in_pktinfo)))
-# define dstaddr(x) (&(((struct in_pktinfo *)(CMSG_DATA(x)))->ipi_addr))
+# define dstaddr(x) (&((reinterpret_cast<struct in_pktinfo *>(CMSG_DATA(x)))->ipi_addr))
 #else
 # error "can't determine v4 socket option (IP_RECVDSTADDR or IP_PKTINFO)"
 #endif
@@ -81,7 +81,7 @@
 # define dstaddr6(x) (&(((struct in6_pktinfo *)(CMSG_DATA(x)))->ipi6_addr))
 #elif defined IPV6_PKTINFO
 # define DSTADDR6_SOCKOPT IPV6_RECVPKTINFO
-# define dstaddr6(x) (&(((struct in6_pktinfo *)(CMSG_DATA(x)))->ipi6_addr))
+# define dstaddr6(x) (&((reinterpret_cast<struct in6_pktinfo *>(CMSG_DATA(x)))->ipi6_addr))
 #else
 # error "cant't determine v6 socket option (IPV6_RECVPKTINFO or IPV6_PKTINFO)"
 #endif
@@ -301,8 +301,8 @@ int udp_trsp_socket::recv()
 {
     char buf[MAX_UDP_MSGLEN];
     u_char mctrl[DSTADDR_DATASIZE];
-    int buf_len;
-    
+    ssize_t buf_len;
+
     msghdr           msg;
     cmsghdr*         cmsgptr; 
     sockaddr_storage from_addr;
@@ -318,88 +318,89 @@ int udp_trsp_socket::recv()
     msg.msg_iovlen     = 1;
     msg.msg_control    = mctrl;
     msg.msg_controllen = DSTADDR_DATASIZE;
-    
-	buf_len = recvmsg(get_sd(),&msg,0);
-	if(buf_len <= 0){
-	    if(!buf_len) return 0;
-	    ERROR("recvfrom returned %d: %s\n",buf_len,strerror(errno));
-	    switch(errno){
-	    case EBADF:
-	    case ENOTSOCK:
-	    case EOPNOTSUPP:
-		return 0;
-	    }
-	    return errno;
-	}
 
-	if(buf_len <= 4) {
-		return 0;
-	}
+    buf_len = recvmsg(get_sd(),&msg,MSG_DONTWAIT);
+    if(buf_len <= 0) {
+        if(!buf_len) return 0;
+        ERROR("recvfrom returned %ld: %s\n",buf_len,strerror(errno));
+        switch(errno) {
+        case EBADF:
+        case ENOTSOCK:
+        case EOPNOTSUPP:
+        case EWOULDBLOCK:
+            return 0;
+        }
+        return errno;
+    }
 
-	if(buf_len > MAX_UDP_MSGLEN){
-	    ERROR("Message was too big (>%d)\n",MAX_UDP_MSGLEN);
-		return 0;
-	}
+    if(buf_len <= 4) {
+        return 0;
+    }
 
-	sockaddr_storage* sa = (sockaddr_storage*)msg.msg_name;
-	if(!am_get_port(sa)) {
-	    DBG("Source port is 0: dropping");
-		return 0;
-	}
+    if(buf_len > MAX_UDP_MSGLEN) {
+        ERROR("Message was too big (>%d)\n",MAX_UDP_MSGLEN);
+        return 0;
+    }
 
-	sip_msg* s_msg = new sip_msg(buf,buf_len);
-	s_msg->transport_id = sip_transport::UDP;
-	memcpy(&s_msg->remote_ip,msg.msg_name,msg.msg_namelen);
+    sockaddr_storage* sa = static_cast<sockaddr_storage*>(msg.msg_name);
+    if(!am_get_port(sa)) {
+        DBG("Source port is 0: dropping");
+        return 0;
+    }
 
-	if (trsp_socket::log_level_raw_msgs >= 0) {
-	    char host[NI_MAXHOST] = "";
-	    _LOG(trsp_socket::log_level_raw_msgs, 
-		 "vv M [|] u recvd msg via UDP from %s:%i vv\n"
-		 "--++--\n%.*s--++--\n",
-		 am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
-		 am_get_port(&s_msg->remote_ip),
-		 s_msg->len, s_msg->buf);
-	}
+    sip_msg* s_msg = new sip_msg(buf,static_cast<int>(buf_len));
+    s_msg->transport_id = sip_transport::UDP;
+    memcpy(&s_msg->remote_ip,msg.msg_name,msg.msg_namelen);
 
-	s_msg->local_socket = this;
-	inc_ref(this);
+    if (trsp_socket::log_level_raw_msgs >= 0) {
+        char host[NI_MAXHOST] = "";
+        _LOG(trsp_socket::log_level_raw_msgs,
+            "vv M [|] u recvd msg via UDP from %s:%i vv\n"
+            "--++--\n%.*s--++--\n",
+            am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
+            am_get_port(&s_msg->remote_ip),
+            s_msg->len, s_msg->buf);
+    }
 
-	for (cmsgptr = CMSG_FIRSTHDR(&msg);
-		cmsgptr != NULL;
-		cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
-	{
-		if (cmsgptr->cmsg_level == IPPROTO_IP &&
-			cmsgptr->cmsg_type == DSTADDR_SOCKOPT)
-		{
-				s_msg->local_ip.ss_family = AF_INET;
-				am_set_port(&s_msg->local_ip,get_port());
-				memcpy(&((sockaddr_in*)(&s_msg->local_ip))->sin_addr,
-				dstaddr(cmsgptr),sizeof(in_addr));
-		} else if(cmsgptr->cmsg_level == IPPROTO_IPV6 &&
-				  cmsgptr->cmsg_type == IPV6_PKTINFO)
-		{
-			s_msg->local_ip.ss_family = AF_INET6;
-			am_set_port(&s_msg->local_ip,get_port());
-			memcpy(&((sockaddr_in6*)(&s_msg->local_ip))->sin6_addr,
-			dstaddr6(cmsgptr),sizeof(in6_addr));
-		}
+    s_msg->local_socket = this;
+    inc_ref(this);
+
+    for (cmsgptr = CMSG_FIRSTHDR(&msg);
+         cmsgptr != nullptr;
+         cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
+    {
+        if (cmsgptr->cmsg_level == IPPROTO_IP &&
+            cmsgptr->cmsg_type == DSTADDR_SOCKOPT)
+        {
+                s_msg->local_ip.ss_family = AF_INET;
+                am_set_port(&s_msg->local_ip,static_cast<short>(get_port()));
+                memcpy(&(reinterpret_cast<sockaddr_in*>(&s_msg->local_ip))->sin_addr,
+                dstaddr(cmsgptr),sizeof(in_addr));
+        } else if(cmsgptr->cmsg_level == IPPROTO_IPV6 &&
+                  cmsgptr->cmsg_type == IPV6_PKTINFO)
+        {
+            s_msg->local_ip.ss_family = AF_INET6;
+            am_set_port(&s_msg->local_ip,static_cast<short>(get_port()));
+            memcpy(&(reinterpret_cast<sockaddr_in6*>(&s_msg->local_ip))->sin6_addr,
+            dstaddr6(cmsgptr),sizeof(in6_addr));
+        }
 #if defined RECV_SOCKET_TIMESTAMP
-		else if(cmsgptr->cmsg_level == SOL_SOCKET &&
-				  cmsgptr->cmsg_type == SO_TIMESTAMP)
-		{
-			s_msg->recv_timestamp = *(struct timeval *)CMSG_DATA(cmsgptr);
-			DBG("got timestamp %ld.%ld",s_msg->recv_timestamp.tv_sec,s_msg->recv_timestamp.tv_usec);
-		}
+        else if(cmsgptr->cmsg_level == SOL_SOCKET &&
+                cmsgptr->cmsg_type == SO_TIMESTAMP)
+        {
+            s_msg->recv_timestamp = *(struct timeval *)CMSG_DATA(cmsgptr);
+            DBG("got timestamp %ld.%ld",s_msg->recv_timestamp.tv_sec,s_msg->recv_timestamp.tv_usec);
+        }
 #endif
-	}
+    }
 
 #if !defined RECV_SOCKET_TIMESTAMP
-	gettimeofday(&s_msg->recv_timestamp,NULL);
+    gettimeofday(&s_msg->recv_timestamp,nullptr);
 #endif
 
-	// pass message to the parser / transaction layer
+    // pass message to the parser / transaction layer
     SIP_info* info = AmConfig.sip_ifs[get_if()].proto_info[get_addr_if()];
-	trans_layer::instance()->received_msg(s_msg, info->acl, info->opt_acl);
+    trans_layer::instance()->received_msg(s_msg, info->acl, info->opt_acl);
     return 1;
 }
 
