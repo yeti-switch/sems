@@ -457,7 +457,7 @@ class AmB2BMedia: public AmMediaSession
     void replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, 
 				  const string& relay_address,
 				  const string& relay_public_address,
-				  int addr_type);
+				  AddressType addr_type);
 
     /** replace offer inside given SDP with locally generated one (media streams
      * etc must be initialised like in case replaceConnectionAddress) */

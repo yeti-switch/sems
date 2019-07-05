@@ -138,11 +138,18 @@ void AmRtpStream::setLocalIP(const string& ip)
         throw string("AmRtpStream:setLocalIP. failed to get interface/proto id");
     }
 
-    int addrType = IP_info::UNDEFINED;
-    if(l_saddr.ss_family == AF_INET) addrType = IP_info::IPv4;
-    if(l_saddr.ss_family == AF_INET6) addrType = IP_info::IPv6;
-    int media = AmConfig.media_ifs[l_if].proto_info[lproto_id]->mtype;
-    int proto_id = AmConfig.media_ifs[l_if].findProto(addrType | (media<<6));
+    AddressType address_type = AT_NONE;
+    switch(l_saddr.ss_family) {
+    case AF_INET:
+        address_type = AT_V4;
+        break;
+    case AF_INET6:
+        address_type = AT_V6;
+        break;
+    }
+
+    auto media_type = AmConfig.media_ifs[l_if].proto_info[lproto_id]->mtype;
+    int proto_id = AmConfig.media_ifs[l_if].findProto(address_type, media_type);
     if(proto_id >= 0) {
         lproto_id = proto_id;
     }
@@ -817,7 +824,7 @@ void AmRtpStream::setRAddr(
      */
     dns_handle dh;
     dns_priority priority = IPv4_only;
-    if(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == IP_info::IPv6) {
+    if(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == AT_V6) {
         priority = IPv6_only;
     }
     if (!addr.empty() && resolver::instance()->resolve_name(addr.c_str(),&dh,&ss,priority) < 0) {

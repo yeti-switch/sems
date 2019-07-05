@@ -515,7 +515,7 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp)
     return; // FIXME: throw an exception here?
   }
 
-  int atype = dlg->getOutboundAddrType();
+  auto atype = dlg->getOutboundAddrType();
 
   media_session->replaceConnectionAddress(
     sdp, a_leg,

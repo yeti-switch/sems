@@ -1325,23 +1325,12 @@ void AmSession::setRtpInterface(int _rtp_interface) {
   rtp_interface = _rtp_interface;
 }
 
-static int str2addrtype(const std::string &s)
-{
-    if(s.find(":") != std::string::npos) {
-        return sip_address_type::IPv6;
-    } else if(s.find(".") != std::string::npos) {
-        return sip_address_type::IPv4;
-    }
-    return sip_address_type::UNPARSED;
-
-}
-
 int AmSession::getRtpProtoId()
 {
     if(rtp_proto_id < 0) {
         int rtp_if = getRtpInterface();
-        int rtp_type = dlg->getOutboundAddrType();
-        int rtp_proto_id = AmConfig.media_ifs[rtp_if].findProto(rtp_type | (MEDIA_info::RTP<<6));
+        int rtp_proto_id = AmConfig.media_ifs[rtp_if].findProto(
+            dlg->getOutboundAddrType(), MEDIA_info::RTP);
         if(rtp_proto_id >= 0) {
             setRtpProtoId(rtp_proto_id);
         }
@@ -1357,7 +1346,7 @@ int AmSession::setRtpProtoId(int _rtp_proto_id)
   return 0;
 }
 
-string AmSession::localMediaIP(int addrType)
+string AmSession::localMediaIP(AddressType addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
@@ -1373,11 +1362,15 @@ string AmSession::localMediaIP(int addrType)
   assert((unsigned int)rtp_proto_id < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip && addrType != IP_info::UNDEFINED) {
-    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType | (MEDIA_info::RTP<<6));
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip &&
+     addrType != AT_NONE)
+  {
+    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType,MEDIA_info::RTP);
     if(proto_id >= 0) {
         set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->local_ip;
         rtp_proto_id = proto_id;
+    } else {
+        throw string("AmSession::localMediaIP: missed requested proto in choosen media interface");
     }
   } else {
     set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->local_ip;
@@ -1393,7 +1386,7 @@ string AmSession::localMediaIP(int addrType)
 
 // Utility for basic NAT handling: allow the config file to specify the IP
 // address to use in SDP bodies 
-string AmSession::advertisedIP(int addrType)
+string AmSession::advertisedIP(AddressType addrType)
 {
   // sets rtp_interface if not initialized
   getRtpInterface();
@@ -1408,8 +1401,10 @@ string AmSession::advertisedIP(int addrType)
   assert((unsigned int)rtp_proto_id < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
   string set_ip = "";
-  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip && addrType != IP_info::UNDEFINED) {
-    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType | (MEDIA_info::RTP<<6));
+  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip &&
+     addrType != AT_NONE)
+  {
+    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType, MEDIA_info::RTP);
     if(proto_id >= 0) {
         set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->local_ip;
         rtp_proto_id = proto_id;

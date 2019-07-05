@@ -1130,7 +1130,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V4));
                 if(!info) {
                     return -1;
                 }
@@ -1138,7 +1138,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V4));
                 if(!info) {
                     return -1;
                 }
@@ -1146,7 +1146,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv4));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V4));
                 if(!info) {
                     return -1;
                 }
@@ -1157,7 +1157,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
@@ -1165,7 +1165,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
@@ -1173,7 +1173,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
-                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, IP_info::IPv6));
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
@@ -1203,7 +1203,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
-                MEDIA_info* info =  dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv4));
+                MEDIA_info* info =  dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, AT_V4));
                 if(!info) {
                     return -1;
                 }
@@ -1211,7 +1211,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
-                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv4));
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, AT_V4));
                 if(!info) {
                     return -1;
                 }
@@ -1222,7 +1222,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTP_NAME);
-                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv6));
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
@@ -1230,7 +1230,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
             }
             if(cfg_size(ip4, SECTION_RTSP_NAME)) {
                 cfg_t* cfg = cfg_getsec(ip4, SECTION_RTSP_NAME);
-                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, IP_info::IPv6));
+                MEDIA_info* info = dynamic_cast<MEDIA_info*>(readInterface(cfg, media_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
@@ -1244,7 +1244,7 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
     return 0;
 }
 
-IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type)
+IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, AddressType ip_type)
 {
     IP_info* info;
     SIP_info* sinfo = nullptr;
@@ -1522,8 +1522,9 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 return -1;
             }
             if (insertSIPInterfaceMapping(config, *info,cint(if_iterator - config->sip_ifs.begin())) < 0 ||
-                (*if_iterator).insertProtoMapping(static_cast<unsigned char>((info->type_ip)|(info->type << 3)), i) ||
-                setNetInterface(config, *info)) {
+                (*if_iterator).insertProtoMapping(*info, i) ||
+                setNetInterface(config, *info))
+            {
                 return -1;
             }
 
@@ -1562,8 +1563,7 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                       "interface '%s'\n", local_ip.c_str(), if_iterator->name.c_str());
                 return -1;
             }
-            if ((*if_iterator).insertProtoMapping(
-                    static_cast<unsigned char>((info->type_ip)|(info->mtype << 6)), i) ||
+            if ((*if_iterator).insertProtoMapping(*info, i) ||
                 setNetInterface(config, *info)) {
                 return -1;
             }

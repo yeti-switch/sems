@@ -84,9 +84,9 @@ int _SipCtrlInterface::alloc_udp_structs()
 int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
-    if(info.type_ip == IP_info::IPv4) {
+    if(info.type_ip == AT_V4) {
         trans = trsp_socket::udp_ipv4;
-    } else if(info.type_ip == IP_info::IPv6) {
+    } else if(info.type_ip == AT_V6) {
         trans = trsp_socket::udp_ipv6;
     } else {
         ERROR("Unknown transport type in udp server");
@@ -182,9 +182,9 @@ int _SipCtrlInterface::alloc_tcp_structs()
 int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
-    if(info.type_ip == IP_info::IPv4) {
+    if(info.type_ip == AT_V4) {
         trans = trsp_socket::tcp_ipv4;
-    } else if(info.type_ip == IP_info::IPv6) {
+    } else if(info.type_ip == AT_V6) {
         trans = trsp_socket::tcp_ipv6;
     } else {
         ERROR("Unknown transport type in udp server");
@@ -250,9 +250,9 @@ int _SipCtrlInterface::alloc_tls_structs()
 int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
-    if(info.type_ip == IP_info::IPv4) {
+    if(info.type_ip == AT_V4) {
         trans = trsp_socket::tls_ipv4;
-    } else if(info.type_ip == IP_info::IPv6) {
+    } else if(info.type_ip == AT_V6) {
         trans = trsp_socket::tls_ipv6;
     } else {
         ERROR("Unknown transport type in tls server");

@@ -893,7 +893,7 @@ void AmB2BMedia::replaceConnectionAddress(
     AmSdp &parser_sdp, bool a_leg,
     const string& relay_address,
     const string& relay_public_address,
-    int addr_type)
+    AddressType addr_type)
 {
     AmLock lock(mutex);
 

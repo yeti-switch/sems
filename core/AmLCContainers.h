@@ -13,15 +13,14 @@
 class IP_info
 {
 public:
-    enum IP_type
-    {
-        UNDEFINED = 0,
-        IPv4,
-        IPv6
-    };
-
     IP_info()
-    : type_ip(UNDEFINED), net_if_idx(0), dscp(0), sig_sock_opts(0), tos_byte(0){}
+    : type_ip(AT_NONE),
+      net_if_idx(0),
+      dscp(0),
+      sig_sock_opts(0),
+      tos_byte(0)
+    {}
+
     IP_info(const IP_info& info)
     : local_ip(info.local_ip)
     , public_ip(info.public_ip)
@@ -30,7 +29,9 @@ public:
     , net_if_idx(info.net_if_idx)
     , dscp(info.dscp)
     , sig_sock_opts(info.sig_sock_opts)
-    , tos_byte(info.tos_byte){}
+    , tos_byte(info.tos_byte)
+    {}
+
     virtual ~IP_info(){}
 
     /** Used for binding socket */
@@ -40,7 +41,7 @@ public:
     std::string public_ip;
 
     /** Used ip type socket */
-    IP_type type_ip;
+    AddressType type_ip;
 
     /** Network interface name and index */
     std::string  net_if;
@@ -64,9 +65,9 @@ public:
     }
 
     std::string ipTypeToStr() const {
-        if(type_ip == IP_type::IPv4) {
+        if(type_ip == AT_V4) {
             return "IPv4";
-        } else if(type_ip == IP_type::IPv6) {
+        } else if(type_ip == AT_V6) {
             return "IPv6";
         }
 
@@ -348,40 +349,20 @@ public:
         }
     }
 
-    int insertProtoMapping(unsigned char ipproto, unsigned short index)
-    {
-        std::map<unsigned char, unsigned short>::iterator it = local_ip_proto2addr_if.find(ipproto);
-        if(it != local_ip_proto2addr_if.end()) {
-            WARN("duplicate local ip protocol %s/%s",
-                 proto_info[index]->ipTypeToStr().c_str(),
-                 proto_info[index]->transportToStr().c_str());
-            local_ip_proto2addr_if[ipproto] = index;
-        }
-        local_ip_proto2addr_if.insert(std::make_pair(ipproto, index));
-        return 0;
-    }
-
-    int findProto(unsigned char ipproto) {
-        auto addr_it = local_ip_proto2addr_if.find(ipproto);
-        if(addr_it != local_ip_proto2addr_if.end()) {
-            return addr_it->second;
-        }
-        return -1;
-    }
-
     std::string name;
     std::vector<ProtoInfo> proto_info;
-    std::map<unsigned char, unsigned short> local_ip_proto2addr_if;
+    std::map<unsigned char, unsigned short> local_ip_proto2proto_idx;
 };
 
 class SIP_interface : public PI_interface<SIP_info*>
 {
 public:
-    SIP_interface(){}
+    SIP_interface() {}
     SIP_interface(const SIP_interface& sip)
     : PI_interface<SIP_info*>(sip)
-    , default_media_if(sip.default_media_if){}
-    virtual ~SIP_interface(){}
+    , default_media_if(sip.default_media_if)
+    {}
+    virtual ~SIP_interface() {}
 
     void operator = (const SIP_interface& sip)
     {
@@ -390,9 +371,73 @@ public:
     }
 
     std::string default_media_if;
+
+    int insertProtoMapping(
+        SIP_info &info,
+        unsigned short index)
+    {
+        unsigned char mask = static_cast<unsigned char>(info.type_ip | (info.type << 3));
+        std::map<unsigned char, unsigned short>::iterator it = local_ip_proto2proto_idx.find(mask);
+        if(it != local_ip_proto2proto_idx.end()) {
+            ERROR("duplicate local signalling protocol %s/%s. replace existent one in the map",
+                 proto_info[index]->ipTypeToStr().c_str(),
+                 proto_info[index]->transportToStr().c_str());
+            local_ip_proto2proto_idx[mask] = index;
+        } else {
+            local_ip_proto2proto_idx.emplace(mask, index);
+        }
+        return 0;
+    }
+
+    int findProto(
+        AddressType address_type,
+        SIP_info::SIP_type transport_type)
+    {
+        unsigned char mask = static_cast<unsigned char>(address_type | (transport_type << 3));
+        auto addr_it = local_ip_proto2proto_idx.find(mask);
+        if(addr_it != local_ip_proto2proto_idx.end()) {
+            return addr_it->second;
+        }
+        return -1;
+    }
 };
 
-typedef PI_interface<MEDIA_info*> MEDIA_interface;
+//typedef PI_interface<MEDIA_info*> MEDIA_interface;
+
+class MEDIA_interface : public PI_interface<MEDIA_info*>
+{
+  public:
+    int insertProtoMapping(
+        MEDIA_info &info,
+        unsigned short index)
+    {
+        unsigned char mask = static_cast<unsigned char>(
+            info.type_ip | (info.mtype << 3));
+        std::map<unsigned char, unsigned short>::iterator it = local_ip_proto2proto_idx.find(mask);
+        if(it != local_ip_proto2proto_idx.end()) {
+            ERROR("duplicate local media protocol %s/%s. replace existent one in the map",
+                 proto_info[index]->ipTypeToStr().c_str(),
+                 proto_info[index]->transportToStr().c_str());
+            local_ip_proto2proto_idx[mask] = index;
+        } else {
+            local_ip_proto2proto_idx.emplace(mask, index);
+        }
+        return 0;
+    }
+
+    int findProto(
+        AddressType address_type,
+        MEDIA_info::MEDIA_type media_type)
+    {
+        unsigned char mask = static_cast<unsigned char>(
+            address_type | (media_type << 3));
+        auto addr_it = local_ip_proto2proto_idx.find(mask);
+        if(addr_it != local_ip_proto2proto_idx.end()) {
+            return addr_it->second;
+        }
+        return -1;
+    }
+};
 
 class IPAddr
 {

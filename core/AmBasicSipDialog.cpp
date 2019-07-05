@@ -19,18 +19,17 @@ static const char *hdrs2remove[] = {
     NULL,
 };
 
-static int str2addrtype(const std::string &s)
+static AddressType str2addrtype(const std::string &s)
 {
     if(s.find(":") != std::string::npos) {
-        return IP_info::IPv6;
+        return AT_V6;
     } else if(s.find(".") != std::string::npos) {
-        return IP_info::IPv4;
+        return AT_V4;
     }
-    return IP_info::UNDEFINED;
-
+    return AT_NONE;
 }
 
-static int str2transport(cstring &s)
+static SIP_info::SIP_type str2transport(cstring &s)
 {
 #define cmp_cond(trsp) 0==strncasecmp(s.s,trsp.s,trsp.len <= s.len ? trsp.len : s.len)
     static cstring udp("udp");
@@ -66,7 +65,7 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
     next_hop_fixed(false),
     outbound_interface(-1),
     outbound_proto_id(-1),
-    outbound_address_type(0),
+    outbound_address_type(AT_NONE),
     resolve_priority(IPv4_only),
     nat_handling(AmConfig.sip_nat_handling),
     usages(0)
@@ -196,11 +195,10 @@ void AmBasicSipDialog::setOutboundInterface(int interface_id) {
   outbound_interface = interface_id;
 }
 
-void AmBasicSipDialog::setOutboundAddrType(int type_id)
+void AmBasicSipDialog::setOutboundAddrType(AddressType type_id)
 {
   DBG("setting outbound address type to %i\n",  type_id);
-  if(type_id == IP_info::IPv4) outbound_address_type = sip_address_type::IPv4;
-  else if(type_id == IP_info::IPv6) outbound_address_type = sip_address_type::IPv6;
+  outbound_address_type = type_id;
 }
 
 void AmBasicSipDialog::setOutboundProtoId(int proto_id) {
@@ -227,9 +225,9 @@ int AmBasicSipDialog::getOutboundIf()
     string local_ip;
     sip_uri d_uri;
     sip_header fr;
-    int addrType = sip_address_type::IPv4;
     std::multimap<string,unsigned short>::iterator if_it;
-    unsigned char ipproto = IPv4_UDP;
+    SIP_info::SIP_type transport_type = SIP_info::UDP;
+    AddressType address_type = AT_V4;
     int proto_id;
     list<sip_destination> ip_list;
 
@@ -238,7 +236,7 @@ int AmBasicSipDialog::getOutboundIf()
        !ip_list.empty())
     {
         d_uri.host = ip_list.front().host;
-        ipproto = (ipproto&0x7)|static_cast<unsigned char>(str2transport(ip_list.front().trsp)<<3);
+        transport_type = str2transport(ip_list.front().trsp);
     } else if(!outbound_proxy.empty() &&
               (remote_tag.empty() || force_outbound_proxy))
     {
@@ -254,7 +252,7 @@ int AmBasicSipDialog::getOutboundIf()
         }
         d_uri.host = route_uri->host;
         if(route_uri->trsp)
-            ipproto = (ipproto&0x7)|static_cast<unsigned char>(str2transport(route_uri->trsp->value)<<3);
+            transport_type = str2transport(route_uri->trsp->value);
     } else {
         dest_uri = remote_uri;
     }
@@ -272,7 +270,7 @@ int AmBasicSipDialog::getOutboundIf()
         }
         //dest_ip = c2stlstr(d_uri.host);
         if(d_uri.trsp)
-            ipproto = (ipproto&0x7)|static_cast<unsigned char>(str2transport(d_uri.trsp->value)<<3);
+            transport_type = str2transport(d_uri.trsp->value);
     }
 
     if(get_local_addr_for_dest(d_uri,local_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
@@ -289,13 +287,13 @@ int AmBasicSipDialog::getOutboundIf()
         goto error;
     }
 
-    addrType = str2addrtype(local_ip);
-    if(!addrType) {
+    address_type = str2addrtype(local_ip);
+    if(!address_type) {
         ERROR("Could not resolve a address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
               local_tag.c_str(), local_ip.c_str());
     }
 
-    proto_id = AmConfig.sip_ifs[if_it->second].findProto((ipproto&0x38)|static_cast<unsigned char>(addrType));
+    proto_id = AmConfig.sip_ifs[if_it->second].findProto(address_type, transport_type);
     if(proto_id < 0) {
         ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
               local_tag.c_str(), local_ip.c_str());
@@ -303,7 +301,7 @@ int AmBasicSipDialog::getOutboundIf()
     }
 
     setOutboundInterface(if_it->second);
-    setOutboundAddrType(addrType);
+    setOutboundAddrType(address_type);
     setOutboundProtoId(proto_id);
 
     return if_it->second;
@@ -311,12 +309,12 @@ int AmBasicSipDialog::getOutboundIf()
   error:
     DBG("Error while computing outbound interface: default interface will be used instead.");
     setOutboundInterface(0);
-    setOutboundAddrType(IP_info::IPv4);
+    setOutboundAddrType(AT_V4);
     setOutboundProtoId(0);
     return 0;
 }
 
-int AmBasicSipDialog::getOutboundAddrType()
+AddressType AmBasicSipDialog::getOutboundAddrType()
 {
   int out_if = getOutboundIf();
   int out_proto_id = getOutboundProtoId();
@@ -325,11 +323,11 @@ int AmBasicSipDialog::getOutboundAddrType()
     return outbound_address_type;
 
   if(out_if < 0 || out_proto_id < 0) {
-      return sip_address_type::UNPARSED;
+      return AT_NONE;
   }
 
   std::string local_ip = AmConfig.sip_ifs[out_if].proto_info[out_proto_id]->getIP();
-  int addrType = str2addrtype(local_ip);
+  AddressType addrType = str2addrtype(local_ip);
   if(addrType) {
       setOutboundAddrType(addrType);
   } else {
@@ -352,7 +350,7 @@ void AmBasicSipDialog::resetOutboundIf()
 {
   setOutboundInterface(-1);
   setOutboundProtoId(-1);
-  setOutboundAddrType(0);
+  setOutboundAddrType(AT_NONE);
 }
 
 void AmBasicSipDialog::setResolvePriority(int priority)

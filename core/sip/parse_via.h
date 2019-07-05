@@ -51,13 +51,6 @@ struct sip_transport
 
 struct sip_address_type
 {
-    enum {
-	UNPARSED=0,
-	IPv4,
-	IPv6,
-	OTHER
-    };
-
     int     type;
     cstring val;
 };

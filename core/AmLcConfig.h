@@ -168,7 +168,7 @@ protected:
     int readGeneral(cfg_t* cfg, ConfigContainer* config);
     int readRoutings(cfg_t* cfg, ConfigContainer* config);
     int checkSipInterfaces(ConfigContainer* config);
-    IP_info* readInterface(cfg_t* cfg, const std::string& if_name, IP_info::IP_type ip_type);
+    IP_info* readInterface(cfg_t* cfg, const std::string& if_name, AddressType ip_type);
     int readAcl(cfg_t* cfg, trsp_acl& acl, const std::string& if_name);
 
     bool fillSysIntfList(ConfigContainer* config);

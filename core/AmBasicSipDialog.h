@@ -29,6 +29,7 @@
 
 #include "AmSipMsg.h"
 #include "sip/msg_sensor.h"
+#include "sip/types.h"
 
 #include <string>
 #include <vector>
@@ -123,7 +124,7 @@ protected:
 
   int outbound_interface;
   int outbound_proto_id;
-  int outbound_address_type;
+  AddressType outbound_address_type;
 
   int resolve_priority;
 
@@ -344,7 +345,7 @@ public:
   /**
    * Set outbound_protocol to specific value (-1 = default).
    */
-  virtual void setOutboundAddrType(int type_id);
+  virtual void setOutboundAddrType(AddressType type_id);
 
   /**
    * Set outbound_transport to specific value (-1 = default).
@@ -361,7 +362,7 @@ public:
    * Compute, set and return the outbound ip protocol version
    * based on remote_uri, next_hop_ip, outbound_proxy, route.
    */
-  int getOutboundAddrType();
+  AddressType getOutboundAddrType();
 
   /**
    * Compute, set and return the outbound transport
