@@ -170,6 +170,8 @@ _LOG(L_WARN, error_category fmt, ##args)
 #define CLASS_INFO(fmt, args...)  INFO(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_DBG(fmt, args...)   DBG(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 
+#define to_void(var) static_cast<void *>(var)
+
 /** @} */
 
 extern int log_level;
