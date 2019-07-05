@@ -309,22 +309,6 @@ public:
     }
 };
 
-/*****************************************************************************/
-/*                   address type with transport id(ipprotoid)               */
-/*             0     1     2     3     4     5     6     7     8             */
-/*          |   address type   |  sip_transport | media_transport |          */
-/*****************************************************************************/
-#define IPv4_UDP    (IP_info::IPv4) | (SIP_info::UDP<<3)
-#define IPv4_TCP    (IP_info::IPv4) | (SIP_info::TCP<<3)
-#define IPv4_TLS    (IP_info::IPv4) | (SIP_info::TLS<<3)
-#define IPv6_UDP    (IP_info::IPv6) | (SIP_info::UDP<<3)
-#define IPv6_TCP    (IP_info::IPv6) | (SIP_info::TCP<<3)
-#define IPv6_TLS    (IP_info::IPv6) | (SIP_info::TLS<<3)
-#define IPv4_RTP    (IP_info::IPv4) | (MEDIA_info::RTP<<6)
-#define IPv4_RTSP   (IP_info::IPv4) | (MEDIA_info::RTSP<<6)
-#define IPv6_RTP    (IP_info::IPv6) | (MEDIA_info::RTP<<6)
-#define IPv6_RTSP   (IP_info::IPv6) | (MEDIA_info::RTSP<<6)
-
 template<typename ProtoInfo>
 class PI_interface
 {
