@@ -122,8 +122,9 @@ protected:
   bool next_hop_fixed;
 
   int outbound_interface;
-  int outbound_transport;
+  int outbound_proto_id;
   int outbound_address_type;
+
   int resolve_priority;
 
   TransMap uas_trans;
@@ -348,7 +349,7 @@ public:
   /**
    * Set outbound_transport to specific value (-1 = default).
    */
-  virtual void setOutboundTransport(int transport);
+  virtual void setOutboundProtoId(int proto_id);
 
   /**
    * Compute, set and return the outbound interface
@@ -366,7 +367,7 @@ public:
    * Compute, set and return the outbound transport
    * based on remote_uri, next_hop_ip, outbound_proxy, route.
    */
-  int getOutboundTransport();
+  int getOutboundProtoId();
 
   /**
    * Reset outbound_interface to default value (-1).

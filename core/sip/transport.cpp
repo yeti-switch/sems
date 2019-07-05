@@ -35,10 +35,10 @@
 
 int trsp_socket::log_level_raw_msgs = L_DBG;
 
-trsp_socket::trsp_socket(unsigned short if_num_, unsigned short addr_num_, unsigned int opts,
+trsp_socket::trsp_socket(unsigned short if_num_, unsigned short proto_idx_, unsigned int opts,
 		socket_transport trans,unsigned int sys_if_idx_, int sd_)
 	: sd(sd_), ip(), port(0), actual_ip(), actual_port(0),
-      if_num(if_num_), addr_num(addr_num_), sys_if_idx(sys_if_idx_),
+	  if_num(if_num_), proto_idx(proto_idx_), sys_if_idx(sys_if_idx_),
       socket_options(opts), transport(trans), tos_byte(0)
 {
     memset(&addr,0,sizeof(sockaddr_storage));
@@ -164,9 +164,9 @@ unsigned short trsp_socket::get_if() const
     return if_num;
 }
 
-unsigned short trsp_socket::get_addr_if() const
+unsigned short trsp_socket::get_proto_idx() const
 {
-    return addr_num;
+    return proto_idx;
 }
 
 trsp_acl::action_t trsp_acl::check(const sockaddr_storage &ip) const

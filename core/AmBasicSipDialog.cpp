@@ -65,7 +65,7 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
     patch_ruri_next_hop(false),
     next_hop_fixed(false),
     outbound_interface(-1),
-    outbound_transport(-1),
+    outbound_proto_id(-1),
     outbound_address_type(0),
     resolve_priority(IPv4_only),
     nat_handling(AmConfig.sip_nat_handling),
@@ -155,12 +155,12 @@ string AmBasicSipDialog::getContactUri()
   }
 
   int oif = getOutboundIf();
-  int ot  = getOutboundTransport();
+  int oproto  = getOutboundProtoId();
   assert(oif >= 0);
   assert(oif < (int)AmConfig.sip_ifs.size());
-  assert(ot < (int)AmConfig.sip_ifs[oif].proto_info.size());
+  assert(oproto < (int)AmConfig.sip_ifs[oif].proto_info.size());
 
-  const auto pi = AmConfig.sip_ifs[oif].proto_info[ot];
+  const auto pi = AmConfig.sip_ifs[oif].proto_info[oproto];
   contact_uri += pi->getIP();
   contact_uri += ":" + int2str(pi->local_port);
 
@@ -203,9 +203,9 @@ void AmBasicSipDialog::setOutboundAddrType(int type_id)
   else if(type_id == IP_info::IPv6) outbound_address_type = sip_address_type::IPv6;
 }
 
-void AmBasicSipDialog::setOutboundTransport(int transport_id) {
-  DBG("setting outbound transport to %i\n",  transport_id);
-  outbound_transport = transport_id;
+void AmBasicSipDialog::setOutboundProtoId(int proto_id) {
+  DBG("setting outbound proto id to %i\n",  proto_id);
+  outbound_proto_id = proto_id;
 }
 
 /**
@@ -230,7 +230,7 @@ int AmBasicSipDialog::getOutboundIf()
     int addrType = sip_address_type::IPv4;
     std::multimap<string,unsigned short>::iterator if_it;
     unsigned char ipproto = IPv4_UDP;
-    int addrif;
+    int proto_id;
     list<sip_destination> ip_list;
 
     if(!next_hop.empty() &&
@@ -295,8 +295,8 @@ int AmBasicSipDialog::getOutboundIf()
               local_tag.c_str(), local_ip.c_str());
     }
 
-    addrif = AmConfig.sip_ifs[if_it->second].findProto((ipproto&0x38)|static_cast<unsigned char>(addrType));
-    if(addrif < 0) {
+    proto_id = AmConfig.sip_ifs[if_it->second].findProto((ipproto&0x38)|static_cast<unsigned char>(addrType));
+    if(proto_id < 0) {
         ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
               local_tag.c_str(), local_ip.c_str());
         goto error;
@@ -304,30 +304,31 @@ int AmBasicSipDialog::getOutboundIf()
 
     setOutboundInterface(if_it->second);
     setOutboundAddrType(addrType);
-    setOutboundTransport(addrif);
+    setOutboundProtoId(proto_id);
 
     return if_it->second;
 
   error:
     DBG("Error while computing outbound interface: default interface will be used instead.");
     setOutboundInterface(0);
-    setOutboundTransport(0);
+    setOutboundAddrType(IP_info::IPv4);
+    setOutboundProtoId(0);
     return 0;
 }
 
 int AmBasicSipDialog::getOutboundAddrType()
 {
   int out_if = getOutboundIf();
-  int out_addr_if = getOutboundTransport();
+  int out_proto_id = getOutboundProtoId();
 
   if (outbound_address_type > 0)
     return outbound_address_type;
 
-  if(out_if < 0 || out_addr_if < 0) {
+  if(out_if < 0 || out_proto_id < 0) {
       return sip_address_type::UNPARSED;
   }
 
-  std::string local_ip = AmConfig.sip_ifs[out_if].proto_info[out_addr_if]->getIP();
+  std::string local_ip = AmConfig.sip_ifs[out_if].proto_info[out_proto_id]->getIP();
   int addrType = str2addrtype(local_ip);
   if(addrType) {
       setOutboundAddrType(addrType);
@@ -339,18 +340,18 @@ int AmBasicSipDialog::getOutboundAddrType()
   return outbound_address_type;
 }
 
-int AmBasicSipDialog::getOutboundTransport()
+int AmBasicSipDialog::getOutboundProtoId()
 {
-    if(outbound_transport < 0) {
+    if(outbound_proto_id < 0) {
         getOutboundIf();
     }
-    return outbound_transport;
+    return outbound_proto_id;
 }
 
 void AmBasicSipDialog::resetOutboundIf()
 {
   setOutboundInterface(-1);
-  setOutboundTransport(-1);
+  setOutboundProtoId(-1);
   setOutboundAddrType(0);
 }
 
@@ -482,7 +483,7 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     set1stBranch(   req.via_branch );
     setOutboundInterface( req.local_if );
     setOutboundAddrType( str2addrtype(req.local_ip) );
-    setOutboundTransport( req.addr_if );
+    setOutboundProtoId(req.proto_idx);
   }
 
   if(onRxReqStatus(req)) {

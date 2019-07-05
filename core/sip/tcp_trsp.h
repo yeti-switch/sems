@@ -55,7 +55,7 @@ public:
 class tcp_server_socket: public trsp_server_socket
 {
 public:
-  tcp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, socket_transport transport);
+  tcp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
 
   const char* get_transport() const { return "tcp"; }
 };

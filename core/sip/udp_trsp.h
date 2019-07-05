@@ -49,9 +49,9 @@ class udp_trsp_socket: public trsp_socket
     int sendmsg(const sockaddr_storage* sa, const char* msg, const int msg_len);
 
 public:
-    udp_trsp_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts,
+	udp_trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
 		    socket_transport transport, unsigned int sys_if_idx = 0)
-	: trsp_socket(if_num, addr_num,opts,transport,sys_if_idx) {}
+	: trsp_socket(if_num, proto_idx,opts,transport,sys_if_idx) {}
 
     ~udp_trsp_socket() {
         close(sd);

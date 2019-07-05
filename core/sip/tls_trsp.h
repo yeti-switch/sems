@@ -159,7 +159,7 @@ public:
 class tls_server_socket : public trsp_server_socket
 {
 public:
-    tls_server_socket(unsigned short if_num, unsigned short addr_num,
+    tls_server_socket(unsigned short if_num, unsigned short proto_idx,
                       unsigned int opts, socket_transport transport,
                       const tls_conf& s_client,
                       const tls_conf& s_server);

@@ -444,11 +444,11 @@ tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock
     }
 }
 
-tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short addr_num,
+tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto_idx,
                                      unsigned int opts, socket_transport transport,
                                      const tls_conf& s_client,
                                      const tls_conf& s_server)
-: trsp_server_socket(if_num, addr_num, opts, new tls_socket_factory(transport))
+: trsp_server_socket(if_num, proto_idx, opts, new tls_socket_factory(transport))
 , client_settings(s_client), server_settings(s_server)
 {
 }

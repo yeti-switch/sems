@@ -39,7 +39,7 @@ void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
 tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
                              int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
                              event_base* evbase_)
-    : trsp_socket(server_sock_->get_if(),server_sock_->get_addr_if(),0,transport,0,sd),
+    : trsp_socket(server_sock_->get_if(),server_sock_->get_proto_idx(),0,transport,0,sd),
       server_sock(server_sock_), server_worker(server_worker_),
       closed(false), connected(false),
       input_len(0), evbase(evbase_),
@@ -154,7 +154,7 @@ int tcp_base_trsp::parse_input()
     inc_ref(this);
 
     // pass message to the parser / transaction layer
-    SIP_info *iface = AmConfig.sip_ifs[server_sock->get_if()].proto_info[server_sock->get_addr_if()];
+    SIP_info *iface = AmConfig.sip_ifs[server_sock->get_if()].proto_info[server_sock->get_proto_idx()];
     trans_layer::instance()->received_msg(s_msg,iface->acl,iface->opt_acl);
 
     char* msg_end = pst.orig_buf + msg_len;
@@ -785,8 +785,8 @@ void trsp_worker::on_stop()
     stopped.wait_for();
 }
 
-trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory)
-    : trsp_socket(if_num, addr_num, opts, sock_factory->transport),
+trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory)
+    : trsp_socket(if_num, proto_idx, opts, sock_factory->transport),
       ev_accept(nullptr),
       sock_factory(sock_factory)
 {

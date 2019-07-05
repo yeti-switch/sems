@@ -90,8 +90,8 @@ protected:
     // internal interface number
     unsigned short   if_num;
 
-    // internal interface addr number
-    unsigned short   addr_num;
+    // internal interface protocol index
+    unsigned short   proto_idx;
 
     // network interface index
     unsigned int sys_if_idx;
@@ -105,7 +105,7 @@ protected:
     uint8_t tos_byte;
 
 public:
-    trsp_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts,
+	trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
 		socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
@@ -178,7 +178,7 @@ public:
     /**
      * Getter for the interface addr number
      */
-    unsigned short get_addr_if() const;
+    unsigned short get_proto_idx() const;
 
     /**
      * Is the transport reliable?

@@ -81,7 +81,7 @@ int _SipCtrlInterface::alloc_udp_structs()
     return -1;
 }
 
-int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short addr_num, SIP_info& info)
+int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
     if(info.type_ip == IP_info::IPv4) {
@@ -94,7 +94,7 @@ int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short ad
     }
 
     udp_trsp_socket* udp_socket =
-        new udp_trsp_socket(if_num, addr_num, info.sig_sock_opts
+        new udp_trsp_socket(if_num, proto_idx, info.sig_sock_opts
 			    | (AmConfig.force_outbound_if ?
 			       trsp_socket::force_outbound_if : 0)
                             | (info.sig_sock_opts & trsp_socket::use_raw_sockets ?
@@ -179,7 +179,7 @@ int _SipCtrlInterface::alloc_tcp_structs()
     return -1;
 }
 
-int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info)
+int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
     if(info.type_ip == IP_info::IPv4) {
@@ -190,7 +190,7 @@ int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short ad
         ERROR("Unknown transport type in udp server");
         return -1;
     }
-    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num, addr_num,info.sig_sock_opts,trans);
+    tcp_server_socket* tcp_socket = new tcp_server_socket(if_num, proto_idx,info.sig_sock_opts,trans);
 
     if(!info.public_ip.empty()) {
         tcp_socket->set_public_ip(info.public_ip);
@@ -247,7 +247,7 @@ int _SipCtrlInterface::alloc_tls_structs()
     return -1;
 }
 
-int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short addr_num, SIP_info& info)
+int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
 {
     trsp_socket::socket_transport trans;
     if(info.type_ip == IP_info::IPv4) {
@@ -267,7 +267,7 @@ int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short ad
 
     tls_server_socket* tls_socket = 0;
     try {
-        tls_socket = new tls_server_socket(if_num, addr_num,info.sig_sock_opts,trans, &tls_info->client_settings, &tls_info->server_settings);
+        tls_socket = new tls_server_socket(if_num, proto_idx,info.sig_sock_opts,trans, &tls_info->client_settings, &tls_info->server_settings);
     } catch(Botan::Exception& ex) {
         ERROR("Botan Exception: %s", ex.what());
     }
@@ -328,14 +328,14 @@ int _SipCtrlInterface::load()
     // Init UDP transport instances
     unsigned short udp_idx = 0;
     for(auto& interface : AmConfig.sip_ifs) {
-        unsigned short addr_idx = 0;
+        unsigned short proto_idx = 0;
         for(auto& info : interface.proto_info) {
             if(info->type == SIP_info::UDP) {
-                if(init_udp_sockets(udp_idx, addr_idx, *info) < 0) {
+                if(init_udp_sockets(udp_idx, proto_idx, *info) < 0) {
                     return -1;
                 }
             }
-            addr_idx++;
+            proto_idx++;
         }
         udp_idx++;
     }
@@ -363,14 +363,14 @@ int _SipCtrlInterface::load()
     // Init TCP transport instances
     unsigned short tcp_idx = 0;
     for(auto& interface : AmConfig.sip_ifs) {
-        unsigned short addr_idx = 0;
+        unsigned short proto_idx = 0;
         for(auto& info : interface.proto_info) {
             if(info->type == SIP_info::TCP) {
-                if(init_tcp_servers(tcp_idx, addr_idx, *info) < 0) {
+                if(init_tcp_servers(tcp_idx, proto_idx, *info) < 0) {
                     return -1;
                 }
             }
-            addr_idx++;
+            proto_idx++;
         }
         tcp_idx++;
     }
@@ -383,14 +383,14 @@ int _SipCtrlInterface::load()
     // Init TCP transport instances
     unsigned short tls_idx = 0;
     for(auto& interface : AmConfig.sip_ifs) {
-        unsigned short addr_idx = 0;
+        unsigned short proto_idx = 0;
         for(auto& info : interface.proto_info) {
             if(info->type == SIP_info::TLS) {
-                if(init_tls_servers(tls_idx, addr_idx, *info) < 0) {
+                if(init_tls_servers(tls_idx, proto_idx, *info) < 0) {
                     return -1;
                 }
             }
-            addr_idx++;
+            proto_idx++;
         }
         tls_idx++;
     }
@@ -839,7 +839,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 
     req.trsp = msg->local_socket->get_transport();
     req.local_if = msg->local_socket->get_if();
-    req.addr_if = msg->local_socket->get_addr_if();
+    req.proto_idx = msg->local_socket->get_proto_idx();
 
     req.via1 = c2stlstr(msg->via1->value);
     if(msg->vias.size() > 1) {

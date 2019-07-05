@@ -218,11 +218,11 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     if(info.contact.empty()) {
         //force contact username
         int oif = dlg.getOutboundIf();
-        int ot = dlg.getOutboundTransport();
+        int oproto = dlg.getOutboundProtoId();
         info_contact.uri_user = info.user;
         const auto &pi = AmConfig.
                          sip_ifs[static_cast<size_t>(oif)].
-                         proto_info[static_cast<size_t>(ot)];
+                         proto_info[static_cast<size_t>(oproto)];
         info_contact.uri_host = pi->getIP();
         info_contact.uri_port = int2str(pi->local_port);
         info_contact.uri_param = info.contact_uri_params;

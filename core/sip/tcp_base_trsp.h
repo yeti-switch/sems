@@ -247,7 +247,7 @@ protected:
 
     static uint32_t hash_addr(const sockaddr_storage* addr);
 
-    trsp_server_socket(unsigned short if_num, unsigned short addr_num, unsigned int opts, trsp_socket_factory* sock_factory);
+    trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory);
     ~trsp_server_socket();
 
 public:

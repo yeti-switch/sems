@@ -68,7 +68,7 @@ tcp_base_trsp* tcp_socket_factory::create_socket(trsp_server_socket* server_sock
     return new tcp_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
 }
 
-tcp_server_socket::tcp_server_socket(short unsigned int if_num, short unsigned int addr_num, unsigned int opts, socket_transport transport)
-: trsp_server_socket(if_num, addr_num, opts, new tcp_socket_factory(transport))
+tcp_server_socket::tcp_server_socket(short unsigned int if_num, short unsigned int proto_idx, unsigned int opts, socket_transport transport)
+: trsp_server_socket(if_num, proto_idx, opts, new tcp_socket_factory(transport))
 {
 }
