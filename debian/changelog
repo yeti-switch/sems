@@ -1,3 +1,10 @@
+sems (1.8.30-1) stable; urgency=low
+
+  * log.h: add to_void macro
+  * udp_trsp_socket::recv(): set MSG_DONTWAIT flag for recvmsg()
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sun, 07 Jul 2019 23:36:23 +0300
+
 sems (1.8.29-1) stable; urgency=low
 
   * AmB2BMedia: fix symmetric RTP mode set in shared stream mode
