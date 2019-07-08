@@ -262,6 +262,8 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const ch
 
 int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const AmMimeBody& body)
 {
+    DBG("entering onTxSdp(), oa_state=%s\n", getOAStateStr(state));
+
     // assume that the payload is ok if it is not empty.
     // (do not parse again self-generated SDP)
     if(body.empty()){
@@ -364,16 +366,6 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
         }
     }
 
-    if(reply.cseq_method == SIP_METH_INVITE && reply.code < 300) {
-        // ignore SDP repeated in 1xx and 2xx replies (183, 180, ... 2xx)
-        if (has_sdp &&
-            (state == OA_Completed || state == OA_OfferSent) &&
-            reply.cseq == cseq)
-        {
-            has_sdp = false;
-        }
-    }
-
     saveState();
 
     if(generate_sdp) {
@@ -412,6 +404,16 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
         }
     }
 
+    if(reply.cseq_method == SIP_METH_INVITE && reply.code < 300) {
+        // ignore SDP repeated in 1xx and 2xx replies (183, 180, ... 2xx)
+        if (has_sdp &&
+            (state == OA_Completed || state == OA_OfferSent) &&
+            reply.cseq == cseq)
+        {
+            has_sdp = false;
+        }
+    }
+
     if (has_sdp && (onTxSdp(reply.cseq,reply.body) != 0)) {
         DBG("onTxSdp() failed\n");
         return -1;
@@ -447,7 +449,18 @@ int AmOfferAnswer::onRequestSent(const AmSipRequest& req)
 
 int AmOfferAnswer::onReplySent(const AmSipReply& reply)
 {
-    int ret = checkStateChange();
+    int ret;
+
+    if(state == OA_Completed &&
+       reply.code == 200 &&
+       reply.cseq == cseq &&
+       reply.cseq_method == SIP_METH_INVITE)
+    {
+        /* Make sure that session is started when 200 OK is sent */
+        ret = dlg->onSdpCompleted();
+    } else {
+        ret = checkStateChange();
+    }
 
     // final answer to non-invite req that triggered O/A transaction
     if((reply.code >= 200) &&
