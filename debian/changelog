@@ -1,3 +1,9 @@
+sems (1.8.30-2) stable; urgency=low
+
+  * AmOfferAnswer: fix OAstate changing and onSessionStart handler invocation on subsequent SDP sent reply
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 08 Jul 2019 19:01:09 +0300
+
 sems (1.8.30-1) stable; urgency=low
 
   * log.h: add to_void macro
