@@ -1140,10 +1140,16 @@ void AmB2BMedia::createUpdateStreams(
     // create missing streams
     createStreams(local_sdp); // FIXME: remote_sdp?
 
-    updateStreams(a_leg, ctrl);
+    updateStreamsUnsafe(a_leg, ctrl);
 }
 
 void AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl)
+{
+    AmLock l(mutex);
+    updateStreamsUnsafe(a_leg, ctrl);
+}
+
+void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
 {
     //const AmSdp &local_sdp = a_leg ? a_leg_local_sdp : b_leg_local_sdp;
     const AmSdp &remote_sdp = a_leg ? a_leg_remote_sdp : b_leg_remote_sdp;

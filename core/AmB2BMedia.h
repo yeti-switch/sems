@@ -390,6 +390,7 @@ class AmB2BMedia: public AmMediaSession
     bool relay_paused;
 
     void createStreams(const AmSdp &sdp);
+    void updateStreamsUnsafe(bool a_leg, RelayController *ctrl);
     void updateStreamPair(AudioStreamPair &pair);
     void updateAudioStreams();
     void updateRelayStream(AmRtpStream *stream, AmB2BSession *session,
