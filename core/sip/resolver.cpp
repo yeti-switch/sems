@@ -1249,14 +1249,19 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
     if(ret > 0) return ret;
 
     //query dns
-    if( ((rr_type == dns_r_ip) &&
-            ((priority != IPv6_only &&
-             query_dns(name,rr_type, IPv4) < 0) ||
-            (priority != IPv4_only &&
-             query_dns(name,rr_type, IPv6) < 0)))
-        || query_dns(name,rr_type, IPnone) < 0)
-    {
-        return -1;
+    switch(rr_type) {
+    case dns_r_ip:
+        if(priority != IPv6_only) {
+            query_dns(name,rr_type, IPv4);
+        }
+        if(priority != IPv4_only) {
+            query_dns(name,rr_type, IPv6);
+        }
+        break;
+    default:
+        if(query_dns(name,rr_type, IPnone) < 0) {
+            return -1;
+        }
     }
 
     h->reset(rr_type);
