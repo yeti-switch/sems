@@ -2487,9 +2487,9 @@ void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r, struct timev
 
     rtp_stats.update_lost();
 
-    r.total_lost_0 = rtp_stats.total_lost >> 16;
+    r.total_lost_2 = (rtp_stats.total_lost >> 16) & 0xff;
     r.total_lost_1 = (rtp_stats.total_lost >> 8) & 0xff;
-    r.total_lost_2 = rtp_stats.total_lost & 0xff;
+    r.total_lost_0 = rtp_stats.total_lost & 0xff;
 
     r.fract_lost = rtp_stats.fraction_lost;
 

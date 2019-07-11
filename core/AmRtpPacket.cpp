@@ -382,7 +382,7 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
         stats.rtt.update(rtt);
     }
 
-    stats.tx.loss = (rr.total_lost_0 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_2;
+    stats.tx.loss = (rr.total_lost_2 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_0;
     DBG("stats.tx.loss: %u",stats.tx.loss);
 
     if(rr.jitter) {
