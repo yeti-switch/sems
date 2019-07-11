@@ -1,3 +1,10 @@
+sems (1.8.31-1) stable; urgency=low
+
+    * AmB2BMedia: guard updateStreams() with mutex
+    * resolver: resolve_name: fix conditions for query_dns calls. fixes DNS queries with type 0
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 11 Jul 2019 21:50:19 +0300
+
 sems (1.8.30-2) stable; urgency=low
 
   * AmOfferAnswer: fix OAstate changing and onSessionStart handler invocation on subsequent SDP sent reply
