@@ -152,7 +152,7 @@ int _trans_layer::set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transp
 	if(prot_sock_it == transports[out_interface].end()) {
 	    DBG("could not find transport 'udp' in outbound interface %i",
 		out_interface);
-	    prot_sock_it = transports[out_interface].begin();
+        return 1;
 	}
     }
 
@@ -1333,8 +1333,11 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	return 0;
     }
 
-    if(set_trsp_socket(msg,next_trsp,out_interface) < 0)
-	return -1;
+    int trsp_ret = set_trsp_socket(msg,next_trsp,out_interface);
+	if(trsp_ret < 0)
+	    return -1;
+    else if(trsp_ret > 0)
+        goto try_next_dest;
 
     if((flags & TR_FLAG_NEXT_HOP_RURI) &&
        (patch_ruri_with_remote_ip(ruri,msg) < 0)) {
@@ -2818,7 +2821,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
  try_next_dest:
     // get the next ip
     if(!tr->targets ||
-       tr->targets->get_next(&sa,next_trsp,tr->flags) < 0){
+       tr->targets->get_next(&sa,next_trsp,tr->flags) < 0) {
 	DBG("no more destinations!");
 	return -1;
     }
@@ -2843,8 +2846,11 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 
 	int out_interface = tmp_msg.local_socket->get_if();
 	tmp_msg.local_socket = NULL;
-	if(set_trsp_socket(&tmp_msg,next_trsp,out_interface) < 0)
+    int trsp_ret = set_trsp_socket(&tmp_msg,next_trsp,out_interface);
+	if(trsp_ret < 0)
 	    return -1;
+    else if(trsp_ret > 0)
+        goto try_next_dest;
 
 	if(n_tr->flags & TR_FLAG_NEXT_HOP_RURI) {
 	    // patch R-URI, generate& parse new message
@@ -2889,8 +2895,11 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
 
 	trsp_socket* old_sock = tr->msg->local_socket;
 	int out_interface = old_sock->get_if();
-	if(set_trsp_socket(tr->msg,next_trsp,out_interface) < 0)
+    int trsp_ret = set_trsp_socket(tr->msg,next_trsp,out_interface);
+	if(trsp_ret < 0)
 	    return -1;
+    else if(trsp_ret > 0)
+        goto try_next_dest;
 
 	if(tr->flags & TR_FLAG_NEXT_HOP_RURI) {
 	    string   n_uri;
