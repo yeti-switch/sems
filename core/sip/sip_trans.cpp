@@ -196,8 +196,8 @@ void sip_trans::reset_timer(trans_timer* t, unsigned int timer_type)
     
     if(*tp != NULL){
 
-	DBG("Clearing old timer of type %s (this=%p)\n",
-	    timer_name((*tp)->type),*tp);
+	DBG("Clearing old timer of type %s (timer=%p)(trans=%p)\n",
+	    timer_name((*tp)->type),*tp, this);
 	wheeltimer::instance()->remove_timer((timer*)*tp);
     }
 
@@ -254,8 +254,8 @@ void sip_trans::reset_timer(unsigned int timer_type, unsigned int expire_delay /
     unsigned int expires = expire_delay / (TIMER_RESOLUTION/1000);
     expires += wt->wall_clock;
     
-    DBG("New timer of type %s at time=%i (repeated=%i)\n",
-	timer_name(timer_type),expires,timer_type>>16);
+    DBG("New timer of type %s at time=%i (repeated=%i)(trans=%p)\n",
+	timer_name(timer_type),expires,timer_type>>16, this);
 
     trans_timer* t = new trans_timer(timer_type,expires,
 				     bucket_id,this);

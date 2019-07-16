@@ -2829,7 +2829,6 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
     if(use_new_trans) {
 	string   n_uri;
 	cstring  old_uri;
-	auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
 
 	// Warning: no deep copy!!!
 	//  -> do not forget to release() before it's too late!
@@ -2852,6 +2851,7 @@ int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
     else if(trsp_ret > 0)
         goto try_next_dest;
 
+	auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
 	if(n_tr->flags & TR_FLAG_NEXT_HOP_RURI) {
 	    // patch R-URI, generate& parse new message
 	    if(patch_ruri_with_remote_ip(n_uri, &tmp_msg)) {
