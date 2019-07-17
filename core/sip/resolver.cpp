@@ -747,12 +747,15 @@ dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, const dns_priority p
     DBG("entry for target %s is not found in the local cache. try to resolve it",
         target.c_str());
 
-    if( ((rr_type == dns_r_ip) &&
-            (resolver::instance()->query_dns(target.c_str(),rr_type, IPv4) < 0 ||
-             resolver::instance()->query_dns(target.c_str(),rr_type, IPv6) < 0))
-        || resolver::instance()->query_dns(target.c_str(),rr_type, IPnone) < 0)
-    {
-        return nullptr;
+    switch(rr_type) {
+    case dns_r_ip:
+        resolver::instance()->query_dns(target.c_str(),rr_type, IPv4);
+        resolver::instance()->query_dns(target.c_str(),rr_type, IPv6);
+        break;
+    default:
+        if(resolver::instance()->query_dns(target.c_str(),rr_type, IPnone) < 0) {
+            return nullptr;
+        }
     }
 
     //final lookup in the cache
