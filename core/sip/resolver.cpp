@@ -748,10 +748,8 @@ dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, const dns_priority p
         target.c_str());
 
     if( ((rr_type == dns_r_ip) &&
-            ((priority != IPv6_only &&
-             resolver::instance()->query_dns(target.c_str(),rr_type, IPv4) < 0) ||
-            (priority != IPv4_only &&
-             resolver::instance()->query_dns(target.c_str(),rr_type, IPv6) < 0)))
+            (resolver::instance()->query_dns(target.c_str(),rr_type, IPv4) < 0 ||
+             resolver::instance()->query_dns(target.c_str(),rr_type, IPv6) < 0))
         || resolver::instance()->query_dns(target.c_str(),rr_type, IPnone) < 0)
     {
         return nullptr;
@@ -1251,12 +1249,8 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
     //query dns
     switch(rr_type) {
     case dns_r_ip:
-        if(priority != IPv6_only) {
-            query_dns(name,rr_type, IPv4);
-        }
-        if(priority != IPv4_only) {
-            query_dns(name,rr_type, IPv6);
-        }
+        query_dns(name,rr_type, IPv4);
+        query_dns(name,rr_type, IPv6);
         break;
     default:
         if(query_dns(name,rr_type, IPnone) < 0) {
