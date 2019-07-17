@@ -1,3 +1,11 @@
+sems (1.8.31-3) stable; urgency=low
+
+    * trans_layer: segfault fixes
+    * trans_layer: fix processing of unconfigured proto on interface
+    * resolver: fix resolve priority caching
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 17 Jul 2019 16:28:23 +0300
+
 sems (1.8.31-2) stable; urgency=low
 
     * rtcp: fix total_lost handling
