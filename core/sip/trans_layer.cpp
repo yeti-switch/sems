@@ -2810,188 +2810,193 @@ sip_trans* _trans_layer::copy_uac_trans(sip_trans* tr)
     return n_tr;
 }
 
-int _trans_layer::try_next_ip(trans_bucket* bucket, sip_trans* tr,
-			      bool use_new_trans)
+int _trans_layer::try_next_ip(
+    trans_bucket* bucket, sip_trans* tr,
+    bool use_new_trans)
 {
     tr->clear_timer(STIMER_M);
 
     trsp_socket::socket_transport next_trsp;
     sockaddr_storage sa;
 
- try_next_dest:
+    sip_trans* orig_tr = tr;
+
+  try_next_dest:
     // get the next ip
     if(!tr->targets ||
-       tr->targets->get_next(&sa,next_trsp,tr->flags) < 0) {
-	DBG("no more destinations!");
-	return -1;
+       tr->targets->get_next(&sa,next_trsp,tr->flags) < 0)
+    {
+        DBG("no more destinations!");
+        if(orig_tr != tr) {
+            //abandon newly created transaction
+            tr->state = TS_ABANDONED;
+        }
+        return -1;
     }
 
     if(use_new_trans) {
-	string   n_uri;
-	cstring  old_uri;
+        string   n_uri;
+        cstring  old_uri;
 
-	// Warning: no deep copy!!!
-	//  -> do not forget to release() before it's too late!
-	sip_msg tmp_msg(*tr->msg);
+        // Warning: no deep copy!!!
+        //  -> do not forget to release() before it's too late!
+        sip_msg tmp_msg(*tr->msg);
 
-	// remove last Via-HF
-	tmp_msg.vias.pop_front();
+        // remove last Via-HF
+        tmp_msg.vias.pop_front();
 
-	// copy the new address back
-	memcpy(&tmp_msg.remote_ip,&sa,sizeof(sockaddr_storage));
+        // copy the new address back
+        memcpy(&tmp_msg.remote_ip,&sa,sizeof(sockaddr_storage));
 
-	// backup R-URI before possible update
-	old_uri = tr->msg->u.request->ruri_str;
+        // backup R-URI before possible update
+        old_uri = tr->msg->u.request->ruri_str;
 
-	int out_interface = tmp_msg.local_socket->get_if();
-	tmp_msg.local_socket = NULL;
-    int trsp_ret = set_trsp_socket(&tmp_msg,next_trsp,out_interface);
-	if(trsp_ret < 0)
-	    return -1;
-    else if(trsp_ret > 0)
-        goto try_next_dest;
+        int out_interface = tmp_msg.local_socket->get_if();
+        tmp_msg.local_socket = nullptr;
 
-	auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
-	if(n_tr->flags & TR_FLAG_NEXT_HOP_RURI) {
-	    // patch R-URI, generate& parse new message
-	    if(patch_ruri_with_remote_ip(n_uri, &tmp_msg)) {
-		ERROR("could not patch R-URI with new destination");
-		tmp_msg.release();
-		return -1;
-	    }
-	}
+        int trsp_ret = set_trsp_socket(&tmp_msg,next_trsp,out_interface);
+        if(trsp_ret < 0) {
+            tmp_msg.release();
+            return -1;
+        } else if(trsp_ret > 0)
+            goto try_next_dest;
 
-	sip_msg* p_msg=NULL;
-	if(generate_and_parse_new_msg(&tmp_msg,p_msg)) {
-	    ERROR("could not generate&parse new message");
-	    tmp_msg.release();
-	    return -1;
-	}
+        auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
 
-	tmp_msg.release();
-	n_tr->msg = p_msg;
+        if(n_tr->flags & TR_FLAG_NEXT_HOP_RURI) {
+            // patch R-URI, generate& parse new message
+            if(patch_ruri_with_remote_ip(n_uri, &tmp_msg)) {
+                ERROR("could not patch R-URI with new destination");
+                tmp_msg.release();
+                return -1;
+            }
+        }
 
-	// take over target set
-	n_tr->targets = tr->targets;
-	tr->targets = NULL;
+        sip_msg* p_msg = nullptr;
+        if(generate_and_parse_new_msg(&tmp_msg,p_msg)) {
+            ERROR("could not generate&parse new message");
+            tmp_msg.release();
+            return -1;
+        }
 
-	// restore old R-URI
-	tr->msg->u.request->ruri_str = old_uri;
+        tmp_msg.release();
+        n_tr->msg = p_msg;
 
-	trans_timer* t_bf = tr->get_timer(STIMER_B);
-	tr = n_tr.release();
+        // take over target set
+        n_tr->targets = tr->targets;
+        tr->targets = nullptr;
 
-	// keep old timer B/F
-	if(t_bf) {
-	    t_bf = new trans_timer(*t_bf,bucket->get_id(),tr);
-	    tr->reset_timer(t_bf,t_bf->type);
-	}
+        // restore old R-URI
+        tr->msg->u.request->ruri_str = old_uri;
 
-	bucket->append(tr);	
-	} //if(use_new_trans)
-    else {
-	// copy the new address back
-	memcpy(&tr->msg->remote_ip,&sa,sizeof(sockaddr_storage));
+        trans_timer* t_bf = tr->get_timer(STIMER_B);
+        tr = n_tr.release();
 
-	trsp_socket* old_sock = tr->msg->local_socket;
-	int out_interface = old_sock->get_if();
-    int trsp_ret = set_trsp_socket(tr->msg,next_trsp,out_interface);
-	if(trsp_ret < 0)
-	    return -1;
-    else if(trsp_ret > 0)
-        goto try_next_dest;
+        // keep old timer B/F
+        if(t_bf) {
+            t_bf = new trans_timer(*t_bf,bucket->get_id(),tr);
+            tr->reset_timer(t_bf,t_bf->type);
+        }
 
-	if(tr->flags & TR_FLAG_NEXT_HOP_RURI) {
-	    string   n_uri;
-	    sip_msg* p_msg=NULL;
+        bucket->append(tr);
+    } else { //if(use_new_trans)
+        // copy the new address back
+        memcpy(&tr->msg->remote_ip,&sa,sizeof(sockaddr_storage));
 
-	    // patch R-URI, generate& parse new message
-	    if(patch_ruri_with_remote_ip(n_uri, tr->msg) ||
-	       generate_and_parse_new_msg(tr->msg,p_msg)) {
-		ERROR("could not patch R-URI with new destination");
-		return -1;
-	    }
+        trsp_socket* old_sock = tr->msg->local_socket;
+        int out_interface = old_sock->get_if();
+        int trsp_ret = set_trsp_socket(tr->msg,next_trsp,out_interface);
 
-	    delete tr->msg;
-	    tr->msg = p_msg;
-	}
-	else if(old_sock != tr->msg->local_socket) {
-	    string   n_uri;
-	    sip_msg* p_msg=NULL;
+        if(trsp_ret < 0) return -1;
+        else if(trsp_ret > 0) goto try_next_dest;
 
-	    // patch R-URI, generate & parse new message
-	    if(generate_and_parse_new_msg(tr->msg,p_msg)) {
-		return -1;
-	    }
+        if(tr->flags & TR_FLAG_NEXT_HOP_RURI) {
+            string   n_uri;
+            sip_msg* p_msg = nullptr;
 
-	    delete tr->msg;
-	    tr->msg = p_msg;
-	}
-	else {
-	    // only create new branch tag
-	    // -> patched directly in the msg's buffer
-	    compute_branch((char*)(tr->msg->via_p1->branch.s+MAGIC_BRANCH_LEN),
-			   tr->msg->callid->value,tr->msg->cseq->value);
-	}
-    }
-   
+            // patch R-URI, generate& parse new message
+            if(patch_ruri_with_remote_ip(n_uri, tr->msg) ||
+               generate_and_parse_new_msg(tr->msg,p_msg))
+            {
+                ERROR("could not patch R-URI with new destination");
+                return -1;
+            }
+
+            delete tr->msg;
+            tr->msg = p_msg;
+        } else if(old_sock != tr->msg->local_socket) {
+            string   n_uri;
+            sip_msg* p_msg = nullptr;
+
+            // patch R-URI, generate & parse new message
+            if(generate_and_parse_new_msg(tr->msg,p_msg)) {
+                return -1;
+            }
+
+            delete tr->msg;
+            tr->msg = p_msg;
+        } else {
+            // only create new branch tag
+            // -> patched directly in the msg's buffer
+            compute_branch((char*)(tr->msg->via_p1->branch.s+MAGIC_BRANCH_LEN),
+                tr->msg->callid->value,tr->msg->cseq->value);
+        }
+    } //if(use_new_trans) else
 
     // and re-send
     if(tr->msg->send(tr->flags) < 0) {
-	ERROR("Error from transport layer\n");
+        ERROR("Error from transport layer\n");
 
-	/*if(default_bl_ttl) {
-	    tr_blacklist::instance()->insert(&tr->msg->remote_ip,
-					     default_bl_ttl,"503");
-	}*/
+        /*if(default_bl_ttl) {
+            tr_blacklist::instance()->insert(&tr->msg->remote_ip, default_bl_ttl,"503");
+        }*/
 
-	use_new_trans = false;
-	goto try_next_dest;
+        use_new_trans = false;
+        goto try_next_dest;
     }
 
     stats.inc_sent_requests();
-    
-	if(tr->logger || tr->sensor) {
-		sockaddr_storage src_ip;
-		tr->msg->local_socket->copy_addr_to(&src_ip);
-		if(tr->logger){
-			tr->logger->log(tr->msg->buf,tr->msg->len,
-							&src_ip,&tr->msg->remote_ip,
-							tr->msg->u.request->method_str);
-		}
-		if(tr->sensor){
-			tr->sensor->feed(tr->msg->buf,tr->msg->len,
-							&src_ip,&tr->msg->remote_ip,
-							msg_sensor::PTYPE_SIP);
-		}
+
+    if(tr->logger || tr->sensor) {
+        sockaddr_storage src_ip;
+        tr->msg->local_socket->copy_addr_to(&src_ip);
+        if(tr->logger) {
+            tr->logger->log(tr->msg->buf,tr->msg->len,
+                            &src_ip,&tr->msg->remote_ip,
+                            tr->msg->u.request->method_str);
+        }
+        if(tr->sensor) {
+            tr->sensor->feed(tr->msg->buf,tr->msg->len,
+                            &src_ip,&tr->msg->remote_ip,
+                            msg_sensor::PTYPE_SIP);
+        }
     }
 
     if(tr->msg->u.request->method == sip_request::INVITE) {
-	tr->state = TS_CALLING;
-	if(!tr->msg->local_socket->is_reliable()) {
-	    tr->reset_timer(STIMER_A,A_TIMER,bucket->get_id());
-	}
-	if(!tr->get_timer(STIMER_B)) {
-	    tr->reset_timer(STIMER_B,B_TIMER,bucket->get_id());
-	}
+        tr->state = TS_CALLING;
+        if(!tr->msg->local_socket->is_reliable()) {
+            tr->reset_timer(STIMER_A,A_TIMER,bucket->get_id());
+        }
+        if(!tr->get_timer(STIMER_B)) {
+            tr->reset_timer(STIMER_B,B_TIMER,bucket->get_id());
+        }
+    } else {
+        tr->state = TS_TRYING;
+        if(!tr->msg->local_socket->is_reliable()) {
+            tr->reset_timer(STIMER_E,E_TIMER,bucket->get_id());
+        }
+        if(!tr->get_timer(STIMER_F)) {
+            tr->reset_timer(STIMER_F,F_TIMER,bucket->get_id());
+        }
     }
-    else {
-	tr->state = TS_TRYING;
-	if(!tr->msg->local_socket->is_reliable()) {
-	    tr->reset_timer(STIMER_E,E_TIMER,bucket->get_id());
-	}
-	if(!tr->get_timer(STIMER_F)) {
-	    tr->reset_timer(STIMER_F,F_TIMER,bucket->get_id());
-	}
-    }
-    
+
     if(tr->targets->has_next()) {
-		if(tr->timer_m){
-			tr->reset_timer(STIMER_M,tr->timer_m,bucket->get_id());
-		} else {
-			tr->reset_timer(STIMER_M,M_TIMER,bucket->get_id());
-		}
-	}
+        if(tr->timer_m){
+            tr->reset_timer(STIMER_M,tr->timer_m,bucket->get_id());
+        } else {
+            tr->reset_timer(STIMER_M,M_TIMER,bucket->get_id());
+        }
+    }
 
     return 0;
 }
