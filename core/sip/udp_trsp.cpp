@@ -322,7 +322,7 @@ int udp_trsp_socket::recv()
     buf_len = recvmsg(get_sd(),&msg,MSG_DONTWAIT);
     if(buf_len <= 0) {
         if(!buf_len) return 0;
-        ERROR("recvfrom returned %ld: %s\n",buf_len,strerror(errno));
+        DBG("recvfrom returned %ld: %s\n",buf_len,strerror(errno));
         switch(errno) {
         case EBADF:
         case ENOTSOCK:
