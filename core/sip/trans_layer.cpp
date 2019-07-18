@@ -2196,7 +2196,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 		goto end;
 	    }
 
-	    INFO("disable blacklisting: remote UA (%s/%i) did reply",
+		DBG("disable blacklisting: remote UA (%s/%i) did reply",
 		 am_inet_ntop(&msg->remote_ip).c_str(),
 		 am_get_port(&msg->remote_ip));
 	    t->flags |= TR_FLAG_DISABLE_BL;
