@@ -443,7 +443,11 @@ void CoreRpc::showConnections(const AmArg&, AmArg& ret)
 
 void CoreRpc::showTrBlacklist(const AmArg&, AmArg& ret)
 {
-    tr_blacklist::instance()->dump(ret["entries"]);
+    AmArg &l = ret["entries"];
+    l.assertArray();
+    tr_blacklist::instance()->dump([&l](const bl_addr& k, const bl_entry*) {
+        l.push(AmArg(am_inet_ntop(&k)));
+    });
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

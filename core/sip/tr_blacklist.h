@@ -81,15 +81,6 @@ struct bl_entry
   {}
 };
 
-class tr_blacklist_dump_helper
-{
-    AmArg& arg;
-public:
-    tr_blacklist_dump_helper(AmArg& arg_) : arg(arg_){}
-
-    void operator() (const bl_addr& k, const bl_entry* v) const;
-};
-
 typedef hash_table<blacklist_bucket> blacklist_ht;
 
 class _tr_blacklist
@@ -102,7 +93,8 @@ protected:
 
 public:
   // public blacklist API:
-  void dump(AmArg& ret);
+  template <typename RetFunc>
+  void dump(RetFunc f) { hash_table<blacklist_bucket>::dump(f); }
   bool exist(const sockaddr_storage* addr);
   void insert(const sockaddr_storage* addr, unsigned int duration /* ms */,
 	      const char* reason);

@@ -40,18 +40,6 @@ using std::list;
 using std::map;
 using std::less;
 
-class void_object
-{
-public:
-    template<class Value>
-    void operator()(const Value&){}
-
-    template<class Key, class Value>
-    void operator()(const Key&, const Value&){}
-};
-
-extern void_object void_;
-
 template<class Value>
 class ht_bucket: public AmMutex
 {
@@ -108,18 +96,20 @@ public:
     }
 
     // debug method
-    template<class Ret = void_object>
-    void dump(Ret& ret = void_) const {
+    template<typename RetFunc>
+    void dump(RetFunc f) const {
 
-	if(elmts.empty())
-	    return;
-	
-	DBG("*** Bucket ID: %i ***\n",(int)get_id());
-	
-	for(typename value_list::const_iterator it = elmts.begin(); it != elmts.end(); ++it) {
-        (*it)->dump();
-        ret(*it);
-	}
+        if(elmts.empty())
+            return;
+
+        DBG("*** Bucket ID: %i ***\n",(int)get_id());
+
+        for(typename value_list::const_iterator it = elmts.begin();
+            it != elmts.end(); ++it)
+        {
+            (*it)->dump();
+            f(*it);
+        }
     }
 
 protected:
@@ -241,19 +231,20 @@ public:
     }
 
     // debug method
-    template<class Ret = void_object>
-    void dump(Ret& ret = void_) const {
+    template<typename RetFunc>
+    void dump(RetFunc f) const {
 
-	if(elmts.empty())
-	    return;
-	
-	DBG("*** Bucket ID: %i ***\n",(int)get_id());
-	
-	for(typename value_map::const_iterator it = elmts.begin(); 
-	    it != elmts.end(); ++it) {
-        dump_elmt(it->first,it->second);
-        ret(it->first,it->second);
-	}
+        if(elmts.empty())
+            return;
+
+        DBG("*** Bucket ID: %i ***\n",(int)get_id());
+
+        for(typename value_map::const_iterator it = elmts.begin();
+            it != elmts.end(); ++it)
+        {
+            dump_elmt(it->first,it->second);
+            f(it->first,it->second);
+        }
     }
 
     virtual void dump_elmt(const Key& k, const Value* v) const {}
@@ -299,15 +290,20 @@ public:
     return 0;
     }
 
-    template<class Ret = void_object>
-    void dump(Ret& ret = void_) const {
-	for(unsigned long l=0; l<size; l++){
-	    _table[l]->lock();
-	    _table[l]->dump(ret);
-	    _table[l]->unlock();
-	}
+    struct NoOp {
+      template<typename...A>
+      void operator()(A...) { };
+    };
+
+    template<typename RetFunc = NoOp>
+    void dump(RetFunc f = RetFunc()) const {
+        for(unsigned long l=0; l<size; l++) {
+            _table[l]->lock();
+            _table[l]->dump(f);
+            _table[l]->unlock();
+        }
     }
-    
+
     void cleanup() {
         for(unsigned long i=0; i<size; i++)
             _table[i]->cleanup();
