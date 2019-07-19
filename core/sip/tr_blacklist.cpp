@@ -45,6 +45,11 @@ void bl_timer::fire()
   tr_blacklist::instance()->remove(&addr);
 }
 
+void tr_blacklist_dump_helper::operator() (const bl_addr& k, const bl_entry* v) const
+{
+    arg.push(AmArg(am_inet_ntop(&k)));
+}
+
 bool blacklist_bucket::insert(const bl_addr& addr, unsigned int duration /* ms */,
 			      const char* reason)
 {
@@ -102,6 +107,12 @@ bool _tr_blacklist::exist(const sockaddr_storage* addr)
   bucket->unlock();
 
   return res;
+}
+
+void _tr_blacklist::dump(AmArg& ret)
+{
+    tr_blacklist_dump_helper dump_helper(ret);
+    hash_table<blacklist_bucket>::dump(dump_helper);
 }
 
 void _tr_blacklist::insert(const sockaddr_storage* addr, unsigned int duration,

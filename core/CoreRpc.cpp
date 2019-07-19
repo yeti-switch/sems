@@ -16,6 +16,7 @@
 #include "signal.h"
 #include <fstream>
 #include <map>
+#include "sip/tr_blacklist.h"
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -154,6 +155,7 @@ void CoreRpc::init_rpc_tree()
     AmArg &show = reg_leaf(root,"show");
         reg_method(show,"status","",&CoreRpc::showStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
+        reg_method(show,"tr_blacklist","",&CoreRpc::showTrBlacklist);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
@@ -437,6 +439,11 @@ void CoreRpc::showStatus(const AmArg&, AmArg& ret)
 void CoreRpc::showConnections(const AmArg&, AmArg& ret)
 {
     SipCtrlInterface::instance()->getInfo(ret);
+}
+
+void CoreRpc::showTrBlacklist(const AmArg&, AmArg& ret)
+{
+    tr_blacklist::instance()->dump(ret["entries"]);
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

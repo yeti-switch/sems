@@ -573,7 +573,6 @@ void dumps_transactions()
     _trans_table.dump();
 }
 
-
 void cleanup_transaction()
 {
     _trans_table.cleanup();

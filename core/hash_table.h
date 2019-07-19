@@ -40,6 +40,17 @@ using std::list;
 using std::map;
 using std::less;
 
+class void_object
+{
+public:
+    template<class Value>
+    void operator()(const Value&){}
+
+    template<class Key, class Value>
+    void operator()(const Key&, const Value&){}
+};
+
+extern void_object void_;
 
 template<class Value>
 class ht_bucket: public AmMutex
@@ -97,7 +108,8 @@ public:
     }
 
     // debug method
-    void dump() const {
+    template<class Ret = void_object>
+    void dump(Ret& ret = void_) const {
 
 	if(elmts.empty())
 	    return;
@@ -105,8 +117,8 @@ public:
 	DBG("*** Bucket ID: %i ***\n",(int)get_id());
 	
 	for(typename value_list::const_iterator it = elmts.begin(); it != elmts.end(); ++it) {
-	    
-	    (*it)->dump();
+        (*it)->dump();
+        ret(*it);
 	}
     }
 
@@ -173,7 +185,7 @@ public:
     
     /**
      * Caution: The bucket MUST be locked before you can 
-     * do anything with it.
+     * do anything with it.ht_bucket
      */
 
     /**
@@ -229,7 +241,8 @@ public:
     }
 
     // debug method
-    void dump() const {
+    template<class Ret = void_object>
+    void dump(Ret& ret = void_) const {
 
 	if(elmts.empty())
 	    return;
@@ -238,7 +251,8 @@ public:
 	
 	for(typename value_map::const_iterator it = elmts.begin(); 
 	    it != elmts.end(); ++it) {
-	    dump_elmt(it->first,it->second);
+        dump_elmt(it->first,it->second);
+        ret(it->first,it->second);
 	}
     }
 
@@ -285,10 +299,11 @@ public:
     return 0;
     }
 
-    void dump() const {
+    template<class Ret = void_object>
+    void dump(Ret& ret = void_) const {
 	for(unsigned long l=0; l<size; l++){
 	    _table[l]->lock();
-	    _table[l]->dump();
+	    _table[l]->dump(ret);
 	    _table[l]->unlock();
 	}
     }
