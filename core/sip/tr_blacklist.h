@@ -6,6 +6,7 @@
 
 #include "ip_util.h"
 #include "wheeltimer.h"
+#include <AmArg.h>
 
 /**
  * Blacklist bucket: key type
@@ -92,6 +93,8 @@ protected:
 
 public:
   // public blacklist API:
+  template <typename RetFunc>
+  void dump(RetFunc f) { hash_table<blacklist_bucket>::dump(f); }
   bool exist(const sockaddr_storage* addr);
   void insert(const sockaddr_storage* addr, unsigned int duration /* ms */,
 	      const char* reason);
