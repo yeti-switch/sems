@@ -1,3 +1,9 @@
+sems (1.8.32-2) stable; urgency=low
+
+    * RpcTreeHandler: fix conditions order
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sun, 21 Jul 2019 00:26:51 +0300
+
 sems (1.8.32-1) stable; urgency=low
 
     * check for param type before check for _list method. fixes segfault
