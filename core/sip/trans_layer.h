@@ -346,6 +346,9 @@ public:
      * Note: the transaction bucket must be locked before
      */
     void remove_trans();
+
+    /** assign _bucket,_t from other ticket if both transactions exist and differ */
+    void assign_if_differs(const trans_ticket& other);
 };
 
 #endif // _trans_layer_h_
