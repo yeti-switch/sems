@@ -595,17 +595,7 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
       reply.code, reply.reason.c_str());
 
   //!HACK: replace transaction ticket in uac_trans map if matched wrong
-  AmSipRequest &t_req = t_it->second;
-  const sip_trans *req_t = t_req.tt.get_trans(),
-                  *rep_t = reply.tt.get_trans();
-  if(rep_t &&
-     req_t &&
-     rep_t != req_t)
-  {
-    t_req.tt = reply.tt;
-    DBG("got reply from transaction %p but matched as %p. apply values from reply",
-        rep_t,req_t);
-  }
+  t_it->second.tt.assign_if_differs(reply.tt);
 
   updateDialogTarget(reply);
 

@@ -3156,6 +3156,29 @@ void trans_ticket::remove_trans()
     _bucket->remove(_t);
 }
 
+void trans_ticket::assign_if_differs(const trans_ticket& other)
+{
+    if(!_t || !other._t) return;
+
+    auto self_old_bucket = _bucket;
+
+    _bucket->lock();
+    if(_bucket->exist(_t)) {
+        if(_bucket != other._bucket)
+            other._bucket->lock();
+
+        if(other._bucket->exist(other._t) && (_t != other._t)) {
+            DBG("patch ticket transaction %p -> %p",
+                _t,other._t);
+            *this = other;
+        }
+
+        if(self_old_bucket != other._bucket)
+            other._bucket->unlock();
+    }
+    self_old_bucket->unlock();
+}
+
 /** EMACS **
  * Local variables:
  * mode: c++
