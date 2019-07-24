@@ -393,13 +393,16 @@ class AmRtpStream
     /** insert packet in DTMF queue if correct payload */
     void recvDtmfPacket(AmRtpPacket* p);
 
+    friend class AmRtpConnection;
     /** Insert an RTP packet to the buffer queue */
     void bufferPacket(AmRtpPacket* p);
     /* Get next packet from the buffer queue */
     int nextPacket(AmRtpPacket*& p);
-
     /** Try to reuse oldest buffered packet for newly coming packet */
     AmRtpPacket *reuseBufferedPacket();
+    /** Clear RTP timeout at time recv_time */
+    void clearRTPTimeout(struct timeval* recv_time);
+    void onParsingErrorRtpPacket(const sockaddr_storage* raddr);
 
     /** handle symmetric RTP/RTCP - if in passive mode, update raddr from rp */
     void handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp);
@@ -409,8 +412,6 @@ class AmRtpStream
     /** Sets generic parameters on SDP media */
     void getSdp(SdpMedia& m);
 
-    /** Clear RTP timeout at time recv_time */
-    void clearRTPTimeout(struct timeval* recv_time);
 
     PayloadMask relay_payloads;
     PayloadRelayMap relay_map;
@@ -506,6 +507,10 @@ class AmRtpStream
            unsigned int& ts, int& payload, bool &relayed);
 
     void recvPacket(int fd);
+
+    /** create and free an RTP packet*/
+    AmRtpPacket* createRtpPacket();
+    void freeRtpPacket(AmRtpPacket* packet);
 
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 

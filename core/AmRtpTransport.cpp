@@ -21,6 +21,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, AddressType type)
     , l_sd(0)
     , l_sd_ctx(-1)
     , logger(0)
+    , relay_raw(false)
 {
     string local_ip;
     int proto_id = AmConfig.media_ifs[l_if].findProto(type,MEDIA_info::RTP);
@@ -62,6 +63,12 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, AddressType type)
 
 AmRtpTransport::~AmRtpTransport()
 {
+    for(auto conn : connections) {
+        delete conn;
+    }
+
+    connections.clear();
+
     if(l_sd) {
         if (AmRtpReceiver::haveInstance()) {
             AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);
@@ -195,6 +202,17 @@ int AmRtpTransport::getLocalSocket()
     return l_sd;
 }
 
+void AmRtpTransport::setRawRelay(bool enable)
+{
+    CLASS_DBG("%sabled RAW relay\n", enable ? "en" : "dis");
+    relay_raw = enable;
+}
+
+bool AmRtpTransport::isRawRelay()
+{
+    return relay_raw;
+}
+
 int AmRtpTransport::init(const SdpMedia& local, const SdpMedia& remote, bool force_passive_mode)
 {
     return 0;
@@ -220,7 +238,7 @@ void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr)
 {
 }
 
-void AmRtpTransport::dtlsSessionEsteblished(uint16_t srtp_profile)
+void AmRtpTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
 }
 
@@ -392,7 +410,7 @@ void AmRtpTransport::recvPacket(int fd)
             return;
         }
 
-        s_conn->handleConnection(buffer, b_size, &saddr);
+        s_conn->handleConnection(buffer, b_size, &saddr, recv_time);
     }
 }
 

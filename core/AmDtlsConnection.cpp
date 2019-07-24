@@ -225,33 +225,28 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert
     return certs;
 }
 
-AmDtlsConnection::AmDtlsConnection(AmRtpTransport* _transport, struct sockaddr_storage* remote_addr, const srtp_fingerprint_p& _fingerprint, bool client)
-    : AmStreamConnection(_transport, remote_addr, AmStreamConnection::DTLS_CONN)
+AmDtlsConnection::AmDtlsConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN)
     , dtls_settings(0)
     , dtls_channel(0)
     , fingerprint(_fingerprint)
+    , srtp_profile(srtp_profile_reserved)
 {
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[_transport->getLocalIf()].proto_info[_transport->getLocalProtoId()]);
     try {
-    } catch(Botan::Exception& exc) {
-        ERROR("unforseen error in dtls:%s",
-                        exc.what());
-        return;
-    }
-    try {
         if(client) {
-              dtls_settings.reset(new dtls_conf(&rtpinfo->client_settings));
-//            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
-//                                                Botan::TLS::Server_Information(transport->getRHost(b_srtcp).c_str(), transport->getPort()),
-//                                                Botan::TLS::Protocol_Version::DTLS_V12);
+            dtls_settings.reset(new dtls_conf(&rtpinfo->client_settings));
+            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
+                                                Botan::TLS::Server_Information(remote_addr.c_str(), remote_port),
+                                                Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
             dtls_settings.reset(new dtls_conf(&rtpinfo->server_settings));
             dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), true);
         }
     } catch(Botan::Exception& exc) {
-        ERROR("unforseen error in dtls:%s",
-                        exc.what());
         dtls_channel = 0;
+        throw string("unforseen error in dtls:%s",
+                        exc.what());
     }
 }
 
@@ -262,7 +257,7 @@ AmDtlsConnection::~AmDtlsConnection()
     }
 }
 
-void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr)
+void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
     try {
         size_t res = dtls_channel->received_data(data, size);
@@ -291,16 +286,32 @@ void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[]
 
 void AmDtlsConnection::tls_session_activated()
 {
+    unsigned int key_len = srtp_profile_get_master_key_length(srtp_profile);
+    unsigned int salt_size = srtp_profile_get_master_salt_length(srtp_profile);
+    unsigned int export_key_size = key_len*2 + salt_size*2;
+    Botan::SymmetricKey key = dtls_channel->key_material_export("EXTRACTOR-dtls_srtp", "", export_key_size);
+    vector<uint8_t> local_key, remote_key;
+    if(dtls_settings->s_server) {
+        remote_key.insert(remote_key.end(), key.begin(), key.begin() + key_len);
+        local_key.insert(local_key.end(), key.begin() + key_len, key.begin() + key_len*2);
+        remote_key.insert(remote_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
+        local_key.insert(local_key.end(), key.begin() + key_len*2 + salt_size, key.end());
+    } else {//TODO: need approve for client side,
+        local_key.insert(local_key.end(), key.begin(), key.begin() + key_len);
+        remote_key.insert(remote_key.end(), key.begin() + key_len, key.begin() + key_len*2);
+        local_key.insert(local_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
+        remote_key.insert(remote_key.end(), key.begin() + key_len*2 + salt_size, key.end());
+    }
+
+    transport->dtlsSessionActivated(srtp_profile, local_key, remote_key);
 }
 
 bool AmDtlsConnection::tls_session_established(const Botan::TLS::Session& session)
 {
     DBG("************ on_dtls_connect() ***********");
-//     DBG("new DTLS connection from %s:%u",
-//         rtp_stream->getRHost(b_srtcp).c_str(),
-//         rtp_stream->getRPort());
+    DBG("new DTLS connection from %s:%u", r_host.c_str(),r_port);
 
-    transport->dtlsSessionEsteblished(session.dtls_srtp_profile());
+    srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();
     return true;
 }
 

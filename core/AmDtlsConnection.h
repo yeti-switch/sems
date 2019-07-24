@@ -17,6 +17,8 @@ using std::shared_ptr;
 #include <botan/tls_callbacks.h>
 #include <botan/credentials_manager.h>
 
+#include <srtp.h>
+
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
@@ -108,11 +110,12 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     Botan::TLS::Channel* dtls_channel;
     auto_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
+    srtp_profile_t srtp_profile;
 public:
-    AmDtlsConnection(AmRtpTransport* transport, struct sockaddr_storage* remote_addr, const srtp_fingerprint_p& _fingerprint, bool client);
+    AmDtlsConnection(AmRtpTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
 
-    void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr) override;
+    void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
 
     void tls_emit_data(const uint8_t data[], size_t size) override;
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) override;

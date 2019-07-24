@@ -1500,8 +1500,35 @@ void AmRtpStream::recvDtmfPacket(AmRtpPacket* p)
     }
 }
 
+AmRtpPacket * AmRtpStream::createRtpPacket()
+{
+    AmRtpPacket* p = mem.newPacket();
+    if (!p) p = reuseBufferedPacket();
+    if (!p) {
+        out_of_buffer_errors++;
+        receive_mut.lock();
+        CLASS_DBG("out of buffers for RTP packets, dropping."
+                "receive_buf: %ld, rtp_ev_qu: %ld",
+                receive_buf.size(),rtp_ev_qu.size());
+        mem.debug();
+        receive_mut.unlock();
+        // drop received data
+        return 0;
+    }
+
+    return p;
+}
+
+void AmRtpStream::freeRtpPacket(AmRtpPacket* packet)
+{
+    assert(packet);
+    mem.freePacket(packet);
+}
+
 void AmRtpStream::bufferPacket(AmRtpPacket* p)
 {
+    if(rtp_ping)	//clear mark for all packets in stream
+        p->marker = false;
     clearRTPTimeout(&recv_time);
     update_receiver_stats(*p);
 
@@ -1634,6 +1661,17 @@ void AmRtpStream::clearRTPTimeout(struct timeval* recv_time)
     memcpy(&last_recv_time, recv_time, sizeof(struct timeval));
 }
 
+void AmRtpStream::onParsingErrorRtpPacket(const sockaddr_storage* raddr)
+{
+    rtp_parse_errors++;
+    CLASS_ERROR("error while parsing RTP packet. "
+        "(src_addr: %s:%i, remote_addr: %s:%i, "
+        "local_ssrc: 0x%x, local_tag: %s)\n",
+        get_addr_str(&saddr).c_str(),am_get_port(&saddr),
+        get_addr_str(raddr).c_str(),am_get_port(raddr),
+        l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+}
+
 void AmRtpStream::clearRTPTimeout()
 {
   gettimeofday(&last_recv_time,NULL);
@@ -1749,17 +1787,8 @@ void AmRtpStream::recvPacket(int fd)
             if(srtp_connection->on_data_recv(buffer, &b_size, false) != SRTP_PACKET_PARSE_RTP) return;
         }
 
-        AmRtpPacket* p = mem.newPacket();
-        if (!p) p = reuseBufferedPacket();
+        AmRtpPacket* p = createRtpPacket();
         if (!p) {
-            out_of_buffer_errors++;
-            receive_mut.lock();
-            CLASS_DBG("out of buffers for RTP packets, dropping."
-                    "receive_buf: %ld, rtp_ev_qu: %ld",
-                    receive_buf.size(),rtp_ev_qu.size());
-            mem.debug();
-            receive_mut.unlock();
-            // drop received data
             return;
         }
 

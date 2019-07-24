@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <sys/socket.h>
 
+#include <string>
+using std::string;
+
 class AmRtpTransport;
 
 class AmStreamConnection
@@ -18,14 +21,16 @@ public:
 
         UNKNOWN_CONN
     };
-    AmStreamConnection(AmRtpTransport* _transport, struct sockaddr_storage* remote_addr, ConnectionType type);
+    AmStreamConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type);
     virtual ~AmStreamConnection();
 
     bool isUseConnection(ConnectionType type);
     bool isAddrConnection(struct sockaddr_storage* recv_addr);
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr) = 0;
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) = 0;
 protected:
     AmRtpTransport* transport;
+    string r_host;
+    int r_port;
     struct sockaddr_storage r_addr;
     ConnectionType conn_type;
 };
@@ -33,13 +38,13 @@ protected:
 class AmRtpConnection : public AmStreamConnection
 {
 public:
-    AmRtpConnection(AmRtpTransport* _transport, struct sockaddr_storage* remote_addr);
+    AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
     virtual ~AmRtpConnection();
 
     void setSymmetricRtpEndless(bool endless);
     void handleSymmetricRtp(struct sockaddr_storage* recv_addr);
 
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr);
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
 protected:
     /** symmetric RTP | RTCP */
     bool passive;

@@ -3,10 +3,11 @@
 #include <stunbuilder.h>
 #include "AmRtpTransport.h"
 
-AmStunConnection::AmStunConnection(AmRtpTransport* _transport, struct sockaddr_storage* remote_addr, int _priority)
-    : AmStreamConnection(_transport, remote_addr, AmStreamConnection::STUN_CONN)
+AmStunConnection::AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int _priority)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
     , priority(_priority)
     , auth_state(AuthState::NO_AUTH)
+    , err_code(0)
 {
 }
 
@@ -23,7 +24,7 @@ void AmStunConnection::set_credentials(const string& luser, const string& lpassw
     remote_password = rpassword;
 }
 
-void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr)
+void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
     CStunMessageReader reader;
     if(reader.AddBytes(data, size) == CStunMessageReader::ParseError) {
@@ -110,7 +111,6 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
 void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
 {
     bool valid = true;
-    int err_code = 0;
     std::string error_str;
 
     if(valid && !reader->HasMessageIntegrityAttribute()) {

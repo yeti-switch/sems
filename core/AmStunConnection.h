@@ -19,6 +19,7 @@ public:
     };
 private:
     AuthState auth_state;
+    int err_code;
     int priority;
     string local_password;
     string remote_password;
@@ -29,13 +30,13 @@ private:
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
     void send_request();
 public:
-    AmStunConnection(AmRtpTransport* _transport, struct sockaddr_storage* remote_addr, int priority);
+    AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int priority);
     virtual ~AmStunConnection();
 
     void set_credentials(const string& luser, const string& lpassword,
                         const string& ruser, const string& rpassword);
 
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr);
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
 
     AuthState getConnectionState();
 };
