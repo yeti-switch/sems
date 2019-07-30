@@ -178,8 +178,6 @@ void SIPRegistrarClient::run()
         uac_auth_i = uac_auth_f->getInstance();
     }
 
-    AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
-
     /*
     while (!stop_requested.get()) {
         if (registrations.size()) {
@@ -296,7 +294,10 @@ int SIPRegistrarClient::onLoad()
     timer.set(TIMEOUT_CHECKING_INTERVAL);
     timer.link(epoll_fd);
 
+    AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
+
     instance()->start();
+
     return 0;
 }
 
