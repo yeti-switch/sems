@@ -1,3 +1,9 @@
+sems (1.8.33-2) stable; urgency=low
+
+    * apps/registrar_client: move event queue registration to the onLoad() method to avoid racing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 30 Jul 2019 16:09:26 +0300
+
 sems (1.8.33-1) stable; urgency=low
 
     * CoreRpc: method to show tr_blacklist entries
