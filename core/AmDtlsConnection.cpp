@@ -5,10 +5,9 @@
 #include <botan/tls_server.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
-#include <botan/base64.h>
-#include <botan/uuid.h>
 #include "AmLCContainers.h"
 #include "AmLcConfig.h"
+#include "AmRtpStream.h"
 
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
@@ -257,16 +256,23 @@ AmDtlsConnection::~AmDtlsConnection()
     }
 }
 
+srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settings)
+{
+    Botan::X509_Certificate cert(settings->certificate);
+    std::string hash("SHA-256");
+    return srtp_fingerprint_p(hash, cert.fingerprint(hash));
+}
+
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
     try {
         size_t res = dtls_channel->received_data(data, size);
         if(res > 0) {
-            CLASS_DBG("need else %llu", res);
+            CLASS_DBG("need else %zu", res);
         }
     } catch(Botan::Exception& exc) {
-        ERROR("unforseen error in dtls:%s",
-                        exc.what());
+        string error("unforseen error in dtls:");
+        transport->getRtpStream()->onErrorRtpTransport(error + exc.what(), transport);
     }
 }
 
@@ -277,7 +283,7 @@ void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)
 void AmDtlsConnection::tls_emit_data(const uint8_t data[], size_t size)
 {
     assert(transport);
-    transport->send(&r_addr, (unsigned char*)data, size);
+    transport->send(&r_addr, (unsigned char*)data, size, AmStreamConnection::DTLS_CONN);
 }
 
 void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)

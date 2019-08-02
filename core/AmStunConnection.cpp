@@ -2,6 +2,7 @@
 #include "log.h"
 #include <stunbuilder.h>
 #include "AmRtpTransport.h"
+#include "AmRtpStream.h"
 
 AmStunConnection::AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int _priority)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
@@ -85,7 +86,8 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     builder.AddBindingResponseHeader(valid);
     builder.AddTransactionId(trnsId);
     if(err_code) {
-        WARN("%s, stun packet is dropped, %s", error_str.c_str(), username.c_str());
+        string error(", stun packet is dropped, ");
+        transport->getRtpStream()->onErrorRtpTransport(error_str + error + username, transport);
         builder.AddErrorCode(err_code, error_str.c_str());
     } else {
         CSocketAddress addr(r_addr);
@@ -97,7 +99,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     CRefCountedBuffer buffer;
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
-        transport->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize());
+        transport->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
     } else {
         auth_state = ERROR;
     }
@@ -133,7 +135,8 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         auth_state = ALLOW;
         transport->allowStunConnection(addr);
     } else if(auth_state == ALLOW){
-        WARN("valid stun message is false ERR = %s", error_str.c_str());
+        string error("valid stun message is false ERR = ");
+        transport->getRtpStream()->onErrorRtpTransport(error + error_str, transport);
     }
 }
 
@@ -168,7 +171,7 @@ void AmStunConnection::send_request()
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
          auth_state = CHECK_OTHER;
-         transport->send(&r_addr, (unsigned char*)buffer->GetData(), buffer->GetSize());
+         transport->send(&r_addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
     }
 }
 

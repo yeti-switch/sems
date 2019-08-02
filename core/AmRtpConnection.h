@@ -8,6 +8,7 @@
 using std::string;
 
 class AmRtpTransport;
+class AmRtpPacket;
 
 class AmStreamConnection
 {
@@ -18,6 +19,7 @@ public:
         RTCP_CONN,
         STUN_CONN,
         DTLS_CONN,
+        RAW_CONN,
 
         UNKNOWN_CONN
     };
@@ -26,13 +28,31 @@ public:
 
     bool isUseConnection(ConnectionType type);
     bool isAddrConnection(struct sockaddr_storage* recv_addr);
+    ConnectionType getConnType();
+    virtual int send(AmRtpPacket* packet);
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) = 0;
+    virtual void setRAddr(const string& addr, unsigned short port) { resolveRemoteAddress(addr, port); }
+    virtual bool getPassiveMode() { return false; }
+    virtual void setPassiveMode(bool p) {}
+    string getRHost() { return r_host; }
+    int getRPort() { return r_port; }
+protected:
+    void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:
     AmRtpTransport* transport;
     string r_host;
     int r_port;
     struct sockaddr_storage r_addr;
     ConnectionType conn_type;
+    bool mute;
+};
+
+class AmRawConnection : public AmStreamConnection
+{
+public:
+    AmRawConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RAW_CONN) {}
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override {}
 };
 
 class AmRtpConnection : public AmStreamConnection
@@ -44,17 +64,30 @@ public:
     void setSymmetricRtpEndless(bool endless);
     void handleSymmetricRtp(struct sockaddr_storage* recv_addr);
 
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
+    void setPassiveMode(bool p) override;
+    virtual bool getPassiveMode() override { return passive; }
+
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
 protected:
     /** symmetric RTP | RTCP */
     bool passive;
     struct timeval passive_set_time;
     unsigned int   passive_packets;
+
     /** endless symmetric rtp switching */
     bool            symmetric_rtp_endless;
 
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
+};
+
+class AmRtcpConnection : public AmStreamConnection
+{
+public:
+    AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    virtual ~AmRtcpConnection();
+
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
 };
 
 #endif/*AM_STREAM_CONNECTION_H*/

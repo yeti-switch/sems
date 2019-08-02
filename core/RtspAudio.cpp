@@ -13,11 +13,8 @@ using namespace Rtsp;
 
 static const int RTP_TIMEOUT_SEC =  1;
 
-
 RtspAudio::RtspAudio(AmSession* _s, const string &uri)
-  : AmRtpAudio(_s,
-               RtspClient::instance()->getRtpInterface(),
-               RtspClient::instance()->getRtpProtoId()),
+  : AmRtpAudio(_s, RtspClient::instance()->getRtpInterface()),
     agent(RtspClient::instance()),
     md(0),
     streamid(-1)
@@ -110,6 +107,14 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     }
 }
 
+void RtspAudio::initTransport()
+{
+    AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTP_TRANSPORT),
+                   *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTCP_TRANSPORT);
+    calcRtpPorts(rtp, rtcp);
+    transports.push_back(rtp);
+    transports.push_back(rtcp);
+}
 
 bool RtspAudio::initSdpAnswer()
 {

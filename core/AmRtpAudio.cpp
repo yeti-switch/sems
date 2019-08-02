@@ -103,8 +103,8 @@ void AmAudioRtpFormat::initCodec()
 }
 
 
-AmRtpAudio::AmRtpAudio(AmSession* _s, int _if, int _addr_if)
-  : AmRtpStream(_s,_if, _addr_if),
+AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
+  : AmRtpStream(_s,_if),
     AmAudio(nullptr),
     m_playout_type(SIMPLE_PLAYOUT),
     playout_buffer(nullptr),
@@ -218,10 +218,8 @@ int AmRtpAudio::receive(unsigned long long system_ts)
         int decoded_size = decode(static_cast<unsigned int>(size));
         if(decoded_size <= 0) {
             if(!decode_errors) { //print just first decode error for current stream
-                DBG("AmAudio:decode(%d) returned %i. "
-                    "remote_addr: %s:%i, local_ssrc: 0x%x, local_tag: %s\n",
+                DBG("AmAudio:decode(%d) returned %i. local_ssrc: 0x%x, local_tag: %s\n",
                     size,decoded_size,
-                    get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                     l_ssrc,session ? session->getLocalTag().c_str() : "no session");
             }
             decode_errors++;
@@ -444,10 +442,8 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
         if(pmt_it == pl_map.end()) {
             if(!not_supported_rx_payload_local_reported) {
                 CLASS_DBG("received payload %i is not described in local SDP. ignore it. "
-                    "remote_addr: %s:%i, "
                     "local_ssrc: 0x%x, local_tag: %s",
                     payload,
-                    get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                     l_ssrc,session ? session->getLocalTag().c_str() : "no session");
                 not_supported_rx_payload_local_reported = true;
             }
@@ -458,10 +454,8 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
         if(pmt_it->second.remote_pt < 0) {
             if(!not_supported_rx_payload_remote_reported) {
                 CLASS_DBG("received payload %i is not described in remote SDP. ignore it. "
-                    "remote_addr: %s:%i, "
                     "local_ssrc: 0x%x, local_tag: %s",
                     payload,
-                    get_addr_str(&r_saddr).c_str(),am_get_port(&r_saddr),
                     l_ssrc,session ? session->getLocalTag().c_str() : "no session");
                 not_supported_rx_payload_remote_reported = true;
             }

@@ -80,6 +80,16 @@ void AmRtpPacket::getAddr(struct sockaddr_storage* a)
   memcpy(a,&saddr,sizeof(sockaddr_storage));
 }
 
+void AmRtpPacket::setLocalAddr(struct sockaddr_storage* a)
+{
+  memcpy(&laddr,a,sizeof(sockaddr_storage));
+}
+
+void AmRtpPacket::getLocalAddr(struct sockaddr_storage* a)
+{
+  memcpy(&laddr,a,sizeof(sockaddr_storage));
+}
+
 bool AmRtpPacket::isRtcp()
 {
     rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;

@@ -36,17 +36,19 @@
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
 #include "sip/ssl_settings.h"
-#include "AmRtpSession.h"
+#include "AmRtpTransport.h"
 
 #include <netinet/in.h>
 
 #include <string>
+#include <vector>
 #include <map>
 #include <queue>
 #include <memory>
 #include <atomic>
 
 using std::string;
+using std::vector;
 using std::auto_ptr;
 using std::pair;
 
@@ -63,12 +65,9 @@ using std::pair;
  * Forward declarations
  */
 class  AmAudio;
-class  AmSession;
 class msg_logger;
 struct SdpPayload;
 struct amci_payload_t;
-class  AmSrtpConnection;
-class AmStunClient;
 
 /**
  * This provides the memory for the receive buffer.
@@ -167,8 +166,7 @@ struct Payload {
  * Rtp stream high level interface.
  */
 class AmRtpStream
-  : public AmObject,
-    public AmRtpSession
+  : public AmObject
 {
   protected:
 
@@ -214,13 +212,7 @@ class AmRtpStream
     typedef std::queue<AmRtpPacket*>                      RtpEventQueue;
     typedef std::map<unsigned char, PayloadMapping>       PayloadMappingTable;
 
-    msghdr recv_msg;
-    iovec recv_iov[1];
-    unsigned int   b_size;
-    unsigned char  buffer[RTP_PACKET_BUF_SIZE];
     unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
-    struct timeval recv_time;
-    struct sockaddr_storage saddr;
 
     // mapping from local payload type to PayloadMapping
     PayloadMappingTable pl_map;
@@ -238,50 +230,11 @@ class AmRtpStream
     */
     int         last_payload;
 
-    /** Remote host information */
-    string             r_host;
-    string             r_rtcp_host;
-    unsigned short     r_port;
-    unsigned short     r_rtcp_port;
-
     /**
     * Local interface used for this stream
     * (index into @AmLcConfig::Ifs)
     */
     int l_if;
-
-    /**
-    * Local addr index from local interface
-    * (index into @AmLcConfig::Ifs.proto_info)
-    */
-    int lproto_id;
-
-    /**
-    * Local and remote host addresses
-    */
-    struct sockaddr_storage r_saddr;
-    struct sockaddr_storage l_saddr;
-    struct sockaddr_storage l_rtcp_saddr;
-    struct sockaddr_storage r_rtcp_saddr;
-
-    /** Local port */
-    unsigned short     l_port;
-
-    /** Local socket */
-    int                l_sd;
-
-    /** Context index in receiver for local socket */
-    int                l_sd_ctx;
-
-    /** Local RTCP port */
-    unsigned int l_rtcp_port;
-
-    /** Local RTCP socket */
-    int          l_rtcp_sd;
-
-    /** Context index in receiver for local RTCP socket */
-    int          l_rtcp_sd_ctx;
-
 
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
@@ -291,31 +244,16 @@ class AmRtpStream
     unsigned int   r_ssrc;
     bool           r_ssrc_i;
 
-    /** symmetric RTP & RTCP */
-    bool           passive;
-    bool           passive_rtcp;
-    struct timeval passive_set_time;
-    unsigned int   passive_packets;
-
-    /**type of rtp init state**/
-    enum RtpMode
-    {
-        RTP_DEFAULT,
-        ICE_RTP
-    } rtp_mode;
-
     TransProt transport;
     bool is_ice_stream;
     string ice_pwd;
     string ice_ufrag;
 
-    /**  srtp connection mode */
-    auto_ptr<AmSrtpConnection> srtp_connection;
-    auto_ptr<AmSrtpConnection> srtcp_connection;
-    auto_ptr<AmStunClient> rtp_stun_client;
-    auto_ptr<AmStunClient> rtcp_stun_client;
-    dtls_server_settings server_settings;
+    vector<AmRtpTransport*> transports;
+    AmRtpTransport* cur_rtp_trans;
+    AmRtpTransport* cur_rtcp_trans;
     dtls_client_settings client_settings;
+    dtls_server_settings server_settings;
     vector<CryptoProfile> srtp_profiles;
     bool srtp_enable;
     bool dtls_enable;
@@ -384,16 +322,12 @@ class AmRtpStream
     /** Session owning this stream */
     AmSession*         session;
 
-    msg_logger *logger;
-    msg_sensor *sensor;
-
     /** Payload provider */
     AmPayloadProvider* payload_provider;
 
     /** insert packet in DTMF queue if correct payload */
     void recvDtmfPacket(AmRtpPacket* p);
 
-    friend class AmRtpConnection;
     /** Insert an RTP packet to the buffer queue */
     void bufferPacket(AmRtpPacket* p);
     /* Get next packet from the buffer queue */
@@ -402,10 +336,6 @@ class AmRtpStream
     AmRtpPacket *reuseBufferedPacket();
     /** Clear RTP timeout at time recv_time */
     void clearRTPTimeout(struct timeval* recv_time);
-    void onParsingErrorRtpPacket(const sockaddr_storage* raddr);
-
-    /** handle symmetric RTP/RTCP - if in passive mode, update raddr from rp */
-    void handleSymmetricRtp(struct sockaddr_storage* recv_addr, bool rtcp);
 
     void relay(AmRtpPacket* p, bool process_dtmf_queue);
 
@@ -431,20 +361,12 @@ class AmRtpStream
     */
     int getDefaultPT();
 
-    void payloads_id2str(const std::vector<int> i, std::vector<string> &s);
+    void payloads_id2str(const vector<int> i, vector<string> &s);
 
+    void calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp);
+
+    virtual void initTransport();
   private:
-
-    void log_sent_rtp_packet(AmRtpPacket &p);
-    void log_rcvd_rtp_packet(AmRtpPacket &p);
-    void log_sent_rtcp_packet(const char *buffer, int len, struct sockaddr_storage &send_addr);
-    void log_rcvd_stun_packet(AmStunClient* client, const char *buffer, int len);
-    void log_sent_stun_packet(AmStunClient* client, const char *buffer, int len, struct sockaddr_storage &send_addr);
-    void log_rcvd_dtls_packet(AmSrtpConnection* client, const char *buffer, int len);
-    void log_sent_dtls_packet(AmSrtpConnection* client, const char *buffer, int len);
-
-    void recvRtcpPacket(AmRtpPacket* p);
-
     void update_sender_stats(const AmRtpPacket &p);
     void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
 
@@ -453,16 +375,6 @@ class AmRtpStream
     void fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now);
 
     void rtcp_send_report(unsigned int user_ts);
-    
-    bool isStunMessage(unsigned char* buf, int size);
-
-    friend class AmSrtpConnection;
-    friend class AmStunClient;
-    int recv(int fd);
-    int send(sockaddr_storage* raddr, unsigned char* buf, int size, bool rtcp);
-    int send(unsigned char* buf, int size, bool rtcp);
-    int sendmsg(unsigned char* buf, int size);
-    
   public:
 
     /**
@@ -487,17 +399,18 @@ class AmRtpStream
     bool force_receive_dtmf;
 
     /** Allocates resources for future use of RTP. */
-    AmRtpStream(AmSession* _s, int _if, int _addr_if);
+    AmRtpStream(AmSession* _s, int _if);
 
     /** Stops the stream and frees all resources. */
     virtual ~AmRtpStream();
 
+    void onErrorRtpTransport(const string& error, AmRtpTransport* transport);
+    void onRtpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
+    void onRtcpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
 
     int send( unsigned int ts,
         unsigned char* buffer,
         unsigned int   size );
-
-    int send_raw( char* packet, unsigned int length );
 
     int compile_and_send( const int payload, bool marker,
                 unsigned int ts, unsigned char* buffer,
@@ -505,8 +418,6 @@ class AmRtpStream
 
     int receive( unsigned char* buffer, unsigned int size,
            unsigned int& ts, int& payload, bool &relayed);
-
-    void recvPacket(int fd);
 
     /** create and free an RTP packet*/
     AmRtpPacket* createRtpPacket();
@@ -516,12 +427,6 @@ class AmRtpStream
 
     /** ping the remote side, to open NATs and enable symmetric RTP */
     int ping();
-
-    /** returns the socket descriptor for local socket (initialized or not) */
-    int hasLocalSocket();
-
-    /** initializes and gets the socket descriptor for local socket */
-    int getLocalSocket();
 
     /**
     * This function must be called before setLocalPort, because
@@ -534,25 +439,14 @@ class AmRtpStream
     * Initializes with a new random local port if 'p' is 0,
     * else binds the given port, and sets own attributes properly.
     */
-    void setLocalPort(unsigned short p = 0);
-
-    /**
-    * Gets RTP port number. If no RTP port in assigned, assigns a new one.
-    * @return local RTP port.
-    */
     int getLocalPort();
-
-    /**
-    * Gets RTCP port number. If no RTP/RTCP port in assigned, assigns a new one.
-    * @return local RTCP port.
-    */
     int getLocalRtcpPort();
 
     /**
     * Gets remote RTP port.
     * @return remote RTP port.
     */
-    int getRPort();
+    int getRPort(bool rtcp);
 
     /**
     * Gets remote host IP.
@@ -563,12 +457,11 @@ class AmRtpStream
     /**
     * Set remote IP & port.
     */
-    void setRAddr(const string& addr, const string& rtcp_addr,
-                  unsigned short port = 0, unsigned short rtcp_port = 0);
+    void setRAddr(const string& addr, unsigned short port);
 
     /** Symmetric RTP & RTCP: passive mode ? */
     void setPassiveMode(bool p);
-    bool getPassiveMode() { return passive || passive_rtcp; }
+    bool getPassiveMode() { return cur_rtp_trans ? cur_rtp_trans->getPassiveMode() : false; }
 
     /** Set using transport */
     void setTransport(TransProt trans);
@@ -577,6 +470,7 @@ class AmRtpStream
     void useIce();
 
     unsigned int get_ssrc() { return l_ssrc; }
+    unsigned int get_rsrc() { return r_ssrc; }
 
     int getLocalTelephoneEventPT();
     int getLocalTelephoneEventRate();
@@ -661,9 +555,6 @@ class AmRtpStream
     */
     virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
-    void initSrtpConnection(bool dtls_server, const SdpFingerPrint& fp);
-    void createSrtpConnection();
-
     /** set the RTP stream on hold */
     void setOnHold(bool on_hold);
 
@@ -693,11 +584,11 @@ class AmRtpStream
     /** disable RTP relaying through relay stream */
     void disableRtpRelay();
 
-    /** enable raw UDP relaying through relay stream */
-    void enableRawRelay();
+    /** enable or diable raw UDP relaying through relay stream */
+    void setRawRelay(bool enable);
 
-    /** disable raw UDP relaying through relay stream */
-    void disableRawRelay();
+    /** is enable raw UDP relaying through relay stream */
+    bool isRawRelay();
 
     /** enable or disable transparent RTP seqno for relay */
     void setRtpRelayTransparentSeqno(bool transparent);

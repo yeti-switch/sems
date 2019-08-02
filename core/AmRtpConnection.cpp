@@ -6,25 +6,7 @@
 AmStreamConnection::AmStreamConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type)
     : transport(_transport), r_host(remote_addr), r_port(remote_port), conn_type(type)
 {
-    /* inet_aton only supports dot-notation IP address strings... but an RFC
-     * 4566 unicast-address, as found in c=, can be an FQDN (or other!).
-     */
-    struct sockaddr_storage ss;
-    AddressType addr_type = AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]->type_ip;
-    dns_handle dh;
-    dns_priority priority = IPv4_only;
-    if(addr_type == AT_V6) {
-        priority = IPv6_only;
-    }
-    if (!remote_addr.empty() && resolver::instance()->resolve_name(remote_addr.c_str(),&dh,&ss,priority) < 0) {
-        CLASS_WARN("Address not valid (host: %s).\n", remote_addr.c_str());
-        throw string("invalid address") + remote_addr;
-    }
-
-    if(remote_port) {
-        memcpy(&r_addr,&ss,sizeof(struct sockaddr_storage));
-        am_set_port(&r_addr,r_port);
-    }
+    resolveRemoteAddress(remote_addr, remote_port);
 }
 
 AmStreamConnection::~AmStreamConnection()
@@ -43,6 +25,44 @@ bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
     else if(recv_addr->ss_family == AF_INET6)
         return memcmp(&r_addr, recv_addr, sizeof(sockaddr_in6)) == 0;
     return false;
+}
+
+AmStreamConnection::ConnectionType AmStreamConnection::getConnType()
+{
+    return conn_type;
+}
+
+int AmStreamConnection::send(AmRtpPacket* packet)
+{
+//    return transport->send(&r_addr, packet->getBuffer(), packet->getBufferSize(), getConnType());
+}
+
+void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int remote_port)
+{
+    /* inet_aton only supports dot-notation IP address strings... but an RFC
+     * 4566 unicast-address, as found in c=, can be an FQDN (or other!).
+     */
+    struct sockaddr_storage ss;
+    AddressType addr_type = AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]->type_ip;
+    dns_handle dh;
+    dns_priority priority = IPv4_only;
+    if(addr_type == AT_V6) {
+        priority = IPv6_only;
+    }
+    if (!remote_addr.empty() && resolver::instance()->resolve_name(remote_addr.c_str(),&dh,&ss,priority) < 0) {
+        WARN("Address not valid (host: %s).\n", remote_addr.c_str());
+        throw string("invalid address") + remote_addr;
+    }
+
+    if(remote_port) {
+        memcpy(&r_addr,&ss,sizeof(struct sockaddr_storage));
+        am_set_port(&r_addr,r_port);
+    }
+
+    mute = ((r_addr.ss_family == AF_INET) &&
+            (SAv4(&r_addr)->sin_addr.s_addr == INADDR_ANY)) ||
+           ((r_addr.ss_family == AF_INET6) &&
+            IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
 }
 
 AmRtpConnection::AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
@@ -65,6 +85,20 @@ void AmRtpConnection::setSymmetricRtpEndless(bool endless)
      symmetric_rtp_endless = endless;
 }
 
+void AmRtpConnection::setPassiveMode(bool p)
+{
+    if(p) {
+        memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
+        passive_packets = 0;
+    }
+    passive = p;
+    if (p) {
+        CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.\n");
+    } else {
+        CLASS_DBG("Passive mode not activated.\n");
+    }
+}
+
 void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
 {
     if(passive)
@@ -83,9 +117,9 @@ void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
         // symmetric RTP
         string addr_str = get_addr_str(recv_addr);
         unsigned short port = am_get_port(recv_addr);
-        const char* prot = (conn_type == RTP_CONN) ? "RTCP" : "RTP";
+        const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
         if (isAddrConnection(recv_addr)) {
-            memcpy(&r_addr, recv_addr, r_addr.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
+            setRAddr(addr_str, port);
             if(!symmetric_rtp_endless) {
                 CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n", prot, addr_str.c_str(),port);
             }
@@ -106,37 +140,44 @@ void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
 
 void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
+    handleSymmetricRtp(recv_addr);
+
     struct timeval now;
     struct timeval diff;
     gettimeofday(&now,NULL);
     timersub(&now,&last_recv_time,&diff);
 
+    sockaddr_storage laddr;
+    transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
-
     p->recv_time = recv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
+    p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
-
-    int parse_res = RTP_PACKET_PARSE_OK;
-    if(!transport->isRawRelay())
-        parse_res = p->rtp_parse();
-
-    struct sockaddr_storage saddr;
-    transport->getLocalAddr(&saddr);
-    if (parse_res == RTP_PACKET_PARSE_ERROR) {
-        transport->getRtpStream()->onParsingErrorRtpPacket(recv_addr);
-        transport->getRtpStream()->clearRTPTimeout(&recv_time);
-        transport->getRtpStream()->freeRtpPacket(p);
-    } else if(parse_res==RTP_PACKET_PARSE_OK) {
-        handleSymmetricRtp(recv_addr);
-        transport->getRtpStream()->bufferPacket(p);
-    } else {
-        CLASS_ERROR("error parsing: rtp packet is RTCP"
-            "(src_addr: %s:%i, remote_addr: %s:%i)\n",
-            get_addr_str(&saddr).c_str(),am_get_port(&saddr),
-            get_addr_str(&r_addr).c_str(),am_get_port(&r_addr));
-        transport->getRtpStream()->freeRtpPacket(p);
-        return;
-    }
+    transport->getRtpStream()->onRtpPacket(p, transport);
 }
+
+AmRtcpConnection::AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
+{
+}
+
+AmRtcpConnection::~AmRtcpConnection()
+{
+}
+
+void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+{
+    sockaddr_storage laddr;
+    transport->getLocalAddr(&laddr);
+    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    p->recv_time = recv_time;
+    p->relayed = false;
+    p->setAddr(recv_addr);
+    p->setLocalAddr(&laddr);
+    p->setBuffer(data, size);
+    transport->getRtpStream()->onRtcpPacket(p, transport);
+    transport->getRtpStream()->freeRtpPacket(p);
+}
+

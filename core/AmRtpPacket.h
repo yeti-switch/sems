@@ -71,6 +71,7 @@ class AmRtpPacket
     bool           relayed;
 
     struct sockaddr_storage saddr;
+    struct sockaddr_storage laddr;
     struct timeval recv_time;
 
     AmRtpPacket();
@@ -78,6 +79,8 @@ class AmRtpPacket
 
     void setAddr(struct sockaddr_storage* a);
     void getAddr(struct sockaddr_storage* a);
+    void setLocalAddr(struct sockaddr_storage* a);
+    void getLocalAddr(struct sockaddr_storage* a);
 
     // returns -1 if error, else 0
     int compile(unsigned char* data_buf, unsigned int size);

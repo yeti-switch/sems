@@ -115,6 +115,8 @@ public:
     AmDtlsConnection(AmRtpTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
 
+    static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
+
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
 
     void tls_emit_data(const uint8_t data[], size_t size) override;
