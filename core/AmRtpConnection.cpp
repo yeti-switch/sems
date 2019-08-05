@@ -21,7 +21,7 @@ bool AmStreamConnection::isUseConnection(ConnectionType type)
 bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
 {
     if(recv_addr->ss_family == AF_INET)
-        return memcmp(&r_addr, recv_addr, sizeof(sockaddr_in)) == 0;
+        return memcmp(&r_addr, recv_addr, sizeof(sockaddr_in) - sizeof(sockaddr_in::sin_zero)) == 0;
     else if(recv_addr->ss_family == AF_INET6)
         return memcmp(&r_addr, recv_addr, sizeof(sockaddr_in6)) == 0;
     return false;

@@ -263,6 +263,7 @@ void AmRtpTransport::addToReceiver()
 
 void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
 {
+    CLASS_DBG("[%p]AmRtpTransport::initIceConnection seq - %d", stream, seq);
     if(seq == NONE) {
         seq = ICE;
         for(auto candidate : remote_media.ice_candidate) {
@@ -281,21 +282,22 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
                         AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
                         conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
                         addConnection(conn);
-                        addConnection(new AmRtpConnection(this, address, port));
-                        addConnection(new AmRtcpConnection(this, address, port));
                     } catch(string& error) {
                         CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
                     }
                 }
             }
         }
+
+        addToReceiver();
     }
 }
 
 void AmRtpTransport::initRtpConnection(const string& remote_address, int remote_port)
 {
-    CLASS_DBG("[%p]AmRtpTransport::initRtpConnection seq - %d, connections size - %zu", stream, seq, connections.size());
-    if(seq == NONE) {
+    CLASS_DBG("[%p]AmRtpTransport::initRtpConnection seq - %d", stream, seq);
+    if(seq == NONE ||
+       seq == ICE) {
         seq = RTP;
         AmStreamConnection* conn = 0;
         if(type != RTCP_TRANSPORT) {
@@ -316,7 +318,8 @@ void AmRtpTransport::initRtpConnection(const string& remote_address, int remote_
 void AmRtpTransport::initRtcpConnection(const string& remote_address, int remote_port)
 {
     CLASS_DBG("[%p]AmRtpTransport::initRtcpConnection seq - %d", stream, seq);
-    if(seq == NONE) {
+    if(seq == NONE ||
+       seq == ICE) {
         try {
             seq = RTP;
             AmStreamConnection* conn = new AmRtcpConnection(this, remote_address, remote_port);
@@ -330,7 +333,9 @@ void AmRtpTransport::initRtcpConnection(const string& remote_address, int remote
 
 void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
-    if(seq == NONE) {
+    CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", stream, seq);
+    if(seq == NONE ||
+       seq == ICE) {
         seq = RTP;
         CryptoProfile cprofile = CP_NONE;
         if(local_media.crypto.size() == 1) {
@@ -377,10 +382,10 @@ void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote
                 AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
                 conn->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
                 addConnection(conn);
+                cur_rtp_stream = conn;
                 if(conn->isMute()) {
                     stream->mute = true;
                 }
-                cur_rtp_stream = conn;
             } catch(string& error) {
                 CLASS_ERROR("Can't add srtp connection. error - %s", error.c_str());
             }
@@ -398,7 +403,9 @@ void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote
 
 void AmRtpTransport::initDtlsConnection(const std::__cxx11::string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
-    if(seq == NONE) {
+    CLASS_DBG("[%p]AmRtpTransport::initDtlsConnection seq - %d", stream, seq);
+    if(seq == NONE ||
+       seq == ICE) {
         seq = DTLS;
         try {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
@@ -431,10 +438,36 @@ void AmRtpTransport::removeConnection(AmStreamConnection* conn)
 
 void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr)
 {
+    stream->allowStunConnection(remote_addr, this);
 }
 
-void AmRtpTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
+void AmRtpTransport::dtlsSessionActivated(sockaddr_storage* remote_addr, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
+    CLASS_DBG("init rtp and rtcp connection by dtls credentials");
+    seq = RTP;
+    if(type == RTP_TRANSPORT) {
+        try {
+            AmSrtpConnection* conn = new AmSrtpConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr), AmStreamConnection::RTP_CONN);
+            conn->use_key((srtp_profile_t)srtp_profile, const_cast<unsigned char*>(local_key.data()), local_key.size(),
+                                                        const_cast<unsigned char*>(remote_key.data()), remote_key.size());
+            addConnection(conn);
+            cur_rtp_stream = conn;
+            if(conn->isMute()) {
+                stream->mute = true;
+            }
+        } catch(string& error) {
+            CLASS_ERROR("Can't add srtp connection. error - %s", error.c_str());
+        }
+    }
+    try {
+        AmSrtpConnection* conn = new AmSrtpConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr), AmStreamConnection::RTCP_CONN);
+        conn->use_key((srtp_profile_t)srtp_profile, const_cast<unsigned char*>(local_key.data()), local_key.size(),
+                                                    const_cast<unsigned char*>(remote_key.data()), remote_key.size());
+        addConnection(conn);
+        cur_rtcp_stream = conn;
+    } catch(string& error) {
+        CLASS_ERROR("Can't add srtcp connection. error - %s", error.c_str());
+    }
 }
 
 void AmRtpTransport::stopReceiving()

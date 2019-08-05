@@ -93,7 +93,7 @@ public:
     int sendmsg(unsigned char* buf, int size);
 
     void allowStunConnection(sockaddr_storage* remote_addr);
-    void dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void dtlsSessionActivated(sockaddr_storage* remote_addr, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
 
     void stopReceiving();
     void resumeReceiving();

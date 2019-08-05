@@ -309,7 +309,7 @@ void AmDtlsConnection::tls_session_activated()
         remote_key.insert(remote_key.end(), key.begin() + key_len*2 + salt_size, key.end());
     }
 
-    transport->dtlsSessionActivated(srtp_profile, local_key, remote_key);
+    transport->dtlsSessionActivated(&r_addr, srtp_profile, local_key, remote_key);
 }
 
 bool AmDtlsConnection::tls_session_established(const Botan::TLS::Session& session)

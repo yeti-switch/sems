@@ -407,6 +407,7 @@ class AmRtpStream
     void onErrorRtpTransport(const string& error, AmRtpTransport* transport);
     void onRtpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
     void onRtcpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
+    void allowStunConnection(sockaddr_storage* remote_addr, AmRtpTransport* transport);
 
     int send( unsigned int ts,
         unsigned char* buffer,

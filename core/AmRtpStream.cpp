@@ -388,16 +388,16 @@ void AmRtpStream::initTransport()
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
     }
-    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
-    if(proto_id < 0) {
-        CLASS_WARN("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
-    } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
-        transports.push_back(rtp);
-        transports.push_back(rtcp);
-        calcRtpPorts(rtp, rtcp);
-    }
+//    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
+//    if(proto_id < 0) {
+//        CLASS_WARN("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
+//    } else {
+//        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
+//                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+//        transports.push_back(rtp);
+//        transports.push_back(rtcp);
+//        calcRtpPorts(rtp, rtcp);
+//    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -853,6 +853,42 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmRtpTransport* transport)
 void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmRtpTransport*)
 {
     p->rtcp_parse_update_stats(rtp_stats);
+}
+
+void AmRtpStream::allowStunConnection(sockaddr_storage* remote_addr, AmRtpTransport* transport)
+{
+    for(auto tr : transports) {
+        if(tr == transport) {
+            if(transport->getTransportType() == RTP_TRANSPORT) {
+                cur_rtp_trans = transport;
+                if(!cur_rtcp_trans && multiplexing) {
+                    cur_rtcp_trans = transport;
+                }
+            } else if(transport->getTransportType() == RTCP_TRANSPORT) {
+                cur_rtcp_trans = transport;
+            }
+        }
+    }
+
+    const AmSdp &local = session->dlg->getLocalSdp(),
+                &remote = session->dlg->getRemoteSdp();
+
+    const SdpMedia& local_media = local.media[sdp_media_index];
+    const SdpMedia& remote_media = remote.media[sdp_media_index];
+
+    try {
+        if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
+            transport->initSrtpConnection(am_inet_ntop(remote_addr), am_get_port(remote_addr), local_media, remote_media);
+        } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
+            transport->initDtlsConnection(am_inet_ntop(remote_addr), am_get_port(remote_addr), local_media, remote_media);
+        } else {
+            transport->initRtpConnection(am_inet_ntop(remote_addr), am_get_port(remote_addr));
+            if(transport == cur_rtcp_trans)
+                transport->initRtcpConnection(am_inet_ntop(remote_addr), am_get_port(remote_addr));
+        }
+    } catch(string& error) {
+        CLASS_ERROR("Can't initialize connections. error - %s", error.c_str());
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
