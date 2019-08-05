@@ -34,7 +34,7 @@ AmStreamConnection::ConnectionType AmStreamConnection::getConnType()
 
 int AmStreamConnection::send(AmRtpPacket* packet)
 {
-//    return transport->send(&r_addr, packet->getBuffer(), packet->getBufferSize(), getConnType());
+    return transport->send(&r_addr, packet->getBuffer(), packet->getBufferSize(), getConnType());
 }
 
 void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int remote_port)

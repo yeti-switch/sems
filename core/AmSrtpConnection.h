@@ -52,6 +52,7 @@ public:
     static std::string gen_base64(unsigned int key_s_len);
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
+    int send(AmRtpPacket * packet) override;
 };
 
 #endif/*AM_SRTP_CONNECTION_H*/

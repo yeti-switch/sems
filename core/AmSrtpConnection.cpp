@@ -16,7 +16,7 @@ AmSrtpConnection::AmSrtpConnection(AmRtpTransport* _transport, const string& rem
     memset(b_init, 0, sizeof(b_init));
     if(conn_type == RTP_CONN)
         s_stream = new AmRtpConnection(_transport, remote_addr, remote_port);
-    if(conn_type == RTCP_CONN)
+    else if(conn_type == RTCP_CONN)
         s_stream = new AmRtcpConnection(_transport, remote_addr, remote_port);
     else
         throw string("incorrect connection type for srtp connection");
@@ -43,7 +43,7 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, uns
         return;
     }
 
-    CLASS_DBG("create srtp connection");
+    CLASS_DBG("create s%s connection", getConnType() == RTP_CONN ? "rtp" : "rtcp");
     unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
     master_key_len += srtp_profile_get_master_salt_length(profile);
     if(master_key_len != key_s_len || master_key_len != key_r_len) {
@@ -132,9 +132,9 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     if(srtp_r_session){
         srtp_err_status_t ret;
         if(getConnType() == RTP_CONN)
-            ret = srtp_unprotect(srtp_r_session, data, (int*)size);
+            ret = srtp_unprotect(srtp_r_session, data, (int*)&size);
         else
-            ret = srtp_unprotect_rtcp(srtp_r_session, data, (int*)size);
+            ret = srtp_unprotect_rtcp(srtp_r_session, data, (int*)&size);
 
         if(ret == srtp_err_status_ok)
             s_stream->handleConnection(data, size, recv_addr, recv_time);
@@ -145,20 +145,24 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         }
     }
 }
-/*
-bool AmSrtpConnection::on_data_send(uint8_t* data, unsigned int* size, bool rtcp)
+
+int AmSrtpConnection::send(AmRtpPacket* p)
 {
-    if(srtp_s_session){
-        if(!rtcp) {
-            uint32_t trailer_len = 0;
-            srtp_get_protect_trailer_length(srtp_s_session, false, 0, &trailer_len);
-            if(*size + trailer_len <= RTP_PACKET_BUF_SIZE)
-                return srtp_protect(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
-            else
-                return false;
-        } else {
-            return srtp_protect_rtcp(srtp_s_session, data, (int*)size) == srtp_err_status_ok;
-        }
+    unsigned int size = p->getBufferSize();
+    if(!srtp_s_session){
+        return -1;
     }
-    return false;
-}*/
+
+    uint32_t trailer_len = 0;
+    srtp_get_protect_trailer_length(srtp_s_session, false, 0, &trailer_len);
+    if(size + trailer_len > RTP_PACKET_BUF_SIZE)
+        return -1;
+
+    if((getConnType() == RTP_CONN && srtp_protect(srtp_s_session, p->getBuffer(), (int*)&size) != srtp_err_status_ok) ||
+       (getConnType() == RTCP_CONN && srtp_protect_rtcp(srtp_s_session, p->getBuffer(), (int*)&size) != srtp_err_status_ok))
+        return -1;
+
+    p->setBufferSize(size);
+
+    return s_stream->send(p);
+}

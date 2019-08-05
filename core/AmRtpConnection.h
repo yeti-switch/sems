@@ -2,6 +2,7 @@
 #define AM_RTP_CONNECTION_H
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/socket.h>
 
 #include <string>
@@ -36,6 +37,8 @@ public:
     virtual void setPassiveMode(bool p) {}
     string getRHost() { return r_host; }
     int getRPort() { return r_port; }
+    void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }
+    bool isMute() { return mute; }
 protected:
     void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:

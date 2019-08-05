@@ -36,6 +36,8 @@ public:
     void setLogger(msg_logger *_logger);
     void setSensor(msg_sensor *_sensor);
 
+    bool isMute();
+
     /**
     * Gets RTP local address. If no RTP address in assigned, assigns a new one.
     * @param out local RTP addess.
@@ -55,6 +57,12 @@ public:
     int getLocalPort();
 
     /**
+    * Initializes with a new random local port if 'p' is 0,
+    * else binds the given port, and sets own attributes properly.
+    */
+    void setLocalPort(unsigned short p = 0);
+
+    /**
     * Gets remote host IP.
     * @return remote host IP.
     */
@@ -67,10 +75,10 @@ public:
     int getRPort(bool rtcp);
 
     /**
-    * Initializes with a new random local port if 'p' is 0,
-    * else binds the given port, and sets own attributes properly.
+    * Gets remote addr.
     */
-    void setLocalPort(unsigned short p = 0);
+    void getRAddr(bool rtcp, sockaddr_storage* addr);
+    void getRAddr(sockaddr_storage* addr);
 
     /**
     * Set remote IP & port.
@@ -139,6 +147,7 @@ private:
     AmRtpStream* stream;
     AmStreamConnection* cur_rtp_stream;
     AmStreamConnection* cur_rtcp_stream;
+    AmStreamConnection* cur_raw_stream;
 
     /** transport type */
     int type;
