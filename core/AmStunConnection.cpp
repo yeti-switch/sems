@@ -106,7 +106,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
-        transport->allowStunConnection(addr);
+        transport->allowStunConnection(addr, priority);
     }
 }
 
@@ -133,7 +133,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
-        transport->allowStunConnection(addr);
+        transport->allowStunConnection(addr, priority);
     } else if(auth_state == ALLOW){
         string error("valid stun message is false ERR = ");
         transport->getRtpStream()->onErrorRtpTransport(error + error_str, transport);

@@ -3,6 +3,7 @@
 
 #include "AmRtpSession.h"
 #include "AmRtpConnection.h"
+#include "AmDtlsConnection.h"
 #include "AmArg.h"
 #include "AmSdp.h"
 
@@ -10,6 +11,7 @@
 #include "sip/types.h"
 #include "sip/msg_logger.h"
 #include "sip/msg_sensor.h"
+#include "sip/ssl_settings.h"
 
 class AmRtpStream;
 class AmRtpPacket;
@@ -31,6 +33,9 @@ public:
 
     int getLocalIf() { return l_if; }
     int getLocalProtoId() { return lproto_id; }
+
+    bool isSrtpEnable() { return srtp_enable; }
+    bool isDtlsEnable() { return dtls_enable; }
 
     /** set destination for logging all received/sent packets */
     void setLogger(msg_logger *_logger);
@@ -92,8 +97,10 @@ public:
     int send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
     int sendmsg(unsigned char* buf, int size);
 
-    void allowStunConnection(sockaddr_storage* remote_addr);
-    void dtlsSessionActivated(sockaddr_storage* remote_addr, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void allowStunConnection(sockaddr_storage* remote_addr, int priority);
+    void dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
+    void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
 
     void stopReceiving();
     void resumeReceiving();
@@ -109,22 +116,41 @@ public:
     void setSocketOption();
     void addToReceiver();
 
+    /**
+    * Generate an SDP offer based on the stream capabilities.
+    * @param index index of the SDP media within the SDP.
+    * @param offer the local offer to be filled/completed.
+    */
+    virtual void getSdpOffer(TransProt& transport, SdpMedia& offer);
+    /**
+    * Generate an answer for the given SDP media based on the stream capabilities.
+    * @param index index of the SDP media within the SDP.
+    * @param offer the remote offer.
+    * @param answer the local answer to be filled/completed.
+    */
+    void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
+    void getIceCandidate(SdpMedia& media);
+    
     void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media);
     void initRtpConnection(const string& remote_address, int remote_port);
-    void initRtcpConnection(const string& remote_address, int remote_port);
     void initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
+    void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);
     void initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
 
     AmRtpStream* getRtpStream() { return stream; }
 protected:
+    void addSrtpConnection(const string& remote_address, int remote_port, int srtp_ptrofile, const string& local_key, const string& remote_key);
+    void addRtpConnection(const string& remote_address, int remote_port);
+    
     int recv(int sd);
 
     void recvPacket(int fd) override;
 
-
     void log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type);
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
 
+    int getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& local_key, string& remote_key);
+    
     AmStreamConnection::ConnectionType GetConnectionType(unsigned char* buf, int size);
     bool isStunMessage(unsigned char* buf, unsigned int size);
     bool isRTPMessage(unsigned char* buf, unsigned int size);
@@ -182,6 +208,12 @@ private:
     unsigned char recv_ctl_buf[RTP_PACKET_TIMESTAMP_DATASIZE];
     struct timeval recv_time;
     struct sockaddr_storage saddr;
+    
+    dtls_client_settings client_settings;
+    dtls_server_settings server_settings;
+    vector<CryptoProfile> srtp_profiles;
+    bool srtp_enable;
+    bool dtls_enable;
 
     vector<AmStreamConnection*> connections;
 };

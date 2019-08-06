@@ -39,6 +39,7 @@ public:
     int getRPort() { return r_port; }
     void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }
     bool isMute() { return mute; }
+    AmRtpTransport* getTransport() { return transport; }
 protected:
     void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:
@@ -62,6 +63,7 @@ class AmRtpConnection : public AmStreamConnection
 {
 public:
     AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    AmRtpConnection(AmStreamConnection* parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port);
     virtual ~AmRtpConnection();
 
     void setSymmetricRtpEndless(bool endless);
@@ -72,6 +74,7 @@ public:
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
 protected:
+    AmStreamConnection* parent;
     /** symmetric RTP | RTCP */
     bool passive;
     struct timeval passive_set_time;
@@ -88,9 +91,12 @@ class AmRtcpConnection : public AmStreamConnection
 {
 public:
     AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    AmRtcpConnection(AmStreamConnection* parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port);
     virtual ~AmRtcpConnection();
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
+private:
+    AmStreamConnection* parent;
 };
 
 #endif/*AM_STREAM_CONNECTION_H*/

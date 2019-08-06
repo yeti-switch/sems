@@ -1,8 +1,11 @@
 #include "AmRtpTransport.h"
 #include "AmRtpConnection.h"
 #include "AmSrtpConnection.h"
+#include "AmStunConnection.h"
+#include "AmDtlsConnection.h"
 #include "AmRtpReceiver.h"
 #include "AmRtpPacket.h"
+#include "AmSession.h"
 #include "AmRtpStream.h"
 #include "AmLcConfig.h"
 #include "stuntypes.h"
@@ -11,8 +14,6 @@
 
 #include <rtp/rtp.h>
 #include <sys/ioctl.h>
-#include "AmStunConnection.h"
-#include "AmDtlsConnection.h"
 
 #define RTCP_PAYLOAD_MIN 72
 #define RTCP_PAYLOAD_MAX 76
@@ -30,6 +31,8 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
     , l_sd_ctx(-1)
     , logger(0)
     , sensor(0)
+    , srtp_enable(false)
+    , dtls_enable(false)
     , type(tr_type)
     , seq(NONE)
 {
@@ -64,6 +67,15 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
 
     recv_msg.msg_control    = recv_ctl_buf;
     recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
+
+    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[_if].proto_info[_proto_id]);
+    if(rtpinfo) {
+        server_settings = rtpinfo->server_settings;
+        client_settings = rtpinfo->client_settings;
+        srtp_profiles = rtpinfo->profiles;
+        srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
+        dtls_enable = srtp_enable && rtpinfo->dtls_enable;
+    }
 }
 
 AmRtpTransport::~AmRtpTransport()
@@ -261,11 +273,91 @@ void AmRtpTransport::addToReceiver()
     }
 }
 
+void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
+{
+    if((transport == TP_RTPSAVP || transport == TP_RTPSAVPF) && !srtp_enable) {
+        CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
+                    AmConfig.media_ifs[l_if].name.c_str());
+        offer.transport = TP_RTPAVP;
+    } else if((transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) && !dtls_enable) {
+        CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
+                    AmConfig.media_ifs[l_if].name.c_str());
+        offer.transport = TP_RTPAVP;
+    } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
+        for(auto profile : srtp_profiles) {
+            SdpCrypto crypto;
+            crypto.tag = 1;
+            crypto.profile = profile;
+            std::string key = AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile);
+            if(key.empty()) {
+                continue;
+            }
+            offer.crypto.push_back(crypto);
+            offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
+        }
+    } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
+        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+        offer.fingerprint.hash = fp.hash;
+        offer.fingerprint.value = fp.value;
+        offer.setup = SdpMedia::SetupActPass;
+    }
+}
+
+void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
+{
+    int transport = offer.transport;
+    bool is_ice_stream = offer.is_ice;
+    if((offer.is_simple_srtp() && !srtp_enable) ||
+       (offer.is_dtls_srtp() && !dtls_enable)) {
+        throw AmSession::Exception(488,"transport not supported");
+    } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
+        answer.crypto.push_back(offer.crypto[0]);
+        answer.crypto.back().keys.clear();
+        for(auto profile : srtp_profiles) {
+            if(profile == answer.crypto[0].profile) {
+                answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key((srtp_profile_t)answer.crypto[0].profile), 0, 1));
+            }
+        }
+        if(answer.crypto.back().keys.empty()) {
+            throw AmSession::Exception(488,"no compatible srtp profile");
+        }
+    } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
+        dtls_settings* settings = (offer.setup == SdpMedia::SetupActive) ?
+                                                    (dtls_settings*)(&server_settings) :
+                                                    (dtls_settings*)(&client_settings);
+        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+        answer.fingerprint.hash = fp.hash;
+        answer.fingerprint.value = fp.value;
+        answer.setup = SdpMedia::SetupPassive;
+        if(offer.setup == SdpMedia::SetupPassive)
+            answer.setup = SdpMedia::SetupActive;
+        else if(offer.setup == SdpMedia::SetupHold)
+            throw AmSession::Exception(488,"hold connections");
+        else if(offer.setup == SdpMedia::SetupUndefined)
+            throw AmSession::Exception(488,"setup not defined");
+    }
+}
+
+void AmRtpTransport::getIceCandidate(SdpMedia& media)
+{
+    SdpIceCandidate candidate;
+    candidate.conn.network = NT_IN;
+    candidate.comp_id = type;
+    candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
+    candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(l_port);
+    media.ice_candidate.push_back(candidate);
+}
+
 void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     CLASS_DBG("[%p]AmRtpTransport::initIceConnection seq - %d", stream, seq);
     if(seq == NONE) {
         seq = ICE;
+        string local_key, remote_key;
+        int cprofile = 0;
+        if(local_media.is_simple_srtp() && srtp_enable) {
+            cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+        }
         for(auto candidate : remote_media.ice_candidate) {
             if(candidate.transport == ICTR_UDP) {
                 string addr = candidate.conn.address;
@@ -285,6 +377,23 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
                     } catch(string& error) {
                         CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
                     }
+
+                    if(local_media.is_simple_srtp() && srtp_enable) {
+                         addSrtpConnection(address, port, cprofile, local_key, remote_key);
+                    } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
+                        srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
+                        try {
+                            if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive) {
+                                addConnection(new AmDtlsConnection(this, address, port, fingerprint, true));
+                            } else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive) {
+                                addConnection(new AmDtlsConnection(this, address, port, fingerprint, false));
+                            }
+                        } catch(string& error) {
+                            CLASS_ERROR("Can't add dtls connection. error - %s", error.c_str());
+                        }
+                    } else {
+                         addRtpConnection(address, port);
+                    }
                 }
             }
         }
@@ -296,38 +405,9 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
 void AmRtpTransport::initRtpConnection(const string& remote_address, int remote_port)
 {
     CLASS_DBG("[%p]AmRtpTransport::initRtpConnection seq - %d", stream, seq);
-    if(seq == NONE ||
-       seq == ICE) {
+    if(seq == NONE) {
         seq = RTP;
-        AmStreamConnection* conn = 0;
-        if(type != RTCP_TRANSPORT) {
-            try {
-                conn = new AmRtpConnection(this, remote_address, remote_port);
-                addConnection(conn);
-                cur_rtp_stream = conn;
-                if(conn->isMute()) {
-                    stream->mute = true;
-                }
-            } catch(string& error) {
-                CLASS_ERROR("Can't add rtp connection. error - %s", error.c_str());
-            }
-        }
-    }
-}
-
-void AmRtpTransport::initRtcpConnection(const string& remote_address, int remote_port)
-{
-    CLASS_DBG("[%p]AmRtpTransport::initRtcpConnection seq - %d", stream, seq);
-    if(seq == NONE ||
-       seq == ICE) {
-        try {
-            seq = RTP;
-            AmStreamConnection* conn = new AmRtcpConnection(this, remote_address, remote_port);
-            addConnection(conn);
-            cur_rtcp_stream = conn;
-        } catch(string& error) {
-            CLASS_ERROR("Can't add rtcp connection. error - %s", error.c_str());
-        }
+        addRtpConnection(remote_address, remote_port);
     }
 }
 
@@ -337,78 +417,49 @@ void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote
     if(seq == NONE ||
        seq == ICE) {
         seq = RTP;
-        CryptoProfile cprofile = CP_NONE;
-        if(local_media.crypto.size() == 1) {
-            cprofile = local_media.crypto[0].profile;
-        } else if(remote_media.crypto.size() == 1) {
-            cprofile = remote_media.crypto[0].profile;
-        } else if(local_media.crypto.empty()){
-            CLASS_ERROR("local secure audio stream without encryption details");
+
+        string local_key, remote_key;
+        int cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+        if(cprofile < 0)
             return;
-        } else if(remote_media.crypto.empty()){
-            CLASS_ERROR("remote secure audio stream without encryption details");
-            return;
-        } else {
-            CLASS_WARN("secure audio stream with some encryption details, use local first");
-            cprofile = local_media.crypto[0].profile;
-        }
 
-        unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
-        unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
-        for(auto key : local_media.crypto) {
-            if(cprofile == key.profile) {
-                if(key.keys.empty()) {
-                    CLASS_ERROR("local secure audio stream without master key");
-                    return;
-                }
-                AmSrtpConnection::base64_key(key.keys[0].key, local_key, local_key_size);
-                break;
-            }
-        }
-        for(auto key : remote_media.crypto) {
-            if(cprofile == key.profile) {
-                if(key.keys.empty()) {
-                    CLASS_ERROR("local secure audio stream without master key");
-                    return;
-                }
-
-                AmSrtpConnection::base64_key(key.keys[0].key, remote_key, remote_key_size);
-                break;
-            }
-        }
-
-        if(type == RTP_TRANSPORT) {
-            try {
-                AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
-                conn->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
-                addConnection(conn);
-                cur_rtp_stream = conn;
-                if(conn->isMute()) {
-                    stream->mute = true;
-                }
-            } catch(string& error) {
-                CLASS_ERROR("Can't add srtp connection. error - %s", error.c_str());
-            }
-        }
-        try {
-            AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTCP_CONN);
-            conn->use_key((srtp_profile_t)cprofile, local_key, local_key_size, remote_key, remote_key_size);
-            addConnection(conn);
-            cur_rtcp_stream = conn;
-        } catch(string& error) {
-            CLASS_ERROR("Can't add srtcp connection. error - %s", error.c_str());
-        }
+        addSrtpConnection(remote_address, remote_port, cprofile, local_key, remote_key);
     }
 }
 
-void AmRtpTransport::initDtlsConnection(const std::__cxx11::string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
+void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key)
+{
+    vector<sockaddr_storage> addrs;
+    for(auto conn : connections) {
+        if(seq == ICE){
+            if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
+                sockaddr_storage raddr;
+                conn->getRAddr(&raddr);
+                addrs.push_back(raddr);
+            }
+        } else if(seq == DTLS) {
+            if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
+                sockaddr_storage raddr;
+                conn->getRAddr(&raddr);
+                addrs.push_back(raddr);
+            }
+        }
+    }
+
+    for(auto addr : addrs) {
+        addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_key);
+    }
+
+    seq = RTP;
+}
+
+void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     CLASS_DBG("[%p]AmRtpTransport::initDtlsConnection seq - %d", stream, seq);
-    if(seq == NONE ||
-       seq == ICE) {
+    if(seq == NONE) {
         seq = DTLS;
+        srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
         try {
-            srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
             if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive) {
                 addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, true));
             } else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive) {
@@ -436,38 +487,29 @@ void AmRtpTransport::removeConnection(AmStreamConnection* conn)
     }
 }
 
-void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr)
+void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
 {
-    stream->allowStunConnection(remote_addr, this);
+    //TODO(alexey.v): set current connections by candidate priority
+    stream->allowStunConnection(this, priority);
 }
 
-void AmRtpTransport::dtlsSessionActivated(sockaddr_storage* remote_addr, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
+void AmRtpTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
-    CLASS_DBG("init rtp and rtcp connection by dtls credentials");
-    seq = RTP;
-    if(type == RTP_TRANSPORT) {
-        try {
-            AmSrtpConnection* conn = new AmSrtpConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr), AmStreamConnection::RTP_CONN);
-            conn->use_key((srtp_profile_t)srtp_profile, const_cast<unsigned char*>(local_key.data()), local_key.size(),
-                                                        const_cast<unsigned char*>(remote_key.data()), remote_key.size());
-            addConnection(conn);
-            cur_rtp_stream = conn;
-            if(conn->isMute()) {
-                stream->mute = true;
-            }
-        } catch(string& error) {
-            CLASS_ERROR("Can't add srtp connection. error - %s", error.c_str());
-        }
-    }
-    try {
-        AmSrtpConnection* conn = new AmSrtpConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr), AmStreamConnection::RTCP_CONN);
-        conn->use_key((srtp_profile_t)srtp_profile, const_cast<unsigned char*>(local_key.data()), local_key.size(),
-                                                    const_cast<unsigned char*>(remote_key.data()), remote_key.size());
-        addConnection(conn);
+    stream->dtlsSessionActivated(this, srtp_profile, local_key, remote_key);
+}
+
+void AmRtpTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+{
+    if(!cur_rtp_stream)
+        cur_rtp_stream = conn;
+    stream->onRtpPacket(packet, this);
+}
+
+void AmRtpTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+{
+    if(!cur_rtcp_stream)
         cur_rtcp_stream = conn;
-    } catch(string& error) {
-        CLASS_ERROR("Can't add srtcp connection. error - %s", error.c_str());
-    }
+    stream->onRtcpPacket(packet, this);
 }
 
 void AmRtpTransport::stopReceiving()
@@ -540,6 +582,14 @@ int AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType
     
     if(cur_stream) {
         return cur_stream->send(packet);
+    } else {
+        for(auto conn : connections) {
+            sockaddr_storage addr;
+            packet->getAddr(&addr);
+            if(conn->isUseConnection(type)) {
+                return conn->send(packet);
+            }
+        }
     }
     
     return 0;
@@ -705,6 +755,104 @@ void AmRtpTransport::recvPacket(int fd)
     }
 }
 
+int AmRtpTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)
+{
+    CryptoProfile cprofile = CP_NONE;
+    if(local_media.crypto.size() == 1) {
+        cprofile = local_media.crypto[0].profile;
+    } else if(remote_media.crypto.size() == 1) {
+        cprofile = remote_media.crypto[0].profile;
+    } else if(local_media.crypto.empty()){
+        CLASS_ERROR("local secure audio stream without encryption details");
+        return -1;
+    } else if(remote_media.crypto.empty()){
+        CLASS_ERROR("remote secure audio stream without encryption details");
+        return -1;
+    } else {
+        CLASS_WARN("secure audio stream with some encryption details, use local first");
+        cprofile = local_media.crypto[0].profile;
+    }
+
+    unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
+    unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
+    for(auto key : local_media.crypto) {
+        if(cprofile == key.profile) {
+            if(key.keys.empty()) {
+                CLASS_ERROR("local secure audio stream without master key");
+                return -1;
+            }
+            AmSrtpConnection::base64_key(key.keys[0].key, local_key, local_key_size);
+            break;
+        }
+    }
+    for(auto key : remote_media.crypto) {
+        if(cprofile == key.profile) {
+            if(key.keys.empty()) {
+                CLASS_ERROR("local secure audio stream without master key");
+                return -1;
+            }
+
+            AmSrtpConnection::base64_key(key.keys[0].key, remote_key, remote_key_size);
+            break;
+        }
+    }
+    l_key.resize(local_key_size);
+    memcpy((void*)l_key.c_str(), local_key, local_key_size);
+    r_key.resize(remote_key_size);
+    memcpy((void*)r_key.c_str(), remote_key, remote_key_size);
+
+    return cprofile;
+}
+
+void AmRtpTransport::addSrtpConnection(const string& remote_address, int remote_port,
+                                       int srtp_profile, const string& local_key, const string& remote_key)
+{
+    if(type == RTP_TRANSPORT) {
+        try {
+            AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
+            conn->use_key((srtp_profile_t)srtp_profile, (unsigned char*)local_key.c_str(), local_key.size(),
+                                                    (unsigned char*)remote_key.c_str(), remote_key.size());
+            addConnection(conn);
+            if(conn->isMute()) {
+                stream->mute = true;
+            }
+        } catch(string& error) {
+            CLASS_ERROR("Can't add srtp connection. error - %s", error.c_str());
+        }
+    }
+    try {
+        AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTCP_CONN);
+        conn->use_key((srtp_profile_t)srtp_profile, (unsigned char*)local_key.c_str(), local_key.size(),
+                                                (unsigned char*)remote_key.c_str(), remote_key.size());
+        addConnection(conn);
+    } catch(string& error) {
+        CLASS_ERROR("Can't add srtcp connection. error - %s", error.c_str());
+    }
+}
+
+void AmRtpTransport::addRtpConnection(const string& remote_address, int remote_port)
+{
+    AmStreamConnection* conn = 0;
+    if(type == RTP_TRANSPORT) {
+        try {
+            conn = new AmRtpConnection(this, remote_address, remote_port);
+            addConnection(conn);
+            if(conn->isMute()) {
+                stream->mute = true;
+            }
+        } catch(string& error) {
+            CLASS_ERROR("Can't add rtp connection. error - %s", error.c_str());
+        }
+    }
+
+    try {
+        conn = new AmRtcpConnection(this, remote_address, remote_port);
+        addConnection(conn);
+    } catch(string& error) {
+        CLASS_ERROR("Can't add rtcp connection. error - %s", error.c_str());
+    }
+}
+
 AmStreamConnection::ConnectionType AmRtpTransport::GetConnectionType(unsigned char* buf, int size)
 {
     if(isStunMessage(buf, size))
@@ -725,8 +873,8 @@ bool AmRtpTransport::isStunMessage(unsigned char* buf, unsigned int size)
         return false;
     }
 
-    unsigned short type = htons(*(unsigned short*)buf);
-    return IS_STUN_MESSAGE(type);
+    // RFC 5764 5.1.2. Reception
+    return *buf < 2;
 }
 
 bool AmRtpTransport::isDTLSMessage(unsigned char* buf, unsigned int size)
@@ -735,9 +883,8 @@ bool AmRtpTransport::isDTLSMessage(unsigned char* buf, unsigned int size)
         return false;
     }
 
-    Botan::TLS::Record_Type type = (Botan::TLS::Record_Type)*buf;
-    return type == Botan::TLS::CHANGE_CIPHER_SPEC || type == Botan::TLS::ALERT ||
-           type == Botan::TLS::HANDSHAKE || type == Botan::TLS::APPLICATION_DATA;
+    // RFC 5764 5.1.2. Reception
+    return *buf < 64 && *buf > 19;
 }
 
 bool AmRtpTransport::isRTCPMessage(unsigned char* buf, unsigned int size)
@@ -746,8 +893,12 @@ bool AmRtpTransport::isRTCPMessage(unsigned char* buf, unsigned int size)
         return false;
     }
 
+    // RFC 5764 5.1.2. Reception
+    if(*buf > 192 || *buf < 127)
+        return false;
+
     rtp_hdr_t* rtp = (rtp_hdr_t*)buf;
-    if(rtp->version == RTP_VERSION && IS_RTCP_PAYLOAD(rtp->pt)) {
+    if(IS_RTCP_PAYLOAD(rtp->pt)) {
         return true;
     }
     return false;
@@ -759,8 +910,13 @@ bool AmRtpTransport::isRTPMessage(unsigned char* buf, unsigned int size)
         return false;
     }
 
+    // RFC 5764 5.1.2. Reception
+    if(*buf > 192 || *buf < 127)
+        return false;
+
+    // RFC 5764 5.1.2. Reception
     rtp_hdr_t* rtp = (rtp_hdr_t*)buf;
-    if(rtp->version == RTP_VERSION && !IS_RTCP_PAYLOAD(rtp->pt)) {
+    if(!IS_RTCP_PAYLOAD(rtp->pt)) {
         return true;
     }
     return false;

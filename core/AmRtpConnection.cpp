@@ -67,6 +67,17 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
 
 AmRtpConnection::AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
+    , parent(0)
+    , passive(false)
+    , passive_set_time{0}
+    , passive_packets(0)
+    , symmetric_rtp_endless(false)
+{
+}
+
+AmRtpConnection::AmRtpConnection(AmStreamConnection* _parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
+    , parent(_parent)
     , passive(false)
     , passive_set_time{0}
     , passive_packets(0)
@@ -155,11 +166,18 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
-    transport->getRtpStream()->onRtpPacket(p, transport);
+    transport->onRtpPacket(p, parent ? parent : this);
 }
 
 AmRtcpConnection::AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
+    , parent(0)
+{
+}
+
+AmRtcpConnection::AmRtcpConnection(AmStreamConnection* _parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
+    , parent(_parent)
 {
 }
 
@@ -177,7 +195,7 @@ void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
-    transport->getRtpStream()->onRtcpPacket(p, transport);
+    transport->onRtcpPacket(p, parent ? parent : this);
     transport->getRtpStream()->freeRtpPacket(p);
 }
 

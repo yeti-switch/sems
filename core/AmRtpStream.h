@@ -252,11 +252,6 @@ class AmRtpStream
     vector<AmRtpTransport*> transports;
     AmRtpTransport* cur_rtp_trans;
     AmRtpTransport* cur_rtcp_trans;
-    dtls_client_settings client_settings;
-    dtls_server_settings server_settings;
-    vector<CryptoProfile> srtp_profiles;
-    bool srtp_enable;
-    bool dtls_enable;
 
     /** mute && port == 0 */
     bool           hold;
@@ -407,7 +402,9 @@ class AmRtpStream
     void onErrorRtpTransport(const string& error, AmRtpTransport* transport);
     void onRtpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
     void onRtcpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
-    void allowStunConnection(sockaddr_storage* remote_addr, AmRtpTransport* transport);
+    void allowStunConnection(AmRtpTransport* transport, int priority);
+    void dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile,
+                              const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
 
     int send( unsigned int ts,
         unsigned char* buffer,
