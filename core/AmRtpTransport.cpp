@@ -264,15 +264,6 @@ void AmRtpTransport::setSocketOption()
 
 }
 
-void AmRtpTransport::addToReceiver()
-{
-    l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this,l_sd_ctx);
-    if(l_sd_ctx < 0) {
-        CLASS_ERROR("can't add to RTP receiver (%s:%i)\n",
-            get_addr_str((sockaddr_storage*)&l_saddr).c_str(),l_port);
-    }
-}
-
 void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
 {
     if((transport == TP_RTPSAVP || transport == TP_RTPSAVPF) && !srtp_enable) {
@@ -397,8 +388,6 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
                 }
             }
         }
-
-        addToReceiver();
     }
 }
 
@@ -413,6 +402,8 @@ void AmRtpTransport::initRtpConnection(const string& remote_address, int remote_
 
 void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
+    if(!srtp_enable) return;
+    
     CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", stream, seq);
     if(seq == NONE ||
        seq == ICE) {
@@ -429,6 +420,9 @@ void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote
 
 void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key)
 {
+    if(!srtp_enable) return;
+
+    CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", stream, seq);
     vector<sockaddr_storage> addrs;
     for(auto conn : connections) {
         if(seq == ICE){
@@ -455,6 +449,8 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
 
 void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
+    if(!dtls_enable) return;
+    
     CLASS_DBG("[%p]AmRtpTransport::initDtlsConnection seq - %d", stream, seq);
     if(seq == NONE) {
         seq = DTLS;
@@ -514,19 +510,29 @@ void AmRtpTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 
 void AmRtpTransport::stopReceiving()
 {
-    if(hasLocalSocket())
+    if(hasLocalSocket() && seq != NONE) {
+        string trtype;
+        if(getTransportType() == RTP_TRANSPORT) trtype = "RTP";
+        if(getTransportType() == RTCP_TRANSPORT) trtype = "RTCP";
+        CLASS_DBG("[%p]remove %s stream from RTP receiver\n", stream,  trtype.c_str());
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
+        l_sd_ctx = 0;
+    }
 }
 
 void AmRtpTransport::resumeReceiving()
 {
-    if(hasLocalSocket()){
+    if(hasLocalSocket() && seq != NONE){
+        string trtype;
+        if(getTransportType() == RTP_TRANSPORT) trtype = "RTP";
+        if(getTransportType() == RTCP_TRANSPORT) trtype = "RTCP";
+        CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n", stream,  trtype.c_str());
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
         if(l_sd_ctx < 0) {
-            ERROR("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);
+            CLASS_DBG("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);
         }
     } else {
-        ERROR("error on add/resuming stream. socket not created");
+        CLASS_DBG("error on add/resuming stream. socket not created");
     }
 }
 

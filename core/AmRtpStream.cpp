@@ -690,10 +690,7 @@ int AmRtpStream::init(const AmSdp& local,
     cur_rtp_trans->getRAddr(false, &raddr);
     if(local_media.send && !hold &&
        (remote_media.port != 0) &&
-       (((raddr.ss_family == AF_INET) &&
-        (SAv4(&raddr)->sin_addr.s_addr != 0)) ||
-        ((raddr.ss_family == AF_INET6) &&
-        (!IN6_IS_ADDR_UNSPECIFIED(&SAv6(&raddr)->sin6_addr)))))
+       !cur_rtp_trans->isMute())
      {
          mute = false;
      } else {
@@ -1601,25 +1598,15 @@ string AmRtpStream::getPayloadName(int payload_type)
 ///
 void AmRtpStream::stopReceiving()
 {
-    if (cur_rtp_trans) {
-        CLASS_DBG("remove stream(transport - %p) from RTP receiver\n", cur_rtp_trans);
-        cur_rtp_trans->stopReceiving();
-    }
-    if (cur_rtcp_trans) {
-        CLASS_DBG("remove stream(transport - %p) from RTCP receiver\n", cur_rtcp_trans);
-        cur_rtcp_trans->stopReceiving();
+    for(auto& transport : transports) {
+        transport->stopReceiving();
     }
 }
 
 void AmRtpStream::resumeReceiving()
 {
-    if (cur_rtp_trans) {
-        CLASS_DBG("add/resume stream(transport - %p) into RTP receiver\n", cur_rtp_trans);
-        cur_rtp_trans->resumeReceiving();
-    }
-    if (cur_rtcp_trans) {
-        CLASS_DBG("add/resume stream(transport - %p) into RTCP receiver\n", cur_rtcp_trans);
-        cur_rtcp_trans->resumeReceiving();
+    for(auto& transport : transports) {
+        transport->resumeReceiving();
     }
 }
 
