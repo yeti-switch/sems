@@ -120,26 +120,33 @@ void AmRtpTransport::setLocalPort(unsigned short p)
 
 void AmRtpTransport::setRAddr(const string& addr, unsigned short port)
 {
+    connections_mut.lock();
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
             conn->setRAddr(addr, port);
+            connections_mut.unlock();
             return;
         }
     }
 
     connections.push_back(new AmRawConnection(this, addr, port));
     cur_raw_stream = connections.back();
+    connections_mut.unlock();
 }
 
 bool AmRtpTransport::isMute()
 {
+    bool ret = false;
+    connections_mut.lock();
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
-            return conn->isMute();
+            ret = conn->isMute();
+            break;
         }
     }
 
-    return false;
+    connections_mut.unlock();
+    return ret;
 }
 
 string AmRtpTransport::getLocalIP()
@@ -159,48 +166,27 @@ int AmRtpTransport::getLocalPort()
 
 string AmRtpTransport::getRHost(bool rtcp)
 {
-    for(auto conn : connections) {
-        if(rtcp && conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            return conn->getRHost();
-        } else if(!rtcp && conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            return conn->getRHost();
-        }
-    }
-
+    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRHost();
+    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRHost();
     return "";
 }
 
 int AmRtpTransport::getRPort(bool rtcp)
 {
-    for(auto conn : connections) {
-        if(rtcp && conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            return conn->getRPort();
-        } else if(!rtcp && conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            return conn->getRPort();
-        }
-    }
-
+    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRPort();
+    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRPort();
     return 0;
 }
 
 void AmRtpTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
-    for(auto conn : connections) {
-        if(rtcp && conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            conn->getRAddr(addr);
-        } else if(!rtcp && conn->getConnType() == AmStreamConnection::RTP_CONN) {
-            conn->getRAddr(addr);
-        }
-    }
+    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRAddr(addr);
+    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRAddr(addr);
 }
 
 void AmRtpTransport::getRAddr(sockaddr_storage* addr)
 {
-    for(auto conn : connections) {
-        if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
-            conn->getRAddr(addr);
-        }
-    }
+    if(cur_raw_stream) cur_raw_stream->getRAddr(addr);
 }
 
 int AmRtpTransport::hasLocalSocket()
@@ -424,6 +410,8 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
 
     CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", stream, seq);
     vector<sockaddr_storage> addrs;
+
+    connections_mut.lock();
     for(auto conn : connections) {
         if(seq == ICE){
             if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
@@ -439,6 +427,7 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
             }
         }
     }
+    connections_mut.unlock();
 
     for(auto addr : addrs) {
         addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_key);
@@ -450,7 +439,7 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
 void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     if(!dtls_enable) return;
-    
+
     CLASS_DBG("[%p]AmRtpTransport::initDtlsConnection seq - %d", stream, seq);
     if(seq == NONE) {
         seq = DTLS;
@@ -469,11 +458,14 @@ void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote
 
 void AmRtpTransport::addConnection(AmStreamConnection* conn)
 {
+    connections_mut.lock();
     connections.push_back(conn);
+    connections_mut.unlock();
 }
 
 void AmRtpTransport::removeConnection(AmStreamConnection* conn)
 {
+    connections_mut.lock();
     for(auto conn_it = connections.begin(); conn_it != connections.end(); conn_it++) {
         if(*conn_it == conn) {
             connections.erase(conn_it);
@@ -481,6 +473,7 @@ void AmRtpTransport::removeConnection(AmStreamConnection* conn)
             break;
         }
     }
+    connections_mut.unlock();
 }
 
 void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
@@ -538,9 +531,11 @@ void AmRtpTransport::resumeReceiving()
 
 void AmRtpTransport::setPassiveMode(bool p)
 {
+    connections_mut.lock();
     for(auto conn : connections) {
         conn->setPassiveMode(p);
     }
+    connections_mut.unlock();
 }
 
 void AmRtpTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)
@@ -572,19 +567,23 @@ int AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType
         cur_stream = cur_raw_stream;
     }
     
+    int ret = 0;
     if(cur_stream) {
         return cur_stream->send(packet);
     } else {
+        connections_mut.lock();
         for(auto conn : connections) {
             sockaddr_storage addr;
             packet->getAddr(&addr);
             if(conn->isUseConnection(type)) {
-                return conn->send(packet);
+                ret = conn->send(packet);
+                break;
             }
         }
+        connections_mut.unlock();
     }
-    
-    return 0;
+
+    return ret;
 }
 
 int AmRtpTransport::send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type)
@@ -717,6 +716,7 @@ void AmRtpTransport::recvPacket(int fd)
 
         log_rcvd_packet((char*)buffer, b_size, saddr, ctype);
 
+        connections_mut.lock();
         vector<AmStreamConnection*> conns_by_type;
         for(auto conn : connections) {
             if(conn->isUseConnection(ctype)) {
@@ -735,6 +735,8 @@ void AmRtpTransport::recvPacket(int fd)
         if(!s_conn && !conns_by_type.empty()) {
             s_conn = conns_by_type[0];
         }
+
+        connections_mut.unlock();
 
         if(!s_conn) {
             char error[100];

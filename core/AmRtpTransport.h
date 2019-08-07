@@ -215,6 +215,7 @@ private:
     bool dtls_enable;
 
     vector<AmStreamConnection*> connections;
+    AmMutex                     connections_mut;
 };
 
 #endif/*AM_RTP_TRANSPORT_H*/

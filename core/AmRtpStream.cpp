@@ -1175,7 +1175,7 @@ int AmRtpStream::compile_and_send(
     rp.ssrc = l_ssrc;
     rp.compile((unsigned char*)buffer,size);
 
-    if(cur_rtp_trans && cur_rtp_trans->send(&rp, AmStreamConnection::RTP_CONN) < 0){
+    if(cur_rtp_trans && cur_rtp_trans->send(&rp, AmStreamConnection::RTP_CONN) < 0) {
         CLASS_ERROR("while sending RTP packet.\n");
         return -1;
     }
