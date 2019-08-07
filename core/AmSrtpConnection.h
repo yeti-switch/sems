@@ -19,7 +19,7 @@ class srtp_master_key_p
 public:
     srtp_master_key_p(srtp_master_key_t key)
         : master_key(key){}
-    ~srtp_master_key_p();
+    ~srtp_master_key_p(){}
 
     operator srtp_master_key_t*()
     {

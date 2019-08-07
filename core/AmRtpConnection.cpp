@@ -4,7 +4,27 @@
 #include "AmRtpStream.h"
 
 AmStreamConnection::AmStreamConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type)
-    : transport(_transport), r_host(remote_addr), r_port(remote_port), conn_type(type)
+    : transport(_transport)
+    , parent(0)
+    , r_host(remote_addr)
+    , r_port(remote_port)
+    , conn_type(type)
+    , passive(false)
+    , passive_set_time{0}
+    , passive_packets(0)
+{
+    resolveRemoteAddress(remote_addr, remote_port);
+}
+
+AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port, ConnectionType type)
+    : transport(_parent->transport)
+    , parent(_parent)
+    , r_host(remote_addr)
+    , r_port(remote_port)
+    , conn_type(type)
+    , passive(false)
+    , passive_set_time{0}
+    , passive_packets(0)
 {
     resolveRemoteAddress(remote_addr, remote_port);
 }
@@ -65,53 +85,10 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
             IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
 }
 
-AmRtpConnection::AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
-    , parent(0)
-    , passive(false)
-    , passive_set_time{0}
-    , passive_packets(0)
-    , symmetric_rtp_endless(false)
+void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
 {
-}
+    if(parent) parent->handleSymmetricRtp(recv_addr);
 
-AmRtpConnection::AmRtpConnection(AmStreamConnection* _parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
-    , parent(_parent)
-    , passive(false)
-    , passive_set_time{0}
-    , passive_packets(0)
-    , symmetric_rtp_endless(false)
-{
-}
-
-AmRtpConnection::~AmRtpConnection()
-{
-}
-
-void AmRtpConnection::setSymmetricRtpEndless(bool endless)
-{
-    CLASS_DBG("%sabled endless symmetric RTP switching\n",
-        endless ? "en":"dis");
-     symmetric_rtp_endless = endless;
-}
-
-void AmRtpConnection::setPassiveMode(bool p)
-{
-    if(p) {
-        memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
-        passive_packets = 0;
-    }
-    passive = p;
-    if (p) {
-        CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.\n");
-    } else {
-        CLASS_DBG("Passive mode not activated.\n");
-    }
-}
-
-void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
-{
     if(passive)
     {
         uint64_t now = last_recv_time.tv_sec*1000-last_recv_time.tv_usec/1000,
@@ -131,11 +108,11 @@ void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
         const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
         if (isAddrConnection(recv_addr)) {
             setRAddr(addr_str, port);
-            if(!symmetric_rtp_endless) {
+            if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
                 CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n", prot, addr_str.c_str(),port);
             }
         } else {
-            if(!symmetric_rtp_endless) {
+            if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
                 CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
                     " Leaving passive mode.\n",prot,prot);
             }
@@ -143,10 +120,38 @@ void AmRtpConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
 
         // avoid comparing each time sender address
         // don't switch to passive mode if endless switching flag set
-        if(!symmetric_rtp_endless){
+        if(!transport->getRtpStream()->isSymmetricRtpEndless()){
             passive = false;
         }
     }
+}
+
+void AmStreamConnection::setPassiveMode(bool p)
+{
+    if(p) {
+        memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
+        passive_packets = 0;
+    }
+    passive = p;
+    if (p) {
+        CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.\n");
+    } else {
+        CLASS_DBG("Passive mode not activated.\n");
+    }
+}
+
+AmRtpConnection::AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
+{
+}
+
+AmRtpConnection::AmRtpConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_parent, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
+{
+}
+
+AmRtpConnection::~AmRtpConnection()
+{
 }
 
 void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
@@ -171,13 +176,11 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 
 AmRtcpConnection::AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
-    , parent(0)
 {
 }
 
-AmRtcpConnection::AmRtcpConnection(AmStreamConnection* _parent, AmRtpTransport* _transport, const string& remote_addr, int remote_port)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
-    , parent(_parent)
+AmRtcpConnection::AmRtcpConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port)
+    : AmStreamConnection(_parent, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
 {
 }
 
@@ -187,6 +190,8 @@ AmRtcpConnection::~AmRtcpConnection()
 
 void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
+    handleSymmetricRtp(recv_addr);
+
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();

@@ -539,22 +539,8 @@ void AmRtpTransport::resumeReceiving()
 void AmRtpTransport::setPassiveMode(bool p)
 {
     for(auto conn : connections) {
-        if (conn->getConnType() == AmStreamConnection::RTP_CONN ||
-            conn->getConnType() == AmStreamConnection::RTCP_CONN) {
-            conn->setPassiveMode(p);
-        }
+        conn->setPassiveMode(p);
     }
-}
-
-bool AmRtpTransport::getPassiveMode()
-{
-    for(auto conn : connections) {
-        if(conn->getConnType() == AmStreamConnection::RTP_CONN) {
-            return conn->getPassiveMode();
-        }
-    }
-
-    return false;
 }
 
 void AmRtpTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)

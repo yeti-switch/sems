@@ -178,7 +178,6 @@ void AudioStreamData::initialize(AmB2BSession *session)
     stream->setRtpForceRelayCN(session->getEnableCNForceRelay());
     stream->setRtpTimeout(session->getRtpTimeout());
     stream->setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
-    stream->setSymmetricRtpIgnoreRTCP(session->getRtpSymmetricRtpIgnoreRTCP());
     stream->setRtpPing(session->getRtpPing());
     stream->setRtpRelayTimestampAligning(session->getRtpRelayTimestampAligning());
 

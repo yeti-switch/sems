@@ -303,9 +303,6 @@ class AmRtpStream
     /** relay CN payload type  */
     bool            force_relay_cn;
 
-
-    /** ignore rtcp for symmetric rtp switching */
-    bool            symmetric_rtp_ignore_rtcp;
     /** endless symmetric rtp switching */
     bool            symmetric_rtp_endless;
     /** send initial rtp packet */
@@ -361,6 +358,14 @@ class AmRtpStream
     void calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp);
 
     virtual void initTransport();
+  public:
+
+    /** Mute */
+    bool mute;
+
+    /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
+    bool force_receive_dtmf;
+
   private:
     void update_sender_stats(const AmRtpPacket &p);
     void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
@@ -371,7 +376,6 @@ class AmRtpStream
 
     void rtcp_send_report(unsigned int user_ts);
   public:
-
     /**
     * Set whether RTP stream will receive RTP packets internally (received packets will be dropped or not).
     */
@@ -386,12 +390,6 @@ class AmRtpStream
     * Resume a paused RTP stream internally (received packets will be processed).
     */
     void resume();
-
-    /** Mute */
-    bool mute;
-
-    /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
-    bool force_receive_dtmf;
 
     /** Allocates resources for future use of RTP. */
     AmRtpStream(AmSession* _s, int _if);
@@ -472,7 +470,6 @@ class AmRtpStream
 
     int getLocalTelephoneEventPT();
     int getLocalTelephoneEventRate();
-
     void setPayloadProvider(AmPayloadProvider* pl_prov);
 
     int getSdpMediaIndex() { return sdp_media_index; }
@@ -608,9 +605,7 @@ class AmRtpStream
 
     /** enable or disable endless symmetric rtp switching */
     void setSymmetricRtpEndless(bool endless);
-
-    /** enable or disable ignore RTCP packets for symmetric rtp */
-    void setSymmetricRtpIgnoreRTCP(bool ignore);
+    bool isSymmetricRtpEndless();
 
     /** enable or disable initial rtp ping on stream initialization.
       also it will set mark for all packets to zero */

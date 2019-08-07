@@ -15,9 +15,9 @@ AmSrtpConnection::AmSrtpConnection(AmRtpTransport* _transport, const string& rem
 {
     memset(b_init, 0, sizeof(b_init));
     if(conn_type == RTP_CONN)
-        s_stream = new AmRtpConnection(this, _transport, remote_addr, remote_port);
+        s_stream = new AmRtpConnection(this, remote_addr, remote_port);
     else if(conn_type == RTCP_CONN)
-        s_stream = new AmRtcpConnection(this, _transport, remote_addr, remote_port);
+        s_stream = new AmRtcpConnection(this, remote_addr, remote_port);
     else
         throw string("incorrect connection type for srtp connection");
 }
@@ -64,7 +64,6 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, uns
     memcpy(c_key_r, key_r, key_r_len);
     srtp_profile = profile;
 }
-
 
 void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len)
 {

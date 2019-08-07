@@ -106,7 +106,7 @@ public:
     void resumeReceiving();
 
     void setPassiveMode(bool p);
-    bool getPassiveMode();
+    bool getPassiveMode() { return cur_rtp_stream ? cur_rtp_stream->getPassiveMode() : false;} 
 
     /** returns the socket descriptor for local socket (initialized or not) */
     int hasLocalSocket();

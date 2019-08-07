@@ -130,6 +130,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     hold(false),
     receiving(true),
     monitor_rtp_timeout(true),
+    symmetric_rtp_endless(false),
     relay_stream(NULL),
     relay_enabled(false),
     relay_raw(false),
@@ -139,8 +140,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     relay_filter_dtmf(false),
     force_relay_dtmf(true),
     relay_timestamp_aligning(false),
-    symmetric_rtp_ignore_rtcp(false),
-    symmetric_rtp_endless(false),
     force_receive_dtmf(false),
     rtp_ping(false),
     force_buffering(false),
@@ -1423,10 +1422,9 @@ void AmRtpStream::setPayloadProvider(AmPayloadProvider* pl_prov)
 
 void AmRtpStream::setPassiveMode(bool p)
 {
-    if(cur_rtp_trans)
-        cur_rtp_trans->setPassiveMode(p);
-    if(cur_rtcp_trans)
-        cur_rtcp_trans->setPassiveMode(p);
+    for(auto transport : transports) {
+        transport->setPassiveMode(p);
+    }
 }
 
 void AmRtpStream::setReceiving(bool r)
@@ -1558,14 +1556,12 @@ void AmRtpStream::setSymmetricRtpEndless(bool endless)
 {
     CLASS_DBG("%sabled endless symmetric RTP switching\n",
         endless ? "en":"dis");
-     symmetric_rtp_endless = endless;
+    symmetric_rtp_endless = endless;
 }
 
-void AmRtpStream::setSymmetricRtpIgnoreRTCP(bool ignore)
+bool AmRtpStream::isSymmetricRtpEndless()
 {
-    CLASS_DBG("%sabled ignore RTCP in symmetric RTP\n",
-        ignore ? "en":"dis");
-    symmetric_rtp_ignore_rtcp = ignore;
+    return symmetric_rtp_endless;
 }
 
 void AmRtpStream::setRtpPing(bool enable)
