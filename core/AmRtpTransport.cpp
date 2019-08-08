@@ -168,6 +168,7 @@ string AmRtpTransport::getRHost(bool rtcp)
 {
     if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRHost();
     else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRHost();
+    else if(cur_raw_stream) return cur_raw_stream->getRHost();
     return "";
 }
 
@@ -175,6 +176,7 @@ int AmRtpTransport::getRPort(bool rtcp)
 {
     if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRPort();
     else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRPort();
+    else if(cur_raw_stream) return cur_raw_stream->getRPort();
     return 0;
 }
 
@@ -182,6 +184,7 @@ void AmRtpTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
     if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRAddr(addr);
     else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRAddr(addr);
+    else getRAddr(addr);
 }
 
 void AmRtpTransport::getRAddr(sockaddr_storage* addr)
