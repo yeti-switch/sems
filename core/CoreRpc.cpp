@@ -5,6 +5,7 @@
 #include "AmEventDispatcher.h"
 #include "SipCtrlInterface.h"
 #include "AmSessionContainer.h"
+#include "AmLcConfig.h"
 #include "ampi/HttpClientAPI.h"
 #include "sip/resolver.h"
 
@@ -424,6 +425,7 @@ void CoreRpc::setDumpLevelFull(const AmArg&, AmArg& ret)
 
 void CoreRpc::showStatus(const AmArg&, AmArg& ret)
 {
+    ret["node_id"] = AmConfig.node_id;
     ret["shutdown_mode"] = (bool)AmConfig.shutdown_mode;
     ret["shutdown_request_time"] = !timerisset(&last_shutdown_time) ?
         AmArg() : timeval2str(last_shutdown_time);
