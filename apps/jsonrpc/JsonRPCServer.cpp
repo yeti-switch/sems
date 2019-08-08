@@ -404,7 +404,8 @@ try  {
         throw JsonRpcError(-32602, "Invalid params",
             "parameters type mismatch in function call");
     } catch (const JsonRpcError& e) {
-        INFO("JsonRpcError \n");
+        INFO("JsonRpcError. code: %d, message: %s, data: %s\n",
+             e.code, e.message.c_str(), AmArg::print(e.data).c_str());
         throw;
     } catch (AmSession::Exception &e) {
         ERROR("got AmSession exception in RPC DI call. method: %s, params: %s, "
