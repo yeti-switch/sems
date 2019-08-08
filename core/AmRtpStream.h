@@ -429,26 +429,26 @@ class AmRtpStream
     * setLocalPort will bind the socket and it will be not
     * possible to change the IP later
     */
-    void setLocalIP(const string& ip);
+    virtual void setLocalIP(const string& ip);
 
     /**
     * Initializes with a new random local port if 'p' is 0,
     * else binds the given port, and sets own attributes properly.
     */
-    int getLocalPort();
-    int getLocalRtcpPort();
+    virtual int getLocalPort();
+    virtual int getLocalRtcpPort();
 
     /**
     * Gets remote RTP port.
     * @return remote RTP port.
     */
-    int getRPort(bool rtcp);
+    virtual int getRPort(bool rtcp);
 
     /**
     * Gets remote host IP.
     * @return remote host IP.
     */
-    string getRHost(bool rtcp);
+    virtual string getRHost(bool rtcp);
 
     /**
     * Set remote IP & port.

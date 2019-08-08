@@ -708,45 +708,50 @@ int AmRtpTransport::recv(int sd)
 void AmRtpTransport::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
-        AmStreamConnection::ConnectionType ctype = GetConnectionType(buffer, b_size);
-        if(ctype == AmStreamConnection::UNKNOWN_CONN) {
-            CLASS_WARN("Unknown packet type, ignore it");
-            return;
-        }
-
-        log_rcvd_packet((char*)buffer, b_size, saddr, ctype);
-
-        connections_mut.lock();
-        vector<AmStreamConnection*> conns_by_type;
-        for(auto conn : connections) {
-            if(conn->isUseConnection(ctype)) {
-                conns_by_type.push_back(conn);
-            }
-        }
-
-        AmStreamConnection* s_conn = 0;
-        for(auto conn : conns_by_type) {
-            if(conn->isAddrConnection(&saddr)) {
-                s_conn = conn;
-                break;
-            }
-        }
-
-        if(!s_conn && !conns_by_type.empty()) {
-            s_conn = conns_by_type[0];
-        }
-
-        connections_mut.unlock();
-
-        if(!s_conn) {
-            char error[100];
-            sprintf(error, "doesn't found connection by type %d, ignore packet with type %d", type, ctype);
-            getRtpStream()->onErrorRtpTransport(error, this);
-            return;
-        }
-
-        s_conn->handleConnection(buffer, b_size, &saddr, recv_time);
+        onPacket(buffer, b_size, saddr, recv_time);
     }
+}
+
+void AmRtpTransport::onPacket(unsigned char* buf, int size, sockaddr_storage& addr, struct timeval recvtime)
+{
+    AmStreamConnection::ConnectionType ctype = GetConnectionType(buf, size);
+    if(ctype == AmStreamConnection::UNKNOWN_CONN) {
+        CLASS_WARN("Unknown packet type, ignore it");
+        return;
+    }
+
+    log_rcvd_packet((char*)buf, size, addr, ctype);
+
+    connections_mut.lock();
+    vector<AmStreamConnection*> conns_by_type;
+    for(auto conn : connections) {
+        if(conn->isUseConnection(ctype)) {
+            conns_by_type.push_back(conn);
+        }
+    }
+
+    AmStreamConnection* s_conn = 0;
+    for(auto conn : conns_by_type) {
+        if(conn->isAddrConnection(&addr)) {
+            s_conn = conn;
+            break;
+        }
+    }
+
+    if(!s_conn && !conns_by_type.empty()) {
+        s_conn = conns_by_type[0];
+    }
+
+    connections_mut.unlock();
+
+    if(!s_conn) {
+        char error[100];
+        sprintf(error, "doesn't found connection by type %d, ignore packet with type %d", type, ctype);
+        getRtpStream()->onErrorRtpTransport(error, this);
+        return;
+    }
+
+    s_conn->handleConnection(buf, size, &addr, recvtime);
 }
 
 int AmRtpTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)

@@ -158,11 +158,6 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 {
     handleSymmetricRtp(recv_addr);
 
-    struct timeval now;
-    struct timeval diff;
-    gettimeofday(&now,NULL);
-    timersub(&now,&last_recv_time,&diff);
-
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();

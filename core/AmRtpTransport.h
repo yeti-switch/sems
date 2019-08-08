@@ -27,7 +27,7 @@ class AmRtpTransport : public AmObject,
 {
 public:
     AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type);
-    ~AmRtpTransport();
+    virtual ~AmRtpTransport();
 
     int getTransportType() { return type; }
 
@@ -142,8 +142,9 @@ protected:
     void addRtpConnection(const string& remote_address, int remote_port);
     
     int recv(int sd);
-
     void recvPacket(int fd) override;
+
+    virtual void onPacket(unsigned char* buf, int size, sockaddr_storage& addr, struct timeval recvtime);
 
     void log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type);
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
@@ -157,6 +158,12 @@ protected:
     bool isRTCPMessage(unsigned char* buf, unsigned int size);
 
     msg_sensor::packet_type_t streamConnType2sensorPackType(AmStreamConnection::ConnectionType type);
+protected:
+    /** Stream owning this transport */
+    AmRtpStream* stream;
+    AmStreamConnection* cur_rtp_stream;
+    AmStreamConnection* cur_rtcp_stream;
+    AmStreamConnection* cur_raw_stream;
 private:
     enum {
         NONE,
@@ -167,12 +174,6 @@ private:
     } seq;
     msg_logger *logger;
     msg_sensor *sensor;
-
-    /** Stream owning this transport */
-    AmRtpStream* stream;
-    AmStreamConnection* cur_rtp_stream;
-    AmStreamConnection* cur_rtcp_stream;
-    AmStreamConnection* cur_raw_stream;
 
     /** transport type */
     int type;
