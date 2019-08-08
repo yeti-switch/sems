@@ -833,7 +833,7 @@ int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns
         }
         memcpy(&remote_ip_ss, &targets.dest_list.begin()->ss, sizeof(remote_ip_ss));
         //DBG("remote_ip_ss: %s",get_addr_str(&remote_ip_ss).c_str());
-  }
+    }
 
     if(err == -1) {
         ERROR("While converting uri with host: '%s'", c2stlstr(remote_uri.host).c_str());

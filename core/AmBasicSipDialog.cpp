@@ -227,7 +227,7 @@ int AmBasicSipDialog::getOutboundIf()
     sip_header fr;
     std::multimap<string,unsigned short>::iterator if_it;
     SIP_info::SIP_type transport_type = SIP_info::UDP;
-    AddressType address_type = AT_V4;
+    AddressType address_type;
     int proto_id;
     list<sip_destination> ip_list;
 
@@ -274,7 +274,7 @@ int AmBasicSipDialog::getOutboundIf()
     }
 
     if(get_local_addr_for_dest(d_uri,local_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
-        ERROR("No local address for dest '%.*s' (local_tag='%s')",
+        DBG("No local address for dest '%.*s' (local_tag='%s')",
               d_uri.host.len, d_uri.host.s,
               local_tag.c_str());
         goto error;
@@ -289,7 +289,8 @@ int AmBasicSipDialog::getOutboundIf()
 
     address_type = str2addrtype(local_ip);
     if(!address_type) {
-        ERROR("Could not resolve a address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
+        address_type = AT_V4;
+        ERROR("Could not resolve address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
               local_tag.c_str(), local_ip.c_str());
     }
 
