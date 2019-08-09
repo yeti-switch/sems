@@ -590,10 +590,6 @@ int AmRtpStream::init(const AmSdp& local,
         ++sdp_it;
     } //while(sdp_it != remote_media.payloads.end())
 
-    cur_rtp_trans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
-                    remote_media.setup == SdpMedia::SetupActive ||
-                    force_passive_mode);
-
     // set remote address - media c-line having precedence over session c-line
     if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
         CLASS_WARN("no c= line given globally or in m= section in remote SDP\n");
@@ -675,6 +671,10 @@ int AmRtpStream::init(const AmSdp& local,
         CLASS_ERROR("Can't initialize connections. error - %s", error.c_str());
         return -1;
     }
+
+    cur_rtp_trans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
+                    remote_media.setup == SdpMedia::SetupActive ||
+                    force_passive_mode);
 
     CLASS_DBG("recv = %d, send = %d",
         local_media.recv, local_media.send);

@@ -76,7 +76,8 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
 
     if(remote_port) {
         memcpy(&r_addr,&ss,sizeof(struct sockaddr_storage));
-        am_set_port(&r_addr,r_port);
+        am_set_port(&r_addr,remote_port);
+        r_port = remote_port;
     }
 
     mute = ((r_addr.ss_family == AF_INET) &&
