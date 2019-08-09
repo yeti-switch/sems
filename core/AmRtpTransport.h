@@ -159,19 +159,20 @@ protected:
 
     msg_sensor::packet_type_t streamConnType2sensorPackType(AmStreamConnection::ConnectionType type);
 protected:
+    enum {
+        NONE,
+        ICE,
+        DTLS,
+        SRTP,
+        RTP,
+        RAW
+    } seq;
     /** Stream owning this transport */
     AmRtpStream* stream;
     AmStreamConnection* cur_rtp_stream;
     AmStreamConnection* cur_rtcp_stream;
     AmStreamConnection* cur_raw_stream;
 private:
-    enum {
-        NONE,
-        ICE,
-        DTLS,
-        SRTP,
-        RTP
-    } seq;
     msg_logger *logger;
     msg_sensor *sensor;
 

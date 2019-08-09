@@ -106,7 +106,7 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
         string addr_str = get_addr_str(recv_addr);
         unsigned short port = am_get_port(recv_addr);
         const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
-        if (isAddrConnection(recv_addr)) {
+        if (!isAddrConnection(recv_addr)) {
             setRAddr(addr_str, port);
             if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
                 CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n", prot, addr_str.c_str(),port);

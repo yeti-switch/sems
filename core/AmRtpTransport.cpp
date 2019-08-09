@@ -527,8 +527,6 @@ void AmRtpTransport::resumeReceiving()
         if(l_sd_ctx < 0) {
             CLASS_DBG("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);
         }
-    } else {
-        CLASS_DBG("error on add/resuming stream. socket not created");
     }
 }
 
@@ -748,9 +746,6 @@ void AmRtpTransport::onPacket(unsigned char* buf, int size, sockaddr_storage& ad
     connections_mut.unlock();
 
     if(!s_conn) {
-        char error[100];
-        sprintf(error, "doesn't found connection by type %d, ignore packet with type %d", type, ctype);
-        getRtpStream()->onErrorRtpTransport(error, this);
         return;
     }
 
