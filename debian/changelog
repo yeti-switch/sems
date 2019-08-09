@@ -1,3 +1,11 @@
+sems (1.8.33-3) stable; urgency=low
+
+    * jsonrpc: JsonRpcServer::execRpc: logging for JsonRpcError exception, adjust loglevels
+    * CoreRpc: core.show.status: show node_id
+    * AmBasicSipDialog: logging: ERR -> DBG for unresolved destination
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 09 Aug 2019 17:15:49 +0300
+
 sems (1.8.33-2) stable; urgency=low
 
     * apps/registrar_client: move event queue registration to the onLoad() method to avoid racing
