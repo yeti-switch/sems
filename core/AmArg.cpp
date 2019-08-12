@@ -482,6 +482,8 @@ string AmArg::print(const AmArg &a) {
 const int arg2int(const AmArg &a)
 {
   if (isArgInt(a)) return a.asInt();
+  if (isArgLongLong(a)) return a.asLongLong();
+  if (isArgDouble(a)) return a.asDouble();
   if (isArgBool(a)) return a.asBool();
   if (isArgCStr(a)) {
     int res;

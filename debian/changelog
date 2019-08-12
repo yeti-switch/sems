@@ -1,3 +1,37 @@
+sems (1.8.33-3) stable; urgency=low
+
+    * jsonrpc: JsonRpcServer::execRpc: logging for JsonRpcError exception, adjust loglevels
+    * CoreRpc: core.show.status: show node_id
+    * AmBasicSipDialog: logging: ERR -> DBG for unresolved destination
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 09 Aug 2019 17:15:49 +0300
+
+sems (1.8.33-2) stable; urgency=low
+
+    * apps/registrar_client: move event queue registration to the onLoad() method to avoid racing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 30 Jul 2019 16:09:26 +0300
+
+sems (1.8.33-1) stable; urgency=low
+
+    * CoreRpc: method to show tr_blacklist entries
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Jul 2019 12:13:23 +0300
+
+sems (1.8.32-2) stable; urgency=low
+
+    * RpcTreeHandler: fix conditions order
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sun, 21 Jul 2019 00:26:51 +0300
+
+sems (1.8.32-1) stable; urgency=low
+
+    * check for param type before check for _list method. fixes segfault
+    * AmBasicSipDialog::onRxReply: lock bucket on trans lookup. fixes segfault
+    * AmArg: arg2int(): process LongLong and Double types as well
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 20 Jul 2019 23:32:11 +0300
+
 sems (1.8.31-4) stable; urgency=low
 
     * adjust loglevels

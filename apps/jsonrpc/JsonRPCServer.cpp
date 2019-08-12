@@ -390,30 +390,29 @@ try  {
         throw JsonRpcError(-32601, "Method not found",
             "function unknown in module");
     } catch (const AmDynInvoke::Exception& e) {
-        ERROR("got AmDynInvoke exception in RPC DI call. method: %s, params: %s, "
+        DBG("got AmDynInvoke exception in RPC DI call. method: %s, params: %s, "
             "code: %d, reason: %s",
             method.c_str(),AmArg::print(params).c_str(),
             e.code,e.reason.c_str());
         throw JsonRpcError(e.code,e.reason,AmArg());
     } catch (const AmArg::OutOfBoundsException& oob) {
-        INFO("out of bounds in  RPC DI call\n");
+        DBG("out of bounds in  RPC DI call\n");
         throw JsonRpcError(-32602, "Invalid params",
             "out of bounds in function call");
     } catch (const AmArg::TypeMismatchException& oob) {
-        INFO("type mismatch  in  RPC DI call\n");
+        DBG("type mismatch  in  RPC DI call\n");
         throw JsonRpcError(-32602, "Invalid params",
             "parameters type mismatch in function call");
     } catch (const JsonRpcError& e) {
-        INFO("JsonRpcError \n");
         throw;
     } catch (AmSession::Exception &e) {
-        ERROR("got AmSession exception in RPC DI call. method: %s, params: %s, "
+        DBG("got AmSession exception in RPC DI call. method: %s, params: %s, "
             "code: %d, reason: %s",
             method.c_str(),AmArg::print(params).c_str(),
             e.code,e.reason.c_str());
         throw JsonRpcError(e.code,e.reason,AmArg());
     } catch (...) {
-        ERROR("unexpected Exception in RPC DI call. method: %s, params: %s",
+        DBG("unexpected Exception in RPC DI call. method: %s, params: %s",
             method.c_str(),AmArg::print(params).c_str());
         throw JsonRpcError(-32000, "Server error",
             "unexpected Exception");
@@ -422,8 +421,9 @@ try  {
     rpc_res["id"] = id;
     rpc_res["jsonrpc"] = "2.0";
 } catch (const JsonRpcError& e) {
-    DBG("got JsonRpcError core %d message '%s'\n",
-        e.code, e.message.c_str());
+    INFO("got JsonRpcError. code %d, message '%s', data: '%s', method: %s, id: %s, params: '%s'\n",
+        e.code, e.message.c_str(), AmArg::print(e.data).c_str(),
+        method.c_str(), id.c_str(), AmArg::print(params).c_str());
     rpc_res["error"] = AmArg(); 
     rpc_res["error"]["code"] = e.code;
     rpc_res["error"]["message"] = e.message;
