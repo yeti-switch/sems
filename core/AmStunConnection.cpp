@@ -4,16 +4,37 @@
 #include "AmRtpTransport.h"
 #include "AmRtpStream.h"
 
+StunTimer::StunTimer(const sp_addr& addr, uint32_t duration)
+: timer(duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock), spaddr(addr)
+{
+}
+
+void StunTimer::updateTimer(uint32_t duration)
+{
+    expires = duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock;
+    wheeltimer::instance()->insert_timer(this);
+}
+
+void StunTimer::fire()
+{
+    stun_processor::instance()->fire(&spaddr);
+}
+
 AmStunConnection::AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int _priority)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
     , priority(_priority)
     , auth_state(AuthState::NO_AUTH)
     , err_code(0)
+    , timer(0)
 {
+    stun_processor::instance()->insert(&r_addr, this);
+    timer = new StunTimer(&r_addr, 0);
 }
 
 AmStunConnection::~AmStunConnection()
 {
+    if(timer) wheeltimer::instance()->remove_timer(timer);
+    stun_processor::instance()->remove(&r_addr);
 }
 
 void AmStunConnection::set_credentials(const string& luser, const string& lpassword,
@@ -134,7 +155,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
         transport->allowStunConnection(addr, priority);
-    } else if(auth_state == ALLOW){
+    } else if(auth_state != ALLOW){
         string error("valid stun message is false ERR = ");
         transport->getRtpStream()->onErrorRtpTransport(error + error_str, transport);
     }
@@ -142,6 +163,10 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
 void AmStunConnection::send_request()
 {
+    if(timer) {
+        timer->updateTimer(auth_state == ALLOW ? 1500 : 500);
+    }
+
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
     StunTransactionId trnsId;
@@ -170,9 +195,22 @@ void AmStunConnection::send_request()
     CRefCountedBuffer buffer;
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
-         auth_state = CHECK_OTHER;
+         if(auth_state != ALLOW)
+            auth_state = CHECK_OTHER;
          transport->send(&r_addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
     }
+}
+
+void AmStunConnection::updateStunTimer()
+{
+    if(!timer && auth_state == ALLOW) {
+        timer = new StunTimer(&r_addr, 1500);
+        wheeltimer::instance()->insert_timer(timer);
+    }
+    else if(timer && auth_state != ALLOW) {
+         wheeltimer::instance()->remove_timer(timer);
+         timer = 0;
+     }
 }
 
 AmStunConnection::AuthState AmStunConnection::getConnectionState()

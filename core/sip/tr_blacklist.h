@@ -6,24 +6,18 @@
 
 #include "ip_util.h"
 #include "wheeltimer.h"
+#include "addr_struct.h"
 #include <AmArg.h>
+
+#define BLACKLIST_HT_POWER 6
+#define BLACKLIST_HT_SIZE  (1 << BLACKLIST_HT_POWER)
+#define BLACKLIST_HT_MASK  (BLACKLIST_HT_SIZE - 1)
 
 /**
  * Blacklist bucket: key type
  */
-struct bl_addr: public sockaddr_storage
-{
-  bl_addr();
-  bl_addr(const bl_addr&);
-  bl_addr(const sockaddr_storage*);
-
-  unsigned int hash();
-};
-
-struct bl_addr_less
-{
-  bool operator() (const bl_addr& l, const bl_addr& r) const;
-};
+typedef addr<BLACKLIST_HT_MASK> bl_addr;
+typedef addr_less<BLACKLIST_HT_MASK> bl_addr_less;
 
 struct bl_entry;
 

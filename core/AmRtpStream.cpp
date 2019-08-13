@@ -770,6 +770,9 @@ void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmRtpTransport*)
 void AmRtpStream::allowStunConnection(AmRtpTransport* transport, int priority)
 {
     for(auto tr : transports) {
+        if(transport->getTransportType() == tr->getTransportType()) {
+            tr->updateStunTimers();
+        }
         if(tr == transport) {
             if(transport->getTransportType() == RTP_TRANSPORT) {
                 cur_rtp_trans = transport;

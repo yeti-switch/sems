@@ -2,11 +2,22 @@
 #define AM_STUN_CONNECTION_H
 
 #include "AmRtpConnection.h"
+#include "AmStunProcessor.h"
+#include "sip/wheeltimer.h"
 #include <commonincludes.hpp>
 #include <stunreader.h>
 #include <string>
 
 using std::string;
+
+class StunTimer : public timer
+{
+    sp_addr spaddr;
+public:
+    StunTimer(const sp_addr& addr, uint32_t duration);
+    void updateTimer(uint32_t duration);
+    void fire() override;
+};
 
 class AmStunConnection : public AmStreamConnection
 {
@@ -25,10 +36,10 @@ private:
     string remote_password;
     string local_user;
     string remote_user;
+    StunTimer* timer;
 
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
-    void send_request();
 public:
     AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int priority);
     virtual ~AmStunConnection();
@@ -38,6 +49,8 @@ public:
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
 
+    void send_request();
+    void updateStunTimer();
     AuthState getConnectionState();
 };
 

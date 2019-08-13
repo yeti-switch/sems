@@ -102,6 +102,8 @@ public:
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
 
+    void updateStunTimers();
+
     void stopReceiving();
     void resumeReceiving();
 
