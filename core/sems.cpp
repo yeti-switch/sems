@@ -781,7 +781,9 @@ int main(int argc, char* argv[])
 
   tls_cleanup();
   srtp_shutdown();
+#if EVENT__NUMERIC_VERSION>0x02010000
   libevent_global_shutdown();
+#endif
   
   INFO("Exiting (%s)\n", success ? "success" : "failure");
   
