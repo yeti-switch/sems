@@ -1797,7 +1797,12 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trs
 
                      switch(msg->u.request->method){
                          case sip_request::INVITE:
-                             acl_action = acl.check(msg->remote_ip);
+                             if(nullptr==static_cast<sip_from_to*>(msg->to->p)->tag.s) {
+                                 //check ACL for initial INVITEs (without To-tag) only
+                                 acl_action = acl.check(msg->remote_ip);
+                             } else {
+                                 acl_action = trsp_acl::Allow;
+                             }
                              break;
                          case sip_request::OPTIONS:
                              acl_action = opt_acl.check(msg->remote_ip);
