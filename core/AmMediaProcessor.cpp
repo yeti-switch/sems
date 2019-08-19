@@ -38,278 +38,302 @@
 #endif
 
 /** \brief Request event to the MediaProcessor (remove,...) */
-struct SchedRequest :
-  public AmEvent
+struct SchedRequest
+  : public AmEvent
 {
-  AmMediaSession* s;
+    AmMediaSession* s;
 
-  SchedRequest(int id, AmMediaSession* s)
-    : AmEvent(id), s(s) {}
+    SchedRequest(int id, AmMediaSession* s)
+      : AmEvent(id), s(s)
+    {}
+
+    ~SchedRequest();
 };
+
+SchedRequest::~SchedRequest()
+{}
 
 struct SchedTailRequest
   : public AmEvent
 {
-  AmMediaTailHandler* h;
+    AmMediaTailHandler* h;
 
-  SchedTailRequest(int id, AmMediaTailHandler* h)
-    : AmEvent(id), h(h) {}
+    SchedTailRequest(int id, AmMediaTailHandler* h)
+      : AmEvent(id), h(h)
+    {}
+
+    ~SchedTailRequest();
 };
+
+SchedTailRequest::~SchedTailRequest()
+{}
 
 /*         session scheduler              */
 
-AmMediaProcessor* AmMediaProcessor::_instance = NULL;
+AmMediaProcessor* AmMediaProcessor::_instance = nullptr;
 
 AmMediaProcessor::AmMediaProcessor()
-  : threads(NULL),num_threads(0)
-{
-}
+  : num_threads(0),
+    threads(nullptr)
+{}
 
 AmMediaProcessor::~AmMediaProcessor()
 {
-  INFO("Media processor has been recycled.\n");
+    INFO("Media processor has been recycled.\n");
 }
 
-void AmMediaProcessor::init() {
-  // start the threads
-  num_threads = AmConfig.media_proc_threads;
-  assert(num_threads > 0);
-  DBG("Starting %u MediaProcessorThreads.\n", num_threads);
-  threads = new AmMediaProcessorThread*[num_threads];
-  for (unsigned int i=0;i<num_threads;i++) {
-    threads[i] = new AmMediaProcessorThread();
-    threads[i]->start();
-  }
+void AmMediaProcessor::init()
+{
+    // start the threads
+    num_threads = static_cast<unsigned int>(AmConfig.media_proc_threads);
+    assert(num_threads > 0);
+    DBG("Starting %u MediaProcessorThreads.\n", num_threads);
+    threads = new AmMediaProcessorThread*[num_threads];
+    for (unsigned int i=0;i<num_threads;i++) {
+        threads[i] = new AmMediaProcessorThread();
+        threads[i]->start();
+    }
 }
 
 AmMediaProcessor* AmMediaProcessor::instance()
 {
-  if(!_instance)
-    _instance = new AmMediaProcessor();
+    if(!_instance)
+        _instance = new AmMediaProcessor();
 
-  return _instance;
+    return _instance;
 }
 
-void AmMediaProcessor::addSession(AmMediaSession* s, 
-				  const string& callgroup)
+void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
 {
-  DBG("AmMediaProcessor::addSession %p",s);
-  s->onMediaProcessingStarted();
- 
-  // evaluate correct scheduler
-  unsigned int sched_thread = 0;
-  group_mut.lock();
-    
-  // callgroup already in a thread? 
-  std::map<std::string, unsigned int>::iterator it =
-    callgroup2thread.find(callgroup);
-  if (it != callgroup2thread.end()) {
-    // yes, use it
-    sched_thread = it->second; 
-  } else {
-    // no, find the thread with lowest load
-    unsigned int lowest_load = threads[0]->getLoad();
-    for (unsigned int i=1;i<num_threads;i++) {
-      unsigned int lower = threads[i]->getLoad();
-      if (lower < lowest_load) {
-	lowest_load = lower; sched_thread = i;
-      }
+    DBG("AmMediaProcessor::addSession %p",to_void(s));
+    s->onMediaProcessingStarted();
+
+    // evaluate correct scheduler
+    unsigned int sched_thread = 0;
+    group_mut.lock();
+
+    // callgroup already in a thread?
+    auto it = callgroup2thread.find(callgroup);
+    if (it != callgroup2thread.end()) {
+        // yes, use it
+        sched_thread = it->second;
+    } else {
+        // no, find the thread with lowest load
+        unsigned int lowest_load = threads[0]->getLoad();
+        for (unsigned int i=1;i<num_threads;i++) {
+            unsigned int lower = threads[i]->getLoad();
+            if (lower < lowest_load) {
+                lowest_load = lower; sched_thread = i;
+            }
+        }
+        // create callgroup->thread mapping
+        callgroup2thread[callgroup] = sched_thread;
     }
-    // create callgroup->thread mapping
-    callgroup2thread[callgroup] = sched_thread;
-  }
-    
-  // join the callgroup
-  callgroupmembers.insert(make_pair(callgroup, s));
-  session2callgroup[s]=callgroup;
-    
-  group_mut.unlock();
-    
-  // add the session to selected thread
-  threads[sched_thread]->
-    postRequest(new SchedRequest(InsertSession,s));
+
+    // join the callgroup
+    callgroupmembers.insert(make_pair(callgroup, s));
+    session2callgroup[s]=callgroup;
+
+    group_mut.unlock();
+
+    // add the session to selected thread
+    threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
 }
 
 void AmMediaProcessor::addSession(AmMediaSession* s,
                                   const string &callgroup,
                                   unsigned int sched_thread)
 {
-    DBG("AmMediaProcessor::addSession %p",s);
+    DBG("AmMediaProcessor::addSession %p",to_void(s));
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::addSession: wrong sched_thread %u for session %p",
-              sched_thread,s);
+            sched_thread,to_void(s));
         return;
     }
 
     group_mut.lock();
+
     // create callgroup->thread mapping
     callgroup2thread[callgroup] = sched_thread;
+
     // join the callgroup
     callgroupmembers.insert(make_pair(callgroup, s));
     session2callgroup[s]=callgroup;
+
     group_mut.unlock();
 
     threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
 }
 
-void AmMediaProcessor::clearSession(AmMediaSession* s) {
-  removeFromProcessor(s, ClearSession);
+void AmMediaProcessor::clearSession(AmMediaSession* s)
+{
+    removeFromProcessor(s, ClearSession);
 }
 
-void AmMediaProcessor::removeSession(AmMediaSession* s) {
-  removeFromProcessor(s, RemoveSession);
+void AmMediaProcessor::removeSession(AmMediaSession* s)
+{
+    removeFromProcessor(s, RemoveSession);
 }
 
-void AmMediaProcessor::softRemoveSession(AmMediaSession* s) {
-  removeFromProcessor(s, SoftRemoveSession);
+void AmMediaProcessor::softRemoveSession(AmMediaSession* s)
+{
+    removeFromProcessor(s, SoftRemoveSession);
 }
 
 /* FIXME: implement Call Group ts offsets for soft changing of 
-	call groups 
+    call groups
 */
-void AmMediaProcessor::changeCallgroup(AmMediaSession* s, 
-				       const string& new_callgroup) {
-  removeFromProcessor(s, SoftRemoveSession);
-  addSession(s, new_callgroup);
+void AmMediaProcessor::changeCallgroup(AmMediaSession* s, const string& new_callgroup)
+{
+    removeFromProcessor(s, SoftRemoveSession);
+    addSession(s, new_callgroup);
 }
 
-void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, 
-					   unsigned int r_type) {
-  DBG("AmMediaProcessor::removeSession %p\n",s);
-  group_mut.lock();
-  // get scheduler
-  string callgroup = session2callgroup[s];
-  unsigned int sched_thread = callgroup2thread[callgroup];
-  DBG("  callgroup is '%s', thread %u\n", callgroup.c_str(), sched_thread);
-  // erase callgroup membership entry
-  std::multimap<std::string, AmMediaSession*>::iterator it = 
-    callgroupmembers.lower_bound(callgroup);
-  while ((it != callgroupmembers.end()) &&
-         (it != callgroupmembers.upper_bound(callgroup))) {
-    if (it->second == s) {
-      callgroupmembers.erase(it);
-      break;
-    }
-    it++;
-  }
-  // erase callgroup entry if empty
-  if (!callgroupmembers.count(callgroup)) {
-    callgroup2thread.erase(callgroup);
-    DBG("callgroup empty, erasing it.\n");
-  }
-  // erase session entry
-  session2callgroup.erase(s);
-  group_mut.unlock();    
+void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_type)
+{
+    DBG("AmMediaProcessor::removeSession %p\n",to_void(s));
 
-  threads[sched_thread]->postRequest(new SchedRequest(r_type,s));
+    group_mut.lock();
+
+    // get scheduler
+    string callgroup = session2callgroup[s];
+    unsigned int sched_thread = callgroup2thread[callgroup];
+    DBG("  callgroup is '%s', thread %u\n", callgroup.c_str(), sched_thread);
+
+    // erase callgroup membership entry
+    auto it = callgroupmembers.lower_bound(callgroup);
+    while ((it != callgroupmembers.end()) &&
+        (it != callgroupmembers.upper_bound(callgroup)))
+    {
+        if (it->second == s) {
+            callgroupmembers.erase(it);
+            break;
+        }
+        it++;
+    }
+
+    // erase callgroup entry if empty
+    if (!callgroupmembers.count(callgroup)) {
+        callgroup2thread.erase(callgroup);
+        DBG("callgroup empty, erasing it.\n");
+    }
+
+    // erase session entry
+    session2callgroup.erase(s);
+    group_mut.unlock();
+
+    threads[sched_thread]->
+        postRequest(new SchedRequest(static_cast<int>(r_type),s));
 }
 
 void AmMediaProcessor::stop() {
-  assert(threads);
-  for (unsigned int i=0;i<num_threads;i++) {
-    if(threads[i] != NULL) {
-      threads[i]->stop();
-    }
-  }
-  bool threads_stopped = true;
-  do {
-    usleep(10000); // 10ms
-    threads_stopped = true;
+    assert(threads);
+
     for (unsigned int i=0;i<num_threads;i++) {
-      if((threads[i] != NULL) &&(!threads[i]->is_stopped())) {
-        threads_stopped = false;
-        break;
-      }
+        if(threads[i] != nullptr) {
+            threads[i]->stop();
+        }
     }
-  } while(!threads_stopped);
-  
-  for (unsigned int i=0;i<num_threads;i++) {
-    if(threads[i] != NULL) {
-      delete threads[i];
-      threads[i] = NULL;
+
+    bool threads_stopped = true;
+    do {
+        usleep(10000); // 10ms
+        threads_stopped = true;
+        for (unsigned int i=0;i<num_threads;i++) {
+            if((threads[i] != nullptr) &&(!threads[i]->is_stopped())) {
+                threads_stopped = false;
+                break;
+            }
+        }
+    } while(!threads_stopped);
+
+    for (unsigned int i=0;i<num_threads;i++) {
+        if(threads[i] != nullptr) {
+            delete threads[i];
+            threads[i] = nullptr;
+        }
     }
-  }
-  delete []  threads;
-  threads = NULL;
+
+    delete []  threads;
+    threads = nullptr;
 }
 
 void AmMediaProcessor::dispose() 
 {
-  if(_instance != NULL) {
-    if(_instance->threads != NULL) {
-      _instance->stop();
+    if(_instance != nullptr) {
+        if(_instance->threads != nullptr) {
+            _instance->stop();
+        }
+        delete _instance;
+        _instance = nullptr;
     }
-    delete _instance;
-    _instance = NULL;
-  }
 }
 
-void AmMediaProcessor::getInfo(AmArg& ret){
-	group_mut.lock();
-	for (unsigned int i=0;i<num_threads;i++) {
-		AmArg l;
-		AmMediaProcessorThread *t = threads[i];
-		if(!t) continue;
-		t->getInfo(l);
-		ret.push(int2str((unsigned int)_self_tid),l);
-	}
-	group_mut.unlock();
+void AmMediaProcessor::getInfo(AmArg& ret)
+{
+    group_mut.lock();
+    for (unsigned int i=0;i<num_threads;i++) {
+        AmArg l;
+        AmMediaProcessorThread *t = threads[i];
+        if(!t) continue;
+        t->getInfo(l);
+        ret.push(int2str(static_cast<unsigned int>(_self_tid)),l);
+    }
+    group_mut.unlock();
 }
 
 /* the actual media processing thread */
 
 AmMediaProcessorThread::AmMediaProcessorThread()
   : events(this), stop_requested(false)
-{
-}
+{}
+
 AmMediaProcessorThread::~AmMediaProcessorThread()
-{
-}
+{}
 
 void AmMediaProcessorThread::on_stop()
 {
-  INFO("requesting media processor to stop.\n");
-  stop_requested.set(true);
+    INFO("requesting media processor to stop.\n");
+    stop_requested.set(true);
 }
 
 void AmMediaProcessorThread::run()
 {
-  setThreadName("media-proc");
-  stop_requested = false;
-  struct timeval now,next_tick,diff,tick;
+    setThreadName("media-proc");
 
-  // wallclock time
-  unsigned long long ts = 0;//4294417296;
+    stop_requested = false;
+    struct timeval now,next_tick,diff,tick;
 
-  tick.tv_sec  = 0;
-  tick.tv_usec = 1000*WC_INC_MS;
+    // wallclock time
+    unsigned long long ts = 0;//4294417296;
 
-  gettimeofday(&now,NULL);
-  timeradd(&tick,&now,&next_tick);
-    
-  while(!stop_requested.get()){
+    tick.tv_sec  = 0;
+    tick.tv_usec = 1000*WC_INC_MS;
 
-    gettimeofday(&now,NULL);
+    gettimeofday(&now,nullptr);
+    timeradd(&tick,&now,&next_tick);
 
-    if(timercmp(&now,&next_tick,<)){
+    while(!stop_requested.get()) {
+        gettimeofday(&now,nullptr);
 
-      struct timespec sdiff,rem;
-      timersub(&next_tick,&now,&diff);
+        if(timercmp(&now,&next_tick,<)) {
+            struct timespec sdiff,rem;
+            timersub(&next_tick,&now,&diff);
 
-      sdiff.tv_sec  = diff.tv_sec;
-      sdiff.tv_nsec = diff.tv_usec * 1000;
+            sdiff.tv_sec  = diff.tv_sec;
+            sdiff.tv_nsec = diff.tv_usec * 1000;
 
-      if(sdiff.tv_nsec > 2000000) // 2 ms
-	nanosleep(&sdiff,&rem);
+            if(sdiff.tv_nsec > 2000000) // 2 ms
+            nanosleep(&sdiff,&rem);
+        }
+
+        processAudio(ts);
+        events.processEvents();
+        processDtmfEvents();
+
+        ts = (ts + WC_INC) & WALLCLOCK_MASK;
+        timeradd(&tick,&next_tick,&next_tick);
     }
-
-    processAudio(ts);
-    events.processEvents();
-    processDtmfEvents();
-
-    ts = (ts + WC_INC) & WALLCLOCK_MASK;
-    timeradd(&tick,&next_tick,&next_tick);
-  }
 }
 
 /**
@@ -317,39 +341,31 @@ void AmMediaProcessorThread::run()
  */
 void AmMediaProcessorThread::processDtmfEvents()
 {
-  for(set<AmMediaSession*>::iterator it = sessions.begin();
-      it != sessions.end(); it++)
-    {
-      AmMediaSession* s = (*it);
-      s->processDtmfEvents();
-    }
+    for(auto &s : sessions)
+        s->processDtmfEvents();
 }
 
 void AmMediaProcessorThread::processAudio(unsigned long long ts)
 {
-  // receiving
-  for(set<AmMediaSession*>::iterator it = sessions.begin();
-      it != sessions.end(); it++)
-  {
-    if ((*it)->readStreams(ts, buffer) < 0) {
-      DBG("readStreams for media session %p returned value < 0",*it);
-      postRequest(new SchedRequest(AmMediaProcessor::ClearSession, *it));
+    // receiving
+    for(auto &s : sessions) {
+        if(s->readStreams(ts, buffer) < 0) {
+            DBG("readStreams for media session %p returned value < 0",to_void(s));
+            postRequest(new SchedRequest(AmMediaProcessor::ClearSession, s));
+        }
     }
-  }
 
-  // sending
-  for(set<AmMediaSession*>::iterator it = sessions.begin();
-      it != sessions.end(); it++)
-  {
-    if ((*it)->writeStreams(ts, buffer) < 0) {
-      DBG("writeStreams for media session %p returned value < 0",*it);
-      postRequest(new SchedRequest(AmMediaProcessor::ClearSession, *it));
+    // sending
+    for(auto &s : sessions) {
+        if (s->writeStreams(ts, buffer) < 0) {
+            DBG("writeStreams for media session %p returned value < 0",to_void(s));
+            postRequest(new SchedRequest(AmMediaProcessor::ClearSession, s));
+        }
     }
-  }
 
-  // process tail
-  for(auto &h : tail_handlers)
-    h->processMediaTail(ts);
+    // process tail
+    for(auto &h : tail_handlers)
+        h->processMediaTail(ts);
 }
 
 void AmMediaProcessorThread::process(AmEvent* e)
@@ -358,16 +374,18 @@ void AmMediaProcessorThread::process(AmEvent* e)
         switch(sr->event_id){
         case AmMediaProcessor::InsertSession:
             sessions.insert(sr->s);
-            DBG("[%p] Session %p inserted to the scheduler\n",this,sr->s);
+            DBG("[%p] Session %p inserted to the scheduler\n",
+                to_void(this),to_void(sr->s));
             sr->s->clearRTPTimeout();
             break;
         case AmMediaProcessor::RemoveSession: {
             AmMediaSession* s = sr->s;
-            set<AmMediaSession*>::iterator s_it = sessions.find(s);
+            auto s_it = sessions.find(s);
             if(s_it != sessions.end()) {
                 sessions.erase(s_it);
                 s->onMediaProcessingTerminated();
-                DBG("[%p] Session %p removed from the scheduler on RemoveSession\n",this,s);
+                DBG("[%p] Session %p removed from the scheduler on RemoveSession\n",
+                    to_void(this),to_void(s));
             }
         } break;
         case AmMediaProcessor::ClearSession: {
@@ -377,7 +395,8 @@ void AmMediaProcessorThread::process(AmEvent* e)
                 sessions.erase(s_it);
                 s->clearAudio();
                 s->onMediaProcessingTerminated();
-                DBG("[%p] Session %p removed from the scheduler on ClearSession\n",this,s);
+                DBG("[%p] Session %p removed from the scheduler on ClearSession\n",
+                    to_void(this),to_void(s));
             }
         } break;
         case AmMediaProcessor::SoftRemoveSession: {
@@ -385,7 +404,8 @@ void AmMediaProcessorThread::process(AmEvent* e)
             set<AmMediaSession*>::iterator s_it = sessions.find(s);
             if(s_it != sessions.end()) {
                 sessions.erase(s_it);
-                DBG("[%p] Session %p removed softly from the scheduler\n",this,s);
+                DBG("[%p] Session %p removed softly from the scheduler\n",
+                    to_void(this),to_void(s));
             }
         } break;
         default:
@@ -393,11 +413,11 @@ void AmMediaProcessorThread::process(AmEvent* e)
             break;
         } //switch(sr->event_id)
     } else if(SchedTailRequest* sr = dynamic_cast<SchedTailRequest*>(e)) {
-        switch(sr->event_id){
+        switch(sr->event_id) {
         case AmMediaProcessor::InsertSession:
             tail_handlers.insert(sr->h);
             DBG("[%p] TailHandler %p inserted to the scheduler\n",
-                this, sr->h);
+                to_void(this),to_void(sr->h));
             break;
         case AmMediaProcessor::RemoveSession: {
             auto h = sr->h;
@@ -406,7 +426,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
                 tail_handlers.erase(h_it);
                 h->onMediaTailProcessingTerminated();
                 DBG("[%p] TailHandler %p removed from the scheduler on RemoveSession\n",
-                    this, h);
+                    to_void(this),to_void(h));
             }
         } break;
         default:
@@ -418,37 +438,39 @@ void AmMediaProcessorThread::process(AmEvent* e)
     }
 }
 
-unsigned int AmMediaProcessorThread::getLoad() {
-  // lock ? 
-  return sessions.size();
+unsigned int AmMediaProcessorThread::getLoad()
+{
+    // lock ?
+    return static_cast<unsigned int>(sessions.size());
 }
 
-void AmMediaProcessorThread::getInfo(AmArg &ret){
-	ret.assertArray();
-	for(set<AmMediaSession*>::iterator it = sessions.begin();
-		it != sessions.end(); it++)
-	{
-		AmArg a;
-		AmMediaSession* s = (*it);
-		s->getInfo(a);
-		ret.push(a);
-	}
+void AmMediaProcessorThread::getInfo(AmArg &ret)
+{
+    ret.assertArray();
+    for(auto &s : sessions) {
+        AmArg a;
+        s->getInfo(a);
+        ret.push(a);
+    }
 }
 
-inline void AmMediaProcessorThread::postRequest(SchedRequest* sr) {
-  events.postEvent(sr);
+inline void AmMediaProcessorThread::postRequest(SchedRequest* sr)
+{
+    events.postEvent(sr);
 }
 
-inline void AmMediaProcessorThread::postTailRequest(SchedTailRequest* sr) {
-  events.postEvent(sr);
+inline void AmMediaProcessorThread::postTailRequest(SchedTailRequest* sr)
+{
+    events.postEvent(sr);
 }
 
 void AmMediaProcessor::addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread)
 {
-    DBG("AmMediaProcessor::addTailHandler %p to the thread %u",h,sched_thread);
+    DBG("AmMediaProcessor::addTailHandler %p to the thread %u",
+        to_void(h),sched_thread);
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::addTailHandler: wrong sched_thread %u for session %p",
-            sched_thread,h);
+            sched_thread,to_void(h));
         return;
     }
     threads[sched_thread]->postTailRequest(new SchedTailRequest(InsertSession,h));
@@ -456,10 +478,11 @@ void AmMediaProcessor::addTailHandler(AmMediaTailHandler* h, unsigned int sched_
 
 void AmMediaProcessor::removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread)
 {
-    DBG("AmMediaProcessor::removeTailHandler %p from the thread %u",h,sched_thread);
+    DBG("AmMediaProcessor::removeTailHandler %p from the thread %u",
+        to_void(h),sched_thread);
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::removeTailHandler: wrong sched_thread %u for session %p",
-            sched_thread,h);
+            sched_thread,to_void(h));
         return;
     }
     h->onMediaTailProcessingStarted();
