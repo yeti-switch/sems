@@ -15,13 +15,13 @@ check [Documentation] for additional versions/distributions info
 
 ### install prerequisites
 ```sh
-apt install git cmake build-essential devscripts
+# apt install git cmake build-essential devscripts
 ```
 
 ### get sources
 ```sh
-# git clone https://github.com/yeti-switch/sems.git --recursive
-# cd sems
+$ git clone https://github.com/yeti-switch/sems.git --recursive
+$ cd sems
 ```
 
 ### build and install dependencies package
@@ -31,7 +31,7 @@ apt install git cmake build-essential devscripts
 
 ### build packages
 ```sh
-# debuild -us -uc -b
+$ debuild -us -uc -b
 ```
 
 [Yeti]:https://yeti-switch.org/
