@@ -781,7 +781,7 @@ int main(int argc, char* argv[])
 
   tls_cleanup();
   srtp_shutdown();
-  libevent_global_shutdown();
+  //libevent_global_shutdown();
   
   INFO("Exiting (%s)\n", success ? "success" : "failure");
   
