@@ -19,7 +19,7 @@ sems core is a part of project [Yeti]
 
 ### get sources & build debian packages
 ```sh
-$ git clone git@github.com:yeti-switch/sems.git
+$ git clone git@github.com:yeti-switch/sems.git --recursive
 $ cd sems
 $ ./package.sh
 ```
