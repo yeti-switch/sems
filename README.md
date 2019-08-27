@@ -2,26 +2,37 @@
 
 sems core is a part of project [Yeti]
 
-## Installation via Package (Debian 8)
+## Installation via Package (Debian 9)
 ```sh
-# echo "deb http://pkg.yeti-switch.org/debian/jessie stable main ext" > /etc/apt/sources.list.d/yeti.list
+# echo "deb http://pkg.yeti-switch.org/debian/stretch stable main ext" > /etc/apt/sources.list.d/yeti.list
 # apt-key adv --keyserver keys.gnupg.net --recv-key 9CEBFFC569A832B6
 # apt update
 # apt install sems sems-modules-base
 ```
+check [Documentation] for additional versions/distributions info
 
 ## Building from sources (Debian 8/9)
 
-### install build prerequisites
+### install prerequisites
 ```sh
-# aptitude install git cmake build-essential libssl-dev libpqxx3-dev libxml2-dev libspandsp-dev libsamplerate-dev libcurl3-dev libhiredis-dev librtmp-dev libzrtpcpp-dev libev-dev python-dev libspeex-dev libgsm1-dev
+apt install git cmake build-essential devscripts
 ```
 
-### get sources & build debian packages
+### get sources
 ```sh
-$ git clone git@github.com:yeti-switch/sems.git --recursive
-$ cd sems
-$ ./package.sh
+# git clone https://github.com/yeti-switch/sems.git --recursive
+# cd sems
 ```
 
-[Yeti]:http://yeti-switch.org/
+### build and install dependencies package
+```sh
+# mk-build-deps -i
+```
+
+### build packages
+```sh
+# debuild -us -uc -b
+```
+
+[Yeti]:https://yeti-switch.org/
+[Documentation]:https://yeti-switch.org/docs/en/
