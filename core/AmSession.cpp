@@ -299,6 +299,7 @@ void AmSession::addStereoRecorder(int channel_id, const string &recorder_id)
 
     lockAudio();
     RTPStream()->setStereoRecorders(stereo_recorders);
+    RTPStream()->disableRtpRelay();
     unlockAudio();
 }
 
