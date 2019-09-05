@@ -68,7 +68,6 @@ ADD_SUBDIRECTORY(cmake)
 
 # Create config-file from template
 CONFIGURE_FILE (${CMAKE_SOURCE_DIR}/core/etc/app_mapping.conf.sample ${CMAKE_SOURCE_DIR}/core/etc/app_mapping.conf)
-CONFIGURE_FILE (${CMAKE_SOURCE_DIR}/core/etc/sems.conf.cmake ${CMAKE_SOURCE_DIR}/core/etc/sems.conf.dist)
 
 INSTALL(
 	TARGETS ${SEMS_LIB} ${SEMS_APP}
@@ -83,7 +82,6 @@ CONFIGURE_FILE(${SEMS_LIB}.pc.in ${SEMS_LIB}.pc)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${SEMS_LIB}.pc DESTINATION ${PKGCFG_DIR})
 
 # Installation of config-files
-INSTALL(FILES ./etc/sems.conf.dist DESTINATION ${SEMS_CFG_PREFIX}/etc/sems/)
 INSTALL(FILES ./etc/app_mapping.conf DESTINATION ${SEMS_CFG_PREFIX}/etc/sems/etc/)
 INSTALL(FILES ./etc/rtsp_client.conf.dist DESTINATION ${SEMS_CFG_PREFIX}/etc/sems/etc/)
 IF(LIBZRTP_FOUND)
