@@ -122,18 +122,18 @@ bool AmAudioFormat::operator != (const AmAudioFormat& r) const
 
 void AmAudioFormat::initCodec()
 {
-  amci_codec_fmt_info_t fmt_i[4];
+    amci_codec_fmt_info_t fmt_i[4];
     fmt_i[0].id=AMCI_FMT_FRAME_LENGTH;
     fmt_i[0].value=frame_size*1000/getRate();
     fmt_i[1].id=AMCI_FMT_FRAME_SIZE;
     fmt_i[1].value=frame_size;
     fmt_i[2].id = 0;
 
-  if( codec && codec->init ) {
-    if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
-      ERROR("could not initialize codec %i\n",codec->id);
-    }  
-  } 
+    if( codec && codec->init ) {
+        if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
+            ERROR("could not initialize codec %i\n",codec->id);
+        }
+    }
 }
 
 void AmAudioFormat::destroyCodec()

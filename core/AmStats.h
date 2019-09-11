@@ -59,6 +59,11 @@ class MeanValue
     if(!n_val) return 0.0;
     return cum_val / float(n_val);
   }
+
+  void clear(){
+    cum_val = 0.0;
+    n_val = 0;
+  }
 };
 
 /** 

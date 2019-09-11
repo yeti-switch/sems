@@ -52,6 +52,15 @@ AmPlayoutBuffer::AmPlayoutBuffer(AmPLCBuffer *plcbuffer, unsigned int sample_rat
   buffer.clear_all();
 }
 
+void AmPlayoutBuffer::reinit(unsigned int new_sample_rate)
+{
+    sample_rate = new_sample_rate;
+    r_ts = 0;
+    w_ts = 0;
+    last_ts_i = false;
+    recv_offset_i = false;
+}
+
 void AmPlayoutBuffer::direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len)
 {
   buffer_put(w_ts,buf,len);
@@ -171,9 +180,20 @@ AmAdaptivePlayout::AmAdaptivePlayout(AmPLCBuffer *plcbuffer, unsigned int sample
     shr_threshold(SHR_THRESHOLD),
     plc_cnt(0),
     short_scaled(WSOLA_SCALED_WIN),
-    fec(sample_rate)
+    fec(new LowcFE(sample_rate))
 {
   memset(n_stat,0,sizeof(int32_t)*ORDER_STAT_WIN_SIZE);
+}
+
+void AmAdaptivePlayout::reinit(unsigned int new_sample_rate)
+{
+    idx = 0;
+    wsola_off= WSOLA_START_OFF;
+    shr_threshold = SHR_THRESHOLD;
+    plc_cnt = 0;
+    short_scaled.clear();
+    fec.reset(new LowcFE(new_sample_rate));
+    AmPlayoutBuffer::reinit(new_sample_rate);
 }
 
 u_int32_t AmAdaptivePlayout::next_delay(u_int32_t ref_ts, u_int32_t ts)
@@ -309,42 +329,31 @@ void AmAdaptivePlayout::write_buffer(u_int32_t ref_ts, u_int32_t ts,
 
 u_int32_t AmAdaptivePlayout::read(u_int32_t ts, int16_t* buf, u_int32_t len)
 {
-  bool do_plc=false;
-
-  if(ts_less()(w_ts,ts+len) && (plc_cnt < 6)){
-	
-    if(!plc_cnt){
-      int nlen = time_scale(w_ts-len,2.0, len);
-      wsola_off += nlen-len;
-    }
-    else {
-      do_plc = true;
-    }
-    plc_cnt++;
-  }
-
-  if(do_plc){
-
-    short plc_buf[FRAMESZ];
-
-    for(unsigned int i=0; i<len/FRAMESZ; i++){
-	    
-      fec.dofe(plc_buf);
-
-      buffer_put(w_ts,plc_buf,FRAMESZ);
+    bool do_plc = false;
+    if(ts_less()(w_ts,ts+len) && (plc_cnt < 6)) {
+        if(!plc_cnt) {
+            int nlen = time_scale(w_ts-len,2.0, len);
+            wsola_off += nlen-len;
+        } else {
+            do_plc = true;
+        }
+        plc_cnt++;
     }
 
-    buffer_get(ts,buf,len);
-  }
-  else {
+    if(do_plc) {
+        short plc_buf[FRAMESZ];
+        for(unsigned int i=0; i<len/FRAMESZ; i++) {
+            fec->dofe(plc_buf);
+            buffer_put(w_ts,plc_buf,FRAMESZ);
+        }
+        buffer_get(ts,buf,len);
+    } else {
+        buffer_get(ts,buf,len);
+        for(unsigned int i=0; i<len/FRAMESZ; i++)
+            fec->addtohistory(buf + i*FRAMESZ);
+    }
 
-    buffer_get(ts,buf,len);
-
-    for(unsigned int i=0; i<len/FRAMESZ; i++)
-      fec.addtohistory(buf + i*FRAMESZ);
-  }
-
-  return len;
+    return len;
 }
 
 void AmAdaptivePlayout::direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len)
