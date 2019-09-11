@@ -85,6 +85,7 @@ class AmPlayoutBuffer
   virtual void direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len);
  public:
   AmPlayoutBuffer(AmPLCBuffer *plcbuffer, unsigned int sample_rate);
+  virtual void reinit(unsigned int new_sample_rate);
   virtual ~AmPlayoutBuffer() {}
 
   virtual void write(u_int32_t ref_ts, u_int32_t ts, int16_t* buf, u_int32_t len, bool begin_talk);
@@ -109,7 +110,7 @@ class AmAdaptivePlayout: public AmPlayoutBuffer
 
   // second stage PLC
   int       plc_cnt;
-  LowcFE    fec;
+  std::unique_ptr<LowcFE> fec;
 
   // buffers
   // strech buffer
@@ -123,6 +124,7 @@ class AmAdaptivePlayout: public AmPlayoutBuffer
  public:
 
   AmAdaptivePlayout(AmPLCBuffer *, unsigned int sample_rate);
+  virtual void reinit(unsigned int new_sample_rate) override;
 
   /** write len samples beginning from timestamp ts from buf */
   void direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len);
