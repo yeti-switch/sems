@@ -1,3 +1,9 @@
+sems (1.8.34-2) stable; urgency=low
+
+  * fix shlibs
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 11 Sep 2019 18:26:42 +0300
+
 sems (1.8.34-1) stable; urgency=low
 
   * AmRtpAudio::setCurrentPayload(): reinit playout buffer and FEC on switching to codec with another rate
