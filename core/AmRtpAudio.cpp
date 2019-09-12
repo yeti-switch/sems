@@ -491,12 +491,10 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
             amci_codec_t* codec = fmt->getCodec();
             use_default_plc = ((codec==nullptr) || (codec->plc == nullptr));
             if(old_rate!=fmt->getRate()) {
-                session->lockAudio();
 #ifndef USE_SPANDSP_PLC
                 fec.reset(new LowcFE(fmt->getRate()));
 #endif
                 playout_buffer->reinit(fmt->getRate());
-                session->unlockAudio();
             }
         }
         return ret;
