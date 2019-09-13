@@ -305,7 +305,7 @@ void AmMediaProcessorThread::run()
     struct timeval now,next_tick,diff,tick;
 
     // wallclock time
-    unsigned long long ts = 0;//4294417296;
+    ts = 0;//4294417296;
 
     tick.tv_sec  = 0;
     tick.tv_usec = 1000*WC_INC_MS;
@@ -374,6 +374,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
         switch(sr->event_id){
         case AmMediaProcessor::InsertSession:
             sessions.insert(sr->s);
+            sr->s->ping(ts);
             DBG("[%p] Session %p inserted to the scheduler\n",
                 to_void(this),to_void(sr->s));
             sr->s->clearRTPTimeout();

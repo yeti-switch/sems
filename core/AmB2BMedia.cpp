@@ -753,6 +753,17 @@ int AmB2BMedia::writeStreams(unsigned long long ts, unsigned char *buffer)
     return res;
 }
 
+int AmB2BMedia::ping(unsigned long long ts)
+{
+    int res = 0;
+    AmLock lock(mutex);
+    for (AudioStreamIterator i = audio.begin(); i != audio.end(); ++i) {
+        if (i->a.getStream()->ping(ts) < 0) { res = -1; break; }
+        if (i->b.getStream()->ping(ts) < 0) { res = -1; break; }
+    }
+    return res;
+}
+
 void AmB2BMedia::processDtmfEvents()
 {
   AmLock lock(mutex);

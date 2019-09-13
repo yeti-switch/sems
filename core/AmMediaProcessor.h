@@ -119,6 +119,9 @@ class AmMediaSession
      * processor. */
     virtual void clearRTPTimeout() = 0;
 
+    /** ping the remote side, to open NATs and enable symmetric RTP */
+    virtual int ping(unsigned long long ts) = 0;
+
     /** Callback function called when a session is added to media processor.  
      *
      * Default implementation sets internal variable usable for detection if the
@@ -182,6 +185,7 @@ class AmMediaProcessorThread :
   unsigned char   buffer[AUDIO_BUFFER_SIZE];
   set<AmMediaSession*> sessions;
   set<AmMediaTailHandler *> tail_handlers;
+  unsigned long long ts;
 
   void processAudio(unsigned long long ts);
   /**

@@ -1538,6 +1538,11 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
 
 }
 
+int AmSession::ping(unsigned long long ts)
+{
+    return RTPStream()->ping(ts);
+}
+
 const char *AmSession::getProcessingStatusStr() const
 {
     ProcessingStatus s = getProcessingStatus();

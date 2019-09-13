@@ -160,6 +160,8 @@ public:
 	   const AmSdp& remote,
        bool force_symmetric_rtp = false);
 
+  int ping(unsigned long long ts);
+
   void setPlayoutType(PlayoutType type);
 
 

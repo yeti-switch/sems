@@ -493,6 +493,8 @@ class AmB2BMedia: public AmMediaSession
      * readStreams()). */
     virtual int writeStreams(unsigned long long ts, unsigned char *buffer);
 
+    virtual int ping(unsigned long long ts);
+
     /** Calls processDtmfEvent on both AmB2BSessions for which this AmB2BMedia
      * instance manages media. */
     virtual void processDtmfEvents();

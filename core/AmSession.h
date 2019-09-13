@@ -651,6 +651,7 @@ public:
 public: 
   virtual int readStreams(unsigned long long ts, unsigned char *buffer);
   virtual int writeStreams(unsigned long long ts, unsigned char *buffer);
+  virtual int ping(unsigned long long ts);
   virtual void clearRTPTimeout() { RTPStream()->clearRTPTimeout(); }
   virtual void processDtmfEvents();
 

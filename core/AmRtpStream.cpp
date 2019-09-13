@@ -324,11 +324,9 @@ try_another_port:
     am_set_port(&l_rtcp_saddr, l_rtcp_port);
 }
 
-int AmRtpStream::ping()
+int AmRtpStream::ping(unsigned long long ts)
 {
-    // TODO:
-    //  - we'd better send an empty UDP packet
-    //    for this purpose.
+    if(!rtp_ping) return 0;
 
     unsigned char ping_chr[2];
 
@@ -339,27 +337,13 @@ int AmRtpStream::ping()
     rp.payload = payload;
     rp.marker = true;
     rp.sequence = sequence++;
-    rp.timestamp = 0;
+    rp.timestamp = ts;
     rp.ssrc = l_ssrc;
     rp.compile((unsigned char*)ping_chr,2);
 
     rp.setAddr(&r_saddr);
 
-    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        unsigned int size = rp.getBufferSize();
-        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false))
-            return 2;
-        rp.setBufferSize(size);
-    }
-
-    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
-        CLASS_ERROR("while sending RTP packet.\n");
-        return -1;
-    }
-    //if (logger) rp.logSent(logger, &l_saddr);
-    log_sent_rtp_packet(rp);
-
-    return 2;
+    return sendpacket(&rp);
 }
 
 int AmRtpStream::compile_and_send(
@@ -407,25 +391,14 @@ int AmRtpStream::compile_and_send(
     }
 #endif
 
-    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        unsigned int size = rp.getBufferSize();
-        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
-            return 0;
-        }
-        rp.setBufferSize(size);
-    }
-
-    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
-        CLASS_ERROR("while sending RTP packet.\n");
-        return -1;
-    }
+    int ret = sendpacket(&rp);
 
     add_if_no_exist(outgoing_payloads,rp.payload);
     outgoing_bytes+=rp.getDataSize();
     //if (logger) rp.logSent(logger, &l_saddr);
     log_sent_rtp_packet(rp);
  
-    return size;
+    return ret;
 }
 
 int AmRtpStream::send(unsigned int ts, unsigned char* buffer, unsigned int size)
@@ -465,22 +438,7 @@ int AmRtpStream::send_raw( char* packet, unsigned int length )
     rp.compile_raw((unsigned char*)packet, length);
     rp.setAddr(&r_saddr);
 
-    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
-        unsigned int size = rp.getBufferSize();
-        if(!srtp_connection->on_data_send(rp.getBuffer(), &size, false)) {
-            return 0;
-        }
-        rp.setBufferSize(size);
-    }
-
-    if(send(rp.getBuffer(), rp.getBufferSize(), false) < 0){
-        CLASS_ERROR("while sending raw RTP packet.\n");
-        return -1;
-    }
-
-    log_sent_rtp_packet(rp);
-
-    return length;
+    return sendpacket(&rp);
 }
 
 int AmRtpStream::sendmsg(unsigned char* buf, int size)
@@ -539,6 +497,24 @@ int AmRtpStream::sendmsg(unsigned char* buf, int size)
   return 0;
 }
 
+int AmRtpStream::sendpacket(AmRtpPacket* packet)
+{
+    if(srtp_connection->get_rtp_mode() != AmSrtpConnection::RTP_DEFAULT) {
+        unsigned int size = packet->getBufferSize();
+        if(!srtp_connection->on_data_send(packet->getBuffer(), &size, false))
+            return 2;
+        packet->setBufferSize(size);
+    }
+
+    if(send(packet->getBuffer(), packet->getBufferSize(), false) < 0){
+        CLASS_ERROR("while sending RTP packet.\n");
+        return -1;
+    }
+    //if (logger) rp.logSent(logger, &l_saddr);
+    log_sent_rtp_packet(*packet);
+
+    return packet->getDataSize();
+}
 
 int AmRtpStream::send(sockaddr_storage* raddr, unsigned char* buf, int size, bool rtcp)
 {
@@ -1409,8 +1385,6 @@ int AmRtpStream::init(const AmSdp& local,
 #endif
 
     active = false; // mark as nothing received yet
-
-    if(rtp_ping) ping(); //generate fake initial rtp packet
 
     gettimeofday(&rtp_stats.start, nullptr);
     rtcp_reports.init(l_ssrc);

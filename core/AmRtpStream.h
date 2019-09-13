@@ -432,6 +432,8 @@ class AmRtpStream
 
     void payloads_id2str(const std::vector<int> i, std::vector<string> &s);
 
+    int sendpacket(AmRtpPacket* packet);
+
   private:
 
     void log_sent_rtp_packet(AmRtpPacket &p);
@@ -510,7 +512,7 @@ class AmRtpStream
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 
     /** ping the remote side, to open NATs and enable symmetric RTP */
-    int ping();
+    virtual int ping(unsigned long long ts);
 
     /** returns the socket descriptor for local socket (initialized or not) */
     int hasLocalSocket();

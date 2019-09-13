@@ -420,6 +420,37 @@ int AmRtpAudio::init(
     return 0;
 }
 
+int AmRtpAudio::ping(unsigned long long ts)
+{
+    if(!rtp_ping) return 0;
+
+    unsigned char ping_chr[2];
+
+    ping_chr[0] = 0;
+    ping_chr[1] = 0;
+
+    AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
+
+    // pre-division by 100 is important
+    // so that the first multiplication
+    // does not overflow the 64bit int
+    unsigned long long user_ts =
+        ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
+        / (WALLCLOCK_RATE/100);
+
+    AmRtpPacket rp;
+    rp.payload = payload;
+    rp.marker = true;
+    rp.sequence = sequence++;
+    rp.timestamp = user_ts;
+    rp.ssrc = l_ssrc;
+    rp.compile((unsigned char*)ping_chr,2);
+
+    rp.setAddr(&r_saddr);
+
+    return sendpacket(&rp);
+}
+
 unsigned int AmRtpAudio::getFrameSize()
 {
     if (!fmt.get())
