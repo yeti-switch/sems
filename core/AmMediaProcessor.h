@@ -120,7 +120,7 @@ class AmMediaSession
     virtual void clearRTPTimeout() = 0;
 
     /** ping the remote side, to open NATs and enable symmetric RTP */
-    virtual int ping(unsigned long long ts) = 0;
+    virtual void ping(unsigned long long ts) = 0;
 
     /** Callback function called when a session is added to media processor.  
      *
