@@ -1,3 +1,10 @@
+sems (1.8.35-1) stable; urgency=low
+
+  * RTP processing refactoring
+  * full ICE support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 16 Sep 2019 12:45:54 +0300
+
 sems (1.8.34-3) stable; urgency=low
 
   * AmRtpAudio: remove excess locking
