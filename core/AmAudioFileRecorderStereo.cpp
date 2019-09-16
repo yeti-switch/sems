@@ -181,7 +181,7 @@ void AmAudioFileRecorderStereo::writeStereoSamples(unsigned long long ts,
 
     switch(channel_id) {
     case AudioRecorderChannelLeft:
-        if(input_sample_rate!=file_sp) {
+        if((unsigned int)input_sample_rate!=file_sp) {
             size = resample(resampling_state_l,
                             samples,size,
                             input_sample_rate);
@@ -219,7 +219,7 @@ void AmAudioFileRecorderStereo::writeStereoSamples(unsigned long long ts,
         }
         break;
     case AudioRecorderChannelRight:
-        if(input_sample_rate!=file_sp) {
+        if((unsigned int)input_sample_rate!=file_sp) {
             size = resample(resampling_state_r,
                             samples,size,
                             input_sample_rate);

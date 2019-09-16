@@ -395,8 +395,7 @@ class MEDIA_interface : public PI_interface<MEDIA_info*>
         MEDIA_info &info,
         unsigned short index)
     {
-        unsigned char mask = static_cast<unsigned char>(
-            info.type_ip | (info.mtype << 3));
+        unsigned char mask = static_cast<unsigned char>(info.type_ip | (info.mtype << 3));
         std::map<unsigned char, unsigned short>::iterator it = local_ip_proto2proto_idx.find(mask);
         if(it != local_ip_proto2proto_idx.end()) {
             ERROR("duplicate local media protocol %s/%s. replace existent one in the map",

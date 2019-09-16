@@ -124,7 +124,7 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
 			   unsigned int   rate);
 
 public:
-  AmRtpAudio(AmSession* _s, int _if, int _addr_if);
+  AmRtpAudio(AmSession* _s, int _if);
   ~AmRtpAudio();
 
   unsigned int getFrameSize();
@@ -160,7 +160,7 @@ public:
 	   const AmSdp& remote,
        bool force_symmetric_rtp = false);
 
-  int ping(unsigned long long ts);
+  int ping(unsigned long long ts) override;
 
   void setPlayoutType(PlayoutType type);
 

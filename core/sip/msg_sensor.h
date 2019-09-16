@@ -30,7 +30,10 @@ public:
   enum packet_type_t {
     PTYPE_SIP = 0,
     PTYPE_RTP,
-    PTYPE_RTCP
+    PTYPE_RTCP,
+    PTYPE_STUN,
+    PTYPE_DTLS,
+    PTYPE_UNKNOWN
   };
   msg_sensor() {}
   virtual ~msg_sensor() {}

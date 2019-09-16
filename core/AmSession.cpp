@@ -276,7 +276,7 @@ const vector<SdpPayload*>& AmSession::getPayloads()
 
 int AmSession::getRPort()
 {
-  return RTPStream()->getRPort();
+  return RTPStream()->getRPort(false);
 }
 
 void AmSession::setRecordAudio(bool record_audio)
@@ -1237,7 +1237,7 @@ string AmSession::sid4dbg()
   dbg = dlg->getCallid() + "/" + dlg->getLocalTag() + "/" 
     + dlg->getRemoteTag() + "/" 
     + int2str(RTPStream()->getLocalPort()) + "/" 
-    + RTPStream()->getRHost(false) + ":" + int2str(RTPStream()->getRPort());
+    + RTPStream()->getRHost(false) + ":" + int2str(RTPStream()->getRPort(false));
   return dbg;
 }
 

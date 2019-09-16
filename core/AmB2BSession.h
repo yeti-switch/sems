@@ -287,8 +287,6 @@ private:
   RTPRelayMode rtp_relay_mode;
   /** force symmetric RTP */
   bool rtp_relay_force_symmetric_rtp;
-  /** ignore rtcp packets for symmetric RTP */
-  bool symmetric_rtp_ignore_rtcp;
   /** endless switching for symmetric rtp */
   bool symmetric_rtp_endless;
   /** send rtp ping  */
@@ -365,7 +363,6 @@ private:
   bool getRtpEndlessSymmetricRtp() const { return symmetric_rtp_endless; }
   bool getRtpPing() const { return rtp_ping; }
   unsigned int getRtpTimeout() const { return dead_rtp_time; }
-  bool getRtpSymmetricRtpIgnoreRTCP() const { return symmetric_rtp_ignore_rtcp; }
   bool getEnableDtmfTranscoding() const { return enable_dtmf_transcoding; }
   bool getEnableInboundDtmfFiltering() const { return enable_inbound_dtmf_filtering; }
   bool getEnableDtmfRtpFiltering() const { return enable_dtmf_rtp_filtering; }
@@ -379,7 +376,6 @@ private:
   virtual void setRtpInterface(int relay_interface);
   virtual void setRtpRelayForceSymmetricRtp(bool force_symmetric);
   virtual void setRtpEndlessSymmetricRtp(bool endless);
-  virtual void setRtpSymmetricRtpIgnoreRTCP(bool ignore_rtcp);
   void setRtpRelayTransparentSeqno(bool transparent);
   void setRtpRelayTransparentSSRC(bool transparent);
   void setRtpRelayTimestampAligning(bool enable);
