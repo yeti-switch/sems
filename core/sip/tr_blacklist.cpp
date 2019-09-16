@@ -3,40 +3,7 @@
 
 #include "hash.h"
 
-#define BLACKLIST_HT_POWER 6
-#define BLACKLIST_HT_SIZE  (1 << BLACKLIST_HT_POWER)
-#define BLACKLIST_HT_MASK  (BLACKLIST_HT_SIZE - 1)
-
 #define DBG_BL INFO
-
-bl_addr::bl_addr()
-{
-  ss_family = AF_INET;
-}
-
-bl_addr::bl_addr(const bl_addr& addr)
-{
-  memcpy(this,&addr,SA_len(&addr));
-}
-
-bl_addr::bl_addr(const sockaddr_storage* p_addr)
-{
-  memcpy((sockaddr_storage*)this,p_addr,SA_len(p_addr));
-}
-
-unsigned int bl_addr::hash()
-{
-  return hashlittle((sockaddr_storage*)this, SA_len(this), 0)
-    & BLACKLIST_HT_MASK;
-}
-
-bool bl_addr_less::operator() (const bl_addr& l, const bl_addr& r) const
-{
-  if(l.ss_family != r.ss_family)
-    return l.ss_family < r.ss_family;
-
-  return memcmp(&l,&r,SA_len(&l));
-}
 
 void bl_timer::fire()
 {

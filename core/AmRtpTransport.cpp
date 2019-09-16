@@ -354,6 +354,7 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
                         AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
                         conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
                         addConnection(conn);
+                        conn->send_request();
                     } catch(string& error) {
                         CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
                     }
@@ -502,6 +503,14 @@ void AmRtpTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
     if(!cur_rtcp_stream)
         cur_rtcp_stream = conn;
     stream->onRtcpPacket(packet, this);
+}
+
+void AmRtpTransport::updateStunTimers()
+{
+    for(auto conn : connections) {
+        if(conn->getConnType() == AmStreamConnection::STUN_CONN)
+            static_cast<AmStunConnection*>(conn)->updateStunTimer();
+    }
 }
 
 void AmRtpTransport::stopReceiving()

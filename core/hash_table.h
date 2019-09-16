@@ -147,6 +147,16 @@ public:
 };
 
 template<class Value>
+class ht_fake
+{
+public:
+    Value* new_elmt(Value* v) {
+	return v;
+    }
+    void dispose(Value* v) {}
+};
+
+template<class Value>
 class ht_ref_cnt
 {
 public:

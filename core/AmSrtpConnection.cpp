@@ -110,25 +110,26 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
 
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
-        if(getConnType() == RTP_CONN)
-            srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
-        else
-            srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
+        srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
+        srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
         policy.window_size = 128;
         policy.num_master_keys = 1;
 
-        CLASS_DBG("create s%s stream for receving stream", getConnType() == RTP_CONN ? "rtp" : "rtcp");
         policy.key = c_key_r;
         if(getConnType() == RTP_CONN) {
             rtp_hdr_t *header = (rtp_hdr_t *)data;
-            policy.ssrc.value = header->ssrc;  // transport->getRtpStream()->get_rsrc();
+            policy.ssrc.value = header->ssrc;
         } else {
             RtcpCommonHeader *header = (RtcpCommonHeader*)data;
             policy.ssrc.value = header->ssrc;
         }
         policy.ssrc.type = ssrc_any_inbound;
+        CLASS_DBG("create s%s stream for receving stream: ssrc - %x", getConnType() == RTP_CONN ? "rtp" : "rtcp", policy.ssrc.value);
         if(srtp_add_stream(srtp_r_session, &policy) != srtp_err_status_ok) {
-            transport->getRtpStream()->onErrorRtpTransport("srtp recv stream not added", transport);
+        string error("s");
+        error.append(getConnType() == RTP_CONN ? "rtp" : "rtcp");
+        error.append(" recv stream not added");
+            transport->getRtpStream()->onErrorRtpTransport(error, transport);
             return;
         }
     }
@@ -142,9 +143,13 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     if(ret == srtp_err_status_ok)
         s_stream->handleConnection(data, size, recv_addr, recv_time);
     else {
+        CLASS_DBG("srtp_unprotect for %s - error:%d", getConnType() == RTP_CONN ? "rtp" : "rtcp", ret);
         sockaddr_storage saddr;
         transport->getLocalAddr(&saddr);
-        transport->getRtpStream()->onErrorRtpTransport("error parsing: incorrect srtp packet", transport);
+        string error("error parsing: incorrect s");
+        error.append(getConnType() == RTP_CONN ? "rtp" : "rtcp");
+        error.append(" packet");
+        transport->getRtpStream()->onErrorRtpTransport(error, transport);
     }
 }
 
@@ -160,10 +165,8 @@ int AmSrtpConnection::send(AmRtpPacket* p)
         
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
-        if(getConnType() == RTP_CONN)
-            srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
-        else
-            srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
+        srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
+        srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
         policy.window_size = 128;
         policy.num_master_keys = 1;
             
