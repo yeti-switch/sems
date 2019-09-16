@@ -422,7 +422,7 @@ class AmRtpStream
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 
     /** ping the remote side, to open NATs and enable symmetric RTP */
-    virtual int ping(unsigned long long ts) {}
+    virtual int ping(unsigned long long ts) { return 0; }
 
     /**
     * This function must be called before setLocalPort, because
