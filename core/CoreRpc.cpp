@@ -317,6 +317,18 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_minfo["use_raw_sockets"] = (minfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
             am_minfo["dscp"] = minfo->dscp;
             am_minfo["tos_byte"] = minfo->tos_byte;
+
+            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(minfo);
+            if(rtp_info) {
+                AmArg &am_rinfo = am_minfo["rtp_info"];
+                am_rinfo["srtp_enable"] = rtp_info->srtp_enable;
+                am_rinfo["dtls_enable"] = rtp_info->dtls_enable;
+                am_rinfo["server_require_client_certificate"] = rtp_info->server_settings.require_client_certificate;
+                am_rinfo["server_verify_client_certificate"] = rtp_info->server_settings.verify_client_certificate;
+                am_rinfo["client_verify_certificate_chain"] = rtp_info->client_settings.verify_certificate_chain;
+                am_rinfo["client_verify_certificate_cn"] = rtp_info->client_settings.verify_certificate_cn;
+            }
+
             am_mearr.push(am_minfo);
         }
         am_iface["media_addrs"] = am_mearr;
