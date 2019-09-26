@@ -1,3 +1,9 @@
+sems (1.8.34-4) stable; urgency=low
+
+  * AmB2BMedia::updateRelayStream(): bind stream before setRAddr(). fixes segfault
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 26 Sep 2019 22:55:05 +0300
+
 sems (1.8.34-3) stable; urgency=low
 
   * AmRtpAudio: remove excess locking
