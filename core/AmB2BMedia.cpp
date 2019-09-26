@@ -1084,6 +1084,11 @@ void AmB2BMedia::updateRelayStream(
 {
     static const PayloadMask true_mask(true);
 
+    if(!session) {
+        CLASS_ERROR("updateRelayStream() no session");
+        return;
+    }
+
     stream->stopReceiving();
     if(m.port) {
         if (session) {
@@ -1096,6 +1101,12 @@ void AmB2BMedia::updateRelayStream(
         stream->setRelayStream(relay_to);
         stream->setRelayPayloads(true_mask);
         if (!relay_paused) stream->enableRtpRelay();
+        if(!stream->hasLocalSocket()) {
+            CLASS_DBG("init on updateRelayStream");
+            stream->setLocalIP(session->localMediaIP(m.conn.addrType));
+            CLASS_DBG("setting local port to %i",m.port);
+            stream->setLocalPort(m.port);
+        }
         stream->setRAddr(connection_address, connection_address,
                          static_cast<unsigned short>(m.port),
                          m.rtcp_port != 0 ? static_cast<unsigned short>(m.rtcp_port+1) : static_cast<unsigned short>(m.port+1));
