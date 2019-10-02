@@ -367,7 +367,6 @@ class AmRtpStream
     bool force_receive_dtmf;
 
   private:
-    void update_sender_stats(const AmRtpPacket &p);
     void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
 
     void init_receiver_info(const AmRtpPacket &p);
@@ -403,6 +402,7 @@ class AmRtpStream
     void allowStunConnection(AmRtpTransport* transport, int priority);
     void dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void update_sender_stats(const AmRtpPacket &p);
 
     int send( unsigned int ts,
         unsigned char* buffer,

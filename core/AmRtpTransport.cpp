@@ -579,7 +579,7 @@ int AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType
     
     int ret = 0;
     if(cur_stream) {
-        return cur_stream->send(packet);
+        ret = cur_stream->send(packet);
     } else {
         connections_mut.lock();
         for(auto conn : connections) {
@@ -591,6 +591,10 @@ int AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType
             }
         }
         connections_mut.unlock();
+    }
+
+    if(ret > 0) {
+        stream->update_sender_stats(*packet);
     }
 
     return ret;
@@ -631,7 +635,7 @@ int AmRtpTransport::send(sockaddr_storage* raddr, unsigned char* buf, int size, 
         log_stacktrace(L_DBG);
         return -1;
     }
-    return 0;
+    return err;
 }
 
 int AmRtpTransport::sendmsg(unsigned char* buf, int size)
