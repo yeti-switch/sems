@@ -2863,8 +2863,10 @@ int _trans_layer::try_next_ip(
         if(trsp_ret < 0) {
             tmp_msg.release();
             return -1;
-        } else if(trsp_ret > 0)
+        } else if(trsp_ret > 0) {
+            tmp_msg.release();
             goto try_next_dest;
+        }
 
         auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
 
