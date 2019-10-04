@@ -369,7 +369,7 @@ void AmRtpStream::initTransport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_WARN("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
+        CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
         AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
                        *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
@@ -379,7 +379,7 @@ void AmRtpStream::initTransport()
     }
     proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_WARN("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
+        CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
         AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
                         *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
