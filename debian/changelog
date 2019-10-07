@@ -1,3 +1,9 @@
+sems (1.8.36-2) stable; urgency=low
+
+  * AmRtpTransport: segfault fix
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 07 Oct 2019 18:45:38 +0300
+
 sems (1.8.36-1) stable; urgency=low
 
   * RTP: fix RTCP SR reports sending
