@@ -80,12 +80,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
 
 AmRtpTransport::~AmRtpTransport()
 {
-    for(auto conn : connections) {
-        delete conn;
-    }
-
-    connections.clear();
-
+    DBG("~AmRtpTransport[%p]",this);
     if(l_sd) {
         if (AmRtpReceiver::haveInstance()) {
             AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);
@@ -93,6 +88,12 @@ AmRtpTransport::~AmRtpTransport()
         }
         close(l_sd);
     }
+
+    for(auto conn : connections) {
+        delete conn;
+    }
+
+    connections.clear();
 
     if (logger) dec_ref(logger);
     if (sensor) dec_ref(sensor);
