@@ -162,6 +162,7 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
     p->recv_time = recv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
@@ -191,6 +192,7 @@ void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
     p->recv_time = recv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
