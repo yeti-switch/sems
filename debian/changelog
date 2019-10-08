@@ -1,3 +1,9 @@
+sems (1.8.36-3) stable; urgency=low
+
+  * AmRtpTransport::stopReceiving(): fix l_sd_ctx invalidation
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 08 Oct 2019 17:15:44 +0300
+
 sems (1.8.36-2) stable; urgency=low
 
   * AmRtpTransport: segfault fix
