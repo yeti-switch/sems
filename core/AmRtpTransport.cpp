@@ -522,7 +522,7 @@ void AmRtpTransport::stopReceiving()
         if(getTransportType() == RTCP_TRANSPORT) trtype = "RTCP";
         CLASS_DBG("[%p]remove %s stream from RTP receiver\n", stream,  trtype.c_str());
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
-        l_sd_ctx = 0;
+        l_sd_ctx = -1;
     }
 }
 

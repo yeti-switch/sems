@@ -211,9 +211,9 @@ void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
   AmLock l(streams_mut);
   (void)l;
 
-  if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,NULL)==-1){
-      ERROR("removeStream epoll_ctl_del sd = %i error %s",
-            sd,strerror(errno));
+  if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,nullptr)==-1){
+      ERROR("removeStream epoll_ctl_del sd = %d ctx_idx = %d error %s",
+            sd,ctx_idx,strerror(errno));
   }
   streams.ctx_put(ctx_idx);
   stream_remove_event.fire();
