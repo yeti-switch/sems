@@ -18,6 +18,7 @@
 #include <fstream>
 #include <map>
 #include "sip/tr_blacklist.h"
+#include "sip/trans_layer.h"
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -157,6 +158,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"status","",&CoreRpc::showStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"tr_blacklist","",&CoreRpc::showTrBlacklist);
+        reg_method(show,"tr_count","",&CoreRpc::showTrCount);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
@@ -462,6 +464,11 @@ void CoreRpc::showTrBlacklist(const AmArg&, AmArg& ret)
     tr_blacklist::instance()->dump([&l](const bl_addr& k, const bl_entry*) {
         l.push(AmArg(am_inet_ntop(&k)));
     });
+}
+
+void CoreRpc::showTrCount(const AmArg&, AmArg& ret)
+{
+    ret = (int)trans_layer::instance()->get_trans_count();
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

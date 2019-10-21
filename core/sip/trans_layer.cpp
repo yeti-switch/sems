@@ -1107,6 +1107,11 @@ void _trans_layer::timeout(trans_bucket* bucket, sip_trans* t)
     ua->handle_sip_reply(trans_ticket(t,bucket),dialog_id,&reply);
 }
 
+const int _trans_layer::get_trans_count()
+{
+    return count_transactions();
+}
+
 static int patch_ruri_with_remote_ip(string& n_uri, sip_msg* msg)
 {
     // - parse R-URI

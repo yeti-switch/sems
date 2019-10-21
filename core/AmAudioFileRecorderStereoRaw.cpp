@@ -4,8 +4,10 @@
 #include "AmSessionContainer.h"
 #include "ampi/HttpClientAPI.h"
 
+using namespace RSR;
+
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
-: AmAudioFileRecorder(RecorderStereoRaw, id)
+: AmAudioFileRecorder(RecorderStereoRaw, id), max_sample_rate(0)
 {
     string filePath(AmConfig.rsr_path);
     filePath += "/" + id + ".rsr";
@@ -15,12 +17,18 @@ AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
         return;
     }
     fseek(fp,0L,SEEK_SET);
+    chunk data;
+    data.header.type = DATA_COMMON;
+    data.header.size = sizeof(common_data);
+    memset(&data.data, 0, sizeof(common_data));
+    fwrite(&data, 1, sizeof(data_chunk) + sizeof(common_data), fp);
 }
 
 AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
 {
     if(!fp) return;
 
+    int meta_offset = ftell(fp);
     for(auto& file : files) {
         chunk data;
         data.data.file.offset = file.second;
@@ -28,6 +36,15 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
         data.header.size = file.first.size() + sizeof(file_metadata);
         fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
+        data.header.type = DATA_COMMON;
+        data.header.size = sizeof(common_data);
+        struct timeval tm;
+        gettimeofday(&tm, 0);
+        data.data.common.timestamp = tm.tv_sec;
+        data.data.common.meta_offset = meta_offset;
+        data.data.common.output_sample_rate = max_sample_rate;
+        fseek(fp, 0, SEEK_SET);
+        fwrite(&data, 1, sizeof(data_chunk) + sizeof(common_data), fp);
     }
 
     fflush(fp);
@@ -66,6 +83,10 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
 {
     last_ts[channel_id] = ts;
     if(!fp) return;
+
+    if(max_sample_rate < input_sample_rate) {
+        max_sample_rate = input_sample_rate;
+    }
 
     chunk data;
     data.data.samples.channel_id = channel_id;

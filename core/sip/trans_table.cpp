@@ -573,6 +573,14 @@ void dumps_transactions()
     _trans_table.dump();
 }
 
+static int count_ret;
+int count_transactions()
+{
+    count_ret = 0;
+    _trans_table.dump([](sip_trans*){count_ret++;});
+    return count_ret;
+}
+
 void cleanup_transaction()
 {
     _trans_table.cleanup();

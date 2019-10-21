@@ -245,6 +245,7 @@ public:
     void timeout(trans_bucket* bucket, sip_trans* t);
 
     const trans_stats &get_stats() { return stats; }
+    const int get_trans_count();
 
 protected:
 

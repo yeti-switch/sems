@@ -14,6 +14,7 @@ private:
     map<string, unsigned long long> files;
     map<unsigned char, unsigned long long> last_ts;
     FILE* fp;
+    int max_sample_rate;
 protected:
     virtual int init(const string &path, const string &sync_ctx);
     virtual int add_file(const string &path);
