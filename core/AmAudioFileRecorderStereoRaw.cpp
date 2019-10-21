@@ -26,26 +26,29 @@ AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 
 AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
 {
+    struct timeval tm;
+    long int meta_offset;
+    chunk data;
+
     if(!fp) return;
 
-    int meta_offset = ftell(fp);
+    meta_offset = static_cast<int>(ftell(fp));
+
     for(auto& file : files) {
-        chunk data;
         data.data.file.offset = file.second;
         data.header.type = DATA_META;
-        data.header.size = file.first.size() + sizeof(file_metadata);
+        data.header.size = static_cast<unsigned int >(file.first.size() + sizeof(file_metadata));
         fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
-        data.header.type = DATA_COMMON;
-        data.header.size = sizeof(common_data);
-        struct timeval tm;
-        gettimeofday(&tm, 0);
-        data.data.common.timestamp = tm.tv_sec;
-        data.data.common.meta_offset = meta_offset;
-        data.data.common.output_sample_rate = max_sample_rate;
-        fseek(fp, 0, SEEK_SET);
-        fwrite(&data, 1, sizeof(data_chunk) + sizeof(common_data), fp);
     }
+
+    gettimeofday(&tm, nullptr);
+    data.data.common.timestamp = static_cast<unsigned long long>(tm.tv_sec);
+    data.data.common.meta_offset = static_cast<unsigned long long>(meta_offset);
+    data.data.common.output_sample_rate = static_cast<unsigned int>(max_sample_rate);
+
+    fseek(fp, sizeof(data_chunk), SEEK_SET);
+    fwrite(&data.data, 1, sizeof(common_data), fp);
 
     fflush(fp);
     fclose(fp);
