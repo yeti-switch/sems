@@ -1,3 +1,10 @@
+sems (1.8.37-1) stable; urgency=low
+
+  * optimize RSR file structure
+  * add RPC method core.show.tr_count
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 22 Oct 2019 11:31:27 +0300
+
 sems (1.8.36-4) stable; urgency=low
 
   * AmRtpConnection: check for ring-buffer overflow. fixes segfault
