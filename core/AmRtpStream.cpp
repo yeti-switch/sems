@@ -301,7 +301,7 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
             tr_rtcp->getLocalAddr(&l_rtcp_addr);
             am_set_port(&l_rtcp_addr,port+1);
             if(bind(tr_rtcp->getLocalSocket(),(const struct sockaddr*)&l_rtcp_addr,SA_len(&l_rtcp_addr))) {
-                CLASS_DBG("bind: %s\n",strerror(errno));
+                CLASS_DBG("bind for RTCP: %s\n",strerror(errno));
                 goto try_another_port;
             }
         }
@@ -309,7 +309,7 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
         tr_rtp->getLocalAddr(&l_rtp_addr);
         am_set_port(&l_rtp_addr,port);
         if(bind(tr_rtp->getLocalSocket(),(const struct sockaddr*)&l_rtp_addr,SA_len(&l_rtp_addr))) {
-            CLASS_DBG("bind: %s\n",strerror(errno));
+            CLASS_DBG("bind for RTP: %s\n",strerror(errno));
             goto try_another_port;
         }
 

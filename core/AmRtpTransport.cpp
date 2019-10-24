@@ -19,6 +19,17 @@
 #define RTCP_PAYLOAD_MAX 76
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
+inline const char *transport_type2str(int type)
+{
+    static const char *rtp = "RTP";
+    static const char *rtcp = "RTCP";
+    static const char *unknown = "UNKNOWN";
+    switch(type) {
+    case RTP_TRANSPORT: return rtp;
+    case RTCP_TRANSPORT: return rtcp;
+    default: return unknown; }
+}
+
 AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type)
     : stream(_stream)
     , cur_rtp_stream(0)
@@ -81,7 +92,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
 AmRtpTransport::~AmRtpTransport()
 {
     DBG("~AmRtpTransport[%p]",this);
-    if(l_sd) {
+    if(l_sd && (l_sd_ctx >= 0)) {
         if (AmRtpReceiver::haveInstance()) {
             AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);
             l_sd_ctx = -1;
@@ -200,22 +211,25 @@ int AmRtpTransport::hasLocalSocket()
 
 int AmRtpTransport::getLocalSocket(bool reinit)
 {
-    if (l_sd && !reinit)
+    CLASS_DBG("> getLocalSocket(%d)", reinit);
+
+    if (l_sd && !reinit) {
+        CLASS_DBG("< return existent l_sd:%d", l_sd);
         return l_sd;
-    else if(l_sd && reinit) {
+    } else if(l_sd && reinit) {
         close(l_sd);
         l_sd = 0;
     }
 
     int sd=0;
     if((sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
-        CLASS_ERROR("%s\n",strerror(errno));
+        CLASS_ERROR("< %s\n",strerror(errno));
         throw string ("while creating new socket.");
     }
 
     int true_opt = 1;
     if(ioctl(sd, FIONBIO , &true_opt) == -1) {
-        CLASS_ERROR("%s\n",strerror(errno));
+        CLASS_ERROR("< %s\n",strerror(errno));
         close(sd);
         throw string ("while setting RTP socket non blocking.");
     }
@@ -223,13 +237,14 @@ int AmRtpTransport::getLocalSocket(bool reinit)
     if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
                   (void*)&true_opt, sizeof(true_opt)) < 0)
     {
-        CLASS_ERROR("%s\n",strerror(errno));
+        CLASS_ERROR("< %s\n",strerror(errno));
         close(sd);
         throw string ("while setting RTP socket SO_TIMESTAMP opt");
     }
 
     l_sd = sd;
 
+    CLASS_DBG("< return newly created l_sd:%d", l_sd);
     return l_sd;
 }
 
@@ -516,11 +531,10 @@ void AmRtpTransport::updateStunTimers()
 
 void AmRtpTransport::stopReceiving()
 {
+    CLASS_DBG("stopReceiving() l_sd:%d, seq:%d", l_sd, seq);
     if(hasLocalSocket() && seq != NONE) {
-        string trtype;
-        if(getTransportType() == RTP_TRANSPORT) trtype = "RTP";
-        if(getTransportType() == RTCP_TRANSPORT) trtype = "RTCP";
-        CLASS_DBG("[%p]remove %s stream from RTP receiver\n", stream,  trtype.c_str());
+        CLASS_DBG("[%p]remove %s stream from RTP receiver\n",
+            to_void(stream),  transport_type2str(getTransportType()));
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
         l_sd_ctx = -1;
     }
@@ -528,11 +542,10 @@ void AmRtpTransport::stopReceiving()
 
 void AmRtpTransport::resumeReceiving()
 {
-    if(hasLocalSocket() && seq != NONE){
-        string trtype;
-        if(getTransportType() == RTP_TRANSPORT) trtype = "RTP";
-        if(getTransportType() == RTCP_TRANSPORT) trtype = "RTCP";
-        CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n", stream,  trtype.c_str());
+    CLASS_DBG("resumeReceiving() l_sd:%d, seq:%d", l_sd, seq);
+    if(hasLocalSocket() && seq != NONE) {
+        CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n",
+            to_void(stream),  transport_type2str(getTransportType()));
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
         if(l_sd_ctx < 0) {
             CLASS_DBG("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);

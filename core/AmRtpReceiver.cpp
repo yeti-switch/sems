@@ -54,8 +54,13 @@ int StreamCtxMap::ctx_get(int fd, AmRtpSession* s){
     return idx;
 }
 
-void StreamCtxMap::ctx_put(int ctx_idx){
-    ctxs[ctx_idx].valid = false;
+void StreamCtxMap::ctx_put(int ctx_idx) {
+    auto &ctx = ctxs[ctx_idx];
+
+    DBG("put ctx_idx:%d. valid:%d, stream_fd:%d, stream:%p ",
+        ctx_idx, ctx.valid, ctx.stream_fd, to_void(ctx.stream));
+
+    ctx.valid = false;
     ctxs_to_put.push_back(ctx_idx);
 }
 
@@ -178,45 +183,53 @@ void AmRtpReceiverThread::run()
 
 int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx)
 {
-  AmLock l(streams_mut);
-  (void)l;
+    CLASS_DBG("> addStream(sd:%d, stream:%p, old_ctx_id:%d)", sd, to_void(stream), old_ctx_idx);
 
-  if(streams.is_double_add(old_ctx_idx,stream)){
-      DBG("atempt to add already added stream. return back old ctx");
-      return old_ctx_idx;
-  }
+    AmLock l(streams_mut);
+    (void)l;
 
-  int ctx_idx = streams.ctx_get(sd,stream);
-  if(-1==ctx_idx){
-      ERROR("streams contexts storage exhausted");
-      throw string("streams contexts storage exhausted");
-  }
-  struct epoll_event ev;
-  bzero(&ev, sizeof(struct epoll_event));
-  ev.events = EPOLLIN;
-  ev.data.fd = ctx_idx;
-  if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev)==-1){
-    ERROR("failed to add to epoll structure stream [%p] with sd=%i, ctx_idx = %d error: %s\n",
-        stream,sd,ctx_idx,strerror(errno));
-    streams.ctx_put_immediate(ctx_idx);
-    return -1;
-  }
-  return ctx_idx;
+    if(streams.is_double_add(old_ctx_idx,stream)) {
+        CLASS_DBG("< skip double add for ctx %d. return it back", old_ctx_idx);
+        return old_ctx_idx;
+    }
+
+    int ctx_idx = streams.ctx_get(sd,stream);
+    if(-1==ctx_idx) {
+        CLASS_ERROR("< streams contexts storage exhausted on attempt to add stream: %p",
+            to_void(stream));
+        throw string("streams contexts storage exhausted");
+    }
+
+    struct epoll_event ev;
+    bzero(&ev, sizeof(struct epoll_event));
+    ev.events = EPOLLIN;
+    ev.data.fd = ctx_idx;
+
+    if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev) == -1) {
+        CLASS_ERROR("< failed to add to epoll structure stream [%p] with sd=%i, ctx_idx = %d error: %s\n",
+            to_void(stream),sd,ctx_idx,strerror(errno));
+        streams.ctx_put_immediate(ctx_idx);
+        return -1;
+    }
+    CLASS_DBG("< sd:%d for stream:%p added with ctx_id:%d", sd, to_void(stream), ctx_idx);
+    return ctx_idx;
 }
 
 void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
 {
-  if(ctx_idx == -1) return;
+    CLASS_DBG("> removeStream(sd:%d, ctx_id:%d)", sd, ctx_idx);
 
-  AmLock l(streams_mut);
-  (void)l;
+    if(ctx_idx == -1) return;
 
-  if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,nullptr)==-1){
-      ERROR("removeStream epoll_ctl_del sd = %d ctx_idx = %d error %s",
+    AmLock l(streams_mut);
+    (void)l;
+
+    if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,nullptr) == -1) {
+        CLASS_ERROR("removeStream epoll_ctl_del sd:%d ctx_idx:%d error:%s",
             sd,ctx_idx,strerror(errno));
-  }
-  streams.ctx_put(ctx_idx);
-  stream_remove_event.fire();
+    }
+    streams.ctx_put(ctx_idx);
+    stream_remove_event.fire();
 }
 
 void _AmRtpReceiver::start()
