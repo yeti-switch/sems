@@ -533,6 +533,7 @@ void AmRtpTransport::updateStunTimers()
 
 void AmRtpTransport::stopReceiving()
 {
+    AmLock l(connections_mut);
     CLASS_DBG("stopReceiving() l_sd:%d, seq:%d", l_sd, seq);
     if(hasLocalSocket() && seq != NONE) {
         CLASS_DBG("[%p]remove %s stream from RTP receiver\n",
@@ -544,6 +545,7 @@ void AmRtpTransport::stopReceiving()
 
 void AmRtpTransport::resumeReceiving()
 {
+    AmLock l(connections_mut);
     CLASS_DBG("resumeReceiving() l_sd:%d, seq:%d", l_sd, seq);
     if(hasLocalSocket() && seq != NONE) {
         CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n",
