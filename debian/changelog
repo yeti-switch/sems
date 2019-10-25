@@ -1,3 +1,9 @@
+sems (1.8.37-3) stable; urgency=low
+
+  * fix RTP sockets descriptors leak
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 25 Oct 2019 12:39:10 +0300
+
 sems (1.8.37-2) stable; urgency=low
 
   * improve RTP receiver related logging

@@ -92,10 +92,12 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
 AmRtpTransport::~AmRtpTransport()
 {
     DBG("~AmRtpTransport[%p]",this);
-    if(l_sd && (l_sd_ctx >= 0)) {
-        if (AmRtpReceiver::haveInstance()) {
-            AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);
-            l_sd_ctx = -1;
+    if(l_sd) {
+        if(l_sd_ctx >= 0) {
+            if (AmRtpReceiver::haveInstance()) {
+                AmRtpReceiver::instance()->removeStream(l_sd,l_sd_ctx);
+                l_sd_ctx = -1;
+            }
         }
         close(l_sd);
     }
