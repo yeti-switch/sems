@@ -209,7 +209,7 @@ int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx
         CLASS_ERROR("< failed to add to epoll structure stream:%p with sd:%i, old_ctx_idx:%d, ctx_idx:%d, error: %s\n",
             to_void(stream),sd,old_ctx_idx,ctx_idx,strerror(errno));
         streams.ctx_put_immediate(ctx_idx);
-        return -1;
+        return old_ctx_idx;
     }
     CLASS_DBG("< sd:%d for stream:%p added with ctx_id:%d", sd, to_void(stream), ctx_idx);
     return ctx_idx;
