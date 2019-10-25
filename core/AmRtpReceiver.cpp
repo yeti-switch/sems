@@ -206,8 +206,8 @@ int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx
     ev.data.fd = ctx_idx;
 
     if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev) == -1) {
-        CLASS_ERROR("< failed to add to epoll structure stream [%p] with sd=%i, ctx_idx = %d error: %s\n",
-            to_void(stream),sd,ctx_idx,strerror(errno));
+        CLASS_ERROR("< failed to add to epoll structure stream:%p with sd:%i, old_ctx_idx:%d, ctx_idx:%d, error: %s\n",
+            to_void(stream),sd,old_ctx_idx,ctx_idx,strerror(errno));
         streams.ctx_put_immediate(ctx_idx);
         return -1;
     }
