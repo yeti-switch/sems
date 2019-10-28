@@ -1,4 +1,4 @@
-sems (1.8.34-4) stable; urgency=low
+sems (1.8.34-4bpo) stable; urgency=low
 
   * AmRtpAudio: remove excess locking
   * trans_layer::try_next_ip: fix missed tmp_msg release on set_trsp_socket() error with positive code
