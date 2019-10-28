@@ -1,3 +1,10 @@
+sems (1.8.33-5p1) stable; urgency=low
+
+  * trans_layer::try_next_ip: fix missed tmp_msg release on set_trsp_socket() error with positive code
+  * AmRtpAudio::setCurrentPayload(): reinit playout buffer and FEC on switching to codec with another rate
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 28 Oct 2019 12:14:41 +0200
+
 sems (1.8.33-5) stable; urgency=low
 
   * AmSession::addStereoRecorder: disable relay after RTP stream setStereoRecorders
