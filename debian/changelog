@@ -1,3 +1,10 @@
+sems (1.8.34-4) stable; urgency=low
+
+  * AmRtpAudio: remove excess locking
+  * trans_layer::try_next_ip: fix missed tmp_msg release on set_trsp_socket() error with positive code
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 28 Oct 2019 12:30:38 +0200
+
 sems (1.8.34-3) stable; urgency=low
 
   * AmRtpAudio: remove excess locking
