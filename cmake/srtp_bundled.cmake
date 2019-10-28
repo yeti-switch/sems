@@ -22,5 +22,6 @@ set(SRTP_BUNDLED_INCLUDE_DIRS ${SRTP_BIN_DIR}/include/)
 add_library(SRTP_bundled STATIC IMPORTED)
 set_property(TARGET SRTP_bundled PROPERTY IMPORTED_LOCATION ${SRTP_BUNDLED_LIB})
 set(SRTP_BUNDLED_LIBS ${SRTP_BUNDLED_LIB})
+list(APPEND sems_dependency_targets libsrtp)
 
 install(DIRECTORY ${SRTP_BIN_DIR}/include/ DESTINATION /usr/include/sems/srtp FILES_MATCHING PATTERN "*.h")

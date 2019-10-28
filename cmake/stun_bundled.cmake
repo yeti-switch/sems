@@ -19,6 +19,7 @@ set(STUN_BUNDLED_INCLUDE_DIRS ${STUN_BIN_DIR}/common ${STUN_BIN_DIR}/stuncore)
 add_library(STUN_bundled STATIC IMPORTED)
 set_property(TARGET STUN_bundled PROPERTY IMPORTED_LOCATION ${STUN_BUNDLED_LIB})
 set(STUN_BUNDLED_LIBS ${STUN_BUNDLED_LIB})
+list(APPEND sems_dependency_targets libstuncore)
 
 install(DIRECTORY ${STUN_BIN_DIR}/stuncore/ DESTINATION /usr/include/sems/stun/ FILES_MATCHING PATTERN *.h)
 install(DIRECTORY ${STUN_BIN_DIR}/common/ DESTINATION /usr/include/sems/stun/ FILES_MATCHING PATTERN *.h)

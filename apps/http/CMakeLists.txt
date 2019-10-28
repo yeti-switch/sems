@@ -7,5 +7,6 @@ SET(http_client_config_dist_files http_client)
 
 INCLUDE_DIRECTORIES(${CURL_BUNDLED_INCLUDE_DIRS})
 SET(sems_module_libs ${CURL_BUNDLED_LIBS})
+SET(sems_module_dependency libcurl)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/module.rules.txt)

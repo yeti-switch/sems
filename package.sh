@@ -1,3 +1,3 @@
 #!/bin/bash
 
-debuild -us -uc -b
+debuild -us -uc -b -j12

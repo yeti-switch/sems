@@ -22,6 +22,10 @@ ADD_DEFINITIONS(-DMOD_NAME=\\\"${sems_module_name}\\\")
 # all modules should be linked against ${CMAKE_DL_LIBS} at least
 # and with additional ${sems_module_libs} if they exists
 TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
+IF(NOT ${sems_module_dependency})
+    MESSAGE(STATUS "sems_${sems_module_name} dependency: ${sems_module_dependency}")
+    ADD_DEPENDENCIES(sems_${sems_module_name} ${sems_module_dependency})
+ENDIF(NOT ${sems_module_dependency})
 
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES OUTPUT_NAME ${sems_module_name})
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES PREFIX "")

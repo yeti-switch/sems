@@ -28,6 +28,7 @@ set(BOTAN_BUNDLED_INCLUDE_DIRS ${BOTAN_BIN_DIR}/build/include/)
 add_library(BOTAN_bundled STATIC IMPORTED)
 set_property(TARGET BOTAN_bundled PROPERTY IMPORTED_LOCATION ${BOTAN_BUNDLED_LIB})
 set(BOTAN_BUNDLED_LIBS ${BOTAN_BUNDLED_LIB})
+list(APPEND sems_dependency_targets libbotan)
 
 file(GLOB BOTAN_INCLUDE_FILES "${BOTAN_BIN_DIR}/build/include/botan/*.h")
 FOREACH(rel_file ${BOTAN_INCLUDE_FILES})

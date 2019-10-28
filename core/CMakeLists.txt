@@ -21,8 +21,7 @@ INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS}
                      ${CONFUSE_BUNDLED_INCLUDE_DIRS}
                      ${STUN_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads
-    ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS} ${STUN_BUNDLED_LIBS})
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)
@@ -54,9 +53,13 @@ IF(LIBZRTP_FOUND)
 ENDIF(LIBZRTP_FOUND)
 
 TARGET_LINK_LIBRARIES(${SEMS_LIB} ${CMAKE_DL_LIBS} ${common_LIBS})
+TARGET_LINK_LIBRARIES(${SEMS_LIB} ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS} ${STUN_BUNDLED_LIBS})
 IF(SPANDSP_FOUND)
     TARGET_LINK_LIBRARIES(${SEMS_LIB} -Wl,--whole-archive ${SPANDSP_LIBRARIES} -Wl,--no-whole-archive)
 ENDIF(SPANDSP_FOUND)
+
+MESSAGE(STATUS "${SEMS_LIB} dependency: ${sems_dependency_targets}")
+ADD_DEPENDENCIES(${SEMS_LIB} ${sems_dependency_targets})
 
 TARGET_LINK_LIBRARIES(${SEMS_APP} ${SEMS_LIB})
 FOREACH(aux_binary IN LISTS aux_binaries)
