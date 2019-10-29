@@ -220,6 +220,7 @@ private:
 
     vector<AmStreamConnection*> connections;
     AmMutex                     connections_mut;
+    AmMutex                     stream_mut;
 };
 
 #endif/*AM_RTP_TRANSPORT_H*/
