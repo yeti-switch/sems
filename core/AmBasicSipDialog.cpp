@@ -246,7 +246,7 @@ int AmBasicSipDialog::getOutboundIf()
         fr.value = stl2cstr(route);
         sip_uri* route_uri = get_first_route_uri(&fr);
         if(!route_uri) {
-            ERROR("Could not parse route (local_tag='%s';route='%s')",
+            DBG("Could not parse route (local_tag='%s';route='%s')",
                   local_tag.c_str(),route.c_str());
             goto error;
         }
@@ -264,7 +264,7 @@ int AmBasicSipDialog::getOutboundIf()
 
     if(!dest_uri.empty()) {
         if(parse_uri(&d_uri,dest_uri.c_str(),static_cast<int>(dest_uri.length()),true) < 0) {
-            ERROR("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
+            DBG("Could not parse destination URI (local_tag='%s';dest_uri='%s')",
                   local_tag.c_str(),dest_uri.c_str());
             goto error;
         }
