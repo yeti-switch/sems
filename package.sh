@@ -1,3 +1,3 @@
 #!/bin/bash
 
-debuild -us -uc -b -j12
+debuild -us -uc -b -j`grep -c ^processor /proc/cpuinfo`
