@@ -80,10 +80,12 @@ using std::string;
 #include "PcapFileRecorder.h"
 #include "sip/tls_trsp.h"
 #include "sip/tr_blacklist.h"
+#include "AmStatisticsCounter.h"
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
 int main_pid = 0;               /**< Main process PID */
+time_t start_time;
 
 /** SIP stack (controller interface) */
 #define sip_ctrl (*SipCtrlInterface::instance())
@@ -403,6 +405,7 @@ int main(int argc, char* argv[])
 
   (void)ret;
 
+  start_time = time(0);
   progname = strrchr(argv[0], '/');
   progname = (progname == NULL ? argv[0] : progname + 1);
 
@@ -707,6 +710,13 @@ int main(int argc, char* argv[])
 
   AmSessionContainer::instance()->initMonitoring();
 
+  statistics::instance()->NewFunctionCounter([]()->unsigned long long{
+    return time(NULL);
+  }, StatCounter::Counter, "core", "localtime");
+  statistics::instance()->NewFunctionCounter([]()->unsigned long long{
+    return time(0) - start_time;
+  }, StatCounter::Counter, "core", "uptime");
+
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {
     DBG("hi world! I'm main child [%d]\n", main_pid);
@@ -781,6 +791,7 @@ int main(int argc, char* argv[])
 
   tls_cleanup();
   srtp_shutdown();
+  statistics::dispose();
 #if EVENT__NUMERIC_VERSION>0x02010000
   libevent_global_shutdown();
 #endif

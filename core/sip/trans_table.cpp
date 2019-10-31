@@ -574,7 +574,7 @@ void dumps_transactions()
 }
 
 static int count_ret;
-int count_transactions()
+unsigned long long count_transactions()
 {
     count_ret = 0;
     _trans_table.dump([](sip_trans*){count_ret++;});

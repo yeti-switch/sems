@@ -54,6 +54,7 @@
 #include "AmUtils.h"
 #include "AmLcConfig.h"
 #include "AmSipEvent.h"
+#include "AmStatisticsCounter.h"
 #include "AmSessionContainer.h"
 
 #include <netdb.h>
@@ -76,11 +77,23 @@ static trsp_acl fake_opt_acl;
 static const cstring sip_resp_forbidden("Forbidden");
 
 unsigned int _trans_layer::default_bl_ttl;
+extern unsigned long long count_transactions();
+
+trans_stats::trans_stats()
+{
+    received_replies = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "rx_replies");
+    received_requests = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "rx_requests");
+    sent_replies = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_replies");
+    sent_reply_retrans = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_replies_retrans");
+    sent_requests = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_requests");
+    sent_request_retrans = statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_requests_retrans");
+}
 
 _trans_layer::_trans_layer()
     : ua(NULL),
       transports()
 {
+    statistics::instance()->NewFunctionCounter(count_transactions, StatCounter::Gauge, "core", "sip_transactions");
 }
 
 _trans_layer::~_trans_layer()
