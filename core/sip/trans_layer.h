@@ -50,6 +50,7 @@ using std::string;
 using std::map;
 
 #include <memory>
+#include <AmStatistics.h>
 
 struct sip_msg;
 struct sip_uri;
@@ -82,14 +83,15 @@ class msg_logger;
 class trans_stats
 {
   private:
-    atomic_int sent_requests;
-    atomic_int sent_replies;
-    atomic_int received_requests;
-    atomic_int received_replies;
-    atomic_int sent_reply_retrans;
-    atomic_int sent_request_retrans;
+    AtomicCounter &sent_requests;
+    AtomicCounter &sent_replies;
+    AtomicCounter &received_requests;
+    AtomicCounter &received_replies;
+    AtomicCounter &sent_reply_retrans;
+    AtomicCounter &sent_request_retrans;
 
   public:
+    trans_stats();
 
     /** increment number of sent requests */
     void inc_sent_requests() { sent_requests.inc(); }
@@ -110,12 +112,12 @@ class trans_stats
     void inc_sent_reply_retrans() { sent_reply_retrans.inc(); }
 
 
-    unsigned get_sent_requests() const { return sent_requests.get(); }
-    unsigned get_sent_replies() const { return sent_replies.get(); }
-    unsigned get_received_requests() const { return received_requests.get(); }
-    unsigned get_received_replies() const { return received_replies.get(); }
-    unsigned get_sent_request_retrans() const { return sent_request_retrans.get(); }
-    unsigned get_sent_reply_retrans() const { return sent_reply_retrans.get(); }
+    unsigned get_sent_requests() const { return sent_requests.atomic_int64::get(); }
+    unsigned get_sent_replies() const { return sent_replies.atomic_int64::get(); }
+    unsigned get_received_requests() const { return received_requests.atomic_int64::get(); }
+    unsigned get_received_replies() const { return received_replies.atomic_int64::get(); }
+    unsigned get_sent_request_retrans() const { return sent_request_retrans.atomic_int64::get(); }
+    unsigned get_sent_reply_retrans() const { return sent_reply_retrans.atomic_int64::get(); }
 };
 
 /** 

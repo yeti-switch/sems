@@ -322,11 +322,11 @@ typedef void* (*FactoryCreate)();
 
 #define DEFINE_FACTORY_INSTANCE(class_name, mod_name)	\
 							\
-  class_name* class_name::_instance=0;			\
+  class_name* class_name::_instance=nullptr;	\
 							\
   class_name* class_name::instance()			\
   {							\
-  if(_instance == NULL)					\
+  if(_instance == nullptr)					\
     _instance = new class_name(mod_name);		\
   return _instance;					\
   }
