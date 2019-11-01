@@ -1,3 +1,10 @@
+sems (1.8.39-1) stable; urgency=low
+
+  * add core statistics counters container
+  * add prometheus_exporter module
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 01 Nov 2019 18:01:18 +0200
+
 sems (1.8.38-1) stable; urgency=low
 
   * fix deadlock in AmRtpTransport
