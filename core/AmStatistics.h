@@ -1,5 +1,4 @@
-#ifndef AM_STATISTICS_COUNTER_H
-#define AM_STATISTICS_COUNTER_H
+#pragma once
 
 #include "singleton.h"
 #include "atomic_types.h"
@@ -11,7 +10,7 @@ using std::map;
 
 class StatCounter
 {
-public:
+  public:
     enum CounterType
     {
         Counter,
@@ -20,9 +19,23 @@ public:
         Summary
     };
 
+  private:
+    CounterType type_;
+    string name_;
+    string group_;
+    string help_;
+    string concatenated_name_;
+    map<string, string> labels;
+
+  public:
     StatCounter(CounterType type, const string& group, const string& name)
-    : type_(type), name_(name), group_(group){}
-    virtual ~StatCounter(){}
+     : type_(type),
+       name_(name),
+       group_(group)
+    {
+        concatenated_name_ = group_ + "_" + name_;
+    }
+    virtual ~StatCounter() {}
 
     CounterType type()
     {
@@ -39,7 +52,7 @@ public:
         help_ = help;
     }
 
-    string getHelp()
+    const string &getHelp()
     {
         return help_;
     }
@@ -49,7 +62,7 @@ public:
         return labels;
     }
 
-    string type_str()
+    const char *type_str()
     {
         switch(type_) {
         case Counter: return "counter";
@@ -57,21 +70,15 @@ public:
         case Histogram: return "histogram";
         case Summary: return "summary";
         }
-        return "";
+        return "unknown";
     }
 
-    string name()
+    const string &name()
     {
-        return group_ + "_" + name_;
+        return concatenated_name_;
     }
 
     virtual void get(unsigned long long* counter) = 0;
-private:
-    CounterType type_;
-    string name_;
-    string group_;
-    string help_;
-    map<string, string> labels;
 };
 
 class AtomicCounter : public atomic_int64, public StatCounter
@@ -106,14 +113,16 @@ class AmStatistics
 protected:
     AmStatistics();
     ~AmStatistics();
-    void dispose(){}
+    void dispose() {}
 public:
     void AddLabel(const string& name, const string& value);
-    map<string, string> GetLabels();
-    map<string, string> GetLabels(const map<string, string>& c_labels);
-    vector<StatCounter*> GetCounters();
-    AtomicCounter* NewAtomicCounter(StatCounter::CounterType type, const string& group, const string& name);
-    FunctionCounter* NewFunctionCounter(FunctionCounter::FuncCounter func, StatCounter::CounterType type, const string& group, const string& name);
+    const map<string, string> &GetLabels() const;
+
+    const vector<StatCounter*> &GetCounters();
+    AmMutex &GetCountersMutex() { return counterMutex; }
+
+    AtomicCounter& NewAtomicCounter(StatCounter::CounterType type, const string& group, const string& name);
+    FunctionCounter& NewFunctionCounter(FunctionCounter::FuncCounter func, StatCounter::CounterType type, const string& group, const string& name);
 private:
     AmMutex counterMutex;
     vector<StatCounter*> counters;
@@ -121,5 +130,3 @@ private:
 };
 
 typedef singleton<AmStatistics> statistics;
-
-#endif/*AM_STATISTICS_COUNTER_H*/

@@ -80,7 +80,7 @@ using std::string;
 #include "PcapFileRecorder.h"
 #include "sip/tls_trsp.h"
 #include "sip/tr_blacklist.h"
-#include "AmStatisticsCounter.h"
+#include "AmStatistics.h"
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/

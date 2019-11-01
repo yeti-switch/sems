@@ -1,6 +1,6 @@
 #include "PrometheusExporter.h"
 #include "prometheus_exporter_cfg.h"
-#include "AmStatisticsCounter.h"
+#include "AmStatistics.h"
 
 #define MOD_NAME "prometheus_exporter"
 
@@ -12,24 +12,25 @@ class PrometheusExporterFactory
     {
         PrometheusExporter::instance();
     }
-    ~PrometheusExporterFactory()
+    ~PrometheusExporterFactory() override
     {
         DBG("~PrometheusExporterFactory");
         PrometheusExporter::dispose();
     }
   public:
-    DECLARE_FACTORY_INSTANCE(PrometheusExporterFactory);
+    DECLARE_FACTORY_INSTANCE(PrometheusExporterFactory)
 
-    int configure(const string& config)
+    int configure(const string& config) override
     {
         return PrometheusExporter::instance()->configure(config);
     }
 
-    int onLoad()
+    int onLoad() override
     {
         return PrometheusExporter::instance()->onLoad();
     }
-    void on_destroy() {
+
+    void on_destroy()  override {
         PrometheusExporter::instance()->stop();
     }
 };
@@ -37,11 +38,11 @@ class PrometheusExporterFactory
 EXPORT_PLUGIN_CONF_FACTORY(PrometheusExporterFactory);
 DEFINE_FACTORY_INSTANCE(PrometheusExporterFactory, MOD_NAME);
 
-PrometheusExporter* PrometheusExporter::_instance=0;
+PrometheusExporter* PrometheusExporter::_instance = nullptr;
 
 PrometheusExporter* PrometheusExporter::instance()
 {
-    if(_instance == NULL){
+    if(_instance == nullptr){
         _instance = new PrometheusExporter();
     }
     return _instance;
@@ -49,13 +50,13 @@ PrometheusExporter* PrometheusExporter::instance()
 
 void PrometheusExporter::dispose()
 {
-    if(_instance != NULL){
+    if(_instance != nullptr){
         delete _instance;
     }
-    _instance = NULL;
+    _instance = nullptr;
 }
 
-int label_func(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv)
+int label_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
 {
     if(argc != 2) {
         cfg_error(cfg, "label must have 2 arguments");
@@ -68,12 +69,14 @@ int label_func(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv)
         return 1;
     case 2:
         value = argv[1];
+        /* fall through */
     case 1:
         option = argv[0];
         break;
     }
 
     statistics::instance()->AddLabel(option, value);
+
     return 0;
 }
 
@@ -106,11 +109,28 @@ void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 }
 
 PrometheusExporter::PrometheusExporter()
-    : ev_base(0), ev_http(0){}
+  : ev_base(nullptr),
+    ev_http(nullptr)
+{}
 
 PrometheusExporter::~PrometheusExporter()
 {
     if(ev_http) evhttp_free(ev_http);
+}
+
+inline void serialize_label(
+    evbuffer *buf,
+    const map<string, string>::value_type &label,
+    bool &begin)
+{
+    if(!begin) {
+        evbuffer_add_printf(buf, ", ");
+    } else {
+        begin = false;
+    }
+
+    evbuffer_add_printf(buf, "%s=\"%s\"",
+        label.first.c_str(), label.second.c_str());
 }
 
 void PrometheusExporter::status_request_cb(struct evhttp_request* req)
@@ -118,19 +138,19 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
     struct evhttp_connection* conn = evhttp_request_get_connection(req);
     char* addr;
     ev_uint16_t port;
+
     evhttp_connection_get_peer(conn, &addr, &port);
     struct sockaddr_storage dst;
     am_inet_pton(addr, &dst);
+
     trsp_acl::action_t acl_action = acl.check(dst);
     switch(acl_action) {
     case trsp_acl::Allow:
         break;
     case trsp_acl::Drop:
-    {
         DBG("message dropped by interface ACL %s:%d", addr, port);
         evhttp_connection_free(conn);
         return;
-    }
     case trsp_acl::Reject:
         DBG("message rejected by interface ACL %s:%d", addr, port);
         evhttp_send_reply_start(req, 403, "Forbidden");
@@ -140,32 +160,54 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
 
     evhttp_add_header(evhttp_request_get_output_headers(req),
                       "Content-Type","text/plain");
-    evbuffer *buf = evbuffer_new();
-    vector<StatCounter*> counters = statistics::instance()->GetCounters();
+
     struct timeval tv;
-    gettimeofday(&tv, 0);
-    unsigned long long timet = tv.tv_sec*1000 + tv.tv_usec/1000;
-    for(auto counter : counters) {
-        string type = counter->type_str();
-        string name = counter->name();
-        unsigned long long cnt;
-        counter->get(&cnt);
-        if(!counter->getHelp().empty()) {
-            evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.c_str(), counter->getHelp().c_str());
-        }
-        if(statistics::instance()->GetLabels().empty() && counter->getLabels().empty()) {
-            evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s %llu %llu\n", prefix.c_str(), name.c_str(), type.c_str(), prefix.c_str(), name.c_str(), cnt, timet);
-        } else {
-            evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s{", prefix.c_str(), name.c_str(), type.c_str(), prefix.c_str(), name.c_str());
-            auto labels = statistics::instance()->GetLabels(counter->getLabels());
-            for(auto label = labels.begin(); label != labels.end(); label++) {
-                if(label != labels.begin())
-                    evbuffer_add_printf(buf, ", ");
-                evbuffer_add_printf(buf, "%s=\"%s\"", label->first.c_str(), label->second.c_str());
+    gettimeofday(&tv, nullptr);
+    unsigned long long timet = static_cast<unsigned long long>(tv.tv_sec*1000 + tv.tv_usec/1000);
+
+    evbuffer *buf = evbuffer_new();
+    {
+        AmLock l(statistics::instance()->GetCountersMutex());
+
+        auto & counters = statistics::instance()->GetCounters();
+        for(auto counter : counters) {
+
+            auto type = counter->type_str();
+            auto &name = counter->name();
+
+            unsigned long long cnt;
+            counter->get(&cnt);
+            if(!counter->getHelp().empty()) {
+                evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.c_str(), counter->getHelp().c_str());
             }
-            evbuffer_add_printf(buf, "} %llu %llu\n", cnt, timet);
+
+            auto &common_labels = statistics::instance()->GetLabels();
+            auto &counter_labels = counter->getLabels();
+
+            if(common_labels.empty() && counter_labels.empty()) {
+                evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s %llu %llu\n",
+                    prefix.c_str(), name.c_str(),
+                    type,
+                    prefix.c_str(), name.c_str(),
+                    cnt, timet);
+            } else {
+                evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s{",
+                    prefix.c_str(), name.c_str(),
+                    type,
+                    prefix.c_str(), name.c_str());
+
+                bool begin = true;
+                for(const auto &l : common_labels)
+                    serialize_label(buf,l,begin);
+                for(const auto &l : counter_labels)
+                    serialize_label(buf,l,begin);
+
+                evbuffer_add_printf(buf, "} %llu %llu\n",
+                    cnt, timet);
+            }
         }
     }
+
     evhttp_send_reply_start(req, HTTP_OK, "OK");
     evhttp_send_reply_chunk(req,buf);
     evhttp_send_reply_end(req);
@@ -174,9 +216,11 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
 
 int PrometheusExporter::configure(const string& config)
 {
+    char *s;
     cfg_t *cfg = cfg_init(prometheus_exporter_opt, CFGF_NONE);
-    cfg_set_validate_func(cfg, PARAM_METHOD, validate_method_func);
     if(!cfg) return -1;
+
+    cfg_set_validate_func(cfg, PARAM_METHOD, validate_method_func);
     cfg_set_error_function(cfg,cfg_error_callback);
 
     switch(cfg_parse_buf(cfg, config.c_str())) {
@@ -192,8 +236,13 @@ int PrometheusExporter::configure(const string& config)
         return -1;
     }
 
+    s = cfg_getstr(cfg, PARAM_ADDRESS);
+    if(!s) {
+        ERROR("missed mandatory option: %s", PARAM_ADDRESS);
+        return -1;
+    }
     ip = cfg_getstr(cfg, PARAM_ADDRESS);
-    port = cfg_getint(cfg, PARAM_PORT);
+    port = static_cast<decltype(port)>(cfg_getint(cfg, PARAM_PORT));
     prefix = cfg_getstr(cfg, PARAM_PREFIX);
     if(cfg_size(cfg, SECTION_ACL)) {
         cfg_t* cfg_acl = cfg_getsec(cfg, SECTION_ACL);
@@ -217,7 +266,7 @@ int PrometheusExporter::readAcl(cfg_t* cfg)
         networks++;
     }
 
-    DBG("parsed %d networks %s",networks);
+    DBG("parsed %d networks",networks);
 
     std::string method = cfg_getstr(cfg, PARAM_METHOD);
     if(method == "drop"){
@@ -252,7 +301,8 @@ int PrometheusExporter::init()
                       static_cast<PrometheusExporter*>(arg)->status_request_cb(req);
                   }, this);
 
-    struct evhttp_bound_socket *ev_http_handle = evhttp_bind_socket_with_handle(ev_http, ip.c_str(), port);
+    struct evhttp_bound_socket *ev_http_handle =
+        evhttp_bind_socket_with_handle(ev_http, ip.c_str(), port);
     if(!ev_http_handle) {
         ERROR("couldn't bind http server to %s:%d",ip.c_str(),port);
         return -1;
@@ -283,12 +333,12 @@ int PrometheusExporter::onLoad()
 void PrometheusExporter::run()
 {
     INFO("prometheus exporter server thread\n");
-    setThreadName("prometheus-exporter");
+    setThreadName("prometheus-http");
     event_base_dispatch(ev_base);
     INFO("prometheus exporter server finished");
 }
 
 void PrometheusExporter::on_stop()
 {
-    event_base_loopexit(ev_base, NULL);
+    event_base_loopexit(ev_base, nullptr);
 }

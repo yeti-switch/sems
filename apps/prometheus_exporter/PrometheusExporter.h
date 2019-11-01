@@ -18,7 +18,7 @@ class PrometheusExporter
     static PrometheusExporter* _instance;
 
     string ip;
-    int   port;
+    uint16_t port;
     string prefix;
     trsp_acl acl;
 
