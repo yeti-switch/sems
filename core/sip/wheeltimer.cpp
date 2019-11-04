@@ -49,6 +49,7 @@ _wheeltimer::_wheeltimer(const char *thread_name)
     struct timeval now;
     gettimeofday(&now,NULL);
     unix_clock.set(now.tv_sec);
+    unix_ms_clock.set(now.tv_sec*1000 + now.tv_usec/1000);
 }
 
 _wheeltimer::~_wheeltimer()
@@ -108,6 +109,7 @@ void _wheeltimer::run()
 
     gettimeofday(&now,NULL);
     unix_clock.set(now.tv_sec);
+    unix_ms_clock.set(now.tv_sec*1000 + now.tv_usec/1000);
 
     turn_wheel();
     timeradd(&tick,&next_tick,&next_tick);

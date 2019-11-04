@@ -42,3 +42,15 @@ FunctionCounter& AmStatistics::NewFunctionCounter(FunctionCounter::FuncCounter f
     return *counter;
 }
 
+AtomicCounter::AtomicCounter(StatCounter::CounterType type, const std::__cxx11::string& group, const std::__cxx11::string& name)
+: StatCounter(type, group, name) {
+    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+}
+
+
+unsigned long long AtomicCounter::inc()
+{
+    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    return atomic_int64::inc();
+}
+
