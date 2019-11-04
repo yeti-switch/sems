@@ -316,6 +316,11 @@ int AmNullAudio::put(unsigned long long system_ts, unsigned char* buffer,
 		     int output_sample_rate, unsigned int size)
 {
   // need to stop at some point?
+
+  if(stereo_record_enabled) {
+    stereo_recorders.put(system_ts,buffer,size,output_sample_rate);
+  }
+
   if (write_msec < 0)
     return size;
 
