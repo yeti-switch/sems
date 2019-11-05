@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <map>
+#include "sip/wheeltimer.h"
 using std::vector;
 using std::map;
 
@@ -78,19 +79,23 @@ class StatCounter
         return concatenated_name_;
     }
 
-    virtual void get(unsigned long long* counter) = 0;
+    virtual unsigned long long get(unsigned long long* ts = 0) = 0;
 };
 
 class AtomicCounter : public atomic_int64, public StatCounter
 {
+    atomic_int64 timestamp;
 public:
-    AtomicCounter(CounterType type, const string& group, const string& name)
-    : StatCounter(type, group, name){}
+    AtomicCounter(CounterType type, const string& group, const string& name);
 
-    virtual void get(unsigned long long* counter)
+    virtual unsigned long long get(unsigned long long* ts)
     {
-        *counter = atomic_int64::get();
+        if(ts)
+            *ts = timestamp.get();
+        return atomic_int64::get();
     }
+
+    unsigned long long inc();
 };
 
 class FunctionCounter : public StatCounter
@@ -100,9 +105,9 @@ public:
     FunctionCounter(CounterType type, const string& group, const string& name, FuncCounter func)
     : StatCounter(type, group, name), func_(func){}
 
-    virtual void get(unsigned long long* counter)
+    virtual unsigned long long get(unsigned long long* ts)
     {
-        *counter = func_();
+        return func_();
     }
 private:
     FuncCounter func_;

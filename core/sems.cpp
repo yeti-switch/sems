@@ -716,6 +716,7 @@ int main(int argc, char* argv[])
   statistics::instance()->NewFunctionCounter([]()->unsigned long long{
     return time(0) - start_time;
   }, StatCounter::Counter, "core", "uptime");
+  statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "start_time").set(start_time);
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {

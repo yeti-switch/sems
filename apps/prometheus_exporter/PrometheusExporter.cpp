@@ -163,7 +163,7 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
 
     struct timeval tv;
     gettimeofday(&tv, nullptr);
-    unsigned long long timet = static_cast<unsigned long long>(tv.tv_sec*1000 + tv.tv_usec/1000);
+    unsigned long long timestamp = static_cast<unsigned long long>(tv.tv_sec*1000 + tv.tv_usec/1000);
 
     evbuffer *buf = evbuffer_new();
     {
@@ -175,8 +175,8 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
             auto type = counter->type_str();
             auto &name = counter->name();
 
-            unsigned long long cnt;
-            counter->get(&cnt);
+            unsigned long long timet = timestamp;
+            unsigned long long cnt = counter->get(&timet);
             if(!counter->getHelp().empty()) {
                 evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.c_str(), counter->getHelp().c_str());
             }
