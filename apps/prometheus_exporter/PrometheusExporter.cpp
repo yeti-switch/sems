@@ -159,54 +159,40 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
     }
 
     evhttp_add_header(evhttp_request_get_output_headers(req),
-                      "Content-Type","text/plain");
-
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    unsigned long long timestamp = static_cast<unsigned long long>(tv.tv_sec*1000 + tv.tv_usec/1000);
+                      "Content-Type","text/plain; version=0.0.4");
 
     evbuffer *buf = evbuffer_new();
-    {
-        AmLock l(statistics::instance()->GetCountersMutex());
-
-        auto & counters = statistics::instance()->GetCounters();
-        for(auto counter : counters) {
-
+        statistics::instance()->iterate([this, buf](MultiplyCounter* counter){
             auto type = counter->type_str();
             auto &name = counter->name();
 
-            unsigned long long timet = timestamp;
-            unsigned long long cnt = counter->get(&timet);
+            evbuffer_add_printf(buf, "#TYPE %s_%s %s\n", prefix.c_str(), name.c_str(), type);
             if(!counter->getHelp().empty()) {
                 evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.c_str(), counter->getHelp().c_str());
             }
 
-            auto &common_labels = statistics::instance()->GetLabels();
-            auto &counter_labels = counter->getLabels();
+            counter->iterate([this, &name, buf](unsigned long long cnt, unsigned long long timet, const map<string, string>& counter_labels) {
+                auto &common_labels = statistics::instance()->GetLabels();
+                if(common_labels.empty() && counter_labels.empty()) {
+                    evbuffer_add_printf(buf, "%s_%s %llu %llu\n",
+                        prefix.c_str(), name.c_str(),
+                        cnt, timet);
+                } else {
+                    evbuffer_add_printf(buf, "%s_%s{",
+                        prefix.c_str(), name.c_str());
 
-            if(common_labels.empty() && counter_labels.empty()) {
-                evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s %llu %llu\n",
-                    prefix.c_str(), name.c_str(),
-                    type,
-                    prefix.c_str(), name.c_str(),
-                    cnt, timet);
-            } else {
-                evbuffer_add_printf(buf, "#TYPE %s_%s %s\n%s_%s{",
-                    prefix.c_str(), name.c_str(),
-                    type,
-                    prefix.c_str(), name.c_str());
+                    bool begin = true;
+                    for(const auto &l : common_labels)
+                        serialize_label(buf,l,begin);
+                    for(const auto &l : counter_labels)
+                        serialize_label(buf,l,begin);
 
-                bool begin = true;
-                for(const auto &l : common_labels)
-                    serialize_label(buf,l,begin);
-                for(const auto &l : counter_labels)
-                    serialize_label(buf,l,begin);
+                    evbuffer_add_printf(buf, "} %llu %llu\n",
+                        cnt, timet);
+                }
 
-                evbuffer_add_printf(buf, "} %llu %llu\n",
-                    cnt, timet);
-            }
-        }
-    }
+            });
+        });
 
     evhttp_send_reply_start(req, HTTP_OK, "OK");
     evhttp_send_reply_chunk(req,buf);

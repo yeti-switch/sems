@@ -57,7 +57,7 @@ AmSessionContainer::AmSessionContainer()
     auto counter = statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
         return AmSession::getSessionNum();
     }, StatCounter::Gauge, "core", "session_num");
-    counter.setHelp("Gets the number of running sessions");
+    statistics::instance()->SetHelp("Gets the number of running sessions", "core", "session_num");
     statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
         return AmSessionContainer::instance()->d_sessions.size();
     }, StatCounter::Gauge, "core", "dead_sessions_count");
