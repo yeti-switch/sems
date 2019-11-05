@@ -1,3 +1,9 @@
+sems (1.8.40-3) stable; urgency=low
+
+  * fix raw sockets initialization
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 05 Nov 2019 17:06:32 +0200
+
 sems (1.8.40-2) stable; urgency=low
 
   * fix pkg build
