@@ -64,10 +64,12 @@ int raw_sender::send(const char* buf, unsigned int len, int sys_if_idx,
   //TODO: grab the MTU from the interface def
   int ret = -1;
   if(from->ss_family == PF_INET) {
+    if(rsock < 0 && (ret = init()) < 0) return ret;
     ret = raw_iphdr_udp4_send(rsock,buf,len,from,to,
                 AmConfig.sys_ifs[sys_if_idx].mtu,
                 tos);
   } else if(from->ss_family == PF_INET6) {
+    if(rsock6 < 0 && (ret = init()) < 0) return ret;
     ret = raw_iphdr_udp6_send(rsock6,buf,len,from,to,
                 AmConfig.sys_ifs[sys_if_idx].mtu,
                 tos);
