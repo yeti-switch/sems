@@ -102,12 +102,12 @@ public:
         if(elmts.empty())
             return;
 
-        DBG("*** Bucket ID: %i ***\n",(int)get_id());
+        //DBG("*** Bucket ID: %i ***\n",(int)get_id());
 
         for(typename value_list::const_iterator it = elmts.begin();
             it != elmts.end(); ++it)
         {
-            (*it)->dump();
+            //(*it)->dump();
             f(*it);
         }
     }
@@ -247,7 +247,7 @@ public:
         if(elmts.empty())
             return;
 
-        DBG("*** Bucket ID: %i ***\n",(int)get_id());
+        //DBG("*** Bucket ID: %i ***\n",(int)get_id());
 
         for(typename value_map::const_iterator it = elmts.begin();
             it != elmts.end(); ++it)
