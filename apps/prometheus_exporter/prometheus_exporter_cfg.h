@@ -3,12 +3,13 @@
 
 #include <confuse.h>
 
-#define PARAM_ADDRESS   "address"
-#define PARAM_PORT      "port"
-#define PARAM_LABEL     "label"
-#define PARAM_WHITELIST "whitelist"
-#define PARAM_METHOD    "method"
-#define PARAM_PREFIX    "metrics_prefix"
+#define PARAM_ADDRESS            "address"
+#define PARAM_PORT               "port"
+#define PARAM_LABEL              "label"
+#define PARAM_WHITELIST          "whitelist"
+#define PARAM_METHOD             "method"
+#define PARAM_PREFIX             "metrics_prefix"
+#define PARAM_OMIT_NOW_TIMESTAMP "omit_now_timestamp"
 
 #define SECTION_ACL     "acl"
 

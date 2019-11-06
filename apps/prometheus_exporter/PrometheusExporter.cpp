@@ -75,7 +75,7 @@ int label_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
         break;
     }
 
-    statistics::instance()->AddLabel(option, value);
+    statistics::instance()->addLabel(option, value);
 
     return 0;
 }
@@ -162,37 +162,57 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
                       "Content-Type","text/plain; version=0.0.4");
 
     evbuffer *buf = evbuffer_new();
-        statistics::instance()->iterate([this, buf](MultiplyCounter* counter){
-            auto type = counter->type_str();
-            auto &name = counter->name();
+    auto now = wheeltimer::instance()->unix_ms_clock.get();
 
-            evbuffer_add_printf(buf, "#TYPE %s_%s %s\n", prefix.c_str(), name.c_str(), type);
-            if(!counter->getHelp().empty()) {
-                evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.c_str(), counter->getHelp().c_str());
-            }
+    statistics::instance()->iterate([this, &now, buf](const std::string &name, StatCountersGroup& counter)
+    {
+        auto type = StatCountersGroup::type2str(counter.type());
 
-            counter->iterate([this, &name, buf](unsigned long long cnt, unsigned long long timet, const map<string, string>& counter_labels) {
-                auto &common_labels = statistics::instance()->GetLabels();
-                if(common_labels.empty() && counter_labels.empty()) {
+        evbuffer_add_printf(buf, "#TYPE %s_%s %s\n", prefix.c_str(), name.data(), type);
+        if(!counter.help().empty()) {
+            evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.data(), counter.help().data());
+        }
+
+        counter.iterate([this, &name, &now, buf](
+            unsigned long long value,
+            unsigned long long timet,
+            const map<string, string>& counter_labels)
+        {
+            auto &timestamp = timet ? timet : now;
+            auto &common_labels = statistics::instance()->getLabels();
+
+            if(common_labels.empty() && counter_labels.empty()) {
+                if(omit_now_timestamp && !timet) {
+                    //without timestamp at the end
                     evbuffer_add_printf(buf, "%s_%s %llu %llu\n",
                         prefix.c_str(), name.c_str(),
-                        cnt, timet);
+                        value, timestamp);
                 } else {
-                    evbuffer_add_printf(buf, "%s_%s{",
-                        prefix.c_str(), name.c_str());
-
-                    bool begin = true;
-                    for(const auto &l : common_labels)
-                        serialize_label(buf,l,begin);
-                    for(const auto &l : counter_labels)
-                        serialize_label(buf,l,begin);
-
-                    evbuffer_add_printf(buf, "} %llu %llu\n",
-                        cnt, timet);
+                    evbuffer_add_printf(buf, "%s_%s %llu\n",
+                    prefix.c_str(), name.c_str(),
+                    value);
                 }
+            } else {
+                evbuffer_add_printf(buf, "%s_%s{",
+                    prefix.c_str(), name.c_str());
 
-            });
+                bool begin = true;
+                for(const auto &l : common_labels)
+                    serialize_label(buf,l,begin);
+                for(const auto &l : counter_labels)
+                    serialize_label(buf,l,begin);
+
+                if(omit_now_timestamp && !timet) {
+                    evbuffer_add_printf(buf, "} %llu\n",
+                        value);
+                } else {
+                    evbuffer_add_printf(buf, "} %llu %llu\n",
+                        value, timestamp);
+                }
+            }
+
         });
+    });
 
     evhttp_send_reply_start(req, HTTP_OK, "OK");
     evhttp_send_reply_chunk(req,buf);
@@ -230,6 +250,7 @@ int PrometheusExporter::configure(const string& config)
     ip = cfg_getstr(cfg, PARAM_ADDRESS);
     port = static_cast<decltype(port)>(cfg_getint(cfg, PARAM_PORT));
     prefix = cfg_getstr(cfg, PARAM_PREFIX);
+    omit_now_timestamp = cfg_getbool(cfg, PARAM_OMIT_NOW_TIMESTAMP);
     if(cfg_size(cfg, SECTION_ACL)) {
         cfg_t* cfg_acl = cfg_getsec(cfg, SECTION_ACL);
         if(readAcl(cfg_acl)) return -1;
@@ -326,5 +347,6 @@ void PrometheusExporter::run()
 
 void PrometheusExporter::on_stop()
 {
-    event_base_loopexit(ev_base, nullptr);
+    event_base_loopbreak(ev_base);
+    //event_base_loopexit(ev_base, nullptr);
 }
