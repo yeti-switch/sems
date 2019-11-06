@@ -48,19 +48,26 @@ AmSessionContainer::AmSessionContainer()
   : _run_cond(false), _container_closed(false), enable_unclean_shutdown(false),
     CPSLimit(0), CPSHardLimit(0), max_cps(0)
 {
-    statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
-        return AmSession::getAvgSessionNum();
-    }, StatCounter::Gauge, "core", "avg_session_num");
-    statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
-        return AmSession::getMaxSessionNum();
-    }, StatCounter::Gauge, "core", "max_session_num");
-    auto counter = statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
-        return AmSession::getSessionNum();
-    }, StatCounter::Gauge, "core", "session_num");
-    statistics::instance()->SetHelp("Gets the number of running sessions", "core", "session_num");
-    statistics::instance()->NewFunctionCounter([]() -> unsigned long long {
-        return AmSessionContainer::instance()->d_sessions.size();
-    }, StatCounter::Gauge, "core", "dead_sessions_count");
+    stat_group(Gauge, "core", "avg_session_num")
+        .addFunctionCounter([]() -> unsigned long long {
+            return AmSession::getAvgSessionNum();
+        });
+
+    stat_group(Gauge, "core", "max_session_num")
+        .addFunctionCounter([]() -> unsigned long long {
+            return AmSession::getMaxSessionNum();
+        });
+
+    stat_group(Gauge, "core", "session_num")
+        .setHelp("number of running sessions")
+        .addFunctionCounter([]() -> unsigned long long {
+            return AmSession::getSessionNum();
+        });
+
+    stat_group(Gauge, "core", "dead_sessions_count")
+        .addFunctionCounter([]() -> unsigned long long {
+            return AmSessionContainer::instance()->d_sessions.size();
+        });
 }
 
 AmSessionContainer* AmSessionContainer::instance()

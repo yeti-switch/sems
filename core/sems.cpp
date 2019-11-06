@@ -710,13 +710,18 @@ int main(int argc, char* argv[])
 
   AmSessionContainer::instance()->initMonitoring();
 
-  statistics::instance()->NewFunctionCounter([]()->unsigned long long{
-    return time(NULL);
-  }, StatCounter::Counter, "core", "localtime");
-  statistics::instance()->NewFunctionCounter([]()->unsigned long long{
-    return time(0) - start_time;
-  }, StatCounter::Counter, "core", "uptime");
-  statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "start_time").set(start_time);
+  stat_group(Counter, "core", "localtime").addFunctionCounter(
+    []()->unsigned long long{
+        return static_cast<unsigned long long>(time(nullptr));
+    });
+
+  stat_group(Counter, "core", "uptime").addFunctionCounter(
+    []()->unsigned long long{
+        return static_cast<unsigned long long>(time(nullptr) - start_time);
+    });
+
+  stat_group(Counter, "core", "start_time").addAtomicCounter().set(
+    static_cast<unsigned long long>(start_time));
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {

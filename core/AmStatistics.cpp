@@ -1,93 +1,28 @@
 #include "AmStatistics.h"
 
-NullCounter null_counter;
+StatCounter::~StatCounter()
+{}
 
-AmStatistics::AmStatistics()
-{
-}
-
-AmStatistics::~AmStatistics()
-{
-    for(auto counter : counters) {
-        delete counter.second;
-    }
-}
-
-void AmStatistics::AddLabel(const string& name, const string& value)
+void StatCounter::addLabel(const string& name, const string& value)
 {
     labels.emplace(name, value);
 }
 
-void AmStatistics::iterate(std::function<void(MultiplyCounter*)> callback)
+AtomicCounter::AtomicCounter()
 {
-    AmLock lock(counterMutex);
-    for(auto counter : counters) {
-        callback(counter.second);
-    }
-}
-
-const map<string, string> &AmStatistics::GetLabels() const
-{
-    return labels;
-}
-
-AtomicCounter& AmStatistics::NewAtomicCounter(StatCounter::CounterType type, const string& group, const string& name)
-{
-    AmLock lock(counterMutex);
-    AtomicCounter *counter = new AtomicCounter(type, group, name);
-    MultiplyCounter* mcounter;
-    auto counter_it = counters.find(counter->name());
-    if(counter_it != counters.end()) {
-        mcounter = counter_it->second;
-        if(mcounter->type() != type) {
-            ERROR("new counter have type is not equal to existing counter %s: new - %s, old - %s"
-                    , counter->name().c_str(), counter->type_str(), mcounter->type_str());
-            delete counter;
-            return null_counter;
-        }
-    } else {
-        counters.insert(std::make_pair(counter->name(), mcounter = new MultiplyCounter(type, group, name)));
-    }
-    mcounter->addCounter(counter);
-    return *counter;
-}
-
-FunctionCounter& AmStatistics::NewFunctionCounter(FunctionCounter::FuncCounter func, StatCounter::CounterType type, const string& group, const string& name)
-{
-    AmLock lock(counterMutex);
-    FunctionCounter *counter = new FunctionCounter(type, group, name, func);
-    MultiplyCounter* mcounter;
-    auto counter_it = counters.find(counter->name());
-    if(counter_it != counters.end()) {
-        mcounter = counter_it->second;
-        if(mcounter->type() != type) {
-            ERROR("new counter have type is not equal to existing counter %s: new - %s, old - %s"
-                    , counter->name().c_str(), counter->type_str(), mcounter->type_str());
-            delete counter;
-            return null_counter;
-        }
-    } else {
-        counters.insert(std::make_pair(counter->name(), mcounter = new MultiplyCounter(type, group, name)));
-    }
-    mcounter->addCounter(counter);
-    return *counter;
-}
-
-void AmStatistics::SetHelp(const std::__cxx11::string& group, const std::__cxx11::string& name, const string& help)
-{
-    AmLock lock(counterMutex);
-    for(auto counter : counters) {
-        if(counter.second->name() == group + name) {
-            counter.second->setHelp(help);
-        }
-    }
-}
-
-AtomicCounter::AtomicCounter(StatCounter::CounterType type, const std::__cxx11::string& group, const std::__cxx11::string& name)
-: StatCounter(type, group, name) {
     timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
 }
 
+AtomicCounter& AtomicCounter::addLabel(const string& name, const string& value)
+{
+    labels.emplace(name, value);
+    return *this;
+}
+
+void AtomicCounter::iterate(iterate_func_type callback)
+{
+    callback(atomic_int64::get(), timestamp.get(), getLabels());
+}
 
 unsigned long long AtomicCounter::inc()
 {
@@ -95,11 +30,106 @@ unsigned long long AtomicCounter::inc()
     return atomic_int64::inc();
 }
 
-void FunctionCounter::iterate(std::function<void(unsigned long long value, unsigned long long timestamp, const map<string, string>&)> callback)
+
+FunctionCounter& FunctionCounter::addLabel(const string& name, const string& value)
 {
-    callback(func_(), wheeltimer::instance()->unix_ms_clock.get(), getLabels());
+    labels.emplace(name, value);
+    return *this;
 }
 
-NullCounter::NullCounter()
-: AtomicCounter(StatCounter::Counter, "", "")
-, FunctionCounter(StatCounter::Counter, "", "", []()->unsigned long long{ return 0; }){}
+void FunctionCounter::iterate(
+    std::function<void(unsigned long long value,
+                       unsigned long long timestamp,
+                       const map<string, string>&)> callback)
+{
+    callback(func_(), 0, getLabels());
+}
+
+StatCountersGroup::~StatCountersGroup()
+{
+    for(auto &counter : counters)
+        delete counter;
+}
+
+void StatCountersGroup::iterate(
+    std::function<void(unsigned long long value,
+                       unsigned long long timestamp,
+                       const map<string, string>&)> callback)
+{
+    AmLock l(counters_lock);
+
+    for(auto& counter : counters) {
+        counter->iterate(callback);
+    }
+}
+
+AtomicCounter& StatCountersGroup::addAtomicCounter()
+{
+    AmLock l(counters_lock);
+
+    auto counter = new AtomicCounter();
+    counters.emplace_back(counter);
+    return *counter;
+}
+
+FunctionCounter& StatCountersGroup::addFunctionCounter(FunctionCounter::CallbackFunction func)
+{
+    AmLock l(counters_lock);
+
+    auto counter = new FunctionCounter(func);
+    counters.emplace_back(counter);
+    return *counter;
+}
+
+AmStatistics::AmStatistics()
+{}
+
+AmStatistics::~AmStatistics()
+{}
+
+string AmStatistics::get_concatenated_name(const string& naming_group, const string& name)
+{
+    return naming_group + "_" + name;
+}
+
+void AmStatistics::addLabel(const string& name, const string& value)
+{
+    labels.emplace(name, value);
+}
+
+const map<string, string> &AmStatistics::getLabels() const
+{
+    return labels;
+
+}
+
+void AmStatistics::iterate(iterate_callback_type callback)
+{
+    AmLock lock(groups_mutex);
+    for(auto &it : counters_groups) {
+        callback(it.first, it.second);
+    }
+}
+
+StatCountersGroup &AmStatistics::group(StatCountersGroup::Type type, const string& naming_group, const string& name)
+{
+    return group(type, get_concatenated_name(naming_group,name));
+}
+
+StatCountersGroup &AmStatistics::group(StatCountersGroup::Type type, const string& name)
+{
+    AmLock lock(groups_mutex);
+
+    auto it = counters_groups.emplace(name, type);
+    auto &group = it.first->second;
+
+    if(it.second == false && group.type() != type) {
+        ERROR("attempt to add counter '%s' with type '%s' to existing counters group with another type '%s'",
+            name.data(),
+            StatCountersGroup::type2str(type),
+            StatCountersGroup::type2str(group.type()));
+        throw std::logic_error("attempt to redefine existent StatCountersGroup");
+    }
+
+    return group;
+}

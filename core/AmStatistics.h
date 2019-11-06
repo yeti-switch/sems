@@ -7,13 +7,74 @@
 #include <vector>
 #include <map>
 #include <functional>
+
 using std::vector;
 using std::map;
 
 class StatCounter
 {
+  protected:
+    map<string, string> labels;
+
   public:
-    enum CounterType
+    using iterate_func_type = std::function<
+        void (unsigned long long value,
+              unsigned long long timestamp,
+              const map<string, string>&) >;
+
+    StatCounter() = default;
+    StatCounter(StatCounter const &) = delete;
+    StatCounter(StatCounter const &&) = delete;
+    virtual ~StatCounter();
+
+    void addLabel(const string& name, const string& value);
+    const map<string, string>& getLabels() { return labels; }
+
+    virtual void iterate(iterate_func_type) = 0;
+};
+
+class AtomicCounter
+  : public atomic_int64,
+    public StatCounter
+{
+    atomic_int64 timestamp;
+  public:
+    AtomicCounter();
+    AtomicCounter(AtomicCounter const &) = delete;
+    AtomicCounter(AtomicCounter const &&) = delete;
+    ~AtomicCounter() override {}
+
+    AtomicCounter &addLabel(const string& name, const string& value);
+    void iterate(iterate_func_type callback) override;
+    unsigned long long inc();
+};
+
+class FunctionCounter
+  : public StatCounter
+{
+  public:
+    typedef unsigned long long (*CallbackFunction)();
+
+    FunctionCounter(CallbackFunction func)
+      : func_(func)
+    {}
+    FunctionCounter(FunctionCounter const &) = delete;
+    FunctionCounter(FunctionCounter const &&) = delete;
+    ~FunctionCounter() override {}
+
+    FunctionCounter &addLabel(const string& name, const string& value);
+    void iterate(iterate_func_type callback) override;
+
+  private:
+    CallbackFunction func_;
+};
+
+//represents set of counters with the same name
+class StatCountersGroup final
+  : public StatCounter
+{
+  public:
+    enum Type
     {
         Counter,
         Gauge,
@@ -22,40 +83,32 @@ class StatCounter
     };
 
   private:
-    CounterType type_;
-    string name_;
-    string group_;
-    string concatenated_name_;
-    map<string, string> labels;
+    vector<StatCounter *> counters;
+    AmMutex counters_lock;
 
-  public:
-    StatCounter(CounterType type, const string& group, const string& name)
-     : type_(type),
-       name_(name),
-       group_(group)
-    {
-        concatenated_name_ = group_ + "_" + name_;
-    }
-    virtual ~StatCounter() {}
+    Type type_;
+    string help_;
 
-    CounterType type()
-    {
-        return type_;
-    }
+public:
+    StatCountersGroup(Type type)
+      : type_(type)
+    { }
+    StatCountersGroup(StatCountersGroup const &) = delete;
+    StatCountersGroup(StatCountersGroup const &&) = delete;
 
-    void addLabel(const string& name, const string& value)
-    {
-        labels.insert(std::make_pair(name, value));
-    }
+    ~StatCountersGroup();
 
-    const map<string, string>& getLabels()
-    {
-        return labels;
-    }
+    void iterate(
+        std::function<void(unsigned long long value,
+                           unsigned long long timestamp,
+                           const map<string, string>&)> callback);
 
-    const char *type_str()
+    AtomicCounter& addAtomicCounter();
+    FunctionCounter& addFunctionCounter(FunctionCounter::CallbackFunction func);
+
+    static const char *type2str(Type type)
     {
-        switch(type_) {
+        switch(type) {
         case Counter: return "counter";
         case Gauge: return "gauge";
         case Histogram: return "histogram";
@@ -64,101 +117,38 @@ class StatCounter
         return "unknown";
     }
 
-    const string &name()
-    {
-        return concatenated_name_;
-    }
+    StatCountersGroup &setHelp(const string& help) { help_ = help;  return *this; }
+    const string &help() { return help_; }
 
-    virtual void iterate(std::function<void(unsigned long long value, unsigned long long timestamp, const map<string, string>&)>) = 0;
-};
-
-class AtomicCounter : public atomic_int64, public StatCounter
-{
-    atomic_int64 timestamp;
-public:
-    AtomicCounter(CounterType type, const string& group, const string& name);
-
-    virtual void iterate(std::function<void(unsigned long long value, unsigned long long timestamp, const map<string, string>&)> callback)
-    {
-        callback(atomic_int64::get(), timestamp.get(), getLabels());
-    }
-
-    unsigned long long inc();
-};
-
-class FunctionCounter : public StatCounter
-{
-public:
-    typedef unsigned long long (*FuncCounter)();
-    FunctionCounter(CounterType type, const string& group, const string& name, FuncCounter func)
-    : StatCounter(type, group, name), func_(func){}
-
-    virtual void iterate(std::function<void(unsigned long long value, unsigned long long timestamp, const map<string, string>&)> callback);
-private:
-    FuncCounter func_;
-};
-
-class MultiplyCounter : public StatCounter
-{
-    vector<StatCounter*> counters;
-    string help_;
-public:
-    MultiplyCounter(CounterType type, const string& group, const string& name)
-    : StatCounter(type, group, name){}
-    ~MultiplyCounter()
-    {
-        for(auto counter : counters) delete counter;
-    }
-
-    virtual void iterate(std::function<void(unsigned long long value, unsigned long long timestamp, const map<string, string>&)> callback)
-    {
-        for(auto& counter : counters) {
-            counter->iterate(callback);
-        }
-    };
-
-    void addCounter(StatCounter* counter)
-    {
-        counters.push_back(counter);
-    }
-
-    void setHelp(const string& help)
-    {
-        help_ = help;
-    }
-
-    const string &getHelp()
-    {
-        return help_;
-    }
-
-};
-
-class NullCounter : public AtomicCounter, public FunctionCounter
-{
-public:
-    NullCounter();
+    Type type() { return type_; }
 };
 
 class AmStatistics
 {
-protected:
+  private:
+    AmMutex groups_mutex;
+    map<string, StatCountersGroup> counters_groups;
+    map<string, string> labels;
+
+  protected:
     AmStatistics();
     ~AmStatistics();
     void dispose() {}
-public:
-    void AddLabel(const string& name, const string& value);
-    const map<string, string> &GetLabels() const;
 
-    void iterate(std::function<void(MultiplyCounter*)> callback);
+    string get_concatenated_name(const string& naming_group, const string& name);
 
-    AtomicCounter& NewAtomicCounter(StatCounter::CounterType type, const string& group, const string& name);
-    FunctionCounter& NewFunctionCounter(FunctionCounter::FuncCounter func, StatCounter::CounterType type, const string& group, const string& name);
-    void SetHelp(const string& group, const string& name, const string& help);
-private:
-    AmMutex counterMutex;
-    map<string, MultiplyCounter*> counters;
-    map<string, string> labels;
+  public:
+    void addLabel(const string& name, const string& value);
+    const map<string, string> &getLabels() const;
+
+    using iterate_callback_type = std::function<void(const std::string &,StatCountersGroup &)>;
+    void iterate(iterate_callback_type callback);
+
+    //get or create group
+    StatCountersGroup &group(StatCountersGroup::Type type, const string& naming_group, const string& name);
+    StatCountersGroup &group(StatCountersGroup::Type type, const string& name);
 };
 
 typedef singleton<AmStatistics> statistics;
+
+#define stat_group(type, grouping_name, name) statistics::instance()->group(StatCountersGroup::type, grouping_name, name)

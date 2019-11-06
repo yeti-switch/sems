@@ -80,19 +80,19 @@ unsigned int _trans_layer::default_bl_ttl;
 extern unsigned long long count_transactions();
 
 trans_stats::trans_stats()
-  : sent_requests(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_requests")),
-    sent_replies(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_replies")),
-    received_requests(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "rx_requests")),
-    received_replies(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "rx_replies")),
-    sent_reply_retrans(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_replies_retrans")),
-    sent_request_retrans(statistics::instance()->NewAtomicCounter(StatCounter::Counter, "core", "tx_requests_retrans"))
+  : sent_requests(stat_group(Counter, "core", "tx_requests").addAtomicCounter()),
+    sent_replies(stat_group(Counter, "core", "tx_replies").addAtomicCounter()),
+    received_requests(stat_group(Counter, "core", "rx_requests").addAtomicCounter()),
+    received_replies(stat_group(Counter, "core", "rx_replies").addAtomicCounter()),
+    sent_reply_retrans(stat_group(Counter, "core", "tx_replies_retrans").addAtomicCounter()),
+    sent_request_retrans(stat_group(Counter, "core", "tx_requests_retrans").addAtomicCounter())
 { }
 
 _trans_layer::_trans_layer()
     : ua(nullptr),
       transports()
 {
-    statistics::instance()->NewFunctionCounter(count_transactions, StatCounter::Gauge, "core", "sip_transactions");
+    stat_group(Gauge, "core", "sip_transactions").addFunctionCounter(count_transactions);
 }
 
 _trans_layer::~_trans_layer()
