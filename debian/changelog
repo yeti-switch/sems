@@ -1,3 +1,10 @@
+sems (1.8.41-1) stable; urgency=low
+
+  * AmStatistics api changes
+  * prometheus_exporter: add omit_now_timestamp option
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Nov 2019 17:13:59 +0200
+
 sems (1.8.40-3) stable; urgency=low
 
   * fix raw sockets initialization
