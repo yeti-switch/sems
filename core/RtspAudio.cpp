@@ -17,7 +17,8 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
   : AmRtpAudio(_s, RtspClient::instance()->getRtpInterface()),
     agent(RtspClient::instance()),
     md(0),
-    streamid(-1)
+    streamid(-1),
+    state(Ready)
 {
     id = agent->addStream(*this);
 
