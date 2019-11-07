@@ -47,6 +47,8 @@ class AtomicCounter
     AtomicCounter &addLabel(const string& name, const string& value);
     void iterate(iterate_func_type callback) override;
     unsigned long long inc();
+    unsigned long long dec();
+    void set(unsigned long long value);
 };
 
 class FunctionCounter
@@ -79,7 +81,8 @@ class StatCountersGroup final
         Counter,
         Gauge,
         Histogram,
-        Summary
+        Summary,
+        Unknown
     };
 
   private:
@@ -115,6 +118,15 @@ public:
         case Summary: return "summary";
         }
         return "unknown";
+    }
+
+    static Type str2type(const char * type)
+    {
+        if(strcmp(type, "counter") == 0) return Counter;
+        if(strcmp(type, "gauge") == 0) return Gauge;
+        if(strcmp(type, "histogram") == 0) return Histogram;
+        if(strcmp(type, "summary") == 0) return Summary;
+        return Unknown;
     }
 
     StatCountersGroup &setHelp(const string& help) { help_ = help;  return *this; }

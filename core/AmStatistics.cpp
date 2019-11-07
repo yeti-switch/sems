@@ -30,6 +30,17 @@ unsigned long long AtomicCounter::inc()
     return atomic_int64::inc();
 }
 
+unsigned long long AtomicCounter::dec()
+{
+    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    return atomic_int64::dec();
+}
+
+void AtomicCounter::set(unsigned long long value)
+{
+    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    return atomic_int64::set(value);
+}
 
 FunctionCounter& FunctionCounter::addLabel(const string& name, const string& value)
 {
