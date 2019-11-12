@@ -1,3 +1,9 @@
+sems (1.8.42-1) stable; urgency=low
+
+  * AmStatistics api changes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 12 Nov 2019 11:14:08 +0200
+
 sems (1.8.41-1) stable; urgency=low
 
   * AmStatistics api changes
