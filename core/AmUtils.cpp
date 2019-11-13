@@ -201,7 +201,7 @@ string int2hex(unsigned int val, bool lowercase)
   return string((char*)buffer);
 }
 
-string long2hex(unsigned long val)
+string long2hex(unsigned long val, bool lowercase)
 {
   unsigned int digit=0;
 
@@ -211,7 +211,7 @@ string long2hex(unsigned long val)
   for(i=0; i<int(2*sizeof(long)); i++){
     digit = val >> 4*(2*sizeof(long)-1);
     val = val << 4;
-    buffer[j++] = _int2hex_lookup[(unsigned char)digit];
+    buffer[j++] = lowercase ? _int2hex_lookup_l[(unsigned char)digit] : _int2hex_lookup[(unsigned char)digit];
   }
 
   return string((char*)buffer);

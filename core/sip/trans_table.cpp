@@ -568,17 +568,9 @@ trans_bucket* get_trans_bucket(unsigned int h)
     return _trans_table[h];
 }
 
-void dumps_transactions()
+void dumps_transactions(const std::function<void (sip_trans*)>& cb)
 {
-    _trans_table.dump();
-}
-
-static int count_ret;
-unsigned long long count_transactions()
-{
-    count_ret = 0;
-    _trans_table.dump([](sip_trans*){count_ret++;});
-    return count_ret;
+    _trans_table.dump(cb);
 }
 
 void cleanup_transaction()

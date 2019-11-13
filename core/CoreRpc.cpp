@@ -159,6 +159,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"tr_blacklist","",&CoreRpc::showTrBlacklist);
         reg_method(show,"tr_count","",&CoreRpc::showTrCount);
+        reg_method(show,"tr_list","",&CoreRpc::showTrList);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
@@ -469,6 +470,11 @@ void CoreRpc::showTrBlacklist(const AmArg&, AmArg& ret)
 void CoreRpc::showTrCount(const AmArg&, AmArg& ret)
 {
     ret = (int)trans_layer::instance()->get_trans_count();
+}
+
+void CoreRpc::showTrList(const AmArg&, AmArg& ret)
+{
+    trans_layer::instance()->get_trans_list(ret);
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

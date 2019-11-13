@@ -92,7 +92,7 @@ _trans_layer::_trans_layer()
     : ua(nullptr),
       transports()
 {
-    stat_group(Gauge, "core", "sip_transactions").addFunctionCounter(count_transactions);
+    stat_group(Gauge, "core", "sip_transactions").addFunctionCounter([]()->unsigned long long { return trans_layer::instance()->get_trans_count(); });
 }
 
 _trans_layer::~_trans_layer()
@@ -1121,7 +1121,32 @@ void _trans_layer::timeout(trans_bucket* bucket, sip_trans* t)
 
 const int _trans_layer::get_trans_count()
 {
-    return count_transactions();
+    int count_ret = 0;
+    dumps_transactions([&count_ret](sip_trans*){count_ret++;});
+    return count_ret;
+}
+
+void _trans_layer::get_trans_list(AmArg& ret)
+{
+    dumps_transactions([&ret](sip_trans* trans){
+        ret.push(AmArg());
+        AmArg& arg = ret.back();
+        arg["state"] = trans->state_str();
+        arg["type"] = trans->type_str();
+        arg["call_id"] = trans->msg->callid ? string(trans->msg->callid->value.s, trans->msg->callid->value.len) : "";
+        arg["method"] = trans->msg->type == SIP_REQUEST ? string(trans->msg->u.request->method_str.s, trans->msg->u.request->method_str.len) : "";
+        arg["remote_ip"] = am_inet_ntop(&trans->msg->remote_ip);
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        arg["age"] = (long long)((tv.tv_sec*1000 + tv.tv_usec/1000) - (trans->time_created.tv_sec*1000 + trans->time_created.tv_usec/1000));
+        cstring transport = transport_str(trans->msg->transport_id);
+        arg["transport"] = string(transport.s, transport.len);
+#if __SIZEOF_POINTER__ == 4
+            arg["pointer"] = string("0x") + int2hex((unsigned int)trans, true);
+#elif __SIZEOF_POINTER__ == 8
+            arg["pointer"] = string("0x") + long2hex((unsigned long long)trans, true);
+#endif
+    });
 }
 
 static int patch_ruri_with_remote_ip(string& n_uri, sip_msg* msg)

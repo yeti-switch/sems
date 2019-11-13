@@ -5,6 +5,8 @@
 #include "cstring.h"
 #include "sip_trans.h"
 
+#include <functional>
+
 #define H_TABLE_POWER   10
 #define H_TABLE_ENTRIES (1<<H_TABLE_POWER)
 
@@ -61,8 +63,7 @@ void compute_branch(char* branch/*[BRANCH_BUF_LEN]*/,
 
 void compute_sl_to_tag(char* to_tag/*[SL_TOTAG_LEN]*/, const sip_msg* msg);
 
-void dumps_transactions();
-long long unsigned int count_transactions();
+void dumps_transactions(const std::function<void(sip_trans*)>& cb = {});
 
 void cleanup_transaction();
 

@@ -64,6 +64,7 @@ class CoreRpc final
     rpc_handler showConnections;
     rpc_handler showTrBlacklist;
     rpc_handler showTrCount;
+    rpc_handler showTrList;
     rpc_handler showSessionsInfo;
     rpc_handler showSessionsCount;
     rpc_handler showSessionsLimit;

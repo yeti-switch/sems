@@ -650,6 +650,21 @@ int parse_via(sip_via* via, const char* beg, int len)
     return 0;
 }
 
+cstring transport_str(int transport_id)
+{
+    switch(transport_id) {
+    case sip_transport::UDP:
+        return "UDP";
+    case sip_transport::TCP:
+        return "TCP";
+    case sip_transport::TLS:
+        return "TLS";
+    case sip_transport::SCTP:
+        return "SCTP";
+    }
+    return "";
+}
+
 /** EMACS **
  * Local variables:
  * mode: c++

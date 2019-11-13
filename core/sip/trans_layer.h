@@ -248,6 +248,7 @@ public:
 
     const trans_stats &get_stats() { return stats; }
     const int get_trans_count();
+    void get_trans_list(AmArg& ret);
 
 protected:
 

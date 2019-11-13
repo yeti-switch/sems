@@ -87,6 +87,7 @@ struct sip_via: public sip_parsed_hdr
 };
 
 int parse_via(sip_via* via, const char* beg, int len);
+cstring transport_str(int transport_id);
 
 #define MAGIC_BRANCH_COOKIE "z9hG4bK"
 #define MAGIC_BRANCH_LEN    7

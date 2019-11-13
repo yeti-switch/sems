@@ -114,6 +114,9 @@ class sip_trans
     /** Transaction type */
     unsigned int type;
     
+    /** Transaction time created */
+    struct timeval time_created;
+
     /** Request that initiated 
 	the transaction */
     sip_msg* msg;

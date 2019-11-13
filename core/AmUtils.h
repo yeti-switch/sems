@@ -127,7 +127,7 @@ string int2hexstr(int val);
 /** 
  * Convert an unsigned long to a string using hexdecimal representation. 
  */
-string long2hex(unsigned long val);
+string long2hex(unsigned long val, bool lowercase = false);
 
 /**
  * Convert a reversed hex string to uint.

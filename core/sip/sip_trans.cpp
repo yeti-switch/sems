@@ -80,6 +80,7 @@ sip_trans::sip_trans()
       redirects_allowed(-1)
 {
     memset(timers,0,SIP_TRANS_TIMERS*sizeof(void*));
+    gettimeofday(&time_created, 0);
 }
 
 sip_trans::~sip_trans() 
