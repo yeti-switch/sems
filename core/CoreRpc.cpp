@@ -157,15 +157,17 @@ void CoreRpc::init_rpc_tree()
     AmArg &show = reg_leaf(root,"show");
         reg_method(show,"status","",&CoreRpc::showStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
-        reg_method(show,"tr_blacklist","",&CoreRpc::showTrBlacklist);
-        reg_method(show,"tr_count","",&CoreRpc::showTrCount);
-        reg_method(show,"tr_list","",&CoreRpc::showTrList);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"config","show config",&CoreRpc::showConfig);
         reg_method(show,"interfaces","active media streams info",&CoreRpc::showInterfaces);
         reg_method(show,"payloads","",&CoreRpc::showPayloads);
         reg_method(show,"log-level","",&CoreRpc::showLogLevel);
         reg_method(show,"dump-level","",&CoreRpc::showDumpLevel);
+        AmArg &show_transport = reg_leaf(show, "transport");
+            reg_method(show_transport,"blacklist","",&CoreRpc::showTrBlacklist);
+        AmArg &show_transactions = reg_leaf(show,"transactions");
+            reg_method(show_transactions,"count","",&CoreRpc::showTrCount);
+            reg_method(show_transactions,"list","",&CoreRpc::showTrList);
         AmArg &show_sessions = reg_method_arg(show,"sessions","show runtime sessions",&CoreRpc::showSessionsInfo,
                                               "active sessions","<LOCAL-TAG>","show sessions related to given local_tag");
             reg_method(show_sessions,"count","",&CoreRpc::showSessionsCount);
