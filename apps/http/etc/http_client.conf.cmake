@@ -28,7 +28,7 @@ module "http_client" {
         # automatic failover if specified more than one url
         #
         # Default: mandatory
-        url={http://storage.pbx2-sandbox.didww.com:6666/pcap-dumps/}
+        url={http://127.0.0.1:6666/pcap-dumps/}
         # content_type=<mimetype>
         #
         # supported only in 'post' mode

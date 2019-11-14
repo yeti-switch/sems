@@ -1,6 +1,4 @@
 shutdown_code = 503
 
-# media_servers=storage.pbx2.didww.com:8554
-
 use_dns_srv = yes
-media_servers = audio-streamer.pbx2.didww.com
+media_servers = rtsp-server.invalid:8554
