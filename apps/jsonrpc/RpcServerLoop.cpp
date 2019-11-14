@@ -207,6 +207,7 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     string connection_id = JsonRPCServerLoop::newConnectionId();
     JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
     peer->fd=client_fd;
+    peer->flags=0;
     if (setnonblock(peer->fd) < 0) {
         delete peer;
         ERROR("failed to set client socket to non-blocking");
