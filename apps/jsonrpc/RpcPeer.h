@@ -65,7 +65,8 @@ struct JsonrpcPeerConnection {
     FL_CLOSE_WRONG_REPLY     = 2,   // close connection if reply with unknown ID received
     FL_CLOSE_NO_REPLYLINK    = 4,   // close connection if reply queue for a request missing
     FL_CLOSE_NO_REQUEST_RECV = 8,   // close connection if reques queue missing
-    FL_CLOSE_NO_NOTIF_RECV   = 16   // close connection if notification queue missing
+    FL_CLOSE_NO_NOTIF_RECV   = 16,  // close connection if notification queue missing
+    FL_REJECTED              = 32,  // connection if not whitelists
   }; 
 
   JsonrpcPeerConnection() { 
