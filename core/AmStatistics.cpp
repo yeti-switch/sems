@@ -144,3 +144,24 @@ StatCountersGroup &AmStatistics::group(StatCountersGroup::Type type, const strin
 
     return group;
 }
+
+const char *StatCountersGroup::type2str(Type type)
+{
+    switch(type) {
+        case Counter: return "counter";
+        case Gauge: return "gauge";
+        case Histogram: return "histogram";
+        case Summary: return "summary";
+        default: break;
+    }
+    return "unknown";
+}
+
+StatCountersGroup::Type StatCountersGroup::str2type(const char * type)
+{
+    if(strcmp(type, "counter") == 0) return Counter;
+    if(strcmp(type, "gauge") == 0) return Gauge;
+    if(strcmp(type, "histogram") == 0) return Histogram;
+    if(strcmp(type, "summary") == 0) return Summary;
+    return Unknown;
+}

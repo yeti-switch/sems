@@ -109,25 +109,8 @@ public:
     AtomicCounter& addAtomicCounter();
     FunctionCounter& addFunctionCounter(FunctionCounter::CallbackFunction func);
 
-    static const char *type2str(Type type)
-    {
-        switch(type) {
-        case Counter: return "counter";
-        case Gauge: return "gauge";
-        case Histogram: return "histogram";
-        case Summary: return "summary";
-        }
-        return "unknown";
-    }
-
-    static Type str2type(const char * type)
-    {
-        if(strcmp(type, "counter") == 0) return Counter;
-        if(strcmp(type, "gauge") == 0) return Gauge;
-        if(strcmp(type, "histogram") == 0) return Histogram;
-        if(strcmp(type, "summary") == 0) return Summary;
-        return Unknown;
-    }
+    static const char *type2str(Type type);
+    static Type str2type(const char * type);
 
     StatCountersGroup &setHelp(const string& help) { help_ = help;  return *this; }
     const string &help() { return help_; }
