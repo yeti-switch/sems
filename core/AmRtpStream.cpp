@@ -823,7 +823,7 @@ inline AmRtpPacket* PacketMem::newPacket()
     return p;
 }
 
-inline void PacketMem::freePacket(AmRtpPacket* p)
+void PacketMem::freePacket(AmRtpPacket* p)
 {
     if (!p)  return;
 
