@@ -1,3 +1,9 @@
+sems (1.8.44-1) stable; urgency=low
+
+  * add acl in jsonrpc plugin
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 14 Nov 2019 13:30:53 +0200
+
 sems (1.8.43-1) stable; urgency=low
 
   * core.show.transactions.list method
