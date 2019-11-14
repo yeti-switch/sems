@@ -14,6 +14,7 @@ class HttpMultiPartFormConnection: public CurlConnection
   int response_code;
   string file_path;
   string file_basename;
+  curl_mime *form;
 
 public:
   HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, const HttpDestination &destination, int epoll_fd);

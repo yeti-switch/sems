@@ -14,18 +14,20 @@
 HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, const HttpDestination &destination, int epoll_fd):
     CurlConnection(epoll_fd),
     destination(destination),
-    event(u)
+    event(u),
+    form(0)
 {
     CDBG("HttpMultiPartFormConnection() %p",this);
 }
 
 HttpMultiPartFormConnection::~HttpMultiPartFormConnection() {
     CDBG("~HttpMultiPartFormConnection() %p curl = %p",this,curl);
+    if(form)
+        curl_mime_free(form);
 }
 
 int HttpMultiPartFormConnection::init(CURLM *curl_multi)
 {
-    curl_mime *form;
     curl_mimepart *field;
 
     if(init_curl(curl_multi)) {
@@ -52,6 +54,7 @@ int HttpMultiPartFormConnection::init(CURLM *curl_multi)
             if(!file_exists(file_path)) {
                 ERROR("HttpMultiPartFormConnection: can't open file: %s",file_path.c_str());
                 curl_mime_free(form);
+                form = 0;
                 return -1;
             }
 

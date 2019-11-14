@@ -63,6 +63,7 @@ struct AudioRecorderEvent
       : recorder_id(recorder_id),
         event_id(event_id)
     {}
+    virtual ~AudioRecorderEvent(){}
 
     enum recorder_class {
         RecorderClassMono,

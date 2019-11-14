@@ -77,6 +77,11 @@ tcp_base_trsp::~tcp_base_trsp()
       DBG("%p free write_ev %p",this, write_ev);
       event_free(write_ev);
   }
+
+  if(sd > 0) {
+    ::close(sd);
+    sd = -1;
+  }
 }
 
 int tcp_base_trsp::parse_input()
@@ -597,6 +602,13 @@ trsp_worker::trsp_worker()
 trsp_worker::~trsp_worker()
 {
     event_base_free(evbase);
+    connections_mut.lock();
+    for(auto conn_m : connections) {
+        for(auto conn : conn_m.second) {
+            dec_ref(conn);
+        }
+    }
+    connections_mut.unlock();
 }
 
 void trsp_worker::add_connection(tcp_base_trsp* client_sock)
