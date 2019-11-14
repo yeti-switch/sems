@@ -195,11 +195,11 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     case trsp_acl::Allow:
         break;
     case trsp_acl::Drop:
-        DBG("connection dropped by interface ACL %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
+        DBG("connection dropped by interface ACL for src %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
         close(client_fd);
         return;
     case trsp_acl::Reject:
-        DBG("message rejected by interface ACL %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
+        DBG("request rejected by interface ACL for src %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
         reject = true;
         break;
     }
