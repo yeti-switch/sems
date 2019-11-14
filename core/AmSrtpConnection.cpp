@@ -9,9 +9,9 @@
 
 AmSrtpConnection::AmSrtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
     : AmStreamConnection(_transport, remote_addr, remote_port, conn_type)
-    , srtp_s_session(0)
-    , srtp_r_session(0)
     , srtp_profile(srtp_profile_reserved)
+    , srtp_s_session(nullptr)
+    , srtp_r_session(nullptr)
 {
     memset(b_init, 0, sizeof(b_init));
     if(conn_type == RTP_CONN)
@@ -26,18 +26,18 @@ AmSrtpConnection::~AmSrtpConnection()
 {
     if(srtp_s_session) {
         srtp_dealloc(srtp_s_session);
-        srtp_s_session = 0;
+        srtp_s_session = nullptr;
     }
     if(srtp_r_session) {
         srtp_dealloc(srtp_r_session);
-        srtp_r_session = 0;
+        srtp_r_session = nullptr;
     }
 
     if(s_stream)
         delete s_stream;
 }
 
-void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len)
+void AmSrtpConnection::use_key(srtp_profile_t profile, const unsigned char* key_s, size_t key_s_len, const unsigned char* key_r, size_t key_r_len)
 {
     if(srtp_s_session || srtp_r_session) {
         return;
@@ -48,14 +48,14 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, unsigned char* key_s, uns
     master_key_len += srtp_profile_get_master_salt_length(profile);
     if(master_key_len != key_s_len || master_key_len != key_r_len) {
         char error[100];
-        sprintf(error, "srtp key not corrected, another size: needed %u in fact local-%u, remote-%u",
+        sprintf(error, "srtp key not corrected, another size: needed %u in fact local-%lu, remote-%lu",
                                 master_key_len, key_s_len, key_r_len);
         transport->getRtpStream()->onErrorRtpTransport(error, transport);
         return;
     }
 
-    if (srtp_create(&srtp_s_session, NULL) != srtp_err_status_ok ||
-        srtp_create(&srtp_r_session, NULL) != srtp_err_status_ok) {
+    if (srtp_create(&srtp_s_session, nullptr) != srtp_err_status_ok ||
+        srtp_create(&srtp_r_session, nullptr) != srtp_err_status_ok) {
         transport->getRtpStream()->onErrorRtpTransport("srtp session not created", transport);
         return;
     }
@@ -72,7 +72,7 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
         ERROR("key buffer less base64 decoded key");
         return;
     }
-    key_s_len = data.size();
+    key_s_len = static_cast<unsigned int>(data.size());
     memcpy(key_s, data.data(), key_s_len);
 }
 
@@ -94,7 +94,7 @@ std::string AmSrtpConnection::gen_base64(unsigned int key_s_len)
         } else {
             data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().end());
         }
-        len = data.size();
+        len = static_cast<unsigned int>(data.size());
     }
     return Botan::base64_encode(data);
 }
@@ -117,10 +117,10 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
 
         policy.key = c_key_r;
         if(getConnType() == RTP_CONN) {
-            rtp_hdr_t *header = (rtp_hdr_t *)data;
+            rtp_hdr_t *header = reinterpret_cast<rtp_hdr_t *>(data);
             policy.ssrc.value = header->ssrc;
         } else {
-            RtcpCommonHeader *header = (RtcpCommonHeader*)data;
+            RtcpCommonHeader *header = reinterpret_cast<RtcpCommonHeader*>(data);
             policy.ssrc.value = header->ssrc;
         }
         policy.ssrc.type = ssrc_any_inbound;
@@ -136,9 +136,9 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     
     srtp_err_status_t ret;
     if(getConnType() == RTP_CONN)
-        ret = srtp_unprotect(srtp_r_session, data, (int*)&size);
+        ret = srtp_unprotect(srtp_r_session, data, reinterpret_cast<int *>(&size));
     else
-        ret = srtp_unprotect_rtcp(srtp_r_session, data, (int*)&size);
+        ret = srtp_unprotect_rtcp(srtp_r_session, data, reinterpret_cast<int *>(&size));
 
     if(ret == srtp_err_status_ok)
         s_stream->handleConnection(data, size, recv_addr, recv_time);
@@ -153,7 +153,7 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     }
 }
 
-int AmSrtpConnection::send(AmRtpPacket* p)
+ssize_t AmSrtpConnection::send(AmRtpPacket* p)
 {
     if(!srtp_s_session){
         transport->getRtpStream()->onErrorRtpTransport("srtp session not initialized", transport);
@@ -188,9 +188,12 @@ int AmSrtpConnection::send(AmRtpPacket* p)
         return -1;
     }
 
-    if((getConnType() == RTP_CONN && srtp_protect(srtp_s_session, p->getBuffer(), (int*)&size) != srtp_err_status_ok) ||
-       (getConnType() == RTCP_CONN && srtp_protect_rtcp(srtp_s_session, p->getBuffer(), (int*)&size) != srtp_err_status_ok)) {
-        transport->getRtpStream()->onErrorRtpTransport("error encripting", transport);
+    if((getConnType() == RTP_CONN &&
+        srtp_protect(srtp_s_session, p->getBuffer(), reinterpret_cast<int *>(&size)) != srtp_err_status_ok) ||
+       (getConnType() == RTCP_CONN &&
+        srtp_protect_rtcp(srtp_s_session, p->getBuffer(), reinterpret_cast<int *>(&size)) != srtp_err_status_ok))
+    {
+        transport->getRtpStream()->onErrorRtpTransport("error encrypting", transport);
         return -1;
     }
 

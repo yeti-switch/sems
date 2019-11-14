@@ -15,7 +15,16 @@ struct ConfigContainer
 {
     ConfigContainer();
     std::vector<SIP_interface> sip_ifs;
+
     std::vector<MEDIA_interface> media_ifs;
+    MEDIA_info &getMediaProtoInfo(int iface_ifx, int proto_idx) {
+        return *media_ifs[static_cast<size_t>(iface_ifx)]
+            .proto_info[static_cast<size_t>(proto_idx)];
+    }
+    MEDIA_interface &getMediaIfaceInfo(int iface_ifx) {
+        return media_ifs[static_cast<size_t>(iface_ifx)];
+    }
+
     std::map<std::string, unsigned short> sip_if_names;
     std::map<std::string, unsigned short> media_if_names;
     std::map<std::string,unsigned short> local_sip_ip2if;

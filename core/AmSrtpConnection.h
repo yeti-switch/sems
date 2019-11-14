@@ -45,14 +45,14 @@ public:
     AmSrtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
     ~AmSrtpConnection();
 
-    void use_key(srtp_profile_t profile, unsigned char* key_s, unsigned int key_s_len, unsigned char* key_r, unsigned int key_r_len);
+    void use_key(srtp_profile_t profile, const unsigned char* key_s, size_t key_s_len, const unsigned char* key_r, size_t key_r_len);
 
     static void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
     static std::string gen_base64_key(srtp_profile_t profile);
     static std::string gen_base64(unsigned int key_s_len);
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
-    int send(AmRtpPacket * packet) override;
+    ssize_t send(AmRtpPacket * packet) override;
 };
 
 #endif/*AM_SRTP_CONNECTION_H*/

@@ -211,7 +211,7 @@ void RpcServerThreadpool::addThreads(unsigned int cnt) {
 }
 
 void RpcServerThreadpool::cleanup() {
-  DBG("cleanup RPC server threads %u\n", threads.size());
+  DBG("cleanup RPC server threads %lu\n", threads.size());
     threads_mut.lock();
     for(auto thread : threads) {
         thread->stop();

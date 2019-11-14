@@ -52,7 +52,7 @@ AmStreamConnection::ConnectionType AmStreamConnection::getConnType()
     return conn_type;
 }
 
-int AmStreamConnection::send(AmRtpPacket* packet)
+ssize_t AmStreamConnection::send(AmRtpPacket* packet)
 {
     return transport->send(&r_addr, packet->getBuffer(), packet->getBufferSize(), getConnType());
 }

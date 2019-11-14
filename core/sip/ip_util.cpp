@@ -108,7 +108,7 @@ const char* am_inet_ntop_sip(const sockaddr_storage* addr, char* str, size_t siz
   return str;
 }
 
-void am_set_port(struct sockaddr_storage* addr, short port)
+void am_set_port(struct sockaddr_storage* addr, unsigned short port)
 {
   struct sockaddr_in *sin = (struct sockaddr_in *)addr;
   struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;

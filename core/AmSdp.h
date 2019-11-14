@@ -151,7 +151,7 @@ struct SdpFingerPrint
 struct SdpIceCandidate
 {
     string foundation;
-    unsigned int  comp_id;
+    int  comp_id;
     IceCandidateTransport transport;
     int priority;
     SdpConnection conn;

@@ -94,7 +94,6 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                     reinterpret_cast<unsigned char*>(&dtmf), sizeof(dtmf_payload_t));
                 return true;
             } else {
-                DBG("");
                 sending_state = DTMF_SEND_ENDING;
                 send_dtmf_end_repeat = 0;
             }
