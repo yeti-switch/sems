@@ -62,6 +62,9 @@ class JsonRpcServer {
 
   static int createReply(JsonrpcNetstringsConnection* peer, const string& id, 
 			 AmArg& result, bool is_error);
+
+  static int createReply(JsonrpcNetstringsConnection* peer, unsigned int id,
+                         AmArg& result, bool is_error);
 };
 
 #endif // _JsonRPCServer_h_

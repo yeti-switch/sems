@@ -50,7 +50,7 @@ using std::string;
 
 void JsonrpcPeerConnection::notifyDisconnect() {
   // let event receivers know about broken connection
-  DBG("notifying event receivers about broken connection\n");
+  DBG("notifying event receivers about broken connection %s, %s\n", notificationReceiver.c_str(), requestReceiver.c_str());
   if (!notificationReceiver.empty())
     AmEventDispatcher::instance()->
       post(notificationReceiver, 

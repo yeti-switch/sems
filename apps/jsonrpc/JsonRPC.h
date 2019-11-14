@@ -71,6 +71,7 @@ class JsonRPCServerModule
   static string host;
   static int port;
   static int threads;
+  static trsp_acl acl;
 };
 
 #endif

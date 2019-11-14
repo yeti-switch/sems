@@ -74,7 +74,32 @@ int JsonRpcServer::createRequest(const string& evq_link, const string& method,
   return 0;
 }
 
-int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer, 
+int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
+			       unsigned int id, AmArg& result, bool is_error) {
+
+  AmArg rpc_res;
+  rpc_res["id"] = (int)id;
+  rpc_res["jsonrpc"] = "2.0";
+  if (is_error)
+    rpc_res["error"] = result;
+  else
+    rpc_res["result"] = result;
+
+  string res_s = arg2json(rpc_res);
+  if (res_s.length() > MAX_RPC_MSG_SIZE) {
+    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)\n",
+	  MAX_RPC_MSG_SIZE);
+    return -3;
+  }
+
+  DBG("created RPC reply: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
+  memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
+  peer->msg_size = res_s.length();
+
+  return 0;
+}
+
+int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
 			       const string& id, AmArg& result, bool is_error) {
 
   AmArg rpc_res;
@@ -188,6 +213,19 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     DBG("received notification\n");
   }
 
+  if(peer->flags & JsonrpcPeerConnection::FL_REJECTED) {
+    JsonrpcNetstringsConnection* conn = dynamic_cast<JsonrpcNetstringsConnection*>(peer);
+    assert(conn);
+    AmArg result("forbidden");
+    if(id_is_int) {
+        int int_id;
+        str2int(id, int_id);
+        createReply(conn, int_id, result, true);
+    } else {
+        createReply(conn, id, result, true);
+    }
+    return 0;
+  }
   // send directly to event queue
   if ((id.empty() && !peer->notificationReceiver.empty()) || 
       (!id.empty() && !peer->requestReceiver.empty())) {

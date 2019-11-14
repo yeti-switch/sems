@@ -56,6 +56,7 @@
 #include <stddef.h>
 
 #include "RpcPeer.h"
+#include "JsonRPC.h"
 
 ev_io ev_accept;
 ev_async JsonRPCServerLoop::async_w;
@@ -181,26 +182,43 @@ void JsonRPCServerLoop::dispatchServerEvent(AmEvent* ev) {
 static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
   int client_fd;
-  struct sockaddr_in client_addr;
+  struct sockaddr_storage client_addr;
   socklen_t client_len = sizeof(client_addr);
   client_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
   if (client_fd == -1) {
     return;
   }
-   	 
-  string connection_id = JsonRPCServerLoop::newConnectionId();
-  JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
-  peer->fd=client_fd;
-  if (setnonblock(peer->fd) < 0) {
-    delete peer;
-    ERROR("failed to set client socket to non-blocking");
-    return;
-  }
 
-  JsonRPCServerLoop::registerConnection(peer, connection_id);
+  trsp_acl::action_t acl_action = JsonRPCServerModule::acl.check(client_addr);
+  bool reject = false;
+  switch(acl_action) {
+    case trsp_acl::Allow:
+        break;
+    case trsp_acl::Drop:
+        DBG("connection dropped by interface ACL %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
+        close(client_fd);
+        return;
+    case trsp_acl::Reject:
+        DBG("message rejected by interface ACL %s:%d", am_inet_ntop(&client_addr).c_str(), am_get_port(&client_addr));
+        reject = true;
+        break;
+    }
 
-  ev_io_init(&peer->ev_read,read_cb,peer->fd,EV_READ);
-  ev_io_start(loop,&peer->ev_read);
+    string connection_id = JsonRPCServerLoop::newConnectionId();
+    JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
+    peer->fd=client_fd;
+    if (setnonblock(peer->fd) < 0) {
+        delete peer;
+        ERROR("failed to set client socket to non-blocking");
+        return;
+    }
+
+    JsonRPCServerLoop::registerConnection(peer, connection_id);
+    if(reject) {
+        peer->flags |= JsonrpcNetstringsConnection::FL_REJECTED;
+    }
+    ev_io_init(&peer->ev_read,read_cb,peer->fd,EV_READ);
+    ev_io_start(loop,&peer->ev_read);
 }
 
 static void async_cb (EV_P_ ev_async *w, int revents)

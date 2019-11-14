@@ -36,6 +36,7 @@ JsonRPCServerModule* JsonRPCServerModule::_instance = NULL;
 string JsonRPCServerModule::host = DEFAULT_JSONRPC_SERVER_HOST;
 int JsonRPCServerModule::port = DEFAULT_JSONRPC_SERVER_PORT;
 int JsonRPCServerModule::threads = DEFAULT_JSONRPC_SERVER_THREADS;
+trsp_acl JsonRPCServerModule::acl;
 
 EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule)
 EXPORT_PLUGIN_CONF_FACTORY(JsonRPCServerModule)
@@ -66,8 +67,18 @@ int JsonRPCServerModule::configure(const std::string & config)
 {
     static const char opt_address[] = "address";
     static const char opt_port[] = "port";
+    static const char opt_whitelist[] = "whitelist";
+    static const char opt_method[] = "method";
     static const char opt_server_threads[] = "server_threads";
     static const char sec_listen[] = "listen";
+    static const char sec_acl[] = "acl";
+
+    static cfg_opt_t acl_sec[]
+    {
+        CFG_STR_LIST(opt_whitelist, 0, CFGF_NODEFAULT),
+        CFG_STR(opt_method, "", CFGF_NODEFAULT),
+        CFG_END()
+    };
 
     cfg_opt_t listen_sec[] = {
         CFG_STR(opt_address, DEFAULT_JSONRPC_SERVER_HOST, CFGF_NONE),
@@ -77,6 +88,7 @@ int JsonRPCServerModule::configure(const std::string & config)
 
     cfg_opt_t opt[] = {
         CFG_SEC(sec_listen,listen_sec, CFGF_NONE),
+        CFG_SEC(sec_acl,acl_sec, CFGF_NODEFAULT),
         CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
         CFG_END()
     };
@@ -100,6 +112,31 @@ int JsonRPCServerModule::configure(const std::string & config)
     host = cfg_getstr(listen, opt_address);
     port = cfg_getint(listen, opt_port);
     threads = cfg_getint(cfg, opt_server_threads);
+    if(cfg_size(cfg, sec_acl)) {
+        cfg_t* cfg_acl = cfg_getsec(cfg, sec_acl);
+        int networks = 0;
+        for(unsigned int j = 0; j < cfg_size(cfg_acl, opt_whitelist); j++) {
+            AmSubnet net;
+            std::string host = cfg_getnstr(cfg_acl, opt_whitelist, j);
+            if(!net.parse(host)) {
+                return -1;
+            }
+            acl.add_network(net);
+            networks++;
+        }
+
+        DBG("parsed %d networks",networks);
+
+        std::string method = cfg_getstr(cfg_acl, opt_method);
+        if(method == "drop"){
+            acl.set_action(trsp_acl::Drop);
+        } else if(method == "reject") {
+            acl.set_action(trsp_acl::Reject);
+        } else {
+            ERROR("unknown acl method '%s'", method.c_str());
+            return -1;
+        }
+    }
 
     cfg_free(cfg);
     return 0;
