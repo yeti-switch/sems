@@ -117,7 +117,7 @@ int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
     return -3;
   }
 
-  DBG("created RPC reply: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
+  //DBG("created RPC reply: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
   memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
   peer->msg_size = res_s.length();
 
