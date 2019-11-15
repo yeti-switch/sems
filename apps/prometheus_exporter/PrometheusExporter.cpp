@@ -25,6 +25,11 @@ class PrometheusExporterFactory
         return PrometheusExporter::instance()->configure(config);
     }
 
+    int reconfigure(const std::string& config) override
+    {
+        return 0;
+    }
+
     int onLoad() override
     {
         return PrometheusExporter::instance()->onLoad();

@@ -168,6 +168,7 @@ private:
     ~Mixer();
 
     int     configure(const std::string& config);
+    int     reconfigure(const std::string& config);
     bool    resolve_name(const string &address, sockaddr_storage &_sa);
     int     bind_socket();
     int     init();

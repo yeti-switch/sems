@@ -58,6 +58,7 @@ class JsonRPCServerModule
 
   // Config factory
   int configure(const std::string & config) override;
+  int reconfigure(const std::string& config) override;
   // DI factory
   AmDynInvoke* getInstance() { return instance(); }
 

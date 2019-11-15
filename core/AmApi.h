@@ -119,6 +119,7 @@ class AmConfigFactory: public AmPluginFactory
   AmConfigFactory(const string& name);
   virtual ~AmConfigFactory(){}
   virtual int configure(const std::string& config)=0;
+  virtual int reconfigure(const std::string& config) = 0;
 };
 
 class AmSession;

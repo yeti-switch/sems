@@ -37,6 +37,11 @@ class HttpClientFactory
         return HttpClient::instance()->configure(config);
     }
 
+    int reconfigure(const std::string& config)
+    {
+        return 0;
+    }
+
     AmDynInvoke* getInstance()
     {
         return HttpClient::instance();

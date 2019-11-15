@@ -91,6 +91,11 @@ int Monitor::configure(const string& config)
     return 0;
 }
 
+int Monitor::reconfigure(const std::string& config)
+{
+    return 0;
+}
+
 int Monitor::onLoad() {
   // todo: if GC configured, start thread
   if (gcRun) {

@@ -48,6 +48,11 @@ int SessionTimerFactory::configure(const std::string& config)
     return cfg.readFromConfig(config);
 }
 
+int SessionTimerFactory::reconfigure(const std::string& config)
+{
+    return 0;
+}
+
 AmSessionEventHandler* SessionTimerFactory::getHandler(AmSession* s)
 {
   return new SessionTimer(s, cfg);

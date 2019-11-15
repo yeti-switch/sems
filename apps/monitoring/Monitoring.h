@@ -119,6 +119,7 @@ class Monitor
 
   // Config factory
   int configure(const string& config) override;
+  int reconfigure(const std::string& config) override;
   // DI factory
   AmDynInvoke* getInstance() { return instance(); }
   // DI API

@@ -54,6 +54,7 @@ class SctpBus
 
     int onLoad();
     int configure(const std::string& config);
+    int reconfigure(const std::string& config);
 
     void run();
     void on_stop();

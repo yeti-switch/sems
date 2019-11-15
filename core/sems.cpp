@@ -267,12 +267,15 @@ static AmCondition<bool> is_shutting_down(false);
 
 static void signal_handler(int sig)
 {
-  if (sig == SIGUSR1 || sig == SIGUSR2) {
+  if(sig == SIGUSR1) {
+    AmSessionContainer::instance()->broadcastShutdown();
+    return;
+  }
+
+  if(sig == SIGUSR2) {
     DBG("brodcasting User event to %u sessions...\n",
 	AmSession::getSessionNum());
-    AmEventDispatcher::instance()->
-      broadcast(new AmSystemEvent(sig == SIGUSR1? 
-				  AmSystemEvent::User1 : AmSystemEvent::User2));
+    AmEventDispatcher::instance()->broadcast(new AmSystemEvent(AmSystemEvent::User));
     return;
   }
 
@@ -292,7 +295,7 @@ static void signal_handler(int sig)
   }
 
   if (sig == SIGHUP) {
-    AmSessionContainer::instance()->broadcastShutdown();
+    //AmPlugIn::instance()->reload();
     return;
   }
 

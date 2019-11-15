@@ -160,6 +160,11 @@ int SIPRegistrarClient::configure(const std::string& config)
     return 0;
 }
 
+int SIPRegistrarClient::reconfigure(const std::string& config)
+{
+    return 0;
+}
+
 void SIPRegistrarClient::run()
 {
     int ret;
