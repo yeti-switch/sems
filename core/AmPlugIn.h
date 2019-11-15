@@ -31,6 +31,7 @@
 
 #include "AmThread.h"
 #include "AmArg.h"
+#include "sip/wheeltimer.h"
 
 #include <string>
 #include <unordered_map>
@@ -46,6 +47,7 @@ class AmSessionFactory;
 class AmSessionEventHandlerFactory;
 class AmDynInvokeFactory;
 class AmLoggingFacility;
+class AmConfigFactory;
 class AmSipRequest;
 struct SdpPayload;
 
@@ -103,6 +105,7 @@ class AmPlugIn : public AmPayloadProvider
   std::map<string,AmPluginFactory*>              name2base;
   std::map<string,AmDynInvokeFactory*>           name2di;
   std::map<string,AmLoggingFacility*>            name2logfac;
+  std::map<string,AmConfigFactory*>              name2config;
   std::map<string,AmPluginFactory*>              module_objects;
 
   std::map<string,AmPluginFactory*>              plugins_objects;
@@ -256,6 +259,16 @@ class AmPlugIn : public AmPayloadProvider
    * List available dynamic invocation components
    */
   void listFactories4Di(AmArg &ret);
+
+  /**
+   * Configuring component
+   */
+  AmConfigFactory* getFactory4Config(const string& name);
+  
+  /**
+   * List available configuring components
+   */
+  void listFactories4Config(AmArg &ret);
 
   /**
    * logging facility lookup function

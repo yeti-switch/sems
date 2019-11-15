@@ -265,6 +265,33 @@ static bool apply_args(std::map<char,string>& args)
 /** Flag to mark the shutdown is in progress (in the main process) */
 static AmCondition<bool> is_shutting_down(false);
 
+class ConfigReloadTimer : public timer
+{
+public:
+    ConfigReloadTimer() : timer(wheeltimer::instance()->wall_clock){}
+    void fire() override
+    {
+        ConfigContainer cfg_box;
+        if(AmLcConfig::GetInstance().readConfiguration(&cfg_box)) {
+            ERROR("configuration errors. reconfiguration stopped");
+            return;
+        }
+
+        AmArg ret;
+        AmPlugIn::instance()->listFactories4Config(ret);
+        for(int i = 0; i < ret.size(); i++) {
+            AmArg &factory_name = ret[i];
+            if(!isArgCStr(factory_name))
+                continue;
+            AmConfigFactory* factory = AmPlugIn::instance()->getFactory4Config(factory_name.asCStr());
+            if(factory && factory->reconfigure(cfg_box.module_config[factory_name.asCStr()])) {
+                ERROR("configuration failed. reconfiguration stopped");
+                return;
+            }
+        }
+    }
+};
+
 static void signal_handler(int sig)
 {
   if(sig == SIGUSR1) {
@@ -295,7 +322,7 @@ static void signal_handler(int sig)
   }
 
   if (sig == SIGHUP) {
-    //AmPlugIn::instance()->reload();
+    wheeltimer::instance()->insert_timer(new ConfigReloadTimer());
     return;
   }
 
