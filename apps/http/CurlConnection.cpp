@@ -11,6 +11,14 @@
         return -1; \
     }
 
+int sockopt_callback(void *clientp,
+                     curl_socket_t curlfd,
+                     curlsocktype purpose)
+{
+    SOCKET_LOG("[%p] socket purpose = %d, fd = %d", clientp, purpose, curlfd);
+    return CURL_SOCKOPT_OK;
+}
+
 CurlConnection::CurlConnection(int epoll_fd)
   : curl(NULL),
     epoll_fd(epoll_fd),
@@ -29,6 +37,9 @@ int CurlConnection::init_curl(CURLM *curl_multi)
         ERROR("curl_easy_init call failed");
         return -1;
     }
+
+    easy_setopt(CURLOPT_SOCKOPTFUNCTION , &sockopt_callback);
+    easy_setopt(CURLOPT_SOCKOPTDATA , this);
 
     easy_setopt(CURLOPT_PRIVATE, this);
     easy_setopt(CURLOPT_ERRORBUFFER, curl_error);

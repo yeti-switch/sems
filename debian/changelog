@@ -1,3 +1,9 @@
+sems (1.8.44-5) stable; urgency=low
+
+  * log http_client libcurl descriptors
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 19 Nov 2019 13:23:11 +0200
+
 sems (1.8.44-4) stable; urgency=low
 
   * debugging sockets log
