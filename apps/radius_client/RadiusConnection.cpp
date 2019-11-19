@@ -55,6 +55,7 @@ int RadiusConnection::init()
     struct sockaddr_storage a;
 
     sock = ::socket(PF_INET, SOCK_DGRAM, 0);
+    SOCKET_LOG("socket(PF_INET, SOCK_DGRAM, 0) = %d",sock);
     if(sock < 0){
         ERROR("can't create socket. error: %s",strerror(errno));
         return -1;

@@ -227,6 +227,7 @@ int AmRtpTransport::getLocalSocket(bool reinit)
         CLASS_ERROR("< %s\n",strerror(errno));
         throw string ("while creating new socket.");
     }
+    SOCKET_LOG("socket(l_saddr.ss_family(%d),SOCK_DGRAM,0) = %d",l_saddr.ss_family,sd);
 
     int true_opt = 1;
     if(ioctl(sd, FIONBIO , &true_opt) == -1) {

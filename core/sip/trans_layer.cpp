@@ -2786,6 +2786,7 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
 	       strerror(errno));
 	return 0;
     }
+    SOCKET_LOG("socket(remote_ip->ss_family(%d), SOCK_DGRAM, 0 ) = %d",remote_ip->ss_family,temp_sock);
     
     sockaddr_storage from;
     socklen_t    len=sizeof(from);

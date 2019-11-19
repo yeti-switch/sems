@@ -542,6 +542,8 @@ void RtspSession::connect()
         ERROR("socket(): %m");
         return;
     }
+    SOCKET_LOG("socket(saddr.ss_family(%d), SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP ) = %d",
+               saddr.ss_family, fd);
 
     if (::bind(fd, reinterpret_cast<sockaddr *>(&l_saddr), SA_len(&l_saddr)) == -1)
         ERROR("bind(): %m");

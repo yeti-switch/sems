@@ -99,6 +99,7 @@ int JsonrpcNetstringsConnection::connect(const string& host, int port,
   // }
 
   fd = socket(PF_INET, SOCK_STREAM, 0);
+  SOCKET_LOG("socket(PF_INET, SOCK_STREAM, 0) = %d",fd);
   sa.sin_port = htons(port);
   sa.sin_family = PF_INET;
 

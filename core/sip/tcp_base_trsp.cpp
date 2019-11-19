@@ -282,6 +282,7 @@ int tcp_base_trsp::connect()
     ERROR("socket: %s\n",strerror(errno));
     return -1;
   }
+  SOCKET_LOG("socket(peer_addr.ss_family(%d),SOCK_STREAM,0) = %d", peer_addr.ss_family, sd);
 
   if(ioctl(sd, FIONBIO , &true_opt) == -1) {
     ERROR("could not make new connection non-blocking: %s\n",strerror(errno));
@@ -841,6 +842,7 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
         ERROR("socket: %s\n",strerror(errno));
         return -1;
     }
+    SOCKET_LOG("socket(addr.ss_family(%d),SOCK_STREAM,0) = %d", addr.ss_family, sd);
 
     int true_opt = 1;
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
@@ -931,6 +933,7 @@ void trsp_server_socket::on_accept(int sd, short ev)
     socklen_t        src_addr_len = sizeof(sockaddr_storage);
 
     int connection_sd = accept(sd,(sockaddr*)&src_addr,&src_addr_len);
+    SOCKET_LOG("accept(sd,...) = %d", connection_sd);
     if(connection_sd < 0) {
         WARN("error while accepting connection");
         return;

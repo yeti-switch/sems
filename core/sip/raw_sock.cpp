@@ -107,6 +107,7 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
     //sockaddr_storage su;
 
     sock = socket(ip_version, SOCK_RAW, proto);
+    SOCKET_LOG("socket(ip_version(%d), SOCK_RAW, proto) = %d",ip_version,sock);
     if (sock==-1)
         goto error;
     /* set socket options */

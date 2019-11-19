@@ -185,6 +185,7 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
   struct sockaddr_storage client_addr;
   socklen_t client_len = sizeof(client_addr);
   client_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
+  SOCKET_LOG("accept(%d, ...); = %d",w->fd, client_fd);
   if (client_fd == -1) {
     return;
   }
@@ -391,6 +392,7 @@ void JsonRPCServerLoop::run() {
   struct sockaddr_in listen_addr; 
   int reuseaddr_on = 1;
   listen_fd = socket(AF_INET, SOCK_STREAM, 0); 
+  SOCKET_LOG("socket(AF_INET, SOCK_STREAM, 0) = %d",listen_fd);
   if (listen_fd < 0)
     err(1, "listen failed");
   if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on,

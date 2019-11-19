@@ -1845,6 +1845,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
         ERROR("socket() failed: %s",strerror(errno));
         return false;
     }
+    SOCKET_LOG("socket(AF_INET, SOCK_DGRAM, 0) = %d", fd);
 
     if(getifaddrs(&ifap) < 0) {
         ERROR("getifaddrs() failed: %s",strerror(errno));

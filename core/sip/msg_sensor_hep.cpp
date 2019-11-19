@@ -98,6 +98,7 @@ int hep_msg_sensor::init(const char *capture_addr, unsigned short capture_port,
 	prepare_hep_hdr();
 
 	s = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
+	SOCKET_LOG("socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP) = %d",s);
 	if(s==-1){
 		ERROR("can't create udp socket for hep sensor. errno: %d",errno);
 		goto error;

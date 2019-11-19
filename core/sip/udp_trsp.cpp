@@ -118,6 +118,7 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
         ERROR("socket: %s\n",strerror(errno));
         return -1;
     }
+    SOCKET_LOG("socket(addr.ss_family(%d),SOCK_DGRAM,0) = %d", addr.ss_family, sd);
 
     if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
         ERROR("bind: %s\n",strerror(errno));

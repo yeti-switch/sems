@@ -29,6 +29,7 @@ int SctpServerConnection::init(int efd, const sockaddr_storage &a)
 
     if((fd = socket( AF_INET, SOCK_SEQPACKET | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_SCTP)) < 0 )
         sctp_sys_err("socket()");
+    SOCKET_LOG("socket( AF_INET, SOCK_SEQPACKET | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_SCTP) = %d",fd);
 
     if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         sctp_sys_err("setsockopt(SO_REUSEADDR)");

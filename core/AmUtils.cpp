@@ -707,6 +707,7 @@ int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local
 	  strerror(errno));
     return -1;
   }
+  SOCKET_LOG("socket(remote_ip->ss_family(%d), SOCK_DGRAM, 0 ) = %d",remote_ip->ss_family, temp_sock);
 
   socklen_t len=sizeof(sockaddr_storage);
   if (connect(temp_sock, (sockaddr*)remote_ip, 

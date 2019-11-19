@@ -38,6 +38,7 @@ int SctpClientConnection::connect()
 
     if((fd = socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP )) == -1)
         sctp_sys_err("socket()");
+    SOCKET_LOG("socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP ) = %d",fd);
 
     state = Connected;
 

@@ -386,6 +386,7 @@ int ethernet_msg_sensor::init(const char *ifname, const char *dst_mac)
 
 	//open raw socket
 	s = socket(AF_PACKET, SOCK_RAW, ETH_P_IP);
+	SOCKET_LOG("socket(AF_PACKET, SOCK_RAW, ETH_P_IP) = %d",s);
 	if(-1==s){
 		ERROR("can't create raw socket for ipip sensor. errno: %d\n",errno);
 		goto error;
