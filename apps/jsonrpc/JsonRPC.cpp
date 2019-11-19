@@ -144,7 +144,11 @@ int JsonRPCServerModule::configure(const std::string & config)
 
 int JsonRPCServerModule::reconfigure(const std::string& config)
 {
-    return 0;
+    JsonRPCServerLoop::instance()->stop(true);
+    int ret = configure(config);
+    if(ret) return ret;
+    JsonRPCServerLoop::instance()->start();
+    return ret;
 }
 
 int JsonRPCServerModule::load() {

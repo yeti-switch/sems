@@ -60,6 +60,7 @@
 
 ev_io ev_accept;
 ev_async JsonRPCServerLoop::async_w;
+ev_async JsonRPCServerLoop::async_stop;
 struct ev_loop* JsonRPCServerLoop::loop = 0;
 JsonRPCServerLoop* JsonRPCServerLoop::_instance = NULL;
 RpcServerThreadpool JsonRPCServerLoop::threadpool;
@@ -387,8 +388,8 @@ void JsonRPCServerLoop::run() {
   INFO("running server loop; listening on %s:%d\n",
        JsonRPCServerModule::host.c_str(),
        JsonRPCServerModule::port);
+  struct sockaddr_in listen_addr;
   int listen_fd;
-  struct sockaddr_in listen_addr; 
   int reuseaddr_on = 1;
   listen_fd = socket(AF_INET, SOCK_STREAM, 0); 
   if (listen_fd < 0)
@@ -439,13 +440,20 @@ void JsonRPCServerLoop::run() {
   INFO("event loop finished\n");
   
   threadpool.cleanup();
+  close(listen_fd);
+  listen_fd = 0;
   INFO("rpc server loop finished\n");
 }
 
 void JsonRPCServerLoop::on_stop() {
-  ev_io_stop(loop, &ev_accept);
-  ev_async_stop(loop, &async_w);
-  ev_break(loop);
+  ev_async_init(&async_stop, [](EV_P_ ev_async*, int) {
+    ev_async_stop(loop, &async_stop);
+    ev_async_stop(loop, &async_w);
+    ev_io_stop(loop, &ev_accept);
+    ev_break(loop);
+  });
+  ev_async_start(loop, &async_stop);
+  ev_async_send(loop, &async_stop);
 }
 
 void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {

@@ -48,6 +48,7 @@ class JsonRPCServerLoop
 {
   static  RpcServerThreadpool threadpool;
   static ev_async async_w;
+  static ev_async async_stop;
   static struct ev_loop *loop;
 
   static JsonRPCServerLoop* _instance;

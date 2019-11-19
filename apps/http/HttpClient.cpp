@@ -39,7 +39,7 @@ class HttpClientFactory
 
     int reconfigure(const std::string& config)
     {
-        return 0;
+        return configure(config);
     }
 
     AmDynInvoke* getInstance()
@@ -153,6 +153,7 @@ int HttpClient::configure(const string& config)
     resend_interval *= 1000;
     resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
 
+    destinations.clear();
     if(destinations.configure(cfg)){
         ERROR("can't configure destinations");
         cfg_free(cfg);
