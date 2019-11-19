@@ -30,6 +30,7 @@ apps/sbc/lc/yeti/etc/yeti.dist.conf
 core/etc/sems.conf.dist
 apps/dsm/etc/*.conf
 apps/http/etc/*.conf
+apps/jsonrpc/etc/*.conf
 build
 debian/.debhelper
 debian/debhelper-build-stamp
