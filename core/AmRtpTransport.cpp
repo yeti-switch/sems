@@ -90,7 +90,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
 
 AmRtpTransport::~AmRtpTransport()
 {
-    DBG("~AmRtpTransport[%p]",to_void(this));
+    DBG("~AmRtpTransport[%p] l_sd = %d",to_void(this), l_sd);
     if(l_sd) {
         if(l_sd_ctx >= 0) {
             if (AmRtpReceiver::haveInstance()) {
@@ -227,7 +227,8 @@ int AmRtpTransport::getLocalSocket(bool reinit)
         CLASS_ERROR("< %s\n",strerror(errno));
         throw string ("while creating new socket.");
     }
-    SOCKET_LOG("socket(l_saddr.ss_family(%d),SOCK_DGRAM,0) = %d",l_saddr.ss_family,sd);
+    SOCKET_LOG("[%p] socket(l_saddr.ss_family(%d),SOCK_DGRAM,0) = %d",
+               to_void(this), l_saddr.ss_family,sd);
 
     int true_opt = 1;
     if(ioctl(sd, FIONBIO , &true_opt) == -1) {
