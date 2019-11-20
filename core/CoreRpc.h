@@ -60,6 +60,7 @@ class CoreRpc final
     rpc_handler setDumpLevelRtp;
     rpc_handler setDumpLevelFull;
 
+    rpc_handler showModules;
     rpc_handler showStatus;
     rpc_handler showConnections;
     rpc_handler showTrBlacklist;

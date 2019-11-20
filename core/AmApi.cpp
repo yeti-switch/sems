@@ -39,18 +39,18 @@ void AmDynInvoke::invoke(const string& method, const AmArg& args, AmArg& ret)
   throw NotImplemented(method);
 }
 
-AmDynInvokeFactory::AmDynInvokeFactory(const string& name)
-  : AmPluginFactory(name) 
+AmDynInvokeFactory::AmDynInvokeFactory(const string& name, const string& version)
+  : AmPluginFactory(name, version)
 {
 }
 
-AmConfigFactory::AmConfigFactory(const string& name)
-  : AmPluginFactory(name)
+AmConfigFactory::AmConfigFactory(const string& name, const string& version)
+  : AmPluginFactory(name, version)
 {
 }
 
-AmSessionFactory::AmSessionFactory(const string& name)
-  : AmPluginFactory(name)
+AmSessionFactory::AmSessionFactory(const string& name, const string& version)
+  : AmPluginFactory(name, version)
 {
 }
 
@@ -145,8 +145,8 @@ void AmSessionFactory::replyOptions(const AmSipRequest& req) {
 //   delete ev;
 // }
 
-AmSessionEventHandlerFactory::AmSessionEventHandlerFactory(const string& name)
-  : AmPluginFactory(name) 
+AmSessionEventHandlerFactory::AmSessionEventHandlerFactory(const string& name, const string& version)
+  : AmPluginFactory(name, version)
 {
 }
 
@@ -158,8 +158,8 @@ bool AmSessionEventHandlerFactory::onInvite(const AmSipRequest& req,
 }
 
 
-AmLoggingFacility::AmLoggingFacility(const string& name,int log_level)
-  : AmPluginFactory(name),
+AmLoggingFacility::AmLoggingFacility(const string& name, const string& version,int log_level)
+  : AmPluginFactory(name, version),
     _log_level(log_level)
 {
     adjustGlobalLogLevel(); //force consistency with global loglevel

@@ -163,6 +163,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"payloads","",&CoreRpc::showPayloads);
         reg_method(show,"log-level","",&CoreRpc::showLogLevel);
         reg_method(show,"dump-level","",&CoreRpc::showDumpLevel);
+        reg_method(show,"modules","",&CoreRpc::showModules);
         AmArg &show_transport = reg_leaf(show, "transport");
             reg_method(show_transport,"blacklist","",&CoreRpc::showTrBlacklist);
         AmArg &show_transactions = reg_leaf(show,"transactions");
@@ -438,6 +439,18 @@ void CoreRpc::setDumpLevelFull(const AmArg&, AmArg& ret)
 {
     setDumpLevel(LOG_FULL_MASK);
     ret = RPC_CMD_SUCC;
+}
+
+void CoreRpc::showModules(const AmArg&, AmArg& ret)
+{
+    map<string, string> modules;
+    AmPlugIn::instance()->dumpPlugins(modules);
+    for(auto& module_it : modules) {
+        ret.push(AmArg());
+        AmArg& arg = ret.back();
+        arg["name"] = module_it.first;
+        arg["version"] = module_it.second;
+    }
 }
 
 void CoreRpc::showStatus(const AmArg&, AmArg& ret)
