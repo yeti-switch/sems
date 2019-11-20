@@ -220,7 +220,8 @@ public:
     , high_port(info.high_port)
     , next_port_index(info.next_port_index)
     {
-        port_state_index = new std::atomic<PORT_state>[(high_port - low_port)/2];
+        index_count = (high_port - low_port)/2;
+        port_state_index = new std::atomic<PORT_state>[index_count];
     }
     virtual ~MEDIA_info(){}
 
@@ -232,22 +233,22 @@ public:
     {
         int port=0;
 
-        for(unsigned int i = 0; i < (high_port - low_port)/2; i++) {
+        for(unsigned int i = 0; i < index_count; i++) {
             next_port_index++;
-            if(next_port_index >= (high_port - low_port)/2){
+            if(next_port_index >= index_count){
                 next_port_index = 0;
             }
 
-            if(port_state_index[next_port_index].load() == PORT_state::FREE)
+            PORT_state state_exp = PORT_state::FREE;
+            if(port_state_index[next_port_index].compare_exchange_strong(state_exp, PORT_state::BUSY))
                 break;
         }
 
         port = low_port + next_port_index*2;
-        port_state_index[next_port_index].store(PORT_state::BUSY);
         return port;
     }
 
-    void freeRtpPort(int port)
+    void freeRtpPort(unsigned int port)
     {
         if(port < low_port || port > high_port || port%2) return;
 
@@ -268,8 +269,9 @@ public:
         return new MEDIA_info(*this);
     }
 private:
-    int next_port_index;
+    unsigned int next_port_index;
     std::atomic<PORT_state>* port_state_index;
+    unsigned int index_count;
 };
 
 class RTP_info : public MEDIA_info
