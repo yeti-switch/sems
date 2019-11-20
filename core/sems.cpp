@@ -279,7 +279,7 @@ public:
 
         AmArg ret;
         AmPlugIn::instance()->listFactories4Config(ret);
-        for(int i = 0; i < ret.size(); i++) {
+        for(size_t i = 0; i < ret.size(); i++) {
             AmArg &factory_name = ret[i];
             if(!isArgCStr(factory_name))
                 continue;
