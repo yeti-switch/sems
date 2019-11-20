@@ -110,6 +110,10 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
 
 void RtspAudio::initTransport()
 {
+    if(!transports.empty()) {
+        return;
+    }
+
     AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTP_TRANSPORT),
                    *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTCP_TRANSPORT);
     calcRtpPorts(rtp, rtcp);
