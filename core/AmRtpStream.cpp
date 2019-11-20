@@ -317,6 +317,7 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
         break;
 
 try_another_port:
+        AmConfig.media_ifs[tr_rtp->getLocalIf()].proto_info[tr_rtp->getLocalProtoId()]->freeRtpPort(port);
         tr_rtp->getLocalSocket(true);
         if(tr_rtp != tr_rtcp) {
             tr_rtcp->getLocalSocket(true);
@@ -329,10 +330,8 @@ try_another_port:
     }
 
     // rco: does that make sense after bind() ????
-    tr_rtp->setSocketOption();
     tr_rtp->setLocalPort(port);
     if(tr_rtp != tr_rtcp) {
-        tr_rtcp->setSocketOption();
         tr_rtcp->setLocalPort(port + 1);
     }
 }

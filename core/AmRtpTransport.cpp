@@ -98,6 +98,7 @@ AmRtpTransport::~AmRtpTransport()
                 l_sd_ctx = -1;
             }
         }
+        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpPort(l_port);
         close(l_sd);
     }
 
@@ -218,6 +219,7 @@ int AmRtpTransport::getLocalSocket(bool reinit)
         CLASS_DBG("< return existent l_sd:%d", l_sd);
         return l_sd;
     } else if(l_sd && reinit) {
+        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpPort(l_port);
         close(l_sd);
         l_sd = 0;
     }
@@ -245,31 +247,26 @@ int AmRtpTransport::getLocalSocket(bool reinit)
         throw string ("while setting RTP socket SO_TIMESTAMP opt");
     }
 
-    l_sd = sd;
-
-    CLASS_DBG("< return newly created l_sd:%d", l_sd);
-    return l_sd;
-}
-
-void AmRtpTransport::setSocketOption()
-{
-    int true_opt = 1;
-    if(setsockopt(l_sd, SOL_SOCKET, SO_REUSEADDR,
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
         static_cast<void*>(&true_opt), sizeof (true_opt)) == -1)
     {
         ERROR("%s\n",strerror(errno));
-        close(l_sd);
-        l_sd = 0;
+        close(sd);
+        sd = 0;
         throw string ("while setting local address reusable.");
     }
 
     int tos = AmConfig.getMediaProtoInfo(l_if, lproto_id).tos_byte;
     if(tos &&
-        setsockopt(l_sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1)
+        setsockopt(sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos)) == -1)
     {
-        CLASS_WARN("failed to set IP_TOS for descriptors %d",l_sd);
+        CLASS_WARN("failed to set IP_TOS for descriptors %d",sd);
     }
 
+    l_sd = sd;
+
+    CLASS_DBG("< return newly created l_sd:%d", l_sd);
+    return l_sd;
 }
 
 void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
