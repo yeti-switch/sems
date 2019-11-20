@@ -69,7 +69,7 @@ class SyslogLogFac : public AmLoggingFacility {
 
  public:
   SyslogLogFac()
-    : AmLoggingFacility("syslog",AmConfig.log_level),
+    : AmLoggingFacility("syslog","", AmConfig.log_level),
       facility(LOG_DAEMON)
   {
   }
@@ -182,7 +182,7 @@ int set_syslog_facility(const char* str, const char* name)
 class StderrLogFac : public AmLoggingFacility {
     static StderrLogFac *_instance;
     StderrLogFac()
-        : AmLoggingFacility("stderr",AmConfig.log_level)
+        : AmLoggingFacility("stderr","", AmConfig.log_level)
     { }
   public:
     static StderrLogFac &instance() {

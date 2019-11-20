@@ -22,7 +22,7 @@ int DILog::pos = 0;
 
 DILog::DILog(const string& name)
     : AmDynInvokeFactory(name),
-      AmLoggingFacility(name, L_DBG)
+      AmLoggingFacility(name, MODULE_VERSION, L_DBG)
 { }
 
 DILog* DILog::_instance=0;

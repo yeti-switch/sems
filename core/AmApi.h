@@ -68,6 +68,10 @@ class AmDynInvoke
   virtual void get_methods_tree(AmArg &) { }
 };
 
+#ifndef MODULE_VERSION
+    #define MODULE_VERSION ""
+#endif
+
 /**
  * \brief Base interface for plugin factories
  */
@@ -75,14 +79,15 @@ class AmPluginFactory
   : public virtual atomic_ref_cnt
 {
   string plugin_name;
-
+  string plugin_version;
  public:
-  AmPluginFactory(const string& name)
-    : plugin_name(name) {}
+  AmPluginFactory(const string& name, const string& version = MODULE_VERSION)
+    : plugin_name(name), plugin_version(version) {}
 
   virtual ~AmPluginFactory() {}
 
   const string& getName() { return plugin_name; } 
+  string getVersion() { return plugin_version; };
 
   /**
    * Enables the plug-in to initialize whatever it needs.
@@ -102,7 +107,7 @@ class AmPluginFactory
 class AmDynInvokeFactory: public AmPluginFactory
 {
  public:
-  AmDynInvokeFactory(const string& name);
+  AmDynInvokeFactory(const string& name, const string& version = MODULE_VERSION);
   virtual ~AmDynInvokeFactory(){}
   virtual AmDynInvoke* getInstance()=0;
 };
@@ -116,7 +121,7 @@ class AmDynInvokeFactory: public AmPluginFactory
 class AmConfigFactory: public AmPluginFactory
 {
  public:
-  AmConfigFactory(const string& name);
+  AmConfigFactory(const string& name, const string& version = MODULE_VERSION);
   virtual ~AmConfigFactory(){}
   virtual int configure(const std::string& config)=0;
   virtual int reconfigure(const std::string& config) = 0;
@@ -130,7 +135,7 @@ class AmSessionEventHandler;
 class AmSessionEventHandlerFactory: public AmPluginFactory
 {
  public:
-  AmSessionEventHandlerFactory(const string& name);
+  AmSessionEventHandlerFactory(const string& name, const string& version = MODULE_VERSION);
   virtual ~AmSessionEventHandlerFactory(){}
 
   virtual AmSessionEventHandler* getHandler(AmSession*)=0;
@@ -162,7 +167,7 @@ class AmSessionFactory: public AmPluginFactory
    */
   void configureSession(AmSession* sess);
 
-  AmSessionFactory(const string& name);
+  AmSessionFactory(const string& name, const string& version = MODULE_VERSION);
 
   /**
    * Creates a dialog state on new UAS request.
@@ -231,7 +236,7 @@ class AmLoggingFacility : public AmPluginFactory
   int _log_level;
   void adjustGlobalLogLevel();
  public:
-  AmLoggingFacility(const string& name,int log_level = L_DBG);
+  AmLoggingFacility(const string& name, const string& version = MODULE_VERSION, int log_level = L_DBG);
   virtual ~AmLoggingFacility() { }
 
   /**

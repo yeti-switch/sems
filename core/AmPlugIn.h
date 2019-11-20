@@ -277,6 +277,11 @@ class AmPlugIn : public AmPayloadProvider
    */
   AmLoggingFacility* getFactory4LogFaclty(const string& name);
 
+  /**
+   * Dump all plugins with name and version
+   */
+  void dumpPlugins(std::map<string, string>& ret);
+
 };
 
 #endif

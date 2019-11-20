@@ -840,6 +840,14 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     return session_factory;
 }
 
+void AmPlugIn::dumpPlugins(std::map<string, string>& ret)
+{
+    std::for_each(plugins_objects.begin(), plugins_objects.end(), [&ret](const std::pair<string, AmPluginFactory*>& pf)
+                  {
+                      ret[pf.second->getName()] = pf.second->getVersion();
+                  });
+}
+
 #define REGISTER_STUFF(comp_name, map_name, param_name)			\
   if(instance()->map_name.find(param_name) != instance()->map_name.end()){	\
   ERROR(comp_name "'%s' already registered !\n", param_name.c_str());	\
