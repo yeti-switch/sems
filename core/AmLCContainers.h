@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <atomic>
 #include <list>
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
@@ -204,14 +205,23 @@ public:
         RTSP
     };
 
+    enum class PORT_state
+    {
+        FREE = 0,
+        BUSY
+    };
+
     MEDIA_info(MEDIA_type type)
-    : mtype(type), low_port(RTP_LOWPORT), high_port(RTP_HIGHPORT), next_rtp_port(-1){}
+    : mtype(type), low_port(RTP_LOWPORT), high_port(RTP_HIGHPORT), next_port_index(0){}
     MEDIA_info(const MEDIA_info& info)
     : IP_info(info)
     , mtype(info.mtype)
     , low_port(info.low_port)
     , high_port(info.high_port)
-    , next_rtp_port(info.next_rtp_port){}
+    , next_port_index(info.next_port_index)
+    {
+        port_state_index = new std::atomic<PORT_state>[(high_port - low_port)/2];
+    }
     virtual ~MEDIA_info(){}
 
     MEDIA_type mtype;
@@ -222,20 +232,26 @@ public:
     {
         int port=0;
 
-        next_rtp_port_mut.lock();
-        if(next_rtp_port < 0){
-            next_rtp_port = low_port;
+        for(unsigned int i = 0; i < (high_port - low_port)/2; i++) {
+            next_port_index++;
+            if(next_port_index >= (high_port - low_port)/2){
+                next_port_index = 0;
+            }
+
+            if(port_state_index[next_port_index].load() == PORT_state::FREE)
+                break;
         }
 
-        port = next_rtp_port & 0xfffe;
-        next_rtp_port += 2;
-
-        if(next_rtp_port >= (int)high_port){
-            next_rtp_port = low_port;
-        }
-        next_rtp_port_mut.unlock();
-
+        port = low_port + next_port_index*2;
+        port_state_index[next_port_index].store(PORT_state::BUSY);
         return port;
+    }
+
+    void freeRtpPort(int port)
+    {
+        if(port < low_port || port > high_port || port%2) return;
+
+        port_state_index[(port - low_port)/2].store(PORT_state::FREE);
     }
 
     std::string transportToStr() const {
@@ -252,8 +268,8 @@ public:
         return new MEDIA_info(*this);
     }
 private:
-    int next_rtp_port;
-    AmMutex next_rtp_port_mut;
+    int next_port_index;
+    std::atomic<PORT_state>* port_state_index;
 };
 
 class RTP_info : public MEDIA_info

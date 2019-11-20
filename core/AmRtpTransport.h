@@ -114,8 +114,6 @@ public:
     int hasLocalSocket();
     /** initializes and gets the socket descriptor for local socket */
     int getLocalSocket(bool reinit = false);
-    /** set options to the socket descriptor for local socket */
-    void setSocketOption();
 
     /**
     * Generate an SDP offer based on the stream capabilities.
