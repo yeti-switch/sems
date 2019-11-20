@@ -239,8 +239,8 @@ public:
                 next_port_index = 0;
             }
 
-            PORT_state state_exp = PORT_state::FREE;
-            if(port_state_index[next_port_index].compare_exchange_strong(state_exp, PORT_state::BUSY))
+            static PORT_state free_state_exp = PORT_state::FREE;
+            if(port_state_index[next_port_index].compare_exchange_strong(free_state_exp, PORT_state::BUSY))
                 break;
         }
 
