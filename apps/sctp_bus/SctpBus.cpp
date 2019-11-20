@@ -58,6 +58,21 @@ int SctpBus::configure(const std::string& config)
     return 0;
 }
 
+int SctpBus::reconfigure(const std::string& config)
+{
+    if(configure(config)) return -1;
+
+    INFO("cleanup sctp_bus configuration");
+    server_connection.close();
+    for(auto const &c: connections_by_id) {
+        delete c.second;
+    }
+    connections_by_id.clear();
+    connections_by_sock.clear();
+
+    return configure();
+}
+
 int SctpBus::configure()
 {
     sockaddr_storage addr = {0};
@@ -378,19 +393,10 @@ void SctpBus::onConnectionRemove(const SctpBusRemoveConnection &e)
 
 void SctpBus::onReloadEvent()
 {
-    INFO("cleanup sctp_bus configuration");
-    server_connection.close();
-    for(auto const &c: connections_by_id) {
-        delete c.second;
-    }
-    connections_by_id.clear();
-    connections_by_sock.clear();
-
     INFO("load sctp_bus configuration");
     ConfigContainer config;
     if(AmLcConfig::GetInstance().readConfiguration(&config) ||
-        configure(config.module_config[MOD_NAME]) ||
-        configure() ) {
+        reconfigure(config.module_config[MOD_NAME])) {
         ERROR("SctpBus configuration error. please fix config and do reload again");
     } else {
         INFO("SctpBus configuration successfully reloaded");

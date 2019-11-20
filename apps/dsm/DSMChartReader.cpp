@@ -256,8 +256,10 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
     return false;
   }
 
-  mods.push_back(dsm_mod);
-  inc_ref(dsm_mod);
+  if(std::find(mods.begin(), mods.end(), dsm_mod) == mods.end()) {
+    mods.push_back(dsm_mod);
+    inc_ref(dsm_mod);
+  }
 
   DBG("loaded module '%s' from '%s'\n", 
       params.c_str(), fname.c_str());

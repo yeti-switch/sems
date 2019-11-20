@@ -142,6 +142,15 @@ int JsonRPCServerModule::configure(const std::string & config)
     return 0;
 }
 
+int JsonRPCServerModule::reconfigure(const std::string& config)
+{
+    JsonRPCServerLoop::instance()->stop(true);
+    int ret = configure(config);
+    if(ret) return ret;
+    JsonRPCServerLoop::instance()->start();
+    return ret;
+}
+
 int JsonRPCServerModule::load() {
   DBG("using server listen address %s\n", host.c_str());
   DBG("using server port %d\n", port);

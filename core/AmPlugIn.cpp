@@ -127,6 +127,7 @@ AmPlugIn::~AmPlugIn()
   std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
   std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
   std::for_each(plugins_objects.begin(), plugins_objects.end(), delete_plugin_factory);
+  std::for_each(name2config.begin(), name2config.end(), delete_plugin_factory);
 
   // if _DEBUG is set do not unload shared libs to allow better debugging
 #ifndef _DEBUG
@@ -457,6 +458,24 @@ void AmPlugIn::listFactories4Di(AmArg &ret)
   }
 }
 
+AmConfigFactory* AmPlugIn::getFactory4Config(const string& name)
+{
+  std::map<std::string,AmConfigFactory*>::iterator it = name2config.find(name);
+  if(it != name2config.end())
+    return it->second;
+  return 0;
+}
+
+void AmPlugIn::listFactories4Config(AmArg &ret)
+{
+  ret.assertArray();
+  for(std::map<string,AmConfigFactory*>::const_iterator it = name2config.begin();
+      it != name2config.end(); it++)
+  {
+    ret.push(it->first);
+  }
+}
+
 AmLoggingFacility* AmPlugIn::getFactory4LogFaclty(const string& name)
 {
   std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.find(name);
@@ -612,6 +631,9 @@ int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
     ERROR("error in plug-in %s configuration!\n", f->getName().c_str());
     goto error;
   }
+  
+  name2config.insert(std::make_pair(sf->getName(),sf));
+  inc_ref(sf);
 
   return 0;
  error:

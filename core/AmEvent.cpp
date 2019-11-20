@@ -41,8 +41,7 @@ AmEvent* AmSystemEvent::clone() {  return new AmSystemEvent(*this); };
 const char* AmSystemEvent::getDescription(EvType t) {
   switch (t) {
   case ServerShutdown: return "ServerShutdown";
-  case User1: return "User1";
-  case User2: return "User2";
+  case User: return "User";
   default: return "Unknown";
   }
 }

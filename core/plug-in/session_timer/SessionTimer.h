@@ -117,6 +117,7 @@ class SessionTimerFactory: public AmSessionEventHandlerFactory,
   DECLARE_FACTORY_INSTANCE(SessionTimerFactory);
 
   int configure(const std::string & config);
+  int reconfigure(const std::string& config);
   int onLoad();
   bool onInvite(const AmSipRequest& req, AmConfigReader& cfg);
 
