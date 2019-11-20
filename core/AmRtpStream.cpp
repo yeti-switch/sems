@@ -803,7 +803,7 @@ PacketMem::PacketMem()
     memset(used, 0, sizeof(used));
 }
 
-inline AmRtpPacket* PacketMem::newPacket()
+AmRtpPacket* PacketMem::newPacket()
 {
     //bool desired;
 
@@ -840,7 +840,7 @@ void PacketMem::freePacket(AmRtpPacket* p)
     n_used.fetch_sub(1);
 }
 
-inline void PacketMem::clear()
+void PacketMem::clear()
 {
     memset(used, 0, sizeof(used));
     n_used.store(0);

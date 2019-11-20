@@ -82,9 +82,9 @@ struct PacketMem {
 
       PacketMem();
 
-    inline AmRtpPacket* newPacket();
-    inline void freePacket(AmRtpPacket* p);
-    inline void clear();
+    AmRtpPacket* newPacket();
+    void freePacket(AmRtpPacket* p);
+    void clear();
     void debug();
 
   private:
