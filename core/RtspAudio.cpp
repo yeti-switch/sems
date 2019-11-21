@@ -116,9 +116,9 @@ void RtspAudio::initTransport()
 
     AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTP_TRANSPORT),
                    *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTCP_TRANSPORT);
-    calcRtpPorts(rtp, rtcp);
     transports.push_back(rtp);
     transports.push_back(rtcp);
+    calcRtpPorts(rtp, rtcp);
 }
 
 bool RtspAudio::initSdpAnswer()

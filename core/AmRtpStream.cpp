@@ -296,6 +296,11 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
 
         port = AmConfig.media_ifs[tr_rtp->getLocalIf()].proto_info[tr_rtp->getLocalProtoId()]->getNextRtpPort();
 
+        if(!port) {
+            retry = 0;
+            break;
+        }
+
         sockaddr_storage l_rtcp_addr, l_rtp_addr;
         if(tr_rtp != tr_rtcp) {
             tr_rtcp->getLocalAddr(&l_rtcp_addr);
@@ -325,8 +330,7 @@ try_another_port:
     }
 
     if (!retry){
-        CLASS_ERROR("could not find a free RTP port\n");
-        return;
+        throw string("could not find a free RTP port\n");
     }
 
     // rco: does that make sense after bind() ????

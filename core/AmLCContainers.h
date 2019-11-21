@@ -4,13 +4,12 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <array>
-#include <atomic>
 #include <functional>
 #include <list>
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 #include "sems.h"
+#include "bitops.h"
 #include "AmSdp.h"
 
 class IP_info
@@ -210,8 +209,7 @@ public:
     MEDIA_info(MEDIA_type type)
     : mtype(type),
       low_port(RTP_LOWPORT),
-      high_port(RTP_HIGHPORT),
-      next_port(low_port)
+      high_port(RTP_HIGHPORT)
     {}
 
     MEDIA_info(const MEDIA_info& info)
@@ -219,11 +217,8 @@ public:
     , mtype(info.mtype)
     , low_port(info.low_port)
     , high_port(info.high_port)
-    , next_port(info.low_port)
     {
-        ports_pairs_count = (high_port - low_port)/2;
-        for(auto &i : ports_state)
-            std::atomic_init(&i, false);
+        memset(ports_state, 0, sizeof(ports_state));
     }
     virtual ~MEDIA_info(){}
 
@@ -233,41 +228,36 @@ public:
 
     unsigned short getNextRtpPort()
     {
-        unsigned short port = 0;
-        unsigned short port_it = next_port;
-        bool free_state_exp = false;
+        #define BITS_PER_LONG   64
 
-        for(unsigned int i = 0; i < ports_pairs_count; i++) {
-            if(ports_state[port_it].compare_exchange_strong(free_state_exp, true)) {
-                port = port_it;
-                port_it+=2;
-                if(port_it >= high_port)
-                    port_it = low_port;
-                break;
+        unsigned short last_it = low_port/BITS_PER_LONG + (high_port - low_port)/BITS_PER_LONG + !!((high_port - low_port)%BITS_PER_LONG);
+        for(int it = low_port/BITS_PER_LONG; it <= last_it; it++) {
+            if (!(~(ports_state[it]))) // all bits set
+                continue;
+
+            unsigned short bit_it = (it*BITS_PER_LONG > low_port) ? 0 : low_port%BITS_PER_LONG;
+            unsigned short last_bit_it = (it*BITS_PER_LONG > high_port) ? high_port%BITS_PER_LONG + 1 : BITS_PER_LONG;
+            for(unsigned short i = bit_it; i < last_bit_it; i += 2) {
+                if(!test_and_set_bit(i, &ports_state[it])) {
+                    return it*BITS_PER_LONG + i;
+                }
             }
-
-            port_it+=2;
-            if(port_it >= high_port)
-                port_it = low_port;
         }
-
-        next_port = port_it;
-
-        return port;
+        return 0;
     }
 
     void freeRtpPort(unsigned int port)
     {
         if(port < low_port || port > high_port || port%2) return;
 
-        ports_state[port].store(false);
+        clear_bit(port%64, &ports_state[port/64]);
     }
 
     void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl)
     {
         for(unsigned int port = low_port; port <= high_port; port+=2) {
             DBG(">>> check port %d",port);
-            if(ports_state[port].load() == true) {
+            if(constant_test_bit(port%64, &ports_state[port/64]) == true) {
                 cl(port, port+1);
             }
         }
@@ -287,9 +277,7 @@ public:
         return new MEDIA_info(*this);
     }
 private:
-    unsigned short next_port;
-    std::array<std::atomic_bool, 0xffff> ports_state;
-    unsigned int ports_pairs_count;
+    unsigned long ports_state[2048];
 };
 
 class RTP_info : public MEDIA_info

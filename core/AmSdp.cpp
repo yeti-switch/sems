@@ -71,7 +71,7 @@ enum sdp_attr_rtpmap_st {TYPE, ENC_NAME, CLK_RATE, ENC_PARAM};
 enum sdp_attr_crypto_st {TAG, PROFILE, KEY, SESS_PARAM};
 enum sdp_attr_candidate_st {FND, COMPID, TRANSPORT, PRIORITY, CADDR, CPORT, CTYPE, RADDR, RPORT, ATTR_NAME, ATTR_VALUE};
 enum sdp_attr_fmtp_st {FORMAT, FORMAT_PARAM};
-enum sdp_origin_st {USER, ID, VERSION_ST, NETTYPE, ADDR, UNICAST_ADDR};
+enum sdp_origin_st {USER, ID, VERSION_ST, NETTYPE, COMMON_ADDR, UNICAST_ADDR};
 
 // inline functions
 
@@ -304,7 +304,7 @@ bool RtcpAddress::parse(const string &src)
     size_t len = src.size();
     if (len < 1) return false;
 
-    enum { PORT, NET_TYPE, ADDR_TYPE, ADDR } s = PORT;
+    enum { PORT, NET_TYPE, ADDR_TYPE, COMMON_ADDR } s = PORT;
 
     // parsing (somehow) according to RFC 3605
     //    rtcp-attribute =  "a=rtcp:" port  [nettype space addrtype space
@@ -322,16 +322,16 @@ bool RtcpAddress::parse(const string &src)
             else nettype += src[i];
             break;
         case ADDR_TYPE:
-            if (src[i] == ' ') s = ADDR;
+            if (src[i] == ' ') s = COMMON_ADDR;
             else addrtype += src[i];
             break;
-        case ADDR:
+        case COMMON_ADDR:
             address += src[i];
             break;
         }
     }
     return s == PORT ||
-           (s == ADDR && !address.empty());
+           (s == COMMON_ADDR && !address.empty());
     // FIXME: nettype, addrtype and addr should be verified
 }
 
@@ -1775,10 +1775,10 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
             string net_type(origin_line, static_cast<size_t>(next-origin_line)-1);
             origin.conn.network = NT_IN; // fixme
             origin_line = next;
-            origin_st = ADDR;
+            origin_st = COMMON_ADDR;
             break;
         }
-        case ADDR: {
+        case COMMON_ADDR: {
             next = parse_until(origin_line, ' ');
             if(next > line_end) {
                 DBG("parse_sdp_origin: ST_ADDR: Incorrect number of value in o=\n");
