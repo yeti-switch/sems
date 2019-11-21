@@ -168,6 +168,7 @@ public:
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, std::string& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, int& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned int& data);
+    int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned short& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
 protected:
     void setValidationFunction(cfg_t* cfg);

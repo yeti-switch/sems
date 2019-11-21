@@ -166,6 +166,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"modules","",&CoreRpc::showModules);
         AmArg &show_transport = reg_leaf(show, "transport");
             reg_method(show_transport,"blacklist","",&CoreRpc::showTrBlacklist);
+            reg_method(show_transport,"used_ports","",&CoreRpc::showUsedPorts);
         AmArg &show_transactions = reg_leaf(show,"transactions");
             reg_method(show_transactions,"count","",&CoreRpc::showTrCount);
             reg_method(show_transactions,"list","",&CoreRpc::showTrList);
@@ -490,6 +491,28 @@ void CoreRpc::showTrCount(const AmArg&, AmArg& ret)
 void CoreRpc::showTrList(const AmArg&, AmArg& ret)
 {
     trans_layer::instance()->get_trans_list(ret);
+}
+
+
+void CoreRpc::showUsedPorts(const AmArg&, AmArg& ret)
+
+{
+    for(MEDIA_interface &interface : AmConfig.media_ifs) {
+        ret[interface.name] = AmArg();
+        AmArg& intf = ret[interface.name];
+        intf.assertStruct();
+        for(MEDIA_info *protoif : interface.proto_info) {
+            AmArg proto_used_ports;
+            proto_used_ports.assertArray();
+
+            protoif->iterateUsedPorts([&proto_used_ports](unsigned short rtp, unsigned short rtcp) {
+                proto_used_ports.push(rtp);
+                proto_used_ports.push(rtcp);
+            });
+
+            intf[protoif->ipTypeToStr()] = proto_used_ports;
+        }
+    }
 }
 
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)

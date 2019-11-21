@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <array>
 #include <atomic>
+#include <functional>
 #include <list>
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
@@ -205,46 +207,52 @@ public:
         RTSP
     };
 
-    enum class PORT_state
-    {
-        FREE = 0,
-        BUSY
-    };
-
     MEDIA_info(MEDIA_type type)
-    : mtype(type), low_port(RTP_LOWPORT), high_port(RTP_HIGHPORT), next_port_index(0){}
+    : mtype(type),
+      low_port(RTP_LOWPORT),
+      high_port(RTP_HIGHPORT),
+      next_port(low_port)
+    {}
+
     MEDIA_info(const MEDIA_info& info)
     : IP_info(info)
     , mtype(info.mtype)
     , low_port(info.low_port)
     , high_port(info.high_port)
-    , next_port_index(info.next_port_index)
+    , next_port(info.low_port)
     {
-        index_count = (high_port - low_port)/2;
-        port_state_index = new std::atomic<PORT_state>[index_count];
+        ports_pairs_count = (high_port - low_port)/2;
+        for(auto &i : ports_state)
+            std::atomic_init(&i, false);
     }
     virtual ~MEDIA_info(){}
 
     MEDIA_type mtype;
-    unsigned int low_port;
-    unsigned int high_port;
+    unsigned short low_port;
+    unsigned short high_port;
 
-    int getNextRtpPort()
+    unsigned short getNextRtpPort()
     {
-        int port=0;
+        unsigned short port = 0;
+        unsigned short port_it = next_port;
+        bool free_state_exp = false;
 
-        for(unsigned int i = 0; i < index_count; i++) {
-            next_port_index++;
-            if(next_port_index >= index_count){
-                next_port_index = 0;
+        for(unsigned int i = 0; i < ports_pairs_count; i++) {
+            if(ports_state[port_it].compare_exchange_strong(free_state_exp, true)) {
+                port = port_it;
+                port_it+=2;
+                if(port_it >= high_port)
+                    port_it = low_port;
+                break;
             }
 
-            static PORT_state free_state_exp = PORT_state::FREE;
-            if(port_state_index[next_port_index].compare_exchange_strong(free_state_exp, PORT_state::BUSY))
-                break;
+            port_it+=2;
+            if(port_it >= high_port)
+                port_it = low_port;
         }
 
-        port = low_port + next_port_index*2;
+        next_port = port_it;
+
         return port;
     }
 
@@ -252,7 +260,17 @@ public:
     {
         if(port < low_port || port > high_port || port%2) return;
 
-        port_state_index[(port - low_port)/2].store(PORT_state::FREE);
+        ports_state[port].store(false);
+    }
+
+    void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl)
+    {
+        for(unsigned int port = low_port; port <= high_port; port+=2) {
+            DBG(">>> check port %d",port);
+            if(ports_state[port].load() == true) {
+                cl(port, port+1);
+            }
+        }
     }
 
     std::string transportToStr() const {
@@ -269,9 +287,9 @@ public:
         return new MEDIA_info(*this);
     }
 private:
-    unsigned int next_port_index;
-    std::atomic<PORT_state>* port_state_index;
-    unsigned int index_count;
+    unsigned short next_port;
+    std::array<std::atomic_bool, 0xffff> ports_state;
+    unsigned int ports_pairs_count;
 };
 
 class RTP_info : public MEDIA_info

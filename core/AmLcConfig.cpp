@@ -1984,6 +1984,13 @@ int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, un
     return 0;
 }
 
+int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned short& data)
+{
+    checkMandatoryParameter(cfg, if_name);
+    data = static_cast<unsigned short>(cfg_getint(cfg, if_name.c_str()));
+    return 0;
+}
+
 int AmLcConfig::getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data)
 {
     checkMandatoryParameter(cfg, if_name);
