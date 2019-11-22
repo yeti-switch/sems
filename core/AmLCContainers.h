@@ -6,7 +6,6 @@
 #include <functional>
 #include <list>
 #include <limits>
-
 #include <cstdint>
 
 #include "sems.h"
@@ -14,7 +13,7 @@
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 
-#define USED_PORT2IDX(PORT) (PORT >> 6)
+#include "bitops.h"
 
 class IP_info
 {
@@ -212,7 +211,7 @@ public:
 
     MEDIA_info(MEDIA_type type);
     MEDIA_info(const MEDIA_info& info) = delete;
-    MEDIA_info(MEDIA_info&& info);
+    MEDIA_info(MEDIA_info&& info) = delete;
     virtual ~MEDIA_info();
 
     MEDIA_type mtype;
@@ -235,12 +234,12 @@ public:
     }
 
 private:
-    unsigned long ports_state[USED_PORT2IDX(USHRT_MAX)];
-    unsigned short ports_state_begin_it,
-                   ports_state_end_it;
+    DECLARE_BITMAP_ALIGNED(ports_state, USHRT_MAX);
+    unsigned long *ports_state_begin_addr,
+                  *ports_state_end_addr;
     unsigned short start_edge_bit_it,
                    end_edge_bit_it;
-    bool parity_start_bit;
+    bool rtp_bit_parity;
 };
 
 class RTP_info : public MEDIA_info

@@ -2,9 +2,7 @@
 
 #include <utility>
 
-#include "bitops.h"
-
-#define BITS_PER_LONG   64
+#define USED_PORT2IDX(PORT) (PORT >> _BITOPS_LONG_SHIFT)
 
 MEDIA_info::MEDIA_info(MEDIA_type type)
   : mtype(type),
@@ -14,27 +12,16 @@ MEDIA_info::MEDIA_info(MEDIA_type type)
     memset(ports_state, 0, sizeof(ports_state));
 }
 
-MEDIA_info::MEDIA_info(MEDIA_info&& info)
-  : IP_info(std::move(info)),
-    mtype(info.mtype),
-    low_port(info.low_port),
-    high_port(info.high_port),
-    ports_state_begin_it(info.ports_state_begin_it),
-    ports_state_end_it(info.ports_state_end_it),
-    start_edge_bit_it(info.start_edge_bit_it),
-    end_edge_bit_it(info.end_edge_bit_it)
-{
-    memcpy(ports_state, info.ports_state, sizeof(ports_state));
-}
-
 MEDIA_info::~MEDIA_info()
 { }
 
 void MEDIA_info::prepare()
 {
-    ports_state_begin_it = USED_PORT2IDX(low_port);
+    unsigned short ports_state_begin_it = USED_PORT2IDX(low_port);
+    ports_state_begin_addr = &ports_state[ports_state_begin_it];
 
-    ports_state_end_it = USED_PORT2IDX(high_port) + !!(high_port%BITS_PER_LONG);
+    unsigned short ports_state_end_it = USED_PORT2IDX(high_port) + !!(high_port%BITS_PER_LONG);
+    ports_state_end_addr = &ports_state[ports_state_end_it];
 
     start_edge_bit_it =
         (ports_state_begin_it*BITS_PER_LONG > low_port) ?
@@ -44,64 +31,76 @@ void MEDIA_info::prepare()
         (ports_state_end_it*BITS_PER_LONG > high_port) ?
             high_port%BITS_PER_LONG + 1 : BITS_PER_LONG;
 
-    parity_start_bit = start_edge_bit_it%2;
-    memset(&ports_state[ports_state_begin_it], parity_start_bit ? 0x55 : 0xAA , (ports_state_end_it - ports_state_begin_it)*sizeof(unsigned long));
+    //flag to determine RTCP ports to ignore in freeRtpPort
+    rtp_bit_parity = start_edge_bit_it % 2;
 
-    ports_state_end_it--;
+    bzero(&ports_state,sizeof(ports_state));
+    //set all bits for RTCP ports to make working optimization checks like if(~(*it))
+    int mask = rtp_bit_parity ? 0x55 : 0xAA;
+    memset(&ports_state[ports_state_begin_it], mask,
+           (ports_state_end_addr - ports_state_begin_addr)*sizeof(unsigned long));
 
-    ports_state[ports_state_begin_it] |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
-    ports_state[ports_state_end_it] |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
+    ports_state_end_addr--;
+
+    //set all leading bits before start_edge_bit_it in first bitmap element
+    *ports_state_begin_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
+    //set all trailing bits after end_edge_bit_it in last bitmap element
+    *ports_state_end_addr |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
 }
 
 unsigned short MEDIA_info::getNextRtpPort()
 {
-    unsigned short it = ports_state_begin_it;
     unsigned short i = 0;
+    unsigned long *it = ports_state_begin_addr;
 
     //process head
-    if(~(ports_state[it])) {
+    if(~(*it)) {
         for(i = start_edge_bit_it; i < BITS_PER_LONG; i += 2) {
-            if(!test_and_set_bit(i, &ports_state[it])) {
+            if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
         }
     }
 
     //common cycle
-    for(; it < ports_state_end_it; it++) {
-        if (!(~(ports_state[it]))) // all bits set
+    for(; it != ports_state_end_addr; it++) {
+        if (!(~(*it))) // all bits set
             continue;
-        for(unsigned short i = 0; i < BITS_PER_LONG; i += 2) {
-            if(!test_and_set_bit(i, &ports_state[it])) {
+        for(i = 0; i < BITS_PER_LONG; i += 2) {
+            if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
         }
     }
 
     //process tail
-    if (~(ports_state[it])) {
+    if (~(*it)) {
         for(i = 0; i < end_edge_bit_it; i += 2) {
-            if(!test_and_set_bit(i, &ports_state[it])) {
+            if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
         }
     }
+
+    //no free port found
     return 0;
 
   bit_is_aquired:
-    return it*BITS_PER_LONG + i;
+    return (static_cast<unsigned short>(it-ports_state) << _BITOPS_LONG_SHIFT)  + i;
 }
 
 void MEDIA_info::freeRtpPort(unsigned int port)
 {
     if(port < low_port || port > high_port) {
-        ERROR("error to free unexpected port: %i", port);
+        ERROR("error to free unexpected port: %u", port);
         return;
     }
 
-    if(parity_start_bit != (bool)(port%2)) return;
+    //ignore RTCP ports
+    if(rtp_bit_parity ^ (port%2))
+        return;
 
-    clear_bit(port%64, &ports_state[USED_PORT2IDX(port)]);
+    clear_bit(port%BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]);
     __sync_synchronize();
 }
 
