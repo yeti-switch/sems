@@ -111,7 +111,7 @@ static void print_usage(bool short_=false)
         "Available options:\n"
         "    -f <file>       Set configuration file\n"
         "    -x <dir>        Set path for plug-ins\n"
-        "    -d <device/ip>  Set network device (or IP address) for media advertising\n"
+//        "    -d <device/ip>  Set network device (or IP address) for media advertising\n"
 #ifndef DISABLE_DAEMON_MODE
         "    -E              Enable debug mode (do not daemonize, log to stderr).\n"
         "    -P <file>       Set PID file\n"
@@ -159,7 +159,7 @@ static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
     }
 }
 
-static void set_default_interface(const string& iface_name)
+/*static void set_default_interface(const string& iface_name)
 {
   unsigned int idx=0;
   map<string,unsigned short>::iterator if_it = AmConfig.sip_if_names.find("default");
@@ -173,6 +173,7 @@ static void set_default_interface(const string& iface_name)
   else {
     idx = if_it->second;
   }
+
   SIP_info* sinfo = new SIP_UDP_info();
   sinfo->local_ip = iface_name;
   AmConfig.sip_ifs.back().proto_info.push_back(sinfo);
@@ -191,7 +192,7 @@ static void set_default_interface(const string& iface_name)
   RTP_info* rinfo = new RTP_info();
   rinfo->local_ip = iface_name;
   AmConfig.media_ifs[idx].proto_info.push_back(rinfo);
-}
+}*/
 
 /* Note: The function should not use logging because it is called before
    the logging is initialized. */
@@ -201,9 +202,9 @@ static bool apply_args(std::map<char,string>& args)
       it != args.end(); ++it){
 
     switch( it->first ){
-    case 'd':
+    /*case 'd':
       set_default_interface(it->second);
-      break;
+      break;*/
 
     case 'D':
       if(!AmConfig.log_stderr){
