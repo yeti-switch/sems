@@ -14,7 +14,7 @@
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 
-#define USED_PORT2IDX(PORT) (PORT << 6)
+#define USED_PORT2IDX(PORT) (PORT >> 6)
 
 class IP_info
 {
