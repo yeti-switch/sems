@@ -60,7 +60,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     }
 
     //common cycle
-    for(; it < ports_state_end_it-1; it++) {
+    for(; it < ports_state_end_it; it++) {
         if (!(~(ports_state[it]))) // all bits set
             continue;
         for(unsigned short i = 0; i < BITS_PER_LONG; i += 2) {
