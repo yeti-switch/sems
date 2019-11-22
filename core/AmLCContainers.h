@@ -1,16 +1,20 @@
 #ifndef AM_LC_CONTAINERS_H
 #define AM_LC_CONTAINERS_H
 
-#include <stdint.h>
 #include <string>
 #include <vector>
 #include <functional>
 #include <list>
+#include <limits>
+
+#include <cstdint>
+
+#include "sems.h"
+#include "AmSdp.h"
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
-#include "sems.h"
-#include "bitops.h"
-#include "AmSdp.h"
+
+#define USED_PORT2IDX(PORT) (PORT << 6)
 
 class IP_info
 {
@@ -206,62 +210,19 @@ public:
         RTSP
     };
 
-    MEDIA_info(MEDIA_type type)
-    : mtype(type),
-      low_port(RTP_LOWPORT),
-      high_port(RTP_HIGHPORT)
-    {}
-
-    MEDIA_info(const MEDIA_info& info)
-    : IP_info(info)
-    , mtype(info.mtype)
-    , low_port(info.low_port)
-    , high_port(info.high_port)
-    {
-        memset(ports_state, 0, sizeof(ports_state));
-    }
-    virtual ~MEDIA_info(){}
+    MEDIA_info(MEDIA_type type);
+    MEDIA_info(const MEDIA_info& info) = delete;
+    MEDIA_info(MEDIA_info&& info);
+    virtual ~MEDIA_info();
 
     MEDIA_type mtype;
     unsigned short low_port;
     unsigned short high_port;
 
-    unsigned short getNextRtpPort()
-    {
-        #define BITS_PER_LONG   64
-
-        unsigned short last_it = low_port/BITS_PER_LONG + (high_port - low_port)/BITS_PER_LONG + !!((high_port - low_port)%BITS_PER_LONG);
-        for(int it = low_port/BITS_PER_LONG; it <= last_it; it++) {
-            if (!(~(ports_state[it]))) // all bits set
-                continue;
-
-            unsigned short bit_it = (it*BITS_PER_LONG > low_port) ? 0 : low_port%BITS_PER_LONG;
-            unsigned short last_bit_it = (it*BITS_PER_LONG > high_port) ? high_port%BITS_PER_LONG + 1 : BITS_PER_LONG;
-            for(unsigned short i = bit_it; i < last_bit_it; i += 2) {
-                if(!test_and_set_bit(i, &ports_state[it])) {
-                    return it*BITS_PER_LONG + i;
-                }
-            }
-        }
-        return 0;
-    }
-
-    void freeRtpPort(unsigned int port)
-    {
-        if(port < low_port || port > high_port || port%2) return;
-
-        clear_bit(port%64, &ports_state[port/64]);
-    }
-
-    void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl)
-    {
-        for(unsigned int port = low_port; port <= high_port; port+=2) {
-            DBG(">>> check port %d",port);
-            if(constant_test_bit(port%64, &ports_state[port/64]) == true) {
-                cl(port, port+1);
-            }
-        }
-    }
+    void prepare();
+    unsigned short getNextRtpPort();
+    void freeRtpPort(unsigned int port);
+    void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl);
 
     std::string transportToStr() const {
         if(mtype == MEDIA_info::RTP) {
@@ -273,25 +234,20 @@ public:
         return "";
     }
 
-    virtual IP_info* Clone(){
-        return new MEDIA_info(*this);
-    }
 private:
-    unsigned long ports_state[2048];
+    unsigned long ports_state[USED_PORT2IDX(USHRT_MAX)];
+    unsigned short ports_state_begin_it,
+                   ports_state_end_it;
+    unsigned short start_edge_bit_it,
+                   end_edge_bit_it;
 };
 
 class RTP_info : public MEDIA_info
 {
 public:
-    RTP_info() : MEDIA_info(RTP), srtp_enable(false), dtls_enable(false){}
-    RTP_info(const RTP_info& info)
-    : MEDIA_info(info)
-    , profiles(info.profiles)
-    , server_settings(info.server_settings)
-    , client_settings(info.client_settings)
-    , srtp_enable(info.srtp_enable)
-    , dtls_enable(info.dtls_enable){}
-    virtual ~RTP_info(){}
+    RTP_info() : MEDIA_info(RTP), srtp_enable(false), dtls_enable(false) {}
+    RTP_info(const RTP_info& info) = delete;
+    virtual ~RTP_info()    {}
 
     static RTP_info* toMEDIA_RTP(MEDIA_info* info)
     {
@@ -300,10 +256,6 @@ public:
         }
 
         return 0;
-    }
-
-    virtual IP_info* Clone(){
-        return new RTP_info(*this);
     }
 
     dtls_client_settings client_settings;
@@ -317,7 +269,7 @@ class RTSP_info : public MEDIA_info
 {
 public:
     RTSP_info() : MEDIA_info(RTSP){}
-    RTSP_info(const RTSP_info& info) : MEDIA_info(info){}
+    RTSP_info(const RTSP_info& info) = delete;
     virtual ~RTSP_info(){}
 
     static RTSP_info* toMEDIA_RTSP(MEDIA_info* info)
@@ -327,10 +279,6 @@ public:
         }
         return 0;
     }
-
-    virtual IP_info* Clone(){
-        return new RTSP_info(*this);
-    }
 };
 
 template<typename ProtoInfo>
@@ -338,22 +286,12 @@ class PI_interface
 {
 public:
     PI_interface(){}
-    PI_interface(const PI_interface<ProtoInfo>& info)
-    {
-        operator = (info);
-    }
+    PI_interface(const PI_interface<ProtoInfo>& info) = delete;
+    PI_interface(PI_interface<ProtoInfo>&& info) = default;
     virtual ~PI_interface()
     {
         for(auto& info : proto_info) {
             delete info;
-        }
-    }
-    void operator = (const PI_interface<ProtoInfo>& if_)
-    {
-        name = if_.name;
-        for(auto& info : if_.proto_info)
-        {
-            proto_info.push_back(dynamic_cast<ProtoInfo>(info->Clone()));
         }
     }
 
@@ -366,17 +304,9 @@ class SIP_interface : public PI_interface<SIP_info*>
 {
 public:
     SIP_interface() {}
-    SIP_interface(const SIP_interface& sip)
-    : PI_interface<SIP_info*>(sip)
-    , default_media_if(sip.default_media_if)
-    {}
+    SIP_interface(const SIP_interface& sip) = delete;
+    SIP_interface(SIP_interface&& sip) = default;
     virtual ~SIP_interface() {}
-
-    void operator = (const SIP_interface& sip)
-    {
-        default_media_if = sip.default_media_if;
-        PI_interface<SIP_info*>::operator = (sip);
-    }
 
     std::string default_media_if;
 
@@ -409,8 +339,6 @@ public:
         return -1;
     }
 };
-
-//typedef PI_interface<MEDIA_info*> MEDIA_interface;
 
 class MEDIA_interface : public PI_interface<MEDIA_info*>
 {

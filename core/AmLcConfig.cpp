@@ -1122,7 +1122,8 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
 
     unsigned int ifCount = cfg_size(sigif, SECTION_IF_NAME);
     for(unsigned int i = 0; i < ifCount; i++) {
-        SIP_interface sip_if;
+        config->sip_ifs.emplace_back();
+        SIP_interface &sip_if = config->sip_ifs.back();
         cfg_t* if_ = cfg_getnsec(sigif, SECTION_IF_NAME, i);
         sip_if.name = if_->title;
         sip_if.default_media_if = cfg_getstr(if_, PARAM_DEFAULT_MEDIAIF_NAME);
@@ -1180,8 +1181,8 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
                 sip_if.proto_info.push_back(info);
             }
         }
-        if(!sip_if.proto_info.empty()) {
-            config->sip_ifs.push_back(sip_if);
+        if(sip_if.proto_info.empty()) {
+            config->sip_ifs.pop_back();
         }
     }
     return 0;
@@ -1196,7 +1197,8 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
     cfg_t* mediaif = cfg_getsec(cfg, SECTION_MEDIAIF_NAME);
     unsigned int ifCount = cfg_size(mediaif, SECTION_IF_NAME);
     for(unsigned int i = 0; i < ifCount; i++) {
-        MEDIA_interface media_if;
+        config->media_ifs.emplace_back();
+        MEDIA_interface &media_if = config->media_ifs.back();
         cfg_t* if_ = cfg_getnsec(mediaif, SECTION_IF_NAME, i);
         media_if.name = if_->title;
         if(cfg_size(if_, SECTION_IP4_NAME)) {
@@ -1237,8 +1239,9 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
                 media_if.proto_info.push_back(info);
             }
         }
-        if(!media_if.proto_info.empty()) {
-            config->media_ifs.push_back(media_if);
+        if(media_if.proto_info.empty()) {
+            config->media_ifs.pop_back();
+            //config->media_ifs.push_back(media_if);
         }
     }
     return 0;
@@ -1293,6 +1296,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
            getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, mediainfo->low_port)) {
             return nullptr;
         }
+        mediainfo->prepare();
     }
 
     //RTP specific opts
