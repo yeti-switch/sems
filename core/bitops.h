@@ -26,11 +26,11 @@ will always be carried out atomically:
 */
 
 
-#ifdef MULTI_THREAD_MODE
+//#ifdef MULTI_THREAD_MODE
 #define LOCK_PREFIX "lock;"
-#else
+/*#else
 #define LOCK_PREFIX ""
-#endif
+#endif*/
 
 #include <arpa/inet.h>
 #include <linux/types.h>
