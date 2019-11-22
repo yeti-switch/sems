@@ -89,7 +89,6 @@ unsigned short MEDIA_info::getNextRtpPort()
     return 0;
 
   bit_is_aquired:
-    INFO("getNextRtpPort %hu", it*BITS_PER_LONG + i);
     return it*BITS_PER_LONG + i;
 }
 
