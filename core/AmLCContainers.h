@@ -240,6 +240,7 @@ private:
                    ports_state_end_it;
     unsigned short start_edge_bit_it,
                    end_edge_bit_it;
+    bool parity_start_bit;
 };
 
 class RTP_info : public MEDIA_info

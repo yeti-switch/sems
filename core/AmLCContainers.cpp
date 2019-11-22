@@ -41,8 +41,16 @@ void MEDIA_info::prepare()
             0 : low_port%BITS_PER_LONG;
 
     end_edge_bit_it =
-        ((ports_state_end_it-1)*BITS_PER_LONG > high_port) ?
+        (ports_state_end_it*BITS_PER_LONG > high_port) ?
             high_port%BITS_PER_LONG + 1 : BITS_PER_LONG;
+
+    parity_start_bit = start_edge_bit_it%2;
+    memset(&ports_state[ports_state_begin_it], parity_start_bit ? 0x55 : 0xAA , (ports_state_end_it - ports_state_begin_it)*sizeof(unsigned long));
+
+    ports_state_end_it--;
+
+    ports_state[ports_state_begin_it] |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
+    ports_state[ports_state_end_it] |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
 }
 
 unsigned short MEDIA_info::getNextRtpPort()
@@ -60,7 +68,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     }
 
     //common cycle
-    for(; it < ports_state_end_it-1; it++) {
+    for(; it < ports_state_end_it; it++) {
         if (!(~(ports_state[it]))) // all bits set
             continue;
         for(unsigned short i = 0; i < BITS_PER_LONG; i += 2) {
@@ -81,6 +89,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     return 0;
 
   bit_is_aquired:
+    INFO("getNextRtpPort %hu", it*BITS_PER_LONG + i);
     return it*BITS_PER_LONG + i;
 }
 
@@ -90,6 +99,8 @@ void MEDIA_info::freeRtpPort(unsigned int port)
         ERROR("error to free unexpected port: %i", port);
         return;
     }
+
+    if(parity_start_bit != (bool)(port%2)) return;
 
     clear_bit(port%64, &ports_state[USED_PORT2IDX(port)]);
     __sync_synchronize();
