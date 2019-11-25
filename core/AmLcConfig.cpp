@@ -1241,7 +1241,31 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
         }
         if(media_if.proto_info.empty()) {
             config->media_ifs.pop_back();
-            //config->media_ifs.push_back(media_if);
+        } else {
+            //check for ports overlapping
+            for(auto &self_p : media_if.proto_info) {
+                for(auto &i : config->media_ifs) {
+                    if(&i == &media_if)
+                        continue;
+                    for(auto &p : i.proto_info) {
+                        if(p->type_ip != self_p->type_ip)
+                            continue;
+                        if(p->local_ip != self_p->local_ip)
+                            continue;
+                        if(self_p->low_port <= p->high_port &&
+                           p->low_port <= self_p->high_port)
+                        {
+                            ERROR("media interface '%s' with range (%hu-%hu) for %s %s "
+                                  "overlaps ports range for interface '%s' with range (%hu-%hu)",
+                                  media_if.name.data(),
+                                  self_p->low_port, self_p->high_port,
+                                  self_p->ipTypeToStr().data(), self_p->local_ip.data(),
+                                  i.name.data(), p->low_port, p->high_port);
+                            return -1;
+                        }
+                    }
+                }
+            }
         }
     }
     return 0;
