@@ -61,6 +61,7 @@ unsigned short MEDIA_info::getNextRtpPort()
             }
         }
     }
+    it++;
 
     //common cycle
     for(; it != ports_state_end_addr; it++) {
