@@ -1,3 +1,9 @@
+sems (1.8.45-2) stable; urgency=low
+
+  * MEDIA_info: fix leading bits set for aligned case
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 25 Nov 2019 15:05:18 +0200
+
 sems (1.8.45-1) stable; urgency=low
 
   * partial reconfiguration on HUP signal

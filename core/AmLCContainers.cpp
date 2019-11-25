@@ -64,7 +64,9 @@ int MEDIA_info::prepare()
     ports_state_end_addr--;
 
     //set all leading bits before start_edge_bit_it in first bitmap element
-    *ports_state_begin_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
+    if(start_edge_bit_it) {
+        *ports_state_begin_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
+    }
     //set all trailing bits after end_edge_bit_it in last bitmap element
     *ports_state_end_addr |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
 
