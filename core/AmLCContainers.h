@@ -218,7 +218,10 @@ public:
     unsigned short low_port;
     unsigned short high_port;
 
-    void prepare();
+    /* initialize variables for RTP ports pool management and validate ports range
+     * returns 0 on success, 1 otherwise */
+    int prepare();
+
     unsigned short getNextRtpPort();
     void freeRtpPort(unsigned int port);
     void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl);

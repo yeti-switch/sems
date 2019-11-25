@@ -15,8 +15,29 @@ MEDIA_info::MEDIA_info(MEDIA_type type)
 MEDIA_info::~MEDIA_info()
 { }
 
-void MEDIA_info::prepare()
+int MEDIA_info::prepare()
 {
+
+    if(high_port <= low_port) {
+        ERROR("invalid port range: %hu-%hu. high_port should be greater than low_port",
+              low_port,high_port);
+        return 1;
+    }
+
+    if((high_port - low_port) < 4) {
+        ERROR("invalid port range: %hu-%hu. specified range is to small for even one B2B call. "
+              "actual range is: %d",
+              low_port,high_port,high_port-low_port);
+        return 1;
+    }
+
+    if((high_port - low_port) % 2 != 0) {
+        ERROR("invalid port range: %hu-%hu. range must be multiple of 2 "
+              "to correctly allocate both RTP and RTCP ports. actual range is: %d",
+              low_port,high_port,high_port-low_port);
+        return 1;
+    }
+
     unsigned short ports_state_begin_it = USED_PORT2IDX(low_port);
     ports_state_begin_addr = &ports_state[ports_state_begin_it];
 
@@ -46,6 +67,8 @@ void MEDIA_info::prepare()
     *ports_state_begin_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
     //set all trailing bits after end_edge_bit_it in last bitmap element
     *ports_state_end_addr |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
+
+    return 0;
 }
 
 unsigned short MEDIA_info::getNextRtpPort()
@@ -64,7 +87,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     it++;
 
     //common cycle
-    for(; it != ports_state_end_addr; it++) {
+    for(; it < ports_state_end_addr; it++) {
         if (!(~(*it))) // all bits set
             continue;
         for(i = 0; i < BITS_PER_LONG; i += 2) {
@@ -75,7 +98,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     }
 
     //process tail
-    if (~(*it)) {
+    if (it==ports_state_end_addr && ~(*it)) {
         for(i = 0; i < end_edge_bit_it; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
