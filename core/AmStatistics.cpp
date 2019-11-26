@@ -24,16 +24,16 @@ void AtomicCounter::iterate(iterate_func_type callback)
     callback(atomic_int64::get(), timestamp.get(), getLabels());
 }
 
-unsigned long long AtomicCounter::inc()
+unsigned long long AtomicCounter::inc(unsigned long long add)
 {
     timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
-    return atomic_int64::inc();
+    return atomic_int64::inc(add);
 }
 
-unsigned long long AtomicCounter::dec()
+unsigned long long AtomicCounter::dec(unsigned long long sub)
 {
     timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
-    return atomic_int64::dec();
+    return atomic_int64::dec(sub);
 }
 
 void AtomicCounter::set(unsigned long long value)

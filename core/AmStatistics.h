@@ -46,8 +46,8 @@ class AtomicCounter
 
     AtomicCounter &addLabel(const string& name, const string& value);
     void iterate(iterate_func_type callback) override;
-    unsigned long long inc();
-    unsigned long long dec();
+    unsigned long long inc(unsigned long long add=1);
+    unsigned long long dec(unsigned long long sub=1);
     void set(unsigned long long value);
 };
 
