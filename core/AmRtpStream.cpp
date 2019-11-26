@@ -78,6 +78,8 @@ using std::set;
 #define ICE_PWD_SIZE    22
 #define ICE_UFRAG_SIZE  4
 
+#define BIND_ATTEMPTS_COUNT 10
+
 static inline void add_if_no_exist(std::vector<int> &v,int payload)
 {
     if(std::find(v.begin(),v.end(),payload)==v.end())
@@ -283,7 +285,7 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
     if(tr_rtp->getLocalPort() && tr_rtcp->getLocalPort())
         return;
 
-    int retry = 10;
+    int retry = BIND_ATTEMPTS_COUNT;
     unsigned short port = 0;
 
     assert(tr_rtp);
@@ -307,7 +309,8 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
             tr_rtcp->getLocalAddr(&l_rtcp_addr);
             am_set_port(&l_rtcp_addr,port+1);
             if(bind(tr_rtcp->getLocalSocket(),(const struct sockaddr*)&l_rtcp_addr,SA_len(&l_rtcp_addr))) {
-                CLASS_DBG("bind for RTCP: %s\n",strerror(errno));
+                CLASS_ERROR("failed to bind port %hu for RTCP: %s\n",
+                          port+1, strerror(errno));
                 goto try_another_port;
             }
         }
@@ -315,7 +318,8 @@ void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
         tr_rtp->getLocalAddr(&l_rtp_addr);
         am_set_port(&l_rtp_addr,port);
         if(bind(tr_rtp->getLocalSocket(),(const struct sockaddr*)&l_rtp_addr,SA_len(&l_rtp_addr))) {
-            CLASS_DBG("bind for RTP: %s\n",strerror(errno));
+            CLASS_ERROR("failed to bind port %hu for RTP: %s\n",
+                        port, strerror(errno));
             goto try_another_port;
         }
 
@@ -332,7 +336,9 @@ try_another_port:
         }
     }
 
-    if (!retry){
+    if (!retry) {
+        ERROR("could not bind RTP/RTCP ports considered free after %d attempts",
+              BIND_ATTEMPTS_COUNT);
         throw string("could not find a free RTP port\n");
     }
 
