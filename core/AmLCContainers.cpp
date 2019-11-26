@@ -76,7 +76,7 @@ int MEDIA_info::prepare(const std::string &iface_name)
         .addAtomicCounter()
         .addLabel("interface",iface_name)
         .addLabel("family",ipTypeToStr())
-        .addLabel("protocol",transportToStr());
+        .addLabel("type",transportToStr());
 
     return 0;
 }
