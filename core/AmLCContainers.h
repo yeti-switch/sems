@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "sems.h"
+#include "AmStatistics.h"
 #include "AmSdp.h"
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
@@ -220,7 +221,7 @@ public:
 
     /* initialize variables for RTP ports pool management and validate ports range
      * returns 0 on success, 1 otherwise */
-    int prepare();
+    int prepare(const std::string &iface_name);
 
     unsigned short getNextRtpPort();
     void freeRtpPort(unsigned int port);
@@ -243,12 +244,18 @@ private:
     unsigned short start_edge_bit_it,
                    end_edge_bit_it;
     bool rtp_bit_parity;
+
+    AtomicCounter *opened_ports_counter;
 };
 
 class RTP_info : public MEDIA_info
 {
 public:
-    RTP_info() : MEDIA_info(RTP), srtp_enable(false), dtls_enable(false) {}
+    RTP_info()
+      : MEDIA_info(RTP),
+        srtp_enable(false),
+        dtls_enable(false)
+    {}
     RTP_info(const RTP_info& info) = delete;
     virtual ~RTP_info()    {}
 
@@ -271,7 +278,9 @@ public:
 class RTSP_info : public MEDIA_info
 {
 public:
-    RTSP_info() : MEDIA_info(RTSP){}
+    RTSP_info()
+      : MEDIA_info(RTSP)
+    {}
     RTSP_info(const RTSP_info& info) = delete;
     virtual ~RTSP_info(){}
 

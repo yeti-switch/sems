@@ -5,9 +5,11 @@
 #define USED_PORT2IDX(PORT) (PORT >> _BITOPS_LONG_SHIFT)
 
 MEDIA_info::MEDIA_info(MEDIA_type type)
-  : mtype(type),
+  : IP_info(),
+    mtype(type),
     low_port(RTP_LOWPORT),
-    high_port(RTP_HIGHPORT)
+    high_port(RTP_HIGHPORT),
+    opened_ports_counter(nullptr)
 {
     memset(ports_state, 0, sizeof(ports_state));
 }
@@ -15,7 +17,7 @@ MEDIA_info::MEDIA_info(MEDIA_type type)
 MEDIA_info::~MEDIA_info()
 { }
 
-int MEDIA_info::prepare()
+int MEDIA_info::prepare(const std::string &iface_name)
 {
 
     if(high_port <= low_port) {
@@ -70,6 +72,12 @@ int MEDIA_info::prepare()
     //set all trailing bits after end_edge_bit_it in last bitmap element
     *ports_state_end_addr |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
 
+    opened_ports_counter = &stat_group(Gauge,"core","media_ports_opened")
+        .addAtomicCounter()
+        .addLabel("interface",iface_name)
+        .addLabel("family",ipTypeToStr())
+        .addLabel("protocol",transportToStr());
+
     return 0;
 }
 
@@ -112,6 +120,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     return 0;
 
   bit_is_aquired:
+    opened_ports_counter->inc(2);
     return (static_cast<unsigned short>(it-ports_state) << _BITOPS_LONG_SHIFT)  + i;
 }
 
@@ -126,6 +135,7 @@ void MEDIA_info::freeRtpPort(unsigned int port)
     if(rtp_bit_parity ^ (port%2))
         return;
 
+    opened_ports_counter->dec(2);
     clear_bit(port%BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]);
     __sync_synchronize();
 }

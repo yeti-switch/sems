@@ -1320,7 +1320,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
            getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, mediainfo->low_port)) {
             return nullptr;
         }
-        if(mediainfo->prepare())
+        if(mediainfo->prepare(if_name))
             return nullptr;
     }
 
