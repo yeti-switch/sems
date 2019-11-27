@@ -306,6 +306,9 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
        (offer.is_dtls_srtp() && !dtls_enable)) {
         throw AmSession::Exception(488,"transport not supported");
     } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
+        if(offer.crypto.empty()) {
+            throw AmSession::Exception(488,"absent crypto attribute");
+        }
         answer.crypto.push_back(offer.crypto[0]);
         answer.crypto.back().keys.clear();
         for(auto profile : srtp_profiles) {
