@@ -1,3 +1,11 @@
+sems (1.8.46-1) stable; urgency=low
+
+  * use ERROR level to notify about binding errors/lack of free ports
+  * add metrics group 'media_ports_opened'
+  * fix crash on missed SRTP attributes in SDP
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 27 Nov 2019 18:29:38 +0200
+
 sems (1.8.45-2) stable; urgency=low
 
   * MEDIA_info: fix leading bits set for aligned case
