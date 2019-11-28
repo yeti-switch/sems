@@ -1,3 +1,9 @@
+sems (1.8.46-2) stable; urgency=low
+
+  * parse options-acl, origination-acl sections for sip-tls
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 28 Nov 2019 17:30:46 +0200
+
 sems (1.8.46-1) stable; urgency=low
 
   * use ERROR level to notify about binding errors/lack of free ports
