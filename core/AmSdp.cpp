@@ -464,7 +464,7 @@ int AmSdp::parse(const char* _sdp_msg)
             }
         }
 
-        if(it->setup == SetupUndefined && setup != SetupUndefined) it->setup = setup;
+        if(it->setup == S_UNDEFINED && setup != S_UNDEFINED) it->setup = setup;
     }
 
     //remove duplicate session attributes
@@ -623,7 +623,7 @@ void AmSdp::print(string& body) const
             }
         }
 
-        if(media_it->setup == SdpMedia::SetupUndefined) {
+        if(media_it->setup == S_UNDEFINED) {
             switch (media_it->dir) {
                 case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
                 case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
@@ -633,11 +633,11 @@ void AmSdp::print(string& body) const
         }
 
         switch (media_it->setup) {
-            case SdpMedia::SetupActive:  out_buf += "a=setup:active\r\n"; break;
-            case SdpMedia::SetupPassive: out_buf += "a=setup:passive\r\n"; break;
-            case SdpMedia::SetupActPass: out_buf += "a=setup:actpass\r\n"; break;
-            case SdpMedia::SetupHold: out_buf += "a=setup:hold\r\n"; break;
-            case SdpMedia::SetupUndefined: break;
+            case S_ACTIVE:  out_buf += "a=setup:active\r\n"; break;
+            case S_PASSIVE: out_buf += "a=setup:passive\r\n"; break;
+            case S_ACTPASS: out_buf += "a=setup:actpass\r\n"; break;
+            case S_HOLD: out_buf += "a=setup:hold\r\n"; break;
+            case S_UNDEFINED: break;
         }
 
         // add attributes (media level)
@@ -1244,13 +1244,13 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
             return;
         } else if(a.attribute == "setup") {
             if (a.value == "active") {
-                sdp_msg->setup=SetupActive;
+                sdp_msg->setup=S_ACTIVE;
             } else if (a.value == "passive") {
-                sdp_msg->setup=SetupPassive;
+                sdp_msg->setup=S_PASSIVE;
             } else if (a.value == "actpass") {
-                sdp_msg->setup=SetupActPass;
+                sdp_msg->setup=S_ACTPASS;
             } else if (a.value == "holdconn") {
-                sdp_msg->setup=SetupHold;
+                sdp_msg->setup=S_HOLD;
             } else {
                 DBG("found unknown value for session attribute 'setup'\n");
             }
@@ -1499,13 +1499,13 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
       next = skip_till_next_line(attr_line, dir_len);
       string value(attr_line, dir_len);
       if (value == "active") {
-        media.setup=SetupActive;
+        media.setup=S_ACTIVE;
       } else if (value == "passive") {
-        media.setup=SetupPassive;
+        media.setup=S_PASSIVE;
       } else if (value == "actpass") {
-        media.setup=SetupActPass;
+        media.setup=S_ACTPASS;
       } else if (value == "holdconn") {
-        media.setup=SetupHold;
+        media.setup=S_HOLD;
       } else {
             DBG("found unknown value for media attribute 'setup'\n");
       }

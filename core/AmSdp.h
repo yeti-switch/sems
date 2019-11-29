@@ -294,7 +294,7 @@ struct SdpMedia
       transport(TP_NONE),
       frame_size(20),
       dir(DirUndefined),
-      setup(SetupUndefined),
+      setup(S_UNDEFINED),
       send(true),
       recv(true),
       has_mode_attribute(false),
