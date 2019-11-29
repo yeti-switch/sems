@@ -18,4 +18,6 @@ enum IceCandidateType { ICT_NONE = 0, ICT_HOST = 0x7E, ICT_SRFLX = 0x64, ICT_PRF
 
 enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP };
 
+enum Setup { SetupHold=0, SetupActive=1, SetupPassive=2, SetupActPass=3, SetupUndefined=4 }; //see rfc4145 4.
+
 string transport_p_2_str(int tp);

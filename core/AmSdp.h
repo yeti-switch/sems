@@ -251,13 +251,6 @@ struct SdpMedia
     DirPassive=2,
     DirUndefined=3
   };
-  enum Setup {
-    SetupHold=0,
-    SetupActive=1,
-    SetupPassive=2,
-    SetupActPass=3,
-    SetupUndefined=4
-  };
 
   int           type;
   unsigned int  port;
@@ -380,6 +373,7 @@ public:
   bool use_ice;
   string ice_pwd;
   string ice_ufrag;
+  Setup setup;
   std::vector<SdpAttribute> attributes; // unknown session level attributes
 
   bool send;

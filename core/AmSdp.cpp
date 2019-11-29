@@ -463,6 +463,8 @@ int AmSdp::parse(const char* _sdp_msg)
                 return true;
             }
         }
+
+        if(it->setup == SetupUndefined && setup != SetupUndefined) it->setup = setup;
     }
 
     //remove duplicate session attributes
@@ -1240,6 +1242,19 @@ static void parse_session_attr(AmSdp* sdp_msg, char* s, char** next) {
             sdp_msg->ice_ufrag = a.value;
             DBG("SDP: got ice request session ice_ufrag %s\n", a.value.c_str());
             return;
+        } else if(a.attribute == "setup") {
+            if (a.value == "active") {
+                sdp_msg->setup=SetupActive;
+            } else if (a.value == "passive") {
+                sdp_msg->setup=SetupPassive;
+            } else if (a.value == "actpass") {
+                sdp_msg->setup=SetupActPass;
+            } else if (a.value == "holdconn") {
+                sdp_msg->setup=SetupHold;
+            } else {
+                DBG("found unknown value for session attribute 'setup'\n");
+            }
+            return;
         }
         // value attribute
         sdp_msg->attributes.push_back(a);
@@ -1484,13 +1499,13 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
       next = skip_till_next_line(attr_line, dir_len);
       string value(attr_line, dir_len);
       if (value == "active") {
-        media.setup=SdpMedia::SetupActive;
+        media.setup=SetupActive;
       } else if (value == "passive") {
-        media.setup=SdpMedia::SetupPassive;
+        media.setup=SetupPassive;
       } else if (value == "actpass") {
-        media.setup=SdpMedia::SetupActPass;
+        media.setup=SetupActPass;
       } else if (value == "holdconn") {
-        media.setup=SdpMedia::SetupHold;
+        media.setup=SetupHold;
       } else {
             DBG("found unknown value for media attribute 'setup'\n");
       }
