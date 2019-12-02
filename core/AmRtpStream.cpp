@@ -685,7 +685,7 @@ int AmRtpStream::init(const AmSdp& local,
     }
 
     cur_rtp_trans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
-                    remote_media.setup == SdpMedia::SetupActive ||
+                    remote_media.setup == S_ACTIVE ||
                     force_passive_mode);
 
     CLASS_DBG("recv = %d, send = %d",
@@ -1673,7 +1673,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
             m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
     } else if(TP_UDPTLSRTPSAVP == transport || TP_UDPTLSRTPSAVPF == transport) {
-        m.setup = SdpMedia::SetupPassive;
+        m.setup = S_PASSIVE;
     }
 }
 

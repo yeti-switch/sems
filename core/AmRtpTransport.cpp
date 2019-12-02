@@ -295,7 +295,7 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
-        offer.setup = SdpMedia::SetupActPass;
+        offer.setup = S_ACTPASS;
     }
 }
 
@@ -321,18 +321,18 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
     } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
-        dtls_settings* settings = (offer.setup == SdpMedia::SetupActive) ?
+        dtls_settings* settings = (offer.setup == S_ACTIVE) ?
                                                     static_cast<dtls_settings*>(&server_settings) :
                                                     static_cast<dtls_settings*>(&client_settings);
         srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
         answer.fingerprint.hash = fp.hash;
         answer.fingerprint.value = fp.value;
-        answer.setup = SdpMedia::SetupPassive;
-        if(offer.setup == SdpMedia::SetupPassive)
-            answer.setup = SdpMedia::SetupActive;
-        else if(offer.setup == SdpMedia::SetupHold)
+        answer.setup = S_PASSIVE;
+        if(offer.setup == S_PASSIVE)
+            answer.setup = S_ACTIVE;
+        else if(offer.setup == S_HOLD)
             throw AmSession::Exception(488,"hold connections");
-        else if(offer.setup == SdpMedia::SetupUndefined)
+        else if(offer.setup == S_UNDEFINED)
             throw AmSession::Exception(488,"setup not defined");
     }
 }
@@ -383,9 +383,9 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
                     } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
                         srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
                         try {
-                            if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive) {
+                            if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
                                 addConnection(new AmDtlsConnection(this, address, port, fingerprint, true));
-                            } else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive) {
+                            } else if(local_media.setup == S_PASSIVE || remote_media.setup == S_ACTIVE) {
                                 addConnection(new AmDtlsConnection(this, address, port, fingerprint, false));
                             }
                         } catch(string& error) {
@@ -468,9 +468,9 @@ void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote
         seq = DTLS;
         srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
         try {
-            if(local_media.setup == SdpMedia::SetupActive || remote_media.setup == SdpMedia::SetupPassive) {
+            if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
                 addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, true));
-            } else if(local_media.setup == SdpMedia::SetupPassive || remote_media.setup == SdpMedia::SetupActive) {
+            } else if(local_media.setup == S_PASSIVE || remote_media.setup == S_ACTIVE) {
                 addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, false));
             }
         } catch(string& error) {
