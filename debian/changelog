@@ -1,3 +1,9 @@
+sems (1.8.47-1) stable; urgency=low
+
+  * support for setup attribute at session level
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 02 Dec 2019 11:51:46 +0200
+
 sems (1.8.46-2) stable; urgency=low
 
   * parse options-acl, origination-acl sections for sip-tls
