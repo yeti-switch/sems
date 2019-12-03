@@ -1,3 +1,9 @@
+sems (1.8.48-1) stable; urgency=low
+
+  * disable sockets logging
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 03 Dec 2019 17:17:06 +0200
+
 sems (1.8.47-1) stable; urgency=low
 
   * support for setup attribute at session level
