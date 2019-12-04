@@ -24,6 +24,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROTOBUF_INCLUDE_DIRS})
 
 set(sems_module_name sctp_bus)
 set(sems_module_libs ${CONFUSE_BUNDLED_LIBS} ${SCTP_LIBRARIES} ${PROTOBUF_LIBRARIES} pb_classes)
+set(sems_module_dependency ${CONFUSE_DEPENDENCY_TARGET})
 
 file(GLOB sctp_bus_SRCS "*.cpp")
 
