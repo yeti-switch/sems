@@ -835,18 +835,18 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
 
     config->sip_ifs.clear();
 
-    switch(cfg_parse(m_cfg, CONF_FILE_PATH)) {
+    switch(cfg_parse(m_cfg, config_path.c_str())) {
     case CFG_SUCCESS:
         break;
     case CFG_FILE_ERROR:
         ERROR("failed to open configuration file: %s (%s)",
-            CONF_FILE_PATH, strerror(errno));
+            config_path.c_str(), strerror(errno));
         return -1;
     case CFG_PARSE_ERROR:
-        ERROR("failed to parse configuration file: %s", CONF_FILE_PATH);
+        ERROR("failed to parse configuration file: %s", config_path.c_str());
         return -1;
     default:
-        ERROR("got unexpected error on configuration file processing: %s", CONF_FILE_PATH);
+        ERROR("got unexpected error on configuration file processing: %s", config_path.c_str());
         return -1;
     }
 
