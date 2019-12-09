@@ -242,6 +242,7 @@ private:
     unsigned long *ports_state_begin_addr,
                   *ports_state_end_addr;
     unsigned short start_edge_bit_it,
+                   start_edge_bit_it_parity,
                    end_edge_bit_it;
     bool rtp_bit_parity;
 

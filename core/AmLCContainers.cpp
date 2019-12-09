@@ -49,6 +49,7 @@ int MEDIA_info::prepare(const std::string &iface_name)
     start_edge_bit_it =
         (ports_state_begin_it*BITS_PER_LONG > low_port) ?
             0 : low_port%BITS_PER_LONG;
+    start_edge_bit_it_parity = start_edge_bit_it%2;
 
     end_edge_bit_it =
         (ports_state_end_it*BITS_PER_LONG > high_port) ?
@@ -100,7 +101,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     for(; it < ports_state_end_addr; it++) {
         if (!(~(*it))) // all bits set
             continue;
-        for(i = start_edge_bit_it%2; i < BITS_PER_LONG; i += 2) {
+        for(i = start_edge_bit_it_parity; i < BITS_PER_LONG; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
@@ -109,7 +110,7 @@ unsigned short MEDIA_info::getNextRtpPort()
 
     //process tail
     if (it==ports_state_end_addr && ~(*it)) {
-        for(i = start_edge_bit_it%2; i < end_edge_bit_it; i += 2) {
+        for(i = start_edge_bit_it_parity; i < end_edge_bit_it; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
