@@ -100,7 +100,7 @@ unsigned short MEDIA_info::getNextRtpPort()
     for(; it < ports_state_end_addr; it++) {
         if (!(~(*it))) // all bits set
             continue;
-        for(i = 0; i < BITS_PER_LONG; i += 2) {
+        for(i = start_edge_bit_it%2; i < BITS_PER_LONG; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
@@ -109,7 +109,7 @@ unsigned short MEDIA_info::getNextRtpPort()
 
     //process tail
     if (it==ports_state_end_addr && ~(*it)) {
-        for(i = 0; i < end_edge_bit_it; i += 2) {
+        for(i = start_edge_bit_it%2; i < end_edge_bit_it; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
