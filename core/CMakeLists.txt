@@ -21,7 +21,7 @@ INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS}
                      ${CONFUSE_BUNDLED_INCLUDE_DIRS}
                      ${STUN_BUNDLED_INCLUDE_DIRS})
 
-SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
+SET(common_LIBS stdc++ resolv mp3lame event event_pthreads wslay)
 
 SET(sems_LIB_SRCS ${sems_SRCS})
 LIST(REMOVE_ITEM sems_LIB_SRCS sems.cpp)

@@ -64,6 +64,14 @@ struct sip_header
 	H_CONTENT_TYPE,
 	H_CONTENT_LENGTH,
 	H_MAX_FORWARDS,
+    H_CONNECTION,
+    H_UPGRADE,
+    H_ORIGIN,
+    H_SEC_WS_VERSION,
+    H_SEC_WS_KEY,
+    H_SEC_WS_EXT,
+    H_SEC_WS_ACCEPT,
+    H_SEC_WS_PROTOCOL,
 	
 	H_OTHER
     };

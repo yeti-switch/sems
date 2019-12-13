@@ -231,12 +231,60 @@ void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, st
     sig = sig_;
 }
 
+tls_input::tls_input()
+: orig_input_len(0)
+{
+}
+
+int tls_input::on_input(tcp_base_trsp* trsp)
+{
+    try {
+        tls_trsp_socket* tls_socket = dynamic_cast<tls_trsp_socket*>(trsp);
+        int ret = tls_socket->tls_channel->received_data(orig_input_buf, orig_input_len);
+        reset_input();
+        return ret;
+    } catch(Botan::Exception& ex) {
+        ERROR("Botan tls error: %s", ex.what());
+        return -1;
+    }
+}
+
+int tls_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size)
+{
+    memcpy(trsp_base_input::get_input(), data, size);
+    trsp_base_input::add_input_len(size);
+    return parse_input(trsp);
+}
+
+tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
+                 trsp_worker* server_worker,
+                 int sd, const sockaddr_storage* sa,
+                 trsp_socket::socket_transport transport,
+                 event_base* evbase, trsp_input* input)
+: tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input), tls_connected(false)
+  , settings((sd == -1) ? dynamic_cast<tls_trsp_settings*>(server_sock)->client_settings : dynamic_cast<tls_trsp_settings*>(server_sock)->server_settings)
+{
+    init(sa);
+}
+
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
 				 trsp_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
-  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase), tls_connected(false), orig_input_len(0)
-  , settings((sd == -1) ? static_cast<tls_server_socket*>(server_sock)->client_settings : static_cast<tls_server_socket*>(server_sock)->server_settings)
+  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tls_input), tls_connected(false)
+  , settings((sd == -1) ? dynamic_cast<tls_trsp_settings*>(server_sock)->client_settings : dynamic_cast<tls_trsp_settings*>(server_sock)->server_settings)
+{
+    init(sa);
+}
+
+tls_trsp_socket::~tls_trsp_socket()
+{
+    if(tls_channel) {
+        delete tls_channel;
+    }
+}
+
+void tls_trsp_socket::init(const sockaddr_storage* sa)
 {
     if(sd == -1) {
         sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
@@ -248,13 +296,6 @@ tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
                                             Botan::TLS::Protocol_Version::TLS_V12);
     } else {
         tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), settings, settings,*rand_generator_tls::instance(), false);
-    }
-}
-
-tls_trsp_socket::~tls_trsp_socket()
-{
-    if(tls_channel) {
-        delete tls_channel;
     }
 }
 
@@ -317,18 +358,6 @@ void tls_trsp_socket::post_write()
     }
 }
 
-int tls_trsp_socket::on_input()
-{
-    try {
-        int ret = tls_channel->received_data(orig_input_buf, orig_input_len);
-        reset_input();
-        return ret;
-    } catch(Botan::Exception& ex) {
-        ERROR("Botan tls error: %s", ex.what());
-        return -1;
-    }
-}
-
 void tls_trsp_socket::copy_peer_addr(sockaddr_storage* sa)
 {
     if(tls_connected) {
@@ -366,9 +395,7 @@ void tls_trsp_socket::tls_emit_data(const uint8_t data[], size_t size)
 
 void tls_trsp_socket::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
 {
-    memcpy(input_buf, data, size);
-    tcp_base_trsp::add_input_len(size);
-    parse_input();
+    static_cast<tls_input*>(input)->on_tls_record(this, data, size);
 }
 
 void tls_trsp_socket::tls_alert(Botan::TLS::Alert alert)
@@ -431,6 +458,11 @@ int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
   return 0;
 }
 
+tls_trsp_settings::tls_trsp_settings(const tls_conf& s_client, const tls_conf& s_server)
+: client_settings(s_client), server_settings(s_server)
+{
+}
+
 tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport)
  : trsp_socket_factory(transport){}
 
@@ -449,7 +481,7 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto
                                      const tls_conf& s_client,
                                      const tls_conf& s_server)
 : trsp_server_socket(if_num, proto_idx, opts, new tls_socket_factory(transport))
-, client_settings(s_client), server_settings(s_server)
+, tls_trsp_settings(s_client, s_server)
 {
 }
 

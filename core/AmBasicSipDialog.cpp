@@ -35,10 +35,14 @@ static SIP_info::SIP_type str2transport(cstring &s)
     static cstring udp("udp");
     static cstring tcp("tcp");
     static cstring tls("tls");
+    static cstring ws("ws");
+    static cstring wss("wss");
     DBG("str2transport(cstring &s [%.*s])",s.len,s.s);
     if(cmp_cond(udp)) return SIP_info::UDP;
     else if(cmp_cond(tcp)) return SIP_info::TCP;
     else if(cmp_cond(tls)) return SIP_info::TLS;
+    else if(cmp_cond(ws)) return SIP_info::WS;
+    else if(cmp_cond(wss)) return SIP_info::WSS;
     return SIP_info::UNDEFINED;
 #undef cmp_cond
 }

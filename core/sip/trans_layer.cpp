@@ -305,7 +305,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     }
     
     bool have_to_tag = false;
-    int  reply_len   = status_line_len(msg->u.reply->reason);
+    int  reply_len   = sip_status_line_len(msg->u.reply->reason);
 
     // add 'received' should be added
     // check if first Via has rport parameter
@@ -433,7 +433,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 
     DBG("reply_len = %i\n",reply_len);
 
-    status_line_wr(&c,reply_code,msg->u.reply->reason);
+    sip_status_line_wr(&c,reply_code,msg->u.reply->reason);
 
     for(list<sip_header*>::iterator it = req->hdrs.begin();
 	it != req->hdrs.end(); ++it) {
@@ -734,7 +734,7 @@ int _trans_layer::send_sl_reply(sip_msg* req, int reply_code,
     assert(req);
 
     bool have_to_tag = false;
-    int  reply_len   = status_line_len(reason);
+    int  reply_len   = sip_status_line_len(reason);
 
     for(list<sip_header*>::iterator it = req->hdrs.begin();
 	it != req->hdrs.end(); ++it) {
@@ -781,7 +781,7 @@ int _trans_layer::send_sl_reply(sip_msg* req, int reply_code,
     char* reply_buf = new char[reply_len];
     char* c = reply_buf;
 
-    status_line_wr(&c,reply_code,reason);
+    sip_status_line_wr(&c,reply_code,reason);
 
     for(list<sip_header*>::iterator it = req->hdrs.begin();
 	it != req->hdrs.end(); ++it) {
@@ -1193,7 +1193,7 @@ static int patch_ruri_with_remote_ip(string& n_uri, sip_msg* msg)
 
 static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
 {
-    int request_len = request_line_len(msg->u.request->method_str,
+    int request_len = sip_request_line_len(msg->u.request->method_str,
  				       msg->u.request->ruri_str);
  
     char branch_buf[BRANCH_BUF_LEN];
@@ -1244,7 +1244,7 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
  
     // generate it
     char* c = p_msg->buf;
-    request_line_wr(&c,msg->u.request->method_str,
+    sip_request_line_wr(&c,msg->u.request->method_str,
  		    msg->u.request->ruri_str);
  
     via_wr(&c,trsp,stl2cstr(via),branch,true);
@@ -1592,7 +1592,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     cstring cancel_str("CANCEL");
     cstring zero("0");
 
-    int request_len = request_line_len(cancel_str,
+    int request_len = sip_request_line_len(cancel_str,
 				       req->u.request->ruri_str);
 
     request_len += copy_hdr_len(req->via1);
@@ -1615,7 +1615,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 
     // generate it
     char* c = p_msg->buf;
-    request_line_wr(&c,cancel_str,
+    sip_request_line_wr(&c,cancel_str,
 		    req->u.request->ruri_str);
 
     copy_hdr_wr(&c,req->via1);
@@ -2483,7 +2483,7 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
     sip_msg* inv = t->msg;
     
     cstring method("ACK",3);
-    int ack_len = request_line_len(method,inv->u.request->ruri_str);
+    int ack_len = sip_request_line_len(method,inv->u.request->ruri_str);
     
     ack_len += copy_hdr_len(inv->via1)
 	+ copy_hdr_len(inv->from)
@@ -2503,7 +2503,7 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
     char* ack_buf = new char [ack_len];
     char* c = ack_buf;
 
-    request_line_wr(&c,method,inv->u.request->ruri_str);
+    sip_request_line_wr(&c,method,inv->u.request->ruri_str);
     
     copy_hdr_wr(&c,inv->via1);
 

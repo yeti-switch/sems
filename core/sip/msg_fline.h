@@ -39,28 +39,48 @@ struct sip_msg;
 //
 // Request-line builder
 //
-inline int request_line_len(const cstring& method,
+inline int sip_request_line_len(const cstring& method,
 			    const cstring& ruri)
 {
     return method.len + ruri.len + SIPVER_len
 	+ 4; // 2*SP + CRLF
 }
 
-void request_line_wr(char** c,
+inline int http_request_line_len(const cstring& method,
+			    const cstring& ruri)
+{
+    return method.len + ruri.len + HTTPVER_len
+	+ 4; // 2*SP + CRLF
+}
+
+void sip_request_line_wr(char** c,
+		     const cstring& method,
+		     const cstring& ruri);
+
+void http_request_line_wr(char** c,
 		     const cstring& method,
 		     const cstring& ruri);
 
 //
 // Status-line builder
 //
-inline int status_line_len(const cstring& reason)
+inline int sip_status_line_len(const cstring& reason)
 {
     return SIPVER_len + 3/*status code*/
 	+ reason.len
 	+ 4; // 2*SP + CRLF
 }
+inline int http_status_line_len(const cstring& reason)
+{
+    return HTTPVER_len + 3/*status code*/
+	+ reason.len
+	+ 4; // 2*SP + CRLF
+}
 
-void status_line_wr(char** c, int status_code,
+void sip_status_line_wr(char** c, int status_code,
+		    const cstring& reason);
+
+void http_status_line_wr(char** c, int status_code,
 		    const cstring& reason);
 
 

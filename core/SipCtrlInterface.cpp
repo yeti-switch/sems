@@ -48,6 +48,7 @@
 #include "sip/ip_util.h"
 #include "sip/tcp_trsp.h"
 #include "sip/tls_trsp.h"
+#include "sip/ws_trsp.h"
 
 #include "log.h"
 
@@ -309,6 +310,161 @@ int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short pr
     return 0;
 }
 
+int _SipCtrlInterface::alloc_ws_structs()
+{
+    unsigned short socketsCount = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::WS) {
+                socketsCount++;
+            }
+        }
+    }
+    ws_sockets = new ws_server_socket* [socketsCount];
+
+    if(ws_sockets)
+	return 0;
+
+    return -1;
+}
+
+int _SipCtrlInterface::init_ws_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
+{
+    trsp_socket::socket_transport trans;
+    if(info.type_ip == AT_V4) {
+        trans = trsp_socket::ws_ipv4;
+    } else if(info.type_ip == AT_V6) {
+        trans = trsp_socket::ws_ipv6;
+    } else {
+        ERROR("Unknown transport type in ws server");
+        return -1;
+    }
+
+    SIP_WS_info* ws_info = SIP_WS_info::toSIP_WS(&info);
+    if(!ws_info) {
+        ERROR("incorrect type of sip info - not WS");
+        return -1;
+    }
+
+    ws_server_socket* ws_socket = new ws_server_socket(if_num, proto_idx,info.sig_sock_opts,trans);
+
+    if(!ws_socket) {
+        return -1;
+    }
+
+    if(!info.public_ip.empty()) {
+        ws_socket->set_public_ip(info.public_ip);
+    }
+
+    ws_socket->set_connect_timeout(ws_info->tcp_connect_timeout);
+    ws_socket->set_idle_timeout(ws_info->tcp_idle_timeout);
+
+    if(ws_socket->bind(info.local_ip, info.local_port) < 0) {
+	ERROR("Could not bind SIP/WS socket to %s:%i",
+              info.local_ip.c_str(),
+              info.local_port);
+
+	delete ws_socket;
+	return -1;
+    }
+
+    if(info.tos_byte) {
+        ws_socket->set_tos_byte(info.tos_byte);
+    }
+
+    //TODO: add some more threads
+    ws_socket->add_workers(trsp_workers, nr_trsp_workers);
+
+    trans_layer::instance()->register_transport(ws_socket);
+    ws_sockets[nr_ws_sockets] = ws_socket;
+    inc_ref(ws_socket);
+    nr_ws_sockets++;
+
+    trsp_server->add_socket(ws_socket);
+
+    return 0;
+}
+
+int _SipCtrlInterface::alloc_wss_structs()
+{
+    unsigned short socketsCount = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::WSS) {
+                socketsCount++;
+            }
+        }
+    }
+    wss_sockets = new wss_server_socket* [socketsCount];
+
+    if(wss_sockets)
+	return 0;
+
+    return -1;
+}
+
+int _SipCtrlInterface::init_wss_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info)
+{
+    trsp_socket::socket_transport trans;
+    if(info.type_ip == AT_V4) {
+        trans = trsp_socket::wss_ipv4;
+    } else if(info.type_ip == AT_V6) {
+        trans = trsp_socket::wss_ipv6;
+    } else {
+        ERROR("Unknown transport type in wss server");
+        return -1;
+    }
+
+    SIP_WSS_info* wss_info = SIP_WSS_info::toSIP_WSS(&info);
+    if(!wss_info) {
+        ERROR("incorrect type of sip info - not WSS");
+        return -1;
+    }
+
+    wss_server_socket* wss_socket = 0;
+    try {
+        wss_socket = new wss_server_socket(if_num, proto_idx,info.sig_sock_opts,trans, &wss_info->client_settings, &wss_info->server_settings);
+    } catch(Botan::Exception& ex) {
+        ERROR("Botan Exception: %s", ex.what());
+    }
+
+    if(!wss_socket) {
+        return -1;
+    }
+
+    if(!info.public_ip.empty()) {
+        wss_socket->set_public_ip(info.public_ip);
+    }
+
+    wss_socket->set_connect_timeout(wss_info->tcp_connect_timeout);
+    wss_socket->set_idle_timeout(wss_info->tcp_idle_timeout);
+
+    if(wss_socket->bind(info.local_ip, info.local_port) < 0) {
+	ERROR("Could not bind SIP/TCP socket to %s:%i",
+              info.local_ip.c_str(),
+              info.local_port);
+
+	delete wss_socket;
+	return -1;
+    }
+
+    if(info.tos_byte) {
+        wss_socket->set_tos_byte(info.tos_byte);
+    }
+
+    //TODO: add some more threads
+    wss_socket->add_workers(trsp_workers, nr_trsp_workers);
+
+    trans_layer::instance()->register_transport(wss_socket);
+    wss_sockets[nr_wss_sockets] = wss_socket;
+    inc_ref(wss_socket);
+    nr_wss_sockets++;
+
+    trsp_server->add_socket(wss_socket);
+
+    return 0;
+}
+
 int _SipCtrlInterface::load()
 {
     if (!AmConfig.outbound_proxy.empty()) {
@@ -375,12 +531,32 @@ int _SipCtrlInterface::load()
         tcp_idx++;
     }
 
-    if(alloc_tls_structs() < 0) {
-        ERROR("no enough memory to alloc TCP structs");
+    if(alloc_ws_structs() < 0) {
+        ERROR("no enough memory to alloc WS structs");
         return -1;
     }
 
-    // Init TCP transport instances
+    // Init WS transport instances
+    unsigned short ws_idx = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        unsigned short proto_idx = 0;
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::WS) {
+                if(init_ws_servers(ws_idx, proto_idx, *info) < 0) {
+                    return -1;
+                }
+            }
+            proto_idx++;
+        }
+        ws_idx++;
+    }
+
+    if(alloc_tls_structs() < 0) {
+        ERROR("no enough memory to alloc TLS structs");
+        return -1;
+    }
+
+    // Init TLS transport instances
     unsigned short tls_idx = 0;
     for(auto& interface : AmConfig.sip_ifs) {
         unsigned short proto_idx = 0;
@@ -395,6 +571,26 @@ int _SipCtrlInterface::load()
         tls_idx++;
     }
 
+    if(alloc_wss_structs() < 0) {
+        ERROR("no enough memory to alloc WSS structs");
+        return -1;
+    }
+
+    // Init WSS transport instances
+    unsigned short wss_idx = 0;
+    for(auto& interface : AmConfig.sip_ifs) {
+        unsigned short proto_idx = 0;
+        for(auto& info : interface.proto_info) {
+            if(info->type == SIP_info::WSS) {
+                if(init_wss_servers(wss_idx, proto_idx, *info) < 0) {
+                    return -1;
+                }
+            }
+            proto_idx++;
+        }
+        wss_idx++;
+    }
+
     return 0;
 }
 
@@ -404,6 +600,8 @@ _SipCtrlInterface::_SipCtrlInterface()
       nr_udp_servers(0), udp_servers(NULL),
       nr_tcp_sockets(0), tcp_sockets(NULL),
       nr_tls_sockets(0), tls_sockets(NULL),
+      nr_ws_sockets(0),  ws_sockets(NULL),
+      nr_wss_sockets(0), wss_sockets(NULL),
       nr_trsp_workers(0), trsp_workers(NULL),
       trsp_server(NULL)
 {
@@ -559,7 +757,7 @@ int _SipCtrlInterface::run()
 	    trsp_workers[i]->start();
 	}
     }
-	
+
     if (NULL != trsp_server) {
         trsp_server->start();
     }
@@ -599,7 +797,7 @@ void _SipCtrlInterface::cleanup()
 	delete trsp_server;
 	trsp_server = NULL;
     }
-    
+
     if (NULL != trsp_workers) {
 	for(int i=0; i<nr_trsp_workers;i++){
 	    trsp_workers[i]->stop();
@@ -635,7 +833,18 @@ void _SipCtrlInterface::cleanup()
 	tcp_sockets = NULL;
 	nr_tcp_sockets = 0;
     }
-    
+
+    if (NULL != ws_sockets) {
+	for(int i=0; i<nr_ws_sockets;i++){
+	    DBG("dec_ref(%p)",ws_sockets[i]);
+	    dec_ref(ws_sockets[i]);
+	}
+
+	delete [] ws_sockets;
+	ws_sockets = NULL;
+	nr_ws_sockets = 0;
+    }
+
     if (NULL != tls_sockets) {
 	for(int i=0; i<nr_tls_sockets;i++){
 	    DBG("dec_ref(%p)",tls_sockets[i]);
@@ -645,6 +854,17 @@ void _SipCtrlInterface::cleanup()
 	delete [] tls_sockets;
 	tls_sockets = NULL;
 	nr_tls_sockets = 0;
+    }
+
+    if (NULL != wss_sockets) {
+	for(int i=0; i<nr_wss_sockets;i++){
+	    DBG("dec_ref(%p)",wss_sockets[i]);
+	    dec_ref(wss_sockets[i]);
+	}
+
+	delete [] wss_sockets;
+	wss_sockets = NULL;
+	nr_wss_sockets = 0;
     }
 }
 

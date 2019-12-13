@@ -985,6 +985,8 @@ int sip_target_set::get_next(
         static cstring trsp_udp_name("udp");
         static cstring trsp_tcp_name("tcp");
         static cstring trsp_tls_name("tls");
+        static cstring trsp_ws_name("ws");
+        static cstring trsp_wss_name("wss");
 
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
@@ -1029,7 +1031,33 @@ int sip_target_set::get_next(
                 //unexpected address family for TLS transport
                 next_trsp = trsp_socket::tr_invalid;
             }
-        } else {
+        } else if(0==strncasecmp(t.trsp, trsp_ws_name.s, trsp_ws_name.len)) {
+            //WS
+            switch(ss->ss_family) {
+            case AF_INET:
+                next_trsp = trsp_socket::ws_ipv4;
+                break;
+            case AF_INET6:
+                next_trsp = trsp_socket::ws_ipv6;
+                break;
+            default:
+                //unexpected address family for WS transport
+                next_trsp = trsp_socket::tr_invalid;
+            }
+        }  else if(0==strncasecmp(t.trsp, trsp_wss_name.s, trsp_wss_name.len)) {
+            //WSS
+            switch(ss->ss_family) {
+            case AF_INET:
+                next_trsp = trsp_socket::wss_ipv4;
+                break;
+            case AF_INET6:
+                next_trsp = trsp_socket::wss_ipv6;
+                break;
+            default:
+                //unexpected address family for WSS transport
+                next_trsp = trsp_socket::tr_invalid;
+            }
+        }else {
             //unknown transport name
             next_trsp = trsp_socket::tr_invalid;
         }

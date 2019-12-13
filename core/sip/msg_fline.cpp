@@ -43,7 +43,7 @@ inline void status_code_wr(char** c, int code)
 }
 
 
-void status_line_wr(char** c, int status_code,
+void sip_status_line_wr(char** c, int status_code,
 		    const cstring& reason)
 {
     memcpy(*c,"SIP/2.0 ",8);
@@ -60,7 +60,24 @@ void status_line_wr(char** c, int status_code,
     *((*c)++) = LF;
 }
 
-void request_line_wr(char** c,
+void http_status_line_wr(char** c, int status_code,
+		    const cstring& reason)
+{
+    memcpy(*c,"HTTP/1.1 ",9);
+    *c += 9;
+
+    status_code_wr(c,status_code);
+
+    *((*c)++) = SP;
+
+    memcpy(*c,reason.s,reason.len);
+    *c += reason.len;
+
+    *((*c)++) = CR;
+    *((*c)++) = LF;
+}
+
+void sip_request_line_wr(char** c,
 		     const cstring& method,
 		     const cstring& ruri)
 {
@@ -79,6 +96,24 @@ void request_line_wr(char** c,
     *((*c)++) = LF;
 }
 
+void http_request_line_wr(char** c,
+		     const cstring& method,
+		     const cstring& ruri)
+{
+    memcpy(*c,method.s,method.len);
+    *c += method.len;
+
+    *((*c)++) = SP;
+
+    memcpy(*c,ruri.s,ruri.len);
+    *c += ruri.len;
+
+    memcpy(*c," HTTP/1.1",9);
+    *c += 9;
+
+    *((*c)++) = CR;
+    *((*c)++) = LF;
+}
 
 /** EMACS **
  * Local variables:

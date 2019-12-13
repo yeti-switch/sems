@@ -51,13 +51,21 @@ using std::auto_ptr;
 #define RSEQ_len           SIP_HDR_LEN(SIP_HDR_RSEQ)  // 4
 #define RACK_len           SIP_HDR_LEN(SIP_HDR_RACK)  // 4
 #define ROUTE_len          SIP_HDR_LEN(SIP_HDR_ROUTE) // 5
+#define	ORIGIN_len         SIP_HDR_LEN(HTTP_HDR_ORIGIN) // 6
 #define CALL_ID_len        SIP_HDR_LEN(SIP_HDR_CALL_ID) // 7
 #define CONTACT_len        SIP_HDR_LEN(SIP_HDR_CONTACT) // 7
 #define REQUIRE_len        SIP_HDR_LEN(SIP_HDR_REQUIRE) // 7
+#define	UPGRADE_len        SIP_HDR_LEN(HTTP_HDR_UPGRADE) // 7
+#define	CONNECTION_len     SIP_HDR_LEN(HTTP_HDR_CONNECTION) // 10
 #define CONTENT_TYPE_len   SIP_HDR_LEN(SIP_HDR_CONTENT_TYPE) // 12
 #define RECORD_ROUTE_len   SIP_HDR_LEN(SIP_HDR_RECORD_ROUTE) // 12
-#define CONTENT_LENGTH_len SIP_HDR_LEN(SIP_HDR_CONTENT_LENGTH) // 14
 #define	MAX_FORWARDS_len   SIP_HDR_LEN(SIP_HDR_MAX_FORWARDS) // 12
+#define CONTENT_LENGTH_len SIP_HDR_LEN(SIP_HDR_CONTENT_LENGTH) // 14
+#define	SEC_WS_KEY_len     SIP_HDR_LEN(HTTP_HDR_SEC_WS_KEY) // 17
+#define	SEC_WS_ACCEPT_len  SIP_HDR_LEN(HTTP_HDR_SEC_WS_ACCEPT) // 20
+#define	SEC_WS_VERSION_len SIP_HDR_LEN(HTTP_HDR_SEC_WS_VERSION) // 21
+#define	SEC_WS_PROTO_len   SIP_HDR_LEN(HTTP_HDR_SEC_WS_PROTOCOL) // 22
+#define	SEC_WS_EXT_len     SIP_HDR_LEN(HTTP_HDR_SEC_WS_EXT) // 24
 
 
 sip_header::sip_header()
@@ -184,6 +192,12 @@ int parse_header_type(sip_header* h)
 	}
 	break;
 
+    case ORIGIN_len:
+	if(!lower_cmp(h->name.s+1,HTTP_HDR_ORIGIN+1,ORIGIN_len-1)){
+	    h->type = sip_header::H_ORIGIN;
+	}
+	break;
+
     //case CALL_ID_len:
     //case REQUIRE_len:
     case CONTACT_len:
@@ -210,17 +224,37 @@ int parse_header_type(sip_header* h)
 		break;
 	    }
 	    break;
-        case 'r':
-        case 'R':
-            if (! lower_cmp(h->name.s+1, SIP_HDR_REQUIRE+1,
-                SIP_HDR_LEN(SIP_HDR_REQUIRE)-1))
-              h->type = sip_header::H_REQUIRE;
-            break;
+    case 'r':
+    case 'R':
+        if (! lower_cmp(h->name.s+1, SIP_HDR_REQUIRE+1,
+            SIP_HDR_LEN(SIP_HDR_REQUIRE)-1))
+            h->type = sip_header::H_REQUIRE;
+        break;
+    case 'u':
+    case 'U':
+        if (! lower_cmp(h->name.s+1, HTTP_HDR_UPGRADE+1,
+            SIP_HDR_LEN(HTTP_HDR_UPGRADE)-1))
+            h->type = sip_header::H_UPGRADE;
+        break;
 
 	default:
 	    h->type = sip_header::H_OTHER;
 	    break;
 	}
+	break;
+
+    case CONNECTION_len:
+	switch(h->name.s[0]){
+	case 'c':
+	case 'C':
+        if (! lower_cmp(h->name.s+1, HTTP_HDR_CONNECTION+1,
+            SIP_HDR_LEN(HTTP_HDR_CONNECTION)-1))
+            h->type = sip_header::H_CONNECTION;
+        break;
+	default:
+	    h->type = sip_header::H_OTHER;
+	    break;
+    }
 	break;
 
     //case RECORD_ROUTE_len:
@@ -251,6 +285,36 @@ int parse_header_type(sip_header* h)
     case CONTENT_LENGTH_len:
 	if(!lower_cmp(h->name.s,SIP_HDR_CONTENT_LENGTH,CONTENT_LENGTH_len)){
 	    h->type = sip_header::H_CONTENT_LENGTH;
+	}
+	break;
+
+    case SEC_WS_VERSION_len:
+	if(!lower_cmp(h->name.s,HTTP_HDR_SEC_WS_VERSION,SEC_WS_VERSION_len)){
+	    h->type = sip_header::H_SEC_WS_VERSION;
+	}
+	break;
+
+    case SEC_WS_PROTO_len:
+	if(!lower_cmp(h->name.s,HTTP_HDR_SEC_WS_PROTOCOL,SEC_WS_PROTO_len)){
+	    h->type = sip_header::H_SEC_WS_PROTOCOL;
+	}
+	break;
+
+    case SEC_WS_ACCEPT_len:
+	if(!lower_cmp(h->name.s,HTTP_HDR_SEC_WS_ACCEPT,SEC_WS_ACCEPT_len)){
+	    h->type = sip_header::H_SEC_WS_ACCEPT;
+	}
+	break;
+
+    case SEC_WS_KEY_len:
+	if(!lower_cmp(h->name.s,HTTP_HDR_SEC_WS_KEY,SEC_WS_KEY_len)){
+	    h->type = sip_header::H_SEC_WS_KEY;
+	}
+	break;
+
+    case SEC_WS_EXT_len:
+	if(!lower_cmp(h->name.s,HTTP_HDR_SEC_WS_EXT,SEC_WS_EXT_len)){
+	    h->type = sip_header::H_SEC_WS_EXT;
 	}
 	break;
 
