@@ -1,3 +1,11 @@
+sems (1.8.49-1) stable; urgency=low
+
+  * fix usage of command line parameter -f
+  * fix parity in choosing free port of media interface
+  * fix multithreaded build
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 16 Dec 2019 16:27:47 +0200
+
 sems (1.8.48-1) stable; urgency=low
 
   * disable sockets logging
