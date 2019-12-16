@@ -40,17 +40,24 @@
 #include "md5.h"
 #include "sip/sip_trans.h"
 #include "sip/resolver.h"
+#include <confuse.h>
 
 using std::string;
 
 
 #define MOD_NAME "uac_auth"
 
+#define OPT_ALLOWED_QOPS "allowed_qops"
+#define OPT_SERVER_SECRET "server_secret"
+
 EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory);
 EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory);
+EXPORT_PLUGIN_CONF_FACTORY(UACAuthFactory);
 
 UACAuthFactory* UACAuthFactory::_instance=0;
 string UACAuth::server_nonce_secret = "CKASLD§$>NLKJSLDKFJ"; // replaced on load
+int UACAuth::allowed_qop_types;
+static string qop_str_value;
 
 UACAuthFactory* UACAuthFactory::instance()
 {
@@ -113,23 +120,69 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
 
 int UACAuthFactory::onLoad()
 {
-  string secret;
-  AmConfigReader conf;
-  string cfg_file_path = AmConfig.configs_path + "uac_auth.conf";
-  if(conf.loadFile(cfg_file_path)){
-    WARN("Could not open '%s', assuming that default values are fine\n",
-	 cfg_file_path.c_str());
-    secret = AmSession::getNewId(); // ?? TODO: is this cryptoproof?
-  } else {
-    secret = conf.getParameter("server_secret");
-    if (secret.size()<5) {
-      ERROR("server_secret in '%s' too short!\n", cfg_file_path.c_str());
-      return -1;
-    }
-  }
+    return 0;
+}
 
-  UACAuth::setServerSecret(secret);
-  return 0;
+int UACAuthFactory::configure(const std::string& config)
+{
+    cfg_opt_t opt[] = {
+        CFG_STR_LIST(OPT_ALLOWED_QOPS, 0,CFGF_NONE),
+        CFG_STR(OPT_SERVER_SECRET, "", CFGF_NONE),
+        CFG_END()
+    };
+    cfg_t *cfg = cfg_init(opt, CFGF_NONE);
+    if(!cfg) return -1;
+
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    }
+
+    //server_secret
+    std::string secret = cfg_getstr(cfg, OPT_SERVER_SECRET);
+    if(secret.empty()) {
+        WARN("server_secret is not set. use the randomly generated one");
+        secret = AmSession::getNewId();
+    } else {
+        //validate secret
+        if(secret.size() < 5) {
+            ERROR("uac_auth: server_secret is too short");
+            return -1;
+        }
+    }
+    UACAuth::setServerSecret(secret);
+
+    //allowed_qops
+    if(cfg_size(cfg, OPT_ALLOWED_QOPS)) {
+        int allowed_qops = 0;
+        for(unsigned int j = 0; j < cfg_size(cfg, OPT_ALLOWED_QOPS); j++) {
+            std::string str_qop_name = cfg_getnstr(cfg, OPT_ALLOWED_QOPS, j);
+            if("auth"==str_qop_name) {
+                allowed_qops |= UACAuth::QOP_AUTH;
+                DBG("enable 'auth' qop");
+            } else if("auth-int"==str_qop_name) {
+                allowed_qops |= UACAuth::QOP_AUTH_INT;
+                DBG("enable 'auth-int' qop");
+            } else {
+                ERROR("unknown qop type: '%s'. (expected: auth, auth-int)",str_qop_name.data());
+                return -1;
+            }
+        }
+        UACAuth::setAllowedQops(allowed_qops);
+    } else {
+        DBG("empty " OPT_ALLOWED_QOPS ". allow both auth and auth-int by default");
+        UACAuth::setAllowedQops(UACAuth::QOP_AUTH | UACAuth::QOP_AUTH_INT);
+    }
+
+    return 0;
 }
 
 bool UACAuthFactory::onInvite(const AmSipRequest& req, AmConfigReader& conf)
@@ -667,6 +720,17 @@ void UACAuth::setServerSecret(const string& secret) {
   DBG("Server Nonce secret set\n");
 }
 
+void UACAuth::setAllowedQops(int allowed_qop_mask) {
+	allowed_qop_types = allowed_qop_mask;
+	if(allowed_qop_types & QOP_AUTH) {
+		qop_str_value = "auth";
+	}
+	if(allowed_qop_types & QOP_AUTH_INT) {
+		if(!qop_str_value.empty()) qop_str_value += ",";
+		qop_str_value += "auth-int";
+	}
+}
+
 void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, const string& user,
 				  const string& pwd, AmArg& ret) {
   if (req->method == SIP_METH_ACK || req->method == SIP_METH_CANCEL) {
@@ -806,7 +870,7 @@ string UACAuth::getChallengeHeader(const string& realm)
 {
     return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
            "realm=\""+realm+"\", "
-           "qop=\"auth,auth-int\", "
+           "qop=\"" + qop_str_value + "\", "
            "nonce=\""+calcNonce()+"\"\r\n";
 }
 
@@ -933,3 +997,4 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& re
 				         "nonce=\""+calcNonce()+"\"\r\n");
 	}
 }
+
