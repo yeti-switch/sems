@@ -68,6 +68,7 @@ class UACAuthFactory
 
     int onLoad();
     int configure(const std::string& config) override;
+    int reconfigure(const std::string& config) override;
 
     // SessionEventHandler API
     AmSessionEventHandler* getHandler(AmSession* s);

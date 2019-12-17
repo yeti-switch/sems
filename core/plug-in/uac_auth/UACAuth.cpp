@@ -185,6 +185,11 @@ int UACAuthFactory::configure(const std::string& config)
     return 0;
 }
 
+int UACAuthFactory::reconfigure(const std::string& config)
+{
+    return configure(config);
+}
+
 bool UACAuthFactory::onInvite(const AmSipRequest& req, AmConfigReader& conf)
 {
   return true;
