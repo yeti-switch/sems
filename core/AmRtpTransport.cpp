@@ -134,24 +134,22 @@ void AmRtpTransport::setLocalPort(unsigned short p)
 
 void AmRtpTransport::setRAddr(const string& addr, unsigned short port)
 {
-    connections_mut.lock();
+    AmLock l(connections_mut);
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
             conn->setRAddr(addr, port);
-            connections_mut.unlock();
             return;
         }
     }
 
     connections.push_back(new AmRawConnection(this, addr, port));
     cur_raw_stream = connections.back();
-    connections_mut.unlock();
 }
 
 bool AmRtpTransport::isMute()
 {
     bool ret = false;
-    connections_mut.lock();
+    AmLock l(connections_mut);
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
             ret = conn->isMute();
@@ -159,7 +157,6 @@ bool AmRtpTransport::isMute()
         }
     }
 
-    connections_mut.unlock();
     return ret;
 }
 
@@ -433,24 +430,24 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
 
     CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", to_void(stream), seq);
     vector<sockaddr_storage> addrs;
-
-    connections_mut.lock();
-    for(auto conn : connections) {
-        if(seq == ICE){
-            if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
-                sockaddr_storage raddr;
-                conn->getRAddr(&raddr);
-                addrs.push_back(raddr);
-            }
-        } else if(seq == DTLS) {
-            if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
-                sockaddr_storage raddr;
-                conn->getRAddr(&raddr);
-                addrs.push_back(raddr);
+    {
+        AmLock l(connections_mut);
+        for(auto conn : connections) {
+            if(seq == ICE){
+                if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
+                    sockaddr_storage raddr;
+                    conn->getRAddr(&raddr);
+                    addrs.push_back(raddr);
+                }
+            } else if(seq == DTLS) {
+                if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
+                    sockaddr_storage raddr;
+                    conn->getRAddr(&raddr);
+                    addrs.push_back(raddr);
+                }
             }
         }
     }
-    connections_mut.unlock();
 
     for(auto addr : addrs) {
         addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_key);
@@ -481,14 +478,13 @@ void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote
 
 void AmRtpTransport::addConnection(AmStreamConnection* conn)
 {
-    connections_mut.lock();
+    AmLock l(connections_mut);
     connections.push_back(conn);
-    connections_mut.unlock();
 }
 
 void AmRtpTransport::removeConnection(AmStreamConnection* conn)
 {
-    connections_mut.lock();
+    AmLock l(connections_mut);
     for(auto conn_it = connections.begin(); conn_it != connections.end(); conn_it++) {
         if(*conn_it == conn) {
             connections.erase(conn_it);
@@ -496,7 +492,6 @@ void AmRtpTransport::removeConnection(AmStreamConnection* conn)
             break;
         }
     }
-    connections_mut.unlock();
 }
 
 void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
@@ -561,11 +556,10 @@ void AmRtpTransport::resumeReceiving()
 
 void AmRtpTransport::setPassiveMode(bool p)
 {
-    connections_mut.lock();
+    AmLock l(connections_mut);
     for(auto conn : connections) {
         conn->setPassiveMode(p);
     }
-    connections_mut.unlock();
 }
 
 void AmRtpTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)
@@ -601,7 +595,7 @@ ssize_t AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::Connection
     if(cur_stream) {
         ret = cur_stream->send(packet);
     } else {
-        connections_mut.lock();
+        AmLock l(connections_mut);
         for(auto conn : connections) {
             sockaddr_storage addr;
             packet->getAddr(&addr);
@@ -610,7 +604,6 @@ ssize_t AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::Connection
                 break;
             }
         }
-        connections_mut.unlock();
     }
 
     if(ret > 0) {
@@ -756,27 +749,28 @@ void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_st
 
     log_rcvd_packet(reinterpret_cast<const char*>(buf), static_cast<int>(size), addr, ctype);
 
-    connections_mut.lock();
     vector<AmStreamConnection*> conns_by_type;
-    for(auto conn : connections) {
-        if(conn->isUseConnection(ctype)) {
-            conns_by_type.push_back(conn);
-        }
-    }
-
     AmStreamConnection* s_conn = nullptr;
-    for(auto conn : conns_by_type) {
-        if(conn->isAddrConnection(&addr)) {
-            s_conn = conn;
-            break;
+
+    {
+        AmLock l(connections_mut);
+        for(auto conn : connections) {
+            if(conn->isUseConnection(ctype)) {
+                conns_by_type.push_back(conn);
+            }
+        }
+
+        for(auto conn : conns_by_type) {
+            if(conn->isAddrConnection(&addr)) {
+                s_conn = conn;
+                break;
+            }
+        }
+
+        if(!s_conn && !conns_by_type.empty()) {
+            s_conn = conns_by_type[0];
         }
     }
-
-    if(!s_conn && !conns_by_type.empty()) {
-        s_conn = conns_by_type[0];
-    }
-
-    connections_mut.unlock();
 
     if(!s_conn) {
         return;
