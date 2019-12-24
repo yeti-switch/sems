@@ -9,3 +9,4 @@
 [submodule "third/srtp"]
 	path = third/srtp
 	url = https://github.com/cisco/libsrtp.git
+    ignore = all
