@@ -26,42 +26,63 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _AmDtmfSender_h_
-#define _AmDtmfSender_h_
+#pragma once
 
 #include "AmThread.h"
 #include <queue>
 using std::queue;
-using std::pair;
 
 class AmRtpStream;
 
 class AmDtmfSender
 {
-  // event, duration
-  typedef pair<int, unsigned int> Dtmf;
+    struct Dtmf {
+        int event;
+        unsigned int duration_ms;
+        unsigned int sample_rate;
+        unsigned int frame_size;
+        Dtmf() = default;
+        Dtmf(int event, unsigned int duration_ms,
+            unsigned int sample_rate,
+            unsigned int frame_size)
+          : event(event),
+            duration_ms(duration_ms),
+            sample_rate(sample_rate),
+            frame_size(frame_size)
+        {}
+    };
 
-  enum sending_state_t {
-    DTMF_SEND_NONE,      // not sending event
-    DTMF_SEND_SENDING,   // sending event
-    DTMF_SEND_ENDING     // sending end of event
-  } sending_state;
+    enum sending_state_t {
+        DTMF_SEND_NONE,             // not sending event
+        DTMF_SEND_SENDING_FIRST,    // sending event first packet
+        DTMF_SEND_SENDING,          // sending event
+        DTMF_SEND_ENDING            // sending end of event
+    } sending_state;
 
-  queue<Dtmf> send_queue;
-  AmMutex     send_queue_mut;
+    queue<Dtmf> send_queue;
+    AmMutex     send_queue_mut;
 
-  Dtmf         current_send_dtmf;
-  unsigned int current_send_dtmf_ts;
-  int          send_dtmf_end_repeat;
+    Dtmf         current_event;
+    //user timestamp of the event sending started
+    unsigned int current_send_dtmf_ts;
+    //timestamp used to get duration value for event
+    unsigned int current_send_dtmf_duration_ts;
+    //event duration in timestamp values
+    unsigned int send_dtmf_duration_ts;
+    //timestamp to stop event sending
+    unsigned int send_dtmf_end_ts;
+    //counter to send ending packets
+    int          send_dtmf_end_repeat;
 
-public:
-  AmDtmfSender();
+  public:
+    AmDtmfSender();
 
-  /** Add a DTMF event to the send queue */
-  void queueEvent(int event, unsigned int duration_ms, unsigned int sample_rate);
+    bool isSending() { return sending_state != DTMF_SEND_NONE; }
 
-  /** Processes the send queue according to the timestamp */
-  bool sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStream* stream);
+    /** Add a DTMF event to the send queue */
+    void queueEvent(int event, unsigned int duration_ms, unsigned int sample_rate, unsigned int frame_size);
+
+    /** Processes the send queue according to the timestamp */
+    bool sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStream* stream);
 };
 
-#endif

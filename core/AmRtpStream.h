@@ -200,7 +200,8 @@ class AmRtpStream
 
     unsigned int dead_rtp_time;
 
-    long int ts_adjust;
+    long int relay_ts_shift;
+    long int media_processor_ts_shift;
     unsigned int last_sent_ts;
 
     struct PayloadMapping {
@@ -329,7 +330,7 @@ class AmRtpStream
     /** Clear RTP timeout at time recv_time */
     void clearRTPTimeout(struct timeval* recv_time);
 
-    void relay(AmRtpPacket* p, bool process_dtmf_queue);
+    void relay(AmRtpPacket* p);
 
     /** Sets generic parameters on SDP media */
     void getSdp(SdpMedia& m);
@@ -403,6 +404,10 @@ class AmRtpStream
     void dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     void update_sender_stats(const AmRtpPacket &p);
+
+    bool process_dtmf_queue(unsigned int ts);
+
+    unsigned int get_adjusted_ts(unsigned int user_ts, long int &ts_shift);
 
     int send( unsigned int ts,
         unsigned char* buffer,
@@ -519,12 +524,6 @@ class AmRtpStream
 
     unsigned long getRcvdBytes() { return incoming_bytes; }
     unsigned long getSentBytes() { return outgoing_bytes; }
-    /**
-    * send a DTMF as RTP payload (RFC4733)
-    * @param event event ID (e.g. key press), see rfc
-    * @param duration_ms duration in milliseconds
-    */
-    void sendDtmf(int event, unsigned int duration_ms);
 
     /**
     * Generate an SDP offer based on the stream capabilities.

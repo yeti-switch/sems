@@ -73,7 +73,7 @@ using std::set;
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
 
-#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF 1000
+#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF 10000
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
 #define ICE_PWD_SIZE    22
 #define ICE_UFRAG_SIZE  4
@@ -155,7 +155,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     not_supported_rx_payload_local_reported(false),
     not_supported_rx_payload_remote_reported(false),
     not_supported_tx_payload_reported(false),
-    ts_adjust(0),
+    relay_ts_shift(0),
+    media_processor_ts_shift(0),
     last_sent_ts(0),
     last_send_rtcp_report_ts(0),
     transport(TP_RTPAVP),
@@ -981,7 +982,7 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 
             if (NULL != relay_stream) //packet is not dtmf or relay dtmf is not filtered
             {
-                relay_stream->relay(p, force_receive_dtmf && !force_relay_dtmf);
+                relay_stream->relay(p);
                 if(force_buffering && p->relayed) {
                     receive_mut.lock();
                     if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
@@ -1164,22 +1165,61 @@ int AmRtpStream::compile_and_send(
         return -1;
     }
 
+    last_sent_ts = ts;
+
     add_if_no_exist(outgoing_payloads,rp.payload);
     outgoing_bytes+=rp.getDataSize();
 
     return size;
 }
 
-int AmRtpStream::send(unsigned int ts, unsigned char* buffer, unsigned int size)
+bool AmRtpStream::process_dtmf_queue(unsigned int ts)
+{
+    if(remote_telephone_event_pt.get() &&
+       dtmf_sender.sendPacket(ts,remote_telephone_event_pt->payload_type,this))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts, long int &ts_shift)
+{
+    unsigned int adjusted_ts = static_cast<unsigned int>(ts+ts_shift);
+    unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(adjusted_ts,last_sent_ts) : 0;
+    if(ts_diff > RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF) {
+        CLASS_DBG("AmRtpStream::send() timestamp adjust condition reached: "
+            "ts: %u, adjusted_user_ts: %u, "
+            "ts_shift: %ld, ts_diff: %u, "
+            "max_ts_diff: %u",
+            ts,adjusted_ts,
+            media_processor_ts_shift,ts_diff,
+            RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF);
+
+        auto old_ts_adjust = ts_shift;
+
+        ts_shift = last_sent_ts - ts;
+
+        CLASS_DBG("ts_shift changed from %ld to %ld",
+            old_ts_adjust,media_processor_ts_shift);
+
+        adjusted_ts = static_cast<unsigned int>(ts+ts_shift);
+    }
+
+    return adjusted_ts;
+}
+
+int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int size)
 {
     if ((mute) || (hold))
         return 0;
 
-    if(remote_telephone_event_pt.get() &&
-       dtmf_sender.sendPacket(ts,remote_telephone_event_pt->payload_type,this))
-    {
+
+    unsigned int adjusted_user_ts = get_adjusted_ts(user_ts, media_processor_ts_shift);
+
+    if(process_dtmf_queue(adjusted_user_ts))
         return size;
-    }
 
     if(!size)
         return -1;
@@ -1195,10 +1235,10 @@ int AmRtpStream::send(unsigned int ts, unsigned char* buffer, unsigned int size)
         not_supported_tx_payload_reported = false;
     }
 
-    return compile_and_send(it->second.remote_pt, false, ts, buffer, size);
+    return compile_and_send(it->second.remote_pt, false, adjusted_user_ts, buffer, size);
 }
 
-void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
+void AmRtpStream::relay(AmRtpPacket* p)
 {
     // not yet initialized
     // or muted/on-hold
@@ -1211,12 +1251,17 @@ void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
          return;
 
      if(!relay_raw) {
-         rtp_hdr_t* hdr = (rtp_hdr_t*)p->getBuffer();
-         if(process_dtmf_queue && remote_telephone_event_pt.get()) {
+
+         if(dtmf_sender.isSending())
+             return;
+
+         rtp_hdr_t* hdr = reinterpret_cast<rtp_hdr_t*>(p->getBuffer());
+
+         /*if(process_dtmf_queue && remote_telephone_event_pt.get()) {
              hdr->ssrc = htonl(l_ssrc);
              if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
                  return;
-         }
+         }*/
 
          if (!relay_transparent_seqno)
              hdr->seq = htons(sequence++);
@@ -1226,33 +1271,9 @@ void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
          hdr->pt = relay_map.get(hdr->pt);
 
          if(relay_timestamp_aligning) {
-             //timestamp adjust code
-             unsigned int orig_ts = p->timestamp;
-             unsigned int new_ts = static_cast<unsigned int>(orig_ts+ts_adjust); //adjust ts
-             unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(new_ts,last_sent_ts) : 0;
-
-             if(ts_diff > RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF) {
-                 CLASS_DBG("AmRtpStream::relay() timestamp adjust condition reached: "
-                     "orig_ts: %i, new_ts: %i, "
-                     "ts_adjust: %ld, ts_diff: %i, "
-                     "max_ts_diff: %i",
-                     orig_ts,new_ts,
-                     ts_adjust,ts_diff,
-                     RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF);
-
-                 auto old_ts_adjust = ts_adjust;
-                 ts_adjust = last_sent_ts - orig_ts;
-
-                 CLASS_DBG("AmRtpStream::relay() ts_adjust changed from %ld to %ld",
-                     old_ts_adjust,ts_adjust);
-
-                 //adjust again
-                 new_ts = static_cast<unsigned int>(p->timestamp+ts_adjust);
-             }
-
-             p->timestamp = last_sent_ts = new_ts;
+             p->timestamp = get_adjusted_ts(p->timestamp, relay_ts_shift);
              hdr->ts = htonl(p->timestamp);
-         } //if(relay_timestamp_aligning)
+         }
 
      } //if(!relay_raw)
 
@@ -1261,19 +1282,17 @@ void AmRtpStream::relay(AmRtpPacket* p, bool process_dtmf_queue)
                     cur_rtp_trans->getRHost(false).c_str(),cur_rtp_trans->getRPort(false));
      } else {
          sockaddr_storage addr;
+
          if(cur_rtp_trans && relay_raw) cur_rtp_trans->getRAddr(&addr);
          else if(cur_rtp_trans && !relay_raw) cur_rtp_trans->getRAddr(false, &addr);
+
          if(session && cur_rtp_trans) session->onAfterRTPRelay(p, &addr);
+
+         last_sent_ts = p->timestamp;
+
          add_if_no_exist(outgoing_relayed_payloads,p->payload);
          outgoing_bytes += p->getBufferSize();
      }
-}
-
-
-void AmRtpStream::sendDtmf(int event, unsigned int duration_ms)
-{
-    CLASS_DBG("AmRtpStream::sendDtmf(event = %d, duration = %u)",event,duration_ms);
-    dtmf_sender.queueEvent(event,duration_ms,getLocalTelephoneEventRate());
 }
 
 void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int user_ts)

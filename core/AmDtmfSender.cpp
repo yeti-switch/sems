@@ -38,13 +38,17 @@ AmDtmfSender::AmDtmfSender()
 { }
 
 /** Add a DTMF event to the send queue */
-void AmDtmfSender::queueEvent(int event, unsigned int duration_ms, unsigned int sample_rate)
+void AmDtmfSender::queueEvent(
+    int event,
+    unsigned int duration_ms,
+    unsigned int sample_rate, unsigned int frame_size)
 {
     send_queue_mut.lock();
-    send_queue.push(std::make_pair(event, duration_ms * sample_rate / 1000));
+    send_queue.emplace(event, duration_ms, sample_rate, frame_size);
     send_queue_mut.unlock();
-    DBG("enqueued DTMF event %i duration %u. queue: %p, size: %lu\n", event, duration_ms,
-        static_cast<void *>(&send_queue), send_queue.size());
+    DBG("enqueued DTMF event %i duration %u frame_size: %u queue: %p, size: %lu",
+        event, duration_ms, frame_size,
+        to_void(&send_queue), send_queue.size());
 }
 
 /** Processes the send queue according to the timestamp */
@@ -62,43 +66,67 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
             DBG("DTMF_SEND_NONE queue: %p, size = %lu",
                 static_cast<void *>(&send_queue), send_queue.size());
 
-            current_send_dtmf = send_queue.front();
+            current_event = send_queue.front();
             send_queue.pop();
             send_queue_mut.unlock();
 
-            sending_state = DTMF_SEND_SENDING;
-            current_send_dtmf_ts = ts-DTMF_EVENT_MIN_DURATION; //hack to avoid events with zero duration
+            sending_state = DTMF_SEND_SENDING_FIRST;
+            send_dtmf_duration_ts = current_event.duration_ms * current_event.sample_rate / 1000;
+            unsigned int frame_size_ts = current_event.frame_size * current_event.sample_rate / 1000;
 
-            DBG("starting to send DTMF\n");
+            DBG("current_event.duration_ms: %u, current_event.frame_size: %u, frame_size_ms: %u, send_dtmf_duration_ts: %u",
+                current_event.duration_ms, current_event.frame_size, frame_size_ts, send_dtmf_duration_ts);
+
+            if(send_dtmf_duration_ts < frame_size_ts) {
+                send_dtmf_duration_ts = frame_size_ts;
+                DBG("dtmf event duration %u is less than %u. set it to %u",
+                    send_dtmf_duration_ts,
+                    frame_size_ts, frame_size_ts);
+            }
+
+            current_send_dtmf_ts = ts;
+            current_send_dtmf_duration_ts = current_send_dtmf_ts - frame_size_ts;
+            send_dtmf_end_ts = ts + send_dtmf_duration_ts;
+
+            DBG("starting to send DTMF. key: %d, duration: %u, current_send_dtmf_ts: %u, send_dtmf_end_ts: %u",
+                current_event.event, send_dtmf_duration_ts,
+                current_send_dtmf_ts, send_dtmf_end_ts);
         } break;
+        case DTMF_SEND_SENDING_FIRST:
         case DTMF_SEND_SENDING: {
-            if (ts_less()(ts, current_send_dtmf_ts + current_send_dtmf.second)) {
+            DBG("DTMF_SEND_SENDING. ts: %u , current_send_dtmf_ts: %u, send_dtmf_end_ts: %u",
+                ts, current_send_dtmf_ts, send_dtmf_end_ts);
+            if (ts_less()(ts, send_dtmf_end_ts)) {
                 // send packet
                 //if (!remote_telephone_event_pt.get())
                 //return;
-                u_int16 duration = static_cast<u_int16>(ts - current_send_dtmf_ts);
+                u_int16 duration = static_cast<u_int16>(ts - current_send_dtmf_duration_ts);
 
                 dtmf_payload_t dtmf;
-                dtmf.event = static_cast<u_int8>(current_send_dtmf.first);
+                dtmf.event = static_cast<u_int8>(current_event.event);
                 dtmf.e = dtmf.r = 0;
                 dtmf.duration = htons(duration);
                 dtmf.volume = 20;
 
-                DBG("DTMF_SEND_SENDING: send: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u\n",
-                    dtmf.event,dtmf.e,dtmf.r,dtmf.volume,duration,current_send_dtmf_ts);
+                DBG("DTMF_SEND_SENDING: ts:%u send: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u\n",
+                    ts, dtmf.event,dtmf.e,dtmf.r,dtmf.volume,duration,current_send_dtmf_ts);
 
                 stream->compile_and_send(
                     static_cast<int>(remote_pt),
-                    duration == DTMF_EVENT_MIN_DURATION,
+                    sending_state == DTMF_SEND_SENDING_FIRST,
                     current_send_dtmf_ts,
                     reinterpret_cast<unsigned char*>(&dtmf), sizeof(dtmf_payload_t));
-                return true;
+
+                if(sending_state == DTMF_SEND_SENDING_FIRST)
+                    sending_state = DTMF_SEND_SENDING;
+
+                return false;
             } else {
                 sending_state = DTMF_SEND_ENDING;
                 send_dtmf_end_repeat = 0;
             }
         } break;
-        case DTMF_SEND_ENDING:  {
+        case DTMF_SEND_ENDING: {
             if (send_dtmf_end_repeat >= 3) {
                 DBG("DTMF send complete\n");
                 sending_state = DTMF_SEND_NONE;
@@ -108,10 +136,10 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 //if (!remote_telephone_event_pt.get())
                 //return;
                 dtmf_payload_t dtmf;
-                dtmf.event = static_cast<u_int8>(current_send_dtmf.first);
+                dtmf.event = static_cast<u_int8>(current_event.event);
                 dtmf.e = 1;
                 dtmf.r = 0;
-                dtmf.duration = htons(current_send_dtmf.second);
+                dtmf.duration = htons(send_dtmf_duration_ts);
                 dtmf.volume = 20;
 
                 DBG("sending DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u\n",

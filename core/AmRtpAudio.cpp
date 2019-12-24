@@ -184,6 +184,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             static_cast<unsigned int>(AUDIO_BUFFER_SIZE), rtp_ts,
             new_payload,last_samples_relayed);
 
+        //DBG("AmRtpStream::receive: %d", size);
         if(size <= 0) {
 
             switch(size){
@@ -352,6 +353,27 @@ int AmRtpAudio::put(
     return send(static_cast<unsigned int>(user_ts),
                 static_cast<unsigned char*>(samples),
                 static_cast<unsigned int>(s));
+}
+
+void AmRtpAudio::put_on_idle(unsigned long long system_ts)
+{
+    //DBG("%llu put_on_idle",system_ts);
+    last_send_ts_i = true;
+    last_send_ts = system_ts;
+
+    if ((mute) || (hold))
+        return;
+
+    AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
+
+    // pre-division by 100 is important
+    // so that the first multiplication
+    // does not overflow the 64bit int
+    unsigned long long user_ts =
+        system_ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
+        / (WALLCLOCK_RATE/100);
+
+    process_dtmf_queue(get_adjusted_ts(user_ts, media_processor_ts_shift));
 }
 
 void AmRtpAudio::getSdpOffer(unsigned int index, SdpMedia& offer)
@@ -623,4 +645,10 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
 void AmRtpAudio::onRtpTimeout()
 {
     session->postEvent(new AmRtpTimeoutEvent());
+}
+
+void AmRtpAudio::sendDtmf(int event, unsigned int duration_ms)
+{
+    CLASS_DBG("AmRtpAudio::sendDtmf(event = %d, duration = %u)",event,duration_ms);
+    dtmf_sender.queueEvent(event,duration_ms,getLocalTelephoneEventRate(), frame_size);
 }

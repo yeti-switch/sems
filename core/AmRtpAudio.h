@@ -150,6 +150,8 @@ public:
   int put(unsigned long long system_ts, unsigned char* buffer, 
 	  int input_sample_rate, unsigned int size);
 
+  void put_on_idle(unsigned long long system_ts);
+
   unsigned int bytes2samples(unsigned int) const;
 
   // AmRtpStream interface
@@ -173,6 +175,13 @@ public:
   unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer);
 
   bool isLastSamplesRelayed() { return last_samples_relayed; }
+
+  /**
+  * send a DTMF as RTP payload (RFC4733)
+  * @param event event ID (e.g. key press), see rfc
+  * @param duration_ms duration in milliseconds
+  */
+  void sendDtmf(int event, unsigned int duration_ms);
 
 protected:
   int read(unsigned int user_ts, unsigned int size) { return 0; }

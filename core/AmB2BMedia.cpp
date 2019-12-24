@@ -585,6 +585,9 @@ int AudioStreamData::writeStream(unsigned long long ts, unsigned char *buffer, A
             //CLASS_DBG("stream->put(%llu,%d)",ts,got);
             return stream->put(ts, buffer, sample_rate,
                                static_cast<unsigned int>(got));
+        } else {
+            //to process stuff like dtmf queues even on no data received for stream
+            stream->put_on_idle(ts);
         }
     }
     return 0;
