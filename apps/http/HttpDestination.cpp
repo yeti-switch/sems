@@ -195,7 +195,11 @@ int HttpDestination::parse(const string &name, cfg_t *cfg)
     }
 
     if(mode==Post) {
-        content_type = cfg_getstr(cfg, "content_type");
+        if(!cfg_size(cfg, PARAM_CONTENT_TYPE_NAME)) {
+            ERROR("absent 'content_type' for post mode");
+            return -1;
+        }
+        content_type = cfg_getstr(cfg, PARAM_CONTENT_TYPE_NAME);
     }
 
     return 0;
