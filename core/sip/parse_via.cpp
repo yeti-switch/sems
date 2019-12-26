@@ -85,9 +85,12 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 	TR_BEG,
 	TR_UDP,
 	TR_T,
+	TR_W,
 	TR_TCP,
 	TR_TLS,
 	TR_SCTP,
+	TR_WS,
+	TR_WSS,
 	TR_OTHER
     };
 
@@ -135,6 +138,11 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 		    st = TR_OTHER;
 		break;
 
+	    case 'w':
+	    case 'W':
+		st = TR_W;
+		break;
+
 	    case 't':
 	    case 'T':
 		st = TR_T;
@@ -142,7 +150,7 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 
 	    case 's':
 	    case 'S':
-		if ( (len >= 4) && 
+		if ( (len >= 4) &&
 		     ( (*(*c+1) == 'c') || (*(*c+1) == 'C') ) &&
 		     ( (*(*c+2) == 't') || (*(*c+2) == 'T') ) &&
 		     ( (*(*c+3) == 'p') || (*(*c+3) == 'P') ) ) {
@@ -160,6 +168,23 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 		break;
 	    }
 	    break;
+
+	case TR_W:
+	    switch(**c){
+	    case 's':
+	    case 'S':
+		if( (len >= 3) &&
+		    ( (*(*c+1) == 's') || (*(*c+1) == 'S')) ){
+		    t->type = sip_transport::WSS;
+		    st = TR_WSS;
+		    (*c)++;
+		}
+		else {
+		    t->type = sip_transport::WS;
+		    st = TR_WS;
+        }
+        }
+		break;
 
 	case TR_T:
 	    switch(**c){
@@ -196,6 +221,8 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 	case TR_UDP:
 	case TR_TCP:
 	case TR_TLS:
+	case TR_WS:
+	case TR_WSS:
 	case TR_SCTP:
 	    switch(**c){
 	    case '\0':
@@ -659,6 +686,10 @@ cstring transport_str(int transport_id)
         return "TCP";
     case sip_transport::TLS:
         return "TLS";
+    case sip_transport::WS:
+        return "WS";
+    case sip_transport::WSS:
+        return "WSS";
     case sip_transport::SCTP:
         return "SCTP";
     }

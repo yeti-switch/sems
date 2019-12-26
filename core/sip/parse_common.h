@@ -101,10 +101,16 @@ using std::list;
 #define SIP_str    "SIP"
 #define SUP_SIPVER "/2.0"
 
+#define HTTP_str    "HTTP"
+
 #define SIP_len        (sizeof(SIP_str)-/*0-term*/1)
 #define SUP_SIPVER_len (sizeof(SUP_SIPVER)-/*0-term*/1)
 
+#define HTTP_len        (sizeof(HTTP_str)-/*0-term*/1)
+
 #define SIPVER_len (SIP_len+SUP_SIPVER_len)
+
+#define HTTPVER_len (HTTP_len+SUP_SIPVER_len)
 
 //
 // Common states: (>100)

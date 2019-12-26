@@ -54,34 +54,38 @@ class trsp_socket;
 enum {
     SIP_UNKNOWN=0,
     SIP_REQUEST,
-    SIP_REPLY
+    SIP_REPLY,
+    HTTP_REQUEST,
+    HTTP_REPLY
 };
 
 
 struct sip_request
 {
-    //
-    // Request methods
-    //
-    
     enum {
 	OTHER_METHOD=0,
+    //sip method
 	INVITE,
 	ACK,
         PRACK,
 	OPTIONS,
 	BYE,
 	CANCEL,
-	REGISTER
+	REGISTER,
+    //http method
+    GET
     };
-
+    
+    //
+    // Request methods
+    //
+    
     cstring  method_str;
     int      method;
 
     cstring  ruri_str;
     sip_uri  ruri;
 };
-
 
 struct sip_reply
 {
@@ -100,7 +104,6 @@ struct sip_reply
     {}
 };
 
-
 struct sip_msg
 {
     char*   buf;
@@ -110,8 +113,8 @@ struct sip_msg
     int     type; 
 
     union {
-	sip_request* request;
-	sip_reply*   reply;
+	struct sip_request* request;
+	struct sip_reply*   reply;
     }u;
 
     list<sip_header*>  hdrs;
@@ -134,6 +137,15 @@ struct sip_msg
     sip_header*        content_type;
     sip_header*        content_length;
     cstring            body;
+
+    sip_header*        connection;
+    sip_header*        upgrade;
+    sip_header*        origin;
+    sip_header*        sec_ws_version;
+    sip_header*        sec_ws_key;
+    sip_header*        sec_ws_ext;
+    sip_header*        sec_ws_accept;
+    sip_header*        sec_ws_protocol;
 
     sockaddr_storage   local_ip;
     trsp_socket*       local_socket;
@@ -162,6 +174,7 @@ struct sip_msg
 int parse_method(int* method, const char* beg, int len);
 int parse_headers(sip_msg* msg, char** c, char* end);
 int parse_sip_msg(sip_msg* msg, char*& err_msg);
+int parse_http_msg(sip_msg* msg, char*& err_msg);
 
 #define get_contact(msg) (msg->contacts.empty() ? NULL : (*msg->contacts.begin()))
 

@@ -22,13 +22,50 @@ using std::string;
 
 class trsp_server_socket;
 class trsp_worker;
+class tcp_base_trsp;
+struct sip_msg;
+
+struct trsp_input
+{
+    virtual void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg) = 0;
+    virtual unsigned char* get_input() = 0;
+    virtual int get_input_free_space() = 0;
+    virtual void add_input_len(int len) = 0;
+    virtual int on_input(tcp_base_trsp* socket) = 0;
+};
+
+class trsp_base_input : public trsp_input
+{
+    unsigned char    input_buf[MAX_TCP_MSGLEN];
+    int              input_len;
+    parser_state     pst;
+public:
+    trsp_base_input();
+    virtual ~trsp_base_input(){}
+    unsigned char*   get_input() { return input_buf + input_len; }
+    int              get_input_free_space() {
+        if(input_len > MAX_TCP_MSGLEN) return 0;
+        return MAX_TCP_MSGLEN - input_len;
+    }
+    void add_input_len(int len){
+        input_len += len;
+    }
+
+    void reset_input() {
+        input_len = 0;
+    }
+    void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg);
+    int parse_input(tcp_base_trsp* socket);
+};
 
 class tcp_base_trsp : public trsp_socket
 {
 protected:
     friend class trsp_worker;
+    friend class trsp_base_input;
     trsp_server_socket* server_sock;
     trsp_worker* server_worker;
+    trsp_input* input;
 
     bool             closed;
     bool             connected;
@@ -37,14 +74,11 @@ protected:
     unsigned short   peer_port;
     bool             peer_addr_valid;
 
-    parser_state     pst;
-    unsigned char    input_buf[MAX_TCP_MSGLEN];
-    int              input_len;
-
     struct event_base* evbase;
     struct event*      read_ev;
     struct event*      write_ev;
 
+public:
     struct msg_buf {
         sockaddr_storage addr;
         char*            msg;
@@ -58,23 +92,10 @@ protected:
         int bytes_left() { return msg_len - (cursor - msg); }
     };
 
+protected:
     AmMutex sock_mut;
     deque<msg_buf*> send_q;
 
-    virtual unsigned char*   get_input() { return input_buf + input_len; }
-    virtual int              get_input_free_space() {
-        if(input_len > MAX_TCP_MSGLEN) return 0;
-        return MAX_TCP_MSGLEN - input_len;
-    }
-    virtual void add_input_len(int len){
-        input_len += len;
-    }
-
-    void reset_input() {
-        input_len = 0;
-    }
-
-    int parse_input();
 
     /** fake implementation: we will never bind a connection socket */
     int bind(const string& address, unsigned short port) {
@@ -143,13 +164,12 @@ protected:
 
     virtual void pre_write(){}
     virtual void post_write(){}
-    virtual int on_input() = 0;
 
     static void on_sock_read(int fd, short ev, void* arg);
     static void on_sock_write(int fd, short ev, void* arg);
 
     tcp_base_trsp(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
-                  const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
+                  const sockaddr_storage* sa, socket_transport transport, event_base* evbase, trsp_input* input);
     virtual ~tcp_base_trsp();
 
 public:

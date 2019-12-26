@@ -24,6 +24,8 @@
 #define SECTION_IP6_NAME             "ip6"
 #define SECTION_RTSP_NAME            "rtsp"
 #define SECTION_RTP_NAME             "rtp"
+#define SECTION_SIP_WS_NAME          "sip-ws"
+#define SECTION_SIP_WSS_NAME         "sip-wss"
 #define SECTION_SIP_TLS_NAME         "sip-tls"
 #define SECTION_SIP_TCP_NAME         "sip-tcp"
 #define SECTION_SIP_UDP_NAME         "sip-udp"
@@ -64,6 +66,7 @@
 #define PARAM_PUBLIC_ADDR_NAME       "public-address"
 #define PARAM_CONNECT_TIMEOUT_NAME   "connect-timeout"
 #define PARAM_IDLE_TIMEOUT_NAME      "idle-timeout"
+#define PARAM_CORS_MODE_NAME         "cors_mode"
 #define PARAM_WHITELIST_NAME         "whitelist"
 #define PARAM_METHOD_NAME            "method"
 #define PARAM_PATH_NAME              "path"
@@ -383,6 +386,46 @@ namespace Config {
         CFG_END()
     };
 
+    static cfg_opt_t sip_wss[] =
+    {
+        CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
+        CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CORS_MODE_NAME, cfg_false, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    static cfg_opt_t sip_ws[] =
+    {
+        CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
+        CFG_INT(PARAM_PORT_NAME, 0, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
+        CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_BOOL(PARAM_CORS_MODE_NAME, cfg_false, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
     static cfg_opt_t ip[] =
     {
         CFG_SEC(SECTION_RTSP_NAME, rtsp, CFGF_NODEFAULT),
@@ -390,6 +433,8 @@ namespace Config {
         CFG_SEC(SECTION_SIP_TCP_NAME, sip_tcp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SIP_UDP_NAME, sip_udp, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SIP_TLS_NAME, sip_tls, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SIP_WS_NAME, sip_ws, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SIP_WSS_NAME, sip_wss, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -1155,27 +1200,59 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
                 }
                 sip_if.proto_info.push_back(info);
             }
+            if(cfg_size(ip4, SECTION_SIP_WS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_WS_NAME);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V4));
+                if(!info) {
+                    return -1;
+                }
+                sip_if.proto_info.push_back(info);
+            }
+            if(cfg_size(ip4, SECTION_SIP_WSS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_WSS_NAME);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V4));
+                if(!info) {
+                    return -1;
+                }
+                sip_if.proto_info.push_back(info);
+            }
         }
         if(cfg_size(if_, SECTION_IP6_NAME)) {
-            cfg_t* ip4 = cfg_getsec(if_, SECTION_IP6_NAME);
-            if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
-                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_UDP_NAME);
+            cfg_t* ip6 = cfg_getsec(if_, SECTION_IP6_NAME);
+            if(cfg_size(ip6, SECTION_SIP_UDP_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip6, SECTION_SIP_UDP_NAME);
                 SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
                 sip_if.proto_info.push_back(info);
             }
-            if(cfg_size(ip4, SECTION_SIP_TCP_NAME)) {
-                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TCP_NAME);
+            if(cfg_size(ip6, SECTION_SIP_TCP_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip6, SECTION_SIP_TCP_NAME);
                 SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
                 }
                 sip_if.proto_info.push_back(info);
             }
-            if(cfg_size(ip4, SECTION_SIP_TLS_NAME)) {
-                cfg_t* cfg = cfg_getsec(ip4, SECTION_SIP_TLS_NAME);
+            if(cfg_size(ip6, SECTION_SIP_TLS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip6, SECTION_SIP_TLS_NAME);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
+                if(!info) {
+                    return -1;
+                }
+                sip_if.proto_info.push_back(info);
+            }
+            if(cfg_size(ip6, SECTION_SIP_WS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip6, SECTION_SIP_WS_NAME);
+                SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
+                if(!info) {
+                    return -1;
+                }
+                sip_if.proto_info.push_back(info);
+            }
+            if(cfg_size(ip6, SECTION_SIP_WSS_NAME)) {
+                cfg_t* cfg = cfg_getsec(ip6, SECTION_SIP_WSS_NAME);
                 SIP_info* info = dynamic_cast<SIP_info*>(readInterface(cfg, sip_if.name, AT_V6));
                 if(!info) {
                     return -1;
@@ -1280,6 +1357,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
     SIP_UDP_info* suinfo = nullptr;
     SIP_TCP_info* stinfo = nullptr;
     SIP_TLS_info* stlinfo = nullptr;
+    WS_info* wsinfo = nullptr;
     MEDIA_info* mediainfo = nullptr;
     RTP_info* rtpinfo = nullptr;
 
@@ -1289,6 +1367,14 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
         info = sinfo = stinfo = new SIP_TCP_info();
     } else if(strcmp(cfg->name, SECTION_SIP_TLS_NAME) == 0) {
         info = sinfo = stinfo = stlinfo = new SIP_TLS_info();
+    } else if(strcmp(cfg->name, SECTION_SIP_WS_NAME) == 0) {
+        SIP_WS_info *pinfo = new SIP_WS_info();
+        info = sinfo = stinfo = static_cast<SIP_TCP_info*>(pinfo);
+        wsinfo = static_cast<WS_info*>(pinfo);
+    } else if(strcmp(cfg->name, SECTION_SIP_WSS_NAME) == 0) {
+        SIP_WSS_info *pinfo = new SIP_WSS_info();
+        info = sinfo = stinfo = stlinfo = static_cast<SIP_TLS_info*>(pinfo);
+        wsinfo = static_cast<WS_info*>(pinfo);
     } else if(strcmp(cfg->name, SECTION_RTP_NAME) == 0) {
         info = mediainfo = rtpinfo = new RTP_info();
     } else if(strcmp(cfg->name, SECTION_RTSP_NAME) == 0) {
@@ -1436,7 +1522,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
         stinfo->tcp_idle_timeout = cuint(cfg_getint(cfg, PARAM_IDLE_TIMEOUT_NAME));
     }
 
-    //STL specific opts
+    //TLS specific opts
     if(stlinfo) {
         cfg_t* server = cfg_getsec(cfg, SECTION_SERVER_NAME);
         if(!server) {
@@ -1493,6 +1579,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
             stlinfo->client_settings.ca_list.push_back(ca);
         }
+    }
+
+    if(wsinfo) {
+        wsinfo->cors_mode = cfg_getbool(cfg, PARAM_CORS_MODE_NAME);
     }
 
     return info;

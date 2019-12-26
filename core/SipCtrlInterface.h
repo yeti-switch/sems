@@ -52,6 +52,8 @@ class udp_trsp;
 
 class tcp_server_socket;
 class tls_server_socket;
+class ws_server_socket;
+class wss_server_socket;
 class trsp_worker;
 class trsp;
 
@@ -80,11 +82,16 @@ class _SipCtrlInterface:
     unsigned short    nr_tls_sockets;
     tls_server_socket** tls_sockets;
 
+    unsigned short    nr_ws_sockets;
+    ws_server_socket** ws_sockets;
+
+    unsigned short    nr_wss_sockets;
+    wss_server_socket** wss_sockets;
+
     unsigned short    nr_trsp_workers;
     trsp_worker** trsp_workers;
     
     trsp* trsp_server;
-
 
     int alloc_udp_structs();
     int init_udp_sockets(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
@@ -92,12 +99,18 @@ class _SipCtrlInterface:
 
     int alloc_trsp_worker_structs();
     int init_trsp_workers();
-    
+
     int alloc_tcp_structs();
     int init_tcp_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
-    
+
     int alloc_tls_structs();
     int init_tls_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+
+    int alloc_ws_structs();
+    int init_ws_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+
+    int alloc_wss_structs();
+    int init_wss_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
 public:
 
     static string outbound_host;

@@ -92,20 +92,12 @@ public:
 
 typedef singleton<tls_session_manager> session_manager_tls;
 
-class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
+class tls_input : public trsp_base_input
 {
-    bool tls_connected;
-    uint16_t ciphersuite;
-    deque<msg_buf*> orig_send_q;
-
     unsigned char    orig_input_buf[MAX_TCP_MSGLEN];
     int              orig_input_len;
-
-    Botan::TLS::Channel* tls_channel;
-    tls_conf settings;
-
-    void generate_transport_errors();
-
+public:
+    tls_input();
     unsigned char*   get_input() { return orig_input_buf + orig_input_len; }
     int              get_input_free_space() {
         if(orig_input_len > MAX_TCP_MSGLEN) return 0;
@@ -114,12 +106,30 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
     void reset_input() {
         orig_input_len = 0;
     }
+    void add_input_len(int len){
+        orig_input_len += len;
+    }
+    int on_input(tcp_base_trsp* trsp);
 
+    virtual int on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size);
+};
+
+class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
+{
+    bool tls_connected;
+    uint16_t ciphersuite;
+
+    Botan::TLS::Channel* tls_channel;
+    tls_conf settings;
 
     friend class tls_socket_factory;
-    const char* get_transport() const { return "tls"; }
+    friend class tls_input;
     tls_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
+
+    void init(const sockaddr_storage* sa);
+
+    void generate_transport_errors();
 
     void tls_emit_data(const uint8_t data[], size_t size);
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
@@ -131,15 +141,17 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
                                 Botan::Usage_Type usage,
                                 const std::string& hostname,
                                 const Botan::TLS::Policy& policy);
+protected:
+    deque<msg_buf*> orig_send_q;
+protected:
+    const char* get_transport() const { return "tls"; }
+    tls_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
+                            const sockaddr_storage* sa, socket_transport transport, event_base* evbase, trsp_input* input);
 public:
     virtual ~tls_trsp_socket();
 
-    int on_input();
     void pre_write();
     void post_write();
-    void add_input_len(int len){
-        orig_input_len += len;
-    }
 
     void copy_peer_addr(sockaddr_storage* sa);
 
@@ -156,7 +168,16 @@ public:
                                          int sd, const sockaddr_storage* sa, event_base* evbase);
 };
 
-class tls_server_socket : public trsp_server_socket
+class tls_trsp_settings
+{
+public:
+    tls_trsp_settings(const tls_conf& s_client, const tls_conf& s_server);
+    virtual ~tls_trsp_settings(){}
+    tls_conf client_settings;
+    tls_conf server_settings;
+};
+
+class tls_server_socket : public trsp_server_socket, public tls_trsp_settings
 {
 public:
     tls_server_socket(unsigned short if_num, unsigned short proto_idx,
@@ -166,8 +187,6 @@ public:
 
     const char* get_transport() const { return "tls"; }
 
-    tls_conf client_settings;
-    tls_conf server_settings;
 };
 
 void tls_cleanup();

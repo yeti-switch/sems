@@ -63,7 +63,11 @@ public:
         tcp_ipv4,
         tcp_ipv6,
         tls_ipv4,
-        tls_ipv6
+        tls_ipv6,
+        ws_ipv4,
+        ws_ipv6,
+        wss_ipv4,
+        wss_ipv6
     };
 
     static int log_level_raw_msgs;

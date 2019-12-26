@@ -57,6 +57,14 @@ sip_msg::sip_msg(const char* msg_buf, int msg_len)
       record_route(),
       content_type(NULL),
       content_length(NULL),
+      connection(NULL),
+      upgrade(NULL),
+      origin(NULL),
+      sec_ws_version(NULL),
+      sec_ws_key(NULL),
+      sec_ws_ext(NULL),
+      sec_ws_accept(NULL),
+      sec_ws_protocol(NULL),
       body(),
       local_socket(NULL),
       type(SIP_UNKNOWN)
@@ -84,6 +92,14 @@ sip_msg::sip_msg()
       record_route(),
       content_type(NULL),
       content_length(NULL),
+      connection(NULL),
+      upgrade(NULL),
+      origin(NULL),
+      sec_ws_version(NULL),
+      sec_ws_key(NULL),
+      sec_ws_ext(NULL),
+      sec_ws_accept(NULL),
+      sec_ws_protocol(NULL),
       body(),
       local_socket(NULL),
       type(SIP_UNKNOWN),
@@ -109,10 +125,10 @@ sip_msg::~sip_msg()
     }
 
     if(u.request){
-	if(type == SIP_REQUEST && u.request){
+	if((type == SIP_REQUEST || type == HTTP_REQUEST) && u.request){
 	    delete u.request;
 	}
-	else if(type == SIP_REPLY && u.reply) {
+	else if((type == SIP_REPLY  || type == HTTP_REPLY) && u.reply) {
 	    delete u.reply;
 	}
     }
@@ -165,6 +181,8 @@ const char* REGISTERm = "REGISTER";
 const char *PRACKm = "PRACK";
 #define PRACK_len 5
 
+const char* GETm = "GET";
+#define GET_len 3
 
 int parse_method(int* method, const char* beg, int len)
 {
@@ -205,6 +223,12 @@ int parse_method(int* method, const char* beg, int len)
 	    if(!memcmp(c+1,BYEm+1,BYE_len-1)){
 		//DBG("Found BYE\n");
 		*method = sip_request::BYE;
+	    }
+	    break;
+    case 'G':
+	    if(!memcmp(c+1,GETm+1,GET_len-1)){
+		//DBG("Found BYE\n");
+		*method = sip_request::GET;
 	    }
 	    break;
 	}
@@ -251,13 +275,25 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 	FL_METH=0,
 	FL_RURI,
 	
-	FL_SIPVER1,     // 'S'
+    FL_SIPVER1,      //'S' || 'H'
+
 	FL_SIPVER2,     // 'I'
 	FL_SIPVER3,     // 'P'
-	FL_SIPVER4,     // '/'
-	FL_SIPVER_DIG1, // 1st digit
-	FL_SIPVER_SEP,  // '.'
-	FL_SIPVER_DIG2, // 2st digit
+
+	FL_SIPVER4,     // 'T'
+	FL_SIPVER5,     // 'T'
+	FL_SIPVER6,     // 'P'
+
+	FL_SIPVER7,     // '/'
+
+	FL_SIPVER_DIG1_1, // 1st digit for sip '2'
+	FL_SIPVER_DIG1_2, // 1st digit for http '0' || '1'
+	FL_SIPVER_SEP_1,  // '.' for sip
+	FL_SIPVER_SEP_2,  // '.' for http 0.9
+	FL_SIPVER_SEP_3,  // '.' for http 1.1 || 1.0
+	FL_SIPVER_DIG2_1, // 2st digit for sip '0'
+	FL_SIPVER_DIG2_2, // 2st digit for http 0.9
+	FL_SIPVER_DIG2_3, // 2st digit for http 1.0 || 1.1
 
 	FL_SIPVER_SP,   // ' '
 
@@ -281,77 +317,131 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 
 	switch(st){
 
-#define case_SIPVER(ch1,ch2,st1,st2)		\
-	    case st1:				\
-		switch(**c){			\
-		case ch1:			\
-		case ch2:			\
-		    st = st2;			\
-		    break;			\
-		default:			\
-		    if(!is_request){		\
-			st = FL_METH;		\
-			(*c)--;			\
-		    }				\
-		    else {			\
-			st = FL_ERR;		\
-		    }				\
-		}				\
-		break
+#define case_SIPVER_case1(ch1, st2)     \
+            case ch1:                   \
+		    st = st2;
 
-	case_SIPVER('S','s',FL_SIPVER1,FL_SIPVER2);
+#define case_SIPVER_case2(ch1, ch2, st2)    \
+            case ch1:                       \
+            case ch2:                       \
+		    st = st2;
+
+#define case_SIPVER_case3(ch1, ch2, ch3, st2)    \
+            case ch1:                            \
+            case ch2:                            \
+            case ch3:                            \
+		    st = st2;
+
+#define case_SIPVER_type(type1, type2) \
+		    if(is_request) msg->type = type1;         \
+            else msg->type = type2;                   \
+		    break;
+
+#define case_SIPVER_BEGIN(st1)              \
+	    case st1:                           \
+		switch(**c){
+
+#define case_SIPVER_END()                   \
+		default:                            \
+		    if(!is_request){                \
+			st = FL_METH;                   \
+			(*c)--;                         \
+		    }                               \
+		    else {                          \
+			st = FL_ERR;                    \
+		    }                               \
+		}                                   \
+		break;
+
+#define case_SIPVER(ch1, ch2, st1, st2)      \
+        case_SIPVER_BEGIN(st1)               \
+            case_SIPVER_case2(ch1, ch2, st2) \
+            break;                           \
+        case_SIPVER_END()
+
+	case_SIPVER_BEGIN(FL_SIPVER1)
+        case_SIPVER_case2('S', 's',FL_SIPVER2)
+        case_SIPVER_type(SIP_REQUEST, SIP_REPLY)
+        case_SIPVER_case2('H', 'h', FL_SIPVER4)
+        case_SIPVER_type(HTTP_REQUEST, HTTP_REPLY)
+    case_SIPVER_END()
 	case_SIPVER('I','i',FL_SIPVER2,FL_SIPVER3);
-	case_SIPVER('P','p',FL_SIPVER3,FL_SIPVER4);
+	case_SIPVER('P','p',FL_SIPVER3,FL_SIPVER7);
 
-	case FL_SIPVER4:     // '/'
+	case_SIPVER('T','t',FL_SIPVER4,FL_SIPVER5);
+	case_SIPVER('T','t',FL_SIPVER5,FL_SIPVER6);
+	case_SIPVER('P','p',FL_SIPVER6,FL_SIPVER7);
+
+	case FL_SIPVER7:     // '/'
 	    if(**c == '/'){
-		st = FL_SIPVER_DIG1;
+            if(msg->type <= SIP_REPLY)
+                st = FL_SIPVER_DIG1_1;
+            else if(msg->type <= HTTP_REPLY)
+                st = FL_SIPVER_DIG1_2;
 	    }
 	    else if(!is_request){
-		st = FL_METH;
-		(*c)--;
+            st = FL_METH;
+            (*c)--;
 	    }
 	    else {
-		st = FL_ERR;
+            st = FL_ERR;
 	    }
 	    break;
 
 #undef case_SIPVER
-#define case_SIPVER(ch1,st1,st2)		\
-	    case st1:				\
-		switch(**c){			\
-		case ch1:			\
-		    st = st2;			\
-		    break;			\
-		default:			\
-		    st = FL_ERR;		\
-		    break;			\
-		}				\
-		break
+#undef case_SIPVER_END
+#define case_SIPVER_END()   \
+        default:            \
+		    st = FL_ERR;    \
+		    break;          \
+		}                   \
+		break;
 
-	case_SIPVER('2',FL_SIPVER_DIG1,FL_SIPVER_SEP);
-	case_SIPVER('.',FL_SIPVER_SEP,FL_SIPVER_DIG2);
+#define case_SIPVER(ch1, st1, st2)      \
+        case_SIPVER_BEGIN(st1)          \
+            case_SIPVER_case1(ch1, st2) \
+            break;                      \
+        case_SIPVER_END()
 
-	case FL_SIPVER_DIG2:
-	    if(**c == '0'){
-		if(is_request)
-		    st = FL_EOL;
-		else {
-		    msg->type = SIP_REPLY;
-		    msg->u.reply = new sip_reply;
-		    st = FL_SIPVER_SP;
-		}
-	    }
-	    else {
-	      st = FL_ERR;
-	    }
-	    break;
+    case_SIPVER('2', FL_SIPVER_DIG1_1, FL_SIPVER_SEP_1)
+    case_SIPVER_BEGIN(FL_SIPVER_DIG1_2)
+            case_SIPVER_case1('0', FL_SIPVER_SEP_2)
+            break;
+            case_SIPVER_case1('1', FL_SIPVER_SEP_3)
+            break;
+    case_SIPVER_END()
+    case_SIPVER('.', FL_SIPVER_SEP_1, FL_SIPVER_DIG2_1)
+    case_SIPVER('.', FL_SIPVER_SEP_2, FL_SIPVER_DIG2_2)
+    case_SIPVER('.', FL_SIPVER_SEP_3, FL_SIPVER_DIG2_3)
+    case_SIPVER_BEGIN(FL_SIPVER_DIG2_1)
+            case_SIPVER_case1('0', FL_SIPVER_SP)
+            if(is_request)
+                st = FL_EOL;
+            else
+                msg->u.reply = new sip_reply;
+            break;
+    case_SIPVER_END()
+    case_SIPVER_BEGIN(FL_SIPVER_DIG2_2)
+            case_SIPVER_case1('9', FL_SIPVER_SP)
+            if(is_request)
+                st = FL_EOL;
+            else
+                msg->u.reply = new sip_reply;
+            break;
+    case_SIPVER_END()
+    case_SIPVER_BEGIN(FL_SIPVER_DIG2_3)
+            case_SIPVER_case2('0', '1', FL_SIPVER_SP)
+            if(is_request)
+                st = FL_EOL;
+            else
+                msg->u.reply = new sip_reply;
+            break;
+    case_SIPVER_END()
 
 	case FL_METH:
 	    switch(**c){
 	    case SP:
-		msg->type = SIP_REQUEST;
-		msg->u.request = new sip_request;
+        msg->u.request = new sip_request;
 		msg->u.request->method_str.set(beg,*c-beg);
 		err = parse_method(&msg->u.request->method,beg,*c-beg);
 		if(err)
@@ -373,9 +463,11 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 	    switch(**c){
 	    case SP:
 		msg->u.request->ruri_str.set(beg, *c-beg); 
-		err = parse_uri(&msg->u.request->ruri, beg, *c-beg);
-		if(err)
-		    return err;
+        if(msg->u.request->method <= sip_request::REGISTER) {
+            err = parse_uri(&msg->u.request->ruri, beg, *c-beg);
+            if(err)
+                return err;
+        }
 		st = FL_SIPVER1;
 		is_request = true;
 		break;
@@ -506,7 +598,6 @@ int parse_headers(sip_msg* msg, char** c, char* end)
 	    case sip_header::H_RACK:
 		if(msg->type == SIP_REQUEST && 
 		   msg->u.request->method == sip_request::PRACK) {
-		    
 		    msg->rack = hdr;
 		}
 		break;
@@ -521,6 +612,38 @@ int parse_headers(sip_msg* msg, char** c, char* end)
 
 	    case sip_header::H_RECORD_ROUTE:
 		msg->record_route.push_back(hdr);
+		break;
+
+	    case sip_header::H_CONNECTION:
+		msg->connection = hdr;
+		break;
+
+	    case sip_header::H_UPGRADE:
+		msg->upgrade = hdr;
+		break;
+
+	    case sip_header::H_ORIGIN:
+		msg->origin = hdr;
+		break;
+
+	    case sip_header::H_SEC_WS_VERSION:
+		msg->sec_ws_version = hdr;
+		break;
+
+	    case sip_header::H_SEC_WS_KEY:
+		msg->sec_ws_key = hdr;
+		break;
+
+	    case sip_header::H_SEC_WS_EXT:
+		msg->sec_ws_ext = hdr;
+		break;
+
+	    case sip_header::H_SEC_WS_PROTOCOL:
+		msg->sec_ws_protocol= hdr;
+		break;
+
+	    case sip_header::H_SEC_WS_ACCEPT:
+		msg->sec_ws_accept = hdr;
 		break;
 	    }
 	    msg->hdrs.push_back(hdr);
@@ -548,6 +671,17 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
 	msg->body.set(c,msg->len - (c - msg->buf));
     }
 
+
+	if(msg->type > SIP_REPLY){
+	    err_msg = (char*)"incorrect type of protocol";
+        return MALFORMED_SIP_MSG;
+	}
+
+	if(msg->type == SIP_REQUEST && msg->u.request->method > sip_request::REGISTER){
+	    err_msg = (char*)"incorrect method of protocol";
+        return MALFORMED_SIP_MSG;
+	}
+
     if(!msg->via1 ||
        !msg->cseq ||
        !msg->from ||
@@ -556,7 +690,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
 
 	if(!msg->via1){
 	    err_msg = (char*)"missing Via header field";
-	} 
+	}
 	else if(!msg->cseq){
 	    err_msg = (char*)"missing CSeq header field";
 	}
@@ -633,6 +767,65 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
             return MALFORMED_SIP_MSG;
         }
     }
+
+    return 0;
+}
+
+int parse_http_msg(sip_msg* msg, char*& err_msg)
+{
+    char* c = msg->buf;
+    char* end = msg->buf + msg->len;
+
+    int err = parse_first_line(msg,&c,end);
+
+    if(err) {
+	err_msg = (char*)"Could not parse first line";
+	return MALFORMED_FLINE;
+    }
+
+    err = parse_headers(msg,&c,end);
+
+    if(!err){
+	msg->body.set(c,msg->len - (c - msg->buf));
+    }
+
+	if(msg->type < HTTP_REQUEST){
+	    err_msg = (char*)"incorrect type of protocol";
+        return MALFORMED_SIP_MSG;
+	}
+
+	if(msg->type == HTTP_REQUEST && msg->u.request->method < sip_request::GET){
+	    err_msg = (char*)"incorrect method of protocol";
+        return MALFORMED_SIP_MSG;
+	}
+
+    if(!msg->connection ||
+       !msg->upgrade ||
+       !msg->sec_ws_version) {
+	if(!msg->connection){
+	    err_msg = (char*)"missing Connection header field";
+	}
+
+	else if(!msg->upgrade){
+	    err_msg = (char*)"missing upgrade header field";
+	}
+
+	else if(!msg->sec_ws_version){
+	    err_msg = (char*)"missing sec_websocket_version header field";
+	}
+
+	return INCOMPLETE_SIP_MSG;
+    }
+
+    if(msg->type == HTTP_REQUEST && !msg->sec_ws_key){
+	    err_msg = (char*)"missing sec_websocket_key header field";
+        return INCOMPLETE_SIP_MSG;
+	}
+
+    if(msg->type == HTTP_REPLY && !msg->sec_ws_accept){
+	    err_msg = (char*)"missing sec_websocket_accept header field";
+        return INCOMPLETE_SIP_MSG;
+	}
 
     return 0;
 }

@@ -18,21 +18,30 @@
 //avoid sockets in WAITING state. close() will send RST and immediately remove entry from hashtable
 #define TCP_STATIC_CLIENT_PORT_CLOSE_NOWAIT 1
 
+int tcp_input::on_input(tcp_base_trsp * socket)
+{
+    return parse_input(socket);
+}
 
 tcp_trsp_socket::tcp_trsp_socket(trsp_server_socket* server_sock,
 				 trsp_worker* server_worker,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
-  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase)
-{}
+  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tcp_input)
+{
+}
+
+tcp_trsp_socket::tcp_trsp_socket(trsp_server_socket* server_sock,
+                 trsp_worker* server_worker,
+                 int sd, const sockaddr_storage* sa,
+                 trsp_socket::socket_transport transport,
+                 event_base* evbase, trsp_input* input)
+: tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input)
+{
+}
 
 tcp_trsp_socket::~tcp_trsp_socket()
 {}
-
-int tcp_trsp_socket::on_input()
-{
-    return parse_input();
-}
 
 int tcp_trsp_socket::send(const sockaddr_storage* sa, const char* msg, 
 			  const int msg_len, unsigned int flags)

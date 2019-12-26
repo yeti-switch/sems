@@ -26,18 +26,24 @@ using std::string;
 
 class tcp_server_socket;
 
+class tcp_input : public trsp_base_input
+{
+public:
+    int on_input(tcp_base_trsp * socket);
+};
+
 class tcp_trsp_socket: public tcp_base_trsp
 {
-
   friend class tcp_socket_factory;
-  const char* get_transport() const { return "tcp"; }
   tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
-
+protected:
+  tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
+                  const sockaddr_storage* sa, socket_transport transport,
+                  event_base* evbase, trsp_input* input);
+  const char* get_transport() const { return "tcp"; }
 public:
   ~tcp_trsp_socket();
-
-  int on_input();
 
   int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);

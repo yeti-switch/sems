@@ -55,6 +55,15 @@
 #define SIP_HDR_SUBSCRIPTION_STATE "Subscription-State"
 #define SIP_HDR_REPLACES          "Replaces"
 
+#define HTTP_HDR_CONNECTION       "Connection"
+#define HTTP_HDR_UPGRADE          "Upgrade"
+#define HTTP_HDR_ORIGIN           "Origin"
+#define HTTP_HDR_SEC_WS_VERSION   "Sec-WebSocket-Version"
+#define HTTP_HDR_SEC_WS_KEY       "Sec-WebSocket-Key"
+#define HTTP_HDR_SEC_WS_EXT       "Sec-WebSocket-Extensions"
+#define HTTP_HDR_SEC_WS_ACCEPT    "Sec-WebSocket-Accept"
+#define HTTP_HDR_SEC_WS_PROTOCOL  "Sec-WebSocket-Protocol"
+
 #define SIP_HDR_COL(_hdr)       _hdr ":"
 #define SIP_HDR_COLSP(_hdr)     SIP_HDR_COL(_hdr) " "
 #define COLSP                   ": "

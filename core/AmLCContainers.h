@@ -89,7 +89,9 @@ public:
         UNDEFINED = 0,
         UDP,
         TCP,
-        TLS
+        TLS,
+        WS,
+        WSS
     };
 
     SIP_info(SIP_type type)
@@ -116,6 +118,10 @@ public:
             return "UDP";
         } else if(type == SIP_info::TLS) {
             return "TLS";
+        } else if(type == SIP_info::WS) {
+            return "WS";
+        } else if(type == SIP_info::WSS) {
+            return "WSS";
         }
 
         return "";
@@ -176,6 +182,9 @@ public:
 
 class SIP_TLS_info : public SIP_TCP_info
 {
+protected:
+    explicit SIP_TLS_info(SIP_info::SIP_type type)
+    : SIP_TCP_info(type){}
 public:
     SIP_TLS_info()
     : SIP_TCP_info(TLS){}
@@ -198,6 +207,64 @@ public:
 
     virtual IP_info* Clone(){
         return new SIP_TLS_info(*this);
+    }
+};
+
+class WS_info
+{
+public:
+    WS_info()
+    : cors_mode(true){}
+    WS_info(const WS_info& info)
+    : cors_mode(info.cors_mode){}
+    virtual ~WS_info(){}
+
+    bool cors_mode;
+};
+
+class SIP_WS_info : public SIP_TCP_info, public WS_info
+{
+public:
+    SIP_WS_info()
+    : SIP_TCP_info(WS){}
+    SIP_WS_info(const SIP_WS_info& info)
+    : SIP_TCP_info(info)
+    , WS_info(info){}
+    virtual ~SIP_WS_info(){}
+
+    static SIP_WS_info* toSIP_WS(SIP_info* info)
+    {
+        if(info->type == WS) {
+            return static_cast<SIP_WS_info*>(info);
+        }
+        return 0;
+    }
+
+    virtual IP_info* Clone(){
+        return new SIP_WS_info(*this);
+    }
+};
+
+class SIP_WSS_info : public SIP_TLS_info, public WS_info
+{
+public:
+    SIP_WSS_info()
+    : SIP_TLS_info(WSS){}
+    SIP_WSS_info(const SIP_WSS_info& info)
+    : SIP_TLS_info(info)
+    , WS_info(info){}
+    virtual ~SIP_WSS_info(){}
+
+    static SIP_WSS_info* toSIP_WSS(SIP_info* info)
+    {
+        if(info->type == WSS) {
+            return static_cast<SIP_WSS_info*>(info);
+        }
+        return 0;
+    }
+
+    virtual IP_info* Clone(){
+        return new SIP_WSS_info(*this);
     }
 };
 

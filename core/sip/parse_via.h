@@ -42,6 +42,8 @@ struct sip_transport
 	TCP,
 	TLS,
 	SCTP,
+    WS,
+    WSS,
 	OTHER
     };
 

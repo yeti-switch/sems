@@ -11,80 +11,20 @@
 #include "AmLcConfig.h"
 #include "AmUtils.h"
 
-static string generate_ssl_options_string(sockaddr_ssl* sa)
+trsp_base_input::trsp_base_input()
+: input_len(0) 
 {
-    string ret;
-    ret += toString(sa->sig);
-    ret += ";";
-    ret += toString(sa->cipher);
-    ret += ";";
-    ret += toString(sa->mac);
-    return ret;
-}
-
-void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
-{
-    if(ev & (EV_READ|EV_TIMEOUT)) {
-        ((tcp_base_trsp*)arg)->on_read(ev);
-    }
-}
-
-void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
-{
-    if(ev & (EV_WRITE|EV_TIMEOUT)) {
-        ((tcp_base_trsp*)arg)->on_write(ev);
-    }
-}
-
-tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
-                             int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
-                             event_base* evbase_)
-    : trsp_socket(server_sock_->get_if(),server_sock_->get_proto_idx(),0,transport,0,sd),
-      server_sock(server_sock_), server_worker(server_worker_),
-      closed(false), connected(false),
-      input_len(0), evbase(evbase_),
-      read_ev(NULL), write_ev(NULL)
-{
-    // local address
-    actual_ip = ip = server_sock->get_ip();
-    actual_port = port = server_sock->get_port();
-    socket_options = server_sock->get_options();
-    server_sock->copy_addr_to(&addr);
-
-    // peer address
-    memcpy(&peer_addr,sa,sizeof(sockaddr_storage));
-
-    char host[NI_MAXHOST] = "";
-    peer_ip = am_inet_ntop(&peer_addr,host,NI_MAXHOST);
-    peer_port = am_get_port(&peer_addr);
-
     // async parser state
     pst.reset((char*)input_buf);
-
-    if(sd > 0) {
-        create_events();
-    }
 }
 
-tcp_base_trsp::~tcp_base_trsp()
+void trsp_base_input::on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg)
 {
-  DBG("********* connection destructor ***********");
-  if(read_ev) {
-      DBG("%p free read_ev %p",this, read_ev);
-      event_free(read_ev);
-  }
-  if(write_ev) {
-      DBG("%p free write_ev %p",this, write_ev);
-      event_free(write_ev);
-  }
-
-  if(sd > 0) {
-    ::close(sd);
-    sd = -1;
-  }
+    SIP_info *iface = AmConfig.sip_ifs[socket->server_sock->get_if()].proto_info[socket->server_sock->get_proto_idx()];
+    trans_layer::instance()->received_msg((sip_msg*)s_msg,iface->acl,iface->opt_acl);
 }
 
-int tcp_base_trsp::parse_input()
+int trsp_base_input::parse_input(tcp_base_trsp* socket)
 {
   for(;;) {
     int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
@@ -127,40 +67,48 @@ int tcp_base_trsp::parse_input()
     gettimeofday(&s_msg->recv_timestamp,NULL);
 
     //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
-    switch(get_transport_id()) {
-    case tls_ipv4:
-    case tls_ipv6:
+    switch(socket->get_transport_id()) {
+    case tcp_base_trsp::tls_ipv4:
+    case tcp_base_trsp::tls_ipv6:
         s_msg->transport_id = sip_transport::TLS;
         break;
-    case tcp_ipv4:
-    case tcp_ipv6:
+    case tcp_base_trsp::ws_ipv4:
+    case tcp_base_trsp::ws_ipv6:
+        s_msg->transport_id = sip_transport::WS;
+        break;
+    case tcp_base_trsp::tcp_ipv4:
+    case tcp_base_trsp::tcp_ipv6:
         s_msg->transport_id = sip_transport::TCP;
         break;
+    case tcp_base_trsp::wss_ipv4:
+    case tcp_base_trsp::wss_ipv6:
+        s_msg->transport_id = sip_transport::WSS;
+        break;
     default:
-        ERROR("unexpected socket transport_id: %d. set TCP as fallback", get_transport_id());
+        ERROR("unexpected socket transport_id: %d. set TCP as fallback", socket->get_transport_id());
         s_msg->transport_id = sip_transport::TCP;
     }
 
-    copy_peer_addr(&s_msg->remote_ip);
-    copy_addr_to(&s_msg->local_ip);
+    socket->copy_peer_addr(&s_msg->remote_ip);
+    socket->copy_addr_to(&s_msg->local_ip);
 
     char host[NI_MAXHOST] = "";
     DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv\n"
         "--++--\n%.*s--++--\n",
-        get_transport(),
-        sd,
+        socket->get_transport(),
+        socket->sd,
         am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
         am_get_port(&s_msg->remote_ip),
-        actual_ip.c_str(), actual_port,
+        am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
+        am_get_port(&s_msg->local_ip),
         s_msg->len,
         s_msg->len, s_msg->buf);
 
-    s_msg->local_socket = this;
-    inc_ref(this);
+    s_msg->local_socket = socket;
+    inc_ref(socket);
 
     // pass message to the parser / transaction layer
-    SIP_info *iface = AmConfig.sip_ifs[server_sock->get_if()].proto_info[server_sock->get_proto_idx()];
-    trans_layer::instance()->received_msg(s_msg,iface->acl,iface->opt_acl);
+    on_parsed_received_msg(socket, s_msg);
 
     char* msg_end = pst.orig_buf + msg_len;
     char* input_end = (char*)input_buf + input_len;
@@ -177,6 +125,76 @@ int tcp_base_trsp::parse_input()
 
   // fake:
   //return 0;
+}
+
+static string generate_ssl_options_string(sockaddr_ssl* sa)
+{
+    string ret;
+    ret += toString(sa->sig);
+    ret += ";";
+    ret += toString(sa->cipher);
+    ret += ";";
+    ret += toString(sa->mac);
+    return ret;
+}
+
+void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
+{
+    if(ev & (EV_READ|EV_TIMEOUT)) {
+        ((tcp_base_trsp*)arg)->on_read(ev);
+    }
+}
+
+void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
+{
+    if(ev & (EV_WRITE|EV_TIMEOUT)) {
+        ((tcp_base_trsp*)arg)->on_write(ev);
+    }
+}
+
+tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
+                             int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
+                             event_base* evbase_, trsp_input* input_)
+    : trsp_socket(server_sock_->get_if(),server_sock_->get_proto_idx(),0,transport,0,sd),
+      server_sock(server_sock_), server_worker(server_worker_),
+      closed(false), connected(false),
+      evbase(evbase_), input(input_),
+      read_ev(NULL), write_ev(NULL)
+{
+    // local address
+    actual_ip = ip = server_sock->get_ip();
+    actual_port = port = server_sock->get_port();
+    socket_options = server_sock->get_options();
+    server_sock->copy_addr_to(&addr);
+
+    // peer address
+    memcpy(&peer_addr,sa,sizeof(sockaddr_storage));
+
+    char host[NI_MAXHOST] = "";
+    peer_ip = am_inet_ntop(&peer_addr,host,NI_MAXHOST);
+    peer_port = am_get_port(&peer_addr);
+
+    if(sd > 0) {
+        create_events();
+    }
+}
+
+tcp_base_trsp::~tcp_base_trsp()
+{
+  DBG("********* connection destructor ***********");
+  if(read_ev) {
+      DBG("%p free read_ev %p",this, read_ev);
+      event_free(read_ev);
+  }
+  if(write_ev) {
+      DBG("%p free write_ev %p",this, write_ev);
+      event_free(write_ev);
+  }
+
+  if(sd > 0) {
+    ::close(sd);
+    sd = -1;
+  }
 }
 
 void tcp_base_trsp::close()
@@ -381,6 +399,8 @@ int tcp_base_trsp::check_connection()
 
 void tcp_base_trsp::on_read(short ev)
 {
+    assert(input);
+    
     int bytes = 0;
     {   // locked section
 
@@ -392,10 +412,11 @@ void tcp_base_trsp::on_read(short ev)
             _l.release_ownership();
             return;
         }
-
+        
         DBG("on_read (connected = %i, transport = %s)",connected, get_transport());
 
-        bytes = ::read(sd,get_input(),get_input_free_space());
+        
+        bytes = ::read(sd,input->get_input(),input->get_input_free_space());
         if(bytes < 0) {
             switch(errno) {
             case EAGAIN:
@@ -430,10 +451,10 @@ void tcp_base_trsp::on_read(short ev)
         }
     }// end of - locked section
 
-    add_input_len(bytes);
+    input->add_input_len(bytes);
 
     // ... and parse it
-    if(on_input() < 0) {
+    if(input->on_input(this) < 0) {
         DBG("Error while parsing input: closing connection!");
         sock_mut.lock();
         close();
