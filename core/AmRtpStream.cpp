@@ -140,7 +140,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     relay_raw(false),
     sdp_media_index(-1),
     relay_transparent_ssrc(false),
-    relay_transparent_seqno(true),
+    relay_transparent_seqno(false),
     relay_filter_dtmf(false),
     force_relay_dtmf(true),
     relay_timestamp_aligning(false),
