@@ -1206,8 +1206,6 @@ unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
         CLASS_DBG("relay_ts_shift changed from %ld to %ld",
             old_ts_adjust,relay_ts_shift);
 
-        log_stacktrace(L_ERR);
-
         adjusted_ts = static_cast<unsigned int>(ts+relay_ts_shift);
     }
 
