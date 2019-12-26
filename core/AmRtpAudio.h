@@ -152,6 +152,8 @@ public:
 
   void put_on_idle(unsigned long long system_ts);
 
+  void update_user_ts(unsigned long long system_ts);
+
   unsigned int bytes2samples(unsigned int) const;
 
   // AmRtpStream interface

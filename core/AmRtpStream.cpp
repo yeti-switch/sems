@@ -73,7 +73,9 @@ using std::set;
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
 
-#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF 10000
+//max_frame_size * 8
+#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF (200*8)
+
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
 #define ICE_PWD_SIZE    22
 #define ICE_UFRAG_SIZE  4
@@ -156,8 +158,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     not_supported_rx_payload_remote_reported(false),
     not_supported_tx_payload_reported(false),
     relay_ts_shift(0),
-    media_processor_ts_shift(0),
-    last_sent_ts(0),
+    tx_user_ts(0),
     last_send_rtcp_report_ts(0),
     transport(TP_RTPAVP),
     is_ice_stream(false),
@@ -1165,8 +1166,6 @@ int AmRtpStream::compile_and_send(
         return -1;
     }
 
-    last_sent_ts = ts;
-
     add_if_no_exist(outgoing_payloads,rp.payload);
     outgoing_bytes+=rp.getDataSize();
 
@@ -1180,31 +1179,36 @@ bool AmRtpStream::process_dtmf_queue(unsigned int ts)
     {
         return true;
     }
-
     return false;
 }
 
-unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts, long int &ts_shift)
+unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
 {
-    unsigned int adjusted_ts = static_cast<unsigned int>(ts+ts_shift);
-    unsigned int ts_diff = last_sent_ts ? ts_unsigned_diff(adjusted_ts,last_sent_ts) : 0;
+    unsigned int adjusted_ts = static_cast<unsigned int>(ts+relay_ts_shift);
+    unsigned int ts_diff = tx_user_ts ? ts_unsigned_diff(adjusted_ts,tx_user_ts) : 0;
+
+    /*CLASS_DBG("get_adjusted_ts(ts = %u) tx_user_ts = %llu",
+              ts, tx_user_ts);*/
+
     if(ts_diff > RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF) {
-        CLASS_DBG("AmRtpStream::send() timestamp adjust condition reached: "
-            "ts: %u, adjusted_user_ts: %u, "
-            "ts_shift: %ld, ts_diff: %u, "
+        CLASS_DBG("timestamp adjust condition reached: "
+            "ts: %u, adjusted_ts: %u, tx_user_ts: %u, "
+            "relay_ts_shift: %ld, ts_diff: %u, "
             "max_ts_diff: %u",
-            ts,adjusted_ts,
-            media_processor_ts_shift,ts_diff,
+            ts,adjusted_ts, tx_user_ts,
+            relay_ts_shift,ts_diff,
             RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF);
 
-        auto old_ts_adjust = ts_shift;
+        auto old_ts_adjust = relay_ts_shift;
 
-        ts_shift = last_sent_ts - ts;
+        relay_ts_shift = tx_user_ts - ts;
 
-        CLASS_DBG("ts_shift changed from %ld to %ld",
-            old_ts_adjust,media_processor_ts_shift);
+        CLASS_DBG("relay_ts_shift changed from %ld to %ld",
+            old_ts_adjust,relay_ts_shift);
 
-        adjusted_ts = static_cast<unsigned int>(ts+ts_shift);
+        log_stacktrace(L_ERR);
+
+        adjusted_ts = static_cast<unsigned int>(ts+relay_ts_shift);
     }
 
     return adjusted_ts;
@@ -1215,10 +1219,7 @@ int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int 
     if ((mute) || (hold))
         return 0;
 
-
-    unsigned int adjusted_user_ts = get_adjusted_ts(user_ts, media_processor_ts_shift);
-
-    if(process_dtmf_queue(adjusted_user_ts))
+    if(process_dtmf_queue(user_ts))
         return size;
 
     if(!size)
@@ -1235,7 +1236,7 @@ int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int 
         not_supported_tx_payload_reported = false;
     }
 
-    return compile_and_send(it->second.remote_pt, false, adjusted_user_ts, buffer, size);
+    return compile_and_send(it->second.remote_pt, false, user_ts, buffer, size);
 }
 
 void AmRtpStream::relay(AmRtpPacket* p)
@@ -1255,6 +1256,11 @@ void AmRtpStream::relay(AmRtpPacket* p)
          if(dtmf_sender.isSending())
              return;
 
+         if(!tx_user_ts) {
+             //no reference ts yet. skip sending
+             return;
+         }
+
          rtp_hdr_t* hdr = reinterpret_cast<rtp_hdr_t*>(p->getBuffer());
 
          /*if(process_dtmf_queue && remote_telephone_event_pt.get()) {
@@ -1270,10 +1276,10 @@ void AmRtpStream::relay(AmRtpPacket* p)
 
          hdr->pt = relay_map.get(hdr->pt);
 
-         if(relay_timestamp_aligning) {
-             p->timestamp = get_adjusted_ts(p->timestamp, relay_ts_shift);
-             hdr->ts = htonl(p->timestamp);
-         }
+         //if(relay_timestamp_aligning) {
+         p->timestamp = get_adjusted_ts(p->timestamp);
+         hdr->ts = htonl(p->timestamp);
+         //}
 
      } //if(!relay_raw)
 
@@ -1287,8 +1293,6 @@ void AmRtpStream::relay(AmRtpPacket* p)
          else if(cur_rtp_trans && !relay_raw) cur_rtp_trans->getRAddr(false, &addr);
 
          if(session && cur_rtp_trans) session->onAfterRTPRelay(p, &addr);
-
-         last_sent_ts = p->timestamp;
 
          add_if_no_exist(outgoing_relayed_payloads,p->payload);
          outgoing_bytes += p->getBufferSize();
@@ -1539,6 +1543,9 @@ void AmRtpStream::setRtpRelayTimestampAligning(bool enable_aligning)
     CLASS_DBG("%sabled RTP relay timestamp aligning\n",
         enable_aligning ? "en":"dis");
     relay_timestamp_aligning = enable_aligning;
+    if(relay_timestamp_aligning) {
+        CLASS_WARN("relay_timestamp_aligning is deprecated because of using timestamp from media processor as reference for relay");
+    }
 }
 
 void AmRtpStream::setRtpForceRelayDtmf(bool relay)

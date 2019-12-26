@@ -179,6 +179,8 @@ class AmRtpStream
     // current payload (index into @payloads)
     int payload;
 
+    unsigned long long tx_user_ts;
+
     RtcpBidirectionalStat rtp_stats;
     struct timeval start_time;
     unsigned long long last_send_rtcp_report_ts;
@@ -201,8 +203,6 @@ class AmRtpStream
     unsigned int dead_rtp_time;
 
     long int relay_ts_shift;
-    long int media_processor_ts_shift;
-    unsigned int last_sent_ts;
 
     struct PayloadMapping {
         int8_t remote_pt; // remote payload type
@@ -387,7 +387,7 @@ class AmRtpStream
     void pause();
 
     /**
-    * Resume a paused RTP stream internally (received packets will be processed).
+    * Resume a paused RTP stream internally (received packets will be ed).
     */
     void resume();
 
@@ -407,7 +407,7 @@ class AmRtpStream
 
     bool process_dtmf_queue(unsigned int ts);
 
-    unsigned int get_adjusted_ts(unsigned int user_ts, long int &ts_shift);
+    unsigned int get_adjusted_ts(unsigned int user_ts);
 
     int send( unsigned int ts,
         unsigned char* buffer,

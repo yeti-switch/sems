@@ -1530,9 +1530,13 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
     }
     stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
     if (got < 0) res = -1;
-    if (got > 0) res = stream->put(ts, buffer, stream->getSampleRate(), got);
+    if (got > 0) {
+        res = stream->put(ts, buffer, stream->getSampleRate(), got);
+    } else {
+        stream->put_on_idle(ts);
+    }
   }
-  
+
   unlockAudio();
   return res;
 

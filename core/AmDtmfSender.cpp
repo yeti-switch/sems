@@ -94,12 +94,9 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
         } break;
         case DTMF_SEND_SENDING_FIRST:
         case DTMF_SEND_SENDING: {
-            DBG("DTMF_SEND_SENDING. ts: %u , current_send_dtmf_ts: %u, send_dtmf_end_ts: %u",
-                ts, current_send_dtmf_ts, send_dtmf_end_ts);
             if (ts_less()(ts, send_dtmf_end_ts)) {
+
                 // send packet
-                //if (!remote_telephone_event_pt.get())
-                //return;
                 u_int16 duration = static_cast<u_int16>(ts - current_send_dtmf_duration_ts);
 
                 dtmf_payload_t dtmf;
@@ -132,9 +129,8 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 sending_state = DTMF_SEND_NONE;
             } else {
                 send_dtmf_end_repeat++;
+
                 // send packet with end bit set, duration = event duration
-                //if (!remote_telephone_event_pt.get())
-                //return;
                 dtmf_payload_t dtmf;
                 dtmf.event = static_cast<u_int8>(current_event.event);
                 dtmf.e = 1;

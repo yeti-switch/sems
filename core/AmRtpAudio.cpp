@@ -318,7 +318,7 @@ int AmRtpAudio::put(
 
     if(!size) return 0;
 
-    if(mute) return 0;
+    if(mute || hold) return 0;
 
     if(!fmt.get())
       return 0;
@@ -341,16 +341,9 @@ int AmRtpAudio::put(
         return s;
     }
 
-    AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
+    update_user_ts(system_ts);
 
-    // pre-division by 100 is important
-    // so that the first multiplication
-    // does not overflow the 64bit int
-    unsigned long long user_ts =
-        system_ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
-        / (WALLCLOCK_RATE/100);
-
-    return send(static_cast<unsigned int>(user_ts),
+    return send(tx_user_ts,
                 static_cast<unsigned char*>(samples),
                 static_cast<unsigned int>(s));
 }
@@ -361,19 +354,24 @@ void AmRtpAudio::put_on_idle(unsigned long long system_ts)
     last_send_ts_i = true;
     last_send_ts = system_ts;
 
-    if ((mute) || (hold))
+    if (mute || hold)
         return;
 
+    update_user_ts(system_ts);
+
+    process_dtmf_queue(tx_user_ts);
+}
+
+void AmRtpAudio::update_user_ts(unsigned long long system_ts)
+{
     AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
 
     // pre-division by 100 is important
     // so that the first multiplication
     // does not overflow the 64bit int
-    unsigned long long user_ts =
+    tx_user_ts =
         system_ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
         / (WALLCLOCK_RATE/100);
-
-    process_dtmf_queue(get_adjusted_ts(user_ts, media_processor_ts_shift));
 }
 
 void AmRtpAudio::getSdpOffer(unsigned int index, SdpMedia& offer)
@@ -449,16 +447,9 @@ int AmRtpAudio::ping(unsigned long long ts)
     ping_chr[0] = 0;
     ping_chr[1] = 0;
 
-    AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
+    update_user_ts(ts);
 
-    // pre-division by 100 is important
-    // so that the first multiplication
-    // does not overflow the 64bit int
-    unsigned long long user_ts =
-        ts * (static_cast<unsigned long long>(rtp_fmt->getTSRate()) / 100)
-        / (WALLCLOCK_RATE/100);
-
-    return compile_and_send(payload, true, static_cast<unsigned int>(user_ts), ping_chr, 2);
+    return compile_and_send(payload, true, static_cast<unsigned int>(tx_user_ts), ping_chr, 2);
 }
 
 unsigned int AmRtpAudio::getFrameSize()
