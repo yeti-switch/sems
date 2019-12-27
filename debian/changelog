@@ -1,3 +1,9 @@
+sems (1.8.34-5bpo) stable; urgency=low
+
+  * apps/mp3: remove id3 tag
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 27 Dec 2019 14:11:06 +0200
+
 sems (1.8.34-4bpo) stable; urgency=low
 
   * AmRtpAudio: remove excess locking
