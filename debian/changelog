@@ -1,3 +1,9 @@
+sems (1.8.50-2) stable; urgency=low
+
+  * apps/mp3: remove id3 tag
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 27 Dec 2019 14:48:20 +0200
+
 sems (1.8.50-1) stable; urgency=low
 
   * websockets transport support
