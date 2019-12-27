@@ -166,7 +166,7 @@ long MP3_create(const char* format_parameters, amci_codec_fmt_info_t* format_des
   lame_set_quality(coder_state->gfp,2);   /* 2=high  5 = medium  7=low */ 
   
   id3tag_init(coder_state->gfp);
-  id3tag_set_title(coder_state->gfp, "mp3 voicemail by iptel.org");
+  //id3tag_set_title(coder_state->gfp, "mp3 voicemail by iptel.org");
   ret_code = lame_init_params(coder_state->gfp);
   
   if (ret_code < 0) {
