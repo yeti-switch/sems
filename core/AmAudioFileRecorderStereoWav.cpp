@@ -3,7 +3,7 @@
 
 #define WAV_FILE_SAMPLERATE 8000
 
-AmAudioFileRecorderStereoWav::wav_file_data::wav_file_data(const std::__cxx11::string& path)
+AmAudioFileRecorderStereoWav::wav_file_data::wav_file_data(const std::string& path)
 : AmAudioFileRecorderStereo::file_data(path)
 {
     audioFile = new AmAudioFile();
@@ -45,7 +45,7 @@ AmAudioFileRecorderStereoWav::AmAudioFileRecorderStereoWav(const string& id)
 AmAudioFileRecorderStereoWav::~AmAudioFileRecorderStereoWav()
 { }
 
-AmAudioFileRecorderStereo::file_data * AmAudioFileRecorderStereoWav::create_file_data(const std::__cxx11::string& path)
+AmAudioFileRecorderStereo::file_data * AmAudioFileRecorderStereoWav::create_file_data(const std::string& path)
 {
     return new wav_file_data(path);
 }

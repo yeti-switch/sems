@@ -7,7 +7,7 @@
 
 #define MAX_TS_DIFF 160
 
-AmAudioFileRecorderStereo::file_data::file_data(const std::__cxx11::string& path)
+AmAudioFileRecorderStereo::file_data::file_data(const std::string& path)
 : path(path)
 {
     open();
