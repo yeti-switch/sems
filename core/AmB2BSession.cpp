@@ -193,7 +193,11 @@ void AmB2BSession::finalize()
     while(!relayed_req.empty()) {
       TransMap::iterator it = relayed_req.begin();
       const AmSipRequest& req = it->second;
-      relayError(req.method,req.cseq,true,481,SIP_REPLY_NOT_EXIST);
+      if(req.method == SIP_METH_BYE) {
+        relayError(req.method,req.cseq,true,200,"OK");
+      } else {
+        relayError(req.method,req.cseq,true,481,SIP_REPLY_NOT_EXIST);
+      }
       relayed_req.erase(it);
     }
   }
