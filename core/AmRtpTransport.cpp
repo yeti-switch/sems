@@ -1,4 +1,5 @@
 #include "AmRtpTransport.h"
+#include "AmFaxImage.h"
 #include "AmRtpConnection.h"
 #include "AmSrtpConnection.h"
 #include "AmStunConnection.h"
@@ -32,10 +33,11 @@ inline const char *transport_type2str(int type)
 
 AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type)
     : seq(NONE)
+    , mode(DEFAULT)
     , stream(_stream)
-    , cur_rtp_stream(nullptr)
-    , cur_rtcp_stream(nullptr)
-    , cur_raw_stream(nullptr)
+    , cur_rtp_conn(nullptr)
+    , cur_rtcp_conn(nullptr)
+    , cur_raw_conn(nullptr)
     , logger(nullptr)
     , sensor(nullptr)
     , type(tr_type)
@@ -143,7 +145,12 @@ void AmRtpTransport::setRAddr(const string& addr, unsigned short port)
     }
 
     connections.push_back(new AmRawConnection(this, addr, port));
-    cur_raw_stream = connections.back();
+    cur_raw_conn = connections.back();
+}
+
+void AmRtpTransport::setMode(Mode _mode)
+{
+    mode = _mode;
 }
 
 bool AmRtpTransport::isMute()
@@ -177,30 +184,30 @@ int AmRtpTransport::getLocalPort()
 
 string AmRtpTransport::getRHost(bool rtcp)
 {
-    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRHost();
-    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRHost();
-    else if(cur_raw_stream) return cur_raw_stream->getRHost();
+    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRHost();
+    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRHost();
+    else if(cur_raw_conn) return cur_raw_conn->getRHost();
     return "";
 }
 
 int AmRtpTransport::getRPort(bool rtcp)
 {
-    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRPort();
-    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRPort();
-    else if(cur_raw_stream) return cur_raw_stream->getRPort();
+    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRPort();
+    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRPort();
+    else if(cur_raw_conn) return cur_raw_conn->getRPort();
     return 0;
 }
 
 void AmRtpTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
-    if(rtcp && cur_rtp_stream) return cur_rtp_stream->getRAddr(addr);
-    else if(!rtcp && cur_rtcp_stream) return cur_rtcp_stream->getRAddr(addr);
+    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRAddr(addr);
+    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRAddr(addr);
     else getRAddr(addr);
 }
 
 void AmRtpTransport::getRAddr(sockaddr_storage* addr)
 {
-    if(cur_raw_stream) cur_raw_stream->getRAddr(addr);
+    if(cur_raw_conn) cur_raw_conn->getRAddr(addr);
 }
 
 int AmRtpTransport::hasLocalSocket()
@@ -293,6 +300,12 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
         offer.setup = S_ACTPASS;
+    } else if(transport == TP_UDPTL) {
+        t38_options_t options;
+        options.getT38DefaultOptions();
+        options.getAttributes(offer);
+        offer.payloads.clear();
+        offer.fmt = T38_FMT;
     }
 }
 
@@ -331,6 +344,13 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
             throw AmSession::Exception(488,"hold connections");
         else if(offer.setup == S_UNDEFINED)
             throw AmSession::Exception(488,"setup not defined");
+    } else if(transport == TP_UDPTL) {
+        t38_options_t options;
+        options.negotiateT38Options(offer.attributes);
+        options.getAttributes(answer);
+        answer.payloads.clear();
+        answer.type = MT_IMAGE;
+        answer.fmt = T38_FMT;
     }
 }
 
@@ -476,6 +496,15 @@ void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote
     }
 }
 
+void AmRtpTransport::initUdptlConnection(const string& remote_address, int remote_port)
+{
+    if(seq == NONE || seq == RTP) {
+        seq = UDPTL;
+        addConnection(new UDPTLConnection(this, remote_address, remote_port));
+        mode = FAX;
+    }
+}
+
 void AmRtpTransport::addConnection(AmStreamConnection* conn)
 {
     AmLock l(connections_mut);
@@ -508,16 +537,28 @@ void AmRtpTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<ui
 
 void AmRtpTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
-    if(!cur_rtp_stream)
-        cur_rtp_stream = conn;
+    if(!cur_rtp_conn)
+        cur_rtp_conn = conn;
     stream->onRtpPacket(packet, this);
 }
 
 void AmRtpTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
-    if(!cur_rtcp_stream)
-        cur_rtcp_stream = conn;
+    if(!cur_rtcp_conn)
+        cur_rtcp_conn = conn;
     stream->onRtcpPacket(packet, this);
+}
+
+void AmRtpTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+{
+    if(mode == DEFAULT) {
+        onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
+        stream->freeRtpPacket(packet);
+    } else if(mode == FAX) {
+        stream->onUdptlPacket(packet, this);
+    } else {
+        stream->onRawPacket(packet, this);
+    }
 }
 
 void AmRtpTransport::updateStunTimers()
@@ -584,11 +625,11 @@ ssize_t AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::Connection
 {
     AmStreamConnection* cur_stream = nullptr;
     if(type == AmStreamConnection::RTP_CONN) {
-        cur_stream = cur_rtp_stream;
+        cur_stream = cur_rtp_conn;
     } else if(type == AmStreamConnection::RTCP_CONN) {
-        cur_stream = cur_rtcp_stream;
+        cur_stream = cur_rtcp_conn;
     } else if(type == AmStreamConnection::RAW_CONN) {
-        cur_stream = cur_raw_stream;
+        cur_stream = cur_raw_conn;
     }
     
     ssize_t ret = 0;
@@ -741,10 +782,17 @@ void AmRtpTransport::recvPacket(int fd)
 
 void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_storage& addr, struct timeval recvtime)
 {
-    AmStreamConnection::ConnectionType ctype = GetConnectionType(buf, size);
-    if(ctype == AmStreamConnection::UNKNOWN_CONN) {
-        CLASS_WARN("Unknown packet type, ignore it");
-        return;
+    AmStreamConnection::ConnectionType ctype;
+    if(mode == DEFAULT) {
+        ctype = GetConnectionType(buf, size);
+        if(ctype == AmStreamConnection::UNKNOWN_CONN) {
+            CLASS_WARN("Unknown packet type, ignore it");
+            return;
+        }
+    } else if(mode == FAX){
+        ctype = AmStreamConnection::UDPTL_CONN;
+    } else {
+        ctype = AmStreamConnection::RAW_CONN;
     }
 
     log_rcvd_packet(reinterpret_cast<const char*>(buf), static_cast<int>(size), addr, ctype);

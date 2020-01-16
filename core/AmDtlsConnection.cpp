@@ -265,7 +265,7 @@ srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settin
 
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr);
+    handleSymmetricRtp(recv_addr, &recv_time);
     try {
         size_t res = dtls_channel->received_data(data, size);
         if(res > 0) {
@@ -289,6 +289,16 @@ void AmDtlsConnection::tls_emit_data(const uint8_t data[], size_t size)
 
 void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
 {
+    sockaddr_storage laddr;
+    transport->getLocalAddr(&laddr);
+    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
+    p->recv_time = last_recv_time;
+    p->relayed = false;
+    p->setAddr(&r_addr);
+    p->setLocalAddr(&laddr);
+    p->setBuffer((unsigned char*)data, size);
+    transport->onRawPacket(p, this);
 }
 
 void AmDtlsConnection::tls_session_activated()

@@ -21,11 +21,18 @@ class AmRtpPacket;
 
 #define RTP_TRANSPORT   1
 #define RTCP_TRANSPORT  2
+#define FAX_TRANSPORT   3
 
 class AmRtpTransport : public AmObject,
                        public AmRtpSession
 {
 public:
+    enum Mode{
+        DEFAULT,
+        FAX,
+        RAW
+    };
+
     AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type);
     virtual ~AmRtpTransport();
 
@@ -90,6 +97,11 @@ public:
     */
     void setRAddr(const string& addr, unsigned short port);
 
+    /**
+    * Set transport mode.
+    */
+    void setMode(Mode mode);
+
     void addConnection(AmStreamConnection* conn);
     void removeConnection(AmStreamConnection* conn);
 
@@ -101,6 +113,7 @@ public:
     void dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
+    void onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn);
 
     void updateStunTimers();
 
@@ -108,7 +121,7 @@ public:
     void resumeReceiving();
 
     void setPassiveMode(bool p);
-    bool getPassiveMode() { return cur_rtp_stream ? cur_rtp_stream->getPassiveMode() : false;} 
+    bool getPassiveMode() { return cur_rtp_conn ? cur_rtp_conn->getPassiveMode() : false;}
 
     /** returns the socket descriptor for local socket (initialized or not) */
     int hasLocalSocket();
@@ -120,7 +133,7 @@ public:
     * @param index index of the SDP media within the SDP.
     * @param offer the local offer to be filled/completed.
     */
-    virtual void getSdpOffer(TransProt& transport, SdpMedia& offer);
+    void getSdpOffer(TransProt& transport, SdpMedia& offer);
     /**
     * Generate an answer for the given SDP media based on the stream capabilities.
     * @param index index of the SDP media within the SDP.
@@ -135,6 +148,7 @@ public:
     void initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
     void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);
     void initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
+    void initUdptlConnection(const string& remote_address, int remote_port);
 
     AmRtpStream* getRtpStream() { return stream; }
 protected:
@@ -165,13 +179,16 @@ protected:
         DTLS,
         SRTP,
         RTP,
-        RAW
+        UDPTL
     } seq;
+
+    Mode mode;
+
     /** Stream owning this transport */
     AmRtpStream* stream;
-    AmStreamConnection* cur_rtp_stream;
-    AmStreamConnection* cur_rtcp_stream;
-    AmStreamConnection* cur_raw_stream;
+    AmStreamConnection* cur_rtp_conn;
+    AmStreamConnection* cur_rtcp_conn;
+    AmStreamConnection* cur_raw_conn;
 private:
     msg_logger *logger;
     msg_sensor *sensor;

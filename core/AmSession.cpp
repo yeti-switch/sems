@@ -276,7 +276,7 @@ const vector<SdpPayload*>& AmSession::getPayloads()
 
 int AmSession::getRPort()
 {
-  return RTPStream()->getRPort(false);
+  return RTPStream()->getRPort(RTP_TRANSPORT);
 }
 
 void AmSession::setRecordAudio(bool record_audio)
@@ -1080,6 +1080,10 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
             }
 
             audio_1st_stream = false;
+        } else if(m.type == MT_IMAGE
+                  && m.transport == TP_UDPTL
+                  /*&& (m.port != 0)*/ ) {
+            RTPStream()->getSdpAnswer(media_index,m,answer_media);
         } else {
             answer_media.type = m.type;
             answer_media.port = 0;
@@ -1237,7 +1241,7 @@ string AmSession::sid4dbg()
   dbg = dlg->getCallid() + "/" + dlg->getLocalTag() + "/" 
     + dlg->getRemoteTag() + "/" 
     + int2str(RTPStream()->getLocalPort()) + "/" 
-    + RTPStream()->getRHost(false) + ":" + int2str(RTPStream()->getRPort(false));
+    + RTPStream()->getRHost(RTP_TRANSPORT) + ":" + int2str(RTPStream()->getRPort(RTP_TRANSPORT));
   return dbg;
 }
 

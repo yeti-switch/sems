@@ -86,9 +86,9 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
             IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
 }
 
-void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
+void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* recv_time)
 {
-    if(parent) parent->handleSymmetricRtp(recv_addr);
+    if(parent) parent->handleSymmetricRtp(recv_addr, recv_time);
 
     if(passive)
     {
@@ -125,6 +125,8 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr)
             passive = false;
         }
     }
+
+    memcpy(&last_recv_time, recv_time, sizeof(struct timeval));
 }
 
 void AmStreamConnection::setPassiveMode(bool p)
@@ -157,7 +159,7 @@ AmRtpConnection::~AmRtpConnection()
 
 void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr);
+    handleSymmetricRtp(recv_addr, &recv_time);
 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
@@ -187,7 +189,7 @@ AmRtcpConnection::~AmRtcpConnection()
 
 void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr);
+    handleSymmetricRtp(recv_addr, &recv_time);
 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
