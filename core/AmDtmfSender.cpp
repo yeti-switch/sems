@@ -34,7 +34,8 @@
 #define DTMF_EVENT_MIN_DURATION 160
 
 AmDtmfSender::AmDtmfSender()
-  : sending_state(DTMF_SEND_NONE)
+  : sending_state(DTMF_SEND_NONE),
+    is_sending(false)
 { }
 
 /** Add a DTMF event to the send queue */
@@ -91,6 +92,8 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
             DBG("starting to send DTMF. key: %d, duration: %u, current_send_dtmf_ts: %u, send_dtmf_end_ts: %u",
                 current_event.event, send_dtmf_duration_ts,
                 current_send_dtmf_ts, send_dtmf_end_ts);
+
+            is_sending.store(true);
         } break;
         case DTMF_SEND_SENDING_FIRST:
         case DTMF_SEND_SENDING: {
@@ -127,6 +130,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
             if (send_dtmf_end_repeat >= 3) {
                 DBG("DTMF send complete\n");
                 sending_state = DTMF_SEND_NONE;
+                is_sending.store(false);
             } else {
                 send_dtmf_end_repeat++;
 

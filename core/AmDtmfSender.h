@@ -29,6 +29,7 @@
 #pragma once
 
 #include "AmThread.h"
+#include <atomic>
 #include <queue>
 using std::queue;
 
@@ -58,6 +59,7 @@ class AmDtmfSender
         DTMF_SEND_SENDING,          // sending event
         DTMF_SEND_ENDING            // sending end of event
     } sending_state;
+    std::atomic_bool is_sending;
 
     queue<Dtmf> send_queue;
     AmMutex     send_queue_mut;
@@ -77,7 +79,7 @@ class AmDtmfSender
   public:
     AmDtmfSender();
 
-    bool isSending() { return sending_state != DTMF_SEND_NONE; }
+    bool isSending() { return is_sending.load(); }
 
     /** Add a DTMF event to the send queue */
     void queueEvent(int event, unsigned int duration_ms, unsigned int sample_rate, unsigned int frame_size);
