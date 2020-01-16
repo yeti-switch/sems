@@ -1,3 +1,9 @@
+sems (1.8.51-2) stable; urgency=low
+
+  * AmDtmfSender::sendPacket: fix return in DTMF_SEND_SENDING* states
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 16 Jan 2020 17:19:05 +0200
+
 sems (1.8.51-1) stable; urgency=low
 
   * AmDtmfSender: use atomic variable to check sending state

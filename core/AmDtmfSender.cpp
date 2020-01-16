@@ -33,6 +33,9 @@
 
 #define DTMF_EVENT_MIN_DURATION 160
 
+#define DTMF_SENDER_PACKET_SENT true
+#define DTMF_SENDER_NOP false
+
 AmDtmfSender::AmDtmfSender()
   : sending_state(DTMF_SEND_NONE),
     is_sending(false)
@@ -61,7 +64,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
             send_queue_mut.lock();
             if (send_queue.empty()) {
                 send_queue_mut.unlock();
-                return false;
+                return DTMF_SENDER_NOP;
             }
 
             DBG("DTMF_SEND_NONE queue: %p, size = %lu",
@@ -120,7 +123,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 if(sending_state == DTMF_SEND_SENDING_FIRST)
                     sending_state = DTMF_SEND_SENDING;
 
-                return false;
+                return DTMF_SENDER_PACKET_SENT;
             } else {
                 sending_state = DTMF_SEND_ENDING;
                 send_dtmf_end_repeat = 0;
@@ -150,7 +153,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                     false,
                     current_send_dtmf_ts,
                     reinterpret_cast<unsigned char*>(&dtmf), sizeof(dtmf_payload_t));
-                return true;
+                return DTMF_SENDER_PACKET_SENT;
             }
         } break;
         }; //switch(sending_state)
