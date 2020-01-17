@@ -86,9 +86,9 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
             IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
 }
 
-void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* recv_time)
+void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* rv_time)
 {
-    if(parent) parent->handleSymmetricRtp(recv_addr, recv_time);
+    if(parent) parent->handleSymmetricRtp(recv_addr, rv_time);
 
     if(passive)
     {
@@ -126,7 +126,7 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
         }
     }
 
-    memcpy(&last_recv_time, recv_time, sizeof(struct timeval));
+    memcpy(&last_recv_time, rv_time, sizeof(struct timeval));
 }
 
 void AmStreamConnection::setPassiveMode(bool p)

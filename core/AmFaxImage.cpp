@@ -233,19 +233,19 @@ UDPTLConnection::~UDPTLConnection()
 {
 }
 
-void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval rv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
+    handleSymmetricRtp(recv_addr, &rv_time);
 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
-    p->recv_time = recv_time;
+    p->recv_time = rv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
-    transport->getRtpStream()->onUdptlPacket(p, transport);
+    transport->onRawPacket(p, this);
 }
 
 /***************************************************************************************************/
@@ -278,7 +278,10 @@ void AmFaxImage::init_t30()
                                                T30_SUPPORT_300_300_RESOLUTION | T30_SUPPORT_400_400_RESOLUTION |
                                                T30_SUPPORT_600_600_RESOLUTION | T30_SUPPORT_1200_1200_RESOLUTION | T30_SUPPORT_300_600_RESOLUTION |
                                                T30_SUPPORT_400_800_RESOLUTION | T30_SUPPORT_600_1200_RESOLUTION);
-    t30_set_rx_file(m_t30_state, m_filePath.c_str(), -1);
+    if(m_send)
+        t30_set_tx_file(m_t30_state, m_filePath.c_str(), 0, -1);
+    else
+        t30_set_rx_file(m_t30_state, m_filePath.c_str(), -1);
     t30_set_phase_b_handler(m_t30_state, phase_b_handler, (void *) this);
     t30_set_phase_d_handler(m_t30_state, phase_d_handler, (void *) this);
     t30_set_phase_e_handler(m_t30_state, phase_e_handler, (void *) this);
@@ -418,6 +421,8 @@ int FaxT38Image::init_t38()
         return FALSE;
     }
 
+    m_t38_options.getT38DefaultOptions();
+
     if(m_t38_options.T38FaxMaxBuffer > T38_TX_BUF_LEN) {
         CLASS_WARN("T38FaxMaxBuffer %d more then maximum packet len " NAME_TO_STRING(T38_TX_BUF_LEN), m_t38_options.T38FaxMaxBuffer);
     }
@@ -467,6 +472,11 @@ int FaxT38Image::init_t38()
     gettimeofday(&m_lastTime, NULL);
     CLASS_DBG("initialize udptl complete");
     return TRUE;
+}
+
+void FaxT38Image::setOptions(const t38_options_t& t38_options)
+{
+    m_t38_options = t38_options;
 }
 
 int FaxT38Image::send_udptl_packet(const uint8_t* buf, int len)

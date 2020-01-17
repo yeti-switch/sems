@@ -305,6 +305,7 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         options.getT38DefaultOptions();
         options.getAttributes(offer);
         offer.payloads.clear();
+        offer.type = MT_IMAGE;
         offer.fmt = T38_FMT;
     }
 }
@@ -555,8 +556,10 @@ void AmRtpTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
         onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
         stream->freeRtpPacket(packet);
     } else if(mode == FAX) {
+        cur_raw_conn = conn;
         stream->onUdptlPacket(packet, this);
     } else {
+        cur_raw_conn = conn;
         stream->onRawPacket(packet, this);
     }
 }

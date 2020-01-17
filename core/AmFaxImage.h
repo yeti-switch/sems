@@ -99,6 +99,7 @@ public:
 
     int send_udptl_packet(const uint8_t *buf, int len);
     int init_t38();
+    void setOptions(const t38_options_t& t38_options);
 protected:
 
     //AmMediaSession implementation
