@@ -1082,7 +1082,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
             audio_1st_stream = false;
         } else if(m.type == MT_IMAGE
                   && m.transport == TP_UDPTL
-                  /*&& (m.port != 0)*/ ) {
+                  && (m.port != 0)) {
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
         } else {
             answer_media.type = m.type;

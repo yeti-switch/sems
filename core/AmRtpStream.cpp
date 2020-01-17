@@ -163,7 +163,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     transport(TP_RTPAVP),
     is_ice_stream(false),
     multiplexing(false),
-    reuse_media_trans(false),
+    reuse_media_trans(true),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
     cur_udptl_trans(0)
@@ -377,9 +377,50 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port)
         throw string("AmRtpStream:setRAddr. failed to get interface/proto id");
     }
 
-    if(cur_rtp_trans) {
+    if(transport != TP_UDPTL && cur_rtp_trans) {
         cur_rtp_trans->setRAddr(addr, port);
         mute = cur_rtp_trans->isMute();
+    } else if(cur_udptl_trans) {
+        cur_udptl_trans->setRAddr(addr, port);
+        mute = cur_udptl_trans->isMute();
+    }
+}
+
+void AmRtpStream::addFaxTransport()
+{
+    if(reuse_media_trans && !transports.empty()) {
+        return;
+    }
+
+    for(auto& transport : transports) {
+        if(transport->getTransportType() == FAX_TRANSPORT) {
+            return;
+        }
+    }
+
+    if(l_if < 0) {
+        if (session) l_if = session->getRtpInterface();
+        else {
+            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
+            l_if = 0;
+        }
+    }
+
+    int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
+    if(proto_id < 0) {
+        CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
+    } else {
+        AmRtpTransport *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+        transports.push_back(fax);
+        calcRtpPorts(fax, fax);
+    }
+    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
+    if(proto_id < 0) {
+        CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
+    } else {
+        AmRtpTransport *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+        transports.push_back(fax);
+        calcRtpPorts(fax, fax);
     }
 }
 
@@ -402,26 +443,20 @@ void AmRtpStream::initTransport()
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
         AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT),
-                       *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
         transports.push_back(rtp);
         transports.push_back(rtcp);
-        transports.push_back(fax);
         calcRtpPorts(rtp, rtcp);
-        calcRtpPorts(fax, fax);
     }
     proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
         AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                        *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT),
-                       *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+                        *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
         transports.push_back(rtp);
         transports.push_back(rtcp);
-        transports.push_back(fax);
         calcRtpPorts(rtp, rtcp);
-        calcRtpPorts(fax, fax);
     }
 }
 
