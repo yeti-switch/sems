@@ -114,11 +114,13 @@ void RtspAudio::initTransport()
         return;
     }
 
-    AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTP_TRANSPORT),
-                   *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTCP_TRANSPORT);
+    AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId()),
+                   *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId());
     transports.push_back(rtp);
     transports.push_back(rtcp);
     calcRtpPorts(rtp, rtcp);
+    rtp->setTransportType(RTP_TRANSPORT);
+    rtcp->setTransportType(RTCP_TRANSPORT);
 }
 
 bool RtspAudio::initSdpAnswer()

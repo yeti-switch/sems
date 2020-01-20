@@ -24,14 +24,16 @@ inline const char *transport_type2str(int type)
 {
     static const char *rtp = "RTP";
     static const char *rtcp = "RTCP";
-    static const char *unknown = "UNKNOWN";
+    static const char *fax = "FAX";
+    static const char *raw = "RAW";
     switch(type) {
     case RTP_TRANSPORT: return rtp;
     case RTCP_TRANSPORT: return rtcp;
-    default: return unknown; }
+    case FAX_TRANSPORT: return fax;
+    default: return raw; }
 }
 
-AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type)
+AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id)
     : seq(NONE)
     , mode(DEFAULT)
     , stream(_stream)
@@ -40,7 +42,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int
     , cur_raw_conn(nullptr)
     , logger(nullptr)
     , sensor(nullptr)
-    , type(tr_type)
+    , type(RAW_TRANSPORT)
     , l_sd(0)
     , l_sd_ctx(-1)
     , l_port(0)
@@ -275,6 +277,11 @@ int AmRtpTransport::getLocalSocket(bool reinit)
 
 void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
 {
+    if(transport != TP_UDPTL)
+        offer.type = MT_AUDIO;
+    else
+        offer.type = MT_IMAGE;
+
     if((transport == TP_RTPSAVP || transport == TP_RTPSAVPF) && !srtp_enable) {
         CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
                     AmConfig.getMediaIfaceInfo(l_if).name.c_str());
@@ -305,7 +312,6 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         options.getT38DefaultOptions();
         options.getAttributes(offer);
         offer.payloads.clear();
-        offer.type = MT_IMAGE;
         offer.fmt = T38_FMT;
     }
 }
@@ -313,6 +319,11 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
 void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
 {
     int transport = offer.transport;
+    if(transport != TP_UDPTL)
+        answer.type = MT_AUDIO;
+    else
+        answer.type = MT_IMAGE;
+
     if((offer.is_simple_srtp() && !srtp_enable) ||
        (offer.is_dtls_srtp() && !dtls_enable)) {
         throw AmSession::Exception(488,"transport not supported");
@@ -350,7 +361,6 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         options.negotiateT38Options(offer.attributes);
         options.getAttributes(answer);
         answer.payloads.clear();
-        answer.type = MT_IMAGE;
         answer.fmt = T38_FMT;
     }
 }

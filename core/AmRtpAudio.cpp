@@ -376,7 +376,6 @@ void AmRtpAudio::update_user_ts(unsigned long long system_ts)
 
 void AmRtpAudio::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
-//    if (offer.type != MT_AUDIO) return;
     AmRtpStream::getSdpOffer(index,offer);
 }
 
@@ -385,7 +384,6 @@ void AmRtpAudio::getSdpAnswer(
     const SdpMedia& offer,
     SdpMedia& answer)
 {
-    answer.type = MT_AUDIO;
     AmRtpStream::getSdpAnswer(index,offer,answer);
 }
 

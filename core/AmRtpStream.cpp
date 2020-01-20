@@ -82,6 +82,8 @@ using std::set;
 
 #define BIND_ATTEMPTS_COUNT 10
 
+#define MAX_TRANSPORTS_COUNT 8
+
 static inline void add_if_no_exist(std::vector<int> &v,int payload)
 {
     if(std::find(v.begin(),v.end(),payload)==v.end())
@@ -222,21 +224,29 @@ void AmRtpStream::setLocalIP(const string& ip)
         throw string("AmRtpStream:setLocalIP. failed to get interface");
     }
 
+    int count = 1;
+
     for(auto transport : transports) {
         sockaddr_storage taddr;
         transport->getLocalAddr(&taddr);
-        if(transport->getTransportType() == RTP_TRANSPORT && taddr.ss_family == addr.ss_family ) {
+        if(taddr.ss_family == addr.ss_family && count == RTP_TRANSPORT) {
             CLASS_DBG("set current rtp transport %p", transport);
             cur_rtp_trans = transport;
+            count++;
+            continue;
         }
 
-        if(transport->getTransportType() == FAX_TRANSPORT && taddr.ss_family == addr.ss_family && !reuse_media_trans) {
+        if(taddr.ss_family == addr.ss_family && count == FAX_TRANSPORT) {
             CLASS_DBG("set current udptl transport %p", transport);
             cur_udptl_trans = transport;
+            count++;
+            continue;
         }
 
-        if(transport->getTransportType() == RTCP_TRANSPORT && taddr.ss_family == addr.ss_family ) {
+        if(taddr.ss_family == addr.ss_family && count == RTCP_TRANSPORT) {
             cur_rtcp_trans = transport;
+            count++;
+            continue;
         }
     }
 
@@ -386,17 +396,13 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port)
     }
 }
 
-void AmRtpStream::addFaxTransport()
+void AmRtpStream::addAdditionTransport()
 {
-    if(reuse_media_trans && !transports.empty()) {
+    if(reuse_media_trans) {
         return;
     }
 
-    for(auto& transport : transports) {
-        if(transport->getTransportType() == FAX_TRANSPORT) {
-            return;
-        }
-    }
+    initTransport();
 
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();
@@ -406,29 +412,39 @@ void AmRtpStream::addFaxTransport()
         }
     }
 
+    int v4_count = 0, v6_count = 0;
+    for(auto &transport : transports) {
+        int proto_id = transport->getLocalProtoId();
+        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V4) v4_count++;
+        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V6) v6_count++;
+    }
+
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
-    } else {
-        AmRtpTransport *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+    } else if(v4_count < 4){
+        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
+                        *raw = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(fax);
-        calcRtpPorts(fax, fax);
+        transports.push_back(raw);
+        calcRtpPorts(fax, raw);
     }
     proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
-    } else {
-        AmRtpTransport *fax = new AmRtpTransport(this, l_if, proto_id, FAX_TRANSPORT);
+    } else  if(v6_count < 4){
+        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
+                        *raw = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(fax);
-        calcRtpPorts(fax, fax);
+        transports.push_back(raw);
+        calcRtpPorts(fax, raw);
     }
 }
 
 void AmRtpStream::initTransport()
 {
-    if(!transports.empty()) {
+    if(!transports.empty())
         return;
-    }
 
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();
@@ -442,8 +458,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
+                       *rtcp = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -452,8 +468,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                        *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
+                        *rtcp = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -489,8 +505,11 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
     if(transport == TP_UDPTL) {
+        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpOffer(transport, offer);
     } else {
+        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
+        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
         cur_rtp_trans->getSdpOffer(transport, offer);
     }
     if(is_ice_stream) {
@@ -527,10 +546,14 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    if(transport == TP_UDPTL)
+    if(transport == TP_UDPTL) {
+        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpAnswer(offer, answer);
-    else
+    } else {
+        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
+        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
         cur_rtp_trans->getSdpAnswer(offer, answer);
+    }
     if(is_ice_stream) {
         answer.is_ice = true;
         if(ice_pwd.empty()) {
@@ -1476,7 +1499,7 @@ void AmRtpStream::useIce()
     is_ice_stream = true;
 }
 
-void AmRtpStream::setReuseMedia(bool reuse_media)
+void AmRtpStream::setReuseMediaPort(bool reuse_media)
 {
     reuse_media_trans = reuse_media;
 }
@@ -1835,7 +1858,6 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     rx.ssrc = r_ssrc;
     if(cur_rtp_trans) {
         sockaddr_storage raddr;
-//         cur_rtp_trans->getRemoteAddr(&laddr);
          memcpy(&rx.addr, &raddr, sizeof(struct sockaddr_storage));
     } else {
          memset(&rx.addr, 0, sizeof(struct sockaddr_storage));

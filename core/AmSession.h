@@ -161,6 +161,12 @@ protected:
   /** media transport **/
   TransProt media_transport;
 
+  /** media type **/
+  MediaType media_type;
+
+  /** reuse media slot for fax*/
+  bool reuse_media_slot;
+
   /** use ice protocol in media stream **/
   bool use_ice_media_stream;
 
@@ -280,6 +286,10 @@ public:
 
   TransProt getMediaTransport() const { return media_transport; }
   void setMediaTransport(TransProt trsp);
+
+  MediaType getMediaType() const { return media_type; }
+  void setMediaType(MediaType type);
+  void setReuseMediaSlot(bool reuse_media);
 
   bool isUseIceMediaStream() const { return use_ice_media_stream; }
   void useIceMediaStream() { use_ice_media_stream = true; }

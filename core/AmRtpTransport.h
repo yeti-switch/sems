@@ -19,9 +19,10 @@ class AmRtpPacket;
 #define RTP_PACKET_BUF_SIZE 4096
 #define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
 
-#define RTP_TRANSPORT   1
-#define RTCP_TRANSPORT  2
-#define FAX_TRANSPORT   3
+#define RAW_TRANSPORT       0
+#define RTP_TRANSPORT       1
+#define RTCP_TRANSPORT      2
+#define FAX_TRANSPORT       3
 
 class AmRtpTransport : public AmObject,
                        public AmRtpSession
@@ -33,10 +34,11 @@ public:
         RAW
     };
 
-    AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id, int tr_type);
+    AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id);
     virtual ~AmRtpTransport();
 
     int getTransportType() { return type; }
+    void setTransportType(int _type) { type = _type; }
 
     int getLocalIf() { return l_if; }
     int getLocalProtoId() { return lproto_id; }

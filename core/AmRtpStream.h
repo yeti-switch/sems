@@ -480,8 +480,8 @@ class AmRtpStream
     /** Set using ice protocol */
     void useIce();
 
-    void setReuseMedia(bool reuse_media);
-    void addFaxTransport();
+    void setReuseMediaPort(bool reuse_media);
+    void addAdditionTransport();
 
     unsigned int get_ssrc() { return l_ssrc; }
     unsigned int get_rsrc() { return r_ssrc; }

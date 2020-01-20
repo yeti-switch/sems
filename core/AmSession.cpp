@@ -90,6 +90,8 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     accept_early_session(false),
     override_frame_size(0),
     media_transport(TransProt::TP_NONE),
+    media_type(MediaType::MT_AUDIO),
+    reuse_media_slot(true),
     use_ice_media_stream(false),
     rtp_interface(-1),
     rtp_proto_id(-1),
@@ -163,6 +165,18 @@ void AmSession::setMediaTransport(TransProt trsp)
 {
     CLASS_DBG("set transport to: %d(%s)",trsp, transport_p_2_str(trsp).c_str());
     media_transport = trsp;
+}
+
+void AmSession::setMediaType(MediaType type)
+{
+    CLASS_DBG("set type to: %d(%s)",type, SdpMedia::type2str(type).c_str());
+    media_type = type;
+}
+
+void AmSession::setReuseMediaSlot(bool reuse_media)
+{
+    CLASS_DBG("set reuse media slot: %s", reuse_media ? "true" : "false");
+    reuse_media_slot = reuse_media;
 }
 
 void AmSession::addHandler(AmSessionEventHandler* sess_evh)
@@ -982,10 +996,15 @@ bool AmSession::getSdpOffer(AmSdp& offer)
   unsigned int media_idx = 0;
   if(!offer.media.size()) {
     offer.media.push_back(SdpMedia());
-    offer.media.back().type=MT_AUDIO;
-  }
-  else {
+  } else {
     media_idx = RTPStream()->getSdpMediaIndex();
+      if(!reuse_media_slot && offer.media[media_idx].type != media_type) {
+          offer.media[media_idx].port = 0;
+          offer.media[media_idx].send = false;
+          offer.media[media_idx].recv = false;
+          offer.media.push_back(SdpMedia());
+          media_idx = offer.media.size() - 1;
+      }
   }
 
   RTPStream()->setLocalIP(localMediaIP());
@@ -1048,6 +1067,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 
         if( m.type == MT_AUDIO
             && m.transport != TP_UDPTL
+            && media_type != MT_IMAGE
             && audio_1st_stream
             && (m.port != 0) )
         {
@@ -1082,6 +1102,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
             audio_1st_stream = false;
         } else if(m.type == MT_IMAGE
                   && m.transport == TP_UDPTL
+                  && media_type == MT_IMAGE
                   && (m.port != 0)) {
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
         } else {
