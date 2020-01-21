@@ -1260,6 +1260,9 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 //                   send functions
 int AmRtpStream::send_udptl(unsigned int ts, unsigned char* buffer, unsigned int size)
 {
+    if ((mute) || (hold))
+        return 0;
+
     AmRtpPacket rp;
     rp.compile_raw(buffer, size);
     if(cur_udptl_trans && cur_udptl_trans->send(&rp, AmStreamConnection::UDPTL_CONN) < 0) {
