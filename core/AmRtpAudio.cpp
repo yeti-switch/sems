@@ -366,6 +366,9 @@ void AmRtpAudio::update_user_ts(unsigned long long system_ts)
 {
     AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
 
+    if(!rtp_fmt)
+        return;
+
     // pre-division by 100 is important
     // so that the first multiplication
     // does not overflow the 64bit int
