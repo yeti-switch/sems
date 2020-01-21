@@ -1002,9 +1002,12 @@ bool AmSession::getSdpOffer(AmSdp& offer)
           offer.media[media_idx].port = 0;
           offer.media[media_idx].send = false;
           offer.media[media_idx].recv = false;
-          offer.media.push_back(SdpMedia());
-          media_idx = offer.media.size() - 1;
+      } else {
+          offer.media.clear();
       }
+
+      offer.media.push_back(SdpMedia());
+      media_idx = offer.media.size() - 1;
   }
 
   RTPStream()->setLocalIP(localMediaIP());
