@@ -184,18 +184,18 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
             const map<string, string>& counter_labels)
         {
             auto &timestamp = timet ? timet : now;
+            bool &omit_timestamp = timet ? omit_update_timestamp : omit_now_timestamp;
             auto &common_labels = statistics::instance()->getLabels();
 
             if(common_labels.empty() && counter_labels.empty()) {
-                if(omit_now_timestamp && !timet) {
-                    //without timestamp at the end
+                if(omit_timestamp) {
+                    evbuffer_add_printf(buf, "%s_%s %llu\n",
+                        prefix.c_str(), name.c_str(),
+                        value);
+                } else {
                     evbuffer_add_printf(buf, "%s_%s %llu %llu\n",
                         prefix.c_str(), name.c_str(),
                         value, timestamp);
-                } else {
-                    evbuffer_add_printf(buf, "%s_%s %llu\n",
-                    prefix.c_str(), name.c_str(),
-                    value);
                 }
             } else {
                 evbuffer_add_printf(buf, "%s_%s{",
@@ -207,7 +207,7 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
                 for(const auto &l : counter_labels)
                     serialize_label(buf,l,begin);
 
-                if(omit_now_timestamp && !timet) {
+                if(omit_timestamp) {
                     evbuffer_add_printf(buf, "} %llu\n",
                         value);
                 } else {
@@ -256,6 +256,7 @@ int PrometheusExporter::configure(const string& config)
     port = static_cast<decltype(port)>(cfg_getint(cfg, PARAM_PORT));
     prefix = cfg_getstr(cfg, PARAM_PREFIX);
     omit_now_timestamp = cfg_getbool(cfg, PARAM_OMIT_NOW_TIMESTAMP);
+    omit_update_timestamp = cfg_getbool(cfg, PARAM_OMIT_UPDATE_TIMESTAMP);
     if(cfg_size(cfg, SECTION_ACL)) {
         cfg_t* cfg_acl = cfg_getsec(cfg, SECTION_ACL);
         if(readAcl(cfg_acl)) return -1;

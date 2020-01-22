@@ -9,7 +9,9 @@
 #define PARAM_WHITELIST          "whitelist"
 #define PARAM_METHOD             "method"
 #define PARAM_PREFIX             "metrics_prefix"
-#define PARAM_OMIT_NOW_TIMESTAMP "omit_now_timestamp"
+
+#define PARAM_OMIT_NOW_TIMESTAMP    "omit_now_timestamp"
+#define PARAM_OMIT_UPDATE_TIMESTAMP "omit_update_timestamp"
 
 #define SECTION_ACL     "acl"
 
