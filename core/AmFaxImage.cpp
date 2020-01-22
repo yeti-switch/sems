@@ -270,7 +270,7 @@ void AmFaxImage::init_t30()
     span_log_set_level(logging, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_DEBUG);
     span_log_set_protocol(logging, "T30");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
-    t30_set_ecm_capability(m_t30_state, FALSE);
+    t30_set_ecm_capability(m_t30_state, TRUE);
     t30_set_supported_image_sizes(m_t30_state, T30_SUPPORT_US_LETTER_LENGTH | T30_SUPPORT_US_LEGAL_LENGTH | T30_SUPPORT_UNLIMITED_LENGTH |
                                                T30_SUPPORT_215MM_WIDTH | T30_SUPPORT_303MM_WIDTH);
     t30_set_supported_resolutions(m_t30_state, T30_SUPPORT_STANDARD_RESOLUTION | T30_SUPPORT_FINE_RESOLUTION | T30_SUPPORT_SUPERFINE_RESOLUTION |
@@ -278,6 +278,8 @@ void AmFaxImage::init_t30()
                                                T30_SUPPORT_300_300_RESOLUTION | T30_SUPPORT_400_400_RESOLUTION |
                                                T30_SUPPORT_600_600_RESOLUTION | T30_SUPPORT_1200_1200_RESOLUTION | T30_SUPPORT_300_600_RESOLUTION |
                                                T30_SUPPORT_400_800_RESOLUTION | T30_SUPPORT_600_1200_RESOLUTION);
+    t30_set_supported_compressions(m_t30_state, T30_SUPPORT_T4_1D_COMPRESSION | T30_SUPPORT_T4_2D_COMPRESSION | T30_SUPPORT_T6_COMPRESSION);
+    t30_set_supported_t30_features(m_t30_state, T30_SUPPORT_IDENTIFICATION | T30_SUPPORT_SELECTIVE_POLLING | T30_SUPPORT_SUB_ADDRESSING);
     if(m_send)
         t30_set_tx_file(m_t30_state, m_filePath.c_str(), 0, -1);
     else
