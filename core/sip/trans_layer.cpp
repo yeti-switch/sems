@@ -51,6 +51,7 @@
 
 #include "log.h"
 
+#include "netlink.h"
 #include "AmUtils.h"
 #include "AmLcConfig.h"
 #include "AmSipEvent.h"
@@ -2779,55 +2780,27 @@ int _trans_layer::find_outbound_if(sockaddr_storage* remote_ip)
 
     if(transports.size() == 1)
 	return 0;
-    
-    int temp_sock = socket(remote_ip->ss_family, SOCK_DGRAM, 0 );
-    if (temp_sock == -1) {
-	ERROR( "ERROR: socket() failed: %s\n",
-	       strerror(errno));
-	return 0;
-    }
-    SOCKET_LOG("socket(remote_ip->ss_family(%d), SOCK_DGRAM, 0 ) = %d",remote_ip->ss_family,temp_sock);
-    
+
     sockaddr_storage from;
-    socklen_t    len=sizeof(from);
-    //trsp_socket* tsock=NULL;
-    
-    if (connect(temp_sock, (sockaddr*)remote_ip, 
-		remote_ip->ss_family == AF_INET ? 
-		sizeof(sockaddr_in) : sizeof(sockaddr_in6))==-1) {
-	
-	ERROR("connect failed: %s\n",
-	      strerror(errno));
-	goto error;
-    }
-    
-    if (getsockname(temp_sock, (sockaddr*)&from, &len)==-1) {
-	ERROR("getsockname failed: %s\n",
-	      strerror(errno));
-	goto error;
-    }
-    close(temp_sock);
+    NetlinkHelper& helper = NetlinkHelper::instance();
+    if(!helper.get_local_addr(*remote_ip, from))
+        return -1;
     
     // try with alternative address
     char local_ip[NI_MAXHOST];
     if(am_inet_ntop(&from,local_ip,NI_MAXHOST) != NULL) {
-	map<string,unsigned short>::iterator if_it =
-	           AmConfig.local_sip_ip2if.find(local_ip);
-	if(if_it == AmConfig.local_sip_ip2if.end()){
-	    ERROR("Could not find a local interface for "
-		  "resolved local IP (local_ip='%s')",
-		  local_ip);
-	}
-	else {
-	    return if_it->second;
-	}
+        map<string,unsigned short>::iterator if_it =
+                AmConfig.local_sip_ip2if.find(local_ip);
+        if(if_it == AmConfig.local_sip_ip2if.end()){
+            ERROR("Could not find a local interface for "
+            "resolved local IP (local_ip='%s')",
+            local_ip);
+        }
+        else {
+            return if_it->second;
+        }
     }
 
-    // no matching interface
-    return -1;
-
- error:
-    close(temp_sock);
     return 0;
 }
 
