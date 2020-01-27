@@ -119,6 +119,7 @@ class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
     bool tls_connected;
     uint16_t ciphersuite;
 
+    tls_rand_generator rand_gen;
     Botan::TLS::Channel* tls_channel;
     tls_conf settings;
 
