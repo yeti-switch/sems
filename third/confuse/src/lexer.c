@@ -1591,7 +1591,7 @@ ECHO;
 			YY_CURRENT_BUFFER_LVALUE->yy_buffer_status = YY_BUFFER_NORMAL;
 			}
         else
-            cfg_endbuffer(cfg, YY_CURRENT_BUFFER_LVALUE->yy_ch_buf);
+            cfg_endbuffer(cfg, yytext_ptr);
 
 		/* Note that here we test for yy_c_buf_p "<=" to the position
 		 * of the first EOB in the buffer, since yy_c_buf_p will

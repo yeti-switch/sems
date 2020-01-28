@@ -1018,6 +1018,7 @@ DLLIMPORT void cfg_error(cfg_t *cfg, const char *fmt, ...)
 
 void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
 {
+    //printf("cfg %p, raw %p, %d\n", cfg, raw, type);
     size_t buflen = 0;
     char* data = 0;
     struct cfg_raw_t* raw_info = 0;
@@ -1043,25 +1044,29 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
             data = malloc(buflen);
             strncpy(data, raw_info->raw, raw_info->raw_len);
             strncpy(data + raw_info->raw_len, cfg->raw_info->raw, cfg->raw_info->raw_len);
+            free(raw_info->raw);
             raw_info->raw_len = buflen;
             raw_info->raw = data;
+            free(cfg->raw_info->raw);
             free(cfg->raw_info);
             cfg->raw_info = raw_info;
         }
         raw_info = cfg->raw_info;
-        raw_info = cfg->raw_info;
         if(raw == cfg->raw_info->ptr) // append full buffer(include file)
             buflen = strlen(raw);
         else if(raw > cfg->raw_info->ptr) //append string from current buffer
-            buflen = raw - cfg->raw_info->ptr - 1; 
-        else //end current buffer
-            buflen = cfg_get_current_buf_ptr() - cfg->raw_info->ptr - 1;
+            buflen = raw - cfg->raw_info->ptr - 1;
+        else { //end current buffer
+            buflen = raw - cfg_get_current_buf() - 1;
+            cfg->raw_info->ptr = cfg_get_current_buf();
+        }
         buflen += cfg->raw_info->raw_len;
         //printf("%zu\n", buflen);
         data = malloc(buflen + 1);
         strncpy(data, raw_info->raw, raw_info->raw_len);
         strncpy(data + raw_info->raw_len, cfg->raw_info->ptr, buflen - cfg->raw_info->raw_len);
         data[buflen] = 0;
+        //printf("%s\n", data);
         free(cfg->raw_info->raw);
         cfg->raw_info->raw = data;
         cfg->raw_info->raw_len = buflen;
