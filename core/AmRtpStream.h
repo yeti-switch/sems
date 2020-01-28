@@ -253,6 +253,7 @@ class AmRtpStream
     vector<AmRtpTransport*> transports;
     AmRtpTransport* cur_rtp_trans;
     AmRtpTransport* cur_rtcp_trans;
+    AmRtpTransport* cur_udptl_trans;
 
     /** mute && port == 0 */
     bool           hold;
@@ -321,12 +322,6 @@ class AmRtpStream
     /** insert packet in DTMF queue if correct payload */
     void recvDtmfPacket(AmRtpPacket* p);
 
-    /** Insert an RTP packet to the buffer queue */
-    void bufferPacket(AmRtpPacket* p);
-    /* Get next packet from the buffer queue */
-    int nextPacket(AmRtpPacket*& p);
-    /** Try to reuse oldest buffered packet for newly coming packet */
-    AmRtpPacket *reuseBufferedPacket();
     /** Clear RTP timeout at time recv_time */
     void clearRTPTimeout(struct timeval* recv_time);
 
@@ -345,6 +340,9 @@ class AmRtpStream
 
     /* RTP and RTCP multiplexing mode*/
     bool multiplexing;
+
+    /* reusing media transport for udptl packets(fax stream) */
+    bool reuse_media_trans;
 
     RtcpReportsPreparedData rtcp_reports;
 
@@ -400,6 +398,8 @@ class AmRtpStream
     void onErrorRtpTransport(const string& error, AmRtpTransport* transport);
     void onRtpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
     void onRtcpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
+    void onUdptlPacket(AmRtpPacket* packet, AmRtpTransport* transport);
+    void onRawPacket(AmRtpPacket* packet, AmRtpTransport* transport);
     void allowStunConnection(AmRtpTransport* transport, int priority);
     void dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
@@ -408,6 +408,10 @@ class AmRtpStream
     bool process_dtmf_queue(unsigned int ts);
 
     unsigned int get_adjusted_ts(unsigned int user_ts);
+
+    int send_udptl( unsigned int ts,
+        unsigned char* buffer,
+        unsigned int   size );
 
     int send( unsigned int ts,
         unsigned char* buffer,
@@ -423,6 +427,12 @@ class AmRtpStream
     /** create and free an RTP packet*/
     AmRtpPacket* createRtpPacket();
     void freeRtpPacket(AmRtpPacket* packet);
+    /** Insert an RTP packet to the buffer queue */
+    void bufferPacket(AmRtpPacket* p);
+    /* Get next packet from the buffer queue */
+    int nextPacket(AmRtpPacket*& p);
+    /** Try to reuse oldest buffered packet for newly coming packet */
+    AmRtpPacket *reuseBufferedPacket();
 
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 
@@ -447,13 +457,13 @@ class AmRtpStream
     * Gets remote RTP port.
     * @return remote RTP port.
     */
-    virtual int getRPort(bool rtcp);
+    virtual int getRPort(int type);
 
     /**
     * Gets remote host IP.
     * @return remote host IP.
     */
-    virtual string getRHost(bool rtcp);
+    virtual string getRHost(int type);
 
     /**
     * Set remote IP & port.
@@ -469,6 +479,9 @@ class AmRtpStream
 
     /** Set using ice protocol */
     void useIce();
+
+    void setReuseMediaPort(bool reuse_media);
+    void addAdditionTransport();
 
     unsigned int get_ssrc() { return l_ssrc; }
     unsigned int get_rsrc() { return r_ssrc; }

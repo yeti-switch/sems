@@ -20,6 +20,7 @@ public:
         RTCP_CONN,
         STUN_CONN,
         DTLS_CONN,
+        UDPTL_CONN,
         RAW_CONN,
 
         UNKNOWN_CONN
@@ -36,7 +37,7 @@ public:
     virtual void setRAddr(const string& addr, unsigned short port) { resolveRemoteAddress(addr, port); }
     virtual bool getPassiveMode() { return passive; }
     virtual void setPassiveMode(bool p);
-    virtual void handleSymmetricRtp(struct sockaddr_storage* recv_addr);
+    virtual void handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* recv_time);
     string getRHost() { return r_host; }
     int getRPort() { return r_port; }
     void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }

@@ -82,6 +82,8 @@ using std::set;
 
 #define BIND_ATTEMPTS_COUNT 10
 
+#define MAX_TRANSPORTS_COUNT 8
+
 static inline void add_if_no_exist(std::vector<int> &v,int payload)
 {
     if(std::find(v.begin(),v.end(),payload)==v.end())
@@ -163,8 +165,10 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     transport(TP_RTPAVP),
     is_ice_stream(false),
     multiplexing(false),
+    reuse_media_trans(true),
     cur_rtp_trans(0),
-    cur_rtcp_trans(0)
+    cur_rtcp_trans(0),
+    cur_udptl_trans(0)
 {
     DBG("AmRtpStream[%p](%p)",this,session);
 
@@ -189,17 +193,19 @@ AmRtpStream::~AmRtpStream()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   initialisation functions
 
-int AmRtpStream::getRPort(bool rtcp)
+int AmRtpStream::getRPort(int type)
 {
-    if(rtcp && cur_rtcp_trans) return cur_rtcp_trans->getRPort(true);
-    else if(!rtcp && cur_rtp_trans) return cur_rtp_trans->getRPort(false);
+    if(type == RTCP_TRANSPORT && cur_rtcp_trans) return cur_rtcp_trans->getRPort(true);
+    else if(type == RTP_TRANSPORT && cur_rtp_trans) return cur_rtp_trans->getRPort(false);
+    else if(type == FAX_TRANSPORT && cur_udptl_trans) return cur_udptl_trans->getRPort(false);
     return 0;
 }
 
-string AmRtpStream::getRHost(bool rtcp)
+string AmRtpStream::getRHost(int type)
 {
-    if(rtcp && cur_rtcp_trans) return cur_rtcp_trans->getRHost(true);
-    else if(!rtcp && cur_rtp_trans) return cur_rtp_trans->getRHost(false);
+    if(type == RTCP_TRANSPORT && cur_rtcp_trans) return cur_rtcp_trans->getRHost(true);
+    else if(type == RTP_TRANSPORT && cur_rtp_trans) return cur_rtp_trans->getRHost(false);
+    else if(type == FAX_TRANSPORT && cur_udptl_trans) return cur_udptl_trans->getRHost(false);
     return "";
 }
 
@@ -218,16 +224,29 @@ void AmRtpStream::setLocalIP(const string& ip)
         throw string("AmRtpStream:setLocalIP. failed to get interface");
     }
 
+    int count = 1;
+
     for(auto transport : transports) {
         sockaddr_storage taddr;
         transport->getLocalAddr(&taddr);
-        if(transport->getTransportType() == RTP_TRANSPORT && taddr.ss_family == addr.ss_family ) {
+        if(taddr.ss_family == addr.ss_family && count == RTP_TRANSPORT) {
             CLASS_DBG("set current rtp transport %p", transport);
             cur_rtp_trans = transport;
+            count++;
+            continue;
         }
 
-        if(transport->getTransportType() == RTCP_TRANSPORT && taddr.ss_family == addr.ss_family ) {
+        if(taddr.ss_family == addr.ss_family && count == FAX_TRANSPORT) {
+            CLASS_DBG("set current udptl transport %p", transport);
+            cur_udptl_trans = transport;
+            count++;
+            continue;
+        }
+
+        if(taddr.ss_family == addr.ss_family && count == RTCP_TRANSPORT) {
             cur_rtcp_trans = transport;
+            count++;
+            continue;
         }
     }
 
@@ -237,6 +256,10 @@ void AmRtpStream::setLocalIP(const string& ip)
 
     if(!cur_rtcp_trans) {
         cur_rtcp_trans = cur_rtp_trans;
+    }
+
+    if(!cur_udptl_trans) {
+        cur_udptl_trans = cur_rtp_trans;
     }
 }
 
@@ -249,16 +272,19 @@ int AmRtpStream::getLocalPort()
         return 0;
     }
 
-    if(!cur_rtp_trans || !cur_rtcp_trans) {
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         setLocalIP(session->advertisedIP());
     }
 
-    if(!cur_rtp_trans || !cur_rtcp_trans) {
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         ERROR("AmRtpStream:getLocalPort. failed to get transport");
         return 0;
     }
 
-    return cur_rtp_trans->getLocalPort();
+    if(transport == TP_UDPTL)
+        return cur_udptl_trans->getLocalPort();
+    else
+        return cur_rtp_trans->getLocalPort();
 }
 
 int AmRtpStream::getLocalRtcpPort()
@@ -270,11 +296,11 @@ int AmRtpStream::getLocalRtcpPort()
         return 0;
     }
 
-    if(!cur_rtp_trans || !cur_rtcp_trans) {
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         setLocalIP(session->advertisedIP());
     }
 
-    if(!cur_rtp_trans || !cur_rtcp_trans) {
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         ERROR("AmRtpStream:getLocalRtcpPort. failed to get transport");
         return 0;
     }
@@ -361,17 +387,64 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port)
         throw string("AmRtpStream:setRAddr. failed to get interface/proto id");
     }
 
-    if(cur_rtp_trans) {
+    if(transport != TP_UDPTL && cur_rtp_trans) {
         cur_rtp_trans->setRAddr(addr, port);
         mute = cur_rtp_trans->isMute();
+    } else if(cur_udptl_trans) {
+        cur_udptl_trans->setRAddr(addr, port);
+        mute = cur_udptl_trans->isMute();
+    }
+}
+
+void AmRtpStream::addAdditionTransport()
+{
+    if(reuse_media_trans) {
+        return;
+    }
+
+    initTransport();
+
+    if(l_if < 0) {
+        if (session) l_if = session->getRtpInterface();
+        else {
+            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
+            l_if = 0;
+        }
+    }
+
+    int v4_count = 0, v6_count = 0;
+    for(auto &transport : transports) {
+        int proto_id = transport->getLocalProtoId();
+        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V4) v4_count++;
+        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V6) v6_count++;
+    }
+
+    int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
+    if(proto_id < 0) {
+        CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
+    } else if(v4_count < 4){
+        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
+                        *raw = new AmRtpTransport(this, l_if, proto_id);
+        transports.push_back(fax);
+        transports.push_back(raw);
+        calcRtpPorts(fax, raw);
+    }
+    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
+    if(proto_id < 0) {
+        CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
+    } else  if(v6_count < 4){
+        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
+                        *raw = new AmRtpTransport(this, l_if, proto_id);
+        transports.push_back(fax);
+        transports.push_back(raw);
+        calcRtpPorts(fax, raw);
     }
 }
 
 void AmRtpStream::initTransport()
 {
-    if(!transports.empty()) {
+    if(!transports.empty())
         return;
-    }
 
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();
@@ -385,8 +458,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                       *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
+                       *rtcp = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -395,8 +468,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id, RTP_TRANSPORT),
-                        *rtcp = new AmRtpTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
+                        *rtcp = new AmRtpTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -431,7 +504,14 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     getSdp(offer);
     offer.payloads.clear();
     payload_provider->getPayloads(offer.payloads);
-    cur_rtp_trans->getSdpOffer(transport, offer);
+    if(transport == TP_UDPTL) {
+        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
+        cur_udptl_trans->getSdpOffer(transport, offer);
+    } else {
+        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
+        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
+        cur_rtp_trans->getSdpOffer(transport, offer);
+    }
     if(is_ice_stream) {
         offer.is_ice = true;
         if(ice_pwd.empty()) {
@@ -466,7 +546,14 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    cur_rtp_trans->getSdpAnswer(offer, answer);
+    if(transport == TP_UDPTL) {
+        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
+        cur_udptl_trans->getSdpAnswer(offer, answer);
+    } else {
+        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
+        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
+        cur_rtp_trans->getSdpAnswer(offer, answer);
+    }
     if(is_ice_stream) {
         answer.is_ice = true;
         if(ice_pwd.empty()) {
@@ -502,143 +589,149 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    if(!cur_rtp_trans) {
-       CLASS_ERROR("AmRtpStream::init. failed to get transport");
-       return -1;
-    }
 
     const SdpMedia& local_media = local.media[sdp_media_index];
     const SdpMedia& remote_media = remote.media[sdp_media_index];
 
     CLASS_DBG("AmRtpStream[%p]::init() sdp_media_index = %d",this,sdp_media_index);
 
-    payloads.clear();
-    pl_map.clear();
-    payloads.resize(local_media.payloads.size());
+    if(local_media.type == MT_AUDIO) {
+        payloads.clear();
+        pl_map.clear();
+        payloads.resize(local_media.payloads.size());
 
-    int i=0;
-    vector<SdpPayload>::const_iterator sdp_it = local_media.payloads.begin();
-    vector<Payload>::iterator p_it = payloads.begin();
+        int i=0;
+        vector<SdpPayload>::const_iterator sdp_it = local_media.payloads.begin();
+        vector<Payload>::iterator p_it = payloads.begin();
 
-     // first pass on local SDP - fill pl_map with intersection of codecs
-    while(sdp_it != local_media.payloads.end()) {
-        int int_pt;
+        // first pass on local SDP - fill pl_map with intersection of codecs
+        while(sdp_it != local_media.payloads.end()) {
+            int int_pt;
 
-        if ((local_media.transport == TP_RTPAVP ||
-            local_media.transport == TP_UDPTLSRTPSAVP ||
-            local_media.transport == TP_RTPSAVP) && sdp_it->payload_type < 20)
-            int_pt = sdp_it->payload_type;
-        else int_pt = payload_provider->getDynPayload(sdp_it->encoding_name,
-                                                      sdp_it->clock_rate,
-                                                      sdp_it->encoding_param);
+            if ((local_media.transport == TP_RTPAVP ||
+                local_media.transport == TP_UDPTLSRTPSAVP ||
+                local_media.transport == TP_RTPSAVP) && sdp_it->payload_type < 20)
+                int_pt = sdp_it->payload_type;
+            else int_pt = payload_provider->getDynPayload(sdp_it->encoding_name,
+                                                        sdp_it->clock_rate,
+                                                        sdp_it->encoding_param);
 
-        amci_payload_t* a_pl = NULL;
-        if(int_pt >= 0)
-            a_pl = payload_provider->payload(int_pt);
+            amci_payload_t* a_pl = NULL;
+            if(int_pt >= 0)
+                a_pl = payload_provider->payload(int_pt);
 
-        if(a_pl == NULL) {
-            if (relay_payloads.get(sdp_it->payload_type)) {
-                // this payload should be relayed, ignore
-                ++sdp_it;
-                continue;
+            if(a_pl == NULL) {
+                if (relay_payloads.get(sdp_it->payload_type)) {
+                    // this payload should be relayed, ignore
+                    ++sdp_it;
+                    continue;
+                } else {
+                    CLASS_DBG("No internal payload corresponding to type %s/%i (ignoring)\n",
+                        sdp_it->encoding_name.c_str(),
+                        sdp_it->clock_rate);
+                    // ignore this payload
+                    ++sdp_it;
+                    continue;
+                }
+            }
+
+            p_it->pt         = sdp_it->payload_type;
+            p_it->name       = sdp_it->encoding_name;
+            p_it->codec_id   = a_pl->codec_id;
+            p_it->clock_rate = a_pl->sample_rate;
+            p_it->advertised_clock_rate = sdp_it->clock_rate;
+
+            pl_map[sdp_it->payload_type].index     = i;
+            pl_map[sdp_it->payload_type].remote_pt = -1;
+
+            ++p_it;
+            ++sdp_it;
+            ++i;
+        } //while(sdp_it != local_media.payloads.end())
+
+        // remove payloads which were not initialised (because of unknown payloads
+        // which are to be relayed)
+        if (p_it != payloads.end())
+            payloads.erase(p_it, payloads.end());
+
+        // second pass on remote SDP - initialize payload IDs used by remote (remote_pt)
+        sdp_it = remote_media.payloads.begin();
+        while(sdp_it != remote_media.payloads.end()) {
+
+            // TODO: match not only on encoding name
+            //       but also on parameters, if necessary
+            //       Some codecs define multiple payloads
+            //       with different encoding parameters
+            PayloadMappingTable::iterator pmt_it = pl_map.end();
+            if(sdp_it->encoding_name.empty() || (local_media.transport == TP_RTPAVP && sdp_it->payload_type < 20))
+            {
+                // must be a static payload
+                pmt_it = pl_map.find(sdp_it->payload_type);
             } else {
-                CLASS_DBG("No internal payload corresponding to type %s/%i (ignoring)\n",
-                    sdp_it->encoding_name.c_str(),
-                    sdp_it->clock_rate);
-                // ignore this payload
-                ++sdp_it;
-                continue;
+                for(p_it = payloads.begin(); p_it != payloads.end(); ++p_it) {
+                    if(!strcasecmp(p_it->name.c_str(),sdp_it->encoding_name.c_str()) &&
+                    (p_it->advertised_clock_rate == (unsigned int)sdp_it->clock_rate))
+                    {
+                        pmt_it = pl_map.find(p_it->pt);
+                        break;
+                    }
+                }
+            }
+
+            // TODO: remove following code once proper
+            //       payload matching is implemented
+            //
+            // initialize remote_pt if not already there
+            if(pmt_it != pl_map.end() && (pmt_it->second.remote_pt < 0)) {
+                pmt_it->second.remote_pt = sdp_it->payload_type;
+            }
+            ++sdp_it;
+        } //while(sdp_it != remote_media.payloads.end())
+
+        // set remote address - media c-line having precedence over session c-line
+        if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
+            CLASS_WARN("no c= line given globally or in m= section in remote SDP\n");
+            return -1;
+        }
+
+        if(local_media.payloads.empty()) {
+            CLASS_DBG("local_media.payloads.empty()\n");
+            return -1;
+        }
+
+        //find telephone-event intersections
+        local_telephone_event_pt.reset(nullptr);
+        remote_telephone_event_pt.reset(nullptr);
+        for(auto const &remote_payload: remote_media.payloads) {
+            if(remote_payload.encoding_name == "telephone-event") {
+                for(auto const &local_payload: local_media.payloads) {
+                    if(local_payload.encoding_name == "telephone-event"
+                    && remote_payload.clock_rate == local_payload.clock_rate)
+                    {
+                        local_telephone_event_pt.reset(new SdpPayload(local_payload));
+                        remote_telephone_event_pt.reset(new SdpPayload(remote_payload));
+                        break;
+                    }
+                }
+                if(local_telephone_event_pt.get()) //use first matched pair
+                    break;
             }
         }
 
-        p_it->pt         = sdp_it->payload_type;
-        p_it->name       = sdp_it->encoding_name;
-        p_it->codec_id   = a_pl->codec_id;
-        p_it->clock_rate = a_pl->sample_rate;
-        p_it->advertised_clock_rate = sdp_it->clock_rate;
-
-        pl_map[sdp_it->payload_type].index     = i;
-        pl_map[sdp_it->payload_type].remote_pt = -1;
-
-        ++p_it;
-        ++sdp_it;
-        ++i;
-    } //while(sdp_it != local_media.payloads.end())
-
-    // remove payloads which were not initialised (because of unknown payloads
-    // which are to be relayed)
-    if (p_it != payloads.end())
-        payloads.erase(p_it, payloads.end());
-
-    // second pass on remote SDP - initialize payload IDs used by remote (remote_pt)
-    sdp_it = remote_media.payloads.begin();
-    while(sdp_it != remote_media.payloads.end()) {
-
-        // TODO: match not only on encoding name
-        //       but also on parameters, if necessary
-        //       Some codecs define multiple payloads
-        //       with different encoding parameters
-        PayloadMappingTable::iterator pmt_it = pl_map.end();
-        if(sdp_it->encoding_name.empty() || (local_media.transport == TP_RTPAVP && sdp_it->payload_type < 20))
-        {
-            // must be a static payload
-            pmt_it = pl_map.find(sdp_it->payload_type);
+        if (remote_telephone_event_pt.get()) {
+            CLASS_DBG("remote party supports telephone events (pt=%i)\n",
+                remote_telephone_event_pt->payload_type);
         } else {
-            for(p_it = payloads.begin(); p_it != payloads.end(); ++p_it) {
-                if(!strcasecmp(p_it->name.c_str(),sdp_it->encoding_name.c_str()) &&
-                   (p_it->advertised_clock_rate == (unsigned int)sdp_it->clock_rate))
-                {
-                    pmt_it = pl_map.find(p_it->pt);
-                    break;
-                }
-            }
+            CLASS_DBG("remote party doesn't support telephone events\n");
         }
 
-        // TODO: remove following code once proper
-        //       payload matching is implemented
-        //
-        // initialize remote_pt if not already there
-        if(pmt_it != pl_map.end() && (pmt_it->second.remote_pt < 0)) {
-            pmt_it->second.remote_pt = sdp_it->payload_type;
+        payload = getDefaultPT();
+        if(payload < 0) {
+            CLASS_DBG("could not set a default payload\n");
+            return -1;
         }
-        ++sdp_it;
-    } //while(sdp_it != remote_media.payloads.end())
-
-    // set remote address - media c-line having precedence over session c-line
-    if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
-        CLASS_WARN("no c= line given globally or in m= section in remote SDP\n");
-        return -1;
-    }
-
-    if(local_media.payloads.empty()) {
-        CLASS_DBG("local_media.payloads.empty()\n");
-        return -1;
-    }
-
-    //find telephone-event intersections
-    local_telephone_event_pt.reset(nullptr);
-    remote_telephone_event_pt.reset(nullptr);
-    for(auto const &remote_payload: remote_media.payloads) {
-        if(remote_payload.encoding_name == "telephone-event") {
-            for(auto const &local_payload: local_media.payloads) {
-                if(local_payload.encoding_name == "telephone-event"
-                   && remote_payload.clock_rate == local_payload.clock_rate)
-                {
-                    local_telephone_event_pt.reset(new SdpPayload(local_payload));
-                    remote_telephone_event_pt.reset(new SdpPayload(remote_payload));
-                    break;
-                }
-            }
-            if(local_telephone_event_pt.get()) //use first matched pair
-                break;
-        }
-    }
-
-    if (remote_telephone_event_pt.get()) {
-        CLASS_DBG("remote party supports telephone events (pt=%i)\n",
-            remote_telephone_event_pt->payload_type);
-    } else {
-        CLASS_DBG("remote party doesn't support telephone events\n");
+        CLASS_DBG("default payload selected = %i\n",payload);
+        last_payload = payload;
     }
 
     CLASS_DBG("use transport = %d",
@@ -655,6 +748,12 @@ int AmRtpStream::init(const AmSdp& local,
          remote_media.is_use_ice()?"true":"false",
          remote_media.is_dtls_srtp()?"true":"false",
          remote_media.is_simple_srtp()?"true":"false");
+
+    if((local_media.type == MT_AUDIO && !cur_rtp_trans) ||
+       (local_media.type == MT_IMAGE && !cur_udptl_trans)) {
+        CLASS_ERROR("AmRtpStream::init. failed to get transport");
+        return -1;
+    }
 
     multiplexing = local_media.is_multiplex;
 
@@ -676,6 +775,8 @@ int AmRtpStream::init(const AmSdp& local,
             cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
             if(cur_rtcp_trans != cur_rtp_trans)
                 cur_rtcp_trans->initDtlsConnection(address, port, local_media, remote_media);
+        } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
+            cur_udptl_trans->initUdptlConnection(address, port);
         } else {
             cur_rtp_trans->initRtpConnection(address, port);
             if(cur_rtcp_trans != cur_rtp_trans)
@@ -686,9 +787,12 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    cur_rtp_trans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
-                    remote_media.setup == S_ACTIVE ||
-                    force_passive_mode);
+    AmRtpTransport* rtptrans = cur_rtp_trans;
+    if(transport == TP_UDPTL) rtptrans = cur_udptl_trans;
+
+    rtptrans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
+                        remote_media.setup == S_ACTIVE ||
+                        force_passive_mode);
 
     CLASS_DBG("recv = %d, send = %d",
         local_media.recv, local_media.send);
@@ -700,10 +804,10 @@ int AmRtpStream::init(const AmSdp& local,
     }
 
     sockaddr_storage raddr;
-    cur_rtp_trans->getRAddr(false, &raddr);
+    rtptrans->getRAddr(false, &raddr);
     if(local_media.send && !hold &&
-       (remote_media.port != 0) &&
-       !cur_rtp_trans->isMute())
+//       (remote_media.port != 0) &&
+       !rtptrans->isMute())
      {
          mute = false;
      } else {
@@ -711,18 +815,11 @@ int AmRtpStream::init(const AmSdp& local,
      }
      CLASS_DBG("mute = %d",mute);
 
-    payload = getDefaultPT();
-    if(payload < 0) {
-        CLASS_DBG("could not set a default payload\n");
-        return -1;
-    }
-    CLASS_DBG("default payload selected = %i\n",payload);
-    last_payload = payload;
-
-    active = false; // mark as nothing received yet
-
     gettimeofday(&rtp_stats.start, nullptr);
     rtcp_reports.init(l_ssrc);
+
+
+    active = false; // mark as nothing received yet
 
     return 0;
 }
@@ -769,7 +866,7 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmRtpTransport* transport)
             get_addr_str(&laddr).c_str(),am_get_port(&laddr),
             get_addr_str(&raddr).c_str(),am_get_port(&raddr),
             l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-        transport->getRtpStream()->freeRtpPacket(p);
+        freeRtpPacket(p);
         return;
     }
 }
@@ -777,6 +874,19 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmRtpTransport* transport)
 void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmRtpTransport*)
 {
     p->rtcp_parse_update_stats(rtp_stats);
+}
+
+void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmRtpTransport*)
+{
+    clearRTPTimeout(&p->recv_time);
+    if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
+        mem.freePacket(p);
+    }
+}
+
+void AmRtpStream::onRawPacket(AmRtpPacket* p, AmRtpTransport*)
+{
+    freeRtpPacket(p);
 }
 
 void AmRtpStream::allowStunConnection(AmRtpTransport* transport, int priority)
@@ -1148,6 +1258,20 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   send functions
+int AmRtpStream::send_udptl(unsigned int ts, unsigned char* buffer, unsigned int size)
+{
+    if ((mute) || (hold))
+        return 0;
+
+    AmRtpPacket rp;
+    rp.compile_raw(buffer, size);
+    if(cur_udptl_trans && cur_udptl_trans->send(&rp, AmStreamConnection::UDPTL_CONN) < 0) {
+        CLASS_ERROR("while sending RTP packet.\n");
+        return -1;
+    }
+
+    return size;
+}
 
 int AmRtpStream::compile_and_send(
     const int payload, bool marker, unsigned int ts,
@@ -1376,6 +1500,11 @@ void AmRtpStream::useIce()
 {
     CLASS_DBG("set using ice protocol");
     is_ice_stream = true;
+}
+
+void AmRtpStream::setReuseMediaPort(bool reuse_media)
+{
+    reuse_media_trans = reuse_media;
 }
 
 void AmRtpStream::clearRTPTimeout(struct timeval* recv_time)
@@ -1732,7 +1861,6 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     rx.ssrc = r_ssrc;
     if(cur_rtp_trans) {
         sockaddr_storage raddr;
-//         cur_rtp_trans->getRemoteAddr(&laddr);
          memcpy(&rx.addr, &raddr, sizeof(struct sockaddr_storage));
     } else {
          memset(&rx.addr, 0, sizeof(struct sockaddr_storage));
