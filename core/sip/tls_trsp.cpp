@@ -291,11 +291,11 @@ void tls_trsp_socket::init(const sockaddr_storage* sa)
         if(sa_ssl->ssl_marker) {
             settings.set_optional_parameters(toString(sa_ssl->sig), toString(sa_ssl->cipher), toString(sa_ssl->mac));
         }
-        tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), settings, settings,*rand_generator_tls::instance(),
+        tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), settings, settings,rand_gen,
                                             Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
                                             Botan::TLS::Protocol_Version::TLS_V12);
     } else {
-        tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), settings, settings,*rand_generator_tls::instance(), false);
+        tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), settings, settings,rand_gen, false);
     }
 }
 
