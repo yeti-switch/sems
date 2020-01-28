@@ -29,6 +29,7 @@
 
 #include "AmUtils.h"
 #include "AmThread.h"
+#include "netlink.h"
 #include "log.h"
 #include "AmSipMsg.h"
 #include "sip/resolver.h"
@@ -701,36 +702,10 @@ string add2path( const string& path, int n_suffix, ...)
 
 int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local)
 {
-  int temp_sock = socket(remote_ip->ss_family, SOCK_DGRAM, 0 );
-  if (temp_sock == -1) {
-    ERROR("socket() failed: %s\n",
-	  strerror(errno));
-    return -1;
-  }
-  SOCKET_LOG("socket(remote_ip->ss_family(%d), SOCK_DGRAM, 0 ) = %d",remote_ip->ss_family, temp_sock);
-
-  socklen_t len=sizeof(sockaddr_storage);
-  if (connect(temp_sock, (sockaddr*)remote_ip, 
-	      remote_ip->ss_family == AF_INET ? 
-	      sizeof(sockaddr_in) : sizeof(sockaddr_in6))==-1) {
-
-      ERROR("connect failed: %s\n",
-	    strerror(errno));
-      goto error;
-  }
-
-  if (getsockname(temp_sock, (sockaddr*)local, &len)==-1) {
-      ERROR("getsockname failed: %s\n",
-	    strerror(errno));
-      goto error;
-  }
-
-  close(temp_sock);
-  return 0;
-
- error:
-  close(temp_sock);
-  return -1;
+    NetlinkHelper& helper = NetlinkHelper::instance();
+    if(!helper.get_local_addr(*remote_ip, *local))
+        return -1;
+    return 0;
 }
 
 int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority)
