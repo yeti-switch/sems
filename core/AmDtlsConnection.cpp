@@ -235,12 +235,12 @@ AmDtlsConnection::AmDtlsConnection(AmRtpTransport* _transport, const string& rem
     try {
         if(client) {
             dtls_settings.reset(new dtls_conf(&rtpinfo->client_settings));
-            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(),
+            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen,
                                                 Botan::TLS::Server_Information(remote_addr.c_str(), remote_port),
                                                 Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
             dtls_settings.reset(new dtls_conf(&rtpinfo->server_settings));
-            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,*rand_generator_dtls::instance(), true);
+            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen, true);
         }
     } catch(Botan::Exception& exc) {
         dtls_channel = 0;

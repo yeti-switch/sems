@@ -111,6 +111,7 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     auto_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
     srtp_profile_t srtp_profile;
+    dtls_rand_generator rand_gen;
 public:
     AmDtlsConnection(AmRtpTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
