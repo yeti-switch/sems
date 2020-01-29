@@ -137,6 +137,14 @@ string long2hex(unsigned long val, bool lowercase = false);
  */
 bool reverse_hex2int(const string& str, unsigned int& result);
 
+/**
+ * Convert a hex string to uint.
+ * @param str    [in]  string to convert.
+ * @param result [out] result integer.
+ * @return true if failed.
+ */
+bool hex2int(const string& str, unsigned int& result);
+
 /** 
  * Convert a double to a string. 
  */

@@ -283,6 +283,35 @@ bool reverse_hex2int(const string& str, unsigned int& result)
   return false;
 }
 
+bool hex2int(const string& str, unsigned int& result)
+{
+    unsigned int ret = 0,
+                 i = 0;
+
+    for(const auto &c: str) {
+        if(++i > 8 /* unsigned int countains up to 4 bytes (8 nablas)*/) {
+            DBG("hex2int: too many digits in %s", str.data());
+            return true;
+        }
+        ret <<= 4;
+        if(c =='0')
+            continue;
+        if (c > '0' && c <= '9')
+            ret += static_cast<unsigned int>(c - '0');
+        else if(c >= 'a' && c <= 'f')
+            ret += static_cast<unsigned int>(c -'a' + 10);
+        else if(c >= 'A' && c <= 'F')
+            ret += static_cast<unsigned int>(c -'A' + 10);
+        else {
+            DBG("hex2int: unexpected char 0x%x in %s", c, str.data());
+            return true;
+        }
+    }
+
+    result = ret;
+    return false;
+}
+
 bool str2i(const string& str, unsigned int& result)
 {
   char* s = (char*)str.c_str();
