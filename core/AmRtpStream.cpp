@@ -503,11 +503,11 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     }
     getSdp(offer);
     offer.payloads.clear();
-    payload_provider->getPayloads(offer.payloads);
-    if(transport == TP_UDPTL) {
+    if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
         cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpOffer(transport, offer);
     } else {
+        payload_provider->getPayloads(offer.payloads);
         cur_rtp_trans->setTransportType(RTP_TRANSPORT);
         cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
         cur_rtp_trans->getSdpOffer(transport, offer);
@@ -546,7 +546,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     answer.is_multiplex = offer.is_multiplex;
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
-    if(transport == TP_UDPTL) {
+    if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
         cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpAnswer(offer, answer);
     } else {
@@ -740,14 +740,14 @@ int AmRtpStream::init(const AmSdp& local,
          local_media.dir, remote_media.dir);
     CLASS_DBG("local setup = %u, remote setup = %u",
          local_media.setup, remote_media.setup);
-    CLASS_DBG("local media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s",
+    CLASS_DBG("local media attribute: use_ice - %s, dtls - %s, srtp - %s",
          local_media.is_use_ice()?"true":"false",
-         local_media.is_dtls_srtp()?"true":"false",
-         local_media.is_simple_srtp()?"true":"false");
-    CLASS_DBG("remote media attribute: use_ice - %s, dtls_srtp - %s, simple_srtp - %s",
+         (local_media.is_dtls_srtp() || local_media.is_dtls())?"true":"false",
+         (local_media.is_simple_srtp() || local_media.is_dtls_srtp() )?"true":"false");
+    CLASS_DBG("remote media attribute: use_ice - %s, dtls - %s, srtp - %s",
          remote_media.is_use_ice()?"true":"false",
-         remote_media.is_dtls_srtp()?"true":"false",
-         remote_media.is_simple_srtp()?"true":"false");
+         (remote_media.is_dtls_srtp() || remote_media.is_dtls())?"true":"false",
+         (remote_media.is_simple_srtp() || remote_media.is_dtls_srtp())?"true":"false");
 
     if((local_media.type == MT_AUDIO && !cur_rtp_trans) ||
        (local_media.type == MT_IMAGE && !cur_udptl_trans)) {
@@ -777,6 +777,9 @@ int AmRtpStream::init(const AmSdp& local,
                 cur_rtcp_trans->initDtlsConnection(address, port, local_media, remote_media);
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
+        } else if(local_media.is_dtls() && cur_udptl_trans) {
+            cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
+            cur_udptl_trans->initUdptlConnection(address, port);
         } else {
             cur_rtp_trans->initRtpConnection(address, port);
             if(cur_rtcp_trans != cur_rtp_trans)
@@ -788,7 +791,7 @@ int AmRtpStream::init(const AmSdp& local,
     }
 
     AmRtpTransport* rtptrans = cur_rtp_trans;
-    if(transport == TP_UDPTL) rtptrans = cur_udptl_trans;
+    if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) rtptrans = cur_udptl_trans;
 
     rtptrans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
                         remote_media.setup == S_ACTIVE ||

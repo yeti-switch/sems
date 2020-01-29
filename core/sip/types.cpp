@@ -10,6 +10,7 @@ string transport_p_2_str(int tp)
         case TP_RTPSAVPF: return "RTP/SAVPF";
         case TP_UDPTLSRTPSAVP: return "UDP/TLS/RTP/SAVP";
         case TP_UDPTLSRTPSAVPF: return "UDP/TLS/RTP/SAVPF";
+        case TP_UDPTLSUDPTL: return "UDP/TLS/UDPTL";
         case TP_UDPTL: return "UDPTL";
         default: return "<unknown_media_type>";
     }

@@ -249,6 +249,28 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 }
 
 /***************************************************************************************************/
+/*                                         UDPTLConnection                                         */
+/***************************************************************************************************/
+DTLSUDPTLConnection::DTLSUDPTLConnection(AmRtpTransport* _transport, const std::__cxx11::string& remote_addr, int remote_port, AmStreamConnection* dtls)
+: AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls)
+{
+}
+
+DTLSUDPTLConnection::~DTLSUDPTLConnection()
+{
+}
+
+void DTLSUDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+{
+    ERROR("NOT IMPLEMENTED. that's wrong - this function doesn't to called");
+}
+
+ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
+{
+    return m_dtls_conn->send(packet);
+}
+
+/***************************************************************************************************/
 /*                                           AmFaxImage                                            */
 /***************************************************************************************************/
 AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send)

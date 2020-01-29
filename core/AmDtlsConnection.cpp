@@ -230,6 +230,7 @@ AmDtlsConnection::AmDtlsConnection(AmRtpTransport* _transport, const string& rem
     , dtls_channel(0)
     , fingerprint(_fingerprint)
     , srtp_profile(srtp_profile_reserved)
+    , activated(false)
 {
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[_transport->getLocalIf()].proto_info[_transport->getLocalProtoId()]);
     try {
@@ -277,6 +278,15 @@ void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct
     }
 }
 
+ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
+{
+    if(activated) {
+        dtls_channel->send((const uint8_t*)packet->getBuffer(), packet->getBufferSize());
+        return packet->getBufferSize();
+    }
+    return 0;
+}
+
 void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)
 {
 }
@@ -321,6 +331,7 @@ void AmDtlsConnection::tls_session_activated()
     }
 
     transport->dtlsSessionActivated(srtp_profile, local_key, remote_key);
+    activated = true;
 }
 
 bool AmDtlsConnection::tls_session_established(const Botan::TLS::Session& session)
