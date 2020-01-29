@@ -277,7 +277,7 @@ int AmRtpTransport::getLocalSocket(bool reinit)
 
 void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
 {
-    if(transport != TP_UDPTL)
+    if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
         offer.type = MT_AUDIO;
     else
         offer.type = MT_IMAGE;
@@ -313,13 +313,23 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         options.getAttributes(offer);
         offer.payloads.clear();
         offer.fmt = T38_FMT;
+    } else if(transport == TP_UDPTLSUDPTL) {
+        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+        offer.fingerprint.hash = fp.hash;
+        offer.fingerprint.value = fp.value;
+        offer.setup = S_ACTPASS;
+        t38_options_t options;
+        options.getT38DefaultOptions();
+        options.getAttributes(offer);
+        offer.payloads.clear();
+        offer.fmt = T38_FMT;
     }
 }
 
 void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
 {
     int transport = offer.transport;
-    if(transport != TP_UDPTL)
+    if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
         answer.type = MT_AUDIO;
     else
         answer.type = MT_IMAGE;
@@ -357,6 +367,25 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         else if(offer.setup == S_UNDEFINED)
             throw AmSession::Exception(488,"setup not defined");
     } else if(transport == TP_UDPTL) {
+        t38_options_t options;
+        options.negotiateT38Options(offer.attributes);
+        options.getAttributes(answer);
+        answer.payloads.clear();
+        answer.fmt = T38_FMT;
+    } else if(transport == TP_UDPTLSUDPTL) {
+        dtls_settings* settings = (offer.setup == S_ACTIVE) ?
+                                                    static_cast<dtls_settings*>(&server_settings) :
+                                                    static_cast<dtls_settings*>(&client_settings);
+        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+        answer.fingerprint.hash = fp.hash;
+        answer.fingerprint.value = fp.value;
+        answer.setup = S_PASSIVE;
+        if(offer.setup == S_PASSIVE)
+            answer.setup = S_ACTIVE;
+        else if(offer.setup == S_HOLD)
+            throw AmSession::Exception(488,"hold connections");
+        else if(offer.setup == S_UNDEFINED)
+            throw AmSession::Exception(488,"setup not defined");
         t38_options_t options;
         options.negotiateT38Options(offer.attributes);
         options.getAttributes(answer);
@@ -513,6 +542,17 @@ void AmRtpTransport::initUdptlConnection(const string& remote_address, int remot
         seq = UDPTL;
         addConnection(new UDPTLConnection(this, remote_address, remote_port));
         mode = FAX;
+    } else if(seq == DTLS) {
+        seq = UDPTL;
+        {
+        AmLock l(connections_mut);
+            for(auto &conn : connections) {
+                if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
+                    connections.push_back(new DTLSUDPTLConnection(this, remote_address, remote_port, conn));
+                }
+            }
+        }
+        mode = DTLS_FAX;
     }
 }
 
@@ -565,7 +605,7 @@ void AmRtpTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
     if(mode == DEFAULT) {
         onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
         stream->freeRtpPacket(packet);
-    } else if(mode == FAX) {
+    } else if(mode == FAX || mode == DTLS_FAX) {
         cur_raw_conn = conn;
         stream->onUdptlPacket(packet, this);
     } else {
@@ -804,6 +844,8 @@ void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_st
         }
     } else if(mode == FAX){
         ctype = AmStreamConnection::UDPTL_CONN;
+    } else if(mode == DTLS_FAX) {
+        ctype = AmStreamConnection::DTLS_CONN;
     } else {
         ctype = AmStreamConnection::RAW_CONN;
     }

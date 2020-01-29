@@ -31,6 +31,7 @@ public:
     enum Mode{
         DEFAULT,
         FAX,
+        DTLS_FAX,
         RAW
     };
 

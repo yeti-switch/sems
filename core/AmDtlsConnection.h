@@ -111,6 +111,7 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     auto_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
     srtp_profile_t srtp_profile;
+    bool activated;
 public:
     AmDtlsConnection(AmRtpTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
@@ -118,6 +119,7 @@ public:
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
+    ssize_t send(AmRtpPacket * packet) override;
 
     void tls_emit_data(const uint8_t data[], size_t size) override;
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) override;
