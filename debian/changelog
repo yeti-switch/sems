@@ -1,3 +1,11 @@
+sems (1.8.53-1) stable; urgency=low
+
+  * add UDP/TLS/UDPTL transport
+  * AmUtils: add hex2int helper
+  * UACAuth: use hex2int to parse nonce_count
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 29 Jan 2020 14:25:37 +0200
+
 sems (1.8.52-1) stable; urgency=low
 
   * add t38 transport. transports refactoring
