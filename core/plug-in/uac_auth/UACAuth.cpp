@@ -956,7 +956,7 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& re
 
 				// get nonce count from request
 				string nonce_count_str = find_attribute("nc", auth_hdr);
-				if (str2i(nonce_count_str, client_nonce_count)) {
+				if (hex2int(nonce_count_str, client_nonce_count)) {
 					DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
 					goto auth_end;
 				}
