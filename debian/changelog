@@ -1,3 +1,9 @@
+sems (1.8.53-2) stable; urgency=low
+
+  * AmRtpTransport::onPacket: log recv_addr on uknown packet
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 30 Jan 2020 15:37:01 +0200
+
 sems (1.8.53-1) stable; urgency=low
 
   * add UDP/TLS/UDPTL transport

@@ -839,7 +839,9 @@ void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_st
     if(mode == DEFAULT) {
         ctype = GetConnectionType(buf, size);
         if(ctype == AmStreamConnection::UNKNOWN_CONN) {
-            CLASS_WARN("Unknown packet type, ignore it");
+            CLASS_WARN("Unknown packet type from %s:%d, ignore it",
+                       am_inet_ntop(&addr).c_str(),
+                       am_get_port(&addr));
             return;
         }
     } else if(mode == FAX){
