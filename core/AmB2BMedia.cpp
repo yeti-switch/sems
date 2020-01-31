@@ -169,6 +169,7 @@ void B2BMediaStatistics::getReport(const AmArg &, AmArg &ret)
 
 void AudioStreamData::initialize(AmB2BSession *session)
 {
+    CLASS_DBG("AudioStreamData::initialize()");
     stream = new AmRtpAudio(session, session->getRtpInterface());
 
     stream->setRtpRelayTransparentSeqno(session->getRtpRelayTransparentSeqno());
@@ -193,6 +194,7 @@ void AudioStreamData::initialize(AmB2BSession *session)
 
     session->getLowFiPLs(lowfi_payloads);
     stream->setLocalIP(session->localMediaIP());
+    stream->updateTransports();
 }
 
 AudioStreamData::AudioStreamData(AmB2BSession *session)

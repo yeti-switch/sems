@@ -491,6 +491,8 @@ void AmRtpStream::getSdp(SdpMedia& m)
 
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
+    CLASS_DBG("AmRtpStream::getSdpAnswer(index = %u)",index);
+
     sdp_media_index = index;
     if(session) {
         auto session_trsp = session->getMediaTransport();
@@ -501,81 +503,47 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
         if(!is_ice_stream)
             is_ice_stream = session->isUseIceMediaStream();
     }
+
+    updateTransports();
+
     getSdp(offer);
     offer.payloads.clear();
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
-        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpOffer(transport, offer);
     } else {
         payload_provider->getPayloads(offer.payloads);
-        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
-        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
         cur_rtp_trans->getSdpOffer(transport, offer);
     }
-    if(is_ice_stream) {
-        offer.is_ice = true;
-        if(ice_pwd.empty()) {
-            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
-            ice_pwd.clear();
-            ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
-        }
-        offer.ice_pwd = ice_pwd;
-        if(ice_ufrag.empty()) {
-            string data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
-            ice_ufrag.clear();
-            ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
-        }
-        offer.ice_ufrag = ice_ufrag;
-        for(auto transport :transports) {
-            transport->getIceCandidate(offer);
-        }
-        offer.is_multiplex = true;
-    }
+
+    applyIceParams(offer);
 }
 
 void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer)
 {
+    CLASS_DBG("AmRtpStream::getSdpAnswer(index = %u)",index);
+
     if(offer.is_use_ice() && !AmConfig.enable_ice) {
-        throw AmSession::Exception(488,"transport not supported");
+        throw AmSession::Exception(488,"transport is not supported");
     }
 
     sdp_media_index = index;
     transport = offer.transport;
-    is_ice_stream = offer.is_ice;
+    is_ice_stream = offer.is_use_ice();
     answer.rtcp_port = getLocalRtcpPort();
     answer.is_multiplex = offer.is_multiplex;
+
+    updateTransports();
+
     getSdp(answer);
     offer.calcAnswer(payload_provider,answer);
+
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
-        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
         cur_udptl_trans->getSdpAnswer(offer, answer);
     } else {
-        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
-        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
         cur_rtp_trans->getSdpAnswer(offer, answer);
     }
-    if(is_ice_stream) {
-        answer.is_ice = true;
-        if(ice_pwd.empty()) {
-            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
-            ice_pwd.clear();
-            ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
-        }
-        answer.ice_pwd = ice_pwd;
-        if(ice_ufrag.empty()) {
-            string data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
-            ice_ufrag.clear();
-            ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
-        }
-        answer.ice_ufrag = ice_ufrag;
-        for(auto transport : transports) {
-            if((answer.is_simple_srtp() && !transport->isSrtpEnable()) ||
-               (answer.is_dtls_srtp() && !transport->isDtlsEnable()))
-                continue;
-            transport->getIceCandidate(answer);
-        }
-        answer.is_multiplex = true;
-    }
+
+    applyIceParams(answer);
 }
 
 int AmRtpStream::init(const AmSdp& local,
@@ -825,6 +793,44 @@ int AmRtpStream::init(const AmSdp& local,
     active = false; // mark as nothing received yet
 
     return 0;
+}
+
+void AmRtpStream::updateTransports()
+{
+    if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
+        cur_udptl_trans->setTransportType(FAX_TRANSPORT);
+    } else {
+        cur_rtp_trans->setTransportType(RTP_TRANSPORT);
+        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
+    }
+}
+
+void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
+{
+    if(is_ice_stream) {
+        sdp_media.is_ice = true;
+        if(ice_pwd.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
+            ice_pwd.clear();
+            ice_pwd.append(data.begin(), data.begin() + ICE_PWD_SIZE);
+        }
+        sdp_media.ice_pwd = ice_pwd;
+        if(ice_ufrag.empty()) {
+            string data = AmSrtpConnection::gen_base64(ICE_UFRAG_SIZE);
+            ice_ufrag.clear();
+            ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
+        }
+        sdp_media.ice_ufrag = ice_ufrag;
+        for(auto transport :transports) {
+            transport->getIceCandidate(sdp_media);
+        }
+        sdp_media.is_multiplex = true;
+    } else {
+        sdp_media.is_ice = false;
+        sdp_media.ice_pwd.clear();
+        sdp_media.ice_ufrag.clear();
+        sdp_media.ice_candidate.clear();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////

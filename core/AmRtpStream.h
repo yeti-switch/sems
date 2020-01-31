@@ -562,6 +562,9 @@ class AmRtpStream
     */
     virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
 
+    void updateTransports();
+    void applyIceParams(SdpMedia& sdp);
+
     /** set the RTP stream on hold */
     void setOnHold(bool on_hold);
 

@@ -681,6 +681,7 @@ void AmB2BSession::onInvite2xx(const AmSipReply& reply)
 
 int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
 {
+  CLASS_DBG("AmB2BSession::onSdpCompleted");
   HoldMethod method;
   if(isHoldRequest(remote_sdp,method)) {
     if(!remote_on_hold) {
