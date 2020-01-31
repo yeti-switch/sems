@@ -376,7 +376,8 @@ AmSdp::AmSdp(const AmSdp& p_sdp_msg)
     attributes(p_sdp_msg.attributes),
     send(p_sdp_msg.send),
     recv(p_sdp_msg.recv),
-    media(p_sdp_msg.media)
+    media(p_sdp_msg.media),
+    use_ice(p_sdp_msg.use_ice)
 {}
 
 int AmSdp::parse(const char* _sdp_msg)
