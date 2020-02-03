@@ -29,10 +29,12 @@ dtls_conf::dtls_conf(const dtls_conf& conf)
 
 dtls_conf::dtls_conf(dtls_client_settings* settings)
 : s_client(settings), s_server(0)
-, certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_dtls::instance()))
 , is_optional(false)
 {
+    if(!settings->certificate.empty())
+        certificate = Botan::X509_Certificate(settings->certificate);
+    if(!settings->certificate_key.empty())
+        key.reset(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_dtls::instance()));
 }
 
 dtls_conf::dtls_conf(dtls_server_settings* settings)
@@ -259,6 +261,7 @@ AmDtlsConnection::~AmDtlsConnection()
 
 srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settings)
 {
+    if(settings->certificate.empty()) return srtp_fingerprint_p();
     Botan::X509_Certificate cert(settings->certificate);
     std::string hash("SHA-256");
     return srtp_fingerprint_p(hash, cert.fingerprint(hash));
