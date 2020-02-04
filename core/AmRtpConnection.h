@@ -21,6 +21,7 @@ public:
         STUN_CONN,
         DTLS_CONN,
         UDPTL_CONN,
+        ZRTP_CONN,
         RAW_CONN,
 
         UNKNOWN_CONN

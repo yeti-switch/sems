@@ -173,6 +173,7 @@ protected:
     bool isRTPMessage(unsigned char* buf, unsigned int size);
     bool isDTLSMessage(unsigned char* buf, unsigned int size);
     bool isRTCPMessage(unsigned char* buf, unsigned int size);
+    bool isZRTPMessage(unsigned char* buf, unsigned int size);
 
     msg_sensor::packet_type_t streamConnType2sensorPackType(AmStreamConnection::ConnectionType type);
 protected:

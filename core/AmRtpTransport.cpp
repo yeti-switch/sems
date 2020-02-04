@@ -19,6 +19,7 @@
 #define RTCP_PAYLOAD_MIN 72
 #define RTCP_PAYLOAD_MAX 76
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
+#define ZRTP_MAGIC_COOKIE   0x5a525450
 
 inline const char *transport_type2str(int type)
 {
@@ -993,6 +994,8 @@ AmStreamConnection::ConnectionType AmRtpTransport::GetConnectionType(unsigned ch
         return AmStreamConnection::RTCP_CONN;
     if(isRTPMessage(buf, size))
         return AmStreamConnection::RTP_CONN;
+    if(isZRTPMessage(buf, size))
+        return AmStreamConnection::ZRTP_CONN;
 
     return AmStreamConnection::UNKNOWN_CONN;
 }
@@ -1052,6 +1055,18 @@ bool AmRtpTransport::isRTPMessage(unsigned char* buf, unsigned int size)
     return false;
 }
 
+bool AmRtpTransport::isZRTPMessage(unsigned char* buf, unsigned int size)
+{
+    if(size < sizeof(rtp_hdr_t)) {
+        return false;
+    }
+
+    // RFC 6189 5.0 ZRTP packet format
+    if(*buf != 16 && *(((int*)buf) + 1) != ZRTP_MAGIC_COOKIE)
+        return false;
+
+    return true;
+}
 
 msg_sensor::packet_type_t AmRtpTransport::streamConnType2sensorPackType(AmStreamConnection::ConnectionType type)
 {
