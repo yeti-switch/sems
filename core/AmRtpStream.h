@@ -37,6 +37,7 @@
 #include "sip/msg_sensor.h"
 #include "sip/ssl_settings.h"
 #include "AmMediaTransport.h"
+#include "AmZrtpConnection.h"
 
 #include <netinet/in.h>
 
@@ -167,6 +168,9 @@ struct Payload {
  */
 class AmRtpStream
   : public AmObject
+#ifdef WITH_ZRTP
+  , public ZrtpContextSubscriber
+#endif/*WITH_ZRTP*/
 {
   protected:
 
@@ -343,7 +347,9 @@ class AmRtpStream
 
     /* reusing media transport for udptl packets(fax stream) */
     bool reuse_media_trans;
-
+#ifdef WITH_ZRTP
+    zrtpContext zrtp_context;
+#endif/*WITH_ZRTP*/
     RtcpReportsPreparedData rtcp_reports;
 
     /**
@@ -433,6 +439,12 @@ class AmRtpStream
     int nextPacket(AmRtpPacket*& p);
     /** Try to reuse oldest buffered packet for newly coming packet */
     AmRtpPacket *reuseBufferedPacket();
+
+#ifdef WITH_ZRTP
+    zrtpContext* getZrtpContext() { return &zrtp_context; }
+    void zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
+    int send_zrtp(unsigned char* buffer, unsigned int size);
+#endif/*WITH_ZRTP*/
 
     void processRtcpTimers(unsigned long long system_ts, unsigned int user_ts);
 

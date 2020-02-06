@@ -40,10 +40,6 @@
 #include "AmSrtpConnection.h"
 //#include "sip/async_file_writer.h"
 
-#ifdef WITH_ZRTP
-# include "AmZRTP.h"
-#endif
-
 #include "SipCtrlInterface.h"
 #include "sip/trans_table.h"
 
@@ -673,12 +669,6 @@ int main(int argc, char* argv[])
         srtp_install_log_handler(log_handler, NULL);
   }
 
-#ifdef WITH_ZRTP
-  if (AmZRTP::init()) {
-    ERROR("Cannot initialize ZRTP\n");
-    goto error;
-  }
-#endif
   if(AmConfig.enable_rtsp){
     if(RtspClient::instance()->onLoad()){
       ERROR("Cannot initialize RTSP client\n");

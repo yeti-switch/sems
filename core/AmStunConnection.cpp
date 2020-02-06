@@ -62,6 +62,11 @@ void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct
     }
 }
 
+void AmStunConnection::setDependentConnection(AmStreamConnection* conn)
+{
+    depend_conn = conn;
+}
+
 void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storage* addr)
 {
     StunAttribute user;
@@ -128,6 +133,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
+        depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
         transport->allowStunConnection(addr, priority);
     }
 }
@@ -155,6 +161,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
+        depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
         transport->allowStunConnection(addr, priority);
     } else if(auth_state != ALLOW){
         string error("valid stun message is false ERR = ");

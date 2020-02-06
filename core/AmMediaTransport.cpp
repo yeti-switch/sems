@@ -4,6 +4,7 @@
 #include "AmSrtpConnection.h"
 #include "AmStunConnection.h"
 #include "AmDtlsConnection.h"
+#include "AmZrtpConnection.h"
 #include "AmRtpReceiver.h"
 #include "AmRtpPacket.h"
 #include "AmSession.h"
@@ -203,8 +204,8 @@ int AmMediaTransport::getRPort(bool rtcp)
 
 void AmMediaTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
-    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRAddr(addr);
-    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRAddr(addr);
+    if(!rtcp && cur_rtp_conn) return cur_rtp_conn->getRAddr(addr);
+    else if(rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRAddr(addr);
     else getRAddr(addr);
 }
 
@@ -324,6 +325,11 @@ void AmMediaTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         options.getAttributes(offer);
         offer.payloads.clear();
         offer.fmt = T38_FMT;
+#ifdef WITH_ZRTP
+    } else {
+        offer.zrtp_hash.is_use = true;
+        offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+#endif/*WITH_ZRTP*/
     }
 }
 
@@ -392,6 +398,11 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         options.getAttributes(answer);
         answer.payloads.clear();
         answer.fmt = T38_FMT;
+#ifdef WITH_ZRTP
+    } else if(AmConfig.enable_zrtp && srtp_enable && offer.zrtp_hash.is_use) {
+        answer.zrtp_hash.is_use = true;
+        answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+#endif/*WITH_ZRTP*/
     }
 }
 
@@ -427,14 +438,6 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                 str2int(addr_port[1], port);
 
                 if(type == candidate.comp_id && sa.ss_family == l_saddr.ss_family) {
-                    try {
-                        AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
-                        conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
-                        addConnection(conn);
-                        conn->send_request();
-                    } catch(string& error) {
-                        CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
-                    }
 
                     if(local_media.is_simple_srtp() && srtp_enable) {
                          addSrtpConnection(address, port, cprofile, local_key, remote_key);
@@ -449,8 +452,29 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                         } catch(string& error) {
                             CLASS_ERROR("Can't add dtls connection. error - %s", error.c_str());
                         }
+#ifdef WITH_ZRTP
+                    } else if(AmConfig.enable_zrtp && srtp_enable) {
+                        try {
+                            cur_rtp_conn = new AmZRTPConnection(this, address, port);
+                            addConnection(cur_rtp_conn);
+                        } catch(string& error) {
+                            CLASS_ERROR("Can't add zrtp connection. error - %s", error.c_str());
+                        }
+#endif/*WITH_ZRTP*/
                     } else {
                          addRtpConnection(address, port);
+                    }
+
+                    try {
+                        AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
+                        if(cur_rtp_conn) {
+                            conn->setDependentConnection(cur_rtp_conn);
+                        }
+                        conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
+                        addConnection(conn);
+                        conn->send_request();
+                    } catch(string& error) {
+                        CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
                     }
                 }
             }
@@ -507,6 +531,13 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
                     conn->getRAddr(&raddr);
                     addrs.push_back(raddr);
                 }
+            } else if(seq == TRANSPORT_SEQ_ZRTP) {
+                if(conn->getConnType() == AmStreamConnection::ZRTP_CONN) {
+                    cur_rtp_conn = 0;
+                    sockaddr_storage raddr;
+                    conn->getRAddr(&raddr);
+                    addrs.push_back(raddr);
+                }
             }
         }
     }
@@ -542,21 +573,42 @@ void AmMediaTransport::initUdptlConnection(const string& remote_address, int rem
 {
     if(seq == TRANSPORT_SEQ_NONE || seq == TRANSPORT_SEQ_RTP) {
         seq = TRANSPORT_SEQ_UDPTL;
-        addConnection(new UDPTLConnection(this, remote_address, remote_port));
+        try {
+            addConnection(new UDPTLConnection(this, remote_address, remote_port));
+        } catch(string& error) {
+            CLASS_ERROR("Can't add udptl connection. error - %s", error.c_str());
+        }
         mode = TRANSPORT_MODE_FAX;
     } else if(seq == TRANSPORT_SEQ_DTLS) {
         seq = TRANSPORT_SEQ_UDPTL;
-        {
-        AmLock l(connections_mut);
-            for(auto &conn : connections) {
-                if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
-                    connections.push_back(new DTLSUDPTLConnection(this, remote_address, remote_port, conn));
+        try {
+            AmLock l(connections_mut);
+                for(auto &conn : connections) {
+                    if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
+                        connections.push_back(new DTLSUDPTLConnection(this, remote_address, remote_port, conn));
+                    }
                 }
-            }
+        } catch(string& error) {
+            CLASS_ERROR("Can't add dtls udptl connection. error - %s", error.c_str());
         }
         mode = TRANSPORT_MODE_DTLS_FAX;
     }
 }
+
+#ifdef WITH_ZRTP
+void AmMediaTransport::initZrtpConnection(const string& remote_address, int remote_port)
+{
+    try {
+        if(seq == TRANSPORT_SEQ_NONE) {
+            seq = TRANSPORT_SEQ_ZRTP;
+            cur_rtp_conn = new AmZRTPConnection(this, remote_address, remote_port);
+            addConnection(cur_rtp_conn);
+        }
+    } catch(string& error) {
+        CLASS_ERROR("Can't add zrtp connection. error - %s", error.c_str());
+    }
+}
+#endif/*WITH_ZRTP*/
 
 void AmMediaTransport::initRawConnection()
 {
@@ -589,6 +641,11 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
 {
     (void)remote_addr;
     //TODO(alexey.v): set current connections by candidate priority
+    for(auto& conn : connections) {
+        if(conn->getConnType() == AmRawConnection::ZRTP_CONN && conn->isAddrConnection(remote_addr)) {
+            cur_rtp_conn = conn;
+        }
+    }
     stream->allowStunConnection(this, priority);
 }
 

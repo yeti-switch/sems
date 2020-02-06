@@ -133,14 +133,14 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
             return;
         }
     }
-    
+
     srtp_err_status_t ret;
     if(getConnType() == RTP_CONN)
         ret = srtp_unprotect(srtp_r_session, data, reinterpret_cast<int *>(&size));
     else
         ret = srtp_unprotect_rtcp(srtp_r_session, data, reinterpret_cast<int *>(&size));
 
-    if(ret == srtp_err_status_ok)
+    if(ret == srtp_err_status_ok || getConnType() == RTCP_CONN)
         s_stream->handleConnection(data, size, recv_addr, recv_time);
     else {
         CLASS_DBG("srtp_unprotect for %s - error:%d", getConnType() == RTP_CONN ? "rtp" : "rtcp", ret);

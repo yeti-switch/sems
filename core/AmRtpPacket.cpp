@@ -112,20 +112,10 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
     data_offset = sizeof(rtp_hdr_t) + (hdr->cc*4);
 
     if(hdr->x != 0) {
-        //#ifndef WITH_ZRTP
-        //if (AmConfig::IgnoreRTPXHdrs) {
-        //  skip the extension header
-        //#endif
         if (b_size >= data_offset + 4) {
             data_offset +=
             ntohs(((rtp_xhdr_t*) (buffer + data_offset))->len)*4;
         }
-        // #ifndef WITH_ZRTP
-        //   } else {
-        //     DBG("RTP extension headers not supported.\n");
-        //     return -1;
-        //   }
-        // #endif
     }
 
     payload = hdr->pt;
