@@ -41,7 +41,7 @@ private:
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
 public:
-    AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int priority);
+    AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int priority);
     virtual ~AmStunConnection();
 
     void set_credentials(const string& luser, const string& lpassword,

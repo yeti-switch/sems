@@ -114,7 +114,7 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     dtls_rand_generator rand_gen;
     bool activated;
 public:
-    AmDtlsConnection(AmRtpTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
+    AmDtlsConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
 
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);

@@ -36,7 +36,7 @@
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
 #include "sip/ssl_settings.h"
-#include "AmRtpTransport.h"
+#include "AmMediaTransport.h"
 
 #include <netinet/in.h>
 
@@ -250,10 +250,10 @@ class AmRtpStream
     string ice_pwd;
     string ice_ufrag;
 
-    vector<AmRtpTransport*> transports;
-    AmRtpTransport* cur_rtp_trans;
-    AmRtpTransport* cur_rtcp_trans;
-    AmRtpTransport* cur_udptl_trans;
+    vector<AmMediaTransport*> transports;
+    AmMediaTransport* cur_rtp_trans;
+    AmMediaTransport* cur_rtcp_trans;
+    AmMediaTransport* cur_udptl_trans;
 
     /** mute && port == 0 */
     bool           hold;
@@ -354,7 +354,7 @@ class AmRtpStream
 
     void payloads_id2str(const vector<int> i, vector<string> &s);
 
-    void calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp);
+    void calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rtcp);
 
     virtual void initTransport();
   public:
@@ -395,13 +395,13 @@ class AmRtpStream
     /** Stops the stream and frees all resources. */
     virtual ~AmRtpStream();
 
-    void onErrorRtpTransport(const string& error, AmRtpTransport* transport);
-    void onRtpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
-    void onRtcpPacket(AmRtpPacket* packet, AmRtpTransport* transport);
-    void onUdptlPacket(AmRtpPacket* packet, AmRtpTransport* transport);
-    void onRawPacket(AmRtpPacket* packet, AmRtpTransport* transport);
-    void allowStunConnection(AmRtpTransport* transport, int priority);
-    void dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile,
+    void onErrorRtpTransport(const string& error, AmMediaTransport* transport);
+    void onRtpPacket(AmRtpPacket* packet, AmMediaTransport* transport);
+    void onRtcpPacket(AmRtpPacket* packet, AmMediaTransport* transport);
+    void onUdptlPacket(AmRtpPacket* packet, AmMediaTransport* transport);
+    void onRawPacket(AmRtpPacket* packet, AmMediaTransport* transport);
+    void allowStunConnection(AmMediaTransport* transport, int priority);
+    void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     void update_sender_stats(const AmRtpPacket &p);
 

@@ -114,8 +114,8 @@ void RtspAudio::initTransport()
         return;
     }
 
-    AmRtpTransport *rtp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId()),
-                   *rtcp = new AmRtpTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId());
+    AmMediaTransport *rtp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId()),
+                   *rtcp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId());
     transports.push_back(rtp);
     transports.push_back(rtcp);
     calcRtpPorts(rtp, rtcp);

@@ -7,7 +7,7 @@
 #include <botan/base64.h>
 #include <botan/uuid.h>
 
-AmSrtpConnection::AmSrtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
+AmSrtpConnection::AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
     : AmStreamConnection(_transport, remote_addr, remote_port, conn_type)
     , srtp_profile(srtp_profile_reserved)
     , srtp_s_session(nullptr)

@@ -24,19 +24,19 @@ class AmRtpPacket;
 #define RTCP_TRANSPORT      2
 #define FAX_TRANSPORT       3
 
-class AmRtpTransport : public AmObject,
+class AmMediaTransport : public AmObject,
                        public AmRtpSession
 {
 public:
-    enum Mode{
-        DEFAULT,
-        FAX,
-        DTLS_FAX,
-        RAW
+    enum Mode {
+        TRANSPORT_MODE_DEFAULT,
+        TRANSPORT_MODE_FAX,
+        TRANSPORT_MODE_DTLS_FAX,
+        TRANSPORT_MODE_RAW
     };
 
-    AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id);
-    virtual ~AmRtpTransport();
+    AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id);
+    virtual ~AmMediaTransport();
 
     int getTransportType() { return type; }
     void setTransportType(int _type) { type = _type; }
@@ -152,6 +152,7 @@ public:
     void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);
     void initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
     void initUdptlConnection(const string& remote_address, int remote_port);
+    void initRawConnection();
 
     AmRtpStream* getRtpStream() { return stream; }
 protected:
@@ -178,12 +179,13 @@ protected:
     msg_sensor::packet_type_t streamConnType2sensorPackType(AmStreamConnection::ConnectionType type);
 protected:
     enum {
-        NONE,
-        ICE,
-        DTLS,
-        SRTP,
-        RTP,
-        UDPTL
+        TRANSPORT_SEQ_NONE,
+        TRANSPORT_SEQ_ICE,
+        TRANSPORT_SEQ_DTLS,
+        TRANSPORT_SEQ_SRTP,
+        TRANSPORT_SEQ_RTP,
+        TRANSPORT_SEQ_UDPTL,
+        TRANSPORT_SEQ_RAW
     } seq;
 
     Mode mode;

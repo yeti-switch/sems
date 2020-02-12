@@ -1,4 +1,4 @@
-#include "AmRtpTransport.h"
+#include "AmMediaTransport.h"
 #include "AmFaxImage.h"
 #include "AmRtpConnection.h"
 #include "AmSrtpConnection.h"
@@ -34,9 +34,9 @@ inline const char *transport_type2str(int type)
     default: return raw; }
 }
 
-AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id)
-    : seq(NONE)
-    , mode(DEFAULT)
+AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id)
+    : seq(TRANSPORT_SEQ_NONE)
+    , mode(TRANSPORT_MODE_DEFAULT)
     , stream(_stream)
     , cur_rtp_conn(nullptr)
     , cur_rtcp_conn(nullptr)
@@ -66,7 +66,7 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id)
     CLASS_DBG("local_ip = %s\n",local_ip.c_str());
 
     if (!am_inet_pton(local_ip.c_str(), &l_saddr)) {
-        throw string("AmRtpTransport: Invalid IP address: %s", local_ip.c_str());
+        throw string("AmMediaTransport: Invalid IP address: %s", local_ip.c_str());
     }
 
     recv_iov[0].iov_base = buffer;
@@ -93,9 +93,9 @@ AmRtpTransport::AmRtpTransport(AmRtpStream* _stream, int _if, int _proto_id)
     }
 }
 
-AmRtpTransport::~AmRtpTransport()
+AmMediaTransport::~AmMediaTransport()
 {
-    DBG("~AmRtpTransport[%p] l_sd = %d",to_void(this), l_sd);
+    DBG("~AmMediaTransport[%p] l_sd = %d",to_void(this), l_sd);
     if(l_sd) {
         if(l_sd_ctx >= 0) {
             if (AmRtpReceiver::haveInstance()) {
@@ -117,27 +117,27 @@ AmRtpTransport::~AmRtpTransport()
     if (sensor) dec_ref(sensor);
 }
 
-void AmRtpTransport::setLogger(msg_logger* _logger)
+void AmMediaTransport::setLogger(msg_logger* _logger)
 {
     if (logger) dec_ref(logger);
         logger = _logger;
     if (logger) inc_ref(logger);
 }
 
-void AmRtpTransport::setSensor(msg_sensor *_sensor)
+void AmMediaTransport::setSensor(msg_sensor *_sensor)
 {
     if(sensor) dec_ref(sensor);
         sensor = _sensor;
     if(sensor) inc_ref(sensor);
 }
 
-void AmRtpTransport::setLocalPort(unsigned short p)
+void AmMediaTransport::setLocalPort(unsigned short p)
 {
     l_port = p;
     am_set_port(&l_saddr,l_port);
 }
 
-void AmRtpTransport::setRAddr(const string& addr, unsigned short port)
+void AmMediaTransport::setRAddr(const string& addr, unsigned short port)
 {
     AmLock l(connections_mut);
     for(auto conn : connections) {
@@ -151,12 +151,12 @@ void AmRtpTransport::setRAddr(const string& addr, unsigned short port)
     cur_raw_conn = connections.back();
 }
 
-void AmRtpTransport::setMode(Mode _mode)
+void AmMediaTransport::setMode(Mode _mode)
 {
     mode = _mode;
 }
 
-bool AmRtpTransport::isMute()
+bool AmMediaTransport::isMute()
 {
     bool ret = false;
     AmLock l(connections_mut);
@@ -170,22 +170,22 @@ bool AmRtpTransport::isMute()
     return ret;
 }
 
-string AmRtpTransport::getLocalIP()
+string AmMediaTransport::getLocalIP()
 {
     return AmConfig.getMediaProtoInfo(l_if, lproto_id).getIP();
 }
 
-void AmRtpTransport::getLocalAddr(struct sockaddr_storage* addr)
+void AmMediaTransport::getLocalAddr(struct sockaddr_storage* addr)
 {
     memcpy(addr, &l_saddr, sizeof(sockaddr_storage));
 }
 
-int AmRtpTransport::getLocalPort()
+int AmMediaTransport::getLocalPort()
 {
     return l_port;
 }
 
-string AmRtpTransport::getRHost(bool rtcp)
+string AmMediaTransport::getRHost(bool rtcp)
 {
     if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRHost();
     else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRHost();
@@ -193,7 +193,7 @@ string AmRtpTransport::getRHost(bool rtcp)
     return "";
 }
 
-int AmRtpTransport::getRPort(bool rtcp)
+int AmMediaTransport::getRPort(bool rtcp)
 {
     if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRPort();
     else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRPort();
@@ -201,24 +201,24 @@ int AmRtpTransport::getRPort(bool rtcp)
     return 0;
 }
 
-void AmRtpTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
+void AmMediaTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
     if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRAddr(addr);
     else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRAddr(addr);
     else getRAddr(addr);
 }
 
-void AmRtpTransport::getRAddr(sockaddr_storage* addr)
+void AmMediaTransport::getRAddr(sockaddr_storage* addr)
 {
     if(cur_raw_conn) cur_raw_conn->getRAddr(addr);
 }
 
-int AmRtpTransport::hasLocalSocket()
+int AmMediaTransport::hasLocalSocket()
 {
     return l_sd;
 }
 
-int AmRtpTransport::getLocalSocket(bool reinit)
+int AmMediaTransport::getLocalSocket(bool reinit)
 {
     CLASS_DBG("> getLocalSocket(%d)", reinit);
 
@@ -276,7 +276,7 @@ int AmRtpTransport::getLocalSocket(bool reinit)
     return l_sd;
 }
 
-void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
+void AmMediaTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
 {
     if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
         offer.type = MT_AUDIO;
@@ -327,7 +327,7 @@ void AmRtpTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
     }
 }
 
-void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
+void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
 {
     int transport = offer.transport;
     if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
@@ -395,7 +395,7 @@ void AmRtpTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
     }
 }
 
-void AmRtpTransport::getIceCandidate(SdpMedia& media)
+void AmMediaTransport::getIceCandidate(SdpMedia& media)
 {
     SdpIceCandidate candidate;
     candidate.conn.network = NT_IN;
@@ -405,11 +405,11 @@ void AmRtpTransport::getIceCandidate(SdpMedia& media)
     media.ice_candidate.push_back(candidate);
 }
 
-void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
+void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
 {
-    CLASS_DBG("[%p]AmRtpTransport::initIceConnection seq - %d", to_void(stream), seq);
-    if(seq == NONE) {
-        seq = ICE;
+    CLASS_DBG("[%p]AmMediaTransport::initIceConnection seq - %d", to_void(stream), seq);
+    if(seq == TRANSPORT_SEQ_NONE) {
+        seq = TRANSPORT_SEQ_ICE;
         string local_key, remote_key;
         int cprofile = 0;
         if(local_media.is_simple_srtp() && srtp_enable) {
@@ -458,23 +458,24 @@ void AmRtpTransport::initIceConnection(const SdpMedia& local_media, const SdpMed
     }
 }
 
-void AmRtpTransport::initRtpConnection(const string& remote_address, int remote_port)
+void AmMediaTransport::initRtpConnection(const string& remote_address, int remote_port)
 {
-    CLASS_DBG("[%p]AmRtpTransport::initRtpConnection seq - %d", to_void(stream), seq);
-    if(seq == NONE) {
-        seq = RTP;
+    CLASS_DBG("[%p]AmMediaTransport::initRtpConnection seq - %d", to_void(stream), seq);
+    if(seq == TRANSPORT_SEQ_NONE) {
+        seq = TRANSPORT_SEQ_RTP;
         addRtpConnection(remote_address, remote_port);
     }
 }
 
-void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
+void AmMediaTransport::initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     if(!srtp_enable) return;
     
-    CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", to_void(stream), seq);
-    if(seq == NONE ||
-       seq == ICE) {
-        seq = RTP;
+    CLASS_DBG("[%p]AmMediaTransport::initSrtpConnection seq - %d", to_void(stream), seq);
+    if(seq == TRANSPORT_SEQ_NONE ||
+       seq == TRANSPORT_SEQ_ICE)
+    {
+        seq = TRANSPORT_SEQ_RTP;
 
         string local_key, remote_key;
         int cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
@@ -485,22 +486,22 @@ void AmRtpTransport::initSrtpConnection(const string& remote_address, int remote
     }
 }
 
-void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key)
+void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key)
 {
     if(!srtp_enable) return;
 
-    CLASS_DBG("[%p]AmRtpTransport::initSrtpConnection seq - %d", to_void(stream), seq);
+    CLASS_DBG("[%p]AmMediaTransport::initSrtpConnection seq - %d", to_void(stream), seq);
     vector<sockaddr_storage> addrs;
     {
         AmLock l(connections_mut);
         for(auto conn : connections) {
-            if(seq == ICE){
+            if(seq == TRANSPORT_SEQ_ICE){
                 if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
                     sockaddr_storage raddr;
                     conn->getRAddr(&raddr);
                     addrs.push_back(raddr);
                 }
-            } else if(seq == DTLS) {
+            } else if(seq == TRANSPORT_SEQ_DTLS) {
                 if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
                     sockaddr_storage raddr;
                     conn->getRAddr(&raddr);
@@ -514,16 +515,16 @@ void AmRtpTransport::initSrtpConnection(uint16_t srtp_profile, const string& loc
         addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_key);
     }
 
-    seq = RTP;
+    seq = TRANSPORT_SEQ_RTP;
 }
 
-void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
+void AmMediaTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     if(!dtls_enable) return;
 
-    CLASS_DBG("[%p]AmRtpTransport::initDtlsConnection seq - %d", to_void(stream), seq);
-    if(seq == NONE) {
-        seq = DTLS;
+    CLASS_DBG("[%p]AmMediaTransport::initDtlsConnection seq - %d", to_void(stream), seq);
+    if(seq == TRANSPORT_SEQ_NONE) {
+        seq = TRANSPORT_SEQ_DTLS;
         srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
         try {
             if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
@@ -537,14 +538,14 @@ void AmRtpTransport::initDtlsConnection(const string& remote_address, int remote
     }
 }
 
-void AmRtpTransport::initUdptlConnection(const string& remote_address, int remote_port)
+void AmMediaTransport::initUdptlConnection(const string& remote_address, int remote_port)
 {
-    if(seq == NONE || seq == RTP) {
-        seq = UDPTL;
+    if(seq == TRANSPORT_SEQ_NONE || seq == TRANSPORT_SEQ_RTP) {
+        seq = TRANSPORT_SEQ_UDPTL;
         addConnection(new UDPTLConnection(this, remote_address, remote_port));
-        mode = FAX;
-    } else if(seq == DTLS) {
-        seq = UDPTL;
+        mode = TRANSPORT_MODE_FAX;
+    } else if(seq == TRANSPORT_SEQ_DTLS) {
+        seq = TRANSPORT_SEQ_UDPTL;
         {
         AmLock l(connections_mut);
             for(auto &conn : connections) {
@@ -553,17 +554,26 @@ void AmRtpTransport::initUdptlConnection(const string& remote_address, int remot
                 }
             }
         }
-        mode = DTLS_FAX;
+        mode = TRANSPORT_MODE_DTLS_FAX;
     }
 }
 
-void AmRtpTransport::addConnection(AmStreamConnection* conn)
+void AmMediaTransport::initRawConnection()
+{
+    DBG("initRawConnection: %d",seq);
+    setMode(TRANSPORT_MODE_RAW);
+    if(seq == TRANSPORT_SEQ_NONE) {
+        seq = TRANSPORT_SEQ_RAW;
+    }
+}
+
+void AmMediaTransport::addConnection(AmStreamConnection* conn)
 {
     AmLock l(connections_mut);
     connections.push_back(conn);
 }
 
-void AmRtpTransport::removeConnection(AmStreamConnection* conn)
+void AmMediaTransport::removeConnection(AmStreamConnection* conn)
 {
     AmLock l(connections_mut);
     for(auto conn_it = connections.begin(); conn_it != connections.end(); conn_it++) {
@@ -575,38 +585,38 @@ void AmRtpTransport::removeConnection(AmStreamConnection* conn)
     }
 }
 
-void AmRtpTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
+void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
 {
     (void)remote_addr;
     //TODO(alexey.v): set current connections by candidate priority
     stream->allowStunConnection(this, priority);
 }
 
-void AmRtpTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
+void AmMediaTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
     stream->dtlsSessionActivated(this, srtp_profile, local_key, remote_key);
 }
 
-void AmRtpTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
     if(!cur_rtp_conn)
         cur_rtp_conn = conn;
     stream->onRtpPacket(packet, this);
 }
 
-void AmRtpTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+void AmMediaTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
     if(!cur_rtcp_conn)
         cur_rtcp_conn = conn;
     stream->onRtcpPacket(packet, this);
 }
 
-void AmRtpTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
+void AmMediaTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
-    if(mode == DEFAULT) {
+    if(mode == TRANSPORT_MODE_DEFAULT) {
         onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
         stream->freeRtpPacket(packet);
-    } else if(mode == FAX || mode == DTLS_FAX) {
+    } else if(mode == TRANSPORT_MODE_FAX || mode == TRANSPORT_MODE_DTLS_FAX) {
         cur_raw_conn = conn;
         stream->onUdptlPacket(packet, this);
     } else {
@@ -615,7 +625,7 @@ void AmRtpTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn)
     }
 }
 
-void AmRtpTransport::updateStunTimers()
+void AmMediaTransport::updateStunTimers()
 {
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::STUN_CONN)
@@ -623,11 +633,11 @@ void AmRtpTransport::updateStunTimers()
     }
 }
 
-void AmRtpTransport::stopReceiving()
+void AmMediaTransport::stopReceiving()
 {
     AmLock l(stream_mut);
     CLASS_DBG("stopReceiving() l_sd:%d, seq:%d", l_sd, seq);
-    if(hasLocalSocket() && seq != NONE) {
+    if(hasLocalSocket() && seq != TRANSPORT_SEQ_NONE) {
         CLASS_DBG("[%p]remove %s stream from RTP receiver\n",
             to_void(stream),  transport_type2str(getTransportType()));
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
@@ -635,11 +645,11 @@ void AmRtpTransport::stopReceiving()
     }
 }
 
-void AmRtpTransport::resumeReceiving()
+void AmMediaTransport::resumeReceiving()
 {
     AmLock l(stream_mut);
     CLASS_DBG("resumeReceiving() l_sd:%d, seq:%d", l_sd, seq);
-    if(hasLocalSocket() && seq != NONE) {
+    if(hasLocalSocket() && seq != TRANSPORT_SEQ_NONE) {
         CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n",
             to_void(stream),  transport_type2str(getTransportType()));
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
@@ -649,7 +659,7 @@ void AmRtpTransport::resumeReceiving()
     }
 }
 
-void AmRtpTransport::setPassiveMode(bool p)
+void AmMediaTransport::setPassiveMode(bool p)
 {
     AmLock l(connections_mut);
     for(auto conn : connections) {
@@ -657,7 +667,7 @@ void AmRtpTransport::setPassiveMode(bool p)
     }
 }
 
-void AmRtpTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)
+void AmMediaTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)
 {
     static const cstring empty;
     if (logger)
@@ -666,7 +676,7 @@ void AmRtpTransport::log_rcvd_packet(const char *buffer, int len, struct sockadd
         sensor->feed(buffer, static_cast<int>(b_size), &saddr, &l_saddr, streamConnType2sensorPackType(type));
 }
 
-void AmRtpTransport::log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type)
+void AmMediaTransport::log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type)
 {
     static const cstring empty;
     if (logger)
@@ -675,7 +685,7 @@ void AmRtpTransport::log_sent_packet(const char *buffer, int len, struct sockadd
         sensor->feed(buffer, static_cast<int>(b_size), &l_saddr, &send_addr, streamConnType2sensorPackType(type));
 }
 
-ssize_t AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType type)
+ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType type)
 {
     AmStreamConnection* cur_stream = nullptr;
     if(type == AmStreamConnection::RTP_CONN) {
@@ -708,7 +718,7 @@ ssize_t AmRtpTransport::send(AmRtpPacket* packet, AmStreamConnection::Connection
     return ret;
 }
 
-ssize_t AmRtpTransport::send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type)
+ssize_t AmMediaTransport::send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type)
 {
     log_sent_packet(reinterpret_cast<const char*>(buf), size, *raddr, type);
 
@@ -746,7 +756,7 @@ ssize_t AmRtpTransport::send(sockaddr_storage* raddr, unsigned char* buf, int si
     return err;
 }
 
-int AmRtpTransport::sendmsg(unsigned char* buf, int size)
+int AmMediaTransport::sendmsg(unsigned char* buf, int size)
 {
     MEDIA_info &iface = AmConfig.getMediaProtoInfo(l_if, lproto_id);
     unsigned int sys_if_idx = iface.net_if_idx;
@@ -802,7 +812,7 @@ int AmRtpTransport::sendmsg(unsigned char* buf, int size)
     return 0;
 }
 
-ssize_t AmRtpTransport::recv(int sd)
+ssize_t AmMediaTransport::recv(int sd)
 {
     cmsghdr *cmsgptr;
     ssize_t ret = recvmsg(sd,&recv_msg,0);
@@ -827,17 +837,17 @@ ssize_t AmRtpTransport::recv(int sd)
     return ret;
 }
 
-void AmRtpTransport::recvPacket(int fd)
+void AmMediaTransport::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
         onPacket(buffer, b_size, saddr, recv_time);
     }
 }
 
-void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_storage& addr, struct timeval recvtime)
+void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_storage& addr, struct timeval recvtime)
 {
     AmStreamConnection::ConnectionType ctype;
-    if(mode == DEFAULT) {
+    if(mode == TRANSPORT_MODE_DEFAULT) {
         ctype = GetConnectionType(buf, size);
         if(ctype == AmStreamConnection::UNKNOWN_CONN) {
             CLASS_WARN("Unknown packet type from %s:%d, ignore it",
@@ -845,9 +855,9 @@ void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_st
                        am_get_port(&addr));
             return;
         }
-    } else if(mode == FAX){
+    } else if(mode == TRANSPORT_MODE_FAX){
         ctype = AmStreamConnection::UDPTL_CONN;
-    } else if(mode == DTLS_FAX) {
+    } else if(mode == TRANSPORT_MODE_DTLS_FAX) {
         ctype = AmStreamConnection::DTLS_CONN;
     } else {
         ctype = AmStreamConnection::RAW_CONN;
@@ -885,7 +895,7 @@ void AmRtpTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_st
     s_conn->handleConnection(buf, size, &addr, recvtime);
 }
 
-int AmRtpTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)
+int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)
 {
     CryptoProfile cprofile = CP_NONE;
     if(local_media.crypto.size() == 1) {
@@ -933,7 +943,7 @@ int AmRtpTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const S
     return cprofile;
 }
 
-void AmRtpTransport::addSrtpConnection(const string& remote_address, int remote_port,
+void AmMediaTransport::addSrtpConnection(const string& remote_address, int remote_port,
                                        int srtp_profile, const string& local_key, const string& remote_key)
 {
     if(type == RTP_TRANSPORT) {
@@ -961,7 +971,7 @@ void AmRtpTransport::addSrtpConnection(const string& remote_address, int remote_
     }
 }
 
-void AmRtpTransport::addRtpConnection(const string& remote_address, int remote_port)
+void AmMediaTransport::addRtpConnection(const string& remote_address, int remote_port)
 {
     AmStreamConnection* conn = nullptr;
     if(type == RTP_TRANSPORT) {
@@ -984,7 +994,7 @@ void AmRtpTransport::addRtpConnection(const string& remote_address, int remote_p
     }
 }
 
-AmStreamConnection::ConnectionType AmRtpTransport::GetConnectionType(unsigned char* buf, unsigned int size)
+AmStreamConnection::ConnectionType AmMediaTransport::GetConnectionType(unsigned char* buf, unsigned int size)
 {
     if(isStunMessage(buf, size))
         return AmStreamConnection::STUN_CONN;
@@ -1000,7 +1010,7 @@ AmStreamConnection::ConnectionType AmRtpTransport::GetConnectionType(unsigned ch
     return AmStreamConnection::UNKNOWN_CONN;
 }
 
-bool AmRtpTransport::isStunMessage(unsigned char* buf, unsigned int size)
+bool AmMediaTransport::isStunMessage(unsigned char* buf, unsigned int size)
 {
     if(size < sizeof(unsigned short)) {
         return false;
@@ -1010,7 +1020,7 @@ bool AmRtpTransport::isStunMessage(unsigned char* buf, unsigned int size)
     return *buf < 2;
 }
 
-bool AmRtpTransport::isDTLSMessage(unsigned char* buf, unsigned int size)
+bool AmMediaTransport::isDTLSMessage(unsigned char* buf, unsigned int size)
 {
     if(!size) {
         return false;
@@ -1020,7 +1030,7 @@ bool AmRtpTransport::isDTLSMessage(unsigned char* buf, unsigned int size)
     return *buf < 64 && *buf > 19;
 }
 
-bool AmRtpTransport::isRTCPMessage(unsigned char* buf, unsigned int size)
+bool AmMediaTransport::isRTCPMessage(unsigned char* buf, unsigned int size)
 {
     if(size < sizeof(rtp_hdr_t)) {
         return false;
@@ -1037,7 +1047,7 @@ bool AmRtpTransport::isRTCPMessage(unsigned char* buf, unsigned int size)
     return false;
 }
 
-bool AmRtpTransport::isRTPMessage(unsigned char* buf, unsigned int size)
+bool AmMediaTransport::isRTPMessage(unsigned char* buf, unsigned int size)
 {
     if(size < sizeof(rtp_hdr_t)) {
         return false;
@@ -1055,7 +1065,7 @@ bool AmRtpTransport::isRTPMessage(unsigned char* buf, unsigned int size)
     return false;
 }
 
-bool AmRtpTransport::isZRTPMessage(unsigned char* buf, unsigned int size)
+bool AmMediaTransport::isZRTPMessage(unsigned char* buf, unsigned int size)
 {
     if(size < sizeof(rtp_hdr_t)) {
         return false;
@@ -1068,7 +1078,7 @@ bool AmRtpTransport::isZRTPMessage(unsigned char* buf, unsigned int size)
     return true;
 }
 
-msg_sensor::packet_type_t AmRtpTransport::streamConnType2sensorPackType(AmStreamConnection::ConnectionType type)
+msg_sensor::packet_type_t AmMediaTransport::streamConnType2sensorPackType(AmStreamConnection::ConnectionType type)
 {
     switch(type) {
         case AmStreamConnection::RTP_CONN:

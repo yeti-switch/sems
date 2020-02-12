@@ -32,7 +32,7 @@ typedef struct t38_option{
 class UDPTLConnection : public AmStreamConnection
 {
 public:
-    UDPTLConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    UDPTLConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port);
     virtual ~UDPTLConnection();
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
@@ -42,7 +42,7 @@ class DTLSUDPTLConnection : public AmStreamConnection
 {
     AmStreamConnection* m_dtls_conn;
 public:
-    DTLSUDPTLConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection* dtls);
+    DTLSUDPTLConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection* dtls);
     virtual ~DTLSUDPTLConnection();
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;

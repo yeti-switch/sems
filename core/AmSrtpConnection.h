@@ -42,7 +42,7 @@ private:
 
     AmStreamConnection* s_stream;
 public:
-    AmSrtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
+    AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
     ~AmSrtpConnection();
 
     void use_key(srtp_profile_t profile, const unsigned char* key_s, size_t key_s_len, const unsigned char* key_r, size_t key_r_len);

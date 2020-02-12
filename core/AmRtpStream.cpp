@@ -308,7 +308,7 @@ int AmRtpStream::getLocalRtcpPort()
     return cur_rtcp_trans->getLocalPort();
 }
 
-void AmRtpStream::calcRtpPorts(AmRtpTransport* tr_rtp, AmRtpTransport* tr_rtcp)
+void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rtcp)
 {
     if(tr_rtp->getLocalPort() && tr_rtcp->getLocalPort())
         return;
@@ -423,8 +423,8 @@ void AmRtpStream::addAdditionTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else if(v4_count < 4){
-        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
-                        *raw = new AmRtpTransport(this, l_if, proto_id);
+        AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id),
+                          *raw = new AmMediaTransport(this, l_if, proto_id);
         transports.push_back(fax);
         transports.push_back(raw);
         calcRtpPorts(fax, raw);
@@ -433,8 +433,8 @@ void AmRtpStream::addAdditionTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else  if(v6_count < 4){
-        AmRtpTransport  *fax = new AmRtpTransport(this, l_if, proto_id),
-                        *raw = new AmRtpTransport(this, l_if, proto_id);
+        AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id),
+                          *raw = new AmMediaTransport(this, l_if, proto_id);
         transports.push_back(fax);
         transports.push_back(raw);
         calcRtpPorts(fax, raw);
@@ -458,8 +458,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
-                       *rtcp = new AmRtpTransport(this, l_if, proto_id);
+        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id),
+                         *rtcp = new AmMediaTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -468,8 +468,8 @@ void AmRtpStream::initTransport()
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
-        AmRtpTransport *rtp = new AmRtpTransport(this, l_if, proto_id),
-                        *rtcp = new AmRtpTransport(this, l_if, proto_id);
+        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id),
+                         *rtcp = new AmMediaTransport(this, l_if, proto_id);
         transports.push_back(rtp);
         transports.push_back(rtcp);
         calcRtpPorts(rtp, rtcp);
@@ -758,7 +758,7 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    AmRtpTransport* rtptrans = cur_rtp_trans;
+    AmMediaTransport* rtptrans = cur_rtp_trans;
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) rtptrans = cur_udptl_trans;
 
     rtptrans->setPassiveMode(remote_media.dir == SdpMedia::DirActive ||
@@ -836,7 +836,7 @@ void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   transport callbacks functions(received RTP packets or transport errors)
 
-void AmRtpStream::onErrorRtpTransport(const string& error, AmRtpTransport* transport)
+void AmRtpStream::onErrorRtpTransport(const string& error, AmMediaTransport* transport)
 {
     struct sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
@@ -847,7 +847,7 @@ void AmRtpStream::onErrorRtpTransport(const string& error, AmRtpTransport* trans
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session");
 }
 
-void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmRtpTransport* transport)
+void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
 {
     int parse_res = RTP_PACKET_PARSE_OK;
     if(!relay_raw)
@@ -880,12 +880,12 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmRtpTransport* transport)
     }
 }
 
-void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmRtpTransport*)
+void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmMediaTransport*)
 {
     p->rtcp_parse_update_stats(rtp_stats);
 }
 
-void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmRtpTransport*)
+void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmMediaTransport*)
 {
     clearRTPTimeout(&p->recv_time);
     if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
@@ -893,12 +893,14 @@ void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmRtpTransport*)
     }
 }
 
-void AmRtpStream::onRawPacket(AmRtpPacket* p, AmRtpTransport*)
+void AmRtpStream::onRawPacket(AmRtpPacket* p, AmMediaTransport*)
 {
-    freeRtpPacket(p);
+    if(!relay_raw)
+        freeRtpPacket(p);
+    bufferPacket(p);
 }
 
-void AmRtpStream::allowStunConnection(AmRtpTransport* transport, int priority)
+void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int priority)
 {
     for(auto tr : transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
@@ -917,7 +919,7 @@ void AmRtpStream::allowStunConnection(AmRtpTransport* transport, int priority)
     }
 }
 
-void AmRtpStream::dtlsSessionActivated(AmRtpTransport* transport, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
+void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
@@ -1646,6 +1648,9 @@ void AmRtpStream::setRawRelay(bool enable)
 {
     CLASS_DBG("%sabled RAW relay\n", enable ? "en" : "dis");
     relay_raw = enable;
+    if(cur_rtp_trans) {
+        cur_rtp_trans->initRawConnection();
+    }
 }
 
 bool AmRtpStream::isRawRelay()

@@ -1,5 +1,5 @@
 #include "AmDtlsConnection.h"
-#include "AmRtpTransport.h"
+#include "AmMediaTransport.h"
 
 #include <botan/tls_client.h>
 #include <botan/tls_server.h>
@@ -226,7 +226,7 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert
     return certs;
 }
 
-AmDtlsConnection::AmDtlsConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
+AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN)
     , dtls_settings(0)
     , dtls_channel(0)

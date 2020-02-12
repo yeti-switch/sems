@@ -8,7 +8,7 @@
 #include <string>
 using std::string;
 
-class AmRtpTransport;
+class AmMediaTransport;
 class AmRtpPacket;
 
 class AmStreamConnection
@@ -26,7 +26,7 @@ public:
 
         UNKNOWN_CONN
     };
-    AmStreamConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type);
+    AmStreamConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type);
     AmStreamConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port, ConnectionType type);
     virtual ~AmStreamConnection();
 
@@ -43,11 +43,11 @@ public:
     int getRPort() { return r_port; }
     void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }
     bool isMute() { return mute; }
-    AmRtpTransport* getTransport() { return transport; }
+    AmMediaTransport* getTransport() { return transport; }
 protected:
     void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:
-    AmRtpTransport* transport;
+    AmMediaTransport* transport;
     AmStreamConnection* parent;
     string r_host;
     int r_port;
@@ -66,15 +66,14 @@ protected:
 class AmRawConnection : public AmStreamConnection
 {
 public:
-    AmRawConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RAW_CONN) {}
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override {}
+    AmRawConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port);
+    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
 };
 
 class AmRtpConnection : public AmStreamConnection
 {
 public:
-    AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    AmRtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port);
     AmRtpConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port);
     virtual ~AmRtpConnection();
 
@@ -84,7 +83,7 @@ public:
 class AmRtcpConnection : public AmStreamConnection
 {
 public:
-    AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port);
+    AmRtcpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port);
     AmRtcpConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port);
     virtual ~AmRtcpConnection();
 

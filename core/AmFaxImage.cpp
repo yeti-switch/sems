@@ -224,7 +224,7 @@ void t38_option::getAttributes(SdpMedia& m)
 /***************************************************************************************************/
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
-UDPTLConnection::UDPTLConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+UDPTLConnection::UDPTLConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
 : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN)
 {
 }
@@ -239,7 +239,10 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
+
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
+
     p->recv_time = rv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
@@ -251,7 +254,7 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 /***************************************************************************************************/
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
-DTLSUDPTLConnection::DTLSUDPTLConnection(AmRtpTransport* _transport, const std::__cxx11::string& remote_addr, int remote_port, AmStreamConnection* dtls)
+DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::__cxx11::string& remote_addr, int remote_port, AmStreamConnection* dtls)
 : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls)
 {
 }

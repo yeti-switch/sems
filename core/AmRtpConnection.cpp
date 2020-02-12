@@ -1,9 +1,9 @@
 #include "AmRtpConnection.h"
-#include "AmRtpTransport.h"
+#include "AmMediaTransport.h"
 #include "AmLcConfig.h"
 #include "AmRtpStream.h"
 
-AmStreamConnection::AmStreamConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type)
+AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type)
     : transport(_transport)
     , parent(0)
     , r_host(remote_addr)
@@ -143,7 +143,30 @@ void AmStreamConnection::setPassiveMode(bool p)
     }
 }
 
-AmRtpConnection::AmRtpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+AmRawConnection::AmRawConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
+  : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RAW_CONN)
+{}
+
+void AmRawConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+{
+    handleSymmetricRtp(recv_addr, &recv_time);
+
+    sockaddr_storage laddr;
+    transport->getLocalAddr(&laddr);
+
+    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
+
+    p->recv_time = recv_time;
+    p->relayed = false;
+    p->setAddr(recv_addr);
+    p->setLocalAddr(&laddr);
+    p->setBuffer(data, size);
+    transport->onRawPacket(p, this);
+}
+
+
+AmRtpConnection::AmRtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTP_CONN)
 {
 }
@@ -163,8 +186,10 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
+
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
     if(!p) return;
+
     p->recv_time = recv_time;
     p->relayed = false;
     p->setAddr(recv_addr);
@@ -173,7 +198,7 @@ void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct 
     transport->onRtpPacket(p, parent ? parent : this);
 }
 
-AmRtcpConnection::AmRtcpConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port)
+AmRtcpConnection::AmRtcpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RTCP_CONN)
 {
 }

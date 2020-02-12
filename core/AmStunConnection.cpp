@@ -1,7 +1,7 @@
 #include "AmStunConnection.h"
 #include "log.h"
 #include <stunbuilder.h>
-#include "AmRtpTransport.h"
+#include "AmMediaTransport.h"
 #include "AmRtpStream.h"
 
 StunTimer::StunTimer(const sp_addr& addr, uint32_t duration)
@@ -20,7 +20,7 @@ void StunTimer::fire()
     stun_processor::instance()->fire(&spaddr);
 }
 
-AmStunConnection::AmStunConnection(AmRtpTransport* _transport, const string& remote_addr, int remote_port, int _priority)
+AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _priority)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
     , priority(_priority)
     , auth_state(AuthState::NO_AUTH)

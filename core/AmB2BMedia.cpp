@@ -1094,6 +1094,12 @@ void AmB2BMedia::updateRelayStream(
 
     stream->stopReceiving();
     if(m.port) {
+        stream->setRelayStream(relay_to);
+        stream->setRelayPayloads(true_mask);
+        if (!relay_paused) stream->enableRtpRelay();
+        stream->setRAddr(connection_address, static_cast<unsigned short>(m.port));
+        if((m.transport != TP_RTPAVP) && (m.transport != TP_RTPSAVP))
+            stream->setRawRelay(true);
         if (session) {
             // propagate session settings
             stream->setPassiveMode(session->getRtpRelayForceSymmetricRtp());
@@ -1101,11 +1107,6 @@ void AmB2BMedia::updateRelayStream(
             stream->setRtpRelayTransparentSSRC(session->getRtpRelayTransparentSSRC());
             // if (!stream->hasLocalSocket()) stream->setLocalIP(session->advertisedIP());
         }
-        stream->setRelayStream(relay_to);
-        stream->setRelayPayloads(true_mask);
-        if (!relay_paused) stream->enableRtpRelay();
-        stream->setRAddr(connection_address, static_cast<unsigned short>(m.port));
-        if((m.transport != TP_RTPAVP) && (m.transport != TP_RTPSAVP)) stream->setRawRelay(true);
         stream->resumeReceiving();
     } else {
         DBG("disabled stream");
@@ -1454,6 +1455,8 @@ void AmB2BMedia::createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer,
 
 void AmB2BMedia::setRtpLogger(msg_logger* _logger)
 {
+    DBG("AmB2BMedia::setRtpLogger");
+
     AmLock lock(mutex);
 
     if (logger) dec_ref(logger);
