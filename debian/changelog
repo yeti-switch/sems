@@ -1,3 +1,9 @@
+sems (1.8.55-2) stable; urgency=low
+
+  * AmB2BMedia: fix pcap logging for relay streams
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 12 Feb 2020 16:03:28 +0200
+
 sems (1.8.55-1) stable; urgency=low
 
   * fix relay streams initialization in AmB2BMedia (fixes T38 for yeti module)

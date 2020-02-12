@@ -1107,6 +1107,7 @@ void AmB2BMedia::updateRelayStream(
             stream->setRtpRelayTransparentSSRC(session->getRtpRelayTransparentSSRC());
             // if (!stream->hasLocalSocket()) stream->setLocalIP(session->advertisedIP());
         }
+        stream->setLogger(logger);
         stream->resumeReceiving();
     } else {
         DBG("disabled stream");
