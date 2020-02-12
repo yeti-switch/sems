@@ -254,7 +254,7 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 /***************************************************************************************************/
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
-DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::__cxx11::string& remote_addr, int remote_port, AmStreamConnection* dtls)
+DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::string& remote_addr, int remote_port, AmStreamConnection* dtls)
 : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls)
 {
 }
