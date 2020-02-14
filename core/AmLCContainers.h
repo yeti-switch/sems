@@ -100,16 +100,15 @@ public:
     : IP_info(info)
     , type(info.type)
     , local_port(info.local_port)
-    , acl(info.acl)
-    , opt_acl(info.opt_acl){}
+    , acls(info.acls)
+    {}
     virtual ~SIP_info(){}
 
     SIP_type type;
 
     unsigned int local_port;
 
-    trsp_acl acl;
-    trsp_acl opt_acl;
+    trsp_acls acls;
 
     std::string transportToStr() const {
         if(type == SIP_info::TCP) {

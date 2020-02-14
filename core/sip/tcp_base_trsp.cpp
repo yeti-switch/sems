@@ -21,7 +21,7 @@ trsp_base_input::trsp_base_input()
 void trsp_base_input::on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg)
 {
     SIP_info *iface = AmConfig.sip_ifs[socket->server_sock->get_if()].proto_info[socket->server_sock->get_proto_idx()];
-    trans_layer::instance()->received_msg((sip_msg*)s_msg,iface->acl,iface->opt_acl);
+    trans_layer::instance()->received_msg((sip_msg*)s_msg,iface->acls);
 }
 
 int trsp_base_input::parse_input(tcp_base_trsp* socket)

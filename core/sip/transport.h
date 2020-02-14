@@ -235,6 +235,12 @@ class trsp_acl {
     void add_network(AmSubnet net) { networks.push_back(net); }
 };
 
+struct trsp_acls {
+    trsp_acl inv; //INVITE ACLs
+    trsp_acl opt; //OPTIONS ACLs
+    trsp_acl reg; //REGISTER ACLs
+};
+
 #endif
 
 /** EMACS **

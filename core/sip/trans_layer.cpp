@@ -72,8 +72,7 @@
     msg->u.reply->reason = cstring(new_reason); \
     msg->u.reply->local_reply = true;
 
-static trsp_acl fake_acl;
-static trsp_acl fake_opt_acl;
+static trsp_acls fake_acls;
 
 static const cstring sip_resp_forbidden("Forbidden");
 
@@ -1046,7 +1045,7 @@ void _trans_layer::transport_error(sip_msg* msg)
     set_err_reply_from_req(err,msg,503,"Transport Error");
 
     // err will be deleted there, as any received message
-    process_rcvd_msg(err, fake_acl, fake_opt_acl);
+    process_rcvd_msg(err, fake_acls);
 }
 
 static void translate_string(sip_msg* dst_msg, cstring& dst,
@@ -1708,7 +1707,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
           delete msg;\
           return
 
-void _trans_layer::received_msg(sip_msg* msg, const trsp_acl &acl, const trsp_acl &opt_acl)
+void _trans_layer::received_msg(sip_msg* msg, const trsp_acls &acls)
 {
     char* err_msg=0;
     int err = parse_sip_msg(msg,err_msg);
@@ -1735,10 +1734,10 @@ void _trans_layer::received_msg(sip_msg* msg, const trsp_acl &acl, const trsp_ac
 	DROP_MSG;
     }
 
-    process_rcvd_msg(msg,acl,opt_acl);
+    process_rcvd_msg(msg,acls);
 }
 
-void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trsp_acl &opt_acl)
+void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 {    
     assert(msg->callid && get_cseq(msg));
     unsigned int h = hash(msg->callid->value, get_cseq(msg)->num_str);
@@ -1842,13 +1841,16 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trs
                          case sip_request::INVITE:
                              if(nullptr==static_cast<sip_from_to*>(msg->to->p)->tag.s) {
                                  //check ACL for initial INVITEs (without To-tag) only
-                                 acl_action = acl.check(msg->remote_ip);
+                                 acl_action = acls.inv.check(msg->remote_ip);
                              } else {
                                  acl_action = trsp_acl::Allow;
                              }
                              break;
                          case sip_request::OPTIONS:
-                             acl_action = opt_acl.check(msg->remote_ip);
+                             acl_action = acls.opt.check(msg->remote_ip);
+                             break;
+                         case sip_request::REGISTER:
+                             acl_action = acls.reg.check(msg->remote_ip);
                              break;
                          default:
                              acl_action = trsp_acl::Allow;

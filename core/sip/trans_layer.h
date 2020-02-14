@@ -193,7 +193,7 @@ public:
      * Called by the transport layer
      * when a new message has been recived.
      */
-    void received_msg(sip_msg* msg, const trsp_acl &acl, const trsp_acl &opt_acl);
+    void received_msg(sip_msg* msg, const trsp_acls &acls);
 
     /**
      * This is called by the transaction timer callback.
@@ -307,7 +307,7 @@ protected:
     /**
      * Processes a parsed SIP message
      */
-    void process_rcvd_msg(sip_msg* msg, const trsp_acl &acl, const trsp_acl &opt_acl);
+    void process_rcvd_msg(sip_msg* msg, const trsp_acls &acls);
 };
 
 typedef singleton<_trans_layer> trans_layer;

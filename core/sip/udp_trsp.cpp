@@ -401,7 +401,7 @@ int udp_trsp_socket::recv()
 
     // pass message to the parser / transaction layer
     SIP_info* info = AmConfig.sip_ifs[get_if()].proto_info[get_proto_idx()];
-    trans_layer::instance()->received_msg(s_msg, info->acl, info->opt_acl);
+    trans_layer::instance()->received_msg(s_msg, info->acls);
     return 1;
 }
 

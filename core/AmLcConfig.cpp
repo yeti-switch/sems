@@ -31,6 +31,7 @@
 #define SECTION_SIP_UDP_NAME         "sip-udp"
 #define SECTION_OPT_NAME             "options-acl"
 #define SECTION_ORIGACL_NAME         "origination-acl"
+#define SECTION_REG_ACL_NAME         "register-acl"
 #define SECTION_MODULES_NAME         "modules"
 #define SECTION_MODULE_NAME          "module"
 #define SECTION_MODULE_GLOBAL_NAME   "module-global"
@@ -322,6 +323,7 @@ namespace Config {
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -338,6 +340,7 @@ namespace Config {
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -381,6 +384,7 @@ namespace Config {
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NODEFAULT),
         CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NODEFAULT),
         CFG_END()
@@ -401,6 +405,7 @@ namespace Config {
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SERVER_NAME, tls_server, CFGF_NODEFAULT),
         CFG_SEC(SECTION_CLIENT_NAME, tls_client, CFGF_NODEFAULT),
         CFG_BOOL(PARAM_CORS_MODE_NAME, cfg_false, CFGF_NODEFAULT),
@@ -422,6 +427,7 @@ namespace Config {
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_REG_ACL_NAME, acl, CFGF_NODEFAULT),
         CFG_BOOL(PARAM_CORS_MODE_NAME, cfg_false, CFGF_NODEFAULT),
         CFG_END()
     };
@@ -835,7 +841,32 @@ AmLcConfig::~AmLcConfig()
 
 void AmLcConfig::setValidationFunction(cfg_t* cfg)
 {
-    // acl of interfaces validation
+    // interfaces ACL validation
+#define set_acl_method_validator(PROTO_NAME, PROTO_VERSION, METHOD_NAME) \
+    cfg_set_validate_func(cfg,\
+        SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" PROTO_VERSION "|"\
+        PROTO_NAME "|" METHOD_NAME "|" PARAM_METHOD_NAME,\
+        validate_method_func)
+
+#define set_acl_validator_proto_version(PROTO_NAME, PROTO_VERSION) \
+    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_OPT_NAME);\
+    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_ORIGACL_NAME);\
+    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_REG_ACL_NAME);
+
+#define set_acl_validator_proto(PROTO_NAME) \
+    set_acl_validator_proto_version(PROTO_NAME, SECTION_IP4_NAME);\
+    set_acl_validator_proto_version(PROTO_NAME, SECTION_IP6_NAME);
+
+    set_acl_validator_proto(SECTION_SIP_UDP_NAME);
+    set_acl_validator_proto(SECTION_SIP_TCP_NAME);
+    set_acl_validator_proto(SECTION_SIP_TLS_NAME);
+    set_acl_validator_proto(SECTION_SIP_WS_NAME);
+    set_acl_validator_proto(SECTION_SIP_WSS_NAME);
+
+#undef set_acl_validator_proto
+#undef set_acl_validator_proto_version
+#undef set_acl_method_validator
+
     cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
                                  SECTION_SIP_UDP_NAME "|" SECTION_OPT_NAME "|" PARAM_METHOD_NAME, validate_method_func);
     cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"
@@ -1501,7 +1532,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
 
         if(cfg_size(cfg, SECTION_ORIGACL_NAME)) {
             cfg_t* acl = cfg_getsec(cfg, SECTION_ORIGACL_NAME);
-            if(readAcl(acl, sinfo->acl, if_name)) {
+            if(readAcl(acl, sinfo->acls.inv, if_name)) {
                  ERROR("error parsing invite acl for interface: %s",if_name.c_str());
                  return nullptr;
             }
@@ -1509,8 +1540,16 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
 
         if(cfg_size(cfg, SECTION_OPT_NAME)) {
             cfg_t* opt_acl = cfg_getsec(cfg, SECTION_OPT_NAME);
-            if(readAcl(opt_acl, sinfo->opt_acl, if_name)) {
+            if(readAcl(opt_acl, sinfo->acls.opt, if_name)) {
                 ERROR("error parsing options acl for interface: %s",if_name.c_str());
+                return nullptr;
+            }
+        }
+
+        if(cfg_size(cfg, SECTION_REG_ACL_NAME)) {
+            cfg_t* reg_acl = cfg_getsec(cfg, SECTION_REG_ACL_NAME);
+            if(readAcl(reg_acl, sinfo->acls.reg, if_name)) {
+                ERROR("error parsing register acl for interface: %s",if_name.c_str());
                 return nullptr;
             }
         }
