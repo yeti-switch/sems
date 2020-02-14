@@ -207,11 +207,17 @@ void tcp_base_trsp::close()
     DBG("********* closing connection ***********");
     DBG("connection type %s", get_transport());
 
-    DBG("%p del read_ev %p", this, read_ev);
-    event_del(read_ev);
+    if(read_ev) {
+        DBG("%p del read_ev %p", this, read_ev);
+        event_del(read_ev);
+        read_ev = NULL;
+    }
 
-    DBG("%p del write_ev %p", this, write_ev);
-    event_del(write_ev);
+    if(write_ev) {
+        DBG("%p del write_ev %p", this, write_ev);
+        event_del(write_ev);
+        write_ev = NULL;
+    }
 
     if(sd > 0) {
         ::close(sd);
