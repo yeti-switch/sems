@@ -1,3 +1,9 @@
+sems (1.8.55-3) stable; urgency=low
+
+  * fix tls_trsp_socket finalization segfault
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 14 Feb 2020 17:36:53 +0200
+
 sems (1.8.55-2) stable; urgency=low
 
   * AmB2BMedia: fix pcap logging for relay streams
