@@ -1,3 +1,9 @@
+sems (1.8.56-1) stable; urgency=low
+
+  * add register-acl
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 15 Feb 2020 21:39:57 +0200
+
 sems (1.8.55-3) stable; urgency=low
 
   * fix tls_trsp_socket finalization segfault
