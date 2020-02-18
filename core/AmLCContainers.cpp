@@ -61,7 +61,7 @@ int MEDIA_info::prepare(const std::string &iface_name)
     bzero(&ports_state,sizeof(ports_state));
     //set all bits for RTCP ports to make working optimization checks like if(~(*it))
     int mask = rtp_bit_parity ? 0x55 : 0xAA;
-    memset(&ports_state[ports_state_begin_it], mask,
+    memset(ports_state_begin_addr, mask,
            (ports_state_end_addr - ports_state_begin_addr)*sizeof(unsigned long));
 
     ports_state_end_addr--;

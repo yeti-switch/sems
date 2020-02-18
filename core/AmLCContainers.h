@@ -304,7 +304,7 @@ public:
     }
 
 private:
-    DECLARE_BITMAP_ALIGNED(ports_state, USHRT_MAX);
+    DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
     unsigned long *ports_state_begin_addr,
                   *ports_state_end_addr;
     unsigned short start_edge_bit_it,
