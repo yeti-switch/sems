@@ -195,6 +195,8 @@ protected:
     AmStreamConnection* cur_rtp_conn;
     AmStreamConnection* cur_rtcp_conn;
     AmStreamConnection* cur_raw_conn;
+
+    AmStreamConnection* getSuitableConnection(bool rtcp);
 private:
     msg_logger *logger;
     msg_sensor *sensor;

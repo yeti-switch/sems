@@ -185,27 +185,33 @@ int AmMediaTransport::getLocalPort()
     return l_port;
 }
 
+AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
+{
+    if(!rtcp) {
+        if(cur_rtp_conn) return cur_rtp_conn;
+    } else if(cur_rtcp_conn)
+        return cur_rtcp_conn;
+    return cur_raw_conn;
+}
+
 string AmMediaTransport::getRHost(bool rtcp)
 {
-    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRHost();
-    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRHost();
-    else if(cur_raw_conn) return cur_raw_conn->getRHost();
+    auto c = getSuitableConnection(rtcp);
+    if(c) return c->getRHost();
     return "";
 }
 
 int AmMediaTransport::getRPort(bool rtcp)
 {
-    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRPort();
-    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRPort();
-    else if(cur_raw_conn) return cur_raw_conn->getRPort();
+    auto c = getSuitableConnection(rtcp);
+    if(c) return c->getRPort();
     return 0;
 }
 
 void AmMediaTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 {
-    if(rtcp && cur_rtp_conn) return cur_rtp_conn->getRAddr(addr);
-    else if(!rtcp && cur_rtcp_conn) return cur_rtcp_conn->getRAddr(addr);
-    else getRAddr(addr);
+    auto c = getSuitableConnection(rtcp);
+    if(c) c->getRAddr(addr);
 }
 
 void AmMediaTransport::getRAddr(sockaddr_storage* addr)
