@@ -1198,7 +1198,9 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
 void AmRtpStream::recvDtmfPacket(AmRtpPacket* p)
 {
     if (p->payload == getLocalTelephoneEventPT()) {
-        dtmf_payload_t* dpl = (dtmf_payload_t*)p->getData();
+        if(p->getDataSize()!=sizeof(dtmf_payload_t))
+            return;
+        auto dpl = reinterpret_cast<dtmf_payload_t*>(p->getData());
         /*CLASS_DBG("DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u session = [%p]\n",
           dpl->event,dpl->e,dpl->r,dpl->volume,ntohs(dpl->duration),p->timestamp, session);*/
         if (session)
