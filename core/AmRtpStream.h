@@ -61,6 +61,8 @@ using std::pair;
 #define RTP_BUFFER_SIZE -5 // buffer overrun
 #define RTP_UNKNOWN_PL  -6 // unknown payload
 
+#define RTP_STREAM_BUF_PACKETS_COUNT 32
+
 /**
  * Forward declarations
  */
@@ -72,24 +74,49 @@ struct amci_payload_t;
 /**
  * This provides the memory for the receive buffer.
  */
-struct PacketMem {
-#define MAX_PACKETS_BITS 5
-#define MAX_PACKETS (1<<MAX_PACKETS_BITS)
-#define MAX_PACKETS_MASK (MAX_PACKETS-1)
+template <int packets_count>
+class PacketMem {
+#define PacketMemUsedClearMask (~(ULONG_MAX>>(BITS_PER_LONG - packets_count)))
+    AmRtpPacket packets[packets_count];
+    unsigned long used; //used packets bitmask
+  public:
+    PacketMem()
+      : used(PacketMemUsedClearMask)
+    {}
+    AmRtpPacket* newPacket()
+    {
+        if (!(~(used)))
+            return nullptr;
 
-    AmRtpPacket packets[MAX_PACKETS];
-    std::atomic<bool> used[MAX_PACKETS];
+        for(int i = 0; i < packets_count; i++) {
+            if(!test_and_set_bit(i, &used)) {
+                return &packets[i];
+            }
+        }
 
-      PacketMem();
+        return nullptr;
+    }
+    void freePacket(AmRtpPacket* p)
+    {
+        if (!p)  return;
 
-    AmRtpPacket* newPacket();
-    void freePacket(AmRtpPacket* p);
-    void clear();
-    void debug();
+        int idx = p-packets;
 
-  private:
-    unsigned int cur_idx;
-    std::atomic<unsigned int> n_used;
+        assert(idx >= 0);
+        assert(idx < packets_count);
+
+        clear_bit(idx, &used);
+        __sync_synchronize();
+    }
+    void clear()
+    {
+        used = PacketMemUsedClearMask;
+        __sync_synchronize();
+    }
+    void debug()
+    {
+        DBG("used: 0x%lx",used);
+    }
 };
 
 /** \brief event fired on RTP timeout */
@@ -265,8 +292,8 @@ class AmRtpStream
     bool           monitor_rtp_timeout;
 
     /** Payload type for telephone event */
-    auto_ptr<const SdpPayload> remote_telephone_event_pt;
-    auto_ptr<const SdpPayload> local_telephone_event_pt;
+    unique_ptr<const SdpPayload> remote_telephone_event_pt;
+    unique_ptr<const SdpPayload> local_telephone_event_pt;
 
     /** DTMF sender */
     AmDtmfSender   dtmf_sender;
@@ -274,7 +301,7 @@ class AmRtpStream
     /**
     * Receive buffer, queue and mutex
     */
-    PacketMem       mem;
+    PacketMem<RTP_STREAM_BUF_PACKETS_COUNT> mem;
     ReceiveBuffer   receive_buf;
     RtpEventQueue   rtp_ev_qu;
     AmMutex         receive_mut;

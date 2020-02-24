@@ -46,6 +46,7 @@
 #include "sip/raw_sender.h"
 #include "sip/msg_logger.h"
 
+#include "bitops.h"
 #include "log.h"
 
 #include <assert.h>
@@ -933,60 +934,6 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with RTP packets
 
-PacketMem::PacketMem()
-  : cur_idx(0), n_used(0)
-{
-    memset(used, 0, sizeof(used));
-}
-
-AmRtpPacket* PacketMem::newPacket()
-{
-    //bool desired;
-
-    if(n_used >= MAX_PACKETS)
-        return NULL; // full
-
-    while(used[cur_idx].exchange(true)) {
-        cur_idx = (cur_idx + 1) & MAX_PACKETS_MASK;
-    }
-
-    n_used.fetch_add(1);
-
-    AmRtpPacket* p = &packets[cur_idx];
-    cur_idx = (cur_idx + 1) & MAX_PACKETS_MASK;
-
-    return p;
-}
-
-void PacketMem::freePacket(AmRtpPacket* p)
-{
-    if (!p)  return;
-
-    int idx = p-packets;
-    assert(idx >= 0);
-    assert(idx < MAX_PACKETS);
-
-    if(!used[idx]) {
-        CLASS_ERROR("freePacket() double free: n_used = %d, idx = %d",
-            n_used.load(),idx);
-        return;
-    }
-
-    used[p-packets].store(false);
-    n_used.fetch_sub(1);
-}
-
-void PacketMem::clear()
-{
-    memset(used, 0, sizeof(used));
-    n_used.store(0);
-    cur_idx = 0;
-}
-
-void PacketMem::debug() {
-    DBG("cur_idx: %i, n_used: %i",cur_idx,n_used.load());
-}
-
 AmRtpPacket * AmRtpStream::createRtpPacket()
 {
     AmRtpPacket* p = mem.newPacket();
@@ -1329,7 +1276,7 @@ unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
 
     if(ts_diff > RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF) {
         CLASS_DBG("timestamp adjust condition reached: "
-            "ts: %u, adjusted_ts: %u, tx_user_ts: %u, "
+            "ts: %u, adjusted_ts: %u, tx_user_ts: %llu, "
             "relay_ts_shift: %ld, ts_diff: %u, "
             "max_ts_diff: %u",
             ts,adjusted_ts, tx_user_ts,
