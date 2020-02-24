@@ -203,7 +203,7 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
 
         } else {
             static char sip[] = "sip";
-            static int sip_len = strlen(sip);
+            static size_t sip_len = strlen(sip);
             if(s_msg->sec_ws_protocol &&
                 (s_msg->sec_ws_protocol->value.len != sip_len || 
                 lower_cmp(s_msg->sec_ws_protocol->value.s, sip, sip_len))) {
@@ -211,9 +211,9 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
             }
 
             static char websocket[] = "websocket";
-            static int websocket_len = strlen(websocket);
+            static size_t websocket_len = strlen(websocket);
             static char upgrade[] = "upgrade";
-            static int upgrade_len = strlen(upgrade);
+            static size_t upgrade_len = strlen(upgrade);
             if(s_msg->upgrade->value.len != websocket_len ||
                lower_cmp(s_msg->upgrade->value.s, websocket, websocket_len)) {
                 if(s_msg->type == HTTP_REQUEST)
@@ -266,7 +266,7 @@ void ws_input::on_msg_recv(wslay_event_context_ptr ctx, const struct wslay_event
 
 ssize_t ws_input::on_send_callback(wslay_event_context_ptr ctx, const uint8_t* data, size_t len, int flags)
 {
-    DBG("on_send_callback %d", len);
+    DBG("on_send_callback %ld", len);
     output->send_data((char*)data, len, flags);
     return len;
 }

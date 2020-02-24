@@ -108,7 +108,7 @@ public:
 class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
 {
     Botan::TLS::Channel* dtls_channel;
-    auto_ptr<dtls_conf> dtls_settings;
+    unique_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
     srtp_profile_t srtp_profile;
     dtls_rand_generator rand_gen;

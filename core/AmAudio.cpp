@@ -279,8 +279,8 @@ AmAudio::AmAudio()
   : fmt(new AmAudioFormat(CODEC_PCM16)),
     max_rec_time(-1),
     rec_time(0),
-    input_resampling_state(NULL),
-    output_resampling_state(NULL),
+    input_resampling_state(),
+    output_resampling_state(),
     stereo_record_enabled(false),
     inband_detector_enabled(false),
     record_enabled(false)
@@ -291,8 +291,8 @@ AmAudio::AmAudio(AmAudioFormat *_fmt)
   : fmt(_fmt),
     max_rec_time(-1),
     rec_time(0),
-    input_resampling_state(NULL),
-    output_resampling_state(NULL),
+    input_resampling_state(),
+    output_resampling_state(),
     stereo_record_enabled(false),
     inband_detector_enabled(false),
     record_enabled(false)
