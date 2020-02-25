@@ -1,3 +1,9 @@
+sems (1.8.58-1) stable; urgency=low
+
+  * PacketMem: use bitmap
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 25 Feb 2020 12:42:02 +0200
+
 sems (1.8.57-1) stable; urgency=low
 
   * AmMediaTransport: fix rtcp flag checking for getRHost/getRPort/getRAddr methods
