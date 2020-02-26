@@ -630,31 +630,32 @@ void HttpClient::on_resend_timer_event()
 {
     resend_timer.read();
 
-    for(auto i = resend_batch_size/3 + (resend_batch_size%3==0 ? 0 : 1);
-        i > 0; i--)
-    {
-        /* get one event from failed queue of each type.
-           could enqueue max 2 events more than configured in resend_batch_size
-           if resend_batch_size is not multiple of 3 */
+    auto remained_events = resend_batch_size;
+    while(remained_events) {
+        /* get one event from failed queue of each type */
 
         //TODO: rewrite to use std::move() instead of copying with delete
 
         bool have_failed_events = false;
 
         if(!failed_upload_events.empty()) {
-            have_failed_events |= true;
             auto e = failed_upload_events.front();
             on_upload_request(*e);
             failed_upload_events.pop();
             delete e;
+
+            if(--remained_events==0) break;
+            have_failed_events |= true;
         }
 
         if(!failed_post_events.empty()) {
-            have_failed_events |= true;
             auto e = failed_post_events.front();
             on_post_request(*e);
             failed_post_events.pop();
             delete e;
+
+            if(--remained_events==0) break;
+            have_failed_events |= true;
         }
 
         if(!failed_multipart_form_events.empty()) {
@@ -663,6 +664,9 @@ void HttpClient::on_resend_timer_event()
             on_multpart_form_request(*e);
             failed_multipart_form_events.pop();
             delete e;
+
+            if(--remained_events==0) break;
+            have_failed_events |= true;
         }
 
         if(!have_failed_events)
@@ -677,9 +681,10 @@ void HttpClient::on_connection_delete(CurlConnection *c)
 
 void HttpClient::showStats(AmArg &ret)
 {
-    ret["upload_resend_queue_size"] = failed_upload_events.size();
-    ret["post_resend_queue_size"] = failed_post_events.size();
-    ret["multipart_form_resend_queue_size"] = failed_multipart_form_events.size();
+    ret["failed_upload_events_queue"] = failed_upload_events.size();
+    ret["failed_post_events_queue"] = failed_post_events.size();
+    ret["failed_multipart_form_events_queue"] = failed_multipart_form_events.size();
+
     ret["resend_queue_max "] = (long int)resend_queue_max;
     ret["resend_batch_size "] = (long int)resend_batch_size;
     ret["resend_interval"] = resend_interval;
