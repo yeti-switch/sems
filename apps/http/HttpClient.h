@@ -43,6 +43,7 @@ class HttpClient
     AmTimerFd resend_timer;
     int resend_interval;
     unsigned int resend_queue_max;
+    unsigned int resend_batch_size;
 
     struct SyncContextData {
         time_t created_at;

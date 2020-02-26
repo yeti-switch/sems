@@ -149,9 +149,15 @@ int HttpClient::configure(const string& config)
         return -1;
     }
 
-    resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME);
-    resend_interval *= 1000;
+    resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME)*1000;
     resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
+
+    auto resend_batch_size_tmp = cfg_getint(cfg, PARAM_RESEND_BATCH_SIZE_NAME);
+    if(resend_batch_size_tmp <= 0) {
+        ERROR("resend_batch_size must be greater than 0");
+        return -1;
+    }
+    resend_batch_size = static_cast<decltype(resend_batch_size)>(resend_batch_size_tmp);
 
     destinations.clear();
     if(destinations.configure(cfg)){
@@ -622,26 +628,46 @@ void HttpClient::on_requeue(CurlConnection *c)
 
 void HttpClient::on_resend_timer_event()
 {
-    while(!failed_upload_events.empty()){
-        HttpUploadEvent *e = failed_upload_events.front();
-        on_upload_request(*e);
-        delete e;
-        failed_upload_events.pop();
-    }
-    while(!failed_post_events.empty()){
-        HttpPostEvent *e = failed_post_events.front();
-        on_post_request(*e);
-        delete e;
-        failed_post_events.pop();
-    }
-    while(!failed_multipart_form_events.empty()){
-        HttpPostMultipartFormEvent *e = failed_multipart_form_events.front();
-        on_multpart_form_request(*e);
-        delete e;
-        failed_multipart_form_events.pop();
-    }
-
     resend_timer.read();
+
+    for(auto i = resend_batch_size/3 + (resend_batch_size%3==0 ? 0 : 1);
+        i > 0; i--)
+    {
+        /* get one event from failed queue of each type.
+           could enqueue max 2 events more than configured in resend_batch_size
+           if resend_batch_size is not multiple of 3 */
+
+        //TODO: rewrite to use std::move() instead of copying with delete
+
+        bool have_failed_events = false;
+
+        if(!failed_upload_events.empty()) {
+            have_failed_events |= true;
+            auto e = failed_upload_events.front();
+            on_upload_request(*e);
+            failed_upload_events.pop();
+            delete e;
+        }
+
+        if(!failed_post_events.empty()) {
+            have_failed_events |= true;
+            auto e = failed_post_events.front();
+            on_post_request(*e);
+            failed_post_events.pop();
+            delete e;
+        }
+
+        if(!failed_multipart_form_events.empty()) {
+            have_failed_events |= true;
+            auto e = failed_multipart_form_events.front();
+            on_multpart_form_request(*e);
+            failed_multipart_form_events.pop();
+            delete e;
+        }
+
+        if(!have_failed_events)
+            break;
+    }
 }
 
 void HttpClient::on_connection_delete(CurlConnection *c)
@@ -655,6 +681,7 @@ void HttpClient::showStats(AmArg &ret)
     ret["post_resend_queue_size"] = failed_post_events.size();
     ret["multipart_form_resend_queue_size"] = failed_multipart_form_events.size();
     ret["resend_queue_max "] = (long int)resend_queue_max;
+    ret["resend_batch_size "] = (long int)resend_batch_size;
     ret["resend_interval"] = resend_interval;
 }
 

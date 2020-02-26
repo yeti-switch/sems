@@ -14,6 +14,14 @@ module "http_client" {
     # Default: 10000
     resend_queue_max=0
 
+    # resend_batch_size=<integer>
+    #
+    # maximum events to requeue for sending from failed queues per resend_interval
+    # must be greater than 0
+    #
+    # Default: 12
+    resend_batch_size=12
+
     # destination "<destination name>
     destination "pcap" {
         # mode=<modes>
