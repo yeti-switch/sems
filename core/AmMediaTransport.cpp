@@ -708,8 +708,6 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
     } else {
         AmLock l(connections_mut);
         for(auto conn : connections) {
-            sockaddr_storage addr;
-            packet->getAddr(&addr);
             if(conn->isUseConnection(type)) {
                 ret = conn->send(packet);
                 break;
@@ -751,11 +749,11 @@ ssize_t AmMediaTransport::send(sockaddr_storage* raddr, unsigned char* buf, int 
         reinterpret_cast<const struct sockaddr*>(raddr), SA_len(raddr));
 
     if(err == -1) {
-        ERROR("while sending packet with sendto(%d,%p,%d,0,%p,%ld): %s\n",
+        CLASS_ERROR("sendto(%d,%p,%d,0,%p,%ld): errno: %d, raddr:'%s', type: %d\n",
             l_sd,
             static_cast<void *>(buf),size,
             static_cast<void *>(raddr),SA_len(raddr),
-            strerror(errno));
+            errno, get_addr_str(raddr).data(), type);
         log_stacktrace(L_DBG);
         return -1;
     }

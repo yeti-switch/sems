@@ -13,6 +13,8 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
     , passive_set_time{0}
     , passive_packets(0)
 {
+    CLASS_DBG("AmStreamConnection(transport:%p, remote_addr:'%s', port:%d)",
+              to_void(_transport), remote_addr.data(), remote_port);
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
@@ -26,6 +28,8 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     , passive_set_time{0}
     , passive_packets(0)
 {
+    CLASS_DBG("AmStreamConnection(parent: %p, remote_addr:'%s', port:%d)",
+              to_void(_parent), remote_addr.data(), remote_port);
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
@@ -54,7 +58,19 @@ AmStreamConnection::ConnectionType AmStreamConnection::getConnType()
 
 ssize_t AmStreamConnection::send(AmRtpPacket* packet)
 {
-    return transport->send(&r_addr, packet->getBuffer(), packet->getBufferSize(), getConnType());
+    auto ret = transport->send(
+        &r_addr,
+        packet->getBuffer(), static_cast<int>(packet->getBufferSize()),
+        getConnType());
+
+    if(ret < 0) {
+        CLASS_ERROR("AmStreamConnection::send: ret: %ld. r_addr:'%s':%hu, r_host:'%s', r_port: %d",
+            ret,
+            get_addr_str(&r_addr).data(),am_get_port(&r_addr),
+            r_host.data(),r_port);
+    }
+
+    return ret;
 }
 
 void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int remote_port)

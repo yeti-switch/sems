@@ -1438,8 +1438,8 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
     AmRtpPacket rp;
     rp.compile_raw((unsigned char*)buf,len);
     if(cur_rtcp_trans && cur_rtcp_trans->send(&rp, AmStreamConnection::RTCP_CONN) < 0) {
-         CLASS_ERROR("failed to send RTCP packet: %s. fd: %d, raddr: %s:%d, buf: %p:%d",
-                     strerror(errno),
+         CLASS_ERROR("failed to send RTCP packet: errno: %d, fd: %d, raddr: %s:%d, buf: %p:%d",
+                     errno,
                      cur_rtcp_trans->getLocalSocket(),
                      cur_rtcp_trans->getRHost(true).c_str(),
                      cur_rtcp_trans->getRPort(true),
