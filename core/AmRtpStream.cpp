@@ -1634,7 +1634,7 @@ void AmRtpStream::setRtpRelayTimestampAligning(bool enable_aligning)
         enable_aligning ? "en":"dis");
     relay_timestamp_aligning = enable_aligning;
     if(relay_timestamp_aligning) {
-        CLASS_WARN("relay_timestamp_aligning is deprecated because of using timestamp from media processor as reference for relay");
+        CLASS_DBG("relay_timestamp_aligning is deprecated because of using timestamp from media processor as reference for relay");
     }
 }
 
