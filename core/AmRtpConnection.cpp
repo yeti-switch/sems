@@ -3,6 +3,24 @@
 #include "AmLcConfig.h"
 #include "AmRtpStream.h"
 
+static string streamConnType2str(AmStreamConnection::ConnectionType type)
+{
+    switch(type) {
+        case AmStreamConnection::RTP_CONN:
+            return "RTP";
+        case AmStreamConnection::RTCP_CONN:
+            return "RTCP";
+        case AmStreamConnection::DTLS_CONN:
+            return "DTLS";
+        case AmStreamConnection::STUN_CONN:
+            return "STUN";
+        case AmStreamConnection::RAW_CONN:
+            return "RAW";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type)
     : transport(_transport)
     , parent(0)
@@ -13,8 +31,8 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
     , passive_set_time{0}
     , passive_packets(0)
 {
-    CLASS_DBG("AmStreamConnection(transport:%p, remote_addr:'%s', port:%d)",
-              to_void(_transport), remote_addr.data(), remote_port);
+    CLASS_DBG("AmStreamConnection(transport:%p, remote_addr:'%s', port:%d, type %s)",
+              to_void(_transport), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
@@ -28,8 +46,8 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     , passive_set_time{0}
     , passive_packets(0)
 {
-    CLASS_DBG("AmStreamConnection(parent: %p, remote_addr:'%s', port:%d)",
-              to_void(_parent), remote_addr.data(), remote_port);
+    CLASS_DBG("AmStreamConnection(parent: %p, remote_addr:'%s', port:%d, type %s)",
+              to_void(_parent), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
     resolveRemoteAddress(remote_addr, remote_port);
 }
 

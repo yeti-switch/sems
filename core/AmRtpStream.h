@@ -277,7 +277,8 @@ class AmRtpStream
     string ice_pwd;
     string ice_ufrag;
 
-    vector<AmMediaTransport*> transports;
+    vector<AmMediaTransport*> ip4_transports;
+    vector<AmMediaTransport*> ip6_transports;
     AmMediaTransport* cur_rtp_trans;
     AmMediaTransport* cur_rtcp_trans;
     AmMediaTransport* cur_udptl_trans;
@@ -383,7 +384,8 @@ class AmRtpStream
 
     void calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rtcp);
 
-    virtual void initTransport();
+    virtual void initIP4Transport();
+    virtual void initIP6Transport();
   public:
 
     /** Mute */
@@ -506,6 +508,9 @@ class AmRtpStream
 
     /** Set using ice protocol */
     void useIce();
+
+    /** Set using multiplexing for rtcp */
+    virtual void setMultiplexing(bool multiplex);
 
     void setReuseMediaPort(bool reuse_media);
     void addAdditionTransport();

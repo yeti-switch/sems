@@ -165,7 +165,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     last_send_rtcp_report_ts(0),
     transport(TP_RTPAVP),
     is_ice_stream(false),
-    multiplexing(false),
+    multiplexing(_s->isRtcpMultiplexing()),
     reuse_media_trans(true),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
@@ -185,7 +185,10 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 AmRtpStream::~AmRtpStream()
 {
     DBG("~AmRtpStream[%p]() session = %p",this,session);
-    for(auto trans : transports) {
+    for(auto trans : ip4_transports) {
+        delete trans;
+    }
+    for(auto trans : ip6_transports) {
         delete trans;
     }
     if(session) session->onRTPStreamDestroy(this);
@@ -219,32 +222,43 @@ void AmRtpStream::setLocalIP(const string& ip)
 
     CLASS_DBG("ip = %s\n",ip.c_str());
 
-    initTransport();
-
     if(l_if < 0) {
-        throw string("AmRtpStream:setLocalIP. failed to get interface");
+        if (session) l_if = session->getRtpInterface();
+        else {
+            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
+            l_if = 0;
+        }
+    }
+
+    vector<AmMediaTransport*>* transports;
+    if(addr.ss_family == AF_INET) {
+        initIP4Transport();
+        transports = &ip4_transports;
+    } else {
+        initIP6Transport();
+        transports = &ip6_transports;
     }
 
     int count = 1;
 
-    for(auto transport : transports) {
-        sockaddr_storage taddr;
-        transport->getLocalAddr(&taddr);
-        if(taddr.ss_family == addr.ss_family && count == RTP_TRANSPORT) {
+    for(auto transport : *transports) {
+        if(count == RTP_TRANSPORT) {
             CLASS_DBG("set current rtp transport %p", transport);
             cur_rtp_trans = transport;
             count++;
+            if(multiplexing) count++;
             continue;
         }
 
-        if(taddr.ss_family == addr.ss_family && count == FAX_TRANSPORT) {
+        if(count == FAX_TRANSPORT) {
             CLASS_DBG("set current udptl transport %p", transport);
             cur_udptl_trans = transport;
             count++;
             continue;
         }
 
-        if(taddr.ss_family == addr.ss_family && count == RTCP_TRANSPORT) {
+        if(count == RTCP_TRANSPORT) {
+            CLASS_DBG("set current rtcp transport %p", transport);
             cur_rtcp_trans = transport;
             count++;
             continue;
@@ -266,13 +280,6 @@ void AmRtpStream::setLocalIP(const string& ip)
 
 int AmRtpStream::getLocalPort()
 {
-    initTransport();
-
-    if(l_if < 0) {
-        CLASS_ERROR("AmRtpStream:getLocalPort. failed to get interface");
-        return 0;
-    }
-
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         setLocalIP(session->advertisedIP());
     }
@@ -290,13 +297,6 @@ int AmRtpStream::getLocalPort()
 
 int AmRtpStream::getLocalRtcpPort()
 {
-    initTransport();
-
-    if(l_if < 0) {
-        CLASS_ERROR("AmRtpStream:getLocalRtcpPort. failed to get interface");
-        return 0;
-    }
-
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
         setLocalIP(session->advertisedIP());
     }
@@ -311,18 +311,17 @@ int AmRtpStream::getLocalRtcpPort()
 
 void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rtcp)
 {
-    if(tr_rtp->getLocalPort() && tr_rtcp->getLocalPort())
+    if(tr_rtp->getLocalPort() && tr_rtcp && tr_rtcp->getLocalPort())
         return;
 
     int retry = BIND_ATTEMPTS_COUNT;
     unsigned short port = 0;
 
     assert(tr_rtp);
-    assert(tr_rtcp);
 
     for(;retry; --retry) {
 
-        if (!tr_rtp->getLocalSocket() || !tr_rtcp->getLocalSocket())
+        if (!tr_rtp->getLocalSocket() || (tr_rtcp && !tr_rtcp->getLocalSocket()))
             return;
 
         port = AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
@@ -334,7 +333,7 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
         }
 
         sockaddr_storage l_rtcp_addr, l_rtp_addr;
-        if(tr_rtp != tr_rtcp) {
+        if(tr_rtp != tr_rtcp && tr_rtcp) {
             tr_rtcp->getLocalAddr(&l_rtcp_addr);
             am_set_port(&l_rtcp_addr,port+1);
             if(bind(tr_rtcp->getLocalSocket(),(const struct sockaddr*)&l_rtcp_addr,SA_len(&l_rtcp_addr))) {
@@ -360,7 +359,7 @@ try_another_port:
                                    tr_rtp->getLocalProtoId()).freeRtpPort(port);
 
         tr_rtp->getLocalSocket(true);
-        if(tr_rtp != tr_rtcp) {
+        if(tr_rtp != tr_rtcp && tr_rtcp) {
             tr_rtcp->getLocalSocket(true);
         }
     }
@@ -373,7 +372,7 @@ try_another_port:
 
     // rco: does that make sense after bind() ????
     tr_rtp->setLocalPort(port);
-    if(tr_rtp != tr_rtcp) {
+    if(tr_rtp != tr_rtcp && tr_rtcp) {
         tr_rtcp->setLocalPort(port + 1);
     }
 }
@@ -381,19 +380,23 @@ try_another_port:
 void AmRtpStream::setRAddr(const string& addr, unsigned short port)
 {
     CLASS_DBG("RTP remote address set to %s:%u\n", addr.c_str(),port);
+    bool find_transport = true;
+    sockaddr_storage raddr, laddr;
+    am_inet_pton(addr.c_str(), &raddr);
+    AmMediaTransport *cur_transport = 0;
+    if(transport != TP_UDPTL && cur_rtp_trans)
+        cur_transport = cur_rtp_trans;
+    else
+        cur_transport = cur_udptl_trans;
 
-    initTransport();
-
-    if(l_if < 0) {
-        throw string("AmRtpStream:setRAddr. failed to get interface/proto id");
+    if(cur_transport) {
+        cur_transport->getLocalAddr(&laddr);
+        find_transport = (laddr.ss_family != raddr.ss_family);
     }
 
-    if(transport != TP_UDPTL && cur_rtp_trans) {
-        cur_rtp_trans->setRAddr(addr, port);
-        mute = cur_rtp_trans->isMute();
-    } else if(cur_udptl_trans) {
-        cur_udptl_trans->setRAddr(addr, port);
-        mute = cur_udptl_trans->isMute();
+    if(!find_transport) {
+        cur_transport->setRAddr(addr, port);
+        mute = cur_transport->isMute();
     }
 }
 
@@ -403,76 +406,73 @@ void AmRtpStream::addAdditionTransport()
         return;
     }
 
-    initTransport();
-
-    if(l_if < 0) {
-        if (session) l_if = session->getRtpInterface();
-        else {
-            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
-            l_if = 0;
-        }
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        setLocalIP(session->advertisedIP());
     }
 
-    int v4_count = 0, v6_count = 0;
-    for(auto &transport : transports) {
-        int proto_id = transport->getLocalProtoId();
-        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V4) v4_count++;
-        if(AmConfig.media_ifs[l_if].proto_info[proto_id]->type_ip == AT_V6) v6_count++;
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        ERROR("AmRtpStream::addAdditionTransport. failed to get transport");
+        return;
     }
 
-    int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
+    vector<AmMediaTransport*>* transports;
+    AddressType type;
+    sockaddr_storage sa;
+    cur_rtp_trans->getLocalAddr(&sa);
+    if(sa.ss_family == AF_INET) {
+        transports = &ip4_transports;
+        type = AT_V4;
+    } else {
+        transports = &ip6_transports;
+        type = AT_V6;
+    }
+
+    int proto_id = AmConfig.media_ifs[l_if].findProto(type,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
-    } else if(v4_count < 4){
-        AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id),
-                          *raw = new AmMediaTransport(this, l_if, proto_id);
-        transports.push_back(fax);
-        transports.push_back(raw);
-        calcRtpPorts(fax, raw);
-    }
-    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
-    if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
-    } else  if(v6_count < 4){
-        AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id),
-                          *raw = new AmMediaTransport(this, l_if, proto_id);
-        transports.push_back(fax);
-        transports.push_back(raw);
-        calcRtpPorts(fax, raw);
+        CLASS_DBG("AmRtpTransport: missed requested %s proto in choosen media interface %d", type == AT_V4 ? "ipv4" : "ipv6", l_if);
+    } else if((!multiplexing && transports->size() < 3) &&
+              (multiplexing && transports->size() < 2)){
+        AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id, FAX_TRANSPORT);
+        transports->push_back(fax);
+        calcRtpPorts(fax, 0);
     }
 }
 
-void AmRtpStream::initTransport()
+void AmRtpStream::initIP4Transport()
 {
-    if(!transports.empty())
+    if(!ip4_transports.empty())
         return;
-
-    if(l_if < 0) {
-        if (session) l_if = session->getRtpInterface();
-        else {
-            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
-            l_if = 0;
-        }
-    }
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
     } else {
-        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id),
-                         *rtcp = new AmMediaTransport(this, l_if, proto_id);
-        transports.push_back(rtp);
-        transports.push_back(rtcp);
+        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
+                         *rtcp = 0;
+        ip4_transports.push_back(rtp);
+        if(!multiplexing) {
+            rtcp = new AmMediaTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+            ip4_transports.push_back(rtcp);
+        }
         calcRtpPorts(rtp, rtcp);
     }
-    proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
+}
+void AmRtpStream::initIP6Transport()
+{
+    if(!ip6_transports.empty())
+        return;
+
+    int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
         CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
     } else {
-        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id),
-                         *rtcp = new AmMediaTransport(this, l_if, proto_id);
-        transports.push_back(rtp);
-        transports.push_back(rtcp);
+        AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
+                         *rtcp = 0;
+        ip6_transports.push_back(rtp);
+        if(!multiplexing) {
+            rtcp = new AmMediaTransport(this, l_if, proto_id, RTCP_TRANSPORT);
+            ip6_transports.push_back(rtcp);
+        }
         calcRtpPorts(rtp, rtcp);
     }
 }
@@ -492,7 +492,7 @@ void AmRtpStream::getSdp(SdpMedia& m)
 
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
 {
-    CLASS_DBG("AmRtpStream::getSdpAnswer(index = %u)",index);
+    CLASS_DBG("AmRtpStream::getSdpOffer(index = %u)",index);
 
     sdp_media_index = index;
     if(session) {
@@ -508,6 +508,7 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     updateTransports();
 
     getSdp(offer);
+    offer.is_multiplex = multiplexing;
     offer.payloads.clear();
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
         cur_udptl_trans->getSdpOffer(transport, offer);
@@ -531,7 +532,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     transport = offer.transport;
     is_ice_stream = offer.is_use_ice();
     answer.rtcp_port = getLocalRtcpPort();
-    answer.is_multiplex = offer.is_multiplex;
+    answer.is_multiplex = multiplexing;
 
     updateTransports();
 
@@ -724,8 +725,6 @@ int AmRtpStream::init(const AmSdp& local,
         return -1;
     }
 
-    multiplexing = local_media.is_multiplex;
-
     string address = remote_media.conn.address.empty() ?
         remote.conn.address : remote_media.conn.address;
     int port = static_cast<int>(remote_media.port);
@@ -737,7 +736,10 @@ int AmRtpStream::init(const AmSdp& local,
 
     try {
         if(remote_media.is_use_ice()) {
-            for(auto transport : transports) {
+            for(auto transport : ip4_transports) {
+                transport->initIceConnection(local_media, remote_media);
+            }
+            for(auto transport : ip6_transports) {
                 transport->initIceConnection(local_media, remote_media);
             }
         } else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
@@ -806,13 +808,17 @@ void AmRtpStream::updateTransports()
         cur_udptl_trans->setTransportType(FAX_TRANSPORT);
     } else {
         cur_rtp_trans->setTransportType(RTP_TRANSPORT);
-        cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
+        if(cur_rtp_trans != cur_rtcp_trans)
+            cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
     }
 }
 
 void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
 {
     if(is_ice_stream) {
+        initIP4Transport();
+        initIP6Transport();
+
         sdp_media.is_ice = true;
         if(ice_pwd.empty()) {
             string data = AmSrtpConnection::gen_base64(ICE_PWD_SIZE);
@@ -826,10 +832,12 @@ void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
             ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
         }
         sdp_media.ice_ufrag = ice_ufrag;
-        for(auto transport :transports) {
+        for(auto transport : ip4_transports) {
             transport->getIceCandidate(sdp_media);
         }
-        sdp_media.is_multiplex = true;
+        for(auto transport : ip6_transports) {
+            transport->getIceCandidate(sdp_media);
+        }
     } else {
         sdp_media.is_ice = false;
         sdp_media.ice_pwd.clear();
@@ -907,19 +915,23 @@ void AmRtpStream::onRawPacket(AmRtpPacket* p, AmMediaTransport*)
 
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int priority)
 {
-    for(auto tr : transports) {
+    if(transport->getTransportType() == RTP_TRANSPORT) {
+        cur_rtp_trans = transport;
+        if(!cur_rtcp_trans && multiplexing) {
+            cur_rtcp_trans = transport;
+        }
+    } else if(transport->getTransportType() == RTCP_TRANSPORT) {
+        cur_rtcp_trans = transport;
+    }
+
+    for(auto tr : ip4_transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
             tr->updateStunTimers();
         }
-        if(tr == transport) {
-            if(transport->getTransportType() == RTP_TRANSPORT) {
-                cur_rtp_trans = transport;
-                if(!cur_rtcp_trans && multiplexing) {
-                    cur_rtcp_trans = transport;
-                }
-            } else if(transport->getTransportType() == RTCP_TRANSPORT) {
-                cur_rtcp_trans = transport;
-            }
+    }
+    for(auto tr : ip6_transports) {
+        if(transport->getTransportType() == tr->getTransportType()) {
+            tr->updateStunTimers();
         }
     }
 }
@@ -929,7 +941,11 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
     memcpy((void*)r_key.c_str(), remote_key.data(), remote_key.size());
-    for(auto tr : transports) {
+    for(auto tr : ip4_transports) {
+        if(transport->getTransportType() == tr->getTransportType())
+            tr->initSrtpConnection(srtp_profile, l_key, r_key);
+    }
+    for(auto tr : ip6_transports) {
         if(transport->getTransportType() == tr->getTransportType())
             tr->initSrtpConnection(srtp_profile, l_key, r_key);
     }
@@ -1466,6 +1482,12 @@ void AmRtpStream::useIce()
     is_ice_stream = true;
 }
 
+void AmRtpStream::setMultiplexing(bool multiplex)
+{
+    CLASS_DBG("set using ice protocol");
+    multiplexing = multiplex;
+}
+
 void AmRtpStream::setReuseMediaPort(bool reuse_media)
 {
     reuse_media_trans = reuse_media;
@@ -1520,7 +1542,10 @@ void AmRtpStream::setPayloadProvider(AmPayloadProvider* pl_prov)
 
 void AmRtpStream::setPassiveMode(bool p)
 {
-    for(auto transport : transports) {
+    for(auto transport : ip4_transports) {
+        transport->setPassiveMode(p);
+    }
+    for(auto transport : ip6_transports) {
         transport->setPassiveMode(p);
     }
 }
@@ -1698,21 +1723,30 @@ string AmRtpStream::getPayloadName(int payload_type)
 ///
 void AmRtpStream::stopReceiving()
 {
-    for(auto& transport : transports) {
+    for(auto& transport : ip4_transports) {
+        transport->stopReceiving();
+    }
+    for(auto& transport : ip6_transports) {
         transport->stopReceiving();
     }
 }
 
 void AmRtpStream::resumeReceiving()
 {
-    for(auto& transport : transports) {
+    for(auto& transport : ip4_transports) {
+        transport->resumeReceiving();
+    }
+    for(auto& transport : ip6_transports) {
         transport->resumeReceiving();
     }
 }
 
 void AmRtpStream::setLogger(msg_logger* _logger)
 {
-    for(auto trans : transports) {
+    for(auto trans : ip4_transports) {
+        trans->setLogger(_logger);
+    }
+    for(auto trans : ip6_transports) {
         trans->setLogger(_logger);
     }
 }
@@ -1720,7 +1754,10 @@ void AmRtpStream::setLogger(msg_logger* _logger)
 void AmRtpStream::setSensor(msg_sensor *_sensor)
 {
     CLASS_DBG("AmRtpStream: change sensor to %p",_sensor);
-    for(auto trans : transports) {
+    for(auto trans : ip4_transports) {
+        trans->setSensor(_sensor);
+    }
+    for(auto trans : ip6_transports) {
         trans->setSensor(_sensor);
     }
 }

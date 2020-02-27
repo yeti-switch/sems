@@ -170,6 +170,9 @@ protected:
   /** use ice protocol in media stream **/
   bool use_ice_media_stream;
 
+  /** use rtcp multiplexing in media stream **/
+  bool rtcp_multiplexing;
+
   /** Local IP interface to be used for RTP streams */
   int rtp_interface;
   int rtp_proto_id;
@@ -293,6 +296,9 @@ public:
 
   bool isUseIceMediaStream() const { return use_ice_media_stream; }
   void useIceMediaStream() { use_ice_media_stream = true; }
+
+  void setRtcpMultiplexing(bool multiplexing) { rtcp_multiplexing = multiplexing; }
+  bool isRtcpMultiplexing() { return rtcp_multiplexing; }
 
   /* ----         audio input and output        ---- */
 

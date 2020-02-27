@@ -108,23 +108,29 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     }
 }
 
-void RtspAudio::initTransport()
+void RtspAudio::initIP4Transport()
 {
-    if(!transports.empty()) {
+    if(!ip4_transports.empty()) {
         return;
     }
 
-    AmMediaTransport *rtp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId()),
-                   *rtcp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId());
-    transports.push_back(rtp);
-    transports.push_back(rtcp);
+    AmMediaTransport *rtp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTP_TRANSPORT),
+                   *rtcp = new AmMediaTransport(this, RtspClient::instance()->getRtpInterface(), RtspClient::instance()->getRtpProtoId(), RTCP_TRANSPORT);
+    ip4_transports.push_back(rtp);
+    ip4_transports.push_back(rtcp);
     calcRtpPorts(rtp, rtcp);
     rtp->setTransportType(RTP_TRANSPORT);
     rtcp->setTransportType(RTCP_TRANSPORT);
 }
 
+void RtspAudio::initIP6Transport()
+{
+    throw string ("not supported yet");
+}
+
 bool RtspAudio::initSdpAnswer()
 {
+    setLocalIP(AmConfig.getMediaProtoInfo(RtspClient::instance()->getRtpInterface(),RtspClient::instance()->getRtpProtoId()).getIP());
     if(offer.media.empty()) {
         ERROR("empty offer");
         return false;
