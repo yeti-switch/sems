@@ -1,3 +1,10 @@
+sems (1.8.58-3) stable; urgency=low
+
+  * adjust loglevel for msg about relay_timestamp_aligning deprecation WARN -> DBG
+  * improve media sending error logging
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 27 Feb 2020 17:42:52 +0200
+
 sems (1.8.58-2) stable; urgency=low
 
   * http_client: add resend_batch_size option
