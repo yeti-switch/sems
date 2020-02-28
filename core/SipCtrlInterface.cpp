@@ -1023,33 +1023,35 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
 
     prepare_routes_uas(msg->record_route, req.route);
 
-    for (list<sip_header *>::const_iterator it = msg->hdrs.begin();
-	 it != msg->hdrs.end(); ++it) {
-
-	switch((*it)->type) {
-	case sip_header::H_OTHER:
-	case sip_header::H_REQUIRE:
-	    req.hdrs += c2stlstr((*it)->name) + ": "
-		+ c2stlstr((*it)->value) + CRLF;
-	    break;
-	case sip_header::H_VIA:
-	    req.vias += c2stlstr((*it)->name) + ": "
-		+ c2stlstr((*it)->value) + CRLF;
-	    break;
-	case sip_header::H_MAX_FORWARDS:
-	    if(!str2int(c2stlstr((*it)->value),req.max_forwards) ||
-	       (req.max_forwards < 0) ||
-	       (req.max_forwards > 255)) {
-		trans_layer::instance()->
-		    send_sf_error_reply(&tt, msg, 400, "Incorrect Max-Forwards");
-		return false;
-	    }
-	    break;
-	}
+    for(const auto &h: msg->hdrs) {
+        switch(h->type) {
+        case sip_header::H_OTHER:
+        case sip_header::H_REQUIRE: {
+            string value = c2stlstr(h->value);
+            size_t rpos = 0;
+            while ((rpos=value.find_first_of("\r\n")) != string::npos)
+                value.erase(rpos, 1);
+            req.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
+        } break;
+        case sip_header::H_VIA:
+            req.vias += c2stlstr(h->name) + ": "
+                + c2stlstr(h->value) + CRLF;
+            break;
+        case sip_header::H_MAX_FORWARDS:
+            if(!str2int(c2stlstr(h->value),req.max_forwards) ||
+               (req.max_forwards < 0) ||
+               (req.max_forwards > 255))
+            {
+                trans_layer::instance()->
+                    send_sf_error_reply(&tt, msg, 400, "Incorrect Max-Forwards");
+                return false;
+            }
+            break;
+        }
     }
 
     if(req.max_forwards < 0)
-	req.max_forwards = AmConfig.max_forwards;
+        req.max_forwards = AmConfig.max_forwards;
 
     req.remote_ip = get_addr_str(&msg->remote_ip);
     req.remote_port = am_get_port(&msg->remote_ip);
@@ -1136,24 +1138,26 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
     prepare_routes_uac(msg->record_route, reply.route);
 
     unsigned rseq;
-    for (list<sip_header*>::iterator it = msg->hdrs.begin();
-	 it != msg->hdrs.end(); ++it) {
+    for(const auto &h: msg->hdrs) {
 #ifdef PROPAGATE_UNPARSED_REPLY_HEADERS
         reply.unparsed_headers.push_back(AmSipHeader((*it)->name, (*it)->value));
 #endif
-        switch ((*it)->type) {
-          case sip_header::H_OTHER:
-          case sip_header::H_REQUIRE:
-	      reply.hdrs += c2stlstr((*it)->name) + ": "
-                  + c2stlstr((*it)->value) + CRLF;
-              break;
-          case sip_header::H_RSEQ:
-              if (! parse_rseq(&rseq, (*it)->value.s, (*it)->value.len)) {
-                  ERROR("failed to parse (rcvd) '" SIP_HDR_RSEQ "' hdr.\n");
-              } else {
-                  reply.rseq = rseq;
-              }
-              break;
+        switch (h->type) {
+        case sip_header::H_OTHER:
+        case sip_header::H_REQUIRE: {
+            string value = c2stlstr(h->value);
+            size_t rpos = 0;
+            while ((rpos=value.find_first_of("\r\n")) != string::npos)
+                value.erase(rpos, 1);
+            reply.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
+        } break;
+        case sip_header::H_RSEQ:
+            if(!parse_rseq(&rseq, h->value.s, static_cast<int>(h->value.len))) {
+                ERROR("failed to parse (rcvd) '" SIP_HDR_RSEQ "' hdr.\n");
+            } else {
+                reply.rseq = rseq;
+            }
+            break;
         }
     }
 

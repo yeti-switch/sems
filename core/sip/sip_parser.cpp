@@ -666,6 +666,12 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     }
 
     err = parse_headers(msg,&c,end);
+    /*for(const auto &h: msg->hdrs) {
+        DBG("h: type:%d, name:'%.*s', value:'%.*s'",
+            h->type,
+            h->name.len, h->name.s,
+            h->value.len, h->value.s);
+    }*/
 
     if(!err){
 	msg->body.set(c,msg->len - (c - msg->buf));
