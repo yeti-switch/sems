@@ -700,7 +700,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
   if (rtp_relay_mode != RTP_Direct) {
     if (!media_session) {
       // report missing media session (here we get for rtp_relay_mode == RTP_Relay)
-      ERROR("[%s] media session is missing, can't update SDP\n",
+      DBG("[%s] media session is missing, can't update SDP\n",
             dlg?dlg->getLocalTag().c_str():"null");
     } else {
       if(rtp_stream_shared && hasRtpStream() && !media_session->isProcessingMedia()) {
