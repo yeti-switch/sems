@@ -1029,7 +1029,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
         case sip_header::H_REQUIRE: {
             string value = c2stlstr(h->value);
             size_t rpos = 0;
-            while ((rpos=value.find_first_of("\r\n")) != string::npos)
+            while ((rpos=value.find_first_of("\r\n",rpos)) != string::npos)
                 value.erase(rpos, 1);
             req.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
         } break;
@@ -1147,7 +1147,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
         case sip_header::H_REQUIRE: {
             string value = c2stlstr(h->value);
             size_t rpos = 0;
-            while ((rpos=value.find_first_of("\r\n")) != string::npos)
+            while ((rpos=value.find_first_of("\r\n",rpos)) != string::npos)
                 value.erase(rpos, 1);
             reply.hdrs += c2stlstr(h->name) + COLSP + value + CRLF;
         } break;
