@@ -726,10 +726,14 @@ int AmRtpStream::init(const AmSdp& local,
 
     multiplexing = local_media.is_multiplex;
 
-    string address = remote_media.conn.address.empty() ? remote.conn.address : remote_media.conn.address;
-    string rtcp_address = remote_media.rtcp_conn.address.empty() ? remote.conn.address : remote_media.rtcp_conn.address;
-    int port = remote_media.port;
-    int rtcp_port = remote_media.rtcp_port ? remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1);
+    string address = remote_media.conn.address.empty() ?
+        remote.conn.address : remote_media.conn.address;
+    int port = static_cast<int>(remote_media.port);
+
+    string rtcp_address = remote_media.rtcp_conn.address.empty() ?
+        address : remote_media.rtcp_conn.address;
+    int rtcp_port = static_cast<int>(remote_media.rtcp_port ?
+        remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1));
 
     try {
         if(remote_media.is_use_ice()) {
