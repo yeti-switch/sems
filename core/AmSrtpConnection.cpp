@@ -133,7 +133,7 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
             return;
         }
     }
-    
+
     srtp_err_status_t ret;
     if(getConnType() == RTP_CONN)
         ret = srtp_unprotect(srtp_r_session, data, reinterpret_cast<int *>(&size));

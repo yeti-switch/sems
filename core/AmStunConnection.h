@@ -29,6 +29,7 @@ public:
         ERROR
     };
 private:
+    AmStreamConnection* depend_conn;
     AuthState auth_state;
     int err_code;
     int priority;
@@ -48,6 +49,8 @@ public:
                         const string& ruser, const string& rpassword);
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
+
+    void setDependentConnection(AmStreamConnection* conn);
 
     void send_request();
     void updateStunTimer();

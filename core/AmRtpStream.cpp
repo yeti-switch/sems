@@ -59,10 +59,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#ifdef WITH_ZRTP
-#include "zrtp/zrtp.h"
-#endif
-
 #include "rtp/rtp.h"
 
 #include <set>
@@ -180,6 +176,9 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 
     // by default the system codecs
     payload_provider = AmPlugIn::instance();
+#ifdef WITH_ZRTP
+    zrtp_context.addSubscriber(this);
+#endif/*WITH_ZRTP*/
 }
 
 AmRtpStream::~AmRtpStream()
@@ -710,14 +709,32 @@ int AmRtpStream::init(const AmSdp& local,
          local_media.dir, remote_media.dir);
     CLASS_DBG("local setup = %u, remote setup = %u",
          local_media.setup, remote_media.setup);
+#ifdef WITH_ZRTP
+    CLASS_DBG("local media attribute: use_ice - %s, dtls - %s, srtp - %s, zrtp - %s",
+#else/*WITH_ZRTP*/
     CLASS_DBG("local media attribute: use_ice - %s, dtls - %s, srtp - %s",
+#endif/*WITH_ZRTP*/
          local_media.is_use_ice()?"true":"false",
          (local_media.is_dtls_srtp() || local_media.is_dtls())?"true":"false",
-         (local_media.is_simple_srtp() || local_media.is_dtls_srtp() )?"true":"false");
+         (local_media.is_simple_srtp() || local_media.is_dtls_srtp() )?"true":"false"
+#ifdef WITH_ZRTP
+         , local_media.zrtp_hash.is_use?"true":"false");
+#else/*WITH_ZRTP*/
+         );
+#endif/*WITH_ZRTP*/
+#ifdef WITH_ZRTP
+    CLASS_DBG("remote media attribute: use_ice - %s, dtls - %s, srtp - %s, zrtp - %s",
+#else/*WITH_ZRTP*/
     CLASS_DBG("remote media attribute: use_ice - %s, dtls - %s, srtp - %s",
+#endif/*WITH_ZRTP*/
          remote_media.is_use_ice()?"true":"false",
          (remote_media.is_dtls_srtp() || remote_media.is_dtls())?"true":"false",
-         (remote_media.is_simple_srtp() || remote_media.is_dtls_srtp())?"true":"false");
+         (remote_media.is_simple_srtp() || remote_media.is_dtls_srtp())?"true":"false"
+#ifdef WITH_ZRTP
+         , local_media.zrtp_hash.is_use?"true":"false");
+#else/*WITH_ZRTP*/
+         );
+#endif/*WITH_ZRTP*/
 
     if((local_media.type == MT_AUDIO && !cur_rtp_trans) ||
        (local_media.type == MT_IMAGE && !cur_udptl_trans)) {
@@ -735,6 +752,15 @@ int AmRtpStream::init(const AmSdp& local,
         remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1));
 
     try {
+#ifdef WITH_ZRTP
+        if(AmConfig.enable_zrtp && AmConfig.enable_srtp) {
+            if(remote_media.zrtp_hash.is_use) {
+                zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
+            }
+             zrtp_context.start();
+        }
+#endif/*WITH_ZRTP*/
+
         if(remote_media.is_use_ice()) {
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media);
@@ -755,10 +781,17 @@ int AmRtpStream::init(const AmSdp& local,
         } else if(local_media.is_dtls() && cur_udptl_trans) {
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
+#ifdef WITH_ZRTP
+        } else if(AmConfig.enable_zrtp && AmConfig.enable_srtp) {
+                cur_rtp_trans->initZrtpConnection(address, port);
+                if(cur_rtcp_trans != cur_rtp_trans)
+                    cur_rtcp_trans->initRtpConnection(address, port);
+#endif/*WITH_ZRTP*/
         } else {
             cur_rtp_trans->initRtpConnection(address, port);
-            if(cur_rtcp_trans != cur_rtp_trans)
+            if(cur_rtcp_trans != cur_rtp_trans) {
                 cur_rtcp_trans->initRtpConnection(rtcp_address, rtcp_port);
+            }
         }
     } catch(string& error) {
         CLASS_ERROR("Can't initialize connections. error - %s", error.c_str());
@@ -784,7 +817,7 @@ int AmRtpStream::init(const AmSdp& local,
     sockaddr_storage raddr;
     rtptrans->getRAddr(false, &raddr);
     if(local_media.send && !hold &&
-//       (remote_media.port != 0) &&
+       (remote_media.port != 0) &&
        !rtptrans->isMute())
      {
          mute = false;
@@ -951,6 +984,62 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
     }
 }
 
+#ifdef WITH_ZRTP
+extern "C" {
+#include <bzrtp/bzrtp.h>
+}
+
+void AmRtpStream::zrtpSessionActivated(const bzrtpSrtpSecrets_t* srtpSecrets)
+{
+    string l_key(srtpSecrets->selfSrtpKeyLength + srtpSecrets->selfSrtpSaltLength, 0),
+           r_key(srtpSecrets->peerSrtpKeyLength + srtpSecrets->peerSrtpSaltLength, 0);
+    memcpy((void*)l_key.c_str(), srtpSecrets->selfSrtpKey, srtpSecrets->selfSrtpKeyLength);
+    memcpy((void*)(l_key.c_str() + srtpSecrets->selfSrtpKeyLength), srtpSecrets->selfSrtpSalt, srtpSecrets->selfSrtpSaltLength);
+    memcpy((void*)r_key.c_str(), srtpSecrets->peerSrtpKey, srtpSecrets->peerSrtpKeyLength);
+    memcpy((void*)(r_key.c_str() + srtpSecrets->peerSrtpKeyLength), srtpSecrets->peerSrtpSalt, srtpSecrets->peerSrtpSaltLength);
+
+    uint16_t srtp_profile;
+    if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS32){
+			if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3){
+                srtp_profile = srtp_profile_aead_aes_256_gcm;
+            } else {
+                srtp_profile = srtp_profile_aes128_cm_sha1_32;
+            }
+    } else if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS80){
+			if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3){
+                srtp_profile = srtp_profile_aead_aes_128_gcm;
+            } else {
+                srtp_profile = srtp_profile_aes128_cm_sha1_80;
+            }
+    } else {
+        CLASS_ERROR("encryption methods with keys derived using ZRTP are not supported");
+        return;
+    }
+
+    for(auto tr : transports) {
+            tr->initSrtpConnection(srtp_profile, l_key, r_key);
+    }
+}
+
+int AmRtpStream::send_zrtp(unsigned char* buffer, unsigned int size)
+{
+    if ((mute) || (hold))
+        return 0;
+
+    AmRtpPacket rp;
+    rp.compile_raw(buffer, size);
+    sockaddr_storage raddr;
+    cur_rtp_trans->getRAddr(false, &raddr);
+    if(cur_rtp_trans && cur_rtp_trans->send(&raddr, buffer, size, AmStreamConnection::ZRTP_CONN) < 0) {
+        CLASS_ERROR("while sending ZRTP packet.\n");
+        return -1;
+    }
+
+    return size;
+}
+
+#endif/*WITH_ZRTP*/
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with RTP packets
 
@@ -1086,13 +1175,11 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
         }
     } //if(relay_enabled)
 
-#ifndef WITH_ZRTP
     // throw away ZRTP packets
     if(p->version != RTP_VERSION) {
         mem.freePacket(p);
         return;
     }
-#endif
 
     receive_mut.lock();
     // NOTE: useless, as DTMF events are pushed into 'rtp_ev_qu'
@@ -1103,62 +1190,14 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
     //     }
     // }
 
-#ifdef WITH_ZRTP
-    if (session && session->enable_zrtp) {
-
-        if (NULL == session->zrtp_session_state.zrtp_audio) {
-            WARN("dropping received packet, as there's no ZRTP stream initialized\n");
-            receive_mut.unlock();
-            mem.freePacket(p);
-            return;
-        }
-
-        unsigned int size = p->getBufferSize();
-        zrtp_status_t status = zrtp_process_srtp(session->zrtp_session_state.zrtp_audio, (char*)p->getBuffer(), &size);
-        switch (status) {
-        case zrtp_status_forward:
-        case zrtp_status_ok: {
-            p->setBufferSize(size);
-            if (p->parse() < 0) {
-                ERROR("parsing decoded packet!\n");
-                mem.freePacket(p);
-            } else {
-                if(p->payload == getLocalTelephoneEventPT()) {
-                    rtp_ev_qu.push(p);
-                } else {
-                    if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
-                        // insert failed
-                        mem.freePacket(p);
-                    }
-                }
-            }
-        }	break;
-        case zrtp_status_drop: {receive_buf
-            // This is a protocol ZRTP packet or masked RTP media.
-            // In either case the packet must be dropped to protect your
-            // media codec
-            mem.freePacket(p);
-        } break;
-        case zrtp_status_fail:
-        default: {
-            CLASS_ERROR("zrtp_status_fail!\n");
-            // This is some kind of error - see logs for more information
-            mem.freePacket(p);
-        } break; }
+    if(p->payload == getLocalTelephoneEventPT()) {
+        rtp_ev_qu.push(p);
     } else {
-#endif // WITH_ZRTP
-
-        if(p->payload == getLocalTelephoneEventPT()) {
-            rtp_ev_qu.push(p);
-        } else {
-            if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
-                // insert failed
-                mem.freePacket(p);
-            }
+        if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
+            // insert failed
+            mem.freePacket(p);
         }
-#ifdef WITH_ZRTP
     }
-#endif
     receive_mut.unlock();
 }
 
@@ -1576,12 +1615,6 @@ void AmRtpStream::resume()
     receive_mut.unlock();
 
     receiving = true;
-
-#ifdef WITH_ZRTP
-    if (session && session->enable_zrtp) {
-        session->zrtp_session_state.startStreams(get_ssrc());
-    }
-#endif
 }
 
 void AmRtpStream::setOnHold(bool on_hold)

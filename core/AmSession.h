@@ -42,10 +42,6 @@
 #include "AmSessionEventHandler.h"
 #include "AmMediaProcessor.h"
 
-#ifdef WITH_ZRTP
-#include "AmZRTP.h"
-#endif
-
 #include <string>
 #include <vector>
 #include <queue>
@@ -214,13 +210,8 @@ public:
   bool hasRtpStream() { return _rtp_str.get() != NULL; }
   AmRtpAudio* releaseRtpStream() { return _rtp_str.release(); }
 
-#ifdef WITH_ZRTP
-  AmZRTPSessionState zrtp_session_state;
-
   /** must be set before session is started! i.e. in constructor */
   bool enable_zrtp;
-
-#endif
 
   AmSipDialog* dlg;
 
@@ -600,14 +591,7 @@ public:
    * entry point for system events
    */
   virtual void onSystemEvent(AmSystemEvent* ev);
-  
-#ifdef WITH_ZRTP
-  /**
-   * ZRTP events @see ZRTP
-   */
-  virtual void onZRTPProtocolEvent(zrtp_protocol_event_t event, zrtp_stream_t *stream_ctx);
-  virtual void onZRTPSecurityEvent(zrtp_security_event_t event, zrtp_stream_t *stream_ctx);
-#endif
+
   /** This callback is called on exception during onInvite() execution */
   virtual void onInviteException(int code,string reason,bool no_reply) {}
 

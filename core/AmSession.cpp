@@ -42,10 +42,6 @@
 
 #include <typeinfo>
 
-#ifdef WITH_ZRTP
-#include "AmZRTP.h"
-#endif
-
 #include "log.h"
 
 #include <algorithm>
@@ -97,10 +93,9 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtp_proto_id(-1),
     input(nullptr), output(nullptr),
     refresh_method(REFRESH_UPDATE_FB_REINV),
-    dlg(p_dlg)
-#ifdef WITH_ZRTP
-  ,  zrtp_session(NULL), zrtp_audio(NULL), enable_zrtp(true)
-#endif
+    dlg(p_dlg),
+    enable_zrtp(false)
+
 {
   DBG("AmSession[%p](%p)",this,dlg);
   if(!dlg) dlg = new AmSipDialog(this);
@@ -375,19 +370,7 @@ bool AmSession::startup() {
 
   try {
     try {
-
       onStart();
-
-#ifdef WITH_ZRTP
-      if (enable_zrtp) {
-	if (zrtp_session_state.initSession(this)) {
-	  ERROR("initializing ZRTP session\n");
-	  throw AmSession::Exception(500, SIP_REPLY_SERVER_INTERNAL_ERROR);
-	}
-	DBG("initialized ZRTP session context OK\n");
-      }
-#endif
-
     } 
     catch(const AmSession::Exception& e){ throw e; }
     catch(const string& str){
@@ -536,12 +519,6 @@ void AmSession::finalize()
 {
   DBG("running finalize sequence...\n");
   dlg->finalize();
-  
-#ifdef WITH_ZRTP
-  if (enable_zrtp) {
-    zrtp_session_state.freeSession();
-  }
-#endif
 
   onBeforeDestroy();
   destroy();
@@ -791,20 +768,6 @@ void AmSession::process(AmEvent* ev)
     onRtpTimeout();
     return;
   }
-
-#ifdef WITH_ZRTP
-  AmZRTPProtocolEvent* zrtp_p_ev = dynamic_cast<AmZRTPProtocolEvent*>(ev);
-  if(zrtp_p_ev){
-    onZRTPProtocolEvent((zrtp_protocol_event_t)zrtp_p_ev->event_id, zrtp_p_ev->stream_ctx);
-    return;
-  }
-
-  AmZRTPSecurityEvent* zrtp_s_ev = dynamic_cast<AmZRTPSecurityEvent*>(ev);
-  if(zrtp_s_ev){
-    onZRTPSecurityEvent((zrtp_security_event_t)zrtp_s_ev->event_id, zrtp_s_ev->stream_ctx);
-    return;
-  }
-#endif
 }
 
 void AmSession::onSipRequest(const AmSipRequest& req)
@@ -1485,41 +1448,6 @@ bool AmSession::removeTimers() {
 
   return true;
 }
-
- 
-#ifdef WITH_ZRTP
-
-void AmSession::onZRTPProtocolEvent(zrtp_protocol_event_t event, zrtp_stream_t *stream_ctx) {
-  DBG("AmSession::onZRTPProtocolEvent: %s\n", zrtp_protocol_event_desc(event));
-
-  if (event==ZRTP_EVENT_IS_SECURE) {
-      INFO("ZRTP_EVENT_IS_SECURE \n");
-      //         info->is_verified  = ctx->_session_ctx->secrets.verifieds & ZRTP_BIT_RS0;
- 
-      // zrtp_session_t *session = stream_ctx->_session_ctx;
- 
-      // if (ZRTP_SAS_BASE32 == session->sas_values.rendering) {
-      // 	DBG("Got SAS value <<<%.4s>>>\n", session->sas_values.str1.buffer);
-      // } else {
-      // 	DBG("Got SAS values SAS1 '%s' and SAS2 '%s'\n", 
-      // 	    session->sas_values.str1.buffer,
-      // 	    session->sas_values.str2.buffer);
-      // }
-  }
- 
-    // case ZRTP_EVENT_IS_PENDINGCLEAR:
-    //   INFO("ZRTP_EVENT_IS_PENDINGCLEAR\n");
-    //   INFO("other side requested goClear. Going clear.\n\n");
-    //   //      zrtp_clear_stream(zrtp_audio);
-    //   break;
-  
-}
-
-void AmSession::onZRTPSecurityEvent(zrtp_security_event_t event, zrtp_stream_t *stream_ctx) {
-  DBG("AmSession::onZRTPSecurityEvent: %s\n", zrtp_security_event_desc(event));
-}
- 
-#endif
 
 int AmSession::readStreams(unsigned long long ts, unsigned char *buffer) 
 { 

@@ -128,10 +128,9 @@ struct ConfigContainer
     AmAudio::ResamplingImplementationType resampling_implementation_type;
     int dump_level;
 
-#ifdef WITH_ZRTP
     bool enable_zrtp;
     bool enable_zrtp_debuglog;
-#endif
+
 #ifndef DISABLE_DAEMON_MODE
     bool deamon_mode;
     std::string deamon_pid_file;

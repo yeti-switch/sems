@@ -152,6 +152,9 @@ public:
     void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);
     void initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
     void initUdptlConnection(const string& remote_address, int remote_port);
+#ifdef WITH_ZRTP
+    void initZrtpConnection(const string& remote_address, int remote_port);
+#endif/*WITH_ZRTP*/
     void initRawConnection();
 
     AmRtpStream* getRtpStream() { return stream; }
@@ -168,7 +171,7 @@ protected:
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
 
     int getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& local_key, string& remote_key);
-    
+public:
     AmStreamConnection::ConnectionType GetConnectionType(unsigned char* buf, unsigned int size);
     bool isStunMessage(unsigned char* buf, unsigned int size);
     bool isRTPMessage(unsigned char* buf, unsigned int size);
@@ -185,7 +188,8 @@ protected:
         TRANSPORT_SEQ_SRTP,
         TRANSPORT_SEQ_RTP,
         TRANSPORT_SEQ_UDPTL,
-        TRANSPORT_SEQ_RAW
+        TRANSPORT_SEQ_RAW,
+        TRANSPORT_SEQ_ZRTP
     } seq;
 
     Mode mode;

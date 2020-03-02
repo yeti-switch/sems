@@ -12,7 +12,7 @@
 #include "AmUtils.h"
 
 trsp_base_input::trsp_base_input()
-: input_len(0) 
+: input_len(0)
 {
     // async parser state
     pst.reset((char*)input_buf);

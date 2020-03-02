@@ -610,6 +610,11 @@ void AmSdp::print(string& body) const
             out_buf += "a=rtcp-mux\r\n";
         }
 
+#ifdef WITH_ZRTP
+        if(media_it->zrtp_hash.is_use) {
+            out_buf += "a=zrtp-hash:" ZRTP_VERSION " " + media_it->zrtp_hash.hash + "\r\n";
+        }
+#endif/*WITH_ZRTP*/
         if(media_it->send){
             if(media_it->recv){
                 out_buf += "a=sendrecv\r\n";
@@ -1513,6 +1518,20 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     } else {
       DBG("ignoring direction attribute without value\n");
     }
+#ifdef WITH_ZRTP
+  } else if (attr == "zrtp-hash") {
+        next = parse_until(attr_line, line_end, ' ');
+        string version(attr_line, int(next-attr_line)-1);
+        if(version == ZRTP_VERSION) {
+            media.zrtp_hash.is_use = true;
+            attr_line = next;
+            size_t val_len = 0;
+            next = skip_till_next_line(attr_line, val_len);
+            media.zrtp_hash.hash = string(attr_line, val_len);
+        } else {
+            DBG("unsupported zrtp version in 'zrtp-hash' attribute\n");
+        }
+#endif/*WITH_ZRTP*/
   } else if (attr == "direction") {
     if (parsing) {
       size_t dir_len = 0;

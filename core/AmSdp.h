@@ -143,10 +143,25 @@ struct SdpFingerPrint
 {
     string hash;
     string value;
-    
+
     SdpFingerPrint(){}
     SdpFingerPrint(const SdpFingerPrint& fp) : hash(fp.hash), value(fp.value) {}
 };
+
+#ifdef WITH_ZRTP
+
+#define ZRTP_VERSION "1.10"
+
+struct SdpZrtpHash
+{
+    bool is_use;
+    string hash;
+
+    SdpZrtpHash() : is_use(false) {}
+    SdpZrtpHash(const SdpZrtpHash& hash) : is_use(hash.is_use), hash(hash.hash){}
+};
+
+#endif/*WITH_ZRTP*/
 
 struct SdpIceCandidate
 {
@@ -276,6 +291,9 @@ struct SdpMedia
   std::vector<SdpCrypto> crypto;
   /* udp/tls/rtp/savr  transport attribute*/
   SdpFingerPrint fingerprint;
+#ifdef WITH_ZRTP
+  SdpZrtpHash zrtp_hash;
+#endif/*WITH_ZRTP*/
   // ice attribute
   bool is_ice;
   string ice_pwd;

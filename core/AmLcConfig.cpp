@@ -584,6 +584,8 @@ namespace Config {
         CFG_INT(PARAM_SIP_TIMER_C_NAME, DEFAULT_C_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_BL_NAME, DEFAULT_BL_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_T2_NAME, DEFAULT_T2_TIMER, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_ZRTP_NAME, cfg_true, CFGF_NONE),
+        CFG_BOOL(PARAM_ENABLE_ZRTP_DLOG_NAME, cfg_true, CFGF_NONE),
 #ifdef USE_LIBSAMPLERATE
 #ifndef USE_INTERNAL_RESAMPLER
         CFG_STR(PARAM_RESAMPLE_LIBRARY_NAME, VALUE_LIBSAMPLERATE, CFGF_NONE),
@@ -596,10 +598,6 @@ namespace Config {
 #ifndef USE_INTERNAL_RESAMPLER
         CFG_STR(PARAM_RESAMPLE_LIBRARY_NAME, VALUE_UNAVAILABLE, CFGF_NONE),
 #endif
-#endif
-#ifdef WITH_ZRTP
-        CFG_BOOL(PARAM_ENABLE_ZRTP_NAME, cfg_true, CFGF_NONE),
-        CFG_BOOL(PARAM_ENABLE_ZRTP_DLOG_NAME, cfg_true, CFGF_NONE),
 #endif
 #ifndef DISABLE_DAEMON_MODE
         CFG_BOOL(PARAM_DEAMON_NAME, cfg_true, CFGF_NONE),
@@ -1096,10 +1094,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(value == VALUE_LIBSAMPLERATE) config->resampling_implementation_type = AmAudio::LIBSAMPLERATE;
     else if(value == VALUE_UNAVAILABLE) config->resampling_implementation_type = AmAudio::UNAVAILABLE;
     else if(value == VALUE_INTERNAL) config->resampling_implementation_type = AmAudio::INTERNAL_RESAMPLER;
-#ifdef WITH_ZRTP
     config->enable_zrtp = cfg_getbool(gen, PARAM_ENABLE_ZRTP_NAME);
     config->enable_zrtp_debuglog = cfg_getbool(gen, PARAM_ENABLE_ZRTP_DLOG_NAME);
-#endif
 #ifndef DISABLE_DAEMON_MODE
     config->deamon_mode = cfg_getbool(gen, PARAM_DEAMON_NAME);
     config->deamon_uid = cfg_getstr(gen, PARAM_DEAMON_UID_NAME);

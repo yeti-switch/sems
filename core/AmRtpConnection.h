@@ -30,7 +30,7 @@ public:
     AmStreamConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port, ConnectionType type);
     virtual ~AmStreamConnection();
 
-    bool isUseConnection(ConnectionType type);
+    virtual bool isUseConnection(ConnectionType type);
     bool isAddrConnection(struct sockaddr_storage* recv_addr);
     ConnectionType getConnType();
     virtual ssize_t send(AmRtpPacket* packet);
