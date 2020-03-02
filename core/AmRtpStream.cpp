@@ -1016,7 +1016,10 @@ void AmRtpStream::zrtpSessionActivated(const bzrtpSrtpSecrets_t* srtpSecrets)
         return;
     }
 
-    for(auto tr : transports) {
+    for(auto tr : ip4_transports) {
+            tr->initSrtpConnection(srtp_profile, l_key, r_key);
+    }
+    for(auto tr : ip6_transports) {
             tr->initSrtpConnection(srtp_profile, l_key, r_key);
     }
 }
