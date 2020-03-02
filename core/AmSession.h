@@ -291,6 +291,14 @@ public:
   void setRtcpMultiplexing(bool multiplexing) { rtcp_multiplexing = multiplexing; }
   bool isRtcpMultiplexing() { return rtcp_multiplexing; }
 
+  void setZrtpEnabled(bool enable) {
+      if(AmConfig.enable_zrtp)
+          enable_zrtp = enable;
+      else if(enable)
+          WARN("attempt to enable ZRTP for session but it is globally disabled");
+  }
+  bool isZrtpEnabled() { return enable_zrtp; }
+
   /* ----         audio input and output        ---- */
 
   /**

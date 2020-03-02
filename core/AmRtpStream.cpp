@@ -753,11 +753,11 @@ int AmRtpStream::init(const AmSdp& local,
 
     try {
 #ifdef WITH_ZRTP
-        if(AmConfig.enable_zrtp && AmConfig.enable_srtp) {
+        if(session && session->isZrtpEnabled() && AmConfig.enable_srtp) {
             if(remote_media.zrtp_hash.is_use) {
                 zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
             }
-             zrtp_context.start();
+            zrtp_context.start();
         }
 #endif/*WITH_ZRTP*/
 
@@ -782,7 +782,7 @@ int AmRtpStream::init(const AmSdp& local,
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP
-        } else if(AmConfig.enable_zrtp && AmConfig.enable_srtp) {
+        } else if(session && session->isZrtpEnabled() && AmConfig.enable_srtp) {
                 cur_rtp_trans->initZrtpConnection(address, port);
                 if(cur_rtcp_trans != cur_rtp_trans)
                     cur_rtcp_trans->initRtpConnection(address, port);
@@ -1727,6 +1727,11 @@ void AmRtpStream::setSymmetricRtpEndless(bool endless)
 bool AmRtpStream::isSymmetricRtpEndless()
 {
     return symmetric_rtp_endless;
+}
+
+bool AmRtpStream::isZrtpEnabled()
+{
+    return session ? session->isZrtpEnabled() : false;
 }
 
 void AmRtpStream::setRtpPing(bool enable)

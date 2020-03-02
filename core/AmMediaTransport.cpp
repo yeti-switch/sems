@@ -405,7 +405,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.payloads.clear();
         answer.fmt = T38_FMT;
 #ifdef WITH_ZRTP
-    } else if(AmConfig.enable_zrtp && srtp_enable && offer.zrtp_hash.is_use) {
+    } else if(stream->isZrtpEnabled() && srtp_enable && offer.zrtp_hash.is_use) {
         answer.zrtp_hash.is_use = true;
         answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
 #endif/*WITH_ZRTP*/
@@ -467,7 +467,7 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                             CLASS_ERROR("Can't add dtls connection. error - %s", error.c_str());
                         }
 #ifdef WITH_ZRTP
-                    } else if(AmConfig.enable_zrtp && srtp_enable) {
+                    } else if(stream->isZrtpEnabled() && srtp_enable) {
                         try {
                             cur_rtp_conn = new AmZRTPConnection(this, address, port);
                             addConnection(cur_rtp_conn);
