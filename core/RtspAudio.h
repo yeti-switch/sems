@@ -31,7 +31,8 @@ class RtspAudio : public AmRtpAudio
         // RtspMsg             req;
 
     private:
-        void    initTransport();
+        void    initIP4Transport();
+        void    initIP6Transport();
         bool    initSdpAnswer();
         void    initRtpAudio(unsigned short int r_rtp_port);
         int     initRtpAudio_by_sdp(const char *sdp_msg);

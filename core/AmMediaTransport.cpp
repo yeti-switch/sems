@@ -34,7 +34,7 @@ inline const char *transport_type2str(int type)
     default: return raw; }
 }
 
-AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id)
+AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type)
     : seq(TRANSPORT_SEQ_NONE)
     , mode(TRANSPORT_MODE_DEFAULT)
     , stream(_stream)
@@ -43,7 +43,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id)
     , cur_raw_conn(nullptr)
     , logger(nullptr)
     , sensor(nullptr)
-    , type(RAW_TRANSPORT)
+    , type(type)
     , l_sd(0)
     , l_sd_ctx(-1)
     , l_port(0)

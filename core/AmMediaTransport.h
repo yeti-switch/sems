@@ -35,7 +35,7 @@ public:
         TRANSPORT_MODE_RAW
     };
 
-    AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id);
+    AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type);
     virtual ~AmMediaTransport();
 
     int getTransportType() { return type; }
