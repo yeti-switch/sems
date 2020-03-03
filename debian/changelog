@@ -1,3 +1,9 @@
+sems (1.9.2) stable; urgency=low
+
+  * fix module.rules.txt git version parsing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 03 Mar 2020 11:40:06 +0200
+
 sems (1.9.1) stable; urgency=low
 
   * zrtp support
