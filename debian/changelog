@@ -1,3 +1,10 @@
+sems (1.9.1) stable; urgency=low
+
+  * zrtp support
+  * fix excess transports initialization & rtcp-mux logic
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 03 Mar 2020 10:46:26 +0200
+
 sems (1.8.58-5) stable; urgency=low
 
   * SipCtrlInterface: optimize \r\n erasing
