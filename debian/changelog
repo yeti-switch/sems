@@ -1,3 +1,10 @@
+sems (1.9.3) stable; urgency=low
+
+  * AmRtpStream::onUdptlPacket: guard receive_buf.insert with receive_mut. fixes segfault
+  * core/cmake/module.rules.txt: fix mod version
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 04 Mar 2020 18:17:50 +0200
+
 sems (1.9.2) stable; urgency=low
 
   * fix module.rules.txt git version parsing
