@@ -934,6 +934,7 @@ void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmMediaTransport*)
 void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmMediaTransport*)
 {
     clearRTPTimeout(&p->recv_time);
+    AmLock l(receive_mut);
     if(!receive_buf.insert(ReceiveBuffer::value_type(p->timestamp,p)).second) {
         mem.freePacket(p);
     }
