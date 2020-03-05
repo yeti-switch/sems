@@ -1002,15 +1002,19 @@ void AmRtpStream::zrtpSessionActivated(const bzrtpSrtpSecrets_t* srtpSecrets)
     uint16_t srtp_profile;
     if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS32){
 			if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3){
-                srtp_profile = srtp_profile_aead_aes_256_gcm;
+                srtp_profile = CP_AES256_CM_SHA1_32;
+//             } else if(srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2){
+//                 srtp_profile = CP_AES192_CM_SHA1_32;
             } else {
-                srtp_profile = srtp_profile_aes128_cm_sha1_32;
+                srtp_profile = CP_AES128_CM_SHA1_32;
             }
     } else if (srtpSecrets->authTagAlgo == ZRTP_AUTHTAG_HS80){
 			if (srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES3){
-                srtp_profile = srtp_profile_aead_aes_128_gcm;
+                srtp_profile = CP_AES256_CM_SHA1_80;
+//             } else if(srtpSecrets->cipherAlgo == ZRTP_CIPHER_AES2){
+//                 srtp_profile = CP_AES192_CM_SHA1_80;
             } else {
-                srtp_profile = srtp_profile_aes128_cm_sha1_80;
+                srtp_profile = CP_AES128_CM_SHA1_80;
             }
     } else {
         CLASS_ERROR("encryption methods with keys derived using ZRTP are not supported");

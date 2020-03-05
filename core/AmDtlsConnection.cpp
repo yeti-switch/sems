@@ -1,4 +1,5 @@
 #include "AmDtlsConnection.h"
+#include "AmSrtpConnection.h"
 #include "AmMediaTransport.h"
 
 #include <botan/tls_client.h>
@@ -316,8 +317,8 @@ void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[]
 
 void AmDtlsConnection::tls_session_activated()
 {
-    unsigned int key_len = srtp_profile_get_master_key_length(srtp_profile);
-    unsigned int salt_size = srtp_profile_get_master_salt_length(srtp_profile);
+    unsigned int key_len = srtp::profile_get_master_key_length(srtp_profile);
+    unsigned int salt_size = srtp::profile_get_master_salt_length(srtp_profile);
     unsigned int export_key_size = key_len*2 + salt_size*2;
     Botan::SymmetricKey key = dtls_channel->key_material_export("EXTRACTOR-dtls_srtp", "", export_key_size);
     vector<uint8_t> local_key, remote_key;

@@ -12,7 +12,13 @@ enum MediaType { MT_NONE=0, MT_AUDIO, MT_VIDEO, MT_APPLICATION, MT_TEXT, MT_MESS
 /** transport protocol */
 enum TransProt { TP_NONE=0, TP_RTPAVP, TP_RTPAVPF, TP_UDP, TP_RTPSAVP, TP_UDPTL, TP_RTPSAVPF, TP_UDPTLSRTPSAVP, TP_UDPTLSRTPSAVPF, TP_UDPTLSUDPTL};
 /** srtp profile */
-enum CryptoProfile { CP_NONE=0, CP_AES128_CM_SHA1_80 = 1, CP_AES128_CM_SHA1_32 = 2, CP_F8128_HMAC_SHA1_80 = 4, CP_NULL_SHA1_80 = 5, CP_NULL_SHA1_32 = 6 };
+enum CryptoProfile {
+    CP_NONE=0, CP_AES128_CM_SHA1_80 = 1, CP_AES128_CM_SHA1_32 = 2, CP_NULL_SHA1_80 = 5, CP_NULL_SHA1_32 = 6, // see rfc5764 4.1.2
+    CP_AES256_CM_SHA1_80 = 3, CP_AES256_CM_SHA1_32 = 4,                                                      // see https://tools.ietf.org/id/draft-lennox-avtcore-dtls-srtp-bigaes-01.html
+//    CP_AEAD_AES_128_GCM = 7, CP_AEAD_AES_256_GCM = 8,                                                        // see rfc7714 14.2
+//    CP_AES192_CM_SHA1_80 = 17, CP_AES192_CM_SHA1_32 = 18                                                     // unused numbers
+                                                                                                             // see https://www.iana.org/assignments/srtp-protection/srtp-protection.xhtml
+};
 
 enum IceCandidateType { ICT_NONE = 0, ICT_HOST = 0x7E, ICT_SRFLX = 0x64, ICT_PRFLX = 0x5A, ICT_RELAY = 0x40 }; // see rfc5245 4.1.2.1
 

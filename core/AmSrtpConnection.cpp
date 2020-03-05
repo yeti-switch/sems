@@ -44,8 +44,8 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, const unsigned char* key_
     }
 
     CLASS_DBG("create s%s connection", getConnType() == RTP_CONN ? "rtp" : "rtcp");
-    unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
-    master_key_len += srtp_profile_get_master_salt_length(profile);
+    unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
+    master_key_len += srtp::profile_get_master_salt_length(profile);
     if(master_key_len != key_s_len || master_key_len != key_r_len) {
         char error[100];
         sprintf(error, "srtp key not corrected, another size: needed %u in fact local-%lu, remote-%lu",
@@ -76,10 +76,81 @@ void AmSrtpConnection::base64_key(const std::string& key, unsigned char* key_s, 
     memcpy(key_s, data.data(), key_s_len);
 }
 
+int srtp::profile_get_master_key_length(srtp_profile_t profile)
+{
+    switch((int)profile) {
+        case CP_AES128_CM_SHA1_80:
+        case CP_AES128_CM_SHA1_32:
+//         case CP_AEAD_AES_128_GCM:
+            return SRTP_AES_128_KEY_LEN;
+//         case CP_AES192_CM_SHA1_80:
+//         case CP_AES192_CM_SHA1_32:
+//             return SRTP_AES_192_KEY_LEN;
+        case CP_AES256_CM_SHA1_80:
+        case CP_AES256_CM_SHA1_32:
+//         case CP_AEAD_AES_256_GCM:
+            return SRTP_AES_256_KEY_LEN;
+    }
+
+    return 0;
+}
+
+int srtp::profile_get_master_salt_length(srtp_profile_t profile)
+{
+    switch ((int)profile) {
+    case CP_AES128_CM_SHA1_80:
+    case CP_AES128_CM_SHA1_32:
+//     case CP_AES192_CM_SHA1_80:
+//     case CP_AES192_CM_SHA1_32:
+    case CP_AES256_CM_SHA1_80:
+    case CP_AES256_CM_SHA1_32:
+    case CP_NULL_SHA1_80:
+        return SRTP_SALT_LEN;
+//     case CP_AEAD_AES_128_GCM:
+//     case CP_AEAD_AES_256_GCM:
+//         return SRTP_AEAD_SALT_LEN;
+    }
+
+    return 0;
+}
+
+void srtp::crypto_policy_set_from_profile_for_rtp(srtp_crypto_policy_t* policy, srtp_profile_t profile)
+{
+    switch ((int)profile) {
+        case CP_AES128_CM_SHA1_80:
+            srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(policy);
+            break;
+        case CP_AES128_CM_SHA1_32:
+            srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(policy);
+            break;
+//         case CP_AES192_CM_SHA1_80:
+//             srtp_crypto_policy_set_aes_cm_192_hmac_sha1_80(policy);
+//             break;
+//         case CP_AES192_CM_SHA1_32:
+//             srtp_crypto_policy_set_aes_cm_192_hmac_sha1_32(policy);
+//             break;
+        case CP_AES256_CM_SHA1_80:
+            srtp_crypto_policy_set_aes_cm_256_hmac_sha1_80(policy);
+            break;
+        case CP_AES256_CM_SHA1_32:
+            srtp_crypto_policy_set_aes_cm_256_hmac_sha1_32(policy);
+            break;
+        case CP_NULL_SHA1_80:
+            srtp_crypto_policy_set_null_cipher_hmac_sha1_80(policy);
+            break;
+//         case CP_AEAD_AES_128_GCM:
+//             srtp_crypto_policy_set_aes_gcm_128_16_auth(policy);
+//             break;
+//         case CP_AEAD_AES_256_GCM:
+//             srtp_crypto_policy_set_aes_gcm_256_16_auth(policy);
+//             break;
+    }
+}
+
 std::string AmSrtpConnection::gen_base64_key(srtp_profile_t profile)
 {
-    unsigned int master_key_len = srtp_profile_get_master_key_length(profile);
-    master_key_len += srtp_profile_get_master_salt_length(profile);
+    unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
+    master_key_len += srtp::profile_get_master_salt_length(profile);
     return gen_base64(master_key_len);
 }
 
@@ -110,8 +181,8 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
 
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
-        srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
-        srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
         policy.window_size = 128;
         policy.num_master_keys = 1;
 
@@ -165,8 +236,8 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
         
         srtp_policy_t policy;
         memset(&policy, 0, sizeof(policy));
-        srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
-        srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
         policy.window_size = 128;
         policy.num_master_keys = 1;
             

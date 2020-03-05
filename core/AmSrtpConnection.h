@@ -29,6 +29,13 @@ public:
     srtp_master_key_t master_key;
 };
 
+namespace srtp {
+    int profile_get_master_key_length(srtp_profile_t profile);
+    int profile_get_master_salt_length(srtp_profile_t profile);
+#define crypto_policy_set_from_profile_for_rtcp crypto_policy_set_from_profile_for_rtp
+    void crypto_policy_set_from_profile_for_rtp(srtp_crypto_policy_t* policy, srtp_profile_t profile);
+}
+
 class AmSrtpConnection : public AmStreamConnection
 {
 private:

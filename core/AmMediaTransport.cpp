@@ -354,12 +354,15 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         if(offer.crypto.empty()) {
             throw AmSession::Exception(488,"absent crypto attribute");
         }
-        answer.crypto.push_back(offer.crypto[0]);
-        answer.crypto.back().keys.clear();
         for(auto profile : srtp_profiles) {
-            if(profile == answer.crypto[0].profile) {
-                answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key(
-                    static_cast<srtp_profile_t>(answer.crypto[0].profile)), 0, 1));
+            for(auto offer_profile : offer.crypto) {
+                if(profile == offer_profile.profile) {
+                    answer.crypto.push_back(offer_profile);
+                    answer.crypto.back().keys.clear();
+                    answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key(
+                        static_cast<srtp_profile_t>(answer.crypto[0].profile)), 0, 1));
+                    break;
+                }
             }
         }
         if(answer.crypto.back().keys.empty()) {
