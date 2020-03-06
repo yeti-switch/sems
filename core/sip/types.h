@@ -20,6 +20,8 @@ enum CryptoProfile {
                                                                                                              // see https://www.iana.org/assignments/srtp-protection/srtp-protection.xhtml
 };
 
+#define CP_MAX_VALUE    CP_NULL_SHA1_32
+
 enum IceCandidateType { ICT_NONE = 0, ICT_HOST = 0x7E, ICT_SRFLX = 0x64, ICT_PRFLX = 0x5A, ICT_RELAY = 0x40 }; // see rfc5245 4.1.2.1
 
 enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP };

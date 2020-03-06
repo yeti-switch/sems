@@ -216,6 +216,11 @@ CryptoProfile SdpCrypto::str2profile(string str)
     return crypto_profile(str);
 }
 
+string SdpCrypto::profile2str(CryptoProfile profile)
+{
+    return profile_t_2_str(profile);
+}
+
 string SdpIceCandidate::print() const
 {
     string data("a=candidate:");

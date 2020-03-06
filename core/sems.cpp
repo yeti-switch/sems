@@ -77,6 +77,7 @@ using std::string;
 #include "sip/tls_trsp.h"
 #include "sip/tr_blacklist.h"
 #include "AmStatistics.h"
+#include <getopt.h>
 #endif
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
@@ -92,6 +93,17 @@ const char *get_sems_version(void)
     return SEMS_VERSION;
 }
 
+static void print_supported_srtp_profiles() {
+    printf(
+        DEFAULT_SIGNATURE "\n"
+        "Supported srtp profiles:\n"
+    );
+    for(int i = 1; i <= CP_MAX_VALUE; i++) {
+        string data = SdpCrypto::profile2str((CryptoProfile)i);
+        if(SdpCrypto::str2profile(data) != CP_NONE)
+            printf("      %s\n", data.c_str());
+    }
+}
 
 static void print_usage(bool short_=false)
 {
@@ -105,20 +117,21 @@ static void print_usage(bool short_=false)
         DEFAULT_SIGNATURE "\n"
         "Usage: %s [OPTIONS]\n"
         "Available options:\n"
-        "    -f <file>       Set configuration file\n"
-        "    -x <dir>        Set path for plug-ins\n"
+        "    -f <file>            Set configuration file\n"
+        "    -x <dir>             Set path for plug-ins\n"
 //        "    -d <device/ip>  Set network device (or IP address) for media advertising\n"
 #ifndef DISABLE_DAEMON_MODE
-        "    -E              Enable debug mode (do not daemonize, log to stderr).\n"
-        "    -P <file>       Set PID file\n"
-        "    -u <uid>        Set user ID\n"
-        "    -g <gid>        Set group ID\n"
+        "    -E                   Enable debug mode (do not daemonize, log to stderr).\n"
+        "    -P <file>            Set PID file\n"
+        "    -u <uid>             Set user ID\n"
+        "    -g <gid>             Set group ID\n"
 #else
-        "    -E              Enable debug mode (log to stderr)\n"
+        "    -E                   Enable debug mode (log to stderr)\n"
 #endif
-        "    -D <level>      Set stderr log level (0=error, 1=warning, 2=info, 3=debug; default=%d)\n"
-        "    -v              Print version\n"
-        "    -h              Print this help\n",
+        "    -D <level>           Set stderr log level (0=error, 1=warning, 2=info, 3=debug; default=%d)\n"
+        "    --list-srtp-profiles Print supported srtp profile\n"
+        "    -v, --version        Print version\n"
+        "    -h, --help           Print this help\n",
         progname, AmConfig.log_level
     );
   }
@@ -127,31 +140,36 @@ static void print_usage(bool short_=false)
 /* Note: The function should not use log because it is called before logging is initialized. */
 static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
 {
+    static struct option long_options[] = {
+            {"help", 0, 0, 'h'},
+            {"version", 0, 0, 'v'},
+            {"list-srtp-profiles", 0, 0, 'l'},
+            {0, 0, 0, 0}
+        };
 #ifndef DISABLE_DAEMON_MODE
     static const char* opts = ":hvEf:x:d:D:u:g:P:";
 #else
     static const char* opts = ":hvEf:x:d:D:";
-#endif    
+#endif
 
-    opterr = 0;
-    
     while (true) {
-	int c = getopt(argc, argv, opts);
-	switch (c) {
-	case -1:
-	    return true;
-	    
-	case ':':
-	    fprintf(stderr, "%s: missing argument for option '-%c'\n", progname, optopt);
-	    return false;
-	    
-	case '?':
-	    fprintf(stderr, "%s: unknown option '-%c'\n", progname, optopt);
-	    return false;
-	    
-	default:
-	    args[c] = (optarg ? optarg : "yes");
-	}
+        int option_index;
+        int c = getopt_long(argc, argv, opts, long_options, &option_index);
+        switch (c) {
+        case -1:
+            return true;
+
+        case ':':
+            fprintf(stderr, "%s: missing argument for option '-%c'\n", progname, optopt);
+            return false;
+
+        case '?':
+            fprintf(stderr, "%s: unknown option '-%c'\n", progname, optopt);
+            return false;
+
+        default:
+            args[c] = (optarg ? optarg : "yes");
+        }
     }
 }
 
@@ -443,6 +461,11 @@ int main(int argc, char* argv[])
 
   if(args.find('h') != args.end()){
     print_usage();
+    return 0;
+  }
+
+  if(args.find('l') != args.end()){
+    print_supported_srtp_profiles();
     return 0;
   }
 

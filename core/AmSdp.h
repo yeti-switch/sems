@@ -137,6 +137,7 @@ struct SdpCrypto
     string print() const;
 
     static CryptoProfile str2profile(string str);
+    static string profile2str(CryptoProfile profile);
 };
 
 struct SdpFingerPrint

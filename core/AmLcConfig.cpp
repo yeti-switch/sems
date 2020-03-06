@@ -1447,7 +1447,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
         }
         cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
         for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
-            rtpinfo->profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(sdes, PARAM_PROFILES_NAME, i)));
+            char* profile_name = cfg_getnstr(sdes, PARAM_PROFILES_NAME, i);
+            CryptoProfile profile = SdpCrypto::str2profile(profile_name);
+            if(profile == CP_NONE) {
+                ERROR("incorrect or not supported profile name %s", profile_name);
+                return nullptr;
+            }
+            rtpinfo->profiles.push_back(profile);
         }
 
         cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
