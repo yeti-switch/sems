@@ -1,3 +1,11 @@
+sems (1.10.0) stable; urgency=low
+
+  * fix SRTP profiles negotiation
+  * add SRTP profiles AES_256_CM_HMAC_SHA1_80 and AES_256_CM_HMAC_SHA1_32
+  * add command option --list-srtp-profiles
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 12 Mar 2020 17:19:48 +0200
+
 sems (1.9.3) stable; urgency=low
 
   * AmRtpStream::onUdptlPacket: guard receive_buf.insert with receive_mut. fixes segfault
