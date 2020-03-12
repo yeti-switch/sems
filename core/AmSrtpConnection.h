@@ -8,7 +8,7 @@
 #include <srtp.h>
 #include <memory>
 
-#define SRTP_KEY_SIZE 30
+#define SRTP_KEY_SIZE 46
 
 #define SRTP_PACKET_PARSE_ERROR -1
 #define SRTP_PACKET_PARSE_OK 0
