@@ -111,8 +111,8 @@ inline string profile_t_2_str(int pt)
     switch(pt){
         case CP_AES128_CM_SHA1_80: return "AES_CM_128_HMAC_SHA1_80";
         case CP_AES128_CM_SHA1_32: return "AES_CM_128_HMAC_SHA1_32";
-        case CP_AES256_CM_SHA1_80: return "AES_CM_256_HMAC_SHA1_80";
-        case CP_AES256_CM_SHA1_32: return "AES_CM_256_HMAC_SHA1_32";
+        case CP_AES256_CM_SHA1_80: return "AES_256_CM_HMAC_SHA1_80";
+        case CP_AES256_CM_SHA1_32: return "AES_256_CM_HMAC_SHA1_32";
         case CP_NULL_SHA1_80: return "NULL_HMAC_SHA1_80";
         case CP_NULL_SHA1_32: return "NULL_HMAC_SHA1_32";
 //         case CP_AEAD_AES_128_GCM: return "AEAD_AES_256_GCM";
@@ -1444,7 +1444,8 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     } else if(attr == "rtcp-mux") {
         media.is_multiplex = true;
     } else if(attr == "crypto") {
-        SdpCrypto crypto;
+        media.crypto.emplace_back();
+        SdpCrypto &crypto = media.crypto.back();
         while(attr_line < line_end) {
             next = parse_until(attr_line, line_end, ' ');
             switch(crypto_st) {
@@ -1467,14 +1468,14 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
                     string method = string(attr_line, static_cast<size_t>(key_data-attr_line)-1);
                     string key_info = string(key_data, static_cast<size_t>(next-key_data)-1);
                     if(method == "inline") {
-                        SdpKeyInfo info;
+                        crypto.keys.emplace_back();
+                        SdpKeyInfo &info = crypto.keys.back();
                         char* key_end = parse_until(key_data, next, '|');
                         info.key = string(key_data, static_cast<size_t>(key_end-key_data)-1);
 
                         //TODO: parse parameters as described in https://tools.ietf.org/html/rfc4568#section-9.2
                         info.lifetime = 0;
                         info.mki = 1;
-                        crypto.keys.push_back(info);
                         break;
                     }
                 }
@@ -1487,7 +1488,6 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
             } //switch(crypto_st)
             attr_line = next;
         } //while(attr_line < line_end)
-        media.crypto.push_back(crypto);
     } else if(attr == "fingerprint") {
         next = parse_until(attr_line, line_end, ' ');
         media.fingerprint.hash = string(attr_line, int(next-attr_line)-1);
@@ -2036,9 +2036,9 @@ static CryptoProfile crypto_profile(std::string profile)
 //        return CP_AES192_CM_SHA1_32;
 //    else if(profile_uc == "AES_CM_192_HMAC_SHA1_80")
 //        return CP_AES192_CM_SHA1_80;
-    else if(profile_uc == "AES_CM_256_HMAC_SHA1_32")
+    else if(profile_uc == "AES_256_CM_HMAC_SHA1_32")
         return CP_AES256_CM_SHA1_32;
-    else if(profile_uc == "AES_CM_256_HMAC_SHA1_80")
+    else if(profile_uc == "AES_256_CM_HMAC_SHA1_80")
         return CP_AES256_CM_SHA1_80;
 //    else if(profile_uc == "AEAD_AES_128_GCM")
 //        return CP_AEAD_AES_128_GCM;

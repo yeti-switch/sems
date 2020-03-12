@@ -348,24 +348,27 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.type = MT_IMAGE;
 
     if((offer.is_simple_srtp() && !srtp_enable) ||
-       (offer.is_dtls_srtp() && !dtls_enable)) {
+       (offer.is_dtls_srtp() && !dtls_enable))
+    {
         throw AmSession::Exception(488,"transport not supported");
     } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
         if(offer.crypto.empty()) {
             throw AmSession::Exception(488,"absent crypto attribute");
         }
-        for(auto profile : srtp_profiles) {
-            for(auto offer_profile : offer.crypto) {
-                if(profile == offer_profile.profile) {
-                    answer.crypto.push_back(offer_profile);
-                    answer.crypto.back().keys.clear();
-                    answer.crypto.back().keys.push_back(SdpKeyInfo(AmSrtpConnection::gen_base64_key(
-                        static_cast<srtp_profile_t>(answer.crypto[0].profile)), 0, 1));
+        for(const auto &allowed_profile : srtp_profiles) {
+            for(const auto &offer_crypto : offer.crypto) {
+                if(allowed_profile == offer_crypto.profile) {
+                    answer.crypto.emplace_back(offer_crypto);
+                    auto &answer_crypto = answer.crypto.back();
+                    answer_crypto.keys.clear();
+                    answer_crypto.keys.emplace_back(
+                        SdpKeyInfo(AmSrtpConnection::gen_base64_key(
+                            static_cast<srtp_profile_t>(answer_crypto.profile)), 0, 1));
                     break;
                 }
             }
         }
-        if(answer.crypto.back().keys.empty()) {
+        if(answer.crypto.empty()) {
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
     } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {

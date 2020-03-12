@@ -1240,7 +1240,7 @@ media-interfaces {
                         *
                         *  srtp profile
                         *
-                        *  available values: AES_CM_256_HMAC_SHA1_32, AES_CM_256_HMAC_SHA1_80, AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
+                        *  available values: AES_256_CM_HMAC_SHA1_32, AES_256_CM_HMAC_SHA1_80, AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80
                         *
                         *  default: no default
                         */
