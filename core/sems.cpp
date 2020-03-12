@@ -95,14 +95,23 @@ const char *get_sems_version(void)
 
 static void print_supported_srtp_profiles() {
     printf(
-        DEFAULT_SIGNATURE "\n"
-        "Supported srtp profiles:\n"
+        "  Supported SRTP profiles:\n"
     );
-    for(int i = 1; i <= CP_MAX_VALUE; i++) {
+    for(int i = 1; i <= CP_MAX; i++) {
         string data = SdpCrypto::profile2str((CryptoProfile)i);
         if(SdpCrypto::str2profile(data) != CP_NONE)
-            printf("      %s\n", data.c_str());
+            printf("    %s\n", data.c_str());
     }
+    printf(
+        "\n"
+        "  Related sems.conf options:\n"
+        "    media-interfaces.interface.ip4.rtp.srtp.sdes.profiles\n"
+        "    media-interfaces.interface.ip6.rtp.srtp.sdes.profiles\n"
+        "\n"
+        "    media-interfaces.interface.ip4.rtp.srtp.dtls.client.profiles\n"
+        "    media-interfaces.interface.ip6.rtp.srtp.dtls.client.profiles\n"
+        "\n"
+    );
 }
 
 static void print_usage(bool short_=false)
@@ -114,63 +123,84 @@ static void print_usage(bool short_=false)
   }
   else {
     printf(
-        DEFAULT_SIGNATURE "\n"
-        "Usage: %s [OPTIONS]\n"
-        "Available options:\n"
-        "    -f <file>            Set configuration file\n"
-        "    -x <dir>             Set path for plug-ins\n"
-//        "    -d <device/ip>  Set network device (or IP address) for media advertising\n"
+        "Usage: %s [STARTUP_OPTIONS...|INFORMATIONAL_OPTION]\n\n"
+        " Startup options:\n"
+        "    -f <file>            set configuration file (default: " CONFIG_FILE ")\n"
+        "    -x <dir>             set path for plug-ins\n"
 #ifndef DISABLE_DAEMON_MODE
-        "    -E                   Enable debug mode (do not daemonize, log to stderr).\n"
-        "    -P <file>            Set PID file\n"
-        "    -u <uid>             Set user ID\n"
-        "    -g <gid>             Set group ID\n"
-#else
-        "    -E                   Enable debug mode (log to stderr)\n"
+        "\n"
+        "    -P <file>            set PID file (default: " DEFAULT_DAEMON_PID_FILE ")\n"
+        "    -u <uid>             set user ID\n"
+        "    -g <gid>             set group ID\n"
 #endif
-        "    -D <level>           Set stderr log level (0=error, 1=warning, 2=info, 3=debug; default=%d)\n"
-        "    --list-srtp-profiles Print supported srtp profile\n"
-        "    -v, --version        Print version\n"
-        "    -h, --help           Print this help\n",
+        "\n"
+        "    -D <level>           set stderr log level (default: %d):\n"
+        "                         0 - error, 1 - warning, 2 - info, 3 - debug\n\n"
+        "    -E                   enable debug mode (do not daemonize, log to stderr).\n"
+        "\n"
+        " Informational options:\n"
+        "    --list-srtp-profiles print supported SRTP profiles\n"
+        "\n"
+        "    -v, --version        print version\n"
+        "    -h, --help           print this help\n"
+        "\n",
         progname, AmConfig.log_level
     );
   }
 }
 
 /* Note: The function should not use log because it is called before logging is initialized. */
-static bool parse_args(int argc, char* argv[], std::map<char,string>& args)
+static bool process_args(int argc, char* argv[], std::map<char,string>& args)
 {
+    static int list_srtp_profiles = 0;
     static struct option long_options[] = {
-            {"help", 0, 0, 'h'},
-            {"version", 0, 0, 'v'},
-            {"list-srtp-profiles", 0, 0, 'l'},
-            {0, 0, 0, 0}
-        };
+        {"help", 0, nullptr, 'h'},
+        {"version", 0, nullptr, 'v'},
+        {"list-srtp-profiles", 0, &list_srtp_profiles, 1},
+        {nullptr, 0, nullptr, 0}
+    };
 #ifndef DISABLE_DAEMON_MODE
     static const char* opts = ":hvEf:x:d:D:u:g:P:";
 #else
     static const char* opts = ":hvEf:x:d:D:";
 #endif
 
-    while (true) {
-        int option_index;
-        int c = getopt_long(argc, argv, opts, long_options, &option_index);
-        switch (c) {
-        case -1:
-            return true;
+    int opt;
+    int option_index;
 
+    while (-1!=(opt = getopt_long(argc, argv, opts, long_options, &option_index))) {
+        switch (opt) {
         case ':':
             fprintf(stderr, "%s: missing argument for option '-%c'\n", progname, optopt);
-            return false;
+            print_usage(true);
+            exit(1);
 
         case '?':
             fprintf(stderr, "%s: unknown option '-%c'\n", progname, optopt);
-            return false;
+            print_usage(true);
+            exit(1);
+
+        case 'h':
+            print_usage();
+            exit(0);
+
+        case 'v':
+            printf("%s\n", SEMS_VERSION);
+            exit(0);
+
+        case 0:
+            //long-only options
+            if(list_srtp_profiles) {
+                print_supported_srtp_profiles();
+                exit(0);
+            }
+            break;
 
         default:
-            args[c] = (optarg ? optarg : "yes");
+            args[static_cast<char>(opt)] = (optarg ? optarg : "yes");
         }
     }
+    return true;
 }
 
 /*static void set_default_interface(const string& iface_name)
@@ -450,32 +480,14 @@ int main(int argc, char* argv[])
 
   (void)ret;
 
-  start_time = time(0);
+  start_time = time(nullptr);
   progname = strrchr(argv[0], '/');
-  progname = (progname == NULL ? argv[0] : progname + 1);
+  progname = (progname == nullptr ? argv[0] : progname + 1);
 
-  if(!parse_args(argc, argv, args)){
+  if(!process_args(argc, argv, args)){
     print_usage(true);
     return 1;
   }
-
-  if(args.find('h') != args.end()){
-    print_usage();
-    return 0;
-  }
-
-  if(args.find('l') != args.end()){
-    print_supported_srtp_profiles();
-    return 0;
-  }
-
-  if(args.find('v') != args.end()){
-    printf("%s\n", DEFAULT_SIGNATURE);
-    return 0;
-  }
-
-  // Init default interface
-  //AmConfig::Ifs.push_back(AmConfig::IP_interface());
 
   init_logging(SEMS_APP_NAME);
 
