@@ -1247,6 +1247,60 @@ media-interfaces {
                         profiles = {AES_CM_128_HMAC_SHA1_32, AES_CM_128_HMAC_SHA1_80, NULL_HMAC_SHA1_32, NULL_HMAC_SHA1_80}
                     }
                     /*
+                    * section described ZRTP client settings
+                    */
+                    zrtp {
+                        /* optional parameter: hashes
+                        *
+                        *  zrtp supported hashes
+                        *
+                        *  available values: S256, S384, N256, N384
+                        *
+                        *  default: all available values
+                        */
+                        hashes = {S256, S384, N256, N384}
+
+                        /* optional parameter: ciphers
+                        *
+                        *  zrtp supported ciphers
+                        *
+                        *  available values: AES1, AES2, AES3, 2FS1, 2FS2, 2FS3
+                        *
+                        *  default: all available values
+                        */
+                        ciphers = {AES1, AES2, AES3, 2FS1, 2FS2, 2FS3}
+
+                        /* optional parameter: authtags
+                        *
+                        *  zrtp supported authtag
+                        *
+                        *  available values: HS32, HS80, SK32, SK80
+                        *
+                        *  default: all available values
+                        */
+                        authtags = {HS32, HS80, SK32, SK64}
+
+                        /* optional parameter: dhmodes
+                        *
+                        *  zrtp supported key agreement
+                        *
+                        *  available values: DH3K, DH2K, EC25, EC38, EC52, PRSA, MULT
+                        *
+                        *  default: all available values
+                        */
+                        dhmodes = {DH3K, DH2K, EC25, EC38, EC52, PRSA, MULT}
+
+                        /* optional parameter: sas
+                        *
+                        *  zrtp supported sas
+                        *
+                        *  available values: B32, B256
+                        *
+                        *  default: all available values
+                        */
+                        sas = {B32, B256}
+                    }
+                    /*
                     * section described DTLS client settings
                     */
                     dtls {

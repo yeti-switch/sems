@@ -52,6 +52,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     , lproto_id(_proto_id)
     , srtp_enable(false)
     , dtls_enable(false)
+    , zrtp_enable(false)
 {
     string local_ip;
     if(_proto_id >= 0) {
@@ -290,6 +291,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     case TP_UDPTL:
     case TP_UDPTLSUDPTL:
         offer.type = MT_IMAGE;
+        break;
     default:
         offer.type = MT_AUDIO;
     }
@@ -360,8 +362,8 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     default:
 #ifdef WITH_ZRTP
         if(stream->isZrtpEnabled() && zrtp_enable) {
-            offer.zrtp_hash.is_use = true;
             offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+            if(!offer.zrtp_hash.hash.empty()) offer.zrtp_hash.is_use = true;
         }
 #endif/*WITH_ZRTP*/
         break;
@@ -440,9 +442,9 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.payloads.clear();
         answer.fmt = T38_FMT;
 #ifdef WITH_ZRTP
-    } else if(stream->isZrtpEnabled() && srtp_enable && offer.zrtp_hash.is_use) {
-        answer.zrtp_hash.is_use = true;
+    } else if(stream->isZrtpEnabled() && zrtp_enable && offer.zrtp_hash.is_use) {
         answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+        if(!answer.zrtp_hash.hash.empty()) answer.zrtp_hash.is_use = true;
 #endif/*WITH_ZRTP*/
     }
 }

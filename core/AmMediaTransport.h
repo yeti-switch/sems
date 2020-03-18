@@ -244,6 +244,7 @@ private:
     vector<CryptoProfile> srtp_profiles;
     bool srtp_enable;
     bool dtls_enable;
+    bool zrtp_enable;
 
     vector<AmStreamConnection*> connections;
     AmMutex                     connections_mut;

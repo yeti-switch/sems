@@ -129,7 +129,6 @@ struct ConfigContainer
     int dump_level;
 
     bool enable_zrtp;
-    bool enable_zrtp_debuglog;
 
 #ifndef DISABLE_DAEMON_MODE
     bool deamon_mode;

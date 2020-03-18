@@ -16,6 +16,12 @@
 
 #include "bitops.h"
 
+#ifdef WITH_ZRTP
+extern "C" {
+    #include <bzrtp/bzrtp.h>
+}
+#endif/*WITH_ZRTP*/
+
 class IP_info
 {
 public:
@@ -321,7 +327,8 @@ public:
     RTP_info()
       : MEDIA_info(RTP),
         srtp_enable(false),
-        dtls_enable(false)
+        dtls_enable(false),
+        zrtp_enable(false)
     {}
     RTP_info(const RTP_info& info) = delete;
     virtual ~RTP_info()    {}
@@ -340,6 +347,66 @@ public:
     std::vector<CryptoProfile> profiles;
     bool srtp_enable;
     bool dtls_enable;
+
+    int zrtp_hash_from_str(const string& str) {
+#ifdef WITH_ZRTP
+        if(str == "S256") return ZRTP_HASH_S256;
+        if(str == "S384") return ZRTP_HASH_S384;
+        if(str == "N256") return ZRTP_HASH_N256;
+        if(str == "N384") return ZRTP_HASH_N384;
+#endif/*WITH_ZRTP*/
+        return 0;
+    }
+
+    int zrtp_cipher_from_str(const string& str) {
+#ifdef WITH_ZRTP
+        if(str == "AES1") return ZRTP_CIPHER_AES1;
+        if(str == "AES2") return ZRTP_CIPHER_AES2;
+        if(str == "AES3") return ZRTP_CIPHER_AES3;
+        if(str == "2FS1") return ZRTP_CIPHER_2FS1;
+        if(str == "2FS2") return ZRTP_CIPHER_2FS2;
+        if(str == "2FS3") return ZRTP_CIPHER_2FS3;
+#endif/*WITH_ZRTP*/
+        return 0;
+    }
+
+    int zrtp_authtag_from_str(const string& str) {
+#ifdef WITH_ZRTP
+        if(str == "HS32") return ZRTP_AUTHTAG_HS32;
+        if(str == "HS80") return ZRTP_AUTHTAG_HS80;
+        if(str == "SK32") return ZRTP_AUTHTAG_SK32;
+        if(str == "SK64") return ZRTP_AUTHTAG_SK64;
+#endif/*WITH_ZRTP*/
+        return 0;
+    }
+
+    int zrtp_dhmode_from_str(const string& str) {
+#ifdef WITH_ZRTP
+        if(str == "DH2K") return ZRTP_KEYAGREEMENT_DH2k;
+        if(str == "EC25") return ZRTP_KEYAGREEMENT_EC25;
+        if(str == "DH3K") return ZRTP_KEYAGREEMENT_DH3k;
+        if(str == "EC38") return ZRTP_KEYAGREEMENT_EC38;
+        if(str == "EC52") return ZRTP_KEYAGREEMENT_EC52;
+        if(str == "PRSH") return ZRTP_KEYAGREEMENT_Prsh;
+        if(str == "MULT") return ZRTP_KEYAGREEMENT_Mult;
+#endif/*WITH_ZRTP*/
+        return 0;
+    }
+
+    int zrtp_sas_from_str(const string& str) {
+#ifdef WITH_ZRTP
+        if(str == "B32") return ZRTP_SAS_B32;
+        if(str == "B256") return ZRTP_SAS_B256;
+#endif/*WITH_ZRTP*/
+        return 0;
+    }
+
+    bool zrtp_enable;
+    std::vector<int> zrtp_hashes;
+    std::vector<int> zrtp_ciphers;
+    std::vector<int> zrtp_authtags;
+    std::vector<int> zrtp_dhmodes;
+    std::vector<int> zrtp_sas;
 };
 
 class RTSP_info : public MEDIA_info

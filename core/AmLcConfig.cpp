@@ -47,6 +47,7 @@
 #define SECTION_SRTP_NAME            "srtp"
 #define SECTION_SDES_NAME            "sdes"
 #define SECTION_DTLS_NAME            "dtls"
+#define SECTION_ZRTP_NAME            "zrtp"
 
 #define PARAM_LIMIT_NAME             "limit"
 #define PARAM_CODE_NAME              "code"
@@ -124,7 +125,6 @@
 #define PARAM_PCAP_UPLOAD_QUEUE_NAME "pcap_upload_queue"
 #define PARAM_RESAMPLE_LIBRARY_NAME  "resampling_library"
 #define PARAM_ENABLE_ZRTP_NAME       "enable_zrtp"
-#define PARAM_ENABLE_ZRTP_DLOG_NAME  "enable_zrtp_debuglog"
 #define PARAM_EXCLUDE_PAYLOADS_NAME  "exclude_payloads"
 #define PARAM_DEAMON_NAME            "daemon"
 #define PARAM_DEAMON_UID_NAME        "daemon_uid"
@@ -155,6 +155,10 @@
 #define PARAM_REQUIRE_CERT_NAME      "require_client_certificate"
 #define PARAM_CA_LIST_NAME           "ca_list"
 #define PARAM_CIPHERS_NAME           "ciphers"
+#define PARAM_HASHES_NAME            "hashes"
+#define PARAM_AUTHTAGS_NAME          "authtags"
+#define PARAM_DHMODES_NAME           "dhmodes"
+#define PARAM_SAS_NAME               "sas"
 #define PARAM_MACS_NAME              "macs"
 #define PARAM_DH_PARAM_NAME          "dhparam"
 #define PARAM_CERT_CHAIN_NAME        "verify_certificate_chain"
@@ -285,11 +289,22 @@ namespace Config {
         CFG_END()
     };
 
+    static cfg_opt_t zrtp[] =
+    {
+        CFG_STR_LIST(PARAM_HASHES_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_AUTHTAGS_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_DHMODES_NAME, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_SAS_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
     static cfg_opt_t srtp[] =
     {
         CFG_BOOL(PARAM_ENABLE_SRTP_NAME, cfg_true, CFGF_NONE),
         CFG_SEC(SECTION_SDES_NAME, sdes, CFGF_NONE),
         CFG_SEC(SECTION_DTLS_NAME, dtls, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_ZRTP_NAME, zrtp, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -585,7 +600,6 @@ namespace Config {
         CFG_INT(PARAM_SIP_TIMER_BL_NAME, DEFAULT_BL_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_T2_NAME, DEFAULT_T2_TIMER, CFGF_NONE),
         CFG_BOOL(PARAM_ENABLE_ZRTP_NAME, cfg_true, CFGF_NONE),
-        CFG_BOOL(PARAM_ENABLE_ZRTP_DLOG_NAME, cfg_true, CFGF_NONE),
 #ifdef USE_LIBSAMPLERATE
 #ifndef USE_INTERNAL_RESAMPLER
         CFG_STR(PARAM_RESAMPLE_LIBRARY_NAME, VALUE_LIBSAMPLERATE, CFGF_NONE),
@@ -839,17 +853,17 @@ AmLcConfig::~AmLcConfig()
 
 void AmLcConfig::setValidationFunction(cfg_t* cfg)
 {
-    // interfaces ACL validation
-#define set_acl_method_validator(PROTO_NAME, PROTO_VERSION, METHOD_NAME) \
+// interfaces ACL validation
+#define set_method_validator(PROTO_NAME, PROTO_VERSION, METHOD_NAME) \
     cfg_set_validate_func(cfg,\
         SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" PROTO_VERSION "|"\
         PROTO_NAME "|" METHOD_NAME "|" PARAM_METHOD_NAME,\
         validate_method_func)
 
 #define set_acl_validator_proto_version(PROTO_NAME, PROTO_VERSION) \
-    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_OPT_NAME);\
-    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_ORIGACL_NAME);\
-    set_acl_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_REG_ACL_NAME);
+    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_OPT_NAME);\
+    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_ORIGACL_NAME);\
+    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_REG_ACL_NAME);
 
 #define set_acl_validator_proto(PROTO_NAME) \
     set_acl_validator_proto_version(PROTO_NAME, SECTION_IP4_NAME);\
@@ -865,26 +879,28 @@ void AmLcConfig::setValidationFunction(cfg_t* cfg)
 #undef set_acl_validator_proto_version
 #undef set_acl_method_validator
 
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
-                                 SECTION_SIP_UDP_NAME "|" SECTION_OPT_NAME "|" PARAM_METHOD_NAME, validate_method_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"
-                                 SECTION_SIP_UDP_NAME "|" SECTION_OPT_NAME "|" PARAM_METHOD_NAME, validate_method_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
-                                 SECTION_SIP_TCP_NAME "|" SECTION_OPT_NAME "|" PARAM_METHOD_NAME, validate_method_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"
-                                 SECTION_SIP_TCP_NAME "|" SECTION_OPT_NAME "|" PARAM_METHOD_NAME, validate_method_func);
+// ip of interfaces validation
+#define set_ip_func_validator(INTERFACE_NAME, PROTO_NAME) \
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"\
+        PROTO_NAME "|" PARAM_ADDRESS_NAME,\
+        validate_ip6_func);\
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"\
+        PROTO_NAME "|" PARAM_ADDRESS_NAME,\
+        validate_ip4_func);
 
-    // ip of interfaces validation
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"
-                                 SECTION_SIP_TCP_NAME "|" PARAM_ADDRESS_NAME, validate_ip6_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"
-                                 SECTION_SIP_UDP_NAME "|" PARAM_ADDRESS_NAME, validate_ip6_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
-                                 SECTION_SIP_TCP_NAME "|" PARAM_ADDRESS_NAME, validate_ip4_func);
-    cfg_set_validate_func(cfg, SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"
-                                 SECTION_SIP_UDP_NAME "|" PARAM_ADDRESS_NAME, validate_ip4_func);
+    set_ip_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_UDP_NAME);
+    set_ip_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_TCP_NAME);
+    set_ip_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_TLS_NAME);
+    set_ip_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_WS_NAME);
+    set_ip_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_WSS_NAME);
+    set_ip_func_validator(SECTION_MEDIAIF_NAME, SECTION_RTP_NAME);
+    set_ip_func_validator(SECTION_MEDIAIF_NAME, SECTION_RTSP_NAME);
 
-    // general validation
+#undef set_ip_func_validator
+
+// general validation
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_RAW_NAME , validate_log_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_LEVEL_NAME , validate_log_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_STDERR_LEVEL_NAME , validate_log_func);
@@ -1095,7 +1111,6 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     else if(value == VALUE_UNAVAILABLE) config->resampling_implementation_type = AmAudio::UNAVAILABLE;
     else if(value == VALUE_INTERNAL) config->resampling_implementation_type = AmAudio::INTERNAL_RESAMPLER;
     config->enable_zrtp = cfg_getbool(gen, PARAM_ENABLE_ZRTP_NAME);
-    config->enable_zrtp_debuglog = cfg_getbool(gen, PARAM_ENABLE_ZRTP_DLOG_NAME);
 #ifndef DISABLE_DAEMON_MODE
     config->deamon_mode = cfg_getbool(gen, PARAM_DEAMON_NAME);
     config->deamon_uid = cfg_getstr(gen, PARAM_DEAMON_UID_NAME);
@@ -1454,6 +1469,58 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
                 return nullptr;
             }
             rtpinfo->profiles.push_back(profile);
+        }
+
+        cfg_t* zrtp = cfg_getsec(srtp, SECTION_ZRTP_NAME);
+        if(!zrtp) {
+            rtpinfo->zrtp_enable = false;
+        } else {
+            rtpinfo->zrtp_enable = true;
+            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_HASHES_NAME); i++) {
+                std::string hash = cfg_getnstr(zrtp, PARAM_HASHES_NAME, i);
+                int ihash = rtpinfo->zrtp_hash_from_str(hash);
+                if(!ihash) {
+                    ERROR("incorrect or not supported zrtp hash name %s", hash.c_str());
+                    return nullptr;
+                }
+                rtpinfo->zrtp_hashes.push_back(ihash);
+            }
+            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_CIPHERS_NAME); i++) {
+                std::string cipher = cfg_getnstr(zrtp, PARAM_CIPHERS_NAME, i);
+                int icipher = rtpinfo->zrtp_cipher_from_str(cipher);
+                if(!icipher) {
+                    ERROR("incorrect or not supported zrtp cipher name %s", cipher.c_str());
+                    return nullptr;
+                }
+                rtpinfo->zrtp_ciphers.push_back(icipher);
+            }
+            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_AUTHTAGS_NAME); i++) {
+                std::string authtag = cfg_getnstr(zrtp, PARAM_AUTHTAGS_NAME, i);
+                int iauthtag = rtpinfo->zrtp_authtag_from_str(authtag);
+                if(!iauthtag) {
+                    ERROR("incorrect or not supported zrtp authtag name %s", authtag.c_str());
+                    return nullptr;
+                }
+                rtpinfo->zrtp_authtags.push_back(iauthtag);
+            }
+            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_DHMODES_NAME); i++) {
+                std::string dhmode = cfg_getnstr(zrtp, PARAM_DHMODES_NAME, i);
+                int idhmode = rtpinfo->zrtp_dhmode_from_str(dhmode);
+                if(!idhmode) {
+                    ERROR("incorrect or not supported zrtp dhmode name %s", dhmode.c_str());
+                    return nullptr;
+                }
+                rtpinfo->zrtp_dhmodes.push_back(idhmode);
+            }
+            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_SAS_NAME); i++) {
+                std::string sas = cfg_getnstr(zrtp, PARAM_SAS_NAME, i);
+                int isas= rtpinfo->zrtp_sas_from_str(sas);
+                if(!isas) {
+                    ERROR("incorrect or not supported zrtp sas name %s", sas.c_str());
+                    return nullptr;
+                }
+                rtpinfo->zrtp_sas.push_back(isas);
+            }
         }
 
         cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
