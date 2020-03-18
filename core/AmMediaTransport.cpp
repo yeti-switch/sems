@@ -978,7 +978,7 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
         return;
     }
 
-    s_conn->handleConnection(buf, size, &addr, recvtime);
+    s_conn->process_packet(buf, size, &addr, recvtime);
 }
 
 int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)

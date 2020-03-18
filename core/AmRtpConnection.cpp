@@ -120,6 +120,19 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
             IN6_IS_ADDR_UNSPECIFIED(&SAv6(&r_addr)->sin6_addr));
 }
 
+void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
+                                        struct sockaddr_storage* recv_addr,
+                                        struct timeval recv_time)
+{
+    handleSymmetricRtp(recv_addr, &recv_time);
+    if(!passive && !isAddrConnection(recv_addr)) {
+        //got packet from unknown remote addr. ignore it
+        //TODO: update stream stats here
+        return;
+    }
+    handleConnection(data, size, recv_addr, recv_time);
+}
+
 void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* rv_time)
 {
     if(parent) parent->handleSymmetricRtp(recv_addr, rv_time);
@@ -183,8 +196,6 @@ AmRawConnection::AmRawConnection(AmMediaTransport* _transport, const string& rem
 
 void AmRawConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
-
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
 
@@ -216,8 +227,6 @@ AmRtpConnection::~AmRtpConnection()
 
 void AmRtpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
-
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
 
@@ -248,8 +257,6 @@ AmRtcpConnection::~AmRtcpConnection()
 
 void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
-
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
     AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();

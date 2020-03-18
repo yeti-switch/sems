@@ -235,8 +235,6 @@ UDPTLConnection::~UDPTLConnection()
 
 void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval rv_time)
 {
-    handleSymmetricRtp(recv_addr, &rv_time);
-
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
 

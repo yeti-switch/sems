@@ -270,7 +270,6 @@ srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settin
 
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
     try {
         size_t res = dtls_channel->received_data(data, size);
         if(res > 0) {

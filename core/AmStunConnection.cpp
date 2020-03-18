@@ -48,7 +48,6 @@ void AmStunConnection::set_credentials(const string& luser, const string& lpassw
 
 void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
     CStunMessageReader reader;
     if(reader.AddBytes(data, size) == CStunMessageReader::ParseError) {
         return;

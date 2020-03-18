@@ -34,6 +34,7 @@ public:
     bool isAddrConnection(struct sockaddr_storage* recv_addr);
     ConnectionType getConnType();
     virtual ssize_t send(AmRtpPacket* packet);
+    virtual void process_packet(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) = 0;
     virtual void setRAddr(const string& addr, unsigned short port) { resolveRemoteAddress(addr, port); }
     virtual bool getPassiveMode() { return passive; }
