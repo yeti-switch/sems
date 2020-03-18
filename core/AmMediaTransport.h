@@ -136,7 +136,7 @@ public:
     * @param index index of the SDP media within the SDP.
     * @param offer the local offer to be filled/completed.
     */
-    void getSdpOffer(TransProt& transport, SdpMedia& offer);
+    void getSdpOffer(SdpMedia& offer);
     /**
     * Generate an answer for the given SDP media based on the stream capabilities.
     * @param index index of the SDP media within the SDP.

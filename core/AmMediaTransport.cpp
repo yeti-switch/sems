@@ -283,22 +283,43 @@ int AmMediaTransport::getLocalSocket(bool reinit)
     return l_sd;
 }
 
-void AmMediaTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
+void AmMediaTransport::getSdpOffer(SdpMedia& offer)
 {
-    if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
-        offer.type = MT_AUDIO;
-    else
+    //set offer type
+    switch(offer.transport) {
+    case TP_UDPTL:
+    case TP_UDPTLSUDPTL:
         offer.type = MT_IMAGE;
+    default:
+        offer.type = MT_AUDIO;
+    }
 
-    if((transport == TP_RTPSAVP || transport == TP_RTPSAVPF) && !srtp_enable) {
-        CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
-                    AmConfig.getMediaIfaceInfo(l_if).name.c_str());
-        offer.transport = TP_RTPAVP;
-    } else if((transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) && !dtls_enable) {
-        CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
-                    AmConfig.getMediaIfaceInfo(l_if).name.c_str());
-        offer.transport = TP_RTPAVP;
-    } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
+    //process failovers
+    switch(offer.transport) {
+    case TP_RTPSAVP:
+    case TP_RTPSAVPF:
+        if(!srtp_enable) {
+            CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
+                AmConfig.getMediaIfaceInfo(l_if).name.c_str());
+            offer.transport = TP_RTPAVP;
+        }
+        break;
+    case TP_UDPTLSRTPSAVP:
+    case TP_UDPTLSRTPSAVPF:
+        if(!dtls_enable) {
+            CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
+                AmConfig.getMediaIfaceInfo(l_if).name.c_str());
+            offer.transport = TP_RTPAVP;
+        }
+        break;
+    default:
+        break;
+    }
+
+    //init related options
+    switch(offer.transport) {
+    case TP_RTPSAVP:
+    case TP_RTPSAVPF:
         for(auto profile : srtp_profiles) {
             SdpCrypto crypto;
             crypto.tag = 1;
@@ -310,18 +331,22 @@ void AmMediaTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
             offer.crypto.push_back(crypto);
             offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
-    } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
+        break;
+    case TP_UDPTLSRTPSAVP:
+    case TP_UDPTLSRTPSAVPF: {
         srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
         offer.setup = S_ACTPASS;
-    } else if(transport == TP_UDPTL) {
+    } break;
+    case TP_UDPTL: {
         t38_options_t options;
         options.getT38DefaultOptions();
         options.getAttributes(offer);
         offer.payloads.clear();
         offer.fmt = T38_FMT;
-    } else if(transport == TP_UDPTLSUDPTL) {
+    } break;
+    case TP_UDPTLSUDPTL: {
         srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
         offer.fingerprint.hash = fp.hash;
         offer.fingerprint.value = fp.value;
@@ -331,11 +356,15 @@ void AmMediaTransport::getSdpOffer(TransProt& transport, SdpMedia& offer)
         options.getAttributes(offer);
         offer.payloads.clear();
         offer.fmt = T38_FMT;
+    } break;
+    default:
 #ifdef WITH_ZRTP
-    } else {
-        offer.zrtp_hash.is_use = true;
-        offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+        if(stream->isZrtpEnabled() && zrtp_enable) {
+            offer.zrtp_hash.is_use = true;
+            offer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
+        }
 #endif/*WITH_ZRTP*/
+        break;
     }
 }
 

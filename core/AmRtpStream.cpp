@@ -510,10 +510,10 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     offer.is_multiplex = multiplexing;
     offer.payloads.clear();
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
-        cur_udptl_trans->getSdpOffer(transport, offer);
+        cur_udptl_trans->getSdpOffer(offer);
     } else {
         payload_provider->getPayloads(offer.payloads);
-        cur_rtp_trans->getSdpOffer(transport, offer);
+        cur_rtp_trans->getSdpOffer(offer);
     }
 
     applyIceParams(offer);
