@@ -1,3 +1,9 @@
+sems (1.11.1) stable; urgency=low
+
+  * add zrtp settings in config (chipersuite settings are not processed. WIP)
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 19 Mar 2020 15:23:16 +0200
+
 sems (1.11.0) stable; urgency=low
 
   * ignore RTP packets from unknown remote addr in active mode
