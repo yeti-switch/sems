@@ -1,3 +1,11 @@
+sems (1.11.0) stable; urgency=low
+
+  * ignore RTP packets from unknown remote addr in active mode
+  * AmMediaTransport::getSdpOffer: fix failover logic. use transport from offer
+  * fix zrtp-hash in SDP offer on disabled ZRTP for session
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 19 Mar 2020 13:24:25 +0200
+
 sems (1.10.0) stable; urgency=low
 
   * fix SRTP profiles negotiation
