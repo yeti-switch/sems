@@ -62,6 +62,7 @@ protected:
     struct timeval last_recv_time;
     struct timeval passive_set_time;
     unsigned int   passive_packets;
+    unsigned int   dropped_by_raddr_packets;
 };
 
 class AmRawConnection : public AmStreamConnection

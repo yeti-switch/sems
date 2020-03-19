@@ -30,6 +30,7 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
     , passive(false)
     , passive_set_time{0}
     , passive_packets(0)
+    , dropped_by_raddr_packets(0)
 {
     CLASS_DBG("AmStreamConnection(transport:%p, remote_addr:'%s', port:%d, type %s)",
               to_void(_transport), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
@@ -45,6 +46,7 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     , passive(false)
     , passive_set_time{0}
     , passive_packets(0)
+    , dropped_by_raddr_packets(0)
 {
     CLASS_DBG("AmStreamConnection(parent: %p, remote_addr:'%s', port:%d, type %s)",
               to_void(_parent), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
@@ -128,6 +130,15 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
     if(!passive && !isAddrConnection(recv_addr)) {
         //got packet from unknown remote addr. ignore it
         //TODO: update stream stats here
+        if((dropped_by_raddr_packets++ % 1500) == 0 /* 1/0.02*10 (every 10 seconds) */ ) {
+            auto stream = transport->getRtpStream();
+            CLASS_WARN("%u packets dropped by raddr check. "
+                "packet raddr: %s:%hu, connection raddr: %s:%hu, stream:%p",
+                dropped_by_raddr_packets,
+                get_addr_str(recv_addr).data(), am_get_port(recv_addr),
+                get_addr_str(&r_addr).data(), am_get_port(&r_addr),
+                stream);
+        }
         return;
     }
     handleConnection(data, size, recv_addr, recv_time);
