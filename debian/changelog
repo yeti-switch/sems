@@ -1,3 +1,9 @@
+sems (1.11.2) stable; urgency=low
+
+  * AmRtpStream: getMediaStats: fix rx/tx remote addrs. fix onRTPStreamDestroy call order
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 19 Mar 2020 18:37:34 +0200
+
 sems (1.11.1) stable; urgency=low
 
   * add zrtp settings in config (chipersuite settings are not processed. WIP)
