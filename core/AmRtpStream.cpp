@@ -184,13 +184,13 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 AmRtpStream::~AmRtpStream()
 {
     DBG("~AmRtpStream[%p]() session = %p",this,session);
+    if(session) session->onRTPStreamDestroy(this);
     for(auto trans : ip4_transports) {
         delete trans;
     }
     for(auto trans : ip6_transports) {
         delete trans;
     }
-    if(session) session->onRTPStreamDestroy(this);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1910,8 +1910,7 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     //RX rtp_common
     rx.ssrc = r_ssrc;
     if(cur_rtp_trans) {
-        sockaddr_storage raddr;
-         memcpy(&rx.addr, &raddr, sizeof(struct sockaddr_storage));
+        cur_rtp_trans->getRAddr(&rx.addr);
     } else {
          memset(&rx.addr, 0, sizeof(struct sockaddr_storage));
     }
@@ -1932,9 +1931,7 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     //TX rtp_comon
     tx.ssrc = l_ssrc;
     if(cur_rtp_trans) {
-        sockaddr_storage laddr;
-        cur_rtp_trans->getLocalAddr(&laddr);
-        memcpy(&tx.addr, &laddr, sizeof(struct sockaddr_storage));
+        cur_rtp_trans->getLocalAddr(&tx.addr);
     } else {
         memset(&tx.addr, 0, sizeof(struct sockaddr_storage));
     }
