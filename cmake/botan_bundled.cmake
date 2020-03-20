@@ -14,7 +14,6 @@ add_custom_target(libbotan ALL DEPENDS ${BOTAN_BUNDLED_LIB})
 IF(NOT EXISTS ${BOTAN_BIN_DIR}/configure_stdout)
     file(MAKE_DIRECTORY ${BOTAN_BIN_DIR})
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${BOTAN_SRC_DIR} ${BOTAN_BIN_DIR})
-    execute_process(COMMAND git --git-dir=${PROJECT_SOURCE_DIR}/.git/modules/${BOTAN_DIR} --work-tree=${BOTAN_BIN_DIR} apply ${BOTAN_PATCH_FILE} WORKING_DIRECTORY ${BOTAN_BIN_DIR})
     execute_process(COMMAND ./configure.py ${BOTAN_CONFIG_ARGS} OUTPUT_FILE configure_stdout WORKING_DIRECTORY ${BOTAN_BIN_DIR})
 ENDIF(NOT EXISTS ${BOTAN_BIN_DIR}/configure_stdout)
 
