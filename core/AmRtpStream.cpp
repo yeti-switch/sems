@@ -752,15 +752,6 @@ int AmRtpStream::init(const AmSdp& local,
         remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1));
 
     try {
-#ifdef WITH_ZRTP
-        if(session && session->isZrtpEnabled() && AmConfig.enable_srtp) {
-            if(remote_media.zrtp_hash.is_use) {
-                zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
-            }
-            zrtp_context.start();
-        }
-#endif/*WITH_ZRTP*/
-
         if(remote_media.is_use_ice()) {
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media);
@@ -783,9 +774,21 @@ int AmRtpStream::init(const AmSdp& local,
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP
         } else if(session && session->isZrtpEnabled() && AmConfig.enable_srtp) {
+                if(remote_media.zrtp_hash.is_use) {
+                    zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
+                }
                 cur_rtp_trans->initZrtpConnection(address, port);
                 if(cur_rtcp_trans != cur_rtp_trans)
                     cur_rtcp_trans->initRtpConnection(address, port);
+
+                RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(
+                    &AmConfig.getMediaProtoInfo(cur_rtp_trans->getLocalIf(), cur_rtp_trans->getLocalProtoId()));
+                zrtp_context.init(ZRTP_HASH_TYPE, rtpinfo->zrtp_hashes);
+                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, rtpinfo->zrtp_ciphers);
+                zrtp_context.init(ZRTP_AUTHTAG_TYPE, rtpinfo->zrtp_authtags);
+                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, rtpinfo->zrtp_dhmodes);
+                zrtp_context.init(ZRTP_SAS_TYPE, rtpinfo->zrtp_sas);
+                zrtp_context.start();
 #endif/*WITH_ZRTP*/
         } else {
             cur_rtp_trans->initRtpConnection(address, port);

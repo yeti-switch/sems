@@ -114,6 +114,23 @@ static void print_supported_srtp_profiles() {
     );
 }
 
+static void print_supported_zrtp_attributes() {
+
+    printf(
+        "  Supported ZRTP attributes:\n"
+        "    hash algorithms:\n"
+        "       S256, S384, N256, N384\n"
+        "    ciphers algorithms:\n"
+        "       AES1, AES2, AES3, 2FS1, 2FS2, 2FS3\n"
+        "    authtag algorithms:\n"
+        "       HS32, HS80, SK32, SK64\n"
+        "    dhmode algorithms:\n"
+        "       DH2K, EC25, DH3K, EC38, EC52, PRSH, MULT\n"
+        "    sas algorithms:\n"
+        "       B32, B256\n"
+    );
+}
+
 static void print_usage(bool short_=false)
 {
   if (short_) {
@@ -140,6 +157,7 @@ static void print_usage(bool short_=false)
         "\n"
         " Informational options:\n"
         "    --list-srtp-profiles print supported SRTP profiles\n"
+        "    --list-zrtp-attributes print supported ZRTP attributes\n"
         "\n"
         "    -v, --version        print version\n"
         "    -h, --help           print this help\n"
@@ -153,10 +171,12 @@ static void print_usage(bool short_=false)
 static bool process_args(int argc, char* argv[], std::map<char,string>& args)
 {
     static int list_srtp_profiles = 0;
+    static int list_zrtp_attributes = 0;
     static struct option long_options[] = {
         {"help", 0, nullptr, 'h'},
         {"version", 0, nullptr, 'v'},
         {"list-srtp-profiles", 0, &list_srtp_profiles, 1},
+        {"list-zrtp-attributes", 0, &list_zrtp_attributes, 1},
         {nullptr, 0, nullptr, 0}
     };
 #ifndef DISABLE_DAEMON_MODE
@@ -192,6 +212,9 @@ static bool process_args(int argc, char* argv[], std::map<char,string>& args)
             //long-only options
             if(list_srtp_profiles) {
                 print_supported_srtp_profiles();
+                exit(0);
+            } else if(list_zrtp_attributes) {
+                print_supported_zrtp_attributes();
                 exit(0);
             }
             break;

@@ -30,6 +30,7 @@ public:
 
     string getLocalHash(unsigned int ssrc);
     void setRemoteHash(const string& hash);
+    void init(uint8_t type, const std::vector<uint8_t>& values);
     void start();
     bool isStarted() {return started;}
     bool isActivated() {return activated;}

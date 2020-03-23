@@ -57,6 +57,14 @@ void zrtpContext::setRemoteHash(const std::string& hash)
         DBG("set zrtp remote hash to zrtp context for ssrc %d", l_ssrc);
 }
 
+void zrtpContext::init(uint8_t type, const std::vector<uint8_t>& values)
+{
+    if(!context)
+        throw string("zrtp context not created");
+    if(!values.empty())
+        bzrtp_setSupportedCryptoTypes((bzrtpContext_t*)context, type, (uint8_t*)values.data(), values.size());
+}
+
 void zrtpContext::start()
 {
     if(!context) return;

@@ -402,11 +402,11 @@ public:
     }
 
     bool zrtp_enable;
-    std::vector<int> zrtp_hashes;
-    std::vector<int> zrtp_ciphers;
-    std::vector<int> zrtp_authtags;
-    std::vector<int> zrtp_dhmodes;
-    std::vector<int> zrtp_sas;
+    std::vector<uint8_t> zrtp_hashes;
+    std::vector<uint8_t> zrtp_ciphers;
+    std::vector<uint8_t> zrtp_authtags;
+    std::vector<uint8_t> zrtp_dhmodes;
+    std::vector<uint8_t> zrtp_sas;
 };
 
 class RTSP_info : public MEDIA_info
