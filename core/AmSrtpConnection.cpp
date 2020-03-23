@@ -43,7 +43,8 @@ void AmSrtpConnection::use_key(srtp_profile_t profile, const unsigned char* key_
         return;
     }
 
-    CLASS_DBG("create s%s connection", getConnType() == RTP_CONN ? "rtp" : "rtcp");
+    CLASS_DBG("create s%s connection: profile %s", getConnType() == RTP_CONN ? "rtp" : "rtcp",
+              SdpCrypto::profile2str((CryptoProfile)profile).c_str());
     unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
     master_key_len += srtp::profile_get_master_salt_length(profile);
     if(master_key_len != key_s_len || master_key_len != key_r_len) {
@@ -196,10 +197,12 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         }
         policy.ssrc.type = ssrc_any_inbound;
         CLASS_DBG("create s%s stream for receving stream: ssrc - %x", getConnType() == RTP_CONN ? "rtp" : "rtcp", policy.ssrc.value);
-        if(srtp_add_stream(srtp_r_session, &policy) != srtp_err_status_ok) {
-        string error("s");
-        error.append(getConnType() == RTP_CONN ? "rtp" : "rtcp");
-        error.append(" recv stream not added");
+        int ret = srtp_err_status_ok;
+        if((ret = srtp_add_stream(srtp_r_session, &policy)) != srtp_err_status_ok) {
+            ERROR("srtp_add_stream error %d", ret);
+            string error("s");
+            error.append(getConnType() == RTP_CONN ? "rtp" : "rtcp");
+            error.append(" recv stream not added");
             transport->getRtpStream()->onErrorRtpTransport(error, transport);
             return;
         }
@@ -245,7 +248,9 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
         policy.key = c_key_s;
         policy.ssrc.value = transport->getRtpStream()->get_ssrc();
         policy.ssrc.type = ssrc_any_outbound;
-        if(srtp_add_stream(srtp_s_session, &policy) != srtp_err_status_ok) {
+        int ret = srtp_err_status_ok;
+        if((ret = srtp_add_stream(srtp_s_session, &policy)) != srtp_err_status_ok) {
+            ERROR("srtp_add_stream error %d", ret);
             transport->getRtpStream()->onErrorRtpTransport("srtp send stream not added", transport);
             return -1;
         }

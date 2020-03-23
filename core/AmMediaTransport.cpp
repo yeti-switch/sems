@@ -92,6 +92,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
         srtp_profiles = rtpinfo->profiles;
         srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
         dtls_enable = srtp_enable && rtpinfo->dtls_enable;
+        zrtp_enable = srtp_enable && rtpinfo->zrtp_enable;
     }
 }
 
@@ -442,7 +443,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.payloads.clear();
         answer.fmt = T38_FMT;
 #ifdef WITH_ZRTP
-    } else if(stream->isZrtpEnabled() && zrtp_enable && offer.zrtp_hash.is_use) {
+    } else if(stream->isZrtpEnabled() && zrtp_enable) {
         answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
         if(!answer.zrtp_hash.hash.empty()) answer.zrtp_hash.is_use = true;
 #endif/*WITH_ZRTP*/
