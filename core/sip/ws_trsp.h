@@ -41,8 +41,8 @@ public:
 class ws_input : public trsp_base_input
 {
     unsigned char    ws_input_buf[MAX_TCP_MSGLEN];
-    int              ws_input_len;
-    int              ws_input_pos;
+    size_t           ws_input_len;
+    size_t           ws_input_pos;
     cstring          ws_accept;
     cstring          ws_key;
 

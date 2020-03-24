@@ -57,8 +57,9 @@ void ws_input::on_msg_recv_callback(wslay_event_context_ptr ctx,
 
 int ws_input::genmask_callback(wslay_event_context_ptr ctx, uint8_t *buf, size_t len, void *user_data)
 {
-    ws_input* input = (ws_input*)user_data;
-    for(int i = 0; i < len; i++) {
+    //ws_input* input = (ws_input*)user_data;
+    (void)user_data;
+    for(size_t i = 0; i < len; i++) {
         buf[i] = get_random() & 0xff;
     }
     return 0;
