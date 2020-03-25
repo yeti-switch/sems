@@ -89,7 +89,7 @@ void AmAudioRtpFormat::initCodec()
                 } break;
                 case AMCI_FMT_FRAME_SIZE: {
                     frame_size=static_cast<unsigned int>(fmt_i[i].value);
-                    frame_time=frame_size/rate*1000;
+                    frame_time=frame_size*1000/rate;
                 } break;
                 case AMCI_FMT_ENCODED_FRAME_SIZE: {
                 //   frame_encoded_size=fmt_i[i].value;
