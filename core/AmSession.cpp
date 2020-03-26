@@ -973,6 +973,11 @@ bool AmSession::getSdpOffer(AmSdp& offer)
       media_idx = offer.media.size() - 1;
   }
 
+  if(!offer.media.empty() && override_frame_size) {
+    auto &m = offer.media.back();
+    m.frame_size = override_frame_size;
+  }
+
   RTPStream()->setLocalIP(localMediaIP());
   RTPStream()->getSdpOffer(media_idx,offer.media.back());
   
