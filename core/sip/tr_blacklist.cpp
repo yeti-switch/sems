@@ -7,8 +7,8 @@
 
 void bl_timer::fire()
 {
-  DBG_BL("blacklist: %s/%i expired",
-	 am_inet_ntop(&addr).c_str(),am_get_port(&addr));
+  DBG_BL("blacklist: %s/%i/%d expired",
+	 am_inet_ntop(&addr).c_str(),am_get_port(&addr), addr.transport());
   tr_blacklist::instance()->remove(&addr);
 }
 
@@ -27,8 +27,8 @@ bool blacklist_bucket::insert(const bl_addr& addr, unsigned int duration /* ms *
     return false;
   }
 
-  DBG_BL("blacklist: added %s/%i (%s/TTL=%.1fs)",
-	 am_inet_ntop(&addr).c_str(),am_get_port(&addr),
+  DBG_BL("blacklist: added %s/%i/%i (%s/TTL=%.1fs)",
+	 am_inet_ntop(&addr).c_str(),am_get_port(&addr), addr.transport(),
 	 reason,(float)duration/1000.0);
 
   wt->insert_timer(t);

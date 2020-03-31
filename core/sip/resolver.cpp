@@ -1073,6 +1073,7 @@ int sip_target_set::get_next(
             }
         }
 
+        SS2TR_ADDR(ss, next_trsp);
     } while(!(flags & TR_FLAG_DISABLE_BL) &&
             tr_blacklist::instance()->exist(ss));
 
