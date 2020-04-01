@@ -479,7 +479,10 @@ void CoreRpc::showTrBlacklist(const AmArg&, AmArg& ret)
     AmArg &l = ret["entries"];
     l.assertArray();
     tr_blacklist::instance()->dump([&l](const bl_addr& k, const bl_entry*) {
-        l.push(AmArg(am_inet_ntop(&k)));
+        l.push(AmArg());
+        AmArg &e = l.back();
+        e["ip"] = am_inet_ntop(&k);
+        e["proto"] = trsp_socket::socket_transport2proto_str(static_cast<trsp_socket::socket_transport>(k.transport()));
     });
 }
 

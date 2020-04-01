@@ -69,6 +69,7 @@ public:
         wss_ipv4,
         wss_ipv6
     };
+    static const char *socket_transport2proto_str(const socket_transport transport);
 
     static int log_level_raw_msgs;
     
