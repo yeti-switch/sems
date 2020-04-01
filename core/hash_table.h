@@ -308,9 +308,8 @@ public:
     template<typename RetFunc = NoOp>
     void dump(RetFunc f = RetFunc()) const {
         for(unsigned long l=0; l<size; l++) {
-            _table[l]->lock();
+            AmLock lock(*_table[l]);
             _table[l]->dump(f);
-            _table[l]->unlock();
         }
     }
 
