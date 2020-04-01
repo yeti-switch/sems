@@ -6,7 +6,7 @@
 
 #include "ip_util.h"
 #include "wheeltimer.h"
-#include "addr_struct.h"
+#include "sa_storage_transport_key.h"
 #include <AmArg.h>
 
 #define BLACKLIST_HT_POWER 6
@@ -16,14 +16,13 @@
 /**
  * Blacklist bucket: key type
  */
-typedef addr<BLACKLIST_HT_MASK> bl_addr;
-typedef addr_less<BLACKLIST_HT_MASK> bl_addr_less;
+typedef sa_storage_transport_key<BLACKLIST_HT_MASK> bl_addr;
 
 struct bl_entry;
 
 typedef ht_map_bucket<bl_addr,bl_entry,
 		      ht_delete<bl_entry>,
-		      bl_addr_less> bl_bucket_base;
+		      bl_addr::less> bl_bucket_base;
 
 class blacklist_bucket
   : public bl_bucket_base
@@ -50,9 +49,7 @@ struct bl_timer
 {
   bl_addr addr;
 
-  bl_timer()
-    : timer(), addr()
-  {}
+  bl_timer() = delete;
 
   bl_timer(const bl_addr& addr, unsigned int expires)
     : timer(expires), addr(addr)

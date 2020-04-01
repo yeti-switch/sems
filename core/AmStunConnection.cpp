@@ -27,7 +27,7 @@ AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& r
     , err_code(0)
     , timer(0)
 {
-    SS2TR_ADDR(&r_addr, transport->getTransportType());
+    SA_transport(&r_addr) = transport->getTransportType();
     stun_processor::instance()->insert(&r_addr, this);
     timer = new StunTimer(&r_addr, 0);
 }

@@ -2,7 +2,7 @@
 #define AM_STUN_PROCESSOR_H
 
 #include "sip/wheeltimer.h"
-#include "sip/addr_struct.h"
+#include "sip/sa_storage_transport_key.h"
  #include "hash_table.h"
 #include "singleton.h"
 
@@ -13,14 +13,13 @@
 /**
  * Blacklist bucket: key type
  */
-typedef addr<STUN_PEER_HT_MASK> sp_addr;
-typedef addr_less<STUN_PEER_HT_MASK> sp_addr_less;
+typedef sa_storage_transport_key<STUN_PEER_HT_MASK> sp_addr;
 
 class AmStunConnection;
 
 typedef ht_map_bucket<sp_addr,AmStunConnection,
 		      ht_fake<AmStunConnection>,
-		      sp_addr_less> sp_bucket_base;
+		      sp_addr::less> sp_bucket_base;
 
 typedef hash_table<sp_bucket_base> stun_pair_ht;
 

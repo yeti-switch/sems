@@ -1407,9 +1407,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	p_msg = NULL;
 
 	if(default_bl_ttl) {
-        SS2TR_ADDR(&msg->remote_ip, msg->local_socket->get_transport_id());
-	    tr_blacklist::instance()->insert(&msg->remote_ip,
-					     default_bl_ttl,"503");
+		SA_transport(&msg->remote_ip) = msg->local_socket->get_transport_id();
+		tr_blacklist::instance()->insert(&msg->remote_ip, default_bl_ttl,"503");
 	}
 	tt->_bucket->unlock();
 	goto try_next_dest;
