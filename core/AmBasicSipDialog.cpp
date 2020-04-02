@@ -821,7 +821,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
 				  sip_target_set* target_set_override,
 				  unsigned int redirects_allowed)
 {
-    auto_ptr<sip_target_set> targets(
+    unique_ptr<sip_target_set> targets(
         target_set_override ? target_set_override: new sip_target_set((dns_priority)getResolvePriority()));
 
   AmSipRequest req;

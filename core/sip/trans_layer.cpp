@@ -1290,7 +1290,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 			       int out_interface, unsigned int flags,
 				   msg_logger* logger,msg_sensor *sensor,
 				   sip_timers_override *timers_override,
-				   sip_target_set* targets,
+				   sip_target_set* targets_,
 				   int redirects_allowed)
 {
     // Request-URI
@@ -1304,6 +1304,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     // Supported / Require
     // Content-Length / Content-Type
 
+    unique_ptr<sip_target_set> targets(targets_);
     assert(msg);
     assert(tt);
     assert(targets);
@@ -1330,7 +1331,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     }
 
     if(targets->dest_list.empty()) {
-        res = resolver::instance()->resolve_targets(dest_list,targets);
+        res = resolver::instance()->resolve_targets(dest_list,targets.get());
         if(res < 0){
             DBG("resolve_targets failed\n");
             return res;
@@ -1436,7 +1437,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    tt->_t->flags = flags;
 
 	    if(tt->_t->targets)	delete tt->_t->targets;
-	    tt->_t->targets = targets;
+	    tt->_t->targets = targets.release();
 
 	    if(tt->_t->targets->has_next()){
 			tt->_t->timer_m =
