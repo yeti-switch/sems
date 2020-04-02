@@ -1,3 +1,9 @@
+sems (1.13.1) stable; urgency=low
+
+  * trans_layer: fix sip_target_set memory leak
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 02 Apr 2020 16:07:14 +0300
+
 sems (1.13.0) stable; urgency=low
 
   * add transport to blacklist hash
