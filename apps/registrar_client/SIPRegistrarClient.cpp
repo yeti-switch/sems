@@ -715,6 +715,8 @@ string SIPRegistrarClient::createRegistration(
     const int &srv_failover_timeout,
     const string& handle)
 {
+    DBG("createRegistration");
+
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
     instance()->postEvent(
         new SIPNewRegistrationEvent(
@@ -815,7 +817,7 @@ void SIPRegistrarClient::invoke(
     AmArg& ret)
 {
     if(method == "createRegistration"){
-        string proxy, contact, handle;
+        string proxy, contact, handle, sess_link;
         int expires_interval = 0,
             force = 0,
             retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
@@ -827,15 +829,44 @@ void SIPRegistrarClient::invoke(
         bool force_expires_interval = false;
         size_t n = args.size();
 
+        if(n < 6) {
+            throw AmSession::Exception(500,"expected at least 6 args");
+        }
+
+        for(int i = 0; i < 6; i++) {
+            if(!isArgCStr(args.get(i))) {
+                throw AmSession::Exception(500,"expected string at arg: " + int2str(i+1));
+            }
+        }
+
         do {
 
-        if (n > 7)
-            proxy = args.get(7).asCStr();
-        else break;
+        if (n > 6) {
+            AmArg &sess_link_arg = args.get(6);
+            if(!isArgUndef(sess_link_arg)) {
+                if(!isArgCStr(sess_link_arg))
+                    throw AmSession::Exception(500,"wrong sess_link arg. expected string or null");
+                sess_link = sess_link_arg.asCStr();
+            }
+        } else break;
 
-        if (n > 8)
-            contact = args.get(8).asCStr();
-        else break;
+        if (n > 7) {
+            AmArg &proxy_arg = args.get(7);
+            if(!isArgUndef(proxy_arg)) {
+                if(!isArgCStr(proxy_arg))
+                    throw AmSession::Exception(500,"wrong proxy arg. expected string or null");
+                proxy = proxy_arg.asCStr();
+            }
+        } else break;
+
+        if (n > 8) {
+            AmArg &contact_arg = args.get(8);
+            if(!isArgUndef(contact_arg)) {
+                if(!isArgCStr(contact_arg))
+                    throw AmSession::Exception(500,"wrong contact arg. expected string or null");
+                contact = contact_arg.asCStr();
+            }
+        } else break;
 
         if (n > 9) {
             AmArg &a = args.get(9);
@@ -911,9 +942,14 @@ void SIPRegistrarClient::invoke(
             }
         } else break;
 
-        if (args.size() > 17)
-            handle = args.get(17).asCStr();
-        else break;
+        if (args.size() > 17) {
+            AmArg &handle_arg = args.get(17);
+            if(!isArgUndef(handle_arg)) {
+                if(!isArgCStr(handle_arg))
+                    throw AmSession::Exception(500,"wrong handle arg. expected string or null");
+                handle = handle_arg.asCStr();
+            }
+        } else break;
 
         } while(0);
 
@@ -924,7 +960,7 @@ void SIPRegistrarClient::invoke(
             args.get(3).asCStr(),
             args.get(4).asCStr(),
             args.get(5).asCStr(),
-            args.get(6).asCStr(),
+            sess_link,
             proxy,
             contact,
             expires_interval,
@@ -935,8 +971,7 @@ void SIPRegistrarClient::invoke(
             proxy_transport_protocol_id,
             transaction_timeout,
             srv_failover_timeout,
-            handle
-        ).c_str());
+            handle));
     } else if(method == "removeRegistration") {
         removeRegistration(args.get(0).asCStr());
     } else if(method == "removeRegistrationById") {
