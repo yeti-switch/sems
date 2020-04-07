@@ -75,6 +75,7 @@ OPTION(SEMS_USE_TTS           "Build with Text-to-speech support (requires Flite
 OPTION(SEMS_USE_OPENSSL       "Build with OpenSSL" ON)
 OPTION(SEMS_USE_MONITORING    "Build with monitoring support" ON)
 OPTION(SEMS_USE_IPV6          "Build with IPv6 support" OFF)
+OPTION(SEMS_USE_AMARG_STAT    "Use AmArg statistic" OFF)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
 #OPTION(MAX_RTP_SESSIONS:int   "How many rtp sessions SEMS will handle simultaneously? (default 2048)" 2048)
 

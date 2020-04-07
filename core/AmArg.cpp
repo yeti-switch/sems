@@ -29,6 +29,29 @@
 #include "log.h"
 #include "AmUtils.h"
 
+#ifdef USE_AMARG_STATISTICS
+    AtomicCounter& amargsize = stat_group(Gauge, "core", "amarg_memory").addAtomicCounter();
+    #define INC_AMARGSTRUCT_SIZE(v_struct) \
+        for(auto& it : *v_struct) { \
+            INC_AMARGSIZE(strlen(it.first.c_str())); \
+        }
+    #define DEC_AMARGSTRUCT_SIZE(v_struct) \
+        for(auto& it : *v_struct) { \
+            DEC_AMARGSIZE(strlen(it.first.c_str())); \
+        }
+    #define INC_IF_AMARGSIZE(key) \
+        if(v_struct->find(key) == v_struct->end())\
+            INC_AMARGSIZE(strlen(key));
+    #define DEC_IF_AMARGSIZE(name) \
+        if(v_struct->find(name) != v_struct->end())\
+            DEC_AMARGSIZE(strlen(name));
+#else 
+    #define INC_AMARGSTRUCT_SIZE(v_struct)
+    #define DEC_AMARGSTRUCT_SIZE(v_struct)
+    #define INC_IF_AMARGSIZE(key)
+    #define DEC_IF_AMARGSIZE(key)
+#endif/*USE_AMARG_STATISTICS*/
+
 const char* AmArg::t2str(int type) {
   switch (type) {
   case AmArg::Undef:   return "Undef";
@@ -51,6 +74,8 @@ AmArg::AmArg(const AmArg& v)
   type = Undef;
 
   *this = v;
+  
+  INC_AMARGSIZE(sizeof(*this));
 }
 
 AmArg& AmArg::operator=(const AmArg& v) {
@@ -63,12 +88,18 @@ AmArg& AmArg::operator=(const AmArg& v) {
     case LongLong: { v_long = v.v_long; } break;
     case Bool:   { v_bool = v.v_bool; } break;
     case Double: { v_double = v.v_double; } break;
-    case CStr:   { v_cstr = strdup(v.v_cstr); } break;
+    case CStr:   {
+        v_cstr = strdup(v.v_cstr);
+        INC_AMARGSIZE(strlen(v.v_cstr));
+    } break;
     case AObject:{ v_obj = v.v_obj; } break;
     case ADynInv:{ v_inv = v.v_inv; } break;
     case Array:  { v_array = new ValueArray(*v.v_array); } break;
-    case Struct: { v_struct = new ValueStruct(*v.v_struct); } break;
-    case Blob:   {  v_blob = new ArgBlob(*v.v_blob); } break;
+    case Struct: {
+        INC_AMARGSTRUCT_SIZE(v.v_struct);
+        v_struct = new ValueStruct(*v.v_struct);
+    } break;
+    case Blob:   { v_blob = new ArgBlob(*v.v_blob); } break;
     case Undef: break;
     default: assert(0);
     }
@@ -79,22 +110,29 @@ AmArg& AmArg::operator=(const AmArg& v) {
 AmArg::AmArg(std::map<std::string, std::string>& v) 
   : type(Undef) {
   assertStruct();
+  INC_AMARGSIZE(sizeof(*this));
   for (std::map<std::string, std::string>::iterator it=
-	 v.begin();it!= v.end();it++)
+	 v.begin();it!= v.end();it++) {
+    INC_AMARGSIZE(strlen(it->first.c_str()));
     (*v_struct)[it->first] = AmArg(it->second.c_str());
+  }
 }
 
 AmArg::AmArg(std::map<std::string, AmArg>& v) 
   : type(Undef) {
   assertStruct();
+  INC_AMARGSIZE(sizeof(*this)); 
   for (std::map<std::string, AmArg>::iterator it=
-	 v.begin();it!= v.end();it++)
+	 v.begin();it!= v.end();it++) {
+    INC_AMARGSIZE(strlen(it->first.c_str()));
     (*v_struct)[it->first] = it->second;
+  }
 }
 
 AmArg::AmArg(vector<std::string>& v)
   : type(Array) {
   assertArray(0);
+  INC_AMARGSIZE(sizeof(*this));
   for (vector<std::string>::iterator it 
 	 = v.begin(); it != v.end(); it++) {
     push(AmArg(it->c_str()));
@@ -104,6 +142,7 @@ AmArg::AmArg(vector<std::string>& v)
 AmArg::AmArg(const vector<int>& v ) 
   : type(Array) {
   assertArray(0);
+  INC_AMARGSIZE(sizeof(*this));
   for (vector<int>::const_iterator it 
 	 = v.begin(); it != v.end(); it++) {
     push(AmArg(*it));
@@ -113,6 +152,7 @@ AmArg::AmArg(const vector<int>& v )
 AmArg::AmArg(const vector<double>& v)
   : type(Array) {
   assertArray(0);
+  INC_AMARGSIZE(sizeof(*this));
   for (vector<double>::const_iterator it 
 	 = v.begin(); it != v.end(); it++) {
     push(AmArg(*it));
@@ -164,9 +204,16 @@ void AmArg::assertStruct() const {
 }
 
 void AmArg::invalidate() {
-  if(type == CStr) { free((void*)v_cstr); }
+  if(type == CStr) {
+      DEC_AMARGSIZE(strlen(v_cstr));
+      free((void*)v_cstr); 
+  }
   else if(type == Array) { delete v_array; }
-  else if(type == Struct) { delete v_struct; }
+  else if(type == Struct) {
+      
+      DEC_AMARGSTRUCT_SIZE(v_struct);
+      delete v_struct; 
+  }
   else if(type == Blob) { delete v_blob; }
   type = Undef;
 }
@@ -179,6 +226,7 @@ void AmArg::push(const AmArg& a) {
 void AmArg::push(const string &key, const AmArg &val) {
   assertStruct();
   (*v_struct)[key] = val;
+  INC_AMARGSIZE(strlen(key.c_str()));
 }
 
 void AmArg::pop(AmArg &a) {
@@ -305,21 +353,25 @@ AmArg& AmArg::operator[](int idx) const {
 
 AmArg& AmArg::operator[](std::string key) {
   assertStruct();
+  INC_IF_AMARGSIZE(key.c_str());
   return (*v_struct)[key];
 }
 
 AmArg& AmArg::operator[](std::string key) const {
   assertStruct();
+  INC_IF_AMARGSIZE(key.c_str());
   return (*v_struct)[key];
 }
 
 AmArg& AmArg::operator[](const char* key) {
   assertStruct();
+  INC_IF_AMARGSIZE(key);
   return (*v_struct)[key];
 }
 
 AmArg& AmArg::operator[](const char* key) const {
   assertStruct();
+  INC_IF_AMARGSIZE(key);
   return (*v_struct)[key];
 }
 
@@ -373,11 +425,13 @@ AmArg::ValueStruct::const_iterator AmArg::end() const {
 
 void AmArg::erase(const char* name) {
   assertStruct();
+  DEC_IF_AMARGSIZE(name);
   v_struct->erase(name);
 }
 
 void AmArg::erase(const std::string& name) {
   assertStruct();
+  DEC_IF_AMARGSIZE(name.c_str());
   v_struct->erase(name);
 }
 
@@ -421,6 +475,31 @@ VECTOR_GETTER(bool, asBoolVector, asBool)
 VECTOR_GETTER(double, asDoubleVector, asDouble)
 VECTOR_GETTER(AmObject*, asAmObjectVector, asObject)
 #undef  VECTOR_GETTER
+
+size_t AmArg::getAllocatedSize()
+{
+    size_t size = sizeof(*this);
+    switch(type) {
+    case CStr:
+        size += strlen(v_cstr);
+      break;
+    case Blob:
+        size += v_blob->len + sizeof(*v_blob);
+        break;
+    case Array:
+      for (size_t i = 0; i < this->size(); i ++)
+          size += (*v_array)[i].getAllocatedSize();
+      break;
+    case Struct:
+      for (auto& it : *v_struct) {
+          size += it.first.size();
+          size += it.second.getAllocatedSize();
+      }
+      break;
+    default: break;
+    }
+    return size;
+}
 
 vector<ArgBlob> AmArg::asArgBlobVector() const {		
   vector<ArgBlob> res;				

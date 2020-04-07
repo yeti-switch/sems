@@ -41,7 +41,17 @@ using std::string;
 #include <map>
 
 #include "log.h"
+#include "AmStatistics.h"
 
+#ifdef USE_AMARG_STATISTICS
+    extern AtomicCounter& amargsize;
+    #define INC_AMARGSIZE(s) amargsize.inc(s)
+    #define DEC_AMARGSIZE(s) amargsize.dec(s)
+#else
+    #define INC_AMARGSIZE(s)
+    #define DEC_AMARGSIZE(s)
+#endif/*USE_AMARG_STATISTICS*/
+    
 /** base for Objects as @see AmArg parameter, not owned by AmArg (!) */
 class AmObject {
  public:
@@ -56,14 +66,16 @@ struct ArgBlob {
   
   ArgBlob() 
   : data(NULL),len(0)
-  {  
+  {
+      INC_AMARGSIZE(sizeof(*this));
   }
 
-  ArgBlob(const ArgBlob& a) {
+  ArgBlob(const ArgBlob& a) {  
     len = a.len;
     data = malloc(len);
     if (data)
       memcpy(data, a.data, len);
+    INC_AMARGSIZE(sizeof(*this) + len);
   }
   
   ArgBlob(const void* _data, int _len) {
@@ -71,9 +83,13 @@ struct ArgBlob {
     data = malloc(len);
     if (data)
       memcpy(data, _data, len);
+    INC_AMARGSIZE(sizeof(*this) + _len);
   }
   
-  ~ArgBlob() { if (data) free(data); }
+  ~ArgBlob() {
+      if (data) free(data);
+      DEC_AMARGSIZE(sizeof(*this) + len);
+  }
 };
 
 class AmDynInvoke;
@@ -135,67 +151,70 @@ class AmArg
 
  AmArg() 
    : type(Undef) 
-  { }
+  { INC_AMARGSIZE(sizeof(*this));}
   
   AmArg(const AmArg& v);
   
  AmArg(const int& v)
    : type(Int),
     v_int(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
 
  AmArg(const long int& v)
    : type(Int),
     v_int(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
 
  AmArg(const long unsigned int& v)
    : type(LongLong),
     v_long(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
 
  AmArg(const long long int& v)
    : type(LongLong),
     v_long(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
 
  AmArg(const bool& v)
    : type(Bool),
     v_bool(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
   
  AmArg(const double& v)
    : type(Double),
     v_double(v)
-    { }
+    { INC_AMARGSIZE(sizeof(*this)); }
   
  AmArg(const char* v)
    : type(CStr)
   {
+    INC_AMARGSIZE(sizeof(*this) + strlen(v));
     v_cstr = strdup(v);
   }
   
  AmArg(const string &v)
    : type(CStr)
   {
+    INC_AMARGSIZE(sizeof(*this) + strlen(v.c_str()));
     v_cstr = strdup(v.c_str());
   }
   
  AmArg(const ArgBlob v)
    : type(Blob)
   {
+    INC_AMARGSIZE(sizeof(*this));
     v_blob = new ArgBlob(v);
   }
 
   AmArg(AmObject* v) 
     : type(AObject),
     v_obj(v) 
-   { }
+   { INC_AMARGSIZE(sizeof(*this)); }
 
   AmArg(AmDynInvoke* v) 
     : type(ADynInv),
     v_inv(v) 
-   { }
+   { INC_AMARGSIZE(sizeof(*this)); }
 
   // convenience constructors
   AmArg(vector<std::string>& v);
@@ -204,7 +223,10 @@ class AmArg
   AmArg(std::map<std::string, std::string>& v);
   AmArg(std::map<std::string, AmArg>& v);
   
-  ~AmArg() { invalidate(); }
+  ~AmArg() {
+      invalidate();
+      DEC_AMARGSIZE(sizeof(*this));
+  }
 
   void assertArray();
   void assertArray() const;
@@ -360,6 +382,8 @@ class AmArg
    *   e.g. "ssif" -> [cstr, cstr, int, double]
    */
   void assertArrayFmt(const char* format) const;
+
+  size_t getAllocatedSize();
 
   void clear();
   friend bool operator==(const AmArg& lhs, const AmArg& rhs);
