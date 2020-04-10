@@ -197,6 +197,8 @@ void JsonRPCServerModule::invoke(const string& method,
     ret.push(AmArg("sendMessage"));
     ret.push(AmArg("getServerPort"));
     ret.push(AmArg("execServerFunction"));
+    ret.push(AmArg("setNotifySink"));
+    ret.push(AmArg("setRequestSink"));
     // ret.push(AmArg("newConnection"));
     // ret.push(AmArg("sendRequest"));
     // ret.push(AmArg("sendRequestList"));
