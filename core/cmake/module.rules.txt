@@ -8,8 +8,6 @@ INCLUDE(${SEMS_CMAKE_DIR}/doc.rules.txt)
 INCLUDE(${SEMS_CMAKE_DIR}/config.rules.txt)
 INCLUDE(${SEMS_CMAKE_DIR}/audio.rules.txt)
 
-${USE_AMARG_STAT_DEFINITION}
-
 ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
 
 IF(APPLE)
