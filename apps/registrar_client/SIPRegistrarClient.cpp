@@ -678,6 +678,13 @@ bool SIPRegistrarClient::add_reg(const string& reg_id, AmSIPRegistration* new_re
         ERROR("duplicate id: %s on create registration %s",
             new_reg->getInfo().id.c_str(),
             reg_id.c_str());
+        if (new_reg->getEventSink().length()) {
+            AmSessionContainer::instance()->
+                postEvent(new_reg->getEventSink(),
+                    new SIPRegistrationEvent(
+                        SIPRegistrationEvent::RegisterDuplicate,
+                        new_reg->getHandle(), new_reg->getInfo().id));
+        }
         delete new_reg;
         return false;
     }

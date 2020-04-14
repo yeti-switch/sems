@@ -40,7 +40,8 @@ struct SIPRegistrationEvent : public AmEvent {
     RegisterFailed,
     RegisterNoContact,
     RegisterTimeout,
-    RegisterSendTimeout
+    RegisterSendTimeout,
+    RegisterDuplicate
   };
 };
 
