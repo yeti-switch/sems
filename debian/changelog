@@ -1,3 +1,12 @@
+sems (1.14.0) stable; urgency=low
+
+  * amarg statistics
+  * registrar_client: add RegisterDuplicate SIPRegistrationEvent
+  * jsonrpc: add setNotifySink, setRequestSink methods
+  * registrar_client: fix segfault/exceptions on createRegistration invoke
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 15 Apr 2020 00:04:55 +0300
+
 sems (1.13.1) stable; urgency=low
 
   * trans_layer: fix sip_target_set memory leak
