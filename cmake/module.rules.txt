@@ -8,6 +8,10 @@ INCLUDE(${CMAKE_SOURCE_DIR}/cmake/doc.rules.txt)
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/config.rules.txt)
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
+IF(SEMS_USE_AMARG_STAT)
+    add_definitions("-DUSE_AMARG_STATISTICS")
+ENDIF(SEMS_USE_AMARG_STAT)
+
 ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
 
 IF(APPLE)
