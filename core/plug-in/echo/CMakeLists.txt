@@ -1,5 +1,4 @@
 set (echo_SRCS
-AmAudioEcho.cpp
 Echo.cpp
 )
 
