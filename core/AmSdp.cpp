@@ -654,7 +654,7 @@ void AmSdp::print(string& body) const
             case S_ACTIVE:  out_buf += "a=setup:active\r\n"; break;
             case S_PASSIVE: out_buf += "a=setup:passive\r\n"; break;
             case S_ACTPASS: out_buf += "a=setup:actpass\r\n"; break;
-            case S_HOLD: out_buf += "a=setup:hold\r\n"; break;
+            case S_HOLD: out_buf += "a=setup:holdconn\r\n"; break;
             case S_UNDEFINED: break;
         }
 
