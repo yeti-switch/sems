@@ -1,3 +1,11 @@
+sems (1.14.1) stable; urgency=low
+
+  * AmSdp: fix setup attribute value. hold -> holdconn
+  * AmSdp: fix uninitialized 'setup' attribute
+  * move AmAudioEcho to core
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 16 Apr 2020 14:43:48 +0300
+
 sems (1.14.0) stable; urgency=low
 
   * amarg statistics
