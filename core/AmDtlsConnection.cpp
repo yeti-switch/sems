@@ -22,9 +22,9 @@ dtls_conf::dtls_conf(const dtls_conf& conf)
 , is_optional(conf.is_optional)
 {
     if(conf.s_server && !conf.s_server->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_dtls::instance()));
+        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, rand_gen));
     } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_dtls::instance()));
+        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, rand_gen));
     }
 }
 
@@ -35,13 +35,13 @@ dtls_conf::dtls_conf(dtls_client_settings* settings)
     if(!settings->certificate.empty())
         certificate = Botan::X509_Certificate(settings->certificate);
     if(!settings->certificate_key.empty())
-        key.reset(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_dtls::instance()));
+        key.reset(Botan::PKCS8::load_key(settings->certificate_key, rand_gen));
 }
 
 dtls_conf::dtls_conf(dtls_server_settings* settings)
 : s_client(0), s_server(settings)
 , certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_dtls::instance()))
+, key(Botan::PKCS8::load_key(settings->certificate_key, rand_gen))
 , is_optional(false)
 {
 }
@@ -53,9 +53,9 @@ void dtls_conf::operator=(const dtls_conf& conf)
     certificate = conf.certificate;
     is_optional = conf.is_optional;
     if(conf.s_server && !conf.s_server->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_dtls::instance()));
+        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, rand_gen));
     } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_dtls::instance()));
+        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, rand_gen));
     }
 }
 

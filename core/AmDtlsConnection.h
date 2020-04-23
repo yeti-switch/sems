@@ -19,12 +19,22 @@ using std::shared_ptr;
 
 #include <srtp.h>
 
+class dtls_rand_generator
+{
+public:
+    Botan::AutoSeeded_RNG rng;
+    operator Botan::RandomNumberGenerator& () {
+        return rng;
+    }
+};
+
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
     friend class AmDtlsConnection;
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
+    dtls_rand_generator rand_gen;
     Botan::X509_Certificate certificate;
     unique_ptr<Botan::Private_Key> key;
 
@@ -61,22 +71,12 @@ public:
     void set_optional_parameters(string sig_, string cipher_, string mac_);
 };
 
-class dtls_rand_generator
-{
-public:
-    Botan::AutoSeeded_RNG rng;
-    operator Botan::RandomNumberGenerator& () {
-        return rng;
-    }
-};
-
-typedef singleton<dtls_rand_generator> rand_generator_dtls;
-
 class dtls_session_manager
 {
 public:
+    dtls_rand_generator rand_gen;
     Botan::TLS::Session_Manager_In_Memory ssm;
-    dtls_session_manager() : ssm(*rand_generator_dtls::instance()){}
+    dtls_session_manager() : ssm(rand_gen){}
     operator Botan::TLS::Session_Manager_In_Memory& () {
         return ssm;
     }
