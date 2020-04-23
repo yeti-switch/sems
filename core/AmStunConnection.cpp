@@ -26,6 +26,7 @@ AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& r
     , auth_state(AuthState::NO_AUTH)
     , err_code(0)
     , timer(0)
+    , depend_conn(0)
 {
     SA_transport(&r_addr) = transport->getTransportType();
     stun_processor::instance()->insert(&r_addr, this);
@@ -133,7 +134,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
-        depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
+        if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
         transport->allowStunConnection(addr, priority);
     }
 }
@@ -161,7 +162,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
     if(valid && auth_state != ALLOW) {
         auth_state = ALLOW;
-        depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
+        if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
         transport->allowStunConnection(addr, priority);
     } else if(auth_state != ALLOW){
         string error("valid stun message is false ERR = ");

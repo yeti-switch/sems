@@ -482,15 +482,6 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                 str2int(addr_port[1], port);
 
                 if(type == candidate.comp_id && sa.ss_family == l_saddr.ss_family) {
-                    try {
-                        AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
-                        conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
-                        addConnection(conn);
-                        conn->send_request();
-                    } catch(string& error) {
-                        CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
-                    }
-
                     if(local_media.is_simple_srtp() && srtp_enable) {
                          addSrtpConnection(address, port, cprofile, local_key, remote_key);
                     } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
@@ -516,6 +507,19 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                     } else {
                          addRtpConnection(address, port);
                     }
+
+                    try {
+                        AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
+                        if(cur_rtp_conn) {
+                            conn->setDependentConnection(cur_rtp_conn);
+                        }
+                        conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
+                        addConnection(conn);
+                        conn->send_request();
+                    } catch(string& error) {
+                        CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
+                    }
+
                 }
             }
         }
