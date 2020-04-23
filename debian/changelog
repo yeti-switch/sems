@@ -1,3 +1,9 @@
+sems (1.15.0) stable; urgency=low
+
+  * fix segfault in botan Botan::UUID::UUID
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 23 Apr 2020 20:23:14 +0300
+
 sems (1.14.2) stable; urgency=low
 
   * fix crash in AmStunConnection
