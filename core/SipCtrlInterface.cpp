@@ -779,6 +779,17 @@ void _SipCtrlInterface::cleanup()
 {
     DBG("Stopping SIP control interface threads\n");
 
+    if (NULL != trsp_workers) {
+        for(int i=0; i<nr_trsp_workers;i++) {
+            trsp_workers[i]->stop();
+            trsp_workers[i]->join();
+            delete trsp_workers[i];
+        }
+        delete [] trsp_workers;
+        trsp_workers = NULL;
+        nr_trsp_workers = 0;
+    }
+
     if (NULL != udp_servers) {
 	for(int i=0; i<nr_udp_servers;i++){
 	    udp_servers[i]->stop();
@@ -789,13 +800,6 @@ void _SipCtrlInterface::cleanup()
 	delete [] udp_servers;
 	udp_servers = NULL;
 	nr_udp_servers = 0;
-    }
-
-    if(NULL != trsp_server){
-    trsp_server->stop();
-    trsp_server->join();
-	delete trsp_server;
-	trsp_server = NULL;
     }
 
     if (NULL != trsp_workers) {
@@ -865,6 +869,13 @@ void _SipCtrlInterface::cleanup()
 	delete [] wss_sockets;
 	wss_sockets = NULL;
 	nr_wss_sockets = 0;
+    }
+
+    if(NULL != trsp_server) {
+        trsp_server->stop();
+        trsp_server->join();
+        delete trsp_server;
+        trsp_server = NULL;
     }
 }
 
