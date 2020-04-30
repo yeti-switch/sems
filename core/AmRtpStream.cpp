@@ -1879,6 +1879,13 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
             m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
     } else if(TP_UDPTLSRTPSAVP == transport || TP_UDPTLSRTPSAVPF == transport) {
+        RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]);
+        dtls_settings* settings = (m.setup == S_ACTIVE) ?
+            static_cast<dtls_settings*>(&rtpinfo->server_settings) :
+            static_cast<dtls_settings*>(&rtpinfo->client_settings);
+        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+        m.fingerprint.hash = fp.hash;
+        m.fingerprint.value = fp.value;
         m.setup = S_PASSIVE;
     }
 }

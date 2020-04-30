@@ -847,6 +847,7 @@ bool AmB2BMedia::canRelay(const SdpMedia &m)
 {
     return (m.transport == TP_RTPAVP) ||
            (m.transport == TP_RTPSAVP) ||
+           (m.transport == TP_UDPTLSRTPSAVP) ||
            (m.transport == TP_UDP) ||
            (m.transport == TP_UDPTL);
 }
@@ -1098,7 +1099,7 @@ void AmB2BMedia::updateRelayStream(
         stream->setRelayPayloads(true_mask);
         if (!relay_paused) stream->enableRtpRelay();
         stream->setRAddr(connection_address, static_cast<unsigned short>(m.port));
-        if((m.transport != TP_RTPAVP) && (m.transport != TP_RTPSAVP))
+        if((m.transport != TP_RTPAVP) && !m.is_simple_srtp() && !m.is_dtls_srtp())
             stream->setRawRelay(true);
         if (session) {
             // propagate session settings

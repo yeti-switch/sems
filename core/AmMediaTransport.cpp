@@ -603,9 +603,14 @@ void AmMediaTransport::initDtlsConnection(const string& remote_address, int remo
         srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
         try {
             if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
+                CLASS_DBG("create client DtlsConnection");
                 addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, true));
             } else if(local_media.setup == S_PASSIVE || remote_media.setup == S_ACTIVE) {
+                CLASS_DBG("create server DtlsConnection");
                 addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, false));
+            } else {
+                CLASS_DBG("DtlsConnection creation skipped because of no valid setup attributes. "
+                          "local: %d, remote: %d", local_media.setup, remote_media.setup);
             }
         } catch(string& error) {
             CLASS_ERROR("Can't add dtls connection. error - %s", error.c_str());
