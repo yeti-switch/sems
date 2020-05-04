@@ -1887,6 +1887,12 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
         m.fingerprint.hash = fp.hash;
         m.fingerprint.value = fp.value;
         m.setup = S_PASSIVE;
+    } else if(TP_RTPAVP == transport || TP_RTPAVPF == transport) {
+        RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]);
+        if(isZrtpEnabled() && rtpinfo->zrtp_enable) {
+            m.zrtp_hash.hash = zrtp_context.getLocalHash(l_ssrc);
+            m.zrtp_hash.is_use = true;
+        }
     }
 }
 
