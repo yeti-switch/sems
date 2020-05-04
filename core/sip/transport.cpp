@@ -132,10 +132,28 @@ void trsp_socket::set_public_ip(const string& ip)
     public_ip = ip;
 }
 
-const char* trsp_socket::get_advertised_ip() const
+void trsp_socket::set_public_domain(const string& domain)
 {
+    public_domain = domain;
+}
+
+void trsp_socket::set_announce_port(bool announce)
+{
+    announce_port = announce;
+}
+
+bool trsp_socket::get_announce_port() const
+{
+    return announce_port;
+}
+
+const char* trsp_socket::get_advertised_host() const
+{
+    if(!public_domain.empty())
+        return public_domain.data();
+
     if(!public_ip.empty())
-	return public_ip.c_str();
+        return public_ip.c_str();
 
     return get_ip();
 }

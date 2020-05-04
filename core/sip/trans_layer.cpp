@@ -1202,9 +1202,9 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
 
     //get connected here
 
-    string via(msg->local_socket->get_advertised_ip());
-    if(msg->local_socket->get_actual_port() != 5060)
-    via += ":" + int2str(msg->local_socket->get_actual_port());
+    string via(msg->local_socket->get_advertised_host());
+    if(msg->local_socket->get_announce_port() && msg->local_socket->get_actual_port() != 5060)
+        via += ":" + int2str(msg->local_socket->get_actual_port());
 
     cstring trsp = msg->local_socket->get_transport();
 

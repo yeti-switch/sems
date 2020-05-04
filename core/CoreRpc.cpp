@@ -290,6 +290,8 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_sinfo["local_ip"] = sinfo->local_ip;
             am_sinfo["local_port"] = (int)sinfo->local_port;
             am_sinfo["public_ip"] = sinfo->public_ip;
+            am_sinfo["domain"] = sinfo->public_domain;
+            am_sinfo["announce_port"] = sinfo->announce_port;
             am_sinfo["static_client_port"] = (sinfo->sig_sock_opts&trsp_socket::static_client_port)!= 0;
             am_sinfo["use_raw_sockets"] = (sinfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
             am_sinfo["force_via_address"] = (sinfo->sig_sock_opts&trsp_socket::force_via_address) != 0;
@@ -318,6 +320,7 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_minfo["ip_type"] = minfo->ipTypeToStr();
             am_minfo["local_ip"] = minfo->local_ip;
             am_minfo["public_ip"] = minfo->public_ip;
+            am_minfo["domain"] = minfo->public_domain;
             am_minfo["rtp_low_port"] = (int)minfo->low_port;
             am_minfo["rtp_high_port"] = (int)minfo->high_port;
             am_minfo["capacity"] = (double)(minfo->high_port-minfo->low_port+1)/2;

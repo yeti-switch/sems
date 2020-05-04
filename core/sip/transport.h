@@ -91,6 +91,10 @@ protected:
 
     // public IP (Via-HF)
     string      public_ip;
+    // public domain IP (Via-HF)
+    string      public_domain;
+    // should we add port to Via-HF
+    bool        announce_port;
 
     // internal interface number
     unsigned short   if_num;
@@ -163,12 +167,27 @@ public:
      * Setter for public IP address
      */
     void set_public_ip(const string& ip);
-    
+
     /**
-     * Getter for advertised IP address
-     * @return either bound IP or public IP
+     * Setter for public domain address
      */
-    const char* get_advertised_ip() const;
+    void set_public_domain(const string& domain);
+
+    /**
+     * Setter for announce port flag
+     */
+    void set_announce_port(bool announce);
+
+    /**
+     * Getter for announce port flag
+     */
+    bool get_announce_port() const;
+
+    /**
+     * Getter for advertised Host
+     * @return either bound IP or public IP or public Domain
+     */
+    const char* get_advertised_host() const;
 
     /**
      *  Getter for the socket descriptor

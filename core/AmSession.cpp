@@ -1403,11 +1403,11 @@ string AmSession::advertisedIP(AddressType addrType)
   {
     int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType, MEDIA_info::RTP);
     if(proto_id >= 0) {
-        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->local_ip;
+        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->getHost();
         rtp_proto_id = proto_id;
     }
   } else {
-      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->getIP();
+      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->getHost();
   }
 
   if( (set_ip[0] == '[') &&

@@ -212,14 +212,16 @@ string AmRtpStream::getRHost(int type)
     return "";
 }
 
-void AmRtpStream::setLocalIP(const string& ip)
+void AmRtpStream::setLocalIP(const string& host)
 {
-    sockaddr_storage addr;
-    if (!am_inet_pton(ip.c_str(), &addr)) {
-        throw string ("AmRtpStream::setLocalIP: Invalid IP address: ") + ip;
-    }
+    CLASS_DBG("host = %s\n",host.data());
 
-    CLASS_DBG("ip = %s\n",ip.c_str());
+    sockaddr_storage addr;
+    dns_handle dh;
+
+    if (resolver::instance()->resolve_name(host.data(),&dh,&addr, Dualstack) < 0) {
+        throw string ("AmRtpStream::setLocalIP: failed to resolve local IP address: ") + host;
+    }
 
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();

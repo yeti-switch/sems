@@ -36,6 +36,8 @@ public:
     IP_info(const IP_info& info)
     : local_ip(info.local_ip)
     , public_ip(info.public_ip)
+    , public_domain(info.public_domain)
+    , announce_port(info.announce_port)
     , type_ip(info.type_ip)
     , net_if(info.net_if)
     , net_if_idx(info.net_if_idx)
@@ -49,8 +51,13 @@ public:
     /** Used for binding socket */
     std::string local_ip;
 
-    /** Used in Contact-HF */
+    /** Used in Contact-HF/Via-HF */
     std::string public_ip;
+
+    /** Used in Contact-HF/Via-HF instead of public_ip if set */
+    std::string public_domain;
+
+    bool announce_port;
 
     /** Used ip type socket */
     AddressType type_ip;
@@ -70,6 +77,10 @@ public:
 
     std::string getIP() {
       return public_ip.empty() ? local_ip : public_ip;
+    }
+
+    std::string getHost() {
+      return public_domain.empty() ? getIP() : public_domain;
     }
 
     virtual IP_info* Clone(){

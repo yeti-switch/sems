@@ -485,7 +485,7 @@ class AmRtpStream
     * setLocalPort will bind the socket and it will be not
     * possible to change the IP later
     */
-    virtual void setLocalIP(const string& ip);
+    virtual void setLocalIP(const string& host);
 
     /**
     * Initializes with a new random local port if 'p' is 0,

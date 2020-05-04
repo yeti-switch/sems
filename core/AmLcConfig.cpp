@@ -66,6 +66,8 @@
 #define PARAM_FORCE_OBD_IF_NAME      "force_outbound_if"
 #define PARAM_FORCE_TRANSPORT_NAME   "force-contact-transport"
 #define PARAM_PUBLIC_ADDR_NAME       "public-address"
+#define PARAM_PUBLIC_DOMAIN_NAME     "domain"
+#define PARAM_ANNOUNCE_PORT_NAME     "announce-port"
 #define PARAM_CONNECT_TIMEOUT_NAME   "connect-timeout"
 #define PARAM_IDLE_TIMEOUT_NAME      "idle-timeout"
 #define PARAM_CORS_MODE_NAME         "cors_mode"
@@ -241,6 +243,7 @@ namespace Config {
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_INT(PARAM_HIGH_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
         CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
@@ -313,6 +316,7 @@ namespace Config {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
         CFG_INT(PARAM_HIGH_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_BOOL(PARAM_USE_RAW_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_OBD_IF_NAME, cfg_false, CFGF_NONE),
@@ -333,6 +337,8 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
@@ -352,6 +358,8 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_SEC(SECTION_OPT_NAME, acl, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ORIGACL_NAME, acl, CFGF_NODEFAULT),
@@ -394,6 +402,8 @@ namespace Config {
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
@@ -415,6 +425,8 @@ namespace Config {
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_TRANSPORT_NAME, cfg_true, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
@@ -437,6 +449,8 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
+        CFG_BOOL(PARAM_ANNOUNCE_PORT_NAME, cfg_true, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_CONNECT_TIMEOUT_NAME, 0, CFGT_NONE),
         CFG_INT(PARAM_IDLE_TIMEOUT_NAME, 0, CFGT_NONE),
@@ -1433,6 +1447,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
     if(cfg_size(cfg, PARAM_PUBLIC_ADDR_NAME)) {
         info->public_ip = cfg_getstr(cfg, PARAM_PUBLIC_ADDR_NAME);
     }
+    if(cfg_size(cfg, PARAM_PUBLIC_DOMAIN_NAME)) {
+        info->public_domain = cfg_getstr(cfg, PARAM_PUBLIC_DOMAIN_NAME);
+    }
+    info->announce_port = cfg_getbool(cfg, PARAM_ANNOUNCE_PORT_NAME);
 
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_USE_RAW_NAME) ? trsp_socket::use_raw_sockets : 0;
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_OBD_IF_NAME) ? trsp_socket::force_outbound_if : 0;

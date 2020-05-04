@@ -105,6 +105,8 @@ int _SipCtrlInterface::init_udp_sockets(unsigned short if_num, unsigned short pr
     if(!info.public_ip.empty()) {
         udp_socket->set_public_ip(info.public_ip);
     }
+    udp_socket->set_public_domain(info.public_domain);
+    udp_socket->set_announce_port(info.announce_port);
 
     if(udp_socket->bind(info.local_ip,
                         info.local_port) < 0) {
@@ -196,6 +198,8 @@ int _SipCtrlInterface::init_tcp_servers(unsigned short if_num, unsigned short pr
     if(!info.public_ip.empty()) {
         tcp_socket->set_public_ip(info.public_ip);
     }
+    tcp_socket->set_public_domain(info.public_domain);
+    tcp_socket->set_announce_port(info.announce_port);
 
     SIP_TCP_info* tcp_info = SIP_TCP_info::toSIP_TCP(&info);
     if(!tcp_info) {
@@ -280,6 +284,8 @@ int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short pr
     if(!info.public_ip.empty()) {
         tls_socket->set_public_ip(info.public_ip);
     }
+    tls_socket->set_public_domain(info.public_domain);
+    tls_socket->set_announce_port(info.announce_port);
 
     tls_socket->set_connect_timeout(tls_info->tcp_connect_timeout);
     tls_socket->set_idle_timeout(tls_info->tcp_idle_timeout);
@@ -355,6 +361,8 @@ int _SipCtrlInterface::init_ws_servers(unsigned short if_num, unsigned short pro
     if(!info.public_ip.empty()) {
         ws_socket->set_public_ip(info.public_ip);
     }
+    ws_socket->set_public_domain(info.public_domain);
+    ws_socket->set_announce_port(info.announce_port);
 
     ws_socket->set_connect_timeout(ws_info->tcp_connect_timeout);
     ws_socket->set_idle_timeout(ws_info->tcp_idle_timeout);
@@ -435,6 +443,8 @@ int _SipCtrlInterface::init_wss_servers(unsigned short if_num, unsigned short pr
     if(!info.public_ip.empty()) {
         wss_socket->set_public_ip(info.public_ip);
     }
+    wss_socket->set_public_domain(info.public_domain);
+    wss_socket->set_announce_port(info.announce_port);
 
     wss_socket->set_connect_timeout(wss_info->tcp_connect_timeout);
     wss_socket->set_idle_timeout(wss_info->tcp_idle_timeout);
