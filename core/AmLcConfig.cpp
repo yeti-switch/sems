@@ -1230,6 +1230,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
         cfg_t* if_ = cfg_getnsec(sigif, SECTION_IF_NAME, i);
         sip_if.name = if_->title;
         sip_if.default_media_if = cfg_getstr(if_, PARAM_DEFAULT_MEDIAIF_NAME);
+
         if(cfg_size(if_, SECTION_IP4_NAME)) {
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_SIP_UDP_NAME)) {
@@ -1273,6 +1274,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
                 sip_if.proto_info.push_back(info);
             }
         }
+
         if(cfg_size(if_, SECTION_IP6_NAME)) {
             cfg_t* ip6 = cfg_getsec(if_, SECTION_IP6_NAME);
             if(cfg_size(ip6, SECTION_SIP_UDP_NAME)) {
@@ -1316,8 +1318,28 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
                 sip_if.proto_info.push_back(info);
             }
         }
+
         if(sip_if.proto_info.empty()) {
             config->sip_ifs.pop_back();
+        } else {
+            for(const auto &p: sip_if.proto_info) {
+                if(!p->public_domain.empty()) {
+                    dns_handle dh;
+                    dns_priority priority =  p->type_ip == AT_V4 ? IPv4_only : IPv6_only;
+                    sockaddr_storage a;
+                    if (resolver::instance()->resolve_name(p->public_domain.data(),
+                        &dh,&a, priority) < 0)
+                    {
+                        WARN("failed to resolve domain: '%s' with priority %s "
+                             "(sip interface '%s', transport: %s, protocol: %s)",
+                             p->public_domain.data(),
+                             dns_priority_str(priority),
+                             sip_if.name.data(),
+                             p->transportToStr().data(),
+                             p->ipTypeToStr().data());
+                    }
+                }
+            }
         }
     }
     return 0;
@@ -1377,8 +1399,25 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
         if(media_if.proto_info.empty()) {
             config->media_ifs.pop_back();
         } else {
-            //check for ports overlapping
             for(auto &self_p : media_if.proto_info) {
+                //check public domain is resolvable locally
+                if(!self_p->public_domain.empty()) {
+                    dns_handle dh;
+                    dns_priority priority =  self_p->type_ip == AT_V4 ? IPv4_only : IPv6_only;
+                    sockaddr_storage a;
+                    if (resolver::instance()->resolve_name(self_p->public_domain.data(),
+                        &dh,&a, priority) < 0)
+                    {
+                        WARN("failed to resolve domain: '%s' with priority %s "
+                             "(media interface '%s', transport: %s, protocol: %s)",
+                             self_p->public_domain.data(),
+                             dns_priority_str(priority),
+                             media_if.name.data(),
+                             self_p->transportToStr().data(),
+                             self_p->ipTypeToStr().data());
+                    }
+                }
+                //check for ports overlapping
                 for(auto &i : config->media_ifs) {
                     if(&i == &media_if)
                         continue;
