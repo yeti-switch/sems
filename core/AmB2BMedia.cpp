@@ -929,7 +929,7 @@ void AmB2BMedia::replaceConnectionAddress(
     RelayStreamIterator relay_stream_it = relay_streams.begin();
 
     std::vector<SdpMedia>::iterator it = parser_sdp.media.begin();
-    for (; it != parser_sdp.media.end() ; ++it) {
+    for (unsigned int idx = 0; it != parser_sdp.media.end() ; ++it, ++idx) {
         // FIXME: only UDP streams are handled for now
         if(it->type == MT_AUDIO) {
             if( audio_stream_it == audio.end() ) {
@@ -945,9 +945,9 @@ void AmB2BMedia::replaceConnectionAddress(
                 }
                 try {
                     if (a_leg) {
-                        audio_stream_it->a.replaceAudioMediaParameters(*it, relay_address);
+                        audio_stream_it->a.replaceAudioMediaParameters(*it, idx, relay_address);
                     } else {
-                        audio_stream_it->b.replaceAudioMediaParameters(*it, relay_address);
+                        audio_stream_it->b.replaceAudioMediaParameters(*it, idx, relay_address);
                     }
                     if(!replaced_ports.empty()) replaced_ports += "/";
                     replaced_ports += int2str(it->port);

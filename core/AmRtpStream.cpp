@@ -1816,7 +1816,7 @@ void AmRtpStream::setSensor(msg_sensor *_sensor)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   help functions
 
-void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_address)
+void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address)
 {
     CLASS_DBG("replaceAudioMediaParameters() relay_address: %s",
               relay_address.c_str());
@@ -1840,8 +1840,35 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
 
     //ensure correct crypto parameters
     m.crypto.clear();
+    m.zrtp_hash.hash.clear();
+    m.zrtp_hash.is_use = false;
     m.dir = SdpMedia::DirUndefined;
+    m.setup = S_UNDEFINED;
+    m.transport = transport;
 
+    auto &dlg = session->dlg;
+    if(!dlg) {
+        CLASS_DBG("no dlg");
+        return;
+    }
+    if(!cur_rtp_trans) {
+        CLASS_DBG("no current RTP transport set");
+        return;
+    }
+
+    if(dlg->getOAState() == AmOfferAnswer::OA_OfferRecved) {
+        //answer
+        const auto &offer = dlg->getRemoteSdp();
+        if(idx >= offer.media.size()) {
+            CLASS_DBG("no stream with idx %d in offer media", idx);
+            return;
+        }
+        cur_rtp_trans->getSdpAnswer(offer.media[idx], m);
+    } else {
+        //offer
+        cur_rtp_trans->getSdpOffer(m);
+    }
+#if 0
     switch(transport) {
     case TP_RTPAVP:
         break;
@@ -1896,6 +1923,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, const string& relay_a
             m.zrtp_hash.is_use = true;
         }
     }
+#endif
 }
 
 void AmRtpStream::payloads_id2str(const vector<int> i, vector<string>& s)

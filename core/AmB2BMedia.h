@@ -191,8 +191,8 @@ class AudioStreamData {
       if (stream) stream->clearRTPTimeout(); 
     }
 
-    void replaceAudioMediaParameters(SdpMedia &m, const string& relay_address) {
-      if(stream) stream->replaceAudioMediaParameters(m, relay_address);
+    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address) {
+      if(stream) stream->replaceAudioMediaParameters(m, idx, relay_address);
     }
 
     void setLocalIP(const string& ip) { 

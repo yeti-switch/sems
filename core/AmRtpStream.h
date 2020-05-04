@@ -540,7 +540,7 @@ class AmRtpStream
     int getLastPayload() { return last_payload; }
     string getPayloadName(int payload_type);
 
-    void replaceAudioMediaParameters(SdpMedia &m, const string& relay_address);
+    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address);
 
     struct MediaStats {
 
