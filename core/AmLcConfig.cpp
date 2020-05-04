@@ -1489,7 +1489,6 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
     if(cfg_size(cfg, PARAM_PUBLIC_DOMAIN_NAME)) {
         info->public_domain = cfg_getstr(cfg, PARAM_PUBLIC_DOMAIN_NAME);
     }
-    info->announce_port = cfg_getbool(cfg, PARAM_ANNOUNCE_PORT_NAME);
 
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_USE_RAW_NAME) ? trsp_socket::use_raw_sockets : 0;
     info->sig_sock_opts |=  cfg_getbool(cfg, PARAM_FORCE_OBD_IF_NAME) ? trsp_socket::force_outbound_if : 0;
@@ -1651,6 +1650,8 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
 
     //SIP specific opts
     if(sinfo) {
+        info->announce_port = cfg_getbool(cfg, PARAM_ANNOUNCE_PORT_NAME);
+
         if(getMandatoryParameter(cfg, PARAM_PORT_NAME, sinfo->local_port)) {
             return nullptr;
         }
