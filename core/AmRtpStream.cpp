@@ -1340,16 +1340,16 @@ bool AmRtpStream::process_dtmf_queue(unsigned int ts)
 
 unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
 {
-    unsigned int adjusted_ts = static_cast<unsigned int>(ts+relay_ts_shift);
-    unsigned int ts_diff = tx_user_ts ? ts_unsigned_diff(adjusted_ts,tx_user_ts) : 0;
+    auto adjusted_ts = static_cast<decltype(tx_user_ts)>(ts+relay_ts_shift);
+    auto ts_diff = tx_user_ts ? ts_unsigned_diff(adjusted_ts,tx_user_ts) : 0;
 
     /*CLASS_DBG("get_adjusted_ts(ts = %u) tx_user_ts = %llu",
               ts, tx_user_ts);*/
 
     if(ts_diff > RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF) {
         CLASS_DBG("timestamp adjust condition reached: "
-            "ts: %u, adjusted_ts: %u, tx_user_ts: %llu, "
-            "relay_ts_shift: %ld, ts_diff: %u, "
+            "ts: %u, adjusted_ts: %llu, tx_user_ts: %llu, "
+            "relay_ts_shift: %ld, ts_diff: %llu, "
             "max_ts_diff: %u",
             ts,adjusted_ts, tx_user_ts,
             relay_ts_shift,ts_diff,
