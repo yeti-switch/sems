@@ -299,6 +299,7 @@ class AmRtpStream
     /** Payload type for telephone event */
     unique_ptr<const SdpPayload> remote_telephone_event_pt;
     unique_ptr<const SdpPayload> local_telephone_event_pt;
+    DECLARE_BITMAP_ALIGNED(local_telephone_event_payloads, 128 /* payload type is 7th bit field */);
 
     /** DTMF sender */
     AmDtmfSender   dtmf_sender;
@@ -532,6 +533,7 @@ class AmRtpStream
 
     int getLocalTelephoneEventPT();
     int getLocalTelephoneEventRate();
+    bool isLocalTelephoneEventPayload(unsigned char payload);
     void setPayloadProvider(AmPayloadProvider* pl_prov);
 
     int getSdpMediaIndex() { return sdp_media_index; }

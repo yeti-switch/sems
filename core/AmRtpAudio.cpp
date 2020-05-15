@@ -510,6 +510,12 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
             return -1;
         }
 
+        if(isLocalTelephoneEventPayload(payload)) {
+            CLASS_ERROR("Attempt to set telephone-event payload %d as default audio payload. ignore it",
+                        payload);
+            return -1;
+        }
+
         this->payload = payload;
 
         not_supported_rx_payload_local_reported = false;
