@@ -1,3 +1,9 @@
+sems (1.17.0) stable; urgency=low
+
+  * fix DTMF receiving on multiple telephone-event payloads negotiated
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 15 May 2020 17:38:47 +0300
+
 sems (1.16.1) stable; urgency=low
 
   * AmRtpStream::get_adjusted_ts: fix adjusted_ts overflow
