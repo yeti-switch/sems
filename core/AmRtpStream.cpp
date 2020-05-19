@@ -70,8 +70,8 @@ using std::set;
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
 
-//max_frame_size * 8
-#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF (200*8)
+//max_frame_size * 20
+#define RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF (200*20)
 
 #define RTCP_REPORT_SEND_INTERVAL_SECONDS 3
 #define ICE_PWD_SIZE    22
