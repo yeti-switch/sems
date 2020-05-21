@@ -740,11 +740,15 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
     if(!sock) {
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
         tcp_base_trsp* new_sock = new_connection(server_sock, sa);
-        sock = new_sock;
-        inc_ref(sock);
-        new_conn = true;
+        if(new_sock) {
+            sock = new_sock;
+            inc_ref(sock);
+            new_conn = true;
+        }
     }
     connections_mut.unlock();
+
+    if(!sock) return -1;
 
     // must be done outside from connections_mut
     // to avoid dead-lock with the event base
@@ -779,6 +783,7 @@ tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, cons
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,-1,sa,evbase);
+    if(!new_sock) return 0;
     connections[dest].push_back(new_sock);
     inc_ref(new_sock);
     return new_sock;
