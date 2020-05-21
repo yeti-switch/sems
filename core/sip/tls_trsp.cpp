@@ -229,6 +229,8 @@ void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, st
     cipher = cipher_;
     mac = mac_;
     sig = sig_;
+    DBG("set optional parameters in tls session: cipher - %s, mac - %s, sig - %s",
+        cipher.c_str(), mac.c_str(), sig.c_str());
 }
 
 tls_input::tls_input()
