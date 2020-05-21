@@ -1,3 +1,9 @@
+sems (1.17.3) stable; urgency=low
+
+  * logging for tls_conf::set_optional_parameters
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 21 May 2020 16:55:28 +0300
+
 sems (1.17.2) stable; urgency=low
 
   * fix node crash on botan exception for new socket
