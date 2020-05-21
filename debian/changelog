@@ -1,3 +1,9 @@
+sems (1.17.2) stable; urgency=low
+
+  * fix node crash on botan exception for new socket
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 21 May 2020 16:51:17 +0300
+
 sems (1.17.1) stable; urgency=low
 
   * AmRtpStream: increase RTP_TIMESTAMP_ALINGING_MAX_TS_DIFF. 1600 -> 4000
