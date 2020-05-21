@@ -44,6 +44,9 @@ tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
 , certificate(conf.certificate)
 , is_optional(conf.is_optional)
+, cipher(conf.cipher)
+, mac(conf.mac)
+, sig(conf.sig)
 {
     if(conf.s_server && !conf.s_server->certificate_key.empty()) {
         key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_tls::instance()));
