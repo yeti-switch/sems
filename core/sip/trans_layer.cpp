@@ -2841,7 +2841,7 @@ int _trans_layer::try_next_ip(
     tr->clear_timer(STIMER_M);
 
     trsp_socket::socket_transport next_trsp;
-    sockaddr_storage sa;
+    sockaddr_storage sa = {0};
 
     sip_trans* orig_tr = tr;
 

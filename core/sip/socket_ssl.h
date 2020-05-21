@@ -1,5 +1,6 @@
 #include <netinet/in.h>
 #include <string>
+#include "transport.h"
 
 struct sockaddr_ssl
 {
@@ -7,6 +8,7 @@ struct sockaddr_ssl
         sockaddr_in in;
         sockaddr_in6 in6;
     } addr;
+    trsp_socket::socket_transport trsp;
     bool ssl_marker;
     enum sig_method{
         SIG_SHA,
