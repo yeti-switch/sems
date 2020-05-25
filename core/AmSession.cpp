@@ -1084,6 +1084,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
             answer_media.send = false;
             answer_media.recv = false;
             answer_media.frame_size = m.frame_size;
+            answer_media.fmt = m.fmt;
             answer_payloads.clear();
             if(!m.payloads.empty()) {
                 SdpPayload dummy_pl = m.payloads.front();
