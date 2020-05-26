@@ -100,6 +100,10 @@ AmArg& AmArg::operator=(const AmArg& v) {
         v_struct = new ValueStruct(*v.v_struct);
     } break;
     case Blob:   { v_blob = new ArgBlob(*v.v_blob); } break;
+    case Reference:
+        v_ref = v.v_ref;
+        inc_ref(v_ref);
+        break;
     case Undef: break;
     default: assert(0);
     }
@@ -215,6 +219,7 @@ void AmArg::invalidate() {
       delete v_struct; 
   }
   else if(type == Blob) { delete v_blob; }
+  else if(type == Reference) { dec_ref(v_ref); }
   type = Undef;
 }
 
@@ -496,6 +501,9 @@ size_t AmArg::getAllocatedSize()
           size += it.second.getAllocatedSize();
       }
       break;
+    case Reference:
+        size+=v_ref->arg().getAllocatedSize();
+        break;
     default: break;
     }
     return size;
@@ -553,6 +561,8 @@ string AmArg::print(const AmArg &a) {
         s.resize(s.size() - 2); // strip last ", "
       s += "}";
       return s;
+    case Reference:
+        s = print(a.v_ref->arg());
     default: break;
   }
   return "<UNKONWN TYPE>";

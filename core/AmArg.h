@@ -25,8 +25,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _AmArg_h_
-#define _AmArg_h_
+#pragma once
 
 #include <assert.h>
 #include <string.h>
@@ -111,9 +110,11 @@ class AmArg
     AObject, // pointer to an object not owned by AmArg
     ADynInv, // pointer to a AmDynInvoke (useful for call backs)
     Blob,
-    
+
     Array,
-    Struct
+    Struct,
+
+    Reference
   };
 
   struct OutOfBoundsException {
@@ -127,10 +128,31 @@ class AmArg
   typedef std::vector<AmArg> ValueArray;
   typedef std::map<std::string, AmArg> ValueStruct; 
 
- private:
+  struct ValueRef
+    : public atomic_ref_cnt
+  {
+      AmObject *arg_ptr;
+
+      ValueRef() = delete;
+      ValueRef(const ValueRef &) = delete;
+      ValueRef(AmObject *arg)
+        : arg_ptr(arg)
+      { }
+
+      void on_destroy() {
+          delete arg_ptr;
+      }
+
+      AmArg &arg() const {
+          DBG("arg(): arg_ptr: %p, arg_ptr, amarg: %p",
+              arg_ptr, dynamic_cast<AmArg *>(arg_ptr));
+          return *dynamic_cast<AmArg *>(arg_ptr);
+      }
+  };
+
+private:
   // type
   short type;
-    
   // value
   union {
     long int       v_int;
@@ -143,6 +165,7 @@ class AmArg
     ArgBlob*       v_blob;
     ValueArray*    v_array;
     ValueStruct*   v_struct;
+    ValueRef*      v_ref;
   };
 
   void invalidate();
@@ -206,10 +229,18 @@ class AmArg
     v_blob = new ArgBlob(v);
   }
 
-  AmArg(AmObject* v) 
-    : type(AObject),
-    v_obj(v) 
-   { INC_AMARGSIZE(sizeof(*this)); }
+  AmArg(AmObject* v, bool reference = false)
+  {
+      if(reference) {
+        type = Reference;
+        v_ref = new ValueRef(v);
+        inc_ref(v_ref);
+      } else {
+        type = AObject;
+        v_obj = v;
+      }
+      INC_AMARGSIZE(sizeof(*this));
+  }
 
   AmArg(AmDynInvoke* v) 
     : type(ADynInv),
@@ -250,6 +281,7 @@ class AmArg
 #define isArgAObject(a) (AmArg::AObject == a.getType())
 #define isArgADynInv(a) (AmArg::ADynInv == a.getType())
 #define isArgBlob(a) (AmArg::Blob == a.getType())
+#define isArgReference(a) (AmArg::Reference == a.getType())
 
 #define _THROW_TYPE_MISMATCH(exp,got) \
 	do { \
@@ -287,6 +319,10 @@ class AmArg
 #define assertArgStruct(a)			\
   if (!isArgStruct(a))				\
 	_THROW_TYPE_MISMATCH(Struct,a);
+#define assertArgReference(a)			\
+  if (!isArgReference(a))				\
+	_THROW_TYPE_MISMATCH(Reference,a);
+
 
   void setBorrowedPointer(AmObject* v) {
     invalidate();
@@ -325,6 +361,12 @@ class AmArg
   void concat(const AmArg& a);
   
   const size_t size() const;
+
+  AmArg &getReferencedValue() const {
+      if(Reference != type)
+          throw TypeMismatchException();
+      return v_ref->arg();
+  }
 
   /** throws OutOfBoundsException if array too small */
   AmArg& get(size_t idx);
@@ -400,6 +442,4 @@ bool operator==(const AmArg& lhs, const AmArg& rhs);
 
 const int arg2int(const AmArg &a);
 string arg2str(const AmArg &a);
-
-#endif
 
