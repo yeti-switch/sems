@@ -1,3 +1,9 @@
+sems (1.19.0) stable; urgency=low
+
+  * AmArg: add Reference type
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 27 May 2020 12:10:31 +0300
+
 sems (1.18.1) stable; urgency=low
 
   * AmSession::getSdpAnswer: fix .fmt assinging for rejected streams
