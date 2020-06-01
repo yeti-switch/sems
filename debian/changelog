@@ -1,3 +1,9 @@
+sems (1.20.0) stable; urgency=low
+
+  * fix SRTP-DTLS negotiation
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Jun 2020 20:40:07 +0300
+
 sems (1.19.0) stable; urgency=low
 
   * AmArg: add Reference type
