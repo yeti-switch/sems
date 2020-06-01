@@ -414,6 +414,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
                         break;
                     }
                 }
+                if(!local_crypto.empty()) break;
             }
         }
         if(local_crypto.empty()) {
