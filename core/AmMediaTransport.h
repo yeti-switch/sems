@@ -241,10 +241,13 @@ private:
     
     dtls_client_settings client_settings;
     dtls_server_settings server_settings;
-    vector<CryptoProfile> srtp_profiles;
+    vector<CryptoProfile> allowed_srtp_profiles;
     bool srtp_enable;
     bool dtls_enable;
     bool zrtp_enable;
+
+    vector<SdpCrypto> local_crypto;
+    SdpFingerPrint local_dtls_fingerprint;
 
     vector<AmStreamConnection*> connections;
     AmMutex                     connections_mut;

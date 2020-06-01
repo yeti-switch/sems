@@ -89,7 +89,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     if(rtpinfo) {
         server_settings = rtpinfo->server_settings;
         client_settings = rtpinfo->client_settings;
-        srtp_profiles = rtpinfo->profiles;
+        allowed_srtp_profiles = rtpinfo->profiles;
         srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
         dtls_enable = srtp_enable && rtpinfo->dtls_enable;
         zrtp_enable = srtp_enable && rtpinfo->zrtp_enable;
@@ -287,6 +287,8 @@ int AmMediaTransport::getLocalSocket(bool reinit)
 
 void AmMediaTransport::getSdpOffer(SdpMedia& offer)
 {
+    CLASS_DBG("AmMediaTransport::getSdpOffer");
+
     //set offer type
     switch(offer.transport) {
     case TP_UDPTL:
@@ -323,23 +325,29 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     switch(offer.transport) {
     case TP_RTPSAVP:
     case TP_RTPSAVPF:
-        for(auto profile : srtp_profiles) {
-            SdpCrypto crypto;
-            crypto.tag = 1;
-            crypto.profile = profile;
-            std::string key = AmSrtpConnection::gen_base64_key(static_cast<srtp_profile_t>(crypto.profile));
-            if(key.empty()) {
-                continue;
+        if(local_crypto.empty()) {
+            for(auto profile : allowed_srtp_profiles) {
+                SdpCrypto crypto;
+                crypto.tag = 1;
+                crypto.profile = profile;
+                std::string key = AmSrtpConnection::gen_base64_key(static_cast<srtp_profile_t>(crypto.profile));
+                if(key.empty()) {
+                    continue;
+                }
+                local_crypto.push_back(crypto);
+                local_crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
             }
-            offer.crypto.push_back(crypto);
-            offer.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
         }
+        offer.crypto = local_crypto;
         break;
     case TP_UDPTLSRTPSAVP:
     case TP_UDPTLSRTPSAVPF: {
-        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
-        offer.fingerprint.hash = fp.hash;
-        offer.fingerprint.value = fp.value;
+        if(local_dtls_fingerprint.hash.empty()) {
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+            local_dtls_fingerprint.hash = fp.hash;
+            local_dtls_fingerprint.value = fp.value;
+        }
+        offer.fingerprint = local_dtls_fingerprint;
         offer.setup = S_ACTPASS;
     } break;
     case TP_UDPTL: {
@@ -350,9 +358,12 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
         offer.fmt = T38_FMT;
     } break;
     case TP_UDPTLSUDPTL: {
-        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
-        offer.fingerprint.hash = fp.hash;
-        offer.fingerprint.value = fp.value;
+        if(local_dtls_fingerprint.hash.empty()) {
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+            local_dtls_fingerprint.hash = fp.hash;
+            local_dtls_fingerprint.value = fp.value;
+        }
+        offer.fingerprint = local_dtls_fingerprint;
         offer.setup = S_ACTPASS;
         t38_options_t options;
         options.getT38DefaultOptions();
@@ -373,6 +384,8 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
 
 void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
 {
+    CLASS_DBG("AmMediaTransport::getSdpAnswer");
+
     int transport = offer.transport;
     if(transport != TP_UDPTL && transport != TP_UDPTLSUDPTL)
         answer.type = MT_AUDIO;
@@ -387,29 +400,35 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         if(offer.crypto.empty()) {
             throw AmSession::Exception(488,"absent crypto attribute");
         }
-        for(const auto &allowed_profile : srtp_profiles) {
-            for(const auto &offer_crypto : offer.crypto) {
-                if(allowed_profile == offer_crypto.profile) {
-                    answer.crypto.emplace_back(offer_crypto);
-                    auto &answer_crypto = answer.crypto.back();
-                    answer_crypto.keys.clear();
-                    answer_crypto.keys.emplace_back(
-                        SdpKeyInfo(AmSrtpConnection::gen_base64_key(
-                            static_cast<srtp_profile_t>(answer_crypto.profile)), 0, 1));
-                    break;
+        if(local_crypto.empty()) {
+            for(const auto &allowed_profile : allowed_srtp_profiles) {
+                for(const auto &offer_crypto : offer.crypto) {
+                    if(allowed_profile == offer_crypto.profile) {
+                        local_crypto.emplace_back(offer_crypto);
+                        auto &c = local_crypto.back();
+                        c.keys.clear();
+                        c.keys.emplace_back(
+                            SdpKeyInfo(AmSrtpConnection::gen_base64_key(
+                                static_cast<srtp_profile_t>(c.profile)), 0, 1));
+                        break;
+                    }
                 }
             }
         }
-        if(answer.crypto.empty()) {
+        if(local_crypto.empty()) {
             throw AmSession::Exception(488,"no compatible srtp profile");
         }
+        answer.crypto = local_crypto;
     } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
         dtls_settings* settings = (offer.setup == S_ACTIVE) ?
                                                     static_cast<dtls_settings*>(&server_settings) :
                                                     static_cast<dtls_settings*>(&client_settings);
-        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
-        answer.fingerprint.hash = fp.hash;
-        answer.fingerprint.value = fp.value;
+        if(local_dtls_fingerprint.hash.empty()) {
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+            local_dtls_fingerprint.hash = fp.hash;
+            local_dtls_fingerprint.value = fp.value;
+        }
+        answer.fingerprint = local_dtls_fingerprint;
         answer.setup = S_PASSIVE;
         if(offer.setup == S_PASSIVE)
             answer.setup = S_ACTIVE;
@@ -427,9 +446,12 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         dtls_settings* settings = (offer.setup == S_ACTIVE) ?
                                                     static_cast<dtls_settings*>(&server_settings) :
                                                     static_cast<dtls_settings*>(&client_settings);
-        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
-        answer.fingerprint.hash = fp.hash;
-        answer.fingerprint.value = fp.value;
+        if(local_dtls_fingerprint.hash.empty()) {
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+            local_dtls_fingerprint.hash = fp.hash;
+            local_dtls_fingerprint.value = fp.value;
+        }
+        answer.fingerprint = local_dtls_fingerprint;
         answer.setup = S_PASSIVE;
         if(offer.setup == S_PASSIVE)
             answer.setup = S_ACTIVE;
