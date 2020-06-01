@@ -1874,74 +1874,23 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, con
         return;
     }
 
-    if(dlg->getOAState() == AmOfferAnswer::OA_OfferRecved) {
-        //answer
+    switch(dlg->getOAState()) {
+    case AmOfferAnswer::OA_None:
+        cur_rtp_trans->getSdpOffer(m);
+        break;
+    case AmOfferAnswer::OA_OfferRecved:
+    case AmOfferAnswer::OA_Completed: {
         const auto &offer = dlg->getRemoteSdp();
         if(idx >= offer.media.size()) {
             CLASS_DBG("no stream with idx %d in offer media", idx);
             return;
         }
         cur_rtp_trans->getSdpAnswer(offer.media[idx], m);
-    } else {
-        //offer
-        cur_rtp_trans->getSdpOffer(m);
-    }
-#if 0
-    switch(transport) {
-    case TP_RTPAVP:
-        break;
-    case TP_RTPSAVP:
-    case TP_RTPSAVPF:
-        if(cur_rtp_trans && !cur_rtp_trans->isSrtpEnable()) {
-            CLASS_WARN("srtp is disabled on related interface (%s). failover to RTPAVP profile",
-                       AmConfig.media_ifs[l_if].name.c_str());
-            transport = TP_RTPAVP;
-        }
-        break;
-    case TP_UDPTLSRTPSAVP:
-    case TP_UDPTLSRTPSAVPF:
-        if(cur_rtp_trans && !cur_rtp_trans->isDtlsEnable()) {
-            CLASS_WARN("dtls is disabled on related interface (%s). failover to RTPAVP profile",
-                       AmConfig.media_ifs[l_if].name.c_str());
-            transport = TP_RTPAVP;
-        }
-        break;
+    } break;
     default:
-        CLASS_ERROR("unsupported transport id: %d. raise exception",transport);
-        throw std::string("unsupported transport id: " + int2str(transport));
+        CLASS_ERROR("unexpected OA state %d in AmRtpStream::replaceAudioMediaParameters",
+                    dlg->getOAState());
     }
-
-    m.transport = transport;
-    if(TP_RTPSAVP == transport || TP_RTPSAVPF == transport) {
-        RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]);
-        for(auto profile : rtpinfo->profiles) {
-            SdpCrypto crypto;
-            crypto.tag = 1;
-            crypto.profile = profile;
-            std::string key = AmSrtpConnection::gen_base64_key((srtp_profile_t)crypto.profile);
-            if(key.empty()) {
-                continue;
-            }
-            m.crypto.push_back(crypto);
-            m.crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
-        }
-    } else if(TP_UDPTLSRTPSAVP == transport || TP_UDPTLSRTPSAVPF == transport) {
-        RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]);
-        dtls_settings* settings = (m.setup == S_ACTIVE) ?
-            static_cast<dtls_settings*>(&rtpinfo->server_settings) :
-            static_cast<dtls_settings*>(&rtpinfo->client_settings);
-        srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
-        m.fingerprint.hash = fp.hash;
-        m.fingerprint.value = fp.value;
-        m.setup = S_PASSIVE;
-    } else if(TP_RTPAVP == transport || TP_RTPAVPF == transport) {
-        RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]);
-        if(isZrtpEnabled() && rtpinfo->zrtp_enable) {
-            m.zrtp_hash.hash = zrtp_context.getLocalHash(l_ssrc);
-            m.zrtp_hash.is_use = true;
-        }
-    }
-#endif
 }
 
 void AmRtpStream::payloads_id2str(const vector<int> i, vector<string>& s)
