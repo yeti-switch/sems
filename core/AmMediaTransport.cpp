@@ -326,14 +326,15 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     case TP_RTPSAVP:
     case TP_RTPSAVPF:
         if(local_crypto.empty()) {
+            int i = 0;
             for(auto profile : allowed_srtp_profiles) {
                 SdpCrypto crypto;
-                crypto.tag = 1;
                 crypto.profile = profile;
                 std::string key = AmSrtpConnection::gen_base64_key(static_cast<srtp_profile_t>(crypto.profile));
                 if(key.empty()) {
                     continue;
                 }
+                crypto.tag = ++i;
                 local_crypto.push_back(crypto);
                 local_crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
             }
