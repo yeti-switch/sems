@@ -1,3 +1,9 @@
+sems (1.20.1) stable; urgency=low
+
+  * AmMediaTransport::getSdpAnswer: stop on first matched crypto profile
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 01 Jun 2020 21:11:13 +0300
+
 sems (1.20.0) stable; urgency=low
 
   * fix SRTP-DTLS negotiation
