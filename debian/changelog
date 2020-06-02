@@ -1,3 +1,9 @@
+sems (1.20.3) stable; urgency=low
+
+  * fix sefgault on AmRtpStream init with null session
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Jun 2020 19:34:35 +0300
+
 sems (1.20.2) stable; urgency=low
 
   * zrtpContext::getLocalHash: fix context leak

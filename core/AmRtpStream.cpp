@@ -161,7 +161,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     last_send_rtcp_report_ts(0),
     transport(TP_RTPAVP),
     is_ice_stream(false),
-    multiplexing(_s->isRtcpMultiplexing()),
     reuse_media_trans(true),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
@@ -181,6 +180,10 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 #endif/*WITH_ZRTP*/
 
     bzero(local_telephone_event_payloads, sizeof(local_telephone_event_payloads));
+
+    if(_s) {
+        multiplexing = _s->isRtcpMultiplexing();
+    }
 }
 
 AmRtpStream::~AmRtpStream()
