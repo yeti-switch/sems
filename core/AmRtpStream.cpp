@@ -129,6 +129,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     session(_s),
     offer_answer_used(true),
     active(false), // do not return any data unless something really received
+    multiplexing(false),
     mute(false),
     hold(false),
     receiving(true),
