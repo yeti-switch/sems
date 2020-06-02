@@ -1,3 +1,9 @@
+sems (1.20.2) stable; urgency=low
+
+  * zrtpContext::getLocalHash: fix context leak
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Jun 2020 12:21:26 +0300
+
 sems (1.20.1) stable; urgency=low
 
   * AmMediaTransport::getSdpAnswer: stop on first matched crypto profile
