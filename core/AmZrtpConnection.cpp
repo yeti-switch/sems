@@ -78,17 +78,20 @@ void zrtpContext::start()
 std::string zrtpContext::getLocalHash(unsigned int ssrc)
 {
     l_ssrc = ssrc;
-    context = bzrtp_createBzrtpContext();
-    bzrtpCallbacks_t callbacks{
-        .bzrtp_statusMessage = NULL,
-        .bzrtp_sendData = zrtp_sendData,
-        .bzrtp_srtpSecretsAvailable = zrtp_srtpSecretsAvailable,
-        .bzrtp_startSrtpSession = zrtp_startSrtpSession,
-        .bzrtp_contextReadyForExportedKeys = NULL
-    };
-    bzrtp_setCallbacks((bzrtpContext_t*)context, &callbacks);
-    bzrtp_initBzrtpContext((bzrtpContext_t*)context, ssrc);
-    bzrtp_setClientData((bzrtpContext_t*)context, l_ssrc, this);
+
+    if(!context) {
+        context = bzrtp_createBzrtpContext();
+        bzrtpCallbacks_t callbacks{
+            .bzrtp_statusMessage = NULL,
+                    .bzrtp_sendData = zrtp_sendData,
+                    .bzrtp_srtpSecretsAvailable = zrtp_srtpSecretsAvailable,
+                    .bzrtp_startSrtpSession = zrtp_startSrtpSession,
+                    .bzrtp_contextReadyForExportedKeys = NULL
+        };
+        bzrtp_setCallbacks((bzrtpContext_t*)context, &callbacks);
+        bzrtp_initBzrtpContext((bzrtpContext_t*)context, ssrc);
+        bzrtp_setClientData((bzrtpContext_t*)context, l_ssrc, this);
+    }
 
     string hash(70, 0);
     bzrtp_getSelfHelloHash((bzrtpContext_t*)context, ssrc, (uint8_t*)hash.c_str(), hash.size());
