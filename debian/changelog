@@ -1,3 +1,9 @@
+sems (1.21.0) stable; urgency=low
+
+  * fix dtls-srtp session negotiation
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Jun 2020 19:49:29 +0300
+
 sems (1.20.4) stable; urgency=low
 
   * AmRtpStream: set multiplexing to false by default
