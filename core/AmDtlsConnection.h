@@ -11,6 +11,7 @@
 using std::auto_ptr;
 using std::unique_ptr;
 using std::shared_ptr;
+#include <atomic>
 
 #include <botan/auto_rng.h>
 #include <botan/tls_policy.h>
@@ -109,13 +110,19 @@ public:
 
 class AmDtlsConnection;
 
-class DtlsTimer : public timer
+class DtlsTimer
+  : public timer,
+    public atomic_ref_cnt
 {
     AmDtlsConnection* conn;
-public:
-    DtlsTimer(AmDtlsConnection* connection, uint32_t duration);
-    void updateTimer(uint32_t duration);
+    std::atomic_bool is_valid;
+  public:
+    DtlsTimer(AmDtlsConnection* connection);
+    ~DtlsTimer();
     void fire() override;
+    void invalidate();
+  private:
+    void reset();
 };
 
 class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
@@ -127,7 +134,8 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     dtls_rand_generator rand_gen;
     bool activated;
     bool is_client;
-    DtlsTimer timer;
+
+    DtlsTimer *pending_handshake_timer;
 protected:
     void initConnection();
 public:
@@ -138,7 +146,7 @@ public:
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
     ssize_t send(AmRtpPacket * packet) override;
-    void timer_check();
+    bool timer_check();
 
     void tls_emit_data(const uint8_t data[], size_t size) override;
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) override;

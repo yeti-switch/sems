@@ -10,6 +10,8 @@
 #include "AmLcConfig.h"
 #include "AmRtpStream.h"
 
+#define DTLS_TIMER_INTERVAL_MS 1000
+
 dtls_conf::dtls_conf()
 : s_client(0), s_server(0)
 , is_optional(false)
@@ -227,24 +229,41 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert
     return certs;
 }
 
-DtlsTimer::DtlsTimer(AmDtlsConnection* connection, uint32_t duration)
-: timer(duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock)
-, conn(connection)
+DtlsTimer::DtlsTimer(AmDtlsConnection* connection)
+: conn(connection),
+  is_valid(true)
 {
-    updateTimer(duration);
+    inc_ref(this);
+    reset();
 }
+
+DtlsTimer::~DtlsTimer()
+{ }
 
 void DtlsTimer::fire()
 {
-    conn->timer_check();
+    if(!is_valid.load()) {
+        dec_ref(this);
+        return;
+    }
+    if(conn->timer_check()) {
+        reset();
+    } else {
+        dec_ref(this);
+    }
 }
 
-void DtlsTimer::updateTimer(uint32_t duration)
+void DtlsTimer::invalidate()
 {
-    expires = duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock;
+    is_valid.store(false);
+}
+
+void DtlsTimer::reset()
+{
+    expires =
+        DTLS_TIMER_INTERVAL_MS/(TIMER_RESOLUTION/DTLS_TIMER_INTERVAL_MS) + wheeltimer::instance()->wall_clock;
     wheeltimer::instance()->insert_timer(this);
 }
-
 
 AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN)
@@ -254,22 +273,34 @@ AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& r
     , fingerprint(_fingerprint)
     , srtp_profile(srtp_profile_reserved)
     , activated(false)
-    , timer(this, 1000)
+    , pending_handshake_timer(nullptr)
 {
     initConnection();
 }
 
 AmDtlsConnection::~AmDtlsConnection()
 {
+    if(pending_handshake_timer) {
+        pending_handshake_timer->invalidate();
+        dec_ref(pending_handshake_timer);
+    }
+
     if(dtls_channel) {
         delete dtls_channel;
     }
-    wheeltimer::instance()->remove_timer(&timer);
 }
 
 void AmDtlsConnection::initConnection()
 {
-    if(dtls_channel) delete dtls_channel;
+    if(dtls_channel) {
+        if(pending_handshake_timer) {
+            pending_handshake_timer->invalidate();
+            dec_ref(pending_handshake_timer);
+            pending_handshake_timer = nullptr;
+        }
+        delete dtls_channel;
+    }
+
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     try {
         if(is_client) {
@@ -281,6 +312,9 @@ void AmDtlsConnection::initConnection()
             dtls_settings.reset(new dtls_conf(&rtpinfo->server_settings));
             dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen, true);
         }
+
+        pending_handshake_timer = new DtlsTimer(this);
+        inc_ref(pending_handshake_timer);
     } catch(Botan::Exception& exc) {
         dtls_channel = 0;
         throw string("unforseen error in dtls:%s",
@@ -318,14 +352,13 @@ ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
     return 0;
 }
 
-void AmDtlsConnection::timer_check()
+bool AmDtlsConnection::timer_check()
 {
-    if(!dtls_channel) return;
     if(!activated) {
         dtls_channel->timeout_check();
-        timer.updateTimer(1000);
-        CLASS_DBG("update dtls timer");
+        return true;
     }
+    return false;
 }
 
 void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)
