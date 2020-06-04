@@ -783,7 +783,7 @@ int AmRtpStream::init(const AmSdp& local,
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
             cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
             if(cur_rtcp_trans != cur_rtp_trans)
-                cur_rtcp_trans->initDtlsConnection(address, port, local_media, remote_media);
+                cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
         } else if(local_media.is_dtls() && cur_udptl_trans) {

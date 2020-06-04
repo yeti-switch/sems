@@ -227,20 +227,55 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert
     return certs;
 }
 
+DtlsTimer::DtlsTimer(AmDtlsConnection* connection, uint32_t duration)
+: timer(duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock)
+, conn(connection)
+{
+    updateTimer(duration);
+}
+
+void DtlsTimer::fire()
+{
+    conn->timer_check();
+}
+
+void DtlsTimer::updateTimer(uint32_t duration)
+{
+    expires = duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock;
+    wheeltimer::instance()->insert_timer(this);
+}
+
+
 AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN)
+    , is_client(client)
     , dtls_settings()
     , dtls_channel(0)
     , fingerprint(_fingerprint)
     , srtp_profile(srtp_profile_reserved)
     , activated(false)
+    , timer(this, 1000)
 {
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[_transport->getLocalIf()].proto_info[_transport->getLocalProtoId()]);
+    initConnection();
+}
+
+AmDtlsConnection::~AmDtlsConnection()
+{
+    if(dtls_channel) {
+        delete dtls_channel;
+    }
+    wheeltimer::instance()->remove_timer(&timer);
+}
+
+void AmDtlsConnection::initConnection()
+{
+    if(dtls_channel) delete dtls_channel;
+    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     try {
-        if(client) {
+        if(is_client) {
             dtls_settings.reset(new dtls_conf(&rtpinfo->client_settings));
             dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen,
-                                                Botan::TLS::Server_Information(remote_addr.c_str(), remote_port),
+                                                Botan::TLS::Server_Information(r_host.c_str(), r_port),
                                                 Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
             dtls_settings.reset(new dtls_conf(&rtpinfo->server_settings));
@@ -250,13 +285,6 @@ AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& r
         dtls_channel = 0;
         throw string("unforseen error in dtls:%s",
                         exc.what());
-    }
-}
-
-AmDtlsConnection::~AmDtlsConnection()
-{
-    if(dtls_channel) {
-        delete dtls_channel;
     }
 }
 
@@ -288,6 +316,16 @@ ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
         return packet->getBufferSize();
     }
     return 0;
+}
+
+void AmDtlsConnection::timer_check()
+{
+    if(!dtls_channel) return;
+    if(!activated) {
+        dtls_channel->timeout_check();
+        timer.updateTimer(1000);
+        CLASS_DBG("update dtls timer");
+    }
 }
 
 void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)

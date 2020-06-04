@@ -4,6 +4,7 @@
 #include "AmRtpConnection.h"
 
 #include "sip/ssl_settings.h"
+#include "sip/wheeltimer.h"
 #include "singleton.h"
 
 #include <memory>
@@ -61,6 +62,7 @@ public:
     bool allow_dtls10() const override;
     bool allow_dtls12() const override;
     bool require_cert_revocation_info() const override { return false; }
+    bool require_client_certificate_authentication() const override { return true; }
     vector<uint16_t> srtp_profiles() const override;
 
     //Credentials_Manager functions
@@ -105,6 +107,17 @@ public:
     }
 };
 
+class AmDtlsConnection;
+
+class DtlsTimer : public timer
+{
+    AmDtlsConnection* conn;
+public:
+    DtlsTimer(AmDtlsConnection* connection, uint32_t duration);
+    void updateTimer(uint32_t duration);
+    void fire() override;
+};
+
 class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
 {
     Botan::TLS::Channel* dtls_channel;
@@ -113,6 +126,10 @@ class AmDtlsConnection : public AmStreamConnection, public Botan::TLS::Callbacks
     srtp_profile_t srtp_profile;
     dtls_rand_generator rand_gen;
     bool activated;
+    bool is_client;
+    DtlsTimer timer;
+protected:
+    void initConnection();
 public:
     AmDtlsConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client);
     virtual ~AmDtlsConnection();
@@ -121,6 +138,7 @@ public:
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
     ssize_t send(AmRtpPacket * packet) override;
+    void timer_check();
 
     void tls_emit_data(const uint8_t data[], size_t size) override;
     void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) override;
