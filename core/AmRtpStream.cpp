@@ -1862,8 +1862,10 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, con
 
     //ensure correct crypto parameters
     m.crypto.clear();
+#ifdef WITH_ZRTP
     m.zrtp_hash.hash.clear();
     m.zrtp_hash.is_use = false;
+#endif
     m.dir = SdpMedia::DirUndefined;
     m.setup = S_UNDEFINED;
     m.transport = transport;
