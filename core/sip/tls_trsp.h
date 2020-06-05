@@ -56,6 +56,7 @@ public:
     bool allow_dtls10() const override { return false;}
     bool allow_dtls12() const override { return false;}
     bool require_cert_revocation_info() const override { return false; }
+    bool require_client_certificate_authentication() const override;
 
     //Credentials_Manager functions
     vector<Botan::Certificate_Store*> trusted_certificate_authorities(const string& type, const string& context) override;

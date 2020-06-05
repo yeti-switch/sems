@@ -4,6 +4,8 @@
 
 #include <botan/tls_client.h>
 #include <botan/tls_server.h>
+#include <botan/tls_exceptn.h>
+#include <botan/tls_alert.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
 #include "AmLCContainers.h"
@@ -88,11 +90,7 @@ vector<Botan::Certificate_Store *> dtls_conf::trusted_certificate_authorities(co
         ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
     }
 
-    if(s_server && !s_server->require_client_certificate) {
-        return std::vector<Botan::Certificate_Store*>();
-    } else {
-        return ca;
-    }
+    return ca;
 }
 
 bool dtls_conf::allow_dtls10() const
@@ -424,17 +422,22 @@ void AmDtlsConnection::tls_verify_cert_chain(const vector<Botan::X509_Certificat
                                              const string& hostname,
                                              const Botan::TLS::Policy& policy)
 {
-    if((dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_chain) ||
+    if((dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_chain &&
+        !dtls_settings->s_client->verify_certificate_cn) ||
         (dtls_settings->s_server && !dtls_settings->s_server->verify_client_certificate)) {
         return;
     }
 
-    if(dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_cn)
-        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
-    else
+    if(dtls_settings->s_client && dtls_settings->s_client->verify_certificate_cn) {
+        if(!dtls_settings->s_client->verify_certificate_chain) {
+            if(!cert_chain[0].matches_dns_name(hostname))
+                throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_STATUS_RESPONSE, "Verify common name certificate failed");
+        } else
+            Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
+    } else
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
 
     std::transform(fingerprint.hash.begin(), fingerprint.hash.end(), fingerprint.hash.begin(), static_cast<int(*)(int)>(std::toupper));
     if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
-        throw Botan::Exception("fingerprint is not equal");
+        throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_HASH_VALUE, "fingerprint is not equal");
 }

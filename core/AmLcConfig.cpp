@@ -271,7 +271,6 @@ namespace Config {
         CFG_STR(PARAM_CERTIFICATE_NAME, "", CFGF_NODEFAULT),
         CFG_STR(PARAM_CERTIFICATE_KEY_NAME, "", CFGF_NODEFAULT),
         CFG_BOOL(PARAM_VERIFY_CERT_NAME, cfg_true, CFGF_NONE),
-        CFG_BOOL(PARAM_REQUIRE_CERT_NAME, cfg_true, CFGF_NONE),
         CFG_STR_LIST(PARAM_CIPHERS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_MACS_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_DH_PARAM_NAME, "", CFGF_NONE),
@@ -1609,17 +1608,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
                 rtpinfo->server_settings.macs_list.push_back(mac);
             }
             rtpinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
-            rtpinfo->server_settings.require_client_certificate = cfg_getbool(server, PARAM_REQUIRE_CERT_NAME);
+            rtpinfo->server_settings.require_client_certificate = true;
             rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
             for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
                 std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
                 rtpinfo->server_settings.ca_list.push_back(ca);
             }
 
-            if(rtpinfo->server_settings.require_client_certificate && rtpinfo->server_settings.ca_list.empty()) {
-                ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
-                return nullptr;
-            }
             if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
                 ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
                 return nullptr;
@@ -1719,10 +1714,6 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             stlinfo->server_settings.ca_list.push_back(ca);
         }
 
-        if(stlinfo->server_settings.require_client_certificate && stlinfo->server_settings.ca_list.empty()) {
-            ERROR("incorrect server tls configuration for interface %s: ca list cannot be empty, if sets require client certificate", if_name.c_str());
-            return nullptr;
-        }
         if(stlinfo->server_settings.verify_client_certificate && !stlinfo->server_settings.require_client_certificate) {
             ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
             return nullptr;

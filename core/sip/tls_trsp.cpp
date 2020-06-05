@@ -16,6 +16,8 @@
 #include <botan/tls_server.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
+#include <botan/tls_exceptn.h>
+#include <botan/tls_alert.h>
 
 
 tls_conf::tls_conf(tls_client_settings* settings)
@@ -192,11 +194,7 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
         ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
     }
 
-    if(s_server && !s_server->require_client_certificate) {
-        return std::vector<Botan::Certificate_Store*>();
-    } else {
-        return ca;
-    }
+    return ca;
 }
 
 vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
@@ -224,6 +222,12 @@ Botan::Private_Key* tls_conf::private_key_for(const Botan::X509_Certificate& cer
         return &*key;
     }
     return nullptr;
+}
+
+bool tls_conf::require_client_certificate_authentication() const
+{
+    if(s_server) return s_server->require_client_certificate;
+    return false;
 }
 
 void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, std::string mac_)
@@ -428,14 +432,18 @@ void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certif
                             const std::string& hostname,
                             const Botan::TLS::Policy& policy)
 {
-    if((settings.s_client && !settings.s_client->verify_certificate_chain) ||
+    if((settings.s_client && !settings.s_client->verify_certificate_chain && !settings.s_client->verify_certificate_cn) ||
         (settings.s_server && !settings.s_server->verify_client_certificate)) {
         return;
     }
 
-    if(settings.s_client && !settings.s_client->verify_certificate_cn)
-        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
-    else
+    if(settings.s_client && settings.s_client->verify_certificate_cn) {
+        if(settings.s_client->verify_certificate_chain) {
+            if(!cert_chain[0].matches_dns_name(hostname))
+                throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_STATUS_RESPONSE, "Verify common name certificate failed");
+        } else
+            Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
+    } else
         Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
 }
 
