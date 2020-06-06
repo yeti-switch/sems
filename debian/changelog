@@ -1,3 +1,11 @@
+sems (1.22.0) stable; urgency=low
+
+  * remove media-interfaces.ip4/6.rtp.srtp.server.require_client_certificate parameter
+  * fix tls and dtls certificate verification
+  * fix build without ZRTP support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 06 Jun 2020 15:04:01 +0300
+
 sems (1.21.0) stable; urgency=low
 
   * fix dtls-srtp session negotiation
