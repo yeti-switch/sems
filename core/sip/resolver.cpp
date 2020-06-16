@@ -1366,12 +1366,14 @@ int _resolver::set_destination_ip(
                         srv_name += "udp";
                     } else if(!lower_cmp_n(next_trsp,"tcp")) {
                         srv_name += "tcp";
+                    } else if(!lower_cmp_n(next_trsp,"tls")) {
+                        srv_name += "tls";
                     } else {
                         DBG("unsupported transport: skip SRV lookup");
                         goto no_SRV;
                     }
                 } else if(!lower_cmp_n(next_scheme,"sips")) {
-                    srv_name = "_sip._tcp";
+                    srv_name = "_sips._tcp";
                 }
 
                 srv_name += "." + nh;
