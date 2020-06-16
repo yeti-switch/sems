@@ -89,6 +89,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     media_type(MediaType::MT_AUDIO),
     reuse_media_slot(true),
     use_ice_media_stream(false),
+    rtcp_multiplexing(false),
     rtp_interface(-1),
     rtp_proto_id(-1),
     input(nullptr), output(nullptr),

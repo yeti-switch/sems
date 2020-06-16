@@ -1,3 +1,9 @@
+sems (1.22.1) stable; urgency=low
+
+  * AmSession: fix uninitialized rtcp_multiplexing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 16 Jun 2020 13:35:38 +0300
+
 sems (1.22.0) stable; urgency=low
 
   * remove media-interfaces.ip4/6.rtp.srtp.server.require_client_certificate parameter
