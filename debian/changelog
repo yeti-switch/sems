@@ -1,3 +1,10 @@
+sems (1.23.0) stable; urgency=low
+
+  * registrar_client: 'sips' scheme support for registration
+  * resolver: _sip._tls and _sips._tcp SRV resolving
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 18 Jun 2020 16:12:50 +0300
+
 sems (1.22.1) stable; urgency=low
 
   * AmSession: fix uninitialized rtcp_multiplexing
