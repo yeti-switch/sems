@@ -1,3 +1,9 @@
+sems (1.23.1) stable; urgency=low
+
+  * AmSipRegistration: ensure IPv6 reference for domain 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 18 Jun 2020 17:05:17 +0300
+
 sems (1.23.0) stable; urgency=low
 
   * registrar_client: 'sips' scheme support for registration
