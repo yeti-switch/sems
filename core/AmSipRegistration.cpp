@@ -56,38 +56,23 @@ AmSIPRegistration::AmSIPRegistration(
     reg_send_begin(0),
     error_code(0)
 {
-    req.user     = info.user;
-    req.method   = "REGISTER";
-    req.r_uri    = "sip:"+info.domain;
-    req.from     = info.name+" <sip:"+info.user+"@"+info.domain+">";
-    req.from_uri = "sip:"+info.user+"@"+info.domain;
-    req.from_tag = handle;
-    req.to       = req.from;
-    req.to_tag   = "";
-    req.callid   = AmSession::getNewId();
-
-    reg_timers_override.stimer_f = static_cast<unsigned int>(info.transaction_timeout);
-    reg_timers_override.stimer_m = static_cast<unsigned int>(info.srv_failover_timeout);
-
-    patch_transport(req.r_uri,info.transport_protocol_id);
-
-    // clear dlg.callid? ->reregister?
-    dlg.initFromLocalRequest(req);
-    dlg.cseq = 50;
+    applyInfo();
 }
 
 void AmSIPRegistration::patch_transport(string &uri, int transport_protocol_id)
 {
     switch(transport_protocol_id) {
     case sip_transport::UDP: break;
-    case sip_transport::TCP: {
-        DBG("%s patch uri to use TCP transport. current value is: '%s'",
-            handle.c_str(),uri.c_str());
+    case sip_transport::TCP:
+    case sip_transport::TLS: {
+        auto transport_name = transport_str(transport_protocol_id);
+        DBG("%s patch uri to use %.*s transport. current value is: '%s'",
+            handle.c_str(),transport_name.len, transport_name.s, uri.c_str());
         AmUriParser parser;
         parser.uri = uri;
         if(!parser.parse_uri()) {
-            ERROR("%s Error parsing '%s' for protocol patching to TCP. leave it as is",
-                 handle.c_str(),parser.uri.c_str());
+            ERROR("%s Error parsing '%s' for protocol patching to %.*s. leave it as is",
+                 handle.c_str(),parser.uri.c_str(), transport_name.len, transport_name.s);
             break;
         }
         //check for existent transport param
@@ -105,13 +90,15 @@ void AmSIPRegistration::patch_transport(string &uri, int transport_protocol_id)
                 }
             }
             if(can_patch) {
-                parser.uri_param+=";transport=TCP";
+                parser.uri_param+=";transport=";
+                parser.uri_param+=c2stlstr(transport_name);
                 uri = parser.uri_str();
                 DBG("%s uri patched to: '%s'",
                     handle.c_str(),uri.c_str());
             }
         } else {
-            parser.uri_param = "transport=TCP";
+            parser.uri_param = "transport=";
+            parser.uri_param+=c2stlstr(transport_name);
             uri = parser.uri_str();
             DBG("%s uri patched to: '%s'",
                 handle.c_str(),uri.c_str());
@@ -138,19 +125,60 @@ void AmSIPRegistration::setRegistrationInfo(const SIPRegistrationInfo& _info)
     cred.user = info.user;
     cred.pwd = info.pwd;
 
+    applyInfo();
+}
+
+void AmSIPRegistration::applyInfo()
+{
+    AmUriParser uri_parser;
+
+    req.method   = "REGISTER";
     req.user     = info.user;
-    req.r_uri    = "sip:"+info.domain;
-    req.from     = info.name+" <sip:"+info.user+"@"+info.domain+">";
-    req.from_uri = "sip:"+info.user+"@"+info.domain;
+
+    uri_parser.uri_host = info.domain;
+
+    //set scheme
+    if(sip_uri::SIPS==info.scheme_id) {
+        uri_parser.uri_scheme = "sips";
+    }
+
+    //add transport
+    if(sip_transport::UDP!=info.transport_protocol_id &&
+       sip_uri::SIPS!=info.scheme_id)
+    {
+        uri_parser.uri_param+= "transport=";
+        uri_parser.uri_param+= c2stlstr(transport_str(info.transport_protocol_id));
+    }
+
+    req.r_uri = uri_parser.uri_str();
+    uri_parser.uri_param.clear();   //remove transport for To/From/Contact headers
+
+    uri_parser.display_name = info.name;
+    uri_parser.uri_user = info.user;
+
+    req.from = uri_parser.nameaddr_str();
+    req.from_tag = handle;
+
     req.to       = req.from;
     req.to_tag   = "";
 
-    patch_transport(req.r_uri,info.transport_protocol_id);
+    req.from_uri = uri_parser.uri_str(); //Contact header
 
-    // to trigger setting dlg identifiers
-    dlg.setCallid(string());
+    req.callid   = AmSession::getNewId();
+
+    reg_timers_override.stimer_f = static_cast<unsigned int>(info.transaction_timeout);
+    reg_timers_override.stimer_m = static_cast<unsigned int>(info.srv_failover_timeout);
 
     dlg.initFromLocalRequest(req);
+    dlg.cseq = 50;
+
+    // set outbound proxy as next hop
+    if (!info.proxy.empty()) {
+        dlg.outbound_proxy = info.proxy;
+        patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
+    } else if (!AmConfig.outbound_proxy.empty()) {
+        dlg.outbound_proxy = AmConfig.outbound_proxy;
+    }
 }
 
 void AmSIPRegistration::setSessionEventHandler(AmSessionEventHandler* new_seh)
@@ -194,21 +222,8 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     unregistering = false;
     postponed = false;
 
-    req.to_tag     = "";
-    req.r_uri    = "sip:"+info.domain;
-
-    patch_transport(req.r_uri,info.transport_protocol_id);
-
-    dlg.setRemoteTag(string());
+    dlg.setRemoteTag(req.to_tag);
     dlg.setRemoteUri(req.r_uri);
-    
-    // set outbound proxy as next hop
-    if (!info.proxy.empty()) {
-        dlg.outbound_proxy = info.proxy;
-        patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-    } else if (!AmConfig.outbound_proxy.empty()) {
-        dlg.outbound_proxy = AmConfig.outbound_proxy;
-    }
 
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
                   int2str(expires_interval) + CRLF;
@@ -269,21 +284,8 @@ bool AmSIPRegistration::doUnregister()
     unregistering = true;
     postponed = false;
 
-    req.to_tag     = "";
-    req.r_uri      = "sip:"+info.domain;
-    patch_transport(req.r_uri,info.transport_protocol_id);
-
-    dlg.setRemoteTag(string());
+    dlg.setRemoteTag(req.to_tag);
     dlg.setRemoteUri(req.r_uri);
-
-    // set outbound proxy as next hop
-    if (!info.proxy.empty()) {
-        dlg.outbound_proxy = info.proxy;
-        patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-    } else if (!AmConfig.outbound_proxy.empty()) {
-        dlg.outbound_proxy = AmConfig.outbound_proxy;
-        patch_transport(dlg.outbound_proxy,info.proxy_transport_protocol_id);
-    }
 
     int flags=0;
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) "0" CRLF;

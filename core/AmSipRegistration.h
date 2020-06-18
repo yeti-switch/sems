@@ -37,6 +37,8 @@ using std::string;
 #include "AmSessionEventHandler.h"
 #include "RegShaper.h"
 
+#include "sip/parse_uri.h"
+
 #define DEFAULT_REGISTER_RETRY_DELAY 5
 #define REGISTER_ATTEMPTS_UNLIMITED 0
 
@@ -59,6 +61,7 @@ struct SIPRegistrationInfo {
   bool force_expires_interval;
   int transaction_timeout;
   int srv_failover_timeout;
+  sip_uri::uri_scheme scheme_id;
 
   SIPRegistrationInfo(
     const string& id,
@@ -77,7 +80,8 @@ struct SIPRegistrationInfo {
     const int& transport_protocol_id,
     const int& proxy_transport_protocol_id,
     const int& transaction_timeout,
-    const int& srv_failover_timeout)
+    const int& srv_failover_timeout,
+    sip_uri::uri_scheme scheme_id = sip_uri::SIP)
   : id(id),domain(domain),user(user),name(name),
     auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
     contact_uri_params(contact_uri_params),
@@ -89,7 +93,8 @@ struct SIPRegistrationInfo {
     proxy_transport_protocol_id(proxy_transport_protocol_id),
     attempt(0),
     transaction_timeout(transaction_timeout),
-    srv_failover_timeout(srv_failover_timeout)
+    srv_failover_timeout(srv_failover_timeout),
+    scheme_id(scheme_id)
   { }
 };
 
@@ -134,6 +139,7 @@ class AmSIPRegistration
   ~AmSIPRegistration();
 
   void setRegistrationInfo(const SIPRegistrationInfo& _info);
+  void applyInfo();
 
   void setSessionEventHandler(AmSessionEventHandler* new_seh);
 

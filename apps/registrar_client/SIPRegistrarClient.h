@@ -131,7 +131,8 @@ class SIPRegistrarClient
         const int& proxy_transport_protocol_id,
         const int &transaction_timeout,
         const int &srv_failover_timeout,
-        const string& handle);
+        const string& handle,
+        sip_uri::uri_scheme scheme_id);
     void removeRegistration(const string& handle);
     void removeRegistrationById(const string& id);
     bool hasRegistration(const string& handle);

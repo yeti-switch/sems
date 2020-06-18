@@ -720,7 +720,8 @@ string SIPRegistrarClient::createRegistration(
     const int& proxy_transport_protocol_id,
     const int &transaction_timeout,
     const int &srv_failover_timeout,
-    const string& handle)
+    const string& handle,
+    sip_uri::uri_scheme scheme_id = sip_uri::SIP)
 {
     DBG("createRegistration");
 
@@ -744,7 +745,8 @@ string SIPRegistrarClient::createRegistration(
                 transport_protocol_id,
                 proxy_transport_protocol_id,
                 transaction_timeout,
-                srv_failover_timeout),
+                srv_failover_timeout,
+                scheme_id),
             l_handle,
             sess_link
         )
@@ -831,6 +833,7 @@ void SIPRegistrarClient::invoke(
             max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
             transport_protocol_id = sip_transport::UDP,
             proxy_transport_protocol_id = sip_transport::UDP,
+            scheme_id = sip_uri::SIP,
             transaction_timeout = 0,
             srv_failover_timeout = 0;
         bool force_expires_interval = false;
@@ -958,6 +961,18 @@ void SIPRegistrarClient::invoke(
             }
         } else break;
 
+        if (args.size() > 18) {
+            AmArg &a = args.get(18);
+            if(isArgInt(a)) {
+                scheme_id = a.asInt();
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), scheme_id)){
+                throw AmSession::Exception(500,"wrong scheme_id argument");
+            }
+            if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
+                throw AmSession::Exception(500,"unexpected scheme_id value");
+            }
+        } else break;
+
         } while(0);
 
         ret.push(createRegistration(
@@ -978,7 +993,8 @@ void SIPRegistrarClient::invoke(
             proxy_transport_protocol_id,
             transaction_timeout,
             srv_failover_timeout,
-            handle));
+            handle,
+            static_cast<sip_uri::uri_scheme>(scheme_id)));
     } else if(method == "removeRegistration") {
         removeRegistration(args.get(0).asCStr());
     } else if(method == "removeRegistrationById") {

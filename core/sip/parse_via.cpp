@@ -681,17 +681,17 @@ cstring transport_str(int transport_id)
 {
     switch(transport_id) {
     case sip_transport::UDP:
-        return "UDP";
+        return "udp";
     case sip_transport::TCP:
-        return "TCP";
+        return "tcp";
     case sip_transport::TLS:
-        return "TLS";
+        return "tls";
     case sip_transport::WS:
-        return "WS";
+        return "ws";
     case sip_transport::WSS:
-        return "WSS";
+        return "wss";
     case sip_transport::SCTP:
-        return "SCTP";
+        return "sctp";
     }
     return "";
 }
