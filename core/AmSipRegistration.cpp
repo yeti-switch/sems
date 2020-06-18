@@ -136,6 +136,7 @@ void AmSIPRegistration::applyInfo()
     req.user     = info.user;
 
     uri_parser.uri_host = info.domain;
+    ensure_ipv6_reference(uri_parser.uri_host);
 
     //set scheme
     if(sip_uri::SIPS==info.scheme_id) {
@@ -606,3 +607,4 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
     } //else if (reply.code >= 300)
 }
 
+;
