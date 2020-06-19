@@ -803,6 +803,23 @@ int main(int argc, char* argv[])
         return static_cast<unsigned long long>(time(nullptr) - start_time);
     });
 
+  stat_group(Gauge, "core", "version").addFunctionCounter(
+    []()->unsigned long long{
+        return 1;
+    }).addLabel("core", SEMS_VERSION);
+
+  stat_group(Gauge, "core", "shutdown_mode").addFunctionCounter(
+    []()->unsigned long long{
+        return AmConfig.shutdown_mode == true ? 1 : 0;
+    });
+
+  if(AmConfig.session_limit) {
+    stat_group(Gauge, "core", "sessions_limit").addFunctionCounter(
+        []()->unsigned long long{
+            return AmConfig.session_limit;
+        });
+  }
+
   stat_group(Counter, "core", "start_time").addAtomicCounter().set(
     static_cast<unsigned long long>(start_time));
 

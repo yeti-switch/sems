@@ -68,6 +68,7 @@ AmSessionContainer::AmSessionContainer()
         .addFunctionCounter([]() -> unsigned long long {
             return AmSessionContainer::instance()->d_sessions.size();
         });
+    session_limit_reject = &stat_group(Gauge, "core", "sessions_limit_rejects").addAtomicCounter();
 }
 
 AmSessionContainer* AmSessionContainer::instance()
@@ -535,6 +536,8 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
       
       DBG("session_limit %d reached. Not creating session.\n", 
 	  AmConfig.session_limit);
+      if(session_limit_reject)
+        session_limit_reject->inc(1);
 
 	  AmSipDialog::reply_error(req,AmConfig.session_limit_err_code,
 			       AmConfig.session_limit_err_reason);

@@ -91,6 +91,8 @@ class AmSessionContainer : public AmThread
   /** Mutex to protect the cps container */
   AmMutex      cps_mut;
 
+  AtomicCounter* session_limit_reject;
+
   enum { CPS_SAMPLERATE = 5 };
 
   unsigned int CPSLimit;
