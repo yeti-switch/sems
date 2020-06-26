@@ -17,6 +17,7 @@ void StunTimer::updateTimer(uint32_t duration)
 
 void StunTimer::fire()
 {
+    CLASS_DBG("StunTimer::fire() spaddr: %p", get_addr_str(&spaddr).data());
     stun_processor::instance()->fire(&spaddr);
 }
 
@@ -31,10 +32,13 @@ AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& r
     SA_transport(&r_addr) = transport->getTransportType();
     stun_processor::instance()->insert(&r_addr, this);
     timer = new StunTimer(&r_addr, 0);
+    CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, timer: %p",
+              r_host.data(), r_port, timer);
 }
 
 AmStunConnection::~AmStunConnection()
 {
+    CLASS_DBG("~AmStunConnection()");
     if(timer) wheeltimer::instance()->remove_timer(timer);
     stun_processor::instance()->remove(&r_addr);
 }
@@ -172,6 +176,8 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
 void AmStunConnection::send_request()
 {
+    CLASS_DBG("AmStunConnection::send_request()");
+
     if(timer) {
         timer->updateTimer(auth_state == ALLOW ? 1500 : 500);
     }
