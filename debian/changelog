@@ -1,3 +1,10 @@
+sems (1.23.2) stable; urgency=low
+
+  * AmStunConnection, AmStunProcessor: additional logging
+  * AmSipSubscription: set expires 60 for REFER subscriptions
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 26 Jun 2020 16:52:05 +0300
+
 sems (1.23.1) stable; urgency=low
 
   * AmSipRegistration: ensure IPv6 reference for domain 
