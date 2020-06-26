@@ -41,6 +41,7 @@
 #include <assert.h>
 
 #define DEFAULT_SUB_EXPIRES 600
+#define REFER_SUB_EXPIRES 60
 
 // TIMER N should first expire once transaction timer has hit
 // in case we receive no reply to SUBSCRIBE.
@@ -124,7 +125,10 @@ string SingleSubscription::getNotifyHeaders()
   case SubState_active:
     hdrs+= SIP_HDR_COLSP(SIP_HDR_SUBSCRIPTION_STATE) "active";
     if(expires!=0) {
-      hdrs+= ";expires=" + int2str((unsigned int)expires);
+      auto now = AmAppTimer::instance()->unix_clock.get();
+      if(expires > now) {
+            hdrs+= ";expires=" + int2str(static_cast<unsigned int>(expires - now));
+      }
     }
     hdrs+=CRLF;
     break;
@@ -179,6 +183,7 @@ SingleSubscription* AmSipSubscription::makeSubscription(const AmSipRequest& req,
 
   string event;
   string id;
+  int expires = 0;
 
   if(req.method == SIP_METH_SUBSCRIBE) {
     // fetch Event-HF
@@ -190,7 +195,8 @@ SingleSubscription* AmSipSubscription::makeSubscription(const AmSipRequest& req,
     //TODO: fetch Refer-Sub-HF (RFC 4488)
     event = "refer";
     id = int2str(req.cseq);
-  } 
+    expires = REFER_SUB_EXPIRES;
+  }
   else {
     DBG("subscription are only created by SUBSCRIBE or REFER requests\n");
     // subscription are only created by SUBSCRIBE or REFER requests
@@ -198,7 +204,11 @@ SingleSubscription* AmSipSubscription::makeSubscription(const AmSipRequest& req,
     return NULL;
   }
 
-  return newSingleSubscription(role,event,id);
+  auto subscription = newSingleSubscription(role,event,id);
+  if(expires) {
+    subscription->setExpires(AmAppTimer::instance()->unix_clock.get() + expires);
+  }
+  return subscription;
 }
 
 SingleSubscription::~SingleSubscription()
