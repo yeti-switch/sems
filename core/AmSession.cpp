@@ -1350,6 +1350,13 @@ void AmSession::getMediaAcl(trsp_acl& acl)
     acl = media_acl;
 }
 
+void AmSession::setMediaAcl(const std::vector<AmSubnet>& networks)
+{
+    media_acl.set_action(trsp_acl::Allow);
+    for(auto& network : networks)
+        media_acl.add_network(network);
+}
+
 string AmSession::localMediaIP(AddressType addrType)
 {
   // sets rtp_interface if not initialized

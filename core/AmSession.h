@@ -680,6 +680,7 @@ public:
   int getRtpProtoId();
   int setRtpProtoId(int _rtp_proto_id);
   void getMediaAcl(trsp_acl& acl);
+  void setMediaAcl(const std::vector<AmSubnet>& networks);
 };
 
 inline AmRtpAudio* AmSession::RTPStream() {
