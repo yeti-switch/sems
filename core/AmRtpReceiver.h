@@ -32,6 +32,7 @@
 #include "AmRtpSession.h"
 #include "atomic_types.h"
 #include "singleton.h"
+#include "AmStatistics.h"
 
 #include <sys/epoll.h>
 
@@ -135,6 +136,7 @@ class _AmRtpReceiver
   unsigned int         n_receivers;
 
   atomic_int next_index;
+  AtomicCounter& drop_counter;
 
 protected:
   _AmRtpReceiver();
@@ -147,6 +149,7 @@ public:
 
   int addStream(int sd, AmRtpSession* stream, int old_ctx_idx);
   void removeStream(int sd, int ctx_idx);
+  void inc_drop_packets();
 };
 
 typedef singleton<_AmRtpReceiver> AmRtpReceiver;

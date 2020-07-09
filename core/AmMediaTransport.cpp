@@ -967,8 +967,10 @@ void AmMediaTransport::recvPacket(int fd)
         trsp_acl::action_t action = media_acl.check(saddr);
         if(action == trsp_acl::Allow)
             onPacket(buffer, b_size, saddr, recv_time);
-        else
+        else {
             stream->inc_drop_pack();
+            AmRtpReceiver::instance()->inc_drop_packets();
+        }
     }
 }
 

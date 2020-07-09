@@ -90,7 +90,8 @@ void StreamCtxMap::put_pended(){
     }
 }
 
-_AmRtpReceiver::_AmRtpReceiver()
+_AmRtpReceiver::_AmRtpReceiver() :
+    drop_counter(stat_group(Counter, "core", "media_dropped").addAtomicCounter())
 {
   n_receivers = AmConfig.rtp_recv_threads;
   receivers = new AmRtpReceiverThread[n_receivers];
@@ -248,4 +249,9 @@ void _AmRtpReceiver::removeStream(int sd, int ctx_idx)
 {
   unsigned int i = sd % n_receivers;
   receivers[i].removeStream(sd,ctx_idx);
+}
+
+void _AmRtpReceiver::inc_drop_packets()
+{
+    drop_counter.inc();
 }
