@@ -3,7 +3,7 @@
 #include "AmUtils.h"
 #include "sip/ip_util.h"
 
-#define STUN_TIMER_INTERVAL_MICROSECONDS 200000
+#define STUN_TIMER_INTERVAL_MICROSECONDS 125000
 
 AmStunProcessor::AmStunProcessor()
   : epoll_fd(-1),
@@ -99,8 +99,8 @@ void AmStunProcessor::on_timer()
     connections_mutex.lock();
     auto i = connections.begin();
     while(i != connections.end()) {
-        /*DBG("AmStunProcessor::on_timer process connection: %p, timeout: %llu",
-            i->first, i->second);*/
+        /*DBG("AmStunProcessor::on_timer process connection: %p, now: %llu, timeout: %llu",
+            i->first, now, i->second);*/
         if(now > i->second) {
             //DBG("send_request for connection %p", i->first);
             i->first->send_request();
@@ -116,8 +116,8 @@ void AmStunProcessor::on_timer()
 
     while(!set_timer_events.empty()) {
         auto &e = set_timer_events.front();
-        DBG("AmStunProcessor::process set timer event: %p, %llu",
-            e.connection, e.timeout);
+        /*DBG("AmStunProcessor::process set timer event: %p, %llu",
+            e.connection, e.timeout);*/
         connections[e.connection] = now + e.timeout;
         set_timer_events.pop_front();
     }
