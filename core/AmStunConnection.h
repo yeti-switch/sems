@@ -10,15 +10,6 @@
 
 using std::string;
 
-class StunTimer : public timer
-{
-    sp_addr spaddr;
-public:
-    StunTimer(const sp_addr& addr, uint32_t duration);
-    void updateTimer(uint32_t duration);
-    void fire() override;
-};
-
 class AmStunConnection : public AmStreamConnection
 {
 public:
@@ -37,7 +28,6 @@ private:
     string remote_password;
     string local_user;
     string remote_user;
-    StunTimer* timer;
 
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);

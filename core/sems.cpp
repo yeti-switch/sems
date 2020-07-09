@@ -30,6 +30,7 @@
 #include "AmPlugIn.h"
 #include "AmSessionContainer.h"
 #include "AmMediaProcessor.h"
+#include "AmStunProcessor.h"
 #include "AmRtpReceiver.h"
 #include "AmEventDispatcher.h"
 #include "AmSessionProcessor.h"
@@ -762,6 +763,9 @@ int main(int argc, char* argv[])
   INFO("Starting media processor\n");
   AmMediaProcessor::instance()->init();
 
+  INFO("Starting stun processor\n");
+  stun_processor::instance()->start();
+
   // init thread usage with libevent
   // before it's too late
   if(evthread_use_pthreads() != 0) {
@@ -838,6 +842,9 @@ int main(int argc, char* argv[])
 
   INFO("Disposing media processor\n");
   AmMediaProcessor::dispose();
+
+  INFO("Disposing stun processor\n");
+  stun_processor::dispose();
 
   INFO("Disposing audio file recorder\n");
   AmAudioFileRecorderProcessor::dispose();

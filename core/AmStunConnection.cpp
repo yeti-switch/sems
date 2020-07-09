@@ -4,43 +4,22 @@
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
 
-StunTimer::StunTimer(const sp_addr& addr, uint32_t duration)
-: timer(duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock), spaddr(addr)
-{
-}
-
-void StunTimer::updateTimer(uint32_t duration)
-{
-    expires = duration/(TIMER_RESOLUTION/1000) + wheeltimer::instance()->wall_clock;
-    wheeltimer::instance()->insert_timer(this);
-}
-
-void StunTimer::fire()
-{
-    CLASS_DBG("StunTimer::fire() spaddr: %p", get_addr_str(&spaddr).data());
-    stun_processor::instance()->fire(&spaddr);
-}
-
 AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _priority)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
     , priority(_priority)
     , auth_state(AuthState::NO_AUTH)
     , err_code(0)
-    , timer(0)
     , depend_conn(0)
 {
     SA_transport(&r_addr) = transport->getTransportType();
-    stun_processor::instance()->insert(&r_addr, this);
-    timer = new StunTimer(&r_addr, 0);
-    CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, timer: %p",
-              r_host.data(), r_port, timer);
+    CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu",
+              r_host.data(), r_port, SA_transport(&r_addr));
 }
 
 AmStunConnection::~AmStunConnection()
 {
     CLASS_DBG("~AmStunConnection()");
-    if(timer) wheeltimer::instance()->remove_timer(timer);
-    stun_processor::instance()->remove(&r_addr);
+    stun_processor::instance()->remove_timer(this);
 }
 
 void AmStunConnection::set_credentials(const string& luser, const string& lpassword,
@@ -178,9 +157,7 @@ void AmStunConnection::send_request()
 {
     CLASS_DBG("AmStunConnection::send_request()");
 
-    if(timer) {
-        timer->updateTimer(auth_state == ALLOW ? 1500 : 500);
-    }
+    stun_processor::instance()->set_timer(this, auth_state == ALLOW ? 1500 : 500);
 
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
@@ -218,14 +195,11 @@ void AmStunConnection::send_request()
 
 void AmStunConnection::updateStunTimer()
 {
-    if(!timer && auth_state == ALLOW) {
-        timer = new StunTimer(&r_addr, 1500);
-        wheeltimer::instance()->insert_timer(timer);
+    if(auth_state == ALLOW) {
+        stun_processor::instance()->set_timer(this, 1500);
+    } else {
+        stun_processor::instance()->remove_timer(this);
     }
-    else if(timer && auth_state != ALLOW) {
-         wheeltimer::instance()->remove_timer(timer);
-         timer = 0;
-     }
 }
 
 AmStunConnection::AuthState AmStunConnection::getConnectionState()
