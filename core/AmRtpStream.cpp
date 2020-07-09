@@ -150,6 +150,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     dead_rtp_time(AmConfig.dead_rtp_time),
     incoming_bytes(0),
     outgoing_bytes(0),
+    dropped_packets_count(0),
     decode_errors(0),
     rtp_parse_errors(0),
     out_of_buffer_errors(0),
@@ -1922,6 +1923,7 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     auto &rx  = s.rx;
     auto &tx = s.tx;
 
+    s.dropped = dropped_packets_count;
     s.rtt = rtp_stats.rtt;
     memcpy(&s.time_start, &start_time, sizeof(struct timeval));
     gettimeofday(&s.time_end, nullptr);
@@ -1962,6 +1964,11 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
 
     //TX specific
     tx.jitter = rtp_stats.rtcp_remote_jitter;
+}
+
+void AmRtpStream::getMediaAcl(trsp_acl& acl)
+{
+    session->getMediaAcl(acl);
 }
 
 void AmRtpStream::debug()

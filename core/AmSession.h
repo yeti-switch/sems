@@ -86,6 +86,7 @@ protected:
   /** get new RTP format for the session */
   //virtual AmAudioRtpFormat* getNewRtpFormat();
 
+  trsp_acl media_acl;
 private:
   AmDtmfDetector   m_dtmfDetector;
   AmDtmfEventQueue m_dtmfEventQueue;
@@ -678,6 +679,7 @@ public:
   void setRtpInterface(int _rtp_interface);
   int getRtpProtoId();
   int setRtpProtoId(int _rtp_proto_id);
+  void getMediaAcl(trsp_acl& acl);
 };
 
 inline AmRtpAudio* AmSession::RTPStream() {

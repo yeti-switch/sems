@@ -94,6 +94,8 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
         dtls_enable = srtp_enable && rtpinfo->dtls_enable;
         zrtp_enable = srtp_enable && rtpinfo->zrtp_enable;
     }
+
+    stream->getMediaAcl(media_acl);
 }
 
 AmMediaTransport::~AmMediaTransport()
@@ -962,12 +964,17 @@ ssize_t AmMediaTransport::recv(int sd)
 void AmMediaTransport::recvPacket(int fd)
 {
     if(recv(fd) > 0) {
-        onPacket(buffer, b_size, saddr, recv_time);
+        trsp_acl::action_t action = media_acl.check(saddr);
+        if(action == trsp_acl::Allow)
+            onPacket(buffer, b_size, saddr, recv_time);
+        else
+            stream->inc_drop_pack();
     }
 }
 
 void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_storage& addr, struct timeval recvtime)
 {
+    stream->updateRcvdBytes(size);
     AmStreamConnection::ConnectionType ctype;
     if(mode == TRANSPORT_MODE_DEFAULT) {
         ctype = GetConnectionType(buf, size);

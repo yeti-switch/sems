@@ -867,30 +867,34 @@ AmLcConfig::~AmLcConfig()
 void AmLcConfig::setValidationFunction(cfg_t* cfg)
 {
 // interfaces ACL validation
-#define set_method_validator(PROTO_NAME, PROTO_VERSION, METHOD_NAME) \
+#define set_method_validator(IF_NAME, PROTO_NAME, PROTO_VERSION, METHOD_NAME) \
     cfg_set_validate_func(cfg,\
-        SECTION_SIGIF_NAME "|" SECTION_IF_NAME "|" PROTO_VERSION "|"\
+        IF_NAME "|" SECTION_IF_NAME "|" PROTO_VERSION "|"\
         PROTO_NAME "|" METHOD_NAME "|" PARAM_METHOD_NAME,\
         validate_method_func)
 
-#define set_acl_validator_proto_version(PROTO_NAME, PROTO_VERSION) \
-    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_OPT_NAME);\
-    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_ORIGACL_NAME);\
-    set_method_validator(PROTO_NAME, PROTO_VERSION, SECTION_REG_ACL_NAME);
+#define set_sip_acl_validator_proto_version(PROTO_NAME, PROTO_VERSION) \
+    set_method_validator(SECTION_SIGIF_NAME, PROTO_NAME, PROTO_VERSION, SECTION_OPT_NAME);\
+    set_method_validator(SECTION_SIGIF_NAME, PROTO_NAME, PROTO_VERSION, SECTION_ORIGACL_NAME);\
+    set_method_validator(SECTION_SIGIF_NAME, PROTO_NAME, PROTO_VERSION, SECTION_REG_ACL_NAME);
 
-#define set_acl_validator_proto(PROTO_NAME) \
-    set_acl_validator_proto_version(PROTO_NAME, SECTION_IP4_NAME);\
-    set_acl_validator_proto_version(PROTO_NAME, SECTION_IP6_NAME);
+#define set_acl_validator_proto(DEF_NAME, PROTO_NAME) \
+    DEF_NAME(PROTO_NAME, SECTION_IP4_NAME);\
+    DEF_NAME(PROTO_NAME, SECTION_IP6_NAME);
 
-    set_acl_validator_proto(SECTION_SIP_UDP_NAME);
-    set_acl_validator_proto(SECTION_SIP_TCP_NAME);
-    set_acl_validator_proto(SECTION_SIP_TLS_NAME);
-    set_acl_validator_proto(SECTION_SIP_WS_NAME);
-    set_acl_validator_proto(SECTION_SIP_WSS_NAME);
+#define set_sip_acl_validator_proto(PROTO_NAME) \
+    set_acl_validator_proto(set_sip_acl_validator_proto_version, PROTO_NAME)
 
+    set_sip_acl_validator_proto(SECTION_SIP_UDP_NAME);
+    set_sip_acl_validator_proto(SECTION_SIP_TCP_NAME);
+    set_sip_acl_validator_proto(SECTION_SIP_TLS_NAME);
+    set_sip_acl_validator_proto(SECTION_SIP_WS_NAME);
+    set_sip_acl_validator_proto(SECTION_SIP_WSS_NAME);
+
+#undef set_sip_acl_validator_proto
 #undef set_acl_validator_proto
-#undef set_acl_validator_proto_version
-#undef set_acl_method_validator
+#undef set_sip_acl_validator_proto_version
+#undef set_method_validator
 
 // ip of interfaces validation
 #define set_ip_func_validator(INTERFACE_NAME, PROTO_NAME) \

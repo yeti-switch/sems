@@ -1345,6 +1345,11 @@ int AmSession::setRtpProtoId(int _rtp_proto_id)
   return 0;
 }
 
+void AmSession::getMediaAcl(trsp_acl& acl)
+{
+    acl = media_acl;
+}
+
 string AmSession::localMediaIP(AddressType addrType)
 {
   // sets rtp_interface if not initialized
