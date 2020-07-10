@@ -68,7 +68,7 @@ AmSessionContainer::AmSessionContainer()
         .addFunctionCounter([]() -> unsigned long long {
             return AmSessionContainer::instance()->d_sessions.size();
         });
-    session_limit_reject = &stat_group(Gauge, "core", "sessions_limit_rejects").addAtomicCounter();
+    session_limit_reject = &stat_group(Counter, "core", "sessions_limit_rejects").addAtomicCounter();
 }
 
 AmSessionContainer* AmSessionContainer::instance()
