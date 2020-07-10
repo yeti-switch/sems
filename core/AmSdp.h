@@ -125,14 +125,16 @@ struct SdpCrypto
 {
     unsigned int tag;
     CryptoProfile profile;
+    bool alt_alias;
     vector<SdpKeyInfo> keys;
     vector<string> sp;
 
-    SdpCrypto() : tag(0), profile(CP_NONE) {}
+    SdpCrypto() : tag(0), profile(CP_NONE), alt_alias(false) {}
 
     SdpCrypto(const SdpCrypto& crypto)
         : tag(crypto.tag), profile(crypto.profile)
-        , keys(crypto.keys), sp(crypto.sp){}
+        , keys(crypto.keys), sp(crypto.sp)
+        , alt_alias(crypto.alt_alias){}
 
     string print() const;
 

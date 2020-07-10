@@ -61,7 +61,7 @@ static bool is_wsp(char s);
 
 static MediaType media_type(std::string media);
 static TransProt transport_type(std::string transport);
-static CryptoProfile crypto_profile(std::string profile);
+static CryptoProfile crypto_profile(std::string profile, bool& alternative);
 static bool attr_check(std::string attr);
 
 enum parse_st {SDP_DESCR, SDP_MEDIA};
@@ -106,13 +106,13 @@ inline string media_t_2_str(int mt)
     }
 }
 
-inline string profile_t_2_str(int pt)
+inline string profile_t_2_str(int pt, bool alternative)
 {
     switch(pt){
         case CP_AES128_CM_SHA1_80: return "AES_CM_128_HMAC_SHA1_80";
         case CP_AES128_CM_SHA1_32: return "AES_CM_128_HMAC_SHA1_32";
-        case CP_AES256_CM_SHA1_80: return "AES_256_CM_HMAC_SHA1_80";
-        case CP_AES256_CM_SHA1_32: return "AES_256_CM_HMAC_SHA1_32";
+        case CP_AES256_CM_SHA1_80: return alternative ? "AES_CM_256_HMAC_SHA1_80" : "AES_256_CM_HMAC_SHA1_80";
+        case CP_AES256_CM_SHA1_32: return alternative ? "AES_CM_256_HMAC_SHA1_32" : "AES_256_CM_HMAC_SHA1_32";
         case CP_NULL_SHA1_80: return "NULL_HMAC_SHA1_80";
         case CP_NULL_SHA1_32: return "NULL_HMAC_SHA1_32";
 //         case CP_AEAD_AES_128_GCM: return "AEAD_AES_256_GCM";
@@ -203,7 +203,7 @@ string SdpCrypto::print() const
     string ret("a=crypto:");
     ret += int2str(tag);
     ret += " ";
-    ret += profile_t_2_str(profile);
+    ret += profile_t_2_str(profile, alt_alias);
     for(auto key:keys) {
         ret += " ";
         ret += key.print();
@@ -213,12 +213,13 @@ string SdpCrypto::print() const
 
 CryptoProfile SdpCrypto::str2profile(string str)
 {
-    return crypto_profile(str);
+    bool alt = false;
+    return crypto_profile(str, alt);
 }
 
 string SdpCrypto::profile2str(CryptoProfile profile)
 {
-    return profile_t_2_str(profile);
+    return profile_t_2_str(profile, false);
 }
 
 string SdpIceCandidate::print() const
@@ -1459,7 +1460,7 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
             }
             case PROFILE: {
                 string profile(attr_line, static_cast<size_t>(next-attr_line)-1);
-                crypto.profile = crypto_profile(profile);
+                crypto.profile = crypto_profile(profile, crypto.alt_alias);
                 crypto_st = KEY;
                 break;
             }
@@ -2025,11 +2026,12 @@ static TransProt transport_type(string transport)
 }
 
 
-static CryptoProfile crypto_profile(std::string profile)
+static CryptoProfile crypto_profile(std::string profile, bool& alternative)
 {
     string profile_uc = profile;
     std::transform(profile_uc.begin(), profile_uc.end(), profile_uc.begin(), toupper);
 
+    alternative = false;
     if(profile_uc == "AES_CM_128_HMAC_SHA1_32")
         return CP_AES128_CM_SHA1_32;
     else if(profile_uc == "AES_CM_128_HMAC_SHA1_80")
@@ -2038,7 +2040,13 @@ static CryptoProfile crypto_profile(std::string profile)
 //        return CP_AES192_CM_SHA1_32;
 //    else if(profile_uc == "AES_CM_192_HMAC_SHA1_80")
 //        return CP_AES192_CM_SHA1_80;
-    else if(profile_uc == "AES_256_CM_HMAC_SHA1_32")
+    else if(profile_uc == "AES_CM_256_HMAC_SHA1_32") {
+        alternative = true;
+        return CP_AES256_CM_SHA1_32;
+    } else if(profile_uc == "AES_CM_256_HMAC_SHA1_80") {
+        alternative = true;
+        return CP_AES256_CM_SHA1_80;
+    } else if(profile_uc == "AES_256_CM_HMAC_SHA1_32")
         return CP_AES256_CM_SHA1_32;
     else if(profile_uc == "AES_256_CM_HMAC_SHA1_80")
         return CP_AES256_CM_SHA1_80;
