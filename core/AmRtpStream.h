@@ -215,6 +215,7 @@ class AmRtpStream
     RtcpBidirectionalStat rtp_stats;
     struct timeval start_time;
     unsigned long long last_send_rtcp_report_ts;
+    unsigned long long dropped_packets_count;
 
     std::vector<int> incoming_payloads;
     std::vector<int> incoming_relayed_payloads;
@@ -440,6 +441,7 @@ class AmRtpStream
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     void update_sender_stats(const AmRtpPacket &p);
+    void inc_drop_pack(){ dropped_packets_count++; }
 
     bool process_dtmf_queue(unsigned int ts);
 
@@ -549,6 +551,7 @@ class AmRtpStream
         struct timeval time_start;
         struct timeval time_end;
         MathStat<uint32_t> rtt;
+        uint32_t dropped;
 
         struct rtp_common {
             unsigned int ssrc;
@@ -583,6 +586,7 @@ class AmRtpStream
 
     unsigned long getRcvdBytes() { return incoming_bytes; }
     unsigned long getSentBytes() { return outgoing_bytes; }
+    void updateRcvdBytes(unsigned long bytes) { incoming_bytes += bytes; }
 
     /**
     * Generate an SDP offer based on the stream capabilities.
@@ -696,6 +700,8 @@ class AmRtpStream
     void setSensor(msg_sensor *_sensor);
 
     void setForceBuffering(bool buffering) { force_buffering = buffering; }
+
+    void getMediaAcl(trsp_acl& acl);
 
     void debug();
     virtual void getInfo(AmArg &ret);

@@ -252,6 +252,8 @@ private:
     vector<AmStreamConnection*> connections;
     AmMutex                     connections_mut;
     AmMutex                     stream_mut;
+
+    trsp_acl media_acl;
 };
 
 #endif/*AM_RTP_TRANSPORT_H*/
