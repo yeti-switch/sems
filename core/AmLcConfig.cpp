@@ -2205,7 +2205,8 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
 
 int AmLcConfig::checkSipInterfaces(ConfigContainer* config)
 {
-    std::vector<SIP_info*> infos;
+    std::vector< std::tuple<SIP_interface *,SIP_info*> > infos;
+
     for(auto& sip_if : config->sip_ifs) {
         bool bfind = false;
         for(auto& media_if : config->media_ifs) {
@@ -2220,22 +2221,25 @@ int AmLcConfig::checkSipInterfaces(ConfigContainer* config)
         }
 
         for(auto& info : sip_if.proto_info) {
-            for(auto& other_info : infos) {
-                if(info->local_ip == other_info->local_ip && info->local_port == other_info->local_port) {
-                    if(info->type == other_info->type) {
-                        ERROR("duplicate ip %s and port %d in interface \'%s\'", other_info->local_ip.c_str(), other_info->local_port, sip_if.name.c_str());
+            for(auto& other_info_tuple : infos) {
+                auto &other_sip_if  = *std::get<0>(other_info_tuple);
+                auto &other_info  = *std::get<1>(other_info_tuple);
+
+                if(info->local_ip == other_info.local_ip &&
+                   info->local_port == other_info.local_port &&
+                   (info->type == other_info.type ||
+                    (info->type > SIP_info::UDP && other_info.type > SIP_info::UDP)))
+                {
+                    ERROR("duplicate ip/port %s/%d in interfaces %s/%s and %s/%s",
+                        other_info.local_ip.c_str(),
+                        other_info.local_port,
+                        sip_if.name.c_str(), info->transportToStr().c_str(),
+                        other_sip_if.name.c_str(), other_info.transportToStr().c_str());
                         return -1;
-                    } else if(info->type > SIP_info::UDP && other_info->type > SIP_info::UDP) {
-                        ERROR("ip %s and port %d is used different transports(%s and %s) in interface \'%s\'",
-                              other_info->local_ip.c_str(), other_info->local_port,
-                              other_info->transportToStr().c_str(),
-                              info->transportToStr().c_str(), sip_if.name.c_str());
-                        return -1;
-                    }
                 }
             }
 
-            infos.push_back(const_cast<SIP_info*>(info));
+            infos.emplace_back(&sip_if, const_cast<SIP_info*>(info));
         }
     }
 
