@@ -7,9 +7,11 @@
 AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _priority)
     : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
     , priority(_priority)
-    , auth_state(AuthState::NO_AUTH)
+    , isAuthentificated(false)
     , err_code(0)
     , depend_conn(0)
+    , count(0)
+    , intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500} //rfc5389 7.2.1.Sending over UDP
 {
     SA_transport(&r_addr) = transport->getTransportType();
     CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu",
@@ -111,14 +113,11 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         transport->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
-    } else {
-        auth_state = ERROR;
-    }
-
-    if(valid && auth_state != ALLOW) {
-        auth_state = ALLOW;
-        if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
-        transport->allowStunConnection(addr, priority);
+        if(valid && !isAuthentificated) {
+            isAuthentificated = true;
+            if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
+            transport->allowStunConnection(addr, priority);
+        }
     }
 }
 
@@ -143,11 +142,11 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         valid = false;
     }
 
-    if(valid && auth_state != ALLOW) {
-        auth_state = ALLOW;
+    if(valid && !isAuthentificated) {
+        isAuthentificated = true;
         if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
         transport->allowStunConnection(addr, priority);
-    } else if(auth_state != ALLOW){
+    } else if(!valid){
         string error("valid stun message is false ERR = ");
         transport->getRtpStream()->onErrorRtpTransport(error + error_str, transport);
     }
@@ -157,7 +156,7 @@ void AmStunConnection::send_request()
 {
     CLASS_DBG("AmStunConnection::send_request()");
 
-    stun_processor::instance()->set_timer(this, auth_state == ALLOW ? 1500 : 500);
+    updateStunTimer(false);
 
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
@@ -187,22 +186,22 @@ void AmStunConnection::send_request()
     CRefCountedBuffer buffer;
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
-         if(auth_state != ALLOW)
-            auth_state = CHECK_OTHER;
          transport->send(&r_addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
     }
 }
 
-void AmStunConnection::updateStunTimer()
+void AmStunConnection::updateStunTimer(bool remove)
 {
-    if(auth_state == ALLOW) {
-        stun_processor::instance()->set_timer(this, 1500);
-    } else {
+    if(remove)
         stun_processor::instance()->remove_timer(this);
+    DBG("stun request update timer: count %d", count);
+    if((isAuthentificated && count == STUN_INTERVALS_COUNT) ||
+        ++count <= STUN_INTERVALS_COUNT) {
+        stun_processor::instance()->set_timer(this, intervals[count]);
     }
 }
 
-AmStunConnection::AuthState AmStunConnection::getConnectionState()
+bool AmStunConnection::getConnectionState()
 {
-    return auth_state;
+    return isAuthentificated;
 }

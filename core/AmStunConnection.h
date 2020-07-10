@@ -10,24 +10,21 @@
 
 using std::string;
 
+#define STUN_INTERVALS_COUNT    7
+
 class AmStunConnection : public AmStreamConnection
 {
-public:
-    enum AuthState{
-        NO_AUTH,
-        CHECK_OTHER,
-        ALLOW,
-        ERROR
-    };
 private:
     AmStreamConnection* depend_conn;
-    AuthState auth_state;
+    bool isAuthentificated;
     int err_code;
     int priority;
     string local_password;
     string remote_password;
     string local_user;
     string remote_user;
+    int count;
+    int intervals[STUN_INTERVALS_COUNT+1];
 
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
@@ -43,8 +40,8 @@ public:
     void setDependentConnection(AmStreamConnection* conn);
 
     void send_request();
-    void updateStunTimer();
-    AuthState getConnectionState();
+    void updateStunTimer(bool remove = true);
+    bool getConnectionState();
 };
 
 #endif/*AM_STUN_CONNECTION_H*/

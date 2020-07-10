@@ -545,7 +545,6 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                     } catch(string& error) {
                         CLASS_ERROR("Can't add ice candidate address. error - %s", error.c_str());
                     }
-
                 }
             }
         }
