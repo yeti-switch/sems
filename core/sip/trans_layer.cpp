@@ -85,7 +85,9 @@ trans_stats::trans_stats()
     received_requests(stat_group(Counter, "core", "rx_requests").addAtomicCounter()),
     received_replies(stat_group(Counter, "core", "rx_replies").addAtomicCounter()),
     sent_reply_retrans(stat_group(Counter, "core", "tx_replies_retrans").addAtomicCounter()),
-    sent_request_retrans(stat_group(Counter, "core", "tx_requests_retrans").addAtomicCounter())
+    sent_request_retrans(stat_group(Counter, "core", "tx_requests_retrans").addAtomicCounter()),
+    sip_acl_dropped(stat_group(Counter, "core", "sip_acl_dropped").addAtomicCounter()),
+    sip_acl_rejected(stat_group(Counter, "core", "sip_acl_rejected").addAtomicCounter())
 { }
 
 _trans_layer::_trans_layer()
@@ -1863,11 +1865,13 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
                      case trsp_acl::Drop:
                          bucket->unlock();
                          DBG("message dropped by interface ACL");
+                         stats.inc_sip_acl_dropped();
                          DROP_MSG;
                          break;
                      case trsp_acl::Reject:
                          bucket->unlock();
                          DBG("message rejected by interface ACL");
+                         stats.inc_sip_acl_rejected();
                          send_sl_reply(msg,403,sip_resp_forbidden,
                                        cstring(),cstring());
                          return;

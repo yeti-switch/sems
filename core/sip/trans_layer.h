@@ -89,6 +89,8 @@ class trans_stats
     AtomicCounter &received_replies;
     AtomicCounter &sent_reply_retrans;
     AtomicCounter &sent_request_retrans;
+    AtomicCounter &sip_acl_dropped;
+    AtomicCounter &sip_acl_rejected;
 
   public:
     trans_stats();
@@ -111,6 +113,8 @@ class trans_stats
     /** increment number of sent reply retransmissions */
     void inc_sent_reply_retrans() { sent_reply_retrans.inc(); }
 
+    void inc_sip_acl_dropped() { sip_acl_dropped.inc(); }
+    void inc_sip_acl_rejected() { sip_acl_rejected.inc(); }
 
     unsigned get_sent_requests() const { return sent_requests.atomic_int64::get(); }
     unsigned get_sent_replies() const { return sent_replies.atomic_int64::get(); }
