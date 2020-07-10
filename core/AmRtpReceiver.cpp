@@ -91,7 +91,7 @@ void StreamCtxMap::put_pended(){
 }
 
 _AmRtpReceiver::_AmRtpReceiver() :
-    drop_counter(stat_group(Counter, "core", "media_dropped").addAtomicCounter())
+    drop_counter(stat_group(Counter, "core", "media_acl_dropped").addAtomicCounter())
 {
   n_receivers = AmConfig.rtp_recv_threads;
   receivers = new AmRtpReceiverThread[n_receivers];
