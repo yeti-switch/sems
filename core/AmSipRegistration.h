@@ -61,6 +61,7 @@ struct SIPRegistrationInfo {
   bool force_expires_interval;
   int transaction_timeout;
   int srv_failover_timeout;
+  dns_priority resolve_priority;
   sip_uri::uri_scheme scheme_id;
 
   SIPRegistrationInfo(
@@ -81,6 +82,7 @@ struct SIPRegistrationInfo {
     const int& proxy_transport_protocol_id,
     const int& transaction_timeout,
     const int& srv_failover_timeout,
+    const dns_priority& resolve_priority,
     sip_uri::uri_scheme scheme_id = sip_uri::SIP)
   : id(id),domain(domain),user(user),name(name),
     auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
@@ -94,8 +96,23 @@ struct SIPRegistrationInfo {
     attempt(0),
     transaction_timeout(transaction_timeout),
     srv_failover_timeout(srv_failover_timeout),
+    resolve_priority(resolve_priority),
     scheme_id(scheme_id)
   { }
+  SIPRegistrationInfo()
+  : expires_interval(0)
+  , force_expires_interval(false)
+  , retry_delay(0)
+  , max_attempts(0)
+  , transport_protocol_id(0)
+  , proxy_transport_protocol_id(0)
+  , transaction_timeout(0)
+  , srv_failover_timeout(0)
+  , resolve_priority(Dualstack)
+  , scheme_id(sip_uri::SIP)
+  { }
+  
+  bool init_from_amarg(const AmArg& info);
 };
 
 class AmSIPRegistration 

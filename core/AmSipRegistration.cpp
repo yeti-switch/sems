@@ -32,6 +32,70 @@
 #include "AmSessionContainer.h"
 #include "sip/parse_via.h"
 
+bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
+{
+#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
+    if(info.hasMember(#key)) { \
+        AmArg & key ## _arg = info[#key]; \
+        if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return false; } \
+        key = key ## _arg.asCStr(); \
+    }
+
+#define DEF_AND_VALIDATE_OPTIONAL_INT(key,default_value) \
+    key = default_value; \
+    if(info.hasMember(#key)) { \
+        AmArg & key ## _arg = info[#key]; \
+        if(!isArgInt(key ## _arg)) { ERROR("unexpected '" #key "' type. expected integer"); return false; } \
+        key = key ## _arg.asInt(); \
+    }
+
+#define DEF_AND_VALIDATE_MANDATORY_STR(key) \
+    if(!info.hasMember(#key)) { ERROR("missed '" #key "' in BusReplyEvent payload");return false; } \
+    AmArg & key ## _arg = info[#key]; \
+    if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return false; } \
+    key = key ## _arg.asCStr();
+
+    if(!isArgStruct(info)) { ERROR("unexpected payload type in BusReplyEvent"); return false; }
+    if(!info.hasMember("id")) { ERROR("missed 'id' in BusReplyEvent payload");return false; }
+    AmArg &id_arg = info["id"];
+    if(isArgCStr(id_arg)) {
+        id = id_arg.asCStr();
+    } else if(isArgInt(id_arg)) {
+        id = int2str(id_arg.asInt());
+    } else {
+        ERROR("unexpected 'id' type. expected string or integer");
+        return false;
+    }
+    DEF_AND_VALIDATE_MANDATORY_STR(domain);
+    DEF_AND_VALIDATE_OPTIONAL_STR(user);
+    DEF_AND_VALIDATE_OPTIONAL_STR(name);
+    DEF_AND_VALIDATE_OPTIONAL_STR(auth_user);
+    DEF_AND_VALIDATE_OPTIONAL_STR(pwd);
+    DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
+    DEF_AND_VALIDATE_OPTIONAL_STR(contact);
+    DEF_AND_VALIDATE_OPTIONAL_STR(contact_uri_params);
+
+    DEF_AND_VALIDATE_OPTIONAL_INT(expires_interval,0);
+    DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval,0);
+    DEF_AND_VALIDATE_OPTIONAL_INT(retry_delay,DEFAULT_REGISTER_RETRY_DELAY);
+    DEF_AND_VALIDATE_OPTIONAL_INT(max_attempts,REGISTER_ATTEMPTS_UNLIMITED);
+    DEF_AND_VALIDATE_OPTIONAL_INT(transport_protocol_id,sip_transport::UDP);
+    DEF_AND_VALIDATE_OPTIONAL_INT(proxy_transport_protocol_id,sip_transport::UDP);
+
+    DEF_AND_VALIDATE_OPTIONAL_INT(transaction_timeout,0);
+    DEF_AND_VALIDATE_OPTIONAL_INT(srv_failover_timeout,0);
+
+    string priority;
+    DEF_AND_VALIDATE_OPTIONAL_STR(priority);
+    resolve_priority = string_to_priority(priority);
+
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+#undef DEF_AND_VALIDATE_OPTIONAL_INT
+#undef DEF_AND_VALIDATE_MANDATORY_STR
+    return true;
+}
+
+
 AmSIPRegistration::AmSIPRegistration(
     const string& handle,
     const SIPRegistrationInfo& info,
@@ -225,12 +289,12 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
 
     dlg.setRemoteTag(req.to_tag);
     dlg.setRemoteUri(req.r_uri);
+    dlg.setResolvePriority(info.resolve_priority);
 
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
                   int2str(expires_interval) + CRLF;
 
     int flags=0;
-
     if(info.contact.empty()) {
         //force contact username
         int oif = dlg.getOutboundIf();

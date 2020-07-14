@@ -132,6 +132,7 @@ class SIPRegistrarClient
         const int &transaction_timeout,
         const int &srv_failover_timeout,
         const string& handle,
+        const dns_priority& priority,
         sip_uri::uri_scheme scheme_id);
     void removeRegistration(const string& handle);
     void removeRegistrationById(const string& id);

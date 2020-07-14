@@ -464,81 +464,24 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         key = key ## _arg.asCStr(); \
     }
 
-#define DEF_AND_VALIDATE_OPTIONAL_INT(key,default_value) \
-    int key = default_value; \
-    if(data.hasMember(#key)) { \
-        AmArg & key ## _arg = data[#key]; \
-        if(!isArgInt(key ## _arg)) { ERROR("unexpected '" #key "' type. expected integer"); return; } \
-        key = key ## _arg.asInt(); \
-    }
-
-#define DEF_AND_VALIDATE_MANDATORY_STR(key) \
-    if(!data.hasMember(#key)) { ERROR("missed '" #key "' in BusReplyEvent payload");return; } \
-    AmArg & key ## _arg = data[#key]; \
-    if(!isArgCStr(key ## _arg)) { ERROR("unexpected '" #key "' type. expected string"); return; } \
-    string key = key ## _arg.asCStr();
-
     if(!isArgStruct(data)) { ERROR("unexpected payload type in BusReplyEvent"); return; }
 
-    DEF_AND_VALIDATE_MANDATORY_STR(action);
-    if(action=="create") {
-        //DEF_AND_VALIDATE_MANDATORY_STR(id);
-        if(!data.hasMember("id")) { ERROR("missed 'id' in BusReplyEvent payload");return; }
-        AmArg &id_arg = data["id"];
-        string id;
-        if(isArgCStr(id_arg)) {
-            id = id_arg.asCStr();
-        } else if(isArgInt(id_arg)) {
-            id = int2str(id_arg.asInt());
-        } else {
-            ERROR("unexpected 'id' type. expected string or integer");
-            return;
-        }
+    string action;
+    if(!data.hasMember(action)) { ERROR("missed 'action' in BusReplyEvent payload"); return; }
+    AmArg & action_arg = data[action];
+    if(!isArgCStr(action_arg)) { ERROR("unexpected 'action' type. expected string"); return; } \
+    action = action_arg.asCStr();
 
-        DEF_AND_VALIDATE_MANDATORY_STR(domain);
-        DEF_AND_VALIDATE_OPTIONAL_STR(user);
-        DEF_AND_VALIDATE_OPTIONAL_STR(name);
-        DEF_AND_VALIDATE_OPTIONAL_STR(auth_username);
-        DEF_AND_VALIDATE_OPTIONAL_STR(auth_password);
+    if(action=="create") {
+        SIPRegistrationInfo info;
+        if(!info.init_from_amarg(data)) return;
         DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
-        DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
-        DEF_AND_VALIDATE_OPTIONAL_STR(contact);
-        DEF_AND_VALIDATE_OPTIONAL_STR(contact_params);
         DEF_AND_VALIDATE_OPTIONAL_STR(handle);
 
-        DEF_AND_VALIDATE_OPTIONAL_INT(expires,0);
-        DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval,0);
-        DEF_AND_VALIDATE_OPTIONAL_INT(retry_delay,DEFAULT_REGISTER_RETRY_DELAY);
-        DEF_AND_VALIDATE_OPTIONAL_INT(max_attempts,REGISTER_ATTEMPTS_UNLIMITED);
-        DEF_AND_VALIDATE_OPTIONAL_INT(transport_protocol_id,sip_transport::UDP);
-        DEF_AND_VALIDATE_OPTIONAL_INT(proxy_transport_protocol_id,sip_transport::UDP);
-
-        DEF_AND_VALIDATE_OPTIONAL_INT(transaction_timeout,0);
-        DEF_AND_VALIDATE_OPTIONAL_INT(srv_failover_timeout,0);
-
         SIPRegistrarClient::instance()->postEvent(
-            new SIPNewRegistrationEvent(
-                SIPRegistrationInfo(
-                    id,
-                    domain,
-                    user,
-                    name,
-                    auth_username,
-                    auth_password,
-                    proxy,
-                    contact,
-                    contact_params,
-                    expires,
-                    force_expires_interval,
-                    retry_delay,
-                    max_attempts,
-                    transport_protocol_id,
-                    proxy_transport_protocol_id,
-                    transaction_timeout,
-                    srv_failover_timeout),
+            new SIPNewRegistrationEvent(info,
                 handle.empty() ? AmSession::getNewId() : handle,
-                sess_link
-            )
+                sess_link)
         );
     } else if(action=="remove") {
         if(!data.hasMember("id")) { ERROR("missed 'id' in BusReplyEvent payload");return; }
@@ -564,8 +507,6 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         ERROR("unknown action '%s'",action.c_str());
     }
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
-#undef DEF_AND_VALIDATE_OPTIONAL_INT
-#undef DEF_AND_VALIDATE_MANDATORY_STR
 }
 
 void SIPRegistrarClient::onBusEvent(BusReplyEvent* bus_event)
@@ -721,6 +662,7 @@ string SIPRegistrarClient::createRegistration(
     const int &transaction_timeout,
     const int &srv_failover_timeout,
     const string& handle,
+    const dns_priority& priority,
     sip_uri::uri_scheme scheme_id = sip_uri::SIP)
 {
     DBG("createRegistration");
@@ -746,6 +688,7 @@ string SIPRegistrarClient::createRegistration(
                 proxy_transport_protocol_id,
                 transaction_timeout,
                 srv_failover_timeout,
+                priority,
                 scheme_id),
             l_handle,
             sess_link
@@ -826,175 +769,118 @@ void SIPRegistrarClient::invoke(
     AmArg& ret)
 {
     if(method == "createRegistration"){
-        string proxy, contact, handle, sess_link;
-        int expires_interval = 0,
-            force = 0,
-            retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
-            max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
-            transport_protocol_id = sip_transport::UDP,
-            proxy_transport_protocol_id = sip_transport::UDP,
-            scheme_id = sip_uri::SIP,
-            transaction_timeout = 0,
-            srv_failover_timeout = 0;
-        bool force_expires_interval = false;
-        size_t n = args.size();
+        if(isArgStruct(args[0])) {
 
-        if(n < 6) {
-            throw AmSession::Exception(500,"expected at least 6 args");
+#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
+    string key; \
+    if(args[0].hasMember(#key)) { \
+        AmArg & key ## _arg = args[0][#key]; \
+        if(!isArgCStr(key ## _arg)) throw AmSession::Exception(500,"unexpected '" #key "' type. expected string");\
+        key = key ## _arg.asCStr(); \
+    }
+
+            DEF_AND_VALIDATE_OPTIONAL_STR(handle);
+            DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
+            string l_handle = handle.empty() ? AmSession::getNewId() : handle;
+            SIPRegistrationInfo info;
+            info.init_from_amarg(args[0]);
+            instance()->postEvent(new SIPNewRegistrationEvent(info,l_handle,sess_link));
+            ret.push(true);
+
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+
+        } else {
+            string proxy, contact, handle, sess_link;
+            int expires_interval = 0,
+                force = 0,
+                retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
+                max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
+                transport_protocol_id = sip_transport::UDP,
+                proxy_transport_protocol_id = sip_transport::UDP,
+                scheme_id = sip_uri::SIP,
+                transaction_timeout = 0,
+                srv_failover_timeout = 0;
+            bool force_expires_interval = false;
+            dns_priority priority;
+            size_t n = args.size();
+
+            if(n < 6) {
+                throw AmSession::Exception(500,"expected at least 6 args");
+            }
+
+            for(int i = 0; i < 6; i++) {
+                if(!isArgCStr(args.get(i))) {
+                    throw AmSession::Exception(500,"expected string at arg: " + int2str(i+1));
+                }
+            }
+
+#define DEF_AND_VALIDATE_OPTIONAL_STR(index, name) \
+            if (args.size() > index) {\
+                AmArg &a = args.get(index);\
+                if(!isArgUndef(a)) {\
+                    if(!isArgCStr(a))\
+                        throw AmSession::Exception(500,"wrong " #name " arg. expected string or null");\
+                    name = a.asCStr();\
+                }\
+            } else break
+
+#define DEF_AND_VALIDATE_OPTIONAL_INT(index, name) \
+            if (args.size() > index) {\
+                AmArg &a = args.get(index);\
+                if(isArgInt(a)) {\
+                    name = a.asInt();\
+                } else if(isArgCStr(a) && !str2int(a.asCStr(), name)){\
+                    throw AmSession::Exception(500,"wrong " #name " argument");\
+                }\
+            } else break
+
+            do {
+                string priority_str;
+                DEF_AND_VALIDATE_OPTIONAL_STR(6, sess_link);
+                DEF_AND_VALIDATE_OPTIONAL_STR(7, proxy);
+                DEF_AND_VALIDATE_OPTIONAL_STR(8, contact);
+                DEF_AND_VALIDATE_OPTIONAL_INT(9, expires_interval);
+                DEF_AND_VALIDATE_OPTIONAL_INT(10, force);
+                DEF_AND_VALIDATE_OPTIONAL_INT(11, retry_delay);
+                DEF_AND_VALIDATE_OPTIONAL_INT(12, max_attempts);
+                DEF_AND_VALIDATE_OPTIONAL_INT(13, transport_protocol_id);
+                DEF_AND_VALIDATE_OPTIONAL_INT(14, proxy_transport_protocol_id);
+                DEF_AND_VALIDATE_OPTIONAL_INT(15, transaction_timeout);
+                DEF_AND_VALIDATE_OPTIONAL_INT(16, srv_failover_timeout);
+                DEF_AND_VALIDATE_OPTIONAL_STR(17, handle);
+                DEF_AND_VALIDATE_OPTIONAL_STR(18, priority_str);
+                DEF_AND_VALIDATE_OPTIONAL_INT(19, scheme_id);
+
+                priority = string_to_priority(priority_str);
+                if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
+                    throw AmSession::Exception(500,"unexpected scheme_id value");
+                }
+            } while(0);
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+#undef DEF_AND_VALIDATE_OPTIONAL_INT
+
+            ret.push(createRegistration(
+                args.get(0).asCStr(),
+                args.get(1).asCStr(),
+                args.get(2).asCStr(),
+                args.get(3).asCStr(),
+                args.get(4).asCStr(),
+                args.get(5).asCStr(),
+                sess_link,
+                proxy,
+                contact,
+                expires_interval,
+                force_expires_interval,
+                retry_delay,
+                max_attempts,
+                transport_protocol_id,
+                proxy_transport_protocol_id,
+                transaction_timeout,
+                srv_failover_timeout,
+                handle,
+                priority,
+                static_cast<sip_uri::uri_scheme>(scheme_id)));
         }
-
-        for(int i = 0; i < 6; i++) {
-            if(!isArgCStr(args.get(i))) {
-                throw AmSession::Exception(500,"expected string at arg: " + int2str(i+1));
-            }
-        }
-
-        do {
-
-        if (n > 6) {
-            AmArg &sess_link_arg = args.get(6);
-            if(!isArgUndef(sess_link_arg)) {
-                if(!isArgCStr(sess_link_arg))
-                    throw AmSession::Exception(500,"wrong sess_link arg. expected string or null");
-                sess_link = sess_link_arg.asCStr();
-            }
-        } else break;
-
-        if (n > 7) {
-            AmArg &proxy_arg = args.get(7);
-            if(!isArgUndef(proxy_arg)) {
-                if(!isArgCStr(proxy_arg))
-                    throw AmSession::Exception(500,"wrong proxy arg. expected string or null");
-                proxy = proxy_arg.asCStr();
-            }
-        } else break;
-
-        if (n > 8) {
-            AmArg &contact_arg = args.get(8);
-            if(!isArgUndef(contact_arg)) {
-                if(!isArgCStr(contact_arg))
-                    throw AmSession::Exception(500,"wrong contact arg. expected string or null");
-                contact = contact_arg.asCStr();
-            }
-        } else break;
-
-        if (n > 9) {
-            AmArg &a = args.get(9);
-            if(isArgInt(a)) {
-                expires_interval = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), expires_interval)){
-                throw AmSession::Exception(500,"wrong expires_interval argument");
-            }
-        } else break;
-
-        if (n > 10) {
-            AmArg &a = args.get(10);
-            if(isArgInt(a)) {
-                force_expires_interval = a.asInt();
-            } else if(isArgCStr(a) && str2int(a.asCStr(), force)){
-                force_expires_interval = force;
-            } else {
-                throw AmSession::Exception(500,"wrong force_expires_interval argument");
-            }
-        } else break;
-
-        if (args.size() > 11) {
-            AmArg &a = args.get(11);
-            if(isArgInt(a)) {
-                retry_delay = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), retry_delay)){
-                throw AmSession::Exception(500,"wrong retry_delay argument");
-            }
-        } else break;
-
-        if (args.size() > 12) {
-            AmArg &a = args.get(12);
-            if(isArgInt(a)) {
-                max_attempts = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), max_attempts)){
-                throw AmSession::Exception(500,"wrong max_attempts argument");
-            }
-        } else break;
-
-        if (args.size() > 13) {
-            AmArg &a = args.get(13);
-            if(isArgInt(a)) {
-                transport_protocol_id = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), transport_protocol_id)){
-                throw AmSession::Exception(500,"wrong transport_protocol_id argument");
-            }
-        } else break;
-
-        if (args.size() > 14) {
-            AmArg &a = args.get(14);
-            if(isArgInt(a)) {
-                proxy_transport_protocol_id = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), proxy_transport_protocol_id)){
-                throw AmSession::Exception(500,"wrong proxy_transport_protocol_id argument");
-            }
-        } else break;
-
-        if (args.size() > 15) {
-            AmArg &a = args.get(15);
-            if(isArgInt(a)) {
-                transaction_timeout = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), transaction_timeout)){
-                throw AmSession::Exception(500,"wrong transaction_timeout argument");
-            }
-        } else break;
-
-        if (args.size() > 16) {
-            AmArg &a = args.get(16);
-            if(isArgInt(a)) {
-                srv_failover_timeout = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), srv_failover_timeout)){
-                throw AmSession::Exception(500,"wrong srv_failover_timeout argument");
-            }
-        } else break;
-
-        if (args.size() > 17) {
-            AmArg &handle_arg = args.get(17);
-            if(!isArgUndef(handle_arg)) {
-                if(!isArgCStr(handle_arg))
-                    throw AmSession::Exception(500,"wrong handle arg. expected string or null");
-                handle = handle_arg.asCStr();
-            }
-        } else break;
-
-        if (args.size() > 18) {
-            AmArg &a = args.get(18);
-            if(isArgInt(a)) {
-                scheme_id = a.asInt();
-            } else if(isArgCStr(a) && !str2int(a.asCStr(), scheme_id)){
-                throw AmSession::Exception(500,"wrong scheme_id argument");
-            }
-            if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
-                throw AmSession::Exception(500,"unexpected scheme_id value");
-            }
-        } else break;
-
-        } while(0);
-
-        ret.push(createRegistration(
-            args.get(0).asCStr(),
-            args.get(1).asCStr(),
-            args.get(2).asCStr(),
-            args.get(3).asCStr(),
-            args.get(4).asCStr(),
-            args.get(5).asCStr(),
-            sess_link,
-            proxy,
-            contact,
-            expires_interval,
-            force_expires_interval,
-            retry_delay,
-            max_attempts,
-            transport_protocol_id,
-            proxy_transport_protocol_id,
-            transaction_timeout,
-            srv_failover_timeout,
-            handle,
-            static_cast<sip_uri::uri_scheme>(scheme_id)));
     } else if(method == "removeRegistration") {
         removeRegistration(args.get(0).asCStr());
     } else if(method == "removeRegistrationById") {
