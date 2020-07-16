@@ -848,10 +848,11 @@ void SIPRegistrarClient::invoke(
                 DEF_AND_VALIDATE_OPTIONAL_INT(15, transaction_timeout);
                 DEF_AND_VALIDATE_OPTIONAL_INT(16, srv_failover_timeout);
                 DEF_AND_VALIDATE_OPTIONAL_STR(17, handle);
-                DEF_AND_VALIDATE_OPTIONAL_STR(18, priority_str);
-                DEF_AND_VALIDATE_OPTIONAL_INT(19, scheme_id);
+                DEF_AND_VALIDATE_OPTIONAL_INT(18, scheme_id);
+                DEF_AND_VALIDATE_OPTIONAL_STR(19, priority_str);
 
                 priority = string_to_priority(priority_str);
+
                 if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
                     throw AmSession::Exception(500,"unexpected scheme_id value");
                 }
