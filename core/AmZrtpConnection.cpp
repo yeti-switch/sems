@@ -152,17 +152,22 @@ bool AmZRTPConnection::isUseConnection(AmStreamConnection::ConnectionType type)
 
 void AmZRTPConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
 {
-    handleSymmetricRtp(recv_addr, &recv_time);
     if(getTransport()->isZRTPMessage(data, size)) {
         context->onRecvData(data, size);
     } else if(getTransport()->isRTPMessage(data, size)) {
-        rtp_conn.handleConnection(data, size, recv_addr, recv_time);
+        rtp_conn.process_packet(data, size, recv_addr, recv_time);
     }
 }
 
 void AmZRTPConnection::zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets)
 {
     getTransport()->removeConnection(rtcp_conn);
+}
+
+void AmZRTPConnection::setPassiveMode(bool p)
+{
+    rtp_conn.setPassiveMode(p);
+    AmStreamConnection::setPassiveMode(p);
 }
 
 ssize_t AmZRTPConnection::send(AmRtpPacket* packet)

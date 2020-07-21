@@ -216,7 +216,7 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         ret = srtp_unprotect_rtcp(srtp_r_session, data, reinterpret_cast<int *>(&size));
 
     if(ret == srtp_err_status_ok || getConnType() == RTCP_CONN)
-        s_stream->handleConnection(data, size, recv_addr, recv_time);
+        s_stream->process_packet(data, size, recv_addr, recv_time);
     else {
         CLASS_DBG("srtp_unprotect for %s - error:%d", getConnType() == RTP_CONN ? "rtp" : "rtcp", ret);
         sockaddr_storage saddr;
@@ -277,4 +277,10 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
     p->setBufferSize(size);
 
     return s_stream->send(p);
+}
+
+void AmSrtpConnection::setPassiveMode(bool p)
+{
+    s_stream->setPassiveMode(p);
+    AmStreamConnection::setPassiveMode(p);
 }
