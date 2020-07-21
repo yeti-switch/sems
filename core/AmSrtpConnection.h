@@ -60,6 +60,7 @@ public:
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
     ssize_t send(AmRtpPacket * packet) override;
+    void setPassiveMode(bool p) override;
 };
 
 #endif/*AM_SRTP_CONNECTION_H*/

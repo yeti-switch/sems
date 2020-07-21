@@ -54,6 +54,7 @@ public:
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
     virtual bool isUseConnection(ConnectionType type);
     virtual ssize_t send(AmRtpPacket* packet);
+    virtual void setPassiveMode(bool p);
     virtual void zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
 
     int send(uint8_t* data, unsigned int size);
