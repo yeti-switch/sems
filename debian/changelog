@@ -1,14 +1,22 @@
+sems (1.25.0) stable; urgency=low
+
+  * fix symmetric RTP for SRTP and ZRTP connections
+  * stun connection refactoring
+  * AmSipRegistration: init from AmArg struct
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 22 Jul 2020 17:54:47 +0300
+
 sems (1.24.0) stable; urgency=low
 
-  * AmStunProcessor refactoring to use single timer. fixes segfault
-  * support for AES_CM_256_HMAC_SHA1_80/32 SRTP profiles
-  * add media ACL. new metric: sems_core_media_acl_dropped
-  * check ip-port collisions for non-UDP SIP transports
+  * amstunprocessor refactoring to use single timer. fixes segfault
+  * support for aes_cm_256_hmac_sha1_80/32 srtp profiles
+  * add media acl. new metric: sems_core_media_acl_dropped
+  * check ip-port collisions for non-udp sip transports
   * add metrics: sems_core_shutdown_mode, sems_core_version
   * add metrics: sems_core_sessions_limit, sems_core_sessions_limit_rejects
   * add metrics: sems_core_sip_acl_dropped, sems_core_sip_acl_rejected
 
- -- Michael Furmur <m.furmur@gmail.com>  Fri, 10 Jul 2020 15:29:34 +0300
+ -- michael furmur <m.furmur@gmail.com>  fri, 10 jul 2020 15:29:34 +0300
 
 sems (1.23.2) stable; urgency=low
 
