@@ -41,8 +41,6 @@ AmMutex AmSessionProcessor::threads_mut;
 vector<AmSessionProcessorThread*>::iterator 
 AmSessionProcessor::threads_it = AmSessionProcessor::threads.begin();
 
-EventStats AmSessionProcessor::event_stats;
-
 void AmSessionProcessor::init()
 {
     stat_group(Counter, "core","session_processor_events_count").addFunctionGroupCounter(&get_statistics_count);
@@ -71,7 +69,7 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   DBG("starting %u session processor threads\n", num_threads);
   threads_mut.lock();
   for (unsigned int i=0; i < num_threads;i++) {
-    threads.push_back(new AmSessionProcessorThread(event_stats));
+    threads.push_back(new AmSessionProcessorThread());
     threads.back()->start();
   }
   threads_it = threads.begin();
@@ -81,16 +79,21 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
 
 void AmSessionProcessor::get_statistics_count(StatCounter::iterate_func_type f)
 {
-    event_stats.iterate_count(f);
+    //event_stats.iterate_count(f);
+    for(auto &t : threads)
+        t->get_statistics_count(f);
 }
 
 void AmSessionProcessor::get_statistics_time(StatCounter::iterate_func_type f)
 {
-    event_stats.iterate_time(f);
+    //event_stats.iterate_time(f);
+    for(auto &t : threads)
+        t->get_statistics_time(f);
+
 }
 
-AmSessionProcessorThread::AmSessionProcessorThread(EventStats &event_stats)
-  : events(this), runcond(false), event_stats(event_stats)
+AmSessionProcessorThread::AmSessionProcessorThread()
+  : events(this), runcond(false)
 {}
 
 AmSessionProcessorThread::~AmSessionProcessorThread() {
@@ -107,7 +110,7 @@ void AmSessionProcessorThread::run()
 {
     setThreadName("session-proc");
 
-    //events_stats.addLabel("thread",long2str(_self_tid));
+    event_stats.addLabel("thread",long2str(_self_tid));
 
     stop_requested = false;
     while(!stop_requested.get()) {
@@ -152,6 +155,7 @@ void AmSessionProcessorThread::run()
         DBG("processing events for  up to %zd sessions\n", pending_process_sessions.size());
 
         std::list<AmSession*>::iterator it=sessions.begin();
+        event_stats_mutex.lock();
         while (it != sessions.end()) {
             if ((pending_process_sessions.find(*it)!=pending_process_sessions.end())
                 && (!(*it)->processingCycle(event_stats)))
@@ -164,6 +168,7 @@ void AmSessionProcessorThread::run()
                 it++;
             }
         }
+        event_stats_mutex.unlock();
 
         if (fin_sessions.size()) {
             DBG("finalizing %zd sessions\n", fin_sessions.size());
@@ -209,6 +214,18 @@ void AmSessionProcessorThread::startSession(AmSession* s) {
 
   // wakeup the thread
   runcond.set(true);
+}
+
+void AmSessionProcessorThread::get_statistics_count(StatCounter::iterate_func_type f)
+{
+    AmLock l(event_stats_mutex);
+    event_stats.iterate_count(f);
+}
+
+void AmSessionProcessorThread::get_statistics_time(StatCounter::iterate_func_type f)
+{
+    AmLock l(event_stats_mutex);
+    event_stats.iterate_time(f);
 }
 
 #endif

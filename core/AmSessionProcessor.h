@@ -48,7 +48,6 @@ class AmSessionProcessor {
     static vector<AmSessionProcessorThread*> threads;
     static AmMutex threads_mut;
     static vector<AmSessionProcessorThread*>::iterator threads_it;
-    static EventStats event_stats;
 
   public:
     static void init();
@@ -82,13 +81,14 @@ class AmSessionProcessorThread
     std::set<AmEventQueue*> process_sessions;
     AmMutex process_sessions_mut;
 
-    EventStats &event_stats;
+    EventStats event_stats;
+    AmMutex event_stats_mutex;
 
     // AmEventHandler interface
     void process(AmEvent* e);
 
  public:
-    AmSessionProcessorThread(EventStats &event_stats);
+    AmSessionProcessorThread();
     ~AmSessionProcessorThread();
 
     // AmThread interface
@@ -99,6 +99,9 @@ class AmSessionProcessorThread
     void notify(AmEventQueue* sender);
 
     void startSession(AmSession* s);
+
+    void get_statistics_count(StatCounter::iterate_func_type f);
+    void get_statistics_time(StatCounter::iterate_func_type f);
 };
 
 #endif // _AmSessionProcessor_h_

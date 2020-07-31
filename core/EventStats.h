@@ -41,7 +41,6 @@ struct EventTypeStats {
 class EventStats
   : public HashByType<EventTypeStats>
 {
-    AmMutex mutex;
     map<string,string> labels;
   public:
     void update(AmEvent *event, timeval &consumed_time);

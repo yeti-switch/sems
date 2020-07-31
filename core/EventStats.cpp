@@ -29,7 +29,6 @@ void EventTypeStats::iterate_time(StatCounter::iterate_func_type f)
 
 void EventStats::update(AmEvent *event, timeval &consumed_time)
 {
-    AmLock l(mutex);
     try {
         auto &tinfo = typeid(*event);
 
@@ -51,7 +50,6 @@ void EventStats::update(AmEvent *event, timeval &consumed_time)
 
 void EventStats::iterate_count(StatCounter::iterate_func_type f)
 {
-    AmLock l(mutex);
     for(auto &it: *this) {
         it.second.iterate_count(f);
     }
@@ -59,7 +57,6 @@ void EventStats::iterate_count(StatCounter::iterate_func_type f)
 
 void EventStats::iterate_time(StatCounter::iterate_func_type f)
 {
-    AmLock l(mutex);
     for(auto &it: *this) {
         it.second.iterate_time(f);
     }
