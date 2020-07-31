@@ -56,6 +56,11 @@ void FunctionCounter::iterate(
     callback(func_(), 0, getLabels());
 }
 
+void FunctionGroupCounter::iterate(iterate_func_type callback)
+{
+    func_(callback);
+}
+
 StatCountersGroup::~StatCountersGroup()
 {
     for(auto &counter : counters)
@@ -88,6 +93,15 @@ FunctionCounter& StatCountersGroup::addFunctionCounter(FunctionCounter::Callback
     AmLock l(counters_lock);
 
     auto counter = new FunctionCounter(func);
+    counters.emplace_back(counter);
+    return *counter;
+}
+
+FunctionGroupCounter& StatCountersGroup::addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func)
+{
+    AmLock l(counters_lock);
+
+    auto counter = new FunctionGroupCounter(func);
     counters.emplace_back(counter);
     return *counter;
 }

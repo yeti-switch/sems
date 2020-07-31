@@ -395,10 +395,10 @@ bool AmSession::startup() {
   return true;
 }
 
-bool AmSession::processEventsCatchExceptions() {
+bool AmSession::processEventsCatchExceptions(EventStats &stats) {
   try {
     try {	
-      processEvents();
+      processEvents(&stats);
     } 
     catch(const AmSession::Exception& e){ throw e; }
     catch(const string& str){
@@ -417,7 +417,7 @@ bool AmSession::processEventsCatchExceptions() {
 
 /** one cycle of the event processing loop. 
     this should be called until it returns false. */
-bool AmSession::processingCycle() {
+bool AmSession::processingCycle(EventStats &stats) {
 
     DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv\n",
         dlg->getCallid().c_str(),getLocalTag().c_str(),
@@ -428,7 +428,7 @@ bool AmSession::processingCycle() {
 
     switch (processing_status) {
     case SESSION_PROCESSING_EVENTS: {
-        if (!processEventsCatchExceptions()) {
+        if (!processEventsCatchExceptions(stats)) {
             // exception occured, stop processing
             processing_status = SESSION_ENDED_DISCONNECTED;
             return false;
@@ -491,7 +491,7 @@ bool AmSession::processingCycle() {
     case SESSION_WAITING_DISCONNECTED: {
         // processing events until dialog status is Disconnected
 
-        if (!processEventsCatchExceptions()) {
+        if (!processEventsCatchExceptions(stats)) {
             processing_status = SESSION_ENDED_DISCONNECTED;
             return false; // exception occured, stop processing
         }

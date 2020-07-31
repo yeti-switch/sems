@@ -748,11 +748,12 @@ int main(int argc, char* argv[])
 
   INFO("Starting session container\n");
   AmSessionContainer::instance()->start();
-  
+
 #ifdef SESSION_THREADPOOL
   INFO("Starting session processor threads\n");
   AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 #endif 
+  AmSessionProcessor::init();
 
   INFO("Starting audio recorder");
   AmAudioFileRecorderProcessor::instance()->start();

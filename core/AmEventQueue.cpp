@@ -70,29 +70,41 @@ void AmEventQueue::postEvent(AmEvent* event)
     DBG("AmEventQueue: event posted\n");
 }
 
-void AmEventQueue::processEvents()
+void AmEventQueue::processEvents(EventStats *stats)
 {
-  m_queue.lock();
+    timeval start, end, consumed_time;
 
-  while(!ev_queue.empty()) {
-	
-    AmEvent* event = ev_queue.front();
-    ev_queue.pop();
-    m_queue.unlock();
-
-    if (AmConfig.log_events) 
-      DBG("before processing event (%s)\n",
-	  typeid(*event).name());
-    handler->process(event);
-    if (AmConfig.log_events) 
-      DBG("event processed (%s)\n",
-	  typeid(*event).name());
-    delete event;
     m_queue.lock();
-  }
-    
-  ev_pending.set(false);
-  m_queue.unlock();
+
+    while(!ev_queue.empty()) {
+        AmEvent* event = ev_queue.front();
+        ev_queue.pop();
+        m_queue.unlock();
+
+        if(stats) {
+            gettimeofday(&start, nullptr);
+        }
+
+        if (AmConfig.log_events)
+            DBG("before processing event (%s)\n", typeid(*event).name());
+
+        handler->process(event);
+
+        if(stats) {
+            gettimeofday(&end, nullptr);
+            timersub(&end,&start,&consumed_time);
+            stats->update(event, consumed_time);
+        }
+
+        if(AmConfig.log_events)
+            DBG("event processed (%s)\n", typeid(*event).name());
+
+        delete event;
+        m_queue.lock();
+    }
+
+    ev_pending.set(false);
+    m_queue.unlock();
 }
 
 void AmEventQueue::waitForEvent()
@@ -113,7 +125,7 @@ void AmEventQueue::processSingleEvent()
     if (AmConfig.log_events) 
       DBG("before processing event\n");
     handler->process(event);
-    if (AmConfig.log_events) 
+    if (AmConfig.log_events)
       DBG("event processed\n");
     delete event;
 

@@ -41,6 +41,7 @@
 #include "AmApi.h"
 #include "AmSessionEventHandler.h"
 #include "AmMediaProcessor.h"
+#include "EventStats.h"
 
 #include <string>
 #include <vector>
@@ -183,13 +184,13 @@ protected:
 
   /** process pending events,  
       @return whether everything went smoothly */
-  virtual bool processEventsCatchExceptions();
+  virtual bool processEventsCatchExceptions(EventStats &stats);
 
   /** @return whether startup was successful */
   bool startup();
 
   /** @return whether session continues running */
-  virtual bool processingCycle();
+  virtual bool processingCycle(EventStats &stats);
 
   /** clean up session */
   void finalize();

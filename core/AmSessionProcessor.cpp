@@ -41,6 +41,14 @@ AmMutex AmSessionProcessor::threads_mut;
 vector<AmSessionProcessorThread*>::iterator 
 AmSessionProcessor::threads_it = AmSessionProcessor::threads.begin();
 
+EventStats AmSessionProcessor::event_stats;
+
+void AmSessionProcessor::init()
+{
+    stat_group(Counter, "core","session_processor_events_count").addFunctionGroupCounter(&get_statistics_count);
+    stat_group(Counter, "core","session_processor_events_time").addFunctionGroupCounter(&get_statistics_time);
+}
+
 AmSessionProcessorThread* AmSessionProcessor::getProcessorThread() {
   threads_mut.lock();
   if (!threads.size()) {
@@ -63,7 +71,7 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   DBG("starting %u session processor threads\n", num_threads);
   threads_mut.lock();
   for (unsigned int i=0; i < num_threads;i++) {
-    threads.push_back(new AmSessionProcessorThread());
+    threads.push_back(new AmSessionProcessorThread(event_stats));
     threads.back()->start();
   }
   threads_it = threads.begin();
@@ -71,11 +79,19 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   threads_mut.unlock();
 }
 
-
-AmSessionProcessorThread::AmSessionProcessorThread() 
-  : events(this), runcond(false)
+void AmSessionProcessor::get_statistics_count(StatCounter::iterate_func_type f)
 {
+    event_stats.iterate_count(f);
 }
+
+void AmSessionProcessor::get_statistics_time(StatCounter::iterate_func_type f)
+{
+    event_stats.iterate_time(f);
+}
+
+AmSessionProcessorThread::AmSessionProcessorThread(EventStats &event_stats)
+  : events(this), runcond(false), event_stats(event_stats)
+{}
 
 AmSessionProcessorThread::~AmSessionProcessorThread() {
 }
@@ -87,75 +103,80 @@ void AmSessionProcessorThread::notify(AmEventQueue* sender) {
   process_sessions_mut.unlock();
 }
 
-void AmSessionProcessorThread::run() {
-  setThreadName("session-proc");
-  stop_requested = false;
-  while(!stop_requested.get()){
+void AmSessionProcessorThread::run()
+{
+    setThreadName("session-proc");
 
-    runcond.wait_for();
+    //events_stats.addLabel("thread",long2str(_self_tid));
 
-    DBG("running processing loop\n");
+    stop_requested = false;
+    while(!stop_requested.get()) {
 
-    process_sessions_mut.lock();
-    runcond.set(false);
-    // get the list of session s that need processing
-    std::set<AmEventQueue*> pending_process_sessions 
-      = process_sessions;
-    process_sessions.clear();
-    process_sessions_mut.unlock();
+        runcond.wait_for();
 
-    // process control events (AmSessionProcessorThreadAddEvent)
-    events.processEvents();
+        DBG("running processing loop\n");
 
-    // startup all new sessions
-    if (!startup_sessions.empty()) {
-      DBG("starting up %zd sessions\n", startup_sessions.size());
+        process_sessions_mut.lock();
+        runcond.set(false);
 
-      for (std::vector<AmSession*>::iterator it=
-	     startup_sessions.begin(); 
-	   it != startup_sessions.end(); it++) {
-	
-	DBG("starting up [%s|%s]: [%p]\n",
-	    (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str(),*it);
-	if ((*it)->startup()) {
-	  sessions.push_back(*it); // startup successful
-	  // make sure this session is being processed for startup events
-	  pending_process_sessions.insert(*it);
-	}
-      }
+        // get the list of session s that need processing
+        std::set<AmEventQueue*> pending_process_sessions = process_sessions;
+        process_sessions.clear();
 
-      startup_sessions.clear();
-    }
+        process_sessions_mut.unlock();
 
-    std::vector<AmSession*> fin_sessions;
+        // process control events (AmSessionProcessorThreadAddEvent)
+        events.processEvents();
 
-    DBG("processing events for  up to %zd sessions\n",
-	pending_process_sessions.size());
+        // startup all new sessions
+        if (!startup_sessions.empty()) {
+            DBG("starting up %zd sessions\n", startup_sessions.size());
 
-    std::list<AmSession*>::iterator it=sessions.begin();
-    while (it != sessions.end()) {
-      if ((pending_process_sessions.find(*it)!=
-	      pending_process_sessions.end()) &&
-	  (!(*it)->processingCycle())) {
-	fin_sessions.push_back(*it);
-	std::list<AmSession*>::iterator d_it = it;
-	it++;
-	sessions.erase(d_it);
-      } else {
-	it++;
-      }
-    }
+            for (std::vector<AmSession*>::iterator it = startup_sessions.begin();
+                 it != startup_sessions.end(); it++)
+            {
+                DBG("starting up [%s|%s]: [%p]\n",
+                    (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str(),*it);
 
-    if (fin_sessions.size()) {
-      DBG("finalizing %zd sessions\n", fin_sessions.size());
-      for (std::vector<AmSession*>::iterator it=fin_sessions.begin(); 
-	   it != fin_sessions.end(); it++) {
-	DBG("finalizing session [%p/%s/%s]\n",
-	    *it, (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str());
-	(*it)->finalize();
-      }
-    }
-  }
+                if ((*it)->startup()) {
+                    sessions.push_back(*it); // startup successful
+                    // make sure this session is being processed for startup events
+                    pending_process_sessions.insert(*it);
+                }
+            }
+            startup_sessions.clear();
+        }
+
+        std::vector<AmSession*> fin_sessions;
+
+        DBG("processing events for  up to %zd sessions\n", pending_process_sessions.size());
+
+        std::list<AmSession*>::iterator it=sessions.begin();
+        while (it != sessions.end()) {
+            if ((pending_process_sessions.find(*it)!=pending_process_sessions.end())
+                && (!(*it)->processingCycle(event_stats)))
+            {
+                fin_sessions.push_back(*it);
+                std::list<AmSession*>::iterator d_it = it;
+                it++;
+                sessions.erase(d_it);
+            } else {
+                it++;
+            }
+        }
+
+        if (fin_sessions.size()) {
+            DBG("finalizing %zd sessions\n", fin_sessions.size());
+            for (std::vector<AmSession*>::iterator it=fin_sessions.begin();
+                 it != fin_sessions.end(); it++)
+            {
+                DBG("finalizing session [%p/%s/%s]\n",
+                    *it, (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str());
+
+                (*it)->finalize();
+            }
+        }
+    } //while(!stop_requested.get())
 }
 
 void AmSessionProcessorThread::on_stop() {

@@ -71,6 +71,25 @@ class FunctionCounter
     CallbackFunction func_;
 };
 
+class FunctionGroupCounter
+  : public StatCounter
+{
+  public:
+    typedef void (*CallbackFunction)(iterate_func_type callback);
+
+    FunctionGroupCounter(CallbackFunction func)
+      : func_(func)
+    {}
+    FunctionGroupCounter(FunctionGroupCounter const &) = delete;
+    FunctionGroupCounter(FunctionGroupCounter const &&) = delete;
+    ~FunctionGroupCounter() override {}
+
+    void iterate(iterate_func_type callback) override;
+
+  private:
+    CallbackFunction func_;
+};
+
 //represents set of counters with the same name
 class StatCountersGroup final
   : public StatCounter
@@ -108,6 +127,7 @@ public:
 
     AtomicCounter& addAtomicCounter();
     FunctionCounter& addFunctionCounter(FunctionCounter::CallbackFunction func);
+    FunctionGroupCounter& addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func);
 
     static const char *type2str(Type type);
     static Type str2type(const char * type);

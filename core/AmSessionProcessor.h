@@ -34,30 +34,37 @@
 
 #include "AmThread.h"
 #include "AmEventQueue.h"
+#include "EventStats.h"
+#include "AmStatistics.h"
 
 #include <vector>
 #include <list>
 #include <set>
+
 class AmSessionProcessorThread;
 class AmSession;
 
 class AmSessionProcessor {
-  static vector<AmSessionProcessorThread*> threads;
-  static AmMutex threads_mut;
-  static vector<AmSessionProcessorThread*>::iterator 
-    threads_it;
+    static vector<AmSessionProcessorThread*> threads;
+    static AmMutex threads_mut;
+    static vector<AmSessionProcessorThread*>::iterator threads_it;
+    static EventStats event_stats;
 
- public: 
-  static AmSessionProcessorThread* getProcessorThread();
-  static void addThreads(unsigned int num_threads);
+  public:
+    static void init();
+    static AmSessionProcessorThread* getProcessorThread();
+    static void addThreads(unsigned int num_threads);
+    static void get_statistics_count(StatCounter::iterate_func_type f);
+    static void get_statistics_time(StatCounter::iterate_func_type f);
 };
 
 struct AmSessionProcessorThreadAddEvent 
   : AmEvent
 {
-  AmSession* s;
-  AmSessionProcessorThreadAddEvent(AmSession* s)
-    : s(s), AmEvent(120) { }
+    AmSession* s;
+    AmSessionProcessorThreadAddEvent(AmSession* s)
+      : s(s), AmEvent(120)
+    { }
 };
 
 class AmSessionProcessorThread 
@@ -65,30 +72,33 @@ class AmSessionProcessorThread
   public AmEventHandler,
   public AmEventNotificationSink
 {
-  AmEventQueue    events;
-  std::list<AmSession*> sessions;
-  std::vector<AmSession*> startup_sessions;
-  AmSharedVar<bool> stop_requested;
+  private:
+    AmEventQueue    events;
+    std::list<AmSession*> sessions;
+    std::vector<AmSession*> startup_sessions;
+    AmSharedVar<bool> stop_requested;
 
-  AmCondition<bool> runcond;
-  std::set<AmEventQueue*> process_sessions;
-  AmMutex process_sessions_mut;
+    AmCondition<bool> runcond;
+    std::set<AmEventQueue*> process_sessions;
+    AmMutex process_sessions_mut;
 
-  // AmEventHandler interface
-  void process(AmEvent* e);
+    EventStats &event_stats;
+
+    // AmEventHandler interface
+    void process(AmEvent* e);
 
  public:
-  AmSessionProcessorThread();
-  ~AmSessionProcessorThread();
+    AmSessionProcessorThread(EventStats &event_stats);
+    ~AmSessionProcessorThread();
 
-  // AmThread interface
-  void run();
-  void on_stop();
+    // AmThread interface
+    void run();
+    void on_stop();
 
-  // AmEventNotificationSink interface
-  void notify(AmEventQueue* sender);
+    // AmEventNotificationSink interface
+    void notify(AmEventQueue* sender);
 
-  void startSession(AmSession* s);
+    void startSession(AmSession* s);
 };
 
 #endif // _AmSessionProcessor_h_

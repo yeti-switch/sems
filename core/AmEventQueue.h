@@ -31,6 +31,7 @@
 #include "AmThread.h"
 #include "AmEvent.h"
 #include "atomic_types.h"
+#include "EventStats.h"
 
 #include <queue>
 
@@ -78,7 +79,7 @@ public:
   virtual ~AmEventQueue();
 
   void postEvent(AmEvent*);
-  void processEvents();
+  void processEvents(EventStats *stats = nullptr);
   void waitForEvent();
   void processSingleEvent();
   bool eventPending();
