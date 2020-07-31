@@ -1,3 +1,10 @@
+sems (1.26.0) stable; urgency=low
+
+  * add callback on failed RTP initialization
+  * AmSessionProcessor: collect events processing metrics
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 31 Jul 2020 17:12:27 +0300
+
 sems (1.25.0) stable; urgency=low
 
   * fix symmetric RTP for SRTP and ZRTP connections
