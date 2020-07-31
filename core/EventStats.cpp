@@ -23,7 +23,7 @@ void EventTypeStats::iterate_count(StatCounter::iterate_func_type f)
 
 void EventTypeStats::iterate_time(StatCounter::iterate_func_type f)
 {
-    f(consumed_time.tv_sec,0,labels);
+    f(consumed_time.tv_sec*1000 + consumed_time.tv_usec/1000, 0, labels);
 }
 
 

@@ -44,7 +44,7 @@ AmSessionProcessor::threads_it = AmSessionProcessor::threads.begin();
 void AmSessionProcessor::init()
 {
     stat_group(Counter, "core","session_processor_events_count").addFunctionGroupCounter(&get_statistics_count);
-    stat_group(Counter, "core","session_processor_events_time").addFunctionGroupCounter(&get_statistics_time);
+    stat_group(Counter, "core","session_processor_events_time_spent_ms").addFunctionGroupCounter(&get_statistics_time);
 }
 
 AmSessionProcessorThread* AmSessionProcessor::getProcessorThread() {
