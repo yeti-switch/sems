@@ -771,8 +771,8 @@ int AmRtpStream::init(const AmSdp& local,
         (local_media.is_simple_rtp()  && !remote_media.is_simple_rtp()) ||
         (local_media.is_dtls_udptl()  && !remote_media.is_dtls_udptl()) ||
         (local_media.is_udptl() && !remote_media.is_udptl())) {
-        CLASS_ERROR("AmRtpStream::init. incompatible transport between sides");
-        init_error = "incompatible transport between sides";
+        CLASS_ERROR("AmRtpStream::init. incompatible transport");
+        init_error = "incompatible transport";
         return -1;
     }
 
