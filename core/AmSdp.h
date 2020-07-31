@@ -338,20 +338,29 @@ struct SdpMedia
 
   void set_mode_if_missed(bool _send, bool _recv);
   
-  bool is_dtls() const {
+  bool is_dtls_udptl() const {
        return transport == TP_UDPTLSUDPTL;
+  }
+
+  bool is_udptl() const {
+       return transport == TP_UDPTL;
   }
 
   bool is_dtls_srtp() const {
       return transport == TP_UDPTLSRTPSAVP ||
              transport == TP_UDPTLSRTPSAVPF;
   }
-  
+
   bool is_simple_srtp() const {
       return transport == TP_RTPSAVP ||
              transport == TP_RTPSAVPF;
   }
-  
+
+  bool is_simple_rtp() const {
+      return transport == TP_RTPAVP ||
+             transport == TP_RTPAVPF;
+  }
+
   bool is_use_ice() const {
       return is_ice;
   }

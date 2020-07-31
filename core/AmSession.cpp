@@ -1149,7 +1149,10 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
     ERROR("Error while initializing RTP stream (unknown exception in AmRTPStream::init)\n");
     ret = -1;
   }
+
   unlockAudio();
+
+  if(ret == -1) onInitStreamFailed();
 
   if (!isProcessingMedia()) {
     setInbandDetector(AmConfig.default_dtmf_detector);

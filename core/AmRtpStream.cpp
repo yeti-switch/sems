@@ -560,10 +560,12 @@ int AmRtpStream::init(const AmSdp& local,
     const AmSdp& remote,
     bool force_passive_mode)
 {
+    init_error.clear();
     if((sdp_media_index < 0) ||
        ((unsigned)sdp_media_index >= local.media.size()) ||
        ((unsigned)sdp_media_index >= remote.media.size())) {
         CLASS_ERROR("Media index %i is invalid, either within local or remote SDP (or both)",sdp_media_index);
+        init_error = "Media index is invalid";
         return -1;
     }
 
@@ -669,11 +671,13 @@ int AmRtpStream::init(const AmSdp& local,
         // set remote address - media c-line having precedence over session c-line
         if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
             CLASS_WARN("no c= line given globally or in m= section in remote SDP\n");
+            init_error = "no remote address";
             return -1;
         }
 
         if(local_media.payloads.empty()) {
             CLASS_DBG("local_media.payloads.empty()\n");
+            init_error = "no payloads";
             return -1;
         }
 
@@ -715,6 +719,7 @@ int AmRtpStream::init(const AmSdp& local,
         payload = getDefaultPT();
         if(payload < 0) {
             CLASS_DBG("could not set a default payload\n");
+            init_error = "could not set a default payload";
             return -1;
         }
         CLASS_DBG("default payload selected = %i\n",payload);
@@ -733,7 +738,7 @@ int AmRtpStream::init(const AmSdp& local,
     CLASS_DBG("local media attribute: use_ice - %s, dtls - %s, srtp - %s",
 #endif/*WITH_ZRTP*/
          local_media.is_use_ice()?"true":"false",
-         (local_media.is_dtls_srtp() || local_media.is_dtls())?"true":"false",
+         (local_media.is_dtls_srtp() || local_media.is_dtls_udptl())?"true":"false",
          (local_media.is_simple_srtp() || local_media.is_dtls_srtp() )?"true":"false"
 #ifdef WITH_ZRTP
          , local_media.zrtp_hash.is_use?"true":"false");
@@ -746,7 +751,7 @@ int AmRtpStream::init(const AmSdp& local,
     CLASS_DBG("remote media attribute: use_ice - %s, dtls - %s, srtp - %s",
 #endif/*WITH_ZRTP*/
          remote_media.is_use_ice()?"true":"false",
-         (remote_media.is_dtls_srtp() || remote_media.is_dtls())?"true":"false",
+         (remote_media.is_dtls_srtp() || remote_media.is_dtls_udptl())?"true":"false",
          (remote_media.is_simple_srtp() || remote_media.is_dtls_srtp())?"true":"false"
 #ifdef WITH_ZRTP
          , local_media.zrtp_hash.is_use?"true":"false");
@@ -757,6 +762,17 @@ int AmRtpStream::init(const AmSdp& local,
     if((local_media.type == MT_AUDIO && !cur_rtp_trans) ||
        (local_media.type == MT_IMAGE && !cur_udptl_trans)) {
         CLASS_ERROR("AmRtpStream::init. failed to get transport");
+        init_error = "failed to get transport";
+        return -1;
+    }
+
+    if ((local_media.is_simple_srtp() && !remote_media.is_simple_srtp()) ||
+        (local_media.is_dtls_srtp()  && !remote_media.is_dtls_srtp()) ||
+        (local_media.is_simple_rtp()  && !remote_media.is_simple_rtp()) ||
+        (local_media.is_dtls_udptl()  && !remote_media.is_dtls_udptl()) ||
+        (local_media.is_udptl() && !remote_media.is_udptl())) {
+        CLASS_ERROR("AmRtpStream::init. incompatible transport between sides");
+        init_error = "incompatible transport between sides";
         return -1;
     }
 
@@ -787,7 +803,7 @@ int AmRtpStream::init(const AmSdp& local,
                 cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
-        } else if(local_media.is_dtls() && cur_udptl_trans) {
+        } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP
@@ -816,6 +832,7 @@ int AmRtpStream::init(const AmSdp& local,
         }
     } catch(string& error) {
         CLASS_ERROR("Can't initialize connections. error - %s", error.c_str());
+        init_error = error;
         return -1;
     }
 

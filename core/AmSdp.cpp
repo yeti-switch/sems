@@ -602,7 +602,7 @@ void AmSdp::print(string& body) const
             out_buf += c_it->print();
         }
 
-        if(media_it->is_dtls_srtp() || media_it->is_dtls())
+        if(media_it->is_dtls_srtp() || media_it->is_dtls_udptl())
             out_buf += "a=fingerprint:" + media_it->fingerprint.hash + " " + media_it->fingerprint.value + "\r\n";
 
       if(media_it->is_ice) {

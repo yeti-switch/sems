@@ -608,6 +608,9 @@ public:
   /** This callback is called on final exception in processEventsCatchExceptions() */
   virtual bool onException(int code,const string &reason) noexcept { return false; }
 
+  /** This callback is called on failed inited rtp stream */
+  virtual void onInitStreamFailed() {}
+
   /** This callback is called if RTP timeout encountered */
   virtual void onRtpTimeout();
 

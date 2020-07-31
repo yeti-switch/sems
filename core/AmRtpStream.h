@@ -402,6 +402,9 @@ class AmRtpStream
     /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
     bool force_receive_dtmf;
 
+    /** the string representation of the rtp stream initialization error */
+    string init_error;
+
   private:
     void fill_sender_report(RtcpSenderReportHeader &s, struct timeval &now, unsigned int user_ts);
 
