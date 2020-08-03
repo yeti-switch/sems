@@ -41,12 +41,35 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
         key = key ## _arg.asCStr(); \
     }
 
+#define DEF_AND_VALIDATE_OPTIONAL_STR_ALT(key, altname) \
+    if(info.hasMember(#key)) { \
+        AmArg &a = info[#key]; \
+        if(!isArgCStr(a)) { ERROR("unexpected '" #key "' type. expected string"); return false; } \
+        key = a.asCStr(); \
+    } else if (info.hasMember(#altname)) { \
+        AmArg &a = info[#altname]; \
+        if(!isArgCStr(a)) { ERROR("unexpected '" #altname "' type. expected string"); return false; } \
+        key = a.asCStr(); \
+    }
+
 #define DEF_AND_VALIDATE_OPTIONAL_INT(key,default_value) \
     key = default_value; \
     if(info.hasMember(#key)) { \
         AmArg & key ## _arg = info[#key]; \
         if(!isArgInt(key ## _arg)) { ERROR("unexpected '" #key "' type. expected integer"); return false; } \
         key = key ## _arg.asInt(); \
+    }
+
+#define DEF_AND_VALIDATE_OPTIONAL_INT_ALT(key,altname, default_value) \
+    key = default_value; \
+    if(info.hasMember(#key)) { \
+        AmArg &a = info[#key]; \
+        if(!isArgInt(a)) { ERROR("unexpected '" #key "' type. expected integer"); return false; } \
+        key = a.asInt(); \
+    } else if(info.hasMember(#altname)) { \
+        AmArg &a = info[#altname]; \
+        if(!isArgInt(a)) { ERROR("unexpected '" #altname "' type. expected integer"); return false; } \
+        key = a.asInt(); \
     }
 
 #define DEF_AND_VALIDATE_MANDATORY_STR(key) \
@@ -69,13 +92,13 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
     DEF_AND_VALIDATE_MANDATORY_STR(domain);
     DEF_AND_VALIDATE_OPTIONAL_STR(user);
     DEF_AND_VALIDATE_OPTIONAL_STR(name);
-    DEF_AND_VALIDATE_OPTIONAL_STR(auth_user);
-    DEF_AND_VALIDATE_OPTIONAL_STR(pwd);
+    DEF_AND_VALIDATE_OPTIONAL_STR_ALT(auth_user, auth_username);
+    DEF_AND_VALIDATE_OPTIONAL_STR_ALT(pwd, auth_password);
     DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
     DEF_AND_VALIDATE_OPTIONAL_STR(contact);
-    DEF_AND_VALIDATE_OPTIONAL_STR(contact_uri_params);
+    DEF_AND_VALIDATE_OPTIONAL_STR_ALT(contact_uri_params, contact_params);
 
-    DEF_AND_VALIDATE_OPTIONAL_INT(expires_interval,0);
+    DEF_AND_VALIDATE_OPTIONAL_INT_ALT(expires_interval, expires, 0);
     DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval,0);
     DEF_AND_VALIDATE_OPTIONAL_INT(retry_delay,DEFAULT_REGISTER_RETRY_DELAY);
     DEF_AND_VALIDATE_OPTIONAL_INT(max_attempts,REGISTER_ATTEMPTS_UNLIMITED);
