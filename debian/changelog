@@ -1,3 +1,9 @@
+sems (1.26.1) stable; urgency=low
+
+  * fix relay mode stats and rpc command "show media stream"
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 03 Aug 2020 15:18:15 +0300
+
 sems (1.26.0) stable; urgency=low
 
   * add callback on failed RTP initialization
