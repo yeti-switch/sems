@@ -1432,6 +1432,8 @@ void AmRtpStream::relay(AmRtpPacket* p)
      if (mute || hold)
          return;
 
+     if(!cur_rtp_trans) return;
+
      sockaddr_storage recv_addr;
      p->getAddr(&recv_addr);
      if(session && !session->onBeforeRTPRelay(p,&recv_addr))
@@ -1469,19 +1471,16 @@ void AmRtpStream::relay(AmRtpPacket* p)
 
      } //if(!relay_raw)
 
-     if(cur_rtp_trans && cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
+     if(cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
          CLASS_ERROR("while sending RTP packet to '%s':%i\n",
                     cur_rtp_trans->getRHost(false).c_str(),cur_rtp_trans->getRPort(false));
      } else {
-         sockaddr_storage addr;
-
-         if(cur_rtp_trans && relay_raw) cur_rtp_trans->getRAddr(&addr);
-         else if(cur_rtp_trans && !relay_raw) cur_rtp_trans->getRAddr(false, &addr);
-
-         if(session && cur_rtp_trans) session->onAfterRTPRelay(p, &addr);
-
-         add_if_no_exist(outgoing_relayed_payloads,p->payload);
-         outgoing_bytes += p->getBufferSize();
+        sockaddr_storage addr;
+        if(relay_raw) cur_rtp_trans->getRAddr(&addr);
+        else if(!relay_raw) cur_rtp_trans->getRAddr(false, &addr);
+        if(session) session->onAfterRTPRelay(p, &addr);
+        add_if_no_exist(outgoing_relayed_payloads,p->payload);
+        outgoing_bytes += p->getBufferSize();
      }
 }
 

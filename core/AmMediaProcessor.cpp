@@ -277,7 +277,7 @@ void AmMediaProcessor::getInfo(AmArg& ret)
         AmMediaProcessorThread *t = threads[i];
         if(!t) continue;
         t->getInfo(l);
-        ret.push(int2str(static_cast<unsigned int>(_self_tid)),l);
+        ret.push(int2str(static_cast<unsigned int>(t->_pid)),l);
     }
     group_mut.unlock();
 }
