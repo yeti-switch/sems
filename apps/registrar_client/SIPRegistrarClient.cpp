@@ -467,8 +467,8 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
     if(!isArgStruct(data)) { ERROR("unexpected payload type in BusReplyEvent"); return; }
 
     string action;
-    if(!data.hasMember(action)) { ERROR("missed 'action' in BusReplyEvent payload"); return; }
-    AmArg & action_arg = data[action];
+    if(!data.hasMember("action")) { ERROR("missed 'action' in BusReplyEvent payload"); return; }
+    AmArg & action_arg = data["action"];
     if(!isArgCStr(action_arg)) { ERROR("unexpected 'action' type. expected string"); return; } \
     action = action_arg.asCStr();
 
