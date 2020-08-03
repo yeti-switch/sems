@@ -1,3 +1,9 @@
+sems (1.26.2) stable; urgency=low
+
+  * fix SIPRegistrarClient::processAmArgRegistration
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 04 Aug 2020 00:48:35 +0300
+
 sems (1.26.1) stable; urgency=low
 
   * fix relay mode stats and rpc command "show media stream"
