@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
+#include "AmArg.h"
 
 #include <string>
 using std::string;
@@ -45,6 +46,7 @@ public:
     void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }
     bool isMute() { return mute; }
     AmMediaTransport* getTransport() { return transport; }
+    void getInfo(AmArg& ret);
 protected:
     void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:

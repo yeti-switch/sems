@@ -2017,6 +2017,20 @@ void AmRtpStream::getInfo(AmArg &ret){
     ret["self_ptr"] = s.str();
 
     s.clear();
+    ret["relay_enabled"] = relay_enabled;
+    ret["relay_enabled"] = relay_enabled;
+    ret["relay_raw"] = relay_raw;
+    ret["force_relay_cn"] = force_relay_cn;
+    AmArg &p = ret["relay_payloads"];
+    for(auto& payload : payloads) {
+        if(relay_payloads.get(payload.pt)) {
+            AmArg pl;
+            pl["encoding_name"] = payload.name;
+            pl["payload_type"] = payload.pt;
+            pl["clock_rate"] = (int)payload.clock_rate;
+            p.push(pl);
+        }
+    }
     if(relay_stream) {
         std::stringstream s;
         s << std::hex << relay_stream;
@@ -2032,8 +2046,8 @@ void AmRtpStream::getInfo(AmArg &ret){
         AmArg &a = ret["socket"];
         a["local_ip"] = cur_rtp_trans->getLocalIP();
         a["local_port"] = getLocalPort();
-        a["remote_host"] = getRHost(false);
-        a["remote_port"] = getRPort(false);
+        a["remote_host"] = getRHost(RTP_TRANSPORT);
+        a["remote_port"] = getRPort(RTP_TRANSPORT);
     } else {
         ret["socket"] = "unbound";
     }
@@ -2041,6 +2055,20 @@ void AmRtpStream::getInfo(AmArg &ret){
     ret["mute"] = mute;
     ret["hold"] = hold;
     ret["receiving"] = receiving;
+
+    AmArg& transports = ret["transports"];
+    for(auto& transport: ip4_transports) {
+        AmArg trsp;
+        trsp["protocol"] = "ip4";
+        transport->getInfo(trsp);
+        transports.push(trsp);
+    }
+    for(auto& transport: ip6_transports) {
+        AmArg trsp;
+        trsp["protocol"] = "ip6";
+        transport->getInfo(trsp);
+        transports.push(trsp);
+    }
 }
 
 void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
