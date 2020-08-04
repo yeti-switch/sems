@@ -1,3 +1,9 @@
+sems (1.27.0) stable; urgency=low
+
+  * rpc method 'core.show.media.streams': show additional info
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 04 Aug 2020 13:33:52 +0300
+
 sems (1.26.3) stable; urgency=low
 
   * SIPRegistrationInfo::init_from_amarg: fix back-compatibility"
