@@ -156,6 +156,7 @@ public:
     void initZrtpConnection(const string& remote_address, int remote_port);
 #endif/*WITH_ZRTP*/
     void initRawConnection();
+    void getInfo(AmArg& ret);
 
     AmRtpStream* getRtpStream() { return stream; }
 protected:

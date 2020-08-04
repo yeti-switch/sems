@@ -687,6 +687,24 @@ void AmMediaTransport::initRawConnection()
     }
 }
 
+void AmMediaTransport::getInfo(AmArg& ret)
+{
+    if(mode == TRANSPORT_MODE_FAX) ret["mode"] = "fax";
+    else if(mode == TRANSPORT_MODE_DTLS_FAX) ret["mode"] = "dtls_fax";
+    else if(mode == TRANSPORT_MODE_RAW) ret["mode"] = "raw";
+    else if(mode == TRANSPORT_MODE_DEFAULT) ret["mode"] = "default";
+
+    if(type == FAX_TRANSPORT) ret["type"] = "fax";
+    if(type == RTP_TRANSPORT) ret["type"] = "rtp";
+    if(type == RTCP_TRANSPORT) ret["type"] = "rtcp";
+    AmArg& conns = ret["connections"];
+    for(auto& connection : connections) {
+        AmArg conn;
+        connection->getInfo(conn);
+        conns.push(conn);
+    }
+}
+
 void AmMediaTransport::addConnection(AmStreamConnection* conn)
 {
     AmLock l(connections_mut);

@@ -189,6 +189,20 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
     memcpy(&last_recv_time, rv_time, sizeof(struct timeval));
 }
 
+void AmStreamConnection::getInfo(AmArg& ret)
+{
+    if(conn_type == RTP_CONN) ret["type"] = "rtp";
+    else if(conn_type == RTCP_CONN) ret["type"] = "rtcp";
+    else if(conn_type == STUN_CONN) ret["type"] = "stun";
+    else if(conn_type == DTLS_CONN) ret["type"] = "dtls";
+    else if(conn_type == UDPTL_CONN) ret["type"] = "udptl";
+    else if(conn_type == ZRTP_CONN) ret["type"] = "zrtp";
+    else if(conn_type == RAW_CONN) ret["type"] = "raw";
+    ret["passive"] = passive;
+    ret["remote_addr"] = r_host;
+    ret["remote_port"] = r_port;
+}
+
 void AmStreamConnection::setPassiveMode(bool p)
 {
     if(p) {

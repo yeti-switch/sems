@@ -2055,6 +2055,20 @@ void AmRtpStream::getInfo(AmArg &ret){
     ret["mute"] = mute;
     ret["hold"] = hold;
     ret["receiving"] = receiving;
+
+    AmArg& transports = ret["transports"];
+    for(auto& transport: ip4_transports) {
+        AmArg trsp;
+        trsp["protocol"] = "ip4";
+        transport->getInfo(trsp);
+        transports.push(trsp);
+    }
+    for(auto& transport: ip6_transports) {
+        AmArg trsp;
+        trsp["protocol"] = "ip6";
+        transport->getInfo(trsp);
+        transports.push(trsp);
+    }
 }
 
 void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
