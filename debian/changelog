@@ -1,3 +1,10 @@
+sems (1.28.0) stable; urgency=low
+
+  * AmRtpConnection::isAddrConnection: fix IPv6 addrs comparation
+  * AmSrtpConnection: change RX context explicitly on SSRC change
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 06 Aug 2020 23:12:11 +0300
+
 sems (1.27.0) stable; urgency=low
 
   * rpc method 'core.show.media.streams': show additional info
