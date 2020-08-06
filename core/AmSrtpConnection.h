@@ -40,21 +40,35 @@ class AmSrtpConnection : public AmStreamConnection
 {
 private:
     typedef std::vector<srtp_master_key_p> srtp_master_keys;
-    unsigned char  c_key_s[SRTP_KEY_SIZE];
-    unsigned char  c_key_r[SRTP_KEY_SIZE];
-    bool b_init[2];
+    unsigned char  c_key_tx[SRTP_KEY_SIZE];
+    unsigned char  c_key_rx[SRTP_KEY_SIZE];
+
+    bool rx_context_initialized;
+    bool tx_context_initialized;
+    bool connection_invalidated;
+    uint32_t last_rx_ssrc_net_order;
+    unsigned int rx_ssrc_changes_count;
+    srtp_policy_t rx_policy;
+
     srtp_profile_t srtp_profile;
-    srtp_t srtp_s_session;
-    srtp_t srtp_r_session;
+    srtp_t srtp_tx_session;
+    srtp_t srtp_rx_session;
 
     AmStreamConnection* s_stream;
+
+    int ensure_rx_stream_context(uint32_t ssrc_net_order);
+
 public:
     AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
     ~AmSrtpConnection();
 
-    void use_key(srtp_profile_t profile, const unsigned char* key_s, size_t key_s_len, const unsigned char* key_r, size_t key_r_len);
+    void use_key(srtp_profile_t profile,
+                 const unsigned char* key_tx, size_t key_tx_len,
+                 const unsigned char* key_rx, size_t key_rx_len);
 
-    static void base64_key(const std::string& key, unsigned char* key_s, unsigned int& key_s_len);
+    static void base64_key(const std::string& key,
+                           unsigned char* key_s, unsigned int& key_s_len);
+
     static std::string gen_base64_key(srtp_profile_t profile);
     static std::string gen_base64(unsigned int key_s_len);
 
