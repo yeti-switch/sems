@@ -71,10 +71,9 @@ bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
     } else if(recv_addr->ss_family == AF_INET6) {
         auto &r_addr_ipv6 = *reinterpret_cast<sockaddr_in6 *>(&r_addr);
         auto &recv_addr_ipv6 = *reinterpret_cast<sockaddr_in6 *>(recv_addr);
-        bool ret =  r_addr_ipv6.sin6_port == recv_addr_ipv6.sin6_port &&
-                    IN6_ARE_ADDR_EQUAL(&r_addr_ipv6.sin6_addr, &recv_addr_ipv6.sin6_addr);
+        return r_addr_ipv6.sin6_port == recv_addr_ipv6.sin6_port &&
+               IN6_ARE_ADDR_EQUAL(&r_addr_ipv6.sin6_addr, &recv_addr_ipv6.sin6_addr);
                     //0==memcmp(&r_addr_ipv6.sin6_addr, &recv_addr_ipv6.sin6_addr, sizeof(struct in6_addr));
-        return ret;
     }
     return false;
 }
