@@ -67,13 +67,10 @@ bool AmStreamConnection::isUseConnection(ConnectionType type)
 bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
 {
     if(recv_addr->ss_family == AF_INET) {
-        return memcmp(&r_addr, recv_addr, sizeof(sockaddr_in) - sizeof(sockaddr_in::sin_zero)) == 0;
+        return SAv4(&r_addr)->sin_addr.s_addr==SAv4(recv_addr)->sin_addr.s_addr;
     } else if(recv_addr->ss_family == AF_INET6) {
-        auto &r_addr_ipv6 = *reinterpret_cast<sockaddr_in6 *>(&r_addr);
-        auto &recv_addr_ipv6 = *reinterpret_cast<sockaddr_in6 *>(recv_addr);
-        return r_addr_ipv6.sin6_port == recv_addr_ipv6.sin6_port &&
-               IN6_ARE_ADDR_EQUAL(&r_addr_ipv6.sin6_addr, &recv_addr_ipv6.sin6_addr);
-                    //0==memcmp(&r_addr_ipv6.sin6_addr, &recv_addr_ipv6.sin6_addr, sizeof(struct in6_addr));
+        return SAv6(&r_addr)->sin6_port == SAv6(recv_addr)->sin6_port &&
+               IN6_ARE_ADDR_EQUAL(&SAv6(&r_addr)->sin6_addr, &SAv6(recv_addr)->sin6_addr);
     }
     return false;
 }

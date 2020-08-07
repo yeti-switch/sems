@@ -28,6 +28,7 @@
  */
 #include "transport.h"
 #include "../log.h"
+#include "sip/ip_util.h"
 
 #include <assert.h>
 #include <netinet/in.h>
@@ -180,14 +181,11 @@ bool trsp_socket::match_addr(sockaddr_storage* other_addr) const
         return false;
 
     if(addr.ss_family == AF_INET) {
-        if(!memcmp(&((sockaddr_in*)&addr)->sin_addr,
-                   &((sockaddr_in*)other_addr)->sin_addr,
-                   sizeof(in_addr)))
-            return true;
+        return SAv4(&addr)->sin_addr.s_addr==SAv4(other_addr)->sin_addr.s_addr;
     } else if(addr.ss_family == AF_INET6) {
         return IN6_ARE_ADDR_EQUAL(
-            &((sockaddr_in6*)&addr)->sin6_addr,
-            &((sockaddr_in6*)other_addr)->sin6_addr);
+            &(SAv6(&addr))->sin6_addr,
+            &(SAv6(other_addr))->sin6_addr);
     }
 
     return false;

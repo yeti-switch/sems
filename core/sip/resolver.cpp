@@ -553,9 +553,9 @@ bool ip_entry::operator == (const ip_entry& entry)
     if(type != entry.type)
         return false;
     if(type == IPv4) {
-        return memcmp(&addr,&entry.addr, sizeof(in_addr)) == 0;
+        return addr.s_addr==entry.addr.s_addr;
     } else if(type == IPv6) {
-        return memcmp(&addr6,&entry.addr6, sizeof(in6_addr)) == 0;
+        return IN6_ARE_ADDR_EQUAL(&addr6,&entry.addr6);
     }
     return false;
 }
