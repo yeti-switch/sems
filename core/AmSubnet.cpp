@@ -9,7 +9,7 @@
 #include <cstring>
 
 #define SAv4_addr(v) (SAv4(&v)->sin_addr.s_addr)
-#define SAv6_addr(v) (*(uint64_t*)(SAv6(&v)->sin6_addr.s6_addr))
+#define SAv6_addr(v) ((uint64_t*)(SAv6(&v)->sin6_addr.s6_addr))
 
 #define TYP_INIT 0 
 #define TYP_SMLE 1 
@@ -68,8 +68,10 @@ bool AmSubnet::parse_mask(const std::string &mask_str)
         SAv4_addr(mask) = htonl((~0UL) << (32-mask_len));
     SAv4_addr(network) = SAv4_addr(addr) & SAv4_addr(mask);
     } else {
-        SAv6_addr(mask) = htonll((~0ULL) << (128-mask_len));
-        SAv6_addr(network) = SAv6_addr(addr) & SAv6_addr(mask);
+        SAv6_addr(mask)[0] = (mask_len >= 64 ? htonll(~0ULL) : (htonll((~0ULL) << (64-mask_len))));
+        SAv6_addr(mask)[1] = (mask_len >= 64 ? htonll((~0ULL) << (128-mask_len)) : 0);
+        SAv6_addr(network)[0] = SAv6_addr(addr)[0] & SAv6_addr(mask)[0];
+        SAv6_addr(network)[1] = SAv6_addr(addr)[1] & SAv6_addr(mask)[1];
     }
 
     return true;
@@ -97,6 +99,7 @@ bool AmSubnet::contains(const sockaddr_storage &ip) const
     if(addr.ss_family == AF_INET) {
     return ( SAv4_addr(network) == (SAv4_addr(ip) & SAv4_addr(mask)));
     } else {
-        return ( SAv6_addr(network) == (SAv6_addr(ip) & SAv6_addr(mask)));
+        return ( SAv6_addr(network)[0] == (SAv6_addr(ip)[0] & SAv6_addr(mask)[0])) &&
+               ( SAv6_addr(network)[1] == (SAv6_addr(ip)[1] & SAv6_addr(mask)[1]));
     }
 }
