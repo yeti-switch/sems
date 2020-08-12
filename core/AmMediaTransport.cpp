@@ -698,6 +698,7 @@ void AmMediaTransport::getInfo(AmArg& ret)
     if(type == RTP_TRANSPORT) ret["type"] = "rtp";
     if(type == RTCP_TRANSPORT) ret["type"] = "rtcp";
     AmArg& conns = ret["connections"];
+    AmLock l(connections_mut);
     for(auto& connection : connections) {
         AmArg conn;
         connection->getInfo(conn);
