@@ -150,17 +150,13 @@ int HttpClient::configure(const string& config)
     }
 
     resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME)*1000;
-    resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
-
-    auto resend_batch_size_tmp = cfg_getint(cfg, PARAM_RESEND_BATCH_SIZE_NAME);
-    if(resend_batch_size_tmp <= 0) {
-        ERROR("resend_batch_size must be greater than 0");
-        return -1;
-    }
-    resend_batch_size = static_cast<decltype(resend_batch_size)>(resend_batch_size_tmp);
+    DefaultValues vals;
+    vals.resend_queue_max = resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
+    vals.resend_connection_limit = resend_connection_limit = cfg_getint(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME);
+    vals.connection_limit = connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
 
     destinations.clear();
-    if(destinations.configure(cfg)){
+    if(destinations.configure(cfg, vals)){
         ERROR("can't configure destinations");
         cfg_free(cfg);
         return -1;
@@ -293,15 +289,6 @@ void HttpClient::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    while(!failed_upload_events.empty()){
-        delete failed_upload_events.front();
-        failed_upload_events.pop();
-    }
-    while(!failed_post_events.empty()){
-        delete failed_post_events.front();
-        failed_post_events.pop();
-    }
-
     DBG("HttpClient stopped");
 
     stopped.set(true);
@@ -337,15 +324,15 @@ void HttpClient::process_http_event(AmEvent * ev)
     switch(ev->event_id) {
     case HttpEvent::Upload: {
         if(HttpUploadEvent *e = dynamic_cast<HttpUploadEvent*>(ev))
-            on_upload_request(*e);
+            on_upload_request(e);
     } break;
     case HttpEvent::Post: {
         if(HttpPostEvent *e = dynamic_cast<HttpPostEvent*>(ev))
-            on_post_request(*e);
+            on_post_request(e);
     } break;
     case HttpEvent::MultiPartForm: {
         if(HttpPostMultipartFormEvent *e = dynamic_cast<HttpPostMultipartFormEvent*>(ev))
-            on_multpart_form_request(*e);
+            on_multpart_form_request(e);
     } break;
     default:
         WARN("unknown event received");
@@ -474,155 +461,140 @@ void HttpClient::on_sync_context_timer()
     sync_contexts_timer.read();
 }
 
-void HttpClient::on_upload_request(const HttpUploadEvent &u)
+void HttpClient::on_upload_request(HttpUploadEvent *u)
 {
-    HttpDestinationsMap::const_iterator destination = destinations.find(u.destination_name);
+    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
-            u.destination_name.c_str(),u.session_id.c_str());
+            u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    const HttpDestination &d = destination->second;
+    HttpDestination &d = destination->second;
     if(d.mode!=HttpDestination::Put) {
         ERROR("wrong destination '%s' type for upload request from session %s. 'put' mode expected. ignore it",
-              u.destination_name.c_str(),u.session_id.c_str());
+              u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    if(u.token.empty()){
+    if(u->token.empty()){
         DBG("http upload request: %s => %s [%i/%i]",
-            u.file_path.c_str(),
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt);
+            u->file_path.c_str(),
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt);
     } else {
         DBG("http upload request: %s => %s [%i/%i] token: %s",
-            u.file_path.c_str(),
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt,
-            u.token.c_str());
+            u->file_path.c_str(),
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt,
+            u->token.c_str());
     }
 
-    if(check_http_event_sync_ctx(u)) {
+    if(check_http_event_sync_ctx(*u)) {
         DBG("http upload request is consumed by synchronization contexts handler");
         return;
     }
 
-    HttpUploadConnection *c = new HttpUploadConnection(u,d,epoll_fd);
+    if(!u->is_send_failed && d.count_connection >= d.connection_limit) {
+        DBG("http upload request marked as postponed");
+        d.addEvent(new HttpUploadEvent(*u));
+        return;
+    }
+
+    HttpUploadConnection *c = new HttpUploadConnection(*u,d,epoll_fd);
     if(c->init(curl_multi)){
         ERROR("http upload connection intialization error");
         delete c;
     }
 }
 
-void HttpClient::on_post_request(const HttpPostEvent &u)
+void HttpClient::on_post_request(HttpPostEvent *u)
 {
-    HttpDestinationsMap::const_iterator destination = destinations.find(u.destination_name);
+    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
-            u.destination_name.c_str(),u.session_id.c_str());
+            u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    const HttpDestination &d = destination->second;
+    HttpDestination &d = destination->second;
     if(d.mode!=HttpDestination::Post) {
         ERROR("wrong destination '%s' mode for upload request from session %s. 'post' mode expected. ignore it",
-              u.destination_name.c_str(),u.session_id.c_str());
+              u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    if(u.token.empty()){
+    if(u->token.empty()){
         DBG("http post request url: %s [%i/%i]",
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt);
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt);
     } else {
         DBG("http post request url: %s [%i/%i], token: %s",
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt,
-            u.token.c_str());
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt,
+            u->token.c_str());
     }
 
-    if(check_http_event_sync_ctx(u)) {
+    if(check_http_event_sync_ctx(*u)) {
         DBG("http post request is consumed by synchronization contexts handler");
         return;
     }
 
-    HttpPostConnection *c = new HttpPostConnection(u,d,epoll_fd);
+    if(!u->is_send_failed && d.count_connection == d.connection_limit) {
+        DBG("http post request marked as postponed");
+        d.addEvent(new HttpPostEvent(*u));
+        return;
+    }
+
+    HttpPostConnection *c = new HttpPostConnection(*u,d,epoll_fd);
     if(c->init(curl_multi)){
         ERROR("http post connection intialization error");
         delete c;
     }
 }
 
-void HttpClient::on_multpart_form_request(const HttpPostMultipartFormEvent &u)
+void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
 {
-    HttpDestinationsMap::const_iterator destination = destinations.find(u.destination_name);
+    HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
-            u.destination_name.c_str(),u.session_id.c_str());
+            u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    const HttpDestination &d = destination->second;
+    HttpDestination &d = destination->second;
     if(d.mode!=HttpDestination::Post) {
         ERROR("wrong destination '%s' mode for upload request from session %s. 'post' mode expected. ignore it",
-              u.destination_name.c_str(),u.session_id.c_str());
+              u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
 
-    if(u.token.empty()){
+    if(u->token.empty()){
         DBG("http multipart form request url: %s [%i/%i]",
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt);
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt);
     } else {
         DBG("http multipart form request url: %s [%i/%i], token: %s",
-            d.url[u.failover_idx].c_str(),
-            u.failover_idx,u.attempt,
-            u.token.c_str());
+            d.url[u->failover_idx].c_str(),
+            u->failover_idx,u->attempt,
+            u->token.c_str());
     }
 
-    if(check_http_event_sync_ctx(u)) {
+    if(check_http_event_sync_ctx(*u)) {
         DBG("multipart form request is consumed by synchronization contexts handler");
         return;
     }
 
-    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(u,d,epoll_fd);
+    if(!u->is_send_failed && d.count_connection == d.connection_limit) {
+        DBG("http multipart form request marked as postponed");
+        d.addEvent(new HttpPostMultipartFormEvent(*u));
+        return;
+    }
+
+    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d,epoll_fd);
     if(c->init(curl_multi)){
         ERROR("http multipart form connection intialization error");
         delete c;
-    }
-}
-
-void HttpClient::on_requeue(CurlConnection *c)
-{
-    if(HttpUploadConnection *upload_conn = dynamic_cast<HttpUploadConnection *>(c)) {
-        if(resend_queue_max && failed_upload_events.size()>=resend_queue_max){
-            ERROR("reached max resend queue size %d. drop failed upload request",resend_queue_max);
-            upload_conn->post_response_event();
-            return;
-        }
-        failed_upload_events.emplace(new HttpUploadEvent(upload_conn->get_event()));
-        return;
-    }
-
-    if(HttpPostConnection *post_conn = dynamic_cast<HttpPostConnection *>(c)) {
-        if(resend_queue_max && failed_post_events.size()>=resend_queue_max){
-            ERROR("reached max resend queue size %d. drop failed post request",resend_queue_max);
-            post_conn->post_response_event();
-            return;
-        }
-        failed_post_events.emplace(new HttpPostEvent(post_conn->get_event()));
-        return;
-    }
-
-    if(HttpMultiPartFormConnection *mpf_conn = dynamic_cast<HttpMultiPartFormConnection *>(c)) {
-        if(resend_queue_max && failed_multipart_form_events.size()>=resend_queue_max){
-            ERROR("reached max resend queue size %d. drop failed multipart form request",resend_queue_max);
-            mpf_conn->post_response_event();
-            return;
-        }
-        failed_multipart_form_events.emplace(new HttpPostMultipartFormEvent(mpf_conn->get_event()));
-        return;
     }
 }
 
@@ -630,63 +602,27 @@ void HttpClient::on_resend_timer_event()
 {
     resend_timer.read();
 
-    auto remained_events = resend_batch_size;
-    while(remained_events) {
-        /* get one event from failed queue of each type */
-
-        //TODO: rewrite to use std::move() instead of copying with delete
-
-        bool have_failed_events = false;
-
-        if(!failed_upload_events.empty()) {
-            auto e = failed_upload_events.front();
-            on_upload_request(*e);
-            failed_upload_events.pop();
-            delete e;
-
-            if(--remained_events==0) break;
-            have_failed_events |= true;
-        }
-
-        if(!failed_post_events.empty()) {
-            auto e = failed_post_events.front();
-            on_post_request(*e);
-            failed_post_events.pop();
-            delete e;
-
-            if(--remained_events==0) break;
-            have_failed_events |= true;
-        }
-
-        if(!failed_multipart_form_events.empty()) {
-            have_failed_events |= true;
-            auto e = failed_multipart_form_events.front();
-            on_multpart_form_request(*e);
-            failed_multipart_form_events.pop();
-            delete e;
-
-            if(--remained_events==0) break;
-            have_failed_events |= true;
-        }
-
-        if(!have_failed_events)
-            break;
+    for(auto& dest : destinations) {
+        dest.second.send_failed_events(this);
     }
 }
 
 void HttpClient::on_connection_delete(CurlConnection *c)
 {
     invalid_ptrs.add(c);
+
+    for(auto& dest : destinations) {
+        dest.second.send_postponed_events(this);
+    }
 }
 
 void HttpClient::showStats(AmArg &ret)
 {
-    ret["failed_upload_events_queue"] = failed_upload_events.size();
-    ret["failed_post_events_queue"] = failed_post_events.size();
-    ret["failed_multipart_form_events_queue"] = failed_multipart_form_events.size();
-
-    ret["resend_queue_max "] = (long int)resend_queue_max;
-    ret["resend_batch_size "] = (long int)resend_batch_size;
     ret["resend_interval"] = resend_interval;
+    for(auto& dest : destinations) {
+        AmArg& dst_arr = ret["destinations"];
+        AmArg& dst = dst_arr[dest.first.c_str()];
+        dest.second.showStats(dst);
+    }
 }
 

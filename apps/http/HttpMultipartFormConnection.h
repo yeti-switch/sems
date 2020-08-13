@@ -9,7 +9,7 @@
 
 class HttpMultiPartFormConnection: public CurlConnection
 {
-  const HttpDestination &destination;
+  HttpDestination &destination;
   HttpPostMultipartFormEvent event;
   int response_code;
   string file_path;
@@ -17,7 +17,7 @@ class HttpMultiPartFormConnection: public CurlConnection
   curl_mime *form;
 
 public:
-  HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, const HttpDestination &destination, int epoll_fd);
+  HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination, int epoll_fd);
   ~HttpMultiPartFormConnection();
 
   const HttpPostMultipartFormEvent &get_event() { return event; }
@@ -25,6 +25,7 @@ public:
   int init(CURLM *curl_multi);
 
   int on_finished(CURLcode result);
+  void on_requeue();
 
   void post_response_event();
 };

@@ -9,22 +9,22 @@
 
 class HttpUploadConnection: public CurlConnection
 {
-  const HttpDestination &destination;
+  HttpDestination &destination;
   HttpUploadEvent event;
   string file_basename;
   int response_code;
   FILE *fd;
 
 public:
-  HttpUploadConnection(const HttpUploadEvent &u, const HttpDestination &destination, int epoll_fd);
+  HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination, int epoll_fd);
   ~HttpUploadConnection();
-
-  const HttpUploadEvent &get_event() { return event; }
 
   int init(CURLM *curl_multi);
 
   int on_finished(CURLcode result);
+  void on_requeue();
 
   void post_response_event();
+
 };
 

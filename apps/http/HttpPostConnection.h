@@ -9,20 +9,19 @@
 
 class HttpPostConnection: public CurlConnection
 {
-  const HttpDestination &destination;
+  HttpDestination &destination;
   HttpPostEvent event;
   int response_code;
   struct curl_slist *headers;
   string response;
 public:
-  HttpPostConnection(const HttpPostEvent &u, const HttpDestination &destination, int epoll_fd);
+  HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination, int epoll_fd);
   ~HttpPostConnection();
-
-  const HttpPostEvent &get_event() { return event; }
 
   int init(CURLM *curl_multi);
 
   int on_finished(CURLcode result);
+  void on_requeue();
 
   void post_response_event();
 

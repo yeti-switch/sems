@@ -11,19 +11,21 @@
 
 #include "AmSessionContainer.h"
 
-HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, const HttpDestination &destination, int epoll_fd):
+HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination, int epoll_fd):
     CurlConnection(epoll_fd),
     destination(destination),
     event(u),
     form(0)
 {
     CDBG("HttpMultiPartFormConnection() %p",this);
+    u.is_send_failed ? destination.resend_count_connection++ : destination.count_connection++;
 }
 
 HttpMultiPartFormConnection::~HttpMultiPartFormConnection() {
     CDBG("~HttpMultiPartFormConnection() %p curl = %p",this,curl);
     if(form)
         curl_mime_free(form);
+    event.is_send_failed ? destination.resend_count_connection-- : destination.count_connection--;
 }
 
 int HttpMultiPartFormConnection::init(CURLM *curl_multi)
@@ -127,6 +129,21 @@ int HttpMultiPartFormConnection::on_finished(CURLcode result)
         post_response_event();
 
     return requeue;
+}
+
+void HttpMultiPartFormConnection::on_requeue()
+{
+    if(destination.check_queue()){
+        ERROR("reached max resend queue size %d. drop failed multipart form request",destination.resend_queue_max);
+        post_response_event();
+    } else {
+        if(!event.is_send_failed) {
+            destination.count_connection--;
+            destination.resend_count_connection++;
+        }
+        event.is_send_failed = true;
+        destination.addEvent(new HttpPostMultipartFormEvent(event));
+    }
 }
 
 void HttpMultiPartFormConnection::post_response_event()

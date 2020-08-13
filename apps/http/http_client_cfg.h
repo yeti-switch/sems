@@ -7,8 +7,10 @@
 #define SECTION_ON_FAIL_NAME        "on_failure"
 
 #define PARAM_RESEND_INTERVAL_NAME   "resend_interval"
-#define PARAM_RESEND_QUEUE_MAX_NAME  "resend_queue_max"
-#define PARAM_RESEND_BATCH_SIZE_NAME "resend_batch_size"
+
+#define PARAM_RESEND_QUEUE_MAX_NAME         "resend_queue_max"
+#define PARAM_RESEND_CONNECTION_LIMIT_NAME  "resend_connection_limit"
+#define PARAM_CONNECTION_LIMIT_NAME         "connection_limit"
 
 #define PARAM_MODE_NAME             "mode"
 #define PARAM_URL_NAME              "urls"
