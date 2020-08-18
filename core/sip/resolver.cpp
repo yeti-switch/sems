@@ -1236,11 +1236,13 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
                     hash_entry->to_str().c_str(),
                     parsed_entry->to_str().c_str());
             }
+            dec_ref(hash_entry);
         } else {
             DBG("DNS cache: ignore entry with another type. name: '%s', hashed: %s, parsed: %s",
                 name.c_str(),
                 hash_entry->to_str().c_str(),
                 parsed_entry->to_str().c_str());
+            dec_ref(hash_entry);
         }
     }
 
@@ -1577,7 +1579,6 @@ void _resolver::run()
         for(dns_bucket::value_map::iterator it = bucket->elmts.begin();
             it != bucket->elmts.end(); ++it)
         {
-
             dns_entry* dns_e = static_cast<dns_entry*>(it->second);
             if(now >= it->second->expire) {
                 dns_bucket::value_map::iterator tmp_it = it;
