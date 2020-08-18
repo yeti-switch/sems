@@ -18,13 +18,13 @@ HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestina
     fd(NULL)
 {
     CDBG("HttpUploadConnection() %p",this);
-    u.is_send_failed ? destination.resend_count_connection++ : destination.count_connection++;
+    u.attempt ? destination.resend_count_connection++ : destination.count_connection++;
 }
 
 HttpUploadConnection::~HttpUploadConnection() {
     CDBG("~HttpUploadConnection() %p curl = %p",this,curl);
     if(fd) fclose(fd);
-    event.is_send_failed ? destination.resend_count_connection-- : destination.count_connection--;
+    event.attempt ? destination.resend_count_connection-- : destination.count_connection--;
 }
 
 int HttpUploadConnection::init(CURLM *curl_multi)
@@ -95,6 +95,10 @@ int HttpUploadConnection::on_finished(CURLcode result)
                 event.failover_idx);
             return true; //force requeue
         } else {
+            if(!event.attempt) {
+                destination.count_connection--;
+                destination.resend_count_connection++;
+            }
             event.attempt++;
             event.failover_idx = 0;
         }
@@ -122,11 +126,6 @@ void HttpUploadConnection::on_requeue()
         ERROR("reached max resend queue size %d. drop failed upload request",destination.resend_queue_max);
         post_response_event();
     } else {
-        if(!event.is_send_failed) {
-            destination.count_connection--;
-            destination.resend_count_connection++;
-        }
-        event.is_send_failed = true;
         destination.addEvent(new HttpUploadEvent(event));
     }
 }

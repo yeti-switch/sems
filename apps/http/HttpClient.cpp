@@ -495,7 +495,7 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    if(!u->is_send_failed && d.count_connection >= d.connection_limit) {
+    if(!u->attempt && d.count_connection >= d.connection_limit) {
         DBG("http upload request marked as postponed");
         d.addEvent(new HttpUploadEvent(*u));
         return;
@@ -540,7 +540,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    if(!u->is_send_failed && d.count_connection == d.connection_limit) {
+    if(!u->attempt && d.count_connection == d.connection_limit) {
         DBG("http post request marked as postponed");
         d.addEvent(new HttpPostEvent(*u));
         return;
@@ -585,7 +585,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    if(!u->is_send_failed && d.count_connection == d.connection_limit) {
+    if(!u->attempt && d.count_connection == d.connection_limit) {
         DBG("http multipart form request marked as postponed");
         d.addEvent(new HttpPostMultipartFormEvent(*u));
         return;

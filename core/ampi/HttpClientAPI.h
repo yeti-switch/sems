@@ -19,16 +19,14 @@ struct HttpEvent {
   struct timeval created_at;
   unsigned int failover_idx;
   unsigned int attempt;
-  bool is_send_failed;
 
   HttpEvent(
       string session_id, string token, const string &sync_ctx_id = string(),
       unsigned int failover_idx = 0,
-      unsigned int attempt = 0, bool is_send_failed = false)
+      unsigned int attempt = 0)
     : session_id(session_id), token(token), sync_ctx_id(sync_ctx_id),
       failover_idx(failover_idx),
-      attempt(attempt),
-      is_send_failed(is_send_failed)
+      attempt(attempt)
   {
       gettimeofday(&created_at,NULL);
   }
@@ -56,7 +54,7 @@ struct HttpUploadEvent
 
   HttpUploadEvent(const HttpUploadEvent &src)
     : AmEvent(Upload),
-      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt, src.is_send_failed),
+      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name),
       file_name(src.file_name),
       file_path(src.file_path)
@@ -101,7 +99,7 @@ struct HttpPostMultipartFormEvent
 
     HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
       : AmEvent(MultiPartForm),
-        HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt, src.is_send_failed),
+        HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
         destination_name(src.destination_name),
         parts(src.parts)
     { }
@@ -142,7 +140,7 @@ struct HttpPostEvent
 
   HttpPostEvent(const HttpPostEvent &src)
     : AmEvent(Post),
-      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt, src.is_send_failed),
+      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name),
       data(src.data)
   {}

@@ -278,7 +278,7 @@ HttpDestination::Mode HttpDestination::str2Mode(const string& mode)
 
 void HttpDestination::addEvent(HttpEvent* event)
 {
-    if(event->is_send_failed) {
+    if(event->attempt) {
         events.push_back(event);
         count_failed_events++;
     } else {
@@ -292,7 +292,7 @@ void HttpDestination::send_failed_events(HttpClient* client)
     while(!events.empty() &&
          count_will_send &&
          (event = events.back()) &&
-         event->is_send_failed) {
+         event->attempt) {
             events.pop_back();
             HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
             if(upload_event)
@@ -316,7 +316,7 @@ void HttpDestination::send_postponed_events(HttpClient* client)
     while(!events.empty() &&
          count_will_send &&
          (event = events.front()) &&
-         !event->is_send_failed) {
+         !event->attempt) {
             events.pop_front();
             HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
             if(upload_event)
