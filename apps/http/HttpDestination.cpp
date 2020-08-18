@@ -142,6 +142,14 @@ bool HttpCodesMap::operator ()(long int code) const
     else return false;
 }
 
+HttpDestination::HttpDestination(const string &name)
+: count_connection(stat_group(Gauge, "http", "active_connections").addAtomicCounter().addLabel("name", name))
+, count_failed_events(stat_group(Gauge, "http", "failed_events").addAtomicCounter().addLabel("name", name))
+, resend_count_connection(stat_group(Gauge, "http", "active_resend_connections").addAtomicCounter().addLabel("name", name))
+, count_pending_events(stat_group(Gauge, "http", "pending_events").addAtomicCounter().addLabel("name", name))
+{
+}
+
 HttpDestination::~HttpDestination()
 {
     while(!events.empty()){
@@ -211,10 +219,6 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         content_type = cfg_getstr(cfg, PARAM_CONTENT_TYPE_NAME);
     }
 
-    count_connection = 0;
-    resend_count_connection = 0;
-    count_failed_events = 0;
-
     if(cfg_size(cfg, PARAM_CONNECTION_LIMIT_NAME)) connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
     else connection_limit = values.connection_limit;
 
@@ -280,9 +284,10 @@ void HttpDestination::addEvent(HttpEvent* event)
 {
     if(event->attempt) {
         events.push_back(event);
-        count_failed_events++;
+        count_failed_events.inc();
     } else {
         events.push_front(event);
+        count_pending_events.inc();
     }
 }
 void HttpDestination::send_failed_events(HttpClient* client)
@@ -303,7 +308,7 @@ void HttpDestination::send_failed_events(HttpClient* client)
             HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
             if(multipart_event)
                 client->on_multpart_form_request(multipart_event);
-            count_failed_events--;
+            count_failed_events.dec();
             count_will_send--;
             delete event;
     }
@@ -312,7 +317,7 @@ void HttpDestination::send_failed_events(HttpClient* client)
 void HttpDestination::send_postponed_events(HttpClient* client)
 {
     HttpEvent* event;
-    unsigned int count_will_send = connection_limit - count_connection;
+    unsigned int count_will_send = connection_limit - count_connection.get();
     while(!events.empty() &&
          count_will_send &&
          (event = events.front()) &&
@@ -327,21 +332,22 @@ void HttpDestination::send_postponed_events(HttpClient* client)
             HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
             if(multipart_event)
                 client->on_multpart_form_request(multipart_event);
+            count_pending_events.dec();
             count_will_send--;
             delete event;
     }
 }
 
 bool HttpDestination::check_queue() {
-    return resend_queue_max && count_failed_events>=resend_queue_max;
+    return resend_queue_max && count_failed_events.get()>=resend_queue_max;
 }
 
 void HttpDestination::showStats(AmArg& ret)
 {
-    ret["pending_events"] = events.size() - count_failed_events;
-    ret["failed_events"] = (int)count_failed_events;
-    ret["active_connections"] = (int)count_connection;
-    ret["active_resend_connections"] = (int)resend_count_connection;
+    ret["pending_events"] = (int)count_pending_events.get();
+    ret["failed_events"] = (int)count_failed_events.get();
+    ret["active_connections"] = (int)count_connection.get();
+    ret["active_resend_connections"] = (int)resend_count_connection.get();
 }
 
 int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const
@@ -372,7 +378,7 @@ int HttpDestination::post_upload(bool failed) const
 
 int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
-    HttpDestination d;
+    HttpDestination d(name);
     if(d.parse(name,cfg, values)){
         return -1;
     }

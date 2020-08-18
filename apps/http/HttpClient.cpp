@@ -82,7 +82,11 @@ HttpClient::HttpClient()
   : AmEventFdQueue(this),
     epoll_fd(-1),
     stopped(false)
-{ }
+{ 
+    stat_group(Gauge, "http", "sync_context_count").addFunctionCounter([]()->unsigned long long {
+       return HttpClient::instance()->sync_contexts.size();
+    });
+}
 
 HttpClient::~HttpClient()
 { }
@@ -495,7 +499,7 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    if(!u->attempt && d.count_connection >= d.connection_limit) {
+    if(!u->attempt && d.count_connection.get() >= d.connection_limit) {
         DBG("http upload request marked as postponed");
         d.addEvent(new HttpUploadEvent(*u));
         return;
@@ -540,7 +544,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    if(!u->attempt && d.count_connection == d.connection_limit) {
+    if(!u->attempt && d.count_connection.get() == d.connection_limit) {
         DBG("http post request marked as postponed");
         d.addEvent(new HttpPostEvent(*u));
         return;
@@ -585,7 +589,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    if(!u->attempt && d.count_connection == d.connection_limit) {
+    if(!u->attempt && d.count_connection.get() == d.connection_limit) {
         DBG("http multipart form request marked as postponed");
         d.addEvent(new HttpPostMultipartFormEvent(*u));
         return;
@@ -619,6 +623,7 @@ void HttpClient::on_connection_delete(CurlConnection *c)
 void HttpClient::showStats(AmArg &ret)
 {
     ret["resend_interval"] = resend_interval;
+    ret["sync_context_count"] = sync_contexts.size();
     for(auto& dest : destinations) {
         AmArg& dst_arr = ret["destinations"];
         AmArg& dst = dst_arr[dest.first.c_str()];

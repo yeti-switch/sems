@@ -18,13 +18,13 @@ HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestina
     fd(NULL)
 {
     CDBG("HttpUploadConnection() %p",this);
-    u.attempt ? destination.resend_count_connection++ : destination.count_connection++;
+    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
 }
 
 HttpUploadConnection::~HttpUploadConnection() {
     CDBG("~HttpUploadConnection() %p curl = %p",this,curl);
     if(fd) fclose(fd);
-    event.attempt ? destination.resend_count_connection-- : destination.count_connection--;
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpUploadConnection::init(CURLM *curl_multi)
@@ -96,8 +96,8 @@ int HttpUploadConnection::on_finished(CURLcode result)
             return true; //force requeue
         } else {
             if(!event.attempt) {
-                destination.count_connection--;
-                destination.resend_count_connection++;
+                destination.count_connection.dec();
+                destination.resend_count_connection.inc();
             }
             event.attempt++;
             event.failover_idx = 0;

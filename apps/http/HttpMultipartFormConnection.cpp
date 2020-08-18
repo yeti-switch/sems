@@ -18,14 +18,14 @@ HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipart
     form(0)
 {
     CDBG("HttpMultiPartFormConnection() %p",this);
-    u.attempt ? destination.resend_count_connection++ : destination.count_connection++;
+    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
 }
 
 HttpMultiPartFormConnection::~HttpMultiPartFormConnection() {
     CDBG("~HttpMultiPartFormConnection() %p curl = %p",this,curl);
     if(form)
         curl_mime_free(form);
-    event.attempt ? destination.resend_count_connection-- : destination.count_connection--;
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpMultiPartFormConnection::init(CURLM *curl_multi)
@@ -111,8 +111,8 @@ int HttpMultiPartFormConnection::on_finished(CURLcode result)
             return true; //force requeue
         } else {
             if(!event.attempt) {
-                destination.count_connection--;
-                destination.resend_count_connection++;
+                destination.count_connection.dec();
+                destination.resend_count_connection.inc();
             }
             event.attempt++;
             event.failover_idx = 0;

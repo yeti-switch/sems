@@ -20,13 +20,13 @@ HttpPostConnection::HttpPostConnection(const HttpPostEvent &u, HttpDestination &
     headers(NULL)
 {
     CDBG("HttpPostConnection() %p",this);
-    u.attempt ? destination.resend_count_connection++ : destination.count_connection++;
+    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
 }
 
 HttpPostConnection::~HttpPostConnection() {
     CDBG("~HttpPostConnection() %p curl = %p",this,curl);
     if(headers) curl_slist_free_all(headers);
-    event.attempt ? destination.resend_count_connection-- : destination.count_connection--;
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpPostConnection::init(CURLM *curl_multi)
@@ -79,8 +79,8 @@ int HttpPostConnection::on_finished(CURLcode result)
             return true; //force requeue
         } else {
             if(!event.attempt) {
-                destination.count_connection--;
-                destination.resend_count_connection++;
+                destination.count_connection.dec();
+                destination.resend_count_connection.inc();
             }
             event.failover_idx = 0;
             event.attempt++;

@@ -59,7 +59,7 @@ struct DefaultValues {
 
 struct HttpDestination {
 
-    HttpDestination(){}
+    HttpDestination(const string &name);
     ~HttpDestination();
 
     HttpCodesMap succ_codes;
@@ -89,9 +89,10 @@ struct HttpDestination {
     unsigned int connection_limit;
 
     list<HttpEvent*> events;
-    unsigned int count_failed_events;
-    unsigned int count_connection;
-    unsigned int resend_count_connection;
+    AtomicCounter& count_failed_events;
+    AtomicCounter& count_connection;
+    AtomicCounter& resend_count_connection;
+    AtomicCounter& count_pending_events;
 
     string succ_codes_str;
 
