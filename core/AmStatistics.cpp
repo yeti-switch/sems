@@ -1,5 +1,7 @@
 #include "AmStatistics.h"
 
+#include <stdexcept>
+
 StatCounter::~StatCounter()
 {}
 
