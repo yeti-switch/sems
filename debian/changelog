@@ -1,3 +1,10 @@
+sems (1.29.1) stable; urgency=low
+
+  * http_client: metrics: use MOD_NAME as prefix
+  * http_client: metrics: rename label 'name' -> 'destination'
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 18 Aug 2020 21:23:19 +0300
+
 sems (1.29.0) stable; urgency=low
 
   * fix/optimize IPv6 addresses processing
