@@ -314,6 +314,7 @@ void SIPRegistrarClient::onServerShutdown()
          registrations.begin(); it != registrations.end(); it++)
     {
         it->second->doUnregister();
+        delete it->second;
         AmEventDispatcher::instance()->delEventQueue(it->first);
     }
 }
