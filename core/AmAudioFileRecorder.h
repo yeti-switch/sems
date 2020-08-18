@@ -7,6 +7,7 @@
 
 #include <queue>
 #include <list>
+#include <stdexcept>
 
 class AmAudioFileRecorder {
   public:
