@@ -23,5 +23,6 @@ public:
   int finish(CURLcode result);
 
   virtual int on_finished(CURLcode result) = 0;
+  virtual void on_requeue() = 0;
 };
 

@@ -11,18 +11,20 @@
 
 #include "AmSessionContainer.h"
 
-HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, const HttpDestination &destination, int epoll_fd):
+HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination, int epoll_fd):
     CurlConnection(epoll_fd),
     destination(destination),
     event(u),
     fd(NULL)
 {
     CDBG("HttpUploadConnection() %p",this);
+    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
 }
 
 HttpUploadConnection::~HttpUploadConnection() {
     CDBG("~HttpUploadConnection() %p curl = %p",this,curl);
     if(fd) fclose(fd);
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpUploadConnection::init(CURLM *curl_multi)
@@ -93,6 +95,10 @@ int HttpUploadConnection::on_finished(CURLcode result)
                 event.failover_idx);
             return true; //force requeue
         } else {
+            if(!event.attempt) {
+                destination.count_connection.dec();
+                destination.resend_count_connection.inc();
+            }
             event.attempt++;
             event.failover_idx = 0;
         }
@@ -112,6 +118,16 @@ int HttpUploadConnection::on_finished(CURLcode result)
         post_response_event();
 
     return requeue;
+}
+
+void HttpUploadConnection::on_requeue()
+{
+    if(destination.check_queue()){
+        ERROR("reached max resend queue size %d. drop failed upload request",destination.resend_queue_max);
+        post_response_event();
+    } else {
+        destination.addEvent(new HttpUploadEvent(event));
+    }
 }
 
 void HttpUploadConnection::post_response_event()

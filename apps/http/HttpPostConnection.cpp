@@ -13,18 +13,20 @@
 
 static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpPostConnection *self);
 
-HttpPostConnection::HttpPostConnection(const HttpPostEvent &u, const HttpDestination &destination, int epoll_fd):
+HttpPostConnection::HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination, int epoll_fd):
     CurlConnection(epoll_fd),
     destination(destination),
     event(u),
     headers(NULL)
 {
     CDBG("HttpPostConnection() %p",this);
+    u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
 }
 
 HttpPostConnection::~HttpPostConnection() {
     CDBG("~HttpPostConnection() %p curl = %p",this,curl);
     if(headers) curl_slist_free_all(headers);
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpPostConnection::init(CURLM *curl_multi)
@@ -76,6 +78,10 @@ int HttpPostConnection::on_finished(CURLcode result)
                 event.failover_idx);
             return true; //force requeue
         } else {
+            if(!event.attempt) {
+                destination.count_connection.dec();
+                destination.resend_count_connection.inc();
+            }
             event.failover_idx = 0;
             event.attempt++;
         }
@@ -95,6 +101,16 @@ int HttpPostConnection::on_finished(CURLcode result)
         post_response_event();
 
     return requeue;
+}
+
+void HttpPostConnection::on_requeue()
+{
+    if(destination.check_queue()){
+        ERROR("reached max resend queue size %d. drop failed post request",destination.resend_queue_max);
+        post_response_event();
+    } else {
+        destination.addEvent(new HttpPostEvent(event));
+    }
 }
 
 void HttpPostConnection::post_response_event()

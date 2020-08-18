@@ -37,13 +37,11 @@ class HttpClient
     int epoll_fd;
     invalid_ptrs_t invalid_ptrs;
 
-    std::queue<HttpUploadEvent *> failed_upload_events;
-    std::queue<HttpPostEvent *> failed_post_events;
-    std::queue<HttpPostMultipartFormEvent *> failed_multipart_form_events;
     AmTimerFd resend_timer;
     int resend_interval;
     unsigned int resend_queue_max;
-    unsigned int resend_batch_size;
+    unsigned int resend_connection_limit;
+    unsigned int connection_limit;
 
     struct SyncContextData {
         time_t created_at;
@@ -76,12 +74,12 @@ class HttpClient
 
     HttpDestinationsMap destinations;
 
-    void on_upload_request(const HttpUploadEvent &u);
-    void on_post_request(const HttpPostEvent &u);
-    void on_multpart_form_request(const HttpPostMultipartFormEvent &u);
+    friend struct HttpDestination;
+    void on_upload_request(HttpUploadEvent *u);
+    void on_post_request(HttpPostEvent *u);
+    void on_multpart_form_request(HttpPostMultipartFormEvent *u);
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
     void on_sync_context_timer();
-    void on_requeue(CurlConnection *c);
     void on_resend_timer_event();
 
     void showStats(AmArg &ret);

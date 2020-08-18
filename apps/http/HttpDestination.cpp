@@ -2,6 +2,7 @@
 #include "http_client_cfg.h"
 #include "AmLcConfig.h"
 #include "AmUtils.h"
+#include "HttpClient.h"
 #include "log.h"
 #include "defs.h"
 
@@ -141,7 +142,23 @@ bool HttpCodesMap::operator ()(long int code) const
     else return false;
 }
 
-int HttpDestination::parse(const string &name, cfg_t *cfg)
+HttpDestination::HttpDestination(const string &name)
+: count_connection(stat_group(Gauge, "http", "active_connections").addAtomicCounter().addLabel("name", name))
+, count_failed_events(stat_group(Gauge, "http", "failed_events").addAtomicCounter().addLabel("name", name))
+, resend_count_connection(stat_group(Gauge, "http", "active_resend_connections").addAtomicCounter().addLabel("name", name))
+, count_pending_events(stat_group(Gauge, "http", "pending_events").addAtomicCounter().addLabel("name", name))
+{
+}
+
+HttpDestination::~HttpDestination()
+{
+    while(!events.empty()){
+        delete events.front();
+        events.pop_front();
+    }
+}
+
+int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
     AmLcConfig::GetInstance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
     mode = str2Mode(mode_str);
@@ -202,6 +219,15 @@ int HttpDestination::parse(const string &name, cfg_t *cfg)
         content_type = cfg_getstr(cfg, PARAM_CONTENT_TYPE_NAME);
     }
 
+    if(cfg_size(cfg, PARAM_CONNECTION_LIMIT_NAME)) connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
+    else connection_limit = values.connection_limit;
+
+    if(cfg_size(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME)) resend_connection_limit = cfg_getint(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME);
+    else resend_connection_limit = values.resend_connection_limit;
+
+    if(cfg_size(cfg, PARAM_RESEND_QUEUE_MAX_NAME)) resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
+    else resend_queue_max = values.resend_queue_max;
+
     return 0;
 }
 
@@ -254,6 +280,76 @@ HttpDestination::Mode HttpDestination::str2Mode(const string& mode)
     return Unknown;
 }
 
+void HttpDestination::addEvent(HttpEvent* event)
+{
+    if(event->attempt) {
+        events.push_back(event);
+        count_failed_events.inc();
+    } else {
+        events.push_front(event);
+        count_pending_events.inc();
+    }
+}
+void HttpDestination::send_failed_events(HttpClient* client)
+{
+    HttpEvent* event;
+    unsigned int count_will_send = resend_connection_limit;
+    while(!events.empty() &&
+         count_will_send &&
+         (event = events.back()) &&
+         event->attempt) {
+            events.pop_back();
+            HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
+            if(upload_event)
+                client->on_upload_request(upload_event);
+            HttpPostEvent* post_event = dynamic_cast<HttpPostEvent*>(event);
+            if(post_event)
+                client->on_post_request(post_event);
+            HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
+            if(multipart_event)
+                client->on_multpart_form_request(multipart_event);
+            count_failed_events.dec();
+            count_will_send--;
+            delete event;
+    }
+}
+
+void HttpDestination::send_postponed_events(HttpClient* client)
+{
+    HttpEvent* event;
+    unsigned int count_will_send = connection_limit - count_connection.get();
+    while(!events.empty() &&
+         count_will_send &&
+         (event = events.front()) &&
+         !event->attempt) {
+            events.pop_front();
+            HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
+            if(upload_event)
+                client->on_upload_request(upload_event);
+            HttpPostEvent* post_event = dynamic_cast<HttpPostEvent*>(event);
+            if(post_event)
+                client->on_post_request(post_event);
+            HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
+            if(multipart_event)
+                client->on_multpart_form_request(multipart_event);
+            count_pending_events.dec();
+            count_will_send--;
+            delete event;
+    }
+}
+
+bool HttpDestination::check_queue() {
+    return resend_queue_max && count_failed_events.get()>=resend_queue_max;
+}
+
+void HttpDestination::showStats(AmArg& ret)
+{
+    ret["pending_events"] = (int)count_pending_events.get();
+    ret["failed_events"] = (int)count_failed_events.get();
+    ret["active_connections"] = (int)count_connection.get();
+    ret["active_resend_connections"] = (int)resend_count_connection.get();
+}
+
 int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const
 {
     int requeue = 0;
@@ -280,10 +376,10 @@ int HttpDestination::post_upload(bool failed) const
     return requeue;
 }
 
-int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg)
+int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
-    HttpDestination d;
-    if(d.parse(name,cfg)){
+    HttpDestination d(name);
+    if(d.parse(name,cfg, values)){
         return -1;
     }
     std::pair<HttpDestinationsMap::iterator,bool> ret;
@@ -295,11 +391,11 @@ int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg)
     return 0;
 }
 
-int HttpDestinationsMap::configure(cfg_t * cfg)
+int HttpDestinationsMap::configure(cfg_t * cfg, const DefaultValues& values)
 {
     for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DIST_NAME); i++) {
         cfg_t *dist = cfg_getnsec(cfg, SECTION_DIST_NAME, i);
-        if(configure_destination(dist->title, dist)) {
+        if(configure_destination(dist->title, dist, values)) {
             ERROR("can't configure destination %s",dist->title);
             return -1;
         }

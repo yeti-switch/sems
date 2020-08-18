@@ -30,6 +30,7 @@ struct HttpEvent {
   {
       gettimeofday(&created_at,NULL);
   }
+  virtual ~HttpEvent(){}
 };
 
 

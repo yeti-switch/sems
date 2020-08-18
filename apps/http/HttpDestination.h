@@ -1,13 +1,18 @@
 #pragma once
 
 #include "AmArg.h"
+#include "HttpClientAPI.h"
 
 #include <map>
 #include <string>
+#include <list>
 #include <confuse.h>
 using std::string;
+using std::list;
 
 #include "curl/curl.h"
+
+class HttpClient;
 
 class DestinationAction {
 public:
@@ -45,7 +50,17 @@ class HttpCodesMap {
     bool operator ()(long int code) const;
 };
 
+struct DefaultValues {
+
+    unsigned int resend_queue_max;
+    unsigned int resend_connection_limit;
+    unsigned int connection_limit;
+};
+
 struct HttpDestination {
+
+    HttpDestination(const string &name);
+    ~HttpDestination();
 
     HttpCodesMap succ_codes;
     DestinationAction succ_action;
@@ -53,7 +68,7 @@ struct HttpDestination {
 
     string content_type;
 
-    int parse(const string &name, cfg_t *cfg);
+    int parse(const string &name, cfg_t *cfg, const DefaultValues& values);
 
     bool need_requeue() const { return fail_action.requeue(); }
 
@@ -69,6 +84,15 @@ struct HttpDestination {
     vector<string> url;
     size_t max_failover_idx;
     unsigned int attempts_limit;
+    unsigned int resend_queue_max;
+    unsigned int resend_connection_limit;
+    unsigned int connection_limit;
+
+    list<HttpEvent*> events;
+    AtomicCounter& count_failed_events;
+    AtomicCounter& count_connection;
+    AtomicCounter& resend_count_connection;
+    AtomicCounter& count_pending_events;
 
     string succ_codes_str;
 
@@ -78,15 +102,21 @@ struct HttpDestination {
     void dump(const string &key) const;
     void dump(const string &key, AmArg &ret) const;
     static Mode str2Mode(const string& mode);
+
+    void addEvent(HttpEvent* event);
+    void send_failed_events(HttpClient* client);
+    void send_postponed_events(HttpClient* client);
+    bool check_queue();
+    void showStats(AmArg &ret);
 };
 
 class HttpDestinationsMap
   : public std::map<string,HttpDestination>
 {
-    int configure_destination(const string &name, cfg_t *cfg);
+    int configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values);
   public:
 
-    int configure(cfg_t *cfg);
+    int configure(cfg_t *cfg, const DefaultValues& values);
     void dump();
     void dump(AmArg &ret);
 

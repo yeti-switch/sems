@@ -57,7 +57,7 @@ void CurlMultiHandler::check_multi_info()
             curl_easy_getinfo(easy, CURLINFO_PRIVATE, &c);
             curl_multi_remove_handle(curl_multi, easy);
             if(c->finish(msg->data.result)){
-                on_requeue(c);
+                c->on_requeue();
             }
             on_connection_delete(c);
             delete c;
