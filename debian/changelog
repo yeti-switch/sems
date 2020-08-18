@@ -1,3 +1,11 @@
+sems (1.29.0) stable; urgency=low
+
+  * fix/optimize IPv6 addresses processing
+  * resolver: fix memory leak on saving entries present in cache
+  * http_client: add prometheus statistics. add rpc response attribute
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 18 Aug 2020 19:27:57 +0300
+
 sems (1.28.0) stable; urgency=low
 
   * AmRtpConnection::isAddrConnection: fix IPv6 addrs comparation
