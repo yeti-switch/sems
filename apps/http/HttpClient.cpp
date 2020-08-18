@@ -83,7 +83,7 @@ HttpClient::HttpClient()
     epoll_fd(-1),
     stopped(false)
 { 
-    stat_group(Gauge, "http", "sync_context_count").addFunctionCounter([]()->unsigned long long {
+    stat_group(Gauge, MOD_NAME, "sync_context_count").addFunctionCounter([]()->unsigned long long {
        return HttpClient::instance()->sync_contexts.size();
     });
 }

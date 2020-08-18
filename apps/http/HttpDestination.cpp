@@ -143,10 +143,10 @@ bool HttpCodesMap::operator ()(long int code) const
 }
 
 HttpDestination::HttpDestination(const string &name)
-: count_connection(stat_group(Gauge, "http", "active_connections").addAtomicCounter().addLabel("name", name))
-, count_failed_events(stat_group(Gauge, "http", "failed_events").addAtomicCounter().addLabel("name", name))
-, resend_count_connection(stat_group(Gauge, "http", "active_resend_connections").addAtomicCounter().addLabel("name", name))
-, count_pending_events(stat_group(Gauge, "http", "pending_events").addAtomicCounter().addLabel("name", name))
+: count_connection(stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
+, count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
+, resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
+, count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
 {
 }
 
