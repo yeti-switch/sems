@@ -129,8 +129,10 @@ int HttpMultiPartFormConnection::on_finished(CURLcode result)
         requeue = false;
     }
 
-    if(!requeue)
+    if(!requeue) {
+        destination.requests_processed.inc();
         post_response_event();
+    }
 
     return requeue;
 }

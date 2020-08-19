@@ -219,6 +219,7 @@ void HttpClient::invoke(const string& method, const AmArg& args, AmArg& ret)
     } else if(method=="_list"){
         ret.push("stats");
         ret.push("post");
+        ret.push("show");
     } else {
         throw AmDynInvoke::NotImplemented(method);
     }

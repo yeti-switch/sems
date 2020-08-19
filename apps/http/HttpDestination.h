@@ -47,6 +47,7 @@ class HttpCodesMap {
   public:
     HttpCodesMap();
     int parse(cfg_t* cfg);
+    void dump(AmArg &ret) const;
     bool operator ()(long int code) const;
 };
 
@@ -93,6 +94,7 @@ struct HttpDestination {
     AtomicCounter& count_connection;
     AtomicCounter& resend_count_connection;
     AtomicCounter& count_pending_events;
+    AtomicCounter& requests_processed;
 
     string succ_codes_str;
 

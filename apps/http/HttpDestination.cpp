@@ -136,6 +136,40 @@ int HttpCodesMap::parse(cfg_t* cfg)
     return 0;
 }
 
+void HttpCodesMap::dump(AmArg &ret) const
+{
+    bool within_interval = false;
+    int interval_start = 0;
+
+    ret.assertArray();
+    for(int i = 0; i < 1000; i++) {
+        if(!within_interval) {
+            if(!codes[i]) {
+                //continue of the gap
+                continue;
+            }
+            //new interval
+            within_interval = true;
+            interval_start = i;
+        } else {
+            if(codes[i]) {
+                //interval continues
+                continue;
+            }
+            //interval end
+            within_interval = false;
+            ret.push(AmArg());
+            if(interval_start == (i-1)) {
+                ret.back() = interval_start;
+            } else {
+                AmArg &interval = ret.back();
+                interval.push(interval_start);
+                interval.push(i-1);
+            }
+        }
+    }
+}
+
 bool HttpCodesMap::operator ()(long int code) const
 {
     if(code > 0 && code < 1000) return codes[code];
@@ -147,6 +181,7 @@ HttpDestination::HttpDestination(const string &name)
 , count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
 , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
 , count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
+, requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
 {
 }
 
@@ -256,7 +291,7 @@ void HttpDestination::dump(const string &key, AmArg &ret) const
     }
     ret["url"] = url_list;
     ret["mode"] = mode_str.c_str();
-    ret["action"] = succ_action.str();
+    ret["succ_action"] = succ_action.str();
     if(succ_action.has_data()){
         ret["action_data"] = succ_action.data();
     }
@@ -267,6 +302,11 @@ void HttpDestination::dump(const string &key, AmArg &ret) const
     if(mode==Post && !content_type.empty()) {
         ret["content_type"] = content_type;
     }
+    ret["attempts_limit"] = static_cast<int>(attempts_limit);
+    ret["resend_queue_max"] = static_cast<int>(resend_queue_max);
+    ret["connection_limit"] = static_cast<int>(resend_connection_limit);
+    ret["resend_connection_limit"] = static_cast<int>(connection_limit);
+    succ_codes.dump(ret["succ_codes"]);
 }
 
 
@@ -321,20 +361,21 @@ void HttpDestination::send_postponed_events(HttpClient* client)
     while(!events.empty() &&
          count_will_send &&
          (event = events.front()) &&
-         !event->attempt) {
-            events.pop_front();
-            HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
-            if(upload_event)
-                client->on_upload_request(upload_event);
-            HttpPostEvent* post_event = dynamic_cast<HttpPostEvent*>(event);
-            if(post_event)
-                client->on_post_request(post_event);
-            HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
-            if(multipart_event)
-                client->on_multpart_form_request(multipart_event);
-            count_pending_events.dec();
-            count_will_send--;
-            delete event;
+         !event->attempt)
+    {
+        events.pop_front();
+        HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
+        if(upload_event)
+            client->on_upload_request(upload_event);
+        HttpPostEvent* post_event = dynamic_cast<HttpPostEvent*>(event);
+        if(post_event)
+            client->on_post_request(post_event);
+        HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
+        if(multipart_event)
+            client->on_multpart_form_request(multipart_event);
+        count_pending_events.dec();
+        count_will_send--;
+        delete event;
     }
 }
 
@@ -348,6 +389,7 @@ void HttpDestination::showStats(AmArg& ret)
     ret["failed_events"] = (int)count_failed_events.get();
     ret["active_connections"] = (int)count_connection.get();
     ret["active_resend_connections"] = (int)resend_count_connection.get();
+    ret["requests_processed"] = static_cast<unsigned long>(requests_processed.get());
 }
 
 int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const
@@ -369,8 +411,12 @@ int HttpDestination::post_upload(bool failed) const
 
     if(!failed) {
         succ_action.perform();
+        requests_processed.inc();
     } else {
         requeue = fail_action.perform();
+        if(!requeue) {
+            requests_processed.inc();
+        }
     }
 
     return requeue;
