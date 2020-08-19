@@ -411,12 +411,8 @@ int HttpDestination::post_upload(bool failed) const
 
     if(!failed) {
         succ_action.perform();
-        requests_processed.inc();
     } else {
         requeue = fail_action.perform();
-        if(!requeue) {
-            requests_processed.inc();
-        }
     }
 
     return requeue;
