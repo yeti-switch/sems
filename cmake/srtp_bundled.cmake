@@ -5,7 +5,7 @@ set (SRTP_SRC_DIR ${PROJECT_SOURCE_DIR}/${SRTP_DIR})
 set (SRTP_BIN_DIR ${PROJECT_BINARY_DIR}/${SRTP_DIR})
 set (SRTP_BUNDLED_LIB ${SRTP_BIN_DIR}/libsrtp2.a)
 
-set(SRTP_CONFIG_ARGS --disable-openssl --enable-debug-logging CPPFLAGS=-fPIC)
+set(SRTP_CONFIG_ARGS --disable-openssl --enable-debug-logging CPPFLAGS='-fPIC -fcommon')
 
 add_custom_target(libsrtp ALL DEPENDS ${SRTP_BUNDLED_LIB})
 
