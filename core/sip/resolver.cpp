@@ -1656,6 +1656,7 @@ void dns_handle::dumpIps(AmArg &ret, dns_priority priority)
 
 void dns_handle::prepare(dns_entry* e, dns_priority priority)
 {
+    if(!e) return;
     if(e->get_type() == dns_r_ip) {
         if(ip_e)
             dec_ref(ip_e);
