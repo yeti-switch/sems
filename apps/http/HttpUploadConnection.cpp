@@ -24,7 +24,6 @@ HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestina
 HttpUploadConnection::~HttpUploadConnection() {
     CDBG("~HttpUploadConnection() %p curl = %p",this,curl);
     if(fd) fclose(fd);
-    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
 }
 
 int HttpUploadConnection::init(CURLM *curl_multi)
@@ -75,6 +74,8 @@ int HttpUploadConnection::on_finished(CURLcode result)
     char *eff_url;
     double speed_upload, total_time;
 
+    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
+
     curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &eff_url);
     curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD, &speed_upload);
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
@@ -95,10 +96,6 @@ int HttpUploadConnection::on_finished(CURLcode result)
                 event.failover_idx);
             return true; //force requeue
         } else {
-            if(!event.attempt) {
-                destination.count_connection.dec();
-                destination.resend_count_connection.inc();
-            }
             event.attempt++;
             event.failover_idx = 0;
         }
