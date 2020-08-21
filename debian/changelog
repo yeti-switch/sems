@@ -1,3 +1,11 @@
+sems (1.29.2) stable; urgency=low
+
+  * http: add requests_processed metric
+  * http: fix active connections decrement place. fixes pending events processing
+  * resolver: fix segfault when prepare() is called after resolve_name() for IP
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 21 Aug 2020 11:23:32 +0300
+
 sems (1.29.1) stable; urgency=low
 
   * http_client: metrics: use MOD_NAME as prefix
