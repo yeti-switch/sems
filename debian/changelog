@@ -1,3 +1,9 @@
+sems (1.29.3) stable; urgency=low
+
+  * fix ssl sockets matching for sips scheme
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 26 Aug 2020 22:02:53 +0300
+
 sems (1.29.2) stable; urgency=low
 
   * http: add requests_processed metric
