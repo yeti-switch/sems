@@ -420,6 +420,8 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
     tls_connected = true;
     ciphersuite = session.ciphersuite_code();
     copy_peer_addr(&peer_addr);
+    sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&peer_addr);
+    DBG("ssl_marker:%d sig:%d cipher:%d mac:%d", sa_ssl->ssl_marker, sa_ssl->sig, sa_ssl->cipher, sa_ssl->mac);
     add_write_event();
     DBG("write event added...");
     return true;

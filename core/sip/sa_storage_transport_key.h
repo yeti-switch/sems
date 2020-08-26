@@ -2,8 +2,8 @@
 
 #include "hash.h"
 #include <sys/socket.h>
-#include "ip_util.h"
-#include "transport.h"
+#include "ip_util.h"/*
+#include "transport.h"*/
 
 /**
  * Blacklist bucket: key type

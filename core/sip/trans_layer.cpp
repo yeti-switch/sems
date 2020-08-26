@@ -44,6 +44,7 @@
 #include "resolver.h"
 #include "sip_ua.h"
 #include "msg_logger.h"
+#include "socket_ssl.h"
 
 #include "wheeltimer.h"
 #include "sip_timers.h"
@@ -127,52 +128,63 @@ void _trans_layer::clear_transports()
     transports.clear();
 }
 
-int _trans_layer::set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transport& next_trsp,
-				  int out_interface)
+int _trans_layer::set_trsp_socket(
+    sip_msg* msg,
+    const trsp_socket::socket_transport& next_trsp,
+    int out_interface)
 {
     if((out_interface < 0)
-       || ((unsigned int)out_interface >= transports.size())) {
-
-	out_interface = find_outbound_if(&msg->remote_ip);
-	if(out_interface < 0) {
-	    DBG("could not find any suitable outbound interface");
-	    return -1;
-	}
+       || ((unsigned int)out_interface >= transports.size()))
+    {
+        out_interface = find_outbound_if(&msg->remote_ip);
+        if(out_interface < 0) {
+            DBG("could not find any suitable outbound interface");
+            return -1;
+        }
     }
 
     if(transports[out_interface].empty()) {
-	ERROR("no transport for this interface");
-	return -1;
+        ERROR("no transport for this interface");
+        return -1;
     }
 
     prot_collection::iterator prot_sock_it =
-	transports[out_interface].find(next_trsp);
+        transports[out_interface].find(next_trsp);
 
     if(prot_sock_it == transports[out_interface].end()) {
 
-	DBG("could not find transport in outbound interface %i",
-	    out_interface);
+        DBG("could not find transport in outbound interface %i", out_interface);
 
-    if(msg->remote_ip.ss_family == AF_INET) {
-        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv4);
-    } else if(msg->remote_ip.ss_family == AF_INET6) {
-        prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv6);
-    } else {
-        ERROR("incorrect remote ip");
-        return -1;
-    }
-	
-	// if we couldn't find anything, take whatever is there...
-	if(prot_sock_it == transports[out_interface].end()) {
-	    DBG("could not find transport 'udp' in outbound interface %i",
-		out_interface);
-        return 1;
-	}
+        if(msg->remote_ip.ss_family == AF_INET) {
+            prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv4);
+        } else if(msg->remote_ip.ss_family == AF_INET6) {
+            prot_sock_it = transports[out_interface].find(trsp_socket::udp_ipv6);
+        } else {
+            ERROR("incorrect remote ip");
+            return -1;
+        }
+
+        // if we couldn't find anything, take whatever is there...
+        if(prot_sock_it == transports[out_interface].end()) {
+            DBG("could not find transport 'udp' in outbound interface %i", out_interface);
+            return 1;
+        }
     }
 
     if(msg->local_socket) dec_ref(msg->local_socket);
     msg->local_socket = prot_sock_it->second;
     inc_ref(msg->local_socket);
+
+    sockaddr_ssl* remote_ip_ssl = reinterpret_cast<sockaddr_ssl*>(&msg->remote_ip);
+
+    DBG("set_trsp_socket: msg->local_socket:%p msg->remote_ip:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
+        msg->local_socket,
+        am_inet_ntop(&msg->remote_ip).c_str(), am_get_port(&msg->remote_ip),
+        remote_ip_ssl->trsp,
+        remote_ip_ssl->ssl_marker,
+        remote_ip_ssl->sig,
+        remote_ip_ssl->cipher,
+        remote_ip_ssl->mac);
 
     return 0;
 }

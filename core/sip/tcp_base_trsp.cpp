@@ -161,6 +161,16 @@ tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* serv
       evbase(evbase_), input(input_),
       read_ev(NULL), write_ev(NULL)
 {
+    sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&sa);
+    CLASS_DBG("tcp_base_trsp() server_socket:%p transport:%d sa:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
+              server_sock, transport,
+              am_inet_ntop(sa).c_str(), am_get_port(sa),
+              sa_ssl->trsp,
+              sa_ssl->ssl_marker,
+              sa_ssl->sig,
+              sa_ssl->cipher,
+              sa_ssl->mac);
+
     // local address
     actual_ip = ip = server_sock->get_ip();
     actual_port = port = server_sock->get_port();
@@ -181,7 +191,7 @@ tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* serv
 
 tcp_base_trsp::~tcp_base_trsp()
 {
-  DBG("********* connection destructor ***********");
+  CLASS_DBG("~tcp_base_trsp()");
   if(read_ev) {
       DBG("%p free read_ev %p",this, read_ev);
       event_free(read_ev);
@@ -297,6 +307,17 @@ int tcp_base_trsp::connect()
 {
   int true_opt = 1;
 
+  sockaddr_ssl* peer_addr_ssl = reinterpret_cast<sockaddr_ssl*>(&peer_addr);
+
+  CLASS_DBG("tcp_base_trsp::connect(): sd:%d ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d", sd,
+      peer_addr.ss_family,
+      am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr),
+      peer_addr_ssl->trsp,
+      peer_addr_ssl->ssl_marker,
+      peer_addr_ssl->sig,
+      peer_addr_ssl->cipher,
+      peer_addr_ssl->mac);
+
   if(sd > 0) {
     ERROR("pending connection request: close first.");
     return -1;
@@ -348,7 +369,7 @@ int tcp_base_trsp::connect()
   }
 
   if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
-    ERROR("bind: %s\n",strerror(errno));
+    CLASS_ERROR("bind: %s\n",strerror(errno));
     ::close(sd);
     return -1;
   }
@@ -720,11 +741,20 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* sock = NULL;
 
+    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+    CLASS_DBG("trsp_worker::send(): ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
+        sa->ss_family,
+        am_inet_ntop(sa).c_str(), am_get_port(sa),
+        sa_ssl->trsp,
+        sa_ssl->ssl_marker,
+        sa_ssl->sig,
+        sa_ssl->cipher,
+        sa_ssl->mac);
+
     bool new_conn=false;
     connections_mut.lock();
     auto sock_it = connections.find(dest);
     if(sock_it != connections.end()) {
-        sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
         if(!sa_ssl->ssl_marker) {
             sock = sock_it->second[0];
             inc_ref(sock);
@@ -736,7 +766,7 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
             }
         }
     }
-    
+
     if(!sock) {
         //TODO: add flags to avoid new connections (ex: UAs behind NAT)
         tcp_base_trsp* new_sock = new_connection(server_sock, sa);
