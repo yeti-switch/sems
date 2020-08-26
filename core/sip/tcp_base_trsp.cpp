@@ -129,13 +129,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
 
 static string generate_ssl_options_string(sockaddr_ssl* sa)
 {
-    string ret;
-    ret += toString(sa->sig);
-    ret += ";";
-    ret += toString(sa->cipher);
-    ret += ";";
-    ret += toString(sa->mac);
-    return ret;
+    return sa->ssl_marker ? "ssl" : "";
 }
 
 void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
@@ -161,7 +155,7 @@ tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* serv
       evbase(evbase_), input(input_),
       read_ev(NULL), write_ev(NULL)
 {
-    sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&sa);
+    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)(sa);
     CLASS_DBG("tcp_base_trsp() server_socket:%p transport:%d sa:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
               server_sock, transport,
               am_inet_ntop(sa).c_str(), am_get_port(sa),
