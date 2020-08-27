@@ -217,7 +217,7 @@ class trsp_worker
     struct event_base* evbase;
 
     AmMutex                      connections_mut;
-    map<string,std::vector<tcp_base_trsp*>> connections;
+    map<string,tcp_base_trsp*>   connections;
     AmCondition<bool> stopped;
 
 protected:

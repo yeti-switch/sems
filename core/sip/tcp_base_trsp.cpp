@@ -127,11 +127,6 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
   //return 0;
 }
 
-static string generate_ssl_options_string(sockaddr_ssl* sa)
-{
-    return sa->ssl_marker ? "ssl" : "";
-}
-
 void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
 {
     if(ev & (EV_READ|EV_TIMEOUT)) {
@@ -617,26 +612,6 @@ tcp_base_trsp* trsp_socket_factory::new_connection(trsp_server_socket* server_so
   return create_socket(server_sock, server_worker,sd,sa,evbase);
 }
 
-class trsp_compare
-{
-    string opt_str;
-public:
-    trsp_compare(string opt_string) : opt_str(opt_string){}
-
-    bool operator () (tcp_base_trsp* trsp) {
-        sockaddr_storage sa = {0};
-        sockaddr_ssl* sa_ssl = 0;
-        string ssl_opt;
-
-        trsp->copy_peer_addr(&sa);
-        sa_ssl = (sockaddr_ssl*)&sa;
-        if(sa_ssl->ssl_marker) {
-            ssl_opt = generate_ssl_options_string(sa_ssl);
-        }
-        return ssl_opt == opt_str;
-    }
-};
-
 trsp_worker::trsp_worker()
 {
     evbase = event_base_new();
@@ -647,9 +622,7 @@ trsp_worker::~trsp_worker()
     event_base_free(evbase);
     connections_mut.lock();
     for(auto conn_m : connections) {
-        for(auto conn : conn_m.second) {
-            dec_ref(conn);
-        }
+        dec_ref(conn_m.second);
     }
     connections_mut.unlock();
 }
@@ -664,29 +637,13 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
         client_sock->get_peer_port());
 
     connections_mut.lock();
-    bool bfind = false;
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
         sockaddr_storage sa = {0};
-        sockaddr_ssl* sa_ssl = 0;
-        string ssl_opt;
-
         client_sock->copy_peer_addr(&sa);
-        sa_ssl = (sockaddr_ssl*)&sa;
-        if(sa_ssl->ssl_marker) {
-            ssl_opt = generate_ssl_options_string(sa_ssl);
-        }
-        auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(ssl_opt));
-        if(trsp_it != sock_it->second.end()) {
-                dec_ref(*trsp_it);
-                *trsp_it = client_sock;
-                bfind = true;
-        }
     }
 
-    if(!bfind){
-        connections[conn_id].push_back(client_sock);
-    }
+    connections[conn_id] = client_sock;
 
     inc_ref(client_sock);
     connections_mut.unlock();
@@ -703,26 +660,12 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
         sockaddr_storage sa = {0};
-        sockaddr_ssl* sa_ssl = 0;
-        string ssl_opt;
-
         client_sock->copy_peer_addr(&sa);
-        sa_ssl = (sockaddr_ssl*)&sa;
-        if(sa_ssl->ssl_marker) {
-            ssl_opt += generate_ssl_options_string(sa_ssl);
-        }
-        auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(ssl_opt));
-        if(trsp_it != sock_it->second.end()) {
-                dec_ref(*trsp_it);
-                sock_it->second.erase(trsp_it);
-        }
-
+        dec_ref(sock_it->second);
+        
         DBG("TCP connection from %s removed",conn_id.c_str());
 
-        if(sock_it->second.empty()) {
-            connections.erase(sock_it);
-        }
-
+        connections.erase(sock_it);
     }
     connections_mut.unlock();
 }
@@ -735,30 +678,19 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* sock = NULL;
 
-    sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
-    CLASS_DBG("trsp_worker::send(): ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
-        sa->ss_family,
-        am_inet_ntop(sa).c_str(), am_get_port(sa),
-        sa_ssl->trsp,
-        sa_ssl->ssl_marker,
-        sa_ssl->sig,
-        sa_ssl->cipher,
-        sa_ssl->mac);
 
     bool new_conn=false;
     connections_mut.lock();
     auto sock_it = connections.find(dest);
     if(sock_it != connections.end()) {
-        if(!sa_ssl->ssl_marker) {
-            sock = sock_it->second[0];
-            inc_ref(sock);
-        } else {
-            auto trsp_it = find_if(sock_it->second.begin(), sock_it->second.end(), trsp_compare(generate_ssl_options_string(sa_ssl)));
-            if(trsp_it != sock_it->second.end()) {
-                sock = *trsp_it;
-                inc_ref(sock);
-            }
-        }
+        sock = sock_it->second;
+        inc_ref(sock);
+        sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
+        sockaddr_storage peer_addr;
+        sock->copy_peer_addr(&peer_addr);
+        sockaddr_ssl* peer_ssl = (sockaddr_ssl*)&peer_addr;
+        if(sa_ssl->ssl_marker == 1 && peer_ssl->ssl_marker != 1)
+            WARN("incorrect send address: connection must be secure");
     }
 
     if(!sock) {
@@ -808,7 +740,7 @@ tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, cons
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,-1,sa,evbase);
     if(!new_sock) return 0;
-    connections[dest].push_back(new_sock);
+    connections[dest] = new_sock;
     inc_ref(new_sock);
     return new_sock;
 }
@@ -819,8 +751,7 @@ void trsp_worker::getInfo(AmArg &ret)
 
     ret.assertStruct();
     for(auto const &con_it: connections) {
-        for(auto const &it: con_it.second)
-            it->getInfo(ret[con_it.first]);
+            con_it.second->getInfo(ret[con_it.first]);
     }
 }
 

@@ -159,6 +159,8 @@ public:
 
     int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);
+
+    void getInfo(AmArg &ret);
 };
 
 class tls_socket_factory : public trsp_socket_factory
