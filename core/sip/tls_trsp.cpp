@@ -473,17 +473,6 @@ int tls_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
   return 0;
 }
 
-static string generate_ssl_options_string(sockaddr_ssl* sa)
-{
-    string ret;
-    ret += toString(sa->sig);
-    ret += ";";
-    ret += toString(sa->cipher);
-    ret += ";";
-    ret += toString(sa->mac);
-    return ret;
-}
-
 void tls_trsp_socket::getInfo(AmArg& ret)
 {
     sockaddr_ssl* ssl = (sockaddr_ssl*)&peer_addr;

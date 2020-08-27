@@ -689,8 +689,8 @@ int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* s
         sockaddr_storage peer_addr;
         sock->copy_peer_addr(&peer_addr);
         sockaddr_ssl* peer_ssl = (sockaddr_ssl*)&peer_addr;
-        if(sa_ssl->ssl_marker == 1 && peer_ssl->ssl_marker != 1)
-            WARN("incorrect send address: connection must be secure");
+        if(sa_ssl->ssl_marker^peer_ssl->ssl_marker)
+            WARN("incorrect send address, not equal ssl marker: send %d, peer %d", sa_ssl->ssl_marker, peer_ssl->ssl_marker);
     }
 
     if(!sock) {
