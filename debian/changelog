@@ -1,3 +1,9 @@
+sems (1.30.0) stable; urgency=low
+
+  * refactoring: tcp_base_trsp: remove excess connections vector
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 28 Aug 2020 09:49:47 +0300
+
 sems (1.29.3) stable; urgency=low
 
   * fix ssl sockets matching for sips scheme
