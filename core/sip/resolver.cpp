@@ -1558,6 +1558,16 @@ void _resolver::clear_cache() {
     DBG("resolver::clear_cache() %d entries removed",removed);
 }
 
+unsigned int _resolver::count_cache()
+{
+    unsigned int size = 0;
+    for(unsigned long i=0; i<cache.get_size(); i++) {
+        dns_bucket* bucket = cache.get_bucket(i);
+        bucket->dump([&size](const string& , dns_entry* ){size++;});
+    }
+    return size;
+}
+
 void _resolver::run()
 {
     struct timespec tick,rem;

@@ -312,6 +312,7 @@ public:
         sip_target_set* targets);
 
     void clear_cache();
+    unsigned int count_cache();
 
 protected:
     _resolver();
