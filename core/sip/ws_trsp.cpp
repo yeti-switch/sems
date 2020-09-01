@@ -110,6 +110,29 @@ int ws_input::send(tcp_base_trsp::msg_buf* msg)
     return 0;
 }
 
+void ws_input::generate_transport_errors()
+{
+    /* avoid deadlock between session processor and tcp worker.
+       it is safe to unlock here because 'closed' flag is set to true and
+       send_q will not be affected by send() anymore.
+       do not forget to avoid double mutex unlock in places where close() is called
+    */
+    sock_mut.unlock();
+
+    while(!send_q.empty()) {
+
+        tcp_base_trsp::msg_buf* msg = send_q.front();
+        send_q.pop_front();
+
+        sip_msg s_msg(msg->msg,msg->msg_len);
+        delete msg;
+
+        output->copy_addrs(&s_msg.local_ip, &s_msg.remote_ip);
+
+        trans_layer::instance()->transport_error(&s_msg);
+    }
+}
+
 void ws_input::pre_write()
 {
     if(!send_q.empty()) {
@@ -436,6 +459,11 @@ int wss_input::send(tcp_base_trsp::msg_buf* buf)
     return input.send(buf);
 }
 
+void wss_input::generate_transport_errors()
+{
+    input.generate_transport_errors();
+}
+
 bool wss_input::is_connected()
 {
     return input.is_connected();
@@ -449,7 +477,8 @@ ws_trsp_socket::ws_trsp_socket(trsp_server_socket* server_sock,
 {}
 
 ws_trsp_socket::~ws_trsp_socket()
-{}
+{
+}
 
 int ws_trsp_socket::send_data(const char* msg, const int msg_len, unsigned int flags)
 {
@@ -512,6 +541,11 @@ int ws_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int 
   return 0;
 }
 
+void ws_trsp_socket::generate_transport_errors()
+{
+    static_cast<ws_input*>(input)->generate_transport_errors();
+}
+
 ws_socket_factory::ws_socket_factory(tcp_base_trsp::socket_transport transport)
  : trsp_socket_factory(transport)
 {}
@@ -536,7 +570,8 @@ wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
 {}
 
 wss_trsp_socket::~wss_trsp_socket()
-{}
+{
+}
 
 int wss_trsp_socket::send_data(const char* msg, const int msg_len, unsigned int flags)
 {
@@ -597,6 +632,11 @@ int wss_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int
   }
 
   return 0;
+}
+
+void wss_trsp_socket::generate_transport_errors()
+{
+    static_cast<wss_input*>(input)->generate_transport_errors();
 }
 
 wss_socket_factory::wss_socket_factory(tcp_base_trsp::socket_transport transport)

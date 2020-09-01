@@ -31,11 +31,14 @@ class msg_buf;
 class ws_output
 {
 public:
+    ws_output(){}
+    virtual ~ws_output(){}
     virtual int send_data(const char* msg, const int msg_len, unsigned int flags)=0;
     virtual int send(const char* msg, const int msg_len, unsigned int flags)=0;
     virtual cstring get_host() = 0;
     virtual void on_ws_connected() = 0;
     virtual void on_ws_close() = 0;
+    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) = 0;
 };
 
 class ws_input : public trsp_base_input
@@ -75,6 +78,7 @@ public:
     void pre_write();
     void post_write();
     int send(tcp_base_trsp::msg_buf* buf);
+    void generate_transport_errors();
 
     unsigned char*   get_input();
     int get_input_free_space();
@@ -99,6 +103,7 @@ public:
     void pre_write();
     void post_write();
     int send(tcp_base_trsp::msg_buf* buf);
+    void generate_transport_errors();
     bool is_connected();
 };
 
@@ -115,6 +120,13 @@ class ws_trsp_socket: public ws_output, public tcp_trsp_socket
     cstring get_host() {
         return cstring(get_peer_ip().c_str(), get_peer_ip().size());
     }
+
+    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) {
+        copy_peer_addr(sa_remote);
+        copy_addr_to(sa_local);
+    }
+
+    void generate_transport_errors();
 
 protected:
     void on_ws_connected();
@@ -145,6 +157,13 @@ class wss_trsp_socket: public ws_output, public tls_trsp_socket
     cstring get_host() {
         return cstring(get_peer_ip().c_str(), get_peer_ip().size());
     }
+
+    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) {
+        copy_peer_addr(sa_remote);
+        copy_addr_to(sa_local);
+    }
+
+    void generate_transport_errors();
 
     void on_ws_connected();
     void on_ws_close();

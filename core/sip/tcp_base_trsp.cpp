@@ -194,6 +194,8 @@ tcp_base_trsp::~tcp_base_trsp()
     ::close(sd);
     sd = -1;
   }
+
+  delete input;
 }
 
 void tcp_base_trsp::close()
