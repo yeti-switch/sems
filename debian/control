@@ -51,7 +51,7 @@ Description: SIP Express Media Server, shared library
 Package: libsems1-dev
 Architecture: any
 Section: libdevel
-Depends: libsems1(= ${source:Version}), cmake, ${misc:Depends}
+Depends: libsems1(= ${source:Version}), cmake, libbzrtp-dev, libbctoolbox-dev, libtiff-dev, libsamplerate0-dev
 Description: SIP Express Media Server, development package 
  SEMS, the SIP Express Media Server, is a free, high performance,
  extensible media server and SBC for SIP (RFC3261) based VoIP services.
