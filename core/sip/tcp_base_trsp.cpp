@@ -283,11 +283,17 @@ void tcp_base_trsp::add_write_event(struct timeval* timeout)
 
 void tcp_base_trsp::create_events()
 {
+    if(read_ev) {
+        ERROR("read event already created: transport %s, ip %s, port %d", get_transport(), am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr));
+    }
     read_ev = event_new(evbase, sd, EV_READ|EV_PERSIST,
                         tcp_base_trsp::on_sock_read,
                         (void *)this);
     DBG("%p created read_ev %p with base %p",this, read_ev, evbase);
 
+    if(write_ev) {
+        ERROR("write event already created: transport %s, ip %s, port %d", get_transport(), am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr));
+    }
     write_ev = event_new(evbase, sd, EV_WRITE,
                          tcp_base_trsp::on_sock_write,
                          (void *)this);
