@@ -40,6 +40,7 @@
 #include "log.h"
 
 #include <assert.h>
+#include "parse_header.h"
 
 int _timer_type_lookup[] = { 
     0,1,2, // STIMER_A, STIMER_B, STIMER_D
@@ -117,7 +118,7 @@ void sip_trans::retransmit()
 
     int send_err = retr_socket->send(&retr_addr,retr_buf,retr_len,flags);
     if(send_err < 0){
-	ERROR("Error from transport layer\n");
+        ERROR("Error from transport layer: call_id %s\n", msg->callid ? msg->callid->value.s : "unknown");
     }
 
 	if(logger || sensor) {

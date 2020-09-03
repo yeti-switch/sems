@@ -1417,7 +1417,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     
     err = p_msg->send(flags);
     if(err < 0){
-	ERROR("Error from transport layer\n");
+        ERROR("Error from transport layer: call_id %s\n", p_msg->callid ? p_msg->callid->value.s : "unknown");
 	delete p_msg;
 	p_msg = NULL;
 
@@ -1673,7 +1673,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 
     int send_err = p_msg->send(t->flags);
     if(send_err < 0){
-	ERROR("Error from transport layer\n");
+    ERROR("Error from transport layer: call_id %s\n", p_msg->callid ? p_msg->callid->value.s : "unknown");
 	delete p_msg;
     }
     else {
@@ -2547,7 +2547,7 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
     int send_err = inv->local_socket->send(&inv->remote_ip,ack_buf,
 					   ack_len,t->flags);
     if(send_err < 0){
-	ERROR("Error from transport layer\n");
+        ERROR("Error from transport layer: call_id %s\n", inv->callid ? inv->callid->value.s : "unknown");
     }
     else stats.inc_sent_requests();
     
@@ -2987,7 +2987,7 @@ int _trans_layer::try_next_ip(
 
     // and re-send
     if(tr->msg->send(tr->flags) < 0) {
-        ERROR("Error from transport layer\n");
+        ERROR("Error from transport layer: call_id %s\n", tr->msg->callid ? tr->msg->callid->value.s : "unknown");
 
         /*if(default_bl_ttl) {
             tr_blacklist::instance()->insert(&tr->msg->remote_ip, default_bl_ttl,"503");
