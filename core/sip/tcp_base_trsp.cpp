@@ -377,7 +377,10 @@ int tcp_base_trsp::check_connection()
     int ret = connect();
     if(ret < 0) {
       if(errno != EINPROGRESS && errno != EALREADY) {
-	ERROR("could not connect: %s",strerror(errno));
+	ERROR("could not connect to %s:%d: %s",
+          am_inet_ntop(&peer_addr).c_str(),
+          am_get_port(&peer_addr),
+          strerror(errno));
 	::close(sd);
 	sd = -1;
 	return -1;
