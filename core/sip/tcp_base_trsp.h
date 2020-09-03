@@ -27,6 +27,9 @@ struct sip_msg;
 
 struct trsp_input
 {
+    trsp_input(){}
+    virtual ~trsp_input(){}
+
     virtual void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg) = 0;
     virtual unsigned char* get_input() = 0;
     virtual int get_input_free_space() = 0;
