@@ -1,3 +1,9 @@
+sems (1.31.0) stable; urgency=low
+
+  * fix memory leak for TCP-based transports
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 03 Sep 2020 12:37:55 +0300
+
 sems (1.30.0) stable; urgency=low
 
   * refactoring: tcp_base_trsp: remove excess connections vector
