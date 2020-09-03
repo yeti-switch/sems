@@ -100,7 +100,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     builder.AddTransactionId(trnsId);
     if(err_code) {
         string error(", stun packet is dropped, ");
-        transport->getRtpStream()->onErrorRtpTransport(error_str + error + username, transport);
+        transport->getRtpStream()->onErrorRtpTransport(STUN_DROPPED_ERROR, error_str + error + username, transport);
         builder.AddErrorCode(err_code, error_str.c_str());
     } else {
         CSocketAddress addr(r_addr);
@@ -148,7 +148,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         transport->allowStunConnection(addr, priority);
     } else if(!valid){
         string error("valid stun message is false ERR = ");
-        transport->getRtpStream()->onErrorRtpTransport(error + error_str, transport);
+        transport->getRtpStream()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
     }
 }
 

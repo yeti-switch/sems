@@ -15,9 +15,28 @@ class AmRtpPacket;
 class AmStreamConnection
 {
 public:
+    enum ConnectionError {
+        RTP_BUFFER_SIZE_ERROR = 0,
+        RTP_PARSER_ERROR = 0,
+
+        DTLS_ERROR,
+
+        SRTP_KEY_ERROR,
+        SRTP_INIT_ERROR,
+        SRTP_CREATION_ERROR,
+        SRTP_ADD_STREAM_ERROR,
+        SRTP_UNPROTECT_ERROR,
+        SRTP_PROTECT_ERROR,
+
+        STUN_DROPPED_ERROR,
+        STUN_VALID_ERROR,
+
+        UNKNOWN_ERR
+    };
+
     enum ConnectionType
     {
-        RTP_CONN,
+        RTP_CONN = 0,
         RTCP_CONN,
         STUN_CONN,
         DTLS_CONN,

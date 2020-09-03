@@ -59,13 +59,13 @@ void AmSrtpConnection::use_key(srtp_profile_t profile,
         char error[100];
         sprintf(error, "srtp key are not correct. another size: needed %u in fact local-%lu, remote-%lu",
                                 master_key_len, key_tx_len, key_rx_len);
-        transport->getRtpStream()->onErrorRtpTransport(error, transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_KEY_ERROR, error, transport);
         return;
     }
 
     if (srtp_create(&srtp_tx_session, nullptr) != srtp_err_status_ok ||
         srtp_create(&srtp_rx_session, nullptr) != srtp_err_status_ok) {
-        transport->getRtpStream()->onErrorRtpTransport("srtp session not created", transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_CREATION_ERROR, "srtp session not created", transport);
         return;
     }
 
@@ -215,7 +215,7 @@ int AmSrtpConnection::ensure_rx_stream_context(uint32_t ssrc_net_order)
         string error("failed to add S");
         error.append(getConnType() == RTP_CONN ? "RTP" : "RTCP");
         error.append(" rx stream context");
-        transport->getRtpStream()->onErrorRtpTransport(error, transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_ADD_STREAM_ERROR, error, transport);
         return 1;
     }
 
@@ -231,7 +231,7 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         return;
 
     if(!srtp_rx_session) {
-        transport->getRtpStream()->onErrorRtpTransport("srtp session not initialized", transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_INIT_ERROR, "srtp session not initialized", transport);
         return;
     }
 
@@ -271,14 +271,14 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         string error("error parsing: incorrect S");
         error.append(getConnType() == RTP_CONN ? "RTP" : "RTCP");
         error.append(" packet");
-        transport->getRtpStream()->onErrorRtpTransport(error, transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_UNPROTECT_ERROR, error, transport);
     }
 }
 
 ssize_t AmSrtpConnection::send(AmRtpPacket* p)
 {
     if(!srtp_tx_session){
-        transport->getRtpStream()->onErrorRtpTransport("srtp session not initialized", transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_INIT_ERROR, "srtp session not initialized", transport);
         return -1;
     }
 
@@ -299,7 +299,7 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
         int ret = srtp_err_status_ok;
         if((ret = srtp_add_stream(srtp_tx_session, &policy)) != srtp_err_status_ok) {
             ERROR("srtp_add_stream error %d", ret);
-            transport->getRtpStream()->onErrorRtpTransport("srtp send stream not added", transport);
+            transport->getRtpStream()->onErrorRtpTransport(SRTP_ADD_STREAM_ERROR, "srtp send stream not added", transport);
             return -1;
         }
     }
@@ -308,7 +308,7 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
     uint32_t trailer_len = 0;
     srtp_get_protect_trailer_length(srtp_tx_session, false, 0, &trailer_len);
     if(size + trailer_len > RTP_PACKET_BUF_SIZE) {
-        transport->getRtpStream()->onErrorRtpTransport("size + trailer_len > RTP_PACKET_BUF_SIZE", transport);
+        transport->getRtpStream()->onErrorRtpTransport(RTP_BUFFER_SIZE_ERROR, "size + trailer_len > RTP_PACKET_BUF_SIZE", transport);
         return -1;
     }
 
@@ -317,7 +317,7 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
        (getConnType() == RTCP_CONN &&
         srtp_protect_rtcp(srtp_tx_session, p->getBuffer(), reinterpret_cast<int *>(&size)) != srtp_err_status_ok))
     {
-        transport->getRtpStream()->onErrorRtpTransport("error encrypting", transport);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_PROTECT_ERROR, "error encrypting", transport);
         return -1;
     }
 

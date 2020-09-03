@@ -226,6 +226,7 @@ class AmRtpStream
     unsigned long decode_errors;
     unsigned long rtp_parse_errors;
     unsigned long out_of_buffer_errors;
+    unsigned long srtp_unprotect_errors;
 
     bool not_supported_rx_payload_local_reported;
     bool not_supported_rx_payload_remote_reported;
@@ -435,7 +436,7 @@ class AmRtpStream
     /** Stops the stream and frees all resources. */
     virtual ~AmRtpStream();
 
-    void onErrorRtpTransport(const string& error, AmMediaTransport* transport);
+    void onErrorRtpTransport(AmStreamConnection::ConnectionError err, const string& error, AmMediaTransport* transport);
     void onRtpPacket(AmRtpPacket* packet, AmMediaTransport* transport);
     void onRtcpPacket(AmRtpPacket* packet, AmMediaTransport* transport);
     void onUdptlPacket(AmRtpPacket* packet, AmMediaTransport* transport);
@@ -569,6 +570,7 @@ class AmRtpStream
         struct rx_stat: public rtp_common {
             unsigned long decode_errors;
             unsigned long rtp_parse_errors;
+            unsigned long srtp_decript_errors;
             unsigned long out_of_buffer_errors;
 
             MathStat<long> delta;

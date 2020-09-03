@@ -337,7 +337,7 @@ void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct
         }
     } catch(Botan::Exception& exc) {
         string error("unforseen error in dtls:");
-        transport->getRtpStream()->onErrorRtpTransport(error + exc.what(), transport);
+        transport->getRtpStream()->onErrorRtpTransport(DTLS_ERROR, error + exc.what(), transport);
     }
 }
 

@@ -153,6 +153,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     dropped_packets_count(0),
     decode_errors(0),
     rtp_parse_errors(0),
+    srtp_unprotect_errors(0),
     out_of_buffer_errors(0),
     wrong_payload_errors(0),
     not_supported_rx_payload_local_reported(false),
@@ -920,15 +921,19 @@ void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   transport callbacks functions(received RTP packets or transport errors)
 
-void AmRtpStream::onErrorRtpTransport(const string& error, AmMediaTransport* transport)
+void AmRtpStream::onErrorRtpTransport(AmStreamConnection::ConnectionError err, const string& error, AmMediaTransport* transport)
 {
     struct sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
-    CLASS_ERROR("%s (src_addr: %s:%i, "
+    if(err == AmStreamConnection::RTP_PARSER_ERROR) rtp_parse_errors++;
+    else if(err == AmStreamConnection::SRTP_UNPROTECT_ERROR) srtp_unprotect_errors++;
+    else {
+        CLASS_ERROR("%s (src_addr: %s:%i, "
                 "local_ssrc: 0x%x, local_tag: %s)\n",
                 error.c_str(),
                 get_addr_str(&laddr).c_str(),am_get_port(&laddr),
                 l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+    }
 }
 
 void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
@@ -941,13 +946,14 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
     p->getAddr(&raddr);
     transport->getLocalAddr(&laddr);
     if (parse_res == RTP_PACKET_PARSE_ERROR) {
-        rtp_parse_errors++;
-        CLASS_ERROR("error while parsing RTP packet. "
-            "(src_addr: %s:%i, remote_addr: %s:%i, "
-            "local_ssrc: 0x%x, local_tag: %s)\n",
-            get_addr_str(&laddr).c_str(),am_get_port(&laddr),
-            get_addr_str(&raddr).c_str(),am_get_port(&raddr),
-            l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+        string error("error while parsing RTP packet. (src_addr: ");
+        error += get_addr_str(&laddr) + ":" + int2str(am_get_port(&laddr)) + ", remote_addr: ";
+        error += get_addr_str(&raddr) + ":" + int2str(am_get_port(&raddr)) + "local_ssrc: ";
+        error += int2hexstr(l_ssrc) + ", local_tag: ";
+        error += (session ? session->getLocalTag().c_str() : string("no session")) + ")";
+
+        onErrorRtpTransport(AmStreamConnection::RTP_PARSER_ERROR, error, transport);
+
         clearRTPTimeout(&p->recv_time);
         freeRtpPacket(p);
     } else if(parse_res==RTP_PACKET_PARSE_OK) {
@@ -1960,6 +1966,7 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
     //RX specific
     rx.decode_errors = decode_errors;
     rx.rtp_parse_errors = rtp_parse_errors;
+    rx.srtp_decript_errors = srtp_unprotect_errors;
     rx.out_of_buffer_errors = out_of_buffer_errors;
     rx.delta = rtp_stats.rx_delta;
     rx.jitter = rtp_stats.jitter;
