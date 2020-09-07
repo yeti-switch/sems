@@ -219,6 +219,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
         new_ip->type = IPv6;
         memcpy(&(new_ip->addr6), ns_rr_rdata(*rr), sizeof(in6_addr));
     } else {
+        delete new_ip;
         return nullptr;
     }
 
