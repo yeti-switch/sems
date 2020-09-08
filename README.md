@@ -2,16 +2,16 @@
 
 sems core is a part of project [Yeti]
 
-## Installation via Package (Debian 9)
+## Installation via Package (Debian 10)
 ```sh
-# echo "deb http://pkg.yeti-switch.org/debian/stretch stable main ext" > /etc/apt/sources.list.d/yeti.list
+# echo "deb [arch=amd64] http://pkg.yeti-switch.org/debian/buster 1.10 main" > /etc/apt/sources.list.d/yeti.list
 # apt-key adv --keyserver keys.gnupg.net --recv-key 9CEBFFC569A832B6
-# apt update
+# wget -O- https://pkg.yeti-switch.org/key.gpg | apt-key add -
 # apt install sems sems-modules-base
 ```
 check [Documentation] for additional versions/distributions info
 
-## Building from sources (Debian 8/9)
+## Building from sources (Debian 10)
 
 ### install prerequisites
 ```sh
@@ -31,7 +31,7 @@ $ cd sems
 
 ### build packages
 ```sh
-$ debuild -us -uc -b
+$ debuild -us -uc -b -j$(nproc)
 ```
 
 [Yeti]:https://yeti-switch.org/
