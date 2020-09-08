@@ -1,3 +1,11 @@
+sems (1.32.0) stable; urgency=low
+
+  * add core.show.resolver.list RPC method
+  * resolver: dns_ip_entry::get_rr(): fix memory leak
+  * improved media layer errors accounting
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 08 Sep 2020 14:14:47 +0300
+
 sems (1.31.0) stable; urgency=low
 
   * fix memory leak for TCP-based transports
