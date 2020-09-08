@@ -72,6 +72,7 @@ class CoreRpc final
     rpc_handler showSessionsLimit;
     rpc_handler setSessionsLimit;
     rpc_handler showResolverCount;
+    rpc_handler showResolverCache;
 
     rpc_handler requestShutdownNormal;
     rpc_handler requestShutdownImmediate;

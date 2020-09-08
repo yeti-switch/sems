@@ -1564,9 +1564,28 @@ unsigned int _resolver::count_cache()
     unsigned int size = 0;
     for(unsigned long i=0; i<cache.get_size(); i++) {
         dns_bucket* bucket = cache.get_bucket(i);
+        bucket->lock();
         bucket->dump([&size](const string& , dns_entry* ){size++;});
+        bucket->unlock();
     }
     return size;
+}
+
+void _resolver::dump_cache(AmArg& ret)
+{
+    for(unsigned long i=0; i<cache.get_size(); i++) {
+        dns_bucket* bucket = cache.get_bucket(i);
+        bucket->lock();
+        AmArg& entries = ret["entries"];
+        bucket->dump([&entries](const string& name, dns_entry* entry){
+            AmArg data;
+            data["data"] = entry->to_str();
+            data["name"] = name;
+            data["expire"] = (long long)(entry->expire - wheeltimer::instance()->unix_clock.get());
+            entries.push(data);
+        });
+        bucket->unlock();
+    }
 }
 
 void _resolver::run()

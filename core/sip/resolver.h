@@ -313,6 +313,7 @@ public:
 
     void clear_cache();
     unsigned int count_cache();
+    void dump_cache(AmArg& ret);
 
 protected:
     _resolver();

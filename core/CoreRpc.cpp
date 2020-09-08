@@ -166,6 +166,7 @@ void CoreRpc::init_rpc_tree()
         reg_method(show,"modules","",&CoreRpc::showModules);
         AmArg &show_resolver = reg_leaf(show,"resolver");
             reg_method(show_resolver,"count","",&CoreRpc::showResolverCount);
+            reg_method(show_resolver,"list","",&CoreRpc::showResolverCache);
         AmArg &show_transport = reg_leaf(show, "transport");
             reg_method(show_transport,"blacklist","",&CoreRpc::showTrBlacklist);
             reg_method(show_transport,"used_ports","",&CoreRpc::showUsedPorts);
@@ -663,6 +664,11 @@ void CoreRpc::requestResolverClear(const AmArg&, AmArg& ret)
 void CoreRpc::showResolverCount(const AmArg&, AmArg& ret)
 {
     ret = (int)resolver::instance()->count_cache();
+}
+
+void CoreRpc::showResolverCache(const AmArg&, AmArg& ret)
+{
+    resolver::instance()->dump_cache(ret);
 }
 
 void CoreRpc::requestResolverGet(const AmArg& args, AmArg& ret)
