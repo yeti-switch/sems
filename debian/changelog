@@ -1,3 +1,9 @@
+sems (1.32.1) stable; urgency=low
+
+  * tcp_base_trsp: fix read/write events memory leak
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 11 Sep 2020 12:06:20 +0300
+
 sems (1.32.0) stable; urgency=low
 
   * add core.show.resolver.list RPC method
