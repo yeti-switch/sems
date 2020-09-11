@@ -182,11 +182,13 @@ tcp_base_trsp::~tcp_base_trsp()
 {
   CLASS_DBG("~tcp_base_trsp()");
   if(read_ev) {
-      DBG("%p free read_ev %p",this, read_ev);
+      DBG("%p destroy read_ev %p",this, read_ev);
+      event_del(read_ev);
       event_free(read_ev);
   }
   if(write_ev) {
-      DBG("%p free write_ev %p",this, write_ev);
+      DBG("%p destroy write_ev %p",this, write_ev);
+      event_del(write_ev);
       event_free(write_ev);
   }
 
@@ -209,14 +211,16 @@ void tcp_base_trsp::close()
     DBG("connection type %s", get_transport());
 
     if(read_ev) {
-        DBG("%p del read_ev %p", this, read_ev);
+        DBG("%p destroy read_ev %p", this, read_ev);
         event_del(read_ev);
+        event_free(read_ev);
         read_ev = NULL;
     }
 
     if(write_ev) {
-        DBG("%p del write_ev %p", this, write_ev);
+        DBG("%p destroy write_ev %p", this, write_ev);
         event_del(write_ev);
+        event_free(write_ev);
         write_ev = NULL;
     }
 
