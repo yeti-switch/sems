@@ -553,10 +553,23 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
 
 void AmMediaTransport::initRtpConnection(const string& remote_address, int remote_port)
 {
-    CLASS_DBG("[%p]AmMediaTransport::initRtpConnection seq - %d", to_void(stream), seq);
+    CLASS_DBG("[%p]AmMediaTransport::initRtpConnection(%s, %d) seq:%d, type:%d",
+              to_void(stream), remote_address.data(), remote_port, seq, type);
     if(seq == TRANSPORT_SEQ_NONE) {
         seq = TRANSPORT_SEQ_RTP;
         addRtpConnection(remote_address, remote_port);
+    } else {
+        CLASS_DBG("AmMediaTransport::initRtpConnection() update connections endpoint");
+        AmLock l(connections_mut);
+        for(auto c: connections) {
+            switch(c->getConnType()) {
+                case AmStreamConnection::RTP_CONN:
+                case AmStreamConnection::RTCP_CONN:
+                    c->setRAddr(remote_address, remote_port);
+                    break;
+                default: break;
+            }
+        }
     }
 }
 

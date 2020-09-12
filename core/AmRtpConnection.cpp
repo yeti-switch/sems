@@ -36,6 +36,8 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
 {
     CLASS_DBG("AmStreamConnection(transport:%p, remote_addr:'%s', port:%d, type %s)",
               to_void(_transport), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
+    bzero(&r_addr, sizeof(struct sockaddr_storage));
+    r_port = 0;
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
@@ -52,6 +54,8 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
 {
     CLASS_DBG("AmStreamConnection(parent: %p, remote_addr:'%s', port:%d, type %s)",
               to_void(_parent), remote_addr.data(), remote_port, streamConnType2str(type).c_str());
+    bzero(&r_addr, sizeof(struct sockaddr_storage));
+    r_port = 0;
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
@@ -116,6 +120,10 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
     }
 
     if(remote_port) {
+        CLASS_DBG("change connection endpoint. conn_type:%d %s:%d -> %s:%d",
+                  conn_type,
+                  get_addr_str(&r_addr).data(), r_port,
+                  get_addr_str(&ss).data(), remote_port);
         memcpy(&r_addr,&ss,sizeof(struct sockaddr_storage));
         am_set_port(&r_addr,remote_port);
         r_port = remote_port;
