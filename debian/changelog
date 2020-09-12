@@ -1,3 +1,9 @@
+sems (1.32.2) stable; urgency=low
+
+  * fix media remote addr update on reINVITE
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 12 Sep 2020 03:43:18 +0300
+
 sems (1.32.1) stable; urgency=low
 
   * tcp_base_trsp: fix read/write events memory leak
