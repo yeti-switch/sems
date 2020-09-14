@@ -659,6 +659,15 @@ void AmMediaTransport::initDtlsConnection(const string& remote_address, int remo
         } catch(string& error) {
             CLASS_ERROR("Can't add dtls connection. error - %s", error.c_str());
         }
+    } else {
+        CLASS_DBG("update dtls connection endpoint");
+        for(auto& c : connections) {
+            if (c->getConnType() == AmStreamConnection::DTLS_CONN ||
+                c->getConnType() == AmStreamConnection::RTP_CONN  ||
+                c->getConnType() == AmStreamConnection::RTCP_CONN ) {
+                    c->setRAddr(remote_address, remote_port);
+            }
+        }
     }
 }
 
@@ -691,7 +700,7 @@ void AmMediaTransport::initZrtpConnection(const string& remote_address, int remo
             cur_rtp_conn = new AmZRTPConnection(this, remote_address, remote_port);
             addConnection(cur_rtp_conn);
         } else {
-            CLASS_DBG("update srtp connection endpoint");
+            CLASS_DBG("update zrtp connection endpoint");
             cur_rtp_conn->setRAddr(remote_address, remote_port);
         }
     } catch(string& error) {
