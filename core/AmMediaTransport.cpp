@@ -559,16 +559,13 @@ void AmMediaTransport::initRtpConnection(const string& remote_address, int remot
         seq = TRANSPORT_SEQ_RTP;
         addRtpConnection(remote_address, remote_port);
     } else {
-        CLASS_DBG("AmMediaTransport::initRtpConnection() update connections endpoint");
-        AmLock l(connections_mut);
-        for(auto c: connections) {
-            switch(c->getConnType()) {
-                case AmStreamConnection::RTP_CONN:
-                case AmStreamConnection::RTCP_CONN:
-                    c->setRAddr(remote_address, remote_port);
-                    break;
-                default: break;
-            }
+        if(cur_rtp_conn) {
+            CLASS_DBG("update rtp connection endpoint");
+            cur_rtp_conn->setRAddr(remote_address, remote_port);
+        }
+        if(cur_rtcp_conn) {
+            CLASS_DBG("update rtcp connection endpoint");
+            cur_rtcp_conn->setRAddr(remote_address, remote_port);
         }
     }
 }
