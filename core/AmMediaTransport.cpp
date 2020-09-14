@@ -586,6 +586,15 @@ void AmMediaTransport::initSrtpConnection(const string& remote_address, int remo
             return;
 
         addSrtpConnection(remote_address, remote_port, cprofile, local_key, remote_key);
+    } else {
+        if(cur_rtp_conn) {
+            CLASS_DBG("update srtp connection endpoint");
+            cur_rtp_conn->setRAddr(remote_address, remote_port);
+        }
+        if(cur_rtcp_conn) {
+            CLASS_DBG("update srtcp connection endpoint");
+            cur_rtcp_conn->setRAddr(remote_address, remote_port);
+        }
     }
 }
 
