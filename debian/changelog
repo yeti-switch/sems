@@ -1,3 +1,9 @@
+sems (1.33.0) stable; urgency=low
+
+  * fix remote addr set for rtp/srtp/dtls/zrtp transports
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 15 Sep 2020 11:53:13 +0300
+
 sems (1.32.2) stable; urgency=low
 
   * fix media remote addr update on reINVITE
