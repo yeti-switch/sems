@@ -867,8 +867,6 @@ void AmSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
   }
 }
 
-
-
 void AmSession::onInvite2xx(const AmSipReply& reply)
 {
   dlg->send_200_ack(reply.cseq);

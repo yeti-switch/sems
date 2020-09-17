@@ -1155,6 +1155,14 @@ void _trans_layer::get_trans_list(AmArg& ret)
         arg["age"] = (long long)((tv.tv_sec*1000 + tv.tv_usec/1000) - (trans->time_created.tv_sec*1000 + trans->time_created.tv_usec/1000));
         cstring transport = transport_str(trans->msg->transport_id);
         arg["transport"] = string(transport.s, transport.len);
+        string timers;
+        for(int i = 0; i < __STIMER_MAX; i++) {
+            if(trans->is_timer_set(i)) {
+                timers.append(timer_name(i));
+                timers.append(" ");
+            }
+        }
+        arg["timers"] = timers;
 #if __SIZEOF_POINTER__ == 4
             arg["pointer"] = string("0x") + int2hex((unsigned int)trans, true);
 #elif __SIZEOF_POINTER__ == 8
