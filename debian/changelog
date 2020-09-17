@@ -1,3 +1,9 @@
+sems (1.33.1) stable; urgency=low
+
+  * add timers in rpc command "transaction.list" reply
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 17 Sep 2020 22:12:47 +0300
+
 sems (1.33.0) stable; urgency=low
 
   * fix remote addr set for rtp/srtp/dtls/zrtp transports
