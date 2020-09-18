@@ -236,13 +236,16 @@ public:
 struct sip_target
 {
     sockaddr_storage ss;
-    char             trsp[SIP_TRSP_SIZE_MAX+1];
+    trsp_socket::socket_transport trsp;
 
     sip_target();
     sip_target(const sip_target& target);
 
     void clear();
     const sip_target& operator = (const sip_target& target);
+
+    //sets trsp, ss.ssl_marker, ss.transport considering transport and scheme
+    void resolve(const cstring &trsp_str, bool sips_scheme);
 };
 
 struct sip_target_set

@@ -948,14 +948,117 @@ sip_target::sip_target(const sip_target& target)
 const sip_target& sip_target::operator = (const sip_target& target)
 {
     memcpy(&ss,&target.ss,sizeof(sockaddr_storage));
-    memcpy(trsp,target.trsp,SIP_TRSP_SIZE_MAX+1);
-    return target;
+    trsp = target.trsp;
+    return *this;
 }
 
 void sip_target::clear()
 {
     memset(&ss,0,sizeof(sockaddr_storage));
-    memset(trsp,'\0',SIP_TRSP_SIZE_MAX+1);
+    trsp = trsp_socket::tr_invalid;
+}
+
+void sip_target::resolve(const cstring &trsp_str, bool sips_scheme)
+{
+    static cstring trsp_udp_name("udp");
+    static cstring trsp_tcp_name("tcp");
+    static cstring trsp_tls_name("tls");
+    static cstring trsp_ws_name("ws");
+    static cstring trsp_wss_name("wss");
+
+    sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&ss);
+
+    //TODO: replace with bitmap for trsp_socket::socket_transport
+
+    if(!lower_cmp_n(trsp_str, trsp_udp_name)) {
+         //UDP
+         switch(ss.ss_family) {
+         case AF_INET:
+             trsp = trsp_socket::udp_ipv4;
+             break;
+         case AF_INET6:
+             trsp = trsp_socket::udp_ipv6;
+             break;
+         default:
+             //unexpected address family for UDP transport
+             trsp = trsp_socket::tr_invalid;
+         }
+    } else if(!lower_cmp_n(trsp_str, trsp_tcp_name)) {
+        //TCP
+        switch(ss.ss_family) {
+        case AF_INET:
+            trsp = trsp_socket::tcp_ipv4;
+            break;
+        case AF_INET6:
+            trsp = trsp_socket::tcp_ipv6;
+            break;
+        default:
+            //unexpected address family for TCP transport
+            trsp = trsp_socket::tr_invalid;
+        }
+    } else if(!lower_cmp_n(trsp_str, trsp_tls_name)) {
+        //TLS
+        sa_ssl->ssl_marker = true;
+        switch(ss.ss_family) {
+        case AF_INET:
+            trsp = trsp_socket::tls_ipv4;
+            break;
+        case AF_INET6:
+            trsp = trsp_socket::tls_ipv6;
+            break;
+        default:
+            //unexpected address family for TLS transport
+            trsp = trsp_socket::tr_invalid;
+        }
+    } else if(!lower_cmp_n(trsp_str, trsp_ws_name)) {
+        //WS
+        switch(ss.ss_family) {
+        case AF_INET:
+            trsp = trsp_socket::ws_ipv4;
+            break;
+        case AF_INET6:
+            trsp = trsp_socket::ws_ipv6;
+            break;
+        default:
+            //unexpected address family for WS transport
+            trsp = trsp_socket::tr_invalid;
+        }
+    } else if(!lower_cmp_n(trsp_str, trsp_wss_name)) {
+        //WSS
+        sa_ssl->ssl_marker = true;
+        switch(ss.ss_family) {
+        case AF_INET:
+            trsp = trsp_socket::wss_ipv4;
+            break;
+        case AF_INET6:
+            trsp = trsp_socket::wss_ipv6;
+            break;
+        default:
+            //unexpected address family for WSS transport
+            trsp = trsp_socket::tr_invalid;
+        }
+    } else {
+        //unknown transport name. use UDP as fallback
+        trsp = trsp_socket::tr_invalid;
+    }
+
+     if(!trsp) {
+         //use UDP as fallback
+         if(ss.ss_family == AF_INET) {
+             trsp = trsp_socket::udp_ipv4;
+         } else {
+             trsp = trsp_socket::udp_ipv6;
+         }
+     }
+
+     SA_transport(&ss) = trsp;
+
+    if(sips_scheme) {
+        sa_ssl->ssl_marker = true;
+        sa_ssl->sig = sockaddr_ssl::SIG_RSA;
+        sa_ssl->cipher = sockaddr_ssl::CIPHER_AES128;
+        sa_ssl->mac = sockaddr_ssl::MAC_SHA1;
+    }
 }
 
 sip_target_set::sip_target_set(dns_priority priority_)
@@ -983,98 +1086,12 @@ int sip_target_set::get_next(
         if(!has_next())
             return -1;
 
-        static cstring trsp_udp_name("udp");
-        static cstring trsp_tcp_name("tcp");
-        static cstring trsp_tls_name("tls");
-        static cstring trsp_ws_name("ws");
-        static cstring trsp_wss_name("wss");
-
         sip_target& t = *dest_list_it;
         memcpy(ss,&t.ss,sizeof(sockaddr_storage));
-
-        //TODO: replace with bitmap for protocols combination
-        if(0==strncasecmp(t.trsp, trsp_udp_name.s, trsp_udp_name.len)) {
-            //UDP
-            switch(ss->ss_family) {
-            case AF_INET:
-                next_trsp = trsp_socket::udp_ipv4;
-                break;
-            case AF_INET6:
-                next_trsp = trsp_socket::udp_ipv6;
-                break;
-            default:
-                //unexpected address family for UDP transport
-                next_trsp = trsp_socket::tr_invalid;
-            }
-        } else if(0==strncasecmp(t.trsp, trsp_tcp_name.s, trsp_tcp_name.len)) {
-            //TCP
-            switch(ss->ss_family) {
-            case AF_INET:
-                next_trsp = trsp_socket::tcp_ipv4;
-                break;
-            case AF_INET6:
-                next_trsp = trsp_socket::tcp_ipv6;
-                break;
-            default:
-                //unexpected address family for TCP transport
-                next_trsp = trsp_socket::tr_invalid;
-            }
-        } else if(0==strncasecmp(t.trsp, trsp_tls_name.s, trsp_tls_name.len)) {
-            //TLS
-            switch(ss->ss_family) {
-            case AF_INET:
-                next_trsp = trsp_socket::tls_ipv4;
-                break;
-            case AF_INET6:
-                next_trsp = trsp_socket::tls_ipv6;
-                break;
-            default:
-                //unexpected address family for TLS transport
-                next_trsp = trsp_socket::tr_invalid;
-            }
-        } else if(0==strncasecmp(t.trsp, trsp_ws_name.s, trsp_ws_name.len)) {
-            //WS
-            switch(ss->ss_family) {
-            case AF_INET:
-                next_trsp = trsp_socket::ws_ipv4;
-                break;
-            case AF_INET6:
-                next_trsp = trsp_socket::ws_ipv6;
-                break;
-            default:
-                //unexpected address family for WS transport
-                next_trsp = trsp_socket::tr_invalid;
-            }
-        }  else if(0==strncasecmp(t.trsp, trsp_wss_name.s, trsp_wss_name.len)) {
-            //WSS
-            switch(ss->ss_family) {
-            case AF_INET:
-                next_trsp = trsp_socket::wss_ipv4;
-                break;
-            case AF_INET6:
-                next_trsp = trsp_socket::wss_ipv6;
-                break;
-            default:
-                //unexpected address family for WSS transport
-                next_trsp = trsp_socket::tr_invalid;
-            }
-        }else {
-            //unknown transport name
-            next_trsp = trsp_socket::tr_invalid;
-        }
+        next_trsp = t.trsp;
 
         next();
 
-        // set default transport to UDP
-        if(!next_trsp) {
-            if(ss->ss_family == AF_INET) {
-                next_trsp = trsp_socket::udp_ipv4;
-            } else {
-                next_trsp = trsp_socket::udp_ipv6;
-            }
-        }
-
-        SA_transport(ss) = next_trsp;
     } while(!(flags & TR_FLAG_DISABLE_BL) &&
             tr_blacklist::instance()->exist(ss));
 
@@ -1100,10 +1117,12 @@ void sip_target_set::debug()
     for(list<sip_target>::iterator it = dest_list.begin();
         it != dest_list.end(); it++)
     {
-        DBG("\t%c %s:%u/%s",
+        DBG("\t%c %s:%u/%d(%s)",
             it == dest_list_it ? '>' : ' ',
             am_inet_ntop(&it->ss).c_str(),
-            am_get_port(&it->ss),it->trsp);
+            am_get_port(&it->ss),
+            it->trsp,
+            trsp_socket::socket_transport2proto_str(it->trsp));
     }
 }
 
@@ -1492,6 +1511,8 @@ int _resolver::resolve_targets(
     const list<sip_destination>& dest_list,
     sip_target_set* targets)
 {
+    bool sips_scheme;
+
     for(list<sip_destination>::const_iterator it = dest_list.begin();
         it != dest_list.end(); it++)
     {
@@ -1514,21 +1535,10 @@ int _resolver::resolve_targets(
             return RESOLVING_ERROR_CODE;
         }
 
-        if(it->trsp.len && (it->trsp.len <= SIP_TRSP_SIZE_MAX)) {
-            memcpy(t.trsp,it->trsp.s,it->trsp.len);
-            t.trsp[it->trsp.len] = '\0';
-        } else {
-            t.trsp[0] = '\0';
-        }
+        sips_scheme = !lower_cmp_n(it->scheme, "sips");
 
         do {
-            if(!lower_cmp_n(it->scheme, "sips")) {
-                sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&t.ss);
-                sa_ssl->ssl_marker = true;
-                sa_ssl->sig = sockaddr_ssl::SIG_RSA;
-                sa_ssl->cipher = sockaddr_ssl::CIPHER_AES128;
-                sa_ssl->mac = sockaddr_ssl::MAC_SHA1;
-            }
+            t.resolve(it->trsp, sips_scheme);
             targets->dest_list.push_back(t);
         } while(h_dns.next_ip(&t.ss, Dualstack) > 0);
     } //for it: dest_list
