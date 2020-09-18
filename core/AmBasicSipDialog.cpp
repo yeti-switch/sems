@@ -753,7 +753,7 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
     reply.body = *body;
 
   if(onTxReply(req,reply,flags)){
-    DBG("onTxReply failed\n");
+    ERROR("onTxReply failed, callid - %s\n", callid.c_str());
     return -1;
   }
 
