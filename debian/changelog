@@ -1,3 +1,11 @@
+sems (1.34.0) stable; urgency=low
+
+  * resolver: target set resolving optimizations
+  * resolver: move socket_transport to the _resolver::resolve_targets()
+  * AmBasicSipDialog::reply: log on failed onTxReply DBG -> ERRROR
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sun, 20 Sep 2020 13:21:45 +0300
+
 sems (1.33.1) stable; urgency=low
 
   * add timers in rpc command "transaction.list" reply
