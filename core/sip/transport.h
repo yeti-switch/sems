@@ -44,35 +44,55 @@ using std::vector;
 #define DEFAULT_IDLE_TIMEOUT 3600000 /* 1 hour */
 #define DEFAULT_TCP_CONNECT_TIMEOUT 2000 /* 2 seconds */
 
+#define sock_transport_addr_shift(v) (v << 3)
+#define sock_transport_addr_mask  0x8
+#define sock_transport_proto_mask 0x7
+
 class trsp_socket
     : public atomic_ref_cnt
 {
 public:
     enum socket_options {
-	force_via_address       = (1 << 0),
-	force_outbound_if       = (1 << 1),
-	use_raw_sockets         = (1 << 2),
-	no_transport_in_contact = (1 << 3),
-	static_client_port = (1 << 4)
+        force_via_address       = (1 << 0),
+        force_outbound_if       = (1 << 1),
+        use_raw_sockets         = (1 << 2),
+        no_transport_in_contact = (1 << 3),
+        static_client_port = (1 << 4)
+    };
+
+    //3 low bits of socket_transport
+    enum socket_transport_proto {
+        tr_proto_invalid  = 0,
+        tr_proto_udp,
+        tr_proto_tcp,
+        tr_proto_tls,
+        tr_proto_ws,
+        tr_proto_wss
+    };
+
+    //4th bit of socket_transport
+    enum socket_transport_addr_family {
+        tr_addr_family_ipv4 = 0,
+        tr_addr_family_ipv6 = sock_transport_addr_shift(1)
     };
 
     enum socket_transport {
         tr_invalid  = 0,
-        udp_ipv4,
-        udp_ipv6,
-        tcp_ipv4,
-        tcp_ipv6,
-        tls_ipv4,
-        tls_ipv6,
-        ws_ipv4,
-        ws_ipv6,
-        wss_ipv4,
-        wss_ipv6
+        udp_ipv4 = tr_proto_udp,
+        udp_ipv6 = tr_proto_udp | tr_addr_family_ipv6,
+        tcp_ipv4 = tr_proto_tcp,
+        tcp_ipv6 = tr_proto_tcp | tr_addr_family_ipv6,
+        tls_ipv4 = tr_proto_tls,
+        tls_ipv6 = tr_proto_tls | tr_addr_family_ipv6,
+        ws_ipv4 =  tr_proto_ws,
+        ws_ipv6 =  tr_proto_ws  | tr_addr_family_ipv6,
+        wss_ipv4 = tr_proto_wss,
+        wss_ipv6 = tr_proto_wss | tr_addr_family_ipv6
     };
     static const char *socket_transport2proto_str(const socket_transport transport);
 
     static int log_level_raw_msgs;
-    
+
 protected:
     // socket descriptor
     int sd;

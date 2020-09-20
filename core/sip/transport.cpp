@@ -38,21 +38,16 @@ int trsp_socket::log_level_raw_msgs = L_DBG;
 
 const char * trsp_socket::socket_transport2proto_str(const socket_transport transport)
 {
-	switch(transport) {
-	case udp_ipv4:
-	case udp_ipv6:
+	switch(transport & sock_transport_proto_mask) {
+	case tr_proto_udp:
 		return "udp";
-	case tcp_ipv4:
-	case tcp_ipv6:
+	case tr_proto_tcp:
 		return "tcp";
-	case tls_ipv4:
-	case tls_ipv6:
+	case tr_proto_tls:
 		return "tls";
-	case ws_ipv4:
-	case ws_ipv6:
+	case tr_proto_ws:
 		return "ws";
-	case wss_ipv4:
-	case wss_ipv6:
+	case tr_proto_wss:
 		return "wss";
 	default:
 		return "invalid";

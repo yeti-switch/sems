@@ -960,98 +960,77 @@ void sip_target::clear()
 
 void sip_target::resolve(const cstring &trsp_str, bool sips_scheme)
 {
-    static cstring trsp_udp_name("udp");
-    static cstring trsp_tcp_name("tcp");
-    static cstring trsp_tls_name("tls");
-    static cstring trsp_ws_name("ws");
-    static cstring trsp_wss_name("wss");
-
     sockaddr_ssl* sa_ssl = reinterpret_cast<sockaddr_ssl*>(&ss);
 
-    //TODO: replace with bitmap for trsp_socket::socket_transport
-
-    if(!lower_cmp_n(trsp_str, trsp_udp_name)) {
-         //UDP
-         switch(ss.ss_family) {
-         case AF_INET:
-             trsp = trsp_socket::udp_ipv4;
-             break;
-         case AF_INET6:
-             trsp = trsp_socket::udp_ipv6;
-             break;
-         default:
-             //unexpected address family for UDP transport
-             trsp = trsp_socket::tr_invalid;
-         }
-    } else if(!lower_cmp_n(trsp_str, trsp_tcp_name)) {
-        //TCP
-        switch(ss.ss_family) {
-        case AF_INET:
-            trsp = trsp_socket::tcp_ipv4;
+    sa_ssl->ssl_marker = false;
+    int trsp_tmp = trsp_socket::tr_proto_udp;
+    if(trsp_str.len) {
+        switch(LOWER_B(trsp_str.s[0])) {
+        case 'u':
+            if(3==trsp_str.len
+               && 'd'==LOWER_B(trsp_str.s[1])
+               && 'p'==LOWER_B(trsp_str.s[2]))
+            {
+                //udp
+                trsp_tmp = trsp_socket::tr_proto_udp;
+            }
             break;
-        case AF_INET6:
-            trsp = trsp_socket::tcp_ipv6;
+        case 't':
+            if(3==trsp_str.len) {
+                //tcp|tls
+                switch(LOWER_B(trsp_str.s[1])) {
+                case 'c':
+                    if('p'==LOWER_B(trsp_str.s[2])) {
+                        //tcp
+                        trsp_tmp = trsp_socket::tr_proto_tcp;
+                    }
+                    break;
+                case 'l':
+                    if('s'==LOWER_B(trsp_str.s[2])) {
+                        //tls
+                        trsp_tmp = trsp_socket::tr_proto_tls;
+                        sa_ssl->ssl_marker = true;
+                    }
+                    break;
+                }
+            }
             break;
-        default:
-            //unexpected address family for TCP transport
-            trsp = trsp_socket::tr_invalid;
-        }
-    } else if(!lower_cmp_n(trsp_str, trsp_tls_name)) {
-        //TLS
-        sa_ssl->ssl_marker = true;
-        switch(ss.ss_family) {
-        case AF_INET:
-            trsp = trsp_socket::tls_ipv4;
+        case 'w':
+            //ws|wss
+            switch(trsp_str.len) {
+            case 2:
+                if('s'==LOWER_B(trsp_str.s[1])) {
+                    //ws
+                    trsp_tmp = trsp_socket::tr_proto_ws;
+                }
+                break;
+            case 3:
+                if('s'==LOWER_B(trsp_str.s[1])
+                   && 's'==LOWER_B(trsp_str.s[2]))
+                {
+                    //wss
+                    trsp_tmp = trsp_socket::tr_proto_wss;
+                    sa_ssl->ssl_marker = true;
+                }
+                break;
+            }
             break;
-        case AF_INET6:
-            trsp = trsp_socket::tls_ipv6;
-            break;
-        default:
-            //unexpected address family for TLS transport
-            trsp = trsp_socket::tr_invalid;
-        }
-    } else if(!lower_cmp_n(trsp_str, trsp_ws_name)) {
-        //WS
-        switch(ss.ss_family) {
-        case AF_INET:
-            trsp = trsp_socket::ws_ipv4;
-            break;
-        case AF_INET6:
-            trsp = trsp_socket::ws_ipv6;
-            break;
-        default:
-            //unexpected address family for WS transport
-            trsp = trsp_socket::tr_invalid;
-        }
-    } else if(!lower_cmp_n(trsp_str, trsp_wss_name)) {
-        //WSS
-        sa_ssl->ssl_marker = true;
-        switch(ss.ss_family) {
-        case AF_INET:
-            trsp = trsp_socket::wss_ipv4;
-            break;
-        case AF_INET6:
-            trsp = trsp_socket::wss_ipv6;
-            break;
-        default:
-            //unexpected address family for WSS transport
-            trsp = trsp_socket::tr_invalid;
-        }
-    } else {
-        //unknown transport name. use UDP as fallback
-        trsp = trsp_socket::tr_invalid;
+        } //switch(LOWER_B(trsp_str.s[0]))
     }
 
-     if(!trsp) {
-         //use UDP as fallback
-         if(ss.ss_family == AF_INET) {
-             trsp = trsp_socket::udp_ipv4;
-         } else {
-             trsp = trsp_socket::udp_ipv6;
-         }
-     }
+    switch(ss.ss_family) {
+    case AF_INET:
+        //skip OR with tr_addr_family_ipv4 coz it zero
+        //trsp_tmp |= trsp_socket::tr_addr_family_ipv4;
+        break;
+    case AF_INET6:
+        trsp_tmp |= trsp_socket::tr_addr_family_ipv6;
+        break;
+    }
 
-     SA_transport(&ss) = trsp;
+    trsp = static_cast<trsp_socket::socket_transport>(trsp_tmp);
+
+    SA_transport(&ss) = trsp_tmp;
 
     if(sips_scheme) {
         sa_ssl->ssl_marker = true;
