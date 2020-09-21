@@ -1,3 +1,9 @@
+sems (1.35.1) stable; urgency=low
+
+  * tls_trsp: comment out IMPLICIT signature method
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 21 Sep 2020 17:12:16 +0300
+
 sems (1.35.0) stable; urgency=low
 
   * tls_conf: fix policy overrides
