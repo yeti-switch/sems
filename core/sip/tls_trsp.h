@@ -34,8 +34,8 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     Botan::X509_Certificate certificate;
     std::unique_ptr<Botan::Private_Key> key;
 
-    //for optional client connection
-    bool is_optional;
+    //ciphersuite policy overrides
+    bool policy_override;
     std::string cipher;
     std::string mac;
     std::string sig;
@@ -63,7 +63,7 @@ public:
     vector<Botan::X509_Certificate> cert_chain(const vector<string>& cert_key_types, const string& type, const string& context) override;
     Botan::Private_Key* private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context) override;
 
-    void set_optional_parameters(std::string sig_, std::string cipher_, std::string mac_);
+    void set_policy_overrides(std::string sig_, std::string cipher_, std::string mac_);
 };
 
 class tls_rand_generator

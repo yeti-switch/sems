@@ -4,6 +4,8 @@ std::string toString(sockaddr_ssl::sig_method sig)
 {
     switch(sig)
     {
+    case sockaddr_ssl::SIG_UNDEFINED:
+        return "";
     case sockaddr_ssl::SIG_RSA:
         return "RSA";
     case sockaddr_ssl::SIG_DH:
@@ -28,6 +30,8 @@ std::string toString(sockaddr_ssl::cipher_method cipher)
 {
     switch(cipher)
     {
+    case sockaddr_ssl::CIPHER_UNDEFINED:
+        return "";
     case sockaddr_ssl::CIPHER_AES256_OCB12:
         return "AES-256/OCB(12)";
     case sockaddr_ssl::CIPHER_AES128_OCB12:
@@ -74,6 +78,8 @@ std::string toString(sockaddr_ssl::mac_method mac)
 {
     switch(mac)
     {
+    case sockaddr_ssl::MAC_UNDEFINED:
+        return "";
     case sockaddr_ssl:: MAC_AEAD:
         return "AEAD";
     case sockaddr_ssl:: MAC_SHA256:

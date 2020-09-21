@@ -10,7 +10,8 @@ struct sockaddr_ssl
     } addr;
     trsp_socket::socket_transport trsp;
     bool ssl_marker;
-    enum sig_method{
+    enum sig_method {
+        SIG_UNDEFINED = 0,
         SIG_SHA,
         SIG_ECDHE_PSK,
         SIG_DHE_PSK,
@@ -20,7 +21,8 @@ struct sockaddr_ssl
         SIG_DH,
         SIG_RSA
     } sig;
-    enum cipher_method{
+    enum cipher_method {
+        CIPHER_UNDEFINED = 0,
         CIPHER_AES256_OCB12,
         CIPHER_AES128_OCB12,
         CIPHER_ChaCha20Poly1305,
@@ -41,7 +43,8 @@ struct sockaddr_ssl
         CIPHER_SEED,
         CIPHER_3DES
     } cipher;
-    enum mac_method{
+    enum mac_method {
+        MAC_UNDEFINED = 0,
         MAC_AEAD,
         MAC_SHA256,
         MAC_SHA384,

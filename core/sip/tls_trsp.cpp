@@ -23,7 +23,7 @@
 tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
 , key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
-, is_optional(false)
+, policy_override(false)
 {
     if(!settings->certificate.empty()){
         Botan::X509_Certificate cert(settings->certificate);
@@ -34,7 +34,7 @@ tls_conf::tls_conf(tls_client_settings* settings)
 tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
 , key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
-, is_optional(false)
+, policy_override(false)
 {
     if(!settings->certificate.empty()){
         Botan::X509_Certificate cert(settings->certificate);
@@ -45,7 +45,7 @@ tls_conf::tls_conf(tls_server_settings* settings)
 tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
 , certificate(conf.certificate)
-, is_optional(conf.is_optional)
+, policy_override(conf.policy_override)
 , cipher(conf.cipher)
 , mac(conf.mac)
 , sig(conf.sig)
@@ -59,7 +59,7 @@ tls_conf::tls_conf(const tls_conf& conf)
 
 vector<string> tls_conf::allowed_key_exchange_methods() const
 {
-    if(s_client && is_optional) {
+    if(s_client && !sig.empty()) {
         return {sig };
     } else {
         return Policy::allowed_key_exchange_methods();
@@ -68,7 +68,8 @@ vector<string> tls_conf::allowed_key_exchange_methods() const
 
 vector<string> tls_conf::allowed_signature_methods() const
 {
-    if(s_client && is_optional) {
+    //!FIXME: clarify IMPLICIT usage cases
+    if(s_client && policy_override) {
         return {"IMPLICIT"};
     } else {
         return Policy::allowed_signature_methods();
@@ -79,7 +80,7 @@ vector<string> tls_conf::allowed_ciphers() const
 {
     if(s_server) {
         return s_server->cipher_list;
-    } else if(s_client && is_optional) {
+    } else if(s_client && !cipher.empty()) {
         return { cipher };
     } else if(s_client) {
         return Policy::allowed_ciphers();
@@ -92,7 +93,7 @@ vector<string> tls_conf::allowed_macs() const
 {
     if(s_server) {
         return s_server->macs_list;
-    } else if(s_client && is_optional) {
+    } else if(s_client && !mac.empty()) {
         return {mac };
     } else if(s_client) {
         return Policy::allowed_macs();
@@ -230,9 +231,9 @@ bool tls_conf::require_client_certificate_authentication() const
     return false;
 }
 
-void tls_conf::set_optional_parameters(std::string sig_, std::string cipher_, std::string mac_)
+void tls_conf::set_policy_overrides(std::string sig_, std::string cipher_, std::string mac_)
 {
-    is_optional = true;
+    policy_override = true;
     cipher = cipher_;
     mac = mac_;
     sig = sig_;
@@ -298,7 +299,10 @@ void tls_trsp_socket::init(const sockaddr_storage* sa)
     if(sd == -1) {
         sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
         if(sa_ssl->ssl_marker) {
-            settings.set_optional_parameters(toString(sa_ssl->sig), toString(sa_ssl->cipher), toString(sa_ssl->mac));
+            settings.set_policy_overrides(
+                toString(sa_ssl->sig),
+                toString(sa_ssl->cipher),
+                toString(sa_ssl->mac));
         }
         tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), settings, settings,rand_gen,
                                             Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
