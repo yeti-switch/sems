@@ -69,11 +69,12 @@ vector<string> tls_conf::allowed_key_exchange_methods() const
 vector<string> tls_conf::allowed_signature_methods() const
 {
     //!FIXME: clarify IMPLICIT usage cases
-    if(s_client && policy_override) {
+    return Policy::allowed_signature_methods();
+    /*if(s_client && policy_override) {
         return {"IMPLICIT"};
     } else {
         return Policy::allowed_signature_methods();
-    }
+    }*/
 }
 
 vector<string> tls_conf::allowed_ciphers() const
@@ -237,7 +238,7 @@ void tls_conf::set_policy_overrides(std::string sig_, std::string cipher_, std::
     cipher = cipher_;
     mac = mac_;
     sig = sig_;
-    DBG("set optional parameters in tls session: cipher - %s, mac - %s, sig - %s",
+    DBG("set optional parameters in tls session: cipher:'%s', mac:'%s', sig:'%s'",
         cipher.c_str(), mac.c_str(), sig.c_str());
 }
 
