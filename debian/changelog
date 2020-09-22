@@ -1,3 +1,11 @@
+sems (1.36.0) stable; urgency=low
+
+  * AmRtpConnection: move raddr check log to DBG level
+  * fixed UAS transactions stuck for stopped session
+  * AmStreamConnection::isAddrConnection: fix ports matching for IPv4
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 22 Sep 2020 16:10:06 +0300
+
 sems (1.35.1) stable; urgency=low
 
   * tls_trsp: comment out IMPLICIT signature method
