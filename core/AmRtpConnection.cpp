@@ -146,7 +146,7 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
         //TODO: update stream stats here
         if((dropped_by_raddr_packets++ % 1500) == 0 /* 1/0.02*10 (every 10 seconds) */ ) {
             auto stream = transport->getRtpStream();
-            CLASS_WARN("%u packets dropped by raddr check. "
+            CLASS_DBG("%u packets dropped by raddr check. "
                 "packet raddr: %s:%hu, connection raddr: %s:%hu, stream:%p",
                 dropped_by_raddr_packets,
                 get_addr_str(recv_addr).data(), am_get_port(recv_addr),
