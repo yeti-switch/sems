@@ -415,6 +415,19 @@ bool AmSession::processEventsCatchExceptions(EventStats &stats) {
   return true;
 }
 
+void AmSession::postEvent(AmEvent* event)
+{
+    if(!is_stopped())
+        AmEventQueue::postEvent(event);
+    else {
+        AmSipRequestEvent* ev_req = dynamic_cast<AmSipRequestEvent*>(event);
+        if(ev_req) {
+            AmSipDialog::reply_error(ev_req->req,481,SIP_REPLY_NOT_EXIST);
+        }
+        delete event;
+    }
+}
+
 /** one cycle of the event processing loop. 
     this should be called until it returns false. */
 bool AmSession::processingCycle(EventStats &stats) {

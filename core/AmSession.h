@@ -241,6 +241,9 @@ public:
    */
   virtual void process(AmEvent*);
 
+  /** post event into session */
+  void postEvent(AmEvent* event) override;
+
   /**
    * add a handler which will be called 
    * for all events in session
