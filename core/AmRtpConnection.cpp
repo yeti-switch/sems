@@ -71,7 +71,8 @@ bool AmStreamConnection::isUseConnection(ConnectionType type)
 bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
 {
     if(recv_addr->ss_family == AF_INET) {
-        return SAv4(&r_addr)->sin_addr.s_addr==SAv4(recv_addr)->sin_addr.s_addr;
+        return SAv4(&r_addr)->sin_port==SAv4(recv_addr)->sin_port &&
+               SAv4(&r_addr)->sin_addr.s_addr==SAv4(recv_addr)->sin_addr.s_addr;
     } else if(recv_addr->ss_family == AF_INET6) {
         return SAv6(&r_addr)->sin6_port == SAv6(recv_addr)->sin6_port &&
                IN6_ARE_ADDR_EQUAL(&SAv6(&r_addr)->sin6_addr, &SAv6(recv_addr)->sin6_addr);
