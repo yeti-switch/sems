@@ -51,6 +51,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <fstream>
 
 #include <grp.h>
 #include <pwd.h>
@@ -490,6 +491,27 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
     }
 }
 
+void process_mem_usage(unsigned long long& vm_usage, unsigned long long& resident_set)
+{
+    vm_usage     = 0;
+    resident_set = 0;
+
+    // the two fields we want
+    unsigned long long vsize;
+    long rss;
+    {
+        std::string ignore;
+        std::ifstream ifs("/proc/self/stat", std::ios_base::in);
+        for(int i = 0; i < 22; i++)
+            ifs >> ignore;
+        ifs >> vsize >> rss;
+    }
+
+    long long page_size_kb = sysconf(_SC_PAGE_SIZE); // in case x86-64 is configured to use 2MB pages
+    vm_usage = vsize;
+    resident_set = rss * page_size_kb;
+}
+
 /*
  * Main
  */
@@ -823,6 +845,20 @@ int main(int argc, char* argv[])
 
   stat_group(Counter, "core", "start_time").addAtomicCounter().set(
     static_cast<unsigned long long>(start_time));
+
+  stat_group(Gauge, "vmsize").addFunctionCounter(
+    []()->unsigned long long{
+        unsigned long long vm_usage, resident_set;
+        process_mem_usage(vm_usage, resident_set);
+        return vm_usage;
+  });
+
+  stat_group(Gauge, "rss").addFunctionCounter(
+    []()->unsigned long long{
+        unsigned long long vm_usage, resident_set;
+        process_mem_usage(vm_usage, resident_set);
+        return resident_set;
+  });
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {
