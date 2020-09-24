@@ -491,25 +491,23 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
     }
 }
 
-void process_mem_usage(unsigned long long& vm_usage, unsigned long long& resident_set)
+void get_statm_values(StatCounter::iterate_func_type f)
 {
-    vm_usage     = 0;
-    resident_set = 0;
+    //https://www.kernel.org/doc/html/latest/filesystems/proc.html
 
-    // the two fields we want
-    unsigned long long vsize;
-    long rss;
-    {
-        std::string ignore;
-        std::ifstream ifs("/proc/self/stat", std::ios_base::in);
-        for(int i = 0; i < 22; i++)
-            ifs >> ignore;
-        ifs >> vsize >> rss;
-    }
+    static long long sys_page_size = sysconf(_SC_PAGESIZE);
 
-    long long page_size_kb = sysconf(_SC_PAGE_SIZE); // in case x86-64 is configured to use 2MB pages
-    vm_usage = vsize;
-    resident_set = rss * page_size_kb;
+    static map<string,string> const vmsize_labels {{"field", "size"}};
+    static map<string,string> const vmrss_labels {{"field", "resident"}};
+
+    unsigned long long v;
+    std::ifstream ifs("/proc/self/statm", std::ios_base::in);
+
+    ifs >> v; //VmSize
+    f(v * sys_page_size, 0, vmsize_labels);
+
+    ifs >> v; //VmRSS
+    f(v * sys_page_size, 0, vmrss_labels);
 }
 
 /*
@@ -846,19 +844,7 @@ int main(int argc, char* argv[])
   stat_group(Counter, "core", "start_time").addAtomicCounter().set(
     static_cast<unsigned long long>(start_time));
 
-  stat_group(Gauge, "vmsize").addFunctionCounter(
-    []()->unsigned long long{
-        unsigned long long vm_usage, resident_set;
-        process_mem_usage(vm_usage, resident_set);
-        return vm_usage;
-  });
-
-  stat_group(Gauge, "rss").addFunctionCounter(
-    []()->unsigned long long{
-        unsigned long long vm_usage, resident_set;
-        process_mem_usage(vm_usage, resident_set);
-        return resident_set;
-  });
+  stat_group(Gauge, "core", "statm").addFunctionGroupCounter(&get_statm_values);
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {

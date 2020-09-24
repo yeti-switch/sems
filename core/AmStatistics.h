@@ -166,7 +166,4 @@ class AmStatistics
 
 typedef singleton<AmStatistics> statistics;
 
-StatCountersGroup& statistic_group(StatCountersGroup::Type type, const string& naming_group, const string& name);
-StatCountersGroup& statistic_group(StatCountersGroup::Type type, const string& name);
-
-#define stat_group(type, ...) statistic_group(StatCountersGroup::type, __VA_ARGS__)
+#define stat_group(type, grouping_name, name) statistics::instance()->group(StatCountersGroup::type, grouping_name, name)

@@ -181,10 +181,3 @@ StatCountersGroup::Type StatCountersGroup::str2type(const char * type)
     if(strcmp(type, "summary") == 0) return Summary;
     return Unknown;
 }
-
-StatCountersGroup& statistic_group(StatCountersGroup::Type type, const string& naming_group, const string& name) {
-    return statistics::instance()->group(type, naming_group, name);
-}
-StatCountersGroup& statistic_group(StatCountersGroup::Type type, const string& name) {
-    return statistics::instance()->group(type, name);
-}
