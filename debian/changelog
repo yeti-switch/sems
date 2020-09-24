@@ -1,3 +1,9 @@
+sems (1.36.1) stable; urgency=low
+
+  * add prometeus memory metrics
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 24 Sep 2020 12:03:42 +0300
+
 sems (1.36.0) stable; urgency=low
 
   * AmRtpConnection: move raddr check log to DBG level
