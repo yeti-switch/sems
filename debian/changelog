@@ -1,3 +1,10 @@
+sems (1.36.2) stable; urgency=low
+
+  * third/confuse: fix getting raw data
+  * UACAuth::checkAuthentication: use hex2int to parse nonce_count
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 06 Oct 2020 17:10:05 +0300
+
 sems (1.36.1) stable; urgency=low
 
   * add prometeus memory metrics
