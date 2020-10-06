@@ -1015,12 +1015,14 @@ DLLIMPORT void cfg_error(cfg_t *cfg, const char *fmt, ...)
 #define BEGIN_FUNCTION  1
 #define END_DATA        2
 #define BEGIN_DATA      3
+#define END_BUFFER      4
 
 void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
 {
     //printf("cfg %p, raw %p, %d\n", cfg, raw, type);
     size_t buflen = 0;
     char* data = 0;
+    int offset = 1;
     struct cfg_raw_t* raw_info = 0;
     switch(type)
     {
@@ -1035,6 +1037,8 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
         cfg->raw_info->ptr = cfg_get_current_buf_ptr();
         cfg->raw_info->cur_buf = cfg_get_current_buf();
         break;
+    case END_BUFFER:
+        offset = 0;
     case BEGIN_FUNCTION:
     case END_DATA:
         while(cfg->raw_info->cur_buf != cfg_get_current_buf()) {
@@ -1055,9 +1059,9 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
         if(raw == cfg->raw_info->ptr) // append full buffer(include file)
             buflen = strlen(raw);
         else if(raw > cfg->raw_info->ptr) //append string from current buffer
-            buflen = raw - cfg->raw_info->ptr - 1;
+            buflen = raw - cfg->raw_info->ptr - offset;
         else { //end current buffer
-            buflen = raw - cfg_get_current_buf() - 1;
+            buflen = raw - cfg_get_current_buf() - offset;
             cfg->raw_info->ptr = cfg_get_current_buf();
         }
         buflen += cfg->raw_info->raw_len;
@@ -1078,7 +1082,7 @@ void cfg_raw_update(cfg_t *cfg, const char* raw, int type)
 DLLIMPORT void cfg_endbuffer(cfg_t *cfg, const char* raw)
 {
 	if(is_set(CFGF_RAW,cfg->flags) && raw){
-        cfg_raw_update(cfg, raw, END_DATA);
+        cfg_raw_update(cfg, raw, END_BUFFER);
     }
 }
 
