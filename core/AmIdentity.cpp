@@ -32,14 +32,14 @@ AmIdentity::~AmIdentity()
 {
 }
 
-void AmIdentity::add_desttn(const std::string& desttn)
+void AmIdentity::add_dest_tn(const std::string& desttn)
 {
     dest_data.tns.push_back(desttn);
 }
 
-void AmIdentity::add_desturl(const std::string& desturl)
+void AmIdentity::add_dest_url(const std::string& desturl)
 {
-    dest_data.uries.push_back(desturl);
+    dest_data.uris.push_back(desturl);
 }
 
 IdentData & AmIdentity::get_dest()
@@ -47,29 +47,29 @@ IdentData & AmIdentity::get_dest()
     return dest_data;
 }
 
-void AmIdentity::add_origtn(const std::string& origtn)
+void AmIdentity::add_orig_tn(const std::string& origtn)
 {
     orig_data.tns.push_back(origtn);
 }
 
-void AmIdentity::add_origurl(const std::string& origurl)
+void AmIdentity::add_orig_url(const std::string& origurl)
 {
-    orig_data.uries.push_back(origurl);
+    orig_data.uris.push_back(origurl);
 }
 
-IdentData & AmIdentity::get_origtn()
+IdentData & AmIdentity::get_orig()
 {
     return orig_data;
 }
 
-std::string & AmIdentity::get_x5url()
+std::string & AmIdentity::get_x5u_url()
 {
-    return x5url;
+    return x5u_url;
 }
 
-void AmIdentity::set_x5url(const std::string& val)
+void AmIdentity::set_x5u_url(const std::string& val)
 {
-    x5url = val;
+    x5u_url = val;
 }
 
 void AmIdentity::set_attestation(AmIdentity::ident_attest val)
@@ -82,7 +82,7 @@ AmIdentity::ident_attest AmIdentity::get_attestation()
     return at;
 }
 
-std::string & AmIdentity::get_origid()
+std::string & AmIdentity::get_orig_id()
 {
     return orig_id;
 }
@@ -99,15 +99,16 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
     AmArg header;
     header[alg] = ES256;
-    header[x5u] = x5url;
+    header[x5u] = x5u_url;
     header[ppt] = shaken;
     header[typ] = passport;
-    orig_header = arg2json(header);
+    jwt_header = arg2json(header);
 
     AmArg payload;
     payload[attest] = std::string(1, (char)at);
     payload[iat] = (int)time(0);
     payload[origid] = orig_id = AmSession::getNewId();
+
     AmArg& dest_arg = payload[dest];
     dest_arg.assertStruct();
     if(dest_data.tns.size() == 1) {
@@ -117,13 +118,14 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
             dest_arg[tn].push(AmArg(tn_s));
         }
     }
-    if(dest_data.uries.size() == 1) {
-        dest_arg[uri] = dest_data.uries[0];
+    if(dest_data.uris.size() == 1) {
+        dest_arg[uri] = dest_data.uris[0];
     } else {
-        for(auto& url : dest_data.uries) {
+        for(auto& url : dest_data.uris) {
             dest_arg[uri].push(AmArg(url));
         }
     }
+
     AmArg& orig_arg = payload[orig];
     orig_arg.assertStruct();
     if(orig_data.tns.size() == 1) {
@@ -133,31 +135,34 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
             orig_arg[tn].push(AmArg(tn_s));
         }
     }
-    if(orig_data.uries.size() == 1) {
-        orig_arg[uri] = orig_data.uries[0];
+    if(orig_data.uris.size() == 1) {
+        orig_arg[uri] = orig_data.uris[0];
     } else {
-        for(auto& url : orig_data.uries) {
+        for(auto& url : orig_data.uris) {
             orig_arg[uri].push(AmArg(url));
         }
     }
-    orig_payload = arg2json(payload);
 
-    std::string base64_header = base64_url_encode(orig_header);
-    std::string base64_payload= base64_url_encode(orig_payload);
+    jwt_payload = arg2json(payload);
+
+    std::string base64_header = base64_url_encode(jwt_header);
+    std::string base64_payload= base64_url_encode(jwt_payload);
     ops->update((uint8_t*)base64_header.c_str(), base64_header.size());
     ops->update((uint8_t*)".", 1);
     ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
     sign.resize(ops->signature_length());
     Botan::secure_vector<uint8_t> sign_ = ops->sign(rnd);
     memcpy((char*)sign.c_str(), sign_.data(), sign_.size());
+
     std::string ret = base64_url_encode(sign);
     ret.insert(0, ".");
     ret.insert(0, base64_payload);
     ret.insert(0, ".");
     ret.insert(0, base64_header);
     ret.append(";info=<");
-    ret.append(x5url);
+    ret.append(x5u_url);
     ret.append(">;alg=ES256;ppt=shaken");
+
     return ret;
 }
 
@@ -165,15 +170,19 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
 {
     time_t t = time(0);
     if(t - created > expire) {
-        INFO("identity verification failed because expired timeout");
+        INFO("identity verification failed because of expired timeout");
         return false;
     }
+
     std::unique_ptr<Botan::PK_Ops::Verification> ops = key->create_verification_op("EMSA1(SHA-256)", "");
-    std::string base64_header = base64_url_encode(orig_header);
-    std::string base64_payload= base64_url_encode(orig_payload);
+
+    std::string base64_header = base64_url_encode(jwt_header);
+    std::string base64_payload= base64_url_encode(jwt_payload);
+
     ops->update((uint8_t*)base64_header.c_str(), base64_header.size());
     ops->update((uint8_t*)".", 1);
     ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
+
     return ops->is_valid_signature((uint8_t*)sign.c_str(), sign.size());
 }
 
@@ -191,10 +200,12 @@ bool AmIdentity::parse(const std::string& value)
     std::string value_base64;
     std::string info;
     size_t end = 0;
+
     if(value[0] == '.' && value[1] == '.') {
         ERROR("compact form is not supported");
         return false;
     }
+
     size_t pos = value.find(';');
     if(pos == std::string::npos) {
         value_base64 = value;
@@ -216,62 +227,70 @@ bool AmIdentity::parse(const std::string& value)
 
     data_base64[2].append(value_base64.begin() + end, value_base64.end());
 
-    orig_header = base64_url_decode(data_base64[0]);
-    orig_payload = base64_url_decode(data_base64[1]);
-    sign= base64_url_decode(data_base64[2]);
+    jwt_header = base64_url_decode(data_base64[0]);
+    jwt_payload = base64_url_decode(data_base64[1]);
+    sign = base64_url_decode(data_base64[2]);
 
     AmArg header, payload;
-    if(!json2arg(orig_header, header)){
-        ERROR("incorrect jws json:\n%s", orig_header.c_str());
+
+    if(!json2arg(jwt_header, header)) {
+        ERROR("incorrect jwt header:\n%s", jwt_header.c_str());
         return false;
     }
-    if(!json2arg(orig_payload, payload)) {
-        ERROR("incorrect jws json:\n%s", orig_payload.c_str());
+
+    if(!json2arg(jwt_payload, payload)) {
+        ERROR("incorrect jwt payload:\n%s", jwt_payload.c_str());
         return false;
     }
 
     try {
         AmArg &alg_arg = header[alg],
-            &x5u_arg = header[x5u],
-            &ppt_arg = header[ppt],
-            &type_arg = header[typ];
+              &x5u_arg = header[x5u],
+              &ppt_arg = header[ppt],
+              &type_arg = header[typ];
+
         if(!isArgCStr(alg_arg) ||
-            !isArgCStr(x5u_arg) ||
-            !isArgCStr(type_arg)) {
+           !isArgCStr(x5u_arg) ||
+           !isArgCStr(type_arg))
+        {
             throw AmArg::TypeMismatchException();
         }
-    
+
         if(strcmp(alg_arg.asCStr(), ES256) ||
             strcmp(type_arg.asCStr(), passport) ||
             !isArgCStr(ppt_arg) ||
-            strcmp(ppt_arg.asCStr(), shaken)) {
-            ERROR("unsupported jws header:\n%s", orig_header.c_str());
+            strcmp(ppt_arg.asCStr(), shaken))
+        {
+            ERROR("unsupported jwt header:\n%s", jwt_header.c_str());
             return false;
         }
 
-        x5url = x5u_arg.asCStr();
+        x5u_url = x5u_arg.asCStr();
     } catch(AmArg::TypeMismatchException& exc) {
-        ERROR("incorrect jws header:\n%s", orig_header.c_str());
+        ERROR("incorrect jwt header:\n%s", jwt_header.c_str());
         return false;
     }
 
     try {
         AmArg &origid_arg = payload[origid],
-            &attest_arg = payload[attest],
-            &dest_arg = payload[dest],
-            &orig_arg = payload[orig],
-            &iat_arg = payload[iat];
+              &attest_arg = payload[attest],
+              &dest_arg = payload[dest],
+              &orig_arg = payload[orig],
+              &iat_arg = payload[iat];
+
         if(!isArgCStr(origid_arg) ||
-            !isArgCStr(attest_arg) ||
-            !isArgInt(iat_arg) || 
-            !isArgStruct(orig_arg) ||
-            !isArgStruct(dest_arg)) {
+           !isArgCStr(attest_arg) ||
+           !isArgInt(iat_arg) || 
+           !isArgStruct(orig_arg) ||
+           !isArgStruct(dest_arg))
+        {
             throw AmArg::TypeMismatchException();
         }
 
         if(strlen(attest_arg.asCStr()) != 1 ||
-            attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C) {
-            ERROR("unsupported jws payload:\n%s", orig_payload.c_str());
+           attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C)
+        {
+            ERROR("unsupported jwt payload:\n%s", jwt_payload.c_str());
             return false;
         }
 
@@ -286,19 +305,19 @@ bool AmIdentity::parse(const std::string& value)
             if(isArgCStr(arg_)) { \
                 ident.push_back(arg_.asCStr()); \
             } else { \
-                for(int i = 0; i < arg_.size(); i++) \
+                for(int i = 0; i < static_cast<int>(arg_.size()); i++) \
                     ident.push_back(arg_[i].asCStr()); \
             } \
         } \
 
         add_ident_data(orig_arg, orig_data.tns, tn)
-        add_ident_data(orig_arg, orig_data.uries, uri)
+        add_ident_data(orig_arg, orig_data.uris, uri)
         add_ident_data(dest_arg, dest_data.tns, tn)
-        add_ident_data(dest_arg, dest_data.uries, uri)
+        add_ident_data(dest_arg, dest_data.uris, uri)
 #undef add_ident_data
 
     } catch(AmArg::TypeMismatchException& exc) {
-        ERROR("incorrect jws payload:\n%s", orig_payload.c_str());
+        ERROR("incorrect jwt payload:\n%s", jwt_payload.c_str());
         return false;
     }
 
@@ -308,10 +327,12 @@ bool AmIdentity::parse(const std::string& value)
         do {
             pos = info.find(';', end);
             std::string param;
+
             if(pos != std::string::npos)
                 param.append(info.begin() + end, info.begin() + pos);
             else 
                 param.append(info.begin() + end, info.end());
+
             end = pos + 1;
             pos = param.find('=');
             if(pos == std::string::npos) {
@@ -337,12 +358,14 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     if((!alg_info.empty() && alg_info != ES256) ||
-       (!ppt_info.empty() && ppt_info != shaken)) {
-        ERROR("unsupported identity header");
+       (!ppt_info.empty() && ppt_info != shaken))
+    {
+        ERROR("unsupported identity header signature params");
         return false;
     }
-    if(!x5u_info.empty() && x5u_info != x5url) {
-        ERROR("info of parameter identity header not equal to info from jws json");
+
+    if(!x5u_info.empty() && x5u_info != x5u_url) {
+        ERROR("info of identity header parameter is not equal to the x5u from jwt");
         return false;
     }
 
