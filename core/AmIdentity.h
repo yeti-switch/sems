@@ -17,6 +17,14 @@
  * openssl req -new -x509 -key test.key.pem -out test.pem -days 730 -subj "/C=UA/O=root/CN=sjwttest"
  */
 
+#define ERR_EXPIRE_TIMEOUT      1
+#define ERR_VERIFICATION        2
+#define ERR_COMPACT_FORM        3
+#define ERR_HEADER_VALUE        4
+#define ERR_JWT_VALUE           5
+#define ERR_EQUAL_X5U           6
+#define ERR_UNSUPPORTED         7
+
 struct IdentData
 {
     std::vector<std::string> uris;
@@ -61,6 +69,8 @@ class AmIdentity
     void add_dest_url(const std::string& desturl);
     IdentData& get_dest();
 
+    int get_last_error(std::string& err);
+
   private:
     std::string sign;
     std::string x5u_url;
@@ -69,6 +79,8 @@ class AmIdentity
     ident_attest at;
     time_t created;
     std::string orig_id;
+    int last_errcode;
+    std::string last_errstr;
 
     std::string jwt_header;
     std::string jwt_payload;

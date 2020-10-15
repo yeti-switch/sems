@@ -236,7 +236,7 @@ string arg2json(const AmArg &a) {
   case AmArg::Array:
     s = "[";
     for (size_t i = 0; i < a.size(); i ++)
-      s += arg2json(a[i]) + ", ";
+      s += arg2json(a[i]) + ",";
     if (1 < s.size()) 
       s.resize(s.size() - 2); // strip last ", "
     s += "]";
@@ -246,9 +246,9 @@ string arg2json(const AmArg &a) {
     s = "{";
     for (AmArg::ValueStruct::const_iterator it = a.asStruct()->begin();
 	 it != a.asStruct()->end(); it ++) {
-      s += '"'+it->first + "\": ";
+      s += '"'+it->first + "\":";
       s += arg2json(it->second);
-      s += ", ";
+      s += ",";
     }
     if (1 < s.size())
       s.resize(s.size() - 2); // strip last ", "

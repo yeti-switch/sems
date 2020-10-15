@@ -25,6 +25,7 @@
 #define shaken str(shaken)
 
 AmIdentity::AmIdentity()
+: last_errcode(0)
 {
 }
 
@@ -168,8 +169,12 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
 bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
 {
+    last_errcode = 0;
+    last_errstr.clear();
     time_t t = time(0);
     if(t - created > expire) {
+        last_errstr = "Expired Timeout";
+        last_errcode = ERR_EXPIRE_TIMEOUT;
         INFO("identity verification failed because of expired timeout");
         return false;
     }
@@ -183,7 +188,12 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
     ops->update((uint8_t*)".", 1);
     ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
 
-    return ops->is_valid_signature((uint8_t*)sign.c_str(), sign.size());
+    bool ret = ops->is_valid_signature((uint8_t*)sign.c_str(), sign.size());
+    if(!ret) {
+        last_errstr = "Verification Failed";
+        last_errcode = ERR_VERIFICATION;
+    }
+    return ret;
 }
 
 bool AmIdentity::verify_attestation(Botan::Public_Key* key, unsigned int expire, const IdentData& orig_, const IdentData& dest_)
@@ -202,6 +212,8 @@ bool AmIdentity::parse(const std::string& value)
     size_t end = 0;
 
     if(value[0] == '.' && value[1] == '.') {
+        last_errstr = "Compact form is not supported";
+        last_errcode = ERR_COMPACT_FORM;
         ERROR("compact form is not supported");
         return false;
     }
@@ -218,6 +230,8 @@ bool AmIdentity::parse(const std::string& value)
     for(int i = 0; i < 2; i++) {
         pos = value_base64.find('.', end);
         if(pos == std::string::npos) {
+            last_errstr = "Incorrect Identity Header Value";
+            last_errcode = ERR_HEADER_VALUE;
             ERROR("absent signature in identity %s", i < 1 ? "header" : "payload");
             return false;
         }
@@ -234,11 +248,15 @@ bool AmIdentity::parse(const std::string& value)
     AmArg header, payload;
 
     if(!json2arg(jwt_header, header)) {
+        last_errstr = "Incorrect jwt header";
+        last_errcode = ERR_JWT_VALUE;
         ERROR("incorrect jwt header:\n%s", jwt_header.c_str());
         return false;
     }
 
     if(!json2arg(jwt_payload, payload)) {
+        last_errstr = "Incorrect jwt payload";
+        last_errcode = ERR_JWT_VALUE;
         ERROR("incorrect jwt payload:\n%s", jwt_payload.c_str());
         return false;
     }
@@ -261,12 +279,16 @@ bool AmIdentity::parse(const std::string& value)
             !isArgCStr(ppt_arg) ||
             strcmp(ppt_arg.asCStr(), shaken))
         {
+            last_errstr = "Unsupported jwt header";
+            last_errcode = ERR_UNSUPPORTED;
             ERROR("unsupported jwt header:\n%s", jwt_header.c_str());
             return false;
         }
 
         x5u_url = x5u_arg.asCStr();
     } catch(AmArg::TypeMismatchException& exc) {
+        last_errstr = "Incorrect jwt header";
+        last_errcode = ERR_JWT_VALUE;
         ERROR("incorrect jwt header:\n%s", jwt_header.c_str());
         return false;
     }
@@ -290,6 +312,8 @@ bool AmIdentity::parse(const std::string& value)
         if(strlen(attest_arg.asCStr()) != 1 ||
            attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C)
         {
+            last_errstr = "Unsupported jwt payload";
+            last_errcode = ERR_UNSUPPORTED;
             ERROR("unsupported jwt payload:\n%s", jwt_payload.c_str());
             return false;
         }
@@ -317,6 +341,8 @@ bool AmIdentity::parse(const std::string& value)
 #undef add_ident_data
 
     } catch(AmArg::TypeMismatchException& exc) {
+        last_errstr = "Incorrect jwt payload";
+        last_errcode = ERR_JWT_VALUE;
         ERROR("incorrect jwt payload:\n%s", jwt_payload.c_str());
         return false;
     }
@@ -336,6 +362,8 @@ bool AmIdentity::parse(const std::string& value)
             end = pos + 1;
             pos = param.find('=');
             if(pos == std::string::npos) {
+                last_errstr = "Incorrect Info Parameter";
+                last_errcode = ERR_HEADER_VALUE;
                 ERROR("incorrect info parameter: %s", param.c_str());
                 continue;
             }
@@ -344,6 +372,8 @@ bool AmIdentity::parse(const std::string& value)
                         value(param.begin() + pos + 1, param.end());
             if(name == "info") {
                 if(value[0] != '<' || value.back() != '>') {
+                    last_errstr = "Incorrect Info value";
+                    last_errcode = ERR_HEADER_VALUE;
                     ERROR("incorrect info value: %s", value.c_str());
                     continue;
                 }
@@ -360,14 +390,24 @@ bool AmIdentity::parse(const std::string& value)
     if((!alg_info.empty() && alg_info != ES256) ||
        (!ppt_info.empty() && ppt_info != shaken))
     {
+        last_errstr = "Unsupported identity header params";
+        last_errcode = ERR_UNSUPPORTED;
         ERROR("unsupported identity header signature params");
         return false;
     }
 
     if(!x5u_info.empty() && x5u_info != x5u_url) {
+        last_errstr = "JWT url not equal info url";
+        last_errcode = ERR_EQUAL_X5U;
         ERROR("info of identity header parameter is not equal to the x5u from jwt");
         return false;
     }
 
     return true;
+}
+
+int AmIdentity::get_last_error(std::string& err)
+{
+    err = last_errstr;
+    return last_errcode;
 }
