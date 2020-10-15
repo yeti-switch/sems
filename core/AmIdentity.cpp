@@ -211,6 +211,8 @@ bool AmIdentity::parse(const std::string& value)
     std::string info;
     size_t end = 0;
 
+    last_errcode = 0;
+    last_errstr.clear();
     if(value[0] == '.' && value[1] == '.') {
         last_errstr = "Compact form is not supported";
         last_errcode = ERR_COMPACT_FORM;
