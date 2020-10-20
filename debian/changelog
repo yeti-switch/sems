@@ -1,3 +1,9 @@
+sems (1.37.1) stable; urgency=low
+
+  * arg2json fix serialization
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 20 Oct 2020 14:25:32 +0300
+
 sems (1.37.0) stable; urgency=low
 
   * JWT primitives to process Indentity header

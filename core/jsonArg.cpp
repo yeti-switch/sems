@@ -238,7 +238,7 @@ string arg2json(const AmArg &a) {
     for (size_t i = 0; i < a.size(); i ++)
       s += arg2json(a[i]) + ",";
     if (1 < s.size()) 
-      s.resize(s.size() - 2); // strip last ", "
+      s.resize(s.size() - 1); // strip last ","
     s += "]";
     return s;
 
@@ -251,7 +251,7 @@ string arg2json(const AmArg &a) {
       s += ",";
     }
     if (1 < s.size())
-      s.resize(s.size() - 2); // strip last ", "
+      s.resize(s.size() - 1); // strip last ","
     s += "}";
     return s;
   default: break;
