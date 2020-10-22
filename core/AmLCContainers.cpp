@@ -41,7 +41,7 @@ int MEDIA_info::prepare(const std::string &iface_name)
     }
 
     unsigned short ports_state_begin_it = USED_PORT2IDX(low_port);
-    ports_state_begin_addr = &ports_state[ports_state_begin_it];
+    ports_state_current_addr = ports_state_start_addr = &ports_state[ports_state_begin_it];
 
     unsigned short ports_state_end_it = USED_PORT2IDX(high_port) + !!(high_port%BITS_PER_LONG);
     ports_state_end_addr = &ports_state[ports_state_end_it];
@@ -61,14 +61,14 @@ int MEDIA_info::prepare(const std::string &iface_name)
     bzero(&ports_state,sizeof(ports_state));
     //set all bits for RTCP ports to make working optimization checks like if(~(*it))
     int mask = rtp_bit_parity ? 0x55 : 0xAA;
-    memset(ports_state_begin_addr, mask,
-           (ports_state_end_addr - ports_state_begin_addr)*sizeof(unsigned long));
+    memset(ports_state_start_addr, mask,
+           (ports_state_end_addr - ports_state_start_addr)*sizeof(unsigned long));
 
     ports_state_end_addr--;
 
     //set all leading bits before start_edge_bit_it in first bitmap element
     if(start_edge_bit_it) {
-        *ports_state_begin_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
+        *ports_state_start_addr |= (~(ULONG_MAX<<(start_edge_bit_it - 1)));
     }
     //set all trailing bits after end_edge_bit_it in last bitmap element
     *ports_state_end_addr |= (~(ULONG_MAX>>(BITS_PER_LONG - end_edge_bit_it)));
@@ -85,17 +85,20 @@ int MEDIA_info::prepare(const std::string &iface_name)
 unsigned short MEDIA_info::getNextRtpPort()
 {
     unsigned short i = 0;
-    unsigned long *it = ports_state_begin_addr;
+    unsigned long *it, *current_it;
+
+    // try to aquire port in range [ports_state_current_addr,end]
+    current_it = it = ports_state_current_addr;
 
     //process head
-    if(~(*it)) {
+    if(it==ports_state_start_addr && ~(*it)) {
         for(i = start_edge_bit_it; i < BITS_PER_LONG; i += 2) {
             if(!test_and_set_bit(i, it)) {
                 goto bit_is_aquired;
             }
         }
+        it++;
     }
-    it++;
 
     //common cycle
     for(; it < ports_state_end_addr; it++) {
@@ -117,11 +120,49 @@ unsigned short MEDIA_info::getNextRtpPort()
         }
     }
 
-    //no free port found
+    /* no free port found in range [ports_state_current_addr,end]
+     * try to aquire port in range [start,ports_state_current_addr) */
+
+    if(current_it==ports_state_start_addr) {
+        //ports_state_current_addr was equal to ports_state_start_addr
+        return 0;
+    }
+    it = ports_state_start_addr;
+
+    //process head
+    if(~(*it)) {
+        for(i = start_edge_bit_it; i < BITS_PER_LONG; i += 2) {
+            if(!test_and_set_bit(i, it)) {
+                goto bit_is_aquired;
+            }
+        }
+    }
+    it++;
+
+    //common cycle
+    for(; it < current_it; it++) {
+        if (!(~(*it))) // all bits set
+            continue;
+        for(i = start_edge_bit_it_parity; i < BITS_PER_LONG; i += 2) {
+            if(!test_and_set_bit(i, it)) {
+                goto bit_is_aquired;
+            }
+        }
+    }
+
+    //no tail checking because if we are here, then it has already been checked
+
     return 0;
 
   bit_is_aquired:
+    //shift ports_state_current_addr to avoid aquiring of the freshly freed port
+    current_it = it+1;
+    ports_state_current_addr =
+        current_it > ports_state_end_addr ?
+            ports_state_start_addr : current_it;
+
     opened_ports_counter->inc(2);
+
     return (static_cast<unsigned short>(it-ports_state) << _BITOPS_LONG_SHIFT)  + i;
 }
 
