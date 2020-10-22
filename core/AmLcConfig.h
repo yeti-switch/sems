@@ -9,7 +9,7 @@
 #include "AmAudio.h"
 #include "AmUtils.h"
 
-#define AmConfig AmLcConfig::GetInstance().m_config
+#define AmConfig AmLcConfig::instance().m_config
 
 struct ConfigContainer
 {
@@ -108,7 +108,6 @@ struct ConfigContainer
     std::string transcoder_in_stats_hdr;
     bool log_sessions;
     bool log_events;
-    std::string signature;
     std::string sdp_origin;
     std::string sdp_session_name;
     int node_id;
@@ -144,7 +143,7 @@ class AmLcConfig
 public:
     ~AmLcConfig();
 
-    static AmLcConfig& GetInstance()
+    static AmLcConfig& instance()
     {
         static AmLcConfig config;
         return config;
@@ -168,6 +167,14 @@ public:
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned int& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, unsigned short& data);
     int getMandatoryParameter(cfg_t* cfg, const std::string& if_name, bool& data);
+
+    void applySignature(const char *signature, bool override = false);
+    void addSignatureHdr(AmSipRequest &req) const;
+    void addSignatureHdr(AmSipReply &reply) const;
+    int addUacSignature(char *buf) const;
+    int getUacSignatureLen() const;
+    int addUasSignature(char *buf) const;
+    int getUasSignatureLen() const;
 protected:
     void setValidationFunction(cfg_t* cfg);
     int readSigInterfaces(cfg_t* cfg, ConfigContainer* config);
@@ -185,6 +192,10 @@ protected:
     int setNetInterface(ConfigContainer* config, IP_info& ip_if);
 private:
     cfg_t* m_cfg;
+
+    bool is_default_signature;
+    std::string signature_header_uac;
+    std::string signature_header_uas;
 };
 
 #endif/*AM_LC_CONFIG_H*/

@@ -195,7 +195,7 @@ HttpDestination::~HttpDestination()
 
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
-    AmLcConfig::GetInstance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
+    AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
     mode = str2Mode(mode_str);
     if(mode == Unknown) {
         ERROR("%s: uknown mode: %s",name.c_str(),mode_str.c_str());

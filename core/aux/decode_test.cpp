@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	string path = argv[3];
 	char *out_file_path = argv[4];
 
-	if(AmLcConfig::GetInstance().readConfiguration()){
+	if(AmLcConfig::instance().readConfiguration()){
 		ERROR("Errors occured while reading configuration file: exiting.");
 		return EXIT_FAILURE;
 	}

@@ -193,7 +193,7 @@ int RtspClient::configure(const std::string& conf)
     config.max_queue_length     = cfg_getint(cfg, PARAM_MAX_QUEUE_LENGTH_NAME);
     config.reconnect_interval   = cfg_getint(cfg, PARAM_RECONNECT_INTERVAL_NAME);
     config.shutdown_code        = cfg_getint(cfg, PARAM_SHUTDOWN_CODE_NAME);
-    AmLcConfig::GetInstance().getMandatoryParameter(cfg, PARAM_RTSP_INTERFACE_NAME_NAME, config.rtsp_interface_name);
+    AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_RTSP_INTERFACE_NAME_NAME, config.rtsp_interface_name);
 
     int i = 0;
     config.l_if = -1;

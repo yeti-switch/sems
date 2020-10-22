@@ -834,9 +834,7 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq,
     return -1;
 
   if (!(flags&SIP_FLAGS_VERBATIM)) {
-    // add Signature
-    if (AmConfig.signature.length())
-      req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig.signature + CRLF;
+    AmLcConfig::instance().addSignatureHdr(req);
   }
 
   sip_target_set* targets_set = new sip_target_set((dns_priority)getResolvePriority());

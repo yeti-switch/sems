@@ -2509,65 +2509,67 @@ int _trans_layer::update_uas_request(trans_bucket* bucket, sip_trans* t, sip_msg
 void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
 {
     sip_msg* inv = t->msg;
-    
-    cstring method("ACK",3);
+
+    static cstring method("ACK",3);
     int ack_len = sip_request_line_len(method,inv->u.request->ruri_str);
-    
+
     ack_len += copy_hdr_len(inv->via1)
-	+ copy_hdr_len(inv->from)
-	+ copy_hdr_len(reply->to)
-	+ copy_hdr_len(inv->callid);
-    
+            + copy_hdr_len(inv->from)
+            + copy_hdr_len(reply->to)
+            + copy_hdr_len(inv->callid);
+
     ack_len += cseq_len(get_cseq(inv)->num_str,method);
 
     if(!inv->route.empty())
- 	ack_len += copy_hdrs_len(inv->route);
+        ack_len += copy_hdrs_len(inv->route);
 
-    cstring content_len("0");
+    ack_len += AmLcConfig::instance().getUacSignatureLen();
+
+    static cstring content_len("0");
     ack_len += content_length_len(content_len);
 
     ack_len += 2/* EoH CRLF */;
-    
+
     char* ack_buf = new char [ack_len];
     char* c = ack_buf;
 
     sip_request_line_wr(&c,method,inv->u.request->ruri_str);
-    
+
     copy_hdr_wr(&c,inv->via1);
 
     copy_hdr_wr(&c,inv->from);
     copy_hdr_wr(&c,reply->to);
     copy_hdr_wr(&c,inv->callid);
-    
+
     cseq_wr(&c,get_cseq(inv)->num_str,method);
 
     if(!inv->route.empty())
-	 copy_hdrs_wr(&c,inv->route);
+        copy_hdrs_wr(&c,inv->route);
 
+    c+= AmLcConfig::instance().addUacSignature(c);
     content_length_wr(&c,content_len);
-    
+
     *c++ = CR;
     *c++ = LF;
 
     DBG("About to send ACK\n");
 
     assert(inv->local_socket);
-    int send_err = inv->local_socket->send(&inv->remote_ip,ack_buf,
-					   ack_len,t->flags);
+    int send_err = inv->local_socket->send(&inv->remote_ip,ack_buf, ack_len,t->flags);
     if(send_err < 0){
         ERROR("Error from transport layer: call_id %s\n", inv->callid ? inv->callid->value.s : "unknown");
     }
     else stats.inc_sent_requests();
-    
-	if(t->logger || t->sensor) {
-		sockaddr_storage src_ip;
-		inv->local_socket->copy_addr_to(&src_ip);
-		if(t->logger){
-			t->logger->log(ack_buf,ack_len,&src_ip,&inv->remote_ip,method);
-		}
-		if(t->sensor){
-			t->sensor->feed(ack_buf,ack_len,&src_ip,&inv->remote_ip,msg_sensor::PTYPE_SIP);
-		}
+
+    if(t->logger || t->sensor) {
+        sockaddr_storage src_ip;
+        inv->local_socket->copy_addr_to(&src_ip);
+        if(t->logger){
+            t->logger->log(ack_buf,ack_len,&src_ip,&inv->remote_ip,method);
+        }
+        if(t->sensor){
+            t->sensor->feed(ack_buf,ack_len,&src_ip,&inv->remote_ip,msg_sensor::PTYPE_SIP);
+        }
     }
 
     delete[] ack_buf;

@@ -279,11 +279,11 @@ static bool apply_args(std::map<char,string>& args)
       if(!AmConfig.log_stderr){
           /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
                   progname);*/
-          if (!AmLcConfig::GetInstance().setLogStderr(true)) {
+          if (!AmLcConfig::instance().setLogStderr(true)) {
               return false;
           }
       }
-      if (!AmLcConfig::GetInstance().setStderrLogLevel(it->second)) {
+      if (!AmLcConfig::instance().setStderrLogLevel(it->second)) {
           fprintf(stderr, "%s: invalid stderr log level: %s\n",
                   progname, it->second.c_str());
           return false;
@@ -294,13 +294,13 @@ static bool apply_args(std::map<char,string>& args)
 #ifndef DISABLE_DAEMON_MODE
      AmConfig.deamon_mode = false;
 #endif
-     if (!AmLcConfig::GetInstance().setLogStderr(true)) {
+     if (!AmLcConfig::instance().setLogStderr(true)) {
        return false;
      }
      break;
 
     case 'f':
-      AmLcConfig::GetInstance().config_path = it->second;
+      AmLcConfig::instance().config_path = it->second;
       break;
 
     case 'x':
@@ -342,7 +342,7 @@ public:
     void fire() override
     {
         ConfigContainer cfg_box;
-        if(AmLcConfig::GetInstance().readConfiguration(&cfg_box)) {
+        if(AmLcConfig::instance().readConfiguration(&cfg_box)) {
             ERROR("configuration errors. reconfiguration stopped");
             return;
         }
@@ -542,7 +542,7 @@ int main(int argc, char* argv[])
   }
 
   /* load and apply configuration file */
-  if(AmLcConfig::GetInstance().readConfiguration())
+  if(AmLcConfig::instance().readConfiguration())
   {
     ERROR("configuration errors. exiting.");
     return -1;
@@ -553,7 +553,7 @@ int main(int argc, char* argv[])
     goto error;
   }
 
-  if(AmLcConfig::GetInstance().finalizeIpConfig() < 0)
+  if(AmLcConfig::instance().finalizeIpConfig() < 0)
     goto error;
 
   printf("Configuration:\n"
@@ -573,7 +573,7 @@ int main(int argc, char* argv[])
 	 log_level2str[AmConfig.log_level], AmConfig.log_level,
          AmConfig.log_stderr ? "yes" : "no",
 #endif
-	 AmLcConfig::GetInstance().config_path.c_str(),
+	 AmLcConfig::instance().config_path.c_str(),
 	 AmConfig.modules_path.c_str()
 #ifndef DISABLE_DAEMON_MODE
 	 ,AmConfig.deamon_mode ? "yes" : "no",
@@ -582,12 +582,12 @@ int main(int argc, char* argv[])
 #endif
 	);
 
-  AmLcConfig::GetInstance().dump_Ifs();
+  AmLcConfig::instance().dump_Ifs();
 
   printf("-----BEGIN CFG DUMP-----\n"
          "%s\n"
          "-----END CFG DUMP-----\n",
-         AmLcConfig::GetInstance().serialize().c_str());
+         AmLcConfig::instance().serialize().c_str());
 
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");

@@ -758,9 +758,7 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
   }
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig.signature.length()){
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
-  }
+  AmLcConfig::instance().addSignatureHdr(reply);
 
   if ((code > 100 && code < 300) && !(flags & SIP_FLAGS_NOCONTACT)) {
     /* if 300<=code<400, explicit contact setting should be done */
@@ -798,8 +796,7 @@ int AmBasicSipDialog::reply_error(const AmSipRequest& req, unsigned int code,
   reply.to_tag = AmSession::getNewId();
 
   inplaceHeadersErase(reply.hdrs,hdrs2remove);
-  if (AmConfig.signature.length())
-    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SERVER) + AmConfig.signature + CRLF;
+  AmLcConfig::instance().addSignatureHdr(reply);
 
   // add transcoder statistics into reply headers
   //addTranscoderStats(reply.hdrs);
@@ -861,9 +858,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
   }
 
   inplaceHeadersErase(req.hdrs,hdrs2remove);
-  if (AmConfig.signature.length()){
-    req.hdrs += SIP_HDR_COLSP(SIP_HDR_USER_AGENT) + AmConfig.signature + CRLF;
-  }
+  AmLcConfig::instance().addSignatureHdr(req);
 
   int send_flags = 0;
   if(patch_ruri_next_hop && remote_tag.empty()) {

@@ -588,7 +588,7 @@ namespace Config {
         CFG_STR(PARAM_OPT_TRANSCODE_IN_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_TRANSCODE_OUT_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_TRANSCODE_IN_NAME, "", CFGF_NONE),
-        CFG_STR(PARAM_SIGNATURE_NAME, DEFAULT_SIGNATURE, CFGF_NONE),
+        CFG_STR(PARAM_SIGNATURE_NAME, nullptr, CFGF_NONE),
         CFG_STR(PARAM_SDP_ORIGIN_NAME, DEFAULT_SDP_ORIGIN, CFGF_NONE),
         CFG_STR(PARAM_SDP_SESSION_NAME, DEFAULT_SDP_SESSION_NAME, CFGF_NONE),
         CFG_STR(PARAM_DTMF_DETECTOR_NAME, VALUE_SPANDSP, CFGF_NONE),
@@ -853,6 +853,7 @@ ConfigContainer::ConfigContainer()
 /*******************************************************************************************************/
 AmLcConfig::AmLcConfig()
 : config_path(CONF_FILE_PATH)
+, is_default_signature(false)
 {
 }
 
@@ -1095,11 +1096,6 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->options_transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_OPT_TRANSCODE_IN_NAME);
     config->transcoder_out_stats_hdr = cfg_getstr(gen, PARAM_TRANSCODE_OUT_NAME);
     config->transcoder_in_stats_hdr = cfg_getstr(gen, PARAM_TRANSCODE_IN_NAME);
-    if(!cfg_size(gen, PARAM_SIGNATURE_NAME)) {
-        config->signature = DEFAULT_SIGNATURE;
-    } else {
-        config->signature = cfg_getstr(gen, PARAM_SIGNATURE_NAME);
-    }
     config->sdp_origin = cfg_getstr(gen, PARAM_SDP_ORIGIN_NAME);
     config->sdp_session_name = cfg_getstr(gen, PARAM_SDP_SESSION_NAME);
     config->node_id = cint(cfg_getint(gen, PARAM_NODE_ID_NAME));
@@ -1133,6 +1129,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->deamon_uid = cfg_getstr(gen, PARAM_DEAMON_UID_NAME);
     config->deamon_gid = cfg_getstr(gen, PARAM_DEAMON_GID_NAME);
 #endif /* !DISABLE_DAEMON_MODE */
+
+    applySignature(cfg_getstr(gen, PARAM_SIGNATURE_NAME));
 
     return 0;
 }
@@ -2310,4 +2308,54 @@ std::string AmLcConfig::serialize()
     free(buf);
 
     return ret;
+}
+
+void AmLcConfig::applySignature(const char *signature, bool override)
+{
+    if(!override && !is_default_signature && !signature_header_uac.empty()) {
+        //ignore if already initialized with non-default signature
+        return;
+    }
+
+    if(!signature) {
+        signature = DEFAULT_SIGNATURE;
+        is_default_signature = true;
+    } else {
+        is_default_signature = false;
+    }
+
+    signature_header_uac = string(SIP_HDR_COLSP(SIP_HDR_USER_AGENT)) + signature + CRLF;
+    signature_header_uas = string(SIP_HDR_COLSP(SIP_HDR_SERVER)) + signature + CRLF;
+}
+
+void AmLcConfig::addSignatureHdr(AmSipRequest &req) const
+{
+    if(!signature_header_uac.empty())
+        req.hdrs += signature_header_uac;
+}
+
+void AmLcConfig::addSignatureHdr(AmSipReply &reply) const
+{
+    if(!signature_header_uas.empty())
+        reply.hdrs += signature_header_uas;
+}
+
+int AmLcConfig::addUacSignature(char *buf) const
+{
+    memcpy(buf, signature_header_uac.data(), signature_header_uac.size());
+    return signature_header_uac.size();
+}
+
+int AmLcConfig::getUacSignatureLen() const {
+    return signature_header_uac.size();
+}
+
+int AmLcConfig::addUasSignature(char *buf) const
+{
+    memcpy(buf, signature_header_uas.data(), signature_header_uas.size());
+    return signature_header_uas.size();
+}
+
+int AmLcConfig::getUasSignatureLen() const {
+    return signature_header_uas.size();
 }
