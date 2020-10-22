@@ -1,3 +1,11 @@
+sems (1.38.0) stable; urgency=low
+
+  * MEDIA_info::getNextRtpPort: avoid aquiring of the freshly freed port
+  * AmLcConfig: rename GetInstance() -> instance()
+  * signature processing fixes
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 23 Oct 2020 01:20:08 +0300
+
 sems (1.37.1) stable; urgency=low
 
   * arg2json fix serialization
