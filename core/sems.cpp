@@ -491,24 +491,53 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
     }
 }
 
-void get_statm_values(StatCounter::iterate_func_type f)
+class GroupsContainerSelfStatm
+  : public StatsCountersGroupsContainerInterface
 {
-    //https://www.kernel.org/doc/html/latest/filesystems/proc.html
+    long long sys_page_size;
 
-    static long long sys_page_size = sysconf(_SC_PAGESIZE);
+    struct Group
+      : public StatCountersGroupsInterface
+    {
+        unsigned long long value;
+        map<string,string> labels;
 
-    static map<string,string> const vmsize_labels {{"field", "size"}};
-    static map<string,string> const vmrss_labels {{"field", "resident"}};
+        Group()
+          : StatCountersGroupsInterface(Gauge)
+        {}
 
-    unsigned long long v;
-    std::ifstream ifs("/proc/self/statm", std::ios_base::in);
+        void update(unsigned long long v) { value = v; }
 
-    ifs >> v; //VmSize
-    f(v * sys_page_size, 0, vmsize_labels);
+        void iterate_counters(iterate_counters_callback_type callback) override
+        {
+            callback(value, 0, labels);
+        }
+    };
+    Group vmsize_group;
+    Group vmrss_group;
 
-    ifs >> v; //VmRSS
-    f(v * sys_page_size, 0, vmrss_labels);
-}
+  public:
+    GroupsContainerSelfStatm()
+      : sys_page_size(sysconf(_SC_PAGESIZE))
+    {}
+
+    void operator ()(const string &name, iterate_groups_callback_type callback) override
+    {
+        //https://www.kernel.org/doc/html/latest/filesystems/proc.html
+        unsigned long long v;
+
+        std::ifstream ifs("/proc/self/statm", std::ios_base::in);
+
+        ifs >> v; //VmSize
+        vmsize_group.value = sys_page_size * v;
+
+        ifs >> v; //VmRSS
+        vmrss_group.value = sys_page_size * v;
+
+        callback("core_statm_vmsize", vmsize_group);
+        callback("core_statm_vmrss", vmrss_group);
+    }
+};
 
 /*
  * Main
@@ -844,7 +873,7 @@ int main(int argc, char* argv[])
   stat_group(Counter, "core", "start_time").addAtomicCounter().set(
     static_cast<unsigned long long>(start_time));
 
-  stat_group(Gauge, "core", "statm").addFunctionGroupCounter(&get_statm_values);
+  statistics::instance()->add_groups_container("self_statm", new GroupsContainerSelfStatm());
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {

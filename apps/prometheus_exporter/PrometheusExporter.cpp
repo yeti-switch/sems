@@ -169,16 +169,16 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
     evbuffer *buf = evbuffer_new();
     auto now = wheeltimer::instance()->unix_ms_clock.get();
 
-    statistics::instance()->iterate([this, &now, buf](const std::string &name, StatCountersGroup& counter)
+    statistics::instance()->iterate_groups([this, &now, buf](const std::string &name, StatCountersGroupsInterface& group)
     {
-        auto type = StatCountersGroup::type2str(counter.type());
+        auto type = StatCountersGroupsInterface::type2str(group.getType());
 
         evbuffer_add_printf(buf, "#TYPE %s_%s %s\n", prefix.c_str(), name.data(), type);
-        if(!counter.help().empty()) {
-            evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.data(), counter.help().data());
+        if(!group.getHelp().empty()) {
+            evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.data(), group.getHelp().data());
         }
 
-        counter.iterate([this, &name, &now, buf](
+        group.iterate_counters([this, &name, &now, buf](
             unsigned long long value,
             unsigned long long timet,
             const map<string, string>& counter_labels)

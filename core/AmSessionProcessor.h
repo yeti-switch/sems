@@ -53,8 +53,8 @@ class AmSessionProcessor {
     static void init();
     static AmSessionProcessorThread* getProcessorThread();
     static void addThreads(unsigned int num_threads);
-    static void get_statistics_count(StatCounter::iterate_func_type f);
-    static void get_statistics_time(StatCounter::iterate_func_type f);
+    static void get_statistics_count(StatCounterInterface::iterate_func_type f);
+    static void get_statistics_time(StatCounterInterface::iterate_func_type f);
 };
 
 struct AmSessionProcessorThreadAddEvent 
@@ -100,8 +100,8 @@ class AmSessionProcessorThread
 
     void startSession(AmSession* s);
 
-    void get_statistics_count(StatCounter::iterate_func_type f);
-    void get_statistics_time(StatCounter::iterate_func_type f);
+    void get_statistics_count(StatCounterInterface::iterate_func_type f);
+    void get_statistics_time(StatCounterInterface::iterate_func_type f);
 };
 
 #endif // _AmSessionProcessor_h_

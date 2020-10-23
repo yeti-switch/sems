@@ -34,8 +34,8 @@ struct EventTypeStats {
     EventTypeStats(const std::type_info &type_info, timeval &consumed_time, map<string,string> ext_labels);
 
     void update(timeval &event_consumed_time);
-    void iterate_count(StatCounter::iterate_func_type f);
-    void iterate_time(StatCounter::iterate_func_type f);
+    void iterate_count(StatCounterInterface::iterate_func_type f);
+    void iterate_time(StatCounterInterface::iterate_func_type f);
 };
 
 class EventStats
@@ -44,8 +44,8 @@ class EventStats
     map<string,string> labels;
   public:
     void update(AmEvent *event, timeval &consumed_time);
-    void iterate_count(StatCounter::iterate_func_type f);
-    void iterate_time(StatCounter::iterate_func_type f);
+    void iterate_count(StatCounterInterface::iterate_func_type f);
+    void iterate_time(StatCounterInterface::iterate_func_type f);
 
     void addLabel(const string& name, const string& value);
 };

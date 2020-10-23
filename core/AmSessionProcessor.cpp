@@ -77,14 +77,14 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   threads_mut.unlock();
 }
 
-void AmSessionProcessor::get_statistics_count(StatCounter::iterate_func_type f)
+void AmSessionProcessor::get_statistics_count(StatCounterInterface::iterate_func_type f)
 {
     //event_stats.iterate_count(f);
     for(auto &t : threads)
         t->get_statistics_count(f);
 }
 
-void AmSessionProcessor::get_statistics_time(StatCounter::iterate_func_type f)
+void AmSessionProcessor::get_statistics_time(StatCounterInterface::iterate_func_type f)
 {
     //event_stats.iterate_time(f);
     for(auto &t : threads)
@@ -216,13 +216,13 @@ void AmSessionProcessorThread::startSession(AmSession* s) {
   runcond.set(true);
 }
 
-void AmSessionProcessorThread::get_statistics_count(StatCounter::iterate_func_type f)
+void AmSessionProcessorThread::get_statistics_count(StatCounterInterface::iterate_func_type f)
 {
     AmLock l(event_stats_mutex);
     event_stats.iterate_count(f);
 }
 
-void AmSessionProcessorThread::get_statistics_time(StatCounter::iterate_func_type f)
+void AmSessionProcessorThread::get_statistics_time(StatCounterInterface::iterate_func_type f)
 {
     AmLock l(event_stats_mutex);
     event_stats.iterate_time(f);

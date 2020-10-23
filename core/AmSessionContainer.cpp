@@ -58,11 +58,11 @@ AmSessionContainer::AmSessionContainer()
             return AmSession::getMaxSessionNum();
         });
 
-    stat_group(Gauge, "core", "session_num")
-        .setHelp("number of running sessions")
-        .addFunctionCounter([]() -> unsigned long long {
-            return AmSession::getSessionNum();
-        });
+    auto &session_num_group = stat_group(Gauge, "core", "session_num");
+    session_num_group.setHelp("number of running sessions");
+    session_num_group.addFunctionCounter([]() -> unsigned long long {
+        return AmSession::getSessionNum();
+    });
 
     stat_group(Gauge, "core", "dead_sessions_count")
         .addFunctionCounter([]() -> unsigned long long {

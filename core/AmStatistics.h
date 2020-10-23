@@ -6,36 +6,46 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 #include <functional>
 
 using std::vector;
 using std::map;
+using std::shared_ptr;
 
-class StatCounter
-{
+template <class Parent>
+class StatLabelsContainer {
   protected:
     map<string, string> labels;
+    void addLabelInternal(const string& name, const string& value)
+    {
+        labels.emplace(name, value);
+    }
+  public:
+    const map<string, string>& getLabels() { return labels; }
+    virtual Parent &addLabel(const string& name, const string& value) = 0;
+};
 
+class StatCounterInterface
+{
   public:
     using iterate_func_type = std::function<
         void (unsigned long long value,
               unsigned long long timestamp,
               const map<string, string>&) >;
 
-    StatCounter() = default;
-    StatCounter(StatCounter const &) = delete;
-    StatCounter(StatCounter const &&) = delete;
-    virtual ~StatCounter();
-
-    void addLabel(const string& name, const string& value);
-    const map<string, string>& getLabels() { return labels; }
+    StatCounterInterface() = default;
+    StatCounterInterface(StatCounterInterface const &) = delete;
+    StatCounterInterface(StatCounterInterface const &&) = delete;
+    virtual ~StatCounterInterface();
 
     virtual void iterate(iterate_func_type) = 0;
 };
 
 class AtomicCounter
   : public atomic_int64,
-    public StatCounter
+    public StatCounterInterface,
+    public StatLabelsContainer<AtomicCounter>
 {
     atomic_int64 timestamp;
   public:
@@ -44,7 +54,7 @@ class AtomicCounter
     AtomicCounter(AtomicCounter const &&) = delete;
     ~AtomicCounter() override {}
 
-    AtomicCounter &addLabel(const string& name, const string& value);
+    AtomicCounter &addLabel(const string& name, const string& value) override;
     void iterate(iterate_func_type callback) override;
     unsigned long long inc(unsigned long long add=1);
     unsigned long long dec(unsigned long long sub=1);
@@ -52,7 +62,8 @@ class AtomicCounter
 };
 
 class FunctionCounter
-  : public StatCounter
+  : public StatCounterInterface,
+    public StatLabelsContainer<FunctionCounter>
 {
   public:
     typedef unsigned long long (*CallbackFunction)();
@@ -64,7 +75,7 @@ class FunctionCounter
     FunctionCounter(FunctionCounter const &&) = delete;
     ~FunctionCounter() override {}
 
-    FunctionCounter &addLabel(const string& name, const string& value);
+    FunctionCounter &addLabel(const string& name, const string& value) override;
     void iterate(iterate_func_type callback) override;
 
   private:
@@ -72,7 +83,7 @@ class FunctionCounter
 };
 
 class FunctionGroupCounter
-  : public StatCounter
+  : public StatCounterInterface
 {
   public:
     typedef void (*CallbackFunction)(iterate_func_type callback);
@@ -90,9 +101,7 @@ class FunctionGroupCounter
     CallbackFunction func_;
 };
 
-//represents set of counters with the same name
-class StatCountersGroup final
-  : public StatCounter
+class StatCountersGroupsInterface
 {
   public:
     enum Type
@@ -104,66 +113,91 @@ class StatCountersGroup final
         Unknown
     };
 
+    using iterate_counters_callback_type =
+        std::function<void (unsigned long long value,
+                            unsigned long long timestamp,
+                            const map<string, string>&)>;
   private:
-    vector<StatCounter *> counters;
-    AmMutex counters_lock;
-
     Type type_;
     string help_;
 
-public:
-    StatCountersGroup(Type type)
+  public:
+    StatCountersGroupsInterface(Type type)
       : type_(type)
+    {}
+    StatCountersGroupsInterface(StatCountersGroupsInterface const &) = delete;
+    StatCountersGroupsInterface(StatCountersGroupsInterface const &&) = delete;
+
+    virtual void iterate_counters(iterate_counters_callback_type callback) = 0;
+
+    static const char *type2str(Type type);
+    static Type str2type(const char * type);
+
+    StatCountersGroupsInterface &setHelp(const string& help) { help_ = help;  return *this; }
+    const string &getHelp() { return help_; }
+
+    StatCountersGroupsInterface::Type getType() { return type_; }
+};
+
+class StatsCountersGroupsContainerInterface {
+  public:
+    using iterate_groups_callback_type =
+        std::function<void(const std::string &name,
+                           StatCountersGroupsInterface &group)>;
+    virtual void operator ()(const string &name, iterate_groups_callback_type callback) = 0;
+};
+
+//represents set of counters with the same name
+class StatCountersSingleGroup final
+  : public StatCountersGroupsInterface,
+    public StatsCountersGroupsContainerInterface
+{
+    vector<StatCounterInterface *> counters;
+    AmMutex counters_lock;
+
+  public:
+    StatCountersSingleGroup(Type type)
+      : StatCountersGroupsInterface(type)
     { }
-    StatCountersGroup(StatCountersGroup const &) = delete;
-    StatCountersGroup(StatCountersGroup const &&) = delete;
+    StatCountersSingleGroup(StatCountersSingleGroup const &) = delete;
+    StatCountersSingleGroup(StatCountersSingleGroup const &&) = delete;
 
-    ~StatCountersGroup();
-
-    void iterate(
-        std::function<void(unsigned long long value,
-                           unsigned long long timestamp,
-                           const map<string, string>&)> callback);
+    ~StatCountersSingleGroup();
 
     AtomicCounter& addAtomicCounter();
     FunctionCounter& addFunctionCounter(FunctionCounter::CallbackFunction func);
     FunctionGroupCounter& addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func);
 
-    static const char *type2str(Type type);
-    static Type str2type(const char * type);
-
-    StatCountersGroup &setHelp(const string& help) { help_ = help;  return *this; }
-    const string &help() { return help_; }
-
-    Type type() { return type_; }
+    void operator ()(const string &name, iterate_groups_callback_type callback) override;
+    void iterate_counters(iterate_counters_callback_type callback) override;
 };
 
 class AmStatistics
+  : public StatLabelsContainer<AmStatistics>
 {
   private:
     AmMutex groups_mutex;
-    map<string, StatCountersGroup> counters_groups;
-    map<string, string> labels;
+    map<string, shared_ptr<StatsCountersGroupsContainerInterface> > counters_groups_containers;
 
   protected:
     AmStatistics();
-    ~AmStatistics();
+    virtual ~AmStatistics();
     void dispose() {}
 
     string get_concatenated_name(const string& naming_group, const string& name);
 
   public:
-    void addLabel(const string& name, const string& value);
-    const map<string, string> &getLabels() const;
+    AmStatistics& addLabel(const string& name, const string& value) override;
 
-    using iterate_callback_type = std::function<void(const std::string &,StatCountersGroup &)>;
-    void iterate(iterate_callback_type callback);
+    void iterate_groups(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback);
 
     //get or create group
-    StatCountersGroup &group(StatCountersGroup::Type type, const string& naming_group, const string& name);
-    StatCountersGroup &group(StatCountersGroup::Type type, const string& name);
+    StatCountersSingleGroup &group(StatCountersSingleGroup::Type type, const string& naming_group, const string& name);
+    StatCountersSingleGroup &group(StatCountersSingleGroup::Type type, const string& name);
+
+    void add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container);
 };
 
 typedef singleton<AmStatistics> statistics;
 
-#define stat_group(type, grouping_name, name) statistics::instance()->group(StatCountersGroup::type, grouping_name, name)
+#define stat_group(type, grouping_name, name) statistics::instance()->group(StatCountersSingleGroup::type, grouping_name, name)

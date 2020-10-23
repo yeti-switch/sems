@@ -2,13 +2,8 @@
 
 #include <stdexcept>
 
-StatCounter::~StatCounter()
+StatCounterInterface::~StatCounterInterface()
 {}
-
-void StatCounter::addLabel(const string& name, const string& value)
-{
-    labels.emplace(name, value);
-}
 
 AtomicCounter::AtomicCounter()
 {
@@ -17,7 +12,7 @@ AtomicCounter::AtomicCounter()
 
 AtomicCounter& AtomicCounter::addLabel(const string& name, const string& value)
 {
-    labels.emplace(name, value);
+    addLabelInternal(name, value);
     return *this;
 }
 
@@ -46,7 +41,7 @@ void AtomicCounter::set(unsigned long long value)
 
 FunctionCounter& FunctionCounter::addLabel(const string& name, const string& value)
 {
-    labels.emplace(name, value);
+    addLabelInternal(name, value);
     return *this;
 }
 
@@ -63,25 +58,34 @@ void FunctionGroupCounter::iterate(iterate_func_type callback)
     func_(callback);
 }
 
-StatCountersGroup::~StatCountersGroup()
+const char *StatCountersGroupsInterface::type2str(Type type)
+{
+    switch(type) {
+        case Counter: return "counter";
+        case Gauge: return "gauge";
+        case Histogram: return "histogram";
+        case Summary: return "summary";
+        default: break;
+    }
+    return "unknown";
+}
+
+StatCountersGroupsInterface::Type StatCountersGroupsInterface::str2type(const char * type)
+{
+    if(strcmp(type, "counter") == 0) return Counter;
+    if(strcmp(type, "gauge") == 0) return Gauge;
+    if(strcmp(type, "histogram") == 0) return Histogram;
+    if(strcmp(type, "summary") == 0) return Summary;
+    return Unknown;
+}
+
+StatCountersSingleGroup::~StatCountersSingleGroup()
 {
     for(auto &counter : counters)
         delete counter;
 }
 
-void StatCountersGroup::iterate(
-    std::function<void(unsigned long long value,
-                       unsigned long long timestamp,
-                       const map<string, string>&)> callback)
-{
-    AmLock l(counters_lock);
-
-    for(auto& counter : counters) {
-        counter->iterate(callback);
-    }
-}
-
-AtomicCounter& StatCountersGroup::addAtomicCounter()
+AtomicCounter& StatCountersSingleGroup::addAtomicCounter()
 {
     AmLock l(counters_lock);
 
@@ -90,7 +94,7 @@ AtomicCounter& StatCountersGroup::addAtomicCounter()
     return *counter;
 }
 
-FunctionCounter& StatCountersGroup::addFunctionCounter(FunctionCounter::CallbackFunction func)
+FunctionCounter& StatCountersSingleGroup::addFunctionCounter(FunctionCounter::CallbackFunction func)
 {
     AmLock l(counters_lock);
 
@@ -99,13 +103,27 @@ FunctionCounter& StatCountersGroup::addFunctionCounter(FunctionCounter::Callback
     return *counter;
 }
 
-FunctionGroupCounter& StatCountersGroup::addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func)
+FunctionGroupCounter& StatCountersSingleGroup::addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func)
 {
     AmLock l(counters_lock);
 
     auto counter = new FunctionGroupCounter(func);
     counters.emplace_back(counter);
     return *counter;
+}
+
+void StatCountersSingleGroup::operator ()(const string &name, iterate_groups_callback_type callback)
+{
+    callback(name, *this);
+}
+
+void StatCountersSingleGroup::iterate_counters(iterate_counters_callback_type callback)
+{
+    AmLock l(counters_lock);
+
+    for(auto& counter : counters) {
+        counter->iterate(callback);
+    }
 }
 
 AmStatistics::AmStatistics()
@@ -119,65 +137,49 @@ string AmStatistics::get_concatenated_name(const string& naming_group, const str
     return naming_group + "_" + name;
 }
 
-void AmStatistics::addLabel(const string& name, const string& value)
+AmStatistics& AmStatistics::addLabel(const string& name, const string& value)
 {
-    labels.emplace(name, value);
+    addLabelInternal(name, value);
+    return *this;
 }
 
-const map<string, string> &AmStatistics::getLabels() const
-{
-    return labels;
-
-}
-
-void AmStatistics::iterate(iterate_callback_type callback)
+void AmStatistics::iterate_groups(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
 {
     AmLock lock(groups_mutex);
-    for(auto &it : counters_groups) {
-        callback(it.first, it.second);
+    for(auto &it : counters_groups_containers) {
+        (*it.second)(it.first, callback);
     }
 }
 
-StatCountersGroup &AmStatistics::group(StatCountersGroup::Type type, const string& naming_group, const string& name)
+StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type, const string& naming_group, const string& name)
 {
     return group(type, get_concatenated_name(naming_group,name));
 }
 
-StatCountersGroup &AmStatistics::group(StatCountersGroup::Type type, const string& name)
+StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type, const string& name)
 {
     AmLock lock(groups_mutex);
 
-    auto it = counters_groups.emplace(name, type);
-    auto &group = it.first->second;
+    auto it = counters_groups_containers.emplace(name, new StatCountersSingleGroup(type));
+    auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second.get());
 
-    if(it.second == false && group.type() != type) {
+    if(it.second == false && existent_group.getType() != type) {
         ERROR("attempt to add counter '%s' with type '%s' to existing counters group with another type '%s'",
             name.data(),
-            StatCountersGroup::type2str(type),
-            StatCountersGroup::type2str(group.type()));
+            StatCountersGroupsInterface::type2str(type),
+            StatCountersGroupsInterface::type2str(existent_group.getType()));
+        throw std::logic_error("attempt to redefine existent StatCountersSingleGroup");
+    }
+
+    return existent_group;
+}
+
+void AmStatistics::add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container)
+{
+    auto it = counters_groups_containers.emplace(name, container);
+    if(it.second == false) {
+        ERROR("attempt to add groups container  %p by existing name: %s",
+            container, name.data());
         throw std::logic_error("attempt to redefine existent StatCountersGroup");
     }
-
-    return group;
-}
-
-const char *StatCountersGroup::type2str(Type type)
-{
-    switch(type) {
-        case Counter: return "counter";
-        case Gauge: return "gauge";
-        case Histogram: return "histogram";
-        case Summary: return "summary";
-        default: break;
-    }
-    return "unknown";
-}
-
-StatCountersGroup::Type StatCountersGroup::str2type(const char * type)
-{
-    if(strcmp(type, "counter") == 0) return Counter;
-    if(strcmp(type, "gauge") == 0) return Gauge;
-    if(strcmp(type, "histogram") == 0) return Histogram;
-    if(strcmp(type, "summary") == 0) return Summary;
-    return Unknown;
 }
