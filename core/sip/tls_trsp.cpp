@@ -62,19 +62,30 @@ vector<string> tls_conf::allowed_key_exchange_methods() const
     if(s_client && !sig.empty()) {
         return {sig };
     } else {
-        return Policy::allowed_key_exchange_methods();
+        return {
+            "SRP_SHA",
+            "ECDHE_PSK",
+            "DHE_PSK",
+            "PSK",
+            "CECPQ1",
+            "ECDH",
+            "DH",
+            "RSA"
+        };
+        //return Policy::allowed_key_exchange_methods();
     }
 }
 
 vector<string> tls_conf::allowed_signature_methods() const
 {
-    //!FIXME: clarify IMPLICIT usage cases
-    return Policy::allowed_signature_methods();
-    /*if(s_client && policy_override) {
-        return {"IMPLICIT"};
-    } else {
-        return Policy::allowed_signature_methods();
-    }*/
+    return {
+       "ECDSA",
+       "RSA",
+       "DSA",
+       "IMPLICIT",
+       //"ANONYMOUS" (anon)
+    };
+    //return Policy::allowed_signature_methods();
 }
 
 vector<string> tls_conf::allowed_ciphers() const
@@ -84,7 +95,28 @@ vector<string> tls_conf::allowed_ciphers() const
     } else if(s_client && !cipher.empty()) {
         return { cipher };
     } else if(s_client) {
-        return Policy::allowed_ciphers();
+        return {
+           "AES-256/OCB(12)",
+           "AES-128/OCB(12)",
+           "ChaCha20Poly1305",
+           "AES-256/GCM",
+           "AES-128/GCM",
+           "AES-256/CCM",
+           "AES-128/CCM",
+           "AES-256/CCM(8)",
+           "AES-128/CCM(8)",
+           "Camellia-256/GCM",
+           "Camellia-128/GCM",
+           "ARIA-256/GCM",
+           "ARIA-128/GCM",
+           "AES-256",
+           "AES-128",
+           "Camellia-256",
+           "Camellia-128",
+           "SEED",
+           "3DES"
+        };
+        //return Policy::allowed_ciphers();
     }
     ERROR("allowed_ciphers: called in unexpected context");
     return vector<string>();

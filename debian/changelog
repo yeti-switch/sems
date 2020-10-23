@@ -1,3 +1,9 @@
+sems (1.38.1) stable; urgency=low
+
+  * tls client: enable more cipher suites by default
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 23 Oct 2020 19:28:32 +0300
+
 sems (1.38.0) stable; urgency=low
 
   * MEDIA_info::getNextRtpPort: avoid aquiring of the freshly freed port
