@@ -958,20 +958,33 @@ struct RegistrationMetricGroup
 
         labels["handle"] = handle;
         labels["id"] = ri.id;
+
         labels["domain"] = ri.domain;
+        labels["transport_protocol"] = c2stlstr(transport_str(ri.transport_protocol_id));
+
         labels["user"] = ri.user;
         labels["auth_user"] = ri.auth_user;
-        labels["proxy"] = ri.proxy;
-        labels["expires_interval"] = ri.expires_interval;
-        labels["transport_protocol_id"] = ri.transport_protocol_id;
-        labels["proxy_transport_protocol_id"] = ri.proxy_transport_protocol_id;
-        labels["retry_delay"] = ri.retry_delay;
+        labels["expires_interval"] = int2str(ri.expires_interval);
+        labels["transport_protocol"] = c2stlstr(transport_str(ri.transport_protocol_id));
+        labels["contact"] = reg.request_contact;
+
+        if(!ri.proxy.empty()) {
+            labels["proxy"] = ri.proxy;
+            labels["proxy_transport_protocol"] = c2stlstr(transport_str(ri.proxy_transport_protocol_id));
+        }
+
+        auto reg_state = reg.getState();
+        if(reg_state==AmSIPRegistration::RegisterError) {
+            labels["error_code"] = int2str(reg.error_code);
+            labels["error_reason"] = reg.error_reason;
+            labels["error_initiator"] = getSIPRegistationErrorInitiatorString(reg.error_initiatior);
+        }
 
         values[REG_VALUE_POSTPONE_TIMEOUT_MSEC] = reg.postponed ?
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 reg.postponed_next_attempt-now).count() : 0;
         values[REG_VALUE_ATTEMPT] = ri.attempt;
-        values[REG_VALUE_STATE] = reg.getState();
+        values[REG_VALUE_STATE] = reg_state;
     }
 
     void serialize(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
