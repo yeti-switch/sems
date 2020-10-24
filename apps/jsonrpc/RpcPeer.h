@@ -69,14 +69,18 @@ struct JsonrpcPeerConnection {
     FL_REJECTED              = 32,  // connection if not whitelists
   }; 
 
-  JsonrpcPeerConnection() { 
+  JsonrpcPeerConnection()
+    : flags(0)
+  {
     req_id = rand()%1024;
   }
 
   int req_id;
 
   JsonrpcPeerConnection(const std::string& id)
-  : id(id) { 
+  : id(id),
+    flags(0)
+  {
     DBG("created connection '%s'\n", id.c_str());
   }
 
