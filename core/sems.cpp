@@ -532,8 +532,8 @@ class GroupsContainerSelfStatm
         ifs >> v; //VmRSS
         vmrss_group.value = sys_page_size * v;
 
-        callback("core_statm_vmsize", vmsize_group);
-        callback("core_statm_vmrss", vmrss_group);
+        callback("core_memory_vmsize", vmsize_group);
+        callback("core_memory_vmrss", vmrss_group);
     }
 };
 
