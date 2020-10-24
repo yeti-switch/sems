@@ -38,6 +38,8 @@
 
 #define CFG_OPT_NAME_SHAPER_MIN_INTERVAL "min_interval_per_domain_msec"
 #define CFG_OPT_NAME_DEFAULT_EXPIRES "default_expires"
+#define CFG_OPT_NAME_EXPORT_METRICS "export_metrics"
+
 #define DEFAULT_EXPIRES 1800
 
 #define TIMEOUT_CHECKING_INTERVAL 200000 //microseconds
@@ -118,15 +120,14 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
     uac_auth_i(NULL),
     stopped(false),
     default_expires(DEFAULT_EXPIRES)
-{
-    statistics::instance()->add_groups_container("registrar_client", this);
-}
+{ }
 
 int SIPRegistrarClient::configure(const std::string& config)
 {
     cfg_opt_t opt[] = {
         CFG_INT(CFG_OPT_NAME_SHAPER_MIN_INTERVAL, 0, CFGF_NODEFAULT),
         CFG_INT(CFG_OPT_NAME_DEFAULT_EXPIRES, DEFAULT_EXPIRES, CFGF_NONE),
+        CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE),
         CFG_END()
     };
     cfg_t *cfg = cfg_init(opt, CFGF_NONE);
@@ -158,6 +159,9 @@ int SIPRegistrarClient::configure(const std::string& config)
         }
     }
     default_expires = cfg_getint(cfg, CFG_OPT_NAME_DEFAULT_EXPIRES);
+    if(cfg_true==cfg_getbool(cfg,CFG_OPT_NAME_EXPORT_METRICS))
+        statistics::instance()->add_groups_container("registrar_client", this);
+
     cfg_free(cfg);
     return 0;
 }
