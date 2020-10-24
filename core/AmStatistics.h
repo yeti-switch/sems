@@ -136,6 +136,7 @@ class StatCountersGroupsInterface
     StatCountersGroupsInterface &setHelp(const string& help) { help_ = help;  return *this; }
     const string &getHelp() { return help_; }
 
+    void setType(StatCountersGroupsInterface::Type type) { type_ = type; }
     StatCountersGroupsInterface::Type getType() { return type_; }
 };
 
@@ -177,7 +178,7 @@ class AmStatistics
 {
   private:
     AmMutex groups_mutex;
-    map<string, shared_ptr<StatsCountersGroupsContainerInterface> > counters_groups_containers;
+    map<string, StatsCountersGroupsContainerInterface *> counters_groups_containers;
 
   protected:
     AmStatistics();

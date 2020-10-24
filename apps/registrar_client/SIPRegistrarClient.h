@@ -51,7 +51,8 @@ class SIPRegistrarClient
     public AmDynInvoke,
     public AmThread,
     public AmEventFdQueue,
-    public AmEventHandler
+    public AmEventHandler,
+    public StatsCountersGroupsContainerInterface
 {
     int epoll_fd;
     AmTimerFd timer;
@@ -104,6 +105,8 @@ class SIPRegistrarClient
     static SIPRegistrarClient* instance();
     void invoke(const string& method,
                 const AmArg& args, AmArg& ret);
+    //StatCountersGroupsInterface
+    void operator ()(const string &name, iterate_groups_callback_type callback) override;
 
     bool onSipReply(const AmSipReply& rep, AmSipDialog::Status old_dlg_status);
     int onLoad();
@@ -146,7 +149,6 @@ class SIPRegistrarClient
         AddRegistration,
         RemoveRegistration
     } RegEvents;
-
 };
 
 struct SIPNewRegistrationEvent : public AmEvent

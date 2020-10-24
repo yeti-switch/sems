@@ -506,8 +506,6 @@ class GroupsContainerSelfStatm
           : StatCountersGroupsInterface(Gauge)
         {}
 
-        void update(unsigned long long v) { value = v; }
-
         void iterate_counters(iterate_counters_callback_type callback) override
         {
             callback(value, 0, labels);

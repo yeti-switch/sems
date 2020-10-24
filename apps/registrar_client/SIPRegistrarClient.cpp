@@ -118,7 +118,9 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
     uac_auth_i(NULL),
     stopped(false),
     default_expires(DEFAULT_EXPIRES)
-{ }
+{
+    statistics::instance()->add_groups_container("registrar_client", this);
+}
 
 int SIPRegistrarClient::configure(const std::string& config)
 {
@@ -920,3 +922,98 @@ void SIPRegistrarClient::invoke(
         throw AmDynInvoke::NotImplemented(method);
 }
 
+struct RegistrationMetricGroup
+  : public StatCountersGroupsInterface
+{
+    static vector<string> metrics_keys_names;
+    static vector<string> metrics_help_strings;
+
+    enum metric_keys_idx {
+        REG_VALUE_POSTPONE_TIMEOUT_MSEC = 0,
+        REG_VALUE_ATTEMPT,
+        REG_VALUE_STATE,
+        REG_VALUE_MAX
+    };
+    struct reg_info {
+        map<string, string> labels;
+        unsigned long long values[REG_VALUE_MAX];
+    };
+    vector<reg_info> data;
+    int idx;
+
+    RegistrationMetricGroup()
+      : StatCountersGroupsInterface(Gauge)
+    {}
+
+    void add_reg(RegShaper::timep &now, const string &handle, AmSIPRegistration &reg)
+    {
+        data.emplace_back();
+        auto &labels = data.back().labels;
+        auto &values = data.back().values;
+        auto &ri = reg.getInfo();
+
+        labels["handle"] = handle;
+        labels["id"] = ri.id;
+        labels["domain"] = ri.domain;
+        labels["user"] = ri.user;
+        labels["auth_user"] = ri.auth_user;
+        labels["proxy"] = ri.proxy;
+        labels["expires_interval"] = ri.expires_interval;
+        labels["transport_protocol_id"] = ri.transport_protocol_id;
+        labels["proxy_transport_protocol_id"] = ri.proxy_transport_protocol_id;
+        labels["retry_delay"] = ri.retry_delay;
+
+        values[REG_VALUE_POSTPONE_TIMEOUT_MSEC] = reg.postponed ?
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                reg.postponed_next_attempt-now).count() : 0;
+        values[REG_VALUE_ATTEMPT] = ri.attempt;
+        values[REG_VALUE_STATE] = reg.getState();
+    }
+
+    void serialize(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
+    {
+        for(int i = 0; i < REG_VALUE_MAX; i++) {
+            idx = i;
+            setHelp(metrics_help_strings[idx]);
+            callback(metrics_keys_names[idx], *this);
+        }
+    }
+
+    void iterate_counters(iterate_counters_callback_type callback) override
+    {
+        for (size_t i = 0; i < data.size(); i++) {
+            auto &reg = data[i];
+            callback(reg.values[idx], 0, reg.labels);
+        }
+    }
+};
+
+vector<string> RegistrationMetricGroup::metrics_keys_names = {
+    "registration_postpone_timeout_msec",
+    "registration_attempt",
+    "registration_state"
+};
+
+vector<string> RegistrationMetricGroup::metrics_help_strings = {
+    "",
+    "",
+    "0:pending, 1:active, 2:error, 3:expired, 4:postponed"
+};
+
+void SIPRegistrarClient::operator ()(const string &name, iterate_groups_callback_type callback)
+{
+    AmArg ret;
+    ret.assertArray();
+
+    RegistrationMetricGroup g;
+    {
+        AmLock l(reg_mut);
+        RegShaper::timep now(std::chrono::system_clock::now());
+        g.data.reserve(registrations.size());
+        for(const auto &reg_it: registrations) {
+            g.add_reg(now, reg_it.first, *reg_it.second);
+        }
+    }
+
+    g.serialize(callback);
+}

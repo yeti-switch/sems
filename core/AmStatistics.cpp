@@ -161,7 +161,7 @@ StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type,
     AmLock lock(groups_mutex);
 
     auto it = counters_groups_containers.emplace(name, new StatCountersSingleGroup(type));
-    auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second.get());
+    auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second);
 
     if(it.second == false && existent_group.getType() != type) {
         ERROR("attempt to add counter '%s' with type '%s' to existing counters group with another type '%s'",
