@@ -1473,8 +1473,8 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
                         SdpKeyInfo &info = crypto.keys.back();
                         size_t line_len;
                         next = skip_till_next_line(key_data, line_len);
-                        char* key_end = parse_until(key_data, key_data+line_len, '|');
-                        info.key = string(key_data, static_cast<size_t>(key_end-key_data));
+                        char* key_end = parse_until(key_data, key_data+line_len+1, '|');
+                        info.key = string(key_data, static_cast<size_t>(key_end-key_data-1));
                         //TODO: parse parameters as described in https://tools.ietf.org/html/rfc4568#section-9.2
                         info.lifetime = 0;
                         info.mki = 1;

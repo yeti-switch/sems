@@ -1,3 +1,9 @@
+sems (1.39.3) stable; urgency=low
+
+  * AmSdp: fix 'crypto' attribute key length
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 03 Nov 2020 01:37:51 +0200
+
 sems (1.39.2) stable; urgency=low
 
   * AmSdp: fix 'crypto' parsing without mki/lifetime
