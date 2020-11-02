@@ -403,6 +403,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         if(offer.crypto.empty()) {
             throw AmSession::Exception(488,"absent crypto attribute");
         }
+        //TODO: check intersection with SDP offer if local_crypto is not empty
         if(local_crypto.empty()) {
             for(const auto &allowed_profile : allowed_srtp_profiles) {
                 for(const auto &offer_crypto : offer.crypto) {
@@ -1095,27 +1096,39 @@ int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const
 
     unsigned char local_key[SRTP_KEY_SIZE], remote_key[SRTP_KEY_SIZE];
     unsigned int local_key_size = SRTP_KEY_SIZE, remote_key_size = SRTP_KEY_SIZE;
-    for(auto key : local_media.crypto) {
-        if(cprofile == key.profile) {
-            if(key.keys.empty()) {
-                CLASS_ERROR("local secure audio stream without master key");
-                return -1;
-            }
-            AmSrtpConnection::base64_key(key.keys[0].key, local_key, local_key_size);
-            break;
-        }
-    }
-    for(auto key : remote_media.crypto) {
-        if(cprofile == key.profile) {
-            if(key.keys.empty()) {
-                CLASS_ERROR("local secure audio stream without master key");
-                return -1;
-            }
 
-            AmSrtpConnection::base64_key(key.keys[0].key, remote_key, remote_key_size);
-            break;
-        }
+    //get local key
+    auto local_crypto_profile_it = std::find_if(local_media.crypto.begin(), local_media.crypto.end(),
+        [cprofile](const SdpCrypto &s){ return s.profile == cprofile; });
+    if(local_crypto_profile_it == local_media.crypto.end()) {
+        CLASS_ERROR("no chosen profile %s in local media crypto attributes",
+                    SdpCrypto::profile2str(cprofile).data());
+        return -1;
     }
+    if(local_crypto_profile_it->keys.empty()) {
+        CLASS_ERROR("local secure audio stream without master key");
+        return -1;
+    }
+
+    //reduce local_crypto vector to the chosen profile (to generate correct answer for reINVITES)
+    local_crypto.insert(local_crypto.begin(), *local_crypto_profile_it);
+    local_crypto.resize(1);
+
+    AmSrtpConnection::base64_key(local_crypto_profile_it->keys[0].key, local_key, local_key_size);
+
+    //get remote key
+    auto remote_crypto_profile_it = std::find_if(remote_media.crypto.begin(), remote_media.crypto.end(),
+        [cprofile](const SdpCrypto &s){ return s.profile == cprofile; });
+    if(remote_crypto_profile_it == remote_media.crypto.end()) {
+        CLASS_ERROR("no chosen profile %s in remote media crypto attributes",
+                    SdpCrypto::profile2str(cprofile).data());
+        return -1;
+    }
+    if(remote_crypto_profile_it->keys.empty()) {
+        CLASS_ERROR("remote secure audio stream without master key");
+        return -1;
+    }
+    AmSrtpConnection::base64_key(remote_crypto_profile_it->keys[0].key, remote_key, remote_key_size);
 
     l_key.assign(reinterpret_cast<char *>(local_key), local_key_size);
     r_key.assign(reinterpret_cast<char *>(remote_key), remote_key_size);
