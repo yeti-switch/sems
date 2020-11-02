@@ -1465,17 +1465,16 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
                 break;
             }
             case KEY: {
-                string key(attr_line, static_cast<size_t>(next-attr_line)-1);
                 char* key_data = parse_until(attr_line, next, ':');
                 if(key_data < line_end) {
                     string method = string(attr_line, static_cast<size_t>(key_data-attr_line)-1);
-                    string key_info = string(key_data, static_cast<size_t>(next-key_data)-1);
                     if(method == "inline") {
                         crypto.keys.emplace_back();
                         SdpKeyInfo &info = crypto.keys.back();
-                        char* key_end = parse_until(key_data, next, '|');
-                        info.key = string(key_data, static_cast<size_t>(key_end-key_data)-1);
-
+                        size_t line_len;
+                        next = skip_till_next_line(key_data, line_len);
+                        char* key_end = parse_until(key_data, key_data+line_len, '|');
+                        info.key = string(key_data, static_cast<size_t>(key_end-key_data));
                         //TODO: parse parameters as described in https://tools.ietf.org/html/rfc4568#section-9.2
                         info.lifetime = 0;
                         info.mki = 1;
