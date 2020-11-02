@@ -1,3 +1,9 @@
+sems (1.39.1) stable; urgency=low
+
+  * AmMediaTransport: fix crypto attrs count in reply for reINVITE
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 02 Nov 2020 20:24:08 +0200
+
 sems (1.39.0) stable; urgency=low
 
   * AmStatistics: refactoring for groups containers support
