@@ -55,6 +55,8 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
 	ERROR("parsing error %i",err);
       }
 
+      socket->inc_sip_parse_error();
+
       pst.reset((char*)input_buf);
       reset_input();
 

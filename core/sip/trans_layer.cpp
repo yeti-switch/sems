@@ -120,6 +120,7 @@ int _trans_layer::register_transport(trsp_socket* trsp)
     }
 
     transports[if_num][trsp->get_transport_id()] = trsp;
+
     return 0;
 }
 
@@ -1737,6 +1738,7 @@ void _trans_layer::received_msg(sip_msg* msg, const trsp_acls &acls)
 
     if(err){
 	DBG("parse_sip_msg returned %i\n",err);
+    msg->local_socket->inc_sip_parse_error();
 
 	if(!err_msg){
 	    err_msg = (char*)"unknown parsing error";
