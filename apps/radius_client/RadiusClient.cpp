@@ -130,6 +130,15 @@ void RadiusClient::invoke(const string& method, const AmArg& args, AmArg& ret)
         start();
     } else if(method=="init"){
         ret = init();
+    } else if(method == "_list") {
+        ret.push("addAuthConnection");
+        ret.push("addAccConnection");
+        ret.push("clearAuthConnections");
+        ret.push("clearAccConnections");
+        ret.push("showAuthConnections");
+        ret.push("showAccConnections");
+        ret.push("showAuthStat");
+        ret.push("showAccStat");
     } else {
         throw AmDynInvoke::NotImplemented(method);
     }
