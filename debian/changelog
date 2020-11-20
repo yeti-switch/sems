@@ -1,3 +1,9 @@
+sems (1.41.0) stable; urgency=low
+
+  * revert to use bundled CURL 
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 20 Nov 2020 14:46:39 +0200
+
 sems (1.40.0) stable; urgency=low
 
   * add sems_core_sip_parse_error counter
