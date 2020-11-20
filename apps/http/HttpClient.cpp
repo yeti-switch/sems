@@ -4,6 +4,7 @@
 
 #include "AmSessionContainer.h"
 #include "AmUtils.h"
+#include "sip/resolver.h"
 
 #define MOD_NAME "http_client"
 
@@ -11,7 +12,7 @@
 #include "http_client_cfg.h"
 using std::vector;
 
-#define SYNC_CONTEXTS_TIMER_INVERVAL 5000
+#define SYNC_CONTEXTS_TIMER_INVERVAL 500000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 
 class HttpClientFactory
@@ -186,6 +187,9 @@ int HttpClient::init()
     sync_contexts_timer.link(epoll_fd,true);
     sync_contexts_timer.set(SYNC_CONTEXTS_TIMER_INVERVAL);
 
+    resolve_timer.link(epoll_fd, true);
+    resolve_timer.set(1, false);
+
     if(init_curl(epoll_fd)){
         ERROR("curl init failed");
         return -1;
@@ -193,6 +197,7 @@ int HttpClient::init()
 
     epoll_link(epoll_fd,true);
     stop_event.link(epoll_fd,true);
+    init_rpc();
 
     DBG("HttpClient initialized");
     return 0;
@@ -208,21 +213,16 @@ int HttpClient::onLoad()
     return 0;
 }
 
-void HttpClient::invoke(const string& method, const AmArg& args, AmArg& ret)
+void HttpClient::init_rpc_tree()
 {
-    if(method=="show"){
-        destinations.dump(ret);
-    } else if(method=="stats"){
-        showStats(ret);
-    } else if(method=="post") {
-        postRequest(args,ret);
-    } else if(method=="_list"){
-        ret.push("stats");
-        ret.push("post");
-        ret.push("show");
-    } else {
-        throw AmDynInvoke::NotImplemented(method);
-    }
+    AmArg &show = reg_leaf(root,"show");
+        reg_method(show,"destinations","destinations dump",&HttpClient::dstDump);
+        reg_method(show, "stats", "show statistics", &HttpClient::showStats);
+        reg_method(show, "dns_cache", "show statistics", &HttpClient::showDnsCache);
+    AmArg &post = reg_leaf(root,"request");
+        reg_method(post,"post","post request", &HttpClient::postRequest);
+        AmArg &cache = reg_leaf(post,"dns_cache");
+            reg_method(cache,"reset","reset dns_cache", &HttpClient::resetDnsCache);
 }
 
 void HttpClient::postRequest(const AmArg& args, AmArg& ret)
@@ -233,6 +233,25 @@ void HttpClient::postRequest(const AmArg& args, AmArg& ret)
         new HttpPostEvent(args.get(0).asCStr(), //destination
                           args.get(1).asCStr(), //data
                           string()));           //token
+}
+
+void HttpClient::dstDump(const AmArg&, AmArg& ret)
+{
+    destinations.dump(ret);
+}
+
+void HttpClient::showDnsCache(const AmArg& args, AmArg& ret)
+{
+    struct curl_slist* host = hosts;
+    while(host) {
+        ret.push(host->data);
+        host = host->next;
+    }
+}
+
+void HttpClient::resetDnsCache(const AmArg& args, AmArg& ret)
+{
+    resolve_timer.set(1);
 }
 
 void HttpClient::run()
@@ -271,6 +290,8 @@ void HttpClient::run()
                 on_resend_timer_event();
             } else if(p==&sync_contexts_timer) {
                 on_sync_context_timer();
+            } else if(p==&resolve_timer) {
+                on_update_resolve_list();
             } else if(p==static_cast<AmEventFdQueue *>(this)){
                 processEvents();
             } else if(p==&stop_event){
@@ -507,7 +528,7 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
     }
 
     HttpUploadConnection *c = new HttpUploadConnection(*u,d,epoll_fd);
-    if(c->init(curl_multi)){
+    if(c->init(hosts, curl_multi)){
         ERROR("http upload connection intialization error");
         delete c;
     }
@@ -552,7 +573,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
     }
 
     HttpPostConnection *c = new HttpPostConnection(*u,d,epoll_fd);
-    if(c->init(curl_multi)){
+    if(c->init(hosts, curl_multi)){
         ERROR("http post connection intialization error");
         delete c;
     }
@@ -597,7 +618,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
     }
 
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d,epoll_fd);
-    if(c->init(curl_multi)){
+    if(c->init(hosts, curl_multi)){
         ERROR("http multipart form connection intialization error");
         delete c;
     }
@@ -612,6 +633,78 @@ void HttpClient::on_resend_timer_event()
     }
 }
 
+static bool add_to_resolve_slist(struct curl_slist** hosts, const char* r_host)
+{
+    struct curl_slist* host = *hosts;
+    int r_host_len = strlen(r_host);
+    while(host) {
+        int host_len = strlen(host->data);
+        if(host_len == r_host_len && !strncmp(host->data, r_host, host_len)) return true;
+        host = host->next;
+    }
+
+    struct curl_slist* tmp = curl_slist_append(*hosts, r_host);
+    if(!tmp) {
+        curl_slist_free_all(*hosts);
+        return false;
+    }
+
+    *hosts = tmp; 
+    return true;
+}
+
+
+void HttpClient::on_update_resolve_list()
+{
+    DBG("the cache is reset. trying update");
+    resolve_timer.read();
+
+    if(hosts) {
+        curl_slist_free_all(hosts);
+        hosts = 0;
+    }
+
+    CURLU *curlu = curl_url();
+    if(!curlu) return;
+    uint64_t next_time = -1;
+    for(auto& dst : destinations) {
+        for(auto& url : dst.second.url) {
+            if(curl_url_set(curlu, CURLUPART_URL, url.c_str(), 0)) continue;
+            char* host;
+            curl_url_get(curlu, CURLUPART_HOST, &host, 0);
+            char* port;
+            curl_url_get(curlu, CURLUPART_PORT, &port, 0);
+
+            dns_handle handle;
+            sockaddr_storage sa;
+            if(resolver::instance()->resolve_name(host, &handle, &sa, Dualstack) == -1)
+                continue;
+            if(next_time > handle.get_expired()) {
+                next_time = handle.get_expired();
+            }
+
+            std::string rhost;
+            rhost.append(host);
+            rhost.append(":");
+            if(port) rhost.append(port);
+            else rhost.append("80");
+            rhost.append(":");
+            rhost.append(am_inet_ntop(&sa));
+            while(handle.next_ip(&sa, Dualstack) != -1) {
+                rhost.append(",");
+                rhost.append(am_inet_ntop(&sa));
+            }
+            curl_free(host);
+            if(port) curl_free(port);
+
+            add_to_resolve_slist(&hosts, rhost.c_str());
+        }
+    }
+    curl_url_cleanup(curlu);
+
+    resolve_timer.set(next_time/1000);
+}
+
 void HttpClient::on_connection_delete(CurlConnection *c)
 {
     invalid_ptrs.add(c);
@@ -621,7 +714,7 @@ void HttpClient::on_connection_delete(CurlConnection *c)
     }
 }
 
-void HttpClient::showStats(AmArg &ret)
+void HttpClient::showStats(const AmArg& args, AmArg &ret)
 {
     ret["resend_interval"] = resend_interval;
     ret["sync_context_count"] = sync_contexts.size();
@@ -631,4 +724,3 @@ void HttpClient::showStats(AmArg &ret)
         dest.second.showStats(dst);
     }
 }
-

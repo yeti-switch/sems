@@ -19,7 +19,7 @@ public:
   HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination, int epoll_fd);
   ~HttpUploadConnection();
 
-  int init(CURLM *curl_multi);
+  int init(struct curl_slist* hosts, CURLM *curl_multi);
 
   int on_finished(CURLcode result);
   void on_requeue();

@@ -3,6 +3,7 @@
 #include "ampi/HttpClientAPI.h"
 
 #include "AmApi.h"
+#include "RpcTreeHandler.h"
 #include "AmEventDispatcher.h"
 
 #include "AmEventFdQueue.h"
@@ -25,7 +26,7 @@ class HttpClient
 : public AmThread,
   public AmEventFdQueue,
   public AmEventHandler,
-  public AmDynInvoke,
+  public RpcTreeHandler<HttpClient>,
   public CurlMultiHandler
 {
     friend class HttpClientFactory;
@@ -68,6 +69,7 @@ class HttpClient
     using SyncContextsMap = std::unordered_map<string, SyncContextData>;
     SyncContextsMap sync_contexts;
     AmTimerFd sync_contexts_timer;
+    AmTimerFd resolve_timer;
 
     int configure(const string& config);
     int init();
@@ -81,24 +83,26 @@ class HttpClient
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
     void on_sync_context_timer();
     void on_resend_timer_event();
+    void on_update_resolve_list();
 
-    void showStats(AmArg &ret);
-    void postRequest(const AmArg& args, AmArg& ret);
+    rpc_handler showStats;
+    rpc_handler postRequest;
+    rpc_handler dstDump;
+    rpc_handler showDnsCache;
+    rpc_handler resetDnsCache;
 
     /* true if event consumed */
     template<typename EventType>
     bool check_http_event_sync_ctx(const EventType &u);
 
+    bool reloadCache();
   public:
     HttpClient();
     ~HttpClient();
 
     static HttpClient* instance();
     static void dispose();
-    AmDynInvoke* getInstance() { return instance(); }
-
-    void invoke(const string& method,
-                const AmArg& args, AmArg& ret);
+    AmDynInvoke* getInstance() { return static_cast<AmDynInvoke*>(instance()); }
 
     int onLoad();
 
@@ -109,5 +113,6 @@ class HttpClient
     void process_http_event(AmEvent* ev);
 
     void on_connection_delete(CurlConnection *c);
+    void init_rpc_tree();
 };
 

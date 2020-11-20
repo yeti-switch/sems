@@ -181,9 +181,6 @@ void CoreRpc::init_rpc_tree()
             reg_method(show_media,"streams","active media streams info",&CoreRpc::showMediaStreams);
         AmArg &show_recorder = reg_leaf(show,"recorder","async audio recorder instance");
             reg_method(show_recorder,"stats","",&CoreRpc::showRecorderStats);
-        AmArg &show_http = reg_leaf(show,"http","http client instance");
-            reg_method(show_http,"destinations","",&CoreRpc::showHttpDestinations);
-            reg_method(show_http,"stats","",&CoreRpc::showHttpStats);
 
     //request
     AmArg &request = reg_leaf(root,"request");
@@ -197,8 +194,6 @@ void CoreRpc::init_rpc_tree()
         AmArg &request_resolver = reg_leaf(request,"resolver");
             reg_method(request_resolver,"clear","",&CoreRpc::requestResolverClear);
             reg_method(request_resolver,"get","",&CoreRpc::requestResolverGet);
-        AmArg &request_http = reg_leaf(request,"http","http_client instance");
-        reg_method(request_http,"upload","manual event generation",&CoreRpc::requestHttpUpload);
 
     //set
     AmArg &set = reg_leaf(root,"set");
@@ -610,49 +605,6 @@ void CoreRpc::requestShutdownCancel(const AmArg& args, AmArg& ret)
 void CoreRpc::showRecorderStats(const AmArg&, AmArg& ret)
 {
     AmAudioFileRecorderProcessor::instance()->getStats(ret);
-}
-
-void CoreRpc::showHttpDestinations(const AmArg& args, AmArg& ret)
-{
-    AmDynInvokeFactory* f = AmPlugIn::instance()->getFactory4Di("http_client");
-    if(NULL==f){
-        throw AmSession::Exception(500,"http_client module not loaded");
-    }
-    AmDynInvoke* i = f->getInstance();
-    if(NULL==i){
-        throw AmSession::Exception(500,"can't get http client instance");
-    }
-    i->invoke("show",args,ret);
-}
-
-void CoreRpc::showHttpStats(const AmArg& args, AmArg& ret)
-{
-    AmDynInvokeFactory* f = AmPlugIn::instance()->getFactory4Di("http_client");
-    if(NULL==f){
-        throw AmSession::Exception(500,"http_client module not loaded");
-    }
-    AmDynInvoke* i = f->getInstance();
-    if(NULL==i){
-        throw AmSession::Exception(500,"can't get http client instance");
-    }
-    i->invoke("stats",args,ret);
-}
-
-void CoreRpc::requestHttpUpload(const AmArg& args, AmArg& ret)
-{
-    args.assertArrayFmt("sss");
-
-    if (AmSessionContainer::instance()->postEvent(
-        HTTP_EVENT_QUEUE,
-        new HttpUploadEvent(args.get(0).asCStr(),
-                            args.get(1).asCStr(),
-                            args.get(2).asCStr(),
-                            string())))
-    {
-        ret = "posted to queue";
-    } else {
-        ret = "failed to post event";
-    }
 }
 
 void CoreRpc::requestResolverClear(const AmArg&, AmArg& ret)
