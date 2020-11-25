@@ -242,6 +242,7 @@ void HttpClient::dstDump(const AmArg&, AmArg& ret)
 
 void HttpClient::showDnsCache(const AmArg& args, AmArg& ret)
 {
+    AmLock lock(host_m);
     struct curl_slist* host = hosts;
     while(host) {
         ret.push(host->data);
@@ -659,6 +660,7 @@ void HttpClient::on_update_resolve_list()
     DBG("the cache is reset. trying update");
     resolve_timer.read();
 
+    AmLock lock(host_m);
     if(hosts) {
         curl_slist_free_all(hosts);
         hosts = 0;
@@ -702,7 +704,7 @@ void HttpClient::on_update_resolve_list()
     }
     curl_url_cleanup(curlu);
 
-    resolve_timer.set(next_time/1000);
+    resolve_timer.set(next_time);
 }
 
 void HttpClient::on_connection_delete(CurlConnection *c)
