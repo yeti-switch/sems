@@ -1,3 +1,12 @@
+sems (1.42.0) stable; urgency=low
+
+  * re-enable system libcurl usage
+  * http_client: use local DNS cache to avoid connections stuck because of curL_multi/resolver racing
+  * http_client: fix resend_connection_limit processing
+  * http_client: fix SYNC_CONTEXTS_TIMER_INVERVAL
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 26 Nov 2020 17:14:31 +0200
+
 sems (1.41.0) stable; urgency=low
 
   * revert to use bundled CURL 
