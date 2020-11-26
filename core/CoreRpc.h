@@ -81,10 +81,6 @@ class CoreRpc final
 
     rpc_handler showRecorderStats;
 
-    rpc_handler showHttpDestinations;
-    rpc_handler showHttpStats;
-    rpc_handler requestHttpUpload;
-
     rpc_handler requestResolverClear;
     rpc_handler requestResolverGet;
 
