@@ -26,7 +26,7 @@ HttpUploadConnection::~HttpUploadConnection() {
     if(fd) fclose(fd);
 }
 
-int HttpUploadConnection::init(CURLM *curl_multi)
+int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
 {
     struct stat file_info;
 
@@ -50,7 +50,7 @@ int HttpUploadConnection::init(CURLM *curl_multi)
         return -1;
     }
 
-    if(init_curl(curl_multi)){
+    if(init_curl(hosts, curl_multi)){
         ERROR("curl connection initialization failed");
         return -1;
     }

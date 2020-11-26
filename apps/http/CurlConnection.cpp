@@ -23,26 +23,47 @@ CurlConnection::CurlConnection(int epoll_fd)
   : curl(NULL),
     epoll_fd(epoll_fd),
     //s(-1),
-    socket_watched(false)
+    socket_watched(false),
+    resolve_hosts(0)
 { }
 
 CurlConnection::~CurlConnection()
 {
     if(curl) curl_easy_cleanup(curl);
+    if(resolve_hosts) curl_slist_free_all(resolve_hosts);
 }
 
-int CurlConnection::init_curl(CURLM *curl_multi)
+static struct curl_slist* clone_resolve_slist(struct curl_slist* hosts)
+{
+    struct curl_slist *tmp = 0, *resolve_hosts= 0;
+    while(hosts) {
+        tmp = curl_slist_append(resolve_hosts, hosts->data);
+
+        if(!tmp) {
+            curl_slist_free_all(resolve_hosts);
+            return NULL;
+        }
+
+        resolve_hosts = tmp;
+        hosts = hosts->next;
+    }
+    return resolve_hosts;
+}
+
+int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
 {
     if(!(curl=curl_easy_init())){
         ERROR("curl_easy_init call failed");
         return -1;
     }
-
     easy_setopt(CURLOPT_SOCKOPTFUNCTION , &sockopt_callback);
     easy_setopt(CURLOPT_SOCKOPTDATA , this);
 
     easy_setopt(CURLOPT_PRIVATE, this);
     easy_setopt(CURLOPT_ERRORBUFFER, curl_error);
+
+    resolve_hosts = clone_resolve_slist(hosts);
+    easy_setopt(CURLOPT_CONNECT_TO, resolve_hosts);
 
 #ifdef ENABLE_DEBUG
     easy_setopt(CURLOPT_VERBOSE, 1L);

@@ -27,11 +27,11 @@ HttpMultiPartFormConnection::~HttpMultiPartFormConnection() {
         curl_mime_free(form);
 }
 
-int HttpMultiPartFormConnection::init(CURLM *curl_multi)
+int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
 {
     curl_mimepart *field;
 
-    if(init_curl(curl_multi)) {
+    if(init_curl(hosts, curl_multi)) {
         ERROR("curl connection initialization failed");
         return -1;
     }

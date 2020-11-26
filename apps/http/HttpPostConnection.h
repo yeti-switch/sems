@@ -18,7 +18,7 @@ public:
   HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination, int epoll_fd);
   ~HttpPostConnection();
 
-  int init(CURLM *curl_multi);
+  int init(struct curl_slist* hosts, CURLM *curl_multi);
 
   int on_finished(CURLcode result);
   void on_requeue();

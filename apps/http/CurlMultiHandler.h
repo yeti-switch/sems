@@ -14,6 +14,8 @@ class CurlMultiHandler
 protected:
   int curl_running_handles;
   CURLM *curl_multi;
+  struct curl_slist* hosts;
+  AmMutex host_m;
   AmTimerFd curl_timer;
 
   virtual void on_connection_delete(CurlConnection *c) {}

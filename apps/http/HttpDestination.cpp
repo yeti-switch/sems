@@ -256,12 +256,24 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
 
     if(cfg_size(cfg, PARAM_CONNECTION_LIMIT_NAME)) connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
     else connection_limit = values.connection_limit;
+    if(!connection_limit) {
+        ERROR("connection limit cannot equal zero");
+        return -1;
+    }
 
     if(cfg_size(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME)) resend_connection_limit = cfg_getint(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME);
     else resend_connection_limit = values.resend_connection_limit;
+    if(!resend_connection_limit) {
+        ERROR("resend connection limit cannot equal zero");
+        return -1;
+    }
 
     if(cfg_size(cfg, PARAM_RESEND_QUEUE_MAX_NAME)) resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
     else resend_queue_max = values.resend_queue_max;
+    if(!resend_queue_max) {
+        ERROR("resend queue max cannot equal zero");
+        return -1;
+    }
 
     return 0;
 }
@@ -333,7 +345,8 @@ void HttpDestination::addEvent(HttpEvent* event)
 void HttpDestination::send_failed_events(HttpClient* client)
 {
     HttpEvent* event;
-    unsigned int count_will_send = resend_connection_limit;
+    unsigned int count_will_send = (resend_count_connection.get() < resend_connection_limit) ?
+                                    resend_connection_limit - resend_count_connection.get() : 0;
     while(!events.empty() &&
          count_will_send &&
          (event = events.back()) &&

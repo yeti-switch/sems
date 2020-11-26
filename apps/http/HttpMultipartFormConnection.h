@@ -22,7 +22,7 @@ public:
 
   const HttpPostMultipartFormEvent &get_event() { return event; }
 
-  int init(CURLM *curl_multi);
+  int init(struct curl_slist* hosts, CURLM *curl_multi);
 
   int on_finished(CURLcode result);
   void on_requeue();

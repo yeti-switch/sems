@@ -179,6 +179,7 @@ struct dns_handle
 
     bool valid();
     bool eoip();
+    int get_expired();
 
     int next_ip(sockaddr_storage* sa, dns_priority priority);
     const dns_handle& operator = (const dns_handle& rh);

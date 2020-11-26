@@ -28,9 +28,9 @@ HttpPostConnection::~HttpPostConnection() {
     if(headers) curl_slist_free_all(headers);
 }
 
-int HttpPostConnection::init(CURLM *curl_multi)
+int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
 {
-    if(init_curl(curl_multi)){
+    if(init_curl(hosts, curl_multi)){
         ERROR("curl connection initialization failed");
         return -1;
     }

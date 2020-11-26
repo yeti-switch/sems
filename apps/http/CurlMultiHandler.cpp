@@ -15,7 +15,8 @@ static int timer_function_static(CURLM *multi, long timeout_ms, CurlMultiHandler
 
 CurlMultiHandler::CurlMultiHandler()
     : curl_running_handles(0),
-      curl_multi(NULL)
+      curl_multi(NULL),
+      hosts(0)
 { }
 
 int CurlMultiHandler::init_curl(int epoll_fd)
@@ -38,6 +39,7 @@ int CurlMultiHandler::init_curl(int epoll_fd)
 CurlMultiHandler::~CurlMultiHandler()
 {
     curl_multi_cleanup(curl_multi);
+    if(hosts) curl_slist_free_all(hosts);
 }
 
 void CurlMultiHandler::check_multi_info()
@@ -82,8 +84,11 @@ void CurlMultiHandler::on_timer_event()
     check_multi_info();
 
     curl_timer.read();
+/*
+    long timeout = 0;
+    curl_multi_timeout(curl_multi, &timeout);
+    timer_function(curl_multi, timeout);*/
 }
-
 
 void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
 {
@@ -139,9 +144,8 @@ int CurlMultiHandler::timer_function(CURLM *multi, long timeout_ms)
     CDBG("process request for timer with timeout %ld", timeout_ms);
     if(timeout_ms>0){
         curl_timer.set(timeout_ms*1000,false);
-    } else {
+    } else if(timeout_ms == 0){
         curl_timer.set(1,false);
     }
     return 0;
 }
-

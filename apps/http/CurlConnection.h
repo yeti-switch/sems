@@ -10,6 +10,7 @@ class CurlConnection
   char curl_error[CURL_ERROR_SIZE];
 protected:
   CURL *curl;
+  struct curl_slist* resolve_hosts;
   long http_response_code;
 public:
   CurlConnection(int epoll_fd);
@@ -17,7 +18,7 @@ public:
 
   int socket() { return s; }
 
-  int init_curl(CURLM *curl_multi = NULL);
+  int init_curl(struct curl_slist* hosts, CURLM *curl_multi = NULL);
   int watch_socket(int socket, int what);
 
   int finish(CURLcode result);
