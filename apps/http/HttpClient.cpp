@@ -188,7 +188,8 @@ int HttpClient::init()
     sync_contexts_timer.set(SYNC_CONTEXTS_TIMER_INVERVAL);
 
     resolve_timer.link(epoll_fd, true);
-    resolve_timer.set(1, false);
+    //resolve_timer.set(1, false);
+    update_resolve_list();
 
     if(init_curl(epoll_fd)){
         ERROR("curl init failed");
@@ -292,7 +293,8 @@ void HttpClient::run()
             } else if(p==&sync_contexts_timer) {
                 on_sync_context_timer();
             } else if(p==&resolve_timer) {
-                on_update_resolve_list();
+                DBG("DNS cache timer expired");
+                update_resolve_list();
             } else if(p==static_cast<AmEventFdQueue *>(this)){
                 processEvents();
             } else if(p==&stop_event){
@@ -655,9 +657,10 @@ static bool add_to_resolve_slist(struct curl_slist** hosts, const char* r_host)
 }
 
 
-void HttpClient::on_update_resolve_list()
+void HttpClient::update_resolve_list()
 {
-    DBG("the cache is reset. trying update");
+    DBG("update local DNS cache");
+
     resolve_timer.read();
 
     AmLock lock(host_m);
@@ -668,20 +671,24 @@ void HttpClient::on_update_resolve_list()
 
     CURLU *curlu = curl_url();
     if(!curlu) return;
-    uint64_t next_time = -1;
+    uint64_t next_time = 0;
+
     for(auto& dst : destinations) {
         for(auto& url : dst.second.url) {
-            if(curl_url_set(curlu, CURLUPART_URL, url.c_str(), 0)) continue;
             char* host;
-            curl_url_get(curlu, CURLUPART_HOST, &host, 0);
             char* port;
-            curl_url_get(curlu, CURLUPART_PORT, &port, 0);
-
             dns_handle handle;
             sockaddr_storage sa;
-            if(resolver::instance()->resolve_name(host, &handle, &sa, Dualstack) == -1)
+
+            if(curl_url_set(curlu, CURLUPART_URL, url.c_str(), 0))
                 continue;
-            if(next_time > handle.get_expired()) {
+            curl_url_get(curlu, CURLUPART_HOST, &host, 0);
+            curl_url_get(curlu, CURLUPART_PORT, &port, 0);
+
+            if(resolver::instance()->resolve_name(host, &handle, &sa, Dualstack) <= 0)
+                continue;
+
+            if(!next_time || next_time > handle.get_expired()) {
                 next_time = handle.get_expired();
             }
 
@@ -691,11 +698,13 @@ void HttpClient::on_update_resolve_list()
             if(port) rhost.append(port);
             else rhost.append("80");
             rhost.append(":");
+
             rhost.append(am_inet_ntop(&sa));
             while(handle.next_ip(&sa, Dualstack) != -1) {
                 rhost.append(",");
                 rhost.append(am_inet_ntop(&sa));
             }
+
             curl_free(host);
             if(port) curl_free(port);
 
@@ -703,6 +712,9 @@ void HttpClient::on_update_resolve_list()
         }
     }
     curl_url_cleanup(curlu);
+
+    if(next_time) DBG("set resolve_timer interval to: %f sec", next_time/1e6);
+    else DBG("disarm resolve_timer");
 
     resolve_timer.set(next_time);
 }

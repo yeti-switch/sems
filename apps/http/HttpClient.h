@@ -83,7 +83,7 @@ class HttpClient
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
     void on_sync_context_timer();
     void on_resend_timer_event();
-    void on_update_resolve_list();
+    void update_resolve_list();
 
     rpc_handler showStats;
     rpc_handler postRequest;
