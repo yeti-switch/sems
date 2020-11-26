@@ -839,12 +839,14 @@ bool dns_handle::eoip()
         return (ip_n == -1);
 }
 
-int dns_handle::get_expired()
+u_int64_t dns_handle::get_expired()
 {
     if(srv_e)
         return srv_e->expire;
-    else 
+    else if(ip_e)
         return ip_e->expire;
+    else
+        return 0;
 }
 
 int dns_handle::next_ip(sockaddr_storage* sa, dns_priority priority)
