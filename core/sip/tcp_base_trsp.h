@@ -63,6 +63,7 @@ public:
 
 class tcp_base_trsp : public trsp_socket
 {
+    AtomicCounter& sip_parse_errors;
 protected:
     friend class trsp_worker;
     friend class trsp_base_input;
@@ -192,6 +193,8 @@ public:
     }
 
     void getInfo(AmArg &ret);
+
+    void inc_sip_parse_error() { sip_parse_errors.inc(); }
 };
 
 class trsp_socket_factory
@@ -244,10 +247,12 @@ public:
 
 class trsp_server_socket : public trsp_socket
 {
+public:
+    AtomicCounter& sip_parse_errors;
 protected:
     struct event_base* evbase;
     struct event*      ev_accept;
-    
+
     friend class trsp_worker;
     trsp_socket_factory* sock_factory;
     vector<trsp_worker*> workers;
@@ -302,6 +307,8 @@ public:
     struct timeval* get_idle_timeout();
 
     void getInfo(AmArg &ret);
+
+    void inc_sip_parse_error() { sip_parse_errors.inc(); }
 };
 
 class trsp: public AmThread
