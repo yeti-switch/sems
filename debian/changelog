@@ -1,3 +1,9 @@
+sems (1.43.0) stable; urgency=low
+
+  * temporary remove sip_parse_errors counter to avoid deadlock
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 04 Dec 2020 03:39:57 +0200
+
 sems (1.42.0) stable; urgency=low
 
   * re-enable system libcurl usage

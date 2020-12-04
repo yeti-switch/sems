@@ -59,11 +59,11 @@ trsp_socket::trsp_socket(unsigned short if_num_, unsigned short proto_idx_, unsi
 		socket_transport trans,unsigned int sys_if_idx_, int sd_)
 	: sd(sd_), ip(), port(0), actual_ip(), actual_port(0),
 	  if_num(if_num_), proto_idx(proto_idx_), sys_if_idx(sys_if_idx_),
-      socket_options(opts), transport(trans), tos_byte(0),
+      socket_options(opts), transport(trans), tos_byte(0)/*,
       sip_parse_errors(stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
                       .addLabel("interface", AmConfig.sip_ifs[if_num].name)
                       .addLabel("transport", socket_transport2proto_str(transport))
-                      .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+                      .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))*/
 {
     memset(&addr,0,sizeof(sockaddr_storage));
 }
