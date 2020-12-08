@@ -143,15 +143,18 @@ void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
     }
 }
 
-tcp_base_trsp::tcp_base_trsp(trsp_server_socket* server_sock_, trsp_worker* server_worker_,
-                             int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
-                             event_base* evbase_, trsp_input* input_)
-    : trsp_socket(server_sock_->get_if(),server_sock_->get_proto_idx(),0,transport,0,sd),
-      server_sock(server_sock_), server_worker(server_worker_),
-      closed(false), connected(false),
-      evbase(evbase_), input(input_),
-      read_ev(NULL), write_ev(NULL),
-      sip_parse_errors(server_sock_->sip_parse_errors)
+tcp_base_trsp::tcp_base_trsp(
+    trsp_server_socket* server_sock_, trsp_worker* server_worker_,
+    int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
+    event_base* evbase_, trsp_input* input_)
+  : trsp_socket(
+        server_sock_->get_sip_parse_errors(),
+        server_sock_->get_if(),
+        server_sock_->get_proto_idx(),0,transport,0,sd),
+    server_sock(server_sock_), server_worker(server_worker_),
+    closed(false), connected(false),
+    evbase(evbase_), input(input_),
+    read_ev(NULL), write_ev(NULL)
 {
     sockaddr_ssl* sa_ssl = (sockaddr_ssl*)(sa);
     CLASS_DBG("tcp_base_trsp() server_socket:%p transport:%d sa:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
@@ -804,14 +807,16 @@ void trsp_worker::on_stop()
     stopped.wait_for();
 }
 
-trsp_server_socket::trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory)
-    : trsp_socket(if_num, proto_idx, opts, sock_factory->transport),
-      ev_accept(nullptr),
-      sock_factory(sock_factory),
-      sip_parse_errors(stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
-                      .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-                      .addLabel("transport", socket_transport2proto_str(transport))
-                      .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+trsp_server_socket::trsp_server_socket(
+    unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory)
+  : trsp_socket(
+        stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()),
+        if_num, proto_idx, opts, sock_factory->transport),
+    ev_accept(nullptr),
+    sock_factory(sock_factory)
 {
     inc_ref(sock_factory);
 }

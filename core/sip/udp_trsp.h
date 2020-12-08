@@ -50,16 +50,17 @@ class udp_trsp_socket: public trsp_socket
     int sendto(const sockaddr_storage* sa, const char* msg, const int msg_len);
     int sendmsg(const sockaddr_storage* sa, const char* msg, const int msg_len);
 
-    AtomicCounter& sip_parse_errors;
-public:
-	udp_trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
-		    socket_transport transport, unsigned int sys_if_idx = 0)
-	: trsp_socket(if_num, proto_idx,opts,transport,sys_if_idx),
-	  sip_parse_errors(stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
-                      .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-                      .addLabel("transport", socket_transport2proto_str(transport))
-                      .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
-
+  public:
+    udp_trsp_socket(
+        unsigned short if_num, unsigned short proto_idx, unsigned int opts,
+        socket_transport transport, unsigned int sys_if_idx = 0)
+  : trsp_socket(
+        stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()),
+        if_num, proto_idx,opts,transport,sys_if_idx)
+    {}
     ~udp_trsp_socket() {
         close(sd);
     }
@@ -82,8 +83,6 @@ public:
 	     const int msg_len, unsigned int flags);
     
     int recv();
-
-    void inc_sip_parse_error() { sip_parse_errors.inc(); }
 };
 
 class udp_trsp: public AmThread

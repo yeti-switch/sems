@@ -63,8 +63,7 @@ public:
 
 class tcp_base_trsp : public trsp_socket
 {
-    AtomicCounter& sip_parse_errors;
-protected:
+  protected:
     friend class trsp_worker;
     friend class trsp_base_input;
     trsp_server_socket* server_sock;
@@ -193,8 +192,6 @@ public:
     }
 
     void getInfo(AmArg &ret);
-
-    void inc_sip_parse_error() { sip_parse_errors.inc(); }
 };
 
 class trsp_socket_factory
@@ -247,8 +244,6 @@ public:
 
 class trsp_server_socket : public trsp_socket
 {
-public:
-    AtomicCounter& sip_parse_errors;
 protected:
     struct event_base* evbase;
     struct event*      ev_accept;

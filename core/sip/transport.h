@@ -133,9 +133,13 @@ protected:
 
     uint8_t tos_byte;
 
+    AtomicCounter& sip_parse_errors;
+
 public:
-	trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
-		socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
+    trsp_socket(
+        AtomicCounter& parse_errors_counter,
+        unsigned short if_num, unsigned short proto_idx, unsigned int opts,
+        socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
     int set_tos_byte(uint8_t byte);
@@ -254,7 +258,8 @@ public:
 
 	virtual void getInfo(AmArg &) {}
 
-    virtual void inc_sip_parse_error() = 0;
+    virtual void inc_sip_parse_error() { sip_parse_errors.inc(); }
+    AtomicCounter& get_sip_parse_errors() { return sip_parse_errors; }
 };
 
 class trsp_acl {
