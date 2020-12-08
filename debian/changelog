@@ -1,3 +1,9 @@
+sems (1.44.0) stable; urgency=low
+
+  * fix sip_parse_errors counter deadlock
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 08 Dec 2020 13:56:53 +0200
+
 sems (1.43.0) stable; urgency=low
 
   * temporary remove sip_parse_errors counter to avoid deadlock
