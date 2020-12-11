@@ -380,6 +380,7 @@ void AmBasicSipDialog::initFromLocalRequest(const AmSipRequest& req)
   scheme       = req.scheme;
   user         = req.user;
   domain       = req.domain;
+  route        = req.route;
 
   setCallid(      req.callid   );
   setLocalTag(    req.from_tag );
