@@ -1,3 +1,15 @@
+sems (1.44.1) stable; urgency=low
+
+  * fix adding route in sip request
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 05 Jan 2021 19:39:58 +0200
+
+sems (1.44.0) stable; urgency=low
+
+  * fix sip_parse_errors counter deadlock
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 08 Dec 2020 13:56:53 +0200
+
 sems (1.44.0) stable; urgency=low
 
   * fix sip_parse_errors counter deadlock
