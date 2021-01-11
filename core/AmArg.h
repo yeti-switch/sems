@@ -99,7 +99,7 @@ class AmArg
 {
  public:
   // type enum
-  enum {
+  enum Type {
     Undef=0,
 
     Int,
@@ -186,6 +186,11 @@ private:
  AmArg(const long int& v)
    : type(Int),
     v_int(v)
+    { INC_AMARGSIZE(sizeof(*this)); }
+
+ AmArg(const unsigned int& v)
+   : type(LongLong),
+    v_long(v)
     { INC_AMARGSIZE(sizeof(*this)); }
 
  AmArg(const long unsigned int& v)
