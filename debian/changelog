@@ -1,3 +1,9 @@
+sems (1.45.0) stable; urgency=low
+
+  * add options prober application
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 12 Jan 2021 11:29:22 +0200
+
 sems (1.44.1) stable; urgency=low
 
   * fix adding route in sip request
