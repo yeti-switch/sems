@@ -306,6 +306,9 @@ void SipSingleProbe::getInfo(AmArg &a)
     a["from"] =  dlg.getLocalParty();
     a["to"] =  dlg.getRemoteParty();
     a["contact"] =  contact_uri;
+    a["proxy"] = dlg.outbound_proxy;
+    a["append_headers"] = append_headers;
+    a["sip_interface_name"] = sip_interface_name;
 
     a["last_reply_code"] = last_reply_code;
     a["last_reply_reason"] = last_reply_reason;
