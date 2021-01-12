@@ -8,7 +8,7 @@
 
 vector<string> ProbersMetricGroup::metrics_keys_names = {
     "options_probe_last_reply_code",
-    "options_probe_last_reply_delay_ms"
+    "options_probe_last_reply_rtt_ms"
 };
 
 /*vector<string> ProbersMetricGroup::metrics_help_strings = {
