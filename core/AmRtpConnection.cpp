@@ -18,6 +18,8 @@ static string streamConnType2str(AmStreamConnection::ConnectionType type)
             return "RAW";
         case AmStreamConnection::ZRTP_CONN:
             return "ZRTP";
+        case AmStreamConnection::UDPTL_CONN:
+            return "UDPTL";
         default:
             return "UNKNOWN";
     }
