@@ -316,9 +316,23 @@ void OptionsProber::ShowProbers(const AmArg &args, AmArg &ret)
 {
     ret.assertArray();
     AmLock l(probers_mutex);
-    for(auto p: probers_by_id) {
-        ret.push(AmArg());
-        p.second->getInfo(ret.back());
+    if(isArgArray(args) && args.size()) {
+        //show probers from id list
+        for(size_t i = 0; i < args.size(); i++) {
+            if(!isArgInt(args[i]))
+                continue;
+            auto p = probers_by_id.find(args[i].asInt());
+            if(p == probers_by_id.end())
+                continue;
+            ret.push(AmArg());
+            p->second->getInfo(ret.back());
+        }
+    } else {
+        //show all probers
+        for(auto p: probers_by_id) {
+            ret.push(AmArg());
+            p.second->getInfo(ret.back());
+        }
     }
 }
 
