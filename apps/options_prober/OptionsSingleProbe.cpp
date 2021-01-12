@@ -239,9 +239,8 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     }
 
     //process contact_uri and append hdrs
-    options_flags = 0;
+    options_flags = SIP_FLAGS_NOCONTACT;
     if(!contact_uri.empty()) {
-        options_flags = SIP_FLAGS_NOCONTACT;
         options_hdrs = SIP_HDR_COLSP(SIP_HDR_CONTACT) "<" + contact_uri + ">" + CRLF;
     }
     options_hdrs += preprocess_append_headers();
@@ -293,7 +292,7 @@ void SipSingleProbe::getInfo(AmArg &a)
     a["ruri"] =  dlg.getRemoteUri();
     a["from"] =  dlg.getLocalParty();
     a["to"] =  dlg.getRemoteParty();
-    a["contact"] =  !contact_uri.empty() ? contact_uri : dlg.getContactUri();
+    a["contact"] =  contact_uri;
 
     a["last_reply_code"] = last_reply_code;
     a["last_reply_reason"] = last_reply_reason;
