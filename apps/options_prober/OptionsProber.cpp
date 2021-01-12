@@ -336,59 +336,6 @@ void OptionsProber::ShowProbers(const AmArg &args, AmArg &ret)
     }
 }
 
-struct ProbersMetricGroup
-  : public StatCountersGroupsInterface
-{
-    static vector<string> metrics_keys_names;
-    static vector<string> metrics_help_strings;
-
-    enum metric_keys_idx {
-        PROBE_VALUE_LAST_REPLY_CODE = 0,
-        PROBE_VALUE_MAX
-    };
-    struct reg_info {
-        map<string, string> labels;
-        unsigned long long values[PROBE_VALUE_MAX];
-    };
-    vector<reg_info> data;
-    int idx;
-
-    ProbersMetricGroup()
-      : StatCountersGroupsInterface(Gauge)
-    {}
-
-    void add_reg(SipSingleProbe *p)
-    {
-        data.emplace_back();
-        p->serializeStats(data.back().labels, data.back().values);
-    }
-
-    void serialize(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
-    {
-        for(int i = 0; i < PROBE_VALUE_MAX; i++) {
-            idx = i;
-            //setHelp(metrics_help_strings[idx]);
-            callback(metrics_keys_names[idx], *this);
-        }
-    }
-
-    void iterate_counters(iterate_counters_callback_type callback) override
-    {
-        for (size_t i = 0; i < data.size(); i++) {
-            auto &reg = data[i];
-            callback(reg.values[idx], 0, reg.labels);
-        }
-    }
-};
-
-vector<string> ProbersMetricGroup::metrics_keys_names = {
-    "options_probe_last_reply_code",
-};
-
-/*vector<string> ProbersMetricGroup::metrics_help_strings = {
-    ""
-};*/
-
 void OptionsProber::operator ()(const string &name, iterate_groups_callback_type callback)
 {
     ProbersMetricGroup g;

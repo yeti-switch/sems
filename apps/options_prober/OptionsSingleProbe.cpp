@@ -6,6 +6,15 @@
 #include "sip/parse_via.h"
 #include "sip/parse_uri.h"
 
+vector<string> ProbersMetricGroup::metrics_keys_names = {
+    "options_probe_last_reply_code",
+    "options_probe_last_reply_delay_ms"
+};
+
+/*vector<string> ProbersMetricGroup::metrics_help_strings = {
+    ""
+};*/
+
 static bool transport_protocol_validator(const AmArg &a) {
     int id = a.asInt();
     if(id < sip_transport::UDP || id > sip_transport::WSS) {
@@ -266,6 +275,7 @@ bool SipSingleProbe::process(timep &now)
     }
 
     active_dialog = true;
+    last_send_time = now;
     recheck_time = now + interval;
 
     return false;
@@ -280,6 +290,9 @@ void SipSingleProbe::onSipReply(
     active_dialog = false;
     last_reply_code = reply.code;
     last_reply_reason = reply.reason;
+    last_reply_delay = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now() - last_send_time);
+    last_reply_contact = !reply.contact.empty() ? reply.contact : getHeader(reply.hdrs, "Contact", "m", false);
 }
 
 void SipSingleProbe::getInfo(AmArg &a)
@@ -296,6 +309,8 @@ void SipSingleProbe::getInfo(AmArg &a)
 
     a["last_reply_code"] = last_reply_code;
     a["last_reply_reason"] = last_reply_reason;
+    a["last_reply_contact"] = last_reply_contact;
+    a["last_reply_delay_ms"] = last_reply_delay.count();
 }
 
 void SipSingleProbe::serializeStats(map<string, string> &labels, unsigned long long *values) const
@@ -303,11 +318,11 @@ void SipSingleProbe::serializeStats(map<string, string> &labels, unsigned long l
     labels["id"] = std::to_string(id);
     labels["name"] = name;
     labels["interval"] = std::to_string(interval.count());
-    labels["interval"] = std::to_string(interval.count());
     labels["local_tag"] = dlg.getLocalTag();
     labels["ruri"] =  dlg.getRemoteUri();
     labels["from"] =  dlg.getLocalParty();
     labels["to"] =  dlg.getRemoteParty();
 
-    values[0] = last_reply_code;
+    values[ProbersMetricGroup::PROBE_VALUE_LAST_REPLY_CODE] = last_reply_code;
+    values[ProbersMetricGroup::PROBE_VALUE_LAST_REPLY_DELAY_MS] = last_reply_delay.count();
 }
