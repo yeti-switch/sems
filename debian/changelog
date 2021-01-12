@@ -1,3 +1,11 @@
+sems (1.45.1) stable; urgency=low
+
+  * options_prober: add fields for rpc: proxy,append_headers,sip_interface_name,last_reply_contact,last_reply_delay
+  * options_prober: do not send Contact header if not specified
+  * options_prober: rpc: allow to get specified probers by id
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 12 Jan 2021 20:44:41 +0200
+
 sems (1.45.0) stable; urgency=low
 
   * add options prober application
