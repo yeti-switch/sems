@@ -812,7 +812,7 @@ trsp_server_socket::trsp_server_socket(
   : trsp_socket(
         stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-            .addLabel("transport", socket_transport2proto_str(transport))
+            .addLabel("transport", socket_transport2proto_str(sock_factory->transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()),
         if_num, proto_idx, opts, sock_factory->transport),
     ev_accept(nullptr),
