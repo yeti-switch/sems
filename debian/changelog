@@ -1,3 +1,10 @@
+sems (1.45.2) stable; urgency=low
+
+  * fix sems_core_sip_parse_errors metric invalid transport label
+  * options_prober: rename options_probe_last_reply_delay_ms -> options_probe_last_reply_rtt_ms
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Feb 2021 17:51:34 +0200
+
 sems (1.45.1) stable; urgency=low
 
   * options_prober: add fields for rpc: proxy,append_headers,sip_interface_name,last_reply_contact,last_reply_delay
