@@ -1,3 +1,10 @@
+sems (1.46.0) stable; urgency=low
+
+  * add Max-Forwards header for CANCEL & ACK requests
+  * AmB2BMedia refactoring
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 26 Feb 2021 14:45:48 +0200
+
 sems (1.45.2) stable; urgency=low
 
   * fix sems_core_sip_parse_errors metric invalid transport label
