@@ -11,7 +11,7 @@ SET(http_client_config_dist_files http_client)
 #SET(sems_module_dependency libcurl)
 
 #system curl
-FIND_PACKAGE(Curl)
+FIND_PACKAGE(CURL)
 INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
 SET(sems_module_libs ${CURL_LIBRARIES})
 
