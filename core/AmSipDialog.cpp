@@ -771,7 +771,7 @@ int AmSipDialog::cancel(bool final, const string& hdrs)
             default:
                 setStatus(Cancelling);
                 return SipCtrlInterface::cancel(&t->second.tt, local_tag,
-                                                t->first, t->second.hdrs+hdrs);
+                                                t->first, AmConfig.max_forwards, t->second.hdrs+hdrs);
             } //switch(getStatus())
         }
     }

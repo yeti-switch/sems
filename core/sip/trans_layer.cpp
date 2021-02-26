@@ -45,6 +45,7 @@
 #include "sip_ua.h"
 #include "msg_logger.h"
 #include "socket_ssl.h"
+#include "defs.h"
 
 #include "wheeltimer.h"
 #include "sip_timers.h"
@@ -1536,7 +1537,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 }
 
 int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
-			 unsigned int inv_cseq, const cstring& hdrs)
+			 unsigned int inv_cseq, unsigned int maxf, const cstring& hdrs)
 {
     assert(tt);
     assert(tt->_bucket && tt->_t);
@@ -1613,6 +1614,13 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 	return -1;
     }
 
+    string mf = int2str(maxf);
+    sip_header maxfrwd;
+    maxfrwd.type = sip_header::H_MAX_FORWARDS;
+    maxfrwd.name.set(SIP_HDR_MAX_FORWARDS, strlen(SIP_HDR_MAX_FORWARDS));
+    maxfrwd.value = stl2cstr(mf);
+    maxfrwd.p = 0;
+
     cstring cancel_str("CANCEL");
     cstring zero("0");
 
@@ -1626,7 +1634,8 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 	+ copy_hdr_len(req->callid)
 	+ cseq_len(get_cseq(req)->num_str,cancel_str)
 	+ copy_hdrs_len(req->route)
-	+ copy_hdrs_len(req->contacts);
+	+ copy_hdrs_len(req->contacts)
+	+ copy_hdr_len(&maxfrwd);
 
     request_len += hdrs.len;
     request_len += content_length_len(zero);
@@ -1646,6 +1655,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     copy_hdr_wr(&c,req->to);
     copy_hdr_wr(&c,req->from);
     copy_hdr_wr(&c,req->callid);
+    copy_hdr_wr(&c,&maxfrwd);
     cseq_wr(&c,get_cseq(req)->num_str,cancel_str);
     copy_hdrs_wr(&c,req->route);
     copy_hdrs_wr(&c,req->contacts);
@@ -2021,7 +2031,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 	    {
 		// send CANCEL
 		trans_ticket tt(t,bucket);
-		cancel(&tt,cstring(),0,cstring());
+		cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring());
 	    
 		// Now remove the transaction
 		bucket->lock();
@@ -2512,13 +2522,21 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
 {
     sip_msg* inv = t->msg;
 
+    string mf = int2str(AmConfig.max_forwards);
+    sip_header maxfrwd;
+    maxfrwd.type = sip_header::H_MAX_FORWARDS;
+    maxfrwd.name.set(SIP_HDR_MAX_FORWARDS, strlen(SIP_HDR_MAX_FORWARDS));
+    maxfrwd.value = stl2cstr(mf);
+    maxfrwd.p = 0;
+
     static cstring method("ACK",3);
     int ack_len = sip_request_line_len(method,inv->u.request->ruri_str);
 
     ack_len += copy_hdr_len(inv->via1)
             + copy_hdr_len(inv->from)
             + copy_hdr_len(reply->to)
-            + copy_hdr_len(inv->callid);
+            + copy_hdr_len(inv->callid)
+            + copy_hdr_len(&maxfrwd);
 
     ack_len += cseq_len(get_cseq(inv)->num_str,method);
 
@@ -2542,6 +2560,7 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
     copy_hdr_wr(&c,inv->from);
     copy_hdr_wr(&c,reply->to);
     copy_hdr_wr(&c,inv->callid);
+    copy_hdr_wr(&c, &maxfrwd);
 
     cseq_wr(&c,get_cseq(inv)->num_str,method);
 
@@ -2645,7 +2664,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 	{
 	    // send CANCEL
 	    trans_ticket tt(tr,bucket);
-	    cancel(&tt,cstring(),0,cstring());
+	    cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring());
 	    
 	    // Now remove the transaction
 	    bucket->lock();

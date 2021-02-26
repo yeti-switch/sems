@@ -156,7 +156,7 @@ public:
      * @param tt transaction ticket of the request to cancel.
      */
     static int cancel(trans_ticket* tt, const string& dialog_id,
-		      unsigned int inv_cseq, const string& hdrs);
+		      unsigned int inv_cseq, unsigned int maxf, const string& hdrs);
 
     /**
      * From sip_ua
