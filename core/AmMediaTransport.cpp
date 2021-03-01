@@ -42,7 +42,6 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     , cur_rtp_conn(nullptr)
     , cur_rtcp_conn(nullptr)
     , cur_raw_conn(nullptr)
-    , cur_udptl_conn(nullptr)
     , logger(nullptr)
     , sensor(nullptr)
     , type(type)
@@ -193,15 +192,10 @@ int AmMediaTransport::getLocalPort()
 
 AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
 {
-    if(mode == TRANSPORT_MODE_DEFAULT) {
-        if(!rtcp) {
-            if(cur_rtp_conn) return cur_rtp_conn;
-        } else if(cur_rtcp_conn)
-            return cur_rtcp_conn;
-    } else if(mode == TRANSPORT_MODE_FAX ||
-              mode == TRANSPORT_MODE_DTLS_FAX) {
-        if(cur_udptl_conn) return cur_udptl_conn;
-    }
+    if(!rtcp) {
+        if(cur_rtp_conn) return cur_rtp_conn;
+    } else if(cur_rtcp_conn)
+        return cur_rtcp_conn;
     return cur_raw_conn;
 }
 
@@ -684,7 +678,6 @@ void AmMediaTransport::initUdptlConnection(const string& remote_address, int rem
         seq = TRANSPORT_SEQ_UDPTL;
         addConnection(new UDPTLConnection(this, remote_address, remote_port));
         mode = TRANSPORT_MODE_FAX;
-        cur_udptl_conn = connections.back();
     } else if(seq == TRANSPORT_SEQ_DTLS) {
         seq = TRANSPORT_SEQ_UDPTL;
         {
@@ -800,7 +793,7 @@ void AmMediaTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn
         onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
         stream->freeRtpPacket(packet);
     } else if(mode == TRANSPORT_MODE_FAX || mode == TRANSPORT_MODE_DTLS_FAX) {
-        cur_udptl_conn = conn;
+        cur_raw_conn = conn;
         stream->onUdptlPacket(packet, this);
     } else {
         cur_raw_conn = conn;
@@ -877,8 +870,6 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
         cur_stream = cur_rtcp_conn;
     } else if(type == AmStreamConnection::RAW_CONN) {
         cur_stream = cur_raw_conn;
-    } else if(type == AmStreamConnection::UDPTL_CONN) {
-        cur_stream = cur_udptl_conn;
     }
     
     ssize_t ret = 0;

@@ -2025,6 +2025,7 @@ void AmRtpStream::getInfo(AmArg &ret){
 
     s.clear();
     ret["relay_enabled"] = relay_enabled;
+    ret["relay_enabled"] = relay_enabled;
     ret["relay_raw"] = relay_raw;
     ret["force_relay_cn"] = force_relay_cn;
     AmArg &p = ret["relay_payloads"];

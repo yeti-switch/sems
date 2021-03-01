@@ -198,7 +198,6 @@ protected:
     AmRtpStream* stream;
     AmStreamConnection* cur_rtp_conn;
     AmStreamConnection* cur_rtcp_conn;
-    AmStreamConnection* cur_udptl_conn;
     AmStreamConnection* cur_raw_conn;
 
     AmStreamConnection* getSuitableConnection(bool rtcp);
