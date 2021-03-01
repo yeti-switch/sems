@@ -1,7 +1,6 @@
-sems (1.46.0) stable; urgency=low
+sems (1.46.0~prod) stable; urgency=low
 
   * add Max-Forwards header for CANCEL & ACK requests
-  * AmB2BMedia refactoring
 
  -- Michael Furmur <m.furmur@gmail.com>  Fri, 26 Feb 2021 14:45:48 +0200
 
