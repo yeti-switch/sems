@@ -1,3 +1,9 @@
+sems (1.47.0) stable; urgency=low
+
+  * registrar_client: process sip_interface_name for registration
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 09 Mar 2021 21:01:41 +0200
+
 sems (1.46.0) stable; urgency=low
 
   * add Max-Forwards header for CANCEL & ACK requests
