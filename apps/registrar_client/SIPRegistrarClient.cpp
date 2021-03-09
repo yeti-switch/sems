@@ -99,6 +99,9 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     } else {
         r["postpone_timeout_msec"] = 0;
     }
+    r["resolve_priority"] = ri.resolve_priority;
+    r["scheme_id"] = ri.scheme_id;
+    r["sip_interface_name"] = ri.sip_interface_name;
     ret.push(r);
 }
 

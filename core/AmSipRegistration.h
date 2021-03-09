@@ -52,6 +52,7 @@ struct SIPRegistrationInfo {
   string proxy;
   string contact;
   string contact_uri_params;
+  string sip_interface_name;
   int expires_interval;
   int retry_delay;
   int max_attempts;

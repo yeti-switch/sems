@@ -97,6 +97,7 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
     DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
     DEF_AND_VALIDATE_OPTIONAL_STR(contact);
     DEF_AND_VALIDATE_OPTIONAL_STR_ALT(contact_uri_params, contact_params);
+    DEF_AND_VALIDATE_OPTIONAL_STR(sip_interface_name);
 
     DEF_AND_VALIDATE_OPTIONAL_INT_ALT(expires_interval, expires, 0);
     DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval,0);
@@ -111,6 +112,19 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
     string priority;
     DEF_AND_VALIDATE_OPTIONAL_STR(priority);
     resolve_priority = string_to_priority(priority);
+
+    if(info.hasMember("scheme_id")) {
+        AmArg &a = info["scheme_id"];
+        if(!isArgInt(a)) {
+            ERROR("unexpected scheme_id type. expected integer");
+            return false;
+        }
+        scheme_id = static_cast<sip_uri::uri_scheme>(a.asInt());
+        if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
+            ERROR("unexpected scheme_id value: %d", scheme_id);
+            return false;
+        }
+     }
 
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 #undef DEF_AND_VALIDATE_OPTIONAL_INT
@@ -309,6 +323,19 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     waiting_result = true;
     unregistering = false;
     postponed = false;
+
+    while(!info.sip_interface_name.empty() && info.sip_interface_name != "default") {
+        auto name_it = AmConfig.sip_if_names.find(info.sip_interface_name);
+        if(name_it == AmConfig.sip_if_names.end()) {
+            ERROR("regisration %s(%s): specified sip_interface_name '%s' does not exist as a signaling interface",
+                handle.data(), info.id.data(), info.sip_interface_name.data());
+            break;
+        }
+        dlg.setOutboundInterface(name_it->second);
+        dlg.setOutboundInterface(AT_V4);
+        dlg.setOutboundProtoId(0);
+        break;
+    }
 
     dlg.setRemoteTag(req.to_tag);
     dlg.setRemoteUri(req.r_uri);
