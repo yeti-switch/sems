@@ -332,7 +332,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
             break;
         }
         dlg.setOutboundInterface(name_it->second);
-        dlg.setOutboundInterface(AT_V4);
+        dlg.setOutboundAddrType(AT_V4);
         dlg.setOutboundProtoId(0);
         break;
     }
