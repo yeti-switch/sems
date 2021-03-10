@@ -1,3 +1,9 @@
+sems (1.47.1) stable; urgency=low
+
+  * fix segfault on AmB2BMedia::updateRelayStream null stream
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 10 Mar 2021 23:46:27 +0200
+
 sems (1.47.0) stable; urgency=low
 
   * registrar_client: process sip_interface_name for registration

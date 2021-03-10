@@ -1110,6 +1110,10 @@ void AmB2BMedia::updateRelayStream(
 {
     static const PayloadMask true_mask(true);
 
+    if(!stream) {
+        return;
+    }
+
     stream->stopReceiving();
     if(m.port) {
         stream->setRelayStream(relay_to);
