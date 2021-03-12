@@ -1,3 +1,9 @@
+sems (1.47.2) stable; urgency=low
+
+  * AmB2BMedia: fix crash on b2b media clear
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 12 Mar 2021 18:07:35 +0200
+
 sems (1.47.1) stable; urgency=low
 
   * fix segfault on AmB2BMedia::updateRelayStream null stream
