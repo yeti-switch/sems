@@ -277,12 +277,12 @@ void StreamData::clear()
 
     if(stream && !shared_stream) {
         delete stream;
-        stream = nullptr;
     } else {
         //cleanup relay for shared stream
         stream->disableRtpRelay();
         stream->setRelayStream(nullptr);
     }
+    stream = nullptr;
     initialized = false;
 }
 
