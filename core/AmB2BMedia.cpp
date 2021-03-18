@@ -275,14 +275,16 @@ void StreamData::clear()
     in = nullptr;
     clearDtmfSink();
 
-    if(stream && !shared_stream) {
-        delete stream;
-    } else {
-        //cleanup relay for shared stream
-        stream->disableRtpRelay();
-        stream->setRelayStream(nullptr);
+    if(stream) {
+        if(!shared_stream) {
+            delete stream;
+        } else {
+            //cleanup relay for shared stream
+            stream->disableRtpRelay();
+            stream->setRelayStream(nullptr);
+        }
+        stream = nullptr;
     }
-    stream = nullptr;
     initialized = false;
 }
 

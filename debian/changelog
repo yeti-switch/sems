@@ -1,3 +1,9 @@
+sems (1.47.3) stable; urgency=low
+
+  * AmB2BMedia: StreamData::clear: fix stream ptr checking
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 18 Mar 2021 10:36:37 +0200
+
 sems (1.47.2) stable; urgency=low
 
   * AmB2BMedia: fix crash on b2b media clear
