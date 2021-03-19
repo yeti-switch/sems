@@ -13,6 +13,7 @@ class CurlMultiHandler
 
 protected:
   int curl_running_handles;
+  //bool curl_timer_set;
   CURLM *curl_multi;
   struct curl_slist* hosts;
   AmMutex host_m;
@@ -34,7 +35,7 @@ public:
 
   //curl multi callbacks
   int socket_callback(CURL *e, curl_socket_t s, int what, void *sockp);
-  int timer_function(CURLM *multi, long timeout_ms);
+  int timer_function(CURLM *, long timeout_ms);
 
 };
 

@@ -33,6 +33,8 @@ int CurlMultiHandler::init_curl(int epoll_fd)
     multi_setopt(CURLMOPT_TIMERFUNCTION, timer_function_static);
     multi_setopt(CURLMOPT_TIMERDATA, this);
 
+    //timer_function(curl_multi, 1);
+
     return 0;
 }
 
@@ -74,6 +76,9 @@ void CurlMultiHandler::check_multi_info()
 void CurlMultiHandler::on_timer_event()
 {
     CDBG("on timer()");
+    curl_timer.read();
+
+    //curl_timer_set = false;
 #ifdef ENABLE_DEBUG
     CURLMcode rc =
 #endif
@@ -82,12 +87,8 @@ void CurlMultiHandler::on_timer_event()
         rc,curl_running_handles);
 
     check_multi_info();
-
-    curl_timer.read();
-/*
-    long timeout = 0;
-    curl_multi_timeout(curl_multi, &timeout);
-    timer_function(curl_multi, timeout);*/
+    /*if(!curl_timer_set)
+        timer_function(curl_multi, 1000);*/
 }
 
 void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
@@ -139,13 +140,14 @@ int CurlMultiHandler::socket_callback(CURL *e, curl_socket_t s, int what, void *
     return 0;
 }
 
-int CurlMultiHandler::timer_function(CURLM *multi, long timeout_ms)
+int CurlMultiHandler::timer_function(CURLM *, long timeout_ms)
 {
     CDBG("process request for timer with timeout %ld", timeout_ms);
-    if(timeout_ms>0){
+    /*if(timeout_ms>=0)
+        curl_timer_set = true;*/
+    if(timeout_ms>0)
         curl_timer.set(timeout_ms*1000,false);
-    } else if(timeout_ms == 0){
+    else if(!timeout_ms)
         curl_timer.set(1,false);
-    }
     return 0;
 }
