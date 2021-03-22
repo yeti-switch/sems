@@ -1540,18 +1540,12 @@ void _resolver::clear_cache() {
     for(unsigned long i=0; i<cache.get_size(); i++) {
         dns_bucket* bucket = cache.get_bucket(i);
         bucket->lock();
-        for(dns_bucket::value_map::iterator it = bucket->elmts.begin();
-                it != bucket->elmts.end(); ++it)
-        {
+        auto it =  bucket->elmts.begin();
+        while(it != bucket->elmts.end()) {
             dns_entry* dns_e = static_cast<dns_entry*>(it->second);
-            dns_bucket::value_map::iterator tmp_it = it;
-            bool end_of_bucket = (++it == bucket->elmts.end());
-
-            bucket->elmts.erase(tmp_it);
+            it = bucket->elmts.erase(it);
             dec_ref(dns_e);
             removed++;
-
-            if(end_of_bucket) break;
         }
         bucket->unlock();
     }
