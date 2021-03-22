@@ -77,7 +77,9 @@ class CoreRpc final
     rpc_handler requestShutdownNormal;
     rpc_handler requestShutdownImmediate;
     rpc_handler requestShutdownGraceful;
+    rpc_handler requestShutdownGracefulNoAutoTerm;
     rpc_handler requestShutdownCancel;
+    rpc_handler setShutdownAutoTerm;
 
     rpc_handler showRecorderStats;
 

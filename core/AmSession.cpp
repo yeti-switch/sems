@@ -55,6 +55,7 @@ volatile unsigned int AmSession::session_num = 0;
 AmMutex AmSession::session_num_mut;
 volatile unsigned int AmSession::max_session_num = 0;
 volatile unsigned long long AmSession::avg_session_num = 0;
+bool AmSession::terminate_on_no_sessions = true;
 
 struct timeval get_now() {
   struct timeval res;
@@ -622,10 +623,13 @@ void AmSession::session_stopped() {
   avg_last_timestamp = now;
   //current session number
   session_num--;
-  if(AmConfig.shutdown_mode&&!session_num){
-	//commit suicide if shutdown mode is enabled
-	INFO("last session stopped in graceful shutdown mode. shutdown");
-	kill(getpid(),SIGINT);
+  if(AmConfig.shutdown_mode
+     && terminate_on_no_sessions
+     &&!session_num)
+  {
+    //commit suicide if shutdown mode is enabled
+    INFO("last session stopped in graceful shutdown mode. shutdown");
+    kill(getpid(),SIGINT);
   }
   session_num_mut.unlock();
 }

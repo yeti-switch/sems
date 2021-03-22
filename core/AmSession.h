@@ -126,6 +126,7 @@ private:
   static volatile unsigned int session_num;
   static volatile unsigned int max_session_num;
   static volatile unsigned long long avg_session_num;
+  static bool terminate_on_no_sessions;
   static AmMutex session_num_mut;
 
   friend class AmMediaProcessor;
@@ -470,6 +471,10 @@ public:
    * Gets the average of running sessions since last query
    */
   static unsigned int getAvgSessionNum();
+
+  /* ----         Shutdown mode                 ---- */
+  static void setTerminateOnNoSessions(bool terminate) { terminate_on_no_sessions = terminate; }
+  static bool getTerminateOnNoSessions() { return terminate_on_no_sessions; }
 
   /* ----         DTMF                          ---- */
   /**

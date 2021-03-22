@@ -141,7 +141,10 @@ void CoreRpc::set_system_shutdown(bool shutdown)
         timerclear(&last_shutdown_time);
     }
 
-    if(AmConfig.shutdown_mode&&!AmSession::getSessionNum()){
+    if(AmConfig.shutdown_mode
+       && AmSession::getTerminateOnNoSessions()
+       && !AmSession::getSessionNum())
+    {
         //commit suicide immediatly
         INFO("no active sessions on graceful shutdown command. exit immediately");
         kill(getpid(),SIGINT);
@@ -190,6 +193,7 @@ void CoreRpc::init_rpc_tree()
             reg_method(request_shutdown,"normal","",&CoreRpc::requestShutdownNormal);
             reg_method(request_shutdown,"immediate","",&CoreRpc::requestShutdownImmediate);
             reg_method(request_shutdown,"graceful","",&CoreRpc::requestShutdownGraceful);
+            reg_method(request_shutdown,"graceful_no_autoterm","",&CoreRpc::requestShutdownGracefulNoAutoTerm);
             reg_method(request_shutdown,"cancel","",&CoreRpc::requestShutdownCancel);
         AmArg &request_resolver = reg_leaf(request,"resolver");
             reg_method(request_resolver,"clear","",&CoreRpc::requestResolverClear);
@@ -209,6 +213,11 @@ void CoreRpc::init_rpc_tree()
 
         AmArg &set_sessions = reg_leaf(set,"sessions");
             reg_method(set_sessions,"limit","",&CoreRpc::setSessionsLimit);
+
+        AmArg &set_shutdown = reg_leaf(set,"shutdown");
+            reg_method(set_shutdown,
+                       "autoterm","set automatic termination on graceful shutdown",
+                       &CoreRpc::setShutdownAutoTerm);
 }
 
 void CoreRpc::log_invoke(const string& method, const AmArg& args) const
@@ -461,6 +470,7 @@ void CoreRpc::showStatus(const AmArg&, AmArg& ret)
     ret["shutdown_mode"] = (bool)AmConfig.shutdown_mode;
     ret["shutdown_request_time"] = !timerisset(&last_shutdown_time) ?
         AmArg() : timeval2str(last_shutdown_time);
+    ret["shutdown_autoterm"] = AmSession::getTerminateOnNoSessions();
     ret["core_version"] = SEMS_VERSION;
     ret["sessions"] = (int)AmSession::getSessionNum();
     ret["dump_level"] = dump_level2str(AmConfig.dump_level);
@@ -596,9 +606,45 @@ void CoreRpc::requestShutdownGraceful(const AmArg& args, AmArg& ret)
     ret = RPC_CMD_SUCC;
 }
 
+void CoreRpc::requestShutdownGracefulNoAutoTerm(const AmArg&, AmArg& ret)
+{
+    AmSession::setTerminateOnNoSessions(false);
+    set_system_shutdown(true);
+    ret = RPC_CMD_SUCC;
+}
+
 void CoreRpc::requestShutdownCancel(const AmArg& args, AmArg& ret)
 {
     set_system_shutdown(false);
+    ret = RPC_CMD_SUCC;
+}
+
+void CoreRpc::setShutdownAutoTerm(const AmArg& args, AmArg& ret)
+{
+    bool flag;
+    if(args.size()!=1) {
+        throw AmSession::Exception(500,"one arg expected");
+    }
+
+    AmArg &a = args[0];
+    if(isArgInt(a)) {
+        flag = a.asInt() != 0;
+    } else if(isArgBool(a)) {
+        flag = a.asBool();
+    } else if(isArgCStr(a)) {
+        int parsed_int;
+        if(!str2int(a.asCStr(), parsed_int)) {
+            throw AmSession::Exception(500,"integer not parsed");
+        }
+        flag = parsed_int != 0;
+    } else {
+        throw AmSession::Exception(500,"bool/int or string param expected");
+    }
+
+    INFO("set auto termination on graceful shutdown: %d -> %d",
+         AmSession::getTerminateOnNoSessions(), flag);
+
+    AmSession::setTerminateOnNoSessions(flag);
     ret = RPC_CMD_SUCC;
 }
 
@@ -720,4 +766,3 @@ void CoreRpc::plugin(const AmArg& args, AmArg& ret)
     params.pop(fact_meth);
     di_inst->invoke(fact_meth.asCStr(), params, ret);
 }
-
