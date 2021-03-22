@@ -1,3 +1,10 @@
+sems (1.48.1) stable; urgency=low
+
+  * SipCtrlInterface::cleanup(): stop trsp_server before sockets cleanup
+  * resolver: fix cache clearing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 22 Mar 2021 17:35:30 +0200
+
 sems (1.48.0) stable; urgency=low
 
   * allow to disable automatic termination after the last session in graceful shutdown mode
