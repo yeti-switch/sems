@@ -60,6 +60,8 @@
 #include "AmSipEvent.h"
 #include "AmLcConfig.h"
 
+#include <functional>
+
 bool _SipCtrlInterface::log_parsed_messages = true;
 int _SipCtrlInterface::udp_rcvbuf = -1;
 
@@ -785,105 +787,60 @@ void _SipCtrlInterface::stop()
     stopped.set(true);
 }
 
+template<typename T>
+void cleanup_array(T *&v, unsigned short &n, std::function< void(int) > f)
+{
+    if(v==nullptr)
+        return;
+
+    for(int i=0; i<n;i++)
+        f(i);
+
+    delete [] v;
+    v = nullptr;
+    n = 0;
+}
+
+template<typename T>
+void cleanup_with_stop_delete(T *&workers, unsigned short &n)
+{
+    cleanup_array(workers, n, [&workers](int i) {
+        workers[i]->stop();
+        workers[i]->join();
+        delete workers[i];
+    });
+}
+
+template<typename T>
+void cleanup_with_decref(T *&sockets, unsigned short &n)
+{
+    cleanup_array(sockets, n, [&sockets](int i) {
+        DBG("dec_ref(%p)",sockets[i]);
+        dec_ref(sockets[i]);
+    });
+}
+
 void _SipCtrlInterface::cleanup()
 {
     DBG("Stopping SIP control interface threads\n");
 
-    if (NULL != trsp_workers) {
-        for(int i=0; i<nr_trsp_workers;i++) {
-            trsp_workers[i]->stop();
-            trsp_workers[i]->join();
-            delete trsp_workers[i];
-        }
-        delete [] trsp_workers;
-        trsp_workers = NULL;
-        nr_trsp_workers = 0;
-    }
-
-    if (NULL != udp_servers) {
-	for(int i=0; i<nr_udp_servers;i++){
-	    udp_servers[i]->stop();
-	    udp_servers[i]->join();
-	    delete udp_servers[i];
-	}
-
-	delete [] udp_servers;
-	udp_servers = NULL;
-	nr_udp_servers = 0;
-    }
-
-    if (NULL != trsp_workers) {
-	for(int i=0; i<nr_trsp_workers;i++){
-	    trsp_workers[i]->stop();
-	    trsp_workers[i]->join();
-	    delete trsp_workers[i];
-	}
-	delete [] trsp_workers;
-	trsp_workers = NULL;
-	nr_trsp_workers = 0;
-    }
-	
-    trans_layer::instance()->clear_transports();
-
-    if (NULL != udp_sockets) {
-	for(int i=0; i<nr_udp_sockets;i++){
-	    //delete udp_sockets[i];
-	    DBG("dec_ref(%p)",udp_sockets[i]);
-	    dec_ref(udp_sockets[i]);
-	}
-
-	delete [] udp_sockets;
-	udp_sockets = NULL;
-	nr_udp_sockets = 0;
-    }
-
-    if (NULL != tcp_sockets) {
-	for(int i=0; i<nr_tcp_sockets;i++){
-	    DBG("dec_ref(%p)",tcp_sockets[i]);
-	    dec_ref(tcp_sockets[i]);
-	}
-
-	delete [] tcp_sockets;
-	tcp_sockets = NULL;
-	nr_tcp_sockets = 0;
-    }
-
-    if (NULL != ws_sockets) {
-	for(int i=0; i<nr_ws_sockets;i++){
-	    DBG("dec_ref(%p)",ws_sockets[i]);
-	    dec_ref(ws_sockets[i]);
-	}
-
-	delete [] ws_sockets;
-	ws_sockets = NULL;
-	nr_ws_sockets = 0;
-    }
-
-    if (NULL != tls_sockets) {
-	for(int i=0; i<nr_tls_sockets;i++){
-	    DBG("dec_ref(%p)",tls_sockets[i]);
-	    dec_ref(tls_sockets[i]);
-	}
-
-	delete [] tls_sockets;
-	tls_sockets = NULL;
-	nr_tls_sockets = 0;
-    }
-
-    if (NULL != wss_sockets) {
-	for(int i=0; i<nr_wss_sockets;i++){
-	    DBG("dec_ref(%p)",wss_sockets[i]);
-	    dec_ref(wss_sockets[i]);
-	}
-
-	delete [] wss_sockets;
-	wss_sockets = NULL;
-	nr_wss_sockets = 0;
-    }
-
     if(NULL != trsp_server) {
         trsp_server->stop();
         trsp_server->join();
+    }
+
+    cleanup_with_stop_delete(trsp_workers, nr_trsp_workers);
+    cleanup_with_stop_delete(udp_servers, nr_udp_servers);
+
+    trans_layer::instance()->clear_transports();
+
+    cleanup_with_decref(udp_sockets, nr_udp_sockets);
+    cleanup_with_decref(tcp_sockets, nr_tcp_sockets);
+    cleanup_with_decref(ws_sockets, nr_ws_sockets);
+    cleanup_with_decref(tls_sockets, nr_tls_sockets);
+    cleanup_with_decref(wss_sockets, nr_wss_sockets);
+
+    if(NULL != trsp_server) {
         delete trsp_server;
         trsp_server = NULL;
     }
