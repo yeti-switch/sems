@@ -1,8 +1,7 @@
 [Unit]
 Description=SEMS for YETI project
 Documentation=https://yeti-switch.org/docs/
-Requires=network.target
-After=postgresql.service redis-server.service yeti-management.service
+After=postgresql.service redis-server.service network-online.target
 
 [Install]
 WantedBy=multi-user.target
