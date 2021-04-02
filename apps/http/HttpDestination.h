@@ -88,6 +88,7 @@ struct HttpDestination {
     unsigned int resend_queue_max;
     unsigned int resend_connection_limit;
     unsigned int connection_limit;
+    unsigned int min_file_size;
 
     list<HttpEvent*> events;
     AtomicCounter& count_failed_events;

@@ -59,6 +59,16 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
                 return -1;
             }
 
+            if(destination.min_file_size && get_file_size() < destination.min_file_size) {
+                INFO("HttpMultiPartFormConnection: file_size less minimum required: %s",file_path.c_str());
+                curl_mime_free(form);
+                form = 0;
+                if(0!=std::remove(file_path.c_str())){
+                    ERROR("can't remove '%s': %d",file_path.c_str(),errno);
+                }
+                return -1;
+            }
+
             file_basename = filename_from_fullpath(file_path);
             break;
         }
@@ -155,5 +165,12 @@ void HttpMultiPartFormConnection::post_response_event()
         ERROR("failed to post HttpUploadResponseEvent for session %s",
             event.session_id.c_str());
     }
+}
+
+unsigned int HttpMultiPartFormConnection::get_file_size()
+{
+    struct stat buf;
+    if(stat(file_path.c_str(), &buf)) return 0;
+    return buf.st_size;
 }
 

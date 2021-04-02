@@ -182,6 +182,7 @@ HttpDestination::HttpDestination(const string &name)
 , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
 , count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
 , requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
+, min_file_size(0)
 {
 }
 
@@ -274,6 +275,8 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         ERROR("resend queue max cannot equal zero");
         return -1;
     }
+
+    if(cfg_size(cfg, PARAM_MIN_FILE_SIZE_NAME)) min_file_size = cfg_getint(cfg, PARAM_MIN_FILE_SIZE_NAME);
 
     return 0;
 }

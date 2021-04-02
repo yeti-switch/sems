@@ -20,6 +20,7 @@
 #define PARAM_ACTION_NAME           "action"
 #define PARAM_ACTION_ARGS_NAME      "args"
 #define PARAM_CONTENT_TYPE_NAME     "content_type"
+#define PARAM_MIN_FILE_SIZE_NAME    "min_file_size"
 
 #define MODE_PUT_VALUE          "put"
 #define MODE_POST_VALUE         "post"

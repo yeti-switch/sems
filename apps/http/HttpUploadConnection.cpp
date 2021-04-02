@@ -50,6 +50,14 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
         return -1;
     }
 
+    if(destination.min_file_size && file_info.st_size < destination.min_file_size) {
+        INFO("file_size less minimum required: %s",event.file_path.c_str());
+        if(0!=std::remove(event.file_path.c_str())){
+            ERROR("can't remove '%s': %d",event.file_path.c_str(),errno);
+        }
+        return -1;
+    }
+
     if(init_curl(hosts, curl_multi)){
         ERROR("curl connection initialization failed");
         return -1;
