@@ -1,3 +1,9 @@
+sems (1.48.2) stable; urgency=low
+
+  * http_client: min_file_size destination parameter
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 09 Apr 2021 18:34:30 +0300
+
 sems (1.48.1) stable; urgency=low
 
   * SipCtrlInterface::cleanup(): stop trsp_server before sockets cleanup
