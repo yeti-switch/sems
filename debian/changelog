@@ -1,3 +1,9 @@
+sems (1.48.3) stable; urgency=low
+
+  * http_client: fix curl timer disarm
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 12 Apr 2021 18:24:47 +0300
+
 sems (1.48.2) stable; urgency=low
 
   * http_client: min_file_size destination parameter
