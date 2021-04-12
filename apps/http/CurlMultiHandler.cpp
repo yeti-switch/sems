@@ -78,7 +78,6 @@ void CurlMultiHandler::on_timer_event()
     CDBG("on timer()");
     curl_timer.read();
 
-    //curl_timer_set = false;
 #ifdef ENABLE_DEBUG
     CURLMcode rc =
 #endif
@@ -87,8 +86,6 @@ void CurlMultiHandler::on_timer_event()
         rc,curl_running_handles);
 
     check_multi_info();
-    /*if(!curl_timer_set)
-        timer_function(curl_multi, 1000);*/
 }
 
 void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
@@ -114,16 +111,10 @@ void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
     CDBG("curl_multi_socket_action(%d, %d) = %d, running_handles = %d",
         c->socket(),action,rc,curl_running_handles);
 
-    /*if(curl_running_handles <= 0) {
-        DBG("all handles done. disarm timer");
-        curl_timer.set(0,false); //disarm timer
-    }*/
-
     check_multi_info();
 }
 
-/*
- * curl multi callbacks
+/* * curl multi callbacks
  */
 
 int CurlMultiHandler::socket_callback(CURL *e, curl_socket_t s, int what, void *sockp)
@@ -143,11 +134,17 @@ int CurlMultiHandler::socket_callback(CURL *e, curl_socket_t s, int what, void *
 int CurlMultiHandler::timer_function(CURLM *, long timeout_ms)
 {
     CDBG("process request for timer with timeout %ld", timeout_ms);
-    /*if(timeout_ms>=0)
-        curl_timer_set = true;*/
-    if(timeout_ms>0)
-        curl_timer.set(timeout_ms*1000,false);
-    else if(!timeout_ms)
+    if(timeout_ms) {
+        if(timeout_ms > 0) {
+            curl_timer.set(timeout_ms*1000,false);
+        } else {
+            //timeout_ms < 0. disarm timer
+            curl_timer.set(0,false);
+        }
+    } else {
+        //timeout_ms == 0. means to arm timer for the shortest possible interval
         curl_timer.set(1,false);
+    }
+
     return 0;
 }
