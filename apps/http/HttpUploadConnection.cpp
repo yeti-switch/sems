@@ -52,9 +52,8 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
 
     if(destination.min_file_size && file_info.st_size < destination.min_file_size) {
         INFO("file_size less minimum required: %s",event.file_path.c_str());
-        if(0!=std::remove(event.file_path.c_str())){
-            ERROR("can't remove '%s': %d",event.file_path.c_str(),errno);
-        }
+        //process file indentically to the success action
+        destination.succ_action.perform(event.file_path, file_basename);
         return -1;
     }
 

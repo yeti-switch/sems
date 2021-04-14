@@ -59,17 +59,16 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
                 return -1;
             }
 
+            file_basename = filename_from_fullpath(file_path);
+
             if(destination.min_file_size && get_file_size() < destination.min_file_size) {
                 INFO("HttpMultiPartFormConnection: file_size less minimum required: %s",file_path.c_str());
                 curl_mime_free(form);
                 form = 0;
-                if(0!=std::remove(file_path.c_str())){
-                    ERROR("can't remove '%s': %d",file_path.c_str(),errno);
-                }
+                destination.succ_action.perform(file_path, file_basename);
                 return -1;
             }
 
-            file_basename = filename_from_fullpath(file_path);
             break;
         }
     }
