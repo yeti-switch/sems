@@ -1,3 +1,10 @@
+sems (1.48.4) stable; urgency=low
+
+  * http: adjust logging on min_file_size condition
+  * http: perform on_success actions on matched min_file_size condition
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 15 Apr 2021 16:15:42 +0300
+
 sems (1.48.3) stable; urgency=low
 
   * http_client: fix curl timer disarm
