@@ -51,7 +51,8 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     }
 
     if(destination.min_file_size && file_info.st_size < destination.min_file_size) {
-        INFO("file_size less minimum required: %s",event.file_path.c_str());
+        INFO("file '%s' is too small (%ld < %u). skip request. perform on_success actions",
+             event.file_path.c_str(), file_info.st_size, destination.min_file_size);
         //process file indentically to the success action
         destination.succ_action.perform(event.file_path, file_basename);
         return -1;

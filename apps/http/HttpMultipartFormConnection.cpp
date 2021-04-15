@@ -61,8 +61,10 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
 
             file_basename = filename_from_fullpath(file_path);
 
-            if(destination.min_file_size && get_file_size() < destination.min_file_size) {
-                INFO("HttpMultiPartFormConnection: file_size less minimum required: %s",file_path.c_str());
+            unsigned int file_size = get_file_size();
+            if(destination.min_file_size && file_size < destination.min_file_size) {
+                INFO("file '%s' is too small (%u < %u). skip request. perform on_success actions",
+                     file_path.c_str(), file_size, destination.min_file_size);
                 curl_mime_free(form);
                 form = 0;
                 destination.succ_action.perform(file_path, file_basename);
