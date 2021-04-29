@@ -1,3 +1,10 @@
+sems (1.48.5) stable; urgency=low
+
+  * http: fix active_connections/active_resend_connections decrement on CURL connection init failure
+  * AmB2BSession: ignore SDP body in replies for dlg in OfferSent state on relay
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 29 Apr 2021 14:01:51 +0300
+
 sems (1.48.4) stable; urgency=low
 
   * http: adjust logging on min_file_size condition
