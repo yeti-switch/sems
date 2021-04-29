@@ -532,7 +532,8 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
 
     HttpUploadConnection *c = new HttpUploadConnection(*u,d,epoll_fd);
     if(c->init(hosts, curl_multi)){
-        ERROR("http upload connection intialization error");
+        DBG("http upload connection intialization error");
+        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         delete c;
     }
 }
@@ -577,7 +578,8 @@ void HttpClient::on_post_request(HttpPostEvent *u)
 
     HttpPostConnection *c = new HttpPostConnection(*u,d,epoll_fd);
     if(c->init(hosts, curl_multi)){
-        ERROR("http post connection intialization error");
+        DBG("http post connection intialization error");
+        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         delete c;
     }
 }
@@ -622,7 +624,8 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
 
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d,epoll_fd);
     if(c->init(hosts, curl_multi)){
-        ERROR("http multipart form connection intialization error");
+        DBG("http multipart form connection intialization error");
+        u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         delete c;
     }
 }
