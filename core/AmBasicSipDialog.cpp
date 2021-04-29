@@ -72,7 +72,8 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
     outbound_address_type(AT_NONE),
     resolve_priority(IPv4_only),
     nat_handling(AmConfig.sip_nat_handling),
-    usages(0)
+    usages(0),
+    max_forwards(-1)
 {
   //assert(h);
 }
@@ -381,6 +382,7 @@ void AmBasicSipDialog::initFromLocalRequest(const AmSipRequest& req)
   user         = req.user;
   domain       = req.domain;
   route        = req.route;
+  max_forwards = req.max_forwards;
 
   setCallid(      req.callid   );
   setLocalTag(    req.from_tag );
@@ -479,6 +481,7 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
     scheme       = req.scheme;
     user         = req.user;
     domain       = req.domain;
+    max_forwards = req.max_forwards;
 
     setCallid(      req.callid   );
     setRemoteTag(   req.from_tag );
@@ -844,6 +847,8 @@ int AmBasicSipDialog::sendRequest(const string& method,
   req.callid = callid;
 
   req.hdrs = hdrs;
+
+  req.max_forwards = max_forwards;
 
   req.route = getRoute();
 

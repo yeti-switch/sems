@@ -114,6 +114,7 @@ protected:
   string local_party;  // To/From
 
   string remote_ua; // User-Agent/Server
+  uint32_t max_forwards; //Max-Forwards
 
   string route;
 
