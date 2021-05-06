@@ -1,3 +1,9 @@
+sems (1.49.0) stable; urgency=low
+
+  * AmBasicSipDialog: add max_forwards
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 06 May 2021 14:09:21 +0300
+
 sems (1.48.5) stable; urgency=low
 
   * http: fix active_connections/active_resend_connections decrement on CURL connection init failure
