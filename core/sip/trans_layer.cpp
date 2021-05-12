@@ -3149,6 +3149,12 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
              + string(parsed_contact.port_str.s,
                       parsed_contact.port_str.len);
     }
+    if(parsed_contact.trsp) {
+        n_uri+= ";" + string(parsed_contact.trsp->name.s,
+                             parsed_contact.trsp->name.len) +
+                "=" + string(parsed_contact.trsp->value.s,
+                             parsed_contact.trsp->value.len);
+    }
 
     sip_msg tmp_msg(*t->msg);
     tmp_msg.vias.pop_front();
