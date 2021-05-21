@@ -4,6 +4,8 @@
 #include <vector>
 #include <botan/pk_keys.h>
 
+#include "AmArg.h"
+
 /* related standards:
  * https://tools.ietf.org/html/rfc8224 Authenticated Identity Management in the Session Initiation Protocol (SIP)
  * https://tools.ietf.org/html/rfc8225 PASSporT: Personal Assertion Token
@@ -71,6 +73,9 @@ class AmIdentity
 
     int get_last_error(std::string& err);
 
+    const AmArg &get_parsed_header() { return header; }
+    const AmArg &get_parsed_payload() { return payload; }
+
   private:
     std::string sign;
     std::string x5u_url;
@@ -83,5 +88,8 @@ class AmIdentity
     std::string last_errstr;
 
     std::string jwt_header;
+    AmArg header;
+
     std::string jwt_payload;
+    AmArg payload;
 };

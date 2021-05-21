@@ -98,14 +98,12 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     Botan::AutoSeeded_RNG rnd;
     std::unique_ptr<Botan::PK_Ops::Signature> ops = key->create_signature_op(rnd, "EMSA1(SHA-256)", "");
 
-    AmArg header;
     header[alg] = ES256;
     header[x5u] = x5u_url;
     header[ppt] = shaken;
     header[typ] = passport;
     jwt_header = arg2json(header);
 
-    AmArg payload;
     payload[attest] = std::string(1, (char)at);
     payload[iat] = (int)time(0);
     payload[origid] = orig_id = AmSession::getNewId();
@@ -246,8 +244,6 @@ bool AmIdentity::parse(const std::string& value)
     jwt_header = base64_url_decode(data_base64[0]);
     jwt_payload = base64_url_decode(data_base64[1]);
     sign = base64_url_decode(data_base64[2]);
-
-    AmArg header, payload;
 
     if(!json2arg(jwt_header, header)) {
         last_errstr = "Incorrect jwt header";
