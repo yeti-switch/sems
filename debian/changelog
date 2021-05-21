@@ -1,3 +1,10 @@
+sems (1.50.0) stable; urgency=low
+
+  * use bundled libcurl 7.76.1
+  * AmIdentity: store and expose parsed payload and header
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 21 May 2021 16:34:47 +0300
+
 sems (1.49.1) stable; urgency=low
 
   * trans_layer::retarget: use Contact transport
