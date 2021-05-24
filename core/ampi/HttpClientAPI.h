@@ -195,11 +195,11 @@ struct HttpGetResponseEvent
   string data;
   string mime_type;
 
-  HttpGetResponseEvent(long int code, string &data,
+  HttpGetResponseEvent(long int code, const string &data,
                         const string& mimetype, string token = string())
     : AmEvent(E_PLUGIN),
       code(code),
-      data(data),
+      data(data.c_str(), data.size()),
       mime_type(mimetype),
       token(token)
     {}
