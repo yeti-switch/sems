@@ -10,6 +10,7 @@ struct HttpEvent {
       Upload = 0,
       Post,
       MultiPartForm,
+      Get,
       TriggerSyncContext
   };
 
@@ -160,6 +161,48 @@ struct HttpPostResponseEvent
       data(data),
       token(token)
   {}
+};
+
+struct HttpGetEvent
+  : public HttpEvent, AmEvent
+{
+  string destination_name;
+  string url;
+
+  HttpGetEvent(const string& destination_name,
+               const string& url, string token,
+               const string &session_id = string())
+    : AmEvent(Get)
+    , HttpEvent(session_id, token)
+    , destination_name(destination_name)
+    , url(url)
+  {
+  }
+
+  HttpGetEvent(const HttpGetEvent &src)
+    : AmEvent(Get),
+      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      destination_name(src.destination_name)
+    , url(src.url)
+  {}
+};
+
+struct HttpGetResponseEvent
+  : public AmEvent
+{
+  long int code;
+  string token;
+  string data;
+  string mime_type;
+
+  HttpGetResponseEvent(long int code, const string &data,
+                        const string& mimetype, string token = string())
+    : AmEvent(E_PLUGIN),
+      code(code),
+      data(data.c_str(), data.size()),
+      mime_type(mimetype),
+      token(token)
+    {}
 };
 
 struct HttpTriggerSyncContext

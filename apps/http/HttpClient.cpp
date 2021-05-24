@@ -222,6 +222,7 @@ void HttpClient::init_rpc_tree()
         reg_method(show, "dns_cache", "show statistics", &HttpClient::showDnsCache);
     AmArg &post = reg_leaf(root,"request");
         reg_method(post,"post","post request", &HttpClient::postRequest);
+        reg_method(post,"get","get request", &HttpClient::getRequest);
         AmArg &cache = reg_leaf(post,"dns_cache");
             reg_method(cache,"reset","reset dns_cache", &HttpClient::resetDnsCache);
 }
@@ -233,6 +234,16 @@ void HttpClient::postRequest(const AmArg& args, AmArg& ret)
         HTTP_EVENT_QUEUE,
         new HttpPostEvent(args.get(0).asCStr(), //destination
                           args.get(1).asCStr(), //data
+                          string()));           //token
+}
+
+void HttpClient::getRequest(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("ss");
+    AmSessionContainer::instance()->postEvent(
+        HTTP_EVENT_QUEUE,
+        new HttpGetEvent(args.get(0).asCStr(), //destination
+                          args.get(1).asCStr(), //url
                           string()));           //token
 }
 
@@ -362,6 +373,10 @@ void HttpClient::process_http_event(AmEvent * ev)
     case HttpEvent::MultiPartForm: {
         if(HttpPostMultipartFormEvent *e = dynamic_cast<HttpPostMultipartFormEvent*>(ev))
             on_multpart_form_request(e);
+    } break;
+    case HttpEvent::Get: {
+        if(HttpGetEvent* e = dynamic_cast<HttpGetEvent*>(ev))
+            on_get_request(e);
     } break;
     default:
         WARN("unknown event received");
@@ -626,6 +641,47 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
     if(c->init(hosts, curl_multi)){
         DBG("http multipart form connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        delete c;
+    }
+}
+
+void HttpClient::on_get_request(HttpGetEvent *e)
+{
+    HttpDestinationsMap::iterator destination = destinations.find(e->destination_name);
+    if(destination==destinations.end()){
+        ERROR("event with unknown destination '%s' from session %s. ignore it",
+            e->destination_name.c_str(),e->session_id.c_str());
+        return;
+    }
+
+    HttpDestination &d = destination->second;
+    if(d.mode!=HttpDestination::Get) {
+        ERROR("wrong destination '%s' mode for request from session %s. 'get' mode expected. ignore it",
+              e->destination_name.c_str(),e->session_id.c_str());
+        return;
+    }
+
+    if(e->token.empty()){
+        DBG("http get request url: %s [%i/%i]",
+            e->url.c_str(),
+            e->failover_idx,e->attempt);
+    } else {
+        DBG("http get request url: %s [%i/%i], token: %s",
+            e->url.c_str(),
+            e->failover_idx,e->attempt,
+            e->token.c_str());
+    }
+
+    if(!e->attempt && d.count_connection.get() == d.connection_limit) {
+        DBG("http get request");
+        d.addEvent(new HttpGetEvent(*e));
+        return;
+    }
+
+    HttpGetConnection *c = new HttpGetConnection(*e,d,epoll_fd);
+    if(c->init(hosts, curl_multi)){
+        DBG("http get connection intialization error");
+        e->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         delete c;
     }
 }

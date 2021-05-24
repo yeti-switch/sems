@@ -11,6 +11,7 @@
 #include "HttpDestination.h"
 #include "HttpUploadConnection.h"
 #include "HttpPostConnection.h"
+#include "HttpGetConnection.h"
 #include "HttpMultipartFormConnection.h"
 #include "CurlMultiHandler.h"
 
@@ -80,6 +81,7 @@ class HttpClient
     void on_upload_request(HttpUploadEvent *u);
     void on_post_request(HttpPostEvent *u);
     void on_multpart_form_request(HttpPostMultipartFormEvent *u);
+    void on_get_request(HttpGetEvent *e);
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
     void on_sync_context_timer();
     void on_resend_timer_event();
@@ -87,6 +89,7 @@ class HttpClient
 
     rpc_handler showStats;
     rpc_handler postRequest;
+    rpc_handler getRequest;
     rpc_handler dstDump;
     rpc_handler showDnsCache;
     rpc_handler resetDnsCache;
