@@ -78,7 +78,8 @@ struct HttpDestination {
     enum Mode {
         Unknown,
         Put,
-        Post
+        Post,
+        Get
     } mode;
     string mode_str;
 

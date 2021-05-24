@@ -203,17 +203,21 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         return -1;
     }
 
+    attempts_limit = cfg_getint(cfg, PARAM_REQUEUE_LIMIT_NAME);
+
     for(unsigned int i = 0; i < cfg_size(cfg, PARAM_URL_NAME); i++) {
         string url_ = cfg_getnstr(cfg, PARAM_URL_NAME, i);
         url.push_back(url_);
     }
-    if(url.empty()){
+    if(mode != Get && url.empty()){
         ERROR("missed url for destination %s",name.c_str());
         return -1;
     }
-    max_failover_idx = url.size()-1;
 
-    attempts_limit = cfg_getint(cfg, PARAM_REQUEUE_LIMIT_NAME);
+    if(url.empty())
+        max_failover_idx = 0;
+    else
+        max_failover_idx = url.size()-1;
 
     if(succ_codes.parse(cfg)) {
         ERROR("can't parse succ codes map");
@@ -331,6 +335,8 @@ HttpDestination::Mode HttpDestination::str2Mode(const string& mode)
         return Put;
     } else if(mode == MODE_POST_VALUE) {
         return Post;
+    } else if(mode == MODE_GET_VALUE) {
+        return Get;
     }
     return Unknown;
 }

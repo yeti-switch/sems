@@ -24,6 +24,7 @@
 
 #define MODE_PUT_VALUE          "put"
 #define MODE_POST_VALUE         "post"
+#define MODE_GET_VALUE          "get"
 
 #define ACTION_REMOVE_VALUE     "remove"
 #define ACTION_NOTHING_VALUE    "nothing"
