@@ -385,6 +385,10 @@ bool AmIdentity::parse(const std::string& value)
         } while(end); 
     }
 
+    alg_info = trim(alg_info, "\"");
+    ppt_info = trim(ppt_info, "\"");
+    x5u_info = trim(x5u_info, "\"");
+
     if((!alg_info.empty() && alg_info != ES256) ||
        (!ppt_info.empty() && ppt_info != shaken))
     {
