@@ -370,6 +370,9 @@ void HttpDestination::send_failed_events(HttpClient* client)
             HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
             if(multipart_event)
                 client->on_multpart_form_request(multipart_event);
+            HttpGetEvent* get_event = dynamic_cast<HttpGetEvent*>(event);
+            if(get_event)
+                client->on_get_request(get_event);
             count_failed_events.dec();
             count_will_send--;
             delete event;
@@ -395,6 +398,9 @@ void HttpDestination::send_postponed_events(HttpClient* client)
         HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
         if(multipart_event)
             client->on_multpart_form_request(multipart_event);
+        HttpGetEvent* get_event = dynamic_cast<HttpGetEvent*>(event);
+        if(get_event)
+            client->on_get_request(get_event);
         count_pending_events.dec();
         count_will_send--;
         delete event;
