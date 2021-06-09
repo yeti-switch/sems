@@ -81,7 +81,6 @@ int HttpGetConnection::on_finished(CURLcode result)
     }
 
     if(!requeue) {
-        DBG("%lu", response.size());
         destination.requests_processed.inc();
         post_response_event();
     }
