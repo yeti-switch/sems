@@ -1,3 +1,9 @@
+sems (1.51.1) stable; urgency=low
+
+  * http: remove excess dbg for HttpGetConnection
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 10 Jun 2021 20:35:36 +0300
+
 sems (1.51.0) stable; urgency=low
 
   * AmIdentity: allow atttibute values in double-qoutes
