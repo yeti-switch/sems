@@ -233,10 +233,25 @@ void RtspAudio::onRtpTimeout()
     state = Ready;
 }
 
-
-void RtspAudio::onRtspPlayNotify(const RtspMsg &) {
-    DBG("onRtspPlayNotify() id: %ld, streamid: %d, uri: %s",
+void RtspAudio::onMaxRtpTimeReached()
+{
+    DBG("onMaxRtpTimeReached() id: %ld, streamid: %d, uri: %s",
         id,streamid,uri.c_str());
+    if (state == Playing)
+        session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+
+    state = Ready;
+}
+
+void RtspAudio::onRtspPlayNotify(const RtspMsg & msg) {
+    DBG("onRtspPlayNotify() id: %ld, streamid: %d, rtptime: %u, uri: %s",
+        id,streamid, msg.rtptime, uri.c_str());
+
+    if(msg.rtptime) {
+        setMaxRtpTime(msg.rtptime);
+        return;
+    }
+
     state = Ready;
     session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 }

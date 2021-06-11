@@ -41,7 +41,9 @@ class RtspAudio : public AmRtpAudio
         void    setup(int l_port);
         void    play();
         void    rtsp_play(const RtspMsg &msg);
-        void    onRtpTimeout();
+
+        void    onRtpTimeout() override;
+        void    onMaxRtpTimeReached() override;
 
     public:
         RtspAudio(AmSession* _s, const string &uri);

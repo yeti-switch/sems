@@ -123,6 +123,7 @@ void RtspMsg::process_header(int hdr, const char *v, size_t vl)
 {
 #define SRV_PORT_PARAM "server_port="
 #define STREAMID_PARAM "streamid="
+#define RTPTIME_PARAM "rtptime="
     const char *s;
 
     switch(hdr) {
@@ -156,6 +157,10 @@ void RtspMsg::process_header(int hdr, const char *v, size_t vl)
             s += sizeof(STREAMID_PARAM)-1;
             streamid = atoi(s);
         };
+        if((s = strstr(v, RTPTIME_PARAM)) ) {
+            s += sizeof(RTPTIME_PARAM)-1;
+            rtptime = atol(s);
+        };
         break;
 
     default:;
@@ -163,6 +168,7 @@ void RtspMsg::process_header(int hdr, const char *v, size_t vl)
 
 #undef SRV_PORT_PARAM
 #undef STREAMID_PARAM
+#undef RTPTIME_PARAM
 }
 
 
@@ -197,6 +203,8 @@ void RtspMsg::parse_msg(int type, const string &data)
 {
     const char *s = data.data(),
                *p;
+
+    rtptime = 0;
 
     while ((p=strstr(s, "\r\n"))) {
 

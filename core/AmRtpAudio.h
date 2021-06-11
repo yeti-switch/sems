@@ -114,7 +114,12 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
   unsigned long long last_send_ts;
   bool               last_send_ts_i;
 
-  bool               last_samples_relayed;
+  /**
+   last expected RTP timestamp to receive
+   causes onMaxRtpTimeReached() to be called if reached
+   */
+  unsigned long long max_rtp_time;
+
   //
   // Default packet loss concealment functions
   //
@@ -176,7 +181,7 @@ public:
   // @return length in bytes of the recivered segment
   unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer);
 
-  bool isLastSamplesRelayed() { return last_samples_relayed; }
+  bool isLastSamplesRelayed() { return last_recv_relayed; }
 
   /**
   * send a DTMF as RTP payload (RFC4733)
@@ -185,10 +190,13 @@ public:
   */
   void sendDtmf(int event, unsigned int duration_ms);
 
+  void setMaxRtpTime(uint32_t ts);
 protected:
   int read(unsigned int user_ts, unsigned int size) { return 0; }
   int write(unsigned int user_ts, unsigned int size) { return 0; }
   void virtual onRtpTimeout();
+  void virtual onMaxRtpTimeReached();
+
 };
 
 #endif

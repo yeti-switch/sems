@@ -111,11 +111,11 @@ AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
     AmAudio(nullptr),
     m_playout_type(SIMPLE_PLAYOUT),
     playout_buffer(nullptr),
+    frame_size(0),
     /*last_ts_i(false),*/ use_default_plc(true),
-    last_check(0),last_check_i(false),send_int(false),
+    last_check(0),last_check_i(false), send_int(false),
     last_send_ts_i(false),
-    last_samples_relayed(false),
-    frame_size(0)
+    max_rtp_time(0)
 {
 #ifdef USE_SPANDSP_PLC
     plc_state = plc_init(NULL);
@@ -168,8 +168,6 @@ unsigned int AmRtpAudio::bytes2samples(unsigned int bytes) const
 int AmRtpAudio::receive(unsigned long long system_ts) 
 {
     int size;
-    unsigned int rtp_ts;
-    int new_payload = -1;
 
     if(!fmt.get() || (!playout_buffer.get())) {
         DBG("audio format not initialized\n");
@@ -181,9 +179,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
     while(true) {
         size = AmRtpStream::receive(
             static_cast<unsigned char*>(samples),
-            static_cast<unsigned int>(AUDIO_BUFFER_SIZE), rtp_ts,
-            new_payload,last_samples_relayed);
-
+            static_cast<unsigned int>(AUDIO_BUFFER_SIZE));
         //DBG("AmRtpStream::receive: %d", size);
         if(size <= 0) {
 
@@ -209,11 +205,11 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             break;
         } //if(size <= 0)
 
-        if(COMFORT_NOISE_PAYLOAD_TYPE == new_payload) {
+        if(COMFORT_NOISE_PAYLOAD_TYPE == last_recv_payload) {
             playout_buffer->clearLastTs();
             continue;
         } else {
-            setCurrentPayload(new_payload, static_cast<int>(frame_size));
+            setCurrentPayload(last_recv_payload, static_cast<int>(frame_size));
         }
 
         int decoded_size = decode(static_cast<unsigned int>(size));
@@ -232,11 +228,11 @@ int AmRtpAudio::receive(unsigned long long system_ts)
         // For g722, TSRate=8000 and Rate=16000
         //
         AmAudioRtpFormat* rtp_fmt = static_cast<AmAudioRtpFormat*>(fmt.get());
-        unsigned long long adjusted_rtp_ts = rtp_ts;
+        unsigned long long adjusted_rtp_ts = last_recv_ts;
 
         if(rtp_fmt->getRate() != rtp_fmt->getTSRate()) {
             adjusted_rtp_ts =
-                static_cast<unsigned long long>(rtp_ts) *
+                last_recv_ts *
                 static_cast<unsigned long long>(rtp_fmt->getRate())
                 / static_cast<unsigned long long>(rtp_fmt->getTSRate());
         }
@@ -248,9 +244,9 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             /*reinterpret_cast<ShortSample*>(unsigned char *samples()),*/
             PCM16_B2S(static_cast<u_int32_t>(decoded_size)), begin_talk);
 
-        if(!active && !last_samples_relayed) {
-            DBG("switching to active-mode\t(ts=%u;stream=%p)\n",
-                rtp_ts,static_cast<void *>(this));
+        if(!active && !last_recv_relayed) {
+            DBG("switching to active-mode\t(ts=%llu;stream=%p)\n",
+                last_recv_ts,static_cast<void *>(this));
             active = true;
         }
     } //while(true)
@@ -284,7 +280,7 @@ int AmRtpAudio::get(
     if(ret < 0)
         return ret; // like nothing received?
 
-    if (!active && !last_samples_relayed) return 0;
+    if (!active && !last_recv_relayed) return 0;
 
     unsigned int user_ts = scaleSystemTS(system_ts);
 
@@ -297,6 +293,11 @@ int AmRtpAudio::get(
             user_ts,
             reinterpret_cast<ShortSample*>(static_cast<unsigned char*>(samples)),
             nb_samples));
+
+    if(max_rtp_time && max_rtp_time <= last_recv_ts && !size) {
+       onMaxRtpTimeReached();
+       max_rtp_time = 0;
+    }
 
     if(output_sample_rate != getSampleRate()) {
         size = resampleOutput(
@@ -640,6 +641,17 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
             DBG("Simple playout buffer activated\n");
         }
     }
+}
+
+void AmRtpAudio::setMaxRtpTime(uint32_t ts)
+{
+    CLASS_DBG("AmRtpAudio::setLastRtpTime(%u)", ts);
+    max_rtp_time = ts;
+}
+
+void AmRtpAudio::onMaxRtpTimeReached()
+{
+    session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 }
 
 void AmRtpAudio::onRtpTimeout()

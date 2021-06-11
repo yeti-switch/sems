@@ -258,11 +258,15 @@ class AmRtpStream
     unsigned int sequence;
 
     /**
-     Payload of last received packet.
+     Payload of last not-relayed received packet.
      Usefull to detect talk spurt, looking
      for comfort noise packets.
     */
-    int         last_payload;
+    int          last_payload;
+
+    int                last_recv_payload;
+    bool               last_recv_relayed;
+    unsigned long long last_recv_ts;
 
     /**
     * Local interface used for this stream
@@ -463,8 +467,7 @@ class AmRtpStream
                 unsigned int ts, unsigned char* buffer,
                 unsigned int size );
 
-    int receive( unsigned char* buffer, unsigned int size,
-           unsigned int& ts, int& payload, bool &relayed);
+    int receive(unsigned char* buffer, unsigned int size);
 
     /** create and free an RTP packet*/
     AmRtpPacket* createRtpPacket();

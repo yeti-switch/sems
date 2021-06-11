@@ -139,6 +139,9 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     relay_enabled(false),
     relay_raw(false),
     sdp_media_index(-1),
+    last_recv_payload(-1),
+    last_recv_relayed(false),
+    last_recv_ts(0),
     relay_transparent_ssrc(false),
     relay_transparent_seqno(false),
     relay_filter_dtmf(false),
@@ -1126,8 +1129,7 @@ void AmRtpStream::freeRtpPacket(AmRtpPacket* packet)
 // @param audio_buffer_ts [in]  current ts at the audio_buffer
 
 int AmRtpStream::receive(
-    unsigned char* buffer, unsigned int size,
-    unsigned int& ts, int &out_payload, bool &relayed)
+    unsigned char* buffer, unsigned int size)
 {
     AmRtpPacket* rp = NULL;
     int err = nextPacket(rp);
@@ -1138,12 +1140,12 @@ int AmRtpStream::receive(
     if (!rp)
         return 0;
 
-    relayed = rp->relayed;
+    last_recv_relayed = rp->relayed;
 
-    if(!relayed) {
+    if(!last_recv_relayed) {
         /* do we have a new talk spurt? */
         begin_talk = ((last_payload == 13) || rp->marker);
-        last_payload = rp->payload;
+        last_payload = last_recv_payload;
 
         add_if_no_exist(incoming_payloads,rp->payload);
     }
@@ -1154,7 +1156,7 @@ int AmRtpStream::receive(
     }
 
     if(isLocalTelephoneEventPayload(rp->payload)) {
-        if(!relayed) recvDtmfPacket(rp);
+        if(!last_recv_relayed) recvDtmfPacket(rp);
         freeRtpPacket(rp);
         return RTP_DTMF;
     }
@@ -1167,8 +1169,9 @@ int AmRtpStream::receive(
     }
 
     memcpy(buffer,rp->getData(),rp->getDataSize());
-    ts = rp->timestamp;
-    out_payload = rp->payload;
+
+    last_recv_ts = rp->timestamp;
+    last_recv_payload = rp->payload;
 
     int res = rp->getDataSize();
     freeRtpPacket(rp);
