@@ -1,3 +1,10 @@
+sems (1.52.0) stable; urgency=low
+
+  *  RtspAudio: use 'rtptime' from NOTIFY for noAudio
+  *  cmake: place libs after the static libcurl.a
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 17 Jun 2021 19:03:08 +0300
+
 sems (1.51.1) stable; urgency=low
 
   * http: remove excess dbg for HttpGetConnection
