@@ -29,5 +29,5 @@ set(CURL_BUNDLED_INCLUDE_DIRS ${CURL_BIN_DIR}/include)
 
 add_library(curl_bundled STATIC IMPORTED)
 set_property(TARGET curl_bundled PROPERTY IMPORTED_LOCATION ${CURL_BUNDLED_LIB})
-set(CURL_BUNDLED_LIBS gssapi_krb5 ssl cares crypto z nghttp2 brotlidec ${CURL_BUNDLED_LIB})
+set(CURL_BUNDLED_LIBS ${CURL_BUNDLED_LIB} gssapi_krb5 ssl cares crypto z nghttp2 brotlidec)
 list(APPEND sems_dependency_targets libcurl)
