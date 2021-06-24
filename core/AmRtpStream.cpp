@@ -170,7 +170,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     reuse_media_trans(true),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
-    cur_udptl_trans(0)
+    cur_udptl_trans(0),
+    rtp_endpoint_learned_notified(false)
 {
     DBG("AmRtpStream[%p](%p)",this,session);
 
@@ -993,6 +994,15 @@ void AmRtpStream::onRawPacket(AmRtpPacket* p, AmMediaTransport*)
         freeRtpPacket(p);
     bufferPacket(p);
 }
+
+void AmRtpStream::onSymmetricRtp()
+{
+    if(!rtp_endpoint_learned_notified) {
+        rtp_endpoint_learned_notified = true;
+        if(session) session->onRtpEndpointLearned();
+    }
+}
+
 
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int priority)
 {

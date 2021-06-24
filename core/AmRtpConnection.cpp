@@ -168,35 +168,37 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
     {
         uint64_t now = last_recv_time.tv_sec*1000-last_recv_time.tv_usec/1000,
                  set_time = passive_set_time.tv_sec*1000-passive_set_time.tv_usec/1000;
+
         if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_PACKETS &&
-           passive_packets < (unsigned int)AmConfig.symmetric_rtp_packets) {
+            passive_packets < (unsigned int)AmConfig.symmetric_rtp_packets) {
             passive_packets++;
             return;
         } else if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_DELAY &&
-           now - set_time < (uint64_t)AmConfig.symmetric_rtp_delay) {
+            now - set_time < (uint64_t)AmConfig.symmetric_rtp_delay) {
             return;
         }
 
-        // symmetric RTP
-        string addr_str = get_addr_str(recv_addr);
-        unsigned short port = am_get_port(recv_addr);
-        const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
-        if (!isAddrConnection(recv_addr)) {
-            setRAddr(addr_str, port);
-            if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
-                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n", prot, addr_str.c_str(),port);
-            }
-        } else {
-            if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
-                CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
-                    " Leaving passive mode.\n",prot,prot);
-            }
-        }
+        transport->getRtpStream()->onSymmetricRtp();
 
-        // avoid comparing each time sender address
-        // don't switch to passive mode if endless switching flag set
-        if(!transport->getRtpStream()->isSymmetricRtpEndless()){
+        // symmetric RTP
+        if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
+            //normal mode
+            const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
+            if (!isAddrConnection(recv_addr)) {
+                string addr_str = get_addr_str(recv_addr);
+                unsigned short port = am_get_port(recv_addr);
+                setRAddr(addr_str, port);
+                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n",
+                          prot, addr_str.c_str(),port);
+            } else {
+                CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
+                          " Leaving passive mode.\n",
+                          prot,prot);
+            }
             passive = false;
+        } else if(!isAddrConnection(recv_addr)) {
+            //endless mode
+            setRAddr(get_addr_str(recv_addr), am_get_port(recv_addr));
         }
     }
 

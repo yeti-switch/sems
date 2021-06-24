@@ -686,6 +686,7 @@ public:
 
   virtual void onAfterRTPRelay(AmRtpPacket* p, sockaddr_storage* remote_addr) {}
   virtual void onRTPStreamDestroy(AmRtpStream *stream) {}
+  virtual void onRtpEndpointLearned() {}
 
   int getRtpInterface();
   void setRtpInterface(int _rtp_interface);

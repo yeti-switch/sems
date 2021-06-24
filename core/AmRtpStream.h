@@ -445,6 +445,10 @@ class AmRtpStream
     void onRtcpPacket(AmRtpPacket* packet, AmMediaTransport* transport);
     void onUdptlPacket(AmRtpPacket* packet, AmMediaTransport* transport);
     void onRawPacket(AmRtpPacket* packet, AmMediaTransport* transport);
+
+    void onSymmetricRtp();
+    bool rtp_endpoint_learned_notified;
+
     void allowStunConnection(AmMediaTransport* transport, int priority);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
