@@ -1,3 +1,9 @@
+sems (1.53.0) stable; urgency=low
+
+  * add AmSession::onRtpEndpointLearned() callback
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 24 Jun 2021 22:33:44 +0300
+
 sems (1.52.0) stable; urgency=low
 
   *  RtspAudio: use 'rtptime' from NOTIFY for noAudio
