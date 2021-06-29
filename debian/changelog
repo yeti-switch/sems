@@ -1,3 +1,9 @@
+sems (1.50.1) stable; urgency=low
+
+  * jsonrpc: increase write timeout 3->6 seconds
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 29 Jun 2021 12:20:26 +0300
+
 sems (1.50.0) stable; urgency=low
 
   * use bundled libcurl 7.76.1
