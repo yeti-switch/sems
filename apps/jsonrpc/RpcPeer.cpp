@@ -46,7 +46,7 @@ using std::string;
 #include "JsonRPCEvents.h"
 #include "sip/resolver.h"
 
-#define POLL_TIMEOUT 3000
+#define POLL_TIMEOUT 6000
 
 void JsonrpcPeerConnection::notifyDisconnect() {
   // let event receivers know about broken connection
