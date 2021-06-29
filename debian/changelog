@@ -1,3 +1,9 @@
+sems (1.53.1) stable; urgency=low
+
+  * jsonrpc: increase write timeout 3->6 seconds
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 29 Jun 2021 23:53:50 +0300
+
 sems (1.53.0) stable; urgency=low
 
   * add AmSession::onRtpEndpointLearned() callback
