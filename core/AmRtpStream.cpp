@@ -224,17 +224,8 @@ string AmRtpStream::getRHost(int type)
     return "";
 }
 
-void AmRtpStream::setLocalIP(const string& host)
+void AmRtpStream::setLocalIP(AddressType addrtype)
 {
-    CLASS_DBG("host = %s\n",host.data());
-
-    sockaddr_storage addr;
-    dns_handle dh;
-
-    if (resolver::instance()->resolve_name(host.data(),&dh,&addr, Dualstack) < 0) {
-        throw string ("AmRtpStream::setLocalIP: failed to resolve local IP address: ") + host;
-    }
-
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();
         else {
@@ -243,8 +234,11 @@ void AmRtpStream::setLocalIP(const string& host)
         }
     }
 
+    if(addrtype == AT_NONE)
+        addrtype = session->getLocalMediaAddressType();
+
     vector<AmMediaTransport*>* transports;
-    if(addr.ss_family == AF_INET) {
+    if(addrtype == AT_V4) {
         initIP4Transport();
         transports = &ip4_transports;
     } else {
@@ -291,10 +285,52 @@ void AmRtpStream::setLocalIP(const string& host)
     }
 }
 
+std::string AmRtpStream::getLocalIP()
+{
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        setLocalIP();
+    }
+
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        ERROR("AmRtpStream:getLocalIP. failed to get transport");
+        return 0;
+    }
+
+    if(transport == TP_UDPTL)
+        return cur_udptl_trans->getLocalIP();
+    else
+        return cur_rtp_trans->getLocalIP();
+}
+
+std::string AmRtpStream::getLocalAddress()
+{
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        setLocalIP();
+    }
+
+    if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
+        ERROR("AmRtpStream:getLocalPort. failed to get transport");
+        return "";
+    }
+
+    if(transport == TP_UDPTL) {
+        string host = AmConfig.media_ifs[l_if].proto_info[cur_udptl_trans->getLocalProtoId()]->getHost();
+        if(host.empty())
+            return cur_udptl_trans->getLocalIP();
+        return host;
+    } else {
+        string host = AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]->getHost();
+        if(host.empty())
+            return cur_rtp_trans->getLocalIP();
+        return host;
+    }
+    return "";
+}
+
 int AmRtpStream::getLocalPort()
 {
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
-        setLocalIP(session->advertisedIP());
+        setLocalIP();
     }
 
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
@@ -311,7 +347,7 @@ int AmRtpStream::getLocalPort()
 int AmRtpStream::getLocalRtcpPort()
 {
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
-        setLocalIP(session->advertisedIP());
+        setLocalIP();
     }
 
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
@@ -328,7 +364,6 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
         return;
 
     int retry = BIND_ATTEMPTS_COUNT;
-    unsigned short port = 0;
 
     assert(tr_rtp);
 
@@ -337,39 +372,41 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
         if (!tr_rtp->getLocalSocket() || (tr_rtcp && !tr_rtcp->getLocalSocket()))
             return;
 
-        port = AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
-                                          tr_rtp->getLocalProtoId()).getNextRtpPort();
 
-        if(!port) {
+        sockaddr_storage l_rtcp_addr, l_rtp_addr;
+        if(!AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
+                                          tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr)) {
             retry = 0;
             break;
         }
 
-        sockaddr_storage l_rtcp_addr, l_rtp_addr;
         if(tr_rtp != tr_rtcp && tr_rtcp) {
-            tr_rtcp->getLocalAddr(&l_rtcp_addr);
-            am_set_port(&l_rtcp_addr,port+1);
+            memcpy(&l_rtcp_addr, &l_rtp_addr, sizeof(sockaddr_storage));
+            am_set_port(&l_rtcp_addr,am_get_port(&l_rtp_addr)+1);
             if(bind(tr_rtcp->getLocalSocket(),(const struct sockaddr*)&l_rtcp_addr,SA_len(&l_rtcp_addr))) {
-                CLASS_ERROR("failed to bind port %hu for RTCP: %s\n",
-                          port+1, strerror(errno));
+                CLASS_ERROR("failed to bind port %d for RTCP: %s\n",
+                          am_get_port(&l_rtp_addr)+1, strerror(errno));
                 goto try_another_port;
             }
         }
 
-        tr_rtp->getLocalAddr(&l_rtp_addr);
-        am_set_port(&l_rtp_addr,port);
         if(bind(tr_rtp->getLocalSocket(),(const struct sockaddr*)&l_rtp_addr,SA_len(&l_rtp_addr))) {
             CLASS_ERROR("failed to bind port %hu for RTP: %s\n",
-                        port, strerror(errno));
+                        am_get_port(&l_rtp_addr), strerror(errno));
             goto try_another_port;
         }
 
         // both bind() succeeded!
+        // rco: does that make sense after bind() ????
+        tr_rtp->setLocalAddr(&l_rtp_addr);
+        if(tr_rtp != tr_rtcp && tr_rtcp) {
+            tr_rtcp->setLocalAddr(&l_rtcp_addr);
+        }
         break;
 
 try_another_port:
         AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
-                                   tr_rtp->getLocalProtoId()).freeRtpPort(port);
+                                   tr_rtp->getLocalProtoId()).freeRtpAddress(l_rtp_addr);
 
         tr_rtp->getLocalSocket(true);
         if(tr_rtp != tr_rtcp && tr_rtcp) {
@@ -383,11 +420,6 @@ try_another_port:
         throw string("could not find a free RTP port\n");
     }
 
-    // rco: does that make sense after bind() ????
-    tr_rtp->setLocalPort(port);
-    if(tr_rtp != tr_rtcp && tr_rtcp) {
-        tr_rtcp->setLocalPort(port + 1);
-    }
 }
 
 void AmRtpStream::setRAddr(const string& addr, unsigned short port)
@@ -420,7 +452,7 @@ void AmRtpStream::addAdditionTransport()
     }
 
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
-        setLocalIP(session->advertisedIP());
+        setLocalIP();
     }
 
     if(!cur_rtp_trans || !cur_rtcp_trans || !cur_udptl_trans) {
@@ -1874,12 +1906,9 @@ void AmRtpStream::setSensor(msg_sensor *_sensor)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   help functions
 
-void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address)
+void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType addr_type)
 {
-    CLASS_DBG("replaceAudioMediaParameters() relay_address: %s",
-              relay_address.c_str());
-
-    setLocalIP(relay_address);
+    setLocalIP(addr_type);
 
     m.port = static_cast<unsigned int>(getLocalPort());
     //replace rtcp attribute
@@ -1888,7 +1917,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, con
             if (a.attribute == "rtcp") {
                 RtcpAddress addr(a.value);
                 addr.setPort(getLocalRtcpPort());
-                if (addr.hasAddress()) addr.setAddress(relay_address);
+                if (addr.hasAddress()) addr.setAddress(getLocalIP());
                 a.value = addr.print();
             }
         } catch (const std::exception &e) {

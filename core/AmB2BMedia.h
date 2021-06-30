@@ -112,11 +112,11 @@ public:
     void resumeStreamProcessing() { if(stream) stream->resumeReceiving(); }
     void clearRTPTimeout() { if (stream) stream->clearRTPTimeout(); }
     void setReceiving(bool r) {  if (stream) { stream->setReceiving(r); } }
-    void setLocalIP(const string& ip) { if (stream) stream->setLocalIP(ip); }
+    void setLocalIP(AddressType type) { if (stream) stream->setLocalIP(type); }
     void getSdpOffer(int media_idx, SdpMedia &m) { if (stream) stream->getSdpOffer(media_idx, m); }
     void getSdpAnswer(int media_idx, const SdpMedia &offer, SdpMedia &answer) { if (stream) stream->getSdpAnswer(media_idx, offer, answer); }
-    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address) {
-        if(stream) stream->replaceAudioMediaParameters(m, idx, relay_address);
+    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType type) {
+        if(stream) stream->replaceAudioMediaParameters(m, idx, type);
     }
 
     /** initialize given stream for transcoding & regular audio processing
@@ -382,10 +382,7 @@ class AmB2BMedia: public AmMediaSession
     /** Replace connection address and ports within SDP.
      *
      * Throws an exception (string) in case of error. (FIXME?) */
-    void replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, 
-				  const string& relay_address,
-				  const string& relay_public_address,
-				  AddressType addr_type);
+    void replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, AddressType addr_type);
 
     /** replace offer inside given SDP with locally generated one (media streams
      * etc must be initialised like in case replaceConnectionAddress) */

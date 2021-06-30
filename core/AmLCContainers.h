@@ -79,7 +79,7 @@ public:
       return public_ip.empty() ? local_ip : public_ip;
     }
 
-    std::string getHost() {
+    virtual std::string getHost() {
       return public_domain.empty() ? getIP() : public_domain;
     }
 
@@ -302,14 +302,6 @@ public:
     unsigned short low_port;
     unsigned short high_port;
 
-    /* initialize variables for RTP ports pool management and validate ports range
-     * returns 0 on success, 1 otherwise */
-    int prepare(const std::string &iface_name);
-
-    unsigned short getNextRtpPort();
-    void freeRtpPort(unsigned int port);
-    void iterateUsedPorts(std::function<void(unsigned short, unsigned short)> cl);
-
     std::string transportToStr() const {
         if(mtype == MEDIA_info::RTP) {
             return "RTP";
@@ -320,17 +312,43 @@ public:
         return "";
     }
 
-private:
-    DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
-    unsigned long *ports_state_start_addr,
-                  *ports_state_end_addr;
-    unsigned long *ports_state_current_addr;
-    unsigned short start_edge_bit_it,
-                   start_edge_bit_it_parity,
-                   end_edge_bit_it;
-    bool rtp_bit_parity;
+    virtual int prepare(const std::string &iface_name);
+    virtual bool getNextRtpAddress(sockaddr_storage& ss) = 0;
+    virtual void freeRtpAddress(const sockaddr_storage& ss) = 0;
+    virtual void iterateUsedPorts(std::function<void(const std::string&, unsigned short, unsigned short)> cl) = 0;
 
-    AtomicCounter *opened_ports_counter;
+    class PortMap {
+    public:
+        PortMap(MEDIA_info& info_);
+
+        unsigned short getNextRtpPort();
+        void freeRtpPort(unsigned int port);
+        void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
+
+        /* initialize variables for RTP ports pool management and validate ports range
+        * returns 0 on success, 1 otherwise */
+        int prepare(const std::string &iface_name);
+
+        void copy_addr(sockaddr_storage& ss);
+        bool match_addr(const sockaddr_storage& ss);
+
+        void setAddress(const string &address_) { address = address_; }
+    private:
+        DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
+        unsigned long *ports_state_start_addr,
+                    *ports_state_end_addr;
+        unsigned long *ports_state_current_addr;
+        unsigned short start_edge_bit_it,
+                    start_edge_bit_it_parity,
+                    end_edge_bit_it;
+        bool rtp_bit_parity;
+
+        AtomicCounter *opened_ports_counter;
+
+        MEDIA_info& info;
+        std::string address;
+        sockaddr_storage saddr;
+    };
 };
 
 class RTP_info : public MEDIA_info
@@ -354,11 +372,25 @@ public:
         return 0;
     }
 
+    std::vector<PortMap> addresses;
+    size_t addresses_size;
+    bool single_address;
+    unsigned long last_aquired_address_idx;
+
     dtls_client_settings client_settings;
     dtls_server_settings server_settings;
     std::vector<CryptoProfile> profiles;
     bool srtp_enable;
     bool dtls_enable;
+
+    int prepare(const std::string &iface_name);
+    bool getNextRtpAddress(sockaddr_storage& ss);
+    void freeRtpAddress(const sockaddr_storage& ss);
+    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
+
+    virtual std::string getHost() {
+        return public_domain.empty() ? "" : public_domain;
+    }
 
     int zrtp_hash_from_str(const string& str) {
 #ifdef WITH_ZRTP
@@ -423,12 +455,19 @@ public:
 
 class RTSP_info : public MEDIA_info
 {
+    PortMap portmap;
 public:
     RTSP_info()
       : MEDIA_info(RTSP)
+      , portmap(*this)
     {}
     RTSP_info(const RTSP_info& info) = delete;
     virtual ~RTSP_info(){}
+
+    int prepare(const std::string &iface_name);
+    bool getNextRtpAddress(sockaddr_storage& ss);
+    void freeRtpAddress(const sockaddr_storage& ss);
+    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
 
     static RTSP_info* toMEDIA_RTSP(MEDIA_info* info)
     {

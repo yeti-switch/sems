@@ -197,7 +197,7 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
         if(session->getEnableDtmfRtpDetection())
             stream->force_receive_dtmf = true;
 
-        stream->setLocalIP(session->localMediaIP());
+        stream->setLocalIP();
         stream->updateTransports();
 
         force_symmetric_rtp = session->getRtpRelayForceSymmetricRtp();
@@ -919,21 +919,12 @@ void AmB2BMedia::createStreams(const AmSdp &sdp)
 
 void AmB2BMedia::replaceConnectionAddress(
     AmSdp &parser_sdp, bool a_leg,
-    const string& relay_address,
-    const string& relay_public_address,
     AddressType addr_type)
 {
     AmLock lock(mutex);
 
+    string public_address;
     SdpConnection orig_conn = parser_sdp.conn; // needed for the 'quick workaround' for non-audio media
-
-    // place relay_address in connection address
-    if (!parser_sdp.conn.address.empty() &&
-        (parser_sdp.conn.address != zero_ip))
-    {
-        parser_sdp.conn.address = relay_public_address;
-        DBG("new connection address: %s",parser_sdp.conn.address.c_str());
-    }
 
     // we need to create streams if they are not already created
     createStreams(parser_sdp);
@@ -955,22 +946,25 @@ void AmB2BMedia::replaceConnectionAddress(
                 continue;
             }
             if(it->port) { // if stream active
-                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
-                    it->conn.address = relay_public_address;
-                    it->conn.addrType = addr_type;
-                    DBG("new stream connection address: %s",it->conn.address.c_str());
-                }
                 try {
                     if (a_leg) {
-                        (*audio)->a.replaceAudioMediaParameters(*it, idx, relay_address);
+                        (*audio)->a.replaceAudioMediaParameters(*it, idx, addr_type);
+                        public_address = (*audio)->a.getStream()->getLocalAddress();
                     } else {
-                        (*audio)->b.replaceAudioMediaParameters(*it, idx, relay_address);
+                        (*audio)->b.replaceAudioMediaParameters(*it, idx, addr_type);
+                        public_address = (*audio)->b.getStream()->getLocalAddress();
                     }
                     if(!replaced_ports.empty()) replaced_ports += "/";
                     replaced_ports += int2str(it->port);
                 } catch (const string& s) {
                     ERROR("setting port: '%s'\n", s.c_str());
                     throw string("error setting RTP port\n");
+                }
+
+                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
+                    it->conn.address = public_address;
+                    it->conn.addrType = addr_type;
+                    DBG("new stream connection address: %s",it->conn.address.c_str());
                 }
             }
             while(!(*audio)->audio) ++audio;
@@ -981,26 +975,29 @@ void AmB2BMedia::replaceConnectionAddress(
                 continue;
             }
             if(it->port) { // if stream active
-                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
-                    it->conn.address = relay_public_address;
-                    it->conn.addrType = addr_type;
-                    DBG("new stream connection address: %s",it->conn.address.c_str());
-                }
                 try {
                     if (a_leg) {
-                        (*relay)->a.setLocalIP(relay_address);
+                        (*relay)->a.setLocalIP(addr_type);
+                        public_address = (*relay)->a.getStream()->getLocalAddress();
                         it->port = static_cast<unsigned int>((*relay)->a.getStream()->getLocalPort());
-                        replaceRtcpAttr(*it, relay_address, (*relay)->a.getStream()->getLocalRtcpPort());
+                        replaceRtcpAttr(*it, (*relay)->a.getStream()->getLocalIP(), (*relay)->a.getStream()->getLocalRtcpPort());
                     } else {
-                        (*relay)->b.setLocalIP(relay_address);
+                        (*relay)->b.setLocalIP(addr_type);
+                        public_address = (*relay)->a.getStream()->getLocalAddress();
                         it->port = static_cast<unsigned int>((*relay)->b.getStream()->getLocalPort());
-                        replaceRtcpAttr(*it, relay_address, (*relay)->b.getStream()->getLocalRtcpPort());
+                        replaceRtcpAttr(*it, (*relay)->b.getStream()->getLocalIP(), (*relay)->b.getStream()->getLocalRtcpPort());
                     }
                     if(!replaced_ports.empty()) replaced_ports += "/";
                     replaced_ports += int2str(it->port);
                 } catch (const string& s) {
                     ERROR("setting port: '%s'\n", s.c_str());
                     throw string("error setting RTP port\n");
+                }
+
+                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
+                    it->conn.address = public_address;
+                    it->conn.addrType = addr_type;
+                    DBG("new stream connection address: %s",it->conn.address.c_str());
                 }
             }
             while((*relay)->audio) ++relay;
@@ -1020,8 +1017,16 @@ void AmB2BMedia::replaceConnectionAddress(
              "relay streams initialized (%zu)", streams.size());
     }
 
+    // place relay_address in connection address
+    if (!parser_sdp.conn.address.empty() &&
+        (parser_sdp.conn.address != zero_ip))
+    {
+        parser_sdp.conn.address = public_address;
+        DBG("new connection address: %s",parser_sdp.conn.address.c_str());
+    }
+
     DBG("replaced connection address in SDP with %s:%s",
-        relay_public_address.c_str(), replaced_ports.c_str());
+        public_address.c_str(), replaced_ports.c_str());
 }
 
 void AmB2BMedia::updateStreamPair(StreamPair &pair)
@@ -1439,9 +1444,9 @@ void AmB2BMedia::createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer,
         answer.conn.address = zero_ip;
     } else {
         if (a_leg) {
-            if (a) answer.conn.address = a->advertisedIP();
+            if (a) answer.conn.address = a->RTPStream()->getLocalAddress();
         } else {
-            if (b) answer.conn.address = b->advertisedIP();
+            if (b) answer.conn.address = b->RTPStream()->getLocalAddress();
         }
         if (answer.conn.address.empty())
             answer.conn.address = zero_ip; // we need something there

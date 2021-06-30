@@ -55,22 +55,7 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     , dtls_enable(false)
     , zrtp_enable(false)
 {
-    string local_ip;
-    if(_proto_id >= 0) {
-        local_ip = AmConfig.getMediaProtoInfo(l_if, _proto_id).local_ip;
-    }
-
-    if((local_ip[0] == '[') &&
-      (local_ip[local_ip.size() - 1] == ']') ) {
-        local_ip.pop_back();
-        local_ip.erase(local_ip.begin());
-    }
-
-    CLASS_DBG("local_ip = %s\n",local_ip.c_str());
-
-    if (!am_inet_pton(local_ip.c_str(), &l_saddr)) {
-        throw string("AmMediaTransport: Invalid IP address: %s", local_ip.c_str());
-    }
+    memset(&l_saddr, 0, sizeof(sockaddr_storage));
 
     recv_iov[0].iov_base = buffer;
     recv_iov[0].iov_len  = RTP_PACKET_BUF_SIZE;
@@ -109,7 +94,7 @@ AmMediaTransport::~AmMediaTransport()
                 l_sd_ctx = -1;
             }
         }
-        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpPort(l_port);
+        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
         close(l_sd);
     }
 
@@ -135,12 +120,6 @@ void AmMediaTransport::setSensor(msg_sensor *_sensor)
     if(sensor) dec_ref(sensor);
         sensor = _sensor;
     if(sensor) inc_ref(sensor);
-}
-
-void AmMediaTransport::setLocalPort(unsigned short p)
-{
-    l_port = p;
-    am_set_port(&l_saddr,l_port);
 }
 
 void AmMediaTransport::setRAddr(const string& addr, unsigned short port)
@@ -178,7 +157,12 @@ bool AmMediaTransport::isMute()
 
 string AmMediaTransport::getLocalIP()
 {
-    return AmConfig.getMediaProtoInfo(l_if, lproto_id).getIP();
+    return am_inet_ntop(&l_saddr);
+}
+
+unsigned short AmMediaTransport::getLocalPort()
+{
+    return l_port;
 }
 
 void AmMediaTransport::getLocalAddr(struct sockaddr_storage* addr)
@@ -186,9 +170,10 @@ void AmMediaTransport::getLocalAddr(struct sockaddr_storage* addr)
     memcpy(addr, &l_saddr, sizeof(sockaddr_storage));
 }
 
-int AmMediaTransport::getLocalPort()
+void AmMediaTransport::setLocalAddr(struct sockaddr_storage* addr)
 {
-    return l_port;
+    memcpy(&l_saddr, addr, sizeof(sockaddr_storage));
+    l_port = am_get_port(addr);
 }
 
 AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
@@ -243,13 +228,14 @@ int AmMediaTransport::getLocalSocket(bool reinit)
         CLASS_DBG("< return existent l_sd:%d", l_sd);
         return l_sd;
     } else if(l_sd && reinit) {
-        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpPort(l_port);
+        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
         close(l_sd);
         l_sd = 0;
     }
 
     int sd=0;
-    if((sd = socket(l_saddr.ss_family,SOCK_DGRAM,0)) == -1) {
+    if((sd = socket(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == AT_V4 ? AF_INET : AF_INET6,
+                    SOCK_DGRAM,0)) == -1) {
         CLASS_ERROR("< %s\n",strerror(errno));
         throw string ("while creating new socket.");
     }

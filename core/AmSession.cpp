@@ -962,9 +962,6 @@ bool AmSession::getSdpOffer(AmSdp& offer)
   //offer.origin.sessId = 1;
   //offer.origin.sessV = 1;
   offer.sessionName = AmConfig.sdp_session_name;
-  offer.conn.network = NT_IN;
-  offer.conn.addrType = AT_V4;
-  offer.conn.address = advertisedIP();
 
   // TODO: support mutiple media types (needs multiples RTP streams)
   // TODO: support update instead of clearing everything
@@ -994,9 +991,14 @@ bool AmSession::getSdpOffer(AmSdp& offer)
     m.frame_size = override_frame_size;
   }
 
-  RTPStream()->setLocalIP(localMediaIP());
+  RTPStream()->setLocalIP();
   RTPStream()->getSdpOffer(media_idx,offer.media.back());
-  
+
+  sockaddr_storage ss;
+  am_inet_pton(RTPStream()->getLocalIP().c_str(), &ss);
+  offer.conn.network = NT_IN;
+  offer.conn.addrType = ss.ss_family == AF_INET ? AT_V4 : AT_V6;
+  offer.conn.address = RTPStream()->getLocalAddress();
   return true;
 }
 
@@ -1027,20 +1029,14 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 
     answer.version = 0;
     answer.origin.user = AmConfig.sdp_origin;
-    //answer.origin.sessId = 1;
-    //answer.origin.sessV = 1;
     answer.sessionName = AmConfig.sdp_session_name;
-    answer.conn.network = NT_IN;
+
+    AddressType addrtype = AT_V4;
 
     if(!offer.conn.address.empty()) {
-        answer.conn.addrType = offer.conn.addrType;
-        answer.conn.address = advertisedIP(answer.conn.addrType);
+        addrtype = offer.conn.addrType;
         connection_line_is_processed = true;
     }
-
-    if (offer.conn.address.empty()) answer.conn.addrType = AT_V4; // or use first stream connection?
-    else answer.conn.addrType = offer.conn.addrType;
-    answer.conn.address = advertisedIP(answer.conn.addrType);
 
     answer.media.clear();
 
@@ -1058,19 +1054,19 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
             && audio_1st_stream
             && (m.port != 0) )
         {
-            /* TODO: here could be issue when multiple media streams
-               use different address families. add additional checks */
             if(!connection_line_is_processed) {
                 if(m.conn.address.empty()) {
                     throw Exception(488, "missed c= line");
                 }
-                answer.conn.addrType = m.conn.addrType;
-                answer.conn.address = advertisedIP(answer.conn.addrType);
+                addrtype = m.conn.addrType;
                 connection_line_is_processed = true;
             }
 
-            RTPStream()->setLocalIP(localMediaIP(answer.conn.addrType));
+            RTPStream()->setLocalIP(addrtype);
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
+
+            /* TODO: here could be issue when multiple media streams
+               use different address families. add additional checks */
             
             if(answer_media.is_use_ice()) {
                 answer.use_ice = true;
@@ -1091,6 +1087,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
                   && (m.transport == TP_UDPTL || m.transport == TP_UDPTLSUDPTL)
                   && media_type == MT_IMAGE
                   && (m.port != 0)) {
+            RTPStream()->setLocalIP(addrtype);
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
         } else {
             answer_media.type = m.type;
@@ -1114,6 +1111,10 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
         std::stable_sort(answer_payloads.begin(),answer_payloads.end(),codec_priority_cmp());
         media_index++;
     } //
+
+    answer.conn.network = NT_IN;
+    answer.conn.addrType = addrtype;
+    answer.conn.address = RTPStream()->getLocalAddress();
     return true;
 }
 
@@ -1375,81 +1376,23 @@ void AmSession::setMediaAcl(const std::vector<AmSubnet>& networks)
         media_acl.add_network(network);
 }
 
-string AmSession::localMediaIP(AddressType addrType)
+AddressType AmSession::getLocalMediaAddressType()
 {
-  // sets rtp_interface if not initialized
-  getRtpInterface();
-  getRtpProtoId();
-  
-  //assert(rtp_interface >= 0);
-  if(rtp_interface < 0)
-      throw string ("AmSession::localMediaIP: failed to resolve rtp interface index");
-  assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
+    // sets rtp_interface if not initialized
+    getRtpInterface();
+    getRtpProtoId();
 
-  if(rtp_proto_id < 0)
-      throw string ("AmSession::localMediaIP: failed to resolve  rtp addr type");
-  assert((unsigned int)rtp_proto_id < AmConfig.media_ifs[rtp_interface].proto_info.size());
+    //assert(rtp_interface >= 0);
+    if(rtp_interface < 0)
+        throw string ("AmSession::localMediaIP: failed to resolve rtp interface index");
+    assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
 
-  string set_ip = "";
-  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip &&
-     addrType != AT_NONE)
-  {
-    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType,MEDIA_info::RTP);
-    if(proto_id >= 0) {
-        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->local_ip;
-        rtp_proto_id = proto_id;
-    } else {
-        throw string("AmSession::localMediaIP: missed requested proto in choosen media interface");
-    }
-  } else {
-    set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->local_ip;
-  }
+    if(rtp_proto_id < 0)
+        throw string ("AmSession::localMediaIP: failed to resolve  rtp addr type");
+    assert((unsigned int)rtp_proto_id < AmConfig.media_ifs[rtp_interface].proto_info.size());
 
-  if( (set_ip[0] == '[') &&
-      (set_ip[set_ip.size() - 1] == ']') ) {
-      set_ip.pop_back();
-      set_ip.erase(set_ip.begin());
-  }
-  return set_ip;
+    return AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip;
 }
-
-// Utility for basic NAT handling: allow the config file to specify the IP
-// address to use in SDP bodies 
-string AmSession::advertisedIP(AddressType addrType)
-{
-  // sets rtp_interface if not initialized
-  getRtpInterface();
-  getRtpProtoId();
-  
-  if(rtp_interface < 0)
-      throw string ("AmSession::advertisedIP: failed to resolve rtp interface index");
-  assert((unsigned int)rtp_interface < AmConfig.media_ifs.size());
-
-  if(rtp_proto_id < 0)
-      throw string ("AmSession::advertisedIP: failed to resolve  rtp addr type");
-  assert((unsigned int)rtp_proto_id < AmConfig.media_ifs[rtp_interface].proto_info.size());
-
-  string set_ip = "";
-  if(addrType != AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->type_ip &&
-     addrType != AT_NONE)
-  {
-    int proto_id = AmConfig.media_ifs[rtp_interface].findProto(addrType, MEDIA_info::RTP);
-    if(proto_id >= 0) {
-        set_ip = AmConfig.media_ifs[rtp_interface].proto_info[proto_id]->getHost();
-        rtp_proto_id = proto_id;
-    }
-  } else {
-      set_ip = AmConfig.media_ifs[rtp_interface].proto_info[rtp_proto_id]->getHost();
-  }
-
-  if( (set_ip[0] == '[') &&
-      (set_ip[set_ip.size() - 1] == ']') ) {
-      set_ip.pop_back();
-      set_ip.erase(set_ip.begin());
-  }
-
-  return set_ip;
-}  
 
 bool AmSession::timersSupported() {
   WARN("this function is deprecated; application timers are always supported\n");

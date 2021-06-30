@@ -507,7 +507,6 @@ void CoreRpc::showTrList(const AmArg&, AmArg& ret)
     trans_layer::instance()->get_trans_list(ret);
 }
 
-
 void CoreRpc::showUsedPorts(const AmArg&, AmArg& ret)
 
 {
@@ -517,14 +516,16 @@ void CoreRpc::showUsedPorts(const AmArg&, AmArg& ret)
         intf.assertStruct();
         for(MEDIA_info *protoif : interface.proto_info) {
             AmArg proto_used_ports;
-            proto_used_ports.assertArray();
+            proto_used_ports.assertStruct();
 
-            protoif->iterateUsedPorts([&proto_used_ports](unsigned short rtp, unsigned short rtcp) {
-                proto_used_ports.push(rtp);
-                proto_used_ports.push(rtcp);
+            protoif->iterateUsedPorts([&proto_used_ports](const std::string& address, unsigned short rtp, unsigned short rtcp) {
+                AmArg& ports = proto_used_ports[address];
+                ports.push(rtp);
+                ports.push(rtcp);
             });
 
-            intf[protoif->ipTypeToStr()] = proto_used_ports;
+            AmArg& tintf = intf[protoif->transportToStr()];
+            tintf[protoif->ipTypeToStr()] = proto_used_ports;
         }
     }
 }

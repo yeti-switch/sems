@@ -519,12 +519,7 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp)
   }
 
   auto atype = dlg->getOutboundAddrType();
-
-  media_session->replaceConnectionAddress(
-    sdp, a_leg,
-    localMediaIP(atype),
-    advertisedIP(atype),
-    atype);
+  media_session->replaceConnectionAddress(sdp, a_leg, atype);
 }
 
 void AmB2BSession::updateLocalBody(AmMimeBody& body)

@@ -54,28 +54,28 @@ public:
     bool isMute();
 
     /**
-    * Gets RTP local address. If no RTP address in assigned, assigns a new one.
-    * @param out local RTP addess.
+    * Gets RTP local ip.
+    * @param out local RTP ip.
     */
     string getLocalIP();
 
     /**
-    * Gets RTP local address. If no RTP address in assigned, assigns a new one.
+    * Gets RTP local port.
+    * @param out local RTP port.
+    */    
+    unsigned short getLocalPort();
+
+    /**
+    * Gets RTP local address.
     * @param out local RTP addess.
     */
     void getLocalAddr(struct sockaddr_storage* addr);
 
     /**
-    * Gets RTP port number. If no RTP port in assigned, assigns a new one.
-    * @return local RTP port.
+    * Sets RTP local address.
+    * @param in local RTP addess.
     */
-    int getLocalPort();
-
-    /**
-    * Initializes with a new random local port if 'p' is 0,
-    * else binds the given port, and sets own attributes properly.
-    */
-    void setLocalPort(unsigned short p = 0);
+    void setLocalAddr(struct sockaddr_storage* addr);
 
     /**
     * Gets remote host IP.

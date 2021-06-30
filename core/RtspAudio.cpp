@@ -23,7 +23,9 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
     id = agent->addStream(*this);
 
     AmRtpStream::setRtpTimeout(RTP_TIMEOUT_SEC);
-    AmRtpAudio::setLocalIP(agent->localMediaIP());
+    sockaddr_storage ss;
+    am_inet_pton(agent->localMediaIP().c_str(), &ss);
+    AmRtpAudio::setLocalIP(ss.ss_family == AF_INET ? AT_V4 : AT_V6);
 
     open(uri);
 }
@@ -130,7 +132,7 @@ void RtspAudio::initIP6Transport()
 
 bool RtspAudio::initSdpAnswer()
 {
-    setLocalIP(AmConfig.getMediaProtoInfo(RtspClient::instance()->getRtpInterface(),RtspClient::instance()->getRtpProtoId()).getIP());
+    setLocalIP(AmConfig.getMediaProtoInfo(RtspClient::instance()->getRtpInterface(),RtspClient::instance()->getRtpProtoId()).type_ip);
     if(offer.media.empty()) {
         ERROR("empty offer");
         return false;

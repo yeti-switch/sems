@@ -494,12 +494,9 @@ class AmRtpStream
     /** ping the remote side, to open NATs and enable symmetric RTP */
     virtual int ping(unsigned long long ts) { return 0; }
 
-    /**
-    * This function must be called before setLocalPort, because
-    * setLocalPort will bind the socket and it will be not
-    * possible to change the IP later
-    */
-    virtual void setLocalIP(const string& host);
+    virtual void setLocalIP(AddressType addrtype = AT_NONE);
+    virtual string getLocalAddress();
+    virtual string getLocalIP();
 
     /**
     * Initializes with a new random local port if 'p' is 0,
@@ -555,7 +552,7 @@ class AmRtpStream
     int getLastPayload() { return last_payload; }
     string getPayloadName(int payload_type);
 
-    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, const string& relay_address);
+    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType addr_type);
 
     struct MediaStats {
 

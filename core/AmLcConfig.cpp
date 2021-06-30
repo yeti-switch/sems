@@ -56,6 +56,7 @@
 
 #define PARAM_DEFAULT_MEDIAIF_NAME   "default-media-interface"
 #define PARAM_ADDRESS_NAME           "address"
+#define PARAM_ADDITIONAL_ADDR_NAME   "additional_addresses"
 #define PARAM_LOW_PORT_NAME          "low-port"
 #define PARAM_HIGH_PORT_NAME         "high-port"
 #define PARAM_PORT_NAME              "port"
@@ -308,6 +309,7 @@ namespace Config {
     static cfg_opt_t rtp[] =
     {
         CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
+        CFG_STR_LIST(PARAM_ADDITIONAL_ADDR_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_LOW_PORT_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_PUBLIC_ADDR_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_PUBLIC_DOMAIN_NAME, "", CFGF_NONE),
@@ -733,18 +735,38 @@ int validate_method_func(cfg_t *cfg, cfg_opt_t *opt)
     return valid ? 0 : 1;
 }
 
-int validate_ip6_func(cfg_t *cfg, cfg_opt_t *opt)
+int validate_ip6(const std::string& address)
 {
-    std::string value = cfg_getstr(cfg, opt->name);
     sockaddr_storage addr;
-    if(!am_inet_pton(value.c_str(), &addr)){
-        ERROR("invalid value \'%s\' of address", value.c_str());
+    if(!am_inet_pton(address.c_str(), &addr)){
+        ERROR("invalid value \'%s\' of address", address.c_str());
         return 1;
     }
 
     bool valid = addr.ss_family == AF_INET6;
     if(!valid) {
-        ERROR("invalid value \'%s\' of address: not ip6 address", value.c_str());
+        ERROR("invalid value \'%s\' of address: not ip6 address", address.c_str());
+    }
+    return valid ? 0 : 1;
+}
+
+int validate_ip6_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    return validate_ip6(value);
+}
+
+int validate_ip4(const std::string& address)
+{
+    sockaddr_storage addr;
+    if(!am_inet_pton(address.c_str(), &addr)){
+        ERROR("invalid value \'%s\' of address", address.c_str());
+        return 1;
+    }
+
+    bool valid = addr.ss_family == AF_INET;
+    if(!valid) {
+        ERROR("invalid value \'%s\' of address: not ip4 address", address.c_str());
     }
     return valid ? 0 : 1;
 }
@@ -752,17 +774,7 @@ int validate_ip6_func(cfg_t *cfg, cfg_opt_t *opt)
 int validate_ip4_func(cfg_t *cfg, cfg_opt_t *opt)
 {
     std::string value = cfg_getstr(cfg, opt->name);
-    sockaddr_storage addr;
-    if(!am_inet_pton(value.c_str(), &addr)){
-        ERROR("invalid value \'%s\' of address", value.c_str());
-        return 1;
-    }
-
-    bool valid = addr.ss_family == AF_INET;
-    if(!valid) {
-        ERROR("invalid value \'%s\' of address: not ip4 address", value.c_str());
-    }
-    return valid ? 0 : 1;
+    return validate_ip4(value);
 }
 
 int validate_dtmf_func(cfg_t *cfg, cfg_opt_t *opt)
@@ -1502,12 +1514,21 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
            getMandatoryParameter(cfg, PARAM_LOW_PORT_NAME, mediainfo->low_port)) {
             return nullptr;
         }
-        if(mediainfo->prepare(if_name))
-            return nullptr;
     }
 
     //RTP specific opts
     if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
+        auto &addrs =  rtpinfo->addresses;
+        addrs.emplace_back(*mediainfo);
+        addrs.back().setAddress(rtpinfo->local_ip);
+        for(unsigned int i = 0; i < cfg_size(cfg, PARAM_ADDITIONAL_ADDR_NAME); i++) {
+            string address = cfg_getnstr(cfg, PARAM_ADDITIONAL_ADDR_NAME, i);
+            if((rtpinfo->type_ip == AT_V4 && validate_ip4(address)) ||
+               (rtpinfo->type_ip == AT_V6 && validate_ip6(address)))
+                return nullptr;
+            addrs.emplace_back(*mediainfo);
+            addrs.back().setAddress(address);
+        }
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
         if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, rtpinfo->srtp_enable)) {
             return nullptr;
@@ -1638,6 +1659,12 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
                 rtpinfo->client_settings.ca_list.push_back(ca);
             }
         }
+    }
+
+    //MEDIA specific opts
+    if(mediainfo) {
+        if(mediainfo->prepare(if_name))
+            return nullptr;
     }
 
     //SIP specific opts
