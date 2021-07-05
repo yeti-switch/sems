@@ -6,7 +6,10 @@
 #define MAX_LINES 700000
 #define MAX_LINE_LEN 512
 
-class DILog : public AmLoggingFacility, public AmDynInvoke, public AmDynInvokeFactory
+class DILog : public AmLoggingFacility
+            , public AmDynInvoke
+            , public AmDynInvokeFactory
+            , public AmConfigFactory
 {
  private:
   void dumpLog(const char* path, AmArg &ret);
@@ -26,6 +29,8 @@ class DILog : public AmLoggingFacility, public AmDynInvoke, public AmDynInvokeFa
 
   int onLoad();
 
+  virtual int configure(const std::string& config);
+  virtual int reconfigure(const std::string& config);
   // LF API
   //void log(int level, const char* fmt);
   void log(int level, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg);

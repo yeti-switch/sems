@@ -1,4 +1,5 @@
 #include "AmPlugIn.h"
+#include "AmLcConfig.h"
 #include "log.h"
 #include "DILog.h"
 
@@ -14,25 +15,21 @@ using namespace std;
 #define MOD_NAME "di_log"
 #include "log.h"
 
+#define PARAM_LOG_LEVEL_NAME "loglevel"
+
 EXPORT_LOG_FACILITY_FACTORY(DILog);
+EXPORT_PLUGIN_CONF_FACTORY(DILog);
 EXPORT_PLUGIN_CLASS_FACTORY(DILog);
+DEFINE_FACTORY_INSTANCE(DILog, MOD_NAME);
 
 char DILog::ring_buf[MAX_LINES][MAX_LINE_LEN] = {{0}};
 int DILog::pos = 0;
 
 DILog::DILog(const string& name)
     : AmDynInvokeFactory(name),
-      AmLoggingFacility(name, MODULE_VERSION, L_DBG)
+      AmLoggingFacility(name, MODULE_VERSION, L_DBG),
+      AmConfigFactory(name, name)
 { }
-
-DILog* DILog::_instance=0;
-
-DILog* DILog::instance() {
-  if(_instance == NULL){
-    _instance = new DILog(MOD_NAME);
-  }
-  return _instance;
-}
 
 int DILog::onLoad() {
   DBG("DILog logging ring-buffer loaded.\n");
@@ -100,4 +97,40 @@ void DILog::log(int level, pid_t pid, pid_t tid,
   pos = (pos + 1) % MAX_LINES;
 }
 
-// todo: new() array on load, provide DI for resizing
+int DILog::configure(const std::string& config)
+{
+    cfg_opt_t di_opt[]
+    {
+        CFG_STR(PARAM_LOG_LEVEL_NAME, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+    cfg_t *cfg = cfg_init(di_opt, CFGF_NONE);
+    if(!cfg) return -1;
+    cfg_set_validate_func(cfg, PARAM_LOG_LEVEL_NAME, validate_log_func);
+
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    }
+
+    if(cfg_size(cfg, PARAM_LOG_LEVEL_NAME))
+        setLogLevel(parse_log_level(cfg_getstr(cfg, PARAM_LOG_LEVEL_NAME)));
+
+    cfg_free(cfg);
+    return 0;
+}
+
+int DILog::reconfigure(const std::string& config)
+{
+    return configure(config);
+}
+
+// TODO: new() array on load, provide DI for resizing

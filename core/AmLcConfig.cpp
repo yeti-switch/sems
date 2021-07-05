@@ -175,11 +175,6 @@
 #define VALUE_DROP                   "drop"
 #define VALUE_REJECT                 "reject"
 #define VALUE_BL_TTL                 60000 /* 60s */
-#define VALUE_LOG_NO                 "no"
-#define VALUE_LOG_DEBUG              "debug"
-#define VALUE_LOG_ERR                "error"
-#define VALUE_LOG_WARN               "warn"
-#define VALUE_LOG_INFO               "info"
 #define VALUE_UDP_RECVBUF            -1
 #define VALUE_LOG_DUMP_PATH          "/var/spool/sems/logdump"
 #define VALUE_RSR_PATH               "/var/spool/sems/rsr/"
