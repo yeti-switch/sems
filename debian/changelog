@@ -1,3 +1,9 @@
+sems (1.54.1) stable; urgency=low
+
+  * fix config reading for rtp sections without srtp
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 07 Jul 2021 19:57:01 +0300
+
 sems (1.54.0) stable; urgency=low
 
   * multiple IP addresses per logical media interface

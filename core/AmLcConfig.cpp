@@ -1517,7 +1517,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
     }
 
     //RTP specific opts
-    if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
+    if(rtpinfo) {
         auto &addrs =  rtpinfo->addresses;
         addrs.emplace_back(*mediainfo);
         addrs.back().setAddress(rtpinfo->local_ip);
@@ -1529,6 +1529,10 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             addrs.emplace_back(*mediainfo);
             addrs.back().setAddress(address);
         }
+    }
+
+    //RTP->SRTP specific opts
+    if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
         cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
         if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, rtpinfo->srtp_enable)) {
             return nullptr;
