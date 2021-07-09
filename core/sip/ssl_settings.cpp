@@ -1,9 +1,38 @@
 #include "ssl_settings.h"
 #include "sip/tls_trsp.h"
-#include <botan/pkcs8.h>
+#include <botan/data_src.h>
+#include <fstream>
 
-settings::~settings()
-{}
+//---------------
+//TODO(): fix crash, but created memory leaks
+// template<>
+// binary_data<Botan::Private_Key>::~binary_data()
+// {
+//     data.release();
+// };
+//---------------
+
+template<>
+Botan::Private_Key* binary_data<Botan::Private_Key>::get()
+{
+    AmLock lock(mutex);
+    return Botan::PKCS8::copy_key(*data).release();
+}
+
+void settings::load_certificates()
+{
+    certificate.set(new Botan::X509_Certificate(certificate_path));
+    Botan::DataSource_Stream stream(certificate_key_path);
+    certificate_key.set(Botan::PKCS8::load_key(stream).release());
+    {
+        AmLock lock(ca_list);
+        ca_list.clear();
+        for(auto& ca : ca_path_list) {
+            std::vector<Botan::X509_Certificate>& list = ca_list;
+            list.push_back(Botan::X509_Certificate(ca));
+        }
+    }
+}
 
 bool settings::checkCertificateAndKey(
     const char *interface_name,
@@ -11,15 +40,16 @@ bool settings::checkCertificateAndKey(
     const char *role_name)
 {
     try {
-        if(!certificate_key.empty()) {
+        if(!certificate_key_path.empty()) {
             DBG("checking %s interface %s %s %s certificate_key: %s",
                 interface_type, interface_name,
                 getProtocolName(),role_name,
-                certificate_key.c_str());
-            std::unique_ptr<Botan::Private_Key> key(Botan::PKCS8::load_key(certificate_key, *rand_generator_tls::instance()));
+                certificate_key_path.c_str());
+            Botan::DataSource_Stream stream(certificate_key_path);
+            std::unique_ptr<Botan::Private_Key> key(Botan::PKCS8::load_key(stream));
         }
 
-        for(auto& cert : ca_list) {
+        for(auto& cert : ca_path_list) {
                 DBG("checking %s interface %s %s %s ca_list: %s",
                     interface_type, interface_name,
                     getProtocolName(),role_name,
@@ -27,12 +57,12 @@ bool settings::checkCertificateAndKey(
                 Botan::X509_Certificate cert_(cert);
         }
 
-        if(!certificate.empty()) {
+        if(!certificate_path.empty()) {
             DBG("checking %s interface %s %s %s certificate: %s",
                 interface_type, interface_name,
                 getProtocolName(),role_name,
-                certificate.c_str());
-            Botan::X509_Certificate certificate_(certificate);
+                certificate_path.c_str());
+            Botan::X509_Certificate certificate_(certificate_path);
         }
 
     } catch(const Botan::Exception& exc) {
@@ -41,6 +71,47 @@ bool settings::checkCertificateAndKey(
     }
     return true;
 }
+
+void settings::dump(const std::string& prefix)
+{
+    std::string ca_list("{");
+    for(auto& ca : ca_path_list) {
+        ca_list.append(ca);
+        ca_list.push_back(',');
+    }
+    ca_list.pop_back();
+    ca_list.push_back('}');
+
+    std::string protocols;
+    auto supp_proto = getSupportedProtocols();
+    for(auto& protocol : supp_proto) {
+        protocols.append(protocol);
+        protocols.push_back(',');
+    }
+    protocols.pop_back();
+    protocols.push_back('}');
+    INFO("\t\tclient: certificate='%s'"
+        ";key='%s';ca='%s'"
+        ";supported_protocols='%s'",
+        certificate_path.c_str(),
+        certificate_key_path.c_str(),
+        ca_list.c_str(), protocols.c_str());
+}
+
+#define getSupportedProtocols(class_setting) \
+std::vector<std::string> class_setting::getSupportedProtocols() \
+{ \
+    std::vector<std::string> supp_proto; \
+    for(auto& proto : protocols) { \
+        supp_proto.push_back(protocolToStr(proto)); \
+    } \
+    return supp_proto; \
+}
+
+getSupportedProtocols(tls_settings);
+getSupportedProtocols(dtls_settings);
+
+#undef getSupportedProtocols
 
 const char *tls_settings::getProtocolName()
 {

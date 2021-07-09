@@ -33,18 +33,7 @@ public:
       tos_byte(0)
     {}
 
-    IP_info(const IP_info& info)
-    : local_ip(info.local_ip)
-    , public_ip(info.public_ip)
-    , public_domain(info.public_domain)
-    , announce_port(info.announce_port)
-    , type_ip(info.type_ip)
-    , net_if(info.net_if)
-    , net_if_idx(info.net_if_idx)
-    , dscp(info.dscp)
-    , sig_sock_opts(info.sig_sock_opts)
-    , tos_byte(info.tos_byte)
-    {}
+    IP_info(const IP_info& info) = delete;
 
     virtual ~IP_info(){}
 
@@ -83,10 +72,6 @@ public:
       return public_domain.empty() ? getIP() : public_domain;
     }
 
-    virtual IP_info* Clone(){
-        return new IP_info(*this);
-    }
-
     std::string ipTypeToStr() const {
         if(type_ip == AT_V4) {
             return "IPv4";
@@ -113,12 +98,7 @@ public:
 
     SIP_info(SIP_type type)
     : type(type), local_port(0){}
-    SIP_info(const SIP_info& info)
-    : IP_info(info)
-    , type(info.type)
-    , local_port(info.local_port)
-    , acls(info.acls)
-    {}
+    SIP_info(const SIP_info& info) = delete;
     virtual ~SIP_info(){}
 
     SIP_type type;
@@ -142,17 +122,13 @@ public:
 
         return "";
     }
-
-    virtual IP_info* Clone(){
-        return new SIP_info(*this);
-    }
 };
 
 class SIP_UDP_info : public SIP_info
 {
 public:
     SIP_UDP_info() : SIP_info(UDP){}
-    SIP_UDP_info(const SIP_UDP_info& info) : SIP_info(info){}
+    SIP_UDP_info(const SIP_UDP_info& info) = delete;
     virtual ~SIP_UDP_info(){}
 
     static SIP_UDP_info* toSIP_UDP(SIP_info* info)
@@ -161,10 +137,6 @@ public:
             return static_cast<SIP_UDP_info*>(info);
         }
         return 0;
-    }
-
-    virtual IP_info* Clone(){
-        return new SIP_UDP_info(*this);
     }
 };
 
@@ -176,8 +148,7 @@ protected:
 public:
     SIP_TCP_info()
     : SIP_info(TCP), tcp_connect_timeout(DEFAULT_TCP_CONNECT_TIMEOUT), tcp_idle_timeout(DEFAULT_IDLE_TIMEOUT){}
-    SIP_TCP_info(const SIP_TCP_info& info)
-    : SIP_info(info), tcp_connect_timeout(info.tcp_connect_timeout), tcp_idle_timeout(info.tcp_idle_timeout){}
+    SIP_TCP_info(const SIP_TCP_info& info) = delete;
     virtual ~SIP_TCP_info(){}
 
     unsigned int tcp_connect_timeout;
@@ -190,10 +161,6 @@ public:
         }
         return 0;
     }
-
-    virtual IP_info* Clone(){
-        return new SIP_TCP_info(*this);
-    }
 };
 
 class SIP_TLS_info : public SIP_TCP_info
@@ -204,10 +171,7 @@ protected:
 public:
     SIP_TLS_info()
     : SIP_TCP_info(TLS){}
-    SIP_TLS_info(const SIP_TLS_info& info)
-    : SIP_TCP_info(info)
-    , server_settings(info.server_settings)
-    , client_settings(info.client_settings){}
+    SIP_TLS_info(const SIP_TLS_info& info) = delete;
     virtual ~SIP_TLS_info(){}
 
     tls_server_settings server_settings;
@@ -215,14 +179,10 @@ public:
 
     static SIP_TLS_info* toSIP_TLS(SIP_info* info)
     {
-        if(info->type == TLS) {
+        if(info->type == TLS || info->type == WSS) {
             return static_cast<SIP_TLS_info*>(info);
         }
         return 0;
-    }
-
-    virtual IP_info* Clone(){
-        return new SIP_TLS_info(*this);
     }
 };
 
@@ -243,9 +203,7 @@ class SIP_WS_info : public SIP_TCP_info, public WS_info
 public:
     SIP_WS_info()
     : SIP_TCP_info(WS){}
-    SIP_WS_info(const SIP_WS_info& info)
-    : SIP_TCP_info(info)
-    , WS_info(info){}
+    SIP_WS_info(const SIP_WS_info& info) = delete;
     virtual ~SIP_WS_info(){}
 
     static SIP_WS_info* toSIP_WS(SIP_info* info)
@@ -255,10 +213,6 @@ public:
         }
         return 0;
     }
-
-    virtual IP_info* Clone(){
-        return new SIP_WS_info(*this);
-    }
 };
 
 class SIP_WSS_info : public SIP_TLS_info, public WS_info
@@ -266,9 +220,7 @@ class SIP_WSS_info : public SIP_TLS_info, public WS_info
 public:
     SIP_WSS_info()
     : SIP_TLS_info(WSS){}
-    SIP_WSS_info(const SIP_WSS_info& info)
-    : SIP_TLS_info(info)
-    , WS_info(info){}
+    SIP_WSS_info(const SIP_WSS_info& info) = delete;
     virtual ~SIP_WSS_info(){}
 
     static SIP_WSS_info* toSIP_WSS(SIP_info* info)
@@ -277,10 +229,6 @@ public:
             return static_cast<SIP_WSS_info*>(info);
         }
         return 0;
-    }
-
-    virtual IP_info* Clone(){
-        return new SIP_WSS_info(*this);
     }
 };
 
@@ -361,7 +309,7 @@ public:
         zrtp_enable(false)
     {}
     RTP_info(const RTP_info& info) = delete;
-    virtual ~RTP_info()    {}
+    virtual ~RTP_info(){}
 
     static RTP_info* toMEDIA_RTP(MEDIA_info* info)
     {

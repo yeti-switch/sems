@@ -73,8 +73,8 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
 
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(&AmConfig.getMediaProtoInfo(_if, _proto_id));
     if(rtpinfo) {
-        server_settings = rtpinfo->server_settings;
-        client_settings = rtpinfo->client_settings;
+        server_settings = &rtpinfo->server_settings;
+        client_settings = &rtpinfo->client_settings;
         allowed_srtp_profiles = rtpinfo->profiles;
         srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
         dtls_enable = srtp_enable && rtpinfo->dtls_enable;
@@ -338,7 +338,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     case TP_UDPTLSRTPSAVP:
     case TP_UDPTLSRTPSAVPF: {
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(server_settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -354,7 +354,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     } break;
     case TP_UDPTLSUDPTL: {
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(&server_settings);
+            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(server_settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -418,8 +418,8 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.crypto = local_crypto;
     } else if(transport == TP_UDPTLSRTPSAVP || transport == TP_UDPTLSRTPSAVPF) {
         dtls_settings* settings = (offer.setup == S_ACTIVE) ?
-                                                    static_cast<dtls_settings*>(&server_settings) :
-                                                    static_cast<dtls_settings*>(&client_settings);
+                                                    static_cast<dtls_settings*>(server_settings) :
+                                                    static_cast<dtls_settings*>(client_settings);
         if(local_dtls_fingerprint.hash.empty()) {
             srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
             local_dtls_fingerprint.hash = fp.hash;
@@ -441,8 +441,8 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.fmt = T38_FMT;
     } else if(transport == TP_UDPTLSUDPTL) {
         dtls_settings* settings = (offer.setup == S_ACTIVE) ?
-                                                    static_cast<dtls_settings*>(&server_settings) :
-                                                    static_cast<dtls_settings*>(&client_settings);
+                                                    static_cast<dtls_settings*>(server_settings) :
+                                                    static_cast<dtls_settings*>(client_settings);
         if(local_dtls_fingerprint.hash.empty()) {
             srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
             local_dtls_fingerprint.hash = fp.hash;

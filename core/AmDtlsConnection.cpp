@@ -6,6 +6,7 @@
 #include <botan/tls_server.h>
 #include <botan/tls_exceptn.h>
 #include <botan/tls_alert.h>
+#include <botan/data_src.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
 #include "AmLCContainers.h"
@@ -22,45 +23,29 @@ dtls_conf::dtls_conf()
 
 dtls_conf::dtls_conf(const dtls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
-, certificate(conf.certificate)
-, is_optional(conf.is_optional)
-{
-    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, rand_gen));
-    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, rand_gen));
-    }
-}
+, certificate(new Botan::X509_Certificate(*conf.certificate))
+, key(Botan::PKCS8::copy_key(*conf.key.get()))
+, is_optional(conf.is_optional) {}
 
 dtls_conf::dtls_conf(dtls_client_settings* settings)
 : s_client(settings), s_server(0)
-, is_optional(false)
-{
-    if(!settings->certificate.empty())
-        certificate = Botan::X509_Certificate(settings->certificate);
-    if(!settings->certificate_key.empty())
-        key.reset(Botan::PKCS8::load_key(settings->certificate_key, rand_gen));
-}
+, certificate(settings->certificate.get())
+, key(settings->certificate_key.get())
+, is_optional(false){}
 
 dtls_conf::dtls_conf(dtls_server_settings* settings)
 : s_client(0), s_server(settings)
-, certificate(settings->certificate)
-, key(Botan::PKCS8::load_key(settings->certificate_key, rand_gen))
-, is_optional(false)
-{
-}
+, certificate(settings->certificate.get())
+, key(settings->certificate_key.get())
+, is_optional(false){}
 
 void dtls_conf::operator=(const dtls_conf& conf)
 {
     s_client = conf.s_client;
     s_server = conf.s_server;
-    certificate = conf.certificate;
+    certificate.reset(new Botan::X509_Certificate(*conf.certificate));
     is_optional = conf.is_optional;
-    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, rand_gen));
-    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
-        key = unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, rand_gen));
-    }
+    key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
 }
 
 Botan::Private_Key * dtls_conf::private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context)
@@ -86,8 +71,9 @@ vector<Botan::Certificate_Store *> dtls_conf::trusted_certificate_authorities(co
     }
 
     vector<Botan::Certificate_Store*> ca;
-    for(auto& cert : settings->ca_list) {
-        ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
+    auto list = settings->ca_list.data();
+    for(auto& cert : list) {
+        ca.push_back(new Botan::Certificate_Store_In_Memory(cert));
     }
 
     return ca;
@@ -211,11 +197,11 @@ vector<string> dtls_conf::allowed_signature_methods() const
 vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
 {
     vector<Botan::X509_Certificate> certs;
-    std::string algorithm = certificate.load_subject_public_key()->algo_name();
+    std::string algorithm = certificate->load_subject_public_key()->algo_name();
     for(auto& key : cert_key_types) {
         if(algorithm == key) {
             DBG("loaded certificate with algorithm %s", algorithm.c_str());
-            certs.push_back(certificate);
+            certs.push_back(*certificate);
         }
     }
 
@@ -322,10 +308,8 @@ void AmDtlsConnection::initConnection()
 
 srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settings)
 {
-    if(settings->certificate.empty()) return srtp_fingerprint_p();
-    Botan::X509_Certificate cert(settings->certificate);
     std::string hash("SHA-256");
-    return srtp_fingerprint_p(hash, cert.fingerprint(hash));
+    return srtp_fingerprint_p(hash, settings->certificate.get()->fingerprint(hash));
 }
 
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)

@@ -1617,8 +1617,8 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
                 rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
             }
-            if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate) ||
-            getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key)){
+            if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate_path) ||
+            getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key_path)){
                 return nullptr;
             }
             for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
@@ -1634,7 +1634,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
             for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
                 std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
-                rtpinfo->server_settings.ca_list.push_back(ca);
+                rtpinfo->server_settings.ca_path_list.push_back(ca);
             }
 
             if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
@@ -1654,13 +1654,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
                 rtpinfo->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
             }
-            rtpinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
-            rtpinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+            rtpinfo->client_settings.certificate_path = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+            rtpinfo->client_settings.certificate_key_path = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
             rtpinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
             rtpinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
             for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
                 std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
-                rtpinfo->client_settings.ca_list.push_back(ca);
+                rtpinfo->client_settings.ca_path_list.push_back(ca);
             }
         }
     }
@@ -1722,8 +1722,8 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
             stlinfo->server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
         }
-        if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, stlinfo->server_settings.certificate) ||
-           getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, stlinfo->server_settings.certificate_key)) {
+        if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, stlinfo->server_settings.certificate_path) ||
+           getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, stlinfo->server_settings.certificate_key_path)) {
             return nullptr;
         }
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
@@ -1739,7 +1739,7 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
         stlinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
         for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
-            stlinfo->server_settings.ca_list.push_back(ca);
+            stlinfo->server_settings.ca_path_list.push_back(ca);
         }
 
         if(stlinfo->server_settings.verify_client_certificate && !stlinfo->server_settings.require_client_certificate) {
@@ -1756,13 +1756,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
             std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
             stlinfo->client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
         }
-        stlinfo->client_settings.certificate = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
-        stlinfo->client_settings.certificate_key = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+        stlinfo->client_settings.certificate_path = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+        stlinfo->client_settings.certificate_key_path = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
         stlinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
         stlinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
         for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
             std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
-            stlinfo->client_settings.ca_list.push_back(ca);
+            stlinfo->client_settings.ca_path_list.push_back(ca);
         }
     }
 
@@ -1843,6 +1843,8 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 {
                     return -1;
                 }
+                tls_info->client_settings.load_certificates();
+                tls_info->server_settings.load_certificates();
             }
             i++;
         }
@@ -1875,7 +1877,7 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
             }
 
             RTP_info* rtp_info = RTP_info::toMEDIA_RTP(info);
-            if(rtp_info && rtp_info->srtp_enable) {
+            if(rtp_info && rtp_info->dtls_enable) {
                 if(!rtp_info->client_settings.checkCertificateAndKey(
                         if_iterator->name.c_str(),"media","client") ||
                     !rtp_info->server_settings.checkCertificateAndKey(
@@ -1883,6 +1885,8 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 {
                     return -1;
                 }
+                rtp_info->client_settings.load_certificates();
+                rtp_info->server_settings.load_certificates();
             }
             i++;
         }
@@ -1911,55 +1915,8 @@ void AmLcConfig::dump_Ifs(ConfigContainer* config)
                     info->tcp_connect_timeout,
                     info->tcp_idle_timeout);
 
-                //client settings
-                {
-                    std::string ca_list("{");
-                    for(auto& ca : info->client_settings.ca_list) {
-                        ca_list.append(ca);
-                        ca_list.push_back(',');
-                    }
-                    ca_list.pop_back();
-                    ca_list.push_back('}');
-
-                    std::string protocols("{");
-                    for(auto& protocol : info->client_settings.protocols) {
-                        protocols.append(info->client_settings.protocolToStr(protocol));
-                        protocols.push_back(',');
-                    }
-                    protocols.pop_back();
-                    protocols.push_back('}');
-                    INFO("\t\tclient: certificate='%s'"
-                        ";key='%s';ca='%s'"
-                        ";supported_protocols='%s'",
-                        info->client_settings.certificate.c_str(),
-                        info->client_settings.certificate_key.c_str(),
-                        ca_list.c_str(), protocols.c_str());
-                }
-
-                //server settings
-                {
-                    std::string ca_list("{");
-                    for(auto& ca : info->server_settings.ca_list) {
-                        ca_list.append(ca);
-                        ca_list.push_back(',');
-                    }
-                    ca_list.pop_back();
-                    ca_list.push_back('}');
-
-                    std::string protocols("{");
-                    for(auto& protocol : info->server_settings.protocols) {
-                        protocols.append(info->server_settings.protocolToStr(protocol));
-                        protocols.push_back(',');
-                    }
-                    protocols.pop_back();
-                    protocols.push_back('}');
-                    INFO("\t\tserver: certificate='%s'"
-                        ";key='%s';ca='%s'"
-                        ";supported_protocols='%s'",
-                        info->server_settings.certificate.c_str(),
-                        info->server_settings.certificate_key.c_str(),
-                        ca_list.c_str(), protocols.c_str());
-                }
+                info->client_settings.dump("client");
+                info->server_settings.dump("server");
             } else {
                 INFO("\t\tUDP");
             }

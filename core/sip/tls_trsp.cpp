@@ -16,45 +16,44 @@
 #include <botan/tls_server.h>
 #include <botan/pkcs8.h>
 #include <botan/dl_group.h>
+#include <botan/data_src.h>
 #include <botan/tls_exceptn.h>
 #include <botan/tls_alert.h>
 
 
 tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
-, key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
-, policy_override(false)
-{
-    if(!settings->certificate.empty()){
-        Botan::X509_Certificate cert(settings->certificate);
-        certificate = cert;
-    }
-}
+, certificate(settings->certificate.get())
+, key(settings->certificate_key.get())
+, policy_override(false) {}
 
 tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
-, key(settings->certificate_key.empty() ? 0 : Botan::PKCS8::load_key(settings->certificate_key, *rand_generator_tls::instance()))
+, certificate(settings->certificate.get())
+, key(settings->certificate_key.get())
 , policy_override(false)
-{
-    if(!settings->certificate.empty()){
-        Botan::X509_Certificate cert(settings->certificate);
-        certificate = cert;
-    }
-}
+{}
 
 tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
-, certificate(conf.certificate)
+, certificate(new Botan::X509_Certificate(*conf.certificate))
+, key(Botan::PKCS8::copy_key(*conf.key.get()))
 , policy_override(conf.policy_override)
 , cipher(conf.cipher)
 , mac(conf.mac)
-, sig(conf.sig)
+, sig(conf.sig) {}
+
+
+void tls_conf::operator=(const tls_conf& conf)
 {
-    if(conf.s_server && !conf.s_server->certificate_key.empty()) {
-        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_server->certificate_key, *rand_generator_tls::instance()));
-    } else if(conf.s_client && !conf.s_client->certificate_key.empty()) {
-        key = std::unique_ptr<Botan::Private_Key>(Botan::PKCS8::load_key(conf.s_client->certificate_key, *rand_generator_tls::instance()));
-    }
+    s_client = conf.s_client;
+    s_server = conf.s_server;
+    certificate.reset(new Botan::X509_Certificate(*conf.certificate));
+    key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
+    policy_override = conf.policy_override;
+    cipher = conf.cipher;
+    mac = conf.mac;
+    sig = conf.sig;
 }
 
 vector<string> tls_conf::allowed_key_exchange_methods() const
@@ -224,7 +223,8 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
     }
 
     vector<Botan::Certificate_Store*> ca;
-    for(auto& cert : settings->ca_list) {
+    auto ca_list = settings->ca_list.data();
+    for(auto& cert : ca_list) {
         ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
     }
 
@@ -234,11 +234,11 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
 vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
 {
     vector<Botan::X509_Certificate> certs;
-    std::string algorithm = certificate.load_subject_public_key()->algo_name();
+    std::string algorithm = certificate->load_subject_public_key()->algo_name();
     for(auto& key : cert_key_types) {
         if(algorithm == key) {
             DBG("loaded certificate with algorithm %s", algorithm.c_str());
-            certs.push_back(certificate);
+            certs.push_back(*certificate);
         }
     }
 
@@ -550,6 +550,23 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto
 
 void tls_cleanup()
 {
-    rand_generator_tls::dispose();
     session_manager_tls::dispose();
+    for(auto& sipif: AmConfig.sip_ifs) {
+        for(auto& proto : sipif.proto_info) {
+            SIP_TLS_info* sip_info = SIP_TLS_info::toSIP_TLS(proto);
+            if(sip_info) {
+                sip_info->server_settings.certificate_key.clear();
+                sip_info->client_settings.certificate_key.clear();
+            }
+        }
+    }
+    for(auto& mediaif: AmConfig.media_ifs) {
+        for(auto& proto : mediaif.proto_info) {
+            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(proto);
+            if(rtp_info && rtp_info->dtls_enable) {
+                rtp_info->server_settings.certificate_key.clear();
+                rtp_info->client_settings.certificate_key.clear();
+            }
+        }
+    }
 }

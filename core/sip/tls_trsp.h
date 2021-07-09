@@ -31,7 +31,7 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     friend class tls_trsp_socket;
     tls_client_settings* s_client;
     tls_server_settings* s_server;
-    Botan::X509_Certificate certificate;
+    std::unique_ptr<Botan::X509_Certificate> certificate;
     std::unique_ptr<Botan::Private_Key> key;
 
     //ciphersuite policy overrides
@@ -43,6 +43,8 @@ public:
     tls_conf(tls_client_settings* settings);
     tls_conf(tls_server_settings* settings);
     tls_conf(const tls_conf& conf);
+
+    void operator=(const tls_conf& conf);
 
     //Policy functions
     vector<string> allowed_key_exchange_methods() const override;
@@ -77,13 +79,12 @@ public:
     void dispose(){}
 };
 
-typedef singleton<tls_rand_generator> rand_generator_tls;
-
 class tls_session_manager
 {
+    tls_rand_generator rand_tls;
 public:
     Botan::TLS::Session_Manager_In_Memory ssm;
-    tls_session_manager() : ssm(*rand_generator_tls::instance()){}
+    tls_session_manager() : ssm(rand_tls){}
     operator Botan::TLS::Session_Manager_In_Memory& () {
         return ssm;
     }

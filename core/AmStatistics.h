@@ -142,6 +142,7 @@ class StatCountersGroupsInterface
 
 class StatsCountersGroupsContainerInterface {
   public:
+    virtual ~StatsCountersGroupsContainerInterface(){}
     using iterate_groups_callback_type =
         std::function<void(const std::string &name,
                            StatCountersGroupsInterface &group)>;
@@ -183,7 +184,11 @@ class AmStatistics
   protected:
     AmStatistics();
     virtual ~AmStatistics();
-    void dispose() {}
+    void dispose() {
+        for(auto& it : counters_groups_containers) {
+            delete it.second;
+        }
+    }
 
     string get_concatenated_name(const string& naming_group, const string& name);
 

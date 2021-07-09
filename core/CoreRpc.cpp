@@ -198,6 +198,8 @@ void CoreRpc::init_rpc_tree()
         AmArg &request_resolver = reg_leaf(request,"resolver");
             reg_method(request_resolver,"clear","",&CoreRpc::requestResolverClear);
             reg_method(request_resolver,"get","",&CoreRpc::requestResolverGet);
+        AmArg &request_config = reg_leaf(request,"reload");
+            reg_method(request_config ,"certificates","",&CoreRpc::requestReloadCertificate);
 
     //set
     AmArg &set = reg_leaf(root,"set");
@@ -724,6 +726,50 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
     di_log_args.push(path);
 
     di_log->getInstance()->invoke("dumplogtodisk",di_log_args,ret);
+}
+
+void CoreRpc::requestReloadCertificate(const AmArg& args, AmArg& ret)
+{
+    std::vector<settings*> settings;
+    for(auto& sip_if : AmConfig.sip_ifs) {
+        for(auto& proto : sip_if.proto_info) {
+            SIP_TLS_info* sip_info = SIP_TLS_info::toSIP_TLS(proto);
+            if(sip_info) {
+                if(sip_info->client_settings.checkCertificateAndKey(sip_if.name.c_str(),"SIP","client")) {
+                    settings.push_back(&sip_info->client_settings);
+                } else {
+                    throw AmSession::Exception(500,"certificates checking failed");
+                }
+                if(sip_info->server_settings.checkCertificateAndKey(sip_if.name.c_str(),"SIP","server")) {
+                    settings.push_back(&sip_info->server_settings);
+                } else {
+                    throw AmSession::Exception(500,"certificates checking failed");
+                }
+            }
+        }
+    }
+    for(auto& media_if : AmConfig.media_ifs) {
+        for(auto& proto : media_if.proto_info) {
+            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(proto);
+            if(rtp_info && rtp_info->srtp_enable) {
+                if(rtp_info->client_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","client")) {
+                    settings.push_back(&rtp_info->client_settings);
+                } else {
+                    throw AmSession::Exception(500,"certificates checking failed");
+                }
+                if(rtp_info->server_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","server")) {
+                    settings.push_back(&rtp_info->server_settings);
+                } else {
+                    throw AmSession::Exception(500,"certificates checking failed");
+                }
+            }
+        }
+    }
+
+    for(auto& setting : settings) {
+        setting->load_certificates();
+    }
+    ret = RPC_CMD_SUCC;
 }
 
 void CoreRpc::plugin(const AmArg& args, AmArg& ret)

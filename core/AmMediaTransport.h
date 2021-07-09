@@ -240,8 +240,8 @@ private:
     struct timeval recv_time;
     struct sockaddr_storage saddr;
     
-    dtls_client_settings client_settings;
-    dtls_server_settings server_settings;
+    dtls_client_settings* client_settings;
+    dtls_server_settings* server_settings;
     vector<CryptoProfile> allowed_srtp_profiles;
     bool srtp_enable;
     bool dtls_enable;
