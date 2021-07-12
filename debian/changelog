@@ -1,3 +1,9 @@
+sems (1.53.2) stable; urgency=low
+
+  * add option loglevel to override default debug log level for module di_log
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 12 Jul 2021 14:54:38 +0300
+
 sems (1.53.1) stable; urgency=low
 
   * jsonrpc: increase write timeout 3->6 seconds
