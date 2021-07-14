@@ -38,16 +38,17 @@ public:
             delete data.release();
         }
     }
+
+    uint64_t not_after() {
+        return 0;
+    }
 };
 
 template<>Botan::Private_Key* binary_data<Botan::Private_Key>::get();
 extern template Botan::Private_Key* binary_data<Botan::Private_Key>::get();
 
-//------------
-//TODO(): fix crash, but created memory leaks
-// template<>binary_data<Botan::Private_Key>::~binary_data();
-// extern template binary_data<Botan::Private_Key>::~binary_data();
-//------------
+template<>uint64_t binary_data<Botan::X509_Certificate>::not_after();
+extern template uint64_t binary_data<Botan::X509_Certificate>::not_after();
 
 typedef binary_data<Botan::X509_Certificate> Certificate;
 typedef binary_data<Botan::Private_Key> PrivateKey;
@@ -66,6 +67,9 @@ public:
     operator AmMutex& () { return mutex; }
     vector<T> data() { AmLock lock(mutex); return data_; }
 };
+
+class AtomicCounter;
+
 struct settings
 {
     string certificate_path;
@@ -76,7 +80,9 @@ struct settings
     PrivateKey certificate_key;
     binary_list<Botan::X509_Certificate> ca_list;
 
-    settings(){}
+    AtomicCounter* crt_not_after;
+
+    settings() : crt_not_after(0){}
     virtual ~settings(){}
 
     void load_certificates();

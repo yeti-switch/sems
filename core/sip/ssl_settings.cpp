@@ -3,20 +3,18 @@
 #include <botan/data_src.h>
 #include <fstream>
 
-//---------------
-//TODO(): fix crash, but created memory leaks
-// template<>
-// binary_data<Botan::Private_Key>::~binary_data()
-// {
-//     data.release();
-// };
-//---------------
-
 template<>
 Botan::Private_Key* binary_data<Botan::Private_Key>::get()
 {
     AmLock lock(mutex);
     return Botan::PKCS8::copy_key(*data).release();
+}
+
+template<>
+uint64_t binary_data<Botan::X509_Certificate>::not_after()
+{
+    AmLock lock(mutex);
+    return data->not_after().time_since_epoch();
 }
 
 void settings::load_certificates()
@@ -32,6 +30,8 @@ void settings::load_certificates()
             list.push_back(Botan::X509_Certificate(ca));
         }
     }
+
+    crt_not_after->set(certificate.not_after());
 }
 
 bool settings::checkCertificateAndKey(
