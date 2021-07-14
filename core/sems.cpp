@@ -535,6 +535,7 @@ class GroupsContainerSelfStatm
         callback("core_memory_vmsize", vmsize_group);
         callback("core_memory_vmrss", vmrss_group);
     }
+    bool is_need_delete() override { return true; }
 };
 
 /*

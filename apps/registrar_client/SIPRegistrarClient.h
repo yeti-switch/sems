@@ -107,6 +107,7 @@ class SIPRegistrarClient
                 const AmArg& args, AmArg& ret);
     //StatCountersGroupsInterface
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
+    bool is_need_delete() override { return false; }
 
     bool onSipReply(const AmSipReply& rep, AmSipDialog::Status old_dlg_status);
     int onLoad();

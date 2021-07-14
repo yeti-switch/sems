@@ -142,11 +142,13 @@ class StatCountersGroupsInterface
 
 class StatsCountersGroupsContainerInterface {
   public:
+    StatsCountersGroupsContainerInterface(){}
     virtual ~StatsCountersGroupsContainerInterface(){}
     using iterate_groups_callback_type =
         std::function<void(const std::string &name,
                            StatCountersGroupsInterface &group)>;
     virtual void operator ()(const string &name, iterate_groups_callback_type callback) = 0;
+    virtual bool is_need_delete() = 0;
 };
 
 //represents set of counters with the same name
@@ -171,6 +173,7 @@ class StatCountersSingleGroup final
     FunctionGroupCounter& addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func);
 
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
+    bool is_need_delete() override { return true; }
     void iterate_counters(iterate_counters_callback_type callback) override;
 };
 
@@ -186,7 +189,7 @@ class AmStatistics
     virtual ~AmStatistics();
     void dispose() {
         for(auto& it : counters_groups_containers) {
-            delete it.second;
+            if(it.second->is_need_delete()) delete it.second;
         }
     }
 
