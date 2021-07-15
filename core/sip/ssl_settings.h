@@ -32,13 +32,6 @@ public:
         return new T(*data.get());
     }
 
-    void clear() {
-        AmLock lock(mutex);
-        if(data.get()) {
-            delete data.release();
-        }
-    }
-
     uint64_t not_after() {
         return 0;
     }

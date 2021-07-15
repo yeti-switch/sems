@@ -551,22 +551,4 @@ tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto
 void tls_cleanup()
 {
     session_manager_tls::dispose();
-    for(auto& sipif: AmConfig.sip_ifs) {
-        for(auto& proto : sipif.proto_info) {
-            SIP_TLS_info* sip_info = SIP_TLS_info::toSIP_TLS(proto);
-            if(sip_info) {
-                sip_info->server_settings.certificate_key.clear();
-                sip_info->client_settings.certificate_key.clear();
-            }
-        }
-    }
-    for(auto& mediaif: AmConfig.media_ifs) {
-        for(auto& proto : mediaif.proto_info) {
-            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(proto);
-            if(rtp_info && rtp_info->dtls_enable) {
-                rtp_info->server_settings.certificate_key.clear();
-                rtp_info->client_settings.certificate_key.clear();
-            }
-        }
-    }
 }

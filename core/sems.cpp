@@ -82,6 +82,8 @@ using std::string;
 #include <getopt.h>
 #endif
 
+#include <botan/locking_allocator.h>
+
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
 int main_pid = 0;               /**< Main process PID */
 time_t start_time;
@@ -560,6 +562,9 @@ int main(int argc, char* argv[])
     print_usage(true);
     return 1;
   }
+
+  //instantiation to ensure mlock_allocator will be destroyed after the AmLcConfig
+  Botan::mlock_allocator::instance();
 
   init_logging(SEMS_APP_NAME);
 
