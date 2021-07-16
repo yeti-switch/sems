@@ -3,35 +3,30 @@
 #include <botan/data_src.h>
 #include <fstream>
 
-template<>
-Botan::Private_Key* binary_data<Botan::Private_Key>::get()
-{
-    AmLock lock(mutex);
-    return Botan::PKCS8::copy_key(*data).release();
-}
+settings::settings()
+{}
 
-template<>
-uint64_t binary_data<Botan::X509_Certificate>::not_after()
+AtomicCounter &settings::initNotAfterCounter()
 {
-    AmLock lock(mutex);
-    return data->not_after().time_since_epoch();
+    certificate_not_after_counter =
+        &stat_group(Gauge, "core", "certificate_not_after_timestamp").addAtomicCounter();
+    return *certificate_not_after_counter;
 }
 
 void settings::load_certificates()
 {
-    certificate.set(new Botan::X509_Certificate(certificate_path));
-    Botan::DataSource_Stream stream(certificate_key_path);
-    certificate_key.set(Botan::PKCS8::load_key(stream).release());
-    {
-        AmLock lock(ca_list);
-        ca_list.clear();
-        for(auto& ca : ca_path_list) {
-            std::vector<Botan::X509_Certificate>& list = ca_list;
-            list.push_back(Botan::X509_Certificate(ca));
-        }
-    }
+    AmLock l(mutex);
 
-    crt_not_after->set(certificate.not_after());
+    certificate.reset(new Botan::X509_Certificate(certificate_path));
+    certificate_not_after_counter->set(certificate->not_after().time_since_epoch());
+
+    Botan::DataSource_Stream stream(certificate_key_path);
+    certificate_key = Botan::PKCS8::load_key(stream);
+
+    ca_list.clear();
+    for(auto& ca : ca_path_list) {
+        ca_list.push_back(Botan::X509_Certificate(ca));
+    }
 }
 
 bool settings::checkCertificateAndKey(
@@ -72,7 +67,37 @@ bool settings::checkCertificateAndKey(
     return true;
 }
 
-void settings::dump(const std::string& prefix)
+std::unique_ptr<Botan::X509_Certificate> settings::getCertificateCopy()
+{
+    AmLock l(mutex);
+    std::unique_ptr<Botan::X509_Certificate>
+        ret(new Botan::X509_Certificate(*certificate));
+    return ret;
+}
+
+std::string settings::getCertificateFingerprint(const string &hash_name)
+{
+    AmLock l(mutex);
+    return certificate.get()->fingerprint(hash_name);
+}
+
+std::unique_ptr<Botan::Private_Key> settings::getCertificateKeyCopy()
+{
+    AmLock l(mutex);
+    return Botan::PKCS8::copy_key(*certificate_key.get());
+}
+
+vector<Botan::Certificate_Store*> settings::getCertificateAuthorityCopy()
+{
+    AmLock l(mutex);
+    vector<Botan::Certificate_Store*> ca;
+    for(auto& cert : ca_list) {
+        ca.push_back(new Botan::Certificate_Store_In_Memory(cert));
+    }
+    return ca;
+}
+
+void settings::dump(const std::string&)
 {
     std::string ca_list("{");
     for(auto& ca : ca_path_list) {

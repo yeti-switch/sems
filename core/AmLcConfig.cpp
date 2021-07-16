@@ -1842,12 +1842,18 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 {
                     return -1;
                 }
-                tls_info->client_settings.crt_not_after = &stat_group(Gauge, "core", "signalling_certificate_not_after_timestamp").addAtomicCounter().
-                addLabel("interface", if_iterator->name).addLabel("protocol", tls_info->ipTypeToStr()).addLabel("transport", tls_info->transportToStr()).
-                addLabel("role", "client");
-                tls_info->server_settings.crt_not_after = &stat_group(Gauge, "core", "signalling_certificate_not_after_timestamp").addAtomicCounter().
-                addLabel("interface", if_iterator->name).addLabel("protocol", tls_info->ipTypeToStr()).addLabel("transport", tls_info->transportToStr()).
-                addLabel("role", "server");
+
+                tls_info->client_settings.initNotAfterCounter()
+                    .addLabel("interface", if_iterator->name)
+                    .addLabel("protocol", tls_info->ipTypeToStr())
+                    .addLabel("transport", tls_info->transportToStr())
+                    .addLabel("role", "client");
+
+                tls_info->server_settings.initNotAfterCounter()
+                    .addLabel("interface", if_iterator->name)
+                    .addLabel("protocol", tls_info->ipTypeToStr())
+                    .addLabel("transport", tls_info->transportToStr())
+                    .addLabel("role", "server");
 
                 tls_info->client_settings.load_certificates();
                 tls_info->server_settings.load_certificates();
@@ -1892,12 +1898,17 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                     return -1;
                 }
 
-                rtp_info->client_settings.crt_not_after = &stat_group(Gauge, "core", "media_certificate_not_after_timestamp").addAtomicCounter().
-                addLabel("interface", if_iterator->name).addLabel("protocol", rtp_info->ipTypeToStr()).addLabel("transport", rtp_info->transportToStr()).
-                addLabel("role", "client");
-                rtp_info->server_settings.crt_not_after = &stat_group(Gauge, "core", "media_certificate_not_after_timestamp").addAtomicCounter().
-                addLabel("interface", if_iterator->name).addLabel("protocol", rtp_info->ipTypeToStr()).addLabel("transport", rtp_info->transportToStr()).
-                addLabel("role", "server");
+                rtp_info->client_settings.initNotAfterCounter()
+                    .addLabel("interface", if_iterator->name)
+                    .addLabel("protocol", rtp_info->ipTypeToStr())
+                    .addLabel("transport", rtp_info->transportToStr())
+                    .addLabel("role", "client");
+
+                rtp_info->server_settings.initNotAfterCounter()
+                    .addLabel("interface", if_iterator->name)
+                    .addLabel("protocol", rtp_info->ipTypeToStr())
+                    .addLabel("transport", rtp_info->transportToStr())
+                    .addLabel("role", "server");
 
                 rtp_info->client_settings.load_certificates();
                 rtp_info->server_settings.load_certificates();

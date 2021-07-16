@@ -29,14 +29,14 @@ dtls_conf::dtls_conf(const dtls_conf& conf)
 
 dtls_conf::dtls_conf(dtls_client_settings* settings)
 : s_client(settings), s_server(0)
-, certificate(settings->certificate.get())
-, key(settings->certificate_key.get())
+, certificate(settings->getCertificateCopy())
+, key(settings->getCertificateKeyCopy())
 , is_optional(false){}
 
 dtls_conf::dtls_conf(dtls_server_settings* settings)
 : s_client(0), s_server(settings)
-, certificate(settings->certificate.get())
-, key(settings->certificate_key.get())
+, certificate(settings->getCertificateCopy())
+, key(settings->getCertificateKeyCopy())
 , is_optional(false){}
 
 void dtls_conf::operator=(const dtls_conf& conf)
@@ -70,13 +70,7 @@ vector<Botan::Certificate_Store *> dtls_conf::trusted_certificate_authorities(co
         return std::vector<Botan::Certificate_Store*>();
     }
 
-    vector<Botan::Certificate_Store*> ca;
-    auto list = settings->ca_list.data();
-    for(auto& cert : list) {
-        ca.push_back(new Botan::Certificate_Store_In_Memory(cert));
-    }
-
-    return ca;
+    return settings->getCertificateAuthorityCopy();
 }
 
 bool dtls_conf::allow_dtls10() const
@@ -308,8 +302,8 @@ void AmDtlsConnection::initConnection()
 
 srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settings)
 {
-    std::string hash("SHA-256");
-    return srtp_fingerprint_p(hash, settings->certificate.get()->fingerprint(hash));
+    static std::string hash("SHA-256");
+    return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
 }
 
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)

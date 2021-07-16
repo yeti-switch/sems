@@ -23,14 +23,14 @@
 
 tls_conf::tls_conf(tls_client_settings* settings)
 : s_client(settings), s_server(0)
-, certificate(settings->certificate.get())
-, key(settings->certificate_key.get())
+, certificate(settings->getCertificateCopy())
+, key(settings->getCertificateKeyCopy())
 , policy_override(false) {}
 
 tls_conf::tls_conf(tls_server_settings* settings)
 : s_client(0), s_server(settings)
-, certificate(settings->certificate.get())
-, key(settings->certificate_key.get())
+, certificate(settings->getCertificateCopy())
+, key(settings->getCertificateKeyCopy())
 , policy_override(false)
 {}
 
@@ -222,13 +222,7 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
         return std::vector<Botan::Certificate_Store*>();
     }
 
-    vector<Botan::Certificate_Store*> ca;
-    auto ca_list = settings->ca_list.data();
-    for(auto& cert : ca_list) {
-        ca.push_back(new Botan::Certificate_Store_In_Memory(Botan::X509_Certificate(cert)));
-    }
-
-    return ca;
+    return settings->getCertificateAuthorityCopy();
 }
 
 vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)

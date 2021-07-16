@@ -731,6 +731,7 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
 void CoreRpc::requestReloadCertificate(const AmArg& args, AmArg& ret)
 {
     std::vector<settings*> settings;
+
     for(auto& sip_if : AmConfig.sip_ifs) {
         for(auto& proto : sip_if.proto_info) {
             SIP_TLS_info* sip_info = SIP_TLS_info::toSIP_TLS(proto);
@@ -748,6 +749,7 @@ void CoreRpc::requestReloadCertificate(const AmArg& args, AmArg& ret)
             }
         }
     }
+
     for(auto& media_if : AmConfig.media_ifs) {
         for(auto& proto : media_if.proto_info) {
             RTP_info* rtp_info = RTP_info::toMEDIA_RTP(proto);
