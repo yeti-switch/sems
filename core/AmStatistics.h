@@ -142,13 +142,12 @@ class StatCountersGroupsInterface
 
 class StatsCountersGroupsContainerInterface {
   public:
-    StatsCountersGroupsContainerInterface(){}
+    StatsCountersGroupsContainerInterface() = default;
     virtual ~StatsCountersGroupsContainerInterface(){}
     using iterate_groups_callback_type =
         std::function<void(const std::string &name,
                            StatCountersGroupsInterface &group)>;
     virtual void operator ()(const string &name, iterate_groups_callback_type callback) = 0;
-    virtual bool is_need_delete() = 0;
 };
 
 //represents set of counters with the same name
@@ -173,7 +172,6 @@ class StatCountersSingleGroup final
     FunctionGroupCounter& addFunctionGroupCounter(FunctionGroupCounter::CallbackFunction func);
 
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
-    bool is_need_delete() override { return true; }
     void iterate_counters(iterate_counters_callback_type callback) override;
 };
 
@@ -182,14 +180,25 @@ class AmStatistics
 {
   private:
     AmMutex groups_mutex;
-    map<string, StatsCountersGroupsContainerInterface *> counters_groups_containers;
+
+    struct GroupContainerEntry {
+        StatsCountersGroupsContainerInterface *groups_container;
+        bool managed_by_am_statistics;
+        GroupContainerEntry(
+            StatsCountersGroupsContainerInterface *groups_container,
+            bool managed_by_am_statistics)
+          : groups_container(groups_container),
+            managed_by_am_statistics(managed_by_am_statistics)
+        {}
+    };
+    map<string, GroupContainerEntry> counters_groups_containers;
 
   protected:
     AmStatistics();
     virtual ~AmStatistics();
     void dispose() {
         for(auto& it : counters_groups_containers) {
-            if(it.second->is_need_delete()) delete it.second;
+            if(it.second.managed_by_am_statistics) delete it.second.groups_container;
         }
     }
 
@@ -204,7 +213,8 @@ class AmStatistics
     StatCountersSingleGroup &group(StatCountersSingleGroup::Type type, const string& naming_group, const string& name);
     StatCountersSingleGroup &group(StatCountersSingleGroup::Type type, const string& name);
 
-    void add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container);
+    void add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container,
+                              bool is_managed_by_am_statistics);
 };
 
 typedef singleton<AmStatistics> statistics;

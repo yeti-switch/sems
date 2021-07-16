@@ -120,9 +120,9 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
   : AmDynInvokeFactory(MOD_NAME),
     AmConfigFactory(MOD_NAME),
     AmEventFdQueue(this),
-    uac_auth_i(NULL),
     stopped(false),
-    default_expires(DEFAULT_EXPIRES)
+    default_expires(DEFAULT_EXPIRES),
+    uac_auth_i(NULL)
 { }
 
 int SIPRegistrarClient::configure(const std::string& config)
@@ -163,7 +163,7 @@ int SIPRegistrarClient::configure(const std::string& config)
     }
     default_expires = cfg_getint(cfg, CFG_OPT_NAME_DEFAULT_EXPIRES);
     if(cfg_true==cfg_getbool(cfg,CFG_OPT_NAME_EXPORT_METRICS))
-        statistics::instance()->add_groups_container("registrar_client", this);
+        statistics::instance()->add_groups_container("registrar_client", this, false);
 
     cfg_free(cfg);
     return 0;

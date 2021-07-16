@@ -537,7 +537,6 @@ class GroupsContainerSelfStatm
         callback("core_memory_vmsize", vmsize_group);
         callback("core_memory_vmrss", vmrss_group);
     }
-    bool is_need_delete() override { return true; }
 };
 
 /*
@@ -877,7 +876,7 @@ int main(int argc, char* argv[])
   stat_group(Counter, "core", "start_time").addAtomicCounter().set(
     static_cast<unsigned long long>(start_time));
 
-  statistics::instance()->add_groups_container("self_statm", new GroupsContainerSelfStatm());
+  statistics::instance()->add_groups_container("self_statm", new GroupsContainerSelfStatm(), true);
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {

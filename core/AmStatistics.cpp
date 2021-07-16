@@ -147,7 +147,7 @@ void AmStatistics::iterate_groups(StatsCountersGroupsContainerInterface::iterate
 {
     AmLock lock(groups_mutex);
     for(auto &it : counters_groups_containers) {
-        (*it.second)(it.first, callback);
+        (*it.second.groups_container)(it.first, callback);
     }
 }
 
@@ -160,8 +160,8 @@ StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type,
 {
     AmLock lock(groups_mutex);
 
-    auto it = counters_groups_containers.emplace(name, new StatCountersSingleGroup(type));
-    auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second);
+    auto it = counters_groups_containers.try_emplace(name, new StatCountersSingleGroup(type), true);
+    auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second.groups_container);
 
     if(it.second == false && existent_group.getType() != type) {
         ERROR("attempt to add counter '%s' with type '%s' to existing counters group with another type '%s'",
@@ -174,9 +174,10 @@ StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type,
     return existent_group;
 }
 
-void AmStatistics::add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container)
+void AmStatistics::add_groups_container(const string& name, StatsCountersGroupsContainerInterface *container,
+                                        bool is_managed_by_am_statistics)
 {
-    auto it = counters_groups_containers.emplace(name, container);
+    auto it = counters_groups_containers.try_emplace(name, container, is_managed_by_am_statistics);
     if(it.second == false) {
         ERROR("attempt to add groups container  %p by existing name: %s",
             container, name.data());

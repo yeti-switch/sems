@@ -69,6 +69,5 @@ class OptionsProber
 
     //StatCountersGroupsInterface
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
-    bool is_need_delete() override { return false; }
 };
 

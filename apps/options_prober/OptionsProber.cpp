@@ -38,8 +38,8 @@ OptionsProber::OptionsProber(const string& name)
   : AmDynInvokeFactory(MOD_NAME),
     AmConfigFactory(MOD_NAME),
     AmEventFdQueue(this),
-    uac_auth_i(nullptr),
-    stopped(false)
+    stopped(false),
+    uac_auth_i(nullptr)
 {}
 
 int OptionsProber::configure(const std::string& config)
@@ -64,7 +64,7 @@ int OptionsProber::configure(const std::string& config)
     }
 
     if(cfg_true==cfg_getbool(cfg,CFG_OPT_NAME_EXPORT_METRICS))
-        statistics::instance()->add_groups_container("options_prober", this);
+        statistics::instance()->add_groups_container("options_prober", this, true);
 
     cfg_free(cfg);
     return 0;
