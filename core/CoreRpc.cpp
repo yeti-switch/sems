@@ -198,8 +198,8 @@ void CoreRpc::init_rpc_tree()
         AmArg &request_resolver = reg_leaf(request,"resolver");
             reg_method(request_resolver,"clear","",&CoreRpc::requestResolverClear);
             reg_method(request_resolver,"get","",&CoreRpc::requestResolverGet);
-        AmArg &request_config = reg_leaf(request,"reload");
-            reg_method(request_config ,"certificates","",&CoreRpc::requestReloadCertificate);
+        AmArg &request_cerificates = reg_leaf(request ,"certificates");
+            reg_method(request_cerificates ,"reload","",&CoreRpc::requestReloadCertificate);
 
     //set
     AmArg &set = reg_leaf(root,"set");
