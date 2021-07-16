@@ -57,10 +57,10 @@ int HttpGetConnection::on_finished(CURLcode result)
 
     DBG("get: %s finished with %ld in %.3f seconds (%.3f bytes/sec) with content type %s",
         eff_url, http_response_code,
-        total_time, speed_download, ct);
+        total_time, speed_download, ct ? ct : "(null)");
 
     if(destination.succ_codes(http_response_code)) {
-        mime_type = ct;
+        if(ct) mime_type = ct;
         requeue = destination.post_upload(false);
     } else {
         ERROR("can't get to '%s'. curl_code: %d, http_code %ld",
