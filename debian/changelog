@@ -1,3 +1,11 @@
+sems (1.55.0) stable; urgency=low
+
+  * add rpc command: core.request.certificates.reload
+  * add metric: sems_core_certificate_not_after_timestamp
+  * http_client: HttpGetConnection: fix segfault on reply without content-type
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 16 Jul 2021 13:27:22 +0300
+
 sems (1.54.1) stable; urgency=low
 
   * fix config reading for rtp sections without srtp
