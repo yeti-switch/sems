@@ -25,7 +25,7 @@ void settings::load_certificates()
 
     ca_list.clear();
     for(auto& ca : ca_path_list) {
-        ca_list.push_back(Botan::X509_Certificate(ca));
+        ca_list.emplace_back(ca);
     }
 }
 
