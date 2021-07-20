@@ -56,6 +56,7 @@ PrometheusExporter* PrometheusExporter::instance()
 void PrometheusExporter::dispose()
 {
     if(_instance != nullptr){
+        _instance->stop(true);
         delete _instance;
     }
     _instance = nullptr;
@@ -121,6 +122,7 @@ PrometheusExporter::PrometheusExporter()
 PrometheusExporter::~PrometheusExporter()
 {
     if(ev_http) evhttp_free(ev_http);
+    if(ev_base) event_base_free(ev_base);
 }
 
 inline void serialize_label(
@@ -354,5 +356,4 @@ void PrometheusExporter::run()
 void PrometheusExporter::on_stop()
 {
     event_base_loopbreak(ev_base);
-    //event_base_loopexit(ev_base, nullptr);
 }
