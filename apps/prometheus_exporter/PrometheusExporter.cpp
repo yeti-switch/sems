@@ -36,7 +36,7 @@ class PrometheusExporterFactory
     }
 
     void on_destroy()  override {
-        PrometheusExporter::instance()->stop();
+        PrometheusExporter::instance()->stop(true);
     }
 };
 
@@ -56,7 +56,6 @@ PrometheusExporter* PrometheusExporter::instance()
 void PrometheusExporter::dispose()
 {
     if(_instance != nullptr){
-        _instance->stop(true);
         delete _instance;
     }
     _instance = nullptr;

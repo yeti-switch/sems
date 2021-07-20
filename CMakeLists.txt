@@ -78,6 +78,7 @@ OPTION(SEMS_USE_MONITORING    "Build with monitoring support" ON)
 OPTION(SEMS_USE_IPV6          "Build with IPv6 support" OFF)
 OPTION(SEMS_USE_AMARG_STAT    "Use AmArg statistic" OFF)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
+OPTION(USE_ADDRESS_SANITIZER  "Use address sanitizer gcc option" OFF)
 #OPTION(MAX_RTP_SESSIONS:int   "How many rtp sessions SEMS will handle simultaneously? (default 2048)" 2048)
 
 SET(MAX_RTP_SESSIONS 8192)
@@ -312,9 +313,11 @@ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 SET(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -D_DEBUG")
 
 # use AddressSanitizer
-# SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
-# SET(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -fsanitize=address")
-# ADD_DEFINITIONS(-DVALGRIND)
+IF(USE_ADDRESS_SANITIZER)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -fsanitize=address")
+    ADD_DEFINITIONS(-DVALGRIND)
+ENDIF(USE_ADDRESS_SANITIZER)
 
 ADD_DEFINITIONS("-D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
 
