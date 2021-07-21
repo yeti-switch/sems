@@ -1,3 +1,9 @@
+sems (1.55.2) stable; urgency=low
+
+  * fix termination segfaults and address sanitizer warnings
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 21 Jul 2021 14:21:59 +0300
+
 sems (1.55.1) stable; urgency=low
 
   * AmB2BMedia: fix wrong StreamData usage for non-audio streams
