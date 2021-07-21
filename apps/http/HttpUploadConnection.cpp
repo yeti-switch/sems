@@ -76,7 +76,7 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     return 0;
 }
 
-int HttpUploadConnection::on_finished(CURLcode result)
+int HttpUploadConnection::on_finished()
 {
     int requeue = 0;
     char *eff_url;
@@ -95,9 +95,8 @@ int HttpUploadConnection::on_finished(CURLcode result)
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(event.file_path,file_basename, false);
     } else {
-        ERROR("can't upload '%s' to '%s'. curl_code: %d, http_code %ld",
-              event.file_path.c_str(), eff_url,
-              result,http_response_code);
+        ERROR("can't upload '%s' to '%s'. http_code %ld",
+              event.file_path.c_str(), eff_url,http_response_code);
         if(event.failover_idx < destination.max_failover_idx) {
             event.failover_idx++;
             DBG("faiolver to the next destination. new failover index is %i",

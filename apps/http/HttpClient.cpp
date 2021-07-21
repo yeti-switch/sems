@@ -92,7 +92,7 @@ HttpClient::HttpClient()
 HttpClient::~HttpClient()
 { }
 
-int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
+static int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
 {
     std::string value = cfg_getstr(cfg, opt->name);
     HttpDestination::Mode mode = HttpDestination::str2Mode(value);
@@ -103,7 +103,7 @@ int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
     return 0;
 }
 
-int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
+static int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
 {
     std::string value = cfg_getstr(cfg, opt->name);
     DestinationAction::HttpAction action = DestinationAction::str2Action(value);
@@ -111,6 +111,41 @@ int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
         ERROR("invalid value \'%s\' of option \'%s\' - must be \'move\', \'nothing\', \'remove\' or \'requeue\'", value.c_str(), opt->name);
         return 1;
     }
+    return 0;
+}
+
+long parse_size(const string& size) {
+    if(size.empty() || !isdigit(size[0])) return 0;
+    char* endptr = NULL;
+    long l_i = strtol(size.c_str(), &endptr, 10);
+    if(endptr && *endptr  != '\0') {
+        switch(*endptr) {
+        case 'g':
+        case 'G':
+            l_i *= 1024;
+        case 'm':
+        case 'M':
+            l_i *= 1024;
+        case 'k':
+        case 'K':
+            l_i *= 1024;
+            break;
+        default:
+            return 0;
+        }
+        endptr++;
+        if(endptr && *endptr  != '\0') return 0;
+    }
+    return l_i;
+}
+
+static int validate_size_func(cfg_t *cfg, cfg_opt_t *opt) {
+    std::string value = cfg_getstr(cfg, opt->name);
+    if(!parse_size(value)) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be digital without or with one of 'g','G','m','M','k','K' symbols", value.c_str(), opt->name);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -139,6 +174,8 @@ int HttpClient::configure(const string& config)
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MAX_REPLY_SIZE_NAME, validate_size_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MIN_FILE_SIZE_NAME, validate_size_func);
     cfg_set_error_function(cfg,cfg_error_callback);
 
     switch(cfg_parse_buf(cfg, config.c_str())) {

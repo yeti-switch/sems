@@ -42,7 +42,7 @@ int HttpGetConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     return 0;
 }
 
-int HttpGetConnection::on_finished(CURLcode result)
+int HttpGetConnection::on_finished()
 {
     int requeue = 0;
     char *eff_url, *ct;
@@ -63,9 +63,8 @@ int HttpGetConnection::on_finished(CURLcode result)
         if(ct) mime_type = ct;
         requeue = destination.post_upload(false);
     } else {
-        ERROR("can't get to '%s'. curl_code: %d, http_code %ld",
-              eff_url,
-              result,http_response_code);
+        ERROR("can't get to '%s'. http_code %ld",
+              eff_url,http_response_code);
         event.failover_idx = 0;
         event.attempt++;
         requeue = destination.post_upload(true);
@@ -121,5 +120,6 @@ size_t HttpGetConnection::write_func(void *ptr, size_t size, size_t nmemb, void 
     int old_size = response.size();
     response.resize(old_size + size*nmemb);
     memcpy((char*)response.data() + old_size, (char*)ptr, size*nmemb);
-    return size*nmemb;
+    if(destination.max_reply_size && destination.max_reply_size < response.size()) return 0;
+    else return size*nmemb;
 }

@@ -94,7 +94,7 @@ static void dump_event(const HttpPostMultipartFormEvent &event)
     }
 }
 
-int HttpMultiPartFormConnection::on_finished(CURLcode result)
+int HttpMultiPartFormConnection::on_finished()
 {
     int requeue = 0;
     char *eff_url;
@@ -113,8 +113,8 @@ int HttpMultiPartFormConnection::on_finished(CURLcode result)
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(file_path,file_basename, false);
     } else {
-        ERROR("failed to post multipart form to '%s'. curl_code: %d, http_code %ld. event ptr: %p",
-              eff_url,result,http_response_code,static_cast<void *>(&event));
+        ERROR("failed to post multipart form to '%s'. http_code %ld. event ptr: %p",
+              eff_url,http_response_code,static_cast<void *>(&event));
         dump_event(event);
         if(event.failover_idx < destination.max_failover_idx) {
             event.failover_idx++;
