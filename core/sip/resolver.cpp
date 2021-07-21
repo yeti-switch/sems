@@ -1174,8 +1174,7 @@ _resolver::~_resolver()
 }
 
 void _resolver::dispose() { 
-    stop();
-    join();
+    stop(true);
 }
 
 inline bool rr_type_supports_merging(dns_rr_type rr_type) {

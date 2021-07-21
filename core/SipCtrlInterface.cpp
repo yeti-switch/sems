@@ -805,8 +805,7 @@ template<typename T>
 void cleanup_with_stop_delete(T *&workers, unsigned short &n)
 {
     cleanup_array(workers, n, [&workers](int i) {
-        workers[i]->stop();
-        workers[i]->join();
+        workers[i]->stop(true);
         delete workers[i];
     });
 }

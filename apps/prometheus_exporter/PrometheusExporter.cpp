@@ -36,7 +36,7 @@ class PrometheusExporterFactory
     }
 
     void on_destroy()  override {
-        PrometheusExporter::instance()->stop();
+        PrometheusExporter::instance()->stop(true);
     }
 };
 
@@ -121,6 +121,7 @@ PrometheusExporter::PrometheusExporter()
 PrometheusExporter::~PrometheusExporter()
 {
     if(ev_http) evhttp_free(ev_http);
+    if(ev_base) event_base_free(ev_base);
 }
 
 inline void serialize_label(
@@ -354,5 +355,4 @@ void PrometheusExporter::run()
 void PrometheusExporter::on_stop()
 {
     event_base_loopbreak(ev_base);
-    //event_base_loopexit(ev_base, nullptr);
 }

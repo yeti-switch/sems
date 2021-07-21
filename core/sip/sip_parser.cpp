@@ -151,6 +151,7 @@ void sip_msg::release()
     buf = NULL;
     hdrs.clear();
     u.request = NULL;
+    if(local_socket) dec_ref(local_socket);
     local_socket = NULL;
 }
 

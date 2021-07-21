@@ -121,12 +121,16 @@ int _trans_layer::register_transport(trsp_socket* trsp)
     }
 
     transports[if_num][trsp->get_transport_id()] = trsp;
+    inc_ref(trsp);
 
     return 0;
 }
 
 void _trans_layer::clear_transports()
 {
+    for(auto& trans : transports) {
+        for(auto& proto : trans) dec_ref(proto.second);
+    }
     transports.clear();
 }
 

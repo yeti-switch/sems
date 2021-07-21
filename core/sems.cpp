@@ -339,10 +339,7 @@ static AmCondition<bool> is_shutting_down(false);
 
 class ConfigReloadTimer : public timer
 {
-public:
-    ConfigReloadTimer() : timer(wheeltimer::instance()->wall_clock){}
-    void fire() override
-    {
+    void reload() {
         ConfigContainer cfg_box;
         if(AmLcConfig::instance().readConfiguration(&cfg_box)) {
             ERROR("configuration errors. reconfiguration stopped");
@@ -361,6 +358,13 @@ public:
                 return;
             }
         }
+    }
+public:
+    ConfigReloadTimer() : timer(wheeltimer::instance()->wall_clock){}
+    void fire() override
+    {
+        reload();
+        wheeltimer::instance()->remove_timer(this);
     }
 };
 
@@ -952,6 +956,7 @@ int main(int argc, char* argv[])
 
   INFO("Disposing plug-ins\n");
   AmPlugIn::dispose();
+
 
   tls_cleanup();
   srtp_shutdown();
