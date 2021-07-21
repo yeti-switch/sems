@@ -983,7 +983,7 @@ void AmB2BMedia::replaceConnectionAddress(
                         replaceRtcpAttr(*it, (*relay)->a.getStream()->getLocalIP(), (*relay)->a.getStream()->getLocalRtcpPort());
                     } else {
                         (*relay)->b.setLocalIP(addr_type);
-                        public_address = (*relay)->a.getStream()->getLocalAddress();
+                        public_address = (*relay)->b.getStream()->getLocalAddress();
                         it->port = static_cast<unsigned int>((*relay)->b.getStream()->getLocalPort());
                         replaceRtcpAttr(*it, (*relay)->b.getStream()->getLocalIP(), (*relay)->b.getStream()->getLocalRtcpPort());
                     }
