@@ -182,7 +182,7 @@ HttpDestination::HttpDestination(const string &name)
 , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
 , count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
 , requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
-, min_file_size(0)
+, min_file_size(0), max_reply_size(0)
 {
 }
 
@@ -193,6 +193,7 @@ HttpDestination::~HttpDestination()
         events.pop_front();
     }
 }
+extern long parse_size(const string& size);
 
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
@@ -280,7 +281,13 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         return -1;
     }
 
-    if(cfg_size(cfg, PARAM_MIN_FILE_SIZE_NAME)) min_file_size = cfg_getint(cfg, PARAM_MIN_FILE_SIZE_NAME);
+    if(cfg_size(cfg, PARAM_MIN_FILE_SIZE_NAME)) {
+        min_file_size = parse_size(cfg_getstr(cfg, PARAM_MIN_FILE_SIZE_NAME));
+    }
+
+    if(cfg_size(cfg, PARAM_MAX_REPLY_SIZE_NAME)) {
+        max_reply_size = parse_size(cfg_getstr(cfg, PARAM_MAX_REPLY_SIZE_NAME));
+    }
 
     return 0;
 }

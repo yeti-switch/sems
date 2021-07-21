@@ -20,7 +20,7 @@ public:
 
   int init(struct curl_slist* hosts, CURLM *curl_multi);
 
-  int on_finished(CURLcode result);
+  int on_finished();
   void on_requeue();
 
   void post_response_event();

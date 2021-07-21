@@ -51,7 +51,7 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     return 0;
 }
 
-int HttpPostConnection::on_finished(CURLcode result)
+int HttpPostConnection::on_finished()
 {
     int requeue = 0;
     char *eff_url;
@@ -70,9 +70,8 @@ int HttpPostConnection::on_finished(CURLcode result)
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(false);
     } else {
-        ERROR("can't post to '%s'. curl_code: %d, http_code %ld",
-              eff_url,
-              result,http_response_code);
+        ERROR("can't post to '%s'. http_code %ld",
+              eff_url,http_response_code);
         if(event.failover_idx < destination.max_failover_idx) {
             event.failover_idx++;
             DBG("faiolver to the next destination. new failover index is %i",

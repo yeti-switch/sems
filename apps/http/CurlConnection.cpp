@@ -136,15 +136,22 @@ int CurlConnection::watch_socket(int socket, int what)
     return 0;
 }
 
+void CurlConnection::on_curl_error(CURLcode result)
+{
+    http_response_code = -result;
+}
+
 int CurlConnection::finish(CURLcode result)
 {
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response_code);
-
     if(result!=CURLE_OK)
     {
         ERROR("curl connection %p finished with error: %d (%s)",
               this, result, curl_error);
+        on_curl_error(result);
+    } else {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response_code);
     }
-    return on_finished(result);
+
+    return on_finished();
 }
 
