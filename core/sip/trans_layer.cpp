@@ -3161,6 +3161,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     }
 
     sip_msg tmp_msg(*t->msg);
+    if(tmp_msg.local_socket) inc_ref(tmp_msg.local_socket);
     tmp_msg.vias.pop_front();
 
     std::unique_ptr<sip_trans> n_tr(copy_uac_trans(t));
