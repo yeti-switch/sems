@@ -125,8 +125,9 @@ void _AmAppTimer::direct_app_timer_cb(direct_app_timer* t)
       delete t;
 
       // finally fire this timer!
+      std::unique_ptr<DirectAppTimer> tmp_timer(dt->clone());
       direct_timers_mut.unlock();
-      dt->fire();
+      tmp_timer->fire();
       return;
     }
   }

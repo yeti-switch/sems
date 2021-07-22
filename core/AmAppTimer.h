@@ -45,6 +45,7 @@ class DirectAppTimer
 public:
   virtual ~DirectAppTimer() {}
   virtual void fire()=0;
+  virtual DirectAppTimer* clone() const = 0;
 };
 
 class _AmAppTimer 

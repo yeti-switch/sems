@@ -85,6 +85,10 @@ private:
     void fire(){
       sub->onTimer(timer_id);
     }
+
+    DirectAppTimer *clone() const override {
+        return new SubscriptionTimer(*this);
+    }
   };
 
   enum SubscriptionTimerId {
