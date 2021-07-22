@@ -1,3 +1,10 @@
+sems (1.56.0) stable; urgency=low
+
+  * f66c56b14 AmAppTimer: clone DirectAppTimer before fire() to avoid racing
+  * 4eeff25d5 fix crash: increment reference of local socket in retarget
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 22 Jul 2021 16:06:15 +0300
+
 sems (1.55.2) stable; urgency=low
 
   * fix termination segfaults and address sanitizer warnings
