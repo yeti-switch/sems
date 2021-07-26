@@ -187,9 +187,8 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
     last_errstr.clear();
     time_t t = time(0);
     if(t - created > expire) {
-        last_errstr = "Expired Timeout";
         last_errcode = ERR_EXPIRE_TIMEOUT;
-        INFO("identity verification failed because of expired timeout");
+        last_errstr = "Expired Timeout";
         return false;
     }
 
@@ -204,7 +203,7 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
 
     bool ret = ops->is_valid_signature((uint8_t*)sign.c_str(), sign.size());
     if(!ret) {
-        last_errstr = "Verification Failed";
+        last_errstr = "Signature verification Failed";
         last_errcode = ERR_VERIFICATION;
     }
     return ret;
