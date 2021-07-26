@@ -1,3 +1,12 @@
+sems (1.57.0) stable; urgency=low
+
+  * http_client: add max_reply_size parameter for destinations
+  * AmIdentity: adjust error reasons. remove INFO messages from parse()/verify()
+  * fix global log-level adjustments on facilities log-level change via jsonrpc
+  * add jsonrpc method core.set.log-level.stderr
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 27 Jul 2021 02:43:30 +0300
+
 sems (1.56.0) stable; urgency=low
 
   * f66c56b14 AmAppTimer: clone DirectAppTimer before fire() to avoid racing
