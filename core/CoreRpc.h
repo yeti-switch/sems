@@ -53,6 +53,7 @@ class CoreRpc final
     rpc_handler showLogLevel;
     rpc_handler setLogSyslogLevel;
     rpc_handler setLogDiLogLevel;
+    rpc_handler setLogStderrLogLevel;
 
     rpc_handler showDumpLevel;
     rpc_handler setDumpLevelNone;

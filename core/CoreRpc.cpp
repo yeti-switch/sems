@@ -206,6 +206,7 @@ void CoreRpc::init_rpc_tree()
         AmArg &set_loglevel = reg_leaf(set,"log-level");
             reg_method(set_loglevel,"syslog","<log_level>",&CoreRpc::setLogSyslogLevel);
             reg_method(set_loglevel,"di_log","<log_level>",&CoreRpc::setLogDiLogLevel);
+            reg_method(set_loglevel,"stderr","<log_level>",&CoreRpc::setLogStderrLogLevel);
 
         AmArg &set_dumplevel = reg_leaf(set,"dump-level");
             reg_method(set_dumplevel,"none","",&CoreRpc::setDumpLevelNone);
@@ -413,6 +414,7 @@ void CoreRpc::showLogLevel(const AmArg& args, AmArg& ret)
     ret["log_level"] = log_level;
     addLoggingFacilityLogLevel(ret["facilities"],"syslog");
     addLoggingFacilityLogLevel(ret["facilities"],"di_log");
+    addLoggingFacilityLogLevel(ret["facilities"],"stderr");
 }
 
 void CoreRpc::setLogSyslogLevel(const AmArg& args, AmArg& ret)
@@ -423,6 +425,11 @@ void CoreRpc::setLogSyslogLevel(const AmArg& args, AmArg& ret)
 void CoreRpc::setLogDiLogLevel(const AmArg& args, AmArg& ret)
 {
     setLoggingFacilityLogLevel(args,ret,"di_log");
+}
+
+void CoreRpc::setLogStderrLogLevel(const AmArg& args, AmArg& ret)
+{
+    setLoggingFacilityLogLevel(args,ret,"stderr");
 }
 
 void CoreRpc::showDumpLevel(const AmArg&, AmArg& ret)

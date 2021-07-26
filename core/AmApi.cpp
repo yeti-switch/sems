@@ -169,10 +169,11 @@ void AmLoggingFacility::adjustGlobalLogLevel()
 {
 	if(_log_level == log_level)
 		return;
+    int log_level_arg = _log_level;
 	if(_log_level > log_level || //increase global loglevel
-		!has_higher_levels(_log_level)) //decrease global loglevel if no logging facilities with higher loglevel
+		get_higher_levels(log_level_arg)) //decrease global loglevel if no logging facilities with higher loglevel
 	{
-		log_level = _log_level;
+		log_level = log_level_arg;
 		//INFO("global loglevel adjusted to %d by %s logging facility",log_level,getName().c_str());
 	}
 }

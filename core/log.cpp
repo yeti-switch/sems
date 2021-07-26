@@ -259,17 +259,18 @@ void unregister_log_hook(AmLoggingFacility* fac){
     }
 }
 
-bool has_higher_levels(int log_level_arg){
+bool get_higher_levels(int& log_level_arg){
 	AmLock lock(log_hooks_mutex);
 	if(log_hooks.empty())
 		return false;
 	for (vector<AmLoggingFacility*>::iterator it = log_hooks.begin();
 		it != log_hooks.end(); ++it)
 	{
-		if(log_level_arg < (*it)->getLogLevel())
-			return true;
+		if(log_level_arg < (*it)->getLogLevel()) {
+            log_level_arg = (*it)->getLogLevel();
+        }
 	}
-	return false;
+	return log_level > log_level_arg;
 }
 
 void set_log_level(int log_level_arg){
