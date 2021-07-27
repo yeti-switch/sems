@@ -1,3 +1,9 @@
+sems (1.57.1) stable; urgency=low
+
+  * AmIdentity: parse Identity headers with ppt=div
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 27 Jul 2021 19:56:42 +0300
+
 sems (1.57.0) stable; urgency=low
 
   * http_client: add max_reply_size parameter for destinations
