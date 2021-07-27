@@ -24,6 +24,12 @@
 #define ES256 str(ES256)
 #define passport str(passport)
 #define shaken str(shaken)
+#define div str(div)
+
+enum passport_type {
+    ES256_PASSPORT_SHAKEN = 0,
+    ES256_PASSPORT_DIV
+};
 
 static AmArgHashValidator IdentityHeaderValidator({
     {alg, true, {AmArg::CStr}},
@@ -32,12 +38,19 @@ static AmArgHashValidator IdentityHeaderValidator({
     {typ, true, {AmArg::CStr}}
 });
 
-static AmArgHashValidator IdentityPayloadValidator({
+static AmArgHashValidator IdentityShakenPayloadValidator({
     {origid, true, {AmArg::CStr}},
     {attest, true, {AmArg::CStr}},
     {iat, true, {AmArg::Int}},
     {orig, true, {AmArg::Struct}},
     {dest, true, {AmArg::Struct}}
+});
+
+static AmArgHashValidator IdentityDivPayloadValidator({
+    {iat, true, {AmArg::Int}},
+    {orig, true, {AmArg::Struct}},
+    {dest, true, {AmArg::Struct}},
+    {div, true, {AmArg::Struct}}
 });
 
 AmIdentity::AmIdentity()
@@ -223,6 +236,7 @@ bool AmIdentity::parse(const std::string& value)
     std::string value_base64;
     std::string info;
     size_t end = 0;
+    passport_type ppt_id;
 
     last_errcode = 0;
     last_errstr.clear();
@@ -289,12 +303,25 @@ bool AmIdentity::parse(const std::string& value)
               &ppt_arg = header[ppt],
               &type_arg = header[typ];
 
-        if(strcmp(alg_arg.asCStr(), ES256) ||
-           strcmp(type_arg.asCStr(), passport) ||
-           strcmp(ppt_arg.asCStr(), shaken))
+        if(strcmp(alg_arg.asCStr(), ES256))
         {
             last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unsupported alg/type/ppt. ES256/passport/shaken expected";
+            last_errstr = "Unsupported alg. 'ES256' expected";
+            return false;
+        }
+
+        if(strcmp(type_arg.asCStr(), passport)) {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr = "Unsupported typ. 'passport' expected";
+            return false;
+        }
+        if(0==strcmp(ppt_arg.asCStr(), shaken)) {
+            ppt_id = ES256_PASSPORT_SHAKEN;
+        } else if(0==strcmp(ppt_arg.asCStr(), div)) {
+            ppt_id = ES256_PASSPORT_DIV;
+        } else {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr = "Unsupported ppt. 'shaken' or 'div' expected";
             return false;
         }
 
@@ -306,27 +333,41 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     //process payload
-    if(!IdentityPayloadValidator.validate(payload)) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Unexpected JWT payload layout";
-        return false;
+    switch(ppt_id) {
+    case ES256_PASSPORT_SHAKEN:
+        if(!IdentityShakenPayloadValidator.validate(payload)) {
+            last_errcode = ERR_JWT_VALUE;
+            last_errstr = "Unexpected JWT shaken payload layout";
+            return false;
+        }
+        break;
+    case ES256_PASSPORT_DIV:
+        if(!IdentityDivPayloadValidator.validate(payload)) {
+            last_errcode = ERR_JWT_VALUE;
+            last_errstr = "Unexpected JWT div payload layout";
+            return false;
+        }
+        break;
     }
 
     try {
-        AmArg &attest_arg = payload[attest],
-              &dest_arg = payload[dest],
+
+        if(ppt_id==ES256_PASSPORT_SHAKEN) {
+            AmArg &attest_arg = payload[attest];
+            if(strlen(attest_arg.asCStr()) != 1 ||
+               attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C)
+            {
+                last_errcode = ERR_UNSUPPORTED;
+                last_errstr = "Unknown attestation level";
+                return false;
+            }
+            at = (enum ident_attest)(attest_arg.asCStr()[0]);
+        }
+
+        AmArg &dest_arg = payload[dest],
               &orig_arg = payload[orig],
               &iat_arg = payload[iat];
 
-        if(strlen(attest_arg.asCStr()) != 1 ||
-           attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C)
-        {
-            last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unknown attestaion level";
-            return false;
-        }
-
-        at = (enum ident_attest)(attest_arg.asCStr()[0]);
         created = iat_arg.asInt();
 
 #define add_ident_data(arg, ident, name) \
@@ -346,6 +387,7 @@ bool AmIdentity::parse(const std::string& value)
         add_ident_data(orig_arg, orig_data.uris, uri)
         add_ident_data(dest_arg, dest_data.tns, tn)
         add_ident_data(dest_arg, dest_data.uris, uri)
+        //TODO: add field div_data and add tn/uri for it
 #undef add_ident_data
 
     } catch(AmArg::TypeMismatchException& exc) {
@@ -393,12 +435,31 @@ bool AmIdentity::parse(const std::string& value)
         } while(end);
     }
 
-    if((!alg_info.empty() && alg_info != ES256) ||
-       (!ppt_info.empty() && ppt_info != shaken))
-    {
+    if(!alg_info.empty() && alg_info != ES256) {
         last_errcode = ERR_UNSUPPORTED;
-        last_errstr = "Unsupported identity header alg/ppt params. expected ES256/shaken";
+        last_errstr = "Unsupported identity header alg. 'ES256' expected";
         return false;
+    }
+
+    if(!ppt_info.empty()) {
+        DBG("ppt_info: %s",ppt_info.data());
+        if(ppt_info == shaken) {
+            if(ppt_id != ES256_PASSPORT_SHAKEN) {
+                last_errcode = ERR_HEADER_VALUE;
+                last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
+                return false;
+            }
+        } else if(ppt_info == div) {
+            if(ppt_id != ES256_PASSPORT_DIV) {
+                last_errcode = ERR_HEADER_VALUE;
+                last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
+                return false;
+            }
+        } else {
+            last_errcode = ERR_UNSUPPORTED;
+            last_errstr = "Unsupported identity header ppt. 'shaken' or 'div' expected";
+            return false;
+        }
     }
 
     if(!x5u_info.empty() && x5u_info != x5u_url) {
