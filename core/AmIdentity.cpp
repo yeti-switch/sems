@@ -176,7 +176,7 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
     payload[jwt_payload_claim_attest] = std::string(1, (char)at);
     payload[jwt_payload_claim_iat] = (int)time(0);
-    payload[jwt_payload_claim_orig] = orig_id = AmSession::getNewId();
+    payload[jwt_payload_claim_origid] = orig_id = AmSession::getNewId();
 
     AmArg& dest_arg = payload[jwt_payload_claim_dest];
     dest_arg.assertStruct();
