@@ -17,23 +17,25 @@ MEDIA_info::~MEDIA_info()
 
 int MEDIA_info::prepare(const std::string& iface_name)
 {
+    if(low_port%2) {
+        ERROR("%s: invalid port range: %hu-%hu. low_port should be even",
+              iface_name.data(),low_port,high_port);
+        return 1;
+    }
+    if(!(high_port%2)) {
+        ERROR("%s: invalid port range: %hu-%hu. high_port should be odd",
+              iface_name.data(),low_port,high_port);
+        return 1;
+    }
     if(high_port <= low_port) {
-        ERROR("invalid port range: %hu-%hu. high_port should be greater than low_port",
-              low_port,high_port);
+        ERROR("%s:invalid port range: %hu-%hu. high_port should be greater than low_port",
+              iface_name.data(),low_port,high_port);
         return 1;
     }
-
-    if((high_port - low_port) < 4) {
-        ERROR("invalid port range: %hu-%hu. specified range is to small for even one B2B call. "
+    if((high_port - low_port) < 3) {
+        ERROR("%s: invalid port range: %hu-%hu. specified range is to small for even one B2B call. "
               "actual range is: %d",
-              low_port,high_port,high_port-low_port);
-        return 1;
-    }
-
-    if((high_port - low_port) % 2 != 0) {
-        ERROR("invalid port range: %hu-%hu. range must be multiple of 2 "
-              "to correctly allocate both RTP and RTCP ports. actual range is: %d",
-              low_port,high_port,high_port-low_port);
+              iface_name.data(),low_port,high_port,high_port-low_port);
         return 1;
     }
 
