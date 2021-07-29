@@ -504,6 +504,10 @@ void tcp_base_trsp::getInfo(AmArg &ret)
     AmLock l(sock_mut);
 
     ret["sd"] = sd;
+    ret["actual_address"] = get_actual_ip();
+    ret["actual_port"] = get_actual_port();
+    ret["proto"] = get_transport();
+    ret["ifnum"] = if_num;
     ret["queue_size"] = send_q.size();
 }
 
@@ -773,7 +777,9 @@ void trsp_worker::getInfo(AmArg &ret)
 
     ret.assertStruct();
     for(auto const &con_it: connections) {
-            con_it.second->getInfo(ret[con_it.first]);
+        SIP_interface &sip_if = AmConfig.sip_ifs[con_it.second->get_if()];
+        AmArg &r = ret[sip_if.name];
+        con_it.second->getInfo(r[con_it.first]);
     }
 }
 
@@ -1004,14 +1010,6 @@ struct timeval* trsp_server_socket::get_idle_timeout()
         return &idle_timeout;
 
     return NULL;
-}
-
-void trsp_server_socket::getInfo(AmArg &ret)
-{
-    for(unsigned int i=0; i<workers.size(); i++) {
-        AmArg &r = ret[int2str(i)];
-        workers[i]->getInfo(r);
-    }
 }
 
 trsp::trsp()
