@@ -1,3 +1,12 @@
+sems (1.58.0) stable; urgency=low
+
+  * AmIdentity: parse Identity headers with ppt=div-o
+  * fix segfault on AmB2BMedia::replaceConnectionAddress() for not initialized StreamPair
+  * fix media ports range validator
+  * fix output rpc command "core.show.connections"
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 30 Jul 2021 11:27:59 +0300
+
 sems (1.57.1) stable; urgency=low
 
   * AmIdentity: parse Identity headers with ppt=div
