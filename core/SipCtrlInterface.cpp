@@ -1364,11 +1364,9 @@ void _SipCtrlInterface::getInfo(AmArg &ret)
 {
     ret.assertStruct();
     //if_num
-    for(unsigned int i = 0; i < AmConfig.sip_ifs.size(); i++) {
-        tcp_server_socket &tcp_socket = *tcp_sockets[i];
-        SIP_interface &sip_if = AmConfig.sip_ifs[tcp_socket.get_if()];
-        AmArg &r = ret[sip_if.name];
-        tcp_socket.getInfo(r);
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        trsp_worker.getInfo(ret);
     }
 }
 

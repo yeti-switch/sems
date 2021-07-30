@@ -301,8 +301,6 @@ public:
     struct timeval* get_connect_timeout();
     struct timeval* get_idle_timeout();
 
-    void getInfo(AmArg &ret);
-
     void inc_sip_parse_error() { sip_parse_errors.inc(); }
 };
 

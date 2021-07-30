@@ -123,10 +123,10 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
     }
 
     if(remote_port) {
-        CLASS_DBG("change connection endpoint. conn_type:%d %s:%d -> %s:%d",
-                  conn_type,
-                  get_addr_str(&r_addr).data(), r_port,
-                  get_addr_str(&ss).data(), remote_port);
+        //CLASS_DBG("change connection endpoint. conn_type:%d %s:%d -> %s:%d",
+        //          conn_type,
+        //          get_addr_str(&r_addr).data(), r_port,
+        //          get_addr_str(&ss).data(), remote_port);
         memcpy(&r_addr,&ss,sizeof(struct sockaddr_storage));
         am_set_port(&r_addr,remote_port);
         r_port = remote_port;
