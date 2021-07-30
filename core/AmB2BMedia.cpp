@@ -946,22 +946,24 @@ void AmB2BMedia::replaceConnectionAddress(
                 continue;
             }
             if(it->port) { // if stream active
+                public_address.clear();
                 try {
-                    if (a_leg) {
-                        (*audio)->a.replaceAudioMediaParameters(*it, idx, addr_type);
-                        public_address = (*audio)->a.getStream()->getLocalAddress();
-                    } else {
-                        (*audio)->b.replaceAudioMediaParameters(*it, idx, addr_type);
-                        public_address = (*audio)->b.getStream()->getLocalAddress();
+                    auto stream = a_leg ? (*audio)->a.getStream() : (*audio)->b.getStream();
+                    if(stream) {
+                        stream->replaceAudioMediaParameters(*it, idx, addr_type);
+                        public_address = stream->getLocalAddress();
+
+                        if(!replaced_ports.empty()) replaced_ports += "/";
+                        replaced_ports += int2str(it->port);
                     }
-                    if(!replaced_ports.empty()) replaced_ports += "/";
-                    replaced_ports += int2str(it->port);
                 } catch (const string& s) {
                     ERROR("setting port: '%s'\n", s.c_str());
                     throw string("error setting RTP port\n");
                 }
 
-                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
+                if (!public_address.empty() &&
+                    !it->conn.address.empty() && (parser_sdp.conn.address != zero_ip))
+                {
                     it->conn.address = public_address;
                     it->conn.addrType = addr_type;
                     DBG("new stream connection address: %s",it->conn.address.c_str());
@@ -975,26 +977,26 @@ void AmB2BMedia::replaceConnectionAddress(
                 continue;
             }
             if(it->port) { // if stream active
+                public_address.clear();
                 try {
-                    if (a_leg) {
-                        (*relay)->a.setLocalIP(addr_type);
-                        public_address = (*relay)->a.getStream()->getLocalAddress();
-                        it->port = static_cast<unsigned int>((*relay)->a.getStream()->getLocalPort());
-                        replaceRtcpAttr(*it, (*relay)->a.getStream()->getLocalIP(), (*relay)->a.getStream()->getLocalRtcpPort());
-                    } else {
-                        (*relay)->b.setLocalIP(addr_type);
-                        public_address = (*relay)->b.getStream()->getLocalAddress();
-                        it->port = static_cast<unsigned int>((*relay)->b.getStream()->getLocalPort());
-                        replaceRtcpAttr(*it, (*relay)->b.getStream()->getLocalIP(), (*relay)->b.getStream()->getLocalRtcpPort());
+                    auto stream = a_leg ? (*relay)->a.getStream() : (*relay)->b.getStream();
+                    if(stream) {
+                        stream->setLocalIP(addr_type);
+                        public_address = stream->getLocalAddress();
+                        it->port = static_cast<unsigned int>(stream->getLocalPort());
+                        replaceRtcpAttr(*it, stream->getLocalIP(), stream->getLocalRtcpPort());
+
+                        if(!replaced_ports.empty()) replaced_ports += "/";
+                        replaced_ports += int2str(it->port);
                     }
-                    if(!replaced_ports.empty()) replaced_ports += "/";
-                    replaced_ports += int2str(it->port);
                 } catch (const string& s) {
                     ERROR("setting port: '%s'\n", s.c_str());
                     throw string("error setting RTP port\n");
                 }
 
-                if (!it->conn.address.empty() && (parser_sdp.conn.address != zero_ip)) {
+                if (!public_address.empty() &&
+                    !it->conn.address.empty() && (parser_sdp.conn.address != zero_ip))
+                {
                     it->conn.address = public_address;
                     it->conn.addrType = addr_type;
                     DBG("new stream connection address: %s",it->conn.address.c_str());
