@@ -320,32 +320,28 @@ bool AmIdentity::parse(const std::string& value)
         last_errstr = "Empty base65url header";
         return false;
     }
-    jwt_header = base64_url_decode(data_base64[0]);
-    if(jwt_header.empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Empty header data after decoding. wrong base64url";
-        return false;
-    }
-
     if(data_base64[1].empty()) {
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Empty base65url payload";
         return false;
     }
-    jwt_payload = base64_url_decode(data_base64[1]);
-    if(jwt_payload.empty()) {
-        last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Empty payload data after decoding. wrong base64url";
-        return false;
-    }
-
     if(data_base64[2].empty()) {
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Empty base65url signature";
         return false;
     }
-    sign = base64_url_decode(data_base64[2]);
-    if(sign.empty()) {
+
+    if(!base64_url_decode(data_base64[0], jwt_header) || jwt_header.empty()) {
+        last_errcode = ERR_JWT_VALUE;
+        last_errstr = "Empty header data after decoding or wrong base64url";
+        return false;
+    }
+    if(!base64_url_decode(data_base64[1], jwt_payload) || jwt_payload.empty()) {
+        last_errcode = ERR_JWT_VALUE;
+        last_errstr = "Empty payload data after decoding or wrong base64url";
+        return false;
+    }
+    if(!base64_url_decode(data_base64[2], sign) || sign.empty()) {
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Empty signature data after decoding. wrong base64url";
     }

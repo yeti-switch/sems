@@ -44,8 +44,7 @@ std::string base64_url_encode(const std::string & in) {
   return out;
 }
 
-std::string base64_url_decode(const std::string & in) {
-  std::string out;
+bool base64_url_decode(const std::string & in, std::string& out) {
   std::vector<int> T(256, -1);
   unsigned int i;
   for (i =0; i < 64; i++) T[base64_url_alphabet[i]] = i;
@@ -53,7 +52,7 @@ std::string base64_url_decode(const std::string & in) {
   int val = 0, valb = -8;
   for (i = 0; i < in.length(); i++) {
     unsigned char c = in[i];
-    if (T[c] == -1) break;
+    if (T[c] == -1) return false;
     val = (val<<6) + T[c];
     valb += 6;
     if (valb >= 0) {
@@ -61,5 +60,5 @@ std::string base64_url_decode(const std::string & in) {
       valb -= 8;
     }
   }
-  return out;
+  return true;
 }
