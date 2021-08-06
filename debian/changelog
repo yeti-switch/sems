@@ -1,3 +1,10 @@
+sems (1.59.0) stable; urgency=low
+
+  * jsonxx: fix infinite loop on json parsing
+  * AmIdentity: check for base64_url data correctness
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 02 Aug 2021 18:27:09 +0300
+
 sems (1.58.1) stable; urgency=low
 
   * AmIdentity: fix json parsing infinite loop on empty decoded header/payload
