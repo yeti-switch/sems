@@ -547,6 +547,9 @@ void AmSdp::print(string& body) const
 
         string options;
 
+        auto is_t38_transport = media_it->transport==TP_UDPTL
+                                || media_it->transport==TP_UDPTLSUDPTL;
+
         if (media_it->transport == TP_RTPAVP
             || media_it->transport == TP_RTPAVPF
             || media_it->transport == TP_RTPSAVP
@@ -589,7 +592,7 @@ void AmSdp::print(string& body) const
 
         if (media_it->rtcp_port)
             out_buf += "\r\na=rtcp:" + int2str(media_it->rtcp_port);
-      
+
         if (!media_it->rtcp_conn.address.empty())
             out_buf += " IN " + addr_t_2_str(media_it->rtcp_conn.addrType) + 
                     " " + media_it->rtcp_conn.address;
@@ -605,17 +608,14 @@ void AmSdp::print(string& body) const
         if(media_it->is_dtls_srtp() || media_it->is_dtls_udptl())
             out_buf += "a=fingerprint:" + media_it->fingerprint.hash + " " + media_it->fingerprint.value + "\r\n";
 
-      if(media_it->is_ice) {
-          out_buf += "a=ice-pwd:" + media_it->ice_pwd + CRLF;
-          out_buf += "a=ice-ufrag:" + media_it->ice_ufrag + CRLF;
-          for (std::vector<SdpIceCandidate>::const_iterator c_it=
-                        media_it->ice_candidate.begin(); c_it != media_it->ice_candidate.end(); c_it++) {
+        if(media_it->is_ice) {
+            out_buf += "a=ice-pwd:" + media_it->ice_pwd + CRLF;
+            out_buf += "a=ice-ufrag:" + media_it->ice_ufrag + CRLF;
+            for (std::vector<SdpIceCandidate>::const_iterator c_it=
+                 media_it->ice_candidate.begin(); c_it != media_it->ice_candidate.end(); c_it++)
+            {
                 out_buf += c_it->print();
-          }
-      }
-        // "a=ptime:" line
-        if(media_it->frame_size) {
-            out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
+            }
         }
 
         // "a=rtcp-mux" line
@@ -628,36 +628,43 @@ void AmSdp::print(string& body) const
             out_buf += "a=zrtp-hash:" ZRTP_VERSION " " + media_it->zrtp_hash.hash + "\r\n";
         }
 #endif/*WITH_ZRTP*/
-        if(media_it->send){
-            if(media_it->recv){
-                out_buf += "a=sendrecv\r\n";
-            } else {
-                out_buf += "a=sendonly\r\n";
-            }
-        } else {
-            if(media_it->recv){
-                out_buf += "a=recvonly\r\n";
-            } else {
-                out_buf += "a=inactive\r\n";
-            }
-        }
 
-        if(media_it->setup == S_UNDEFINED) {
-            switch (media_it->dir) {
-                case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
-                case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
-                case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
-                case SdpMedia::DirUndefined: break;
+        if(!is_t38_transport) {
+            if(media_it->frame_size && !is_t38_transport) {
+                out_buf += "a=ptime:" + int2str(media_it->frame_size) + "\r\n";
             }
-        }
 
-        switch (media_it->setup) {
-            case S_ACTIVE:  out_buf += "a=setup:active\r\n"; break;
-            case S_PASSIVE: out_buf += "a=setup:passive\r\n"; break;
-            case S_ACTPASS: out_buf += "a=setup:actpass\r\n"; break;
-            case S_HOLD: out_buf += "a=setup:holdconn\r\n"; break;
-            case S_UNDEFINED: break;
-        }
+            if(media_it->send){
+                if(media_it->recv){
+                    out_buf += "a=sendrecv\r\n";
+                } else {
+                    out_buf += "a=sendonly\r\n";
+                }
+            } else {
+                if(media_it->recv){
+                    out_buf += "a=recvonly\r\n";
+                } else {
+                    out_buf += "a=inactive\r\n";
+                }
+            }
+
+            if(media_it->setup == S_UNDEFINED) {
+                switch (media_it->dir) {
+                    case SdpMedia::DirActive:  out_buf += "a=direction:active\r\n"; break;
+                    case SdpMedia::DirPassive: out_buf += "a=direction:passive\r\n"; break;
+                    case SdpMedia::DirBoth:  out_buf += "a=direction:both\r\n"; break;
+                    case SdpMedia::DirUndefined: break;
+                }
+            }
+
+            switch (media_it->setup) {
+                case S_ACTIVE:  out_buf += "a=setup:active\r\n"; break;
+                case S_PASSIVE: out_buf += "a=setup:passive\r\n"; break;
+                case S_ACTPASS: out_buf += "a=setup:actpass\r\n"; break;
+                case S_HOLD: out_buf += "a=setup:holdconn\r\n"; break;
+                case S_UNDEFINED: break;
+            }
+        } //if(!is_t38_transport)
 
         // add attributes (media level)
         for (std::vector<SdpAttribute>::const_iterator a_it=
