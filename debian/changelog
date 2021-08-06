@@ -1,3 +1,9 @@
+sems (1.59.1) stable; urgency=low
+
+  * AmSdp: do not add RTP a-lines for image streams
+ 
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 06 Aug 2021 17:32:16 +0300
+
 sems (1.59.0) stable; urgency=low
 
   * jsonxx: fix infinite loop on json parsing
