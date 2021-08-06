@@ -333,17 +333,17 @@ bool AmIdentity::parse(const std::string& value)
 
     if(!base64_url_decode(data_base64[0], jwt_header) || jwt_header.empty()) {
         last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Empty header data after decoding or wrong base64url";
+        last_errstr = "Failed to decode header as base64url";
         return false;
     }
     if(!base64_url_decode(data_base64[1], jwt_payload) || jwt_payload.empty()) {
         last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Empty payload data after decoding or wrong base64url";
+        last_errstr = "Failed to decode payload as base64url";
         return false;
     }
     if(!base64_url_decode(data_base64[2], sign) || sign.empty()) {
         last_errcode = ERR_JWT_VALUE;
-        last_errstr = "Empty signature data after decoding. wrong base64url";
+        last_errstr = "Failed to decode signature as base64url";
     }
 
     if(!json2arg(jwt_header, header)) {
