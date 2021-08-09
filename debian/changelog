@@ -1,3 +1,9 @@
+sems (1.60.0) stable; urgency=low
+
+  * AmBasicSipDialog: add setOutboundInterfaceName() method
+ 
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 09 Aug 2021 22:01:09 +0300
+
 sems (1.59.2) stable; urgency=low
 
   * SDP: use lowercase 'udptl' for t38 transport
