@@ -1,3 +1,9 @@
+sems (1.59.2) stable; urgency=low
+
+  * SDP: use lowercase 'udptl' for t38 transport
+ 
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 09 Aug 2021 11:46:36 +0300
+
 sems (1.59.1) stable; urgency=low
 
   * AmSdp: do not add RTP a-lines for image streams
