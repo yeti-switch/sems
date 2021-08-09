@@ -242,9 +242,8 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
                 id, sip_interface_name.data());
             return false;
         }
-        dlg.setOutboundInterface(name_it->second);
-        dlg.setOutboundInterface(AT_V4);
-        dlg.setOutboundProtoId(0);
+        dlg.resetOutboundIf();
+        dlg.setOutboundInterfaceName(sip_interface_name);
     }
 
     //process contact_uri and append hdrs
