@@ -123,6 +123,8 @@ protected:
   bool patch_ruri_next_hop;
   bool next_hop_fixed;
 
+  string force_outbound_interface_by_name;
+
   int outbound_interface;
   int outbound_proto_id;
   AddressType outbound_address_type;
@@ -337,6 +339,11 @@ public:
    * Compute the Route-HF for the next request
    */
   string getRoute();
+
+  /**
+   * set force_outbound_interface_by_name
+   */
+  void setOutboundInterfaceName(const string &iface_name);
 
   /**
    * Set outbound_interface to specific value (-1 = default).

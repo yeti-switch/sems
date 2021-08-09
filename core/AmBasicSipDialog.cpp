@@ -197,6 +197,11 @@ string AmBasicSipDialog::getRoute()
   return res;
 }
 
+void AmBasicSipDialog::setOutboundInterfaceName(const string &iface_name) {
+  DBG("setting outbound interface name to %s", iface_name.data());
+  force_outbound_interface_by_name = iface_name;
+}
+
 void AmBasicSipDialog::setOutboundInterface(int interface_id) {
   DBG("setting outbound interface to %i\n",  interface_id);
   outbound_interface = interface_id;
@@ -287,11 +292,20 @@ int AmBasicSipDialog::getOutboundIf()
         goto error;
     }
 
-    if_it = AmConfig.local_sip_ip2if.find(local_ip);
-    if(if_it == AmConfig.local_sip_ip2if.end()) {
-        ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
-              local_tag.c_str(), local_ip.c_str());
-        goto error;
+    if(force_outbound_interface_by_name.empty()) {
+        if_it = AmConfig.local_sip_ip2if.find(local_ip);
+        if(if_it == AmConfig.local_sip_ip2if.end()) {
+            ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
+                  local_tag.c_str(), local_ip.c_str());
+            goto error;
+        }
+    } else {
+        if_it = AmConfig.sip_if_names.find(force_outbound_interface_by_name);
+        if(if_it == AmConfig.sip_if_names.end()) {
+            ERROR("Could not find a local interface for force interface name (local_tag='%s';local_ip='%s';iface_name='%s')",
+                  local_tag.c_str(), local_ip.c_str(), force_outbound_interface_by_name.data());
+            goto error;
+        }
     }
 
     address_type = str2addrtype(local_ip);
@@ -303,7 +317,8 @@ int AmBasicSipDialog::getOutboundIf()
 
     proto_id = AmConfig.sip_ifs[if_it->second].findProto(address_type, transport_type);
     if(proto_id < 0) {
-        ERROR("Could not find a transport in interface for resolved local IP (local_tag='%s'; local_ip='%s').",
+        ERROR("Could not find a transport in interface %s for resolved local IP (local_tag='%s'; local_ip='%s').",
+              AmConfig.sip_ifs[if_it->second].name.data(),
               local_tag.c_str(), local_ip.c_str());
         goto error;
     }
