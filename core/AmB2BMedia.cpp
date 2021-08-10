@@ -1082,7 +1082,9 @@ void AmB2BMedia::updateAudioStreams()
 
     if(!((have_a || have_b))) return;
 
-    bool needs_processing = a && b && a->getRtpRelayMode() == AmB2BSession::RTP_Transcoding;
+    bool needs_processing =
+        a && b && have_a && have_b &&
+        a->getRtpRelayMode() == AmB2BSession::RTP_Transcoding;
 
     // initialize streams to be able to relay & transcode (or use local audio)
     for (auto &i : streams) {
