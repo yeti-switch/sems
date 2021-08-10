@@ -63,9 +63,9 @@ vector<string> tls_conf::allowed_key_exchange_methods() const
     } else {
         return {
             "SRP_SHA",
-            "ECDHE_PSK",
+            /*"ECDHE_PSK",
             "DHE_PSK",
-            "PSK",
+            "PSK",*/
             "CECPQ1",
             "ECDH",
             "DH",
