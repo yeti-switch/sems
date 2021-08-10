@@ -1,3 +1,9 @@
+sems (1.60.3) stable; urgency=low
+
+  * AmB2BMedia: require full initialization before adding to MediaProcessor
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 10 Aug 2021 22:34:54 +0300
+
 sems (1.60.2) stable; urgency=low
 
   * tls_trsp: avoid excess add_write_event() during TLS negotiation
