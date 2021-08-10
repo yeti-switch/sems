@@ -1,3 +1,10 @@
+sems (1.60.2) stable; urgency=low
+
+  * tls_trsp: avoid excess add_write_event() during TLS negotiation
+  * tls_trsp: disable PSK key exchange methods
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 10 Aug 2021 17:07:40 +0300
+
 sems (1.60.1) stable; urgency=low
 
   * options_prober: fix interface forcing by name
