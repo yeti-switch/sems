@@ -365,6 +365,9 @@ void tls_trsp_socket::generate_transport_errors()
 
 void tls_trsp_socket::pre_write()
 {
+    /*DBG("pre_write(): tls_connected:%d, senq_q.size():%zd, orig_send_q.size():%zd",
+        tls_connected, send_q.size(),orig_send_q.size());*/
+
     try {
         if(tls_connected && !orig_send_q.empty()) {
             msg_buf* msg = orig_send_q.front();
@@ -380,21 +383,25 @@ void tls_trsp_socket::pre_write()
 
 void tls_trsp_socket::post_write()
 {
-    if(tls_connected && send_q.empty()) {
-        msg_buf* msg = 0;
-        while(!orig_send_q.empty()) {
-            msg = orig_send_q.front();
-            if(msg->bytes_left() == 0) {
-                orig_send_q.pop_front();
-                delete msg;
-            } else {
-                break;
+    /*DBG("post_write(): tls_connected:%d, senq_q.size():%zd, orig_send_q.size():%zd",
+        tls_connected, send_q.size(),orig_send_q.size());*/
+    if(tls_connected) {
+        if(send_q.empty()) {
+            msg_buf* msg = 0;
+            while(!orig_send_q.empty()) {
+                msg = orig_send_q.front();
+                if(msg->bytes_left() == 0) {
+                    orig_send_q.pop_front();
+                    delete msg;
+                } else {
+                    break;
+                }
             }
         }
-    }
-    if(!orig_send_q.empty()) {
-        add_write_event();
-        DBG("write event added...");
+        if(!orig_send_q.empty()) {
+            add_write_event();
+            DBG("write event added...");
+        }
     }
 }
 
