@@ -736,10 +736,8 @@ void AmB2BMedia::changeSessionUnsafe(bool a_leg, AmB2BSession *new_session)
     }
 
     if (needs_processing) {
-        if (!isProcessingMedia()) {
-            addToMediaProcessorUnsafe();
-        }
-    } else if (isProcessingMedia()) {
+        addToMediaProcessorUnsafe();
+    } else {
         AmMediaProcessor::instance()->removeSession(this);
     }
 
@@ -1106,10 +1104,8 @@ void AmB2BMedia::updateAudioStreams()
     // we need to be fully initialised (both legs) before we can correctly handle
     // the media, right?
     if (needs_processing) {
-        if (!isProcessingMedia()) {
-            addToMediaProcessorUnsafe();
-        }
-    } else if (isProcessingMedia()) {
+        addToMediaProcessorUnsafe();
+    } else {
         AmMediaProcessor::instance()->removeSession(this);
     }
 }
@@ -1294,7 +1290,7 @@ void AmB2BMedia::stop(bool a_leg)
     TRACE("stop %s leg\n", a_leg ? "A" : "B");
     clearAudio(a_leg);
     // remove from processor only if both A and B leg stopped
-    if (isProcessingMedia() && (!a) && (!b)) {
+    if ((!a) && (!b)) {
         AmMediaProcessor::instance()->removeSession(this);
     }
 }
