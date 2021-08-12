@@ -127,13 +127,16 @@ class AmMediaSession
      * Default implementation sets internal variable usable for detection if the
      * object is in use by AmMediaProcessorThread. */
     virtual void onMediaProcessingStarted() { processing_media.set(true); }
-    
+
+    /** Callback function called when a session is already exists in media processor on adding */
+    virtual void onMediaSessionExists() { }
+
     /* Callback function called when a session is removed from media processor.
      *
      * Default implementation sets internal variable usable for detection if the
      * object is in use by AmMediaProcessorThread. */
     virtual void onMediaProcessingTerminated() { processing_media.set(false); }
-  
+
     /** Indicates if the object is used by media processor.
      * 
      * Returns value of internal variable for distinguishing if the object is

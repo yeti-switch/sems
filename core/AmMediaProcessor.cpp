@@ -381,6 +381,7 @@ void AmMediaProcessorThread::process(AmEvent* e)
             } else {
                 DBG("[%p] Session %p has already in scheduler\n",
                     to_void(this),to_void(sr->s));
+                sr->s->onMediaSessionExists();
             }
             break;
         case AmMediaProcessor::RemoveSession: {

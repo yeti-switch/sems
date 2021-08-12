@@ -654,13 +654,18 @@ AmB2BMedia::~AmB2BMedia()
 
 void AmB2BMedia::addToMediaProcessor()
 {
-    addReference(); // AmMediaProcessor's reference
+    // AmMediaProcessor's reference
+    // will be released by onMediaProcessingTerminated() or onMediaSessionExists()
+    addReference();
     AmMediaProcessor::instance()->addSession(this, callgroup);
 }
 
 void AmB2BMedia::addToMediaProcessorUnsafe()
 {
-    ref_cnt++; // AmMediaProcessor's reference
+    // AmMediaProcessor's reference
+    // will be released by onMediaProcessingTerminated() or onMediaSessionExists()
+    ref_cnt++;
+
     AmMediaProcessor::instance()->addSession(this, callgroup);
 }
 
@@ -1295,11 +1300,20 @@ void AmB2BMedia::stop(bool a_leg)
     }
 }
 
+void AmB2BMedia::onMediaSessionExists()
+{
+    AmMediaSession::onMediaSessionExists();
+    // release reference held by AmMediaProcessor
+    // aquired by addToMediaProcessor() or addToMediaProcessorUnsafe()
+    releaseReference();
+}
+
 void AmB2BMedia::onMediaProcessingTerminated()
 {
     AmMediaSession::onMediaProcessingTerminated();
 
     // release reference held by AmMediaProcessor
+    // aquired by addToMediaProcessor() or addToMediaProcessorUnsafe()
     releaseReference();
 }
 

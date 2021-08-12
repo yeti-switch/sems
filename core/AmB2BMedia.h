@@ -438,14 +438,16 @@ class AmB2BMedia: public AmMediaSession
 
     /** Clear RTP timeout of all streams in both call legs. */
     virtual void clearRTPTimeout();
-    
+
+    virtual void onMediaSessionExists() override;
+
     /** Callback function called once media processor releases this instance
      * from processing loop.
      * 
      * Deletes itself if there are no other references! FIXME: might be
      * returning something like "release me" and calling delete from media
      * processor would be better? */
-    virtual void onMediaProcessingTerminated();
+    virtual void onMediaProcessingTerminated() override;
 
     void mute(bool a_leg) { setMuteFlag(a_leg, true); }
     void unmute(bool a_leg) { setMuteFlag(a_leg, false); }
