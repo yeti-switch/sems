@@ -1,3 +1,9 @@
+sems (1.60.4) stable; urgency=low
+
+  * fix no audio on racing between AmB2BMedia and AmMediaProcessor
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 12 Aug 2021 15:55:08 +0300
+
 sems (1.60.3) stable; urgency=low
 
   * AmB2BMedia: require full initialization before adding to MediaProcessor
