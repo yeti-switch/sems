@@ -373,11 +373,15 @@ void AmMediaProcessorThread::process(AmEvent* e)
     if(SchedRequest* sr = dynamic_cast<SchedRequest*>(e)) {
         switch(sr->event_id){
         case AmMediaProcessor::InsertSession:
-            sessions.insert(sr->s);
-            sr->s->ping(ts);
-            DBG("[%p] Session %p inserted to the scheduler\n",
-                to_void(this),to_void(sr->s));
-            sr->s->clearRTPTimeout();
+            if(sessions.insert(sr->s).second) {
+                sr->s->ping(ts);
+                sr->s->clearRTPTimeout();
+                DBG("[%p] Session %p inserted to the scheduler\n",
+                    to_void(this),to_void(sr->s));
+            } else {
+                DBG("[%p] Session %p has already in scheduler\n",
+                    to_void(this),to_void(sr->s));
+            }
             break;
         case AmMediaProcessor::RemoveSession: {
             AmMediaSession* s = sr->s;
