@@ -1,3 +1,9 @@
+sems (1.61.0) stable; urgency=low
+
+  * AmB2BMedia: fix AmMediaProcessor references leak
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 13 Aug 2021 01:20:35 +0300
+
 sems (1.60.4) stable; urgency=low
 
   * fix no audio on racing between AmB2BMedia and AmMediaProcessor
