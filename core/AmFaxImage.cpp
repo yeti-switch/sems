@@ -575,6 +575,13 @@ void FaxT38Image::onMediaProcessingStarted()
     init_t38();
 }
 
+void FaxT38Image::onMediaSessionExists()
+{
+    CLASS_DBG("onMediaSessionExists()");
+    //cleanup ref aquired by onMediaProcessingStarted()
+    dec_ref(this);
+}
+
 void FaxT38Image::onMediaProcessingTerminated()
 {
     CLASS_DBG("onMediaProcessingTerminated()");

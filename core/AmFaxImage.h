@@ -117,6 +117,7 @@ protected:
     int readStreams(unsigned long long ts, unsigned char * buffer) override;
     int writeStreams(unsigned long long ts, unsigned char * buffer) override;
     void onMediaProcessingStarted() override;
+    void onMediaSessionExists() override;
     void onMediaProcessingTerminated() override;
     void clearAudio() override;
     void clearRTPTimeout() override;
