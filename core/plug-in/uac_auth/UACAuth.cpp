@@ -49,6 +49,9 @@ using std::string;
 
 #define OPT_ALLOWED_QOPS "allowed_qops"
 #define OPT_SERVER_SECRET "server_secret"
+#define OPT_NONCE_EXPIRE "nonce_expire"
+
+#define DEFAULT_NONCE_EXPIRE 300
 
 EXPORT_SESSION_EVENT_HANDLER_FACTORY(UACAuthFactory);
 EXPORT_PLUGIN_CLASS_FACTORY(UACAuthFactory);
@@ -57,6 +60,7 @@ EXPORT_PLUGIN_CONF_FACTORY(UACAuthFactory);
 UACAuthFactory* UACAuthFactory::_instance=0;
 string UACAuth::server_nonce_secret = "CKASLD§$>NLKJSLDKFJ"; // replaced on load
 int UACAuth::allowed_qop_types;
+int UACAuth::nonce_expire;
 static string qop_str_value;
 
 UACAuthFactory* UACAuthFactory::instance()
@@ -128,6 +132,7 @@ int UACAuthFactory::configure(const std::string& config)
     cfg_opt_t opt[] = {
         CFG_STR_LIST(OPT_ALLOWED_QOPS, 0,CFGF_NONE),
         CFG_STR(OPT_SERVER_SECRET, "", CFGF_NONE),
+        CFG_INT(OPT_NONCE_EXPIRE, DEFAULT_NONCE_EXPIRE, CFGF_NONE),
         CFG_END()
     };
     cfg_t *cfg = cfg_init(opt, CFGF_NONE);
@@ -181,6 +186,8 @@ int UACAuthFactory::configure(const std::string& config)
         DBG("empty " OPT_ALLOWED_QOPS ". allow both auth and auth-int by default");
         UACAuth::setAllowedQops(UACAuth::QOP_AUTH | UACAuth::QOP_AUTH_INT);
     }
+
+    UACAuth::setNonceExpire(cfg_getint(cfg, OPT_NONCE_EXPIRE));
 
     return 0;
 }
@@ -699,7 +706,7 @@ string UACAuth::calcNonce() {
 }
 
 /** check nonce integrity. @return true if correct */
-bool UACAuth::checkNonce(const string& nonce) {
+UACAuth::nonce_check_result_t UACAuth::checkNonce(const string& nonce) {
   HASHHEX hash;
   MD5_CTX Md5Ctx;
   HASH RespHash;
@@ -708,7 +715,19 @@ bool UACAuth::checkNonce(const string& nonce) {
 
   if (nonce.size() != INT_HEX_LEN+HASHHEXLEN) {
     DBG("wrong nonce length (expected %u, got %zd)\n", INT_HEX_LEN+HASHHEXLEN, nonce.size());
-    return false;
+    return NCR_WRONG;
+  }
+
+  unsigned int nonce_time = 0;
+  if(!hex2int(std::string(nonce.c_str(), INT_HEX_LEN), nonce_time)) {
+    DBG("wrong nonce value(error hex to int conversion)\n");
+    return NCR_WRONG;
+  }
+  nonce_time += nonce_expire;
+  time_t now = time(NULL);
+  if(nonce_time < now) {
+    DBG("wrong nonce value(nonce expired)\n");
+    return NCR_EXPIRED;
   }
 
   MD5Init(&Md5Ctx);
@@ -717,7 +736,7 @@ bool UACAuth::checkNonce(const string& nonce) {
   MD5Final(RespHash, &Md5Ctx);
   cvt_hex(RespHash, hash);
 
-  return tc_isequal((const char*)hash, &nonce[INT_HEX_LEN], HASHHEXLEN);
+  return tc_isequal((const char*)hash, &nonce[INT_HEX_LEN], HASHHEXLEN) ? NCR_OK : NCR_WRONG;
 }
 
 void UACAuth::setServerSecret(const string& secret) {
@@ -734,6 +753,11 @@ void UACAuth::setAllowedQops(int allowed_qop_mask) {
 		if(!qop_str_value.empty()) qop_str_value += ",";
 		qop_str_value += "auth-int";
 	}
+}
+
+void UACAuth::setNonceExpire(int nonce_expire)
+{
+    UACAuth::nonce_expire = nonce_expire;
 }
 
 void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, const string& user,
@@ -783,9 +807,14 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
       goto auth_end;
     }
 
-    if (!checkNonce(r_challenge.nonce)) {
+    nonce_check_result_t ret = checkNonce(r_challenge.nonce);
+    if (ret == NCR_WRONG) {
       DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
       internal_reason = "Incorrect nonce";
+      goto auth_end;
+    } else if(ret == NCR_EXPIRED) {
+      DBG("Auth: nonce '%s' expired\n", r_challenge.nonce.c_str());
+      internal_reason = "Nonce expired";
       goto auth_end;
     }
 
@@ -923,10 +952,14 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& re
 			goto auth_end;
 		}
 
-		if (!checkNonce(r_challenge.nonce)) {
-			DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
-			goto auth_end;
-		}
+        nonce_check_result_t ret = checkNonce(r_challenge.nonce);
+        if (ret == NCR_WRONG) {
+            DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
+            goto auth_end;
+        } else if(ret == NCR_EXPIRED) {
+            DBG("Auth: nonce '%s' expired\n", r_challenge.nonce.c_str());
+            goto auth_end;
+        }
 
 		// we don't check the URI
 		// if (r_uri != req->r_uri) {
