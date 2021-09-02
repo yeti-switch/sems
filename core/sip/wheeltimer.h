@@ -73,6 +73,7 @@ public:
     ~timer(); 
 
     virtual void fire()=0;
+    virtual void onDelete() { delete this; };
 };
 
 #include "singleton.h"

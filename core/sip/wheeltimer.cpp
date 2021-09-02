@@ -257,7 +257,7 @@ void _wheeltimer::delete_timer(timer* t)
     if(t->next)
 	((timer*)t->next)->prev = t->prev;
 
-    delete t;
+    t->onDelete();
 }
 
 
