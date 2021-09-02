@@ -181,6 +181,7 @@ extern int log_level;
 extern const char* log_level2str[];
 
 void init_logging(const char* name);
+void cleanup_logging();
 void run_log_hooks(int, pid_t, pthread_t, const char*, const char*, int, char*);
 
 #ifndef DISABLE_SYSLOG_LOG

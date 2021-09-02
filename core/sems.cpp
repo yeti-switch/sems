@@ -966,6 +966,7 @@ int main(int argc, char* argv[])
 #endif
   
   INFO("Exiting (%s)\n", success ? "success" : "failure");
-  
+  cleanup_logging();
+
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }

@@ -219,6 +219,13 @@ void init_logging(const char* name)
   INFO("Logging initialized\n");
 }
 
+void cleanup_logging()
+{
+    INFO("Logging cleanup");
+    AmLock l(log_hooks_mutex);
+    log_hooks.clear();
+}
+
 /**
  * Run log hooks
  */
