@@ -64,12 +64,16 @@ const char* __sub_state_str[] = {
 };
 
 SingleSubscription::SingleSubscription(AmSipSubscription* subs, Role role,
-				       const string& event, const string& id)
-    : subs(subs), role(role), event(event), id(id),
-      sub_state(SubState_init), pending_subscribe(0), expires(0),
-      timer_n(this,RFC6665_TIMER_N),timer_expires(this,SUBSCRIPTION_EXPIRE)
+                                       const string& event, const string& id)
+  : sub_state(SubState_init), pending_subscribe(0), expires(0),
+    timer_n(this,RFC6665_TIMER_N),
+    timer_expires(this,SUBSCRIPTION_EXPIRE),
+    subs(subs),
+    event(event),
+    id(id),
+    role(role)
 {
-  assert(subs); 
+    assert(subs);
 }
 
 AmBasicSipDialog* SingleSubscription::dlg()
@@ -214,9 +218,10 @@ SingleSubscription* AmSipSubscription::makeSubscription(const AmSipRequest& req,
 SingleSubscription::~SingleSubscription()
 {
   // just to be sure...
-  AmAppTimer::instance()->removeTimer(&timer_n);
+  timer_n.clear();
+
   // this one should still be active
-  AmAppTimer::instance()->removeTimer(&timer_expires);
+  timer_expires.clear();
 }
 
 void SingleSubscription::requestFSM(const AmSipRequest& req)
@@ -230,7 +235,7 @@ void SingleSubscription::requestFSM(const AmSipRequest& req)
 
     // start Timer N (RFC6665/4.1.2)
     DBG("setTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
-    AmAppTimer::instance()->setTimer(&timer_n,RFC6665_TIMER_N_DURATION);
+    timer_n.set(RFC6665_TIMER_N_DURATION);
   }
   else if(req.method == SIP_METH_NOTIFY) {
     subs->onNotify(req,this);
@@ -311,11 +316,11 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
       if(!expires_txt.empty() && str2int(expires_txt,sub_expires)){
 	if(sub_expires){
 	  DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)\n",dlg()->getLocalTag().c_str());
-	  AmAppTimer::instance()->setTimer(&timer_expires,(double)sub_expires);
+	  timer_expires.set((double)sub_expires);
 	  expires = sub_expires + AmAppTimer::instance()->unix_clock.get();
 
 	  DBG("removeTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
-	  AmAppTimer::instance()->removeTimer(&timer_n);
+	  timer_n.clear();
 	}
 	else {
 	  // we do not care too much, as timer N is set
@@ -371,7 +376,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
 
     // Kill timer N
     DBG("removeTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
-    AmAppTimer::instance()->removeTimer(&timer_n);
+    timer_n.clear();
 
     sub_state_txt = strip_header_params(sub_state_txt);
     if(sub_state_txt == "active"){
@@ -388,7 +393,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
     
     // reset expire timer
     DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)\n",dlg()->getLocalTag().c_str());
-    AmAppTimer::instance()->setTimer(&timer_expires,(double)notify_expire);
+    timer_expires.set((double)notify_expire);
     expires = notify_expire + AmAppTimer::instance()->unix_clock.get();
   }
 
@@ -399,7 +404,7 @@ void SingleSubscription::setExpires(unsigned long exp)
 {
   double notify_expire = exp - AmAppTimer::instance()->unix_clock.get();
   if(notify_expire > 0.0) {
-    AmAppTimer::instance()->setTimer(&timer_expires,notify_expire);
+    timer_expires.set(notify_expire);
     expires = exp;
   }
   else {
@@ -731,16 +736,20 @@ bool AmSipSubscription::sendReferNotify(AmBasicSipDialog *sip_dlg,
 }
 
 
-SIPSubscriptionEvent::SIPSubscriptionEvent(SubscriptionStatus status, 
-					   const string& handle,
-					   unsigned int expires,
-					   unsigned int code, 
-					   const string& reason)
-  : AmEvent(E_SIP_SUBSCRIPTION), status(status), 
-    handle(handle), expires(expires), code(code), 
-    reason(reason), notify_body(0) 
+SIPSubscriptionEvent::SIPSubscriptionEvent(SubscriptionStatus status,
+                                           const string& handle,
+                                           unsigned int expires,
+                                           unsigned int code,
+                                           const string& reason)
+  : AmEvent(E_SIP_SUBSCRIPTION),
+    handle(handle),
+    code(code),
+    reason(reason),
+    status(status),
+    expires(expires),
+    notify_body(nullptr)
 {}
-  
+
 const char* SIPSubscriptionEvent::getStatusText() 
 {
   switch (status) {

@@ -47,13 +47,12 @@ class SingleSubscription;
 struct SingleSubTimeoutEvent
   : public AmEvent
 {
-  string ltag;
-  int timer_id;
-  SingleSubscription* sub;
-
-  SingleSubTimeoutEvent(const string& ltag, int timer_id, SingleSubscription* sub)
-    : AmEvent(E_SIP_SUBSCRIPTION), ltag(ltag), timer_id(timer_id), sub(sub)
-  {}
+    string ltag;
+    int timer_id;
+    SingleSubscription* sub;
+    SingleSubTimeoutEvent(const string& ltag, int timer_id, SingleSubscription* sub)
+      : AmEvent(E_SIP_SUBSCRIPTION), ltag(ltag), timer_id(timer_id), sub(sub)
+    {}
 };
 
 /**
@@ -62,97 +61,91 @@ struct SingleSubTimeoutEvent
  * This class contain only one SIP suscription,
  * identified by its event package name, id and role.
  */
-class SingleSubscription 
+class SingleSubscription
 {
-public:
-  enum Role {
-    Subscriber=0,
-    Notifier
-  };
-
-private:
-  class SubscriptionTimer
-    : public DirectAppTimer
-  {
-    SingleSubscription* sub;
-    int timer_id;
-    
   public:
-    SubscriptionTimer(SingleSubscription* sub, int timer_id)
-      : sub(sub), timer_id(timer_id)
-    {}
-    
-    void fire(){
-      sub->onTimer(timer_id);
-    }
+    enum Role {
+        Subscriber=0,
+        Notifier
+    };
 
-    DirectAppTimer *clone() const override {
-        return new SubscriptionTimer(*this);
-    }
-  };
+  private:
+    class SubscriptionTimer
+      : public DirectAppTimer
+    {
+        SingleSubscription* sub;
+        int timer_id;
+      public:
+        SubscriptionTimer(SingleSubscription* sub, int timer_id)
+          : sub(sub), timer_id(timer_id)
+        { }
+        void onTimer() {
+            sub->onTimer(timer_id);
+        }
+    };
 
-  enum SubscriptionTimerId {
-    RFC6665_TIMER_N=0,
-    SUBSCRIPTION_EXPIRE
-  };
+    enum SubscriptionTimerId {
+        RFC6665_TIMER_N=0,
+        SUBSCRIPTION_EXPIRE
+    };
 
-  // state
-  unsigned int sub_state;
-  int  pending_subscribe;
-  unsigned long  expires;
-  string terminated_reason;
+    // state
+    unsigned int sub_state;
+    int  pending_subscribe;
+    unsigned long  expires;
+    string terminated_reason;
 
-  // timers
-  SubscriptionTimer timer_n;
-  SubscriptionTimer timer_expires;
+    // timers
+    SubscriptionTimer timer_n;
+    SubscriptionTimer timer_expires;
 
-  AmSipSubscription* subs;
+    AmSipSubscription* subs;
 
-  void onTimer(int timer_id);
+    void onTimer(int timer_id);
 
-  AmBasicSipDialog* dlg();
+    AmBasicSipDialog* dlg();
 
-  void requestFSM(const AmSipRequest& req);
-  
-  friend class SubscriptionTimer;
+    void requestFSM(const AmSipRequest& req);
 
-public:  
-  enum SubscriptionState {
-    SubState_init=0,
-    SubState_notify_wait,
-    SubState_pending,
-    SubState_active,
-    SubState_terminated
-  };
-  
-  // identifiers
-  string event;
-  string    id;
-  Role    role;
+    friend class SubscriptionTimer;
 
-  SingleSubscription(AmSipSubscription* subs, Role role,
-		     const string& event, const string& id);
+  public:
+    enum SubscriptionState {
+        SubState_init=0,
+        SubState_notify_wait,
+        SubState_pending,
+        SubState_active,
+        SubState_terminated
+    };
 
-  virtual ~SingleSubscription();
+    // identifiers
+    string event;
+    string    id;
+    Role    role;
 
-  bool onRequestIn(const AmSipRequest& req);
-  void onRequestSent(const AmSipRequest& req);
-  virtual void replyFSM(const AmSipRequest& req, const AmSipReply& reply);
+    SingleSubscription(AmSipSubscription* subs, Role role,
+                       const string& event, const string& id);
 
-  unsigned int getState() { return sub_state; }
-  virtual void setState(unsigned int st);
+    virtual ~SingleSubscription();
 
-  unsigned long getExpires() { return expires; }
-  void setExpires(unsigned long exp);
+    bool onRequestIn(const AmSipRequest& req);
+    void onRequestSent(const AmSipRequest& req);
+    virtual void replyFSM(const AmSipRequest& req, const AmSipReply& reply);
 
-  void terminate(const string &reason = string());
-  bool terminated();
+    unsigned int getState() { return sub_state; }
+    virtual void setState(unsigned int st);
 
-  string to_str();
+    unsigned long getExpires() { return expires; }
+    void setExpires(unsigned long exp);
 
-  string getNotifyHeaders();
-  void sendReferNotify(AmBasicSipDialog *sip_dlg, string &body,
-                       bool terminate_sub = false, const string &reason = string());
+    void terminate(const string &reason = string());
+    bool terminated();
+
+    string to_str();
+
+    string getNotifyHeaders();
+    void sendReferNotify(AmBasicSipDialog *sip_dlg, string &body,
+                         bool terminate_sub = false, const string &reason = string());
 };
 
 /**
@@ -163,115 +156,119 @@ public:
  */
 class AmSipSubscription
 {
-protected:
-  typedef list<SingleSubscription*> Subscriptions;
-  typedef map<unsigned int,Subscriptions::iterator> CSeqMap;
+  protected:
+    typedef list<SingleSubscription*> Subscriptions;
+    typedef map<unsigned int,Subscriptions::iterator> CSeqMap;
 
-  AmBasicSipDialog* dlg;
-  AmEventQueue*    ev_q;
-  Subscriptions    subs;
-  CSeqMap  uas_cseq_map;
-  CSeqMap  uac_cseq_map;
+    AmBasicSipDialog* dlg;
+    AmEventQueue*    ev_q;
+    Subscriptions    subs;
+    CSeqMap  uas_cseq_map;
+    CSeqMap  uac_cseq_map;
 
-  SingleSubscription* makeSubscription(const AmSipRequest& req, bool uac);
-  Subscriptions::iterator createSubscription(const AmSipRequest& req, bool uac);
-  Subscriptions::iterator matchSubscription(const AmSipRequest& req, bool uac);
-  Subscriptions::iterator findSubscription(SingleSubscription::Role role,
-					   const string& event, const string& id);
-  void removeSubFromUACCSeqMap(Subscriptions::iterator sub);
-  void removeSubFromUASCSeqMap(Subscriptions::iterator sub);
+    SingleSubscription* makeSubscription(const AmSipRequest& req, bool uac);
+    Subscriptions::iterator createSubscription(const AmSipRequest& req, bool uac);
+    Subscriptions::iterator matchSubscription(const AmSipRequest& req, bool uac);
+    Subscriptions::iterator findSubscription(SingleSubscription::Role role,
+                                             const string& event, const string& id);
+    void removeSubFromUACCSeqMap(Subscriptions::iterator sub);
+    void removeSubFromUASCSeqMap(Subscriptions::iterator sub);
 
-  virtual void removeSubscription(Subscriptions::iterator sub);
+    virtual void removeSubscription(Subscriptions::iterator sub);
 
-  virtual SingleSubscription* newSingleSubscription(SingleSubscription::Role role,
-						    const string& event,
-						    const string& id);
+    virtual SingleSubscription* newSingleSubscription(SingleSubscription::Role role,
+                                                      const string& event,
+                                                      const string& id);
 
-  friend class SingleSubscription;
+    friend class SingleSubscription;
 
-public:
-  AmSipSubscription(AmBasicSipDialog* dlg, AmEventQueue* ev_q);
-  virtual ~AmSipSubscription();
+  public:
+    AmSipSubscription(AmBasicSipDialog* dlg, AmEventQueue* ev_q);
+    virtual ~AmSipSubscription();
 
-  /**
-   * Is there at least one active subscription?
-   */
-  bool isActive();
+    /**
+    * Is there at least one active subscription?
+    */
+    bool isActive();
 
-  /**
-   * Terminate all subscriptions
-   */
-  void terminate();
+    /**
+    * Terminate all subscriptions
+    */
+    void terminate();
 
-  /**
-   * Check if a subscription exists
-   */
-  bool subscriptionExists(SingleSubscription::Role role,
-			  const string& event, const string& id);
-  
-  bool onRequestIn(const AmSipRequest& req);
-  void onRequestSent(const AmSipRequest& req);
-  bool onReplyIn(const AmSipRequest& req, const AmSipReply& reply);
-  void onReplySent(const AmSipRequest& req, const AmSipReply& reply);
+    /**
+    * Check if a subscription exists
+    */
+    bool subscriptionExists(SingleSubscription::Role role,
+                            const string& event, const string& id);
 
-  virtual void onNotify(const AmSipRequest& req, SingleSubscription* sub) {}
-  virtual void onFailureReply(const AmSipReply& reply, SingleSubscription* sub) {}
-  virtual void onTimeout(int timer_id, SingleSubscription* sub);
+    bool onRequestIn(const AmSipRequest& req);
+    void onRequestSent(const AmSipRequest& req);
+    bool onReplyIn(const AmSipRequest& req, const AmSipReply& reply);
+    void onReplySent(const AmSipRequest& req, const AmSipReply& reply);
 
-  virtual void debug();
+    virtual void onNotify([[maybe_unused]] const AmSipRequest& req,
+                         [[maybe_unused]] SingleSubscription* sub)
+    {}
 
-  bool sendReferNotify(AmBasicSipDialog *sip_dlg, const string& id, string &body,
-                       bool terminate_sub = false, const string &reason = string());
+    virtual void onFailureReply([[maybe_unused]] const AmSipReply& reply,
+                                [[maybe_unused]] SingleSubscription* sub)
+    {}
 
+    virtual void onTimeout(int timer_id, SingleSubscription* sub);
+
+    virtual void debug();
+
+    bool sendReferNotify(AmBasicSipDialog *sip_dlg, const string& id, string &body,
+                         bool terminate_sub = false, const string &reason = string());
 };
 
 struct SIPSubscriptionEvent
   : public AmEvent
 {
+    enum SubscriptionStatus {
+        SubscribeActive=0,
+        SubscribeFailed,
+        SubscribeTerminated,
+        SubscribePending,
+        SubscriptionTimeout
+    };
 
-  enum SubscriptionStatus {
-    SubscribeActive=0,
-    SubscribeFailed,
-    SubscribeTerminated,
-    SubscribePending,
-    SubscriptionTimeout
-  };
+    string handle;
+    unsigned int code;
+    string reason;
+    SubscriptionStatus status;
+    unsigned int expires;
+    std::unique_ptr<AmMimeBody> notify_body;
 
-  string handle;
-  unsigned int code;
-  string reason;
-  SubscriptionStatus status;
-  unsigned int expires;
-  std::auto_ptr<AmMimeBody> notify_body;
+    SIPSubscriptionEvent(SubscriptionStatus status, const string& handle,
+                         unsigned int expires = 0,
+                         unsigned int code=0, const string& reason="");
 
-  SIPSubscriptionEvent(SubscriptionStatus status, const string& handle,
-		       unsigned int expires = 0,
-		       unsigned int code=0, const string& reason="");
-  
-  const char* getStatusText();
+    const char* getStatusText();
 };
 
 struct AmSipSubscriptionInfo
 {
-  string domain;
-  string user;
-  string from_user;
-  string pwd;
-  string proxy;
-  string event;
-  string accept;
-  string id;
+    string domain;
+    string user;
+    string from_user;
+    string pwd;
+    string proxy;
+    string event;
+    string accept;
+    string id;
 
-  AmSipSubscriptionInfo(const string& domain,
-			const string& user,
-			const string& from_user,
-			const string& pwd,
-			const string& proxy,
-			const string& event)
-  : domain(domain),user(user),
-    from_user(from_user),pwd(pwd),proxy(proxy),
-    event(event)
-  { }
+    AmSipSubscriptionInfo(const string& domain,
+                          const string& user,
+                          const string& from_user,
+                          const string& pwd,
+                          const string& proxy,
+                          const string& event)
+      : domain(domain),user(user),
+        from_user(from_user),pwd(pwd),proxy(proxy),
+        event(event)
+    { }
 };
 
 class AmSipSubscriptionDialog
@@ -279,38 +276,46 @@ class AmSipSubscriptionDialog
     public AmBasicSipEventHandler,
     public AmSipSubscription
 {
-  string event;
-  string event_id;
-  string accept;
-  string sess_link;
+    string event;
+    string event_id;
+    string accept;
+    string sess_link;
 
-public:
-  AmSipSubscriptionDialog(const AmSipSubscriptionInfo& info,
-			  const string& sess_link,
-			  AmEventQueue* ev_q = NULL);
+  public:
+    AmSipSubscriptionDialog(const AmSipSubscriptionInfo& info,
+                            const string& sess_link,
+                            AmEventQueue* ev_q = NULL);
 
-  int subscribe(int expires);
+    int subscribe(int expires);
 
-  string getDescription();
+    string getDescription();
 
-  /** AmSipSubscription interface */
-  void onNotify(const AmSipRequest& req, SingleSubscription* sub);
-  void onFailureReply(const AmSipReply& reply, SingleSubscription* sub);
-  void onTimeout(int timer_id, SingleSubscription* sub);
+    /** AmSipSubscription interface */
+    void onNotify(const AmSipRequest& req, SingleSubscription* sub);
+    void onFailureReply(const AmSipReply& reply, SingleSubscription* sub);
+    void onTimeout(int timer_id, SingleSubscription* sub);
 
   /** AmBasicDialogEventHandler interface */
-  void onSipRequest(const AmSipRequest& req)
-  { AmSipSubscription::onRequestIn(req); }
+    void onSipRequest(const AmSipRequest& req)
+    {
+        AmSipSubscription::onRequestIn(req);
+    }
 
-  void onRequestSent(const AmSipRequest& req)
-  { AmSipSubscription::onRequestSent(req); }
+    void onRequestSent(const AmSipRequest& req)
+    {
+        AmSipSubscription::onRequestSent(req);
+    }
 
-  void onSipReply(const AmSipRequest& req, const AmSipReply& reply,
-		  AmBasicSipDialog::Status old_status)
-  { AmSipSubscription::onReplyIn(req,reply); }
+    void onSipReply(const AmSipRequest& req, const AmSipReply& reply,
+                    [[maybe_unused]] AmBasicSipDialog::Status old_status)
+    {
+        AmSipSubscription::onReplyIn(req,reply);
+    }
 
-  void onReplySent(const AmSipRequest& req, const AmSipReply& reply)
-  { AmSipSubscription::onReplySent(req,reply); }
+    void onReplySent(const AmSipRequest& req, const AmSipReply& reply)
+    {
+        AmSipSubscription::onReplySent(req,reply);
+    }
 };
 
 #endif
