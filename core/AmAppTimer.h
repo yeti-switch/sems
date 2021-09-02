@@ -29,6 +29,8 @@
 #define _AmAppTimer_h_
 
 #include "sip/wheeltimer.h"
+#include "DirectAppTimer.h"
+
 #include <string>
 using std::string;
 
@@ -38,63 +40,36 @@ using std::string;
 #define TICKS_PER_SEC (1000000 / TIMER_RESOLUTION)
 
 class app_timer;
-class direct_app_timer;
 
-class DirectAppTimer
+class _AmAppTimer
+  : public _wheeltimer
 {
-public:
-  virtual ~DirectAppTimer() {}
-  virtual void fire()=0;
-  virtual DirectAppTimer* clone() const = 0;
-};
+    typedef std::map<int, app_timer*>   AppTimers;
+    typedef std::map<string, AppTimers> TimerQueues;
 
-class _AmAppTimer 
-  : public _wheeltimer 
-{
-  typedef std::map<int, app_timer*>   AppTimers;
-  typedef std::map<string, AppTimers> TimerQueues;
-  typedef std::map<DirectAppTimer*,direct_app_timer*> DirectTimers;
+    AmMutex user_timers_mut;
+    TimerQueues user_timers;
 
-  AmMutex user_timers_mut;
-  TimerQueues user_timers;
+    /** creates timer object and inserts it into our container */
+    app_timer* create_timer(const string& q_id, int id, unsigned int expires);
+    /** erases timer - does not delete timer object @return timer object pointer, if found */
+    app_timer* erase_timer(const string& q_id, int id);
 
-  AmMutex direct_timers_mut;
-  DirectTimers direct_timers;
+    /* callback used by app_timer */
+    void app_timer_cb(app_timer* at);
+    friend class app_timer;
 
-  /** creates timer object and inserts it into our container */
-  app_timer* create_timer(const string& q_id, int id, unsigned int expires);
-  /** erases timer - does not delete timer object @return timer object pointer, if found */
-  app_timer* erase_timer(const string& q_id, int id);
+  public:
+    _AmAppTimer();
+    ~_AmAppTimer();
+    void dispose(){}
 
-  /* callback used by app_timer */
-  void app_timer_cb(app_timer* at);
-  friend class app_timer;
-
-  /* callback used by direct_app_timer */
-  void direct_app_timer_cb(direct_app_timer* t);
-  friend class direct_app_timer;
-
- public:
-  _AmAppTimer();
-  ~_AmAppTimer();
-  void dispose(){}
-
-  /** set a timer for event queue eventqueue_name with id timer_id and timeout (s) */
-  void setTimer(const string& eventqueue_name, int timer_id, double timeout);
-  /** remove timer for event queue eventqueue_name with id timer_id */
-  void removeTimer(const string& eventqueue_name, int timer_id);
-  /** remove all timers for event queue eventqueue_name */
-  void removeTimers(const string& eventqueue_name);
-
-  /* set a timer which directly calls your handler */
-  void setTimer(DirectAppTimer* t, double timeout);
-  /* remove a timer which directly calls your handler */
-  void removeTimer(DirectAppTimer* t);
-
-  /* ONLY use this from inside the timer handler of a direct timer */
-  void setTimer_unsafe(DirectAppTimer* t, double timeout);
-  /* ONLY use this from inside the timer handler of a direct timer */
-  void removeTimer_unsafe(DirectAppTimer* t);
+    /** set a timer for event queue eventqueue_name with id timer_id and timeout (s) */
+    void setTimer(const string& eventqueue_name, int timer_id, double timeout);
+    /** remove timer for event queue eventqueue_name with id timer_id */
+    void removeTimer(const string& eventqueue_name, int timer_id);
+    /** remove all timers for event queue eventqueue_name */
+    void removeTimers(const string& eventqueue_name);
 };
 
 typedef singleton<_AmAppTimer> AmAppTimer;
