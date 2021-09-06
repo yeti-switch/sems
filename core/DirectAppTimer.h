@@ -42,6 +42,12 @@ class DirectAppTimer
     DirectAppTimer();
     virtual ~DirectAppTimer();
 
+    DirectAppTimer(const DirectAppTimer&) = delete;
+    DirectAppTimer& operator=(const DirectAppTimer&) = delete;
+
+    DirectAppTimer(DirectAppTimer&&);
+    DirectAppTimer& operator=(DirectAppTimer&&) = delete;
+
     //schedule timer
     void set(double timeout);
     //clear scheduled timer
