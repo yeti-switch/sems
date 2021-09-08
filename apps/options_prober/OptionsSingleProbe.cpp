@@ -213,10 +213,10 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
 
     uri_parser.uri_user = ruri_username;
 
-    req.from = uri_parser.nameaddr_str();
+    req.from = from_uri.empty() ? uri_parser.nameaddr_str() : from_uri;
     req.from_tag = tag;
 
-    req.to       = req.from;
+    req.to = to_uri.empty() ? uri_parser.nameaddr_str() : to_uri;
     req.to_tag   = "";
 
     req.callid   = AmSession::getNewId();
