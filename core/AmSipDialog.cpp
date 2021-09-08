@@ -273,9 +273,9 @@ int AmSipDialog::onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flag
 	setStatus(Early);
       }
       else if(reply.code < 300)
-	setStatus(Connected);
+        setStatus(Connected);
       else
-	setStatus(Disconnected);
+        drop();
     }
     break;
 
@@ -286,7 +286,7 @@ int AmSipDialog::onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flag
       //  authentication (NYI at this place)
       // Also: we should not send provisionnal replies to a BYE
       if(reply.code >= 200)
-	setStatus(Disconnected);
+          drop();
     }
     break;
 
@@ -392,8 +392,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
       }
 
       if(reply.code >= 300) {// error reply
-        setStatus(Disconnected);
-        setRemoteTag(reply.to_tag);
+          drop();
       } else if(cancel_pending){
         cancel_pending = false;
         bye();
@@ -414,8 +413,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
           setRemoteTag(reply.to_tag);
         }
       } else { // error reply
-        setStatus(Disconnected);
-        setRemoteTag(reply.to_tag);
+          drop();
       }
       break; //Early
 
@@ -427,7 +425,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
       } else if(reply.code >= 300){
         // CANCEL accepted
         DBG("CANCEL accepted, status -> Disconnected\n");
-        setStatus(Disconnected);
+        drop();
       } else if(reply.code < 300){
         // CANCEL rejected
         DBG("CANCEL rejected/too late. connect\n");
@@ -460,8 +458,8 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
         reply.cseq_method.c_str(), reply.code);
 
     if((reply.cseq_method == SIP_METH_BYE) && (reply.code >= 200)){
-      //TODO: support the auth case here (401/403)
-      setStatus(Disconnected);
+        //TODO: support the auth case here (401/403)
+        drop();
     }
   }
 
@@ -550,8 +548,9 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
             send_200_ack(*it);
         }
         if (status != Disconnecting) {
-            setStatus(Disconnected);
-            return sendRequest(SIP_METH_BYE, NULL, hdrs, flags);
+            int ret = sendRequest(SIP_METH_BYE, NULL, hdrs, flags);
+            drop();
+            return ret;
         } else {
             return 0;
         }
@@ -577,7 +576,7 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
                   "no UAC transaction to cancel or UAS transaction to reply.\n",
                   local_tag.c_str(),
                   getStatusStr());
-            setStatus(Disconnected);
+            drop();
         }
         return 0;
     case Cancelling:
@@ -593,7 +592,7 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
         // to send the reply on behalf of the app.
         ERROR("[%s] ignoring bye() in %s state: no UAS transaction to reply",
               local_tag.c_str(),getStatusStr());
-        setStatus(Disconnected);
+        drop();
         return 0;
     default:
         DBG("bye(): we are not connected "
@@ -780,9 +779,10 @@ int AmSipDialog::cancel(bool final, const string& hdrs)
 }
 
 int AmSipDialog::drop()
-{	
-  setStatus(Disconnected);
-  return 1;
+{
+    setStatus(Disconnected);
+    remote_tag.clear();
+    return 1;
 }
 
 int AmSipDialog::send_200_ack(unsigned int inv_cseq,
