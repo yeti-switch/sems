@@ -563,6 +563,7 @@ string AmArg::print(const AmArg &a) {
       return s;
     case Reference:
         s = print(a.v_ref->arg());
+	return s;
     default: break;
   }
   return "<UNKONWN TYPE>";
