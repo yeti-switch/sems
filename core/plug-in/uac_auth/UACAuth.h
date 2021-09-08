@@ -109,9 +109,15 @@ class UACAuth : public AmSessionEventHandler
         QOP_AUTH = 1,
         QOP_AUTH_INT = 2
     };
+    enum nonce_check_result_t {
+        NCR_EXPIRED,
+        NCR_WRONG,
+        NCR_OK
+    };
   private:
     static string server_nonce_secret;
     static int allowed_qop_types;
+    static int nonce_expire;
 
     std::map<unsigned int, SIPRequestInfo> sent_requests;
 
@@ -180,13 +186,14 @@ class UACAuth : public AmSessionEventHandler
     virtual bool onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
 
     static string calcNonce();
-    static bool checkNonce(const string& nonce);
+    static nonce_check_result_t checkNonce(const string& nonce);
     static void checkAuthentication(const AmSipRequest* req, const string& realm,
                                     const string& user, const string& pwd, AmArg& ret);
     static string getChallengeHeader(const string& realm);
 
     static void setServerSecret(const string& secret);
     static void setAllowedQops(int allowed_qop_mask);
+    static void setNonceExpire(int nonce_expire);
 
     /** time-constant string compare function (but leaks timing of length mismatch)
       * @return true if matching */
