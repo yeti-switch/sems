@@ -126,7 +126,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 #   will not work with spandsp 0.0.2 .
 #   (which means that current debian and gentoo packages don't work)
 IF(SEMS_USE_SPANDSP)
-	FIND_PACKAGE(Spandsp REQUIRED)
+	#FIND_PACKAGE(Spandsp REQUIRED)
 	#ADD_DEFINITIONS(-DUSE_SPANDSP -DUSE_SPANDSP_PLC -D__STDC_LIMIT_MACROS)
 	ADD_DEFINITIONS(-DUSE_SPANDSP -D__STDC_LIMIT_MACROS)
 	MESSAGE(STATUS "Using spandsp: YES")
