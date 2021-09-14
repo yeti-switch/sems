@@ -1,3 +1,9 @@
+sems (1.63.0) stable; urgency=low
+
+  * libbotan: add TNAuthList support
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 14 Sep 2021 09:06:54 +0300
+
 sems (1.62.1) stable; urgency=low
 
   * fix SST INVITE To-tag on 422 reply
