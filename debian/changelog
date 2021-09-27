@@ -1,3 +1,9 @@
+sems (1.61.0p1) stable; urgency=low
+
+  * AmRtpStream: fast getMediaAcl segfault fix
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 27 Sep 2021 18:28:53 +0000
+
 sems (1.61.0) stable; urgency=low
 
   * AmB2BMedia: fix AmMediaProcessor references leak
