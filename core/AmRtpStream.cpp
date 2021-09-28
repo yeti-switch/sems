@@ -2033,7 +2033,8 @@ void AmRtpStream::getMediaStats(struct MediaStats &s)
 
 void AmRtpStream::getMediaAcl(trsp_acl& acl)
 {
-    session->getMediaAcl(acl);
+    if(session)
+        session->getMediaAcl(acl);
 }
 
 void AmRtpStream::debug()
