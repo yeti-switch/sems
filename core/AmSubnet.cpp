@@ -66,7 +66,7 @@ bool AmSubnet::parse_mask(const std::string &mask_str)
     network.ss_family = addr.ss_family;
     if(addr.ss_family == AF_INET) {
         SAv4_addr(mask) = htonl((~0UL) << (32-mask_len));
-    SAv4_addr(network) = SAv4_addr(addr) & SAv4_addr(mask);
+        SAv4_addr(network) = SAv4_addr(addr) & SAv4_addr(mask);
     } else {
         SAv6_addr(mask)[0] = (mask_len >= 64 ? htonll(~0ULL) : (htonll((~0ULL) << (64-mask_len))));
         SAv6_addr(mask)[1] = (mask_len >= 64 ? htonll((~0ULL) << (128-mask_len)) : 0);
@@ -77,7 +77,7 @@ bool AmSubnet::parse_mask(const std::string &mask_str)
     return true;
 }
 
-bool AmSubnet::parse(std::string &s)
+bool AmSubnet::parse(const std::string &s)
 {
     if(s.empty()) return false;
 
@@ -97,9 +97,19 @@ bool AmSubnet::contains(const sockaddr_storage &ip) const
         return false;
     }
     if(addr.ss_family == AF_INET) {
-    return ( SAv4_addr(network) == (SAv4_addr(ip) & SAv4_addr(mask)));
+        return ( SAv4_addr(network) == (SAv4_addr(ip) & SAv4_addr(mask)));
     } else {
         return ( SAv6_addr(network)[0] == (SAv6_addr(ip)[0] & SAv6_addr(mask)[0])) &&
                ( SAv6_addr(network)[1] == (SAv6_addr(ip)[1] & SAv6_addr(mask)[1]));
     }
+}
+
+AmSubnet::operator AmArg() const
+{
+    AmArg a;
+    a["address"] = get_addr_str(&addr);
+    a["mask"] = get_addr_str(&mask);
+    a["network"] = get_addr_str(&network);
+    a["mask_len"] = mask_len;
+    return a;
 }

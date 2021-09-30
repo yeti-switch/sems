@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AmArg.h"
+
 #include <sys/socket.h>
 #include <stdint.h>
 #include <string>
@@ -18,7 +20,13 @@ class AmSubnet {
     AmSubnet();
     ~AmSubnet() {}
 
-    bool parse(std::string &s);
+    bool parse(const std::string &s);
     bool contains(const sockaddr_storage &addr) const;
+
+    const sockaddr_storage& get_addr() const { return addr; }
+    const sockaddr_storage& get_mask() const { return mask; }
+    const sockaddr_storage& get_network() const { return network; }
+    unsigned int get_mask_len() const { return mask_len; }
+    operator AmArg() const;
 };
 
