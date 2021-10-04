@@ -274,7 +274,7 @@ int _SipCtrlInterface::init_tls_servers(unsigned short if_num, unsigned short pr
 
     tls_server_socket* tls_socket = 0;
     try {
-        tls_socket = new tls_server_socket(if_num, proto_idx,info.sig_sock_opts,trans, &tls_info->client_settings, &tls_info->server_settings);
+        tls_socket = new tls_server_socket(if_num, proto_idx,info.sig_sock_opts,trans);
     } catch(Botan::Exception& ex) {
         ERROR("Botan Exception: %s", ex.what());
     }
@@ -433,7 +433,7 @@ int _SipCtrlInterface::init_wss_servers(unsigned short if_num, unsigned short pr
 
     wss_server_socket* wss_socket = 0;
     try {
-        wss_socket = new wss_server_socket(if_num, proto_idx,info.sig_sock_opts,trans, &wss_info->client_settings, &wss_info->server_settings);
+        wss_socket = new wss_server_socket(if_num, proto_idx,info.sig_sock_opts,trans);
     } catch(Botan::Exception& ex) {
         ERROR("Botan Exception: %s", ex.what());
     }

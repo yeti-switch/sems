@@ -40,8 +40,7 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     std::string mac;
     std::string sig;
 public:
-    tls_conf(tls_client_settings* settings);
-    tls_conf(tls_server_settings* settings);
+    tls_conf(tls_settings* settings);
     tls_conf(const tls_conf& conf);
 
     void operator=(const tls_conf& conf);
@@ -173,22 +172,11 @@ public:
                                          int sd, const sockaddr_storage* sa, event_base* evbase);
 };
 
-class tls_trsp_settings
-{
-public:
-    tls_trsp_settings(const tls_conf& s_client, const tls_conf& s_server);
-    virtual ~tls_trsp_settings(){}
-    tls_conf client_settings;
-    tls_conf server_settings;
-};
-
-class tls_server_socket : public trsp_server_socket, public tls_trsp_settings
+class tls_server_socket : public trsp_server_socket
 {
 public:
     tls_server_socket(unsigned short if_num, unsigned short proto_idx,
-                      unsigned int opts, socket_transport transport,
-                      const tls_conf& s_client,
-                      const tls_conf& s_server);
+                      unsigned int opts, socket_transport transport);
 
     const char* get_transport() const { return "tls"; }
 

@@ -650,10 +650,7 @@ tcp_base_trsp* wss_socket_factory::create_socket(trsp_server_socket* server_sock
 }
 
 wss_server_socket::wss_server_socket(short unsigned int if_num, short unsigned int proto_idx,
-                                     unsigned int opts, socket_transport transport,
-                                     const tls_conf& s_client,
-                                     const tls_conf& s_server)
+                                     unsigned int opts, socket_transport transport)
 : trsp_server_socket(if_num, proto_idx, opts, new wss_socket_factory(transport))
-, tls_trsp_settings(s_client, s_server)
 {
 }

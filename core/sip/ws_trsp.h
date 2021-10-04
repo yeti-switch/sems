@@ -201,10 +201,10 @@ public:
   const char* get_transport() const { return "ws"; }
 };
 
-class wss_server_socket: public trsp_server_socket, public tls_trsp_settings
+class wss_server_socket: public trsp_server_socket
 {
 public:
-  wss_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport, const tls_conf& s_client, const tls_conf& s_server);
+  wss_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
 
   const char* get_transport() const { return "wss"; }
 };

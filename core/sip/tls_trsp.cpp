@@ -20,19 +20,14 @@
 #include <botan/tls_exceptn.h>
 #include <botan/tls_alert.h>
 
-
-tls_conf::tls_conf(tls_client_settings* settings)
-: s_client(settings), s_server(0)
-, certificate(settings->getCertificateCopy())
-, key(settings->getCertificateKeyCopy())
-, policy_override(false) {}
-
-tls_conf::tls_conf(tls_server_settings* settings)
-: s_client(0), s_server(settings)
-, certificate(settings->getCertificateCopy())
+tls_conf::tls_conf(tls_settings* settings)
+: certificate(settings->getCertificateCopy())
 , key(settings->getCertificateKeyCopy())
 , policy_override(false)
-{}
+{
+    s_client = dynamic_cast<tls_client_settings*>(settings);
+    s_server = dynamic_cast<tls_server_settings*>(settings);
+}
 
 tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
@@ -293,13 +288,20 @@ int tls_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t s
     return parse_input(trsp);
 }
 
+static tls_settings* getTlsSetting(int sd, int if_, int proto) {
+    if(sd == -1)
+        return &SIP_TLS_info::toSIP_TLS(AmConfig.sip_ifs[if_].proto_info[proto])->client_settings;
+    else
+        return &SIP_TLS_info::toSIP_TLS(AmConfig.sip_ifs[if_].proto_info[proto])->server_settings;
+}
+
 tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
                  trsp_worker* server_worker,
                  int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport,
                  event_base* evbase, trsp_input* input)
 : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input), tls_connected(false)
-  , settings((sd == -1) ? dynamic_cast<tls_trsp_settings*>(server_sock)->client_settings : dynamic_cast<tls_trsp_settings*>(server_sock)->server_settings)
+  , settings(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx()))
 {
     init(sa);
 }
@@ -309,7 +311,7 @@ tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
 				 int sd, const sockaddr_storage* sa,
                  trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tls_input), tls_connected(false)
-  , settings((sd == -1) ? dynamic_cast<tls_trsp_settings*>(server_sock)->client_settings : dynamic_cast<tls_trsp_settings*>(server_sock)->server_settings)
+  , settings(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx()))
 {
     init(sa);
 }
@@ -521,11 +523,6 @@ void tls_trsp_socket::getInfo(AmArg& ret)
     tcp_base_trsp::getInfo(ret);
 }
 
-tls_trsp_settings::tls_trsp_settings(const tls_conf& s_client, const tls_conf& s_server)
-: client_settings(s_client), server_settings(s_server)
-{
-}
-
 tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport)
  : trsp_socket_factory(transport){}
 
@@ -540,11 +537,8 @@ tcp_base_trsp* tls_socket_factory::create_socket(trsp_server_socket* server_sock
 }
 
 tls_server_socket::tls_server_socket(unsigned short if_num, unsigned short proto_idx,
-                                     unsigned int opts, socket_transport transport,
-                                     const tls_conf& s_client,
-                                     const tls_conf& s_server)
+                                     unsigned int opts, socket_transport transport)
 : trsp_server_socket(if_num, proto_idx, opts, new tls_socket_factory(transport))
-, tls_trsp_settings(s_client, s_server)
 {
 }
 
