@@ -694,8 +694,8 @@ string UACAuth::calcNonce() {
   HASH RespHash;
 
   time_t now = time(NULL);
-  result = int2hex(now);
-  
+  result = int2hex(now, true);
+
   MD5Init(&Md5Ctx);
   w_MD5Update(&Md5Ctx, result);
   w_MD5Update(&Md5Ctx, server_nonce_secret);
@@ -719,7 +719,7 @@ UACAuth::nonce_check_result_t UACAuth::checkNonce(const string& nonce) {
   }
 
   unsigned int nonce_time = 0;
-  if(!hex2int(std::string(nonce.c_str(), INT_HEX_LEN), nonce_time)) {
+  if(hex2int(std::string(nonce.c_str(), INT_HEX_LEN), nonce_time)) {
     DBG("wrong nonce value(error hex to int conversion)\n");
     return NCR_WRONG;
   }
