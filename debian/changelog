@@ -1,3 +1,9 @@
+sems (1.65.0) stable; urgency=low
+
+  * fix certificates reload by jsonRPC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 06 Oct 2021 12:20:52 +0300
+
 sems (1.64.0) stable; urgency=low
 
   * add IPTree class with binary tree for ipv4/6 addresses
