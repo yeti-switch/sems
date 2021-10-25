@@ -880,10 +880,11 @@ int AmRtpStream::init(const AmSdp& local,
                         remote_media.setup == S_ACTIVE ||
                         force_passive_mode);
 
-    CLASS_DBG("recv = %d, send = %d",
-        local_media.recv, local_media.send);
+    CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d",
+        local_media.recv, local_media.send,
+        remote_media.recv, remote_media.send);
 
-    if(local_media.recv) {
+    if(local_media.recv && remote_media.send) {
         resume();
     } else {
         pause();
@@ -1910,7 +1911,9 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
 {
     setLocalIP(addr_type);
 
-    m.port = static_cast<unsigned int>(getLocalPort());
+    if(m.port) //do not replace 0 port
+        m.port = static_cast<unsigned int>(getLocalPort());
+
     //replace rtcp attribute
     for(auto &a : m.attributes) {
         try {
