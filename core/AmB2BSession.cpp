@@ -1011,7 +1011,7 @@ int AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
   if(reply.to_tag.empty())
     flags |= SIP_FLAGS_NOTAG;
 
-  int ignore_reply_body = false;
+  /*int ignore_reply_body = false;
   if(dlg &&
      dlg->getOAState()==AmOfferAnswer::OA_OfferSent &&
      body.hasContentType(SIP_APPLICATION_SDP))
@@ -1019,10 +1019,10 @@ int AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
     DBG("got reply %d for %s with unexpected SDP payload. ignore it",
         reply.code, reply.cseq_method.c_str());
     ignore_reply_body = true;
-  }
+  }*/
 
-  int err = dlg->reply(orig,reply.code,reply.reason,
-		       ignore_reply_body ? NULL : &body, *hdrs, flags);
+  int err = dlg->reply(orig,reply.code,reply.reason, &body, *hdrs, flags);
+                       //ignore_reply_body ? NULL : &body, *hdrs, flags);
 
   if(err < 0){
     ERROR("dlg->reply() failed\n");
