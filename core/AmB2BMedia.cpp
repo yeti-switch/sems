@@ -935,8 +935,11 @@ void AmB2BMedia::replaceConnectionAddress(
     string replaced_ports;
     StreamIterator audio = streams.end(), relay = streams.end();
     for(StreamIterator i = streams.begin(); i != streams.end(); ++i) {
-        if((*i)->audio && audio == streams.end()) audio = i;
-        else if(relay == streams.end()) relay = i;
+        if((*i)->audio) {
+            if(audio == streams.end()) audio = i;
+        } else {
+            if(relay == streams.end()) relay = i;
+        }
     }
 
     std::vector<SdpMedia>::iterator it = parser_sdp.media.begin();
@@ -948,29 +951,27 @@ void AmB2BMedia::replaceConnectionAddress(
                 DBG("audio media line does not have coresponding audio stream...\n");
                 continue;
             }
-            if(it->port) { // if stream active
-                public_address.clear();
-                try {
-                    auto stream = a_leg ? (*audio)->a.getStream() : (*audio)->b.getStream();
-                    if(stream) {
-                        stream->replaceAudioMediaParameters(*it, idx, addr_type);
-                        public_address = stream->getLocalAddress();
 
-                        if(!replaced_ports.empty()) replaced_ports += "/";
+            public_address.clear();
+            try {
+                auto stream = a_leg ? (*audio)->a.getStream() : (*audio)->b.getStream();
+                if(stream) {
+                    stream->replaceAudioMediaParameters(*it, idx, addr_type);
+                    public_address = stream->getLocalAddress();
+                    if(!replaced_ports.empty()) replaced_ports += "/";
                         replaced_ports += int2str(it->port);
                     }
-                } catch (const string& s) {
-                    ERROR("setting port: '%s'\n", s.c_str());
-                    throw string("error setting RTP port\n");
-                }
+            } catch (const string& s) {
+                ERROR("setting port: '%s'\n", s.c_str());
+                throw string("error setting RTP port\n");
+            }
 
-                if (!public_address.empty() &&
-                    !it->conn.address.empty() && (parser_sdp.conn.address != zero_ip))
-                {
-                    it->conn.address = public_address;
-                    it->conn.addrType = addr_type;
-                    DBG("new stream connection address: %s",it->conn.address.c_str());
-                }
+            if (!public_address.empty() &&
+                !it->conn.address.empty() && (parser_sdp.conn.address != zero_ip))
+            {
+                it->conn.address = public_address;
+                it->conn.addrType = addr_type;
+                DBG("new stream connection address: %s",it->conn.address.c_str());
             }
 
             ++audio;
@@ -1199,10 +1200,14 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
     // Warning: do not apply the new mask unless the offer answer succeeds?
     // we can safely apply the changes once we have local & remote SDP (i.e. the
     // negotiation is finished) otherwise we might handle the RTP in a wrong way
+
     StreamIterator audio = streams.end(), relay = streams.end();
     for(StreamIterator i = streams.begin(); i != streams.end(); ++i) {
-        if((*i)->audio && audio == streams.end()) audio = i;
-        else if(relay == streams.end()) relay = i;
+        if((*i)->audio) {
+            if(audio == streams.end()) audio = i;
+        } else {
+            if(relay == streams.end()) relay = i;
+        }
     }
 
     int idx = 0;
@@ -1234,7 +1239,11 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
                 (*audio)->b.setRelayDestination(connection_address,
                                                static_cast<int>(m->port));
             }
-            while(!(*audio)->audio && audio != streams.end()) ++audio;
+
+            ++audio;
+            //skip relay streams
+            while(audio!=streams.end() && !(*audio)->audio)
+                ++audio;
         } else {
             DBG("updateStreams() processing non-audio stream %d",idx);
             if(ignore_relay_streams) continue;
@@ -1255,9 +1264,13 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
                     static_cast<void *>(relay_stream.b.getStream()));
                 updateRelayStream(relay_stream.b.getStream(), b, connection_address, *m, relay_stream.a.getStream());
             }
-            while((*relay)->audio && relay != streams.end()) ++relay;
+            ++relay;
+            //skip audio streams
+            while(relay!=streams.end() && (*relay)->audio)
+                ++relay;
         }
     } //iterate remote_sdp.media
+
     updateAudioStreams();
     TRACE("streams updated with SDP");
 }
