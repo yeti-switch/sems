@@ -972,7 +972,11 @@ void AmB2BMedia::replaceConnectionAddress(
                     DBG("new stream connection address: %s",it->conn.address.c_str());
                 }
             }
-            while(!(*audio)->audio) ++audio;
+
+            ++audio;
+            //skip relay streams
+            while(audio!=streams.end() && !(*audio)->audio)
+                ++audio;
         } else if(canRelay(*it)) {
             if( relay == streams.end() ) {
                 // strange... we should actually have a stream for this media line...
@@ -1005,7 +1009,10 @@ void AmB2BMedia::replaceConnectionAddress(
                     DBG("new stream connection address: %s",it->conn.address.c_str());
                 }
             }
-            while((*relay)->audio) ++relay;
+            ++relay;
+            //skip audio streams
+            while(relay!=streams.end() && (*relay)->audio)
+                ++relay;
         } else {
             // quick workaround to allow direct connection of non-supported streams (i.e.
             // those which are not relayed or transcoded): propagate connection
