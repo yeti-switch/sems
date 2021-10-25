@@ -193,6 +193,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
                 tmp1.len = c - tmp1.s;
                 uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
                 tmp1.s = c+1;
+                st = URI_HNAME;
                 break;
             case URI_PVALUE:
                 tmp2.len = c - tmp2.s;
@@ -201,7 +202,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
                 //    tmp1.len, tmp1.s,
                 //    tmp2.len, tmp2.s);
                 tmp1.s = c+1;
-                st = URI_PNAME;
+                st = URI_HNAME;
                 break;
             } //switch(st)
             break;
