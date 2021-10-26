@@ -320,7 +320,7 @@ IF(USE_ADDRESS_SANITIZER)
 ENDIF(USE_ADDRESS_SANITIZER)
 
 #ADD_DEFINITIONS("-D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
-ADD_DEFINITIONS("-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/= -D__FILENAME__=__FILE__")
+ADD_DEFINITIONS("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/= -D__FILENAME__=__FILE__")
 
 # compile with session thread pool support?
 #      use this for very high concurrent call count
