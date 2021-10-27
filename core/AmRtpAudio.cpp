@@ -402,8 +402,6 @@ int AmRtpAudio::init(
     }
 
     if(local.media[sdp_media_index].type == MT_AUDIO) {
-        AmAudioRtpFormat* fmt_p = new AmAudioRtpFormat();
-
         PayloadMappingTable::iterator pl_it =
             pl_map.find(static_cast<PayloadMappingTable::key_type>(payload));
         if ((pl_it == pl_map.end()) || (pl_it->second.remote_pt < 0)) {
@@ -413,8 +411,11 @@ int AmRtpAudio::init(
 
         const SdpMedia& remote_media = remote.media[sdp_media_index];
         if(!session->getRtpFrameSize(frame_size)) frame_size = remote_media.frame_size;
+
+        AmAudioRtpFormat* fmt_p = new AmAudioRtpFormat();
         fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
         fmt.reset(fmt_p);
+
         amci_codec_t* codec = fmt->getCodec();
         use_default_plc = ((codec==nullptr) || (codec->plc == nullptr));
 
