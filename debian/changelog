@@ -1,3 +1,10 @@
+sems (1.53.3) stable; urgency=low
+
+  * SDP: use lowercase 'udptl' for t38 transport
+  * SDP: do not add RTP-related a-lines for image streams
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 27 Oct 2021 10:24:38 +0000
+
 sems (1.53.2) stable; urgency=low
 
   * add option loglevel to override default debug log level for module di_log
