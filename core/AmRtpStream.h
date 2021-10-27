@@ -228,9 +228,8 @@ class AmRtpStream
     unsigned long out_of_buffer_errors;
     unsigned long srtp_unprotect_errors;
 
-    bool not_supported_rx_payload_local_reported;
-    bool not_supported_rx_payload_remote_reported;
-    bool not_supported_tx_payload_reported;
+    int last_not_supported_rx_payload;
+    int last_not_supported_tx_payload;
     unsigned long wrong_payload_errors;
 
     unsigned int dead_rtp_time;

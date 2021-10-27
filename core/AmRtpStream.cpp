@@ -159,9 +159,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     srtp_unprotect_errors(0),
     out_of_buffer_errors(0),
     wrong_payload_errors(0),
-    not_supported_rx_payload_local_reported(false),
-    not_supported_rx_payload_remote_reported(false),
-    not_supported_tx_payload_reported(false),
+    last_not_supported_rx_payload(-1),
+    last_not_supported_tx_payload(-1),
     relay_ts_shift(0),
     tx_user_ts(0),
     last_send_rtcp_report_ts(0),
@@ -1463,16 +1462,19 @@ int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int 
     if(!size)
         return -1;
 
-    PayloadMappingTable::const_iterator it = pl_map.find(payload);
-    if ((it == pl_map.end()) || (it->second.remote_pt < 0)) {
-        if(!not_supported_tx_payload_reported) {
-            CLASS_DBG("attempt to send packet with unsupported remote payload type %d\n", payload);
-            not_supported_tx_payload_reported = true;
-        }
+    if(payload == last_not_supported_tx_payload) {
+        //attempt to send payload known as not supported. skip processing
         return 0;
-    } else {
-        not_supported_tx_payload_reported = false;
     }
+
+    auto it = pl_map.find(payload);
+    if ((it == pl_map.end()) || (it->second.remote_pt < 0)) {
+        CLASS_DBG("attempt to send packet with unsupported remote payload type %d\n", payload);
+        last_not_supported_tx_payload = payload;
+        return 0;
+    }
+
+    last_not_supported_tx_payload = -1;
 
     return compile_and_send(it->second.remote_pt, false, user_ts, buffer, size);
 }

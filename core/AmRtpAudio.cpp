@@ -475,31 +475,37 @@ unsigned int AmRtpAudio::getFrameTime()
 int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
 {
     if(payload != this->payload) {
+
+        if(payload == last_not_supported_rx_payload) {
+            //received payload known as not supported. skip processing
+            wrong_payload_errors++;
+            return -1;
+        }
+
         CLASS_DBG("change payload %d -> %d, local_ssrc: 0x%x, local_tag: %s",
             this->payload, payload,
             l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+
         PayloadMappingTable::iterator pmt_it =
             pl_map.find(static_cast<PayloadMappingTable::key_type>(payload));
         if(pmt_it == pl_map.end()) {
-            if(!not_supported_rx_payload_local_reported) {
-                CLASS_DBG("received payload %i is not described in local SDP. ignore it. "
-                    "local_ssrc: 0x%x, local_tag: %s",
-                    payload,
-                    l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-                not_supported_rx_payload_local_reported = true;
-            }
+            CLASS_DBG("received payload %i is not described in local SDP. ignore it. "
+                      "local_ssrc: 0x%x, local_tag: %s",
+                      payload,
+                      l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+
+            last_not_supported_rx_payload = payload;
             wrong_payload_errors++;
             return -1;
         }
 
         if(pmt_it->second.remote_pt < 0) {
-            if(!not_supported_rx_payload_remote_reported) {
-                CLASS_DBG("received payload %i is not described in remote SDP. ignore it. "
-                    "local_ssrc: 0x%x, local_tag: %s",
-                    payload,
-                    l_ssrc,session ? session->getLocalTag().c_str() : "no session");
-                not_supported_rx_payload_remote_reported = true;
-            }
+            CLASS_DBG("received payload %i is not described in remote SDP. ignore it. "
+                      "local_ssrc: 0x%x, local_tag: %s",
+                      payload,
+                      l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+
+            last_not_supported_rx_payload = payload;
             wrong_payload_errors++;
             return -1;
         }
@@ -508,19 +514,22 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
         if(index >= payloads.size()) {
             ERROR("Could not set current payload: payload %i maps to invalid index %i\n",
                 payload, index);
+            last_not_supported_rx_payload = payload;
+            wrong_payload_errors++;
             return -1;
         }
 
         if(isLocalTelephoneEventPayload(payload)) {
             CLASS_ERROR("Attempt to set telephone-event payload %d as default audio payload. ignore it",
                         payload);
+            last_not_supported_rx_payload = payload;
+            wrong_payload_errors++;
             return -1;
         }
 
         this->payload = payload;
 
-        not_supported_rx_payload_local_reported = false;
-        not_supported_rx_payload_remote_reported = false;
+        last_not_supported_rx_payload = -1;
 
         unsigned int old_rate = fmt->getRate();
         int ret = static_cast<AmAudioRtpFormat*>(fmt.get())
