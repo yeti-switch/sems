@@ -904,6 +904,8 @@ int AmRtpStream::init(const AmSdp& local,
     gettimeofday(&rtp_stats.start, nullptr);
     rtcp_reports.init(l_ssrc);
 
+    last_not_supported_rx_payload = -1;
+    last_not_supported_tx_payload = -1;
 
     active = false; // mark as nothing received yet
 
