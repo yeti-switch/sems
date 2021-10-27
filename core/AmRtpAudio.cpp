@@ -209,7 +209,8 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             playout_buffer->clearLastTs();
             continue;
         } else {
-            setCurrentPayload(last_recv_payload, static_cast<int>(frame_size));
+            if(setCurrentPayload(last_recv_payload, static_cast<int>(frame_size)) < 0)
+                continue;
         }
 
         int decoded_size = decode(static_cast<unsigned int>(size));
