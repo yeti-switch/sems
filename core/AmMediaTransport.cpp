@@ -807,8 +807,8 @@ void AmMediaTransport::stopReceiving()
     AmLock l(stream_mut);
     CLASS_DBG("stopReceiving() l_sd:%d, seq:%d", l_sd, seq);
     if(hasLocalSocket() && seq != TRANSPORT_SEQ_NONE) {
-        CLASS_DBG("[%p]remove %s stream from RTP receiver\n",
-            to_void(stream),  transport_type2str(getTransportType()));
+        CLASS_DBG("remove stream %p %s transport from RTP receiver",
+            to_void(stream), transport_type2str(getTransportType()));
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
         l_sd_ctx = -1;
     }
@@ -819,8 +819,8 @@ void AmMediaTransport::resumeReceiving()
     AmLock l(stream_mut);
     CLASS_DBG("resumeReceiving() l_sd:%d, seq:%d", l_sd, seq);
     if(hasLocalSocket() && seq != TRANSPORT_SEQ_NONE) {
-        CLASS_DBG("[%p]add/resume %s stream into RTP receiver\n",
-            to_void(stream),  transport_type2str(getTransportType()));
+        CLASS_DBG("add/resume stream %p %s transport into RTP receiver",
+            to_void(stream), transport_type2str(getTransportType()));
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
         if(l_sd_ctx < 0) {
             CLASS_DBG("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);
@@ -856,6 +856,7 @@ void AmMediaTransport::log_sent_packet(const char *buffer, int len, struct socka
 
 ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::ConnectionType type)
 {
+    //CLASS_DBG("send(%p,%d)", packet, type);
     AmStreamConnection* cur_stream = nullptr;
     if(type == AmStreamConnection::RTP_CONN) {
         cur_stream = cur_rtp_conn;
@@ -889,6 +890,9 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
 
 ssize_t AmMediaTransport::send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type)
 {
+    /*CLASS_DBG("send(%s:%hu,%p,%d,%d)",
+              get_addr_str(raddr).data(), am_get_port(raddr),
+              buf,size,type);*/
     log_sent_packet(reinterpret_cast<const char*>(buf), size, *raddr, type);
 
     MEDIA_info* iface = AmConfig.media_ifs[static_cast<size_t>(l_if)]
