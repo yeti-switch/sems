@@ -124,6 +124,7 @@ void AmMediaTransport::setSensor(msg_sensor *_sensor)
 
 void AmMediaTransport::setRAddr(const string& addr, unsigned short port)
 {
+    CLASS_DBG("AmMediaTransport::setRAddr(%s, %d)", addr.data(), port);
     AmLock l(connections_mut);
     for(auto conn : connections) {
         if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
@@ -546,19 +547,33 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
 
 void AmMediaTransport::initRtpConnection(const string& remote_address, int remote_port)
 {
-    CLASS_DBG("[%p]AmMediaTransport::initRtpConnection(%s, %d) seq:%d, type:%d",
-              to_void(stream), remote_address.data(), remote_port, seq, type);
+    CLASS_DBG("AmMediaTransport::initRtpConnection(%s, %d) stream:%p, seq:%d, type:%d, cur_rtp_conn:%p",
+              remote_address.data(), remote_port, to_void(stream), seq, type, cur_rtp_conn);
     if(seq == TRANSPORT_SEQ_NONE) {
         seq = TRANSPORT_SEQ_RTP;
         addRtpConnection(remote_address, remote_port);
     } else {
         if(cur_rtp_conn) {
-            CLASS_DBG("update rtp connection endpoint");
+            CLASS_DBG("setRAddr for cur_rtp_conn %p", cur_rtp_conn);
             cur_rtp_conn->setRAddr(remote_address, remote_port);
+        } else if(seq != TRANSPORT_SEQ_ICE) {
+            for(auto &c : connections) {
+               CLASS_DBG("setRAddr for all RTP connections");
+               if(c->getConnType()==AmStreamConnection::RTP_CONN) {
+                   c->setRAddr(remote_address, remote_port);
+               }
+            }
         }
         if(cur_rtcp_conn) {
-            CLASS_DBG("update rtcp connection endpoint");
+            CLASS_DBG("setRAddr for cur_rtcp_conn %p", cur_rtcp_conn);
             cur_rtcp_conn->setRAddr(remote_address, remote_port);
+        } else if(seq != TRANSPORT_SEQ_ICE) {
+            CLASS_DBG("setRAddr for all RTCP connections");
+            for(auto &c : connections) {
+               if(c->getConnType()==AmStreamConnection::RTCP_CONN) {
+                   c->setRAddr(remote_address, remote_port);
+               }
+            }
         }
     }
 }
