@@ -1,3 +1,15 @@
+sems (1.66.0) stable; urgency=low
+
+  * fix SDP processing for offer/answer pairs in 200OK/ACK
+  * fix remote endpoint update on reINVITEs before RTP packets received on related stream
+  * fix multiple streams processing
+  * fix SDP processing for disabled/inactive streams
+  * fix AmAudioRtpFormat object leak on no default payload set
+  * skip unsupported RX payloads processing
+  * parse_sip_uri: fix uri header parsing after uri params
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 28 Oct 2021 16:47:00 +0300
+
 sems (1.65.0) stable; urgency=low
 
   * fix certificates reload by jsonRPC
