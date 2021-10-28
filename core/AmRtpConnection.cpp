@@ -105,6 +105,14 @@ ssize_t AmStreamConnection::send(AmRtpPacket* packet)
     return ret;
 }
 
+void AmStreamConnection::setRAddr(const string& addr, unsigned short port)
+{
+    CLASS_DBG("setRAddr(%s,%hu) type:%d, endpoint: %s:%d",
+              addr.data(), port, conn_type,
+              r_host.data(), r_port);
+    resolveRemoteAddress(addr, port);
+}
+
 void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int remote_port)
 {
     /* inet_aton only supports dot-notation IP address strings... but an RFC
@@ -121,6 +129,7 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
         WARN("Address not valid (host: %s).\n", remote_addr.c_str());
         throw string("invalid address") + remote_addr;
     }
+    r_host = remote_addr;
 
     if(remote_port) {
         //CLASS_DBG("change connection endpoint. conn_type:%d %s:%d -> %s:%d",

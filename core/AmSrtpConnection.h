@@ -73,7 +73,7 @@ public:
     static std::string gen_base64(unsigned int key_s_len);
 
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
-    void setRAddr(const string& addr, unsigned short port) override { s_stream->setRAddr(addr, port); }
+    void setRAddr(const string& addr, unsigned short port) override;
     ssize_t send(AmRtpPacket * packet) override;
     void setPassiveMode(bool p) override;
 };

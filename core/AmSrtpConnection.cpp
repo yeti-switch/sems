@@ -275,6 +275,12 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     }
 }
 
+void AmSrtpConnection::setRAddr(const string& addr, unsigned short port)
+{
+    CLASS_DBG("setRAddr(%s,%hu)",addr.data(),port);
+    s_stream->setRAddr(addr, port);
+}
+
 ssize_t AmSrtpConnection::send(AmRtpPacket* p)
 {
     if(!srtp_tx_session){
