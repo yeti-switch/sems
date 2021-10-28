@@ -557,8 +557,9 @@ void AmMediaTransport::initRtpConnection(const string& remote_address, int remot
             CLASS_DBG("setRAddr for cur_rtp_conn %p", cur_rtp_conn);
             cur_rtp_conn->setRAddr(remote_address, remote_port);
         } else if(seq != TRANSPORT_SEQ_ICE) {
+            CLASS_DBG("setRAddr for all RTP connections");
+            AmLock l(connections_mut);
             for(auto &c : connections) {
-               CLASS_DBG("setRAddr for all RTP connections");
                if(c->getConnType()==AmStreamConnection::RTP_CONN) {
                    c->setRAddr(remote_address, remote_port);
                }
@@ -569,6 +570,7 @@ void AmMediaTransport::initRtpConnection(const string& remote_address, int remot
             cur_rtcp_conn->setRAddr(remote_address, remote_port);
         } else if(seq != TRANSPORT_SEQ_ICE) {
             CLASS_DBG("setRAddr for all RTCP connections");
+            AmLock l(connections_mut);
             for(auto &c : connections) {
                if(c->getConnType()==AmStreamConnection::RTCP_CONN) {
                    c->setRAddr(remote_address, remote_port);
