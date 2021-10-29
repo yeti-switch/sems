@@ -1517,16 +1517,13 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
 
     //RTP specific opts
     if(rtpinfo) {
-        auto &addrs =  rtpinfo->addresses;
-        addrs.emplace_back(*mediainfo);
-        addrs.back().setAddress(rtpinfo->local_ip);
+        rtpinfo->addMediaAddress(rtpinfo->local_ip);
         for(unsigned int i = 0; i < cfg_size(cfg, PARAM_ADDITIONAL_ADDR_NAME); i++) {
             string address = cfg_getnstr(cfg, PARAM_ADDITIONAL_ADDR_NAME, i);
             if((rtpinfo->type_ip == AT_V4 && validate_ip4(address)) ||
                (rtpinfo->type_ip == AT_V6 && validate_ip6(address)))
                 return nullptr;
-            addrs.emplace_back(*mediainfo);
-            addrs.back().setAddress(address);
+            rtpinfo->addMediaAddress(address);
         }
     }
 

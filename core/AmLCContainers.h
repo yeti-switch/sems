@@ -7,6 +7,7 @@
 #include <list>
 #include <limits>
 #include <cstdint>
+#include <atomic>
 
 #include "sems.h"
 #include "AmStatistics.h"
@@ -267,6 +268,10 @@ public:
 
     class PortMap {
     public:
+        PortMap() = delete;
+        PortMap(const PortMap &) = delete;
+        PortMap(PortMap &&) = delete;
+
         PortMap(MEDIA_info& info_);
 
         unsigned short getNextRtpPort();
@@ -285,7 +290,7 @@ public:
         DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
         unsigned long *ports_state_start_addr,
                     *ports_state_end_addr;
-        unsigned long *ports_state_current_addr;
+        std::atomic<unsigned long *> ports_state_current_addr;
         unsigned short start_edge_bit_it,
                     start_edge_bit_it_parity,
                     end_edge_bit_it;
@@ -320,10 +325,8 @@ public:
         return 0;
     }
 
-    std::vector<PortMap> addresses;
-    size_t addresses_size;
+    std::list<PortMap> addresses;
     bool single_address;
-    unsigned long last_aquired_address_idx;
 
     dtls_client_settings client_settings;
     dtls_server_settings server_settings;
@@ -331,6 +334,7 @@ public:
     bool srtp_enable;
     bool dtls_enable;
 
+    void addMediaAddress(std::string &address);
     int prepare(const std::string &iface_name);
     bool getNextRtpAddress(sockaddr_storage& ss);
     void freeRtpAddress(const sockaddr_storage& ss);

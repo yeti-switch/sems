@@ -108,7 +108,7 @@ int MEDIA_info::PortMap::prepare(const std::string &iface_name)
 unsigned short MEDIA_info::PortMap::getNextRtpPort()
 {
     unsigned short i = 0;
-    unsigned long *it, *current_it;
+    unsigned long *it, *current_it, *next_it;
 
     // try to aquire port in range [ports_state_current_addr,end]
     current_it = it = ports_state_current_addr;
@@ -179,10 +179,11 @@ unsigned short MEDIA_info::PortMap::getNextRtpPort()
 
   bit_is_aquired:
     //shift ports_state_current_addr to avoid aquiring of the freshly freed port
-    current_it = it+1;
-    ports_state_current_addr =
-        current_it > ports_state_end_addr ?
-            ports_state_start_addr : current_it;
+    next_it = it+1;
+    if(next_it > ports_state_end_addr) next_it = ports_state_start_addr;
+
+    ports_state_current_addr.compare_exchange_strong(
+        current_it, next_it);
 
     opened_ports_counter->inc(2);
 
@@ -233,6 +234,12 @@ bool MEDIA_info::PortMap::match_addr(const sockaddr_storage& ss)
     return false;
 }
 
+void RTP_info::addMediaAddress(std::string &address)
+{
+    addresses.emplace_back(*this);
+    addresses.back().setAddress(address);
+}
+
 int RTP_info::prepare(const std::string& iface_name)
 {
     if(MEDIA_info::prepare(iface_name)) return 1;
@@ -240,37 +247,30 @@ int RTP_info::prepare(const std::string& iface_name)
         if(it.prepare(iface_name))
             return 1;
     }
-    addresses_size = addresses.size();
-    single_address = addresses_size==1;
-    last_aquired_address_idx = 0;
+    single_address = addresses.size()==1;
     return 0;
 }
 
 bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
 { 
-    auto self_idx = last_aquired_address_idx;
-    auto idx = self_idx;
     unsigned short port;
 
     if(single_address) {
-        if((port = addresses[0].getNextRtpPort())) {
-            addresses[0].copy_addr(ss);
+        if((port = addresses.begin()->getNextRtpPort())) {
+            addresses.begin()->copy_addr(ss);
             am_set_port(&ss, port);
             return true;
         }
         return false;
     }
 
-    do {
-        if((port = addresses[idx].getNextRtpPort())) {
-            //free port found and aquired
-            addresses[idx].copy_addr(ss);
+    for(auto &it : addresses) {
+        if((port = it.getNextRtpPort())) {
+            it.copy_addr(ss);
             am_set_port(&ss, port);
-            last_aquired_address_idx = idx;
             return true;
         }
-        idx = (idx +1) % addresses_size;
-    } while(idx != self_idx);
+    }
 
     return false;
 }
@@ -278,7 +278,7 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
 void RTP_info::freeRtpAddress(const sockaddr_storage& ss)
 {
     if(single_address) {
-        addresses[0].freeRtpPort(am_get_port(&ss));
+        addresses.begin()->freeRtpPort(am_get_port(&ss));
         return;
     }
 
