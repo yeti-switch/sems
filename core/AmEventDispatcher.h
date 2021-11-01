@@ -58,11 +58,10 @@ public:
     typedef std::map<string,string>  Dictionnary;
     typedef Dictionnary::iterator    DictIter;
 
-    typedef void QueueEntryIterateHandler(const string &key,const QueueEntry &entry,void *data);
-    typedef QueueEntryIterateHandler *QueueEntryIterateHandlerPtr;
+    using QueueEntryIterateHandler = std::function<
+        void (const string &key,const QueueEntry &entry) >;
 
-    typedef void QueueEntryHandler(const QueueEntry &entry,void *data);
-    typedef QueueEntryHandler *QueueEntryHandlerPtr;
+    using QueueEntryHandler = std::function< void (const QueueEntry &entry) >;
 
 private:
 
@@ -118,8 +117,8 @@ public:
     bool empty();
 
     void dump();
-    void iterate(QueueEntryIterateHandler callback, void *arg);
-    bool apply(const string& local_tag, QueueEntryHandler callback, void *arg);
+    void iterate(QueueEntryIterateHandler callback);
+    bool apply(const string& local_tag, QueueEntryHandler callback);
 };
 
 #endif

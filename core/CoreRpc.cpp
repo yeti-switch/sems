@@ -108,28 +108,6 @@ static void AmSession2AmArg(AmSession *leg, AmArg &s)
     }
 }
 
-static void dump_session_info(
-    const AmEventDispatcher::QueueEntry &entry,
-    void *arg)
-{
-    AmArg &a = *(AmArg *)arg;
-    a.assertStruct();
-    AmSession *leg = dynamic_cast<AmSession *>(entry.q);
-    if(!leg) return;
-    AmSession2AmArg(leg,a);
-}
-
-static void dump_sessions_info(
-    const string &key,
-    const AmEventDispatcher::QueueEntry &entry,
-    void *arg)
-{
-    AmSession *leg = dynamic_cast<AmSession *>(entry.q);
-    if(!leg) return;
-    AmArg &ret = *(AmArg *)arg;
-    AmSession2AmArg(leg,ret[key]);
-}
-
 void CoreRpc::set_system_shutdown(bool shutdown)
 {
     AmConfig.shutdown_mode = shutdown;
@@ -542,24 +520,46 @@ void CoreRpc::showUsedPorts(const AmArg&, AmArg& ret)
 void CoreRpc::showSessionsInfo(const AmArg& args, AmArg& ret)
 {
     ret.assertStruct();
+
     if(!args.size()){
-        AmEventDispatcher::instance()->iterate(&dump_sessions_info,&ret);
+        AmEventDispatcher::instance()->iterate(
+            [&ret](const string &key,
+                   const AmEventDispatcher::QueueEntry &entry)
+        {
+            if(AmSession *leg = dynamic_cast<AmSession *>(entry.q)) {
+                AmSession2AmArg(leg, ret[key]);
+            }
+        });
     } else {
         const string local_tag = args[0].asCStr();
         AmArg &session_info = ret[local_tag];
+
         AmEventDispatcher::instance()->apply(
             local_tag,
-            &dump_session_info,
-            &session_info);
+            [&session_info](const AmEventDispatcher::QueueEntry &entry)
+        {
+            session_info.assertStruct();
+            if(AmSession *leg = dynamic_cast<AmSession *>(entry.q)) {
+                AmSession2AmArg(leg,session_info);
+            }
+        });
+
+
         if(isArgStruct(session_info) &&
             session_info.hasMember("other_id"))
         {
             const string other_local_tag = session_info["other_id"].asCStr();
             AmArg &other_session_info = ret[other_local_tag];
+
             AmEventDispatcher::instance()->apply(
                 other_local_tag,
-                &dump_session_info,
-                &other_session_info);
+                [&other_session_info](const AmEventDispatcher::QueueEntry &entry)
+            {
+                other_session_info.assertStruct();
+                if(AmSession *leg = dynamic_cast<AmSession *>(entry.q)) {
+                    AmSession2AmArg(leg,other_session_info);
+                }
+            });
         }
     }
 }

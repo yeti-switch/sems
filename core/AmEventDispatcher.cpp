@@ -256,26 +256,26 @@ void AmEventDispatcher::dump()
     DBG("*** End of Event dispatcher bucket dump ***\n");
 }
 
-void AmEventDispatcher::iterate(QueueEntryIterateHandlerPtr callback, void *arg)
+void AmEventDispatcher::iterate(QueueEntryIterateHandler callback)
 {
     for(size_t i=0;i<EVENT_DISPATCHER_BUCKETS;i++) {
         AmLock l(queues_mut[i]);
         if(!queues[i].empty()) {
             for(EvQueueMapIter it = queues[i].begin();
                 it != queues[i].end(); it++)
-            callback(it->first,it->second,arg);
+            callback(it->first,it->second);
         }
     }
 }
 
-bool AmEventDispatcher::apply(const string& local_tag, QueueEntryHandler callback, void *arg)
+bool AmEventDispatcher::apply(const string& local_tag, QueueEntryHandler callback)
 {
     bool found = false;
     unsigned int queue_bucket = hash(local_tag);
     AmLock l(queues_mut[queue_bucket]);
     EvQueueMapIter it = queues[queue_bucket].find(local_tag);
     if(it != queues[queue_bucket].end()){
-        callback(it->second,arg);
+        callback(it->second);
         found = true;
     }
     return found;
