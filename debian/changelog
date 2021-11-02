@@ -1,3 +1,10 @@
+sems (1.67.0) stable; urgency=low
+
+  * use std::function for AmEventDispatcher::iterate/apply
+  * PortMap::getNextRtpPort(): use atomic for ports_state_current_addr
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 02 Nov 2021 16:47:03 +0200
+
 sems (1.66.0) stable; urgency=low
 
   * fix SDP processing for offer/answer pairs in 200OK/ACK
