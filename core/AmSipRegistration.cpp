@@ -96,7 +96,7 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
     DEF_AND_VALIDATE_OPTIONAL_STR_ALT(pwd, auth_password);
     DEF_AND_VALIDATE_OPTIONAL_STR(proxy);
     DEF_AND_VALIDATE_OPTIONAL_STR(contact);
-    DEF_AND_VALIDATE_OPTIONAL_STR_ALT(contact_uri_params, contact_params);
+    DEF_AND_VALIDATE_OPTIONAL_STR(contact_uri_params);
     DEF_AND_VALIDATE_OPTIONAL_STR(sip_interface_name);
 
     DEF_AND_VALIDATE_OPTIONAL_INT_ALT(expires_interval, expires, 0);
@@ -124,6 +124,22 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
             ERROR("unexpected scheme_id value: %d", scheme_id);
             return false;
         }
+     }
+
+     if(info.hasMember("contact_params")) {
+        AmArg &a = info["contact_params"];
+         if(!isArgStruct(a)) {
+            ERROR("unexpected contact_params type. expected struct");
+            return false;
+         }
+
+         for(auto& p : a) {
+             if(!isArgCStr(p.second)) {
+                ERROR("unexpected value of contact_params member %s. expected string", p.first.c_str());
+                return false;
+             }
+             contact_params[p.first] = p.second.asCStr();
+         }
      }
 
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
@@ -344,7 +360,6 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
                   int2str(expires_interval) + CRLF;
 
-    int flags=0;
     if(info.contact.empty()) {
         //force contact username
         int oif = dlg.getOutboundIf();
@@ -356,24 +371,23 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
         info_contact.uri_host = pi->getIP();
         info_contact.uri_port = int2str(pi->local_port);
         info_contact.uri_param = info.contact_uri_params;
-        info.contact = info_contact.uri_str();
+        info_contact.params = info.contact_params;
+    } else {
+        size_t end = 0;
+        if(!info_contact.parse_contact(info.contact,0,end)) {
+            ERROR("failed to parse contact field: %s",info.contact.c_str());
+            waiting_result = false;
+            reg_send_begin  = time(nullptr);
+            return false;
+        }
     }
 
-    size_t end = 0;
-    if(!info_contact.parse_contact(info.contact,0,end)) {
-        ERROR("failed to parse contact field: %s",info.contact.c_str());
-        waiting_result = false;
-        reg_send_begin  = time(nullptr);
-        return false;
-    }
-    request_contact = info.contact;
-    hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) "<"
-            + info.contact + ">" + CRLF;
-            flags = SIP_FLAGS_NOCONTACT;
+    request_contact = info_contact.nameaddr_str();
+    hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
 
     info.attempt++;
 
-    if (dlg.sendRequest(req.method, nullptr, hdrs, flags, &reg_timers_override) < 0) {
+    if (dlg.sendRequest(req.method, nullptr, hdrs, SIP_FLAGS_NOCONTACT, &reg_timers_override) < 0) {
         DBG("failed to send registration. ruri: %s\n",
             req.r_uri.c_str());
         res = false;

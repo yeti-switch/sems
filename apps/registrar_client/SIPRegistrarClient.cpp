@@ -690,6 +690,7 @@ string SIPRegistrarClient::createRegistration(
                 proxy,
                 contact,
                 string(),
+                map<string, string>(),
                 expires_interval,
                 force_expires_interval,
                 retry_delay,
