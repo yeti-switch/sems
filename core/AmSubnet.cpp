@@ -93,7 +93,6 @@ bool AmSubnet::parse(const std::string &s)
 bool AmSubnet::contains(const sockaddr_storage &ip) const
 {
     if(ip.ss_family!=network.ss_family){
-        DBG("%s() different address families",FUNC_NAME);
         return false;
     }
     if(addr.ss_family == AF_INET) {
