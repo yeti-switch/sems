@@ -1,3 +1,9 @@
+sems (1.67.1) stable; urgency=low
+
+  * fixes for media ACL
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 08 Nov 2021 15:07:51 +0200
+
 sems (1.67.0) stable; urgency=low
 
   * use std::function for AmEventDispatcher::iterate/apply
