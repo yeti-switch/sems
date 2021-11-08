@@ -1371,7 +1371,7 @@ void AmSession::getMediaAcl(trsp_acl& acl)
 
 void AmSession::setMediaAcl(const std::vector<AmSubnet>& networks)
 {
-    media_acl.set_action(trsp_acl::Allow);
+    media_acl.set_action(trsp_acl::Drop);
     for(auto& network : networks)
         media_acl.add_network(network);
 }
