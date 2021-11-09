@@ -139,9 +139,7 @@ class AmSIPRegistration
 
   AmSipRequest req;
 
-  AmUriParser server_contact;
   AmUriParser local_contact;
-  AmUriParser info_contact;
 
   unsigned int expires_interval;
   bool force_expires_interval;

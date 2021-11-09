@@ -365,17 +365,17 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
             //force contact username
             int oif = dlg.getOutboundIf();
             int oproto = dlg.getOutboundProtoId();
-            info_contact.uri_user = info.user;
+            local_contact.uri_user = info.user;
             const auto &pi = AmConfig.
                              sip_ifs[static_cast<size_t>(oif)].
                              proto_info[static_cast<size_t>(oproto)];
-            info_contact.uri_host = pi->getIP();
-            info_contact.uri_port = int2str(pi->local_port);
-            info_contact.uri_param = info.contact_uri_params;
-            info_contact.params = info.contact_params;
+            local_contact.uri_host = pi->getIP();
+            local_contact.uri_port = int2str(pi->local_port);
+            local_contact.uri_param = info.contact_uri_params;
+            local_contact.params = info.contact_params;
         } else {
             size_t end = 0;
-            if(!info_contact.parse_contact(info.contact,0,end)) {
+            if(!local_contact.parse_contact(info.contact,0,end)) {
                 ERROR("failed to parse contact field: %s",info.contact.c_str());
                 waiting_result = false;
                 reg_send_begin  = time(nullptr);
@@ -383,7 +383,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
             }
         }
 
-        request_contact = info_contact.nameaddr_str();
+        request_contact = local_contact.nameaddr_str();
     }
 
     hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
@@ -583,9 +583,8 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 req.from_tag.c_str(),info.id.c_str());
 
             size_t end  = 0;
-            string local_contact_hdr = dlg.getContactUri();
+            AmUriParser server_contact;
 
-            local_contact.parse_contact(local_contact_hdr, 0, end);
             //local_contact.dump();
             reply_contacts.clear();
 
@@ -610,13 +609,11 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
 
                     if(!reply_contacts.empty())
                         reply_contacts+=", ";
-                    reply_contacts += server_contact.uri_str();
+                    reply_contacts += server_contact.nameaddr_str();
 
                     if(found) continue;
 
-                    if(server_contact.isEqual(local_contact) ||
-                       (!info.contact.empty()&&server_contact.isEqual(info_contact)))
-                    {
+                    if(server_contact.isEqual(local_contact)) {
                         DBG("contact found");
 
                         const auto contact_expires = server_contact.params.find("expires");
