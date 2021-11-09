@@ -1,3 +1,11 @@
+sems (1.68.0) stable; urgency=low
+
+  [AmSipRegistration]
+  * use 'contact_params' to specify Contact header params
+  * use 'contact__uri_params' to specify Contact URI params
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 09 Nov 2021 12:10:35 +0200
+
 sems (1.67.1) stable; urgency=low
 
   * fixes for media ACL
