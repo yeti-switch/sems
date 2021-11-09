@@ -1235,9 +1235,6 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
     }
 
     if (relay_enabled) {
-        if (force_receive_dtmf && isLocalTelephoneEventPayload(p->payload))
-            recvDtmfPacket(p);
-
         if (relay_raw ||
             /*(p->payload == getLocalTelephoneEventPT()
              && (force_relay_dtmf || !active)) ||*/
