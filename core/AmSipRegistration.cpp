@@ -360,29 +360,32 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) +
                   int2str(expires_interval) + CRLF;
 
-    if(info.contact.empty()) {
-        //force contact username
-        int oif = dlg.getOutboundIf();
-        int oproto = dlg.getOutboundProtoId();
-        info_contact.uri_user = info.user;
-        const auto &pi = AmConfig.
-                         sip_ifs[static_cast<size_t>(oif)].
-                         proto_info[static_cast<size_t>(oproto)];
-        info_contact.uri_host = pi->getIP();
-        info_contact.uri_port = int2str(pi->local_port);
-        info_contact.uri_param = info.contact_uri_params;
-        info_contact.params = info.contact_params;
-    } else {
-        size_t end = 0;
-        if(!info_contact.parse_contact(info.contact,0,end)) {
-            ERROR("failed to parse contact field: %s",info.contact.c_str());
-            waiting_result = false;
-            reg_send_begin  = time(nullptr);
-            return false;
+    if(request_contact.empty()) {
+        if(info.contact.empty()) {
+            //force contact username
+            int oif = dlg.getOutboundIf();
+            int oproto = dlg.getOutboundProtoId();
+            info_contact.uri_user = info.user;
+            const auto &pi = AmConfig.
+                             sip_ifs[static_cast<size_t>(oif)].
+                             proto_info[static_cast<size_t>(oproto)];
+            info_contact.uri_host = pi->getIP();
+            info_contact.uri_port = int2str(pi->local_port);
+            info_contact.uri_param = info.contact_uri_params;
+            info_contact.params = info.contact_params;
+        } else {
+            size_t end = 0;
+            if(!info_contact.parse_contact(info.contact,0,end)) {
+                ERROR("failed to parse contact field: %s",info.contact.c_str());
+                waiting_result = false;
+                reg_send_begin  = time(nullptr);
+                return false;
+            }
         }
+
+        request_contact = info_contact.nameaddr_str();
     }
 
-    request_contact = info_contact.nameaddr_str();
     hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
 
     info.attempt++;
@@ -418,9 +421,8 @@ bool AmSIPRegistration::doUnregister()
 
     int flags=0;
     string hdrs = SIP_HDR_COLSP(SIP_HDR_EXPIRES) "0" CRLF;
-    if(!info.contact.empty()) {
-        hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) "<";
-        hdrs += info.contact + ">" + CRLF;
+    if(!request_contact.empty()) {
+        hdrs += SIP_HDR_COLSP(SIP_HDR_CONTACT) + request_contact + CRLF;
         flags = SIP_FLAGS_NOCONTACT;
     }
 
