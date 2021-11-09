@@ -1,3 +1,9 @@
+sems (1.69.0) stable; urgency=low
+
+  * AmSipRegistration: fix bindings matching
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 09 Nov 2021 13:48:04 +0200
+
 sems (1.68.0) stable; urgency=low
 
   [AmSipRegistration]
