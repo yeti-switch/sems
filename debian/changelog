@@ -1,3 +1,9 @@
+sems (1.69.2) stable; urgency=low
+
+  * AmRtpStream: set relayed flag on relay
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 17 Nov 2021 09:46:04 +0200
+
 sems (1.69.1) stable; urgency=low
 
   * AmRtpStream: fixed dtmf events doubling
