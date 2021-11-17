@@ -1482,59 +1482,57 @@ void AmRtpStream::relay(AmRtpPacket* p)
 {
     // not yet initialized
     // or muted/on-hold
-     if (mute || hold)
-         return;
+    if (mute || hold)
+        return;
 
-     if(!cur_rtp_trans) return;
+    if(!cur_rtp_trans) return;
 
-     sockaddr_storage recv_addr;
-     p->getAddr(&recv_addr);
-     if(session && !session->onBeforeRTPRelay(p,&recv_addr))
-         return;
+    sockaddr_storage recv_addr;
+    p->getAddr(&recv_addr);
+    if(session && !session->onBeforeRTPRelay(p,&recv_addr))
+        return;
 
-     if(!relay_raw) {
+    if(!relay_raw) {
 
-         if(dtmf_sender.isSending())
-             return;
+        if(dtmf_sender.isSending())
+            return;
 
-         if(!tx_user_ts) {
-             //no reference ts yet. skip sending
-             return;
-         }
+        if(!tx_user_ts) {
+            //no reference ts yet. skip sending
+            return;
+        }
 
-         rtp_hdr_t* hdr = reinterpret_cast<rtp_hdr_t*>(p->getBuffer());
+        rtp_hdr_t* hdr = reinterpret_cast<rtp_hdr_t*>(p->getBuffer());
 
-         /*if(process_dtmf_queue && remote_telephone_event_pt.get()) {
-             hdr->ssrc = htonl(l_ssrc);
-             if(dtmf_sender.sendPacket(p->timestamp,remote_telephone_event_pt->payload_type,this))
-                 return;
-         }*/
+        if (!relay_transparent_seqno)
+            hdr->seq = htons(sequence++);
+        if (!relay_transparent_ssrc)
+            hdr->ssrc = htonl(l_ssrc);
 
-         if (!relay_transparent_seqno)
-             hdr->seq = htons(sequence++);
-         if (!relay_transparent_ssrc)
-             hdr->ssrc = htonl(l_ssrc);
+        hdr->pt = relay_map.get(hdr->pt);
 
-         hdr->pt = relay_map.get(hdr->pt);
+        p->timestamp = get_adjusted_ts(p->timestamp);
+        hdr->ts = htonl(p->timestamp);
+    } //if(!relay_raw)
 
-         //if(relay_timestamp_aligning) {
-         p->timestamp = get_adjusted_ts(p->timestamp);
-         hdr->ts = htonl(p->timestamp);
-         //}
-
-     } //if(!relay_raw)
-
-     if(cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
-         CLASS_ERROR("while sending RTP packet to '%s':%i\n",
-                    cur_rtp_trans->getRHost(false).c_str(),cur_rtp_trans->getRPort(false));
-     } else {
-        sockaddr_storage addr;
-        if(relay_raw) cur_rtp_trans->getRAddr(&addr);
-        else if(!relay_raw) cur_rtp_trans->getRAddr(false, &addr);
-        if(session) session->onAfterRTPRelay(p, &addr);
+    if(cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
+        CLASS_ERROR("while sending RTP packet to '%s':%i\n",
+                    cur_rtp_trans->getRHost(false).c_str(),
+                    cur_rtp_trans->getRPort(false));
+    } else {
+        p->relayed = true;
+        if(session) {
+            sockaddr_storage addr;
+            if(relay_raw) {
+                cur_rtp_trans->getRAddr(&addr);
+            } else {
+                cur_rtp_trans->getRAddr(false, &addr);
+            }
+            session->onAfterRTPRelay(p, &addr);
+        }
         add_if_no_exist(outgoing_relayed_payloads,p->payload);
         outgoing_bytes += p->getBufferSize();
-     }
+    }
 }
 
 void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int user_ts)
