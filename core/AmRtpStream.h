@@ -213,17 +213,15 @@ class AmRtpStream
     unsigned long long tx_user_ts;
 
     RtcpBidirectionalStat rtp_stats;
-    struct timeval start_time;
     unsigned long long last_send_rtcp_report_ts;
     unsigned long long dropped_packets_count;
 
-    std::vector<int> incoming_payloads;
-    std::vector<int> incoming_relayed_payloads;
+    std::map<uint32_t, std::vector<int>> incoming_payloads;
+    std::map<uint32_t, std::vector<int>> incoming_relayed_payloads;
     std::vector<int> outgoing_payloads;
     std::vector<int> outgoing_relayed_payloads;
     unsigned long incoming_bytes;
     unsigned long outgoing_bytes;
-    unsigned long decode_errors;
     unsigned long rtp_parse_errors;
     unsigned long out_of_buffer_errors;
     unsigned long srtp_unprotect_errors;
@@ -559,6 +557,9 @@ class AmRtpStream
         struct timeval time_end;
         MathStat<uint32_t> rtt;
         uint32_t dropped;
+        uint32_t out_of_buffer_errors;
+        uint32_t rtp_parse_errors;
+        uint32_t srtp_decript_errors;
 
         struct rtp_common {
             unsigned int ssrc;
@@ -566,24 +567,23 @@ class AmRtpStream
             uint32_t pkt;
             uint32_t bytes;
             uint32_t total_lost;
-            std::vector<string> payloads_transcoded;
-            std::vector<string> payloads_relayed;
+            vector<string> payloads_transcoded;
+            vector<string> payloads_relayed;
         };
 
         struct rx_stat: public rtp_common {
             unsigned long decode_errors;
-            unsigned long rtp_parse_errors;
-            unsigned long srtp_decript_errors;
-            unsigned long out_of_buffer_errors;
-
             MathStat<long> delta;
             MathStat<double> jitter;
             MathStat<uint32_t> rtcp_jitter;
-        } rx;
+        };
+
 
         struct tx_stat: public rtp_common {
             MathStat<uint32_t> jitter;
         } tx;
+
+        vector<struct rx_stat> rx;
 
         MediaStats()
         {

@@ -4,6 +4,7 @@
 
 #include <time.h>
 #include <stdint.h>
+#include <sys/socket.h>
 
 #include <unordered_map>
 #include <cmath>
@@ -11,6 +12,8 @@
 const int MAX_DROPOUT = 3000;
 const int MAX_MISORDER = 100;
 const int MIN_SEQUENTIAL = 2;
+const int MAX_RX_STATS = 10;
+const int MAX_STREAM_STATS = 5;
 
 template <typename T = int>
 struct MathStat
@@ -68,8 +71,7 @@ struct RtcpUnidirectionalStat
     unsigned    loss;          /**< Total number of packets lost           */
     unsigned    reorder;       /**< Total number of out of order packets   */
     unsigned    dup;           /**< Total number of duplicates packets     */
-
-    MathStat<>  loss_period;   /**< Loss period statistics (in usec)       */
+    unsigned    decode_err;    /**< Total number of decoding packet errors */
 
     struct {
         unsigned    burst:1;   /**< Burst/sequential packet lost detected  */
@@ -77,6 +79,14 @@ struct RtcpUnidirectionalStat
     } loss_type;               /**< Types of loss detected.                */
 
     int         rtcp_jitter;   /** scaled RTCP jitter                      */
+
+    struct sockaddr_storage addr;        /**< rx remote address                 */
+    MathStat<long>     rx_delta;         /**< rx delta statistic(in usec)       */
+    MathStat<double>   jitter_usec;      /**< rx jitter statistic(in usec)      */
+    MathStat<uint32_t> rtcp_jitter_usec; /**< rx rtcp jitter statistic(in usec) */
+    MathStat<uint32_t>  loss_period;     /**< Loss period statistics (in usec)  */
+
+    RtcpUnidirectionalStat();
 };
 
 struct RtcpBidirectionalStat
@@ -86,12 +96,12 @@ struct RtcpBidirectionalStat
 
     timeval    start;             /**< Time when session was created       */
 
-    RtcpUnidirectionalStat    tx; /**< Send stream statistics.             */
-    //RxStatMap    rx;              /**< Recv streams statistics.            */
-    RtcpUnidirectionalStat    rx; /**< Recv stream statistics.             */
-
     uint32_t    rtp_tx_last_ts;   /**< Last TX RTP timestamp.              */
     uint16_t    rtp_tx_last_seq;  /**< Last TX RTP sequence.               */
+
+    RtcpUnidirectionalStat  tx; /**< Send stream statistics.             */
+    RxStatMap               rx; /**< Recv stream statistics.             */
+    RtcpUnidirectionalStat* current_rx;
 
     // https://tools.ietf.org/html/rfc3550
 
@@ -114,13 +124,10 @@ struct RtcpBidirectionalStat
     timeval  sr_recv_time;
 
     MathStat<uint32_t>       rtt;          /**< Round trip delay statistic(in usec) */
-    MathStat<long>           rx_delta;     /**< rx delta statistic(in usec)  */
-    MathStat<double>         jitter;       /** rx jitter statistic(in usec) */
-    MathStat<uint32_t>       rtcp_jitter;         /** rx jitter statistic(in usec) */
     MathStat<uint32_t>       rtcp_remote_jitter;  /** rx jitter from remote reports statistic(in usec) */
 
-    void init_seq(uint16_t seq);
-    int update_seq(uint16_t seq);
+    void init_seq(uint32_t ssrc, uint16_t seq);
+    int update_seq(uint32_t ssrc, uint16_t seq);
     void update_lost();
 
     RtcpBidirectionalStat();

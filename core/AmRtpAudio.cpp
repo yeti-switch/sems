@@ -215,12 +215,14 @@ int AmRtpAudio::receive(unsigned long long system_ts)
 
         int decoded_size = decode(static_cast<unsigned int>(size));
         if(decoded_size <= 0) {
-            if(!decode_errors) { //print just first decode error for current stream
-                DBG("AmAudio:decode(%d) returned %i. local_ssrc: 0x%x, local_tag: %s\n",
-                    size,decoded_size,
-                    l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            if(rtp_stats.current_rx) {
+                if(!rtp_stats.current_rx->decode_err) { //print just first decode error for current stream
+                    DBG("AmAudio:decode(%d) returned %i. local_ssrc: 0x%x, local_tag: %s\n",
+                        size,decoded_size,
+                        l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+                }
+                rtp_stats.current_rx->decode_err++;
             }
-            decode_errors++;
             return (decoded_size < 0) ? -1 : 0;
         }
 

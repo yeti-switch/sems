@@ -447,7 +447,8 @@ int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
     }
 
     memcpy(&buffer[0], data_buf, size);
-    b_size = size;
+    b_size = d_size = size;
+    data_offset = 0;
 
     return size;
 }

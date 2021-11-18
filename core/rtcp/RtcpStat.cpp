@@ -7,26 +7,38 @@
 
 #define RTP_SEQ_MOD (1<<16)
 
-RtcpBidirectionalStat::RtcpBidirectionalStat()
-  : sr_lsr(0)
-{
-    timerclear(&rx_recv_time);
+RtcpUnidirectionalStat::RtcpUnidirectionalStat()
+{ 
+    bzero(this,sizeof(RtcpUnidirectionalStat));
 }
 
-void RtcpBidirectionalStat::init_seq(uint16_t seq)
+RtcpBidirectionalStat::RtcpBidirectionalStat()
+  : sr_lsr(0), current_rx(0)
+{
+    timerclear(&rx_recv_time);
+    timerclear(&start);
+}
+
+void RtcpBidirectionalStat::init_seq(uint32_t ssrc, uint16_t seq)
 {
     base_seq = seq;
     max_seq = seq;
     bad_seq = RTP_SEQ_MOD - 1;
     cycles = 0;
+    total_lost = 0;
     received = 0;
     received_prior = 0;
     expected_prior = 0;
-    rx.rtcp_jitter = 0;
     transit = 0;
+    if(rx.size() < MAX_RX_STATS || rx.find(ssrc) != rx.end()) {
+        rx[ssrc].rtcp_jitter = 0;
+        current_rx = &rx[ssrc];
+    } else {
+        current_rx = 0;
+    }
 }
 
-int RtcpBidirectionalStat::update_seq(uint16_t seq)
+int RtcpBidirectionalStat::update_seq(uint32_t ssrc, uint16_t seq)
 {
     uint16_t udelta = seq - max_seq;
 
@@ -38,7 +50,7 @@ int RtcpBidirectionalStat::update_seq(uint16_t seq)
             probation--;
             max_seq = seq;
             if (probation == 0) {
-                init_seq(seq);
+                init_seq(ssrc, seq);
                 received++;
                 return 1;
             }
@@ -60,7 +72,7 @@ int RtcpBidirectionalStat::update_seq(uint16_t seq)
             /* Two sequential packets -- assume that the other side
             * restarted without telling us so just re-sync
             * (i.e., pretend this was the first packet). */
-            init_seq(seq);
+            init_seq(ssrc, seq);
         } else {
             bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
             return 0;
@@ -97,5 +109,5 @@ void RtcpBidirectionalStat::update_lost()
     } else {
         fraction_lost = (lost_interval << 8) / expected_interval;
     }
-    //rx.loss_period.update(fraction_lost);
+    //current_rx->loss_period.update((uint32_t)fraction_lost);
 }
