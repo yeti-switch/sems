@@ -320,7 +320,7 @@ void SipSingleProbe::serializeStats(map<string, string> &labels, unsigned long l
     labels["id"] = std::to_string(id);
     labels["name"] = name;
     labels["interval"] = std::to_string(interval.count());
-    labels["local_tag"] = dlg.getLocalTag();
+    //labels["local_tag"] = dlg.getLocalTag();
     labels["ruri"] =  dlg.getRemoteUri();
     labels["from"] =  dlg.getLocalParty();
     labels["to"] =  dlg.getRemoteParty();
