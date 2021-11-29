@@ -1,3 +1,9 @@
+sems (1.69.3) stable; urgency=low
+
+  * options_prober: remove local_tag label from metrics
+
+ -- Michael Furmur <m.furmur@gmail.com>  Mon, 29 Nov 2021 22:28:37 +0200
+
 sems (1.69.2) stable; urgency=low
 
   * AmRtpStream: set relayed flag on relay
