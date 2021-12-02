@@ -1,3 +1,9 @@
+sems (1.70.1) stable; urgency=low
+
+  * fix crash on big messages in tls/tcp transports
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 02 Dec 2021 20:03:54 +0200
+
 sems (1.70.0) stable; urgency=low
 
   * disable ZRTP for RTSP audio streams
