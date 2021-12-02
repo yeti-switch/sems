@@ -843,7 +843,7 @@ int AmRtpStream::init(const AmSdp& local,
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP
-        } else if(session && session->isZrtpEnabled() && AmConfig.enable_srtp) {
+        } else if(isZrtpEnabled() && AmConfig.enable_srtp) {
                 if(remote_media.zrtp_hash.is_use) {
                     zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
                 }
@@ -867,6 +867,7 @@ int AmRtpStream::init(const AmSdp& local,
             }
         }
     } catch(string& error) {
+        log_demangled_stacktrace(L_ERR);
         CLASS_ERROR("Can't initialize connections. error - %s", error.c_str());
         init_error = error;
         return -1;

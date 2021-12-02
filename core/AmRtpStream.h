@@ -680,7 +680,7 @@ class AmRtpStream
     void setSymmetricRtpEndless(bool endless);
     bool isSymmetricRtpEndless();
 
-    bool isZrtpEnabled();
+    virtual bool isZrtpEnabled();
 
     /** enable or disable initial rtp ping on stream initialization.
       also it will set mark for all packets to zero */

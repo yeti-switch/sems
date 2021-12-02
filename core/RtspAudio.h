@@ -57,4 +57,5 @@ class RtspAudio : public AmRtpAudio
         void    onRtspMessage(const RtspMsg &msg);
         void    onRtspPlayNotify(const RtspMsg &msg);
 
+        bool isZrtpEnabled() override { return false; }
 };
