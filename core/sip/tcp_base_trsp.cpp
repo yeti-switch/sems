@@ -29,43 +29,39 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
   for(;;) {
     int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
     if(err) {
+        if(err == UNEXPECTED_EOT) {
+            if(pst.orig_buf > (char*)input_buf) {
+                int addr_shift = pst.orig_buf - (char*)input_buf;
+                memmove(input_buf, pst.orig_buf, input_len - addr_shift);
+                pst.orig_buf = (char*)input_buf;
+                pst.c -= addr_shift;
+                if(pst.beg)
+                    pst.beg -= addr_shift;
+                input_len -= addr_shift;
+                return 0;
+            } else if(get_input_free_space()){
+                return 0;
+            }
+            ERROR("message is too big. drop connection. peer %s:%d",
+                socket->get_peer_ip().data(), socket->get_peer_port());
+        } else {
+            ERROR("parsing error %d. peer %s:%d",
+                  err, socket->get_peer_ip().data(), socket->get_peer_port());
+        }
 
-      if(err == UNEXPECTED_EOT) {
+        socket->inc_sip_parse_error();
 
-	if(pst.orig_buf > (char*)input_buf) {
+        pst.reset((char*)input_buf);
+        reset_input();
 
-	  int addr_shift = pst.orig_buf - (char*)input_buf;
-	  memmove(input_buf, pst.orig_buf, input_len - addr_shift);
-
-	  pst.orig_buf = (char*)input_buf;
-	  pst.c -= addr_shift;
-	  if(pst.beg)
-	    pst.beg -= addr_shift;
-	  input_len -= addr_shift;
-
-	  return 0;
-	}
-	else if(get_input_free_space()){
-	  return 0;
-	}
-
-	ERROR("message way too big! drop connection...");
-      }
-      else {
-	ERROR("parsing error %i",err);
-      }
-
-      socket->inc_sip_parse_error();
-
-      pst.reset((char*)input_buf);
-      reset_input();
-
-      return -1;
-    }
+        return -1;
+    } //if(err)
 
     int msg_len = pst.get_msg_len();
     if(msg_len > MAX_TCP_MSGLEN) {
-        ERROR("message too big! drop connection...");
+        ERROR("message is too big (%d > %d. drop connection. peer %s:%d",
+            msg_len, MAX_TCP_MSGLEN,
+            socket->get_peer_ip().data(), socket->get_peer_port());
         return -1;
     }
 
