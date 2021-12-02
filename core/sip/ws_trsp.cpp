@@ -439,9 +439,14 @@ int ws_input::send_request()
 
 int wss_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[] , size_t size)
 {
-    memcpy(input.get_input(), data, size);
-    input.add_input_len(size);
-    return input.on_input(trsp);
+    if(size < (size_t)input.get_input_free_space()) {
+        memcpy(input.get_input(), data, size);
+        input.add_input_len(size);
+        return input.on_input(trsp);
+    } else {
+        ERROR("message too big! drop connection...");
+        throw Botan::Exception("message too big!");
+    }
 }
 
 void wss_input::pre_write()

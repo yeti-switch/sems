@@ -283,9 +283,14 @@ int tls_input::on_input(tcp_base_trsp* trsp)
 
 int tls_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size)
 {
-    memcpy(trsp_base_input::get_input(), data, size);
-    trsp_base_input::add_input_len(size);
-    return parse_input(trsp);
+    if(size < (size_t)trsp_base_input::get_input_free_space()) {
+        memcpy(trsp_base_input::get_input(), data, size);
+        trsp_base_input::add_input_len(size);
+        return parse_input(trsp);
+    } else {
+        ERROR("message too big! drop connection...");
+        throw Botan::Exception("message too big!");
+    }
 }
 
 static tls_settings* getTlsSetting(int sd, int if_, int proto) {

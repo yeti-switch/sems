@@ -64,6 +64,11 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
     }
 
     int msg_len = pst.get_msg_len();
+    if(msg_len > MAX_TCP_MSGLEN) {
+        ERROR("message too big! drop connection...");
+        return -1;
+    }
+
     sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
 
     gettimeofday(&s_msg->recv_timestamp,NULL);
