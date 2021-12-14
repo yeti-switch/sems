@@ -1,3 +1,9 @@
+sems (1.71.0) stable; urgency=low
+
+  * collect RTP/RTCP statistics for multiple SSRC
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 14 Dec 2021 17:12:46 +0200
+
 sems (1.70.1) stable; urgency=low
 
   * fix crash on big messages in tls/tcp transports
