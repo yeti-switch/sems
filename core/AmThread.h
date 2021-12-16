@@ -88,7 +88,15 @@ class AmControlledLock
         if(ownership)
             m.unlock();
     }
-    void release_ownership() { ownership = false; }
+    void release_ownership() {
+        ownership = false;
+    }
+    void release() {
+        if(ownership) {
+            m.unlock();
+            ownership = false;
+        }
+    }
 };
 
 /**
