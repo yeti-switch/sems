@@ -1,3 +1,9 @@
+sems (1.72.1) stable; urgency=low
+
+  * uac_auth: fix ending for auth header
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 30 Dec 2021 13:48:46 +0200
+
 sems (1.72.0) stable; urgency=low
 
   * add release() method for AmControlledLock
