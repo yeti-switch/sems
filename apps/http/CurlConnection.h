@@ -2,11 +2,12 @@
 
 #include "curl/curl.h"
 #include "stdint.h"
+#include <set>
 
 class CurlConnection
 {
-  int s, epoll_fd;
-  bool socket_watched;
+  int epoll_fd;
+  std::set<int> sockets;
   char curl_error[CURL_ERROR_SIZE];
 protected:
   CURL *curl;
@@ -15,8 +16,6 @@ protected:
 public:
   CurlConnection(int epoll_fd);
   virtual ~CurlConnection();
-
-  int socket() { return s; }
 
   int init_curl(struct curl_slist* hosts, CURLM *curl_multi = NULL);
   int watch_socket(int socket, int what);

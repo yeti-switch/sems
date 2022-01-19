@@ -33,8 +33,6 @@ int CurlMultiHandler::init_curl(int epoll_fd)
     multi_setopt(CURLMOPT_TIMERFUNCTION, timer_function_static);
     multi_setopt(CURLMOPT_TIMERDATA, this);
 
-    //timer_function(curl_multi, 1);
-
     return 0;
 }
 
@@ -88,15 +86,15 @@ void CurlMultiHandler::on_timer_event()
     check_multi_info();
 }
 
-void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
+void CurlMultiHandler::on_socket_event(int socket, uint32_t events)
 {
 #ifdef ENABLE_DEBUG
     CURLMcode rc;
 #endif
     int action = 0;
 
-    CDBG("on_socket_event(%p, %d (%s|%s|%s))",
-        c, events,
+    CDBG("on_socket_event(%d, %d (%s|%s|%s))",
+        socket, events,
         events&EPOLLIN ? "EPOLLIN" : "",
         events&EPOLLOUT? "EPOLLOUT" : "",
         events&EPOLLERR? "EPOLLERR" : "");
@@ -107,9 +105,9 @@ void CurlMultiHandler::on_socket_event(CurlConnection *c, uint32_t events)
 #ifdef ENABLE_DEBUG
     rc =
 #endif
-        curl_multi_socket_action(curl_multi, c->socket(), action, &curl_running_handles);
+        curl_multi_socket_action(curl_multi, socket, action, &curl_running_handles);
     CDBG("curl_multi_socket_action(%d, %d) = %d, running_handles = %d",
-        c->socket(),action,rc,curl_running_handles);
+        socket,action,rc,curl_running_handles);
 
     check_multi_info();
 }

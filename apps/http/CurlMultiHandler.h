@@ -30,7 +30,7 @@ public:
 
   //epoll callbacks
   void on_timer_event();
-  void on_socket_event(CurlConnection *c, uint32_t events);
+  void on_socket_event(int socket, uint32_t events);
 
   //curl multi callbacks
   int socket_callback(CURL *e, curl_socket_t s, int what, void *sockp);

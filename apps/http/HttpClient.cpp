@@ -309,7 +309,6 @@ void HttpClient::run()
     int ret;
     void *p;
     bool running;
-    CurlConnection *c;
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName("http-client");
@@ -350,15 +349,9 @@ void HttpClient::run()
                 running = false;
                 break;
             } else {
-                if(invalid_ptrs.contain(p)){
-                    CDBG("skip invalidated pointer %p",p);
-                    continue;
-                }
-                c = reinterpret_cast<CurlConnection *>(p);
-                on_socket_event(c,e.events);
+                on_socket_event(e.data.fd,e.events);
             }
         }
-        invalid_ptrs.clear();
     } while(running);
 
     AmEventDispatcher::instance()->delEventQueue(HTTP_EVENT_QUEUE);
@@ -519,6 +512,7 @@ void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
 
 void HttpClient::on_sync_context_timer()
 {
+    sync_contexts_timer.read();
     time_t now = time(nullptr);
     for(auto it = sync_contexts.begin(); it != sync_contexts.end(); ) {
         if(now - it->second.created_at > SYNC_CONTEXTS_TIMEOUT_INVERVAL) {
@@ -539,7 +533,6 @@ void HttpClient::on_sync_context_timer()
             ++it;
         }
     }
-    sync_contexts_timer.read();
 }
 
 void HttpClient::on_upload_request(HttpUploadEvent *u)
@@ -817,8 +810,6 @@ void HttpClient::update_resolve_list()
 
 void HttpClient::on_connection_delete(CurlConnection *c)
 {
-    invalid_ptrs.add(c);
-
     for(auto& dest : destinations) {
         dest.second.send_postponed_events(this);
     }
