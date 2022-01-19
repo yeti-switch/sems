@@ -1,3 +1,9 @@
+sems (1.61.0p2) stable; urgency=low
+
+  * http: fix connections freeze
+
+ -- Michael Furmur <m.furmur@gmail.com>  Wed, 19 Jan 2022 22:43:11 +0000
+
 sems (1.61.0p1) stable; urgency=low
 
   * AmRtpStream: fast getMediaAcl segfault fix
