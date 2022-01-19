@@ -1,3 +1,9 @@
+sems (1.72.2) stable; urgency=low
+
+  * http: fix connections freeze
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Jan 2022 00:24:27 +0200
+
 sems (1.72.1) stable; urgency=low
 
   * uac_auth: fix ending for auth header
