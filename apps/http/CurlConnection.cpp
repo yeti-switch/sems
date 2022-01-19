@@ -22,8 +22,6 @@ int sockopt_callback(void *clientp,
 CurlConnection::CurlConnection(int epoll_fd)
   : curl(NULL),
     epoll_fd(epoll_fd),
-    //s(-1),
-    socket_watched(false),
     resolve_hosts(0)
 { }
 
@@ -64,7 +62,6 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
 
     resolve_hosts = clone_resolve_slist(hosts);
     easy_setopt(CURLOPT_CONNECT_TO, resolve_hosts);
-
 #ifdef ENABLE_DEBUG
     easy_setopt(CURLOPT_VERBOSE, 1L);
 #endif
@@ -85,20 +82,21 @@ int CurlConnection::watch_socket(int socket, int what)
 
     CDBG("watch_socket(%d,%d)",socket,what);
 
-    s = socket;
 
     if(CURL_POLL_NONE==what) return 0;
 
     if(CURL_POLL_REMOVE==what) {
-        CDBG("disable socket %d watching",s);
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, s, NULL)) {
-            DBG("epoll_ctl_delete(%d) %d",s,errno);
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, socket, NULL)) {
+            DBG("epoll_ctl_delete(%d) %d",socket,errno);
         }
-        socket_watched = false;
+        sockets.erase(socket);
         return 0;
     }
 
-    ev.data.ptr = this;
+    bool change = sockets.find(socket) != sockets.end();
+    sockets.emplace(socket);
+
+    ev.data.fd = socket;
     switch(what){
     case CURL_POLL_IN:
         ev.events = EPOLLIN | EPOLLERR;
@@ -111,25 +109,23 @@ int CurlConnection::watch_socket(int socket, int what)
         break;
     }
 
-    if(socket_watched) {
+    if(change) {
         CDBG("modify socket %d watching for events %d (%s|%s|%s)",
-            s,ev.events,
+            socket,ev.events,
             ev.events&EPOLLIN ? "EPOLLIN" : "",
             ev.events&EPOLLOUT? "EPOLLOUT" : "",
             ev.events&EPOLLERR? "EPOLLERR" : "");
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, s, &ev)) {
-            DBG("epoll_ctl_mod(%d) %d",s,errno);
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, socket, &ev)) {
+            DBG("epoll_ctl_mod(%d) %d",socket,errno);
         }
     } else {
         CDBG("enable socket %d watching for events %d (%s|%s|%s)",
-            s,ev.events,
+            socket,ev.events,
             ev.events&EPOLLIN ? "EPOLLIN" : "",
             ev.events&EPOLLOUT? "EPOLLOUT" : "",
             ev.events&EPOLLERR? "EPOLLERR" : "");
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_ADD, s, &ev)) {
-            ERROR("epoll_ctl_add(%d) %d",s,errno);
-        } else {
-            socket_watched = true;
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket, &ev)) {
+            ERROR("epoll_ctl_add(%d) %d",socket,errno);
         }
     }
 

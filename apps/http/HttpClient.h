@@ -37,7 +37,6 @@ class HttpClient
     AmCondition<bool> stopped;
 
     int epoll_fd;
-    invalid_ptrs_t invalid_ptrs;
 
     AmTimerFd resend_timer;
     int resend_interval;
