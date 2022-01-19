@@ -86,7 +86,7 @@ int CurlConnection::watch_socket(int socket, int what)
     if(CURL_POLL_NONE==what) return 0;
 
     if(CURL_POLL_REMOVE==what) {
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, socket, NULL)) {
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, socket, nullptr)) {
             DBG("epoll_ctl_delete(%d) %d",socket,errno);
         }
         sockets.erase(socket);
@@ -96,6 +96,7 @@ int CurlConnection::watch_socket(int socket, int what)
     bool change = sockets.find(socket) != sockets.end();
     sockets.emplace(socket);
 
+    ev.data.ptr = 0;
     ev.data.fd = socket;
     switch(what){
     case CURL_POLL_IN:
