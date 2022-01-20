@@ -15,15 +15,17 @@ static int timer_function_static(CURLM *multi, long timeout_ms, CurlMultiHandler
 
 CurlMultiHandler::CurlMultiHandler()
     : curl_running_handles(0),
-      curl_multi(NULL),
+      curl_multi(nullptr),
       hosts(0)
 { }
 
-int CurlMultiHandler::init_curl(int epoll_fd)
+int CurlMultiHandler::init_curl(int epoll_fd_arg)
 {
+    epoll_fd = epoll_fd_arg;
+
     curl_timer.link(epoll_fd, true);
 
-    if((curl_multi = curl_multi_init())==NULL) {
+    if((curl_multi = curl_multi_init())==nullptr) {
         ERROR("curl_multi_init call failed");
             return -1;
     }
@@ -115,16 +117,63 @@ void CurlMultiHandler::on_socket_event(int socket, uint32_t events)
 /* * curl multi callbacks
  */
 
-int CurlMultiHandler::socket_callback(CURL *e, curl_socket_t s, int what, void *sockp)
+int CurlMultiHandler::socket_callback(CURL *, curl_socket_t s, int what, void *sockp)
 {
-    CurlConnection *c;
 #ifdef ENABLE_DEBUG
     static const char *whatstr[]={ "none", "IN", "OUT", "INOUT", "REMOVE"};
 #endif
     CDBG("socket_callback(): s=%d e=%p what=%s ", s, e, whatstr[what]);
 
-    curl_easy_getinfo(e, CURLINFO_PRIVATE, &c);
-    c->watch_socket(s,what);
+    if(CURL_POLL_NONE==what) return 0;
+
+    if(CURL_POLL_REMOVE==what) {
+        if(CURLM_OK!=curl_multi_assign(curl_multi, s, nullptr)) {
+            ERROR("curl_multi_assign(%d,0)",s);
+        }
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, s, nullptr)) {
+            DBG("epoll_ctl_delete(%d) %d",s,errno);
+        }
+        return 0;
+    }
+
+    struct epoll_event ev;
+    ev.data.ptr = 0;
+    ev.data.fd = s;
+    ev.events = EPOLLERR;
+    switch(what) {
+    case CURL_POLL_IN:
+        ev.events |= EPOLLIN;
+        break;
+    case CURL_POLL_OUT:
+        ev.events |= EPOLLOUT;
+        break;
+    case CURL_POLL_INOUT:
+        ev.events |= EPOLLOUT | EPOLLIN;
+        break;
+    }
+
+    if(sockp) {
+        CDBG("modify socket %d watching for events %d (%s|%s|%s)",
+            s,ev.events,
+            ev.events&EPOLLIN ? "EPOLLIN" : "",
+            ev.events&EPOLLOUT? "EPOLLOUT" : "",
+            ev.events&EPOLLERR? "EPOLLERR" : "");
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, s, &ev)) {
+            DBG("epoll_ctl_mod(%d) %d",s,errno);
+        }
+    } else {
+        if(CURLM_OK!=curl_multi_assign(curl_multi, s, (void *)1)) {
+            ERROR("curl_multi_assign(%d,1)",s);
+        }
+        CDBG("enable socket %d watching for events %d (%s|%s|%s)",
+            s,ev.events,
+            ev.events&EPOLLIN ? "EPOLLIN" : "",
+            ev.events&EPOLLOUT? "EPOLLOUT" : "",
+            ev.events&EPOLLERR? "EPOLLERR" : "");
+        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_ADD, s, &ev)) {
+            ERROR("epoll_ctl_add(%d) %d",s,errno);
+        }
+    }
 
     return 0;
 }

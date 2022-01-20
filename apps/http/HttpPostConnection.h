@@ -15,7 +15,7 @@ class HttpPostConnection: public CurlConnection
   struct curl_slist *headers;
   string response;
 public:
-  HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination, int epoll_fd);
+  HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination);
   ~HttpPostConnection();
 
   int init(struct curl_slist* hosts, CURLM *curl_multi);

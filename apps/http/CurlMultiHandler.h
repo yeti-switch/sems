@@ -13,6 +13,7 @@ class CurlMultiHandler
 
 protected:
   int curl_running_handles;
+  int epoll_fd;
   CURLM *curl_multi;
   struct curl_slist* hosts;
   AmMutex host_m;
