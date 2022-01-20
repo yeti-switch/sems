@@ -1,3 +1,9 @@
+sems (1.61.0p3) stable; urgency=low
+
+  * http: remove socket_callback processing from CurlConnection
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Jan 2022 12:31:59 +0000
+
 sems (1.61.0p2) stable; urgency=low
 
   * http: fix connections freeze
