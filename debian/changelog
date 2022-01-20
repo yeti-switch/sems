@@ -1,3 +1,9 @@
+sems (1.61.0p4) stable; urgency=low
+
+  * AmSessionContainer: print request ruri and callid on AmSession::Exception
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Jan 2022 14:32:19 +0000
+
 sems (1.61.0p3) stable; urgency=low
 
   * http: remove socket_callback processing from CurlConnection
