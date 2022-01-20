@@ -371,7 +371,8 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
       }
   } 
   catch(const AmSession::Exception& e){
-    ERROR("%i %s %s\n",e.code,e.reason.c_str(), e.hdrs.c_str());
+    ERROR("%i %s %s ruri:%s, cid:%s\n",e.code,e.reason.c_str(), e.hdrs.c_str(),
+          req.r_uri.data(), req.callid.data());
     AmSipDialog::reply_error(req,e.code,e.reason, e.hdrs);
   }
   catch(const string& err){
