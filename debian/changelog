@@ -1,3 +1,9 @@
+sems (1.72.3) stable; urgency=low
+
+  * http: improve curl sockets processing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 20 Jan 2022 14:04:22 +0200
+
 sems (1.72.2) stable; urgency=low
 
   * http: fix connections freeze
