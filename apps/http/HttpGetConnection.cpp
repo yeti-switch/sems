@@ -14,10 +14,9 @@
 static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection *self);
 
 HttpGetConnection::HttpGetConnection(const HttpGetEvent &u, HttpDestination &destination, int epoll_fd):
-    CurlConnection(epoll_fd),
     destination(destination),
     event(u),
-    headers(NULL)
+    headers(nullptr)
 {
     CDBG("HttpGetConnection() %p",this);
     u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();

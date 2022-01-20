@@ -16,7 +16,7 @@ class HttpUploadConnection: public CurlConnection
   FILE *fd;
 
 public:
-  HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination, int epoll_fd);
+  HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination);
   ~HttpUploadConnection();
 
   int init(struct curl_slist* hosts, CURLM *curl_multi);
