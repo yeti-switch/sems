@@ -11,8 +11,7 @@
 
 #include "AmSessionContainer.h"
 
-HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination, int epoll_fd):
-    CurlConnection(epoll_fd),
+HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination):
     destination(destination),
     event(u),
     form(0)

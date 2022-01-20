@@ -19,9 +19,8 @@ int sockopt_callback(void *clientp,
     return CURL_SOCKOPT_OK;
 }
 
-CurlConnection::CurlConnection(int epoll_fd)
-  : curl(NULL),
-    epoll_fd(epoll_fd),
+CurlConnection::CurlConnection()
+  : curl(nullptr),
     resolve_hosts(0)
 { }
 
@@ -70,63 +69,6 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
         if(CURLM_OK!=curl_multi_add_handle(curl_multi,curl)){
             ERROR("can't add handler to curl_multi");
             return -1;
-        }
-    }
-
-    return 0;
-}
-
-int CurlConnection::watch_socket(int socket, int what)
-{
-    struct epoll_event ev;
-
-    CDBG("watch_socket(%d,%d)",socket,what);
-
-
-    if(CURL_POLL_NONE==what) return 0;
-
-    if(CURL_POLL_REMOVE==what) {
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, socket, nullptr)) {
-            DBG("epoll_ctl_delete(%d) %d",socket,errno);
-        }
-        sockets.erase(socket);
-        return 0;
-    }
-
-    bool change = sockets.find(socket) != sockets.end();
-    sockets.emplace(socket);
-
-    ev.data.ptr = 0;
-    ev.data.fd = socket;
-    switch(what){
-    case CURL_POLL_IN:
-        ev.events = EPOLLIN | EPOLLERR;
-        break;
-    case CURL_POLL_OUT:
-        ev.events = EPOLLOUT | EPOLLERR;
-        break;
-    case CURL_POLL_INOUT:
-        ev.events = EPOLLOUT | EPOLLIN | EPOLLERR;
-        break;
-    }
-
-    if(change) {
-        CDBG("modify socket %d watching for events %d (%s|%s|%s)",
-            socket,ev.events,
-            ev.events&EPOLLIN ? "EPOLLIN" : "",
-            ev.events&EPOLLOUT? "EPOLLOUT" : "",
-            ev.events&EPOLLERR? "EPOLLERR" : "");
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, socket, &ev)) {
-            DBG("epoll_ctl_mod(%d) %d",socket,errno);
-        }
-    } else {
-        CDBG("enable socket %d watching for events %d (%s|%s|%s)",
-            socket,ev.events,
-            ev.events&EPOLLIN ? "EPOLLIN" : "",
-            ev.events&EPOLLOUT? "EPOLLOUT" : "",
-            ev.events&EPOLLERR? "EPOLLERR" : "");
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket, &ev)) {
-            ERROR("epoll_ctl_add(%d) %d",socket,errno);
         }
     }
 

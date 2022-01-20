@@ -11,11 +11,10 @@
 
 #include "AmSessionContainer.h"
 
-HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination, int epoll_fd):
-    CurlConnection(epoll_fd),
+HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination):
     destination(destination),
     event(u),
-    fd(NULL)
+    fd(nullptr)
 {
     CDBG("HttpUploadConnection() %p",this);
     u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();

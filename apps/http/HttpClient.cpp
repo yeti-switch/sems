@@ -64,7 +64,7 @@ HttpClient* HttpClient::_instance=0;
 
 HttpClient* HttpClient::instance()
 {
-    if(_instance == NULL){
+    if(_instance == nullptr){
         _instance = new HttpClient();
     }
     return _instance;
@@ -73,16 +73,16 @@ HttpClient* HttpClient::instance()
 
 void HttpClient::dispose()
 {
-    if(_instance != NULL){
+    if(_instance != nullptr){
         delete _instance;
     }
-    _instance = NULL;
+    _instance = nullptr;
 }
 
 HttpClient::HttpClient()
   : AmEventFdQueue(this),
-    epoll_fd(-1),
-    stopped(false)
+    stopped(false),
+    epoll_fd(-1)
 { 
     stat_group(Gauge, MOD_NAME, "sync_context_count").addFunctionCounter([]()->unsigned long long {
        return HttpClient::instance()->sync_contexts.size();
@@ -116,7 +116,7 @@ static int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
 
 long parse_size(const string& size) {
     if(size.empty() || !isdigit(size[0])) return 0;
-    char* endptr = NULL;
+    char* endptr = nullptr;
     long l_i = strtol(size.c_str(), &endptr, 10);
     if(endptr && *endptr  != '\0') {
         switch(*endptr) {
@@ -264,7 +264,7 @@ void HttpClient::init_rpc_tree()
             reg_method(cache,"reset","reset dns_cache", &HttpClient::resetDnsCache);
 }
 
-void HttpClient::postRequest(const AmArg& args, AmArg& ret)
+void HttpClient::postRequest(const AmArg& args, AmArg&)
 {
     args.assertArrayFmt("ss");
     AmSessionContainer::instance()->postEvent(
@@ -274,7 +274,7 @@ void HttpClient::postRequest(const AmArg& args, AmArg& ret)
                           string()));           //token
 }
 
-void HttpClient::getRequest(const AmArg& args, AmArg& ret)
+void HttpClient::getRequest(const AmArg& args, AmArg&)
 {
     args.assertArrayFmt("ss");
     AmSessionContainer::instance()->postEvent(
@@ -289,7 +289,7 @@ void HttpClient::dstDump(const AmArg&, AmArg& ret)
     destinations.dump(ret);
 }
 
-void HttpClient::showDnsCache(const AmArg& args, AmArg& ret)
+void HttpClient::showDnsCache(const AmArg&, AmArg& ret)
 {
     AmLock lock(host_m);
     struct curl_slist* host = hosts;
@@ -299,7 +299,7 @@ void HttpClient::showDnsCache(const AmArg& args, AmArg& ret)
     }
 }
 
-void HttpClient::resetDnsCache(const AmArg& args, AmArg& ret)
+void HttpClient::resetDnsCache(const AmArg&, AmArg&)
 {
     resolve_timer.set(1);
 }
@@ -575,7 +575,7 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    HttpUploadConnection *c = new HttpUploadConnection(*u,d,epoll_fd);
+    HttpUploadConnection *c = new HttpUploadConnection(*u,d);
     if(c->init(hosts, curl_multi)){
         DBG("http upload connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
@@ -621,7 +621,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    HttpPostConnection *c = new HttpPostConnection(*u,d,epoll_fd);
+    HttpPostConnection *c = new HttpPostConnection(*u,d);
     if(c->init(hosts, curl_multi)){
         DBG("http post connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
@@ -667,7 +667,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d,epoll_fd);
+    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d);
     if(c->init(hosts, curl_multi)){
         DBG("http multipart form connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
@@ -808,14 +808,14 @@ void HttpClient::update_resolve_list()
     resolve_timer.set(next_time);
 }
 
-void HttpClient::on_connection_delete(CurlConnection *c)
+void HttpClient::on_connection_delete(CurlConnection *)
 {
     for(auto& dest : destinations) {
         dest.second.send_postponed_events(this);
     }
 }
 
-void HttpClient::showStats(const AmArg& args, AmArg &ret)
+void HttpClient::showStats(const AmArg&, AmArg &ret)
 {
     ret["resend_interval"] = resend_interval;
     ret["sync_context_count"] = sync_contexts.size();

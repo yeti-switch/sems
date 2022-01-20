@@ -18,7 +18,7 @@ class HttpMultiPartFormConnection: public CurlConnection
 
   unsigned int get_file_size();
 public:
-  HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination, int epoll_fd);
+  HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination);
   ~HttpMultiPartFormConnection();
 
   const HttpPostMultipartFormEvent &get_event() { return event; }
