@@ -31,6 +31,7 @@
 #include "AmUtils.h"
 #include "AmSipHeaders.h"
 #include "AmLcConfig.h"
+#include "AmUriParser.h"
 
 #include <map>
 
@@ -200,6 +201,197 @@ int UACAuthFactory::reconfigure(const std::string& config)
 bool UACAuthFactory::onInvite(const AmSipRequest& req, AmConfigReader& conf)
 {
   return true;
+}
+
+string UACAuthDigestChallenge::find_attribute(const string &name)
+{
+    auto it = attributes.find(name);
+    if(it != attributes.end()) {
+        return it->second;
+    }
+    return string();
+}
+
+bool UACAuthDigestChallenge::parse(const std::string auth_hdr)
+{
+    auto pos = auth_hdr.find_first_not_of(' ');
+
+    string method = auth_hdr.substr(pos, 6);
+    std::transform(
+        method.begin(), method.end(), method.begin(),
+        (int(*)(int)) toupper);
+    if (method != "DIGEST") {
+        ERROR("only Digest auth supported. hdr: %s", auth_hdr.data());
+        return false;
+    }
+    pos+=6;
+
+    char last_c = 0;
+    string::size_type name_start_pos = 0, name_end_pos = 0,
+                      value_start_pos = 0, value_end_pos = 0;
+    enum { ST_START,
+           ST_NAME_SKIP_WS_BEFORE, ST_NAME, ST_NAME_SKIP_WS_AFTER,
+           ST_VALUE_SKIP_WS_BEFORE, ST_VALUE, ST_ESCAPED_VALUE, ST_VALUE_SKIP_WS_AFTER
+    } st = ST_START;
+
+    auto process_attribute_end = [&](bool end_by_comma = true) -> bool {
+        switch(st) {
+        case ST_NAME:
+            st = ST_START;
+            name_end_pos = pos;
+            attributes.emplace(
+                auth_hdr.substr(name_start_pos, name_end_pos - name_start_pos),
+                string());
+            break;
+        case ST_NAME_SKIP_WS_AFTER:
+            st = ST_START;
+            attributes.emplace(
+                auth_hdr.substr(name_start_pos, name_end_pos - name_start_pos),
+                string());
+            name_start_pos = pos;
+            break;
+        case ST_VALUE_SKIP_WS_BEFORE:
+            st = ST_START;
+            attributes.emplace(
+                auth_hdr.substr(name_start_pos, name_end_pos - name_start_pos),
+                string());
+            name_start_pos = pos;
+            break;
+        case ST_VALUE:
+            st = ST_START;
+            value_end_pos = pos;
+            attributes.emplace(
+                auth_hdr.substr(name_start_pos, name_end_pos - name_start_pos),
+                auth_hdr.substr(value_start_pos, value_end_pos - value_start_pos));
+            name_start_pos = pos;
+            break;
+        case ST_VALUE_SKIP_WS_AFTER:
+            st = ST_START;
+            attributes.emplace(
+                auth_hdr.substr(name_start_pos, name_end_pos - name_start_pos),
+                auth_hdr.substr(value_start_pos, value_end_pos - value_start_pos));
+            name_start_pos = pos;
+            break;
+        case ST_ESCAPED_VALUE:
+        case ST_START:
+            break;
+        default:
+            if(end_by_comma) {
+                ERROR("unexpected comma at %lu. hdr: %s", pos, auth_hdr.data());
+                return false;
+            }
+        }
+        return true;
+    };
+
+    while(pos < auth_hdr.length()) {
+        auto &c = auth_hdr[pos];
+        switch(c) {
+        case '\"':
+            switch(st) {
+            case ST_VALUE_SKIP_WS_BEFORE:
+                st = ST_ESCAPED_VALUE;
+                value_start_pos = pos+1;
+                last_c = c;
+                break;
+            case ST_ESCAPED_VALUE:
+                if(last_c != '\\') {
+                    st = ST_VALUE_SKIP_WS_AFTER;
+                    value_end_pos = pos;
+                }
+                break;
+            default:
+                ERROR("unexpected dquote at %lu. hdr: %s", pos, auth_hdr.data());
+                return false;
+            }
+            break;
+        case '=':
+            switch(st) {
+            case ST_NAME:
+                st = ST_VALUE_SKIP_WS_BEFORE;
+                name_end_pos = value_start_pos = pos;
+                break;
+            case ST_NAME_SKIP_WS_AFTER:
+                st = ST_VALUE_SKIP_WS_BEFORE;
+                value_start_pos = pos;
+                break;
+            case ST_ESCAPED_VALUE:
+                break;
+            default:
+                ERROR("unexpected equal sign at %lu. hdr: %s", pos, auth_hdr.data());
+                return false;
+            }
+            break;
+        case ',':
+            if(!process_attribute_end(true))
+                return false;
+            break;
+        case ' ':
+            switch(st) {
+            case ST_START:
+                st = ST_NAME_SKIP_WS_BEFORE;
+                break;
+            case ST_NAME:
+                st = ST_NAME_SKIP_WS_AFTER;
+                name_end_pos = pos;
+                break;
+            case ST_VALUE:
+                st = ST_VALUE_SKIP_WS_AFTER;
+                value_end_pos = pos;
+                break;
+            case ST_NAME_SKIP_WS_BEFORE:
+            case ST_NAME_SKIP_WS_AFTER:
+            case ST_VALUE_SKIP_WS_BEFORE:
+            case ST_VALUE_SKIP_WS_AFTER:
+            case ST_ESCAPED_VALUE:
+                break;
+            default:
+                ERROR("unexpected space at %lu. hdr: %s", pos, auth_hdr.data());
+                return false;
+            }
+            break;
+        default:
+            switch(st) {
+            case ST_START:
+                st = ST_NAME;
+                name_start_pos = pos;
+                break;
+            case ST_NAME_SKIP_WS_BEFORE:
+                st = ST_NAME;
+                name_start_pos = pos;
+                break;
+            case ST_VALUE_SKIP_WS_BEFORE:
+                st = ST_VALUE;
+                value_start_pos = pos;
+                break;
+            case ST_ESCAPED_VALUE:
+                last_c = c;
+                break;
+            case ST_VALUE:
+            case ST_NAME:
+                break;
+            default:
+                ERROR("unexpected '%c' at %lu. hdr: %s", c, pos, auth_hdr.data());
+                return false;
+            }
+            break;
+        } //switch(c)
+        pos++;
+    } //while(pos < auth_hdr.length())
+
+    process_attribute_end(false);
+
+    /*for(const auto &p : attributes) {
+        DBG("attribute '%s': '%s'", p.first.data(),p.second.data());
+    }*/
+
+    realm = find_attribute("realm");
+    nonce = find_attribute("nonce");
+    opaque = find_attribute("opaque");
+    algorithm = find_attribute("algorithm");
+    qop = find_attribute("qop");
+
+    return (realm.length() && nonce.length());
 }
 
 AmSessionEventHandler* UACAuthFactory::getHandler(AmSession* s)
@@ -417,54 +609,6 @@ bool UACAuth::tc_isequal(const char* s1, const char* s2, size_t len) {
   return !res;
 }
 
-// supr gly
-string UACAuth::find_attribute(const string& name, const string& header) {
-  size_t pos1 = header.find(name);
-
-  while (true) {
-    if (pos1 == string::npos)
-      return "";
-    
-    if (!pos1 || header[pos1-1] == ',' || header[pos1-1] == ' ')
-      break;
-
-    pos1 = header.find(name, pos1+1);
-  }
-
-  pos1+=name.length();
-  pos1 = header.find_first_not_of(" =\"", pos1);
-  if (pos1 != string::npos) {
-    size_t pos2 = header.find_first_of(",\"", pos1);
-    if (pos2 != string::npos) {
-      return header.substr(pos1, pos2-pos1);
-    } else {
-      return header.substr(pos1); // end of hdr
-    }
-  }
-
-  return "";
-}
-
-bool UACAuth::parse_header(const string& auth_hdr, UACAuthDigestChallenge& challenge) {
-  size_t p = auth_hdr.find_first_not_of(' ');
-  string method = auth_hdr.substr(p, 6);
-  std::transform(method.begin(), method.end(), method.begin(), 
-		 (int(*)(int)) toupper);
-  if (method != "DIGEST") {
-    ERROR("only Digest auth supported\n");
-    return false;
-  }
-
-  // inefficient parsing...TODO: optimize this
-  challenge.realm = find_attribute("realm", auth_hdr);
-  challenge.nonce = find_attribute("nonce", auth_hdr);
-  challenge.opaque = find_attribute("opaque", auth_hdr);
-  challenge.algorithm = find_attribute("algorithm", auth_hdr);
-  challenge.qop = find_attribute("qop", auth_hdr);
-  
-  return (challenge.realm.length() && challenge.nonce.length());
-}
-
 bool UACAuth::do_auth(const unsigned int code, const string& auth_hdr,  
 		      const string& method, const string& uri,
 		      const AmMimeBody* body, string& result)
@@ -474,7 +618,7 @@ bool UACAuth::do_auth(const unsigned int code, const string& auth_hdr,
     return false;
   }
 
-  if (!parse_header(auth_hdr, challenge)) {
+  if (!challenge.parse(auth_hdr)) {
     DBG("error parsing auth header '%s'\n", auth_hdr.c_str());
     return false;
   }
@@ -777,17 +921,20 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
   if (auth_hdr.size()) {
     UACAuthDigestChallenge r_challenge;
 
-    r_challenge.realm = find_attribute("realm", auth_hdr);
-    r_challenge.nonce = find_attribute("nonce", auth_hdr);
-    r_challenge.qop = find_attribute("qop", auth_hdr);
-    string r_response = find_attribute("response", auth_hdr);
-    string r_username = find_attribute("username", auth_hdr);
-    string r_uri = find_attribute("uri", auth_hdr);
-    string r_cnonce = find_attribute("cnonce", auth_hdr);
+    if(!r_challenge.parse(auth_hdr)) {
+        DBG("Auth: failed to parse Authorization header");
+        internal_reason = "Parsing error";
+        goto auth_end;
+    }
+
+    string r_response = r_challenge.find_attribute("response");
+    string r_username = r_challenge.find_attribute("username");
+    string r_uri = r_challenge.find_attribute("uri");
+    string r_cnonce = r_challenge.find_attribute("cnonce");
 
     DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'\n",
-	r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
-	r_response.c_str(), r_username.c_str(), r_uri.c_str(), r_cnonce.c_str() );
+        r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
+        r_response.c_str(), r_username.c_str(), r_uri.c_str(), r_cnonce.c_str() );
 
     if (r_response.size() != HASHHEXLEN) {
       DBG("Auth: response length mismatch (wanted %u hex chars): '%s'\n", HASHHEXLEN, r_response.c_str());
@@ -848,7 +995,7 @@ void UACAuth::checkAuthentication(const AmSipRequest* req, const string& realm, 
       if(qop_auth || qop_auth_int) {
 
 	// get nonce count from request
-	string nonce_count_str = find_attribute("nc", auth_hdr);
+	string nonce_count_str = r_challenge.find_attribute("nc");
 	if (hex2int(nonce_count_str, client_nonce_count)) {
 	  DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
 	  internal_reason = "Error parsing nonce_count";
@@ -925,13 +1072,15 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& re
 	if (auth_hdr.size()) {
 		UACAuthDigestChallenge r_challenge;
 
-		r_challenge.realm = find_attribute("realm", auth_hdr);
-		r_challenge.nonce = find_attribute("nonce", auth_hdr);
-		r_challenge.qop = find_attribute("qop", auth_hdr);
-		string r_response = find_attribute("response", auth_hdr);
-		string r_username = find_attribute("username", auth_hdr);
-		string r_uri = find_attribute("uri", auth_hdr);
-		string r_cnonce = find_attribute("cnonce", auth_hdr);
+        if(!r_challenge.parse(auth_hdr)) {
+            DBG("Auth: failed to parse Authorization header");
+            goto auth_end;
+        }
+
+		string r_response = r_challenge.find_attribute("response");
+		string r_username = r_challenge.find_attribute("username");
+		string r_uri = r_challenge.find_attribute("uri");
+		string r_cnonce = r_challenge.find_attribute("cnonce");
 
 		DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'\n",
 		    r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
@@ -988,7 +1137,7 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest* req, const string& re
 			if(qop_auth || qop_auth_int) {
 
 				// get nonce count from request
-				string nonce_count_str = find_attribute("nc", auth_hdr);
+				string nonce_count_str = r_challenge.find_attribute("nc");
 				if (hex2int(nonce_count_str, client_nonce_count)) {
 					DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
 					goto auth_end;
