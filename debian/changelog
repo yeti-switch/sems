@@ -1,3 +1,15 @@
+sems (1.53.4) stable; urgency=low
+
+  [http_client]
+  * add optional parameter max_reply_size in http destination
+  * fix curl sockets processing
+  [uac_auth]
+  * add 'nonce_expire' parameter
+  * fix digest Authorization header parsing 
+  * fix ending for Authorization header in reINVITES
+
+ -- Michael Furmur <m.furmur@gmail.com>  Thu, 27 Jan 2022 15:58:51 +0200
+
 sems (1.53.3) stable; urgency=low
 
   * SDP: use lowercase 'udptl' for t38 transport
