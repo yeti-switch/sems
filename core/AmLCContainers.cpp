@@ -2,6 +2,7 @@
 
 #include <utility>
 #include "sip/ip_util.h"
+#include "AmSession.h"
 
 #define USED_PORT2IDX(PORT) (PORT >> _BITOPS_LONG_SHIFT)
 
@@ -207,11 +208,12 @@ void MEDIA_info::PortMap::freeRtpPort(unsigned int port)
 }
 
 
-void MEDIA_info::PortMap::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl)
+void MEDIA_info::PortMap::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl)
 {
     for(unsigned short port = info.low_port; port <= info.high_port; port+=2) {
         if(constant_test_bit(port%BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]) == true) {
-            cl(address, port, port+1);
+            AmLock lock(lp);
+            cl(address, port, port+1, localtag_ports[port]);
         }
     }
 }
@@ -254,11 +256,16 @@ int RTP_info::prepare(const std::string& iface_name)
 bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
 { 
     unsigned short port;
+    std::string localtag = reinterpret_cast<sockaddr_stream&>(ss).session->getLocalTag();
 
     if(single_address) {
         if((port = addresses.begin()->getNextRtpPort())) {
             addresses.begin()->copy_addr(ss);
             am_set_port(&ss, port);
+
+            AmLock lock(addresses.begin()->lp);
+            addresses.begin()->localtag_ports.emplace(port, localtag);
+
             return true;
         }
         return false;
@@ -268,6 +275,10 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
         if((port = it.getNextRtpPort())) {
             it.copy_addr(ss);
             am_set_port(&ss, port);
+
+            AmLock lock(addresses.begin()->lp);
+            addresses.begin()->localtag_ports.emplace(port, localtag);
+
             return true;
         }
     }
@@ -279,18 +290,24 @@ void RTP_info::freeRtpAddress(const sockaddr_storage& ss)
 {
     if(single_address) {
         addresses.begin()->freeRtpPort(am_get_port(&ss));
+
+        AmLock lock(addresses.begin()->lp);
+        addresses.begin()->localtag_ports.erase(am_get_port(&ss));
         return;
     }
 
     for(auto& it : addresses) {
         if(it.match_addr(ss)) {
             it.freeRtpPort(am_get_port(&ss));
+
+            AmLock lock(addresses.begin()->lp);
+            addresses.begin()->localtag_ports.erase(am_get_port(&ss));
             break;
         }
     }
 }
 
-void RTP_info::iterateUsedPorts(std::function<void (const std::string &, unsigned short, unsigned short)> cl)
+void RTP_info::iterateUsedPorts(std::function<void (const std::string &, unsigned short, unsigned short, const std::string& )> cl)
 {
     for(auto& it : addresses) {
         it.iterateUsedPorts(cl);
@@ -306,20 +323,28 @@ int RTSP_info::prepare(const std::string& iface_name)
 
 bool RTSP_info::getNextRtpAddress(sockaddr_storage& ss)
 {
+    std::string localtag = reinterpret_cast<sockaddr_stream&>(ss).session->getLocalTag();
+
     portmap.copy_addr(ss);
     unsigned short port;
     if(!(port = portmap.getNextRtpPort()))
         return false;
     am_set_port(&ss, port);
+
+    AmLock lock(portmap.lp);
+    portmap.localtag_ports.emplace(port, localtag);
     return true;
 }
 
 void RTSP_info::freeRtpAddress(const sockaddr_storage& ss)
 {
     portmap.freeRtpPort(am_get_port(&ss));
+
+    AmLock lock(portmap.lp);
+    portmap.localtag_ports.erase(am_get_port(&ss));
 }
 
-void RTSP_info::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl)
+void RTSP_info::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl)
 {
     portmap.iterateUsedPorts(cl);
 }

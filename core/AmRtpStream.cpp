@@ -371,6 +371,7 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
 
 
         sockaddr_storage l_rtcp_addr, l_rtp_addr;
+        reinterpret_cast<sockaddr_stream*>(&l_rtp_addr)->session = session;
         if(!AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
                                           tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr)) {
             retry = 0;

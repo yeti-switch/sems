@@ -505,10 +505,13 @@ void CoreRpc::showUsedPorts(const AmArg&, AmArg& ret)
             AmArg proto_used_ports;
             proto_used_ports.assertStruct();
 
-            protoif->iterateUsedPorts([&proto_used_ports](const std::string& address, unsigned short rtp, unsigned short rtcp) {
+            protoif->iterateUsedPorts([&proto_used_ports](const std::string& address, unsigned short rtp, unsigned short rtcp, const std::string& localtag) {
                 AmArg& ports = proto_used_ports[address];
-                ports.push(rtp);
-                ports.push(rtcp);
+                AmArg port;
+                port["ports"].push(rtp);
+                port["ports"].push(rtcp);
+                port["localtag"] = localtag;
+                ports.push(port);
             });
 
             AmArg& tintf = intf[protoif->transportToStr()];

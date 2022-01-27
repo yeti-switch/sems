@@ -715,6 +715,14 @@ class AmRtpStream
     virtual void getInfo(AmArg &ret);
 };
 
+struct sockaddr_stream
+{
+    union {
+        sockaddr_in in;
+        sockaddr_in6 in6;
+    } addr;
+    AmSession* session;
+};
 // Local Variables:
 // mode:C++
 // End:

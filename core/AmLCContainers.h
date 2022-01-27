@@ -264,7 +264,7 @@ public:
     virtual int prepare(const std::string &iface_name);
     virtual bool getNextRtpAddress(sockaddr_storage& ss) = 0;
     virtual void freeRtpAddress(const sockaddr_storage& ss) = 0;
-    virtual void iterateUsedPorts(std::function<void(const std::string&, unsigned short, unsigned short)> cl) = 0;
+    virtual void iterateUsedPorts(std::function<void(const std::string&, unsigned short, unsigned short, const std::string&)> cl) = 0;
 
     class PortMap {
     public:
@@ -276,7 +276,7 @@ public:
 
         unsigned short getNextRtpPort();
         void freeRtpPort(unsigned int port);
-        void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
+        void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl);
 
         /* initialize variables for RTP ports pool management and validate ports range
         * returns 0 on success, 1 otherwise */
@@ -286,6 +286,10 @@ public:
         bool match_addr(const sockaddr_storage& ss);
 
         void setAddress(const string &address_) { address = address_; }
+
+        AmMutex lp;
+        std::map<short, std::string> localtag_ports;
+
     private:
         DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
         unsigned long *ports_state_start_addr,
@@ -295,7 +299,6 @@ public:
                     start_edge_bit_it_parity,
                     end_edge_bit_it;
         bool rtp_bit_parity;
-
         AtomicCounter *opened_ports_counter;
 
         MEDIA_info& info;
@@ -338,7 +341,7 @@ public:
     int prepare(const std::string &iface_name);
     bool getNextRtpAddress(sockaddr_storage& ss);
     void freeRtpAddress(const sockaddr_storage& ss);
-    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
+    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl);
 
     virtual std::string getHost() {
         return public_domain.empty() ? "" : public_domain;
@@ -419,7 +422,7 @@ public:
     int prepare(const std::string &iface_name);
     bool getNextRtpAddress(sockaddr_storage& ss);
     void freeRtpAddress(const sockaddr_storage& ss);
-    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
+    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl);
 
     static RTSP_info* toMEDIA_RTSP(MEDIA_info* info)
     {
