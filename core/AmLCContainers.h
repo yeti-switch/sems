@@ -289,7 +289,8 @@ public:
 
 //         AmMutex lp;
 //         std::map<short, std::string> localtag_ports;
-        char localtag_ports[USHRT_MAX+BYTES_PER_LONG+1][2*sizeof(int)*4+2+1]; 
+            //4*int2hex() + 3'-' + 5(prefix) + 1(0 symbol)
+        char localtag_ports[USHRT_MAX+BYTES_PER_LONG+1][2*sizeof(int)*4+3+5+1]; 
     private:
         DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
         unsigned long *ports_state_start_addr,
