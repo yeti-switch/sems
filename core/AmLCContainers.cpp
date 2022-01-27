@@ -212,7 +212,7 @@ void MEDIA_info::PortMap::iterateUsedPorts(std::function<void(const std::string&
 {
     for(unsigned short port = info.low_port; port <= info.high_port; port+=2) {
         if(constant_test_bit(port%BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]) == true) {
-            AmLock lock(lp);
+            //AmLock lock(lp);
             cl(address, port, port+1, localtag_ports[port]);
         }
     }
@@ -263,8 +263,8 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
             addresses.begin()->copy_addr(ss);
             am_set_port(&ss, port);
 
-            AmLock lock(addresses.begin()->lp);
-            addresses.begin()->localtag_ports.emplace(port, localtag);
+            //AmLock lock(addresses.begin()->lp);
+            strcpy(addresses.begin()->localtag_ports[port], localtag.c_str());
 
             return true;
         }
@@ -276,8 +276,8 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
             it.copy_addr(ss);
             am_set_port(&ss, port);
 
-            AmLock lock(addresses.begin()->lp);
-            addresses.begin()->localtag_ports.emplace(port, localtag);
+            //AmLock lock(addresses.begin()->lp);
+            strcpy(addresses.begin()->localtag_ports[port], localtag.c_str());
 
             return true;
         }
@@ -291,8 +291,8 @@ void RTP_info::freeRtpAddress(const sockaddr_storage& ss)
     if(single_address) {
         addresses.begin()->freeRtpPort(am_get_port(&ss));
 
-        AmLock lock(addresses.begin()->lp);
-        addresses.begin()->localtag_ports.erase(am_get_port(&ss));
+//         AmLock lock(addresses.begin()->lp);
+//         addresses.begin()->localtag_ports.erase(am_get_port(&ss));
         return;
     }
 
@@ -300,8 +300,8 @@ void RTP_info::freeRtpAddress(const sockaddr_storage& ss)
         if(it.match_addr(ss)) {
             it.freeRtpPort(am_get_port(&ss));
 
-            AmLock lock(addresses.begin()->lp);
-            addresses.begin()->localtag_ports.erase(am_get_port(&ss));
+//             AmLock lock(addresses.begin()->lp);
+//             addresses.begin()->localtag_ports.erase(am_get_port(&ss));
             break;
         }
     }
@@ -331,8 +331,9 @@ bool RTSP_info::getNextRtpAddress(sockaddr_storage& ss)
         return false;
     am_set_port(&ss, port);
 
-    AmLock lock(portmap.lp);
-    portmap.localtag_ports.emplace(port, localtag);
+//    AmLock lock(portmap.lp);
+    //portmap.localtag_ports.emplace(port, localtag);
+    strcpy(portmap.localtag_ports[port], localtag.c_str());
     return true;
 }
 
@@ -340,8 +341,8 @@ void RTSP_info::freeRtpAddress(const sockaddr_storage& ss)
 {
     portmap.freeRtpPort(am_get_port(&ss));
 
-    AmLock lock(portmap.lp);
-    portmap.localtag_ports.erase(am_get_port(&ss));
+//     AmLock lock(portmap.lp);
+//     portmap.localtag_ports.erase(am_get_port(&ss));
 }
 
 void RTSP_info::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short, const std::string& )> cl)

@@ -287,9 +287,9 @@ public:
 
         void setAddress(const string &address_) { address = address_; }
 
-        AmMutex lp;
-        std::map<short, std::string> localtag_ports;
-
+//         AmMutex lp;
+//         std::map<short, std::string> localtag_ports;
+        char localtag_ports[USHRT_MAX+BYTES_PER_LONG+1][2*sizeof(int)*4+2+1]; 
     private:
         DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
         unsigned long *ports_state_start_addr,
