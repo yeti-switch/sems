@@ -804,7 +804,7 @@ void UACAuth::uac_calc_response(
     const UACAuthDigestChallenge& challenge, const string& cnonce,
     const string& qop_value, unsigned int nonce_count, HASHHEX response)
 {
-    static unsigned char hc[1] = {';'};
+    static unsigned char hc[1] = {':'};
     MD5_CTX Md5Ctx;
     HASH RespHash;
 
