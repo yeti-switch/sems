@@ -1,3 +1,9 @@
+sems (1.72.6) stable; urgency=low
+
+  * IPTree: fix matching for IPv4
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 01 Feb 2022 20:27:22 +0200
+
 sems (1.72.5) stable; urgency=low
 
   * uac_auth: fix resposne calculation
