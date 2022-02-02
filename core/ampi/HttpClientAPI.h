@@ -129,6 +129,7 @@ struct HttpPostEvent
 {
   string data;
   string destination_name;
+  map<string, string> additional_headers;
 
   HttpPostEvent(string destination_name, string data, string token,
                 string session_id = string(),
@@ -139,11 +140,23 @@ struct HttpPostEvent
       data(data)
   {}
 
+  HttpPostEvent(string destination_name, string data,
+                map<string, string> headers, string token,
+                string session_id = string(),
+                const string &sync_ctx_id = string())
+    : AmEvent(Post),
+      HttpEvent(session_id,token,sync_ctx_id),
+      destination_name(destination_name),
+      data(data),
+      additional_headers(headers)
+  {}
+
   HttpPostEvent(const HttpPostEvent &src)
     : AmEvent(Post),
       HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name),
-      data(src.data)
+      data(src.data),
+      additional_headers(src.additional_headers)
   {}
 };
 

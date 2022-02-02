@@ -38,9 +38,15 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
         string content_type_header = "Content-Type: ";
         content_type_header += destination.content_type;
         headers = curl_slist_append(headers, content_type_header.c_str());
-        easy_setopt(CURLOPT_HTTPHEADER, headers);
     }
 
+    for(auto& header : event.additional_headers) {
+        string user_header = header.first + ": ";
+        user_header += header.second;
+        headers = curl_slist_append(headers, user_header.c_str());
+    }
+
+    if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
     easy_setopt(CURLOPT_URL,destination.url[0].c_str());
     easy_setopt(CURLOPT_POSTFIELDS,event.data.c_str());
 
