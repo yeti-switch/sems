@@ -1950,10 +1950,10 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
     switch(dlg->getOAState()) {
     case AmOfferAnswer::OA_None:
     case AmOfferAnswer::OA_OfferSent:
+    case AmOfferAnswer::OA_Completed:
         cur_rtp_trans->getSdpOffer(m);
         break;
-    case AmOfferAnswer::OA_OfferRecved:
-    case AmOfferAnswer::OA_Completed: {
+    case AmOfferAnswer::OA_OfferRecved: {
         const auto &offer = dlg->getRemoteSdp();
         if(idx >= offer.media.size()) {
             CLASS_DBG("no stream with idx %d in offer media", idx);

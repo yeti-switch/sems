@@ -46,6 +46,11 @@ struct UACAuthDigestChallenge {
     std::string opaque;
     bool stale;
     std::string algorithm;
+
+    std::map<string,string> attributes;
+
+    bool parse(const std::string auth_hdr);
+    string find_attribute(const string &name);
 };
 
 /** \brief factory for uac_auth session event handlers */
@@ -131,9 +136,6 @@ class UACAuth : public AmSessionEventHandler
     unsigned int nonce_count;
 
     bool nonce_reuse; // reused nonce?
-
-    static std::string find_attribute(const std::string& name, const std::string& header);
-    static bool parse_header(const std::string& auth_hdr, UACAuthDigestChallenge& challenge);
 
     static void uac_calc_HA1(const UACAuthDigestChallenge& challenge,
         const UACAuthCred* _credential,

@@ -1,6 +1,8 @@
 #include "IPTree.h"
 #include "sip/ip_util.h"
 
+#include <byteswap.h>
+
 void IPTree::Node::clear()
 {
     one.reset();
@@ -15,8 +17,8 @@ IPTree::Node *IPTree::get_node_ipv4(const sockaddr_storage &addr, unsigned int m
         return node;
     }
 
-    auto &addr_bytes = SAv4(&addr)->sin_addr.s_addr;
-    unsigned int bit_mask = 1;
+    auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
+    unsigned int bit_mask = 1 << 31;
     while(mask_len--) {
         auto &child = (addr_bytes & bit_mask) ? node->one : node->zero;
         node = child.get();
@@ -24,7 +26,7 @@ IPTree::Node *IPTree::get_node_ipv4(const sockaddr_storage &addr, unsigned int m
             node = new Node();
             child.reset(node);
         }
-        bit_mask <<= 1;
+        bit_mask >>= 1;
     }
 
     return node;
@@ -94,8 +96,8 @@ void IPTree::match(const sockaddr_storage &addr, MatchResult &ret)
 {
     if(addr.ss_family==AF_INET) {
         auto *node = &ipv4_root;
-        auto &addr_bytes = SAv4(&addr)->sin_addr.s_addr;
-        unsigned int bit_mask = 1;
+        auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
+        unsigned int bit_mask = 1 << 31;
         do {
             for(const auto &idx : node->indexes)
                 ret.push_back(idx);
@@ -103,7 +105,7 @@ void IPTree::match(const sockaddr_storage &addr, MatchResult &ret)
             node = (addr_bytes & bit_mask) ?
                 node->one.get() : node->zero.get();
 
-            bit_mask <<= 1;
+            bit_mask >>= 1;
         } while(node);
     } else {
         auto *node = &ipv6_root;
