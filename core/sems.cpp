@@ -916,6 +916,9 @@ int main(int argc, char* argv[])
   INFO("Disposing RTP receiver\n");
   AmRtpReceiver::dispose();
 
+  INFO("Stop session processor\n");
+  AmSessionProcessor::stop();
+
   INFO("Disposing media processor\n");
   AmMediaProcessor::dispose();
 

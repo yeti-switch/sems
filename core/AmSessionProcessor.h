@@ -51,6 +51,7 @@ class AmSessionProcessor {
 
   public:
     static void init();
+    static void stop();
     static AmSessionProcessorThread* getProcessorThread();
     static void addThreads(unsigned int num_threads);
     static void get_statistics_count(StatCounterInterface::iterate_func_type f);

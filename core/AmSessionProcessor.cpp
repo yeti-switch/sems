@@ -47,6 +47,16 @@ void AmSessionProcessor::init()
     stat_group(Counter, "core","session_processor_events_time_spent_ms").addFunctionGroupCounter(&get_statistics_time);
 }
 
+void AmSessionProcessor::stop()
+{
+  threads_mut.lock();
+  for(auto& thr : threads) {
+      thr->stop(true);
+      delete thr;
+  }
+  threads_mut.unlock();
+}
+
 AmSessionProcessorThread* AmSessionProcessor::getProcessorThread() {
   threads_mut.lock();
   if (!threads.size()) {
@@ -113,11 +123,13 @@ void AmSessionProcessorThread::run()
     event_stats.addLabel("thread",long2str(_self_tid));
 
     stop_requested = false;
-    while(!stop_requested.get()) {
+    while(true) {
+
+        DBG("running processing loop\n");
 
         runcond.wait_for();
 
-        DBG("running processing loop\n");
+        if(stop_requested.get()) break;
 
         process_sessions_mut.lock();
         runcond.set(false);
@@ -187,6 +199,7 @@ void AmSessionProcessorThread::run()
 void AmSessionProcessorThread::on_stop() {
   INFO("requesting session to stop.\n");
   stop_requested.set(true);
+  runcond.set(true);
 }
 
 // AmEventHandler interface
