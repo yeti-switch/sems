@@ -368,6 +368,8 @@ void HttpDestination::send_failed_events(HttpClient* client)
          (event = events.back()) &&
          event->attempt) {
             events.pop_back();
+
+
             HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
             if(upload_event)
                 client->on_upload_request(upload_event);
@@ -396,18 +398,9 @@ void HttpDestination::send_postponed_events(HttpClient* client)
          !event->attempt)
     {
         events.pop_front();
-        HttpUploadEvent* upload_event = dynamic_cast<HttpUploadEvent*>(event);
-        if(upload_event)
-            client->on_upload_request(upload_event);
-        HttpPostEvent* post_event = dynamic_cast<HttpPostEvent*>(event);
-        if(post_event)
-            client->on_post_request(post_event);
-        HttpPostMultipartFormEvent* multipart_event = dynamic_cast<HttpPostMultipartFormEvent*>(event);
-        if(multipart_event)
-            client->on_multpart_form_request(multipart_event);
-        HttpGetEvent* get_event = dynamic_cast<HttpGetEvent*>(event);
-        if(get_event)
-            client->on_get_request(get_event);
+
+        client->process_http_event(event);
+
         count_pending_events.dec();
         count_will_send--;
         delete event;

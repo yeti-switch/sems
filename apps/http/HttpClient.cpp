@@ -409,7 +409,7 @@ void HttpClient::process_http_event(AmEvent * ev)
             on_get_request(e);
     } break;
     default:
-        WARN("unknown event received");
+        WARN("unknown event received. event_id:%d", ev->event_id);
     }
 }
 

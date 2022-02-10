@@ -5,7 +5,9 @@
 
 #define HTTP_EVENT_QUEUE "http"
 
-struct HttpEvent {
+struct HttpEvent
+  : public AmEvent
+{
   enum Type {
       Upload = 0,
       Post,
@@ -22,10 +24,12 @@ struct HttpEvent {
   unsigned int attempt;
 
   HttpEvent(
+      int event_id,
       string session_id, string token, const string &sync_ctx_id = string(),
       unsigned int failover_idx = 0,
       unsigned int attempt = 0)
-    : session_id(session_id), token(token), sync_ctx_id(sync_ctx_id),
+    : AmEvent(event_id),
+      session_id(session_id), token(token), sync_ctx_id(sync_ctx_id),
       failover_idx(failover_idx),
       attempt(attempt)
   {
@@ -36,7 +40,7 @@ struct HttpEvent {
 
 
 struct HttpUploadEvent
-  : public HttpEvent, AmEvent
+  : public HttpEvent
 {
 
   string file_path;
@@ -46,16 +50,14 @@ struct HttpUploadEvent
   HttpUploadEvent(string destination_name, string file_name, string file_path, string token,
                   string session_id = string(),
                   const string &sync_ctx_id = string())
-    : AmEvent(Upload),
-      HttpEvent(session_id,token,sync_ctx_id),
+    : HttpEvent(Upload, session_id,token,sync_ctx_id),
       destination_name(destination_name),
       file_name(file_name),
       file_path(file_path)
   { }
 
   HttpUploadEvent(const HttpUploadEvent &src)
-    : AmEvent(Upload),
-      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+    : HttpEvent(Upload, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name),
       file_name(src.file_name),
       file_path(src.file_path)
@@ -67,7 +69,7 @@ struct HttpUploadEvent
 };
 
 struct HttpPostMultipartFormEvent
-  : public HttpEvent, AmEvent
+  : public HttpEvent
 {
     struct Part {
         enum Type {
@@ -93,14 +95,12 @@ struct HttpPostMultipartFormEvent
     HttpPostMultipartFormEvent(string destination_name, string token,
                                string session_id = string(),
                                const string &sync_ctx_id = string())
-      : AmEvent(MultiPartForm),
-        HttpEvent(session_id,token,sync_ctx_id),
+      : HttpEvent(MultiPartForm, session_id,token,sync_ctx_id),
         destination_name(destination_name)
     { }
 
     HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
-      : AmEvent(MultiPartForm),
-        HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      : HttpEvent(MultiPartForm, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
         destination_name(src.destination_name),
         parts(src.parts)
     { }
@@ -125,7 +125,7 @@ struct HttpUploadResponseEvent
 };
 
 struct HttpPostEvent
-  : public HttpEvent, AmEvent
+  : public HttpEvent
 {
   string data;
   string destination_name;
@@ -134,8 +134,7 @@ struct HttpPostEvent
   HttpPostEvent(string destination_name, string data, string token,
                 string session_id = string(),
                 const string &sync_ctx_id = string())
-    : AmEvent(Post),
-      HttpEvent(session_id,token,sync_ctx_id),
+    : HttpEvent(Post, session_id,token,sync_ctx_id),
       destination_name(destination_name),
       data(data)
   {}
@@ -144,16 +143,14 @@ struct HttpPostEvent
                 map<string, string> headers, string token,
                 string session_id = string(),
                 const string &sync_ctx_id = string())
-    : AmEvent(Post),
-      HttpEvent(session_id,token,sync_ctx_id),
+    : HttpEvent(Post, session_id,token,sync_ctx_id),
       destination_name(destination_name),
       data(data),
       additional_headers(headers)
   {}
 
   HttpPostEvent(const HttpPostEvent &src)
-    : AmEvent(Post),
-      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+    : HttpEvent(Post, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name),
       data(src.data),
       additional_headers(src.additional_headers)
@@ -177,7 +174,7 @@ struct HttpPostResponseEvent
 };
 
 struct HttpGetEvent
-  : public HttpEvent, AmEvent
+  : public HttpEvent
 {
   string destination_name;
   string url;
@@ -185,16 +182,14 @@ struct HttpGetEvent
   HttpGetEvent(const string& destination_name,
                const string& url, string token,
                const string &session_id = string())
-    : AmEvent(Get)
-    , HttpEvent(session_id, token)
+    : HttpEvent(Get, session_id, token)
     , destination_name(destination_name)
     , url(url)
   {
   }
 
   HttpGetEvent(const HttpGetEvent &src)
-    : AmEvent(Get),
-      HttpEvent(src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+    : HttpEvent(Get, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
       destination_name(src.destination_name)
     , url(src.url)
   {}
