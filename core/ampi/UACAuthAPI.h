@@ -33,6 +33,19 @@
 #include <string>
 using std::string;
 
+enum UACAuthErrorCodes {
+    UACAuthGeneric = 0,
+    UACAuthHeaderParse,
+    UACAuthResponseLength,
+    UACAuthRealmMismatch,
+    UACAuthUserMismatch,
+    UACAuthNonceIncorrect,
+    UACAuthNonceExpired,
+    UACAuthNonceCountParse,
+    UACAuthResponseNotMatched,
+    UACAuthNoAuthHeader
+};
+
 class DialogControl 
 : public AmObject 
 {

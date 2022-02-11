@@ -921,12 +921,14 @@ void UACAuth::checkAuthentication(
     string auth_hdr = getHeader(req->hdrs, "Authorization");
     bool authenticated = false;
     string internal_reason;
+    int internal_code = UACAuthGeneric;
 
     if(auth_hdr.size()) {
         UACAuthDigestChallenge r_challenge;
 
         if(!r_challenge.parse(auth_hdr)) {
             DBG("Auth: failed to parse Authorization header");
+            internal_code = UACAuthHeaderParse;
             internal_reason = "Parsing error";
             goto auth_end;
         }
@@ -942,18 +944,21 @@ void UACAuth::checkAuthentication(
 
         if(r_response.size() != HASHHEXLEN) {
             DBG("Auth: response length mismatch (wanted %u hex chars): '%s'\n", HASHHEXLEN, r_response.c_str());
+            internal_code = UACAuthResponseLength;
             internal_reason = "Response length mismatch";
             goto auth_end;
         }
 
         if(realm != r_challenge.realm) {
             DBG("Auth: realm mismatch: required '%s' vs '%s'\n", realm.c_str(), r_challenge.realm.c_str());
+            internal_code = UACAuthRealmMismatch;
             internal_reason = "Realm mismatch";
             goto auth_end;
         }
 
         if(user != r_username) {
             DBG("Auth: user mismatch: '%s' vs '%s'\n", user.c_str(), r_username.c_str());
+            internal_code = UACAuthUserMismatch;
             internal_reason = "User mismatch";
             goto auth_end;
         }
@@ -961,10 +966,12 @@ void UACAuth::checkAuthentication(
         nonce_check_result_t ret = checkNonce(r_challenge.nonce);
         if(ret == NCR_WRONG) {
             DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
+            internal_code = UACAuthNonceIncorrect;
             internal_reason = "Incorrect nonce";
             goto auth_end;
         } else if(ret == NCR_EXPIRED) {
             DBG("Auth: nonce '%s' expired\n", r_challenge.nonce.c_str());
+            internal_code = UACAuthNonceExpired;
             internal_reason = "Nonce expired";
             goto auth_end;
         }
@@ -1000,6 +1007,7 @@ void UACAuth::checkAuthentication(
                 string nonce_count_str = r_challenge.find_attribute("nc");
                 if(hex2int(nonce_count_str, client_nonce_count)) {
                     DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
+                    internal_code = UACAuthNonceCountParse;
                     internal_reason = "Error parsing nonce_count";
                     goto auth_end;
                 }
@@ -1030,9 +1038,11 @@ void UACAuth::checkAuthentication(
             authenticated = true;
         } else {
             DBG("Auth: authentication NOT successfull\n");
+            internal_code = UACAuthResponseNotMatched;
             internal_reason = "Response NOT matched";
         }
     } else {
+        internal_code = UACAuthNoAuthHeader;
         internal_reason = "no Authorization header";
     }
 
@@ -1047,6 +1057,7 @@ void UACAuth::checkAuthentication(
         ret.push(getChallengeHeader(realm));
     }
     ret.push(internal_reason);
+    ret.push(internal_code);
 }
 
 string UACAuth::getChallengeHeader(const string& realm)
