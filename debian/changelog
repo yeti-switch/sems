@@ -1,3 +1,12 @@
+sems (1.73.0) stable; urgency=low
+
+  * uac_auth: add internal error codes for checkAuthentication()
+  * http_client: additional headers for HttpPost event
+  * fix sessions processor cleanup on finalization
+  * add initial testing
+
+ -- Michael Furmur <m.furmur@gmail.com>  Fri, 11 Feb 2022 21:25:43 +0200
+
 sems (1.72.7) stable; urgency=low
 
   * AmRtpStream: fix SDP Offer generation in Completed OA state
