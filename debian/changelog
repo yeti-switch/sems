@@ -1,3 +1,9 @@
+sems (1.72.7dbg2) stable; urgency=low
+
+  * log AmB2BMedia, AmRtpStream constructors/destructors at INFO level
+
+ -- Michael Furmur <m.furmur@gmail.com>  Tue, 08 Feb 2022 10:49:33 +0200
+
 sems (1.72.7dbg) stable; urgency=low
 
   * track local_tag for used ports

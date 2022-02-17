@@ -171,7 +171,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     cur_udptl_trans(0),
     rtp_endpoint_learned_notified(false)
 {
-    DBG("AmRtpStream[%p](%p)",this,session);
+    INFO("AmRtpStream[%p](%p[%s])",this,session,
+         session ? session->getLocalTag().data() : "");
 
     l_ssrc = get_random();
     sequence = get_random();
@@ -192,7 +193,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 
 AmRtpStream::~AmRtpStream()
 {
-    DBG("~AmRtpStream[%p]() session = %p",this,session);
+    INFO("~AmRtpStream[%p]() session = %p",this,session);
     if(session) session->onRTPStreamDestroy(this);
     for(auto trans : ip4_transports) {
         delete trans;

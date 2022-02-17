@@ -176,7 +176,9 @@ StreamData::StreamData(AmB2BSession* session, bool audio)
 
 void StreamData::initialize(AmB2BSession* session, bool audio)
 {
-    CLASS_DBG("StreamData::initialize()");
+    CLASS_INFO("StreamData::initialize(%p[%s], %d)",
+               session, session ? session->getLocalTag().data() : "", audio);
+
     if(session || !audio)
         stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
 
@@ -271,6 +273,9 @@ bool StreamData::initStream(PlayoutType playout_type,
 
 void StreamData::clear()
 {
+    CLASS_INFO("StreamData::clear() stream:%p, shared_stream:%d",
+               stream, shared_stream);
+
     resetStats();
     in = nullptr;
     clearDtmfSink();
@@ -638,15 +643,15 @@ AmB2BMedia::AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b):
     asensor(nullptr), bsensor(nullptr),
     ignore_relay_streams(false)
 {
-    DBG("AmB2BMedia[%p](%p,%p) t",
+    INFO("AmB2BMedia[%p](%p[%s],%p[%s])",
         static_cast<void *>(this),
-        static_cast<void *>(_a),
-        static_cast<void *>(_b));
+        static_cast<void *>(_a), _a ? _a->getLocalTag().data() : "",
+        static_cast<void *>(_b), _b ? _b->getLocalTag().data() : "");
 }
 
 AmB2BMedia::~AmB2BMedia()
 {
-    DBG("~AmB2BMedia[%p]()",static_cast<void *>(this));
+    INFO("~AmB2BMedia[%p]()",static_cast<void *>(this));
     if (logger) dec_ref(logger);
     if (asensor) dec_ref(asensor);
     if (bsensor) dec_ref(bsensor);
@@ -801,7 +806,7 @@ void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms)
 
 void AmB2BMedia::clearAudio(bool a_leg)
 {
-    TRACE("[%p] clear %s leg audio\n",
+    INFO("[%p] clear %s leg audio\n",
           static_cast<void *>(this), a_leg ? "A" : "B");
 
     AmLock lock(mutex);
@@ -1280,6 +1285,9 @@ void AmB2BMedia::setFirstAudioPairStream(
     AmRtpAudio *stream,
     const AmSdp &local_sdp, const AmSdp &remote_sdp)
 {
+    INFO("AmB2BMedia::setFirstAudioPairStream[%p](%d, %p)",
+        static_cast<void *>(this), a_leg, static_cast<void *>(stream));
+
     StreamData *adata = 0;
     for(auto &i : streams) {
         if(i->audio) {
