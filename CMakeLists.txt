@@ -67,6 +67,7 @@ OPTION(SEMS_USE_TTS           "Build with Text-to-speech support (requires Flite
 OPTION(SEMS_USE_OPENSSL       "Build with OpenSSL" ON)
 OPTION(SEMS_USE_MONITORING    "Build with monitoring support" ON)
 OPTION(SEMS_USE_IPV6          "Build with IPv6 support" OFF)
+OPTION(SEMS_USE_GTEST         "Build with googletest" ON)
 OPTION(SEMS_USE_AMARG_STAT    "Use AmArg statistic" OFF)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
 OPTION(USE_ADDRESS_SANITIZER  "Use address sanitizer gcc option" OFF)
@@ -191,6 +192,12 @@ IF(SEMS_USE_AMARG_STAT)
 	ADD_DEFINITIONS(-DUSE_AMARG_STATISTICS)
 ENDIF(SEMS_USE_AMARG_STAT)
 
+IF(SEMS_USE_GTEST)
+    MESSAGE(STATUS "Using google test library: YES (external)")
+ELSE(SEMS_USE_GTEST)
+    MESSAGE(STATUS "Using google test: NO")
+ENDIF(SEMS_USE_GTEST)
+
 # Let's try to find GSM library and header files
 FIND_PACKAGE(Gsm)
 IF(GSM_FOUND)
@@ -287,6 +294,7 @@ INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core)
 INCLUDE_DIRECTORIES (${CMAKE_BINARY_DIR}/core)
 INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
+include_directories(${SEMS_SOURCE_DIR}/third/googletest/googletest/include)
 
 CONFIGURE_FILE( ${SEMS_SOURCE_DIR}/core/sems.h.cmake ${CMAKE_BINARY_DIR}/core/sems.h)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
@@ -357,8 +365,11 @@ ADD_SUBDIRECTORY (apps)
 #ADD_SUBDIRECTORY (tools)
 ADD_SUBDIRECTORY (debian)
 
-ADD_SUBDIRECTORY (third/googletest)
-ADD_SUBDIRECTORY (unit_tests)
+IF(SEMS_USE_GTEST)
+    ADD_SUBDIRECTORY (third/googletest)
+    ADD_SUBDIRECTORY (unit_tests)
+    INSTALL(DIRECTORY ${SEMS_SOURCE_DIR}/third/googletest/googletest/include/ DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
+ENDIF(SEMS_USE_GTEST)
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
 

@@ -1,0 +1,299 @@
+#include "PGHandler.h"
+#include "../Query.h"
+#include "../pqtypes-int.h"
+
+TEST_F(PostgresqlTest, NonTransactionSimpleTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    NonTransaction pg_backend(&handler);
+    pg_backend.exec(new Query("SELECT pg_backend_pid()", false));
+    conn->runTransaction(&pg_backend);
+    while(pg_backend.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    NonTransaction show_tables(&handler);
+    show_tables.exec(new Query("SHOW TABLES", false));
+    conn->runTransaction(&show_tables);
+    while(show_tables.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, CancelTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    NonTransaction pg_cancel(&handler);
+    pg_cancel.exec(new Query("SELECT 3133 FROM PG_SLEEP(10)", false));
+    conn->runTransaction(&pg_cancel);
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(pg_cancel.cancel(), true);
+    ASSERT_EQ(pg_cancel.get_status(), IPGTransaction::CANCELING);
+    while(pg_cancel.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+
+    conn->close();
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, QueryParamTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+    NonTransaction pg_create(&handler);
+    pg_create.exec(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    conn->runTransaction(&pg_create);
+    while(pg_create.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    NonTransaction pg_insert(&handler);
+    QueryParams* q_insert = new QueryParams("INSERT INTO test(id, value, data, str) VALUES($1, $2, $3, $4);", false, false);
+    pg_insert.exec(q_insert);
+    q_insert->addParam(QueryParam((uint32_t)120));
+    q_insert->addParam(QueryParam((float)5.25));
+    q_insert->addParam(QueryParam("test"));
+    AmArg arg_str;
+    arg_str["data"] = "test";
+    q_insert->addParam(QueryParam(arg_str));
+    conn->runTransaction(&pg_insert);
+    while(pg_insert.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    conn->runTransaction(&pg_insert);
+    while(pg_insert.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+    
+    NonTransaction pg_select(&handler);
+    pg_select.exec(new Query("SELECT * FROM test;", true));
+    conn->runTransaction(&pg_select);
+    while(pg_select.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    NonTransaction pg_drop(&handler);
+    pg_drop.exec(new Query("DROP TABLE test;", false));
+    conn->runTransaction(&pg_drop);
+    while(pg_drop.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+
+    conn->close();
+    delete conn;
+}
+
+
+TEST_F(PostgresqlTest, QueryPreparedTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+    NonTransaction pg_create(&handler);
+    pg_create.exec(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    conn->runTransaction(&pg_create);
+    while(pg_create.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    vector<Oid> oids;
+    oids.push_back(INT8OID);
+    oids.push_back(FLOAT4OID);
+    oids.push_back(VARCHAROID);
+    oids.push_back(JSONOID);
+    PreparedTransaction prt("test_insert",
+                            "INSERT INTO test(id, value, data, str) VALUES($1, $2, $3, $4);",
+                            oids, &handler);
+    conn->runTransaction(&prt);
+    while(prt.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+    NonTransaction pg_insert(&handler);
+    QueryParams* q_insert = new QueryParams("test_insert", false, true);
+    pg_insert.exec(q_insert);
+    AmArg arg_str;
+    arg_str["data"] = "test";
+    q_insert->addParam(QueryParam((uint32_t)120)).
+              addParam(QueryParam((float)5.25)).
+              addParam(QueryParam("test")).
+              addParam(QueryParam(arg_str));
+    conn->runTransaction(&pg_insert);
+    while(pg_insert.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+    NonTransaction pg_select(&handler);
+    pg_select.exec(new Query("SELECT * FROM test;", false));
+    conn->runTransaction(&pg_select);
+    while(pg_select.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    NonTransaction pg_drop(&handler);
+    pg_drop.exec(new Query("DROP TABLE test;", false));
+    conn->runTransaction(&pg_drop);
+    while(pg_drop.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+
+    conn->close();
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, DbTransactionTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+    DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write> pg_create(&handler);
+    pg_create.exec(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    conn->runTransaction(&pg_create);
+    while(pg_create.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    NonTransaction pg_drop(&handler);
+    pg_drop.exec(new Query("DROP TABLE test;", false));
+    conn->runTransaction(&pg_drop);
+    while(pg_drop.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+
+    conn->close();
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, DbTransactionErrorTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+    DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write> pg_create(&handler);
+    QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    string query_str("INSERT INTO test(id) VALUES(\"xa-xa\")");
+    server.addError(query_str, false);
+    query->addQuery(new Query(query_str, false));
+    pg_create.exec(query);
+    conn->runTransaction(&pg_create);
+    while(pg_create.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    conn->close();
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, ChainQueryTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    QueryParams* q_insert = new QueryParams("INSERT INTO test(id, value, data, str) VALUES($1, $2, $3, $4);", false, false);
+    q_insert->addParam(QueryParam((uint32_t)120));
+    q_insert->addParam(QueryParam((float)5.25));
+    q_insert->addParam(QueryParam("test"));
+    AmArg arg_str;
+    arg_str["data"] = "test";
+    q_insert->addParam(QueryParam(arg_str));
+
+    QueryChain* q_chain = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    q_chain->addQuery(q_insert);
+    q_chain->addQuery(new Query("SELECT * FROM test;", true));
+    q_chain->addQuery(new Query("DROP TABLE test;", false));
+
+    NonTransaction pg_create(&handler);
+    pg_create.exec(q_chain);
+    conn->runTransaction(&pg_create);
+    while(pg_create.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
+    handler.cur_state = PGHandler::CONNECTED;
+
+    conn->close();
+    delete conn;
+}
+
+TEST_F(PostgresqlTest, DbTransactionMergeTest)
+{
+    PGHandler handler;
+    IPGTransaction* trans = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_only);
+    IPGTransaction* trans1 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_only);
+    ASSERT_FALSE(trans->merge(trans1));
+    trans->exec(new Query("SELECT pg_backend_pid()", false));
+    ASSERT_FALSE(trans->merge(trans1));
+    trans1->exec(new Query("SELECT pg_backend_pid()", false));
+    ASSERT_TRUE(trans->merge(trans1));
+    ASSERT_EQ(trans->get_size(), 2);
+    IPGTransaction* trans2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    trans2->exec(new Query("SELECT pg_backend_pid()", false));
+    ASSERT_FALSE(trans2->merge(trans));
+    IPGTransaction* trans3 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_only);
+    trans3->exec(new Query("SELECT pg_backend_pid()", false));
+    ASSERT_EQ(trans3->get_size(), 1);
+    ASSERT_TRUE(trans3->merge(trans));
+    ASSERT_EQ(trans3->get_size(), 3);
+
+    delete trans;
+    delete trans1;
+    delete trans2;
+    delete trans3;
+}

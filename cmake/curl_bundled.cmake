@@ -6,7 +6,7 @@ set (CURL_BIN_DIR ${PROJECT_BINARY_DIR}/${CURL_DIR})
 set (CURL_BUNDLED_PREFIX ${CURL_BIN_DIR}/lib/.libs)
 set (CURL_BUNDLED_LIB ${CURL_BUNDLED_PREFIX}/libcurl.a)
 
-set(CURL_WITHOUT --without-libssh2 --without-librtmp --without-libpsl --without-libidn2)
+set(CURL_WITHOUT --without-libssh2 --without-librtmp --without-libpsl --without-libidn2 --without-libgsasl)
 set(CURL_ENABLE --enable-ares --enable-debug)
 set(CURL_DISABLE0 --disable-ftp --disable-file --disable-ldap --disable-ldaps --disable-rtsp --disable-proxy --disable-dict --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-smb --disable-gopher)
 set(CURL_DISABLE1 --disable-thread --disable-manual --disable-dependency-tracking --disable-cookies --disable-silent-rules --disable-symbol-hiding --disable-shared)

@@ -61,7 +61,6 @@ int main(int argc, char** argv)
     //instantiation to ensure mlock_allocator will be destroyed after the AmLcConfig
     Botan::mlock_allocator::instance();
 
-    ::testing::InitGoogleTest(&argc, argv);
     if (ParseCommandLine(argc, argv) < 0 ||
         test_config::instance()->readConfiguration(config_path) < 0 ||
         ParseCommandLine(argc, argv) < 0 ||
@@ -85,11 +84,17 @@ int main(int argc, char** argv)
 
 	TesterLogFac::instance().setLogLevel(test_config::instance()->log_level);
 
+    ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
 
 	TesterLogFac::instance().setLogLevel(L_WARN);
 
     worker_manager::instance()->dispose();
+
+    AmEventDispatcher::dispose();
+    resolver::instance()->clear_cache();
+    resolver::dispose();
     AmPlugIn::dispose();
+    statistics::dispose();
     return ret;
 }

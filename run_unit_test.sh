@@ -18,9 +18,11 @@ done
 for m in \
 apps/http/http_client.so \
 apps/jsonrpc/jsonrpc.so \
-core/plug-in/wav/wav.so
+core/plug-in/wav/wav.so \
+apps/postgresql/postgresql_unit.so
 do
-    cp -uv $BUILD_DIR/$m $TEST_TMP_DIR/lib/
+    name=$(basename $m)
+    cp -uv $BUILD_DIR/$m $TEST_TMP_DIR/lib/${name//"_unit"/}
 done
 
 if [ $# -lt 1 ]; then
