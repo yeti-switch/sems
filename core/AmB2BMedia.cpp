@@ -177,8 +177,23 @@ StreamData::StreamData(AmB2BSession* session, bool audio)
 void StreamData::initialize(AmB2BSession* session, bool audio)
 {
     CLASS_DBG("StreamData::initialize()");
-    if(session || !audio)
+    if(session || !audio) {
+        if(stream) {
+            ERROR("StreamData::initialize(%p[%s],%d): stream:%p. "
+                  "shared_stream:%d",
+                  session, session->getLocalTag().data(), audio,
+                  stream, shared_stream);
+            stream->stopReceiving();
+            if(!shared_stream) {
+                delete stream;
+            } else {
+                //cleanup relay for shared stream
+                stream->disableRtpRelay();
+                stream->setRelayStream(nullptr);
+            }
+        }
         stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
+    }
 
     if(session && audio) {
         stream->setRtpRelayTransparentSeqno(session->getRtpRelayTransparentSeqno());
@@ -349,6 +364,19 @@ void StreamData::changeSession(AmB2BSession *session)
 
 void StreamData::setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session)
 {
+    if(stream) {
+        ERROR("StreamData::setStreamUnsafe(%p, %p[%s]) stream:%p, shared_stream:%d",
+              s, session, session->getLocalTag().data(),
+              stream, shared_stream);
+        stream->stopReceiving();
+        if(!shared_stream) {
+           delete stream;
+        } else {
+            //cleanup relay for shared stream
+            stream->disableRtpRelay();
+            stream->setRelayStream(nullptr);
+        }
+    }
     stream = s;
     shared_stream = true;
     if(session) {
