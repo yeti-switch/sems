@@ -178,21 +178,14 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
 {
     CLASS_DBG("StreamData::initialize()");
     if(session || !audio) {
-        if(stream) {
+        if(!stream) {
+            stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
+        } else {
             ERROR("StreamData::initialize(%p[%s],%d): stream:%p. "
                   "shared_stream:%d",
                   session, session->getLocalTag().data(), audio,
                   stream, shared_stream);
-            stream->stopReceiving();
-            if(!shared_stream) {
-                delete stream;
-            } else {
-                //cleanup relay for shared stream
-                stream->disableRtpRelay();
-                stream->setRelayStream(nullptr);
-            }
         }
-        stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
     }
 
     if(session && audio) {
