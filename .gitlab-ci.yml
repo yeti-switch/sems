@@ -1,0 +1,98 @@
+image:
+  name: registry.in.didww.com:443/sems/sems:ci
+  entrypoint: [""]
+
+stages:
+  - image
+  - package
+  - unstable
+  - stable
+
+build main image:
+  stage: image
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script: []
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - >
+      /kaniko/executor
+      --build-arg "http_proxy=$http_proxy"
+      --build-arg "https_proxy=$https_proxy"
+      --build-arg "no_proxy=$no_proxy"
+      --build-arg "KANIKO_CONTEXT=$CI_PROJECT_DIR"
+      --context "$CI_PROJECT_DIR"
+      --dockerfile "$CI_PROJECT_DIR/Dockerfile"
+      --destination "registry.in.didww.com:443/sems/sems:ci"
+      --force
+  only:
+    refs:
+      - schedules
+      - web
+    variables:
+      - $CI_PROJECT_PATH == "sems/sems"
+  tags:
+    - docker
+
+package and upload to unstable pbx:
+  stage: package
+  script:
+    - >
+      debuild -b -us -uc
+    - >
+      aptly-ctl
+      -vv
+      -C "url=$APTLY_HOST"
+      -C "signing.gpgkey=$APTLY_KEY"
+      -C "signing.passphrase_file=$APTLY_PASS_FILE"
+      put bullseye_pbx_unstable ../*.deb | tee unstable_pkg_ref
+    - >
+      deploy-notifier
+      --debug
+      --environment unstable
+      --From runner-${CI_RUNNER_ID}@no-reply.didww.com
+      --mail-relay "$DIDWW_MAIL_RELAY"
+      --reply-to engineering@didww.com
+      --emails $(echo ${CHLOG_MAIL_TO:-$GITLAB_USER_EMAIL} | sed 's/\r /\n/g')
+      --rocket-chat-url "$ROCKET_CHAT_URL"
+      --rocket-chat-tokens $(echo ${CHLOG_ROCKET_CHAT_TO} | sed 's/\r /\n/g')
+  artifacts:
+    expire_in: "6 weeks"
+    paths:
+      - "debian/changelog"
+      - "unstable_pkg_ref"
+  rules:
+    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww"'
+  tags:
+    - docker
+
+upload to stable pbx:
+  stage: stable
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - >
+      aptly-ctl
+      -vv
+      -C "url=$APTLY_HOST"
+      -C "signing.gpgkey=$APTLY_KEY"
+      -C "signing.passphrase_file=$APTLY_PASS_FILE"
+      copy -t bullseye_pbx_stable < unstable_pkg_ref
+    - >
+      deploy-notifier
+      --debug
+      --environment stable
+      --From runner-${CI_RUNNER_ID}@no-reply.didww.com
+      --mail-relay "$DIDWW_MAIL_RELAY"
+      --reply-to engineering@didww.com
+      --emails $(echo ${CHLOG_MAIL_TO:-$GITLAB_USER_EMAIL} | sed 's/\r /\n/g')
+      --rocket-chat-url "$ROCKET_CHAT_URL"
+      --rocket-chat-tokens $(echo ${CHLOG_ROCKET_CHAT_TO} | sed 's/\r /\n/g')
+  dependencies:
+    - package and upload to unstable pbx
+  rules:
+    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww"'
+      when: manual
+  tags:
+    - docker
