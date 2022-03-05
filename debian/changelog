@@ -1,3 +1,9 @@
+sems (1.73.2p1) stable; urgency=low
+
+  * CI test
+
+ -- Michael Furmur <m.furmur@gmail.com>  Sat, 05 Mar 2022 14:39:14 +0200
+
 sems (1.73.2) stable; urgency=low
 
   * AmB2BMedia: keep old stream on StreamData::initialize()
