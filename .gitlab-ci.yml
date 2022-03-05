@@ -63,7 +63,7 @@ package and upload to unstable pbx:
       - "debian/changelog"
       - "unstable_pkg_ref"
   rules:
-    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww"'
+    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww" && $CI_COMMIT_TITLE =~ /^v\d+\.\d+\.[0-9a-z]$/'
   tags:
     - docker
 
@@ -92,7 +92,7 @@ upload to stable pbx:
   dependencies:
     - package and upload to unstable pbx
   rules:
-    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww"'
+    - if: '$CI_PROJECT_PATH == "sems/sems" && $CI_COMMIT_BRANCH == "didww" && $CI_COMMIT_TITLE =~ /^v\d+\.\d+\.[0-9a-z]$/'
       when: manual
   tags:
     - docker
