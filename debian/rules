@@ -3,7 +3,7 @@
 #export DH_VERBOSE=1
 export DEB_BUILD_OPTIONS:=$(DEB_BUILD_OPTIONS) nostrip
 
-dh_args=--buildsystem=cmake --builddirectory=build --parallel
+dh_args=--buildsystem=cmake --builddirectory=build
 dh_opts=$(addprefix -O,$(dh_args))
 
 %:
