@@ -1,5 +1,9 @@
 #! /usr/bin/bash
 
+set -e
+
+cd $(dirname "${BASH_SOURCE[0]}")
+
 BUILD_DIR=./build
 TEST_TMP_DIR=$BUILD_DIR/unit_tests
 
@@ -24,11 +28,10 @@ if [ $# -lt 1 ]; then
     exit 0
 fi
 
-echo $1
-
-if [ $1 == "all" ]; then
-    $SEMS_TESTER -c $SEMS_TESTER_CFG
-    exit 0
+filter=$1
+shift
+if [ $filter == "all" ]; then
+    $SEMS_TESTER -c $SEMS_TESTER_CFG $@
+else
+    $SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_also_run_disabled_tests --gtest_filter=$filter $@
 fi
-
-$SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_also_run_disabled_tests --gtest_filter=$1
