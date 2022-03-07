@@ -6,7 +6,7 @@
 #include <log.h>
 #include <jsonArg.h>
 
-TEST(Common, ParseAndVerifyIdentityTask)
+TEST(Common, DISABLED_ParseAndVerifyIdentityTask)
 {
     bool ret;
     int last_errcode;
@@ -51,7 +51,7 @@ TEST(Common, ParseAndVerifyIdentityTask)
     EXPECT_FALSE(ret = identity.parse(identity_value));
 }
 
-TEST(Common, SignAndVerifyIdentityTask)
+TEST(Common, DISABLED_SignAndVerifyIdentityTask)
 {
     bool ret;
     int last_errcode;
@@ -72,7 +72,7 @@ TEST(Common, SignAndVerifyIdentityTask)
     }
 }
 
-TEST(Common, ParseErrorIdentityTask)
+TEST(Common, DISABLED_ParseErrorIdentityTask)
 {
     AmIdentity identity;
     std::string identity_value, last_error;
