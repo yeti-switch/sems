@@ -3,7 +3,7 @@ Maintainer: yeti team <dev@yeti-switch.org>
 Section: net
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: debhelper (>= 9), git, cmake, build-essential, libssl-dev, libxml2-dev, libsamplerate-dev, libcurl3-dev | libcurl4-dev, libhiredis-dev, librtmp-dev, libev-dev, python-dev | python2-dev, libspeex-dev, libgsm1-dev, libmp3lame-dev, libopus-dev, libprotobuf-dev, protobuf-compiler, libsctp-dev, libevent-dev, libc-ares-dev, libkrb5-dev, libboost-all-dev, libtiff5-dev, libnghttp2-dev, libwslay-dev, libbzrtp-dev, libbctoolbox-dev, libbrotli-dev, libsqlite3-dev
+Build-Depends: debhelper (>= 9), git, cmake, build-essential, devscripts, libssl-dev, libxml2-dev, libsamplerate-dev, libcurl3-dev | libcurl4-dev, libhiredis-dev, librtmp-dev, libev-dev, python-dev | python2-dev, libspeex-dev, libgsm1-dev, libmp3lame-dev, libopus-dev, libprotobuf-dev, protobuf-compiler, libsctp-dev, libevent-dev, libc-ares-dev, libkrb5-dev, libboost-all-dev, libtiff5-dev, libnghttp2-dev, libwslay-dev, libbzrtp-dev, libbctoolbox-dev, libbrotli-dev, libsqlite3-dev
 
 Package: sems
 Architecture: any

@@ -357,4 +357,4 @@ ADD_SUBDIRECTORY (unit_tests)
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
 
-add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all)
+add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams)

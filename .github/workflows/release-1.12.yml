@@ -1,0 +1,22 @@
+name: release-1.12
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:bullseye
+    steps:
+      - run: apt update
+      - run: apt -y --no-install-recommends install git ca-certificates curl
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - run: apt -y --no-install-recommends build-dep .
+      - run: debuild -us -uc -b
+      - run: ci/deploy.sh bullseye 1.12 main ../*.deb
+        env:
+          PKG_API_BASE: ${{secrets.PKG_API_BASE}}
