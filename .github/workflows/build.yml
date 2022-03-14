@@ -1,5 +1,5 @@
 name: build
-on: [push]
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,3 +12,7 @@ jobs:
           submodules: true
       - run: apt -y --no-install-recommends build-dep .
       - run: debuild -us -uc -b
+      - run: ci/deploy.sh bullseye 1.12 main ../*.deb
+        env:
+          PKG_API_BASE: ${{secrets.PKG_API_BASE}}
+        if: startsWith(github.ref, 'refs/tags/v')
