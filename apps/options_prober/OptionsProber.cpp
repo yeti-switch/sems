@@ -64,7 +64,7 @@ int OptionsProber::configure(const std::string& config)
     }
 
     if(cfg_true==cfg_getbool(cfg,CFG_OPT_NAME_EXPORT_METRICS))
-        statistics::instance()->add_groups_container("options_prober", this, true);
+        statistics::instance()->add_groups_container("options_prober", this, false);
 
     cfg_free(cfg);
     return 0;
