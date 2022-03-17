@@ -1,17 +1,17 @@
+[![Build Status](https://github.com/yeti-switch/sems/actions/workflows/build.yml/badge.svg)](https://github.com/yeti-switch/sems/actions/workflows/build.yml)
 # sems
 
 sems core is a part of project [Yeti]
 
-## Installation via Package (Debian 10)
+## Installation via Package (Debian)
 ```sh
-# echo "deb [arch=amd64] http://pkg.yeti-switch.org/debian/buster 1.10 main" > /etc/apt/sources.list.d/yeti.list
-# apt-key adv --keyserver keys.gnupg.net --recv-key 9CEBFFC569A832B6
-# wget -O- https://pkg.yeti-switch.org/key.gpg | apt-key add -
+# echo "deb [arch=amd64] http://pkg.yeti-switch.org/debian/bullseye 1.12 main" > /etc/apt/sources.list.d/yeti.list
+# curl https://pkg.yeti-switch.org/key.gpg | gpg --dearmor > /etc/apt/trusted.gpg.d/pkg.yeti-switch.org.gpg
 # apt install sems sems-modules-base
 ```
 check [Documentation] for additional versions/distributions info
 
-## Building from sources (Debian 10)
+## Building from sources (Debian)
 
 ### install prerequisites
 ```sh
@@ -24,14 +24,14 @@ $ git clone https://github.com/yeti-switch/sems.git --recursive
 $ cd sems
 ```
 
-### build and install dependencies package
+### install dependencies
 ```sh
-# mk-build-deps -i
+# apt build-deps .
 ```
 
 ### build packages
 ```sh
-$ debuild -us -uc -b -j$(nproc)
+$ debuild -us -uc -b
 ```
 
 [Yeti]:https://yeti-switch.org/
