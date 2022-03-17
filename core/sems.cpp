@@ -775,7 +775,9 @@ int main(int argc, char* argv[])
 
   if(set_sighandler(signal_handler))
     goto error;
-    
+
+  resolver::instance();
+
   if(AmConfig.enable_srtp) {
         if(srtp_init() != srtp_err_status_ok) {
             ERROR("Cannot initialize SRTP library\n");
@@ -791,7 +793,7 @@ int main(int argc, char* argv[])
     }
     DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
   }
-    
+
   AmThreadWatcher::instance();
   if(CoreRpc::instance().onLoad()) {
     ERROR("failed to initialize CoreRpc");
