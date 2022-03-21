@@ -183,8 +183,9 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
         } else {
             ERROR("StreamData::initialize(%p[%s],%d): stream:%p. "
                   "shared_stream:%d",
-                  session, session->getLocalTag().data(), audio,
-                  stream, shared_stream);
+                  session,
+                  session ? session->getLocalTag().data() : "",
+                  audio, stream, shared_stream);
         }
     }
 
@@ -359,7 +360,8 @@ void StreamData::setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session)
 {
     if(stream) {
         ERROR("StreamData::setStreamUnsafe(%p, %p[%s]) stream:%p, shared_stream:%d",
-              s, session, session->getLocalTag().data(),
+              s, session,
+              session ? session->getLocalTag().data() : "",
               stream, shared_stream);
         stream->stopReceiving();
         if(!shared_stream) {
