@@ -437,107 +437,127 @@ bool UACAuth::onSipReply(
     const AmSipRequest&, const AmSipReply& reply,
     AmBasicSipDialog::Status old_dlg_status)
 {
+    CLASS_DBG("UACAuth::onSipReply() code:%d", reply.code);
     bool processed = false;
-    if(reply.code==407 || reply.code==401) {
-        DBG("SIP reply with code %d cseq %d .\n", reply.code, reply.cseq);
-        std::map<unsigned int, SIPRequestInfo>::iterator ri = 
-            sent_requests.find(reply.cseq);
-        if(ri!= sent_requests.end()) {
-            DBG(" UACAuth - processing with reply code %d \n", reply.code);
-            if(!nonce_reuse &&
-                (((reply.code == 401) &&
-                getHeader(ri->second.hdrs, SIP_HDR_AUTHORIZATION, true).length()) ||
-                ((reply.code == 407) && 
-                getHeader(ri->second.hdrs, SIP_HDR_PROXY_AUTHORIZATION, true).length())))
-            {
-                DBG("Authorization failed!\n");
-            } else {
-                nonce_reuse = false;
-                string auth_hdr = (reply.code==407) ?
-                    getHeader(reply.hdrs, SIP_HDR_PROXY_AUTHENTICATE, true) :
-                    getHeader(reply.hdrs, SIP_HDR_WWW_AUTHENTICATE, true);
-                string result; 
-                string auth_uri; 
-                auth_uri = dlg->getRemoteUri();
+    bool proxy_auth;
 
-                if(do_auth(reply.code, auth_hdr,
-                            ri->second.method,
-                            auth_uri, &(ri->second.body), result))
-                {
-                    string hdrs = ri->second.hdrs;
-
-                    // strip other auth headers
-                    if(reply.code == 401) {
-                        removeHeader(hdrs, SIP_HDR_AUTHORIZATION);
-                    } else {
-                        removeHeader(hdrs, SIP_HDR_PROXY_AUTHORIZATION);
-                    }
-
-                    if (hdrs == "\r\n" || hdrs == "\r" || hdrs == "\n")
-                       hdrs = result;
-                    else
-                       hdrs += result;
-
-                    if(dlg->getStatus() < AmSipDialog::Connected && 
-                        ri->second.method != SIP_METH_BYE)
-                    {
-                        // reset remote tag so remote party 
-                        // thinks its new dlg
-                        dlg->setRemoteTag(string());
-
-                        if(AmConfig.proxy_sticky_auth) {
-                            // update remote URI to resolved IP
-                            auto hpos = dlg->getRemoteUri().find("@");
-                            if (hpos != string::npos && reply.remote_ip.length())
-                            {
-                                string remote_uri =
-                                    dlg->getRemoteUri().substr(0, hpos+1) +
-                                    reply.remote_ip + ":"+int2str(reply.remote_port);
-                                dlg->setRemoteUri(remote_uri);
-                                DBG("updated remote URI to '%s'\n", remote_uri.c_str());
-                            }
-                        }
-                    }
-
-                    int flags = SIP_FLAGS_VERBATIM | SIP_FLAGS_NOAUTH;
-                    size_t skip = 0, pos1, pos2, hdr_start;
-                    if(findHeader(hdrs, SIP_HDR_CONTACT, skip, pos1, pos2, hdr_start) ||
-                        findHeader(hdrs, "m", skip, pos1, pos2, hdr_start))
-                    {
-                        flags |= SIP_FLAGS_NOCONTACT;
-                    }
-
-                    reply.tt.lock_bucket();
-                    const sip_trans *t = reply.tt.get_trans();
-                    sip_target_set *targets_copy = nullptr;
-                    if(t && t->targets) {
-                        targets_copy = new sip_target_set(*t->targets);
-                        targets_copy->prev();
-                    }
-                    reply.tt.unlock_bucket();
-
-                    // resend request
-                    if(dlg->sendRequest(
-                        ri->second.method,
-                        &(ri->second.body),
-                        hdrs, ri->second.flags | flags,
-                        nullptr, targets_copy) == 0)
-                    {
-                        processed = true;
-                        DBG("authenticated request successfully sent.\n");
-                        // undo SIP dialog status change
-                        if(dlg->getStatus() != old_dlg_status)
-                            dlg->setStatus(old_dlg_status);
-                    } else {
-                        ERROR("failed to send authenticated request.\n");
-                    }
-                } //if(do_auth(..
-            }
-            sent_requests.erase(ri);
-        } //if(ri!= sent_requests.end())
-    } else if(reply.code >= 200) {
-        sent_requests.erase(reply.cseq); // now we dont need it any more
+    if(reply.code == 407) {
+        proxy_auth = true;
+    } else if(reply.code == 401) {
+        proxy_auth = false;
+    } else {
+        if(reply.cseq >= 200)
+            sent_requests.erase(reply.cseq);
+        return false;
     }
+
+    DBG("SIP reply with code:%d cseq:%d", reply.code, reply.cseq);
+    auto ri = sent_requests.find(reply.cseq);
+    if(ri == sent_requests.end()) {
+        DBG("cseq:%d not found in sent_requests", reply.cseq);
+        return false;
+    }
+
+    DBG("processing %s reply:%d. nonce_reuse:%d",
+        reply.cseq_method.data(), reply.code, nonce_reuse);
+
+    string auth_hdr = proxy_auth ?
+        getHeader(reply.hdrs, SIP_HDR_PROXY_AUTHENTICATE, true) :
+        getHeader(reply.hdrs, SIP_HDR_WWW_AUTHENTICATE, true);
+
+    if(!nonce_reuse &&
+        (proxy_auth ?
+            getHeader(ri->second.hdrs, SIP_HDR_PROXY_AUTHORIZATION, true).length() :
+            getHeader(ri->second.hdrs, SIP_HDR_AUTHORIZATION, true).length()))
+    {
+        DBG("Authorization failed. got 401/407 after the auth header sent");
+    } else {
+        string result;
+        string auth_uri = dlg->getRemoteUri();
+
+        nonce_reuse = false;
+
+        if(!do_auth(reply.code, auth_hdr,
+                    ri->second.method,
+                    auth_uri, &(ri->second.body), result))
+        {
+            goto out;
+        }
+
+        DBG("result: %s", result.data());
+
+        string hdrs = ri->second.hdrs;
+        // strip other auth headers
+        if(proxy_auth) {
+            removeHeader(hdrs, SIP_HDR_PROXY_AUTHORIZATION);
+        } else {
+            removeHeader(hdrs, SIP_HDR_AUTHORIZATION);
+        }
+
+        if (hdrs == "\r\n" || hdrs == "\r" || hdrs == "\n")
+           hdrs = result;
+        else
+           hdrs += result;
+
+        if(dlg->getStatus() < AmSipDialog::Connected &&
+            ri->second.method != SIP_METH_BYE)
+        {
+            // reset remote tag so remote party
+            // thinks its new dlg
+            dlg->setRemoteTag(string());
+
+            if(AmConfig.proxy_sticky_auth) {
+                // update remote URI to resolved IP
+                auto hpos = auth_uri.find("@");
+                if (hpos != string::npos && reply.remote_ip.length())
+                {
+                    string remote_uri =
+                       auth_uri.substr(0, hpos+1) +
+                        reply.remote_ip + ":"+int2str(reply.remote_port);
+                    dlg->setRemoteUri(remote_uri);
+                    DBG("updated remote URI to '%s'\n", remote_uri.c_str());
+                }
+            }
+        }
+
+        int flags = SIP_FLAGS_VERBATIM | SIP_FLAGS_NOAUTH;
+        size_t skip = 0, pos1, pos2, hdr_start;
+        if(findHeader(hdrs, SIP_HDR_CONTACT, skip, pos1, pos2, hdr_start) ||
+            findHeader(hdrs, "m", skip, pos1, pos2, hdr_start))
+        {
+            flags |= SIP_FLAGS_NOCONTACT;
+        }
+
+        reply.tt.lock_bucket();
+        const sip_trans *t = reply.tt.get_trans();
+        sip_target_set *targets_copy = nullptr;
+        if(t && t->targets) {
+            targets_copy = new sip_target_set(*t->targets);
+            targets_copy->prev();
+        }
+        reply.tt.unlock_bucket();
+
+        // resend request
+        if(dlg->sendRequest(
+            ri->second.method,
+            &(ri->second.body),
+            hdrs, ri->second.flags | flags,
+            nullptr, targets_copy) != 0)
+        {
+            ERROR("failed to send authenticated request");
+            goto out;
+        }
+
+        DBG("authenticated request successfully sent");
+
+        processed = true;
+
+        // undo SIP dialog status change
+        if(dlg->getStatus() != old_dlg_status)
+            dlg->setStatus(old_dlg_status);
+    }
+out:
+    sent_requests.erase(ri);
 
     return processed;
 }
@@ -546,6 +566,7 @@ bool UACAuth::onSendRequest(AmSipRequest& req, int& flags)
 {
     // add authentication header if nonce is already there
     string result;
+    CLASS_DBG("onSendRequest(). nonce:'%s'", challenge.nonce.data());
     if(!(flags & SIP_FLAGS_NOAUTH) &&
        !challenge.nonce.empty() &&
        do_auth(challenge, challenge_code,
@@ -562,7 +583,7 @@ bool UACAuth::onSendRequest(AmSipRequest& req, int& flags)
         nonce_reuse = false;
     }
 
-    DBG("adding %d to list of sent requests.\n", req.cseq);
+    DBG("adding %d to list of sent requests. nonce_reuse:%d", req.cseq, nonce_reuse);
     sent_requests[req.cseq] = SIPRequestInfo(
         req.method, &req.body, req.hdrs, flags//,
         // TODO: fix this!!!
