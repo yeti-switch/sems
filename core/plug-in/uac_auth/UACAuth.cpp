@@ -212,6 +212,8 @@ string UACAuthDigestChallenge::find_attribute(const string &name)
 
 bool UACAuthDigestChallenge::parse(const std::string auth_hdr)
 {
+    attributes.clear();
+
     auto pos = auth_hdr.find_first_not_of(' ');
 
     string method = auth_hdr.substr(pos, 6);
