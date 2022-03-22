@@ -1,5 +1,8 @@
-name: build
-on: push
+name: build & release
+on:
+  push:
+    tags:
+      - 'v*'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,3 +15,6 @@ jobs:
           submodules: true
       - run: apt -y --no-install-recommends build-dep .
       - run: debuild -us -uc -b
+      - run: ci/deploy.sh bullseye 1.12 main ../*.deb
+        env:
+          PKG_API_BASE: ${{secrets.PKG_API_BASE}}
