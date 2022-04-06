@@ -349,7 +349,7 @@ message(STATUS CoreDefs: ${CoreDefs})
 
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)
-ADD_SUBDIRECTORY (tools)
+#ADD_SUBDIRECTORY (tools)
 ADD_SUBDIRECTORY (debian)
 
 ADD_SUBDIRECTORY (third/googletest)
