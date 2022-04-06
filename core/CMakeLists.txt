@@ -7,7 +7,8 @@ FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c" "rtcp/*.cpp")
 
 SET(SEMS_LIB libsems)
 
-SET(aux_binaries decode_test utf8_test)
+#SET(aux_binaries decode_test utf8_test)
+SET(aux_binaries decode-test)
 
 set (audio_files
 beep.wav
@@ -35,7 +36,7 @@ SET_TARGET_PROPERTIES(${SEMS_LIB} PROPERTIES
 
 ADD_EXECUTABLE(${SEMS_APP} sems.cpp)
 FOREACH(aux_binary IN LISTS aux_binaries)
-	ADD_EXECUTABLE (sems_${aux_binary} aux/${aux_binary}.cpp)
+	ADD_EXECUTABLE (sems-${aux_binary} aux/${aux_binary}.cpp)
 ENDFOREACH(aux_binary)
 
 IF(NOT MAX_RTP_SESSIONS)
@@ -71,7 +72,7 @@ ADD_DEPENDENCIES(${SEMS_LIB} ${sems_dependency_targets})
 
 TARGET_LINK_LIBRARIES(${SEMS_APP} ${SEMS_LIB})
 FOREACH(aux_binary IN LISTS aux_binaries)
-	TARGET_LINK_LIBRARIES(sems_${aux_binary} ${SEMS_LIB})
+	TARGET_LINK_LIBRARIES(sems-${aux_binary} ${SEMS_LIB})
 ENDFOREACH(aux_binary)
 
 ADD_SUBDIRECTORY(plug-in)
@@ -86,7 +87,7 @@ INSTALL(
 	LIBRARY DESTINATION ${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}
 )
 FOREACH(aux_binary IN LISTS aux_binaries)
-	INSTALL(TARGETS sems_${aux_binary} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/sbin)
+	INSTALL(TARGETS sems-${aux_binary} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/sbin)
 ENDFOREACH(aux_binary)
 
 CONFIGURE_FILE(${SEMS_LIB}.pc.in ${SEMS_LIB}.pc)
