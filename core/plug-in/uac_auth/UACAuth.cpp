@@ -188,6 +188,8 @@ int UACAuthFactory::configure(const std::string& config)
 
     UACAuth::setNonceExpire(cfg_getint(cfg, OPT_NONCE_EXPIRE));
 
+    cfg_free(cfg);
+
     return 0;
 }
 
