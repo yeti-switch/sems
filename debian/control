@@ -15,7 +15,17 @@ Description: SIP Express Media Server, very fast and flexible SIP media server
  server and SBC for SIP (RFC3261) based VoIP  services. It features voicemail, conferencing,
  announcements, pre-call announcements, prepaid service, calling card service etc.
  .
- This package contains base applications, plugins and audio codecs for SEMS
+ This package contains main SEMS daemon which loads plugins and applications
+
+Package: sems-dev-utils
+Architecture: any
+Depends: libsems1(= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: SIP Express Media Server, very fast and flexible SIP media server
+ SEMS, the SIP Express Media Server, is a free, high performance, extensible media
+ server and SBC for SIP (RFC3261) based VoIP  services. It features voicemail, conferencing,
+ announcements, pre-call announcements, prepaid service, calling card service etc.
+ .
+ This package contains utilities for debugging
 
 Package: sems-sounds
 Architecture: any

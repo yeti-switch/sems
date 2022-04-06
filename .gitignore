@@ -41,6 +41,7 @@ debian/libsems1
 debian/libsems1-dev
 debian/sems-sounds
 debian/sems-modules-base
+debian/sems-dev-utils
 debian/tmp
 doc/doxygen_doc
 *.kdev4
