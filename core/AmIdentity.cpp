@@ -24,11 +24,6 @@ static const char *jwt_hdr_claim_ppt = "ppt";
 static const char *ppt_value_shaken = "shaken";
 static const char *ppt_value_div = "div";
 static const char *ppt_value_div_opt = "div-o";
-enum passport_type {
-    ES256_PASSPORT_SHAKEN = 0,
-    ES256_PASSPORT_DIV,
-    ES256_PASSPORT_DIV_OPT
-};
 
 static const char *jwt_payload_claim_origid = "origid";
 static const char *jwt_payload_claim_attest = "attest";
@@ -72,19 +67,16 @@ static AmArgHashValidator IdentityDivOptPayloadValidator({
     {jwt_payload_claim_opt, true, {AmArg::CStr}}
 });
 
-static void add_ident_data(AmArg &arg, std::vector<std::string> &ident, const char *name)
+void IdentData::parse_field(AmArg &a,
+                            std::vector<std::string> &field)
 {
-    if(!arg.hasMember(name))
-        return;
-
-    AmArg& a = arg[name];
     if(isArgCStr(a)) {
-        ident.push_back(a.asCStr());
+        field.push_back(a.asCStr());
     } else if(isArgArray(a)) {
         for(int i = 0; i < static_cast<int>(a.size()); i++) {
             AmArg &v = a[i];
             if(isArgCStr(v)) {
-                ident.push_back(a[i].asCStr());
+                field.push_back(a[i].asCStr());
             } else {
                 throw AmArg::TypeMismatchException();
             }
@@ -94,14 +86,88 @@ static void add_ident_data(AmArg &arg, std::vector<std::string> &ident, const ch
     }
 }
 
-AmIdentity::AmIdentity()
-: last_errcode(0)
+void IdentData::parse(AmArg &a)
 {
+    tns.clear();
+    if(a.hasMember(jwt_field_tn))
+        parse_field(a[jwt_field_tn], tns);
+
+    uris.clear();
+    if(a.hasMember(jwt_field_uri))
+         parse_field(a[jwt_field_uri], uris);
 }
 
-AmIdentity::~AmIdentity()
+void IdentData::serialize_field(AmArg &a,
+                                std::vector<std::string> &field)
 {
+    if(field.size() == 1) {
+        a = field[0];
+    } else {
+        for(auto& tn_s : field) {
+            a.push(AmArg(tn_s));
+        }
+    }
 }
+
+void IdentData::serialize(AmArg &a)
+{
+    a.assertStruct();
+    if(!uris.empty())
+        serialize_field(a[jwt_field_uri], uris);
+    if(!tns.empty())
+        serialize_field(a[jwt_field_tn], tns);
+}
+
+std::vector<std::string> AmIdentity::PassportType::names = {
+    ppt_value_shaken,
+    ppt_value_div,
+    ppt_value_div_opt
+};
+
+AmIdentity::PassportType::PassportType(passport_type_id ppt_id)
+  : ppt_id(ppt_id)
+{}
+
+void AmIdentity::PassportType::set(passport_type_id type_id)
+{
+    ppt_id = type_id;
+}
+
+AmIdentity::PassportType::passport_type_id AmIdentity::PassportType::get()
+{
+    return ppt_id;
+}
+
+bool AmIdentity::PassportType::parse(const char* ppt_name)
+{
+    int i = ES256_PASSPORT_SHAKEN;
+    for(const auto &n : names) {
+        if(n == ppt_name) {
+            set(static_cast<passport_type_id>(i));
+            return true;
+        }
+        i++;
+    }
+    return false;
+}
+
+const string &AmIdentity::PassportType::get_name()
+{
+    if(ppt_id < 0 || ppt_id > ES256_PASSPORT_DIV_OPT) {
+        static string unknown("unknown");
+        return unknown;
+    }
+
+    return names[ppt_id];
+}
+
+AmIdentity::AmIdentity()
+  : last_errcode(0),
+    type(PassportType::ES256_PASSPORT_SHAKEN)
+{}
+
+AmIdentity::~AmIdentity()
+{}
 
 void AmIdentity::add_dest_tn(const std::string& desttn)
 {
@@ -133,6 +199,31 @@ IdentData & AmIdentity::get_orig()
     return orig_data;
 }
 
+void AmIdentity::add_div_tn(const std::string& desttn)
+{
+    div_data.tns.push_back(desttn);
+}
+
+void AmIdentity::add_div_url(const std::string& desturl)
+{
+    div_data.uris.push_back(desturl);
+}
+
+IdentData & AmIdentity::get_div()
+{
+    return div_data;
+}
+
+void AmIdentity::set_passport_type(PassportType::passport_type_id type_id)
+{
+    type.set(type_id);
+}
+
+AmIdentity::PassportType::passport_type_id AmIdentity::get_passport_type()
+{
+    return type.get();
+}
+
 std::string & AmIdentity::get_x5u_url()
 {
     return x5u_url;
@@ -153,6 +244,16 @@ AmIdentity::ident_attest AmIdentity::get_attestation()
     return at;
 }
 
+void AmIdentity::set_opt(const std::string &opt_claim)
+{
+    opt = opt_claim;
+}
+
+std::string & AmIdentity::get_opt()
+{
+    return opt;
+}
+
 std::string & AmIdentity::get_orig_id()
 {
     return orig_id;
@@ -170,7 +271,7 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
     header[jwt_hdr_claim_alg] = alg_value_es256;
     header[jwt_hdr_claim_x5u] = x5u_url;
-    header[jwt_hdr_claim_ppt] = ppt_value_shaken;
+    header[jwt_hdr_claim_ppt] = type.get_name();
     header[jwt_hdr_claim_typ] = typ_value_passport;
     jwt_header = arg2json(header);
 
@@ -178,38 +279,14 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     payload[jwt_payload_claim_iat] = (int)time(0);
     payload[jwt_payload_claim_origid] = orig_id = AmSession::getNewId();
 
-    AmArg& dest_arg = payload[jwt_payload_claim_dest];
-    dest_arg.assertStruct();
-    if(dest_data.tns.size() == 1) {
-        dest_arg[jwt_field_tn] = dest_data.tns[0];
-    } else {
-        for(auto& tn_s : dest_data.tns) {
-            dest_arg[jwt_field_tn].push(AmArg(tn_s));
-        }
-    }
-    if(dest_data.uris.size() == 1) {
-        dest_arg[jwt_field_uri] = dest_data.uris[0];
-    } else {
-        for(auto& url : dest_data.uris) {
-            dest_arg[jwt_field_uri].push(AmArg(url));
-        }
-    }
+    dest_data.serialize(payload[jwt_payload_claim_dest]);
+    orig_data.serialize(payload[jwt_payload_claim_orig]);
 
-    AmArg& orig_arg = payload[jwt_payload_claim_orig];
-    orig_arg.assertStruct();
-    if(orig_data.tns.size() == 1) {
-        orig_arg[jwt_field_tn] = orig_data.tns[0];
-    } else {
-        for(auto& tn_s : orig_data.tns) {
-            orig_arg[jwt_field_tn].push(AmArg(tn_s));
-        }
-    }
-    if(orig_data.uris.size() == 1) {
-        orig_arg[jwt_field_uri] = orig_data.uris[0];
-    } else {
-        for(auto& url : orig_data.uris) {
-            orig_arg[jwt_field_uri].push(AmArg(url));
-        }
+    if(type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
+        //ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
+        div_data.serialize(payload[jwt_payload_claim_div]);
+        if(type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
+            payload[jwt_payload_claim_opt] = opt;
     }
 
     jwt_payload = arg2json(payload);
@@ -219,18 +296,19 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     ops->update((uint8_t*)base64_header.c_str(), base64_header.size());
     ops->update((uint8_t*)".", 1);
     ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
-    sign.resize(ops->signature_length());
+    signature.resize(ops->signature_length());
     Botan::secure_vector<uint8_t> sign_ = ops->sign(rnd);
-    memcpy((char*)sign.c_str(), sign_.data(), sign_.size());
+    memcpy((char*)signature.c_str(), sign_.data(), sign_.size());
 
-    std::string ret = base64_url_encode(sign);
+    std::string ret = base64_url_encode(signature);
     ret.insert(0, ".");
     ret.insert(0, base64_payload);
     ret.insert(0, ".");
     ret.insert(0, base64_header);
     ret.append(";info=<");
     ret.append(x5u_url);
-    ret.append(">;alg=ES256;ppt=shaken");
+    ret.append(">;alg=ES256;ppt=");
+    ret.append(type.get_name());
 
     return ret;
 }
@@ -255,7 +333,7 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
     ops->update((uint8_t*)".", 1);
     ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
 
-    bool ret = ops->is_valid_signature((uint8_t*)sign.c_str(), sign.size());
+    bool ret = ops->is_valid_signature((uint8_t*)signature.c_str(), signature.size());
     if(!ret) {
         last_errstr = "Signature verification Failed";
         last_errcode = ERR_VERIFICATION;
@@ -277,7 +355,6 @@ bool AmIdentity::parse(const std::string& value)
     std::string value_base64;
     std::string info;
     size_t end = 0;
-    passport_type ppt_id;
 
     last_errcode = 0;
     last_errstr.clear();
@@ -341,7 +418,7 @@ bool AmIdentity::parse(const std::string& value)
         last_errstr = "Failed to decode payload as base64url";
         return false;
     }
-    if(!base64_url_decode(data_base64[2], sign) || sign.empty()) {
+    if(!base64_url_decode(data_base64[2], signature) || signature.empty()) {
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Failed to decode signature as base64url";
     }
@@ -384,13 +461,7 @@ bool AmIdentity::parse(const std::string& value)
             return false;
         }
 
-        if(0==strcmp(ppt_arg.asCStr(), ppt_value_shaken)) {
-            ppt_id = ES256_PASSPORT_SHAKEN;
-        } else if(0==strcmp(ppt_arg.asCStr(), ppt_value_div)) {
-            ppt_id = ES256_PASSPORT_DIV;
-        } else if(0==strcmp(ppt_arg.asCStr(), ppt_value_div_opt)) {
-            ppt_id = ES256_PASSPORT_DIV_OPT;
-        } else {
+        if(!type.parse(ppt_arg.asCStr())) {
             last_errcode = ERR_UNSUPPORTED;
             last_errstr = "Unsupported ppt. 'shaken' or 'div' expected";
             return false;
@@ -404,33 +475,15 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     //process payload
-    switch(ppt_id) {
-    case ES256_PASSPORT_SHAKEN:
-        if(!IdentityShakenPayloadValidator.validate(payload)) {
-            last_errcode = ERR_JWT_VALUE;
-            last_errstr = "Unexpected JWT shaken payload layout";
-            return false;
-        }
-        break;
-    case ES256_PASSPORT_DIV:
-        if(!IdentityDivPayloadValidator.validate(payload)) {
-            last_errcode = ERR_JWT_VALUE;
-            last_errstr = "Unexpected JWT div payload layout";
-            return false;
-        }
-        break;
-    case ES256_PASSPORT_DIV_OPT:
-        if(!IdentityDivOptPayloadValidator.validate(payload)) {
-            last_errcode = ERR_JWT_VALUE;
-            last_errstr = "Unexpected JWT div-o payload layout";
-            return false;
-        }
-        break;
-    }
-
     try {
+        switch(type.get()) {
+        case PassportType::ES256_PASSPORT_SHAKEN: {
+            if(!IdentityShakenPayloadValidator.validate(payload)) {
+                last_errcode = ERR_JWT_VALUE;
+                last_errstr = "Unexpected JWT shaken payload layout";
+                return false;
+            }
 
-        if(ppt_id==ES256_PASSPORT_SHAKEN) {
             AmArg &attest_arg = payload[jwt_payload_claim_attest];
             if(strlen(attest_arg.asCStr()) != 1 ||
                attest_arg.asCStr()[0] < AT_A || attest_arg.asCStr()[0] > AT_C)
@@ -440,20 +493,36 @@ bool AmIdentity::parse(const std::string& value)
                 return false;
             }
             at = (enum ident_attest)(attest_arg.asCStr()[0]);
+
+        } break;
+        case PassportType::ES256_PASSPORT_DIV:
+            if(!IdentityDivPayloadValidator.validate(payload)) {
+                last_errcode = ERR_JWT_VALUE;
+                last_errstr = "Unexpected JWT div payload layout";
+                return false;
+            }
+
+            div_data.parse(payload[jwt_payload_claim_div]);
+
+            break;
+        case PassportType::ES256_PASSPORT_DIV_OPT:
+            if(!IdentityDivOptPayloadValidator.validate(payload)) {
+                last_errcode = ERR_JWT_VALUE;
+                last_errstr = "Unexpected JWT div-o payload layout";
+                return false;
+            }
+
+            div_data.parse(payload[jwt_payload_claim_div]);
+            opt = payload[jwt_payload_claim_opt].asCStr();
+
+            break;
         }
 
-        AmArg &dest_arg = payload[jwt_payload_claim_dest],
-              &orig_arg = payload[jwt_payload_claim_orig],
-              &iat_arg = payload[jwt_payload_claim_iat];
+        created = payload[jwt_payload_claim_iat].asInt();
 
-        created = iat_arg.asInt();
+        orig_data.parse(payload[jwt_payload_claim_orig]);
+        dest_data.parse(payload[jwt_payload_claim_dest]);
 
-        add_ident_data(orig_arg, orig_data.tns, jwt_field_tn);
-        add_ident_data(orig_arg, orig_data.uris, jwt_field_uri);
-        add_ident_data(dest_arg, dest_data.tns, jwt_field_tn);
-        add_ident_data(dest_arg, dest_data.uris, jwt_field_uri);
-
-        //TODO: add field div_data and add tn/uri for it
     } catch(AmArg::TypeMismatchException& exc) {
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Malformed JWT payload layout";
@@ -507,19 +576,19 @@ bool AmIdentity::parse(const std::string& value)
 
     if(!ppt_info.empty()) {
         if(ppt_info == ppt_value_shaken) {
-            if(ppt_id != ES256_PASSPORT_SHAKEN) {
+            if(type.get() != PassportType::ES256_PASSPORT_SHAKEN) {
                 last_errcode = ERR_HEADER_VALUE;
                 last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
                 return false;
             }
         } else if(ppt_info == ppt_value_div) {
-            if(ppt_id != ES256_PASSPORT_DIV) {
+            if(type.get() != PassportType::ES256_PASSPORT_DIV) {
                 last_errcode = ERR_HEADER_VALUE;
                 last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
                 return false;
             }
         } else if(ppt_info == ppt_value_div_opt) {
-            if(ppt_id != ES256_PASSPORT_DIV_OPT) {
+            if(type.get() != PassportType::ES256_PASSPORT_DIV_OPT) {
                 last_errcode = ERR_HEADER_VALUE;
                 last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
                 return false;

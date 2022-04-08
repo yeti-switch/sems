@@ -31,6 +31,14 @@ struct IdentData
 {
     std::vector<std::string> uris;
     std::vector<std::string> tns;
+
+    void parse_field(AmArg &arg,
+                     std::vector<std::string> &ident);
+    void parse(AmArg &a);
+
+    void serialize_field(AmArg &a,
+                         std::vector<std::string> &field);
+    void serialize(AmArg &a);
 };
 
 class AmIdentity
@@ -40,6 +48,29 @@ class AmIdentity
         AT_A = 'A',
         AT_B = 'B',
         AT_C = 'C'
+    };
+
+    class PassportType {
+      public:
+        enum passport_type_id {
+            ES256_PASSPORT_SHAKEN = 0,
+            ES256_PASSPORT_DIV,
+            ES256_PASSPORT_DIV_OPT
+        };
+
+      private:
+        passport_type_id ppt_id;
+        static std::vector<std::string> names;
+        //static const char *names[];
+
+      public:
+        PassportType(passport_type_id ppt_id = ES256_PASSPORT_SHAKEN);
+
+        void set(passport_type_id type_id);
+        passport_type_id get();
+        const string &get_name();
+
+        bool parse(const char* ppt_name);
     };
 
     AmIdentity();
@@ -54,11 +85,17 @@ class AmIdentity
 
     bool parse(const std::string& value);
 
+    void set_passport_type(PassportType::passport_type_id type);
+    PassportType::passport_type_id get_passport_type();
+
     void set_x5u_url(const std::string& val);
     std::string& get_x5u_url();
 
     void set_attestation(ident_attest val);
     ident_attest get_attestation();
+
+    void set_opt(const std::string &opt_claim);
+    std::string &get_opt();
 
     std::string& get_orig_id();
     time_t get_created();
@@ -71,25 +108,41 @@ class AmIdentity
     void add_dest_url(const std::string& desturl);
     IdentData& get_dest();
 
+    void add_div_tn(const std::string& desttn);
+    void add_div_url(const std::string& desturl);
+    IdentData& get_div();
+
     int get_last_error(std::string& err);
 
     const AmArg &get_parsed_header() { return header; }
     const AmArg &get_parsed_payload() { return payload; }
 
+    const std::string &get_header() { return jwt_header; }
+    const std::string &get_payload() { return jwt_payload; }
+
   private:
-    std::string sign;
-    std::string x5u_url;
-    IdentData orig_data;
-    IdentData dest_data;
-    ident_attest at;
-    time_t created;
-    std::string orig_id;
-    int last_errcode;
-    std::string last_errstr;
+    //header claims
+    PassportType type;      //ppt
+    std::string x5u_url;    //x5u
+
+    //payload claims
+    time_t created;         //iat
+    std::string orig_id;    //orig_id
+    IdentData orig_data;    //orig
+    IdentData dest_data;    //dest
+    IdentData div_data;     //div (div, div-o only)
+    ident_attest at;        //attest (shaken only)
+    std::string opt;        //opt (div-o only)
+
+    //ES256 signature
+    std::string signature;
 
     std::string jwt_header;
     AmArg header;
 
     std::string jwt_payload;
     AmArg payload;
+
+    int last_errcode;
+    std::string last_errstr;
 };
