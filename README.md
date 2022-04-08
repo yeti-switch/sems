@@ -1,4 +1,7 @@
 [![Build Status](https://github.com/yeti-switch/sems/actions/workflows/build.yml/badge.svg)](https://github.com/yeti-switch/sems/actions/workflows/build.yml)
+
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct.svg)](https://stand-with-ukraine.pp.ua)
+
 # sems
 
 sems core is a part of project [Yeti]
