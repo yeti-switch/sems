@@ -467,7 +467,7 @@ bool AmIdentity::parse(const std::string& value)
 
         if(!type.parse(ppt_arg.asCStr())) {
             last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unsupported ppt. 'shaken' or 'div' expected";
+            last_errstr = "Unsupported ppt. 'shaken','div','div-o' expected";
             return false;
         }
 
@@ -579,27 +579,15 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     if(!ppt_info.empty()) {
-        if(ppt_info == ppt_value_shaken) {
-            if(type.get() != PassportType::ES256_PASSPORT_SHAKEN) {
-                last_errcode = ERR_HEADER_VALUE;
-                last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
-                return false;
-            }
-        } else if(ppt_info == ppt_value_div) {
-            if(type.get() != PassportType::ES256_PASSPORT_DIV) {
-                last_errcode = ERR_HEADER_VALUE;
-                last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
-                return false;
-            }
-        } else if(ppt_info == ppt_value_div_opt) {
-            if(type.get() != PassportType::ES256_PASSPORT_DIV_OPT) {
-                last_errcode = ERR_HEADER_VALUE;
-                last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
-                return false;
-            }
-        } else {
+        PassportType info_type;
+        if(!info_type.parse(ppt_info.data())) {
             last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unsupported identity header ppt. 'shaken' or 'div' expected";
+            last_errstr = "Unsupported identity header ppt. 'shaken','div','div-o' expected";
+            return false;
+        }
+        if(info_type.get()!=type.get()) {
+            last_errcode = ERR_HEADER_VALUE;
+            last_errstr = "JWT header 'ppt' claim and identity header param 'ppt' does not match";
             return false;
         }
     }
