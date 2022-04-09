@@ -6,17 +6,19 @@
 #include <log.h>
 #include <jsonArg.h>
 
-TEST(Common, DISABLED_ParseAndVerifyIdentityTask)
+TEST(Common, ParseAndVerifyIdentityTask)
 {
     bool ret;
     int last_errcode;
     std::string last_error;
 
-    std::string identity_value("eyJhbGciOiJFUzI1NiIsInBwdCI6InNoYWtlbiIsInR5cCI6InBhc3Nwb3J0IiwieDV1IjoiaHR0cHM6"\
-                          "Ly9jdXJsLmhheHguc2UvY2EvY2FjZXJ0LnBlbSJ9.eyJhdHRlc3QiOiJDIiwiZGVzdCI6eyJ0biI6WyI"\
-                          "iXX0sImlhdCI6MTYwMjA1NTc0Miwib3JpZyI6eyJ0biI6IiJ9LCJvcmlnaWQiOiJjOTlkOWU3Zi1kMWI"\
-                          "zLTRjOTItYjMzMy1lNWU1ZWZmMDNhZjEifQ.lj2311mNk23vinNsceeWNvVtElsuvEVCHO_hpT8eUOkP"\
-                          "iy01PD85pFxKfPcVb0BolCZOlXsBsncXt3lNvcsW7w;info=<https://curl.haxx.se/ca/cacert.pem>;alg=ES256;ppt=shaken");
+    std::string identity_value(
+        "eyJhbGciOiJFUzI1NiIsInBwdCI6InNoYWtlbiIsInR5cCI6InBhc3Nwb3J0IiwieDV1IjoiaHR0cHM6"
+        "Ly9jdXJsLmhheHguc2UvY2EvY2FjZXJ0LnBlbSJ9.eyJhdHRlc3QiOiJDIiwiZGVzdCI6eyJ0biI6WyI"
+        "iXX0sImlhdCI6MTYwMjA1NTc0Miwib3JpZyI6eyJ0biI6IiJ9LCJvcmlnaWQiOiJjOTlkOWU3Zi1kMWI"
+        "zLTRjOTItYjMzMy1lNWU1ZWZmMDNhZjEifQ.lj2311mNk23vinNsceeWNvVtElsuvEVCHO_hpT8eUOkP"
+        "iy01PD85pFxKfPcVb0BolCZOlXsBsncXt3lNvcsW7w"
+        ";info=<https://curl.haxx.se/ca/cacert.pem>;alg=ES256;ppt=shaken");
     AmIdentity identity;
     EXPECT_TRUE(ret = identity.parse(identity_value));
     if(!ret) {
@@ -34,7 +36,8 @@ TEST(Common, DISABLED_ParseAndVerifyIdentityTask)
     }
 
     //ppt:div
-    identity_value = "eyJhbGciOiJFUzI1NiIsInBwdCI6ImRpdiIsInR5cCI6InBhc3Nwb3J0I"
+    identity_value =
+        "eyJhbGciOiJFUzI1NiIsInBwdCI6ImRpdiIsInR5cCI6InBhc3Nwb3J0I"
         "iwieDV1IjoiaHR0cHM6Ly93d3cuZXhhbXBsZS5jb20vY2VydC5jZXIifQ.eyJkZXN0"
         "Ijp7InRuIjpbIjEyMTU1NTUxMjE0Il19LCJkaXYiOnsidG4iOiIxMjE1NTU1NTEyMT"
         "MifSwiaWF0IjoxNDQzMjA4MzQ1LCJvcmlnIjp7InRuIjoiMTIxNTU1NTEyMTIifX0."
@@ -47,11 +50,12 @@ TEST(Common, DISABLED_ParseAndVerifyIdentityTask)
         ERROR("%d: %s",last_errcode, last_error.data());
     }
 
-    identity_value = "o=<https://cert.stir.t-mobile.com/cc6bc455afa94a1c63b057624c048db030ad80e061e609e598877470b317443f>;alg=ES256;ppt=\"shaken\"";
+    identity_value =
+        "o=<https://cert.stir.t-mobile.com/cc6bc455afa94a1c63b057624c048db030ad80e061e609e598877470b317443f>;alg=ES256;ppt=\"shaken\"";
     EXPECT_FALSE(ret = identity.parse(identity_value));
 }
 
-TEST(Common, DISABLED_SignAndVerifyIdentityTask)
+TEST(Common, SignAndVerifyIdentityTask)
 {
     bool ret;
     int last_errcode;
@@ -72,7 +76,7 @@ TEST(Common, DISABLED_SignAndVerifyIdentityTask)
     }
 }
 
-TEST(Common, DISABLED_ParseErrorIdentityTask)
+TEST(Common, ParseErrorIdentityTask)
 {
     AmIdentity identity;
     std::string identity_value, last_error;
