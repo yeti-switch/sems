@@ -359,6 +359,10 @@ bool AmIdentity::parse(const std::string& value)
     last_errcode = 0;
     last_errstr.clear();
 
+    jwt_header.clear();
+    jwt_payload.clear();
+    signature.clear();
+
     if(value[0] == '.' && value[1] == '.') {
         last_errcode = ERR_COMPACT_FORM;
         last_errstr = "Compact form is not supported";
