@@ -29,6 +29,7 @@
 #define AmEvent_h
 
 #include "AmArg.h"
+#include "ObjectsCounter.h"
 
 #include <string>
 using std::string;
@@ -41,6 +42,9 @@ using std::string;
 
 /** \brief base event class */
 struct AmEvent
+#ifdef OBJECTS_COUNTER
+  : ObjCounter(AmEvent)
+#endif
 {
   int event_id;
   bool processed;

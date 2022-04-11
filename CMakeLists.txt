@@ -70,6 +70,7 @@ OPTION(SEMS_USE_IPV6          "Build with IPv6 support" OFF)
 OPTION(SEMS_USE_AMARG_STAT    "Use AmArg statistic" OFF)
 OPTION(USE_SYSTEMD            "Use systemd instead of SysV" ON)
 OPTION(USE_ADDRESS_SANITIZER  "Use address sanitizer gcc option" OFF)
+OPTION(USE_OBJECTS_COUNTERS   "Use objects counters in AmStatistics" ON)
 #OPTION(MAX_RTP_SESSIONS:int   "How many rtp sessions SEMS will handle simultaneously? (default 2048)" 2048)
 
 SET(MAX_RTP_SESSIONS 8192)
@@ -309,6 +310,10 @@ IF(USE_ADDRESS_SANITIZER)
     SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -fsanitize=address")
     ADD_DEFINITIONS(-DVALGRIND)
 ENDIF(USE_ADDRESS_SANITIZER)
+
+IF(USE_OBJECTS_COUNTERS)
+    ADD_DEFINITIONS(-DOBJECTS_COUNTER)
+ENDIF(USE_OBJECTS_COUNTERS)
 
 #ADD_DEFINITIONS("-D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
 ADD_DEFINITIONS("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/= -D__FILENAME__=__FILE__")

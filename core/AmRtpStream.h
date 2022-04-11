@@ -38,6 +38,7 @@
 #include "sip/ssl_settings.h"
 #include "AmMediaTransport.h"
 #include "AmZrtpConnection.h"
+#include "ObjectsCounter.h"
 
 #include <netinet/in.h>
 
@@ -198,6 +199,9 @@ class AmRtpStream
 #ifdef WITH_ZRTP
   , public ZrtpContextSubscriber
 #endif/*WITH_ZRTP*/
+#ifdef OBJECTS_COUNTER
+  , ObjCounter(AmRtpStream)
+#endif
 {
   protected:
 

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "AmArg.h"
+#include "ObjectsCounter.h"
 
 #include <string>
 using std::string;
@@ -13,6 +14,9 @@ class AmMediaTransport;
 class AmRtpPacket;
 
 class AmStreamConnection
+#ifdef OBJECTS_COUNTER
+  : ObjCounter(AmStreamConnection)
+#endif
 {
 public:
     enum ConnectionError {

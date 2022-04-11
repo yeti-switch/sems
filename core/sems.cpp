@@ -39,6 +39,7 @@
 #include "RtspClient.h"
 #include "CoreRpc.h"
 #include "AmSrtpConnection.h"
+#include "ObjectsCounter.h"
 //#include "sip/async_file_writer.h"
 
 #include "SipCtrlInterface.h"
@@ -570,6 +571,7 @@ int main(int argc, char* argv[])
   Botan::mlock_allocator::instance();
 
   init_logging(SEMS_APP_NAME);
+  init_core_objects_counters();
 
   /* apply command-line options */
   if(!apply_args(args)){

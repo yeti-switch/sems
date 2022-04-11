@@ -75,6 +75,9 @@ class AmSession :
   public AmSipDialogEventHandler,
   public AmMediaSession,
   public AmDtmfSink
+#ifdef OBJECTS_COUNTER
+  , ObjCounter(AmSession)
+#endif
 {
   AmMutex      audio_mut;
 

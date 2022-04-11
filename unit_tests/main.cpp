@@ -8,6 +8,7 @@
 #include "AmSessionProcessor.h"
 #include "AmEventDispatcher.h"
 #include "CoreRpc.h"
+#include "ObjectsCounter.h"
 
 class TesterLogFac : public AmLoggingFacility {
     static TesterLogFac *_instance;
@@ -51,6 +52,8 @@ int ParseCommandLine(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+    init_core_objects_counters();
+
     TesterLogFac& testlog = TesterLogFac::instance();
 	register_log_hook(&testlog);
     AmPlugIn::registerLoggingFacility(testlog.getName(), &testlog);

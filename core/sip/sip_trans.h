@@ -36,6 +36,7 @@
 #include <sys/socket.h>
 
 #include "msg_sensor.h"
+#include "ObjectsCounter.h"
 
 #include <list>
 using std::list;
@@ -107,6 +108,9 @@ public:
 };
 
 class sip_trans
+#ifdef OBJECTS_COUNTER
+  : ObjectsCounter<sip_trans>
+#endif
 {
     trans_timer* timers[SIP_TRANS_TIMERS];
 

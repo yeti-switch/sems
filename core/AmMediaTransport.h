@@ -24,8 +24,12 @@ class AmRtpPacket;
 #define RTCP_TRANSPORT      2
 #define FAX_TRANSPORT       3
 
-class AmMediaTransport : public AmObject,
-                       public AmRtpSession
+class AmMediaTransport
+  : public AmObject,
+    public AmRtpSession
+#ifdef OBJECTS_COUNTER
+    , ObjCounter(AmMediaTransport)
+#endif
 {
 public:
     enum Mode {
