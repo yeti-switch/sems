@@ -1,3 +1,11 @@
+sems (1.74.0) stable; urgency=low
+  * add 'sems-jwt-tool' to work with STIR/SHAKEN headers
+  * add sems-dev-tools package
+  * fix and enable identity tests
+  * update cJSON version
+  * add objects counter
+ -- Michael Furmur <furmur@pm.me>  Tue, 12 Apr 2022 20:43:38 +0300
+
 sems (1.73.3) stable; urgency=low
   * fix reparsing by UACAuthDigestChallenge::parse()
   * AmB2BMedia: fix segfault on stream leak error messag
