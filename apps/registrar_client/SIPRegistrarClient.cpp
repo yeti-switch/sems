@@ -1004,7 +1004,7 @@ struct RegistrationMetricGroup
     {
         for (size_t i = 0; i < data.size(); i++) {
             auto &reg = data[i];
-            callback(reg.values[idx], 0, reg.labels);
+            callback(reg.values[idx], /*0,*/ reg.labels);
         }
     }
 };

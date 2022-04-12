@@ -2,7 +2,6 @@
 
 #include "singleton.h"
 #include "atomic_types.h"
-#include "sip/wheeltimer.h"
 
 #include <vector>
 #include <map>
@@ -31,7 +30,7 @@ class StatCounterInterface
   public:
     using iterate_func_type = std::function<
         void (unsigned long long value,
-              unsigned long long timestamp,
+              /*unsigned long long timestamp,*/
               const map<string, string>&) >;
 
     StatCounterInterface() = default;
@@ -47,7 +46,7 @@ class AtomicCounter
     public StatCounterInterface,
     public StatLabelsContainer<AtomicCounter>
 {
-    atomic_int64 timestamp;
+    //atomic_int64 timestamp;
   public:
     AtomicCounter();
     AtomicCounter(AtomicCounter const &) = delete;
@@ -56,9 +55,9 @@ class AtomicCounter
 
     AtomicCounter &addLabel(const string& name, const string& value) override;
     void iterate(iterate_func_type callback) override;
-    unsigned long long inc(unsigned long long add=1);
+    /*unsigned long long inc(unsigned long long add=1);
     unsigned long long dec(unsigned long long sub=1);
-    void set(unsigned long long value);
+    void set(unsigned long long value);*/
 };
 
 class FunctionCounter
@@ -115,7 +114,7 @@ class StatCountersGroupsInterface
 
     using iterate_counters_callback_type =
         std::function<void (unsigned long long value,
-                            unsigned long long timestamp,
+                            /*unsigned long long timestamp,*/
                             const map<string, string>&)>;
   private:
     Type type_;

@@ -515,7 +515,7 @@ class GroupsContainerSelfStatm
 
         void iterate_counters(iterate_counters_callback_type callback) override
         {
-            callback(value, 0, labels);
+            callback(value, /*0,*/ labels);
         }
     };
     Group vmsize_group;

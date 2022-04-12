@@ -7,7 +7,7 @@ StatCounterInterface::~StatCounterInterface()
 
 AtomicCounter::AtomicCounter()
 {
-    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    //timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
 }
 
 AtomicCounter& AtomicCounter::addLabel(const string& name, const string& value)
@@ -18,26 +18,26 @@ AtomicCounter& AtomicCounter::addLabel(const string& name, const string& value)
 
 void AtomicCounter::iterate(iterate_func_type callback)
 {
-    callback(atomic_int64::get(), timestamp.get(), getLabels());
+    callback(atomic_int64::get(), /*timestamp.get(),*/ getLabels());
 }
 
-unsigned long long AtomicCounter::inc(unsigned long long add)
+/*unsigned long long AtomicCounter::inc(unsigned long long add)
 {
-    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    //timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
     return atomic_int64::inc(add);
 }
 
 unsigned long long AtomicCounter::dec(unsigned long long sub)
 {
-    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    //timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
     return atomic_int64::dec(sub);
 }
 
 void AtomicCounter::set(unsigned long long value)
 {
-    timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
+    //timestamp.set(wheeltimer::instance()->unix_ms_clock.get());
     return atomic_int64::set(value);
-}
+}*/
 
 FunctionCounter& FunctionCounter::addLabel(const string& name, const string& value)
 {
@@ -47,10 +47,10 @@ FunctionCounter& FunctionCounter::addLabel(const string& name, const string& val
 
 void FunctionCounter::iterate(
     std::function<void(unsigned long long value,
-                       unsigned long long timestamp,
+                       /*unsigned long long timestamp,*/
                        const map<string, string>&)> callback)
 {
-    callback(func_(), 0, getLabels());
+    callback(func_(), /*0,*/ getLabels());
 }
 
 void FunctionGroupCounter::iterate(iterate_func_type callback)

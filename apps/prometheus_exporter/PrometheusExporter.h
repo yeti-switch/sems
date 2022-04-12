@@ -20,8 +20,8 @@ class PrometheusExporter
     string ip;
     uint16_t port;
     string prefix;
-    bool omit_now_timestamp;
-    bool omit_update_timestamp;
+    //bool omit_now_timestamp;
+    //bool omit_update_timestamp;
     trsp_acl acl;
 
     struct event_base          *ev_base;

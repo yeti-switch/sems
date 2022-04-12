@@ -18,12 +18,12 @@ void EventTypeStats::update(timeval &event_consumed_time)
 
 void EventTypeStats::iterate_count(StatCounterInterface::iterate_func_type f)
 {
-    f(count,0,labels);
+    f(count,/*0,*/labels);
 }
 
 void EventTypeStats::iterate_time(StatCounterInterface::iterate_func_type f)
 {
-    f(consumed_time.tv_sec*1000 + consumed_time.tv_usec/1000, 0, labels);
+    f(consumed_time.tv_sec*1000 + consumed_time.tv_usec/1000, /*0,*/ labels);
 }
 
 

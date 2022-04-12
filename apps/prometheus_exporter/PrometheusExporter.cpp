@@ -1,6 +1,7 @@
 #include "PrometheusExporter.h"
 #include "prometheus_exporter_cfg.h"
 #include "AmStatistics.h"
+#include "sip/wheeltimer.h"
 
 #define MOD_NAME "prometheus_exporter"
 
@@ -168,9 +169,9 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
                       "Content-Type","text/plain; version=0.0.4");
 
     evbuffer *buf = evbuffer_new();
-    auto now = wheeltimer::instance()->unix_ms_clock.get();
+    //auto now = wheeltimer::instance()->unix_ms_clock.get();
 
-    statistics::instance()->iterate_groups([this, &now, buf](const std::string &name, StatCountersGroupsInterface& group)
+    statistics::instance()->iterate_groups([this, /*&now,*/ buf](const std::string &name, StatCountersGroupsInterface& group)
     {
         auto type = StatCountersGroupsInterface::type2str(group.getType());
 
@@ -179,25 +180,25 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
             evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.data(), group.getHelp().data());
         }
 
-        group.iterate_counters([this, &name, &now, buf](
+        group.iterate_counters([this, &name, /*&now,*/ buf](
             unsigned long long value,
-            unsigned long long timet,
+            /*unsigned long long timet,*/
             const map<string, string>& counter_labels)
         {
-            auto &timestamp = timet ? timet : now;
-            bool &omit_timestamp = timet ? omit_update_timestamp : omit_now_timestamp;
+            //auto &timestamp = timet ? timet : now;
+            //bool &omit_timestamp = timet ? omit_update_timestamp : omit_now_timestamp;
             auto &common_labels = statistics::instance()->getLabels();
 
             if(common_labels.empty() && counter_labels.empty()) {
-                if(omit_timestamp) {
+                //if(omit_timestamp) {
                     evbuffer_add_printf(buf, "%s_%s %llu\n",
                         prefix.c_str(), name.c_str(),
                         value);
-                } else {
+                /*} else {
                     evbuffer_add_printf(buf, "%s_%s %llu %llu\n",
                         prefix.c_str(), name.c_str(),
                         value, timestamp);
-                }
+                }*/
             } else {
                 evbuffer_add_printf(buf, "%s_%s{",
                     prefix.c_str(), name.c_str());
@@ -208,13 +209,13 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
                 for(const auto &l : counter_labels)
                     serialize_label(buf,l,begin);
 
-                if(omit_timestamp) {
+                //if(omit_timestamp) {
                     evbuffer_add_printf(buf, "} %llu\n",
                         value);
-                } else {
+                /*} else {
                     evbuffer_add_printf(buf, "} %llu %llu\n",
                         value, timestamp);
-                }
+                }*/
             }
 
         });
@@ -256,8 +257,8 @@ int PrometheusExporter::configure(const string& config)
     ip = cfg_getstr(cfg, PARAM_ADDRESS);
     port = static_cast<decltype(port)>(cfg_getint(cfg, PARAM_PORT));
     prefix = cfg_getstr(cfg, PARAM_PREFIX);
-    omit_now_timestamp = cfg_getbool(cfg, PARAM_OMIT_NOW_TIMESTAMP);
-    omit_update_timestamp = cfg_getbool(cfg, PARAM_OMIT_UPDATE_TIMESTAMP);
+    //omit_now_timestamp = cfg_getbool(cfg, PARAM_OMIT_NOW_TIMESTAMP);
+    //omit_update_timestamp = cfg_getbool(cfg, PARAM_OMIT_UPDATE_TIMESTAMP);
     if(cfg_size(cfg, SECTION_ACL)) {
         cfg_t* cfg_acl = cfg_getsec(cfg, SECTION_ACL);
         if(readAcl(cfg_acl)) return -1;
