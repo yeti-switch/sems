@@ -12,7 +12,9 @@ void init_core_objects_counters()
     ObjCounterInit(AmStreamConnection);
 
     ObjCounterInit(AmSession);
+    ObjCounterInit(AmEvent);
 
     ObjCounterInit(sip_trans);
-    ObjCounterInit(AmEvent);
+    ObjCounterInit(dns_base_entry);
+    ObjCounterInit(base_timer);
 }

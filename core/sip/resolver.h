@@ -36,6 +36,7 @@
 #include "parse_next_hop.h"
 
 #include "AmArg.h"
+#include "ObjectsCounter.h"
 
 #include <string>
 #include <vector>
@@ -76,6 +77,9 @@ dns_priority string_to_priority(const string& priority);
 struct dns_handle;
 
 struct dns_base_entry
+#ifdef OBJECTS_COUNTER
+  : ObjCounter(dns_base_entry)
+#endif
 {
     u_int64_t expire;
 

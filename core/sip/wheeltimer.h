@@ -31,6 +31,7 @@
 #define _wheeltimer_h_
 
 #include "../AmThread.h"
+#include "../ObjectsCounter.h"
 #include <sys/types.h>
 #include <deque>
 
@@ -46,6 +47,9 @@
 #define WHEELS 4
 
 class base_timer
+#ifdef OBJECTS_COUNTER
+  : ObjCounter(base_timer)
+#endif
 {
 public:
     base_timer* next;
