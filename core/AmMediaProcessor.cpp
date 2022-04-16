@@ -129,10 +129,12 @@ void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
         return;
     }
 
-    s->setMediaCallGroup(callgroup);
+    s->setMediaCallGroup(
+        callgroup.size() ?
+            callgroup : AmSession::getNewId());
 
     // callgroup already in a thread?
-    auto it = callgroups.find(callgroup);
+    auto it = callgroups.find(s->getMediaCallGroup());
     if(it != callgroups.end()) {
         //yes, use it
         sched_thread = it->second.thread_id;
@@ -150,7 +152,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
         }
 
         // create callgroup->thread mapping
-        callgroups.try_emplace(callgroup, sched_thread, s);
+        callgroups.try_emplace(s->getMediaCallGroup(), sched_thread, s);
     }
 
     group_mut.unlock();
@@ -186,9 +188,12 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
         return;
     }
 
-    s->setMediaCallGroup(callgroup);
+    s->setMediaCallGroup(
+        callgroup.size() ?
+            callgroup : AmSession::getNewId());
+
     // create callgroup->thread mapping and join callgroup
-    callgroups.try_emplace(callgroup, sched_thread, s);
+    callgroups.try_emplace(s->getMediaCallGroup(), sched_thread, s);
 
     group_mut.unlock();
 
