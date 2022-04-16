@@ -57,9 +57,17 @@ class AmMediaSession
   private:
     AmCondition<bool> processing_media;
 
+    /* this field is managed by AmMediaProcessor
+     * and guarded by AmMediaProcessor::group_mut */
+    string media_session_callgroup;
+
   public:
     AmMediaSession(): processing_media(false) { }
     virtual ~AmMediaSession() { }
+
+    void setMediaCallGroup(const std::string &id) { media_session_callgroup = id; }
+    void clearMediaCallGroup() { media_session_callgroup.clear(); }
+    const string &getMediaCallGroup() { return media_session_callgroup; }
 
     /** Read from all media streams.
      *
@@ -226,17 +234,24 @@ class AmMediaProcessor
 {
   static AmMediaProcessor* _instance;
 
-  unsigned int num_threads; 
+  unsigned int num_threads;
   AmMediaProcessorThread**  threads;
-  
-  std::map<string, unsigned int> callgroup2thread;
-  std::multimap<string, AmMediaSession*> callgroupmembers;
-  std::map<AmMediaSession*, string> session2callgroup;
+
+  struct callgroup_t {
+      std::set<AmMediaSession *> members;
+      unsigned int thread_id;
+
+      callgroup_t(unsigned int thread_id, AmMediaSession* s)
+        : thread_id(thread_id),
+          members({s})
+      {}
+  };
+  std::unordered_map<string, callgroup_t> callgroups;
   AmMutex group_mut;
 
   AmMediaProcessor();
   ~AmMediaProcessor();
-	
+
   void removeFromProcessor(AmMediaSession* s, unsigned int r_type);
 public:
   /** 

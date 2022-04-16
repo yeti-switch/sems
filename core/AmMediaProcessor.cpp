@@ -37,6 +37,8 @@
 #include <time.h>
 #endif
 
+#define CALLGROUPS_SIZE_ESTIMATE 1000
+
 /** \brief Request event to the MediaProcessor (remove,...) */
 struct SchedRequest
   : public AmEvent
@@ -75,7 +77,10 @@ AmMediaProcessor* AmMediaProcessor::_instance = nullptr;
 AmMediaProcessor::AmMediaProcessor()
   : num_threads(0),
     threads(nullptr)
-{}
+{
+    callgroups.reserve(AmConfig.session_limit ?
+        AmConfig.session_limit : CALLGROUPS_SIZE_ESTIMATE);
+}
 
 AmMediaProcessor::~AmMediaProcessor()
 {
@@ -106,35 +111,51 @@ AmMediaProcessor* AmMediaProcessor::instance()
 void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
 {
     DBG("AmMediaProcessor::addSession %p",to_void(s));
-    s->onMediaProcessingStarted();
 
     // evaluate correct scheduler
     unsigned int sched_thread = 0;
+
     group_mut.lock();
 
+    if(!s->getMediaCallGroup().empty()) {
+        if(callgroup == s->getMediaCallGroup()) {
+            DBG("attempt to re-add session %p with callgroup %s. ignore",
+                s, callgroup.data());
+        } else {
+            ERROR("attempt to add session %p to the callgroup %s. actual callgroup:%s. ignore",
+                s, callgroup.data(), s->getMediaCallGroup().data());
+        }
+        group_mut.unlock();
+        return;
+    }
+
+    s->setMediaCallGroup(callgroup);
+
     // callgroup already in a thread?
-    auto it = callgroup2thread.find(callgroup);
-    if (it != callgroup2thread.end()) {
-        // yes, use it
-        sched_thread = it->second;
+    auto it = callgroups.find(callgroup);
+    if(it != callgroups.end()) {
+        //yes, use it
+        sched_thread = it->second.thread_id;
+        //join the callgroup
+        it->second.members.emplace(s);
     } else {
         // no, find the thread with lowest load
         unsigned int lowest_load = threads[0]->getLoad();
         for (unsigned int i=1;i<num_threads;i++) {
             unsigned int lower = threads[i]->getLoad();
             if (lower < lowest_load) {
-                lowest_load = lower; sched_thread = i;
+                lowest_load = lower;
+                sched_thread = i;
             }
         }
+
         // create callgroup->thread mapping
-        callgroup2thread[callgroup] = sched_thread;
+        callgroups.try_emplace(callgroup, sched_thread, s);
     }
 
-    // join the callgroup
-    callgroupmembers.insert(make_pair(callgroup, s));
-    session2callgroup[s]=callgroup;
-
     group_mut.unlock();
+
+    s->onMediaProcessingStarted();
 
     // add the session to selected thread
     threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
@@ -144,7 +165,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
                                   const string &callgroup,
                                   unsigned int sched_thread)
 {
-    DBG("AmMediaProcessor::addSession %p",to_void(s));
+    DBG("AmMediaProcessor::addSession %p %u",to_void(s), sched_thread);
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::addSession: wrong sched_thread %u for session %p",
             sched_thread,to_void(s));
@@ -153,12 +174,21 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
 
     group_mut.lock();
 
-    // create callgroup->thread mapping
-    callgroup2thread[callgroup] = sched_thread;
+    if(!s->getMediaCallGroup().empty()) {
+        if(callgroup == s->getMediaCallGroup()) {
+            DBG("attempt to re-add session %p with callgroup %s. ignore",
+                s, callgroup.data());
+        } else {
+            ERROR("attempt to add session %p to the callgroup %s. actual callgroup:%s. ignore",
+                s, callgroup.data(), s->getMediaCallGroup().data());
+        }
+        group_mut.unlock();
+        return;
+    }
 
-    // join the callgroup
-    callgroupmembers.insert(make_pair(callgroup, s));
-    session2callgroup[s]=callgroup;
+    s->setMediaCallGroup(callgroup);
+    // create callgroup->thread mapping and join callgroup
+    callgroups.try_emplace(callgroup, sched_thread, s);
 
     group_mut.unlock();
 
@@ -196,30 +226,39 @@ void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_typ
     group_mut.lock();
 
     // get scheduler
-    string callgroup = session2callgroup[s];
-    unsigned int sched_thread = callgroup2thread[callgroup];
+    auto &callgroup = s->getMediaCallGroup();
+    if(callgroup.empty()) {
+        group_mut.unlock();
+        DBG("attempt to remove session %p without active media callgroup. ignore", s);
+        return;
+    }
+
+    auto it = callgroups.find(callgroup);
+    if(it == callgroups.end()) {
+        DBG("callgroup %s not found on session %p removal. clear it and ignore request",
+            callgroup.data(), s);
+        s->clearMediaCallGroup();
+        group_mut.unlock();
+        return;
+    }
+
+    auto &cg = it->second;
+    unsigned int sched_thread = cg.thread_id;
+
     DBG("  callgroup is '%s', thread %u\n", callgroup.c_str(), sched_thread);
 
     // erase callgroup membership entry
-    auto it = callgroupmembers.lower_bound(callgroup);
-    while ((it != callgroupmembers.end()) &&
-        (it != callgroupmembers.upper_bound(callgroup)))
-    {
-        if (it->second == s) {
-            callgroupmembers.erase(it);
-            break;
-        }
-        it++;
-    }
+    auto erased = cg.members.erase(s);
+    DBG("erased %ld entries by ptr %p", erased, s);
 
     // erase callgroup entry if empty
-    if (!callgroupmembers.count(callgroup)) {
-        callgroup2thread.erase(callgroup);
+    if(cg.members.empty()) {
         DBG("callgroup empty, erasing it.\n");
+        callgroups.erase(it);
     }
 
-    // erase session entry
-    session2callgroup.erase(s);
+    s->clearMediaCallGroup();
+
     group_mut.unlock();
 
     threads[sched_thread]->
@@ -273,11 +312,9 @@ void AmMediaProcessor::getInfo(AmArg& ret)
 {
     group_mut.lock();
     for (unsigned int i=0;i<num_threads;i++) {
-        AmArg l;
         AmMediaProcessorThread *t = threads[i];
         if(!t) continue;
-        t->getInfo(l);
-        ret.push(int2str(static_cast<unsigned int>(t->_pid)),l);
+        t->getInfo(ret[int2str(static_cast<unsigned int>(t->_pid))]);
     }
     group_mut.unlock();
 }
