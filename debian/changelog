@@ -1,3 +1,7 @@
+sems (1.75.0) stable; urgency=low
+  * AmMediaProcessor: threads mapping refactoring
+ -- Michael Furmur <furmur@pm.me>  Sat, 16 Apr 2022 19:52:49 +0300
+
 sems (1.74.0) stable; urgency=low
   * add 'sems-jwt-tool' to work with STIR/SHAKEN headers
   * add sems-dev-tools package
