@@ -192,8 +192,21 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
         callgroup.size() ?
             callgroup : AmSession::getNewId());
 
-    // create callgroup->thread mapping and join callgroup
-    callgroups.try_emplace(s->getMediaCallGroup(), sched_thread, s);
+    auto it = callgroups.find(s->getMediaCallGroup());
+    if(it != callgroups.end()) {
+        if(sched_thread != it->second.thread_id) {
+            ERROR("callgroup %s exists with different thread_id:%u "
+                  "(provided sched_thread:%u). ignore",
+                  s->getMediaCallGroup().data(),
+                  it->second.thread_id, sched_thread);
+            s->clearMediaCallGroup();
+            group_mut.unlock();
+            return;
+        }
+        it->second.members.emplace(s);
+    } else {
+        callgroups.try_emplace(s->getMediaCallGroup(), sched_thread, s);
+    }
 
     group_mut.unlock();
 
