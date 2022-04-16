@@ -1,3 +1,7 @@
+sems (1.75.1) stable; urgency=low
+  * AmMediaProcessor: fix addSession with empty callgroup
+ -- Michael Furmur <furmur@pm.me>  Sat, 16 Apr 2022 21:15:28 +0300
+
 sems (1.75.0) stable; urgency=low
   * AmMediaProcessor: threads mapping refactoring
  -- Michael Furmur <furmur@pm.me>  Sat, 16 Apr 2022 19:52:49 +0300
