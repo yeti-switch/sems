@@ -764,8 +764,8 @@ void HttpClient::update_resolve_list()
 
     for(auto& dst : destinations) {
         for(auto& url : dst.second.url) {
-            char* host;
-            char* port;
+            char* host = 0;
+            char* port = 0;
             dns_handle handle;
             sockaddr_storage sa;
 
@@ -774,8 +774,11 @@ void HttpClient::update_resolve_list()
             curl_url_get(curlu, CURLUPART_HOST, &host, 0);
             curl_url_get(curlu, CURLUPART_PORT, &port, 0);
 
-            if(resolver::instance()->resolve_name(host, &handle, &sa, Dualstack) <= 0)
+            if(resolver::instance()->resolve_name(host, &handle, &sa, Dualstack) <= 0) {
+                curl_free(host);
+                if(port) curl_free(port);
                 continue;
+            }
 
             if(!next_time || next_time > handle.get_expired()) {
                 next_time = handle.get_expired();
