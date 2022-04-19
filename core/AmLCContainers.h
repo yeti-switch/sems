@@ -1,5 +1,4 @@
-#ifndef AM_LC_CONTAINERS_H
-#define AM_LC_CONTAINERS_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -15,7 +14,7 @@
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 
-#include "bitops.h"
+#include "PortMap.h"
 
 #ifdef WITH_ZRTP
 extern "C" {
@@ -25,7 +24,7 @@ extern "C" {
 
 class IP_info
 {
-public:
+  public:
     IP_info()
     : type_ip(AT_NONE),
       net_if_idx(0),
@@ -265,54 +264,28 @@ public:
     virtual bool getNextRtpAddress(sockaddr_storage& ss) = 0;
     virtual void freeRtpAddress(const sockaddr_storage& ss) = 0;
     virtual void iterateUsedPorts(std::function<void(const std::string&, unsigned short, unsigned short)> cl) = 0;
-
-    class PortMap {
-    public:
-        PortMap() = delete;
-        PortMap(const PortMap &) = delete;
-        PortMap(PortMap &&) = delete;
-
-        PortMap(MEDIA_info& info_);
-
-        unsigned short getNextRtpPort();
-        void freeRtpPort(unsigned int port);
-        void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
-
-        /* initialize variables for RTP ports pool management and validate ports range
-        * returns 0 on success, 1 otherwise */
-        int prepare(const std::string &iface_name);
-
-        void copy_addr(sockaddr_storage& ss);
-        bool match_addr(const sockaddr_storage& ss);
-
-        void setAddress(const string &address_) { address = address_; }
-    private:
-        DECLARE_BITMAP_ALIGNED(ports_state, (USHRT_MAX+BYTES_PER_LONG+1));
-        unsigned long *ports_state_start_addr,
-                    *ports_state_end_addr;
-        std::atomic<unsigned long *> ports_state_current_addr;
-        unsigned short start_edge_bit_it,
-                    start_edge_bit_it_parity,
-                    end_edge_bit_it;
-        bool rtp_bit_parity;
-
-        AtomicCounter *opened_ports_counter;
-
-        MEDIA_info& info;
-        std::string address;
-        sockaddr_storage saddr;
-    };
 };
 
 class RTP_info : public MEDIA_info
 {
-public:
+  private:
+    std::list<PortMap> addresses;
+    bool single_address;
+
+  public:
     RTP_info()
       : MEDIA_info(RTP),
         srtp_enable(false),
         dtls_enable(false),
         zrtp_enable(false)
     {}
+    RTP_info(unsigned short low, unsigned short high)
+      : RTP_info()
+    {
+        low_port = low;
+        high_port = high;
+        addMediaAddress(std::string());
+    }
     RTP_info(const RTP_info& info) = delete;
     virtual ~RTP_info(){}
 
@@ -325,16 +298,13 @@ public:
         return 0;
     }
 
-    std::list<PortMap> addresses;
-    bool single_address;
-
     dtls_client_settings client_settings;
     dtls_server_settings server_settings;
     std::vector<CryptoProfile> profiles;
     bool srtp_enable;
     bool dtls_enable;
 
-    void addMediaAddress(std::string &address);
+    void addMediaAddress(const std::string &address);
     int prepare(const std::string &iface_name);
     bool getNextRtpAddress(sockaddr_storage& ss);
     void freeRtpAddress(const sockaddr_storage& ss);
@@ -411,7 +381,6 @@ class RTSP_info : public MEDIA_info
 public:
     RTSP_info()
       : MEDIA_info(RTSP)
-      , portmap(*this)
     {}
     RTSP_info(const RTSP_info& info) = delete;
     virtual ~RTSP_info(){}
@@ -544,5 +513,3 @@ struct SysIntf
     unsigned int flags;
     unsigned int mtu;
 };
-
-#endif/*AM_LC_CONTAINERS_H*/

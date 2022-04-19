@@ -10,12 +10,8 @@
 void freePortBordersTest(unsigned short low, unsigned short high)
 {
     std::set<unsigned short> rtp_ports, rtcp_ports;
-    RTP_info info;
 
-    info.low_port = low;
-    info.high_port = high;
-    info.addresses.emplace_back(info);
-    info.addresses.back().setAddress(info.getIP());
+    RTP_info info(low, high);
     GTEST_ASSERT_EQ(info.prepare("test"), 0);
 
     sockaddr_storage ss;
@@ -71,11 +67,7 @@ void freePortAvoidFreshlyFreedTest(unsigned short low, unsigned short high)
 {
     int port;
 
-    RTP_info info;
-    info.low_port = low;
-    info.high_port = high;
-    info.addresses.emplace_back(info);
-    info.addresses.back().setAddress(info.getIP());
+    RTP_info info(low, high);
     GTEST_ASSERT_EQ(info.prepare("test"), 0);
 
     sockaddr_storage ss;
@@ -102,11 +94,7 @@ TEST(Config, MediaFreePortAquireOrdering)
     int low = 64;
     int high = 255;
 
-    RTP_info info;
-    info.low_port = low;
-    info.high_port = high;
-    info.addresses.emplace_back(info);
-    info.addresses.back().setAddress(info.getIP());
+    RTP_info info(low, high);
     info.prepare("test");
 
     int start = low >> 6;
@@ -149,11 +137,7 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
     //int aquires_count = 50;
     int aquires_count = 500;
 
-    RTP_info port_map;
-    port_map.low_port = low;
-    port_map.high_port = high;
-    port_map.addresses.emplace_back(port_map);
-    port_map.addresses.back().setAddress(port_map.getIP());
+    RTP_info port_map(low, high);
     port_map.prepare("test");
 
     std::mutex m;
@@ -199,7 +183,7 @@ TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
     for(auto &ap : aquired_ports) {
         std::cout << "0x" << std::hex << ap.first << ": " << std::dec << ap.second << std::endl;
     }
-    DBG("distribution size: %zd (pool size: %ld)",
+    DBG("distribution size: %zd (pool size: %d)",
         ports_distribution.size(), (high-low+1)/2);
     for(auto &it : ports_distribution) {
         std::cout << it.first << ": " << it.second << std::endl;
