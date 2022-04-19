@@ -236,7 +236,11 @@ public:
  *    need it?
  */
 
-class AmB2BMedia: public AmMediaSession
+class AmB2BMedia
+  : public AmMediaSession
+#ifdef OBJECTS_COUNTER
+  , ObjCounter(AmB2BMedia)
+#endif
 {
   private:
     /* remembered both legs of the B2B call
