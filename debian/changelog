@@ -1,3 +1,9 @@
+sems (1.77.0) stable; urgency=low
+  * AmMediaTransport: close socket before release from the PortMap
+    (fixes racing with attempt to bind not closed socket)
+  * fix infinite loop in core.show.transport.used_ports when high_port is 65535
+ -- Michael Furmur <furmur@pm.me>  Tue, 19 Apr 2022 20:14:55 +0300
+
 sems (1.76.0) stable; urgency=low
   * fix memory leak in HttpClient::update_resolve_list()
   * add AmB2BMedia obj counter
