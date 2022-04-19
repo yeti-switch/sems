@@ -209,7 +209,7 @@ void MEDIA_info::PortMap::freeRtpPort(unsigned int port)
 
 void MEDIA_info::PortMap::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl)
 {
-    for(unsigned short port = info.low_port; port <= info.high_port; port+=2) {
+    for(unsigned int port = info.low_port; port <= info.high_port; port+=2) {
         if(constant_test_bit(port%BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]) == true) {
             cl(address, port, port+1);
         }
