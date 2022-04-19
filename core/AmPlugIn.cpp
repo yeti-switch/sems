@@ -152,10 +152,8 @@ AmPlugIn* AmPlugIn::instance()
 }
 
 void AmPlugIn::init() {
-  for (vector<string>::iterator it = 
-	 AmConfig.exclude_payloads.begin();
-       it != AmConfig.exclude_payloads.end();it++)
-    excluded_payloads.insert(*it);
+    for(const auto &p: AmConfig.exclude_payloads)
+        excluded_payloads.emplace(p);
 
     DBG("adding built-in codecs...\n");
 
