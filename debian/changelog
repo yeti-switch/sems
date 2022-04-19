@@ -1,3 +1,10 @@
+sems (1.76.0) stable; urgency=low
+  * fix memory leak in HttpClient::update_resolve_list()
+  * add AmB2BMedia obj counter
+  * AmB2BMedia: report non-empty streams container in destructor
+  * AmMediaProcessor: check for existent callgroup on adding to the specified thread
+ -- Michael Furmur <furmur@pm.me>  Tue, 19 Apr 2022 12:41:37 +0300
+
 sems (1.75.1) stable; urgency=low
   * AmMediaProcessor: fix addSession with empty callgroup
  -- Michael Furmur <furmur@pm.me>  Sat, 16 Apr 2022 21:15:28 +0300
