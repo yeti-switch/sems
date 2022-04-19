@@ -94,8 +94,8 @@ AmMediaTransport::~AmMediaTransport()
                 l_sd_ctx = -1;
             }
         }
-        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
         close(l_sd);
+        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
     }
 
     for(auto conn : connections) {
