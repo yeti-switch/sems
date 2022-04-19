@@ -447,6 +447,7 @@ int wss_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[] , size_t 
         ERROR("message is too big. drop connection. peer %s:%d",
               trsp->get_peer_ip().data(), trsp->get_peer_port());
     }
+    return 0;
 }
 
 void wss_input::pre_write()
