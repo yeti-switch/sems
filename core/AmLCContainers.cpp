@@ -17,6 +17,11 @@ MEDIA_info::~MEDIA_info()
 
 int MEDIA_info::prepare(const std::string& iface_name)
 {
+    if(low_port < 1) {
+        ERROR("%s: invalid port range: %hu-%hu. low_port should be greater than zero",
+              iface_name.data(),low_port,high_port);
+        return 1;
+    }
     if(low_port%2) {
         ERROR("%s: invalid port range: %hu-%hu. low_port should be even",
               iface_name.data(),low_port,high_port);
