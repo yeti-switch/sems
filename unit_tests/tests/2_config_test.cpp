@@ -7,17 +7,9 @@
 #include <mutex>
 #include <chrono>
 
-void testUsedPorts(RTP_info& info, const std::set<unsigned short> &ports)
-{
-    info.iterateUsedPorts([&ports](const std::string &addr, unsigned short rtp, unsigned short rtcp) {
-        GTEST_ASSERT_EQ(ports.count(rtp), 1);
-        GTEST_ASSERT_EQ(ports.count(rtcp), 1);
-    });
-}
-
 void freePortBordersTest(unsigned short low, unsigned short high)
 {
-    std::set<unsigned short> ports;
+    std::set<unsigned short> rtp_ports, rtcp_ports;
     RTP_info info;
 
     info.low_port = low;
@@ -28,22 +20,47 @@ void freePortBordersTest(unsigned short low, unsigned short high)
 
     sockaddr_storage ss;
     for(int i = low; i < high; i+=2) {
-        EXPECT_TRUE(info.getNextRtpAddress(ss));
+        fflush(stdout);
+        ASSERT_TRUE(info.getNextRtpAddress(ss));
         int port = am_get_port(&ss);
 
-        GTEST_ASSERT_NE(port, 0);
-        GTEST_ASSERT_EQ(ports.count(port), 0);  //check RTP port for uniqueness
-        GTEST_ASSERT_EQ(ports.count(port+1), 0); //check RTCP port for uniqueness
+        GTEST_ASSERT_EQ(rtp_ports.count(port), 0);  //check RTP port for uniqueness
+        GTEST_ASSERT_EQ(rtcp_ports.count(port+1), 0); //check RTCP port for uniqueness
 
-        ports.emplace(port);
-        ports.emplace(port+1);
+        rtp_ports.emplace(port);
+        rtcp_ports.emplace(port+1);
     }
 
-    testUsedPorts(info, ports);
+    //check all ports are considered used
+    info.iterateUsedPorts([&rtp_ports,&rtcp_ports](
+        const std::string &addr,
+        unsigned short rtp, unsigned short rtcp)
+    {
+        GTEST_ASSERT_EQ(rtp_ports.count(rtp), 1);
+        GTEST_ASSERT_EQ(rtcp_ports.count(rtcp), 1);
+    });
+
+    //free ports
+    for(auto p: rtp_ports) {
+        am_set_port(&ss, p);
+        info.freeRtpAddress(ss);
+    }
+
+    //check all ports are free
+    bool has_used_ports = false;
+    info.iterateUsedPorts([&has_used_ports](
+        const std::string &addr,
+        unsigned short rtp, unsigned short rtcp)
+    {
+        has_used_ports = true;
+    });
+
+    ASSERT_FALSE(has_used_ports);
 }
 
 TEST(Config, MediaFreePortBorders)
 {
+    freePortBordersTest(2, -1);
     freePortBordersTest(27514, 32767);
     freePortBordersTest(27520, 32767);
     freePortBordersTest(27520, 32749);
