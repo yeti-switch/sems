@@ -670,6 +670,10 @@ AmB2BMedia::AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b):
 AmB2BMedia::~AmB2BMedia()
 {
     DBG("~AmB2BMedia[%p]()",static_cast<void *>(this));
+    if(streams.size()) {
+        ERROR("~AmB2BMedia[%p] streams size: %zu",
+              static_cast<void *>(this), streams.size());
+    }
     if (logger) dec_ref(logger);
     if (asensor) dec_ref(asensor);
     if (bsensor) dec_ref(bsensor);
