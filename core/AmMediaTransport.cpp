@@ -225,16 +225,19 @@ int AmMediaTransport::getLocalSocket(bool reinit)
 {
     CLASS_DBG("> getLocalSocket(%d)", reinit);
 
-    if (l_sd && !reinit) {
-        CLASS_DBG("< return existent l_sd:%d", l_sd);
-        return l_sd;
-    } else if(l_sd && reinit) {
-        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
-        close(l_sd);
-        l_sd = 0;
+    if(l_sd) {
+        if(!reinit) {
+            CLASS_DBG("< return existent l_sd:%d", l_sd);
+            return l_sd;
+        } else {
+            if(am_get_port(&l_saddr))
+                AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
+            close(l_sd);
+            l_sd = 0;
+        }
     }
 
-    int sd=0;
+    int sd = 0;
     if((sd = socket(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == AT_V4 ? AF_INET : AF_INET6,
                     SOCK_DGRAM,0)) == -1) {
         CLASS_ERROR("< %s\n",strerror(errno));
