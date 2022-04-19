@@ -357,22 +357,26 @@ int AmRtpStream::getLocalRtcpPort()
 
 void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rtcp)
 {
+    assert(tr_rtp);
+
     if(tr_rtp->getLocalPort() && tr_rtcp && tr_rtcp->getLocalPort())
         return;
 
+    sockaddr_storage l_rtcp_addr, l_rtp_addr;
     int retry = BIND_ATTEMPTS_COUNT;
-
-    assert(tr_rtp);
-
     for(;retry; --retry) {
 
-        if (!tr_rtp->getLocalSocket() || (tr_rtcp && !tr_rtcp->getLocalSocket()))
+        if (!tr_rtp->getLocalSocket() ||
+            (tr_rtcp && !tr_rtcp->getLocalSocket()))
+        {
             return;
+        }
 
-
-        sockaddr_storage l_rtcp_addr, l_rtp_addr;
-        if(!AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
-                                          tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr)) {
+        if(!AmConfig.getMediaProtoInfo(
+            tr_rtp->getLocalIf(),
+            tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr))
+        {
+            //no free ports in PortMap. give up
             retry = 0;
             break;
         }
@@ -380,14 +384,25 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
         if(tr_rtp != tr_rtcp && tr_rtcp) {
             memcpy(&l_rtcp_addr, &l_rtp_addr, sizeof(sockaddr_storage));
             am_set_port(&l_rtcp_addr,am_get_port(&l_rtp_addr)+1);
-            if(bind(tr_rtcp->getLocalSocket(),(const struct sockaddr*)&l_rtcp_addr,SA_len(&l_rtcp_addr))) {
+
+            //bind RTCP port
+            if(bind(
+                tr_rtcp->getLocalSocket(),
+                (const struct sockaddr*)&l_rtcp_addr,
+                SA_len(&l_rtcp_addr)))
+            {
                 CLASS_ERROR("failed to bind port %d for RTCP: %s\n",
                           am_get_port(&l_rtp_addr)+1, strerror(errno));
                 goto try_another_port;
             }
         }
 
-        if(bind(tr_rtp->getLocalSocket(),(const struct sockaddr*)&l_rtp_addr,SA_len(&l_rtp_addr))) {
+        //bind RTP port
+        if(bind(
+            tr_rtp->getLocalSocket(),
+            (const struct sockaddr*)&l_rtp_addr,
+            SA_len(&l_rtp_addr)))
+        {
             CLASS_ERROR("failed to bind port %hu for RTP: %s\n",
                         am_get_port(&l_rtp_addr), strerror(errno));
             goto try_another_port;
@@ -402,8 +417,9 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
         break;
 
 try_another_port:
-        AmConfig.getMediaProtoInfo(tr_rtp->getLocalIf(),
-                                   tr_rtp->getLocalProtoId()).freeRtpAddress(l_rtp_addr);
+        AmConfig.getMediaProtoInfo(
+            tr_rtp->getLocalIf(),
+            tr_rtp->getLocalProtoId()).freeRtpAddress(l_rtp_addr);
 
         tr_rtp->getLocalSocket(true);
         if(tr_rtp != tr_rtcp && tr_rtcp) {
