@@ -252,7 +252,7 @@ class AmMediaProcessor
   AmMediaProcessor();
   ~AmMediaProcessor();
 
-  void removeFromProcessor(AmMediaSession* s, unsigned int r_type);
+  bool removeFromProcessor(AmMediaSession* s, unsigned int r_type);
 public:
   /** 
    * InsertSession     : inserts the session to the processor
@@ -266,18 +266,17 @@ public:
 
   void init();
   /** Add session s to processor */
-  void addSession(AmMediaSession* s, const string& callgroup);
+  bool addSession(AmMediaSession* s, const string& callgroup);
   /** Add session s to sched_thread processor */
-  void addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
+  bool addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
   /** Remove session s from processor */
-  void removeSession(AmMediaSession* s);
+  bool removeSession(AmMediaSession* s);
   /** Remove session s from processor and clear its audio */
-  void clearSession(AmMediaSession* s);
+  bool clearSession(AmMediaSession* s);
   /** Remove session s from processor but don't signal that to the session */
-  void softRemoveSession(AmMediaSession* s);
+  bool softRemoveSession(AmMediaSession* s);
   /** Change the callgroup of a session (use with caution) */
-  void changeCallgroup(AmMediaSession* s, 
-		       const string& new_callgroup);
+  bool changeCallgroup(AmMediaSession* s, const string& new_callgroup);
 
   void addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
   void removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);

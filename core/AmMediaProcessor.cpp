@@ -108,7 +108,7 @@ AmMediaProcessor* AmMediaProcessor::instance()
     return _instance;
 }
 
-void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
+bool AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
 {
     DBG("AmMediaProcessor::addSession %p",to_void(s));
 
@@ -126,7 +126,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
                 s, callgroup.data(), s->getMediaCallGroup().data());
         }
         group_mut.unlock();
-        return;
+        return false;
     }
 
     s->setMediaCallGroup(
@@ -161,9 +161,11 @@ void AmMediaProcessor::addSession(AmMediaSession* s, const string& callgroup)
 
     // add the session to selected thread
     threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
+
+    return true;
 }
 
-void AmMediaProcessor::addSession(AmMediaSession* s,
+bool AmMediaProcessor::addSession(AmMediaSession* s,
                                   const string &callgroup,
                                   unsigned int sched_thread)
 {
@@ -171,7 +173,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
     if(sched_thread >= num_threads) {
         ERROR("AmMediaProcessor::addSession: wrong sched_thread %u for session %p",
             sched_thread,to_void(s));
-        return;
+        return false;
     }
 
     group_mut.lock();
@@ -185,7 +187,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
                 s, callgroup.data(), s->getMediaCallGroup().data());
         }
         group_mut.unlock();
-        return;
+        return false;
     }
 
     s->setMediaCallGroup(
@@ -201,7 +203,7 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
                   it->second.thread_id, sched_thread);
             s->clearMediaCallGroup();
             group_mut.unlock();
-            return;
+            return false;
         }
         it->second.members.emplace(s);
     } else {
@@ -211,33 +213,35 @@ void AmMediaProcessor::addSession(AmMediaSession* s,
     group_mut.unlock();
 
     threads[sched_thread]->postRequest(new SchedRequest(InsertSession,s));
+
+    return true;
 }
 
-void AmMediaProcessor::clearSession(AmMediaSession* s)
+bool AmMediaProcessor::clearSession(AmMediaSession* s)
 {
-    removeFromProcessor(s, ClearSession);
+    return removeFromProcessor(s, ClearSession);
 }
 
-void AmMediaProcessor::removeSession(AmMediaSession* s)
+bool AmMediaProcessor::removeSession(AmMediaSession* s)
 {
-    removeFromProcessor(s, RemoveSession);
+    return removeFromProcessor(s, RemoveSession);
 }
 
-void AmMediaProcessor::softRemoveSession(AmMediaSession* s)
+bool AmMediaProcessor::softRemoveSession(AmMediaSession* s)
 {
-    removeFromProcessor(s, SoftRemoveSession);
+    return removeFromProcessor(s, SoftRemoveSession);
 }
 
 /* FIXME: implement Call Group ts offsets for soft changing of 
     call groups
 */
-void AmMediaProcessor::changeCallgroup(AmMediaSession* s, const string& new_callgroup)
+bool AmMediaProcessor::changeCallgroup(AmMediaSession* s, const string& new_callgroup)
 {
     removeFromProcessor(s, SoftRemoveSession);
-    addSession(s, new_callgroup);
+    return addSession(s, new_callgroup);
 }
 
-void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_type)
+bool AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_type)
 {
     DBG("AmMediaProcessor::removeSession %p\n",to_void(s));
 
@@ -248,7 +252,7 @@ void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_typ
     if(callgroup.empty()) {
         group_mut.unlock();
         DBG("attempt to remove session %p without active media callgroup. ignore", s);
-        return;
+        return false;
     }
 
     auto it = callgroups.find(callgroup);
@@ -257,7 +261,7 @@ void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_typ
             callgroup.data(), s);
         s->clearMediaCallGroup();
         group_mut.unlock();
-        return;
+        return false;
     }
 
     auto &cg = it->second;
@@ -281,6 +285,8 @@ void AmMediaProcessor::removeFromProcessor(AmMediaSession* s, unsigned int r_typ
 
     threads[sched_thread]->
         postRequest(new SchedRequest(static_cast<int>(r_type),s));
+
+    return true;
 }
 
 void AmMediaProcessor::stop() {
