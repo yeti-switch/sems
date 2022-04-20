@@ -684,7 +684,8 @@ void AmB2BMedia::addToMediaProcessor()
     // AmMediaProcessor's reference
     // will be released by onMediaProcessingTerminated() or onMediaSessionExists()
     addReference();
-    AmMediaProcessor::instance()->addSession(this, callgroup);
+    if(!AmMediaProcessor::instance()->addSession(this, callgroup))
+        releaseReference();
 }
 
 void AmB2BMedia::addToMediaProcessorUnsafe()
@@ -693,7 +694,8 @@ void AmB2BMedia::addToMediaProcessorUnsafe()
     // will be released by onMediaProcessingTerminated() or onMediaSessionExists()
     ref_cnt++;
 
-    AmMediaProcessor::instance()->addSession(this, callgroup);
+    if(!AmMediaProcessor::instance()->addSession(this, callgroup))
+        ref_cnt--;
 }
 
 void AmB2BMedia::addReference() {
