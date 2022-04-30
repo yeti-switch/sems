@@ -2232,10 +2232,11 @@ void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
         timeval diff;
         timersub(&p.recv_time, &rtp_stats.rx_recv_time, &diff);
         if(rtp_stats.current_rx) {
-            rtp_stats.current_rx->rx_delta.update((diff.tv_sec * 1000000) + diff.tv_usec);
-            if(rtp_stats.current_rx->rx_delta.n && rtp_stats.current_rx->rx_delta.n % 250) {
+            auto &rx_delta = rtp_stats.current_rx->rx_delta;
+            rx_delta.update((diff.tv_sec * 1000000) + diff.tv_usec);
+            if(rx_delta.n && (0 == rx_delta.n % 250)) {
                 //update jitter every 250 packets (5 seconds)
-                rtp_stats.current_rx->jitter_usec.update(rtp_stats.current_rx->rx_delta.sd());
+                rtp_stats.current_rx->jitter_usec.update(rx_delta.sd());
             }
         }
     }
