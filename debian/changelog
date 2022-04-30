@@ -1,3 +1,7 @@
+sems (1.78.1) stable; urgency=low
+  * media statistics: fix RTT calculation from RTCP RR
+ -- Michael Furmur <furmur@pm.me>  Sat, 30 Apr 2022 23:43:56 +0300
+
 sems (1.78.0) stable; urgency=low
   * AmB2BMedia: fix references leak on AmMediaProcessor::addSession errors
  -- Michael Furmur <furmur@pm.me>  Wed, 20 Apr 2022 17:51:29 +0300
