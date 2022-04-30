@@ -60,6 +60,8 @@
     #define RTCP_DBG(fmt, args...) ;
 #endif
 
+#define NTP32_TO_USEC_SCALING_FACTOR (1e6/65536.0)
+
 AmRtpPacket::AmRtpPacket()
   : data_offset(0)
 {
@@ -346,6 +348,7 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 
     stats.sr_lsr = ( (ntohl(sr.ntp_sec) << 16) |
                      (ntohl(sr.ntp_frac) >> 16) );
+
     stats.sr_recv_time = recv_time;
 
     stats.unlock();
@@ -357,9 +360,8 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 {
     stats.lock();
 
-    uint32_t ssrc = ntohl(rr.ssrc);
     DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
-        ssrc,
+        ntohl(rr.ssrc),
         ntohl(rr.last_seq),
         ntohl(rr.lsr),
         ntohl(rr.dlsr),
@@ -371,15 +373,16 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
     );
 
     if(rr.dlsr) {
-        uint32_t rtt = (recv_time.tv_sec+NTP_TIME_OFFSET) << 16;
-        uint64_t i = recv_time.tv_usec;
-        i <<= 32;
-        i /= 1000000;
-        rtt |= ((uint32_t)i) >> 16;
-        rtt -= ntohl(rr.dlsr);
-        rtt -= ntohl(rr.lsr);
-        rtt *= 1e6/65536.0;
-        stats.rtt.update(rtt);
+        //https://tools.ietf.org/search/rfc3550#section-4
+        //https://tools.ietf.org/search/rfc3550#section-6.4.1
+
+        int64_t rtt = ((recv_time.tv_sec + NTP_TIME_OFFSET) & 0xffff)*1e6 + recv_time.tv_usec;
+        rtt -= ntohl(rr.dlsr)*NTP32_TO_USEC_SCALING_FACTOR;
+        rtt -= ntohl(rr.lsr)*NTP32_TO_USEC_SCALING_FACTOR;
+
+        if(rtt > 0) {
+            stats.rtt.update(rtt);
+        }
     }
 
     stats.tx.loss = (rr.total_lost_2 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_0;
