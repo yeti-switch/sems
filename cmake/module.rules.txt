@@ -14,13 +14,20 @@ IF(SEMS_USE_AMARG_STAT)
     add_definitions("-DUSE_AMARG_STATISTICS")
 ENDIF(SEMS_USE_AMARG_STAT)
 
-ADD_LIBRARY(sems_${sems_module_name}_static STATIC ${${sems_module_name}_SRCS})
-FILE(WRITE ${CMAKE_BINARY_DIR}/empty.cpp)
-ADD_LIBRARY(sems_${sems_module_name} MODULE ${CMAKE_BINARY_DIR}/empty.cpp)
-
 IF(${sems_module_name}_UNIT_SRCS)
     MESSAGE(STATUS "using unit tests for ${sems_module_name}")
+
+    ADD_LIBRARY(sems_${sems_module_name}_obj OBJECT ${${sems_module_name}_SRCS})
+
+    ADD_LIBRARY(sems_${sems_module_name} MODULE)
+    target_sources(sems_${sems_module_name} PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
+
     ADD_LIBRARY(sems_${sems_module_name}_unit MODULE ${${sems_module_name}_UNIT_SRCS})
+    target_sources(sems_${sems_module_name}_unit PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
+
+ELSE(${sems_module_name}_UNIT_SRCS)
+    ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
+    TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
 ENDIF(${sems_module_name}_UNIT_SRCS)
 
 IF(APPLE)
@@ -37,9 +44,9 @@ ADD_DEFINITIONS(-DMOD_NAME=\\\"${sems_module_name}\\\"  -DMODULE_VERSION=\\\"${M
 
 # all modules should be linked against ${CMAKE_DL_LIBS} at least
 # and with additional ${sems_module_libs} if they exists
-TARGET_LINK_LIBRARIES(sems_${sems_module_name} -Wl,--whole-archive sems_${sems_module_name}_static -Wl,--no-whole-archive ${CMAKE_DL_LIBS} ${sems_module_libs} )
+TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
 IF(${sems_module_name}_UNIT_SRCS)
-    TARGET_LINK_LIBRARIES(sems_${sems_module_name}_unit -Wl,--whole-archive sems_${sems_module_name}_static -Wl,--no-whole-archive ${CMAKE_DL_LIBS} ${sems_module_libs} )
+    TARGET_LINK_LIBRARIES(sems_${sems_module_name}_unit ${CMAKE_DL_LIBS} ${sems_module_libs})
 ENDIF(${sems_module_name}_UNIT_SRCS)
 
 IF(NOT ${sems_module_dependency})
