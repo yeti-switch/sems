@@ -13,5 +13,5 @@ file(GLOB tester_test_SRCS "tests/*.cpp")
 add_executable(${SEMS_UT} ${tester_test_SRCS} ${tester_SRCS})
 
 target_link_libraries(${SEMS_UT} gtest_main event ev libsems)
-install(TARGETS sems-tester RUNTIME DESTINATION bin)
+install(TARGETS sems-tester RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 
