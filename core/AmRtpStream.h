@@ -576,7 +576,7 @@ class AmRtpStream
         };
 
         struct rx_stat: public rtp_common {
-            unsigned long decode_errors;
+            uint32_t decode_errors;
             MathStat<long> delta;
             MathStat<double> jitter;
             MathStat<uint32_t> rtcp_jitter;
