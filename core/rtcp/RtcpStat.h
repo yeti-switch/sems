@@ -103,6 +103,9 @@ struct RtcpBidirectionalStat
     RxStatMap               rx; /**< Recv stream statistics.             */
     RtcpUnidirectionalStat* current_rx;
 
+    uint32_t rtcp_rr_sent, rtcp_rr_recv;
+    uint32_t rtcp_sr_sent, rtcp_sr_recv;
+
     // https://tools.ietf.org/html/rfc3550
 
     uint16_t max_seq;        /* highest seq. number seen */

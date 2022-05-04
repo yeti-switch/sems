@@ -13,15 +13,18 @@ RtcpUnidirectionalStat::RtcpUnidirectionalStat()
 }
 
 RtcpBidirectionalStat::RtcpBidirectionalStat()
-  : sr_lsr(0),
-    current_rx(0),
+  : current_rx(nullptr),
+    rtcp_rr_sent(0), rtcp_rr_recv(0),
+    rtcp_sr_sent(0), rtcp_sr_recv(0),
+    max_seq(0),
     cycles(0),
-    total_lost(0),
-    fraction_lost(0),
     received(0),
     received_prior(0),
     expected_prior(0),
-    transit(0)
+    transit(0),
+    total_lost(0),
+    fraction_lost(0),
+    sr_lsr(0)
 {
     timerclear(&rx_recv_time);
     timerclear(&start);

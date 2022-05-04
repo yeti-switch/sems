@@ -2013,6 +2013,12 @@ void AmRtpStream::getMediaStats(MediaStats &s)
     memcpy(&s.time_start, &rtp_stats.start, sizeof(struct timeval));
     gettimeofday(&s.time_end, nullptr);
 
+    s.rtcp_rr_sent = rtp_stats.rtcp_rr_sent;
+    s.rtcp_rr_recv = rtp_stats.rtcp_rr_recv;
+
+    s.rtcp_sr_sent = rtp_stats.rtcp_sr_sent;
+    s.rtcp_sr_recv = rtp_stats.rtcp_sr_recv;
+
     for(auto &it : rtp_stats.rx)
     {
         MediaStats::rx_stat* rx_ssrc;
@@ -2171,6 +2177,8 @@ void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, struct timeval &
 {
     uint64_t i;
 
+    rtp_stats.rtcp_sr_sent++;
+
     s.sender_pcount = htonl(rtp_stats.tx.pkt);
     s.sender_bcount = htonl(rtp_stats.tx.bytes);
     s.rtp_ts = htonl(user_ts);
@@ -2244,6 +2252,8 @@ void AmRtpStream::update_receiver_stats(const AmRtpPacket &p)
 void AmRtpStream::fill_receiver_report(RtcpReceiverReportHeader &r, struct timeval &now)
 {
     struct timeval delay;
+
+    rtp_stats.rtcp_rr_sent++;
 
     rtp_stats.update_lost();
 

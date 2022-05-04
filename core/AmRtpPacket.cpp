@@ -338,6 +338,8 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 {
     stats.lock();
 
+    stats.rtcp_sr_recv++;
+
     DBG("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
         ntohl(sr.ntp_sec),
         ntohl(sr.ntp_frac),
@@ -359,6 +361,8 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidirectionalStat &stats)
 {
     stats.lock();
+
+    stats.rtcp_rr_recv++;
 
     DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
         ntohl(rr.ssrc),

@@ -565,6 +565,9 @@ class AmRtpStream
         uint32_t rtp_parse_errors;
         uint32_t srtp_decript_errors;
 
+        uint32_t rtcp_rr_sent, rtcp_rr_recv;
+        uint32_t rtcp_sr_sent, rtcp_sr_recv;
+
         struct rtp_common {
             unsigned int ssrc;
             struct sockaddr_storage addr;
