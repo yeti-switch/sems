@@ -13,7 +13,14 @@ RtcpUnidirectionalStat::RtcpUnidirectionalStat()
 }
 
 RtcpBidirectionalStat::RtcpBidirectionalStat()
-  : sr_lsr(0), current_rx(0)
+  : sr_lsr(0),
+    current_rx(0),
+    cycles(0),
+    total_lost(0),
+    received(0),
+    received_prior(0),
+    expected_prior(0),
+    transit(0)
 {
     timerclear(&rx_recv_time);
     timerclear(&start);
@@ -31,8 +38,8 @@ void RtcpBidirectionalStat::init_seq(uint32_t ssrc, uint16_t seq)
     expected_prior = 0;
     transit = 0;
     if(rx.size() < MAX_RX_STATS || rx.find(ssrc) != rx.end()) {
-        rx[ssrc].rtcp_jitter = 0;
         current_rx = &rx[ssrc];
+        current_rx->rtcp_jitter = 0;
     } else {
         current_rx = 0;
     }
