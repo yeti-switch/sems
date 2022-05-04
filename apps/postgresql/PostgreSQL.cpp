@@ -93,6 +93,7 @@ int PostgreSQL::init()
     stop_event.link(epoll_fd,true);
 
     makePolicyFactory(false);
+    init_rpc();
 
     DBG("PostgreSQL Client initialized");
     return 0;
