@@ -51,6 +51,7 @@ void Worker::getStats(AmArg& stats)
 {
     stats["max_queue_length"] = max_queue_length;
     stats["batch_size"] = batch_size;
+    stats["batch_interval"] = batch_interval;
     stats["trans_wait_time"] = trans_wait_time;
     stats["reconnect_interval"] = reconnect_interval;
     stats["retransmit_interval"] = retransmit_interval;
