@@ -25,6 +25,7 @@ class Worker : public ITransactionHandler,
     uint32_t retransmit_interval;
     uint32_t reconnect_interval;
     uint32_t trans_wait_time;
+    uint32_t batch_interval;
     uint32_t batch_size;
     uint32_t max_queue_length;
 
@@ -61,6 +62,7 @@ class Worker : public ITransactionHandler,
     time_t retransmit_next_time;
     time_t wait_next_time;
     time_t reset_next_time;
+    time_t send_next_time;
 
     void getFreeConnection(IPGConnection **conn, ConnectionPool **pool, std::function<void(const string&)> func);
     void checkQueue();

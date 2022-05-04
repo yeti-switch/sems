@@ -18,9 +18,11 @@ Worker::Worker(const std::string& name, int epollfd)
 , retransmit_interval(DEFAULT_RET_INTERVAL)
 , reconnect_interval(DEFAULT_REC_INTERVAL)
 , batch_size(DEFAULT_BATCH_SIZE)
+, batch_interval(DEFAULT_BATCH_INTERVAL)
 , max_queue_length(DEFAULT_MAX_Q_LEN)
 , retransmit_next_time(0), wait_next_time(0)
-, reset_next_time(0), master(0), slave(0)
+, reset_next_time(0), send_next_time(0)
+, master(0), slave(0)
 , queue_size(stat_group(Gauge, MOD_NAME, "queue").addAtomicCounter().addLabel("worker", name))
 , dropped(stat_group(Counter, MOD_NAME, "dropped").addAtomicCounter().addLabel("worker", name))
 , ret_size(stat_group(Gauge, MOD_NAME, "retransmit").addAtomicCounter().addLabel("worker", name))
@@ -328,10 +330,15 @@ void Worker::setWorkTimer(bool immediately)
           (!interval || wait_next_time < current || wait_next_time - current < interval)) {
             interval = wait_next_time - current > 0 ? wait_next_time - current : 1;
         }
+        if(send_next_time &&
+          (!interval || send_next_time < current || send_next_time - current < interval)) {
+            interval = send_next_time - current > 0 ? send_next_time - current : 1;
+        }
         workTimer.set(interval*1000000, false);
         //DBG("set timer %lu", interval);
     }
-    //DBG("current_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu", current, reset_next_time, retransmit_next_time, wait_next_time);
+    //DBG("current_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu",
+    //    current, reset_next_time, retransmit_next_time, wait_next_time, send_next_time);
 }
 
 void Worker::checkQueue()
@@ -346,6 +353,9 @@ void Worker::checkQueue()
             trans_it = retransmit_q.erase(trans_it);
         }
     }
+
+    if(send_next_time > time(0) && queue.size() < batch_size) return;
+
     IPGTransaction* trans = 0;
     size_t count = 0;
     bool need_send = false;
@@ -381,6 +391,9 @@ void Worker::checkQueue()
             trans_it++;
         }
     }
+    if(!queue.size()) send_next_time = 0;
+    else send_next_time = time(0) + batch_interval;
+    DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
 }
 
 void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, const std::string& token)
@@ -397,26 +410,13 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
         delete trans;
         return;
     }
-    IPGConnection* conn = 0;
-    ConnectionPool* pool = 0;
-    string query = trans->get_query()->get_query();
-    getFreeConnection(&conn, &pool, ERROR_CALLBACK);
-    if(conn) {
-        transactions.emplace_back(trans, pool, sender, token);
-        tr_size.inc((long long)trans->get_size());
-        wait_next_time = transactions.front().createdTime + trans_wait_time;
-        DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
-        setWorkTimer(false);
-        conn->runTransaction(trans);
-    } else if(pool){                                    // no free connection
-        queue.emplace_back(trans, (ConnectionPool*)0, sender, token);
-        queue_size.inc((long long)trans->get_size());
-    } else {
-        if(!sender.empty())
-            AmEventDispatcher::instance()->post(sender, new PGResponseError(trans->get_query()->get_query(), "absent pool", token));
-        dropped.inc((long long)trans->get_size());
-        delete trans;
+    queue.emplace_back(trans, (ConnectionPool*)0, sender, token);
+    queue_size.inc((long long)trans->get_size());
+    if(!send_next_time) {
+        send_next_time = time(0) + batch_interval;
+        DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
+    setWorkTimer(false);
 }
 
 void Worker::runPrepared(const PGPrepareData& prepared)
@@ -456,6 +456,7 @@ void Worker::configure(const PGWorkerConfig& e)
     retransmit_interval = e.retransmit_interval;
     reconnect_interval = e.reconnect_interval;
     batch_size = e.batch_size;
+    batch_interval = e.batch_interval;
     max_queue_length = e.max_queue_length;
     setSearchPath(search_pathes);
     for(auto& prepared : e.prepeared)
