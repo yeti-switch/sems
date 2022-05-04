@@ -1,3 +1,7 @@
+sems (1.80.1) stable; urgency=low
+  * pkg: fix shlib deps
+ -- Michael Furmur <furmur@pm.me>  Wed, 04 May 2022 21:37:08 +0300
+
 sems (1.80.0) stable; urgency=low
   * postgresql: add batch_interval logic
   * postgresql: fix RPC initialization
