@@ -90,7 +90,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     vector<PGEvent::Type> types = {PGEvent::Result, PGEvent::Result};
     WorkerHandler::instance().set_expected_events(types);
 
-    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, 1, 1, 1);
+    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, 1, 1, 1, DEFAULT_BATCH_SIZE, 1);
     PostgreSQL::instance()->postEvent(wc);
 
     string query;
@@ -320,7 +320,8 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
     pool.pool_size = 1;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, false);
-    config.batch_size = 3;
+    config.batch_size = 4;
+    config.batch_interval = 2;
     worker.configure(config);
 
     AmArg resp;
@@ -349,7 +350,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     Worker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
-    pool.pool_size = 1;
+    pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, 3, 1);
     config.batch_size = 4;

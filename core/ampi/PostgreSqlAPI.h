@@ -6,13 +6,14 @@
 #include <string>
 using std::string;
 
-#define POSTGRESQL_QUEUE     "postgresql"
-#define DEFAULT_POOL_SIZE    6
-#define DEFAULT_BATCH_SIZE   0
-#define DEFAULT_MAX_Q_LEN    10000
-#define DEFAULT_RET_INTERVAL 10     //in sec
-#define DEFAULT_REC_INTERVAL 1      //in sec
-#define DEFAULT_WAIT_TIME    5      //in sec
+#define POSTGRESQL_QUEUE       "postgresql"
+#define DEFAULT_POOL_SIZE      6
+#define DEFAULT_BATCH_SIZE     0
+#define DEFAULT_MAX_Q_LEN      10000
+#define DEFAULT_BATCH_INTERVAL 1      //in sec 
+#define DEFAULT_RET_INTERVAL   10     //in sec
+#define DEFAULT_REC_INTERVAL   1      //in sec
+#define DEFAULT_WAIT_TIME      5      //in sec
 
 class PGEvent : public AmEvent
 {
@@ -107,6 +108,7 @@ class PGWorkerConfig : public PGEvent
 public:
     string worker_name;
     uint32_t batch_size;
+    uint32_t batch_interval;
     uint32_t max_queue_length;
     bool failover_to_slave;
     bool retransmit_enable;
@@ -123,6 +125,7 @@ public:
                    uint32_t retransmit_interval_ = DEFAULT_RET_INTERVAL,
                    uint32_t reconnect_interval_ = DEFAULT_REC_INTERVAL,
                    uint32_t batch_size_ = DEFAULT_BATCH_SIZE,
+                   uint32_t batch_interval_ = DEFAULT_BATCH_INTERVAL,
                    uint32_t max_queue_length_ = DEFAULT_MAX_Q_LEN)
     : PGEvent(WorkerConfig), worker_name(name_)
     , failover_to_slave(failover_to_slave_)
@@ -131,6 +134,7 @@ public:
     , reconnect_interval(reconnect_interval_)
     , trans_wait_time(trans_wait_time_)
     , batch_size(batch_size_)
+    , batch_interval(batch_interval_)
     , max_queue_length(max_queue_length_){}
 
     PGPrepareData& addPrepared(const string& stmt_, const string& query_) {
