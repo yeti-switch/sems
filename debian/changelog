@@ -1,3 +1,9 @@
+sems (1.80.0) stable; urgency=low
+  * postgresql: add batch_interval logic
+  * postgresql: fix RPC initialization
+  * rtcp: add SR/RR sent/recv counters, stats initialization fixes
+ -- Michael Furmur <furmur@pm.me>  Wed, 04 May 2022 20:51:37 +0300
+
 sems (1.79.0) stable; urgency=low
   * add postgresql module
   * AmRtpStream: change type for 'decode_errors'. unsigned long -> uint32_t
