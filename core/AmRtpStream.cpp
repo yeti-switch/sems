@@ -2191,8 +2191,6 @@ void AmRtpStream::init_receiver_info(const AmRtpPacket &p)
     rtcp_reports.update(r_ssrc);
     r_ssrc_i = true;
 
-    rtp_stats.max_seq--;
-    rtp_stats.probation = MIN_SEQUENTIAL;
     rtp_stats.init_seq(p.ssrc, p.sequence);
 }
 

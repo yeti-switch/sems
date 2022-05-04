@@ -17,6 +17,7 @@ RtcpBidirectionalStat::RtcpBidirectionalStat()
     current_rx(0),
     cycles(0),
     total_lost(0),
+    fraction_lost(0),
     received(0),
     received_prior(0),
     expected_prior(0),
@@ -28,11 +29,13 @@ RtcpBidirectionalStat::RtcpBidirectionalStat()
 
 void RtcpBidirectionalStat::init_seq(uint32_t ssrc, uint16_t seq)
 {
+    probation = MIN_SEQUENTIAL;
     base_seq = seq;
     max_seq = seq;
     bad_seq = RTP_SEQ_MOD - 1;
     cycles = 0;
     total_lost = 0;
+    fraction_lost = 0;
     received = 0;
     received_prior = 0;
     expected_prior = 0;
@@ -98,6 +101,8 @@ void RtcpBidirectionalStat::update_lost()
 {
     /*DBG("update_lost: cycles: %d, max_seq: %d, received: %d, base_seq: %d, expected_prior: %d, received_prior: %d",
         cycles, max_seq, received, base_seq, expected_prior, received_prior);*/
+
+    if(!max_seq) return;
 
     uint32_t extended_max = cycles + max_seq;
     uint32_t expected =  extended_max - base_seq + 1;
