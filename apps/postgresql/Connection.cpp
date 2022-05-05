@@ -13,10 +13,10 @@ IPGConnection::~IPGConnection()
 
 bool IPGConnection::runTransaction(IPGTransaction* trans)
 {
-    if(cur_transition)
+    if(cur_transaction)
         return false;
     trans->reset(this);
-    cur_transition = trans;
+    cur_transaction = trans;
     check();
     return true;
 }
@@ -37,10 +37,10 @@ void IPGConnection::check()
         check_conn();
     }
 
-    if(status == CONNECTION_OK && cur_transition) {
-        cur_transition->check();
-        if(cur_transition->get_status() == IPGTransaction::FINISH) {
-            cur_transition = 0;
+    if(status == CONNECTION_OK && cur_transaction) {
+        cur_transaction->check();
+        if(cur_transaction->get_status() == IPGTransaction::FINISH) {
+            cur_transaction = 0;
             if(planned) runTransaction(planned);
             planned = 0;
         }
@@ -60,15 +60,15 @@ bool IPGConnection::reset()
 
 void IPGConnection::cancelTransaction()
 {
-    if(cur_transition && cur_transition->get_status() != IPGTransaction::FINISH) {
-        cur_transition->cancel();
+    if(cur_transaction && cur_transaction->get_status() != IPGTransaction::FINISH) {
+        cur_transaction->cancel();
     }
 }
 
 void IPGConnection::stopTransaction()
 {
-    if(handler && cur_transition) handler->onStopTransaction(cur_transition);
-    cur_transition = 0;
+    if(handler && cur_transaction) handler->onStopTransaction(cur_transaction);
+    cur_transaction = 0;
     delete planned;
     planned = 0;
 }

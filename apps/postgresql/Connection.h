@@ -38,7 +38,7 @@ protected:
     time_t disconnected_time;
 protected:
     friend class IPGTransaction;
-    IPGTransaction* cur_transition;
+    IPGTransaction* cur_transaction;
     IPGTransaction* planned;
 
     virtual void check_conn() = 0;
@@ -49,9 +49,10 @@ public:
     IPGConnection(const string& conn_info, IConnectionHandler* handler)
     : connection_info(conn_info), handler(handler)
     , status(CONNECTION_BAD), conn_fd(-1)
-    , cur_transition(0)
-    , planned(0)
-    , disconnected_time(time(0)){}
+    , cur_transaction(nullptr)
+    , planned(nullptr)
+    , disconnected_time(time(0))
+    {}
     virtual ~IPGConnection();
 
 
@@ -66,7 +67,7 @@ public:
     ConnStatusType getStatus() { return status; }
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_info; }
-    bool isBusy() { return cur_transition ? true : false; }
+    bool isBusy() { return cur_transaction ? true : false; }
     time_t getDisconnectedTime() { return disconnected_time; } 
 };
 

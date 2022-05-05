@@ -1,5 +1,4 @@
-#ifndef PQ_TRANSITION_H
-#define PQ_TRANSITION_H
+#pragma once
 
 #include <AmArg.h>
 #include <PostgreSqlAPI.h>
@@ -219,5 +218,3 @@ public:
     ConfigTransaction(const ConfigTransaction& trans);
     ~ConfigTransaction(){}
 };
-
-#endif/*PQ_TRANSITION_H*/
