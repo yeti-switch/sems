@@ -321,7 +321,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, false);
     config.batch_size = 4;
-    config.batch_interval = 2;
+    config.batch_timeout = 2;
     worker.configure(config);
 
     AmArg resp;

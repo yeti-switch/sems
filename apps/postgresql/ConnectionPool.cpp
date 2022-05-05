@@ -18,7 +18,7 @@ Worker::Worker(const std::string& name, int epollfd)
 , retransmit_interval(DEFAULT_RET_INTERVAL)
 , reconnect_interval(DEFAULT_REC_INTERVAL)
 , batch_size(DEFAULT_BATCH_SIZE)
-, batch_interval(DEFAULT_BATCH_INTERVAL)
+, batch_timeout(DEFAULT_BATCH_TIMEOUT)
 , max_queue_length(DEFAULT_MAX_Q_LEN)
 , retransmit_next_time(0), wait_next_time(0)
 , reset_next_time(0), send_next_time(0)
@@ -51,7 +51,7 @@ void Worker::getStats(AmArg& stats)
 {
     stats["max_queue_length"] = max_queue_length;
     stats["batch_size"] = batch_size;
-    stats["batch_interval"] = batch_interval;
+    stats["batch_timeout"] = batch_timeout;
     stats["trans_wait_time"] = trans_wait_time;
     stats["reconnect_interval"] = reconnect_interval;
     stats["retransmit_interval"] = retransmit_interval;
@@ -393,7 +393,7 @@ void Worker::checkQueue()
         }
     }
     if(!queue.size()) send_next_time = 0;
-    else send_next_time = time(0) + batch_interval;
+    else send_next_time = time(0) + batch_timeout;
     DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
 }
 
@@ -414,7 +414,7 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
     queue.emplace_back(trans, (ConnectionPool*)0, sender, token);
     queue_size.inc((long long)trans->get_size());
     if(!send_next_time) {
-        send_next_time = time(0) + batch_interval;
+        send_next_time = time(0) + batch_timeout;
         DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
     setWorkTimer(false);
@@ -457,7 +457,7 @@ void Worker::configure(const PGWorkerConfig& e)
     retransmit_interval = e.retransmit_interval;
     reconnect_interval = e.reconnect_interval;
     batch_size = e.batch_size;
-    batch_interval = e.batch_interval;
+    batch_timeout = e.batch_timeout;
     max_queue_length = e.max_queue_length;
     setSearchPath(search_pathes);
     for(auto& prepared : e.prepeared)

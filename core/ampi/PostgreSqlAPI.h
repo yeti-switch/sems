@@ -10,7 +10,7 @@ using std::string;
 #define DEFAULT_POOL_SIZE      6
 #define DEFAULT_BATCH_SIZE     0
 #define DEFAULT_MAX_Q_LEN      10000
-#define DEFAULT_BATCH_INTERVAL 1      //in sec 
+#define DEFAULT_BATCH_TIMEOUT 1      //in sec
 #define DEFAULT_RET_INTERVAL   10     //in sec
 #define DEFAULT_REC_INTERVAL   1      //in sec
 #define DEFAULT_WAIT_TIME      5      //in sec
@@ -108,7 +108,7 @@ class PGWorkerConfig : public PGEvent
 public:
     string worker_name;
     uint32_t batch_size;
-    uint32_t batch_interval;
+    uint32_t batch_timeout;
     uint32_t max_queue_length;
     bool failover_to_slave;
     bool retransmit_enable;
@@ -118,24 +118,27 @@ public:
     vector<PGPrepareData> prepeared;
     vector<string> search_pathes;
 
-    PGWorkerConfig(const string& name_,
-                   bool failover_to_slave_,
-                   bool retransmit_enable_,
-                   uint32_t trans_wait_time_ = DEFAULT_WAIT_TIME,
-                   uint32_t retransmit_interval_ = DEFAULT_RET_INTERVAL,
-                   uint32_t reconnect_interval_ = DEFAULT_REC_INTERVAL,
-                   uint32_t batch_size_ = DEFAULT_BATCH_SIZE,
-                   uint32_t batch_interval_ = DEFAULT_BATCH_INTERVAL,
-                   uint32_t max_queue_length_ = DEFAULT_MAX_Q_LEN)
-    : PGEvent(WorkerConfig), worker_name(name_)
-    , failover_to_slave(failover_to_slave_)
-    , retransmit_enable(retransmit_enable_)
-    , retransmit_interval(retransmit_interval_)
-    , reconnect_interval(reconnect_interval_)
-    , trans_wait_time(trans_wait_time_)
-    , batch_size(batch_size_)
-    , batch_interval(batch_interval_)
-    , max_queue_length(max_queue_length_){}
+    PGWorkerConfig(
+        const string& name,
+       bool failover_to_slave,
+       bool retransmit_enable,
+       uint32_t trans_wait_time = DEFAULT_WAIT_TIME,
+       uint32_t retransmit_interval = DEFAULT_RET_INTERVAL,
+       uint32_t reconnect_interval = DEFAULT_REC_INTERVAL,
+       uint32_t batch_size = DEFAULT_BATCH_SIZE,
+       uint32_t batch_timeout = DEFAULT_BATCH_TIMEOUT,
+       uint32_t max_queue_length = DEFAULT_MAX_Q_LEN)
+     : PGEvent(WorkerConfig)
+     , worker_name(name)
+     , failover_to_slave(failover_to_slave)
+     , retransmit_enable(retransmit_enable)
+     , retransmit_interval(retransmit_interval)
+     , reconnect_interval(reconnect_interval)
+     , trans_wait_time(trans_wait_time)
+     , batch_size(batch_size)
+     , batch_timeout(batch_timeout)
+     , max_queue_length(max_queue_length)
+    {}
 
     PGPrepareData& addPrepared(const string& stmt_, const string& query_) {
         return prepeared.emplace_back(stmt_, query_);

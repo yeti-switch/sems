@@ -25,7 +25,7 @@ class Worker : public ITransactionHandler,
     uint32_t retransmit_interval;
     uint32_t reconnect_interval;
     uint32_t trans_wait_time;
-    uint32_t batch_interval;
+    uint32_t batch_timeout;
     uint32_t batch_size;
     uint32_t max_queue_length;
 
