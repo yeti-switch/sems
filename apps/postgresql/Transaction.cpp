@@ -411,6 +411,12 @@ ConfigTransaction::ConfigTransaction(const ConfigTransaction& trans)
         tr_impl->query = trans.tr_impl->query->clone();
 }
 
+template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;
+template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_only>;
+template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_only>;
 template<> const char* DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>::begin_cmd  ="BEGIN";
 template<> const char* DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>::begin_cmd   ="BEGIN READ ONLY";
 template<> const char* DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_write>::begin_cmd ="BEGIN ISOLATION LEVEL REPEATABLE READ";

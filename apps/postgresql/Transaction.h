@@ -176,6 +176,13 @@ public:
     ~DbTransaction(){};
 };
 
+extern template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
+extern template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;
+extern template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_write>;
+extern template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_only>;
+extern template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_write>;
+extern template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_only>;
+
 IPGTransaction* createDbTransaction(ITransactionHandler* handler,
                                     PGTransactionData::isolation_level il,
                                     PGTransactionData::write_policy wp);
