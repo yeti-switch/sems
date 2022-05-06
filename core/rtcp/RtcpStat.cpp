@@ -32,7 +32,6 @@ RtcpBidirectionalStat::RtcpBidirectionalStat()
 
 void RtcpBidirectionalStat::init_seq(uint32_t ssrc, uint16_t seq)
 {
-    probation = MIN_SEQUENTIAL;
     base_seq = seq;
     max_seq = seq;
     bad_seq = RTP_SEQ_MOD - 1;
