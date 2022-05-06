@@ -1,3 +1,8 @@
+sems (1.80.2) stable; urgency=low
+  * pkg: fix shlib deps
+  * rtcp: fix probation reset in update_seq()
+ -- Michael Furmur <furmur@pm.me>  Fri, 06 May 2022 19:03:53 +0300
+
 sems (1.80.1) stable; urgency=low
   * pkg: fix shlib deps
  -- Michael Furmur <furmur@pm.me>  Wed, 04 May 2022 21:37:08 +0300
