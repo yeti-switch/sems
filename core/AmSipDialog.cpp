@@ -97,21 +97,25 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   if(!AmBasicSipDialog::onRxReqSanity(req))
     return false;
 
-  if (req.method == SIP_METH_INVITE || req.method == SIP_METH_UPDATE) {
-    bool pending = pending_invites;
+  bool invite = (req.method == SIP_METH_INVITE);
+  if(invite || (req.method == SIP_METH_UPDATE)) {
+    bool pending = invite ? pending_invites : false;
+
     if (offeranswer_enabled) {
       // not sure this is needed here: could be in AmOfferAnswer as well
       pending |= ((oa.getState() != AmOfferAnswer::OA_None) &&
-		  (oa.getState() != AmOfferAnswer::OA_Completed));
+                  (oa.getState() != AmOfferAnswer::OA_Completed));
     }
 
-    if (pending) {
-      reply_error(req, 491, SIP_REPLY_PENDING,
-		  SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER) 
-		  + int2str(get_random() % 10) + CRLF, logger);
+    if(pending) {
+      reply_error(
+        req, 491, SIP_REPLY_PENDING,
+        SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
+        + int2str(get_random() % 10) + CRLF, logger);
       return false;
     }
-    if(req.method == SIP_METH_INVITE)
+
+    if(invite)
       pending_invites++;
   }
 
