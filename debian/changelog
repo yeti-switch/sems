@@ -1,3 +1,7 @@
+sems (1.80.4) stable; urgency=low
+  * AmSipDialog: allow UPDATE method on pending INVITEs
+ -- Michael Furmur <furmur@pm.me>  Thu, 12 May 2022 11:32:53 +0300
+
 sems (1.80.3) stable; urgency=low
   * revert postgres policy templates cleanup
  -- Michael Furmur <furmur@pm.me>  Fri, 06 May 2022 19:24:51 +0300
