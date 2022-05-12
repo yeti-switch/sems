@@ -93,8 +93,11 @@ class StreamData {
     string outgoing_payload_name;
     string incoming_payload_name;
 public:
+    StreamData() = delete;
+    StreamData(StreamData const &) = delete;
+    StreamData(StreamData const &&) = delete;
     StreamData(AmB2BSession* session, bool audio);
-    ~StreamData() { }
+    ~StreamData();
 
     void clear();
     void initialize(AmB2BSession* session, bool audio);
@@ -255,6 +258,9 @@ class AmB2BMedia
         bool audio;
         int media_idx;
     public:
+        StreamPair() = delete;
+        StreamPair(StreamPair const &) = delete;
+        StreamPair(StreamPair const &&) = delete;
         StreamPair(AmB2BSession *_a, AmB2BSession *_b)
             : a(_a, false), b(_b, false)
             , audio(false), media_idx(-1) { }
@@ -285,9 +291,6 @@ class AmB2BMedia
         }
     };
 
-    typedef std::vector<StreamPair*>::iterator StreamIterator;
-    typedef std::vector<SdpMedia>::iterator SdpMediaIterator;
-
     /** Callgroup reqired by AmMediaProcessor to distinguish
      * AmMediaProcessorThread which should take care about media session.
      *
@@ -313,7 +316,7 @@ class AmB2BMedia
      */
     PlayoutType playout_type;
 
-    std::vector<StreamPair*>  streams;
+    std::list<StreamPair> streams;
 
     bool a_leg_muted, b_leg_muted;
     bool a_leg_receiving, b_leg_receiving;

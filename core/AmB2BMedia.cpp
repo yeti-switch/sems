@@ -168,10 +168,19 @@ void B2BMediaStatistics::getReport(const AmArg &, AmArg &ret)
 //////////////////////////////////////////////////////////////////////////////////
 StreamData::StreamData(AmB2BSession* session, bool audio)
   : shared_stream(false)
-    , stream(0)
+    , stream(nullptr)
     , initialized(false)
 {
     initialize(session, audio);
+}
+
+StreamData::~StreamData()
+{
+    if(stream) {
+        ERROR("~StreamData() stream %p", stream);
+        stream->stopReceiving();
+        clear();
+    }
 }
 
 void StreamData::initialize(AmB2BSession* session, bool audio)
@@ -180,6 +189,7 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
     if(session || !audio) {
         if(!stream) {
             stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
+            DBG("StreamData::initialize: stream: %p", stream);
         } else {
             ERROR("StreamData::initialize(%p[%s],%d): stream:%p. "
                   "shared_stream:%d",
@@ -364,13 +374,7 @@ void StreamData::setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session)
               session ? session->getLocalTag().data() : "",
               stream, shared_stream);
         stream->stopReceiving();
-        if(!shared_stream) {
-           delete stream;
-        } else {
-            //cleanup relay for shared stream
-            stream->disableRtpRelay();
-            stream->setRelayStream(nullptr);
-        }
+        clear();
     }
     stream = s;
     shared_stream = true;
@@ -738,34 +742,34 @@ void AmB2BMedia::changeSessionUnsafe(bool a_leg, AmB2BSession *new_session)
     bool needs_processing = a && b && a->getRtpRelayMode() == AmB2BSession::RTP_Transcoding;
 
     // update all streams
-    for (auto &i : streams) {
-        if(i->audio) {
+    for (auto &pair : streams) {
+        if(pair.audio) {
             // stop processing first to avoid unexpected results
-            i->a.stopStreamProcessing();
-            i->b.stopStreamProcessing();
+            pair.a.stopStreamProcessing();
+            pair.b.stopStreamProcessing();
 
             // replace session
             if (a_leg) {
-                i->a.changeSession(new_session);
+                pair.a.changeSession(new_session);
             } else {
-                i->b.changeSession(new_session);
+                pair.b.changeSession(new_session);
             }
 
-            updateStreamPair(*i);
+            updateStreamPair(pair);
 
-            if (i->requiresProcessing()) needs_processing = true;
+            if (pair.requiresProcessing()) needs_processing = true;
 
             // reset logger (needed if a stream changes)
-            i->setLogger(logger);
-            i->setASensor(asensor);
-            i->setBSensor(bsensor);
+            pair.setLogger(logger);
+            pair.setASensor(asensor);
+            pair.setBSensor(bsensor);
 
             // return back for processing if needed
-            i->a.resumeStreamProcessing();
-            i->b.resumeStreamProcessing();
+            pair.a.resumeStreamProcessing();
+            pair.b.resumeStreamProcessing();
         } else {
-            if(a_leg) i->a.changeSession(new_session);
-            else i->b.changeSession(new_session);
+            if(a_leg) pair.a.changeSession(new_session);
+            else pair.b.changeSession(new_session);
         }
     }
 
@@ -782,10 +786,10 @@ int AmB2BMedia::writeStreams(unsigned long long ts, unsigned char *buffer)
 {
     int res = 0;
     AmLock lock(mutex);
-    for (auto &i : streams) {
-        if(!i->audio) continue;
-        if (i->a.writeStream(ts, buffer, i->b) < 0) { res = -1; break; }
-        if (i->b.writeStream(ts, buffer, i->a) < 0) { res = -1; break; }
+    for (auto &pair : streams) {
+        if(!pair.audio) continue;
+        if (pair.a.writeStream(ts, buffer, pair.b) < 0) { res = -1; break; }
+        if (pair.b.writeStream(ts, buffer, pair.a) < 0) { res = -1; break; }
     }
     return res;
 }
@@ -793,20 +797,20 @@ int AmB2BMedia::writeStreams(unsigned long long ts, unsigned char *buffer)
 void AmB2BMedia::ping(unsigned long long ts)
 {
     AmLock lock(mutex);
-    for(auto &i : streams) {
-        if(!i->audio) continue;
-        if(i->a.getStream()) i->a.getStream()->ping(ts);
-        if(i->b.getStream()) i->b.getStream()->ping(ts);
+    for(auto &pair : streams) {
+        if(!pair.audio) continue;
+        if(pair.a.getStream()) pair.a.getStream()->ping(ts);
+        if(pair.b.getStream()) pair.b.getStream()->ping(ts);
     }
 }
 
 void AmB2BMedia::processDtmfEvents()
 {
   AmLock lock(mutex);
-  for (auto &i : streams) {
-    if(!i->audio) continue;
-    i->a.processDtmfEvents();
-    i->b.processDtmfEvents();
+  for (auto &pair : streams) {
+    if(!pair.audio) continue;
+    pair.a.processDtmfEvents();
+    pair.b.processDtmfEvents();
   }
 
   if (a) a->processDtmfEvents();
@@ -820,10 +824,10 @@ void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms)
         return;
 
     // send the DTMFs using the first available stream
-    for(auto &i : streams) {
-        if(!i->audio) continue;
-        if(a_leg) i->a.sendDtmf(event,duration_ms);
-        else i->b.sendDtmf(event,duration_ms);
+    for(auto &pair : streams) {
+        if(!pair.audio) continue;
+        if(a_leg) pair.a.sendDtmf(event,duration_ms);
+        else pair.b.sendDtmf(event,duration_ms);
         break;
     }
 }
@@ -835,17 +839,17 @@ void AmB2BMedia::clearAudio(bool a_leg)
 
     AmLock lock(mutex);
 
-    for (auto &i : streams) {
+    for (auto &pair : streams) {
         // remove streams from AmRtpReceiver first! (always both?)
-        i->a.stopStreamProcessing();
-        i->b.stopStreamProcessing();
-        if(!i->audio) continue;
+        pair.a.stopStreamProcessing();
+        pair.b.stopStreamProcessing();
+        if(!pair.audio) continue;
         if (a_leg) {
-            i->a.clear();
-            i->b.setRelayStream(nullptr);
+            pair.a.clear();
+            pair.b.setRelayStream(nullptr);
         } else {
-            i->b.clear();
-            i->a.setRelayStream(nullptr);
+            pair.b.clear();
+            pair.a.setRelayStream(nullptr);
         }
     }
 
@@ -861,9 +865,6 @@ void AmB2BMedia::clearAudio(bool a_leg)
     }
 
     if (!a && !b) {
-        for (StreamIterator j = streams.begin(); j != streams.end(); ++j) {
-            delete *j;
-        }
         streams.clear();
     }
 }
@@ -871,9 +872,9 @@ void AmB2BMedia::clearAudio(bool a_leg)
 void AmB2BMedia::clearRTPTimeout()
 {
     AmLock lock(mutex);
-    for (auto &i : streams) {
-        i->a.clearRTPTimeout();
-        i->b.clearRTPTimeout();
+    for (auto &pair : streams) {
+        pair.a.clearRTPTimeout();
+        pair.b.clearRTPTimeout();
     }
 }
 
@@ -888,7 +889,7 @@ bool AmB2BMedia::canRelay(const SdpMedia &m)
 
 void AmB2BMedia::createStreams(const AmSdp &sdp)
 {
-    StreamIterator stream = streams.begin();
+    auto streams_pair = streams.begin();
 
     vector<SdpMedia>::const_iterator m = sdp.media.begin();
     int idx = 0;
@@ -896,56 +897,54 @@ void AmB2BMedia::createStreams(const AmSdp &sdp)
         // audio streams
         if (m->type == MT_AUDIO) {
             DBG("createStreams() processing audio stream %d",idx);
-            if(stream == streams.end()) {
-                streams.push_back( new StreamPair(a, b, idx));
-                stream = --streams.end();
+            if(streams_pair == streams.end()) {
+                streams.emplace_back(a, b, idx);
+                streams_pair = --streams.end();
                 DBG("[%p] createStreams() created audio StreamPair for stream %d. %p/%p",
                     static_cast<void *>(this),
                     idx,
-                    static_cast<void *>(streams.back()->a.getStream()),
-                    static_cast<void *>(streams.back()->b.getStream()));
-            } else if(!(*stream)->audio) {
-                (*stream)->audio = true;
-                (*stream)->media_idx = idx;
+                    static_cast<void *>(streams.back().a.getStream()),
+                    static_cast<void *>(streams.back().b.getStream()));
+            } else if(!streams_pair->audio) {
+                streams_pair->audio = true;
+                streams_pair->media_idx = idx;
             }
-            (*stream)->a.mute(a_leg_muted);
-            (*stream)->b.mute(b_leg_muted);
-            (*stream)->setLogger(logger);
-            (*stream)->setASensor(asensor);
-            (*stream)->setBSensor(bsensor);
+            streams_pair->a.mute(a_leg_muted);
+            streams_pair->b.mute(b_leg_muted);
+            streams_pair->setLogger(logger);
+            streams_pair->setASensor(asensor);
+            streams_pair->setBSensor(bsensor);
         } else if(!ignore_relay_streams && canRelay(*m)) {// non-audio streams that we can relay
             DBG("createStreams() processing non-audio stream %d",idx);
-            if(stream == streams.end()) {
-                streams.push_back( new StreamPair(a, b));
-                stream = --streams.end();
+            if(streams_pair == streams.end()) {
+                streams.emplace_back(a, b);
+                streams_pair = --streams.end();
                 DBG("[%p] createStreams() created relay StreamPair for non-audio stream %d. %p/%p",
                     static_cast<void *>(this),
                     idx,
-                    static_cast<void *>(streams.back()->a.getStream()),
-                    static_cast<void *>(streams.back()->b.getStream()));
-            } else if((*stream)->audio) {
-                (*stream)->audio = false;
-                (*stream)->media_idx = -1;
+                    static_cast<void *>(streams.back().a.getStream()),
+                    static_cast<void *>(streams.back().b.getStream()));
+            } else if(streams_pair->audio) {
+                streams_pair->audio = false;
+                streams_pair->media_idx = -1;
             }
-            (*stream)->setLogger(logger);
-            (*stream)->setASensor(asensor);
-            (*stream)->setBSensor(bsensor);
+            streams_pair->setLogger(logger);
+            streams_pair->setASensor(asensor);
+            streams_pair->setBSensor(bsensor);
         } else continue; // non-audio stream that we can not relay
 
-        stream++;
+        streams_pair++;
     } //for (; m != sdp.media.end(); ++m, ++idx)
-    
-    // clear last not used streams
-    for(StreamIterator i = stream; i != streams.end();) {
-        (*i)->a.stopStreamProcessing();
-        (*i)->b.stopStreamProcessing();
-        if((*i)->audio) {
-            (*i)->a.clear();
-            (*i)->b.setRelayStream(nullptr);
-        }
 
-        delete *i;
-        i = streams.erase(i);
+    // clear last not used streams
+    while(streams_pair != streams.end()) {
+        streams_pair->a.stopStreamProcessing();
+        streams_pair->a.stopStreamProcessing();
+
+        streams_pair->a.clear();
+        streams_pair->b.clear();
+
+        streams_pair = streams.erase(streams_pair);
     }
 }
 
@@ -962,20 +961,20 @@ void AmB2BMedia::replaceConnectionAddress(
     createStreams(parser_sdp);
 
     string replaced_ports;
-    StreamIterator audio = streams.end(), relay = streams.end();
-    for(StreamIterator i = streams.begin(); i != streams.end(); ++i) {
-        if((*i)->audio) {
-            if(audio == streams.end()) audio = i;
+    auto audio_pair = streams.end(), relay_pair = streams.end();
+    for(auto i = streams.begin(); i != streams.end(); ++i) {
+        if(i->audio) {
+            if(audio_pair == streams.end()) audio_pair = i;
         } else {
-            if(relay == streams.end()) relay = i;
+            if(relay_pair == streams.end()) relay_pair = i;
         }
     }
 
-    std::vector<SdpMedia>::iterator it = parser_sdp.media.begin();
+    auto it = parser_sdp.media.begin();
     for (unsigned int idx = 0; it != parser_sdp.media.end() ; ++it, ++idx) {
         // FIXME: only UDP streams are handled for now
         if(it->type == MT_AUDIO) {
-            if( audio == streams.end() ) {
+            if(audio_pair == streams.end() ) {
                 // strange... we should actually have a stream for this media line...
                 DBG("audio media line does not have coresponding audio stream...\n");
                 continue;
@@ -983,13 +982,13 @@ void AmB2BMedia::replaceConnectionAddress(
 
             public_address.clear();
             try {
-                auto stream = a_leg ? (*audio)->a.getStream() : (*audio)->b.getStream();
+                auto stream = a_leg ? audio_pair->a.getStream() : audio_pair->b.getStream();
                 if(stream) {
                     stream->replaceAudioMediaParameters(*it, idx, addr_type);
                     public_address = stream->getLocalAddress();
                     if(!replaced_ports.empty()) replaced_ports += "/";
                         replaced_ports += int2str(it->port);
-                    }
+                }
             } catch (const string& s) {
                 ERROR("setting port: '%s'\n", s.c_str());
                 throw string("error setting RTP port\n");
@@ -1003,12 +1002,12 @@ void AmB2BMedia::replaceConnectionAddress(
                 DBG("new stream connection address: %s",it->conn.address.c_str());
             }
 
-            ++audio;
+            ++audio_pair;
             //skip relay streams
-            while(audio!=streams.end() && !(*audio)->audio)
-                ++audio;
+            while(audio_pair!=streams.end() && !audio_pair->audio)
+                ++audio_pair;
         } else if(canRelay(*it)) {
-            if( relay == streams.end() ) {
+            if(relay_pair == streams.end()) {
                 // strange... we should actually have a stream for this media line...
                 DBG("media line does not have a coresponding relay stream...\n");
                 continue;
@@ -1016,7 +1015,7 @@ void AmB2BMedia::replaceConnectionAddress(
             if(it->port) { // if stream active
                 public_address.clear();
                 try {
-                    auto stream = a_leg ? (*relay)->a.getStream() : (*relay)->b.getStream();
+                    auto stream = a_leg ? relay_pair->a.getStream() : relay_pair->b.getStream();
                     if(stream) {
                         stream->setLocalIP(addr_type);
                         public_address = stream->getLocalAddress();
@@ -1039,10 +1038,10 @@ void AmB2BMedia::replaceConnectionAddress(
                     DBG("new stream connection address: %s",it->conn.address.c_str());
                 }
             }
-            ++relay;
+            ++relay_pair;
             //skip audio streams
-            while(relay!=streams.end() && (*relay)->audio)
-                ++relay;
+            while(relay_pair!=streams.end() && relay_pair->audio)
+                ++relay_pair;
         } else {
             // quick workaround to allow direct connection of non-supported streams (i.e.
             // those which are not relayed or transcoded): propagate connection
@@ -1127,17 +1126,17 @@ void AmB2BMedia::updateAudioStreams()
         a->getRtpRelayMode() == AmB2BSession::RTP_Transcoding;
 
     // initialize streams to be able to relay & transcode (or use local audio)
-    for (auto &i : streams) {
-        if(!i->audio) continue;
-        i->a.stopStreamProcessing();
-        i->b.stopStreamProcessing();
+    for (auto &pair : streams) {
+        if(!pair.audio) continue;
+        pair.a.stopStreamProcessing();
+        pair.b.stopStreamProcessing();
 
-        updateStreamPair(*i);
+        updateStreamPair(pair);
 
-        if (i->requiresProcessing()) needs_processing = true;
+        if (pair.requiresProcessing()) needs_processing = true;
 
-        i->a.resumeStreamProcessing();
-        i->b.resumeStreamProcessing();
+        pair.a.resumeStreamProcessing();
+        pair.b.resumeStreamProcessing();
     }
 
     // start media processing (only if transcoding or regular audio processing
@@ -1230,12 +1229,12 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
     // we can safely apply the changes once we have local & remote SDP (i.e. the
     // negotiation is finished) otherwise we might handle the RTP in a wrong way
 
-    StreamIterator audio = streams.end(), relay = streams.end();
-    for(StreamIterator i = streams.begin(); i != streams.end(); ++i) {
-        if((*i)->audio) {
-            if(audio == streams.end()) audio = i;
+    auto audio_pair = streams.end(), relay_pair = streams.end();
+    for(auto i = streams.begin(); i != streams.end(); ++i) {
+        if(i->audio) {
+            if(audio_pair == streams.end()) audio_pair = i;
         } else {
-            if(relay == streams.end()) relay = i;
+            if(relay_pair == streams.end()) relay_pair = i;
         }
     }
 
@@ -1247,38 +1246,38 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
         if (m->type == MT_AUDIO) {
             DBG("updateStreams() processing audio stream %d",idx);
 
-            if(audio == streams.end()) {
+            if(audio_pair == streams.end()) {
                 WARN("can't process audio stream from sdp. no appropriate audio stream. ignore it");
                 continue;
             }
             DBG("[%p] updateStreams() update AudioStreamPair %p/%p",
                 static_cast<void *>(this),
-                static_cast<void *>((*audio)->a.getStream()),
-                static_cast<void *>((*audio)->b.getStream()));
+                static_cast<void *>(audio_pair->a.getStream()),
+                static_cast<void *>(audio_pair->b.getStream()));
 
             // initialize relay mask in the other(!) leg and relay destination for stream in current leg
             TRACE("relay payloads in direction %s\n", a_leg ? "B -> A" : "A -> B");
 
             if (a_leg) {
-                (*audio)->b.setRelayPayloads(*m, ctrl);
-                (*audio)->a.setRelayDestination(connection_address,
+                audio_pair->b.setRelayPayloads(*m, ctrl);
+                audio_pair->a.setRelayDestination(connection_address,
                                                static_cast<int>(m->port));
             } else {
-                (*audio)->a.setRelayPayloads(*m, ctrl);
-                (*audio)->b.setRelayDestination(connection_address,
+                audio_pair->a.setRelayPayloads(*m, ctrl);
+                audio_pair->b.setRelayDestination(connection_address,
                                                static_cast<int>(m->port));
             }
 
-            ++audio;
+            ++audio_pair;
             //skip relay streams
-            while(audio!=streams.end() && !(*audio)->audio)
-                ++audio;
+            while(audio_pair!=streams.end() && !audio_pair->audio)
+                ++audio_pair;
         } else {
             DBG("updateStreams() processing non-audio stream %d",idx);
             if(ignore_relay_streams) continue;
             if (!canRelay(*m)) continue;
-            if (relay == streams.end()) continue;
-            StreamPair& relay_stream = **relay;
+            if (relay_pair == streams.end()) continue;
+            StreamPair& relay_stream = *relay_pair;
 
             if(a_leg) {
                 DBG("[%p] updating A-leg relay_stream %d. %p",
@@ -1293,10 +1292,10 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
                     static_cast<void *>(relay_stream.b.getStream()));
                 updateRelayStream(relay_stream.b.getStream(), b, connection_address, *m, relay_stream.a.getStream());
             }
-            ++relay;
+            ++relay_pair;
             //skip audio streams
-            while(relay!=streams.end() && (*relay)->audio)
-                ++relay;
+            while(relay_pair!=streams.end() && relay_pair->audio)
+                ++relay_pair;
         }
     } //iterate remote_sdp.media
 
@@ -1310,17 +1309,17 @@ void AmB2BMedia::setFirstAudioPairStream(
     const AmSdp &local_sdp, const AmSdp &remote_sdp)
 {
     StreamData *adata = 0;
-    for(auto &i : streams) {
-        if(i->audio) {
-            adata = &(a_leg ? i->a : i->b);
+    for(auto &pair : streams) {
+        if(pair.audio) {
+            adata = &(a_leg ? pair.a : pair.b);
             break;
         }
     }
 
     if(!adata) {
-        StreamPair *pair = new StreamPair(nullptr, nullptr, 0);
-        streams.push_back(pair);
-        adata = &(a_leg ? pair->a : pair->b);
+        streams.emplace_back(nullptr, nullptr, 0);
+        auto &pair = streams.back();
+        adata = &(a_leg ? pair.a : pair.b);
     }
 
     adata->setStreamUnsafe(stream, a_leg ? a : b);
@@ -1373,14 +1372,14 @@ bool AmB2BMedia::replaceOffer(AmSdp &sdp, bool a_leg)
 
     createStreams(sdp); // create missing streams
     try {
-        StreamIterator as = streams.begin();
+        auto pair = streams.begin();
         for (vector<SdpMedia>::iterator m = sdp.media.begin(); m != sdp.media.end(); ++m) {
-            if (m->type == MT_AUDIO && as != streams.end()) {
+            if (m->type == MT_AUDIO && pair != streams.end()) {
                 // generate our local offer
-                while(!(*as)->audio && as != streams.end()) ++as;
+                while(!pair->audio && pair != streams.end()) ++pair;
                 TRACE("... making audio stream offer\n");
-                if (a_leg) (*as)->a.getSdpOffer((*as)->media_idx, *m);
-                else (*as)->b.getSdpOffer((*as)->media_idx, *m);
+                if (a_leg) pair->a.getSdpOffer(pair->media_idx, *m);
+                else pair->b.getSdpOffer(pair->media_idx, *m);
             } else {
                 TRACE("... making non-audio/uninitialised stream inactive\n");
                 m->send = false;
@@ -1425,66 +1424,66 @@ void AmB2BMedia::setMuteFlag(bool a_leg, bool set)
     AmLock lock(mutex);
     if (a_leg) a_leg_muted = set;
     else b_leg_muted = set;
-    for (auto &i : streams) {
-        if(!i->audio) continue;
-        if (a_leg) i->a.mute(set);
-        else i->b.mute(set);
+    for (auto &pair : streams) {
+        if(!pair.audio) continue;
+        if (a_leg) pair.a.mute(set);
+        else pair.b.mute(set);
     }
 }
 
 void AmB2BMedia::setRtpTimeout(bool a_leg, unsigned int timeout)
 {
     AmLock lock(mutex);
-    for (auto &p: streams)
-        p->setRtpTimeout(a_leg,timeout);
+    for (auto &pair: streams)
+        pair.setRtpTimeout(a_leg,timeout);
 }
 
 void AmB2BMedia::setRtpTimeout(unsigned int timeout)
 {
     AmLock lock(mutex);
-    for (auto &p: streams)
-        p->setRtpTimeout(timeout);
+    for (auto &pair: streams)
+        pair.setRtpTimeout(timeout);
 }
 
 void AmB2BMedia::setFirstStreamInput(bool a_leg, AmAudio *in)
 {
     AmLock lock(mutex);
-    StreamPair *adata = 0;
-    for(auto &i : streams) {
-        if(i->audio) {
-            adata = i;
-            break;
-        }
-    }
-    if (adata) {
-        if (a_leg) adata->a.setInput(in);
-        else adata->b.setInput(in);
+
+    bool found = false;
+    for(auto &pair : streams) {
+        if(!pair.audio) continue;
+
+        found = true;
+        if (a_leg) pair.a.setInput(in);
+        else pair.b.setInput(in);
         updateAudioStreams();
-    } else {
-        if (in) {
-            ERROR("BUG: can't set %s leg's first stream input, no streams\n", a_leg ? "A": "B");
-        }
+
+        break;
+    }
+
+    if(!found && in) {
+        ERROR("BUG: can't set %s leg's first stream input, no streams\n",a_leg ? "A": "B");
     }
 }
 
 void AmB2BMedia::setFirstStreamOutput(bool a_leg, AmAudio *out)
 {
     AmLock lock(mutex);
-    StreamPair *adata = 0;
-    for(auto &i : streams) {
-        if(i->audio) {
-            adata = i;
-            break;
-        }
-    }
-    if (adata) {
-        if (a_leg) adata->a.setOutput(out);
-        else adata->b.setOutput(out);
+
+    bool found = false;
+    for(auto &pair : streams) {
+        if(!pair.audio) continue;
+
+        found = true;
+        if (a_leg) pair.a.setOutput(out);
+        else pair.b.setOutput(out);
         updateAudioStreams();
-    } else {
-        if (out) {
-            ERROR("BUG: can't set %s leg's first stream output, no streams\n", a_leg ? "A": "B");
-        }
+
+        break;
+    }
+
+    if(!found && out) {
+        ERROR("BUG: can't set %s leg's first stream output, no streams\n", a_leg ? "A": "B");
     }
 }
 
@@ -1515,7 +1514,7 @@ void AmB2BMedia::createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer,
             answer.conn.address = zero_ip; // we need something there
     }
 
-    StreamIterator i = streams.begin();
+    auto pair = streams.begin();
     vector<SdpMedia>::const_iterator m;
     for (m = offer.media.begin();
          m != offer.media.end(); ++m)
@@ -1532,17 +1531,17 @@ void AmB2BMedia::createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer,
 
         if (m->port == 0) { // copy whole inactive media line
             media = *m;
-            while(!(*i)->audio || i != streams.end()) ++i;
+            while(!pair->audio || pair != streams.end()) ++pair;
             continue;
         }
 
-        if(i == streams.end()) {
+        if(pair == streams.end()) {
             ERROR("audio streams less then media lines in sdp");
             return;
         }
 
-        if (a_leg) (*i)->a.getSdpAnswer((*i)->media_idx, *m, media);
-        else (*i)->b.getSdpAnswer((*i)->media_idx, *m, media);
+        if (a_leg) pair->a.getSdpAnswer(pair->media_idx, *m, media);
+        else pair->b.getSdpAnswer(pair->media_idx, *m, media);
 
         media.send = false; // should be already because the stream should be on hold
         media.recv = false; // what we would do with received data?
@@ -1567,8 +1566,8 @@ void AmB2BMedia::setRtpLogger(msg_logger* _logger)
     if (logger) inc_ref(logger);
 
     // walk through all the streams and use logger for them
-    for (StreamIterator j = streams.begin(); j != streams.end(); ++j)
-        (*j)->setLogger(logger);
+    for(auto &pair: streams)
+        pair.setLogger(logger);
 }
 
 void AmB2BMedia::setRtpASensor(msg_sensor* _sensor)
@@ -1582,8 +1581,8 @@ void AmB2BMedia::setRtpASensor(msg_sensor* _sensor)
     if(asensor) inc_ref(asensor);
 
     // walk through all the streams and apply sensor for them
-    for (StreamIterator j = streams.begin(); j != streams.end(); ++j)
-        (*j)->setASensor(asensor);
+    for(auto &pair: streams)
+        pair.setASensor(asensor);
 }
 
 void AmB2BMedia::setRtpBSensor(msg_sensor* _sensor)
@@ -1597,21 +1596,21 @@ void AmB2BMedia::setRtpBSensor(msg_sensor* _sensor)
     if(bsensor) inc_ref(bsensor);
 
     // walk through all the streams and apply sensor for them
-    for (StreamIterator i = streams.begin(); i != streams.end(); ++i)
-        (*i)->setBSensor(bsensor);
+    for(auto &pair: streams)
+        pair.setBSensor(bsensor);
 }
 
 void AmB2BMedia::setRelayDTMFReceiving(bool enabled) {
     AmLock lock(mutex);
 
     DBG("streams.size() = %zd\n", streams.size());
-    for (StreamIterator j = streams.begin(); j != streams.end(); j++) {
+    for(auto &pair : streams) {
         DBG("force_receive_dtmf %sabled for [%p]\n", enabled?"en":"dis",
-            static_cast<void *>(&(*j)->a));
+            static_cast<void *>(&pair.a));
         DBG("force_receive_dtmf %sabled for [%p]\n", enabled?"en":"dis",
-            static_cast<void *>(&(*j)->b));
-        (*j)->a.getStream()->force_receive_dtmf = enabled;
-        (*j)->b.getStream()->force_receive_dtmf = enabled;
+            static_cast<void *>(&pair.b));
+        pair.a.getStream()->force_receive_dtmf = enabled;
+        pair.b.getStream()->force_receive_dtmf = enabled;
     }
 }
 
@@ -1622,22 +1621,24 @@ void AmB2BMedia::setReceiving(bool receiving_a, bool receiving_b)
 
     DBG("streams.size() = %zd\n",streams.size());
 
-    for (StreamIterator j = streams.begin(); j != streams.end(); j++)
-    {
-        if(!(*j)->audio)
+    for(auto &pair : streams) {
+        if(!pair.audio)
             DBG("setReceiving(%s) A relay stream [%p]\n", receiving_a?"true":"false",
-                static_cast<void *>((*j)->a.getStream()));
+                static_cast<void *>(pair.a.getStream()));
         else
             DBG("setReceiving(%s) A audio stream [%p]\n", receiving_a?"true":"false",
-                static_cast<void *>((*j)->a.getStream()));
-        (*j)->a.setReceiving(receiving_a);
-        if(!(*j)->audio)
+                static_cast<void *>(pair.a.getStream()));
+
+        pair.a.setReceiving(receiving_a);
+
+        if(!pair.audio)
             DBG("setReceiving(%s) B relay stream [%p]\n", receiving_b?"true":"false",
-                static_cast<void *>((*j)->a.getStream()));
+                static_cast<void *>(pair.a.getStream()));
         else
             DBG("setReceiving(%s) B audio stream [%p]\n", receiving_b?"true":"false",
-                static_cast<void *>((*j)->a.getStream()));
-        (*j)->b.setReceiving(receiving_b);
+                static_cast<void *>(pair.a.getStream()));
+
+        pair.b.setReceiving(receiving_b);
     }
 }
 
@@ -1654,13 +1655,13 @@ void AmB2BMedia::pauseRelay()
     DBG("streams.size() = %zd\n", streams.size());
     relay_paused = true;
 
-    for (StreamIterator j = streams.begin(); j != streams.end(); j++) {
-        if((*j)->audio) {
-            (*j)->a.setRelayPaused(true);
-            (*j)->b.setRelayPaused(true);
+    for(auto &pair : streams) {
+        if(pair.audio) {
+            pair.a.setRelayPaused(true);
+            pair.b.setRelayPaused(true);
         } else {
-            (*j)->a.getStream()->setRawRelay(false);
-            (*j)->b.getStream()->setRawRelay(false);
+            pair.a.getStream()->setRawRelay(false);
+            pair.b.getStream()->setRawRelay(false);
         }
     }
 }
@@ -1673,13 +1674,13 @@ void AmB2BMedia::restartRelay()
 
     relay_paused = false;
 
-    for (StreamIterator j = streams.begin(); j != streams.end(); j++) {
-        if((*j)->audio) {
-            (*j)->a.setRelayPaused(false);
-            (*j)->b.setRelayPaused(false);
+    for(auto &pair : streams) {
+        if(pair.audio) {
+            pair.a.setRelayPaused(false);
+            pair.b.setRelayPaused(false);
         } else {
-            (*j)->a.getStream()->setRawRelay(true);
-            (*j)->b.getStream()->setRawRelay(true);
+            pair.a.getStream()->setRawRelay(true);
+            pair.b.getStream()->setRawRelay(true);
         }
     }
 }
@@ -1700,13 +1701,13 @@ void AmB2BMedia::debug()
         have_b_leg_local_sdp ? 'X' : '-',
         have_b_leg_remote_sdp ? 'X' : '-');
 
-    for (StreamIterator i = streams.begin(); i != streams.end(); ++i) {
-        if((*i)->audio) DBG(" - audio stream (A):\n");
+    for(auto &pair : streams) {
+        if(pair.audio) DBG(" - audio stream (A):\n");
         else DBG(" - relay stream (A):\n");
-        (*i)->a.debug();
-        if((*i)->audio) DBG(" - audio stream (B):\n");
+        pair.a.debug();
+        if(pair.audio) DBG(" - audio stream (B):\n");
         else DBG(" - relay stream (B):\n");
-        (*i)->b.debug();
+        pair.b.debug();
     }
 }
 
@@ -1720,17 +1721,17 @@ void AmB2BMedia::getInfo(AmArg &ret)
     arg_audio.assertArray();
     arg_relay_streams.assertArray();
 
-    for(StreamIterator i = streams.begin(); i != streams.end(); ++i) {
+    for(auto &pair : streams) {
         AmArg *arg;
-        if((*i)->audio) arg = &arg_audio;
+        if(pair.audio) arg = &arg_audio;
         else arg = &arg_relay_streams;
 
         arg->push(AmArg());
         AmArg &u = arg_audio.back();
-        (*i)->a.getInfo(u["a"]);
-        (*i)->b.getInfo(u["b"]);
-        if((*i)->audio) {
-            u["media_idx"] = (*i)->media_idx;
+        pair.a.getInfo(u["a"]);
+        pair.b.getInfo(u["b"]);
+        if(pair.audio) {
+            u["media_idx"] = pair.media_idx;
         }
     }
 
