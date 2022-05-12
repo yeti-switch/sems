@@ -85,7 +85,9 @@ trans_stats::trans_stats()
   : sent_requests(stat_group(Counter, "core", "tx_requests").addAtomicCounter()),
     sent_replies(stat_group(Counter, "core", "tx_replies").addAtomicCounter()),
     received_requests(stat_group(Counter, "core", "rx_requests").addAtomicCounter()),
+    received_request_retransmits(stat_group(Counter, "core", "rx_requests_retrans").addAtomicCounter()),
     received_replies(stat_group(Counter, "core", "rx_replies").addAtomicCounter()),
+    received_200_reply_retransmits(stat_group(Counter, "core", "rx_200_replies_retrans").addAtomicCounter()),
     sent_reply_retrans(stat_group(Counter, "core", "tx_replies_retrans").addAtomicCounter()),
     sent_request_retrans(stat_group(Counter, "core", "tx_requests_retrans").addAtomicCounter()),
     sip_acl_dropped(stat_group(Counter, "core", "sip_acl_dropped").addAtomicCounter()),
@@ -1838,6 +1840,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 	    }
 	    else {
 		DBG("Found retransmission\n");
+		stats.inc_received_requests_retransmits();
 		t->retransmit(); // retransmit reply
 	    }
 	}
@@ -2219,6 +2222,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 		}
 
 		DBG("Received 200 reply retransmission\n");
+		stats.inc_received_200_replies_retransmits();
 		t->retransmit();
 		goto end;
 

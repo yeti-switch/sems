@@ -86,7 +86,9 @@ class trans_stats
     AtomicCounter &sent_requests;
     AtomicCounter &sent_replies;
     AtomicCounter &received_requests;
+    AtomicCounter &received_request_retransmits;
     AtomicCounter &received_replies;
+    AtomicCounter &received_200_reply_retransmits;
     AtomicCounter &sent_reply_retrans;
     AtomicCounter &sent_request_retrans;
     AtomicCounter &sip_acl_dropped;
@@ -104,8 +106,14 @@ class trans_stats
     /** increment number of received requests */
     void inc_received_requests() { received_requests.inc(); }
 
+    /** increment number of received requests retransmits  */
+    void inc_received_requests_retransmits() { received_request_retransmits.inc(); }
+
     /** increment number of received replies */
     void inc_received_replies() { received_replies.inc(); }
+
+    /** increment number of received 200 OK retransmits */
+    void inc_received_200_replies_retransmits() { received_200_reply_retransmits.inc(); }
 
     /** increment number of sent request retransmissions */
     void inc_sent_request_retrans() { sent_request_retrans.inc(); }
