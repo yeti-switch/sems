@@ -1,3 +1,9 @@
+sems (1.81.1) stable; urgency=low
+  * AmB2BSession: force dialog drop on leg termination
+    fixes sessions stucking for scenarios with signalling issues
+    and races of the internal events like ACK or RTP timeout 
+ -- Michael Furmur <furmur@pm.me>  Tue, 17 May 2022 17:55:55 +0300
+
 sems (1.81.0) stable; urgency=low
   * trans_layer: add rx_requests_retrans, rx_200_replies_retrans counters
   * AmB2BMedia: 'streams' usage refactoring. fix AmRtpAudio objects leak
