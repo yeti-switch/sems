@@ -1,3 +1,7 @@
+sems (1.81.2) stable; urgency=low
+  * AmB2BSession: revert transactions cleanup on leg termination
+ -- Michael Furmur <furmur@pm.me>  Tue, 17 May 2022 18:26:42 +0300
+
 sems (1.81.1) stable; urgency=low
   * AmB2BSession: force dialog drop on leg termination
     fixes sessions stucking for scenarios with signalling issues
