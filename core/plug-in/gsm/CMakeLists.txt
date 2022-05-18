@@ -1,5 +1,5 @@
 set (gsm_SRCS
- gsm.c
+ gsm.cpp
 )
 
 INCLUDE_DIRECTORIES(${GSM_INCLUDE_DIR})

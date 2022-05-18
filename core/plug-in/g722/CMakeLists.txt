@@ -1,4 +1,4 @@
-SET(g722_SRCS g722.c)
+SET(g722_SRCS g722.cpp)
 
 #module_cflags  = -ansi # -DNOFPU
 

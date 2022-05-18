@@ -48,6 +48,7 @@ __thread pthread_t _self_tid = 0;
 __thread pid_t     _self_pid = 0;
 
 int log_level  = L_INFO;	/**< log level */
+__thread char log_buf[LOG_BUFFER_LEN];
 
 /** Map log levels to text labels */
 const char* log_level2str[] = { "ERROR", "WARNING", "INFO", "DEBUG" };
@@ -89,7 +90,8 @@ class SyslogLogFac : public AmLoggingFacility {
   }
 
   bool setFacility(const char* str, const char* name);
-  void log(int, pid_t, pid_t, const char*, const char*, int, char*);
+  void log(int, pid_t, pid_t,
+           const char*, const char*, int, const char*);
 
   static SyslogLogFac &instance(){
 	  if(!_instance) _instance = new SyslogLogFac();
@@ -132,7 +134,8 @@ bool SyslogLogFac::setFacility(const char* str, const char* name) {
   return true;
 }
 
-void SyslogLogFac::log(int level, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg)
+void SyslogLogFac::log(int level, pid_t pid, pid_t tid,
+                       const char* func, const char* file, int line, const char* msg)
 {
   static const int log2syslog_level[] = { LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
 #ifdef _DEBUG
@@ -191,7 +194,8 @@ class StderrLogFac : public AmLoggingFacility {
     }
     ~StderrLogFac() {}
     int onLoad() {  return 0; }
-    void log(int level_, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg_)
+    void log(int level_, pid_t pid, pid_t tid,
+             const char* func, const char* file, int line, const char* msg_)
     {
         fprintf(stderr, COMPLETE_LOG_FMT);
         fflush(stderr);
@@ -229,7 +233,8 @@ void cleanup_logging()
 /**
  * Run log hooks
  */
-void run_log_hooks(int level, pid_t pid, pthread_t tid, const char* func, const char* file, int line, char* msg)
+void run_log_hooks(int level, pid_t pid, pthread_t tid,
+                   const char* func, const char* file, int line, const char* msg)
 {
   AmLock l(log_hooks_mutex);
   (void)l;
@@ -370,7 +375,7 @@ void __lds(int ll, unsigned int max_frames)
     				    funcname, &funcnamesize, &status);
         if (status == 0) {
     	funcname = ret; // use possibly realloc()-ed string
-    	_LOG(ll,"%s : %s+%s",
+        _LOG(ll,"%s : %s+%s",
     		symbollist[i], funcname, begin_offset);
         }
         else {

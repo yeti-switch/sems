@@ -1,5 +1,5 @@
 set (speex_SRCS
- speex.c
+ speex.cpp
 )
 
 INCLUDE_DIRECTORIES(${SPEEX_INCLUDE_DIR})

@@ -22,7 +22,8 @@ class TesterLogFac : public AmLoggingFacility {
     }
     ~TesterLogFac() {}
     int onLoad() {  return 0; }
-    void log(int level_, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg_)
+    void log(int level_, pid_t pid, pid_t tid,
+             const char* func, const char* file, int line, const char* msg_)
     {
         fprintf(stderr, COMPLETE_LOG_FMT);
         fflush(stderr);

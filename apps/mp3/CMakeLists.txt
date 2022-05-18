@@ -1,5 +1,5 @@
 set (mp3_SRCS
-mp3.c
+mp3.cpp
 )
 
 #ifeq ($(WITH_MPG123DECODER), yes)

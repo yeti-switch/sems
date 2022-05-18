@@ -138,8 +138,8 @@ void no_output(const char *format, va_list ap)
 long MP3_create(const char* format_parameters, amci_codec_fmt_info_t* format_description) {
   mp3_coder_state* coder_state;
   int ret_code;
-  
-  coder_state = malloc(sizeof(mp3_coder_state));
+
+  coder_state = new mp3_coder_state();
   if (!coder_state) {
     ERROR("no memory for allocating mp3 coder state\n");
     return -1;
@@ -151,7 +151,7 @@ long MP3_create(const char* format_parameters, amci_codec_fmt_info_t* format_des
     
   if (!coder_state->gfp) {
     ERROR("initialiting lame\n");
-    free(coder_state);
+    delete coder_state;
     return -1;
   }
 
@@ -162,7 +162,7 @@ long MP3_create(const char* format_parameters, amci_codec_fmt_info_t* format_des
   lame_set_num_channels(coder_state->gfp,1);
   lame_set_in_samplerate(coder_state->gfp,8000);
   lame_set_brate(coder_state->gfp,16);
-  lame_set_mode(coder_state->gfp,3); // mono
+  lame_set_mode(coder_state->gfp, MONO); // mono
   lame_set_quality(coder_state->gfp,2);   /* 2=high  5 = medium  7=low */ 
   
   id3tag_init(coder_state->gfp);
@@ -171,7 +171,7 @@ long MP3_create(const char* format_parameters, amci_codec_fmt_info_t* format_des
   
   if (ret_code < 0) {
     ERROR("lame encoder init failed: return code is %d\n", ret_code);
-    free(coder_state);
+    delete coder_state;
     return -1;
   }
   
@@ -201,7 +201,7 @@ void MP3_destroy(long h_inst) {
     mpg123_delete(((mp3_coder_state*)h_inst)->mpg123_h);
 #endif
 
-    free((mp3_coder_state*)h_inst);
+    delete (mp3_coder_state*)h_inst;
   }
 }
 

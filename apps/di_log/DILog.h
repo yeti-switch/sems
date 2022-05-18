@@ -33,5 +33,6 @@ class DILog : public AmLoggingFacility
   virtual int reconfigure(const std::string& config);
   // LF API
   //void log(int level, const char* fmt);
-  void log(int level, pid_t pid, pid_t tid, const char* func, const char* file, int line, char* msg);
+  void log(int level, pid_t pid, pid_t tid,
+           const char* func, const char* file, int line, const char* msg);
 };

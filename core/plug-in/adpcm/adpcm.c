@@ -30,7 +30,6 @@
 
 #include "amci.h"
 #include "codecs.h"
-#include "../../log.h"
 #include "g72x.h"
 #include <stdlib.h>
 

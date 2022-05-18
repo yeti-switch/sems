@@ -323,9 +323,6 @@ IF(USE_OBJECTS_COUNTERS)
     ADD_DEFINITIONS(-DOBJECTS_COUNTER)
 ENDIF(USE_OBJECTS_COUNTERS)
 
-#ADD_DEFINITIONS("-D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
-ADD_DEFINITIONS("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/= -D__FILENAME__=__FILE__")
-
 # compile with session thread pool support?
 #      use this for very high concurrent call count
 #      applications (e.g. for signaling only)

@@ -333,14 +333,14 @@ int Pcm16_2_Speex( unsigned char* out_buf, unsigned char* in_buf,
   SpeexState* ss;
   short* pcm = (short*) in_buf;
   char* buffer = (char*)out_buf;
-  div_t blocks;
+  ldiv_t blocks;
     
   ss = (SpeexState*) h_codec;
     
   if (!ss || channels!=1)
     return -1;
 
-  blocks = div(size>>1, ss->frame_size);
+  blocks = ldiv(size>>1, ss->frame_size);
   if (blocks.rem) {
     ERROR("Pcm16_2_Speex: not integral number of blocks %d.%d\n", 
 	  blocks.quot, blocks.rem);

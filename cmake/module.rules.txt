@@ -14,6 +14,8 @@ IF(SEMS_USE_AMARG_STAT)
     add_definitions("-DUSE_AMARG_STATISTICS")
 ENDIF(SEMS_USE_AMARG_STAT)
 
+add_definitions("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=${sems_module_name}:")
+
 IF(${sems_module_name}_UNIT_SRCS)
     MESSAGE(STATUS "using unit tests for ${sems_module_name}")
 

@@ -36,9 +36,9 @@
 #define SYSTEM_SAMPLECLOCK_RATE 32000
 #endif
 
-#ifdef __cplusplus
+/*#ifdef __cplusplus
 extern "C" {
-#endif
+#endif*/
 
 #ifdef __linux
 # ifndef _GNU_SOURCE
@@ -352,13 +352,13 @@ struct amci_subtype_t {
 struct amci_inoutfmt_t {
 
     /** example: "Wav". */
-    char* name; 
+    const char* name;
   
     /** example: "wav". */
-    char* ext;
+    const char* ext;
 
     /** example: "audio/x-wav". */
-    char* email_content_type; 
+    const char* email_content_type;
 
     /** options: AMCI_RDONLY, AMCI_WRONLY. */
     amci_file_open_t open;
@@ -428,7 +428,7 @@ struct amci_payload_t {
 struct amci_exports_t {
 
     /** Module name */
-    char* name;
+    const char* name;
 
     /** Codec module load function. can be NULL */
     amci_codec_module_load_t module_load;
@@ -590,15 +590,8 @@ struct amci_exports_t {
 #define AMCI_NO_CODECCREATE   NULL
 #define AMCI_NO_CODECDESTROY  NULL
 
-#ifdef __cplusplus
+/*#ifdef __cplusplus
 }
-#endif
+#endif*/
 
 #endif
-
-
-
-
-
-
-

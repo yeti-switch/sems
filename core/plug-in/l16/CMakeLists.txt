@@ -1,5 +1,5 @@
 set (l16_SRCS
- l16.c
+ l16.cpp
 )
 
 SET(sems_module_name l16)

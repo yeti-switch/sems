@@ -33,9 +33,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+extern "C" {
 #include "iLBC_define.h"
 #include "iLBC_encode.h"
 #include "iLBC_decode.h"
+}
+
 /**
  * @file plug-in/ilbc/ilbc.c
  * iLBC support 
@@ -133,8 +137,8 @@ long iLBC_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
 
   iLBC_Codec_Inst_t* codec_inst;
   int mode;
-  char* mbegin;
-  char* msep;
+  const char* mbegin;
+  const char* msep;
   char modeb[8];
   
   if ((!format_parameters)||(!*format_parameters)||(!(mbegin=strstr(format_parameters, "mode")))) {

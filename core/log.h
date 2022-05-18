@@ -25,29 +25,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/** @file log.h */
-#ifndef _log_h_
-#define _log_h_
+#pragma once
 
 #include <sys/types.h>	/* pid_t */
 #include <stdio.h>
 #include <unistd.h>	/* getpid() */
 #include <pthread.h>	/* pthread_self() */
 #include <execinfo.h>   /* backtrace_symbols() */
-
-#ifdef __cplusplus
 #include <cxxabi.h> /* __cxa_demangle() */
-#endif
 
 extern __thread pthread_t _self_tid;
 extern __thread pid_t     _self_pid;
-
-#ifdef __cplusplus
-extern "C" {
-# if 0
-}
-# endif
-#endif
 
 /**
  * @{ Log levels
@@ -114,18 +102,35 @@ enum Log_Level {
 #define LOG_BUFFER_LEN 4096
 #endif
 
-/* The underscores in parameter and local variable names are there to
-   avoid collisions. */
+extern int log_level;
+extern __thread char log_buf[LOG_BUFFER_LEN];
+
+void run_log_hooks(int, pid_t, pthread_t,
+                   const char*, const char*, int, const char*);
+
+template<class... Types> void write_log(
+    int level, const char* func, const char* file, int line,
+    const char *fmt, Types... args)
+{
+    //level = FIX_LOG_LEVEL(level);
+    if(level > log_level) return;
+
+    if constexpr (sizeof...(args) > 0) {
+        /*int n = */snprintf(log_buf, sizeof(log_buf), fmt, args...);
+
+        /*if ((n < LOG_BUFFER_LEN) && (msg[n - 1] == '\n'))
+            msg[n - 1] = '\0';*/
+
+        run_log_hooks(level, _self_pid, _self_tid,
+                      func, file, line, log_buf);
+    } else {
+        run_log_hooks(level, _self_pid, _self_tid,
+                      func, file, line, fmt);
+    }
+}
+
 #define _LOG(level__, fmt, args...) \
-    do { \
-        int level_ = FIX_LOG_LEVEL(level__); \
-        if ((level_) > log_level) break; \
-        char msg_[LOG_BUFFER_LEN]; \
-        int n_ = snprintf(msg_, sizeof(msg_), fmt, ##args); \
-        if ((n_ < LOG_BUFFER_LEN) && (msg_[n_ - 1] == '\n')) \
-            msg_[n_ - 1] = '\0'; \
-        run_log_hooks(level_, _self_pid, _self_tid, FUNC_NAME, __FILENAME__, __LINE__, msg_); \
-    } while(0)
+    write_log(level__, FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
 
 /**
  * @{ Logging macros
@@ -177,12 +182,10 @@ _LOG(L_WARN, error_category fmt, ##args)
 
 /** @} */
 
-extern int log_level;
 extern const char* log_level2str[];
 
 void init_logging(const char* name);
 void cleanup_logging();
-void run_log_hooks(int, pid_t, pthread_t, const char*, const char*, int, char*);
 
 #ifndef DISABLE_SYSLOG_LOG
 int set_syslog_facility(const char*, const char* );
@@ -190,14 +193,9 @@ int set_syslog_facility(const char*, const char* );
 
 void log_stacktrace(int ll);
 
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
-/* ...only for C++ */
 #define log_demangled_stacktrace __lds
 void __lds(int ll, unsigned int max_frames = 63);
+
 class AmLoggingFacility;
 void register_log_hook(AmLoggingFacility*);
 void unregister_log_hook(AmLoggingFacility*);
@@ -207,7 +205,3 @@ bool get_higher_levels(int& log_level_arg);
 void set_log_level(int log_level_arg);
 void register_stderr_facility();
 void set_stderr_log_level(int log_level_arg);
-
-#endif
-
-#endif /* !_log_h_ */

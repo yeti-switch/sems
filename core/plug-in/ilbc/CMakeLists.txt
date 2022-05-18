@@ -1,5 +1,5 @@
 set (ilbc_SRCS
- ilbc.c
+ ilbc.cpp
 )
 
 SET(sems_module_name ilbc)

@@ -1,7 +1,7 @@
 find_package(OPUS REQUIRED)
 
 set (opus_SRCS
-	opus.c
+	opus.cpp
 )
 
 SET(sems_module_name opus)

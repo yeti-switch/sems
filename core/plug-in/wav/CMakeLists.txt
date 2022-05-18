@@ -1,7 +1,7 @@
 set (wav_SRCS
- g711.c
- wav.c
- wav_hdr.c
+ g711.cpp
+ wav.cpp
+ wav_hdr.cpp
 )
 
 SET(sems_module_name wav)

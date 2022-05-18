@@ -27,7 +27,11 @@
 
 #include "amci.h"
 #include "codecs.h"
+
+extern "C" {
 #include "gsm-1.0-pl10/inc/gsm.h"
+}
+
 #include "../../log.h"
 
 #include <stdlib.h>
@@ -129,8 +133,8 @@ static int gsm_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned i
 static long gsm_create_if(const char* format_parameters, amci_codec_fmt_info_t* format_description)
 { 
   gsm* h_codec=0;
-    
-  h_codec = malloc(sizeof(gsm)*2);
+
+  h_codec = static_cast<gsm *>(malloc(sizeof(gsm)*2));
   if(!h_codec){
     ERROR("gsm.c: could not create handle array\n");
     return 0;
@@ -147,7 +151,7 @@ static long gsm_create_if(const char* format_parameters, amci_codec_fmt_info_t* 
   format_description[2].value = 33;
   format_description[3].id = 0;
 
-    
+
   return (long)h_codec;
 }
 
