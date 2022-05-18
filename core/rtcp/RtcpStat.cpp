@@ -8,8 +8,19 @@
 #define RTP_SEQ_MOD (1<<16)
 
 RtcpUnidirectionalStat::RtcpUnidirectionalStat()
-{ 
-    bzero(this,sizeof(RtcpUnidirectionalStat));
+  : update{0,0},
+    update_cnt(0),
+    pkt(0),
+    bytes(0),
+    discard(0),
+    loss(0),
+    reorder(0),
+    dup(0),
+    decode_err(0),
+    loss_type{ .burst = 0, .random = 0},
+    rtcp_jitter(0)
+{
+    bzero(&addr,sizeof(addr));
 }
 
 RtcpBidirectionalStat::RtcpBidirectionalStat()
