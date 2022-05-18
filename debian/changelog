@@ -1,3 +1,7 @@
+sems (1.82.0) stable; urgency=low
+  * logging refactoring
+ -- Michael Furmur <furmur@pm.me>  Wed, 18 May 2022 19:06:44 +0300
+
 sems (1.81.2) stable; urgency=low
   * AmB2BSession: revert transactions cleanup on leg termination
  -- Michael Furmur <furmur@pm.me>  Tue, 17 May 2022 18:26:42 +0300
