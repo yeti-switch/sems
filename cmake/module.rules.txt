@@ -42,7 +42,7 @@ ENDIF(APPLE)
 SET(MODULE_VERSION "${SEMS_VERSION}")
 MESSAGE(STATUS "set version of ${sems_module_name} - ${MODULE_VERSION}")
 
-ADD_DEFINITIONS(-DMOD_NAME=\\\"${sems_module_name}\\\"  -DMODULE_VERSION=\\\"${MODULE_VERSION}\\\")
+ADD_DEFINITIONS(-DMOD_NAME="${sems_module_name}"  -DMODULE_VERSION="${MODULE_VERSION}")
 
 # all modules should be linked against ${CMAKE_DL_LIBS} at least
 # and with additional ${sems_module_libs} if they exists
