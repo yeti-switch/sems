@@ -14,7 +14,7 @@ add_custom_target(libbotan ALL DEPENDS ${BOTAN_BUNDLED_LIB})
 IF(NOT EXISTS ${BOTAN_BIN_DIR}/configure_stdout)
     file(MAKE_DIRECTORY ${BOTAN_BIN_DIR})
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${BOTAN_SRC_DIR} ${BOTAN_BIN_DIR})
-    execute_process(COMMAND patch --strip=1 --directory=${BOTAN_BIN_DIR} --input=${BOTAN_PATCH_FILE})
+    execute_process(COMMAND patch --silent --strip=1 --directory=${BOTAN_BIN_DIR} --input=${BOTAN_PATCH_FILE})
     execute_process(COMMAND ./configure.py ${BOTAN_CONFIG_ARGS} OUTPUT_FILE configure_stdout WORKING_DIRECTORY ${BOTAN_BIN_DIR})
 ENDIF(NOT EXISTS ${BOTAN_BIN_DIR}/configure_stdout)
 
