@@ -282,15 +282,15 @@ TEST_F(PostgresqlTest, DbTransactionMergeTest)
     ASSERT_FALSE(trans->merge(trans1));
     trans1->exec(new Query("SELECT pg_backend_pid()", false));
     ASSERT_TRUE(trans->merge(trans1));
-    ASSERT_EQ(trans->get_size(), 2);
+    ASSERT_EQ((int)trans->get_size(), 2);
     IPGTransaction* trans2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     trans2->exec(new Query("SELECT pg_backend_pid()", false));
     ASSERT_FALSE(trans2->merge(trans));
     IPGTransaction* trans3 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_only);
     trans3->exec(new Query("SELECT pg_backend_pid()", false));
-    ASSERT_EQ(trans3->get_size(), 1);
+    ASSERT_EQ((int)trans3->get_size(), 1);
     ASSERT_TRUE(trans3->merge(trans));
-    ASSERT_EQ(trans3->get_size(), 3);
+    ASSERT_EQ((int)trans3->get_size(), 3);
 
     delete trans;
     delete trans1;

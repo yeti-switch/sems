@@ -195,7 +195,8 @@ int Pcm16_2_iLBC( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   short* in_b = (short*)in_buf;
 
   float block[BLOCKL_MAX];
-  int i,k;
+  unsigned int i;
+  int k;
   iLBC_Codec_Inst_t* codec_inst;
   int out_buf_offset=0;
 
@@ -247,7 +248,8 @@ static int iLBC_2_Pcm16_Ext( unsigned char* out_buf, unsigned char* in_buf, unsi
 			     unsigned int channels, unsigned int rate, long h_codec, int mode )
 {
   short* out_b = (short*)out_buf;
-  int i,k,noframes;
+  unsigned int i, noframes;
+  int k;
   float decblock[BLOCKL_MAX];
   float dtmp;
   iLBC_Codec_Inst_t* codec_inst;

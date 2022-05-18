@@ -212,7 +212,7 @@ bool is_valid_utf8(const std::string &s)
 
 	utf8_fsm_state st = ST_COMPLETED;
 
-	for(const unsigned char &c: s) {
+	for(const unsigned char c: s) {
 		switch(st) {
 		DEFINE_SEQUENCE_CLASSIFIER;
 		DEFINE_RANGE_VALIDATORS

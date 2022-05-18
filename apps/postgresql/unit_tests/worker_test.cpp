@@ -26,7 +26,7 @@ TEST_F(PostgresqlTest, WorkerConnectionTest)
     ASSERT_TRUE(arg.hasMember("master"));
     ASSERT_TRUE(isArgArray(arg["master"]));
     ASSERT_FALSE(isArgArray(arg["slave"]));
-    ASSERT_EQ(arg["master"].size(), 1);
+    ASSERT_EQ((int)arg["master"].size(), 1);
     bool exit = false;
     while(exit) {
         sleep(1);

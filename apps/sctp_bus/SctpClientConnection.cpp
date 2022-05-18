@@ -217,7 +217,7 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
         return;
     }
 
-    ssize_t size = r.ByteSize();
+    ssize_t size = r.ByteSizeLong();
 
     DBG("SEND sctp_bus event %d:%s/%d -> %d:%s",
         r.src_node_id(),
@@ -264,7 +264,7 @@ void SctpClientConnection::send(const SctpBusRawRequest &e)
         return;
     }
 
-    ssize_t size = r.ByteSize();
+    ssize_t size = r.ByteSizeLong();
 
     DBG("SEND sctp_bus event request %d:%s/%d -> %d:%s seq: %ld",
         r.src_node_id(),
@@ -309,7 +309,7 @@ void SctpClientConnection::send(const SctpBusRawReply &e)
         return;
     }
 
-    ssize_t size = r.ByteSize();
+    ssize_t size = r.ByteSizeLong();
 
     DBG("SEND sctp_bus event reply %d:%s/%d -> %d:%s",
         r.src_node_id(),

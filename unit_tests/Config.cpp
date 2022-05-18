@@ -93,7 +93,7 @@ int TesterConfig::readConfiguration(const string& filePath)
     signalling_interface = cfg_getstr(m_cfg, PARAM_SIG_INTERFACE_NAME);
     log_level = parse_log_level(cfg_getstr(m_cfg, PARAM_LOG_LEVEL_NAME));
 
-    for(int i = 0; i < cfg_size(m_cfg, PARAM_ALLOW_PLUGINS_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(m_cfg, PARAM_ALLOW_PLUGINS_NAME); i++) {
         allow_plugins.push_back(cfg_getnstr(m_cfg, PARAM_ALLOW_PLUGINS_NAME, i));
     }
 

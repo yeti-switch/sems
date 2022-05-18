@@ -26,7 +26,8 @@ WorkerContainer::Worker::Worker()
     }
 
     ev_async_init(&async_task, [](EV_P_ ev_async* async_task, int) {
-        struct Worker *worker = ((struct Worker*) (((char*)async_task) - offset_of(&Worker::async_task)));
+        auto worker = reinterpret_cast<Worker*>(
+            ((char*)async_task) - offset_of(&Worker::async_task));
         worker->execute_task();
     });
     ev_async_start(loop, &async_task);
@@ -85,7 +86,7 @@ WorkerContainer::~WorkerContainer()
 
 void WorkerContainer::init(unsigned int workers_)
 {
-    for(int i = 0; i < workers_; i++) {
+    for(unsigned int i = 0; i < workers_; i++) {
         workers.push_back(new Worker);
         workers.back()->start();
     }

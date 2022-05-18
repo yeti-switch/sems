@@ -115,8 +115,9 @@ TEST(Config, MediaFreePortAquireOrdering)
             EXPECT_TRUE(info.getNextRtpAddress(ss));
             port = am_get_port(&ss);
 
-            if(free_ports_left > 0)
+            if(free_ports_left > 0) {
                 GTEST_ASSERT_NE(port, 0);
+            }
 
             GTEST_ASSERT_EQ(expected_ports[j], port);
             expected_ports[j]+=2;

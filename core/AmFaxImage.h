@@ -19,7 +19,7 @@ typedef struct t38_option{
     bool        T38FaxTranscodingMMR;
     bool        T38FaxTranscodingJBIG;
     std::string T38FaxRateManagement;
-    uint32_t    T38FaxMaxBuffer;
+    int         T38FaxMaxBuffer;
     uint32_t    T38FaxMaxDatagram;
     uint32_t    T38FaxMaxIFP;
     std::string T38FaxUdpEC;

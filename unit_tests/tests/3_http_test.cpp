@@ -60,7 +60,7 @@ public:
                 }
 
                 char buf[8046] = {0};
-                int ret = recv(client_fd, buf, 8046, 0);
+                recv(client_fd, buf, 8046, 0);
                 DBG("%s", buf);
                 close(client_fd);
                 return EXIT_SUCCESS;
