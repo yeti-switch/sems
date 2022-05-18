@@ -2000,6 +2000,30 @@ void AmRtpStream::payloads_id2str(const vector<int> i, vector<string>& s)
     }
 }
 
+AmRtpStream::MediaStats::MediaStats()
+  : time_start{0,0},
+    time_end{0,0},
+    dropped(0),
+    out_of_buffer_errors(0),
+    rtp_parse_errors(0),
+    srtp_decript_errors(0),
+    rtcp_rr_sent(0), rtcp_rr_recv(0),
+    rtcp_sr_sent(0), rtcp_sr_recv(0)
+{}
+
+AmRtpStream::MediaStats::rtp_common::rtp_common()
+  : ssrc(0),
+    pkt(0),
+    bytes(0),
+    total_lost(0)
+{
+    bzero(&addr, sizeof(addr));
+}
+
+AmRtpStream::MediaStats::rx_stat::rx_stat()
+  : decode_errors(0)
+{}
+
 void AmRtpStream::getMediaStats(MediaStats &s)
 {
     auto &rx  = s.rx;

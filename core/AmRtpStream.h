@@ -576,6 +576,8 @@ class AmRtpStream
             uint32_t total_lost;
             vector<string> payloads_transcoded;
             vector<string> payloads_relayed;
+
+            rtp_common();
         };
 
         struct rx_stat: public rtp_common {
@@ -583,6 +585,8 @@ class AmRtpStream
             MathStat<long> delta;
             MathStat<double> jitter;
             MathStat<uint32_t> rtcp_jitter;
+
+            rx_stat();
         };
 
 
@@ -592,10 +596,7 @@ class AmRtpStream
 
         vector<struct rx_stat> rx;
 
-        MediaStats()
-        {
-            bzero(this, sizeof(struct MediaStats));
-        }
+        MediaStats();
     };
     void getMediaStats(struct MediaStats &s);
 
