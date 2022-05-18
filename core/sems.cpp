@@ -622,10 +622,10 @@ int main(int argc, char* argv[])
 
   AmLcConfig::instance().dump_Ifs();
 
-  printf("-----BEGIN CFG DUMP-----\n"
+  /*printf("-----BEGIN CFG DUMP-----\n"
          "%s\n"
          "-----END CFG DUMP-----\n",
-         AmLcConfig::instance().serialize().c_str());
+         AmLcConfig::instance().serialize().c_str());*/
 
   if(set_fd_limit() < 0) {
     WARN("could not raise FD limit");
