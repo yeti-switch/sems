@@ -34,12 +34,12 @@ SystemDSM::~SystemDSM() {
 }
 
 void SystemDSM::run() {
-  DBG("SystemDSM thread starting...\n");
+  DBG("SystemDSM thread starting...");
 
-  DBG("Running init of SystemDSM...\n");
+  DBG("Running init of SystemDSM...");
   if (!engine.init(&dummy_session, this, startDiagName, 
 		   reload ? DSMCondition::Reload : DSMCondition::Startup)) {
-    WARN("Initialization failed for SystemDSM\n");
+    WARN("Initialization failed for SystemDSM");
     AmEventDispatcher::instance()->delEventQueue(dummy_session.getLocalTag());
     return;
   }
@@ -50,11 +50,11 @@ void SystemDSM::run() {
   }
 
   AmEventDispatcher::instance()->delEventQueue(dummy_session.getLocalTag());
-  DBG("SystemDSM thread finished.\n");
+  DBG("SystemDSM thread finished.");
 }
 
 void SystemDSM::on_stop() {
-  DBG("requesting stop of SystemDSM\n");
+  DBG("requesting stop of SystemDSM");
   stop_requested.set(true);
 }
 
@@ -78,7 +78,7 @@ void SystemDSM::process(AmEvent* event) {
   // todo: give modules the possibility to define/process events
   JsonRpcEvent* jsonrpc_ev = dynamic_cast<JsonRpcEvent*>(event);
   if (jsonrpc_ev) { 
-    DBG("received jsonrpc event\n");
+    DBG("received jsonrpc event");
 
     JsonRpcResponseEvent* resp_ev = 
       dynamic_cast<JsonRpcResponseEvent*>(jsonrpc_ev);
@@ -134,7 +134,7 @@ void SystemDSM::process(AmEvent* event) {
   if (event->event_id == E_SIP_SUBSCRIPTION) {
     SIPSubscriptionEvent* sub_ev = dynamic_cast<SIPSubscriptionEvent*>(event);
     if (sub_ev) {
-      DBG("SystemDSM received SIP Subscription Event\n");
+      DBG("SystemDSM received SIP Subscription Event");
       map<string, string> params;
       params["status"] = sub_ev->getStatusText();
       params["code"] = int2str(sub_ev->code);
@@ -152,7 +152,7 @@ void SystemDSM::process(AmEvent* event) {
   if (event->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(event);
     if(sys_ev){	
-      DBG("SystemDSM received system Event\n");
+      DBG("SystemDSM received system Event");
       map<string, string> params;
       params["type"] = AmSystemEvent::getDescription(sys_ev->sys_event);
       engine.runEvent(&dummy_session, this, DSMCondition::System, &params);

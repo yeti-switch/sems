@@ -121,7 +121,7 @@ bool SyslogLogFac::setFacility(const char* str, const char* name) {
     new_facility = local_fac[str[5] - '0'];
   }
   else {
-    ERROR("unknown syslog facility '%s'\n", str);
+    ERROR("unknown syslog facility '%s'", str);
     return false;
   }
 
@@ -220,7 +220,7 @@ void init_logging(const char* name)
   AmPlugIn::registerLoggingFacility("syslog",&log);
 #endif
 
-  INFO("Logging initialized\n");
+  INFO("Logging initialized");
 }
 
 void cleanup_logging()

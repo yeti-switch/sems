@@ -62,7 +62,7 @@ int RtmpFactory::onLoad()
   AmConfigReader cfg_file;
 
   if(cfg_file.loadPluginConf(MOD_NAME) < 0){
-    INFO("No config file for " MOD_NAME " plug-in: using defaults.\n");
+    INFO("No config file for " MOD_NAME " plug-in: using defaults.");
   }
   else {
 
@@ -74,7 +74,7 @@ int RtmpFactory::onLoad()
       string listen_port_str = cfg_file.getParameter("listen_port");
       if(sscanf(listen_port_str.c_str(),"%u",
 		&(cfg.ListenPort)) != 1){
-	ERROR("listen_port: invalid RTMP port specified (%s), using default\n",
+	ERROR("listen_port: invalid RTMP port specified (%s), using default",
 	      listen_port_str.c_str());
 	cfg.ListenPort = DEFAULT_RTMP_PORT;
       }
@@ -101,7 +101,7 @@ int RtmpFactory::onLoad()
   RtmpServer* rtmp_server = RtmpServer::instance();
   
   if(rtmp_server->listen(cfg.ListenAddress.c_str(),cfg.ListenPort) < 0) {
-    ERROR("could not start RTMP server at <%s:%u>\n",
+    ERROR("could not start RTMP server at <%s:%u>",
 	  cfg.ListenAddress.c_str(),cfg.ListenPort);
     rtmp_server->dispose();
     return -1;
@@ -119,7 +119,7 @@ int RtmpFactory::onLoad()
     start(); 
   }
   else {
-    INFO("'registrar_client' not found: registration disabled.\n");
+    INFO("'registrar_client' not found: registration disabled.");
   }
 
   return 0;

@@ -60,7 +60,7 @@ int AnnounceTransferFactory::onLoad()
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("default file for ann_b2b module does not exist ('%s').\n",
+    ERROR("default file for ann_b2b module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
@@ -75,12 +75,12 @@ AmSession* AnnounceTransferFactory::onInvite(const AmSipRequest& req, const stri
   string announce_file = announce_path + req.domain 
     + "/" + req.user + ".wav";
 
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
@@ -112,7 +112,7 @@ void AnnounceTransferDialog::onInvite(const AmSipRequest& req) {
     }
     if (!callee_uri.length())
       callee_uri = req.r_uri;
-    DBG("transfer uri set to '%s'\n", callee_uri.c_str());
+    DBG("transfer uri set to '%s'", callee_uri.c_str());
   }
 
   AmSession::onInvite(req);
@@ -124,7 +124,7 @@ void AnnounceTransferDialog::onSessionStart()
   // this disables DTMF detection as well
   setReceiving(false);
 
-  DBG("AnnounceTransferDialog::onSessionStart\n");
+  DBG("AnnounceTransferDialog::onSessionStart");
   if (status == Disconnected) {
     status = Announcing;
     startSession();
@@ -159,7 +159,7 @@ void AnnounceTransferDialog::onSipRequest(const AmSipRequest& req)
 	throw AmSession::Exception(400, "Short Body");
 			
       string sipfrag_sline = body.substr(8, body.find("\n") - 8);
-      DBG("extracted start line from sipfrag '%s'\n", sipfrag_sline.c_str());
+      DBG("extracted start line from sipfrag '%s'", sipfrag_sline.c_str());
       unsigned int code;
       string res_msg;
 			
@@ -173,10 +173,10 @@ void AnnounceTransferDialog::onSipRequest(const AmSipRequest& req)
 	  status = Hangup;
 	  dlg->bye();
 	}
-	DBG("refer succeeded... stop session\n");
+	DBG("refer succeeded... stop session");
 	setStopped();
       } else if (code > 300) {
-	DBG("refer failed...\n");
+	DBG("refer failed...");
 	if (status != Hangup) 
 	  dlg->bye();
 	setStopped();
@@ -197,7 +197,7 @@ void AnnounceTransferDialog::onSipReply(const AmSipRequest& req,
   if ((status==Transfering ||status==Hangup)  && 
       req.method == SIP_METH_REFER) {
     if (rep.code >= 300) {
-      DBG("refer not accepted, stop session.\n");
+      DBG("refer not accepted, stop session.");
       dlg->bye();
       setStopped();
     }
@@ -213,7 +213,7 @@ void AnnounceTransferDialog::onBye(const AmSipRequest& req)
     // (dialog stays open for the subscription created by REFER)
     status = Hangup; 
   } else {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
   }
 }

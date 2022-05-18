@@ -37,7 +37,7 @@ xmlGenericErrorFunc handler = (xmlGenericErrorFunc)xml_err_func;
 int xml_log_level = L_ERR;
 
 int MOD_CLS_NAME::preload() {
-  DBG("initializing libxml2...\n");
+  DBG("initializing libxml2...");
   xmlInitParser();
   initGenericErrorDefaultFunc(&handler);
   handler = (xmlGenericErrorFunc)xml_err_func;
@@ -60,18 +60,18 @@ MOD_CONDITIONEXPORT_NONE(MOD_CLS_NAME);
 
 ModXmlDoc::~ModXmlDoc() {
   if (NULL != doc) {
-    DBG("freeing XML document [%p]\n", doc);
+    DBG("freeing XML document [%p]", doc);
     xmlFreeDoc(doc);
   }
 }
 
 ModXmlXPathObj::~ModXmlXPathObj() {
   if (NULL != xpathObj) {
-    DBG("freeing XML xpath obj [%p]\n", xpathObj);
+    DBG("freeing XML xpath obj [%p]", xpathObj);
     xmlXPathFreeObject(xpathObj);
   }
   if (NULL != xpathCtx) {
-    DBG("freeing XML xpath ctx [%p]\n", xpathCtx);
+    DBG("freeing XML xpath ctx [%p]", xpathCtx);
     xmlXPathFreeContext(xpathCtx);
   }
 }
@@ -93,21 +93,21 @@ EXEC_ACTION_START(MODXMLParseSIPMsgBodyAction) {
   string dstname = resolveVars(par2, sess, sc_sess, event_params);
   AVarMapT::iterator it = sc_sess->avar.find(msgbody_var);
   if (it==sc_sess->avar.end()) {
-    DBG("no message body in avar '%s'\n", msgbody_var.c_str());
+    DBG("no message body in avar '%s'", msgbody_var.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("no message body in avar " + msgbody_var);
     EXEC_ACTION_STOP;
   }
   AmMimeBody* msgbody = dynamic_cast<AmMimeBody*>(it->second.asObject());
   if (NULL == msgbody) {
-    DBG("no AmMimeBody in avar '%s'\n", msgbody_var.c_str());
+    DBG("no AmMimeBody in avar '%s'", msgbody_var.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("no AmMimeBody in avar " + msgbody_var);
     EXEC_ACTION_STOP;
   }
   const unsigned char* b =  msgbody->getPayload();
   if (b==NULL) {
-    DBG("empty AmMimeBody in avar '%s'\n", msgbody_var.c_str());
+    DBG("empty AmMimeBody in avar '%s'", msgbody_var.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("no AmMimeBody in avar " + msgbody_var);
     EXEC_ACTION_STOP;
@@ -118,7 +118,7 @@ EXEC_ACTION_START(MODXMLParseSIPMsgBodyAction) {
   xmlDocPtr doc =
     xmlReadMemory((const char*)b, msgbody->getLen(), "noname.xml", NULL, 0);
   if (doc == NULL) {
-    DBG("failed parsing XML document from '%s'\n", msgbody_var.c_str());
+    DBG("failed parsing XML document from '%s'", msgbody_var.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("failed parsing XML document from " + msgbody_var);
     EXEC_ACTION_STOP;
@@ -128,7 +128,7 @@ EXEC_ACTION_START(MODXMLParseSIPMsgBodyAction) {
 
   ModXmlDoc* xml_doc = new ModXmlDoc(doc);
   sc_sess->avar[dstname] = xml_doc;
-  DBG("parsed XML body document to '%s'\n", dstname.c_str());
+  DBG("parsed XML body document to '%s'", dstname.c_str());
 
 //  string basedir = resolveVars(par2, sess, sc_sess, event_params);
 } EXEC_ACTION_END;
@@ -143,7 +143,7 @@ EXEC_ACTION_START(MODXMLParseAction) {
   xmlDocPtr doc =
     xmlReadMemory(xml_doc.c_str(), xml_doc.length(), "noname.xml", NULL, 0);
   if (doc == NULL) {
-    DBG("failed parsing XML document from '%s'\n", xml_doc.c_str());
+    DBG("failed parsing XML document from '%s'", xml_doc.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("failed parsing XML document from " + xml_doc);
     EXEC_ACTION_STOP;
@@ -152,24 +152,24 @@ EXEC_ACTION_START(MODXMLParseAction) {
 
   ModXmlDoc* xml_doc_var = new ModXmlDoc(doc);
   sc_sess->avar[dstname] = xml_doc_var;
-  DBG("parsed XML body document to '%s'\n", dstname.c_str());
+  DBG("parsed XML body document to '%s'", dstname.c_str());
 } EXEC_ACTION_END;
 
 template<class T>
 T* getXMLElemFromVariable(DSMSession* sc_sess, const string& var_name) {
   AVarMapT::iterator it = sc_sess->avar.find(var_name);
   if (it == sc_sess->avar.end()) {
-    DBG("object '%s' not found\n", var_name.c_str());
+    DBG("object '%s' not found", var_name.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("object '"+var_name+"' not found\n");
+    sc_sess->SET_STRERROR("object '"+var_name+"' not found");
     return NULL;
   }
 
   T* doc = dynamic_cast<T*>(it->second.asObject());
   if (NULL == doc) {
-    DBG("object '%s' is not the right type\n", var_name.c_str());
+    DBG("object '%s' is not the right type", var_name.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("object '"+var_name+"' is not the right type\n");
+    sc_sess->SET_STRERROR("object '"+var_name+"' is not the right type");
     return NULL;
   }
   return doc;
@@ -190,7 +190,7 @@ EXEC_ACTION_START(MODXMLEvalXPathAction) {
   
   xmlXPathContextPtr xpathCtx = xmlXPathNewContext(doc);
   if(xpathCtx == NULL) {
-    DBG("unable to create new XPath context\n");
+    DBG("unable to create new XPath context");
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("unable to create new XPath context");
     EXEC_ACTION_STOP;
@@ -202,29 +202,29 @@ EXEC_ACTION_START(MODXMLEvalXPathAction) {
   for (vector<string>::iterator it=ns_entries.begin(); it != ns_entries.end(); it++) {
     vector<string> ns = explode(*it, "=");
     if (ns.size() != 2) {
-      DBG("script writer error: namespace entry must be prefix=href (got '%s')\n",
+      DBG("script writer error: namespace entry must be prefix=href (got '%s')",
 	  it->c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-      sc_sess->SET_STRERROR("script writer error: namespace entry must be prefix=href\n");
+      sc_sess->SET_STRERROR("script writer error: namespace entry must be prefix=href");
       xmlXPathFreeContext(xpathCtx);
       EXEC_ACTION_STOP;
     }
 
     if(xmlXPathRegisterNs(xpathCtx, (const xmlChar*)ns[0].c_str(),
 			  (const xmlChar*)ns[1].c_str()) != 0) {
-      DBG("unable to register namespace %s=%s\n", ns[0].c_str(), ns[1].c_str());
+      DBG("unable to register namespace %s=%s", ns[0].c_str(), ns[1].c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-      sc_sess->SET_STRERROR("unable to register namespace\n");
+      sc_sess->SET_STRERROR("unable to register namespace");
       xmlXPathFreeContext(xpathCtx);
       EXEC_ACTION_STOP;
     }
-    DBG("registered namespace %s=%s\n", ns[0].c_str(), ns[1].c_str());
+    DBG("registered namespace %s=%s", ns[0].c_str(), ns[1].c_str());
   }
 
   xmlXPathObjectPtr xpathObj = xmlXPathEvalExpression((const xmlChar*)xpath_expr.c_str(),
 						      xpathCtx);
   if(xpathObj == NULL) {
-    DBG("unable to evaluate xpath expression \"%s\"\n", xpath_expr.c_str());
+    DBG("unable to evaluate xpath expression \"%s\"", xpath_expr.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("unable to evaluate xpath expression");
     xmlXPathFreeContext(xpathCtx);
@@ -233,7 +233,7 @@ EXEC_ACTION_START(MODXMLEvalXPathAction) {
 
   ModXmlXPathObj* xpath_obj = new ModXmlXPathObj(xpathObj, xpathCtx);
   sc_sess->avar[xml_doc_var+".xpath"] = xpath_obj;
-  DBG("evaluated XPath expression on '%s' to '%s'\n",
+  DBG("evaluated XPath expression on '%s' to '%s'",
       xml_doc_var.c_str(), (xml_doc_var+".xpath").c_str());
 
 } EXEC_ACTION_END;
@@ -250,7 +250,7 @@ EXEC_ACTION_START(MODXMLXPathResultNodeCount) {
   ModXmlXPathObj* xpath_obj =
     getXMLElemFromVariable<ModXmlXPathObj>(sc_sess, xpath_res_var);
   if (NULL == xpath_obj){
-    DBG("no xpath result found in '%s'\n", xpath_res_var.c_str());
+    DBG("no xpath result found in '%s'", xpath_res_var.c_str());
     sc_sess->var[cnt_var] = "0";
     EXEC_ACTION_STOP;
   }
@@ -259,7 +259,7 @@ EXEC_ACTION_START(MODXMLXPathResultNodeCount) {
     xpath_obj->xpathObj->nodesetval->nodeNr : 0;
 
   sc_sess->var[cnt_var] = int2str(res);
-  DBG("set count $%s=%u\n", cnt_var.c_str(), res);
+  DBG("set count $%s=%u", cnt_var.c_str(), res);
   
 } EXEC_ACTION_END;
 
@@ -274,7 +274,7 @@ EXEC_ACTION_START(MODXMLSetLogLevelAction) {
   else if (xml_log_level_s == "debug")
     xml_log_level = L_DBG;
   else {
-    ERROR("script writer error: '%s' is no valid log level (error, warn, info, debug)\n",
+    ERROR("script writer error: '%s' is no valid log level (error, warn, info, debug)",
 	  xml_log_level_s.c_str());
   }
 } EXEC_ACTION_END;

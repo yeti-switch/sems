@@ -36,17 +36,17 @@ int MsgStorage::onLoad() {
   
   AmConfigReader cfg;
   if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
-    DBG("no configuration could be loaded, assuming defaults.\n");
+    DBG("no configuration could be loaded, assuming defaults.");
   } else {
       msg_dir = cfg.getParameter("storage_dir",MSG_DIR);
-      DBG("storage_dir set to '%s'.\n", msg_dir.c_str());
+      DBG("storage_dir set to '%s'.", msg_dir.c_str());
   }
 
   string path = msg_dir;
   int status = mkdir(path.c_str(), 
 		     S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   if (status && (errno != EEXIST)) {
-    ERROR("creating storage path '%s': %s\n", 
+    ERROR("creating storage path '%s': %s", 
 	  path.c_str(),strerror(errno));
     return -1;
   }
@@ -55,13 +55,13 @@ int MsgStorage::onLoad() {
   status = mkdir(path.c_str(), 
 		     S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   if (status && (errno != EEXIST)) {
-    ERROR("Write permission check failed. Could not create '%s': %s\n", 
+    ERROR("Write permission check failed. Could not create '%s': %s", 
 	  path.c_str(),strerror(errno));
     return -1;
   }
   rmdir(path.c_str());
 
-  DBG("MsgStorage loaded.\n");
+  DBG("MsgStorage loaded.");
   return 0;
 }
 
@@ -131,7 +131,7 @@ int MsgStorage::msg_new(string domain, string user,
   int status = mkdir(path.c_str(), 
 		     S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   if (status && (errno != EEXIST)) {
-    ERROR("creating '%s': %s\n", 
+    ERROR("creating '%s': %s", 
 	  path.c_str(),strerror(errno));
     return MSG_EUSRNOTFOUND;
   }
@@ -140,16 +140,16 @@ int MsgStorage::msg_new(string domain, string user,
   status = mkdir(path.c_str(), 
 		     S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   if (status && (errno != EEXIST)) {
-    ERROR("creating '%s': %s\n", 
+    ERROR("creating '%s': %s", 
 	  path.c_str(),strerror(errno));
     return MSG_EUSRNOTFOUND;
   }
 
-  DBG("creating '%s'\n", (path + msg_name).c_str());
+  DBG("creating '%s'", (path + msg_name).c_str());
 
   FILE* fp = fopen((path + msg_name).c_str(), "wb");
   if (!fp) {
-    ERROR("creating '%s': %s\n", 
+    ERROR("creating '%s': %s", 
 	  (path + msg_name).c_str(),strerror(errno));
     return MSG_ESTORAGE;
   }
@@ -166,7 +166,7 @@ int MsgStorage::msg_new(string domain, string user,
 void MsgStorage::msg_get(string domain, string user, 
   string msg_name, AmArg& ret) { 
   string fname = msg_dir + "/" + domain + "/" + user + "/"+ msg_name;
-  DBG("looking for  '%s'\n", fname.c_str());
+  DBG("looking for  '%s'", fname.c_str());
 
   FILE* fp = fopen(fname.c_str(), "r");
   if (!fp) 
@@ -184,7 +184,7 @@ int MsgStorage::msg_markread(string domain, string user, string msg_name) {
 
   struct stat e_stat;
   if (stat(path.c_str(), &e_stat)) {
-    ERROR("cannot stat '%s': %s\n", 
+    ERROR("cannot stat '%s': %s", 
 	  path.c_str(),strerror(errno));
     return MSG_EMSGNOTFOUND;
   }
@@ -194,7 +194,7 @@ int MsgStorage::msg_markread(string domain, string user, string msg_name) {
   buf.modtime = e_stat.st_mtime;
 
   if (utime(path.c_str(), &buf)) {
-    ERROR("cannot utime '%s': %s\n", 
+    ERROR("cannot utime '%s': %s", 
 	  path.c_str(),strerror(errno));
     return MSG_EREADERROR;
   }
@@ -208,7 +208,7 @@ int MsgStorage::msg_delete(string domain, string user, string msg_name) {
   // TODO: check the directory lock
   string path = msg_dir + "/" + domain + "/" + user + "/" + msg_name;
   if (unlink(path.c_str())) {
-      ERROR("cannot unlink '%s': %s\n", 
+      ERROR("cannot unlink '%s': %s", 
 	    path.c_str(),strerror(errno));
       return MSG_EMSGNOTFOUND;
   }
@@ -221,7 +221,7 @@ int MsgStorage::msg_delete(string domain, string user, string msg_name) {
 void MsgStorage::userdir_open(string domain, string user, AmArg& ret) { 
   // TODO: block the directory from delete (increase lock)
   string path = msg_dir + "/" +  domain + "/" + user + "/";
-  DBG("trying to list '%s'\n", path.c_str());
+  DBG("trying to list '%s'", path.c_str());
   DIR* dir = opendir(path.c_str());
   if (!dir) {
     ret.push(MSG_EUSRNOTFOUND);
@@ -241,7 +241,7 @@ void MsgStorage::userdir_open(string domain, string user, AmArg& ret) {
       }
     struct stat e_stat;
     if (stat((path+msgname).c_str(), &e_stat)) {
-      ERROR("cannot stat '%s': %s\n", 
+      ERROR("cannot stat '%s': %s", 
 	    (path+msgname).c_str(),strerror(errno));
       continue;
     }

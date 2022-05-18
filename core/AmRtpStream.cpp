@@ -226,7 +226,7 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
     if(l_if < 0) {
         if (session) l_if = session->getRtpInterface();
         else {
-            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used\n");
+            CLASS_ERROR("BUG: no session when initializing RTP stream, invalid interface can be used");
             l_if = 0;
         }
     }
@@ -391,7 +391,7 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
                 (const struct sockaddr*)&l_rtcp_addr,
                 SA_len(&l_rtcp_addr)))
             {
-                CLASS_ERROR("failed to bind port %d for RTCP: %s\n",
+                CLASS_ERROR("failed to bind port %d for RTCP: %s",
                           am_get_port(&l_rtp_addr)+1, strerror(errno));
                 goto try_another_port;
             }
@@ -403,7 +403,7 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
             (const struct sockaddr*)&l_rtp_addr,
             SA_len(&l_rtp_addr)))
         {
-            CLASS_ERROR("failed to bind port %hu for RTP: %s\n",
+            CLASS_ERROR("failed to bind port %hu for RTP: %s",
                         am_get_port(&l_rtp_addr), strerror(errno));
             goto try_another_port;
         }
@@ -437,7 +437,7 @@ try_another_port:
 
 void AmRtpStream::setRAddr(const string& addr, unsigned short port)
 {
-    CLASS_DBG("RTP remote address set to %s:%u\n", addr.c_str(),port);
+    CLASS_DBG("RTP remote address set to %s:%u", addr.c_str(),port);
     bool find_transport = true;
     sockaddr_storage raddr, laddr;
     am_inet_pton(addr.c_str(), &raddr);
@@ -656,7 +656,7 @@ int AmRtpStream::init(const AmSdp& local,
                     ++sdp_it;
                     continue;
                 } else {
-                    CLASS_DBG("No internal payload corresponding to type %s/%i (ignoring)\n",
+                    CLASS_DBG("No internal payload corresponding to type %s/%i (ignoring)",
                         sdp_it->encoding_name.c_str(),
                         sdp_it->clock_rate);
                     // ignore this payload
@@ -720,13 +720,13 @@ int AmRtpStream::init(const AmSdp& local,
 
         // set remote address - media c-line having precedence over session c-line
         if (remote.conn.address.empty() && remote_media.conn.address.empty()) {
-            CLASS_WARN("no c= line given globally or in m= section in remote SDP\n");
+            CLASS_WARN("no c= line given globally or in m= section in remote SDP");
             init_error = "no remote address";
             return -1;
         }
 
         if(local_media.payloads.empty()) {
-            CLASS_DBG("local_media.payloads.empty()\n");
+            CLASS_DBG("local_media.payloads.empty()");
             init_error = "no payloads";
             return -1;
         }
@@ -760,19 +760,19 @@ int AmRtpStream::init(const AmSdp& local,
         }
 
         if (remote_telephone_event_pt.get()) {
-            CLASS_DBG("remote party supports telephone events (pt=%i)\n",
+            CLASS_DBG("remote party supports telephone events (pt=%i)",
                 remote_telephone_event_pt->payload_type);
         } else {
-            CLASS_DBG("remote party doesn't support telephone events\n");
+            CLASS_DBG("remote party doesn't support telephone events");
         }
 
         payload = getDefaultPT();
         if(payload < 0) {
-            CLASS_DBG("could not set a default payload\n");
+            CLASS_DBG("could not set a default payload");
             init_error = "could not set a default payload";
             return -1;
         }
-        CLASS_DBG("default payload selected = %i\n",payload);
+        CLASS_DBG("default payload selected = %i",payload);
         last_payload = payload;
     }
 
@@ -1145,7 +1145,7 @@ int AmRtpStream::send_zrtp(unsigned char* buffer, unsigned int size)
     sockaddr_storage raddr;
     cur_rtp_trans->getRAddr(false, &raddr);
     if(cur_rtp_trans && cur_rtp_trans->send(&raddr, buffer, size, AmStreamConnection::ZRTP_CONN) < 0) {
-        CLASS_ERROR("while sending ZRTP packet.\n");
+        CLASS_ERROR("while sending ZRTP packet.");
         return -1;
     }
 
@@ -1222,7 +1222,7 @@ int AmRtpStream::receive(
 
     assert(rp->getData());
     if(rp->getDataSize() > size) {
-        CLASS_ERROR("received too big RTP packet\n");
+        CLASS_ERROR("received too big RTP packet");
         freeRtpPacket(rp);
         return RTP_BUFFER_SIZE;
     }
@@ -1264,7 +1264,7 @@ void AmRtpStream::bufferPacket(AmRtpPacket* p)
              p->payload == COMFORT_NOISE_PAYLOAD_TYPE))
         {
             if(active) {
-                CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)\n",p->timestamp,this);
+                CLASS_DBG("switching to relay-mode\t(ts=%u;stream=%p)",p->timestamp,this);
                 active = false;
             }
 
@@ -1318,7 +1318,7 @@ void AmRtpStream::recvDtmfPacket(AmRtpPacket* p)
     if(p->getDataSize()!=sizeof(dtmf_payload_t))
         return;
     auto dpl = reinterpret_cast<dtmf_payload_t*>(p->getData());
-    /*CLASS_DBG("DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u session = [%p]\n",
+    /*CLASS_DBG("DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u session = [%p]",
                 dpl->event,dpl->e,dpl->r,dpl->volume,ntohs(dpl->duration),p->timestamp, session);*/
     if(session)
         session->postDtmfEvent(new AmRtpDtmfEvent(dpl, getLocalTelephoneEventRate(), p->timestamp));
@@ -1395,7 +1395,7 @@ int AmRtpStream::send_udptl(unsigned int ts, unsigned char* buffer, unsigned int
     AmRtpPacket rp;
     rp.compile_raw(buffer, size);
     if(cur_udptl_trans && cur_udptl_trans->send(&rp, AmStreamConnection::UDPTL_CONN) < 0) {
-        CLASS_ERROR("while sending RTP packet.\n");
+        CLASS_ERROR("while sending RTP packet.");
         return -1;
     }
 
@@ -1415,7 +1415,7 @@ int AmRtpStream::compile_and_send(
     rp.compile((unsigned char*)buffer,size);
 
     if(cur_rtp_trans && cur_rtp_trans->send(&rp, AmStreamConnection::RTP_CONN) < 0) {
-        CLASS_ERROR("while sending RTP packet.\n");
+        CLASS_ERROR("while sending RTP packet.");
         return -1;
     }
 
@@ -1483,7 +1483,7 @@ int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int 
 
     auto it = pl_map.find(payload);
     if ((it == pl_map.end()) || (it->second.remote_pt < 0)) {
-        CLASS_DBG("attempt to send packet with unsupported remote payload type %d\n", payload);
+        CLASS_DBG("attempt to send packet with unsupported remote payload type %d", payload);
         last_not_supported_tx_payload = payload;
         return 0;
     }
@@ -1531,7 +1531,7 @@ void AmRtpStream::relay(AmRtpPacket* p)
     } //if(!relay_raw)
 
     if(cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
-        CLASS_ERROR("while sending RTP packet to '%s':%i\n",
+        CLASS_ERROR("while sending RTP packet to '%s':%i",
                     cur_rtp_trans->getRHost(false).c_str(),
                     cur_rtp_trans->getRPort(false));
     } else {
@@ -1709,19 +1709,19 @@ void AmRtpStream::setPassiveMode(bool p)
 
 void AmRtpStream::setReceiving(bool r)
 {
-    CLASS_DBG("set receiving=%s\n",r?"true":"false");
+    CLASS_DBG("set receiving=%s",r?"true":"false");
     receiving = r;
 }
 
 void AmRtpStream::pause()
 {
-    CLASS_DBG("pausing (receiving=false)\n");
+    CLASS_DBG("pausing (receiving=false)");
     receiving = false;
 }
 
 void AmRtpStream::resume()
 {
-    CLASS_DBG("resuming (receiving=true, clearing biffers/TS/TO)\n");
+    CLASS_DBG("resuming (receiving=true, clearing biffers/TS/TO)");
 
     clearRTPTimeout();
 
@@ -1748,7 +1748,7 @@ bool AmRtpStream::getOnHold()
 void AmRtpStream::setRelayStream(AmRtpStream* stream)
 {
     relay_stream = stream;
-    CLASS_DBG("set relay stream [%p]\n", stream);
+    CLASS_DBG("set relay stream [%p]", stream);
 }
 
 void AmRtpStream::setRelayPayloads(const PayloadMask &_relay_payloads)
@@ -1763,19 +1763,19 @@ void AmRtpStream::setRelayPayloadMap(const PayloadRelayMap & _relay_map)
 
 void AmRtpStream::enableRtpRelay()
 {
-    CLASS_DBG("enabled RTP relay\n");
+    CLASS_DBG("enabled RTP relay");
     relay_enabled = true;
 }
 
 void AmRtpStream::disableRtpRelay()
 {
-    CLASS_DBG("disabled RTP relay\n");
+    CLASS_DBG("disabled RTP relay");
     relay_enabled = false;
 }
 
 void AmRtpStream::setRawRelay(bool enable)
 {
-    CLASS_DBG("%sabled RAW relay\n", enable ? "en" : "dis");
+    CLASS_DBG("%sabled RAW relay", enable ? "en" : "dis");
     relay_raw = enable;
     if(cur_rtp_trans) {
         cur_rtp_trans->initRawConnection();
@@ -1789,28 +1789,28 @@ bool AmRtpStream::isRawRelay()
 
 void AmRtpStream::setRtpRelayTransparentSeqno(bool transparent)
 {
-    CLASS_DBG("%sabled RTP relay transparent seqno\n",
+    CLASS_DBG("%sabled RTP relay transparent seqno",
         transparent ? "en":"dis");
     relay_transparent_seqno = transparent;
 }
 
 void AmRtpStream::setRtpRelayTransparentSSRC(bool transparent)
 {
-    CLASS_DBG("%sabled RTP relay transparent SSRC\n",
+    CLASS_DBG("%sabled RTP relay transparent SSRC",
         transparent ? "en":"dis");
      relay_transparent_ssrc = transparent;
 }
 
 void AmRtpStream::setRtpRelayFilterRtpDtmf(bool filter)
 {
-    CLASS_DBG("%sabled RTP relay filtering of RTP DTMF (2833 / 3744)\n",
+    CLASS_DBG("%sabled RTP relay filtering of RTP DTMF (2833 / 3744)",
         filter ? "en":"dis");
     relay_filter_dtmf = filter;
 }
 
 void AmRtpStream::setRtpRelayTimestampAligning(bool enable_aligning)
 {
-    CLASS_DBG("%sabled RTP relay timestamp aligning\n",
+    CLASS_DBG("%sabled RTP relay timestamp aligning",
         enable_aligning ? "en":"dis");
     relay_timestamp_aligning = enable_aligning;
     if(relay_timestamp_aligning) {
@@ -1820,21 +1820,21 @@ void AmRtpStream::setRtpRelayTimestampAligning(bool enable_aligning)
 
 void AmRtpStream::setRtpForceRelayDtmf(bool relay)
 {
-    CLASS_DBG("%sabled force relay of RTP DTMF (2833 / 3744)\n",
+    CLASS_DBG("%sabled force relay of RTP DTMF (2833 / 3744)",
         relay ? "en":"dis");
     force_relay_dtmf = relay;
 }
 
 void AmRtpStream::setRtpForceRelayCN(bool relay)
 {
-    CLASS_DBG("%sabled force relay CN payload\n",
+    CLASS_DBG("%sabled force relay CN payload",
         relay ? "en":"dis");
     force_relay_cn = relay;
 }
 
 void AmRtpStream::setSymmetricRtpEndless(bool endless)
 {
-    CLASS_DBG("%sabled endless symmetric RTP switching\n",
+    CLASS_DBG("%sabled endless symmetric RTP switching",
         endless ? "en":"dis");
     symmetric_rtp_endless = endless;
 }
@@ -1851,14 +1851,14 @@ bool AmRtpStream::isZrtpEnabled()
 
 void AmRtpStream::setRtpPing(bool enable)
 {
-    CLASS_DBG("%sabled RTP Ping\n", enable ? "en":"dis");
+    CLASS_DBG("%sabled RTP Ping", enable ? "en":"dis");
     rtp_ping = enable;
 }
 
 void AmRtpStream::setRtpTimeout(unsigned int timeout)
 {
     dead_rtp_time = timeout;
-    CLASS_DBG("set RTP dead time to %i\n", dead_rtp_time);
+    CLASS_DBG("set RTP dead time to %i", dead_rtp_time);
 }
 
 unsigned int AmRtpStream::getRtpTimeout()
@@ -1938,7 +1938,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
                 a.value = addr.print();
             }
         } catch (const std::exception &e) {
-            DBG("can't replace RTCP address: %s\n", e.what());
+            DBG("can't replace RTCP address: %s", e.what());
         }
     }
 

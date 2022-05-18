@@ -98,17 +98,17 @@ FCTMF_SUITE_BGN(test_headers) {
 
       string hdrs1;
       addOptionTag(hdrs1, "Supported", "blub");
-      // DBG("hdrs1 '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 '%s'", hdrs1.c_str());
       fct_chk(hdrs1.find("Supported: blub") != string::npos);
 
       hdrs1 = hdrs;
       addOptionTag(hdrs1, "Supported", "something");
-      // DBG("hdrs1 '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 '%s'", hdrs1.c_str());
       fct_chk(hdrs1.find("something") != string::npos);
 
       hdrs1 = hdrs;
       addOptionTag(hdrs1, "Supported", "timer");
-      // DBG("hdrs1 '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 '%s'", hdrs1.c_str());
       fct_chk(hdrs1 == hdrs);
 
     } FCT_TEST_END();
@@ -119,17 +119,17 @@ FCTMF_SUITE_BGN(test_headers) {
 
       string hdrs1 = hdrs;
       removeOptionTag(hdrs1, "Supported", "notexisting");
-      // DBG("hdrs1 = '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 = '%s'", hdrs1.c_str());
       fct_chk(hdrs1 == hdrs); // dont touch
 
       hdrs1 = hdrs;
       removeOptionTag(hdrs1, "Supported", "timer");
-      // DBG("hdrs1 = '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 = '%s'", hdrs1.c_str());
       fct_chk(hdrs1.empty() == true); // last one
 
       hdrs1 = hdrs + "Supported: timer" CRLF;
       removeOptionTag(hdrs1, "Supported", "timer");
-      // DBG("hdrs1 = '%s'\n", hdrs1.c_str());
+      // DBG("hdrs1 = '%s'", hdrs1.c_str());
       fct_chk(hdrs1.empty()== true); // last one
 
     } FCT_TEST_END();

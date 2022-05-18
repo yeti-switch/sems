@@ -205,7 +205,7 @@ static int patch_contact_transport(sip_header* contact, const cstring& trsp,
     list<cstring> contact_list;
     if(parse_nameaddr_list(contact_list, contact->value.s,
 			   contact->value.len) < 0) {
-	DBG("Could not parse contact list\n");
+	DBG("Could not parse contact list");
 	return -1;
     }
 
@@ -218,7 +218,7 @@ static int patch_contact_transport(sip_header* contact, const cstring& trsp,
 	sip_nameaddr na;
 	const char* c = ct_it->s;
 	if(parse_nameaddr_uri(&na,&c,ct_it->len) < 0) {
-	    DBG("Could not parse nameaddr & URI (%.*s)\n",ct_it->len,ct_it->s);
+	    DBG("Could not parse nameaddr & URI (%.*s)",ct_it->len,ct_it->s);
 	    return -1;
 	}
 
@@ -287,7 +287,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     assert(tt);
 
     if (!tt->_bucket || !tt->_t) {
-	ERROR("Invalid transaction ticket\n");
+	ERROR("Invalid transaction ticket");
 	return -1;
     }
 
@@ -297,13 +297,13 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     bucket->lock();
     if(!bucket->exist(t)){
 	bucket->unlock();
-	ERROR("Invalid transaction key: transaction does not exist (%p;%p)\n",bucket,t);
+	ERROR("Invalid transaction key: transaction does not exist (%p;%p)",bucket,t);
 	return -1;
     }
 
     if(t->reply_status >= 200){
 	bucket->unlock();
-	ERROR("Transaction has already been closed with a final reply\n");
+	ERROR("Transaction has already been closed with a final reply");
 	return -1;
     }
 
@@ -407,7 +407,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 		// there was already a(nother?) Require HF
 		continue;
 	    if(!parse_extensions(&rel100_ext, (*it)->value.s, (*it)->value.len)) {
-		ERROR("failed to parse(own?) 'Require' hdr.\n");
+		ERROR("failed to parse(own?) 'Require' hdr.");
 		continue;
 	    }
 
@@ -421,11 +421,11 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 
 	case sip_header::H_RSEQ:
 	    if (rseq) {
-		ERROR("multiple 'RSeq' headers in reply.\n");
+		ERROR("multiple 'RSeq' headers in reply.");
 		continue;
 	    }
 	    if (!parse_rseq(&rseq, (*it)->value.s, (*it)->value.len)) {
-		ERROR("failed to parse (own?) 'RSeq' hdr.\n");
+		ERROR("failed to parse (own?) 'RSeq' hdr.");
 		continue;
 	    }
 	    if (rel100_ext) {
@@ -453,7 +453,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     char* reply_buf = new char[reply_len];
     char* c = reply_buf;
 
-    DBG("reply_len = %i\n",reply_len);
+    DBG("reply_len = %i",reply_len);
 
     sip_status_line_wr(&c,reply_code,msg->u.reply->reason);
 
@@ -582,7 +582,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     sockaddr_storage remote_ip;
     if(!local_socket) {
 	
-	ERROR("request to be replied has no transport socket set\n");
+	ERROR("request to be replied has no transport socket set");
 	delete [] reply_buf;
 	goto end;
     }
@@ -592,10 +592,10 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     // force_via_address option? send to 1st via
     if(local_socket->is_opt_set(trsp_socket::force_via_address)) {
 	string via_host = c2stlstr(req->via_p1->host);
-	DBG("force_via_address: setting remote IP to via '%s'\n", via_host.c_str());
+	DBG("force_via_address: setting remote IP to via '%s'", via_host.c_str());
 	if (resolver::instance()->str2ip(via_host.c_str(), &remote_ip,
 					 (address_type)(IPv4 | IPv6)) != 1) {
-	    ERROR("Invalid via_host '%s'\n", via_host.c_str());
+	    ERROR("Invalid via_host '%s'", via_host.c_str());
 	    delete [] reply_buf;
 	    goto end;
 	}
@@ -625,7 +625,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
 	}
     }
 
-    DBG("Sending to %s:%i <%.*s...>\n",
+    DBG("Sending to %s:%i <%.*s...>",
 	get_addr_str(&remote_ip).c_str(),
 	ntohs(((sockaddr_in*)&remote_ip)->sin_port),
 	50 /* preview - instead of p_msg->len */,reply_buf);
@@ -633,7 +633,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     //TODO: pass send-flags down to here
     err = local_socket->send(&remote_ip,reply_buf,reply_len,0);
     if(err < 0){
-	ERROR("could not send to %s:%i <%.*s...>\n",
+	ERROR("could not send to %s:%i <%.*s...>",
 	      get_addr_str(&remote_ip).c_str(),
 	      ntohs(((sockaddr_in*)&remote_ip)->sin_port),
 	      50 /* preview - instead of p_msg->len */,reply_buf);
@@ -721,7 +721,7 @@ int _trans_layer::send_sf_error_reply(const trans_ticket* tt, const sip_msg* req
     char* c = (char*)hdrs.s;
     int err = parse_headers(&reply,&c,c+hdrs.len);
     if(err){
-	ERROR("Malformed additional header\n");
+	ERROR("Malformed additional header");
 	return -1;
     }
     reply.body = body;
@@ -948,7 +948,7 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	sip_uri* route_uri = get_first_route_uri(fr);
 	if(route_uri == NULL) {
 	    
-	    DBG("Parsing 1st route uri failed\n");
+	    DBG("Parsing 1st route uri failed");
 	    return -1;
 	}
 	
@@ -971,10 +971,10 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 
 	err = parse_uri(&parsed_r_uri,r_uri.s,r_uri.len);
 	if(err < 0){
-	    ERROR("Invalid Request URI\n");
+	    ERROR("Invalid Request URI");
 	    return -1;
 	}
-	DBG("setting next-hop based on request-URI\n");
+	DBG("setting next-hop based on request-URI");
 	*next_hop  = parsed_r_uri.host;
 	if(parsed_r_uri.port_str.len)
 	    *next_port = parsed_r_uri.port;
@@ -994,7 +994,7 @@ int _trans_layer::set_next_hop(sip_msg* msg,
         *next_trsp = "udp";
     }
 
-    DBG("next_scheme:next_hop:next_port is <%.*s:%.*s:%u/%.*s>\n",
+    DBG("next_scheme:next_hop:next_port is <%.*s:%.*s:%u/%.*s>",
     next_scheme->len, next_scheme->s,
 	next_hop->len, next_hop->s, *next_port,
 	next_trsp ? next_trsp->len : 0,
@@ -1045,14 +1045,14 @@ void _trans_layer::transport_error(sip_msg* msg)
     char* err_msg=0;
     int ret = parse_sip_msg(msg,err_msg);
     if(ret){
-	DBG("parse_sip_msg returned %i\n",ret);
+	DBG("parse_sip_msg returned %i",ret);
 
 	if(!err_msg){
 	    err_msg = (char*)"unknown parsing error";
 	}
-	DBG("parsing error: %s\n",err_msg);
+	DBG("parsing error: %s",err_msg);
 
-	DBG("Message was: \"%.*s\"\n",msg->len,msg->buf);
+	DBG("Message was: \"%.*s\"",msg->len,msg->buf);
 	return;
     }
 
@@ -1299,8 +1299,8 @@ static int generate_and_parse_new_msg(sip_msg* msg, sip_msg*& p_msg)
     // and parse it
     char* err_msg=0;
     if(parse_sip_msg(p_msg,err_msg)){
- 	ERROR("Parser failed on generated request\n");
- 	ERROR("Message was: <%.*s>\n",p_msg->len,p_msg->buf);
+ 	ERROR("Parser failed on generated request");
+ 	ERROR("Message was: <%.*s>",p_msg->len,p_msg->buf);
  	delete p_msg;
  	p_msg = NULL;
  	return MALFORMED_SIP_MSG;
@@ -1346,7 +1346,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 
 	res = parse_next_hop(_next_hop,dest_list);
 	if(res || dest_list.empty()) {
-	    DBG("parse_next_hop %.*s failed (%i)\n",
+	    DBG("parse_next_hop %.*s failed (%i)",
 		_next_hop.len, _next_hop.s, res);
 	    return res;
 	}
@@ -1354,7 +1354,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     else {
 	sip_destination dest;
 	if(set_next_hop(msg,&dest.host,&dest.port,&dest.trsp, &dest.scheme) < 0){
-	    DBG("set_next_hop failed\n");
+	    DBG("set_next_hop failed");
 	    return -1;
 	}
 	dest_list.push_back(dest);
@@ -1363,7 +1363,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     if(targets->dest_list.empty()) {
         res = resolver::instance()->resolve_targets(dest_list,targets.get());
         if(res < 0){
-            DBG("resolve_targets failed\n");
+            DBG("resolve_targets failed");
             return res;
         }
         targets->reset_iterator();
@@ -1421,7 +1421,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     err = generate_and_parse_new_msg(msg,p_msg);
     if(err != 0) { return err; }
 
-	/*DBG("Sending to %s:%i via %s <%.*s...>\n",
+	/*DBG("Sending to %s:%i via %s <%.*s...>",
 		get_addr_str(&p_msg->remote_ip).c_str(),
 		ntohs(((sockaddr_in*)&p_msg->remote_ip)->sin_port),
 		p_msg->local_socket->get_transport(),
@@ -1433,7 +1433,7 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     
     err = p_msg->send(flags);
     if(err < 0){
-        ERROR("Error from transport layer: call_id %s\n", p_msg->callid ? p_msg->callid->value.s : "unknown");
+        ERROR("Error from transport layer: call_id %s", p_msg->callid ? p_msg->callid->value.s : "unknown");
 	delete p_msg;
 	p_msg = NULL;
 
@@ -1451,12 +1451,12 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	// might delete p_msg, and msg->u.request->method is not set
 	int method = p_msg->u.request->method;
 
-	DBG("update_uac_request tt->_t =%p\n", tt->_t);
+	DBG("update_uac_request tt->_t =%p", tt->_t);
 	err = update_uac_request(
 		tt->_bucket,tt->_t,p_msg,
 		timers_override, redirects_allowed);
 	if(err < 0){
-	    DBG("Could not update UAC state for request\n");
+	    DBG("Could not update UAC state for request");
 	    delete p_msg;
 	    tt->_bucket->unlock();
 	    return err;
@@ -1478,8 +1478,8 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
 	    }
 	}
 
-	/*DBG("logger = %p\n",logger);
-	DBG("sensor = %p\n",sensor);*/
+	/*DBG("logger = %p",logger);
+	DBG("sensor = %p",sensor);*/
 
 	if(logger || sensor) {
 	    sockaddr_storage src_ip;
@@ -1561,12 +1561,12 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 
     if(!t){
 	bucket->unlock();
-	DBG("No transaction to cancel: wrong key or finally replied\n");
+	DBG("No transaction to cancel: wrong key or finally replied");
 	return 0;
     }
 
     if(t->canceled) {
-	DBG("Transaction has already been canceled\n");
+	DBG("Transaction has already been canceled");
 	bucket->unlock();
 	return 0;
     }
@@ -1578,7 +1578,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     if(req->u.request->method != sip_request::INVITE){
 	t->dump();
 	bucket->unlock();
-	ERROR("Trying to cancel a non-INVITE request (we SHOULD NOT do that); inv_cseq: %u, i:%.*s\n",
+	ERROR("Trying to cancel a non-INVITE request (we SHOULD NOT do that); inv_cseq: %u, i:%.*s",
 	      inv_cseq, dialog_id.len,dialog_id.s);
 	return -1;
     }
@@ -1601,7 +1601,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     }
 
     case TS_COMPLETED:
-	ERROR("Trying to cancel a request while in TS_COMPLETED state; inv_cseq: %u, i:%.*s\n",
+	ERROR("Trying to cancel a request while in TS_COMPLETED state; inv_cseq: %u, i:%.*s",
 	      inv_cseq, dialog_id.len,dialog_id.s);
 	t->dump();
 	bucket->unlock();
@@ -1613,7 +1613,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 	break;
 
     default:
-	ERROR("Trying to cancel a request while in %s state; inv_cseq: %u, i:%.*s\n",
+	ERROR("Trying to cancel a request while in %s state; inv_cseq: %u, i:%.*s",
 	      t->state_str(), inv_cseq, dialog_id.len,dialog_id.s);
 	t->dump();
 	bucket->unlock();
@@ -1680,8 +1680,8 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     // and parse it
     char* err_msg=0;
     if(parse_sip_msg(p_msg,err_msg)){
-	ERROR("Parser failed on generated request\n");
-	ERROR("Message was: <%.*s>\n",p_msg->len,p_msg->buf);
+	ERROR("Parser failed on generated request");
+	ERROR("Message was: <%.*s>",p_msg->len,p_msg->buf);
 	delete p_msg;
 	bucket->unlock();
 	return MALFORMED_SIP_MSG;
@@ -1691,14 +1691,14 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     p_msg->local_socket = req->local_socket;
     inc_ref(p_msg->local_socket);
 
-    DBG("Sending to %s:%i:\n<%.*s>\n",
+    DBG("Sending to %s:%i:\n<%.*s>",
 	get_addr_str(&p_msg->remote_ip).c_str(),
 	ntohs(((sockaddr_in*)&p_msg->remote_ip)->sin_port),
 	p_msg->len,p_msg->buf);
 
     int send_err = p_msg->send(t->flags);
     if(send_err < 0){
-    ERROR("Error from transport layer: call_id %s\n", p_msg->callid ? p_msg->callid->value.s : "unknown");
+    ERROR("Error from transport layer: call_id %s", p_msg->callid ? p_msg->callid->value.s : "unknown");
 	delete p_msg;
     }
     else {
@@ -1707,7 +1707,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 	sip_trans* cancel_t=NULL;
 	send_err = update_uac_request(bucket,cancel_t,p_msg);
 	if(send_err<0){
-	    DBG("Could not update state for UAC transaction\n");
+	    DBG("Could not update state for UAC transaction");
 	    delete p_msg;
 	}
 	else {
@@ -1753,16 +1753,16 @@ void _trans_layer::received_msg(sip_msg* msg, const trsp_acls &acls)
     int err = parse_sip_msg(msg,err_msg);
 
     if(err){
-	DBG("parse_sip_msg returned %i\n",err);
+	DBG("parse_sip_msg returned %i",err);
     msg->local_socket->inc_sip_parse_error();
 
 	if(!err_msg){
 	    err_msg = (char*)"unknown parsing error";
 	}
 
-	DBG("parsing error: %s\n",err_msg);
+	DBG("parsing error: %s",err_msg);
 
-	DBG("Message was: \"%.*s\"\n",msg->len,msg->buf);
+	DBG("Message was: \"%.*s\"",msg->len,msg->buf);
 
 	if((err != MALFORMED_FLINE)
 	   && (msg->type == SIP_REQUEST)
@@ -1807,12 +1807,12 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 	    if(msg->u.request->method != t->msg->u.request->method){
 		
 		// ACK matched INVITE transaction
-		DBG("ACK matched INVITE transaction %p\n", t);
+		DBG("ACK matched INVITE transaction %p", t);
 		int t_state = t->state;
 		err = update_uas_request(bucket,t,msg);
-		DBG("update_uas_request(bucket,t=%p,msg) = %i\n",t, err);
+		DBG("update_uas_request(bucket,t=%p,msg) = %i",t, err);
 		if(err<0){
-		    DBG("trans_layer::update_uas_trans() failed!\n");
+		    DBG("trans_layer::update_uas_trans() failed!");
 		    // Anyway, there is nothing we can do...
 		}
 		else {
@@ -1827,19 +1827,19 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 			//  let's pass the request to
 			//  the UA, iff it was a 200-ACK
 			assert(ua);
-			DBG("Passing ACK to the UA.\n");
+			DBG("Passing ACK to the UA.");
 			ua->handle_sip_request(trans_ticket(), // dummy
 					       msg);
 		    }
 		    else {
-			DBG("Absorbing non-200-ACK\n");
+			DBG("Absorbing non-200-ACK");
 		    }
 
 		    DROP_MSG;
 		}
 	    }
 	    else {
-		DBG("Found retransmission\n");
+		DBG("Found retransmission");
 		stats.inc_received_requests_retransmits();
 		t->retransmit(); // retransmit reply
 	    }
@@ -1870,7 +1870,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
                          assert(msg->u.request->method != 
                              inv_t->msg->u.request->method);
                          err = update_uas_request(inv_bucket,inv_t,msg);
-                         DBG("update_uas_request(bucket,t,msg) = %i\n",err);
+                         DBG("update_uas_request(bucket,t,msg) = %i",err);
                      }
                      inv_bucket->unlock();
                      bucket->lock();
@@ -1941,7 +1941,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 
 	    // Reply matched UAC transaction
 	    
-	    DBG("Reply matched an existing transaction\n");
+	    DBG("Reply matched an existing transaction");
 
 	    if(t->logger) {
 			t->logger->log(msg->buf,msg->len,&msg->remote_ip,
@@ -1956,7 +1956,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 	    string dialog_id(t->dialog_id.s, t->dialog_id.len);
 	    int res = update_uac_reply(bucket,t,msg);
 	    if(res < 0){
-		ERROR("update_uac_trans() failed, so what happens now???\n");
+		ERROR("update_uac_trans() failed, so what happens now???");
 		break;
 	    }
 	    // do not touch the transaction anymore:
@@ -1969,8 +1969,8 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 	    }
 	}
 	else {
-	    DBG("Reply did NOT match any existing transaction...\n");
-	    DBG("reply code = %i\n",msg->u.reply->code);
+	    DBG("Reply did NOT match any existing transaction...");
+	    DBG("reply code = %i",msg->u.reply->code);
 	    if( (msg->u.reply->code >= 200) &&
 	        (msg->u.reply->code <  300) ) {
 		
@@ -1986,7 +1986,7 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
 	break;
 
     default:
-	ERROR("Got unknown message type: Bug?\n");
+	ERROR("Got unknown message type: Bug?");
 	break;
     }
 
@@ -2003,7 +2003,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
     cstring to_tag;
     int     reply_code = msg->u.reply->code;
 
-    DBG("update_uac_reply(reply code = %i, trans=%p)\n",reply_code, t);
+    DBG("update_uac_reply(reply code = %i, trans=%p)",reply_code, t);
 
     if(reply_code < 200){
 
@@ -2168,7 +2168,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 	} 
 	else {
 	    
-	    DBG("Positive final reply to INVITE transaction (state=%i)\n",t->state);
+	    DBG("Positive final reply to INVITE transaction (state=%i)",t->state);
 
 	    // Positive final reply to INVITE transaction
 	    switch(t->state){
@@ -2217,11 +2217,11 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 		    //   also be sending a BYE to quit
 		    //   this dialog...
 		    //
-		    DBG("Received 200 reply with different To-tag as the previous one.\n");
+		    DBG("Received 200 reply with different To-tag as the previous one.");
 		    goto end;
 		}
 
-		DBG("Received 200 reply retransmission\n");
+		DBG("Received 200 reply retransmission");
 		stats.inc_received_200_replies_retransmits();
 		t->retransmit();
 		goto end;
@@ -2317,17 +2317,17 @@ int _trans_layer::update_uac_request(
     if(msg->u.request->method != sip_request::ACK){
 	t = bucket->add_trans(msg,TT_UAC);
 
-	DBG("update_uac_request(t=%p)\n", t);
+	DBG("update_uac_request(t=%p)", t);
     }
     else {
 	// 200 ACK
 	if(!msg->local_socket->is_reliable()) {
 	    t = bucket->match_request(msg,TT_UAC);
 	    if(t == NULL){
-		DBG("While sending 200 ACK: no matching transaction\n");
+		DBG("While sending 200 ACK: no matching transaction");
 		return -1;
 	    }
-	    DBG("update_uac_request(200 ACK, t=%p)\n", t);
+	    DBG("update_uac_request(200 ACK, t=%p)", t);
 	    // clear old retransmission buffer
 	    delete [] t->retr_buf;
 	
@@ -2393,7 +2393,7 @@ int _trans_layer::update_uac_request(
 
 int _trans_layer::update_uas_reply(trans_bucket* bucket, sip_trans* t, int reply_code)
 {
-    DBG("update_uas_reply(t=%p)\n", t);
+    DBG("update_uas_reply(t=%p)", t);
 
     t->reply_status = reply_code;
     bool reliable_trsp = t->retr_socket->is_reliable();
@@ -2470,13 +2470,13 @@ int _trans_layer::update_uas_reply(trans_bucket* bucket, sip_trans* t, int reply
 
 int _trans_layer::update_uas_request(trans_bucket* bucket, sip_trans* t, sip_msg* msg)
 {
-    DBG("update_uas_request(t=%p)\n", t);
+    DBG("update_uas_request(t=%p)", t);
     int method = msg->u.request->method;
 
     if(method != sip_request::ACK &&
        method != sip_request::PRACK) {
 
-	ERROR("Bug? Recvd non PR-/ACK request for existing UAS transact.!?\n");
+	ERROR("Bug? Recvd non PR-/ACK request for existing UAS transact.!?");
 	return -1;
     }
 
@@ -2519,7 +2519,7 @@ int _trans_layer::update_uas_request(trans_bucket* bucket, sip_trans* t, sip_msg
 	return TS_REMOVED;
 	    
     default:
-	DBG("Bug? Unknown state at this point: %i\n",t->state);
+	DBG("Bug? Unknown state at this point: %i",t->state);
 	break;
     }
 
@@ -2581,12 +2581,12 @@ void _trans_layer::send_non_200_ack(sip_msg* reply, sip_trans* t)
     *c++ = CR;
     *c++ = LF;
 
-    DBG("About to send ACK\n");
+    DBG("About to send ACK");
 
     assert(inv->local_socket);
     int send_err = inv->local_socket->send(&inv->remote_ip,ack_buf, ack_len,t->flags);
     if(send_err < 0){
-        ERROR("Error from transport layer: call_id %s\n", inv->callid ? inv->callid->value.s : "unknown");
+        ERROR("Error from transport layer: call_id %s", inv->callid ? inv->callid->value.s : "unknown");
     }
     else stats.inc_sent_requests();
 
@@ -2639,7 +2639,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 
 	tr->clear_timer(STIMER_B);
 	if(tr->state == TS_CALLING) {
-	    DBG("Transaction timeout!\n");
+	    DBG("Transaction timeout!");
 	    // unlocks the bucket
 	    timeout(bucket,tr);
 	    return;
@@ -2692,7 +2692,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 
 	case TS_TRYING:
 	case TS_PROCEEDING:
-	    DBG("Transaction timeout!\n");
+	    DBG("Transaction timeout!");
 	    // unlocks the bucket
 	    timeout(bucket,tr);
 	    return;
@@ -2820,7 +2820,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 	break;
 
     default:
-	ERROR("Invalid timer type %i\n",type);
+	ERROR("Invalid timer type %i",type);
 	break;
     }
 
@@ -3026,7 +3026,7 @@ int _trans_layer::try_next_ip(
 
     // and re-send
     if(tr->msg->send(tr->flags) < 0) {
-        ERROR("Error from transport layer: call_id %s\n", tr->msg->callid ? tr->msg->callid->value.s : "unknown");
+        ERROR("Error from transport layer: call_id %s", tr->msg->callid ? tr->msg->callid->value.s : "unknown");
 
         /*if(default_bl_ttl) {
             tr_blacklist::instance()->insert(&tr->msg->remote_ip, default_bl_ttl,"503");
@@ -3196,7 +3196,7 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
     sip_destination dest;
     list<sip_destination> dest_list;
     if(set_next_hop(p_msg,&dest.host,&dest.port,&dest.trsp,&dest.scheme) < 0){
-        DBG("retarget: set_next_hop failed\n");
+        DBG("retarget: set_next_hop failed");
         update_reply_msg(500, "Failed to get nexthop for redirected request");
         return -1;
     }

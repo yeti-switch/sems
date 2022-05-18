@@ -175,7 +175,7 @@ static long SILK_create(unsigned int rtp_Hz,
 {
   SILK_state* st = malloc(sizeof(SILK_state));
   if(st == NULL) {
-    ERROR("could not allocate SILK state\n");
+    ERROR("could not allocate SILK state");
     return 0;
   }
 
@@ -244,7 +244,7 @@ int Pcm16_2_SILK( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   ret = SKP_Silk_SDK_Encode( st->psEnc, &st->encControl, (SKP_int16*)in_buf, 
 			     (SKP_int16)size/2, out_buf, &nBytes );
   if( ret ) {
-    ERROR( "SKP_Silk_Encode returned %d (size=%u)\n", ret, size );
+    ERROR( "SKP_Silk_Encode returned %d (size=%u)", ret, size );
     return -1;
   }
 
@@ -262,7 +262,7 @@ int SILK_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
     ret = SKP_Silk_SDK_Decode( st->psDec, &st->decControl, 0/*lost*/,
 			       in_buf, size, outPtr, &len );
     if( ret ) {
-      ERROR( "SKP_Silk_SDK_Decode returned %d\n", ret );
+      ERROR( "SKP_Silk_SDK_Decode returned %d", ret );
       return ret;
     }
 
@@ -270,7 +270,7 @@ int SILK_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
 
     if( (unsigned char*)outPtr - out_buf > AUDIO_BUFFER_SIZE ) {
       /* Oooops!!! buffer overflow !!! */
-      ERROR("Buffer overflow (size=%li)\n",
+      ERROR("Buffer overflow (size=%li)",
 	    (unsigned char*)outPtr - out_buf);
       return -1; // TODO
     }

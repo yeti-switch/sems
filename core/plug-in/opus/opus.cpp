@@ -131,7 +131,7 @@ long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
   int error;
  
   if (format_parameters) {
-    DBG("OPUS params: >>%s<<.\n", format_parameters);
+    DBG("OPUS params: >>%s<<.", format_parameters);
   } 
 
   codec_inst = (opus_state_t*)malloc(sizeof(opus_state_t));
@@ -182,7 +182,7 @@ long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
 
   codec_inst->opus_enc = opus_encoder_create(_OPUS_RATE,1,_OPUS_APPLICATION_,&error);
   if (error) {
-    DBG("OPUS: error %d while creating encoder state.\n", error);
+    DBG("OPUS: error %d while creating encoder state.", error);
     return -1;
   }
 
@@ -195,7 +195,7 @@ long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
 
   codec_inst->opus_dec = opus_decoder_create(_OPUS_RATE,1,&error);
   if (error) {
-    DBG("OPUS: error %d while creating decoder state.\n", error);
+    DBG("OPUS: error %d while creating decoder state.", error);
     opus_encoder_destroy(codec_inst->opus_enc);
     return -1;
   }
@@ -221,7 +221,7 @@ int pcm16_2_opus( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   int res;
 
   if (!h_codec){
-    ERROR("opus codec not initialized.\n");
+    ERROR("opus codec not initialized.");
     return 0;
   }
   codec_inst = (opus_state_t*)h_codec;
@@ -243,7 +243,7 @@ static int opus_2_pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned
   int res;
 
   if (!h_codec){
-    ERROR("opus codec not initialized.\n");
+    ERROR("opus codec not initialized.");
     return 0;
   }
   codec_inst = (opus_state_t*)h_codec;
@@ -266,13 +266,13 @@ static int opus_plc( unsigned char* out_buf, unsigned int size,
   int res;
 
   if (!h_codec){
-    ERROR("opus codec not initialized.\n");
+    ERROR("opus codec not initialized.");
     return 0;
   }
   codec_inst = (opus_state_t*)h_codec;
 
   if (size/channels > AUDIO_BUFFER_SIZE) {
-    /* DBG("OPUS plc: size %d, chan %d exceeds buffer size %d.\n", size, channels, AUDIO_BUFFER_SIZE); */
+    /* DBG("OPUS plc: size %d, chan %d exceeds buffer size %d.", size, channels, AUDIO_BUFFER_SIZE); */
     return 0;
   }
 
@@ -290,7 +290,7 @@ static unsigned int opus_frames2samples(long h_codec, unsigned char* in, unsigne
 {
   opus_state_t* codec_inst;
   if(!h_codec){
-    ERROR("opus codec not initialized.\n");
+    ERROR("opus codec not initialized.");
     return 0;
   }
   codec_inst = (opus_state_t *)h_codec;

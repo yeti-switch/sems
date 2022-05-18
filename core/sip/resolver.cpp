@@ -204,7 +204,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
 
     ip_entry* new_ip = new ip_entry();
     if(rr->type == ns_t_a) {
-        DBG("A: TTL=%i %s %i.%i.%i.%i\n",
+        DBG("A: TTL=%i %s %i.%i.%i.%i",
             ns_rr_ttl(*rr), ns_rr_name(*rr),
             ns_rr_rdata(*rr)[0], ns_rr_rdata(*rr)[1],
             ns_rr_rdata(*rr)[2], ns_rr_rdata(*rr)[3]);
@@ -212,7 +212,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
         memcpy(&(new_ip->addr), ns_rr_rdata(*rr), sizeof(in_addr));
     } else if(rr->type == ns_t_aaaa) {
         const u_short* a = reinterpret_cast<const u_short *>(ns_rr_rdata(*rr));
-        DBG("AAAA: TTL=%i %s %x:%x:%x:%x:%x:%x:%x:%x\n",
+        DBG("AAAA: TTL=%i %s %x:%x:%x:%x:%x:%x:%x:%x",
             ns_rr_ttl(*rr), ns_rr_name(*rr),
             htons(a[0]), htons(a[1]), htons(a[2]), htons(a[3]),
             htons(a[4]), htons(a[5]), htons(a[6]), htons(a[7]));
@@ -660,11 +660,11 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
         NS_MAXDNAME) /* Size of result buffer */
         < 0)         /* Negative: error       */
     {
-        DBG("dns_expand_name failed\n");
+        DBG("dns_expand_name failed");
         return nullptr;
     }
 
-    DBG("SRV: TTL=%i %s P=<%i> W=<%i> P=<%i> T=<%s>\n",
+    DBG("SRV: TTL=%i %s P=<%i> W=<%i> P=<%i> T=<%s>",
         ns_rr_ttl(*rr),
         ns_rr_name(*rr),
         dns_get_16(rdata),
@@ -704,11 +704,11 @@ dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* e
         NS_MAXDNAME) /* Size of result buffer */
         < 0)         /* Negative: error       */
     {    /* Negative: error       */
-        ERROR("dns_expand_name failed\n");
+        ERROR("dns_expand_name failed");
         return nullptr;
     }
 
-    DBG("CNAME: TTL=%i %s T=<%s>\n",
+    DBG("CNAME: TTL=%i %s T=<%s>",
         ns_rr_ttl(*rr),
         ns_rr_name(*rr),
         name_buf);
@@ -915,7 +915,7 @@ dns_base_entry* dns_naptr_entry::get_rr(dns_record* rr, u_char*, u_char* end)
 
     for(int i=0; i < NAPTR_Fields; i++) {
         if(rdata > end) {
-            ERROR("corrupted NAPTR record!!\n");
+            ERROR("corrupted NAPTR record!!");
             return nullptr;
         }
 
@@ -1358,7 +1358,7 @@ int _resolver::set_destination_ip(
 
     string nh = c2stlstr(next_hop);
 
-    DBG("checking whether '%s' is IP address...\n", nh.c_str());
+    DBG("checking whether '%s' is IP address...", nh.c_str());
     if (am_inet_pton(nh.c_str(), remote_ip) != 1) {
 
         // nh does NOT contain a valid IP address
@@ -1366,7 +1366,7 @@ int _resolver::set_destination_ip(
             // no explicit port specified,
             // try SRV first
             if (disable_srv) {
-                DBG("no port specified, but DNS SRV disabled (skipping).\n");
+                DBG("no port specified, but DNS SRV disabled (skipping).");
             } else {
                 string srv_name;
                 if(!lower_cmp_n(next_scheme,"sip")) {
@@ -1388,7 +1388,7 @@ int _resolver::set_destination_ip(
 
                 srv_name += "." + nh;
 
-                DBG("no port specified, looking up SRV '%s'...\n",
+                DBG("no port specified, looking up SRV '%s'...",
                     srv_name.c_str());
 
                 if(resolver::instance()->resolve_name(srv_name.c_str(),
@@ -1410,7 +1410,7 @@ int _resolver::set_destination_ip(
                 h_dns,remote_ip,
                 priority);
             if(err < 0) {
-                DBG("Unresolvable Request URI domain <%s>\n",nh.c_str());
+                DBG("Unresolvable Request URI domain <%s>",nh.c_str());
                 return RESOLVING_ERROR_CODE;
             }
     } else { //if (am_inet_pton(nh.c_str(), remote_ip) != 1)
@@ -1425,7 +1425,7 @@ int _resolver::set_destination_ip(
         am_set_port(remote_ip,next_port);
     }
 
-    DBG("set destination to %s:%u\n",
+    DBG("set destination to %s:%u",
         nh.c_str(), am_get_port(remote_ip));
 
     return 0;

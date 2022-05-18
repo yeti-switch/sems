@@ -33,7 +33,7 @@ static void replaceRtcpAttr(SdpMedia &m, const string& relay_address, int rtcp_p
                 a.value = addr.print();
             }
         } catch (const exception &e) {
-            DBG("can't replace RTCP address: %s\n", e.what());
+            DBG("can't replace RTCP address: %s", e.what());
         }
     }
 }
@@ -275,7 +275,7 @@ bool StreamData::initStream(PlayoutType playout_type,
         //if (!stream->muted()) stream->setOnHold(muted);
     } else {
         initialized = false;
-        DBG("stream initialization failed\n");
+        DBG("stream initialization failed");
         // there still can be payloads to be relayed (if all possible payloads are
         // to be relayed this needs not to be an error)
     }
@@ -434,13 +434,13 @@ void StreamData::setRelayDestination(const string& connection_address, int port)
 void StreamData::setRelayPaused(bool paused)
 {
     if (paused == relay_paused) {
-        DBG("relay already paused for stream [%p], ignoring\n",
+        DBG("relay already paused for stream [%p], ignoring",
             static_cast<void *>(stream));
         return;
     }
 
     relay_paused = paused;
-    DBG("relay %spaused, stream [%p]\n", relay_paused?"":"not ",
+    DBG("relay %spaused, stream [%p]", relay_paused?"":"not ",
         static_cast<void *>(stream));
 
     if (nullptr != stream) {
@@ -453,7 +453,7 @@ void StreamData::setRelayPaused(bool paused)
 
 void StreamData::mute(bool set_mute)
 {
-    DBG("mute(%s) - RTP stream [%p]\n", set_mute?"true":"false", static_cast<void *>(stream));
+    DBG("mute(%s) - RTP stream [%p]", set_mute?"true":"false", static_cast<void *>(stream));
 
     if (stream) {
         stream->setOnHold(set_mute);
@@ -477,7 +477,7 @@ void StreamData::setDtmfSink(AmDtmfSink *dtmf_sink)
             for(vector<SdpPayload>::iterator it = lowfi_payloads.begin();
                 it != lowfi_payloads.end(); ++it)
             {
-                DBG("checking %s/%i PL type against %s/%i\n",
+                DBG("checking %s/%i PL type against %s/%i",
                 selected_payload_name.c_str(), stream->getPayloadType(),
                 it->encoding_name.c_str(), it->payload_type);
                 if(selected_payload_name == it->encoding_name) {
@@ -713,7 +713,7 @@ bool AmB2BMedia::releaseReference() {
     int r = --ref_cnt;
     mutex.unlock();
     if (r==0) {
-        DBG("last reference to AmB2BMedia [%p] cleared, destroying\n",
+        DBG("last reference to AmB2BMedia [%p] cleared, destroying",
             static_cast<void *>(this));
         delete this;
     }
@@ -976,7 +976,7 @@ void AmB2BMedia::replaceConnectionAddress(
         if(it->type == MT_AUDIO) {
             if(audio_pair == streams.end() ) {
                 // strange... we should actually have a stream for this media line...
-                DBG("audio media line does not have coresponding audio stream...\n");
+                DBG("audio media line does not have coresponding audio stream...");
                 continue;
             }
 
@@ -990,7 +990,7 @@ void AmB2BMedia::replaceConnectionAddress(
                         replaced_ports += int2str(it->port);
                 }
             } catch (const string& s) {
-                ERROR("setting port: '%s'\n", s.c_str());
+                ERROR("setting port: '%s'", s.c_str());
                 throw string("error setting RTP port\n");
             }
 
@@ -1009,7 +1009,7 @@ void AmB2BMedia::replaceConnectionAddress(
         } else if(canRelay(*it)) {
             if(relay_pair == streams.end()) {
                 // strange... we should actually have a stream for this media line...
-                DBG("media line does not have a coresponding relay stream...\n");
+                DBG("media line does not have a coresponding relay stream...");
                 continue;
             }
             if(it->port) { // if stream active
@@ -1026,7 +1026,7 @@ void AmB2BMedia::replaceConnectionAddress(
                         replaced_ports += int2str(it->port);
                     }
                 } catch (const string& s) {
-                    ERROR("setting port: '%s'\n", s.c_str());
+                    ERROR("setting port: '%s'", s.c_str());
                     throw string("error setting RTP port\n");
                 }
 
@@ -1462,7 +1462,7 @@ void AmB2BMedia::setFirstStreamInput(bool a_leg, AmAudio *in)
     }
 
     if(!found && in) {
-        ERROR("BUG: can't set %s leg's first stream input, no streams\n",a_leg ? "A": "B");
+        ERROR("BUG: can't set %s leg's first stream input, no streams",a_leg ? "A": "B");
     }
 }
 
@@ -1483,7 +1483,7 @@ void AmB2BMedia::setFirstStreamOutput(bool a_leg, AmAudio *out)
     }
 
     if(!found && out) {
-        ERROR("BUG: can't set %s leg's first stream output, no streams\n", a_leg ? "A": "B");
+        ERROR("BUG: can't set %s leg's first stream output, no streams", a_leg ? "A": "B");
     }
 }
 
@@ -1603,11 +1603,11 @@ void AmB2BMedia::setRtpBSensor(msg_sensor* _sensor)
 void AmB2BMedia::setRelayDTMFReceiving(bool enabled) {
     AmLock lock(mutex);
 
-    DBG("streams.size() = %zd\n", streams.size());
+    DBG("streams.size() = %zd", streams.size());
     for(auto &pair : streams) {
-        DBG("force_receive_dtmf %sabled for [%p]\n", enabled?"en":"dis",
+        DBG("force_receive_dtmf %sabled for [%p]", enabled?"en":"dis",
             static_cast<void *>(&pair.a));
-        DBG("force_receive_dtmf %sabled for [%p]\n", enabled?"en":"dis",
+        DBG("force_receive_dtmf %sabled for [%p]", enabled?"en":"dis",
             static_cast<void *>(&pair.b));
         pair.a.getStream()->force_receive_dtmf = enabled;
         pair.b.getStream()->force_receive_dtmf = enabled;
@@ -1619,23 +1619,23 @@ void AmB2BMedia::setReceiving(bool receiving_a, bool receiving_b)
 {
     AmLock lock(mutex); // TODO: is this necessary?
 
-    DBG("streams.size() = %zd\n",streams.size());
+    DBG("streams.size() = %zd",streams.size());
 
     for(auto &pair : streams) {
         if(!pair.audio)
-            DBG("setReceiving(%s) A relay stream [%p]\n", receiving_a?"true":"false",
+            DBG("setReceiving(%s) A relay stream [%p]", receiving_a?"true":"false",
                 static_cast<void *>(pair.a.getStream()));
         else
-            DBG("setReceiving(%s) A audio stream [%p]\n", receiving_a?"true":"false",
+            DBG("setReceiving(%s) A audio stream [%p]", receiving_a?"true":"false",
                 static_cast<void *>(pair.a.getStream()));
 
         pair.a.setReceiving(receiving_a);
 
         if(!pair.audio)
-            DBG("setReceiving(%s) B relay stream [%p]\n", receiving_b?"true":"false",
+            DBG("setReceiving(%s) B relay stream [%p]", receiving_b?"true":"false",
                 static_cast<void *>(pair.a.getStream()));
         else
-            DBG("setReceiving(%s) B audio stream [%p]\n", receiving_b?"true":"false",
+            DBG("setReceiving(%s) B audio stream [%p]", receiving_b?"true":"false",
                 static_cast<void *>(pair.a.getStream()));
 
         pair.b.setReceiving(receiving_b);
@@ -1652,7 +1652,7 @@ void AmB2BMedia::pauseRelay()
 {
     AmLock lock(mutex);
 
-    DBG("streams.size() = %zd\n", streams.size());
+    DBG("streams.size() = %zd", streams.size());
     relay_paused = true;
 
     for(auto &pair : streams) {
@@ -1670,7 +1670,7 @@ void AmB2BMedia::restartRelay()
 {
     AmLock lock(mutex);
 
-    DBG("streams.size() = %zd\n", streams.size());
+    DBG("streams.size() = %zd", streams.size());
 
     relay_paused = false;
 
@@ -1702,11 +1702,11 @@ void AmB2BMedia::debug()
         have_b_leg_remote_sdp ? 'X' : '-');
 
     for(auto &pair : streams) {
-        if(pair.audio) DBG(" - audio stream (A):\n");
-        else DBG(" - relay stream (A):\n");
+        if(pair.audio) DBG(" - audio stream (A):");
+        else DBG(" - relay stream (A):");
         pair.a.debug();
-        if(pair.audio) DBG(" - audio stream (B):\n");
-        else DBG(" - relay stream (B):\n");
+        if(pair.audio) DBG(" - audio stream (B):");
+        else DBG(" - relay stream (B):");
         pair.b.debug();
     }
 }

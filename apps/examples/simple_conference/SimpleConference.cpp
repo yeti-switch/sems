@@ -141,7 +141,7 @@ void SimpleConferenceDialog::process(AmEvent* ev)
 
 void SimpleConferenceDialog::onDtmf(int event, int duration)
 {
-  DBG("SimpleConferenceDialog::onDtmf: event %d duration %d\n", 
+  DBG("SimpleConferenceDialog::onDtmf: event %d duration %d", 
       event, duration);
 }
 

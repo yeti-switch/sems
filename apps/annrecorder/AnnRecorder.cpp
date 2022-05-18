@@ -106,7 +106,7 @@ int AnnRecorderFactory::onLoad()
 
   message_storage_fact = AmPlugIn::instance()->getFactory4Di("msg_storage");
   if(!message_storage_fact) {
-    ERROR("sorry, could not get msg_storage, please load a suitable plug-in\n");
+    ERROR("sorry, could not get msg_storage, please load a suitable plug-in");
     return -1;
   }
 
@@ -123,7 +123,7 @@ void AnnRecorderFactory::getAppParams(const AmSipRequest& req, map<string, strin
     AmUriParser p;
     p.uri = req.from_uri;
     if (!p.parse_uri()) {
-      DBG("parsing From-URI '%s' failed\n", p.uri.c_str());
+      DBG("parsing From-URI '%s' failed", p.uri.c_str());
       throw AmSession::Exception(500, MOD_NAME ": could not parse From-URI");
     }
     user = p.uri_user;
@@ -185,12 +185,12 @@ void AnnRecorderFactory::getAppParams(const AmSipRequest& req, map<string, strin
 
  announce_found:
 
-  DBG(MOD_NAME " invocation parameters: \n");
-  DBG(" User:     <%s> \n", user.c_str());
-  DBG(" Domain:   <%s> \n", domain.c_str());
-  DBG(" Language: <%s> \n", language.c_str());
-  DBG(" Type:     <%s> \n", typ.c_str());
-  DBG(" Def. File:<%s> \n", announce_file.c_str());
+  DBG(MOD_NAME " invocation parameters: ");
+  DBG(" User:     <%s> ", user.c_str());
+  DBG(" Domain:   <%s> ", domain.c_str());
+  DBG(" Language: <%s> ", language.c_str());
+  DBG(" Type:     <%s> ", typ.c_str());
+  DBG(" Def. File:<%s> ", announce_file.c_str());
 
   params["domain"] = domain;
   params["user"] = user;
@@ -216,7 +216,7 @@ AmSession* AnnRecorderFactory::onInvite(const AmSipRequest& req, const string& a
   AmSession* s = new AnnRecorderDialog(params, prompts, cred); 
   
   if (NULL == cred) {
-    WARN("discarding unknown session parameters.\n");
+    WARN("discarding unknown session parameters.");
   } else {
     AmUACAuth::enable(s);
   }
@@ -233,7 +233,7 @@ AnnRecorderDialog::AnnRecorderDialog(const map<string, string>& params,
 {
   msg_storage = AnnRecorderFactory::message_storage_fact->getInstance();
   if(!msg_storage){
-    ERROR("could not get a message storage reference\n");
+    ERROR("could not get a message storage reference");
     throw AmSession::Exception(500,"could not get a message storage reference");
   }
 }
@@ -247,7 +247,7 @@ AnnRecorderDialog::~AnnRecorderDialog()
 
 void AnnRecorderDialog::onSessionStart()
 {
-  DBG("AnnRecorderDialog::onSessionStart\n");
+  DBG("AnnRecorderDialog::onSessionStart");
 
   prompts.addToPlaylist(WELCOME,  (long)this, playlist);
   prompts.addToPlaylist(YOUR_PROMPT,  (long)this, playlist);
@@ -266,14 +266,14 @@ void AnnRecorderDialog::enqueueCurrent() {
   wav_file.close();
   FILE* fp = getCurrentMessage();
   if (!fp) {
-    DBG("no recorded msg available, using default\n");
+    DBG("no recorded msg available, using default");
     if (wav_file.open(params["defaultfile"], AmAudioFile::Read)) {
-      ERROR("opening default greeting file '%s'!\n", params["defaultfile"].c_str());
+      ERROR("opening default greeting file '%s'!", params["defaultfile"].c_str());
       return;
     }  
   } else {
     if (wav_file.fpopen("aa.wav", AmAudioFile::Read, fp)) {
-      ERROR("fpopen message file!\n");
+      ERROR("fpopen message file!");
       return;
     }
   }
@@ -281,23 +281,23 @@ void AnnRecorderDialog::enqueueCurrent() {
 }
 
 void AnnRecorderDialog::onDtmf(int event, int duration_msec) {
-  DBG("DTMF %d, %d\n", event, duration_msec);
+  DBG("DTMF %d, %d", event, duration_msec);
   // remove timer
   try {
     removeTimers();
   } catch(...) {
-    ERROR("Exception caught calling mod api\n");
+    ERROR("Exception caught calling mod api");
   }
 
   switch (state) {
   case S_WAIT_START: { 
-    DBG("received key %d in state S_WAIT_START: start recording\n", event); 
+    DBG("received key %d in state S_WAIT_START: start recording", event); 
     playlist.flush();
 
     wav_file.close();
     msg_filename = "/tmp/" + getLocalTag() + ".wav";
     if(wav_file.open(msg_filename,AmAudioFile::Write,false)) {
-     ERROR("AnnRecorder: couldn't open %s for writing\n", 
+     ERROR("AnnRecorder: couldn't open %s for writing", 
 	   msg_filename.c_str());
      dlg->bye();
      setStopped();
@@ -310,7 +310,7 @@ void AnnRecorderDialog::onDtmf(int event, int duration_msec) {
   } break;
 
   case S_RECORDING: {
-    DBG("received key %d in state S_RECORDING: replay recording\n", event); 
+    DBG("received key %d in state S_RECORDING: replay recording", event); 
     prompts.addToPlaylist(BEEP,  (long)this, playlist);
     playlist.flush();
     replayRecording();
@@ -318,7 +318,7 @@ void AnnRecorderDialog::onDtmf(int event, int duration_msec) {
   } break;
 
   case S_CONFIRM: { 
-    DBG("received key %d in state S_CONFIRM save or redo\n", event); 
+    DBG("received key %d in state S_CONFIRM save or redo", event); 
     playlist.flush();
 
     wav_file.close();
@@ -332,7 +332,7 @@ void AnnRecorderDialog::onDtmf(int event, int duration_msec) {
   } break;
 
   default: { 
-    DBG("ignoring key %d in state %d\n",
+    DBG("ignoring key %d in state %d",
 		 event, state); 
   }break;
   }
@@ -353,7 +353,7 @@ void AnnRecorderDialog::saveAndConfirm() {
 
 void AnnRecorderDialog::onBye(const AmSipRequest& req)
 {
-  DBG("onBye: stopSession\n");
+  DBG("onBye: stopSession");
   setStopped();
 }
 
@@ -375,7 +375,7 @@ void AnnRecorderDialog::process(AmEvent* event)
       saveAndConfirm();
       return;
     }
-    ERROR("unknown timer id!\n");
+    ERROR("unknown timer id!");
   }
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
@@ -414,7 +414,7 @@ void AnnRecorderDialog::process(AmEvent* event)
 
 void AnnRecorderDialog::replayRecording() {
   prompts.addToPlaylist(YOUR_PROMPT,  (long)this, playlist);
-  DBG("msg_filename = '%s'\n", msg_filename.c_str());
+  DBG("msg_filename = '%s'", msg_filename.c_str());
   if (!wav_file.open(msg_filename, AmAudioFile::Read))
     playlist.addToPlaylist(new AmPlaylistItem(&wav_file, NULL));
   prompts.addToPlaylist(CONFIRM,  (long)this, playlist);
@@ -428,7 +428,7 @@ inline UACAuthCred* AnnRecorderDialog::getCredentials() {
 
 void AnnRecorderDialog::saveMessage(FILE* fp) {
   string msg_name = params["type"]+".wav";
-  DBG("message name is '%s'\n", msg_name.c_str());
+  DBG("message name is '%s'", msg_name.c_str());
 
   AmArg di_args,ret;
   di_args.push((params["domain"]+DOMAIN_PROMPT_SUFFIX).c_str()); // domain
@@ -441,9 +441,9 @@ void AnnRecorderDialog::saveMessage(FILE* fp) {
   try {
     msg_storage->invoke("msg_new",di_args,ret);  
   } catch(string& s) {
-    ERROR("invoking msg_new: '%s'\n", s.c_str());
+    ERROR("invoking msg_new: '%s'", s.c_str());
   } catch(...) {
-    ERROR("invoking msg_new.\n");
+    ERROR("invoking msg_new.");
   }
   // TODO: evaluate ret return value
 }
@@ -453,7 +453,7 @@ FILE* AnnRecorderDialog::getCurrentMessage() {
   string& user = params["user"];
   string domain = params["domain"]+DOMAIN_PROMPT_SUFFIX;
 
-  DBG("trying to get message '%s' for user '%s' domain '%s'\n",
+  DBG("trying to get message '%s' for user '%s' domain '%s'",
       msgname.c_str(), user.c_str(), domain.c_str());
   AmArg di_args,ret;
   di_args.push(domain.c_str());  // domain
@@ -472,7 +472,7 @@ FILE* AnnRecorderDialog::getCurrentMessage() {
   }
   int ecode = ret.get(0).asInt();
   if (MSG_OK != ecode) {
-    DBG("msg_get for user '%s' domain '%s' message '%s': %s\n",
+    DBG("msg_get for user '%s' domain '%s' message '%s': %s",
 	  user.c_str(), domain.c_str(),
 	  msgname.c_str(),
 	  MsgStrError(ret.get(0).asInt()));

@@ -56,7 +56,7 @@ void RtmpSession::sendCallState()
 {
   m_rtmp_conn.lock();
   if(rtmp_connection){
-    DBG("Dialog status: %s\n",dlg->getStatusStr());
+    DBG("Dialog status: %s",dlg->getStatusStr());
     unsigned int rtmp_call_status = __dlg_status2rtmp_call[dlg->getStatus()];
     rtmp_connection->SendCallStatus(rtmp_call_status);
   }
@@ -95,9 +95,9 @@ void RtmpSession::onSessionStart()
     return;
   }
 
-  DBG("enabling adaptive buffer\n");
+  DBG("enabling adaptive buffer");
   RTPStream()->setPlayoutType(ADAPTIVE_PLAYOUT);
-  DBG("plugging rtmp_audio into in&out\n");
+  DBG("plugging rtmp_audio into in&out");
   setInOut(rtmp_audio,rtmp_audio);
   
   AmSession::onSessionStart();
@@ -124,7 +124,7 @@ void RtmpSession::onSipReply(const AmSipRequest& req,
 
 void RtmpSession::onInvite(const AmSipRequest& req)
 {
-  DBG("status str: %s\n",dlg->getStatusStr());
+  DBG("status str: %s",dlg->getStatusStr());
 
   if(dlg->getStatus() != AmSipDialog::Trying){
     AmSession::onInvite(req);
@@ -173,7 +173,7 @@ void RtmpSession::setConnectionPtr(RtmpConnection* c)
 {
   //warning: this is not executed from event handler threads!!!
   m_rtmp_conn.lock();
-  DBG("resetting sender ptr used by rtmp_audio (c=%p)\n",c);
+  DBG("resetting sender ptr used by rtmp_audio (c=%p)",c);
   if(c){
     rtmp_audio->setSenderPtr(c->getSenderPtr());
   }

@@ -26,7 +26,7 @@ AmAudioFileRecorderStereoWav::wav_file_data::~wav_file_data()
 int AmAudioFileRecorderStereoWav::wav_file_data::put(unsigned char* out, unsigned char* lbuf, unsigned char* rbuf, size_t l)
 {
     if(l*2 > OUT_BUF_SIZE) {
-        ERROR("buffer was too small\n");
+        ERROR("buffer was too small");
         return -1;
     }
 

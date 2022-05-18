@@ -185,7 +185,7 @@ int parse_nameaddr(sip_nameaddr* na, const char** c, int len)
 
 	    case '\\':
 		if(!*(++(*c))){
-		    DBG("Escape char in quoted str at EoT!!!\n");
+		    DBG("Escape char in quoted str at EoT!!!");
 		    return MALFORMED_SIP_MSG;
 		}
 		break;
@@ -207,7 +207,7 @@ int parse_nameaddr(sip_nameaddr* na, const char** c, int len)
 		break;
 
 	    default:
-		DBG("'<' expected, found %c\n",**c);
+		DBG("'<' expected, found %c",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -245,7 +245,7 @@ int parse_nameaddr(sip_nameaddr* na, const char** c, int len)
 	break;
 
     default:
-	DBG("Incomplete name-addr (st=%i) <%.*s>\n",st,(int)(end-beg),beg);
+	DBG("Incomplete name-addr (st=%i) <%.*s>",st,(int)(end-beg),beg);
 	return MALFORMED_SIP_MSG;
     }
     
@@ -256,13 +256,13 @@ int parse_nameaddr_uri(sip_nameaddr* na, const char** c, int len)
 {
     if(parse_nameaddr(na, c, len) < 0) {
       
-      DBG("Parsing name-addr failed\n");
+      DBG("Parsing name-addr failed");
       return -1;
     }
     
     if(parse_uri(&na->uri,na->addr.s,na->addr.len) < 0) {
 	
-	DBG("Parsing uri failed\n");
+	DBG("Parsing uri failed");
 	return -1;
     }
 
@@ -353,7 +353,7 @@ static int skip_2_next_nameaddr(const char*& c,
 	    
     switch(st){
     case RR_QUOTED:
-	DBG("Malformed nameaddr\n");
+	DBG("Malformed nameaddr");
 	return -1;
 
     case RR_SEP_SWS: // not fine, but acceptable
@@ -380,7 +380,7 @@ int parse_nameaddr_list(list<cstring>& nas, const char* c, int len)
       const char* na_begin = c;
       int err = skip_2_next_nameaddr(c,na_end,end);
       if(err < 0){
-	ERROR("While parsing nameaddr list ('%.*s')\n",len,na_begin);
+	ERROR("While parsing nameaddr list ('%.*s')",len,na_begin);
 	return -1;
       }
 
@@ -404,7 +404,7 @@ int parse_first_nameaddr(sip_nameaddr* na, const char* c, int len)
 
   int err = skip_2_next_nameaddr(tmp_c,na_end,end);
   if(err < 0){
-    ERROR("While parsing first nameaddr ('%.*s')\n",len,c);
+    ERROR("While parsing first nameaddr ('%.*s')",len,c);
     return -1;
   }
 

@@ -37,7 +37,7 @@ AmSession* EarlyRecordFactory::onInvite(const AmSipRequest& req, const string& a
   AmSession* s = new EarlyRecordDialog(cred); 
   
   if (NULL == cred) {
-    WARN("discarding unknown session parameters.\n");
+    WARN("discarding unknown session parameters.");
   } else {
     AmUACAuth::enable(s);
   }
@@ -57,7 +57,7 @@ EarlyRecordDialog::~EarlyRecordDialog()
 }
 
 void EarlyRecordDialog::onEarlySessionStart() {
-  DBG("Early Session Start\n");
+  DBG("Early Session Start");
   msg_filename = "/tmp/" + getLocalTag() + ".wav";
   
   if(a_msg.open(msg_filename,AmAudioFile::Write,false))
@@ -90,7 +90,7 @@ void EarlyRecordDialog::onSessionStart()
 
 void EarlyRecordDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

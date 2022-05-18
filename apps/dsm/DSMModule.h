@@ -157,7 +157,7 @@ class SCStrArgAction
     }									\
 									\
     if ((!optional) && (!sep_found)) {					\
-      ERROR("expected two parameters separated with '%c' in expression '%s' for %s\n", \
+      ERROR("expected two parameters separated with '%c' in expression '%s' for %s", \
 	    sep,arg.c_str(),typeid(this).name());			\
       return;								\
     }									\
@@ -191,7 +191,7 @@ class SCStrArgAction
     }									\
 									\
     if ((!optional) && ((par1.empty())||(par2.empty()))) {		\
-      ERROR("expected two parameters separated with '%c' in expression '%s' for %s\n", \
+      ERROR("expected two parameters separated with '%c' in expression '%s' for %s", \
 	    sep,arg.c_str(),typeid(this).name());			\
       return;								\
     }

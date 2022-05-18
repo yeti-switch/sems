@@ -75,7 +75,7 @@ RtmpConnection::~RtmpConnection()
 void RtmpConnection::setSessionPtr(RtmpSession* s)
 {
   m_session.lock();
-  DBG("session ptr = 0x%p\n",s);
+  DBG("session ptr = 0x%p",s);
   session = s;
   m_session.unlock();
 }
@@ -85,10 +85,10 @@ void RtmpConnection::run()
   RTMPPacket packet;
   memset(&packet,0,sizeof(RTMPPacket));
 
-  DBG("Starting connection (socket=%i)\n",rtmp.m_sb.sb_socket);
+  DBG("Starting connection (socket=%i)",rtmp.m_sb.sb_socket);
 
   if (!RTMP_Serve(&rtmp)) {
-    ERROR("Handshake failed\n");
+    ERROR("Handshake failed");
     RTMP_Close(&rtmp);
     return;
   }
@@ -96,7 +96,7 @@ void RtmpConnection::run()
   // from here on, we send asynchronously
   sender = new RtmpSender(&rtmp);
   if(!sender){
-    ERROR("Could not allocate sender.\n");
+    ERROR("Could not allocate sender.");
     RTMP_Close(&rtmp);
     return;
   }
@@ -118,7 +118,7 @@ void RtmpConnection::run()
     RTMPPacket_Free(&packet);
 
     if(err < 0) {
-      ERROR("could not process packet\n");
+      ERROR("could not process packet");
       break;
     }
   }
@@ -137,7 +137,7 @@ void RtmpConnection::run()
   sender = NULL;
 
   RTMP_Close(&rtmp);
-  DBG("connection closed\n");
+  DBG("connection closed");
   AmThreadWatcher::instance()->add(this);
 }
 
@@ -166,13 +166,13 @@ int RtmpConnection::processPacket(RTMPPacket* packet)
 
   case 0x05:
     // server bw
-    DBG("Server BW msg not yet supported.\n");
+    DBG("Server BW msg not yet supported.");
     //TODO: HandleServerBW(&rtmp, packet);
     break;
 
   case 0x06:
     // client bw
-    DBG("Client BW msg not yet supported.\n");
+    DBG("Client BW msg not yet supported.");
     //TODO: HandleClientBW(&rtmp, packet);
     break;
 
@@ -182,7 +182,7 @@ int RtmpConnection::processPacket(RTMPPacket* packet)
     // note(rco): librtmp writes the absolute timestamp into every packet
     //            after parsing it.
     //
-    //DBG("audio packet: ts = %8i\n",packet->m_nTimeStamp);
+    //DBG("audio packet: ts = %8i",packet->m_nTimeStamp);
     rxAudio(packet);
     break;
 
@@ -202,7 +202,7 @@ int RtmpConnection::processPacket(RTMPPacket* packet)
 
   case 0x11:			
     // flex message
-    DBG("flex message\n");
+    DBG("flex message");
     if (invoke(packet, 1))
       return -1;
     break;
@@ -217,7 +217,7 @@ int RtmpConnection::processPacket(RTMPPacket* packet)
 
   case INVOKE_PTYPE:
     // invoke
-    DBG("invoke message\n");
+    DBG("invoke message");
     if (invoke(packet, 0))
       return -1;
     break;
@@ -263,7 +263,7 @@ RtmpConnection::invoke(RTMPPacket *packet, unsigned int offset)
   AVal method;
   AMFProp_GetString(AMF_GetProp(&obj, NULL, 0), &method);
   double txn = AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 1));
-  DBG("client invoking <%s>\n",method.av_val);
+  DBG("client invoking <%s>",method.av_val);
 
   if (AVMATCH(&method, &av_connect))
     {
@@ -336,41 +336,41 @@ RtmpConnection::invoke(RTMPPacket *packet, unsigned int offset)
     {
       AMFProp_GetString(AMF_GetProp(&obj, NULL, 3), &rtmp.Link.playpath);
 
-      DBG("playpath = <%.*s>\n",
+      DBG("playpath = <%.*s>",
 	  rtmp.Link.playpath.av_len,
 	  rtmp.Link.playpath.av_val);
 
       if (rtmp.Link.tcUrl.av_len)
 	{
 
-	  DBG("tcUrl = <%.*s>\n",
+	  DBG("tcUrl = <%.*s>",
 	      rtmp.Link.tcUrl.av_len,
 	      rtmp.Link.tcUrl.av_val);
 
 	  if (rtmp.Link.app.av_val) 
 	    {
-	      DBG("app = <%.*s>\n",
+	      DBG("app = <%.*s>",
 		  rtmp.Link.app.av_len,
 		  rtmp.Link.app.av_val);
 	    }
 
 	  if (rtmp.Link.flashVer.av_val)
 	    {
-	      DBG("flashVer = <%.*s>\n",
+	      DBG("flashVer = <%.*s>",
 		  rtmp.Link.flashVer.av_len,
 		  rtmp.Link.flashVer.av_val);
 	    }
 
 	  if (rtmp.Link.swfUrl.av_val)
 	    {
-	      DBG("swfUrl = <%.*s>\n",
+	      DBG("swfUrl = <%.*s>",
 		  rtmp.Link.swfUrl.av_len,
 		  rtmp.Link.swfUrl.av_val);
 	    }
 
 	  if (rtmp.Link.pageUrl.av_val)
 	    {
-	      DBG("pageUrl = <%.*s>\n",
+	      DBG("pageUrl = <%.*s>",
 		  rtmp.Link.pageUrl.av_len,
 		  rtmp.Link.pageUrl.av_val);
 	    }
@@ -387,13 +387,13 @@ RtmpConnection::invoke(RTMPPacket *packet, unsigned int offset)
     }
   else if(AVMATCH(&method, &av_publish))
     {
-      DBG("Client is now publishing (Stream ID = %i)\n",
+      DBG("Client is now publishing (Stream ID = %i)",
 	  packet->m_nInfoField2);
       publish_stream_id = packet->m_nInfoField2;
     }
   else if(AVMATCH(&method, &av_closeStream))
     {
-      DBG("received closeStream with StreamID=%i\n",packet->m_nInfoField2);
+      DBG("received closeStream with StreamID=%i",packet->m_nInfoField2);
       stopStream(packet->m_nInfoField2);
     }
   else if(AVMATCH(&method, &av_deleteStream))
@@ -401,7 +401,7 @@ RtmpConnection::invoke(RTMPPacket *packet, unsigned int offset)
       // - compare StreamID with play_stream_id
       //   - if matched: stop session
       unsigned int stream_id = (unsigned int)AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 3));
-      DBG("received deleteStream with StreamID=%i\n",stream_id);
+      DBG("received deleteStream with StreamID=%i",stream_id);
       stopStream(stream_id);
     }
   else if(AVMATCH(&method, &av_dial))
@@ -440,12 +440,12 @@ RtmpConnection::invoke(RTMPPacket *packet, unsigned int offset)
     {
       if(!registered){
 	if(RtmpFactory_impl::instance()->addConnection(ident,this) < 0) {
-	  ERROR("could not register RTMP connection (ident='%s')\n",ident.c_str());
+	  ERROR("could not register RTMP connection (ident='%s')",ident.c_str());
 	  sender->SendErrorResult(txn,"Sono.Registration.Failed");
 	}
 	else {
 	  registered = true;
-	  DBG("RTMP connection registered (ident='%s')\n",ident.c_str());
+	  DBG("RTMP connection registered (ident='%s')",ident.c_str());
 	  sender->SendRegisterResult(txn,ident.c_str());
 	}
       }
@@ -630,7 +630,7 @@ static void dump_audio(RTMPPacket *packet)
     dump_fd = open("speex_out.raw",O_WRONLY|O_CREAT|O_TRUNC,
 		   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
     if(dump_fd < 0)
-      ERROR("could not open speex_out.raw: %s\n",strerror(errno));
+      ERROR("could not open speex_out.raw: %s",strerror(errno));
   }
   if(dump_fd < 0) return;
 
@@ -700,11 +700,11 @@ RtmpSession* RtmpConnection::startSession(const char* uri)
   switch(AmSessionContainer::instance()->addSession(dialout_id,
 						    n_session.get())){
   case AmSessionContainer::ShutDown:
-    DBG("Server shuting down... do not create a new session.\n");
+    DBG("Server shuting down... do not create a new session.");
     return NULL;
 
   case AmSessionContainer::AlreadyExist:
-    DBG("Session already exist !?\n");
+    DBG("Session already exist !?");
     return NULL;
 
   case AmSessionContainer::Inserted:
@@ -716,7 +716,7 @@ RtmpSession* RtmpConnection::startSession(const char* uri)
 
   RtmpSession* pn_session = n_session.release();
   if(dialout_dlg->sendRequest(SIP_METH_INVITE,&sdp_body) < 0) {
-    ERROR("dialout_dlg->sendRequest() returned an error\n");
+    ERROR("dialout_dlg->sendRequest() returned an error");
     AmSessionContainer::instance()->destroySession(pn_session);
     return NULL;
   }
@@ -728,7 +728,7 @@ RtmpSession* RtmpConnection::startSession(const char* uri)
 void RtmpConnection::detachSession()
 {
   m_session.lock();
-  DBG("detaching session: erasing session ptr... (s=%p)\n",session);
+  DBG("detaching session: erasing session ptr... (s=%p)",session);
 
   if(session){
     session->setConnectionPtr(NULL);

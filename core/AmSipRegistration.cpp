@@ -234,7 +234,7 @@ AmSIPRegistration::~AmSIPRegistration()
 
 void AmSIPRegistration::setRegistrationInfo(const SIPRegistrationInfo& _info)
 {
-    DBG("updating registration info for '%s@%s'\n",
+    DBG("updating registration info for '%s@%s'",
         _info.user.c_str(), _info.domain.c_str());
     info = _info;
 
@@ -391,7 +391,7 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
     info.attempt++;
 
     if (dlg.sendRequest(req.method, nullptr, hdrs, SIP_FLAGS_NOCONTACT, &reg_timers_override) < 0) {
-        DBG("failed to send registration. ruri: %s\n",
+        DBG("failed to send registration. ruri: %s",
             req.r_uri.c_str());
         res = false;
         waiting_result = false;
@@ -489,7 +489,7 @@ void AmSIPRegistration::onRegisterExpired()
             new SIPRegistrationEvent(SIPRegistrationEvent::RegisterTimeout,
             handle,info.id));
     }
-    DBG("Registration '%s' expired.\n", (info.user+"@"+info.domain).c_str());
+    DBG("Registration '%s' expired.", (info.user+"@"+info.domain).c_str());
     active = false;
     error_code = 500;
     error_reason = "register expired";
@@ -509,7 +509,7 @@ void AmSIPRegistration::onRegisterSendTimeout()
                 new SIPRegistrationEvent(SIPRegistrationEvent::RegisterSendTimeout,
                 handle,info.id));
     }
-    DBG("Registration '%s' REGISTER request timeout.\n",
+    DBG("Registration '%s' REGISTER request timeout.",
         (info.user+"@"+info.domain).c_str());
     active = false;
     doRegistration();
@@ -562,14 +562,14 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
             contacts = getHeader(reply.hdrs, "Contact", "m", true);
 
         if (unregistering) {
-            DBG("received positive reply to De-REGISTER\n");
+            DBG("received positive reply to De-REGISTER");
 
             active = false;
             error_code = 0;
             remove = true;
 
             if (!contacts.length()) {
-                DBG("no contacts registered any more\n");
+                DBG("no contacts registered any more");
             }
             if (sess_link.length()) {
                 AmSessionContainer::instance()->postEvent(
@@ -602,7 +602,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 end = 0;
                 while(contacts.length() != end) {
                     if (!server_contact.parse_contact(contacts, end, end)) {
-                        DBG("while parsing contact\n");
+                        DBG("while parsing contact");
                         break;
                     }
                     //server_contact.dump();
@@ -662,7 +662,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                         reg_begin = time(nullptr);
 
                         if (sess_link.length()) {
-                            DBG("%s(%s) posting SIPRegistrationEvent to '%s'\n",
+                            DBG("%s(%s) posting SIPRegistrationEvent to '%s'",
                                 handle.c_str(),info.id.c_str(),
                                 sess_link.c_str());
                             AmSessionContainer::instance()->

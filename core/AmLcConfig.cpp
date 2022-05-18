@@ -982,7 +982,7 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
 int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_GENERAL_NAME)) {
-        ERROR(SECTION_GENERAL_NAME " absent\n");
+        ERROR(SECTION_GENERAL_NAME " absent");
         return -1;
     }
     cfg_t* gen = cfg_getsec(cfg, SECTION_GENERAL_NAME);
@@ -1004,7 +1004,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             std::string timer_cfg = std::string("sip_timer_") +
                 static_cast<char>(tolower(*timer_name(cuint(t))));
             sip_timers[t] = cuint(cfg_getint(gen, timer_cfg.c_str()));
-            DBG("Set SIP Timer '%s' to %u ms\n", timer_name(cuint(t)), sip_timers[t]);
+            DBG("Set SIP Timer '%s' to %u ms", timer_name(cuint(t)), sip_timers[t]);
         }
 
         setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
@@ -1026,10 +1026,10 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             return -1;
         }
 #else
-        WARN("session_processor_threads specified in sems.conf,\n");
-        WARN("but SEMS is compiled without SESSION_THREADPOOL support.\n");
-        WARN("set USE_THREADPOOL in Makefile.defs to enable session thread pool.\n");
-        WARN("SEMS will start now, but every call will have its own thread.\n");
+        WARN("session_processor_threads specified in sems.conf,");
+        WARN("but SEMS is compiled without SESSION_THREADPOOL support.");
+        WARN("set USE_THREADPOOL in Makefile.defs to enable session thread pool.");
+        WARN("SEMS will start now, but every call will have its own thread.");
 #endif
     }
 
@@ -1144,7 +1144,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
 int AmLcConfig::readRoutings(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_ROUTING_NAME)) {
-        ERROR(SECTION_ROUTING_NAME " absent\n");
+        ERROR(SECTION_ROUTING_NAME " absent");
         return -1;
     }
     cfg_t* routing = cfg_getsec(cfg, SECTION_ROUTING_NAME);
@@ -1168,11 +1168,11 @@ int AmLcConfig::readRoutings(cfg_t* cfg, ConfigContainer* config)
         } else if (app_str == "$(mapping)") {
             app.app_select = ConfigContainer::App_MAPPING;
             string appcfg_fname = AmConfig.configs_path + "app_mapping.conf";
-            DBG("Loading application mapping...\n");
+            DBG("Loading application mapping...");
             if (!read_regex_mapping(appcfg_fname, "=>", "application mapping",
                 app.app_mapping))
             {
-                ERROR("reading application mapping\n");
+                ERROR("reading application mapping");
                 return -1;
             }
         } else {
@@ -1186,7 +1186,7 @@ int AmLcConfig::readRoutings(cfg_t* cfg, ConfigContainer* config)
 int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_MODULES_NAME)) {
-        ERROR(SECTION_MODULES_NAME " absent\n");
+        ERROR(SECTION_MODULES_NAME " absent");
         return -1;
     }
     cfg_t* modules_ = cfg_getsec(cfg, SECTION_MODULES_NAME);
@@ -1225,7 +1225,7 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
 int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_SIGIF_NAME)) {
-        ERROR(SECTION_SIGIF_NAME " absent\n");
+        ERROR(SECTION_SIGIF_NAME " absent");
         return -1;
     }
     cfg_t* sigif = cfg_getsec(cfg, SECTION_SIGIF_NAME);
@@ -1355,7 +1355,7 @@ int AmLcConfig::readSigInterfaces(cfg_t* cfg, ConfigContainer* config)
 int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_MEDIAIF_NAME)) {
-        ERROR(SECTION_MEDIAIF_NAME " absent\n");
+        ERROR(SECTION_MEDIAIF_NAME " absent");
         return -1;
     }
     cfg_t* mediaif = cfg_getsec(cfg, SECTION_MEDIAIF_NAME);
@@ -2014,7 +2014,7 @@ void AmLcConfig::fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config)
                     continue;
 
                 if(config->local_sip_ip2if.find(intf_it->addrs.front().addr) == config->local_sip_ip2if.end()) {
-                    DBG("mapping unmapped IP address '%s' to interface #%u \n",
+                    DBG("mapping unmapped IP address '%s' to interface #%u ",
                         intf_it->addrs.front().addr.c_str(), idx);
                     config->local_sip_ip2if[intf_it->addrs.front().addr] =
                         static_cast<unsigned short>(idx);
@@ -2074,11 +2074,11 @@ std::string AmLcConfig::fixIface2IP(const std::string& dev_name, bool v6_for_sip
             continue;
 
         if(intf_it->addrs.empty()) {
-            ERROR("No IP address for interface '%s'\n",intf_it->name.c_str());
+            ERROR("No IP address for interface '%s'",intf_it->name.c_str());
             return "";
         }
 
-        DBG("dev_name = '%s'\n",dev_name.c_str());
+        DBG("dev_name = '%s'",dev_name.c_str());
         return intf_it->addrs.front().addr;
     }
 
@@ -2162,7 +2162,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
         }
 
         if (am_inet_ntop(reinterpret_cast<const sockaddr_storage*>(p_if->ifa_addr), host, NI_MAXHOST) == nullptr) {
-            ERROR("am_inet_ntop() failed\n");
+            ERROR("am_inet_ntop() failed");
             continue;
             // freeifaddrs(ifap);
             // return false;
@@ -2199,7 +2199,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
             }
         }
 
-        DBG("iface='%s';ip='%s';flags=0x%x\n",p_if->ifa_name,host,p_if->ifa_flags);
+        DBG("iface='%s';ip='%s';flags=0x%x",p_if->ifa_name,host,p_if->ifa_flags);
         intf_it->addrs.push_back(IPAddr(fixIface2IP(host, true),
             static_cast<short>(p_if->ifa_addr->sa_family)));
     }

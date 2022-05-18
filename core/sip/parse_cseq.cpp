@@ -122,7 +122,7 @@ int parse_cseq(sip_cseq* cseq, const char* beg, int len)
     cseq->method_str.set(beg,c-beg);
     if(parse_method(&cseq->method, cseq->method_str.s, cseq->method_str.len) < 0){
 	
-	DBG("Cseq method parsing failed\n");
+	DBG("Cseq method parsing failed");
 	return MALFORMED_SIP_MSG;
     }
 

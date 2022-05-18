@@ -70,7 +70,7 @@ void AmMailDeamon::on_stop()
 int AmMailDeamon::sendQueued(AmMail* mail)
 {
   if(mail->from.empty() || mail->to.empty()){
-    ERROR("mail.from('%s') or mail.to('%s') is empty\n",mail->from.c_str(),mail->to.c_str());
+    ERROR("mail.from('%s') or mail.to('%s') is empty",mail->from.c_str(),mail->to.c_str());
     return -1;
   }
 
@@ -79,7 +79,7 @@ int AmMailDeamon::sendQueued(AmMail* mail)
   // 	 att_it != mail->attachements.end(); ++att_it ){
 	
   // 	if(!(tst_fp = fopen(att_it->fullname.c_str(),"r"))){
-  // 	    ERROR("%s\n",strerror(errno));
+  // 	    ERROR("%s",strerror(errno));
   // 	    return -1;
   // 	}
   // 	else
@@ -105,14 +105,14 @@ void AmMailDeamon::run()
     if (smtp.connect(AnswerMachineFactory::SmtpServerAddress,
 		     AnswerMachineFactory::SmtpServerPort)) {
 	    
-      WARN("Mail deamon could not connect to SMTP server at <%s:%i>\n",
+      WARN("Mail deamon could not connect to SMTP server at <%s:%i>",
 	   AnswerMachineFactory::SmtpServerAddress.c_str(),
 	   AnswerMachineFactory::SmtpServerPort);
       continue;
     }
 
     event_fifo_mut.lock();
-    DBG("Mail deamon starting its work\n");
+    DBG("Mail deamon starting its work");
 
     while(!event_fifo.empty()){
 
@@ -155,7 +155,7 @@ void AmMailDeamon::run()
 
     event_fifo_mut.unlock();
 
-    DBG("Mail deamon finished\n");
+    DBG("Mail deamon finished");
   }
 }
 

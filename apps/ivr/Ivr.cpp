@@ -102,7 +102,7 @@ extern "C" {
       return NULL;
 
     AmConfig.ignore_sig_chld = ignore;
-    DBG("%sgnoring SIGCHLD.\n", ignore?"I":"Not i");
+    DBG("%sgnoring SIGCHLD.", ignore?"I":"Not i");
 
     return Py_None;
   }
@@ -127,7 +127,7 @@ extern "C" {
     if (pIvrFactory) 
       pIvrFactory->addDeferredThread(py_thread_object);
     else 
-      ERROR("Could not find __c_ivrFactory in Python state.\n");
+      ERROR("Could not find __c_ivrFactory in Python state.");
 
     return Py_None;
   }
@@ -143,13 +143,13 @@ extern "C" {
 
 void PythonScriptThread::run() {
   PYLOCK;
-  DBG("PythonScriptThread - calling python function.\n");
+  DBG("PythonScriptThread - calling python function.");
   PyObject_CallObject(py_thread_object, NULL);
-  DBG("PythonScriptThread - thread finished..\n");
+  DBG("PythonScriptThread - thread finished..");
 }
 
 void PythonScriptThread::on_stop() {
-  DBG("PythonScriptThread::on_stop.\n");
+  DBG("PythonScriptThread::on_stop.");
 }
 
 IvrFactory::IvrFactory(const string& _app_name)
@@ -163,7 +163,7 @@ AmSessionEventHandlerFactory* IvrFactory::session_timer_f = NULL;
 void IvrFactory::import_object(PyObject* m, const char* name, PyTypeObject* type)
 {
   if (PyType_Ready(type) < 0){
-    ERROR("PyType_Ready failed !\n");
+    ERROR("PyType_Ready failed !");
     return;
   }
   Py_INCREF(type);
@@ -217,8 +217,8 @@ void IvrFactory::import_ivr_builtins()
 
   if(!log_mod){
     PyErr_Print();
-    ERROR("IvrFactory: could not find the log python module.\n");
-    ERROR("IvrFactory: please check your installation.\n");
+    ERROR("IvrFactory: could not find the log python module.");
+    ERROR("IvrFactory: please check your installation.");
     return;
   }
 }
@@ -246,8 +246,8 @@ void IvrFactory::set_sys_path(const string& script_path)
     
   if(!py_mod){
     PyErr_Print();
-    ERROR("IvrFactory: could not import 'sys' module.\n");
-    ERROR("IvrFactory: please check your installation.\n");
+    ERROR("IvrFactory: could not import 'sys' module.");
+    ERROR("IvrFactory: please check your installation.");
     return;
   }
 
@@ -272,7 +272,7 @@ IvrDialog* IvrFactory::newDlg(const string& name)
 
   map<string,IvrScriptDesc>::iterator mod_it = mod_reg.find(name);
   if(mod_it == mod_reg.end()){
-    ERROR("Unknown script name '%s'\n", name.c_str());
+    ERROR("Unknown script name '%s'", name.c_str());
     throw AmSession::Exception(500,"Unknown Application");
   }
 
@@ -291,7 +291,7 @@ IvrDialog* IvrFactory::newDlg(const string& name)
     delete dlg;
 
     PyErr_Print();
-    ERROR("IvrFactory: while loading \"%s\": could not create instance\n",
+    ERROR("IvrFactory: while loading \"%s\": could not create instance",
 	  name.c_str());
     throw AmSession::Exception(500,"Internal error in IVR plug-in.\n");
 
@@ -316,12 +316,12 @@ bool IvrFactory::loadScript(const string& path)
   string cfg_file = add2path(AmConfig.configs_path,1,(path + ".conf").c_str());
   config = PyDict_New();
   if(!config){
-    ERROR("could not allocate new dict for config\n");
+    ERROR("could not allocate new dict for config");
     goto error2;
   }
 
   if(cfg.loadFile(cfg_file)){
-    WARN("could not load config file at %s\n",cfg_file.c_str());
+    WARN("could not load config file at %s",cfg_file.c_str());
   } else {
     for(map<string,string>::const_iterator it = cfg.begin();
 	it != cfg.end(); it++){
@@ -347,7 +347,7 @@ bool IvrFactory::loadScript(const string& path)
     
   if(!mod){
     PyErr_Print();
-    WARN("IvrFactory: Failed to load \"%s\"\n", path.c_str());
+    WARN("IvrFactory: Failed to load \"%s\"", path.c_str());
 
     // before python 2.4,
     // it can happen that the module
@@ -370,7 +370,7 @@ bool IvrFactory::loadScript(const string& path)
   if(!dlg_class){
 
     PyErr_Print();
-    WARN("IvrFactory: class IvrDialog not found in \"%s\"\n", path.c_str());
+    WARN("IvrFactory: class IvrDialog not found in \"%s\"", path.c_str());
     goto error1;
   }
 
@@ -378,7 +378,7 @@ bool IvrFactory::loadScript(const string& path)
 
   if(!PyObject_IsSubclass(dlg_class,(PyObject*)&IvrDialogBaseType)){
 
-    WARN("IvrFactory: in \"%s\": IvrDialog is not a subtype of IvrDialogBase\n",
+    WARN("IvrFactory: in \"%s\": IvrDialog is not a subtype of IvrDialogBase",
 	 path.c_str());
     goto error2;
   }
@@ -413,33 +413,33 @@ int IvrFactory::onLoad()
   string script_path = cfg.getParameter("script_path");
   init_python_interpreter(script_path);
 
-  DBG("** IVR compile time configuration:\n");
-  DBG("**     built with PYTHON support.\n");
+  DBG("** IVR compile time configuration:");
+  DBG("**     built with PYTHON support.");
 
 #ifdef IVR_WITH_TTS
-  DBG("**     Text-To-Speech enabled\n");
+  DBG("**     Text-To-Speech enabled");
 #else
-  DBG("**     Text-To-Speech disabled\n");
+  DBG("**     Text-To-Speech disabled");
 #endif
 
-  DBG("** IVR run time configuration:\n");
-  DBG("**     script path:         \'%s\'\n", script_path.c_str());
+  DBG("** IVR run time configuration:");
+  DBG("**     script path:         \'%s\'", script_path.c_str());
 
   regex_t reg;
   if(regcomp(&reg,PYFILE_REGEX,REG_EXTENDED)){
-    ERROR("while compiling regular expression\n");
+    ERROR("while compiling regular expression");
     return -1;
   }
 
   DIR* dir = opendir(script_path.c_str());
   if(!dir){
     regfree(&reg);
-    ERROR("Ivr: script pre-loader (%s): %s\n",
+    ERROR("Ivr: script pre-loader (%s): %s",
 	  script_path.c_str(),strerror(errno));
     return -1;
   }
 
-  DBG("directory '%s' opened\n",script_path.c_str());
+  DBG("directory '%s' opened",script_path.c_str());
 
   std::set<string> unique_entries;
   regmatch_t  pmatch[2];
@@ -465,17 +465,17 @@ int IvrFactory::onLoad()
     if(loadScript(*it)){
       bool res = plugin->registerFactory4App(*it,this);
       if(res)
-	INFO("Application script registered: %s.\n",
+	INFO("Application script registered: %s.",
 	     it->c_str());
     }
   }
 
   if(cfg.hasParameter("enable_session_timer") &&
      (cfg.getParameter("enable_session_timer") == string("yes")) ){
-    DBG("enabling session timers\n");
+    DBG("enabling session timers");
     session_timer_f = AmPlugIn::instance()->getFactory4Seh("session_timer");
     if(session_timer_f == NULL){
-      ERROR("Could not load the session_timer module: disabling session timers.\n");
+      ERROR("Could not load the session_timer module: disabling session timers.");
     }
   }
 
@@ -526,7 +526,7 @@ void IvrFactory::setupSessionTimer(AmSession* s) {
       return;
 
     if(h->configure(cfg)){
-      ERROR("Could not configure the session timer: disabling session timers.\n");
+      ERROR("Could not configure the session timer: disabling session timers.");
       delete h;
     } else {
       s->addHandler(h);
@@ -554,7 +554,7 @@ IvrDialog::IvrDialog()
 
 IvrDialog::~IvrDialog()
 {
-  DBG("----------- IvrDialog::~IvrDialog() ------------- \n");
+  DBG("----------- IvrDialog::~IvrDialog() ------------- ");
 
   playlist.flush();
   
@@ -757,7 +757,7 @@ void IvrDialog::onRtpTimeout() {
 
 void IvrDialog::process(AmEvent* event) 
 {
-  DBG("IvrDialog::process\n");
+  DBG("IvrDialog::process");
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && audio_event->event_id == AmAudioEvent::noAudio){
@@ -812,7 +812,7 @@ void IvrDialog::createCalleeSession()
     callee_dlg->setLocalUri(b2b_callee_from_uri);
   }
   
-  DBG("Created B2BUA callee leg, From: %s\n",
+  DBG("Created B2BUA callee leg, From: %s",
       callee_dlg->getLocalParty().c_str());
 
   callee_session->start();

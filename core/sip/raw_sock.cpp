@@ -115,7 +115,7 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
         t=1;
         if(ip_version == PF_INET) {
             if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockopt(IP_HDRINCL) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockopt(IP_HDRINCL) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
@@ -126,7 +126,7 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
             goto error;
 #else
             if (setsockopt(sock, IPPROTO_IPV6, IPV6_HDRINCL, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockopt(IPV6_HDRINCL) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
@@ -139,13 +139,13 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
 #ifdef IP_PKTINFO
         if(ip_version == PF_INET) {
             if (setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockopt(IP_PKTINFO) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockopt(IP_PKTINFO) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
         } else if(ip_version == PF_INET6) {
             if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockopt(IPV6_PKTINFO) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockopt(IPV6_PKTINFO) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
@@ -153,13 +153,13 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
 #elif defined(IP_RECVDSTADDR)
         if(ip_version == PF_INET) {
             if (setsockopt(sock, IPPROTO_IP, IP_RECVDSTADDR, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockop(IP_RECVDSTADDR) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockop(IP_RECVDSTADDR) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
         } else if(ip_version == PF_INET6) {
             if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVDSTADDR, &t, sizeof(t))<0) {
-                ERROR("raw_socket: setsockop(IPV6_RECVDSTADDR) failed: %s [%d]\n",
+                ERROR("raw_socket: setsockop(IPV6_RECVDSTADDR) failed: %s [%d]",
                     strerror(errno), errno);
                 goto error;
             }
@@ -172,12 +172,12 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
     t=IP_PMTUDISC_DONT;
     if(ip_version == PF_INET) {
         if(setsockopt(sock, IPPROTO_IP, IP_MTU_DISCOVER, &t, sizeof(t)) ==-1) {
-            ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s\n", strerror(errno));
+            ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s", strerror(errno));
             goto error;
         }
     } else if(ip_version == PF_INET6) {
         if(setsockopt(sock, IPPROTO_IPV6, IPV6_MTU_DISCOVER, &t, sizeof(t)) ==-1) {
-            ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s\n", strerror(errno));
+            ERROR("raw_socket: setsockopt(IP_MTU_DISCOVER): %s", strerror(errno));
             goto error;
         }
     }
@@ -186,7 +186,7 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
     if (ip) {
         if (bind(sock, (sockaddr*)ip, SA_len(ip))==-1) {
             char ip_str[NI_MAXHOST];
-            ERROR("raw_socket: bind(%s) failed: %s [%d]\n",
+            ERROR("raw_socket: bind(%s) failed: %s [%d]",
                 am_inet_ntop(ip,ip_str,NI_MAXHOST), strerror(errno), errno);
             goto error;
         }
@@ -359,7 +359,7 @@ int raw_udp_socket(int iphdr_incl)
 // 			n=-3;
 // 			goto error;
 // 		}else{
-// 			ERROR("udp length too small: %d/%d\n",
+// 			ERROR("udp length too small: %d/%d",
 // 			      (int)udp_len, (int)(end-udph_start));
 // 			n=-3;
 // 			goto error;

@@ -43,18 +43,18 @@ CurlModule::CurlModule() {
   if (!curl_initialized) {
     curl_initialized = true;
     if (curl_global_init(CURL_GLOBAL_ALL)) {
-      ERROR("Initializing libcurl\n");
+      ERROR("Initializing libcurl");
       throw string("Initializing libcurl");
     }
 
     curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
     if (data && data->version >=0) {
-      DBG("using libcurl version '%s'\n", 
+      DBG("using libcurl version '%s'", 
 	  data->version);
       if (data->features & CURL_VERSION_SSL) {
-	DBG("libcurl with SSL version '%s'\n", data->ssl_version);
+	DBG("libcurl with SSL version '%s'", data->ssl_version);
       } else {
-	DBG("libcurl without SSL support\n");
+	DBG("libcurl without SSL support");
       }
     }
   }
@@ -86,7 +86,7 @@ DSMCondition* CurlModule::getCondition(const string& from_str) {
 size_t debug_output_func(void  *ptr,  size_t  size,  size_t
 			 nmemb,  void  *stream) {
   string data((char*)ptr, size*nmemb);
-  DBG("server out: <<%s>>\n", data.c_str());
+  DBG("server out: <<%s>>", data.c_str());
   return size*nmemb;
 }
 
@@ -97,7 +97,7 @@ size_t var_output_func(void  *ptr,  size_t  size,  size_t
     return size*nmemb;
 
   string data((char*)ptr, size*nmemb);
-  DBG("server out: <<%s>>\n", data.c_str());
+  DBG("server out: <<%s>>", data.c_str());
   DSMSession* sc_sess = reinterpret_cast<DSMSession*>(stream);
   if (sc_sess) {
     sc_sess->var["curl.out"]+=data;
@@ -116,14 +116,14 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
 		  bool get_result) {
   CURL* m_curl_handle = curl_easy_init();
   if (!m_curl_handle) {
-    ERROR("getting curl handle\n");
+    ERROR("getting curl handle");
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
     return false;
   }
   
   char* enc_url = curl_easy_escape(m_curl_handle, url.c_str(), url.length());
   if (NULL == enc_url) {
-    ERROR("URL-encoding url '%s'\n", url.c_str());
+    ERROR("URL-encoding url '%s'", url.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     curl_easy_cleanup(m_curl_handle);
     return false;
@@ -131,7 +131,7 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
 
   if (curl_easy_setopt(m_curl_handle, CURLOPT_URL, url.c_str())
        != CURLE_OK)  {
-    ERROR("setting URL '%s'\n", url.c_str());
+    ERROR("setting URL '%s'", url.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);    
     curl_easy_cleanup(m_curl_handle);
     free(enc_url);
@@ -141,11 +141,11 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
   if (!sc_sess->var["curl.timeout"].empty())  {
     unsigned int curl_timeout = 0;
     if (str2i(sc_sess->var["curl.timeout"], curl_timeout)) {
-      WARN("curl.timeout '%s' not understood\n", sc_sess->var["curl.timeout"].c_str());
+      WARN("curl.timeout '%s' not understood", sc_sess->var["curl.timeout"].c_str());
     } else {
       if ((curl_easy_setopt(m_curl_handle, CURLOPT_TIMEOUT, curl_timeout) != CURLE_OK) || 
 	  (curl_easy_setopt(m_curl_handle, CURLOPT_NOSIGNAL, 1L) != CURLE_OK)) {
-	ERROR("setting timeout '%u'\n", curl_timeout);
+	ERROR("setting timeout '%u'", curl_timeout);
 	sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
 	curl_easy_cleanup(m_curl_handle);
 	free(enc_url);
@@ -157,7 +157,7 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
   if (!get_result) {
     if (curl_easy_setopt(m_curl_handle, CURLOPT_WRITEFUNCTION, debug_output_func) 
 	!= CURLE_OK)  {
-      ERROR("setting curl write function\n");
+      ERROR("setting curl write function");
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
       curl_easy_cleanup(m_curl_handle);
       free(enc_url);
@@ -168,7 +168,7 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
 	!= CURLE_OK)||
 	(curl_easy_setopt(m_curl_handle, CURLOPT_WRITEDATA, sc_sess) 
 	 != CURLE_OK))  {
-      ERROR("setting curl write function\n");
+      ERROR("setting curl write function");
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
       curl_easy_cleanup(m_curl_handle);
       free(enc_url);
@@ -180,7 +180,7 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
   curl_err[0]='\0';
   if (curl_easy_setopt(m_curl_handle, CURLOPT_ERRORBUFFER, curl_err)
        != CURLE_OK)  {
-    ERROR("setting curl error buffer\n");
+    ERROR("setting curl error buffer");
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     curl_easy_cleanup(m_curl_handle);
     free(enc_url);
@@ -192,7 +192,7 @@ bool curl_run_get(DSMSession* sc_sess, const string& url,
   set_curl_code(sc_sess,m_curl_handle);
 
   if (rescode) {
-    DBG("Error while trying to retrieve '%s': '%s'\n", 
+    DBG("Error while trying to retrieve '%s': '%s'", 
 	url.c_str(), curl_err);
     sc_sess->var["curl.err"] = string(curl_err);
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);    
@@ -225,7 +225,7 @@ EXEC_ACTION_START(SCJCurlGetFormAction) {
   for (vector<string>::iterator it=
 	 p_vars.begin();it != p_vars.end();it++) {
     string varname = (it->size() && ((*it)[0]=='$')) ? (it->substr(1)) : (*it);
-    DBG("adding '%s' = '%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+    DBG("adding '%s' = '%s'", varname.c_str(), sc_sess->var[varname].c_str());
     if (!url_has_qmark && it == p_vars.begin()) 
       form_url+= "?";
     else 
@@ -239,14 +239,14 @@ EXEC_ACTION_START(SCJCurlGetFormAction) {
 void curl_run_getfile(DSMSession* sc_sess, const string& url, const string& outfile) {
   CURL* m_curl_handle = curl_easy_init();
   if (!m_curl_handle) {
-    ERROR("getting curl handle\n");
+    ERROR("getting curl handle");
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
     return;
   }
   
   if (curl_easy_setopt(m_curl_handle, CURLOPT_URL, url.c_str())
        != CURLE_OK)  {
-    ERROR("setting URL '%s'\n", url.c_str());
+    ERROR("setting URL '%s'", url.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);    
     curl_easy_cleanup(m_curl_handle);
     return;
@@ -255,11 +255,11 @@ void curl_run_getfile(DSMSession* sc_sess, const string& url, const string& outf
   if (!sc_sess->var["curl.timeout"].empty())  {
     unsigned int curl_timeout = 0;
     if (str2i(sc_sess->var["curl.timeout"], curl_timeout)) {
-      WARN("curl.timeout '%s' not understood\n", sc_sess->var["curl.timeout"].c_str());
+      WARN("curl.timeout '%s' not understood", sc_sess->var["curl.timeout"].c_str());
     } else {
       if ((curl_easy_setopt(m_curl_handle, CURLOPT_TIMEOUT, curl_timeout) != CURLE_OK) || 
 	  (curl_easy_setopt(m_curl_handle, CURLOPT_NOSIGNAL, 1L) != CURLE_OK)) {
-	ERROR("setting timeout '%u'\n", curl_timeout);
+	ERROR("setting timeout '%u'", curl_timeout);
 	sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
 	curl_easy_cleanup(m_curl_handle);
 	return;
@@ -269,14 +269,14 @@ void curl_run_getfile(DSMSession* sc_sess, const string& url, const string& outf
 
   FILE* f = fopen(outfile.c_str(), "wb");
   if (NULL == f) {
-    DBG("Error opening file '%s' for writing\n", outfile.c_str());
+    DBG("Error opening file '%s' for writing", outfile.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
     return;
   }
 
   if (curl_easy_setopt(m_curl_handle, CURLOPT_WRITEDATA, f) 
        != CURLE_OK)  {
-    ERROR("setting curl data file\n");
+    ERROR("setting curl data file");
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
     fclose(f);
     return;
@@ -286,7 +286,7 @@ void curl_run_getfile(DSMSession* sc_sess, const string& url, const string& outf
   curl_err[0]='\0';
   if (curl_easy_setopt(m_curl_handle, CURLOPT_ERRORBUFFER, curl_err)
        != CURLE_OK)  {
-    ERROR("setting URL '%s'\n", url.c_str());
+    ERROR("setting URL '%s'", url.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     fclose(f);
     return;
@@ -295,7 +295,7 @@ void curl_run_getfile(DSMSession* sc_sess, const string& url, const string& outf
   CURLcode rescode = curl_easy_perform(m_curl_handle);
 
   if (rescode) {
-    DBG("Error while trying to retrieve '%s' to '%s': '%s'\n", 
+    DBG("Error while trying to retrieve '%s' to '%s': '%s'", 
 	url.c_str(), outfile.c_str(), curl_err);
     sc_sess->var["curl.err"] = string(curl_err);
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);    
@@ -319,14 +319,14 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
 		   bool get_result) {
   CURL* m_curl_handle = curl_easy_init();
   if (!m_curl_handle) {
-    ERROR("getting curl handle\n");
+    ERROR("getting curl handle");
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
     return false;
   }
   
   if (curl_easy_setopt(m_curl_handle, CURLOPT_URL, par1.c_str())
        != CURLE_OK)  {
-    ERROR("setting URL '%s'\n", par1.c_str());
+    ERROR("setting URL '%s'", par1.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);    
     curl_easy_cleanup(m_curl_handle);
     return false;
@@ -335,11 +335,11 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
   if (!sc_sess->var["curl.timeout"].empty())  {
     unsigned int curl_timeout = 0;
     if (str2i(sc_sess->var["curl.timeout"], curl_timeout)) {
-      WARN("curl.timeout '%s' not understood\n", sc_sess->var["curl.timeout"].c_str());
+      WARN("curl.timeout '%s' not understood", sc_sess->var["curl.timeout"].c_str());
     } else {
       if ((curl_easy_setopt(m_curl_handle, CURLOPT_TIMEOUT, curl_timeout) != CURLE_OK) || 
 	  (curl_easy_setopt(m_curl_handle, CURLOPT_NOSIGNAL, 1L) != CURLE_OK)) {
-	ERROR("setting timeout '%u'\n", curl_timeout);
+	ERROR("setting timeout '%u'", curl_timeout);
 	sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
 	curl_easy_cleanup(m_curl_handle);
 	return false;
@@ -350,7 +350,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
   if (!get_result) {
     if (curl_easy_setopt(m_curl_handle, CURLOPT_WRITEFUNCTION, debug_output_func) 
 	!= CURLE_OK)  {
-      ERROR("setting curl write function\n");
+      ERROR("setting curl write function");
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
       curl_easy_cleanup(m_curl_handle);
       return false;
@@ -360,7 +360,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
 	!= CURLE_OK)||
 	(curl_easy_setopt(m_curl_handle, CURLOPT_WRITEDATA, sc_sess) 
 	 != CURLE_OK))  {
-      ERROR("setting curl write function\n");
+      ERROR("setting curl write function");
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);    
       curl_easy_cleanup(m_curl_handle);
       return false;
@@ -371,7 +371,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
   curl_err[0]='\0';
   if (curl_easy_setopt(m_curl_handle, CURLOPT_ERRORBUFFER, curl_err)
        != CURLE_OK)  {
-    ERROR("setting curl error buffer\n");
+    ERROR("setting curl error buffer");
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     curl_easy_cleanup(m_curl_handle);
     return false;
@@ -379,7 +379,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
 
   if (curl_easy_setopt(m_curl_handle, CURLOPT_POST, 1)
   != CURLE_OK)  {
-	  ERROR("setting curl post option\n");
+	  ERROR("setting curl post option");
 	  sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
 	  curl_easy_cleanup(m_curl_handle);
 	  return false;
@@ -393,7 +393,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
 	  slist = curl_slist_append(slist, hdr.c_str());
 	  if (curl_easy_setopt(m_curl_handle, CURLOPT_HTTPHEADER, slist)
 	  != CURLE_OK)  {
-		  ERROR("setting curl content type\n");
+		  ERROR("setting curl content type");
 		  sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
 		  curl_easy_cleanup(m_curl_handle);
 		  if(slist) curl_slist_free_all(slist);
@@ -408,7 +408,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
   for (vector<string>::iterator it=
 	 p_vars.begin();it != p_vars.end();it++) {
     string varname = (it->size() && ((*it)[0]=='$')) ? (it->substr(1)) : (*it);
-    DBG("adding '%s' = '%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+    DBG("adding '%s' = '%s'", varname.c_str(), sc_sess->var[varname].c_str());
     curl_formadd(&post, &last,
 		 CURLFORM_COPYNAME, varname.c_str(),
 		 CURLFORM_COPYCONTENTS, sc_sess->var[varname].c_str(), CURLFORM_END);
@@ -416,7 +416,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
 
   if (curl_easy_setopt(m_curl_handle, CURLOPT_HTTPPOST, post)
   != CURLE_OK)  {
-	  ERROR("setting curl httppost option\n");
+	  ERROR("setting curl httppost option");
 	  sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
 	  curl_formfree(post);
 	  curl_easy_cleanup(m_curl_handle);
@@ -429,7 +429,7 @@ bool curl_run_post(DSMSession* sc_sess, const string& par1, const string& par2,
   set_curl_code(sc_sess,m_curl_handle);
 
   if (rescode) {
-    DBG("Error while trying to POST to '%s': '%s'\n",
+    DBG("Error while trying to POST to '%s': '%s'",
         par1.c_str(), curl_err);
     sc_sess->var["curl.err"] = string(curl_err);
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);

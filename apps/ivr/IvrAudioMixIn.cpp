@@ -5,7 +5,7 @@
 
 static PyObject* IvrAudioMixIn_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  DBG("---------- IvrAudioMixIn_alloc -----------\n");
+  DBG("---------- IvrAudioMixIn_alloc -----------");
   IvrAudioMixIn *self;
 
   self = (IvrAudioMixIn *)type->tp_alloc(type, 0);
@@ -19,7 +19,7 @@ static PyObject* IvrAudioMixIn_new(PyTypeObject *type, PyObject *args, PyObject 
 
 static void IvrAudioMixIn_dealloc(IvrAudioMixIn* self)
 {
-  DBG("---------- IvrAudioMixIn_dealloc -----------\n");
+  DBG("---------- IvrAudioMixIn_dealloc -----------");
   if (self->mix) {
     delete self->mix;
     self->mix = NULL;

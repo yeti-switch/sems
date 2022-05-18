@@ -15,7 +15,7 @@
 
 GWSession::GWSession(const string& auth_realm, const string& auth_user, const string& auth_pwd) : 
 						      credentials(auth_realm, auth_user, auth_pwd) {
-	DBG("new GWSession@%p\n", this);
+	DBG("new GWSession@%p", this);
 }
 UACAuthCred* GWSession::getCredentials() {
         return &credentials;
@@ -25,48 +25,48 @@ void GWSession::setOtherLeg(AmAudio *otherleg) {
 	m_OtherLeg=otherleg;
 }
 void GWSession::onInvite(const AmSipRequest& req) {
-    DBG("GWSession::onInvite\n");
+    DBG("GWSession::onInvite");
 //    RTPStream()->setMonitorRTPTimeout(false);
     invite_req=req;
     return;
 }
 
 void GWSession::onSessionStart(const AmSipRequest& req) {
-        DBG("GWSession::onSessionStart\n");
+        DBG("GWSession::onSessionStart");
         try {
             string sdp_reply;
             acceptAudio(req.body,req.hdrs,&sdp_reply);
             if(dlg.reply(req,200,"OK Isdn side state is: CONNECTED", "application/sdp",sdp_reply) != 0)
                      throw AmSession::Exception(500,"could not send response");
 	}catch(const AmSession::Exception& e){
-    	    ERROR("%i %s\n",e.code,e.reason.c_str());
+    	    ERROR("%i %s",e.code,e.reason.c_str());
             setStopped();
             dlg.reply(req,e.code,e.reason);
             return;
         }
-        DBG("GWSession::onSessionStart Setting Audio\n");
+        DBG("GWSession::onSessionStart Setting Audio");
 	setInOut((AmAudio *)(m_OtherLeg),(AmAudio *)(m_OtherLeg));
 	AmSession::onSessionStart(req);
 	AmMediaProcessor::instance()->addSession(this, callgroup);
 }	
 void GWSession::onSessionStart(const AmSipReply& reply) {
-        DBG("GWSession::onSessionStart(reply)\n");
-	DBG("calling ((mISDNChannel*)m_otherleg)->accept();\n");
+        DBG("GWSession::onSessionStart(reply)");
+	DBG("calling ((mISDNChannel*)m_otherleg)->accept();");
         int ret=((mISDNChannel*)m_OtherLeg)->accept();
-        DBG("GWSession::onSessionStart Setting Audio\n");
+        DBG("GWSession::onSessionStart Setting Audio");
 	setInOut((AmAudio *)(m_OtherLeg),(AmAudio *)(m_OtherLeg)); 
         AmSession::onSessionStart(reply);
 
 }
 		    
 void GWSession::onBye(const AmSipRequest& req) {
-	DBG("GWSession::onBye\n");
+	DBG("GWSession::onBye");
 	int ret=((mISDNChannel*)m_OtherLeg)->hangup();
         AmSession::onBye(req);
 		
 }
 void GWSession::onCancel(const AmSipRequest& req) {
-	DBG("GWSession::onCancel\n");
+	DBG("GWSession::onCancel");
 	int ret=((mISDNChannel*)m_OtherLeg)->hangup();
         AmSession::onCancel(req);
 		
@@ -74,47 +74,47 @@ void GWSession::onCancel(const AmSipRequest& req) {
 
 GWSession::~GWSession()
 {
-	INFO("destroying GWSession!\n");
+	INFO("destroying GWSession!");
 }
 
 // we just need a hack this function for INVITE as orginal executes onSessionStart imediately after OnInvite
 void GWSession::onSipRequest(const AmSipRequest& req)
 {
-    DBG("GWSession::onSipRequest check 1\n");
+    DBG("GWSession::onSipRequest check 1");
     if(req.method == "INVITE"){
 	dlg.updateStatus(req);
 	onInvite(req);
   } else {
-    DBG("GWSession::onSipRequest calling parent\n");
+    DBG("GWSession::onSipRequest calling parent");
     AmSession::onSipRequest(req);
   }
 }
 
 void GWSession::onSipReply(const AmSipReply& reply, AmSipDialog::Status old_dlg_status) {
     int status = dlg.getStatus();
-    DBG("GWSession::onSipReply: code = %i, reason = %s\n, status = %i\n",  
+    DBG("GWSession::onSipReply: code = %i, reason = %s\n, status = %i",  
 	reply.code,reply.reason.c_str(),dlg.getStatus());
     if((dlg.getStatus()==AmSipDialog::Pending)&&(reply.code==183)) {	onProgress(reply);   }
     if((dlg.getStatus()==AmSipDialog::Pending)&&(reply.code>=300)) {	
 	int ret=((mISDNChannel*)m_OtherLeg)->hangup();
     }
-    DBG("GWSession::onSipReply calling parent\n");
+    DBG("GWSession::onSipReply calling parent");
     AmSession::onSipReply(reply, old_dlg_status);
 }
 
 void GWSession::on_stop() {
-    DBG("GWSession::on_stop\n");
+    DBG("GWSession::on_stop");
     if (!getDetached())
     	AmMediaProcessor::instance()->clearSession(this);
     else
         clearAudio();
 }
 void GWSession::onRinging(const AmSipReply& reply) {
-    DBG("GWSession::onRinging\n");
+    DBG("GWSession::onRinging");
     //TODO
 }
 void GWSession::onProgress(const AmSipReply& reply){
-    DBG("GWSession::onProgress\n");
+    DBG("GWSession::onProgress");
     //TODO
 }
 
@@ -139,7 +139,7 @@ GWSession* GWSession::CallFromOutside(std::string &fromnumber, std::string &tonu
 	string(""), // local_tag (callid)
 	string(""), // headers
 	c_args);
-    DBG("GWCall::CallFromOutside session=%p\n",s);
+    DBG("GWCall::CallFromOutside session=%p",s);
     //this is static function so we dont that 'this' pointer yet as GWcall object is created in factory::onInvite. so we use pointer returned by dialout
     ((GWSession*)s)->setOtherLeg(chan);
     //for early media?

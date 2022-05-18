@@ -50,7 +50,7 @@ int AmAudioMixIn::get(unsigned long long system_ts, unsigned char* buffer,
 	system_ts : system_ts + s*WALLCLOCK_RATE;
     }
     if (!sys_ts_less()(system_ts, next_start_ts)) {
-      DBG("starting mix-in\n");
+      DBG("starting mix-in");
       mixing = true;
       next_start_ts = system_ts + s*WALLCLOCK_RATE;
     }
@@ -139,7 +139,7 @@ int AmAudioMixIn::get(unsigned long long system_ts, unsigned char* buffer,
 int AmAudioMixIn::put(unsigned long long system_ts, unsigned char* buffer, 
 		      int input_sample_rate, unsigned int size) {
 
-  ERROR("writing not supported\n");
+  ERROR("writing not supported");
   return -1;
 }
 

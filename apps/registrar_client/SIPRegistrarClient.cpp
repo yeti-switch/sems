@@ -182,12 +182,12 @@ void SIPRegistrarClient::run()
 
     setThreadName("sip-reg-client");
 
-    DBG("SIPRegistrarClient starting...\n");
+    DBG("SIPRegistrarClient starting...");
 
     AmDynInvokeFactory* uac_auth_f = AmPlugIn::instance()->getFactory4Di("uac_auth");
     if (uac_auth_f == NULL) {
-        DBG("unable to get a uac_auth factory. registrations will not be authenticated.\n");
-        DBG("(do you want to load uac_auth module?)\n");
+        DBG("unable to get a uac_auth factory. registrations will not be authenticated.");
+        DBG("(do you want to load uac_auth module?)");
     } else {
         uac_auth_i = uac_auth_f->getInstance();
     }
@@ -215,7 +215,7 @@ void SIPRegistrarClient::run()
         ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
 
         if(ret == -1 && errno != EINTR) {
-            ERROR("epoll_wait: %s\n",strerror(errno));
+            ERROR("epoll_wait: %s",strerror(errno));
         }
 
         if(ret < 1)
@@ -318,7 +318,7 @@ int SIPRegistrarClient::onLoad()
 void SIPRegistrarClient::onServerShutdown()
 {
     // TODO: properly wait until unregistered, with timeout
-    DBG("shutdown SIP registrar client: deregistering\n");
+    DBG("shutdown SIP registrar client: deregistering");
     for (std::map<std::string, AmSIPRegistration*>::iterator it=
          registrations.begin(); it != registrations.end(); it++)
     {
@@ -333,7 +333,7 @@ void SIPRegistrarClient::process(AmEvent* ev)
     if (ev->event_id == E_SYSTEM) {
         AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
         if(sys_ev){
-            DBG("Session received system Event\n");
+            DBG("Session received system Event");
             if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
                 stop_event.fire();
             }
@@ -385,7 +385,7 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
                               shaper);
 
     if (uac_auth_i != NULL) {
-        DBG("enabling UAC Auth for new registration.\n");
+        DBG("enabling UAC Auth for new registration.");
         // get a sessionEventHandler from uac_auth
         AmArg di_args,ret;
         AmArg a;
@@ -395,7 +395,7 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
 
         uac_auth_i->invoke("getHandler", di_args, ret);
         if (!ret.size()) {
-            ERROR("Can not add auth handler to new registration!\n");
+            ERROR("Can not add auth handler to new registration!");
         } else {
             AmObject* p = ret.get(0).asObject();
             if (p != NULL) {
@@ -547,7 +547,7 @@ void SIPRegistrarClient::on_stop()
 
 bool SIPRegistrarClient::onSipReply(const AmSipReply& rep, AmSipDialog::Status old_dlg_status)
 {
-    DBG("got reply with tag '%s'\n", rep.from_tag.c_str());
+    DBG("got reply with tag '%s'", rep.from_tag.c_str());
 
     if (instance()->hasRegistration(rep.from_tag)) {
         instance()->postEvent(new AmSipReplyEvent(rep));
@@ -563,7 +563,7 @@ bool SIPRegistrarClient::hasRegistration(const string& handle)
 
 AmSIPRegistration* SIPRegistrarClient::get_reg(const string& reg_id) 
 {
-    DBG("get registration '%s'\n", reg_id.c_str());
+    DBG("get registration '%s'", reg_id.c_str());
     AmSIPRegistration* res = NULL;
     reg_mut.lock();
     map<string, AmSIPRegistration*>::iterator it =
@@ -571,19 +571,19 @@ AmSIPRegistration* SIPRegistrarClient::get_reg(const string& reg_id)
     if (it!=registrations.end())
         res = it->second;
     reg_mut.unlock();
-    DBG("get registration : res = '%ld' (this = %ld)\n", (long)res, (long)this);
+    DBG("get registration : res = '%ld' (this = %ld)", (long)res, (long)this);
     return res;
 }
 
 AmSIPRegistration* SIPRegistrarClient::get_reg_unsafe(const string& reg_id) 
 {
-    //	DBG("get registration_unsafe '%s'\n", reg_id.c_str());
+    //	DBG("get registration_unsafe '%s'", reg_id.c_str());
     AmSIPRegistration* res = NULL;
     map<string, AmSIPRegistration*>::iterator it =
         registrations.find(reg_id);
     if (it!=registrations.end())
         res = it->second;
-    //     DBG("get registration_unsafe : res = '%ld' (this = %ld)\n", (long)res, (long)this);
+    //     DBG("get registration_unsafe : res = '%ld' (this = %ld)", (long)res, (long)this);
     return res;
 }
 
@@ -611,7 +611,7 @@ AmSIPRegistration* SIPRegistrarClient::remove_reg_unsafe(const string& reg_id)
 
 bool SIPRegistrarClient::add_reg(const string& reg_id, AmSIPRegistration* new_reg)
 {
-    CLASS_DBG("adding registration '%s' with id = '%s'\n",
+    CLASS_DBG("adding registration '%s' with id = '%s'",
         reg_id.c_str(), new_reg->getInfo().id.c_str());
     AmSIPRegistration* reg = NULL;
     reg_mut.lock();

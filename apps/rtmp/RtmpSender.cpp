@@ -58,7 +58,7 @@ int RtmpSender::push_back(const RTMPPacket& p)
 {
   RTMPPacket np = p;
   if(!RTMPPacket_Alloc(&np,np.m_nBodySize)){
-    ERROR("could not allocate packet.\n");
+    ERROR("could not allocate packet.");
     return 0;
   }
   memcpy(np.m_body,p.m_body,p.m_nBodySize);
@@ -79,7 +79,7 @@ void RtmpSender::run()
     
     //wait for some work
     // (at most 1s)
-    //DBG("waiting for work...\n");
+    //DBG("waiting for work...");
     has_work.wait_for();//_to(1000);
 
     // send packets in the queue
@@ -98,7 +98,7 @@ void RtmpSender::run()
       }
 
       if(!RTMP_SendPacket(p_rtmp,&p,FALSE)) {
-	ERROR("could not send packet.\n");
+	ERROR("could not send packet.");
       }
 
       RTMPPacket_Free(&p);
@@ -131,7 +131,7 @@ int RtmpSender::SendChangeChunkSize()
   packet.m_nBodySize = 4;
 
   AMF_EncodeInt32(packet.m_body, pend, p_rtmp->m_outChunkSize);
-  DBG("changing send chunk size to %i\n",p_rtmp->m_outChunkSize);
+  DBG("changing send chunk size to %i",p_rtmp->m_outChunkSize);
 
   return RTMP_SendPacket(p_rtmp,&packet,FALSE);
 }

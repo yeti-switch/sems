@@ -65,11 +65,11 @@ int Click2DialFactory::onLoad()
     AnnouncePath += "/";
 
   AnnounceFile = cfg.getParameter("default_announce",ANNOUNCE_FILE);
-  DBG("AnnounceFile = %s\n",AnnounceFile.c_str());
+  DBG("AnnounceFile = %s",AnnounceFile.c_str());
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)) {
-    ERROR("default file for ann_b2b module does not exist ('%s').\n",
+    ERROR("default file for ann_b2b module does not exist ('%s').",
       announce_file.c_str());
     return -1;
   }
@@ -87,12 +87,12 @@ string Click2DialFactory::getAnnounceFile(const AmSipRequest& req)
   string announce_file = announce_path + req.domain
     + "/" + req.user + ".wav";
 
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
   announce_file = AnnouncePath + AnnounceFile;
@@ -108,7 +108,7 @@ AmSession* Click2DialFactory::onInvite(const AmSipRequest& req, const string& ap
   string callee_uri, a_realm, a_user, a_pwd;
 
   if(session_params.size() != 4) {
-    ERROR("Need 4 parameters, got %lu\n", 
+    ERROR("Need 4 parameters, got %lu", 
 	  (long unsigned int)session_params.size());
     return NULL;
   }
@@ -117,27 +117,27 @@ AmSession* Click2DialFactory::onInvite(const AmSipRequest& req, const string& ap
     a_realm = string(session_params.get(0).asCStr());
   }
   else {
-    ERROR("All arguments have to be CStr\n");
+    ERROR("All arguments have to be CStr");
     return NULL;
   }
   if(session_params.get(1).getType() == AmArg::CStr) {
     a_user = string(session_params.get(1).asCStr());
   }
   else {
-    ERROR("All arguments have to be CStr\n");
+    ERROR("All arguments have to be CStr");
     return NULL;
   }
   if (session_params.get(2).getType() == AmArg::CStr) {
     a_pwd = string(session_params.get(2).asCStr());
   }
   else {
-    ERROR("All arguments have to be CStr\n");
+    ERROR("All arguments have to be CStr");
     return NULL;
   }
 
   cred = new UACAuthCred(a_realm, a_user, a_pwd);
   if(cred == NULL) {
-    ERROR("Failed to create authentication handle\n");
+    ERROR("Failed to create authentication handle");
     return NULL;
   }
 
@@ -145,7 +145,7 @@ AmSession* Click2DialFactory::onInvite(const AmSipRequest& req, const string& ap
     callee_uri = string(session_params.get(3).asCStr());
   }
   else {
-    ERROR("All arguments have to be CStr\n");
+    ERROR("All arguments have to be CStr");
     return NULL;
   }
 
@@ -183,7 +183,7 @@ AmB2BCallerSession()
 
 void C2DCallerDialog::onInvite(const AmSipRequest& req)
 {
-  ERROR("incoming calls not supported in click2dial app!\n");
+  ERROR("incoming calls not supported in click2dial app!");
   dlg->reply(req,606,"Not Acceptable");
   setStopped();
 }
@@ -207,11 +207,11 @@ void C2DCallerDialog::onSessionStart()
 
 void C2DCallerDialog::updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cseq) {
   if (old_cseq == invite_req.cseq) {
-    DBG("updating invite_req.cseq %u -> %u\n", old_cseq, new_cseq);
+    DBG("updating invite_req.cseq %u -> %u", old_cseq, new_cseq);
     invite_req.cseq = new_cseq;
   }
   if (old_cseq == est_invite_cseq) {
-    DBG("updating est_invite_cseq %u -> %u\n", old_cseq, new_cseq);
+    DBG("updating est_invite_cseq %u -> %u", old_cseq, new_cseq);
     est_invite_cseq = new_cseq;
   }
 
@@ -291,7 +291,7 @@ void C2DCalleeDialog::setAuthHandler()
     if (uac_auth_f != NULL) {
       AmSessionEventHandler *h = uac_auth_f->getHandler(this);
       if (h != NULL ) {
-        DBG("uac-auth enabled for new callee session.\n");
+        DBG("uac-auth enabled for new callee session.");
         addHandler(h);
       }
       else {

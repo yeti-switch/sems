@@ -54,19 +54,19 @@ int JsonRpcServer::createRequest(const string& evq_link, const string& method,
 
     if (!evq_link.empty()) 
       peer->replyReceivers[req_id] = make_pair(evq_link, udata);
-    DBG("registering reply sink '%s' for id %s\n", 
+    DBG("registering reply sink '%s' for id %s", 
 	evq_link.c_str(), req_id.c_str());
 
   }
 
   string rpc_params_json = arg2json(rpc_params);
   if (rpc_params_json.length() > MAX_RPC_MSG_SIZE) {
-    ERROR("internal error: message exceeded MAX_RPC_MSG_SIZE (%d)\n", 
+    ERROR("internal error: message exceeded MAX_RPC_MSG_SIZE (%d)", 
 	  MAX_RPC_MSG_SIZE);
     return -3;
   }
 
-  DBG("RPC message: >>%.*s<<\n", (int)rpc_params_json.length(), rpc_params_json.c_str());
+  DBG("RPC message: >>%.*s<<", (int)rpc_params_json.length(), rpc_params_json.c_str());
   memcpy(peer->msgbuf, rpc_params_json.c_str(), rpc_params_json.length());
   peer->msg_size = rpc_params_json.length();
   // set peer connection up for sending
@@ -87,12 +87,12 @@ int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
 
   string res_s = arg2json(rpc_res);
   if (res_s.length() > MAX_RPC_MSG_SIZE) {
-    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)\n",
+    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)",
 	  MAX_RPC_MSG_SIZE);
     return -3;
   }
 
-  DBG("created RPC reply: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
+  DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
   memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
   peer->msg_size = res_s.length();
 
@@ -112,12 +112,12 @@ int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
 
   string res_s = arg2json(rpc_res);
   if (res_s.length() > MAX_RPC_MSG_SIZE) {
-    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)\n", 
+    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)", 
 	  MAX_RPC_MSG_SIZE);
     return -3;
   }
 
-  //DBG("created RPC reply: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
+  //DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
   memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
   peer->msg_size = res_s.length();
 
@@ -167,16 +167,16 @@ unsigned int generate_reply(char *buf, const string &id, bool id_is_int,
 int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
                                  JsonrpcPeerConnection* peer)
 {
-    DBG("parsing message ...\n");
+    DBG("parsing message ...");
     // const char* txt = "{\"jsonrpc\": \"2.0\", \"result\": 19, \"id\": 1}";
     AmArg rpc_params;
     if (!json2arg(msgbuf, rpc_params)) {
-        INFO("Error parsing message '%.*s'\n", (int)*msg_size, msgbuf);
+        INFO("Error parsing message '%.*s'", (int)*msg_size, msgbuf);
         return -1;
     }
 
     if(!rpc_params.hasMember("jsonrpc") || strcmp(rpc_params["jsonrpc"].asCStr(), "2.0")) {
-        INFO("wrong json-rpc version received; only 2.0 supported!\n");
+        INFO("wrong json-rpc version received; only 2.0 supported!");
         return -2; // todo: check value, reply with error?
     }
 
@@ -188,7 +188,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         if (!rpc_params.hasMember("id") || !isArgCStr(rpc_params["id"])
             || rpc_params["id"] == "")
         {
-            INFO("Error parsing jsonrpc message: no id in reply!\n");
+            INFO("Error parsing jsonrpc message: no id in reply!");
             return -2;// todo: check value, reply with error?
         }
         string id = rpc_params["id"].asCStr();
@@ -200,7 +200,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
             *msg_size = 0;
 
             if (peer->flags & JsonrpcPeerConnection::FL_CLOSE_WRONG_REPLY) {
-                INFO("closing connection after unknown reply id %s received\n", id.c_str());
+                INFO("closing connection after unknown reply id %s received", id.c_str());
                 return -2;
             }
             return 0;
@@ -214,7 +214,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
             resp_ev = new JsonRpcResponseEvent(false, id, rpc_params["result"], udata);
         } else {
             if (!rpc_params.hasMember("error")) {
-                INFO("protocol error: reply does not have error nor result!\n");
+                INFO("protocol error: reply does not have error nor result!");
                 return -2;
             }
             resp_ev = new JsonRpcResponseEvent(true, id, rpc_params["error"], udata);
@@ -224,7 +224,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         bool posted = AmEventDispatcher::instance()->
             post(event_queue_id, resp_ev);
         if (!posted) {
-            DBG("receiver event queue does not exist (any more)\n");
+            DBG("receiver event queue does not exist (any more)");
             peer->replyReceivers.erase(rep_recv_q);
             *msg_size = 0;
             if (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_REPLYLINK) {
@@ -234,7 +234,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
             return 0;
         }
 
-        DBG("successfully posted reply to event queue\n");
+        DBG("successfully posted reply to event queue");
         peer->replyReceivers.erase(rep_recv_q);
         // don't send a reply
         *msg_size = 0;
@@ -252,11 +252,11 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
             id = int2str(rpc_params["id"].asInt());
             id_is_int = true;
         } else {
-            ERROR("incorrect type for jsonrpc id <%s>\n",
+            ERROR("incorrect type for jsonrpc id <%s>",
                   AmArg::print(rpc_params["id"]).c_str());
         }
     } else {
-        DBG("received notification\n");
+        DBG("received notification");
     }
 
     if(peer->flags & JsonrpcPeerConnection::FL_REJECTED) {
@@ -319,7 +319,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         string dst_evqueue = id.empty() ?
             peer->notificationReceiver.c_str() : peer->requestReceiver.c_str();
 
-        DBG("directly passing %s to event queue '%s'\n",
+        DBG("directly passing %s to event queue '%s'",
             id.empty() ? "notification":"request",
             dst_evqueue.c_str());
 
@@ -338,23 +338,23 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
             post(dst_evqueue, request_ev);
 
         if(!posted) {
-            DBG("%s receiver event queue '%s' does not exist (any more)\n",
+            DBG("%s receiver event queue '%s' does not exist (any more)",
                 id.empty() ? "notification":"request",
                 dst_evqueue.c_str());
 
             delete request_ev;
 
             if (id.empty() && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_NOTIF_RECV)) {
-                INFO("closing connection on missing notification receiver queue\n");
+                INFO("closing connection on missing notification receiver queue");
                 return -1; // todo: reply error?
             }
 
             if (!id.empty() && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_REQUEST_RECV)) {
-                INFO("closing connection on missing request receiver queue\n");
+                INFO("closing connection on missing request receiver queue");
                 return -1; // todo: reply error?
             }
         } else {
-            DBG("successfully posted %s to event queue '%s'\n",
+            DBG("successfully posted %s to event queue '%s'",
             id.empty() ? "notification":"request",
             dst_evqueue.c_str());
         }
@@ -377,12 +377,12 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
 
     string res_s = arg2json(rpc_res);
     if (res_s.length() > MAX_RPC_MSG_SIZE) {
-        ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)\n",
+        ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)",
               MAX_RPC_MSG_SIZE);
         return -3;
     }
 
-    //DBG("RPC result: >>%.*s<<\n", (int)res_s.length(), res_s.c_str());
+    //DBG("RPC result: >>%.*s<<", (int)res_s.length(), res_s.c_str());
     memcpy(msgbuf, res_s.c_str(), res_s.length());
     *msg_size = res_s.length();
 
@@ -494,7 +494,7 @@ try  {
     string fact_meth = method.substr(method.find('.')+1);
 
     try {
-        DBG("searching for factory '%s' method '%s'\n",
+        DBG("searching for factory '%s' method '%s'",
             factory.c_str(), fact_meth.c_str());
         AmDynInvokeFactory* fact =
             AmPlugIn::instance()->getFactory4Di(factory);
@@ -510,7 +510,7 @@ try  {
 
         di_inst->invoke(fact_meth, params, rpc_res["result"]);
     } catch (const AmDynInvoke::NotImplemented& ni) {
-        DBG("not implemented DI function '%s'\n",
+        DBG("not implemented DI function '%s'",
             ni.what.c_str());
         throw JsonRpcError(-32601, "Method not found",
             "function unknown in module");
@@ -521,11 +521,11 @@ try  {
             e.code,e.reason.c_str());
         throw JsonRpcError(e.code,e.reason,AmArg());
     } catch (const AmArg::OutOfBoundsException& oob) {
-        DBG("out of bounds in  RPC DI call\n");
+        DBG("out of bounds in  RPC DI call");
         throw JsonRpcError(-32602, "Invalid params",
             "out of bounds in function call");
     } catch (const AmArg::TypeMismatchException& oob) {
-        DBG("type mismatch  in  RPC DI call\n");
+        DBG("type mismatch  in  RPC DI call");
         throw JsonRpcError(-32602, "Invalid params",
             "parameters type mismatch in function call");
     } catch (const JsonRpcError& e) {
@@ -546,7 +546,7 @@ try  {
     rpc_res["id"] = id;
     rpc_res["jsonrpc"] = "2.0";
 } catch (const JsonRpcError& e) {
-    INFO("got JsonRpcError. code %d, message '%s', data: '%s', method: %s, id: %s, params: '%s'\n",
+    INFO("got JsonRpcError. code %d, message '%s', data: '%s', method: %s, id: %s, params: '%s'",
         e.code, e.message.c_str(), AmArg::print(e.data).c_str(),
         method.c_str(), id.c_str(), AmArg::print(params).c_str());
     rpc_res["error"] = AmArg(); 
@@ -572,10 +572,10 @@ void JsonRpcServer::runCoreMethod(const string& method, const AmArg& params, AmA
     assertArgArray(params);
     assertArgInt(params[0]);
     log_level = params[0].asInt();
-    DBG("set log_level to %d\n", log_level);
+    DBG("set log_level to %d", log_level);
   } else if (method == "get_loglevel") {
     res[0] = log_level;
-    DBG("get_log_level returns %d\n", log_level);
+    DBG("get_log_level returns %d", log_level);
   } else {
     throw JsonRpcError(-32601, "Method not found",
 		       "function unknown in core");

@@ -103,14 +103,14 @@ int precoded_file_open(FILE* fp, struct amci_file_desc_t* fmt_desc, int options,
   fseek (fp, 0, SEEK_END);
   fmt_desc->data_size=ftell (fp);
   rewind(fp);
-  DBG("file opened, size = %d\n", fmt_desc->data_size);
+  DBG("file opened, size = %d", fmt_desc->data_size);
   return 0;
 }
 
 int precoded_file_close(FILE* fp, struct amci_file_desc_t* fmt_desc, int options, 
 			long h_codec, struct amci_codec_t *codec)
 {
-  DBG("file closed\n");
+  DBG("file closed");
   return 0;
 }
 
@@ -163,7 +163,7 @@ int AmPrecodedFile::open(const std::string& filename) {
 
     vector<string> codec_def = explode(codec_line, ";");
     if (codec_def.size() != 8) {
-      ERROR("unable to decipher codec line '%s'\n",
+      ERROR("unable to decipher codec line '%s'",
 	    codec_line.c_str());
       continue;
     }
@@ -173,7 +173,7 @@ int AmPrecodedFile::open(const std::string& filename) {
 #define get_uint_item(name, index, description)			\
     unsigned int name;						\
     if (str2i(codec_def[index], name)) {			\
-      ERROR("decoding " description " in codec line '%s'\n",	\
+      ERROR("decoding " description " in codec line '%s'",	\
 	    codec_line.c_str());				\
       continue;							\
     }								\
@@ -190,7 +190,7 @@ int AmPrecodedFile::open(const std::string& filename) {
     pl.filename=str_dir + codec_def[7];
 #undef get_uint_item
 
-    DBG("inserting codec '%s' file '%s' and id %d\n",
+    DBG("inserting codec '%s' file '%s' and id %d",
 	pl.name, pl.filename.c_str(), pl.payload_id);
     payloads[pl.payload_id]=pl;
   }

@@ -95,19 +95,19 @@ static int parse_transport(sip_transport* t, const char** c, int len)
     };
 
     if(len < (int)SIPVER_len + 2){ // at least "SIP/2.0/?"
-	DBG("Transport protocol is too small\n");
+	DBG("Transport protocol is too small");
 	return MALFORMED_SIP_MSG;
     }
 
     if (parse_sip_version(*c,SIPVER_len)) {
-	DBG("Wrong/unsupported SIP version\n");
+	DBG("Wrong/unsupported SIP version");
 	return MALFORMED_SIP_MSG;
     }
     
     *c += SIPVER_len;
     
     if (*(*c)++ != '/') {
-	DBG("Missing '/' after SIP version\n");
+	DBG("Missing '/' after SIP version");
 	return MALFORMED_SIP_MSG;
     }
 
@@ -313,7 +313,7 @@ static int parse_by(sip_via_parm* v, const char** c, int len)
 	    case HTAB:
 	    case CR:
 	    case LF:
-		DBG("Bad character in IPv6 address (0x%x)\n",**c);
+		DBG("Bad character in IPv6 address (0x%x)",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -335,7 +335,7 @@ static int parse_by(sip_via_parm* v, const char** c, int len)
 		break;
 
 	    default:
-		DBG("LWS expected\n");
+		DBG("LWS expected");
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -371,7 +371,7 @@ static int parse_by(sip_via_parm* v, const char** c, int len)
 		goto end_by;
 	    }
 	    if((**c < '0') ||(**c > '9')){
-		DBG("bad character in port number (0x%x)\n",**c);
+		DBG("bad character in port number (0x%x)",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    v->port_i = v->port_i*10 + (**c - '0'); 
@@ -415,11 +415,11 @@ static int parse_by(sip_via_parm* v, const char** c, int len)
 	break;
 
     default:
-	DBG("Unexpected end state: st = %i\n",st);
+	DBG("Unexpected end state: st = %i",st);
 	return UNDEFINED_ERR;
     }
 
-    //DBG("Via 'sent-by': '%.*s:%i'\n",v->host.len,v->host.s,v->port_i);
+    //DBG("Via 'sent-by': '%.*s:%i'",v->host.len,v->host.s,v->port_i);
 
     return 0;
 }
@@ -545,7 +545,7 @@ inline int parse_via_params(sip_via_parm* parm, const char** c, int len)
 	switch(st){
 	case VP_BRANCH:
 	    parm->branch = (*it)->value;
-	    DBG("parsed branch: %.*s\n",(*it)->value.len,(*it)->value.s);
+	    DBG("parsed branch: %.*s",(*it)->value.len,(*it)->value.s);
 	    break;
 	case VP_RECVD:
 	    parm->recved = (*it)->value;
@@ -555,7 +555,7 @@ inline int parse_via_params(sip_via_parm* parm, const char** c, int len)
 	    parm->rport = (*it)->value;
 	    if(parm->rport.len) {
 		if(str2i(c2stlstr(parm->rport),parm->rport_i)) {
-		    DBG("invalid port number in Via 'sent-by' address.\n");
+		    DBG("invalid port number in Via 'sent-by' address.");
 		}
 	    }
 	    else {
@@ -568,7 +568,7 @@ inline int parse_via_params(sip_via_parm* parm, const char** c, int len)
 	continue; // makes compiler happy
     }
 
-    DBG("has_rport: %i\n",parm->has_rport);
+    DBG("has_rport: %i",parm->has_rport);
     
     return ret;
 }
@@ -644,7 +644,7 @@ int parse_via(sip_via* via, const char* beg, int len)
 		break;
 
 	    default:
-		DBG("',' expected, found '%c'\n",*c);
+		DBG("',' expected, found '%c'",*c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;

@@ -47,15 +47,15 @@ int DIDialFactory::onLoad(){
 	break;
 
       dialout_pins[d_pin[0]] = DIDialoutInfo(d_pin[1], d_pin[2], d_pin[3], d_pin[4]);
-      DBG("DIDial: added PIN '%s' userpart '%s' domain '%s' user '%s' pwd '<not shown>'\n", 
+      DBG("DIDial: added PIN '%s' userpart '%s' domain '%s' user '%s' pwd '<not shown>'", 
 	  d_pin[0].c_str(), d_pin[1].c_str(), d_pin[2].c_str(), d_pin[3].c_str());
       i_pin++;		
     } 
   } else {
-    DBG("no configuration for di_dial found. No dialout pins will be set.\n");
+    DBG("no configuration for di_dial found. No dialout pins will be set.");
   }
   
-  DBG("DIDial loaded.\n");
+  DBG("DIDial loaded.");
   return 0;
 }
 
@@ -130,7 +130,7 @@ string DIDial::dialout(const string& application,
 		       const string& from, 
 		       const string& to,
 		       AmArg* extra_params) {
-  DBG("dialout application '%s', user '%s', from '%s', to '%s'\n", 
+  DBG("dialout application '%s', user '%s', from '%s', to '%s'", 
       application.c_str(), user.c_str(), from.c_str(), to.c_str());
 
   string tag = AmUAC::dialout(user.c_str(), application,  to,  
@@ -186,7 +186,7 @@ string DIDial::dialout_auth_b2b(const string& application,
           const string& a_pwd
 ) {
 
-  DBG("authenticated b2b dialout application '%s', from '%s', to '%s', caller '%s', callee '%s'\n",
+  DBG("authenticated b2b dialout application '%s', from '%s', to '%s', caller '%s', callee '%s'",
     application.c_str(), from.c_str(), to.c_str(), caller_ruri.c_str(), callee_ruri.c_str());
 
   AmArg a;

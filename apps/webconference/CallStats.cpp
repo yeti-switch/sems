@@ -32,14 +32,14 @@ void WCCCallStats::save() {
     if (ofs.good()) {
       ofs << total << std::endl << failed << std::endl << seconds;
       ofs.close();
-      DBG("saved statistics: %u total %u failed %u seconds (%u min)\n", 
+      DBG("saved statistics: %u total %u failed %u seconds (%u min)", 
 	  total, failed, seconds, seconds/60);
     } else {
-      ERROR("opening/writing stats to '%s'\n", 
+      ERROR("opening/writing stats to '%s'", 
 	    filename.c_str());
     }
   } catch (std::exception& e) {
-    ERROR("writing stats to '%s': %s\n", 
+    ERROR("writing stats to '%s': %s", 
 	  filename.c_str(), e.what());
   }
 }
@@ -53,13 +53,13 @@ void WCCCallStats::load() {
     if (ifs.good()) {
       ifs >> total >> failed >> seconds;
       ifs.close();
-      DBG("read statistics: %u total %u failed %u seconds (%u min)\n", 
+      DBG("read statistics: %u total %u failed %u seconds (%u min)", 
 	  total, failed, seconds, seconds/60);
     } else {
-      WARN("opening/reading stats from '%s' failed\n", filename.c_str());
+      WARN("opening/reading stats from '%s' failed", filename.c_str());
     }
   } catch (std::exception& e) {
-      ERROR("opening/reading stats from '%s': %s\n", 
+      ERROR("opening/reading stats from '%s': %s", 
 	    filename.c_str(), e.what());
   }
 }

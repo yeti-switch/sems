@@ -14,7 +14,7 @@ public:
     }
 
     int onLoad(){
-      DBG("CCAcc calling card accounting loaded.\n");
+      DBG("CCAcc calling card accounting loaded.");
       return 0;
     }
 };
@@ -39,7 +39,7 @@ CCAcc::~CCAcc() { }
 
 void CCAcc::invoke(const string& method, const AmArg& args, AmArg& ret)
 {
-  DBG("cc_acc: %s(%s)\n", method.c_str(), AmArg::print(args).c_str());
+  DBG("cc_acc: %s(%s)", method.c_str(), AmArg::print(args).c_str());
 
     if(method == "getCredit"){
       assertArgCStr(args.get(0));
@@ -77,7 +77,7 @@ int CCAcc::getCredit(string pin) {
   credits_mut.lock();
   std::map<string, unsigned int>::iterator it =  credits.find(pin);
   if (it == credits.end()) {
-    DBG("PIN '%s' does not exist.\n", pin.c_str());
+    DBG("PIN '%s' does not exist.", pin.c_str());
     credits_mut.unlock();
     return -1;
   }

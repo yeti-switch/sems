@@ -47,7 +47,7 @@ int AmPromptCollection::configureModule(AmConfigReader& cfg,
 	 announcements.begin(); it != announcements.end(); it++) {
     string fname = cfg.getParameter(it->first, "");
     if (fname.empty()){
-      WARN("using default file '%s' for '%s' prompt in '%s' module\n",
+      WARN("using default file '%s' for '%s' prompt in '%s' module",
 	   it->second.c_str(), it->first.c_str(), mod_name);
       fname = it->second;
     }
@@ -63,19 +63,19 @@ int AmPromptCollection::setPrompt(const std::string& name,
 				  const std::string& filename,
 				  const char* mod_name) {
   if (!file_exists(filename)) {
-    ERROR("'%s' prompt for module %s does not exist at '%s'.\n", 
+    ERROR("'%s' prompt for module %s does not exist at '%s'.", 
 	  name.c_str(), mod_name, filename.c_str());
     return -1;
   }
  
   AudioFileEntry* af = new AudioFileEntry();
   if (af->load(filename)) {
-    ERROR("Could not load '%s' prompt for module %s at '%s'.\n", 
+    ERROR("Could not load '%s' prompt for module %s at '%s'.", 
 	  name.c_str(), mod_name, filename.c_str());
     delete af;
     return -1;
   }
-  DBG("adding prompt '%s' to prompt collection.\n", 
+  DBG("adding prompt '%s' to prompt collection.", 
       name.c_str());
   store[name]=af;
   return 0;
@@ -128,11 +128,11 @@ int AmPromptCollection::addToPlaylist(const std::string& name, long sess_id,
     it++;
   }
   if (it == store.end()) {
-    WARN("'%s' prompt not found!\n", name.c_str());
+    WARN("'%s' prompt not found!", name.c_str());
     return -1;
   }
 
-  DBG("adding '%s' prompt to playlist at the %s'\n", it->first.c_str(), 
+  DBG("adding '%s' prompt to playlist at the %s'", it->first.c_str(), 
       front ? "front":"back");
 
   AmCachedAudioFile* af = it->second->getAudio();

@@ -165,7 +165,7 @@ void addOptionTag(string& hdrs, const string& hdr_name, const string& tag) {
     // tag not found - add our tag to the (first) hdr_name header
     size_t pos1; size_t pos2; size_t hdr_start;
     if (!findHeader(hdrs, hdr_name, 0, pos1, pos2, hdr_start)) {
-      ERROR("internal error: header '%s' disappeared in-between (hdrs = '%s'!\n",
+      ERROR("internal error: header '%s' disappeared in-between (hdrs = '%s'!",
 	    hdr_name.c_str(), hdrs.c_str());
       hdrs += hdr_name + COLSP + tag + CRLF;
       return;

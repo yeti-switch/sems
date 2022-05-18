@@ -73,7 +73,7 @@ long G722NB_create(const char* format_parameters, amci_codec_fmt_info_t* format_
         
   gs = (G722State*) calloc(1, sizeof(G722State));
   if (!gs) {
-    ERROR("error allocating memory for G722 codec state\n");
+    ERROR("error allocating memory for G722 codec state");
     return 0;
   }
 
@@ -81,7 +81,7 @@ long G722NB_create(const char* format_parameters, amci_codec_fmt_info_t* format_
 				      64000, 0 /* G722_SAMPLE_RATE_8000 */);
 
   if (!gs->encode_state) {
-    ERROR("error initializing G722 encoder\n");
+    ERROR("error initializing G722 encoder");
     free(gs);
     return 0;
   }
@@ -89,7 +89,7 @@ long G722NB_create(const char* format_parameters, amci_codec_fmt_info_t* format_
   gs->decode_state = g722_decode_init(NULL, 
 				      64000, 0 /* G722_SAMPLE_RATE_8000 */);
   if (!gs->decode_state) {
-    ERROR("error initializing G722 decoder\n");
+    ERROR("error initializing G722 decoder");
     free(gs->encode_state);
     free(gs);
     return 0;
@@ -146,12 +146,12 @@ int Pcm16_2_G722NB( unsigned char* out_buf, unsigned char* in_buf, unsigned int 
   G722State* gs;
 
   if (channels!=1) {
-    ERROR("only supports 1 channel\n");
+    ERROR("only supports 1 channel");
     return 0;
   }
 
   if (rate != 16000 /* 8000 */) {
-    ERROR("only supports NB (8khz)\n");
+    ERROR("only supports NB (8khz)");
     return 0;
   }
 
@@ -167,12 +167,12 @@ int G722NB_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int 
   G722State* gs;
 
   if (channels!=1) {
-    ERROR("only supports 1 channel\n");
+    ERROR("only supports 1 channel");
     return 0;
   }
 
   if (rate != 16000 /* 8000 */) {
-    ERROR("only supports NB (8khz)\n");
+    ERROR("only supports NB (8khz)");
     return 0;
   }
 

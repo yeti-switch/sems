@@ -53,7 +53,7 @@ void AmPlaylist::gotoNextItem(bool notify)
 
   updateCurrentItem();
   if(notify && had_item && !cur_item && ev_q){
-    DBG("posting AmAudioEvent::noAudio event!\n");
+    DBG("posting AmAudioEvent::noAudio event!");
     ev_q->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
   }
 }
@@ -72,7 +72,7 @@ int AmPlaylist::get(unsigned long long system_ts, unsigned char* buffer,
 				   output_sample_rate,
 				   nb_samples)) <= 0) {
 
-    DBG("get: gotoNextItem\n");
+    DBG("get: gotoNextItem");
     gotoNextItem(true);
   }
 
@@ -98,7 +98,7 @@ int AmPlaylist::put(unsigned long long system_ts, unsigned char* buffer,
 				     input_sample_rate,
 				     size)) < 0) {
 
-    DBG("put: gotoNextItem\n");
+    DBG("put: gotoNextItem");
     gotoNextItem(true);
   }
 
@@ -144,7 +144,7 @@ void AmPlaylist::addToPlayListFront(AmPlaylistItem* item)
 
 void AmPlaylist::close()
 {
-  DBG("flushing playlist before closing\n");
+  DBG("flushing playlist before closing");
   flush();
   AmAudio::close();
 }

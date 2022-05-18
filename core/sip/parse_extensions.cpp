@@ -71,6 +71,6 @@ bool parse_extensions(unsigned *extensions, const char *start, int len)
   }
 
   *extensions = mask;
-  DBG("mask of parsed extensions: 0x%x.\n", mask);
+  DBG("mask of parsed extensions: 0x%x.", mask);
   return true;
 }

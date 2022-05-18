@@ -200,7 +200,7 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 
     offer.print(sdp_body);
 
-    //INFO("******* SDP offer body:\n%s\n", sdp_body.c_str());
+    //INFO("******* SDP offer body:\n%s", sdp_body.c_str());
 
     if(!initSdpAnswer()) {
         ERROR("failed to init SDP answer");
@@ -209,7 +209,7 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 
     answer.print(sdp_body);
 
-    //INFO("******* SDP answer body:\n%s\n", sdp_body.c_str());
+    //INFO("******* SDP answer body:\n%s", sdp_body.c_str());
 
     AmRtpAudio::init(answer, offer);
     resumeReceiving();

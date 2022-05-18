@@ -240,7 +240,7 @@ int AmMediaTransport::getLocalSocket(bool reinit)
     int sd = 0;
     if((sd = socket(AmConfig.media_ifs[l_if].proto_info[lproto_id]->type_ip == AT_V4 ? AF_INET : AF_INET6,
                     SOCK_DGRAM,0)) == -1) {
-        CLASS_ERROR("< %s\n",strerror(errno));
+        CLASS_ERROR("< %s",strerror(errno));
         throw string ("while creating new socket.");
     }
     SOCKET_LOG("[%p] socket(l_saddr.ss_family(%d),SOCK_DGRAM,0) = %d",
@@ -248,7 +248,7 @@ int AmMediaTransport::getLocalSocket(bool reinit)
 
     int true_opt = 1;
     if(ioctl(sd, FIONBIO , &true_opt) == -1) {
-        CLASS_ERROR("< %s\n",strerror(errno));
+        CLASS_ERROR("< %s",strerror(errno));
         close(sd);
         throw string ("while setting RTP socket non blocking.");
     }
@@ -256,7 +256,7 @@ int AmMediaTransport::getLocalSocket(bool reinit)
     if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
                   static_cast<void*>(&true_opt), sizeof(true_opt)) < 0)
     {
-        CLASS_ERROR("< %s\n",strerror(errno));
+        CLASS_ERROR("< %s",strerror(errno));
         close(sd);
         throw string ("while setting RTP socket SO_TIMESTAMP opt");
     }
@@ -264,7 +264,7 @@ int AmMediaTransport::getLocalSocket(bool reinit)
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
         static_cast<void*>(&true_opt), sizeof (true_opt)) == -1)
     {
-        ERROR("%s\n",strerror(errno));
+        ERROR("%s",strerror(errno));
         close(sd);
         sd = 0;
         throw string ("while setting local address reusable.");
@@ -938,7 +938,7 @@ ssize_t AmMediaTransport::send(sockaddr_storage* raddr, unsigned char* buf, int 
         reinterpret_cast<const struct sockaddr*>(raddr), SA_len(raddr));
 
     if(err == -1) {
-        CLASS_ERROR("sendto(%d,%p,%d,0,%p,%ld): errno: %d, raddr:'%s', type: %d\n",
+        CLASS_ERROR("sendto(%d,%p,%d,0,%p,%ld): errno: %d, raddr:'%s', type: %d",
             l_sd,
             static_cast<void *>(buf),size,
             static_cast<void *>(raddr),SA_len(raddr),
@@ -998,7 +998,7 @@ int AmMediaTransport::sendmsg(unsigned char* buf, int size)
 
     // bytes_sent = ;
     if(::sendmsg(l_sd, &hdr, 0) < 0) {
-        ERROR("sendto: %s\n",strerror(errno));
+        ERROR("sendto: %s",strerror(errno));
         return -1;
     }
 

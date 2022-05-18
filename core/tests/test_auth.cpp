@@ -13,7 +13,7 @@ FCTMF_SUITE_BGN(test_auth) {
 
       string secret = "1234secret";
       string nonce = UACAuth::calcNonce();
-      //      DBG("nonce '%s'\n", nonce.c_str());    
+      //      DBG("nonce '%s'", nonce.c_str());    
       fct_chk( UACAuth::checkNonce(nonce));
     } FCT_TEST_END();
 

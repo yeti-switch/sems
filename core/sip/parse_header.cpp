@@ -410,7 +410,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 		break;
 
 	    default:
-		DBG("Missing ':' after header name\n");
+		DBG("Missing ':' after header name");
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -423,15 +423,15 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 
 	    case H_NAME:
 		if((*c-(st==ST_CRLF?2:1))-begin == 0){
-		    //DBG("Detected end of headers\n");
+		    //DBG("Detected end of headers");
 		    return 0;
 		}
- 		DBG("Illegal CR or LF in header name\n");
+ 		DBG("Illegal CR or LF in header name");
  		return MALFORMED_SIP_MSG;
 
 	    case H_VALUE_SWS:
 		if(!IS_WSP(**c)){
-		    DBG("Malformed header: <%.*s>\n",(int)(*c-begin),begin);
+		    DBG("Malformed header: <%.*s>",(int)(*c-begin),begin);
 		    begin = *c;
 		    saved_st = H_NAME;
 		    //re-parse cur char w. new state
@@ -443,7 +443,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 		if(!IS_WSP(**c)){
 		    hdr->value.set(begin,(*c-(st==ST_CRLF?2:1))-begin);
 
-		    //DBG("hdr: \"%.*s: %.*s\"\n",
+		    //DBG("hdr: \"%.*s: %.*s\"",
 		    //     hdr->name.len,hdr->name.s,
 		    //     hdr->value.len,hdr->value.s);
 
@@ -457,7 +457,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 		break;
 
 	    default:
-		DBG("Oooops! st=%i\n",saved_st);
+		DBG("Oooops! st=%i",saved_st);
 		break;
 	    }
 
@@ -469,9 +469,9 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
     switch(st){
 
     case H_NAME:
-	DBG("Incomplete header (st=%i;saved_st=%i)\n",st,saved_st);
+	DBG("Incomplete header (st=%i;saved_st=%i)",st,saved_st);
 	if(st == H_NAME){
-	    DBG("header = \"%.*s\"\n",(int)(*c - begin), begin);
+	    DBG("header = \"%.*s\"",(int)(*c - begin), begin);
 	}
 	return UNEXPECTED_EOT;
 
@@ -480,7 +480,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 	
 	    hdr->value.set(begin,*c - begin);
 	    
-	    //DBG("hdr: \"%.*s: %.*s\"\n",
+	    //DBG("hdr: \"%.*s: %.*s\"",
 	    //	hdr->name.len,hdr->name.s,
 	    //	hdr->value.len,hdr->value.s);
 	    
@@ -497,10 +497,10 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 	    
 	case H_NAME:
 	    if((*c-(st==ST_CRLF?2:1))-begin == 0){
-		//DBG("Detected end of headers\n");
+		//DBG("Detected end of headers");
 		return 0;
 	    }
-	    DBG("Illegal CR or LF in header name\n");
+	    DBG("Illegal CR or LF in header name");
 	    return MALFORMED_SIP_MSG;
 
 	case H_VALUE:
@@ -508,7 +508,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 		
 		hdr->value.set(begin,*c - begin - (st==ST_CRLF? 2 : 1));
 		
-		//DBG("hdr: \"%.*s: %.*s\"\n",
+		//DBG("hdr: \"%.*s: %.*s\"",
 		//	hdr->name.len,hdr->name.s,
 		//	hdr->value.len,hdr->value.s);
 		
@@ -521,7 +521,7 @@ int parse_headers(list<sip_header*>& hdrs, char** c, char* end)
 	break;
     }
     
-    DBG("Incomplete header (st=%i;saved_st=%i)\n",st,saved_st);
+    DBG("Incomplete header (st=%i;saved_st=%i)",st,saved_st);
     return UNEXPECTED_EOT;
 }
 

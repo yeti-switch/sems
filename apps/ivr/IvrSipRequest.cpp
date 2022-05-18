@@ -58,7 +58,7 @@ static PyObject* IvrSipRequest_new(PyTypeObject *type, PyObject *args, PyObject 
     self->own_p_req = true;
   }
 
-  DBG("IvrSipRequest_new\n");
+  DBG("IvrSipRequest_new");
   return (PyObject *)self;
 }
 
@@ -87,14 +87,14 @@ static PyObject* IvrSipRequest_newRef(PyTypeObject *type, PyObject *args, PyObje
     self->own_p_req = false;
   }
 
-  DBG("IvrSipRequest_newRef\n");
+  DBG("IvrSipRequest_newRef");
   return (PyObject *)self;
 }
 
 static void
 IvrSipRequest_dealloc(IvrSipRequest* self) 
 {
-  DBG("IvrSipRequest_dealloc\n");
+  DBG("IvrSipRequest_dealloc");
 
   if(self->own_p_req)
     delete self->p_req;

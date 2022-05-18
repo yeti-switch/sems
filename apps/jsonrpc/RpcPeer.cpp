@@ -50,7 +50,7 @@ using std::string;
 
 void JsonrpcPeerConnection::notifyDisconnect() {
   // let event receivers know about broken connection
-  DBG("notifying event receivers about broken connection %s, %s\n", notificationReceiver.c_str(), requestReceiver.c_str());
+  DBG("notifying event receivers about broken connection %s, %s", notificationReceiver.c_str(), requestReceiver.c_str());
   if (!notificationReceiver.empty())
     AmEventDispatcher::instance()->
       post(notificationReceiver, 
@@ -189,14 +189,14 @@ int JsonrpcNetstringsConnection::netstringsRead() {
   if (!in_msg) {
     while (true) {
       if (rcvd_size > MAX_NS_LEN_SIZE) {
-	DBG("closing connection [%p/%d]: oversize length\n", this, fd);
+	DBG("closing connection [%p/%d]: oversize length", this, fd);
 	close();
 	return REMOVE;
       }
       // reading length
       ssize_t r=read(fd,&msgbuf[rcvd_size],1);
       if (!r) {
-	DBG("closing connection [%p/%d] on peer hangup\n", this, fd);
+	DBG("closing connection [%p/%d] on peer hangup", this, fd);
 	close();
 	return REMOVE;
       }
@@ -206,38 +206,38 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	return CONTINUE;
      
       if (r != 1) {
-	INFO("socket error on connection [%p/%d]: %s\n",
+	INFO("socket error on connection [%p/%d]: %s",
 	     this, fd, strerror(errno));
 	close();
 	return REMOVE;
       }
       
-      //DBG("received '%c'\n", msgbuf[rcvd_size]);
+      //DBG("received '%c'", msgbuf[rcvd_size]);
       if (msgbuf[rcvd_size] == ':') {
 	msgbuf[rcvd_size] = '\0';
 	if (str2i(std::string(msgbuf, rcvd_size), msg_size)) {
-	  ERROR("Protocol error decoding size '%s'\n", msgbuf);
+	  ERROR("Protocol error decoding size '%s'", msgbuf);
 	  close();
 	  return REMOVE;
 	}
 	// received len - switch to receive msg mode
 	in_msg = true;
 	rcvd_size = read(fd,msgbuf,msg_size+1);
-	// DBG("received '%.*s'\n", rcvd_size, msgbuf);
+	// DBG("received '%.*s'", rcvd_size, msgbuf);
 
 	if (rcvd_size == msg_size+1) { 
 	  if (msgbuf[msg_size] == ',') {
 	    msgbuf[msg_size+1] = '\0';
 	    return DISPATCH;
 	  }
-	  INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','\n",
+	  INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
 	       this, fd);
 	  close();
 	  return REMOVE;
 	}
 
 	if (!rcvd_size) {
-	  DBG("closing connection [%p/%d] on peer hangup\n", this, fd);
+	  DBG("closing connection [%p/%d] on peer hangup", this, fd);
 	  close();
 	  return REMOVE;
 	}
@@ -247,7 +247,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	  return CONTINUE; // necessary?
 
 	if (rcvd_size<0) {
-	  INFO("socket error on connection [%p/%d]: %s\n",
+	  INFO("socket error on connection [%p/%d]: %s",
 	       this, fd, strerror(errno));
 	  close();
 	  return REMOVE;
@@ -257,7 +257,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
       } 
 
       if (msgbuf[rcvd_size] < '0' || msgbuf[rcvd_size] > '9') {
-	INFO("Protocol error on connection [%p/%d]: invalid character in size\n",
+	INFO("Protocol error on connection [%p/%d]: invalid character in size",
 	     this, fd);
 	close();
 	return REMOVE;
@@ -269,12 +269,12 @@ int JsonrpcNetstringsConnection::netstringsRead() {
     ssize_t r = read(fd,msgbuf+rcvd_size,msg_size-rcvd_size+1);
     if (r>0) {
       rcvd_size += r;
-      DBG("msgbuf='%.*s'\n", msg_size+1,msgbuf);
+      DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
       if (rcvd_size == msg_size+1) { 
-	DBG("msg_size = %d, rcvd_size = %d, <%c> \n", msg_size, rcvd_size, msgbuf[msg_size-1]);
+	DBG("msg_size = %d, rcvd_size = %d, <%c> ", msg_size, rcvd_size, msgbuf[msg_size-1]);
 	if (msgbuf[msg_size] == ',')
 	  return DISPATCH;
-	INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','\n",
+	INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
 	     this, fd);
 	close();
 	return REMOVE;
@@ -283,7 +283,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
     }
 
     if (!r) {
-      DBG("closing connection [%p/%d] on peer hangup\n", this, fd);
+      DBG("closing connection [%p/%d] on peer hangup", this, fd);
       close();
       return REMOVE;
     }
@@ -292,7 +292,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	(r<0 && errno == EWOULDBLOCK))
       return CONTINUE; // necessary?
 
-    INFO("socket error on connection [%p/%d]: %s\n",
+    INFO("socket error on connection [%p/%d]: %s",
 	 this, fd, strerror(errno));
     close();
     return REMOVE;
@@ -312,7 +312,7 @@ int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
   // write size to snd_size
   string msg_size_s = int2str(msg_size);
   if (msg_size_s.length()>MAX_NS_LEN_SIZE) {
-    ERROR("too large return message size len\n");
+    ERROR("too large return message size len");
     close();
     return REMOVE;
   }
@@ -360,9 +360,9 @@ int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
 	}
 	if (written<0) {
 		if (errno == ECONNRESET)
-			DBG("closing connection [%p/%d] on peer hangup\n", this, fd);
+			DBG("closing connection [%p/%d] on peer hangup", this, fd);
 		else
-			INFO("error on connection [%p/%d]: %s\n", this, fd, strerror(errno));
+			INFO("error on connection [%p/%d]: %s", this, fd, strerror(errno));
 		close();
 		return REMOVE;
 	}

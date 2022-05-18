@@ -67,18 +67,18 @@ void _AmAppTimer::app_timer_cb(app_timer* at)
 
     if (NULL != at_local) {
         if (at_local != at) {
-            DBG("timer was reset while expiring - not firing timer\n");
+            DBG("timer was reset while expiring - not firing timer");
             // we'd better re-insert at_local into user_timers
             // what happens else, when at_local get fired ???
             user_timers[at->get_q_id()][at->get_id()] = at_local;
         } else {
-            DBG("timer fired: %d for '%s'\n", at->get_id(), at->get_q_id().c_str());
+            DBG("timer fired: %d for '%s'", at->get_id(), at->get_q_id().c_str());
             AmSessionContainer::instance()->postEvent(
                 at->get_q_id(), new AmTimeoutEvent(at->get_id()));
             delete at;
         }
     } else {
-        DBG("timer %d for '%s' already removed\n",
+        DBG("timer %d for '%s' already removed",
             at->get_id(), at->get_q_id().c_str());
         // will be deleted by wheeltimer
     }

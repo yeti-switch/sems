@@ -51,7 +51,7 @@ int tcp_trsp_socket::send(const sockaddr_storage* sa, const char* msg,
   if(closed || (check_connection() < 0))
     return -1;
 
-  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
             actual_ip.c_str(), actual_port,
             get_addr_str(sa).c_str(),
             am_get_port(sa),

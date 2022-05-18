@@ -78,7 +78,7 @@ void AmB2ABSession::onB2ABEvent(B2ABEvent* ev)
 
 void AmB2ABSession::relayEvent(AmEvent* ev)
 {
-  DBG("AmB2ABSession::relayEvent: id=%s\n",
+  DBG("AmB2ABSession::relayEvent: id=%s",
       other_id.c_str());
 
   if(!other_id.empty())
@@ -88,7 +88,7 @@ void AmB2ABSession::relayEvent(AmEvent* ev)
 void AmB2ABSession::connectSession()
 {
   if (!connector) {
-    DBG("error - trying to connect session, but no connector!\n");
+    DBG("error - trying to connect session, but no connector!");
     return;
   }
   connector->connectSession(this);
@@ -136,9 +136,9 @@ AmB2ABCallerSession::~AmB2ABCallerSession()
 }
 
 void AmB2ABCallerSession::onBeforeDestroy() {
-  DBG("Waiting for release from callee session...\n");
+  DBG("Waiting for release from callee session...");
   connector->waitReleased();
-  DBG("OK, got release from callee session.\n");
+  DBG("OK, got release from callee session.");
 }
 
 void AmB2ABCallerSession::terminateOtherLeg()
@@ -156,7 +156,7 @@ void AmB2ABCallerSession::onB2ABEvent(B2ABEvent* ev)
   case B2ABConnectAudio: {
     callee_status = Connected;
 
-    DBG("ConnectAudio event received from other leg\n");
+    DBG("ConnectAudio event received from other leg");
     B2ABConnectAudioEvent* ca = 
       dynamic_cast<B2ABConnectAudioEvent*>(ev);
     if (!ca) 
@@ -170,7 +170,7 @@ void AmB2ABCallerSession::onB2ABEvent(B2ABEvent* ev)
   case B2ABConnectEarlyAudio: {
     callee_status = Early;
 
-    DBG("ConnectEarlyAudio event received from other leg\n");
+    DBG("ConnectEarlyAudio event received from other leg");
     B2ABConnectEarlyAudioEvent* ca = 
       dynamic_cast<B2ABConnectEarlyAudioEvent*>(ev);
     if (!ca)
@@ -183,14 +183,14 @@ void AmB2ABCallerSession::onB2ABEvent(B2ABEvent* ev)
 
   case B2ABConnectOtherLegException:
   case B2ABConnectOtherLegFailed: {
-    WARN("looks like callee leg could not be created. terminating our leg.\n");
+    WARN("looks like callee leg could not be created. terminating our leg.");
     terminateLeg();
     callee_status = None;
     return;
   } break;
 
   case B2ABOtherLegRinging: {
-    DBG("callee_status set to Ringing.\n");
+    DBG("callee_status set to Ringing.");
     callee_status = Ringing;
     return;
   } break;
@@ -278,7 +278,7 @@ AmB2ABCalleeSession::~AmB2ABCalleeSession()
 }
 
 void AmB2ABCalleeSession::onBeforeDestroy() {
-  DBG("releasing caller session.\n");
+  DBG("releasing caller session.");
   connector->release();
   // now caller session is released
 }
@@ -314,17 +314,17 @@ void AmB2ABCalleeSession::onB2ABEvent(B2ABEvent* ev)
       return;
     } 
     catch(const AmSession::Exception& e){
-      ERROR("%i %s\n",e.code,e.reason.c_str());
+      ERROR("%i %s",e.code,e.reason.c_str());
       relayEvent(new B2ABConnectOtherLegExceptionEvent(e.code,e.reason));
       setStopped();
     }
     catch(const string& err){
-      ERROR("startSession: %s\n",err.c_str());
+      ERROR("startSession: %s",err.c_str());
       relayEvent(new B2ABConnectOtherLegExceptionEvent(500,err));
       setStopped();
     }
     catch(...){
-      ERROR("unexpected exception\n");
+      ERROR("unexpected exception");
       relayEvent(new B2ABConnectOtherLegExceptionEvent(500,"unexpected exception"));
       setStopped();
     }
@@ -334,7 +334,7 @@ void AmB2ABCalleeSession::onB2ABEvent(B2ABEvent* ev)
 }
 
 void AmB2ABCalleeSession::onEarlySessionStart() {
-  DBG("onEarlySessionStart of callee session\n");
+  DBG("onEarlySessionStart of callee session");
   connectSession();
   is_connected = true;
   relayEvent(new B2ABConnectEarlyAudioEvent());
@@ -342,10 +342,10 @@ void AmB2ABCalleeSession::onEarlySessionStart() {
 
 
 void AmB2ABCalleeSession::onSessionStart() {
-  DBG("onSessionStart of callee session\n");
+  DBG("onSessionStart of callee session");
   if (!is_connected) {
     is_connected = true;
-    DBG("call connectSession\n");
+    DBG("call connectSession");
     connectSession();
   }
   relayEvent(new B2ABConnectAudioEvent());
@@ -362,8 +362,8 @@ void AmB2ABCalleeSession::onSipReply(const AmSipRequest& req, const AmSipReply& 
 
     if (status == AmSipDialog::Disconnected) {
 	  
-      DBG("callee session creation failed. notifying caller session.\n");
-      DBG("this happened with reply: %d.\n", rep.code);
+      DBG("callee session creation failed. notifying caller session.");
+      DBG("this happened with reply: %d.", rep.code);
       relayEvent(new B2ABConnectOtherLegFailedEvent(rep.code, rep.reason));
 
     } else if (rep.code == 180) {
@@ -401,7 +401,7 @@ void AmSessionAudioConnector::connectSession(AmSession* sess)
       sess->setInOut(&audio_connectors[1],&audio_connectors[0]);
     }
     else {
-	ERROR("connector full!\n");
+	ERROR("connector full!");
     }
 
     tag_mut.unlock();
@@ -425,7 +425,7 @@ bool AmSessionAudioConnector::disconnectSession(AmSession* sess)
     sess->setInOut(NULL, NULL);
     res = connected[0];
   } else {
-    DBG("disconnecting from wrong AmSessionAudioConnector\n");
+    DBG("disconnecting from wrong AmSessionAudioConnector");
   }
   tag_mut.unlock();
 

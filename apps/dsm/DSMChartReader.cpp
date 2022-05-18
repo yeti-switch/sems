@@ -131,7 +131,7 @@ DSMAction* DSMChartReader::actionFromToken(const string& str) {
   DSMAction* a = core_mod.getAction(str);
   if (a) return a;
 
-  ERROR("could not find action for '%s' (missing import?)\n", str.c_str());
+  ERROR("could not find action for '%s' (missing import?)", str.c_str());
   return NULL;
 }
 
@@ -146,7 +146,7 @@ DSMFunction* DSMChartReader::functionFromToken(const string& str) {
 
   for (vector<DSMFunction*>::iterator it=funcs.begin(); it!= funcs.end(); it++) {
     if((*it)->name == cmd) {
-        DBG("found function '%s' in function list\n", cmd.c_str());
+        DBG("found function '%s' in function list", cmd.c_str());
         return *it;
     }
   }
@@ -156,7 +156,7 @@ DSMFunction* DSMChartReader::functionFromToken(const string& str) {
 bool DSMChartReader::forFromToken(DSMArrayFor& af, const string& token) {
   string forhdr = token;
   if (forhdr.length() < 2 || forhdr[0] != '(' || forhdr[forhdr.length()-1] != ')') {
-    ERROR("syntax error in 'for %s': expected 'for (x in array)'\n",
+    ERROR("syntax error in 'for %s': expected 'for (x in array)'",
 	  forhdr.c_str());
     return false;
   }
@@ -176,7 +176,7 @@ bool DSMChartReader::forFromToken(DSMArrayFor& af, const string& token) {
     af.k = kv[0];
     af.v = kv[1];
     af.array_struct = forh_v[1];
-    DBG("for (%s,%s in %s) {\n", af.k.c_str(), af.v.c_str(), af.array_struct.c_str());
+    DBG("for (%s,%s in %s) {", af.k.c_str(), af.v.c_str(), af.array_struct.c_str());
   } else if (forh_v[1].length() > 7 &&
 	forh_v[1].substr(0,6)=="range(" &&
 	forh_v[1][forh_v[1].length()-1] == ')') {
@@ -191,13 +191,13 @@ bool DSMChartReader::forFromToken(DSMArrayFor& af, const string& token) {
       af.array_struct = trim(range_s, " ");
     }
     af.k = forh_v[0];
-    DBG("for (%s in range(%s, %s) {\n",
+    DBG("for (%s in range(%s, %s) {",
 	af.k.c_str(), af.v.c_str(), af.array_struct.c_str());
   } else {
     af.for_type = DSMArrayFor::Array;
     af.array_struct = forh_v[1];
     af.k = forh_v[0];
-    DBG("for (%s in %s) {\n", af.k.c_str(), af.array_struct.c_str());
+    DBG("for (%s in %s) {", af.k.c_str(), af.array_struct.c_str());
   }
 
   return true;
@@ -218,7 +218,7 @@ DSMCondition* DSMChartReader::conditionFromToken(const string& str, bool invert)
     c->invert = invert;
 
   if (c)  return c;
-  ERROR("could not find condition for '%s' (missing import?)\n", str.c_str());
+  ERROR("could not find condition for '%s' (missing import?)", str.c_str());
   return NULL;
 }
 
@@ -228,7 +228,7 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
   
   splitCmd(mod_cmd, cmd, params);
   if (!params.length()) {
-    ERROR("import needs module name\n");
+    ERROR("import needs module name");
     return false;
   }
 
@@ -239,19 +239,19 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
 
   void* h_dl = dlopen(fname.c_str(),RTLD_NOW | RTLD_GLOBAL);
   if(!h_dl){
-    ERROR("import module: %s: %s\n",fname.c_str(),dlerror());
+    ERROR("import module: %s: %s",fname.c_str(),dlerror());
     return false;
   }
 
   SCFactoryCreate sc_fc = NULL;
   if ((sc_fc = (SCFactoryCreate)dlsym(h_dl,SC_FACTORY_EXPORT_STR)) == NULL) {
-    ERROR("invalid SC module '%s' (SC_EXPORT missing?)\n", fname.c_str());
+    ERROR("invalid SC module '%s' (SC_EXPORT missing?)", fname.c_str());
     return false;
   }
    
   DSMModule* dsm_mod = (DSMModule*)sc_fc();
   if (!mod) {
-    ERROR("module '%s' did not return functions.\n", 
+    ERROR("module '%s' did not return functions.", 
 	  fname.c_str());
     return false;
   }
@@ -261,7 +261,7 @@ bool DSMChartReader::importModule(const string& mod_cmd, const string& mod_path)
     inc_ref(dsm_mod);
   }
 
-  DBG("loaded module '%s' from '%s'\n", 
+  DBG("loaded module '%s' from '%s'", 
       params.c_str(), fname.c_str());
   return true;
 }
@@ -278,7 +278,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
     
     if (token.length()>6 && token.substr(0, 6) == "import") {
       if (!importModule(token, mod_path)) {
-	ERROR("error loading module in '%s'\n", 
+	ERROR("error loading module in '%s'", 
 	      token.c_str());
 	return false;
       }
@@ -308,7 +308,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
     if (stack.empty()) {
       if (token == ";")
       	continue;
-      ERROR("Without context I do not understand '%s'\n", token.c_str());
+      ERROR("Without context I do not understand '%s'", token.c_str());
       return false;
     }
 
@@ -336,11 +336,11 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       if (token == ";") {
         owner->transferElem(f);
         funcs.push_back(f);
-      	DBG("Adding DSMFunction '%s' to funcs\n", f->name.c_str());
+      	DBG("Adding DSMFunction '%s' to funcs", f->name.c_str());
        	continue;
       }
       
-      DBG("Unknown token: %s\n", token.c_str());
+      DBG("Unknown token: %s", token.c_str());
       return false;
    }
     
@@ -364,26 +364,26 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	  owner->transferElem(ct);
 	  al->actions.push_back(ct);
 	} else {
-	  ERROR("no ActionList for DSMConditionTree\n");
+	  ERROR("no ActionList for DSMConditionTree");
 	  delete al;
 	  return false;
 	}
        	continue;
       }
 
-      ERROR("syntax error: got '%s' without context\n", token.c_str());
+      ERROR("syntax error: got '%s' without context", token.c_str());
       return false;
     }
     
     State* state = dynamic_cast<State*>(stack_top);
     if (state) {
       if (!state->name.length()) {
-	// 	DBG("naming state '%s'\n", token.c_str());
+	// 	DBG("naming state '%s'", token.c_str());
 	state->name = token;
 	continue;
       }
       if (token == "enter") {
-      DBG("adding 'enter' actions for state '%s'\n", state->name.c_str());
+      DBG("adding 'enter' actions for state '%s'", state->name.c_str());
 	stack.push_back(new ActionList(ActionList::AL_enter));
 	continue;
       }
@@ -420,7 +420,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       if ((token == "}") || (token == "->")) {
       	stack.pop_back();
         if (stack.empty()) {
-	  ERROR("no item for action list\n");
+	  ERROR("no item for action list");
 	  delete al;
 	  return false;
       	}
@@ -428,7 +428,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	if (al->al_type == ActionList::AL_func) {
 	  DSMFunction* f = dynamic_cast<DSMFunction*>(&(*stack.back()));
 	  if (!f) {
-	    ERROR("no DSMFunction for action list\n");
+	    ERROR("no DSMFunction for action list");
 	    delete al;
 	    return false;
 	  }
@@ -441,7 +441,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	    al->al_type == ActionList::AL_else) {
 	  DSMConditionTree* ct = dynamic_cast<DSMConditionTree*>(&(*stack.back()));
 	  if (!ct) {
-	    ERROR("no DSMConditionTree for action list\n");
+	    ERROR("no DSMConditionTree for action list");
 	    delete al;
 	    return false;
 	  }
@@ -457,14 +457,14 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	    owner->transferElem(ct);
 	    al_parent->actions.push_back(ct);
 	  } else {
-	    ERROR("no ActionList for DSMConditionTree\n");
+	    ERROR("no ActionList for DSMConditionTree");
 	    delete al;
 	    return false;
 	  }
 	  if (al->al_type == ActionList::AL_if)
-	    DBG("} // end if\n");
+	    DBG("} // end if");
 	  else
-	    DBG("} // end else\n");
+	    DBG("} // end else");
 
 	  delete al;
 
@@ -476,7 +476,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	    al->al_type == ActionList::AL_exit) {
 	  State* s = dynamic_cast<State*>(&(*stack.back()));
 	  if (!s) {
-	    ERROR("no State for action list\n");
+	    ERROR("no State for action list");
 	    delete al;
 	    return false;
 	  }
@@ -493,7 +493,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	if (al->al_type == ActionList::AL_trans) {
 	  DSMTransition* t = dynamic_cast<DSMTransition*>(&(*stack.back()));
 	  if (!t) {
-	    ERROR("no DSMTransition for action list\n");
+	    ERROR("no DSMTransition for action list");
 	    delete al;
 	    return false;
 	  }
@@ -505,7 +505,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	if (al->al_type == ActionList::AL_for) {
 	  DSMArrayFor* af = dynamic_cast<DSMArrayFor*>(&(*stack.back()));
 	  if (!af) {
-	    ERROR("no DSMArrayFor for action list\n");
+	    ERROR("no DSMArrayFor for action list");
 	    delete al;
 	    return false;
 	  }
@@ -515,23 +515,23 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	  
 	  ActionList* b_al = dynamic_cast<ActionList*>(&(*stack.back()));
 	  if (!b_al) {
-	    ERROR("internal error: no ActionList for 'for'\n");
+	    ERROR("internal error: no ActionList for 'for'");
 	    return false;
 	  }
 	  b_al->actions.push_back(af);
-	  DBG("} // end for (%s%s in %s) {\n",
+	  DBG("} // end for (%s%s in %s) {",
 	      af->k.c_str(), af->v.empty() ? "" : (","+af->v).c_str(),
 	      af->array_struct.c_str());
 	  delete al;
 	  continue;
 	}
 
-	ERROR("internal: unknown transition list type\n");
+	ERROR("internal: unknown transition list type");
 	return false;
       }
 
       if (token == "if") {
-	DBG("if ...\n");
+	DBG("if ...");
 	// start condition tree
 	stack.push_back(new DSMConditionTree());
 	DSMConditionList* cl = new DSMConditionList();
@@ -541,10 +541,10 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       }
 
       if (token == "else") {
-	DBG(" ... else ...\n");
+	DBG(" ... else ...");
 	DSMConditionTree* ct = dynamic_cast<DSMConditionTree*>(al->actions.back());
 	if (NULL == ct) {
-	  ERROR("syntax error: else without if block\n");
+	  ERROR("syntax error: else without if block");
 	  return false;
 	}
 	stack.push_back(ct);
@@ -567,7 +567,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 
       DSMFunction* f = functionFromToken(token);
       if (f) {
-	DBG("adding actions from function '%s'\n", f->name.c_str());
+	DBG("adding actions from function '%s'", f->name.c_str());
 	DBG("al.size is %zd before", al->actions.size());
 	for (vector<DSMElement*>::iterator it=f->actions.begin();
 	     it != f->actions.end(); it++) {
@@ -579,7 +579,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	continue;
       }
 
-      DBG("adding action '%s'\n", token.c_str());
+      DBG("adding action '%s'", token.c_str());
       DSMAction* a = actionFromToken(token);
       if (!a)
 	return false;
@@ -598,10 +598,10 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
 	stack.pop_back();
 	DSMConditionTree* ct = dynamic_cast<DSMConditionTree*>(&(*stack.back()));
 	if (!ct) {
-	  ERROR("internal error: condition list without condition tree\n");
+	  ERROR("internal error: condition list without condition tree");
 	  return false;
 	}
-	DBG("{\n");
+	DBG("{");
 	ct->conditions = cl->conditions;
 	ct->is_exception = cl->is_exception;
 	stack.push_back(new ActionList(ActionList::AL_if));
@@ -617,7 +617,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       	// end of condition list
       	stack.pop_back();
       	if (stack.empty()) {
-      	  ERROR("nothing to apply conditions to\n");
+      	  ERROR("nothing to apply conditions to");
       	  delete cl;
       	  return false;
       	}
@@ -633,7 +633,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
           ct->conditions = cl->conditions;
           ct->is_exception = cl->is_exception;
         } else {
-      	  ERROR("no transition or condition list to apply conditions to\n");
+      	  ERROR("no transition or condition list to apply conditions to");
       	  delete cl;
       	  return false;
       	}
@@ -657,7 +657,7 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       	continue;
       }
       
-      DBG("new condition: '%s'\n", token.c_str());
+      DBG("new condition: '%s'", token.c_str());
       DSMCondition* c = conditionFromToken(token, cl->invert_next);
       cl->invert_next = false;
       if (!c) 
@@ -722,8 +722,8 @@ bool DSMChartReader::decode(DSMStateDiagram* e, const string& chart,
       if (af->array_struct.length() || af->k.length()) {
 	// expecting body
 	if (token == "}") {
-	  DBG("close for\n");
-	  ERROR("sounds wrong!!!\n");
+	  DBG("close for");
+	  ERROR("sounds wrong!!!");
 	  stack.pop_back();
 	  continue;
 	}

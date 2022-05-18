@@ -64,7 +64,7 @@ int SCPyModule::preload() {
   if(!Py_IsInitialized()){
     add_env_path("PYTHONPATH",AmConfig.plugin_path);
     Py_Initialize();
-    DBG("Python version %s\n", Py_GetVersion());
+    DBG("Python version %s", Py_GetVersion());
   }
 
   PyEval_InitThreads();
@@ -99,14 +99,14 @@ int SCPyModule::preload() {
 MOD_ACTIONEXPORT_BEGIN(MOD_CLS_NAME) {
 
   if (NULL==dsm_module) {
-    ERROR("mod_py must be preloaded! add preload_mods=mod_py to dsm.conf\n");
+    ERROR("mod_py must be preloaded! add preload_mods=mod_py to dsm.conf");
     return NULL;
   }
 
   try {
     DEF_CMD("py", SCPyPyAction);
   } catch (const string& err) {
-    ERROR("creating py() action\n");
+    ERROR("creating py() action");
     return NULL;
   }
 
@@ -116,7 +116,7 @@ MOD_ACTIONEXPORT_BEGIN(MOD_CLS_NAME) {
 MOD_CONDITIONEXPORT_BEGIN(MOD_CLS_NAME) {
 
   if (NULL==dsm_module) {
-    ERROR("mod_py must be preloaded! add preload=mod_py to dsm.conf\n");
+    ERROR("mod_py must be preloaded! add preload=mod_py to dsm.conf");
     return NULL;
   }
 
@@ -124,7 +124,7 @@ MOD_CONDITIONEXPORT_BEGIN(MOD_CLS_NAME) {
     try {
       return new PyPyCondition(params);
     } catch (const string& err) {
-      ERROR("creating py() condition\n");
+      ERROR("creating py() condition");
       return NULL;
     }
   }
@@ -180,13 +180,13 @@ bool py_execute(PyCodeObject* py_func, DSMSession* sc_sess,
   PYLOCK;
 
   bool py_res = false;
-  DBG("add main \n");
+  DBG("add main ");
   PyObject* m = PyImport_AddModule("__main__");
   if (m == NULL) {
-    ERROR("getting main module\n");
+    ERROR("getting main module");
     return false;
   }
-  DBG("get globals \n");
+  DBG("get globals ");
   PyObject* globals = PyModule_GetDict(m);
   PyObject* locals = getPyLocals(sc_sess);
 
@@ -226,13 +226,13 @@ bool py_execute(PyCodeObject* py_func, DSMSession* sc_sess,
   PyDict_DelItemString(ts_dict, "_dsm_sess_");
   
   if (NULL == res) {
-    ERROR("evaluating python code\n");
+    ERROR("evaluating python code");
   } else if (PyBool_Check(res)) {
     py_res = PyInt_AsLong(res);
     Py_DECREF(res);
   } else {
     if (expect_int_result) {
-      ERROR("unknown result from python code\n");
+      ERROR("unknown result from python code");
     }
     Py_DECREF(res);
   }
@@ -244,7 +244,7 @@ SCPyPyAction::SCPyPyAction(const string& arg) {
   PYLOCK;
   py_func = Py_CompileString(arg.c_str(), ("<mod_py action: '"+arg+"'>").c_str(), Py_file_input);
   if (NULL == py_func) {
-    ERROR("compiling python code '%s'\n", 
+    ERROR("compiling python code '%s'", 
 	  arg.c_str());
     if(PyErr_Occurred())
       PyErr_Print();
@@ -264,7 +264,7 @@ PyPyCondition::PyPyCondition(const string& arg) {
   PYLOCK;
   py_func = Py_CompileString(arg.c_str(), ("<mod_py condition: '"+arg+"'>").c_str(), Py_eval_input);
   if (NULL == py_func) {
-    ERROR("compiling python code '%s'\n", 
+    ERROR("compiling python code '%s'", 
 	  arg.c_str());
     if(PyErr_Occurred())
       PyErr_Print();
@@ -288,14 +288,14 @@ SCPyModule::~SCPyModule() { }
 void printdict(PyObject* p, char* name) {
   return;
 
-  DBG("dict %s %p -------------\n", name, p);
+  DBG("dict %s %p -------------", name, p);
   PyObject *key, *value;
   Py_ssize_t pos = 0;
   
   while (PyDict_Next(p, &pos, &key, &value)) {
-    DBG(" obj '%s' ref %d\n", PyString_AsString(key), key->ob_refcnt);
+    DBG(" obj '%s' ref %d", PyString_AsString(key), key->ob_refcnt);
   }
-  DBG("dict %p end -------------\n", p);
+  DBG("dict %p end -------------", p);
 }
 
 extern grammar _PyParser_Grammar; /* From graminit.c */

@@ -82,13 +82,13 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
         handler.setBorrowedPointer(getHandler(cc->getDlg(), c));
         ret.push(handler);
         } else {
-            ERROR("wrong types in call to getHandler.  (c=%ld, cc= %ld)\n", 
+            ERROR("wrong types in call to getHandler.  (c=%ld, cc= %ld)", 
                   (unsigned long)c, (unsigned long)cc);
         }
     } else if (method == "checkAuth") {
         // params: Request realm user pwd
         if(args.size() < 4) {
-            ERROR("missing arguments to uac_auth checkAuth function, expected Request realm user pwd\n");
+            ERROR("missing arguments to uac_auth checkAuth function, expected Request realm user pwd");
             throw AmArg::TypeMismatchException();
         }
 
@@ -104,7 +104,7 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
     } else if(method == "checkAuthHA1") {
         // params: Request realm user pwd
         if (args.size() < 4) {
-            ERROR("missing arguments to uac_auth checkAuthHA1 function, expected Request realm user pwd\n");
+            ERROR("missing arguments to uac_auth checkAuthHA1 function, expected Request realm user pwd");
             throw AmArg::TypeMismatchException();
         }
 
@@ -402,7 +402,7 @@ AmSessionEventHandler* UACAuthFactory::getHandler(AmSession* s)
     if(c != nullptr) {
         return getHandler(s->dlg, c);
     } else {
-        DBG("no credentials for new session. not enabling auth session handler.\n");
+        DBG("no credentials for new session. not enabling auth session handler.");
     }
     return nullptr;
 }
@@ -517,7 +517,7 @@ bool UACAuth::onSipReply(
                        auth_uri.substr(0, hpos+1) +
                         reply.remote_ip + ":"+int2str(reply.remote_port);
                     dlg->setRemoteUri(remote_uri);
-                    DBG("updated remote URI to '%s'\n", remote_uri.c_str());
+                    DBG("updated remote URI to '%s'", remote_uri.c_str());
                 }
             }
         }
@@ -635,12 +635,12 @@ bool UACAuth::do_auth(
     const AmMimeBody* body, string& result)
 {
     if(!auth_hdr.length()) {
-        DBG("empty auth header.\n");
+        DBG("empty auth header.");
         return false;
     }
 
     if(!challenge.parse(auth_hdr)) {
-        DBG("error parsing auth header '%s'\n", auth_hdr.c_str());
+        DBG("error parsing auth header '%s'", auth_hdr.c_str());
         return false;
     }
 
@@ -660,11 +660,11 @@ bool UACAuth::do_auth(
        (challenge.algorithm != "MD5") &&
        (challenge.algorithm != "md5"))
     {
-        DBG("unsupported algorithm: '%s'\n", challenge.algorithm.c_str());
+        DBG("unsupported algorithm: '%s'", challenge.algorithm.c_str());
         return false;
     }
 
-    DBG("realm='%s', nonce='%s', qop='%s'\n",
+    DBG("realm='%s', nonce='%s', qop='%s'",
         challenge.realm.c_str(), 
         challenge.nonce.c_str(),
         challenge.qop.c_str());
@@ -672,7 +672,7 @@ bool UACAuth::do_auth(
     if(credential->realm.length()
        && (credential->realm != challenge.realm))
     {
-        DBG("authentication realm mismatch ('%s' vs '%s').\n",
+        DBG("authentication realm mismatch ('%s' vs '%s').",
             credential->realm.c_str(),challenge.realm.c_str());
     }
 
@@ -713,7 +713,7 @@ bool UACAuth::do_auth(
     uac_calc_HA1( challenge, credential, cnonce, ha1);
     uac_calc_HA2( method, uri, challenge, qop_auth_int ? hentity : nullptr, ha2);
     uac_calc_response( ha1, ha2, challenge, cnonce, qop_value, nonce_count, response);
-    DBG("calculated response = %s\n", response);
+    DBG("calculated response = %s", response);
 
     // compile auth response
     result = ((code==401) ?
@@ -735,7 +735,7 @@ bool UACAuth::do_auth(
 
     result += "response=\"" + string((char*)response) + "\", algorithm=MD5" CRLF;
 
-    DBG("Auth req hdr: '%s'\n", result.c_str());
+    DBG("Auth req hdr: '%s'", result.c_str());
 
     return true;
 }
@@ -884,19 +884,19 @@ UACAuth::nonce_check_result_t UACAuth::checkNonce(const string& nonce)
 #define INT_HEX_LEN int(2*sizeof(int))
 
     if(nonce.size() != INT_HEX_LEN+HASHHEXLEN) {
-        DBG("wrong nonce length (expected %u, got %zd)\n", INT_HEX_LEN+HASHHEXLEN, nonce.size());
+        DBG("wrong nonce length (expected %u, got %zd)", INT_HEX_LEN+HASHHEXLEN, nonce.size());
         return NCR_WRONG;
     }
 
     unsigned int nonce_time = 0;
     if(hex2int(std::string(nonce.c_str(), INT_HEX_LEN), nonce_time)) {
-        DBG("wrong nonce value(error hex to int conversion)\n");
+        DBG("wrong nonce value(error hex to int conversion)");
         return NCR_WRONG;
     }
     nonce_time += nonce_expire;
     time_t now = time(nullptr);
     if(nonce_time < now) {
-        DBG("wrong nonce value(nonce expired)\n");
+        DBG("wrong nonce value(nonce expired)");
         return NCR_EXPIRED;
     }
 
@@ -912,7 +912,7 @@ UACAuth::nonce_check_result_t UACAuth::checkNonce(const string& nonce)
 
 void UACAuth::setServerSecret(const string& secret) {
     server_nonce_secret = secret;
-    DBG("Server Nonce secret set\n");
+    DBG("Server Nonce secret set");
 }
 
 void UACAuth::setAllowedQops(int allowed_qop_mask) {
@@ -936,7 +936,7 @@ void UACAuth::checkAuthentication(
     const string& pwd, AmArg& ret)
 {
     if(req->method == SIP_METH_ACK || req->method == SIP_METH_CANCEL) {
-        DBG("letting pass %s request without authentication\n", req->method.c_str());
+        DBG("letting pass %s request without authentication", req->method.c_str());
         ret.push(200);
         ret.push("OK");
         ret.push("");
@@ -963,26 +963,26 @@ void UACAuth::checkAuthentication(
         string r_uri = r_challenge.find_attribute("uri");
         string r_cnonce = r_challenge.find_attribute("cnonce");
 
-        DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'\n",
+        DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'",
             r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
             r_response.c_str(), r_username.c_str(), r_uri.c_str(), r_cnonce.c_str() );
 
         if(r_response.size() != HASHHEXLEN) {
-            DBG("Auth: response length mismatch (wanted %u hex chars): '%s'\n", HASHHEXLEN, r_response.c_str());
+            DBG("Auth: response length mismatch (wanted %u hex chars): '%s'", HASHHEXLEN, r_response.c_str());
             internal_code = UACAuthResponseLength;
             internal_reason = "Response length mismatch";
             goto auth_end;
         }
 
         if(realm != r_challenge.realm) {
-            DBG("Auth: realm mismatch: required '%s' vs '%s'\n", realm.c_str(), r_challenge.realm.c_str());
+            DBG("Auth: realm mismatch: required '%s' vs '%s'", realm.c_str(), r_challenge.realm.c_str());
             internal_code = UACAuthRealmMismatch;
             internal_reason = "Realm mismatch";
             goto auth_end;
         }
 
         if(user != r_username) {
-            DBG("Auth: user mismatch: '%s' vs '%s'\n", user.c_str(), r_username.c_str());
+            DBG("Auth: user mismatch: '%s' vs '%s'", user.c_str(), r_username.c_str());
             internal_code = UACAuthUserMismatch;
             internal_reason = "User mismatch";
             goto auth_end;
@@ -990,12 +990,12 @@ void UACAuth::checkAuthentication(
 
         nonce_check_result_t ret = checkNonce(r_challenge.nonce);
         if(ret == NCR_WRONG) {
-            DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
+            DBG("Auth: incorrect nonce '%s'", r_challenge.nonce.c_str());
             internal_code = UACAuthNonceIncorrect;
             internal_reason = "Incorrect nonce";
             goto auth_end;
         } else if(ret == NCR_EXPIRED) {
-            DBG("Auth: nonce '%s' expired\n", r_challenge.nonce.c_str());
+            DBG("Auth: nonce '%s' expired", r_challenge.nonce.c_str());
             internal_code = UACAuthNonceExpired;
             internal_reason = "Nonce expired";
             goto auth_end;
@@ -1003,7 +1003,7 @@ void UACAuth::checkAuthentication(
 
         // we don't check the URI
         // if (r_uri != req->r_uri) {
-        //   DBG("Auth: incorrect URI in request: '%s'\n", r_challenge.nonce.c_str());
+        //   DBG("Auth: incorrect URI in request: '%s'", r_challenge.nonce.c_str());
         //   goto auth_end;
         // }
 
@@ -1031,13 +1031,13 @@ void UACAuth::checkAuthentication(
                 // get nonce count from request
                 string nonce_count_str = r_challenge.find_attribute("nc");
                 if(hex2int(nonce_count_str, client_nonce_count)) {
-                    DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
+                    DBG("Error parsing nonce_count '%s'", nonce_count_str.c_str());
                     internal_code = UACAuthNonceCountParse;
                     internal_reason = "Error parsing nonce_count";
                     goto auth_end;
                 }
 
-                DBG("got client_nonce_count %u\n", client_nonce_count);
+                DBG("got client_nonce_count %u", client_nonce_count);
 
                 // auth-int? calculate hentity
                 if(qop_auth_int) {
@@ -1058,11 +1058,11 @@ void UACAuth::checkAuthentication(
         DBG("calculated our response vs request: '%s' vs '%s'", response, r_response.c_str());
 
         if(tc_isequal((const char*)response, r_response.c_str(), HASHHEXLEN)) {
-            DBG("Auth: authentication successfull\n");
+            DBG("Auth: authentication successfull");
             internal_reason = "Response matched";
             authenticated = true;
         } else {
-            DBG("Auth: authentication NOT successfull\n");
+            DBG("Auth: authentication NOT successfull");
             internal_code = UACAuthResponseNotMatched;
             internal_reason = "Response NOT matched";
         }
@@ -1099,7 +1099,7 @@ void UACAuth::checkAuthenticationByHA1(
 {
     if(req->method == SIP_METH_ACK || req->method == SIP_METH_CANCEL)
     {
-        DBG("letting pass %s request without authentication\n", req->method.c_str());
+        DBG("letting pass %s request without authentication", req->method.c_str());
         ret.push(200);
         ret.push("OK");
         ret.push("");
@@ -1122,37 +1122,37 @@ void UACAuth::checkAuthenticationByHA1(
         string r_uri = r_challenge.find_attribute("uri");
         string r_cnonce = r_challenge.find_attribute("cnonce");
 
-        DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'\n",
+        DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'",
             r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
             r_response.c_str(), r_username.c_str(), r_uri.c_str(), r_cnonce.c_str() );
 
         if(r_response.size() != HASHHEXLEN) {
-            DBG("Auth: response length mismatch (wanted %u hex chars): '%s'\n", HASHHEXLEN, r_response.c_str());
+            DBG("Auth: response length mismatch (wanted %u hex chars): '%s'", HASHHEXLEN, r_response.c_str());
             goto auth_end;
         }
 
         if(realm != r_challenge.realm) {
-            DBG("Auth: realm mismatch: required '%s' vs '%s'\n", realm.c_str(), r_challenge.realm.c_str());
+            DBG("Auth: realm mismatch: required '%s' vs '%s'", realm.c_str(), r_challenge.realm.c_str());
             goto auth_end;
         }
 
         if(user != r_username) {
-            DBG("Auth: user mismatch: '%s' vs '%s'\n", user.c_str(), r_username.c_str());
+            DBG("Auth: user mismatch: '%s' vs '%s'", user.c_str(), r_username.c_str());
             goto auth_end;
         }
 
         nonce_check_result_t ret = checkNonce(r_challenge.nonce);
         if(ret == NCR_WRONG) {
-            DBG("Auth: incorrect nonce '%s'\n", r_challenge.nonce.c_str());
+            DBG("Auth: incorrect nonce '%s'", r_challenge.nonce.c_str());
             goto auth_end;
         } else if(ret == NCR_EXPIRED) {
-            DBG("Auth: nonce '%s' expired\n", r_challenge.nonce.c_str());
+            DBG("Auth: nonce '%s' expired", r_challenge.nonce.c_str());
             goto auth_end;
         }
 
         // we don't check the URI
         // if (r_uri != req->r_uri) {
-        //   DBG("Auth: incorrect URI in request: '%s'\n", r_challenge.nonce.c_str());
+        //   DBG("Auth: incorrect URI in request: '%s'", r_challenge.nonce.c_str());
         //   goto auth_end;
         // }
 
@@ -1178,11 +1178,11 @@ void UACAuth::checkAuthenticationByHA1(
                 // get nonce count from request
                 string nonce_count_str = r_challenge.find_attribute("nc");
                 if(hex2int(nonce_count_str, client_nonce_count)) {
-                    DBG("Error parsing nonce_count '%s'\n", nonce_count_str.c_str());
+                    DBG("Error parsing nonce_count '%s'", nonce_count_str.c_str());
                     goto auth_end;
                 }
 
-                DBG("got client_nonce_count %u\n", client_nonce_count);
+                DBG("got client_nonce_count %u", client_nonce_count);
 
                 // auth-int? calculate hentity
                 if(qop_auth_int){
@@ -1202,10 +1202,10 @@ void UACAuth::checkAuthenticationByHA1(
         DBG("calculated our response vs request: '%s' vs '%s'", response, r_response.c_str());
 
         if(!strncmp((const char*)response, r_response.c_str(), HASHHEXLEN)) {
-            DBG("Auth: authentication successfull\n");
+            DBG("Auth: authentication successfull");
             authenticated = true;
         } else {
-            DBG("Auth: authentication NOT successfull\n");
+            DBG("Auth: authentication NOT successfull");
         }
     }
 

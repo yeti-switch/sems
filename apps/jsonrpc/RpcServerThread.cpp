@@ -58,7 +58,7 @@ void RpcServerThread::run() {
 }
 
 void RpcServerThread::on_stop() {
-  INFO("TODO: stop server thread\n");
+  INFO("TODO: stop server thread");
   ev_pending.set(true);
   is_stop.set(true);
   join();
@@ -67,7 +67,7 @@ void RpcServerThread::on_stop() {
 void RpcServerThread::process(AmEvent* event) {
   JsonServerEvent* server_event = dynamic_cast<JsonServerEvent*>(event);
   if (server_event == NULL) {
-    ERROR("invalid event to process\n");
+    ERROR("invalid event to process");
     return;
   }
   JsonrpcNetstringsConnection* connection = server_event->conn;
@@ -79,17 +79,17 @@ void RpcServerThread::process(AmEvent* event) {
       dynamic_cast<JsonServerSendMessageEvent*>(server_event);
 
     if (NULL == snd_msg_ev) {
-      ERROR("wrong event type received\n");
+      ERROR("wrong event type received");
       return;
     }
 
     if (NULL == connection) {
-      DBG("getting connection for id %s\n", snd_msg_ev->connection_id.c_str());
+      DBG("getting connection for id %s", snd_msg_ev->connection_id.c_str());
       JsonrpcPeerConnection* js_connection = JsonRPCServerLoop::getConnection(snd_msg_ev->connection_id);
       if ((NULL == js_connection) || 
 	  (NULL == 
 	   (connection = dynamic_cast<JsonrpcNetstringsConnection*>(js_connection))))  {
-	ERROR("getting connection for id %s - message will not be sent\n",
+	ERROR("getting connection for id %s - message will not be sent",
 	      snd_msg_ev->connection_id.c_str());
 	return;
       }
@@ -100,7 +100,7 @@ void RpcServerThread::process(AmEvent* event) {
 				       snd_msg_ev->params, connection,
 				       snd_msg_ev->udata,
 				       snd_msg_ev->id.empty())) {
-	ERROR("creating request\n");
+	ERROR("creating request");
 	// give back connection into server loop
 	JsonRPCServerLoop::returnConnection(connection);
 	return;
@@ -121,11 +121,11 @@ void RpcServerThread::process(AmEvent* event) {
 
   int res = 0;
   if (connection->messagePending() && connection->messageIsRecv()) {
-    DBG("processing message >%.*s<\n", connection->msg_size, connection->msgbuf);
+    DBG("processing message >%.*s<", connection->msg_size, connection->msgbuf);
     res = JsonRpcServer::processMessage(connection->msgbuf, &connection->msg_size, 
 					connection);
     if (res<0) {
-      INFO("error processing message - closing connection\n");
+      INFO("error processing message - closing connection");
       connection->close();
       connection->notifyDisconnect();
       JsonRPCServerLoop::removeConnection(connection->id);
@@ -137,10 +137,10 @@ void RpcServerThread::process(AmEvent* event) {
     processed_message = true;
   }
 
-  DBG("connection->messagePending() = %s\n", connection->messagePending()?"true":"false");
+  DBG("connection->messagePending() = %s", connection->messagePending()?"true":"false");
 
   if (connection->messagePending() && !connection->messageIsRecv()) {
-    DBG("calling write\n");
+    DBG("calling write");
     res = connection->netstringsBlockingWrite();
     if (res == JsonrpcNetstringsConnection::REMOVE) {
       connection->notifyDisconnect();
@@ -152,7 +152,7 @@ void RpcServerThread::process(AmEvent* event) {
 
   if (processed_message && 
       (connection->flags & JsonrpcPeerConnection::FL_CLOSE_ALWAYS)) {
-    DBG("closing connection marked as FL_CLOSE_ALWAYS\n");
+    DBG("closing connection marked as FL_CLOSE_ALWAYS");
     connection->close();
     connection->notifyDisconnect(); // ??
     JsonRPCServerLoop::removeConnection(connection->id);
@@ -172,7 +172,7 @@ RpcServerThreadpool::RpcServerThreadpool() {
   // one thread is started here so that 
   // in app initialization code, there is already
   // a server thread available to receive events 
-  DBG("starting one server thread for startup requests...\n");
+  DBG("starting one server thread for startup requests...");
   addThreads(1);
 }
 
@@ -183,7 +183,7 @@ RpcServerThreadpool::~RpcServerThreadpool() {
 void RpcServerThreadpool::dispatch(AmEvent* ev) {
   threads_mut.lock();
   if (!threads.size()) {
-    ERROR("no threads started for Rpc servers\n");
+    ERROR("no threads started for Rpc servers");
     delete ev;
     threads_mut.unlock();
     return;
@@ -199,7 +199,7 @@ void RpcServerThreadpool::dispatch(AmEvent* ev) {
 }
 
 void RpcServerThreadpool::addThreads(unsigned int cnt) {
-  DBG("adding %u RPC server threads\n", cnt);
+  DBG("adding %u RPC server threads", cnt);
   threads_mut.lock();
   for (unsigned int i=0;i<cnt;i++) {
     RpcServerThread* thr = new RpcServerThread();
@@ -211,7 +211,7 @@ void RpcServerThreadpool::addThreads(unsigned int cnt) {
 }
 
 void RpcServerThreadpool::cleanup() {
-  DBG("cleanup RPC server threads %lu\n", threads.size());
+  DBG("cleanup RPC server threads %lu", threads.size());
     threads_mut.lock();
     for(auto thread : threads) {
         thread->stop();

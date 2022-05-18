@@ -92,13 +92,13 @@ void DSMFactory::postEvent(AmEvent* e) {
   AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(e);  
   if (sys_ev && 
       sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-    DBG("stopping DSM...\n");
+    DBG("stopping DSM...");
     preload_reader.cleanup();
     AmEventDispatcher::instance()->delEventQueue("dsm");
     return;
   }
 
-  WARN("received unknown event\n");
+  WARN("received unknown event");
 }
 
 DSMFactory::~DSMFactory() {
@@ -170,9 +170,9 @@ int DSMFactory::onLoad()
   for (vector<string>::iterator it=system_dsms.begin(); it != system_dsms.end(); it++) {
     string status;
     if (createSystemDSM("main", *it, false /* reload */, status)) {
-      DBG("created SystemDSM '%s'\n", it->c_str());
+      DBG("created SystemDSM '%s'", it->c_str());
     } else {
-      ERROR("creating system DSM '%s': '%s'\n", it->c_str(), status.c_str());
+      ERROR("creating system DSM '%s': '%s'", it->c_str(), status.c_str());
       return -1;
     }
   }
@@ -180,12 +180,12 @@ int DSMFactory::onLoad()
 #ifdef USE_MONITORING
   string monitoring_full_callgraph = cfg.getParameter("monitoring_full_stategraph");
   MonitoringFullCallgraph = monitoring_full_callgraph == "yes";
-  DBG("%sogging full call graph (states) to monitoring.\n",
+  DBG("%sogging full call graph (states) to monitoring.",
       MonitoringFullCallgraph?"L":"Not l");
 
   string monitoring_full_transitions = cfg.getParameter("monitoring_full_transitions");
   MonitoringFullTransitions = monitoring_full_transitions == "yes";
-  DBG("%sogging full call graph (transitions) to monitoring.\n",
+  DBG("%sogging full call graph (transitions) to monitoring.",
       MonitoringFullTransitions?"L":"Not l");
 
   string cfg_usecaller = cfg.getParameter("monitor_select_use_caller");
@@ -196,7 +196,7 @@ int DSMFactory::onLoad()
   else if (cfg_usecaller=="pai") 
     MonSelectCaller = MonSelect_PAI;
   else {
-    ERROR("monitor_select_use_caller value '%s' not understood\n",
+    ERROR("monitor_select_use_caller value '%s' not understood",
 	  cfg_usecaller.c_str());
   }
 
@@ -208,7 +208,7 @@ int DSMFactory::onLoad()
   else if (cfg_usecallee=="from") 
     MonSelectCallee = MonSelect_FROM;
   else {
-    ERROR("monitor_select_use_callee value '%s' not understood\n",
+    ERROR("monitor_select_use_callee value '%s' not understood",
 	  cfg_usecallee.c_str());
   }
 
@@ -221,10 +221,10 @@ int DSMFactory::onLoad()
     filters+=*it;
   }
   if (MonSelectFilters.size()) {
-    DBG("using additional monitor app select filters: %s\n", 
+    DBG("using additional monitor app select filters: %s", 
 	filters.c_str());
   } else {
-    DBG("not using additional monitor app select filters\n");
+    DBG("not using additional monitor app select filters");
   }
   MonSelectFallback = cfg.getParameter("monitor_select_fallback");
 #endif
@@ -234,13 +234,13 @@ int DSMFactory::onLoad()
     if (conf_d_dir[conf_d_dir.length()-1] != '/')
       conf_d_dir += '/';
 
-    DBG("processing configurations in '%s'...\n", conf_d_dir.c_str());
+    DBG("processing configurations in '%s'...", conf_d_dir.c_str());
     int err=0;
     struct dirent* entry;
     DIR* dir = opendir(conf_d_dir.c_str());
     
     if(!dir){
-      INFO("DSM config files loader (%s): %s\n",
+      INFO("DSM config files loader (%s): %s",
 	    conf_d_dir.c_str(), strerror(errno));
     } else {
       while( ((entry = readdir(dir)) != NULL) && (err == 0) ){
@@ -252,7 +252,7 @@ int DSMFactory::onLoad()
         
 	string conf_file_name = conf_d_dir + conf_name;
 	
-	DBG("loading %s ...\n",conf_file_name.c_str());
+	DBG("loading %s ...",conf_file_name.c_str());
 	if (!loadConfig(conf_file_name, conf_name, false, NULL)) 
 	  return -1;
 
@@ -263,10 +263,10 @@ int DSMFactory::onLoad()
 
   if(cfg.hasParameter("enable_session_timer") &&
      (cfg.getParameter("enable_session_timer") == string("yes")) ){
-    DBG("enabling session timers\n");
+    DBG("enabling session timers");
     session_timer_f = AmPlugIn::instance()->getFactory4Seh("session_timer");
     if(session_timer_f == NULL){
-      ERROR("Could not load the session_timer module: disabling session timers.\n");
+      ERROR("Could not load the session_timer module: disabling session timers.");
     }
   }
 
@@ -279,7 +279,7 @@ bool DSMFactory::loadPrompts(AmConfigReader& cfg) {
     explode(cfg.getParameter("load_prompts"), ",");
   for (vector<string>::iterator it=
 	 prompts_files.begin(); it != prompts_files.end(); it++) {
-    DBG("loading prompts from '%s'\n", it->c_str());
+    DBG("loading prompts from '%s'", it->c_str());
     std::ifstream ifs(it->c_str());
     string s;
     while (ifs.good() && !ifs.eof()) {
@@ -289,7 +289,7 @@ bool DSMFactory::loadPrompts(AmConfigReader& cfg) {
         vector<string> p=explode(s, "=");
 	if (p.size()==2) {
 	  prompts.setPrompt(p[0], p[1], MOD_NAME);
-	  DBG("added prompt '%s' as '%s'\n", 
+	  DBG("added prompt '%s' as '%s'", 
 	      p[0].c_str(), p[1].c_str());
 	}
       }
@@ -303,7 +303,7 @@ bool DSMFactory::loadPrompts(AmConfigReader& cfg) {
   for (vector<string>::iterator it=required_prompts.begin(); 
        it != required_prompts.end(); it++) {
     if (!prompts.hasPrompt(*it)) {
-      ERROR("required prompt '%s' not loaded.\n",
+      ERROR("required prompt '%s' not loaded.",
 	    it->c_str());
       has_all_prompts = false;
     }
@@ -323,11 +323,11 @@ bool DSMFactory::loadPromptSets(AmConfigReader& cfg) {
 	 prompt_sets_names.begin(); it != prompt_sets_names.end(); it++) {
     string fname = prompt_sets_path.empty() ? "": prompt_sets_path + "/";
     fname += *it;
-    DBG("loading prompts for '%s' (file '%s')\n", it->c_str(), fname.c_str());
+    DBG("loading prompts for '%s' (file '%s')", it->c_str(), fname.c_str());
     std::ifstream ifs(fname.c_str());
     string s;
     if (!ifs.good()) {
-      WARN("prompts set file '%s' could not be read\n", fname.c_str());
+      WARN("prompts set file '%s' could not be read", fname.c_str());
     }
     AmPromptCollection* pc = new AmPromptCollection();
     while (ifs.good() && !ifs.eof()) {
@@ -337,7 +337,7 @@ bool DSMFactory::loadPromptSets(AmConfigReader& cfg) {
         vector<string> p=explode(s, "=");
 	if (p.size()==2) {
 	  pc->setPrompt(p[0], p[1], MOD_NAME);
-	  DBG("set '%s' added prompt '%s' as '%s'\n", 
+	  DBG("set '%s' added prompt '%s' as '%s'", 
 	      it->c_str(), p[0].c_str(), p[1].c_str());
 	}
       }
@@ -357,7 +357,7 @@ bool DSMFactory::loadDiags(AmConfigReader& cfg, DSMStateDiagramCollection* m_dia
   string err;
   int res = preloadModules(cfg, err, ModPath);
   if (res<0) {
-    ERROR("%s\n", err.c_str());
+    ERROR("%s", err.c_str());
     return false;
   }
 
@@ -368,7 +368,7 @@ bool DSMFactory::loadDiags(AmConfigReader& cfg, DSMStateDiagramCollection* m_dia
   for (vector<string>::iterator it=
 	 diags_names.begin(); it != diags_names.end(); it++) {
     if (!m_diags->loadFile(DiagPath+*it+".dsm", *it, DiagPath, ModPath, DebugDSM, CheckDSM)) {
-      ERROR("loading %s from %s\n", 
+      ERROR("loading %s from %s", 
 	    it->c_str(), (DiagPath+*it+".dsm").c_str());
       return false;
     }
@@ -386,10 +386,10 @@ bool DSMFactory::registerApps(AmConfigReader& cfg, DSMStateDiagramCollection* m_
     if (m_diags->hasDiagram(*it)) {
       bool res = AmPlugIn::instance()->registerFactory4App(*it,this);
       if(res)
-	INFO("DSM state machine registered: %s.\n",
+	INFO("DSM state machine registered: %s.",
 	     it->c_str());
     } else {
-      ERROR("trying to register application '%s' which is not loaded.\n",
+      ERROR("trying to register application '%s' which is not loaded.",
 	    it->c_str());
       return false;
     }
@@ -415,7 +415,7 @@ bool DSMFactory::loadConfig(const string& conf_file_name, const string& conf_nam
 			    bool live_reload, DSMStateDiagramCollection* m_diags) {
 
   string script_name = conf_name.substr(0, conf_name.length()-5); // - .conf
-  DBG("loading %s from %s ...\n", script_name.c_str(), conf_file_name.c_str());
+  DBG("loading %s from %s ...", script_name.c_str(), conf_file_name.c_str());
   AmConfigReader cfg;
   if(cfg.loadFile(conf_file_name))
     return false;
@@ -430,8 +430,8 @@ bool DSMFactory::loadConfig(const string& conf_file_name, const string& conf_nam
   script_config.config_vars.insert(cfg.begin(), cfg.end());
 
   if (live_reload) {
-    INFO("live DSM config reload does NOT reload prompts and prompt sets!\n");
-    INFO("(see http://tracker.iptel.org/browse/SEMS-68)\n");
+    INFO("live DSM config reload does NOT reload prompts and prompt sets!");
+    INFO("(see http://tracker.iptel.org/browse/SEMS-68)");
   } else {
     if (!loadPrompts(cfg))
       return false;
@@ -487,7 +487,7 @@ bool DSMFactory::loadConfig(const string& conf_file_name, const string& conf_nam
     string status;
     if (createSystemDSM(script_name, *it, live_reload, status)) {
     } else {
-      ERROR("creating system DSM '%s': '%s'\n", it->c_str(), status.c_str());
+      ERROR("creating system DSM '%s': '%s'", it->c_str(), status.c_str());
       res = false;
     }
   }
@@ -509,7 +509,7 @@ void DSMFactory::setupSessionTimer(AmSession* s) {
       return;
 
     if(h->configure(cfg)){
-      ERROR("Could not configure the session timer: disabling session timers.\n");
+      ERROR("Could not configure the session timer: disabling session timers.");
       delete h;
     } else {
       s->addHandler(h);
@@ -563,14 +563,14 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
   if (MonSelectFallback.empty()) {					\
     throw AmSession::Exception(code, reason);				\
   } else {								\
-    DBG("falling back to '%s'\n", MonSelectFallback.c_str());		\
+    DBG("falling back to '%s'", MonSelectFallback.c_str());		\
     start_diag = MonSelectFallback;					\
     return;								\
   }
 
 #ifdef USE_MONITORING
       if (NULL == MONITORING_GLOBAL_INTERFACE) {
-	ERROR("using $(mon_select) but monitoring not loaded\n");
+	ERROR("using $(mon_select) but monitoring not loaded");
 	FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
       }
 
@@ -583,21 +583,21 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
 	  size_t end;
 	  string pai = getHeader(req.hdrs, SIP_HDR_P_ASSERTED_IDENTITY, true);
 	  if (!from_parser.parse_contact(pai, 0, end)) {
-	    WARN("Failed to parse " SIP_HDR_P_ASSERTED_IDENTITY " '%s'\n",
+	    WARN("Failed to parse " SIP_HDR_P_ASSERTED_IDENTITY " '%s'",
 		  pai.c_str());
 	    FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
 	  }
 	}
 
 	if (!from_parser.parse_uri()) {
-	  DBG("failed to parse caller uri '%s'\n", from_parser.uri.c_str());
+	  DBG("failed to parse caller uri '%s'", from_parser.uri.c_str());
 	  FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
 	}
 	
 	AmArg caller_filter;
 	caller_filter.push("caller");
 	caller_filter.push(from_parser.uri_user);
-	DBG(" && looking for caller=='%s'\n", from_parser.uri_user.c_str());
+	DBG(" && looking for caller=='%s'", from_parser.uri_user.c_str());
 	di_args.push(caller_filter);
       }
 
@@ -611,17 +611,17 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
 	  AmUriParser to_parser;
 	  size_t end;
 	  if (!to_parser.parse_contact(req.to, 0, end)) {
-	    ERROR("Failed to parse To '%s'\n", req.to.c_str());
+	    ERROR("Failed to parse To '%s'", req.to.c_str());
 	    FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
 	  }
 	  if (!to_parser.parse_uri()) {
-	    DBG("failed to parse callee uri '%s'\n", to_parser.uri.c_str());
+	    DBG("failed to parse callee uri '%s'", to_parser.uri.c_str());
 	    FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
 	  }
 	  callee_filter.push(to_parser.uri_user);
 	}
 	  
-	DBG(" && looking for callee=='%s'\n", req.user.c_str());
+	DBG(" && looking for callee=='%s'", req.user.c_str());
 	di_args.push(callee_filter);
       }
       // apply additional filters
@@ -634,7 +634,7 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
 	  string app_param_val = get_header_keyvalue(app_params, *it);
 	  filter.push(app_param_val);
 	  di_args.push(filter);
-	  DBG(" && looking for %s=='%s'\n", it->c_str(), app_param_val.c_str());
+	  DBG(" && looking for %s=='%s'", it->c_str(), app_param_val.c_str());
 	}
       }
 
@@ -642,14 +642,14 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
       
       if ((ret.getType()!=AmArg::Array)||
 	  !ret.size()) {
-	DBG("call info not found. caller uri %s, r-uri %s\n", 
+	DBG("call info not found. caller uri %s, r-uri %s", 
 	     req.from_uri.c_str(), req.r_uri.c_str());
 	FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
       }
 
       AmArg sess_id, sess_params;
       if (ret.size()>1) {
-	DBG("multiple call info found - picking the first one\n");
+	DBG("multiple call info found - picking the first one");
       }
       const char* session_id = ret.get(0).asCStr();
       sess_id.push(session_id);
@@ -658,7 +658,7 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
       if ((sess_params.getType()!=AmArg::Array)||
 	  !sess_params.size() ||
 	  sess_params.get(0).getType() != AmArg::Struct) {
-	INFO("call parameters not found. caller uri %s, r-uri %s, id %s\n", 
+	INFO("call parameters not found. caller uri %s, r-uri %s, id %s", 
 	     req.from_uri.c_str(), req.r_uri.c_str(), ret.get(0).asCStr());
 	FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
       }
@@ -666,9 +666,9 @@ void DSMFactory::runMonitorAppSelect(const AmSipRequest& req, string& start_diag
       AmArg& sess_dict = sess_params.get(0);
       if (sess_dict.hasMember("app")) {
 	start_diag = sess_dict["app"].asCStr();
-	DBG("selected application '%s' for session\n", start_diag.c_str());
+	DBG("selected application '%s' for session", start_diag.c_str());
       } else {
-	ERROR("selected session params don't contain 'app'\n");
+	ERROR("selected session params don't contain 'app'");
 	FALLBACK_OR_EXCEPTION(500, "Internal Server Error");
       }
       AmArg2DSMStrMap(sess_dict["appParams"], vars);
@@ -691,7 +691,7 @@ AmSession* DSMFactory::onInvite(const AmSipRequest& req, const string& app_name,
 
   if (app_name == MOD_NAME) {
     if (InboundStartDiag.empty()) {
-      ERROR("no inbound calls allowed\n");
+      ERROR("no inbound calls allowed");
       throw AmSession::Exception(488, "Not Acceptable Here");
     }
     if (InboundStartDiag=="$(mon_select)") {
@@ -703,7 +703,7 @@ AmSession* DSMFactory::onInvite(const AmSipRequest& req, const string& app_name,
     start_diag = app_name;
   }
 
-  DBG("start_diag = %s\n",start_diag.c_str());
+  DBG("start_diag = %s",start_diag.c_str());
 
   // determine run configuration for script
   DSMScriptConfig call_config;
@@ -739,7 +739,7 @@ AmSession* DSMFactory::onInvite(const AmSipRequest& req, const string& app_name,
 
   if (app_name == MOD_NAME) {
     if (OutboundStartDiag.empty()) {
-      ERROR("no outbound calls allowed\n");
+      ERROR("no outbound calls allowed");
       throw AmSession::Exception(488, "Not Acceptable Here");
     }
   } else {
@@ -754,7 +754,7 @@ AmSession* DSMFactory::onInvite(const AmSipRequest& req, const string& app_name,
     if (cred_obj)
       cred = dynamic_cast<UACAuthCred*>(cred_obj);
   } else if (session_params.getType() == AmArg::Array) {
-    DBG("session params is array - size %zd\n", session_params.size());
+    DBG("session params is array - size %zd", session_params.size());
     // Creds
     cred = AmUACAuth::unpackCredentials(session_params.get(0));
     // Creds + vars
@@ -789,7 +789,7 @@ AmSession* DSMFactory::onInvite(const AmSipRequest& req, const string& app_name,
     addParams(s, req.hdrs); 
 
   if (NULL == cred) {
-    DBG("outgoing DSM call will not be authenticated.\n");
+    DBG("outgoing DSM call will not be authenticated.");
   } else {
     AmUACAuth::enable(s);
   }
@@ -852,7 +852,7 @@ void DSMFactory::reloadDSMs(const AmArg& args, AmArg& ret) {
 	 diags_names.begin(); it != diags_names.end(); it++) {
     if (!new_diags->loadFile(DiagPath+*it+".dsm", *it, DiagPath, ModPath,
 			     DebugDSM, CheckDSM)) {
-      ERROR("loading %s from %s\n", 
+      ERROR("loading %s from %s", 
 	    it->c_str(), (DiagPath+*it+".dsm").c_str());
       ret.push(500);
       ret.push("loading " +*it+ " from "+ DiagPath+*it+".dsm");
@@ -875,7 +875,7 @@ int DSMFactory::preloadModules(AmConfigReader& cfg, string& res, const string& M
   if (preload_names.size()) {
     for (vector<string>::iterator it=
 	   preload_names.begin(); it != preload_names.end(); it++) {
-      DBG("preloading '%s'...\n", it->c_str());
+      DBG("preloading '%s'...", it->c_str());
       if (!preload_reader.importModule("import("+*it+")", ModPath)) {
 	res = "importing module '"+*it+"' for preload\n";
 	return -1;
@@ -1023,7 +1023,7 @@ void DSMFactory::registerApplication(const AmArg& args, AmArg& ret) {
 
   bool res = AmPlugIn::instance()->registerFactory4App(diag_name,this);
   if(res) {
-    INFO("DSM state machine registered: %s.\n",diag_name.c_str());
+    INFO("DSM state machine registered: %s.",diag_name.c_str());
     ret.push(200);
     ret.push("registered DSM application");    
   } else {

@@ -33,7 +33,7 @@ int MWI::onLoad()
     AmPlugIn::instance()->getFactory4Di("msg_storage");
 
   if(!ms_fact || !(MessageStorage = ms_fact->getInstance())) {
-    ERROR("could not load msg_storage. Load a msg_storage implementation module.\n");
+    ERROR("could not load msg_storage. Load a msg_storage implementation module.");
     return -1;
   };
 
@@ -45,19 +45,19 @@ int MWI::onLoad()
   
   AmConfigReader cfg;
   if(cfg.loadFile(AmConfig.configs_path + "mwi.conf")) {
-    ERROR("can not load configuration file\n");
+    ERROR("can not load configuration file");
     return -1;
   };
   
   presence_server = cfg.getParameter("presence_server");
   if (presence_server.length())
-    DBG("set presence server '%s'\n", presence_server.c_str());
+    DBG("set presence server '%s'", presence_server.c_str());
   else {
-    ERROR("parameter 'presence_server' did not found in the configuration file\n");
+    ERROR("parameter 'presence_server' did not found in the configuration file");
     return -1;
   }                
   
-  DBG("MWI module loaded.\n");
+  DBG("MWI module loaded.");
   return 0;
 };
 
@@ -75,7 +75,7 @@ void MWI::publish(const string& user, const string& domain)
   MessageStorage->invoke("userdir_open",di_args,ret);
     
   if (!ret.size() || !isArgInt(ret.get(0))) {
-    ERROR("userdir_open for user '%s' domain '%s' returned no (valid) result.\n", user.c_str(), domain.c_str());
+    ERROR("userdir_open for user '%s' domain '%s' returned no (valid) result.", user.c_str(), domain.c_str());
     return;
   };
     
@@ -89,7 +89,7 @@ void MWI::publish(const string& user, const string& domain)
       all_msgs--;
   };
                                                   
-  DBG("Found %d new and %d old messages\n", new_msgs, all_msgs - new_msgs);
+  DBG("Found %d new and %d old messages", new_msgs, all_msgs - new_msgs);
   string vm_buf = int2str(new_msgs) + "/" + int2str(all_msgs - new_msgs);
 
   headers = "Event: message-summary\r\n";

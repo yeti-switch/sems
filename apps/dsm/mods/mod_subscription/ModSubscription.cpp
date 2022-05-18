@@ -66,11 +66,11 @@ EXEC_ACTION_START(SIPSUBCreateAction) {
   string handle = AmSipSubscriptionContainer::instance()->
     createSubscription(info, sess->getLocalTag(), expires);
 
-  DBG("got handle '%s'\n", handle.c_str());
+  DBG("got handle '%s'", handle.c_str());
   sc_sess->var[params_s+".handle"] = handle;
   if (handle.empty()) {
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("could not create subscription\n");
+    sc_sess->SET_STRERROR("could not create subscription");
   } else {
     sc_sess->CLR_ERRNO;
   }
@@ -86,10 +86,10 @@ EXEC_ACTION_START(SIPSUBRefreshAction) {
   if (!expires.empty())
     str2i(expires, expires_i);
 
-  DBG("refreshing subscription with handle '%s'\n", handle.c_str());
+  DBG("refreshing subscription with handle '%s'", handle.c_str());
   if (!AmSipSubscriptionContainer::instance()->refreshSubscription(handle, expires_i)) {
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
-    sc_sess->SET_STRERROR("could not refresh subscription\n");
+    sc_sess->SET_STRERROR("could not refresh subscription");
   } else {
     sc_sess->CLR_ERRNO;
   }
@@ -97,6 +97,6 @@ EXEC_ACTION_START(SIPSUBRefreshAction) {
 
 EXEC_ACTION_START(SIPSUBRemoveAction) {
   string handle = resolveVars(arg, sess, sc_sess, event_params);
-  DBG("removing subscription with handle '%s'\n", handle.c_str());
+  DBG("removing subscription with handle '%s'", handle.c_str());
   AmSipSubscriptionContainer::instance()->removeSubscription(handle);
 } EXEC_ACTION_END;

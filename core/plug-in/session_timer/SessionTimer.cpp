@@ -96,7 +96,7 @@ bool SessionTimer::process(AmEvent* ev)
   if (timeout_ev) {
     if (timeout_ev->data.get(0).asInt() >= ID_SESSION_TIMER_TIMERS_START &&
 	timeout_ev->data.get(0).asInt() <=ID_SESSION_TIMER_TIMERS_END) {
-      DBG("received timeout Event with ID %d\n", timeout_ev->data.get(0).asInt());
+      DBG("received timeout Event with ID %d", timeout_ev->data.get(0).asInt());
       onTimeoutEvent(timeout_ev);
     }
     return true;
@@ -124,7 +124,7 @@ bool SessionTimer::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
     string min_se_hdr = getHeader(reply.hdrs, SIP_HDR_MIN_SE, true);
     if (!min_se_hdr.empty()) {
       if (str2i(strip_header_params(min_se_hdr), i_minse)) {
-	WARN("error while parsing " SIP_HDR_MIN_SE " header value '%s'\n",
+	WARN("error while parsing " SIP_HDR_MIN_SE " header value '%s'",
 	     strip_header_params(min_se_hdr).c_str());
       } else {
 	
@@ -133,7 +133,7 @@ bool SessionTimer::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 	  unsigned int new_cseq = s->dlg->cseq;
 	  // resend request with interval i_minse
 	  if (s->dlg->sendRequest(req.method, &req.body,req.hdrs) == 0) {
-	    DBG("request with new Session Interval %u successfully sent.\n", i_minse);
+	    DBG("request with new Session Interval %u successfully sent.", i_minse);
 	    // undo SIP dialog status change
 	    if (s->dlg->getStatus() != old_dlg_status)
 	      s->dlg->setStatus(old_dlg_status);
@@ -142,10 +142,10 @@ bool SessionTimer::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 	    // processed
 	    return true;
 	  } else {
-	    ERROR("failed to send request with new Session Interval.\n");
+	    ERROR("failed to send request with new Session Interval.");
 	  }
 	} else {
-	  DBG("other side requests too high Min-SE: %u (our limit %u)\n",
+	  DBG("other side requests too high Min-SE: %u (our limit %u)",
 	      i_minse, session_timer_conf.getMaximumTimer());
 	}
       }
@@ -171,7 +171,7 @@ bool SessionTimer::onSendRequest(AmSipRequest& req, int& flags)
   // if (session_timer_conf.getEnableSessionTimer() &&
   //     ((req.method == SIP_METH_INVITE) || (req.method == SIP_METH_UPDATE))) {
     // save INVITE and UPDATE so we can resend on 422 reply
-    // DBG("adding %d to list of sent requests.\n", req.cseq);
+    // DBG("adding %d to list of sent requests.", req.cseq);
     // sent_requests[req.cseq] = SIPRequestInfo(req.method,
     // 					     &req.body,
     // 					     req.hdrs);
@@ -265,7 +265,7 @@ bool SessionTimerFactory::checkSessionExpires(const AmSipRequest& req, AmConfigR
 				   int2str(sst_cfg.getMinimumTimer())+CRLF);
       }
     } else {
-      WARN("parsing session expires '%s' failed\n", session_expires.c_str());
+      WARN("parsing session expires '%s' failed", session_expires.c_str());
       throw AmSession::Exception(400,"Bad Request");
     }
   }
@@ -290,7 +290,7 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipRequest& req) {
     if (!sess_expires_hdr.empty()) {
       if (str2i(strip_header_params(sess_expires_hdr),
 		rem_sess_expires)) {
-	WARN("error while parsing " SIP_HDR_SESSION_EXPIRES " header value '%s'\n",
+	WARN("error while parsing " SIP_HDR_SESSION_EXPIRES " header value '%s'",
 	     strip_header_params(sess_expires_hdr).c_str()); // exception?
       } else {
 	rem_has_sess_expires = true;
@@ -303,7 +303,7 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipRequest& req) {
     if (!min_se_hdr.empty()) {
       if (str2i(strip_header_params(min_se_hdr),
 		i_minse)) {
-	WARN("error while parsing " SIP_HDR_MIN_SE " header value '%s'\n",
+	WARN("error while parsing " SIP_HDR_MIN_SE " header value '%s'",
 	     strip_header_params(min_se_hdr).c_str()); // exception?
       }
     }
@@ -324,7 +324,7 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipRequest& req) {
       }
     }
      
-    DBG("using actual session interval %u\n", session_interval);
+    DBG("using actual session interval %u", session_interval);
 
     // determine session refresher -- cf rfc4028 Table 2
     // only if the remote party supports timer and asks 
@@ -333,11 +333,11 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipRequest& req) {
     // could also be refresher=uac
     if ((remote_timer_aware) && (!sess_expires_hdr.empty()) &&
 	(get_header_param(sess_expires_hdr, "refresher") == "uac")) {
-      DBG("session refresher will be remote UAC.\n");
+      DBG("session refresher will be remote UAC.");
       session_refresher      = refresh_remote;
       session_refresher_role = UAC;
     } else {
-      DBG("session refresher will be local UAS.\n");
+      DBG("session refresher will be local UAS.");
       session_refresher      = refresh_local;
       session_refresher_role = UAS;
     }
@@ -371,7 +371,7 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipReply& reply)
     unsigned int sess_i_tmp = 0;
     if (str2i(strip_header_params(sess_expires_hdr),
 	      sess_i_tmp)) {
-      WARN("error while parsing " SIP_HDR_SESSION_EXPIRES " header value '%s'\n",
+      WARN("error while parsing " SIP_HDR_SESSION_EXPIRES " header value '%s'",
 	   strip_header_params(sess_expires_hdr).c_str()); // exception?
     } else {
       // this is forbidden by rfc, but to be sure against 'rogue' proxy/uas
@@ -394,21 +394,21 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipReply& reply)
 void SessionTimer::setTimers(AmSession* s) 
 {
   // set session timer
-  DBG("Setting session interval timer: %ds, tag '%s'\n", session_interval, 
+  DBG("Setting session interval timer: %ds, tag '%s'", session_interval, 
       s->getLocalTag().c_str());
 
   s->setTimer(ID_SESSION_INTERVAL_TIMER, session_interval);
     
   // set session refresh action timer, after half the expiration
   if (session_refresher == refresh_local) {
-    DBG("Setting session refresh timer: %ds, tag '%s'\n", session_interval/2, 
+    DBG("Setting session refresh timer: %ds, tag '%s'", session_interval/2, 
 	s->getLocalTag().c_str());
     s->setTimer(ID_SESSION_REFRESH_TIMER, session_interval/2);
   }
 }
 
 void SessionTimer::retryRefreshTimer(AmSession* s) {
-  DBG("Retrying session refresh timer: T-2s, tag '%s' \n",
+  DBG("Retrying session refresh timer: T-2s, tag '%s' ",
       s->getLocalTag().c_str());
 
   s->setTimer(ID_SESSION_REFRESH_TIMER, 2);
@@ -428,24 +428,24 @@ void SessionTimer::onTimeoutEvent(AmTimeoutEvent* timeout_ev)
 
   if (s->dlg->getStatus() == AmSipDialog::Disconnecting ||
       s->dlg->getStatus() == AmSipDialog::Disconnected) {
-    DBG("ignoring SST timeout event %i in Disconnecting/-ed session\n",
+    DBG("ignoring SST timeout event %i in Disconnecting/-ed session",
 	timer_id);
     return;
   }
 
   if (timer_id == ID_SESSION_REFRESH_TIMER) {
     if (session_refresher == refresh_local) {
-      DBG("Session Timer: initiating session refresh\n");
+      DBG("Session Timer: initiating session refresh");
       if (!s->refresh()) {
 	retryRefreshTimer(s);
       }
     } else {
-      DBG("need session refresh but remote session is refresher\n");
+      DBG("need session refresh but remote session is refresher");
     }
   } else if (timer_id == ID_SESSION_INTERVAL_TIMER) {
     s->onSessionTimeout();
   } else {
-    DBG("unknown timeout event received.\n");
+    DBG("unknown timeout event received.");
   }
 
   return;
@@ -517,7 +517,7 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
     if (cfg_size(cfg, PARAM_MAXIMUM_TIMER_NAME)) {
         int maximum_timer = cfg_getint(cfg, PARAM_MAXIMUM_TIMER_NAME);
         if (maximum_timer<=0) {
-        ERROR("invalid value for maximum_timer '%d'\n",maximum_timer);
+        ERROR("invalid value for maximum_timer '%d'",maximum_timer);
         cfg_free(cfg);
         return -1;
         }
@@ -533,12 +533,12 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
         } else if (refresh_method_s == "INVITE") {
             RefreshMethod = AmSession::REFRESH_REINVITE;
         } else {
-            ERROR("unknown setting for 'session_refresh_method' config option.\n");
+            ERROR("unknown setting for 'session_refresh_method' config option.");
             cfg_free(cfg);
             return -1;
         }
         HaveRefreshMethod = true;
-        DBG("set session refresh method: %d.\n", RefreshMethod);
+        DBG("set session refresh method: %d.", RefreshMethod);
     } else {
         HaveRefreshMethod = false;
     }
@@ -553,7 +553,7 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
   // enable_session_timer
   if(cfg.hasParameter("enable_session_timer")) {
     if(!setEnableSessionTimer(cfg.getParameter("enable_session_timer"))){
-      ERROR("invalid enable_session_timer specified\n");
+      ERROR("invalid enable_session_timer specified");
       return -1;
     }
   }
@@ -561,7 +561,7 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
   // session_expires
   if(cfg.hasParameter("session_expires")){
     if(!setSessionExpires(cfg.getParameter("session_expires"))){
-      ERROR("invalid session_expires specified\n");
+      ERROR("invalid session_expires specified");
       return -1;
     }
   }
@@ -569,7 +569,7 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
   // minimum_timer
   if(cfg.hasParameter("minimum_timer")){
     if(!setMinimumTimer(cfg.getParameter("minimum_timer"))){
-      ERROR("invalid minimum_timer specified\n");
+      ERROR("invalid minimum_timer specified");
       return -1;
     }
   }
@@ -578,7 +578,7 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
     int maximum_timer = 0;
     if (!str2int(cfg.getParameter("maximum_timer"), maximum_timer) ||
 	maximum_timer<=0) {
-      ERROR("invalid value for maximum_timer '%s'\n",
+      ERROR("invalid value for maximum_timer '%s'",
 	    cfg.getParameter("maximum_timer").c_str());
       return -1;
     }
@@ -594,11 +594,11 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
     } else if (refresh_method_s == "INVITE") {
       RefreshMethod = AmSession::REFRESH_REINVITE;
     } else {
-      ERROR("unknown setting for 'session_refresh_method' config option.\n");
+      ERROR("unknown setting for 'session_refresh_method' config option.");
       return -1;
     }
     HaveRefreshMethod = true;
-    DBG("set session refresh method: %d.\n", RefreshMethod);
+    DBG("set session refresh method: %d.", RefreshMethod);
   } else {
     HaveRefreshMethod = false;
   }
@@ -624,7 +624,7 @@ int AmSessionTimerConfig::setSessionExpires(const string& se) {
   if(sscanf(se.c_str(),"%u",&SessionExpires) != 1) {
     return 0;
   }
-  DBG("setSessionExpires(%i)\n",SessionExpires);
+  DBG("setSessionExpires(%i)",SessionExpires);
   return 1;
 } 
 
@@ -632,6 +632,6 @@ int AmSessionTimerConfig::setMinimumTimer(const string& minse) {
   if(sscanf(minse.c_str(),"%u",&MinimumTimer) != 1) {
     return 0;
   }
-  DBG("setMinimumTimer(%i)\n",MinimumTimer);
+  DBG("setMinimumTimer(%i)",MinimumTimer);
   return 1;
 }

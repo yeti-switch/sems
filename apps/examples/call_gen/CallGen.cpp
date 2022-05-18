@@ -83,7 +83,7 @@ int CallGenFactory::load() {
 
   string play_fname = cfg.getParameter(PLAY_FILE, "default.wav");
   if (play_file.load(play_fname)) {
-    ERROR("file %s could not be loaded.\n", 
+    ERROR("file %s could not be loaded.", 
 	  play_fname.c_str());
     return -1;
   }
@@ -99,7 +99,7 @@ int CallGenFactory::load() {
     DigitsDir+='/';
 
   if (!DigitsDir.length()) {
-    WARN("No digits_dir specified in configuration.\n");
+    WARN("No digits_dir specified in configuration.");
   }
   for (int i=0;i<10;i++) 
     prompts.setPrompt(int2str(i), DigitsDir+int2str(i)+".wav", APP_NAME);
@@ -145,7 +145,7 @@ void CallGenFactory::checkTarget() {
   if (!target_args)
     return;
 
-  DBG("%zd active calls, %d current target, %d already scheduled\n",
+  DBG("%zd active calls, %d current target, %d already scheduled",
       active_calls.size(), target_args->get(0).asInt(), scheduled);
 
   int missing_calls = 
@@ -162,12 +162,12 @@ void CallGenFactory::checkTarget() {
 }
 
 void CallGenFactory::on_stop(){
-  ERROR("not stoppable!\n");
+  ERROR("not stoppable!");
 }
 
 AmSession* CallGenFactory::onInvite(const AmSipRequest& req, const string& app_name,
 				    const map<string,string>& app_params) {
-  ERROR("incoming calls not supported!\n");
+  ERROR("incoming calls not supported!");
   return NULL;
 }
 
@@ -259,7 +259,7 @@ void CallGenFactory::createCall(const AmArg& args) {
   
   AmArg* c_args = new AmArg(args);
   
-  DBG("placing new call to %s\n", call_ruri.c_str());
+  DBG("placing new call to %s", call_ruri.c_str());
   /* string tag = */ AmUAC::dialout("callgen", // user
 				APP_NAME,  
 				call_ruri,
@@ -284,7 +284,7 @@ void CallGenFactory::createCalls(const AmArg& args, AmArg& ret) {
     if (wait_time_rand>0)
       wait_nsec+=(rand()%wait_time_rand);
 
-    DBG("sleeping %d seconds\n", wait_nsec);
+    DBG("sleeping %d seconds", wait_nsec);
     if (wait_nsec >0 && (i+1 < ncalls))
       sleep(wait_nsec);
   }
@@ -303,7 +303,7 @@ void CallGenFactory::scheduleCalls(const AmArg& args, AmArg& ret) {
   if (args.size()>9)
     ncalls_per_sec = args[9].asInt();
 
-  DBG("scheduling %d calls (%d/s)\n", ncalls, ncalls_per_sec);
+  DBG("scheduling %d calls (%d/s)", ncalls, ncalls_per_sec);
   
   time_t now;
   time(&now);
@@ -334,7 +334,7 @@ void CallGenFactory::setTarget(const AmArg& args, AmArg& ret) {
   if (old_args)
     delete old_args;
 
-  DBG("target now set to %d calls\n", 
+  DBG("target now set to %d calls", 
       target_args->get(0).asInt());
 }
 
@@ -416,9 +416,9 @@ void CallGenDialog::setCallTimer() {
     call_timer+=rand()%call_time_rand;
 
   if (call_timer > 0) {
-    DBG("setting timer %d %d\n", CALL_TIMER, call_timer);
+    DBG("setting timer %d %d", CALL_TIMER, call_timer);
     if (!setTimer(CALL_TIMER, call_timer)) {
-      ERROR("internal: setting timer!\n");
+      ERROR("internal: setting timer!");
       return;
     }
   }
@@ -486,7 +486,7 @@ void CallGenDialog::onSipReply(const AmSipReply& reply, AmSipDialog::Status old_
   AmSession::onSipReply(reply, old_dlg_status);
   if ((old_dlg_status < AmSipDialog::Connected) &&
       dlg->getStatus() == AmSipDialog::Disconnected) {
-    DBG("SIP dialog status change: < Connected -> Disconnected, stopping call\n");
+    DBG("SIP dialog status change: < Connected -> Disconnected, stopping call");
     setStopped();
   }
 }

@@ -31,12 +31,12 @@ MyAppDialog::~MyAppDialog()
 
 void MyAppDialog::onSessionStart()
 {
-    DBG("MyAppDialog::onSessionStart: Hello World!\n");
+    DBG("MyAppDialog::onSessionStart: Hello World!");
 }
 
 void MyAppDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

@@ -87,7 +87,7 @@ int RegistrationAgentFactory::onLoad()
       ri.auth_user = ri.user;
 
     dialer.add_reg(ri);
-    DBG("Adding registration account #%d (%s %s %s %s %s %s)\n", i,
+    DBG("Adding registration account #%d (%s %s %s %s %s %s)", i,
         ri.domain.c_str(), ri.user.c_str(), ri.display_name.c_str(), 
         ri.auth_user.c_str(), ri.proxy.c_str(), ri.contact.c_str());
 
@@ -123,12 +123,12 @@ void RegThread::add_reg(const RegInfo& ri) {
 void RegThread::create_registration(RegInfo& ri) {
   AmDynInvokeFactory* di_f = AmPlugIn::instance()->getFactory4Di("registrar_client");
   if (di_f == NULL) {
-    ERROR("unable to get a registrar_client\n");
+    ERROR("unable to get a registrar_client");
   } else {
     AmDynInvoke* registrar_client_i = di_f->getInstance();
     if (registrar_client_i!=NULL) {
 
-      DBG("calling createRegistration\n");
+      DBG("calling createRegistration");
       AmArg di_args, reg_handle;
       di_args.push(ri.domain.c_str());
       di_args.push(ri.user.c_str());
@@ -151,7 +151,7 @@ bool RegThread::check_registration(const RegInfo& ri) {
     return false;
   AmDynInvokeFactory* di_f = AmPlugIn::instance()->getFactory4Di("registrar_client");
   if (di_f == NULL) {
-    ERROR("unable to get a registrar_client\n");
+    ERROR("unable to get a registrar_client");
   } else {
     AmDynInvoke* registrar_client_i = di_f->getInstance();
     if (registrar_client_i!=NULL) {
@@ -164,7 +164,7 @@ bool RegThread::check_registration(const RegInfo& ri) {
 	  return false; // does not exist
 	int state = res.get(1).asInt();
 	int expires = res.get(2).asInt();
-	DBG("Got state %s with expires %us for registration.\n", 
+	DBG("Got state %s with expires %us for registration.", 
 	    getSIPRegistationStateString(state), expires);
 	if (state == 2) // expired ... FIXME: add values from API here
 	  return false;
@@ -179,7 +179,7 @@ bool RegThread::check_registration(const RegInfo& ri) {
 
 void RegThread::run() {
   setThreadName("RegAgent");
-  DBG("registrar client started.\n");
+  DBG("registrar client started.");
   sleep(2); // wait for sems to completely start up
 
   while (true) {
@@ -187,7 +187,7 @@ void RegThread::run() {
 	 it != registrations.end(); it++) {
       if (!check_registration(*it)) {
 	// todo: this is very crude... should adjust retry time
-	DBG("Registration %d does not exist or timeout. Creating registration.\n",
+	DBG("Registration %d does not exist or timeout. Creating registration.",
 	    (int)(it - registrations.begin()));
 	create_registration(*it);
       }
@@ -198,11 +198,11 @@ void RegThread::run() {
 }
 
 void RegThread::on_stop() {
-  DBG("not stopping...\n");
+  DBG("not stopping...");
 }
 
 void RegThread::postEvent(AmEvent* ev) {
-  DBG("received registration event.\n"); 
+  DBG("received registration event."); 
   // TODO: handle events instead of re-try
   delete ev;
 }

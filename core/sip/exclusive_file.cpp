@@ -113,7 +113,7 @@ exclusive_file::~exclusive_file()
 int exclusive_file::open(bool& is_new)
 {
   if(fd != -1) {
-    ERROR("file already open\n");
+    ERROR("file already open");
     return -1;
   }
   
@@ -147,7 +147,7 @@ int exclusive_file::write_to_file(const void* buf, unsigned int len)
           && (++retries < 10));
 
   if (res != (int)len) {
-    ERROR("writing to file '%s': %s\n",name.c_str(),strerror(errno));
+    ERROR("writing to file '%s': %s",name.c_str(),strerror(errno));
   }
   //else {
   //DBG("%i bytes written to %s",res,name.c_str());

@@ -204,7 +204,7 @@ int AmContentType::parse(const string& ct)
 	break;
 
       default:
-	DBG("Missing '/' after media type in 'Content-Type' hdr field\n");
+	DBG("Missing '/' after media type in 'Content-Type' hdr field");
 	return -1;
       }
       break;
@@ -244,7 +244,7 @@ int AmContentType::parse(const string& ct)
 	if(!IS_WSP(*c)){
 	  // should not happen: parse_headers() should already 
 	  //                    have triggered an error
-	  DBG("Malformed Content-Type value: <%.*s>\n",(int)(end-beg),beg);
+	  DBG("Malformed Content-Type value: <%.*s>",(int)(end-beg),beg);
 	  return -1;
 	}
 	else {
@@ -258,7 +258,7 @@ int AmContentType::parse(const string& ct)
 	if(!IS_WSP(*c)){
 	  // should not happen: parse_headers() should already 
 	  //                    have triggered an error
-	  DBG("Malformed Content-Type value: <%.*s>\n",(int)(end-beg),beg);
+	  DBG("Malformed Content-Type value: <%.*s>",(int)(end-beg),beg);
 	  return -1;
 	}
 	break;
@@ -283,7 +283,7 @@ int AmContentType::parse(const string& ct)
   case CT_TYPE:
   case CT_SLASH_SWS:
   case CT_SUBTYPE_SWS:
-    DBG("Malformed Content-Type value: <%.*s>\n",(int)(end-beg),beg);
+    DBG("Malformed Content-Type value: <%.*s>",(int)(end-beg),beg);
     return -1;
     
   case CT_SUBTYPE:
@@ -337,7 +337,7 @@ int AmContentType::Param::parseType()
   case BOUNDARY_len:
     if(!lower_cmp(c,BOUNDARY_str,len)){
       if(value.empty()) {
-	DBG("Content-Type boundary parameter is missing a value\n");
+	DBG("Content-Type boundary parameter is missing a value");
 	return -1;
       }
       type = Param::BOUNDARY;
@@ -492,7 +492,7 @@ int AmMimeBody::parseSinglePart(unsigned char* buf, unsigned int len)
 
   // parse headers first
   if(parse_headers(hdrs,&c,c+len) < 0) {
-    DBG("could not parse part headers\n");
+    DBG("could not parse part headers");
     free_headers(hdrs);
     return -1;
   }
@@ -504,7 +504,7 @@ int AmMimeBody::parseSinglePart(unsigned char* buf, unsigned int len)
   for(list<sip_header*>::iterator it = hdrs.begin();
       it != hdrs.end(); ++it) {
 
-    DBG("Part header: <%.*s>: <%.*s>\n",
+    DBG("Part header: <%.*s>: <%.*s>",
 	(*it)->name.len,(*it)->name.s,
 	(*it)->value.len,(*it)->value.s);
 
@@ -520,10 +520,10 @@ int AmMimeBody::parseSinglePart(unsigned char* buf, unsigned int len)
   if(!sub_part_ct.empty() &&
      (sub_part->parse(sub_part_ct,(unsigned char*)c,end-c) == 0)) {
     // TODO: check errors
-    DBG("Successfully parsed subpart.\n");
+    DBG("Successfully parsed subpart.");
   }
   else {
-    DBG("Either no Content-Type, or subpart parsing failed.\n");
+    DBG("Either no Content-Type, or subpart parsing failed.");
     sub_part->ct.setType("");
     sub_part->ct.setSubType("");
     sub_part->setPayload((unsigned char*)c,end-c);
@@ -539,7 +539,7 @@ int AmMimeBody::parseSinglePart(unsigned char* buf, unsigned int len)
 int AmMimeBody::parseMultipart(const unsigned char* buf, unsigned int len)
 {
   if(!ct.mp_boundary) {
-    DBG("boundary parameter missing in a multipart MIME body\n");
+    DBG("boundary parameter missing in a multipart MIME body");
     return -1;
   }
 
@@ -549,7 +549,7 @@ int AmMimeBody::parseMultipart(const unsigned char* buf, unsigned int len)
 
   int err = findNextBoundary(&part_end,&next_part);
   if(err < 0) {
-    DBG("unexpected end-of-buffer\n");
+    DBG("unexpected end-of-buffer");
     return -1;
   }
 
@@ -561,22 +561,22 @@ int AmMimeBody::parseMultipart(const unsigned char* buf, unsigned int len)
 
     err = findNextBoundary(&part_end,&next_part);
     if(err < 0) {
-      DBG("unexpected end-of-buffer while searching for MIME body boundary\n");
+      DBG("unexpected end-of-buffer while searching for MIME body boundary");
       return -1;
     }
     
     if(parseSinglePart(part_beg,part_end-part_beg) < 0) {
-      DBG("Failed parsing part\n");
+      DBG("Failed parsing part");
     }
     else {
       AmMimeBody* part = parts.back();
-      DBG("Added new part:\n%.*s\n",
+      DBG("Added new part:\n%.*s",
 	  part->content_len,part->payload);
     }
     
   } while(!err);
 
-  DBG("End-of-multipart body found\n");
+  DBG("End-of-multipart body found");
 
   return 0;
 }
@@ -590,11 +590,11 @@ int AmMimeBody::parse(const string& content_type,
   
   if(ct.isType(MULTIPART)) {
 
-    DBG("parsing multi-part body\n");
+    DBG("parsing multi-part body");
     return parseMultipart(buf,len);
   }
   else {
-    DBG("saving single-part body\n");
+    DBG("saving single-part body");
     setPayload(buf,len);
   }
 
@@ -623,7 +623,7 @@ void AmMimeBody::convertToSinglepart()
     setPayload(parts.front()->payload, parts.front()->content_len);
     clearParts();
   } else {
-    DBG("body does not have exactly one part\n");
+    DBG("body does not have exactly one part");
   }
 }
 
@@ -667,7 +667,7 @@ AmMimeBody* AmMimeBody::addPart(const string& content_type)
   if(ct.type.empty() && ct.subtype.empty()) {
     // fill *this* body
     if(ct.parse(content_type)) {
-      DBG("could not parse content-type\n");
+      DBG("could not parse content-type");
       return NULL;
     }
     
@@ -678,7 +678,7 @@ AmMimeBody* AmMimeBody::addPart(const string& content_type)
     convertToMultipart();
     body = new AmMimeBody();
     if(body->ct.parse(content_type)) {
-      DBG("parsing new content-type failed\n");
+      DBG("parsing new content-type failed");
       delete body;
       return NULL;
     }
@@ -693,7 +693,7 @@ AmMimeBody* AmMimeBody::addPart(const string& content_type)
 int AmMimeBody::deletePart(const string& content_type)
 {
   if (!ct.isType(MULTIPART)) {
-    DBG("body is not multipart\n");
+    DBG("body is not multipart");
     return -1;
   }
 

@@ -71,7 +71,7 @@ static inline int skip_name(const string& s, unsigned int pos)
   }
 
   if (quoted) {
-    ERROR("skip_name(): Closing quote missing in name part of URI\n");
+    ERROR("skip_name(): Closing quote missing in name part of URI");
     return -1;
   }
 
@@ -118,7 +118,7 @@ static inline int skip_uri(const string& s, unsigned int pos)
       switch(st) {
       case ST1: st = ST3; break;
       case ST3:
-	DBG("ERROR skip_uri(): Second < found\n");
+	DBG("ERROR skip_uri(): Second < found");
 	return -1;
       case ST5: st = ST2; break;
       case ST6: st = ST4; break;
@@ -128,7 +128,7 @@ static inline int skip_uri(const string& s, unsigned int pos)
     case '>':
       switch(st) {
       case ST1:
-	DBG("ERROR skip_uri(): > is first\n");
+	DBG("ERROR skip_uri(): > is first");
 	return -2;
 
       case ST3: st = ST1; break;
@@ -155,7 +155,7 @@ static inline int skip_uri(const string& s, unsigned int pos)
   }
 
   if (st != ST1) {
-    DBG("ERROR skip_uri(): < or \" not closed\n");
+    DBG("ERROR skip_uri(): < or \" not closed");
     return -3;
   }
   return p;
@@ -190,7 +190,7 @@ bool AmUriParser::parse_uri() {
 
   while (pos<uri.length()) {
     char c = uri[pos];
-    //    DBG("(1) c = %c, st = %d\n", c, st);
+    //    DBG("(1) c = %c, st = %d", c, st);
     switch(st) {
     case uS0: {
       switch (c) {
@@ -304,7 +304,7 @@ bool AmUriParser::parse_uri() {
     } break;
 
     };
-    //    DBG("(2) c = %c, st = %d\n", c, st);
+    //    DBG("(2) c = %c, st = %d", c, st);
     pos++;
   }
   switch(st) {
@@ -315,7 +315,7 @@ bool AmUriParser::parse_uri() {
   case uSPARAM: uri_param = uri.substr(p1+1, pos-p1-1); break;
   case uS0:
   case uSPROT: {
-      DBG("ERROR while parsing uri: '%s'\n",uri.c_str());
+      DBG("ERROR while parsing uri: '%s'",uri.c_str());
       return false;
     } break;
   };
@@ -490,23 +490,23 @@ string AmUriParser::add_param_to_param_list(const string& param_name,
 }
 
 void AmUriParser::dump() const {
-  DBG("--- Uri Info --- \n");
-  DBG(" uri           '%s'\n", uri.c_str());
-  DBG(" display_name  '%s'\n", display_name.c_str());
-  DBG(" uri_user      '%s'\n", uri_user.c_str());
-  DBG(" uri_host      '%s'\n", uri_host.c_str());
-  DBG(" uri_port      '%s'\n", uri_port.c_str());
-  DBG(" uri_hdr       '%s'\n", uri_headers.c_str());
-  DBG(" uri_param     '%s'\n", uri_param.c_str());
+  DBG("--- Uri Info --- ");
+  DBG(" uri           '%s'", uri.c_str());
+  DBG(" display_name  '%s'", display_name.c_str());
+  DBG(" uri_user      '%s'", uri_user.c_str());
+  DBG(" uri_host      '%s'", uri_host.c_str());
+  DBG(" uri_port      '%s'", uri_port.c_str());
+  DBG(" uri_hdr       '%s'", uri_headers.c_str());
+  DBG(" uri_param     '%s'", uri_param.c_str());
   for (map<string, string>::const_iterator it = params.begin();
        it != params.end(); it++) {
 
     if (it->second.empty())
-      DBG(" param     '%s'\n", it->first.c_str());
+      DBG(" param     '%s'", it->first.c_str());
     else
-      DBG(" param     '%s'='%s'\n", it->first.c_str(), it->second.c_str());
+      DBG(" param     '%s'='%s'", it->first.c_str(), it->second.c_str());
   }
-  DBG("-------------------- \n");
+  DBG("-------------------- ");
 }
 
 string AmUriParser::uri_str() const

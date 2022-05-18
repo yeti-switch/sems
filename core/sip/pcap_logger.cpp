@@ -123,7 +123,7 @@ int pcap_logger::log(const char* buf, int len,
 int pcap_logger::logv4(const char *data, int data_len, struct sockaddr_storage *src, struct sockaddr_storage *dst, size_t addr_len, struct timeval &event_time)
 {
   if (((sockaddr_in*)src)->sin_family != AF_INET) {
-    ERROR("writing only IPv4 is supported\n");
+    ERROR("writing only IPv4 is supported");
     return -1;
   }
 
@@ -176,7 +176,7 @@ int pcap_logger::logv4(const char *data, int data_len, struct sockaddr_storage *
 int pcap_logger::logv6(const char *data, int data_len, struct sockaddr_storage *src, struct sockaddr_storage *dst, size_t addr_len, struct timeval &event_time)
 {
   if (((sockaddr_in*)src)->sin_family != AF_INET6) {
-    ERROR("writing only IPv6 is supported\n");
+    ERROR("writing only IPv6 is supported");
     return -1;
   }
 

@@ -191,7 +191,7 @@ int VoiceboxFactory::onLoad()
 
   default_language = cfg.getParameter("default_language");
   if (default_language.length()) {
-    DBG("set default language '%s'\n", default_language.c_str());
+    DBG("set default language '%s'", default_language.c_str());
   }
 
   vector<string> domains = explode(cfg.getParameter("domains"), ";");
@@ -237,7 +237,7 @@ int VoiceboxFactory::onLoad()
 	prompt_options[*dom][lang_name]=
 	  PromptOptions(lang_digits, lang_digitpos_right);
 
-	DBG("Enabled language <%s> for domain <%s>\n",
+	DBG("Enabled language <%s> for domain <%s>",
 	    lang->empty()?"default":lang_name.c_str(), 
 	    dom->empty()?"default":dom->c_str()
 	    );
@@ -246,35 +246,35 @@ int VoiceboxFactory::onLoad()
   }
 
   if (prompts.empty()) {
-    ERROR("No menu voice messages found at '%s'.\n",
+    ERROR("No menu voice messages found at '%s'.",
 	  prompt_base_path.c_str());
     return -1;
   }
 
   string s_repeat_key = cfg.getParameter("repeat_key", "1");
   if (str2i(s_repeat_key, repeat_key)) {
-    ERROR("repeat_key value '%s' unparseable.\n", 
+    ERROR("repeat_key value '%s' unparseable.", 
 	  s_repeat_key.c_str());
     return -1;
   }
 
   string s_save_key = cfg.getParameter("save_key", "2");
   if (str2i(s_save_key, save_key)) {
-    ERROR("save_key value '%s' unparseable.\n", 
+    ERROR("save_key value '%s' unparseable.", 
 	  s_save_key.c_str());
     return -1;
   }
 
   string s_delete_key = cfg.getParameter("delete_key", "3");
   if (str2i(s_delete_key, delete_key)) {
-    ERROR("delete_key value '%s' unparseable.\n", 
+    ERROR("delete_key value '%s' unparseable.", 
 	  s_delete_key.c_str());
     return -1;
   }
 
   string s_startover_key = cfg.getParameter("startover_key", "4");
   if (str2i(s_startover_key, startover_key)) {
-    ERROR("startover_key value '%s' unparseable.\n", 
+    ERROR("startover_key value '%s' unparseable.", 
 	  s_startover_key.c_str());
     return -1;
   }
@@ -282,7 +282,7 @@ int VoiceboxFactory::onLoad()
   MessageStorage = NULL;
   MessageStorage = AmPlugIn::instance()->getFactory4Di("msg_storage");
   if(NULL == MessageStorage){
-    ERROR("could not load msg_storage. Load a msg_storage implementation module.\n");
+    ERROR("could not load msg_storage. Load a msg_storage implementation module.");
     return -1;
   }
 
@@ -304,7 +304,7 @@ AmSession* VoiceboxFactory::onInvite(const AmSipRequest& req, const string& app_
     AmUriParser p;
     p.uri = req.from_uri;
     if (!p.parse_uri()) {
-      DBG("parsing From-URI '%s' failed\n", p.uri.c_str());
+      DBG("parsing From-URI '%s' failed", p.uri.c_str());
       throw AmSession::Exception(500, APP_NAME ": could not parse From-URI");
     }
     user = p.uri_user;

@@ -66,7 +66,7 @@ int SCAwsModule::preload() {
    string aws_access_key = cfg.getParameter("aws_access_key");
    string aws_secret_access_key = cfg.getParameter("aws_secret_access_key");
    if (aws_access_key.empty() || aws_secret_access_key.empty()) {
-     ERROR("aws_access_key / aws_secret_access_key must be configured in aws.conf!\n");
+     ERROR("aws_access_key / aws_secret_access_key must be configured in aws.conf!");
      return -1;
    }
 
@@ -75,19 +75,19 @@ int SCAwsModule::preload() {
      s3ConnectionPool = new ConnectionPool<S3ConnectionPtr>(initial_connections_s3,
 							    aws_access_key, aws_secret_access_key);
    } catch (const AWSInitializationException& e) {
-     ERROR("initializing AWS: '%s'\n", e.what());
+     ERROR("initializing AWS: '%s'", e.what());
      return -1;
    } catch (const AWSAccessKeyIdMissingException& e) {
-     ERROR("missing AWS key\n");
+     ERROR("missing AWS key");
      return -1;
    } catch (const AWSSecretAccessKeyMissingException& e) {
-     ERROR("missing AWS secret key\n");
+     ERROR("missing AWS secret key");
      return -1;
    } catch (const AWSConnectionException& e) {
-     ERROR("connection failed:'%s'\n", e.what());
+     ERROR("connection failed:'%s'", e.what());
      return -1;
    } catch (const AWSException& e) {
-     ERROR("creating AWS connections: '%s'\n", e.what());
+     ERROR("creating AWS connections: '%s'", e.what());
      return -1;
    }
 
@@ -96,19 +96,19 @@ int SCAwsModule::preload() {
      sqsConnectionPool = new ConnectionPool<SQSConnectionPtr>(initial_connections_sqs,
 							      aws_access_key, aws_secret_access_key);
    } catch (const AWSInitializationException& e) {
-     ERROR("initializing AWS: '%s'\n", e.what());
+     ERROR("initializing AWS: '%s'", e.what());
      return -1;
    } catch (const AWSAccessKeyIdMissingException& e) {
-     ERROR("missing AWS key\n");
+     ERROR("missing AWS key");
      return -1;
    } catch (const AWSSecretAccessKeyMissingException& e) {
-     ERROR("missing AWS secret key\n");
+     ERROR("missing AWS secret key");
      return -1;
    } catch (const AWSConnectionException& e) {
-     ERROR("connection failed:'%s'\n", e.what());
+     ERROR("connection failed:'%s'", e.what());
      return -1;
    } catch (const AWSException& e) {
-     ERROR("creating AWS connections: '%s'\n", e.what());
+     ERROR("creating AWS connections: '%s'", e.what());
      return -1;
    }
 
@@ -117,7 +117,7 @@ int SCAwsModule::preload() {
 
 #define CHECK_PRELOAD_S3				\
   if (NULL == SCAwsModule::s3ConnectionPool) {		\
-    ERROR("mod_aws must be preloaded!\n");		\
+    ERROR("mod_aws must be preloaded!");		\
     throw DSMException("aws", "cause", "need preload"); \
     return false;					\
   }							\
@@ -126,7 +126,7 @@ int SCAwsModule::preload() {
 #define GET_CONNECTION_S3						\
   S3ConnectionPtr aS3 = SCAwsModule::s3ConnectionPool->getConnection(); \
   if (!aS3) {								\
-    ERROR("getting S3 connection from connection pool\n");		\
+    ERROR("getting S3 connection from connection pool");		\
     throw DSMException("aws", "cause", "get connection");		\
     return false;							\
   }									\
@@ -141,7 +141,7 @@ EXEC_ACTION_START(SCS3PutFileAction) {
 
   const string& bucket = sc_sess->var["aws.s3.bucket"];
   if (bucket.empty()) {
-    ERROR("S3: trying to put in empty bucket!\n");
+    ERROR("S3: trying to put in empty bucket!");
     throw DSMException("aws", "cause", "empty bucket");
     return false;
   }
@@ -150,7 +150,7 @@ EXEC_ACTION_START(SCS3PutFileAction) {
   try {
     std::ifstream lInStream(filename.c_str());
     if (!lInStream) {
-      WARN("file not found or accessible: '%s'\n",filename.c_str());
+      WARN("file not found or accessible: '%s'",filename.c_str());
       FREE_CONNECTION_S3;
       throw DSMException("aws", "cause", "file not found");
       return false;
@@ -160,7 +160,7 @@ EXEC_ACTION_START(SCS3PutFileAction) {
 
     sc_sess->SET_ERRNO(DSM_ERRNO_OK);
   } catch (const AWSException &e) {
-    WARN("S3 put failed: '%s'\n", e.what());
+    WARN("S3 put failed: '%s'", e.what());
     sc_sess->var["aws.ereason"] = e.what();
     sc_sess->SET_ERRNO(DSM_ERRNO_AWS_PUT);
   }
@@ -180,7 +180,7 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
 
   unsigned int num_files = 0;
   if (str2i(sc_sess->var[files_array+"_size"], num_files)) {
-    ERROR("determining size of '%s' array\n", files_array.c_str());
+    ERROR("determining size of '%s' array", files_array.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("determining size of '"+
 			  files_array+"' array\n");
@@ -190,7 +190,7 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
   // safety check
   unsigned int num_keys = 0;
   if (str2i(sc_sess->var[keys_array+"_size"], num_keys)) {
-    ERROR("determining size of '%s' array\n", keys_array.c_str());
+    ERROR("determining size of '%s' array", keys_array.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("determining size of '"+
 			  keys_array+"' array\n");
@@ -199,7 +199,7 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
 
   for (unsigned int i=0;i<num_files;i++) {
     if (sc_sess->var[files_array+"_"+int2str(i)].empty()) {
-      ERROR("missing file name $%s_%u\n", files_array.c_str(), i);
+      ERROR("missing file name $%s_%u", files_array.c_str(), i);
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
       sc_sess->SET_STRERROR("missing file name $"+
 			    files_array+"_"+int2str(i)+"\n");
@@ -209,9 +209,9 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
 
   const string& bucket = sc_sess->var["aws.s3.bucket"];
   if (bucket.empty()) {
-    ERROR("S3: trying to put with empty bucket name!\n");
+    ERROR("S3: trying to put with empty bucket name!");
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("S3: trying to put with empty bucket name!\n");
+    sc_sess->SET_STRERROR("S3: trying to put with empty bucket name!");
     return false;
   }
     
@@ -224,9 +224,9 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
     try {
       std::ifstream lInStream(filename.c_str());
       if (!lInStream) {
-	WARN("file not found or accessible: '%s'\n",filename.c_str());
+	WARN("file not found or accessible: '%s'",filename.c_str());
 	sc_sess->SET_ERRNO(DSM_ERRNO_AWS_PUT);
-	sc_sess->SET_STRERROR("file not found or accessible: '"+filename+"'\n");
+	sc_sess->SET_STRERROR("file not found or accessible: '"+filename+"'");
 	FREE_CONNECTION_S3;
 	return false;
       }
@@ -235,7 +235,7 @@ EXEC_ACTION_START(SCS3PutMultiFileAction) {
       
       sc_sess->CLR_ERRNO;
     } catch (const AWSException &e) {
-      WARN("S3 put failed: '%s'\n", e.what());
+      WARN("S3 put failed: '%s'", e.what());
       sc_sess->var["aws.ereason"] = e.what();
       sc_sess->SET_ERRNO(DSM_ERRNO_AWS_PUT);
       sc_sess->SET_STRERROR(e.what());
@@ -254,7 +254,7 @@ EXEC_ACTION_START(SCS3CreateBucketAction) {
   if (bucket.empty())
     bucket = sc_sess->var["aws.s3.bucket"];
   if (bucket.empty()) {
-    ERROR("S3: trying to create bucket with empty bucket name!\n");
+    ERROR("S3: trying to create bucket with empty bucket name!");
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("S3: trying to create bucket with empty bucket name!");
     return false;
@@ -264,7 +264,7 @@ EXEC_ACTION_START(SCS3CreateBucketAction) {
   try {
     CreateBucketResponsePtr lRes = aS3->createBucket(bucket);
     bucket = lRes->getBucketName();
-    DBG("created bucket with name '%s'\n", bucket.c_str());
+    DBG("created bucket with name '%s'", bucket.c_str());
     sc_sess->var["aws.s3.bucket"] = bucket;
     sc_sess->CLR_ERRNO;
   } catch (const AWSException &e) {
@@ -278,7 +278,7 @@ EXEC_ACTION_START(SCS3CreateBucketAction) {
 
 #define CHECK_PRELOAD_SQS				\
   if (NULL == SCAwsModule::sqsConnectionPool) {		\
-    ERROR("mod_aws must be preloaded!\n");		\
+    ERROR("mod_aws must be preloaded!");		\
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);		\
     sc_sess->SET_STRERROR("mod_aws must be preloaded");	\
     return false;					\
@@ -287,7 +287,7 @@ EXEC_ACTION_START(SCS3CreateBucketAction) {
 #define GET_CONNECTION_SQS						\
   SQSConnectionPtr aSQS = SCAwsModule::sqsConnectionPool->getConnection(); \
   if (!aSQS) {								\
-    ERROR("getting SQS connection from connection pool\n");		\
+    ERROR("getting SQS connection from connection pool");		\
     sc_sess->SET_ERRNO(DSM_ERRNO_AWS_CONN);				\
     sc_sess->SET_STRERROR("getting SQS connection from connection pool"); \
     return false;							\
@@ -300,7 +300,7 @@ EXEC_ACTION_START(SCS3CreateBucketAction) {
   if (sqs_queue.empty())						\
     sqs_queue = sc_sess->var["aws.sqs.queue"];				\
   if (sqs_queue.empty()) {						\
-    ERROR("SQS: trying to operate on empty queue name!\n");		\
+    ERROR("SQS: trying to operate on empty queue name!");		\
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);				\
     sc_sess->SET_STRERROR("SQS: trying to operate on empty queue name!"); \
     return false;							\
@@ -313,7 +313,7 @@ EXEC_ACTION_START(SCSQSCreateQueueAction) {
   string aVisibilityTimeout_s = resolveVars(par1, sess, sc_sess, event_params);
   unsigned int aVisibilityTimeout = 0;
   if (str2i(aVisibilityTimeout_s, aVisibilityTimeout)) {
-    ERROR("unable to determine aVisibilityTimeout '%s' for new queue\n",
+    ERROR("unable to determine aVisibilityTimeout '%s' for new queue",
 	  aVisibilityTimeout_s.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     sc_sess->SET_STRERROR("unable to determine aVisibilityTimeout '"+
@@ -328,7 +328,7 @@ EXEC_ACTION_START(SCSQSCreateQueueAction) {
     sc_sess->var["aws.sqs.queue"] = lRes->getQueueUrl();
     sc_sess->CLR_ERRNO;
   } catch (const AWSException &e) {
-    WARN("SQS create failed: '%s'\n", e.what());
+    WARN("SQS create failed: '%s'", e.what());
     sc_sess->var["aws.ereason"] = e.what();
     sc_sess->SET_ERRNO(DSM_ERRNO_AWS_CREATE);
     sc_sess->SET_STRERROR(e.what());
@@ -346,7 +346,7 @@ EXEC_ACTION_START(SCSQSDeleteQueueAction) {
     DeleteQueueResponsePtr lRes = aSQS->deleteQueue (sqs_queue);
     sc_sess->CLR_ERRNO;
   } catch (const AWSException &e) {
-    WARN("SQS delete failed: '%s'\n", e.what());
+    WARN("SQS delete failed: '%s'", e.what());
     sc_sess->var["aws.ereason"] = e.what();
     sc_sess->SET_ERRNO(DSM_ERRNO_AWS_DELETE);
     sc_sess->SET_STRERROR(e.what());
@@ -365,13 +365,13 @@ EXEC_ACTION_START(SCSQSSendMessageAction) {
   GET_CONNECTION_SQS;
   try {
     SendMessageResponsePtr lRes = aSQS->sendMessage (sqs_queue, message);
-    DBG("successfully sent message to SQS\n");
-    DBG("   url: [%s]\n", lRes->getMessageId().c_str());
-    DBG("   md5: [%s]\n", lRes->getMD5OfMessageBody().c_str());
+    DBG("successfully sent message to SQS");
+    DBG("   url: [%s]", lRes->getMessageId().c_str());
+    DBG("   md5: [%s]", lRes->getMD5OfMessageBody().c_str());
     sc_sess->var["aws.sqs.url"] = lRes->getMessageId();
     sc_sess->var["aws.sqs.md5"] = lRes->getMD5OfMessageBody();
   } catch (const AWSException &e) {
-    WARN("SQS send failed: '%s'\n", e.what());
+    WARN("SQS send failed: '%s'", e.what());
     sc_sess->var["aws.ereason"] = e.what();
     sc_sess->SET_ERRNO(DSM_ERRNO_AWS_SEND);
     sc_sess->SET_STRERROR(e.what());
@@ -403,13 +403,13 @@ EXEC_ACTION_START(SCSQSReceiveMessageAction) {
 //     std::cerr << e.what() << std::endl;
 //     return false;
 //   }
-  ERROR("TODO\n");
+  ERROR("TODO");
   FREE_CONNECTION_SQS;
 } EXEC_ACTION_END;
 
 EXEC_ACTION_START(SCSQSDeleteMessageAction) {
   CHECK_PRELOAD_SQS;
   GET_CONNECTION_SQS;
-  ERROR("TODO\n");
+  ERROR("TODO");
   FREE_CONNECTION_SQS;
 } EXEC_ACTION_END;

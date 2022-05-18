@@ -126,7 +126,7 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
         priority = IPv6_only;
     }
     if (!remote_addr.empty() && resolver::instance()->resolve_name(remote_addr.c_str(),&dh,&ss,priority) < 0) {
-        WARN("Address not valid (host: %s).\n", remote_addr.c_str());
+        WARN("Address not valid (host: %s).", remote_addr.c_str());
         throw string("invalid address") + remote_addr;
     }
     r_host = remote_addr;
@@ -197,7 +197,7 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
                 string addr_str = get_addr_str(recv_addr);
                 unsigned short port = am_get_port(recv_addr);
                 setRAddr(addr_str, port);
-                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i\n",
+                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i",
                           prot, addr_str.c_str(),port);
             } else {
                 CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
@@ -236,9 +236,9 @@ void AmStreamConnection::setPassiveMode(bool p)
     }
     passive = p;
     if (p) {
-        CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.\n");
+        CLASS_DBG("The other UA is NATed or passive mode forced: switched to passive mode.");
     } else {
-        CLASS_DBG("Passive mode not activated.\n");
+        CLASS_DBG("Passive mode not activated.");
     }
 }
 

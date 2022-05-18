@@ -15,7 +15,7 @@ extern "C" cst_voice *register_cmu_us_kal();
 
 static PyObject* PySemsAudioFile_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  DBG("---------- PySemsAudioFile_alloc -----------\n");
+  DBG("---------- PySemsAudioFile_alloc -----------");
   PySemsAudioFile *self;
 
   self = (PySemsAudioFile *)type->tp_alloc(type, 0);
@@ -41,7 +41,7 @@ static PyObject* PySemsAudioFile_new(PyTypeObject *type, PyObject *args, PyObjec
 
 static void PySemsAudioFile_dealloc(PySemsAudioFile* self)
 {
-  DBG("---------- PySemsAudioFile_dealloc -----------\n");
+  DBG("---------- PySemsAudioFile_dealloc -----------");
   delete self->af;
   self->af = NULL;
 

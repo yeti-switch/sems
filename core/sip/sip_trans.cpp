@@ -118,7 +118,7 @@ void sip_trans::retransmit()
 
     int send_err = retr_socket->send(&retr_addr,retr_buf,retr_len,flags);
     if(send_err < 0){
-        ERROR("Error from transport layer: call_id %s\n", msg->callid ? msg->callid->value.s : "unknown");
+        ERROR("Error from transport layer: call_id %s", msg->callid ? msg->callid->value.s : "unknown");
     }
 
 	if(logger || sensor) {
@@ -198,7 +198,7 @@ void sip_trans::reset_timer(trans_timer* t, unsigned int timer_type)
     
     if(*tp != NULL){
 
-	DBG("Clearing old timer of type %s (timer=%p)(trans=%p)\n",
+	DBG("Clearing old timer of type %s (timer=%p)(trans=%p)",
 	    timer_name((*tp)->type),*tp, this);
 	wheeltimer::instance()->remove_timer((timer*)*tp);
     }
@@ -215,7 +215,7 @@ void trans_timer::fire()
     if(bucket){
 	bucket->lock();
 	if(bucket->exist(t)){
-	    DBG("Transaction timer expired: type=%s, trans=%p, eta=%i, t=%i\n",
+	    DBG("Transaction timer expired: type=%s, trans=%p, eta=%i, t=%i",
 		timer_name(type),t,expires,wheeltimer::instance()->wall_clock);
 
 	    trans_timer* tt = t->get_timer(this->type & 0xFFFF);
@@ -238,7 +238,7 @@ void trans_timer::fire()
 	}
     }
     else {
-	ERROR("Invalid bucket id\n");
+	ERROR("Invalid bucket id");
     }
 }
 
@@ -256,7 +256,7 @@ void sip_trans::reset_timer(unsigned int timer_type, unsigned int expire_delay /
     unsigned int expires = expire_delay / (TIMER_RESOLUTION/1000);
     expires += wt->wall_clock;
     
-    DBG("New timer of type %s at time=%i (repeated=%i)(trans=%p)\n",
+    DBG("New timer of type %s at time=%i (repeated=%i)(trans=%p)",
 	timer_name(timer_type),expires,timer_type>>16, this);
 
     trans_timer* t = new trans_timer(timer_type,expires,

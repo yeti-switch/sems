@@ -87,7 +87,7 @@ static int pcm16_2_gsm(unsigned char* out_buf, unsigned char* in_buf, unsigned i
   blocks = div(size,320);
 
   if(blocks.rem){
-    ERROR("pcm16_2_gsm: number of blocks should be integral (block size = 320)\n");
+    ERROR("pcm16_2_gsm: number of blocks should be integral (block size = 320)");
     return -1;
   }
 
@@ -109,7 +109,7 @@ static int gsm_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned i
   blocks = div(size,33);
 
   if(blocks.rem){
-    ERROR("gsm_2_pcm16: number of blocks should be integral (block size = 33)\n");
+    ERROR("gsm_2_pcm16: number of blocks should be integral (block size = 33)");
     return -1;
   }
 
@@ -117,8 +117,8 @@ static int gsm_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned i
 
   /*if(out_size > AUDIO_BUFFER_SIZE){
 
-    ERROR("gsm_2_pcm16: converting buffer would lead to buffer overrun:\n");
-    ERROR("gsm_2_pcm16: input size=%u; needed output size=%u; buffer size=%u\n",
+    ERROR("gsm_2_pcm16: converting buffer would lead to buffer overrun:");
+    ERROR("gsm_2_pcm16: input size=%u; needed output size=%u; buffer size=%u",
 	  size,out_size,AUDIO_BUFFER_SIZE);
     return -1;
   }*/
@@ -136,7 +136,7 @@ static long gsm_create_if(const char* format_parameters, amci_codec_fmt_info_t* 
 
   h_codec = static_cast<gsm *>(malloc(sizeof(gsm)*2));
   if(!h_codec){
-    ERROR("gsm.c: could not create handle array\n");
+    ERROR("gsm.c: could not create handle array");
     return 0;
   }
 

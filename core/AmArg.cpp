@@ -456,12 +456,12 @@ void AmArg::assertArrayFmt(const char* format) const {
       case 'a': assertArgArray(get(i)); got+='a'; break;
       case 'b': assertArgBlob(get(i)); got+='b'; break;
       case 'u': assertArgStruct(get(i)); got+='u'; break;
-      default: got+='?'; ERROR("ignoring unknown format type '%c'\n", 
+      default: got+='?'; ERROR("ignoring unknown format type '%c'", 
 			       format[i]); break;
       }
     }
   } catch (...) {
-    ERROR("parameter mismatch: expected '%s', got '%s...'\n",
+    ERROR("parameter mismatch: expected '%s', got '%s...'",
 	  format, got.c_str());
     throw;
   }

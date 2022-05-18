@@ -35,7 +35,7 @@ static PyObject* IvrSipDialog_new(PyTypeObject *type, PyObject *args, PyObject *
     self->p_dlg = (AmSipDialog*)PyCObject_AsVoidPtr(o_dlg);
   }
 
-  DBG("IvrSipDialog_new\n");
+  DBG("IvrSipDialog_new");
   return (PyObject *)self;
 }
 

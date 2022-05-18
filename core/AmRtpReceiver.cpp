@@ -107,12 +107,12 @@ AmRtpReceiverThread::AmRtpReceiverThread()
 
 AmRtpReceiverThread::~AmRtpReceiverThread()
 {
-  INFO("RTP receiver has been recycled.\n");
+  INFO("RTP receiver has been recycled.");
 }
 
 void AmRtpReceiverThread::on_stop()
 {
-  INFO("requesting RTP receiver to stop.\n");
+  INFO("requesting RTP receiver to stop.");
   stop_event.fire();
 }
 
@@ -151,7 +151,7 @@ void AmRtpReceiverThread::run()
   while(!stop){
     int ret = epoll_wait(poll_fd,events,EPOLL_MAX_EVENTS,-1);
     if(ret == -1 && errno != EINTR){
-      ERROR("AmRtpReceiver: epoll_wait: %s\n",strerror(errno));
+      ERROR("AmRtpReceiver: epoll_wait: %s",strerror(errno));
     }
     if(ret < 1)
       continue;
@@ -207,7 +207,7 @@ int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx
     ev.data.fd = ctx_idx;
 
     if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev) == -1) {
-        CLASS_ERROR("< failed to add to epoll structure stream:%p with sd:%i, old_ctx_idx:%d, ctx_idx:%d, error: %s\n",
+        CLASS_ERROR("< failed to add to epoll structure stream:%p with sd:%i, old_ctx_idx:%d, ctx_idx:%d, error: %s",
             to_void(stream),sd,old_ctx_idx,ctx_idx,strerror(errno));
         streams.ctx_put_immediate(ctx_idx);
         return old_ctx_idx;

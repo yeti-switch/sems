@@ -74,7 +74,7 @@ void AmPlayoutBuffer::write(u_int32_t ref_ts, u_int32_t rtp_ts,
     {
       recv_offset = rtp_ts - ref_ts;
       recv_offset_i = true;
-      DBG("initialized recv_offset with %u (%u - %u)\n",
+      DBG("initialized recv_offset with %u (%u - %u)",
 	  recv_offset, ref_ts, rtp_ts);
       mapped_ts = r_ts = w_ts = ref_ts;
     }
@@ -85,7 +85,7 @@ void AmPlayoutBuffer::write(u_int32_t ref_ts, u_int32_t rtp_ts,
     if( ts_less()(mapped_ts, ref_ts - MAX_DELAY/2) || 
 	!ts_less()(mapped_ts, ref_ts + MAX_DELAY) ){
 
-      DBG("resync needed: reference ts = %u; write ts = %u\n",
+      DBG("resync needed: reference ts = %u; write ts = %u",
 	  ref_ts, mapped_ts);
       recv_offset = rtp_ts - ref_ts;
       mapped_ts = r_ts = w_ts = ref_ts;
@@ -415,7 +415,7 @@ u_int32_t AmAdaptivePlayout::time_scale(u_int32_t ts, float factor,
 
   if (fabs(factor - 1.0) <= SCALE_FACTOR_START) {
 #ifdef DEBUG_PLAYOUTBUF
-    DBG("not scaling - too little f difference \n");
+    DBG("not scaling - too little f difference ");
 #endif
     return s;
   }
@@ -484,7 +484,7 @@ u_int32_t AmAdaptivePlayout::time_scale(u_int32_t ts, float factor,
     // put merged segment into buffer
     buffer_put( cur_ts, merge_buf, TEMPLATE_SEG);
     if (p_buf_end - srch - TEMPLATE_SEG < 0) {
-      ERROR("audio after merged segment spills over\n");
+      ERROR("audio after merged segment spills over");
       break;
     }
     // add after merged segment audio from after srch 
@@ -501,7 +501,7 @@ u_int32_t AmAdaptivePlayout::time_scale(u_int32_t ts, float factor,
     float act_fact = s / (float)packet_len;
 
 #ifdef DEBUG_PLAYOUTBUF
-    DBG("at ts %u: new size = %u, ratio = %f, requested = %f (wsola_off = %ld)\n", 
+    DBG("at ts %u: new size = %u, ratio = %f, requested = %f (wsola_off = %ld)", 
 	ts, s, act_fact, factor, (long)wsola_off);
 #endif
     // break condition: coming to the end of the frame (with safety margin)

@@ -95,7 +95,7 @@ int XMLRPC2DI::load() {
 
     int client_request_timeout = cfg.getParameterInt("client_request_timeout",0);
 
-    DBG("Running multi-threaded XMLRPC server with %u threads\n", threads);
+    DBG("Running multi-threaded XMLRPC server with %u threads", threads);
     MultithreadXmlRpcServer* mt_s = new MultithreadXmlRpcServer();
 
     if(client_request_timeout){
@@ -105,19 +105,19 @@ int XMLRPC2DI::load() {
     mt_s->createThreads(threads);    
     s = mt_s;
   } else {
-    DBG("Running single-threaded XMLRPC server\n");
+    DBG("Running single-threaded XMLRPC server");
     s = new XmlRpcServer();
   }
 
   ServerRetryAfter = cfg.getParameterInt("server_retry_after", 10);
-  DBG("retrying failed server after %u seconds\n", ServerRetryAfter);
+  DBG("retrying failed server after %u seconds", ServerRetryAfter);
 
   
   string server_timeout = cfg.getParameter("server_timeout");
   if (!server_timeout.empty()) {
     unsigned int server_timeout_i = 0;
     if (str2i(server_timeout, server_timeout_i)) {
-      ERROR("could not understand server_timeout=%s\n", 
+      ERROR("could not understand server_timeout=%s", 
 	    server_timeout.c_str());
       return -1;
     }
@@ -129,25 +129,25 @@ int XMLRPC2DI::load() {
 
   string run_server = cfg.getParameter("run_server","yes");
   if (run_server != "yes") {
-    DBG("XMLRPC server will not be started.\n");
+    DBG("XMLRPC server will not be started.");
     return 0;
   }
 
   string bind_ip = cfg.getParameter("server_ip");
   if (bind_ip.empty()) {
-    DBG("binding on ANY interface\n");
+    DBG("binding on ANY interface");
   } else {
     bind_ip = AmLcConfig::instance().fixIface2IP(bind_ip, false);
   }
 
   string conf_xmlrpc_port = cfg.getParameter("xmlrpc_port",XMLRPC_PORT);
   if (conf_xmlrpc_port.empty()) {
-    ERROR("configuration: xmlrpc_port must be defined!\n");
+    ERROR("configuration: xmlrpc_port must be defined!");
     return -1;
   } 
   
   if (str2i(conf_xmlrpc_port, XMLRPCPort)) {
-    ERROR("configuration: unable to decode xmlrpc_port value '%s'!\n", 
+    ERROR("configuration: unable to decode xmlrpc_port value '%s'!", 
 	  conf_xmlrpc_port.c_str());
     return -1;
   }
@@ -155,9 +155,9 @@ int XMLRPC2DI::load() {
   bool export_di = false;
   string direct_export = cfg.getParameter("direct_export","");
   if (direct_export.length()) {
-    DBG("direct_export interfaces: %s\n", direct_export.c_str());
+    DBG("direct_export interfaces: %s", direct_export.c_str());
   } else {
-    DBG("No direct_export interfaces.\n");
+    DBG("No direct_export interfaces.");
   }
 
   string export_di_s = cfg.getParameter("export_di","yes");
@@ -165,7 +165,7 @@ int XMLRPC2DI::load() {
     export_di = true;
   } 
   
-  INFO("XMLRPC Server: %snabling builtin method 'di'.\n", export_di?"E":"Not e");
+  INFO("XMLRPC Server: %snabling builtin method 'di'.", export_di?"E":"Not e");
 
 
   server = new XMLRPC2DIServer(XMLRPCPort, bind_ip, export_di, direct_export, s);
@@ -203,7 +203,7 @@ void XMLRPC2DI::newConnection(const AmArg& args, AmArg& ret) {
   string server_name  = args.get(1).asCStr();
   int port            = args.get(2).asInt();
   string uri          = args.get(3).asCStr();
-  DBG("adding XMLRPC server http://%s:%d%s for application '%s'\n",
+  DBG("adding XMLRPC server http://%s:%d%s for application '%s'",
       server_name.c_str(), port, uri.c_str(), app_name.c_str());
 
   XMLRPCServerEntry* sc = new XMLRPCServerEntry(server_name, port, uri);
@@ -224,7 +224,7 @@ XMLRPCServerEntry* XMLRPC2DI::getServer(const string& app_name) {
   }
   server_mut.unlock();
 
-  DBG("found %zd active connections for application %s\n", 
+  DBG("found %zd active connections for application %s", 
       scs.size(), app_name.c_str());  
   if (scs.empty()) {
     // no connections found
@@ -258,7 +258,7 @@ void XMLRPC2DI::sendRequest(const AmArg& args, AmArg& ret) {
     XMLRPC2DIServer::amarg2xmlrpcval(params, x_args);
 
     if (c.execute(method.c_str(), x_args, x_result, XMLRPC2DI::ServerTimeout) &&  !c.isFault()) {
-      DBG("successfully executed method %s on server %s:%d\n",
+      DBG("successfully executed method %s on server %s:%d",
 	  method.c_str(), srv->server.c_str(), srv->port);
       ret.push(0);
       ret.push("OK");
@@ -266,7 +266,7 @@ void XMLRPC2DI::sendRequest(const AmArg& args, AmArg& ret) {
       XMLRPC2DIServer::xmlrpcval2amarg(x_result, ret[2]);
       return;      
     } else {
-      DBG("executing method %s failed on server %s:%d\n",
+      DBG("executing method %s failed on server %s:%d",
 	  method.c_str(), srv->server.c_str(), srv->port);
       srv->set_failed();
     }
@@ -299,14 +299,14 @@ void XMLRPC2DI::sendRequestList(const AmArg& args, AmArg& ret) {
     }
 
     if (c.execute(method.c_str(), x_args, x_result, XMLRPC2DI::ServerTimeout) &&  !c.isFault()) {
-      DBG("successfully executed method %s on server %s:%d\n",
+      DBG("successfully executed method %s on server %s:%d",
 	  method.c_str(), srv->server.c_str(), srv->port);
       ret.push(0);
       ret.push("OK");
       XMLRPC2DIServer::xmlrpcval2amarg(x_result, ret);
       return;      
     } else {
-      DBG("executing method %s failed on server %s:%d\n",
+      DBG("executing method %s failed on server %s:%d",
 	  method.c_str(), srv->server.c_str(), srv->port);
       srv->set_failed();
     }
@@ -364,17 +364,17 @@ XMLRPC2DIServer::XMLRPC2DIServer(unsigned int port,
 
 
 {	
-  INFO("XMLRPC Server: enabled builtin method 'calls'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_loglevel'\n");
-  INFO("XMLRPC Server: enabled builtin method 'set_loglevel'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_shutdownmode'\n");
-  INFO("XMLRPC Server: enabled builtin method 'set_shutdownmode'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_callsavg'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_callsmax'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_cpsavg'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_cpsmax'\n");
-  INFO("XMLRPC Server: enabled builtin method 'get_cpslimit'\n");
-  INFO("XMLRPC Server: enabled builtin method 'set_cpslimit'\n");
+  INFO("XMLRPC Server: enabled builtin method 'calls'");
+  INFO("XMLRPC Server: enabled builtin method 'get_loglevel'");
+  INFO("XMLRPC Server: enabled builtin method 'set_loglevel'");
+  INFO("XMLRPC Server: enabled builtin method 'get_shutdownmode'");
+  INFO("XMLRPC Server: enabled builtin method 'set_shutdownmode'");
+  INFO("XMLRPC Server: enabled builtin method 'get_callsavg'");
+  INFO("XMLRPC Server: enabled builtin method 'get_callsmax'");
+  INFO("XMLRPC Server: enabled builtin method 'get_cpsavg'");
+  INFO("XMLRPC Server: enabled builtin method 'get_cpsmax'");
+  INFO("XMLRPC Server: enabled builtin method 'get_cpslimit'");
+  INFO("XMLRPC Server: enabled builtin method 'set_cpslimit'");
 
   // export all methods via 'di' function? 
   if (di_export) {
@@ -388,8 +388,8 @@ XMLRPC2DIServer::XMLRPC2DIServer(unsigned int port,
     registerMethods(*it);
   }
 
-  INFO("Initialized XMLRPC2DIServer with: \n");
-  INFO("    IP = %s             port = %u\n", 
+  INFO("Initialized XMLRPC2DIServer with: ");
+  INFO("    IP = %s             port = %u", 
        bind_ip.empty()?"ANY":bind_ip.c_str(), port);
 }
 
@@ -400,14 +400,14 @@ void XMLRPC2DIServer::registerMethods(const std::string& iface) {
   try {
     AmDynInvokeFactory* di_f = AmPlugIn::instance()->getFactory4Di(iface);
     if(NULL == di_f){
-      ERROR("DI interface '%s' could not be found. Missing load_plugins?\n", 
+      ERROR("DI interface '%s' could not be found. Missing load_plugins?", 
 	    iface.c_str());
       return;
     } 
     
     AmDynInvoke* di = di_f->getInstance();
     if(NULL == di){
-      ERROR("could not get DI instance from '%s'.\n", 
+      ERROR("could not get DI instance from '%s'.", 
 	    iface.c_str());
       return;
     } 
@@ -422,39 +422,39 @@ void XMLRPC2DIServer::registerMethods(const std::string& iface) {
 	ERROR("name conflict for method '%s' from interface '%s', "
 	      "method already exported!\n",
 	      method.c_str(), iface.c_str());
-	ERROR("This method will be exported only as '%s.%s'\n",
+	ERROR("This method will be exported only as '%s.%s'",
 	      iface.c_str(), method.c_str());
       }
       
       if (!has_method) {
-	INFO("XMLRPC Server: enabling method '%s'\n",
+	INFO("XMLRPC Server: enabling method '%s'",
 	     method.c_str());
 	DIMethodProxy* mp = new DIMethodProxy(method, method, di_f);
 	s->addMethod(mp);
       }
       
-      INFO("XMLRPC Server: enabling method '%s.%s'\n",
+      INFO("XMLRPC Server: enabling method '%s.%s'",
 	   iface.c_str(), method.c_str());
       DIMethodProxy* mp = new DIMethodProxy(iface + "." + method, 
 					    method, di_f);
       s->addMethod(mp);
     }
   } catch (AmDynInvoke::NotImplemented& e) {
-    ERROR("Not implemented in interface '%s': '%s'\n", 
+    ERROR("Not implemented in interface '%s': '%s'", 
 	  iface.c_str(), e.what.c_str());
   } catch (const AmArg::OutOfBoundsException& e) {
-    ERROR("Out of bounds exception occured while exporting interface '%s'\n", 
+    ERROR("Out of bounds exception occured while exporting interface '%s'", 
 	  iface.c_str());
   } catch (...) {
-    ERROR("Unknown exception occured while exporting interface '%s'\n", 
+    ERROR("Unknown exception occured while exporting interface '%s'", 
 	  iface.c_str());
   }
 }
 
 bool XMLRPC2DIServer::initialize() {
-  DBG("Binding XMLRPC2DIServer to port %u \n", port);
+  DBG("Binding XMLRPC2DIServer to port %u ", port);
   if (!s->bindAndListen(port, bind_ip)) {
-    ERROR("Binding XMLRPC2DIServer to %s:%u\n", bind_ip.c_str(), port);
+    ERROR("Binding XMLRPC2DIServer to %s:%u", bind_ip.c_str(), port);
     return false;
   }
   return true;
@@ -465,7 +465,7 @@ void XMLRPC2DIServer::run() {
   // register us as SIP event receiver for MOD_NAME
   AmEventDispatcher::instance()->addEventQueue(MOD_NAME, this);
 
-  DBG("starting XMLRPC2DIServer...\n");
+  DBG("starting XMLRPC2DIServer...");
   running.set(true);
   do {
     s->work(DEF_XMLRPCSERVER_WORK_INTERVAL);
@@ -474,14 +474,14 @@ void XMLRPC2DIServer::run() {
   while(running.get());
 
   AmEventDispatcher::instance()->delEventQueue(MOD_NAME);
-  DBG("Exiting XMLRPC2DIServer.\n");
+  DBG("Exiting XMLRPC2DIServer.");
 }
 
 void XMLRPC2DIServer::process(AmEvent* ev) {
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("XMLRPC2DIServer received system Event\n");
+      DBG("XMLRPC2DIServer received system Event");
       if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
 	DBG("XMLRPC2DIServer received system Event: ServerShutdown, "
 	    "stopping thread\n");
@@ -490,66 +490,66 @@ void XMLRPC2DIServer::process(AmEvent* ev) {
       return;
     }
   }
-  WARN("unknown event received\n");
+  WARN("unknown event received");
 }
 
 void XMLRPC2DIServer::on_stop() {
-  DBG("on_stop().\n");
+  DBG("on_stop().");
   running.set(false);
 }
 
 void XMLRPC2DIServerCallsMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   int res = AmSession::getSessionNum();
-  DBG("XMLRPC2DI: calls = %d\n", res);
+  DBG("XMLRPC2DI: calls = %d", res);
   result = res;
 }
 
 void XMLRPC2DIServerGetLoglevelMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   int res = log_level;
-  DBG("XMLRPC2DI: get_loglevel returns %d\n", res);
+  DBG("XMLRPC2DI: get_loglevel returns %d", res);
   result = res;
 }
 
 void XMLRPC2DIServerSetLoglevelMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   log_level = params[0];
-  DBG("XMLRPC2DI: set log level to %d.\n", (int)params[0]);
+  DBG("XMLRPC2DI: set log level to %d.", (int)params[0]);
   result = "200 OK";
 }
 
 
 void XMLRPC2DIServerGetShutdownmodeMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
-  DBG("XMLRPC2DI: get_shutdownmode returns %s\n", AmConfig.shutdown_mode?"true":"false");
+  DBG("XMLRPC2DI: get_shutdownmode returns %s", AmConfig.shutdown_mode?"true":"false");
   result = (bool)AmConfig.shutdown_mode;
 }
 
 void XMLRPC2DIServerSetShutdownmodeMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   AmConfig.shutdown_mode = params[0];
-  DBG("XMLRPC2DI: set shutdownmode to %s.\n", AmConfig.shutdown_mode?"true":"false");
+  DBG("XMLRPC2DI: set shutdownmode to %s.", AmConfig.shutdown_mode?"true":"false");
   result = "200 OK";
 }
 
 void XMLRPC2DIServerGetCPSLimitMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   pair<unsigned int, unsigned int> l = AmSessionContainer::instance()->getCPSLimit();
-  DBG("XMLRPC2DI: get_cpslimit returns %d and %d\n", l.first, l.second);
+  DBG("XMLRPC2DI: get_cpslimit returns %d and %d", l.first, l.second);
   result = int2str(l.first) + " " + int2str(l.second);
 }
 
 void XMLRPC2DIServerSetCPSLimitMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   AmSessionContainer::instance()->setCPSLimit((int)params[0]);
-  DBG("XMLRPC2DI: set cpslimit to %u.\n",
+  DBG("XMLRPC2DI: set cpslimit to %u.",
     AmSessionContainer::instance()->getCPSLimit().first);
   result = "200 OK";
 }
 
 void XMLRPC2DIServerGetCpsavgMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   int l = AmSessionContainer::instance()->getAvgCPS();
-  DBG("XMLRPC2DI: get_cpsavg returns %d\n", l);
+  DBG("XMLRPC2DI: get_cpsavg returns %d", l);
   result = l;
 }
 
 void XMLRPC2DIServerGetCpsmaxMethod::execute(XmlRpcValue& params, XmlRpcValue& result) {
   int l = AmSessionContainer::instance()->getMaxCPS();
-  DBG("XMLRPC2DI: get_cpsmax returns %d\n", l);
+  DBG("XMLRPC2DI: get_cpsmax returns %d", l);
   result = l;
 }
 
@@ -557,7 +557,7 @@ void XMLRPC2DIServerGetCpsmaxMethod::execute(XmlRpcValue& params, XmlRpcValue& r
   void _meth::execute(XmlRpcValue& params, XmlRpcValue& result) {	\
   unsigned int res = AmSession::_sess_func();				\
   result = (int)res;							\
-  DBG("XMLRPC2DI: " _descr "(): %u\n", res);				\
+  DBG("XMLRPC2DI: " _descr "(): %u", res);				\
 }
 
 XMLMETH_EXEC(XMLRPC2DIServerGetCallsavgMethod, getAvgSessionNum, "get_callsavg");
@@ -576,7 +576,7 @@ void XMLRPC2DIServerDIMethod::execute(XmlRpcValue& params, XmlRpcValue& result) 
     string fact_name = params[0];
     string fct_name = params[1];
 
-    DBG("XMLRPC2DI: factory '%s' function '%s'\n", 
+    DBG("XMLRPC2DI: factory '%s' function '%s'", 
 	fact_name.c_str(), fct_name.c_str());
 
     // get args
@@ -584,7 +584,7 @@ void XMLRPC2DIServerDIMethod::execute(XmlRpcValue& params, XmlRpcValue& result) 
     XMLRPC2DIServer::xmlrpcval2amargarray(params, args, 2);
   
     if (XMLRPC2DI::DebugServerParams) {
-      DBG(" params: <%s>\n", AmArg::print(args).c_str()); 
+      DBG(" params: <%s>", AmArg::print(args).c_str()); 
     }
 
     AmDynInvokeFactory* di_f = AmPlugIn::instance()->getFactory4Di(fact_name);
@@ -600,7 +600,7 @@ void XMLRPC2DIServerDIMethod::execute(XmlRpcValue& params, XmlRpcValue& result) 
 
 
     if (XMLRPC2DI::DebugServerResult) {
-      DBG(" result: <%s>\n", AmArg::print(ret).c_str()); 
+      DBG(" result: <%s>", AmArg::print(ret).c_str()); 
     }
   
     XMLRPC2DIServer::amarg2xmlrpcval(ret, result);
@@ -642,20 +642,20 @@ void XMLRPC2DIServer::xmlrpcval2amargarray(XmlRpcValue& v, AmArg& a,
 void XMLRPC2DIServer::xmlrpcval2amarg(XmlRpcValue& v, AmArg& a) {
   if (v.valid()) {
     switch (v.getType()) {
-    case XmlRpcValue::TypeInt:   {  /* DBG("X->A INT\n"); */ a = (int)v;    }  break;
-    case XmlRpcValue::TypeDouble:{  /* DBG("X->A DBL\n"); */ a = (double)v; }  break;
-    case XmlRpcValue::TypeString:{  /* DBG("X->A STR\n"); */ a = ((string)v).c_str(); }  break;
-    case XmlRpcValue::TypeBoolean : {  /* DBG("X->A BOL\n"); */ a = (bool)v;  }
-    case XmlRpcValue::TypeInvalid : {  /* DBG("X->A BOL\n"); */ a = AmArg();  }
+    case XmlRpcValue::TypeInt:   {  /* DBG("X->A INT"); */ a = (int)v;    }  break;
+    case XmlRpcValue::TypeDouble:{  /* DBG("X->A DBL"); */ a = (double)v; }  break;
+    case XmlRpcValue::TypeString:{  /* DBG("X->A STR"); */ a = ((string)v).c_str(); }  break;
+    case XmlRpcValue::TypeBoolean : {  /* DBG("X->A BOL"); */ a = (bool)v;  }
+    case XmlRpcValue::TypeInvalid : {  /* DBG("X->A BOL"); */ a = AmArg();  }
       
     case XmlRpcValue::TypeArray: { 
-      /* DBG("X->A ARR\n"); */ 
+      /* DBG("X->A ARR"); */ 
       a.assertArray();
       xmlrpcval2amargarray(v, a, 0);
     } break;
 #ifdef XMLRPCPP_SUPPORT_STRUCT_ACCESS
     case XmlRpcValue::TypeStruct: {
-      /* DBG("X->A STR\n"); */ 
+      /* DBG("X->A STR"); */ 
       a.assertStruct();
       const XmlRpc::XmlRpcValue::ValueStruct& xvs = 
 	(XmlRpc::XmlRpcValue::ValueStruct)v;
@@ -688,19 +688,19 @@ void XMLRPC2DIServer::amarg2xmlrpcval(const AmArg& a,
     break;
 
   case AmArg::CStr:  
-    //    DBG("a->X CSTR\n");
+    //    DBG("a->X CSTR");
     result = string(a.asCStr()); break;
 
   case AmArg::Int:
-    //    DBG("a->X INT\n");  
+    //    DBG("a->X INT");  
     result=a.asInt(); break;
 
   case AmArg::Double: 
-    //    DBG("a->X DOUBLE\n");  
+    //    DBG("a->X DOUBLE");  
     result=a.asDouble(); break;
 
   case AmArg::Array:
-    //    DBG("a->X ARRAY size %u\n", a.size());  
+    //    DBG("a->X ARRAY size %u", a.size());  
     result.setSize(a.size());
     for (size_t i=0;i<a.size();i++) {
       // duh... recursion...
@@ -709,7 +709,7 @@ void XMLRPC2DIServer::amarg2xmlrpcval(const AmArg& a,
     break;
 
   case AmArg::Struct:
-    //    DBG("a->X STRUCT size %u\n", a.size());  
+    //    DBG("a->X STRUCT size %u", a.size());  
     for (AmArg::ValueStruct::const_iterator it = 
 	   a.begin(); it != a.end(); it++) {
       // duh... recursion...
@@ -717,7 +717,7 @@ void XMLRPC2DIServer::amarg2xmlrpcval(const AmArg& a,
     }
     break;
 
-  default: { WARN("unsupported return value type %d\n", a.getType()); } break;
+  default: { WARN("unsupported return value type %d", a.getType()); } break;
     // TODO: do sth with the data here ?
   }
 }
@@ -747,19 +747,19 @@ void DIMethodProxy::execute(XmlRpcValue& params,
     AmArg args, ret;
 
     
-    DBG("XMLRPC2DI '%s': function '%s'\n", 
+    DBG("XMLRPC2DI '%s': function '%s'", 
 	server_method_name.c_str(),
 	di_method_name.c_str());
 
     XMLRPC2DIServer::xmlrpcval2amarg(params, args);
     if (XMLRPC2DI::DebugServerParams) {
-      DBG(" params: <%s>\n", AmArg::print(args).c_str()); 
+      DBG(" params: <%s>", AmArg::print(args).c_str()); 
     }
 
     di->invoke(di_method_name, args, ret);
 
     if (XMLRPC2DI::DebugServerResult) {
-      DBG(" result: <%s>\n", AmArg::print(ret).c_str()); 
+      DBG(" result: <%s>", AmArg::print(ret).c_str()); 
     }
     
     XMLRPC2DIServer::amarg2xmlrpcval(ret, result);

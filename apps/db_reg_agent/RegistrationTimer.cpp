@@ -46,7 +46,7 @@ int RegistrationTimer::get_bucket_index(time_t tv) {
   bucket_index /= TIMER_BUCKET_LENGTH;
   
   if (bucket_index > TIMER_BUCKETS) { // too far in the future
-    ERROR("requested timer too far in the future (index %d vs %d TIMER_BUCKETS)\n",
+    ERROR("requested timer too far in the future (index %d vs %d TIMER_BUCKETS)",
 	  bucket_index, TIMER_BUCKETS);
     return -2;
   }
@@ -59,12 +59,12 @@ int RegistrationTimer::get_bucket_index(time_t tv) {
 
 void RegistrationTimer::place_timer(RegTimer* timer, int bucket_index) {
   if (bucket_index < 0) {
-    ERROR("trying to place_timer with negative index (%i)\n", bucket_index);
+    ERROR("trying to place_timer with negative index (%i)", bucket_index);
     return;
   }
 
   if (bucket_index > TIMER_BUCKETS) {
-    ERROR("trying to place_timer with too high index (%i vs %i)\n",
+    ERROR("trying to place_timer with too high index (%i vs %i)",
 	  bucket_index, TIMER_BUCKETS);
     return;
   }
@@ -77,13 +77,13 @@ void RegistrationTimer::place_timer(RegTimer* timer, int bucket_index) {
   buckets[bucket_index].timers.insert(it, timer);
   size_t b_size = buckets[bucket_index].timers.size();
  
- DBG("inserted timer [%p] in bucket %i (now sized %zd)\n",
+ DBG("inserted timer [%p] in bucket %i (now sized %zd)",
       timer, bucket_index, b_size);
 }
 
 void RegistrationTimer::fire_timer(RegTimer* timer) {
   if (timer && timer->cb) {
-    DBG("firing timer [%p]\n", timer);
+    DBG("firing timer [%p]", timer);
     timer->cb(timer, timer->data1, timer->data2);
   }
 }
@@ -98,13 +98,13 @@ bool RegistrationTimer::insert_timer(RegTimer* timer) {
   if (bucket_index == -1) {
     // already expired, fire timer
     buckets_mut.unlock();
-    DBG("inserting already expired timer [%p], firing\n", timer);
+    DBG("inserting already expired timer [%p], firing", timer);
     fire_timer(timer);
     return false;
   }
 
   if (bucket_index == -2) {
-    ERROR("trying to place timer too far in the future\n");
+    ERROR("trying to place timer too far in the future");
     buckets_mut.unlock();
     return false;
   }
@@ -144,9 +144,9 @@ bool RegistrationTimer::remove_timer(RegTimer* timer) {
   buckets_mut.unlock();  
 
   if (res) {
-    DBG("successfully removed timer [%p]\n", timer);
+    DBG("successfully removed timer [%p]", timer);
   } else {
-    DBG("timer [%p] not found for removing\n", timer);
+    DBG("timer [%p] not found for removing", timer);
   }
   return res;
 }
@@ -168,7 +168,7 @@ void RegistrationTimer::run_timers() {
     current_bucket++;
     current_bucket %= TIMER_BUCKETS;
     current_bucket_start += TIMER_BUCKET_LENGTH;
-    // DBG("turned bucket to %i\n", current_bucket);
+    // DBG("turned bucket to %i", current_bucket);
   }
 
   // move timers from current_bucket
@@ -185,7 +185,7 @@ void RegistrationTimer::run_timers() {
   buckets_mut.unlock();
 
   if (!timers_tbf.empty()) {
-    DBG("firing %zd timers\n", timers_tbf.size());
+    DBG("firing %zd timers", timers_tbf.size());
     for (std::list<RegTimer*>::iterator it=timers_tbf.begin();
 	 it != timers_tbf.end(); it++) {
       fire_timer(*it);
@@ -229,7 +229,7 @@ void RegistrationTimer::run()
     timeradd(&tick,&next_tick,&next_tick);
   }
 
-  DBG("RegistrationTimer thread finishing.\n");
+  DBG("RegistrationTimer thread finishing.");
   _shutdown_finished = true;
 }
 
@@ -256,7 +256,7 @@ bool RegistrationTimer::insert_timer_leastloaded(RegTimer* timer,
 
   if (from_index < 0) {
     // use now .. to_index
-    DBG("from_time (%ld) in the past - searching load loaded from now()\n", from_time);
+    DBG("from_time (%ld) in the past - searching load loaded from now()", from_time);
     from_index  = current_bucket;
   }
   // find least loaded bucket
@@ -273,7 +273,7 @@ bool RegistrationTimer::insert_timer_leastloaded(RegTimer* timer,
     i++;
     i %= TIMER_BUCKETS;
   }
-  DBG("found bucket %i with least load %zd (between %i and %i)\n",
+  DBG("found bucket %i with least load %zd (between %i and %i)",
       res_index, least_load, from_index, to_index);
 
   // update expires to some random value inside the selected bucket
@@ -286,7 +286,7 @@ bool RegistrationTimer::insert_timer_leastloaded(RegTimer* timer,
   timer->expires = current_bucket_start + 
     diff * TIMER_BUCKET_LENGTH + // bucket start
     rand() % TIMER_BUCKET_LENGTH;
-  DBG("setting expires to %ld (between %ld and %ld)\n",
+  DBG("setting expires to %ld (between %ld and %ld)",
       timer->expires, from_time, to_time);
 
   place_timer(timer, res_index);

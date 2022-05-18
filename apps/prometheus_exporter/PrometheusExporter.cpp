@@ -347,7 +347,7 @@ int PrometheusExporter::onLoad()
 
 void PrometheusExporter::run()
 {
-    INFO("prometheus exporter server thread\n");
+    INFO("prometheus exporter server thread");
     setThreadName("prometheus-http");
     event_base_dispatch(ev_base);
     INFO("prometheus exporter server finished");

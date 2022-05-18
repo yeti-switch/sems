@@ -114,7 +114,7 @@ void AmConferenceStatus::releaseChannel(const string& cid, unsigned int ch_id)
     }
   }
   else {
-    ERROR("conference '%s' does not exists\n",cid.c_str());
+    ERROR("conference '%s' does not exists",cid.c_str());
   }
   cid2s_mut.unlock();
 }
@@ -130,7 +130,7 @@ AmConferenceStatus::AmConferenceStatus(const string& conference_id)
 
 AmConferenceStatus::~AmConferenceStatus()
 {
-  DBG("AmConferenceStatus::~AmConferenceStatus(): conf_id = %s\n",conf_id.c_str());
+  DBG("AmConferenceStatus::~AmConferenceStatus(): conf_id = %s",conf_id.c_str());
 }
 
 void AmConferenceStatus::postConferenceEvent(int event_id, const string& sess_id)
@@ -216,7 +216,7 @@ int AmConferenceStatus::releaseChannel(unsigned int ch_id)
   }
   else {
     participants = channels.size();
-    ERROR("bad channel id=%i within conference status '%s'\n",
+    ERROR("bad channel id=%i within conference status '%s'",
 	  ch_id,conf_id.c_str());
   }
   sessions_mut.unlock();

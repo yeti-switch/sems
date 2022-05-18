@@ -94,7 +94,7 @@ int get_announce_msg(string application, string message, string user,
 
 	mysqlpp::Query query = EarlyAnnounceFactory::Connection.query();
 	    
-	DBG("Query string <%s>\n", query_string.c_str());
+	DBG("Query string <%s>", query_string.c_str());
 
 	query << query_string;
 
@@ -124,7 +124,7 @@ int get_announce_msg(string application, string message, string user,
 		return 1;
 	    }
 	} else {
-	    ERROR("Database query error\n");
+	    ERROR("Database query error");
 	    *audio_file = "";
 	    return 0;
 	}
@@ -132,7 +132,7 @@ int get_announce_msg(string application, string message, string user,
 
     catch (const mysqlpp::Exception& er) {
 	// Catch-all for any MySQL++ exceptions
-	ERROR("MySQL++ error: %s\n", er.what());
+	ERROR("MySQL++ error: %s", er.what());
 	*audio_file = "";
 	return 0;
     }
@@ -152,14 +152,14 @@ int EarlyAnnounceFactory::onLoad()
   if (cfg.hasParameter("continue_b2b")) { 
     if (cfg.getParameter("continue_b2b") == "yes") {
       ContinueB2B = Always;
-      DBG("early_announce in b2bua mode.\n");
+      DBG("early_announce in b2bua mode.");
     }
     else if (cfg.getParameter("continue_b2b") == "app-param") {
       ContinueB2B = AppParam;
       DBG("early_announce in b2bua/final reply mode "
 	  "(depends on app-param).\n");
     } else {
-      DBG("early_announce sends final reply.\n");
+      DBG("early_announce sends final reply.");
     }
   }
 
@@ -176,13 +176,13 @@ int EarlyAnnounceFactory::onLoad()
 
   mysql_user = cfg.getParameter("mysql_user");
   if (mysql_user.empty()) {
-    ERROR("early_announce.conf parameter 'mysql_user' is missing.\n");
+    ERROR("early_announce.conf parameter 'mysql_user' is missing.");
     return -1;
   }
 
   mysql_passwd = cfg.getParameter("mysql_passwd");
   if (mysql_passwd.empty()) {
-    ERROR("early_announce.conf parameter 'mysql_passwd' is missing.\n");
+    ERROR("early_announce.conf parameter 'mysql_passwd' is missing.");
     return -1;
   }
 
@@ -216,19 +216,19 @@ int EarlyAnnounceFactory::onLoad()
     Connection.connect(mysql_db.c_str(), mysql_server.c_str(),
 		       mysql_user.c_str(), mysql_passwd.c_str());
     if (!Connection) {
-      ERROR("Database connection failed: %s\n", Connection.error());
+      ERROR("Database connection failed: %s", Connection.error());
       return -1;
     }
   }
 
   catch (const mysqlpp::BadOption& er) {
-    ERROR("MySQL++ set_option error: %s\n", er.what());
+    ERROR("MySQL++ set_option error: %s", er.what());
     return -1;
   }
  	
   catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return -1;
   }
 
@@ -238,7 +238,7 @@ int EarlyAnnounceFactory::onLoad()
     return -1;
   }
   if (announce_file.empty()) {
-    ERROR("default announce for " MOD_NAME " module does not exist.\n");
+    ERROR("default announce for " MOD_NAME " module does not exist.");
     return -1;
   }
 
@@ -255,7 +255,7 @@ int EarlyAnnounceFactory::onLoad()
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("default file for " MOD_NAME " module does not exist ('%s').\n",
+    ERROR("default file for " MOD_NAME " module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
@@ -307,12 +307,12 @@ AmSession* EarlyAnnounceFactory::onInvite(const AmSipRequest& req, const string&
   string announce_file = announce_path + req.domain 
     + "/" + req.user + ".wav";
 
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
@@ -340,7 +340,7 @@ void EarlyAnnounceDialog::onEarlySessionStart()
   // this disables DTMF detection as well
   setReceiving(false);
 
-  DBG("EarlyAnnounceDialog::onEarlySessionStart\n");
+  DBG("EarlyAnnounceDialog::onEarlySessionStart");
 
   if(wav_file.open(filename,AmAudioFile::Read))
     throw string("EarlyAnnounceDialog::onEarlySessionStart: Cannot open file");
@@ -352,7 +352,7 @@ void EarlyAnnounceDialog::onEarlySessionStart()
 
 void EarlyAnnounceDialog::onBye(const AmSipRequest& req)
 {
-  DBG("onBye: stopSession\n");
+  DBG("onBye: stopSession");
   setStopped();
 }
 
@@ -368,7 +368,7 @@ void EarlyAnnounceDialog::process(AmEvent* event)
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && 
      (audio_event->event_id == AmAudioEvent::cleared)) {
-      DBG("AmAudioEvent::cleared\n");
+      DBG("AmAudioEvent::cleared");
 
       bool continue_b2b = false;
       if (EarlyAnnounceFactory::ContinueB2B == 
@@ -383,7 +383,7 @@ void EarlyAnnounceDialog::process(AmEvent* event)
 	  continue_b2b = getHeader(invite_req.hdrs,"P-B2B", true)=="yes";
 	}
       }
-      DBG("determined: continue_b2b = %s\n", continue_b2b?"true":"false");
+      DBG("determined: continue_b2b = %s", continue_b2b?"true":"false");
 
       if (!continue_b2b) {
 	unsigned int code_i = 404;
@@ -393,7 +393,7 @@ void EarlyAnnounceDialog::process(AmEvent* event)
 	if (iptel_app_param.length()) {
 	  string code = get_header_keyvalue(iptel_app_param,"Final-Reply-Code");
 	  if (code.length() && str2i(code, code_i)) {
-	    ERROR("while parsing Final-Reply-Code parameter\n");
+	    ERROR("while parsing Final-Reply-Code parameter");
 	  }
 	  reason = get_header_keyvalue(iptel_app_param,"Final-Reply-Reason");
 	  if (!reason.length())
@@ -401,7 +401,7 @@ void EarlyAnnounceDialog::process(AmEvent* event)
 	} else {
 	  string code = getHeader(invite_req.hdrs,"P-Final-Reply-Code", true);
 	  if (code.length() && str2i(code, code_i)) {
-	    ERROR("while parsing P-Final-Reply-Code\n");
+	    ERROR("while parsing P-Final-Reply-Code");
 	  }
 	  string h_reason =  getHeader(invite_req.hdrs,"P-Final-Reply-Reason", true);
 	  if (h_reason.length()) {
@@ -412,7 +412,7 @@ void EarlyAnnounceDialog::process(AmEvent* event)
 	  }
 	}
 
-	DBG("Replying with code %d %s\n", code_i, reason.c_str());
+	DBG("Replying with code %d %s", code_i, reason.c_str());
 	dlg->reply(invite_req, code_i, reason);
 	
 	setStopped();

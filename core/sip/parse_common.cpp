@@ -42,7 +42,7 @@ int parse_sip_version(const char* beg, int len)
     //char* end = c+len;
 
     if(len!=SIPVER_len){
-	DBG("SIP-Version string length != SIPVER_len\n");
+	DBG("SIP-Version string length != SIPVER_len");
 	return MALFORMED_SIP_MSG;
     }
 
@@ -50,17 +50,17 @@ int parse_sip_version(const char* beg, int len)
 	((c[1] != 'I')&&(c[1] != 'i')) ||
 	((c[2] != 'P')&&(c[2] != 'p')) ) {
 
-	DBG("SIP-Version does not begin with \"SIP\"\n");
+	DBG("SIP-Version does not begin with \"SIP\"");
 	return MALFORMED_SIP_MSG;
     }
     c += SIP_len;
 
     if(memcmp(c,SUP_SIPVER,SUP_SIPVER_len) != 0){
-	DBG("Unsupported or malformed SIP-Version\n");
+	DBG("Unsupported or malformed SIP-Version");
 	return MALFORMED_SIP_MSG;
     }
 
-    //DBG("SIP-Version OK\n");
+    //DBG("SIP-Version OK");
     return 0;
 }
 
@@ -107,7 +107,7 @@ static int _parse_gen_params(list<sip_avp*>* params, const char** c,
 		    return 0;
 		}
 
-		DBG("';' expected, found '%c'\n",**c);
+		DBG("';' expected, found '%c'",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -186,7 +186,7 @@ static int _parse_gen_params(list<sip_avp*>* params, const char** c,
 		    params->push_back(avp.release());
 		    return 0;
 		}
-		DBG("'=' expected\n");
+		DBG("'=' expected");
 		return MALFORMED_SIP_MSG;
 	    }
 
@@ -257,7 +257,7 @@ static int _parse_gen_params(list<sip_avp*>* params, const char** c,
 		
 	    case '\\':
 		if(!*(++(*c))){
-		    DBG("Escape char in quoted str at EoT!!!\n");
+		    DBG("Escape char in quoted str at EoT!!!");
 		    return MALFORMED_SIP_MSG;
 		}
 		break;
@@ -308,7 +308,7 @@ static int _parse_gen_params(list<sip_avp*>* params, const char** c,
 	break;
 
     default:
-	DBG("Wrong state: st=%i\n",st);
+	DBG("Wrong state: st=%i",st);
 	return MALFORMED_SIP_MSG;
     }
 

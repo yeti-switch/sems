@@ -66,7 +66,7 @@ VoiceboxDialog::VoiceboxDialog(const string& user,
   setDtmfDetectionEnabled(true);
   msg_storage = VoiceboxFactory::MessageStorage->getInstance();
   if(!msg_storage){
-    ERROR("could not get a message storage reference\n");
+    ERROR("could not get a message storage reference");
     throw AmSession::Exception(500,"could not get a message storage reference");
   }
 }
@@ -107,7 +107,7 @@ void VoiceboxDialog::process(AmEvent* ev)
   AmAudioEvent* audio_ev = dynamic_cast<AmAudioEvent*>(ev);
   if (audio_ev  && 
       audio_ev->event_id == AmAudioEvent::noAudio) {
-    DBG("########## noAudio event #########\n");
+    DBG("########## noAudio event #########");
 
     if (Bye == state) {
       closeMailbox();
@@ -120,14 +120,14 @@ void VoiceboxDialog::process(AmEvent* ev)
 
   AmPlaylistSeparatorEvent* pl_ev = dynamic_cast<AmPlaylistSeparatorEvent*>(ev);
   if (pl_ev) {
-    DBG("########## Playlist separator ####\n");
+    DBG("########## Playlist separator ####");
 
     if (Prompting == state) {
       if (pl_ev->event_id == PLAYLIST_SEPARATOR_MSG_BEGIN){
 	// mark message as saved  
 	saveCurMessage();
 	// now we can accept action on the message
-	DBG("Changed state to MsgAction.\n");
+	DBG("Changed state to MsgAction.");
 	state = MsgAction;
       }
     }
@@ -140,7 +140,7 @@ void VoiceboxDialog::process(AmEvent* ev)
 
 void VoiceboxDialog::onDtmf(int event, int duration)
 {
-  DBG("VoiceboxDialog::onDtmf: event %d duration %d\n", 
+  DBG("VoiceboxDialog::onDtmf: event %d duration %d", 
       event, duration);
   
   if (EnteringPin == state) {
@@ -148,7 +148,7 @@ void VoiceboxDialog::onDtmf(int event, int duration)
     // check pin
     if (event<10) {
       entered_pin += int2str(event);
-      DBG("added '%s': PIN is now '%s'.\n", 
+      DBG("added '%s': PIN is now '%s'.", 
 	  int2str(event).c_str(), entered_pin.c_str());
     }
     if (event==10 || event==11) { // # and * keys
@@ -230,7 +230,7 @@ void VoiceboxDialog::openMailbox() {
   userdir_open = true;
   int ecode = ret.get(0).asInt();
   if (MSG_EUSRNOTFOUND == ecode) {
-    DBG("empty mailbox for user '%s' domain '%s'.\n",
+    DBG("empty mailbox for user '%s' domain '%s'.",
 	  user.c_str(), domain.c_str()
 	);
     closeMailbox();
@@ -238,7 +238,7 @@ void VoiceboxDialog::openMailbox() {
   }
 
   if (MSG_OK != ecode) {
-    ERROR("userdir_open for user '%s' domain '%s': %s\n",
+    ERROR("userdir_open for user '%s' domain '%s': %s",
 	  user.c_str(), domain.c_str(),
 	  MsgStrError(ret.get(0).asInt()));
     closeMailbox();
@@ -259,7 +259,7 @@ void VoiceboxDialog::openMailbox() {
     AmArg& elem = ret.get(1).get(i);
     if (!isArgArray(elem) 
 	|| elem.size() != 3) {
-      ERROR("wrong element in userdir list.\n");
+      ERROR("wrong element in userdir list.");
       continue;
     }
     
@@ -281,7 +281,7 @@ void VoiceboxDialog::openMailbox() {
   saved_msgs.sort();
   saved_msgs.reverse();
   
-  DBG("Got %zd new and %zd saved messages for user '%s' domain '%s'\n",
+  DBG("Got %zd new and %zd saved messages for user '%s' domain '%s'",
       new_msgs.size(), saved_msgs.size(),
       user.c_str(), domain.c_str());
  
@@ -307,7 +307,7 @@ void VoiceboxDialog::closeMailbox() {
       isArgInt(ret.get(0)) &&
       ret.get(0).asInt() != MSG_OK
       ) {
-    ERROR("userdir_close for user '%s' domain '%s': %s\n",
+    ERROR("userdir_close for user '%s' domain '%s': %s",
 	  user.c_str(), domain.c_str(),
 	  MsgStrError(ret.get(0).asInt()));
   }
@@ -317,7 +317,7 @@ void VoiceboxDialog::closeMailbox() {
 FILE* VoiceboxDialog::getCurrentMessage() {
   string msgname = cur_msg->name;
 
-  DBG("trying to get message '%s' for user '%s' domain '%s'\n",
+  DBG("trying to get message '%s' for user '%s' domain '%s'",
       msgname.c_str(), user.c_str(), domain.c_str());
   AmArg di_args,ret;
   di_args.push(domain.c_str());  // domain
@@ -345,7 +345,7 @@ FILE* VoiceboxDialog::getCurrentMessage() {
   
   if ((ret.size() < 2) ||
       (!isArgAObject(ret.get(1)))) {
-    ERROR("msg_get for user '%s' domain '%s' message '%s': invalid return value\n",
+    ERROR("msg_get for user '%s' domain '%s' message '%s': invalid return value",
 	  user.c_str(), domain.c_str(),
 	  msgname.c_str());
     return NULL;
@@ -413,7 +413,7 @@ void VoiceboxDialog::doListOverview() {
 bool VoiceboxDialog::enqueueCurMessage() {
   if (((in_saved_msgs) && (cur_msg == saved_msgs.end()))
       ||((!in_saved_msgs) && (cur_msg == new_msgs.end()))) {
-      ERROR("check implementation!\n");
+      ERROR("check implementation!");
       return false;
   }
 
@@ -486,13 +486,13 @@ void VoiceboxDialog::curMsgOP(const char* op) {
 
     if ((ret.size() < 1)
 	|| !isArgInt(ret.get(0))) {
-      ERROR("%s returned wrong result type\n", op);
+      ERROR("%s returned wrong result type", op);
       return;
     }
     
     int errcode = ret.get(0).asInt();
     if (errcode != MSG_OK) {
-      ERROR("%s error: %s\n", 
+      ERROR("%s error: %s", 
 	    op, MsgStrError(errcode));
     }
   }  
@@ -543,7 +543,7 @@ void VoiceboxDialog::checkFinalMessage() {
 
 void VoiceboxDialog::enqueueCount(unsigned int cnt) {
   if (cnt > 99) {
-    ERROR("only support up to 99 messages count.\n");
+    ERROR("only support up to 99 messages count.");
     return;
   }
 

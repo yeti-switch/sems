@@ -65,7 +65,7 @@ int AnnounceAuthFactory::onLoad()
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("default file for ann_b2b module does not exist ('%s').\n",
+    ERROR("default file for ann_b2b module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
@@ -92,12 +92,12 @@ AmSession* AnnounceAuthFactory::onInvite(const AmSipRequest& req, const string& 
   string announce_file = announce_path + req.domain 
     + "/" + req.user + ".wav";
 
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
@@ -130,7 +130,7 @@ AnnounceAuthDialog::~AnnounceAuthDialog()
 
 void AnnounceAuthDialog::onSessionStart()
 {
-  DBG("AnnounceAuthDialog::onSessionStart\n");
+  DBG("AnnounceAuthDialog::onSessionStart");
   startSession();
 
   AmSession::onSessionStart();
@@ -149,7 +149,7 @@ void AnnounceAuthDialog::startSession()
 
 void AnnounceAuthDialog::onBye(const AmSipRequest& req)
 {
-  DBG("onBye: stopSession\n");
+  DBG("onBye: stopSession");
   setStopped();
 }
 
@@ -188,5 +188,5 @@ void DialerThread::run() {
 }
 
 void DialerThread::on_stop() {
-  DBG("stopping...\n");
+  DBG("stopping...");
 }

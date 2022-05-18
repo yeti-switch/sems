@@ -75,10 +75,10 @@ void PrecodedDialog::onSessionStart()
   AmPrecodedFileInstance* file = 
     file_def->getFileInstance(RTPStream()->getPayloadType());
   if (!file) {
-    ERROR("no payload\n");
+    ERROR("no payload");
   }
   if (!file || file->open()) { 
-    ERROR("PrecodedDialog::onSessionStart: Cannot open file\n");
+    ERROR("PrecodedDialog::onSessionStart: Cannot open file");
     dlg->bye();
     setStopped();
     return;
@@ -92,7 +92,7 @@ void PrecodedDialog::onSessionStart()
 
 void PrecodedDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

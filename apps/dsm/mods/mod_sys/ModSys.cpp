@@ -66,22 +66,22 @@ MOD_CONDITIONEXPORT_BEGIN(MOD_CLS_NAME) {
 } MOD_CONDITIONEXPORT_END;
 
 MATCH_CONDITION_START(FileExistsCondition) {
-  DBG("checking file '%s'\n", arg.c_str());
+  DBG("checking file '%s'", arg.c_str());
   string fname = resolveVars(arg, sess, sc_sess, event_params);
   bool ex =  file_exists(fname);
-  DBG("file '%s' %s\n", fname.c_str(), ex?"exists":"does not exist");
+  DBG("file '%s' %s", fname.c_str(), ex?"exists":"does not exist");
   if (inv) {
-    DBG("returning %s\n", (!ex)?"true":"false");
+    DBG("returning %s", (!ex)?"true":"false");
     return !ex;
   }  else {
-    DBG("returning %s\n", (ex)?"true":"false");
+    DBG("returning %s", (ex)?"true":"false");
     return ex;
   }
 } MATCH_CONDITION_END;
 
 bool sys_mkdir(const char* p) {
   if (mkdir(p,  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
-    ERROR("mkdir failed for '%s': %s\n", 
+    ERROR("mkdir failed for '%s': %s", 
 	  p, strerror(errno));
     return false;
   }
@@ -90,7 +90,7 @@ bool sys_mkdir(const char* p) {
 
 EXEC_ACTION_START(SCMkDirAction) {
   string d = resolveVars(arg, sess, sc_sess, event_params);
-  DBG("mkdir '%s'\n", d.c_str());
+  DBG("mkdir '%s'", d.c_str());
   if (sys_mkdir(d.c_str())) {
     sc_sess->SET_ERRNO(DSM_ERRNO_OK);    
   } else {
@@ -139,7 +139,7 @@ bool sys_mkdir_recursive(const char* p) {
 
 EXEC_ACTION_START(SCMkDirRecursiveAction) {
   string d = resolveVars(arg, sess, sc_sess, event_params);
-  DBG("mkdir recursive '%s'\n", d.c_str());
+  DBG("mkdir recursive '%s'", d.c_str());
   if (sys_mkdir_recursive(d.c_str())) {
     sc_sess->SET_ERRNO(DSM_ERRNO_OK);    
   } else {
@@ -171,7 +171,7 @@ EXEC_ACTION_START(SCRenameAction) {
   } else if (rres == EXDEV) {
     FILE* f1 = fopen(src.c_str(), "r");
     if (NULL == f1) {
-      WARN("opening source file '%s' for copying failed: '%s'\n", 
+      WARN("opening source file '%s' for copying failed: '%s'", 
 	   src.c_str(), strerror(errno));
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
       return false;
@@ -179,7 +179,7 @@ EXEC_ACTION_START(SCRenameAction) {
 
     FILE* f2 = fopen(dst.c_str(), "w");
     if (NULL == f2) {
-      WARN("opening destination file '%s' for copying failed: '%s'\n", 
+      WARN("opening destination file '%s' for copying failed: '%s'", 
 	   dst.c_str(), strerror(errno));
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
       return false;
@@ -191,7 +191,7 @@ EXEC_ACTION_START(SCRenameAction) {
     fclose(f2);
     
     if (unlink(src.c_str())) {
-      WARN("unlinking source file '%s' for copying failed: '%s'\n", 
+      WARN("unlinking source file '%s' for copying failed: '%s'", 
 	   src.c_str(), strerror(errno));
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
       return false;
@@ -199,7 +199,7 @@ EXEC_ACTION_START(SCRenameAction) {
 
     sc_sess->SET_ERRNO(DSM_ERRNO_OK);
   } else {
-    WARN("renaming '%s' to '%s' failed: '%s'\n", 
+    WARN("renaming '%s' to '%s' failed: '%s'", 
 	 src.c_str(), dst.c_str(), strerror(errno));
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
   }
@@ -214,7 +214,7 @@ EXEC_ACTION_START(SCUnlinkAction) {
   if (!unlink(fname.c_str())) {
     sc_sess->SET_ERRNO(DSM_ERRNO_OK);    
   } else {
-    WARN("unlink '%s' failed: '%s'\n", 
+    WARN("unlink '%s' failed: '%s'", 
 	fname.c_str(), strerror(errno));
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
   }
@@ -229,7 +229,7 @@ EXEC_ACTION_START(SCUnlinkArrayAction) {
 
   unsigned int arr_size = 0;
   if (str2i(sc_sess->var[fname + "_size"], arr_size)) {
-    ERROR("_size not present/parseable '$%s'\n", sc_sess->var[fname + "_size"].c_str());
+    ERROR("_size not present/parseable '$%s'", sc_sess->var[fname + "_size"].c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     return false;
   }
@@ -238,9 +238,9 @@ EXEC_ACTION_START(SCUnlinkArrayAction) {
   for (unsigned int i=0;i<arr_size;i++)  {
     
     string file_fullname  = prefix + '/' + sc_sess->var[fname + "_"+int2str(i)];
-    DBG("unlinking '%s'\n", file_fullname.c_str());
+    DBG("unlinking '%s'", file_fullname.c_str());
     if (unlink(file_fullname.c_str())) {
-      DBG("unlink '%s' failed: '%s'\n", 
+      DBG("unlink '%s' failed: '%s'", 
 	  file_fullname.c_str(), strerror(errno));
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
     }
@@ -251,7 +251,7 @@ EXEC_ACTION_START(SCTmpNamAction) {
   string varname = resolveVars(arg, sess, sc_sess, event_params);
   char fname[L_tmpnam];
   if (!tmpnam(fname)) {
-    ERROR("unique name cannot be generated\n");
+    ERROR("unique name cannot be generated");
     sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
   } else {
     sc_sess->var[varname] = fname;
@@ -267,7 +267,7 @@ EXEC_ACTION_START(SCPopenAction) {
 
   string cmd = resolveVars(par2, sess, sc_sess, event_params);
   
-  DBG("executing '%s' while saving output to $%s\n", 
+  DBG("executing '%s' while saving output to $%s", 
       cmd.c_str(), dst_var.c_str());
 
   char buf[100];
@@ -297,7 +297,7 @@ EXEC_ACTION_START(SCPopenAction) {
     throw DSMException("sys", "type", "pclose", "cause", strerror(errno));
   }
   sc_sess->var[dst_var+".status"] = int2str(status);
-  DBG("child process returned status %d\n", status);
+  DBG("child process returned status %d", status);
 
 } EXEC_ACTION_END;
 
@@ -315,7 +315,7 @@ EXEC_ACTION_START(SCSysGetTimestampAction) {
   snprintf(ms_buf, 40, "%li", (long int)tv.tv_usec);
   sc_sess->var[varname+".tv_usec"] = ms_buf;
 
-  DBG("got timestamp $%s=%s, $%s=%s, \n",
+  DBG("got timestamp $%s=%s, $%s=%s, ",
       (varname+".tv_sec").c_str(), sc_sess->var[varname+".tv_sec"].c_str(),
       (varname+".tv_usec").c_str(), sc_sess->var[varname+".tv_usec"].c_str()
       );
@@ -350,7 +350,7 @@ EXEC_ACTION_START(SCSysSubTimestampAction) {
   snprintf(ms_buf, 40, "%lu", diff.tv_sec * 1000 + diff.tv_usec / 1000);
   sc_sess->var[t1+".msec"] = ms_buf;
 
-  DBG("sub $%s = %s,  $%s = %s,  $%s = %s\n",
+  DBG("sub $%s = %s,  $%s = %s,  $%s = %s",
       (t1+".tv_sec").c_str(), sc_sess->var[t1+".tv_sec"].c_str(),
       (t1+".tv_usec").c_str(), sc_sess->var[t1+".tv_usec"].c_str(),
       (t1+".msec").c_str(), sc_sess->var[t1+".msec"].c_str()

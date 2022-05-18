@@ -121,7 +121,7 @@ bool AmBasicSipDialog::getUACTransPending()
 
 void AmBasicSipDialog::setStatus(Status new_status)
 {
-  DBG("setting SIP dialog status: %s->%s\n",
+  DBG("setting SIP dialog status: %s->%s",
       getStatusStr(), getStatusStr(new_status));
 
   status = new_status;
@@ -203,18 +203,18 @@ void AmBasicSipDialog::setOutboundInterfaceName(const string &iface_name) {
 }
 
 void AmBasicSipDialog::setOutboundInterface(int interface_id) {
-  DBG("setting outbound interface to %i\n",  interface_id);
+  DBG("setting outbound interface to %i",  interface_id);
   outbound_interface = interface_id;
 }
 
 void AmBasicSipDialog::setOutboundAddrType(AddressType type_id)
 {
-  DBG("setting outbound address type to %i\n",  type_id);
+  DBG("setting outbound address type to %i",  type_id);
   outbound_address_type = type_id;
 }
 
 void AmBasicSipDialog::setOutboundProtoId(int proto_id) {
-  DBG("setting outbound proto id to %i\n",  proto_id);
+  DBG("setting outbound proto id to %i",  proto_id);
   outbound_proto_id = proto_id;
 }
 
@@ -411,7 +411,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
   // Sanity checks
   if(!remote_tag.empty() && !req.from_tag.empty() &&
      (req.from_tag != remote_tag)){
-    DBG("remote_tag = '%s'; req.from_tag = '%s'\n",
+    DBG("remote_tag = '%s'; req.from_tag = '%s'",
 	remote_tag.c_str(), req.from_tag.c_str());
 	reply_error(req, 481, SIP_REPLY_NOT_EXIST,string(),logger);
     return false;
@@ -451,7 +451,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 
 void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
 {
-  DBG("AmBasicSipDialog::onRxRequest(req = %s)\n", req.method.c_str());
+  DBG("AmBasicSipDialog::onRxRequest(req = %s)", req.method.c_str());
 
   if(req.method != SIP_METH_ACK) {
     // log only non-initial received requests, the initial one is already logged
@@ -617,7 +617,7 @@ void AmBasicSipDialog::onRxReply(const AmSipReply& reply)
     return;
   }
 
-  DBG("onRxReply(rep = %u %s): transaction found!\n",
+  DBG("onRxReply(rep = %u %s): transaction found!",
       reply.code, reply.reason.c_str());
 
   //!HACK: replace transaction ticket in uac_trans map if matched wrong
@@ -755,7 +755,7 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
         local_tag.c_str(),remote_tag.c_str());
     return -1;
   }
-  //DBG("reply: transaction found!\n");
+  //DBG("reply: transaction found!");
 
   AmSipReply reply;
 
@@ -772,7 +772,7 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
     reply.body = *body;
 
   if(onTxReply(req,reply,flags)){
-    ERROR("onTxReply failed, callid - %s\n", callid.c_str());
+    ERROR("onTxReply failed, callid - %s", callid.c_str());
     return -1;
   }
 
@@ -899,7 +899,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
                    logger,sensor,timers_override,
 				   redirects_allowed);
   if(res) {
-    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i\n",
+    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i",
       req.method.c_str(),
       req.r_uri.c_str(),
       req.callid.c_str(),
@@ -913,22 +913,22 @@ int AmBasicSipDialog::sendRequest(const string& method,
 
 void AmBasicSipDialog::dump()
 {
-  DBG("callid = %s\n",callid.c_str());
-  DBG("local_tag = %s\n",local_tag.c_str());
-  DBG("uac_trans.size() = %zu\n",uac_trans.size());
+  DBG("callid = %s",callid.c_str());
+  DBG("local_tag = %s",local_tag.c_str());
+  DBG("uac_trans.size() = %zu",uac_trans.size());
   if(uac_trans.size()){
     for(TransMap::iterator it = uac_trans.begin();
 	it != uac_trans.end(); it++){
 
-      DBG("    cseq = %i; method = %s\n",it->first,it->second.method.c_str());
+      DBG("    cseq = %i; method = %s",it->first,it->second.method.c_str());
     }
   }
-  DBG("uas_trans.size() = %zu\n",uas_trans.size());
+  DBG("uas_trans.size() = %zu",uas_trans.size());
   if(uas_trans.size()){
     for(TransMap::iterator it = uas_trans.begin();
 	it != uas_trans.end(); it++){
 
-      DBG("    cseq = %i; method = %s\n",it->first,it->second.method.c_str());
+      DBG("    cseq = %i; method = %s",it->first,it->second.method.c_str());
     }
   }
 }

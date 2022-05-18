@@ -62,7 +62,7 @@ void AmAudioMixer::releaseSource(AmAudio* s) {
     sources.find((AmAudioMixerConnector*)s);
   if (it==sources.end()) {
     srcsink_mut.unlock();
-    ERROR("source [%p] is not part of this mixer.\n", s);
+    ERROR("source [%p] is not part of this mixer.", s);
     return;
   }
   mixer.removeChannel(it->second);

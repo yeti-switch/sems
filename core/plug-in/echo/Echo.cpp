@@ -49,8 +49,8 @@ int EchoFactory::onLoad()
   bool useSessionTimer = false;
     
   if(conf.loadFile(AmConfig.configs_path + string(MODULE_NAME)+ ".conf")){
-    WARN("Could not open " MODULE_NAME ".conf\n");
-    WARN("assuming that default values are fine\n");
+    WARN("Could not open " MODULE_NAME ".conf");
+    WARN("assuming that default values are fine");
   }
   else {
     if(conf.hasParameter("enable_session_timer") &&
@@ -112,7 +112,7 @@ EchoDialog::~EchoDialog()
 
 void EchoDialog::onSessionStart()
 {
-  DBG("EchoDialog::onSessionStart\n");
+  DBG("EchoDialog::onSessionStart");
 
   RTPStream()->setPlayoutType(playout_type);
   setInOut(&echo,&echo);
@@ -139,7 +139,7 @@ void EchoDialog::onDtmf(int event, int duration)
       playout_type = JB_PLAYOUT;
     } else
       playout_type = SIMPLE_PLAYOUT;
-    DBG("received *. set playout technique to %s.\n", pt);
+    DBG("received *. set playout technique to %s.", pt);
 		
     RTPStream()->setPlayoutType(playout_type);
   }

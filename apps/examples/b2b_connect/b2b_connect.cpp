@@ -47,7 +47,7 @@ int b2b_connectFactory::onLoad()
 {
   AmConfigReader cfg;
   if(cfg.loadFile(AmConfig.configs_path + string(MOD_NAME ".conf"))) {
-    INFO("configuration file '%s' not found. using defaults.\n",
+    INFO("configuration file '%s' not found. using defaults.",
 	 (AmConfig.configs_path + string(MOD_NAME ".conf")).c_str());
     return 0;
   }
@@ -143,7 +143,7 @@ void b2b_connectDialog::onB2ABEvent(B2ABEvent* ev)
     B2ABConnectOtherLegExceptionEvent* ex_ev = 
       dynamic_cast<B2ABConnectOtherLegExceptionEvent*>(ev);
     if (ex_ev && dlg->getStatus() < AmSipDialog::Connected) {
-      DBG("callee leg creation failed with exception '%d %s'\n",
+      DBG("callee leg creation failed with exception '%d %s'",
 	  ex_ev->code, ex_ev->reason.c_str());
       dlg->reply(invite_req, ex_ev->code, ex_ev->reason);
       setStopped();
@@ -155,7 +155,7 @@ void b2b_connectDialog::onB2ABEvent(B2ABEvent* ev)
     B2ABConnectOtherLegFailedEvent* f_ev = 
       dynamic_cast<B2ABConnectOtherLegFailedEvent*>(ev);
     if (f_ev && dlg->getStatus() < AmSipDialog::Connected) {
-      DBG("callee leg creation failed with reply '%d %s'\n",
+      DBG("callee leg creation failed with reply '%d %s'",
 	  f_ev->code, f_ev->reason.c_str());
       dlg->reply(invite_req, f_ev->code, f_ev->reason);
       setStopped();
@@ -177,7 +177,7 @@ void b2b_connectDialog::process(AmEvent* ev)
 //   if(plugin_event && plugin_event->name == "timer_timeout") {
 //     int timer_id = plugin_event->data.get(0).asInt();
 //     if (timer_id == TIMERID_CREDIT_TIMEOUT) {
-//       DBG("timer timeout, no more credit\n");
+//       DBG("timer timeout, no more credit");
 //       stopAccounting();
 //       terminateOtherLeg();
 //       terminateLeg();
@@ -190,7 +190,7 @@ void b2b_connectDialog::process(AmEvent* ev)
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(ev);
 	
   if(audio_event && (audio_event->event_id == AmAudioEvent::cleared)){
-    DBG("ignoring end of prompt.\n");
+    DBG("ignoring end of prompt.");
     return;
   }
 
@@ -199,7 +199,7 @@ void b2b_connectDialog::process(AmEvent* ev)
 
 void b2b_connectDialog::onDtmf(int event, int duration)
 {
-  DBG("DTMF event %d duration %d\n", event, duration);
+  DBG("DTMF event %d duration %d", event, duration);
   return;
   
 }
@@ -259,7 +259,7 @@ void b2b_connectCalleeSession::onSipReply(const AmSipReply& reply,
  
   if ((old_dlg_status < AmSipDialog::Connected) &&
       (dlg->getStatus() == AmSipDialog::Disconnected)) {
-    DBG("status change Pending -> Disconnected. Stopping session.\n");
+    DBG("status change Pending -> Disconnected. Stopping session.");
     setStopped();
   }
 }

@@ -112,7 +112,7 @@ AmPlugIn::AmPlugIn()
 
 static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
 {
-  DBG("decreasing reference to plug-in factory: %s\n", pf.first.c_str());
+  DBG("decreasing reference to plug-in factory: %s", pf.first.c_str());
   dec_ref(pf.second);
 }
 
@@ -155,7 +155,7 @@ void AmPlugIn::init() {
     for(const auto &p: AmConfig.exclude_payloads)
         excluded_payloads.emplace(p);
 
-    DBG("adding built-in codecs...\n");
+    DBG("adding built-in codecs...");
 
     addCodec(&_codec_pcm16);
     addCodec(&_codec_tevent);
@@ -178,7 +178,7 @@ int AmPlugIn::load(const string& directory, const std::vector<std::string>& plug
       if (plugin_file == "sipctrl") {
         WARN("sipctrl is integrated into the core, loading sipctrl "
                 "module is not necessary any more\n");
-        WARN("please update your configuration to not load sipctrl module\n");
+        WARN("please update your configuration to not load sipctrl module");
         continue;
       }
   
@@ -186,16 +186,16 @@ int AmPlugIn::load(const string& directory, const std::vector<std::string>& plug
       plugin_file+=".so";
   
       plugin_file = directory + "/"  + plugin_file;
-      DBG("loading %s...\n",plugin_file.c_str());
+      DBG("loading %s...",plugin_file.c_str());
       if( (err = loadPlugIn(plugin_file, plugin_file, loaded_plugins)) < 0 ) {
-      ERROR("while loading plug-in '%s'\n",plugin_file.c_str());
+      ERROR("while loading plug-in '%s'",plugin_file.c_str());
       // be strict here: if plugin not loaded, stop!
       return err; 
       }
   }
 
-  DBG("AmPlugIn: modules loaded.\n");
-  DBG("Initializing %zd plugins...\n", loaded_plugins.size());
+  DBG("AmPlugIn: modules loaded.");
+  DBG("Initializing %zd plugins...", loaded_plugins.size());
   for (vector<AmPluginFactory*>::iterator it =
 	 loaded_plugins.begin(); it != loaded_plugins.end(); it++) {
     int err = (*it)->onLoad();
@@ -229,7 +229,7 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
        it!=AmConfig.rtld_global_plugins.end();it++) {
     if (!strcmp(bname, it->c_str())) {
       dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
-      DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'\n", file.c_str());
+      DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'", file.c_str());
       break;
     }
   }
@@ -238,7 +238,7 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   void* h_dl = dlopen(file.c_str(),dlopen_flags);
 
   if(!h_dl){
-    ERROR("AmPlugIn::loadPlugIn: %s: %s\n",file.c_str(),dlerror());
+    ERROR("AmPlugIn::loadPlugIn: %s: %s",file.c_str(),dlerror());
     return -1;
   }
 
@@ -298,7 +298,7 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   }
 
   if(!has_sym){
-    ERROR("Plugin type could not be detected (%s)(%s)\n",file.c_str(),dlerror());
+    ERROR("Plugin type could not be detected (%s)(%s)",file.c_str(),dlerror());
     goto error;
   }
 
@@ -376,7 +376,7 @@ void AmPlugIn::getPayloads(vector<SdpPayload>& pl_vec) const
       // if channels==2 use that value; otherwise don't add channels param
       pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate, pl_it->second->channels==2?2:0));
     } else {
-      ERROR("Payload %d (from the payload_order map) was not found in payloads map!\n", it->second);
+      ERROR("Payload %d (from the payload_order map) was not found in payloads map!", it->second);
     }
   }
 }
@@ -403,7 +403,7 @@ amci_subtype_t* AmPlugIn::subtype(amci_inoutfmt_t* iofmt, const string& subtype_
   if(!iofmt)
     return NULL;
 
-  DBG("looking for subtype '%s'\n", subtype_name.c_str());
+  DBG("looking for subtype '%s'", subtype_name.c_str());
   amci_subtype_t* st = iofmt->subtypes;
   if(subtype_name.empty()) // default subtype wanted
     return st;
@@ -485,13 +485,13 @@ AmLoggingFacility* AmPlugIn::getFactory4LogFaclty(const string& name)
 int AmPlugIn::loadAudioPlugIn(amci_exports_t* exports)
 {
   if(!exports){
-    ERROR("audio plug-in doesn't contain any exports !\n");
+    ERROR("audio plug-in doesn't contain any exports !");
     return -1;
   }
 
   if (exports->module_load) {
     if (exports->module_load() < 0) {
-      ERROR("initializing audio plug-in!\n");
+      ERROR("initializing audio plug-in!");
       return -1;
     }
   }
@@ -528,20 +528,20 @@ int AmPlugIn::loadAppPlugIn(AmPluginFactory* f)
 {
   AmSessionFactory* sf = dynamic_cast<AmSessionFactory*>(f);
   if(!sf){
-    ERROR("invalid application plug-in!\n");
+    ERROR("invalid application plug-in!");
     return -1;
   }
 
   name2app_mut.lock();
 
   if(name2app.find(sf->getName()) != name2app.end()){
-    ERROR("application '%s' already loaded !\n",sf->getName().c_str());
+    ERROR("application '%s' already loaded !",sf->getName().c_str());
     name2app_mut.unlock();
     return -1;
   }      
 
   name2app.insert(std::make_pair(sf->getName(),sf));
-  DBG("application '%s' loaded.\n",sf->getName().c_str());
+  DBG("application '%s' loaded.",sf->getName().c_str());
 
   inc_ref(sf);
   if(!module_objects.insert(std::make_pair(sf->getName(),sf)).second){
@@ -558,18 +558,18 @@ int AmPlugIn::loadSehPlugIn(AmPluginFactory* f)
 {
   AmSessionEventHandlerFactory* sf = dynamic_cast<AmSessionEventHandlerFactory*>(f);
   if(!sf){
-    ERROR("invalid session component plug-in!\n");
+    ERROR("invalid session component plug-in!");
     goto error;
   }
 
   if(name2seh.find(sf->getName()) != name2seh.end()){
-    ERROR("session component '%s' already loaded !\n",sf->getName().c_str());
+    ERROR("session component '%s' already loaded !",sf->getName().c_str());
     goto error;
   }
 
   inc_ref(sf);
   name2seh.insert(std::make_pair(sf->getName(),sf));
-  DBG("session component '%s' loaded.\n",sf->getName().c_str());
+  DBG("session component '%s' loaded.",sf->getName().c_str());
 
   return 0;
 
@@ -591,18 +591,18 @@ int AmPlugIn::loadDiPlugIn(AmPluginFactory* f)
 {
   AmDynInvokeFactory* sf = dynamic_cast<AmDynInvokeFactory*>(f);
   if(!sf){
-    ERROR("invalid component plug-in!\n");
+    ERROR("invalid component plug-in!");
     goto error;
   }
 
   if(name2di.find(sf->getName()) != name2di.end()){
-    ERROR("component '%s' already loaded !\n",sf->getName().c_str());
+    ERROR("component '%s' already loaded !",sf->getName().c_str());
     goto error;
   }
   
   name2di.insert(std::make_pair(sf->getName(),sf));
   inc_ref(sf);
-  DBG("component '%s' loaded.\n",sf->getName().c_str());
+  DBG("component '%s' loaded.",sf->getName().c_str());
 
   return 0;
 
@@ -615,18 +615,18 @@ int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
   std::map<std::string, std::string>::iterator module_it;
   AmConfigFactory* sf = dynamic_cast<AmConfigFactory*>(f);
   if(!sf){
-    ERROR("invalid component plug-in %s!\n", f->getName().c_str());
+    ERROR("invalid component plug-in %s!", f->getName().c_str());
     goto error;
   }
 
   module_it = AmConfig.module_config.find(f->getName());
   if(module_it == AmConfig.module_config.end()) {
-    ERROR("don't have plug-in %s configuration!\n", f->getName().c_str());
+    ERROR("don't have plug-in %s configuration!", f->getName().c_str());
     goto error;
   }
 
   if(sf->configure(module_it->second)) {
-    ERROR("error in plug-in %s configuration!\n", f->getName().c_str());
+    ERROR("error in plug-in %s configuration!", f->getName().c_str());
     goto error;
   }
   
@@ -642,19 +642,19 @@ int AmPlugIn::loadLogFacPlugIn(AmPluginFactory* f)
 {
   AmLoggingFacility* sf = dynamic_cast<AmLoggingFacility*>(f);
   if(!sf){
-    ERROR("invalid logging facility plug-in!\n");
+    ERROR("invalid logging facility plug-in!");
     goto error;
   }
 
   if(name2logfac.find(sf->getName()) != name2logfac.end()){
-    ERROR("logging facility '%s' already loaded !\n",
+    ERROR("logging facility '%s' already loaded !",
 	  sf->getName().c_str());
     goto error;
   }
       
   name2logfac.insert(std::make_pair(sf->getName(),sf));
   inc_ref(sf);
-  DBG("logging facility component '%s' loaded.\n",sf->getName().c_str());
+  DBG("logging facility component '%s' loaded.",sf->getName().c_str());
 
   return 0;
 
@@ -665,7 +665,7 @@ int AmPlugIn::loadLogFacPlugIn(AmPluginFactory* f)
 int AmPlugIn::addCodec(amci_codec_t* c)
 {
   if(codecs.find(c->id) != codecs.end()){
-    ERROR("codec id (%i) already supported\n",c->id);
+    ERROR("codec id (%i) already supported",c->id);
     return -1;
   }
   codecs.insert(std::make_pair(c->id,c));
@@ -675,7 +675,7 @@ int AmPlugIn::addCodec(amci_codec_t* c)
   if(!c->samples2bytes) {
     WARN("codec %i does not provide samples2bytes function",c->id);
   }
-  DBG("codec id %i inserted\n",c->id);
+  DBG("codec id %i inserted",c->id);
   return 0;
 }
 
@@ -683,7 +683,7 @@ int AmPlugIn::addPayload(amci_payload_t* p)
 {
   if (excluded_payloads.find(p->name) != 
       excluded_payloads.end()) {
-    DBG("Not enabling excluded payload '%s'\n", 
+    DBG("Not enabling excluded payload '%s'", 
 	p->name);
     return 0;
   }
@@ -691,13 +691,13 @@ int AmPlugIn::addPayload(amci_payload_t* p)
   amci_codec_t* c;
   unsigned int i, id;
   if( !(c = codec(p->codec_id)) ){
-    ERROR("in payload '%s': codec id (%i) not supported\n",
+    ERROR("in payload '%s': codec id (%i) not supported",
 	  p->name, p->codec_id);
     return -1;
   }
   if(p->payload_id != -1){
     if(payloads.find(p->payload_id) != payloads.end()){
-      ERROR("payload id (%i) already supported\n",p->payload_id);
+      ERROR("payload id (%i) already supported",p->payload_id);
       return -1;
     }
   }
@@ -714,11 +714,11 @@ int AmPlugIn::addPayload(amci_payload_t* p)
   }
   if (i >= AmConfig.codec_order.size()) {
       payload_order.insert(std::make_pair(id + 100, id));
-      DBG("payload '%s/%i' inserted with id %i and order %i\n",
+      DBG("payload '%s/%i' inserted with id %i and order %i",
 	  p->name, p->sample_rate, id, id + 100);
   } else {
       payload_order.insert(std::make_pair(i, id));
-      DBG("payload '%s/%i' inserted with id %i and order %i\n",
+      DBG("payload '%s/%i' inserted with id %i and order %i",
 	  p->name, p->sample_rate, id, i);
   }
 
@@ -728,7 +728,7 @@ int AmPlugIn::addPayload(amci_payload_t* p)
 int AmPlugIn::addFileFormat(amci_inoutfmt_t* f)
 {
   if(file_formats.find(f->name) != file_formats.end()){
-    ERROR("file format '%s' already supported\n",f->name);
+    ERROR("file format '%s' already supported",f->name);
     return -1;
   }
 
@@ -736,7 +736,7 @@ int AmPlugIn::addFileFormat(amci_inoutfmt_t* f)
   for(; st->type >= 0; st++ ){
 
     if( !codec(st->codec_id) ){
-      ERROR("in '%s' subtype %i: codec id (%i) not supported\n",
+      ERROR("in '%s' subtype %i: codec id (%i) not supported",
 	    f->name,st->type,st->codec_id);
       return -1;
     }
@@ -753,7 +753,7 @@ int AmPlugIn::addFileFormat(amci_inoutfmt_t* f)
     }
 
   }
-  DBG("file format %s inserted\n",f->name);
+  DBG("file format %s inserted",f->name);
   file_formats.insert(std::make_pair(f->name,f));
 
   return 0;
@@ -783,7 +783,7 @@ bool AmPlugIn::registerFactory4App(const string& app_name, AmSessionFactory* f)
 bool AmPlugIn::registerApplication(const string& app_name, AmSessionFactory* f) {
   bool res = instance()->registerFactory4App(app_name, f);
   if (res) {
-    DBG("Application '%s' registered.\n", app_name.c_str());
+    DBG("Application '%s' registered.", app_name.c_str());
   }
   return res;
 }
@@ -831,7 +831,7 @@ AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& 
     
     AmSessionFactory* session_factory = getFactory4App(m_app_name);
     if(!session_factory) {
-      ERROR("AmPlugIn::findSessionFactory: application '%s' not found !\n", m_app_name.c_str());
+      ERROR("AmPlugIn::findSessionFactory: application '%s' not found !", m_app_name.c_str());
     }
     
     app_name = m_app_name;
@@ -848,12 +848,12 @@ void AmPlugIn::dumpPlugins(std::map<string, string>& ret)
 
 #define REGISTER_STUFF(comp_name, map_name, param_name)			\
   if(instance()->map_name.find(param_name) != instance()->map_name.end()){	\
-  ERROR(comp_name "'%s' already registered !\n", param_name.c_str());	\
+  ERROR(comp_name "'%s' already registered !", param_name.c_str());	\
   return false;								\
   }									\
   inc_ref(f);								\
   instance()->map_name.insert(std::make_pair(param_name,f));		\
-  DBG(comp_name " '%s' registered.\n",param_name.c_str());		\
+  DBG(comp_name " '%s' registered.",param_name.c_str());		\
   return true;
 
 bool AmPlugIn::registerSIPEventHandler(const string& seh_name,

@@ -55,7 +55,7 @@ MyJukeboxDialog::~MyJukeboxDialog()
 
 void MyJukeboxDialog::onSessionStart()
 {
-    DBG("MyJukeboxDialog::onSessionStart - jukedir is '%s'\n", 
+    DBG("MyJukeboxDialog::onSessionStart - jukedir is '%s'", 
 	MyJukeboxFactory::JukeboxDir.c_str());
     
     setInOut(&playlist, &playlist);
@@ -63,11 +63,11 @@ void MyJukeboxDialog::onSessionStart()
 }
 
 void MyJukeboxDialog::onDtmf(int event, int duration) {
-  DBG("MyJukeboxDialog::onDtmf, got event %d, duration %d.\n", event, duration);
+  DBG("MyJukeboxDialog::onDtmf, got event %d, duration %d.", event, duration);
 
   AmAudioFile* wav_file = new AmAudioFile();
   if(wav_file->open(MyJukeboxFactory::JukeboxDir + int2str(event) + ".wav",AmAudioFile::Read)) {
-    ERROR("MyJukeboxDialog::onSessionStart: Cannot open file\n");
+    ERROR("MyJukeboxDialog::onSessionStart: Cannot open file");
     delete wav_file;
     return;
   }
@@ -79,11 +79,11 @@ void MyJukeboxDialog::onDtmf(int event, int duration) {
 
 void MyJukeboxDialog::process(AmEvent* ev)
 {
-    DBG("AmSession::process\n");
+    DBG("AmSession::process");
 
     AmAudioEvent* audio_ev = dynamic_cast<AmAudioEvent*>(ev);
     if(audio_ev && (audio_ev->event_id == AmAudioEvent::noAudio)){
-      DBG("MyJukeboxDialog::process: Playlist is empty!\n");
+      DBG("MyJukeboxDialog::process: Playlist is empty!");
       return;
     }
 
@@ -92,7 +92,7 @@ void MyJukeboxDialog::process(AmEvent* ev)
 
 void MyJukeboxDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

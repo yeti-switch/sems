@@ -58,11 +58,11 @@ DiameterClient::~DiameterClient() {
 
 int DiameterClient::onLoad() {
   if (tcp_init_tcp()) {
-    ERROR("initializing tcp transport layer.\n");
+    ERROR("initializing tcp transport layer.");
     return -1;
   }
 
-  DBG("DiameterClient loaded.\n");
+  DBG("DiameterClient loaded.");
   return 0;
 }
 
@@ -88,7 +88,7 @@ void DiameterClient::newConnection(const AmArg& args,
   }
 
   ServerConnection* sc = new ServerConnection();
-  DBG("initializing new connection for application %s...\n",
+  DBG("initializing new connection for application %s...",
       app_name.c_str());
   sc->init(server_ip, server_port, 
 	   ca_file, cert_file,
@@ -96,10 +96,10 @@ void DiameterClient::newConnection(const AmArg& args,
 	   app_id, vendor_id, product_name, 
 	   req_timeout);
 
-  DBG("starting new connection...\n");
+  DBG("starting new connection...");
   sc->start();
 
-  DBG("registering connection...\n");
+  DBG("registering connection...");
   conn_mut.lock();
   connections.insert(make_pair(app_name, sc));
   conn_mut.unlock();
@@ -127,7 +127,7 @@ void DiameterClient::sendRequest(const AmArg& args,
   }
   conn_mut.unlock();
 
-  DBG("found %zd active connections for application %s\n", 
+  DBG("found %zd active connections for application %s", 
       scs.size(), app_name.c_str());
 
   if (scs.empty()) {
@@ -195,7 +195,7 @@ void DiameterClient::invoke(const string& method, const AmArg& args,
     a.push(AmArg("vtm"));
     a.push(AmArg(AAA_LAR));
     a.push(AmArg(AAA_APP_USPI));
-    DBG("x pushin \n");
+    DBG("x pushin ");
     AmArg avps;
 
     AmArg e164;
@@ -219,9 +219,9 @@ void DiameterClient::invoke(const string& method, const AmArg& args,
 
     // check...
 
-    DBG("x checking\n");
+    DBG("x checking");
     a.assertArrayFmt("siias");
-    DBG("x checking\n");
+    DBG("x checking");
     // check values
     AmArg& vals = a.get(3);
     for (size_t i=0;i<vals.size(); i++) {
@@ -229,7 +229,7 @@ void DiameterClient::invoke(const string& method, const AmArg& args,
       //    [int avp_id, int flags, int vendor, blob data]
       row.assertArrayFmt("iiib");
     }
-    DBG("x sendrequest\n");
+    DBG("x sendrequest");
     sendRequest(a, ret);
 
   } else if(method == "_list"){ 

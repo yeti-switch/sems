@@ -209,15 +209,15 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
         char* err_msg=0;
         int err = parse_http_msg(s_msg, err_msg);
         if(err){
-            DBG("parse_sip_msg returned %i\n",err);
+            DBG("parse_sip_msg returned %i",err);
 
             if(!err_msg){
                 err_msg = (char*)"unknown parsing error";
             }
 
-            DBG("parsing error: %s\n",err_msg);
+            DBG("parsing error: %s",err_msg);
 
-            DBG("Message was: \"%.*s\"\n",s_msg->len,s_msg->buf);
+            DBG("Message was: \"%.*s\"",s_msg->len,s_msg->buf);
 
             if((err != MALFORMED_FLINE) &&
                (s_msg->type == HTTP_REQUEST) &&
@@ -531,7 +531,7 @@ int ws_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int 
   if(closed || (check_connection() < 0))
     return -1;
 
-  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
             actual_ip.c_str(), actual_port,
             get_addr_str(sa).c_str(),
             am_get_port(sa),
@@ -624,7 +624,7 @@ int wss_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int
   if(closed || (check_connection() < 0))
     return -1;
 
-  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
             actual_ip.c_str(), actual_port,
             get_addr_str(sa).c_str(),
             am_get_port(sa),

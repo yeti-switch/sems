@@ -112,7 +112,7 @@ stream_alloc(USC_CodecInfo *info, struct stream *md, const char *name)
 
   if (USC_NoError != fns->std.NumAlloc(&info->params, &md->nBanks))
     {
-      ERROR("g729_stream_alloc: can't query memory reqirements for %s\n", name);
+      ERROR("g729_stream_alloc: can't query memory reqirements for %s", name);
       return -1;
     }
 
@@ -122,7 +122,7 @@ stream_alloc(USC_CodecInfo *info, struct stream *md, const char *name)
   /* Query how big has to be each block */
   if (USC_NoError != fns->std.MemAlloc(&info->params, md->banks))
     {
-      ERROR("g729_stream_alloc: can't query memory bank size for %s\n", name);
+      ERROR("g729_stream_alloc: can't query memory bank size for %s", name);
       return -1;
     }
  
@@ -160,7 +160,7 @@ stream_create(USC_CodecInfo *info, struct stream *st, const char *name)
     /* Create encoder instance */
     if(USC_NoError != fns->std.Init(&info->params, st->banks, &st->handle))
       {
-	ERROR("g729_stream_create: can't intialize stream %s\n", name);
+	ERROR("g729_stream_create: can't intialize stream %s", name);
 	stream_free(st);
 	return -1;
       }
@@ -184,7 +184,7 @@ long g729_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
 
     if (USC_NoError != fns->std.GetInfo((USC_Handle)NULL, &pInfo))
       {
-	ERROR("g729: Can't query codec info\n");
+	ERROR("g729: Can't query codec info");
 	return (0);
       }
   
@@ -248,7 +248,7 @@ static int pcm16_2_g729(unsigned char* out_buf, unsigned char* in_buf, unsigned 
 
     if (blocks.rem)
       {
-	ERROR("pcm16_2_G729: number of blocks should be integral (block size = %d)\n",
+	ERROR("pcm16_2_G729: number of blocks should be integral (block size = %d)",
 	      codec->pInfo.params.framesize);
 	return -1;
       }
@@ -274,7 +274,7 @@ static int pcm16_2_g729(unsigned char* out_buf, unsigned char* in_buf, unsigned 
 	err = fns->Encode (codec->enc.handle, &in, &out);
         if (USC_NoError != err)
 	  {
-	    ERROR("pcm16_2_G729: error %d encoding\n", err);
+	    ERROR("pcm16_2_G729: error %d encoding", err);
 	    return -1;
 	  }
     
@@ -319,7 +319,7 @@ static int g729_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned 
 	err = fns->Decode (codec->dec.handle, &in, &out);
 	if (USC_NoError != err)
 	  {
-	    ERROR("g729_2_pcm16: error %d decoding data\n", err);
+	    ERROR("g729_2_pcm16: error %d decoding data", err);
 	    break;
 	  }
 

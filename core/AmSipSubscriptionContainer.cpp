@@ -45,7 +45,7 @@ void _AmSipSubscriptionContainer::initialize() {
   if (!initialized) {
     // AmEventDispatcher::instance()->addEventQueue(SUBSCRIPTION_CONTAINER_EVQ_ID, this);
     initialized = true;
-    DBG("Starting SIP Subscription client thread ([%p])\n", this);
+    DBG("Starting SIP Subscription client thread ([%p])", this);
     start();
   }
 }
@@ -83,10 +83,10 @@ bool _AmSipSubscriptionContainer::refreshSubscription(const string& sub_handle,
   subscriptions_mut.lock();
   AmSipSubscriptionMapIter it = subscriptions.find(sub_handle);
   if (it != subscriptions.end()) {
-    DBG("refreshing subscription '%s'\n", sub_handle.c_str());
+    DBG("refreshing subscription '%s'", sub_handle.c_str());
     res = it->second->subscribe(wanted_expires);
   } else {
-    DBG("subscription '%s' already removed\n", sub_handle.c_str());
+    DBG("subscription '%s' already removed", sub_handle.c_str());
     res = false;
   }
   subscriptions_mut.unlock();
@@ -97,10 +97,10 @@ void _AmSipSubscriptionContainer::removeSubscription(const string& sub_handle) {
   subscriptions_mut.lock();
   AmSipSubscriptionMapIter it = subscriptions.find(sub_handle);
   if (it != subscriptions.end()) {
-    DBG("unsubscribing subscription '%s'\n", sub_handle.c_str());
+    DBG("unsubscribing subscription '%s'", sub_handle.c_str());
     it->second->subscribe(0);
   } else {
-    DBG("subscription '%s' already removed - ignoring\n", sub_handle.c_str());
+    DBG("subscription '%s' already removed - ignoring", sub_handle.c_str());
   }
   subscriptions_mut.unlock();
 }
@@ -110,8 +110,8 @@ void _AmSipSubscriptionContainer::onEvent(AmEvent* event)
 {
   AmSipRequestEvent* sip_req_ev = dynamic_cast<AmSipRequestEvent*>(event);
   if (sip_req_ev) {
-    // DBG("got SIP request: '%s'\n", sip_req_ev->req.print().c_str());
-    DBG("got SIP request: %s %s\n",
+    // DBG("got SIP request: '%s'", sip_req_ev->req.print().c_str());
+    DBG("got SIP request: %s %s",
 	sip_req_ev->req.method.c_str(), sip_req_ev->req.r_uri.c_str());
     string ltag = sip_req_ev->req.to_tag;
 
@@ -119,14 +119,14 @@ void _AmSipSubscriptionContainer::onEvent(AmEvent* event)
     AmSipSubscriptionMapIter it = subscriptions.find(ltag);
     if (it == subscriptions.end()) {
       subscriptions_mut.unlock();
-      WARN("got SIP request '%s' for unknown subscription '%s'\n",
+      WARN("got SIP request '%s' for unknown subscription '%s'",
 	   sip_req_ev->req.print().c_str(), ltag.c_str());
       AmSipDialog::reply_error(sip_req_ev->req, 481, SIP_REPLY_NOT_EXIST);
       return;
     }
     it->second->onRxRequest(sip_req_ev->req);
     if (!(it->second->getUsages() > 0)) {
-      DBG("subscription '%s' terminated - removing\n", it->second->getDescription().c_str());
+      DBG("subscription '%s' terminated - removing", it->second->getDescription().c_str());
       delete it->second;
       subscriptions.erase(it);
       AmEventDispatcher::instance()->delEventQueue(ltag);
@@ -137,21 +137,21 @@ void _AmSipSubscriptionContainer::onEvent(AmEvent* event)
 
   AmSipReplyEvent* sip_reply_ev = dynamic_cast<AmSipReplyEvent*>(event);
   if (sip_reply_ev) {
-    DBG("got SIP reply: '%s'\n", sip_reply_ev->reply.print().c_str());
+    DBG("got SIP reply: '%s'", sip_reply_ev->reply.print().c_str());
     string ltag = sip_reply_ev->reply.from_tag;
 
     subscriptions_mut.lock();
     AmSipSubscriptionMapIter it = subscriptions.find(ltag);
     if (it == subscriptions.end()) {
       subscriptions_mut.unlock();
-      WARN("got SIP reply '%s' for unknown subscription '%s'\n",
+      WARN("got SIP reply '%s' for unknown subscription '%s'",
 	   sip_reply_ev->reply.print().c_str(), ltag.c_str());
 
       return;
     }
     it->second->onRxReply(sip_reply_ev->reply);
     if (!(it->second->getUsages() > 0)) {
-      DBG("subscription '%s' terminated - removing\n", it->second->getDescription().c_str());
+      DBG("subscription '%s' terminated - removing", it->second->getDescription().c_str());
       delete it->second;
       subscriptions.erase(it);
       AmEventDispatcher::instance()->delEventQueue(ltag);
@@ -162,7 +162,7 @@ void _AmSipSubscriptionContainer::onEvent(AmEvent* event)
 
   SingleSubTimeoutEvent* to_ev = dynamic_cast<SingleSubTimeoutEvent*>(event);
   if(to_ev) {
-    DBG("got timeout event: %s/%i/%p\n",
+    DBG("got timeout event: %s/%i/%p",
 	to_ev->ltag.c_str(), to_ev->timer_id, to_ev->sub);
 
     string ltag = to_ev->ltag;
@@ -171,14 +171,14 @@ void _AmSipSubscriptionContainer::onEvent(AmEvent* event)
     AmSipSubscriptionMapIter it = subscriptions.find(ltag);
     if (it == subscriptions.end()) {
       subscriptions_mut.unlock();
-      WARN("got timeout event '%i/%p' for unknown subscription '%s'\n",
+      WARN("got timeout event '%i/%p' for unknown subscription '%s'",
 	   to_ev->timer_id, to_ev->sub, ltag.c_str());
 
       return;
     }
     it->second->onTimeout(to_ev->timer_id, to_ev->sub);
     if (!(it->second->getUsages() > 0)) {
-      DBG("subscription '%s' terminated - removing\n", it->second->getDescription().c_str());
+      DBG("subscription '%s' terminated - removing", it->second->getDescription().c_str());
       delete it->second;
       subscriptions.erase(it);
       AmEventDispatcher::instance()->delEventQueue(ltag);

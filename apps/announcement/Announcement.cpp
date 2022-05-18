@@ -63,7 +63,7 @@ int AnnouncementFactory::onLoad()
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("default file for announcement module does not exist ('%s').\n",
+    ERROR("default file for announcement module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
@@ -78,12 +78,12 @@ string AnnouncementFactory::getAnnounceFile(const AmSipRequest& req) {
   string announce_file = announce_path + req.domain 
     + "/" + req.user + ".wav";
 
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     goto end;
 
@@ -106,7 +106,7 @@ AmSession* AnnouncementFactory::onInvite(const AmSipRequest& req, const string& 
   AmSession* s = new AnnouncementDialog(getAnnounceFile(req), cred);
   
   if (NULL == cred) {
-    WARN("discarding unknown session parameters.\n");
+    WARN("discarding unknown session parameters.");
   } else {
     AmUACAuth::enable(s);
   }
@@ -128,10 +128,10 @@ AnnouncementDialog::~AnnouncementDialog()
 }
 
 void AnnouncementDialog::onSessionStart() {
-  DBG("AnnouncementDialog::onSessionStart()...\n");
+  DBG("AnnouncementDialog::onSessionStart()...");
 
   if(wav_file.open(filename,AmAudioFile::Read)) {
-    ERROR("Couldn't open file %s.\n", filename.c_str());
+    ERROR("Couldn't open file %s.", filename.c_str());
     throw string("AnnouncementDialog::onSessionStart: Cannot open file\n");
   }
 
@@ -145,7 +145,7 @@ void AnnouncementDialog::onSessionStart() {
 
 void AnnouncementDialog::onBye(const AmSipRequest& req)
 {
-  DBG("onBye: stopSession\n");
+  DBG("onBye: stopSession");
   AmSession::onBye(req);
 }
 

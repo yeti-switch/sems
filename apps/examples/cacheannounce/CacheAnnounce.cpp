@@ -61,13 +61,13 @@ int CacheAnnounceFactory::onLoad()
 
     string announce_file = AnnouncePath + AnnounceFile;
     if(!file_exists(announce_file)){
-		ERROR("default file for cacheannounce module does not exist ('%s').\n",
+		ERROR("default file for cacheannounce module does not exist ('%s').",
 			  announce_file.c_str());
 		return -1;
     }
 
 	if (ann_cache.load(announce_file)) {
-		ERROR("file '%s' could not be cached.\n",
+		ERROR("file '%s' could not be cached.",
 			  announce_file.c_str());
 		return -1;
 	}
@@ -92,7 +92,7 @@ CacheAnnounceDialog::~CacheAnnounceDialog()
 
 void CacheAnnounceDialog::onSessionStart()
 {
-    DBG("CacheAnnounceDialog::onSessionStart\n");
+    DBG("CacheAnnounceDialog::onSessionStart");
     startSession();
 
     AmSession::onSessionStart();
@@ -110,7 +110,7 @@ void CacheAnnounceDialog::startSession(){
 
 void CacheAnnounceDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

@@ -81,7 +81,7 @@ void DSMTeeConfChannel::reset(AmConferenceChannel* channel) {
 }
 
 AmAudio* DSMTeeConfChannel::setupAudio(AmAudio* out) {
-  DBG("out == %p, chan.get == %p\n", out, chan.get());
+  DBG("out == %p, chan.get == %p", out, chan.get());
   if (!chan.get() || !out)
     return NULL;
 
@@ -100,9 +100,9 @@ EXEC_ACTION_START(ConfPostEventAction) {
   
   unsigned int ev;
   if (str2i(ev_id, ev)) {
-    ERROR("decoding conference event id '%s'\n", ev_id.c_str());
+    ERROR("decoding conference event id '%s'", ev_id.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("decoding conference event id '"+ev_id+"%s'\n");
+    sc_sess->SET_STRERROR("decoding conference event id '"+ev_id+"%s'");
     return false;
   }
 
@@ -125,14 +125,14 @@ static bool ConferenceJoinChannel(DSMConfChannel** dsm_chan,
   } else if (mode == "listenonly") {
     connect_play = true;
   } 
-  DBG("connect_play = %s, connect_rec = %s\n", 
+  DBG("connect_play = %s, connect_rec = %s", 
       connect_play?"true":"false", 
       connect_record?"true":"false");
   
   AmConferenceChannel* chan = AmConferenceStatus::getChannel(channel_id, 
 							     sess->getLocalTag(), sess->RTPStream()->getSampleRate());
   if (NULL == chan) {
-    ERROR("obtaining conference channel\n");
+    ERROR("obtaining conference channel");
     throw DSMException("conference");
     return false;
   }
@@ -200,7 +200,7 @@ static T* getDSMConfChannel(DSMSession* sc_sess, const char* key_name) {
 EXEC_ACTION_START(ConfLeaveAction) {
   DSMConfChannel* chan = getDSMConfChannel<DSMConfChannel>(sc_sess, CONF_AKEY_CHANNEL);
   if (NULL == chan) {
-    WARN("app error: trying to leave conference, but channel not found\n");
+    WARN("app error: trying to leave conference, but channel not found");
     sc_sess->SET_ERRNO(DSM_ERRNO_SCRIPT);
     sc_sess->SET_STRERROR("trying to leave conference, but channel not found");
     return false;
@@ -217,7 +217,7 @@ EXEC_ACTION_START(ConfRejoinAction) {
 
   DSMConfChannel* chan = getDSMConfChannel<DSMConfChannel>(sc_sess, CONF_AKEY_CHANNEL);
   if (NULL == chan) {
-    WARN("app error: trying to rejoin conference, but channel not found\n");
+    WARN("app error: trying to rejoin conference, but channel not found");
   } else {
     chan->release();
   }
@@ -247,17 +247,17 @@ EXEC_ACTION_START(ConfTeeJoinAction) {
   if (conf_varname.empty()) 
     conf_varname = CONF_AKEY_DEF_TEECHANNEL;
 
-  DBG("Speaking also in conference '%s' (with cvar '%s')\n",
+  DBG("Speaking also in conference '%s' (with cvar '%s')",
       channel_id.c_str(), conf_varname.c_str());
 
   DSMTeeConfChannel* chan = 
     getDSMConfChannel<DSMTeeConfChannel>(sc_sess, conf_varname.c_str());
   if (NULL == chan) {
-    DBG("not previously in tee-channel, creating new\n");
+    DBG("not previously in tee-channel, creating new");
     AmConferenceChannel* conf_channel = AmConferenceStatus::getChannel(channel_id, 
 								       sess->getLocalTag(), sess->RTPStream()->getSampleRate());
     if (NULL == conf_channel) {
-      ERROR("obtaining conference channel\n");
+      ERROR("obtaining conference channel");
       throw DSMException("conference");
     }
 
@@ -273,14 +273,14 @@ EXEC_ACTION_START(ConfTeeJoinAction) {
     // link channel audio before session's input (usually playlist)
     AmAudio* chan_audio = chan->setupAudio(sess->getInput());
     if (chan_audio == NULL) {
-      ERROR("tee channel audio setup failed\n");
+      ERROR("tee channel audio setup failed");
       throw DSMException("conference");
     } 
 
     sess->setInput(chan_audio);    
 
   } else {
-    DBG("previously already in tee-channel, resetting\n");
+    DBG("previously already in tee-channel, resetting");
 
     // temporarily switch back to playlist, 
     // while we are releasing the old channel
@@ -289,7 +289,7 @@ EXEC_ACTION_START(ConfTeeJoinAction) {
     AmConferenceChannel* conf_channel = AmConferenceStatus::getChannel(channel_id, 
 								       sess->getLocalTag(), sess->RTPStream()->getSampleRate());
     if (NULL == conf_channel) {
-      ERROR("obtaining conference channel\n");
+      ERROR("obtaining conference channel");
       throw DSMException("conference");
       return false;
     }
@@ -299,7 +299,7 @@ EXEC_ACTION_START(ConfTeeJoinAction) {
     // link channel audio before session's input (usually playlist)
     AmAudio* chan_audio = chan->setupAudio(sess->getInput());
     if (chan_audio == NULL) {
-      ERROR("tee channel audio setup failed\n");
+      ERROR("tee channel audio setup failed");
       throw DSMException("conference");
     } 
 
@@ -317,7 +317,7 @@ EXEC_ACTION_START(ConfTeeLeaveAction) {
   DSMTeeConfChannel* chan = 
     getDSMConfChannel<DSMTeeConfChannel>(sc_sess, conf_varname.c_str());
   if (NULL == chan) {
-    WARN("app error: trying to leave tee conference, but channel not found\n");
+    WARN("app error: trying to leave tee conference, but channel not found");
     sc_sess->SET_ERRNO(DSM_ERRNO_SCRIPT);
     sc_sess->SET_STRERROR("trying to leave tee conference, but channel not found");
     return false;
@@ -359,10 +359,10 @@ EXEC_ACTION_START(ConfSetupMixInAction) {
   DSMDisposableT<AmAudioMixIn >* m_obj = 
     getDSMConfChannel<DSMDisposableT<AmAudioMixIn > >(sc_sess, CONF_AKEY_MIXER);
   if (NULL != m_obj) {
-    DBG("releasing old MixIn (hope script write setInOutPlaylist before)\n");
+    DBG("releasing old MixIn (hope script write setInOutPlaylist before)");
     m_obj->reset(m);
   } else {
-    DBG("creating new mixer container\n");
+    DBG("creating new mixer container");
     m_obj = new DSMDisposableT<AmAudioMixIn >(m);
     AmArg c_arg;
     c_arg.setBorrowedPointer(m_obj);
@@ -386,7 +386,7 @@ EXEC_ACTION_START(ConfPlayMixInAction) {
 
   DSMDisposableAudioFile* af = new DSMDisposableAudioFile();
   if(af->open(filename,AmAudioFile::Read)) {
-    ERROR("audio file '%s' could not be opened for reading.\n", 
+    ERROR("audio file '%s' could not be opened for reading.", 
 	  filename.c_str());
     delete af;
     
@@ -395,7 +395,7 @@ EXEC_ACTION_START(ConfPlayMixInAction) {
 
   sc_sess->transferOwnership(af);
 
-  DBG("starting mixin of file '%s'\n", filename.c_str());
+  DBG("starting mixin of file '%s'", filename.c_str());
   m->mixin(af);
 
 } EXEC_ACTION_END;

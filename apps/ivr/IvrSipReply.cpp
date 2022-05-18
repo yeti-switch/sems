@@ -55,7 +55,7 @@ static PyObject* IvrSipReply_new(PyTypeObject *type, PyObject *args, PyObject *k
     self->p_req = (AmSipReply*)PyCObject_AsVoidPtr(o_req);
   }
 
-  DBG("IvrSipReply_new\n");
+  DBG("IvrSipReply_new");
   return (PyObject *)self;
 }
 

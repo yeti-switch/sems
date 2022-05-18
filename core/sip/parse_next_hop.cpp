@@ -96,7 +96,7 @@ int parse_next_hop(const cstring& next_hop,
 	break;
       default:
 	// syntax error
-	DBG("error: unexpected character '%c' in IPL_HOST_SEP state.\n",*c);
+	DBG("error: unexpected character '%c' in IPL_HOST_SEP state.",*c);
 	return -1;
       }
       break;
@@ -116,7 +116,7 @@ int parse_next_hop(const cstring& next_hop,
 	break;
       default:
 	if(*c < '0' && *c > '9'){
-	  DBG("error: unexpected character '%c' in IPL_PORT state.\n",*c);
+	  DBG("error: unexpected character '%c' in IPL_PORT state.",*c);
 	  return -1;
 	}
 	dest.port = dest.port*10 + (*c - '0');
@@ -138,7 +138,7 @@ int parse_next_hop(const cstring& next_hop,
 	  continue;
 	}
 	// syntax error
-	DBG("error: unexpected character '%c' in IPL_TRSP state.\n",*c);
+	DBG("error: unexpected character '%c' in IPL_TRSP state.",*c);
 	return -1;
       }
       break;

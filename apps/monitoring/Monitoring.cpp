@@ -99,7 +99,7 @@ int Monitor::reconfigure(const std::string& config)
 int Monitor::onLoad() {
   // todo: if GC configured, start thread
   if (gcRun) {
-    DBG("Running garbage collection for monitoring every %u seconds\n", 
+    DBG("Running garbage collection for monitoring every %u seconds", 
 	gcInterval);
     gc_thread.reset(new MonitorGarbageCollector());
     gc_thread->start();
@@ -304,7 +304,7 @@ void Monitor::addSample(const AmArg& args, AmArg& ret) {
     = bucket.samples[args[0].asCStr()].sample[args[1].asCStr()];
   if ((!sample_list.empty()) && timercmp(&sample_list.front().time, &now, >=)) {
     // sample list time stamps needs to be monotonically increasing - clear if resyncing
-    // WARN("clock drift backwards - clearing %zd items\n", sample_list.size());
+    // WARN("clock drift backwards - clearing %zd items", sample_list.size());
     sample_list.clear();
   }
   sample_list.push_front(SampleInfo::time_cnt(now, cnt));
@@ -687,7 +687,7 @@ void Monitor::listByRegex(const AmArg& args, AmArg& ret) {
   ret.assertArray();
   regex_t attr_reg;
   if(regcomp(&attr_reg,args[1].asCStr(),REG_NOSUB)){
-    ERROR("could not compile regex '%s'\n", args[1].asCStr());
+    ERROR("could not compile regex '%s'", args[1].asCStr());
     return;
   }
   
@@ -756,13 +756,13 @@ LogBucket& Monitor::getLogBucket(const string& call_id) {
 
 void MonitorGarbageCollector::run() {
   setThreadName("MonitorGC");
-  DBG("running MonitorGarbageCollector thread\n");
+  DBG("running MonitorGarbageCollector thread");
   running.set(true);
   while (running.get()) {
     sleep(Monitor::gcInterval);
     Monitor::instance()->clearFinished();
   }
-  DBG("MonitorGarbageCollector thread ends\n");
+  DBG("MonitorGarbageCollector thread ends");
   AmEventDispatcher::instance()->delEventQueue("monitoring_gc");
 }
 
@@ -770,12 +770,12 @@ void MonitorGarbageCollector::postEvent(AmEvent* e) {
   AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(e);  
   if (sys_ev && 
       sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-    DBG("stopping MonitorGarbageCollector thread\n");
+    DBG("stopping MonitorGarbageCollector thread");
     running.set(false);
     return;
   }
 
-  WARN("received unknown event\n");
+  WARN("received unknown event");
 }
 
 void MonitorGarbageCollector::on_stop() {

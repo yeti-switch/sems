@@ -33,14 +33,14 @@ void PySemsB2ABDialog::onBeforeDestroy() {
 }
 
 void PySemsB2ABDialog::onEarlySessionStart() {
-  DBG("PySemsB2ABDialog::onEarlySessionStart\n");
+  DBG("PySemsB2ABDialog::onEarlySessionStart");
   setInOut(&playlist,&playlist);
   AmB2ABCallerSession::onEarlySessionStart();
 }
 
 void PySemsB2ABDialog::onSessionStart()
 {
-  DBG("PySemsB2ABDialog::onSessionStart\n");
+  DBG("PySemsB2ABDialog::onSessionStart");
   setInOut(&playlist,&playlist);
   AmB2ABCallerSession::onSessionStart();
 }
@@ -52,7 +52,7 @@ AmB2ABCalleeSession* PySemsB2ABDialog::createCalleeSession() {
 
 void PySemsB2ABDialog::process(AmEvent* event) 
 {
-  DBG("PySemsB2ABDialog::process\n");
+  DBG("PySemsB2ABDialog::process");
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && audio_event->event_id == AmAudioEvent::noAudio){
@@ -77,7 +77,7 @@ void PySemsB2ABDialog::process(AmEvent* event)
 void PySemsB2ABCalleeDialog::onB2ABEvent(B2ABEvent* ev) {
   PySemsB2ABEvent* py_ev = dynamic_cast<PySemsB2ABEvent*>(ev);
   if (NULL != py_ev) {
-    DBG("calling onPyB2AB...\n");
+    DBG("calling onPyB2AB...");
     onPyB2ABEvent(py_ev);
   } else {
     AmB2ABCalleeSession::onB2ABEvent(ev);
@@ -86,6 +86,6 @@ void PySemsB2ABCalleeDialog::onB2ABEvent(B2ABEvent* ev) {
 
 
 void PySemsB2ABCalleeDialog::onPyB2ABEvent(PySemsB2ABEvent* py_ev) {
-  DBG("ignoring PySemsB2ABEvent\n");
+  DBG("ignoring PySemsB2ABEvent");
   delete py_ev; //-- don't delete, ownership already been transfered to python?
 }

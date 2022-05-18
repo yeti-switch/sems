@@ -42,7 +42,7 @@ static void dump_audio(RTMPPacket *packet)
     dump_fd = open("speex_in.raw",O_WRONLY|O_CREAT|O_TRUNC,
 		   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
     if(dump_fd < 0)
-      ERROR("could not open speex_in.raw: %s\n",strerror(errno));
+      ERROR("could not open speex_in.raw: %s",strerror(errno));
   }
   if(dump_fd < 0) return;
 
@@ -58,7 +58,7 @@ static void dump_audio(unsigned char* buffer, unsigned int size)
     dump_fd = open("pcm_in.raw",O_WRONLY|O_CREAT|O_TRUNC,
 		   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
     if(dump_fd < 0)
-      ERROR("could not open pcm_in.raw: %s\n",strerror(errno));
+      ERROR("could not open pcm_in.raw: %s",strerror(errno));
   }
   if(dump_fd < 0) return;
 
@@ -88,7 +88,7 @@ int RtmpAudio::get(unsigned long long system_ts, unsigned char* buffer,
 
   unsigned int user_ts = scaleSystemTS(system_ts);
 
-  //DBG("get(%u, %u)\n",user_ts,nb_samples);
+  //DBG("get(%u, %u)",user_ts,nb_samples);
   process_recv_queue(user_ts);
 
   nb_samples = (unsigned int)((float)nb_samples * (float)getSampleRate()
@@ -125,7 +125,7 @@ int RtmpAudio::put(unsigned long long system_ts, unsigned char* buffer,
 		       input_sample_rate, getSampleRate());
 
   int s = encode(size);
-  //DBG("s = %i\n",s);
+  //DBG("s = %i",s);
   
   if(s<=0){
     return s;
@@ -184,7 +184,7 @@ int RtmpAudio::send(unsigned int user_ts, unsigned int size)
   packet.m_body[0] = 0xB2;
   memcpy(packet.m_body+1,(unsigned char*)samples,size);
 
-  //DBG("sending audio packet: size=%u rtmp_ts=%u StreamID=%u (rtp_ts=%u)\n",
+  //DBG("sending audio packet: size=%u rtmp_ts=%u StreamID=%u (rtp_ts=%u)",
   //    size+1,rtmp_ts,play_stream_id,user_ts);
 
   sender->push_back(packet);
@@ -200,7 +200,7 @@ void RtmpAudio::bufferPacket(const RTMPPacket& p)
 {
   RTMPPacket np = p;
   if(!RTMPPacket_Alloc(&np,np.m_nBodySize)){
-    ERROR("could not allocate packet.\n");
+    ERROR("could not allocate packet.");
     return;
   }
   memcpy(np.m_body,p.m_body,p.m_nBodySize);
@@ -235,7 +235,7 @@ void RtmpAudio::process_recv_queue(unsigned int ref_ts)
 
       size = decode(size);
       if(size <= 0){
-	ERROR("decode() returned %i\n",size);
+	ERROR("decode() returned %i",size);
 	return;
       }
       
@@ -275,7 +275,7 @@ unsigned int RtmpAudio::conceal_loss(unsigned int, unsigned char *)
 void RtmpAudio::setSenderPtr(RtmpSender* s)
 {
   m_sender.lock();
-  DBG("sender ptr = %p\n",s);
+  DBG("sender ptr = %p",s);
   sender = s;
   m_sender.unlock();
 }
@@ -283,7 +283,7 @@ void RtmpAudio::setSenderPtr(RtmpSender* s)
 void RtmpAudio::setPlayStreamID(unsigned int stream_id)
 {
   m_sender.lock();
-  DBG("play_stream_id = %i\n",stream_id);
+  DBG("play_stream_id = %i",stream_id);
   play_stream_id = stream_id;
   m_sender.unlock();
 }

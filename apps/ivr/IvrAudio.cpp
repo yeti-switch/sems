@@ -14,7 +14,7 @@ extern "C" cst_voice *register_cmu_us_kal();
 
 static PyObject* IvrAudioFile_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  DBG("---------- IvrAudioFile_alloc -----------\n");
+  DBG("---------- IvrAudioFile_alloc -----------");
   IvrAudioFile *self;
 
   self = (IvrAudioFile *)type->tp_alloc(type, 0);
@@ -42,7 +42,7 @@ static PyObject* IvrAudioFile_new(PyTypeObject *type, PyObject *args, PyObject *
 
 static void IvrAudioFile_dealloc(IvrAudioFile* self)
 {
-  DBG("---------- IvrAudioFile_dealloc -----------\n");
+  DBG("---------- IvrAudioFile_dealloc -----------");
   delete self->af;
   self->af = NULL;
 

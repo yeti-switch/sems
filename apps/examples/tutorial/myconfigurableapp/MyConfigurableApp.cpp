@@ -26,7 +26,7 @@ int MyConfigurableAppFactory::onLoad()
     AnnouncementFile = cfg.getParameter("announcement_file","/tmp/default.wav");
 
     if(!file_exists(AnnouncementFile)){
-	ERROR("announcement file for configurableApp module does not exist ('%s').\n",
+	ERROR("announcement file for configurableApp module does not exist ('%s').",
 	      AnnouncementFile.c_str());
 	return -1;
     }
@@ -50,7 +50,7 @@ MyConfigurableAppDialog::~MyConfigurableAppDialog()
 
 void MyConfigurableAppDialog::onSessionStart()
 {
-    DBG("MyConfigurableAppDialog::onSessionStart - file is '%s'\n", 
+    DBG("MyConfigurableAppDialog::onSessionStart - file is '%s'", 
 	MyConfigurableAppFactory::AnnouncementFile.c_str());
 
     AmSession::onSessionStart();
@@ -58,7 +58,7 @@ void MyConfigurableAppDialog::onSessionStart()
 
 void MyConfigurableAppDialog::onBye(const AmSipRequest& req)
 {
-    DBG("onBye: stopSession\n");
+    DBG("onBye: stopSession");
     setStopped();
 }
 

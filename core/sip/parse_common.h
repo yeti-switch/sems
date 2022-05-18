@@ -138,7 +138,7 @@ enum {
 	    	    st = ST_CRLF;\
 	        }\
 	        else {\
- 		    DBG("CR without LF\n");\
+ 		    DBG("CR without LF");\
  		    return MALFORMED_SIP_MSG;\
 	        }\
 	        break

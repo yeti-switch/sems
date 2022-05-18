@@ -32,14 +32,14 @@ PySemsB2BDialog::~PySemsB2BDialog()
 
 void PySemsB2BDialog::onSessionStart()
 {
-  DBG("PySemsB2BDialog::onSessionStart\n");
+  DBG("PySemsB2BDialog::onSessionStart");
   setInOut(&playlist,&playlist);
   AmB2BCallerSession::onSessionStart();
 }
 
 void PySemsB2BDialog::process(AmEvent* event) 
 {
-  DBG("PySemsB2BDialog::process\n");
+  DBG("PySemsB2BDialog::process");
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && audio_event->event_id == AmAudioEvent::noAudio){

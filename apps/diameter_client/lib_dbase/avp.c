@@ -92,7 +92,7 @@ AAA_AVP* AAAAddGroupedAVP(AAA_AVP* grouped, AAA_AVP* avp) {
   AAA_AVP *mem;
 
   if (grouped == NULL || avp == NULL) {
-    ERROR("trying to group NULL avp\n");
+    ERROR("trying to group NULL avp");
     return grouped;
   }
   // insert at head
@@ -161,7 +161,7 @@ AAA_AVP*  AAACreateAVP(
 
   return avp;
  error:
-  ERROR("ERROR:AAACreateAVP: no more free memory!\n");
+  ERROR("ERROR:AAACreateAVP: no more free memory!");
   return 0;
 }
 
@@ -234,7 +234,7 @@ AAA_AVP  *AAAFindMatchingAVP(
 
   /* param checking */
   if (!msg) {
-    ERROR("ERROR:FindMatchingAVP: param msg passed null !!\n");
+    ERROR("ERROR:FindMatchingAVP: param msg passed null !!");
     goto error;
   }
   /* search the startAVP avp */
@@ -321,7 +321,7 @@ AAAReturnCode  AAAFreeAVP(AAA_AVP **avp)
 
   /* some checks */
   if (!avp || !(*avp)) {
-    ERROR("ERROR:AAAFreeAVP: param avp cannot be null!!\n");
+    ERROR("ERROR:AAAFreeAVP: param avp cannot be null!!");
     return AAA_ERR_PARAMETER;
   }
 
@@ -389,7 +389,7 @@ char*  AAAConvertAVPToString(AAA_AVP *avp, char *dest, unsigned int destLen)
   if ((it = avp->groupedHead)) {
     l+=snprintf(dest+l,destLen-l, "Group members:\n---\n");
     while (it) {
-      DBG("print...\n");
+      DBG("print...");
       l+=strlen(AAAConvertAVPToString(it, dest+l, destLen-l));
       l+=snprintf(dest+l,destLen-l, "\n---\n");
       it = AAAGetNextAVP(it);
@@ -458,7 +458,7 @@ AAA_AVP* AAACloneAVP( AAA_AVP *avp , unsigned char clone_data)
   /* clone the avp structure */
   n_avp = (AAA_AVP*)ad_malloc( sizeof(AAA_AVP) );
   if (!n_avp) {
-    ERROR("ERROR:clone_avp: cannot get free memory!!\n");
+    ERROR("ERROR:clone_avp: cannot get free memory!!");
     goto error;
   }
   memcpy( n_avp, avp, sizeof(AAA_AVP));
@@ -468,7 +468,7 @@ AAA_AVP* AAACloneAVP( AAA_AVP *avp , unsigned char clone_data)
     /* clone the avp data */
     n_avp->data.s = (char*)ad_malloc( avp->data.len );
     if (!(n_avp->data.s)) {
-      ERROR("ERROR:clone_avp: cannot get free memory!!\n");
+      ERROR("ERROR:clone_avp: cannot get free memory!!");
       ad_free( n_avp );
       goto error;
     }

@@ -62,7 +62,7 @@ AmOfferAnswer::OAState AmOfferAnswer::getState()
 
 void AmOfferAnswer::setState(AmOfferAnswer::OAState n_st)
 {
-    DBG("setting SIP dialog O/A status: %s->%s\n",
+    DBG("setting SIP dialog O/A status: %s->%s",
         getOAStateStr(state), getOAStateStr(n_st));
     state = n_st;
 }
@@ -140,7 +140,7 @@ int AmOfferAnswer::onRequestIn(const AmSipRequest& req)
             dlg->reply(req,static_cast<unsigned int>(err_code),err_txt);
         } else { // ACK
             // TODO: only if reply to initial INVITE (if re-INV, app should decide)
-            DBG("error %i with SDP received in ACK request: sending BYE\n",err_code);
+            DBG("error %i with SDP received in ACK request: sending BYE",err_code);
             dlg->bye();
         }
     }
@@ -175,8 +175,8 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
                 (state == OA_OfferRecved)) &&
                (reply.cseq == cseq))
             {
-                DBG("ignoring subsequent SDP reply within the same transaction\n");
-                DBG("this usually happens when 183 and 200 have SDP\n");
+                DBG("ignoring subsequent SDP reply within the same transaction");
+                DBG("this usually happens when 183 and 200 have SDP");
                 /* Make sure that session is started when 200 OK is received */
                 if (reply.code == 200) dlg->onSdpCompleted();
             } else {
@@ -191,7 +191,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
        (reply.cseq == cseq) )
     {
         // final error reply -> cleanup OA state
-        DBG("after %u reply to %s: resetting OA state\n",
+        DBG("after %u reply to %s: resetting OA state",
             reply.code, reply.cseq_method.c_str());
         clearTransitionalState();
     }
@@ -199,7 +199,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
 
     if(err_code) {
         // TODO: only if initial INVITE (if re-INV, app should decide)
-        DBG("error %i (%s) with SDP received in %i reply: sending ACK+BYE\n",
+        DBG("error %i (%s) with SDP received in %i reply: sending ACK+BYE",
             err_code,err_txt?err_txt:"none",reply.code);
         dlg->bye();
     }
@@ -209,7 +209,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
 
 int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const char** err_txt)
 {
-    DBG("entering onRxSdp(), oa_state=%s\n", getOAStateStr(state));
+    DBG("entering onRxSdp(), oa_state=%s", getOAStateStr(state));
     OAState old_oa_state = state;
 
     int err_code = 0;
@@ -254,7 +254,7 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const ch
         }
     }
 
-    DBG("oa_state: %s -> %s\n",
+    DBG("oa_state: %s -> %s",
         getOAStateStr(old_oa_state), getOAStateStr(state));
 
     return err_code;
@@ -262,7 +262,7 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const ch
 
 int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const AmMimeBody& body)
 {
-    DBG("entering onTxSdp(), oa_state=%s\n", getOAStateStr(state));
+    DBG("entering onTxSdp(), oa_state=%s", getOAStateStr(state));
 
     // assume that the payload is ok if it is not empty.
     // (do not parse again self-generated SDP)
@@ -281,7 +281,7 @@ int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const AmMimeBody& body)
         break;
     case OA_OfferSent:
         // There is already a pending offer!!!
-        DBG("There is already a pending offer, onTxSdp fails\n");
+        DBG("There is already a pending offer, onTxSdp fails");
         return -1;
     default:
         break;
@@ -322,13 +322,13 @@ int AmOfferAnswer::onRequestOut(AmSipRequest& req)
         if(sdp_local.parse(
             reinterpret_cast<const char*>(sdp_body->getPayload())))
         {
-            ERROR("parser failed on Tx SDP: '%s'\n",
+            ERROR("parser failed on Tx SDP: '%s'",
                   sdp_body->getPayload());
         }
     }
 
     if(has_sdp && (onTxSdp(req.cseq,req.body) != 0)) {
-        DBG("onTxSdp() failed\n");
+        DBG("onTxSdp() failed");
         return -1;
     }
 
@@ -384,7 +384,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
                 if((sdp_body =
                     reply.body.addPart(SIP_APPLICATION_SDP)) == nullptr )
                 {
-                    DBG("AmMimeBody::addPart() failed\n");
+                    DBG("AmMimeBody::addPart() failed");
                     return -1;
                 }
             }
@@ -399,7 +399,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
         if (sdp_local.parse(
                 reinterpret_cast<const char*>(sdp_body->getPayload())))
         {
-            ERROR("parser failed on Tx SDP: '%s'\n",
+            ERROR("parser failed on Tx SDP: '%s'",
                 sdp_body->getPayload());
         }
     }
@@ -415,7 +415,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
     }
 
     if (has_sdp && (onTxSdp(reply.cseq,reply.body) != 0)) {
-        DBG("onTxSdp() failed\n");
+        DBG("onTxSdp() failed");
         return -1;
     }
 
@@ -423,7 +423,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
        (reply.cseq == cseq))
     {
         // final error reply -> cleanup OA state
-        DBG("after %u reply to %s: resetting OA state\n",
+        DBG("after %u reply to %s: resetting OA state",
         reply.code, reply.cseq_method.c_str());
         clearTransitionalState();
     }
@@ -440,7 +440,7 @@ int AmOfferAnswer::onRequestSent(const AmSipRequest& req)
     {
         // transaction has been removed:
         //  -> cleanup OA state
-        DBG("200 ACK sent: resetting OA state\n");
+        DBG("200 ACK sent: resetting OA state");
         clearTransitionalState();
     }
 
@@ -470,7 +470,7 @@ int AmOfferAnswer::onReplySent(const AmSipReply& reply)
     {
         // transaction has been removed:
         //  -> cleanup OA state
-        DBG("transaction finished by final reply %u: resetting OA state\n", reply.cseq);
+        DBG("transaction finished by final reply %u: resetting OA state", reply.cseq);
         clearTransitionalState();
     }
 
@@ -485,7 +485,7 @@ int AmOfferAnswer::getSdpBody(string& sdp_body)
         if(dlg->getSdpOffer(sdp_local)){
             sdp_local.print(sdp_body);
         } else {
-            DBG("No SDP Offer.\n");
+            DBG("No SDP Offer.");
             return -1;
         }
         break;
@@ -493,12 +493,12 @@ int AmOfferAnswer::getSdpBody(string& sdp_body)
         if(dlg->getSdpAnswer(sdp_remote,sdp_local)) {
             sdp_local.print(sdp_body);
         } else {
-            DBG("No SDP Answer.\n");
+            DBG("No SDP Answer.");
             return -1;
         }
         break;
     case OA_OfferSent:
-        DBG("Still waiting for a reply\n");
+        DBG("Still waiting for a reply");
         return -1;
     default: 
         break;
@@ -510,7 +510,7 @@ int AmOfferAnswer::getSdpBody(string& sdp_body)
 void AmOfferAnswer::onNoAck(unsigned int ack_cseq)
 {
     if(ack_cseq == cseq) {
-        DBG("ACK timeout: resetting OA state\n");
+        DBG("ACK timeout: resetting OA state");
         clearTransitionalState();
     }
 }

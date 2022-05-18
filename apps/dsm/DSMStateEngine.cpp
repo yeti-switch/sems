@@ -45,39 +45,39 @@ DSMStateDiagram::~DSMStateDiagram() {
 }
 
 void DSMStateDiagram::addState(const State& state, bool is_initial) {
-  DBG("adding state '%s'\n", state.name.c_str());
+  DBG("adding state '%s'", state.name.c_str());
   for (vector<DSMElement*>::const_iterator it=
 	 state.pre_actions.begin(); it != state.pre_actions.end(); it++) {
-    DBG("   pre-action '%s'\n", (*it)->name.c_str());
+    DBG("   pre-action '%s'", (*it)->name.c_str());
   }
   for (vector<DSMElement*>::const_iterator it=
 	 state.post_actions.begin(); it != state.post_actions.end(); it++) {
-    DBG("   post-action '%s'\n", (*it)->name.c_str());
+    DBG("   post-action '%s'", (*it)->name.c_str());
   }
 
   states.push_back(state);
   if (is_initial) {
     if (!initial_state.empty()) {
-      ERROR("trying to override initial state '%s' with '%s'\n",
+      ERROR("trying to override initial state '%s' with '%s'",
 	    initial_state.c_str(), state.name.c_str());
     } else {
       initial_state = state.name;
-      DBG("set initial state '%s'\n", state.name.c_str());
+      DBG("set initial state '%s'", state.name.c_str());
     }
   }
 }
 
 bool DSMStateDiagram::addTransition(const DSMTransition& trans) {
-  DBG("adding Transition '%s' %s -(...)-> %s\n",
+  DBG("adding Transition '%s' %s -(...)-> %s",
       trans.name.c_str(), trans.from_state.c_str(), trans.to_state.c_str());
   for (vector<DSMCondition*>::const_iterator it=
 	 trans.precond.begin(); it != trans.precond.end(); it++) {
-    DBG("       DSMCondition  %s'%s'\n", 
+    DBG("       DSMCondition  %s'%s'", 
 	(*it)->invert?"not ":"", (*it)->name.c_str());
   }
   for (vector<DSMElement*>::const_iterator it=
 	 trans.actions.begin(); it != trans.actions.end(); it++) {
-    DBG("       Action     '%s'\n", (*it)->name.c_str());
+    DBG("       Action     '%s'", (*it)->name.c_str());
   }
 
   vector<string> from_states;
@@ -107,7 +107,7 @@ bool DSMStateDiagram::addTransition(const DSMTransition& trans) {
 	 from_states.begin(); it != from_states.end(); it++) {
     State* source_st = getState(*it);
     if (!source_st) {
-      ERROR("state '%s' for transition '%s' not found\n",
+      ERROR("state '%s' for transition '%s' not found",
 	    it->c_str(), trans.name.c_str());
       return false;
     }
@@ -131,7 +131,7 @@ State* DSMStateDiagram::getState(const string& s_name) {
 
 State* DSMStateDiagram::getInitialState() {
   if (initial_state.empty()) {
-    ERROR("diag '%s' doesn't have an initial state!\n",
+    ERROR("diag '%s' doesn't have an initial state!",
 	  name.c_str());
     return NULL;
   }
@@ -141,7 +141,7 @@ State* DSMStateDiagram::getInitialState() {
 
 bool DSMStateDiagram::checkConsistency(string& report) {
   bool res = true;
-  DBG("checking consistency of '%s'\n", name.c_str());
+  DBG("checking consistency of '%s'", name.c_str());
   res &= checkInitialState(report);
   res &= checkDestinationStates(report);
   res &= checkHangupHandled(report);
@@ -149,7 +149,7 @@ bool DSMStateDiagram::checkConsistency(string& report) {
 }
 
 bool DSMStateDiagram::checkInitialState(string& report) {
-  DBG("checking for initial state...\n");
+  DBG("checking for initial state...");
   if (NULL == getInitialState()) {
     report+=name+": " "No initial state defined!\n";
     return false;
@@ -157,7 +157,7 @@ bool DSMStateDiagram::checkInitialState(string& report) {
   return true;
 }
 bool DSMStateDiagram::checkDestinationStates(string& report) {
-  DBG("checking for existence of destination states...\n");
+  DBG("checking for existence of destination states...");
   bool res = true;
   for (vector<State>::iterator it=
 	 states.begin(); it != states.end(); it++) {
@@ -174,7 +174,7 @@ bool DSMStateDiagram::checkDestinationStates(string& report) {
 }
 
 bool DSMStateDiagram::checkHangupHandled(string& report) {
-  DBG("checking for hangup handled in all states...\n");
+  DBG("checking for hangup handled in all states...");
   bool res = true;
   for (vector<State>::iterator it=
 	 states.begin(); it != states.end(); it++) {
@@ -240,12 +240,12 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 				vector<DSMElement*>::iterator to, 
 				AmSession* sess,  DSMSession* sc_sess, DSMCondition::EventType event,
 				map<string,string>* event_params,  bool& is_consumed) {
-  DBG("running %zd DSM action elements\n", to - from);
+  DBG("running %zd DSM action elements", to - from);
   for (vector<DSMElement*>::iterator it=from; it != to; it++) {
 
     DSMAction* dsm_act = dynamic_cast<DSMAction*>(*it);
     if (dsm_act) {
-      DBG("executing '%s'\n", (dsm_act)->name.c_str()); 
+      DBG("executing '%s'", (dsm_act)->name.c_str()); 
       if ((dsm_act)->execute(sess, sc_sess, event, event_params)) {
         string se_modifier;
         switch ((dsm_act)->getSEAction(se_modifier,
@@ -254,14 +254,14 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	  is_consumed = false; 
 	  break;
 	case DSMAction::Jump: 
-	  DBG("jumping to %s\n", se_modifier.c_str());
+	  DBG("jumping to %s", se_modifier.c_str());
 	  if (jumpDiag(se_modifier, sess, sc_sess, event, event_params)) {
 	    // is_consumed = false; 
 	    return true;  
 	  }
 	  break;
 	case DSMAction::Call:
-	  DBG("calling %s\n", se_modifier.c_str());
+	  DBG("calling %s", se_modifier.c_str());
 	  if (callDiag(se_modifier, sess, sc_sess, event, event_params, it+1, to))  {
 	    // is_consumed = false; 
 	    return true;   
@@ -281,7 +281,7 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 
     DSMConditionTree* cond_tree = dynamic_cast<DSMConditionTree*>(*it);
     if (cond_tree) {
-      DBG("checking conditions\n");
+      DBG("checking conditions");
       vector<DSMCondition*>::iterator con=cond_tree->conditions.begin();
       while (con!=cond_tree->conditions.end()) {
 	if (!(*con)->_match(sess, sc_sess, event, event_params))
@@ -289,7 +289,7 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	con++;
       }
       if (con == cond_tree->conditions.end()) {
-	DBG("condition tree matched.\n");
+	DBG("condition tree matched.");
         if (runactions(cond_tree->run_if_true.begin(), cond_tree->run_if_true.end(),
 		       sess, sc_sess, event, event_params, is_consumed))
 	  return true;
@@ -304,10 +304,10 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
     DSMArrayFor* array_for = dynamic_cast<DSMArrayFor*>(*it);
     if (array_for) {
       if (array_for->for_type == DSMArrayFor::Range) {
-	DBG("running for (%s in range(%s, %s) {\n",
+	DBG("running for (%s in range(%s, %s) {",
 	    array_for->k.c_str(), array_for->v.c_str(), array_for->array_struct.c_str());
       } else {
-	DBG("running for (%s%s in %s) {\n",
+	DBG("running for (%s%s in %s) {",
 	    array_for->k.c_str(), array_for->v.empty() ? "" : (","+array_for->v).c_str(),
 	    array_for->array_struct.c_str());
       }
@@ -317,12 +317,12 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
       string v_name = array_for->v;
 
       if (!k_name.length()) {
-	ERROR("empty counter name in for\n");
+	ERROR("empty counter name in for");
 	continue;
       }
 
       if (array_for->for_type != DSMArrayFor::Range && !array_name.length()) {
-	ERROR("empty array name in for\n");
+	ERROR("empty array name in for");
 	continue;
       }
 
@@ -345,7 +345,7 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	  string varname = lb->first.substr(array_name.length()+1);
 	  string valname = lb->second;
 	  cnt_values.push_back(make_pair(varname, valname));
-	  DBG("      '%s,%s'\n", varname.c_str(), valname.c_str());
+	  DBG("      '%s,%s'", varname.c_str(), valname.c_str());
 	  lb++;
 	}
       } else if (array_for->for_type == DSMArrayFor::Array) {
@@ -364,20 +364,20 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	  }
 
 	  cnt_values.push_back(make_pair(v->second, ""));
-	  DBG("      '%s'\n", v->second.c_str());
+	  DBG("      '%s'", v->second.c_str());
 	  v++;
 	}
       } else if (array_for->for_type == DSMArrayFor::Range) {
 	string s_range = resolveVars(array_for->v, sess, sc_sess, event_params);
 	if (!str2int(s_range, range[0])) {
-	  WARN("Error converting lower bound range(%s,%s)\n",
+	  WARN("Error converting lower bound range(%s,%s)",
 	       array_for->v.c_str(), array_for->array_struct.c_str());
 	  range[0]=0;
 	} else {
 	  s_range = resolveVars(array_for->array_struct, sess, sc_sess, event_params);
 
 	  if (!str2int(s_range, range[1])) {
-	    WARN("Error converting upper bound range(%s,%s)\n",
+	    WARN("Error converting upper bound range(%s,%s)",
 		 array_for->v.c_str(), array_for->array_struct.c_str());
 	    range[0]=0; range[1]=0;
 	  }
@@ -403,7 +403,7 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	int cnt = range[0];
 	while (cnt != range[1]) {
 	  sc_sess->var[k_name] = int2str(cnt);
-	  DBG("setting $%s=%s\n", k_name.c_str(), sc_sess->var[k_name].c_str());
+	  DBG("setting $%s=%s", k_name.c_str(), sc_sess->var[k_name].c_str());
 
 	  runactions(array_for->actions.begin(), array_for->actions.end(),
 		     sess, sc_sess, event, event_params, is_consumed);
@@ -415,16 +415,16 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
 	}
 
       } else {
-	DBG("running for loop with %zd items\n", cnt_values.size());
+	DBG("running for loop with %zd items", cnt_values.size());
 	for (vector<pair<string, string> > ::iterator f_it=
 	       cnt_values.begin(); f_it != cnt_values.end(); f_it++) {
 	  if (array_for->for_type == DSMArrayFor::Struct) {
-	    DBG("setting $%s=%s, $%s=%s\n", k_name.c_str(), f_it->first.c_str(),
+	    DBG("setting $%s=%s, $%s=%s", k_name.c_str(), f_it->first.c_str(),
 		v_name.c_str(), f_it->second.c_str());
 	    sc_sess->var[k_name] = f_it->first;
 	    sc_sess->var[v_name] = f_it->second;
 	  } else {
-	    DBG("setting $%s=%s\n", k_name.c_str(), f_it->first.c_str());
+	    DBG("setting $%s=%s", k_name.c_str(), f_it->first.c_str());
 	    sc_sess->var[k_name] = f_it->first;
 	  }
 	  runactions(array_for->actions.begin(), array_for->actions.end(),
@@ -448,7 +448,7 @@ bool DSMStateEngine::runactions(vector<DSMElement*>::iterator from,
       continue;
     }
 
-    ERROR("DSMElement type not understood\n");
+    ERROR("DSMElement type not understood");
   }
   return false;
 } 
@@ -469,19 +469,19 @@ bool DSMStateEngine::init(AmSession* sess, DSMSession* sc_sess,
 
   try {
     if (!jumpDiag(startDiagram, sess, sc_sess, init_event, NULL)) {
-      ERROR("initializing with start diag '%s'\n",
+      ERROR("initializing with start diag '%s'",
 	    startDiagram.c_str());
       return false;
     }
   } catch (DSMException& e) {
-    DBG("Exception type '%s' occured while initializing! Run init event as exception...\n", 
+    DBG("Exception type '%s' occured while initializing! Run init event as exception...", 
 	e.params["type"].c_str());
     runEvent(sess, sc_sess, init_event, &e.params, true);
     return true;
     
   }
 
-  DBG("run init event...\n");
+  DBG("run init event...");
   runEvent(sess, sc_sess, init_event, NULL);
   return true;
 }
@@ -510,7 +510,7 @@ bool DSMCondition::match(AmSession* sess, DSMSession* sc_sess,
       return false;
   }
 
-  DBG("condition matched: '%s'\n", name.c_str());
+  DBG("condition matched: '%s'", name.c_str());
   return true;
 }
 
@@ -526,20 +526,20 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
   map<string,string> exception_params;
   bool is_exception = run_exception;
 
-  DBG("o v DSM processing event, current state '%s' v\n", current->name.c_str());
+  DBG("o v DSM processing event, current state '%s' v", current->name.c_str());
   bool is_consumed = true;
   do {
     try {
       is_consumed = true;
 
 
-      DBG(" > state '%s'\n", current->name.c_str());
+      DBG(" > state '%s'", current->name.c_str());
       for (vector<DSMTransition>::iterator tr = current->transitions.begin();
 	   tr != current->transitions.end();tr++) {
 	if (tr->is_exception != is_exception)
 	  continue;
 	
-	DBG(" ...checking transition '%s'\n", tr->name.c_str());
+	DBG(" ...checking transition '%s'", tr->name.c_str());
 	
 	vector<DSMCondition*>::iterator con=tr->precond.begin();
 	while (con!=tr->precond.end()) {
@@ -548,7 +548,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	  con++;
 	}
 	if (con == tr->precond.end()) {
-	  DBG(" .>>transition '%s' matched.\n", tr->name.c_str());
+	  DBG(" .>>transition '%s' matched.", tr->name.c_str());
 	  
 	  //  matched all preconditions
 	  // find target state
@@ -563,7 +563,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	  
 	  // run post-actions
 	  if (current->post_actions.size()) {
-	    DBG(" >>>running %zd post_actions of state '%s'\n",
+	    DBG(" >>>running %zd post_actions of state '%s'",
 		current->post_actions.size(), current->name.c_str());
 	    if (runactions(current->post_actions.begin(), 
 			   current->post_actions.end(), 
@@ -574,7 +574,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	  
 	  // run transition actions
 	  if (tr->actions.size()) {
-	    DBG("  >>>running %zd actions of transition '%s'\n",
+	    DBG("  >>>running %zd actions of transition '%s'",
 		tr->actions.size(), tr->name.c_str());
 	    if (runactions(tr->actions.begin(), 
 			   tr->actions.end(), 
@@ -587,7 +587,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	  if (!target_st) {
 	    break;
 	  }
-	  DBG("  >>>changing to new state '%s'\n", target_st->name.c_str());
+	  DBG("  >>>changing to new state '%s'", target_st->name.c_str());
 	  
 #ifdef USE_MONITORING
 	  MONITORING_LOG(sess->getLocalTag().c_str(), "dsm_state", target_st->name.c_str());
@@ -609,7 +609,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	  
 	  // execute pre-actions
 	  if (current->pre_actions.size()) {
-	    DBG(" >>>running %zd pre_actions of state '%s'\n",
+	    DBG(" >>>running %zd pre_actions of state '%s'",
 		current->pre_actions.size(), current->name.c_str());
 	    if (runactions(current->pre_actions.begin(), 
 			   current->pre_actions.end(), 
@@ -617,13 +617,13 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 	      break;
 	    }
 	  }
-	  DBG(" >>o arrived in state '%s'\n", current->name.c_str());
+	  DBG(" >>o arrived in state '%s'", current->name.c_str());
 	  
 	  break;
 	}
       }
     } catch (DSMException& e) {
-      DBG("DSMException occured, type = %s\n", e.params["type"].c_str());
+      DBG("DSMException occured, type = %s", e.params["type"].c_str());
       is_consumed = false;
 
       is_exception = true; // continue to process as exception event
@@ -634,7 +634,7 @@ void DSMStateEngine::runEvent(AmSession* sess, DSMSession* sc_sess,
 
   } while (!is_consumed);
 
-  DBG("o ^ DSM event processed/consumed; current state '%s' ^\n", current->name.c_str());
+  DBG("o ^ DSM event processed/consumed; current state '%s' ^", current->name.c_str());
 }
 
 bool DSMStateEngine::callDiag(const string& diag_name, AmSession* sess, DSMSession* sc_sess,
@@ -642,7 +642,7 @@ bool DSMStateEngine::callDiag(const string& diag_name, AmSession* sess, DSMSessi
 			      map<string,string>* event_params,
 			      vector<DSMElement*>::iterator actions_from, vector<DSMElement*>::iterator actions_to) {
   if (!current || !current_diag) {
-    ERROR("no current diag to push\n");
+    ERROR("no current diag to push");
     return false;
   }
   stack.push_back(DSMStackElement(current_diag, current));
@@ -661,7 +661,7 @@ bool DSMStateEngine::jumpDiag(const string& diag_name, AmSession* sess, DSMSessi
       current_diag = *it;
       current = current_diag->getInitialState();
       if (!current) {
-	ERROR("diag '%s' does not have initial state.\n",  
+	ERROR("diag '%s' does not have initial state.",  
 	      diag_name.c_str());
 	return false;
       }
@@ -679,7 +679,7 @@ bool DSMStateEngine::jumpDiag(const string& diag_name, AmSession* sess, DSMSessi
 #endif
 
       // execute pre-actions
-      DBG("running %zd pre_actions of init state '%s'\n",
+      DBG("running %zd pre_actions of init state '%s'",
 	  current->pre_actions.size(), current->name.c_str());
       
       bool is_finished;
@@ -691,14 +691,14 @@ bool DSMStateEngine::jumpDiag(const string& diag_name, AmSession* sess, DSMSessi
       return true;
     }
   }
-  ERROR("diag '%s' not found.\n",  diag_name.c_str());
+  ERROR("diag '%s' not found.",  diag_name.c_str());
   return false;
 }
 
 bool DSMStateEngine::returnDiag(AmSession* sess, DSMSession* sc_sess,
 				DSMCondition::EventType event, map<string,string>* event_params) {
   if (stack.empty()) {
-    ERROR("returning from empty stack\n");
+    ERROR("returning from empty stack");
     return false;
   }
   current_diag = stack.back().diag;
@@ -707,7 +707,7 @@ bool DSMStateEngine::returnDiag(AmSession* sess, DSMSession* sc_sess,
   stack.pop_back();
 
   bool is_consumed; //?
-  DBG("executing %zd action elements from stack\n", actions.size());
+  DBG("executing %zd action elements from stack", actions.size());
   if (actions.size()) {
     runactions(actions.begin(), actions.end(), sess, sc_sess, event, event_params, is_consumed);
   }
@@ -724,7 +724,7 @@ bool DSMStateEngine::returnDiag(AmSession* sess, DSMSession* sc_sess,
       }
 #endif
 
-  DBG("returned to diag '%s' state '%s'\n",
+  DBG("returned to diag '%s' state '%s'",
       current_diag->getName().c_str(), 
       current->name.c_str());
 

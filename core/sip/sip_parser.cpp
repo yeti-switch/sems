@@ -121,7 +121,7 @@ sip_msg::~sip_msg()
     for(it = hdrs.begin();
 	it != hdrs.end(); ++it) {
 
-	//DBG("delete 0x%p\n",*it);
+	//DBG("delete 0x%p",*it);
 	delete *it;
     }
 
@@ -199,13 +199,13 @@ int parse_method(int* method, const char* beg, int len)
 	switch(*c){
 	case 'I':
 	    if(!memcmp(c+1,INVITEm+1,INVITE_len-1)){
-		//DBG("Found INVITE\n");
+		//DBG("Found INVITE");
 		*method = sip_request::INVITE;
 	    }
 	    break;
 	case 'C':
 	    if(!memcmp(c+1,CANCELm+1,CANCEL_len-1)){
-		//DBG("Found CANCEL\n");
+		//DBG("Found CANCEL");
 		*method = sip_request::CANCEL;
 	    }
 	    break;
@@ -217,19 +217,19 @@ int parse_method(int* method, const char* beg, int len)
 	switch(*c){
 	case 'A':
 	    if(!memcmp(c+1,ACKm+1,ACK_len-1)){
-		//DBG("Found ACK\n");
+		//DBG("Found ACK");
 		*method = sip_request::ACK;
 	    }
 	    break;
 	case 'B':
 	    if(!memcmp(c+1,BYEm+1,BYE_len-1)){
-		//DBG("Found BYE\n");
+		//DBG("Found BYE");
 		*method = sip_request::BYE;
 	    }
 	    break;
     case 'G':
 	    if(!memcmp(c+1,GETm+1,GET_len-1)){
-		//DBG("Found BYE\n");
+		//DBG("Found BYE");
 		*method = sip_request::GET;
 	    }
 	    break;
@@ -237,14 +237,14 @@ int parse_method(int* method, const char* beg, int len)
 
     case OPTIONS_len:
 	if(!memcmp(c+1,OPTIONSm+1,OPTIONS_len-1)){
-	    //DBG("Found OPTIONS\n");
+	    //DBG("Found OPTIONS");
 	    *method = sip_request::OPTIONS;
 	}
 	break;
 
     case REGISTER_len:
 	if(!memcmp(c+1,REGISTERm+1,REGISTER_len-1)){
-	    //DBG("Found REGISTER\n");
+	    //DBG("Found REGISTER");
 	    *method = sip_request::REGISTER;
 	}
 	break;
@@ -258,13 +258,13 @@ int parse_method(int* method, const char* beg, int len)
     // other method
     for(;c!=end;c++){
 	if(!IS_TOKEN(*c)){
-	    DBG("!IS_TOKEN(%c): MALFORMED_SIP_MSG\n",*c);
+	    DBG("!IS_TOKEN(%c): MALFORMED_SIP_MSG",*c);
 	    return MALFORMED_SIP_MSG;
 	}
     }
 
     if(*method == sip_request::OTHER_METHOD){
-	//DBG("Found other method (%.*s)\n",len,beg);
+	//DBG("Found other method (%.*s)",len,beg);
     }
 
     return 0;
@@ -454,7 +454,7 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 
 // 	    default:
 // 		if(!IS_TOKEN(**c)){
-// 		    DBG("Bad char in request method: 0x%.2x\n",**c);
+// 		    DBG("Bad char in request method: 0x%.2x",**c);
 // 		    return MALFORMED_SIP_MSG;
 // 		}
 // 		break;
@@ -477,7 +477,7 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 	    case CR:
 	    case LF:
 	    case HTAB:
-		DBG("Bad char in request URI: 0x%x\n",**c);
+		DBG("Bad char in request URI: 0x%x",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -526,7 +526,7 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 	    switch(**c){
 	    case_CR_LF;
 	    default:
-		DBG("Bad char at the end of first line: 0x%x\n",**c);
+		DBG("Bad char at the end of first line: 0x%x",**c);
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -544,7 +544,7 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 	    return 0;
 
 	default:
-	    DBG("Bad state! st=%i\n",st);
+	    DBG("Bad state! st=%i",st);
 	    return -99;
 	}
     }

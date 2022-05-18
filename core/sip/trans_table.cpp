@@ -94,7 +94,7 @@ sip_trans* trans_bucket::match_request(sip_msg* msg, unsigned int ttype)
     // sip_cseq* cseq  = dynamic_cast<sip_cseq*>(msg->cseq->p);
     // assert(cseq);
 
-    DBG("Matching %.*s request\n",
+    DBG("Matching %.*s request",
 	msg->u.request->method_str.len,
 	msg->u.request->method_str.s);
 
@@ -115,7 +115,7 @@ sip_trans* trans_bucket::match_request(sip_msg* msg, unsigned int ttype)
 				MAGIC_BRANCH_LEN);
     }
 
-    DBG("do_3261_match = %i\n",do_3261_match);
+    DBG("do_3261_match = %i",do_3261_match);
     if(do_3261_match){
 	
 	const char* branch = msg->via_p1->branch.s + MAGIC_BRANCH_LEN;
@@ -358,7 +358,7 @@ sip_trans* trans_bucket::match_200_ack(sip_trans* t, sip_msg* msg)
 
 sip_trans* trans_bucket::match_1xx_prack(sip_msg* msg)
 {
-    DBG("Matching %.*s request\n",
+    DBG("Matching %.*s request",
 	msg->u.request->method_str.len,
 	msg->u.request->method_str.s);
 
@@ -418,7 +418,7 @@ sip_trans* trans_bucket::match_1xx_prack(sip_msg* msg)
 sip_trans* trans_bucket::find_uac_trans(const cstring& dialog_id,
 					unsigned int inv_cseq)
 {
-    DBG("Matching dialog_id = '%.*s'\n",
+    DBG("Matching dialog_id = '%.*s'",
 	dialog_id.len, dialog_id.s);
 
     if(elmts.empty())

@@ -84,7 +84,7 @@ unsigned int AmMultiPartyMixer::addChannel(unsigned int external_sample_rate)
     }
   }
 
-  //DBG("XXDebugMixerXX: added channel: #%i\n",cur_channel_id);
+  //DBG("XXDebugMixerXX: added channel: #%i",cur_channel_id);
 
   sampleratemap.insert(std::make_pair(cur_channel_id,external_sample_rate));
   samplerates.insert(external_sample_rate);
@@ -108,7 +108,7 @@ void AmMultiPartyMixer::removeChannel(unsigned int channel_id)
 	samplerates.erase(it);
 	sampleratemap.erase(channel_id);
   }
-  //DBG("XXDebugMixerXX: removed channel: #%i\n",channel_id);
+  //DBG("XXDebugMixerXX: removed channel: #%i",channel_id);
   audio_mut.unlock();
 }
 
@@ -276,7 +276,7 @@ AmMultiPartyMixer::findBufferStateForReading(unsigned int sample_rate,
   }
 
   if (buffer_state.size() < MAX_BUFFER_STATES) {
-    // DBG("XXDebugMixerXX: Creating buffer state (from GetChannelPacket)\n");
+    // DBG("XXDebugMixerXX: Creating buffer state (from GetChannelPacket)");
     buffer_state.push_back(MixerBufferState(sample_rate, channelids));
   } // else just reuse the last buffer - conference without a speaker
   std::deque<MixerBufferState>::reverse_iterator rit = buffer_state.rbegin();
@@ -345,7 +345,7 @@ SampleArrayShort* MixerBufferState::get_channel(unsigned int channel_id)
 {
   ChannelMap::iterator channel_it = channels.find(channel_id);
   if(channel_it == channels.end()){
-    ERROR("XXMixerDebugXX: channel #%i does not exist\n",channel_id);
+    ERROR("XXMixerDebugXX: channel #%i does not exist",channel_id);
     return NULL;
   }
 

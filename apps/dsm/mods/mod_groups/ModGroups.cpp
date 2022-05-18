@@ -69,7 +69,7 @@ void GroupsModule::leave_all_groups(const string& ltag) {
 	   active_groups.begin(); ag_it != active_groups.end(); ag_it++) {
       GroupsModule::groups[*ag_it].erase(ltag);
       if (GroupsModule::groups[*ag_it].empty()) {
-	DBG("clearing empty group '%s'\n", ag_it->c_str());
+	DBG("clearing empty group '%s'", ag_it->c_str());
 	GroupsModule::groups.erase(*ag_it);
       }
     }
@@ -81,7 +81,7 @@ void GroupsModule::leave_all_groups(const string& ltag) {
 
 EXEC_ACTION_START(GroupsJoinAction) {
   string groupname = resolveVars(arg, sess, sc_sess, event_params);
-  DBG("call '%s' joining group '%s'\n",
+  DBG("call '%s' joining group '%s'",
       sess->getLocalTag().c_str(), groupname.c_str());
 
   GroupsModule::groups_mut.lock();
@@ -93,7 +93,7 @@ EXEC_ACTION_START(GroupsJoinAction) {
 EXEC_ACTION_START(GroupsLeaveAction) {
   string groupname = resolveVars(arg, sess, sc_sess, event_params);
   string ltag = sess->getLocalTag();
-  DBG("call '%s' leaving group '%s'\n",
+  DBG("call '%s' leaving group '%s'",
       ltag.c_str(), groupname.c_str());
 
   GroupsModule::groups_mut.lock();
@@ -102,7 +102,7 @@ EXEC_ACTION_START(GroupsLeaveAction) {
   if (it != GroupsModule::groups.end()) {
     it->second.erase(ltag);
     if (it->second.empty()) {
-      DBG("clearing empty group '%s'\n", groupname.c_str());
+      DBG("clearing empty group '%s'", groupname.c_str());
       GroupsModule::groups.erase(it);
     }
   }
@@ -111,7 +111,7 @@ EXEC_ACTION_START(GroupsLeaveAction) {
   if (it != GroupsModule::groups_rev.end()) {
     it->second.erase(groupname);
     if (it->second.empty()) {
-      DBG("call '%s' in no group any more\n", ltag.c_str());
+      DBG("call '%s' in no group any more", ltag.c_str());
       GroupsModule::groups_rev.erase(it);
     }
   }
@@ -120,7 +120,7 @@ EXEC_ACTION_START(GroupsLeaveAction) {
 
 EXEC_ACTION_START(GroupsLeaveAllAction) {
   string ltag = sess->getLocalTag();
-  DBG("call '%s' leaving all groups\n", ltag.c_str());
+  DBG("call '%s' leaving all groups", ltag.c_str());
 
   GroupsModule::leave_all_groups(ltag);
 } EXEC_ACTION_END;
@@ -143,7 +143,7 @@ EXEC_ACTION_START(GroupsPostEventAction) {
   }
 
 
-  DBG("posting event to group '%s'\n", groupname.c_str());
+  DBG("posting event to group '%s'", groupname.c_str());
   GroupsModule::groups_mut.unlock();
   GroupMap::iterator grp = GroupsModule::groups.find(groupname);
   bool posted = false;
@@ -156,9 +156,9 @@ EXEC_ACTION_START(GroupsPostEventAction) {
       DSMEvent* ev = new DSMEvent();
       ev->params = ev_params;
       if (!AmSessionContainer::instance()->postEvent(*it, ev)) {
-	DBG("could not post to call '%s'\n", it->c_str());
+	DBG("could not post to call '%s'", it->c_str());
       } else {
-	DBG("posted event to call '%s'\n", it->c_str());
+	DBG("posted event to call '%s'", it->c_str());
 	posted = true;
       }
     }
@@ -169,7 +169,7 @@ EXEC_ACTION_START(GroupsPostEventAction) {
     sc_sess->CLR_ERRNO;
   } else {
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("event could not be posted\n");
+    sc_sess->SET_STRERROR("event could not be posted");
   }
 
 } EXEC_ACTION_END;

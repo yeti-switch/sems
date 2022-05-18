@@ -107,7 +107,7 @@ int get_audio_file(const string& message, const string& domain, const string& la
 
     mysqlpp::Query query = ConferenceFactory::Connection.query();
 	    
-    DBG("Query string <%s>\n", query_string.c_str());
+    DBG("Query string <%s>", query_string.c_str());
 
     query << query_string;
 
@@ -137,7 +137,7 @@ int get_audio_file(const string& message, const string& domain, const string& la
 	return 1;
       }
     } else {
-      ERROR("Database query error\n");
+      ERROR("Database query error");
       audio_file = "";
       return 0;
     }
@@ -145,7 +145,7 @@ int get_audio_file(const string& message, const string& domain, const string& la
 
   catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     audio_file = "";
     return 0;
   }
@@ -174,13 +174,13 @@ int ConferenceFactory::onLoad()
 
   mysql_user = cfg.getParameter("mysql_user");
   if (mysql_user.empty()) {
-    ERROR("conference.conf parameter 'mysql_user' is missing.\n");
+    ERROR("conference.conf parameter 'mysql_user' is missing.");
     return -1;
   }
 
   mysql_passwd = cfg.getParameter("mysql_passwd");
   if (mysql_passwd.empty()) {
-    ERROR("conference.conf parameter 'mysql_passwd' is missing.\n");
+    ERROR("conference.conf parameter 'mysql_passwd' is missing.");
     return -1;
   }
 
@@ -199,19 +199,19 @@ int ConferenceFactory::onLoad()
     Connection.connect(mysql_db.c_str(), mysql_server.c_str(),
 		       mysql_user.c_str(), mysql_passwd.c_str());
     if (!Connection) {
-      ERROR("Database connection failed: %s\n", Connection.error());
+      ERROR("Database connection failed: %s", Connection.error());
       return -1;
     }
   }
 
   catch (const mysqlpp::BadOption& er) {
-    ERROR("MySQL++ set_option error: %s\n", er.what());
+    ERROR("MySQL++ set_option error: %s", er.what());
     return -1;
   }
 
   catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return -1;
   }
 
@@ -220,8 +220,8 @@ int ConferenceFactory::onLoad()
   }
 
   if (LonelyUserFile.empty()) {
-    ERROR("default announce 'first_participant_msg'\n");
-    ERROR("for module conference does not exist.\n");
+    ERROR("default announce 'first_participant_msg'");
+    ERROR("for module conference does not exist.");
     return -1;
   }
 
@@ -248,8 +248,8 @@ int ConferenceFactory::onLoad()
     }
   }
   if(!file_exists(LonelyUserFile)){
-    ERROR("default announce '%s' \n",LonelyUserFile.c_str());
-    ERROR("for module conference does not exist.\n");
+    ERROR("default announce '%s' ",LonelyUserFile.c_str());
+    ERROR("for module conference does not exist.");
     return -1;
   }
 
@@ -271,37 +271,37 @@ int ConferenceFactory::onLoad()
 	
   DialoutSuffix = cfg.getParameter("dialout_suffix");
   if(DialoutSuffix.empty()){
-    WARN("No dialout_suffix has been configured in the conference plug-in:\n");
-    WARN("\t -> dial out will not be available unless P-Dialout-Suffix\n");
-    WARN("\t -> header parameter is passed to conference plug-in\n");
+    WARN("No dialout_suffix has been configured in the conference plug-in:");
+    WARN("\t -> dial out will not be available unless P-Dialout-Suffix");
+    WARN("\t -> header parameter is passed to conference plug-in");
   }
     
   string playout_type = cfg.getParameter("playout_type");
   if (playout_type == "simple") {
     m_PlayoutType = SIMPLE_PLAYOUT;
-    DBG("Using simple (fifo) buffer as playout technique.\n");
+    DBG("Using simple (fifo) buffer as playout technique.");
   } else 	if (playout_type == "adaptive_jb") {
     m_PlayoutType = JB_PLAYOUT;
-    DBG("Using adaptive jitter buffer as playout technique.\n");
+    DBG("Using adaptive jitter buffer as playout technique.");
   } else {
-    DBG("Using adaptive playout buffer as playout technique.\n");
+    DBG("Using adaptive playout buffer as playout technique.");
   }
 
   MaxParticipants = 0;
   string max_participants = cfg.getParameter("max_participants");
   if (max_participants.length() && str2i(max_participants, MaxParticipants)) {
-    ERROR("while parsing max_participants parameter\n"); 
+    ERROR("while parsing max_participants parameter"); 
   }
 
   UseRFC4240Rooms = cfg.getParameter("use_rfc4240_rooms")=="yes";
-  DBG("%ssing RFC4240 room naming.\n", UseRFC4240Rooms?"U":"Not u");
+  DBG("%ssing RFC4240 room naming.", UseRFC4240Rooms?"U":"Not u");
 
   if(cfg.hasParameter("enable_session_timer") &&
      (cfg.getParameter("enable_session_timer") == string("yes")) ){
-    DBG("enabling session timers\n");
+    DBG("enabling session timers");
     session_timer_f = AmPlugIn::instance()->getFactory4Seh("session_timer");
     if(session_timer_f == NULL){
-      ERROR("Could not load the session_timer module: disabling session timers.\n");
+      ERROR("Could not load the session_timer module: disabling session timers.");
     }
   }
 
@@ -314,7 +314,7 @@ AmSession* ConferenceFactory::onInvite(const AmSipRequest& req, const string& ap
   if ((ConferenceFactory::MaxParticipants > 0) &&
       (AmConferenceStatus::getConferenceSize(req.user) >=
       ConferenceFactory::MaxParticipants)) {
-    DBG("Conference is full.\n");
+    DBG("Conference is full.");
     throw AmSession::Exception(486, "Busy Here");
   }
 
@@ -346,7 +346,7 @@ void ConferenceFactory::setupSessionTimer(AmSession* s) {
       return;
 
     if(h->configure(cfg)){
-      ERROR("Could not configure the session timer: disabling session timers.\n");
+      ERROR("Could not configure the session timer: disabling session timers.");
       delete h;
     } else {
       s->addHandler(h);
@@ -365,7 +365,7 @@ AmSession* ConferenceFactory::onRefer(const AmSipRequest& req, const string& app
   
   setupSessionTimer(s);
 
-  DBG("ConferenceFactory::onRefer: local_tag = %s\n",s->dlg->getLocalTag().c_str());
+  DBG("ConferenceFactory::onRefer: local_tag = %s",s->dlg->getLocalTag().c_str());
 
   return s;
 }
@@ -388,7 +388,7 @@ ConferenceDialog::ConferenceDialog(const string& conf_id,
 
 ConferenceDialog::~ConferenceDialog()
 {
-  DBG("ConferenceDialog::~ConferenceDialog()\n");
+  DBG("ConferenceDialog::~ConferenceDialog()");
 
   // clean playlist items
   play_list.flush();
@@ -490,7 +490,7 @@ void ConferenceDialog::onInvite(const AmSipRequest& req)
 #endif
   }
 
-  DBG("Using LonelyUserFile <%s>\n",
+  DBG("Using LonelyUserFile <%s>",
       ConferenceFactory::LonelyUserFile.c_str());
 
   AmSession::onInvite(req);  
@@ -534,7 +534,7 @@ void ConferenceDialog::setupAudio()
 
   if(dialout_channel.get()){
 
-    DBG("adding dialout_channel to the playlist (dialedout = %i)\n",dialedout);
+    DBG("adding dialout_channel to the playlist (dialedout = %i)",dialedout);
     if (listen_only)
 	play_list.addToPlaylist(new AmPlaylistItem(dialout_channel.get(),
 						   (AmAudio*)NULL));
@@ -562,7 +562,7 @@ void ConferenceDialog::setupAudio()
   MONITORING_LOG(getLocalTag().c_str(), "conf_id", conf_id.c_str());
 	
   if(dialedout || !allow_dialout) {
-    DBG("Dialout not enabled or dialout channel. Disabling DTMF detection.\n");
+    DBG("Dialout not enabled or dialout channel. Disabling DTMF detection.");
     setDtmfDetectionEnabled(false);
   }
 }
@@ -583,7 +583,7 @@ void ConferenceDialog::process(AmEvent* ev)
     switch(ce->event_id){
     case ConfNewParticipant:
 
-      DBG("########## new participant #########\n");
+      DBG("########## new participant #########");
       if((ce->participants == 1) && 
 	 !ConferenceFactory::LonelyUserFile.empty() ){
 
@@ -610,7 +610,7 @@ void ConferenceDialog::process(AmEvent* ev)
 		
       break;
     case ConfParticipantLeft:
-      DBG("########## participant left the room #########\n");
+      DBG("########## participant left the room #########");
       if(DropSound.get()){
 	DropSound->rewind();
 	play_list.addToPlayListFront(
@@ -652,7 +652,7 @@ void ConferenceDialog::process(AmEvent* ev)
 
       case DoConfDisconnect:
 
-	DBG("****** Caller received DoConfDisconnect *******\n");
+	DBG("****** Caller received DoConfDisconnect *******");
 	connectMainChannel();
 	state = CS_normal;
 	break;
@@ -671,18 +671,18 @@ void ConferenceDialog::process(AmEvent* ev)
 	if(!RingTone.get())
 	  RingTone.reset(new AmRingTone(0,2000,4000,440,480)); // US
 
-	DBG("adding ring tone to the playlist (dialedout = %i)\n",dialedout);
+	DBG("adding ring tone to the playlist (dialedout = %i)",dialedout);
 	play_list.flush();
 	play_list.addToPlaylist(new AmPlaylistItem(RingTone.get(),NULL));
 	break;
 
       case DoConfError:
 		
-	DBG("****** Caller received DoConfError *******\n");
+	DBG("****** Caller received DoConfError *******");
 	if(!ErrorTone.get())
 	  ErrorTone.reset(new AmRingTone(2000,250,250,440,480));
 
-	DBG("adding error tone to the playlist (dialedout = %i)\n",dialedout);
+	DBG("adding error tone to the playlist (dialedout = %i)",dialedout);
 	play_list.addToPlayListFront(new AmPlaylistItem(ErrorTone.get(),NULL));
 	break;
 		
@@ -713,7 +713,7 @@ string dtmf2str(int event)
 
 void ConferenceDialog::onDtmf(int event, int duration)
 {
-  DBG("ConferenceDialog::onDtmf\n");
+  DBG("ConferenceDialog::onDtmf");
   if (dialedout || !allow_dialout ||
       ((ConferenceFactory::MaxParticipants > 0) &&
        (AmConferenceStatus::getConferenceSize(dlg->getUser()) >= 
@@ -723,7 +723,7 @@ void ConferenceDialog::onDtmf(int event, int duration)
   switch(state){
 	
   case CS_normal:
-    DBG("CS_normal\n");
+    DBG("CS_normal");
     dtmf_seq += dtmf2str(event);
 
     if(dtmf_seq.length() == 2){
@@ -746,7 +746,7 @@ void ConferenceDialog::onDtmf(int event, int duration)
     break;
 
   case CS_dialing_out:{
-    DBG("CS_dialing_out\n");
+    DBG("CS_dialing_out");
     string digit = dtmf2str(event);
 
     if(digit == "*"){
@@ -756,7 +756,7 @@ void ConferenceDialog::onDtmf(int event, int duration)
 	state = CS_dialed_out;
       }
       else {
-	DBG("state = CS_normal; ????????\n");
+	DBG("state = CS_normal; ????????");
 	state = CS_normal;
       }
 
@@ -769,7 +769,7 @@ void ConferenceDialog::onDtmf(int event, int duration)
 
 
   case CS_dialout_connected:
-    DBG("CS_dialout_connected\n");
+    DBG("CS_dialout_connected");
     if(event == 10){ // '*'
 
       AmSessionContainer::instance()
@@ -782,7 +782,7 @@ void ConferenceDialog::onDtmf(int event, int duration)
     }
 
   case CS_dialed_out:
-    DBG("CS_dialed_out\n");
+    DBG("CS_dialed_out");
     if(event == 11){ // '#'
       disconnectDialout();
       state = CS_normal;
@@ -902,10 +902,10 @@ void ConferenceDialog::onSipRequest(const AmSipRequest& req)
     dlg->setRouteSet(getHeader(req.hdrs,"P-Transfer-RR", true));
   }
 
-  DBG("ConferenceDialog::onSipRequest: local_party = %s\n",dlg->getLocalParty().c_str());
-  DBG("ConferenceDialog::onSipRequest: local_tag = %s\n",dlg->getLocalTag().c_str());
-  DBG("ConferenceDialog::onSipRequest: remote_party = %s\n",dlg->getRemoteParty().c_str());
-  DBG("ConferenceDialog::onSipRequest: remote_tag = %s\n",dlg->getRemoteTag().c_str());
+  DBG("ConferenceDialog::onSipRequest: local_party = %s",dlg->getLocalParty().c_str());
+  DBG("ConferenceDialog::onSipRequest: local_tag = %s",dlg->getLocalTag().c_str());
+  DBG("ConferenceDialog::onSipRequest: remote_party = %s",dlg->getRemoteParty().c_str());
+  DBG("ConferenceDialog::onSipRequest: remote_tag = %s",dlg->getRemoteTag().c_str());
 
   dlg->sendRequest(SIP_METH_INVITE);
 
@@ -920,7 +920,7 @@ void ConferenceDialog::onSipReply(const AmSipRequest& req,
 {
   AmSession::onSipReply(req, reply, old_dlg_status);
 
-  DBG("ConferenceDialog::onSipReply: code = %i, reason = %s\n, status = %i\n",
+  DBG("ConferenceDialog::onSipReply: code = %i, reason = %s\n, status = %i",
       reply.code,reply.reason.c_str(),dlg->getStatus());
     
   if(!dialedout /*&& !transfer_req.get()*/)
@@ -979,11 +979,11 @@ void ConferenceDialog::onSipReply(const AmSipRequest& req,
 
 #ifdef WITH_SAS_TTS
 void ConferenceDialog::onZRTPEvent(zrtp_event_t event, zrtp_stream_ctx_t *stream_ctx) {
-  DBG("ZrtpConferenceDialog::onZRTPEvent \n");
+  DBG("ZrtpConferenceDialog::onZRTPEvent ");
 
   switch (event) {
   case ZRTP_EVENT_IS_SECURE: {
-    INFO("ZRTP_EVENT_IS_SECURE \n");
+    INFO("ZRTP_EVENT_IS_SECURE ");
     //         info->is_verified  = ctx->_session_ctx->secrets.verifieds & ZRTP_BIT_RS0;
     
     zrtp_conn_ctx_t *session = stream_ctx->_session_ctx;
@@ -991,10 +991,10 @@ void ConferenceDialog::onZRTPEvent(zrtp_event_t event, zrtp_stream_ctx_t *stream
     string tts_sas = "My SAS is ";
     
     if (ZRTP_SAS_BASE32 == session->sas_values.rendering) {
-      DBG("Got SAS value <<<%.4s>>>\n", session->sas_values.str1.buffer);
+      DBG("Got SAS value <<<%.4s>>>", session->sas_values.str1.buffer);
       tts_sas += session->sas_values.str1.buffer;
     } else {
-      DBG("Got SAS values SAS1 '%s' and SAS2 '%s'\n", 
+      DBG("Got SAS values SAS1 '%s' and SAS2 '%s'", 
 	  session->sas_values.str1.buffer,
 	  session->sas_values.str2.buffer);
       tts_sas += session->sas_values.str1.buffer + string(" and ") + 
@@ -1022,7 +1022,7 @@ void ConferenceDialog::sayTTS(string text) {
     play_list.addToPlayListFront(new AmPlaylistItem(af, NULL));
     TTSFiles.push_back(af);
   } else {
-    ERROR("ERROR reading TTSed file %s\n", filename.c_str());
+    ERROR("ERROR reading TTSed file %s", filename.c_str());
     delete af;
   }
 }

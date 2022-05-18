@@ -466,7 +466,7 @@ static FUNC_DUMP(nature_of_connection_ind_dump)
 	unsigned char con = parm[0];
 	char *continuity;
 
-	DBG("\tSatellites in connection: %d\n", con&0x03);
+	DBG("\tSatellites in connection: %d", con&0x03);
 	con>>=2;
 	switch (con & 0x03) {
 		case 0:
@@ -482,11 +482,11 @@ static FUNC_DUMP(nature_of_connection_ind_dump)
 			continuity = (char *)"spare";
 			break;
 	}
-	DBG("\tContinuity Check: %s (%d)\n", continuity, con & 0x3);
+	DBG("\tContinuity Check: %s (%d)", continuity, con & 0x3);
 	con>>=2;
 	con &= 0x01;
 
-	DBG("\tOutgoing half echo control device: %s (%d)\n", con ? "included" : "not included", con);
+	DBG("\tOutgoing half echo control device: %s (%d)", con ? "included" : "not included", con);
 
 	return 1;
 }
@@ -552,14 +552,14 @@ static FUNC_DUMP(forward_call_ind_dump)
 			break;
 	}
 
-	DBG("\tNat/Intl Call Ind: call to be treated as a %s call (%d)\n", (parm[0] & 1) ? "international" : "national", parm[0] & 1);
-	DBG("\tEnd to End Method Ind: %s method(s) available (%d)\n", cb_str, (parm[0] >> 1) & 3);
-	DBG("\tInterworking Ind: %sinterworking encountered (%d)\n", ((parm[0] >> 3) & 1) ? "" : "no ", (parm[0] >> 3) & 1);
-	DBG("\tEnd to End Info Ind: %send-to-end information available (%d)\n", ((parm[0]>>4)&1) ? "" : "no ", (parm[0] >> 4) & 1);
-	DBG("\tISDN User Part Ind: ISDN user part %sused all the way (%d)\n", ((parm[0]>>5)&1) ? "" : "not ", (parm[0] >> 5) & 1);
-	DBG("\tISDN User Part Pref Ind: %s (%d)\n", hg_str, (parm[0] >> 6) & 3);
-	DBG("\tISDN Access Ind: originating access %s (%d)\n", (parm[1] & 1) ? "ISDN" : "non-ISDN", parm[1] & 1);
-	DBG("\tSCCP Method Ind: %s (%d)\n", kj_str, (parm[1] >> 1) & 3);
+	DBG("\tNat/Intl Call Ind: call to be treated as a %s call (%d)", (parm[0] & 1) ? "international" : "national", parm[0] & 1);
+	DBG("\tEnd to End Method Ind: %s method(s) available (%d)", cb_str, (parm[0] >> 1) & 3);
+	DBG("\tInterworking Ind: %sinterworking encountered (%d)", ((parm[0] >> 3) & 1) ? "" : "no ", (parm[0] >> 3) & 1);
+	DBG("\tEnd to End Info Ind: %send-to-end information available (%d)", ((parm[0]>>4)&1) ? "" : "no ", (parm[0] >> 4) & 1);
+	DBG("\tISDN User Part Ind: ISDN user part %sused all the way (%d)", ((parm[0]>>5)&1) ? "" : "not ", (parm[0] >> 5) & 1);
+	DBG("\tISDN User Part Pref Ind: %s (%d)", hg_str, (parm[0] >> 6) & 3);
+	DBG("\tISDN Access Ind: originating access %s (%d)", (parm[1] & 1) ? "ISDN" : "non-ISDN", parm[1] & 1);
+	DBG("\tSCCP Method Ind: %s (%d)", kj_str, (parm[1] >> 1) & 3);
 	return 2;
 }
 
@@ -618,7 +618,7 @@ static FUNC_DUMP(calling_party_cat_dump)
 			break;
 	}
 
-	DBG("\tCategory: %s (%d)\n", cattype, parm[0]);
+	DBG("\tCategory: %s (%d)", cattype, parm[0]);
 	return 1;
 }
 
@@ -691,7 +691,7 @@ static FUNC_DUMP(transmission_medium_reqs_dump)
 			type = (char *)"N x 64kbit/s unrestricted or possibly spare";
 			break;
 	}
-	DBG("\t%s (%d)\n", type, parm[0]);
+	DBG("\t%s (%d)", type, parm[0]);
 	return 1;
 }
 
@@ -700,13 +700,13 @@ static FUNC_DUMP(called_party_num_dump)
 	int oddeven = (parm[0] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tNature of address: %x\n", parm[0] & 0x7f);
-	DBG("\tNI: %x\n", (parm[1] >> 7) & 0x1);
-	DBG("\tNumbering plan: %x\n", (parm[1] >> 4) & 0x7);
+	DBG("\tNature of address: %x", parm[0] & 0x7f);
+	DBG("\tNI: %x", (parm[1] >> 7) & 0x1);
+	DBG("\tNumbering plan: %x", (parm[1] >> 4) & 0x7);
 
 	isup_get_number(numbuf, &parm[2], len - 2, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -769,17 +769,17 @@ static FUNC_DUMP(backward_call_ind_dump)
 	unsigned char n = (parm[1] >> 5) & 0x1;
 	unsigned char pq = (parm[1] >> 7) & 0x3;
 
-	DBG("\tCharge indicator: %d\n", ba);
-	DBG("\tCalled party's status indicator: %d\n", dc);
-	DBG("\tCalled party's category indicator: %d\n", fe);
-	DBG("\tEnd to End method indicator: %d\n", hg);
-	DBG("\tInterworking indicator: %d\n", i);
-	DBG("\tEnd to End information indicator: %d\n", j);
-	DBG("\tISDN user part indicator: %d\n", k);
-	DBG("\tHolding indicator: %d\n", l);
-	DBG("\tISDN access indicator: %d\n", m);
-	DBG("\tEcho control device indicator: %d\n", n);
-	DBG("\tSCCP method indicator: %d\n", pq);
+	DBG("\tCharge indicator: %d", ba);
+	DBG("\tCalled party's status indicator: %d", dc);
+	DBG("\tCalled party's category indicator: %d", fe);
+	DBG("\tEnd to End method indicator: %d", hg);
+	DBG("\tInterworking indicator: %d", i);
+	DBG("\tEnd to End information indicator: %d", j);
+	DBG("\tISDN user part indicator: %d", k);
+	DBG("\tHolding indicator: %d", l);
+	DBG("\tISDN access indicator: %d", m);
+	DBG("\tEcho control device indicator: %d", n);
+	DBG("\tSCCP method indicator: %d", pq);
 
 	return 2;
 }
@@ -797,10 +797,10 @@ static FUNC_DUMP(opt_backward_call_ind_dump)
 	c = (parm[0] >> 2) & 1;
 	d = (parm[0] >> 3) & 1;
 
-	DBG("\tIn-band information indicator: %d\n", a);
-	DBG("\tCall diversion may occur indicator: %d\n", b);
-	DBG("\tSimple segmentation indicator: %d\n", c);
-	DBG("\tMLPP user indicator: %d\n", d);
+	DBG("\tIn-band information indicator: %d", a);
+	DBG("\tCall diversion may occur indicator: %d", b);
+	DBG("\tSimple segmentation indicator: %d", c);
+	DBG("\tMLPP user indicator: %d", d);
 	return 1;
 }
 
@@ -918,11 +918,11 @@ static FUNC_DUMP(cause_dump)
 		default:
 			cause = (char *)"Unknown";
 	}
-	DBG("\tCoding Standard: %d\n", (parm[0] >> 5) & 3);
-	DBG("\tLocation: %d\n", parm[0] & 0xf);
-	DBG("\tCause Class: %d\n", (parm[1]>>4) & 0x7);
-	DBG("\tCause Subclass: %d\n", parm[1] & 0xf);
-	DBG("\tCause: %s (%d)\n", cause, parm[1] & 0x7f);
+	DBG("\tCoding Standard: %d", (parm[0] >> 5) & 3);
+	DBG("\tLocation: %d", parm[0] & 0xf);
+	DBG("\tCause Class: %d", (parm[1]>>4) & 0x7);
+	DBG("\tCause Subclass: %d", parm[1] & 0xf);
+	DBG("\tCause: %s (%d)", cause, parm[1] & 0x7f);
 
 	return len;
 }
@@ -930,7 +930,7 @@ static FUNC_DUMP(cause_dump)
 
 static FUNC_DUMP(range_and_status_dump)
 {
-	DBG("\tRange: %d\n", parm[0] & 0xff);
+	DBG("\tRange: %d", parm[0] & 0xff);
 	return len;
 }
 
@@ -988,15 +988,15 @@ static FUNC_DUMP(calling_party_num_dump)
 	int oddeven = (parm[0] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tNature of address: %x\n", parm[0] & 0x7f);
-	DBG("\tNI: %x\n", (parm[1] >> 7) & 0x1);
-	DBG("\tNumbering plan: %x\n", (parm[1] >> 4) & 0x7);
-	DBG("\tPresentation: %x\n", (parm[1] >> 2) & 0x3);
-	DBG("\tScreening: %x\n", parm[1] & 0x3);
+	DBG("\tNature of address: %x", parm[0] & 0x7f);
+	DBG("\tNI: %x", (parm[1] >> 7) & 0x1);
+	DBG("\tNumbering plan: %x", (parm[1] >> 4) & 0x7);
+	DBG("\tPresentation: %x", (parm[1] >> 2) & 0x3);
+	DBG("\tScreening: %x", parm[1] & 0x3);
 
 	isup_get_number(numbuf, &parm[2], len - 2, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -1221,7 +1221,7 @@ static FUNC_DUMP(originating_line_information_dump)
 		default:
 			name = (char *)"Unknown to Asterisk ";
 	}
-	DBG("\tLine info code: %s (%d)\n", name, parm[0]);
+	DBG("\tLine info code: %s (%d)", name, parm[0]);
 
 	return 1;
 }
@@ -1269,7 +1269,7 @@ static FUNC_DUMP(jip_dump)
 	char numbuf[64] = "";
 
 	isup_get_number(numbuf, &parm[0], len , 0);
-	DBG("\tJIP: %s\n", numbuf);
+	DBG("\tJIP: %s", numbuf);
 	return len;
 }
 
@@ -1323,12 +1323,12 @@ static FUNC_DUMP(charge_number_dump)
 	int oddeven = (parm[0] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tNature of address: %x\n", parm[0] & 0x7f);
-	DBG("\tNumbering plan: %x\n", (parm[1] >> 4) & 0x7);
+	DBG("\tNature of address: %x", parm[0] & 0x7f);
+	DBG("\tNumbering plan: %x", (parm[1] >> 4) & 0x7);
 
 	isup_get_number(numbuf, &parm[2], len - 2, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -1370,7 +1370,7 @@ static FUNC_RECV(continuity_ind_receive)
 
 static FUNC_DUMP(continuity_ind_dump)
 {
-	DBG("\tContinuity Check: %s\n", (0x01 & parm[0]) ? "successful" : "failed");
+	DBG("\tContinuity Check: %s", (0x01 & parm[0]) ? "successful" : "failed");
 
 	return 1;
 }
@@ -1395,7 +1395,7 @@ static FUNC_DUMP(circuit_group_supervision_dump)
 	default:
 		name = (char *)"Huh?!";
 	}
-	DBG("\tType indicator: %s\n", name);
+	DBG("\tType indicator: %s", name);
 
 	return 1;
 }
@@ -1442,7 +1442,7 @@ static FUNC_DUMP(event_info_dump)
 			name = (char *)"Spare";
 			break;
 	}
-	DBG("\t%s\n", name);
+	DBG("\t%s", name);
 	return 1;
 }
 
@@ -1492,7 +1492,7 @@ static FUNC_DUMP(redirection_info_dump)
 			break;
 	}
 
-	DBG("\tRedirecting indicator: %s (%d)\n", redirect_ind, parm[0] & 0x7);
+	DBG("\tRedirecting indicator: %s (%d)", redirect_ind, parm[0] & 0x7);
 
 	switch ((parm[0] >> 4) & 0xf) {
 		case 0:
@@ -1512,8 +1512,8 @@ static FUNC_DUMP(redirection_info_dump)
 			break;
 	}
 
-	DBG("\tOriginal redirection reason: %s (%d)\n", orig_redir_reas, (parm[0] >> 4) & 0xf);
-	DBG("\tRedirection counter: %d\n", parm[1] & 0x7);
+	DBG("\tOriginal redirection reason: %s (%d)", orig_redir_reas, (parm[0] >> 4) & 0xf);
+	DBG("\tRedirection counter: %d", parm[1] & 0x7);
 
 	switch ((parm[1] >> 4) & 0xf) {
 		case 0:
@@ -1542,7 +1542,7 @@ static FUNC_DUMP(redirection_info_dump)
 			break;
 	}
 
-	DBG("\tRedirecting reason: %s (%d)\n", redir_reas, (parm[1] >> 4) & 0xf);
+	DBG("\tRedirecting reason: %s (%d)", redir_reas, (parm[1] >> 4) & 0xf);
 
 	return 2;
 }
@@ -1575,10 +1575,10 @@ static FUNC_DUMP(generic_name_dump)
 
 	memcpy(name, &parm[1], len - 1);
 
-	DBG("\tType of Name: %s (%d)\n", (typeofname == 1) ? "Calling Name" : "Unknown", typeofname);
-	DBG("\tAvail: %s (%d)\n", (avail == 1) ? "Name not available" : "Name available, or availability unknown", avail);
-	DBG("\tPresentation: %d\n",  presentation);
-	DBG("\tName: %s\n", name);
+	DBG("\tType of Name: %s (%d)", (typeofname == 1) ? "Calling Name" : "Unknown", typeofname);
+	DBG("\tAvail: %s (%d)", (avail == 1) ? "Name not available" : "Name available, or availability unknown", avail);
+	DBG("\tPresentation: %d",  presentation);
+	DBG("\tName: %s", name);
 
 	return len;
 }
@@ -1602,16 +1602,16 @@ static FUNC_DUMP(generic_address_dump)
 	int oddeven = (parm[1] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tType of address: %x\n", parm[0]);
-	DBG("\tNature of address: %x\n", parm[1] & 0x7f);
-	DBG("\tOddEven: %x\n", (parm[1] >> 7) & 0x1);
-	DBG("\tReserved: %x\n", parm[2] & 0x3);
-	DBG("\tPresentation: %x\n", (parm[2] >> 2) & 0x3);
-	DBG("\tNumbering plan: %x\n", (parm[2] >> 4) & 0x7);
+	DBG("\tType of address: %x", parm[0]);
+	DBG("\tNature of address: %x", parm[1] & 0x7f);
+	DBG("\tOddEven: %x", (parm[1] >> 7) & 0x1);
+	DBG("\tReserved: %x", parm[2] & 0x3);
+	DBG("\tPresentation: %x", (parm[2] >> 2) & 0x3);
+	DBG("\tNumbering plan: %x", (parm[2] >> 4) & 0x7);
 
 	isup_get_number(numbuf, &parm[3], len - 3, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -1655,10 +1655,10 @@ static FUNC_DUMP(generic_digits_dump)
 	int oddeven = (parm[0] >> 5) & 0x7;
 	char numbuf[64] = "";
 
-	DBG("\tType of digits: %x\n", parm[0] & 0x1f);
-	DBG("\tEncoding Scheme: %x\n", (parm[0] >> 5) & 0x7);
+	DBG("\tType of digits: %x", parm[0] & 0x1f);
+	DBG("\tEncoding Scheme: %x", (parm[0] >> 5) & 0x7);
 	isup_get_number(numbuf, &parm[1], len - 1, oddeven);
-	DBG("\tAddress digits: %s\n", numbuf);
+	DBG("\tAddress digits: %s", numbuf);
 
 	return len;
 
@@ -1704,13 +1704,13 @@ static FUNC_DUMP(original_called_num_dump)
 	int oddeven = (parm[0] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tNature of address: %x\n", parm[0] & 0x7f);
-	DBG("\tNumbering plan: %x\n", (parm[1] >> 4) & 0x7);
-	DBG("\tPresentation: %x\n", (parm[1] >> 2) & 0x3);
+	DBG("\tNature of address: %x", parm[0] & 0x7f);
+	DBG("\tNumbering plan: %x", (parm[1] >> 4) & 0x7);
+	DBG("\tPresentation: %x", (parm[1] >> 2) & 0x3);
 
 	isup_get_number(numbuf, &parm[2], len - 2, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -1813,10 +1813,10 @@ static FUNC_DUMP(echo_control_info_dump)
 			break;
 	}
 
-	DBG("\tOutgoing echo control device information: %s (%d)\n", ba_str, ba);
-	DBG("\tIncoming echo control device information: %s (%d)\n", dc_str, dc);
-	DBG("\tOutgoing echo control device request: %s (%d)\n", fe_str, fe);
-	DBG("\tIncoming echo control device request: %s (%d)\n", hg_str, hg);
+	DBG("\tOutgoing echo control device information: %s (%d)", ba_str, ba);
+	DBG("\tIncoming echo control device information: %s (%d)", dc_str, dc);
+	DBG("\tOutgoing echo control device request: %s (%d)", fe_str, fe);
+	DBG("\tIncoming echo control device request: %s (%d)", hg_str, hg);
 
 	return len;
 }
@@ -1828,7 +1828,7 @@ static FUNC_DUMP(parameter_compat_info_dump)
 
 static FUNC_DUMP(propagation_delay_cntr_dump)
 {
-	DBG("\tDelay: %dms\n", (unsigned short)(((parm[0] & 0xff) << 8) | (parm[1] & 0xff)));
+	DBG("\tDelay: %dms", (unsigned short)(((parm[0] & 0xff) << 8) | (parm[1] & 0xff)));
 	return len;
 }
 
@@ -1907,11 +1907,11 @@ static FUNC_DUMP(circuit_state_ind_dump)
 
 		}
 
-		DBG("\tMaintenance blocking state: %s (%d)\n", ba_str, babits);
+		DBG("\tMaintenance blocking state: %s (%d)", ba_str, babits);
 		if (!dcbits)
 			continue;
-		DBG("\tCall processing state: %s (%d)\n", dc_str, dcbits);
-		DBG("\tHardware blocking state: %s (%d)\n", fe_str, febits);
+		DBG("\tCall processing state: %s (%d)", dc_str, dcbits);
+		DBG("\tHardware blocking state: %s (%d)", fe_str, febits);
 	}
 	return len;
 }
@@ -1928,10 +1928,10 @@ static FUNC_SEND(circuit_state_ind_transmit)
 
 static FUNC_DUMP(tns_dump)
 {
-	DBG("\tType of Network: %x\n", (parm[0] >> 4) & 0x7);
-	DBG("\tNetwork ID plan: %x\n", parm[0] & 0xf);
-	DBG("\tNetwork ID: %x %x\n", parm[1], parm[2]);
-	DBG("\tCircuit Code: %x\n", (parm[3] >> 4) & 0xf);
+	DBG("\tType of Network: %x", (parm[0] >> 4) & 0x7);
+	DBG("\tNetwork ID plan: %x", parm[0] & 0xf);
+	DBG("\tNetwork ID: %x %x", parm[1], parm[2]);
+	DBG("\tCircuit Code: %x", (parm[3] >> 4) & 0xf);
 
 	return len;
 }
@@ -1970,11 +1970,11 @@ static FUNC_RECV(lspi_receive)
 
 static FUNC_DUMP(lspi_dump)
 {
-	DBG("\tLSPI Type: %x\n", parm[0] & 0x1f);
-	DBG("\tEncoding Scheme: %x\n", (parm[0] >> 5) & 0x7);
-	DBG("\tContext ID: %x\n", parm[1] & 0xf);
-	DBG("\tSpare: %x\n", (parm[1] >> 4) & 0xf);
-	DBG("\tLSP Identity: %x\n", parm[2]);
+	DBG("\tLSPI Type: %x", parm[0] & 0x1f);
+	DBG("\tEncoding Scheme: %x", (parm[0] >> 5) & 0x7);
+	DBG("\tContext ID: %x", parm[1] & 0xf);
+	DBG("\tSpare: %x", (parm[1] >> 4) & 0xf);
+	DBG("\tLSP Identity: %x", parm[2]);
 
 	return len;
 }
@@ -1989,11 +1989,11 @@ static FUNC_DUMP(call_ref_dump)
 	else
 		ptc = parm[3] | (parm[4] << 8);
 
-	DBG("\tCall identity: %d\n", callr);
+	DBG("\tCall identity: %d", callr);
 	if (msg->proto_type == AmISUP::SS7_ANSI)
-		DBG("\tPC: Net-CLstr-Mbr: %d-%d-%d\n",(ptc >> 16) & 0xff, (ptc >> 8) & 0xff, ptc & 0xff);
+		DBG("\tPC: Net-CLstr-Mbr: %d-%d-%d",(ptc >> 16) & 0xff, (ptc >> 8) & 0xff, ptc & 0xff);
 	else
-		DBG("\tPC: 0x%x\n", ptc);
+		DBG("\tPC: 0x%x", ptc);
 
 	return len;
 }
@@ -2035,7 +2035,7 @@ static FUNC_RECV(call_ref_receive)
 
 static FUNC_DUMP(facility_ind_dump)
 {
-	DBG("\tFacility Indicator: %x\n", parm[0]);
+	DBG("\tFacility Indicator: %x", parm[0]);
 	return 1;
 }
 
@@ -2055,15 +2055,15 @@ static FUNC_DUMP(redirecting_number_dump)
 	int oddeven = (parm[0] >> 7) & 0x1;
 	char numbuf[64] = "";
 
-	DBG("\tNature of address: %x\n", parm[0] & 0x7f);
-	DBG("\tNI: %x\n", (parm[1] >> 7) & 0x1);
-	DBG("\tNumbering plan: %x\n", (parm[1] >> 4) & 0x7);
-	DBG("\tPresentation: %x\n", (parm[1] >> 2) & 0x3);
-	DBG("\tScreening: %x\n", parm[1] & 0x3);
+	DBG("\tNature of address: %x", parm[0] & 0x7f);
+	DBG("\tNI: %x", (parm[1] >> 7) & 0x1);
+	DBG("\tNumbering plan: %x", (parm[1] >> 4) & 0x7);
+	DBG("\tPresentation: %x", (parm[1] >> 2) & 0x3);
+	DBG("\tScreening: %x", parm[1] & 0x3);
 
 	isup_get_number(numbuf, &parm[2], len - 2, oddeven);
 
-	DBG("\tAddress signals: %s\n", numbuf);
+	DBG("\tAddress signals: %s", numbuf);
 
 	return len;
 }
@@ -2382,7 +2382,7 @@ int AmISUP::parse_param(int parm, const char* parmbuf, size_t maxlen,isup_parm_t
 			continue;
 
 #ifdef DUMP_ON_PARSING
-		DBG("%s:\n", parms[x].name ? parms[x].name : "Unknown");
+		DBG("%s:", parms[x].name ? parms[x].name : "Unknown");
 #endif
 		DBG("receive_func: %p, type: %d, buf: %p, len: %ld",parms[x].receive,parmtype,parmbuf,maxlen);
 		if (parms[x].receive) {
@@ -2429,7 +2429,7 @@ int AmISUP::parse_param(int parm, const char* parmbuf, size_t maxlen,isup_parm_t
 		return len;
 	}
 	optparm = (struct isup_parm_opt *)parmbuf;
-	DBG("Unknown Parameter (0x%x):\n",optparm->type);
+	DBG("Unknown Parameter (0x%x):",optparm->type);
 	return optparm->len + 2;
 }
 

@@ -352,10 +352,10 @@ bool str2i(char*& str, unsigned int& result, char sep)
   return false;
 
  error_digits:
-  DBG("str2i: too many letters in [%s]\n", init);
+  DBG("str2i: too many letters in [%s]", init);
   return true;
  error_char:
-  DBG("str2i: unexpected char 0x%x in %s\n", *str, init);
+  DBG("str2i: unexpected char 0x%x in %s", *str, init);
   return true;
 }
 
@@ -406,10 +406,10 @@ bool str2int(char*& str, int& result, char sep)
   return true;
 
  error_digits:
-  DBG("str2int: too many digits in [%s]\n", init);
+  DBG("str2int: too many digits in [%s]", init);
   return false;
  error_char:
-  DBG("str2i: unexpected char 0x%x in %s\n", *str, init);
+  DBG("str2i: unexpected char 0x%x in %s", *str, init);
   return false;
 }
 
@@ -461,10 +461,10 @@ bool str2long(char*& str, long& result, char sep)
   return true;
 
  error_digits:
-  DBG("str2long: too many digits in [%s]\n", init);
+  DBG("str2long: too many digits in [%s]", init);
   return false;
  error_char:
-  DBG("str2long: unexpected char 0x%x in %s\n", *str, init);
+  DBG("str2long: unexpected char 0x%x in %s", *str, init);
   return false;
 }
 
@@ -529,10 +529,10 @@ bool str2longlong(char*& str, long long& result, char sep)
   return true;
 
  error_digits:
-  DBG("str2long: too many digits in [%s]\n", init);
+  DBG("str2long: too many digits in [%s]", init);
   return false;
  error_char:
-  DBG("str2long: unexpected char 0x%x in %s\n", *str, init);
+  DBG("str2long: unexpected char 0x%x in %s", *str, init);
   return false;
 }
 
@@ -575,7 +575,7 @@ std::string URL_decode(const std::string& s) {
 	c += s[pos] -'A'+10;
       else {
 	st = uSNormal;
-	DBG("error in escaped string: %%%c%c\n", s[pos-1], s[pos]);
+	DBG("error in escaped string: %%%c%c", s[pos-1], s[pos]);
 	continue;
       }
 
@@ -587,7 +587,7 @@ std::string URL_decode(const std::string& s) {
 	c += (s[pos-1] -'A'+10 ) << 4;
       else {
 	st = uSNormal;
-	DBG("error in escaped string: %%%c%c\n", s[pos-1], s[pos]);
+	DBG("error in escaped string: %%%c%c", s[pos-1], s[pos]);
 	continue;
       }
       res +=c;
@@ -642,12 +642,12 @@ int parse_return_code(const char* lbuf, unsigned int& res_code, string& res_msg 
   }
 
   if( (*cur != ' ') && (*cur != '\t') && (*cur !='-') ){
-    ERROR("expected 0x%x or 0x%x or 0x%x, found 0x%x\n",' ','\t','-',*cur);
+    ERROR("expected 0x%x or 0x%x or 0x%x, found 0x%x",' ','\t','-',*cur);
     goto error;
   }
 
   if(sscanf(res_code_str,"%u",&res_code) != 1){
-    ERROR("wrong code (%s)\n",res_code_str);
+    ERROR("wrong code (%s)",res_code_str);
     goto error;
   }
 
@@ -659,7 +659,7 @@ int parse_return_code(const char* lbuf, unsigned int& res_code, string& res_msg 
   return 0;
 
  error:
-  ERROR("while parsing response\n");
+  ERROR("while parsing response");
   return -1;
 }
 
@@ -1022,7 +1022,7 @@ string get_header_keyvalue_single(const string& param_hdr, const string& name) {
   
   while (p<param_hdr.length() && !v_end) {
     char curr = param_hdr[p];
-    // DBG("curr %c, st=%d, corr=%d\n", curr, st, corr);
+    // DBG("curr %c, st=%d, corr=%d", curr, st, corr);
     switch(st) {
     case ST_FINDBGN: {
       switch(curr) {
@@ -1191,7 +1191,7 @@ void init_random()
   FILE* fp_rand = fopen("/dev/urandom","r");
   if(fp_rand){
     if (fread(&seed,sizeof(int),1,fp_rand) != 1) {
-      DBG("/dev/urandom could not be read, rng probably not initialized.\n");
+      DBG("/dev/urandom could not be read, rng probably not initialized.");
     }
     fclose(fp_rand);
   }
@@ -1250,7 +1250,7 @@ void add_env_path(const char* name, const string& path)
     if(strlen(old_path)){
 	    
       if(regcomp(&path_reg,("[:|^]" + path + "[:|$]").c_str(),REG_NOSUB)){
-	ERROR("could not compile regex\n");
+	ERROR("could not compile regex");
 	return;
       }
 	    
@@ -1263,7 +1263,7 @@ void add_env_path(const char* name, const string& path)
     }
   }
 
-  DBG("setting %s to: '%s'\n",name,var.c_str());
+  DBG("setting %s to: '%s'",name,var.c_str());
 #ifndef BSD_COMP
   setenv(name,var.c_str(),1);
 #else
@@ -1297,7 +1297,7 @@ bool read_regex_mapping(const string& fname, const char* sep,
 			RegexMappingVector& result) {
   std::ifstream appcfg(fname.c_str());
   if (!appcfg.good()) {
-    ERROR("could not load %s file at '%s'\n",
+    ERROR("could not load %s file at '%s'",
 	  dbg_type, fname.c_str());
     return false;
   } else {
@@ -1312,17 +1312,17 @@ bool read_regex_mapping(const string& fname, const char* sep,
 
       vector<string> re_v = explode(entry, sep);
       if (re_v.size() != 2) {
-	ERROR("Incorrect line '%s' in %s: expected format 'regexp%sstring'\n",
+	ERROR("Incorrect line '%s' in %s: expected format 'regexp%sstring'",
 	      entry.c_str(), fname.c_str(), sep);
 	return false;
       }
       regex_t app_re;
       if (regcomp(&app_re, re_v[0].c_str(), REG_EXTENDED)) {
-	ERROR("compiling regex '%s' in %s.\n", 
+	ERROR("compiling regex '%s' in %s.", 
 	      re_v[0].c_str(), fname.c_str());
 	return false;
       }
-      DBG("adding %s '%s' => '%s'\n",
+      DBG("adding %s '%s' => '%s'",
 	  dbg_type, re_v[0].c_str(),re_v[1].c_str());
       result.push_back(make_pair(app_re, re_v[1]));
     }
@@ -1353,7 +1353,7 @@ bool run_regex_mapping(const RegexMappingVector& mapping, const char* test_s,
       unsigned int g = 0;
       for (g = 1; g < MAX_GROUPS; g++) {
         if (groups[g].rm_so == (int)(size_t)-1) break;
-        DBG("group %u: [%2u-%2u]: %.*s\n",
+        DBG("group %u: [%2u-%2u]: %.*s",
             g, groups[g].rm_so, groups[g].rm_eo,
             groups[g].rm_eo - groups[g].rm_so, test_s + groups[g].rm_so);
 	std::string match(test_s + groups[g].rm_so,
@@ -1493,7 +1493,7 @@ static int skip_header(const std::string& hdr, size_t start_pos,
 		break;
 
 		default:
-		DBG("Missing ':' after header name\n");
+		DBG("Missing ':' after header name");
 		return MALFORMED_SIP_MSG;
 		}
 		break;

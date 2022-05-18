@@ -48,7 +48,7 @@ static PyObject* IvrDialogBase_new(PyTypeObject *type, PyObject *args, PyObject 
     self->dialog = IvrSipDialog_FromPtr(self->p_dlg->dlg);
     if(!self->dialog){
       PyErr_Print();
-      ERROR("IvrDialogBase: while creating IvrSipDialog instance\n");
+      ERROR("IvrDialogBase: while creating IvrSipDialog instance");
       Py_DECREF(self);
       return NULL;
     }
@@ -57,21 +57,21 @@ static PyObject* IvrDialogBase_new(PyTypeObject *type, PyObject *args, PyObject 
     self->invite_req = IvrSipRequest_BorrowedFromPtr(self->p_dlg->getInviteReq());
     if(!self->invite_req){
       PyErr_Print();
-      ERROR("IvrDialogBase: while creating IvrSipRequest instance for invite_req\n");
+      ERROR("IvrDialogBase: while creating IvrSipRequest instance for invite_req");
       Py_DECREF(self);
       return NULL;
     }
 
   }
 
-  DBG("IvrDialogBase_new\n");
+  DBG("IvrDialogBase_new");
   return (PyObject *)self;
 }
 
 static void
 IvrDialogBase_dealloc(IvrDialogBase* self) 
 {
-  DBG("IvrDialogBase_dealloc\n");
+  DBG("IvrDialogBase_dealloc");
   Py_XDECREF(self->dialog);
   self->dialog=NULL;
   Py_XDECREF(self->invite_req);
@@ -84,7 +84,7 @@ IvrDialogBase_dealloc(IvrDialogBase* self)
 //
 static PyObject* IvrDialogBase_onRtpTimeout(IvrDialogBase* self, PyObject*)
 {
-  DBG("no script implementation for onRtpTimeout(). Stopping session. \n");
+  DBG("no script implementation for onRtpTimeout(). Stopping session. ");
 
   assert(self->p_dlg);
   self->p_dlg->setStopped();
@@ -309,11 +309,11 @@ static PyObject* IvrDialogBase_b2b_connectCallee(IvrDialogBase* self, PyObject* 
   PyObject* py_o;
 
   if((PyArg_ParseTuple(args,"O",&py_o)) && (py_o == Py_None)) {
-    DBG("args == Py_None\n");
+    DBG("args == Py_None");
     remote_party = self->p_dlg->getOriginalRequest().to;
     remote_uri = self->p_dlg->getOriginalRequest().r_uri;
   } else {
-    DBG("args != Py_None\n");
+    DBG("args != Py_None");
     char* rp = 0; char* ru = 0; char* lp = 0; char* lu = 0;
     if(!PyArg_ParseTuple(args,"ss|ss",&rp, &ru, &lp, &lu))
       return NULL;
@@ -380,7 +380,7 @@ static PyObject* IvrDialogBase_setTimer(IvrDialogBase* self, PyObject* args)
     return NULL;
     
   if (id <= 0) {
-    ERROR("IVR script tried to set timer with non-positive ID.\n");
+    ERROR("IVR script tried to set timer with non-positive ID.");
     return NULL;
   }
 
@@ -399,7 +399,7 @@ static PyObject* IvrDialogBase_removeTimer(IvrDialogBase* self, PyObject* args)
     return NULL;
     
   if (id <= 0) {
-    ERROR("IVR script tried to remove timer with non-positive ID.\n");
+    ERROR("IVR script tried to remove timer with non-positive ID.");
     return NULL;
   }
 
@@ -444,7 +444,7 @@ IvrDialogBase_redirect(IvrDialogBase *self, PyObject* args)
     return NULL;
     
   if(self->p_dlg->transfer(refer_to)){
-    ERROR("redirect failed\n");
+    ERROR("redirect failed");
     return NULL;
   }
     
@@ -464,7 +464,7 @@ IvrDialogBase_refer(IvrDialogBase *self, PyObject* args)
     return NULL;
     
   if(self->p_dlg->refer(refer_to, expires)){
-    ERROR("REFER failed\n");
+    ERROR("REFER failed");
     return NULL;
   }
     

@@ -87,7 +87,7 @@ bool AmSmtpClient::connect(const string& _server_ip, unsigned short _server_port
     
     if(resolver::instance()->resolve_name(server_ip.c_str(),
 					&_dh,&_sa,IPv4_only) < 0) {
-      ERROR("address not valid (smtp server: %s)\n",server_ip.c_str());
+      ERROR("address not valid (smtp server: %s)",server_ip.c_str());
       return false;
     }
 
@@ -96,15 +96,15 @@ bool AmSmtpClient::connect(const string& _server_ip, unsigned short _server_port
 
   sd = socket(PF_INET, SOCK_STREAM, 0);
   if(::connect(sd,(struct sockaddr *)&addr,sizeof(addr)) == -1) {
-    ERROR("%s\n",strerror(errno));
+    ERROR("%s",strerror(errno));
     return false;
   }
     
-  INFO("connected to: %s\n",server_ip.c_str());
+  INFO("connected to: %s",server_ip.c_str());
   bool cont = !get_response(); // server's welcome
 
   if(cont){
-    INFO("%s welcomes us\n",server_ip.c_str());
+    INFO("%s welcomes us",server_ip.c_str());
     return send_command("HELO " + server_ip);
   }
   else
@@ -142,7 +142,7 @@ bool AmSmtpClient::close()
 {
   ::close(sd);
   sd = 0;
-  INFO("We are now deconnected from server\n");
+  INFO("We are now deconnected from server");
   return false;
 }
 
@@ -152,14 +152,14 @@ bool AmSmtpClient::read_line()
   received=0;
   int s = read(sd,lbuf,SMTP_LINE_BUFFER);
   if(s == -1)
-    ERROR("AmSmtpClient::read_line(): %s\n",strerror(errno));
+    ERROR("AmSmtpClient::read_line(): %s",strerror(errno));
   else if(s > 0){
     received = s;
-    DBG("RECEIVED: %.*s\n",s,lbuf);
+    DBG("RECEIVED: %.*s",s,lbuf);
     lbuf[s] = '\0';
   }
   else if(!s)
-    DBG("AmSmtpClient::read_line(): EoF reached!\n");
+    DBG("AmSmtpClient::read_line(): EoF reached!");
     
   return (s<=0);
 }
@@ -179,7 +179,7 @@ bool AmSmtpClient::send_line(const string& cmd)
   snd_buf += "\r\n";
   int ssize = write(sd,snd_buf.c_str(),snd_buf.length());
   if(ssize == -1){
-    ERROR("AmSmtpClient::send_line(): %s\n",strerror(errno));
+    ERROR("AmSmtpClient::send_line(): %s",strerror(errno));
     return true;
   }
 
@@ -204,12 +204,12 @@ bool AmSmtpClient::send_command(const string& cmd)
     status = st_Ok;
   }
   else if(res_code < 600) {
-    ERROR("smtp server answered: %i %s (cmd was '%s')\n",
+    ERROR("smtp server answered: %i %s (cmd was '%s')",
 	  res_code,res_msg.c_str(),cmd.c_str());
     status = st_Error;
   }
   else {
-    WARN("unknown response from smtp server: %i %s (cmd was '%s')\n",
+    WARN("unknown response from smtp server: %i %s (cmd was '%s')",
 	 res_code,res_msg.c_str(),cmd.c_str());
     status = st_Unknown;
   }
@@ -223,7 +223,7 @@ bool AmSmtpClient::parse_response()
 {
   if(parse_return_code(lbuf,res_code,res_msg)==-1){
 
-    ERROR("AmSmtpClient::parse_response(): while parsing response\n");
+    ERROR("AmSmtpClient::parse_response(): while parsing response");
     return true;
   }
 
@@ -356,14 +356,14 @@ static int base64_encode_file(FILE* in, int out_fd)
   FILE* out = fdopen(out_fd,"w");
 
   if(!out){
-    ERROR("base64_encode_file: out file == NULL\n");
+    ERROR("base64_encode_file: out file == NULL");
     return -1;
   }
 
   rewind(in);
   //     FILE* in  = fopen(filename,"rb");
   //     if(!in){
-  // 	ERROR("%s\n",strerror(errno));
+  // 	ERROR("%s",strerror(errno));
   // 	return -1;
   //     }
 
@@ -400,7 +400,7 @@ static int base64_encode_file(FILE* in, int out_fd)
     
   fflush(out);
   //fclose(in);
-  DBG("%i bytes written\n",bytes_written);
+  DBG("%i bytes written",bytes_written);
   return 0;
 }
 

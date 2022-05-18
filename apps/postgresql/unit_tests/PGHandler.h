@@ -78,7 +78,7 @@ public:
         struct epoll_event events[2046];
         int ret = epoll_wait(epoll_fd, events, 2046, 5000);
         if(ret == -1 && errno != EINTR){
-            ERROR("epoll_wait: %s\n",strerror(errno));
+            ERROR("epoll_wait: %s",strerror(errno));
             return -1;
         }
 

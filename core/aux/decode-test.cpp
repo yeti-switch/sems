@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 		ERROR("Can't load plugins. exiting.");
 		return EXIT_FAILURE;
 	}
-	INFO("Loading audio plug-in %s\n",plugin[0].c_str());
+	INFO("Loading audio plug-in %s",plugin[0].c_str());
 
 	transform(payload_name.begin(), payload_name.end(), payload_name.begin(), ::tolower);
 	if(payload_name=="pcmu" || payload_name=="pcma") {
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 				INFO("encoded_frame_size = %d",fmt_i[i].value);
 			} break;
 			default: {
-			  WARN("Unknown codec format descriptor: %d\n", fmt_i[i].id);
+			  WARN("Unknown codec format descriptor: %d", fmt_i[i].id);
 			} break;
 			}
 			i++;

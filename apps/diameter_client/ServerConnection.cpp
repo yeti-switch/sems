@@ -81,10 +81,10 @@ void DiameterServerConnection::setIDs(AAAMessage* msg) {
 void ServerConnection::process(AmEvent* ev) {
   DiameterRequestEvent* re = dynamic_cast<DiameterRequestEvent*>(ev);
   if (NULL == re) {
-    ERROR("received Event with wrong type!\n");
+    ERROR("received Event with wrong type!");
     return;
   }
-  DBG(" making new request\n");
+  DBG(" making new request");
 
   AAAMessage* req = ReqEvent2AAAMessage(re);
 
@@ -92,11 +92,11 @@ void ServerConnection::process(AmEvent* ev) {
   unsigned int exe;
 
   if (sendRequest(req, exe)) {
-    ERROR("sending request\n");
+    ERROR("sending request");
     return;
   }
 
-  DBG("sent request with ID %d\n", exe);
+  DBG("sent request with ID %d", exe);
   struct timeval now;
   gettimeofday(&now, NULL);
 
@@ -113,7 +113,7 @@ ServerConnection::ServerConnection()
 }
 
 ServerConnection::~ServerConnection() {
-  DBG("closing diameter server connection.\n");
+  DBG("closing diameter server connection.");
   conn.terminate();
 }
 
@@ -147,7 +147,7 @@ int ServerConnection::init(const string& _server_name,
 
   struct in_addr inp;
   if (inet_aton(origin_ip.c_str(), &inp) == 0) {
-    ERROR("origin_ip %s could not be decoded.\n", 
+    ERROR("origin_ip %s could not be decoded.", 
 	  origin_ip.c_str());
   } else {
     origin_ip_address[2] =  inp.s_addr & 0xFF;
@@ -164,7 +164,7 @@ int ServerConnection::init(const string& _server_name,
 
 void ServerConnection::openConnection() {
 
-  DBG("init TCP connection\n");
+  DBG("init TCP connection");
   if (conn.dia_conn) {
     ERROR("CRITICAL: trying to open new connection, while current one still"
       " opened.\n");
@@ -173,7 +173,7 @@ void ServerConnection::openConnection() {
   conn.dia_conn = tcp_create_connection(server_name.c_str(), server_port,
 					ca_file.c_str(), cert_file.c_str());
   if (!conn.dia_conn) {
-    ERROR("establishing connection to %s\n", 
+    ERROR("establishing connection to %s", 
 	  server_name.c_str());
     setRetryConnectLater();
     return;
@@ -193,7 +193,7 @@ void ServerConnection::openConnection() {
       || addDataAVP(cer, AVP_Vendor_Id, (char*)&vendorID, sizeof(vendorID)) 
       || addDataAVP(cer, AVP_Supported_Vendor_Id, (char*)&vendorID, sizeof(vendorID)) 
       || addStringAVP(cer, AVP_Product_Name, product_name)) {
-    ERROR("openConnection(): adding AVPs failed\n");
+    ERROR("openConnection(): adding AVPs failed");
     conn.terminate();
     setRetryConnectLater();
     return;
@@ -231,14 +231,14 @@ void ServerConnection::openConnection() {
   conn.setIDs(cer);
   
   if(AAABuildMsgBuffer(cer) != AAA_ERR_SUCCESS) {
-    ERROR( " openConnection(): message buffer not created\n");
+    ERROR( " openConnection(): message buffer not created");
     AAAFreeMessage(&cer);
     return;
   }
   
   int ret = tcp_send(conn.dia_conn, cer->buf.s, cer->buf.len);
   if (ret) {
-    ERROR( "openConnection(): could not send message\n");
+    ERROR( "openConnection(): could not send message");
     conn.terminate();
     setRetryConnectLater();
     AAAFreeMessage(&cer);
@@ -254,9 +254,9 @@ void ServerConnection::openConnection() {
     
     if (res <= 0) {
       if (!res) {
-	ERROR( " openConnection(): did not receive response (CEA).\n");
+	ERROR( " openConnection(): did not receive response (CEA).");
       } else {
-	ERROR( " openConnection(): error receiving response (CEA).\n");
+	ERROR( " openConnection(): error receiving response (CEA).");
       }
       conn.terminate();
       setRetryConnectLater();
@@ -266,7 +266,7 @@ void ServerConnection::openConnection() {
     /* obtain the structure corresponding to the message */
     AAAMessage* cea = AAATranslateMessage(conn.rb.buf, conn.rb.buf_len, 0);	
     if(!cea) {
-      ERROR( " openConnection(): could not decipher response (CEA).\n");
+      ERROR( " openConnection(): could not decipher response (CEA).");
       conn.terminate();
       setRetryConnectLater();
       return;
@@ -283,21 +283,21 @@ void ServerConnection::openConnection() {
     AAAFreeMessage(&cea);
 
     if (!(cea_receive_cnt--)) {
-      ERROR( " openConnection(): no CEA received.\n");
+      ERROR( " openConnection(): no CEA received.");
       conn.terminate();
       setRetryConnectLater();
       return;
     }
   }
   
-  DBG("Connection opened.\n");
+  DBG("Connection opened.");
   open = true;
 }
 
 AAAMessage* ServerConnection::ReqEvent2AAAMessage(DiameterRequestEvent* re) {
   AAAMessage* req = AAAInMessage(re->command_code, re->app_id);
   if (req == NULL) {
-    ERROR("creating new request message.\n");
+    ERROR("creating new request message.");
     return NULL;
   }
   
@@ -312,12 +312,12 @@ AAAMessage* ServerConnection::ReqEvent2AAAMessage(DiameterRequestEvent* re) {
 
 
 #ifdef EXTRA_DEBUG
-    DBG("adding avp id %d, flags %d, vendor %d\n", avp_id, flags, vendor);
+    DBG("adding avp id %d, flags %d, vendor %d", avp_id, flags, vendor);
 #endif 
 
     if (!data->len) {
 #ifdef EXTRA_DEBUG
-      DBG("skipping empty AVP id %d\n", avp_id);
+      DBG("skipping empty AVP id %d", avp_id);
 #endif 
       continue;
     }
@@ -325,12 +325,12 @@ AAAMessage* ServerConnection::ReqEvent2AAAMessage(DiameterRequestEvent* re) {
     AAA_AVP *avp;
     if( (avp=AAACreateAVP(avp_id, (AAA_AVPFlag)flags, vendor, (const char*)data->data,
 			  data->len, AVP_DUPLICATE_DATA)) == 0) {
-      ERROR( M_NAME ": addDataAVP() no more free memory!\n");
+      ERROR( M_NAME ": addDataAVP() no more free memory!");
       continue;
     }
     
     if( AAAAddAVPToMessage(req, avp, 0)!= AAA_ERR_SUCCESS) {
-      ERROR( M_NAME ": addDataAVP(): AVP not added!\n");
+      ERROR( M_NAME ": addDataAVP(): AVP not added!");
       continue;
     }
   }
@@ -349,7 +349,7 @@ int ServerConnection::addStringAVP(AAAMessage* msg, AAA_AVPCode avp_code, string
   AAA_AVP *avp;
   if( (avp=AAACreateAVP(avp_code, (AAA_AVPFlag)AAA_AVP_FLAG_NONE, 0, val.c_str(),
 			val.length(), AVP_DUPLICATE_DATA)) == 0) {
-    ERROR( M_NAME ": addStringAVP() no more free memory!\n");
+    ERROR( M_NAME ": addStringAVP() no more free memory!");
     return -1;
   }
 
@@ -358,7 +358,7 @@ int ServerConnection::addStringAVP(AAAMessage* msg, AAA_AVPCode avp_code, string
     pos = msg->avpList.tail;
 
   if( AAAAddAVPToMessage(msg, avp, pos)!= AAA_ERR_SUCCESS) {
-    ERROR( M_NAME ": addStringAVP(): AVP not added!\n");
+    ERROR( M_NAME ": addStringAVP(): AVP not added!");
     return -1;
   }
   return 0;
@@ -373,12 +373,12 @@ int ServerConnection::addDataAVP(AAAMessage* msg, AAA_AVPCode avp_code, char* va
    AAA_AVP *avp;
    if( (avp=AAACreateAVP(avp_code, (AAA_AVPFlag)AAA_AVP_FLAG_NONE, 0, val,
 			 len, AVP_DUPLICATE_DATA)) == 0) {
-     ERROR( M_NAME ": addDataAVP() no more free memory!\n");
+     ERROR( M_NAME ": addDataAVP() no more free memory!");
      return -1;
    }
 
   if( AAAAddAVPToMessage(msg, avp, 0)!= AAA_ERR_SUCCESS) {
-    ERROR( M_NAME ": addDataAVP(): AVP not added!\n");
+    ERROR( M_NAME ": addDataAVP(): AVP not added!");
     return -1;
   }
   return 0;
@@ -391,7 +391,7 @@ int ServerConnection::addGroupedAVP(AAA_AVP *avp, AAA_AVPCode avp_code,
 
   if( (m_avp=AAACreateAVP(avp_code, (AAA_AVPFlag)AAA_AVP_FLAG_NONE, 0, val, 
 			  len, AVP_DUPLICATE_DATA)) == 0) {
-    ERROR( M_NAME":addGroupedAVP(): no more free memory!\n");
+    ERROR( M_NAME":addGroupedAVP(): no more free memory!");
     return -1;
   }
   AAAAddGroupedAVP(avp, m_avp);
@@ -407,27 +407,27 @@ int ServerConnection::sendRequest(AAAMessage* req, unsigned int& exe) {
   conn.setIDs(req);
 
   if(AAABuildMsgBuffer(req) != AAA_ERR_SUCCESS) {
-    ERROR( " sendRequest(): message buffer not created\n");
+    ERROR( " sendRequest(): message buffer not created");
     return AAA_ERROR_MESSAGE;
   }
   
   int ret = tcp_send(conn.dia_conn, req->buf.s, req->buf.len);
   if (ret) {
-    ERROR( " sendRequest(): could not send message\n");
+    ERROR( " sendRequest(): could not send message");
     AAAFreeMessage(&req);
     return AAA_ERROR_COMM;
   }
 
   exe = req->endtoendId;
 
-  DBG("msg sent...\n");
+  DBG("msg sent...");
   return 0;
 }
 
 int ServerConnection::handleRequest(AAAMessage* req) {
   switch (req->commandCode) {
   case AAA_CC_DWR: { // Device-Watchdog-Request
-    DBG("Device-Watchdog-Request received\n");
+    DBG("Device-Watchdog-Request received");
 
     AAAMessage* reply;
     if ( (reply=AAAInMessage(AAA_CC_DWA, AAA_APP_DIAMETER_COMMON_MSG))==NULL) {
@@ -447,15 +447,15 @@ int ServerConnection::handleRequest(AAAMessage* req) {
     reply->hopbyhopId = req->hopbyhopId;
 
     if(AAABuildMsgBuffer(reply) != AAA_ERR_SUCCESS) {
-      ERROR( " sendRequest(): message buffer not created\n");
+      ERROR( " sendRequest(): message buffer not created");
       AAAFreeMessage(&reply);
       return AAA_ERROR_MESSAGE;
     }
     
-    DBG("sending Device-Watchdog-Answer...\n");
+    DBG("sending Device-Watchdog-Answer...");
     int ret = tcp_send(conn.dia_conn, reply->buf.s, reply->buf.len);
     if (ret) {
-      ERROR( " sendRequest(): could not send message\n");
+      ERROR( " sendRequest(): could not send message");
       closeConnection();
       AAAFreeMessage(&reply);
       return AAA_ERROR_COMM;
@@ -503,14 +503,14 @@ int ServerConnection::handleRequest(AAAMessage* req) {
     reply->hopbyhopId = req->hopbyhopId;
 
     if(AAABuildMsgBuffer(reply) != AAA_ERR_SUCCESS) {
-      ERROR( " sendRequest(): message buffer not created\n");
+      ERROR( " sendRequest(): message buffer not created");
       AAAFreeMessage(&reply);
       return AAA_ERROR_MESSAGE;
     }
 
     int ret = tcp_send(conn.dia_conn, reply->buf.s, reply->buf.len);
     if (ret) {
-      ERROR( " sendRequest(): could not send message\n");
+      ERROR( " sendRequest(): could not send message");
       closeConnection();
       AAAFreeMessage(&reply);
       return AAA_ERROR_COMM;
@@ -525,7 +525,7 @@ int ServerConnection::handleRequest(AAAMessage* req) {
   }; break;
 
   default: {
-    ERROR("ignoring unknown request with command code %i\n", 
+    ERROR("ignoring unknown request with command code %i", 
 	  req->commandCode);
   }; break;
   }
@@ -536,7 +536,7 @@ int ServerConnection::handleRequest(AAAMessage* req) {
 int ServerConnection::handleReply(AAAMessage* rep) {
   unsigned int rep_id = rep->endtoendId;
   int reply_code = AAAMessageGetReplyCode(rep);
-  DBG("received reply - id %d, reply code %d\n", rep_id, reply_code);
+  DBG("received reply - id %d, reply code %d", rep_id, reply_code);
   
   string sess_link  = "";
   req_map_mut.lock();
@@ -545,7 +545,7 @@ int ServerConnection::handleReply(AAAMessage* rep) {
     sess_link = it->second.first;
     req_map.erase(it);
   } else {
-    DBG("session link for reply not found\n");
+    DBG("session link for reply not found");
   }
   req_map_mut.unlock();
 
@@ -554,10 +554,10 @@ int ServerConnection::handleReply(AAAMessage* rep) {
       new DiameterReplyEvent((unsigned int)rep->commandCode, (unsigned int)rep->applicationId, 
 			     AAAMessageAVPs2AmArg(rep));
     if (!AmSessionContainer::instance()->postEvent(sess_link, r_ev)) {
-      DBG("unhandled reply\n");
+      DBG("unhandled reply");
     }
   } else {
-    DBG("no session-link for DIAMETER reply.\n");
+    DBG("no session-link for DIAMETER reply.");
   }
 
   if ((reply_code == AAA_OUT_OF_SPACE)
@@ -601,7 +601,7 @@ void ServerConnection::setRetryConnectLater() {
 }
 
 void ServerConnection::on_stop() {
-  DBG("todo: stop connection.\n");
+  DBG("todo: stop connection.");
 }
 
 void ServerConnection::receive() {
@@ -611,11 +611,11 @@ void ServerConnection::receive() {
 
   if (res < 0) {
     if (res == AAA_CONN_SHUTDOWN) {
-      INFO( M_NAME "receive(): shutdown - closing connection.\n");
+      INFO( M_NAME "receive(): shutdown - closing connection.");
       closeConnection(true);
     } else {
       closeConnection();
-      ERROR( M_NAME "receive(): tcp_recv_reply() failed.\n");
+      ERROR( M_NAME "receive(): tcp_recv_reply() failed.");
     }
     return;
   }
@@ -626,7 +626,7 @@ void ServerConnection::receive() {
   /* obtain the structure corresponding to the message */
   AAAMessage* msg = AAATranslateMessage(conn.rb.buf, conn.rb.buf_len, 0);	
   if(!msg) {
-    ERROR( M_NAME "receive(): message structure not obtained from message.\n");	
+    ERROR( M_NAME "receive(): message structure not obtained from message.");	
     closeConnection();
     return;
   }
@@ -644,14 +644,14 @@ void ServerConnection::receive() {
 }
 
 void ServerConnection::run() {
-  DBG("running server connection\n");
+  DBG("running server connection");
   while (true) {
     if (!open) {
       struct timeval now;
       gettimeofday(&now, NULL);
       
       if(timercmp(&now,&connect_ts,>)){
-	DBG("(re)trying to open the connection\n");
+	DBG("(re)trying to open the connection");
 	openConnection();
       } else {
 	usleep(50000);
@@ -672,7 +672,7 @@ void ServerConnection::checkTimeouts() {
   req_map_mut.lock();
 
 #ifdef EXTRA_DEBUG
-  DBG("checking request timeout of %zd pending requests....\n",
+  DBG("checking request timeout of %zd pending requests....",
       req_map.size());
 #endif
   
@@ -686,15 +686,15 @@ void ServerConnection::checkTimeouts() {
     timersub(&now,&it->second.second,&diff);
     // millisec
     if (diff.tv_sec * 1000 + diff.tv_usec / 1000 > request_timeout) {
-      WARN("timeout for DIAMETER request '%u'\n", it->first);      
+      WARN("timeout for DIAMETER request '%u'", it->first);      
       string& sess_link = it->second.first;
 
-      DBG("notify session '%s' of diameter request timeout\n", 
+      DBG("notify session '%s' of diameter request timeout", 
 	  sess_link.c_str());
       DiameterTimeoutEvent* r_ev = 
 	new DiameterTimeoutEvent(it->first);
       if (!AmSessionContainer::instance()->postEvent(sess_link, r_ev)) {
-	DBG("unhandled timout event.\n");
+	DBG("unhandled timout event.");
       }
       DReqMap::iterator d_it = it;
       it++;
@@ -713,7 +713,7 @@ void ServerConnection::shutdownConnection() {
   closeConnection(true);
 
   req_map_mut.lock();
-  DBG("shutdown: posting timeout to %zd pending requests....\n",
+  DBG("shutdown: posting timeout to %zd pending requests....",
       req_map.size());
   for (DReqMap::iterator it = req_map.begin();
        it != req_map.end();it++) {
@@ -721,7 +721,7 @@ void ServerConnection::shutdownConnection() {
       DiameterTimeoutEvent* r_ev = 
 	new DiameterTimeoutEvent(it->first);
       if (!AmSessionContainer::instance()->postEvent(sess_link, r_ev)) {
-	DBG("unhandled timout event.\n");
+	DBG("unhandled timout event.");
       }
   }
   req_map.clear();

@@ -104,7 +104,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
             case URI_USER:
                 uri->user.len = c - uri->user.s;
                 if(!uri->user.len) {
-                    DBG("Password given for empty user!\n");
+                    DBG("Password given for empty user!");
                     return MALFORMED_URI;
                 }
                 uri->passwd.s = c+1;
@@ -113,7 +113,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
             case URI_HOST:
                 uri->host.len = c - uri->host.s;
                 if(!uri->host.len) {
-                    DBG("Empty host part\n");
+                    DBG("Empty host part");
                     return MALFORMED_URI;
                 }
                 uri->port_str.s = c+1;
@@ -134,7 +134,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
                 uri->host.set(c+1,0);
                 break;
             default:
-                DBG("Illegal char '@' in non-user part\n");
+                DBG("Illegal char '@' in non-user part");
                 return MALFORMED_URI;
                 break;
             } //switch(st)
@@ -158,7 +158,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
                 tmp1.set(c+1,0);
                 break;
             case URI_PNAME:
-                //DBG("Empty URI parameter\n");
+                //DBG("Empty URI parameter");
                 //return MALFORMED_URI;
                 tmp1.len = c - tmp1.s;
                 uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
@@ -167,7 +167,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
             case URI_PVALUE:
                 tmp2.len = c - tmp2.s;
                 uri->params.push_back(new sip_avp(tmp1,tmp2));
-                //DBG("uri param: \"%.*s\"=\"%.*s\"\n",
+                //DBG("uri param: \"%.*s\"=\"%.*s\"",
                 //    tmp1.len, tmp1.s,
                 //    tmp2.len, tmp2.s);
                 tmp1.s = c+1;
@@ -188,7 +188,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
                 tmp1.s = c+1;
                 break;
             case URI_PNAME:
-                //DBG("Empty URI parameter\n");
+                //DBG("Empty URI parameter");
                 //return MALFORMED_URI;
                 tmp1.len = c - tmp1.s;
                 uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
@@ -198,7 +198,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
             case URI_PVALUE:
                 tmp2.len = c - tmp2.s;
                 uri->params.push_back(new sip_avp(tmp1,tmp2));
-                //DBG("uri param: \"%.*s\"=\"%.*s\"\n",
+                //DBG("uri param: \"%.*s\"=\"%.*s\"",
                 //    tmp1.len, tmp1.s,
                 //    tmp2.len, tmp2.s);
                 tmp1.s = c+1;
@@ -212,7 +212,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
             case URI_HNAME:
                 tmp1.len = c - tmp1.s;
                 if(!tmp1.len) {
-                    DBG("Empty param/header name\n");
+                    DBG("Empty param/header name");
                     return MALFORMED_URI;
                 }
                 tmp2.s = c+1;
@@ -223,12 +223,12 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
         case '&':
             switch(st){
             case URI_HNAME:
-                DBG("Empty URI header\n");
+                DBG("Empty URI header");
                 return MALFORMED_URI;
             case URI_HVALUE:
                 tmp2.len = c - tmp2.s;
                 uri->hdrs.push_back(new sip_avp(tmp1,tmp2));
-                //DBG("uri hdr: \"%.*s\"=\"%.*s\"\n",
+                //DBG("uri hdr: \"%.*s\"=\"%.*s\"",
                 //    tmp1.len, tmp1.s,
                 //    tmp2.len, tmp2.s);
                 tmp1.s = c+1;
@@ -256,12 +256,12 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
     switch(st) {
     case URI_USER:
     case URI_PW:
-        DBG("Missing host part\n");
+        DBG("Missing host part");
         return MALFORMED_URI;
     case URI_HOST:
         uri->host.len = c - uri->host.s;
         if(!uri->host.len){
-            DBG("Missing host part\n");
+            DBG("Missing host part");
             return MALFORMED_URI;
         }
         break;
@@ -269,7 +269,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
         uri->port_str.len = c - uri->port_str.s; 
         break;
     case URI_PNAME:
-        //DBG("Empty URI parameter\n");
+        //DBG("Empty URI parameter");
         //return MALFORMED_URI;
         tmp1.len = c - tmp1.s;
         uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
@@ -277,17 +277,17 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
     case URI_PVALUE:
         tmp2.len = c - tmp2.s;
         uri->params.push_back(new sip_avp(tmp1,tmp2));
-        //DBG("uri param: \"%.*s\"=\"%.*s\"\n",
+        //DBG("uri param: \"%.*s\"=\"%.*s\"",
         //    tmp1.len, tmp1.s,
         //    tmp2.len, tmp2.s);
         break;
     case URI_HNAME:
-        DBG("Empty URI header\n");
+        DBG("Empty URI header");
         return MALFORMED_URI;
     case URI_HVALUE:
         tmp2.len = c - tmp2.s;
         uri->hdrs.push_back(new sip_avp(tmp1,tmp2));
-        //DBG("uri hdr: \"%.*s\"=\"%.*s\"\n",
+        //DBG("uri hdr: \"%.*s\"=\"%.*s\"",
         //    tmp1.len, tmp1.s,
         //    tmp2.len, tmp2.s);
         break;
@@ -302,7 +302,7 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
         uri->port = 5060;
     }
 
-    DBG("Converted URI port (%.*s) to int (%i)\n",
+    DBG("Converted URI port (%.*s) to int (%i)",
         uri->port_str.len,uri->port_str.s,uri->port);
 
     for(list<sip_avp*>::iterator it = uri->params.begin();
@@ -442,7 +442,7 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
                 st = SIP_S;
                 continue;
             default:
-                DBG("Unknown URI scheme\n");
+                DBG("Unknown URI scheme");
                 return MALFORMED_URI;
             }
             break;
@@ -453,7 +453,7 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
                 st = SIP_I;
                 continue;
             default:
-                DBG("Unknown URI scheme\n");
+                DBG("Unknown URI scheme");
                 return MALFORMED_URI;
             }
             break;
@@ -464,14 +464,14 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
                 st = SIP_P;
                 continue;
             default:
-                DBG("Unknown URI scheme\n");
+                DBG("Unknown URI scheme");
                 return MALFORMED_URI;
             }
             break;
         case SIP_P:
             switch(*c) {
             case HCOLON:
-                //DBG("scheme: sip\n");
+                //DBG("scheme: sip");
                 uri->scheme = sip_uri::SIP;
                 return parse_sip_uri(uri,c+1,len-(c+1-beg),no_default_port);
             case 's':
@@ -479,23 +479,23 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
                 st = SIPS_S;
                 continue;
                 default:
-                DBG("Unknown URI scheme\n");
+                DBG("Unknown URI scheme");
                 return MALFORMED_URI;
             }
             break;
         case SIPS_S:
             switch(*c) {
             case HCOLON:
-                //DBG("scheme: sips\n");
+                //DBG("scheme: sips");
                 uri->scheme = sip_uri::SIPS;
                 return parse_sip_uri(uri,c+1,len-(c+1-beg),no_default_port);
             default:
-                DBG("Unknown URI scheme\n");
+                DBG("Unknown URI scheme");
                 return MALFORMED_URI;
             }
             break;
         default:
-            DBG("bug: unknown state\n");
+            DBG("bug: unknown state");
             return UNDEFINED_ERR;
         } //switch(st)
     } //for(;c!=beg+len;c++)

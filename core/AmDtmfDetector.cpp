@@ -238,10 +238,10 @@ void AmDtmfDetector::setInbandDetector(Dtmf::InbandDetectorType t, int sample_ra
 
   if ((t != m_inband_type) || (!m_inbandDetector.get())) {
     if (t == Dtmf::SEMSInternal) {
-      DBG("Setting internal DTMF detector\n");
+      DBG("Setting internal DTMF detector");
       m_inbandDetector.reset(new AmSemsInbandDtmfDetector(this, sample_rate));
     } else { // if t == SpanDSP
-      DBG("Setting spandsp DTMF detector\n");
+      DBG("Setting spandsp DTMF detector");
       m_inbandDetector.reset(new AmSpanDSPInbandDtmfDetector(this, sample_rate));
     }
     m_inband_type = t;
@@ -273,11 +273,11 @@ void AmDtmfDetector::process(AmEvent *evt)
 void AmDtmfDetector::flushKey(unsigned int event_id) {
   // flush the current key if it corresponds to the one with event_id
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-  DBG("flushKey\n");
+  DBG("flushKey");
 #endif
   if (m_eventPending && m_current_eventid_i && event_id == m_current_eventid) {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-    DBG("flushKey - reportEvent()\n");
+    DBG("flushKey - reportEvent()");
 #endif
     reportEvent();
   }
@@ -293,7 +293,7 @@ void AmDtmfDetector::registerKeyReleased(int event, Dtmf::EventSource source,
   if ((m_eventPending && m_currentEvent != event) ||
       (m_eventPending && has_eventid && m_current_eventid_i && (event_id != m_current_eventid))) {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-    DBG("event differs - reportEvent()\n");
+    DBG("event differs - reportEvent()");
 #endif
     reportEvent();
   }
@@ -367,7 +367,7 @@ void AmDtmfDetector::registerKeyPressed(int event, Dtmf::EventSource type, bool 
       if ((m_currentEvent != event) ||
 	  (has_eventid && m_current_eventid_i && (event_id != m_current_eventid))) {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-	DBG("event differs - reportEvent() from key pressed\n");
+	DBG("event differs - reportEvent() from key pressed");
 #endif
 	reportEvent();
       }
@@ -443,7 +443,7 @@ void AmDtmfDetector::putDtmfAudio(bool &dtmf_detected, const unsigned char *buf,
   if (m_inbandDetector.get()) {
     m_inbandDetector->streamPut(dtmf_detected, buf, size, system_ts);
   } else if(!non_initiallized_usage){
-    DBG("warning: trying to put DTMF into non-initialized DTMF detector\n");
+    DBG("warning: trying to put DTMF into non-initialized DTMF detector");
     non_initiallized_usage = true;
   }
 }
@@ -467,7 +467,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
       if (m_lastTS_i && m_lastTS == evt->ts()) {
 	// ignore events from past key press which was already reported
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-	DBG("ignore RTP event ts ==%u\n", evt->ts());
+	DBG("ignore RTP event ts ==%u", evt->ts());
 #endif
 	return;
       }
@@ -475,7 +475,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
       if (!m_eventPending)
         {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-	  DBG("new m_eventPending, event()==%d, ts=%u\n", evt->event(), evt->ts());
+	  DBG("new m_eventPending, event()==%d, ts=%u", evt->event(), evt->ts());
 #endif
 	  gettimeofday(&m_startTime, NULL);
 	  m_eventPending = true;
@@ -497,7 +497,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
             {
 	      // Previous event does not end correctly so send out it now...
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-	      DBG("flushKey %u\n", m_currentTS);
+	      DBG("flushKey %u", m_currentTS);
 #endif
 	      m_keysink->flushKey(m_currentTS);
 	      // ... and reinitialize to process current event
@@ -509,7 +509,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
             }
         }
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-      DBG("registerKeyPressed %d, %u\n", m_currentEvent, m_currentTS);
+      DBG("registerKeyPressed %d, %u", m_currentEvent, m_currentTS);
 #endif
       m_keysink->registerKeyPressed(m_currentEvent, Dtmf::SOURCE_RTP, true, m_currentTS);
     }
@@ -522,7 +522,7 @@ void AmRtpDtmfDetector::sendPending()
       struct timeval end_time;
       gettimeofday(&end_time, NULL);
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-      DBG("registerKeyReleased(%d, ... %u)\n", m_currentEvent, m_currentTS);
+      DBG("registerKeyReleased(%d, ... %u)", m_currentEvent, m_currentTS);
 #endif
       m_keysink->registerKeyReleased(m_currentEvent, Dtmf::SOURCE_RTP, m_startTime, end_time, true, m_currentTS);
       m_eventPending = false;
@@ -537,7 +537,7 @@ void AmRtpDtmfDetector::checkTimeout()
   if (m_eventPending && m_packetCount++ > MAX_PACKET_WAIT)
     {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
-      DBG("idle timeout ... sendPending()\n");
+      DBG("idle timeout ... sendPending()");
 #endif
       sendPending();
     }
@@ -648,9 +648,9 @@ void AmSemsInbandDtmfDetector::isdn_audio_goertzel_relative()
     /* report overflows. This should not happen. */
     /* Comment this out if desired */
     /*if (sk < -32768 || sk > 32767)
-      DBG("isdn_audio: dtmf goertzel overflow, sk=%d\n", sk);
+      DBG("isdn_audio: dtmf goertzel overflow, sk=%d", sk);
       if (sk2 < -32768 || sk2 > 32767)
-      DBG("isdn_audio: dtmf goertzel overflow, sk2=%d\n", sk2);
+      DBG("isdn_audio: dtmf goertzel overflow, sk2=%d", sk2);
     */
 
     // note that the result still is in (32-REL_AMP_BITS).REL_AMP_BITS format
@@ -827,7 +827,7 @@ void AmSpanDSPInbandDtmfDetector::tone_report_func(void *user_data, int code) {
 #endif
 
 void AmSpanDSPInbandDtmfDetector::tone_report_f(int code, int level, int delay) {
-  //  DBG("spandsp reports tone %c, %d, %d\n", code, level, delay);
+  //  DBG("spandsp reports tone %c, %d, %d", code, level, delay);
   if (code) { // key pressed
     gettimeofday(&key_start, NULL);
     m_lastCode = code;
@@ -861,9 +861,9 @@ int AmSpanDSPInbandDtmfDetector::char2int(char code) {
 // }
 
 // void AmSpanDSPInbandDtmfDetector::dtmf_rx_f(const char* digits, int len) {
-//   DBG("dtmf_rx_callback len=%d\n", len);
+//   DBG("dtmf_rx_callback len=%d", len);
 
 //   for (int i=0;i<len;i++)
-//     DBG("char %c\n", digits[i]);
+//     DBG("char %c", digits[i]);
 // }
 #endif // USE_SPANDSP

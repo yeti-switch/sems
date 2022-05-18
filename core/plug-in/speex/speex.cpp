@@ -213,7 +213,7 @@ void decode_format_parameters(const char* format_parameters, SpeexState* ss) {
 	if (*buffer)
 	  *buffer++ = 0;
 
-	WARN("SDP parameter fmtp: %s not set in speex.\n", param_value);
+	WARN("SDP parameter fmtp: %s not set in speex.", param_value);
       }
     }
   }
@@ -245,13 +245,13 @@ long speex_create(unsigned int sample_rate,
     break;
 #endif
   default:
-    ERROR("Unsupported sample rate for Speex codec (%u)\n", sample_rate);
+    ERROR("Unsupported sample rate for Speex codec (%u)", sample_rate);
     return 0;
   }
 
   ss = (SpeexState*)malloc(sizeof(SpeexState));
   if (!ss) {
-    ERROR("Could not allocate SpeexState\n");
+    ERROR("Could not allocate SpeexState");
     return 0;
   }
 
@@ -281,10 +281,10 @@ long speex_create(unsigned int sample_rate,
     
   format_description[2].id = 0;
 
-  DBG("set AMCI_FMT_FRAME_LENGTH to %d\n", format_description[0].value);
-  DBG("set AMCI_FMT_FRAME_SIZE to %d\n", format_description[1].value);
+  DBG("set AMCI_FMT_FRAME_LENGTH to %d", format_description[0].value);
+  DBG("set AMCI_FMT_FRAME_SIZE to %d", format_description[1].value);
 
-  DBG("SpeexState %p inserted with %d frames per packet,\n", 
+  DBG("SpeexState %p inserted with %d frames per packet,", 
       ss, ss->frames_per_packet);
 
   return (long)ss;
@@ -312,7 +312,7 @@ void speex_destroy(long handle)
 {
   SpeexState* ss = (SpeexState*) handle;
     
-  DBG("SpeexDestroy for handle %ld\n", handle);
+  DBG("SpeexDestroy for handle %ld", handle);
     
   if (!ss)
     return;
@@ -342,7 +342,7 @@ int Pcm16_2_Speex( unsigned char* out_buf, unsigned char* in_buf,
 
   blocks = ldiv(size>>1, ss->frame_size);
   if (blocks.rem) {
-    ERROR("Pcm16_2_Speex: not integral number of blocks %d.%d\n", 
+    ERROR("Pcm16_2_Speex: not integral number of blocks %d.%d", 
 	  blocks.quot, blocks.rem);
     return -1;
   }
@@ -387,7 +387,7 @@ int Speex_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf,
     pcm+= ss->frame_size;
 	
     if (ret==-2) {
-      ERROR("while calling speex_decode\n");
+      ERROR("while calling speex_decode");
       return -1;
     }
 	

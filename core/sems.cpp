@@ -377,7 +377,7 @@ static void signal_handler(int sig)
   }
 
   if(sig == SIGUSR2) {
-    DBG("brodcasting User event to %u sessions...\n",
+    DBG("brodcasting User event to %u sessions...",
 	AmSession::getSessionNum());
     AmEventDispatcher::instance()->broadcast(new AmSystemEvent(AmSystemEvent::User));
     return;
@@ -391,7 +391,7 @@ static void signal_handler(int sig)
     return;
   }
 
-  WARN("Signal %s (%d) received.\n", strsignal(sig), sig);
+  WARN("Signal %s (%d) received.", strsignal(sig), sig);
 
   if(sig == SIGQUIT) {
     CoreRpc::set_system_shutdown(!AmConfig.shutdown_mode);
@@ -411,7 +411,7 @@ static void signal_handler(int sig)
     if(!is_shutting_down.get()) {
       is_shutting_down.set(true);
 
-      INFO("Stopping SIP stack after signal\n");
+      INFO("Stopping SIP stack after signal");
       sip_ctrl.stop();
     }
   }
@@ -429,7 +429,7 @@ int set_sighandler(void (*handler)(int))
 
   for (int* sig = sigs; *sig; sig++) {
     if (signal(*sig, handler) == SIG_ERR ) {
-      ERROR("Cannot install signal handler for %s.\n", strsignal(*sig));
+      ERROR("Cannot install signal handler for %s.", strsignal(*sig));
       return -1;
     }
   }
@@ -450,7 +450,7 @@ static int write_pid_file()
     return 0;
   }
   else {
-    ERROR("Cannot write PID file '%s': %s.\n",
+    ERROR("Cannot write PID file '%s': %s.",
         AmConfig.deamon_pid_file.c_str(), strerror(errno));
   }
 
@@ -463,14 +463,14 @@ int set_fd_limit()
 {
   struct rlimit rlim;
   if(getrlimit(RLIMIT_NOFILE,&rlim) < 0) {
-    ERROR("getrlimit: %s\n",strerror(errno));
+    ERROR("getrlimit: %s",strerror(errno));
     return -1;
   }
 
   rlim.rlim_cur = rlim.rlim_max;
 
   if(setrlimit(RLIMIT_NOFILE,&rlim) < 0) {
-    ERROR("setrlimit: %s\n",strerror(errno));
+    ERROR("setrlimit: %s",strerror(errno));
     return -1;
   }
  
@@ -484,16 +484,16 @@ static void log_handler(srtp_log_level_t level, const char *msg, void *data)
 {
     switch (level) {
     case srtp_log_level_error:
-        ERROR("SRTP-LOG: %s\n", msg);
+        ERROR("SRTP-LOG: %s", msg);
         break;
     case srtp_log_level_warning:
-        WARN("SRTP-LOG: %s\n", msg);
+        WARN("SRTP-LOG: %s", msg);
         break;
     case srtp_log_level_info:
-        INFO("SRTP-LOG: %s\n", msg);
+        INFO("SRTP-LOG: %s", msg);
         break;
     case srtp_log_level_debug:
-//        DBG("SRTP-LOG: %s\n", msg);
+//        DBG("SRTP-LOG: %s", msg);
         break;
     }
 }
@@ -649,7 +649,7 @@ int main(int argc, char* argv[])
 	  gid = grnam->gr_gid;
 	}
 	else{
-	  ERROR("Cannot find group '%s' in the group database.\n",
+	  ERROR("Cannot find group '%s' in the group database.",
 		AmConfig.deamon_gid.c_str());
 	  goto error;
 	}
@@ -670,7 +670,7 @@ int main(int argc, char* argv[])
 	  uid = pwnam->pw_uid;
 	}
 	else{
-	  ERROR("Cannot find user '%s' in the user database.\n",
+	  ERROR("Cannot find user '%s' in the user database.",
 		AmConfig.deamon_uid.c_str());
 	  goto error;
 	}
@@ -686,50 +686,50 @@ int main(int argc, char* argv[])
 #if defined(__linux__)
     if(!AmConfig.deamon_uid.empty() || !AmConfig.deamon_gid.empty()){
       if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0) {
-	WARN("unable to set daemon to dump core after setuid/setgid\n");
+	WARN("unable to set daemon to dump core after setuid/setgid");
       }
     }
 #endif
 
     /* fork to become!= group leader*/
     if (pipe(fd) == -1) { /* Create a pipe */
-        ERROR("Cannot create pipe.\n");
+        ERROR("Cannot create pipe.");
         goto error;
     }
     int pid;
     if ((pid=fork())<0){
-      ERROR("Cannot fork: %s.\n", strerror(errno));
+      ERROR("Cannot fork: %s.", strerror(errno));
       goto error;
     }else if (pid!=0){
       close(fd[1]);
       /* parent process => wait for result from child*/
       for(int i=0;i<2;i++){
-        DBG("waiting for child[%d] response\n", i);
+        DBG("waiting for child[%d] response", i);
         ret = read(fd[0], &pid, sizeof(int));
         if(pid<0){
-          ERROR("Child [%d] return an error: %d\n", i, pid);
+          ERROR("Child [%d] return an error: %d", i, pid);
           close(fd[0]);
           goto error;
         }
-        DBG("child [%d] pid:%d\n", i, pid);
+        DBG("child [%d] pid:%d", i, pid);
       }
-      DBG("all children return OK. bye world!\n");
+      DBG("all children return OK. bye world!");
       close(fd[0]);
       return 0;
     }else {
       /* child */
       close(fd[0]);
       main_pid = getpid();
-      DBG("hi world! I'm child [%d]\n", main_pid);
+      DBG("hi world! I'm child [%d]", main_pid);
       ret = write(fd[1], &main_pid, sizeof(int));
     }
     /* become session leader to drop the ctrl. terminal */
     if (setsid()<0){
-      ERROR("setsid failed: %s.\n", strerror(errno));
+      ERROR("setsid failed: %s.", strerror(errno));
     }
     /* fork again to drop group  leadership */
     if ((pid=fork())<0){
-      ERROR("Cannot fork: %s.\n", strerror(errno));
+      ERROR("Cannot fork: %s.", strerror(errno));
       goto error;
     }else if (pid!=0){
       /*parent process => exit */
@@ -745,25 +745,25 @@ int main(int argc, char* argv[])
 
 #ifdef PROPAGATE_COREDUMP_SETTINGS
     if (have_limit) {
-      if (setrlimit(RLIMIT_CORE, &lim) < 0) ERROR("failed to set RLIMIT_CORE\n");
-      if (prctl(PR_SET_DUMPABLE, dumpable, 0, 0, 0)<0) ERROR("cannot re-set core dumping to %d!\n", dumpable);
+      if (setrlimit(RLIMIT_CORE, &lim) < 0) ERROR("failed to set RLIMIT_CORE");
+      if (prctl(PR_SET_DUMPABLE, dumpable, 0, 0, 0)<0) ERROR("cannot re-set core dumping to %d!", dumpable);
     }
 #endif
 
     /* try to replace stdin, stdout & stderr with /dev/null */
     if (freopen("/dev/null", "r", stdin)==0){
-      ERROR("Cannot replace stdin with /dev/null: %s.\n",
+      ERROR("Cannot replace stdin with /dev/null: %s.",
 	    strerror(errno));
       /* continue, leave it open */
     };
     if (freopen("/dev/null", "w", stdout)==0){
-      ERROR("Cannot replace stdout with /dev/null: %s.\n",
+      ERROR("Cannot replace stdout with /dev/null: %s.",
 	    strerror(errno));
       /* continue, leave it open */
     };
     /* close stderr only if log_stderr=0 */
     if ((!AmConfig.log_stderr) && (freopen("/dev/null", "w", stderr)==0)){
-      ERROR("Cannot replace stderr with /dev/null: %s.\n",
+      ERROR("Cannot replace stderr with /dev/null: %s.",
 	    strerror(errno));
       /* continue, leave it open */
     };
@@ -782,7 +782,7 @@ int main(int argc, char* argv[])
 
   if(AmConfig.enable_srtp) {
         if(srtp_init() != srtp_err_status_ok) {
-            ERROR("Cannot initialize SRTP library\n");
+            ERROR("Cannot initialize SRTP library");
             goto error;
         }
         srtp_install_log_handler(log_handler, NULL);
@@ -790,7 +790,7 @@ int main(int argc, char* argv[])
 
   if(AmConfig.enable_rtsp){
     if(RtspClient::instance()->onLoad()){
-      ERROR("Cannot initialize RTSP client\n");
+      ERROR("Cannot initialize RTSP client");
       goto error;
     }
     DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
@@ -802,15 +802,15 @@ int main(int argc, char* argv[])
     goto error;
   }
 
-  INFO("Starting application timer scheduler\n");
+  INFO("Starting application timer scheduler");
   AmAppTimer::instance()->start();
   AmThreadWatcher::instance()->add(AmAppTimer::instance());
 
-  INFO("Starting session container\n");
+  INFO("Starting session container");
   AmSessionContainer::instance()->start();
 
 #ifdef SESSION_THREADPOOL
-  INFO("Starting session processor threads\n");
+  INFO("Starting session processor threads");
   AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 #endif 
   AmSessionProcessor::init();
@@ -821,10 +821,10 @@ int main(int argc, char* argv[])
   INFO("Starting pcap recorder");
   PcapFileRecorderProcessor::instance()->start();
 
-  INFO("Starting media processor\n");
+  INFO("Starting media processor");
   AmMediaProcessor::instance()->init();
 
-  INFO("Starting stun processor\n");
+  INFO("Starting stun processor");
   stun_processor::instance()->start();
 
   // init thread usage with libevent
@@ -837,15 +837,15 @@ int main(int argc, char* argv[])
   // start the asynchronous file writer (sorry, no better place...)
   //async_file_writer::instance()->start();
 
-  INFO("Starting RTP receiver\n");
+  INFO("Starting RTP receiver");
   AmRtpReceiver::instance()->start();
 
-  INFO("Starting SIP stack (control interface)\n");
+  INFO("Starting SIP stack (control interface)");
   if(sip_ctrl.load()) {
     goto error;
   }
   
-  INFO("Loading plug-ins\n");
+  INFO("Loading plug-ins");
   AmPlugIn::instance()->init();
   if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
     goto error;
@@ -888,7 +888,7 @@ int main(int argc, char* argv[])
 
   #ifndef DISABLE_DAEMON_MODE
   if(fd[1]) {
-    DBG("hi world! I'm main child [%d]\n", main_pid);
+    DBG("hi world! I'm main child [%d]", main_pid);
     ret = write(fd[1], &main_pid, sizeof(int));
     close(fd[1]); fd[1] = 0;
   }
@@ -900,15 +900,15 @@ int main(int argc, char* argv[])
 
  error:
   // session container stops active sessions
-  INFO("Disposing session container\n");
+  INFO("Disposing session container");
   AmSessionContainer::dispose();
 
-  /*INFO("Disposing app timer\n");
+  /*INFO("Disposing app timer");
   AmAppTimer::dispose();*/
   
-  DBG("** Transaction table dump: **\n");
+  DBG("** Transaction table dump: **");
   dumps_transactions();
-  DBG("*****************************\n");
+  DBG("*****************************");
 
   cleanup_transaction();
   
@@ -917,25 +917,25 @@ int main(int argc, char* argv[])
     RtspClient::dispose();
   }
 
-  INFO("Disposing RTP receiver\n");
+  INFO("Disposing RTP receiver");
   AmRtpReceiver::dispose();
 
-  INFO("Stop session processor\n");
+  INFO("Stop session processor");
   AmSessionProcessor::stop();
 
-  INFO("Disposing media processor\n");
+  INFO("Disposing media processor");
   AmMediaProcessor::dispose();
 
-  INFO("Disposing stun processor\n");
+  INFO("Disposing stun processor");
   stun_processor::dispose();
 
-  INFO("Disposing audio file recorder\n");
+  INFO("Disposing audio file recorder");
   AmAudioFileRecorderProcessor::dispose();
   
-  INFO("Disposing pcap file recorder\n");
+  INFO("Disposing pcap file recorder");
   PcapFileRecorderProcessor::dispose();
   
-  INFO("Disposing event dispatcher\n");
+  INFO("Disposing event dispatcher");
   AmEventDispatcher::dispose();
 
   //async_file_writer::instance()->stop();
@@ -947,7 +947,7 @@ int main(int argc, char* argv[])
   }
   if(fd[1]){
      main_pid = -1;
-     DBG("send -1 to parent\n");
+     DBG("send -1 to parent");
      ret = write(fd[1], &main_pid, sizeof(int));
      close(fd[1]);
   }
@@ -961,7 +961,7 @@ int main(int argc, char* argv[])
 
   AmThreadWatcher::instance()->cleanup();
 
-  INFO("Disposing plug-ins\n");
+  INFO("Disposing plug-ins");
   AmPlugIn::dispose();
 
 
@@ -972,7 +972,7 @@ int main(int argc, char* argv[])
   libevent_global_shutdown();
 #endif
   
-  INFO("Exiting (%s)\n", success ? "success" : "failure");
+  INFO("Exiting (%s)", success ? "success" : "failure");
   cleanup_logging();
 
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);

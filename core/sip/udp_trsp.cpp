@@ -94,12 +94,12 @@
 int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 {
     if(sd){
-        WARN("re-binding socket\n");
+        WARN("re-binding socket");
         close(sd);
     }
 
     if(am_inet_pton(bind_ip.c_str(),&addr) == 0){
-        ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
+        ERROR("am_inet_pton(%s): %s",bind_ip.c_str(),strerror(errno));
         return -1;
     }
     
@@ -108,20 +108,20 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
         ((addr.ss_family == AF_INET6) &&
         IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) )
     {
-        ERROR("Sorry, we cannot bind to 'ANY' address\n");
+        ERROR("Sorry, we cannot bind to 'ANY' address");
         return -1;
     }
 
     am_set_port(&addr,bind_port);
 
     if((sd = socket(addr.ss_family,SOCK_DGRAM,0)) == -1){
-        ERROR("socket: %s\n",strerror(errno));
+        ERROR("socket: %s",strerror(errno));
         return -1;
     }
     SOCKET_LOG("socket(addr.ss_family(%d),SOCK_DGRAM,0) = %d", addr.ss_family, sd);
 
     if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr))) {
-        ERROR("bind: %s\n",strerror(errno));
+        ERROR("bind: %s",strerror(errno));
         close(sd);
         return -1;
     }
@@ -132,7 +132,7 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
         if(setsockopt(sd, IPPROTO_IP, DSTADDR_SOCKOPT,
                       (void*)&true_opt, sizeof (true_opt)) == -1)
         {
-            ERROR("%s\n",strerror(errno));
+            ERROR("%s",strerror(errno));
             close(sd);
             return -1;
         }
@@ -140,7 +140,7 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
         if(setsockopt(sd, IPPROTO_IPV6, DSTADDR6_SOCKOPT,
                   (void*)&true_opt, sizeof (true_opt)) == -1)
         {
-            ERROR("%s\n",strerror(errno));
+            ERROR("%s",strerror(errno));
             close(sd);
             return -1;
         }
@@ -150,7 +150,7 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
     if(setsockopt(sd,SOL_SOCKET,SO_TIMESTAMP,
                   (void*)&true_opt, sizeof(true_opt)) < 0)
     {
-        ERROR("%s\n",strerror(errno));
+        ERROR("%s",strerror(errno));
         close(sd);
         return -1;
     }
@@ -159,7 +159,7 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
     actual_port = port = bind_port;
     actual_ip = ip = bind_ip;
 
-    DBG("UDP transport bound to %s/%i\n",ip.c_str(),port);
+    DBG("UDP transport bound to %s/%i",ip.c_str(),port);
 
     return 0;
 }
@@ -168,17 +168,17 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 int udp_trsp_socket::set_recvbuf_size(int rcvbuf_size)
 {
     if (rcvbuf_size > 0) {
-	DBG("trying to set SIP UDP socket buffer to %d\n", rcvbuf_size);
+	DBG("trying to set SIP UDP socket buffer to %d", rcvbuf_size);
 	if(setsockopt(sd, SOL_SOCKET, SO_RCVBUF,
 		      (void*)&rcvbuf_size, sizeof (int)) == -1) {
-	    WARN("could not set SIP UDP socket buffer: '%s'\n",
+	    WARN("could not set SIP UDP socket buffer: '%s'",
 		 strerror(errno));
 	} else {
 	    int set_rcvbuf_size=0;
 	    socklen_t optlen = sizeof(int);
 	    if (getsockopt(sd, SOL_SOCKET, SO_RCVBUF,
 			   &set_rcvbuf_size, &optlen) == -1) {
-		WARN("could not read back SIP UDP socket buffer length: '%s'\n",
+		WARN("could not read back SIP UDP socket buffer length: '%s'",
 		     strerror(errno));
 	    } else {
 		if (set_rcvbuf_size != rcvbuf_size) {
@@ -203,13 +203,13 @@ int udp_trsp_socket::sendto(const sockaddr_storage* sa,
 
   if (err < 0) {
     char host[NI_MAXHOST] = "";
-    ERROR("sendto(%i;%s:%i): %s\n", sd,
+    ERROR("sendto(%i;%s:%i): %s", sd,
 	  am_inet_ntop_sip(sa,host,NI_MAXHOST),
 	  am_get_port(sa),strerror(errno));
     return err;
   }
   else if (err != msg_len) {
-    ERROR("sendto: sent %i instead of %i bytes\n", err, msg_len);
+    ERROR("sendto: sent %i instead of %i bytes", err, msg_len);
     return -1;
   }
 
@@ -266,7 +266,7 @@ int udp_trsp_socket::sendmsg(const sockaddr_storage* sa,
   // bytes_sent = ;
   if(::sendmsg(sd, &hdr, 0) < 0) {
       char host[NI_MAXHOST] = "";
-      ERROR("sendmsg(%i;%s:%i): %s\n", sd,
+      ERROR("sendmsg(%i;%s:%i): %s", sd,
 	    am_inet_ntop_sip(sa,host,NI_MAXHOST),
 	    am_get_port(sa),strerror(errno));
       return -1;
@@ -323,7 +323,7 @@ int udp_trsp_socket::recv()
     buf_len = recvmsg(get_sd(),&msg,MSG_DONTWAIT);
     if(buf_len <= 0) {
         if(!buf_len) return 0;
-        DBG("recvfrom returned %ld: %s\n",buf_len,strerror(errno));
+        DBG("recvfrom returned %ld: %s",buf_len,strerror(errno));
         switch(errno) {
         case EBADF:
         case ENOTSOCK:
@@ -339,7 +339,7 @@ int udp_trsp_socket::recv()
     }
 
     if(buf_len > MAX_UDP_MSGLEN) {
-        ERROR("Message was too big (>%d)\n",MAX_UDP_MSGLEN);
+        ERROR("Message was too big (>%d)",MAX_UDP_MSGLEN);
         return 0;
     }
 

@@ -83,7 +83,7 @@ AmBasicSipDialog* SingleSubscription::dlg()
 
 void SingleSubscription::onTimer(int timer_id)
 {
-  DBG("[%p] tag=%s;role=%s timer_id = %s\n",this,
+  DBG("[%p] tag=%s;role=%s timer_id = %s",this,
       dlg()->getLocalTag().c_str(),
       role ? "Notifier" : "Subscriber",
       __timer_id_str[timer_id]);
@@ -202,7 +202,7 @@ SingleSubscription* AmSipSubscription::makeSubscription(const AmSipRequest& req,
     expires = REFER_SUB_EXPIRES;
   }
   else {
-    DBG("subscription are only created by SUBSCRIBE or REFER requests\n");
+    DBG("subscription are only created by SUBSCRIBE or REFER requests");
     // subscription are only created by SUBSCRIBE or REFER requests
     // and we do not support unsolicited NOTIFYs
     return NULL;
@@ -234,7 +234,7 @@ void SingleSubscription::requestFSM(const AmSipRequest& req)
     }
 
     // start Timer N (RFC6665/4.1.2)
-    DBG("setTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
+    DBG("setTimer(%s,RFC6665_TIMER_N)",dlg()->getLocalTag().c_str());
     timer_n.set(RFC6665_TIMER_N_DURATION);
   }
   else if(req.method == SIP_METH_NOTIFY) {
@@ -315,17 +315,17 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
       int sub_expires=0;
       if(!expires_txt.empty() && str2int(expires_txt,sub_expires)){
 	if(sub_expires){
-	  DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)\n",dlg()->getLocalTag().c_str());
+	  DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)",dlg()->getLocalTag().c_str());
 	  timer_expires.set((double)sub_expires);
 	  expires = sub_expires + AmAppTimer::instance()->unix_clock.get();
 
-	  DBG("removeTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
+	  DBG("removeTimer(%s,RFC6665_TIMER_N)",dlg()->getLocalTag().c_str());
 	  timer_n.clear();
 	}
 	else {
 	  // we do not care too much, as timer N is set
 	  // for each SUBSCRIBE request
-	  DBG("Expires-HF equals 0\n");
+	  DBG("Expires-HF equals 0");
 	}
       }
       else if(reply.cseq_method == SIP_METH_SUBSCRIBE){
@@ -335,7 +335,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
 	// replies to SUBSCRIBE MUST contain a Expires-HF
 	// if not, or if not readable, we should probably 
 	// quit the subscription
-	DBG("replies to SUBSCRIBE MUST contain a Expires-HF\n");
+	DBG("replies to SUBSCRIBE MUST contain a Expires-HF");
 	terminate();
 	subs->onFailureReply(reply,this);
       }
@@ -375,7 +375,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
       str2int(expires_txt,notify_expire);
 
     // Kill timer N
-    DBG("removeTimer(%s,RFC6665_TIMER_N)\n",dlg()->getLocalTag().c_str());
+    DBG("removeTimer(%s,RFC6665_TIMER_N)",dlg()->getLocalTag().c_str());
     timer_n.clear();
 
     sub_state_txt = strip_header_params(sub_state_txt);
@@ -392,7 +392,7 @@ void SingleSubscription::replyFSM(const AmSipRequest& req, const AmSipReply& rep
     }
     
     // reset expire timer
-    DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)\n",dlg()->getLocalTag().c_str());
+    DBG("setTimer(%s,SUBSCRIPTION_EXPIRE)",dlg()->getLocalTag().c_str());
     timer_expires.set((double)notify_expire);
     expires = notify_expire + AmAppTimer::instance()->unix_clock.get();
   }
@@ -415,7 +415,7 @@ void SingleSubscription::setExpires(unsigned long exp)
 
 void SingleSubscription::setState(unsigned int st)
 {
-  DBG("st = %s\n",__sub_state_str[st]);
+  DBG("st = %s",__sub_state_str[st]);
 
   if(sub_state == SubState_terminated)
     return;
@@ -511,7 +511,7 @@ AmSipSubscription::findSubscription(SingleSubscription::Role role,
   }
 
   if((match != subs.end()) && (*match)->terminated()) {
-    DBG("matched terminated subscription: deleting it first\n");
+    DBG("matched terminated subscription: deleting it first");
     removeSubscription(match);
     match = subs.end();
   }
@@ -593,7 +593,7 @@ AmSipSubscription::matchSubscription(const AmSipRequest& req, bool uac)
   if((!uac && req.to_tag.empty()) || (uac && dlg->getRemoteTag().empty())
      || (req.method == SIP_METH_REFER) || subs.empty()) {
 
-    DBG("no to-tag, REFER or subs empty: create new subscription\n");
+    DBG("no to-tag, REFER or subs empty: create new subscription");
     return createSubscription(req,uac);
   }
 
@@ -608,7 +608,7 @@ AmSipSubscription::matchSubscription(const AmSipRequest& req, bool uac)
     role = uac ? SingleSubscription::Notifier : SingleSubscription::Subscriber;
   }
   else {
-    DBG("unsupported request\n");
+    DBG("unsupported request");
     return subs.end();
   }
 
@@ -621,7 +621,7 @@ AmSipSubscription::matchSubscription(const AmSipRequest& req, bool uac)
   if(match == subs.end()){
     if(req.method == SIP_METH_SUBSCRIBE) {
       // no match... new subscription?
-      DBG("no match found, SUBSCRIBE: create new subscription\n");
+      DBG("no match found, SUBSCRIBE: create new subscription");
       return createSubscription(req,uac);
     }
   }
@@ -649,7 +649,7 @@ void AmSipSubscription::onRequestSent(const AmSipRequest& req)
   Subscriptions::iterator sub_it = matchSubscription(req,true);
   if(sub_it == subs.end()){
     // should we exclude this case in onSendRequest???
-    //ERROR("we just sent a request for which we could obtain no subscription\n");
+    //ERROR("we just sent a request for which we could obtain no subscription");
     return;
   }
 
@@ -664,7 +664,7 @@ bool AmSipSubscription::onReplyIn(const AmSipRequest& req,
   // UAC side
   CSeqMap::iterator cseq_it = uac_cseq_map.find(req.cseq);
   if(cseq_it == uac_cseq_map.end()){
-    DBG("could not find %i in our uac_cseq_map\n",req.cseq);
+    DBG("could not find %i in our uac_cseq_map",req.cseq);
     return false;
   }
 
@@ -842,7 +842,7 @@ void AmSipSubscriptionDialog::onNotify(const AmSipRequest& req,
   if(!req.body.empty())
     sub_ev->notify_body.reset(new AmMimeBody(req.body));
 
-  DBG("posting event to '%s'\n", sess_link.c_str());
+  DBG("posting event to '%s'", sess_link.c_str());
   AmSessionContainer::instance()->postEvent(sess_link, sub_ev);
 }
 
@@ -854,7 +854,7 @@ void AmSipSubscriptionDialog::onFailureReply(const AmSipReply& reply,
     new SIPSubscriptionEvent(SIPSubscriptionEvent::SubscribeFailed, 
 			     local_tag, 0, reply.code, reply.reason);
 
-  DBG("posting event to '%s'\n", sess_link.c_str());
+  DBG("posting event to '%s'", sess_link.c_str());
   AmSessionContainer::instance()->postEvent(sess_link, sub_ev);
 }
 
@@ -869,6 +869,6 @@ void AmSipSubscriptionDialog::onTimeout(int timer_id, SingleSubscription* sub)
   SIPSubscriptionEvent* sub_ev =
     new SIPSubscriptionEvent(SIPSubscriptionEvent::SubscriptionTimeout, local_tag);
 
-  DBG("posting event to '%s'\n", sess_link.c_str());
+  DBG("posting event to '%s'", sess_link.c_str());
   AmSessionContainer::instance()->postEvent(sess_link, sub_ev);
 }

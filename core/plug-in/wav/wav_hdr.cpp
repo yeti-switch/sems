@@ -59,7 +59,7 @@
 #define SAFE_READ(buf,s,fp,sr) \
     sr = fread(buf,s,1,fp);\
     if((sr != 1) || ferror(fp)) { \
-      ERROR("fread: %s (sr=%d)\n", strerror(errno), sr);	\
+      ERROR("fread: %s (sr=%d)", strerror(errno), sr);	\
     return -1;					\
     }
 \
@@ -92,10 +92,10 @@ int wav_dummyread(FILE *fp, unsigned int size)
   unsigned int s;
   char *dummybuf;
   
-  DBG("Skip chunk by reading dummy bytes from stream\n");
+  DBG("Skip chunk by reading dummy bytes from stream");
   dummybuf = (char*) malloc (size);
   if(dummybuf==NULL) {
-      ERROR("Can't alloc memory for dummyread!\n");
+      ERROR("Can't alloc memory for dummyread!");
       return -1;
   }
 
@@ -123,55 +123,55 @@ static int wav_read_header(FILE* fp, struct amci_file_desc_t* fmt_desc)
     return -1;
   rewind(fp);
 
-  DBG("trying to read WAV file\n");
+  DBG("trying to read WAV file");
 
   SAFE_READ(tag,4,fp,s);
-  DBG("tag = <%.4s>\n",tag);
+  DBG("tag = <%.4s>",tag);
   if(strncmp(tag,"RIFF",4)){
-    DBG("wrong format !\n");
+    DBG("wrong format !");
     return -1;
   }
 
   SAFE_READ(&file_size,4,fp,s);
   file_size=le_to_cpu32(file_size);
-  DBG("file size = <%u>\n",file_size);
+  DBG("file size = <%u>",file_size);
 
   SAFE_READ(tag,4,fp,s);
-  DBG("tag = <%.4s>\n",tag);
+  DBG("tag = <%.4s>",tag);
   if(strncmp(tag,"WAVE",4)){
-    DBG("wrong format !\n");
+    DBG("wrong format !");
     return -1;
   }
 
   SAFE_READ(tag,4,fp,s);
-  DBG("tag = <%.4s>\n",tag);
+  DBG("tag = <%.4s>",tag);
   if(strncmp(tag,"fmt ",4)){
-    DBG("wrong format !\n");
+    DBG("wrong format !");
     return -1;
   }
     
   SAFE_READ(&chunk_size,4,fp,s);
   chunk_size=le_to_cpu32(chunk_size);
-  DBG("chunk_size = <%u>\n",chunk_size);
+  DBG("chunk_size = <%u>",chunk_size);
     
   SAFE_READ(&fmt,2,fp,s);
   fmt=le_to_cpu16(fmt);
-  DBG("fmt = <%.2x>\n",fmt);
+  DBG("fmt = <%.2x>",fmt);
 
   SAFE_READ(&channels,2,fp,s);
   channels=le_to_cpu16(channels);
-  DBG("channels = <%i>\n",channels);
+  DBG("channels = <%i>",channels);
 
   SAFE_READ(&rate,4,fp,s);
   rate=le_to_cpu32(rate);
-  DBG("rate = <%i>\n",rate);
+  DBG("rate = <%i>",rate);
 
   /* do not read bytes/sec and block align */
   SAFE_READ(&dummy,6,fp,s); // skip by reading into dummy buffer
 
   SAFE_READ(&bits_per_sample,2,fp,s);
   bits_per_sample=le_to_cpu16(bits_per_sample);
-  DBG("bits/sample = <%i>\n",bits_per_sample);
+  DBG("bits/sample = <%i>",bits_per_sample);
 
   fmt_desc->subtype = fmt;
   sample_size = bits_per_sample>>3;
@@ -179,7 +179,7 @@ static int wav_read_header(FILE* fp, struct amci_file_desc_t* fmt_desc)
   fmt_desc->channels = channels;
 
   if( (fmt == 0x01) && (sample_size == 1)){
-    ERROR("Sorry, we don't support PCM 8 bit\n");
+    ERROR("Sorry, we don't support PCM 8 bit");
     return -1;
   }
 
@@ -192,11 +192,11 @@ static int wav_read_header(FILE* fp, struct amci_file_desc_t* fmt_desc)
   for(;;) {
 
     SAFE_READ(tag,4,fp,s);
-    DBG("tag = <%.4s>\n",tag);
+    DBG("tag = <%.4s>",tag);
 	
     SAFE_READ(&chunk_size,4,fp,s);
     chunk_size=le_to_cpu32(chunk_size);
-    DBG("chunk size = <%i>\n",chunk_size);
+    DBG("chunk size = <%i>",chunk_size);
 	
     if(!strncmp(tag,"data",4))
       break;
@@ -233,7 +233,7 @@ int wav_write_header(FILE* fp, struct amci_file_desc_t* fmt_desc, long h_codec, 
   if (codec && codec->samples2bytes)
     sample_size = codec->samples2bytes(h_codec, 1);
   else {
-    ERROR("Cannot determine sample size\n");
+    ERROR("Cannot determine sample size");
     sample_size = 2;
   }
   memcpy(hdr.magic, "RIFF",4);
@@ -253,10 +253,10 @@ int wav_write_header(FILE* fp, struct amci_file_desc_t* fmt_desc, long h_codec, 
   fwrite(&hdr,sizeof(hdr),1,fp);
   if(ferror(fp)) return -1;
 
-  DBG("fmt = <%i>\n",le_to_cpu16(hdr.format));
-  DBG("channels = <%i>\n",le_to_cpu16(hdr.channels));
-  DBG("rate = <%i>\n",le_to_cpu32(hdr.sample_rate));
-  DBG("data_size = <%i>\n",le_to_cpu32(hdr.data_length));
+  DBG("fmt = <%i>",le_to_cpu16(hdr.format));
+  DBG("channels = <%i>",le_to_cpu16(hdr.channels));
+  DBG("rate = <%i>",le_to_cpu32(hdr.sample_rate));
+  DBG("data_size = <%i>",le_to_cpu32(hdr.data_length));
 
   return 0;
 }
@@ -293,49 +293,49 @@ int wav_mem_open(unsigned char* mptr, unsigned long size, unsigned long* pos,
       return -1;
     *pos=0;
 
-    DBG("trying to read WAV file from memory\n");
+    DBG("trying to read WAV file from memory");
 
     SAFE_MEM_READ(tag,4,mptr,pos,size);
-    DBG("tag = <%.4s>\n",tag);
+    DBG("tag = <%.4s>",tag);
     if(strncmp(tag,"RIFF",4)){
       DBG("wrong format !");
       return -1;
     }
 
     SAFE_MEM_READ(&file_size,4,mptr,pos,size);
-    DBG("file size = <%u>\n",file_size);
+    DBG("file size = <%u>",file_size);
 
     SAFE_MEM_READ(tag,4,mptr,pos,size);
-    DBG("tag = <%.4s>\n",tag);
+    DBG("tag = <%.4s>",tag);
     if(strncmp(tag,"WAVE",4)){
       DBG("wrong format !");
       return -1;
     }
 
     SAFE_MEM_READ(tag,4,mptr,pos,size);
-    DBG("tag = <%.4s>\n",tag);
+    DBG("tag = <%.4s>",tag);
     if(strncmp(tag,"fmt ",4)){
       DBG("wrong format !");
       return -1;
     }
     
     SAFE_MEM_READ(&chunk_size,4,mptr,pos,size);
-    DBG("chunk_size = <%u>\n",chunk_size);
+    DBG("chunk_size = <%u>",chunk_size);
     
     SAFE_MEM_READ(&fmt,2,mptr,pos,size);
-    DBG("fmt = <%.2x>\n",fmt);
+    DBG("fmt = <%.2x>",fmt);
 
     SAFE_MEM_READ(&channels,2,mptr,pos,size);
-    DBG("channels = <%i>\n",channels);
+    DBG("channels = <%i>",channels);
 
     SAFE_MEM_READ(&rate,4,mptr,pos,size);
-    DBG("rate = <%i>\n",rate);
+    DBG("rate = <%i>",rate);
 
     /* do not read bytes/sec and block align */
     *pos +=6;
 
     SAFE_MEM_READ(&bits_per_sample,2,mptr,pos,size);
-    DBG("bits/sample = <%i>\n",bits_per_sample);
+    DBG("bits/sample = <%i>",bits_per_sample);
 
     fmt_desc->subtype = fmt;
     sample_size = bits_per_sample>>3;
@@ -343,7 +343,7 @@ int wav_mem_open(unsigned char* mptr, unsigned long size, unsigned long* pos,
     fmt_desc->channels = channels;
 
     if( (fmt == 0x01) && (sample_size == 1)){
-      ERROR("Sorry, we don't support PCM 8 bit\n");
+      ERROR("Sorry, we don't support PCM 8 bit");
       return -1;
     }
 
@@ -352,10 +352,10 @@ int wav_mem_open(unsigned char* mptr, unsigned long size, unsigned long* pos,
     for(;;) {
 
       SAFE_MEM_READ(tag,4,mptr,pos,size);
-      DBG("tag = <%.4s>\n",tag);
+      DBG("tag = <%.4s>",tag);
 	
       SAFE_MEM_READ(&chunk_size,4,mptr,pos,size);
-      DBG("chunk size = <%i>\n",chunk_size);
+      DBG("chunk size = <%i>",chunk_size);
 	
       if(!strncmp(tag,"data",4))
 	break;
@@ -366,7 +366,7 @@ int wav_mem_open(unsigned char* mptr, unsigned long size, unsigned long* pos,
     return 0;
 
   } else {
-    ERROR("write support for in-memory file not implemented!\n");
+    ERROR("write support for in-memory file not implemented!");
     return -1;
   }
 }

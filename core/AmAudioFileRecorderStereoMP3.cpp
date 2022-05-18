@@ -78,11 +78,11 @@ int AmAudioFileRecorderStereoMP3::mp3_file_data::put(unsigned char *out,unsigned
     // 0 is valid: if not enough samples for an mp3
     //frame lame will not return anything
     switch(ret){
-    case  0: /*DBG("lame_encode_buffer returned 0\n");*/ break;
-    case -1: ERROR("mp3buf was too small\n"); break;
-    case -2: ERROR("malloc() problem\n"); break;
-    case -3: ERROR("lame_init_params() not called\n"); break;
-    case -4: ERROR("psycho acoustic problems. uh!\n"); break;
+    case  0: /*DBG("lame_encode_buffer returned 0");*/ break;
+    case -1: ERROR("mp3buf was too small"); break;
+    case -2: ERROR("malloc() problem"); break;
+    case -3: ERROR("lame_init_params() not called"); break;
+    case -4: ERROR("psycho acoustic problems. uh!"); break;
     }
 
     if(ret > 0) {

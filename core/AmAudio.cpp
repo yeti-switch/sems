@@ -131,7 +131,7 @@ void AmAudioFormat::initCodec()
 
     if( codec && codec->init ) {
         if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
-            ERROR("could not initialize codec %i\n",codec->id);
+            ERROR("could not initialize codec %i",codec->id);
         }
     }
 }
@@ -197,9 +197,9 @@ unsigned int AmLibSamplerateResamplingState::resample(unsigned char* samples, un
 
     if (resample_state) {
         if (resample_buf_samples + PCM16_B2S(s) > PCM16_B2S(AUDIO_BUFFER_SIZE) * 2) {
-            WARN("resample input buffer overflow! (%lu)\n", resample_buf_samples + PCM16_B2S(s));
+            WARN("resample input buffer overflow! (%lu)", resample_buf_samples + PCM16_B2S(s));
         } else if (resample_out_buf_samples + (PCM16_B2S(s) * ratio) + 20 > PCM16_B2S(AUDIO_BUFFER_SIZE)) {
-            WARN("resample: possible output buffer overflow! (%lu)\n", (resample_out_buf_samples + (size_t) ((PCM16_B2S(s) * ratio)) + 20));
+            WARN("resample: possible output buffer overflow! (%lu)", (resample_out_buf_samples + (size_t) ((PCM16_B2S(s) * ratio)) + 20));
         } else {
             signed short* samples_s = (signed short*)samples;
             src_short_to_float_array(samples_s, &resample_in[resample_buf_samples], PCM16_B2S(s));
@@ -216,7 +216,7 @@ unsigned int AmLibSamplerateResamplingState::resample(unsigned char* samples, un
 
         int src_err = src_process(resample_state, &src_data);
         if (src_err) {
-          DBG("resample error: '%s'\n", src_strerror(src_err));
+          DBG("resample error: '%s'", src_strerror(src_err));
         } else {
             signed short* samples_s = (signed short*)(unsigned char*)samples;
 
@@ -365,7 +365,7 @@ int AmAudio::get(unsigned long long system_ts, unsigned char* buffer,
 				   / (float)output_sample_rate));
 
   unsigned int rd_ts = scaleSystemTS(system_ts);
-  //DBG("\tread(rd_ts = %10.u; size = %u)\n",rd_ts,size);
+  //DBG("\tread(rd_ts = %10.u; size = %u)",rd_ts,size);
   size = read(rd_ts,size);
   if(size <= 0){
     return size;
@@ -373,7 +373,7 @@ int AmAudio::get(unsigned long long system_ts, unsigned char* buffer,
 
   size = decode(size);
   if(size < 0) {
-    DBG("decode returned %i\n",size);
+    DBG("decode returned %i",size);
     return -1; 
   }
   size = downMix(size);
@@ -415,7 +415,7 @@ int AmAudio::put(unsigned long long system_ts, unsigned char* buffer,
     incRecordTime(bytes2samples(size));
 
     unsigned int wr_ts = scaleSystemTS(system_ts);
-    //DBG("write(wr_ts = %10.u; s = %u)\n",wr_ts,s);
+    //DBG("write(wr_ts = %10.u; s = %u)",wr_ts,s);
     return write(wr_ts,(unsigned int)s);
   }
   else{
@@ -442,7 +442,7 @@ int AmAudio::decode(unsigned int size)
   int s = size;
 
   if(!fmt.get()){
-    DBG("no fmt !\n");
+    DBG("no fmt !");
     return s;
   }
 
@@ -450,7 +450,7 @@ int AmAudio::decode(unsigned int size)
   long h_codec = fmt->getHCodec();
 
   if(!codec){
-    ERROR("audio format set, but no codec has been loaded\n");
+    ERROR("audio format set, but no codec has been loaded");
     return -1;
   }
 

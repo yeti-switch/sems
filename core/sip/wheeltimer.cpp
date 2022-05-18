@@ -39,7 +39,7 @@
 
 timer::~timer()
 {
-    // DBG("timer::~timer(this=%p)\n",this);
+    // DBG("timer::~timer(this=%p)",this);
 }
 
 _wheeltimer::_wheeltimer(const char *thread_name)

@@ -22,7 +22,7 @@
       switch (*(_c_)) { \
         case '0' ... '9': \
           if (UINT_MAX - (_no) < (unsigned)*(_c_)) { \
-            INFO("not an uint32_t.\n"); \
+            INFO("not an uint32_t."); \
             goto error; \
           } \
           (_no) = (_no) * 10 + *(_c_) - '0'; \
@@ -57,11 +57,11 @@ bool parse_rseq(unsigned *_rseq, const char *start, int len)
     goto error;
 
   *_rseq = rseq;
-  DBG("parsed sequence content: %u.\n", rseq);
+  DBG("parsed sequence content: %u.", rseq);
   return true;
 
 error:
-  INFO("invalid content in sequence header content <%.*s>.\n", len, start);
+  INFO("invalid content in sequence header content <%.*s>.", len, start);
   return false;
 }
 
@@ -104,7 +104,7 @@ bool parse_rack(sip_rack *rack, const char *start, int len)
   if (parse_method(&method, method_str.s, method_str.len))
     goto error;
 
-  DBG("parsed '" SIP_HDR_RSEQ "' header: %u %u <%.*s> <%.*s>.\n", rseq, cseq,
+  DBG("parsed '" SIP_HDR_RSEQ "' header: %u %u <%.*s> <%.*s>.", rseq, cseq,
       cseq_str.len, cseq_str.s, method_str.len, method_str.s);
 
   rack->rseq = rseq;
@@ -117,6 +117,6 @@ bool parse_rack(sip_rack *rack, const char *start, int len)
   return true;
 
 error:
-  INFO("failed to parse <%.*s> as '" SIP_HDR_RSEQ "' header.\n", len, start);
+  INFO("failed to parse <%.*s> as '" SIP_HDR_RSEQ "' header.", len, start);
   return false;
 }

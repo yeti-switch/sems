@@ -37,13 +37,13 @@ extern "C" {
   PyObject* ts_dict = PyThreadState_GetDict();				\
     PyObject* py_sc_sess = PyDict_GetItemString(ts_dict, "_dsm_sess_"); \
     if (NULL == py_sc_sess) {						\
-      ERROR("retrieving the session pointer from TL dict\n");		\
+      ERROR("retrieving the session pointer from TL dict");		\
       return NULL;							\
     }									\
 									\
     DSMSession* sess = (DSMSession*)PyCObject_AsVoidPtr(py_sc_sess);	\
     if (NULL == sess) {							\
-      ERROR("retrieving the session pointer from TL dict\n");		\
+      ERROR("retrieving the session pointer from TL dict");		\
       return NULL;							\
     }									
 
@@ -56,7 +56,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("set '%s' = '%s'\n", varname, val);
+    DBG("set '%s' = '%s'", varname, val);
     sess->var[varname] = val; 
 
     Py_INCREF(Py_None);
@@ -71,7 +71,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("returning '%s'\n", sess->var[varname].c_str());
+    DBG("returning '%s'", sess->var[varname].c_str());
 
     return PyString_FromString(sess->var[varname].c_str());
   }
@@ -88,7 +88,7 @@ extern "C" {
 
     AmSession* sc_sess = dynamic_cast<AmSession*>(sess);
     if (NULL == sc_sess) {
-      ERROR("Not possible to cast to session object.\n");
+      ERROR("Not possible to cast to session object.");
       return NULL;
     }
   
@@ -107,7 +107,7 @@ extern "C" {
     else if (!strcmp("remote_uri", varname))
       res = sc_sess->dlg->getRemoteUri();
 
-    DBG("returning '%s'\n", res.c_str());
+    DBG("returning '%s'", res.c_str());
 
     return PyString_FromString(res.c_str());
   }
@@ -120,7 +120,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("setting errno '%i'\n", errno);
+    DBG("setting errno '%i'", errno);
     sess->SET_ERRNO(errno);
 
     Py_INCREF(Py_None);
@@ -137,7 +137,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("playPrompt('%s', loop=%s)\n", name, loop?"true":"false");
+    DBG("playPrompt('%s', loop=%s)", name, loop?"true":"false");
     try {
       sess->playPrompt(name, loop);
     } catch (DSMException& e) {
@@ -160,7 +160,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("playFile('%s', loop=%s, front=%s)\n", name, 
+    DBG("playFile('%s', loop=%s, front=%s)", name, 
 	loop?"true":"false", front?"true":"false");
     try {
       sess->playFile(name, loop, front);
@@ -181,7 +181,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("recordFile('%s')\n", name);
+    DBG("recordFile('%s')", name);
     try {
       sess->recordFile(name);
     } catch (DSMException& e) {
@@ -197,7 +197,7 @@ extern "C" {
   {
     GET_SESS_PTR;    
     unsigned int res =  sess->getRecordLength();
-    DBG("record length %d\n",res);
+    DBG("record length %d",res);
     return PyInt_FromLong(res);
   }
 
@@ -205,7 +205,7 @@ extern "C" {
   {
     GET_SESS_PTR;    
     unsigned int res =  sess->getRecordDataSize();
-    DBG("record data size %d\n",res);
+    DBG("record data size %d",res);
     return PyInt_FromLong(res);
   }
 
@@ -222,7 +222,7 @@ extern "C" {
   {
     GET_SESS_PTR;
     
-    DBG("flushPlaylist()\n");
+    DBG("flushPlaylist()");
     sess->flushPlaylist();
     Py_INCREF(Py_None);
     return Py_None;
@@ -236,7 +236,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("setPromptSet('%s')\n", name);
+    DBG("setPromptSet('%s')", name);
     try {
       sess->setPromptSet(name);
     } catch (DSMException& e) {
@@ -258,7 +258,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("addSeparator('%s', front=%s)\n", name, front?"true":"false");
+    DBG("addSeparator('%s', front=%s)", name, front?"true":"false");
     sess->addSeparator(name, front);
     Py_INCREF(Py_None);
     return Py_None;
@@ -312,7 +312,7 @@ extern "C" {
 
     GET_SESS_PTR;
     
-    DBG("B2BconnectCallee('%s', '%s', relayed_invite=%s)\n", remote_party, 
+    DBG("B2BconnectCallee('%s', '%s', relayed_invite=%s)", remote_party, 
 	remote_uri, relayed_invite?"true":"false");
     sess->B2BconnectCallee(remote_party, remote_uri, relayed_invite);
     Py_INCREF(Py_None);

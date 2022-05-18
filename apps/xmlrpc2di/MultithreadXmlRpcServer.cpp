@@ -57,7 +57,7 @@ void WorkerThread::run()
   }
 
   AmEventDispatcher::instance()->delEventQueue(eventqueue_name);
-  DBG("WorkerThread stopped.\n");
+  DBG("WorkerThread stopped.");
 } 
 
 void WorkerThread::postEvent(AmEvent* ev) {
@@ -66,14 +66,14 @@ void WorkerThread::postEvent(AmEvent* ev) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if (sys_ev) {
       if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-	DBG("XMLRPC worker thread received system Event: ServerShutdown, stopping\n");
+	DBG("XMLRPC worker thread received system Event: ServerShutdown, stopping");
 	running.set(false);
 	runcond.set(true);
       }
       return;
     }
   }
-  WARN("unknown event received\n");
+  WARN("unknown event received");
 }
 
 void WorkerThread::on_stop() {

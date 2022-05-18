@@ -23,7 +23,7 @@ public:
      }
 
      int onLoad(){
-       DBG("CCAcc calling card accounting loaded.\n");
+       DBG("CCAcc calling card accounting loaded.");
        return 0;
      }
 };
@@ -75,7 +75,7 @@ int CCAcc::getCredit(string pin) {
    xmlArg[0] = pin;
    xmlrpccall.execute("getCredit", xmlArg, result);
    int res = result;
-   DBG("Credit Left '%u' .\n", res);
+   DBG("Credit Left '%u' .", res);
    return res;
 }
 
@@ -91,10 +91,10 @@ int CCAcc::subtractCredit(string pin, int amount) {
    xmlArg[0][0]["methodName"] = "subtractCredit";
    xmlArg[0][0]["pin"] = pin;
    xmlArg[0][0]["amount"] = amount;	
-   DBG("subtractCredit pin# '%s', Seconds '%u'.\n", pin.c_str(),  
+   DBG("subtractCredit pin# '%s', Seconds '%u'.", pin.c_str(),  
 amount );
    xmlrpccall.execute("subtractCredit", xmlArg, result);
    int res = result;
-   DBG("Credit Left '%u' .\n", res);
+   DBG("Credit Left '%u' .", res);
    return res;
 }

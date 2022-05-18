@@ -160,7 +160,7 @@ const char* trsp_socket::get_advertised_host() const
 
 bool trsp_socket::is_opt_set(unsigned int mask) const
 {
-    //DBG("trsp_socket::socket_options = 0x%x\n",socket_options);
+    //DBG("trsp_socket::socket_options = 0x%x",socket_options);
     return (socket_options & mask) == mask;
 }
 

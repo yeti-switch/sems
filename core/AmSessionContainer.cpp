@@ -96,7 +96,7 @@ void AmSessionContainer::dispose()
 
 bool AmSessionContainer::clean_sessions() {
   ds_mut.lock();
-  //DBG("Session cleaner starting its work\n");
+  //DBG("Session cleaner starting its work");
   
   try {
 	SessionQueue n_sessions;
@@ -111,10 +111,10 @@ bool AmSessionContainer::clean_sessions() {
 		if(cur_session->is_stopped() && !cur_session->isProcessingMedia()){
 			DBG("Session cleaner: call monitoring hook");
 			MONITORING_MARK_FINISHED(cur_session->getLocalTag().c_str());
-			DBG("session [%p] has been destroyed\n",(void*)cur_session->_pid);
+			DBG("session [%p] has been destroyed",(void*)cur_session->_pid);
 			delete cur_session;
 		} else {
-			DBG("session [%p] still running\n",(void*)cur_session->_pid);
+			DBG("session [%p] still running",(void*)cur_session->_pid);
 			n_sessions.push(cur_session);
 		}
 		ds_mut.lock();
@@ -126,13 +126,13 @@ bool AmSessionContainer::clean_sessions() {
 	swap(d_sessions,n_sessions);
 
   }catch(std::exception& e){
-    ERROR("exception caught in session cleaner: %s\n", e.what());
+    ERROR("exception caught in session cleaner: %s", e.what());
     throw; /* throw again as this is fatal (because unlocking the mutex fails!! */
   } catch (std::string &e){
-	ERROR("string exception caught in session cleaner: %s\n", e.c_str());
+	ERROR("string exception caught in session cleaner: %s", e.c_str());
 	throw; /* throw again as this is fatal (because unlocking the mutex fails!! */
   }catch(...){
-    ERROR("unknown exception caught in session cleaner!\n");
+    ERROR("unknown exception caught in session cleaner!");
     throw; /* throw again as this is fatal (because unlocking the mutex fails!! */
   }
   bool more = !d_sessions.empty();
@@ -161,15 +161,15 @@ void AmSessionContainer::run()
 
     bool more = clean_sessions();
 
-    //DBG("Session cleaner finished\n");
+    //DBG("Session cleaner finished");
     if(!more  && (!_container_closed.get()))
       _run_cond.set(false);
   }
-  DBG("Session cleaner terminating\n");
+  DBG("Session cleaner terminating");
 }
 
 void AmSessionContainer::broadcastShutdown() {
-  DBG("brodcasting ServerShutdown system event to %u sessions...\n",
+  DBG("brodcasting ServerShutdown system event to %u sessions...",
       AmSession::getSessionNum());
   AmEventDispatcher::instance()->
     broadcast(new AmSystemEvent(AmSystemEvent::ServerShutdown));
@@ -180,11 +180,11 @@ void AmSessionContainer::on_stop()
   _container_closed.set(true);
 
   if (enable_unclean_shutdown) {
-    INFO("unclean shutdown requested - not broadcasting shutdown\n");
+    INFO("unclean shutdown requested - not broadcasting shutdown");
   } else {
     broadcastShutdown();
     
-    DBG("waiting for active event queues to stop...\n");
+    DBG("waiting for active event queues to stop...");
 
     for (unsigned int i=0;
 	 (!AmEventDispatcher::instance()->empty() &&
@@ -193,10 +193,10 @@ void AmSessionContainer::on_stop()
       usleep(10000);
 
     if (!AmEventDispatcher::instance()->empty()) {
-      WARN("Not all calls cleanly ended!\n");
+      WARN("Not all calls cleanly ended!");
     }
     
-    DBG("cleaning sessions...\n");
+    DBG("cleaning sessions...");
     while (clean_sessions()) 
       usleep(10000);
   }
@@ -208,7 +208,7 @@ void AmSessionContainer::stopAndQueue(AmSession* s)
 {
 
   if (AmConfig.log_sessions) {    
-    INFO("session cleaner about to stop %s\n",
+    INFO("session cleaner about to stop %s",
 	 s->getLocalTag().c_str());
   }
 
@@ -229,7 +229,7 @@ void AmSessionContainer::destroySession(AmSession* s)
 	stopAndQueue(s);
     }
     else {
-	WARN("could not remove session: id not found or wrong type\n");
+	WARN("could not remove session: id not found or wrong type");
     }
 }
 
@@ -252,7 +252,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
                 throw AmSession::Exception(482,
                                            SIP_REPLY_LOOP_DETECTED);
             default:
-                ERROR("adding session to session container\n");
+                ERROR("adding session to session container");
                 throw string(SIP_REPLY_SERVER_INTERNAL_ERROR);
             }
 
@@ -266,7 +266,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
                     "ruri", req.r_uri.c_str());
 #endif
                 if (int err = session->sendInvite(req.hdrs)) {
-                    ERROR("INVITE could not be sent: error code = %d.\n", err);
+                    ERROR("INVITE could not be sent: error code = %d.", err);
                     AmEventDispatcher::instance()->delEventQueue(req.from_tag);
                     MONITORING_MARK_FINISHED(req.from_tag.c_str());
                     return "";
@@ -282,7 +282,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
 #endif
 
             if (AmConfig.log_sessions) {
-                INFO("Starting UAC session %s app %s\n",
+                INFO("Starting UAC session %s app %s",
                     req.from_tag.c_str(), app_name.c_str());
             }
 
@@ -295,15 +295,15 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
         } //if(session.get() != 0)
     }
     catch(const AmSession::Exception& e){
-        ERROR("%i %s\n",e.code,e.reason.c_str());
+        ERROR("%i %s",e.code,e.reason.c_str());
         return "";
     }
     catch(const string& err){
-        ERROR("startSession: %s\n",err.c_str());
+        ERROR("startSession: %s",err.c_str());
         return "";
     }
     catch(...){
-        ERROR("unexpected exception\n");
+        ERROR("unexpected exception");
         return "";
     }
 
@@ -328,7 +328,7 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 	session->setCallgroup(local_tag);
 
 	if (AmConfig.log_sessions) {
-	  INFO("Starting UAS session %s\n",
+	  INFO("Starting UAS session %s",
 	       local_tag.c_str());
 	}
 
@@ -348,7 +348,7 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 				     SIP_REPLY_LOOP_DETECTED);
 	  
 	default:
-	  ERROR("adding session to session container\n");
+	  ERROR("adding session to session container");
 	  throw string(SIP_REPLY_SERVER_INTERNAL_ERROR);
 	}
 
@@ -371,16 +371,16 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
       }
   } 
   catch(const AmSession::Exception& e){
-    ERROR("%i %s %s ruri:%s, cid:%s\n",e.code,e.reason.c_str(), e.hdrs.c_str(),
+    ERROR("%i %s %s ruri:%s, cid:%s",e.code,e.reason.c_str(), e.hdrs.c_str(),
           req.r_uri.data(), req.callid.data());
     AmSipDialog::reply_error(req,e.code,e.reason, e.hdrs);
   }
   catch(const string& err){
-    ERROR("startSession: %s\n",err.c_str());
+    ERROR("startSession: %s",err.c_str());
     AmSipDialog::reply_error(req,500,err);
   }
   catch(...){
-    ERROR("unexpected exception\n");
+    ERROR("unexpected exception");
     AmSipDialog::reply_error(req,500,"unexpected exception");
   }
 }
@@ -503,7 +503,7 @@ bool AmSessionContainer::check_and_add_cps()
   }
 
   if( CPSLimit && cps > CPSLimit ){
-    DBG("cps_limit %d reached. Not creating session.\n", CPSLimit);
+    DBG("cps_limit %d reached. Not creating session.", CPSLimit);
     return true;
   }
   else {
@@ -520,7 +520,7 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
   if (AmConfig.shutdown_mode && (!(is_uac && AmConfig.shutdown_mode_allow_uac)))
   {
     _run_cond.set(true); // so that thread stops
-    DBG("Shutdown mode. Not creating session.\n");
+    DBG("Shutdown mode. Not creating session.");
 
     if(!is_uac) {
       AmSipDialog::reply_error(
@@ -535,7 +535,7 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
   if (AmConfig.session_limit &&
       AmConfig.session_limit <= AmSession::session_num) {
       
-      DBG("session_limit %d reached. Not creating session.\n", 
+      DBG("session_limit %d reached. Not creating session.", 
 	  AmConfig.session_limit);
       if(session_limit_reject)
         session_limit_reject->inc(1);
@@ -598,7 +598,7 @@ AmSession* AmSessionContainer::createSession(const AmSipRequest& req,
     //  let's hope the createState function has replied...
     //  ... and do nothing !
 
-    DBG("onInvite/onRefer returned NULL\n");
+    DBG("onInvite/onRefer returned NULL");
   }
   else {
     // save session parameters

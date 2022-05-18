@@ -47,7 +47,7 @@ int JukecallFactory::onLoad()
 {
   // read configuration
 
-  DBG("JukecallFactory loaded.\n");
+  DBG("JukecallFactory loaded.");
   return 0;
 }
 
@@ -80,8 +80,8 @@ void JukecallSession::onSessionStart()
     return;
   }
 
-  DBG("-----------------------------------------------------------------\n");
-  DBG("playing file\n");
+  DBG("-----------------------------------------------------------------");
+  DBG("playing file");
 
   if(initial_announcement.open(INITIAL_ANNOUNCEMENT,AmAudioFile::Read)) {
     dlg->bye();
@@ -97,7 +97,7 @@ void JukecallSession::onSessionStart()
 }
 
 void JukecallSession::onDtmf(int event, int duration_msec) {
-  DBG("got DTMF %d\n", event);
+  DBG("got DTMF %d", event);
 
   // no jukebox if other party is not connected
   if (getCalleeStatus()!=AmB2ABCallerSession::Connected)
@@ -107,11 +107,11 @@ void JukecallSession::onDtmf(int event, int duration_msec) {
   if (state != JC_connect) 
     return;
 
-  DBG("playing back file...\n");
+  DBG("playing back file...");
 
   song.reset(new AmAudioFile());
   if (song->open(JUKE_DIR+int2str(event)+".wav",AmAudioFile::Read)) {
-    ERROR("could not open file\n");
+    ERROR("could not open file");
     return;
   }
   setOutput(song.get());
@@ -129,7 +129,7 @@ void JukecallSession::process(AmEvent* event)
     case JC_initial_announcement: {
       state = JC_connect;
       string callee = "sip:" + dlg->user.substr(3) + "@" + dlg->domain;
-      DBG("-------------------------- connecting %s ------------------------\n", callee.c_str());
+      DBG("-------------------------- connecting %s ------------------------", callee.c_str());
       connectCallee(callee, callee, 
 		    dlg->remote_party, dlg->remote_uri);
 
@@ -138,14 +138,14 @@ void JukecallSession::process(AmEvent* event)
     } break;
 
     case JC_juke: {
-      DBG("reconnecting audio\n");
+      DBG("reconnecting audio");
       connectSession();
       state = JC_connect;
       return;
     }; break;
 
     default: {
-      DBG("cleared in other state.\n");
+      DBG("cleared in other state.");
       return;
     };
     }
@@ -173,7 +173,7 @@ void JukecalleeSession::process(AmEvent* event) {
   if(juke_event) {
     song.reset(new AmAudioFile());
     if (song->open(JUKE_DIR+int2str(event->event_id)+".wav",AmAudioFile::Read)) {
-      ERROR("could not open file\n");
+      ERROR("could not open file");
       return;
     }
     setOutput(song.get());
@@ -182,7 +182,7 @@ void JukecalleeSession::process(AmEvent* event) {
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && (audio_event->event_id == AmAudioEvent::cleared)){
-    DBG("reconnecting audio\n");
+    DBG("reconnecting audio");
     connectSession();
     return;
   }

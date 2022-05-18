@@ -61,11 +61,11 @@ int AnnounceB2BFactory::onLoad()
     AnnouncePath += "/";
 
   AnnounceFile = cfg.getParameter("default_announce",ANNOUNCE_FILE);
-  DBG("AnnounceFile = %s\n",AnnounceFile.c_str());
+  DBG("AnnounceFile = %s",AnnounceFile.c_str());
 
   string announce_file = AnnouncePath + AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("default file for ann_b2b module does not exist ('%s').\n",
+    ERROR("default file for ann_b2b module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
@@ -80,12 +80,12 @@ AmSession* AnnounceB2BFactory::onInvite(const AmSipRequest& req, const string& a
   string announce_file = announce_path + req.domain
     + "/" + req.user + ".wav";
     
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     return new AnnounceCallerDialog(announce_file);
     
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     return new AnnounceCallerDialog(announce_file);
     

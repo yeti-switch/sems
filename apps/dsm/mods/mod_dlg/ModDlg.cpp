@@ -106,12 +106,12 @@ void replyRequest(DSMSession* sc_sess, AmSession* sess,
   string hdrs = replaceLineEnds(resolveVars("$dlg.reply.hdrs", sess, sc_sess, event_params));
   unsigned int code_i;
   if (str2i(code, code_i)) {
-    ERROR("decoding reply code '%s'\n", code.c_str());
+    ERROR("decoding reply code '%s'", code.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     return;
   }
 
-  DBG("replying with %i %s, hdrs='%s'\n", code_i, reason.c_str(), hdrs.c_str());
+  DBG("replying with %i %s, hdrs='%s'", code_i, reason.c_str(), hdrs.c_str());
 
   if (sess->dlg->reply(req, code_i, reason, NULL, hdrs)) {
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
@@ -124,7 +124,7 @@ CONST_ACTION_2P(DLGReplyAction, ',', true);
 EXEC_ACTION_START(DLGReplyAction) {
 
   if (!sc_sess->last_req.get()) {
-    ERROR("no last request to reply\n");
+    ERROR("no last request to reply");
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     sc_sess->SET_STRERROR("no last request to reply");
     return false;
@@ -159,7 +159,7 @@ EXEC_ACTION_START(DLGAcceptInviteAction) {
   if (code.length()) {
     reason = resolveVars(par2, sess, sc_sess, event_params);
     if (str2i(code, code_i)) {
-      ERROR("decoding reply code '%s'\n", code.c_str());
+      ERROR("decoding reply code '%s'", code.c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
       sc_sess->SET_STRERROR("decoding reply code '"+
 			    code+"%s'\n");
@@ -167,10 +167,10 @@ EXEC_ACTION_START(DLGAcceptInviteAction) {
     }
   }
 
-  DBG("replying with %i %s, hdrs='%s'\n", code_i, reason.c_str(), hdrs.c_str());
+  DBG("replying with %i %s, hdrs='%s'", code_i, reason.c_str(), hdrs.c_str());
 
   if (!sc_sess->last_req.get()) {
-    ERROR("no last request to reply\n");
+    ERROR("no last request to reply");
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     sc_sess->SET_STRERROR("no last request to reply");
     return false;
@@ -184,7 +184,7 @@ EXEC_ACTION_START(DLGAcceptInviteAction) {
 
   }catch(const AmSession::Exception& e){
 
-    ERROR("%i %s\n",e.code,e.reason.c_str());
+    ERROR("%i %s",e.code,e.reason.c_str());
     sess->setStopped();
     sess->dlg->reply(*sc_sess->last_req.get(),e.code,e.reason);
 
@@ -213,13 +213,13 @@ EXEC_ACTION_START(DLGConnectCalleeRelayedAction) {
   // if (sc_sess->last_req.get()) {
   //   sc_sess->B2BaddReceivedRequest(*sc_sess->last_req.get());
   // } else {
-  //   WARN("internal error: initial INVITE request missing.\n");
+  //   WARN("internal error: initial INVITE request missing.");
   // }
   // AmB2BSession* b2b_sess = dynamic_cast<AmB2BSession*>(sess);
   // if (b2b_sess) 
   //   b2b_sess->set_sip_relay_only(true);
   // else 
-  //   ERROR("getting B2B session.\n");
+  //   ERROR("getting B2B session.");
 
   sc_sess->B2BconnectCallee(remote_party, remote_uri, true);
 } EXEC_ACTION_END;
@@ -322,7 +322,7 @@ EXEC_ACTION_START(DLGDialoutAction) {
   if (has_vars && has_auth)
       sess_params->push(var_struct);
  
-  DBG("sess_params: '%s'\n", AmArg::print(*sess_params).c_str());
+  DBG("sess_params: '%s'", AmArg::print(*sess_params).c_str());
 
   string new_sess_tag = AmUAC::dialout(user, app_name, r_uri, from, from_uri, to, ltag, hdrs, sess_params);
 
@@ -347,13 +347,13 @@ MATCH_CONDITION_START(DLGReplyHasContentTypeCondition) {
   if (!isArgAObject(sc_sess->avar[DSM_AVAR_REPLY]) ||
       (NULL ==
        (dsm_reply = dynamic_cast<DSMSipReply*>(sc_sess->avar[DSM_AVAR_REPLY].asObject())))) {
-    ERROR("internal: DSM could not get DSMSipReply\n");
+    ERROR("internal: DSM could not get DSMSipReply");
     return false;
   }
 
   bool res = dsm_reply->reply->body.hasContentType(arg);
 
-  DBG("checking for content_type '%s': %s\n", arg.c_str(), res?"has it":"doesn't have it");
+  DBG("checking for content_type '%s': %s", arg.c_str(), res?"has it":"doesn't have it");
   return res;
 } MATCH_CONDITION_END;
 
@@ -369,13 +369,13 @@ MATCH_CONDITION_START(DLGRequestHasContentTypeCondition) {
   if (!isArgAObject(sc_sess->avar[DSM_AVAR_REQUEST]) ||
       (NULL ==
        (dsm_req = dynamic_cast<DSMSipRequest*>(sc_sess->avar[DSM_AVAR_REQUEST].asObject())))) {
-    ERROR("internal: DSM could not get DSMSipRequest\n");
+    ERROR("internal: DSM could not get DSMSipRequest");
     return false;
   }
 
   bool res = dsm_req->req->body.hasContentType(arg);
 
-  DBG("checking for content_type '%s': %s\n", arg.c_str(), res?"has it":"doesn't have it");
+  DBG("checking for content_type '%s': %s", arg.c_str(), res?"has it":"doesn't have it");
   return res;
 } MATCH_CONDITION_END;
 
@@ -395,11 +395,11 @@ EXEC_ACTION_START(DLGGetRequestBodyAction) {
 
   const AmMimeBody* msg_body = sip_req->req->body.hasContentType(content_type);
   if (NULL == msg_body) {
-    DBG("body with content_type %s not found\n", content_type.c_str());
+    DBG("body with content_type %s not found", content_type.c_str());
     sc_sess->var.erase(dstvar);
   } else {
     sc_sess->var[dstvar] = string((const char*)msg_body->getPayload());
-    DBG("set $%s='%s'\n", dstvar.c_str(), sc_sess->var[dstvar].c_str());
+    DBG("set $%s='%s'", dstvar.c_str(), sc_sess->var[dstvar].c_str());
   }
 } EXEC_ACTION_END;
 
@@ -419,11 +419,11 @@ EXEC_ACTION_START(DLGGetReplyBodyAction) {
 
   const AmMimeBody* msg_body = sip_req->reply->body.hasContentType(content_type);
   if (NULL == msg_body) {
-    DBG("body with content_type %s not found\n", content_type.c_str());
+    DBG("body with content_type %s not found", content_type.c_str());
     sc_sess->var.erase(dstvar);
   } else {
     sc_sess->var[dstvar] = string((const char*)msg_body->getPayload());
-    DBG("set $%s='%s'\n", dstvar.c_str(), sc_sess->var[dstvar].c_str());
+    DBG("set $%s='%s'", dstvar.c_str(), sc_sess->var[dstvar].c_str());
   }
 } EXEC_ACTION_END;
 
@@ -431,7 +431,7 @@ EXEC_ACTION_START(DLGGetOtherIdAction) {
   string varname = arg;
   AmB2BSession* b2b_sess = dynamic_cast<AmB2BSession*>(sess);
   if (NULL == b2b_sess) {
-    DBG("script writer error: dlg.getOtherId used without B2B session object.\n");
+    DBG("script writer error: dlg.getOtherId used without B2B session object.");
     EXEC_ACTION_STOP;
   }
 
@@ -444,7 +444,7 @@ EXEC_ACTION_START(DLGGetRtpRelayModeAction) {
   string varname = arg;
   AmB2BSession* b2b_sess = dynamic_cast<AmB2BSession*>(sess);
   if (NULL == b2b_sess) {
-    DBG("script writer error: dlg.getOtherId used without B2B session object.\n");
+    DBG("script writer error: dlg.getOtherId used without B2B session object.");
     EXEC_ACTION_STOP;
   }
 
@@ -457,7 +457,7 @@ EXEC_ACTION_START(DLGGetRtpRelayModeAction) {
   default: sc_sess->var[varname] = "Unknown"; break;
   }
 
-  DBG("get RTP relay mode: %s='%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("get RTP relay mode: %s='%s'", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 CONST_ACTION_2P(DLGReferAction, ',', true);
@@ -517,7 +517,7 @@ EXEC_ACTION_START(DLGB2BRelayErrorAction) {
   string reason = resolveVars(par2, sess, sc_sess, event_params);
   unsigned int code_i;
   if (str2i(code, code_i)) {
-    ERROR("decoding reply code '%s'\n", code.c_str());
+    ERROR("decoding reply code '%s'", code.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
     EXEC_ACTION_STOP;
   }

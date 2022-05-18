@@ -33,7 +33,7 @@ static int skip_line_async(parser_state* pst, char* end)
       return 0;
 
     default:
-      DBG("Bad state! st=%i\n",st);
+      DBG("Bad state! st=%i",st);
       return -99;
     }
   }
@@ -115,7 +115,7 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
 		break;
 
 	    default:
-		DBG("Missing ':' after header name\n");
+		DBG("Missing ':' after header name");
 		return MALFORMED_SIP_MSG;
 	    }
 	    break;
@@ -128,16 +128,16 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
 
 	    case H_NAME:
 		if((*c-(st==ST_CRLF?2:1))-begin == 0){
-		    //DBG("Detected end of headers\n");
+		    //DBG("Detected end of headers");
 		    return 0;
 		}
- 		DBG("Illegal CR or LF in header name: <%.*s>\n",
+ 		DBG("Illegal CR or LF in header name: <%.*s>",
 		    (int)(*c-begin),begin);
  		return MALFORMED_SIP_MSG;
 
 	    case H_VALUE_SWS:
 		if(!IS_WSP(**c)){
-		    DBG("Malformed header: <%.*s>\n",(int)(*c-begin),begin);
+		    DBG("Malformed header: <%.*s>",(int)(*c-begin),begin);
 		    return MALFORMED_SIP_MSG;
 		}
 		break;
@@ -146,7 +146,7 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
 		if(!IS_WSP(**c)){
 		    hdr->value.set(begin,(*c-(st==ST_CRLF?2:1))-begin);
 
-		    //DBG("hdr: \"%.*s: %.*s\"\n",
+		    //DBG("hdr: \"%.*s: %.*s\"",
 		    //     hdr->name.len,hdr->name.s,
 		    //     hdr->value.len,hdr->value.s);
 		    return 0;
@@ -154,7 +154,7 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
 		break;
 
 	    default:
-		DBG("Oooops! st=%i\n",saved_st);
+		DBG("Oooops! st=%i",saved_st);
 		break;
 	    }
 
@@ -175,16 +175,16 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
 	    
 	case H_NAME:
 	    if((*c-(st==ST_CRLF?2:1))-begin == 0){
-		//DBG("Detected end of headers\n");
+		//DBG("Detected end of headers");
 		return 0;
 	    }
-	    DBG("Illegal CR or LF in header name\n");
+	    DBG("Illegal CR or LF in header name");
 	    return MALFORMED_SIP_MSG;
 	}
 	break;
     }
     
-    DBG("Incomplete header (st=%i;saved_st=%i)\n",st,saved_st);
+    DBG("Incomplete header (st=%i;saved_st=%i)",st,saved_st);
     return UNEXPECTED_EOT;
 }
 

@@ -147,7 +147,7 @@ static int skip_2_next_route(const char*& c,
 	    
     switch(st){
     case RR_QUOTED:
-	DBG("Malformed route header\n");
+	DBG("Malformed route header");
 	return -1;
 
     case RR_SEP_SWS: // not fine, but acceptable
@@ -180,7 +180,7 @@ int parse_route(sip_header* rh)
       const char* route_begin = c;
       int err = skip_2_next_route(c,eor,end);
       if(err < 0){
-	ERROR("While parsing route header\n");
+	ERROR("While parsing route header");
 	return -1;
       }
 
@@ -201,7 +201,7 @@ int parse_route(sip_header* rh)
 int parse_first_route_uri(sip_header* fr)
 {
     if(parse_route(fr) < 0) {
-        DBG("Could not parse route hf [%.*s]\n",
+        DBG("Could not parse route hf [%.*s]",
 	    fr->value.len,fr->value.s);
         return -1;
     }
@@ -211,7 +211,7 @@ int parse_first_route_uri(sip_header* fr)
 
     if(route->elmts.empty()) {
       
-        DBG("No first route\n");
+        DBG("No first route");
 	return -1;
     }
 
@@ -225,13 +225,13 @@ int parse_first_route_uri(sip_header* fr)
     auto_ptr<sip_nameaddr> na(new sip_nameaddr());
     if(parse_nameaddr(na.get(), &c, route_str.len)<0) {
       
-      DBG("Parsing name-addr failed\n");
+      DBG("Parsing name-addr failed");
       return -1;
     }
     
     if(parse_uri(&na->uri,na->addr.s,na->addr.len) < 0) {
 	
-	DBG("Parsing route uri failed\n");
+	DBG("Parsing route uri failed");
 	return -1;
     }
 
@@ -251,7 +251,7 @@ sip_uri* get_first_route_uri(sip_header* fr)
     
   sip_route* route = (sip_route*)(fr->p);
   if(!route || route->elmts.empty()){
-    DBG("No first route\n");
+    DBG("No first route");
     return NULL;
   }
 

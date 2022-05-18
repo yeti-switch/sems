@@ -117,7 +117,7 @@ int WebConferenceFactory::load()
     DigitsDir+='/';
 
   if (!DigitsDir.length()) {
-    WARN("No digits_dir specified in configuration.\n");
+    WARN("No digits_dir specified in configuration.");
   }
   for (int i=0;i<10;i++) 
     prompts.setPrompt(int2str(i), DigitsDir+int2str(i)+".wav", APP_NAME);
@@ -125,21 +125,21 @@ int WebConferenceFactory::load()
   string playout_type = cfg.getParameter("playout_type");
   if (playout_type == "simple") {
     m_PlayoutType = SIMPLE_PLAYOUT;
-    DBG("Using simple (fifo) buffer as playout technique.\n");
+    DBG("Using simple (fifo) buffer as playout technique.");
   } else 	if (playout_type == "adaptive_jb") {
     m_PlayoutType = JB_PLAYOUT;
-    DBG("Using adaptive jitter buffer as playout technique.\n");
+    DBG("Using adaptive jitter buffer as playout technique.");
   } else {
-    DBG("Using adaptive playout buffer as playout technique.\n");
+    DBG("Using adaptive playout buffer as playout technique.");
   }
   
   string direct_room_re_str = cfg.getParameter("direct_room_re");
   if (!direct_room_re_str.length()) {
-    DBG("no direct room access prefixes set.\n");
+    DBG("no direct room access prefixes set.");
   } else {
     if (regcomp(&direct_room_re, direct_room_re_str.c_str(), 
 		 REG_EXTENDED|REG_NOSUB)) {
-      ERROR("unable to compile direct room RE '%s'.\n",
+      ERROR("unable to compile direct room RE '%s'.",
 	    direct_room_re_str.c_str());
       return -1;
     }
@@ -147,7 +147,7 @@ int WebConferenceFactory::load()
     string direct_room_strip_str = cfg.getParameter("direct_room_strip");
     if (direct_room_strip_str.length() &&
 	str2i(direct_room_strip_str, direct_room_strip)) {
-      ERROR("unable to decipher direct_room_strip amount '%s'\n",
+      ERROR("unable to decipher direct_room_strip amount '%s'",
 	    direct_room_strip_str.c_str());
       return -1;
     }
@@ -160,25 +160,25 @@ int WebConferenceFactory::load()
   if (!feedback_filename.empty()) {
     feedback_file.open(feedback_filename.c_str(), std::ios::out|std::ios::app);
     if (!feedback_file.good()) {
-      WARN("opening feedback file '%s' failed\n", feedback_filename.c_str());
+      WARN("opening feedback file '%s' failed", feedback_filename.c_str());
     } else {
-      DBG("successfully opened feedback file '%s'\n", 
+      DBG("successfully opened feedback file '%s'", 
 	    feedback_filename.c_str());
     }
   }
 
   string stats_dir = cfg.getParameter("stats_dir");
   if (stats_dir.empty()) 
-    DBG("call statistics will not be persistent across restart.\n");
+    DBG("call statistics will not be persistent across restart.");
   stats = new WCCCallStats(stats_dir);
 
   urlbase = cfg.getParameter("webconference_urlbase");
   if (urlbase.empty())
-    DBG("No urlbase set - SDP will not contain direct access URL.\n");
+    DBG("No urlbase set - SDP will not contain direct access URL.");
 
   MasterPassword  = cfg.getParameter("master_password");
   if (!MasterPassword.empty()) {
-    DBG("Master password set.\n");
+    DBG("Master password set.");
   }  
 
   if (cfg.getParameter("participants_expire") == "no") { 
@@ -188,7 +188,7 @@ int WebConferenceFactory::load()
     ParticipantExpiredDelay = cfg.getParameterInt("participants_expire_delay", 10);
   }
   ignore_pin = cfg.getParameter("ignore_pin")=="yes";
-  DBG("Ignore PINs  enabled: %s\n", ignore_pin?"yes":"no");
+  DBG("Ignore PINs  enabled: %s", ignore_pin?"yes":"no");
 
 
   if (cfg.getParameter("rooms_expire") == "no") { 
@@ -210,11 +210,11 @@ int WebConferenceFactory::load()
 	 predefined_rooms.begin(); it != predefined_rooms.end(); it++) {
     vector<string> room_pwd = explode(*it, ":");
     if (room_pwd.size()==2) {
-      DBG("creating room '%s'\n",room_pwd[0].c_str());
+      DBG("creating room '%s'",room_pwd[0].c_str());
       rooms[room_pwd[0]] = ConferenceRoom();
       rooms[room_pwd[0]].adminpin = room_pwd[1];
     } else {
-      ERROR("wrong entry '%s' in predefined_rooms: should be <room>:<pwd>\n",
+      ERROR("wrong entry '%s' in predefined_rooms: should be <room>:<pwd>",
 	    it->c_str());
       return -1;
     }
@@ -223,19 +223,19 @@ int WebConferenceFactory::load()
 
   if (cfg.getParameter("private_rooms") == "yes") 
     PrivateRoomsMode = true;
-  DBG("Private rooms mode %sabled.\n", PrivateRoomsMode ? "en":"dis");
+  DBG("Private rooms mode %sabled.", PrivateRoomsMode ? "en":"dis");
 
   LoopFirstParticipantPrompt =
     cfg.getParameter("loop_first_participant_prompt") == "yes";
 
   LonelyUserTimer = cfg.getParameterInt("lonely_user_timer", 0);
   if (!LonelyUserTimer) {
-    DBG("'lonely user' timer not used\n");
+    DBG("'lonely user' timer not used");
   } else {
-    DBG("Timer for 'lonely user' used: %u seconds\n", LonelyUserTimer);
+    DBG("Timer for 'lonely user' used: %u seconds", LonelyUserTimer);
   }
 
-  DBG("Looping first participant prompt: %s\n", LoopFirstParticipantPrompt ? "yes":"no");
+  DBG("Looping first participant prompt: %s", LoopFirstParticipantPrompt ? "yes":"no");
 
   if (cfg.getParameter("support_rooms_timeout") == "yes") {
     cleaner = new WebConferenceCleaner(this);
@@ -244,10 +244,10 @@ int WebConferenceFactory::load()
 
   if(cfg.hasParameter("enable_session_timer") &&
      (cfg.getParameter("enable_session_timer") == string("yes")) ){
-    DBG("enabling session timers\n");
+    DBG("enabling session timers");
     session_timer_f = AmPlugIn::instance()->getFactory4Seh("session_timer");
     if(session_timer_f == NULL){
-      ERROR("Could not load the session_timer module: disabling session timers.\n");
+      ERROR("Could not load the session_timer module: disabling session timers.");
     }
   }
 
@@ -325,7 +325,7 @@ ConferenceRoom* WebConferenceFactory::getRoom(const string& room,
       res = &it->second;
       
       if (res->expired()) {
-	DBG("clearing expired room '%s'\n", room.c_str());
+	DBG("clearing expired room '%s'", room.c_str());
 	rooms.erase(it);
 	res = NULL;
       }
@@ -358,7 +358,7 @@ void WebConferenceFactory::setupSessionTimer(AmSession* s) {
       return;
 
     if(h->configure(cfg)){
-      ERROR("Could not configure the session timer: disabling session timers.\n");
+      ERROR("Could not configure the session timer: disabling session timers.");
       delete h;
     } else {
       s->addHandler(h);
@@ -381,7 +381,7 @@ AmSession* WebConferenceFactory::onInvite(const AmSipRequest& req, const string&
       string room = req.user;
       if (room.length() > direct_room_strip) 
  	room = room.substr(direct_room_strip);
-      DBG("direct room access match. connecting to room '%s'\n", 
+      DBG("direct room access match. connecting to room '%s'", 
 	  room.c_str());
 
       w = new WebConferenceDialog(prompts, getInstance(), room);
@@ -402,7 +402,7 @@ AmSession* WebConferenceFactory::onInvite(const AmSipRequest& req, const string&
   AmSession* s = new WebConferenceDialog(prompts, getInstance(), cred); 
 
   if (NULL == cred) {
-    WARN("discarding unknown session parameters.\n");
+    WARN("discarding unknown session parameters.");
   } else {
     AmUACAuth::enable(s);
   }
@@ -539,7 +539,7 @@ void WebConferenceFactory::sweepRooms() {
       if (it->second.expired(now)) {
 	map<string, ConferenceRoom>::iterator d_it = it;
 	it++;       
-	DBG("clearing expired room '%s'\n", d_it->first.c_str());
+	DBG("clearing expired room '%s'", d_it->first.c_str());
 	rooms.erase(d_it);
       } else {
 	it++;
@@ -624,7 +624,7 @@ void WebConferenceFactory::roomDelete(const string& room, const string& adminpin
 		   WebConferenceEvent::Kick, ignore_adminpin);
 
   if (ret.get(0).asInt()==0) {
-    DBG("erasing room '%s'\n", room.c_str());
+    DBG("erasing room '%s'", room.c_str());
     rooms_mut.lock();
     rooms.erase(room);
     rooms_mut.unlock();
@@ -655,7 +655,7 @@ void WebConferenceFactory::closeExpiredRooms() {
 
   for (vector<string>::iterator it=
 	 expired_rooms.begin(); it != expired_rooms.end(); it++) {
-    DBG("deleting expired room '%s'\n", it->c_str());
+    DBG("deleting expired room '%s'", it->c_str());
     AmArg ret;
     roomDelete(*it, "", ret, true);
   }
@@ -966,13 +966,13 @@ void WebConferenceFactory::resetFeedback(const AmArg& args, AmArg& ret) {
   if (!feedback_filename.empty()) {
     feedback_file.open(feedback_filename.c_str(), std::ios::out);
     if (!feedback_file.good()) {
-      ERROR("opening new feedback file '%s'\n", 
+      ERROR("opening new feedback file '%s'", 
 	    feedback_filename.c_str());
       ret.push(-1);
       ret.push("error opening new feedback file");
 
     } else {
-      DBG("successfully opened new feedback file '%s'\n", 
+      DBG("successfully opened new feedback file '%s'", 
 	  feedback_filename.c_str());
       ret.push(0);
       ret.push("OK");

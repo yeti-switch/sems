@@ -183,9 +183,9 @@ EXEC_ACTION_START(SCMyConnectAction) {
   string f_arg = resolveVars(arg, sess, sc_sess, event_params);
   string db_url = f_arg.length()?f_arg:sc_sess->var["config.db_url"];
   if (db_url.empty() || db_url.length() < 11 || db_url.substr(0, 8) != "mysql://") {
-    ERROR("missing correct db_url config or connect parameter\n");
+    ERROR("missing correct db_url config or connect parameter");
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("missing correct db_url config or connect parameter\n");
+    sc_sess->SET_STRERROR("missing correct db_url config or connect parameter");
     return false;
   }
   // split url
@@ -207,13 +207,13 @@ EXEC_ACTION_START(SCMyConnectAction) {
     sc_sess->transferOwnership(conn);
     sc_sess->CLR_ERRNO;    
   } catch (const mysqlpp::ConnectionFailed& e) {
-    ERROR("DB connection failed with error %d: '%s'\n",e.errnum(), e.what());
+    ERROR("DB connection failed with error %d: '%s'",e.errnum(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_CONNECTION);
     sc_sess->SET_STRERROR(e.what());
     sc_sess->var["db.errno"] = int2str(e.errnum());
     sc_sess->var["db.ereason"] = e.what();
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB connection failed: '%s'\n", e.what());
+    ERROR("DB connection failed: '%s'", e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_CONNECTION);    
     sc_sess->SET_STRERROR(e.what());
     sc_sess->var["db.ereason"] = e.what();
@@ -233,7 +233,7 @@ EXEC_ACTION_START(SCMyDisconnectAction) {
     sc_sess->avar[MY_AKEY_CONNECTION] = AmArg();
     sc_sess->CLR_ERRNO;
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB disconnect failed: '%s'\n", e.what());
+    ERROR("DB disconnect failed: '%s'", e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_CONNECTION);
     sc_sess->SET_STRERROR(e.what());
     sc_sess->var["db.ereason"] = e.what();
@@ -267,7 +267,7 @@ EXEC_ACTION_START(SCMyExecuteAction) {
     }
 
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  qstr.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);    
     sc_sess->SET_STRERROR(e.what());
@@ -304,7 +304,7 @@ EXEC_ACTION_START(SCMyQueryAction) {
       sc_sess->SET_STRERROR("query did not have a result");
     }
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  qstr.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);    
     sc_sess->SET_STRERROR(e.what());
@@ -328,9 +328,9 @@ EXEC_ACTION_START(SCMyQueryGetResultAction) {
       string rowindex = resolveVars(par2, sess, sc_sess, event_params);
       if (rowindex.length()) {
 	if (str2i(rowindex, rowindex_i)) {
-	  ERROR("row index '%s' not understood\n", rowindex.c_str());
+	  ERROR("row index '%s' not understood", rowindex.c_str());
 	  sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-	  sc_sess->SET_STRERROR("row index '"+rowindex+"' not understood\n");
+	  sc_sess->SET_STRERROR("row index '"+rowindex+"' not understood");
 	  return false;
 	}
       }
@@ -352,7 +352,7 @@ EXEC_ACTION_START(SCMyQueryGetResultAction) {
       sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);
     }
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  qstr.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);    
     sc_sess->SET_STRERROR(e.what());
@@ -378,7 +378,7 @@ EXEC_ACTION_START(SCMyGetResultAction) {
 
   if (rowindex.length()) {
     if (str2i(rowindex, rowindex_i)) {
-      ERROR("row index '%s' not understood\n", rowindex.c_str());
+      ERROR("row index '%s' not understood", rowindex.c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
       sc_sess->SET_STRERROR("row index '"+rowindex+"' not understood");
       return false;
@@ -390,7 +390,7 @@ EXEC_ACTION_START(SCMyGetResultAction) {
     sc_sess->SET_STRERROR("row index out of result rows bounds");
     return false;
   }
-  DBG("rowindex_i = %d\n", rowindex_i);
+  DBG("rowindex_i = %d", rowindex_i);
   if (colname.length()) {
     // get only this column
     try {      
@@ -502,7 +502,7 @@ bool playDBAudio(AmSession* sess, DSMSession* sc_sess, DSMCondition::EventType e
       sc_sess->SET_STRERROR("query does not have result"); 
     }
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  qstr.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);    
     sc_sess->SET_STRERROR(e.what());
@@ -564,7 +564,7 @@ EXEC_ACTION_START(SCMyGetFileFromDBAction) {
       sc_sess->SET_STRERROR("query does not have result"); 
     }
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  qstr.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);
     sc_sess->SET_STRERROR(e.what());
@@ -584,19 +584,19 @@ EXEC_ACTION_START(SCMyPutFileToDBAction) {
 
   size_t fpos = qstr.find("__FILE__");
   if (fpos == string::npos) {
-    ERROR("missing __FILE__ in query string '%s'\n", 
+    ERROR("missing __FILE__ in query string '%s'", 
 	  par1.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("missing __FILE__ in query string '"+par1+"'\n");
+    sc_sess->SET_STRERROR("missing __FILE__ in query string '"+par1+"'");
     return false;
   }
   
   try {
     std::ifstream data_file(fname.c_str(), std::ios::in | std::ios::binary);
     if (!data_file) {
-      DBG("could not read file '%s'\n", fname.c_str());
+      DBG("could not read file '%s'", fname.c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
-      sc_sess->SET_STRERROR("could not read file '"+fname+"'\n");
+      sc_sess->SET_STRERROR("could not read file '"+fname+"'");
       return false;
     }
     // that one is clever...
@@ -605,9 +605,9 @@ EXEC_ACTION_START(SCMyPutFileToDBAction) {
 		     std::istreambuf_iterator<char>());
        
     if (file_data.empty()) {
-      DBG("could not read file '%s'\n", fname.c_str());
+      DBG("could not read file '%s'", fname.c_str());
       sc_sess->SET_ERRNO(DSM_ERRNO_FILE);
-      sc_sess->SET_STRERROR("could not read file '"+fname+"'\n");
+      sc_sess->SET_STRERROR("could not read file '"+fname+"'");
       return false;
     }
 
@@ -628,7 +628,7 @@ EXEC_ACTION_START(SCMyPutFileToDBAction) {
     }
 
   } catch (const mysqlpp::Exception& e) {
-    ERROR("DB query '%s' failed: '%s'\n", 
+    ERROR("DB query '%s' failed: '%s'", 
 	  par1.c_str(), e.what());
     sc_sess->SET_ERRNO(DSM_ERRNO_MY_QUERY);    
     sc_sess->SET_STRERROR(e.what());
@@ -655,6 +655,6 @@ EXEC_ACTION_START(SCMyEscapeAction) {
   string res;
   query.escape_string(&res, val.c_str(), val.length());
   sc_sess->var[dstvar] = res;
-  DBG("escaped: $%s = escape(%s) = %s\n",
+  DBG("escaped: $%s = escape(%s) = %s",
       dstvar.c_str(), val.c_str(), res.c_str());
 } EXEC_ACTION_END;

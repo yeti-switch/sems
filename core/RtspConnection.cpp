@@ -90,7 +90,7 @@ void RtspMsg::parse_request_line(const char *line, size_t len)
                         : NULL;
 
     if (unlikely(!sp0 || !sp1)) {
-        ERROR("Can't parse request line '%s'\n", line);
+        ERROR("Can't parse request line '%s'", line);
         return;
     }
 
@@ -109,7 +109,7 @@ void RtspMsg::parse_status_line(const char *line, size_t len)
                         : NULL;
 
     if (unlikely(!sp0 || !sp1)) {
-        ERROR("Can't parse status line '%s'\n", line);
+        ERROR("Can't parse status line '%s'", line);
         return;
     }
 
@@ -345,7 +345,7 @@ int RtspSession::rtspSendMsg(const RtspMsg &msg)
     DBG("\n%s", requst_body.c_str());
 
     if (::send(fd, requst_body.c_str(), requst_body.length(), MSG_NOSIGNAL) == -1) {
-        ERROR("RtspSession::request send(): %s\n", strerror(errno));
+        ERROR("RtspSession::request send(): %s", strerror(errno));
         close();
         return 0;
     }

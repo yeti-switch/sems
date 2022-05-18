@@ -53,7 +53,7 @@ MOD_CONDITIONEXPORT_BEGIN(MOD_CLS_NAME) {
 int MOD_CLS_NAME::preload() {
    AmConfigReader cfg;
    if(cfg.loadPluginConf("mod_regex")) {
-	 INFO("no module configuration for 'mod_regex' found, not preloading regular expressions\n");
+	 INFO("no module configuration for 'mod_regex' found, not preloading regular expressions");
      return 0;
    }
 
@@ -61,11 +61,11 @@ int MOD_CLS_NAME::preload() {
    for (std::map<string,string>::const_iterator it =
 	  cfg.begin(); it != cfg.end(); it++) {
      if (add_regex(it->first, it->second)) {
-       ERROR("compiling regex '%s' for '%s'\n",
+       ERROR("compiling regex '%s' for '%s'",
 	     it->second.c_str(), it->first.c_str());
        failed = true;
      } else {
-       DBG("compiled regex '%s' as '%s'\n", it->second.c_str(), it->first.c_str());
+       DBG("compiled regex '%s' as '%s'", it->second.c_str(), it->first.c_str());
      }
    }
 
@@ -74,7 +74,7 @@ int MOD_CLS_NAME::preload() {
 
 int MOD_CLS_NAME::add_regex(const string& r_name, const string& r_reg) {
   if (regexes[r_name].regcomp(r_reg.c_str(), REG_NOSUB | REG_EXTENDED)) {
-    ERROR("compiling '%s' for regex '%s'\n", r_reg.c_str(), r_name.c_str());
+    ERROR("compiling '%s' for regex '%s'", r_reg.c_str(), r_name.c_str());
     regexes.erase(r_name);
     return -1;
   }
@@ -84,21 +84,21 @@ int MOD_CLS_NAME::add_regex(const string& r_name, const string& r_reg) {
 
 CONST_CONDITION_2P(SCExecRegexCondition, ',', false);
 MATCH_CONDITION_START(SCExecRegexCondition) {
-  DBG("checking condition '%s' '%s'\n", par1.c_str(), par2.c_str());
+  DBG("checking condition '%s' '%s'", par1.c_str(), par2.c_str());
 
   string rname = resolveVars(par1, sess, sc_sess, event_params);
   string val = resolveVars(par2, sess, sc_sess, event_params);
 
-  DBG("matching '%s' on regex '%s'\n", val.c_str(), rname.c_str());
+  DBG("matching '%s' on regex '%s'", val.c_str(), rname.c_str());
   map<string, TsRegex>::iterator it=MOD_CLS_NAME::regexes.find(rname);
   if (it == MOD_CLS_NAME::regexes.end()) {
-    ERROR("regex '%s' not found for matching '%s'\n", rname.c_str(), val.c_str());
+    ERROR("regex '%s' not found for matching '%s'", rname.c_str(), val.c_str());
     return false;
   }
 
   int res = it->second.regexec(val.c_str(), 1, NULL, 0);
   // res==0 -> match
-  DBG("regex did %smatch\n", res==0?"":"not ");
+  DBG("regex did %smatch", res==0?"":"not ");
   if (inv) {
     return res != 0;
   } else {
@@ -111,11 +111,11 @@ CONST_ACTION_2P(SCCompileRegexAction, ',', false);
 EXEC_ACTION_START(SCCompileRegexAction) {
   string rname = resolveVars(par1, sess, sc_sess, event_params);
   string rval = par2; //resolveVars(par2, sess, sc_sess, event_params);
-  DBG("compiling '%s' for regex '%s'\n", rval.c_str(), rname.c_str());
+  DBG("compiling '%s' for regex '%s'", rval.c_str(), rname.c_str());
 
   if (MOD_CLS_NAME::add_regex(rname, rval)) {
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    ERROR("compiling '%s' for regex '%s'\n", rval.c_str(), rname.c_str());
+    ERROR("compiling '%s' for regex '%s'", rval.c_str(), rname.c_str());
   }
 } EXEC_ACTION_END;
 
@@ -123,10 +123,10 @@ CONST_ACTION_2P(SCExecRegexAction, ',', false);
 EXEC_ACTION_START(SCExecRegexAction) {
   string rname = resolveVars(par1, sess, sc_sess, event_params);
   string val = resolveVars(par2, sess, sc_sess, event_params);
-  DBG("matching '%s' on regex '%s'\n", val.c_str(), rname.c_str());
+  DBG("matching '%s' on regex '%s'", val.c_str(), rname.c_str());
   map<string, TsRegex>::iterator it=MOD_CLS_NAME::regexes.find(rname);
   if (it == MOD_CLS_NAME::regexes.end()) {
-    ERROR("regex '%s' not found for matching '%s'\n", rname.c_str(), val.c_str());
+    ERROR("regex '%s' not found for matching '%s'", rname.c_str(), val.c_str());
     EXEC_ACTION_STOP;
   }
 
@@ -141,7 +141,7 @@ EXEC_ACTION_START(SCExecRegexAction) {
 
 EXEC_ACTION_START(SCClearRegexAction) {
   string r_name = resolveVars(arg, sess, sc_sess, event_params);
-  DBG("clearing  regex '%s'\n", r_name.c_str());
+  DBG("clearing  regex '%s'", r_name.c_str());
   MOD_CLS_NAME::regexes.erase(r_name);
 } EXEC_ACTION_END;
 
@@ -170,7 +170,7 @@ int TsRegex::regcomp(const char *regex, int cflags) {
 int TsRegex::regexec(const char *_string, size_t nmatch,
 		     regmatch_t pmatch[], int eflags) {
   if (!i) {
-    ERROR("uninitialized regex when matching '%s'\n", _string);
+    ERROR("uninitialized regex when matching '%s'", _string);
     return -1;
   }
   m.lock();

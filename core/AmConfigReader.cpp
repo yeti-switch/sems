@@ -78,7 +78,7 @@ int  AmConfigReader::loadFile(const string& path)
 {
   FILE* fp = fopen(path.c_str(),"r");
   if(!fp){
-      WARN("could not open configuration file '%s': %s\n",
+      WARN("could not open configuration file '%s': %s",
 	   path.c_str(),strerror(errno));
       return -1;
   }
@@ -175,7 +175,7 @@ int  AmConfigReader::loadFile(const string& path)
   return 0;
 
  syntax_error:
-  ERROR("syntax error line %i in %s\n",lc,path.c_str());
+  ERROR("syntax error line %i in %s",lc,path.c_str());
  error:
   fclose(fp);
   return -1;
@@ -235,7 +235,7 @@ static int str_get_line(const char** c, const char* end, char* line_buf, size_t 
       (*c)++;
     }
     else {
-      DBG("strange line ending with CR only\n");
+      DBG("strange line ending with CR only");
     }
   }
 
@@ -329,14 +329,14 @@ int AmConfigReader::loadString(const char* cfg_lines, size_t cfg_len)
   return 0;
 
  syntax_error:
-  ERROR("syntax error line %i\n",lc);
+  ERROR("syntax error line %i",lc);
   return -1;
 }
 
 bool AmConfigReader::getMD5(const string& path, string& md5hash, bool lowercase) {
     std::ifstream data_file(path.c_str(), std::ios::in | std::ios::binary);
     if (!data_file) {
-      DBG("could not read file '%s'\n", path.c_str());
+      DBG("could not read file '%s'", path.c_str());
       return false;
     }
     // that one is clever...

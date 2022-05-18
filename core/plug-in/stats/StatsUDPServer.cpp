@@ -144,12 +144,12 @@ int StatsUDPServer::init()
   if(!udp_port)
     udp_port = DEFAULT_MONIT_UDP_PORT;
 
-  DBG("udp_port = %i\n",udp_port);
+  DBG("udp_port = %i",udp_port);
   udp_addr = cfg.getParameter("monit_udp_ip","");
 
   sd = socket(PF_INET,SOCK_DGRAM,0);
   if(sd == -1){
-    ERROR("could not open socket: %s\n",strerror(errno));
+    ERROR("could not open socket: %s",strerror(errno));
     return -1;
   }
 
@@ -159,7 +159,7 @@ int StatsUDPServer::init()
   /* tos */
   optval=IPTOS_LOWDELAY;
   if (setsockopt(sd, IPPROTO_IP, IP_TOS, (void*)&optval, sizeof(optval)) ==-1){
-    ERROR("WARNING: setsockopt(tos): %s\n", strerror(errno));
+    ERROR("WARNING: setsockopt(tos): %s", strerror(errno));
     /* continue since this is not critical */
   }
 
@@ -170,20 +170,20 @@ int StatsUDPServer::init()
     
   if(!inet_aton(udp_addr.c_str(),(in_addr*)&sa.sin_addr.s_addr)){
     // non valid address
-    ERROR("invalid IP in the monit_udp_ip parameter\n");
+    ERROR("invalid IP in the monit_udp_ip parameter");
     return -1;
   }
 
   //bool socket_bound = false;
   //while(!socket_bound){
   if( bind(sd,(sockaddr*)&sa,sizeof(struct sockaddr_in)) == -1 ){
-    ERROR("could not bind socket at port %i: %s\n",udp_port,strerror(errno));
+    ERROR("could not bind socket at port %i: %s",udp_port,strerror(errno));
     //udp_port += 1;
     //sa.sin_port = htons(udp_port);
 
     return -1;
   } else {
-    INFO("stats server listening on %s:%i\n",udp_addr.c_str(), udp_port);
+    INFO("stats server listening on %s:%i",udp_addr.c_str(), udp_port);
     //socket_bound = true;
   }
   //}
@@ -194,7 +194,7 @@ int StatsUDPServer::init()
 void StatsUDPServer::run()
 {
   setThreadName("StatsUDPServer");
-  DBG("running StatsUDPServer...\n");
+  DBG("running StatsUDPServer...");
   struct sockaddr_in addr;
   socklen_t addrlen = sizeof(struct sockaddr_in);
 
@@ -213,7 +213,7 @@ void StatsUDPServer::run()
       default: break;
       };
 
-      ERROR("recvfrom: %s\n",strerror(errno));
+      ERROR("recvfrom: %s",strerror(errno));
       break;
     }
 
@@ -255,7 +255,7 @@ static int msg_get_line(char*& msg_c, char* str, size_t len)
     return int(s-str);
   }
   else {
-    ERROR("buffer too small (size=%u)\n",(unsigned int)len);
+    ERROR("buffer too small (size=%u)",(unsigned int)len);
     // buffer overran.
     return -1;
   }
@@ -271,7 +271,7 @@ static int msg_get_param(char*& msg_c, string& p, char* line_buf, unsigned int s
     p = line_buf;
   }
   else {
-    ERROR("msg_get_line failed\n");
+    ERROR("msg_get_line failed");
     return -1;
   }
 
@@ -430,7 +430,7 @@ int StatsUDPServer::execute(char* msg_buf, string& reply,
       for (vector<string>::iterator it = s_args.begin(); 
 	   it != s_args.end(); it++) {
 	args.push(it->c_str());
-// 	DBG("mod '%s' added arg a '%s'\n", 
+// 	DBG("mod '%s' added arg a '%s'", 
 // 	    fact_name.c_str(),
 // 	    it->c_str());
       }

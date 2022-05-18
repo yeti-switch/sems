@@ -33,14 +33,14 @@ PySemsDialog::~PySemsDialog()
 
 void PySemsDialog::onSessionStart(const AmSipRequest& req)
 {
-  DBG("PySemsDialog::onSessionStart\n");
+  DBG("PySemsDialog::onSessionStart");
   setInOut(&playlist,&playlist);
   AmSession::onSessionStart(req);
 }
 
 void PySemsDialog::process(AmEvent* event) 
 {
-  DBG("PySemsDialog::process\n");
+  DBG("PySemsDialog::process");
 
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
   if(audio_event && audio_event->event_id == AmAudioEvent::noAudio){

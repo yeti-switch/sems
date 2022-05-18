@@ -42,7 +42,7 @@ AmAudioFileFormat::AmAudioFileFormat(const string& name, int subtype)
     channels = p_subtype->channels;
     subtype = p_subtype->type;
   } 
-  DBG("created AmAudioFileFormat of subtype %i, with rate %u, channels %u\n",
+  DBG("created AmAudioFileFormat of subtype %i, with rate %u, channels %u",
       subtype, rate, channels);
 }
 
@@ -55,7 +55,7 @@ AmAudioFileFormat::AmAudioFileFormat(const string& name, int subtype, amci_subty
     rate = p_subtype->sample_rate;
     channels = p_subtype->channels;
   } 
-  DBG("created AmAudioFileFormat of subtype %i, with rate %u, channels %u\n",
+  DBG("created AmAudioFileFormat of subtype %i, with rate %u, channels %u",
       subtype, rate, channels);
 }
 
@@ -70,7 +70,7 @@ amci_codec_t* AmAudioFileFormat::getCodec()
 
 void AmAudioFileFormat::setSubtypeId(int subtype_id)  { 
   if (subtype != subtype_id) {
-    DBG("changing file subtype to ID %d\n", subtype_id);
+    DBG("changing file subtype to ID %d", subtype_id);
     destroyCodec();
     subtype = subtype_id; 
     p_subtype = 0;
@@ -84,14 +84,14 @@ amci_subtype_t*  AmAudioFileFormat::getSubtype()
     // get file format from file name
     amci_inoutfmt_t* iofmt = AmPlugIn::instance()->fileFormat(name.c_str());
     if(!iofmt){
-      ERROR("AmAudioFileFormat::getSubtype: file format '%s' does not exist\n",
+      ERROR("AmAudioFileFormat::getSubtype: file format '%s' does not exist",
 	    name.c_str());
       return NULL;
     }
 
     p_subtype = AmPlugIn::instance()->subtype(iofmt,subtype);
     if(!p_subtype) {
-      ERROR("AmAudioFileFormat::getSubtype: subtype %i in format '%s' does not exist\n",
+      ERROR("AmAudioFileFormat::getSubtype: subtype %i in format '%s' does not exist",
 	    subtype,iofmt->name);
       return NULL;
     }
@@ -106,13 +106,13 @@ AmAudioFileFormat* AmAudioFile::fileName2Fmt(const string& name, const string& s
 {
   string ext = file_extension(name);
   if(ext == ""){
-    ERROR("fileName2Fmt: file name has no extension (%s)\n",name.c_str());
+    ERROR("fileName2Fmt: file name has no extension (%s)",name.c_str());
     return NULL;
   }
 
   iofmt = AmPlugIn::instance()->fileFormat("",ext);
   if(!iofmt){
-    ERROR("fileName2Fmt: could not find a format with that extension: '%s'\n",ext.c_str());
+    ERROR("fileName2Fmt: could not find a format with that extension: '%s'",ext.c_str());
     return NULL;
   }
 
@@ -121,7 +121,7 @@ AmAudioFileFormat* AmAudioFile::fileName2Fmt(const string& name, const string& s
     if (st!=NULL) {
       return new AmAudioFileFormat(iofmt->name, st->type, st);
     }
-    WARN("subtype '%s' for file '%s' not found. Using default subtype\n",
+    WARN("subtype '%s' for file '%s' not found. Using default subtype",
 	 subtype.c_str(), name.c_str());
   }
 
@@ -169,15 +169,15 @@ int  AmAudioFile::open(const string& filename, OpenMode mode, bool is_tmp)
     n_fp = fopen(f_name.c_str(),mode == AmAudioFile::Read ? "r" : "w+");
     if(!n_fp){
       if(mode == AmAudioFile::Read)
-	ERROR("file not found: %s\n",f_name.c_str());
+	ERROR("file not found: %s",f_name.c_str());
       else
-	ERROR("could not create/overwrite file: %s\n",f_name.c_str());
+	ERROR("could not create/overwrite file: %s",f_name.c_str());
       return -1;
     }
   } else {	
     n_fp = tmpfile();
     if(!n_fp){
-      ERROR("could not create temporary file: %s\n",strerror(errno));
+      ERROR("could not create temporary file: %s",strerror(errno));
       return -1;
     }
   }
@@ -204,7 +204,7 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
 
   AmAudioFileFormat* f_fmt = fileName2Fmt(filename, subtype);
   if(!f_fmt){
-    ERROR("while trying to determine the format of '%s'\n",
+    ERROR("while trying to determine the format of '%s'",
 	  filename.c_str());
     close();
     return -1;
@@ -220,9 +220,9 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
 
     if (f_fmt->channels<0 /*|| f_fmt->getRate()<0*/) {
       if (f_fmt->channels<0)
-	ERROR("channel count must be set for output file.\n");
+	ERROR("channel count must be set for output file.");
       // if (f_fmt->getRate()<0)
-      // 	ERROR("sampling rate must be set for output file.\n");
+      // 	ERROR("sampling rate must be set for output file.");
       close();
       return -1;
     }
@@ -246,19 +246,19 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
     begin = ftell(fp);
   } else {
     if(!iofmt->open)
-      ERROR("no open function\n");
+      ERROR("no open function");
     else
-      ERROR("open returned %d: %s\n", ret, strerror(errno));
+      ERROR("open returned %d: %s", ret, strerror(errno));
     close();
     return ret;
   }
 
   //     if(open_mode == AmAudioFile::Write){
 
-  // 	DBG("After open:\n");
-  // 	DBG("fmt::subtype = %i\n",f_fmt->getSubtypeId());
-  // 	DBG("fmt::channels = %i\n",f_fmt->channels);
-  // 	DBG("fmt::rate = %i\n",f_fmt->rate);
+  // 	DBG("After open:");
+  // 	DBG("fmt::subtype = %i",f_fmt->getSubtypeId());
+  // 	DBG("fmt::channels = %i",f_fmt->channels);
+  // 	DBG("fmt::rate = %i",f_fmt->rate);
   //     }
 
   return ret;
@@ -290,10 +290,10 @@ void AmAudioFile::rewind(unsigned int msec)
   long int k = fmt->calcBytesToRead(((getSampleRate()/100)*msec)/10);
   
   if(fpos > begin + k) {
-    DBG("Rewinding %d milliseconds (%ld bytes)\n", msec, k);
+    DBG("Rewinding %d milliseconds (%ld bytes)", msec, k);
     fseek(fp, -k, SEEK_CUR);
   } else {
-    DBG("Rewinding file\n");
+    DBG("Rewinding file");
     fseek(fp, begin, SEEK_SET);
   }
   clearBufferEOF();
@@ -305,11 +305,11 @@ void AmAudioFile::forward(unsigned int msec)
   long int k = fmt->calcBytesToRead(((getSampleRate()/100)*msec)/10);
   
   if(fpos <= (data_size - k)) {
-    DBG("Forwarding %d milliseconds (%ld bytes)\n", msec, k);
+    DBG("Forwarding %d milliseconds (%ld bytes)", msec, k);
     fseek(fp, k, SEEK_CUR);
     clearBufferEOF();
   } else {
-    DBG("Forwarding to EOF\n");
+    DBG("Forwarding to EOF");
     fseek(fp, data_size, SEEK_SET);
   }
 }
@@ -329,7 +329,7 @@ void AmAudioFile::on_close()
 				    0, 0, 0};
 	    
       if(!iofmt){
-	ERROR("file format pointer not initialized: on_close will not be called\n");
+	ERROR("file format pointer not initialized: on_close will not be called");
       }
       else if(iofmt->on_close)
 	(*iofmt->on_close)(fp,&fmt_desc,open_mode, fmt->getHCodecNoInit(), fmt->getCodec());      
@@ -337,10 +337,10 @@ void AmAudioFile::on_close()
 
     if(open_mode == AmAudioFile::Write){
 
-      DBG("After close:\n");
-      DBG("fmt::subtype = %i\n",f_fmt->getSubtypeId());
-      DBG("fmt::channels = %i\n",f_fmt->channels);
-      DBG("fmt::rate = %i\n",f_fmt->getRate());
+      DBG("After close:");
+      DBG("fmt::subtype = %i",f_fmt->getSubtypeId());
+      DBG("fmt::channels = %i",f_fmt->channels);
+      DBG("fmt::rate = %i",f_fmt->getRate());
     }
 
     on_close_done = true;
@@ -372,7 +372,7 @@ string AmAudioFile::getMimeType()
 int AmAudioFile::read(unsigned int user_ts, unsigned int size)
 {
   if(!fp){
-    ERROR("AmAudioFile::read: file is not opened\n");
+    ERROR("AmAudioFile::read: file is not opened");
     return -1;
   }
 
@@ -390,14 +390,14 @@ int AmAudioFile::read(unsigned int user_ts, unsigned int size)
     
     if ((data_size == -1) && loop.get() && feof(fp)) {
       // data size unknown, loop and eof
-      DBG("rewinding audio file...\n");
+      DBG("rewinding audio file...");
       rewind();
       goto read_block;
     }
 
     if (data_size == -1 && autorewind.get() && feof(fp)) {
       // data size unknown, autorewind and eof      
-      DBG("autorewinding audio file...\n");
+      DBG("autorewinding audio file...");
       rewind();
 
       ret = -2; // eof
@@ -427,13 +427,13 @@ int AmAudioFile::read(unsigned int user_ts, unsigned int size)
 #endif
   } else {
     if (loop.get() && data_size>0) {
-      DBG("rewinding audio file...\n");
+      DBG("rewinding audio file...");
       rewind();
       goto read_block;
     }
 
     if (autorewind.get() && data_size>0){
-      DBG("autorewinding audio file...\n");
+      DBG("autorewinding audio file...");
       rewind();
     }
     
@@ -441,7 +441,7 @@ int AmAudioFile::read(unsigned int user_ts, unsigned int size)
   }
 
   if(ret > 0 && s > 0 && (unsigned int)s < size){
-    DBG("0-stuffing packet: adding %i bytes (packet size=%i)\n",size-s,size);
+    DBG("0-stuffing packet: adding %i bytes (packet size=%i)",size-s,size);
     memset((unsigned char*)samples + s,0,size-s);
     return size;
   }
@@ -452,7 +452,7 @@ int AmAudioFile::read(unsigned int user_ts, unsigned int size)
 int AmAudioFile::write(unsigned int user_ts, unsigned int size)
 {
   if(!fp){
-    ERROR("AmAudioFile::write: file is not opened\n");
+    ERROR("AmAudioFile::write: file is not opened");
     return -1;
   }
 

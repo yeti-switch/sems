@@ -32,7 +32,7 @@ DILog::DILog(const string& name)
 { }
 
 int DILog::onLoad() {
-  DBG("DILog logging ring-buffer loaded.\n");
+  DBG("DILog logging ring-buffer loaded.");
   return 0;
 }
 

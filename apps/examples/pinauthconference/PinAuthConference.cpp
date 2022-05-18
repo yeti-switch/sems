@@ -65,7 +65,7 @@ int PinAuthConferenceFactory::onLoad()
     DigitsDir+='/';
 
   if (!DigitsDir.length()) {
-    WARN("No digits_dir specified in configuration.\n");
+    WARN("No digits_dir specified in configuration.");
   }
   for (int i=0;i<10;i++) 
     prompts.setPrompt(int2str(i), DigitsDir+int2str(i)+".wav", APP_NAME);
@@ -73,12 +73,12 @@ int PinAuthConferenceFactory::onLoad()
   string playout_type = cfg.getParameter("playout_type");
   if (playout_type == "simple") {
     m_PlayoutType = SIMPLE_PLAYOUT;
-    DBG("Using simple (fifo) buffer as playout technique.\n");
+    DBG("Using simple (fifo) buffer as playout technique.");
   } else 	if (playout_type == "adaptive_jb") {
     m_PlayoutType = JB_PLAYOUT;
-    DBG("Using adaptive jitter buffer as playout technique.\n");
+    DBG("Using adaptive jitter buffer as playout technique.");
   } else {
-    DBG("Using adaptive playout buffer as playout technique.\n");
+    DBG("Using adaptive playout buffer as playout technique.");
   }
 
   return 0;
@@ -165,7 +165,7 @@ void PinAuthConferenceDialog::process(AmEvent* ev)
     switch(ce->event_id){
 
     case ConfNewParticipant: {
-      DBG("########## new participant #########\n");
+      DBG("########## new participant #########");
       if(ce->participants == 1){
 	prompts.addToPlaylist(FIRST_PARTICIPANT, (long)this, play_list, true);
       } else {
@@ -174,7 +174,7 @@ void PinAuthConferenceDialog::process(AmEvent* ev)
     } break;
     
     case ConfParticipantLeft: {
-      DBG("########## participant left ########\n");
+      DBG("########## participant left ########");
       prompts.addToPlaylist(DROP_SOUND, (long)this, play_list, true);
     } break;
 
@@ -191,14 +191,14 @@ void PinAuthConferenceDialog::process(AmEvent* ev)
     if (EnteringConference == state) {
       state = InConference;
       connectConference(pin_str);
-      DBG("connectConference. **********************\n");
+      DBG("connectConference. **********************");
     }    
   }
   // audio events
   AmAudioEvent* audio_ev = dynamic_cast<AmAudioEvent*>(ev);
   if (audio_ev  && 
       audio_ev->event_id == AmAudioEvent::noAudio) {
-    DBG("received noAudio event. **********************\n");
+    DBG("received noAudio event. **********************");
     return;
   }
 
@@ -207,14 +207,14 @@ void PinAuthConferenceDialog::process(AmEvent* ev)
 
 void PinAuthConferenceDialog::onDtmf(int event, int duration)
 {
-  DBG("PinAuthConferenceDialog::onDtmf: event %d duration %d\n", 
+  DBG("PinAuthConferenceDialog::onDtmf: event %d duration %d", 
       event, duration);
 
   if (EnteringPin == state) {
     // not yet in conference
     if (event<10) {
       pin_str += int2str(event);
-      DBG("added '%s': PIN is now '%s'.\n", 
+      DBG("added '%s': PIN is now '%s'.", 
 	  int2str(event).c_str(), pin_str.c_str());
     } else if (event==10 || event==11) {
       // pound and star key
@@ -229,7 +229,7 @@ void PinAuthConferenceDialog::onDtmf(int event, int duration)
 	for (size_t i=0;i<pin_str.length();i++) {
 	  string num = "";
 	  num[0] = pin_str[i];
-	  DBG("adding '%s' to playlist.\n", num.c_str());
+	  DBG("adding '%s' to playlist.", num.c_str());
 
 	  prompts.addToPlaylist(num,
 				(long)this, play_list);

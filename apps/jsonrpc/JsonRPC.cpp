@@ -152,10 +152,10 @@ int JsonRPCServerModule::reconfigure(const std::string& config)
 }
 
 int JsonRPCServerModule::load() {
-  DBG("using server listen address %s\n", host.c_str());
-  DBG("using server port %d\n", port);
-  DBG("using %d server threads\n", threads);
-  DBG("starting server loop thread\n");
+  DBG("using server listen address %s", host.c_str());
+  DBG("using server port %d", port);
+  DBG("using %d server threads", threads);
+  DBG("starting server loop thread");
   server_loop = JsonRPCServerLoop::instance();
   server_loop->start();
   
@@ -171,7 +171,7 @@ void JsonRPCServerModule::invoke(const string& method,
                                       // flags(i), host, port (i), method, [params]
     if (args.size() > 7)  {
       if (!isArgArray(args.get(7)) && !isArgStruct(args.get(7))) {
-	ERROR("internal error: params to JSON-RPC must be struct or array\n");
+	ERROR("internal error: params to JSON-RPC must be struct or array");
 	throw AmArg::TypeMismatchException();
       }
     }
@@ -181,7 +181,7 @@ void JsonRPCServerModule::invoke(const string& method,
     args.assertArrayFmt("sisss");          // conn_id, type, method, id, reply_sink, [params]
     if (args.size() > 5) {
       if (!isArgArray(args.get(5)) && !isArgStruct(args.get(5))) {
-	ERROR("internal error: params to JSON-RPC must be struct or array\n");
+	ERROR("internal error: params to JSON-RPC must be struct or array");
 	throw AmArg::TypeMismatchException();
       }
     }

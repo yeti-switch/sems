@@ -39,7 +39,7 @@ int EmailTemplate::load(const string& filename)
   tmpl_file = filename;
   FILE* fp = fopen(tmpl_file.c_str(),"r");
   if(!fp){
-    ERROR("EmailTemplate: could not open mail template '%s': %s\n",
+    ERROR("EmailTemplate: could not open mail template '%s': %s",
 	  tmpl_file.c_str(),strerror(errno));
     return -1;
   }
@@ -53,15 +53,15 @@ int EmailTemplate::load(const string& filename)
   char* buffer = new char[file_size+1];
   if(!buffer){
     fclose(fp);
-    ERROR("EmailTemplate: not enough memory to load template\n");
-    ERROR("(file=%s,size=%u)\n",tmpl_file.c_str(),file_size);
+    ERROR("EmailTemplate: not enough memory to load template");
+    ERROR("(file=%s,size=%u)",tmpl_file.c_str(),file_size);
     return -1;
   }
 
   size_t f_rd = fread(buffer,1,file_size,fp);
   fclose(fp);
   if (f_rd != file_size) {
-    WARN("short read on file %s (expected %u, got %zd)\n",
+    WARN("short read on file %s (expected %u, got %zd)",
 	 filename.c_str(), file_size, f_rd);
   }
   buffer[f_rd] = '\0';
@@ -86,7 +86,7 @@ int EmailTemplate::parse(char* buffer)
     while( (*s==' ') || (*s=='\r') ) s++;
 
     if(!(*s)){
-      ERROR("EmailTemplate: parsing failed: end of file reached\n");
+      ERROR("EmailTemplate: parsing failed: end of file reached");
       return -1;
     }
 	
@@ -114,7 +114,7 @@ int EmailTemplate::parse(char* buffer)
       state = 0;
 
     if(!state){
-      ERROR("EmailTemplate: parsing failed: unknown token: '%s'\n",begin);
+      ERROR("EmailTemplate: parsing failed: unknown token: '%s'",begin);
       return -1;
     }
 
@@ -140,15 +140,15 @@ int EmailTemplate::parse(char* buffer)
   }
 
   if(subject.empty()){
-    ERROR("EmailTemplate: invalid template: empty or no 'subject' line\n");
+    ERROR("EmailTemplate: invalid template: empty or no 'subject' line");
     return -1;
   }
   if(to.empty()){
-    ERROR("EmailTemplate: invalid template: empty or no 'to' line\n");
+    ERROR("EmailTemplate: invalid template: empty or no 'to' line");
     return -1;
   }
   if(from.empty()){
-    ERROR("EmailTemplate: invalid template: empty or no 'from' line\n");
+    ERROR("EmailTemplate: invalid template: empty or no 'from' line");
     return -1;
   }
     
@@ -156,7 +156,7 @@ int EmailTemplate::parse(char* buffer)
     body = s;
 
   if(body.empty()){
-    ERROR("EmailTemplate: invalid template: empty body\n");
+    ERROR("EmailTemplate: invalid template: empty body");
     return -1;
   }
 

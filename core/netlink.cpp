@@ -8,7 +8,7 @@ NetlinkHelper::NetlinkHelper()
 {
     fd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
     if (fd < 0) {
-        ERROR("error creation netlink socket: %s\n", strerror(errno));
+        ERROR("error creation netlink socket: %s", strerror(errno));
         return;
     }
 
@@ -28,7 +28,7 @@ NetlinkHelper::NetlinkHelper()
     msg.msg_flags = 0;
 
     if (bind(fd, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
-        ERROR("error binding with socket: %s\n", (char*)strerror(errno));
+        ERROR("error binding with socket: %s", (char*)strerror(errno));
         close(fd);
         fd = 0;
         return;
@@ -97,7 +97,7 @@ bool NetlinkHelper::send_request(const route_data& data)
 
     iov.iov_len = req.nl.nlmsg_len;
     if(sendmsg(fd, &msg, 0) < 0) {
-        ERROR("error sending data to socket: %s\n", (char*)strerror(errno));
+        ERROR("error sending data to socket: %s", (char*)strerror(errno));
         return false;
     }
 
@@ -108,7 +108,7 @@ bool NetlinkHelper::recv_request(NetlinkHelper::route_data& data)
 {
     ssize_t status = recvmsg(fd, &msg, MSG_PEEK | MSG_TRUNC);
     if (status <= 0) {
-        ERROR("error recv message by netlink: %s\n", (char*)strerror(errno));
+        ERROR("error recv message by netlink: %s", (char*)strerror(errno));
         return false;
     }
 

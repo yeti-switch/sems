@@ -67,19 +67,19 @@ int ServiceLineFactory::onLoad()
   configureModule(cfg);
 
   AnnounceFile = cfg.getParameter("prompt",ANNOUNCE_FILE);
-  DBG("Prompt = %s\n",AnnounceFile.c_str());
+  DBG("Prompt = %s",AnnounceFile.c_str());
 
   string announce_file = AnnounceFile;
   if(!file_exists(announce_file)){
-    ERROR("prompt file for serviceline module does not exist ('%s').\n",
+    ERROR("prompt file for serviceline module does not exist ('%s').",
 	  announce_file.c_str());
     return -1;
   }
 
-  DBG("ServiceLine Connect DTMF Key Mapping:\n");
+  DBG("ServiceLine Connect DTMF Key Mapping:");
   for (unsigned int i=0;i<10;i++) {
     callee_numbers[i] = cfg.getParameter("callee_number"+int2str(i));
-    DBG("Key %u -> Extension __%s__\n", 
+    DBG("Key %u -> Extension __%s__", 
 	i, callee_numbers[i].empty()?
 	"none":callee_numbers[i].c_str());
   }
@@ -102,12 +102,12 @@ AmSession* ServiceLineFactory::onInvite(const AmSipRequest& req, const string& a
   string announce_file = announce_path + req.domain
     + "/" + req.user + ".wav";
     
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     new ServiceLineCallerDialog(announce_file);
     
   announce_file = announce_path + req.user + ".wav";
-  DBG("trying '%s'\n",announce_file.c_str());
+  DBG("trying '%s'",announce_file.c_str());
   if(file_exists(announce_file))
     new ServiceLineCallerDialog(announce_file);
     
@@ -147,7 +147,7 @@ void ServiceLineCallerDialog::process(AmEvent* event)
   AmAudioEvent* audio_event = dynamic_cast<AmAudioEvent*>(event);
 	
   if(audio_event && (audio_event->event_id == AmAudioEvent::cleared)){
-    DBG("ignoring end of prompt.\n");
+    DBG("ignoring end of prompt.");
     return;
   }
 
@@ -156,7 +156,7 @@ void ServiceLineCallerDialog::process(AmEvent* event)
 
 void ServiceLineCallerDialog::onDtmf(int event, int duration)
 {
-  DBG("DTMF event %d duration %d\n", event, duration);
+  DBG("DTMF event %d duration %d", event, duration);
   if (getCalleeStatus() != None)
     return;
   

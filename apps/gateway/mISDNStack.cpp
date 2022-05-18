@@ -26,13 +26,13 @@ mISDNStack* mISDNStack::_instance=NULL;
 mISDNStack* mISDNStack::instance()
 {
     if(!_instance) {
-    DBG("mISDNStack::instance spawning new\n");
+    DBG("mISDNStack::instance spawning new");
 	_instance = new mISDNStack();
 	if(_instance->init() != OK){
 		delete _instance;
                 _instance = 0;
         } else {
-	        DBG("mISDNStack::instance start\n");
+	        DBG("mISDNStack::instance start");
     		_instance->start();
     		init_flip_bits();
         }
@@ -43,14 +43,14 @@ mISDNChannel* mISDNStack::NewCR(mISDNport *port,mISDN::iframe_t *frame) {
     std::map<int,mISDNChannel*>::iterator iter=CR_map.find(frame->dinfo);;
     if(iter==CR_map.end()) {
         mISDNChannel* chan=NULL;
-        DBG("This is new CR, spawning new object\n");
+        DBG("This is new CR, spawning new object");
         chan = new mISDNChannel(port);
         CR_map[frame->dinfo]=chan;
         chan->m_CR=frame->dinfo;
-        DBG("pointer to chan is %p\n",chan);
+        DBG("pointer to chan is %p",chan);
         return chan;
     } else {
-        DBG("got previous CR porinter is %p\n",iter->second);
+        DBG("got previous CR porinter is %p",iter->second);
         return iter->second;
     }
 }
@@ -58,20 +58,20 @@ mISDNChannel* mISDNStack::NewCR(mISDNport *port,mISDN::iframe_t *frame) {
 mISDNChannel* mISDNStack::FindCR(mISDN::iframe_t *frame) {
     std::map<int,mISDNChannel*>::iterator iter=CR_map.find(frame->dinfo);;
     if(iter!=CR_map.end()) {
-//      DBG("got previous CR porinter is %p\n",iter->second);
+//      DBG("got previous CR porinter is %p",iter->second);
         return iter->second;
     } else {
-        ERROR("CR 0x%08x not found in CR_map\n",frame->dinfo);
+        ERROR("CR 0x%08x not found in CR_map",frame->dinfo);
         return NULL;
     }
 }
 mISDNChannel* mISDNStack::FindBC(mISDN::iframe_t *frame) {
     std::map<int,mISDNChannel*>::iterator iter=BC_map.find(frame->addr&STACK_ID_MASK);;
     if(iter!=BC_map.end()) {
-//      DBG("got previous BC porinter is %p\n",iter->second);
+//      DBG("got previous BC porinter is %p",iter->second);
         return iter->second;
     } else {
-        ERROR("BC address 0x%08x not found in BC_map\n",frame->addr);
+        ERROR("BC address 0x%08x not found in BC_map",frame->addr);
         return NULL;
     }
 }
@@ -80,12 +80,12 @@ int mISDNStack::placeCall(const AmSipRequest &req, GWSession *session, const std
     //we will have code to choose right port here.
     mISDNChannel *chan = new mISDNChannel(); //(device);
     if(chan==NULL) {
-	ERROR("Cant allocate new mISDNChannel\n");
+	ERROR("Cant allocate new mISDNChannel");
 	return FAIL;
     }
     session->setOtherLeg(chan);
     chan->setSession(session);
-    DBG("calling ((mISDNChannel*)m_pstndevice)->placeCall(m_req, tonumber, fromnumber);\n");
+    DBG("calling ((mISDNChannel*)m_pstndevice)->placeCall(m_req, tonumber, fromnumber);");
     return chan->placeCall(req, tonumber, fromnumber);
 }
                                             
@@ -100,58 +100,58 @@ int mISDNStack::GetPortInfo() {
         int device;
     
 	if ((device = mISDN_open()) < 0)  {
-                ERROR("mISDNStack::mISDNStack: mISDN_open() failed: ret=%d errno=%d (%s) Check for mISDN modules and device.\n", device, errno, strerror(errno));
+                ERROR("mISDNStack::mISDNStack: mISDN_open() failed: ret=%d errno=%d (%s) Check for mISDN modules and device.", device, errno, strerror(errno));
                 return FAIL;
         }
-        DBG("mISDNStack::mISDNStack: mISDN_open %d\n",device);
+        DBG("mISDNStack::mISDNStack: mISDN_open %d",device);
         /* get number of stacks */
         i = 1;
         num_cards = mISDN_get_stack_count(device);
         if (num_cards <= 0) {
-                ERROR("Found no card. Please be sure to load card drivers.\n");
+                ERROR("Found no card. Please be sure to load card drivers.");
                 return FAIL;
         }
                                                                                 
         /* loop the number of cards and get their info */
         while(i <= num_cards) {
                 err = mISDN_get_stack_info(device, i, buff, sizeof(buff));
-                if (err <= 0) { ERROR("mISDN_get_stack_info() failed: port=%d err=%d\n", i, err); break; }
+                if (err <= 0) { ERROR("mISDN_get_stack_info() failed: port=%d err=%d", i, err); break; }
                 stinf = (stack_info_t *)&frm->data.p;
                 nt = pri = 0;
                 useable = 1;
                 switch(stinf->pid.protocol[0] & ~ISDN_PID_FEATURE_MASK) {
-                        case ISDN_PID_L0_TE_S0:			INFO("Port %2d: TE-mode BRI S/T interface line (for phone lines)\n",i); break;
-                        case ISDN_PID_L0_NT_S0: nt = 1; 	INFO("Port %2d: NT-mode BRI S/T interface port (for phones)\n",i); break;
-                        case ISDN_PID_L0_TE_E1: pri = 1; 	INFO("Port %2d: TE-mode PRI E1  interface line (for phone lines)\n",i); break;
-                        case ISDN_PID_L0_NT_E1: nt = 1;pri = 1;	INFO("Port %2d: NT-mode PRI E1  interface port (for phones)\n",i); break;
-                        default: useable = 0; ERROR("unknown type 0x%08x\n",stinf->pid.protocol[0]);
+                        case ISDN_PID_L0_TE_S0:			INFO("Port %2d: TE-mode BRI S/T interface line (for phone lines)",i); break;
+                        case ISDN_PID_L0_NT_S0: nt = 1; 	INFO("Port %2d: NT-mode BRI S/T interface port (for phones)",i); break;
+                        case ISDN_PID_L0_TE_E1: pri = 1; 	INFO("Port %2d: TE-mode PRI E1  interface line (for phone lines)",i); break;
+                        case ISDN_PID_L0_NT_E1: nt = 1;pri = 1;	INFO("Port %2d: NT-mode PRI E1  interface port (for phones)",i); break;
+                        default: useable = 0; ERROR("unknown type 0x%08x",stinf->pid.protocol[0]);
                 }
                 if (nt) {
-                        if (stinf->pid.protocol[1] == 0) { useable = 0;  INFO(" -> Missing layer 1 NT-mode protocol.\n");  }
-                        p = 2; while(p <= MAX_LAYER_NR) { if (stinf->pid.protocol[p]) {useable = 0; INFO(" -> Layer %d protocol 0x%08x is detected, but not allowed for NT.\n", p, stinf->pid.protocol[p]); } p++; }
+                        if (stinf->pid.protocol[1] == 0) { useable = 0;  INFO(" -> Missing layer 1 NT-mode protocol.");  }
+                        p = 2; while(p <= MAX_LAYER_NR) { if (stinf->pid.protocol[p]) {useable = 0; INFO(" -> Layer %d protocol 0x%08x is detected, but not allowed for NT.", p, stinf->pid.protocol[p]); } p++; }
                         if (useable) {
-                                if (pri) INFO(" -> Interface is Point-To-Point (PRI).\n");
-                                else     INFO(" -> Interface can be Poin-To-Point/Multipoint.\n");
+                                if (pri) INFO(" -> Interface is Point-To-Point (PRI).");
+                                else     INFO(" -> Interface can be Poin-To-Point/Multipoint.");
                         }
                 } else  {
-                        if (stinf->pid.protocol[1] == 0) { useable = 0; INFO(" -> Missing layer 1 protocol.\n"); }
-                        if (stinf->pid.protocol[2] == 0) { useable = 0; INFO(" -> Missing layer 2 protocol.\n"); }
-                        if (stinf->pid.protocol[2] & ISDN_PID_L2_DF_PTP) { INFO(" -> Interface is Poin-To-Point.\n"); }
-                        if (stinf->pid.protocol[3] == 0) { useable = 0; INFO(" -> Missing layer 3 protocol.\n"); } 
+                        if (stinf->pid.protocol[1] == 0) { useable = 0; INFO(" -> Missing layer 1 protocol."); }
+                        if (stinf->pid.protocol[2] == 0) { useable = 0; INFO(" -> Missing layer 2 protocol."); }
+                        if (stinf->pid.protocol[2] & ISDN_PID_L2_DF_PTP) { INFO(" -> Interface is Poin-To-Point."); }
+                        if (stinf->pid.protocol[3] == 0) { useable = 0; INFO(" -> Missing layer 3 protocol."); } 
                         else {	switch(stinf->pid.protocol[3] & ~ISDN_PID_FEATURE_MASK) {
-                                        case ISDN_PID_L3_DSS1USER: INFO(" -> Protocol: DSS1 (Euro ISDN)\n"); break;
-                                        default: useable = 0; INFO(" -> Protocol: unknown protocol 0x%08x\n",stinf->pid.protocol[3]);
+                                        case ISDN_PID_L3_DSS1USER: INFO(" -> Protocol: DSS1 (Euro ISDN)"); break;
+                                        default: useable = 0; INFO(" -> Protocol: unknown protocol 0x%08x",stinf->pid.protocol[3]);
                                 }
                         }
-                        p = 4; while(p <= MAX_LAYER_NR) { if (stinf->pid.protocol[p]) { useable = 0; INFO(" -> Layer %d protocol 0x%08x is detected, but not allowed for TE.\n", p, stinf->pid.protocol[p]); } p++; }
-                        INFO(" -> childcnt: %d\n",stinf->childcnt);
+                        p = 4; while(p <= MAX_LAYER_NR) { if (stinf->pid.protocol[p]) { useable = 0; INFO(" -> Layer %d protocol 0x%08x is detected, but not allowed for TE.", p, stinf->pid.protocol[p]); } p++; }
+                        INFO(" -> childcnt: %d",stinf->childcnt);
                 }
-                if (!useable)  ERROR(" * Port %2d  NOT useable. (maybe somethind is using it already?)\n",i);
+                if (!useable)  ERROR(" * Port %2d  NOT useable. (maybe somethind is using it already?)",i);
                 i++;
         }
         /* close mISDN */
         if ((err = mISDN_close(device))) { 
-    		ERROR("mISDN_close() failed: err=%d '%s'\n", err, strerror(err));
+    		ERROR("mISDN_close() failed: err=%d '%s'", err, strerror(err));
                 return FAIL;
         }
 	return OK;
@@ -177,44 +177,44 @@ int mISDNStack::init() {
         stack_info_t *stinf;
                                 
 
-	if ((m_mISDNdevice = mISDN_open()) < 0)  { ERROR("mISDNStack::init: mISDN_open() failed: ret=%d errno=%d (%s) Check for mISDN modules and device.\n", m_mISDNdevice, errno, strerror(errno)); return FAIL; }
-        DBG("mISDNStack::init: mISDN_opened %d\n",m_mISDNdevice);
+	if ((m_mISDNdevice = mISDN_open()) < 0)  { ERROR("mISDNStack::init: mISDN_open() failed: ret=%d errno=%d (%s) Check for mISDN modules and device.", m_mISDNdevice, errno, strerror(errno)); return FAIL; }
+        DBG("mISDNStack::init: mISDN_opened %d",m_mISDNdevice);
         /* create entity for layer 3 TE-mode */
         mISDN_write_frame(m_mISDNdevice, buff, 0, MGR_NEWENTITY | REQUEST, 0, 0, NULL, TIMEOUT_1SEC);
         ret = mISDN_read_frame(m_mISDNdevice, frm, sizeof(iframe_t), 0, MGR_NEWENTITY | CONFIRM, TIMEOUT_1SEC);
-        if (ret < (int)mISDN_HEADER_LEN) {  	ERROR("Cannot request MGR_NEWENTITY from mISDN. header too small.\n");return FAIL; }
+        if (ret < (int)mISDN_HEADER_LEN) {  	ERROR("Cannot request MGR_NEWENTITY from mISDN. header too small.");return FAIL; }
         m_entity = frm->dinfo & 0xffff;
-        if (!m_entity) {			ERROR("Cannot request MGR_NEWENTITY from mISDN. Exitting due to software bug.\n"); return FAIL; }
-	DBG("our entity for l3-processes is 0x%08x.\n", m_entity);
+        if (!m_entity) {			ERROR("Cannot request MGR_NEWENTITY from mISDN. Exitting due to software bug."); return FAIL; }
+	DBG("our entity for l3-processes is 0x%08x.", m_entity);
 	m_crcount=1; //entity and crcount is used to generate uniqe addr for outgoing calls
 	
 	cnt = mISDN_get_stack_count(m_mISDNdevice);
-	if(cnt<=0) { 				ERROR("no devices\n"); return FAIL;}
+	if(cnt<=0) { 				ERROR("no devices"); return FAIL;}
 	for(port=1;port<=cnt;port++) {	
 		pri = ports = nt = 0;
 		ret = mISDN_get_stack_info(m_mISDNdevice, port, buff, sizeof(buff));
-	        if (ret < 0) {	ERROR("Cannot get stack info for port %d (ret=%d)\n", port, ret); }
+	        if (ret < 0) {	ERROR("Cannot get stack info for port %d (ret=%d)", port, ret); }
 		stinf = (stack_info_t *)&frm->data.p;
 	        switch(stinf->pid.protocol[0] & ~ISDN_PID_FEATURE_MASK)  {
-                    case ISDN_PID_L0_TE_S0: DBG("TE-mode BRI S/T interface line\n"); pri = 0;	nt = 0;	break;
-	    	    case ISDN_PID_L0_NT_S0: DBG("NT-mode BRI S/T interface port\n"); pri = 0;	nt = 1;	break;
-	            case ISDN_PID_L0_TE_E1: DBG("TE-mode PRI E1  interface line\n"); pri = 1;	nt = 0;	break;
-	            case ISDN_PID_L0_NT_E1: DBG("LT-mode PRI E1  interface port\n"); pri = 1;	nt = 1;	break;
+                    case ISDN_PID_L0_TE_S0: DBG("TE-mode BRI S/T interface line"); pri = 0;	nt = 0;	break;
+	    	    case ISDN_PID_L0_NT_S0: DBG("NT-mode BRI S/T interface port"); pri = 0;	nt = 1;	break;
+	            case ISDN_PID_L0_TE_E1: DBG("TE-mode PRI E1  interface line"); pri = 1;	nt = 0;	break;
+	            case ISDN_PID_L0_NT_E1: DBG("LT-mode PRI E1  interface port"); pri = 1;	nt = 1;	break;
 	            default:
-	        	ERROR("unknown port(%d) type 0x%08x\n", port, stinf->pid.protocol[0]);
+	        	ERROR("unknown port(%d) type 0x%08x", port, stinf->pid.protocol[0]);
 	        }
 	        if (nt) {
-	    	    DBG("Port %d (nt)  proto1=0x%08x proto2=0x%08x\n",port, stinf->pid.protocol[1],stinf->pid.protocol[2]);
-                    if (stinf->pid.protocol[1] == 0) 	{ ERROR("Given port %d: Missing layer 1 NT-mode protocol.\n", port); }
-                    if (stinf->pid.protocol[2])		{ ERROR("Given port %d: Layer 2 protocol 0x%08x is detected, but not allowed for NT.\n", port, stinf->pid.protocol[2]); }
-                    ERROR("NT mode not supported yet\n");
+	    	    DBG("Port %d (nt)  proto1=0x%08x proto2=0x%08x",port, stinf->pid.protocol[1],stinf->pid.protocol[2]);
+                    if (stinf->pid.protocol[1] == 0) 	{ ERROR("Given port %d: Missing layer 1 NT-mode protocol.", port); }
+                    if (stinf->pid.protocol[2])		{ ERROR("Given port %d: Layer 2 protocol 0x%08x is detected, but not allowed for NT.", port, stinf->pid.protocol[2]); }
+                    ERROR("NT mode not supported yet");
                     return FAIL;
 		} else { //(te)
-	    	    DBG("Port %d (te)  proto1=0x%08x proto2=0x%08x proto3=0x%08x proto4=0x%08x (nul proto4 is good here)\n",port, stinf->pid.protocol[1],stinf->pid.protocol[2],stinf->pid.protocol[3],stinf->pid.protocol[4]);
-                    if (stinf->pid.protocol[1] == 0) { ERROR("Given port %d: Missing layer 1 protocol.\n", port);}
-	            if (stinf->pid.protocol[2] == 0) { ERROR("Given port %d: Missing layer 2 protocol.\n", port);}
-	            if (stinf->pid.protocol[2] & ISDN_PID_L2_DF_PTP) { ptp=1;DBG("Port %d is point-to-point.\n",port); } else { ptp=0;} 
-    	            if (stinf->pid.protocol[3] == 0) { ERROR("Given port %d: Missing layer 3 protocol.\n", port);} 
+	    	    DBG("Port %d (te)  proto1=0x%08x proto2=0x%08x proto3=0x%08x proto4=0x%08x (nul proto4 is good here)",port, stinf->pid.protocol[1],stinf->pid.protocol[2],stinf->pid.protocol[3],stinf->pid.protocol[4]);
+                    if (stinf->pid.protocol[1] == 0) { ERROR("Given port %d: Missing layer 1 protocol.", port);}
+	            if (stinf->pid.protocol[2] == 0) { ERROR("Given port %d: Missing layer 2 protocol.", port);}
+	            if (stinf->pid.protocol[2] & ISDN_PID_L2_DF_PTP) { ptp=1;DBG("Port %d is point-to-point.",port); } else { ptp=0;} 
+    	            if (stinf->pid.protocol[3] == 0) { ERROR("Given port %d: Missing layer 3 protocol.", port);} 
     	            else {
                 	switch(stinf->pid.protocol[3] & ~ISDN_PID_FEATURE_MASK) {
                     	    case ISDN_PID_L3_DSS1USER: break;
@@ -222,7 +222,7 @@ int mISDNStack::init() {
                         	ERROR("Given port %d: own protocol 0x%08x", port,stinf->pid.protocol[3]);
                 	}
             	    }
-            	    if (stinf->pid.protocol[4]) { ERROR("Given port %d: Layer 4 protocol not allowed.\n", port); }
+            	    if (stinf->pid.protocol[4]) { ERROR("Given port %d: Layer 4 protocol not allowed.", port); }
     		}
 	        /* add mISDNport structure */
                 mISDNportp = &mISDNport_first;
@@ -233,7 +233,7 @@ int mISDNStack::init() {
 
 		/* allocate ressources of port */
 		mISDNport->d_stid = stinf->id;
-		DBG("d_stid = 0x%x.\n", mISDNport->d_stid);
+		DBG("d_stid = 0x%x.", mISDNport->d_stid);
 	        /* create layer intance */
 	        memset(&li, 0, sizeof(li));
 	        strcpy(&li.name[0], "te l4");
@@ -243,40 +243,40 @@ int mISDNStack::init() {
 	        li.pid.protocol[4] = ISDN_PID_L4_B_USER;
 	        li.pid.layermask = ISDN_LAYER(4);
 	        li.st = mISDNport->d_stid;
-	        DBG("setting mISDN_new_layer on port %d, li.st=0x%08x \n",port,li.st);
+	        DBG("setting mISDN_new_layer on port %d, li.st=0x%08x ",port,li.st);
 	        ret = mISDN_new_layer(m_mISDNdevice, &li);
-	        if (ret)  { ERROR("Cannot add layer4 of port %d (ret %d)\n", port, ret);
+	        if (ret)  { ERROR("Cannot add layer4 of port %d (ret %d)", port, ret);
 //	                mISDNport_close(mISDNport);
 	                return FAIL;
 	        }
 	        mISDNport->upper_id = li.id;
 	        ret = mISDN_register_layer(m_mISDNdevice, mISDNport->d_stid, mISDNport->upper_id);
-	        if (ret) { ERROR("Cannot register layer4 of port %d\n", port);
+	        if (ret) { ERROR("Cannot register layer4 of port %d", port);
 //	                mISDNport_close(mISDNport);
 			return FAIL;
 		}
 	        mISDNport->lower_id = mISDN_get_layerid(m_mISDNdevice, mISDNport->d_stid, 3);
-	        if (mISDNport->lower_id < 0) { ERROR("Cannot get layer(%d) id of port %d\n", nt?1:3, port);
+	        if (mISDNport->lower_id < 0) { ERROR("Cannot get layer(%d) id of port %d", nt?1:3, port);
 //	                mISDNport_close(mISDNport);
 			return FAIL;
 	        }
 	        mISDNport->upper_id = mISDN_get_layerid(m_mISDNdevice, mISDNport->d_stid, 4);
-	        if (mISDNport->upper_id < 0) { ERROR("Cannot get layer4 id of port %d\n", port);
+	        if (mISDNport->upper_id < 0) { ERROR("Cannot get layer4 id of port %d", port);
 //	                mISDNport_close(mISDNport);
 			return FAIL;
 	        }
-	        DBG("Layer 4 of port %d added (0x%08x) lower_id=0x%08x.\n", port,mISDNport->upper_id,mISDNport->lower_id);
+	        DBG("Layer 4 of port %d added (0x%08x) lower_id=0x%08x.", port,mISDNport->upper_id,mISDNport->lower_id);
 
 	        mISDNport->b_num = stinf->childcnt;
 	        mISDNport->portnum = port;
 	        mISDNport->ntmode = nt;
 	        mISDNport->pri = pri;
 	        mISDNport->ptp = ptp;
-	        DBG("Port has %d b-channels.\n", mISDNport->b_num);
+	        DBG("Port has %d b-channels.", mISDNport->b_num);
 	        i = 0;
 	        while(i < mISDNport->b_num) {
 	                mISDNport->b_stid[i] = stinf->child[i];
-	                DBG("b_stid[%d] = 0x%x.\n", i, mISDNport->b_stid[i]);
+	                DBG("b_stid[%d] = 0x%x.", i, mISDNport->b_stid[i]);
 	                i++;
 	        }
 	        /* if te-mode, query state link */
@@ -287,14 +287,14 @@ int mISDNStack::init() {
 	                act.addr = mISDNport->upper_id | MSG_BROADCAST;
 	                act.dinfo = SSTATUS_BROADCAST_BIT | SSTATUS_ALL;
 	                act.len = 0;
-	                DBG("sending MGR_SHORTSTATUS request for port %d addr=0x%08x.\n", port,act.addr);
+	                DBG("sending MGR_SHORTSTATUS request for port %d addr=0x%08x.", port,act.addr);
 	                mISDN_write(m_mISDNdevice, &act, mISDN_HEADER_LEN+act.len, TIMEOUT_1SEC);
 //	        }
 			act.prim = PH_ACTIVATE| REQUEST;
 			act.addr = mISDNport->upper_id | FLG_MSG_DOWN;
 			act.dinfo = 0;
 			act.len = 0;
-			DBG("sending PH_ACTIVATE request (l1 up) for port %d addr=0x%08x.\n", port,act.addr);
+			DBG("sending PH_ACTIVATE request (l1 up) for port %d addr=0x%08x.", port,act.addr);
 			mISDN_write(m_mISDNdevice, &act, mISDN_HEADER_LEN+act.len, TIMEOUT_1SEC);
 	        /* if ptp AND te-mode, pull up the link */
 //	        if (mISDNport->ptp && !mISDNport->ntmode) {
@@ -305,7 +305,7 @@ int mISDNStack::init() {
 	                act.addr = mISDNport->upper_id | FLG_MSG_DOWN;
 	                act.dinfo = 0;
 	                act.len = 0;
-	                DBG("sending DL_ESTABLISH request (l2 up) for port %d addr=0x%08x.\n", port,act.addr);
+	                DBG("sending DL_ESTABLISH request (l2 up) for port %d addr=0x%08x.", port,act.addr);
 	                mISDN_write(m_mISDNdevice, &act, mISDN_HEADER_LEN+act.len, TIMEOUT_1SEC);
 //	        }
 	        /* initially, we assume that the link is down, exept for nt-ptmp */
@@ -316,11 +316,11 @@ int mISDNStack::init() {
 
 void mISDNStack::on_stop(void) {
         unsigned char buff[1025];
-        DBG("mISDNStack::on_stop\n");
+        DBG("mISDNStack::on_stop");
         if (m_mISDNdevice >= 0) {
                 mISDN_write_frame(m_mISDNdevice, buff, 0, MGR_DELENTITY | REQUEST, m_entity, 0, NULL, TIMEOUT_1SEC);
                 mISDN_close(m_mISDNdevice); m_mISDNdevice = -1;
-                DBG("mISDN device closed.\n");
+                DBG("mISDN device closed.");
         }
 }
 
@@ -338,7 +338,7 @@ int mISDNStack::GenerateCR() {
                                                                                                                                         
 void mISDNStack::run()
 {
-	DBG("running mISDNStack::run...\n");
+	DBG("running mISDNStack::run...");
 	char msg_buf[MAX_MSG_SIZE];
 	int  msg_buf_s;
 	iframe_t* frame;
@@ -346,7 +346,7 @@ void mISDNStack::run()
 	mISDNChannel* channel;
 
 	while(true){
-//		DBG("tick\n");
+//		DBG("tick");
 		msg_buf_s = mISDN_read(m_mISDNdevice,&msg_buf,MAX_MSG_SIZE, TIMEOUT_10SEC);;
 		if(msg_buf_s == -1){
 			switch(errno){
@@ -355,16 +355,16 @@ void mISDNStack::run()
 			    		continue;
 				default: break;
 			};
-			ERROR("running mISDNStack::run Error in mISDN_read %s\n",strerror(errno));
+			ERROR("running mISDNStack::run Error in mISDN_read %s",strerror(errno));
 			break;
 		}
-		if(msg_buf_s == 0){/*DBG("got 0, cotinuing\n");*/	continue; }
+		if(msg_buf_s == 0){/*DBG("got 0, cotinuing");*/	continue; }
 
 		frame=(iframe_t*)msg_buf;
                 if (frame->dinfo==(signed long)0xffffffff && frame->prim==(PH_DATA|CONFIRM)) {
-                        ERROR("SERIOUS BUG, dinfo == 0xffffffff, prim == PH_DATA | CONFIRM !!!!\n");
+                        ERROR("SERIOUS BUG, dinfo == 0xffffffff, prim == PH_DATA | CONFIRM !!!!");
                 }
-//		DBG("Got something msg_buf_s=%d prim=0x%08x addr=0x%08x dinfo=0x%08x\n",msg_buf_s,frame->prim,frame->addr,frame->dinfo);
+//		DBG("Got something msg_buf_s=%d prim=0x%08x addr=0x%08x dinfo=0x%08x",msg_buf_s,frame->prim,frame->addr,frame->dinfo);
 	        port = mISDNport_first;
                 while(port) {	
             	    if ((frame->addr&MASTER_ID_MASK) == (unsigned int)(port->upper_id&MASTER_ID_MASK)) 
@@ -372,19 +372,19 @@ void mISDNStack::run()
             	    port = port->next; 
             	}
 		if (!port) {	
-		    ERROR("message belongs to no mISDNport: prim(0x%x) addr(0x%x) msg->len(%d)\n", frame->prim, frame->addr, msg_buf_s); 
+		    ERROR("message belongs to no mISDNport: prim(0x%x) addr(0x%x) msg->len(%d)", frame->prim, frame->addr, msg_buf_s); 
 		    continue; 
 		}
 	        if (frame->addr&FLG_CHILD_STACK) { 		/* child stack */
                 /* b-channel data and messages */
-//                    DBG("processing child stack for %s (%d) prim(0x%x) addr(0x%x) dinfo=0x%x msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr,frame->dinfo, msg_buf_s);
+//                    DBG("processing child stack for %s (%d) prim(0x%x) addr(0x%x) dinfo=0x%x msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr,frame->dinfo, msg_buf_s);
 		    channel=FindBC(frame);
 		    if(channel==NULL) {
-			DBG("b-channel is not associated to an ISDNPort (address 0x%x), ignoring.\n", frame->addr);
+			DBG("b-channel is not associated to an ISDNPort (address 0x%x), ignoring.", frame->addr);
 			continue;
 		    }
 		    if(channel->bchan_event(msg_buf,msg_buf_s)!=OK)
-			ERROR("Error processing bchan_event in channel object\n");
+			ERROR("Error processing bchan_event in channel object");
 		    continue;
     	        } else {   /* d-message */
 		    //next two are debug packet dumps uncomment if needed
@@ -393,74 +393,74 @@ void mISDNStack::run()
 		    /* general messages not(yet) related to CR */
         	    switch(frame->prim)   {
                         case CC_NEW_CR | INDICATION:
-                    		DBG("CC_NEW_CR | INDICATION for %s (%d) \n",port->name, port->portnum);
+                    		DBG("CC_NEW_CR | INDICATION for %s (%d) ",port->name, port->portnum);
                     		channel=NewCR(port,frame);
                     		continue;              		break;
                     	case CC_NEW_CR | CONFIRM:
-                    		DBG("CC_NEW_CR | CONFIRM for %s (%d) Is this possible?\n",port->name, port->portnum);
+                    		DBG("CC_NEW_CR | CONFIRM for %s (%d) Is this possible?",port->name, port->portnum);
                     		continue;             		break;
                         case CC_RELEASE_CR | INDICATION:
-                    		DBG("CC_RELEASE_CR | INDICATION for %s (%d) \n",port->name, port->portnum);
+                    		DBG("CC_RELEASE_CR | INDICATION for %s (%d) ",port->name, port->portnum);
                     		channel=FindCR(frame);
                     		if(channel!=NULL) {
-                    			DBG("should delete channel=%p but we will leave it to have media procesor happy just unregister CR from map\n",channel);
+                    			DBG("should delete channel=%p but we will leave it to have media procesor happy just unregister CR from map",channel);
 					channel->unregister_CR();
 //	                   		delete(channel);
-				} else  ERROR("Channel not found for CC_RELEASE_CR | INDICATION %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+				} else  ERROR("Channel not found for CC_RELEASE_CR | INDICATION %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
                     		continue;              		break;
                     	case CC_RELEASE_CR | CONFIRM:
-                    		DBG("CC_RELEASE_CR | CONFIRM for %s (%d) Is this possible?\n",port->name, port->portnum);
+                    		DBG("CC_RELEASE_CR | CONFIRM for %s (%d) Is this possible?",port->name, port->portnum);
                     		continue;            		break;
                         case MGR_SHORTSTATUS | INDICATION:
                         case MGR_SHORTSTATUS | CONFIRM:
-                    		DBG("MGR_SHORTSTATUS ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+                    		DBG("MGR_SHORTSTATUS ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
 	            		switch(frame->dinfo) {
-    	            			case SSTATUS_L1_ACTIVATED:	port->l1link = 1;DBG("MGR_SHORTSTATUS->SSTATUS_L1_ACTIVATED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
-            	    			case SSTATUS_L1_DEACTIVATED:	port->l1link = 0;DBG("MGR_SHORTSTATUS->SSTATUS_L1_DEACTIVATED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
-            	    			case SSTATUS_L2_ESTABLISHED:	port->l2link = 1;DBG("MGR_SHORTSTATUS->SSTATUS_L2_ESTABLISHED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
-            	    			case SSTATUS_L2_RELEASED:	port->l2link = 0;DBG("MGR_SHORTSTATUS->SSTATUS_L2_RELEASED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
+    	            			case SSTATUS_L1_ACTIVATED:	port->l1link = 1;DBG("MGR_SHORTSTATUS->SSTATUS_L1_ACTIVATED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
+            	    			case SSTATUS_L1_DEACTIVATED:	port->l1link = 0;DBG("MGR_SHORTSTATUS->SSTATUS_L1_DEACTIVATED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
+            	    			case SSTATUS_L2_ESTABLISHED:	port->l2link = 1;DBG("MGR_SHORTSTATUS->SSTATUS_L2_ESTABLISHED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
+            	    			case SSTATUS_L2_RELEASED:	port->l2link = 0;DBG("MGR_SHORTSTATUS->SSTATUS_L2_RELEASED for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);break;
             	    		}
             	    		continue;			break;
                         case PH_ACTIVATE | CONFIRM:
                         case PH_ACTIVATE | INDICATION:
-                            DBG("PH_ACTIVATE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+                            DBG("PH_ACTIVATE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
                             port->l1link = 1;
                     	    continue;				break;
                         case PH_DEACTIVATE | CONFIRM:
                         case PH_DEACTIVATE | INDICATION:
-	                    DBG("PH_DEACTIVATE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+	                    DBG("PH_DEACTIVATE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
 			    port->l1link = 0;
     	                    continue;				break;
                         case PH_CONTROL | CONFIRM:
                         case PH_CONTROL | INDICATION:
-        	            DBG("Received PH_CONTROL for port %d (%s).\n", port->portnum, port->name);
+        	            DBG("Received PH_CONTROL for port %d (%s).", port->portnum, port->name);
         	            continue;				break;
                         case DL_ESTABLISH | INDICATION:
                         case DL_ESTABLISH | CONFIRM:
-                	    DBG("DL_ESTABLISH ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+                	    DBG("DL_ESTABLISH ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
                 	    port->l2link = 1;
 			    continue;				break;
                         case DL_RELEASE | INDICATION:
                         case DL_RELEASE | CONFIRM:
-                            DBG("DL_RELEASE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) \n",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
+                            DBG("DL_RELEASE ind or confirm for %s (%d) prim(0x%x) addr(0x%x) msg->len(%d) ",port->name, port->portnum, frame->prim, frame->addr, msg_buf_s);
                             port->l2link = 0;
                             continue;				break;
                         default:
-                        DBG("GOT d-msg from %s port %d prim 0x%x dinfo 0x%x addr 0x%x\n", (port->ntmode)?"NT":"TE", port->portnum, frame->prim, frame->dinfo, frame->addr);
+                        DBG("GOT d-msg from %s port %d prim 0x%x dinfo 0x%x addr 0x%x", (port->ntmode)?"NT":"TE", port->portnum, frame->prim, frame->dinfo, frame->addr);
             	    }
                     /* d-message */
                     if (port->ntmode) {
-			ERROR("NT mode not supported yet\n");
+			ERROR("NT mode not supported yet");
 			continue;
             	    } else {
                 	/* l3-data is sent to channel object for processing */
                 	channel=FindCR(frame);
                 	if(channel==NULL) {
-                		ERROR("Cant find channel for message\n"); 
+                		ERROR("Cant find channel for message"); 
                 		continue;
                 	}
                 	if(channel->processMsg(msg_buf,msg_buf_s)!=OK) 	
-                		ERROR("Error processing msg in channel object\n");
+                		ERROR("Error processing msg in channel object");
                 	continue;
             	    }
     		}
@@ -482,7 +482,7 @@ void mISDNStack::l1l2l3_trace_header(struct mISDNport *mISDNport, int port, unsi
                         else 			{ if (direction == DIRECTION_OUT) msgtext.append(" U->N"); else  msgtext.append(" U<-N"); }
                 }
         }
-        DBG("prim=0x%08lx port=0x%08x %s\n",prim,port, msgtext.c_str());
+        DBG("prim=0x%08lx port=0x%08x %s",prim,port, msgtext.c_str());
 }
 
 #define QI_DUMP(_x_,_y_) sprintf(x," %25s off=0x%04x ridx=0x%04x res1=0x%04x cs_flg=0x%04x",_y_,qi->_x_.off,qi->_x_.ridx,qi->_x_.res1,qi->_x_.cs_flg);ret.append(x);\

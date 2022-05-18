@@ -30,7 +30,7 @@ FCTMF_SUITE_BGN(test_replaces) {
       AmSipRequest r;
       r.hdrs="Replaces: C;from-tag=Cf;to-tag=Ct\r\n";
       fixReplaces(r.hdrs, true);
-      DBG("r.hdrs='%s'\n", r.hdrs.c_str());
+      DBG("r.hdrs='%s'", r.hdrs.c_str());
       fct_chk(r.hdrs=="Replaces: C2;from-tag=C2f;to-tag=C2t\r\n");
 
       SBCCallRegistry::removeCall("Ct");
@@ -49,8 +49,8 @@ FCTMF_SUITE_BGN(test_replaces) {
 
       r.hdrs=orig_str+"\r\n";
       fixReplaces(r.hdrs, false);
-      DBG("r.hdrs='%s'\n", r.hdrs.c_str());
-      DBG("new  s='%s'\n", new_str.c_str());
+      DBG("r.hdrs='%s'", r.hdrs.c_str());
+      DBG("new  s='%s'", new_str.c_str());
 
       fct_chk(r.hdrs==new_str);
 
@@ -70,8 +70,8 @@ FCTMF_SUITE_BGN(test_replaces) {
 
       r.hdrs=orig_str;
       fixReplaces(r.hdrs, false);
-      DBG("r.hdrs='%s'\n", r.hdrs.c_str());
-      DBG("new  s='%s'\n", new_str.c_str());
+      DBG("r.hdrs='%s'", r.hdrs.c_str());
+      DBG("new  s='%s'", new_str.c_str());
 
       fct_chk(r.hdrs==new_str);
 
@@ -91,8 +91,8 @@ FCTMF_SUITE_BGN(test_replaces) {
 
       r.hdrs=orig_str;
       fixReplaces(r.hdrs, false);
-      DBG("r.hdrs='%s'\n", r.hdrs.c_str());
-      DBG("new  s='%s'\n", new_str.c_str());
+      DBG("r.hdrs='%s'", r.hdrs.c_str());
+      DBG("new  s='%s'", new_str.c_str());
 
       fct_chk(r.hdrs==new_str);
 

@@ -44,29 +44,29 @@ void AmEventProcessingThread::postEvent(AmEvent* ev) {
   if (police_event(ev)) {
     AmEventQueue::postEvent(ev);
   } else {
-    DBG("dropping event [%p] due to policing\n", ev);
+    DBG("dropping event [%p] due to policing", ev);
     delete ev;
   }
 }
 
 void AmEventProcessingThread::on_stop() {
-  DBG("AmEventProcessingThread::on_stop\n");
+  DBG("AmEventProcessingThread::on_stop");
 }
 
 void AmEventProcessingThread::run() {
   setThreadName("AmEvt");
-  DBG("AmEventProcessingThread running...\n");
+  DBG("AmEventProcessingThread running...");
 
   while (processing_events) {
     waitForEvent();
     processEvents();
   }
 
-  DBG("AmEventProcessingThread stopping.\n");
+  DBG("AmEventProcessingThread stopping.");
 }
 
 void AmEventProcessingThread::stop_processing() {
-  DBG("stop of event processing requested.\n");
+  DBG("stop of event processing requested.");
   processing_events = false;
 }
 
@@ -76,9 +76,9 @@ void AmEventProcessingThread::process(AmEvent* ev) {
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("received system Event\n");
+      DBG("received system Event");
       if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-	DBG("received system Event: ServerShutdown. Stopping event processing.\n");
+	DBG("received system Event: ServerShutdown. Stopping event processing.");
 	processing_events = false;
       }
     }

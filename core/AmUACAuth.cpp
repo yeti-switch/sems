@@ -33,7 +33,7 @@ bool AmUACAuth::enable(AmSession* s) {
   if (uac_auth_f != NULL) {
     AmSessionEventHandler* h = uac_auth_f->getHandler(s);
     if (h != NULL ) {
-      DBG("enabling SIP UAC auth for new session.\n");
+      DBG("enabling SIP UAC auth for new session.");
       s->addHandler(h);
       res = true;
     } else {

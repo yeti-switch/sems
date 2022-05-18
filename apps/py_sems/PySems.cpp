@@ -138,7 +138,7 @@ PySemsFactory::PySemsFactory(const string& _app_name)
 void PySemsFactory::import_object(PyObject* m, char* name, PyTypeObject* type)
 {
   if (PyType_Ready(type) < 0){
-    ERROR("PyType_Ready failed !\n");
+    ERROR("PyType_Ready failed !");
     return;
   }
   Py_INCREF(type);
@@ -193,8 +193,8 @@ PyObject* PySemsFactory::import_module(const char* modname)
     
   if(!py_mod){
     PyErr_Print();
-    ERROR("PySemsFactory: could not find python module '%s'.\n",modname);
-    ERROR("PySemsFactory: please check your installation.\n");
+    ERROR("PySemsFactory: could not find python module '%s'.",modname);
+    ERROR("PySemsFactory: please check your installation.");
     return NULL;
   }
     
@@ -221,7 +221,7 @@ AmSession* PySemsFactory::newDlg(const string& name)
 
   map<string,PySemsScriptDesc>::iterator mod_it = mod_reg.find(name);
   if(mod_it == mod_reg.end()){
-    ERROR("Unknown script name '%s'\n", name.c_str());
+    ERROR("Unknown script name '%s'", name.c_str());
     throw AmSession::Exception(500,"Unknown Application");
   }
 
@@ -231,7 +231,7 @@ AmSession* PySemsFactory::newDlg(const string& name)
   if(!dlg_inst){
 	
     PyErr_Print();
-    ERROR("PySemsFactory: while loading \"%s\": could not create instance\n",
+    ERROR("PySemsFactory: while loading \"%s\": could not create instance",
 	  name.c_str());
     throw AmSession::Exception(500,"Internal error in PY_SEMS plug-in.");
 	
@@ -245,7 +245,7 @@ AmSession* PySemsFactory::newDlg(const string& name)
 
   switch(mod_desc.dt) {
   case PySemsScriptDesc::None: {
-    ERROR("wrong script type: None.\n");
+    ERROR("wrong script type: None.");
   }; break;
   case PySemsScriptDesc::Dialog: {
     PySemsDialog* dlg = (PySemsDialog*)
@@ -285,7 +285,7 @@ AmSession* PySemsFactory::newDlg(const string& name)
   if (err || !dlg_base) {
     // no luck
     PyErr_Print();
-    ERROR("PySemsFactory: while loading \"%s\": could not retrieve a PySems*Dialog ptr.\n",
+    ERROR("PySemsFactory: while loading \"%s\": could not retrieve a PySems*Dialog ptr.",
 	  name.c_str());
     throw AmSession::Exception(500,"Internal error in PY_SEMS plug-in.");
     Py_DECREF(dlg_inst);
@@ -318,7 +318,7 @@ bool PySemsFactory::loadScript(const string& path)
 
   if(!mod){
     PyErr_Print();
-    WARN("PySemsFactory: Failed to load \"%s\"\n", path.c_str());
+    WARN("PySemsFactory: Failed to load \"%s\"", path.c_str());
 
     dict = PyImport_GetModuleDict();
     Py_INCREF(dict);
@@ -334,7 +334,7 @@ bool PySemsFactory::loadScript(const string& path)
   if(!dlg_class){
 
     PyErr_Print();
-    WARN("PySemsFactory: class PySemsDialog not found in \"%s\"\n", path.c_str());
+    WARN("PySemsFactory: class PySemsDialog not found in \"%s\"", path.c_str());
     goto error1;
   }
 
@@ -342,12 +342,12 @@ bool PySemsFactory::loadScript(const string& path)
     
   if(PyObject_IsSubclass(dlg_class,(PyObject *)sipClass_PySemsDialog)) {
     dt = PySemsScriptDesc::Dialog;
-    DBG("Loaded a Dialog Script.\n");
+    DBG("Loaded a Dialog Script.");
   } else if (PyObject_IsSubclass(dlg_class,(PyObject *)sipClass_PySemsB2BDialog)) {
-    DBG("Loaded a B2BDialog Script.\n");
+    DBG("Loaded a B2BDialog Script.");
     dt = PySemsScriptDesc::B2BDialog;
   } else if (PyObject_IsSubclass(dlg_class,(PyObject *)sipClass_PySemsB2ABDialog)) {
-    DBG("Loaded a B2ABDialog Script.\n");
+    DBG("Loaded a B2ABDialog Script.");
     dt = PySemsScriptDesc::B2ABDialog;
   } else {
     WARN("PySemsFactory: in \"%s\": PySemsScript is not a "
@@ -357,13 +357,13 @@ bool PySemsFactory::loadScript(const string& path)
   }
 
   if(cfg.loadFile(cfg_file)){
-    ERROR("could not load config file at %s\n",cfg_file.c_str());
+    ERROR("could not load config file at %s",cfg_file.c_str());
     goto error2;
   }
 
   config = PyDict_New();
   if(!config){
-    ERROR("could not allocate new dict for config\n");
+    ERROR("could not allocate new dict for config");
     goto error2;
   }
 
@@ -407,28 +407,28 @@ int PySemsFactory::onLoad()
   init_python_interpreter(script_path);
 
 #ifdef PY_SEMS_WITH_TTS
-  DBG("** PY_SEMS Text-To-Speech enabled\n");
+  DBG("** PY_SEMS Text-To-Speech enabled");
 #else
-  DBG("** PY_SEMS Text-To-Speech disabled\n");
+  DBG("** PY_SEMS Text-To-Speech disabled");
 #endif
 
-  DBG("** PY_SEMS script path: \'%s\'\n", script_path.c_str());
+  DBG("** PY_SEMS script path: \'%s\'", script_path.c_str());
 
   regex_t reg;
   if(regcomp(&reg,PYFILE_REGEX,REG_EXTENDED)){
-    ERROR("while compiling regular expression\n");
+    ERROR("while compiling regular expression");
     return -1;
   }
 
   DIR* dir = opendir(script_path.c_str());
   if(!dir){
     regfree(&reg);
-    ERROR("PySems: script pre-loader (%s): %s\n",
+    ERROR("PySems: script pre-loader (%s): %s",
 	  script_path.c_str(),strerror(errno));
     return -1;
   }
 
-  DBG("directory '%s' opened\n",script_path.c_str());
+  DBG("directory '%s' opened",script_path.c_str());
 
   set<string> unique_entries;
   regmatch_t  pmatch[2];
@@ -454,7 +454,7 @@ int PySemsFactory::onLoad()
     if(loadScript(*it)){
       bool res = plugin->registerFactory4App(*it,this);
       if(res)
-	INFO("Application script registered: %s.\n",
+	INFO("Application script registered: %s.",
 	     it->c_str());
     }
   }
@@ -508,7 +508,7 @@ bool PySemsDialogBase::callPyEventHandler(char* name, char* fmt, ...)
 
     if(PyErr_ExceptionMatches(PyExc_AttributeError)){
 
-      DBG("method %s is not implemented, trying default one\n",name);
+      DBG("method %s is not implemented, trying default one",name);
       return true;
     }
 

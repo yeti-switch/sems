@@ -38,11 +38,11 @@ DSMStateDiagramCollection::~DSMStateDiagramCollection() {
 
 bool DSMStateDiagramCollection::readFile(const string& filename, const string& name,
 					 const string& load_path, string& s) {
-  DBG("loading DSM '%s' from '%s'\n", name.c_str(), filename.c_str());
+  DBG("loading DSM '%s' from '%s'", name.c_str(), filename.c_str());
 
   ifstream ifs(filename.c_str());
   if (!ifs.good()) {
-    ERROR("loading state diagram '%s'\n",
+    ERROR("loading state diagram '%s'",
 	  filename.c_str());
     return false;
   }
@@ -62,7 +62,7 @@ bool DSMStateDiagramCollection::readFile(const string& filename, const string& n
 	r = r.substr(fpos+8);
 	r = trim(r, "'\" ");
 	if (r.empty()) {
-	  ERROR("missing include file name!\n");
+	  ERROR("missing include file name!");
 	  return false;
 	}
 
@@ -97,25 +97,25 @@ bool DSMStateDiagramCollection::loadFile(const string& filename, const string& n
     return false;
 
   if (debug_dsm) {
-    DBG("dsm text\n------------------\n%s\n------------------\n", s.c_str());
+    DBG("dsm text\n------------------\n%s\n------------------", s.c_str());
   }
 
   diags.push_back(DSMStateDiagram(name));
   DSMChartReader cr;
   if (!cr.decode(&diags.back(), s, mod_path, this, mods)) {
-    ERROR("DonkeySM decode script error!\n");
+    ERROR("DonkeySM decode script error!");
     return false;
   }
   if (check_dsm) {
     string report;
     if (!diags.back().checkConsistency(report)) {
-      WARN("consistency check failed on '%s' from file '%s':\n", 
+      WARN("consistency check failed on '%s' from file '%s':", 
 	   name.c_str(), filename.c_str());
-      WARN("------------------------------------------\n"
+      WARN("------------------------------------------"
 	   "%s\n"
 	   "------------------------------------------\n", report.c_str());
     } else {
-      DBG("DSM '%s' passed consistency check\n", name.c_str());
+      DBG("DSM '%s' passed consistency check", name.c_str());
     }
   }
 
@@ -140,7 +140,7 @@ vector<string> DSMStateDiagramCollection::getDiagramNames() {
 }
 
 void DSMStateDiagramCollection::addToEngine(DSMStateEngine* e) {
-  DBG("adding %zd diags to engine\n", diags.size());
+  DBG("adding %zd diags to engine", diags.size());
   for (vector <DSMStateDiagram>::iterator it = 
 	 diags.begin(); it != diags.end(); it++) 
     e->addDiagram(&(*it));

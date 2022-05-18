@@ -65,7 +65,7 @@ int CallBackFactory::onLoad()
     DigitsDir+='/';
 
   if (!DigitsDir.length()) {
-    ERROR("No digits_dir specified in configuration.\n");
+    ERROR("No digits_dir specified in configuration.");
   }
   for (int i=0;i<10;i++) 
     prompts.setPrompt(int2str(i), DigitsDir+int2str(i)+".wav", MOD_NAME);
@@ -73,22 +73,22 @@ int CallBackFactory::onLoad()
   string playout_type = cfg.getParameter("playout_type");
   if (playout_type == "simple") {
     m_PlayoutType = SIMPLE_PLAYOUT;
-    DBG("Using simple (fifo) buffer as playout technique.\n");
+    DBG("Using simple (fifo) buffer as playout technique.");
   } else 	if (playout_type == "adaptive_jb") {
     m_PlayoutType = JB_PLAYOUT;
-    DBG("Using adaptive jitter buffer as playout technique.\n");
+    DBG("Using adaptive jitter buffer as playout technique.");
   } else {
-    DBG("Using adaptive playout buffer as playout technique.\n");
+    DBG("Using adaptive playout buffer as playout technique.");
   }
   
   string accept_caller_re_str = cfg.getParameter(ACCEPT_CALLER_RE);
   if (!accept_caller_re_str.length()) {
-    ERROR("no '" ACCEPT_CALLER_RE "' set.\n");
+    ERROR("no '" ACCEPT_CALLER_RE "' set.");
     return -1;
   } else {
     if (regcomp(&accept_caller_re, accept_caller_re_str.c_str(), 
 		 REG_EXTENDED|REG_NOSUB)) {
-      ERROR("unable to compile caller RE '%s'.\n",
+      ERROR("unable to compile caller RE '%s'.",
 	    accept_caller_re_str.c_str());
       return -1;
     }
@@ -96,13 +96,13 @@ int CallBackFactory::onLoad()
 
   gw_user = cfg.getParameter("gw_user");
   if (!gw_user.length()) {
-    ERROR("need gw_user configured!\n");
+    ERROR("need gw_user configured!");
     return -1;
   }
 
   gw_domain = cfg.getParameter("gw_domain");
   if (!gw_domain.length()) {
-    ERROR("need gw_domain configured!\n");
+    ERROR("need gw_domain configured!");
     return -1;
   }
 
@@ -112,14 +112,14 @@ int CallBackFactory::onLoad()
 
   auth_pwd = cfg.getParameter("auth_pwd");
   if (!auth_pwd.length()) {
-    ERROR("need auth_pwd configured!\n");
+    ERROR("need auth_pwd configured!");
     return -1;
   }
 
   cb_wait = cfg.getParameterInt("cb_wait", 5);
-  DBG("cb_wait set to %d\n", cb_wait);
+  DBG("cb_wait set to %d", cb_wait);
 
-  DBG("starting callback thread. (%ld)\n", (long)this);
+  DBG("starting callback thread. (%ld)", (long)this);
   start();
 
   return 0;
@@ -130,26 +130,26 @@ AmSession* CallBackFactory::onInvite(const AmSipRequest& req, const string& app_
 				     const map<string,string>& app_params)
 {
   // or req.from -> with display name ? 
-  DBG("received INVITE from '%s'\n", req.from_uri.c_str());
+  DBG("received INVITE from '%s'", req.from_uri.c_str());
   if (!regexec(&accept_caller_re, req.from_uri.c_str(), 0,0,0)) {
-    DBG("accept_caller_re matched.\n");
+    DBG("accept_caller_re matched.");
     time_t now;
     time(&now);
     // q&d
     string from_user = req.from_uri.substr(req.from_uri.find("sip:")+4);
     from_user = from_user.substr(0, from_user.find("@")); 
-    DBG("INVITE user '%s'\n", from_user.c_str());
+    DBG("INVITE user '%s'", from_user.c_str());
     if (from_user.length()) {
       scheduled_calls_mut.lock();
       scheduled_calls.insert(std::make_pair(now + cb_wait, from_user));
       scheduled_calls_mut.unlock();
     }
     
-    DBG("inserted into callback thread. (%ld)\n", (long)this);
+    DBG("inserted into callback thread. (%ld)", (long)this);
     // or some other reason
     throw AmSession::Exception(486, "Busy here (call you back l8r)"); 
   } else {
-    DBG("accept_caller_re not matched.\n");
+    DBG("accept_caller_re not matched.");
     // or something else
     throw AmSession::Exception(603, "Decline"); 
   }
@@ -176,7 +176,7 @@ AmSession* CallBackFactory::onInvite(const AmSipRequest& req, const string& app_
 
 // this could have been made easier with a timer... 
 void CallBackFactory::run() {
-  DBG("running CallBack thread.\n");
+  DBG("running CallBack thread.");
   while (true) {
     scheduled_calls_mut.lock();
     vector<string> todo;
@@ -247,7 +247,7 @@ void CallBackDialog::onInvite(const AmSipRequest& req)
     return;
   }
 
-  ERROR("incoming calls not supported!\n");
+  ERROR("incoming calls not supported!");
   setStopped();
   dlg->bye();
 }
@@ -264,14 +264,14 @@ void CallBackDialog::onSessionStart()
  
 void CallBackDialog::onDtmf(int event, int duration)
 {
-  DBG("CallBackDialog::onDtmf: event %d duration %d\n", 
+  DBG("CallBackDialog::onDtmf: event %d duration %d", 
       event, duration);
 
   if (CBEnteringNumber == state) {
     // not yet in conference
     if (event<10) {
       call_number += int2str(event);
-      DBG("added '%s': number is now '%s'.\n", 
+      DBG("added '%s': number is now '%s'.", 
 	  int2str(event).c_str(), call_number.c_str());
     } else if (event==10 || event==11) {
       // pound and star key
@@ -284,7 +284,7 @@ void CallBackDialog::onDtmf(int event, int duration)
 	for (size_t i=0;i<call_number.length();i++) {
 	  string num = "";
 	  num[0] = call_number[i]; // this works? 
-	  DBG("adding '%s' to playlist.\n", num.c_str());
+	  DBG("adding '%s' to playlist.", num.c_str());
 	  prompts.addToPlaylist(num,
 				(long)this, play_list);
 	}
@@ -299,7 +299,7 @@ void CallBackDialog::process(AmEvent* ev)
   AmAudioEvent* audio_ev = dynamic_cast<AmAudioEvent*>(ev);
   if (audio_ev  && 
       audio_ev->event_id == AmAudioEvent::noAudio) {
-    DBG("########## noAudio event #########\n");
+    DBG("########## noAudio event #########");
     if (CBTellingNumber == state) {
       state = CBConnecting;
       string callee = "sip:" + call_number + "@" + CallBackFactory::gw_domain;

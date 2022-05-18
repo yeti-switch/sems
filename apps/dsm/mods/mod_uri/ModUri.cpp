@@ -65,7 +65,7 @@ EXEC_ACTION_START(URIParseAction) {
   AmUriParser p;
   p.uri = uri;
   if (!p.parse_uri()) {
-    DBG("parsing URI '%s' failed\n", uri.c_str());
+    DBG("parsing URI '%s' failed", uri.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     sc_sess->SET_STRERROR("parsing URI '"+uri+"%s' failed");
     return false;
@@ -88,7 +88,7 @@ EXEC_ACTION_START(URIParseNameaddrAction) {
 
   AmUriParser p;
   if (!p.parse_nameaddr(uri)) {
-    DBG("parsing nameaddr '%s' failed\n", uri.c_str());
+    DBG("parsing nameaddr '%s' failed", uri.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_GENERAL);
     sc_sess->SET_STRERROR("parsing nameaddr '"+uri+"%s' failed");
     return false;
@@ -116,7 +116,7 @@ EXEC_ACTION_START(URIGetHeaderAction) {
   string dstname = resolveVars(par2, sess, sc_sess, event_params);
 
   sc_sess->var[dstname] = getHeader(sc_sess->var["hdrs"], hname, true);  
-  DBG("got header '%s' value '%s' as $%s\n", 
+  DBG("got header '%s' value '%s' as $%s", 
       hname.c_str(), sc_sess->var[dstname].c_str(), dstname.c_str());
 
 } EXEC_ACTION_END;
@@ -131,7 +131,7 @@ EXEC_ACTION_START(URIEncodeAction) {
   string str = resolveVars(par2, sess, sc_sess, event_params);
 
   sc_sess->var[varname] = URL_encode(str);
-  DBG("URL-encoded: $%s=\"%s\"\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("URL-encoded: $%s=\"%s\"", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 CONST_ACTION_2P(URIDecodeAction, '=', false);
@@ -143,5 +143,5 @@ EXEC_ACTION_START(URIDecodeAction) {
   string str = resolveVars(par2, sess, sc_sess, event_params);
 
   sc_sess->var[varname] = URL_decode(str);
-  DBG("URL-decoded: $%s=\"%s\"\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("URL-decoded: $%s=\"%s\"", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;

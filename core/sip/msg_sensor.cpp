@@ -362,25 +362,25 @@ int ethernet_msg_sensor::init(const char *ifname, const char *dst_mac)
 	int ret,raw_input_buf_len = 0;
 
 	if(NULL==ifname){
-		ERROR("no interface name\n");
+		ERROR("no interface name");
 		return 1;
 	}
 	iface_name = ifname;
 	if(NULL==dst_mac){
-		ERROR("no destination mac address\n");
+		ERROR("no destination mac address");
 		return 1;
 	}
 	sensor_dst_mac = dst_mac;
 
-	DBG("ethernet_msg_sensor::init[%p](%s,%s)\n",this,ifname,dst_mac);
+	DBG("ethernet_msg_sensor::init[%p](%s,%s)",this,ifname,dst_mac);
 
 	iface_name = ifname;
 	if(iface_name.empty()){
-		ERROR("empty interface name\n");
+		ERROR("empty interface name");
 		return 1;
 	}
 	if(iface_name.size()>sizeof(ifr.ifr_name)){
-		ERROR("interface name is too long\n");
+		ERROR("interface name is too long");
 		return 1;
 	}
 
@@ -388,40 +388,40 @@ int ethernet_msg_sensor::init(const char *ifname, const char *dst_mac)
 	s = socket(AF_PACKET, SOCK_RAW, ETH_P_IP);
 	SOCKET_LOG("socket(AF_PACKET, SOCK_RAW, ETH_P_IP) = %d",s);
 	if(-1==s){
-		ERROR("can't create raw socket for ipip sensor. errno: %d\n",errno);
+		ERROR("can't create raw socket for ipip sensor. errno: %d",errno);
 		goto error;
 	}
 	ret = setsockopt(s, SOL_SOCKET, SO_RCVBUF, &raw_input_buf_len, sizeof(raw_input_buf_len));
 	if(-1==ret){
-		WARN("can't set empty receive buffer for raw socket %d with error: %d\n",s,errno);
+		WARN("can't set empty receive buffer for raw socket %d with error: %d",s,errno);
 	}
 
 	memset(&ifr, 0, sizeof(struct ifreq));
 	strncpy(ifr.ifr_name,iface_name.c_str(),iface_name.size());
 	ret = ioctl(s, SIOCGIFINDEX, &ifr);
 	if(-1==ret){
-		ERROR("can't resolve interface name '%s' to index. error: %d\n",
+		ERROR("can't resolve interface name '%s' to index. error: %d",
 			  iface_name.c_str(),errno);
 		goto error;
 	}
 	iface_index = ifr.ifr_ifindex;
-	DBG("index for interface '%s' is %d\n",iface_name.c_str(),iface_index);
+	DBG("index for interface '%s' is %d",iface_name.c_str(),iface_index);
 
 	memset(&ifr, 0, sizeof(struct ifreq));
 	strncpy(ifr.ifr_name,iface_name.c_str(),iface_name.size());
 	ret = ioctl(s, SIOCGIFHWADDR, &ifr);
 	if(-1==ret){
-		ERROR("can't get hw address of interface '%s'. error: %d\n",
+		ERROR("can't get hw address of interface '%s'. error: %d",
 			  iface_name.c_str(),errno);
 		goto error;
 	}
 
 	sensor_src_mac = ether_ntoa((struct ether_addr *)ifr.ifr_hwaddr.sa_data);
-	DBG("hw address for '%s' is '%s'\n",
+	DBG("hw address for '%s' is '%s'",
 		iface_name.c_str(),sensor_src_mac.c_str());
 
 	if(NULL==ether_aton_r(sensor_dst_mac.c_str(),&eaddr)){
-		ERROR("invalid sensor destination mac address '%s'\n",sensor_dst_mac.c_str());
+		ERROR("invalid sensor destination mac address '%s'",sensor_dst_mac.c_str());
 		goto error;
 	}
 

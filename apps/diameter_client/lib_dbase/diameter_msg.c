@@ -93,11 +93,11 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
     msg->buf.len += AVP_HDR_SIZE(avp->flags)+ to_32x_len( avp->data.len );
   }
 
-  //	DBG("xxxx len=%d\n",msg->buf.len);
+  //	DBG("xxxx len=%d",msg->buf.len);
   /* allocate some memory */
   msg->buf.s = (char*)ad_malloc( msg->buf.len );
   if (!msg->buf.s) {
-    ERROR("ERROR:AAABuildMsgBuffer: no more free memory!\n");
+    ERROR("ERROR:AAABuildMsgBuffer: no more free memory!");
     goto error;
   }
   memset(msg->buf.s, 0, msg->buf.len);
@@ -153,13 +153,13 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
   }
 
   if ((char*)p-msg->buf.s!=msg->buf.len) {
-    ERROR("BUG: build_buf_from_msg: mismatch between len and buf!\n");
+    ERROR("BUG: build_buf_from_msg: mismatch between len and buf!");
     ad_free( msg->buf.s );
     msg->buf.s = 0;
     msg->buf.len = 0;
     goto error;
   }
-  //	DBG("Message: %.*s\n", msg->buf.len, msg->buf.s);
+  //	DBG("Message: %.*s", msg->buf.len, msg->buf.s);
   return AAA_ERR_SUCCESS;
  error:
   return -1;
@@ -244,7 +244,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
   /* alloc a new message structure */
   msg = (AAAMessage*)ad_malloc(sizeof(AAAMessage));
   if (!msg) {
-    ERROR("ERROR:AAATranslateMessage: no more free memory!!\n");
+    ERROR("ERROR:AAATranslateMessage: no more free memory!!");
     goto error;
   }
   memset(msg,0,sizeof(AAAMessage));
@@ -304,7 +304,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
     avp_len = get_3bytes( ptr );
     ptr += AVP_LENGTH_SIZE;
     if (avp_len<1) {
-      ERROR("ERROR:AAATranslateMessage: invalid AVP len [%d]\n",
+      ERROR("ERROR:AAATranslateMessage: invalid AVP len [%d]",
 	    avp_len);
       goto error;
     }
@@ -344,7 +344,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
   //AAAPrintMessage( msg );
   return  msg;
  error:
-  ERROR("ERROR:AAATranslateMessage: message conversion droped!!\n");
+  ERROR("ERROR:AAATranslateMessage: message conversion droped!!");
   AAAFreeMessage(&msg);
   return 0;
 }
@@ -358,7 +358,7 @@ AAAMessage* AAAInMessage(AAACommandCode commandCode, AAAApplicationId appId)
   msg = (AAAMessage*)ad_malloc(sizeof(AAAMessage));
   if (!msg) 
     {
-      ERROR("diameter_authorize(): no more free memory!\n");
+      ERROR("diameter_authorize(): no more free memory!");
       return NULL;
     }
   memset(msg, 0, sizeof(AAAMessage));
@@ -388,15 +388,15 @@ void AAAPrintMessage( AAAMessage *msg)
   AAA_AVP *avp;
 
   /* print msg info */
-  DBG("DEBUG: AAA_MESSAGE - %p\n",msg);
-  DBG("\tCode = %u\n",msg->commandCode);
-  DBG("\tFlags = %x\n",msg->flags);
+  DBG("DEBUG: AAA_MESSAGE - %p",msg);
+  DBG("\tCode = %u",msg->commandCode);
+  DBG("\tFlags = %x",msg->flags);
 
   /*print the AVPs */
   avp = msg->avpList.head;
   while (avp) {
     AAAConvertAVPToString(avp,buf,1024);
-    DBG("\n%s\n",buf);
+    DBG("\n%s",buf);
     avp=avp->next;
   }
 }

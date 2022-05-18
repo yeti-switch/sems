@@ -206,7 +206,7 @@ int AmAudioQueue::removeAudio(AmAudio* audio) {
   if (found)
     return 0;
   else {
-    ERROR("could not find audio in queue\n");
+    ERROR("could not find audio in queue");
     return -1; // error
   }
 }
@@ -330,7 +330,7 @@ int AmNullAudio::put(unsigned long long system_ts, unsigned char* buffer,
   }
 
   if (!sys_ts_less()(system_ts, write_end_ts)) {
-    DBG("%dms of silence ended (write)\n", write_msec);
+    DBG("%dms of silence ended (write)", write_msec);
     return -1;
   }
 
@@ -354,7 +354,7 @@ int AmNullAudio::get(unsigned long long system_ts, unsigned char* buffer,
   }
 
   if (!sys_ts_less()(system_ts, read_end_ts)) {
-    DBG("%dms of silence ended (read)\n", read_msec);
+    DBG("%dms of silence ended (read)", read_msec);
     return -1;
   }
 

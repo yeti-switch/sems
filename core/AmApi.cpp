@@ -56,7 +56,7 @@ AmSessionFactory::AmSessionFactory(const string& name, const string& version)
 
 AmSession* AmSessionFactory::onInvite(const AmSipRequest& req, const string& app_name,
 				      AmArg& session_params) {
-  WARN(" discarding session parameters to new session.\n");
+  WARN(" discarding session parameters to new session.");
   map<string,string> app_params;
   return onInvite(req,app_name,app_params);
 }
@@ -69,7 +69,7 @@ AmSession* AmSessionFactory::onRefer(const AmSipRequest& req, const string& app_
 AmSession* AmSessionFactory::onRefer(const AmSipRequest& req, const string& app_name,
 				     AmArg& session_params)
 {
-  WARN(" discarding session parameters to new session.\n");
+  WARN(" discarding session parameters to new session.");
   map<string,string> app_params;
   return onRefer(req,app_name,app_params);
 }
@@ -141,7 +141,7 @@ void AmSessionFactory::replyOptions(const AmSipRequest& req) {
 }
 
 // void AmSessionFactory::postEvent(AmEvent* ev) {
-//   ERROR("unhandled Event in %s module\n", getName().c_str());
+//   ERROR("unhandled Event in %s module", getName().c_str());
 //   delete ev;
 // }
 
@@ -153,7 +153,7 @@ AmSessionEventHandlerFactory::AmSessionEventHandlerFactory(const string& name, c
 bool AmSessionEventHandlerFactory::onInvite(const AmSipRequest& req, 
 					    AmArg& session_params,
 					    AmConfigReader& cfg) {
-  WARN("discarding session parameters for new session.\n");
+  WARN("discarding session parameters for new session.");
   return onInvite(req, cfg);
 }
 

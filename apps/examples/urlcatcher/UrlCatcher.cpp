@@ -55,7 +55,7 @@ int UrlCatcherFactory::onLoad()
   }
 
   ExecCmd = cfg.getParameter("url_exec_cmd", DEFAULT_EXEC_CMD);
-  INFO("UrlCatcher loaded.Exec cmd = '%s'\n", ExecCmd.c_str());
+  INFO("UrlCatcher loaded.Exec cmd = '%s'", ExecCmd.c_str());
   return 0;
 }
 
@@ -65,20 +65,20 @@ AmSession* UrlCatcherFactory::onInvite(const AmSipRequest& req, const string& ap
 {
   AmSdp sdp;
   if (sdp.parse(req.body.c_str())) {
-    ERROR("SDP parsing error\n");
+    ERROR("SDP parsing error");
     throw AmSession::Exception(404, "Not Found Here (SDP parse error)");
   }
 
-  INFO("SDP URI= '%s'\n", sdp.uri.c_str());
+  INFO("SDP URI= '%s'", sdp.uri.c_str());
   if (sdp.uri.empty())
     throw AmSession::Exception(404, "Not Found Here (No Call URI found)");
 
   int res = system((UrlCatcherFactory::ExecCmd + " \""+sdp.uri+"\"").c_str());
   if (res == -1) {
-    ERROR("executing system command '%s'\n", 
+    ERROR("executing system command '%s'", 
 	  (UrlCatcherFactory::ExecCmd + " \""+sdp.uri+"\"").c_str());
   } else {
-    DBG("command returned code %d\n", res);
+    DBG("command returned code %d", res);
   }
 
   throw AmSession::Exception(404, "Not Found Here (but I got your URL)");

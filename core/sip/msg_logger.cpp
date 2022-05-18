@@ -23,7 +23,7 @@ int file_msg_logger::open(const char* filename)
 {
   fd_mut.lock();
   if(fd != -1) {
-    ERROR("file already open\n");
+    ERROR("file already open");
     fd_mut.unlock();
     return -1;
   }
@@ -51,7 +51,7 @@ int file_msg_logger::write(const void *buf, int len)
 {
   int res = ::write(fd, buf, len);
   if (res != len) {
-    ERROR("while writing to message log: %s\n",strerror(errno));
+    ERROR("while writing to message log: %s",strerror(errno));
   }
   return res;
 }

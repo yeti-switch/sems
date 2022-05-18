@@ -73,7 +73,7 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 				cost["encoded_frame_size"] = fmt_i[i].value;
 			} break;
 			default: {
-			  DBG("Unknown codec format descriptor: %d\n", fmt_i[i].id);
+			  DBG("Unknown codec format descriptor: %d", fmt_i[i].id);
 			} break;
 			}
 			i++;

@@ -698,7 +698,7 @@ public:
 
 inline AmRtpAudio* AmSession::RTPStream() {
   if (NULL == _rtp_str.get()) {
-    DBG("creating RTP stream instance for session [%p]\n", 
+    DBG("creating RTP stream instance for session [%p]", 
 	this);
     _rtp_str.reset(new AmRtpAudio(this, rtp_interface));
   }

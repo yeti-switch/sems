@@ -222,7 +222,7 @@ bool parse_number(std::istream& input, int* value) {
       input.get(ch);
       switch (p_state) {
       case p_number: {
-	// DBG("st = p_number, ch=%c\n",ch);
+	// DBG("st = p_number, ch=%c",ch);
 	if (ch == 'E' || ch == 'e') {
 	  exp_str.push_back(ch);
 	  p_state = p_e;
@@ -237,7 +237,7 @@ bool parse_number(std::istream& input, int* value) {
       } break;
 
       case p_e: {
-	// DBG("st = p_e, ch=%c\n",ch);
+	// DBG("st = p_e, ch=%c",ch);
 
 	if (ch == '+') {
 	  exp_str.push_back(ch);
@@ -257,7 +257,7 @@ bool parse_number(std::istream& input, int* value) {
       } break;
 
       case p_enumber: {
-	// DBG("st = p_enumber, ch=%c\n",ch);
+	// DBG("st = p_enumber, ch=%c",ch);
 
 	if (isdigit(ch)) {
 	  exp_value_str.push_back(ch);
@@ -342,7 +342,7 @@ bool parse_float(std::istream& input, double* value) {
       bool end = false;
       switch (p_state) {
       case p_number: {
-	 // DBG("st = p_number, ch=%c\n",ch);
+	 // DBG("st = p_number, ch=%c",ch);
 	if (ch == 'E' || ch == 'e') {
 	  exp_str.push_back(ch);
 	  p_state = p_e;
@@ -367,7 +367,7 @@ bool parse_float(std::istream& input, double* value) {
       } break;
 
       case p_e: {
-	 // DBG("st = p_e, ch=%c\n",ch);
+	 // DBG("st = p_e, ch=%c",ch);
 	if (ch == '+') {
 	  exp_str.push_back(ch);
 	  p_state = p_enumber;
@@ -386,7 +386,7 @@ bool parse_float(std::istream& input, double* value) {
       } break;
 
       case p_enumber: {
-	// DBG("st = p_enumber, ch=%c\n",ch);
+	// DBG("st = p_enumber, ch=%c",ch);
 
 	if (isdigit(ch)) {
 	  exp_value_str.push_back(ch);
@@ -403,7 +403,7 @@ bool parse_float(std::istream& input, double* value) {
 	break;
     }
 
-    // DBG("correct = %s, has_dot = %s, e_sign = %d, exp_value_str.size() = %zd\n", 
+    // DBG("correct = %s, has_dot = %s, e_sign = %d, exp_value_str.size() = %zd", 
     // 	correct?"true":"false",has_dot?"true":"false",e_sign,exp_value_str.size());
     if (!correct || (!has_dot && !(e_sign == -1 && exp_value_str.size())) || p_state == p_e) { 
       // todo: check also some other error states

@@ -53,7 +53,7 @@ EventQueueWorker* AmEventQueueProcessor::getWorker()
 {
   threads_mut.lock();
   if (!threads.size()) {
-    ERROR("requesting EventQueue processing thread but none available\n");
+    ERROR("requesting EventQueue processing thread but none available");
     threads_mut.unlock();
     return NULL;
   }
@@ -80,14 +80,14 @@ int AmEventQueueProcessor::startEventQueue(AmEventQueue* q)
 
 void AmEventQueueProcessor::addThreads(unsigned int num_threads) 
 {
-  DBG("starting %u session processor threads\n", num_threads);
+  DBG("starting %u session processor threads", num_threads);
   threads_mut.lock();
   for (unsigned int i=0; i < num_threads;i++) {
     threads.push_back(new EventQueueWorker());
     threads.back()->start();
   }
   threads_it = threads.begin();
-  DBG("now %zd session processor threads running\n",  threads.size());
+  DBG("now %zd session processor threads running",  threads.size());
   threads_mut.unlock();
 }
 
@@ -117,7 +117,7 @@ void EventQueueWorker::run()
 
     runcond.wait_for();
 
-    DBG("running processing loop\n");
+    DBG("running processing loop");
     process_queues_mut.lock();
     while(!process_queues.empty()) {
 
@@ -142,7 +142,7 @@ void EventQueueWorker::run()
 
 void EventQueueWorker::on_stop() 
 {
-  INFO("requesting worker to stop.\n");
+  INFO("requesting worker to stop.");
   stop_requested.set(true);
   runcond.set(true);
   join();

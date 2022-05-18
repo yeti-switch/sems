@@ -41,7 +41,7 @@ int StatsFactory::onLoad()
 {
   StatsUDPServer* stat_srv = StatsUDPServer::instance();
   if(!stat_srv){
-    ERROR("stats UDP server not initialized.\n");
+    ERROR("stats UDP server not initialized.");
     return -1;
   }
 

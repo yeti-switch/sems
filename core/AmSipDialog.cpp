@@ -205,12 +205,12 @@ void AmSipDialog::setOAState(AmOfferAnswer::OAState n_st) {
 }
 
 void AmSipDialog::setRel100State(Am100rel::State rel100_state) {
-  DBG("setting 100rel state for '%s' to %i\n", local_tag.c_str(), rel100_state);
+  DBG("setting 100rel state for '%s' to %i", local_tag.c_str(), rel100_state);
   rel100.setState(rel100_state);
 }
 
 void AmSipDialog::setOAEnabled(bool oa_enabled) {
-  DBG("%sabling offer_answer on SIP dialog '%s'\n",
+  DBG("%sabling offer_answer on SIP dialog '%s'",
       oa_enabled?"en":"dis", local_tag.c_str());
   offeranswer_enabled = oa_enabled;
 }
@@ -264,7 +264,7 @@ int AmSipDialog::onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flag
 	(reply.code < 200) ) {
       // refuse local provisional replies 
       // when state is Cancelling
-      ERROR("refuse local provisional replies when state is Cancelling\n");
+      ERROR("refuse local provisional replies when state is Cancelling");
       return -1;
     }
     // else continue with final
@@ -428,11 +428,11 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
           setRemoteTag(reply.to_tag);
       } else if(reply.code >= 300){
         // CANCEL accepted
-        DBG("CANCEL accepted, status -> Disconnected\n");
+        DBG("CANCEL accepted, status -> Disconnected");
         drop();
       } else if(reply.code < 300){
         // CANCEL rejected
-        DBG("CANCEL rejected/too late. connect\n");
+        DBG("CANCEL rejected/too late. connect");
         setStatus(Connected);
         setRouteSet(reply.route);
         if(reply.to_tag.empty()){
@@ -458,7 +458,7 @@ bool AmSipDialog::onRxReplyStatus(const AmSipReply& reply)
   } //reply cseq INVITE
 
   if(status == Disconnecting){
-    DBG("?Disconnecting?: cseq_method = %s; code = %i\n",
+    DBG("?Disconnecting?: cseq_method = %s; code = %i",
         reply.cseq_method.c_str(), reply.code);
 
     if((reply.cseq_method == SIP_METH_BYE) && (reply.code >= 200)){
@@ -489,7 +489,7 @@ void AmSipDialog::uasTimeout(AmSipTimeoutEvent* to_ev)
 
   switch(to_ev->type){
   case AmSipTimeoutEvent::noACK:
-    DBG("Timeout: missing ACK\n");
+    DBG("Timeout: missing ACK");
     if (offeranswer_enabled) {
       oa.onNoAck(to_ev->cseq);
     }
@@ -497,7 +497,7 @@ void AmSipDialog::uasTimeout(AmSipTimeoutEvent* to_ev)
     break;
 
   case AmSipTimeoutEvent::noPRACK:
-    DBG("Timeout: missing PRACK\n");
+    DBG("Timeout: missing PRACK");
     rel100.onTimeout(to_ev->req, to_ev->rpl);
     break;
 
@@ -625,7 +625,7 @@ int AmSipDialog::invite(const string& hdrs,
 {
   if(getStatus() == Disconnected) {
     int res = sendRequest(SIP_METH_INVITE, body, hdrs);
-    DBG("TODO: is status already 'trying'? status=%s\n",getStatusStr());
+    DBG("TODO: is status already 'trying'? status=%s",getStatusStr());
     //status = Trying;
     return res;
   }
@@ -642,7 +642,7 @@ int AmSipDialog::update(const AmMimeBody* body,
 {
   switch(getStatus()){
   case Connected://if Connected, we should send a re-INVITE instead...
-    DBG("re-INVITE should be used instead (see RFC3311, section 5.1)\n");
+    DBG("re-INVITE should be used instead (see RFC3311, section 5.1)");
   case Trying:
   case Proceeding:
   case Early:
@@ -742,10 +742,10 @@ int AmSipDialog::prack(const AmSipReply &reply1xx,
     break;
   case Disconnected:
   case Disconnecting:
-      ERROR("can not send PRACK while dialog is in state '%d'.\n", status);
+      ERROR("can not send PRACK while dialog is in state '%d'.", status);
       return -1;
   default:
-      ERROR("BUG: unexpected dialog state '%d'.\n", status);
+      ERROR("BUG: unexpected dialog state '%d'.", status);
       return -1;
   }
   string h = hdrs +
@@ -769,7 +769,7 @@ int AmSipDialog::cancel(bool final, const string& hdrs)
                 if(hdrs.length()) t->second.hdrs+=hdrs;
                 return 0;
             case Cancelling:
-                ERROR("INVITE transaction has already been cancelled\n");
+                ERROR("INVITE transaction has already been cancelled");
                 return -1;
             default:
                 setStatus(Cancelling);
@@ -778,7 +778,7 @@ int AmSipDialog::cancel(bool final, const string& hdrs)
             } //switch(getStatus())
         }
     }
-    ERROR("could not find INVITE transaction to cancel\n");
+    ERROR("could not find INVITE transaction to cancel");
     return -1;
 }
 
@@ -803,7 +803,7 @@ int AmSipDialog::send_200_ack(unsigned int inv_cseq,
 
   TransMap::iterator inv_it = uac_trans.find(inv_cseq);
   if (inv_it == uac_trans.end()) {
-    ERROR("trying to ACK a non-existing transaction (cseq=%i;local_tag=%s)\n",
+    ERROR("trying to ACK a non-existing transaction (cseq=%i;local_tag=%s)",
 	  inv_cseq,local_tag.c_str());
     return -1;
   }

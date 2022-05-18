@@ -117,7 +117,7 @@ void AmThread::start()
     this->_stopped.lock();
     if(!(this->_stopped.unsafe_get())){
         this->_stopped.unlock();
-        ERROR("thread already running\n");
+        ERROR("thread already running");
         return;
     }
     this->_stopped.unsafe_set(false);
@@ -126,10 +126,10 @@ void AmThread::start()
     res = pthread_create(&_td,&attr,_start,this);
     pthread_attr_destroy(&attr);
     if (res != 0) {
-        ERROR("pthread create failed with code %i\n", res);
+        ERROR("pthread create failed with code %i", res);
         throw string("thread could not be started");
     }
-    //DBG("Thread %lu is just created.\n", (unsigned long int) _pid);
+    //DBG("Thread %lu is just created.", (unsigned long int) _pid);
 }
 
 void AmThread::stop(bool join_afer_stop)
@@ -163,7 +163,7 @@ void AmThread::stop(bool join_afer_stop)
             } else if (res == ESRCH) {
                 DBG("pthread_detach failed with code ESRCH: thread could not be found");
             } else {
-                WARN("pthread_detach failed with code %i\n", res);
+                WARN("pthread_detach failed with code %i", res);
             }
         }
     }
@@ -184,7 +184,7 @@ void AmThread::cancel()
 
     int res;
     if ((res = pthread_cancel(_td)) != 0) {
-        ERROR("pthread_cancel failed with code %i\n", res);
+        ERROR("pthread_cancel failed with code %i", res);
     } else {
         DBG("Thread %lu is canceled", static_cast<unsigned long int>(_pid));
         _stopped.set(true);
@@ -208,7 +208,7 @@ int AmThread::setRealtime()
   //     rt_param.sched_priority = 80;
   //     int res = sched_setscheduler(0, SCHED_FIFO, &rt_param);
   //     if (res) {
-  // 	ERROR("sched_setscheduler failed. Try to run SEMS as root or suid.\n");
+  // 	ERROR("sched_setscheduler failed. Try to run SEMS as root or suid.");
   //     }
 
   //     policy = sched_getscheduler(0);
@@ -220,7 +220,7 @@ int AmThread::setRealtime()
   // 	case SCHED_FIFO: str_policy = "SCHED_FIFO"; break;
   //     }
  
-  //     DBG("Thread has now policy '%s' - priority 80 (from %d to %d).\n", str_policy.c_str(), 
+  //     DBG("Thread has now policy '%s' - priority 80 (from %d to %d).", str_policy.c_str(), 
   // 	sched_get_priority_min(policy), sched_get_priority_max(policy));
   //     return 0;
     return 0;
@@ -289,7 +289,7 @@ void AmThreadWatcher::run()
 
         _run_cond.wait_for();
 
-        DBG("Thread watcher starting its work\n");
+        DBG("Thread watcher starting its work");
 
         try {
             std::queue<AmThread*> n_thread_queue;

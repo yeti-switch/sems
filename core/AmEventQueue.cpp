@@ -51,7 +51,7 @@ AmEventQueue::~AmEventQueue()
 void AmEventQueue::postEvent(AmEvent* event)
 {
   if (AmConfig.log_events) 
-    DBG("AmEventQueue: trying to post event\n");
+    DBG("AmEventQueue: trying to post event");
 
   m_queue.lock();
 
@@ -67,7 +67,7 @@ void AmEventQueue::postEvent(AmEvent* event)
   m_queue.unlock();
 
   if (AmConfig.log_events) 
-    DBG("AmEventQueue: event posted\n");
+    DBG("AmEventQueue: event posted");
 }
 
 void AmEventQueue::processEvents(EventStats *stats)
@@ -86,7 +86,7 @@ void AmEventQueue::processEvents(EventStats *stats)
         }
 
         if (AmConfig.log_events)
-            DBG("before processing event (%s)\n", typeid(*event).name());
+            DBG("before processing event (%s)", typeid(*event).name());
 
         handler->process(event);
 
@@ -97,7 +97,7 @@ void AmEventQueue::processEvents(EventStats *stats)
         }
 
         if(AmConfig.log_events)
-            DBG("event processed (%s)\n", typeid(*event).name());
+            DBG("event processed (%s)", typeid(*event).name());
 
         delete event;
         m_queue.lock();
@@ -123,10 +123,10 @@ void AmEventQueue::processSingleEvent()
     m_queue.unlock();
 
     if (AmConfig.log_events) 
-      DBG("before processing event\n");
+      DBG("before processing event");
     handler->process(event);
     if (AmConfig.log_events)
-      DBG("event processed\n");
+      DBG("event processed");
     delete event;
 
     m_queue.lock();

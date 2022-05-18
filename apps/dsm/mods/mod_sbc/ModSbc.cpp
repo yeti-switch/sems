@@ -37,7 +37,7 @@
 SC_EXPORT(MOD_CLS_NAME);
 
 int MOD_CLS_NAME::preload() {
-  DBG("initializing mod_sbc...\n");
+  DBG("initializing mod_sbc...");
   return 0;
 }
 
@@ -130,7 +130,7 @@ MATCH_CONDITION_START(SBCIsALegCondition) {
 
   bool b = call_leg->isALeg();
   bool res = inv ^ b;
-  DBG("SBC: isALeg() == %s (res = %s)\n",
+  DBG("SBC: isALeg() == %s (res = %s)",
       b ? "true":"false", res ? "true":"false");
   return res;
 } MATCH_CONDITION_END;
@@ -145,7 +145,7 @@ MATCH_CONDITION_START(SBCIsOnHoldCondition) {
 
   bool b = call_leg->isOnHold();
   bool res = inv ^ b;
-  DBG("SBC: isOnHold() == %s (res = %s)\n",
+  DBG("SBC: isOnHold() == %s (res = %s)",
       b ? "true":"false", res ? "true":"false");
   return res;
 } MATCH_CONDITION_END;
@@ -164,7 +164,7 @@ MATCH_CONDITION_START(SBCIsOnHoldCondition) {
   }									\
 									\
   if (NULL == profile) {						\
-    ERROR("internal: Call profile object not found\n");			\
+    ERROR("internal: Call profile object not found");			\
     EXEC_ACTION_STOP;							\
   }
 
@@ -178,14 +178,14 @@ EXEC_ACTION_START(MODSBCActionProfileSet) {
 #define SET_TO_CALL_PROFILE(cfgparam, member)		\
   if (profile_param == cfgparam) {			\
     profile->member=value;				\
-    DBG(cfgparam " set to '%s'\n", value.c_str());	\
+    DBG(cfgparam " set to '%s'", value.c_str());	\
     EXEC_ACTION_STOP;					\
   }
 
 #define SET_TO_CALL_PROFILE_OPTION(cfgparam, member)			\
   if (profile_param == cfgparam) {					\
     profile->member=(value == "true");					\
-    DBG(cfgparam " set to '%s'\n", profile->member?"true":"false");	\
+    DBG(cfgparam " set to '%s'", profile->member?"true":"false");	\
     EXEC_ACTION_STOP;							\
   }
 
@@ -258,7 +258,7 @@ EXEC_ACTION_START(MODSBCActionProfileSet) {
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
       sc_sess->SET_STRERROR("rtprelay_interface '"+value+"' not present");
     } else {
-      DBG("rtprelay_interface set to '%s'\n", value.c_str());
+      DBG("rtprelay_interface set to '%s'", value.c_str());
     }
     EXEC_ACTION_STOP;
   }
@@ -269,7 +269,7 @@ EXEC_ACTION_START(MODSBCActionProfileSet) {
       sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
       sc_sess->SET_STRERROR("aleg_rtprelay_interface '"+value+"' not present");
     } else {
-      DBG("aleg_rtprelay_interface set to '%s'\n", value.c_str());
+      DBG("aleg_rtprelay_interface set to '%s'", value.c_str());
     }
     EXEC_ACTION_STOP;
   }
@@ -282,7 +282,7 @@ EXEC_ACTION_START(MODSBCActionProfileSet) {
   // TODO: contact hiding
   // TODO: reg_caching
 
-  DBG("script writer: Call profile property '%s' not known\n", profile_param.c_str());
+  DBG("script writer: Call profile property '%s' not known", profile_param.c_str());
   sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
   sc_sess->SET_STRERROR("Call profile property '"+profile_param+"' not known");
 } EXEC_ACTION_END;
@@ -310,9 +310,9 @@ EXEC_ACTION_START(MODSBCActionProfileSet) {
 
 #define GET_B2B_MEDIA							\
   AmB2BMedia* b2b_media = sbc_call_leg->getMediaSession();		\
-  DBG("session: %p, media: %p\n", sbc_call_leg, b2b_media);		\
+  DBG("session: %p, media: %p", sbc_call_leg, b2b_media);		\
   if (NULL == b2b_media) {						\
-    DBG("No B2BMedia in current SBC call leg, sorry\n");		\
+    DBG("No B2BMedia in current SBC call leg, sorry");		\
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);				\
     sc_sess->SET_STRERROR("No B2BMedia in current SBC call leg, sorry"); \
     EXEC_ACTION_STOP;							\
@@ -337,7 +337,7 @@ EXEC_ACTION_START(MODSBCActionSendDisconnectEvent) {
   string hold_remote = resolveVars(arg, sess, sc_sess, event_params);
   if (!AmSessionContainer::instance()->postEvent(call_leg->getLocalTag(),
 						 new DisconnectLegEvent(hold_remote == DSM_TRUE))) {
-    ERROR("couldn't self-post event\n");
+    ERROR("couldn't self-post event");
   }
 } EXEC_ACTION_END;
 
@@ -358,7 +358,7 @@ EXEC_ACTION_START(MODSBCActionGetCallStatus) {
   if (varname.size() && varname[0] == '$')
     varname.erase(0, 1);
   sc_sess->var[varname] = call_leg->getCallStatusStr();
-  DBG("set $%s='%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("set $%s='%s'", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 void setReliableEventParameters(const DSMSession* sc_sess, const string& var, VarMapT& params) {
@@ -367,7 +367,7 @@ void setReliableEventParameters(const DSMSession* sc_sess, const string& var, Va
     string varname = *it;
 
     if (varname.length() && varname[varname.length()-1]=='.') {
-      DBG("adding postEvent param %s (struct)\n", varname.c_str());
+      DBG("adding postEvent param %s (struct)", varname.c_str());
 
       map<string, string>::const_iterator lb = sc_sess->var.lower_bound(varname);
       while (lb != sc_sess->var.end()) {
@@ -380,7 +380,7 @@ void setReliableEventParameters(const DSMSession* sc_sess, const string& var, Va
     } else {
       VarMapT::const_iterator v_it = sc_sess->var.find(varname);
       if (v_it != sc_sess->var.end()) {
-	DBG("adding reliableEvent param %s=%s\n",
+	DBG("adding reliableEvent param %s=%s",
 	    it->c_str(), v_it->second.c_str());
 	params[varname] = v_it->second;
       }
@@ -399,7 +399,7 @@ EXEC_ACTION_START(MODSBCActionB2BRelayReliable) {
   }
   B2BEvent* unprocessed = new B2BEvent(E_B2B_APP, B2BEvent::B2BApplication);
   if (success_params.size() > 1) {
-    DBG("p='%s'\n", success_params[1].c_str());
+    DBG("p='%s'", success_params[1].c_str());
     setReliableEventParameters(sc_sess, trim(success_params[1], " "), unprocessed->params);
   }
 
@@ -428,7 +428,7 @@ EXEC_ACTION_START(MODSBCActionAddCallee) {
       sbc_call_leg->getCallProfile().transparent_dlg_id = false;
     }
 
-      DBG("Using %stransparent dialog IDs for new call leg\n",
+      DBG("Using %stransparent dialog IDs for new call leg",
 	  sbc_call_leg->getCallProfile().transparent_dlg_id ? "":"non-");
 
     SBCCallLeg* peer = new SBCCallLeg(sbc_call_leg);

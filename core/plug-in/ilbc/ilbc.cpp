@@ -149,13 +149,13 @@ long iLBC_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
     msep++; mbegin=msep;
     while (*msep!='=' && *msep!='\0') msep++;
     if ((msep-mbegin)>8) {
-      DBG("Error in fmtp line >>'%s<<.\n", format_parameters); 
+      DBG("Error in fmtp line >>'%s<<.", format_parameters); 
       mode=30;
     } else {
       memcpy(modeb, mbegin, msep-mbegin);
       modeb[msep-mbegin]='\0';
       if ((!(mode=atoi(modeb))) || (mode != 30 && mode!= 20)) {
-	DBG("Error in fmtp line >>'%s<<.\n", format_parameters);
+	DBG("Error in fmtp line >>'%s<<.", format_parameters);
 	mode=30;
       }
     }
@@ -169,7 +169,7 @@ long iLBC_create(const char* format_parameters, amci_codec_fmt_info_t* format_de
   format_description[3].id = 0;
     
   if (format_parameters) {
-    DBG("ilbc with format parameters : '%s', mode=%d.\n", format_parameters, mode);
+    DBG("ilbc with format parameters : '%s', mode=%d.", format_parameters, mode);
   }
 
   codec_inst = (iLBC_Codec_Inst_t*)malloc(sizeof(iLBC_Codec_Inst_t));
@@ -201,11 +201,11 @@ int Pcm16_2_iLBC( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   int out_buf_offset=0;
 
   if (!h_codec){
-    ERROR("iLBC codec not initialized.\n");
+    ERROR("iLBC codec not initialized.");
     return 0;
   }
   if ((channels!=1)||(rate!=8000)) {
-    ERROR("Unsupported input format for iLBC encoder.\n");
+    ERROR("Unsupported input format for iLBC encoder.");
     return 0;
   }
   
@@ -257,11 +257,11 @@ static int iLBC_2_Pcm16_Ext( unsigned char* out_buf, unsigned char* in_buf, unsi
   short out_buf_offset=0;
 
   if (!h_codec){
-    ERROR("iLBC codec not initialized.\n");
+    ERROR("iLBC codec not initialized.");
     return 0;
   }
   if ((channels!=1)||(rate!=8000)) {
-    ERROR("Unsupported input format for iLBC encoder.\n");
+    ERROR("Unsupported input format for iLBC encoder.");
     return 0;
   }
 
@@ -269,7 +269,7 @@ static int iLBC_2_Pcm16_Ext( unsigned char* out_buf, unsigned char* in_buf, unsi
   
   noframes = size / codec_inst->iLBC_Dec_Inst.no_of_bytes;
   if (noframes*codec_inst->iLBC_Dec_Inst.no_of_bytes != size) {
-    WARN("Dropping extra %d bytes from iLBC packet.\n",
+    WARN("Dropping extra %d bytes from iLBC packet.",
 	 size - noframes*codec_inst->iLBC_Dec_Inst.no_of_bytes);
   }
 
@@ -311,10 +311,10 @@ static int ilbc_read_header(FILE* fp, struct amci_file_desc_t* fmt_desc)
     return -1;
   rewind(fp);
 
-  DBG("trying to read iLBC file\n");
+  DBG("trying to read iLBC file");
 
   SAFE_READ(tag,9,fp,s);
-  DBG("tag = <%.9s>\n",tag);
+  DBG("tag = <%.9s>",tag);
 
   if(!strncmp(tag,"#iLBC30\n",9) ){
     fmt_desc->subtype=ILBC30;
@@ -336,18 +336,18 @@ static int ilbc_read_header(FILE* fp, struct amci_file_desc_t* fmt_desc)
 
 int iLBC_open(FILE* fp, struct amci_file_desc_t* fmt_desc, int options, long h_codec)
 {
-  DBG("ilbc_open.\n");
+  DBG("ilbc_open.");
   if(options == AMCI_RDONLY){
     return ilbc_read_header(fp,fmt_desc);
   }  else {
     if (fmt_desc->subtype == ILBC30) {
-      DBG("writing: #iLBC30\n");
+      DBG("writing: #iLBC30");
       SAFE_WRITE("#iLBC30\n",9,fp);
     } else if (fmt_desc->subtype == ILBC20) {
-      DBG("writing: #iLBC20\n");
+      DBG("writing: #iLBC20");
       SAFE_WRITE("#iLBC20\n",9,fp);
     } else {
-      ERROR("Unsupported ilbc sub type %d\n", fmt_desc->subtype);
+      ERROR("Unsupported ilbc sub type %d", fmt_desc->subtype);
       return -1;
     }
     return 0;
@@ -356,7 +356,7 @@ int iLBC_open(FILE* fp, struct amci_file_desc_t* fmt_desc, int options, long h_c
 
 int iLBC_close(FILE* fp, struct amci_file_desc_t* fmt_desc, int options, long h_codec, struct amci_codec_t *codec)
 {
-  DBG("iLBC_close.\n");
+  DBG("iLBC_close.");
   return 0;
 }
 

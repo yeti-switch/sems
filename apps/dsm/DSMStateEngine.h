@@ -150,8 +150,8 @@ class DSMAction
     Return  // return from FSM call 
   };
 
-  DSMAction() { /* DBG("const action\n"); */ }
-  virtual ~DSMAction() { /* DBG("dest action\n"); */ }
+  DSMAction() { /* DBG("const action"); */ }
+  virtual ~DSMAction() { /* DBG("dest action"); */ }
 
   /** @return whether state engine is to be modified (via getSEAction) */
   virtual bool execute(AmSession* sess, DSMSession* sc_sess, 

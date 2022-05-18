@@ -102,9 +102,9 @@ EXEC_ACTION_START(SCUPlayCountRightAction) {
 
   unsigned int cnt = 0;
   if (str2i(cnt_s,cnt)) {
-    ERROR("could not parse count '%s'\n", cnt_s.c_str());
+    ERROR("could not parse count '%s'", cnt_s.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("could not parse count '"+cnt_s+"'\n");
+    sc_sess->SET_STRERROR("could not parse count '"+cnt_s+"'");
     return false;
   }
 
@@ -121,9 +121,9 @@ EXEC_ACTION_START(SCUPlayCountLeftAction) {
 
   unsigned int cnt = 0;
   if (str2i(cnt_s,cnt)) {
-    ERROR("could not parse count '%s'\n", cnt_s.c_str());
+    ERROR("could not parse count '%s'", cnt_s.c_str());
     sc_sess->SET_ERRNO(DSM_ERRNO_UNKNOWN_ARG);
-    sc_sess->SET_STRERROR("could not parse count '"+cnt_s+"'\n");
+    sc_sess->SET_STRERROR("could not parse count '"+cnt_s+"'");
     return false;
   }
 
@@ -150,7 +150,7 @@ EXEC_ACTION_START(SCURandomAction) {
   else
     sc_sess->var[varname]=int2str(rand());
 
-  DBG("Generated random $%s=%s\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("Generated random $%s=%s", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 EXEC_ACTION_START(SCUSRandomAction) {
@@ -162,7 +162,7 @@ EXEC_ACTION_START(SCUSpellAction) {
   string basedir = resolveVars(par2, sess, sc_sess, event_params);
 
   string play_string = resolveVars(par1, sess, sc_sess, event_params);
-  DBG("spelling '%s'\n", play_string.c_str());
+  DBG("spelling '%s'", play_string.c_str());
   for (size_t i=0;i<play_string.length();i++)
     sc_sess->playFile(basedir+play_string[i]+".wav", false);
 
@@ -181,7 +181,7 @@ EXEC_ACTION_START(SCUSAddAction) {
   // todo: err checking
   string res = double2str(atof(n1.c_str()) + atof(n2.c_str()));
 
-  DBG("setting var[%s] = %s + %s = %s\n", 
+  DBG("setting var[%s] = %s + %s = %s", 
       varname.c_str(), n1.c_str(), n2.c_str(), res.c_str());
   sc_sess->var[varname] = res;
 
@@ -199,7 +199,7 @@ EXEC_ACTION_START(SCUSSubAction) {
   // todo: err checking
   string res = double2str(atof(n1.c_str()) - atof(n2.c_str()));
 
-  DBG("setting var[%s] = %s - %s = %s\n", 
+  DBG("setting var[%s] = %s - %s = %s", 
       varname.c_str(), n1.c_str(), n2.c_str(), res.c_str());
   sc_sess->var[varname] = res;
 
@@ -214,7 +214,7 @@ EXEC_ACTION_START(SCUIntAction) {
     varname = varname.substr(1);  
 
   sc_sess->var[varname] = int2str((int)atof(val.c_str()));
-  DBG("set $%s = %s\n", 
+  DBG("set $%s = %s", 
       varname.c_str(), sc_sess->var[varname].c_str());
 
 } EXEC_ACTION_END;
@@ -256,7 +256,7 @@ EXEC_ACTION_START(SCUEscapeCRLFAction) {
     sc_sess->var[varname].replace(p, 2, "\\r\\n");
   }
 
-  DBG("escaped: $%s='%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("escaped: $%s='%s'", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 
@@ -272,7 +272,7 @@ EXEC_ACTION_START(SCUUnescapeCRLFAction) {
     sc_sess->var[varname].replace(p, 4, "\r\n");
   }
 
-  DBG("unescaped: $%s='%s'\n", varname.c_str(), sc_sess->var[varname].c_str());
+  DBG("unescaped: $%s='%s'", varname.c_str(), sc_sess->var[varname].c_str());
 } EXEC_ACTION_END;
 
 
@@ -283,7 +283,7 @@ EXEC_ACTION_START(SCUPlayRingToneAction) {
   int rtparams[4] = {2000, 4000, 440, 480}; // US
   string s_length = resolveVars(par1, sess, sc_sess, event_params);
   if (!str2int(s_length, length)) {
-    WARN("could not decipher ringtone length: '%s'\n", s_length.c_str());
+    WARN("could not decipher ringtone length: '%s'", s_length.c_str());
   }
 
   vector<string> r_params = explode(par2, ",");
@@ -293,13 +293,13 @@ EXEC_ACTION_START(SCUPlayRingToneAction) {
     if (p.empty())
       continue;
     if (!str2int(p, rtparams[it-r_params.begin()])) {
-      WARN("could not decipher ringtone parameter %zd: '%s', using default\n",
+      WARN("could not decipher ringtone parameter %zd: '%s', using default",
 	   it-r_params.begin(), p.c_str());
       continue;
     }
   }
 
-  DBG("Playing ringtone length %d, on %d, off %d, f %d, f2 %d\n",
+  DBG("Playing ringtone length %d, on %d, off %d, f %d, f2 %d",
       length, rtparams[0], rtparams[1], rtparams[2], rtparams[3]);
 
   DSMRingTone* rt = new DSMRingTone(length, rtparams[0], rtparams[1],

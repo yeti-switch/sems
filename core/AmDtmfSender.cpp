@@ -111,7 +111,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 dtmf.duration = htons(duration);
                 dtmf.volume = 20;
 
-                DBG("DTMF_SEND_SENDING: ts:%u send: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u\n",
+                DBG("DTMF_SEND_SENDING: ts:%u send: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u",
                     ts, dtmf.event,dtmf.e,dtmf.r,dtmf.volume,duration,current_send_dtmf_ts);
 
                 stream->compile_and_send(
@@ -131,7 +131,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
         } break;
         case DTMF_SEND_ENDING: {
             if (send_dtmf_end_repeat >= 3) {
-                DBG("DTMF send complete\n");
+                DBG("DTMF send complete");
                 sending_state = DTMF_SEND_NONE;
                 is_sending.store(false);
             } else {
@@ -145,7 +145,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 dtmf.duration = htons(send_dtmf_duration_ts);
                 dtmf.volume = 20;
 
-                DBG("sending DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u\n",
+                DBG("sending DTMF: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u",
                     dtmf.event,dtmf.e,dtmf.r,dtmf.volume,ntohs(dtmf.duration),current_send_dtmf_ts);
 
                 stream->compile_and_send(

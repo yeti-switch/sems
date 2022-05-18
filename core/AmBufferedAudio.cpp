@@ -60,7 +60,7 @@ void AmBufferedAudio::setBufferSize(size_t _output_buffer_size,
 				    size_t _low_buffer_thresh,
 				    size_t _full_buffer_thresh) {
 
-  DBG("set output buffer size to %zd low thresh %zd, fill thresh %zd\n", 
+  DBG("set output buffer size to %zd low thresh %zd, fill thresh %zd", 
       _output_buffer_size, _low_buffer_thresh, _full_buffer_thresh);
 
   bool reset_buffer = output_buffer_size != _output_buffer_size;
@@ -121,11 +121,11 @@ void AmBufferedAudio::input_get_audio(unsigned int user_ts) {
   while (w < full_buffer_thresh) {
     int size = calcBytesToRead(PCM16_B2S(output_buffer_size - w));
 
-//     DBG("calc %d bytes to read\n", size);
+//     DBG("calc %d bytes to read", size);
     
     // resync might be delayed until buffer empty     // (but output resync never happens)
     size = read(user_ts + PCM16_B2S(w-r),size);
-//     DBG("read returned size = %d\n",size);
+//     DBG("read returned size = %d",size);
     if(size <= 0){
       err_code = size;
       eof = true;
@@ -134,13 +134,13 @@ void AmBufferedAudio::input_get_audio(unsigned int user_ts) {
     
     size = decode(size);
     if(size < 0) {
-//       DBG("decode returned %i\n",size);
+//       DBG("decode returned %i",size);
       err_code = size;
       eof = true;
       return; 
     }
 
-//     DBG("decode returned %i\n",size);
+//     DBG("decode returned %i",size);
     size = downMix(size);
     
     if(size>0) {

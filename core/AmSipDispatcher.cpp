@@ -57,7 +57,7 @@ void AmSipDispatcher::handleSipMsg(const string& dialog_id, AmSipReply &reply)
 	     "unhandled SIP reply: %s\n", reply.print().c_str());
       }
     } else {
-      WARN("unhandled SIP reply: %s\n", reply.print().c_str());
+      WARN("unhandled SIP reply: %s", reply.print().c_str());
     }
     delete ev;
   }
@@ -106,7 +106,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
     return;
   }
 
-  DBG("method: `%s' [%zd].\n", req.method.c_str(), req.method.length());
+  DBG("method: `%s' [%zd].", req.method.c_str(), req.method.length());
 
   if(req.method == SIP_METH_BYE ||
 		req.method == SIP_METH_PRACK){
@@ -133,7 +133,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
 	return;
       } catch (AmSession::Exception& e) {
 	AmSipDialog::reply_error(req,e.code,e.reason, e.hdrs);
-	ERROR("%i %s %s\n",e.code,e.reason.c_str(), e.hdrs.c_str());
+	ERROR("%i %s %s",e.code,e.reason.c_str(), e.hdrs.c_str());
 	return;
       }
     }

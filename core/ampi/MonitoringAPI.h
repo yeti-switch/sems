@@ -203,11 +203,11 @@
 #define _MONITORING_INIT						\
   AmDynInvokeFactory* monitoring_fact= AmPlugIn::instance()->getFactory4Di("monitoring"); \
   if(!monitoring_fact) {						\
-    INFO("monitoring module not loaded, monitoring disabled\n");	\
+    INFO("monitoring module not loaded, monitoring disabled");	\
   } else {								\
     monitoring_di = monitoring_fact->getInstance();			\
     assert(monitoring_di);						\
-    INFO("monitoring enabled\n");					\
+    INFO("monitoring enabled");					\
   }									\
 
 #else

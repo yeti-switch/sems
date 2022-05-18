@@ -74,20 +74,20 @@ static long iSAC_create(const char* format_parameters,
   WebRtcIsac_SetDecSampRate(iSAC_st, kIsacWideband);
 
   if (WebRtcIsac_EncoderInit(iSAC_st, 0) < 0) {
-    ERROR("Could not init ISAC encoder\n");
+    ERROR("Could not init ISAC encoder");
     WebRtcIsac_Free(iSAC_st);
     return 0;
   }
 
   if (WebRtcIsac_DecoderInit(iSAC_st) < 0) {
-    ERROR("Could not init ISAC decoder\n");
+    ERROR("Could not init ISAC decoder");
     WebRtcIsac_Free(iSAC_st);
     return 0;
   }
 
   format_description[0].id = AMCI_FMT_FRAME_SIZE;
   format_description[0].value = iSAC_FRAME_MS * iSAC_SAMPLE_RATE / 1000;
-  DBG("set AMCI_FMT_FRAME_SIZE to %d\n", format_description[0].value);
+  DBG("set AMCI_FMT_FRAME_SIZE to %d", format_description[0].value);
     
   format_description[1].id = 0;
 
@@ -114,14 +114,14 @@ int Pcm16_2_iSAC( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   const WebRtc_Word16* in = (WebRtc_Word16*)in_buf;
   WebRtc_Word16 len=0;
 
-  DBG("starting ISAC encode\n");
+  DBG("starting ISAC encode");
   while((len == 0) && (((unsigned char*)in) - in_buf < size)) {
     len = WebRtcIsac_Encode( st, in, (WebRtc_Word16*)out_buf );
     in += 10 /* ms */ * iSAC_SAMPLE_RATE / 1000;
-    DBG("encoding ISAC frame... (len = %i ; size = %i)\n",len,size);
+    DBG("encoding ISAC frame... (len = %i ; size = %i)",len,size);
   }
   if( len < 0 ) {
-    ERROR( "WebRtcIsac_Encode() returned %d (size=%u)\n", len, size );
+    ERROR( "WebRtcIsac_Encode() returned %d (size=%u)", len, size );
     return -1;
   }
 
@@ -137,7 +137,7 @@ int iSAC_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   samples = WebRtcIsac_Decode( st, (void *)in_buf, size,
 			       outPtr, &speechType );
   if( samples < 0 ) {
-    ERROR( "WebRtcIsac_Decode returned %d\n", samples );
+    ERROR( "WebRtcIsac_Decode returned %d", samples );
     return -1;
   }
 

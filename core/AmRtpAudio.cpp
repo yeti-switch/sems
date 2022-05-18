@@ -78,7 +78,7 @@ void AmAudioRtpFormat::initCodec()
 
     if( codec && codec->init ) {
         if ((h_codec = (*codec->init)(sdp_format_parameters.c_str(), fmt_i)) == -1) {
-            ERROR("could not initialize codec %i\n",codec->id);
+            ERROR("could not initialize codec %i",codec->id);
         } else {
             string s;
             int i=0;
@@ -95,7 +95,7 @@ void AmAudioRtpFormat::initCodec()
                 //   frame_encoded_size=fmt_i[i].value;
                 } break;
                 default: {
-                    DBG("Unknown codec format descriptor: %d\n", fmt_i[i].id);
+                    DBG("Unknown codec format descriptor: %d", fmt_i[i].id);
                 } break;
                 } //switch (fmt_i[i].id)
 
@@ -170,7 +170,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
     int size;
 
     if(!fmt.get() || (!playout_buffer.get())) {
-        DBG("audio format not initialized\n");
+        DBG("audio format not initialized");
         return RTP_ERROR;
     }
 
@@ -196,7 +196,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
                 return -1;
             case RTP_BUFFER_SIZE:
             default:
-                ERROR("AmRtpStream::receive() returned %i\n",size);
+                ERROR("AmRtpStream::receive() returned %i",size);
                 //FIXME: postRequest(new SchedRequest(AmMediaProcessor::ClearSession,s));
                 //       or AmMediaProcessor::instance()->clearSession(session);
                 return -1;
@@ -217,7 +217,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
         if(decoded_size <= 0) {
             if(rtp_stats.current_rx) {
                 if(!rtp_stats.current_rx->decode_err) { //print just first decode error for current stream
-                    DBG("AmAudio:decode(%d) returned %i. local_ssrc: 0x%x, local_tag: %s\n",
+                    DBG("AmAudio:decode(%d) returned %i. local_ssrc: 0x%x, local_tag: %s",
                         size,decoded_size,
                         l_ssrc,session ? session->getLocalTag().c_str() : "no session");
                 }
@@ -248,7 +248,7 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             PCM16_B2S(static_cast<u_int32_t>(decoded_size)), begin_talk);
 
         if(!active && !last_recv_relayed) {
-            DBG("switching to active-mode\t(ts=%llu;stream=%p)\n",
+            DBG("switching to active-mode\t(ts=%llu;stream=%p)",
                 last_recv_ts,static_cast<void *>(this));
             active = true;
         }
@@ -399,7 +399,7 @@ int AmRtpAudio::init(
     const AmSdp& remote,
     bool force_symmetric_rtp)
 {
-    DBG("AmRtpAudio::init(...)\n");
+    DBG("AmRtpAudio::init(...)");
     if(AmRtpStream::init(local,remote,force_symmetric_rtp)){
         return -1;
     }
@@ -408,7 +408,7 @@ int AmRtpAudio::init(
         PayloadMappingTable::iterator pl_it =
             pl_map.find(static_cast<PayloadMappingTable::key_type>(payload));
         if ((pl_it == pl_map.end()) || (pl_it->second.remote_pt < 0)) {
-            DBG("no default payload has been set\n");
+            DBG("no default payload has been set");
             return -1;
         }
 
@@ -516,7 +516,7 @@ int AmRtpAudio::setCurrentPayload(int payload, int frame_size)
 
         unsigned char index = pmt_it->second.index;
         if(index >= payloads.size()) {
-            ERROR("Could not set current payload: payload %i maps to invalid index %i\n",
+            ERROR("Could not set current payload: payload %i maps to invalid index %i",
                 payload, index);
             last_not_supported_rx_payload = payload;
             wrong_payload_errors++;
@@ -575,7 +575,7 @@ unsigned int AmRtpAudio::conceal_loss(unsigned int ts_diff, unsigned char *buffe
             static_cast<unsigned int>(fmt->channels),
             static_cast<unsigned int>(getSampleRate()),
             fmt->getHCodec()));
-        //DBG("codec specific PLC (ts_diff = %i; s = %i)\n",ts_diff,s);
+        //DBG("codec specific PLC (ts_diff = %i; s = %i)",ts_diff,s);
         return s;
     }
 
@@ -584,7 +584,7 @@ _default_plc:
         buffer, PCM16_S2B(ts_diff),
         static_cast<unsigned int>(fmt->channels),
         static_cast<unsigned int>(getSampleRate()));
-    //DBG("default PLC (ts_diff = %i; s = %i)\n",ts_diff,s);
+    //DBG("default PLC (ts_diff = %i; s = %i)",ts_diff,s);
     return s;
 }
 
@@ -637,21 +637,21 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
             if (fmt.get())
                 playout_buffer.reset(new AmAdaptivePlayout(this,static_cast<unsigned int>(getSampleRate())));
             session->unlockAudio();
-            DBG("Adaptive playout buffer activated\n");
+            DBG("Adaptive playout buffer activated");
         } else if (type == JB_PLAYOUT) {
             session->lockAudio();
             m_playout_type = type;
             if (fmt.get())
                 playout_buffer.reset(new AmJbPlayout(this,static_cast<unsigned int>(getSampleRate())));
             session->unlockAudio();
-            DBG("Adaptive jitter buffer activated\n");
+            DBG("Adaptive jitter buffer activated");
         } else {
             session->lockAudio();
             m_playout_type = type;
             if (fmt.get())
                 playout_buffer.reset(new AmPlayoutBuffer(this,static_cast<unsigned int>(getSampleRate())));
             session->unlockAudio();
-            DBG("Simple playout buffer activated\n");
+            DBG("Simple playout buffer activated");
         }
     }
 }

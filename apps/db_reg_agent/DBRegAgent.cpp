@@ -75,13 +75,13 @@ DBRegAgent::~DBRegAgent() {
 int DBRegAgent::onLoad()
 {
 
-  DBG("loading db_reg_agent....\n");
+  DBG("loading db_reg_agent....");
 
   AmDynInvokeFactory* uac_auth_f = AmPlugIn::instance()->getFactory4Di("uac_auth");
   if (uac_auth_f == NULL) {
     WARN("unable to get a uac_auth factory. "
 	 "registrations will not be authenticated.\n");
-    WARN("(do you want to load uac_auth module?)\n");
+    WARN("(do you want to load uac_auth module?)");
   } else {
     uac_auth_i = uac_auth_f->getInstance();
   }
@@ -91,7 +91,7 @@ int DBRegAgent::onLoad()
     return -1;
 
   expires = cfg.getParameterInt("expires", 7200);
-  DBG("requesting registration expires of %u seconds\n", expires);
+  DBG("requesting registration expires of %u seconds", expires);
 
   if (cfg.hasParameter("reregister_interval")) {
     reregister_interval = -1;
@@ -122,13 +122,13 @@ int DBRegAgent::onLoad()
   enable_ratelimiting = cfg.getParameter("enable_ratelimiting") == "yes";
   if (enable_ratelimiting) {
     if (!cfg.hasParameter("ratelimit_rate") || !cfg.hasParameter("ratelimit_per")) {
-      ERROR("if ratelimiting is enabled, ratelimit_rate and ratelimit_per must be set\n");
+      ERROR("if ratelimiting is enabled, ratelimit_rate and ratelimit_per must be set");
       return -1;
     }
     ratelimit_rate = cfg.getParameterInt("ratelimit_rate", 0);
     ratelimit_per = cfg.getParameterInt("ratelimit_per", 0);
     if (!ratelimit_rate || !ratelimit_per) {
-      ERROR("ratelimit_rate and ratelimit_per must be > 0\n");
+      ERROR("ratelimit_rate and ratelimit_per must be > 0");
       return -1;
     }
     ratelimit_slowstart = cfg.getParameter("ratelimit_slowstart") == "yes";
@@ -156,7 +156,7 @@ int DBRegAgent::onLoad()
 
   error_retry_interval = cfg.getParameterInt("error_retry_interval", 300);
   if (!error_retry_interval) {
-    WARN("disabled retry on errors!\n");
+    WARN("disabled retry on errors!");
   }
 
   string mysql_server, mysql_user, mysql_passwd, mysql_db;
@@ -165,13 +165,13 @@ int DBRegAgent::onLoad()
 
   mysql_user = cfg.getParameter("mysql_user");
   if (mysql_user.empty()) {
-    ERROR(MOD_NAME ".conf parameter 'mysql_user' is missing.\n");
+    ERROR(MOD_NAME ".conf parameter 'mysql_user' is missing.");
     return -1;
   }
 
   mysql_passwd = cfg.getParameter("mysql_passwd");
   if (mysql_passwd.empty()) {
-    ERROR(MOD_NAME ".conf parameter 'mysql_passwd' is missing.\n");
+    ERROR(MOD_NAME ".conf parameter 'mysql_passwd' is missing.");
     return -1;
   }
 
@@ -185,7 +185,7 @@ int DBRegAgent::onLoad()
     MainDBConnection.connect(mysql_db.c_str(), mysql_server.c_str(),
                       mysql_user.c_str(), mysql_passwd.c_str());
     if (!MainDBConnection) {
-      ERROR("Database connection failed: %s\n", MainDBConnection.error());
+      ERROR("Database connection failed: %s", MainDBConnection.error());
       return -1;
     }
 
@@ -195,13 +195,13 @@ int DBRegAgent::onLoad()
     ProcessorDBConnection.connect(mysql_db.c_str(), mysql_server.c_str(),
                       mysql_user.c_str(), mysql_passwd.c_str());
     if (!ProcessorDBConnection) {
-      ERROR("Database connection failed: %s\n", ProcessorDBConnection.error());
+      ERROR("Database connection failed: %s", ProcessorDBConnection.error());
       return -1;
     }
 
   } catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return -1;
   }
 
@@ -209,28 +209,28 @@ int DBRegAgent::onLoad()
   AmEventDispatcher::instance()->addEventQueue(MOD_NAME,this);
 
   if (!AmPlugIn::registerDIInterface(MOD_NAME, this)) {
-    ERROR("registering "MOD_NAME" DI interface\n");
+    ERROR("registering "MOD_NAME" DI interface");
     return -1;
   }
 
   joined_query = cfg.getParameter("joined_query");
   if (joined_query.empty()) {
     // todo: name!
-    ERROR("joined_query must be set\n");
+    ERROR("joined_query must be set");
     return -1;
   }
 
   if (cfg.hasParameter("registrations_table")) {
     registrations_table = cfg.getParameter("registrations_table");
   }
-  DBG("using registrations table '%s'\n", registrations_table.c_str());
+  DBG("using registrations table '%s'", registrations_table.c_str());
 
   if (!loadRegistrations()) {
-    ERROR("loading registrations from DB\n");
+    ERROR("loading registrations from DB");
     return -1;
   }
 
-  DBG("starting registration timer thread...\n");
+  DBG("starting registration timer thread...");
   registration_scheduler.start();
 
   // run_tests();
@@ -244,7 +244,7 @@ void DBRegAgent::onUnload() {
   if (running) {
     running = false;
     registration_scheduler._timer_thread_running = false;
-    DBG("unclean shutdown. Waiting for processing thread to stop.\n");
+    DBG("unclean shutdown. Waiting for processing thread to stop.");
     for (int i=0;i<400;i++) {
       if (shutdown_finished && registration_scheduler._shutdown_finished)
 	break;
@@ -252,13 +252,13 @@ void DBRegAgent::onUnload() {
     }
 
     if (!shutdown_finished || !registration_scheduler._shutdown_finished) {
-      WARN("processing thread could not be stopped, process will probably crash\n");
+      WARN("processing thread could not be stopped, process will probably crash");
     }
   }
 
-  DBG("closing main DB connection\n");
+  DBG("closing main DB connection");
   MainDBConnection.disconnect();
-  DBG("closing auxiliary DB connection\n");
+  DBG("closing auxiliary DB connection");
   ProcessorDBConnection.disconnect();
 }
 
@@ -272,14 +272,14 @@ bool DBRegAgent::loadRegistrations() {
 
     query_string = joined_query;
 
-    DBG("querying all registrations with : '%s'\n",
+    DBG("querying all registrations with : '%s'",
 	query_string.c_str());
 
     query << query_string;
     mysqlpp::UseQueryResult res = query.use();
     
     // mysqlpp::Row::size_type row_count = res.num_rows();
-    // DBG("got %zd subscriptions\n", row_count);
+    // DBG("got %zd subscriptions", row_count);
 
     while (mysqlpp::Row row = res.fetch_row()) {
       int status = 0; 
@@ -293,12 +293,12 @@ bool DBRegAgent::loadRegistrations() {
       if (row[COLNAME_STATUS] != mysqlpp::null)
 	status = row[COLNAME_STATUS];
       else {
-	DBG("registration status entry for id %ld does not exist, creating...\n",
+	DBG("registration status entry for id %ld does not exist, creating...",
 	    subscriber_id);
 	createDBRegistration(subscriber_id, ProcessorDBConnection);
       }
 
-      DBG("got subscriber '%s@%s' status %i\n",
+      DBG("got subscriber '%s@%s' status %i",
 	  string(row[COLNAME_USER]).c_str(), string(row[COLNAME_REALM]).c_str(),
 	  status);      
 
@@ -335,7 +335,7 @@ bool DBRegAgent::loadRegistrations() {
 	    dt_registration_ts = (time_t)((mysqlpp::DateTime)row[COLNAME_REGISTRATION_TS]);
 	  }
 
-	  DBG("got expiry '%ld, registration_ts %ld, now %ld'\n",
+	  DBG("got expiry '%ld, registration_ts %ld, now %ld'",
 	      dt_expiry, dt_registration_ts, now_time);
 
 	  if (dt_registration_ts > now_time) {
@@ -346,7 +346,7 @@ bool DBRegAgent::loadRegistrations() {
 
 	  // if expired add to pending registrations, else schedule re-regstration
 	  if (dt_expiry <= now_time) {
-	    DBG("scheduling imminent re-registration for subscriber %ld\n", subscriber_id);
+	    DBG("scheduling imminent re-registration for subscriber %ld", subscriber_id);
 	    scheduleRegistration(subscriber_id);
 	  } else {
 	    setRegistrationTimer(subscriber_id, dt_expiry, dt_registration_ts, now_time);
@@ -377,7 +377,7 @@ bool DBRegAgent::loadRegistrations() {
 
   } catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return false;
   }
 
@@ -409,7 +409,7 @@ void DBRegAgent::createRegistration(long subscriber_id,
   try {
     if (registrations.find(subscriber_id) != registrations.end()) {
       registrations_mut.unlock();
-      WARN("registration with ID %ld already exists, removing\n", subscriber_id);
+      WARN("registration with ID %ld already exists, removing", subscriber_id);
       removeRegistration(subscriber_id);
       clearRegistrationTimer(subscriber_id);
       registrations_mut.lock();
@@ -422,7 +422,7 @@ void DBRegAgent::createRegistration(long subscriber_id,
     registration_ltags[handle] = subscriber_id;
 
     if (NULL != uac_auth_i) {
-      DBG("enabling UAC Auth for new registration.\n");
+      DBG("enabling UAC Auth for new registration.");
       
       // get a sessionEventHandler from uac_auth
       AmArg di_args,ret;
@@ -433,7 +433,7 @@ void DBRegAgent::createRegistration(long subscriber_id,
       
       uac_auth_i->invoke("getHandler", di_args, ret);
       if (!ret.size()) {
-	ERROR("Can not add auth handler to new registration!\n");
+	ERROR("Can not add auth handler to new registration!");
       } else {
 	AmObject* p = ret.get(0).asObject();
 	if (p != NULL) {
@@ -448,7 +448,7 @@ void DBRegAgent::createRegistration(long subscriber_id,
   } catch (const AmArg::TypeMismatchException& e) {
     ERROR("TypeMismatchException");
   } catch (...) {
-    ERROR("unknown exception occured\n");
+    ERROR("unknown exception occured");
   }
 
   registrations_mut.unlock();
@@ -456,7 +456,7 @@ void DBRegAgent::createRegistration(long subscriber_id,
   // register us as SIP event receiver for this ltag
   AmEventDispatcher::instance()->addEventQueue(handle,this);
 
-  DBG("created new registration with ID %ld and ltag '%s'\n",
+  DBG("created new registration with ID %ld and ltag '%s'",
       subscriber_id, handle.c_str());
 }
 
@@ -470,7 +470,7 @@ void DBRegAgent::updateRegistration(long subscriber_id,
   map<long, AmSIPRegistration*>::iterator it=registrations.find(subscriber_id);
   if (it == registrations.end()) {
     registrations_mut.unlock();
-    WARN("updateRegistration - registration %ld %s@%s unknown, creating\n",
+    WARN("updateRegistration - registration %ld %s@%s unknown, creating",
 	 subscriber_id, user.c_str(), realm.c_str());
     createRegistration(subscriber_id, user, pass, realm, contact);
     scheduleRegistration(subscriber_id);
@@ -518,9 +518,9 @@ void DBRegAgent::removeRegistration(long subscriber_id) {
     // deregister us as SIP event receiver for this ltag
     AmEventDispatcher::instance()->delEventQueue(handle);
 
-    DBG("removed registration with ID %ld\n", subscriber_id);
+    DBG("removed registration with ID %ld", subscriber_id);
   } else {
-    DBG("registration with ID %ld not found for removing\n", subscriber_id);
+    DBG("registration with ID %ld not found for removing", subscriber_id);
   }
 }
 
@@ -535,7 +535,7 @@ void DBRegAgent::scheduleRegistration(long subscriber_id) {
     postEvent(new RegistrationActionEvent(RegistrationActionEvent::Register,
 					  subscriber_id));
   }
-  DBG("added to pending actions: REGISTER of %ld\n", subscriber_id);
+  DBG("added to pending actions: REGISTER of %ld", subscriber_id);
 }
 
 /** schedule this registration to de-REGISTER (immediately) */
@@ -549,7 +549,7 @@ void DBRegAgent::scheduleDeregistration(long subscriber_id) {
       postEvent(new RegistrationActionEvent(RegistrationActionEvent::Deregister,
 					    subscriber_id));
   }
-  DBG("added to pending actions: DEREGISTER of %ld\n", subscriber_id);
+  DBG("added to pending actions: DEREGISTER of %ld", subscriber_id);
 }
 
 void DBRegAgent::process(AmEvent* ev) {
@@ -572,7 +572,7 @@ void DBRegAgent::process(AmEvent* ev) {
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("Session received system Event\n");
+      DBG("Session received system Event");
       if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
 	running = false;
 	registration_scheduler._timer_thread_running = false;
@@ -581,7 +581,7 @@ void DBRegAgent::process(AmEvent* ev) {
     }
   }
 
-  ERROR("unknown event received!\n");
+  ERROR("unknown event received!");
 }
 
 // uses ProcessorDBConnection
@@ -589,12 +589,12 @@ void DBRegAgent::onRegistrationActionEvent(RegistrationActionEvent* reg_action_e
   switch (reg_action_ev->action) {
   case RegistrationActionEvent::Register:
     {
-      DBG("REGISTER of registration %ld\n", reg_action_ev->subscriber_id);
+      DBG("REGISTER of registration %ld", reg_action_ev->subscriber_id);
       registrations_mut.lock();
       map<long, AmSIPRegistration*>::iterator it=
 	registrations.find(reg_action_ev->subscriber_id);
       if (it==registrations.end()) {
-	DBG("ignoring scheduled REGISTER of unknown registration %ld\n",
+	DBG("ignoring scheduled REGISTER of unknown registration %ld",
 	    reg_action_ev->subscriber_id);
       } else {
 	if (!it->second->doRegistration()) {
@@ -613,12 +613,12 @@ void DBRegAgent::onRegistrationActionEvent(RegistrationActionEvent* reg_action_e
     } break;
   case RegistrationActionEvent::Deregister:
     {
-      DBG("De-REGISTER of registration %ld\n", reg_action_ev->subscriber_id);
+      DBG("De-REGISTER of registration %ld", reg_action_ev->subscriber_id);
       registrations_mut.lock();
       map<long, AmSIPRegistration*>::iterator it=
 	registrations.find(reg_action_ev->subscriber_id);
       if (it==registrations.end()) {
-	DBG("ignoring scheduled De-REGISTER of unknown registration %ld\n",
+	DBG("ignoring scheduled De-REGISTER of unknown registration %ld",
 	    reg_action_ev->subscriber_id);
       } else {
 	if (!it->second->doUnregister()) {
@@ -659,12 +659,12 @@ void DBRegAgent::createDBRegistration(long subscriber_id, mysqlpp::Connection& c
 
     mysqlpp::SimpleResult res = query.execute();
     if (!res) {
-      WARN("creating registration in DB with query '%s' failed: '%s'\n",
+      WARN("creating registration in DB with query '%s' failed: '%s'",
 	   insert_query.c_str(), res.info());
     }
   }  catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return;
   }
 }
@@ -679,12 +679,12 @@ void DBRegAgent::deleteDBRegistration(long subscriber_id, mysqlpp::Connection& c
 
     mysqlpp::SimpleResult res = query.execute();
     if (!res) {
-      WARN("removing registration in DB with query '%s' failed: '%s'\n",
+      WARN("removing registration in DB with query '%s' failed: '%s'",
 	   insert_query.c_str(), res.info());
     }
   }  catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return;
   }
 }
@@ -718,23 +718,23 @@ void DBRegAgent::updateDBRegistration(mysqlpp::Connection& db_connection,
 
     query << " where " COLNAME_SUBSCRIBER_ID "="+long2str(subscriber_id) + ";";
     string query_str = query.str();
-    DBG("updating registration in DB with query '%s'\n", query_str.c_str());
+    DBG("updating registration in DB with query '%s'", query_str.c_str());
 
     mysqlpp::SimpleResult res = query.execute();
     if (!res) {
-      WARN("updating registration in DB with query '%s' failed: '%s'\n",
+      WARN("updating registration in DB with query '%s' failed: '%s'",
 	   query_str.c_str(), res.info());
     } else {
       if (!res.rows()) {
 	// should not happen - DB entry is created on load or on createRegistration
-	DBG("creating registration DB entry for subscriber %ld\n", subscriber_id);
+	DBG("creating registration DB entry for subscriber %ld", subscriber_id);
 	createDBRegistration(subscriber_id, db_connection);
 	query.reset();
 	query << query_str;
 
 	mysqlpp::SimpleResult res = query.execute();
 	if (!res || !res.rows()) {
-	  WARN("updating registration in DB with query '%s' failed: '%s'\n",
+	  WARN("updating registration in DB with query '%s' failed: '%s'",
 	       query_str.c_str(), res.info());
 	}
       }
@@ -742,7 +742,7 @@ void DBRegAgent::updateDBRegistration(mysqlpp::Connection& db_connection,
 
   }  catch (const mysqlpp::Exception& er) {
     // Catch-all for any MySQL++ exceptions
-    ERROR("MySQL++ error: %s\n", er.what());
+    ERROR("MySQL++ error: %s", er.what());
     return;
   }
 
@@ -752,7 +752,7 @@ void DBRegAgent::updateDBRegistration(mysqlpp::Connection& db_connection,
 void DBRegAgent::onSipReplyEvent(AmSipReplyEvent* ev) {
   if (!ev) return;
 
-  DBG("received SIP reply event for '%s'\n", 
+  DBG("received SIP reply event for '%s'", 
 #ifdef HAS_OFFER_ANSWER
       ev->reply.from_tag.c_str()
 #else
@@ -775,7 +775,7 @@ void DBRegAgent::onSipReplyEvent(AmSipReplyEvent* ev) {
     if (r_it != registrations.end()) {
       AmSIPRegistration* registration = r_it->second;
       if (!registration) {
-	ERROR("Internal error: registration object missing\n");
+	ERROR("Internal error: registration object missing");
 	return;
       }
       unsigned int cseq_before = registration->getDlg()->cseq;
@@ -800,12 +800,12 @@ void DBRegAgent::onSipReplyEvent(AmSipReplyEvent* ev) {
 	    // auth response codes
 	    // processing reply triggered sending request: resent by auth
 	    (cseq_before != registration->getDlg()->cseq)) {
-	  DBG("received negative reply, but still in pending state (auth).\n");
+	  DBG("received negative reply, but still in pending state (auth).");
 	  auth_pending = true;
 	} else {
 	  if (!registration->getUnregistering()) {
 	    // REGISTER failed - mark in DB
-	    DBG("registration failed - mark in DB\n");
+	    DBG("registration failed - mark in DB");
 	    update_status = true;
 	    status = REG_STATUS_FAILED;
 	    if (error_retry_interval) {
@@ -859,25 +859,25 @@ void DBRegAgent::onSipReplyEvent(AmSipReplyEvent* ev) {
 
       if (!delete_status) {
 	if (auth_pending && !save_auth_replies) {
-	  DBG("not updating DB with auth reply %u %s\n",
+	  DBG("not updating DB with auth reply %u %s",
 	      ev->reply.code, ev->reply.reason.c_str());
 	} else {
-	  DBG("update DB with reply %u %s\n", ev->reply.code, ev->reply.reason.c_str());
+	  DBG("update DB with reply %u %s", ev->reply.code, ev->reply.reason.c_str());
 	  updateDBRegistration(MainDBConnection,
 			       subscriber_id, ev->reply.code, ev->reply.reason,
 			       update_status, status, update_ts, expiry,
 			       save_contacts, ev->reply.contact);
 	}
       } else {
-	DBG("delete DB registration of subscriber %ld\n", subscriber_id);
+	DBG("delete DB registration of subscriber %ld", subscriber_id);
 	deleteDBRegistration(subscriber_id, MainDBConnection);
       }
 
     } else {
-      ERROR("internal: inconsistent registration list\n");
+      ERROR("internal: inconsistent registration list");
     }
   } else {
-    DBG("ignoring reply for unknown registration\n");
+    DBG("ignoring reply for unknown registration");
   }
   registrations_mut.unlock();
 }
@@ -885,17 +885,17 @@ void DBRegAgent::onSipReplyEvent(AmSipReplyEvent* ev) {
 void DBRegAgent::run() {
   running = shutdown_finished = true;
 
-  DBG("DBRegAgent thread: waiting 2 sec for server startup ...\n");
+  DBG("DBRegAgent thread: waiting 2 sec for server startup ...");
   sleep(2);
   
   mysqlpp::Connection::thread_start();
 
   if (enable_ratelimiting) {
-    DBG("starting processor thread\n");
+    DBG("starting processor thread");
     registration_processor.start();
   }
 
-  DBG("running DBRegAgent thread...\n");
+  DBG("running DBRegAgent thread...");
   shutdown_finished = false;
   while (running) {
     processEvents();
@@ -903,7 +903,7 @@ void DBRegAgent::run() {
     usleep(1000); // 1ms
   }
 
-  DBG("DBRegAgent done, removing all registrations from Event Dispatcher...\n");
+  DBG("DBRegAgent done, removing all registrations from Event Dispatcher...");
   registrations_mut.lock();
   for (map<string, long>::iterator it=registration_ltags.begin();
        it != registration_ltags.end(); it++) {
@@ -911,43 +911,43 @@ void DBRegAgent::run() {
   }
   registrations_mut.unlock();
 
-  DBG("removing "MOD_NAME" registrations from Event Dispatcher...\n");
+  DBG("removing "MOD_NAME" registrations from Event Dispatcher...");
   AmEventDispatcher::instance()->delEventQueue(MOD_NAME);
 
   mysqlpp::Connection::thread_end();
 
-  DBG("DBRegAgent thread stopped.\n");
+  DBG("DBRegAgent thread stopped.");
   shutdown_finished = true;
 }
 
 void DBRegAgent::on_stop() {
-  DBG("DBRegAgent on_stop()...\n");
+  DBG("DBRegAgent on_stop()...");
   running = false;
 }
 
 void DBRegAgent::setRegistrationTimer(long subscriber_id, unsigned int timeout,
 				      RegistrationActionEvent::RegAction reg_action) {
-  DBG("setting Register timer for subscription %ld, timeout %u, reg_action %u\n",
+  DBG("setting Register timer for subscription %ld, timeout %u, reg_action %u",
       subscriber_id, timeout, reg_action);
 
   RegTimer* timer = NULL;
   map<long, RegTimer*>::iterator it=registration_timers.find(subscriber_id);
   if (it==registration_timers.end()) {
-    DBG("timer object for subscription %ld not found\n", subscriber_id);
+    DBG("timer object for subscription %ld not found", subscriber_id);
     timer = new RegTimer();
     timer->data1 = subscriber_id;
     timer->cb = _timer_cb;
-    DBG("created timer object [%p] for subscription %ld\n", timer, subscriber_id);
+    DBG("created timer object [%p] for subscription %ld", timer, subscriber_id);
   } else {
     timer = it->second;
-    DBG("removing scheduled timer...\n");
+    DBG("removing scheduled timer...");
     registration_scheduler.remove_timer(timer);
   }
 
   timer->data2 = reg_action;
   timer->expires = time(0) + timeout;
 
-  DBG("placing timer for %ld in T-%u\n", subscriber_id, timeout);
+  DBG("placing timer for %ld in T-%u", subscriber_id, timeout);
   registration_scheduler.insert_timer(timer);
 
   registration_timers.insert(std::make_pair(subscriber_id, timer));
@@ -957,21 +957,21 @@ void DBRegAgent::setRegistrationTimer(long subscriber_id, unsigned int timeout,
 void DBRegAgent::setRegistrationTimer(long subscriber_id,
 				      time_t expiry, time_t reg_start_ts,
 				      time_t now_time) {
-  DBG("setting re-Register timer for subscription %ld, expiry %ld, reg_start_t %ld\n",
+  DBG("setting re-Register timer for subscription %ld, expiry %ld, reg_start_t %ld",
       subscriber_id, expiry, reg_start_ts);
 
   RegTimer* timer = NULL;
   map<long, RegTimer*>::iterator it=registration_timers.find(subscriber_id);
   if (it==registration_timers.end()) {
-    DBG("timer object for subscription %ld not found\n", subscriber_id);
+    DBG("timer object for subscription %ld not found", subscriber_id);
     timer = new RegTimer();
     timer->data1 = subscriber_id;
     timer->cb = _timer_cb;
-    DBG("created timer object [%p] for subscription %ld\n", timer, subscriber_id);
+    DBG("created timer object [%p] for subscription %ld", timer, subscriber_id);
     registration_timers.insert(std::make_pair(subscriber_id, timer));
   } else {
     timer = it->second;
-    DBG("removing scheduled timer...\n");
+    DBG("removing scheduled timer...");
     registration_scheduler.remove_timer(timer);
   }
 
@@ -1020,7 +1020,7 @@ void DBRegAgent::setRegistrationTimer(long subscriber_id,
 
     if (t_expiry < now_time) {
       t_expiry = now_time;
-      DBG("re-registering at TS <now> (%ld)\n", now_time);
+      DBG("re-registering at TS <now> (%ld)", now_time);
     }
 
     DBG("calculated re-registration at TS %ld "
@@ -1037,13 +1037,13 @@ void DBRegAgent::clearRegistrationTimer(long subscriber_id) {
 
   map<long, RegTimer*>::iterator it=registration_timers.find(subscriber_id);
   if (it==registration_timers.end()) {
-    DBG("timer object for subscription %ld not found\n", subscriber_id);
+    DBG("timer object for subscription %ld not found", subscriber_id);
       return;
   }
-  DBG("removing timer [%p] from scheduler\n", it->second);
+  DBG("removing timer [%p] from scheduler", it->second);
   registration_scheduler.remove_timer(it->second);
 
-  DBG("deleting timer object [%p]\n", it->second);
+  DBG("deleting timer object [%p]", it->second);
   delete it->second;
 
   registration_timers.erase(it);
@@ -1054,18 +1054,18 @@ void DBRegAgent::removeRegistrationTimer(long subscriber_id) {
 
   map<long, RegTimer*>::iterator it=registration_timers.find(subscriber_id);
   if (it==registration_timers.end()) {
-    DBG("timer object for subscription %ld not found\n", subscriber_id);
+    DBG("timer object for subscription %ld not found", subscriber_id);
     return;
   }
 
-  DBG("deleting timer object [%p]\n", it->second);
+  DBG("deleting timer object [%p]", it->second);
   delete it->second;
 
   registration_timers.erase(it);
 }
 
 void DBRegAgent::timer_cb(RegTimer* timer, long subscriber_id, int reg_action) {
-  DBG("re-registration timer expired: subscriber %ld, timer=[%p], action %d\n",
+  DBG("re-registration timer expired: subscriber %ld, timer=[%p], action %d",
       subscriber_id, timer, reg_action);
 
   registrations_mut.lock();
@@ -1076,7 +1076,7 @@ void DBRegAgent::timer_cb(RegTimer* timer, long subscriber_id, int reg_action) {
     scheduleRegistration(subscriber_id); break;
   case RegistrationActionEvent::Deregister:
     scheduleDeregistration(subscriber_id); break;
-  default: ERROR("internal: unknown reg_action %d for subscriber %ld timer event\n",
+  default: ERROR("internal: unknown reg_action %d for subscriber %ld timer event",
 		 reg_action, subscriber_id);
   };
 }
@@ -1086,7 +1086,7 @@ void DBRegAgent::DIcreateRegistration(int subscriber_id, const string& user,
 				      const string& pass, const string& realm,
 				      const string& contact,
 				      AmArg& ret) {
-  DBG("DI method: createRegistration(%i, %s, %s, %s, %s)\n",
+  DBG("DI method: createRegistration(%i, %s, %s, %s, %s)",
       subscriber_id, user.c_str(),
       pass.c_str(), realm.c_str(), contact.c_str());
 
@@ -1100,7 +1100,7 @@ void DBRegAgent::DIupdateRegistration(int subscriber_id, const string& user,
 				      const string& pass, const string& realm,
 				      const string& contact,
 				      AmArg& ret) {
-  DBG("DI method: updateRegistration(%i, %s, %s, %s)\n",
+  DBG("DI method: updateRegistration(%i, %s, %s, %s)",
       subscriber_id, user.c_str(),
       pass.c_str(), realm.c_str());
 
@@ -1116,7 +1116,7 @@ void DBRegAgent::DIupdateRegistration(int subscriber_id, const string& user,
 }
 
 void DBRegAgent::DIremoveRegistration(int subscriber_id, AmArg& ret) {
-  DBG("DI method: removeRegistration(%i)\n",
+  DBG("DI method: removeRegistration(%i)",
       subscriber_id);
   scheduleDeregistration(subscriber_id);
 
@@ -1129,7 +1129,7 @@ void DBRegAgent::DIremoveRegistration(int subscriber_id, AmArg& ret) {
 }
 
 void DBRegAgent::DIrefreshRegistration(int subscriber_id, AmArg& ret) {
-  DBG("DI method: refreshRegistration(%i)\n", subscriber_id);
+  DBG("DI method: refreshRegistration(%i)", subscriber_id);
   scheduleRegistration(subscriber_id);
 
   ret.push(200);
@@ -1189,10 +1189,10 @@ void DBRegAgentProcessorThread::on_stop() {
 }
 
 void DBRegAgentProcessorThread::rateLimitWait() {
-  DBG("applying rate limit %u initial requests per %us\n",
+  DBG("applying rate limit %u initial requests per %us",
       DBRegAgent::ratelimit_rate, DBRegAgent::ratelimit_per);
 
-  DBG("allowance before ratelimit: %f\n", allowance);
+  DBG("allowance before ratelimit: %f", allowance);
 
   struct timeval current;
   struct timeval time_passed;
@@ -1209,7 +1209,7 @@ void DBRegAgentProcessorThread::rateLimitWait() {
   if (allowance < 1.0) {
     useconds_t sleep_time = 1000000.0 * (1.0 - allowance) *
       ((double)DBRegAgent::ratelimit_per/(double)DBRegAgent::ratelimit_rate);
-    DBG("not enough allowance (%f), sleeping %d useconds\n", allowance, sleep_time);
+    DBG("not enough allowance (%f), sleeping %d useconds", allowance, sleep_time);
     usleep(sleep_time);
     allowance=0.0;
     gettimeofday(&last_check, 0);
@@ -1217,11 +1217,11 @@ void DBRegAgentProcessorThread::rateLimitWait() {
     allowance -= 1.0;
   }
 
-  DBG("allowance left: %f\n", allowance);
+  DBG("allowance left: %f", allowance);
 }
 
 void DBRegAgentProcessorThread::run() {
-  DBG("DBRegAgentProcessorThread thread started\n");
+  DBG("DBRegAgentProcessorThread thread started");
   
   // register us as SIP event receiver for MOD_NAME_processor
   AmEventDispatcher::instance()->addEventQueue(MOD_NAME "_processor",this);
@@ -1246,7 +1246,7 @@ void DBRegAgentProcessorThread::run() {
 
   mysqlpp::Connection::thread_end();
 
- DBG("DBRegAgentProcessorThread thread stopped\n"); 
+ DBG("DBRegAgentProcessorThread thread stopped"); 
 }
 
 void DBRegAgentProcessorThread::process(AmEvent* ev) {
@@ -1254,9 +1254,9 @@ void DBRegAgentProcessorThread::process(AmEvent* ev) {
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("Session received system Event\n");
+      DBG("Session received system Event");
       if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
-	DBG("stopping processor thread\n");
+	DBG("stopping processor thread");
 	stopped = true;
       }
       return;
@@ -1273,11 +1273,11 @@ void DBRegAgentProcessorThread::process(AmEvent* ev) {
     }
   }
 
-  ERROR("unknown event received!\n");
+  ERROR("unknown event received!");
 }
 #if 0
 void test_cb(RegTimer* tr, long data1, void* data2) {
-  DBG("cb called: [%p], data %ld / [%p]\n", tr, data1, data2);
+  DBG("cb called: [%p], data %ld / [%p]", tr, data1, data2);
 }
 
 void DBRegAgent::run_tests() {

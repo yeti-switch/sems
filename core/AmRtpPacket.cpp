@@ -106,7 +106,7 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
     rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
     // ZRTP "Hello" packet has version == 0
     if ((hdr->version != RTP_VERSION) && (hdr->version != 0)) {
-        DBG("[%p] received RTP packet with unsupported version (%i).\n",
+        DBG("[%p] received RTP packet with unsupported version (%i).",
             caller,hdr->version);
         return RTP_PACKET_PARSE_ERROR;
     }
@@ -133,7 +133,7 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
     version = hdr->version;
 
     if (data_offset > b_size) {
-        ERROR("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !\n",
+        ERROR("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !",
               caller,data_offset,b_size);
         return RTP_PACKET_PARSE_ERROR;
     }
@@ -142,7 +142,7 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
 
     if(hdr->p) {
         if (buffer[b_size-1]>=d_size) {
-            ERROR("[%p] bad rtp packet (invalid padding size) !\n",caller);
+            ERROR("[%p] bad rtp packet (invalid padding size) !",caller);
             return RTP_PACKET_PARSE_ERROR;
         }
         d_size -= buffer[b_size-1];
@@ -422,7 +422,7 @@ int AmRtpPacket::compile(unsigned char* data_buf, unsigned int size)
     rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
 
     if(b_size>sizeof(buffer)) {
-        ERROR("builtin buffer size (%d) exceeded: %d\n",
+        ERROR("builtin buffer size (%d) exceeded: %d",
               (int)sizeof(buffer), b_size);
         return -1;
     }
@@ -448,7 +448,7 @@ int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
         return -1;
 
     if(size>sizeof(buffer)){
-        ERROR("builtin buffer size (%d) exceeded: %d\n",
+        ERROR("builtin buffer size (%d) exceeded: %d",
               (int)sizeof(buffer), size);
         return -1;
     }

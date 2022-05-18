@@ -245,13 +245,13 @@ const string& AmSession::getFirstBranch() const
 
 void AmSession::setUri(const string& uri)
 {
-  DBG("AmSession::setUri(%s)\n",uri.c_str());
+  DBG("AmSession::setUri(%s)",uri.c_str());
   /* TODO: sdp.uri = uri;*/
 }
 
 void AmSession::setRtpFrameSize(unsigned int frame_size)
 {
-  DBG("AmSession::setRtpFrameSize(%u)\n",frame_size);
+  DBG("AmSession::setRtpFrameSize(%u)",frame_size);
   override_frame_size = frame_size;
 }
 
@@ -270,13 +270,13 @@ void AmSession::setLocalTag()
   if (dlg->getLocalTag().empty()) {
     string new_id = getNewId();
     dlg->setLocalTag(new_id);
-    DBG("AmSession::setLocalTag() - session id set to %s\n", new_id.c_str());
+    DBG("AmSession::setLocalTag() - session id set to %s", new_id.c_str());
   }
 }
 
 void AmSession::setLocalTag(const string& tag)
 {
-  DBG("AmSession::setLocalTag(%s)\n",tag.c_str());
+  DBG("AmSession::setLocalTag(%s)",tag.c_str());
   dlg->setLocalTag(tag);
 }
 
@@ -350,19 +350,19 @@ bool AmSession::is_stopped() {
 // in this case every session has its own thread 
 // - this is the main processing loop
 void AmSession::run() {
-  DBG("startup session\n");
+  DBG("startup session");
   setThreadName("AmSession");
   if (!startup())
     return;
 
-  DBG("running session event loop\n");
+  DBG("running session event loop");
   while (true) {
     waitForEvent();
     if (!processingCycle())
       break;
   }
 
-  DBG("session event loop ended, finalizing session\n");
+  DBG("session event loop ended, finalizing session");
   finalize();
 }
 #endif
@@ -376,7 +376,7 @@ bool AmSession::startup() {
     } 
     catch(const AmSession::Exception& e){ throw e; }
     catch(const string& str){
-      ERROR("%s\n",str.c_str());
+      ERROR("%s",str.c_str());
       throw AmSession::Exception(500,"unexpected exception.");
     }
     catch(...){
@@ -384,7 +384,7 @@ bool AmSession::startup() {
     }
     
   } catch(const AmSession::Exception& e){
-    ERROR("%i %s\n",e.code,e.reason.c_str());
+    ERROR("%i %s",e.code,e.reason.c_str());
     onBeforeDestroy();
     destroy();
     
@@ -403,14 +403,14 @@ bool AmSession::processEventsCatchExceptions(EventStats &stats) {
     } 
     catch(const AmSession::Exception& e){ throw e; }
     catch(const string& str){
-      DBG("%s\n",str.c_str());
+      DBG("%s",str.c_str());
       throw AmSession::Exception(500,"unexpected exception.");
     } 
     catch(...){
       throw AmSession::Exception(500,"unexpected exception.");
     }    
   } catch(const AmSession::Exception& e){
-    DBG("processEventsCatchExceptions(): got exception %i %s\n",e.code,e.reason.c_str());
+    DBG("processEventsCatchExceptions(): got exception %i %s",e.code,e.reason.c_str());
     return onException(e.code,e.reason);
   }
   return true;
@@ -433,7 +433,7 @@ void AmSession::postEvent(AmEvent* event)
     this should be called until it returns false. */
 bool AmSession::processingCycle(EventStats &stats) {
 
-    DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv\n",
+    DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv",
         dlg->getCallid().c_str(),getLocalTag().c_str(),
         dlg->getStatusStr(),
         sess_stopped.get()?"stopped":"running",
@@ -451,7 +451,7 @@ bool AmSession::processingCycle(EventStats &stats) {
         AmSipDialog::Status dlg_status = dlg->getStatus();
         bool s_stopped = sess_stopped.get();
 
-        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
+        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^",
             dlg->getCallid().c_str(),getLocalTag().c_str(),
             AmBasicSipDialog::getStatusStr(dlg_status),
             s_stopped?"stopped":"running",
@@ -482,7 +482,7 @@ bool AmSession::processingCycle(EventStats &stats) {
             (dlg_status != AmSipDialog::Cancelling)&&
             !no_reply)
         {
-            DBG("app did not send BYE - do that for the app\n");
+            DBG("app did not send BYE - do that for the app");
             if (dlg->bye("",SIP_FLAGS_VERBATIM,true) != 0) {
                 processing_status = SESSION_ENDED_DISCONNECTED;
                 // BYE sending failed - don't wait for dlg status to go disconnected
@@ -514,7 +514,7 @@ bool AmSession::processingCycle(EventStats &stats) {
         if (!res)
             processing_status = SESSION_ENDED_DISCONNECTED;
 
-        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^\n",
+        DBG("^^ S [%s|%s] %s, %s, %i UACTransPending, %i usages ^^",
             dlg->getCallid().c_str(),getLocalTag().c_str(),
             dlg->getStatusStr(),
             sess_stopped.get()?"stopped":"running",
@@ -525,14 +525,14 @@ bool AmSession::processingCycle(EventStats &stats) {
     }; break; //SESSION_WAITING_DISCONNECTED
 
     default: {
-        ERROR("unknown session processing state\n");
+        ERROR("unknown session processing state");
         return false; // stop processing
     }}
 }
 
 void AmSession::finalize()
 {
-  DBG("running finalize sequence...\n");
+  DBG("running finalize sequence...");
   dlg->finalize();
 
   onBeforeDestroy();
@@ -540,7 +540,7 @@ void AmSession::finalize()
   
   session_stopped();
 
-  DBG("session is stopped.\n");
+  DBG("session is stopped.");
 }
 #ifndef SESSION_THREADPOOL
   void AmSession::on_stop() 
@@ -548,7 +548,7 @@ void AmSession::finalize()
   void AmSession::stop()
 #endif  
 {
-  DBG("AmSession::stop()\n");
+  DBG("AmSession::stop()");
 
   if (!isDetached())
     AmMediaProcessor::instance()->clearSession(this);
@@ -577,7 +577,7 @@ string AmSession::getAppParam(const string& param_name) const
 }
 
 void AmSession::destroy() {
-  DBG("AmSession::destroy()\n");
+  DBG("AmSession::destroy()");
   AmSessionContainer::instance()->destroySession(this);
 }
 
@@ -662,7 +662,7 @@ unsigned int AmSession::getAvgSessionNum() {
   unsigned long long d_usec = delta.tv_sec * 1000000ULL + delta.tv_usec;
   if (!d_usec) {
     res = 0;
-    WARN("zero delta!\n");
+    WARN("zero delta!");
   } else {
     //Round up
     res = (unsigned int)((avg_session_num + d_usec - 1) / d_usec);
@@ -725,7 +725,7 @@ void AmSession::sendDtmf(int event, unsigned int duration_ms) {
 
 void AmSession::onDtmf(AmDtmfEvent* e)
 {
-  DBG("AmSession::onDtmf(%i,%i)\n",e->event(),e->duration());
+  DBG("AmSession::onDtmf(%i,%i)",e->event(),e->duration());
 }
 
 void AmSession::clearAudio()
@@ -742,7 +742,7 @@ void AmSession::clearAudio()
   }
 
   unlockAudio();
-  DBG("Audio cleared !!!\n");
+  DBG("Audio cleared !!!");
   postEvent(new AmAudioEvent(AmAudioEvent::cleared));
 }
 
@@ -750,12 +750,12 @@ void AmSession::process(AmEvent* ev)
 {
   CALL_EVENT_H(process,ev);
 
-  DBG("AmSession processing event\n");
+  DBG("AmSession processing event");
 
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("Session received system Event\n");
+      DBG("Session received system Event");
       onSystemEvent(sys_ev);
       return;
     }
@@ -775,7 +775,7 @@ void AmSession::process(AmEvent* ev)
 
   AmDtmfEvent* dtmf_ev = dynamic_cast<AmDtmfEvent*>(ev);
   if (dtmf_ev) {
-    DBG("Session received DTMF, event = %d, duration = %d\n", 
+    DBG("Session received DTMF, event = %d, duration = %d", 
 	dtmf_ev->event(), dtmf_ev->duration());
     onDtmf(dtmf_ev);
     return;
@@ -792,7 +792,7 @@ void AmSession::onSipRequest(const AmSipRequest& req)
 {
   CALL_EVENT_H(onSipRequest,req);
 
-  DBG("onSipRequest: method = %s\n",req.method.c_str());
+  DBG("onSipRequest: method = %s",req.method.c_str());
 
   updateRefreshMethod(req.hdrs);
 
@@ -802,13 +802,13 @@ void AmSession::onSipRequest(const AmSipRequest& req)
       onInvite(req);
     }
     catch(const string& s) {
-	  DBG("AmSession::string exception: %s\n",s.c_str());
+	  DBG("AmSession::string exception: %s",s.c_str());
       setStopped();
 	  onInviteException(500,SIP_REPLY_SERVER_INTERNAL_ERROR,false);
 	  dlg->reply(req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
     }
     catch(const AmSession::Exception& e) {
-	  DBG("AmSession::Exception: %i %s\n",e.code,e.reason.c_str());
+	  DBG("AmSession::Exception: %i %s",e.code,e.reason.c_str());
       setStopped();
       no_reply = (e.code == NO_REPLY_DISCONNECT_CODE);
 	  onInviteException(e.code,e.reason,no_reply);
@@ -873,12 +873,12 @@ void AmSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
   }
 
   if (old_dlg_status != dlg->getStatus()) {
-    DBG("Dialog status changed %s -> %s (stopped=%s) \n", 
+    DBG("Dialog status changed %s -> %s (stopped=%s) ", 
 	AmBasicSipDialog::getStatusStr(old_dlg_status), 
 	dlg->getStatusStr(),
 	sess_stopped.get() ? "true" : "false");
   } else {
-    DBG("Dialog status stays %s (stopped=%s)\n", 
+    DBG("Dialog status stays %s (stopped=%s)", 
 	AmBasicSipDialog::getStatusStr(old_dlg_status), 
 	sess_stopped.get() ? "true" : "false");
   }
@@ -891,7 +891,7 @@ void AmSession::onInvite2xx(const AmSipReply& reply)
 
 void AmSession::onRemoteDisappeared(const AmSipReply&) {
   // see 3261 - 12.2.1.2: should end dialog on 408/481
-  DBG("Remote end unreachable - ending session\n");
+  DBG("Remote end unreachable - ending session");
   dlg->bye();
   setStopped();
 }
@@ -955,7 +955,7 @@ void AmSession::onSendReply(const AmSipRequest& req, AmSipReply& reply, int& fla
 /** Hook called when an SDP offer is required */
 bool AmSession::getSdpOffer(AmSdp& offer)
 {
-  DBG("AmSession::getSdpOffer(...) ...\n");
+  DBG("AmSession::getSdpOffer(...) ...");
 
   offer.version = 0;
   offer.origin.user = AmConfig.sdp_origin;
@@ -1023,7 +1023,7 @@ public:
 /** Hook called when an SDP answer is required */
 bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 {
-    CLASS_DBG("AmSession::getSdpAnswer(...) ...\n");
+    CLASS_DBG("AmSession::getSdpAnswer(...) ...");
 
     bool connection_line_is_processed = false;
 
@@ -1120,7 +1120,7 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
 
 int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
 {
-  DBG("AmSession::onSdpCompleted(...) ...\n");
+  DBG("AmSession::onSdpCompleted(...) ...");
 
   if(local_sdp.media.empty() || remote_sdp.media.empty()) {
 
@@ -1159,10 +1159,10 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   try {
     ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig.force_symmetric_rtp);
   } catch (const string& s) {
-    ERROR("Error while initializing RTP stream: '%s'\n", s.c_str());
+    ERROR("Error while initializing RTP stream: '%s'", s.c_str());
     ret = -1;
   } catch (...) {
-    ERROR("Error while initializing RTP stream (unknown exception in AmRTPStream::init)\n");
+    ERROR("Error while initializing RTP stream (unknown exception in AmRTPStream::init)");
     ret = -1;
   }
 
@@ -1189,13 +1189,13 @@ void AmSession::onSessionStart()
 
 void AmSession::onRtpTimeout()
 {
-  DBG("RTP timeout, stopping Session\n");
+  DBG("RTP timeout, stopping Session");
   dlg->bye();
   setStopped();
 }
 
 void AmSession::onSessionTimeout() {
-  DBG("Session Timer: Timeout, ending session.\n");
+  DBG("Session Timer: Timeout, ending session.");
   dlg->bye();
   setStopped();
 }
@@ -1204,7 +1204,7 @@ void AmSession::updateRefreshMethod(const string& headers) {
   if (refresh_method == REFRESH_UPDATE_FB_REINV) {
     if (key_in_list(getHeader(headers, SIP_HDR_ALLOW),
 		    SIP_METH_UPDATE)) {
-      DBG("remote allows UPDATE, using UPDATE for session refresh.\n");
+      DBG("remote allows UPDATE, using UPDATE for session refresh.");
       refresh_method = REFRESH_UPDATE;
     }
   }
@@ -1216,16 +1216,16 @@ bool AmSession::refresh(int flags) {
     return false;
 
   if (refresh_method == REFRESH_UPDATE) {
-    DBG("Refreshing session with UPDATE\n");
+    DBG("Refreshing session with UPDATE");
     return sendUpdate( NULL, "") == 0;
   } else {
 
     if (dlg->getUACInvTransPending()) {
-      DBG("INVITE transaction pending - not refreshing now\n");
+      DBG("INVITE transaction pending - not refreshing now");
       return false;
     }
 
-    DBG("Refreshing session with re-INVITE\n");
+    DBG("Refreshing session with re-INVITE");
     return sendReinvite(true, "", flags) == 0;
   }
 }
@@ -1240,7 +1240,7 @@ void AmSession::onInvite1xxRel(const AmSipReply &reply)
 {
   // TODO: SDP
   if (dlg->prack(reply, NULL, /*headers*/"") < 0)
-    ERROR("failed to send PRACK request in session '%s'.\n",sid4dbg().c_str());
+    ERROR("failed to send PRACK request in session '%s'.",sid4dbg().c_str());
 }
 
 void AmSession::onPrack2xx(const AmSipReply &reply)
@@ -1330,8 +1330,8 @@ int AmSession::getRtpInterface()
     }
     rtp_interface = media_it->second;
     if(rtp_interface < 0) {
-      DBG("No media interface for signaling interface:\n");
-      DBG("Using default media interface instead.\n");
+      DBG("No media interface for signaling interface:");
+      DBG("Using default media interface instead.");
       rtp_interface = 0;
     }
   }
@@ -1339,7 +1339,7 @@ int AmSession::getRtpInterface()
 }
 
 void AmSession::setRtpInterface(int _rtp_interface) {
-  DBG("setting media interface to %d\n", _rtp_interface);
+  DBG("setting media interface to %d", _rtp_interface);
   rtp_interface = _rtp_interface;
 }
 
@@ -1359,7 +1359,7 @@ int AmSession::getRtpProtoId()
 
 int AmSession::setRtpProtoId(int _rtp_proto_id)
 {
-  DBG("setting media address of interface to %d\n", _rtp_proto_id);
+  DBG("setting media address of interface to %d", _rtp_proto_id);
   rtp_proto_id = _rtp_proto_id;
   return 0;
 }
@@ -1395,19 +1395,19 @@ AddressType AmSession::getLocalMediaAddressType()
 }
 
 bool AmSession::timersSupported() {
-  WARN("this function is deprecated; application timers are always supported\n");
+  WARN("this function is deprecated; application timers are always supported");
   return true;
 }
 
 bool AmSession::setTimer(int timer_id, double timeout) {
   if (timeout <= 0.005) {
-    DBG("setting timer %d with immediate timeout - posting Event\n", timer_id);
+    DBG("setting timer %d with immediate timeout - posting Event", timer_id);
     AmTimeoutEvent* ev = new AmTimeoutEvent(timer_id);
     postEvent(ev);
     return true;
   }
 
-  DBG("setting timer %d with timeout %f\n", timer_id, timeout);
+  DBG("setting timer %d with timeout %f", timer_id, timeout);
   AmAppTimer::instance()->setTimer(getLocalTag(), timer_id, timeout);
 
   return true;
@@ -1415,7 +1415,7 @@ bool AmSession::setTimer(int timer_id, double timeout) {
 
 bool AmSession::removeTimer(int timer_id) {
 
-  DBG("removing timer %d\n", timer_id);
+  DBG("removing timer %d", timer_id);
   AmAppTimer::instance()->removeTimer(getLocalTag(), timer_id);
 
   return true;
@@ -1423,7 +1423,7 @@ bool AmSession::removeTimer(int timer_id) {
 
 bool AmSession::removeTimers() {
 
-  DBG("removing timers\n");
+  DBG("removing timers");
   AmAppTimer::instance()->removeTimers(getLocalTag());
 
   return true;

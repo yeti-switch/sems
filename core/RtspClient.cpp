@@ -88,7 +88,7 @@ bool RtspClient::srv_resolv(string host, int port, sockaddr_storage &_sa)
     
     if (resolver::instance()->resolve_name(host.c_str(), &_dh, &_sa, priority,
         config.use_dns_srv ? dns_r_srv : dns_r_ip) < 0) {
-        ERROR("can't resolve destination: '%s'\n", host.c_str());
+        ERROR("can't resolve destination: '%s'", host.c_str());
         return false;
     }
 
@@ -207,7 +207,7 @@ int RtspClient::configure(const std::string& conf)
     }
 
     if (config.l_if == -1) {
-        ERROR("RTSP media interface not found\n");
+        ERROR("RTSP media interface not found");
         cfg_free(cfg);
         return -1;
     }
@@ -224,7 +224,7 @@ int RtspClient::configure(const std::string& conf)
     }
 
     if(config.lproto_id == -1) {
-        ERROR("RTSP addr interface not found\n");
+        ERROR("RTSP addr interface not found");
         cfg_free(cfg);
         return -1;
     }
@@ -232,7 +232,7 @@ int RtspClient::configure(const std::string& conf)
     config.use_dns_srv = cfg_getbool(cfg, PARAM_USE_DNS_SRV_NAME);
 
     if (!load_media_servers(cfg)) {
-        ERROR("Can't parse media_servers\n");
+        ERROR("Can't parse media_servers");
         cfg_free(cfg);
         return -1;
     }

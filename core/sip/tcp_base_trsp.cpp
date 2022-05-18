@@ -96,7 +96,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
     socket->copy_addr_to(&s_msg->local_ip);
 
     char host[NI_MAXHOST] = "";
-    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv\n"
+    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv"
         "--++--\n%.*s--++--\n",
         socket->get_transport(),
         socket->sd,
@@ -332,13 +332,13 @@ int tcp_base_trsp::connect()
   }
 
   if((sd = socket(peer_addr.ss_family,SOCK_STREAM,0)) == -1){
-    ERROR("socket: %s\n",strerror(errno));
+    ERROR("socket: %s",strerror(errno));
     return -1;
   }
   SOCKET_LOG("socket(peer_addr.ss_family(%d),SOCK_STREAM,0) = %d", peer_addr.ss_family, sd);
 
   if(ioctl(sd, FIONBIO , &true_opt) == -1) {
-    ERROR("could not make new connection non-blocking: %s\n",strerror(errno));
+    ERROR("could not make new connection non-blocking: %s",strerror(errno));
     ::close(sd);
     sd = -1;
     return -1;
@@ -347,7 +347,7 @@ int tcp_base_trsp::connect()
   if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
      (void*)&true_opt, sizeof (true_opt)) == -1)
   {
-    ERROR("setsockopt(SO_REUSEADDR): %s\n",strerror(errno));
+    ERROR("setsockopt(SO_REUSEADDR): %s",strerror(errno));
     ::close(sd);
     return -1;
   }
@@ -356,7 +356,7 @@ int tcp_base_trsp::connect()
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
        (void*)&true_opt, sizeof (true_opt)) == -1)
     {
-      ERROR("setsockopt(SO_REUSEPORT): %s\n",strerror(errno));
+      ERROR("setsockopt(SO_REUSEPORT): %s",strerror(errno));
       ::close(sd);
       return -1;
     }
@@ -368,7 +368,7 @@ int tcp_base_trsp::connect()
     if(setsockopt(sd, SOL_SOCKET, SO_LINGER,
        (void*)&linger_opt, sizeof (struct linger)) == -1)
     {
-      ERROR("setsockopt(SO_LINGER): %s\n",strerror(errno));
+      ERROR("setsockopt(SO_LINGER): %s",strerror(errno));
       return -1;
     }
 #endif
@@ -377,7 +377,7 @@ int tcp_base_trsp::connect()
   }
 
   if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
-    CLASS_ERROR("bind: %s\n",strerror(errno));
+    CLASS_ERROR("bind: %s",strerror(errno));
     ::close(sd);
     return -1;
   }
@@ -554,7 +554,7 @@ void tcp_base_trsp::on_write(short ev)
             return;
         }
 
-        DBG("sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d\n",
+        DBG("sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d",
             get_transport(),
             sd,
             actual_ip.c_str(), actual_port,
@@ -582,7 +582,7 @@ int tcp_base_trsp::on_connect(short ev)
     DBG("connection type %s", get_transport());
 
     if(ev & EV_TIMEOUT) {
-        DBG("********** connection timeout on sd=%i ************\n",sd);
+        DBG("********** connection timeout on sd=%i ************",sd);
         close();
         return -1;
     }
@@ -839,13 +839,13 @@ trsp_server_socket::~trsp_server_socket()
 int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
 {
     if(sd) {
-        WARN("re-binding socket\n");
+        WARN("re-binding socket");
         close(sd);
     }
 
     if(am_inet_pton(bind_ip.c_str(),&addr) == 0) {
 
-        ERROR("am_inet_pton(%s): %s\n",bind_ip.c_str(),strerror(errno));
+        ERROR("am_inet_pton(%s): %s",bind_ip.c_str(),strerror(errno));
         return -1;
     }
 
@@ -854,14 +854,14 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
             ((addr.ss_family == AF_INET6) &&
              IN6_IS_ADDR_UNSPECIFIED(&SAv6(&addr)->sin6_addr)) ) {
 
-        ERROR("Sorry, we cannot bind to 'ANY' address\n");
+        ERROR("Sorry, we cannot bind to 'ANY' address");
         return -1;
     }
 
     am_set_port(&addr,bind_port);
 
     if((sd = socket(addr.ss_family,SOCK_STREAM,0)) == -1) {
-        ERROR("socket: %s\n",strerror(errno));
+        ERROR("socket: %s",strerror(errno));
         return -1;
     }
     SOCKET_LOG("socket(addr.ss_family(%d),SOCK_STREAM,0) = %d", addr.ss_family, sd);
@@ -869,7 +869,7 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     int true_opt = 1;
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
                   (void*)&true_opt, sizeof (true_opt)) == -1) {
-        ERROR("%s\n",strerror(errno));
+        ERROR("%s",strerror(errno));
         close(sd);
         return -1;
     }
@@ -877,27 +877,27 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     if(socket_options & static_client_port) {
         if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
                       (void*)&true_opt, sizeof (true_opt)) == -1) {
-            ERROR("%s\n",strerror(errno));
+            ERROR("%s",strerror(errno));
             close(sd);
             return -1;
         }
     }
 
     if(ioctl(sd, FIONBIO , &true_opt) == -1) {
-        ERROR("setting non-blocking: %s\n",strerror(errno));
+        ERROR("setting non-blocking: %s",strerror(errno));
         close(sd);
         return -1;
     }
 
     if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
 
-        ERROR("bind: %s\n",strerror(errno));
+        ERROR("bind: %s",strerror(errno));
         close(sd);
         return -1;
     }
 
     if(::listen(sd, 16) < 0) {
-        ERROR("listen: %s\n",strerror(errno));
+        ERROR("listen: %s",strerror(errno));
         close(sd);
         return -1;
     }
@@ -905,7 +905,7 @@ int trsp_server_socket::bind(const string& bind_ip, unsigned short bind_port)
     actual_port = port = bind_port;
     actual_ip = ip   = bind_ip;
 
-    DBG("TCP transport bound to %s/%i\n",ip.c_str(),port);
+    DBG("TCP transport bound to %s/%i",ip.c_str(),port);
 
     return 0;
 }
@@ -963,7 +963,7 @@ void trsp_server_socket::on_accept(int sd, short ev)
 
     int true_opt = 1;
     if(ioctl(connection_sd, FIONBIO , &true_opt) == -1) {
-        ERROR("could not make new connection non-blocking: %s\n",strerror(errno));
+        ERROR("could not make new connection non-blocking: %s",strerror(errno));
         close(connection_sd);
         return;
     }
@@ -1028,14 +1028,14 @@ trsp::~trsp()
 void trsp::add_socket(trsp_server_socket* sock)
 {
     sock->add_event(evbase);
-    INFO("Added SIP server %s transport on %s:%i\n",
+    INFO("Added SIP server %s transport on %s:%i",
         sock->get_transport(), sock->get_ip(),sock->get_port());
 }
 
 /** @see AmThread */
 void trsp::run()
 {
-    INFO("Started SIP server thread\n");
+    INFO("Started SIP server thread");
     setThreadName("sip-server-trsp");
 
     /* Start the event loop. */

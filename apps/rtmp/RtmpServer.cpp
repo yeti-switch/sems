@@ -61,12 +61,12 @@ int _RtmpServer::listen(const char* addr, unsigned short port)
 {
   int listen_fd = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
   if(listen_fd < 0){
-    ERROR("socket() failed: %s\n",strerror(errno));
+    ERROR("socket() failed: %s",strerror(errno));
     return -1;
   }
   int onoff=1;
   if(setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&onoff,sizeof(onoff))<0){
-    ERROR("setsockopt(...,SO_REUSEADDR,...) failed: %s\n",strerror(errno));
+    ERROR("setsockopt(...,SO_REUSEADDR,...) failed: %s",strerror(errno));
     close(listen_fd);
     return -1;
   }
@@ -81,18 +81,18 @@ int _RtmpServer::listen(const char* addr, unsigned short port)
 
   if(inet_aton(addr,&SAv4(&listen_addr)->sin_addr)<0){
 	
-    ERROR("inet_aton: %s\n",strerror(errno));
+    ERROR("inet_aton: %s",strerror(errno));
     return -1;
   }
 
   if(bind(listen_fd,(const sockaddr*)&listen_addr,sizeof(struct sockaddr_in)) < 0){
-    ERROR("bind() failed: %s\n",strerror(errno));
+    ERROR("bind() failed: %s",strerror(errno));
     close(listen_fd);
     return -1;
   }
 
   if(::listen(listen_fd,CONN_BACKLOG)<0){
-    ERROR("listen() failed: %s\n",strerror(errno));
+    ERROR("listen() failed: %s",strerror(errno));
     close(listen_fd);
     return -1;
   }
@@ -108,7 +108,7 @@ void _RtmpServer::run()
 {
   RTMP_LogSetLevel(RTMP_LOGDEBUG);
 
-  INFO("RTMP server started (%s:%i)\n",
+  INFO("RTMP server started (%s:%i)",
        inet_ntoa(SAv4(&listen_addr)->sin_addr),
        ntohs(SAv4(&listen_addr)->sin_port));
 
@@ -124,7 +124,7 @@ void _RtmpServer::run()
       case EINTR:
 	continue;
       default:
-	ERROR("poll() failed: %s\n",strerror(errno));
+	ERROR("poll() failed: %s",strerror(errno));
 	return;
       }
     }
@@ -138,7 +138,7 @@ void _RtmpServer::run()
 	    int new_fd = accept(fds[i].fd,(struct sockaddr*)&remote_addr,
 				&remote_addr_len);
 	    if(new_fd < 0){
-	      ERROR("accept() failed: %s\n",strerror(errno));
+	      ERROR("accept() failed: %s",strerror(errno));
 	      continue;
 	    }
 	    RtmpConnection * conn = new RtmpConnection(new_fd);
@@ -163,10 +163,10 @@ void _RtmpServer::run()
 
 void _RtmpServer::on_stop()
 {
-  ERROR("not yet supported!\n");
+  ERROR("not yet supported!");
 }
 
 void _RtmpServer::dispose()
 {
-  ERROR("not yet supported!\n");
+  ERROR("not yet supported!");
 }

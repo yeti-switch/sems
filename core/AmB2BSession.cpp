@@ -144,12 +144,12 @@ AmB2BSession::~AmB2BSession()
 {
   clearRtpReceiverRelay();
 
-  DBG("relayed_req.size() = %zu\n",relayed_req.size());
+  DBG("relayed_req.size() = %zu",relayed_req.size());
 
   map<int,AmSipRequest>::iterator it = recvd_req.begin();
-  DBG("recvd_req.size() = %zu\n",recvd_req.size());
+  DBG("recvd_req.size() = %zu",recvd_req.size());
   for(;it != recvd_req.end(); ++it){
-    DBG("  <%i,%s>\n",it->first,it->second.method.c_str());
+    DBG("  <%i,%s>",it->first,it->second.method.c_str());
   }
 
   if(subs)
@@ -214,7 +214,7 @@ void AmB2BSession::relayError(const string &method, unsigned cseq,
     n_reply.cseq = cseq;
     n_reply.cseq_method = method;
     n_reply.from_tag = dlg->getLocalTag();
-    DBG("relaying B2B SIP error reply %u %s\n", n_reply.code, n_reply.reason.c_str());
+    DBG("relaying B2B SIP error reply %u %s", n_reply.code, n_reply.reason.c_str());
     relayEvent(new B2BSipReplyEvent(n_reply, forward, method, getLocalTag()));
   }
 }
@@ -229,14 +229,14 @@ void AmB2BSession::relayError(const string &method, unsigned cseq, bool forward,
     n_reply.cseq_method = method;
     n_reply.from_tag = dlg->getLocalTag();
 	n_reply.remote_port = 0;
-    DBG("relaying B2B SIP reply %d %s\n", sip_code, reason);
+    DBG("relaying B2B SIP reply %d %s", sip_code, reason);
     relayEvent(new B2BSipReplyEvent(n_reply, forward, method, getLocalTag()));
   }
 }
 
 void AmB2BSession::onB2BEvent(B2BEvent* ev)
 {
-  DBG("AmB2BSession::onB2BEvent\n");
+  DBG("AmB2BSession::onB2BEvent");
   switch(ev->event_id){
 
   case B2BSipRequest:
@@ -244,7 +244,7 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
       B2BSipRequestEvent* req_ev = dynamic_cast<B2BSipRequestEvent*>(ev);
       assert(req_ev);
 
-      DBG("B2BSipRequest: %s (fwd=%s)\n",
+      DBG("B2BSipRequest: %s (fwd=%s)",
 	  req_ev->req.method.c_str(),
 	  req_ev->forward?"true":"false");
 
@@ -269,7 +269,7 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 
 	if (req_ev->req.method == SIP_METH_BYE &&
 	    dlg->getStatus() != AmBasicSipDialog::Connected) {
-	  DBG("not sip-relaying BYE in not connected dlg, b2b-relaying 200 OK\n");
+	  DBG("not sip-relaying BYE in not connected dlg, b2b-relaying 200 OK");
           relayError(req_ev->req.method, req_ev->req.cseq,
 		     true, 200, "OK");
 	  terminateLeg(); //no any reasons to stay alive
@@ -300,9 +300,9 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
       B2BSipReplyEvent* reply_ev = dynamic_cast<B2BSipReplyEvent*>(ev);
       assert(reply_ev);
 
-      DBG("B2BSipReply: %i %s (fwd=%s)\n",reply_ev->reply.code,
+      DBG("B2BSipReply: %i %s (fwd=%s)",reply_ev->reply.code,
 	  reply_ev->reply.reason.c_str(),reply_ev->forward?"true":"false");
-      DBG("B2BSipReply: content-type = %s\n",
+      DBG("B2BSipReply: content-type = %s",
 	  reply_ev->reply.body.getCTStr().c_str());
 
       if(reply_ev->forward){
@@ -346,14 +346,14 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
 	  if (updateSessionDescription(reply_ev->reply.body)) {
 	    if (reply_ev->reply.cseq != est_invite_cseq) {
 	      if (dlg->getUACInvTransPending()) {
-		DBG("changed session, but UAC INVITE trans pending\n");
+		DBG("changed session, but UAC INVITE trans pending");
 		// todo(?): save until trans is finished?
 		return;
 	      }
-	      DBG("session description changed - refreshing\n");
+	      DBG("session description changed - refreshing");
 	      sendEstablishedReInvite();
 	    } else {
-	      DBG("reply to establishing INVITE request - not refreshing\n");
+	      DBG("reply to establishing INVITE request - not refreshing");
 	    }
 	  }
 	}
@@ -362,12 +362,12 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
     return;
 
   case B2BTerminateLeg:
-    DBG("terminateLeg()\n");
+    DBG("terminateLeg()");
     terminateLeg();
     break;
   }
 
-  //ERROR("unknown event caught\n");
+  //ERROR("unknown event caught");
 }
 
 /*static bool parseSdp(AmSdp &dst, const AmMimeBody *body)
@@ -375,7 +375,7 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
   if (body) {
     int res = dst.parse((const char *)body->getPayload());
     if (res != 0) {
-      DBG("SDP parsing failed (%d)!\n", res);
+      DBG("SDP parsing failed (%d)!", res);
       return false;
     }
     return true;
@@ -450,7 +450,7 @@ void AmB2BSession::onSipRequest(const AmSipRequest& req)
   B2BSipRequestEvent* r_ev = new B2BSipRequestEvent(req,fwd);
 
   if (fwd) {
-    DBG("relaying B2B SIP request (fwd) %s %s\n", r_ev->req.method.c_str(), r_ev->req.r_uri.c_str());
+    DBG("relaying B2B SIP request (fwd) %s %s", r_ev->req.method.c_str(), r_ev->req.r_uri.c_str());
 
     if(r_ev->req.method == SIP_METH_NOTIFY) {
 
@@ -482,7 +482,7 @@ void AmB2BSession::onSipRequest(const AmSipRequest& req)
     }
     else {
       // relay failed, generate error reply
-      DBG("relay failed, replying error\n");
+      DBG("relay failed, replying error");
       AmSipReply n_reply;
       errCode2RelayedReply(n_reply, res, 500);
       dlg->reply(req, n_reply.code, n_reply.reason);
@@ -492,7 +492,7 @@ void AmB2BSession::onSipRequest(const AmSipRequest& req)
   }
 
   if(r_ev->req.method!=SIP_METH_INFO){
-	DBG("relaying B2B SIP request %s %s\n", r_ev->req.method.c_str(), r_ev->req.r_uri.c_str());
+	DBG("relaying B2B SIP request %s %s", r_ev->req.method.c_str(), r_ev->req.r_uri.c_str());
 	relayEvent(r_ev);
   }
 }
@@ -514,7 +514,7 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp)
 
   if (!media_session) {
     // report missing media session (here we get for rtp_relay_mode == RTP_Relay)
-    ERROR("BUG: media session is missing, can't update local SDP\n");
+    ERROR("BUG: media session is missing, can't update local SDP");
     return; // FIXME: throw an exception here?
   }
 
@@ -534,7 +534,7 @@ void AmB2BSession::updateLocalBody(AmMimeBody& body)
 
   AmSdp parser_sdp;
   if (parser_sdp.parse((const char*)sdp->getPayload())) {
-    DBG("SDP parsing failed!\n");
+    DBG("SDP parsing failed!");
     return; // FIXME: throw an exception here?
   }
 
@@ -554,12 +554,12 @@ void AmB2BSession::updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cs
   if (t != relayed_req.end()) {
     relayed_req[new_cseq] = t->second;
     relayed_req.erase(t);
-    DBG("updated relayed_req (UAC trans): CSeq %u -> %u\n", old_cseq, new_cseq);
+    DBG("updated relayed_req (UAC trans): CSeq %u -> %u", old_cseq, new_cseq);
   }
 
   if (est_invite_cseq == old_cseq) {
     est_invite_cseq = new_cseq;
-    DBG("updated est_invite_cseq: CSeq %u -> %u\n", old_cseq, new_cseq);
+    DBG("updated est_invite_cseq: CSeq %u -> %u", old_cseq, new_cseq);
   }
 }
 
@@ -570,7 +570,7 @@ void AmB2BSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
   TransMap::iterator t = relayed_req.find(reply.cseq);
   bool fwd = (t != relayed_req.end()) && (reply.code != 100);
 
-  DBG("onSipReply: %s -> %i %s (fwd=%s), c-t=%s\n",
+  DBG("onSipReply: %s -> %i %s (fwd=%s), c-t=%s",
       reply.cseq_method.c_str(), reply.code,reply.reason.c_str(),
       fwd?"true":"false",reply.body.getCTStr().c_str());
 
@@ -590,7 +590,7 @@ void AmB2BSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
        (reply.cseq_method == SIP_METH_NOTIFY) ||
        (reply.cseq_method == SIP_METH_REFER))
       && !subs->onReplyIn(req,reply) ) {
-    DBG("subs.onReplyIn returned false\n");
+    DBG("subs.onReplyIn returned false");
     return;
   }
 
@@ -600,12 +600,12 @@ void AmB2BSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
     AmSipReply n_reply = reply;
     n_reply.cseq = t->second.cseq;
 
-    DBG("relaying B2B SIP reply %u %s\n", n_reply.code, n_reply.reason.c_str());
+    DBG("relaying B2B SIP reply %u %s", n_reply.code, n_reply.reason.c_str());
     relayEvent(new B2BSipReplyEvent(n_reply, true, t->second.method, getLocalTag()));
 
     if(reply.code >= 200) {
       if ((reply.code < 300) && (t->second.method == SIP_METH_INVITE)) {
-	DBG("not removing relayed INVITE transaction yet...\n");
+	DBG("not removing relayed INVITE transaction yet...");
       } else {
 	//grab cseq-mqpping in case of REFER
 	if((reply.code < 300) && (reply.cseq_method == SIP_METH_REFER)) {
@@ -638,7 +638,7 @@ void AmB2BSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
         n_reply.cseq = 0;
       }
     }
-    DBG("relaying B2B SIP reply %u %s\n", n_reply.code, n_reply.reason.c_str());
+    DBG("relaying B2B SIP reply %u %s", n_reply.code, n_reply.reason.c_str());
     relayEvent(new B2BSipReplyEvent(n_reply, false, reply.cseq_method, getLocalTag()));
   }
 }
@@ -653,9 +653,9 @@ void AmB2BSession::onReplySent(const AmSipRequest& req, const AmSipReply& reply)
   
   if(reply.code >= 200 && reply.cseq_method != SIP_METH_CANCEL){
     if((req.method == SIP_METH_INVITE) && (reply.code >= 300)) {
-      DBG("relayed INVITE failed with %u %s\n", reply.code, reply.reason.c_str());
+      DBG("relayed INVITE failed with %u %s", reply.code, reply.reason.c_str());
     }
-    DBG("recvd_req.erase(<%u,%s>)\n", req.cseq, req.method.c_str());
+    DBG("recvd_req.erase(<%u,%s>)", req.cseq, req.method.c_str());
     recvd_req.erase(reply.cseq);
   } 
 
@@ -667,10 +667,10 @@ void AmB2BSession::onInvite2xx(const AmSipReply& reply)
   TransMap::iterator it = relayed_req.find(reply.cseq);
   bool req_fwded = it != relayed_req.end();
   if(!req_fwded) {
-    DBG("req not fwded\n");
+    DBG("req not fwded");
     AmSession::onInvite2xx(reply);
   } else {
-    DBG("no 200 ACK now: waiting for the 200 ACK from the other side...\n");
+    DBG("no 200 ACK now: waiting for the 200 ACK from the other side...");
   }
 }
 
@@ -695,7 +695,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
   if (rtp_relay_mode != RTP_Direct) {
     if (!media_session) {
       // report missing media session (here we get for rtp_relay_mode == RTP_Relay)
-      DBG("[%s] media session is missing, can't update SDP\n",
+      DBG("[%s] media session is missing, can't update SDP",
             dlg?dlg->getLocalTag().c_str():"null");
     } else {
       if(rtp_stream_shared && hasRtpStream() && !media_session->isProcessingMedia()) {
@@ -727,7 +727,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
 
 int AmB2BSession::relayEvent(AmEvent* ev)
 {
-  DBG("AmB2BSession::relayEvent: to other_id='%s'\n",
+  DBG("AmB2BSession::relayEvent: to other_id='%s'",
       other_id.c_str());
 
   if(!other_id.empty()) {
@@ -742,7 +742,7 @@ int AmB2BSession::relayEvent(AmEvent* ev)
 
 void AmB2BSession::onOtherBye(const AmSipRequest& req)
 {
-  DBG("onOtherBye()\n");
+  DBG("onOtherBye()");
   terminateLeg();
 }
 
@@ -771,26 +771,26 @@ void AmB2BSession::terminateOtherLeg()
 }
 
 void AmB2BSession::onRtpTimeout() {
-  DBG("RTP Timeout, ending other leg\n");
+  DBG("RTP Timeout, ending other leg");
   terminateOtherLeg();
   AmSession::onRtpTimeout();
 }
 
 void AmB2BSession::onSessionTimeout() {
-  DBG("Session Timer: Timeout, ending other leg\n");
+  DBG("Session Timer: Timeout, ending other leg");
   terminateOtherLeg();
   AmSession::onSessionTimeout();
 }
 
 void AmB2BSession::onRemoteDisappeared(const AmSipReply& reply) {
-  DBG("remote unreachable, ending other leg\n");
+  DBG("remote unreachable, ending other leg");
   terminateOtherLeg();
   AmSession::onRemoteDisappeared(reply);
 }
 
 void AmB2BSession::onNoAck(unsigned int cseq)
 {
-  DBG("OnNoAck(%u): terminate other leg.\n",cseq);
+  DBG("OnNoAck(%u): terminate other leg.",cseq);
   terminateOtherLeg();
   AmSession::onNoAck(cseq);
 }
@@ -801,7 +801,7 @@ bool AmB2BSession::saveSessionDescription(const AmMimeBody& body) {
   if(!sdp_body)
     return false;
 
-  DBG("saving session description (%s, %.*s...)\n",
+  DBG("saving session description (%s, %.*s...)",
       sdp_body->getCTStr().c_str(), 50, sdp_body->getPayload());
 
   established_body = *sdp_body;
@@ -850,7 +850,7 @@ bool AmB2BSession::updateSessionDescription(const AmMimeBody& body) {
   uint32_t new_body_hash = hashlittle(cmp_body_begin, cmp_body_length, 0);
 
   if (body_hash != new_body_hash) {
-    DBG("session description changed - saving (%s, %.*s...)\n",
+    DBG("session description changed - saving (%s, %.*s...)",
 	sdp_body->getCTStr().c_str(), 50, sdp_body->getPayload());
     body_hash = new_body_hash;
     established_body = body;
@@ -862,18 +862,18 @@ bool AmB2BSession::updateSessionDescription(const AmMimeBody& body) {
 
 int AmB2BSession::sendEstablishedReInvite() {  
   if (established_body.empty()) {
-    ERROR("trying to re-INVITE with saved description, but none saved\n");
+    ERROR("trying to re-INVITE with saved description, but none saved");
     return -1;
   }
 
-  DBG("sending re-INVITE with saved session description\n");
+  DBG("sending re-INVITE with saved session description");
 
   try {
     AmMimeBody body(established_body); // contains only SDP
     updateLocalBody(body);
     return dlg->reinvite("", &body, SIP_FLAGS_VERBATIM);
   } catch (const string& s) {
-    ERROR("sending established SDP reinvite: %s\n", s.c_str());
+    ERROR("sending established SDP reinvite: %s", s.c_str());
   }
   return -1;
 }
@@ -883,7 +883,7 @@ bool AmB2BSession::refresh(int flags) {
   if (dlg->getStatus() != AmSipDialog::Connected)
     return false;
 
-  DBG(" AmB2BSession::refresh: refreshing session\n");
+  DBG(" AmB2BSession::refresh: refreshing session");
   // not in B2B mode
   if (other_id.empty() ||
       // UPDATE as refresh handled like normal session
@@ -893,7 +893,7 @@ bool AmB2BSession::refresh(int flags) {
 
   // refresh with re-INVITE
   if (dlg->getUACInvTransPending()) {
-    DBG("INVITE transaction pending - not refreshing now\n");
+    DBG("INVITE transaction pending - not refreshing now");
     return false;
   }
   return sendEstablishedReInvite() == 0;
@@ -930,15 +930,15 @@ int AmB2BSession::relaySip(const AmSipRequest& req)
 	}
       }
       if (t==relayed_req.end()) {
-    WARN("Transaction with CSeq %d not found for translating RAck cseq, local_tag = %s\n",
+    WARN("Transaction with CSeq %d not found for translating RAck cseq, local_tag = %s",
          req.rack_cseq, dlg->getLocalTag().c_str());
       }
     }
 
-    DBG("relaying SIP request %s %s\n", req.method.c_str(), req.r_uri.c_str());
+    DBG("relaying SIP request %s %s", req.method.c_str(), req.r_uri.c_str());
     int err = dlg->sendRequest(req.method, &body, *hdrs, SIP_FLAGS_VERBATIM);
     if(err < 0){
-      ERROR("dlg->sendRequest() failed, local_tag = %s\n",
+      ERROR("dlg->sendRequest() failed, local_tag = %s",
             dlg->getLocalTag().c_str());
       return err;
     }
@@ -959,16 +959,16 @@ int AmB2BSession::relaySip(const AmSipRequest& req)
       t++;
     } 
     if (t == relayed_req.end()) {
-	  DBG("transaction for ACK not found in relayed requests\n");
+	  DBG("transaction for ACK not found in relayed requests");
       // FIXME: local body (if updated) should be discarded here
       return -1;
     }
 
-    DBG("sending relayed 200 ACK\n");
+    DBG("sending relayed 200 ACK");
     int err = dlg->send_200_ack(t->first, &body,
 			       req.hdrs, SIP_FLAGS_VERBATIM);
     if(err < 0) {
-      ERROR("dlg->send_200_ack() failed, local_tag = %s\n",
+      ERROR("dlg->send_200_ack() failed, local_tag = %s",
             dlg->getLocalTag().c_str());
       return err;
     }
@@ -1006,7 +1006,7 @@ int AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
     updateLocalBody(body);
   }
 
-  DBG("relaying SIP reply %u %s\n", reply.code, reply.reason.c_str());
+  DBG("relaying SIP reply %u %s", reply.code, reply.reason.c_str());
 
   int flags = SIP_FLAGS_VERBATIM;
   if(reply.to_tag.empty())
@@ -1026,7 +1026,7 @@ int AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
                        //ignore_reply_body ? NULL : &body, *hdrs, flags);
 
   if(err < 0){
-    ERROR("dlg->reply() failed\n");
+    ERROR("dlg->reply() failed");
     return err;
   }
 
@@ -1049,12 +1049,12 @@ void AmB2BSession::setRtpRelayMode(RTPRelayMode mode)
 
 void AmB2BSession::setRtpStreamShare(bool shared)
 {
-  DBG("%sabled RTP stream sharing\n",shared?"en":"dis");
+  DBG("%sabled RTP stream sharing",shared?"en":"dis");
   rtp_stream_shared = shared;
 }
 
 void AmB2BSession::setRtpInterface(int relay_interface) {
-  DBG("setting RTP interface for session '%s' to %i\n",
+  DBG("setting RTP interface for session '%s' to %i",
       getLocalTag().c_str(), relay_interface);
   rtp_interface = relay_interface;
 }
@@ -1242,7 +1242,7 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
     AmSipReply& reply = ((B2BSipReplyEvent*)ev)->reply;
 
     if(getOtherId().empty()){
-      //DBG("Discarding B2BSipReply from other leg (other_id empty)\n");
+      //DBG("Discarding B2BSipReply from other leg (other_id empty)");
       DBG("B2BSipReply: other_id empty ("
 	  "reply code=%i; method=%s; callid=%s; from_tag=%s; "
 	  "to_tag=%s; cseq=%i)\n",
@@ -1251,12 +1251,12 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
       //return;
     }
     else if(getOtherId() != reply.from_tag){// was: local_tag
-      DBG("Dialog mismatch! (oi=%s;ft=%s)\n",
+      DBG("Dialog mismatch! (oi=%s;ft=%s)",
 	  getOtherId().c_str(),reply.from_tag.c_str());
       return;
     }
 
-    DBG("%u %s reply received from other leg\n", reply.code, reply.reason.c_str());
+    DBG("%u %s reply received from other leg", reply.code, reply.reason.c_str());
       
     switch(callee_status){
     case NoReply:
@@ -1265,7 +1265,7 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
 	if(reply.code < 200){
 	  if ((!sip_relay_only) && sip_relay_early_media_sdp &&
 	      reply.code>=180 && reply.code<=183 && (!reply.body.empty())) {
-	    DBG("sending re-INVITE to caller with early media SDP\n");
+	    DBG("sending re-INVITE to caller with early media SDP");
 	    if (reinviteCaller(reply)) {
 	      ERROR("re-INVITEing caller for early session failed - "
 		    "stopping this and other leg\n");
@@ -1278,19 +1278,19 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
 	} else if(reply.code < 300){
 	  
 	  callee_status  = Connected;
-	  DBG("setting callee status to connected\n");
+	  DBG("setting callee status to connected");
 	  if (!sip_relay_only) {
 	    DBG("received 200 class reply to establishing INVITE: "
 		"switching to SIP relay only mode, sending re-INVITE to caller\n");
 	    sip_relay_only = true;
 	    if (reinviteCaller(reply)) {
-	      ERROR("re-INVITEing caller failed - stopping this and other leg\n");
+	      ERROR("re-INVITEing caller failed - stopping this and other leg");
 	      terminateOtherLeg();
 	      terminateLeg();
 	    }
 	  }
 	} else {
-	  // 	DBG("received %i from other leg: other_id=%s; reply.local_tag=%s\n",
+	  // 	DBG("received %i from other leg: other_id=%s; reply.local_tag=%s",
 	  // 	    reply.code,other_id.c_str(),reply.local_tag.c_str());
 	  
 	  // TODO: terminated my own leg instead? (+ clear_other())
@@ -1303,7 +1303,7 @@ void AmB2BCallerSession::onB2BEvent(B2BEvent* ev)
       break;
 	
     default:
-      DBG("reply from callee: %u %s\n",reply.code,reply.reason.c_str());
+      DBG("reply from callee: %u %s",reply.code,reply.reason.c_str());
       break;
     }
   }
@@ -1366,7 +1366,7 @@ void AmB2BCallerSession::onSystemEvent(AmSystemEvent* ev) {
 }
 
 void AmB2BCallerSession::onRemoteDisappeared(const AmSipReply& reply) {
-  DBG("remote unreachable, ending B2BUA call\n");
+  DBG("remote unreachable, ending B2BUA call");
   clearRtpReceiverRelay();
 
   AmB2BSession::onRemoteDisappeared(reply);
@@ -1403,7 +1403,7 @@ void AmB2BCallerSession::connectCallee(const string& remote_party,
   ev->relayed_invite = relayed_invite;
   ev->r_cseq       = invite_req.cseq;
 
-  DBG("relaying B2B connect event to %s\n", remote_uri.c_str());
+  DBG("relaying B2B connect event to %s", remote_uri.c_str());
   relayEvent(ev);
   callee_status = NoReply;
 }
@@ -1434,7 +1434,7 @@ void AmB2BCallerSession::createCalleeSession() {
   callee_dlg->setRemoteUri(dlg->getLocalUri());
 
   if (AmConfig.log_sessions) {
-    INFO("Starting B2B callee session %s\n",
+    INFO("Starting B2B callee session %s",
 	 callee_session->getLocalTag().c_str());
   }
 
@@ -1465,7 +1465,7 @@ AmB2BCalleeSession* AmB2BCallerSession::newCalleeSession()
 void AmB2BSession::setMediaSession(AmB2BMedia *new_session) 
 { 
   // FIXME: ignore old media_session? can it be already set here?
-  if (media_session) ERROR("BUG: non-empty media session overwritten\n");
+  if (media_session) ERROR("BUG: non-empty media session overwritten");
   media_session = new_session; 
   if (media_session)
     media_session->addReference(); // new reference for me
@@ -1540,7 +1540,7 @@ void AmB2BCalleeSession::onB2BEvent(B2BEvent* ev)
     int res = dlg->sendRequest(SIP_METH_INVITE, &body,
 			co_ev->hdrs, SIP_FLAGS_VERBATIM);
     if (res < 0) {
-      DBG("sending INVITE failed, relaying back error reply\n");
+      DBG("sending INVITE failed, relaying back error reply");
       relayError(SIP_METH_INVITE, co_ev->r_cseq, co_ev->relayed_invite, res);
 
       if (co_ev->relayed_invite)

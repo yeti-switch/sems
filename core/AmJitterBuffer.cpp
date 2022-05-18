@@ -104,7 +104,7 @@ void AmJitterBuffer::put(const ShortSample *data, unsigned int size, unsigned in
 	  if (m_jitter > MAX_JITTER)
 	    m_jitter = MAX_JITTER;
 #ifdef DEBUG_PLAYOUTBUF
-	  DBG("Jitter buffer delay increased to %u\n", m_jitter);
+	  DBG("Jitter buffer delay increased to %u", m_jitter);
 #endif
 	}
       // Packet arrived too late to be put into buffer
@@ -177,7 +177,7 @@ bool AmJitterBuffer::get(unsigned int ts, unsigned int ms, ShortSample *out_buf,
     m_lastAudioTs = ts;
     m_forceResync = false;
 #ifdef DEBUG_PLAYOUTBUF
-    DBG("Jitter buffer: initialized tsDelta with %u\n", m_tsDelta);
+    DBG("Jitter buffer: initialized tsDelta with %u", m_tsDelta);
     m_tsDeltaStart = m_tsDelta;
 #endif
   }
@@ -189,7 +189,7 @@ bool AmJitterBuffer::get(unsigned int ts, unsigned int ms, ShortSample *out_buf,
        */
       m_tsDelta += m_lastTs - ts + ms;
 #ifdef DEBUG_PLAYOUTBUF
-      DBG("Jitter buffer resynced forward (-> %d rel)\n", 
+      DBG("Jitter buffer resynced forward (-> %d rel)", 
 	  m_tsDelta - m_tsDeltaStart);
 #endif
       m_delayCount = 0;
@@ -199,7 +199,7 @@ bool AmJitterBuffer::get(unsigned int ts, unsigned int ms, ShortSample *out_buf,
 	unsigned int d = m_tsDelta -(m_lastTs - ts + ms);
 	m_tsDelta -= d / 2;
 #ifdef DEBUG_PLAYOUTBUF
-	DBG("Jitter buffer resynced backward (-> %d rel)\n", 
+	DBG("Jitter buffer resynced backward (-> %d rel)", 
 	    m_tsDelta - m_tsDeltaStart);
 #endif
       }
@@ -214,7 +214,7 @@ bool AmJitterBuffer::get(unsigned int ts, unsigned int ms, ShortSample *out_buf,
   }
   m_lastAudioTs = ts;
   unsigned int get_ts = ts + m_tsDelta - m_jitter;
-  //    DBG("Getting pkt at %u, res ts = %u\n", get_ts / m_frameSize, p.timestamp);
+  //    DBG("Getting pkt at %u, res ts = %u", get_ts / m_frameSize, p.timestamp);
   // First of all throw away all too old packets from the head
   Packet *tmp;
   for (tmp = m_head; tmp && ts_less()(tmp->ts() + tmp->size(), get_ts); )
