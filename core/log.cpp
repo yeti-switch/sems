@@ -55,7 +55,7 @@ const char* log_level2str[] = { "ERROR", "WARNING", "INFO", "DEBUG" };
 
 /** Registered logging hooks */
 static vector<AmLoggingFacility*> log_hooks;
-static AmMutex log_hooks_mutex;
+//static AmMutex log_hooks_mutex;
 
 #ifndef DISABLE_SYSLOG_LOG
 
@@ -225,8 +225,10 @@ void init_logging(const char* name)
 
 void cleanup_logging()
 {
-    INFO("Logging cleanup");
-    AmLock l(log_hooks_mutex);
+    //INFO("Logging cleanup");
+    //AmLock l(log_hooks_mutex);
+    for(auto fac : log_hooks)
+        dec_ref(fac);
     log_hooks.clear();
 }
 
@@ -236,16 +238,12 @@ void cleanup_logging()
 void run_log_hooks(int level, pid_t pid, pthread_t tid,
                    const char* func, const char* file, int line, const char* msg)
 {
-  AmLock l(log_hooks_mutex);
-  (void)l;
+  /*AmLock l(log_hooks_mutex);
+  (void)l;*/
 
-  if (!log_hooks.empty()) {
-    for (vector<AmLoggingFacility*>::iterator it = log_hooks.begin();
-         it != log_hooks.end(); ++it) {
-      AmLoggingFacility* fac = *it;
-      if(level <= fac->getLogLevel())
-        fac->log(level, pid, tid, func, file, line, msg);
-    }
+  for(auto fac : log_hooks) {
+    if(level <= fac->getLogLevel())
+      fac->log(level, pid, tid, func, file, line, msg);
   }
 }
 
@@ -254,35 +252,34 @@ void run_log_hooks(int level, pid_t pid, pthread_t tid,
  */
 void register_log_hook(AmLoggingFacility* fac)
 {
-  AmLock lock(log_hooks_mutex);
-  vector<AmLoggingFacility*>::iterator fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
-  if(fac_it==log_hooks.end()) {
-    log_hooks.push_back(fac);
-    inc_ref(fac);
-  }
+    printf("register_log_hook: %s %p\n",fac->getName().data(), fac);
+    //AmLock lock(log_hooks_mutex);
+    auto fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
+    if(fac_it==log_hooks.end()) {
+        log_hooks.push_back(fac);
+        inc_ref(fac);
+    }
 }
 
-void unregister_log_hook(AmLoggingFacility* fac){
+/*void unregister_log_hook(AmLoggingFacility* fac){
 	AmLock lock(log_hooks_mutex);
 	vector<AmLoggingFacility*>::iterator fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
 	if(fac_it!=log_hooks.end()) {
         dec_ref(fac);
 		log_hooks.erase(fac_it);
     }
-}
+}*/
 
-bool get_higher_levels(int& log_level_arg){
-	AmLock lock(log_hooks_mutex);
-	if(log_hooks.empty())
-		return false;
-	for (vector<AmLoggingFacility*>::iterator it = log_hooks.begin();
-		it != log_hooks.end(); ++it)
-	{
-		if(log_level_arg < (*it)->getLogLevel()) {
-            log_level_arg = (*it)->getLogLevel();
+bool get_higher_levels(int& log_level_arg) {
+    //AmLock lock(log_hooks_mutex);
+    if(log_hooks.empty())
+        return false;
+    for (auto it : log_hooks) {
+        if(log_level_arg < it->getLogLevel()) {
+            log_level_arg = it->getLogLevel();
         }
-	}
-	return log_level > log_level_arg;
+    }
+    return log_level > log_level_arg;
 }
 
 void set_log_level(int log_level_arg){

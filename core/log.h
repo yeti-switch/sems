@@ -198,7 +198,7 @@ void __lds(int ll, unsigned int max_frames = 63);
 
 class AmLoggingFacility;
 void register_log_hook(AmLoggingFacility*);
-void unregister_log_hook(AmLoggingFacility*);
+//void unregister_log_hook(AmLoggingFacility*);
 
 bool get_higher_levels(int& log_level_arg);
 

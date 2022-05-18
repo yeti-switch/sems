@@ -185,6 +185,7 @@ void AmLoggingFacility::setLogLevel(int log_level_arg){
 	adjustGlobalLogLevel();
 }
 
-void AmLoggingFacility::on_destroy(){
-  unregister_log_hook(this);
+void AmLoggingFacility::on_destroy()
+{
+  //unregister_log_hook(this);
 }

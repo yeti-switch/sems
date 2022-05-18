@@ -119,7 +119,7 @@ class AmPlugIn : public AmPayloadProvider
   virtual ~AmPlugIn();
 
   /** @return -1 if failed, else 0. */
-  int loadPlugIn(const string& file, const string& plugin_name, vector<AmPluginFactory*>& plugins);
+  int loadPlugIn(const string& file, const string& plugin_name);
 
   int loadAudioPlugIn(amci_exports_t* exports);
   int loadAppPlugIn(AmPluginFactory* cb);
@@ -148,6 +148,9 @@ class AmPlugIn : public AmPayloadProvider
    * @return -1 if failed, else 0.
    */
   int load(const string& directory, const std::vector<std::string>& plugins);
+
+  int initPlugins();
+  int initLoggingPlugins();
 
   /** register logging plugins to receive logging messages */
   void registerLoggingPlugins();

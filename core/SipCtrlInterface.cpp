@@ -622,7 +622,6 @@ _SipCtrlInterface::_SipCtrlInterface()
 
 _SipCtrlInterface::~_SipCtrlInterface()
 {
-    INFO("~_SipCtrlInterface");
     AmSipDispatcher::dispose();
     trans_layer::dispose();
 }

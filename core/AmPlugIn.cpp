@@ -118,11 +118,11 @@ static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
 
 AmPlugIn::~AmPlugIn()
 {
-  for(std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.begin();
+  /*for(std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.begin();
       it != name2logfac.end(); it++){
     // register for receiving logging messages
     unregister_log_hook(it->second);
-  }
+  }*/
   std::for_each(name2logfac.begin(), name2logfac.end(), delete_plugin_factory);
   std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
   std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
@@ -168,55 +168,80 @@ void AmPlugIn::init() {
 
 int AmPlugIn::load(const string& directory, const std::vector<std::string>& plugins)
 {
-  int err=0;
-  
-  vector<AmPluginFactory*> loaded_plugins;
-  
-  for (std::vector<string>::const_iterator it = plugins.begin();
-      it != plugins.end(); it++) {
-      string plugin_file = *it;
-      if (plugin_file == "sipctrl") {
-        WARN("sipctrl is integrated into the core, loading sipctrl "
-                "module is not necessary any more\n");
-        WARN("please update your configuration to not load sipctrl module");
-        continue;
-      }
-  
-      if(plugin_file.find(".so",plugin_file.length()-3) == string::npos )
-      plugin_file+=".so";
-  
-      plugin_file = directory + "/"  + plugin_file;
-      DBG("loading %s...",plugin_file.c_str());
-      if( (err = loadPlugIn(plugin_file, plugin_file, loaded_plugins)) < 0 ) {
-      ERROR("while loading plug-in '%s'",plugin_file.c_str());
-      // be strict here: if plugin not loaded, stop!
-      return err; 
-      }
-  }
+    int err=0;
 
-  DBG("AmPlugIn: modules loaded.");
-  DBG("Initializing %zd plugins...", loaded_plugins.size());
-  for (vector<AmPluginFactory*>::iterator it =
-	 loaded_plugins.begin(); it != loaded_plugins.end(); it++) {
-    int err = (*it)->onLoad();
-    if(err)
-      return err;
-  }
+    for (auto plugin_file : plugins) {
+        if (plugin_file == "sipctrl") {
+            WARN("sipctrl is integrated into the core, loading sipctrl "
+                 "module is not necessary any more");
+            WARN("please update your configuration to not load sipctrl module");
+            continue;
+        }
 
-  return 0;
+        if(plugin_file.find(".so",plugin_file.length()-3) == string::npos )
+            plugin_file+=".so";
+
+        plugin_file = directory + "/"  + plugin_file;
+
+        DBG("loading %s...",plugin_file.c_str());
+
+        if((err = loadPlugIn(plugin_file, plugin_file)) < 0 ) {
+            ERROR("while loading plug-in '%s'",plugin_file.c_str());
+            // be strict here: if plugin not loaded, stop!
+            return err;
+        }
+    }
+
+    DBG("AmPlugIn: modules loaded.");
+
+    return 0;
+}
+
+int AmPlugIn::initPlugins()
+{
+    for(auto &plugin : plugins_objects) {
+
+        if(name2logfac.end() != std::find_if(
+            name2logfac.begin(),name2logfac.end(),
+            [&plugin](auto &it) {
+                return it.second == plugin.second;
+            }
+        )) {
+            //ignore logging plugins
+            continue;
+        }
+
+        DBG("initialize plug-in %s", plugin.first.data());
+
+        int err = plugin.second->onLoad();
+        if(err)
+            return err;
+    }
+    return 0;
+}
+
+int AmPlugIn::initLoggingPlugins()
+{
+    for(auto &plugin : name2logfac) {
+
+        DBG("initialize logging plug-in %s", plugin.first.data());
+
+        int err = plugin.second->onLoad();
+        if(err)
+            return err;
+    }
+    return 0;
 }
 
 void AmPlugIn::registerLoggingPlugins() {
-  // init logging facilities
-  for(std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.begin();
-      it != name2logfac.end(); it++){
-    // register for receiving logging messages
-    register_log_hook(it->second);
-  }  
+    // init logging facilities
+    for(auto &it : name2logfac) {
+        // register for receiving logging messages
+        register_log_hook(it.second);
+    }
 }
 
-int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
-			 vector<AmPluginFactory*>& plugins)
+int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name)
 {
   AmPluginFactory* plugin = NULL; // default: not loaded
   int dlopen_flags = RTLD_NOW;
@@ -292,7 +317,6 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name,
   }
 
   if (NULL != plugin) {
-      plugins.push_back(plugin);
       inc_ref(plugin);
       plugins_objects[plugin_name] = plugin;
   }

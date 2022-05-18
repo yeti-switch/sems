@@ -847,10 +847,17 @@ int main(int argc, char* argv[])
   
   INFO("Loading plug-ins");
   AmPlugIn::instance()->init();
+
   if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
     goto error;
 
+  if(AmPlugIn::instance()->initLoggingPlugins())
+    goto error;
+
   AmPlugIn::instance()->registerLoggingPlugins();
+
+  if(AmPlugIn::instance()->initPlugins())
+    goto error;
 
   AmSessionContainer::instance()->initMonitoring();
 
