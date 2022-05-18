@@ -8,6 +8,7 @@ ENDIF(COMMAND cmake_policy)
 
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+set(CMAKE_CXX_STANDARD 17)
 
 # Add path for additional FindXXX.cmake scenarios
 set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -348,7 +349,6 @@ ADD_DEFINITIONS(-DLOG_BUFFER_LEN=2048)
 
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-ADD_DEFINITIONS(-std=c++17)
 ADD_DEFINITIONS(-Wno-deprecated)
 
 get_directory_property(CoreDefsList DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
