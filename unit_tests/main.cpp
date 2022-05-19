@@ -75,7 +75,17 @@ int main(int argc, char** argv)
 
     worker_manager::instance()->init();
     AmPlugIn::instance()->init();
-    if(AmPlugIn::instance()->load(AmConfig.modules_path, test_config::instance()->allow_plugins) < 0) return -1;
+    if(AmPlugIn::instance()->load(AmConfig.modules_path, test_config::instance()->allow_plugins))
+        return -1;
+
+    if(AmPlugIn::instance()->initLoggingPlugins())
+      return -1;
+
+    AmPlugIn::instance()->registerLoggingPlugins();
+
+    if(AmPlugIn::instance()->initPlugins())
+      return -1;
+
     AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 
     if(CoreRpc::instance().onLoad()) {
