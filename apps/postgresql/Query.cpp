@@ -102,7 +102,7 @@ int PGQueryPrepared::exec()
 int QueryChain::exec()
 {
     if(current == childs.size()) return 0;
-//     DBG("exec %zu: %s", current, childs[current]->get_query().c_str());
+    //DBG("exec %zu: %s", current, childs[current]->get_query().c_str());
     int ret = childs[current]->exec();
     if(ret > 0) is_sended = true;
     if(ret > 0 && current + 1 != childs.size()) {

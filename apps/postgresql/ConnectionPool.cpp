@@ -14,6 +14,7 @@ Worker::Worker(const std::string& name, int epollfd)
 : name(name), epoll_fd(epollfd)
 , failover_to_slave(false)
 , retransmit_enable(false)
+, use_pipeline(false)
 , trans_wait_time(DEFAULT_WAIT_TIME)
 , retransmit_interval(DEFAULT_RET_INTERVAL)
 , reconnect_interval(DEFAULT_REC_INTERVAL)
@@ -57,6 +58,7 @@ void Worker::getStats(AmArg& stats)
     stats["retransmit_interval"] = retransmit_interval;
     stats["retransmit_enable"] = retransmit_enable;
     stats["failover_to_slave"] = failover_to_slave;
+    stats["use_pipeline"] = use_pipeline;
     stats["queue"] = (long long)queue_size.get();
     stats["retransmit"] = (long long)ret_size.get();
     stats["dropped"] = (long long)dropped.get();
@@ -70,6 +72,8 @@ void Worker::getStats(AmArg& stats)
 
 void Worker::onConnect(IPGConnection* conn) {
     DBG("connection %s:%p/\'%s\' success", name.c_str(), conn, conn->getConnInfo().c_str());
+    if(use_pipeline)
+        conn->startPipeline();
     if(!prepareds.empty() || !search_pathes.empty()) {
         IPGTransaction* trans = new ConfigTransaction(prepareds, search_pathes, this);
         if(!conn->runTransaction(trans)) {
@@ -141,7 +145,7 @@ void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
 }
 
 void Worker::onError(IPGTransaction* trans, const string& error) {
-    ERROR("Error of transaction \'%s\' : %s", trans->get_query()->get_query().c_str(), error.c_str());
+    ERROR("Error of transaction \'%p/%s\' : %s", trans, trans->get_query()->get_query().c_str(), error.c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
@@ -159,7 +163,7 @@ void Worker::onTuple(IPGTransaction* trans, const AmArg& result) {
 void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
     setWorkTimer(true);
     erased.push_back(trans);
-    DBG("transaction query \'%s\' finished", trans->get_query()->get_query().c_str());
+    DBG("transaction query \'%p/%s\' finished", trans, trans->get_query()->get_query().c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++){
         if(trans == tr_it->trans) {
@@ -453,6 +457,7 @@ void Worker::configure(const PGWorkerConfig& e)
     prepareds.clear();
     failover_to_slave = e.failover_to_slave;
     retransmit_enable = e.retransmit_enable;
+    use_pipeline = e.use_pipeline;
     trans_wait_time = e.trans_wait_time;
     retransmit_interval = e.retransmit_interval;
     reconnect_interval = e.reconnect_interval;
@@ -463,10 +468,14 @@ void Worker::configure(const PGWorkerConfig& e)
     for(auto& prepared : e.prepeared)
         runPrepared(prepared);
 
+    if(master) master->usePipeline(use_pipeline);
+    if(slave) slave->usePipeline(use_pipeline);
+
     reset_next_time = 0;
     resetConnections.clear();
     retransmit_next_time = 0;
     wait_next_time = 0;
+
     setWorkTimer(false);
 }
 
@@ -605,6 +614,16 @@ void ConnectionPool::resetConnections()
 {
     for(auto& conn : connections) {
         conn->reset();
+    }
+}
+
+void ConnectionPool::usePipeline(bool is_pipeline)
+{
+    for(auto& conn : connections) {
+        if(is_pipeline)
+            conn->startPipeline();
+        else
+            conn->exitPipeline();
     }
 }
 

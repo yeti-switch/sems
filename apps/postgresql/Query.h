@@ -65,7 +65,7 @@ public:
         delete impl;
     }
 
-    int exec() override { return impl->exec(); }
+    int exec() override { /*DBG("exec: %s", impl->get_query().c_str()); */return impl->exec(); }
     bool is_single_mode() override { return impl->is_single_mode(); }
     bool is_finished() override { return impl->is_finished(); }
     const char* get_last_error() override { return impl->get_last_error(); }

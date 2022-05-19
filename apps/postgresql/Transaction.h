@@ -36,6 +36,7 @@ protected:
     PGTransactionStatusType status;
     IPGTransaction* parent;
     TransactionType type;
+    bool synced;
 
     virtual bool check_trans() = 0;
     virtual bool cancel_trans() = 0;
@@ -43,11 +44,14 @@ protected:
     virtual void reset(IPGConnection* conn);
 public:
     ITransaction(IPGTransaction* p, TransactionType t)
-    : conn(0), query(0), parent(p), type(t) {}
+    : conn(0), query(0), parent(p), type(t), synced(false) {}
     virtual ~ITransaction() {
         if(query)
             delete query;
     }
+
+    bool is_pipeline();
+    bool is_synced() { return synced; }
 };
 
 class IPGTransaction
@@ -75,8 +79,8 @@ protected:
     virtual int begin() { state = BODY; return 1; }
     virtual int end() { state = END; return 1; }
     virtual int rollback() { state = END; return 1; }
-    virtual int execute() { return tr_impl->query->exec(); }
-    virtual bool is_finished() { return tr_impl->query->is_finished(); }
+    virtual int execute();
+    virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() : tr_impl->query->is_finished(); }
     virtual bool is_equal(IPGTransaction* trans) { return trans->get_type() == get_type(); }
     virtual IPGTransaction* make_clone() = 0;
     virtual PGTransactionData policy() = 0;
@@ -94,6 +98,7 @@ public:
     IPGTransaction* clone() { return make_clone(); }
     IPGQuery* get_query() { return tr_impl->query; }
     PGTransactionData get_policy() { return policy(); }
+    bool is_pipeline() { return tr_impl->is_pipeline(); }
 
     const AmArg& get_result() { return tr_impl->result; }
     Status get_status() { return status; }

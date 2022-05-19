@@ -11,6 +11,13 @@ IPGConnection::~IPGConnection()
     if(planned) delete planned;
 }
 
+void IPGConnection::check_mode()
+{
+    if(isBusy()) return;
+    if(pipe_status == PQ_PIPELINE_ON && !is_pipeline) exit_pipe();
+    else if(pipe_status == PQ_PIPELINE_OFF && is_pipeline) start_pipe();
+}
+
 bool IPGConnection::runTransaction(IPGTransaction* trans)
 {
     if(cur_transaction)
@@ -31,6 +38,30 @@ bool IPGConnection::addPlannedTransaction(IPGTransaction* trans)
     return true;
 }
 
+void IPGConnection::startPipeline()
+{
+    is_pipeline = true;
+    check_mode();
+}
+
+bool IPGConnection::flushPipeline()
+{
+    if(pipe_status != PQ_PIPELINE_ON) return false;
+    return flush_conn();
+}
+
+bool IPGConnection::syncPipeline()
+{
+    if(pipe_status != PQ_PIPELINE_ON) return false;
+    return sync_pipe();
+}
+
+void IPGConnection::exitPipeline()
+{
+    is_pipeline = false;
+    check_mode();
+}
+
 void IPGConnection::check()
 {
     if(status != CONNECTION_BAD) {
@@ -41,6 +72,7 @@ void IPGConnection::check()
         cur_transaction->check();
         if(cur_transaction->get_status() == IPGTransaction::FINISH) {
             cur_transaction = 0;
+            check_mode();
             if(planned) runTransaction(planned);
             planned = 0;
         }
@@ -87,12 +119,8 @@ void PGConnection::check_conn()
 
     if(connected) {
         if(!PQconsumeInput(conn)) {
-            PQfinish(conn);
-            status = CONNECTION_BAD;
-            connected = false;
-            conn = 0;
+            close_conn();
             disconnected_time = time(0);
-            handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
             handler->onDisconnect(this);
             return;
         }
@@ -100,6 +128,7 @@ void PGConnection::check_conn()
 
     PostgresPollingStatusType   st = PQconnectPoll(conn);
     status = PQstatus(conn);
+    pipe_status = PQpipelineStatus(conn);
     switch((int)st) {
         case PGRES_POLLING_OK:
             if(!connected && status == CONNECTION_OK) {
@@ -117,6 +146,13 @@ void PGConnection::check_conn()
             handler->onConnectionFailed(this, PQerrorMessage(conn));
             break;
     }
+}
+
+bool PGConnection::flush_conn()
+{
+    if(pipe_status == PQ_PIPELINE_ON)
+        PQsendFlushRequest(conn);
+    return PQflush(conn);
 }
 
 bool PGConnection::reset_conn()
@@ -145,6 +181,7 @@ bool PGConnection::reset_conn()
     conn_fd = PQsocket(conn);
     handler->onSock(this, IConnectionHandler::PG_SOCK_NEW);
     status = CONNECTION_BAD;
+    pipe_status = PQ_PIPELINE_OFF;
     connected = false;
 
     return true;
@@ -160,10 +197,31 @@ void PGConnection::close_conn()
     if(conn) {
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         status = CONNECTION_BAD;
+        pipe_status = PQ_PIPELINE_OFF;
         connected = false;
         PQfinish(conn);
         conn = 0;
     }
+}
+
+bool PGConnection::start_pipe()
+{
+    if(!conn) return false;
+    DBG("connection %p enter in pipeline mode", this);
+    return PQenterPipelineMode(conn);
+}
+
+bool PGConnection::sync_pipe()
+{
+    if(!conn) return false;
+    return PQpipelineSync(conn);
+}
+
+bool PGConnection::exit_pipe()
+{
+    if(!conn) return false;
+    DBG("connection %p live pipeline mode", this);
+    return PQexitPipelineMode(conn);
 }
 
 MockConnection::MockConnection(IConnectionHandler* handler)
@@ -186,6 +244,11 @@ void MockConnection::check_conn()
         status = CONNECTION_OK;
         handler->onConnect(this);
     }
+}
+
+bool MockConnection::flush_conn()
+{
+    return true;
 }
 
 bool MockConnection::reset_conn()
@@ -219,4 +282,21 @@ void MockConnection::close_conn()
         ::close(conn_fd);
         conn_fd = -1;
     }
+}
+
+bool MockConnection::start_pipe()
+{
+    pipe_status = PQ_PIPELINE_ON;
+    return true;
+}
+
+bool MockConnection::sync_pipe()
+{
+    return true;
+}
+
+bool MockConnection::exit_pipe()
+{
+    pipe_status = PQ_PIPELINE_OFF;
+    return true;
 }

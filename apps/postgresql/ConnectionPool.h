@@ -22,6 +22,7 @@ class Worker : public ITransactionHandler,
 
     bool failover_to_slave;
     bool retransmit_enable;
+    bool use_pipeline;
     uint32_t retransmit_interval;
     uint32_t reconnect_interval;
     uint32_t trans_wait_time;
@@ -116,6 +117,7 @@ public:
     IPGConnection* getFreeConnection();
     void runTransaction(IPGTransaction* trans);
     void resetConnections();
+    void usePipeline(bool is_pipeline);
 
     void getStats(AmArg& stats);
     const PGPool& getInfo() { return pool; }

@@ -7,10 +7,23 @@
 
 #define MAX_BUF_SIZE 256
 
+int IPGTransaction::execute()
+{
+     if(tr_impl->query->exec() < 0)
+         return -1;
+     return is_pipeline() ? (tr_impl->query->is_finished() ? 1 : 2) : 1;
+}
+
 void ITransaction::reset(IPGConnection* conn_)
 {
     conn = conn_;
+    synced = false;
     query->reset(conn);
+}
+
+bool ITransaction::is_pipeline()
+{
+    return conn->getPipeStatus() == PQ_PIPELINE_ON;
 }
 
 bool IPGTransaction::cancel()
@@ -27,39 +40,47 @@ bool IPGTransaction::cancel()
 
 void IPGTransaction::check()
 {
-    if(tr_impl->query && tr_impl->check_trans()) {
-        if(tr_impl->status == PQTRANS_ACTIVE) {
-            tr_impl->fetch_result();
-            if(is_finished()) {
-                status = FINISH;
-                handler->onFinish(this, tr_impl->result);
+    bool next;
+    do {
+        next = false;
+        if(tr_impl->query && tr_impl->check_trans()) {
+            if(tr_impl->status == PQTRANS_ACTIVE && tr_impl->conn->getPipeStatus() != PQ_PIPELINE_ABORTED) {
+                tr_impl->fetch_result();
+                if(is_finished()) {
+                    status = FINISH;
+                    handler->onFinish(this, tr_impl->result);
+                } else {
+                    next = true;
+                }
+            } else if(tr_impl->status == PQTRANS_IDLE ||
+                    tr_impl->status == PQTRANS_INTRANS) {
+                next = is_pipeline();
+                int ret = 0;
+                // 0 - run transaction request, do not run main query
+                // 1 - transaction request is finished, run main query
+                // -1 - error
+                ret = begin();
+                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
+                // 0 - main query finished, run end transaction request
+                // 1 - main query sended, do not run end transaction request
+                // 2 - main query sending in pipeline mode
+                // -1 - error
+                do {
+                    if(ret) ret = execute();
+                    else if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
+                    else return;
+                } while(ret > 1);
+                if(!ret) ret = end();
+                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
+            } else if(tr_impl->status == PQTRANS_INERROR || tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ABORTED) {
+                status = ERROR;
+                int ret = rollback();
+                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
             } else {
-                check();
+                ERROR("unknown state of database transaction");
             }
-        } else if(tr_impl->status == PQTRANS_IDLE ||
-                 tr_impl->status == PQTRANS_INTRANS) {
-            int ret = 0;
-            // 0 - run transaction request, do not run main query
-            // 1 - transaction request is finished, run main query
-            // -1 - error
-            ret = begin();
-            if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-            // 0 - main query finished, run end transaction request
-            // 1 - main query sended, do not run end transaction request
-            // -1 - error
-            if(ret) ret = execute();
-            else if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-            else return;
-            if(!ret) ret = end();
-            if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-        } else if(tr_impl->status == PQTRANS_INERROR) {
-            status = ERROR;
-            int ret = rollback();
-            if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-        } else {
-            ERROR("unknown state of database transaction");
         }
-    }
+    } while(next);
 }
 
 bool IPGTransaction::exec(IPGQuery* query)
@@ -102,6 +123,10 @@ bool PGTransaction::check_trans()
         ERROR("absent connection");
         return true;
     }
+
+    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished())
+        conn->syncPipeline();
+
     status = PQtransactionStatus((PGconn*)conn->get());
     return !PQisBusy((PGconn*)conn->get());
 }
@@ -165,10 +190,13 @@ void PGTransaction::fetch_result()
         case PGRES_FATAL_ERROR:
             parent->handler->onError(parent, PQresultErrorMessage(res));
             break;
-        case PGRES_SINGLE_TUPLE: 
+        case PGRES_SINGLE_TUPLE:
             single = true;
         case PGRES_TUPLES_OK:
             make_result(res, single);
+            break;
+        case PGRES_PIPELINE_SYNC:
+            synced = true;
             break;
         }
 
@@ -262,7 +290,8 @@ int DbTransaction<isolation, rw>::begin()
         int ret = begin_q->exec();
         delete begin_q;
         state = BODY;
-        return ret ? 0 : -1;
+        //DBG("exec: %s", begin_cmd);
+        return ret > 0 ? is_pipeline() : -1;
     }
     return 1;
 }
@@ -270,10 +299,14 @@ int DbTransaction<isolation, rw>::begin()
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
 int DbTransaction<isolation, rw>::execute()
 {
-    if(!tr_impl->query->is_finished())
-        return IPGTransaction::execute();
-    else
+    if(!tr_impl->query->is_finished()) {
+        int ret = IPGTransaction::execute();
+        if(ret  < 0) return -1;
+        else if(ret == 1 && is_pipeline()) return 0;
+        else return ret;
+    } else {
         return 0;
+    }
 }
 
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
@@ -283,13 +316,14 @@ int DbTransaction<isolation, rw>::rollback()
         ERROR("absent connection");
         return -1;
     }
-    if(state == BODY) {
+    if(state != BEGIN) {
         IQuery* end_q = PolicyFactory::instance()->createQuery("ROLLBACK", false);
         end_q->reset(get_conn());
         int ret = end_q->exec();
         delete end_q;
         state = END;
         if(ret) tr_impl->query->set_finished();
+        //DBG("exec: ROLLBACK");
         return ret ? 0 : -1;
     }
     return 1;
@@ -318,6 +352,7 @@ int DbTransaction<isolation, rw>::end()
         int ret = end_q->exec();
         delete end_q;
         state = END;
+        //DBG("exec: END");
         return ret ? 0 : -1;
     }
     return 1;

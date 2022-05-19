@@ -27,7 +27,7 @@ protected:
     void SetUp() override
     {
         PolicyFactory::dispose();
-        makePolicyFactory(true, &server);
+        makePolicyFactory(false, &server);
         server.clear();
     }
 };
@@ -76,7 +76,7 @@ public:
         }
 
         struct epoll_event events[2046];
-        int ret = epoll_wait(epoll_fd, events, 2046, 5000);
+        int ret = epoll_wait(epoll_fd, events, 2046, 10000);
         if(ret == -1 && errno != EINTR){
             ERROR("epoll_wait: %s",strerror(errno));
             return -1;

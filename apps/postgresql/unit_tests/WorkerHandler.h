@@ -55,7 +55,7 @@ public:
 
         running = true;
         do {
-            int ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, 2000);
+            int ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, 3000);
 
             if(ret == -1 && errno != EINTR){
                 GTEST_FATAL_FAILURE_("epoll_wait error");

@@ -34,6 +34,8 @@ protected:
     string connection_info;
     IConnectionHandler* handler;
     ConnStatusType status;
+    PGpipelineStatus pipe_status;
+    bool is_pipeline;
     int conn_fd;
     time_t disconnected_time;
 protected:
@@ -41,16 +43,23 @@ protected:
     IPGTransaction* cur_transaction;
     IPGTransaction* planned;
 
+    void check_mode();
+
     virtual void check_conn() = 0;
     virtual void* get_conn() = 0;
+    virtual bool flush_conn() = 0;
     virtual bool reset_conn() = 0;
     virtual void close_conn() = 0;
+    virtual bool start_pipe() = 0;
+    virtual bool exit_pipe()  = 0;
+    virtual bool sync_pipe() = 0;
 public:
     IPGConnection(const string& conn_info, IConnectionHandler* handler)
     : connection_info(conn_info), handler(handler)
     , status(CONNECTION_BAD), conn_fd(-1)
     , cur_transaction(nullptr)
     , planned(nullptr)
+    , is_pipeline(false)
     , disconnected_time(time(0))
     {}
     virtual ~IPGConnection();
@@ -62,9 +71,14 @@ public:
     void close() { return close_conn(); }
     bool runTransaction(IPGTransaction* trans);
     bool addPlannedTransaction(IPGTransaction* trans);
+    void startPipeline();
+    bool syncPipeline();
+    bool flushPipeline();
+    void exitPipeline();
     void stopTransaction();
     void cancelTransaction();
     ConnStatusType getStatus() { return status; }
+    PGpipelineStatus getPipeStatus() { return pipe_status; }
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_info; }
     bool isBusy() { return cur_transaction ? true : false; }
@@ -78,8 +92,12 @@ class PGConnection : public IPGConnection
 
     bool reset_conn() override;
     void check_conn() override;
+    bool flush_conn() override;
     void* get_conn() override;
     void close_conn() override;
+    bool start_pipe() override;
+    bool sync_pipe() override;
+    bool exit_pipe() override;
 public:
     PGConnection(const string& conn_info, IConnectionHandler* handler);
     ~PGConnection();
@@ -90,8 +108,12 @@ class MockConnection : public IPGConnection
 {
     bool reset_conn() override;
     void check_conn() override;
+    bool flush_conn() override;
     void* get_conn() override;
     void close_conn() override;
+    bool start_pipe() override;
+    bool sync_pipe() override;
+    bool exit_pipe() override;
 public:
     MockConnection(IConnectionHandler* handler);
     ~MockConnection();

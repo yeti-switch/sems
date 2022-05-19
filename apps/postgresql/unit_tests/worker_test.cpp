@@ -90,7 +90,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     vector<PGEvent::Type> types = {PGEvent::Result, PGEvent::Result};
     WorkerHandler::instance().set_expected_events(types);
 
-    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, 1, 1, 1, DEFAULT_BATCH_SIZE, 1);
+    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, false, 1, 1, 1, DEFAULT_BATCH_SIZE, 1);
     PostgreSQL::instance()->postEvent(wc);
 
     string query;
@@ -281,7 +281,7 @@ TEST_F(PostgresqlTest, WorkerConfigTest)
     PGPool pool(POOL_ADDRESS);
     pool.pool_size = 1;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
-    PGWorkerConfig* wc = new PGWorkerConfig("test", false, false, 2);
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, false, false, 2);
     wc->addPrepared("backend", BACKEND);
     wc->addPrepared("sleep", "SELECT pg_sleep($1)").add_param_oid(INT4OID);
     PostgreSQL::instance()->postEvent(wc);
@@ -319,7 +319,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
     PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
     pool.pool_size = 1;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
-    PGWorkerConfig config("test", false, false);
+    PGWorkerConfig config("test", false, false, false);
     config.batch_size = 4;
     config.batch_timeout = 2;
     worker.configure(config);
@@ -352,7 +352,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
-    PGWorkerConfig config("test", false, true, 3, 1);
+    PGWorkerConfig config("test", false, true, false, 3, 1);
     config.batch_size = 4;
     worker.configure(config);
 
@@ -396,7 +396,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
-    PGWorkerConfig config("test", false, true, 15, 1);
+    PGWorkerConfig config("test", false, true, false, 15, 1);
     config.batch_size = 2;
     worker.configure(config);
     IPGTransaction* trans = new NonTransaction(&worker);

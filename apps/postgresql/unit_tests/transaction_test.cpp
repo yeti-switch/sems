@@ -1,6 +1,7 @@
 #include "PGHandler.h"
 #include "../Query.h"
 #include "../pqtypes-int.h"
+#include <ampi/PostgreSqlAPI.h>
 
 TEST_F(PostgresqlTest, NonTransactionSimpleTest)
 {
@@ -296,4 +297,131 @@ TEST_F(PostgresqlTest, DbTransactionMergeTest)
     delete trans1;
     delete trans2;
     delete trans3;
+}
+
+TEST_F(PostgresqlTest, DbPipelineTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    NonTransaction pg(&handler);
+    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('1', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
+    pg.exec(query);
+
+    conn->runTransaction(&pg);
+
+    while(pg.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+}
+
+TEST_F(PostgresqlTest, DbPipelineErrorTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    NonTransaction pg1(&handler);
+    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT TTT", false));
+    pg1.exec(query);
+
+    conn->runTransaction(&pg1);
+
+    while(pg1.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+
+    NonTransaction pg2(&handler);
+    pg2.exec(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
+
+    conn->runTransaction(&pg2);
+
+    while(pg2.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+}
+
+TEST_F(PostgresqlTest, DbPipelineTransactionTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    IPGTransaction* pg2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('1', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
+    query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
+    pg2->exec(query);
+
+    conn->runTransaction(pg2);
+
+    while(pg2->get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    delete pg2;
+}
+
+TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
+{
+    PGHandler handler;
+    std::string conn_str(POOL_ADDRESS_STR);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    IPGTransaction* pg1 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    query->addQuery(new Query("SELECT TTT", false));
+    pg1->exec(query);
+
+    conn->runTransaction(pg1);
+
+    while(pg1->get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    delete pg1;
+
+    pg1 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    pg1->exec(query);
+
+    conn->runTransaction(pg1);
+
+    while(pg1->get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    delete pg1;
+
+    NonTransaction drop(&handler);
+    drop.exec(new Query("DROP TABLE test;", false));
+    conn->runTransaction(&drop);
+    while(drop.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
 }

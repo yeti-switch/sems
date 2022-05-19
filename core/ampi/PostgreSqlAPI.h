@@ -115,6 +115,7 @@ public:
     uint32_t trans_wait_time;
     uint32_t retransmit_interval;
     uint32_t reconnect_interval;
+    bool use_pipeline;
     vector<PGPrepareData> prepeared;
     vector<string> search_pathes;
 
@@ -122,6 +123,7 @@ public:
         const string& name,
        bool failover_to_slave,
        bool retransmit_enable,
+       bool use_pipeline,
        uint32_t trans_wait_time = DEFAULT_WAIT_TIME,
        uint32_t retransmit_interval = DEFAULT_RET_INTERVAL,
        uint32_t reconnect_interval = DEFAULT_REC_INTERVAL,
@@ -130,6 +132,7 @@ public:
        uint32_t max_queue_length = DEFAULT_MAX_Q_LEN)
      : PGEvent(WorkerConfig)
      , worker_name(name)
+     , use_pipeline(use_pipeline)
      , failover_to_slave(failover_to_slave)
      , retransmit_enable(retransmit_enable)
      , retransmit_interval(retransmit_interval)
