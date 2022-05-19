@@ -252,7 +252,6 @@ void run_log_hooks(int level, pid_t pid, pthread_t tid,
  */
 void register_log_hook(AmLoggingFacility* fac)
 {
-    printf("register_log_hook: %s %p\n",fac->getName().data(), fac);
     //AmLock lock(log_hooks_mutex);
     auto fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
     if(fac_it==log_hooks.end()) {
