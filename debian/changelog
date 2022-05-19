@@ -1,3 +1,7 @@
+sems (1.83.1) stable; urgency=low
+  * fix plugins loading in unit_tests
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 May 2022 13:34:08 +0300
+
 sems (1.83.0) stable; urgency=low
   * merge bus_client app
   * merge conference_mixer app
