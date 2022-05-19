@@ -54,9 +54,6 @@
 
 #define CODEC_G722_NB 13
 
-
-#define CODEC_G729    14
-
 #define CODEC_ULAW16 14
 #define CODEC_ALAW16 15
 
@@ -84,6 +81,12 @@
 #define CODEC_SILK_UB 33
 
 #define CODEC_iSAC_WB 40
+
+#define CODEC_G723 50
+#define CODEC_G729 51
+
+#define CODEC_AMR 55
+#define CODEC_AMRWB 56
 
 #define CODEC_OPUS 60
 

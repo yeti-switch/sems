@@ -11,9 +11,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define CODEC_AMR   50
-#define CODEC_AMRWB   51
-
 /* Taken from Table 2, of 3GPP TS 26.101, v5.0.0 */
 /* Taken from Table 3, of 3GPP TS 26.101, v5.0.0: Comfort Noise (FT 8) */
 static int num_bits[16] = {95, 103, 118, 134, 148, 159, 204, 244, 39};
