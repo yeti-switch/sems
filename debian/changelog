@@ -1,3 +1,9 @@
+sems (1.83.0) stable; urgency=low
+  * merge bus_client app
+  * merge conference_mixer app
+  * remove log_hooks mutex
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 May 2022 12:43:29 +0300
+
 sems (1.82.0) stable; urgency=low
   * logging refactoring
  -- Michael Furmur <furmur@pm.me>  Wed, 18 May 2022 19:06:44 +0300
