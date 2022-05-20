@@ -4,7 +4,8 @@
 #include "AmAudioFile.h"
 #include "AmUtils.h"
 
-int load_testing_source(string path,unsigned char *&buf){
+int load_testing_source(string path,unsigned char *&buf)
+{
 	AmAudioFile f;
 
 	if(f.open(path,AmAudioFile::Read)){
@@ -29,20 +30,18 @@ int load_testing_source(string path,unsigned char *&buf){
 	return p-buf;
 }
 
-void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
+void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost)
+{
 #define DEFAULT_SDP_PARAMS ""
 
-	long h_codec = -1;
+	long h_codec = 0;
 	int out_buf_size,ret;
 	amci_codec_fmt_info_t fmt_i[4];
 	amci_codec_t *codec = NULL;
 	unsigned char *out_buf,*tmp_buf;
-	timeval start,end,diff;
+	timeval start,end, encode_time, decode_time;
 
-	double  pcm16_len;
-	double  encode_cost,encode_ch,
-			decode_cost,decode_ch,
-			both_cost,both_ch;
+	double pcm16_len;
 
 	/** init codec */
 
@@ -53,8 +52,6 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 	codec = plugin->codec(payload->codec_id);
 	if(!codec) return;
 
-	cost["pcm16_size"] = size;
-
 	DBG("codec_id = %d, payload_id = %d",codec->id,payload_id);
 
 	if(codec->init){
@@ -64,13 +61,13 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 		while (fmt_i[i].id) {
 			switch (fmt_i[i].id) {
 			case AMCI_FMT_FRAME_LENGTH : {
-				cost["frame_length"] = fmt_i[i].value;
+				cost["codec_frame_length"] = fmt_i[i].value;
 			} break;
 			case AMCI_FMT_FRAME_SIZE: {
-				cost["frame_size"] = fmt_i[i].value;
+				cost["codec_frame_size"] = fmt_i[i].value;
 			} break;
 			case AMCI_FMT_ENCODED_FRAME_SIZE: {
-				cost["encoded_frame_size"] = fmt_i[i].value;
+				cost["codec_encoded_frame_size"] = fmt_i[i].value;
 			} break;
 			default: {
 			  DBG("Unknown codec format descriptor: %d", fmt_i[i].id);
@@ -84,19 +81,26 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 	 ** encode cost *
 	 ****************/
 
-	if(!codec->encode||!codec->decode){
+	if(!codec->encode||!codec->decode) {
 		DBG("codec for payload %s. doesn't have either encode or decode func",payload->name);
+		if(codec->destroy)
+			(*codec->destroy)(h_codec);
+		cost["info"] = "codec does not export decode/encode functions";
 		return;
 	}
 
 	unsigned int in_buf_samples = size >> 1;
-	cost["pcm16_samples"] = (int)in_buf_samples;
-
 	pcm16_len = in_buf_samples/8e3;
-	cost["pcm16_len"] = pcm16_len;
+
+	cost["pcm16_source_size_bytes"] = size;
+	cost["pcm16_source_samples_count"] = (int)in_buf_samples;
+	cost["pcm16_source_length_seconds"] = pcm16_len;
 
 	if(!codec->samples2bytes){
 		ERROR("no samples2byte implemented for this codec. skip bench");
+		cost["error"] = "codec does not export samples2byte function";
+		if(codec->destroy)
+			(*codec->destroy)(h_codec);
 		return;
 	}
 	out_buf_size = (*codec->samples2bytes)(h_codec,in_buf_samples);
@@ -106,6 +110,8 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 	out_buf = new unsigned char[out_buf_size];
 	if(!out_buf) {
 		ERROR("couldn't allocate memory for encode buffer");
+		if(codec->destroy)
+			(*codec->destroy)(h_codec);
 		return;
 	}
 
@@ -118,20 +124,18 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 
 	if(codec->destroy)
 		(*codec->destroy)(h_codec);
-	if(ret<0){
+
+	if(ret<0) {
 		ERROR("%s.encode() = %d",payload->name,ret);
 		goto free_out;
 	}
-	DBG("%s.encode() = %d (alleged: %d)",payload->name,ret,out_buf_size);
-	h_codec = -1;
+	DBG("%s.encode() = %d (predicted: %d)",payload->name,ret,out_buf_size);
+	h_codec = 0;
 
-	timersub(&end,&start,&diff);
-	encode_cost = timeval2double(diff);
-	encode_ch = pcm16_len/encode_cost;
-
-	cost["encoded_size"] = ret;
-	cost["encode_cost"] = encode_cost;
-	cost["encode_ch"] = encode_ch;
+	timersub(&end,&start,&encode_time);
+	cost["encoded_size_bytes"] = ret;
+	cost["encode_time_seconds"] = timeval2str_usec(encode_time);
+	cost["encode_predicted_channels"] = (int)(pcm16_len/timeval2double(encode_time));
 
 	/****************
 	 ** decode cost *
@@ -165,28 +169,24 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost){
 
 	if(codec->destroy)
 		(*codec->destroy)(h_codec);
+
 	if(ret<0){
 		ERROR("%s.decode() = %d",payload->name,ret);
 		goto free_tmp;
 	}
-	DBG("%s.decode() = %d (alleged: %d)",payload->name,ret,out_buf_size);
+	DBG("%s.decode() = %d (predicted: %d)",payload->name,ret,out_buf_size);
 
-	timersub(&end,&start,&diff);
-	decode_cost = timeval2double(diff);
-	decode_ch = pcm16_len/decode_cost;
-
-	cost["decode_cost"] = decode_cost;
-	cost["decode_ch"] = decode_ch;
+	timersub(&end,&start,&decode_time);
+	cost["decode_time_seconds"] = timeval2str_usec(decode_time);
+	cost["decode_predicted_channels"] = (int)(pcm16_len/timeval2double(decode_time));
 
 	/****************
-	 ** both cost   *
+	 ** duplex cost *
 	 ****************/
 
-	both_cost = decode_cost+encode_cost;
-	both_ch = pcm16_len/both_cost;
-
-	cost["both_cost"] = both_cost;
-	cost["both_ch"] = both_ch;
+	timeradd(&encode_time, &decode_time, &encode_time);
+	cost["duplex_time_seconds"] = timeval2str_usec(encode_time);
+	cost["duplex_predicted_channels_count"] = (int)(pcm16_len/timeval2double(encode_time));
 
 free_tmp:
 	delete[] tmp_buf;
