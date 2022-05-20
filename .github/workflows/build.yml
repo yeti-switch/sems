@@ -8,10 +8,18 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:bullseye
     steps:
+      - name: install aux deps
+        run: apt -y --no-install-recommends install git ca-certificates curl
+      - name: add pgdg pkg repo
+        run: >
+          echo "deb [arch=amd64] deb http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" >> /etc/apt/sources.list.d/pgdg.list &&
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg
       - run: apt update
-      - run: apt -y --no-install-recommends install git ca-certificates curl
-      - uses: actions/checkout@v3
+      - name: clone repo
+        uses: actions/checkout@v3
         with:
           submodules: true
-      - run: apt -y --no-install-recommends build-dep .
-      - run: debuild -us -uc -b
+      - name: install build-deps
+        run: apt update && apt -y --no-install-recommends build-dep .
+      - name: build
+        run: debuild -us -uc -b
