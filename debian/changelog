@@ -1,3 +1,11 @@
+sems (1.84.0) stable; urgency=low
+  * postgresql: add pipeline mode support
+  * merge conference_mixer app
+  * merge bus_client app
+  * merge amr codec
+  * enable benchmark in core.show.payloads
+ -- Michael Furmur <furmur@pm.me>  Fri, 20 May 2022 22:58:13 +0300
+
 sems (1.83.1) stable; urgency=low
   * fix plugins loading in unit_tests
  -- Michael Furmur <furmur@pm.me>  Thu, 19 May 2022 13:34:08 +0300
