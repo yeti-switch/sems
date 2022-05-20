@@ -110,7 +110,7 @@ PGConnection::PGConnection(const std::string& conn_info, IConnectionHandler* han
 
 PGConnection::~PGConnection()
 {
-    close_conn();
+    PGConnection::close_conn();
 }
 
 void PGConnection::check_conn()
@@ -230,7 +230,7 @@ MockConnection::MockConnection(IConnectionHandler* handler)
 
 MockConnection::~MockConnection()
 {
-    close_conn();
+    MockConnection::close_conn();
 }
 
 void MockConnection::check_conn()
