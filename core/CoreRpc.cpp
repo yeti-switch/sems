@@ -370,17 +370,34 @@ void CoreRpc::showPayloads(const AmArg& args, AmArg& ret)
     }
 
     vector<SdpPayload>::const_iterator it = payloads.begin();
-    for(;it!=payloads.end();++it){
+    for(;it!=payloads.end();++it) {
         const SdpPayload &p = *it;
-        ret.push(p.encoding_name,AmArg());
-        AmArg &a = ret[p.encoding_name];
+
+        AmArg *arg_ptr;
+
+        if(ret.hasMember(p.encoding_name)) {
+            if(!isArgArray(ret[p.encoding_name])) {
+                AmArg tmp;
+                tmp.push(ret[p.encoding_name]);
+                ret[p.encoding_name] = tmp;
+            }
+            auto &a = ret[p.encoding_name];
+            a.push(AmArg());
+            arg_ptr  = &a.back();
+        } else {
+            ret.push(p.encoding_name,AmArg());
+            arg_ptr = &ret[p.encoding_name];
+        }
+
+        AmArg &a = *arg_ptr;
 
         DBG("process codec: %s (%d)",
             p.encoding_name.c_str(),p.payload_type);
         a["payload_type"] = p.payload_type;
         a["clock_rate"] = p.clock_rate;
         if(compute_cost) {
-            get_codec_cost(p.payload_type,buf,size,a["cost"]);
+            if(p.encoding_name != "telephone-event")
+                get_codec_cost(p.payload_type,buf,size,a["cost"]);
         }
     }
 
