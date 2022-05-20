@@ -104,10 +104,10 @@ int QueryChain::exec()
     if(current == childs.size()) return 0;
     //DBG("exec %zu: %s", current, childs[current]->get_query().c_str());
     int ret = childs[current]->exec();
-    if(ret > 0) is_sended = true;
+    if(ret > 0) is_sent = true;
     if(ret > 0 && current + 1 != childs.size()) {
         current++;
-        is_sended = false;
+        is_sent = false;
     }
     return ret;
 }
@@ -153,7 +153,7 @@ IPGQuery * QueryChain::clone()
 void QueryChain::reset(IPGConnection* conn)
  {
     current = 0;
-    is_sended = false;
+    is_sent = false;
     finished = false;
     for(auto& child : childs) child->reset(conn);
 }

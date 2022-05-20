@@ -120,15 +120,15 @@ class QueryChain : public IPGQuery
 {
     vector<IPGQuery*> childs;
     size_t current;
-    bool is_sended;
+    bool is_sent;
     bool finished;
     QueryChain()
     : current(0)
-    , is_sended(false)
+    , is_sent(false)
     , finished(false) {}
 public:
     QueryChain(IPGQuery* first)
-    : is_sended(false)
+    : is_sent(false)
     , finished(false){
         addQuery(first);
         current = 0;
@@ -145,7 +145,7 @@ public:
     IPGQuery* get_current_query() override;
 
     bool is_single_mode() override { return get_current_query()->is_single_mode(); }
-    bool is_finished() override { return is_sended || finished; }
+    bool is_finished() override { return is_sent || finished; }
     const char* get_last_error() override { return get_current_query()->get_last_error(); }
     string get_query() override { return get_current_query()->get_query(); }
     void set_finished() override { finished = true; }
