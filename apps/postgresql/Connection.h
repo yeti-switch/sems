@@ -56,8 +56,8 @@ protected:
 public:
     IPGConnection(const string& conn_info, IConnectionHandler* handler)
     : connection_info(conn_info), handler(handler)
-    , status(CONNECTION_BAD), conn_fd(-1)
-    , cur_transaction(nullptr)
+    , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
+    , conn_fd(-1), cur_transaction(nullptr)
     , planned(nullptr)
     , is_pipeline(false)
     , disconnected_time(time(0))

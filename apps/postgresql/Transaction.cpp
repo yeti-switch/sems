@@ -206,7 +206,7 @@ void PGTransaction::fetch_result()
 }
 
 MockTransaction::MockTransaction(IPGTransaction* h, TransactionType t, TestServer* server_)
-: ITransaction(h, t), server(server_), last_query(0)
+: ITransaction(h, t), server(server_), last_query(0), current_query_number(0)
 {
     status = PQTRANS_IDLE;
 }
@@ -216,22 +216,54 @@ MockTransaction::~MockTransaction() {}
 bool MockTransaction::check_trans()
 {
     if(status == PQTRANS_IDLE &&
-       query->get_current_query()->is_finished() &&
-       query->get_current_query() != last_query) {
-            if(server->isError(query->get_query()))
-                parent->handler->onError(parent, "mock error");
-            status = PQTRANS_ACTIVE;
-            last_query = query->get_current_query();
-    } 
+       query->is_finished()) {
+        status = PQTRANS_ACTIVE;
+    }
+
     return true;
 }
 
 void MockTransaction::fetch_result()
 {
-    status = PQTRANS_IDLE;
-    AmArg res = server->getResponse(query->get_query());
-    if(!isArgUndef(res))
-        result.push(res);
+    Query* single = dynamic_cast<Query*>(query);
+    QueryChain* chain = dynamic_cast<QueryChain*>(query);
+    IPGQuery* cur_query = 0;
+    string query_;
+    if(single) {
+        query_ = single->get_query();
+        cur_query = single;
+    } else if(chain) {
+        if(current_query_number < query->get_size()) {
+            query_ = chain->get_query(current_query_number)->get_query();
+            cur_query = chain->get_query(current_query_number);
+        }
+    } else {
+        ERROR("unknown query");
+        return;
+    }
+
+    if(!is_pipeline()) {
+        status = PQTRANS_IDLE;
+        if(server->isError(query_)) {
+            parent->handler->onError(parent, "mock error");
+        } else {
+            AmArg res = server->getResponse(query_);
+            if(!isArgUndef(res))
+                result.push(res);
+        }
+    } else if(current_query_number < query->get_size()){
+        if(server->isError(query_)) {
+            parent->handler->onError(parent, "mock error");
+        } else {
+            AmArg res = server->getResponse(query_);
+            if(!isArgUndef(res))
+                result.push(res);
+        }
+        current_query_number++;
+    } else {
+        synced = true;
+        status = PQTRANS_IDLE;
+    }
 }
 
 void MockTransaction::reset(IPGConnection* conn)

@@ -122,6 +122,7 @@ public:
 class MockTransaction : public ITransaction
 {
     IPGQuery* last_query;
+    int current_query_number;
 protected:
     TestServer* server;
     bool check_trans() override;

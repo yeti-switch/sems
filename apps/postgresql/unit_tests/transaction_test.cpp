@@ -340,6 +340,7 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
     query->addQuery(new Query("SELECT TTT", false));
     pg1.exec(query);
+    server.addError("SELECT TTT", false);
 
     conn->runTransaction(&pg1);
 
@@ -399,6 +400,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
     QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
     query->addQuery(new Query("SELECT TTT", false));
     pg1->exec(query);
+    server.addError("SELECT TTT", false);
 
     conn->runTransaction(pg1);
 

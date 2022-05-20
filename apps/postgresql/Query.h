@@ -150,6 +150,7 @@ public:
     string get_query() override { return get_current_query()->get_query(); }
     void set_finished() override { finished = true; }
     uint32_t get_size() override { return (uint32_t)childs.size(); }
+    IPGQuery* get_query(int num) { return childs[num]; }
 };
 
 class PGQuery : public IQuery

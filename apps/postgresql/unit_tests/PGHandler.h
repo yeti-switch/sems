@@ -169,28 +169,28 @@ protected:
 
     void onError(IPGTransaction*, const string& error) override
     {
-        ERROR("exec query error %s", error.c_str());
+        ERROR("exec query error: %s", error.c_str());
     }
 
     void onPQError(IPGConnection*, const std::string & error) override
     {
-        ERROR("pq error %s", error.c_str());
+        ERROR("pq error: %s", error.c_str());
     }
     
     void onPQError(IPGTransaction*, const std::string & error) override
     {
-        ERROR("pq error %s", error.c_str());
+        ERROR("pq error: %s", error.c_str());
     }
 
     void onFinish(IPGTransaction*, const AmArg & result) override
     {
         cur_state = FINISH;
-        INFO("exec finish %s", AmArg::print(result).c_str());
+        INFO("exec finish: %s", AmArg::print(result).c_str());
     }
 
     void onTuple(IPGTransaction*, const AmArg & result) override
     {
-        INFO("exec tuple result %s", AmArg::print(result).c_str());
+        INFO("exec tuple result: %s", AmArg::print(result).c_str());
     }
 };
 
