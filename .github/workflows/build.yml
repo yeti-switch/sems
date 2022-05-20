@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: debian:bullseye
     steps:
+      - run: apt update
       - name: install aux deps
         run: apt -y --no-install-recommends install git ca-certificates curl
       - name: add pgdg pkg repo
