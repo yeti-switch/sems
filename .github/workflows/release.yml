@@ -10,7 +10,7 @@ jobs:
     steps:
       - run: apt update
       - name: install aux deps
-        run: apt -y --no-install-recommends install git ca-certificates curl
+        run: apt -y --no-install-recommends install git ca-certificates curl gnupg
       - name: add pgdg pkg repo
         run: >
           echo "deb [arch=amd64] deb http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" >> /etc/apt/sources.list.d/pgdg.list &&
