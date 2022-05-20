@@ -27,7 +27,7 @@ protected:
     void SetUp() override
     {
         PolicyFactory::dispose();
-        makePolicyFactory(false, &server);
+        makePolicyFactory(true, &server);
         server.clear();
     }
 };
