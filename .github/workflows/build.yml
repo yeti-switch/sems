@@ -13,7 +13,7 @@ jobs:
         run: apt -y --no-install-recommends install git ca-certificates curl gnupg
       - name: add pgdg pkg repo
         run: >
-          echo "deb [arch=amd64] deb http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" >> /etc/apt/sources.list.d/pgdg.list &&
+          echo "deb [arch=amd64] http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" >> /etc/apt/sources.list.d/pgdg.list &&
           curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg
       - run: apt update
       - name: clone repo
