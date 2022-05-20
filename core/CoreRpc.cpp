@@ -353,11 +353,12 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
 void CoreRpc::showPayloads(const AmArg& args, AmArg& ret)
 {
     vector<SdpPayload> payloads;
-    unsigned char *buf;
+    unsigned char *buf = nullptr;
     int size = 0;
 
-    //bool compute_cost = args.size() && args[0] == "benchmark";
-    bool compute_cost = false;
+    bool compute_cost =
+        args.size() && isArgCStr(args[0]) && args[0] == "benchmark";
+
     string path = args.size()>1 ? args[1].asCStr() : DEFAULT_BENCH_FILE_PATH;
 
     const AmPlugIn* plugin = AmPlugIn::instance();
@@ -378,12 +379,12 @@ void CoreRpc::showPayloads(const AmArg& args, AmArg& ret)
             p.encoding_name.c_str(),p.payload_type);
         a["payload_type"] = p.payload_type;
         a["clock_rate"] = p.clock_rate;
-        if(compute_cost){
-            get_codec_cost(p.payload_type,buf,size,a);
+        if(compute_cost) {
+            get_codec_cost(p.payload_type,buf,size,a["cost"]);
         }
     }
 
-    if(compute_cost)
+    if(buf)
         delete[] buf;
 }
 
