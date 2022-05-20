@@ -52,6 +52,8 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost)
 	codec = plugin->codec(payload->codec_id);
 	if(!codec) return;
 
+	cost["codec_id"] = codec->id;
+
 	DBG("codec_id = %d, payload_id = %d",codec->id,payload_id);
 
 	if(codec->init){
@@ -96,16 +98,13 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost)
 	cost["pcm16_source_samples_count"] = (int)in_buf_samples;
 	cost["pcm16_source_length_seconds"] = pcm16_len;
 
-	if(!codec->samples2bytes){
-		ERROR("no samples2byte implemented for this codec. skip bench");
-		cost["error"] = "codec does not export samples2byte function";
-		if(codec->destroy)
-			(*codec->destroy)(h_codec);
-		return;
+	if(codec->samples2bytes) {
+		out_buf_size = (*codec->samples2bytes)(h_codec,in_buf_samples);
+		DBG("%s.samples2bytes(%ld,%d) = %d",
+			payload->name,h_codec,in_buf_samples,out_buf_size);
+	} else {
+		out_buf_size = size;
 	}
-	out_buf_size = (*codec->samples2bytes)(h_codec,in_buf_samples);
-	DBG("%s.samples2bytes(%ld,%d) = %d",
-		payload->name,h_codec,in_buf_samples,out_buf_size);
 
 	out_buf = new unsigned char[out_buf_size];
 	if(!out_buf) {
@@ -155,7 +154,11 @@ void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost)
 	DBG("decode: h_codec = %ld, in: %p[%i], out: %p[%i]",
 		h_codec,out_buf,ret,tmp_buf,size);
 
-	if(codec->bytes2samples){
+	if (codec->frames2samples) {
+		out_buf_size = PCM16_S2B((*codec->frames2samples)(h_codec,out_buf,ret));
+		DBG("%s.frames2samples(%ld,%p,%d) = %d",
+			payload->name, h_codec,out_buf,ret,out_buf_size);
+	} else if(codec->bytes2samples){
 		out_buf_size = PCM16_S2B((*codec->bytes2samples)(h_codec,ret));
 		DBG("%s.bytes2samples(%ld,%d) = %d",
 			payload->name, h_codec,ret,out_buf_size);
