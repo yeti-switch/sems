@@ -15,12 +15,14 @@ class TesterConfig
     {
         enum {
             String,
+            Bool,
             Integer
         } type;
         union {
             void*   p_void;
             string* p_str;
             int*    p_int;
+            bool*   p_bool;
         } u;
     };
     map<string, parameter_var> config_parameters;
@@ -38,6 +40,7 @@ public:
     int http_port;
     string http_destination;
     int log_level;
+    bool external_postgres;
     vector<string> allow_plugins;
 };
 

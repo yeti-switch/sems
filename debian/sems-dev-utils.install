@@ -1,1 +1,2 @@
 usr/bin/sems-* usr/bin/
+unit_tests/*.h usr/include/sems/unit_tests 

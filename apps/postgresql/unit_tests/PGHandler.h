@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <gtest/gtest.h>
+#include <../unit_tests/Config.h>
 
 #define STR_HELPER(x) #x
 #define STR_(x) STR_HELPER(x)
@@ -27,7 +28,7 @@ protected:
     void SetUp() override
     {
         PolicyFactory::dispose();
-        makePolicyFactory(true, &server);
+        makePolicyFactory(!test_config::instance()->external_postgres, &server);
         server.clear();
     }
 };

@@ -14,9 +14,11 @@ extern int parse_log_level(const std::string& level);
 #define PARAM_LOG_LEVEL_NAME        "log_level"
 #define PARAM_HTTP_PORT_NAME        "port"
 #define PARAM_HTTP_DEST_NAME        "destination"
+#define PARAM_EXT_POSTGRES_NAME     "external"
 
 #define SECTION_STRESS_NAME         "stress"
 #define SECTION_HTTP_NAME           "http"
+#define SECTION_POSTGRES_NAME       "postgres"
 
 #define DEFAULT_LOG_LEVEL        "info"
 #define DEFAULT_DURATION         100
@@ -33,6 +35,7 @@ TesterConfig::TesterConfig()
     config_parameters.emplace<string, parameter_var>(SECTION_STRESS_NAME "_" PARAM_SESSION_DURATION_NAME, {.type = parameter_var::Integer, .u = {&stress_session_duration}});
     config_parameters.emplace<string, parameter_var>(SECTION_STRESS_NAME "_" PARAM_PAIRS_COUNT_NAME, {.type = parameter_var::Integer, .u = {&stress_session_pairs_count}});
     config_parameters.emplace<string, parameter_var>(SECTION_STRESS_NAME "_" PARAM_MEDIA_CODEC_NAME, {.type = parameter_var::String, .u = {&stress_media_codec}});
+    config_parameters.emplace<string, parameter_var>(PARAM_EXT_POSTGRES_NAME "-" SECTION_POSTGRES_NAME, {.type = parameter_var::Bool, .u = {&external_postgres}});
 }
 
 TesterConfig::~TesterConfig()
@@ -54,6 +57,11 @@ int TesterConfig::readConfiguration(const string& filePath)
         CFG_END()
     };
 
+    cfg_opt_t postres[] = {
+        CFG_BOOL(PARAM_EXT_POSTGRES_NAME, cfg_false, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t opt[] = {
         CFG_STR(PARAM_SEMS_CONFIG_PATH_NAME, AmLcConfig::instance().config_path.c_str(), CFGF_NONE),
         CFG_STR(PARAM_SIG_INTERFACE_NAME, "", CFGF_NODEFAULT),
@@ -61,6 +69,7 @@ int TesterConfig::readConfiguration(const string& filePath)
         CFG_STR_LIST(PARAM_ALLOW_PLUGINS_NAME, 0, CFGF_NODEFAULT),
         CFG_SEC(SECTION_STRESS_NAME, stress, CFGF_NONE),
         CFG_SEC(SECTION_HTTP_NAME, http, CFGF_NONE),
+        CFG_SEC(SECTION_POSTGRES_NAME, postres, CFGF_NONE),
         CFG_END()
     };
 
@@ -110,6 +119,9 @@ int TesterConfig::readConfiguration(const string& filePath)
     cfg_t* m_http = cfg_getsec(m_cfg, SECTION_HTTP_NAME);
     http_port = cfg_getint(m_http, PARAM_HTTP_PORT_NAME);
     http_destination = cfg_getstr(m_http, PARAM_HTTP_DEST_NAME);
+
+    cfg_t* m_postgres = cfg_getsec(m_cfg, SECTION_POSTGRES_NAME);
+    external_postgres = cfg_getbool(m_postgres, PARAM_EXT_POSTGRES_NAME);
     return 0;
 }
 
@@ -140,6 +152,11 @@ int TesterConfig::parseCmdOverride(const string& param)
             }
         } else if(parameter.second.type == parameter_var::String) {
             *parameter.second.u.p_str = value;
+        } else if(parameter.second.type == parameter_var::Bool) {
+            if(!str2bool(value, *parameter.second.u.p_bool)) {
+                ERROR("parameter is not integer: %s", param.c_str());
+                return -1;
+            }
         }
     }
     return 1;
