@@ -2,14 +2,19 @@
 #define CONFIG_H
 
 #include <map>
+#include <set>
 #include <vector>
+#include <confuse.h>
 #include "singleton.h"
+#include "AmArg.h"
 
 using std::vector;
 using std::map;
+using std::set;
 
 class TesterConfig
 {
+public:
     //optimization parameter;
     struct parameter_var
     {
@@ -25,7 +30,11 @@ class TesterConfig
             bool*   p_bool;
         } u;
     };
-    map<string, parameter_var> config_parameters;
+    typedef map<string, parameter_var> ConfigParameters;
+protected:
+    ConfigParameters config_parameters;
+    map<string, string> modules_cfg;
+    set<string> cmd_unknown_parameters;
 public:
     TesterConfig();
     ~TesterConfig();
@@ -33,15 +42,15 @@ public:
     int readConfiguration(const string& filePath);
     int parseCmdOverride(const string& param);
 
+    AmArg configureModule(const string& moduleName, cfg_opt_t* opt);
+    void useCmdModule(map<string, parameter_var> config_parameters);
+
+    vector<string> allow_plugins;
     string signalling_interface;
     int stress_session_duration;
     int stress_session_pairs_count;
     string stress_media_codec;
-    int http_port;
-    string http_destination;
     int log_level;
-    bool external_postgres;
-    vector<string> allow_plugins;
 };
 
 typedef singleton<TesterConfig> test_config;

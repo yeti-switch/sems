@@ -9,26 +9,23 @@
 #include <sys/epoll.h>
 #include <gtest/gtest.h>
 #include <../unit_tests/Config.h>
-
-#define STR_HELPER(x) #x
-#define STR_(x) STR_HELPER(x)
-
-#define POOL_HOST           "127.0.0.1"
-#define POOL_PORT           5434
-#define POOL_USER           "yeti"
-#define POOL_DATABASE       "yeti"
-#define POOL_PASS           "yeti"
-#define POOL_ADDRESS        POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS
-#define POOL_ADDRESS_STR    "host=" POOL_HOST " port=" STR_(POOL_PORT) " user=" POOL_USER " dbname=" POOL_DATABASE " password=" POOL_PASS
+#include "WorkerHandler.h"
 
 class PostgresqlTest : public ::testing::Test
 {
 protected:
     TestServer server;
+public:
+    bool external;
+    string address;
+    PostgresqlTest() {
+        external = WorkerHandler::instance().external;
+        address = WorkerHandler::instance().address;
+    }
     void SetUp() override
     {
         PolicyFactory::dispose();
-        makePolicyFactory(!test_config::instance()->external_postgres, &server);
+        makePolicyFactory(!external, &server);
         server.clear();
     }
 };
