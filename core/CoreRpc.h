@@ -41,8 +41,6 @@ class CoreRpc final
     void operator=(CoreRpc const&) = delete;
     ~CoreRpc();
 
-    void invoke(const string& method, const AmArg& args, AmArg& ret);
-
     //make some of the handlers public for back-compatibility
     rpc_handler showVersion;
     rpc_handler showConfig;

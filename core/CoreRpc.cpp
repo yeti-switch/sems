@@ -225,25 +225,6 @@ int CoreRpc::onLoad()
     return 0;
 }
 
-void CoreRpc::invoke(const string& method, const AmArg& args, AmArg& ret)
-{
-    if(method=="_list") {
-        AmArg plugin_cmd;
-        plugin_cmd.push("plugin");
-        plugin_cmd.push("");
-        ret.push(plugin_cmd);
-        RpcTreeHandler::invoke(method,args,ret);
-        return;
-    }
-
-    if(method=="plugin") {
-        plugin(args,ret);
-        return;
-    }
-
-    RpcTreeHandler::invoke(method,args,ret);
-}
-
 void CoreRpc::showVersion(const AmArg& args, AmArg& ret)
 {
     ret["core_build"] = get_sems_version();
