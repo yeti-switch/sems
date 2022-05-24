@@ -514,7 +514,7 @@ try  {
 
         if((!connection_id.empty()) && di_inst->invoke_async(
             connection_id, id,
-            method, params))
+            fact_meth, params))
         {
             return true;
         }
