@@ -364,7 +364,11 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     AmArg rpc_res;
     int int_id;
 
-    execRpc(rpc_params, rpc_res);
+    if(execRpc(peer->id, rpc_params, rpc_res)) {
+        DBG("request consumed by async invocation");
+        *msg_size = 0;
+        return 0;
+    }
 
     if(!id.empty()) {
         if(id_is_int) {
@@ -390,7 +394,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
 }
 
 /** rpc_params must contain "method" member as string */
-void JsonRpcServer::execRpc(const AmArg& rpc_params, AmArg& rpc_res) {
+bool JsonRpcServer::execRpc(const string &connection_id, const AmArg& rpc_params, AmArg& rpc_res) {
     AmArg none_params;
     AmArg& params = none_params;
     if (rpc_params.hasMember("params")) {
@@ -401,7 +405,7 @@ void JsonRpcServer::execRpc(const AmArg& rpc_params, AmArg& rpc_res) {
     if (rpc_params.hasMember("id") && isArgCStr(rpc_params["id"]))
       id = rpc_params["id"].asCStr();
 
-    execRpc(method, id, params, rpc_res);
+    return execRpc(connection_id, method, id, params, rpc_res);
 }
 
 static bool traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmArg &ret) {
@@ -445,7 +449,7 @@ static bool traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
     }
 }
 
-void JsonRpcServer::execRpc(const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
+bool JsonRpcServer::execRpc(const string &connection_id, const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
 
 try  {
 
@@ -453,7 +457,7 @@ try  {
         AmPlugIn::instance()->listFactories4Di(rpc_res["result"]);
         rpc_res["id"] = id;
         rpc_res["jsonrpc"] = "2.0";
-        return;
+        return false;
     }
 
     if(method=="_tree") {
@@ -465,7 +469,7 @@ try  {
 
         AmPlugIn::instance()->listFactories4Di(ret);
         if(!isArgArray(ret))
-            return;
+            return false;
 
         AmArg &result = rpc_res["result"];
         for(size_t i = 0; i < ret.size(); i++) {
@@ -482,7 +486,7 @@ try  {
             if(!traverse_tree(di_inst,string(),fake_args,result[factory_name.asCStr()]))
                 result.erase(factory_name.asCStr());
         }
-        return;
+        return false;
     }
 
     size_t dot_pos = method.find('.');
@@ -506,6 +510,13 @@ try  {
         if(!di_inst) {
             throw JsonRpcError(-32601, "Method not found",
                 "failed to instanciate module");
+        }
+
+        if((!connection_id.empty()) && di_inst->invoke_async(
+            connection_id, id,
+            method, params))
+        {
+            return true;
         }
 
         di_inst->invoke(fact_meth, params, rpc_res["result"]);
@@ -557,9 +568,9 @@ try  {
     rpc_res["id"] = id;
     rpc_res["jsonrpc"] = "2.0";
     rpc_res.erase("result");
-    return;
+    return false;
 }
-
+    return false;
 }
 
 #if 0

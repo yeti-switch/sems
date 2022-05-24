@@ -260,7 +260,7 @@ void JsonRPCServerLoop::process(AmEvent* ev) {
         return;
       }
 
-      JsonRpcServer::execRpc(params,result);
+      JsonRpcServer::execRpc(string(), params,result);
 
       auto reply = new SctpBusRawReply(*sctp_event,arg2json(result));
       if(!AmSessionContainer::instance()->postEvent(SCTP_BUS_EVENT_QUEUE, reply)) {

@@ -188,7 +188,7 @@ void JsonRPCServerModule::invoke(const string& method,
     sendMessage(args, ret);
   } else if (method == "execServerFunction"){ 
     args.assertArrayFmt("ss");          // method, id, params
-    JsonRpcServer::execRpc(args.get(0).asCStr(), args.get(1).asCStr(), args.get(2), ret);
+    JsonRpcServer::execRpc(string(), args.get(0).asCStr(), args.get(1).asCStr(), args.get(2), ret);
     // JsonRpcServer::execRpc(args, ret);
   } else if (method == "getServerPort"){
     ret.push(port);
