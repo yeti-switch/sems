@@ -41,6 +41,7 @@ using std::string;
 #define JSONRPC_MSG_ERROR    2
 struct JsonrpcNetstringsConnection;
 
+#define JSONRPC_EVENT_ID 122
 #define JSONRPC_QUEUE_NAME "jsonrpc"
 
 struct JsonRpcEvent
@@ -49,11 +50,11 @@ struct JsonRpcEvent
     string connection_id;
 
     JsonRpcEvent()
-      : AmEvent(122)
+      : AmEvent(JSONRPC_EVENT_ID)
     { }
 
     JsonRpcEvent(const string &connection_id)
-      : AmEvent(122),
+      : AmEvent(JSONRPC_EVENT_ID),
         connection_id(connection_id)
     {}
 
@@ -103,6 +104,8 @@ struct JsonRpcRequestEvent
   : public JsonRpcEvent
 {
     string method;
+    int method_id;
+
     string id;
     AmArg params;
 
@@ -154,6 +157,18 @@ struct JsonRpcRequestEvent
       : JsonRpcEvent(connection_id),
         method(method),
         id(id),
+        params(params)
+    { }
+
+    //request with method_id with parameters
+    JsonRpcRequestEvent(
+        const string &connection_id,
+        const string &id,
+        int method_id,
+        const AmArg &params)
+      : JsonRpcEvent(connection_id),
+        id(id),
+        method_id(method_id),
         params(params)
     { }
 
@@ -299,15 +314,15 @@ inline void postJsonRpcRequestEvent(
     const string& queue_name,
     const string& connection_id,
     const string& request_id,
-    const string& method,
+    int method_id,
     const AmArg& params)
 {
     if(!AmSessionContainer::instance()->postEvent(
         queue_name,
         new JsonRpcRequestEvent(
             connection_id,
-            method,
             request_id,
+            method_id,
             params)))
     {
         postJsonRpcReply(
