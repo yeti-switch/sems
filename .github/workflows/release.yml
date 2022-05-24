@@ -23,7 +23,7 @@ jobs:
       - name: install build-deps
         run: apt update && apt -y --no-install-recommends build-dep .
       - name: build
-        run: debuild -us -uc -b
+        run: debuild -us -uc -b -j$(nproc)
       - name: upload to pkg.yeti-switch.org. bullseye 1.12 main
         run: ci/deploy.sh bullseye 1.12 main ../*.deb
         env:

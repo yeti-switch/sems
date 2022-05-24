@@ -23,4 +23,4 @@ jobs:
       - name: install build-deps
         run: apt update && apt -y --no-install-recommends build-dep .
       - name: build
-        run: debuild -us -uc -b
+        run: debuild -us -uc -b -j$(nproc)
