@@ -95,7 +95,7 @@ class RpcTreeHandler
             func_descr(fd), arg(a), arg_descr(ad)
         {}
 
-        bool isMethod(){ return handler!=NULL; }
+        bool isMethod(){ return handler!=nullptr || async_handler!=nullptr; }
         bool hasLeafs(){ return leaves.getType()==AmArg::Struct; }
         bool hasLeaf(const char *leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
         bool hasLeaf(const string &leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
