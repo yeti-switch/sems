@@ -90,7 +90,7 @@ class HttpClient
     rpc_handler postRequest;
     rpc_handler getRequest;
     rpc_handler dstDump;
-    rpc_handler showDnsCache;
+    async_rpc_handler showDnsCache;
     rpc_handler resetDnsCache;
 
     /* true if event consumed */
@@ -112,6 +112,7 @@ class HttpClient
     void on_stop();
 
     void process(AmEvent* ev);
+    void process_jsonrpc_request(JsonRpcRequestEvent &request);
     void process_http_event(AmEvent* ev);
 
     void on_connection_delete(CurlConnection *c);

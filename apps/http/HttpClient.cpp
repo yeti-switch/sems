@@ -15,6 +15,10 @@ using std::vector;
 #define SYNC_CONTEXTS_TIMER_INVERVAL 500000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 
+enum RpcMethodId {
+    MethodShowDnsCache
+};
+
 class HttpClientFactory
   : public AmDynInvokeFactory
   , public AmConfigFactory
@@ -289,14 +293,16 @@ void HttpClient::dstDump(const AmArg&, AmArg& ret)
     destinations.dump(ret);
 }
 
-void HttpClient::showDnsCache(const AmArg&, AmArg& ret)
+bool HttpClient::showDnsCache(
+    const string& connection_id,
+    const string& request_id,
+    const AmArg& params)
 {
-    AmLock lock(host_m);
-    struct curl_slist* host = hosts;
-    while(host) {
-        ret.push(host->data);
-        host = host->next;
-    }
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id,
+        MethodShowDnsCache, params));
+
+    return true;
 }
 
 void HttpClient::resetDnsCache(const AmArg&, AmArg&)
@@ -373,6 +379,10 @@ void HttpClient::on_stop()
 void HttpClient::process(AmEvent* ev)
 {
     switch(ev->event_id) {
+    case JSONRPC_EVENT_ID:
+        if(auto e = dynamic_cast<JsonRpcRequestEvent *>(ev))
+            process_jsonrpc_request(*e);
+        break;
     case E_SYSTEM: {
         AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
         if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
@@ -386,6 +396,22 @@ void HttpClient::process(AmEvent* ev)
     } break;
     default:
         process_http_event(ev);
+    }
+}
+
+void HttpClient::process_jsonrpc_request(JsonRpcRequestEvent &request)
+{
+    switch(request.method_id) {
+    case MethodShowDnsCache: {
+        AmArg ret;
+        struct curl_slist* host = hosts;
+        ret.assertArray();
+        while(host) {
+            ret.push(host->data);
+            host = host->next;
+        }
+        postJsonRpcReply(request, ret);
+    } break;
     }
 }
 
@@ -752,7 +778,6 @@ void HttpClient::update_resolve_list()
 
     resolve_timer.read();
 
-    AmLock lock(host_m);
     if(hosts) {
         curl_slist_free_all(hosts);
         hosts = 0;
