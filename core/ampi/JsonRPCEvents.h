@@ -31,6 +31,7 @@
 
 #include "AmEvent.h"
 #include "AmArg.h"
+#include "AmSessionContainer.h"
 
 #include <string>
 using std::string;
@@ -46,9 +47,16 @@ struct JsonRpcEvent
   : public AmEvent
 {
     string connection_id;
+
     JsonRpcEvent()
       : AmEvent(122)
     { }
+
+    JsonRpcEvent(const string &connection_id)
+      : AmEvent(122),
+        connection_id(connection_id)
+    {}
+
     virtual ~JsonRpcEvent() { }
 };
 
@@ -110,14 +118,41 @@ struct JsonRpcRequestEvent
     { }
 
     // request without parameters
-    JsonRpcRequestEvent(string method, string id)
+    JsonRpcRequestEvent(
+        const string &method,
+        const string &id)
       : method(method),
         id(id)
     { }
 
+    //request with connection_id w/o parameters
+    JsonRpcRequestEvent(
+        const string &connection_id,
+        const string &method,
+        const string &id)
+      : JsonRpcEvent(connection_id),
+        method(method),
+        id(id)
+    { }
+
     // request with parameters
-    JsonRpcRequestEvent(string method, string id, AmArg params)
+    JsonRpcRequestEvent(
+        const string &method,
+        const string &id,
+        const AmArg &params)
       : method(method),
+        id(id),
+        params(params)
+    { }
+
+    //request with connection_id with parameters
+    JsonRpcRequestEvent(
+        const string &connection_id,
+        const string &method,
+        const string &id,
+        const AmArg &params)
+      : JsonRpcEvent(connection_id),
+        method(method),
         id(id),
         params(params)
     { }
@@ -203,6 +238,19 @@ struct JsonServerSendMessageEvent
         udata(udata)
     { }
 
+    //reply
+    JsonServerSendMessageEvent(
+        const string& connection_id,
+        const string& id,
+        const AmArg& params,
+        bool is_error = false)
+      : JsonServerEvent(connection_id, SendMessage),
+        is_reply(true),
+        id(id),
+        params(params),
+        is_error(is_error)
+    { }
+
     JsonServerSendMessageEvent(
         const JsonServerSendMessageEvent& e,
         JsonrpcNetstringsConnection* conn)
@@ -218,3 +266,53 @@ struct JsonServerSendMessageEvent
         connection_id = e.connection_id;
     }
 };
+
+//async jsonrpc helpers
+inline void postJsonRpcReply(
+    const string& connection_id,
+    const string& request_id,
+    const AmArg& params,
+    bool is_error = false)
+{
+    AmSessionContainer::instance()->postEvent(
+        JSONRPC_QUEUE_NAME,
+        new JsonServerSendMessageEvent(
+            connection_id,
+            request_id,
+            params,
+            is_error));
+}
+
+inline void postJsonRpcReply(
+    const JsonRpcRequestEvent& request,
+    const AmArg& params,
+    bool is_error = false)
+{
+    postJsonRpcReply(
+        request.connection_id,
+        request.id,
+        params,
+        is_error);
+}
+
+inline void postJsonRpcRequestEvent(
+    const string& queue_name,
+    const string& connection_id,
+    const string& request_id,
+    const string& method,
+    const AmArg& params)
+{
+    if(!AmSessionContainer::instance()->postEvent(
+        queue_name,
+        new JsonRpcRequestEvent(
+            connection_id,
+            method,
+            request_id,
+            params)))
+    {
+        postJsonRpcReply(
+            connection_id,
+            request_id,
+            "queue not found", true);
+    }
+}
