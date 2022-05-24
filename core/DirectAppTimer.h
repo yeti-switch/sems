@@ -45,7 +45,7 @@ class DirectAppTimer
     DirectAppTimer(const DirectAppTimer&) = delete;
     DirectAppTimer& operator=(const DirectAppTimer&) = delete;
 
-    DirectAppTimer(DirectAppTimer&&);
+    DirectAppTimer(DirectAppTimer&&) = delete;
     DirectAppTimer& operator=(DirectAppTimer&&) = delete;
 
     //schedule timer

@@ -45,14 +45,6 @@ DirectAppTimer::DirectAppTimer()
     inc_ref(mutex);
 }
 
-DirectAppTimer::DirectAppTimer(DirectAppTimer&& o)
-  : t(o.t),
-    mutex(o.mutex)
-{
-    o.t = nullptr;
-    o.mutex = nullptr;
-}
-
 DirectAppTimer::~DirectAppTimer()
 {
     if(!mutex) return;
