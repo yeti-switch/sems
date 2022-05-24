@@ -8,9 +8,9 @@ set (STUN_BUNDLED_LIB ${STUN_BIN_DIR}/stuncore/libstuncore.a ${STUN_BIN_DIR}/com
 add_custom_target(libstuncore ALL DEPENDS ${BOTAN_BUNDLED_LIB} ${STUN_BUNDLED_LIB})
 
 file(MAKE_DIRECTORY ${STUN_BIN_DIR})
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${STUN_SRC_DIR} ${STUN_BIN_DIR})
 add_custom_command(OUTPUT ${STUN_BUNDLED_LIB}
     PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${STUN_SRC_DIR} ${STUN_BIN_DIR}
     COMMAND $(MAKE) 'CXXFLAGS=-fPIC -I${BOTAN_BUNDLED_INCLUDE_DIRS}' debug
     WORKING_DIRECTORY ${STUN_BIN_DIR})
 
