@@ -10,9 +10,10 @@ set(SRTP_CONFIG_ARGS --disable-openssl --enable-debug-logging CPPFLAGS='-fPIC -f
 add_custom_target(libsrtp ALL DEPENDS ${SRTP_BUNDLED_LIB})
 
 file(MAKE_DIRECTORY ${SRTP_BIN_DIR})
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRTP_SRC_DIR} ${SRTP_BIN_DIR})
+
 add_custom_command(OUTPUT ${SRTP_BUNDLED_LIB}
     PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRTP_SRC_DIR} ${SRTP_BIN_DIR}
     COMMAND ./configure ${SRTP_CONFIG_ARGS}
     COMMAND $(MAKE)
     WORKING_DIRECTORY ${SRTP_BIN_DIR})
