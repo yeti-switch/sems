@@ -8,6 +8,7 @@ core/amci usr/include/sems/
 core/rtcp usr/include/sems/
 core/compat/*.h usr/include/sems/compat/
 core/compat/*.c usr/include/sems/compat/
+unit_tests/*.h usr/include/sems/unit_tests/
 core/rtp usr/include/sems/
 usr/lib/pkgconfig usr/lib/
 usr/share/cmake/sems usr/share/cmake/

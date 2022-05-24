@@ -10,9 +10,51 @@
 #define DROP_TABLE "DROP TABLE test;"
 #define BACKEND "SELECT pg_backend_pid();"
 
+PGPool GetPoolByAddress(const string& address)
+{
+    vector<string> params;
+    size_t pos = string::npos, first = 0;
+    do {
+        pos = address.find(" ", first);
+        string data;
+        if(pos != string::npos)
+            data.append(address.begin() + first, address.begin() + pos);
+        else
+            data.append(address.begin() + first, address.end());
+        if(!data.empty())
+            params.push_back(data);
+        first = pos + 1;
+    } while(pos != string::npos);
+
+    string host, user, pass, db;
+    int port;
+
+    for(auto& param : params) {
+        string p, v;
+        pos = param.find("=");
+        if(pos == string::npos)
+            continue;
+        p.append(param.begin(), param.begin() + pos);
+        v.append(param.begin() + pos + 1, param.end());
+        if(p == "host")
+            host = v;
+        else if(p == "port") {
+            if(!str2int(v, port))
+                ERROR("incorrect port value `%s` in address", v.c_str());
+        } else if(p == "user")
+            user = v;
+        else if(p == "dbname")
+            db = v;
+        else if(p == "password")
+            pass = v;
+    }
+
+    return PGPool(host, port, db, user, pass);
+}
+
 TEST_F(PostgresqlTest, WorkerConnectionTest)
 {
-    PGPool pool(POOL_ADDRESS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
     sleep(1);
@@ -45,7 +87,7 @@ TEST_F(PostgresqlTest, WorkerConnectionTest)
 
 TEST_F(PostgresqlTest, WorkerDestroyTest)
 {
-    PGPool pool(POOL_ADDRESS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
     sleep(1);
@@ -278,7 +320,7 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
 
 TEST_F(PostgresqlTest, WorkerConfigTest)
 {
-    PGPool pool(POOL_ADDRESS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
     PGWorkerConfig* wc = new PGWorkerConfig("test", false, false, false, 2);
@@ -316,7 +358,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
     PGHandler handler;
     Worker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
-    PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, false, false);
@@ -349,7 +391,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     PGHandler handler;
     Worker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
-    PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, false, 3, 1);
@@ -393,7 +435,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGHandler handler;
     Worker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
-    PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, false, 15, 1);
@@ -442,7 +484,7 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
     PGHandler handler;
     Worker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
-    PGPool pool(POOL_HOST, POOL_PORT, POOL_DATABASE, POOL_USER, POOL_PASS);
+    PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
 

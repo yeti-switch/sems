@@ -3,7 +3,7 @@
 TEST_F(PostgresqlTest, ConnectionTest)
 {
     PGHandler handler;
-    IPGConnection* conn = PolicyFactory::instance()->createConnection(POOL_ADDRESS_STR, &handler);
+    IPGConnection* conn = PolicyFactory::instance()->createConnection(address, &handler);
     ASSERT_EQ(handler.cur_state, PGHandler::DISCONNECTED);
     ASSERT_EQ(handler.count, 0);
     ASSERT_EQ(handler.dis_count, 0);

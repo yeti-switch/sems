@@ -33,14 +33,20 @@ TesterLogFac *TesterLogFac::_instance = NULL;
 
 static string config_path = "./sems_test.cfg";
 
-int ParseCommandLine(int argc, char** argv)
-{
+void GetConfigPath(int argc, char** argv) {
     for(int i = 1; i < argc; i++) {
         if(strcmp(argv[i], "-c") == 0) {
             i++;
             config_path = argv[i];
-            continue;
+            return;
         }
+    }
+}
+
+int ParseCommandLine(int argc, char** argv)
+{
+    for(int i = 1; i < argc; i++) {
+        if(strcmp(argv[i], "-c") == 0) { i++; continue; }
         int ret = test_config::instance()->parseCmdOverride(argv[i]);
         if(ret < 0) return -1;
         else if(ret > 0) {}
@@ -62,8 +68,8 @@ int main(int argc, char** argv)
     //instantiation to ensure mlock_allocator will be destroyed after the AmLcConfig
     Botan::mlock_allocator::instance();
 
-    if (ParseCommandLine(argc, argv) < 0 ||
-        test_config::instance()->readConfiguration(config_path) < 0 ||
+    GetConfigPath(argc, argv);
+    if (test_config::instance()->readConfiguration(config_path) < 0 ||
         ParseCommandLine(argc, argv) < 0 ||
         AmLcConfig::instance().readConfiguration() < 0 ||
         AmLcConfig::instance().finalizeIpConfig() < 0) return -1;

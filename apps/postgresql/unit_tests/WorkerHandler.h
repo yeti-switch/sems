@@ -6,13 +6,28 @@
 
 #include <AmEventFdQueue.h>
 #include <AmEventDispatcher.h>
-#include <PostgreSqlAPI.h>
+#include <ampi/PostgreSqlAPI.h>
 
 #include "../PostgreSQL.h"
 
 #define WORKER_HANDLER_QUEUE "pg_unit_test"
 #define WORKER_POOL_NAME     WORKER_HANDLER_QUEUE
 #define EPOLL_MAX_EVENTS    2048
+
+#define PARAM_EXT_POSTGRES_NAME     "external"
+#define PARAM_PG_ADDR_NAME          "address"
+
+#define STR_HELPER(x) #x
+#define STR_(x) STR_HELPER(x)
+
+#define POOL_HOST           "127.0.0.1"
+#define POOL_PORT           5434
+#define POOL_USER           "yeti"
+#define POOL_DATABASE       "yeti"
+#define POOL_PASS           "yeti"
+#define POOL_ADDRESS_STR    "host=" POOL_HOST " port=" STR_(POOL_PORT) " user=" POOL_USER " dbname=" POOL_DATABASE " password=" POOL_PASS
+
+PGPool GetPoolByAddress(const string& address);
 
 class WorkerHandler : public AmEventFdQueue
                     , public AmEventHandler
@@ -22,13 +37,29 @@ public:
     bool running;
     vector<PGEvent::Type> expected_events;
 
+    bool external;
+    string address;
+
     WorkerHandler()
     : AmEventFdQueue(this)
     , running(true) {
         epoll_fd = epoll_create(10);
         epoll_link(epoll_fd, true);
         
-        PGPool pool(POOL_ADDRESS);
+        cfg_opt_t postres[] = {
+            CFG_BOOL(PARAM_EXT_POSTGRES_NAME, cfg_false, CFGF_NONE),
+            CFG_STR(PARAM_PG_ADDR_NAME, POOL_ADDRESS_STR, CFGF_NONE),
+            CFG_END()
+        };
+        AmArg data = test_config::instance()->configureModule("postgresql", postres);
+        external = data[PARAM_EXT_POSTGRES_NAME].asBool();
+        address = data[PARAM_PG_ADDR_NAME].asCStr();
+        TesterConfig::ConfigParameters config_parameters;
+        config_parameters.emplace<string, TesterConfig::parameter_var>(PARAM_EXT_POSTGRES_NAME "-postgres", {.type = TesterConfig::parameter_var::Bool, .u = {&external}});
+        config_parameters.emplace<string, TesterConfig::parameter_var>(PARAM_PG_ADDR_NAME "-postgres", {.type = TesterConfig::parameter_var::String, .u = {&address}});
+        test_config::instance()->useCmdModule(config_parameters);
+
+        PGPool pool = GetPoolByAddress(address);
         pool.pool_size = 2;
         PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate(WORKER_POOL_NAME, PGWorkerPoolCreate::Master, pool));
         AmEventDispatcher::instance()->addEventQueue(WORKER_HANDLER_QUEUE, this);
