@@ -27,8 +27,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _JsonRPCEvents_h_
-#define _JsonRPCEvents_h_
+#pragma once
 
 #include "AmEvent.h"
 #include "AmArg.h"
@@ -44,137 +43,178 @@ struct JsonrpcNetstringsConnection;
 #define JSONRPC_QUEUE_NAME "jsonrpc"
 
 struct JsonRpcEvent
-  : public AmEvent {
-  string connection_id;
-  JsonRpcEvent() 
-    : AmEvent(122) { }
-  virtual ~JsonRpcEvent() { }
+  : public AmEvent
+{
+    string connection_id;
+    JsonRpcEvent()
+      : AmEvent(122)
+    { }
+    virtual ~JsonRpcEvent() { }
 };
 
-struct JsonRpcResponse {
-  string id;
-  AmArg data;
-  bool is_error;
-  
-  JsonRpcResponse(bool is_error, string id, const AmArg& data)
-  : is_error(is_error), id(id), data(data) { }
-  JsonRpcResponse(bool is_error, string id) 
-  : is_error(is_error), id(id) { }
+struct JsonRpcResponse
+{
+    string id;
+    AmArg data;
+    bool is_error;
 
-  ~JsonRpcResponse() { }
+    JsonRpcResponse(bool is_error, string id, const AmArg& data)
+      : is_error(is_error),
+        id(id),
+        data(data)
+    { }
+
+    JsonRpcResponse(bool is_error, string id)
+      : is_error(is_error),
+        id(id)
+    { }
+
+    ~JsonRpcResponse() { }
 };
 
 struct JsonRpcResponseEvent
-  : public JsonRpcEvent {
-  JsonRpcResponse response;
-  AmArg udata;
+  : public JsonRpcEvent
+{
+    JsonRpcResponse response;
+    AmArg udata;
 
- JsonRpcResponseEvent(bool is_error, string id, const AmArg& data, const AmArg& udata)
-   : response(is_error, id, data), udata(udata)
+    JsonRpcResponseEvent(bool is_error, string id,
+                         const AmArg& data, const AmArg& udata)
+      : response(is_error, id, data),
+        udata(udata)
     { }
-  JsonRpcResponseEvent(bool is_error, string id)
-    : response(is_error, id)
+
+    JsonRpcResponseEvent(bool is_error, string id)
+      : response(is_error, id)
     { }
-  ~JsonRpcResponseEvent() { }
+
+    ~JsonRpcResponseEvent() { }
 };
 
 struct JsonRpcRequestEvent
-  : public JsonRpcEvent {
-  string method;
-  string id;
-  AmArg params;
+  : public JsonRpcEvent
+{
+    string method;
+    string id;
+    AmArg params;
 
-  // notification without parameters 
- JsonRpcRequestEvent(string method) 
-    : method(method) { }
+    // notification without parameters
+    JsonRpcRequestEvent(string method)
+        : method(method)
+    { }
   
-  // notification with parameters
- JsonRpcRequestEvent(string method, AmArg params) 
-   : method(method), params(params) { }
+    // notification with parameters
+    JsonRpcRequestEvent(string method, AmArg params)
+      : method(method),
+        params(params)
+    { }
 
-  // request without parameters 
- JsonRpcRequestEvent(string method, string id) 
-   : method(method), id(id) { }
+    // request without parameters
+    JsonRpcRequestEvent(string method, string id)
+      : method(method),
+        id(id)
+    { }
 
-  // request with parameters 
- JsonRpcRequestEvent(string method, string id, AmArg params) 
-   : method(method), id(id), params(params) { }
-  
-  bool isNotification() { return id.empty(); }
+    // request with parameters
+    JsonRpcRequestEvent(string method, string id, AmArg params)
+      : method(method),
+        id(id),
+        params(params)
+    { }
+
+    bool isNotification() { return id.empty(); }
 };
 
 struct JsonRpcConnectionEvent
-  : public JsonRpcEvent {
+  : public JsonRpcEvent
+{
+    enum {
+        DISCONNECT = 0
+    };
 
-  enum {
-    DISCONNECT = 0
-  };
+    int what;
+    string connection_id;
 
-  int what;
-  string connection_id;
+    JsonRpcConnectionEvent(int what, const string& connection_id)
+      : what(what),
+        connection_id(connection_id)
+    { }
 
- JsonRpcConnectionEvent(int what, const string& connection_id) 
-   : what(what), connection_id(connection_id) { }
-  ~JsonRpcConnectionEvent() { }
+    ~JsonRpcConnectionEvent() { }
 };
 
 
 // events used internally: 
 
 struct JsonServerEvent 
- : public AmEvent {
+  : public AmEvent
+{
+    enum EventType {
+        StartReadLoop = 0,
+        SendMessage
+    };
 
-  enum EventType { 
-    StartReadLoop = 0,
-    SendMessage    
-  };
+    JsonrpcNetstringsConnection* conn;
+    string connection_id;
 
-  JsonrpcNetstringsConnection* conn;
-  string connection_id;
+    JsonServerEvent(
+        JsonrpcNetstringsConnection* c,
+        EventType ev_type)
+      : conn(c),
+        AmEvent(ev_type)
+    { }
 
- JsonServerEvent(JsonrpcNetstringsConnection* c,
-		 EventType ev_type)
-    : conn(c), AmEvent(ev_type) { }
+    JsonServerEvent(
+        const string& connection_id,
+        EventType ev_type)
+      : connection_id(connection_id),
+        AmEvent(ev_type),
+        conn(nullptr)
+    { }
 
- JsonServerEvent(const string& connection_id,
-		 EventType ev_type)
-   : connection_id(connection_id), AmEvent(ev_type), 
-    conn(NULL) { }
-
-  ~JsonServerEvent() { }
+    ~JsonServerEvent() { }
 };
 
 struct JsonServerSendMessageEvent
-  : public JsonServerEvent {
+  : public JsonServerEvent
+{
+    bool is_reply;
+    string method;
+    string id;
+    AmArg params;
+    string reply_link;
+    bool is_error;
+    AmArg udata;
 
-  bool is_reply; 
-  string method;
-  string id;
-  AmArg params;
-  string reply_link;
-  bool is_error;
-  AmArg udata;
+    JsonServerSendMessageEvent(
+        const string& connection_id,
+        bool is_reply,
+        const string& method,
+        const string& id,
+        const AmArg& params,
+        const AmArg& udata = AmArg(),
+        const string& reply_link = "")
+      : JsonServerEvent(connection_id, SendMessage),
+        is_reply(is_reply),
+        reply_link(reply_link),
+        method(method),
+        id(id),
+        params(params),
+        udata(udata)
+    { }
 
-  JsonServerSendMessageEvent(const string& connection_id,
-			     bool is_reply,
-			     const string& method,
-			     const string& id,
-			     const AmArg& params,
-			     const AmArg& udata = AmArg(),
-			     const string& reply_link = "")
-    : JsonServerEvent(connection_id, SendMessage),
-    is_reply(is_reply), reply_link(reply_link),
-    method(method), id(id), params(params), udata(udata) { }
-
- JsonServerSendMessageEvent(const JsonServerSendMessageEvent& e,
-			    JsonrpcNetstringsConnection* conn)
-   : JsonServerEvent(conn, SendMessage),
-    is_reply(e.is_reply),reply_link(e.reply_link),
-    method(e.method), id(e.id), params(e.params), 
-    is_error(e.is_error), udata(e.udata) {
-    connection_id = e.connection_id;
-  }
-
+    JsonServerSendMessageEvent(
+        const JsonServerSendMessageEvent& e,
+        JsonrpcNetstringsConnection* conn)
+      : JsonServerEvent(conn, SendMessage),
+        is_reply(e.is_reply),
+        reply_link(e.reply_link),
+        method(e.method),
+        id(e.id),
+        params(e.params),
+        is_error(e.is_error),
+        udata(e.udata)
+    {
+        connection_id = e.connection_id;
+    }
 };
-
-#endif // _JsonRPCEvents_h_
