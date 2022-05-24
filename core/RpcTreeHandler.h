@@ -2,18 +2,25 @@
 
 #include "AmApi.h"
 #include "AmUtils.h"
+#include "ampi/JsonRPCEvents.h"
 
 template<class C>
 class RpcTreeHandler
   : public AmDynInvoke
 {
-    void process_rpc_cmds(
+    bool process_rpc_cmds(
+        const string& connection_id,
+        const string& request_id,
         const AmArg &cmds, const string& method,
         const AmArg& args, AmArg& ret);
-    void process_rpc_cmds_methods_tree(
+    bool process_rpc_cmds_methods_tree(
+        const string& connection_id,
+        const string& request_id,
         const AmArg &cmds, vector<string> &methods_tree,
         const AmArg& args, AmArg& ret);
-    void process_rpc_cmds_methods_tree_root(
+    bool process_rpc_cmds_methods_tree_root(
+        const string& connection_id,
+        const string& request_id,
         const AmArg &cmds, const string& method,
         const AmArg& args, AmArg& ret);
     void serialize_methods_tree(AmArg &methods_root, AmArg &tree);
@@ -23,6 +30,11 @@ class RpcTreeHandler
 
   public:
     using rpc_handler = void (const AmArg& args, AmArg& ret);
+    using async_rpc_handler =
+        bool (
+            const string& connection_id,
+            const string& request_id,
+            const AmArg& params);
 
     RpcTreeHandler(bool methods_tree = false)
       : methods_tree(methods_tree),
@@ -48,25 +60,46 @@ class RpcTreeHandler
       : public AmObject
     {
         typedef typename C::rpc_handler C::*member_handler;
+        typedef typename C::async_rpc_handler C::*async_member_handler;
+
         member_handler handler;
+        async_member_handler async_handler;
+
         string leaf_descr,func_descr,arg,arg_descr;
         AmArg leaves;
 
         rpc_entry(string ld):
-            handler(NULL), leaf_descr(ld) {}
+            handler(nullptr), leaf_descr(ld) {}
 
         rpc_entry(string ld, member_handler h, string fd):
-            leaf_descr(ld), handler(h), func_descr(fd) {}
+            leaf_descr(ld),
+            handler(h), async_handler(nullptr),
+            func_descr(fd)
+        {}
 
         rpc_entry(string ld, member_handler h, string fd, string a, string ad):
-            leaf_descr(ld), handler(h), func_descr(fd), arg(a), arg_descr(ad) {}
+            leaf_descr(ld),
+            handler(h), async_handler(nullptr),
+            func_descr(fd), arg(a), arg_descr(ad)
+        {}
+
+        rpc_entry(string ld, async_member_handler h, string fd):
+            leaf_descr(ld),
+            handler(nullptr), async_handler(h),
+            func_descr(fd)
+        {}
+
+        rpc_entry(string ld, async_member_handler h, string fd, string a, string ad):
+            leaf_descr(ld),
+            handler(nullptr), async_handler(h),
+            func_descr(fd), arg(a), arg_descr(ad)
+        {}
 
         bool isMethod(){ return handler!=NULL; }
         bool hasLeafs(){ return leaves.getType()==AmArg::Struct; }
         bool hasLeaf(const char *leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
         bool hasLeaf(const string &leaf){ return hasLeafs()&&leaves.hasMember(leaf); }
     };
-
 
     AmArg &reg_leaf(AmArg &parent,const string &name,const string &desc = "");
 
@@ -85,7 +118,17 @@ class RpcTreeHandler
     virtual void log_invoke(const string& method, const AmArg& args) const { }
 
   public:
-    virtual void invoke(const string& method, const AmArg& args, AmArg& ret);
+    bool invoke_async(
+        const string& connection_id,
+        const string& request_id,
+        const string& method,
+        const AmArg& params) override;
+
+    virtual void invoke(
+        const string& method,
+        const AmArg& args,
+        AmArg& ret) override;
+
     virtual void get_methods_tree(AmArg &tree);
     void init_rpc();
 
@@ -96,11 +139,14 @@ class RpcTreeHandler
 };
 
 template<class C>
-void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method,
-                                      const AmArg& args, AmArg& ret)
+bool RpcTreeHandler<C>::process_rpc_cmds(
+    const string& connection_id,
+    const string& request_id,
+    const AmArg &cmds, const string& method,
+    const AmArg& args, AmArg& ret)
 {
     const char *list_method = "_list";
-    if(method==list_method){
+    if(method==list_method) {
         ret.assertArray();
         switch(cmds.getType()){
             case AmArg::Struct: {
@@ -146,7 +192,7 @@ void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method
             default:
                 throw AmArg::TypeMismatchException();
         }
-        return;
+        return false;
     }
 
     if(cmds.hasMember(method)){
@@ -158,23 +204,32 @@ void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method
             if(e->hasLeaf(args[0].asCStr())){
                 AmArg nargs = args,sub_method;
                 nargs.pop(sub_method);
-                process_rpc_cmds(e->leaves,sub_method.asCStr(),nargs,ret);
-                return;
+                return process_rpc_cmds(
+                    connection_id, request_id,
+                    e->leaves,sub_method.asCStr(),nargs,ret);
             } else if(args[0]==list_method){
                 AmArg nargs = args,sub_method;
                 nargs.pop(sub_method);
-                process_rpc_cmds(l,sub_method.asCStr(),nargs,ret);
-                return;
+                return process_rpc_cmds(
+                    connection_id, request_id,
+                    l,sub_method.asCStr(),nargs,ret);
             }
         }
-        if(e->isMethod()){
+        if(e->isMethod()) {
             if(args.size()&&strcmp(args.back().asCStr(),list_method)==0){
                 if(!e->hasLeafs()&&e->arg.empty())
                     ret.assertArray();
-                return;
+                return false;
             }
+
+            if(e->async_handler) {
+                return
+                    (static_cast<C &>(* this).*(e->async_handler))(
+                        connection_id,request_id, args);
+            }
+
             (static_cast<C &>(* this).*(e->handler))(args,ret);
-            return;
+            return false;
         }
         throw AmDynInvoke::NotImplemented("missed arg");
     }
@@ -182,16 +237,22 @@ void RpcTreeHandler<C>::process_rpc_cmds(const AmArg &cmds, const string& method
 }
 
 template<class C>
-void RpcTreeHandler<C>::process_rpc_cmds_methods_tree_root(
+bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree_root(
+    const string& connection_id,
+    const string& request_id,
     const AmArg &cmds, const string& method,
     const AmArg& args, AmArg& ret)
 {
     vector<string> methods_tree = explode(method,".");
-    process_rpc_cmds_methods_tree(cmds,methods_tree,args,ret);
+    return process_rpc_cmds_methods_tree(
+        connection_id, request_id,
+        cmds,methods_tree,args,ret);
 }
 
 template<class C>
-void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
+bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
+    const string& connection_id,
+    const string& request_id,
     const AmArg &cmds, vector<string> &methods_tree,
     const AmArg& args, AmArg& ret)
 {
@@ -250,7 +311,7 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
             default:
                 throw AmArg::TypeMismatchException();
         } //switch
-        return;
+        return false;
     }
 
     if(cmds.hasMember(method)){
@@ -261,11 +322,13 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
         rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
         if(!methods_tree.empty()) {
             if(e->hasLeaf(methods_tree[0])) {
-                process_rpc_cmds_methods_tree(e->leaves,methods_tree,args,ret);
-                return;
+                return process_rpc_cmds_methods_tree(
+                    connection_id, request_id,
+                    e->leaves,methods_tree,args,ret);
             } else if(methods_tree[0]==list_method){
-                process_rpc_cmds_methods_tree(l,methods_tree,args,ret);
-                return;
+                return process_rpc_cmds_methods_tree(
+                    connection_id, request_id,
+                    l,methods_tree,args,ret);
             } else {
                 throw AmDynInvoke::Exception(-32601,
                     string("no matches with methods tree. unknown part: ") +
@@ -281,10 +344,18 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
             {
                 if(!e->hasLeafs()&&e->arg.empty())
                     ret.assertArray();
-                return;
+                return false;
             }
+
+            if(e->async_handler) {
+                return
+                    (static_cast<C &>(* this).*(e->async_handler))(
+                        connection_id,request_id, args);
+            }
+
             (static_cast<C &>(* this).*(e->handler))(args,ret);
-            return;
+
+            return false;
         }
         throw AmDynInvoke::Exception(-32601,
             string("not completed method path. last element: ") + method);
@@ -294,13 +365,48 @@ void RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
 }
 
 template<class C>
+bool RpcTreeHandler<C>::invoke_async(
+    const string& connection_id,
+    const string& request_id,
+    const string& method,
+    const AmArg& params)
+{
+    log_invoke(method,params);
+
+    bool async_consumed;
+    AmArg ret;
+
+    if(methods_tree || method.find('.')!=string::npos) {
+        async_consumed = process_rpc_cmds_methods_tree_root(
+            connection_id, request_id,
+            root,method,params,ret);
+    } else {
+        async_consumed = process_rpc_cmds(
+            connection_id, request_id,
+            root,method,params,ret);
+    }
+
+    if(!async_consumed) {
+        postJsonRpcReply(
+            connection_id,
+            request_id,
+            ret);
+    }
+
+    return true;
+}
+
+template<class C>
 void RpcTreeHandler<C>::invoke(const string& method, const AmArg& args, AmArg& ret)
 {
+    static string empty;
     log_invoke(method,args);
-    DBG("RPC invoke: %s(%s)", method.c_str(), AmArg::print(args).c_str());
+
     if(methods_tree || method.find('.')!=string::npos)
-        process_rpc_cmds_methods_tree_root(root,method,args,ret);
-    else process_rpc_cmds(root,method,args,ret);
+        process_rpc_cmds_methods_tree_root(
+            empty,empty,root,method,args,ret);
+    else process_rpc_cmds(
+            empty,empty,root,method,args,ret);
 }
 
 template<class C>
