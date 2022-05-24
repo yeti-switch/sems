@@ -66,6 +66,16 @@ class AmDynInvoke
   virtual void invoke(const string& method, const AmArg& args, AmArg& ret);
   virtual bool is_methods_tree() { return false; }
   virtual void get_methods_tree(AmArg &) { }
+
+  //returns true if the request consumed by the function
+  virtual bool invoke_async(
+    const string &connection_id,
+    const string &request_id,
+    const string &method,
+    const AmArg &params)
+  {
+    return false;
+  }
 };
 
 #ifndef MODULE_VERSION
