@@ -761,7 +761,6 @@ void AmB2BSession::terminateLeg()
   clearRtpReceiverRelay();
 
   dlg->bye("", SIP_FLAGS_VERBATIM,true);
-  dlg->drop();
 }
 
 void AmB2BSession::terminateOtherLeg()
