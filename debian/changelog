@@ -1,3 +1,14 @@
+sems (1.85.0) stable; urgency=low
+  * fix untimely SIP dlg drop
+    (caused wrong processing for final requests/respones.
+    like no ACK for 487)
+  * unit_tests with external postgresql connection
+  * jsonrpc,AmApi: async jsonrpc support
+  * http: use async showDnsCache. remove host_m mutex
+  * fixed parallel build
+  * DirectAppTimer: delete move constructor. fixes segfault on racing
+ -- Michael Furmur <furmur@pm.me>  Wed, 25 May 2022 13:28:52 +0300
+
 sems (1.84.0) stable; urgency=low
   * postgresql: add pipeline mode support
   * merge conference_mixer app
