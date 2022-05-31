@@ -52,7 +52,7 @@ class AmSessionProcessor {
   public:
     static void init();
     static void stop();
-    static AmSessionProcessorThread* getProcessorThread();
+    static AmSessionProcessorThread* getProcessorThread(bool same = false);
     static void addThreads(unsigned int num_threads);
     static void get_statistics_count(StatCounterInterface::iterate_func_type f);
     static void get_statistics_time(StatCounterInterface::iterate_func_type f);
