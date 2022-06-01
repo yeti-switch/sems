@@ -154,7 +154,8 @@ void AmThread::stop(bool join_afer_stop)
 
     if(join_afer_stop) {
         DBG("join thread %lu",static_cast<unsigned long int>(_td));
-        join();
+        _m_td.unlock();
+        pthread_join(_td,nullptr);
     } else {
         int res;
         if ((res = pthread_detach(_td)) != 0) {
@@ -166,16 +167,13 @@ void AmThread::stop(bool join_afer_stop)
                 WARN("pthread_detach failed with code %i", res);
             }
         }
+        _m_td.unlock();
     }
 
     DBG("Thread %s %lu (%lu) finished detach",
         thread_name,
         static_cast<unsigned long int>(_pid),
         static_cast<unsigned long int>(_td));
-
-    //pthread_cancel(_td);
-
-    _m_td.unlock();
 }
 
 void AmThread::cancel()
