@@ -538,19 +538,41 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
     switch(status) {
     case Disconnecting:
     case Connected: {
-        // collect INVITE UAC transactions
+        //finish INVITE UAC transactions before sending BYE
         vector<unsigned int> ack_trans;
-        for (TransMap::iterator it=uac_trans.begin(); it != uac_trans.end(); it++) {
-            if (it->second.method == SIP_METH_INVITE) {
-                ack_trans.push_back(it->second.cseq);
+        for(const auto &t: uac_trans)
+            if (t.second.method == SIP_METH_INVITE)
+                ack_trans.push_back(t.second.cseq);
+        for(const auto &cseq: ack_trans)
+            send_200_ack(cseq);
+
+        //terminate UAS transactions
+        if(final) {
+            int code;
+            const char *reason;
+            while(!uas_trans.empty()) {
+                const auto &t = uas_trans.begin();
+                int req_cseq = t->first;
+                const auto &req = t->second;
+
+                if(req.method == SIP_METH_BYE) {
+                    code = 200;
+                    reason = "OK";
+                } else {
+                    code = 481;
+                    reason = SIP_REPLY_NOT_EXIST;
+                }
+
+                CLASS_DBG("bye(): terminate UAS %s/%d with %d %s",
+                    req.method.data(), req_cseq,
+                    code, reason);
+
+                reply(req, code, reason);
+                uas_trans.erase(req_cseq);
             }
         }
-        // finish any UAC transaction before sending BYE
-        for (vector<unsigned int>::iterator it=
-             ack_trans.begin(); it != ack_trans.end(); it++)
-        {
-            send_200_ack(*it);
-        }
+
+        //send BYE if Connected
         if (status != Disconnecting) {
             int ret = sendRequest(SIP_METH_BYE, NULL, hdrs, flags);
             drop();
