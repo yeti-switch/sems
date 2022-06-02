@@ -1,3 +1,10 @@
+sems (1.86.0) stable; urgency=low
+  * AmSession: add 'start_on_same_thread' flag to bind new sessions to the same session processor thread
+  * AmSipDialog::bye(): force all UAS transactions termination in Disconnecting/Connected states
+  * AmBasicSipDialog: optimize local address resolving if the outbound interface is set by an upper layer
+  * enable support for unit tests in cmake helpers for modules
+ -- Michael Furmur <furmur@pm.me>  Thu, 02 Jun 2022 17:45:29 +0300
+
 sems (1.85.0) stable; urgency=low
   * fix untimely SIP dlg drop
     (caused wrong processing for final requests/respones.
