@@ -117,6 +117,13 @@ public:
   void start();
   bool is_stopped();
 
+protected:
+  /** flag for function start.
+   * B leg will be added in the same AmSessionProcessorThread as A leg
+   * function start have to call from AmSessionProcessorThread of A leg
+      - by default false*/
+  bool start_on_same_thread;
+
 private:
   void stop();
   void* _pid;

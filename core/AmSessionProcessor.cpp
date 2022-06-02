@@ -57,12 +57,23 @@ void AmSessionProcessor::stop()
   threads_mut.unlock();
 }
 
-AmSessionProcessorThread* AmSessionProcessor::getProcessorThread() {
+AmSessionProcessorThread* AmSessionProcessor::getProcessorThread(bool same) {
   threads_mut.lock();
   if (!threads.size()) {
     ERROR("requesting Session processing thread but none available");
     threads_mut.unlock();
     return NULL;
+  }
+
+  if(same) {
+    unsigned long id = pthread_self();
+    for(auto& thread : threads) {
+        if(id == thread->_pid) {
+            AmSessionProcessorThread* res = thread;
+            threads_mut.unlock();
+            return res;
+        }
+    }
   }
 
   // round robin

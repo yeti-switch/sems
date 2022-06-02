@@ -81,6 +81,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     processing_status(SESSION_PROCESSING_EVENTS),
 #ifdef SESSION_THREADPOOL
     _pid(this),
+    start_on_same_thread(false),
 #endif
     no_reply(false),
     sess_stopped(false),
@@ -335,7 +336,7 @@ void AmSession::delStereoRecorder(int channel_id, const string &recorder_id)
 #ifdef SESSION_THREADPOOL
 void AmSession::start() {
   AmSessionProcessorThread* processor_thread = 
-    AmSessionProcessor::getProcessorThread();
+    AmSessionProcessor::getProcessorThread(start_on_same_thread);
   if (NULL == processor_thread) 
     throw string("no processing thread available");
 
