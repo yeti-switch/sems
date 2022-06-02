@@ -8,7 +8,22 @@ INCLUDE(${SEMS_CMAKE_DIR}/doc.rules.txt)
 INCLUDE(${SEMS_CMAKE_DIR}/config.rules.txt)
 INCLUDE(${SEMS_CMAKE_DIR}/audio.rules.txt)
 
-ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
+add_definitions("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=${sems_module_name}:")
+
+IF(${sems_module_name}_UNIT_SRCS)
+    MESSAGE(STATUS "using unit tests for ${sems_module_name}")
+
+    ADD_LIBRARY(sems_${sems_module_name}_obj OBJECT ${${sems_module_name}_SRCS})
+
+    ADD_LIBRARY(sems_${sems_module_name} MODULE)
+    target_sources(sems_${sems_module_name} PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
+
+    ADD_LIBRARY(sems_${sems_module_name}_unit MODULE ${${sems_module_name}_UNIT_SRCS})
+    target_sources(sems_${sems_module_name}_unit PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
+
+ELSE(${sems_module_name}_UNIT_SRCS)
+    ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
+ENDIF(${sems_module_name}_UNIT_SRCS)
 
 IF(APPLE)
 	SET(CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS
@@ -40,16 +55,29 @@ ENDIF(EXISTS ${CMAKE_SOURCE_DIR}/debian/changelog)
 MESSAGE(STATUS "set version of ${sems_module_name} - ${MODULE_VERSION}")
 ADD_DEFINITIONS(-DMOD_NAME="${sems_module_name}" -DMODULE_VERSION="${MODULE_VERSION}")
 
-# all modules should be linked against ${CMAKE_DL_LIBS} at least
-# and with additional ${sems_module_libs} if they exists
-TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
 IF(NOT ${sems_module_dependency})
     MESSAGE(STATUS "sems_${sems_module_name} dependency: ${sems_module_dependency}")
     ADD_DEPENDENCIES(sems_${sems_module_name} ${sems_module_dependency})
+
+    IF(${sems_module_name}_UNIT_SRCS)
+        ADD_DEPENDENCIES(sems_${sems_module_name}_unit ${sems_module_dependency})
+    ENDIF(${sems_module_name}_UNIT_SRCS)
 ENDIF(NOT ${sems_module_dependency})
+
+# all modules should be linked against ${CMAKE_DL_LIBS} at least
+# and with additional ${sems_module_libs} if they exists
+TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
+IF(${sems_module_name}_UNIT_SRCS)
+    TARGET_LINK_LIBRARIES(sems_${sems_module_name}_unit ${CMAKE_DL_LIBS} ${sems_module_libs})
+ENDIF(${sems_module_name}_UNIT_SRCS)
 
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES OUTPUT_NAME ${sems_module_name})
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES PREFIX "")
+
+IF(${sems_module_name}_UNIT_SRCS)
+    SET_TARGET_PROPERTIES(sems_${sems_module_name}_unit PROPERTIES OUTPUT_NAME ${sems_module_name}_unit)
+    SET_TARGET_PROPERTIES(sems_${sems_module_name}_unit PROPERTIES PREFIX "")
+ENDIF(${sems_module_name}_UNIT_SRCS)
 
 INSTALL(
 	TARGETS sems_${sems_module_name}

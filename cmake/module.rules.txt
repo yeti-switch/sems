@@ -29,7 +29,6 @@ IF(${sems_module_name}_UNIT_SRCS)
 
 ELSE(${sems_module_name}_UNIT_SRCS)
     ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
-    TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
 ENDIF(${sems_module_name}_UNIT_SRCS)
 
 IF(APPLE)

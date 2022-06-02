@@ -1165,6 +1165,7 @@ bool _resolver::disable_srv = false;
 _resolver::_resolver()
     : cache(DNS_CACHE_SIZE)
 {
+    b_stop.set(false);
     start();
 }
 
@@ -1589,7 +1590,6 @@ void _resolver::run()
     unsigned long i = 0;
     setThreadName("resolver");
 
-    b_stop.set(false);
     while(!b_stop.get()) {
         nanosleep(&tick,&rem);
 
