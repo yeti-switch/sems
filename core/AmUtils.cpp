@@ -795,7 +795,7 @@ int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns
 {
     sockaddr_storage remote_ip_ss;
     sockaddr_storage local_ss;
-    int err = get_addr(remote_uri, remote_ip_ss, priority);
+    int err = resolve_sip_uri(remote_uri, remote_ip_ss, priority);
     if(err == -1) {
         ERROR("While converting uri with host: '%s'", c2stlstr(remote_uri.host).c_str());
         return -1;
@@ -816,10 +816,10 @@ int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns
 }
 
 
-int get_addr(const struct sip_uri &uri, string& addr, dns_priority priority)
+int resolve_sip_uri(const struct sip_uri &uri, string& addr, dns_priority priority)
 {
     sockaddr_storage ip_ss;
-    int err = get_addr(uri, ip_ss, priority);
+    int err = resolve_sip_uri(uri, ip_ss, priority);
     if(err == -1) {
         ERROR("While converting uri with host: '%s'", c2stlstr(uri.host).c_str());
         return -1;
@@ -834,7 +834,7 @@ int get_addr(const struct sip_uri &uri, string& addr, dns_priority priority)
     return -1;
 }
 
-int get_addr(const struct sip_uri &uri, sockaddr_storage& addr, dns_priority priority)
+int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_priority priority)
 {
     sip_target_set targets(priority);
     static cstring sip_scheme("sip");

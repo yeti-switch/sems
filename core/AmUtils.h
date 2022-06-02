@@ -274,13 +274,12 @@ string get_addr_str_sip(const sockaddr_storage* addr);
 	select(0, NULL, NULL, NULL, &tval ); \
 	}
 
-/*
- * Computes the local address for a specific destination address.
- * This is done by opening a connected UDP socket and reading the
- * local address with getsockname().
+int resolve_sip_uri(const struct sip_uri &uri, string& addr, dns_priority priority);
+int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_priority priority);
+
+/* Computes the local address for a specific destination address.
+ * This is done using Netlink RTM_F_LOOKUP_TABLE request
  */
-int get_addr(const struct sip_uri &uri, string& addr, dns_priority priority);
-int get_addr(const struct sip_uri &uri, sockaddr_storage& addr, dns_priority priority);
 int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local);
 int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority);
 int get_local_addr_for_dest(const struct sip_uri &remote_uri, string& local, dns_priority priority);

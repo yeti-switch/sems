@@ -286,7 +286,7 @@ int AmBasicSipDialog::getOutboundIf()
             transport_type = str2transport(d_uri.trsp->value);
     }
 
-    if(get_addr(d_uri, remote_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
+    if(resolve_sip_uri(d_uri, remote_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
         DBG("No address for dest '%.*s' (local_tag='%s')",
             d_uri.host.len, d_uri.host.s,
             local_tag.c_str());
