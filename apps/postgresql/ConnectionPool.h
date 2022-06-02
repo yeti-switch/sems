@@ -102,7 +102,7 @@ public:
     void onFinish(IPGTransaction* trans, const AmArg& result) override;
     void onTuple(IPGTransaction* trans, const AmArg& result) override;
 
-    void getStats(AmArg& stats);
+    void getStats(AmArg& ret);
 };
 
 class ConnectionPool
