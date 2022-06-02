@@ -203,7 +203,7 @@ void AmBasicSipDialog::setOutboundInterfaceName(const string &iface_name) {
 }
 
 void AmBasicSipDialog::setOutboundInterface(int interface_id) {
-  DBG("setting outbound interface to %i",  interface_id);
+  DBG("setting outbound interface to %i for dialog %p",  interface_id, this);
   outbound_interface = interface_id;
 }
 
@@ -239,9 +239,10 @@ int AmBasicSipDialog::getOutboundIf()
     sip_header fr;
     std::multimap<string,unsigned short>::iterator if_it;
     SIP_info::SIP_type transport_type = SIP_info::UDP;
-    AddressType address_type;
-    int proto_id;
+    AddressType address_type = AT_NONE;
+    int proto_id = -1;
     list<sip_destination> ip_list;
+    string remote_ip;
 
     if(!next_hop.empty() &&
        !parse_next_hop(stl2cstr(next_hop),ip_list) &&
@@ -285,14 +286,25 @@ int AmBasicSipDialog::getOutboundIf()
             transport_type = str2transport(d_uri.trsp->value);
     }
 
-    if(get_local_addr_for_dest(d_uri,local_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
-        DBG("No local address for dest '%.*s' (local_tag='%s')",
-              d_uri.host.len, d_uri.host.s,
-              local_tag.c_str());
-        goto error;
+    if(resolve_sip_uri(d_uri, remote_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
+        DBG("No address for dest '%.*s' (local_tag='%s')",
+            d_uri.host.len, d_uri.host.s,
+            local_tag.c_str());
+    }
+    address_type = str2addrtype(remote_ip);
+    if(!address_type) {
+        address_type = AT_V4;
+        ERROR("Could not resolve address type for resolved remote IP (local_tag='%s'; remote_ip='%s'). Use default: IPv4",
+            local_tag.c_str(), remote_ip.c_str());
     }
 
     if(force_outbound_interface_by_name.empty()) {
+        if(get_local_addr_for_dest(remote_ip,local_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
+            DBG("No local address for dest '%.*s' (local_tag='%s')",
+                d_uri.host.len, d_uri.host.s,
+                local_tag.c_str());
+            goto error;
+        }
         if_it = AmConfig.local_sip_ip2if.find(local_ip);
         if(if_it == AmConfig.local_sip_ip2if.end()) {
             ERROR("Could not find a local interface for resolved local IP (local_tag='%s';local_ip='%s')",
@@ -302,24 +314,17 @@ int AmBasicSipDialog::getOutboundIf()
     } else {
         if_it = AmConfig.sip_if_names.find(force_outbound_interface_by_name);
         if(if_it == AmConfig.sip_if_names.end()) {
-            ERROR("Could not find a local interface for force interface name (local_tag='%s';local_ip='%s';iface_name='%s')",
-                  local_tag.c_str(), local_ip.c_str(), force_outbound_interface_by_name.data());
+            ERROR("Could not find a local interface for force interface name (local_tag='%s';remote_ip='%s';iface_name='%s')",
+                  local_tag.c_str(), remote_ip.c_str(), force_outbound_interface_by_name.data());
             goto error;
         }
     }
 
-    address_type = str2addrtype(local_ip);
-    if(!address_type) {
-        address_type = AT_V4;
-        ERROR("Could not resolve address type in interface for resolved local IP (local_tag='%s'; local_ip='%s'). Use default: IPv4",
-              local_tag.c_str(), local_ip.c_str());
-    }
-
     proto_id = AmConfig.sip_ifs[if_it->second].findProto(address_type, transport_type);
     if(proto_id < 0) {
-        ERROR("Could not find a transport in interface %s for resolved local IP (local_tag='%s'; local_ip='%s').",
-              AmConfig.sip_ifs[if_it->second].name.data(),
-              local_tag.c_str(), local_ip.c_str());
+        ERROR("Could not find a transport in interface %s for resolved IP (local_tag='%s'; local_ip='%s'; remote_ip='%s').",
+            AmConfig.sip_ifs[if_it->second].name.data(),
+            local_tag.c_str(), local_ip.c_str(), remote_ip.c_str());
         goto error;
     }
 
