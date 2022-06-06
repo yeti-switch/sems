@@ -502,12 +502,13 @@ void Worker::onErrorTransaction(const Worker::TransContainer& trans, const strin
         AmEventDispatcher::instance()->post(trans.sender_id, new PGResponseError(trans.trans->get_query()->get_query(), error, trans.token));
     else {
         IPGTransaction* trans_ = 0;
-        if(trans.trans->get_type() == TR_NON) {
+        if(trans.trans->get_type() == TR_NON && !use_pipeline) {
             trans_ = new NonTransaction(this);
             trans_->exec(trans.trans->get_query()->get_current_query()->clone());
             retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
             ret_size.inc((long long)trans_->get_size());
-        } else if(trans.trans->get_type() == TR_POLICY){
+        } else if(trans.trans->get_type() == TR_POLICY ||
+                (trans.trans->get_type() == TR_NON && use_pipeline)){
             IPGQuery* query = trans.trans->get_query();
             int qsize = query->get_size();
             IPGQuery* q_ret = 0;
@@ -521,7 +522,10 @@ void Worker::onErrorTransaction(const Worker::TransContainer& trans, const strin
             retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
             ret_size.inc((long long)trans.trans->get_size());
             if(qsize > 1) {
-                trans_ = createDbTransaction(this, trans.trans->get_policy().il, trans.trans->get_policy().wp);
+                if(trans.trans->get_type() == TR_POLICY)
+                    trans_ = createDbTransaction(this, trans.trans->get_policy().il, trans.trans->get_policy().wp);
+                else
+                    trans_ = new NonTransaction(this);
                 trans_->exec(q_ret);
                 retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
                 ret_size.inc((long long)trans_->get_size());

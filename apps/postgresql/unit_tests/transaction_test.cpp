@@ -358,6 +358,42 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     }
 }
 
+TEST_F(PostgresqlTest, DbPipelineAbortedTest)
+{
+    PGHandler handler;
+    std::string conn_str(address);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+
+    NonTransaction pg3(&handler);
+    QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    query->addQuery(new Query("SELECT TTT", false));
+    pg3.exec(query);
+    server.addError("SELECT TTT", false);
+
+    conn->runTransaction(&pg3);
+
+    while(pg3.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+
+    NonTransaction pg4(&handler);
+    query = new QueryChain(new Query("SELECT * FROM test;", false));
+    query->addQuery(new Query("DROP TABLE test;", false));
+    pg4.exec(query);
+    server.addError("SELECT * FROM test;", false);
+    conn->runTransaction(&pg4);
+
+    while(pg4.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+}
+
 TEST_F(PostgresqlTest, DbPipelineTransactionTest)
 {
     PGHandler handler;
