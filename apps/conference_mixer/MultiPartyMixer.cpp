@@ -18,15 +18,19 @@
 
 
 MultiPartyMixer::MultiPartyMixer(int64_t ext_id, unsigned backlog_id, unsigned neighbors, int sample_rate)
-  : channels(), scaling_factor(16),
-    ext_id(ext_id), backlog_id(backlog_id), neighbors(neighbors), current_sample_rate(0)
+  : channels(),
+    current_sample_rate(0),
+    scaling_factor(16),
+    ext_id(ext_id),
+    backlog_id(backlog_id),
+    neighbors(neighbors)
 {
     DBG("%s neighbors_num %d sample_rate %d ext_id %ld bl_id %d", __func__, neighbors, sample_rate, ext_id, backlog_id);
 
     ext_resampling.resize(neighbors);
 
-    for (int i=0; i<neighbors; ++i)
-        ext_resampling[i].reset(new AmLibSamplerateResamplingState());
+    for(auto &r : ext_resampling)
+        r.reset(new AmLibSamplerateResamplingState());
 }
 
 
@@ -173,7 +177,7 @@ void MultiPartyMixer::GetChannelPacket(unsigned int   channel_id,
 
     output_sample_rate = GetCurrentSampleRate();
 
-    unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
+    //unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
 
     unsigned int samples = PCM16_B2S(size); // * (bstate->sample_rate/100) / (GetCurrentSampleRate()/100); => 1
     assert(samples <= PCM16_B2S(AUDIO_BUFFER_SIZE));
@@ -251,7 +255,7 @@ int MultiPartyMixer::GetExtChannelPacket(unsigned long long system_ts,
 
     output_sample_rate = GetCurrentSampleRate();
 
-    unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
+    //unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
 
     unsigned int samples = PCM16_B2S(size); // * (bstate->sample_rate/100) / (GetCurrentSampleRate()/100);
     assert(samples <= PCM16_B2S(AUDIO_BUFFER_SIZE));

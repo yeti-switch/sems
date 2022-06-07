@@ -68,14 +68,11 @@ int ConferenceMedia::processMediaTail(unsigned long long ts)
 {
     unsigned char buffer[AUDIO_BUFFER_SIZE];
 
-    int i;
-
     for (int i=run_from; i<run_to; ++i) {
 
         if (!test_bit(i, Mixer::backlog_map))
             continue;
 
-        struct backlog *bl = get_backlog(i);
         mixer_ptr mixer = get_backlog(i)->mixer;
 
         if (!mixer)

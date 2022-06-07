@@ -66,7 +66,7 @@ typedef struct {
 using mixer_ptr = std::shared_ptr<MultiPartyMixer>;
 
 struct backlog {
-    int64_t     id;
+    uint64_t     id;
     mixer_ptr   mixer;
 
     atomic_int  start; /** if start == end => frame queue is empty */
@@ -197,7 +197,7 @@ public:
     RxRing*     getRxRing() { return &rx_ring; }
     void        postRequest(MixerEvent *ev);
 
-    channel_ptr getConferenceChannel(const string &channel_id, int64_t channel_ext_id, const string &local_tag, int sample_rate);
+    channel_ptr getConferenceChannel(const string &channel_id, uint64_t channel_ext_id, const string &local_tag, int sample_rate);
     void        releaseConferenceChannel(const channel_ptr &p, const string &local_tag);
 
 

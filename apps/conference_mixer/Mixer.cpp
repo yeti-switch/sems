@@ -218,7 +218,7 @@ int Mixer::configure(const std::string& config)
 
     checkMandatoryParameter(cfg, SECTION_NEIGHBOURS_NAME);
     cfg_t* nodes = cfg_getsec(cfg, SECTION_NEIGHBOURS_NAME);
-    for(int i = 0; i < cfg_size(nodes, SECTION_NEIGHBOUR_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(nodes, SECTION_NEIGHBOUR_NAME); i++) {
         if(read_neighbor(cfg_getnsec(nodes, SECTION_NEIGHBOUR_NAME, i)) < 0) {
             cfg_free(cfg);
             return -1;
@@ -281,7 +281,7 @@ void Mixer::process(AmEvent* ev)
             running = false;
             event.fire();
         }
-    } else if(ReloadEvent *e = dynamic_cast<ReloadEvent*>(ev)) {
+    } else if(dynamic_cast<ReloadEvent*>(ev)) {
         neighbors_num = 0;
         neighbor_saddr.clear();
 
@@ -480,7 +480,7 @@ bool isNeighbor(const sockaddr_storage &from, int &idx)
 }
 
 
-channel_ptr Mixer::getConferenceChannel(const string &channel_id, int64_t channel_ext_id, const string &local_tag, int sample_rate)
+channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t channel_ext_id, const string &local_tag, int sample_rate)
 {
     // INFO("=> ext_id %ld channel_id='%s' { %ld }", channel_ext_id, channel_id.c_str(), backlog_data[0].id);
 

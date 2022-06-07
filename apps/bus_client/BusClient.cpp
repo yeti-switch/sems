@@ -20,7 +20,7 @@
 using std::list;
 
 static unsigned long TIME_RESOLUTION = 1000000UL;
-static unsigned long TICKS_PER_SEC = (1000000UL / TIME_RESOLUTION);
+//static unsigned long TICKS_PER_SEC = (1000000UL / TIME_RESOLUTION);
 static unsigned long QUERY_TIMER_RESOLUTION = 1000000UL;
 
 BusClient* BusClient::_instance=0;
@@ -39,11 +39,11 @@ BusClient::BusClient(const string& name)
     : AmDynInvokeFactory(name),
       AmConfigFactory(name),
       AmEventFdQueue(this),
-      tostop(false),
-      active_connections(0),
-      epoll_fd(-1),
       timer_val(0),
-      stopped(false)
+      stopped(false),
+      epoll_fd(-1),
+      tostop(false),
+      active_connections(0)
 {
     _instance = this;
 }
@@ -477,7 +477,7 @@ int BusClient::configure(const string& config_)
     AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_SO_RCVBUF_NAME, config.so_rcvbuf);
     AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_SO_SNDBUF_NAME, config.so_sndbuf);
 
-    for(int i = 0; i < cfg_size(cfg, SECTION_BUS_NODE_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_BUS_NODE_NAME); i++) {
         sockaddr_storage addr;
         string address;
         int port;
@@ -522,14 +522,14 @@ int BusClient::configure(const string& config_)
         return -1;
     }
     
-    for(int i = 0; i < cfg_size(routing, SECTION_METHOD_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(routing, SECTION_METHOD_NAME); i++) {
         route_method_t route_method;
         cfg_t* method = cfg_getnsec(routing, SECTION_METHOD_NAME, i);
         map<int, bool> zero_weigth;
         bool broadcast = cfg_getbool(method, PARAM_BROADCAST_NAME);
-        for(int i = 0; i < cfg_size(method, SECTION_BUS_NODE_NAME); i++) {
+        for(unsigned int i = 0; i < cfg_size(method, SECTION_BUS_NODE_NAME); i++) {
             cfg_t* bus_node = cfg_getnsec(method, SECTION_BUS_NODE_NAME, i);
-            route_conn_params_t param = {0};
+            route_conn_params_t param;
             param.name_conn = bus_node->title;
             param.priority = cfg_getint(bus_node, PARAM_PRIORITY_NAME);
             param.weight = cfg_getint(bus_node, PARAM_WEIGHT_NAME);
@@ -557,7 +557,7 @@ int BusClient::configure(const string& config_)
         route_methods.emplace_back(route_method_param_t{.name = method->title, .broadcast = broadcast}, route_method);
     }
 
-    for(int i = 0; i < cfg_size(cfg, SECTION_DYN_QUEUE_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DYN_QUEUE_NAME); i++) {
         string app;
         cfg_t* queue = cfg_getnsec(cfg, SECTION_DYN_QUEUE_NAME, i);
         AmLcConfig::instance().getMandatoryParameter(queue, PARAM_APP_NAME, app);
@@ -571,7 +571,7 @@ int BusClient::configure(const string& config_)
     return 0;
 }
 
-int BusClient::reconfigure(const string& config)
+int BusClient::reconfigure(const string&)
 {
     return 0;
 }
@@ -584,7 +584,7 @@ void BusClient::postEvent(const AmArg& args, AmArg& ret)
         throw AmSession::Exception(500,"usage: postEvent is_query local_tag application body");
     }
 
-    bool is_query, is_packed;
+    bool is_query;
     str2bool(args[0].asCStr(),is_query);
 
     if(!AmSessionContainer::instance()->postEvent(
@@ -599,7 +599,7 @@ void BusClient::postEvent(const AmArg& args, AmArg& ret)
     ret = 200;
 }
 
-void BusClient::showConnections(const AmArg& args, AmArg& ret)
+void BusClient::showConnections(const AmArg&, AmArg& ret)
 {
     ret.assertArray();
     for(int i = 0; i < active_connections; i++) {
@@ -630,7 +630,7 @@ void BusClient::fillRouteInfo(AmArg &route, const route_methods_container::value
     }
 }
 
-void BusClient::showRoutes(const AmArg& args, AmArg& ret)
+void BusClient::showRoutes(const AmArg&, AmArg& ret)
 {
     ret.assertArray();
     for(auto& method : route_methods) {
@@ -693,7 +693,7 @@ void BusDynamicQueue::process(AmEvent* ev)
         return;
     }
 
-    if(AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev)) {
+    if(dynamic_cast<AmSystemEvent*>(ev)) {
         //ignore system events. like ServerShutdown
         return;
     }

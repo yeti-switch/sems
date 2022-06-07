@@ -437,7 +437,7 @@ void BusConnection::recv()
     }
 
     /// have got complete message from SCTP layer
-    ssize_t bus_pdu_hdr_t_size = sizeof(bus_pdu_hdr_t);
+    size_t bus_pdu_hdr_t_size = sizeof(bus_pdu_hdr_t);
 
     if (payload.length() < bus_pdu_hdr_t_size) {
         ERROR("Too short packet %d", length);
@@ -513,7 +513,6 @@ void BusConnection::recv()
                 break;
             }
 
-            size_t pos;
             string src, dst;
             const char *body = 0, *pack = 0;
 
