@@ -108,10 +108,10 @@ int main(int argc, char** argv)
 
     worker_manager::instance()->dispose();
 
-    AmEventDispatcher::dispose();
     resolver::instance()->clear_cache();
     resolver::dispose();
     AmPlugIn::dispose();
     statistics::dispose();
+    AmEventDispatcher::dispose();
     return ret;
 }
