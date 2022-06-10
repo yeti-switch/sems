@@ -260,6 +260,56 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
     }
 }
 
+
+TEST_F(PostgresqlTest, WorkerPipelineTest)
+{
+    PGHandler handler;
+    Worker worker("test", handler.epoll_fd);
+    handler.workers.push_back(&worker);
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 2;
+    worker.createPool(PGWorkerPoolCreate::Master, pool);
+    PGWorkerConfig config("test", false, true, false, 15, 1);
+    config.batch_size = 10;
+    config.use_pipeline = true;
+    worker.configure(config);
+    IPGTransaction* trans = new NonTransaction(&worker);
+    QueryChain* query = new QueryChain(new Query(CREATE_TABLE, false));
+    query->addQuery(new Query("SELECT TTT", false));
+    server.addError("SELECT TTT", false);
+    trans->exec(query);
+    worker.runTransaction(trans, "", "");
+    while(true){
+        if(handler.check() < 1) return;
+        AmArg arg;
+        worker.getStats(arg);
+        if(arg["stats"]["finished"].asInt() == 1) break;
+        usleep(500);
+    }
+
+    trans = new NonTransaction(&worker);
+    trans->exec(new Query("SELECT * FROM test;", false));
+    worker.runTransaction(trans, "", "");
+    while(true){
+        if(handler.check() < 1) return;
+        AmArg arg;
+        worker.getStats(arg);
+        if(arg["stats"]["finished"].asInt() == 2) break;
+        usleep(500);
+    }
+
+    trans = new NonTransaction(&worker);
+    trans->exec(new Query(DROP_TABLE, false));
+    worker.runTransaction(trans, "", "");
+    while(true){
+        if(handler.check() < 1) return;
+        AmArg arg;
+        worker.getStats(arg);
+        if(arg["stats"]["finished"].asInt() == 3) break;
+        usleep(500);
+    }
+}
+
 TEST_F(PostgresqlTest, WorkerPrepareExecTest)
 {
     vector<PGEvent::Type> types = {PGEvent::Result};

@@ -80,7 +80,7 @@ IQuery * TestPolicy::createQueryPrepared(const std::string& cmd, bool singleMode
 PolicyFactory * makePolicyFactory(bool test, TestServer* server)
 {
     if(PolicyFactory::instance_)
-        return PolicyFactory::instance();
+        delete PolicyFactory::instance_;
 
     if(test)
         PolicyFactory::instance_ = new TestPolicy(server);

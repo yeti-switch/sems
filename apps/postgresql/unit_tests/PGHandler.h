@@ -24,7 +24,6 @@ public:
     }
     void SetUp() override
     {
-        PolicyFactory::dispose();
         makePolicyFactory(!external, &server);
         server.clear();
     }
