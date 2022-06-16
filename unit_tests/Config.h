@@ -38,6 +38,7 @@ protected:
 public:
     TesterConfig();
     ~TesterConfig();
+    void dispose(){}
 
     int readConfiguration(const string& filePath);
     int parseCmdOverride(const string& param);

@@ -88,3 +88,8 @@ PolicyFactory * makePolicyFactory(bool test, TestServer* server)
         PolicyFactory::instance_ = new PGPolicy;
     return PolicyFactory::instance();
 }
+
+void freePolicyFactory()
+{
+    PolicyFactory::dispose();
+}

@@ -72,18 +72,22 @@ int TesterConfig::readConfiguration(const string& filePath)
     case CFG_FILE_ERROR:
         ERROR("failed to open configuration file: %s (%s)",
             filePath.c_str(), strerror(errno));
+        cfg_free(m_cfg);
         return -1;
     case CFG_PARSE_ERROR:
         ERROR("failed to parse configuration file: %s", filePath.c_str());
+        cfg_free(m_cfg);
         return -1;
     default:
         ERROR("got unexpected error on configuration file processing: %s", filePath.c_str());
+        cfg_free(m_cfg);
         return -1;
     }
 
     AmLcConfig::instance().config_path = cfg_getstr(m_cfg, PARAM_SEMS_CONFIG_PATH_NAME);
     if(!cfg_size(m_cfg, PARAM_SIG_INTERFACE_NAME)) {
         ERROR("absent signalling interface name in config");
+        cfg_free(m_cfg);
         return -1;
     }
     signalling_interface = cfg_getstr(m_cfg, PARAM_SIG_INTERFACE_NAME);
@@ -94,6 +98,7 @@ int TesterConfig::readConfiguration(const string& filePath)
     stress_session_pairs_count = cfg_getint(m_stress, PARAM_PAIRS_COUNT_NAME);
     if(!cfg_size(m_stress, PARAM_MEDIA_CODEC_NAME)) {
         ERROR("absent media codec of stress test in config");
+        cfg_free(m_cfg);
         return -1;
     }
     stress_media_codec = cfg_getstr(m_stress, PARAM_MEDIA_CODEC_NAME);
@@ -108,11 +113,14 @@ int TesterConfig::readConfiguration(const string& filePath)
         std::string name = module->title;
         if(std::find(allow_plugins.begin(), allow_plugins.end(), name) == allow_plugins.end()) {
                 ERROR("error in configuration: absent plugin `%s` in `allow_plugins` array", name.c_str());
+                cfg_free(m_cfg);
                 return -1;
         } else {
             modules_cfg.emplace(name, module->raw_info->raw);
         }
     }
+
+    cfg_free(m_cfg);
     return 0;
 }
 
@@ -167,13 +175,17 @@ AmArg TesterConfig::configureModule(const std::string& moduleName, cfg_opt_t* op
         break;
     case CFG_PARSE_ERROR:
         ERROR("failed to parse configuration module: %s", moduleName.c_str());
+        cfg_free(m_cfg);
         return -1;
     default:
         ERROR("got unexpected error on configuration module processing: %s", moduleName.c_str());
+        cfg_free(m_cfg);
         return -1;
     }
 
-    return readOptionsModule(m_cfg, opt);
+    AmArg ret = readOptionsModule(m_cfg, opt);
+    cfg_free(m_cfg);
+    return ret;
 }
 
 int TesterConfig::parseCmdOverride(const string& param)

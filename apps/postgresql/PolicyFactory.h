@@ -86,5 +86,6 @@ public:
 };
 
 PolicyFactory* makePolicyFactory(bool test, TestServer* server = 0);
+void freePolicyFactory();
 
 #endif/*POLICY_FACTORY_H*/
