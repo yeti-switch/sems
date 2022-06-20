@@ -1,3 +1,9 @@
+sems (1.87.0) stable; urgency=low
+  * postgresql: fix pipeline mode
+  * fix memory leaks in unit_tests
+  * make TestServer helper visible globally
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Jun 2022 20:26:12 +0300
+
 sems (1.86.0) stable; urgency=low
   * AmSession: add 'start_on_same_thread' flag to bind new sessions to the same session processor thread
   * AmSipDialog::bye(): force all UAS transactions termination in Disconnecting/Connected states
