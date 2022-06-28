@@ -12,6 +12,9 @@
 #include <string>
 #include <lzo/lzo1x.h>
 
+//set upper limit of the uncompressed data to the 20MB
+#define MAX_DECOMPRESSED_SIZE (20 << 20)
+
 // added to libsctp/sendmsg.c
 // int     sctp_sendv(int s, struct iovec *iov, int iov_len, struct sctp_sndrcvinfo *sinfo, int flags);
 
@@ -337,7 +340,15 @@ void BusConnection::hello_handler(bus_pdu_t *pdu, int info_length)
 string BusConnection::inflatePacked(const char* data, uint32_t data_size)
 {
     std::string ret;
-    unsigned long out_len = *(int*)data;
+
+    int out_len_int = *(int *)data;
+    if(out_len_int <= 0 || out_len_int > MAX_DECOMPRESSED_SIZE) {
+        ERROR("inflatePacked(%p, %u): got decompressed size: %d. return empty result",
+              data, data_size, out_len_int);
+        return ret;
+    }
+
+    unsigned long out_len = out_len_int;
     ret.resize(out_len);
     int res = lzo1x_decompress((unsigned char*)data + 4, data_size - 4, (unsigned char*)ret.c_str(), &out_len, 0);
     if(res != LZO_E_OK)
