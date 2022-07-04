@@ -311,12 +311,16 @@ std::string AmRtpStream::getLocalAddress()
     }
 
     if(transport == TP_UDPTL) {
-        string host = AmConfig.media_ifs[l_if].proto_info[cur_udptl_trans->getLocalProtoId()]->getHost();
+        string &host = AmConfig
+            .media_ifs[l_if]
+            .proto_info[cur_udptl_trans->getLocalProtoId()]->getAdvertisedHost();
         if(host.empty())
             return cur_udptl_trans->getLocalIP();
         return host;
     } else {
-        string host = AmConfig.media_ifs[l_if].proto_info[cur_rtp_trans->getLocalProtoId()]->getHost();
+        string &host = AmConfig
+            .media_ifs[l_if]
+            .proto_info[cur_rtp_trans->getLocalProtoId()]->getAdvertisedHost();
         if(host.empty())
             return cur_rtp_trans->getLocalIP();
         return host;

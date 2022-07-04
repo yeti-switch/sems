@@ -28,8 +28,8 @@ class IP_info
     IP_info()
     : type_ip(AT_NONE),
       net_if_idx(0),
-      dscp(0),
       sig_sock_opts(0),
+      dscp(0),
       tos_byte(0)
     {}
 
@@ -68,7 +68,7 @@ class IP_info
       return public_ip.empty() ? local_ip : public_ip;
     }
 
-    virtual std::string getHost() {
+    std::string getHost() {
       return public_domain.empty() ? getIP() : public_domain;
     }
 
@@ -264,6 +264,15 @@ public:
     virtual bool getNextRtpAddress(sockaddr_storage& ss) = 0;
     virtual void freeRtpAddress(const sockaddr_storage& ss) = 0;
     virtual void iterateUsedPorts(std::function<void(const std::string&, unsigned short, unsigned short)> cl) = 0;
+
+    std::string &getAdvertisedHost() {
+        static string empty_string;
+        if(!public_domain.empty())
+            return public_domain;
+        if(!public_ip.empty())
+            return public_ip;
+        return empty_string;
+    }
 };
 
 class RTP_info : public MEDIA_info
@@ -305,14 +314,14 @@ class RTP_info : public MEDIA_info
     bool dtls_enable;
 
     void addMediaAddress(const std::string &address);
-    int prepare(const std::string &iface_name);
-    bool getNextRtpAddress(sockaddr_storage& ss);
-    void freeRtpAddress(const sockaddr_storage& ss);
-    void iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl);
-
-    virtual std::string getHost() {
-        return public_domain.empty() ? "" : public_domain;
-    }
+    int prepare(const std::string &iface_name) override;
+    bool getNextRtpAddress(sockaddr_storage& ss) override;
+    void freeRtpAddress(const sockaddr_storage& ss) override;
+    void iterateUsedPorts(
+        std::function<void(
+            const std::string&,
+            unsigned short,
+            unsigned short)> cl) override;
 
     int zrtp_hash_from_str(const string& str) {
 #ifdef WITH_ZRTP
