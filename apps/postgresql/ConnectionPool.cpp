@@ -402,7 +402,8 @@ void Worker::checkQueue()
     }
     if(!queue.size()) send_next_time = 0;
     else send_next_time = time(0) + batch_timeout;
-    DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
+
+    //DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
 }
 
 void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, const std::string& token)
