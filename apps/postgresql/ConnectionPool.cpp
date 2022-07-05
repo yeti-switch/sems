@@ -468,7 +468,7 @@ void Worker::configure(const PGWorkerConfig& e)
     batch_size = e.batch_size;
     batch_timeout = e.batch_timeout;
     max_queue_length = e.max_queue_length;
-    setSearchPath(search_pathes);
+    setSearchPath(e.search_pathes);
     for(auto& prepared : e.prepeared)
         runPrepared(prepared);
 
