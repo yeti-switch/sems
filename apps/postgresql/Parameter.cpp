@@ -169,6 +169,9 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value)
     case VARCHAROID:
     case CHAROID:
     case TEXTOID:
+    case INETOID:
+    case CIDROID:
+    case MACADDROID:
         return AmArg(value);
     case BOOLOID:
         if(is_binary) return AmArg((bool)value);
