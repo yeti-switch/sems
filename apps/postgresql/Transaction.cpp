@@ -418,14 +418,14 @@ PreparedTransaction::PreparedTransaction(const PGPrepareExec& prepared,
                                          ITransactionHandler* handler)
 : IPGTransaction(PolicyFactory::instance()->createTransaction(this, TR_PREPARED), handler)
 {
-    QueryParams* qexec = new QueryParams(prepared.stmt, prepared.qdata.single, true);
-    vector<QueryParam> qparams = getParams(prepared.params);
+    QueryParams* qexec = new QueryParams(prepared.stmt, prepared.info.single, true);
+    vector<QueryParam> qparams = getParams(prepared.info.params);
     vector<unsigned int> oids;
     for(auto& param : qparams) {
         oids.push_back(param.get_oid());
         qexec->addParam(param);
     }
-    QueryChain* query = new QueryChain(new Prepared(prepared.stmt, prepared.qdata.query, oids));
+    QueryChain* query = new QueryChain(new Prepared(prepared.stmt, prepared.info.query, oids));
     query->addQuery(qexec);
     exec(query);
 }

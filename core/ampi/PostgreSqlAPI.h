@@ -166,24 +166,47 @@ public:
     }
 };
 
+class QueryInfo
+{
+public:
+    string query;
+    bool   single;
+    vector<AmArg> params;
+    QueryInfo(const string& query_, bool single_)
+    : query(query_), single(single_){}
+
+    template<typename T>
+    QueryInfo& addParam(const T& param){
+        params.emplace_back(param);
+        return *this;
+    }
+};
+
 class PGQueryData
 {
 public:
     string worker_name;
-    string query;
-    bool   single;
     string sender_id;
-
+    vector<QueryInfo> info;
     string token;
 
     PGQueryData(const string& name_, const string& query_,
                 bool single, const string& session_id = string(),
                 const string& token_ = string())
     : worker_name(name_)
-    , query(query_)
-    , single(single)
+    , sender_id(session_id)
+    , token(token_) {
+        info.emplace_back(query_, single);
+    }
+    PGQueryData(const string& name_, const string& session_id = string(),
+                const string& token_ = string())
+    : worker_name(name_)
     , sender_id(session_id)
     , token(token_){}
+
+    void addQuery(const string& query_, bool single_) {
+        info.emplace_back(query_, single_);
+    }
 };
 
 class PGTransactionData
@@ -223,17 +246,10 @@ class PGParamExecute : public PGEvent
 public:
     PGQueryData qdata;
     PGTransactionData tdata;
-    vector<AmArg> params;
     bool prepared;
 
     PGParamExecute(const PGQueryData& qdata_, const PGTransactionData& tdata_, bool prepared_)
     : PGEvent(ParamExecute), qdata(qdata_), tdata(tdata_), prepared(prepared_){}
-
-    template<typename T>
-    PGParamExecute& addParam(const T& param){
-        params.emplace_back(param);
-        return *this;
-    }
 };
 
 class PGPrepare : public PGEvent
@@ -254,50 +270,47 @@ public:
 class PGPrepareExec : public PGEvent
 {
 public:
+    string worker_name;
     string stmt;
-    PGQueryData qdata;
+    QueryInfo info;
+    string sender_id;
+    string token;
 
-    vector<AmArg> params;
-
-    PGPrepareExec(const PGQueryData& qdata_, const string& stmt_)
-    : PGEvent(PrepareExec), qdata(qdata_), stmt(stmt_){}
-
-    template<typename T>
-    PGPrepareExec& addParam(const T& param) {
-        params.emplace_back(param);
-        return *this;
-    }
+    PGPrepareExec(const string& name_, const string& stmt_,
+                  const QueryInfo& info_,
+                  const string& session_id = string(),
+                  const string& token_ = string())
+    : PGEvent(PrepareExec), worker_name(name_)
+    , stmt(stmt_), info(info_)
+    , sender_id(session_id), token(token_){}
 };
 
 class PGResponse : public PGEvent
 {
 public:
-    string query;
     string token;
     AmArg result;
 
-    PGResponse(const string& query_, const AmArg& res, const string& token_)
-    : PGEvent(Result), query(query_), token(token_), result(res){}
+    PGResponse(const AmArg& res, const string& token_)
+    : PGEvent(Result), token(token_), result(res){}
 };
 
 class PGResponseError : public PGEvent
 {
 public:
-    string query;
     string token;
     string error;
 
-    PGResponseError(const string& query_, const string& res, const string& token_)
-    : PGEvent(ResultError), query(query_), token(token_), error(res) {}
+    PGResponseError(const string& res, const string& token_)
+    : PGEvent(ResultError), token(token_), error(res) {}
 };
 
 class PGTimeout : public PGEvent
 {
 public:
-    string query;
     string token;
-    PGTimeout(const string& query_, const string& token_)
-    : PGEvent(Timeout), query(query_), token(token_) {}
+    PGTimeout(const string& token_)
+    : PGEvent(Timeout), token(token_) {}
 };
 
 #endif/*POSTGRESQL_API_H*/
