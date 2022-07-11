@@ -33,6 +33,7 @@ class PostgreSQL
     int init();
 
     Worker* getWorker(const PGQueryData& e);
+    bool checkQueryData(const PGQueryData& data);
 
     void onWorkerPoolCreate(const PGWorkerPoolCreate& e);
     void onSimpleExecute(const PGExecute& e);

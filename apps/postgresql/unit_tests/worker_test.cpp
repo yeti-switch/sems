@@ -143,7 +143,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     PGParamExecute* ev = new PGParamExecute(qdata1, PGTransactionData(), false);
     AmArg arg_str;
     arg_str["data"] = "test";
-    ev->addParam(120).addParam(5.25).addParam("test").addParam(arg_str);
+    ev->qdata.info[0].addParam(120).addParam(5.25).addParam("test").addParam(arg_str);
     PostgreSQL::instance()->postEvent(ev);
 
     query = CREATE_TABLE;
@@ -334,11 +334,10 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
 
     query = INSERT_INTO_PARAM;
     server.addResponse(query, AmArg());
-    PGQueryData qdata1(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
-    PGPrepareExec* pr = new PGPrepareExec(qdata1, "add");
+    PGPrepareExec* pr = new PGPrepareExec(WORKER_POOL_NAME, "add", QueryInfo(query, false), WORKER_HANDLER_QUEUE);
     AmArg arg_str;
     arg_str["data"] = "test";
-    pr->addParam(120).addParam(5.25).addParam("test").addParam(arg_str);
+    pr->info.addParam(120).addParam(5.25).addParam("test").addParam(arg_str);
     PostgreSQL::instance()->postEvent(pr);
 
     WorkerHandler::instance().run();
@@ -387,7 +386,7 @@ TEST_F(PostgresqlTest, WorkerConfigTest)
     PostgreSQL::instance()->postEvent(ev);
     PGQueryData qdata1("test", "sleep", false, WORKER_HANDLER_QUEUE);
     ev = new PGParamExecute(qdata1, PGTransactionData(), true);
-    ev->addParam(1);
+    ev->qdata.info[0].addParam(1);
     PostgreSQL::instance()->postEvent(ev);
 
     vector<PGEvent::Type> types = {PGEvent::Result, PGEvent::Result};

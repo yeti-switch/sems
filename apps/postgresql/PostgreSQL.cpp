@@ -240,10 +240,19 @@ Worker* PostgreSQL::getWorker(const PGQueryData& e)
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
         if(!e.sender_id.empty())
-            AmEventDispatcher::instance()->post(e.sender_id, new PGResponseError(e.query, "worker not found", e.token));
+            AmEventDispatcher::instance()->post(e.sender_id, new PGResponseError("worker not found", e.token));
         return 0;
     }
     return workers[e.worker_name];
+}
+
+bool PostgreSQL::checkQueryData(const PGQueryData& data)
+{
+    if(data.info.empty()) {
+        AmEventDispatcher::instance()->post(data.sender_id, new PGResponseError("absent query", data.token));
+        return false;
+    }
+    return true;
 }
 
 void PostgreSQL::onWorkerPoolCreate(const PGWorkerPoolCreate& e)
@@ -258,20 +267,32 @@ void PostgreSQL::onWorkerPoolCreate(const PGWorkerPoolCreate& e)
 
 void PostgreSQL::onSimpleExecute(const PGExecute& e)
 {
+    if(!checkQueryData(e.qdata)) return;
+
     Worker* worker = getWorker(e.qdata);
-    if(worker) {
-        IPGTransaction* trans = 0;
-        if(!e.tdata.is_db)
-            trans = new NonTransaction(worker);
-        else
-            trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
-        trans->exec(new Query(e.qdata.query, e.qdata.single));
-        worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
+    if(!worker) return;
+
+    IPGTransaction* trans = 0;
+    if(!e.tdata.is_db)
+        trans = new NonTransaction(worker);
+    else
+        trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
+    IPGQuery* query = new Query(e.qdata.info[0].query, e.qdata.info[0].single);
+    if(e.qdata.info.size() > 1) {
+        QueryChain* chain = new QueryChain(query);
+        for(int i = 1;i < e.qdata.info.size(); i++) {
+            chain->addQuery(new Query(e.qdata.info[i].query, e.qdata.info[i].single));
+        }
+        query = chain;
     }
+    trans->exec(query);
+    worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
 }
 
 void PostgreSQL::onParamExecute(const PGParamExecute& e)
 {
+    if(!checkQueryData(e.qdata)) return;
+
     Worker* worker = getWorker(e.qdata);
     if(worker) {
         IPGTransaction* trans = 0;
@@ -279,9 +300,19 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
             trans = new NonTransaction(worker);
         else
             trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
-        QueryParams* q = new QueryParams(e.qdata.query, e.qdata.single, e.prepared);
-        q->addParams(getParams(e.params));
-        trans->exec(q);
+        QueryParams* qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
+        qparams->addParams(getParams(e.qdata.info[0].params));
+        IPGQuery* query = qparams;
+        if(e.qdata.info.size() > 1) {
+            QueryChain* chain = new QueryChain(query);
+            for(int i = 1;i < e.qdata.info.size(); i++) {
+                qparams = new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, e.prepared);
+                qparams->addParams(getParams(e.qdata.info[i].params));
+                chain->addQuery(qparams);
+            }
+            query = chain;
+        }
+        trans->exec(query);
         worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
     }
 }
@@ -297,9 +328,9 @@ void PostgreSQL::onPrepare(const PGPrepare& e)
 
 void PostgreSQL::onPrepareExecute(const PGPrepareExec& e)
 {
-    Worker* worker = getWorker(e.qdata);
+    Worker* worker = getWorker(PGQueryData(e.worker_name, e.sender_id, e.token));
     if(worker) {
-        worker->runTransaction(new PreparedTransaction(e, worker), e.qdata.sender_id, e.qdata.token);
+        worker->runTransaction(new PreparedTransaction(e, worker), e.sender_id, e.token);
     }
 }
 
