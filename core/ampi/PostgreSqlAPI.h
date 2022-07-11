@@ -249,7 +249,18 @@ public:
     bool prepared;
 
     PGParamExecute(const PGQueryData& qdata_, const PGTransactionData& tdata_, bool prepared_)
-    : PGEvent(ParamExecute), qdata(qdata_), tdata(tdata_), prepared(prepared_){}
+     : PGEvent(ParamExecute),
+       qdata(qdata_),
+       tdata(tdata_),
+       prepared(prepared_)
+    {}
+
+    template<typename T>
+    QueryInfo& addParam(const T& param)
+    {
+        assert(!qdata.info.empty());
+        return qdata.info[0].addParam(param);
+    }
 };
 
 class PGPrepare : public PGEvent
@@ -283,6 +294,12 @@ public:
     : PGEvent(PrepareExec), worker_name(name_)
     , stmt(stmt_), info(info_)
     , sender_id(session_id), token(token_){}
+
+    template<typename T>
+    QueryInfo& addParam(const T& param)
+    {
+        return info.addParam(param);
+    }
 };
 
 class PGResponse : public PGEvent
