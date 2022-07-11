@@ -842,7 +842,7 @@ int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_prior
     static cstring udp_transport("udp");
 
     int err = 0;
-    if(uri.host.len <= INET6_ADDRSTRLEN) {
+    if(uri.host.len < INET6_ADDRSTRLEN) {
         char host[INET6_ADDRSTRLEN] = {0};
         strncpy(host, uri.host.s, uri.host.len);
         int err = inet_pton(AF_INET,host,&((sockaddr_in*)&addr)->sin_addr);
