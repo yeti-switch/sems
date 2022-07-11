@@ -206,7 +206,10 @@ void PGTransaction::fetch_result()
 }
 
 MockTransaction::MockTransaction(IPGTransaction* h, TransactionType t, TestServer* server_)
-: ITransaction(h, t), server(server_), last_query(0), current_query_number(0)
+  : ITransaction(h, t),
+    last_query(0),
+    current_query_number(0),
+    server(server_)
 {
     status = PQTRANS_IDLE;
 }
@@ -227,15 +230,15 @@ void MockTransaction::fetch_result()
 {
     Query* single = dynamic_cast<Query*>(query);
     QueryChain* chain = dynamic_cast<QueryChain*>(query);
-    IPGQuery* cur_query = 0;
+    //IPGQuery* cur_query = 0;
     string query_;
     if(single) {
         query_ = single->get_query();
-        cur_query = single;
+        //cur_query = single;
     } else if(chain) {
         if(current_query_number < query->get_size()) {
             query_ = chain->get_query(current_query_number)->get_query();
-            cur_query = chain->get_query(current_query_number);
+            //cur_query = chain->get_query(current_query_number);
         }
     } else {
         ERROR("unknown query");
