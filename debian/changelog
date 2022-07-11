@@ -1,3 +1,11 @@
+sems (1.87.1) stable; urgency=low
+  * fix public-address option processing for media interfaces
+  * AmUtils: resolve_sip_uri: fix SIGABRT on long URI host
+  * bus_client: fix SIGABRT on malformed compressed PDU
+  * postgresql: fix search_path set on PGWorkerConfig event
+  * postgresql: cast INETOID,CIDROID,MACADDROID to AmArg
+ -- Michael Furmur <furmur@pm.me>  Mon, 11 Jul 2022 13:31:22 +0300
+
 sems (1.87.0) stable; urgency=low
   * postgresql: fix pipeline mode
   * fix memory leaks in unit_tests
