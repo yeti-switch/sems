@@ -280,7 +280,7 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
     IPGQuery* query = new Query(e.qdata.info[0].query, e.qdata.info[0].single);
     if(e.qdata.info.size() > 1) {
         QueryChain* chain = new QueryChain(query);
-        for(int i = 1;i < e.qdata.info.size(); i++) {
+        for(size_t i = 1;i < e.qdata.info.size(); i++) {
             chain->addQuery(new Query(e.qdata.info[i].query, e.qdata.info[i].single));
         }
         query = chain;
@@ -305,7 +305,7 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
         IPGQuery* query = qparams;
         if(e.qdata.info.size() > 1) {
             QueryChain* chain = new QueryChain(query);
-            for(int i = 1;i < e.qdata.info.size(); i++) {
+            for(size_t i = 1;i < e.qdata.info.size(); i++) {
                 qparams = new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, e.prepared);
                 qparams->addParams(getParams(e.qdata.info[i].params));
                 chain->addQuery(qparams);
