@@ -184,6 +184,8 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value)
             else
                     return AmArg(false);
         }
+    case NUMERICOID:
+        return AmArg(atof(value));
     case INT2OID:
         if(is_binary) return AmArg(pg_get_int2(value));
         else return AmArg(atoi(value));
