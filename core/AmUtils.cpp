@@ -841,15 +841,18 @@ int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_prior
     static cstring sips_scheme("sips");
     static cstring udp_transport("udp");
 
-    char host[INET6_ADDRSTRLEN] = {0};
-    strncpy(host, uri.host.s, uri.host.len);
-    int err = inet_pton(AF_INET,host,&((sockaddr_in*)&addr)->sin_addr);
-    if(err == 1) {
-        addr.ss_family = AF_INET;
-    } else if(err == 0) {
-        err = inet_pton(AF_INET6,host,&((sockaddr_in6*)&addr)->sin6_addr);
+    int err = 0;
+    if(uri.host.len <= INET6_ADDRSTRLEN) {
+        char host[INET6_ADDRSTRLEN] = {0};
+        strncpy(host, uri.host.s, uri.host.len);
+        int err = inet_pton(AF_INET,host,&((sockaddr_in*)&addr)->sin_addr);
         if(err == 1) {
-            addr.ss_family = AF_INET6;
+            addr.ss_family = AF_INET;
+        } else if(err == 0) {
+            err = inet_pton(AF_INET6,host,&((sockaddr_in6*)&addr)->sin6_addr);
+            if(err == 1) {
+                addr.ss_family = AF_INET6;
+            }
         }
     }
 
