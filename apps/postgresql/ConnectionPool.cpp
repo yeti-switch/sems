@@ -167,13 +167,18 @@ void Worker::onTuple(IPGTransaction* trans, const AmArg& result) {
 void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
     setWorkTimer(true);
     erased.push_back(trans);
-    DBG("transaction query \'%p/%s\' finished", trans, trans->get_query()->get_query().c_str());
+    //DBG("transaction query \'%p/%s\' finished", trans, trans->get_query()->get_query().c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++){
         if(trans == tr_it->trans) {
-            DBG("return result \'%s\'", AmArg::print(result).c_str());
+            DBG("post PGResponse %s/%s: %s",
+                tr_it->sender_id.data(),
+                tr_it->token.data(),
+                AmArg::print(result).c_str());
+
             if(!tr_it->sender_id.empty())
                 AmEventDispatcher::instance()->post(tr_it->sender_id, new PGResponse(trans->get_query()->get_query(), result, tr_it->token));
+
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
             transactions.erase(tr_it);
@@ -261,7 +266,7 @@ int Worker::retransmitTransaction(TransContainer& trans)
         transactions.emplace_back(trans.trans, pool, sender_id, token);
         tr_size.inc((long long)trans.trans->get_size());
         wait_next_time = transactions.front().createdTime + trans_wait_time;
-        DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
+        //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
         conn->runTransaction(trans.trans);
         setWorkTimer(false);
         return 0;
@@ -273,7 +278,7 @@ int Worker::retransmitTransaction(TransContainer& trans)
             if(!is_ret_timer_set) {
                 retransmit_next_time = trans.createdTime + retransmit_interval;
                 is_ret_timer_set = true;
-                DBG("worker \'%s\' set next retransmit time: %lu", name.c_str(), retransmit_next_time);
+                //DBG("worker \'%s\' set next retransmit time: %lu", name.c_str(), retransmit_next_time);
             }
             return 1;
         }
@@ -289,7 +294,7 @@ int Worker::retransmitTransaction(TransContainer& trans)
             transactions.emplace_back(trans.trans, pool, trans.sender_id, token);
             tr_size.inc((long long)trans.trans->get_size());
             wait_next_time = transactions.front().createdTime + trans_wait_time;
-            DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
+            //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
             setWorkTimer(false);
             conn->runTransaction(trans.trans);
             return 0;
@@ -310,7 +315,7 @@ int Worker::retransmitTransaction(TransContainer& trans)
         if(!is_ret_timer_set) {
             retransmit_next_time = trans.createdTime + retransmit_interval;
             is_ret_timer_set = true;
-            DBG("worker \'%s\' set next retransmit time: %lu", name.c_str(), retransmit_next_time);
+            //DBG("worker \'%s\' set next retransmit time: %lu", name.c_str(), retransmit_next_time);
         }
         return 1;
     }
@@ -424,7 +429,7 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
     queue_size.inc((long long)trans->get_size());
     if(!send_next_time) {
         send_next_time = time(0) + batch_timeout;
-        DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
+        //DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
     setWorkTimer(false);
 }
