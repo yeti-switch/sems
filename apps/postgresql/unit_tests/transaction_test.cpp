@@ -451,7 +451,6 @@ TEST_F(PostgresqlTest, DbPipelineStressTest)
     while(i < 2) {
         if(handler.check() < 1) return;
         if(pg2->get_status() == IPGTransaction::FINISH) i++;
-        INFO("i = %d", i);
     }
     delete pg2;
 }
