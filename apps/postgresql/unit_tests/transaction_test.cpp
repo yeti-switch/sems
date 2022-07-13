@@ -434,20 +434,24 @@ TEST_F(PostgresqlTest, DbPipelineStressTest)
     conn->startPipeline();
     IPGTransaction* pg2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     string q = "SELECT * from json_each_text('{";
-    for(int i = 0; i < 100000; i++) {
+    for(int i = 0; i < 1000000; i++) {
         if(i) q += ", ";
         char index[100] = {0};
         sprintf(index, "\"i_%d\":\"%d\"", i, i);
         q += index;
     }
     q += "}')";
+    INFO("size of query %d", q.size());
     Query* query = new Query(q, false);
     pg2->exec(query);
 
     conn->runTransaction(pg2);
 
-    while(pg2->get_status() != IPGTransaction::FINISH) {
+    int i = 0;
+    while(i < 2) {
         if(handler.check() < 1) return;
+        if(pg2->get_status() == IPGTransaction::FINISH) i++;
+        INFO("i = %d", i);
     }
     delete pg2;
 }

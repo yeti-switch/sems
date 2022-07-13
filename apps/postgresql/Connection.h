@@ -15,7 +15,8 @@ struct IConnectionHandler
         PG_SOCK_NEW = 0,
         PG_SOCK_DEL,
         PG_SOCK_WRITE,
-        PG_SOCK_READ
+        PG_SOCK_READ,
+        PG_SOCK_RW,
     };
 
     virtual ~IConnectionHandler(){}

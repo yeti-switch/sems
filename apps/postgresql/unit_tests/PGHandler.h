@@ -152,8 +152,10 @@ protected:
             epoll_event event;
             event.events = EPOLLERR;
             event.data.ptr = conn;
-            if(type == PG_SOCK_WRITE) event.events |= EPOLLOUT;
+
             if(type == PG_SOCK_READ) event.events |= EPOLLIN;
+            if(type == PG_SOCK_WRITE) event.events |= EPOLLOUT;
+            if(type == PG_SOCK_RW) event.events |= EPOLLIN | EPOLLOUT;
 
             epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn->getSocket(), &event);
         }

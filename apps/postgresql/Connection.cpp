@@ -136,7 +136,12 @@ void PGConnection::check_conn()
                 handler->onConnect(this);
             }
         case PGRES_POLLING_READING:
-            handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
+            if(connected && cur_transaction) {
+                flush_conn();
+                handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
+            } else {
+                handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
+            }
             break;
         case PGRES_POLLING_WRITING:
             handler->onSock(this, IConnectionHandler::PG_SOCK_WRITE);

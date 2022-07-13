@@ -124,10 +124,8 @@ bool PGTransaction::check_trans()
         return true;
     }
 
-    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished()) {
+    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished())
         conn->syncPipeline();
-        conn->flushPipeline();
-    }
 
     status = PQtransactionStatus((PGconn*)conn->get());
     return !PQisBusy((PGconn*)conn->get());
