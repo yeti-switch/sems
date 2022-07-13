@@ -421,6 +421,37 @@ TEST_F(PostgresqlTest, DbPipelineTransactionTest)
     delete pg2;
 }
 
+TEST_F(PostgresqlTest, DbPipelineStressTest)
+{
+    PGHandler handler;
+    std::string conn_str(address);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    IPGTransaction* pg2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    string q = "SELECT * from json_each_text('{";
+    for(int i = 0; i < 100000; i++) {
+        if(i) q += ", ";
+        char index[100] = {0};
+        sprintf(index, "\"i_%d\":\"%d\"", i, i);
+        q += index;
+    }
+    q += "}')";
+    Query* query = new Query(q, false);
+    pg2->exec(query);
+
+    conn->runTransaction(pg2);
+
+    while(pg2->get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+    delete pg2;
+}
+
 TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
 {
     PGHandler handler;
