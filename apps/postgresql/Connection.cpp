@@ -137,8 +137,8 @@ void PGConnection::check_conn()
             }
         case PGRES_POLLING_READING:
             if(connected && cur_transaction) {
-                flush_conn();
-                handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
+                if(flush_conn())
+                    handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
             } else {
                 handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
             }
