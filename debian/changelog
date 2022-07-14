@@ -1,3 +1,9 @@
+sems (1.88.0) stable; urgency=low
+  * postgresql: fix send buffer overflow processing
+  * postgresql: add NUMERICOID processing
+  * postgresql: add suport for events with combined queries
+ -- Michael Furmur <furmur@pm.me>  Thu, 14 Jul 2022 16:28:01 +0300
+
 sems (1.87.1) stable; urgency=low
   * fix public-address option processing for media interfaces
   * AmUtils: resolve_sip_uri: fix SIGABRT on long URI host
