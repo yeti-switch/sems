@@ -223,7 +223,7 @@ TEST_F(PostgresqlTest, DbTransactionErrorTest)
     DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write> pg_create(&handler);
     QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
     string query_str("INSERT INTO test(id) VALUES(\"xa-xa\")");
-    server.addError(query_str, false);
+    server->addError(query_str, false);
     query->addQuery(new Query(query_str, false));
     pg_create.exec(query);
     conn->runTransaction(&pg_create);
@@ -340,7 +340,7 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
     query->addQuery(new Query("SELECT TTT", false));
     pg1.exec(query);
-    server.addError("SELECT TTT", false);
+    server->addError("SELECT TTT", false);
 
     conn->runTransaction(&pg1);
 
@@ -374,7 +374,7 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
     QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
     query->addQuery(new Query("SELECT TTT", false));
     pg3.exec(query);
-    server.addError("SELECT TTT", false);
+    server->addError("SELECT TTT", false);
 
     conn->runTransaction(&pg3);
 
@@ -386,7 +386,7 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
     query = new QueryChain(new Query("SELECT * FROM test;", false));
     query->addQuery(new Query("DROP TABLE test;", false));
     pg4.exec(query);
-    server.addError("SELECT * FROM test;", false);
+    server->addError("SELECT * FROM test;", false);
     conn->runTransaction(&pg4);
 
     while(pg4.get_status() != IPGTransaction::FINISH) {
@@ -468,7 +468,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
     QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
     query->addQuery(new Query("SELECT TTT", false));
     pg1->exec(query);
-    server.addError("SELECT TTT", false);
+    server->addError("SELECT TTT", false);
 
     conn->runTransaction(pg1);
 

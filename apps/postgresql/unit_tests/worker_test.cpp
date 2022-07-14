@@ -112,7 +112,7 @@ TEST_F(PostgresqlTest, WorkerTransactionTest)
     string query(BACKEND);
     AmArg resp;
     resp.push("pg_backend_pid", 4565);
-    server.addResponse(query, resp);
+    server->addResponse(query, resp);
 
     PGQueryData qdata(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE, "token transaction test");
     PostgreSQL::instance()->postEvent(new PGExecute(qdata, PGTransactionData()));
@@ -137,8 +137,8 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
 
     string query;
     query = INSERT_INTO_PARAM;
-    server.addResponse(query, AmArg());
-    server.addError(query, true);
+    server->addResponse(query, AmArg());
+    server->addError(query, true);
     PGQueryData qdata1(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata1, PGTransactionData(), false);
     AmArg arg_str;
@@ -147,7 +147,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     PostgreSQL::instance()->postEvent(ev);
 
     query = CREATE_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata, PGTransactionData()));
 
@@ -170,7 +170,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     resp.push("data", "test");
     resp.push("str", AmArg());
     resp["str"].push("data", "test");
-    server.addResponse(query, resp);
+    server->addResponse(query, resp);
     PGQueryData qdata2(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata2, PGTransactionData()));
     WorkerHandler::instance().run();
@@ -185,7 +185,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     WorkerHandler::instance().set_expected_events(types);
 
     query = DROP_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata3(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata3, PGTransactionData()));
 
@@ -207,7 +207,7 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
 
     string query;
     query = CREATE_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata, PGTransactionData()));
 
@@ -245,7 +245,7 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
     WorkerHandler::instance().set_expected_events(types);
 
     query = DROP_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata3(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata3, PGTransactionData()));
 
@@ -276,7 +276,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     IPGTransaction* trans = new NonTransaction(&worker);
     QueryChain* query = new QueryChain(new Query(CREATE_TABLE, false));
     query->addQuery(new Query("SELECT TTT", false));
-    server.addError("SELECT TTT", false);
+    server->addError("SELECT TTT", false);
     trans->exec(query);
     worker.runTransaction(trans, "", "");
     while(true){
@@ -317,7 +317,7 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
 
     string query;
     query = CREATE_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata, PGTransactionData()));
 
@@ -333,7 +333,7 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
     WorkerHandler::instance().set_expected_events(types);
 
     query = INSERT_INTO_PARAM;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGPrepareExec* pr = new PGPrepareExec(WORKER_POOL_NAME, "add", QueryInfo(query, false), WORKER_HANDLER_QUEUE);
     AmArg arg_str;
     arg_str["data"] = "test";
@@ -352,7 +352,7 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
     WorkerHandler::instance().set_expected_events(types);
 
     query = DROP_TABLE;
-    server.addResponse(query, AmArg());
+    server->addResponse(query, AmArg());
     PGQueryData qdata3(WORKER_POOL_NAME, query, false, WORKER_HANDLER_QUEUE);
     PostgreSQL::instance()->postEvent(new PGExecute(qdata3, PGTransactionData()));
 
@@ -379,8 +379,8 @@ TEST_F(PostgresqlTest, WorkerConfigTest)
 
     AmArg resp;
     resp.push("pg_backend_pid", 4565);
-    server.addResponse("backend", resp);
-    server.addResponse("sleep", AmArg());
+    server->addResponse("backend", resp);
+    server->addResponse("sleep", AmArg());
     PGQueryData qdata("test", "backend", false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), true);
     PostgreSQL::instance()->postEvent(ev);
@@ -417,7 +417,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
 
     AmArg resp;
     resp.push("pg_backend_pid", 4565);
-    server.addResponse(BACKEND, resp);
+    server->addResponse(BACKEND, resp);
     IPGTransaction* trans = new NonTransaction(&worker);
     trans->exec(new Query(BACKEND, false));
     worker.runTransaction(trans, "", "");
@@ -447,9 +447,9 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     config.batch_size = 4;
     worker.configure(config);
 
-    server.addResponse(CREATE_TABLE, AmArg());
-    server.addResponse(INSERT_INTO, AmArg());
-    server.addError("ASSERT 0", false);
+    server->addResponse(CREATE_TABLE, AmArg());
+    server->addResponse(INSERT_INTO, AmArg());
+    server->addError("ASSERT 0", false);
     IPGTransaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     trans->exec(new Query(CREATE_TABLE, false));
     worker.runTransaction(trans, "", "");

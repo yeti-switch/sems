@@ -13,19 +13,17 @@
 
 class PostgresqlTest : public ::testing::Test
 {
-protected:
-    TestServer server;
 public:
+    TestServer* server;
     bool external;
     string address;
     PostgresqlTest() {
-        external = WorkerHandler::instance().external;
         address = WorkerHandler::instance().address;
+        server = &WorkerHandler::instance().server;
     }
     void SetUp() override
     {
-        makePolicyFactory(!external, &server);
-        server.clear();
+        server->clear();
     }
 };
 

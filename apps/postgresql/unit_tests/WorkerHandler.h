@@ -39,6 +39,7 @@ public:
 
     bool external;
     string address;
+    TestServer server;
 
     WorkerHandler()
     : AmEventFdQueue(this)
@@ -59,6 +60,7 @@ public:
         config_parameters.emplace<string, TesterConfig::parameter_var>(PARAM_PG_ADDR_NAME "-postgres", {.type = TesterConfig::parameter_var::String, .u = {&address}});
         test_config::instance()->useCmdModule(config_parameters);
 
+        makePolicyFactory(!external, &server);
         PGPool pool = GetPoolByAddress(address);
         pool.pool_size = 2;
         PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate(WORKER_POOL_NAME, PGWorkerPoolCreate::Master, pool));
