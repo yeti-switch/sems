@@ -1,8 +1,12 @@
 #include "ConnectionPool.h"
 #include "PostgreSQL.h"
+#include "pqtypes-int.h"
+
 #include <stdio.h>
+
 #include <AmEventDispatcher.h>
 #include <AmStatistics.h>
+
 
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\
@@ -437,11 +441,28 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
 void Worker::runPrepared(const PGPrepareData& prepared)
 {
     prepareds.emplace(prepared.stmt, prepared);
-    PreparedTransaction trans(prepared.stmt, prepared.query, prepared.oids, this);
+
+    std::unique_ptr<PreparedTransaction> trans;
+    if(prepared.sql_types.empty()) {
+        trans.reset(new PreparedTransaction(prepared.stmt, prepared.query, prepared.oids, this));
+    } else {
+        vector<unsigned int> oids;
+        for(const auto &sql_type: prepared.sql_types) {
+            auto oid = pg_typname2oid(sql_type);
+            if(oid == INVALIDOID) {
+                ERROR("unsupported typname '%s' for prepared statement: %s. skip",
+                    sql_type.data(), prepared.stmt.data());
+                return;
+            }
+            oids.emplace_back(oid);
+        }
+        trans.reset(new PreparedTransaction(prepared.stmt, prepared.query, oids, this));
+    }
+
     if(master)
-        master->runTransaction(&trans);
+        master->runTransaction(trans.get());
     if(slave)
-        slave->runTransaction(&trans);
+        slave->runTransaction(trans.get());
 }
 
 void Worker::setSearchPath(const vector<string>& search_path)

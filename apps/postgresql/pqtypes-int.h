@@ -4,6 +4,7 @@
  * See: server/catalog/pg_type.h
  */
 
+#define INVALIDOID         0
 /* numerics types */
 #define INT2OID            21
 #define INT4OID            23

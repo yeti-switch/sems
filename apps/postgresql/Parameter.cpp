@@ -4,6 +4,7 @@
 #include <jsonArg.h>
 
 #include <netinet/in.h>
+#include <unordered_map>
 
 #ifndef ntohll
 #define ntohll(b) __builtin_bswap64(b)
@@ -229,4 +230,61 @@ vector<QueryParam> getParams(const vector<AmArg>& params)
     return qparams;
 }
 
+//based on server/catalog/pg_type.dat 'oid', 'array_type_oid', 'typname' fields
+unsigned int pg_typname2oid(const string &typname)
+{
+    const static std::unordered_map<string, unsigned int> typ2oid_map = {
+        //numeric
+        { "int2",       INT2OID },
+        { "smallint",   INT2OID },
+        { "int4",       INT4OID },
+        { "integer",    INT4OID },
+        { "int8",       INT8OID },
+        { "float4",     FLOAT4OID },
+        { "float8",     FLOAT8OID },
+        { "numeric",    NUMERICOID },
+        //geo
+        { "point",      POINTOID },
+        { "lseg",       LSEGOID },
+        { "path",       PATHOID },
+        { "box",        BOXOID },
+        { "polygon",    POLYGONOID },
+        { "line",       LINEOID },
+        { "circle",     CIRCLEOID },
+        //network
+        { "inet",       INETOID },
+        { "cidr",       CIDROID },
+        { "macaddr",    MACADDROID },
+        //varlen
+        { "bpchar",     BPCHAROID },
+        { "varchar",    VARCHAROID },
+        { "name",       NAMEOID },
+        { "text",       TEXTOID },
+        { "bit",        ZPBITOID },
+        { "varbit",     VARBITOID },
+        { "bytea",      BYTEAOID },
+        //date and time
+        { "date",       DATEOID },
+        { "time",       TIMEOID },
+        { "timetz",     TIMETZOID },
+        { "timestamp",  TIMESTAMPOID },
+        { "timestamptz",TIMESTAMPTZOID },
+        { "interval",   INTERVALOID },
+        // misc
+        { "int2[]",     INT2ARRAYOID },
+        { "int4[]",     INT4ARRAYOID },
+        { "char",       CHAROID },
+        { "bool",       BOOLOID },
+        { "oid",        OIDOID },
+        { "money",      CASHOID },
+        { "record",     RECORDOID },
+        { "uuid",       UUIDOID },
+        { "json",       JSONOID },
+        { "jsonb",      JSONBOID },
+    };
 
+    auto it = typ2oid_map.find(typname);
+    if(it == typ2oid_map.end())
+        return INVALIDOID;
+    return it->second;
+}

@@ -89,6 +89,7 @@ public:
     string stmt;
     string query;
     vector<unsigned int> oids;
+    vector<string> sql_types;
 
     PGPrepareData(const string& stmt_, const string& query_)
     : stmt(stmt_), query(query_) {}
@@ -98,6 +99,11 @@ public:
 
     PGPrepareData& add_param_oid(unsigned int oid) {
         oids.push_back(oid);
+        return *this;
+    }
+
+    PGPrepareData& add_sql_type_param(const string &sql_type) {
+        sql_types.emplace_back(sql_type);
         return *this;
     }
 };
