@@ -132,7 +132,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     vector<PGEvent::Type> types = {PGEvent::Result, PGEvent::Result};
     WorkerHandler::instance().set_expected_events(types);
 
-    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, false, 1, 1, 1, DEFAULT_BATCH_SIZE, 1);
+    PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, false, 1, 1, 1, PG_DEFAULT_BATCH_SIZE, 1);
     PostgreSQL::instance()->postEvent(wc);
 
     string query;

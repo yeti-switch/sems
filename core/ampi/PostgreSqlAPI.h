@@ -1,5 +1,4 @@
-#ifndef POSTGRESQL_API_H
-#define POSTGRESQL_API_H
+#pragma once
 
 #include "AmEvent.h"
 
@@ -7,13 +6,13 @@
 using std::string;
 
 #define POSTGRESQL_QUEUE       "postgresql"
-#define DEFAULT_POOL_SIZE      6
-#define DEFAULT_BATCH_SIZE     0
-#define DEFAULT_MAX_Q_LEN      10000
-#define DEFAULT_BATCH_TIMEOUT 1      //in sec
-#define DEFAULT_RET_INTERVAL   10     //in sec
-#define DEFAULT_REC_INTERVAL   1      //in sec
-#define DEFAULT_WAIT_TIME      5      //in sec
+#define PG_DEFAULT_POOL_SIZE      6
+#define PG_DEFAULT_BATCH_SIZE     0
+#define PG_DEFAULT_MAX_Q_LEN      10000
+#define PG_DEFAULT_BATCH_TIMEOUT 1      //in sec
+#define PG_DEFAULT_RET_INTERVAL   10     //in sec
+#define PG_DEFAULT_REC_INTERVAL   1      //in sec
+#define PG_DEFAULT_WAIT_TIME      5      //in sec
 
 class PGEvent : public AmEvent
 {
@@ -50,7 +49,7 @@ struct PGPool
     PGPool(const string& host_, uint16_t port_,
            const string& name_, const string& user_, const string& pass_)
         : host(host_), port(port_), name(name_), user(user_), pass(pass_)
-        , pool_size(DEFAULT_POOL_SIZE){}
+        , pool_size(PG_DEFAULT_POOL_SIZE){}
     PGPool(const PGPool& pool)
         : host(pool.host), port(pool.port), name(pool.name), user(pool.user), pass(pool.pass)
         , pool_size(pool.pool_size){}
@@ -124,12 +123,12 @@ public:
        bool failover_to_slave,
        bool retransmit_enable,
        bool use_pipeline,
-       uint32_t trans_wait_time = DEFAULT_WAIT_TIME,
-       uint32_t retransmit_interval = DEFAULT_RET_INTERVAL,
-       uint32_t reconnect_interval = DEFAULT_REC_INTERVAL,
-       uint32_t batch_size = DEFAULT_BATCH_SIZE,
-       uint32_t batch_timeout = DEFAULT_BATCH_TIMEOUT,
-       uint32_t max_queue_length = DEFAULT_MAX_Q_LEN)
+       uint32_t trans_wait_time = PG_DEFAULT_WAIT_TIME,
+       uint32_t retransmit_interval = PG_DEFAULT_RET_INTERVAL,
+       uint32_t reconnect_interval = PG_DEFAULT_REC_INTERVAL,
+       uint32_t batch_size = PG_DEFAULT_BATCH_SIZE,
+       uint32_t batch_timeout = PG_DEFAULT_BATCH_TIMEOUT,
+       uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN)
      : PGEvent(WorkerConfig)
      , worker_name(name)
      , use_pipeline(use_pipeline)
@@ -329,5 +328,3 @@ public:
     PGTimeout(const string& token_)
     : PGEvent(Timeout), token(token_) {}
 };
-
-#endif/*POSTGRESQL_API_H*/
