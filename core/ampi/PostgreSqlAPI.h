@@ -216,7 +216,9 @@ public:
 
 class PGTransactionData
 {
-public:
+  public:
+    bool use_transaction;
+
     enum isolation_level
     {
     read_committed,
@@ -230,10 +232,17 @@ public:
     read_write
     } wp;
 
-    bool is_db;
+    PGTransactionData()
+      : use_transaction(false),
+        il(read_committed),
+        wp(write_policy::read_only)
+    {}
 
-    PGTransactionData() : is_db(false), il(read_committed), wp(write_policy::read_only){}
-    PGTransactionData(isolation_level il_, write_policy wp_) : is_db(true), il(il_), wp(wp_){}
+    PGTransactionData(isolation_level il_, write_policy wp_)
+      : use_transaction(true),
+        il(il_),
+        wp(wp_)
+    {}
 };
 
 class PGExecute : public PGEvent
@@ -241,9 +250,17 @@ class PGExecute : public PGEvent
 public:
     PGQueryData qdata;
     PGTransactionData tdata;
+    bool initial;
 
-    PGExecute(const PGQueryData& qdata_, const PGTransactionData& tdata_)
-    : PGEvent(SimpleExecute), qdata(qdata_), tdata(tdata_){}
+    PGExecute(
+        const PGQueryData& qdata_,
+        const PGTransactionData& tdata_,
+        bool initial = false)
+      : PGEvent(SimpleExecute),
+        qdata(qdata_),
+        tdata(tdata_),
+        initial(initial)
+    {}
 };
 
 class PGParamExecute : public PGEvent
@@ -252,12 +269,18 @@ public:
     PGQueryData qdata;
     PGTransactionData tdata;
     bool prepared;
+    bool initial;
 
-    PGParamExecute(const PGQueryData& qdata_, const PGTransactionData& tdata_, bool prepared_)
+    PGParamExecute(
+        const PGQueryData& qdata_,
+        const PGTransactionData& tdata_,
+        bool prepared_,
+        bool initial = false)
      : PGEvent(ParamExecute),
        qdata(qdata_),
        tdata(tdata_),
-       prepared(prepared_)
+       prepared(prepared_),
+       initial(initial)
     {}
 
     template<typename T>

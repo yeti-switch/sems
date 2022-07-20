@@ -442,15 +442,17 @@ PreparedTransaction::PreparedTransaction(const PreparedTransaction& trans)
 
 ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData>& prepareds,
                                      const vector<std::string>& search_pathes,
+                                     const vector< std::unique_ptr<IPGQuery> > &init_queries,
                                      ITransactionHandler* handler)
 : IPGTransaction(PolicyFactory::instance()->createTransaction(this, TR_CONFIG), handler)
 {
-    if(prepareds.empty() && search_pathes.empty()) {
-        ERROR("prepared list and search path are empty");
+    if(prepareds.empty() && search_pathes.empty() && init_queries.empty()) {
+        ERROR("either prepared list, search path, init_queries are empty. nothing to do");
         return;
     }
 
     QueryChain* q = 0;
+
     if(!search_pathes.empty()) {
         string query("SET search_path TO ");
         for(auto& path : search_pathes) {
@@ -460,6 +462,7 @@ ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData>& prep
 
         q = new QueryChain(new Query(query, false));
     }
+
     if(!prepareds.empty()) {
         auto first = prepareds.begin();
         IPGQuery* firstq = new Prepared(first->first, first->second.query, first->second.oids);
@@ -471,6 +474,20 @@ ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData>& prep
             q->addQuery(new Prepared(it->first, it->second.query, it->second.oids));
         }
     }
+
+    if(!init_queries.empty()) {
+        auto it = init_queries.begin();
+        IPGQuery* firstq = it->get();
+        if(!q)
+            q = new QueryChain(firstq->clone());
+        else
+            q->addQuery(firstq->clone());
+
+        for(++it; it != init_queries.end(); ++it) {
+            q->addQuery(it->get()->clone());
+        }
+    }
+
     exec(q);
 }
 

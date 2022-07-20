@@ -272,11 +272,6 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
     Worker* worker = getWorker(e.qdata);
     if(!worker) return;
 
-    IPGTransaction* trans = 0;
-    if(!e.tdata.is_db)
-        trans = new NonTransaction(worker);
-    else
-        trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
     IPGQuery* query = new Query(e.qdata.info[0].query, e.qdata.info[0].single);
     if(e.qdata.info.size() > 1) {
         QueryChain* chain = new QueryChain(query);
@@ -285,8 +280,19 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
         }
         query = chain;
     }
-    trans->exec(query);
-    worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
+
+    if(!e.initial) {
+        IPGTransaction* trans = 0;
+        if(!e.tdata.use_transaction)
+            trans = new NonTransaction(worker);
+        else
+            trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
+
+        trans->exec(query);
+        worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
+    } else {
+        worker->runInitial(query);
+    }
 }
 
 void PostgreSQL::onParamExecute(const PGParamExecute& e)
@@ -295,11 +301,6 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
 
     Worker* worker = getWorker(e.qdata);
     if(worker) {
-        IPGTransaction* trans = 0;
-        if(!e.tdata.is_db)
-            trans = new NonTransaction(worker);
-        else
-            trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
         QueryParams* qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
         qparams->addParams(getParams(e.qdata.info[0].params));
         IPGQuery* query = qparams;
@@ -312,8 +313,19 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
             }
             query = chain;
         }
-        trans->exec(query);
-        worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
+
+        if(!e.initial) {
+            IPGTransaction* trans = 0;
+            if(!e.tdata.use_transaction)
+                trans = new NonTransaction(worker);
+            else
+                trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
+
+            trans->exec(query);
+            worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
+        } else {
+            worker->runInitial(query);
+        }
     }
 }
 

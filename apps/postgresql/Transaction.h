@@ -220,6 +220,7 @@ class ConfigTransaction : public IPGTransaction
 public:
     ConfigTransaction(const map<string, PGPrepareData>& prepareds,
                       const vector<string>& search_pathes,
+                      const vector< std::unique_ptr<IPGQuery> > &init_queries,
                       ITransactionHandler* handler);
     ConfigTransaction(const ConfigTransaction& trans);
     ~ConfigTransaction(){}

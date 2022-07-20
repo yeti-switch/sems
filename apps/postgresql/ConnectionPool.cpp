@@ -82,10 +82,11 @@ void Worker::onConnect(IPGConnection* conn) {
     DBG("connection %s:%p/\'%s\' success", name.c_str(), conn, conn->getConnInfo().c_str());
     if(use_pipeline)
         conn->startPipeline();
-    if(!prepareds.empty() || !search_pathes.empty()) {
-        IPGTransaction* trans = new ConfigTransaction(prepareds, search_pathes, this);
+    if(!prepareds.empty() || !search_pathes.empty() || !init_queries.empty()) {
+        IPGTransaction* trans = new ConfigTransaction(prepareds, search_pathes, init_queries, this);
         if(!conn->runTransaction(trans)) {
-            ERROR("connection %p/%s of worker \'%s\' already exist transaction", conn, conn->getConnInfo().c_str(), name.c_str());
+            ERROR("connection %p/%s of worker \'%s\' already exist transaction",
+                  conn, conn->getConnInfo().c_str(), name.c_str());
             delete trans;
         }
     }
@@ -460,9 +461,22 @@ void Worker::runPrepared(const PGPrepareData& prepared)
     }
 
     if(master)
-        master->runTransaction(trans.get());
+        master->runTransactionForPool(trans.get());
     if(slave)
-        slave->runTransaction(trans.get());
+        slave->runTransactionForPool(trans.get());
+}
+
+void Worker::runInitial(IPGQuery *query)
+{
+    init_queries.emplace_back(query->clone());
+
+    NonTransaction tr(this);
+    tr.exec(query);
+
+    if(master)
+        master->runTransactionForPool(&tr);
+    if(slave)
+        slave->runTransactionForPool(&tr);
 }
 
 void Worker::setSearchPath(const vector<string>& search_path)
@@ -478,14 +492,17 @@ void Worker::setSearchPath(const vector<string>& search_path)
     IPGTransaction* tr = new NonTransaction(this);
     tr->exec(new Query(query, false));
     if(master)
-        master->runTransaction(tr);
+        master->runTransactionForPool(tr);
     if(slave)
-        slave->runTransaction(tr);
+        slave->runTransactionForPool(tr);
 }
 
 void Worker::configure(const PGWorkerConfig& e)
 {
     prepareds.clear();
+    search_pathes.clear();
+    init_queries.clear();
+
     failover_to_slave = e.failover_to_slave;
     retransmit_enable = e.retransmit_enable;
     use_pipeline = e.use_pipeline;
@@ -495,6 +512,7 @@ void Worker::configure(const PGWorkerConfig& e)
     batch_size = e.batch_size;
     batch_timeout = e.batch_timeout;
     max_queue_length = e.max_queue_length;
+
     setSearchPath(e.search_pathes);
     for(auto& prepared : e.prepeared)
         runPrepared(prepared);
@@ -633,7 +651,7 @@ IPGConnection * ConnectionPool::getFreeConnection()
     return 0;
 }
 
-void ConnectionPool::runTransaction(IPGTransaction* trans)
+void ConnectionPool::runTransactionForPool(IPGTransaction* trans)
 {
     for(auto& conn : connections) {
         if(conn->getStatus() == CONNECTION_OK) {

@@ -55,8 +55,11 @@ class Worker : public ITransactionHandler,
     AtomicCounter& dropped;
 
     list<TransContainer> transactions;    //active transactions
+
     map<string,PGPrepareData> prepareds;  //prepared transaction for all connections that has connected
     vector<string> search_pathes;         //search pathes for all connections that has connected
+    vector< std::unique_ptr<IPGQuery> > init_queries; //queries to run on connect
+
     list<TransContainer> retransmit_q;    //queue of retransmit transactions
     list<TransContainer> queue;           //queue of transaction
     vector<IPGTransaction*> erased;       //temp container for finished transactions(on the next iteration they will be deleted)
@@ -76,8 +79,11 @@ public:
     bool processEvent(void* p);
 
     void createPool(PGWorkerPoolCreate::PoolType type, const PGPool& pool);
+
     void runPrepared(const PGPrepareData& prepared);
+    void runInitial(IPGQuery *query);
     void setSearchPath(const vector<string>& search_path);
+
     void runTransaction(IPGTransaction* trans, const string& sender_id, const string& token);
     void configure(const PGWorkerConfig& e);
     void resetPools();    //for tests
@@ -115,7 +121,7 @@ public:
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();
-    void runTransaction(IPGTransaction* trans);
+    void runTransactionForPool(IPGTransaction* trans);
     void resetConnections();
     void usePipeline(bool is_pipeline);
 
