@@ -12,6 +12,7 @@ class QueryParam
     string strvalue;
     char binvalue[sizeof(double)];
 public:
+    QueryParam();
     QueryParam(bool val);
     QueryParam(int16_t val);
     QueryParam(int32_t val);
@@ -23,6 +24,7 @@ public:
     QueryParam(const string& val);
     QueryParam(const char* val);
     QueryParam(const AmArg& val);
+    QueryParam(unsigned int oid, const AmArg &val);
     int get_length();
     unsigned int get_oid();
     const char* get_value();

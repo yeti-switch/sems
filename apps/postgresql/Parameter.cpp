@@ -43,6 +43,10 @@ static inline float    pq_get_float4(const char *value)
     return f.value;
 }
 
+QueryParam::QueryParam()
+: oid(INVALIDOID)
+{ }
+
 QueryParam::QueryParam(bool val)
 : oid(BOOLOID) {
     binvalue[0] = val;
@@ -104,13 +108,37 @@ QueryParam::QueryParam(const AmArg& val)
     strvalue = arg2json(val);
 }
 
+QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
+{
+    DBG("typed QueryParam(%d)", param_oid);
+    switch(param_oid) {
+    case INT2OID: //smallint
+        if(isArgInt(val)) {
+            oid = INT2OID;
+            *((int16_t*)binvalue) = ntohs((int16_t)val.asInt());
+        } else {
+            ERROR("AmArg Int expected for smallint/int2. got:%s. save as null",
+                  AmArg::print(val).data());
+            oid = INVALIDOID;
+        }
+        break;
+    default:
+        ERROR("unsupported typed param with oid: %d. save as null", param_oid);
+        oid = INVALIDOID;
+    }
+}
+
 unsigned int QueryParam::get_oid() {
+    if(oid==INVALIDOID)
+        return VARCHAROID;
     return oid;
 }
 
 const char * QueryParam::get_value()
 {
     switch(oid) {
+    case INVALIDOID:
+        return nullptr;
     case BOOLOID:
     case INT2OID:
     case INT4OID:
@@ -128,6 +156,8 @@ const char * QueryParam::get_value()
 int QueryParam::get_length()
 {
     switch(oid) {
+    case INVALIDOID:
+        return 0;
     case BOOLOID:
         return sizeof(uint8_t);
     case INT2OID:
@@ -214,7 +244,9 @@ vector<QueryParam> getParams(const vector<AmArg>& params)
 {
     vector<QueryParam> qparams;
     for(auto& param : params) {
-        if(isArgInt(param))
+        if(isArgUndef(param))
+            qparams.emplace_back();
+        else if(isArgInt(param))
             qparams.emplace_back(param.asInt());
         else if(isArgLongLong(param))
             qparams.emplace_back((int64_t)param.asLongLong());
@@ -222,10 +254,29 @@ vector<QueryParam> getParams(const vector<AmArg>& params)
             qparams.emplace_back(param.asCStr());
         else if(isArgDouble(param))
             qparams.emplace_back(param.asDouble());
-        else if(isArgStruct(param) || isArgArray(param))
+        else if (isArgArray(param))
             qparams.emplace_back(param);
         else if(isArgBool(param))
             qparams.emplace_back(param.asBool());
+        else if(isArgStruct(param)) {
+            if(param.hasMember("pg")) {
+                AmArg &a = param["pg"];
+                if(isArgArray(a) &&
+                   a.size()==2 &&
+                   isArgCStr(a[0]))
+                {
+                    qparams.emplace_back(
+                        pg_typname2oid(a[0].asCStr()),
+                        a[1]);
+                } else {
+                    ERROR("unexpected format in typed param: %s. add as json",
+                          AmArg::print(param).data());
+                    qparams.emplace_back(param);
+                }
+            } else {
+                qparams.emplace_back(param);
+            }
+        }
     }
     return qparams;
 }

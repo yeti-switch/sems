@@ -185,6 +185,15 @@ public:
         params.emplace_back(param);
         return *this;
     }
+
+    template<typename T>
+    QueryInfo& addTypedParam(const char *sql_type, const T& param) {
+        params.emplace_back();
+        AmArg &a = params.back()["pg"];
+        a.push(sql_type);
+        a.push(param);
+        return *this;
+    }
 };
 
 class PGQueryData
