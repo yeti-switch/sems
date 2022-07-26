@@ -4,6 +4,7 @@
 #include <jsonArg.h>
 
 #include <netinet/in.h>
+#include <time.h>
 #include <unordered_map>
 
 #ifndef ntohll
@@ -215,6 +216,24 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value)
             else
                     return AmArg(false);
         }
+    case TIMESTAMPOID:
+    case TIMESTAMPTZOID: {
+        if(is_binary) {
+            ERROR("binary 'timestamp/timestamptz' are not supported");
+            return AmArg();
+        }
+        struct tm tm;
+        /* TODO: full format for timestamptz is 2021-08-17 18:06:22.358156+03
+           parse microseconds and timezone */
+        if(nullptr == strptime(value, "%Y-%m-%d %H:%M:%S", &tm)) {
+            ERROR("failed to parse oid %d: %s", oid, value);
+            return AmArg();
+        }
+        tm.tm_isdst = 0; //ignore daylight saving time
+        return AmArg(mktime(&tm));
+    } break;
+    case VOIDOID:
+        return AmArg();
     case NUMERICOID:
         return AmArg(atof(value));
     case INT2OID:
@@ -237,6 +256,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value)
         json2arg(value, ret);
         return ret;
     }
+    ERROR("unsupported oid:%u value:%s", oid, value);
     return AmArg();
 }
 

@@ -50,3 +50,4 @@
 #define UUIDOID          2950
 #define JSONOID          114
 #define JSONBOID         3802
+#define VOIDOID          2278
