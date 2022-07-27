@@ -40,8 +40,6 @@
 #define TIMESTAMPTZOID   1184
 #define INTERVALOID      1186
 /* misc types */
-#define INT2ARRAYOID     1005
-#define INT4ARRAYOID     1007
 #define CHAROID            18
 #define BOOLOID            16
 #define OIDOID             26
@@ -51,3 +49,8 @@
 #define JSONOID          114
 #define JSONBOID         3802
 #define VOIDOID          2278
+/* array types */
+#define INT2ARRAYOID     1005
+#define INT4ARRAYOID     1007
+#define VARCHARARRAYOID  1015
+#define INETARRAYOID     1041

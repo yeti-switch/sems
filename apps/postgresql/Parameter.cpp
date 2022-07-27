@@ -111,7 +111,7 @@ QueryParam::QueryParam(const AmArg& val)
 
 QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
 {
-    DBG("typed QueryParam(%d)", param_oid);
+    //DBG("typed QueryParam(%d)", param_oid);
     switch(param_oid) {
     case INT2OID: //smallint
         if(isArgInt(val)) {
@@ -195,8 +195,140 @@ bool QueryParam::is_binary_format()
     return true;
 }
 
-AmArg get_result(unsigned int oid, bool is_binary, const char* value)
+template< typename T >
+struct free_deleter
 {
+    void operator ()( T const * p) {
+        free(p);
+    }
+};
+
+static bool iterate_pg_array(
+    const char *value, AmArg &ret,
+    std::function< AmArg (const char *item_value) > parse_cb)
+{
+    static const char *pg_null_str = "NULL";
+
+    ret.assertArray();
+
+    size_t n = strlen(value);
+    if(n < 2) return false;
+
+    if(n==2) return true; //empty array
+
+    if(value[0] != '{' || value[n-1] != '}')
+        return false;
+
+    char *value_copy = strdup(value);
+
+    //skip leading '{'
+    char *s = value_copy+1;
+
+    //remove trailing '}'
+    value_copy[n-1] = '\0';
+
+    enum {
+        ST_ITEM_START,
+        ST_ITEM,
+        ST_QUOTED_ITEM,
+        ST_ESCAPED_SYMBOL
+    } state = ST_ITEM_START, last_state;
+
+    //tokenize ignoring quoted delimiter
+    char *token = s;
+    for(; *s; s++) {
+        switch(*s) {
+        case ',': //delimiter
+            switch(state) {
+            case ST_ITEM_START:
+                //empty item ?
+                ret.push(AmArg());
+                break;
+            case ST_ITEM:
+                state = ST_ITEM_START;
+                //found. delimiter. process previous item
+                *s = '\0'; //make string null-terminated
+                if(0 == strcmp(token, pg_null_str)) {
+                    ret.push(AmArg());
+                } else {
+                    ret.push(parse_cb(token));
+                }
+                break;
+            case ST_QUOTED_ITEM:
+                //ignore ',' in quoted string
+                break;
+            case ST_ESCAPED_SYMBOL:
+                //ignore escaped ','
+                state = last_state;
+                break;
+            }
+            break;
+        case '\\': //escaping
+            if(state == ST_ITEM_START) {
+                last_state = ST_ITEM;
+                state = ST_ESCAPED_SYMBOL;
+            } else if(state != ST_ESCAPED_SYMBOL) {
+                last_state = state;
+                state = ST_ESCAPED_SYMBOL;
+            }
+            break;
+        case '"': //quotation
+            switch(state) {
+            case ST_ITEM_START:
+                state = ST_QUOTED_ITEM;
+                token = s+1; //skip first quote.
+                break;
+            case ST_ITEM:
+                //ignore '"' within unqouted item
+                break;
+            case ST_ESCAPED_SYMBOL:
+                state = last_state;
+                //ignore escaped '"'
+                break;
+            case ST_QUOTED_ITEM:
+                *s = '\0'; //nullify tail quote
+                state = ST_ITEM;
+                break;
+            }
+            break;
+        default:
+            switch(state) {
+            case ST_ITEM_START:
+                state = ST_ITEM;
+                token = s;
+                break;
+            case ST_ESCAPED_SYMBOL:
+                state = last_state;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    //tail token
+    if(state==ST_ITEM) {
+        if(0 == strcmp(token, pg_null_str)) {
+            ret.push(AmArg());
+        } else {
+            ret.push(parse_cb(token));
+        }
+    }
+
+    free(value_copy);
+
+    return true;
+}
+
+AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_null)
+{
+    AmArg ret;
+
+    //TODO: rewrite to use hash with oid -> parser routine mapping
+
+    if(is_null)
+        return AmArg();
+
     switch(oid) {
     case VARCHAROID:
     case CHAROID:
@@ -204,60 +336,101 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value)
     case INETOID:
     case CIDROID:
     case MACADDROID:
-        return AmArg(value);
+        ret = AmArg(value);
+        break;
     case BOOLOID:
-        if(is_binary) return AmArg((bool)value);
-        else {
+        if(is_binary) {
+            ret = AmArg((bool)value);
+        } else {
             if(value[0] == 't' ||
                value[0] == 'y' ||
                strcmp(value, "on") == 0 ||
                value[0] == '1')
-                    return AmArg(true);
-            else
-                    return AmArg(false);
+            {
+                ret = AmArg(true);
+            } else {
+                ret = AmArg(false);
+            }
         }
+        break;
     case TIMESTAMPOID:
     case TIMESTAMPTZOID: {
         if(is_binary) {
             ERROR("binary 'timestamp/timestamptz' are not supported");
-            return AmArg();
+            break;
         }
         struct tm tm;
         /* TODO: full format for timestamptz is 2021-08-17 18:06:22.358156+03
            parse microseconds and timezone */
         if(nullptr == strptime(value, "%Y-%m-%d %H:%M:%S", &tm)) {
             ERROR("failed to parse oid %d: %s", oid, value);
-            return AmArg();
+            break;
         }
         tm.tm_isdst = 0; //ignore daylight saving time
-        return AmArg(mktime(&tm));
+        ret = AmArg(mktime(&tm));
     } break;
     case VOIDOID:
-        return AmArg();
+        break;
     case NUMERICOID:
-        return AmArg(atof(value));
+        ret = AmArg(atof(value));
+        break;
     case INT2OID:
-        if(is_binary) return AmArg(pg_get_int2(value));
-        else return AmArg(atoi(value));
+        if(is_binary) ret = AmArg(pg_get_int2(value));
+        else ret = AmArg(atoi(value));
+        break;
     case INT4OID:
-        if(is_binary) return AmArg(pq_get_int4(value));
-        else return AmArg(atol(value));
+        if(is_binary) ret = AmArg(pq_get_int4(value));
+        else ret = AmArg(atol(value));
+        break;
     case INT8OID:
-        if(is_binary) return AmArg(pq_get_int8(value));
-        else return AmArg(atoll(value));
+        if(is_binary) ret = AmArg(pq_get_int8(value));
+        else ret = AmArg(atoll(value));
+        break;
     case FLOAT4OID:
-        if(is_binary) return AmArg((double)pq_get_float4(value));
-        else return AmArg(atof(value));
+        if(is_binary) ret = AmArg((double)pq_get_float4(value));
+        else ret = AmArg(atof(value));
+        break;
     case FLOAT8OID:
-        if(is_binary) return AmArg(pq_get_float8(value));
-        else return AmArg(atof(value));
-    case JSONOID:
+        if(is_binary) ret = AmArg(pq_get_float8(value));
+        else ret = AmArg(atof(value));
+        break;
+    case JSONOID: {
         AmArg ret;
         json2arg(value, ret);
-        return ret;
-    }
-    ERROR("unsupported oid:%u value:%s", oid, value);
-    return AmArg();
+    } break;
+    case INT2ARRAYOID:
+        if(is_binary) {
+            ERROR("binary int2[] is not supported");
+            break;
+        }
+        if(!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg {
+            return AmArg(atoi(item_value));
+        })) ERROR("error on int2[] parsing: %s", value);
+        break;
+    case INT4ARRAYOID:
+        if(is_binary) {
+            ERROR("binary int4[] is not supported");
+            break;
+        }
+        if(!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg {
+            return AmArg(atol(item_value));
+        })) ERROR("error on int4[] parsing: %s", value);
+        break;
+    case VARCHARARRAYOID:
+        if(!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg {
+            return AmArg(item_value);
+        })) ERROR("error on varchar[] parsing: %s", value);
+        break;
+    case INETARRAYOID:
+        if(!iterate_pg_array(value, ret, [](const char *item_value) -> AmArg {
+            return AmArg(item_value);
+        })) ERROR("error on inet[] parsing: %s", value);
+        break;
+    default:
+        ERROR("unsupported oid:%u is_null:%d value:%s", oid, is_null, value);
+    } //switch(oid)
+
+    return ret;
 }
 
 vector<QueryParam> getParams(const vector<AmArg>& params)

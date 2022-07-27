@@ -164,8 +164,9 @@ void PGTransaction::make_result(PGresult* res, bool single)
     for(int i = 0; i < rows; i++) {
         AmArg row;
         for(int j = 0; j < fields; j++) {
-            char* value = PQgetvalue(res, i, j);
-            row.push(field_names[j], get_result(field_types[j], field_format[j], value));
+            row.push(field_names[j], get_result(
+                field_types[j], field_format[j],
+                PQgetvalue(res, i, j), PQgetisnull(res, i, j)));
         }
         if(single) parent->handler->onTuple(parent, row);
         result.push(row);

@@ -31,7 +31,7 @@ public:
     bool is_binary_format();
 };
 
-AmArg get_result(unsigned int oid, bool is_binary, const char* value);
+AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_null = false);
 vector<QueryParam> getParams(const vector<AmArg>& params);
 
 unsigned int pg_typname2oid(const string &sql_type);
