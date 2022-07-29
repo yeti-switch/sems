@@ -95,7 +95,9 @@ public:
     : stmt(stmt_), query(query_) {}
     PGPrepareData(const PGPrepareData& data)
     : stmt(data.stmt), query(data.query)
-    , oids(data.oids){}
+    , oids(data.oids)
+    , sql_types(data.sql_types)
+    {}
 
     PGPrepareData& add_param_oid(unsigned int oid) {
         oids.push_back(oid);
