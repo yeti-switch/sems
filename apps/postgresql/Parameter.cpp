@@ -533,6 +533,7 @@ unsigned int pg_typname2oid(const string &typname)
         { "int4[]",     INT4ARRAYOID },
         { "char",       CHAROID },
         { "bool",       BOOLOID },
+        { "boolean",    BOOLOID },
         { "oid",        OIDOID },
         { "money",      CASHOID },
         { "record",     RECORDOID },
