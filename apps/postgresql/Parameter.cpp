@@ -123,6 +123,19 @@ QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
             oid = INVALIDOID;
         }
         break;
+    case INT8OID: //bigint
+        if(isArgInt(val)) {
+            oid = INT8OID;
+            *((int64_t*)binvalue) = ntohll(val.asInt());
+        } else if(isArgLongLong(val)) {
+            oid = INT8OID;
+            *((int64_t*)binvalue) = ntohll(val.asLongLong());
+        } else {
+            ERROR("AmArg Int/LongLong expected for bigint/int8. got:%s. save as null",
+                  AmArg::print(val).data());
+            oid = INVALIDOID;
+        }
+        break;
     default:
         ERROR("unsupported typed param with oid: %d. save as null", param_oid);
         oid = INVALIDOID;
@@ -484,6 +497,7 @@ unsigned int pg_typname2oid(const string &typname)
         { "int4",       INT4OID },
         { "integer",    INT4OID },
         { "int8",       INT8OID },
+        { "bigint",     INT8OID },
         { "float4",     FLOAT4OID },
         { "float8",     FLOAT8OID },
         { "numeric",    NUMERICOID },
