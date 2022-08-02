@@ -500,6 +500,7 @@ unsigned int pg_typname2oid(const string &typname)
         { "bigint",     INT8OID },
         { "float4",     FLOAT4OID },
         { "float8",     FLOAT8OID },
+        { "double",     FLOAT8OID },
         { "numeric",    NUMERICOID },
         //geo
         { "point",      POINTOID },
