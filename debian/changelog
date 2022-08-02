@@ -1,3 +1,13 @@
+sems (1.89.0) stable; urgency=low
+  * pg: add initial requests support to automatically perform saved requests on reconnect
+  * pg: support sqltypes for PGPrepare
+  * pg: support typed and null QueryParam
+  * pg: add smallint/int2, bigint/int8 typed QueryParam
+  * pg: parse int2[],int4[],varchar[],inet[] and null values
+  * pg: add BOOLOID 'boolean' alias
+  * pg: add FLOAT8OID 'double' alias
+ -- Michael Furmur <furmur@pm.me>  Tue, 02 Aug 2022 14:43:06 +0300
+
 sems (1.88.0) stable; urgency=low
   * postgresql: fix send buffer overflow processing
   * postgresql: add NUMERICOID processing
