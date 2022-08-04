@@ -44,6 +44,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -380,71 +381,109 @@ JsonRPCServerLoop::~JsonRPCServerLoop() {
     ev_default_destroy();
 }
 
-void JsonRPCServerLoop::run() {
-  setThreadName("rpc-server");
-  DBG("adding %d more server threads ",
-      JsonRPCServerModule::threads - 1);
-  threadpool.addThreads(JsonRPCServerModule::threads - 1);
+int JsonRPCServerLoop::configure()
+{
+    struct sockaddr_in listen_addr;
+    int reuseaddr_on = 1;
+    listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-  INFO("running server loop; listening on %s:%d",
-       JsonRPCServerModule::host.c_str(),
-       JsonRPCServerModule::port);
-  struct sockaddr_in listen_addr;
-  int listen_fd;
-  int reuseaddr_on = 1;
-  listen_fd = socket(AF_INET, SOCK_STREAM, 0); 
-  SOCKET_LOG("socket(AF_INET, SOCK_STREAM, 0) = %d",listen_fd);
-  if (listen_fd < 0)
-    err(1, "listen failed");
-  if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on,
-		 sizeof(reuseaddr_on)) == -1)
-    err(1, "setsockopt failed");
-  memset(&listen_addr, 0, sizeof(listen_addr));
-  listen_addr.sin_family = AF_INET;
-  if(JsonRPCServerModule::host.empty()){
-    listen_addr.sin_addr.s_addr = INADDR_ANY;
-  } else {
-     if(inet_aton(JsonRPCServerModule::host.c_str(),
-                  &listen_addr.sin_addr)<0)
-     {
-        ERROR("invalid address to listen: %s",
-              JsonRPCServerModule::host.c_str());
-        return;
-     }
-  }
-  listen_addr.sin_port = htons(JsonRPCServerModule::port);
-  if (bind(listen_fd, (struct sockaddr *)&listen_addr,
-	   sizeof(listen_addr)) < 0) {
-    ERROR("bind failed");
-    return;
-  }
-  if (listen(listen_fd,5) < 0) {
-    ERROR("listen failed");
-    return;
-  }
-  if (setnonblock(listen_fd) < 0) {
-    ERROR("failed to set server socket to non-blocking");
-    return;
-  }
+    SOCKET_LOG("socket(AF_INET, SOCK_STREAM, 0) = %d",listen_fd);
 
-  ev_io_init(&ev_accept,accept_cb,listen_fd,EV_READ);
-  ev_io_start(loop,&ev_accept);
+    if (listen_fd < 0) {
+        ERROR("listen failed");
+        return 1;
+    }
 
-  // async watcher to process our events in event loop
-  ev_async_init (&async_w, async_cb);
-  ev_async_start (EV_A_ &async_w);
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on,
+        sizeof(reuseaddr_on)) == -1)
+    {
+        ERROR("setsockopt(SO_REUSEADDR): %d", errno);
+    }
 
-  INFO("running event loop");
-  setEventNotificationSink(this);
-  AmEventDispatcher::instance()->addEventQueue(JSONRPC_QUEUE_NAME,this);
-  ev_loop (loop, 0);
-  AmEventDispatcher::instance()->delEventQueue(JSONRPC_QUEUE_NAME);
-  INFO("event loop finished");
-  
-  threadpool.cleanup();
-  close(listen_fd);
-  listen_fd = 0;
-  INFO("rpc server loop finished");
+    memset(&listen_addr, 0, sizeof(listen_addr));
+    listen_addr.sin_family = AF_INET;
+    if(JsonRPCServerModule::host.empty()){
+        listen_addr.sin_addr.s_addr = INADDR_ANY;
+    } else {
+        if(inet_aton(JsonRPCServerModule::host.c_str(),
+           &listen_addr.sin_addr)<0)
+        {
+            ERROR("invalid address to listen: %s",
+                JsonRPCServerModule::host.c_str());
+            return 1;
+        }
+    }
+
+    if(JsonRPCServerModule::tcp_md5_password.size()) {
+        struct tcp_md5sig md5sig;
+        memset(&md5sig, 0, sizeof(md5sig));
+        memcpy(&md5sig.tcpm_addr, &listen_addr, sizeof(listen_addr));
+        /*md5sig.tcpm_flags = TCP_MD5SIG_FLAG_PREFIX;
+        md5sig.tcpm_prefixlen = 0;*/
+        md5sig.tcpm_keylen = static_cast<uint16_t>(JsonRPCServerModule::tcp_md5_password.size());
+        memcpy(md5sig.tcpm_key,
+               JsonRPCServerModule::tcp_md5_password.data(),
+               md5sig.tcpm_keylen);
+
+        if (setsockopt(listen_fd, IPPROTO_TCP, TCP_MD5SIG, &md5sig, sizeof(md5sig)) < 0) {
+            ERROR("setsockopt(TCP_MD5SIG): %d", errno);
+            return 1;
+        }
+    }
+
+    listen_addr.sin_port = htons(JsonRPCServerModule::port);
+    if (bind(listen_fd, (struct sockaddr *)&listen_addr,
+        sizeof(listen_addr)) < 0)
+    {
+        ERROR("bind failed");
+        return 1;
+    }
+
+    if (listen(listen_fd,5) < 0) {
+        ERROR("listen failed");
+        return 1;
+    }
+
+    if (setnonblock(listen_fd) < 0) {
+        ERROR("failed to set server socket to non-blocking");
+        return 1;
+    }
+
+    return 0;
+}
+
+void JsonRPCServerLoop::run()
+{
+    setThreadName("rpc-server");
+    DBG("adding %d more server threads ",
+        JsonRPCServerModule::threads - 1);
+
+    threadpool.addThreads(JsonRPCServerModule::threads - 1);
+
+    INFO("running server loop; listening on %s:%d",
+        JsonRPCServerModule::host.c_str(),
+        JsonRPCServerModule::port);
+
+
+    ev_io_init(&ev_accept,accept_cb,listen_fd,EV_READ);
+    ev_io_start(loop,&ev_accept);
+
+    // async watcher to process our events in event loop
+    ev_async_init (&async_w, async_cb);
+    ev_async_start (EV_A_ &async_w);
+
+    INFO("running event loop");
+
+    setEventNotificationSink(this);
+    AmEventDispatcher::instance()->addEventQueue(JSONRPC_QUEUE_NAME,this);
+
+    ev_loop (loop, 0);
+
+    AmEventDispatcher::instance()->delEventQueue(JSONRPC_QUEUE_NAME);
+    INFO("event loop finished");
+    threadpool.cleanup();
+    close(listen_fd);
+    listen_fd = 0;
 }
 
 void JsonRPCServerLoop::on_stop() {

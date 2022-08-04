@@ -31,12 +31,15 @@
 #include "JsonRPCServer.h"
 #include <AmLcConfig.h>
 
+#include <netinet/tcp.h>
+
 JsonRPCServerModule* JsonRPCServerModule::_instance = NULL;
 
 string JsonRPCServerModule::host = DEFAULT_JSONRPC_SERVER_HOST;
 int JsonRPCServerModule::port = DEFAULT_JSONRPC_SERVER_PORT;
 int JsonRPCServerModule::threads = DEFAULT_JSONRPC_SERVER_THREADS;
 trsp_acl JsonRPCServerModule::acl;
+string JsonRPCServerModule::tcp_md5_password;
 
 EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule)
 EXPORT_PLUGIN_CONF_FACTORY(JsonRPCServerModule)
@@ -70,6 +73,7 @@ int JsonRPCServerModule::configure(const std::string & config)
     static const char opt_whitelist[] = "whitelist";
     static const char opt_method[] = "method";
     static const char opt_server_threads[] = "server_threads";
+    static const char opt_tcp_md5_password[] = "tcp_md5_password";
     static const char sec_listen[] = "listen";
     static const char sec_acl[] = "acl";
 
@@ -90,6 +94,7 @@ int JsonRPCServerModule::configure(const std::string & config)
         CFG_SEC(sec_listen,listen_sec, CFGF_NONE),
         CFG_SEC(sec_acl,acl_sec, CFGF_NODEFAULT),
         CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
+        CFG_STR(opt_tcp_md5_password, NULL, CFGF_NONE),
         CFG_END()
     };
 
@@ -112,6 +117,13 @@ int JsonRPCServerModule::configure(const std::string & config)
     host = cfg_getstr(listen, opt_address);
     port = cfg_getint(listen, opt_port);
     threads = cfg_getint(cfg, opt_server_threads);
+    if(cfg_getstr(cfg,opt_tcp_md5_password)) {
+        tcp_md5_password = cfg_getstr(cfg,opt_tcp_md5_password);
+        if(tcp_md5_password.size() > TCP_MD5SIG_MAXKEYLEN) {
+            ERROR("tcp_md5_password is too long (TCP_MD5SIG_MAXKEYLEN %u)", TCP_MD5SIG_MAXKEYLEN);
+            return -1;
+        }
+    }
     if(cfg_size(cfg, sec_acl)) {
         cfg_t* cfg_acl = cfg_getsec(cfg, sec_acl);
         int networks = 0;
@@ -147,6 +159,8 @@ int JsonRPCServerModule::reconfigure(const std::string& config)
     JsonRPCServerLoop::instance()->stop(true);
     int ret = configure(config);
     if(ret) return ret;
+    if(JsonRPCServerLoop::instance()->configure())
+        return 1;
     JsonRPCServerLoop::instance()->start();
     return ret;
 }
@@ -155,8 +169,13 @@ int JsonRPCServerModule::load() {
   DBG("using server listen address %s", host.c_str());
   DBG("using server port %d", port);
   DBG("using %d server threads", threads);
+  if(tcp_md5_password.size()) {
+    DBG("use tcp md5 password");
+  }
   DBG("starting server loop thread");
   server_loop = JsonRPCServerLoop::instance();
+  if(server_loop->configure())
+      return 1;
   server_loop->start();
   
   return 0;

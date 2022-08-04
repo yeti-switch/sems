@@ -73,6 +73,7 @@ class JsonRPCServerModule
   static int port;
   static int threads;
   static trsp_acl acl;
+  static string tcp_md5_password;
 };
 
 #endif

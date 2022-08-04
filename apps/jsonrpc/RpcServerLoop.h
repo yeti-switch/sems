@@ -59,6 +59,8 @@ class JsonRPCServerLoop
   static vector<JsonServerEvent*> pending_events; // todo: use map<set<> > if many pending events
   static AmMutex pending_events_mut;
 
+  int listen_fd;
+
  public:
   JsonRPCServerLoop();
   ~JsonRPCServerLoop();
@@ -88,6 +90,8 @@ class JsonRPCServerLoop
 			  const AmArg& params,
 			  const AmArg& udata,
 			  AmArg& ret);
+
+  int configure();
   void run();
   void on_stop();
   void notify(AmEventQueue* sender);
