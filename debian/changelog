@@ -1,3 +1,7 @@
+sems (1.89.1) stable; urgency=low
+  * jsonrpc: add tcp md5 signature support
+ -- Michael Furmur <furmur@pm.me>  Thu, 04 Aug 2022 17:24:10 +0300
+
 sems (1.89.0) stable; urgency=low
   * pg: add initial requests support to automatically perform saved requests on reconnect
   * pg: support sqltypes for PGPrepare
