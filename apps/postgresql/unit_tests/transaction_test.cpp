@@ -313,9 +313,9 @@ TEST_F(PostgresqlTest, DbPipelineTest)
     NonTransaction pg(&handler);
     QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
     query->addQuery(new Query("SELECT repeat('1', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
+//     query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
+//     query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
+//     query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
     pg.exec(query);
 
     conn->runTransaction(&pg);

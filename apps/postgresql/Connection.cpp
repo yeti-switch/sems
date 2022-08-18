@@ -118,6 +118,7 @@ void PGConnection::check_conn()
     if(!handler) return;
 
     if(connected) {
+        DBG("PQconsumeInput");
         if(!PQconsumeInput(conn)) {
             close_conn();
             disconnected_time = time(0);
@@ -160,8 +161,10 @@ void PGConnection::check_conn()
 
 bool PGConnection::flush_conn()
 {
-    if(pipe_status == PQ_PIPELINE_ON)
+    if(pipe_status != PQ_PIPELINE_OFF) {
+        DBG("flush_conn");
         PQsendFlushRequest(conn);
+    }
     return PQflush(conn);
 }
 

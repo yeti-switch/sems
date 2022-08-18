@@ -44,9 +44,13 @@ void IPGTransaction::check()
     do {
         next = false;
         if(tr_impl->query && tr_impl->check_trans()) {
+            
+                DBG("check_trans");
             if(tr_impl->status == PQTRANS_ACTIVE && tr_impl->conn->getPipeStatus() != PQ_PIPELINE_ABORTED) {
+                DBG("try fetch result");
                 tr_impl->fetch_result();
                 if(is_finished()) {
+                DBG("finish");
                     status = FINISH;
                     handler->onFinish(this, tr_impl->result);
                 } else {
@@ -125,6 +129,7 @@ bool PGTransaction::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sended) {
+        DBG("send Sync");
         conn->syncPipeline();
         sync_sended = true;
     }
@@ -172,6 +177,7 @@ void PGTransaction::make_result(PGresult* res, bool single)
         if(single) parent->handler->onTuple(parent, row);
         result.push(row);
     }
+    DBG("result: %s", AmArg::print(result).c_str());
 }
 
 void PGTransaction::fetch_result()
@@ -180,30 +186,39 @@ void PGTransaction::fetch_result()
         ERROR("absent connection");
         return;
     }
+    
+    DBG("fetch_result");
+    PGresult* res = 0;
+    do {
+        while((res = res ? res : PQgetResult((PGconn*)conn->get()))) {
+            bool single = false;
+            ExecStatusType st = ExecStatusType::PGRES_COMMAND_OK;
+            switch ((int)(st = PQresultStatus(res))) {
+            case PGRES_EMPTY_QUERY:
+            case PGRES_BAD_RESPONSE:
+            case PGRES_NONFATAL_ERROR:
+            case PGRES_FATAL_ERROR:
+            case PGRES_PIPELINE_ABORTED:
+                parent->handler->onError(parent, PQresultErrorMessage(res));
+                break;
+            case PGRES_SINGLE_TUPLE:
+                single = true;
+            case PGRES_TUPLES_OK:
+                make_result(res, single);
+                break;
+            case PGRES_PIPELINE_SYNC:
+                DBG("pipeline synced");
+                synced = true;
+                break;
+            default:
+                DBG("unexpected result %d", st);
+            }
 
-    PGresult* res;
-    while((res=PQgetResult((PGconn*)conn->get()))) {
-        bool single = false;
-        ExecStatusType st = ExecStatusType::PGRES_COMMAND_OK;
-        switch ((int)(st = PQresultStatus(res))) {
-        case PGRES_EMPTY_QUERY:
-        case PGRES_BAD_RESPONSE:
-        case PGRES_NONFATAL_ERROR:
-        case PGRES_FATAL_ERROR:
-            parent->handler->onError(parent, PQresultErrorMessage(res));
-            break;
-        case PGRES_SINGLE_TUPLE:
-            single = true;
-        case PGRES_TUPLES_OK:
-            make_result(res, single);
-            break;
-        case PGRES_PIPELINE_SYNC:
-            synced = true;
-            break;
+            DBG("next result");
+            PQclear(res);
+            res = 0;
         }
-
-        PQclear(res);
-    }
+    } while ((res = PQgetResult((PGconn*)conn->get())));
 
 }
 

@@ -137,6 +137,7 @@ protected:
 
     void onSock(IPGConnection* conn, EventType type) override
     {
+        //INFO("type posgres sock event %u", type);
         if(type == PG_SOCK_NEW) {
             epoll_event event;
             event.events = EPOLLIN | EPOLLERR | EPOLLET;
