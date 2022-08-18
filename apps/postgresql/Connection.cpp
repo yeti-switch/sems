@@ -124,6 +124,10 @@ void PGConnection::check_conn()
             handler->onDisconnect(this);
             return;
         }
+        PGnotify* notify =  PQnotifies(conn);
+        if(notify) {
+            DBG("notification");
+        }
     }
 
     PostgresPollingStatusType   st = PQconnectPoll(conn);
@@ -137,8 +141,9 @@ void PGConnection::check_conn()
             }
         case PGRES_POLLING_READING:
             if(connected && cur_transaction) {
-                if(flush_conn())
+                if(flush_conn()) {
                     handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
+                }
             } else {
                 handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
             }
