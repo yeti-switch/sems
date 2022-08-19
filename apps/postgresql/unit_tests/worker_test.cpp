@@ -274,8 +274,8 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     config.use_pipeline = true;
     worker.configure(config);
     IPGTransaction* trans = new NonTransaction(&worker);
-    QueryChain* query = new QueryChain(new Query(CREATE_TABLE, false));
-    query->addQuery(new Query("SELECT TTT", false));
+    QueryChain* query = new QueryChain(new QueryParams(CREATE_TABLE, false, false));
+    query->addQuery(new QueryParams("SELECT TTT", false, false));
     server->addError("SELECT TTT", false);
     trans->exec(query);
     worker.runTransaction(trans, "", "");
@@ -288,7 +288,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     }
 
     trans = new NonTransaction(&worker);
-    trans->exec(new Query("SELECT * FROM test;", false));
+    trans->exec(new QueryParams("SELECT * FROM test;", false, false));
     worker.runTransaction(trans, "", "");
     while(true){
         if(handler.check() < 1) return;
@@ -299,7 +299,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     }
 
     trans = new NonTransaction(&worker);
-    trans->exec(new Query(DROP_TABLE, false));
+    trans->exec(new QueryParams(DROP_TABLE, false, false));
     worker.runTransaction(trans, "", "");
     while(true){
         if(handler.check() < 1) return;

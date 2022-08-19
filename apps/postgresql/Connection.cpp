@@ -71,6 +71,7 @@ void IPGConnection::check()
     if(status == CONNECTION_OK && cur_transaction) {
         cur_transaction->check();
         if(cur_transaction->get_status() == IPGTransaction::FINISH) {
+            //DBG("finish transaction");
             cur_transaction = 0;
             check_mode();
             if(planned) runTransaction(planned);
@@ -118,7 +119,7 @@ void PGConnection::check_conn()
     if(!handler) return;
 
     if(connected) {
-        DBG("PQconsumeInput");
+        //DBG("PQconsumeInput");
         if(!PQconsumeInput(conn)) {
             close_conn();
             disconnected_time = time(0);
@@ -138,6 +139,7 @@ void PGConnection::check_conn()
         case PGRES_POLLING_OK:
             if(!connected && status == CONNECTION_OK) {
                 connected = true;
+                //PQtrace(conn, stderr);
                 handler->onConnect(this);
             }
         case PGRES_POLLING_READING:
@@ -162,7 +164,6 @@ void PGConnection::check_conn()
 bool PGConnection::flush_conn()
 {
     if(pipe_status != PQ_PIPELINE_OFF) {
-        DBG("flush_conn");
         PQsendFlushRequest(conn);
     }
     return PQflush(conn);

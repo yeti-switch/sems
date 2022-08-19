@@ -42,22 +42,20 @@ void IPGTransaction::check()
 {
     bool next;
     do {
+        //DBG("IPGTransaction::check() in do while(%u)", next);
         next = false;
         if(tr_impl->query && tr_impl->check_trans()) {
-            
-                DBG("check_trans");
-            if(tr_impl->status == PQTRANS_ACTIVE && tr_impl->conn->getPipeStatus() != PQ_PIPELINE_ABORTED) {
+            if(tr_impl->status == PQTRANS_ACTIVE && status != FINISH) {
                 DBG("try fetch result");
                 tr_impl->fetch_result();
                 if(is_finished()) {
-                DBG("finish");
                     status = FINISH;
                     handler->onFinish(this, tr_impl->result);
-                } else {
-                    next = true;
                 }
-            } else if(tr_impl->status == PQTRANS_IDLE ||
-                    tr_impl->status == PQTRANS_INTRANS) {
+                next = true;
+            } else if((tr_impl->status == PQTRANS_IDLE || tr_impl->status == PQTRANS_INTRANS)
+                      && status != FINISH) {
+                //DBG("status idle - send query");
                 next = is_pipeline();
                 int ret = 0;
                 // 0 - run transaction request, do not run main query
@@ -76,13 +74,18 @@ void IPGTransaction::check()
                 } while(ret > 1);
                 if(!ret) ret = end();
                 if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-            } else if(tr_impl->status == PQTRANS_INERROR || tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ABORTED) {
+            } else if(tr_impl->status == PQTRANS_INERROR) {
+                //DBG("status aborted - roolback");
                 status = ERROR;
                 int ret = rollback();
                 if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-            } else {
-                ERROR("unknown state of database transaction");
+                if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
+                    tr_impl->conn->syncPipeline();
+            } else if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ABORTED){
+                //DBG("pipeline aborted");
             }
+        } else {
+            //DBG("busy break from while");
         }
     } while(next);
 }
@@ -129,7 +132,7 @@ bool PGTransaction::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sended) {
-        DBG("send Sync");
+        //DBG("send Sync");
         conn->syncPipeline();
         sync_sended = true;
     }
@@ -186,11 +189,14 @@ void PGTransaction::fetch_result()
         ERROR("absent connection");
         return;
     }
-    
-    DBG("fetch_result");
+
     PGresult* res = 0;
     do {
-        while((res = res ? res : PQgetResult((PGconn*)conn->get()))) {
+        if(!res) {
+            res = PQgetResult((PGconn*)conn->get());
+            //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
+        }
+        while(res) {
             bool single = false;
             ExecStatusType st = ExecStatusType::PGRES_COMMAND_OK;
             switch ((int)(st = PQresultStatus(res))) {
@@ -207,18 +213,18 @@ void PGTransaction::fetch_result()
                 make_result(res, single);
                 break;
             case PGRES_PIPELINE_SYNC:
-                DBG("pipeline synced");
+                //DBG("pipeline synced");
                 synced = true;
                 break;
-            default:
-                DBG("unexpected result %d", st);
             }
 
-            DBG("next result");
             PQclear(res);
-            res = 0;
+            res = PQgetResult((PGconn*)conn->get());
+            //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
         }
-    } while ((res = PQgetResult((PGconn*)conn->get())));
+        res = PQgetResult((PGconn*)conn->get());
+        //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
+    } while (res);
 
 }
 
@@ -239,7 +245,6 @@ bool MockTransaction::check_trans()
        query->is_finished()) {
         status = PQTRANS_ACTIVE;
     }
-
     return true;
 }
 
@@ -324,7 +329,7 @@ NonTransaction::NonTransaction(const NonTransaction& trans)
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
 DbTransaction<isolation, rw>::DbTransaction(const DbTransaction<isolation, rw>& trans)
 : IPGTransaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), trans.handler)
-, il(isolation), wp(rw) {
+, il(isolation), wp(rw), dummyParent("", false, false) {
     if(trans.tr_impl->query)
         tr_impl->query = trans.tr_impl->query->clone();
 }
@@ -337,7 +342,7 @@ int DbTransaction<isolation, rw>::begin()
         return -1;
     }
     if(state == BEGIN) {
-        IQuery* begin_q = PolicyFactory::instance()->createQuery(begin_cmd, false);
+        IQuery* begin_q = PolicyFactory::instance()->createQueryParam(begin_cmd, false, &dummyParent);
         begin_q->reset(get_conn());
         int ret = begin_q->exec();
         delete begin_q;
@@ -369,7 +374,7 @@ int DbTransaction<isolation, rw>::rollback()
         return -1;
     }
     if(state != BEGIN) {
-        IQuery* end_q = PolicyFactory::instance()->createQuery("ROLLBACK", false);
+        IQuery* end_q = PolicyFactory::instance()->createQueryParam("ROLLBACK", false, &dummyParent);
         end_q->reset(get_conn());
         int ret = end_q->exec();
         delete end_q;
@@ -399,7 +404,7 @@ int DbTransaction<isolation, rw>::end()
         return -1;
     }
     if(state == BODY) {
-        IQuery* end_q = PolicyFactory::instance()->createQuery("END", false);
+        IQuery* end_q = PolicyFactory::instance()->createQueryParam("END", false, &dummyParent);
         end_q->reset(get_conn());
         int ret = end_q->exec();
         delete end_q;
@@ -477,7 +482,7 @@ ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData>& prep
         }
         query.pop_back();
 
-        q = new QueryChain(new Query(query, false));
+        q = new QueryChain(new QueryParams(query, false, false));
     }
 
     if(!prepareds.empty()) {

@@ -490,7 +490,7 @@ void Worker::setSearchPath(const vector<string>& search_path)
     query.pop_back();
 
     IPGTransaction* tr = new NonTransaction(this);
-    tr->exec(new Query(query, false));
+    tr->exec(new QueryParams(query, false, false));
     if(master)
         master->runTransactionForPool(tr);
     if(slave)

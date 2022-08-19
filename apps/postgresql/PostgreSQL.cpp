@@ -272,11 +272,11 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
     Worker* worker = getWorker(e.qdata);
     if(!worker) return;
 
-    IPGQuery* query = new Query(e.qdata.info[0].query, e.qdata.info[0].single);
+    IPGQuery* query = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, false);
     if(e.qdata.info.size() > 1) {
         QueryChain* chain = new QueryChain(query);
         for(size_t i = 1;i < e.qdata.info.size(); i++) {
-            chain->addQuery(new Query(e.qdata.info[i].query, e.qdata.info[i].single));
+            chain->addQuery(new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, false));
         }
         query = chain;
     }

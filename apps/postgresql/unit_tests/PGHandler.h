@@ -90,11 +90,13 @@ public:
             bool is_connection = true;
             for(auto& worker : workers) {
                 if(worker->processEvent(p)) {
+                    //DBG("worker event");
                     is_connection = false;
                     break;
                 }
             }
             if(is_connection) {
+                //DBG("connection event");
                 IPGConnection* conn = (IPGConnection*)e.data.ptr;
                 conn->check();
             }
@@ -137,7 +139,7 @@ protected:
 
     void onSock(IPGConnection* conn, EventType type) override
     {
-        //INFO("type posgres sock event %u", type);
+        //DBG("type posgres sock event %u", type);
         if(type == PG_SOCK_NEW) {
             epoll_event event;
             event.events = EPOLLIN | EPOLLERR | EPOLLET;

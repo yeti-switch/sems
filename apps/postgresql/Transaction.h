@@ -160,6 +160,7 @@ template<PGTransactionData::isolation_level isolation, PGTransactionData::write_
 class DbTransaction : public IPGTransaction
 {
     static const char* begin_cmd;
+    QueryParams dummyParent;
     PGTransactionData::isolation_level il;
     PGTransactionData::write_policy wp;
     int begin() override;
@@ -178,7 +179,7 @@ class DbTransaction : public IPGTransaction
 public:
     DbTransaction(ITransactionHandler* handler)
     : IPGTransaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), handler)
-    , il(isolation), wp(rw) {}
+    , il(isolation), wp(rw), dummyParent("", false, false) {}
     DbTransaction(const DbTransaction<isolation, rw>& trans);
     ~DbTransaction(){};
 };

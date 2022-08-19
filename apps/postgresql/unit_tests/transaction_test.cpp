@@ -311,11 +311,12 @@ TEST_F(PostgresqlTest, DbPipelineTest)
 
     conn->startPipeline();
     NonTransaction pg(&handler);
-    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('1', 10), pg_sleep(1)", false));
-//     query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
-//     query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
-//     query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
+    QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('1', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('1', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('2', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('3', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('4', 10), pg_sleep(1)", false, false));
     pg.exec(query);
 
     conn->runTransaction(&pg);
@@ -337,8 +338,8 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
 
     conn->startPipeline();
     NonTransaction pg1(&handler);
-    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT TTT", false));
+    QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT TTT", false, false));
     pg1.exec(query);
     server->addError("SELECT TTT", false);
 
@@ -349,7 +350,7 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     }
 
     NonTransaction pg2(&handler);
-    pg2.exec(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
+    pg2.exec(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
 
     conn->runTransaction(&pg2);
 
@@ -371,8 +372,8 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
     conn->startPipeline();
 
     NonTransaction pg3(&handler);
-    QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
-    query->addQuery(new Query("SELECT TTT", false));
+    QueryChain* query = new QueryChain(new QueryParams("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
+    query->addQuery(new QueryParams("SELECT TTT", false, false));
     pg3.exec(query);
     server->addError("SELECT TTT", false);
 
@@ -383,13 +384,22 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
     }
 
     NonTransaction pg4(&handler);
-    query = new QueryChain(new Query("SELECT * FROM test;", false));
-    query->addQuery(new Query("DROP TABLE test;", false));
+    query = new QueryChain(new QueryParams("SELECT * FROM test;", false, false));
+    query->addQuery(new QueryParams("DROP TABLE test;", false, false));
     pg4.exec(query);
     server->addError("SELECT * FROM test;", false);
     conn->runTransaction(&pg4);
 
     while(pg4.get_status() != IPGTransaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+
+    NonTransaction pg2(&handler);
+    pg2.exec(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+
+    conn->runTransaction(&pg2);
+
+    while(pg2.get_status() != IPGTransaction::FINISH) {
         if(handler.check() < 1) return;
     }
 }
@@ -406,11 +416,11 @@ TEST_F(PostgresqlTest, DbPipelineTransactionTest)
 
     conn->startPipeline();
     IPGTransaction* pg2 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    QueryChain* query = new QueryChain(new Query("SELECT repeat('0', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('1', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('2', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('3', 10), pg_sleep(1)", false));
-    query->addQuery(new Query("SELECT repeat('4', 10), pg_sleep(1)", false));
+    QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('1', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('2', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('3', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('4', 10), pg_sleep(1)", false, false));
     pg2->exec(query);
 
     conn->runTransaction(pg2);
@@ -421,7 +431,7 @@ TEST_F(PostgresqlTest, DbPipelineTransactionTest)
     delete pg2;
 }
 
-TEST_F(PostgresqlTest, DbPipelineStressTest)
+TEST_F(PostgresqlTest, DISABLED_DbPipelineStressTest)
 {
     PGHandler handler;
     std::string conn_str(address);
@@ -442,7 +452,7 @@ TEST_F(PostgresqlTest, DbPipelineStressTest)
     }
     q += "}')";
     INFO("size of query %d", q.size());
-    Query* query = new Query(q, false);
+    QueryParams* query = new QueryParams(q, false, false);
     pg2->exec(query);
 
     conn->runTransaction(pg2);
@@ -465,8 +475,8 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
 
     conn->startPipeline();
     IPGTransaction* pg1 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    QueryChain* query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
-    query->addQuery(new Query("SELECT TTT", false));
+    QueryChain* query = new QueryChain(new QueryParams("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
+    query->addQuery(new QueryParams("SELECT TTT", false, false));
     pg1->exec(query);
     server->addError("SELECT TTT", false);
 
@@ -478,7 +488,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
     delete pg1;
 
     pg1 = createDbTransaction(&handler, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    query = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    query = new QueryChain(new QueryParams("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
     pg1->exec(query);
 
     conn->runTransaction(pg1);
@@ -489,7 +499,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
     delete pg1;
 
     NonTransaction drop(&handler);
-    drop.exec(new Query("DROP TABLE test;", false));
+    drop.exec(new QueryParams("DROP TABLE test;", false, false));
     conn->runTransaction(&drop);
     while(drop.get_status() != IPGTransaction::FINISH) {
         if(handler.check() < 1) return;
