@@ -36,7 +36,7 @@ protected:
     PGTransactionStatusType status;
     IPGTransaction* parent;
     TransactionType type;
-    bool sync_sended;
+    bool sync_sent;
     bool synced;
 
     virtual bool check_trans() = 0;
@@ -45,7 +45,7 @@ protected:
     virtual void reset(IPGConnection* conn);
 public:
     ITransaction(IPGTransaction* p, TransactionType t)
-    : conn(0), query(0), parent(p), type(t), synced(false), sync_sended(false) {}
+    : conn(0), query(0), parent(p), type(t), synced(false), sync_sent(false) {}
     virtual ~ITransaction() {
         if(query)
             delete query;
