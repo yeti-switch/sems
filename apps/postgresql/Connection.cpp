@@ -129,6 +129,7 @@ void PGConnection::check_conn()
         PGnotify* notify =  PQnotifies(conn);
         if(notify) {
             DBG("notification");
+            PQfreemem(notify);
         }
     }
 
