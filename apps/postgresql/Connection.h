@@ -2,6 +2,7 @@
 #define PQ_CONNECTION_H
 
 #include <postgresql/libpq-fe.h>
+#include <ctime>
 #include <string>
 using std::string;
 
@@ -61,7 +62,7 @@ public:
     , conn_fd(-1), cur_transaction(nullptr)
     , planned(nullptr)
     , is_pipeline(false)
-    , disconnected_time(time(0))
+    , disconnected_time(std::time(0))
     {}
     virtual ~IPGConnection();
 
