@@ -120,14 +120,14 @@ void Worker::onConnectionFailed(IPGConnection* conn, const std::string& error) {
     DBG("pg connection %s:%p/\'%s\' failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
-    DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
 void Worker::onDisconnect(IPGConnection* conn) {
     DBG("pg connection %s:%p/\'%s\' disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime();
-    DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
 
@@ -177,10 +177,10 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++){
         if(trans == tr_it->trans) {
-            DBG("post PGResponse %s/%s: %s",
+            /*DBG("post PGResponse %s/%s: %s",
                 tr_it->sender_id.data(),
                 tr_it->token.data(),
-                AmArg::print(result).c_str());
+                AmArg::print(result).c_str());*/
 
             if(!tr_it->sender_id.empty())
                 AmEventDispatcher::instance()->post(tr_it->sender_id, new PGResponse(result, tr_it->token));
@@ -206,7 +206,7 @@ void Worker::onPQError(IPGTransaction* trans, const std::string& error) {
 }
 
 void Worker::onCancel(IPGTransaction* conn) {
-    DBG("transaction with query %s canceling", conn->get_query()->get_query().c_str());
+    //DBG("transaction with query %s canceling", conn->get_query()->get_query().c_str());
 }
 
 bool Worker::processEvent(void* p)
@@ -601,7 +601,7 @@ void Worker::onTimer()
             continue;
         }
         reset_next_time = current - (*conn_it)->getDisconnectedTime() + reconnect_interval;
-        DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         break;
     }
     resetConnections.insert(resetConnections.begin(), conns.begin(), conns.end());
@@ -616,7 +616,7 @@ void Worker::onTimer()
             resetConnections.emplace_back(trans_it->trans->get_conn());
         } else {
             wait_next_time = trans_it->createdTime + trans_wait_time;
-            DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
+            //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
             trans_it++;
         }
     }

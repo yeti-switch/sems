@@ -46,7 +46,7 @@ void IPGTransaction::check()
         next = false;
         if(tr_impl->query && tr_impl->check_trans()) {
             if(tr_impl->status == PQTRANS_ACTIVE && status != FINISH) {
-                DBG("try fetch result");
+                //DBG("try fetch result");
                 tr_impl->fetch_result();
                 if(is_finished()) {
                     status = FINISH;
@@ -180,7 +180,7 @@ void PGTransaction::make_result(PGresult* res, bool single)
         if(single) parent->handler->onTuple(parent, row);
         result.push(row);
     }
-    DBG("result: %s", AmArg::print(result).c_str());
+    //DBG("result: %s", AmArg::print(result).c_str());
 }
 
 void PGTransaction::fetch_result()
