@@ -407,10 +407,9 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
         if(is_binary) ret = AmArg(pq_get_float8(value));
         else ret = AmArg(atof(value));
         break;
-    case JSONOID: {
-        AmArg ret;
+    case JSONOID:
         json2arg(value, ret);
-    } break;
+        break;
     case INT2ARRAYOID:
         if(is_binary) {
             ERROR("binary int2[] is not supported");
