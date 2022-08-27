@@ -1,3 +1,7 @@
+sems (1.89.3) stable; urgency=low
+  * pg: fix json reply parsing
+ -- Michael Furmur <furmur@pm.me>  Sat, 27 Aug 2022 12:14:31 +0300
+
 sems (1.89.2) stable; urgency=low
   * pg: fix PQgetResult() freeze in the pipeline mode
   * pg: fix result fetching in the pipeline mode
