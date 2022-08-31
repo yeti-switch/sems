@@ -10,17 +10,17 @@ class RpcTreeHandler
 {
     bool process_rpc_cmds(
         const string& connection_id,
-        const string& request_id,
+        const AmArg& request_id,
         const AmArg &cmds, const string& method,
         const AmArg& args, AmArg& ret);
     bool process_rpc_cmds_methods_tree(
         const string& connection_id,
-        const string& request_id,
+        const AmArg& request_id,
         const AmArg &cmds, vector<string> &methods_tree,
         const AmArg& args, AmArg& ret);
     bool process_rpc_cmds_methods_tree_root(
         const string& connection_id,
-        const string& request_id,
+        const AmArg& request_id,
         const AmArg &cmds, const string& method,
         const AmArg& args, AmArg& ret);
     void serialize_methods_tree(AmArg &methods_root, AmArg &tree);
@@ -33,7 +33,7 @@ class RpcTreeHandler
     using async_rpc_handler =
         bool (
             const string& connection_id,
-            const string& request_id,
+            const AmArg& request_id,
             const AmArg& params);
 
     RpcTreeHandler(bool methods_tree = false)
@@ -120,7 +120,7 @@ class RpcTreeHandler
   public:
     bool invoke_async(
         const string& connection_id,
-        const string& request_id,
+        const AmArg& request_id,
         const string& method,
         const AmArg& params) override;
 
@@ -141,7 +141,7 @@ class RpcTreeHandler
 template<class C>
 bool RpcTreeHandler<C>::process_rpc_cmds(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const AmArg &cmds, const string& method,
     const AmArg& args, AmArg& ret)
 {
@@ -239,7 +239,7 @@ bool RpcTreeHandler<C>::process_rpc_cmds(
 template<class C>
 bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree_root(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const AmArg &cmds, const string& method,
     const AmArg& args, AmArg& ret)
 {
@@ -252,7 +252,7 @@ bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree_root(
 template<class C>
 bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const AmArg &cmds, vector<string> &methods_tree,
     const AmArg& args, AmArg& ret)
 {
@@ -367,7 +367,7 @@ bool RpcTreeHandler<C>::process_rpc_cmds_methods_tree(
 template<class C>
 bool RpcTreeHandler<C>::invoke_async(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const string& method,
     const AmArg& params)
 {

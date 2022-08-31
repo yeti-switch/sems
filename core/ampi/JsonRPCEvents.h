@@ -106,7 +106,8 @@ struct JsonRpcRequestEvent
     string method;
     int method_id;
 
-    string id;
+    AmArg id;
+    bool is_notify;
     AmArg params;
 
     // notification without parameters
@@ -117,34 +118,41 @@ struct JsonRpcRequestEvent
     // notification with parameters
     JsonRpcRequestEvent(string method, AmArg params)
       : method(method),
-        params(params)
+        params(params),
+        is_notify(true)
     { }
 
     // request without parameters
     JsonRpcRequestEvent(
         const string &method,
-        const string &id)
+        const AmArg &id,
+        bool is_notify)
       : method(method),
-        id(id)
+        id(id),
+        is_notify(is_notify)
     { }
 
     //request with connection_id w/o parameters
     JsonRpcRequestEvent(
         const string &connection_id,
         const string &method,
-        const string &id)
+        const AmArg &id,
+        bool is_notify)
       : JsonRpcEvent(connection_id),
         method(method),
-        id(id)
+        id(id),
+        is_notify(is_notify)
     { }
 
     // request with parameters
     JsonRpcRequestEvent(
         const string &method,
-        const string &id,
+        const AmArg &id,
+        bool is_notify,
         const AmArg &params)
       : method(method),
         id(id),
+        is_notify(is_notify),
         params(params)
     { }
 
@@ -152,27 +160,31 @@ struct JsonRpcRequestEvent
     JsonRpcRequestEvent(
         const string &connection_id,
         const string &method,
-        const string &id,
+        const AmArg &id,
+        bool is_notify,
         const AmArg &params)
       : JsonRpcEvent(connection_id),
         method(method),
         id(id),
+        is_notify(is_notify),
         params(params)
     { }
 
     //request with method_id with parameters
     JsonRpcRequestEvent(
         const string &connection_id,
-        const string &id,
+        const AmArg &id,
+        bool is_notify,
         int method_id,
         const AmArg &params)
       : JsonRpcEvent(connection_id),
         id(id),
+        is_notify(is_notify),
         method_id(method_id),
         params(params)
     { }
 
-    bool isNotification() { return id.empty(); }
+    bool isNotification() { return is_notify; }
 };
 
 struct JsonRpcConnectionEvent
@@ -230,7 +242,7 @@ struct JsonServerSendMessageEvent
 {
     bool is_reply;
     string method;
-    string id;
+    AmArg id;
     AmArg params;
     string reply_link;
     bool is_error;
@@ -240,7 +252,7 @@ struct JsonServerSendMessageEvent
         const string& connection_id,
         bool is_reply,
         const string& method,
-        const string& id,
+        const AmArg& id,
         const AmArg& params,
         const AmArg& udata = AmArg(),
         const string& reply_link = "")
@@ -256,7 +268,7 @@ struct JsonServerSendMessageEvent
     //reply
     JsonServerSendMessageEvent(
         const string& connection_id,
-        const string& id,
+        const AmArg& id,
         const AmArg& params,
         bool is_error = false)
       : JsonServerEvent(connection_id, SendMessage),
@@ -285,7 +297,7 @@ struct JsonServerSendMessageEvent
 //async jsonrpc helpers
 inline void postJsonRpcReply(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const AmArg& params,
     bool is_error = false)
 {
@@ -313,7 +325,8 @@ inline void postJsonRpcReply(
 inline void postJsonRpcRequestEvent(
     const string& queue_name,
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
+    bool is_notify,
     int method_id,
     const AmArg& params)
 {
@@ -322,6 +335,7 @@ inline void postJsonRpcRequestEvent(
         new JsonRpcRequestEvent(
             connection_id,
             request_id,
+            is_notify,
             method_id,
             params)))
     {

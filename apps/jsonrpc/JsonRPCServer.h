@@ -50,7 +50,7 @@ struct JsonRpcError {
 class JsonRpcServer {
  public:
   static bool execRpc(const string &connection_id, const AmArg& rpc_params, AmArg& rpc_res);
-  static bool execRpc(const string &connection_id, const string& method, const string& id, const AmArg& params, AmArg& rpc_res);
+  static bool execRpc(const string &connection_id, const string& method, const AmArg& id, const AmArg& params, AmArg& rpc_res);
   //static void runCoreMethod(const string& method, const AmArg& params, AmArg& res);
  public:
   static int processMessage(char* msgbuf, unsigned int* msg_size,

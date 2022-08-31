@@ -295,11 +295,11 @@ void HttpClient::dstDump(const AmArg&, AmArg& ret)
 
 bool HttpClient::showDnsCache(
     const string& connection_id,
-    const string& request_id,
+    const AmArg& request_id,
     const AmArg& params)
 {
     postEvent(new JsonRpcRequestEvent(
-        connection_id, request_id,
+        connection_id, request_id, false,
         MethodShowDnsCache, params));
 
     return true;
