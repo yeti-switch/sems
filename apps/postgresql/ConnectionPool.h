@@ -109,6 +109,8 @@ public:
     void onTuple(IPGTransaction* trans, const AmArg& result) override;
 
     void getStats(AmArg& ret);
+    
+    string get_name() { return name; }
 };
 
 class ConnectionPool
@@ -116,11 +118,13 @@ class ConnectionPool
     vector<IPGConnection*> connections;
     Worker* worker;
     PGPool pool;
+    AtomicCounter& connected;
 public:
-    ConnectionPool(const PGPool& pool, Worker* worker);
+    ConnectionPool(const PGPool& pool, Worker* worker, enum PGWorkerPoolCreate::PoolType type);
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();
+    bool checkConnection(IPGConnection* conn, bool connect);
     void runTransactionForPool(IPGTransaction* trans);
     void resetConnections();
     void usePipeline(bool is_pipeline);

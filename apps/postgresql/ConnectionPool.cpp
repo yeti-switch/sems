@@ -32,7 +32,7 @@ Worker::Worker(const std::string& name, int epollfd)
 , dropped(stat_group(Counter, MOD_NAME, "dropped").addAtomicCounter().addLabel("worker", name))
 , ret_size(stat_group(Gauge, MOD_NAME, "retransmit").addAtomicCounter().addLabel("worker", name))
 , tr_size(stat_group(Gauge, MOD_NAME, "active").addAtomicCounter().addLabel("worker", name))
-, finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name)) {
+, finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name)){
     workTimer.link(epoll_fd, true);
 }
 
@@ -80,6 +80,7 @@ void Worker::getStats(AmArg& ret)
 
 void Worker::onConnect(IPGConnection* conn) {
     DBG("connection %s:%p/\'%s\' success", name.c_str(), conn, conn->getConnInfo().c_str());
+    if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true); 
     if(use_pipeline)
         conn->startPipeline();
     if(!prepareds.empty() || !search_pathes.empty() || !init_queries.empty()) {
@@ -117,7 +118,7 @@ void Worker::onStopTransaction(IPGTransaction* trans)
 }
 
 void Worker::onConnectionFailed(IPGConnection* conn, const std::string& error) {
-    DBG("pg connection %s:%p/\'%s\' failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
+    ERROR("pg connection %s:%p/\'%s\' failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
@@ -125,6 +126,7 @@ void Worker::onConnectionFailed(IPGConnection* conn, const std::string& error) {
 }
 void Worker::onDisconnect(IPGConnection* conn) {
     DBG("pg connection %s:%p/\'%s\' disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
+    if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime();
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
@@ -222,11 +224,11 @@ bool Worker::processEvent(void* p)
 void Worker::createPool(PGWorkerPoolCreate::PoolType type, const PGPool& pool)
 {
     if(type == PGWorkerPoolCreate::Master) {
-        if(!master) master = new ConnectionPool(pool, this);
+        if(!master) master = new ConnectionPool(pool, this,  PGWorkerPoolCreate::Master);
         else ERROR("master connection pool of worker %s already created", name.c_str());
     }
     if(type == PGWorkerPoolCreate::Slave) {
-        if(!slave) slave = new ConnectionPool(pool, this);
+        if(!slave) slave = new ConnectionPool(pool, this, PGWorkerPoolCreate::Slave);
         else ERROR("slave connection pool of worker %s already created", name.c_str());
     }
 }
@@ -624,8 +626,11 @@ void Worker::onTimer()
     setWorkTimer(false);
 }
 
-ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker)
-: pool(pool), worker(worker) {
+ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, enum PGWorkerPoolCreate::PoolType type)
+: pool(pool), worker(worker)
+, connected(stat_group(Gauge, MOD_NAME, "connected").addAtomicCounter().
+            addLabel("worker", worker->get_name()).
+            addLabel("type", type == PGWorkerPoolCreate::Master ? "master" : "slave")) {
     string conn_info;
     int size = snprintf((char*)conn_info.c_str(), 0, "host=%s port=%d user=%s dbname=%s password=%s",
              pool.host.c_str(), pool.port, pool.user.c_str(), pool.name.c_str(), pool.pass.c_str());
@@ -649,6 +654,17 @@ IPGConnection * ConnectionPool::getFreeConnection()
         if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) return conn;
     }
     return 0;
+}
+
+bool ConnectionPool::checkConnection(IPGConnection* conn, bool connect)
+{
+    for(auto& conn_ : connections) {
+        if(conn_ == conn) {
+            connect ? connected.inc() : connected.dec();
+            return true;
+        }
+    }
+    return false;
 }
 
 void ConnectionPool::runTransactionForPool(IPGTransaction* trans)
@@ -689,4 +705,5 @@ void ConnectionPool::getStats(AmArg& stats)
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
     }
+    stats["connected"] = (long long)connected.get();
 }
