@@ -15,6 +15,7 @@ class IPGTransaction;
 struct ITransactionHandler
 {
     virtual ~ITransactionHandler(){}
+    virtual void onSend(IPGTransaction* conn) = 0;
     virtual void onCancel(IPGTransaction* conn) = 0;
     virtual void onError(IPGTransaction* trans, const string& error) = 0;
     virtual void onPQError(IPGTransaction* conn, const string& error) = 0;

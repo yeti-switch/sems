@@ -167,6 +167,8 @@ protected:
         INFO("exec cancel");
     }
 
+    void onSend(IPGTransaction *) override{}
+
     void onError(IPGTransaction*, const string& error) override
     {
         ERROR("exec query error: %s", error.c_str());

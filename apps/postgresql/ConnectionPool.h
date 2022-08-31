@@ -40,12 +40,13 @@ class Worker : public ITransactionHandler,
         IPGTransaction* trans;
         ConnectionPool* currentPool;
         time_t createdTime;
+        time_t sendTime;
         string token;
         string sender_id;
         TransContainer(IPGTransaction* trans, ConnectionPool* pool,
                        const string& sender, const string& token)
         : trans(trans), currentPool(pool), token(token)
-        , sender_id(sender), createdTime(time(0)) {}
+        , sender_id(sender), createdTime(time(0)), sendTime(0) {}
     };
 
     AtomicCounter& tr_size;
@@ -53,6 +54,7 @@ class Worker : public ITransactionHandler,
     AtomicCounter& queue_size;
     AtomicCounter& ret_size;
     AtomicCounter& dropped;
+    AtomicCounter& finished_time;
 
     list<TransContainer> transactions;    //active transactions
 
@@ -103,6 +105,7 @@ public:
 
     //ITransactionHandler
     void onCancel(IPGTransaction* conn) override;
+    void onSend(IPGTransaction* conn) override;
     void onError(IPGTransaction* trans, const string& error) override;
     void onPQError(IPGTransaction* trans, const string& error) override;
     void onFinish(IPGTransaction* trans, const AmArg& result) override;

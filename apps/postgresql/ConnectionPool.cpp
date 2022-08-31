@@ -32,7 +32,8 @@ Worker::Worker(const std::string& name, int epollfd)
 , dropped(stat_group(Counter, MOD_NAME, "dropped").addAtomicCounter().addLabel("worker", name))
 , ret_size(stat_group(Gauge, MOD_NAME, "retransmit").addAtomicCounter().addLabel("worker", name))
 , tr_size(stat_group(Gauge, MOD_NAME, "active").addAtomicCounter().addLabel("worker", name))
-, finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name)) {
+, finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name))
+, finished_time(stat_group(Counter, MOD_NAME, "finished_time").addAtomicCounter().addLabel("worker", name)){
     workTimer.link(epoll_fd, true);
 }
 
@@ -186,6 +187,10 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
                 AmEventDispatcher::instance()->post(tr_it->sender_id, new PGResponse(result, tr_it->token));
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
+            struct timeval tm;
+            gettimeofday(&tm, 0);
+            time_t delay = tm.tv_sec*1000 + tm.tv_usec/1000 - tr_it->sendTime;
+            finished_time.inc(delay);
             transactions.erase(tr_it);
             return;
         }
@@ -205,8 +210,23 @@ void Worker::onPQError(IPGTransaction* trans, const std::string& error) {
     }
 }
 
-void Worker::onCancel(IPGTransaction* conn) {
+void Worker::onCancel(IPGTransaction* trans) {
     //DBG("transaction with query %s canceling", conn->get_query()->get_query().c_str());
+}
+
+void Worker::onSend(IPGTransaction* trans)
+{
+    for(auto tr_it = transactions.begin();
+        tr_it != transactions.end(); tr_it++) {
+        if(trans == tr_it->trans) {
+            if(!tr_it->sendTime) {
+                struct timeval tm;
+                gettimeofday(&tm, 0);
+                tr_it->sendTime = tm.tv_sec*1000 + tm.tv_usec/1000;
+            }
+            return;
+        }
+    }
 }
 
 bool Worker::processEvent(void* p)

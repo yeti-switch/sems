@@ -11,6 +11,7 @@ int IPGTransaction::execute()
 {
      if(tr_impl->query->exec() < 0)
          return -1;
+     handler->onSend(this);
      return is_pipeline() ? (tr_impl->query->is_finished() ? 1 : 2) : 1;
 }
 
