@@ -1,3 +1,8 @@
+sems (1.90.0) stable; urgency=low
+  * jsonrpc: fix numeric id processing
+  * pg: add sems_postgresql_connected, sems_postgresql_finished_time metrics
+ -- Michael Furmur <furmur@pm.me>  Thu, 01 Sep 2022 15:28:12 +0300
+
 sems (1.89.3) stable; urgency=low
   * pg: fix json reply parsing
  -- Michael Furmur <furmur@pm.me>  Sat, 27 Aug 2022 12:14:31 +0300
