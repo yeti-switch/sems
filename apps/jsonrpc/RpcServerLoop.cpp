@@ -334,7 +334,8 @@ void JsonRPCServerLoop::process(AmEvent* ev) {
       WARN("dropping message to inexistent/broken connection '%s' "
 	   "(is_reply=%s, method=%s, id=%s, params='%s')",
 	   snd_msg_ev->connection_id.c_str(), snd_msg_ev->is_reply?"true":"false", 
-	   snd_msg_ev->method.c_str(), snd_msg_ev->id.c_str(), 
+	   snd_msg_ev->method.c_str(),
+	   isArgCStr(snd_msg_ev->id) ? snd_msg_ev->id.asCStr() : int2str(snd_msg_ev->id.asInt()).c_str(), 
 	   AmArg::print(snd_msg_ev->params).c_str());
       return;
     }

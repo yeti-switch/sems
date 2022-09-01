@@ -99,19 +99,26 @@ void RpcServerThread::process(AmEvent* event) {
       if (JsonRpcServer::createRequest(snd_msg_ev->reply_link, snd_msg_ev->method, 
 				       snd_msg_ev->params, connection,
 				       snd_msg_ev->udata,
-				       snd_msg_ev->id.empty())) {
+				       isArgUndef(snd_msg_ev->id))) {
 	ERROR("creating request");
 	// give back connection into server loop
 	JsonRPCServerLoop::returnConnection(connection);
 	return;
       }
     } else {
-      if (JsonRpcServer::createReply(connection, snd_msg_ev->id, snd_msg_ev->params,
-				     snd_msg_ev->is_error)) {
-	// give back connection into server loop
-	JsonRPCServerLoop::returnConnection(connection);
-	return;
-      }
+        int replyCreated = 0;
+        if(isArgInt(snd_msg_ev->id)) {
+            replyCreated = JsonRpcServer::createReply(connection, snd_msg_ev->id.asInt(), snd_msg_ev->params,
+                                                      snd_msg_ev->is_error);
+        } else {
+            replyCreated = JsonRpcServer::createReply(connection, snd_msg_ev->id.asCStr(), snd_msg_ev->params,
+                                                      snd_msg_ev->is_error);
+        }
+        if (replyCreated) {
+                // give back connection into server loop
+                JsonRPCServerLoop::returnConnection(connection);
+                return;
+        }
     }
     connection->msg_recv = false;
 

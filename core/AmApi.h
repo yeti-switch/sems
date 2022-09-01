@@ -70,7 +70,7 @@ class AmDynInvoke
   //returns true if the request consumed by the function
   virtual bool invoke_async(
     const string &connection_id,
-    const string &request_id,
+    const AmArg &request_id,
     const string &method,
     const AmArg &params)
   {

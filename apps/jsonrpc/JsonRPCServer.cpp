@@ -117,7 +117,7 @@ int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
     return -3;
   }
 
-  //DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
+  DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
   memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
   peer->msg_size = res_s.length();
 
@@ -243,19 +243,13 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     } //if(!is_request)
 
     //process request
-    string id;
-    bool id_is_int = false;
+    AmArg id;
+    bool is_notify;
     if (rpc_params.hasMember("id")) {
-        if (isArgCStr(rpc_params["id"])) {
-            id = rpc_params["id"].asCStr();
-        } else if (isArgInt(rpc_params["id"])) {
-            id = int2str(rpc_params["id"].asInt());
-            id_is_int = true;
-        } else {
-            ERROR("incorrect type for jsonrpc id <%s>",
-                  AmArg::print(rpc_params["id"]).c_str());
-        }
+        id = rpc_params["id"];
+        is_notify = false;
     } else {
+        is_notify = true;
         DBG("received notification");
     }
 
@@ -263,12 +257,10 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         JsonrpcNetstringsConnection* conn = dynamic_cast<JsonrpcNetstringsConnection*>(peer);
         assert(conn);
         AmArg result("forbidden");
-        if(id_is_int) {
-            int int_id;
-            str2int(id, int_id);
-            createReply(conn, int_id, result, true);
+        if(isArgInt(id)) {
+            createReply(conn, id.asInt(), result, true);
         } else {
-            createReply(conn, id, result, true);
+            createReply(conn, id.asCStr(), result, true);
         }
         return 0;
     }
@@ -280,47 +272,49 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     if(method == set_notify_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(msgbuf, id, id_is_int, 500,
-                "wrong 'params' type %s for method %s. expected string",
-                params.getTypeStr(), method.asCStr());
+            *msg_size = generate_error_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
+                                             isArgInt(id), 500,
+                                             "wrong 'params' type %s for method %s. expected string",
+                                             params.getTypeStr(), method.asCStr());
             return 0;
         }
 
-        *msg_size = generate_reply(msgbuf, id, id_is_int,
-            "\"changed '%s' -> '%s'\"",
-            peer->notificationReceiver.data(), params.asCStr());
+        *msg_size = generate_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
+                                   isArgInt(id), "\"changed '%s' -> '%s'\"",
+                                   peer->notificationReceiver.data(), params.asCStr());
 
         peer->notificationReceiver = params.asCStr();
         return 0;
     } else if(method == set_request_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(msgbuf, id, id_is_int, 500,
-                "wrong 'params' type %s for method %s. expected string",
-                params.getTypeStr(), method.asCStr());
+            *msg_size = generate_error_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
+                                            isArgInt(id), 500,
+                                            "wrong 'params' type %s for method %s. expected string",
+                                            params.getTypeStr(), method.asCStr());
             return 0;
         }
 
-        *msg_size = generate_reply(msgbuf, id, id_is_int,
-            "\"changed '%s' -> '%s'\"",
-            peer->requestReceiver.data(), params.asCStr());
+        *msg_size = generate_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
+                                   isArgInt(id),"\"changed '%s' -> '%s'\"",
+                                   peer->requestReceiver.data(), params.asCStr());
 
         peer->requestReceiver = params.asCStr();
         return 0;
     }
 
     // send directly to event queue
-    if ((id.empty() && !peer->notificationReceiver.empty()) ||
-        (!id.empty() && !peer->requestReceiver.empty()))
+    if ((is_notify && !peer->notificationReceiver.empty()) ||
+        (!is_notify && !peer->requestReceiver.empty()))
     {
         // don't send a reply
         *msg_size = 0;
 
-        string dst_evqueue = id.empty() ?
+        string dst_evqueue = is_notify ?
             peer->notificationReceiver.c_str() : peer->requestReceiver.c_str();
 
         DBG("directly passing %s to event queue '%s'",
-            id.empty() ? "notification":"request",
+            is_notify ? "notification":"request",
             dst_evqueue.c_str());
 
         AmArg none_params;
@@ -330,7 +324,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         }
 
         JsonRpcRequestEvent* request_ev =
-            new JsonRpcRequestEvent(rpc_params["method"].asCStr(), id, params);
+            new JsonRpcRequestEvent(rpc_params["method"].asCStr(), id, is_notify, params);
 
         request_ev->connection_id = peer->id;
 
@@ -339,45 +333,37 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
 
         if(!posted) {
             DBG("%s receiver event queue '%s' does not exist (any more)",
-                id.empty() ? "notification":"request",
+                is_notify ? "notification":"request",
                 dst_evqueue.c_str());
 
             delete request_ev;
 
-            if (id.empty() && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_NOTIF_RECV)) {
+            if (is_notify && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_NOTIF_RECV)) {
                 INFO("closing connection on missing notification receiver queue");
                 return -1; // todo: reply error?
             }
 
-            if (!id.empty() && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_REQUEST_RECV)) {
+            if (!is_notify && (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_REQUEST_RECV)) {
                 INFO("closing connection on missing request receiver queue");
                 return -1; // todo: reply error?
             }
         } else {
             DBG("successfully posted %s to event queue '%s'",
-            id.empty() ? "notification":"request",
+            is_notify ? "notification":"request",
             dst_evqueue.c_str());
         }
         return 0;
     }
 
     AmArg rpc_res;
-    int int_id;
-
     if(execRpc(peer->id, rpc_params, rpc_res)) {
         DBG("request consumed by async invocation");
         *msg_size = 0;
         return 0;
     }
 
-    if(!id.empty()) {
-        if(id_is_int) {
-            str2int(id, int_id);
-            rpc_res["id"] = int_id;
-        } else {
-            rpc_res["id"] = id;
-        }
-    }
+    if(!is_notify)
+        rpc_res["id"] = id;
 
     string res_s = arg2json(rpc_res);
     if (res_s.length() > MAX_RPC_MSG_SIZE) {
@@ -401,9 +387,10 @@ bool JsonRpcServer::execRpc(const string &connection_id, const AmArg& rpc_params
       params = rpc_params["params"];
     } 
     string method = rpc_params["method"].asCStr();
-    string id;
-    if (rpc_params.hasMember("id") && isArgCStr(rpc_params["id"]))
-      id = rpc_params["id"].asCStr();
+    AmArg id;
+    if (rpc_params.hasMember("id")) {
+        id = rpc_params["id"];
+    }
 
     return execRpc(connection_id, method, id, params, rpc_res);
 }
@@ -449,7 +436,7 @@ static bool traverse_tree(AmDynInvoke* di,const string &method, AmArg args, AmAr
     }
 }
 
-bool JsonRpcServer::execRpc(const string &connection_id, const string& method, const string& id, const AmArg& params, AmArg& rpc_res) {
+bool JsonRpcServer::execRpc(const string &connection_id, const string& method, const AmArg& id, const AmArg& params, AmArg& rpc_res) {
 
 try  {
 
@@ -559,7 +546,8 @@ try  {
 } catch (const JsonRpcError& e) {
     INFO("got JsonRpcError. code %d, message '%s', data: '%s', method: %s, id: %s, params: '%s'",
         e.code, e.message.c_str(), AmArg::print(e.data).c_str(),
-        method.c_str(), id.c_str(), AmArg::print(params).c_str());
+        method.c_str(), isArgCStr(id) ? id.asCStr() : int2str(id.asInt()).c_str(),
+        AmArg::print(params).c_str());
     rpc_res["error"] = AmArg(); 
     rpc_res["error"]["code"] = e.code;
     rpc_res["error"]["message"] = e.message;
