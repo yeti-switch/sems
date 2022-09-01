@@ -121,9 +121,10 @@ class ConnectionPool
     vector<IPGConnection*> connections;
     Worker* worker;
     PGPool pool;
+    PGWorkerPoolCreate::PoolType type;
     AtomicCounter& connected;
 public:
-    ConnectionPool(const PGPool& pool, Worker* worker, enum PGWorkerPoolCreate::PoolType type);
+    ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolCreate::PoolType type);
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();

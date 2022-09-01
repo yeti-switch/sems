@@ -7,6 +7,8 @@
 #include <AmEventDispatcher.h>
 #include <AmStatistics.h>
 
+static const string pool_type_master("master");
+static const string pool_type_slave("slave");
 
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\
@@ -75,9 +77,9 @@ void Worker::getStats(AmArg& ret)
     stats["finished"] = (long long)finished.get();
 
     if(master)
-        master->getStats(stats["master"]);
+        master->getStats(stats);
     if(slave)
-        slave->getStats(stats["slave"]);
+        slave->getStats(stats);
 }
 
 void Worker::onConnect(IPGConnection* conn) {
@@ -644,11 +646,12 @@ void Worker::onTimer()
     setWorkTimer(false);
 }
 
-ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, enum PGWorkerPoolCreate::PoolType type)
-: pool(pool), worker(worker)
-, connected(stat_group(Gauge, MOD_NAME, "connected").addAtomicCounter().
-            addLabel("worker", worker->get_name()).
-            addLabel("type", type == PGWorkerPoolCreate::Master ? "master" : "slave")) {
+ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolCreate::PoolType type)
+  : worker(worker), pool(pool), type(type),
+    connected(stat_group(Gauge, MOD_NAME, "connected").addAtomicCounter()
+        .addLabel("worker", worker->get_name())
+        .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave))
+{
     string conn_info;
     int size = snprintf((char*)conn_info.c_str(), 0, "host=%s port=%d user=%s dbname=%s password=%s",
              pool.host.c_str(), pool.port, pool.user.c_str(), pool.name.c_str(), pool.pass.c_str());
@@ -716,12 +719,16 @@ void ConnectionPool::usePipeline(bool is_pipeline)
 
 void ConnectionPool::getStats(AmArg& stats)
 {
+    AmArg &pool_stats = (type==PGWorkerPoolCreate::Master) ?
+        stats[pool_type_master] : stats[pool_type_slave];
+
     for(auto& conn : connections) {
-        stats.push(AmArg());
-        auto &conn_info = stats.back();
+        pool_stats.push(AmArg());
+        auto &conn_info = pool_stats.back();
         conn_info["status"] = conn->getStatus();
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
     }
+
     stats["connected"] = (long long)connected.get();
 }
