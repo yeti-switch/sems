@@ -60,10 +60,7 @@ class JsonRpcServer {
 			   JsonrpcNetstringsConnection* peer, const AmArg& udata,
 			   bool is_notification = false);
 
-  static int createReply(JsonrpcNetstringsConnection* peer, const string& id, 
-			 AmArg& result, bool is_error);
-
-  static int createReply(JsonrpcNetstringsConnection* peer, unsigned int id,
+  static int createReply(JsonrpcNetstringsConnection* peer, const AmArg &id,
                          AmArg& result, bool is_error);
 };
 

@@ -74,33 +74,11 @@ int JsonRpcServer::createRequest(const string& evq_link, const string& method,
   return 0;
 }
 
-int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
-			       unsigned int id, AmArg& result, bool is_error) {
-
-  AmArg rpc_res;
-  rpc_res["id"] = (int)id;
-  rpc_res["jsonrpc"] = "2.0";
-  if (is_error)
-    rpc_res["error"] = result;
-  else
-    rpc_res["result"] = result;
-
-  string res_s = arg2json(rpc_res);
-  if (res_s.length() > MAX_RPC_MSG_SIZE) {
-    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)",
-	  MAX_RPC_MSG_SIZE);
-    return -3;
-  }
-
-  DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
-  memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
-  peer->msg_size = res_s.length();
-
-  return 0;
-}
-
-int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
-			       const string& id, AmArg& result, bool is_error) {
+int JsonRpcServer::createReply(
+    JsonrpcNetstringsConnection* peer,
+    const AmArg &id,
+    AmArg& result, bool is_error)
+{
 
   AmArg rpc_res;
   rpc_res["id"] = id;
@@ -112,7 +90,7 @@ int JsonRpcServer::createReply(JsonrpcNetstringsConnection* peer,
 
   string res_s = arg2json(rpc_res);
   if (res_s.length() > MAX_RPC_MSG_SIZE) {
-    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)", 
+    ERROR("internal error: reply exceeded MAX_RPC_MSG_SIZE (%d)",
 	  MAX_RPC_MSG_SIZE);
     return -3;
   }
@@ -257,11 +235,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         JsonrpcNetstringsConnection* conn = dynamic_cast<JsonrpcNetstringsConnection*>(peer);
         assert(conn);
         AmArg result("forbidden");
-        if(isArgInt(id)) {
-            createReply(conn, id.asInt(), result, true);
-        } else {
-            createReply(conn, id.asCStr(), result, true);
-        }
+        createReply(conn, id, result, true);
         return 0;
     }
 
@@ -272,32 +246,38 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     if(method == set_notify_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
-                                             isArgInt(id), 500,
-                                             "wrong 'params' type %s for method %s. expected string",
-                                             params.getTypeStr(), method.asCStr());
+            *msg_size = generate_error_reply(
+                msgbuf,
+                arg2str(id), isArgInt(id),
+                500, "wrong 'params' type %s for method %s. expected string",
+                params.getTypeStr(), method.asCStr());
             return 0;
         }
 
-        *msg_size = generate_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
-                                   isArgInt(id), "\"changed '%s' -> '%s'\"",
-                                   peer->notificationReceiver.data(), params.asCStr());
+        *msg_size = generate_reply(
+            msgbuf,
+            arg2str(id), isArgInt(id),
+            "\"changed '%s' -> '%s'\"",
+            peer->notificationReceiver.data(), params.asCStr());
 
         peer->notificationReceiver = params.asCStr();
         return 0;
     } else if(method == set_request_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
-                                            isArgInt(id), 500,
-                                            "wrong 'params' type %s for method %s. expected string",
-                                            params.getTypeStr(), method.asCStr());
+            *msg_size = generate_error_reply(
+                msgbuf,
+                arg2str(id), isArgInt(id),
+                500, "wrong 'params' type %s for method %s. expected string",
+                params.getTypeStr(), method.asCStr());
             return 0;
         }
 
-        *msg_size = generate_reply(msgbuf, isArgInt(id) ? int2str(id.asInt()) : id.asCStr(),
-                                   isArgInt(id),"\"changed '%s' -> '%s'\"",
-                                   peer->requestReceiver.data(), params.asCStr());
+        *msg_size = generate_reply(
+            msgbuf,
+            arg2str(id), isArgInt(id),
+            "\"changed '%s' -> '%s'\"",
+            peer->requestReceiver.data(), params.asCStr());
 
         peer->requestReceiver = params.asCStr();
         return 0;
