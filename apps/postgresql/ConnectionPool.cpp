@@ -187,10 +187,9 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
                 AmEventDispatcher::instance()->post(tr_it->sender_id, new PGResponse(result, tr_it->token));
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
-            struct timeval tm;
-            gettimeofday(&tm, 0);
-            time_t delay = tm.tv_sec*1000 + tm.tv_usec/1000 - tr_it->sendTime;
-            finished_time.inc(delay);
+            finished_time.inc(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - tr_it->sendTime).count());
             transactions.erase(tr_it);
             return;
         }
@@ -219,10 +218,8 @@ void Worker::onSend(IPGTransaction* trans)
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
-            if(!tr_it->sendTime) {
-                struct timeval tm;
-                gettimeofday(&tm, 0);
-                tr_it->sendTime = tm.tv_sec*1000 + tm.tv_usec/1000;
+            if(!tr_it->sendTime.time_since_epoch().count()) {
+                tr_it->sendTime = std::chrono::steady_clock::now();
             }
             return;
         }

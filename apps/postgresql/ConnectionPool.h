@@ -1,6 +1,6 @@
-#ifndef CONNECTION_POOL_H
-#define CONNECTION_POOL_H
+#pragma once
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <list>
@@ -40,13 +40,13 @@ class Worker : public ITransactionHandler,
         IPGTransaction* trans;
         ConnectionPool* currentPool;
         time_t createdTime;
-        time_t sendTime;
+        std::chrono::steady_clock::time_point sendTime;
         string token;
         string sender_id;
         TransContainer(IPGTransaction* trans, ConnectionPool* pool,
                        const string& sender, const string& token)
-        : trans(trans), currentPool(pool), token(token)
-        , sender_id(sender), createdTime(time(0)), sendTime(0) {}
+            : trans(trans), currentPool(pool), createdTime(time(0))
+            , token(token), sender_id(sender) {}
     };
 
     AtomicCounter& tr_size;
@@ -131,5 +131,3 @@ public:
     void getStats(AmArg& stats);
     const PGPool& getInfo() { return pool; }
 };
-
-#endif/*CONNECTION_POOL_H*/
