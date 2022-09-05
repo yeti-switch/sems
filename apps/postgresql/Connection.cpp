@@ -5,6 +5,7 @@
 # include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <AmUtils.h>
 
 IPGConnection::~IPGConnection()
 {
@@ -136,6 +137,7 @@ void PGConnection::check_conn()
     PostgresPollingStatusType   st = PQconnectPoll(conn);
     status = PQstatus(conn);
     pipe_status = PQpipelineStatus(conn);
+    //DBG("check status %u, poll_st %u, pipe %s", status, st, pipe_status == PQ_PIPELINE_ON ? "true" : "false");
     switch((int)st) {
         case PGRES_POLLING_OK:
             if(!connected && status == CONNECTION_OK) {
@@ -156,9 +158,21 @@ void PGConnection::check_conn()
             handler->onSock(this, IConnectionHandler::PG_SOCK_WRITE);
             break;
         case PGRES_POLLING_FAILED:
+            status = CONNECTION_BAD;
+            break;
+    }
+
+    if(!connected) {
+        int err = strlen(PQerrorMessage(conn));
+        if(err) {
+            status = CONNECTION_BAD;
+        }
+
+        if(status == CONNECTION_BAD) {
+            //DBG("error %s", PQerrorMessage(conn));
             disconnected_time = time(0);
             handler->onConnectionFailed(this, PQerrorMessage(conn));
-            break;
+        }
     }
 }
 
@@ -177,20 +191,16 @@ bool PGConnection::reset_conn()
     if(conn) {
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         handler->onReset(this);
-        if(!PQresetStart(conn)) {
-            handler->onPQError(this, PQerrorMessage(conn));
-            return false;
-        }
-    } else {
-        conn = PQconnectStart(connection_info.c_str());
-        if(!conn) {
-            ERROR("cann't create pq connection");
-            return false;
-        }
-        if (PQsetnonblocking(conn, 1) == -1) {
-            handler->onPQError(this, PQerrorMessage(conn));
-            return false;
-        }
+        PQfinish(conn);
+    }
+    conn = PQconnectStart(connection_info.c_str());
+    if(!conn) {
+        ERROR("cann't create pq connection");
+        return false;
+    }
+    if (PQsetnonblocking(conn, 1) == -1) {
+        handler->onPQError(this, PQerrorMessage(conn));
+        return false;
     }
 
     conn_fd = PQsocket(conn);
