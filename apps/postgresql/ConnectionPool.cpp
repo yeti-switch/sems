@@ -139,15 +139,16 @@ void Worker::onDisconnect(IPGConnection* conn) {
 
 void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
 {
+    int ret = 0;
     if(type == PG_SOCK_NEW) {
         epoll_event event;
         event.events = EPOLLIN | EPOLLERR | EPOLLET;
         event.data.ptr = conn;
 
         // add the socket to the epoll file descriptors
-        epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn->getSocket(), &event);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn->getSocket(), &event);
     } else if(type == PG_SOCK_DEL) {
-        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->getSocket(), nullptr);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->getSocket(), nullptr);
     } else {
         epoll_event event;
         event.events = EPOLLERR;
@@ -156,7 +157,14 @@ void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
         if(type == PG_SOCK_READ) event.events |= EPOLLIN;
         if(type == PG_SOCK_RW) event.events |= EPOLLOUT | EPOLLIN;
 
-        epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn->getSocket(), &event);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn->getSocket(), &event);
+    }
+
+    if(ret < 0) {
+        resetConnections.push_back(conn);
+        reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
+        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+        setWorkTimer(false);
     }
 }
 
