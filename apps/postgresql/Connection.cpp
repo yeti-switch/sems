@@ -189,9 +189,8 @@ bool PGConnection::reset_conn()
     if(!handler) return false;
 
     if(conn) {
-        if(connected) handler->onDisconnect(this);
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
-        handler->onReset(this);
+        handler->onReset(this, connected);
         PQfinish(conn);
     }
     conn = PQconnectStart(connection_info.c_str());
@@ -283,7 +282,7 @@ bool MockConnection::reset_conn()
     if(!handler) return false;
 
     if(conn_fd != -1) {
-        handler->onReset(this);
+        handler->onReset(this, false);
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         status = CONNECTION_BAD;
         ::close(conn_fd);

@@ -66,19 +66,19 @@ TEST_F(PostgresqlTest, WorkerConnectionTest)
     ASSERT_TRUE(arg1.hasMember("test"));
     arg = arg1["test"]["stats"];
     ASSERT_TRUE(arg.hasMember("master"));
-    ASSERT_TRUE(isArgArray(arg["master"]));
-    ASSERT_FALSE(isArgArray(arg["slave"]));
-    ASSERT_EQ((int)arg["master"].size(), 1);
+    ASSERT_TRUE(isArgArray(arg["master"]["connections"]));
+    ASSERT_FALSE(isArgArray(arg["slave"]["connections"]));
+    ASSERT_EQ((int)arg["master"]["connections"].size(), 1);
     bool exit = false;
     while(exit) {
         sleep(1);
         arg.clear();
         PostgreSQL::instance()->showStats(arg, arg);
         INFO("%s", AmArg::print(arg).c_str());
-        arg1 = arg["workers"]["test"]["stats"];
+        arg1 = arg["workers"]["test"]["stats"]["master"]["connections"];
         exit = true;
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            if(arg1["master"][i]["status"].asInt() != CONNECTION_OK)
+        for(size_t i = 0; i < arg1.size(); i++) {
+            if(arg1[i]["status"].asInt() != CONNECTION_OK)
                 exit = false;
         }
     }
@@ -121,9 +121,9 @@ TEST_F(PostgresqlTest, WorkerTransactionTest)
 
     AmArg arg;
     PostgreSQL::instance()->showStats(arg, arg);
-    AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-    for(size_t i = 0; i < arg1["master"].size(); i++) {
-        ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+    AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+    for(size_t i = 0; i < arg1.size(); i++) {
+        ASSERT_FALSE(arg1[i]["busy"].asBool());
     }
 }
 
@@ -155,9 +155,9 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
     types = {PGEvent::Result};
@@ -177,9 +177,9 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
     WorkerHandler::instance().set_expected_events(types);
@@ -193,9 +193,9 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
 }
@@ -215,9 +215,9 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
     WorkerHandler::instance().set_expected_events(types);
@@ -231,10 +231,10 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
         bool busy = false;
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            if(arg1["master"][i]["busy"].asBool()) {
+        for(size_t i = 0; i < arg1.size(); i++) {
+            if(arg1[i]["busy"].asBool()) {
                 busy = true;
                 break;
             }
@@ -253,9 +253,9 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
 }
@@ -325,9 +325,9 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
     WorkerHandler::instance().set_expected_events(types);
@@ -344,9 +344,9 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
     WorkerHandler::instance().set_expected_events(types);
@@ -360,9 +360,9 @@ TEST_F(PostgresqlTest, WorkerPrepareExecTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
 }
@@ -395,9 +395,9 @@ TEST_F(PostgresqlTest, WorkerConfigTest)
     {
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
-        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"];
-        for(size_t i = 0; i < arg1["master"].size(); i++) {
-            ASSERT_FALSE(arg1["master"][i]["busy"].asBool());
+        AmArg arg1 = arg["workers"][WORKER_POOL_NAME]["stats"]["master"]["connections"];
+        for(size_t i = 0; i < arg1.size(); i++) {
+            ASSERT_FALSE(arg1[i]["busy"].asBool());
         }
     }
 }
@@ -551,8 +551,8 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
         if(handler.check() < 1) return;
         AmArg arg;
         worker.getStats(arg);
-        if(arg["stats"]["master"][0]["status"].asInt() == CONNECTION_OK ||
-           arg["stats"]["master"][1]["status"].asInt() == CONNECTION_OK) break;
+        if(arg["stats"]["master"]["connections"][0]["status"].asInt() == CONNECTION_OK ||
+           arg["stats"]["master"]["connections"][1]["status"].asInt() == CONNECTION_OK) break;
     }
 
     PGSetSearchPath spath("test");
@@ -564,9 +564,9 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
         AmArg stats;
         worker.getStats(stats);
         auto &arg = stats["stats"];
-        if(!arg["master"][0]["busy"].asBool() && 
-           !arg["master"][1]["busy"].asBool() &&
-           arg["master"][0]["status"].asInt() == CONNECTION_OK &&
-           arg["master"][1]["status"].asInt() == CONNECTION_OK) break;
+        if(!arg["master"]["connections"][0]["busy"].asBool() && 
+           !arg["master"]["connections"][1]["busy"].asBool() &&
+           arg["master"]["connections"][0]["status"].asInt() == CONNECTION_OK &&
+           arg["master"]["connections"][1]["status"].asInt() == CONNECTION_OK) break;
     }
 }

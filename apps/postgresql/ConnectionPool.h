@@ -99,7 +99,7 @@ public:
     void onConnect(IPGConnection* conn) override;
     void onConnectionFailed(IPGConnection* conn, const string& error) override;
     void onDisconnect(IPGConnection* conn) override;
-    void onReset(IPGConnection* conn) override;
+    void onReset(IPGConnection* conn, bool connected) override;
     void onPQError(IPGConnection* conn, const string& error) override;
     void onStopTransaction(IPGTransaction* trans) override;
 

@@ -75,7 +75,6 @@ void Worker::getStats(AmArg& ret)
     stats["dropped"] = (long long)dropped.get();
     stats["active"] = (long long)tr_size.get();
     stats["finished"] = (long long)finished.get();
-    stats["connected"] = 0;
 
     if(master)
         master->getStats(stats);
@@ -99,8 +98,9 @@ void Worker::onConnect(IPGConnection* conn) {
     else
         setWorkTimer(true);
 }
-void Worker::onReset(IPGConnection* conn) {
+void Worker::onReset(IPGConnection* conn, bool connected) {
     DBG("pg connection %s:%p/\'%s\' reset", name.c_str(), conn, conn->getConnInfo().c_str());
+    if(connected && master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
 }
 void Worker::onPQError(IPGConnection* conn, const std::string& error) {
     ERROR("pg connection %s:%p/\'%s\' error: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
@@ -731,13 +731,14 @@ void ConnectionPool::getStats(AmArg& stats)
     AmArg &pool_stats = (type==PGWorkerPoolCreate::Master) ?
         stats[pool_type_master] : stats[pool_type_slave];
 
+    pool_stats["connected"] = (long long)connected.get();
+    AmArg &conns = pool_stats["connections"];
     for(auto& conn : connections) {
-        pool_stats.push(AmArg());
-        auto &conn_info = pool_stats.back();
+        conns.push(AmArg());
+        auto &conn_info = conns.back();
         conn_info["status"] = conn->getStatus();
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
     }
 
-    stats["connected"] = stats["connected"].asLongLong() + (long long)connected.get();
 }

@@ -119,7 +119,7 @@ protected:
         reset.push_back(conn);
     }
 
-    void onReset(IPGConnection*) override
+    void onReset(IPGConnection*, bool connected) override
     {
         INFO("reset");
         cur_state = DISCONNECTED;

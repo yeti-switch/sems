@@ -25,7 +25,7 @@ struct IConnectionHandler
     virtual void onConnect(IPGConnection* conn) = 0;
     virtual void onConnectionFailed(IPGConnection* conn, const string& error) = 0;
     virtual void onDisconnect(IPGConnection* conn) = 0;
-    virtual void onReset(IPGConnection* conn) = 0;
+    virtual void onReset(IPGConnection* conn, bool connected) = 0;
     virtual void onPQError(IPGConnection* conn, const string& error) = 0;
     virtual void onStopTransaction(IPGTransaction* trans) = 0;
 };
