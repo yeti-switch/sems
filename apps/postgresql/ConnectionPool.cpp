@@ -75,6 +75,7 @@ void Worker::getStats(AmArg& ret)
     stats["dropped"] = (long long)dropped.get();
     stats["active"] = (long long)tr_size.get();
     stats["finished"] = (long long)finished.get();
+    stats["connected"] = 0;
 
     if(master)
         master->getStats(stats);
@@ -738,5 +739,5 @@ void ConnectionPool::getStats(AmArg& stats)
         conn_info["busy"] = conn->isBusy();
     }
 
-    stats["connected"] = (long long)connected.get();
+    stats["connected"] = stats["connected"].asLongLong() + (long long)connected.get();
 }

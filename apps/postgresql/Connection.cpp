@@ -189,6 +189,7 @@ bool PGConnection::reset_conn()
     if(!handler) return false;
 
     if(conn) {
+        if(connected) handler->onDisconnect(this);
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         handler->onReset(this);
         PQfinish(conn);
@@ -220,6 +221,7 @@ void * PGConnection::get_conn()
 void PGConnection::close_conn()
 {
     if(conn) {
+        if(connected) handler->onDisconnect(this);
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         status = CONNECTION_BAD;
         pipe_status = PQ_PIPELINE_OFF;
