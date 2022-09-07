@@ -570,3 +570,57 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
            arg["master"][1]["status"].asInt() == CONNECTION_OK) break;
     }
 }
+
+TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
+{
+    PGHandler handler;
+    Worker worker("test", handler.epoll_fd);
+    handler.workers.push_back(&worker);
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 1;
+    worker.createPool(PGWorkerPoolCreate::Master, pool);
+
+    while(true) {
+        if(handler.check() < 1) return;
+        AmArg arg;
+        worker.getStats(arg);
+        if(arg["stats"]["master"][0]["status"].asInt() == CONNECTION_OK ||
+           arg["stats"]["master"][1]["status"].asInt() == CONNECTION_OK) break;
+    }
+
+    vector<string> errors;
+    errors.push_back("42601");
+    worker.setReconnectErrors(errors);
+
+    server->addError("ASSERT 0", true);
+    server->addErrorCodes("ASSERT 0", "42601");
+
+    IPGTransaction* trans = new NonTransaction(&worker);
+    trans->exec(new Query("ASSERT 0", false));
+    worker.runTransaction(trans, "", "");
+
+    while(true) {
+        if(handler.check() < 1) return;
+        AmArg stats;
+        worker.getStats(stats);
+        auto &arg = stats["stats"];
+        if(arg["retransmit"].asInt() == 1) break;
+    }
+
+    while(true) {
+        if(handler.check() < 1) return;
+        AmArg stats;
+        worker.getStats(stats);
+        auto &arg = stats["stats"];
+        if(arg["retransmit"].asInt() == 0) break;
+    }
+
+    while(true) {
+        if(handler.check() < 1) return;
+        AmArg arg;
+        worker.getStats(arg);
+        if(arg["stats"]["master"][0]["status"].asInt() == CONNECTION_OK ||
+           arg["stats"]["master"][1]["status"].asInt() == CONNECTION_OK) break;
+    }
+}
+

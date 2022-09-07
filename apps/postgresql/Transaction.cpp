@@ -4,6 +4,7 @@
 #include <log.h>
 #include <netinet/in.h>
 #include <jsonArg.h>
+#include <AmUtils.h>
 
 #define MAX_BUF_SIZE 256
 
@@ -204,9 +205,14 @@ void PGTransaction::fetch_result()
             case PGRES_EMPTY_QUERY:
             case PGRES_BAD_RESPONSE:
             case PGRES_NONFATAL_ERROR:
-            case PGRES_FATAL_ERROR:
+            case PGRES_FATAL_ERROR: {
+                char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
+                parent->handler->onError(parent, error);
+                char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
+                parent->handler->onErrorCode(parent, errorfield);
+                break;
+            }
             case PGRES_PIPELINE_ABORTED:
-                parent->handler->onError(parent, PQresultErrorMessage(res));
                 break;
             case PGRES_SINGLE_TUPLE:
                 single = true;
@@ -270,16 +276,24 @@ void MockTransaction::fetch_result()
 
     if(!is_pipeline()) {
         status = PQTRANS_IDLE;
-        if(server->isError(query_)) {
+        string errorcode;
+        if(server->isError(query_, errorcode)) {
             parent->handler->onError(parent, "mock error");
+            if(!errorcode.empty()) {
+                parent->handler->onErrorCode(parent, errorcode);
+            }
         } else {
             AmArg res = server->getResponse(query_);
             if(!isArgUndef(res))
                 result.push(res);
         }
     } else if(current_query_number < query->get_size()){
-        if(server->isError(query_)) {
+        string errorcode;
+        if(server->isError(query_, errorcode)) {
             parent->handler->onError(parent, "mock error");
+            if(!errorcode.empty()) {
+                parent->handler->onErrorCode(parent, errorcode);
+            }
         } else {
             AmArg res = server->getResponse(query_);
             if(!isArgUndef(res))
@@ -309,9 +323,13 @@ DbMockTransaction::~DbMockTransaction(){}
 bool DbMockTransaction::check_trans()
 {
     if(status == PQTRANS_IDLE && query->get_current_query()->is_finished()) {
-        if(parent->get_state() == IPGTransaction::BODY && server->isError(query->get_query())) {
+        string error_code;
+        if(parent->get_state() == IPGTransaction::BODY && server->isError(query->get_query(), error_code)) {
             status = PQTRANS_INERROR;
             parent->handler->onError(parent, "mock error");
+            if(!error_code.empty()) {
+                parent->handler->onErrorCode(parent, error_code);
+            }
         } else 
             status = PQTRANS_INTRANS;
     } else if(status == PQTRANS_INTRANS ||

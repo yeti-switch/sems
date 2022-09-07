@@ -18,6 +18,7 @@ struct ITransactionHandler
     virtual void onSend(IPGTransaction* conn) = 0;
     virtual void onCancel(IPGTransaction* conn) = 0;
     virtual void onError(IPGTransaction* trans, const string& error) = 0;
+    virtual void onErrorCode(IPGTransaction* trans, const string& error) = 0;
     virtual void onPQError(IPGTransaction* conn, const string& error) = 0;
     virtual void onFinish(IPGTransaction* conn, const AmArg& result) = 0;
     virtual void onTuple(IPGTransaction* conn, const AmArg& result) = 0;
