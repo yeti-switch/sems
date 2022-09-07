@@ -83,7 +83,7 @@ public:
     PGpipelineStatus getPipeStatus() { return pipe_status; }
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_info; }
-    bool isBusy() { return cur_transaction ? true : false; }
+    bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
     time_t getDisconnectedTime() { return disconnected_time; } 
 };
 
