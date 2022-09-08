@@ -15,6 +15,7 @@ class TestServer
 {
     map<string, AmArg> responses;
     map<string, bool> errors;
+    map<string, string> errorcodes;
 public:
     TestServer(){}
 
@@ -26,11 +27,19 @@ public:
         errors.emplace(query, erase);
     }
 
-    bool isError(const string& query) {
+    void addErrorCodes(const string& query, const string& code) {
+        errorcodes.emplace(query, code);
+    }
+
+    bool isError(const string& query, string& code) {
         for(auto it = errors.begin();
             it != errors.end(); it++) {
             if(it->first == query) {
-                if(it->second) errors.erase(it);
+                code = errorcodes[query];
+                if(it->second) {
+                    errors.erase(it);
+                    errorcodes.erase(query);
+                }
                 return true;
             }
         }

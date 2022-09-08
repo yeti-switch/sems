@@ -174,6 +174,11 @@ protected:
         ERROR("exec query error: %s", error.c_str());
     }
 
+    void onErrorCode(IPGTransaction* , const string& error) override
+    {
+        ERROR("error code: %s", error.c_str());
+    }
+
     void onPQError(IPGConnection*, const std::string & error) override
     {
         ERROR("pq error: %s", error.c_str());

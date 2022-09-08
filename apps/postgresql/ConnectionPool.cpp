@@ -182,6 +182,21 @@ void Worker::onError(IPGTransaction* trans, const string& error) {
     }
 }
 
+
+void Worker::onErrorCode(IPGTransaction* trans, const string& error) {
+    ERROR("error code: \"%s\"", error.c_str());
+    for(auto& err : reconnect_errors) {
+        if(err == error) {
+            if(master && !master->checkConnection(trans->get_conn(), false) && slave) slave->checkConnection(trans->get_conn(), false); 
+            resetConnections.push_back(trans->get_conn());
+            reset_next_time = resetConnections[0]->getDisconnectedTime();
+            //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+            setWorkTimer(false);
+            return;
+        }
+    }
+}
+
 void Worker::onTuple(IPGTransaction* trans, const AmArg& result) {
 }
 
@@ -395,11 +410,12 @@ void Worker::checkQueue()
 {
     for(auto trans_it = retransmit_q.begin();
         trans_it != retransmit_q.end();) {
+        int tr_size = trans_it->trans->get_size();
         int ret = retransmitTransaction(*trans_it);
         if(ret < 0) break;
         else if(ret > 0) trans_it++;
         else {
-            ret_size.dec((long long)trans_it->trans->get_size());
+            ret_size.dec((long long)tr_size);
             trans_it = retransmit_q.erase(trans_it);
         }
     }
@@ -528,11 +544,17 @@ void Worker::setSearchPath(const vector<string>& search_path)
         slave->runTransactionForPool(tr);
 }
 
+void Worker::setReconnectErrors(const vector<std::string>& errors)
+{
+    reconnect_errors = errors;
+}
+
 void Worker::configure(const PGWorkerConfig& e)
 {
     prepareds.clear();
     search_pathes.clear();
     init_queries.clear();
+    reconnect_errors.clear();
 
     failover_to_slave = e.failover_to_slave;
     retransmit_enable = e.retransmit_enable;
@@ -545,6 +567,7 @@ void Worker::configure(const PGWorkerConfig& e)
     max_queue_length = e.max_queue_length;
 
     setSearchPath(e.search_pathes);
+    setReconnectErrors(e.reconnect_errors);
     for(auto& prepared : e.prepeared)
         runPrepared(prepared);
 

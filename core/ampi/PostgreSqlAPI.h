@@ -125,6 +125,7 @@ public:
     bool use_pipeline;
     vector<PGPrepareData> prepeared;
     vector<string> search_pathes;
+    vector<string> reconnect_errors;
 
     PGWorkerConfig(
         const string& name,
@@ -156,6 +157,10 @@ public:
 
     void addSearchPath(const string& search_path) {
         search_pathes.push_back(search_path);
+    }
+
+    void addReconnectError(const string& error) {
+        reconnect_errors.push_back(error);
     }
 };
 

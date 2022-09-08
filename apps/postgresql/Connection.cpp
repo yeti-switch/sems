@@ -142,6 +142,7 @@ void PGConnection::check_conn()
             if(!connected && status == CONNECTION_OK) {
                 connected = true;
                 //PQtrace(conn, stderr);
+                PQsetErrorVerbosity(conn, PQERRORS_VERBOSE);
                 handler->onConnect(this);
             }
         case PGRES_POLLING_READING:

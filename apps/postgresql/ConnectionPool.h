@@ -61,6 +61,7 @@ class Worker : public ITransactionHandler,
     map<string,PGPrepareData> prepareds;  //prepared transaction for all connections that has connected
     vector<string> search_pathes;         //search pathes for all connections that has connected
     vector< std::unique_ptr<IPGQuery> > init_queries; //queries to run on connect
+    vector<string> reconnect_errors;
 
     list<TransContainer> retransmit_q;    //queue of retransmit transactions
     list<TransContainer> queue;           //queue of transaction
@@ -85,6 +86,7 @@ public:
     void runPrepared(const PGPrepareData& prepared);
     void runInitial(IPGQuery *query);
     void setSearchPath(const vector<string>& search_path);
+    void setReconnectErrors(const vector<string>& errors);
 
     void runTransaction(IPGTransaction* trans, const string& sender_id, const string& token);
     void configure(const PGWorkerConfig& e);
@@ -107,6 +109,7 @@ public:
     void onCancel(IPGTransaction* conn) override;
     void onSend(IPGTransaction* conn) override;
     void onError(IPGTransaction* trans, const string& error) override;
+    void onErrorCode(IPGTransaction* trans, const string& error) override;
     void onPQError(IPGTransaction* trans, const string& error) override;
     void onFinish(IPGTransaction* trans, const AmArg& result) override;
     void onTuple(IPGTransaction* trans, const AmArg& result) override;
