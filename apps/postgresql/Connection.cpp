@@ -122,9 +122,8 @@ void PGConnection::check_conn()
     if(connected) {
         //DBG("PQconsumeInput");
         if(!PQconsumeInput(conn)) {
-            close_conn();
             disconnected_time = time(0);
-            handler->onDisconnect(this);
+            close_conn();
             return;
         }
         PGnotify* notify =  PQnotifies(conn);
