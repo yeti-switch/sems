@@ -215,6 +215,16 @@ void AmSipDialog::setOAEnabled(bool oa_enabled) {
   offeranswer_enabled = oa_enabled;
 }
 
+unsigned int AmSipDialog::getOAcseq()
+{
+  return oa.getCseq();
+}
+
+bool AmSipDialog::isOASubsequentSDP(unsigned int sip_msg_cseq)
+{
+  return oa.isSubsequentSDP(sip_msg_cseq);
+}
+
 int AmSipDialog::onTxRequest(AmSipRequest& req, int& flags)
 {
   rel100.onRequestOut(req);

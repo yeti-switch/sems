@@ -68,9 +68,12 @@ public:
 
   /** Accessors */
   OAState getState();
+  unsigned int getCseq();
   void setState(OAState n_st);
   const AmSdp& getLocalSdp();
   const AmSdp& getRemoteSdp();
+
+  bool isSubsequentSDP(unsigned int sip_msg_cseq);
 
   void clear();
   void clearTransitionalState();

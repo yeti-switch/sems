@@ -102,6 +102,8 @@ protected:
   AmOfferAnswer::OAState getOAState();
   void setOAState(AmOfferAnswer::OAState n_st);
   void setOAEnabled(bool oa_enabled);
+  unsigned int getOAcseq();
+  bool isOASubsequentSDP(unsigned int sip_msg_cseq);
   const AmSdp& getLocalSdp() { return oa.getLocalSdp(); }
   const AmSdp& getRemoteSdp() { return oa.getRemoteSdp(); }
 

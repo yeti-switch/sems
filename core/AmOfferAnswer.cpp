@@ -60,6 +60,11 @@ AmOfferAnswer::OAState AmOfferAnswer::getState()
     return state;
 }
 
+unsigned int AmOfferAnswer::getCseq()
+{
+    return cseq;
+}
+
 void AmOfferAnswer::setState(AmOfferAnswer::OAState n_st)
 {
     DBG("setting SIP dialog O/A status: %s->%s",
@@ -94,6 +99,12 @@ int AmOfferAnswer::checkStateChange()
     }
 
     return ret;
+}
+
+bool AmOfferAnswer::isSubsequentSDP(unsigned int sip_msg_cseq)
+{
+    return (state == OA_Completed || state == OA_OfferRecved) &&
+           sip_msg_cseq == cseq;
 }
 
 void AmOfferAnswer::clear()
@@ -171,10 +182,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
         const AmMimeBody* sdp_body =
             reply.body.hasContentType(SIP_APPLICATION_SDP);
         if(sdp_body) {
-            if(((state == OA_Completed) ||
-                (state == OA_OfferRecved)) &&
-               (reply.cseq == cseq))
-            {
+            if(isSubsequentSDP(reply.cseq)) {
                 DBG("ignoring subsequent SDP reply within the same transaction");
                 DBG("this usually happens when 183 and 200 have SDP");
                 /* Make sure that session is started when 200 OK is received */
