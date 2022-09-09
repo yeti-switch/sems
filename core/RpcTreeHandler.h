@@ -69,7 +69,9 @@ class RpcTreeHandler
         AmArg leaves;
 
         rpc_entry(string ld):
-            handler(nullptr), leaf_descr(ld) {}
+            handler(nullptr), async_handler(nullptr),
+            leaf_descr(ld)
+        {}
 
         rpc_entry(string ld, member_handler h, string fd):
             leaf_descr(ld),
