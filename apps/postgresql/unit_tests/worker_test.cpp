@@ -584,8 +584,8 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
         if(handler.check() < 1) return;
         AmArg arg;
         worker.getStats(arg);
-        if(arg["stats"]["master"][0]["status"].asInt() == CONNECTION_OK ||
-           arg["stats"]["master"][1]["status"].asInt() == CONNECTION_OK) break;
+        if(arg["stats"]["master"]["connections"][0]["status"].asInt() == CONNECTION_OK ||
+           arg["stats"]["master"]["connections"][1]["status"].asInt() == CONNECTION_OK) break;
     }
 
     vector<string> errors;
@@ -619,8 +619,8 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
         if(handler.check() < 1) return;
         AmArg arg;
         worker.getStats(arg);
-        if(arg["stats"]["master"][0]["status"].asInt() == CONNECTION_OK ||
-           arg["stats"]["master"][1]["status"].asInt() == CONNECTION_OK) break;
+        if(arg["stats"]["master"]["connections"][0]["status"].asInt() == CONNECTION_OK ||
+           arg["stats"]["master"]["connections"][1]["status"].asInt() == CONNECTION_OK) break;
     }
 }
 
