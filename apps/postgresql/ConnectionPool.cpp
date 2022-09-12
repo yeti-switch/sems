@@ -185,15 +185,17 @@ void Worker::onError(IPGTransaction* trans, const string& error) {
 
 void Worker::onErrorCode(IPGTransaction* trans, const string& error) {
     ERROR("error code: \"%s\"", error.c_str());
-    for(auto& err : reconnect_errors) {
-        if(err == error) {
-            if(master && !master->checkConnection(trans->get_conn(), false) && slave) slave->checkConnection(trans->get_conn(), false); 
-            resetConnections.push_back(trans->get_conn());
-            reset_next_time = resetConnections[0]->getDisconnectedTime();
-            //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-            setWorkTimer(false);
-            return;
-        }
+    if(reconnect_errors.empty() ||
+       reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
+    {
+        if(master && !master->checkConnection(trans->get_conn(), false) && slave)
+            slave->checkConnection(trans->get_conn(), false);
+
+        resetConnections.push_back(trans->get_conn());
+        reset_next_time = resetConnections[0]->getDisconnectedTime();
+        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+        setWorkTimer(false);
+        return;
     }
 }
 
