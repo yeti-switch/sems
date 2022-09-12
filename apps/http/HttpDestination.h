@@ -98,6 +98,7 @@ struct HttpDestination {
     AtomicCounter& resend_count_connection;
     AtomicCounter& count_pending_events;
     AtomicCounter& requests_processed;
+    AtomicCounter& requests_failed;
 
     string succ_codes_str;
 

@@ -72,9 +72,11 @@ int HttpPostConnection::on_finished()
         eff_url, http_response_code,
         total_time, speed_upload);
 
+    bool failed = false;
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(false);
     } else {
+        failed = true;
         ERROR("can't post to '%s'. http_code %ld",
               eff_url,http_response_code);
         if(event.failover_idx < destination.max_failover_idx) {
@@ -100,6 +102,7 @@ int HttpPostConnection::on_finished()
 
     if(!requeue) {
         destination.requests_processed.inc();
+        if(failed) destination.requests_failed.inc();
         post_response_event();
     }
 

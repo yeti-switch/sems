@@ -182,6 +182,7 @@ HttpDestination::HttpDestination(const string &name)
 , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
 , count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
 , requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
+, requests_failed(stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name))
 , min_file_size(0), max_reply_size(0)
 {
 }
@@ -418,6 +419,7 @@ void HttpDestination::showStats(AmArg& ret)
     ret["active_connections"] = (int)count_connection.get();
     ret["active_resend_connections"] = (int)resend_count_connection.get();
     ret["requests_processed"] = static_cast<unsigned long>(requests_processed.get());
+    ret["requests_failed"] = static_cast<unsigned long>(requests_failed.get());
 }
 
 int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const

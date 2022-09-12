@@ -91,9 +91,11 @@ int HttpUploadConnection::on_finished()
         event.file_path.c_str(), eff_url, http_response_code,
         total_time, speed_upload);
 
+    bool failed = false;
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(event.file_path,file_basename, false);
     } else {
+        failed = true;
         ERROR("can't upload '%s' to '%s'. http_code %ld",
               event.file_path.c_str(), eff_url,http_response_code);
         if(event.failover_idx < destination.max_failover_idx) {
@@ -119,6 +121,7 @@ int HttpUploadConnection::on_finished()
 
     if(!requeue) {
         destination.requests_processed.inc();
+        if(failed) destination.requests_failed.inc();
         post_response_event();
     }
 

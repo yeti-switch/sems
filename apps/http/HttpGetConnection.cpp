@@ -58,10 +58,12 @@ int HttpGetConnection::on_finished()
         eff_url, http_response_code,
         total_time, speed_download, ct ? ct : "(null)");
 
+    bool failed = false;
     if(destination.succ_codes(http_response_code)) {
         if(ct) mime_type = ct;
         requeue = destination.post_upload(false);
     } else {
+        failed = true;
         ERROR("can't get to '%s'. http_code %ld",
               eff_url,http_response_code);
         event.failover_idx = 0;
@@ -80,6 +82,7 @@ int HttpGetConnection::on_finished()
 
     if(!requeue) {
         destination.requests_processed.inc();
+        if(failed) destination.requests_failed.inc();
         post_response_event();
     }
 

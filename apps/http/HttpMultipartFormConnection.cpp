@@ -109,9 +109,11 @@ int HttpMultiPartFormConnection::on_finished()
         eff_url, http_response_code,
         total_time, speed_upload);
 
+    bool failed = false;
     if(destination.succ_codes(http_response_code)) {
         requeue = destination.post_upload(file_path,file_basename, false);
     } else {
+        failed = true;
         ERROR("failed to post multipart form to '%s'. http_code %ld. event ptr: %p",
               eff_url,http_response_code,static_cast<void *>(&event));
         dump_event(event);
@@ -138,6 +140,7 @@ int HttpMultiPartFormConnection::on_finished()
 
     if(!requeue) {
         destination.requests_processed.inc();
+        if(failed) destination.requests_failed.inc();
         post_response_event();
     }
 
