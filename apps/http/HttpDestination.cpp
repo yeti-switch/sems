@@ -177,15 +177,14 @@ bool HttpCodesMap::operator ()(long int code) const
 }
 
 HttpDestination::HttpDestination(const string &name)
-: count_connection(stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
-, count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
-, resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
-, count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
-, requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
-, requests_failed(stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name))
-, min_file_size(0), max_reply_size(0)
-{
-}
+  : min_file_size(0), max_reply_size(0)
+  , count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
+  , count_connection(stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
+  , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
+  , count_pending_events(stat_group(Gauge, MOD_NAME, "pending_events").addAtomicCounter().addLabel("destination", name))
+  , requests_processed(stat_group(Counter, MOD_NAME, "requests_processed").addAtomicCounter().addLabel("destination", name))
+  , requests_failed(stat_group(Counter, MOD_NAME, "requests_failed").addAtomicCounter().addLabel("destination", name))
+{}
 
 HttpDestination::~HttpDestination()
 {

@@ -241,6 +241,19 @@ int HttpClient::init()
     stop_event.link(epoll_fd,true);
     init_rpc();
 
+    stat_group(Gauge, MOD_NAME, "failed_events")
+        .setHelp("resend events queue size");
+    stat_group(Gauge, MOD_NAME, "active_connections")
+        .setHelp("active CURL handles in CURLM");
+    stat_group(Gauge, MOD_NAME, "active_resend_connections")
+        .setHelp("active resend CURL handles in CURLM");
+    stat_group(Gauge, MOD_NAME, "pending_events")
+        .setHelp("send events queue size");
+    stat_group(Counter, MOD_NAME, "requests_processed")
+        .setHelp("requests completed in total, including failed ones");
+    stat_group(Counter, MOD_NAME, "requests_failed")
+        .setHelp("requests failed in total");
+
     DBG("HttpClient initialized");
     return 0;
 }
