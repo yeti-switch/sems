@@ -1,3 +1,12 @@
+sems (1.91.0) stable; urgency=low
+  * AmB2BSession: support detection of the subsequent SDP within the same transaction
+  * fix segfault in jsonrpc on partial method path processing
+  * http: add failed requests counter 'sems_http_client_requests_failed'
+  * pg: fix 'connected' counter
+  * pg: fix reconnect on wrong auth over TLS
+  * pg: reconnect on DB errors. Support for SQL error codes list for configurable reconnect on specific errors
+ -- Michael Furmur <furmur@pm.me>  Mon, 12 Sep 2022 19:16:48 +0300
+
 sems (1.90.0) stable; urgency=low
   * jsonrpc: fix numeric id processing
   * pg: add sems_postgresql_connected, sems_postgresql_finished_time metrics
