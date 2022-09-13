@@ -38,7 +38,6 @@
 #include "AmAppTimer.h"
 #include "RtspClient.h"
 #include "CoreRpc.h"
-#include "AmSrtpConnection.h"
 #include "ObjectsCounter.h"
 //#include "sip/async_file_writer.h"
 
@@ -231,108 +230,64 @@ static bool process_args(int argc, char* argv[], std::map<char,string>& args)
     return true;
 }
 
-/*static void set_default_interface(const string& iface_name)
-{
-  unsigned int idx=0;
-  map<string,unsigned short>::iterator if_it = AmConfig.sip_if_names.find("default");
-  if(if_it == AmConfig.sip_if_names.end()) {
-    SIP_interface intf;
-    intf.name = "default";
-    AmConfig.sip_ifs.push_back(intf);
-    AmConfig.sip_if_names["default"] = AmConfig.sip_ifs.size()-1;
-    idx = AmConfig.sip_ifs.size()-1;
-  }
-  else {
-    idx = if_it->second;
-  }
-
-  SIP_info* sinfo = new SIP_UDP_info();
-  sinfo->local_ip = iface_name;
-  AmConfig.sip_ifs.back().proto_info.push_back(sinfo);
-
-  if_it = AmConfig.media_if_names.find("default");
-  if(if_it == AmConfig.media_if_names.end()) {
-    MEDIA_interface intf;
-    intf.name = "default";
-    AmConfig.media_ifs.push_back(intf);
-    AmConfig.media_if_names["default"] = AmConfig.media_ifs.size()-1;
-    idx = AmConfig.media_ifs.size()-1;
-  }
-  else {
-    idx = if_it->second;
-  }
-  RTP_info* rinfo = new RTP_info();
-  rinfo->local_ip = iface_name;
-  AmConfig.media_ifs[idx].proto_info.push_back(rinfo);
-}*/
-
 /* Note: The function should not use logging because it is called before
    the logging is initialized. */
 static bool apply_args(std::map<char,string>& args)
 {
-  for(std::map<char,string>::iterator it = args.begin();
-      it != args.end(); ++it){
-
-    switch( it->first ){
-    /*case 'd':
-      set_default_interface(it->second);
-      break;*/
-
-    case 'D':
-      if(!AmConfig.log_stderr){
-          /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
-                  progname);*/
-          if (!AmLcConfig::instance().setLogStderr(true)) {
+    for(std::map<char,string>::iterator it = args.begin();
+        it != args.end(); ++it)
+    {
+        switch( it->first ) {
+        /*case 'd':
+            set_default_interface(it->second);
+            break;*/
+        case 'D':
+            if(!AmConfig.log_stderr){
+              /*fprintf(stderr, "%s: -D flag usage without preceding -E has no effect. force -E flag\n",
+                      progname);*/
+              if (!AmLcConfig::instance().setLogStderr(true)) {
+                  return false;
+              }
+            }
+            if (!AmLcConfig::instance().setStderrLogLevel(it->second)) {
+              fprintf(stderr, "%s: invalid stderr log level: %s\n",
+                      progname, it->second.c_str());
               return false;
-          }
-      }
-      if (!AmLcConfig::instance().setStderrLogLevel(it->second)) {
-          fprintf(stderr, "%s: invalid stderr log level: %s\n",
-                  progname, it->second.c_str());
-          return false;
-      }
-      break;
-
-    case 'E':
+            }
+            break;
+        case 'E':
 #ifndef DISABLE_DAEMON_MODE
-     AmConfig.deamon_mode = false;
+            AmConfig.deamon_mode = false;
 #endif
-     if (!AmLcConfig::instance().setLogStderr(true)) {
-       return false;
-     }
-     break;
-
-    case 'f':
-      AmLcConfig::instance().config_path = it->second;
-      break;
-
-    case 'x':
-      AmConfig.modules_path = it->second;
-      break;
-
+            if (!AmLcConfig::instance().setLogStderr(true)) {
+                return false;
+            }
+            break;
+        case 'f':
+            AmLcConfig::instance().config_path = it->second;
+            break;
+        case 'x':
+            AmConfig.modules_path = it->second;
+            break;
 #ifndef DISABLE_DAEMON_MODE
-    case 'P':
-      AmConfig.deamon_pid_file = it->second;
-      break;
-
-    case 'u':
-      AmConfig.deamon_uid = it->second;
-      break;
-
-    case 'g':
-      AmConfig.deamon_gid = it->second;
-      break;
+        case 'P':
+            AmConfig.deamon_pid_file = it->second;
+            break;
+        case 'u':
+            AmConfig.deamon_uid = it->second;
+            break;
+        case 'g':
+            AmConfig.deamon_gid = it->second;
+            break;
 #endif
-
-    case 'h':
-    case 'v':
-    default:
-      /* nothing to apply */
-      break;
+        case 'h':
+        case 'v':
+        default:
+            /* nothing to apply */
+            break;
+        }
     }
-  }
-
-  return true;
+    return true;
 }
 
 /** Flag to mark the shutdown is in progress (in the main process) */
@@ -371,116 +326,114 @@ public:
 
 static void signal_handler(int sig)
 {
-  if(sig == SIGUSR1) {
-    AmSessionContainer::instance()->broadcastShutdown();
-    return;
-  }
-
-  if(sig == SIGUSR2) {
-    DBG("brodcasting User event to %u sessions...",
-	AmSession::getSessionNum());
-    AmEventDispatcher::instance()->broadcast(new AmSystemEvent(AmSystemEvent::User));
-    return;
-  }
-
-  if (sig == SIGCHLD && AmConfig.ignore_sig_chld) {
-    return;
-  }
-
-  if (sig == SIGPIPE && AmConfig.ignore_sig_pipe) {
-    return;
-  }
-
-  WARN("Signal %s (%d) received.", strsignal(sig), sig);
-
-  if(sig == SIGQUIT) {
-    CoreRpc::set_system_shutdown(!AmConfig.shutdown_mode);
-    return;
-  }
-
-  if (sig == SIGHUP) {
-    wheeltimer::instance()->insert_timer(new ConfigReloadTimer());
-    return;
-  }
-
-  if (sig == SIGTERM) {
-    AmSessionContainer::instance()->enableUncleanShutdown();
-  }
-
-  if (main_pid == getpid()) {
-    if(!is_shutting_down.get()) {
-      is_shutting_down.set(true);
-
-      INFO("Stopping SIP stack after signal");
-      sip_ctrl.stop();
+    if(sig == SIGUSR1) {
+        AmSessionContainer::instance()->broadcastShutdown();
+        return;
     }
-  }
-  else {
-    /* exit other processes immediately */
-    exit(0);
-  }
+
+    if(sig == SIGUSR2) {
+        DBG("brodcasting User event to %u sessions...",
+            AmSession::getSessionNum());
+        AmEventDispatcher::instance()->broadcast(new AmSystemEvent(AmSystemEvent::User));
+        return;
+    }
+
+    if(sig == SIGCHLD && AmConfig.ignore_sig_chld) {
+        return;
+    }
+
+    if(sig == SIGPIPE && AmConfig.ignore_sig_pipe) {
+        return;
+    }
+
+    WARN("Signal %s (%d) received.", strsignal(sig), sig);
+
+    if(sig == SIGQUIT) {
+        CoreRpc::set_system_shutdown(!AmConfig.shutdown_mode);
+        return;
+    }
+
+    if(sig == SIGHUP) {
+        wheeltimer::instance()->insert_timer(new ConfigReloadTimer());
+        return;
+    }
+
+    if(sig == SIGTERM) {
+        AmSessionContainer::instance()->enableUncleanShutdown();
+    }
+
+    if(main_pid == getpid()) {
+        if(!is_shutting_down.get()) {
+            is_shutting_down.set(true);
+
+            INFO("Stopping SIP stack after signal");
+            sip_ctrl.stop();
+        }
+    } else {
+        /* exit other processes immediately */
+        exit(0);
+    }
 }
 
 int set_sighandler(void (*handler)(int))
 {
-  static int sigs[] = {
-    SIGHUP, SIGPIPE, SIGINT, SIGTERM, SIGQUIT, SIGCHLD, SIGUSR1, SIGUSR2, 0
-  };
+    static int sigs[] = {
+        SIGHUP, SIGPIPE, SIGINT, SIGTERM, SIGQUIT, SIGCHLD, SIGUSR1, SIGUSR2, 0
+    };
 
-  for (int* sig = sigs; *sig; sig++) {
-    if (signal(*sig, handler) == SIG_ERR ) {
-      ERROR("Cannot install signal handler for %s.", strsignal(*sig));
-      return -1;
+    for (int* sig = sigs; *sig; sig++) {
+        if (signal(*sig, handler) == SIG_ERR ) {
+            ERROR("Cannot install signal handler for %s.", strsignal(*sig));
+            return -1;
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
 
 #ifndef DISABLE_DAEMON_MODE
 
 static int write_pid_file()
 {
-  FILE* fpid = fopen(AmConfig.deamon_pid_file.c_str(), "w");
+    FILE* fpid = fopen(AmConfig.deamon_pid_file.c_str(), "w");
 
-  if (fpid) {
-    string spid = int2str((int)getpid());
-    fwrite(spid.c_str(), spid.length(), 1, fpid);
-    fclose(fpid);
-    return 0;
-  }
-  else {
-    ERROR("Cannot write PID file '%s': %s.",
-        AmConfig.deamon_pid_file.c_str(), strerror(errno));
-  }
+    if(fpid) {
+        string spid = int2str((int)getpid());
+        fwrite(spid.c_str(), spid.length(), 1, fpid);
+        fclose(fpid);
+        return 0;
+    } else {
+        ERROR("Cannot write PID file '%s': %s.",
+              AmConfig.deamon_pid_file.c_str(), strerror(errno));
+    }
 
-  return -1;
+    return -1;
 }
 
 #endif /* !DISABLE_DAEMON_MODE */
 
 int set_fd_limit()
 {
-  struct rlimit rlim;
-  if(getrlimit(RLIMIT_NOFILE,&rlim) < 0) {
-    ERROR("getrlimit: %s",strerror(errno));
-    return -1;
-  }
+    struct rlimit rlim;
+    if(getrlimit(RLIMIT_NOFILE,&rlim) < 0) {
+        ERROR("getrlimit: %s",strerror(errno));
+        return -1;
+    }
 
-  rlim.rlim_cur = rlim.rlim_max;
+    rlim.rlim_cur = rlim.rlim_max;
 
-  if(setrlimit(RLIMIT_NOFILE,&rlim) < 0) {
-    ERROR("setrlimit: %s",strerror(errno));
-    return -1;
-  }
- 
-  INFO("Open FDs limit has been raised to %u",
-       (unsigned int)rlim.rlim_cur);
- 
-  return 0;
+    if(setrlimit(RLIMIT_NOFILE,&rlim) < 0) {
+        ERROR("setrlimit: %s",strerror(errno));
+        return -1;
+    }
+
+    INFO("Open FDs limit has been raised to %u",
+         (unsigned int)rlim.rlim_cur);
+
+    return 0;
 }
 
-static void log_handler(srtp_log_level_t level, const char *msg, void *data)
+static void log_handler(srtp_log_level_t level, const char *msg, void *)
 {
     switch (level) {
     case srtp_log_level_error:
@@ -526,7 +479,7 @@ class GroupsContainerSelfStatm
       : sys_page_size(sysconf(_SC_PAGESIZE))
     {}
 
-    void operator ()(const string &name, iterate_groups_callback_type callback) override
+    void operator ()(const string &, iterate_groups_callback_type callback) override
     {
         //https://www.kernel.org/doc/html/latest/filesystems/proc.html
         unsigned long long v;
@@ -549,438 +502,446 @@ class GroupsContainerSelfStatm
  */
 int main(int argc, char* argv[])
 {
-  int success = false;
-  size_t ret;
-  std::map<char,string> args;
-  #ifndef DISABLE_DAEMON_MODE
-  int fd[2] = {0,0};
-  #endif
+    int success = false;
+    size_t ret;
+    std::map<char,string> args;
+#ifndef DISABLE_DAEMON_MODE
+    int fd[2] = {0,0};
+#endif
 
-  (void)ret;
+    (void)ret;
 
-  start_time = time(nullptr);
-  progname = strrchr(argv[0], '/');
-  progname = (progname == nullptr ? argv[0] : progname + 1);
+    start_time = time(nullptr);
+    progname = strrchr(argv[0], '/');
+    progname = (progname == nullptr ? argv[0] : progname + 1);
 
-  if(!process_args(argc, argv, args)){
-    print_usage(true);
-    return 1;
-  }
+    if(!process_args(argc, argv, args)){
+        print_usage(true);
+        return 1;
+    }
 
-  //instantiation to ensure mlock_allocator will be destroyed after the AmLcConfig
-  Botan::mlock_allocator::instance();
+    //instantiation to ensure mlock_allocator will be destroyed after the AmLcConfig
+    Botan::mlock_allocator::instance();
 
-  init_logging(SEMS_APP_NAME);
-  init_core_objects_counters();
+    init_logging(SEMS_APP_NAME);
+    set_log_level(L_DBG);
 
-  /* apply command-line options */
-  if(!apply_args(args)){
-    print_usage(true);
-    goto error;
-  }
+    fprintf(stderr, "MAIN process");
 
-  /* load and apply configuration file */
-  if(AmLcConfig::instance().readConfiguration())
-  {
-    ERROR("configuration errors. exiting.");
-    return -1;
-  }
+    init_core_objects_counters();
 
-  /* re-apply command-line options to override configuration file */
-  if(!apply_args(args)){
-    goto error;
-  }
+    /* apply command-line options */
+    if(!apply_args(args)) {
+        print_usage(true);
+        goto error;
+    }
 
-  if(AmLcConfig::instance().finalizeIpConfig() < 0)
-    goto error;
+    /* load and apply configuration file */
+    if(AmLcConfig::instance().readConfiguration()) {
+        ERROR("configuration errors. exiting.");
+        return -1;
+    }
 
-  printf("Configuration:\n"
+    /* re-apply command-line options to override configuration file */
+    if(!apply_args(args)) {
+        goto error;
+    }
+
+    if(AmLcConfig::instance().finalizeIpConfig() < 0)
+        goto error;
+
+    printf("Configuration:\n"
 #ifdef _DEBUG
          "       syslog log level:    %s (%i)\n"
          "       log to stderr:       %s\n"
 #endif
-	 "       configuration file:  %s\n"
-	 "       plug-in path:        %s\n"
+        "       configuration file:  %s\n"
+        "       plug-in path:        %s\n"
 #ifndef DISABLE_DAEMON_MODE
-         "       daemon mode:         %s\n"
-         "       daemon UID:          %s\n"
-         "       daemon GID:          %s\n"
+        "       daemon mode:         %s\n"
+        "       daemon UID:          %s\n"
+        "       daemon GID:          %s\n"
 #endif
-	 "\n",
+        "\n",
 #ifdef _DEBUG
-	 log_level2str[AmConfig.log_level], AmConfig.log_level,
-         AmConfig.log_stderr ? "yes" : "no",
+        log_level2str[AmConfig.log_level], AmConfig.log_level,
+        AmConfig.log_stderr ? "yes" : "no",
 #endif
-	 AmLcConfig::instance().config_path.c_str(),
-	 AmConfig.modules_path.c_str()
+        AmLcConfig::instance().config_path.c_str(),
+        AmConfig.modules_path.c_str()
 #ifndef DISABLE_DAEMON_MODE
-	 ,AmConfig.deamon_mode ? "yes" : "no",
-	 AmConfig.deamon_uid.empty() ? "<not set>" : AmConfig.deamon_uid.c_str(),
-	 AmConfig.deamon_gid.empty() ? "<not set>" : AmConfig.deamon_gid.c_str()
+        , AmConfig.deamon_mode ? "yes" : "no",
+        AmConfig.deamon_uid.empty() ? "<not set>" : AmConfig.deamon_uid.c_str(),
+        AmConfig.deamon_gid.empty() ? "<not set>" : AmConfig.deamon_gid.c_str()
 #endif
-	);
+    );
 
-  AmLcConfig::instance().dump_Ifs();
+    AmLcConfig::instance().dump_Ifs();
 
-  /*printf("-----BEGIN CFG DUMP-----\n"
-         "%s\n"
-         "-----END CFG DUMP-----\n",
-         AmLcConfig::instance().serialize().c_str());*/
+    /*printf("-----BEGIN CFG DUMP-----\n"
+        "%s\n"
+        "-----END CFG DUMP-----\n",
+        AmLcConfig::instance().serialize().c_str());*/
 
-  if(set_fd_limit() < 0) {
-    WARN("could not raise FD limit");
-  }
+    if(set_fd_limit() < 0) {
+        WARN("could not raise FD limit");
+    }
 
 #ifndef DISABLE_DAEMON_MODE
 
-  if(AmConfig.deamon_mode){
+    if(AmConfig.deamon_mode) {
 #ifdef PROPAGATE_COREDUMP_SETTINGS
-    struct rlimit lim;
-    bool have_limit = false;
-    if (getrlimit(RLIMIT_CORE, &lim) == 0) have_limit = true;
-    int dumpable = prctl(PR_GET_DUMPABLE, 0, 0, 0, 0);
+        struct rlimit lim;
+        bool have_limit = false;
+        if(getrlimit(RLIMIT_CORE, &lim) == 0) have_limit = true;
+        int dumpable = prctl(PR_GET_DUMPABLE, 0, 0, 0, 0);
 #endif
 
-    if(!AmConfig.deamon_gid.empty()){
-      unsigned int gid;
-      if(str2i(AmConfig.deamon_gid, gid)){
-	struct group* grnam = getgrnam(AmConfig.deamon_gid.c_str());
-	if(grnam != NULL){
-	  gid = grnam->gr_gid;
-	}
-	else{
-	  ERROR("Cannot find group '%s' in the group database.",
-		AmConfig.deamon_gid.c_str());
-	  goto error;
-	}
-      }
-      if(setgid(gid)<0){
-	ERROR("Cannot change GID to %i: %s.",
-	      gid,
-	      strerror(errno));
-	goto error;
-      }
-    }
+        if(!AmConfig.deamon_gid.empty()) {
+            unsigned int gid;
+            if(str2i(AmConfig.deamon_gid, gid)) {
+                struct group* grnam = getgrnam(AmConfig.deamon_gid.c_str());
+                if(grnam != NULL) {
+                    gid = grnam->gr_gid;
+                } else {
+                    ERROR("Cannot find group '%s' in the group database.",
+                          AmConfig.deamon_gid.c_str());
+                    goto error;
+                }
+            }
 
-    if(!AmConfig.deamon_uid.empty()){
-      unsigned int uid;
-      if(str2i(AmConfig.deamon_uid, uid)){
-	struct passwd* pwnam = getpwnam(AmConfig.deamon_uid.c_str());
-	if(pwnam != NULL){
-	  uid = pwnam->pw_uid;
-	}
-	else{
-	  ERROR("Cannot find user '%s' in the user database.",
-		AmConfig.deamon_uid.c_str());
-	  goto error;
-	}
-      }
-      if(setuid(uid)<0){
-	ERROR("Cannot change UID to %i: %s.",
-	      uid,
-	      strerror(errno));
-	goto error;
-      }
-    }
+            if(setgid(gid)<0) {
+                ERROR("Cannot change GID to %i: %s.",
+                      gid, strerror(errno));
+                goto error;
+            }
+        }
+
+        if(!AmConfig.deamon_uid.empty()) {
+            unsigned int uid;
+            if(str2i(AmConfig.deamon_uid, uid)) {
+                struct passwd* pwnam = getpwnam(AmConfig.deamon_uid.c_str());
+                if(pwnam != NULL) {
+                    uid = pwnam->pw_uid;
+                } else {
+                    ERROR("Cannot find user '%s' in the user database.",
+                          AmConfig.deamon_uid.c_str());
+                    goto error;
+                }
+            }
+
+            if(setuid(uid)<0) {
+                ERROR("Cannot change UID to %i: %s.",
+                      uid, strerror(errno));
+                goto error;
+            }
+        }
 
 #if defined(__linux__)
-    if(!AmConfig.deamon_uid.empty() || !AmConfig.deamon_gid.empty()){
-      if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0) {
-	WARN("unable to set daemon to dump core after setuid/setgid");
-      }
-    }
+        if(!AmConfig.deamon_uid.empty() || !AmConfig.deamon_gid.empty()) {
+            if(prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0) {
+                WARN("unable to set daemon to dump core after setuid/setgid");
+            }
+        }
 #endif
 
-    /* fork to become!= group leader*/
-    if (pipe(fd) == -1) { /* Create a pipe */
-        ERROR("Cannot create pipe.");
-        goto error;
-    }
-    int pid;
-    if ((pid=fork())<0){
-      ERROR("Cannot fork: %s.", strerror(errno));
-      goto error;
-    }else if (pid!=0){
-      close(fd[1]);
-      /* parent process => wait for result from child*/
-      for(int i=0;i<2;i++){
-        DBG("waiting for child[%d] response", i);
-        ret = read(fd[0], &pid, sizeof(int));
-        if(pid<0){
-          ERROR("Child [%d] return an error: %d", i, pid);
-          close(fd[0]);
-          goto error;
+        /* fork to become!= group leader*/
+        if(pipe(fd) == -1) { /* Create a pipe */
+            ERROR("Cannot create pipe.");
+            goto error;
         }
-        DBG("child [%d] pid:%d", i, pid);
-      }
-      DBG("all children return OK. bye world!");
-      close(fd[0]);
-      return 0;
-    }else {
-      /* child */
-      close(fd[0]);
-      main_pid = getpid();
-      DBG("hi world! I'm child [%d]", main_pid);
-      ret = write(fd[1], &main_pid, sizeof(int));
-    }
-    /* become session leader to drop the ctrl. terminal */
-    if (setsid()<0){
-      ERROR("setsid failed: %s.", strerror(errno));
-    }
-    /* fork again to drop group  leadership */
-    if ((pid=fork())<0){
-      ERROR("Cannot fork: %s.", strerror(errno));
-      goto error;
-    }else if (pid!=0){
-      /*parent process => exit */
-      close(fd[1]);
-      main_pid = getpid();
-      DBG("I'm out. pid: %d", main_pid);
-      return 0;
-    }
-	
-    if(write_pid_file()<0) {
-      goto error;
-    }
+
+        int pid;
+        if((pid=fork())<0) {
+            ERROR("Cannot fork: %s.", strerror(errno));
+            goto error;
+        } else if (pid!=0) {
+            /* parent process => wait for result from child*/
+            close(fd[1]);
+            for(int i=0;i<2;i++) {
+                DBG("waiting for child[%d] response", i);
+                ret = read(fd[0], &pid, sizeof(int));
+                if(pid<0) {
+                    ERROR("Child [%d] return an error: %d", i, pid);
+                    close(fd[0]);
+                    goto error;
+                }
+                DBG("child [%d] pid:%d", i, pid);
+            }
+            DBG("all children return OK. bye world!");
+            close(fd[0]);
+            return 0;
+        } else {
+            /* child */
+            close(fd[0]);
+            main_pid = getpid();
+            DBG("hi world! I'm child [%d]", main_pid);
+            ret = write(fd[1], &main_pid, sizeof(int));
+        }
+
+        /* become session leader to drop the ctrl. terminal */
+        if(setsid()<0) {
+            ERROR("setsid failed: %s.", strerror(errno));
+        }
+
+        /* fork again to drop group leadership */
+        if((pid=fork()) < 0) {
+            ERROR("Cannot fork: %s.", strerror(errno));
+            goto error;
+        } else if (pid!=0) {
+            /*parent process => exit */
+            close(fd[1]);
+            main_pid = getpid();
+            DBG("I'm out. pid: %d", main_pid);
+            return 0;
+        }
+
+        if(write_pid_file()<0) {
+            goto error;
+        }
 
 #ifdef PROPAGATE_COREDUMP_SETTINGS
-    if (have_limit) {
-      if (setrlimit(RLIMIT_CORE, &lim) < 0) ERROR("failed to set RLIMIT_CORE");
-      if (prctl(PR_SET_DUMPABLE, dumpable, 0, 0, 0)<0) ERROR("cannot re-set core dumping to %d!", dumpable);
-    }
+        if(have_limit) {
+            if(setrlimit(RLIMIT_CORE, &lim) < 0)
+                ERROR("failed to set RLIMIT_CORE");
+            if(prctl(PR_SET_DUMPABLE, dumpable, 0, 0, 0)<0)
+                ERROR("cannot re-set core dumping to %d!", dumpable);
+        }
 #endif
 
-    /* try to replace stdin, stdout & stderr with /dev/null */
-    if (freopen("/dev/null", "r", stdin)==0){
-      ERROR("Cannot replace stdin with /dev/null: %s.",
-	    strerror(errno));
-      /* continue, leave it open */
-    };
-    if (freopen("/dev/null", "w", stdout)==0){
-      ERROR("Cannot replace stdout with /dev/null: %s.",
-	    strerror(errno));
-      /* continue, leave it open */
-    };
-    /* close stderr only if log_stderr=0 */
-    if ((!AmConfig.log_stderr) && (freopen("/dev/null", "w", stderr)==0)){
-      ERROR("Cannot replace stderr with /dev/null: %s.",
-	    strerror(errno));
-      /* continue, leave it open */
-    };
-  }
+        /* try to replace stdin, stdout & stderr with /dev/null */
+        if(freopen("/dev/null", "r", stdin)==0) {
+            ERROR("Cannot replace stdin with /dev/null: %s.",
+                  strerror(errno));
+            /* continue, leave it open */
+        }
 
+        if(freopen("/dev/null", "w", stdout)==0) {
+            ERROR("Cannot replace stdout with /dev/null: %s.",
+                  strerror(errno));
+            /* continue, leave it open */
+        }
+
+        /* close stderr only if log_stderr=0 */
+        if((!AmConfig.log_stderr) && (freopen("/dev/null", "w", stderr)==0)) {
+            ERROR("Cannot replace stderr with /dev/null: %s.",
+                  strerror(errno));
+            /* continue, leave it open */
+        }
+    } //if(AmConfig.deamon_mode)
 #endif /* DISABLE_DAEMON_MODE */
 
-  main_pid = getpid();
+    main_pid = getpid();
 
-  init_random();
+    init_random();
 
-  if(set_sighandler(signal_handler))
-    goto error;
+    if(set_sighandler(signal_handler))
+        goto error;
 
-  resolver::instance();
+    resolver::instance();
 
-  if(AmConfig.enable_srtp) {
+    if(AmConfig.enable_srtp) {
         if(srtp_init() != srtp_err_status_ok) {
             ERROR("Cannot initialize SRTP library");
             goto error;
         }
         srtp_install_log_handler(log_handler, NULL);
-  }
-
-  if(AmConfig.enable_rtsp){
-    if(RtspClient::instance()->onLoad()){
-      ERROR("Cannot initialize RTSP client");
-      goto error;
     }
-    DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
-  }
 
-  AmThreadWatcher::instance();
-  if(CoreRpc::instance().onLoad()) {
-    ERROR("failed to initialize CoreRpc");
-    goto error;
-  }
+    if(AmConfig.enable_rtsp) {
+        if(RtspClient::instance()->onLoad()){
+            ERROR("Cannot initialize RTSP client");
+            goto error;
+        }
+        DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
+    }
 
-  INFO("Starting application timer scheduler");
-  AmAppTimer::instance()->start();
-  AmThreadWatcher::instance()->add(AmAppTimer::instance());
+    AmThreadWatcher::instance();
+    if(CoreRpc::instance().onLoad()) {
+        ERROR("failed to initialize CoreRpc");
+        goto error;
+    }
 
-  INFO("Starting session container");
-  AmSessionContainer::instance()->start();
+    INFO("Starting application timer scheduler");
+    AmAppTimer::instance()->start();
+    AmThreadWatcher::instance()->add(AmAppTimer::instance());
+
+    INFO("Starting session container");
+    AmSessionContainer::instance()->start();
 
 #ifdef SESSION_THREADPOOL
-  INFO("Starting session processor threads");
-  AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
+    INFO("Starting session processor threads");
+    AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 #endif 
-  AmSessionProcessor::init();
+    AmSessionProcessor::init();
 
-  INFO("Starting audio recorder");
-  AmAudioFileRecorderProcessor::instance()->start();
+    INFO("Starting audio recorder");
+    AmAudioFileRecorderProcessor::instance()->start();
 
-  INFO("Starting pcap recorder");
-  PcapFileRecorderProcessor::instance()->start();
+    INFO("Starting pcap recorder");
+    PcapFileRecorderProcessor::instance()->start();
 
-  INFO("Starting media processor");
-  AmMediaProcessor::instance()->init();
+    INFO("Starting media processor");
+    AmMediaProcessor::instance()->init();
 
-  INFO("Starting stun processor");
-  stun_processor::instance()->start();
+    INFO("Starting stun processor");
+    stun_processor::instance()->start();
 
-  // init thread usage with libevent
-  // before it's too late
-  if(evthread_use_pthreads() != 0) {
-    ERROR("cannot init thread usage with libevent");
-    goto error;
-  }
+    // init thread usage with libevent
+    // before it's too late
+    if(evthread_use_pthreads() != 0) {
+        ERROR("cannot init thread usage with libevent");
+        goto error;
+    }
 
-  // start the asynchronous file writer (sorry, no better place...)
-  //async_file_writer::instance()->start();
+    // start the asynchronous file writer (sorry, no better place...)
+    //async_file_writer::instance()->start();
 
-  INFO("Starting RTP receiver");
-  AmRtpReceiver::instance()->start();
+    INFO("Starting RTP receiver");
+    AmRtpReceiver::instance()->start();
 
-  INFO("Starting SIP stack (control interface)");
-  if(sip_ctrl.load()) {
-    goto error;
-  }
-  
-  INFO("Loading plug-ins");
-  AmPlugIn::instance()->init();
+    INFO("Starting SIP stack (control interface)");
+    if(sip_ctrl.load()) {
+        goto error;
+    }
 
-  if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
-    goto error;
+    INFO("Loading plug-ins");
+    AmPlugIn::instance()->init();
 
-  if(AmPlugIn::instance()->initLoggingPlugins())
-    goto error;
+    if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
+        goto error;
 
-  AmPlugIn::instance()->registerLoggingPlugins();
+    if(AmPlugIn::instance()->initLoggingPlugins())
+        goto error;
 
-  if(AmPlugIn::instance()->initPlugins())
-    goto error;
+    AmPlugIn::instance()->registerLoggingPlugins();
 
-  AmSessionContainer::instance()->initMonitoring();
+    if(AmPlugIn::instance()->initPlugins())
+        goto error;
 
-  stat_group(Counter, "core", "localtime").addFunctionCounter(
-    []()->unsigned long long{
-        return static_cast<unsigned long long>(time(nullptr));
-    });
+    AmSessionContainer::instance()->initMonitoring();
 
-  stat_group(Counter, "core", "uptime").addFunctionCounter(
-    []()->unsigned long long{
-        return static_cast<unsigned long long>(time(nullptr) - start_time);
-    });
-
-  stat_group(Gauge, "core", "version").addFunctionCounter(
-    []()->unsigned long long{
-        return 1;
-    }).addLabel("core", SEMS_VERSION);
-
-  stat_group(Gauge, "core", "shutdown_mode").addFunctionCounter(
-    []()->unsigned long long{
-        return AmConfig.shutdown_mode == true ? 1 : 0;
-    });
-
-  if(AmConfig.session_limit) {
-    stat_group(Gauge, "core", "sessions_limit").addFunctionCounter(
-        []()->unsigned long long{
-            return AmConfig.session_limit;
+    stat_group(Counter, "core", "localtime").addFunctionCounter(
+        []()->unsigned long long {
+            return static_cast<unsigned long long>(time(nullptr));
         });
-  }
 
-  stat_group(Counter, "core", "start_time").addAtomicCounter().set(
-    static_cast<unsigned long long>(start_time));
+    stat_group(Counter, "core", "uptime").addFunctionCounter(
+        []()->unsigned long long {
+            return static_cast<unsigned long long>(time(nullptr) - start_time);
+        });
 
-  statistics::instance()->add_groups_container("self_statm", new GroupsContainerSelfStatm(), true);
+    stat_group(Gauge, "core", "version").addFunctionCounter(
+        []()->unsigned long long {
+            return 1;
+        }).addLabel("core", SEMS_VERSION);
 
-  #ifndef DISABLE_DAEMON_MODE
-  if(fd[1]) {
-    DBG("hi world! I'm main child [%d]", main_pid);
-    ret = write(fd[1], &main_pid, sizeof(int));
-    close(fd[1]); fd[1] = 0;
-  }
-  #endif
+    stat_group(Gauge, "core", "shutdown_mode").addFunctionCounter(
+        []()->unsigned long long {
+            return AmConfig.shutdown_mode == true ? 1 : 0;
+        });
 
-  // running the server
-  if(sip_ctrl.run() != -1)
-    success = true;
+    if(AmConfig.session_limit) {
+        stat_group(Gauge, "core", "sessions_limit").addFunctionCounter(
+            []()->unsigned long long {
+                return AmConfig.session_limit;
+            });
+    }
 
- error:
-  // session container stops active sessions
-  INFO("Disposing session container");
-  AmSessionContainer::dispose();
+    stat_group(Counter, "core", "start_time").addAtomicCounter().set(
+        static_cast<unsigned long long>(start_time));
 
-  /*INFO("Disposing app timer");
-  AmAppTimer::dispose();*/
-  
-  DBG("** Transaction table dump: **");
-  dumps_transactions();
-  DBG("*****************************");
-
-  cleanup_transaction();
-  
-  if(AmConfig.enable_rtsp){
-    INFO("Disposing RTSP client");
-    RtspClient::dispose();
-  }
-
-  INFO("Disposing RTP receiver");
-  AmRtpReceiver::dispose();
-
-  INFO("Stop session processor");
-  AmSessionProcessor::stop();
-
-  INFO("Disposing media processor");
-  AmMediaProcessor::dispose();
-
-  INFO("Disposing stun processor");
-  stun_processor::dispose();
-
-  INFO("Disposing audio file recorder");
-  AmAudioFileRecorderProcessor::dispose();
-  
-  INFO("Disposing pcap file recorder");
-  PcapFileRecorderProcessor::dispose();
-  
-  INFO("Disposing event dispatcher");
-  AmEventDispatcher::dispose();
-
-  //async_file_writer::instance()->stop();
-  //async_file_writer::instance()->join();
+    statistics::instance()->add_groups_container("self_statm", new GroupsContainerSelfStatm(), true);
 
 #ifndef DISABLE_DAEMON_MODE
-  if (AmConfig.deamon_mode) {
-    unlink(AmConfig.deamon_pid_file.c_str());
-  }
-  if(fd[1]){
-     main_pid = -1;
-     DBG("send -1 to parent");
-     ret = write(fd[1], &main_pid, sizeof(int));
-     close(fd[1]);
-  }
+    if(fd[1]) {
+        DBG("hi world! I'm main child [%d]", main_pid);
+        ret = write(fd[1], &main_pid, sizeof(int));
+        close(fd[1]); fd[1] = 0;
+    }
 #endif
 
-  sip_ctrl.cleanup();
-  resolver::instance()->clear_cache();
-  resolver::dispose();
-  SipCtrlInterface::dispose();
-  tr_blacklist::dispose();
+    // running the server
+    if(sip_ctrl.run() != -1)
+        success = true;
 
-  AmThreadWatcher::instance()->cleanup();
+  error:
+    // session container stops active sessions
+    INFO("Disposing session container");
+    AmSessionContainer::dispose();
 
-  INFO("Disposing plug-ins");
-  AmPlugIn::dispose();
+    /*INFO("Disposing app timer");
+    AmAppTimer::dispose();*/
 
+    DBG("** Transaction table dump: **");
+    dumps_transactions();
+    DBG("*****************************");
 
-  tls_cleanup();
-  srtp_shutdown();
-  statistics::dispose();
+    cleanup_transaction();
+
+    if(AmConfig.enable_rtsp) {
+        INFO("Disposing RTSP client");
+        RtspClient::dispose();
+    }
+
+    INFO("Disposing RTP receiver");
+    AmRtpReceiver::dispose();
+
+    INFO("Stop session processor");
+    AmSessionProcessor::stop();
+
+    INFO("Disposing media processor");
+    AmMediaProcessor::dispose();
+
+    INFO("Disposing stun processor");
+    stun_processor::dispose();
+
+    INFO("Disposing audio file recorder");
+    AmAudioFileRecorderProcessor::dispose();
+
+    INFO("Disposing pcap file recorder");
+    PcapFileRecorderProcessor::dispose();
+
+    INFO("Disposing event dispatcher");
+    AmEventDispatcher::dispose();
+
+    //async_file_writer::instance()->stop();
+    //async_file_writer::instance()->join();
+
+#ifndef DISABLE_DAEMON_MODE
+    if(AmConfig.deamon_mode) {
+        unlink(AmConfig.deamon_pid_file.c_str());
+    }
+
+    if(fd[1]) {
+        main_pid = -1;
+        DBG("send -1 to parent");
+        ret = write(fd[1], &main_pid, sizeof(int));
+        close(fd[1]);
+    }
+#endif
+
+    sip_ctrl.cleanup();
+    resolver::instance()->clear_cache();
+    resolver::dispose();
+    SipCtrlInterface::dispose();
+    tr_blacklist::dispose();
+
+    AmThreadWatcher::instance()->cleanup();
+
+    INFO("Disposing plug-ins");
+    AmPlugIn::dispose();
+
+    tls_cleanup();
+    srtp_shutdown();
+    statistics::dispose();
+
 #if EVENT__NUMERIC_VERSION>0x02010000
-  libevent_global_shutdown();
+    libevent_global_shutdown();
 #endif
-  
-  INFO("Exiting (%s)", success ? "success" : "failure");
-  cleanup_logging();
 
-  return (success ? EXIT_SUCCESS : EXIT_FAILURE);
+    INFO("Exiting (%s)", success ? "success" : "failure");
+    cleanup_logging();
+
+    return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }
