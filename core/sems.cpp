@@ -575,6 +575,7 @@ int main(int argc, char* argv[])
         AmConfig.deamon_gid.empty() ? "<not set>" : AmConfig.deamon_gid.c_str()
 #endif
     );
+    fflush(stdout);
 
     AmLcConfig::instance().dump_Ifs();
 
