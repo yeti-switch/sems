@@ -524,9 +524,6 @@ int main(int argc, char* argv[])
     Botan::mlock_allocator::instance();
 
     init_logging(SEMS_APP_NAME);
-    set_log_level(L_DBG);
-
-    fprintf(stderr, "MAIN process");
 
     init_core_objects_counters();
 
