@@ -1163,11 +1163,9 @@ dns_entry* dns_entry_map::fetch(const key_type& key)
 bool _resolver::disable_srv = false;
 
 _resolver::_resolver()
-    : cache(DNS_CACHE_SIZE)
-{
-    b_stop.set(false);
-    start();
-}
+    : cache(DNS_CACHE_SIZE),
+      b_stop(false)
+{}
 
 _resolver::~_resolver()
 {

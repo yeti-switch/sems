@@ -293,7 +293,7 @@ private:
 };
 
 class _resolver
-  : AmThread
+  : public AmThread
 {
 public:
     // disable SRV lookups

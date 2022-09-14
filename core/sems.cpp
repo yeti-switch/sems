@@ -736,7 +736,7 @@ int main(int argc, char* argv[])
     if(set_sighandler(signal_handler))
         goto error;
 
-    resolver::instance();
+    resolver::instance()->start();
 
     if(AmConfig.enable_srtp) {
         if(srtp_init() != srtp_err_status_ok) {
