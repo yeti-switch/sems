@@ -1,3 +1,8 @@
+sems (1.92.0) stable; urgency=low
+  * avoid resolver thread start before fork(). fixes deadlock on start
+  * AmSession: set 100rel handler for passed dlg in the constructor. fixes 100rel processing
+ -- Michael Furmur <furmur@pm.me>  Wed, 14 Sep 2022 17:20:29 +0300
+
 sems (1.91.0) stable; urgency=low
   * AmB2BSession: support detection of the subsequent SDP within the same transaction
   * fix segfault in jsonrpc on partial method path processing
