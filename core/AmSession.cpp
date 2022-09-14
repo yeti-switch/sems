@@ -102,7 +102,10 @@ AmSession::AmSession(AmSipDialog* p_dlg)
 {
   DBG("AmSession[%p](%p)",this,dlg);
   if(!dlg) dlg = new AmSipDialog(this);
-  else dlg->setEventhandler(this);
+  else {
+    dlg->setEventhandler(this);
+    dlg->setRel100Handler(this);
+  }
 }
 
 AmSession::~AmSession()

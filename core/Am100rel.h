@@ -46,6 +46,8 @@ public:
   Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl);
 
   void setState(State s) { uac_state = uas_state = initial_state = s; }
+  void setHandler(AmSipDialogEventHandler* h) { hdl = h; }
+
   State getInitialState() { return initial_state; }
   State getUacState() { return uac_state; }
   State getUasState() { return uas_state; }

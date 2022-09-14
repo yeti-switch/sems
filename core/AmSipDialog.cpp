@@ -209,6 +209,11 @@ void AmSipDialog::setRel100State(Am100rel::State rel100_state) {
   rel100.setState(rel100_state);
 }
 
+void AmSipDialog::setRel100Handler(AmSipDialogEventHandler* h)
+{
+    rel100.setHandler(h);
+}
+
 void AmSipDialog::setOAEnabled(bool oa_enabled) {
   DBG("%sabling offer_answer on SIP dialog '%s'",
       oa_enabled?"en":"dis", local_tag.c_str());
