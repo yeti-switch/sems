@@ -11,7 +11,7 @@ User=root
 LimitNOFILE=65536
 LimitCORE=infinity
 
-ExecStart=/usr/sbin/sems -P /var/run/sems.pid -u root -g root -f /etc/sems/sems.conf
+ExecStart=/usr/sbin/sems -f /etc/sems/sems.conf
 PIDFile=/var/run/sems.pid
-Type=forking
+Type=simple
 Restart=on-abnormal
