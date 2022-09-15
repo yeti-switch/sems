@@ -700,7 +700,9 @@ ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolC
 
 ConnectionPool::~ConnectionPool()
 {
-    for(auto& conn : connections) delete conn;
+    auto connections_copy = connections;
+    connections.clear();
+    for(auto& conn : connections_copy) delete conn;
 }
 
 IPGConnection * ConnectionPool::getFreeConnection()
