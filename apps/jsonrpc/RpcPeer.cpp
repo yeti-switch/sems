@@ -48,24 +48,28 @@ using std::string;
 
 #define POLL_TIMEOUT 6000
 
-void JsonrpcPeerConnection::notifyDisconnect() {
-  // let event receivers know about broken connection
-  DBG("notifying event receivers about broken connection %s, %s", notificationReceiver.c_str(), requestReceiver.c_str());
-  if (!notificationReceiver.empty())
-    AmEventDispatcher::instance()->
-      post(notificationReceiver, 
-	   new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));
-  if (!requestReceiver.empty())
-    AmEventDispatcher::instance()->
-      post(requestReceiver, 
-	   new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));
-  
-  for (std::map<std::string, std::pair<std::string, AmArg > > ::iterator it=
-	 replyReceivers.begin(); it != replyReceivers.end(); it++) {
-    AmEventDispatcher::instance()->
-      post(it->second.first,
-	   new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));	
-  }
+void JsonrpcPeerConnection::notifyDisconnect()
+{
+    // let event receivers know about broken connection
+    //DBG("notifying event receivers about broken connection %s, %s", notificationReceiver.c_str(), requestReceiver.c_str());
+
+    if(!notificationReceiver.empty())
+        AmEventDispatcher::instance()->post(
+            notificationReceiver,
+            new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));
+
+    if(!requestReceiver.empty())
+        AmEventDispatcher::instance()->post(
+            requestReceiver,
+            new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));
+
+    for(std::map<std::string, std::pair<std::string, AmArg > > ::iterator it=
+        replyReceivers.begin(); it != replyReceivers.end(); it++)
+    {
+        AmEventDispatcher::instance()->post(
+            it->second.first,
+            new JsonRpcConnectionEvent(JsonRpcConnectionEvent::DISCONNECT, id));
+    }
 }
 
 JsonrpcNetstringsConnection::JsonrpcNetstringsConnection(const std::string& id) 

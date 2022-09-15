@@ -142,10 +142,9 @@ void RpcServerThread::process(AmEvent* event)
         processed_message = true;
     }
 
-    DBG("connection->messagePending() = %s", connection->messagePending()?"true":"false");
+    //DBG("connection->messagePending() = %s", connection->messagePending()?"true":"false");
 
     if (connection->messagePending() && !connection->messageIsRecv()) {
-        DBG("calling write");
         res = connection->netstringsBlockingWrite();
         if (res == JsonrpcNetstringsConnection::REMOVE) {
             connection->notifyDisconnect();

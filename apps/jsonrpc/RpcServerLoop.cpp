@@ -135,46 +135,46 @@ inline constexpr size_t offset_of(T1 T2::*member) {
     return offset_of_impl<T1, T2>::offset(member);
 }
 
-static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents) { 	
+static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+{
 
-  struct JsonrpcNetstringsConnection *peer= 
-    ((struct JsonrpcNetstringsConnection*) 
-    (((char*)w) - offset_of(&JsonrpcNetstringsConnection::ev_read)));
+    struct JsonrpcNetstringsConnection *peer= 
+        ((struct JsonrpcNetstringsConnection*)
+        (((char*)w) - offset_of(&JsonrpcNetstringsConnection::ev_read)));
 
-  DBG("read_cb in connection %p", peer);
+    //DBG("read_cb in connection %p", peer);
 
-  // int r=0;
-  // char rbuff[1024];
-  if (revents & EV_READ){
-    // read message - here in main server thread (more efficient for small messages)
-    int res = peer->netstringsRead();
-    switch (res) {
-    case JsonrpcNetstringsConnection::CONTINUE: 
-      ev_io_start(loop,&peer->ev_read); return;
+    // int r=0;
+    // char rbuff[1024];
+    if (revents & EV_READ) {
+        // read message - here in main server thread (more efficient for small messages)
+        int res = peer->netstringsRead();
+        switch(res) {
+        case JsonrpcNetstringsConnection::CONTINUE:
+            ev_io_start(loop,&peer->ev_read);
+            return;
+        case JsonrpcNetstringsConnection::REMOVE: {
+            ev_io_stop(EV_A_ w);
+            peer->notifyDisconnect();
 
-    case JsonrpcNetstringsConnection::REMOVE: {
-      ev_io_stop(EV_A_ w); 
-
-      peer->notifyDisconnect();
-
-      JsonRPCServerLoop::instance()->removeConnection(peer->id);
-      delete peer;
-
-    } return;
-    case JsonrpcNetstringsConnection::DISPATCH: {
-      ev_io_stop(EV_A_ w); 
-      JsonRPCServerLoop::
-	dispatchServerEvent(new JsonServerEvent(peer, JsonServerEvent::StartReadLoop));
-    } return;
+            JsonRPCServerLoop::instance()->removeConnection(peer->id);
+            delete peer;
+        } return;
+        case JsonrpcNetstringsConnection::DISPATCH: {
+            ev_io_stop(EV_A_ w);
+            JsonRPCServerLoop::dispatchServerEvent(
+                new JsonServerEvent(peer, JsonServerEvent::StartReadLoop));
+        } return;
+        }
+        return;
     }
-    return;
-  }
-  // put back to read loop
-  // ev_io_start(loop,&cli->ev_read);
 
-  // ev_io_stop(EV_A_ w);
-  // ev_io_init(&cli->ev_write,write_cb,cli->fd,EV_WRITE);
-  // ev_io_start(loop,&cli->ev_write);	
+    // put back to read loop
+    // ev_io_start(loop,&cli->ev_read);
+
+    // ev_io_stop(EV_A_ w);
+    // ev_io_init(&cli->ev_write,write_cb,cli->fd,EV_WRITE);
+    // ev_io_start(loop,&cli->ev_write);	
 }
 
 void JsonRPCServerLoop::dispatchServerEvent(AmEvent* ev) {
@@ -239,136 +239,136 @@ void JsonRPCServerLoop::notify(AmEventQueue* sender)
    ev_async_send(loop, &async_w);
 }
 
-void JsonRPCServerLoop::process(AmEvent* ev) {
-  DBG("server loop - processing event");
+void JsonRPCServerLoop::process(AmEvent* ev)
+{
+    //DBG("server loop - processing event");
 
-  if(SctpBusRawRequest *sctp_event = dynamic_cast<SctpBusRawRequest *>(ev)) {
-      AmArg params, result;
-      if(!json2arg(sctp_event->data.c_str(),params)) {
-        DBG("failed to parse json from sctp. ignore event");
+    if(SctpBusRawRequest *sctp_event = dynamic_cast<SctpBusRawRequest *>(ev)) {
+        AmArg params, result;
+
+        if(!json2arg(sctp_event->data.c_str(),params)) {
+            DBG("failed to parse json from sctp. ignore event");
+            return;
+        }
+        if(!isArgStruct(params)) {
+            DBG("unexpected json request object type");
+            return;
+        }
+        if(!params.hasMember("method")) {
+            DBG("no 'method' key in the request object");
+            return;
+        }
+        if(!params.hasMember("id")) {
+            DBG("missed 'id' key in the request object");
+            return;
+        }
+
+        JsonRpcServer::execRpc(string(), params,result);
+
+        auto reply = new SctpBusRawReply(*sctp_event,arg2json(result));
+        if(!AmSessionContainer::instance()->postEvent(SCTP_BUS_EVENT_QUEUE, reply)) {
+            DBG("failed to post reply to the sctp_bus queue");
+        }
         return;
-      }
-      if(!isArgStruct(params)) {
-        DBG("unexpected json request object type");
+    }
+
+    AmSystemEvent* system_event = dynamic_cast<AmSystemEvent *>(ev);
+    if(system_event) {
+        if(system_event->sys_event==AmSystemEvent::ServerShutdown) {
+            stop();
+        }
         return;
-      }
-      if(!params.hasMember("method")) {
-        DBG("no 'method' key in the request object");
+    }
+
+    JsonServerEvent* server_event=dynamic_cast<JsonServerEvent*>(ev);
+    if(server_event==NULL) {
+        ERROR("wrong event type received");
         return;
-      }
-      if(!params.hasMember("id")) {
-        DBG("missed 'id' key in the request object");
-        return;
-      }
-
-      JsonRpcServer::execRpc(string(), params,result);
-
-      auto reply = new SctpBusRawReply(*sctp_event,arg2json(result));
-      if(!AmSessionContainer::instance()->postEvent(SCTP_BUS_EVENT_QUEUE, reply)) {
-        DBG("failed to post reply to the sctp_bus queue");
-      }
-
-      return;
-  }
-
-  AmSystemEvent* system_event = dynamic_cast<AmSystemEvent *>(ev);
-  if(system_event) {
-      if(system_event->sys_event==AmSystemEvent::ServerShutdown) {
-          stop();
-      }
-      return;
-  }
-
-  JsonServerEvent* server_event=dynamic_cast<JsonServerEvent*>(ev);
-  if (server_event==NULL) {
-    ERROR("wrong event type received");
-    return;
-  }
-
-  switch (server_event->event_id) {
-  case JsonServerEvent::StartReadLoop: {
-    JsonrpcNetstringsConnection* a_client = server_event->conn;
-
-    DBG("checking for pending events to connection %p/%s",
-	a_client, a_client->id.c_str());
-
-    pending_events_mut.lock();
-    // (check whether event for that connection pending)
-    for (vector<JsonServerEvent*>::iterator it=
-	   pending_events.begin(); it != pending_events.end(); it++) {
-      if ((*it)->connection_id == a_client->id) {
-	// stop read loop
-	ev_io_stop(loop,&a_client->ev_read);
-
-	JsonServerEvent* server_event = *it;
-	pending_events.erase(it);
-	pending_events_mut.unlock();
-	
-	DBG("got pending event for connection '%s'", a_client->id.c_str());
-	
-	server_event->conn = a_client;
-	dispatchServerEvent(server_event);
-
-	return;
-      }
-    }
-    pending_events_mut.unlock();
-    DBG("no pending events for connection %p/%s, starting read loop",
-	a_client, a_client->id.c_str());
-
-    a_client->resetRead();
-    ev_io_init(&a_client->ev_read,read_cb,a_client->fd,EV_READ);
-    ev_io_start(loop,&a_client->ev_read);
-  }; break;
-
-  case JsonServerEvent::SendMessage: {
-    JsonServerSendMessageEvent* snd_msg_ev = 
-      dynamic_cast<JsonServerSendMessageEvent*>(server_event);
-    if (snd_msg_ev == NULL) {
-      ERROR("invalid SendMessage type event received");
-      return;
     }
 
-    JsonrpcPeerConnection* p_peer = getConnection(snd_msg_ev->connection_id);
-    if (p_peer == NULL) {
-      WARN("dropping message to inexistent/broken connection '%s' "
-	   "(is_reply=%s, method=%s, id=%s, params='%s')",
-	   snd_msg_ev->connection_id.c_str(), snd_msg_ev->is_reply?"true":"false", 
-	   snd_msg_ev->method.c_str(),
-	   arg2str(snd_msg_ev->id).data(),
-	   AmArg::print(snd_msg_ev->params).c_str());
-      return;
-    }
-    JsonrpcNetstringsConnection* peer = dynamic_cast<JsonrpcNetstringsConnection*>(p_peer);
-    if (NULL == peer) {
-      ERROR("invalid connection type"); // todo: other transports
-      return;
-    }
+    switch(server_event->event_id) {
+    case JsonServerEvent::StartReadLoop: {
+        JsonrpcNetstringsConnection* a_client = server_event->conn;
 
-    if (ev_is_active(&peer->ev_read)) {
-      // ok, peer is in read loop, we can dispatch it to thread for sending
-      ev_io_stop(EV_A_ &peer->ev_read);
-      JsonRPCServerLoop::
-	dispatchServerEvent(new JsonServerSendMessageEvent(*snd_msg_ev, peer));
-    } else {
-      // peer is being processed by thread, save event for later sending
-      pending_events_mut.lock();
-      // (need to copy event here: original event is deleted when event processed)
-      pending_events.push_back(new JsonServerSendMessageEvent(*snd_msg_ev));
-      size_t q_size = pending_events.size();
-      pending_events_mut.unlock();
-      DBG("queued event for connection %s (total %zd events pending)", 
-	  snd_msg_ev->connection_id.c_str(), q_size);     
-    }
-      
-  }; break;
+        /*DBG("checking for pending events to connection %p/%s",
+            a_client, a_client->id.c_str());*/
+
+        pending_events_mut.lock();
+        // (check whether event for that connection pending)
+        for(vector<JsonServerEvent*>::iterator it=
+            pending_events.begin(); it != pending_events.end(); it++)
+        {
+            if ((*it)->connection_id == a_client->id) {
+                // stop read loop
+                ev_io_stop(loop,&a_client->ev_read);
+                JsonServerEvent* server_event = *it;
+                pending_events.erase(it);
+                pending_events_mut.unlock();
+
+                //DBG("got pending event for connection '%s'", a_client->id.c_str());
+
+                server_event->conn = a_client;
+                dispatchServerEvent(server_event);
+
+                return;
+            }
+        }
+
+        pending_events_mut.unlock();
+        /*DBG("no pending events for connection %p/%s, starting read loop",
+            a_client, a_client->id.c_str());*/
+
+        a_client->resetRead();
+        ev_io_init(&a_client->ev_read,read_cb,a_client->fd,EV_READ);
+        ev_io_start(loop,&a_client->ev_read);
+    }; break; //JsonServerEvent::StartReadLoop
+
+    case JsonServerEvent::SendMessage: {
+        JsonServerSendMessageEvent* snd_msg_ev = 
+            dynamic_cast<JsonServerSendMessageEvent*>(server_event);
+        if (snd_msg_ev == NULL) {
+            ERROR("invalid SendMessage type event received");
+            return;
+        }
+
+        JsonrpcPeerConnection* p_peer = getConnection(snd_msg_ev->connection_id);
+        if (p_peer == NULL) {
+            WARN("dropping message to inexistent/broken connection '%s' "
+                 "(is_reply=%s, method=%s, id=%s, params='%s')",
+                snd_msg_ev->connection_id.c_str(), snd_msg_ev->is_reply?"true":"false", 
+                snd_msg_ev->method.c_str(),
+                arg2str(snd_msg_ev->id).data(),
+                AmArg::print(snd_msg_ev->params).c_str());
+            return;
+        }
+        JsonrpcNetstringsConnection* peer = dynamic_cast<JsonrpcNetstringsConnection*>(p_peer);
+        if (NULL == peer) {
+            ERROR("invalid connection type"); // todo: other transports
+            return;
+        }
+
+        if(ev_is_active(&peer->ev_read)) {
+            // ok, peer is in read loop, we can dispatch it to thread for sending
+            ev_io_stop(EV_A_ &peer->ev_read);
+            JsonRPCServerLoop::dispatchServerEvent(
+                new JsonServerSendMessageEvent(*snd_msg_ev, peer));
+        } else {
+            // peer is being processed by thread, save event for later sending
+            pending_events_mut.lock();
+            // (need to copy event here: original event is deleted when event processed)
+            pending_events.push_back(new JsonServerSendMessageEvent(*snd_msg_ev));
+            size_t q_size = pending_events.size();
+            pending_events_mut.unlock();
+            /*DBG("queued event for connection %s (total %zd events pending)", 
+                snd_msg_ev->connection_id.c_str(), q_size);*/
+        }
+    }; break; //JsonServerEvent::SendMessage
     // todo: process remove connection event 
 
-  default: 
-    ERROR("unknown server event type received");
-    return;
-  }
-
+    default: 
+        ERROR("unknown server event type received");
+        return;
+    } //switch(server_event->event_id)
 }
 
 JsonRPCServerLoop::JsonRPCServerLoop()
@@ -498,31 +498,33 @@ void JsonRPCServerLoop::on_stop() {
   ev_async_send(loop, &async_stop);
 }
 
-void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn) {
-  pending_events_mut.lock();
-  // (check whether event for that connection pending)
-  DBG("checking %zd pending events", pending_events.size());
-  for (vector<JsonServerEvent*>::iterator it=
-	 pending_events.begin(); it != pending_events.end(); it++) {
-    DBG("%s vs %s", (*it)->connection_id.c_str(),conn->id.c_str());
-    if ((*it)->connection_id == conn->id) {
-      JsonServerEvent* server_event = *it;
-      pending_events.erase(it);
-      pending_events_mut.unlock();
+void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn)
+{
+    pending_events_mut.lock();
+    // (check whether event for that connection pending)
+    //DBG("checking %zd pending events", pending_events.size());
+    for(vector<JsonServerEvent*>::iterator it=
+        pending_events.begin(); it != pending_events.end(); it++)
+    {
+        //DBG("%s vs %s", (*it)->connection_id.c_str(),conn->id.c_str());
+        if ((*it)->connection_id == conn->id) {
+            JsonServerEvent* server_event = *it;
+            pending_events.erase(it);
+            pending_events_mut.unlock();
 
-      DBG("got pending event for connection '%s'", conn->id.c_str());
+            //DBG("got pending event for connection '%s'", conn->id.c_str());
 
-      server_event->conn = conn;
-      dispatchServerEvent(server_event);
-      return;
+            server_event->conn = conn;
+            dispatchServerEvent(server_event);
+
+            return;
+        }
     }
-  }
-  pending_events_mut.unlock();
+    pending_events_mut.unlock();
 
-  DBG("returning connection %p", conn);
-  instance()->postEvent(new JsonServerEvent(conn, JsonServerEvent::StartReadLoop));
-
-  //ev_async_send(loop, &async_w);
+    //DBG("returning connection %p", conn);
+    instance()->postEvent(new JsonServerEvent(conn, JsonServerEvent::StartReadLoop));
+    //ev_async_send(loop, &async_w);
 }
 
 void JsonRPCServerLoop::execRpc(const string& evq_link, 

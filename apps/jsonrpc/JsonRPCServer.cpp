@@ -145,7 +145,7 @@ unsigned int generate_reply(char *buf, const string &id, bool id_is_int,
 int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
                                  JsonrpcPeerConnection* peer)
 {
-    DBG("parsing message ...");
+    //DBG("parsing message ...");
     // const char* txt = "{\"jsonrpc\": \"2.0\", \"result\": 19, \"id\": 1}";
     AmArg rpc_params;
     if (!json2arg(msgbuf, rpc_params)) {
@@ -449,7 +449,7 @@ try  {
             di_inst = fact->getInstance();
             if(!di_inst)
                 continue;
-            DBG("process factory: %s",factory_name.asCStr());
+            //DBG("process factory: %s",factory_name.asCStr());
             if(!traverse_tree(di_inst,string(),fake_args,result[factory_name.asCStr()]))
                 result.erase(factory_name.asCStr());
         }
