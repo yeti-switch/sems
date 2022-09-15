@@ -1,3 +1,8 @@
+sems (1.93.0) stable; urgency=low
+  * use systemd Type=simple. disable daemon mode
+  * pg: fix segfault in checkConnection() on sems termination
+ -- Michael Furmur <furmur@pm.me>  Thu, 15 Sep 2022 17:44:31 +0300
+
 sems (1.92.0) stable; urgency=low
   * avoid resolver thread start before fork(). fixes deadlock on start
   * AmSession: set 100rel handler for passed dlg in the constructor. fixes 100rel processing
