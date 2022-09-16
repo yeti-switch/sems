@@ -176,16 +176,22 @@ string AmBasicSipDialog::getContactUri()
   return contact_uri;
 }
 
-string AmBasicSipDialog::getRoute()
+string AmBasicSipDialog::getRoute(bool for_cancel)
 {
   string res;
 
-  if(!outbound_proxy.empty() && (force_outbound_proxy || remote_tag.empty())){
-    res += "<" + outbound_proxy + ";lr>";
-
-    if(!route.empty()) {
-      res += ",";
+  if(!for_cancel) { /* outbound proxy for CANCEL will be set from INVITE routes */
+    if(!outbound_proxy.empty() &&
+       (force_outbound_proxy || remote_tag.empty()))
+    {
+      res += "<" + outbound_proxy + ";lr>";
+      if(!route.empty()) {
+        res += ",";
+      }
     }
+  } else {
+    if(!AmConfig.force_cancel_route_set)
+      return res;
   }
 
   res += route;

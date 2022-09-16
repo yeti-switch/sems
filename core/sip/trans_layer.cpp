@@ -1542,8 +1542,10 @@ int _trans_layer::send_request(sip_msg* msg, trans_ticket* tt,
     return err;
 }
 
-int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
-			 unsigned int inv_cseq, unsigned int maxf, const cstring& hdrs)
+int _trans_layer::cancel(
+    trans_ticket* tt, const cstring& dialog_id,
+    unsigned int inv_cseq, unsigned int maxf,
+    const cstring& hdrs, const cstring &dlg_route_set_hdrs)
 {
     assert(tt);
     assert(tt->_bucket && tt->_t);
@@ -1640,6 +1642,7 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
 	+ copy_hdr_len(req->callid)
 	+ cseq_len(get_cseq(req)->num_str,cancel_str)
 	+ copy_hdrs_len(req->route)
+	+ dlg_route_set_hdrs.len
 	+ copy_hdrs_len(req->contacts)
 	+ copy_hdr_len(&maxfrwd);
 
@@ -1664,6 +1667,10 @@ int _trans_layer::cancel(trans_ticket* tt, const cstring& dialog_id,
     copy_hdr_wr(&c,&maxfrwd);
     cseq_wr(&c,get_cseq(req)->num_str,cancel_str);
     copy_hdrs_wr(&c,req->route);
+    if(dlg_route_set_hdrs.len) {
+      memcpy(c,dlg_route_set_hdrs.s,dlg_route_set_hdrs.len);
+      c += dlg_route_set_hdrs.len;
+    }
     copy_hdrs_wr(&c,req->contacts);
 
     if (hdrs.len) {
@@ -2038,7 +2045,7 @@ int _trans_layer::update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* 
 	    {
 		// send CANCEL
 		trans_ticket tt(t,bucket);
-		cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring());
+		cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring(),cstring());
 	    
 		// Now remove the transaction
 		bucket->lock();
@@ -2672,7 +2679,7 @@ void _trans_layer::timer_expired(trans_timer* t, trans_bucket* bucket,
 	{
 	    // send CANCEL
 	    trans_ticket tt(tr,bucket);
-	    cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring());
+	    cancel(&tt,cstring(),0,AmConfig.max_forwards,cstring(),cstring());
 	    
 	    // Now remove the transaction
 	    bucket->lock();

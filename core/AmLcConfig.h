@@ -83,6 +83,7 @@ struct ConfigContainer
     std::string outbound_proxy;
     bool force_outbound_proxy;
     bool force_outbound_if;
+    bool force_cancel_route_set;
     bool force_symmetric_rtp;
     SymmetricRtpMode symmetric_rtp_mode;
     int symmetric_rtp_delay;

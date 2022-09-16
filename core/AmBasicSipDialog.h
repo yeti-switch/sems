@@ -338,7 +338,7 @@ public:
   /**
    * Compute the Route-HF for the next request
    */
-  string getRoute();
+  string getRoute(bool for_cancel = false);
 
   /**
    * set force_outbound_interface_by_name

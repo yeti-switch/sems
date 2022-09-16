@@ -626,11 +626,14 @@ _SipCtrlInterface::~_SipCtrlInterface()
     trans_layer::dispose();
 }
 
-int _SipCtrlInterface::cancel(trans_ticket* tt, const string& dialog_id,
-			      unsigned int inv_cseq, unsigned int maxf, const string& hdrs)
+int _SipCtrlInterface::cancel(
+    trans_ticket* tt, const string& dialog_id,
+    unsigned int inv_cseq, unsigned int maxf,
+    const string& hdrs, const string &dlg_route_set)
 {
-    return trans_layer::instance()->cancel(tt,stl2cstr(dialog_id),
-					   inv_cseq,maxf,stl2cstr(hdrs));
+    return trans_layer::instance()->cancel(
+        tt,stl2cstr(dialog_id),
+        inv_cseq,maxf,stl2cstr(hdrs),stl2cstr(dlg_route_set));
 }
 
 int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
@@ -646,8 +649,11 @@ int _SipCtrlInterface::send(AmSipRequest &req, const string& dialog_id,
 	req.max_forwards = AmConfig.max_forwards;
     }
 
-    if(req.method == "CANCEL")
-	return cancel(&req.tt, dialog_id, req.cseq, req.max_forwards, req.hdrs);
+    if(req.method == "CANCEL") {
+        return cancel(
+            &req.tt, dialog_id, req.cseq, req.max_forwards,
+            req.hdrs, string());
+    }
 
     sip_msg* msg = new sip_msg();
 

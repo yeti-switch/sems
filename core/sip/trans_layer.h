@@ -199,8 +199,9 @@ public:
      * @param tt transaction ticket from the original INVITE.
      */
     int cancel(trans_ticket* tt, const cstring& dialog_id,
-	       unsigned int inv_cseq, unsigned int maxf, const cstring& hdrs);
-    
+               unsigned int inv_cseq, unsigned int maxf,
+               const cstring& hdrs, const cstring &dlg_route_set_hdrs);
+
     /**
      * Called by the transport layer
      * when a new message has been recived.
