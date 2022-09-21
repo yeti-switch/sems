@@ -56,30 +56,31 @@ Worker::~Worker()
     if(slave) delete slave;
 }
 
+void Worker::getConfig(AmArg& ret)
+{
+    ret["max_queue_length"] = max_queue_length;
+    ret["batch_size"] = batch_size;
+    ret["batch_timeout"] = batch_timeout;
+    ret["trans_wait_time"] = trans_wait_time;
+    ret["reconnect_interval"] = reconnect_interval;
+    ret["retransmit_interval"] = retransmit_interval;
+    ret["retransmit_enable"] = retransmit_enable;
+    ret["failover_to_slave"] = failover_to_slave;
+    ret["use_pipeline"] = use_pipeline;
+}
+
 void Worker::getStats(AmArg& ret)
 {
-    auto &cfg = ret["config"];
-    cfg["max_queue_length"] = max_queue_length;
-    cfg["batch_size"] = batch_size;
-    cfg["batch_timeout"] = batch_timeout;
-    cfg["trans_wait_time"] = trans_wait_time;
-    cfg["reconnect_interval"] = reconnect_interval;
-    cfg["retransmit_interval"] = retransmit_interval;
-    cfg["retransmit_enable"] = retransmit_enable;
-    cfg["failover_to_slave"] = failover_to_slave;
-    cfg["use_pipeline"] = use_pipeline;
-
-    AmArg &stats = ret["stats"];
-    stats["queue"] = (long long)queue_size.get();
-    stats["retransmit"] = (long long)ret_size.get();
-    stats["dropped"] = (long long)dropped.get();
-    stats["active"] = (long long)tr_size.get();
-    stats["finished"] = (long long)finished.get();
+    ret["queue"] = (long long)queue_size.get();
+    ret["retransmit"] = (long long)ret_size.get();
+    ret["dropped"] = (long long)dropped.get();
+    ret["active"] = (long long)tr_size.get();
+    ret["finished"] = (long long)finished.get();
 
     if(master)
-        master->getStats(stats);
+        master->getStats(ret);
     if(slave)
-        slave->getStats(stats);
+        slave->getStats(ret);
 }
 
 void Worker::onConnect(IPGConnection* conn) {

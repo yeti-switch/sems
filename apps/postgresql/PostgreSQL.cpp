@@ -175,10 +175,21 @@ void PostgreSQL::showStats(const AmArg&, AmArg& ret)
     }
 }
 
+void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
+{
+    AmLock lock(mutex);
+    AmArg& wrs_arr = ret["workers"];
+    for(auto& dest : workers) {
+        AmArg& worker = wrs_arr[dest.first.c_str()];
+        dest.second->getConfig(worker);
+    }
+}
+
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
         reg_method(show, "stats", "show statistics", &PostgreSQL::showStats);
+        reg_method(show, "config", "show config", &PostgreSQL::showConfig);
 }
 
 void PostgreSQL::process(AmEvent* ev)

@@ -115,6 +115,7 @@ public:
     void onTuple(IPGTransaction* trans, const AmArg& result) override;
 
     void getStats(AmArg& ret);
+    void getConfig(AmArg& ret);
 
     string get_name() { return name; }
 };
