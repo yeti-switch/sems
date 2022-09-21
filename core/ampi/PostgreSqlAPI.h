@@ -28,7 +28,9 @@ public:
         PrepareExec,
         Result,
         ResultError,
-        Timeout
+        Timeout,
+
+        MaxType
     };
 
     PGEvent(int event_id) : AmEvent(event_id){}

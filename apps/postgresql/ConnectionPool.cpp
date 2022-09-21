@@ -584,6 +584,12 @@ void Worker::configure(const PGWorkerConfig& e)
     setWorkTimer(false);
 }
 
+void Worker::resetPools(PGWorkerPoolCreate::PoolType type)
+{
+    if(master && type == PGWorkerPoolCreate::Master) master->resetConnections();
+    if(slave && type == PGWorkerPoolCreate::Slave) slave->resetConnections();
+}
+
 void Worker::resetPools()
 {
     if(master) master->resetConnections();
