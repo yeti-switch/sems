@@ -1641,10 +1641,12 @@ int _trans_layer::cancel(
 	+ copy_hdr_len(req->from)
 	+ copy_hdr_len(req->callid)
 	+ cseq_len(get_cseq(req)->num_str,cancel_str)
-	+ copy_hdrs_len(req->route)
 	+ dlg_route_set_hdrs.len
 	+ copy_hdrs_len(req->contacts)
 	+ copy_hdr_len(&maxfrwd);
+
+    if(!dlg_route_set_hdrs.len)
+        request_len += copy_hdrs_len(req->route);
 
     request_len += hdrs.len;
     request_len += content_length_len(zero);
@@ -1666,11 +1668,14 @@ int _trans_layer::cancel(
     copy_hdr_wr(&c,req->callid);
     copy_hdr_wr(&c,&maxfrwd);
     cseq_wr(&c,get_cseq(req)->num_str,cancel_str);
-    copy_hdrs_wr(&c,req->route);
-    if(dlg_route_set_hdrs.len) {
-      memcpy(c,dlg_route_set_hdrs.s,dlg_route_set_hdrs.len);
-      c += dlg_route_set_hdrs.len;
+
+    if(!dlg_route_set_hdrs.len) {
+        copy_hdrs_wr(&c,req->route);
+    } else {
+        memcpy(c,dlg_route_set_hdrs.s,dlg_route_set_hdrs.len);
+        c += dlg_route_set_hdrs.len;
     }
+
     copy_hdrs_wr(&c,req->contacts);
 
     if (hdrs.len) {
