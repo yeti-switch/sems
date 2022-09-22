@@ -63,6 +63,7 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
 	logger(NULL),sensor(NULL),
     outbound_proxy(AmConfig.outbound_proxy),
     force_outbound_proxy(AmConfig.force_outbound_proxy),
+    force_cancel_route_set(AmConfig.force_cancel_route_set),
     next_hop(AmConfig.next_hop),
     next_hop_1st_req(AmConfig.next_hop_1st_req),
     patch_ruri_next_hop(false),
@@ -190,7 +191,7 @@ string AmBasicSipDialog::getRoute(bool for_cancel)
       }
     }
   } else {
-    if(!AmConfig.force_cancel_route_set)
+    if(!force_cancel_route_set)
       return res;
   }
 

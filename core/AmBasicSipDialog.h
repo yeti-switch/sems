@@ -117,6 +117,7 @@ protected:
   uint32_t max_forwards; //Max-Forwards
 
   string route;
+  bool force_cancel_route_set;
 
   string next_hop;
   bool next_hop_1st_req;
@@ -308,6 +309,10 @@ public:
   const string& getRouteSet() const { return route; }
   virtual void setRouteSet(const string& new_rs)
   { route = new_rs; }
+
+  bool GetForceCancelRouteSet() const { return force_cancel_route_set; }
+  virtual void setForceCancelRouteSet(bool new_force_cancel_route_set)
+  { force_cancel_route_set = new_force_cancel_route_set; }
 
   const string& getNextHop() const { return next_hop; }
   virtual void setNextHop(const string& new_nh)
