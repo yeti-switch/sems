@@ -1,3 +1,7 @@
+sems (1.94.1) stable; urgency=low
+  * pg: improve connection-related logging
+ -- Michael Furmur <furmur@pm.me>  Sat, 24 Sep 2022 00:48:00 +0300
+
 sems (1.94.0) stable; urgency=low
   * support for SIP dialog route-set in CANCEL request
   * add rpc method postgresql.show.config
