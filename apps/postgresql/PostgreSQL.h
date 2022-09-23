@@ -15,6 +15,23 @@ using std::map;
 
 class IPGConnection;
 
+enum AdditionalTypeEvent {
+    Reset = PGEvent::MaxType
+};
+
+class ResetEvent : public PGEvent
+{
+public:
+    bool for_pool;
+    PGWorkerPoolCreate::PoolType type;
+    string worker_name;
+
+    ResetEvent(const string& name, PGWorkerPoolCreate::PoolType type)
+    : worker_name(name), for_pool(true), type(type), PGEvent(AdditionalTypeEvent::Reset){}
+    ResetEvent(const string& name)
+    : worker_name(name), for_pool(false), type(PGWorkerPoolCreate::Master), PGEvent(AdditionalTypeEvent::Reset){}
+};
+
 class PostgreSQL
 : public AmThread
 , public AmEventFdQueue
@@ -43,6 +60,7 @@ class PostgreSQL
     void onWorkerDestroy(const PGWorkerDestroy& e);
     void onWorkerConfig(const PGWorkerConfig& e);
     void onSetSearchPath(const PGSetSearchPath& e);
+    void onReset(const ResetEvent& e);
 
   public:
     PostgreSQL();
@@ -59,6 +77,7 @@ class PostgreSQL
 
     rpc_handler showStats;
     rpc_handler showConfig;
+    rpc_handler reconnect;
 
     void init_rpc_tree() override;
 

@@ -185,11 +185,30 @@ void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
     }
 }
 
+void PostgreSQL::reconnect(const AmArg& args, AmArg& ret)
+{
+    if(!args.size() ||
+       !isArgCStr(args[0]) || 
+       (args.size() > 1 && !isArgCStr(args[1])) ||
+       (args.size() > 1 && strcmp(args[1].asCStr(), "master") && strcmp(args[1].asCStr(), "slave"))) {
+        throw AmSession::Exception(500, "usage: postgresql.request.reconnect <worker name> [master | slave]");
+    }
+
+    if(args.size() > 1) {
+        PGWorkerPoolCreate::PoolType type = (strcmp(args[1].asCStr(), "master") ? PGWorkerPoolCreate::Slave : PGWorkerPoolCreate::Master);
+        postEvent(new ResetEvent(args[0].asCStr(), type));
+    } else {
+        postEvent(new ResetEvent(args[0].asCStr()));
+    }
+}
+
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
         reg_method(show, "stats", "show statistics", &PostgreSQL::showStats);
         reg_method(show, "config", "show config", &PostgreSQL::showConfig);
+    AmArg &request = reg_leaf(root,"request");
+        reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::reconnect);
 }
 
 void PostgreSQL::process(AmEvent* ev)
@@ -241,6 +260,10 @@ void PostgreSQL::process_postgres_event(AmEvent* ev)
     case PGEvent::PrepareExec: {
         if(PGPrepareExec *e = dynamic_cast<PGPrepareExec*>(ev))
             onPrepareExecute(*e);
+    } break;
+    case AdditionalTypeEvent::Reset: {
+        if(ResetEvent *e = dynamic_cast<ResetEvent*>(ev))
+            onReset(*e);
     } break;
     }
 }
@@ -389,4 +412,17 @@ void PostgreSQL::onSetSearchPath(const PGSetSearchPath& e)
     }
     Worker* worker = workers[e.worker_name];
     worker->setSearchPath(e.search_pathes);
+}
+
+void PostgreSQL::onReset(const ResetEvent& e) {
+    AmLock lock(mutex);
+    for(auto& dest : workers) {
+        if(dest.first == e.worker_name) {
+            if(e.for_pool) {
+                dest.second->resetPools(e.type);
+            } else {
+                dest.second->resetPools();
+            }
+        }
+    }
 }

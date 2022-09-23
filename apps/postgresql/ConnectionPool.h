@@ -90,7 +90,8 @@ public:
 
     void runTransaction(IPGTransaction* trans, const string& sender_id, const string& token);
     void configure(const PGWorkerConfig& e);
-    void resetPools();    //for tests
+    void resetPools(PGWorkerPoolCreate::PoolType type);
+    void resetPools();
 
     void onFireTransaction(const TransContainer& trans);
     void onErrorTransaction(const TransContainer& trans, const string& error);
