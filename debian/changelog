@@ -1,3 +1,9 @@
+sems (1.94.0) stable; urgency=low
+  * support for SIP dialog route-set in CANCEL request
+  * add rpc method postgresql.show.config
+  * add rpc method postgresql.request.reconnect
+ -- Michael Furmur <furmur@pm.me>  Fri, 23 Sep 2022 13:14:31 +0300
+
 sems (1.93.0) stable; urgency=low
   * use systemd Type=simple. disable daemon mode
   * pg: fix segfault in checkConnection() on sems termination
