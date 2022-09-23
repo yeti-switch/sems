@@ -40,7 +40,9 @@ public:
     static PolicyFactory* instance() { return instance_; }
     static void dispose();
 
-    virtual IPGConnection* createConnection(const string& conn_info, IConnectionHandler* handler) = 0;
+    virtual IPGConnection* createConnection(const string& conn_info,
+                                            const string& conn_log_info,
+                                            IConnectionHandler* handler) = 0;
     virtual ITransaction*  createTransaction(IPGTransaction* parent,
                                              TransactionType type) = 0;
     virtual IQuery*        createQuery(const string& cmd, bool singleMode) = 0;
@@ -58,7 +60,9 @@ class TestPolicy : public PolicyFactory
 public:
     TestPolicy(TestServer* server_) : server(server_){}
     ~TestPolicy(){}
-    IPGConnection * createConnection(const std::string & conn_info, IConnectionHandler * handler) override;
+    IPGConnection * createConnection(const std::string & conn_info,
+                                     const string& conn_log_info,
+                                     IConnectionHandler * handler) override;
     ITransaction * createTransaction(IPGTransaction* handler,
                                      TransactionType type) override;
     IQuery * createQuery(const std::string & cmd, bool singleMode) override;
@@ -74,7 +78,9 @@ class PGPolicy : public PolicyFactory
 public:
     PGPolicy(){}
     ~PGPolicy(){}
-    IPGConnection * createConnection(const std::string & conn_info, IConnectionHandler * handler) override;
+    IPGConnection * createConnection(const std::string & conn_info,
+                                     const std::string & conn_log_info,
+                                     IConnectionHandler * handler) override;
     ITransaction * createTransaction(IPGTransaction* parent,
                                      TransactionType type) override;
     IQuery * createQuery(const std::string & cmd, bool singleMode) override;

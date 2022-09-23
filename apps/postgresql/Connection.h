@@ -34,6 +34,7 @@ class IPGConnection
 {
 protected:
     string connection_info;
+    string connection_log_info;
     IConnectionHandler* handler;
     ConnStatusType status;
     PGpipelineStatus pipe_status;
@@ -56,8 +57,10 @@ protected:
     virtual bool exit_pipe()  = 0;
     virtual bool sync_pipe() = 0;
 public:
-    IPGConnection(const string& conn_info, IConnectionHandler* handler)
-    : connection_info(conn_info), handler(handler)
+    IPGConnection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
+    : connection_info(conn_info)
+    , connection_log_info(conn_log_info)
+    , handler(handler)
     , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
     , conn_fd(-1), cur_transaction(nullptr)
     , planned(nullptr)
@@ -82,7 +85,7 @@ public:
     ConnStatusType getStatus() { return status; }
     PGpipelineStatus getPipeStatus() { return pipe_status; }
     int getSocket() { return conn_fd; }
-    string getConnInfo() { return connection_info; }
+    string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
     time_t getDisconnectedTime() { return disconnected_time; } 
 };
@@ -101,7 +104,7 @@ class PGConnection : public IPGConnection
     bool sync_pipe() override;
     bool exit_pipe() override;
 public:
-    PGConnection(const string& conn_info, IConnectionHandler* handler);
+    PGConnection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler);
     ~PGConnection();
 
 };

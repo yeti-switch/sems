@@ -7,7 +7,7 @@ TEST_F(PostgresqlTest, NonTransactionSimpleTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     NonTransaction pg_backend(&handler);
     pg_backend.exec(new Query("SELECT pg_backend_pid()", false));
@@ -33,7 +33,7 @@ TEST_F(PostgresqlTest, CancelTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     NonTransaction pg_cancel(&handler);
     pg_cancel.exec(new Query("SELECT 3133 FROM PG_SLEEP(10)", false));
@@ -56,7 +56,7 @@ TEST_F(PostgresqlTest, QueryParamTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -117,7 +117,7 @@ TEST_F(PostgresqlTest, QueryPreparedTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -185,7 +185,7 @@ TEST_F(PostgresqlTest, DbTransactionTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -215,7 +215,7 @@ TEST_F(PostgresqlTest, DbTransactionErrorTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -241,7 +241,7 @@ TEST_F(PostgresqlTest, ChainQueryTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -303,7 +303,7 @@ TEST_F(PostgresqlTest, DbPipelineTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -330,7 +330,7 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -363,7 +363,7 @@ TEST_F(PostgresqlTest, DbPipelineAbortedTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -408,7 +408,7 @@ TEST_F(PostgresqlTest, DbPipelineTransactionTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -435,7 +435,7 @@ TEST_F(PostgresqlTest, DISABLED_DbPipelineStressTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;
@@ -467,7 +467,7 @@ TEST_F(PostgresqlTest, DbPipelineTransErrorTest)
 {
     PGHandler handler;
     std::string conn_str(address);
-    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, &handler);
+    IPGConnection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
     conn->reset();
     while(conn->getStatus() != CONNECTION_OK) {
         if(handler.check() < 1) return;

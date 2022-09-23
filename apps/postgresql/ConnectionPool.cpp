@@ -3,6 +3,7 @@
 #include "pqtypes-int.h"
 
 #include <stdio.h>
+#include <sstream>
 
 #include <AmEventDispatcher.h>
 #include <AmStatistics.h>
@@ -84,14 +85,14 @@ void Worker::getStats(AmArg& ret)
 }
 
 void Worker::onConnect(IPGConnection* conn) {
-    DBG("connection %s:%p/\'%s\' success", name.c_str(), conn, conn->getConnInfo().c_str());
+    INFO("connection %s:%p/%s success", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true); 
     if(use_pipeline)
         conn->startPipeline();
     if(!prepareds.empty() || !search_pathes.empty() || !init_queries.empty()) {
         IPGTransaction* trans = new ConfigTransaction(prepareds, search_pathes, init_queries, this);
         if(!conn->runTransaction(trans)) {
-            ERROR("connection %p/%s of worker \'%s\' already exist transaction",
+            ERROR("connection %p/%s of worker \'%s\' transaction already exists ",
                   conn, conn->getConnInfo().c_str(), name.c_str());
             delete trans;
         }
@@ -100,16 +101,16 @@ void Worker::onConnect(IPGConnection* conn) {
         setWorkTimer(true);
 }
 void Worker::onReset(IPGConnection* conn, bool connected) {
-    DBG("pg connection %s:%p/\'%s\' reset", name.c_str(), conn, conn->getConnInfo().c_str());
+    INFO("pg connection %s:%p/%s reset", name.c_str(), conn, conn->getConnInfo().c_str());
     if(connected && master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
 }
 void Worker::onPQError(IPGConnection* conn, const std::string& error) {
-    ERROR("pg connection %s:%p/\'%s\' error: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
+    ERROR("pg connection %s:%p/%s error: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
 }
 
 void Worker::onStopTransaction(IPGTransaction* trans)
 {
-    ERROR("pg connection %s:%p/\'%s\' stopped transaction %s",
+    ERROR("pg connection %s:%p/%s stopped transaction %s",
           name.c_str(), trans->get_conn(), trans->get_conn()->getConnInfo().c_str(), trans->get_query()->get_query().c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
@@ -124,14 +125,15 @@ void Worker::onStopTransaction(IPGTransaction* trans)
 }
 
 void Worker::onConnectionFailed(IPGConnection* conn, const std::string& error) {
-    ERROR("pg connection %s:%p/\'%s\' failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
+    ERROR("pg connection %s:%p/%s failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
+
 void Worker::onDisconnect(IPGConnection* conn) {
-    DBG("pg connection %s:%p/\'%s\' disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
+    INFO("pg connection %s:%p/%s disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
     resetConnections.push_back(conn);
     reset_next_time = resetConnections[0]->getDisconnectedTime();
@@ -693,14 +695,19 @@ ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolC
         .addLabel("worker", worker->get_name())
         .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave))
 {
-    string conn_info;
-    int size = snprintf((char*)conn_info.c_str(), 0, "host=%s port=%d user=%s dbname=%s password=%s",
-             pool.host.c_str(), pool.port, pool.user.c_str(), pool.name.c_str(), pool.pass.c_str());
-    conn_info.resize(size + 1);
-    snprintf((char*)conn_info.c_str(), conn_info.size(), "host=%s port=%d user=%s dbname=%s password=%s",
-             pool.host.c_str(), pool.port, pool.user.c_str(), pool.name.c_str(), pool.pass.c_str());
+    std::stringstream conn_info, conn_log_info;
+
+    conn_info << "host=" << pool.host;
+    conn_info << " port=" << pool.port;
+    conn_info << " dbname=" << pool.name;
+    conn_info << " user=" << pool.user;
+    conn_info << " password=" << pool.pass;
+
+    conn_log_info << pool.host << ":" << pool.port << "/" << pool.name;
+
     for(int i = 0; i < pool.pool_size; i++) {
-        connections.push_back(PolicyFactory::instance()->createConnection(conn_info, worker));
+        connections.push_back(PolicyFactory::instance()->createConnection(
+            conn_info.str(), conn_log_info.str(), worker));
         connections.back()->reset();
     }
 }

@@ -107,8 +107,11 @@ void IPGConnection::stopTransaction()
     planned = 0;
 }
 
-PGConnection::PGConnection(const std::string& conn_info, IConnectionHandler* handler)
-: IPGConnection(conn_info, handler), conn(0), connected(false){}
+PGConnection::PGConnection(const std::string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
+ : IPGConnection(conn_info, conn_log_info, handler),
+   conn(0),
+   connected(false)
+{}
 
 PGConnection::~PGConnection()
 {
@@ -251,7 +254,7 @@ bool PGConnection::exit_pipe()
 }
 
 MockConnection::MockConnection(IConnectionHandler* handler)
-: IPGConnection("mock", handler)
+: IPGConnection("mock", "mock", handler)
 {}
 
 MockConnection::~MockConnection()

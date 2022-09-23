@@ -13,12 +13,14 @@ void PolicyFactory::dispose()
     }
 }
 
-IPGConnection * PGPolicy::createConnection(const string& conn_info, IConnectionHandler* handler)
+IPGConnection * PGPolicy::createConnection(const string& conn_info,
+                                           const std::string & conn_log_info,
+                                           IConnectionHandler* handler)
 {
-    return new PGConnection(conn_info, handler);
+    return new PGConnection(conn_info, conn_log_info, handler);
 }
 
-IPGConnection * TestPolicy::createConnection(const string&, IConnectionHandler* handler)
+IPGConnection * TestPolicy::createConnection(const string&, const string &, IConnectionHandler* handler)
 {
     return new MockConnection(handler);
 }
