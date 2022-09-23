@@ -58,6 +58,7 @@ class PostgreSQL
     void on_stop() override;
 
     rpc_handler showStats;
+    rpc_handler showConfig;
 
     void init_rpc_tree() override;
 
