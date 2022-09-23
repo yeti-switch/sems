@@ -77,7 +77,7 @@ class PostgreSQL
 
     rpc_handler showStats;
     rpc_handler showConfig;
-    rpc_handler reconnect;
+    rpc_handler requestReconnect;
 
     void init_rpc_tree() override;
 

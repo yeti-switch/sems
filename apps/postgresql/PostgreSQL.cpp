@@ -185,7 +185,7 @@ void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
     }
 }
 
-void PostgreSQL::reconnect(const AmArg& args, AmArg& ret)
+void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
 {
     if(!args.size() ||
        !isArgCStr(args[0]) || 
@@ -208,7 +208,7 @@ void PostgreSQL::init_rpc_tree()
         reg_method(show, "stats", "show statistics", &PostgreSQL::showStats);
         reg_method(show, "config", "show config", &PostgreSQL::showConfig);
     AmArg &request = reg_leaf(root,"request");
-        reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::reconnect);
+        reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
 }
 
 void PostgreSQL::process(AmEvent* ev)
