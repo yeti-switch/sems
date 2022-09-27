@@ -1,3 +1,7 @@
+sems (1.94.3) stable; urgency=low
+  * pg: log transaction timeout/errors at the error level
+ -- Michael Furmur <furmur@pm.me>  Tue, 27 Sep 2022 18:17:37 +0300
+
 sems (1.94.2) stable; urgency=low
   * pg: fix stuck transactions processing
  -- Michael Furmur <furmur@pm.me>  Tue, 27 Sep 2022 14:24:40 +0300
