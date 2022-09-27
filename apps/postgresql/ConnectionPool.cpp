@@ -110,8 +110,9 @@ void Worker::onPQError(IPGConnection* conn, const std::string& error) {
 
 void Worker::onStopTransaction(IPGTransaction* trans)
 {
-    ERROR("pg connection %s:%p/%s stopped transaction %s",
-          name.c_str(), trans->get_conn(), trans->get_conn()->getConnInfo().c_str(), trans->get_query()->get_query().c_str());
+    ERROR("pg connection %s:%p/%s stopped transaction %d %s",
+          name.c_str(), trans->get_conn(), trans->get_conn()->getConnInfo().c_str(),
+          trans->get_size(), trans->get_query()->get_query().c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
@@ -601,6 +602,11 @@ void Worker::resetPools()
 
 void Worker::onFireTransaction(const TransContainer& trans)
 {
+    ERROR("pg connection %s:%p/%s active transaction timeout. transaction size:%d, query:%s",
+          name.c_str(), trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
+          trans.trans->get_size(),
+          trans.trans->get_query()->get_query().data());
+
     if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
         AmEventDispatcher::instance()->post(trans.sender_id, new PGTimeout(trans.token));
     trans.trans->cancel();
@@ -608,6 +614,12 @@ void Worker::onFireTransaction(const TransContainer& trans)
 
 void Worker::onErrorTransaction(const Worker::TransContainer& trans, const string& error)
 {
+    ERROR("pg connection %s:%p/%s transaction error: '%s', transaction size:%d, query:%s",
+          name.c_str(), trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
+          error.data(),
+          trans.trans->get_size(),
+          trans.trans->get_query()->get_query().data());
+
     if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
         AmEventDispatcher::instance()->post(trans.sender_id, new PGResponseError(error, trans.token));
     else {
@@ -659,7 +671,8 @@ void Worker::onTimer()
     resetConnections.clear();
     reset_next_time = 0;
     for(auto conn_it = conns.begin();
-        conn_it != conns.end();) {
+        conn_it != conns.end();)
+    {
         if((*conn_it)->getDisconnectedTime() + reconnect_interval < current) {
             (*conn_it)->reset();
             conn_it = conns.erase(conn_it);
@@ -674,11 +687,13 @@ void Worker::onTimer()
     for(auto trans_it = transactions.begin();
         trans_it != transactions.end();) {
         if(current - trans_it->createdTime > trans_wait_time &&
-            trans_it->trans->get_status() != IPGTransaction::CANCELING) {
+           trans_it->trans->get_status() == IPGTransaction::ACTIVE)
+        {
             onFireTransaction(*trans_it);
             trans_it++;
         } else if(current - trans_it->createdTime > trans_wait_time*2 &&
-                trans_it->trans->get_status() == IPGTransaction::CANCELING) {
+                  trans_it->trans->get_status() == IPGTransaction::CANCELING)
+        {
             resetConnections.emplace_back(trans_it->trans->get_conn());
             onErrorTransaction(*trans_it, "transaction cancel timeout");
             tr_size.dec((long long)trans_it->trans->get_size());
