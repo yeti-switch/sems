@@ -1,3 +1,7 @@
+sems (1.94.2) stable; urgency=low
+  * pg: fix stuck transactions processing
+ -- Michael Furmur <furmur@pm.me>  Tue, 27 Sep 2022 14:24:40 +0300
+
 sems (1.94.1) stable; urgency=low
   * pg: improve connection-related logging
  -- Michael Furmur <furmur@pm.me>  Sat, 24 Sep 2022 00:48:00 +0300
