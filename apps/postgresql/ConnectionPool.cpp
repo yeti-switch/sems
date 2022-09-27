@@ -676,9 +676,13 @@ void Worker::onTimer()
         if(current - trans_it->createdTime > trans_wait_time &&
             trans_it->trans->get_status() != IPGTransaction::CANCELING) {
             onFireTransaction(*trans_it);
+            trans_it++;
         } else if(current - trans_it->createdTime > trans_wait_time*2 &&
                 trans_it->trans->get_status() == IPGTransaction::CANCELING) {
             resetConnections.emplace_back(trans_it->trans->get_conn());
+            onErrorTransaction(*trans_it, "transaction cancel timeout");
+            tr_size.dec((long long)trans_it->trans->get_size());
+            trans_it = transactions.erase(trans_it);
         } else {
             wait_next_time = trans_it->createdTime + trans_wait_time;
             //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
