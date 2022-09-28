@@ -248,11 +248,6 @@ MockTransaction::~MockTransaction() {}
 
 bool MockTransaction::check_trans()
 {
-    if(status == PQTRANS_IDLE &&
-       query->is_finished()) {
-        status = PQTRANS_ACTIVE;
-    }
-    
     Query* single = dynamic_cast<Query*>(query);
     QueryChain* chain = dynamic_cast<QueryChain*>(query);
     string query_;
@@ -268,8 +263,15 @@ bool MockTransaction::check_trans()
         ERROR("unknown query");
         return true;
     }
-    
-    return !server->checkTail(query_);
+        
+    if((status == PQTRANS_IDLE &&
+       query->is_finished()) ||
+        status == PQTRANS_ACTIVE) {
+        status = PQTRANS_ACTIVE;    
+        return !server->checkTail(query_);
+    }
+
+    return true;
 }
 
 void MockTransaction::fetch_result()
@@ -291,6 +293,7 @@ void MockTransaction::fetch_result()
         return;
     }
 
+    server->clearTail(query_);
     if(!is_pipeline()) {
         status = PQTRANS_IDLE;
         string errorcode;

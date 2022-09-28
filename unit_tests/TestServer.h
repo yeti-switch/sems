@@ -67,12 +67,24 @@ public:
         if(it != tails.end()) {
             if(time(0) != it->second.time) {
                 it->second.time = time(0);
-                it->second.current++;
-                return it->second.current != it->second.count;
+                if(it->second.current != it->second.count)
+                    it->second.current++;
+                if(it->second.current < it->second.count) {
+                    sleep(1);
+                    return true;
+                }
+                return false;
             }
             return true;
         }
         return false;
+    }
+
+    void clearTail(const string& query) {
+        auto it = tails.find(query);
+        if(it != tails.end()) {
+            it->second.current = 0;
+        }
     }
 
     void clear() {

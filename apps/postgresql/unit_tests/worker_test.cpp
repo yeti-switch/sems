@@ -629,13 +629,13 @@ TEST_F(PostgresqlTest, WorkerCancelTest)
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
-    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 2, 5);
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 3, 5);
     wc->batch_size = 4;
     wc->batch_timeout = 2;
     PostgreSQL::instance()->postEvent(wc);
 
     server->addError("SELECT 3133 FROM pg_sleep(10)", false);
-    server->addTail("SELECT 3133 FROM pg_sleep(10)", 1);
+    server->addTail("SELECT 3133 FROM pg_sleep(10)", 2);
     PGQueryData qdata("test", "SELECT 3133 FROM pg_sleep(10)", false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
     PostgreSQL::instance()->postEvent(ev);
@@ -646,6 +646,7 @@ TEST_F(PostgresqlTest, WorkerCancelTest)
         AmArg arg1 = arg["workers"]["test"];
         if(arg1["active"].asInt() == 1 && arg1["retransmit"].asInt() == 0 && (!step || step == 2)) step++;
         if(arg1["active"].asInt() == 0 && arg1["retransmit"].asInt() == 1 && (step == 1 || step == 3)) step++;
+        if(!external) step++;
         sleep(1);
     }
     PGWorkerDestroy *wd = new PGWorkerDestroy("test");
@@ -682,6 +683,7 @@ TEST_F(PostgresqlTest, WorkerCancelErrorTest)
         AmArg arg1 = arg["workers"]["test"];
         if(arg1["active"].asInt() == 1 && arg1["retransmit"].asInt() == 0 && (!step || step == 2)) step++;
         if(arg1["active"].asInt() == 0 && arg1["retransmit"].asInt() == 1 && (step == 1 || step == 3)) step++;
+        if(!external) step++;
         sleep(1);
     }
     PGWorkerDestroy *wd = new PGWorkerDestroy("test");

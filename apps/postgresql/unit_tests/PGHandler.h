@@ -20,6 +20,7 @@ public:
     PostgresqlTest() {
         address = WorkerHandler::instance().address;
         server = &WorkerHandler::instance().server;
+        external = WorkerHandler::instance().external;
     }
     void SetUp() override
     {
