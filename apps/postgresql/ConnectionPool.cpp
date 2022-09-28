@@ -178,8 +178,8 @@ void Worker::onError(IPGTransaction* trans, const string& error) {
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
-            onErrorTransaction(*tr_it, error);
             tr_size.dec((long long)tr_it->trans->get_size());
+            onErrorTransaction(*tr_it, error);
             transactions.erase(tr_it);
             return;
         }
@@ -192,9 +192,6 @@ void Worker::onErrorCode(IPGTransaction* trans, const string& error) {
     if(reconnect_errors.empty() ||
        reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
     {
-        if(master && !master->checkConnection(trans->get_conn(), false) && slave)
-            slave->checkConnection(trans->get_conn(), false);
-
         resetConnections.push_back(trans->get_conn());
         reset_next_time = resetConnections[0]->getDisconnectedTime();
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
@@ -236,8 +233,8 @@ void Worker::onPQError(IPGTransaction* trans, const std::string& error) {
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
-            onErrorTransaction(*tr_it, error);
             tr_size.dec((long long)tr_it->trans->get_size());
+            onErrorTransaction(*tr_it, error);
             transactions.erase(tr_it);
             return;
         }
@@ -695,8 +692,8 @@ void Worker::onTimer()
                   trans_it->trans->get_status() == IPGTransaction::CANCELING)
         {
             resetConnections.emplace_back(trans_it->trans->get_conn());
-            onErrorTransaction(*trans_it, "transaction cancel timeout");
             tr_size.dec((long long)trans_it->trans->get_size());
+            onErrorTransaction(*trans_it, "transaction cancel timeout");
             trans_it = transactions.erase(trans_it);
         } else {
             wait_next_time = trans_it->createdTime + trans_wait_time;
