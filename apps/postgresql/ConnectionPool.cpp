@@ -34,7 +34,7 @@ Worker::Worker(const std::string& name, int epollfd)
 , queue_size(stat_group(Gauge, MOD_NAME, "queue").addAtomicCounter().addLabel("worker", name))
 , dropped(stat_group(Counter, MOD_NAME, "dropped").addAtomicCounter().addLabel("worker", name))
 , ret_size(stat_group(Gauge, MOD_NAME, "retransmit").addAtomicCounter().addLabel("worker", name))
-, tr_size(stat_group(Gauge, MOD_NAME, "active").addAtomicCounter().addLabel("worker", name))
+, tr_size(stat_group(Gauge, MOD_NAME, "queries_active").addAtomicCounter().addLabel("worker", name))
 , finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name))
 , finished_time(stat_group(Counter, MOD_NAME, "finished_time").addAtomicCounter().addLabel("worker", name))
 {
