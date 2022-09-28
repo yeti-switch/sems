@@ -664,25 +664,8 @@ void Worker::onTimer()
     for(auto& tr : erased) delete tr;
     erased.clear();
 
-    auto conns = resetConnections;
-    resetConnections.clear();
-    reset_next_time = 0;
-    for(auto conn_it = conns.begin();
-        conn_it != conns.end();)
-    {
-        if((*conn_it)->getDisconnectedTime() + reconnect_interval < current) {
-            (*conn_it)->reset();
-            conn_it = conns.erase(conn_it);
-            continue;
-        }
-        reset_next_time = current - (*conn_it)->getDisconnectedTime() + reconnect_interval;
-        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-        break;
-    }
-    resetConnections.insert(resetConnections.begin(), conns.begin(), conns.end());
-
     for(auto trans_it = transactions.begin();
-        trans_it != transactions.end();) {
+        trans_wait_time && trans_it != transactions.end();) {
         if(current - trans_it->createdTime > trans_wait_time &&
            trans_it->trans->get_status() == IPGTransaction::ACTIVE)
         {
@@ -701,6 +684,24 @@ void Worker::onTimer()
             trans_it++;
         }
     }
+
+    auto conns = resetConnections;
+    resetConnections.clear();
+    reset_next_time = 0;
+    for(auto conn_it = conns.begin();
+        conn_it != conns.end();)
+    {
+        if((*conn_it)->getDisconnectedTime() + reconnect_interval < current) {
+            (*conn_it)->reset();
+            conn_it = conns.erase(conn_it);
+            continue;
+        }
+        reset_next_time = current - (*conn_it)->getDisconnectedTime() + reconnect_interval;
+        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+        break;
+    }
+    resetConnections.insert(resetConnections.begin(), conns.begin(), conns.end());
+
     checkQueue();
     setWorkTimer(false);
 }
