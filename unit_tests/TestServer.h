@@ -16,6 +16,13 @@ class TestServer
     map<string, AmArg> responses;
     map<string, bool> errors;
     map<string, string> errorcodes;
+    struct tail
+    {
+        time_t time;
+        int current;
+        int count;
+    };
+    map<string, struct tail> tails;
 public:
     TestServer(){}
 
@@ -27,6 +34,11 @@ public:
         errors.emplace(query, erase);
     }
 
+    void addTail(const string& query, int sec) {
+        struct tail t{.time = time(0), .current = 0, .count = sec};
+        tails.emplace(query, t);
+    }
+    
     void addErrorCodes(const string& query, const string& code) {
         errorcodes.emplace(query, code);
     }
@@ -48,6 +60,19 @@ public:
 
     AmArg& getResponse(const string& query) {
         return responses[query];
+    }
+    
+    bool checkTail(const string& query) {
+        auto it = tails.find(query);
+        if(it != tails.end()) {
+            if(time(0) != it->second.time) {
+                it->second.time = time(0);
+                it->second.current++;
+                return it->second.current != it->second.count;
+            }
+            return true;
+        }
+        return false;
     }
 
     void clear() {

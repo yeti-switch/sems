@@ -629,13 +629,13 @@ TEST_F(PostgresqlTest, WorkerCancelTest)
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
-    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 1, 5);
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 2, 5);
     wc->batch_size = 4;
     wc->batch_timeout = 2;
     PostgreSQL::instance()->postEvent(wc);
 
-    AmArg resp;
-    resp.push("SELECT 3133 FROM pg_sleep(10)", 3133);
+    server->addError("SELECT 3133 FROM pg_sleep(10)", false);
+    server->addTail("SELECT 3133 FROM pg_sleep(10)", 1);
     PGQueryData qdata("test", "SELECT 3133 FROM pg_sleep(10)", false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
     PostgreSQL::instance()->postEvent(ev);
@@ -644,11 +644,12 @@ TEST_F(PostgresqlTest, WorkerCancelTest)
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
         AmArg arg1 = arg["workers"]["test"];
-        //DBG("arg = %s", AmArg::print(arg1).c_str());
-        sleep(1);
         if(arg1["active"].asInt() == 1 && arg1["retransmit"].asInt() == 0 && (!step || step == 2)) step++;
         if(arg1["active"].asInt() == 0 && arg1["retransmit"].asInt() == 1 && (step == 1 || step == 3)) step++;
+        sleep(1);
     }
+    PGWorkerDestroy *wd = new PGWorkerDestroy("test");
+    PostgreSQL::instance()->postEvent(wd);
 }
 
 TEST_F(PostgresqlTest, WorkerCancelErrorTest)
@@ -669,6 +670,8 @@ TEST_F(PostgresqlTest, WorkerCancelErrorTest)
         q += index;
     }
     q += "}')";
+    server->addResponse("SELECT 3133 FROM pg_sleep(10)", AmArg(3133));
+    server->addTail("SELECT 3133 FROM pg_sleep(10)", 10);
     PGQueryData qdata("test", q, false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
     PostgreSQL::instance()->postEvent(ev);
@@ -677,9 +680,10 @@ TEST_F(PostgresqlTest, WorkerCancelErrorTest)
         AmArg arg;
         PostgreSQL::instance()->showStats(arg, arg);
         AmArg arg1 = arg["workers"]["test"];
-        //DBG("arg = %s", AmArg::print(arg1).c_str());
-        sleep(1);
         if(arg1["active"].asInt() == 1 && arg1["retransmit"].asInt() == 0 && (!step || step == 2)) step++;
         if(arg1["active"].asInt() == 0 && arg1["retransmit"].asInt() == 1 && (step == 1 || step == 3)) step++;
+        sleep(1);
     }
+    PGWorkerDestroy *wd = new PGWorkerDestroy("test");
+    PostgreSQL::instance()->postEvent(wd);
 }
