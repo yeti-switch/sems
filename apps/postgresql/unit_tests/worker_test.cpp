@@ -624,3 +624,29 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
     }
 }
 
+TEST_F(PostgresqlTest, WorkerCancelTest)
+{
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 2;
+    PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 2, 5);
+    wc->batch_size = 4;
+    wc->batch_timeout = 2;
+    PostgreSQL::instance()->postEvent(wc);
+
+    AmArg resp;
+    resp.push("SELECT 3133 FROM pg_sleep(10)", 3133);
+    PGQueryData qdata("test", "SELECT 3133 FROM pg_sleep(10)", false, WORKER_HANDLER_QUEUE);
+    PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
+    PostgreSQL::instance()->postEvent(ev);
+    int step = 0;
+    while(step < 4){
+        AmArg arg;
+        PostgreSQL::instance()->showStats(arg, arg);
+        AmArg arg1 = arg["workers"]["test"];
+        //DBG("arg = %s", AmArg::print(arg1).c_str());
+        sleep(1);
+        if(arg1["active"].asInt() == 1 && arg1["retransmit"].asInt() == 0 && (!step || step == 2)) step++;
+        if(arg1["active"].asInt() == 0 && arg1["retransmit"].asInt() == 1 && (step == 1 || step == 3)) step++;
+    }
+}
