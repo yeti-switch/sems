@@ -166,6 +166,7 @@ void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
     }
 
     if(ret < 0) {
+        ERROR("epoll error. reset connection %p", conn);
         resetConnections.push_back(conn);
         reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
