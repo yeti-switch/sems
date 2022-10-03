@@ -4,6 +4,7 @@
 #include <postgresql/libpq-fe.h>
 #include <ctime>
 #include <string>
+#include <atomic_types.h>
 using std::string;
 
 class IPGConnection;
@@ -41,6 +42,7 @@ protected:
     bool is_pipeline;
     int conn_fd;
     time_t disconnected_time;
+    atomic_int64 query_finished;
 protected:
     friend class IPGTransaction;
     IPGTransaction* cur_transaction;
@@ -87,7 +89,8 @@ public:
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
-    time_t getDisconnectedTime() { return disconnected_time; } 
+    time_t getDisconnectedTime() { return disconnected_time; }
+    int getFinishedQuery() { return query_finished.get(); }
 };
 
 class PGConnection : public IPGConnection

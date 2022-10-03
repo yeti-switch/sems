@@ -73,6 +73,7 @@ void IPGConnection::check()
         cur_transaction->check();
         if(cur_transaction->get_status() == IPGTransaction::FINISH) {
             //DBG("finish transaction");
+            query_finished.inc(cur_transaction->get_size());
             cur_transaction = 0;
             check_mode();
             if(planned) runTransaction(planned);
