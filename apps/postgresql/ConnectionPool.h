@@ -128,6 +128,7 @@ class ConnectionPool
     PGPool pool;
     PGWorkerPoolCreate::PoolType type;
     AtomicCounter& connected;
+    AtomicCounter& poolsize;
 public:
     ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolCreate::PoolType type);
     ~ConnectionPool();

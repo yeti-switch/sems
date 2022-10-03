@@ -689,3 +689,28 @@ TEST_F(PostgresqlTest, WorkerCancelErrorTest)
     PGWorkerDestroy *wd = new PGWorkerDestroy("test");
     PostgreSQL::instance()->postEvent(wd);
 }
+/*
+TEST_F(PostgresqlTest, WorkerStressTest)
+{
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 2;
+    PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 10, 5);
+    wc->batch_size = 4;
+    wc->batch_timeout = 2;
+    wc->max_queue_length = 10000000;
+    PostgreSQL::instance()->postEvent(wc);
+
+    for(int i=0; i < 1000000; i++) {
+        PGQueryData qdata("test", "SELECT 3133 FROM pg_sleep(0)", false, WORKER_HANDLER_QUEUE);
+        PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
+        PostgreSQL::instance()->postEvent(ev);
+    }
+    while(true){
+        AmArg arg;
+        PostgreSQL::instance()->showStats(arg, arg);
+        AmArg arg1 = arg["workers"]["test"];
+        INFO("arg = %s", AmArg::print(arg1).c_str());
+        sleep(1);
+    }
+}*/

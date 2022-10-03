@@ -31,12 +31,12 @@ Worker::Worker(const std::string& name, int epollfd)
 , retransmit_next_time(0), wait_next_time(0)
 , reset_next_time(0), send_next_time(0)
 , master(0), slave(0)
-, queue_size(stat_group(Gauge, MOD_NAME, "queue").addAtomicCounter().addLabel("worker", name))
-, dropped(stat_group(Counter, MOD_NAME, "dropped").addAtomicCounter().addLabel("worker", name))
-, ret_size(stat_group(Gauge, MOD_NAME, "retransmit").addAtomicCounter().addLabel("worker", name))
+, queue_size(stat_group(Gauge, MOD_NAME, "queries_queue_size").addAtomicCounter().addLabel("worker", name))
+, dropped(stat_group(Counter, MOD_NAME, "queries_dropped").addAtomicCounter().addLabel("worker", name))
+, ret_size(stat_group(Gauge, MOD_NAME, "queries_retry_queue_size").addAtomicCounter().addLabel("worker", name))
 , tr_size(stat_group(Gauge, MOD_NAME, "queries_active").addAtomicCounter().addLabel("worker", name))
-, finished(stat_group(Counter, MOD_NAME, "finished").addAtomicCounter().addLabel("worker", name))
-, finished_time(stat_group(Counter, MOD_NAME, "finished_time").addAtomicCounter().addLabel("worker", name))
+, finished(stat_group(Counter, MOD_NAME, "queries_finished").addAtomicCounter().addLabel("worker", name))
+, finished_time(stat_group(Counter, MOD_NAME, "queries_finished_time").addAtomicCounter().addLabel("worker", name))
 {
     workTimer.link(epoll_fd, true);
 }
@@ -709,9 +709,12 @@ void Worker::onTimer()
 
 ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolCreate::PoolType type)
   : worker(worker), pool(pool), type(type),
-    connected(stat_group(Gauge, MOD_NAME, "connected").addAtomicCounter()
+    connected(stat_group(Gauge, MOD_NAME, "pool_connected").addAtomicCounter()
         .addLabel("worker", worker->get_name())
-        .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave))
+        .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave)),
+    poolsize(stat_group(Gauge, MOD_NAME, "pool_size").addAtomicCounter()
+          .addLabel("worker", worker->get_name())
+          .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave))
 {
     std::stringstream conn_info, conn_log_info;
 
@@ -728,6 +731,8 @@ ConnectionPool::ConnectionPool(const PGPool& pool, Worker* worker, PGWorkerPoolC
             conn_info.str(), conn_log_info.str(), worker));
         connections.back()->reset();
     }
+
+    poolsize.set(pool.pool_size);
 }
 
 ConnectionPool::~ConnectionPool()
