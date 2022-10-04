@@ -64,10 +64,12 @@ public:
     , connection_log_info(conn_log_info)
     , handler(handler)
     , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
-    , conn_fd(-1), cur_transaction(nullptr)
-    , planned(nullptr)
     , is_pipeline(false)
+    , conn_fd(-1)
     , disconnected_time(std::time(0))
+    , queries_finished(0)
+    , cur_transaction(nullptr)
+    , planned(nullptr)
     {}
     virtual ~IPGConnection();
 
