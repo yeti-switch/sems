@@ -613,7 +613,7 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
             }
             // missing AmSipRequest to be able
             // to send the reply on behalf of the app.
-            ERROR("[%s] ignoring bye() in %s state: "
+            DBG("[%s] ignoring bye() in %s state: "
                   "no UAC transaction to cancel or UAS transaction to reply.\n",
                   local_tag.c_str(),
                   getStatusStr());
@@ -631,7 +631,7 @@ int AmSipDialog::bye(const string& hdrs, int flags, bool final)
         }
         // missing AmSipRequest to be able
         // to send the reply on behalf of the app.
-        ERROR("[%s] ignoring bye() in %s state: no UAS transaction to reply",
+        DBG("[%s] ignoring bye() in %s state: no UAS transaction to reply",
               local_tag.c_str(),getStatusStr());
         drop();
         return 0;
