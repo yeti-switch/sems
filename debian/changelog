@@ -1,3 +1,7 @@
+sems (1.94.5) stable; urgency=low
+  * pg: fix queries_finished init
+ -- Michael Furmur <furmur@pm.me>  Tue, 04 Oct 2022 16:25:30 +0300
+
 sems (1.94.4) stable; urgency=low
   * pg: fix active queries counter on transaction errors
   * pg: add 'queries_finished' counter for connections
