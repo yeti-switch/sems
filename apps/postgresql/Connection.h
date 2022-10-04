@@ -42,7 +42,7 @@ protected:
     bool is_pipeline;
     int conn_fd;
     time_t disconnected_time;
-    atomic_int64 query_finished;
+    uint64_t queries_finished;
 protected:
     friend class IPGTransaction;
     IPGTransaction* cur_transaction;
@@ -90,7 +90,7 @@ public:
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
     time_t getDisconnectedTime() { return disconnected_time; }
-    int getFinishedQuery() { return query_finished.get(); }
+    uint64_t getQueriesFinished() { return queries_finished; }
 };
 
 class PGConnection : public IPGConnection

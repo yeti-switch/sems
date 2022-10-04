@@ -803,7 +803,7 @@ void ConnectionPool::getStats(AmArg& stats)
         conn_info["status"] = conn->getStatus();
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
-        conn_info["query_finished"] = conn->getFinishedQuery();
+        conn_info["queries_finished"] = conn->getQueriesFinished();
     }
 
 }
