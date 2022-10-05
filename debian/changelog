@@ -1,3 +1,7 @@
+sems (1.94.6) stable; urgency=low
+  * pg: fix processing delay when batch_size reached
+ -- Michael Furmur <furmur@pm.me>  Wed, 05 Oct 2022 18:10:54 +0300
+
 sems (1.94.5) stable; urgency=low
   * pg: fix queries_finished init
  -- Michael Furmur <furmur@pm.me>  Tue, 04 Oct 2022 16:25:30 +0300
