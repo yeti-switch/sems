@@ -487,7 +487,7 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
         send_next_time = time(0) + batch_timeout;
         //DBG("worker \'%s\' set next batch time: %lu", name.c_str(), send_next_time);
     }
-    setWorkTimer(false);
+    setWorkTimer(queue.size() >= batch_size);
 }
 
 void Worker::runPrepared(const PGPrepareData& prepared)
