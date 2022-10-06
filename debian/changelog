@@ -1,3 +1,7 @@
+sems (1.94.7) stable; urgency=low
+  * pg: fix error/timeout events on the enabled failover
+ -- Michael Furmur <furmur@pm.me>  Thu, 06 Oct 2022 16:43:38 +0300
+
 sems (1.94.6) stable; urgency=low
   * pg: fix processing delay when batch_size reached
  -- Michael Furmur <furmur@pm.me>  Wed, 05 Oct 2022 18:10:54 +0300
