@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <sstream>
 
-#include <AmEventDispatcher.h>
+#include <AmSessionContainer.h>
 #include <AmStatistics.h>
 
 static const string pool_type_master("master");
@@ -14,7 +14,7 @@ static const string pool_type_slave("slave");
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\
     if(!sender_id.empty())\
-        AmEventDispatcher::instance()->post(sender_id, new PGResponseError(error, token));\
+        AmSessionContainer::instance()->postEvent(sender_id, new PGResponseError(error, token));\
 }
 
 Worker::Worker(const std::string& name, int epollfd)
@@ -217,7 +217,8 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
                 AmArg::print(result).c_str());*/
 
             if(!tr_it->sender_id.empty())
-                AmEventDispatcher::instance()->post(tr_it->sender_id, new PGResponse(result, tr_it->token));
+                AmSessionContainer::instance()->postEvent(
+                    tr_it->sender_id, new PGResponse(result, tr_it->token));
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
             finished_time.inc(
@@ -476,7 +477,8 @@ void Worker::runTransaction(IPGTransaction* trans, const string& sender_id, cons
     }
     if(max_queue_length && queue_size.get() >= max_queue_length) {
         if(!sender.empty())
-            AmEventDispatcher::instance()->post(sender, new PGResponseError("queue is full", token));
+            AmSessionContainer::instance()->postEvent(
+                sender, new PGResponseError("queue is full", token));
         dropped.inc((long long)trans->get_size());
         delete trans;
         return;
@@ -606,7 +608,8 @@ void Worker::onFireTransaction(const TransContainer& trans)
           trans.trans->get_query()->get_query().data());
 
     if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
-        AmEventDispatcher::instance()->post(trans.sender_id, new PGTimeout(trans.token));
+        AmSessionContainer::instance()->postEvent(
+            trans.sender_id, new PGTimeout(trans.token));
     trans.trans->cancel();
 }
 
@@ -619,7 +622,8 @@ void Worker::onErrorTransaction(const Worker::TransContainer& trans, const strin
           trans.trans->get_query()->get_query().data());
 
     if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
-        AmEventDispatcher::instance()->post(trans.sender_id, new PGResponseError(error, trans.token));
+        AmSessionContainer::instance()->postEvent(
+            trans.sender_id, new PGResponseError(error, trans.token));
     else {
         IPGTransaction* trans_ = 0;
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {

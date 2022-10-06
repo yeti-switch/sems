@@ -274,7 +274,8 @@ Worker* PostgreSQL::getWorker(const PGQueryData& e)
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
         if(!e.sender_id.empty())
-            AmEventDispatcher::instance()->post(e.sender_id, new PGResponseError("worker not found", e.token));
+            AmSessionContainer::instance()->postEvent(
+                e.sender_id, new PGResponseError("worker not found", e.token));
         return 0;
     }
     return workers[e.worker_name];
@@ -283,7 +284,8 @@ Worker* PostgreSQL::getWorker(const PGQueryData& e)
 bool PostgreSQL::checkQueryData(const PGQueryData& data)
 {
     if(data.info.empty()) {
-        AmEventDispatcher::instance()->post(data.sender_id, new PGResponseError("absent query", data.token));
+        AmSessionContainer::instance()->postEvent(
+            data.sender_id, new PGResponseError("absent query", data.token));
         return false;
     }
     return true;
