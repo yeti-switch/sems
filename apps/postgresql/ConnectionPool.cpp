@@ -111,7 +111,8 @@ void Worker::onPQError(IPGConnection* conn, const std::string& error) {
 void Worker::onStopTransaction(IPGTransaction* trans)
 {
     ERROR("pg connection %s:%p/%s stopped transaction %d %s",
-          name.c_str(), trans->get_conn(), trans->get_conn()->getConnInfo().c_str(),
+          name.c_str(),
+          trans->get_conn(), trans->get_conn()->getConnInfo().c_str(),
           trans->get_size(), trans->get_query()->get_query().c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
@@ -602,29 +603,40 @@ void Worker::resetPools()
 
 void Worker::onFireTransaction(const TransContainer& trans)
 {
-    ERROR("pg connection %s:%p/%s active transaction timeout. transaction size:%d, query:%s",
-          name.c_str(), trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
+    ERROR("pg connection %s/%s:%p/%s active transaction timeout. transaction size:%d, query:%s",
+          name.c_str(),
+          trans.currentPool == master ? pool_type_master.data() : pool_type_slave.data(),
+          trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
           trans.trans->get_size(),
           trans.trans->get_query()->get_query().data());
 
-    if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
+    if(!retransmit_enable &&
+       (!failover_to_slave || trans.currentPool == slave) &&
+       !trans.sender_id.empty())
+    {
         AmSessionContainer::instance()->postEvent(
             trans.sender_id, new PGTimeout(trans.token));
+    }
     trans.trans->cancel();
 }
 
 void Worker::onErrorTransaction(const Worker::TransContainer& trans, const string& error)
 {
-    ERROR("pg connection %s:%p/%s transaction error: '%s', transaction size:%d, query:%s",
-          name.c_str(), trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
+    ERROR("pg connection %s/%s:%p/%s transaction error: '%s', transaction size:%d, query:%s",
+          name.c_str(),
+          trans.currentPool == master ? pool_type_master.data() : pool_type_slave.data(),
+          trans.trans->get_conn(), trans.trans->get_conn()->getConnInfo().c_str(),
           error.data(),
           trans.trans->get_size(),
           trans.trans->get_query()->get_query().data());
 
-    if(!retransmit_enable && !failover_to_slave && !trans.sender_id.empty())
+    if(!retransmit_enable &&
+       (!failover_to_slave || trans.currentPool == slave) &&
+       !trans.sender_id.empty())
+    {
         AmSessionContainer::instance()->postEvent(
             trans.sender_id, new PGResponseError(error, trans.token));
-    else {
+    } else {
         IPGTransaction* trans_ = 0;
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {
             trans_ = new NonTransaction(this);
