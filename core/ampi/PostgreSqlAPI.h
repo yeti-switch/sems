@@ -9,10 +9,11 @@ using std::string;
 #define PG_DEFAULT_POOL_SIZE      6
 #define PG_DEFAULT_BATCH_SIZE     0
 #define PG_DEFAULT_MAX_Q_LEN      10000
-#define PG_DEFAULT_BATCH_TIMEOUT 1      //in sec
+#define PG_DEFAULT_BATCH_TIMEOUT  1      //in sec
 #define PG_DEFAULT_RET_INTERVAL   10     //in sec
 #define PG_DEFAULT_REC_INTERVAL   1      //in sec
 #define PG_DEFAULT_WAIT_TIME      5      //in sec
+#define PG_DEFAULT_CONN_LIFETIME  0      //in sec
 
 class PGEvent : public AmEvent
 {
@@ -125,6 +126,7 @@ public:
     uint32_t retransmit_interval;
     uint32_t reconnect_interval;
     bool use_pipeline;
+    uint32_t connection_lifetime;
     vector<PGPrepareData> prepeared;
     vector<string> search_pathes;
     vector<string> reconnect_errors;
@@ -139,7 +141,8 @@ public:
        uint32_t reconnect_interval = PG_DEFAULT_REC_INTERVAL,
        uint32_t batch_size = PG_DEFAULT_BATCH_SIZE,
        uint32_t batch_timeout = PG_DEFAULT_BATCH_TIMEOUT,
-       uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN)
+       uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN,
+       uint32_t conn_lifetime = PG_DEFAULT_CONN_LIFETIME)
      : PGEvent(WorkerConfig)
      , worker_name(name)
      , use_pipeline(use_pipeline)
@@ -151,6 +154,7 @@ public:
      , batch_size(batch_size)
      , batch_timeout(batch_timeout)
      , max_queue_length(max_queue_length)
+     , connection_lifetime(conn_lifetime)
     {}
 
     PGPrepareData& addPrepared(const string& stmt_, const string& query_) {
