@@ -736,13 +736,13 @@ void Worker::onTimer()
         if(master) {
             auto conns = master->getLifetimeOverConnections(nextTime);
             for(auto& conn : conns) {
-                conn->close();
+                conn->reset();
             }
         }
         if(slave) {
             auto conns = slave->getLifetimeOverConnections(nextTime);
             for(auto& conn : conns) {
-                conn->close();
+                conn->reset();
             }
         }
         if(nextTime) reconn_next_time = nextTime + conn_lifetime;

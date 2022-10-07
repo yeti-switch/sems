@@ -747,7 +747,7 @@ TEST_F(PostgresqlTest, DISABLED_WorkerStressTest)
     PGWorkerDestroy *wd = new PGWorkerDestroy("test");
     PostgreSQL::instance()->postEvent(wd);
 }
-
+/*
 TEST_F(PostgresqlTest, DISABLED_WorkerLifetimeTest)
 {
     PGPool pool = GetPoolByAddress(address);
@@ -769,4 +769,4 @@ TEST_F(PostgresqlTest, DISABLED_WorkerLifetimeTest)
         if(step == 1 && arg1["master"]["connected"].asInt() == 0) step++;
         sleep(1);
     }
-}
+}*/
