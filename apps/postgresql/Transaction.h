@@ -40,6 +40,7 @@ protected:
     TransactionType type;
     bool sync_sent;
     bool synced;
+    bool pipeline_aborted;
 
     virtual bool check_trans() = 0;
     virtual bool cancel_trans() = 0;
@@ -47,7 +48,8 @@ protected:
     virtual void reset(IPGConnection* conn);
 public:
     ITransaction(IPGTransaction* p, TransactionType t)
-    : conn(0), query(0), parent(p), type(t), synced(false), sync_sent(false) {}
+    : conn(0), query(0), parent(p), type(t), synced(false)
+    , sync_sent(false), pipeline_aborted(false) {}
     virtual ~ITransaction() {
         if(query)
             delete query;
@@ -55,6 +57,7 @@ public:
 
     bool is_pipeline();
     bool is_synced() { return synced; }
+    bool is_pipeline_aborted() { return pipeline_aborted; }
 };
 
 class IPGTransaction
@@ -83,7 +86,7 @@ protected:
     virtual int end() { state = END; return 1; }
     virtual int rollback() { state = END; return 1; }
     virtual int execute();
-    virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() : tr_impl->query->is_finished(); }
+    virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() && !tr_impl->is_pipeline_aborted() : tr_impl->query->is_finished(); }
     virtual bool is_equal(IPGTransaction* trans) { return trans->get_type() == get_type(); }
     virtual IPGTransaction* make_clone() = 0;
     virtual PGTransactionData policy() = 0;

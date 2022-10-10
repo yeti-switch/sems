@@ -497,23 +497,23 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
-    PGWorkerConfig config("test", false, true, false, 15, 1);
+    PGWorkerConfig config("test", false, true, true, 15, 1);
     config.batch_size = 2;
     worker.configure(config);
     IPGTransaction* trans = new NonTransaction(&worker);
-    trans->exec(new Query("SELECT pg_sleep(1)", false));
+    trans->exec(new QueryParams("SELECT pg_sleep(1)", false, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    trans->exec(new Query(CREATE_TABLE, false));
+    trans->exec(new QueryParams(CREATE_TABLE, false, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    trans->exec(new Query("SELECT pg_sleep(3)", false));
+    trans->exec(new QueryParams("SELECT pg_sleep(3)", false, false));
     worker.runTransaction(trans, "", "");
     while(true){
         if(handler.check() < 1) return;
         AmArg arg;
         worker.getStats(arg);
-        if(arg["finished"].asInt() == 1) break;
+        if(arg["active"].asInt()) break;
         usleep(500);
     }
     worker.resetPools();
@@ -527,7 +527,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     }
 
     trans = new NonTransaction(&worker);
-    trans->exec(new Query(DROP_TABLE, false));
+    trans->exec(new QueryParams(DROP_TABLE, false, false));
     worker.runTransaction(trans, "", "");
     while(true){
         if(handler.check() < 1) return;
