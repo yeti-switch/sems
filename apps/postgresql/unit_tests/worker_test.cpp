@@ -497,7 +497,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
-    PGWorkerConfig config("test", false, true, true, 15, 1);
+    PGWorkerConfig config("test", false, true, false, 15, 1);
     config.batch_size = 2;
     worker.configure(config);
     IPGTransaction* trans = new NonTransaction(&worker);
