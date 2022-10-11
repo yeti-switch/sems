@@ -142,6 +142,6 @@ public:
     void resetConnections();
     void usePipeline(bool is_pipeline);
 
-    void getStats(AmArg& stats);
+    void getStats(AmArg& stats, uint32_t conn_lifetime);
     const PGPool& getInfo() { return pool; }
 };

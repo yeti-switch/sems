@@ -81,9 +81,9 @@ void Worker::getStats(AmArg& ret)
     ret["finished"] = (long long)finished.get();
 
     if(master)
-        master->getStats(ret);
+        master->getStats(ret, conn_lifetime);
     if(slave)
-        slave->getStats(ret);
+        slave->getStats(ret, conn_lifetime);
 }
 
 void Worker::onConnect(IPGConnection* conn) {
@@ -850,13 +850,16 @@ void ConnectionPool::usePipeline(bool is_pipeline)
     }
 }
 
-void ConnectionPool::getStats(AmArg& stats)
+void ConnectionPool::getStats(AmArg& stats, uint32_t conn_lifetime)
 {
+    auto now = time(0);
+
     AmArg &pool_stats = (type==PGWorkerPoolCreate::Master) ?
         stats[pool_type_master] : stats[pool_type_slave];
 
     pool_stats["connected"] = (long long)connected.get();
     AmArg &conns = pool_stats["connections"];
+
     for(auto& conn : connections) {
         conns.push(AmArg());
         auto &conn_info = conns.back();
@@ -865,8 +868,17 @@ void ConnectionPool::getStats(AmArg& stats)
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
         conn_info["queries_finished"] = conn->getQueriesFinished();
-        if(conn->getStatus() == CONNECTION_OK)
-            conn_info["ttl"] = time(0) - conn->getConnectedTime();
+
+        conn_info["uptime"] = time(0) - conn->getConnectedTime() - conn_lifetime;
+
+        if(conn->getStatus() == CONNECTION_OK) {
+            auto uptime = now - conn->getConnectedTime();
+            conn_info["uptime"] = uptime;
+            if(conn_lifetime) {
+                conn_info["ttl"] = uptime - conn_lifetime;
+            }
+        }
+
         if(conn->getCurrentTransaction()) {
             conn_info["tr_status"] = conn->getCurrentTransaction()->get_status();
             conn_info["tr_db_state"] = conn->getCurrentTransaction()->get_state();
