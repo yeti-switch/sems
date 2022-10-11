@@ -223,9 +223,8 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
                 AmArg::print(result).c_str());*/
 
             if(!tr_it->sender_id.empty()) {
-                bool ret = AmSessionContainer::instance()->postEvent(
+                AmSessionContainer::instance()->postEvent(
                     tr_it->sender_id, new PGResponse(result, tr_it->token));
-                if(!ret) INFO("post event to session %s failed", tr_it->sender_id.c_str());
             }
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
