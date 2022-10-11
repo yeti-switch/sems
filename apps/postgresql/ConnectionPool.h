@@ -29,6 +29,7 @@ class Worker : public ITransactionHandler,
     uint32_t batch_timeout;
     uint32_t batch_size;
     uint32_t max_queue_length;
+    uint32_t conn_lifetime;
 
     AmTimerFd workTimer;
     ConnectionPool* master;
@@ -70,6 +71,7 @@ class Worker : public ITransactionHandler,
     time_t wait_next_time;
     time_t reset_next_time;
     time_t send_next_time;
+    time_t reconn_next_time;
 
     void getFreeConnection(IPGConnection **conn, ConnectionPool **pool, std::function<void(const string&)> func);
     void checkQueue();
@@ -134,6 +136,7 @@ public:
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();
+    vector<IPGConnection*> getLifetimeOverConnections(time_t& nextTime);
     bool checkConnection(IPGConnection* conn, bool connect);
     void runTransactionForPool(IPGTransaction* trans);
     void resetConnections();

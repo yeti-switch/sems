@@ -30,6 +30,7 @@ Worker::Worker(const std::string& name, int epollfd)
 , max_queue_length(PG_DEFAULT_MAX_Q_LEN)
 , retransmit_next_time(0), wait_next_time(0)
 , reset_next_time(0), send_next_time(0)
+, reconn_next_time(0)
 , master(0), slave(0)
 , queue_size(stat_group(Gauge, MOD_NAME, "queries_queue_size").addAtomicCounter().addLabel("worker", name))
 , dropped(stat_group(Counter, MOD_NAME, "queries_dropped").addAtomicCounter().addLabel("worker", name))
@@ -68,6 +69,7 @@ void Worker::getConfig(AmArg& ret)
     ret["retransmit_enable"] = retransmit_enable;
     ret["failover_to_slave"] = failover_to_slave;
     ret["use_pipeline"] = use_pipeline;
+    ret["connection_lifetime"] = conn_lifetime;
 }
 
 void Worker::getStats(AmArg& ret)
@@ -86,7 +88,9 @@ void Worker::getStats(AmArg& ret)
 
 void Worker::onConnect(IPGConnection* conn) {
     INFO("connection %s:%p/%s success", name.c_str(), conn, conn->getConnInfo().c_str());
-    if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true); 
+    if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true);
+    time_t now = time(0);
+    if(conn_lifetime && (reconn_next_time > now + conn_lifetime || !reconn_next_time)) reconn_next_time = now + conn_lifetime;
     if(use_pipeline)
         conn->startPipeline();
     if(!prepareds.empty() || !search_pathes.empty() || !init_queries.empty()) {
@@ -96,6 +100,7 @@ void Worker::onConnect(IPGConnection* conn) {
                   conn, conn->getConnInfo().c_str(), name.c_str());
             delete trans;
         }
+        if(conn_lifetime) setWorkTimer(false);
     }
     else
         setWorkTimer(true);
@@ -138,7 +143,7 @@ void Worker::onDisconnect(IPGConnection* conn) {
     INFO("pg connection %s:%p/%s disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
     resetConnections.push_back(conn);
-    reset_next_time = resetConnections[0]->getDisconnectedTime();
+    reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
@@ -169,7 +174,7 @@ void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
     if(ret < 0) {
         ERROR("epoll error. reset connection %p", conn);
         resetConnections.push_back(conn);
-        reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
+        reset_next_time = time(0) + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         setWorkTimer(false);
     }
@@ -195,7 +200,7 @@ void Worker::onErrorCode(IPGTransaction* trans, const string& error) {
        reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
     {
         resetConnections.push_back(trans->get_conn());
-        reset_next_time = resetConnections[0]->getDisconnectedTime();
+        reset_next_time = time(0) + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         setWorkTimer(false);
         return;
@@ -405,11 +410,15 @@ void Worker::setWorkTimer(bool immediately)
           (!interval || send_next_time < current || send_next_time - current < interval)) {
             interval = send_next_time - current > 0 ? send_next_time - current : 1;
         }
+        if(reconn_next_time &&
+           (!interval || reconn_next_time < current || reconn_next_time - current < interval)) {
+               interval = reconn_next_time - current > 0 ? reconn_next_time - current : 1;
+        }
         workTimer.set(interval*1000000, false);
         //DBG("set timer %lu", interval);
     }
-    //DBG("current_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu",
-    //    current, reset_next_time, retransmit_next_time, wait_next_time, send_next_time);
+//     DBG("worker \'%s\'\n\t\tcurrent_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu, reconn_next_time - %lu",
+//         get_name().c_str(), current, reset_next_time, retransmit_next_time, wait_next_time, send_next_time, reconn_next_time);
 }
 
 void Worker::checkQueue()
@@ -572,6 +581,7 @@ void Worker::configure(const PGWorkerConfig& e)
     batch_size = e.batch_size;
     batch_timeout = e.batch_timeout;
     max_queue_length = e.max_queue_length;
+    conn_lifetime = e.connection_lifetime;
 
     setSearchPath(e.search_pathes);
     setReconnectErrors(e.reconnect_errors);
@@ -586,7 +596,7 @@ void Worker::configure(const PGWorkerConfig& e)
     retransmit_next_time = 0;
     wait_next_time = 0;
 
-    setWorkTimer(false);
+    setWorkTimer(conn_lifetime);
 }
 
 void Worker::resetPools(PGWorkerPoolCreate::PoolType type)
@@ -708,16 +718,35 @@ void Worker::onTimer()
     for(auto conn_it = conns.begin();
         conn_it != conns.end();)
     {
-        if((*conn_it)->getDisconnectedTime() + reconnect_interval < current) {
+        if((*conn_it)->getDisconnectedTime() + reconnect_interval <= current) {
             (*conn_it)->reset();
             conn_it = conns.erase(conn_it);
             continue;
         }
-        reset_next_time = current - (*conn_it)->getDisconnectedTime() + reconnect_interval;
+        if(!reset_next_time || reset_next_time > (*conn_it)->getDisconnectedTime() + reconnect_interval)
+            reset_next_time = (*conn_it)->getDisconnectedTime() + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         break;
     }
     resetConnections.insert(resetConnections.begin(), conns.begin(), conns.end());
+
+    if(conn_lifetime && reconn_next_time <= current) {
+        reconn_next_time = 0;
+        time_t nextTime = 0;
+        if(master) {
+            auto conns = master->getLifetimeOverConnections(nextTime);
+            for(auto& conn : conns) {
+                conn->reset();
+            }
+        }
+        if(slave) {
+            auto conns = slave->getLifetimeOverConnections(nextTime);
+            for(auto& conn : conns) {
+                conn->reset();
+            }
+        }
+        if(nextTime) reconn_next_time = nextTime + conn_lifetime;
+    }
 
     checkQueue();
     setWorkTimer(false);
@@ -764,6 +793,19 @@ IPGConnection * ConnectionPool::getFreeConnection()
         if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) return conn;
     }
     return 0;
+}
+
+vector<IPGConnection*> ConnectionPool::getLifetimeOverConnections(time_t& nextTime)
+{
+    vector<IPGConnection*> conns;
+    time_t current = time(0);
+    for(auto& conn : connections) {
+        if(conn->getConnectedTime() && current > conn->getConnectedTime())
+            conns.push_back(conn);
+        else if(!nextTime || nextTime > conn->getConnectedTime())
+            nextTime = conn->getConnectedTime();
+    }
+    return conns;
 }
 
 bool ConnectionPool::checkConnection(IPGConnection* conn, bool connect)
@@ -820,6 +862,8 @@ void ConnectionPool::getStats(AmArg& stats)
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
         conn_info["queries_finished"] = conn->getQueriesFinished();
+        if(conn->getStatus() == CONNECTION_OK)
+            conn_info["ttl"] = time(0) - conn->getConnectedTime();
     }
 
 }

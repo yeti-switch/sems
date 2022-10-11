@@ -41,6 +41,7 @@ protected:
     PGpipelineStatus pipe_status;
     bool is_pipeline;
     int conn_fd;
+    time_t connected_time;
     time_t disconnected_time;
     uint64_t queries_finished;
 protected:
@@ -66,7 +67,8 @@ public:
     , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
     , is_pipeline(false)
     , conn_fd(-1)
-    , disconnected_time(std::time(0))
+    , connected_time(0)
+    , disconnected_time(::time(0))
     , queries_finished(0)
     , cur_transaction(nullptr)
     , planned(nullptr)
@@ -77,7 +79,7 @@ public:
     void check();
     void* get() { return get_conn(); } 
     bool reset();
-    void close() { return close_conn(); }
+    void close();
     bool runTransaction(IPGTransaction* trans);
     bool addPlannedTransaction(IPGTransaction* trans);
     void startPipeline();
@@ -92,6 +94,7 @@ public:
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
     time_t getDisconnectedTime() { return disconnected_time; }
+    time_t getConnectedTime() { return connected_time; }
     uint64_t getQueriesFinished() { return queries_finished; }
 };
 

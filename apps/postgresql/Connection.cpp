@@ -69,6 +69,10 @@ void IPGConnection::check()
         check_conn();
     }
 
+    if(status == CONNECTION_OK && !getConnectedTime()) {
+        connected_time = time(0);
+    }
+
     if(status == CONNECTION_OK && cur_transaction) {
         cur_transaction->check();
         if(cur_transaction->get_status() == IPGTransaction::FINISH) {
@@ -85,12 +89,21 @@ void IPGConnection::check()
 bool IPGConnection::reset()
 {
     disconnected_time = time(0);
+    connected_time = 0;
     stopTransaction();
     if(reset_conn()) {
         check_conn();
         return true;
     }
     return false;
+}
+
+void IPGConnection::close()
+{
+    disconnected_time = time(0);
+    connected_time = 0;
+    stopTransaction();
+    close_conn();
 }
 
 void IPGConnection::cancelTransaction()
@@ -127,6 +140,7 @@ void PGConnection::check_conn()
         //DBG("PQconsumeInput");
         if(!PQconsumeInput(conn)) {
             disconnected_time = time(0);
+            connected_time = 0;
             close_conn();
             return;
         }
@@ -175,6 +189,7 @@ void PGConnection::check_conn()
         if(status == CONNECTION_BAD) {
             //DBG("error %s", PQerrorMessage(conn));
             disconnected_time = time(0);
+            connected_time = 0;
             handler->onConnectionFailed(this, PQerrorMessage(conn));
         }
     }

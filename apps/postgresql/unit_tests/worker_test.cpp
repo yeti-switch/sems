@@ -747,3 +747,26 @@ TEST_F(PostgresqlTest, DISABLED_WorkerStressTest)
     PGWorkerDestroy *wd = new PGWorkerDestroy("test");
     PostgreSQL::instance()->postEvent(wd);
 }
+/*
+TEST_F(PostgresqlTest, DISABLED_WorkerLifetimeTest)
+{
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 5;
+    PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
+    PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 20, 5, 5);
+    wc->batch_size = 4;
+    wc->batch_timeout = 2;
+    wc->connection_lifetime = 3;
+    PostgreSQL::instance()->postEvent(wc);
+
+    int step = 0;
+    while(step < 3){
+        AmArg arg;
+        PostgreSQL::instance()->showStats(arg, arg);
+        AmArg arg1 = arg["workers"]["test"];
+        INFO("arg = %s", AmArg::print(arg1).c_str());
+        if((step == 0 || step == 2) && arg1["master"]["connected"].asInt() == 5) step++;
+        if(step == 1 && arg1["master"]["connected"].asInt() == 0) step++;
+        sleep(1);
+    }
+}*/
