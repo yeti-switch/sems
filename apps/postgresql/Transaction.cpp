@@ -20,6 +20,8 @@ void ITransaction::reset(IPGConnection* conn_)
 {
     conn = conn_;
     synced = false;
+    sync_sent = false;
+    pipeline_aborted = false;
     query->reset(conn);
 }
 
@@ -213,6 +215,8 @@ void PGTransaction::fetch_result()
                 break;
             }
             case PGRES_PIPELINE_ABORTED:
+                //DBG("pipeline aborted");
+                pipeline_aborted = true;
                 break;
             case PGRES_SINGLE_TUPLE:
                 single = true;
@@ -232,7 +236,6 @@ void PGTransaction::fetch_result()
         res = PQgetResult((PGconn*)conn->get());
         //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
     } while (res);
-
 }
 
 MockTransaction::MockTransaction(IPGTransaction* h, TransactionType t, TestServer* server_)
@@ -418,6 +421,7 @@ int DbTransaction<isolation, rw>::rollback()
         int ret = end_q->exec();
         delete end_q;
         state = END;
+        tr_impl->pipeline_aborted = false;
         if(ret) tr_impl->query->set_finished();
         //DBG("exec: ROLLBACK");
         return ret ? 0 : -1;
