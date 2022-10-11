@@ -93,6 +93,7 @@ public:
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
     time_t getDisconnectedTime() { return disconnected_time; }
     uint64_t getQueriesFinished() { return queries_finished; }
+    IPGTransaction* getCurrentTransaction() { return cur_transaction; }
 };
 
 class PGConnection : public IPGConnection

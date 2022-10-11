@@ -217,9 +217,11 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
                 tr_it->token.data(),
                 AmArg::print(result).c_str());*/
 
-            if(!tr_it->sender_id.empty())
-                AmSessionContainer::instance()->postEvent(
-                    tr_it->sender_id, new PGResponse(result, tr_it->token));
+            if(!tr_it->sender_id.empty()) {
+                bool ret = AmSessionContainer::instance()->postEvent(
+                    tr_it->sender_id, new PGResponse(result, tr_it->token, tr_it->sender_id));
+                if(!ret) INFO("post event to session %s failed", tr_it->sender_id.c_str());
+            }
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
             finished_time.inc(
@@ -817,9 +819,15 @@ void ConnectionPool::getStats(AmArg& stats)
         conns.push(AmArg());
         auto &conn_info = conns.back();
         conn_info["status"] = conn->getStatus();
+        conn_info["pipe_status"] = conn->getPipeStatus();
         conn_info["socket"] = conn->getSocket();
         conn_info["busy"] = conn->isBusy();
         conn_info["queries_finished"] = conn->getQueriesFinished();
+        if(conn->getCurrentTransaction()) {
+            conn_info["tr_status"] = conn->getCurrentTransaction()->get_status();
+            conn_info["tr_db_state"] = conn->getCurrentTransaction()->get_state();
+            conn_info["tr_size"] = conn->getCurrentTransaction()->get_size();
+        }
     }
 
 }
