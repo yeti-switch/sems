@@ -77,7 +77,7 @@ void AmEventQueue::processEvents(EventStats *stats)
     m_queue.lock();
 
     while(!ev_queue.empty()) {
-        AmEvent* event = ev_queue.front();
+        std::unique_ptr<AmEvent> event(ev_queue.front());
         ev_queue.pop();
         m_queue.unlock();
 
@@ -86,20 +86,21 @@ void AmEventQueue::processEvents(EventStats *stats)
         }
 
         if (AmConfig.log_events)
-            DBG("before processing event (%s)", typeid(*event).name());
+            DBG("before processing event (%s)", typeid(*event.get()).name());
 
-        handler->process(event);
+        handler->process(event.get());
 
         if(stats) {
             gettimeofday(&end, nullptr);
             timersub(&end,&start,&consumed_time);
-            stats->update(event, consumed_time);
+            stats->update(event.get(), consumed_time);
         }
 
         if(AmConfig.log_events)
-            DBG("event processed (%s)", typeid(*event).name());
+            DBG("event processed (%s)", typeid(*event.get()).name());
 
-        delete event;
+        event.reset(nullptr);
+
         m_queue.lock();
     }
 

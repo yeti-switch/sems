@@ -44,28 +44,29 @@ void AmEventFdQueue::postEvent(AmEvent* event)
 
 void AmEventFdQueue::processEvents()
 {
-  m_queue.lock();
-
-  while(!ev_queue.empty()) {
-	
-    AmEvent* event = ev_queue.front();
-    ev_queue.pop();
-    m_queue.unlock();
-
-    if (AmConfig.log_events) 
-      DBG("before processing event (%s)",
-	  typeid(*event).name());
-    handler->process(event);
-    if (AmConfig.log_events) 
-      DBG("event processed (%s)",
-	  typeid(*event).name());
-    delete event;
     m_queue.lock();
-  }
 
-  clear_pending();
+    while(!ev_queue.empty()) {
+        std::unique_ptr<AmEvent> event(ev_queue.front());
+        ev_queue.pop();
+        m_queue.unlock();
 
-  m_queue.unlock();
+        if(AmConfig.log_events)
+            DBG("before processing event (%s)", typeid(*event.get()).name());
+
+        handler->process(event.get());
+
+        if(AmConfig.log_events)
+            DBG("event processed (%s)", typeid(*event.get()).name());
+
+        event.reset(nullptr);
+
+        m_queue.lock();
+    }
+
+    clear_pending();
+
+    m_queue.unlock();
 }
 
 void AmEventFdQueue::processSingleEvent()
