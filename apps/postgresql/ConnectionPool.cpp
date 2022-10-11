@@ -868,13 +868,11 @@ void ConnectionPool::getStats(AmArg& stats, uint32_t conn_lifetime)
         conn_info["busy"] = conn->isBusy();
         conn_info["queries_finished"] = conn->getQueriesFinished();
 
-        conn_info["uptime"] = time(0) - conn->getConnectedTime() - conn_lifetime;
-
         if(conn->getStatus() == CONNECTION_OK) {
             auto uptime = now - conn->getConnectedTime();
             conn_info["uptime"] = uptime;
             if(conn_lifetime) {
-                conn_info["ttl"] = uptime - conn_lifetime;
+                conn_info["ttl"] = conn_lifetime - uptime;
             }
         }
 
