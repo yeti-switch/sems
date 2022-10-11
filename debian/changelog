@@ -1,3 +1,9 @@
+sems (1.94.8) stable; urgency=low
+  * fix events leak on exceptions in AmEventQueue,AmEventFdQueue
+  * pg: fix connection freeze after the reset
+  * pg: fix crash after the pipeline aborted
+ -- Michael Furmur <furmur@pm.me>  Tue, 11 Oct 2022 16:29:53 +0300
+
 sems (1.94.7) stable; urgency=low
   * pg: fix error/timeout events on the enabled failover
  -- Michael Furmur <furmur@pm.me>  Thu, 06 Oct 2022 16:43:38 +0300
