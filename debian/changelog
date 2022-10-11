@@ -1,3 +1,8 @@
+sems (1.95.0) stable; urgency=low
+  * support for connection lifetime limiting
+  * postgresql.show.stats: add 'ttl','uptime','pipe_status','tr_status','tr_db_state','tr_size' fields for connection
+ -- Michael Furmur <furmur@pm.me>  Tue, 11 Oct 2022 20:01:06 +0300
+
 sems (1.94.8) stable; urgency=low
   * fix events leak on exceptions in AmEventQueue,AmEventFdQueue
   * pg: fix connection freeze after the reset
