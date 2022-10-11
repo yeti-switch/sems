@@ -96,6 +96,7 @@ public:
     time_t getDisconnectedTime() { return disconnected_time; }
     time_t getConnectedTime() { return connected_time; }
     uint64_t getQueriesFinished() { return queries_finished; }
+    IPGTransaction* getCurrentTransaction() { return cur_transaction; }
 };
 
 class PGConnection : public IPGConnection

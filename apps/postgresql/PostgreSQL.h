@@ -75,7 +75,9 @@ class PostgreSQL
     void run() override;
     void on_stop() override;
 
-    rpc_handler showStats;
+    void showStats(const AmArg& params, AmArg& ret);
+
+    async_rpc_handler showStatistics;
     rpc_handler showConfig;
     rpc_handler requestReconnect;
 
@@ -83,4 +85,5 @@ class PostgreSQL
 
     void process(AmEvent* ev) override;
     void process_postgres_event(AmEvent* ev);
+    void process_jsonrpc_request(JsonRpcRequestEvent &request);
 };

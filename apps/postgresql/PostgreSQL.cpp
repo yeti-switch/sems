@@ -10,6 +10,10 @@ using std::vector;
 
 #define EPOLL_MAX_EVENTS    2048
 
+enum RpcMethodId {
+    MethodShowStats
+};
+
 class PostgreSQLFactory
   : public AmDynInvokeFactory
 {
@@ -165,6 +169,16 @@ void PostgreSQL::on_stop()
     stopped.wait_for();
 }
 
+bool PostgreSQL::showStatistics(const string& connection_id,
+                           const AmArg& request_id,
+                           const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodShowStats, params));
+    return true;
+}
+
 void PostgreSQL::showStats(const AmArg&, AmArg& ret)
 {
     AmLock lock(mutex);
@@ -205,7 +219,7 @@ void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
-        reg_method(show, "stats", "show statistics", &PostgreSQL::showStats);
+        reg_method(show, "stats", "show statistics", &PostgreSQL::showStatistics);
         reg_method(show, "config", "show config", &PostgreSQL::showConfig);
     AmArg &request = reg_leaf(root,"request");
         reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
@@ -214,6 +228,10 @@ void PostgreSQL::init_rpc_tree()
 void PostgreSQL::process(AmEvent* ev)
 {
     switch(ev->event_id) {
+    case JSONRPC_EVENT_ID:
+        if(auto e = dynamic_cast<JsonRpcRequestEvent *>(ev))
+            process_jsonrpc_request(*e);
+        break;
     case E_SYSTEM: {
         AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
         if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
@@ -264,6 +282,17 @@ void PostgreSQL::process_postgres_event(AmEvent* ev)
     case AdditionalTypeEvent::Reset: {
         if(ResetEvent *e = dynamic_cast<ResetEvent*>(ev))
             onReset(*e);
+    } break;
+    }
+}
+
+void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
+{
+    switch(request.method_id) {
+    case MethodShowStats: {
+        AmArg ret;
+        showStats(request.params, ret);
+        postJsonRpcReply(request, ret);
     } break;
     }
 }
