@@ -87,6 +87,8 @@ void IPGTransaction::check()
             //DBG("status idle - send query");
             next = is_pipeline();
 
+            //BEGIN request
+
             //  0 - run transaction request, do not run main query
             //  1 - transaction request is finished, run main query
             // -1 - error
@@ -99,34 +101,39 @@ void IPGTransaction::check()
                 handler->onPQError(this, tr_impl->query->get_last_error());
             }
 
-            do {
-                if(ret) {
+            //FIXME: ensures old code behavior but looks strange
+            if(0==ret) return;
+
+            //query
+            if(1==ret) {
+                do {
                     //  0 - main query finished, run end transaction request
-                    //  1 - main query sended, do not run end transaction request
+                    //  1 - main query sent, do not run end transaction request
                     //  2 - main query sending in pipeline mode
                     // -1 - error
                     ret = execute();
-                }
-                else if(ret < 0) {
-                    ERROR("execute(): %d. query: %s, last_error:%s",
+                    if(ret < 0) {
+                        ERROR("execute(): %d. query: %s, last_error:%s",
+                            ret, tr_impl->query->get_query().data(),
+                            tr_impl->query->get_last_error());
+
+                        handler->onPQError(this, tr_impl->query->get_last_error());
+                    }
+                } while(ret > 1);
+            }
+
+            //END request
+            if(0==ret) {
+                //  0 - success
+                // -1 - no connection or "END" query exec() error
+                ret = end();
+                if(ret < 0) {
+                    ERROR("end(): %d. query: %s, last_error:%s",
                         ret, tr_impl->query->get_query().data(),
                         tr_impl->query->get_last_error());
 
                     handler->onPQError(this, tr_impl->query->get_last_error());
-                } else return;
-            } while(ret > 1);
-
-            if(!ret) {
-                //  0 - success
-                // -1 - no connection or "END" query exec() error
-                ret = end();
-            }
-            if(ret < 0) {
-                ERROR("end(): %d. query: %s, last_error:%s",
-                    ret, tr_impl->query->get_query().data(),
-                    tr_impl->query->get_last_error());
-
-                handler->onPQError(this, tr_impl->query->get_last_error());
+                }
             }
 
             break;
