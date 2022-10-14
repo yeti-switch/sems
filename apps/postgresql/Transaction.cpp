@@ -268,6 +268,8 @@ void PGTransaction::fetch_result()
             bool single = false;
             ExecStatusType st = ExecStatusType::PGRES_COMMAND_OK;
             switch ((int)(st = PQresultStatus(res))) {
+            case PGRES_COMMAND_OK:
+                break;
             case PGRES_EMPTY_QUERY:
             case PGRES_BAD_RESPONSE:
             case PGRES_NONFATAL_ERROR:
@@ -278,18 +280,18 @@ void PGTransaction::fetch_result()
                 parent->handler->onErrorCode(parent, errorfield);
                 break;
             }
-            case PGRES_PIPELINE_ABORTED:
-                //DBG("pipeline aborted");
-                pipeline_aborted = true;
-                break;
-            case PGRES_SINGLE_TUPLE:
-                single = true;
             case PGRES_TUPLES_OK:
                 make_result(res, single);
                 break;
+            case PGRES_SINGLE_TUPLE:
+                single = true;
             case PGRES_PIPELINE_SYNC:
                 //DBG("pipeline synced");
                 synced = true;
+                break;
+            case PGRES_PIPELINE_ABORTED:
+                //DBG("pipeline aborted");
+                pipeline_aborted = true;
                 break;
             default:
                 ERROR("unexpected ExecStatusType:%d", st);
