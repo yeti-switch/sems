@@ -1,3 +1,7 @@
+sems (1.95.1) stable; urgency=low
+  * pg: improve transaction processing errors logging
+ -- Michael Furmur <furmur@pm.me>  Fri, 14 Oct 2022 17:49:46 +0300
+
 sems (1.95.0) stable; urgency=low
   * support for connection lifetime limiting
   * postgresql.show.stats: add 'ttl','uptime','pipe_status','tr_status','tr_db_state','tr_size' fields for connection
