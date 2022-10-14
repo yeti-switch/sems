@@ -1,3 +1,7 @@
+sems (1.95.2) stable; urgency=low
+  * pg: fix transaction query execute error processing
+ -- Michael Furmur <furmur@pm.me>  Fri, 14 Oct 2022 19:42:13 +0300
+
 sems (1.95.1) stable; urgency=low
   * pg: improve transaction processing errors logging
  -- Michael Furmur <furmur@pm.me>  Fri, 14 Oct 2022 17:49:46 +0300
