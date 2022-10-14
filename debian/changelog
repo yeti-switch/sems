@@ -1,3 +1,7 @@
+sems (1.95.3) stable; urgency=low
+  * pg: PGTransaction::fetch_result: process PGRES_COMMAND_OK
+ -- Michael Furmur <furmur@pm.me>  Fri, 14 Oct 2022 20:13:48 +0300
+
 sems (1.95.2) stable; urgency=low
   * pg: fix transaction query execute error processing
  -- Michael Furmur <furmur@pm.me>  Fri, 14 Oct 2022 19:42:13 +0300
