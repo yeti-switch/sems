@@ -1,6 +1,5 @@
 #include "Transaction.h"
 #include "Connection.h"
-#include "pqtypes-int.h"
 #include <log.h>
 #include <netinet/in.h>
 #include <jsonArg.h>
@@ -44,53 +43,111 @@ bool IPGTransaction::cancel()
 
 void IPGTransaction::check()
 {
+    int ret;
     bool next;
+
     do {
         //DBG("IPGTransaction::check() in do while(%u)", next);
-        next = false;
-        if(tr_impl->query && tr_impl->check_trans()) {
-            if(tr_impl->status == PQTRANS_ACTIVE && status != FINISH) {
-                //DBG("try fetch result");
-                tr_impl->fetch_result();
-                if(is_finished()) {
-                    status = FINISH;
-                    handler->onFinish(this, tr_impl->result);
-                }
-                next = true;
-            } else if((tr_impl->status == PQTRANS_IDLE || tr_impl->status == PQTRANS_INTRANS)
-                      && status != FINISH) {
-                //DBG("status idle - send query");
-                next = is_pipeline();
-                int ret = 0;
-                // 0 - run transaction request, do not run main query
-                // 1 - transaction request is finished, run main query
-                // -1 - error
-                ret = begin();
-                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-                // 0 - main query finished, run end transaction request
-                // 1 - main query sended, do not run end transaction request
-                // 2 - main query sending in pipeline mode
-                // -1 - error
-                do {
-                    if(ret) ret = execute();
-                    else if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-                    else return;
-                } while(ret > 1);
-                if(!ret) ret = end();
-                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-            } else if(tr_impl->status == PQTRANS_INERROR) {
-                //DBG("status aborted - roolback");
-                status = ERROR;
-                int ret = rollback();
-                if(ret < 0) handler->onPQError(this, tr_impl->query->get_last_error());
-                if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
-                    tr_impl->conn->syncPipeline();
-            } else if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ABORTED){
-                //DBG("pipeline aborted");
-            }
-        } else {
-            //DBG("busy break from while");
+
+        if(!tr_impl->query) {
+            ERROR("no query for transaction");
+            break;
         }
+
+        if(!tr_impl->check_trans()) {
+            //no connection or connection is busy
+            break;
+        }
+
+        /* FIXME: is it possible to has
+         * status == FINISH and tr_impl->status == PQTRANS_INERROR */
+        if(status == FINISH) {
+            if(tr_impl->status == PQTRANS_INERROR) {
+                ERROR("logical error. tr_impl->status:PQTRANS_INERROR for status:FINISH");
+            }
+            //transaction is finished
+            break;
+        }
+
+        next = false;
+
+        switch(tr_impl->status) {
+
+        case PQTRANS_ACTIVE:
+            tr_impl->fetch_result();
+            if(is_finished()) {
+                status = FINISH;
+                handler->onFinish(this, tr_impl->result);
+            }
+            next = true;
+            break;
+
+        case PQTRANS_IDLE:
+        case PQTRANS_INTRANS:
+            //DBG("status idle - send query");
+            next = is_pipeline();
+
+            //  0 - run transaction request, do not run main query
+            //  1 - transaction request is finished, run main query
+            // -1 - error
+            ret = begin();
+            if(ret < 0) {
+                ERROR("begin(): %d. query: %s, last_error:%s",
+                    ret, tr_impl->query->get_query().data(),
+                    tr_impl->query->get_last_error());
+
+                handler->onPQError(this, tr_impl->query->get_last_error());
+            }
+
+            do {
+                if(ret) {
+                    //  0 - main query finished, run end transaction request
+                    //  1 - main query sended, do not run end transaction request
+                    //  2 - main query sending in pipeline mode
+                    // -1 - error
+                    ret = execute();
+                }
+                else if(ret < 0) {
+                    ERROR("execute(): %d. query: %s, last_error:%s",
+                        ret, tr_impl->query->get_query().data(),
+                        tr_impl->query->get_last_error());
+
+                    handler->onPQError(this, tr_impl->query->get_last_error());
+                } else return;
+            } while(ret > 1);
+
+            if(!ret) {
+                //  0 - success
+                // -1 - no connection or "END" query exec() error
+                ret = end();
+            }
+            if(ret < 0) {
+                ERROR("end(): %d. query: %s, last_error:%s",
+                    ret, tr_impl->query->get_query().data(),
+                    tr_impl->query->get_last_error());
+
+                handler->onPQError(this, tr_impl->query->get_last_error());
+            }
+
+            break;
+
+        case PQTRANS_INERROR:
+            //DBG("status aborted - roolback");
+            status = ERROR;
+            ret = rollback();
+            if(ret < 0) {
+                ERROR("rollback(): %d. query: %s, last_error:%s",
+                    ret, tr_impl->query->get_query().data(),
+                    tr_impl->query->get_last_error());
+
+                handler->onPQError(this, tr_impl->query->get_last_error());
+            }
+            if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
+                tr_impl->conn->syncPipeline();
+            break;
+        default:
+            ERROR("unexpected tr_impl->status: %d", tr_impl->status);
+        } //switch(tr_impl->status)
     } while(next);
 }
 
@@ -132,7 +189,7 @@ bool PGTransaction::check_trans()
 {
     if(!conn) {
         ERROR("absent connection");
-        return true;
+        return false;
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sent) {
@@ -227,6 +284,8 @@ void PGTransaction::fetch_result()
                 //DBG("pipeline synced");
                 synced = true;
                 break;
+            default:
+                ERROR("unexpected ExecStatusType:%d", st);
             }
 
             PQclear(res);

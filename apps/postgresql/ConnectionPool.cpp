@@ -238,7 +238,8 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
 }
 
 void Worker::onPQError(IPGTransaction* trans, const std::string& error) {
-    DBG("Error of transaction \'%s\' : %s", trans->get_query()->get_query().c_str(), error.c_str());
+    ERROR("Error of transaction \'%s\' : %s",
+        trans->get_query()->get_query().c_str(), error.c_str());
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
