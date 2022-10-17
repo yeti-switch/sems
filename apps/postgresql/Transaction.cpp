@@ -266,8 +266,8 @@ void PGTransaction::fetch_result()
         }
         while(res) {
             bool single = false;
-            ExecStatusType st = ExecStatusType::PGRES_COMMAND_OK;
-            switch ((int)(st = PQresultStatus(res))) {
+            ExecStatusType st = PQresultStatus(res);
+            switch (st) {
             case PGRES_COMMAND_OK:
                 break;
             case PGRES_EMPTY_QUERY:
@@ -280,11 +280,12 @@ void PGTransaction::fetch_result()
                 parent->handler->onErrorCode(parent, errorfield);
                 break;
             }
+            case PGRES_SINGLE_TUPLE:
+                single = true;
+                [[fallthrough]];
             case PGRES_TUPLES_OK:
                 make_result(res, single);
                 break;
-            case PGRES_SINGLE_TUPLE:
-                single = true;
             case PGRES_PIPELINE_SYNC:
                 //DBG("pipeline synced");
                 synced = true;
