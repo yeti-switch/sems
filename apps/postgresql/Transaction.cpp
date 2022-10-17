@@ -204,8 +204,8 @@ bool PGTransaction::check_trans()
         conn->syncPipeline();
         sync_sent = true;
     }
-    status = PQtransactionStatus((PGconn*)conn->get());
-    return !PQisBusy((PGconn*)conn->get());
+    status = PQtransactionStatus(*conn);
+    return !PQisBusy(*conn);
 }
 
 bool PGTransaction::cancel_trans()
@@ -217,7 +217,7 @@ bool PGTransaction::cancel_trans()
 
     bool ret = true;
     char errbuf[MAX_BUF_SIZE] = {0};
-    PGcancel* cancel = PQgetCancel((PGconn*)conn->get());
+    PGcancel* cancel = PQgetCancel(*conn);
     if(!PQcancel(cancel, errbuf, MAX_BUF_SIZE)) {
         parent->handler->onPQError(parent, errbuf);
         ret = true;
@@ -261,8 +261,8 @@ void PGTransaction::fetch_result()
     PGresult* res = 0;
     do {
         if(!res) {
-            res = PQgetResult((PGconn*)conn->get());
-            //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
+            res = PQgetResult(*conn);
+            //DBG("PQgetResult(*conn)) = %p", res);
         }
         while(res) {
             bool single = false;
@@ -299,11 +299,11 @@ void PGTransaction::fetch_result()
             }
 
             PQclear(res);
-            res = PQgetResult((PGconn*)conn->get());
-            //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
+            res = PQgetResult(*conn);
+            //DBG("PQgetResult(*conn)) = %p", res);
         }
-        res = PQgetResult((PGconn*)conn->get());
-        //DBG("PQgetResult((PGconn*)conn->get())) = %p", res);
+        res = PQgetResult(*conn);
+        //DBG("PQgetResult(*conn)) = %p", res);
     } while (res);
 }
 

@@ -52,7 +52,7 @@ protected:
     void check_mode();
 
     virtual void check_conn() = 0;
-    virtual void* get_conn() = 0;
+    virtual PGconn* get_pg_conn() { return nullptr; }
     virtual bool flush_conn() = 0;
     virtual bool reset_conn() = 0;
     virtual void close_conn() = 0;
@@ -75,9 +75,9 @@ public:
     {}
     virtual ~IPGConnection();
 
+    operator PGconn * () { return get_pg_conn(); }
 
     void check();
-    void* get() { return get_conn(); } 
     bool reset();
     void close();
     bool runTransaction(IPGTransaction* trans);
@@ -107,7 +107,7 @@ class PGConnection : public IPGConnection
     bool reset_conn() override;
     void check_conn() override;
     bool flush_conn() override;
-    void* get_conn() override;
+    PGconn* get_pg_conn() override;
     void close_conn() override;
     bool start_pipe() override;
     bool sync_pipe() override;
@@ -123,7 +123,6 @@ class MockConnection : public IPGConnection
     bool reset_conn() override;
     void check_conn() override;
     bool flush_conn() override;
-    void* get_conn() override;
     void close_conn() override;
     bool start_pipe() override;
     bool sync_pipe() override;

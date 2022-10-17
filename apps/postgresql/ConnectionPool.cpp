@@ -217,10 +217,10 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++){
         if(trans == tr_it->trans) {
-            /*DBG("post PGResponse %s/%s: %s",
+            DBG("post PGResponse %s/%s: %s",
                 tr_it->sender_id.data(),
                 tr_it->token.data(),
-                AmArg::print(result).c_str());*/
+                AmArg::print(result).c_str());
 
             if(!tr_it->sender_id.empty()) {
                 AmSessionContainer::instance()->postEvent(

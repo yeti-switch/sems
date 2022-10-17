@@ -9,11 +9,11 @@ int PGQuery::exec()
     }
     bool ret = false;
     is_send = false;
-    ret = is_send = PQsendQuery((PGconn*)conn->get(), query.c_str());
-    if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+    ret = is_send = PQsendQuery(*conn, query.c_str());
+    if(!ret) last_error = PQerrorMessage(*conn);
     if(is_send && single_mode) {
-        ret = PQsetSingleRowMode((PGconn*)conn->get());
-        if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+        ret = PQsetSingleRowMode(*conn);
+        if(!ret) last_error = PQerrorMessage(*conn);
     }
     return ret ? 1 : -1;
 }
@@ -48,13 +48,13 @@ int PGQueryParam::exec()
         lengths.push_back(param.get_length());
         formats.push_back(param.is_binary_format());
     }
-    ret = is_send = PQsendQueryParams((PGconn*)conn->get(), query.c_str(),
+    ret = is_send = PQsendQueryParams(*conn, query.c_str(),
                                       parent->params.size(), oids.data(), values.data(),
                                       lengths.data(), formats.data(), 0);
-    if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+    if(!ret) last_error = PQerrorMessage(*conn);
     if(is_send && single_mode) {
-        ret = PQsetSingleRowMode((PGconn*)conn->get());
-        if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+        ret = PQsetSingleRowMode(*conn);
+        if(!ret) last_error = PQerrorMessage(*conn);
     }
     return ret ? 1 : -1;
 }
@@ -66,8 +66,8 @@ int PGPrepared::exec()
         return -1;
     }
 
-    bool ret = is_send = PQsendPrepare((PGconn*)conn->get(), stmt.c_str(), query.c_str(), oids.size(), oids.data());
-    if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+    bool ret = is_send = PQsendPrepare(*conn, stmt.c_str(), query.c_str(), oids.size(), oids.data());
+    if(!ret) last_error = PQerrorMessage(*conn);
     return ret ? 1 : -1;
 }
 
@@ -88,13 +88,13 @@ int PGQueryPrepared::exec()
         lengths.push_back(param.get_length());
         formats.push_back(param.is_binary_format());
     }
-    ret = is_send = PQsendQueryPrepared((PGconn*)conn->get(), query.c_str(),
+    ret = is_send = PQsendQueryPrepared(*conn, query.c_str(),
                                       parent->params.size(), values.data(),
                                       lengths.data(), formats.data(), 0);
-    if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+    if(!ret) last_error = PQerrorMessage(*conn);
     if(is_send && single_mode) {
-        ret = PQsetSingleRowMode((PGconn*)conn->get());
-        if(!ret) last_error = PQerrorMessage((PGconn*)conn->get());
+        ret = PQsetSingleRowMode(*conn);
+        if(!ret) last_error = PQerrorMessage(*conn);
     }
     return ret ? 1 : -1;
 }

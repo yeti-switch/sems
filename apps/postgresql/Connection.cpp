@@ -231,7 +231,7 @@ bool PGConnection::reset_conn()
     return true;
 }
 
-void * PGConnection::get_conn()
+PGconn * PGConnection::get_pg_conn()
 {
     return conn;
 }
@@ -312,11 +312,6 @@ bool MockConnection::reset_conn()
     handler->onSock(this, IConnectionHandler::PG_SOCK_NEW);
 
     return true;
-}
-
-void* MockConnection::get_conn()
-{
-    return this;
 }
 
 void MockConnection::close_conn()
