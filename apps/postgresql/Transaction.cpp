@@ -12,7 +12,7 @@ int IPGTransaction::execute()
      if(tr_impl->query->exec() < 0)
          return -1;
      handler->onSend(this);
-     return is_pipeline() ? (tr_impl->query->is_finished() ? 1 : 2) : 1;
+     return is_pipeline() ? (tr_impl->query->is_finished() ? 0 : 2) : 1;
 }
 
 void ITransaction::reset(IPGConnection* conn_)
@@ -78,6 +78,7 @@ void IPGTransaction::check()
             if(is_finished()) {
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
+                return;
             }
             next = true;
             break;
@@ -470,7 +471,7 @@ int DbTransaction<isolation, rw>::execute()
     if(!tr_impl->query->is_finished()) {
         int ret = IPGTransaction::execute();
         if(ret  < 0) return -1;
-        else if(ret == 1 && is_pipeline()) return 0;
+        else if(ret == 1 && is_pipeline()) return 2;
         else return ret;
     } else {
         return 0;

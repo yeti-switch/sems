@@ -802,9 +802,11 @@ vector<IPGConnection*> ConnectionPool::getLifetimeOverConnections(time_t& nextTi
     vector<IPGConnection*> conns;
     time_t current = time(0);
     for(auto& conn : connections) {
-        if(conn->getConnectedTime() && current > conn->getConnectedTime())
-            conns.push_back(conn);
-        else if(!nextTime || nextTime > conn->getConnectedTime())
+        if(conn->getConnectedTime() &&
+           current > conn->getConnectedTime()) {
+           if(!conn->getCurrentTransaction())
+                conns.push_back(conn);
+        } else if(!nextTime || nextTime > conn->getConnectedTime())
             nextTime = conn->getConnectedTime();
     }
     return conns;
