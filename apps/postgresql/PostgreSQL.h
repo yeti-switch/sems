@@ -22,14 +22,29 @@ enum AdditionalTypeEvent {
 class ResetEvent : public PGEvent
 {
 public:
-    bool for_pool;
-    PGWorkerPoolCreate::PoolType type;
+    union {
+        PGWorkerPoolCreate::PoolType type;
+        int fd;
+    } data;
+    enum {
+        PoolTypeReset,
+        PoolsReset,
+        FdReset
+    } type;
     string worker_name;
 
     ResetEvent(const string& name, PGWorkerPoolCreate::PoolType type)
-    : worker_name(name), for_pool(true), type(type), PGEvent(AdditionalTypeEvent::Reset){}
+    : worker_name(name), type(PoolTypeReset), PGEvent(AdditionalTypeEvent::Reset){
+        data.type = type;
+    }
     ResetEvent(const string& name)
-    : worker_name(name), for_pool(false), type(PGWorkerPoolCreate::Master), PGEvent(AdditionalTypeEvent::Reset){}
+    : worker_name(name), type(PoolsReset), PGEvent(AdditionalTypeEvent::Reset){
+        data.fd = -1;
+    }
+    ResetEvent(const string& name, int fd)
+    : worker_name(name), type(FdReset), PGEvent(AdditionalTypeEvent::Reset){
+        data.fd = fd;
+    }
 };
 
 class PostgreSQL
@@ -80,6 +95,7 @@ class PostgreSQL
     async_rpc_handler showStatistics;
     rpc_handler showConfig;
     rpc_handler requestReconnect;
+    rpc_handler requestReset;
 
     void init_rpc_tree() override;
 

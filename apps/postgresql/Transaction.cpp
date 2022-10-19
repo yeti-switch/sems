@@ -276,9 +276,9 @@ void PGTransaction::fetch_result()
             case PGRES_NONFATAL_ERROR:
             case PGRES_FATAL_ERROR: {
                 char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
-                parent->handler->onError(parent, error);
+                parent->handler->onError(parent, error ? error : "");
                 char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
-                parent->handler->onErrorCode(parent, errorfield);
+                parent->handler->onErrorCode(parent, errorfield ? errorfield : "");
                 break;
             }
             case PGRES_SINGLE_TUPLE:
