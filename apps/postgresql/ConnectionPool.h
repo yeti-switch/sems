@@ -137,6 +137,7 @@ public:
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();
+    IPGConnection* getConnection(int fd);
     vector<IPGConnection*> getLifetimeOverConnections(time_t& nextTime);
     bool checkConnection(IPGConnection* conn, bool connect);
     void runTransactionForPool(IPGTransaction* trans);

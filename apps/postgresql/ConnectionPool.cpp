@@ -824,6 +824,14 @@ IPGConnection * ConnectionPool::getFreeConnection()
     return 0;
 }
 
+IPGConnection * ConnectionPool::getConnection(int fd)
+{
+    for(auto& conn : connections) {
+        if(fd == conn->getSocket()) return conn;
+    }
+    return 0;
+}
+
 vector<IPGConnection*> ConnectionPool::getLifetimeOverConnections(time_t& nextTime)
 {
     vector<IPGConnection*> conns;
