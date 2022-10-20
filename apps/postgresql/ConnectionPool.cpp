@@ -86,6 +86,26 @@ void Worker::getStats(AmArg& ret)
         slave->getStats(ret, conn_lifetime);
 }
 
+bool Worker::getConnectionLog(const AmArg& args)
+{
+    int fd = 0;
+    if(isArgInt(args[0]))
+        fd = args[0].asInt();
+    else if(isArgCStr(args[0]))
+        str2int(args[0].asCStr(), fd);
+    IPGConnection* conn = 0;
+    if(master) conn = master->getConnection(fd);
+    if(!conn && slave) conn = master->getConnection(fd);
+
+    if(!conn) return false;
+
+    IPGTransaction* trans = conn->getCurrentTransaction();
+    if(!trans) return false;
+
+    trans->wrote = false;
+    return trans->saveLog(args[1].asCStr());
+}
+
 void Worker::onConnect(IPGConnection* conn) {
     INFO("connection %s:%p/%s success", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true);
@@ -711,6 +731,13 @@ void Worker::onTimer()
             wait_next_time = trans_it->createdTime + trans_wait_time;
             //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
             trans_it++;
+        }
+    }
+    for(auto trans_it = transactions.begin();
+        PostgreSQL::instance()->getLogTime() && trans_it != transactions.end();) {
+        if(current - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
+           trans_it->trans->get_status() == IPGTransaction::ACTIVE) {
+            trans_it->trans->saveLog(PostgreSQL::instance()->getLogDir().c_str());
         }
     }
 

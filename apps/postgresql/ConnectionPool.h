@@ -119,6 +119,7 @@ public:
 
     void getStats(AmArg& ret);
     void getConfig(AmArg& ret);
+    bool getConnectionLog(const AmArg& args);
 
     string get_name() { return name; }
 };

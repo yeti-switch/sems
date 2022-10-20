@@ -43,9 +43,11 @@ class PostgreSQL
 
     AmEventFd stop_event;
     AmCondition<bool> stopped;
-    AmMutex mutex;
     map<string, Worker*> workers;
     int epoll_fd;
+
+    time_t log_time;
+    string log_dir;
 
     int init();
 
@@ -71,19 +73,27 @@ class PostgreSQL
     AmDynInvoke* getInstance() { return static_cast<AmDynInvoke*>(instance()); }
 
     int onLoad();
+    int configure(const string& config);
+    int reconfigure(const string& config);
 
     void run() override;
     void on_stop() override;
 
     void showStats(const AmArg& params, AmArg& ret);
+    void getConnectionLog(const AmArg& params, AmArg& ret);
+    void showConfig(const AmArg& params, AmArg& ret);
 
     async_rpc_handler showStatistics;
-    rpc_handler showConfig;
+    async_rpc_handler showConfiguration;
     rpc_handler requestReconnect;
+    async_rpc_handler transLog;
 
     void init_rpc_tree() override;
 
     void process(AmEvent* ev) override;
     void process_postgres_event(AmEvent* ev);
     void process_jsonrpc_request(JsonRpcRequestEvent &request);
+
+    time_t getLogTime() { return log_time; }
+    string getLogDir() { return log_dir; }
 };

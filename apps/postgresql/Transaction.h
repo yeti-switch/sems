@@ -7,6 +7,9 @@
 
 #include <postgresql/libpq-fe.h>
 #include <string>
+
+#define TRANS_LOG(trans, log, ...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, log __VA_OPT__(,) __VA_ARGS__)
+
 using std::string;
 
 class IPGConnection;
@@ -92,7 +95,9 @@ protected:
     virtual PGTransactionData policy() = 0;
 
     IPGTransaction(ITransaction* impl, ITransactionHandler* handler)
-        : tr_impl(impl), handler(handler), status(ACTIVE), state(BEGIN) {}
+        : tr_impl(impl), handler(handler)
+        , status(ACTIVE), state(BEGIN)
+        , wrote(false){}
 public:
     virtual ~IPGTransaction() { delete tr_impl; }
 
@@ -112,6 +117,20 @@ public:
     IPGConnection* get_conn() { return tr_impl->conn; }
     TransactionType get_type() { return tr_impl->type; }
     uint32_t get_size() { return tr_impl->query->get_size(); }
+
+    struct TransLog
+    {
+        struct tm time;
+        string func;
+        string file;
+        int line;
+        string data;
+    };
+    bool wrote;
+    vector<TransLog> translog;
+    void add_log(const char* func, const char* file, int line, const char* format, ...);
+    string& get_transaction_log();
+    bool saveLog(const char* path);
 };
 
 class PGTransaction : public ITransaction

@@ -696,14 +696,14 @@ TEST_F(PostgresqlTest, DISABLED_WorkerStressTest)
     pool.pool_size = 5;
     PostgreSQL::instance()->postEvent(new PGWorkerPoolCreate("test", PGWorkerPoolCreate::Master, pool));
     PGWorkerConfig* wc = new PGWorkerConfig("test", false, true, true, 20, 5);
-    wc->batch_size = 100;
+    wc->batch_size = 200;
     wc->batch_timeout = 2;
     wc->max_queue_length = 10000000;
     PostgreSQL::instance()->postEvent(wc);
 
     {
-        PGQueryData qdata("test", "CREATE TABLE IF NOT EXISTS test(id int, value float8)", false, "");
-        PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
+        PGQueryData qdata("test", "CREATE TABLE IF NOT EXISTS test(id int CONSTRAINT test_id PRIMARY KEY, value float8)", false, "");
+        PGParamExecute* ev = new PGParamExecute(qdata,PGTransactionData(),false);
         PostgreSQL::instance()->postEvent(ev);
     }
     while(true){
@@ -715,13 +715,24 @@ TEST_F(PostgresqlTest, DISABLED_WorkerStressTest)
     }
     sleep(5);
 
-    int limit = 1000000;
-    for(int i=0; i < limit; i++) {
-        PGQueryData qdata("test", "INSERT INTO test(id, value) VALUES($1, $2)", false, "");
-        PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
+        PGPrepare* er = new PGPrepare("test", "add", "INSERT INTO test(id, value) VALUES($1, $2)");
+        er->add_param_oid(INT4OID).add_param_oid(FLOAT8OID);
+        PostgreSQL::instance()->postEvent(er);
+
+    int limit = 100000;
+    for(int i=0, j = 0; i < limit; i++, j++) {
+        //PGQueryData qdata("test", "INSERT INTO test(id, value) VALUES($1, $2)", false, "");
+        //PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
+        PGQueryData qdata("test", "add", false, "");
+        PGParamExecute* ev = 
+            new PGParamExecute(qdata,
+                               PGTransactionData(PGTransactionData::isolation_level::read_committed,
+                                                 PGTransactionData::write_policy::read_write),
+                               true);
         ev->addParam(i);
-        ev->addParam(float(i));
+        ev->addParam(double(j));
         PostgreSQL::instance()->postEvent(ev);
+        if(j == 200) j = 0;
     }
     while(true){
         AmArg arg;
