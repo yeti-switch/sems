@@ -238,17 +238,21 @@ void Worker::onFinish(IPGTransaction* trans, const AmArg& result) {
 }
 
 void Worker::onPQError(IPGTransaction* trans, const std::string& error) {
-    ERROR("Error of transaction \'%s\' : %s",
-        trans->get_query()->get_query().c_str(), error.c_str());
-    for(auto tr_it = transactions.begin();
-        tr_it != transactions.end(); tr_it++) {
-        if(trans == tr_it->trans) {
-            tr_size.dec((long long)tr_it->trans->get_size());
-            onErrorTransaction(*tr_it, error);
-            transactions.erase(tr_it);
-            return;
-        }
-    }
+
+    DBG("Error of transaction \'%s\' : %s", trans->get_query()->get_query().c_str(), error.c_str());
+    resetConnections.push_back(trans->get_conn());
+    reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
+    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+    setWorkTimer(false);
+//     for(auto tr_it = transactions.begin();
+//         tr_it != transactions.end(); tr_it++) {
+//         if(trans == tr_it->trans) {
+//             tr_size.dec((long long)tr_it->trans->get_size());
+//             onErrorTransaction(*tr_it, error);
+//             transactions.erase(tr_it);
+//             return;
+//         }
+//     }
 }
 
 void Worker::onCancel(IPGTransaction* trans) {

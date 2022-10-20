@@ -70,7 +70,6 @@ void IPGTransaction::check()
         }
 
         next = false;
-
         switch(tr_impl->status) {
 
         case PQTRANS_ACTIVE:
