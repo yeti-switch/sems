@@ -99,6 +99,7 @@ void IPGTransaction::check()
                     tr_impl->query->get_last_error());
 
                 handler->onPQError(this, tr_impl->query->get_last_error());
+                return;
             }
 
             //FIXME: ensures old code behavior but looks strange
@@ -118,6 +119,7 @@ void IPGTransaction::check()
                             tr_impl->query->get_last_error());
 
                         handler->onPQError(this, tr_impl->query->get_last_error());
+                        return;
                     }
                 } while(ret > 1);
             }
@@ -133,6 +135,7 @@ void IPGTransaction::check()
                         tr_impl->query->get_last_error());
 
                     handler->onPQError(this, tr_impl->query->get_last_error());
+                    return;
                 }
             }
 
@@ -148,6 +151,7 @@ void IPGTransaction::check()
                     tr_impl->query->get_last_error());
 
                 handler->onPQError(this, tr_impl->query->get_last_error());
+                return;
             }
             if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
                 tr_impl->conn->syncPipeline();
