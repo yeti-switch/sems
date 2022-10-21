@@ -80,7 +80,7 @@ void IPGTransaction::check()
             if(is_finished()) {
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
-                //INFO("trans %p logs:\n%s", this, get_transaction_log().c_str());
+                TRANS_LOG(this, "transaction finished get %u results", get_query(true)->get_result_got());
                 return;
             }
             next = true;
@@ -219,10 +219,10 @@ void IPGTransaction::add_log(const char* func_name, const char* file, int line, 
     localtime_r(&tv.tv_sec,&tlog.time);
     tlog.file = file;
     tlog.line = line;
-    int sz = vsnprintf(buf_log, BUFSIZ, format, args);
+    vsnprintf(buf_log, BUFSIZ, format, args);
     tlog.data.append(buf_log);
     va_end(args);
-    //DBG("%s", buf_log);
+    DBG("%s", buf_log);
 }
 
 string& IPGTransaction::get_transaction_log()
@@ -258,7 +258,7 @@ bool IPGTransaction::saveLog(const char* path)
     gettimeofday(&tv,NULL);
     localtime_r(&tv.tv_sec,&t);
     string file_path;
-    int sz = strftime(buf_log, 26, "%d-%b-%T",&t);
+    strftime(buf_log, 26, "%d-%b-%T",&t);
     file_path.append(buf_log);
     snprintf(buf_log, PATH_MAX, "%s/%d_%s.log", path, get_conn()->getSocket(), file_path.c_str());
     file_path = buf_log;
@@ -606,7 +606,7 @@ IPGQuery * DbTransaction<isolation, rw>::get_current_query(bool parent)
     QueryChain* chain = dynamic_cast<QueryChain*>(tr_impl->query);
     if(!chain) return tr_impl->query;
 
-    int num = chain->get_result_got();
+    uint32_t num = chain->get_result_got();
     if(num <= 1) return chain->get_query(0);
     else if(num - 1 >= chain->get_size()) return chain->get_current_query();
     return chain->get_query(num - 1);

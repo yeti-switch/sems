@@ -190,7 +190,7 @@ protected:
         ERROR("pq error: %s", error.c_str());
     }
 
-    void onFinish(IPGTransaction*, const AmArg & result) override
+    void onFinish(IPGTransaction* trans, const AmArg & result) override
     {
         cur_state = FINISH;
         INFO("exec finish: %s", AmArg::print(result).c_str());
