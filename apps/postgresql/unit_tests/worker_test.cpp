@@ -489,6 +489,60 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     }
 }
 
+TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
+{
+    PGHandler handler;
+    Worker worker("test", handler.epoll_fd);
+    handler.workers.push_back(&worker);
+    PGPool pool = GetPoolByAddress(address);
+    pool.pool_size = 2;
+    worker.createPool(PGWorkerPoolCreate::Master, pool);
+    PGWorkerConfig config("test", false, true, true, 3, 1);
+    config.batch_size = 4;
+    worker.configure(config);
+
+    server->addResponse(CREATE_TABLE, AmArg());
+    server->addResponse(INSERT_INTO, AmArg());
+    server->addError("ASSERT 0", false);
+    IPGTransaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    trans->exec(new QueryParams(CREATE_TABLE, false, false));
+    worker.runTransaction(trans, "", "");
+    trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    trans->exec(new QueryParams("ASSERT 0", false, false));
+    worker.runTransaction(trans, "", "");
+    trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    trans->exec(new QueryParams(INSERT_INTO, false, false));
+    worker.runTransaction(trans, "", "");
+    while(true){
+        if(handler.check() < 1) return;
+        AmArg stats;
+        worker.getStats(stats);
+        auto &arg = stats;
+        if(arg["finished"].asInt() == 2 &&
+           arg["retransmit"].asInt() == 1)
+        {
+            break;
+        }
+        usleep(500);
+    }
+
+    trans = new NonTransaction(&worker);
+    trans->exec(new QueryParams(DROP_TABLE, false, false));
+    worker.runTransaction(trans, "", "");
+    while(true){
+        if(handler.check() < 1) return;
+        AmArg stats;
+        worker.getStats(stats);
+        auto &arg = stats;
+        if(arg["finished"].asInt() == 3 &&
+           arg["retransmit"].asInt() == 1)
+        {
+            break;
+        }
+        usleep(500);
+    }
+}
+
 TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
 {
     PGHandler handler;
