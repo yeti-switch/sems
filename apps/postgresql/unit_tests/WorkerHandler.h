@@ -110,6 +110,7 @@ public:
             }
 
         } while(running);
+        usleep(5000);
     }
     
     void process(AmEvent* e) override {

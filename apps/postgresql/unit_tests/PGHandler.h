@@ -170,9 +170,9 @@ protected:
 
     void onSend(IPGTransaction *) override{}
 
-    void onError(IPGTransaction*, const string& error) override
+    void onError(IPGTransaction* trans, const string& error) override
     {
-        ERROR("exec query error: %s", error.c_str());
+        ERROR("exec query '%s' error: %s", trans->get_query()->get_query().c_str(), error.c_str());
     }
 
     void onErrorCode(IPGTransaction* , const string& error) override

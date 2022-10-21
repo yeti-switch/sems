@@ -127,6 +127,11 @@ IPGQuery * QueryChain::get_current_query()
     else return childs[current-1];
 }
 
+void QueryChain::put_result()
+{
+    got_result++;
+}
+
 void QueryChain::addQuery(IPGQuery* q)
  {
     QueryChain* chain = dynamic_cast<QueryChain*>(q);

@@ -342,7 +342,6 @@ int Worker::retransmitTransaction(TransContainer& trans)
     if(!trans.currentPool) {
         IPGConnection* conn = 0;
         ConnectionPool* pool = 0;
-        string query = trans.trans->get_query()->get_query();
         string sender_id = trans.sender_id;
         string token = trans.token;
         getFreeConnection(&conn, &pool, ERROR_CALLBACK);
@@ -368,7 +367,6 @@ int Worker::retransmitTransaction(TransContainer& trans)
         }
         IPGConnection* conn = 0;
         ConnectionPool* pool = master;
-        string query = trans.trans->get_query()->get_query();
         string sender_id = "";
         string token = trans.token;
         getFreeConnection(&conn, &pool, ERROR_CALLBACK);
@@ -672,16 +670,16 @@ void Worker::onErrorTransaction(const Worker::TransContainer& trans, const strin
         IPGTransaction* trans_ = 0;
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {
             trans_ = new NonTransaction(this);
-            trans_->exec(trans.trans->get_query()->get_current_query()->clone());
+            trans_->exec(trans.trans->get_query(false)->clone());
             retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
             ret_size.inc((long long)trans_->get_size());
         } else if(trans.trans->get_type() == TR_POLICY ||
                 (trans.trans->get_type() == TR_NON && use_pipeline)){
-            IPGQuery* query = trans.trans->get_query();
-            int qsize = query->get_size();
+            IPGQuery* query = trans.trans->get_query(true);
+            int qsize = trans.trans->get_size();
             IPGQuery* q_ret = 0;
             if(qsize > 1) {
-                q_ret = query->get_current_query();
+                q_ret = trans.trans->get_query(false);
                 QueryChain* chain = dynamic_cast<QueryChain*>(query);
                 assert(chain);
                 chain->removeQuery(q_ret);

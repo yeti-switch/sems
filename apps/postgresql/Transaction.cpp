@@ -80,7 +80,6 @@ void IPGTransaction::check()
             if(is_finished()) {
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
-                saveLog("/home/alexey/pg_trans_logs");
                 //INFO("trans %p logs:\n%s", this, get_transaction_log().c_str());
                 return;
             }
@@ -192,6 +191,19 @@ bool IPGTransaction::merge(IPGTransaction* trans)
     return true;
 }
 
+IPGQuery * IPGTransaction::get_current_query(bool parent)
+{
+    if(!tr_impl->query) return 0;
+    if(parent) return tr_impl->query;
+    if(!is_pipeline()) return tr_impl->query->get_current_query();
+
+    QueryChain* chain = dynamic_cast<QueryChain*>(tr_impl->query);
+    if(!chain) return tr_impl->query;
+
+    int num = chain->get_result_got();
+    return chain->get_query(num);
+}
+
 static char buf_log[BUFSIZ];
 
 void IPGTransaction::add_log(const char* func_name, const char* file, int line, const char* format, ...)
@@ -210,6 +222,7 @@ void IPGTransaction::add_log(const char* func_name, const char* file, int line, 
     int sz = vsnprintf(buf_log, BUFSIZ, format, args);
     tlog.data.append(buf_log);
     va_end(args);
+    //DBG("%s", buf_log);
 }
 
 string& IPGTransaction::get_transaction_log()
@@ -339,11 +352,13 @@ void PGTransaction::fetch_result()
             ExecStatusType st = PQresultStatus(res);
             switch (st) {
             case PGRES_COMMAND_OK:
+                TRANS_LOG(parent, "command ok");
                 break;
             case PGRES_EMPTY_QUERY:
             case PGRES_BAD_RESPONSE:
             case PGRES_NONFATAL_ERROR:
             case PGRES_FATAL_ERROR: {
+                TRANS_LOG(parent, "error");
                 char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
                 parent->handler->onError(parent, error);
                 char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
@@ -351,9 +366,11 @@ void PGTransaction::fetch_result()
                 break;
             }
             case PGRES_SINGLE_TUPLE:
+                TRANS_LOG(parent, "single tuple");
                 single = true;
                 [[fallthrough]];
             case PGRES_TUPLES_OK:
+                TRANS_LOG(parent, "tuple ok");
                 make_result(res, single);
                 break;
             case PGRES_PIPELINE_SYNC:
@@ -370,6 +387,7 @@ void PGTransaction::fetch_result()
 
             PQclear(res);
             res = PQgetResult(*conn);
+            if(!res) query->put_result();
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
         res = PQgetResult(*conn);
@@ -576,6 +594,22 @@ bool DbTransaction<isolation, rw>::is_equal(IPGTransaction* trans)
         return dbtrans->il == il && dbtrans->wp == wp;
     } else if(IPGTransaction::is_equal(trans)) return true;
     return false;
+}
+
+template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
+IPGQuery * DbTransaction<isolation, rw>::get_current_query(bool parent)
+{
+    if(!tr_impl->query) return 0;
+    if(parent) return tr_impl->query;
+    if(!is_pipeline()) return tr_impl->query->get_current_query();
+
+    QueryChain* chain = dynamic_cast<QueryChain*>(tr_impl->query);
+    if(!chain) return tr_impl->query;
+
+    int num = chain->get_result_got();
+    if(num <= 1) return chain->get_query(0);
+    else if(num - 1 >= chain->get_size()) return chain->get_current_query();
+    return chain->get_query(num - 1);
 }
 
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>

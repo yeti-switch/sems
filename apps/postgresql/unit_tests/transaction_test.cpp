@@ -340,6 +340,8 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     NonTransaction pg1(&handler);
     QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     query->addQuery(new QueryParams("SELECT TTT", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     pg1.exec(query);
     server->addError("SELECT TTT", false);
 

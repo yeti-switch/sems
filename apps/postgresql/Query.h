@@ -53,6 +53,7 @@ struct IPGQuery
     virtual IPGQuery* get_current_query() = 0;
     virtual void set_finished() = 0;
     virtual IPGConnection* getConnection() = 0;
+    virtual void put_result() = 0;
 };
 
 class Query : public IPGQuery
@@ -78,6 +79,7 @@ public:
     IPGQuery* get_current_query() override { return this; }
     void set_finished() override { impl->set_finished(); }
     IPGConnection* getConnection() override { return impl->getConnection(); }
+    void put_result() override {}
 };
 
 class QueryParams : public Query
@@ -125,6 +127,7 @@ class QueryChain : public IPGQuery
     size_t current;
     bool is_sent;
     bool finished;
+    int got_result;
     QueryChain()
     : current(0)
     , is_sent(false)
@@ -132,7 +135,8 @@ class QueryChain : public IPGQuery
 public:
     QueryChain(IPGQuery* first)
     : is_sent(false)
-    , finished(false){
+    , finished(false)
+    , got_result(0){
         addQuery(first);
         current = 0;
     }
@@ -146,6 +150,8 @@ public:
     void reset(IPGConnection* conn) override;
     IPGQuery* clone() override;
     IPGQuery* get_current_query() override;
+    void put_result() override;
+    int get_result_got() { return got_result; }
 
     bool is_single_mode() override { return get_current_query()->is_single_mode(); }
     bool is_finished() override { return is_sent || finished; }
