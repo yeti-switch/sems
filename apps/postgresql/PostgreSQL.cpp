@@ -216,6 +216,27 @@ void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
     }
 }
 
+void PostgreSQL::requestReset(const AmArg& args, AmArg&)
+{
+    if(args.size() != 2 ||
+       !isArgCStr(args[0])) {
+        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    }
+
+    int fd = 0;
+    if(isArgInt(args[1]))
+        fd = args[1].asInt();
+    else if(isArgCStr(args[1])) {
+        if(!str2int(args[1].asCStr(), fd)) {
+            throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+        }
+    } else {
+        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    }
+
+    postEvent(new ResetEvent(args[0].asCStr(), fd));
+}
+
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
@@ -223,6 +244,7 @@ void PostgreSQL::init_rpc_tree()
         reg_method(show, "config", "show config", &PostgreSQL::showConfig);
     AmArg &request = reg_leaf(root,"request");
         reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
+        reg_method(request, "reset", "reset pq connection", &PostgreSQL::requestReset);
 }
 
 void PostgreSQL::process(AmEvent* ev)
@@ -449,8 +471,10 @@ void PostgreSQL::onReset(const ResetEvent& e) {
     AmLock lock(mutex);
     for(auto& dest : workers) {
         if(dest.first == e.worker_name) {
-            if(e.for_pool) {
-                dest.second->resetPools(e.type);
+            if(e.type == ResetEvent::PoolTypeReset) {
+                dest.second->resetPools(e.data.type);
+            } else if(e.type == ResetEvent::FdReset){
+                dest.second->resetConnection(e.data.fd);
             } else {
                 dest.second->resetPools();
             }

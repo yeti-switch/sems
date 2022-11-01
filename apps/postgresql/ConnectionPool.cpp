@@ -611,6 +611,14 @@ void Worker::resetPools(PGWorkerPoolCreate::PoolType type)
     if(slave && type == PGWorkerPoolCreate::Slave) slave->resetConnections();
 }
 
+void Worker::resetConnection(int fd)
+{
+    IPGConnection* conn = 0;
+    if(master) conn = master->getConnection(fd);
+    if(!conn && slave) conn = slave->getConnection(fd);
+    if(conn) conn->reset();
+}
+
 void Worker::resetPools()
 {
     if(master) master->resetConnections();
@@ -844,6 +852,15 @@ void ConnectionPool::resetConnections()
     for(auto& conn : connections) {
         conn->reset();
     }
+}
+
+IPGConnection * ConnectionPool::getConnection(int fd)
+{
+    for(auto& conn : connections) {
+        if(fd == conn->getSocket())
+            return conn;
+    }
+    return 0;
 }
 
 void ConnectionPool::usePipeline(bool is_pipeline)

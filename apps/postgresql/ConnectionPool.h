@@ -93,6 +93,7 @@ public:
     void runTransaction(IPGTransaction* trans, const string& sender_id, const string& token);
     void configure(const PGWorkerConfig& e);
     void resetPools(PGWorkerPoolCreate::PoolType type);
+    void resetConnection(int fd);
     void resetPools();
 
     void onFireTransaction(const TransContainer& trans);
@@ -140,6 +141,7 @@ public:
     bool checkConnection(IPGConnection* conn, bool connect);
     void runTransactionForPool(IPGTransaction* trans);
     void resetConnections();
+    IPGConnection* getConnection(int fd);
     void usePipeline(bool is_pipeline);
 
     void getStats(AmArg& stats, uint32_t conn_lifetime);
