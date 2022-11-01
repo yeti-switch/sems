@@ -117,6 +117,9 @@ QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
         if(isArgInt(val)) {
             oid = INT2OID;
             *((int16_t*)binvalue) = ntohs((int16_t)val.asInt());
+        } else if(isArgUndef(val)){
+            oid = INT2OID;
+            *((int16_t*)binvalue) = 0;
         } else {
             ERROR("AmArg Int expected for smallint/int2. got:%s. save as null",
                   AmArg::print(val).data());
@@ -130,8 +133,24 @@ QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
         } else if(isArgLongLong(val)) {
             oid = INT8OID;
             *((int64_t*)binvalue) = ntohll(val.asLongLong());
+        } else if(isArgUndef(val)){
+            oid = INT8OID;
+            *((int16_t*)binvalue) = 0;
         } else {
             ERROR("AmArg Int/LongLong expected for bigint/int8. got:%s. save as null",
+                  AmArg::print(val).data());
+            oid = INVALIDOID;
+        }
+        break;
+    case JSONOID:
+        if(isArgCStr(val)) {
+            oid = JSONOID;
+            strvalue = val.asCStr();
+        } else if(isArgUndef(val)){
+            oid = JSONOID;
+            strvalue = "null";
+        } else {
+            ERROR("AmArg Json expected for string. got:%s. save as null",
                   AmArg::print(val).data());
             oid = INVALIDOID;
         }
@@ -468,11 +487,9 @@ vector<QueryParam> getParams(const vector<AmArg>& params)
                 AmArg &a = param["pg"];
                 if(isArgArray(a) &&
                    a.size()==2 &&
-                   isArgCStr(a[0]))
-                {
-                    qparams.emplace_back(
-                        pg_typname2oid(a[0].asCStr()),
-                        a[1]);
+                   isArgCStr(a[0])) {
+                    qparams.emplace_back(pg_typname2oid(a[0].asCStr()),
+                                         a[1]);
                 } else {
                     ERROR("unexpected format in typed param: %s. add as json",
                           AmArg::print(param).data());
