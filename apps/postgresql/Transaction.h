@@ -8,12 +8,14 @@
 #include <postgresql/libpq-fe.h>
 #include <string>
 
-#define TRANS_LOG(trans, log, ...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, log __VA_OPT__(,) __VA_ARGS__)
+#define TRANS_LOG(trans, fmt, args...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
 
 using std::string;
 
 class IPGConnection;
 class IPGTransaction;
+
+extern char pg_log_buf[BUFSIZ];
 
 struct ITransactionHandler
 {
@@ -51,8 +53,10 @@ protected:
     virtual void reset(IPGConnection* conn);
 public:
     ITransaction(IPGTransaction* p, TransactionType t)
-    : conn(0), query(0), parent(p), type(t), synced(false)
-    , sync_sent(false), pipeline_aborted(false) {}
+     : conn(0), query(0), parent(p), type(t), sync_sent(false)
+     , synced(false), pipeline_aborted(false)
+    {}
+
     virtual ~ITransaction() {
         if(query)
             delete query;
@@ -96,7 +100,7 @@ protected:
     virtual IPGQuery* get_current_query(bool parent);
 
     IPGTransaction(ITransaction* impl, ITransactionHandler* handler)
-        : tr_impl(impl), handler(handler)
+        : handler(handler), tr_impl(impl)
         , status(ACTIVE), state(BEGIN)
         , trans_log_written(false)
     {}
@@ -130,7 +134,8 @@ public:
     };
     bool trans_log_written;
     vector<TransLog> translog;
-    void add_log(const char* func, const char* file, int line, const char* format, ...);
+    template<class... Types> void add_log(const char* func, const char* file, int line,
+                                          const char* format, Types... args);
     string& get_transaction_log();
     bool saveLog(const char* path);
 };
@@ -254,3 +259,24 @@ public:
     ConfigTransaction(const ConfigTransaction& trans);
     ~ConfigTransaction(){}
 };
+
+template<class... Types> void IPGTransaction::add_log(const char* func, const char* file, int line,
+                                      const char* format, Types... args)
+{
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+
+    translog.emplace_back();
+    TransLog& tlog = translog.back();
+
+    localtime_r(&tv.tv_sec,&tlog.time);
+    tlog.file = file;
+    tlog.line = line;
+
+    if constexpr (sizeof...(args) > 0) {
+        snprintf(pg_log_buf, sizeof(pg_log_buf), format, args...);
+        tlog.data = pg_log_buf;
+    } else {
+        tlog.data = format;
+    }
+}

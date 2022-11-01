@@ -8,6 +8,8 @@
 
 #define MAX_BUF_SIZE 256
 
+char pg_log_buf[BUFSIZ];
+
 int IPGTransaction::execute()
 {
      if(tr_impl->query->exec() < 0)
@@ -210,35 +212,14 @@ IPGQuery * IPGTransaction::get_current_query(bool parent)
     return chain->get_query(num);
 }
 
-static char buf_log[BUFSIZ];
-
-void IPGTransaction::add_log(const char* func_name, const char* file, int line, const char* format, ...)
-{
-    string logstr;
-    va_list args;
-    va_start(args, format);
-
-    translog.emplace_back();
-    TransLog& tlog = translog.back();
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    localtime_r(&tv.tv_sec,&tlog.time);
-    tlog.file = file;
-    tlog.line = line;
-    vsnprintf(buf_log, BUFSIZ, format, args);
-    tlog.data.append(buf_log);
-    va_end(args);
-    DBG("%s", buf_log);
-}
-
 string& IPGTransaction::get_transaction_log()
 {
     static string result_log;
     for(auto& log : translog) {
-        int sz = strftime(buf_log, 26, "%b %d %T",&log.time);
-        result_log.append(buf_log, sz);
-        sz = snprintf(buf_log, BUFSIZ, "[%s:%d] %s\n", log.file.c_str(), log.line, log.data.c_str());
-        result_log.append(buf_log, sz);
+        int sz = strftime(pg_log_buf, 26, "%b %d %T",&log.time);
+        result_log.append(pg_log_buf, sz);
+        sz = snprintf(pg_log_buf, sizeof(pg_log_buf), "[%s:%d] %s\n", log.file.c_str(), log.line, log.data.c_str());
+        result_log.append(pg_log_buf, sz);
     }
     return result_log;
 }
@@ -246,9 +227,11 @@ string& IPGTransaction::get_transaction_log()
 bool IPGTransaction::saveLog(const char* path)
 {
     if(trans_log_written) return true;
+
     string dirPath = path;
     if(dirPath.empty()) return false;
     auto dirPathes = explode(dirPath, "/", true);
+
     std::string dir;
     for(auto &dirName : dirPathes) {
         dir += "/";
@@ -261,18 +244,24 @@ bool IPGTransaction::saveLog(const char* path)
     string& result_log = get_transaction_log();
     struct timeval tv;
     struct tm t;
+
     gettimeofday(&tv,NULL);
     localtime_r(&tv.tv_sec,&t);
+
     string file_path;
-    strftime(buf_log, 26, "%d-%b-%T",&t);
-    file_path.append(buf_log);
-    snprintf(buf_log, PATH_MAX, "%s/%d_%s.log", path, get_conn()->getSocket(), file_path.c_str());
-    file_path = buf_log;
+    strftime(pg_log_buf, 26, "%d-%b-%T",&t);
+    file_path.append(pg_log_buf);
+    snprintf(pg_log_buf, PATH_MAX, "%s/%d_%s.log", path, get_conn()->getSocket(), file_path.c_str());
+    file_path = pg_log_buf;
+
     FILE* f = fopen(file_path.c_str(), "wb");
     if(!f) return false;
+
     fwrite(result_log.c_str(), result_log.size(), 1, f);
     fclose(f);
+
     trans_log_written = true;
+
     return true;
 }
 
