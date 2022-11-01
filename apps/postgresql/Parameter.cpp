@@ -135,7 +135,7 @@ QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
             *((int64_t*)binvalue) = ntohll(val.asLongLong());
         } else if(isArgUndef(val)){
             oid = INT8OID;
-            *((int16_t*)binvalue) = 0;
+            *((int64_t*)binvalue) = 0;
         } else {
             ERROR("AmArg Int/LongLong expected for bigint/int8. got:%s. save as null",
                   AmArg::print(val).data());
@@ -146,7 +146,7 @@ QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
         if(isArgCStr(val)) {
             oid = JSONOID;
             strvalue = val.asCStr();
-        } else if(isArgUndef(val)){
+        } else if(isArgUndef(val)) {
             oid = JSONOID;
             strvalue = "null";
         } else {
