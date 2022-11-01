@@ -5,6 +5,7 @@
 #include <jsonArg.h>
 #include <stdarg.h>
 #include <AmUtils.h>
+#include <iomanip>
 
 #define MAX_BUF_SIZE 256
 
@@ -212,16 +213,18 @@ IPGQuery * IPGTransaction::get_current_query(bool parent)
     return chain->get_query(num);
 }
 
-string& IPGTransaction::get_transaction_log()
+string IPGTransaction::get_transaction_log()
 {
-    static string result_log;
+    std::stringstream ss;
+    std::time_t t;
+
     for(auto& log : translog) {
-        int sz = strftime(pg_log_buf, 26, "%b %d %T",&log.time);
-        result_log.append(pg_log_buf, sz);
-        sz = snprintf(pg_log_buf, sizeof(pg_log_buf), "[%s:%d] %s\n", log.file.c_str(), log.line, log.data.c_str());
-        result_log.append(pg_log_buf, sz);
+        t = std::chrono::system_clock::to_time_t(log.time);
+        ss << std::put_time(std::localtime(&t), "%b %d %T\n");
+        ss << "[" << log.file << ": " << log.line << "] " << log.data << std::endl;
     }
-    return result_log;
+
+    return ss.str();
 }
 
 bool IPGTransaction::saveLog(const char* path)
@@ -241,7 +244,7 @@ bool IPGTransaction::saveLog(const char* path)
         }
     }
 
-    string& result_log = get_transaction_log();
+    string result_log(get_transaction_log());
     struct timeval tv;
     struct tm t;
 

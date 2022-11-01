@@ -7,6 +7,7 @@
 
 #include <postgresql/libpq-fe.h>
 #include <string>
+#include <chrono>
 
 #define TRANS_LOG(trans, fmt, args...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
 
@@ -126,17 +127,22 @@ public:
 
     struct TransLog
     {
-        struct tm time;
+        std::chrono::system_clock::time_point time;
         string func;
         string file;
         int line;
         string data;
+        TransLog(const char* file, int line)
+          : time(std::chrono::system_clock::now()),
+            file(file),
+            line(line)
+        {}
     };
     bool trans_log_written;
     vector<TransLog> translog;
     template<class... Types> void add_log(const char* func, const char* file, int line,
                                           const char* format, Types... args);
-    string& get_transaction_log();
+    string get_transaction_log();
     bool saveLog(const char* path);
 };
 
@@ -263,15 +269,8 @@ public:
 template<class... Types> void IPGTransaction::add_log(const char* func, const char* file, int line,
                                       const char* format, Types... args)
 {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-
-    translog.emplace_back();
+    translog.emplace_back(file,line);
     TransLog& tlog = translog.back();
-
-    localtime_r(&tv.tv_sec,&tlog.time);
-    tlog.file = file;
-    tlog.line = line;
 
     if constexpr (sizeof...(args) > 0) {
         snprintf(pg_log_buf, sizeof(pg_log_buf), format, args...);
