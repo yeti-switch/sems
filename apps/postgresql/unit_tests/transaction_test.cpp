@@ -255,10 +255,11 @@ TEST_F(PostgresqlTest, ChainQueryTest)
     arg_str["data"] = "test";
     q_insert->addParam(QueryParam(arg_str));
 
-    QueryChain* q_chain = new QueryChain(new Query("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false));
+    QueryChain* q_chain = new QueryChain(new QueryParams("CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);", false, false));
     q_chain->addQuery(q_insert);
-    q_chain->addQuery(new Query("SELECT * FROM test;", true));
-    q_chain->addQuery(new Query("DROP TABLE test;", false));
+    q_chain->addQuery(new QueryParams("SELECT * FROM pg_catalog.pg_tables", true, false));
+    q_chain->addQuery(new QueryParams("SELECT * FROM test;", true, false));
+    q_chain->addQuery(new QueryParams("DROP TABLE test;", false, false));
 
     NonTransaction pg_create(&handler);
     pg_create.exec(q_chain);
@@ -340,6 +341,8 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     NonTransaction pg1(&handler);
     QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     query->addQuery(new QueryParams("SELECT TTT", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
     pg1.exec(query);
     server->addError("SELECT TTT", false);
 

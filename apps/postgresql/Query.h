@@ -34,6 +34,7 @@ public:
     string get_query() { return query; }
     void set_finished() { finished = true; }
     void reset(IPGConnection* conn_) { conn = conn_; is_send = false; finished = false; }
+    IPGConnection* getConnection() { return conn; }
     virtual int exec() = 0;
 };
 
@@ -51,6 +52,9 @@ struct IPGQuery
     virtual IPGQuery* clone() = 0;
     virtual IPGQuery* get_current_query() = 0;
     virtual void set_finished() = 0;
+    virtual IPGConnection* getConnection() = 0;
+    virtual void put_result() = 0;
+    virtual uint32_t get_result_got() = 0;
 };
 
 class Query : public IPGQuery
@@ -65,7 +69,7 @@ public:
         delete impl;
     }
 
-    int exec() override { /*DBG("exec: %s", impl->get_query().c_str()); */return impl->exec(); }
+    int exec() override;
     bool is_single_mode() override { return impl->is_single_mode(); }
     bool is_finished() override { return impl->is_finished(); }
     const char* get_last_error() override { return impl->get_last_error(); }
@@ -75,6 +79,9 @@ public:
     IPGQuery* clone() override { return new Query(impl->get_query(), impl->is_single_mode()); }
     IPGQuery* get_current_query() override { return this; }
     void set_finished() override { impl->set_finished(); }
+    IPGConnection* getConnection() override { return impl->getConnection(); }
+    void put_result() override {}
+    uint32_t get_result_got() override { return 1; };
 };
 
 class QueryParams : public Query
@@ -122,6 +129,7 @@ class QueryChain : public IPGQuery
     size_t current;
     bool is_sent;
     bool finished;
+    int got_result;
     QueryChain()
     : current(0)
     , is_sent(false)
@@ -129,7 +137,8 @@ class QueryChain : public IPGQuery
 public:
     QueryChain(IPGQuery* first)
     : is_sent(false)
-    , finished(false){
+    , finished(false)
+    , got_result(0){
         addQuery(first);
         current = 0;
     }
@@ -143,6 +152,8 @@ public:
     void reset(IPGConnection* conn) override;
     IPGQuery* clone() override;
     IPGQuery* get_current_query() override;
+    void put_result() override;
+    uint32_t get_result_got() override { return got_result; }
 
     bool is_single_mode() override { return get_current_query()->is_single_mode(); }
     bool is_finished() override { return is_sent || finished; }
@@ -151,6 +162,7 @@ public:
     void set_finished() override { finished = true; }
     uint32_t get_size() override { return (uint32_t)childs.size(); }
     IPGQuery* get_query(int num) { return childs[num]; }
+    IPGConnection* getConnection() override { return childs[current]->getConnection(); }
 };
 
 class PGQuery : public IQuery

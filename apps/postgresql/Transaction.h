@@ -7,6 +7,9 @@
 
 #include <postgresql/libpq-fe.h>
 #include <string>
+
+#define TRANS_LOG(trans, log, ...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, log __VA_OPT__(,) __VA_ARGS__)
+
 using std::string;
 
 class IPGConnection;
@@ -86,13 +89,16 @@ protected:
     virtual int end() { state = END; return 1; }
     virtual int rollback() { state = END; return 1; }
     virtual int execute();
-    virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() && !tr_impl->is_pipeline_aborted() : tr_impl->query->is_finished(); }
+    virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() : tr_impl->query->is_finished(); }
     virtual bool is_equal(IPGTransaction* trans) { return trans->get_type() == get_type(); }
     virtual IPGTransaction* make_clone() = 0;
     virtual PGTransactionData policy() = 0;
+    virtual IPGQuery* get_current_query(bool parent);
 
     IPGTransaction(ITransaction* impl, ITransactionHandler* handler)
-        : tr_impl(impl), handler(handler), status(ACTIVE), state(BEGIN) {}
+        : tr_impl(impl), handler(handler)
+        , status(ACTIVE), state(BEGIN)
+        , wrote(false){}
 public:
     virtual ~IPGTransaction() { delete tr_impl; }
 
@@ -102,7 +108,7 @@ public:
     void reset(IPGConnection* conn);
     bool merge(IPGTransaction* trans);
     IPGTransaction* clone() { return make_clone(); }
-    IPGQuery* get_query() { return tr_impl->query; }
+    IPGQuery* get_query(bool parent = false) { return get_current_query(parent); }
     PGTransactionData get_policy() { return policy(); }
     bool is_pipeline() { return tr_impl->is_pipeline(); }
 
@@ -112,6 +118,20 @@ public:
     IPGConnection* get_conn() { return tr_impl->conn; }
     TransactionType get_type() { return tr_impl->type; }
     uint32_t get_size() { return tr_impl->query->get_size(); }
+
+    struct TransLog
+    {
+        struct tm time;
+        string func;
+        string file;
+        int line;
+        string data;
+    };
+    bool wrote;
+    vector<TransLog> translog;
+    void add_log(const char* func, const char* file, int line, const char* format, ...);
+    string& get_transaction_log();
+    bool saveLog(const char* path);
 };
 
 class PGTransaction : public ITransaction
@@ -173,8 +193,9 @@ class DbTransaction : public IPGTransaction
     int rollback() override;
     int end() override;
     bool is_equal(IPGTransaction* trans) override;
+    IPGQuery * get_current_query(bool parent) override;
     bool is_finished() override {
-        return IPGTransaction::is_finished() && state == END;
+        return IPGTransaction::is_finished() && state == END && !tr_impl->is_pipeline_aborted();
     }
     IPGTransaction* make_clone() override {
         return new DbTransaction<isolation, rw>(*this);

@@ -120,6 +120,7 @@ public:
 
     void getStats(AmArg& ret);
     void getConfig(AmArg& ret);
+    bool getConnectionLog(const AmArg& args);
 
     string get_name() { return name; }
 };
@@ -137,11 +138,11 @@ public:
     ~ConnectionPool();
 
     IPGConnection* getFreeConnection();
+    IPGConnection* getConnection(int fd);
     vector<IPGConnection*> getLifetimeOverConnections(time_t& nextTime);
     bool checkConnection(IPGConnection* conn, bool connect);
     void runTransactionForPool(IPGTransaction* trans);
     void resetConnections();
-    IPGConnection* getConnection(int fd);
     void usePipeline(bool is_pipeline);
 
     void getStats(AmArg& stats, uint32_t conn_lifetime);

@@ -6,19 +6,24 @@
 #include <vector>
 #include "PolicyFactory.h"
 #include "Connection.h"
+#include "postgresql_cfg.h"
 using std::vector;
 
 #define EPOLL_MAX_EVENTS    2048
 
 enum RpcMethodId {
-    MethodShowStats
+    MethodShowStats,
+    MethodShowConfig,
+    MethodTransLog
 };
 
 class PostgreSQLFactory
   : public AmDynInvokeFactory
+  , public AmConfigFactory
 {
     PostgreSQLFactory(const string& name)
       : AmDynInvokeFactory(name)
+      , AmConfigFactory(name)
     {
         PostgreSQL::instance();
     }
@@ -30,16 +35,22 @@ class PostgreSQLFactory
   public:
     DECLARE_FACTORY_INSTANCE(PostgreSQLFactory);
 
-    AmDynInvoke* getInstance()
-    {
+    AmDynInvoke* getInstance() {
         return PostgreSQL::instance();
     }
-    int onLoad()
-    {
+    int onLoad() {
         return PostgreSQL::instance()->onLoad();
     }
     void on_destroy() {
         PostgreSQL::instance()->stop();
+    }
+
+    int configure(const std::string& config) {
+        return PostgreSQL::instance()->configure(config);
+    }
+
+    int reconfigure(const std::string& config) {
+        return PostgreSQL::instance()->reconfigure(config);
     }
 };
 
@@ -84,6 +95,54 @@ int PostgreSQL::onLoad()
     }
     start();
     return 0;
+}
+
+void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
+{
+    char buf[2048];
+    char *s = buf;
+    char *e = s+sizeof(buf);
+
+    if(cfg->title) {
+        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
+            cfg->filename,cfg->line,cfg->name,cfg->title);
+    } else {
+        s += snprintf(s,e-s, "%s:%d [%s]: ",
+            cfg->filename,cfg->line,cfg->name);
+    }
+    s += vsnprintf(s,e-s,fmt,ap);
+
+    ERROR("%.*s",(int)(s-buf),buf);
+}
+
+int PostgreSQL::configure(const std::string& config)
+{
+    cfg_t *cfg = cfg_init(pg_opt, CFGF_NONE);
+    if(!cfg) return -1;
+
+    switch(cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS:
+        break;
+    case CFG_PARSE_ERROR:
+        ERROR("configuration of module %s parse error",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    default:
+        ERROR("unexpected error on configuration of module %s processing",MOD_NAME);
+        cfg_free(cfg);
+        return -1;
+    }
+
+    log_time = cfg_getint(cfg, PARAM_LOG_TIME_NAME);
+    log_dir = cfg_getstr(cfg, PARAM_LOG_DIR_NAME);
+
+    cfg_free(cfg);
+    return 0;
+}
+
+int PostgreSQL::reconfigure(const std::string& config)
+{
+    return configure(config);
 }
 
 int PostgreSQL::init()
@@ -134,7 +193,6 @@ void PostgreSQL::run()
                 break;
             } else {
                 bool is_connection = true;
-                AmLock lock(mutex);
                 for(auto& worker : workers) {
                     if(worker.second->processEvent(p)) {
                         is_connection = false;
@@ -150,7 +208,6 @@ void PostgreSQL::run()
     } while(running);
 
     {
-        AmLock lock(mutex);
         for(auto& worker : workers) delete worker.second;
         workers.clear();
     }
@@ -181,7 +238,6 @@ bool PostgreSQL::showStatistics(const string& connection_id,
 
 void PostgreSQL::showStats(const AmArg&, AmArg& ret)
 {
-    AmLock lock(mutex);
     AmArg& wrs_arr = ret["workers"];
     for(auto& dest : workers) {
         AmArg& worker = wrs_arr[dest.first.c_str()];
@@ -189,9 +245,32 @@ void PostgreSQL::showStats(const AmArg&, AmArg& ret)
     }
 }
 
+void PostgreSQL::getConnectionLog(const AmArg& params, AmArg& ret)
+{
+    bool res = false;
+    //AmArg& wrs_arr = ret["workers"];
+    for(auto& dest : workers) {
+        if(dest.first == params[0].asCStr()) {
+            AmArg p = params;
+            p.erase((size_t)0);
+            res = dest.second->getConnectionLog(p);
+        }
+    }
+    ret = res;
+}
+
+bool PostgreSQL::showConfiguration(const string& connection_id,
+                           const AmArg& request_id,
+                           const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodShowConfig, params));
+    return true;
+}
+
 void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
 {
-    AmLock lock(mutex);
     AmArg& wrs_arr = ret["workers"];
     for(auto& dest : workers) {
         AmArg& worker = wrs_arr[dest.first.c_str()];
@@ -216,35 +295,42 @@ void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
     }
 }
 
-void PostgreSQL::requestReset(const AmArg& args, AmArg&)
+bool PostgreSQL::transLog(const string& connection_id,
+                           const AmArg& request_id,
+                           const AmArg& params)
 {
-    if(args.size() != 2 ||
-       !isArgCStr(args[0])) {
-        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    if(params.size() != 3 ||
+       !isArgCStr(params[0]) ||
+       !isArgCStr(params[2])) {
+        throw AmSession::Exception(500, "usage: postgresql.request.get_connection_log <worker name> <connection fd> <file path>");
     }
 
     int fd = 0;
-    if(isArgInt(args[1]))
-        fd = args[1].asInt();
-    else if(isArgCStr(args[1])) {
-        if(!str2int(args[1].asCStr(), fd)) {
-            throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    if(isArgInt(params[1]))
+        fd = params[1].asInt();
+    else if(isArgCStr(params[1])) {
+        if(!str2int(params[1].asCStr(), fd)) {
+            throw AmSession::Exception(500, "usage: postgresql.request.get_connection_log <worker name> <connection fd> <file path>");
         }
     } else {
-        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+        throw AmSession::Exception(500, "usage: postgresql.request.get_connection_log <worker name> <connection fd> <file path>");
     }
 
-    postEvent(new ResetEvent(args[0].asCStr(), fd));
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodTransLog, params));
+    return true;
 }
 
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
         reg_method(show, "stats", "show statistics", &PostgreSQL::showStatistics);
-        reg_method(show, "config", "show config", &PostgreSQL::showConfig);
+        reg_method(show, "config", "show config", &PostgreSQL::showConfiguration);
     AmArg &request = reg_leaf(root,"request");
         reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
         reg_method(request, "reset", "reset pq connection", &PostgreSQL::requestReset);
+        reg_method(request, "get_connection_log", "get log of pq connection", &PostgreSQL::transLog);
 }
 
 void PostgreSQL::process(AmEvent* ev)
@@ -316,12 +402,21 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
         showStats(request.params, ret);
         postJsonRpcReply(request, ret);
     } break;
+    case MethodTransLog: {
+        AmArg ret;
+        getConnectionLog(request.params, ret);
+        postJsonRpcReply(request, ret);
+    } break;
+    case MethodShowConfig: {
+        AmArg ret;
+        showConfig(request.params, ret);
+        postJsonRpcReply(request, ret);
+    } break;
     }
 }
 
 Worker* PostgreSQL::getWorker(const PGQueryData& e)
 {
-    AmLock lock(mutex);
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
         if(!e.sender_id.empty())
@@ -344,7 +439,6 @@ bool PostgreSQL::checkQueryData(const PGQueryData& data)
 
 void PostgreSQL::onWorkerPoolCreate(const PGWorkerPoolCreate& e)
 {
-    AmLock lock(mutex);
     if(workers.find(e.worker_name) == workers.end()) {
         workers[e.worker_name] = new Worker(e.worker_name, epoll_fd);
     }
@@ -435,7 +529,6 @@ void PostgreSQL::onPrepareExecute(const PGPrepareExec& e)
 
 void PostgreSQL::onWorkerDestroy(const PGWorkerDestroy& e)
 {
-    AmLock lock(mutex);
     auto worker_it = workers.find(e.worker_name);
     if(worker_it != workers.end()) {
         delete worker_it->second;
@@ -447,7 +540,6 @@ void PostgreSQL::onWorkerDestroy(const PGWorkerDestroy& e)
 
 void PostgreSQL::onWorkerConfig(const PGWorkerConfig& e)
 {
-    AmLock lock(mutex);
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
         return;
@@ -458,7 +550,6 @@ void PostgreSQL::onWorkerConfig(const PGWorkerConfig& e)
 
 void PostgreSQL::onSetSearchPath(const PGSetSearchPath& e)
 {
-    AmLock lock(mutex);
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
         return;
@@ -468,7 +559,6 @@ void PostgreSQL::onSetSearchPath(const PGSetSearchPath& e)
 }
 
 void PostgreSQL::onReset(const ResetEvent& e) {
-    AmLock lock(mutex);
     for(auto& dest : workers) {
         if(dest.first == e.worker_name) {
             if(e.type == ResetEvent::PoolTypeReset) {

@@ -3,6 +3,7 @@
 #include <log.h>
 #include <netinet/in.h>
 #include <jsonArg.h>
+#include <stdarg.h>
 #include <AmUtils.h>
 
 #define MAX_BUF_SIZE 256
@@ -47,7 +48,7 @@ void IPGTransaction::check()
     bool next;
 
     do {
-        //DBG("IPGTransaction::check() in do while(%u)", next);
+        TRANS_LOG(this, "IPGTransaction::check() in do while(%u)", next);
 
         if(!tr_impl->query) {
             ERROR("no query for transaction");
@@ -65,6 +66,7 @@ void IPGTransaction::check()
             if(tr_impl->status == PQTRANS_INERROR) {
                 ERROR("logical error. tr_impl->status:PQTRANS_INERROR for status:FINISH");
             }
+
             //transaction is finished
             break;
         }
@@ -77,6 +79,7 @@ void IPGTransaction::check()
             if(is_finished()) {
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
+                TRANS_LOG(this, "transaction finished get %u results", get_query(true)->get_result_got());
                 return;
             }
             next = true;
@@ -84,7 +87,7 @@ void IPGTransaction::check()
 
         case PQTRANS_IDLE:
         case PQTRANS_INTRANS:
-            //DBG("status idle - send query");
+            TRANS_LOG(this, "status idle - send query");
             next = is_pipeline();
 
             //BEGIN request
@@ -142,7 +145,7 @@ void IPGTransaction::check()
             break;
 
         case PQTRANS_INERROR:
-            //DBG("status aborted - roolback");
+            TRANS_LOG(this, "status aborted - roolback");
             status = ERROR;
             ret = rollback();
             if(ret < 0) {
@@ -191,6 +194,85 @@ bool IPGTransaction::merge(IPGTransaction* trans)
     return true;
 }
 
+IPGQuery * IPGTransaction::get_current_query(bool parent)
+{
+    if(!tr_impl->query) return 0;
+    if(parent) return tr_impl->query;
+    if(!is_pipeline()) return tr_impl->query->get_current_query();
+
+    QueryChain* chain = dynamic_cast<QueryChain*>(tr_impl->query);
+    if(!chain) return tr_impl->query;
+
+    int num = chain->get_result_got();
+    return chain->get_query(num);
+}
+
+static char buf_log[BUFSIZ];
+
+void IPGTransaction::add_log(const char* func_name, const char* file, int line, const char* format, ...)
+{
+    string logstr;
+    va_list args;
+    va_start(args, format);
+
+    translog.emplace_back();
+    TransLog& tlog = translog.back();
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    localtime_r(&tv.tv_sec,&tlog.time);
+    tlog.file = file;
+    tlog.line = line;
+    vsnprintf(buf_log, BUFSIZ, format, args);
+    tlog.data.append(buf_log);
+    va_end(args);
+    DBG("%s", buf_log);
+}
+
+string& IPGTransaction::get_transaction_log()
+{
+    static string result_log;
+    for(auto& log : translog) {
+        int sz = strftime(buf_log, 26, "%b %d %T",&log.time);
+        result_log.append(buf_log, sz);
+        sz = snprintf(buf_log, BUFSIZ, "[%s:%d] %s\n", log.file.c_str(), log.line, log.data.c_str());
+        result_log.append(buf_log, sz);
+    }
+    return result_log;
+}
+
+bool IPGTransaction::saveLog(const char* path)
+{
+    if(wrote) return true;
+    string dirPath = path;
+    if(dirPath.empty()) return false;
+    auto dirPathes = explode(dirPath, "/", true);
+    std::string dir;
+    for(auto &dirName : dirPathes) {
+        dir += "/";
+        dir += dirName;
+        if(access(dir.c_str(), 0) != 0) {
+            mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        }
+    }
+
+    string& result_log = get_transaction_log();
+    struct timeval tv;
+    struct tm t;
+    gettimeofday(&tv,NULL);
+    localtime_r(&tv.tv_sec,&t);
+    string file_path;
+    strftime(buf_log, 26, "%d-%b-%T",&t);
+    file_path.append(buf_log);
+    snprintf(buf_log, PATH_MAX, "%s/%d_%s.log", path, get_conn()->getSocket(), file_path.c_str());
+    file_path = buf_log;
+    FILE* f = fopen(file_path.c_str(), "wb");
+    if(!f) return false;
+    fwrite(result_log.c_str(), result_log.size(), 1, f);
+    fclose(f);
+    wrote = true;
+    return true;
+}
+
 PGTransaction::PGTransaction(IPGTransaction* h, TransactionType t)
 : ITransaction(h, t){}
 
@@ -204,7 +286,7 @@ bool PGTransaction::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sent) {
-        //DBG("send Sync");
+        TRANS_LOG(parent, "send Sync");
         conn->syncPipeline();
         sync_sent = true;
     }
@@ -252,7 +334,7 @@ void PGTransaction::make_result(PGresult* res, bool single)
         if(single) parent->handler->onTuple(parent, row);
         result.push(row);
     }
-    //DBG("result: %s", AmArg::print(result).c_str());
+    TRANS_LOG(parent, "result: %s", AmArg::print(result).c_str());
 }
 
 void PGTransaction::fetch_result()
@@ -266,18 +348,20 @@ void PGTransaction::fetch_result()
     do {
         if(!res) {
             res = PQgetResult(*conn);
-            //DBG("PQgetResult(*conn)) = %p", res);
+            TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
         while(res) {
             bool single = false;
             ExecStatusType st = PQresultStatus(res);
             switch (st) {
             case PGRES_COMMAND_OK:
+                TRANS_LOG(parent, "command ok");
                 break;
             case PGRES_EMPTY_QUERY:
             case PGRES_BAD_RESPONSE:
             case PGRES_NONFATAL_ERROR:
             case PGRES_FATAL_ERROR: {
+                TRANS_LOG(parent, "error");
                 char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
                 parent->handler->onError(parent, error ? error : "");
                 char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
@@ -285,17 +369,19 @@ void PGTransaction::fetch_result()
                 break;
             }
             case PGRES_SINGLE_TUPLE:
+                TRANS_LOG(parent, "single tuple");
                 single = true;
                 [[fallthrough]];
             case PGRES_TUPLES_OK:
+                TRANS_LOG(parent, "tuple ok");
                 make_result(res, single);
                 break;
             case PGRES_PIPELINE_SYNC:
-                //DBG("pipeline synced");
+                TRANS_LOG(parent, "pipeline synced");
                 synced = true;
                 break;
             case PGRES_PIPELINE_ABORTED:
-                //DBG("pipeline aborted");
+                TRANS_LOG(parent, "pipeline aborted");
                 pipeline_aborted = true;
                 break;
             default:
@@ -304,10 +390,11 @@ void PGTransaction::fetch_result()
 
             PQclear(res);
             res = PQgetResult(*conn);
-            //DBG("PQgetResult(*conn)) = %p", res);
+            if(!res) query->put_result();
+            TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
         res = PQgetResult(*conn);
-        //DBG("PQgetResult(*conn)) = %p", res);
+        TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
     } while (res);
 }
 
@@ -462,7 +549,7 @@ int DbTransaction<isolation, rw>::begin()
         int ret = begin_q->exec();
         delete begin_q;
         state = BODY;
-        //DBG("exec: %s", begin_cmd);
+        TRANS_LOG(this, "exec: %s", begin_cmd);
         return ret > 0 ? is_pipeline() : -1;
     }
     return 1;
@@ -496,7 +583,7 @@ int DbTransaction<isolation, rw>::rollback()
         state = END;
         tr_impl->pipeline_aborted = false;
         if(ret) tr_impl->query->set_finished();
-        //DBG("exec: ROLLBACK");
+        TRANS_LOG(this, "exec: ROLLBACK");
         return ret ? 0 : -1;
     }
     return 1;
@@ -513,6 +600,22 @@ bool DbTransaction<isolation, rw>::is_equal(IPGTransaction* trans)
 }
 
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
+IPGQuery * DbTransaction<isolation, rw>::get_current_query(bool parent)
+{
+    if(!tr_impl->query) return 0;
+    if(parent) return tr_impl->query;
+    if(!is_pipeline()) return tr_impl->query->get_current_query();
+
+    QueryChain* chain = dynamic_cast<QueryChain*>(tr_impl->query);
+    if(!chain) return tr_impl->query;
+
+    uint32_t num = chain->get_result_got();
+    if(num <= 1) return chain->get_query(0);
+    else if(num - 1 >= chain->get_size()) return chain->get_current_query();
+    return chain->get_query(num - 1);
+}
+
+template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
 int DbTransaction<isolation, rw>::end()
 {
     if(!get_conn()) {
@@ -525,7 +628,7 @@ int DbTransaction<isolation, rw>::end()
         int ret = end_q->exec();
         delete end_q;
         state = END;
-        //DBG("exec: END");
+        TRANS_LOG(this, "exec: END");
         return ret ? 0 : -1;
     }
     return 1;

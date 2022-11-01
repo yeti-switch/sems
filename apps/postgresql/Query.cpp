@@ -1,5 +1,6 @@
 #include "Query.h"
 #include "Connection.h"
+#include "Transaction.h"
 
 int PGQuery::exec()
 {
@@ -99,10 +100,17 @@ int PGQueryPrepared::exec()
     return ret ? 1 : -1;
 }
 
+int Query::exec()
+{
+    TRANS_LOG(getConnection()->getCurrentTransaction(), "exec: %s", impl->get_query().c_str());
+    return impl->exec();
+}
+
 int QueryChain::exec()
 {
     if(current == childs.size()) return 0;
-    //DBG("exec %zu: %s", current, childs[current]->get_query().c_str());
+    TRANS_LOG(getConnection()->getCurrentTransaction(),
+              "exec %zu: %s", current, childs[current]->get_query().c_str());
     int ret = childs[current]->exec();
     if(ret > 0) is_sent = true;
     if(ret > 0 && current + 1 != childs.size()) {
@@ -117,6 +125,11 @@ IPGQuery * QueryChain::get_current_query()
     if(!current) return childs[current];
     else if(childs[current]->is_finished()) return childs[current];
     else return childs[current-1];
+}
+
+void QueryChain::put_result()
+{
+    got_result++;
 }
 
 void QueryChain::addQuery(IPGQuery* q)

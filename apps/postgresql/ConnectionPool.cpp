@@ -86,6 +86,26 @@ void Worker::getStats(AmArg& ret)
         slave->getStats(ret, conn_lifetime);
 }
 
+bool Worker::getConnectionLog(const AmArg& args)
+{
+    int fd = 0;
+    if(isArgInt(args[0]))
+        fd = args[0].asInt();
+    else if(isArgCStr(args[0]))
+        str2int(args[0].asCStr(), fd);
+    IPGConnection* conn = 0;
+    if(master) conn = master->getConnection(fd);
+    if(!conn && slave) conn = master->getConnection(fd);
+
+    if(!conn) return false;
+
+    IPGTransaction* trans = conn->getCurrentTransaction();
+    if(!trans) return false;
+
+    trans->wrote = false;
+    return trans->saveLog(args[1].asCStr());
+}
+
 void Worker::onConnect(IPGConnection* conn) {
     INFO("connection %s:%p/%s success", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, true) && slave) slave->checkConnection(conn, true);
@@ -326,7 +346,6 @@ int Worker::retransmitTransaction(TransContainer& trans)
     if(!trans.currentPool) {
         IPGConnection* conn = 0;
         ConnectionPool* pool = 0;
-        string query = trans.trans->get_query()->get_query();
         string sender_id = trans.sender_id;
         string token = trans.token;
         getFreeConnection(&conn, &pool, ERROR_CALLBACK);
@@ -352,7 +371,6 @@ int Worker::retransmitTransaction(TransContainer& trans)
         }
         IPGConnection* conn = 0;
         ConnectionPool* pool = master;
-        string query = trans.trans->get_query()->get_query();
         string sender_id = "";
         string token = trans.token;
         getFreeConnection(&conn, &pool, ERROR_CALLBACK);
@@ -664,16 +682,16 @@ void Worker::onErrorTransaction(const Worker::TransContainer& trans, const strin
         IPGTransaction* trans_ = 0;
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {
             trans_ = new NonTransaction(this);
-            trans_->exec(trans.trans->get_query()->get_current_query()->clone());
+            trans_->exec(trans.trans->get_query(false)->clone());
             retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
             ret_size.inc((long long)trans_->get_size());
         } else if(trans.trans->get_type() == TR_POLICY ||
                 (trans.trans->get_type() == TR_NON && use_pipeline)){
-            IPGQuery* query = trans.trans->get_query();
-            int qsize = query->get_size();
+            IPGQuery* query = trans.trans->get_query(true);
+            int qsize = trans.trans->get_size();
             IPGQuery* q_ret = 0;
             if(qsize > 1) {
-                q_ret = query->get_current_query();
+                q_ret = trans.trans->get_query(false);
                 QueryChain* chain = dynamic_cast<QueryChain*>(query);
                 assert(chain);
                 chain->removeQuery(q_ret);
@@ -723,6 +741,13 @@ void Worker::onTimer()
             wait_next_time = trans_it->createdTime + trans_wait_time;
             //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
             trans_it++;
+        }
+    }
+    for(auto trans_it = transactions.begin();
+        PostgreSQL::instance()->getLogTime() && trans_it != transactions.end();) {
+        if(current - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
+           trans_it->trans->get_status() == IPGTransaction::ACTIVE) {
+            trans_it->trans->saveLog(PostgreSQL::instance()->getLogDir().c_str());
         }
     }
 
@@ -809,6 +834,14 @@ IPGConnection * ConnectionPool::getFreeConnection()
     return 0;
 }
 
+IPGConnection * ConnectionPool::getConnection(int fd)
+{
+    for(auto& conn : connections) {
+        if(fd == conn->getSocket()) return conn;
+    }
+    return 0;
+}
+
 vector<IPGConnection*> ConnectionPool::getLifetimeOverConnections(time_t& nextTime)
 {
     vector<IPGConnection*> conns;
@@ -852,15 +885,6 @@ void ConnectionPool::resetConnections()
     for(auto& conn : connections) {
         conn->reset();
     }
-}
-
-IPGConnection * ConnectionPool::getConnection(int fd)
-{
-    for(auto& conn : connections) {
-        if(fd == conn->getSocket())
-            return conn;
-    }
-    return 0;
 }
 
 void ConnectionPool::usePipeline(bool is_pipeline)
