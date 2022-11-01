@@ -295,6 +295,27 @@ void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
     }
 }
 
+void PostgreSQL::requestReset(const AmArg& args, AmArg&)
+{
+    if(args.size() != 2 ||
+       !isArgCStr(args[0])) {
+        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    }
+
+    int fd = 0;
+    if(isArgInt(args[1]))
+        fd = args[1].asInt();
+    else if(isArgCStr(args[1])) {
+        if(!str2int(args[1].asCStr(), fd)) {
+            throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+        }
+    } else {
+        throw AmSession::Exception(500, "usage: postgresql.request.reset <worker name> <connection fd>");
+    }
+
+    postEvent(new ResetEvent(args[0].asCStr(), fd));
+}
+
 bool PostgreSQL::transLog(const string& connection_id,
                            const AmArg& request_id,
                            const AmArg& params)
