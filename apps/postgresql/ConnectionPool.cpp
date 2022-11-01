@@ -744,7 +744,7 @@ void Worker::onTimer()
         }
     }
     for(auto trans_it = transactions.begin();
-        PostgreSQL::instance()->getLogTime() && trans_it != transactions.end();) {
+        PostgreSQL::instance()->getLogTime() && trans_it != transactions.end(); trans_it++) {
         if(current - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
            trans_it->trans->get_status() == IPGTransaction::ACTIVE) {
             trans_it->trans->saveLog(PostgreSQL::instance()->getLogDir().c_str());
