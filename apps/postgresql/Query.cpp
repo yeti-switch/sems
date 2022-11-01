@@ -166,6 +166,7 @@ IPGQuery * QueryChain::clone()
 void QueryChain::reset(IPGConnection* conn)
  {
     current = 0;
+    got_result = 0;
     is_sent = false;
     finished = false;
     for(auto& child : childs) child->reset(conn);
