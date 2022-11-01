@@ -98,7 +98,8 @@ protected:
     IPGTransaction(ITransaction* impl, ITransactionHandler* handler)
         : tr_impl(impl), handler(handler)
         , status(ACTIVE), state(BEGIN)
-        , wrote(false){}
+        , trans_log_written(false)
+    {}
 public:
     virtual ~IPGTransaction() { delete tr_impl; }
 
@@ -127,7 +128,7 @@ public:
         int line;
         string data;
     };
-    bool wrote;
+    bool trans_log_written;
     vector<TransLog> translog;
     void add_log(const char* func, const char* file, int line, const char* format, ...);
     string& get_transaction_log();

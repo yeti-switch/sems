@@ -242,7 +242,7 @@ string& IPGTransaction::get_transaction_log()
 
 bool IPGTransaction::saveLog(const char* path)
 {
-    if(wrote) return true;
+    if(trans_log_written) return true;
     string dirPath = path;
     if(dirPath.empty()) return false;
     auto dirPathes = explode(dirPath, "/", true);
@@ -269,7 +269,7 @@ bool IPGTransaction::saveLog(const char* path)
     if(!f) return false;
     fwrite(result_log.c_str(), result_log.size(), 1, f);
     fclose(f);
-    wrote = true;
+    trans_log_written = true;
     return true;
 }
 

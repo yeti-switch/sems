@@ -102,7 +102,7 @@ bool Worker::getConnectionLog(const AmArg& args)
     IPGTransaction* trans = conn->getCurrentTransaction();
     if(!trans) return false;
 
-    trans->wrote = false;
+    trans->trans_log_written = false;
     return trans->saveLog(args[1].asCStr());
 }
 
