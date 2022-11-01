@@ -74,7 +74,11 @@ void IPGConnection::check()
     }
 
     if(status == CONNECTION_OK && cur_transaction) {
-        cur_transaction->check();
+        if(cur_transaction->check()) {
+            //PQisBusy() returned 1 during transaction processing
+            CLASS_DBG("PQisBusy() returned 1 during transaction processing");
+            handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
+        }
         if(cur_transaction->get_status() == IPGTransaction::FINISH) {
             //DBG("finish transaction");
             queries_finished += cur_transaction->get_size();
@@ -200,7 +204,7 @@ bool PGConnection::flush_conn()
     if(pipe_status != PQ_PIPELINE_OFF) {
         PQsendFlushRequest(conn);
     }
-    return PQflush(conn);
+    return 1==PQflush(conn);
 }
 
 bool PGConnection::reset_conn()

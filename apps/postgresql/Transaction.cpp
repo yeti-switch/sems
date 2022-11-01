@@ -42,10 +42,11 @@ bool IPGTransaction::cancel()
      return false;
 }
 
-void IPGTransaction::check()
+int IPGTransaction::check()
 {
     int ret;
-    bool next;
+    int connection_is_busy = 0;
+    bool next = false;
 
     do {
         TRANS_LOG(this, "IPGTransaction::check() in do while(%u)", next);
@@ -75,12 +76,12 @@ void IPGTransaction::check()
         switch(tr_impl->status) {
 
         case PQTRANS_ACTIVE:
-            tr_impl->fetch_result();
+            connection_is_busy = tr_impl->fetch_result();
             if(is_finished()) {
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
                 TRANS_LOG(this, "transaction finished get %u results", get_query(true)->get_result_got());
-                return;
+                return connection_is_busy;
             }
             next = true;
             break;
@@ -102,11 +103,11 @@ void IPGTransaction::check()
                     tr_impl->query->get_last_error());
 
                 handler->onPQError(this, tr_impl->query->get_last_error());
-                return;
+                return 0;
             }
 
             //FIXME: ensures old code behavior but looks strange
-            if(0==ret) return;
+            if(0==ret) return 0;
 
             //query
             if(1==ret) {
@@ -122,7 +123,7 @@ void IPGTransaction::check()
                             tr_impl->query->get_last_error());
 
                         handler->onPQError(this, tr_impl->query->get_last_error());
-                        return;
+                        return 0;
                     }
                 } while(ret > 1);
             }
@@ -138,7 +139,7 @@ void IPGTransaction::check()
                         tr_impl->query->get_last_error());
 
                     handler->onPQError(this, tr_impl->query->get_last_error());
-                    return;
+                    return 0;
                 }
             }
 
@@ -154,7 +155,7 @@ void IPGTransaction::check()
                     tr_impl->query->get_last_error());
 
                 handler->onPQError(this, tr_impl->query->get_last_error());
-                return;
+                return 0;
             }
             if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
                 tr_impl->conn->syncPipeline();
@@ -163,6 +164,8 @@ void IPGTransaction::check()
             ERROR("unexpected tr_impl->status: %d", tr_impl->status);
         } //switch(tr_impl->status)
     } while(next);
+
+    return connection_is_busy;
 }
 
 bool IPGTransaction::exec(IPGQuery* query)
@@ -337,14 +340,14 @@ void PGTransaction::make_result(PGresult* res, bool single)
     TRANS_LOG(parent, "result: %s", AmArg::print(result).c_str());
 }
 
-void PGTransaction::fetch_result()
+int PGTransaction::fetch_result()
 {
     if(!conn) {
         ERROR("absent connection");
-        return;
+        return 0;
     }
 
-    PGresult* res = 0;
+    PGresult* res = nullptr;
     do {
         if(!res) {
             res = PQgetResult(*conn);
@@ -393,9 +396,17 @@ void PGTransaction::fetch_result()
             if(!res) query->put_result();
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
+
+        if(PQisBusy(*conn)) {
+            TRANS_LOG(parent, "PQisBusy:1. break fetch cycle");
+            return 1;
+        }
+
         res = PQgetResult(*conn);
         TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
     } while (res);
+
+    return 0;
 }
 
 MockTransaction::MockTransaction(IPGTransaction* h, TransactionType t, TestServer* server_)
@@ -437,7 +448,7 @@ bool MockTransaction::check_trans()
     return true;
 }
 
-void MockTransaction::fetch_result()
+int MockTransaction::fetch_result()
 {
     Query* single = dynamic_cast<Query*>(query);
     QueryChain* chain = dynamic_cast<QueryChain*>(query);
@@ -453,7 +464,7 @@ void MockTransaction::fetch_result()
         }
     } else {
         ERROR("unknown query");
-        return;
+        return 0;
     }
 
     server->clearTail(query_);
@@ -487,6 +498,8 @@ void MockTransaction::fetch_result()
         synced = true;
         status = PQTRANS_IDLE;
     }
+
+    return 0;
 }
 
 void MockTransaction::reset(IPGConnection* conn)

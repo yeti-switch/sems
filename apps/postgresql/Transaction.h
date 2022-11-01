@@ -47,7 +47,7 @@ protected:
 
     virtual bool check_trans() = 0;
     virtual bool cancel_trans() = 0;
-    virtual void fetch_result() = 0;
+    virtual int fetch_result() = 0;
     virtual void reset(IPGConnection* conn);
 public:
     ITransaction(IPGTransaction* p, TransactionType t)
@@ -67,14 +67,14 @@ class IPGTransaction
 {
 public:
     enum DbState {
-        BEGIN,
+        BEGIN = 0,
         BODY,
         END
     };
 
     enum Status
     {
-        ACTIVE,
+        ACTIVE = 0,
         CANCELING,
         ERROR,
         FINISH
@@ -103,7 +103,7 @@ protected:
 public:
     virtual ~IPGTransaction() { delete tr_impl; }
 
-    void check();
+    int check();
     bool exec(IPGQuery* query);
     bool cancel();
     void reset(IPGConnection* conn);
@@ -139,7 +139,7 @@ class PGTransaction : public ITransaction
 {
     bool check_trans() override;
     bool cancel_trans() override;
-    void fetch_result() override;
+    int fetch_result() override;
     void make_result(PGresult* res, bool single);
 public:
     PGTransaction(IPGTransaction* h, TransactionType t);
@@ -154,7 +154,7 @@ protected:
     TestServer* server;
     bool check_trans() override;
     bool cancel_trans() override;
-    void fetch_result() override;
+    int fetch_result() override;
     void reset(IPGConnection* conn) override;
 public:
     MockTransaction(IPGTransaction* handler, TransactionType type, TestServer* server_);
