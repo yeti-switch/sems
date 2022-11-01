@@ -161,6 +161,9 @@ void PGConnection::check_conn()
     //DBG("check status %u, poll_st %u, pipe %s", status, st, pipe_status == PQ_PIPELINE_ON ? "true" : "false");
     switch((int)st) {
         case PGRES_POLLING_OK:
+            if(flush_conn()) {
+                handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
+            }
             if(!connected && status == CONNECTION_OK) {
                 connected = true;
                 //PQtrace(conn, stderr);
