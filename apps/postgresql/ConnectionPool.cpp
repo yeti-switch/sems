@@ -173,7 +173,7 @@ void Worker::onSock(IPGConnection* conn, IConnectionHandler::EventType type)
     int ret = 0;
     if(type == PG_SOCK_NEW) {
         epoll_event event;
-        event.events = EPOLLIN | EPOLLERR | EPOLLET;
+        event.events = EPOLLIN | EPOLLERR;
         event.data.ptr = conn;
 
         // add the socket to the epoll file descriptors
