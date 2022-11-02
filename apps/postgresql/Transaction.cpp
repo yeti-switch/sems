@@ -210,6 +210,10 @@ IPGQuery * IPGTransaction::get_current_query(bool parent)
     if(!chain) return tr_impl->query;
 
     int num = chain->get_result_got();
+    if(num >= chain->get_size()) {
+        WARN("got result more than chain size, return last query");
+        num = chain->get_size();
+    }
     return chain->get_query(num);
 }
 
@@ -385,7 +389,7 @@ int PGTransaction::fetch_result()
 
             PQclear(res);
             res = PQgetResult(*conn);
-            if(!res) query->put_result();
+            if(!res && !pipeline_aborted && !synced) query->put_result();
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
 

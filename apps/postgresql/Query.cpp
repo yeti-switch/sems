@@ -122,7 +122,8 @@ int QueryChain::exec()
 
 IPGQuery * QueryChain::get_current_query()
 {
-    if(!current) return childs[current];
+    if(current >= get_size()) return childs[current-1];
+    else if(!current) return childs[current];
     else if(childs[current]->is_finished()) return childs[current];
     else return childs[current-1];
 }
