@@ -54,8 +54,19 @@ Worker::~Worker()
     retransmit_q.clear();
     for(auto& tr : erased) delete tr;
     erased.clear();
-    if(master) delete master;
-    if(slave) delete slave;
+
+    ConnectionPool* destroyed = 0;
+    if(master) {
+        destroyed = master;
+        master = 0;
+        delete destroyed;
+    }
+
+    if(slave) {
+        destroyed = slave;
+        slave = 0;
+        delete destroyed;
+    }
 }
 
 void Worker::getConfig(AmArg& ret)
