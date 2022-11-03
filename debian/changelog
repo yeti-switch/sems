@@ -1,3 +1,11 @@
+sems (1.95.5) stable; urgency=low
+  * pg: add in-memory transaction log
+  * pg: add rpc method postgresql.request.get_connection_log to dump transaction log it to the disk
+  * pg: add rpc method postgresql.request.reset to reset connection by fd
+  * pg: fix thread stuck in iowait on in/out bufs overflow
+  * pg: fix multiple freezes and segfaults
+ -- Michael Furmur <furmur@pm.me>  Thu, 03 Nov 2022 12:59:52 +0200
+
 sems (1.95.4) stable; urgency=low
   * pg: fix multi-tuple response processing
   * pg: do soft connection reset by lifetime threshold (wait for active transactions to be finished)
