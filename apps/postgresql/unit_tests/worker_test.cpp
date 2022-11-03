@@ -3,6 +3,9 @@
 #include "../ConnectionPool.h"
 #include "../PostgreSQL.h"
 #include "../pqtypes-int.h"
+#include "../NonTransaction.h"
+#include "../DbTransaction.h"
+#include "../QueryChain.h"
 
 #define CREATE_TABLE "CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);"
 #define INSERT_INTO_PARAM "INSERT INTO test(id, value, data, str) VALUES($1, $2, $3, $4);"
@@ -264,7 +267,7 @@ TEST_F(PostgresqlTest, WorkerPrepareTest)
 TEST_F(PostgresqlTest, WorkerPipelineTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -273,7 +276,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     config.batch_size = 10;
     config.use_pipeline = true;
     worker.configure(config);
-    IPGTransaction* trans = new NonTransaction(&worker);
+    Transaction* trans = new NonTransaction(&worker);
     QueryChain* query = new QueryChain(new QueryParams(CREATE_TABLE, false, false));
     query->addQuery(new QueryParams("SELECT TTT", false, false));
     server->addError("SELECT TTT", false);
@@ -405,7 +408,7 @@ TEST_F(PostgresqlTest, WorkerConfigTest)
 TEST_F(PostgresqlTest, WorkerQueueTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
@@ -418,7 +421,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
     AmArg resp;
     resp.push("pg_backend_pid", 4565);
     server->addResponse(BACKEND, resp);
-    IPGTransaction* trans = new NonTransaction(&worker);
+    Transaction* trans = new NonTransaction(&worker);
     trans->exec(new Query(BACKEND, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_only);
@@ -438,7 +441,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
 TEST_F(PostgresqlTest, WorkerQueueErrorTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -450,7 +453,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     server->addResponse(CREATE_TABLE, AmArg());
     server->addResponse(INSERT_INTO, AmArg());
     server->addError("ASSERT 0", false);
-    IPGTransaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    Transaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     trans->exec(new Query(CREATE_TABLE, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
@@ -492,7 +495,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
 TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -504,7 +507,7 @@ TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
     server->addResponse(CREATE_TABLE, AmArg());
     server->addResponse(INSERT_INTO, AmArg());
     server->addError("ASSERT 0", false);
-    IPGTransaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    Transaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     trans->exec(new QueryParams(CREATE_TABLE, false, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
@@ -546,7 +549,7 @@ TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
 TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -554,7 +557,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGWorkerConfig config("test", false, true, false, 15, 1);
     config.batch_size = 2;
     worker.configure(config);
-    IPGTransaction* trans = new NonTransaction(&worker);
+    Transaction* trans = new NonTransaction(&worker);
     trans->exec(new QueryParams("SELECT pg_sleep(1)", false, false));
     worker.runTransaction(trans, "", "");
     trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
@@ -595,7 +598,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
 TEST_F(PostgresqlTest, WorkerSearchPathTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -628,7 +631,7 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
 TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
 {
     PGHandler handler;
-    Worker worker("test", handler.epoll_fd);
+    PoolWorker worker("test", handler.epoll_fd);
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
@@ -649,7 +652,7 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
     server->addError("ASSERT 0", true);
     server->addErrorCodes("ASSERT 0", "42601");
 
-    IPGTransaction* trans = new NonTransaction(&worker);
+    Transaction* trans = new NonTransaction(&worker);
     trans->exec(new Query("ASSERT 0", false));
     worker.runTransaction(trans, "", "");
 

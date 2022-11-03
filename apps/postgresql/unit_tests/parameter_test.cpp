@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "PGHandler.h"
-#include "../Parameter.h"
+#include "../QueryParam.h"
 
 TEST_F(PostgresqlTest, ParameterTest)
 {

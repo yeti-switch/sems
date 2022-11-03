@@ -13,8 +13,6 @@ using std::map;
 
 #define MOD_NAME "postgresql"
 
-class IPGConnection;
-
 enum AdditionalTypeEvent {
     Reset = PGEvent::MaxType
 };
@@ -58,7 +56,7 @@ class PostgreSQL
 
     AmEventFd stop_event;
     AmCondition<bool> stopped;
-    map<string, Worker*> workers;
+    map<string, PoolWorker*> workers;
     int epoll_fd;
 
     time_t log_time;
@@ -66,7 +64,7 @@ class PostgreSQL
 
     int init();
 
-    Worker* getWorker(const PGQueryData& e);
+    PoolWorker* getWorker(const PGQueryData& e);
     bool checkQueryData(const PGQueryData& data);
 
     void onWorkerPoolCreate(const PGWorkerPoolCreate& e);

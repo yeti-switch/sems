@@ -3,6 +3,18 @@
 #include "Transaction.h"
 #include "Query.h"
 
+#include "PGConnection.h"
+#include "MockConnection.h"
+
+#include "PGTransactionImpl.h"
+#include "DbMockTransactionImpl.h"
+
+#include "SimpleQueryImpl.h"
+#include "MockQueryImpl.h"
+#include "PrepareQueryImpl.h"
+#include "ParameterizedQueryImpl.h"
+#include "ExecutePreparedQueryImpl.h"
+
 PolicyFactory* PolicyFactory::instance_ = 0;
 
 void PolicyFactory::dispose()
@@ -13,70 +25,70 @@ void PolicyFactory::dispose()
     }
 }
 
-IPGConnection * PGPolicy::createConnection(const string& conn_info,
+Connection * PGPolicy::createConnection(const string& conn_info,
                                            const std::string & conn_log_info,
                                            IConnectionHandler* handler)
 {
     return new PGConnection(conn_info, conn_log_info, handler);
 }
 
-IPGConnection * TestPolicy::createConnection(const string&, const string &, IConnectionHandler* handler)
+Connection * TestPolicy::createConnection(const string&, const string &, IConnectionHandler* handler)
 {
     return new MockConnection(handler);
 }
 
-ITransaction * PGPolicy::createTransaction(IPGTransaction* parent, TransactionType type)
+TransactionImpl * PGPolicy::createTransaction(Transaction* parent, TransactionType type)
 {
-    return new PGTransaction(parent, type);
+    return new PGTransactionImpl(parent, type);
 }
 
-ITransaction * TestPolicy::createTransaction(IPGTransaction* parent, TransactionType type)
+TransactionImpl * TestPolicy::createTransaction(Transaction* parent, TransactionType type)
 {
-    if(type == TR_POLICY) 
-        return new DbMockTransaction(parent, server);
-    return new MockTransaction(parent, type, server);
+    if(type == TR_POLICY)
+        return new DbMockTransactionImpl(parent, server);
+    return new MockTransactionImpl(parent, type, server);
 }
 
-IQuery * PGPolicy::createQuery(const string& cmd, bool singleMode)
+IQueryImpl * PGPolicy::createSimpleQuery(const string& cmd, bool singleMode)
 {
-    return new PGQuery(cmd, singleMode);
+    return new SimpleQueryImpl(cmd, singleMode);
 }
 
-IQuery * TestPolicy::createQuery(const string& cmd, bool singleMode)
+IQueryImpl * TestPolicy::createSimpleQuery(const string& cmd, bool singleMode)
 {
-    return new MockQuery(cmd, singleMode);
+    return new MockQueryImpl(cmd, singleMode);
 }
 
-IQuery * PGPolicy::createQueryParam(const std::string& cmd, bool singleMode, IPGQuery* parent)
+IQueryImpl * PGPolicy::createQueryParam(const std::string& cmd, bool singleMode, IQuery* parent)
 {
-    return new PGQueryParam(cmd, singleMode, (QueryParams*)parent);
+    return new ParameterizedQueryImpl(cmd, singleMode, (QueryParams*)parent);
 }
 
-IQuery * TestPolicy::createQueryParam(const std::string& cmd, bool singleMode, IPGQuery* parent)
+IQueryImpl * TestPolicy::createQueryParam(const std::string& cmd, bool singleMode, IQuery* parent)
 {
-    return new MockQuery(cmd, singleMode);
+    return new MockQueryImpl(cmd, singleMode);
 }
 
-IQuery * PGPolicy::createPrepared(const std::string& stmt,
-                                  const std::string& cmd, const vector<uint32_t>& params)
+IQueryImpl * PGPolicy::createPrepared(const std::string& stmt,
+                                      const std::string& cmd, const vector<uint32_t>& params)
 {
-    return new PGPrepared(stmt, cmd, params);
+    return new PrepareQueryImpl(stmt, cmd, params);
 }
 
-IQuery * TestPolicy::createPrepared(const std::string& stmt,
-                                    const std::string& cmd, const vector<uint32_t>& params)
+IQueryImpl * TestPolicy::createPrepared(const std::string& stmt,
+                                        const std::string& cmd, const vector<uint32_t>& params)
 {
-    return new MockQuery(cmd, false);
+    return new MockQueryImpl(cmd, false);
 }
 
-IQuery * PGPolicy::createQueryPrepared(const std::string& stmt, bool singleMode, IPGQuery* parent)
+IQueryImpl * PGPolicy::createQueryPrepared(const std::string& stmt, bool singleMode, IQuery* parent)
 {
-    return new PGQueryPrepared(stmt, singleMode, (QueryParams*)parent);
+    return new ExecutePreparedQueryImpl(stmt, singleMode, (QueryParams*)parent);
 }
 
-IQuery * TestPolicy::createQueryPrepared(const std::string& cmd, bool singleMode, IPGQuery* parent)
+IQueryImpl * TestPolicy::createQueryPrepared(const std::string& cmd, bool singleMode, IQuery* parent)
 {
-    return new MockQuery(cmd, false);
+    return new MockQueryImpl(cmd, false);
 }
 
 PolicyFactory * makePolicyFactory(bool test, TestServer* server)

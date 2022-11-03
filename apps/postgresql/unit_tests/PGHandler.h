@@ -4,6 +4,7 @@
 #include "../Connection.h"
 #include "../Transaction.h"
 #include "../ConnectionPool.h"
+#include "../PoolWorker.h"
 #include <log.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -40,8 +41,8 @@ public:
     } cur_state;
     int dis_count;
     int count;
-    vector<Worker*> workers;
-    vector<IPGConnection*> reset;
+    vector<PoolWorker*> workers;
+    vector<Connection*> reset;
 
     PGHandler()
     : cur_state(DISCONNECTED)
@@ -98,21 +99,21 @@ public:
             }
             if(is_connection) {
                 //DBG("connection event");
-                IPGConnection* conn = (IPGConnection*)e.data.ptr;
+                Connection* conn = (Connection*)e.data.ptr;
                 conn->check();
             }
         }
         return 1;
     }
 protected:
-    void onConnect(IPGConnection*) override
+    void onConnect(Connection*) override
     {
         INFO("connected");
         cur_state = CONNECTED;
         count++;
     }
 
-    void onDisconnect(IPGConnection* conn) override
+    void onDisconnect(Connection* conn) override
     {
         INFO("disconnected");
         cur_state = DISCONNECTED;
@@ -120,25 +121,25 @@ protected:
         reset.push_back(conn);
     }
 
-    void onReset(IPGConnection*, bool connected) override
+    void onReset(Connection*, bool connected) override
     {
         INFO("reset");
         cur_state = DISCONNECTED;
         dis_count++;
     }
 
-    void onConnectionFailed(IPGConnection* conn, const string& error) override
+    void onConnectionFailed(Connection* conn, const string& error) override
     {
         ERROR("connection failed, error: %s", error.c_str());
         reset.push_back(conn);
     }
 
-    void onStopTransaction(IPGTransaction* trans) override
+    void onStopTransaction(Transaction* trans) override
     {
         INFO("stopped transaction %s", trans->get_query()->get_query().c_str());
     }
 
-    void onSock(IPGConnection* conn, EventType type) override
+    void onSock(Connection* conn, EventType type) override
     {
         //DBG("type posgres sock event %u", type);
         if(type == PG_SOCK_NEW) {
@@ -163,40 +164,40 @@ protected:
         }
     }
 
-    void onCancel(IPGTransaction*) override
+    void onCancel(Transaction*) override
     {
         INFO("exec cancel");
     }
 
-    void onSend(IPGTransaction *) override{}
+    void onSend(Transaction *) override{}
 
-    void onError(IPGTransaction* trans, const string& error) override
+    void onError(Transaction* trans, const string& error) override
     {
         ERROR("exec query '%s' error: %s", trans->get_query()->get_query().c_str(), error.c_str());
     }
 
-    void onErrorCode(IPGTransaction* , const string& error) override
+    void onErrorCode(Transaction* , const string& error) override
     {
         ERROR("error code: %s", error.c_str());
     }
 
-    void onPQError(IPGConnection*, const std::string & error) override
+    void onPQError(Connection*, const std::string & error) override
     {
         ERROR("pq error: %s", error.c_str());
     }
     
-    void onPQError(IPGTransaction*, const std::string & error) override
+    void onPQError(Transaction*, const std::string & error) override
     {
         ERROR("pq error: %s", error.c_str());
     }
 
-    void onFinish(IPGTransaction* trans, const AmArg & result) override
+    void onFinish(Transaction* trans, const AmArg & result) override
     {
         cur_state = FINISH;
         INFO("exec finish: %s", AmArg::print(result).c_str());
     }
 
-    void onTuple(IPGTransaction*, const AmArg & result) override
+    void onTuple(Transaction*, const AmArg & result) override
     {
         INFO("exec tuple result: %s", AmArg::print(result).c_str());
     }

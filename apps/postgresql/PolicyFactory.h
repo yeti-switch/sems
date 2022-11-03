@@ -1,5 +1,4 @@
-#ifndef POLICY_FACTORY_H
-#define POLICY_FACTORY_H
+#pragma once
 
 #include <AmArg.h>
 
@@ -12,13 +11,13 @@ using std::vector;
 
 #include "../unit_tests/TestServer.h"
 
-class IPGConnection;
+class Connection;
 struct IConnectionHandler;
 struct ITransactionHandler;
-class IPGTransaction;
-class ITransaction;
-class IQuery;
-struct IPGQuery;
+class Transaction;
+class TransactionImpl;
+struct IQuery;
+class IQueryImpl;
 
 enum TransactionType {
     TR_NON,
@@ -33,65 +32,68 @@ class PolicyFactory
 {
     friend PolicyFactory* makePolicyFactory(bool, TestServer*);
     static PolicyFactory* instance_;
-protected:
+  protected:
     PolicyFactory(){}
     virtual ~PolicyFactory(){}
-public:
+  public:
     static PolicyFactory* instance() { return instance_; }
     static void dispose();
 
-    virtual IPGConnection* createConnection(const string& conn_info,
-                                            const string& conn_log_info,
-                                            IConnectionHandler* handler) = 0;
-    virtual ITransaction*  createTransaction(IPGTransaction* parent,
-                                             TransactionType type) = 0;
-    virtual IQuery*        createQuery(const string& cmd, bool singleMode) = 0;
-    virtual IQuery*        createQueryParam(const string& cmd,
-                                            bool singleMode, IPGQuery* parent) = 0;
-    virtual IQuery *       createPrepared(const string& stmt,
-                                           const string& cmd, const vector<uint32_t>& params) = 0;
-    virtual IQuery *       createQueryPrepared(const std::string& cmd,
-                                               bool singleMode, IPGQuery* parent) = 0;
+    virtual Connection* createConnection(const string& conn_info,
+                                         const string& conn_log_info,
+                                         IConnectionHandler* handler) = 0;
+    virtual TransactionImpl* createTransaction(Transaction* parent,
+                                               TransactionType type) = 0;
+
+    virtual IQueryImpl* createSimpleQuery(const string& cmd, bool singleMode) = 0;
+    virtual IQueryImpl* createQueryParam(const string& cmd,
+                                         bool singleMode, IQuery* parent) = 0;
+    virtual IQueryImpl* createPrepared(const string& stmt,
+                                       const string& cmd, const vector<uint32_t>& params) = 0;
+    virtual IQueryImpl* createQueryPrepared(const std::string& cmd,
+                                            bool singleMode, IQuery* parent) = 0;
 };
 
 class TestPolicy : public PolicyFactory
 {
     TestServer* server;
-public:
-    TestPolicy(TestServer* server_) : server(server_){}
+
+  public:
+    TestPolicy(TestServer* server_)
+      : server(server_){}
     ~TestPolicy(){}
-    IPGConnection * createConnection(const std::string & conn_info,
-                                     const string& conn_log_info,
-                                     IConnectionHandler * handler) override;
-    ITransaction * createTransaction(IPGTransaction* handler,
-                                     TransactionType type) override;
-    IQuery * createQuery(const std::string & cmd, bool singleMode) override;
-    IQuery * createQueryParam(const string& cmd, bool singleMode, IPGQuery* parent) override;
-    IQuery * createPrepared(const string& stmt,
-                            const string& cmd, const vector<uint32_t>& params) override;
-    IQuery * createQueryPrepared(const std::string& cmd,
-                                 bool singleMode, IPGQuery* parent) override;
+
+    Connection* createConnection(const std::string & conn_info,
+                                 const string& conn_log_info,
+                                 IConnectionHandler * handler) override;
+    TransactionImpl* createTransaction(Transaction* handler,
+                                       TransactionType type) override;
+    IQueryImpl* createSimpleQuery(const std::string & cmd, bool singleMode) override;
+    IQueryImpl* createQueryParam(const string& cmd, bool singleMode, IQuery* parent) override;
+    IQueryImpl* createPrepared(const string& stmt,
+                               const string& cmd, const vector<uint32_t>& params) override;
+    IQueryImpl* createQueryPrepared(const std::string& cmd,
+                                    bool singleMode, IQuery* parent) override;
 };
 
 class PGPolicy : public PolicyFactory
 {
-public:
+  public:
     PGPolicy(){}
     ~PGPolicy(){}
-    IPGConnection * createConnection(const std::string & conn_info,
-                                     const std::string & conn_log_info,
-                                     IConnectionHandler * handler) override;
-    ITransaction * createTransaction(IPGTransaction* parent,
-                                     TransactionType type) override;
-    IQuery * createQuery(const std::string & cmd, bool singleMode) override;
-    IQuery * createQueryParam(const string& cmd, bool singleMode, IPGQuery* parent) override;
-    IQuery * createPrepared(const string& stmt,
-                            const string& cmd, const vector<uint32_t>& params) override;
-    IQuery * createQueryPrepared(const std::string& cmd,
-                                 bool singleMode, IPGQuery* parent) override;
+
+    Connection* createConnection(const std::string & conn_info,
+                                 const std::string & conn_log_info,
+                                 IConnectionHandler * handler) override;
+    TransactionImpl* createTransaction(Transaction* parent,
+                                       TransactionType type) override;
+    IQueryImpl* createSimpleQuery(const std::string & cmd, bool singleMode) override;
+    IQueryImpl* createQueryParam(const string& cmd, bool singleMode, IQuery* parent) override;
+    IQueryImpl* createPrepared(const string& stmt,
+                               const string& cmd, const vector<uint32_t>& params) override;
+    IQueryImpl* createQueryPrepared(const std::string& cmd,
+                                    bool singleMode, IQuery* parent) override;
 };
 
 PolicyFactory* makePolicyFactory(bool test, TestServer* server = 0);
 void freePolicyFactory();
-
-#endif/*POLICY_FACTORY_H*/

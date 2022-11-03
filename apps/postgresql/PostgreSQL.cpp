@@ -6,6 +6,11 @@
 #include <vector>
 #include "PolicyFactory.h"
 #include "Connection.h"
+#include "NonTransaction.h"
+#include "DbTransaction.h"
+#include "PreparedTransaction.h"
+#include "QueryChain.h"
+#include "PoolWorker.h"
 #include "postgresql_cfg.h"
 using std::vector;
 
@@ -200,7 +205,7 @@ void PostgreSQL::run()
                     }
                 }
                 if(is_connection) {
-                    IPGConnection* conn = (IPGConnection*)e.data.ptr;
+                    Connection* conn = (Connection*)e.data.ptr;
                     conn->check();
                 }
             }
@@ -436,7 +441,7 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
     }
 }
 
-Worker* PostgreSQL::getWorker(const PGQueryData& e)
+PoolWorker* PostgreSQL::getWorker(const PGQueryData& e)
 {
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
@@ -461,9 +466,9 @@ bool PostgreSQL::checkQueryData(const PGQueryData& data)
 void PostgreSQL::onWorkerPoolCreate(const PGWorkerPoolCreate& e)
 {
     if(workers.find(e.worker_name) == workers.end()) {
-        workers[e.worker_name] = new Worker(e.worker_name, epoll_fd);
+        workers[e.worker_name] = new PoolWorker(e.worker_name, epoll_fd);
     }
-    Worker* worker = workers[e.worker_name];
+    PoolWorker* worker = workers[e.worker_name];
     worker->createPool(e.type, e.pool);
 }
 
@@ -471,10 +476,10 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
 {
     if(!checkQueryData(e.qdata)) return;
 
-    Worker* worker = getWorker(e.qdata);
+    PoolWorker* worker = getWorker(e.qdata);
     if(!worker) return;
 
-    IPGQuery* query = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, false);
+    IQuery* query = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, false);
     if(e.qdata.info.size() > 1) {
         QueryChain* chain = new QueryChain(query);
         for(size_t i = 1;i < e.qdata.info.size(); i++) {
@@ -484,7 +489,7 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
     }
 
     if(!e.initial) {
-        IPGTransaction* trans = 0;
+        Transaction* trans = 0;
         if(!e.tdata.use_transaction)
             trans = new NonTransaction(worker);
         else
@@ -501,11 +506,11 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
 {
     if(!checkQueryData(e.qdata)) return;
 
-    Worker* worker = getWorker(e.qdata);
+    PoolWorker* worker = getWorker(e.qdata);
     if(worker) {
         QueryParams* qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
         qparams->addParams(getParams(e.qdata.info[0].params));
-        IPGQuery* query = qparams;
+        IQuery* query = qparams;
         if(e.qdata.info.size() > 1) {
             QueryChain* chain = new QueryChain(query);
             for(size_t i = 1;i < e.qdata.info.size(); i++) {
@@ -517,7 +522,7 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
         }
 
         if(!e.initial) {
-            IPGTransaction* trans = 0;
+            Transaction* trans = 0;
             if(!e.tdata.use_transaction)
                 trans = new NonTransaction(worker);
             else
@@ -534,7 +539,7 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
 void PostgreSQL::onPrepare(const PGPrepare& e)
 {
     PGQueryData data(e.worker_name, e.pdata.query, false, "");
-    Worker* worker = getWorker(data);
+    PoolWorker* worker = getWorker(data);
     if(worker) {
         worker->runPrepared(e.pdata);
     }
@@ -542,7 +547,7 @@ void PostgreSQL::onPrepare(const PGPrepare& e)
 
 void PostgreSQL::onPrepareExecute(const PGPrepareExec& e)
 {
-    Worker* worker = getWorker(PGQueryData(e.worker_name, e.sender_id, e.token));
+    PoolWorker* worker = getWorker(PGQueryData(e.worker_name, e.sender_id, e.token));
     if(worker) {
         worker->runTransaction(new PreparedTransaction(e, worker), e.sender_id, e.token);
     }
@@ -565,7 +570,7 @@ void PostgreSQL::onWorkerConfig(const PGWorkerConfig& e)
         ERROR("worker %s not found", e.worker_name.c_str());
         return;
     }
-    Worker* worker = workers[e.worker_name];
+    PoolWorker* worker = workers[e.worker_name];
     worker->configure(e);
 }
 
@@ -575,7 +580,7 @@ void PostgreSQL::onSetSearchPath(const PGSetSearchPath& e)
         ERROR("worker %s not found", e.worker_name.c_str());
         return;
     }
-    Worker* worker = workers[e.worker_name];
+    PoolWorker* worker = workers[e.worker_name];
     worker->setSearchPath(e.search_pathes);
 }
 

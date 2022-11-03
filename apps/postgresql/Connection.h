@@ -1,37 +1,15 @@
-#ifndef PQ_CONNECTION_H
-#define PQ_CONNECTION_H
+#pragma once
+
+#include "IConnectionHandler.h"
 
 #include <postgresql/libpq-fe.h>
 #include <ctime>
-#include <string>
 #include <atomic_types.h>
+
+#include <string>
 using std::string;
 
-class IPGConnection;
-class IPGTransaction;
-
-struct IConnectionHandler
-{
-    enum EventType
-    {
-        PG_SOCK_NEW = 0,
-        PG_SOCK_DEL,
-        PG_SOCK_WRITE,
-        PG_SOCK_READ,
-        PG_SOCK_RW,
-    };
-
-    virtual ~IConnectionHandler(){}
-    virtual void onSock(IPGConnection* conn, EventType type) = 0;
-    virtual void onConnect(IPGConnection* conn) = 0;
-    virtual void onConnectionFailed(IPGConnection* conn, const string& error) = 0;
-    virtual void onDisconnect(IPGConnection* conn) = 0;
-    virtual void onReset(IPGConnection* conn, bool connected) = 0;
-    virtual void onPQError(IPGConnection* conn, const string& error) = 0;
-    virtual void onStopTransaction(IPGTransaction* trans) = 0;
-};
-
-class IPGConnection
+class Connection
 {
 protected:
     string connection_info;
@@ -44,10 +22,10 @@ protected:
     time_t connected_time;
     time_t disconnected_time;
     uint64_t queries_finished;
-protected:
-    friend class IPGTransaction;
-    IPGTransaction* cur_transaction;
-    IPGTransaction* planned;
+
+    friend class Transaction;
+    Transaction* cur_transaction;
+    Transaction* planned;
 
     void check_mode();
 
@@ -59,8 +37,9 @@ protected:
     virtual bool start_pipe() = 0;
     virtual bool exit_pipe()  = 0;
     virtual bool sync_pipe() = 0;
+
 public:
-    IPGConnection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
+    Connection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
     : connection_info(conn_info)
     , connection_log_info(conn_log_info)
     , handler(handler)
@@ -73,15 +52,15 @@ public:
     , cur_transaction(nullptr)
     , planned(nullptr)
     {}
-    virtual ~IPGConnection();
+    virtual ~Connection();
 
     operator PGconn * () { return get_pg_conn(); }
 
     void check();
     bool reset();
     void close();
-    bool runTransaction(IPGTransaction* trans);
-    bool addPlannedTransaction(IPGTransaction* trans);
+    bool runTransaction(Transaction* trans);
+    bool addPlannedTransaction(Transaction* trans);
     void startPipeline();
     bool syncPipeline();
     bool flushPipeline();
@@ -96,40 +75,5 @@ public:
     time_t getDisconnectedTime() { return disconnected_time; }
     time_t getConnectedTime() { return connected_time; }
     uint64_t getQueriesFinished() { return queries_finished; }
-    IPGTransaction* getCurrentTransaction() { return cur_transaction; }
+    Transaction* getCurrentTransaction() { return cur_transaction; }
 };
-
-class PGConnection : public IPGConnection
-{
-    PGconn* conn;
-    bool connected;
-
-    bool reset_conn() override;
-    void check_conn() override;
-    bool flush_conn() override;
-    PGconn* get_pg_conn() override;
-    void close_conn() override;
-    bool start_pipe() override;
-    bool sync_pipe() override;
-    bool exit_pipe() override;
-public:
-    PGConnection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler);
-    ~PGConnection();
-
-};
-
-class MockConnection : public IPGConnection
-{
-    bool reset_conn() override;
-    void check_conn() override;
-    bool flush_conn() override;
-    void close_conn() override;
-    bool start_pipe() override;
-    bool sync_pipe() override;
-    bool exit_pipe() override;
-public:
-    MockConnection(IConnectionHandler* handler);
-    ~MockConnection();
-};
-
-#endif/*PQ_CONNECTION_H*/
