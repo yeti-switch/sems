@@ -72,6 +72,7 @@ int DbTransaction<isolation, rw>::rollback()
         delete end_q;
         state = END;
         tr_impl->pipeline_aborted = false;
+        tr_impl->synced = false;
         if(ret) tr_impl->query->set_finished();
         TRANS_LOG(this, "exec: ROLLBACK");
         return ret ? 0 : -1;

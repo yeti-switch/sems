@@ -27,6 +27,8 @@ IQuery * QueryChain::get_current_query()
 void QueryChain::put_result()
 {
     got_result++;
+    TRANS_LOG(getConnection()->getCurrentTransaction(),
+        "put result: %u", got_result);
 }
 
 void QueryChain::addQuery(IQuery* q)

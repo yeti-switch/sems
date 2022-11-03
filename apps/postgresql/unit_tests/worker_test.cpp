@@ -730,8 +730,6 @@ TEST_F(PostgresqlTest, WorkerCancelErrorTest)
         q += index;
     }
     q += "}')";
-    server->addResponse("SELECT 3133 FROM pg_sleep(10)", AmArg(3133));
-    server->addTail("SELECT 3133 FROM pg_sleep(10)", 10);
     PGQueryData qdata("test", q, false, WORKER_HANDLER_QUEUE);
     PGParamExecute* ev = new PGParamExecute(qdata, PGTransactionData(), false);
     PostgreSQL::instance()->postEvent(ev);
