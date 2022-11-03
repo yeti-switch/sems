@@ -1,5 +1,4 @@
-#ifndef PGHANDLER_H_INCLUDED
-#define PGHANDLER_H_INCLUDED
+#pragma once
 
 #include "../conn/Connection.h"
 #include "../trans/Transaction.h"
@@ -202,6 +201,3 @@ protected:
         INFO("exec tuple result: %s", AmArg::print(result).c_str());
     }
 };
-
-
-#endif // PGHANDLER_H_INCLUDED

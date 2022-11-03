@@ -1,5 +1,4 @@
-#ifndef PARAMETER_H
-#define PARAMETER_H
+#pragma once
 
 #include <string>
 using std::string;
@@ -35,5 +34,3 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
 vector<QueryParam> getParams(const vector<AmArg>& params);
 
 unsigned int pg_typname2oid(const string &sql_type);
-
-#endif/*PARAMETER_H*/

@@ -1,5 +1,4 @@
-#ifndef WORKER_HANDLER_H
-#define WORKER_HANDLER_H
+#pragma once
 
 #include <sys/epoll.h>
 #include <gtest/gtest.h>
@@ -121,5 +120,3 @@ public:
         if(expected_events.empty()) running = false;
     }
 };
-
-#endif/*WORKER_HANDLER_H*/
