@@ -786,6 +786,12 @@ bool AmPlugIn::registerFactory4App(const string& app_name, AmSessionFactory* f)
     }
     name2app_mut.unlock();
 
+    //add module version metric
+    stat_group(Gauge,"module", "version")
+        .addFunctionCounter([]()-> unsigned long long { return 1; })
+        .addLabel("name", f->getName())
+        .addLabel("version", f->getVersion());
+
     return res;
 }
 
