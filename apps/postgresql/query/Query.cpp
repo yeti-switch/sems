@@ -1,6 +1,6 @@
 #include "Query.h"
-#include "Connection.h"
-#include "Transaction.h"
+#include "../conn/Connection.h"
+#include "../trans/Transaction.h"
 
 int Query::exec()
 {

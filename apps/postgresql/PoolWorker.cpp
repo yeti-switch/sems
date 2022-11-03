@@ -5,13 +5,14 @@
 #include <AmStatistics.h>
 
 #include "PostgreSQL.h"
-#include "NonTransaction.h"
-#include "DbTransaction.h"
-#include "PreparedTransaction.h"
-#include "ConfigTransaction.h"
-#include "QueryChain.h"
-
 #include "pqtypes-int.h"
+
+#include "trans/NonTransaction.h"
+#include "trans/DbTransaction.h"
+#include "trans/PreparedTransaction.h"
+#include "trans/ConfigTransaction.h"
+
+#include "query/QueryChain.h"
 
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\

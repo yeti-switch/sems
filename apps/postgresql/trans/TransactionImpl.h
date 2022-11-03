@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ampi/PostgreSqlAPI.h"
-#include "Query.h"
+#include "../query/Query.h"
 
 class Connection;
 class Transaction;

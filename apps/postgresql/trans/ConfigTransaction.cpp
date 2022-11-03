@@ -1,8 +1,8 @@
 #include "ConfigTransaction.h"
 
-#include "QueryParams.h"
-#include "QueryChain.h"
-#include "QueryPrepare.h"
+#include "../query/QueryParams.h"
+#include "../query/QueryChain.h"
+#include "../query/QueryPrepare.h"
 
 ConfigTransaction::ConfigTransaction(const map<std::string, PGPrepareData>& prepareds,
                                      const vector<std::string>& search_pathes,

@@ -1,19 +1,18 @@
 #include "PolicyFactory.h"
-#include "Connection.h"
-#include "Transaction.h"
-#include "Query.h"
 
-#include "PGConnection.h"
-#include "MockConnection.h"
+#include "conn/Connection.h"
+#include "conn/PGConnection.h"
+#include "conn/MockConnection.h"
 
-#include "PGTransactionImpl.h"
-#include "DbMockTransactionImpl.h"
+#include "trans/Transaction.h"
+#include "trans/PGTransactionImpl.h"
+#include "trans/DbMockTransactionImpl.h"
 
-#include "SimpleQueryImpl.h"
-#include "MockQueryImpl.h"
-#include "PrepareQueryImpl.h"
-#include "ParameterizedQueryImpl.h"
-#include "ExecutePreparedQueryImpl.h"
+#include "query/SimpleQueryImpl.h"
+#include "query/MockQueryImpl.h"
+#include "query/PrepareQueryImpl.h"
+#include "query/ParameterizedQueryImpl.h"
+#include "query/ExecutePreparedQueryImpl.h"
 
 PolicyFactory* PolicyFactory::instance_ = 0;
 

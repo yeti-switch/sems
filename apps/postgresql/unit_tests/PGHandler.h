@@ -1,8 +1,8 @@
 #ifndef PGHANDLER_H_INCLUDED
 #define PGHANDLER_H_INCLUDED
 
-#include "../Connection.h"
-#include "../Transaction.h"
+#include "../conn/Connection.h"
+#include "../trans/Transaction.h"
 #include "../ConnectionPool.h"
 #include "../PoolWorker.h"
 #include <log.h>

@@ -1,11 +1,14 @@
 #include "PGHandler.h"
-#include "../Query.h"
-#include "../pqtypes-int.h"
-#include "../NonTransaction.h"
-#include "../DbTransaction.h"
-#include "../PreparedTransaction.h"
-#include "../QueryChain.h"
+
 #include <ampi/PostgreSqlAPI.h>
+#include "../pqtypes-int.h"
+
+#include "../query/Query.h"
+#include "../query/QueryChain.h"
+
+#include "../trans/NonTransaction.h"
+#include "../trans/DbTransaction.h"
+#include "../trans/PreparedTransaction.h"
 
 TEST_F(PostgresqlTest, NonTransactionSimpleTest)
 {

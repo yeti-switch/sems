@@ -1,5 +1,5 @@
 #include "SimpleQueryImpl.h"
-#include "Connection.h"
+#include "../conn/Connection.h"
 
 #include <postgresql/libpq-fe.h>
 

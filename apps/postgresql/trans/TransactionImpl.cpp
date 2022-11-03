@@ -1,6 +1,6 @@
 #include "TransactionImpl.h"
 
-#include "Connection.h"
+#include "../conn/Connection.h"
 
 void TransactionImpl::reset(Connection *conn_)
 {

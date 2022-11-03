@@ -1,5 +1,5 @@
 #include "QueryParam.h"
-#include "pqtypes-int.h"
+#include "../pqtypes-int.h"
 
 #include <jsonArg.h>
 

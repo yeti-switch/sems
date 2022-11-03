@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Transaction.h"
-#include "QueryParams.h"
+#include "../query/QueryParams.h"
 
 #include <ampi/PostgreSqlAPI.h>
 

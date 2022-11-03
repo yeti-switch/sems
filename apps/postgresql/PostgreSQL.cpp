@@ -3,15 +3,19 @@
 #include "log.h"
 #include "AmEventDispatcher.h"
 
-#include <vector>
 #include "PolicyFactory.h"
-#include "Connection.h"
-#include "NonTransaction.h"
-#include "DbTransaction.h"
-#include "PreparedTransaction.h"
-#include "QueryChain.h"
 #include "PoolWorker.h"
 #include "postgresql_cfg.h"
+
+#include "conn/Connection.h"
+
+#include "trans/NonTransaction.h"
+#include "trans/DbTransaction.h"
+#include "trans/PreparedTransaction.h"
+
+#include "query/QueryChain.h"
+
+#include <vector>
 using std::vector;
 
 #define EPOLL_MAX_EVENTS    2048

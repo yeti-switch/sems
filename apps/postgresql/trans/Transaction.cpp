@@ -1,7 +1,8 @@
 #include "Transaction.h"
 
-#include "Connection.h"
-#include "QueryChain.h"
+#include "../conn/Connection.h"
+#include "../query/QueryChain.h"
+
 #include <log.h>
 #include <jsonArg.h>
 #include <AmUtils.h>

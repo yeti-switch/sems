@@ -1,5 +1,5 @@
 #include "DbTransaction.h"
-#include "QueryChain.h"
+#include "../query/QueryChain.h"
 
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;

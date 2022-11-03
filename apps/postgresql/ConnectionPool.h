@@ -9,8 +9,8 @@ using std::vector;
 using std::list;
 
 #include <PostgreSqlAPI.h>
-#include "Connection.h"
-#include "Transaction.h"
+#include "conn/Connection.h"
+#include "trans/Transaction.h"
 
 class PoolWorker;
 

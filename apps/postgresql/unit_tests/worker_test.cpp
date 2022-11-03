@@ -3,9 +3,11 @@
 #include "../ConnectionPool.h"
 #include "../PostgreSQL.h"
 #include "../pqtypes-int.h"
-#include "../NonTransaction.h"
-#include "../DbTransaction.h"
-#include "../QueryChain.h"
+
+#include "../trans/NonTransaction.h"
+#include "../trans/DbTransaction.h"
+
+#include "../query/QueryChain.h"
 
 #define CREATE_TABLE "CREATE TABLE IF NOT EXISTS test(id int, value float8, data varchar(50), str json);"
 #define INSERT_INTO_PARAM "INSERT INTO test(id, value, data, str) VALUES($1, $2, $3, $4);"

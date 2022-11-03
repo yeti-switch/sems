@@ -1,7 +1,8 @@
 #include "PreparedTransaction.h"
-#include "QueryParams.h"
-#include "QueryChain.h"
-#include "QueryPrepare.h"
+
+#include "../query/QueryParams.h"
+#include "../query/QueryChain.h"
+#include "../query/QueryPrepare.h"
 
 PreparedTransaction::PreparedTransaction(const std::string& stmt,
                    const std::string& cmd, const vector<Oid>& oids,

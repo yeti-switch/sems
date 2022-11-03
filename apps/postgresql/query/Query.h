@@ -1,6 +1,7 @@
 #pragma once
 
-#include "PolicyFactory.h"
+#include "../PolicyFactory.h"
+
 #include "QueryParam.h"
 #include "IQueryImpl.h"
 #include "IQuery.h"

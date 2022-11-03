@@ -1,7 +1,7 @@
 #include "MockTransactionImpl.h"
 
 #include "Transaction.h"
-#include "QueryChain.h"
+#include "../query/QueryChain.h"
 
 MockTransactionImpl::MockTransactionImpl(Transaction* h, TransactionType t, TestServer* server_)
   : TransactionImpl(h, t),
