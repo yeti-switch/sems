@@ -422,6 +422,11 @@ udp_trsp::~udp_trsp()
 /** @see AmThread */
 void udp_trsp::run()
 {
+    if(sockets.empty()) {
+        WARN("no interfaces configured for signalling UDP transport");
+        return;
+    }
+
     setThreadName("sip-udp-rx");
 
     INFO("Started SIP server UDP transport");
