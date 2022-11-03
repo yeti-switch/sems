@@ -1,6 +1,13 @@
 #include "DbTransaction.h"
 #include "QueryChain.h"
 
+template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;
+template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::repeatable_read, PGTransactionData::write_policy::read_only>;
+template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_write>;
+template class DbTransaction<PGTransactionData::serializable, PGTransactionData::write_policy::read_only>;
+
 #define DECLARE_BEGIN_CMD(IL, WP) template<> const char* DbTransaction<PGTransactionData::IL, PGTransactionData::write_policy::WP>::begin_cmd
 
 DECLARE_BEGIN_CMD(read_committed, read_write) = "BEGIN";
