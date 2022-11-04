@@ -1,3 +1,9 @@
+sems (1.95.6) stable; urgency=low
+  * pg: fix stuck in pipeline sync on the out buf overflow
+  * add 'sems_module_version' metric for session factory apps
+  * fix epoll_wait errors for udp_trsp without sockets
+ -- Michael Furmur <furmur@pm.me>  Fri, 04 Nov 2022 18:34:54 +0200
+
 sems (1.95.5) stable; urgency=low
   * pg: add in-memory transaction log
   * pg: add rpc method postgresql.request.get_connection_log to dump transaction log it to the disk
