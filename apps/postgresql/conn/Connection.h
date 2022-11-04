@@ -31,7 +31,7 @@ protected:
 
     virtual void check_conn() = 0;
     virtual PGconn* get_pg_conn() { return nullptr; }
-    virtual bool flush_conn() = 0;
+    virtual bool flush_conn(bool flush_pipe = false) = 0;
     virtual bool reset_conn() = 0;
     virtual void close_conn() = 0;
     virtual bool start_pipe() = 0;

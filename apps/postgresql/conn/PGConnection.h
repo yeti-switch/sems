@@ -10,7 +10,7 @@ class PGConnection
 
     bool reset_conn() override;
     void check_conn() override;
-    bool flush_conn() override;
+    bool flush_conn(bool flush_pipe = false) override;
     PGconn* get_pg_conn() override;
     void close_conn() override;
     bool start_pipe() override;

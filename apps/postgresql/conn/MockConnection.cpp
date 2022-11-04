@@ -28,7 +28,7 @@ void MockConnection::check_conn()
     }
 }
 
-bool MockConnection::flush_conn()
+bool MockConnection::flush_conn([[maybe_unused]] bool flush_pipe)
 {
     return true;
 }

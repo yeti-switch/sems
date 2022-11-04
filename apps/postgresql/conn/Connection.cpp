@@ -47,7 +47,7 @@ void Connection::startPipeline()
 bool Connection::flushPipeline()
 {
     if(pipe_status != PQ_PIPELINE_ON) return false;
-    return flush_conn();
+    return flush_conn(true);
 }
 
 bool Connection::syncPipeline()
@@ -75,7 +75,7 @@ void Connection::check()
     if(status == CONNECTION_OK && cur_transaction) {
         if(cur_transaction->check()) {
             //PQisBusy() returned 1 during transaction processing
-            CLASS_DBG("PQisBusy() returned 1 during transaction processing");
+            //CLASS_DBG("PQisBusy() returned 1 during transaction processing");
             handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
         }
         if(cur_transaction->get_status() == Transaction::FINISH) {
