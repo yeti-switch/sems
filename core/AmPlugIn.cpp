@@ -787,10 +787,15 @@ bool AmPlugIn::registerFactory4App(const string& app_name, AmSessionFactory* f)
     name2app_mut.unlock();
 
     //add module version metric
-    stat_group(Gauge,"module", "version")
-        .addFunctionCounter([]()-> unsigned long long { return 1; })
-        .addLabel("name", f->getName())
-        .addLabel("version", f->getVersion());
+    auto &group = stat_group(Gauge,"module", "version");
+    //TODO: add explicit size() method for StatCountersGroupsInterface
+    int counters = 0;
+    group.iterate_counters([&counters](unsigned long long, const map<string, string>&){ counters++; });
+    if(!counters) {
+        group.addFunctionCounter([]()-> unsigned long long { return 1; })
+            .addLabel("name", f->getName())
+            .addLabel("version", f->getVersion());
+    }
 
     return res;
 }
