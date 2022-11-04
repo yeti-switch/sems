@@ -100,6 +100,7 @@ void PoolWorker::getStats(AmArg& ret)
         slave->getStats(ret, conn_lifetime);
 }
 
+#ifdef TRANS_LOG_ENABLE
 bool PoolWorker::getConnectionLog(const AmArg& args)
 {
     int fd = 0;
@@ -119,6 +120,7 @@ bool PoolWorker::getConnectionLog(const AmArg& args)
     trans->trans_log_written = false;
     return trans->saveLog(args[1].asCStr());
 }
+#endif
 
 void PoolWorker::onConnect(Connection* conn) {
     INFO("connection %s:%p/%s success", name.c_str(), conn, conn->getConnInfo().c_str());
@@ -757,6 +759,8 @@ void PoolWorker::onTimer()
             trans_it++;
         }
     }
+
+#ifdef TRANS_LOG_ENABLE
     for(auto trans_it = transactions.begin();
         PostgreSQL::instance()->getLogTime() && trans_it != transactions.end(); trans_it++) {
         if(current - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
@@ -764,6 +768,7 @@ void PoolWorker::onTimer()
             trans_it->trans->saveLog(PostgreSQL::instance()->getLogDir().c_str());
         }
     }
+#endif
 
     auto conns = resetConnections;
     resetConnections.clear();

@@ -22,8 +22,10 @@ using std::vector;
 
 enum RpcMethodId {
     MethodShowStats,
-    MethodShowConfig,
-    MethodTransLog
+    MethodShowConfig
+#ifdef TRANS_LOG_ENABLE
+    , MethodTransLog
+#endif
 };
 
 class PostgreSQLFactory
@@ -254,6 +256,7 @@ void PostgreSQL::showStats(const AmArg&, AmArg& ret)
     }
 }
 
+#ifdef TRANS_LOG_ENABLE
 void PostgreSQL::getConnectionLog(const AmArg& params, AmArg& ret)
 {
     bool res = false;
@@ -267,6 +270,7 @@ void PostgreSQL::getConnectionLog(const AmArg& params, AmArg& ret)
     }
     ret = res;
 }
+#endif
 
 bool PostgreSQL::showConfiguration(const string& connection_id,
                            const AmArg& request_id,
@@ -325,6 +329,7 @@ void PostgreSQL::requestReset(const AmArg& args, AmArg&)
     postEvent(new ResetEvent(args[0].asCStr(), fd));
 }
 
+#ifdef TRANS_LOG_ENABLE
 bool PostgreSQL::transLog(const string& connection_id,
                            const AmArg& request_id,
                            const AmArg& params)
@@ -351,6 +356,7 @@ bool PostgreSQL::transLog(const string& connection_id,
         MethodTransLog, params));
     return true;
 }
+#endif
 
 void PostgreSQL::init_rpc_tree()
 {
@@ -360,7 +366,9 @@ void PostgreSQL::init_rpc_tree()
     AmArg &request = reg_leaf(root,"request");
         reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
         reg_method(request, "reset", "reset pq connection", &PostgreSQL::requestReset);
+#ifdef TRANS_LOG_ENABLE
         reg_method(request, "get_connection_log", "get log of pq connection", &PostgreSQL::transLog);
+#endif
 }
 
 void PostgreSQL::process(AmEvent* ev)
@@ -432,11 +440,13 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
         showStats(request.params, ret);
         postJsonRpcReply(request, ret);
     } break;
+#ifdef TRANS_LOG_ENABLE
     case MethodTransLog: {
         AmArg ret;
         getConnectionLog(request.params, ret);
         postJsonRpcReply(request, ret);
     } break;
+#endif
     case MethodShowConfig: {
         AmArg ret;
         showConfig(request.params, ret);

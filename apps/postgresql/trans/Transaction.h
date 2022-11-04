@@ -3,7 +3,6 @@
 #include <AmArg.h>
 #include <ampi/PostgreSqlAPI.h>
 #include "../PolicyFactory.h"
-#include "../query/Query.h"
 
 #include "TransactionImpl.h"
 #include "ITransactionHandler.h"
@@ -12,7 +11,13 @@
 #include <string>
 #include <chrono>
 
+//uncomment to enable in-memory transaction logging
+//#define TRANS_LOG_ENABLE
+#ifdef TRANS_LOG_ENABLE
 #define TRANS_LOG(trans, fmt, args...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
+#else
+#define TRANS_LOG(trans, fmt, args...) ;
+#endif
 
 using std::string;
 
@@ -58,7 +63,9 @@ class Transaction
     Transaction(TransactionImpl* impl, ITransactionHandler* handler)
         : handler(handler), tr_impl(impl)
         , status(ACTIVE), state(BEGIN)
+#ifdef TRANS_LOG_ENABLE
         , trans_log_written(false)
+#endif
     {}
 
   public:
@@ -94,14 +101,17 @@ class Transaction
             line(line)
         {}
     };
+#ifdef TRANS_LOG_ENABLE
     bool trans_log_written;
     vector<TransLog> translog;
     template<class... Types> void add_log(const char* func, const char* file, int line,
                                           const char* format, Types... args);
     string get_transaction_log();
     bool saveLog(const char* path);
+#endif
 };
 
+#ifdef TRANS_LOG_ENABLE
 template<class... Types> void Transaction::add_log(const char* func, const char* file, int line,
                                       const char* format, Types... args)
 {
@@ -115,3 +125,4 @@ template<class... Types> void Transaction::add_log(const char* func, const char*
         tlog.data = format;
     }
 }
+#endif

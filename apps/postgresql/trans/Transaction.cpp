@@ -208,6 +208,7 @@ IQuery * Transaction::get_current_query(bool parent)
     return chain->get_query(num);
 }
 
+#ifdef TRANS_LOG_ENABLE
 string Transaction::get_transaction_log()
 {
     std::stringstream ss;
@@ -262,3 +263,4 @@ bool Transaction::saveLog(const char* path)
 
     return true;
 }
+#endif

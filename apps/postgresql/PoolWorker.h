@@ -121,7 +121,9 @@ class PoolWorker
 
     void getStats(AmArg& ret);
     void getConfig(AmArg& ret);
+#ifdef TRANS_LOG_ENABLE
     bool getConnectionLog(const AmArg& args);
+#endif
 
     string get_name() { return name; }
 };

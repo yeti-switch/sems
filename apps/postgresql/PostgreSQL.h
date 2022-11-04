@@ -93,14 +93,19 @@ class PostgreSQL
     void on_stop() override;
 
     void showStats(const AmArg& params, AmArg& ret);
+
+#ifdef TRANS_LOG_ENABLE
     void getConnectionLog(const AmArg& params, AmArg& ret);
+#endif
     void showConfig(const AmArg& params, AmArg& ret);
 
     async_rpc_handler showStatistics;
     async_rpc_handler showConfiguration;
     rpc_handler requestReconnect;
     rpc_handler requestReset;
+#ifdef TRANS_LOG_ENABLE
     async_rpc_handler transLog;
+#endif
 
     void init_rpc_tree() override;
 
