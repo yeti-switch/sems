@@ -74,12 +74,8 @@ void PGConnection::check_conn()
     }
 }
 
-bool PGConnection::flush_conn(bool flush_pipe)
+bool PGConnection::flush_conn()
 {
-    if(flush_pipe && pipe_status != PQ_PIPELINE_OFF) {
-        PQsendFlushRequest(conn);
-    }
-
     if(1==PQflush(conn)) {
         handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
         return true;
@@ -152,4 +148,12 @@ bool PGConnection::exit_pipe()
     if(!conn) return false;
     DBG("connection %p live pipeline mode", this);
     return PQexitPipelineMode(conn);
+}
+
+bool PGConnection::flush_pipe()
+{
+    if(pipe_status != PQ_PIPELINE_OFF) {
+        PQsendFlushRequest(conn);
+    }
+    return flush_conn();
 }

@@ -22,11 +22,9 @@ bool PGTransactionImpl::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sent) {
-        if(conn->flushPipeline()) {
+        if(!conn->flush()) {
             TRANS_LOG(parent, "send Sync");
             if(conn->syncPipeline()) sync_sent = true;
-        } else {
-            TRANS_LOG(parent, "no out buf to send Sync");
         }
     }
 

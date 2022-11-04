@@ -47,7 +47,7 @@ void Connection::startPipeline()
 bool Connection::flushPipeline()
 {
     if(pipe_status != PQ_PIPELINE_ON) return false;
-    return flush_conn(true);
+    return flush_pipe();
 }
 
 bool Connection::syncPipeline()
@@ -107,6 +107,11 @@ void Connection::close()
     connected_time = 0;
     stopTransaction();
     close_conn();
+}
+
+bool Connection::flush()
+{
+    return flush_conn();
 }
 
 void Connection::cancelTransaction()

@@ -6,11 +6,12 @@ class MockConnection : public Connection
 {
     bool reset_conn() override;
     void check_conn() override;
-    bool flush_conn(bool flush_pipe = false) override;
+    bool flush_conn() override;
     void close_conn() override;
     bool start_pipe() override;
     bool sync_pipe() override;
     bool exit_pipe() override;
+    bool flush_pipe() override;
 public:
     MockConnection(IConnectionHandler* handler);
     ~MockConnection();

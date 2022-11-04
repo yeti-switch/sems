@@ -31,12 +31,13 @@ protected:
 
     virtual void check_conn() = 0;
     virtual PGconn* get_pg_conn() { return nullptr; }
-    virtual bool flush_conn(bool flush_pipe = false) = 0;
+    virtual bool flush_conn() = 0;
     virtual bool reset_conn() = 0;
     virtual void close_conn() = 0;
     virtual bool start_pipe() = 0;
     virtual bool exit_pipe()  = 0;
     virtual bool sync_pipe() = 0;
+    virtual bool flush_pipe() = 0;
 
 public:
     Connection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
@@ -59,6 +60,7 @@ public:
     void check();
     bool reset();
     void close();
+    bool flush();
     bool runTransaction(Transaction* trans);
     bool addPlannedTransaction(Transaction* trans);
     void startPipeline();

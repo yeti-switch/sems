@@ -28,7 +28,7 @@ void MockConnection::check_conn()
     }
 }
 
-bool MockConnection::flush_conn([[maybe_unused]] bool flush_pipe)
+bool MockConnection::flush_conn()
 {
     return true;
 }
@@ -75,5 +75,10 @@ bool MockConnection::sync_pipe()
 bool MockConnection::exit_pipe()
 {
     pipe_status = PQ_PIPELINE_OFF;
+    return true;
+}
+
+bool MockConnection::flush_pipe()
+{
     return true;
 }
