@@ -19,6 +19,14 @@ int sockopt_callback(void *clientp,
     return CURL_SOCKOPT_OK;
 }
 
+static int curl_debugfunction_callback(
+    [[maybe_unused]] CURL *handle, [[maybe_unused]] curl_infotype type,
+    [[maybe_unused]] char *data, [[maybe_unused]] size_t size,
+    [[maybe_unused]] void *userp)
+{
+    return 0;
+}
+
 CurlConnection::CurlConnection()
   : curl(nullptr),
     resolve_hosts(0)
@@ -63,6 +71,9 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_CONNECT_TO, resolve_hosts);
 #ifdef ENABLE_DEBUG
     easy_setopt(CURLOPT_VERBOSE, 1L);
+#else
+    //ensure we never print to the stdout
+    easy_setopt(CURLOPT_DEBUGFUNCTION, curl_debugfunction_callback);
 #endif
 
     if(curl_multi) {
