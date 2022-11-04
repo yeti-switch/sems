@@ -1,3 +1,8 @@
+sems (1.95.7) stable; urgency=low
+  * fix 'core_module_version' metric duplication
+  * pg: disable in-memory transaction log
+ -- Michael Furmur <furmur@pm.me>  Fri, 04 Nov 2022 23:21:21 +0200
+
 sems (1.95.6) stable; urgency=low
   * pg: fix stuck in pipeline sync on the out buf overflow
   * add 'sems_module_version' metric for session factory apps
