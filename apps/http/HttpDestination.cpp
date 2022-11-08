@@ -307,7 +307,7 @@ void HttpDestination::dump(const string &key) const
         fail_action.str().c_str(), fail_action.data().c_str());
 }
 
-void HttpDestination::dump(const string &key, AmArg &ret) const
+void HttpDestination::dump(const string &, AmArg &ret) const
 {
     string url_list;
     for(auto& url_ : url) {

@@ -4,15 +4,8 @@
 
 #include "AmApi.h"
 #include "RpcTreeHandler.h"
-#include "AmEventDispatcher.h"
-
 #include "AmEventFdQueue.h"
-
 #include "HttpDestination.h"
-#include "HttpUploadConnection.h"
-#include "HttpPostConnection.h"
-#include "HttpGetConnection.h"
-#include "HttpMultipartFormConnection.h"
 #include "CurlMultiHandler.h"
 
 #include <string>
@@ -20,8 +13,6 @@
 #include <unordered_map>
 using std::string;
 using std::map;
-
-#include "invalid_ptrs.h"
 
 class HttpClient
 : public AmThread,
@@ -50,13 +41,13 @@ class HttpClient
         std::queue<AmEvent *> postponed_events;
 
         SyncContextData(int counter)
-          : counter(counter),
-            created_at(time(nullptr))
+          : created_at(time(nullptr)),
+            counter(counter)
         {}
 
         SyncContextData(AmEvent *event)
-          : counter(1),
-            created_at(time(nullptr))
+          : created_at(time(nullptr)),
+            counter(1)
         {
             postponed_events.push(event);
         }
@@ -108,14 +99,14 @@ class HttpClient
 
     int onLoad();
 
-    void run();
-    void on_stop();
+    void run() override;
+    void on_stop() override;
 
-    void process(AmEvent* ev);
+    void process(AmEvent* ev) override;
     void process_jsonrpc_request(JsonRpcRequestEvent &request);
     void process_http_event(AmEvent* ev);
 
-    void on_connection_delete(CurlConnection *c);
-    void init_rpc_tree();
+    void on_connection_delete(CurlConnection *c) override;
+    void init_rpc_tree() override;
 };
 

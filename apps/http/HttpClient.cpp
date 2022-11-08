@@ -1,16 +1,24 @@
 #include "HttpClient.h"
-
+#include "defs.h"
 #include "log.h"
 
 #include "AmSessionContainer.h"
+#include "AmEventDispatcher.h"
 #include "AmUtils.h"
 #include "sip/resolver.h"
 
-#define MOD_NAME "http_client"
+#include "HttpUploadConnection.h"
+#include "HttpPostConnection.h"
+#include "HttpGetConnection.h"
+#include "HttpMultipartFormConnection.h"
 
 #include <vector>
 #include "http_client_cfg.h"
 using std::vector;
+
+#include <sys/epoll.h>
+
+#define MOD_NAME "http_client"
 
 #define SYNC_CONTEXTS_TIMER_INVERVAL 500000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "AmArg.h"
-#include "HttpClientAPI.h"
+#include "ampi/HttpClientAPI.h"
 
 #include <map>
 #include <string>
@@ -9,8 +9,6 @@
 #include <confuse.h>
 using std::string;
 using std::list;
-
-#include "curl/curl.h"
 
 class HttpClient;
 
