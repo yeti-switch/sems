@@ -94,7 +94,9 @@ struct AmSystemEvent : public AmEvent
 {
   enum EvType {
     ServerShutdown = 0,
-    User
+    User,
+    GracefulShutdownRequested,
+    GracefulShutdownCancelled,
   };
 
   EvType sys_event;

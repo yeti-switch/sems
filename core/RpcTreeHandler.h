@@ -131,10 +131,10 @@ class RpcTreeHandler
         const AmArg& args,
         AmArg& ret) override;
 
-    virtual void get_methods_tree(AmArg &tree);
+    virtual void get_methods_tree(AmArg &tree) override;
     void init_rpc();
 
-    bool is_methods_tree() { return methods_tree; }
+    bool is_methods_tree() override { return methods_tree; }
 
   private:
     rpc_entry *root_entry;

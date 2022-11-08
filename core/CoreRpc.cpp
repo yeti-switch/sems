@@ -119,13 +119,14 @@ void CoreRpc::set_system_shutdown(bool shutdown)
         timerclear(&last_shutdown_time);
     }
 
-    if(AmConfig.shutdown_mode
-       && AmSession::getTerminateOnNoSessions()
-       && !AmSession::getSessionNum())
-    {
-        //commit suicide immediatly
-        INFO("no active sessions on graceful shutdown command. exit immediately");
-        kill(getpid(),SIGINT);
+    if(AmConfig.shutdown_mode) {
+        if(AmSession::getTerminateOnNoSessions()
+           && !AmSession::getSessionNum())
+        {
+            AmConfig.shutdown_handlers_processor.onShutdownRequested();
+        }
+    } else {
+        AmConfig.shutdown_handlers_processor.onShutdownCancelled();
     }
 }
 
@@ -137,6 +138,8 @@ void CoreRpc::init_rpc_tree()
     //show
     AmArg &show = reg_leaf(root,"show");
         reg_method(show,"status","",&CoreRpc::showStatus);
+        AmArg &show_shutdown = reg_leaf(show,"shutdown");
+            reg_method(show_shutdown,"status","",&CoreRpc::showShutdownStatus);
         reg_method(show,"connections","",&CoreRpc::showConnections);
         reg_method(show,"version","show version",&CoreRpc::showVersion);
         reg_method(show,"config","show config",&CoreRpc::showConfig);
@@ -464,6 +467,11 @@ void CoreRpc::showStatus(const AmArg&, AmArg& ret)
     time_t now = time(NULL);
     ret["localtime"] = now;
     ret["uptime"] = difftime(now,start_time);
+}
+
+void CoreRpc::showShutdownStatus(const AmArg&, AmArg& ret)
+{
+    AmConfig.shutdown_handlers_processor.getStatus(ret);
 }
 
 void CoreRpc::showConnections(const AmArg&, AmArg& ret)

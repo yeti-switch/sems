@@ -631,9 +631,7 @@ void AmSession::session_stopped() {
      && terminate_on_no_sessions
      &&!session_num)
   {
-    //commit suicide if shutdown mode is enabled
-    INFO("last session stopped in graceful shutdown mode. shutdown");
-    kill(getpid(),SIGINT);
+    AmConfig.shutdown_handlers_processor.onShutdownRequested();
   }
   session_num_mut.unlock();
 }

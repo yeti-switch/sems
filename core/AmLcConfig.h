@@ -8,6 +8,7 @@
 #include "Am100rel.h"
 #include "AmAudio.h"
 #include "AmUtils.h"
+#include "ShutdownHandlersProcessor.h"
 
 #define VALUE_LOG_NO                 "no"
 #define VALUE_LOG_DEBUG              "debug"
@@ -103,10 +104,13 @@ struct ConfigContainer
     unsigned int options_session_limit;
     unsigned int options_session_limit_err_code;
     std::string options_session_limit_err_reason;
+
     bool shutdown_mode;
     unsigned int shutdown_mode_err_code;
     std::string shutdown_mode_err_reason;
     bool shutdown_mode_allow_uac;
+    ShutdownHandlersProcessor shutdown_handlers_processor;
+
     unsigned int cps_limit_err_code;
     std::string cps_limit_err_reason;
     bool enable_srtp;
