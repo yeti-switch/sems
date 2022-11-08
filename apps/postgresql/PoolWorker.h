@@ -119,6 +119,7 @@ class PoolWorker
     void onFinish(Transaction* trans, const AmArg& result) override;
     void onTuple(Transaction* trans, const AmArg& result) override;
 
+    uint64_t getActiveTasksCount();
     void getStats(AmArg& ret);
     void getConfig(AmArg& ret);
 #ifdef TRANS_LOG_ENABLE

@@ -4,6 +4,7 @@
 #include <AmApi.h>
 #include <AmEventFdQueue.h>
 #include <RpcTreeHandler.h>
+#include "ShutdownHandler.h"
 #include "ConnectionPool.h"
 
 #include <string>
@@ -50,6 +51,7 @@ class PostgreSQL
 , public AmEventFdQueue
 , public AmEventHandler
 , public RpcTreeHandler<PostgreSQL>
+, public ShutdownHandler
 {
     friend class PostgreSQLFactory;
     static PostgreSQL* _instance;
@@ -115,4 +117,6 @@ class PostgreSQL
 
     time_t getLogTime() { return log_time; }
     string getLogDir() { return log_dir; }
+
+    uint64_t get_active_tasks_count() override;
 };

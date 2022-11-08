@@ -72,6 +72,14 @@ PoolWorker::~PoolWorker()
     }
 }
 
+uint64_t PoolWorker::getActiveTasksCount()
+{
+    return
+        queue_size.get() +  //queue
+        ret_size.get() +    //retransmit
+        tr_size.get();      //active
+}
+
 void PoolWorker::getConfig(AmArg& ret)
 {
     ret["max_queue_length"] = max_queue_length;

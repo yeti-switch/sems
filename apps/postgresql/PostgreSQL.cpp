@@ -88,7 +88,8 @@ void PostgreSQL::dispose()
 }
 
 PostgreSQL::PostgreSQL()
-: AmEventFdQueue(this)
+ : AmEventFdQueue(this),
+   ShutdownHandler(MOD_NAME, POSTGRESQL_QUEUE)
 {
     AmEventDispatcher::instance()->addEventQueue(POSTGRESQL_QUEUE, this);
 }
@@ -216,6 +217,7 @@ void PostgreSQL::run()
                 }
             }
         }
+        checkFinished();
     } while(running);
 
     {
@@ -379,11 +381,21 @@ void PostgreSQL::process(AmEvent* ev)
             process_jsonrpc_request(*e);
         break;
     case E_SYSTEM: {
-        AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
-        if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
-            stop_event.fire();
+        if(AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev)) {
+            switch(sys_ev->sys_event) {
+            case AmSystemEvent::ServerShutdown:
+                stop_event.fire();
+                break;
+            case AmSystemEvent::GracefulShutdownRequested:
+                onShutdownRequested();
+                break;
+            case AmSystemEvent::GracefulShutdownCancelled:
+                onShutdownCancelled();
+                break;
+            default:
+                break;
+            }
         }
-
     } break;
     default:
         process_postgres_event(ev);
@@ -610,4 +622,18 @@ void PostgreSQL::onReset(const ResetEvent& e) {
             }
         }
     }
+}
+
+uint64_t PostgreSQL::get_active_tasks_count()
+{
+    uint64_t tasks = 0;
+
+    m_queue.lock();
+    tasks += ev_queue.size();
+    m_queue.unlock();
+
+    for(const auto &w : workers)
+        tasks += w.second->getActiveTasksCount();
+
+    return tasks;
 }
