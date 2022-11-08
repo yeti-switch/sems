@@ -20,8 +20,10 @@ void ShutdownHandler::checkFinished()
         return;
 
     tasks_count = get_active_tasks_count();
-    if(0==tasks_count)
+    if(0==tasks_count) {
+        shutdown_mode = false;
         processor.onHandlerFinished(this);
+    }
 }
 
 void ShutdownHandler::onShutdownRequested()
