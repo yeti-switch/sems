@@ -7,6 +7,7 @@
 #include "AmEventFdQueue.h"
 #include "HttpDestination.h"
 #include "CurlMultiHandler.h"
+#include "ShutdownHandler.h"
 
 #include <string>
 #include <map>
@@ -19,6 +20,7 @@ class HttpClient
   public AmEventFdQueue,
   public AmEventHandler,
   public RpcTreeHandler<HttpClient>,
+  public ShutdownHandler,
   public CurlMultiHandler
 {
     friend class HttpClientFactory;
@@ -108,5 +110,7 @@ class HttpClient
 
     void on_connection_delete(CurlConnection *c) override;
     void init_rpc_tree() override;
+
+    uint64_t get_active_tasks_count() override;
 };
 

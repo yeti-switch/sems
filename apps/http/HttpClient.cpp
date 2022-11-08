@@ -93,6 +93,7 @@ void HttpClient::dispose()
 
 HttpClient::HttpClient()
   : AmEventFdQueue(this),
+    ShutdownHandler(MOD_NAME, HTTP_EVENT_QUEUE),
     stopped(false),
     epoll_fd(-1)
 { 
@@ -405,11 +406,21 @@ void HttpClient::process(AmEvent* ev)
             process_jsonrpc_request(*e);
         break;
     case E_SYSTEM: {
-        AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
-        if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
-            stop_event.fire();
-        }
-
+         if(AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev)) {
+             switch(sys_ev->sys_event) {
+             case AmSystemEvent::ServerShutdown:
+                 stop_event.fire();
+                 break;
+             case AmSystemEvent::GracefulShutdownRequested:
+                 onShutdownRequested();
+                 break;
+             case AmSystemEvent::GracefulShutdownCancelled:
+                 onShutdownCancelled();
+                 break;
+             default:
+                 break;
+             }
+         }
     } break;
     case HttpEvent::TriggerSyncContext: {
         if(HttpTriggerSyncContext *e = dynamic_cast<HttpTriggerSyncContext*>(ev))
@@ -418,6 +429,8 @@ void HttpClient::process(AmEvent* ev)
     default:
         process_http_event(ev);
     }
+
+    checkFinished();
 }
 
 void HttpClient::process_jsonrpc_request(JsonRpcRequestEvent &request)
@@ -862,6 +875,7 @@ void HttpClient::on_connection_delete(CurlConnection *)
     for(auto& dest : destinations) {
         dest.second.send_postponed_events(this);
     }
+    checkFinished();
 }
 
 void HttpClient::showStats(const AmArg&, AmArg &ret)
@@ -873,4 +887,25 @@ void HttpClient::showStats(const AmArg&, AmArg &ret)
         AmArg& dst = dst_arr[dest.first.c_str()];
         dest.second.showStats(dst);
     }
+}
+
+uint64_t HttpClient::get_active_tasks_count()
+{
+    uint64_t tasks = 0;
+
+    tasks += sync_contexts.size();
+
+    m_queue.lock();
+    tasks += ev_queue.size();
+    m_queue.unlock();
+
+    for(const auto &i : destinations) {
+        auto &dest = i.second;
+        tasks += dest.events.size();
+        tasks += dest.count_connection.get();
+        //FIXME: should we ensure a graceful shutdown for retransmits ?
+        tasks += dest.resend_count_connection.get();
+    }
+
+    return tasks;
 }
