@@ -1933,6 +1933,10 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
         m.port = static_cast<unsigned int>(getLocalPort());
 
     //replace rtcp attribute
+    m.rtcp_port = 0;
+    m.rtcp_conn.address.clear();
+    //DEPRECATED: because we perform 'rtcp' attr parsing
+    //and store result in rtcp_port and rtcp_conn
     for(auto &a : m.attributes) {
         try {
             if (a.attribute == "rtcp") {
