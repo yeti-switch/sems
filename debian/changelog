@@ -1,3 +1,7 @@
+sems (1.96.1) stable; urgency=low
+  * fix 'a=rtcp' attribute replacement
+ -- Michael Furmur <furmur@pm.me>  Thu, 10 Nov 2022 20:59:55 +0200
+
 sems (1.96.0) stable; urgency=low
   * graceful shutdown for 'http' and 'postgresql' modules
   * add 'core.show.shutdown.status' rpc method
