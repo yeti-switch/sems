@@ -56,6 +56,8 @@ class PoolWorker
     AtomicCounter& ret_size;
     AtomicCounter& dropped;
     AtomicCounter& finished_time;
+    AtomicCounter& canceled;
+    AtomicCounter& failed;
 
     list<TransContainer> transactions;    //active transactions
 

@@ -41,6 +41,8 @@ PoolWorker::PoolWorker(const std::string& name, int epollfd)
 , tr_size(stat_group(Gauge, MOD_NAME, "queries_active").addAtomicCounter().addLabel("worker", name))
 , finished(stat_group(Counter, MOD_NAME, "queries_finished").addAtomicCounter().addLabel("worker", name))
 , finished_time(stat_group(Counter, MOD_NAME, "queries_finished_time").addAtomicCounter().addLabel("worker", name))
+, canceled(stat_group(Counter, MOD_NAME, "queries_canceled").addAtomicCounter().addLabel("worker", name))
+, failed(stat_group(Counter, MOD_NAME, "queries_failed").addAtomicCounter().addLabel("worker", name))
 {
     workTimer.link(epoll_fd, true);
 }
@@ -101,6 +103,8 @@ void PoolWorker::getStats(AmArg& ret)
     ret["dropped"] = (long long)dropped.get();
     ret["active"] = (long long)tr_size.get();
     ret["finished"] = (long long)finished.get();
+    ret["canceled"] = (long long)canceled.get();
+    ret["failed"] = (long long)failed.get();
 
     if(master)
         master->getStats(ret, conn_lifetime);
@@ -169,6 +173,7 @@ void PoolWorker::onStopTransaction(Transaction* trans)
             retransmit_q.emplace_back(tr_it->trans, (ConnectionPool*)0, tr_it->sender_id, tr_it->token);
             tr_size.dec((long long)tr_it->trans->get_size());
             ret_size.inc((long long)tr_it->trans->get_size());
+            failed.inc((long long)tr_it->trans->get_size());
             transactions.erase(tr_it);
             return;
         }
@@ -288,15 +293,6 @@ void PoolWorker::onPQError(Transaction* trans, const std::string& error) {
     reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
-//     for(auto tr_it = transactions.begin();
-//         tr_it != transactions.end(); tr_it++) {
-//         if(trans == tr_it->trans) {
-//             tr_size.dec((long long)tr_it->trans->get_size());
-//             onErrorTransaction(*tr_it, error);
-//             transactions.erase(tr_it);
-//             return;
-//         }
-//     }
 }
 
 void PoolWorker::onCancel(Transaction* trans) {
@@ -684,6 +680,7 @@ void PoolWorker::onFireTransaction(const TransContainer& trans)
             trans.sender_id, new PGTimeout(trans.token));
     }
     trans.trans->cancel();
+    canceled.inc((long long)trans.trans->get_size());
 }
 
 void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& error)
@@ -738,6 +735,7 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
             ret_size.inc((long long)trans.trans->get_size());
         }
     }
+    failed.inc((long long)trans.trans->get_size());
 }
 
 void PoolWorker::onTimer()
