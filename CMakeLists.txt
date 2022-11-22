@@ -376,7 +376,7 @@ ENDIF(SEMS_USE_GTEST)
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
 
-add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams)
+add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest)
 
 add_custom_target(install-dev
     install -d /usr/include/sems
