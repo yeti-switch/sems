@@ -277,7 +277,10 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
 
 void AmSrtpConnection::setRAddr(const string& addr, unsigned short port)
 {
-    CLASS_DBG("setRAddr(%s,%hu)",addr.data(),port);
+    CLASS_DBG("setRAddr(%s,%hu) type:%d, endpoint: %s:%d",
+              addr.data(), port, conn_type,
+              r_host.data(), r_port);
+    resolveRemoteAddress(addr, port);
     s_stream->setRAddr(addr, port);
 }
 
