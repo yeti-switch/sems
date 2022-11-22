@@ -1,3 +1,8 @@
+sems (1.96.2) stable; urgency=low
+  * fix symmetric RTP for SRTP media
+  * pg: add 'sems_postgresql_queries_failed' and 'sems_postgresql_queries_canceled' metrics
+ -- Michael Furmur <furmur@pm.me>  Tue, 22 Nov 2022 21:04:01 +0200
+
 sems (1.96.1) stable; urgency=low
   * fix 'a=rtcp' attribute replacement
  -- Michael Furmur <furmur@pm.me>  Thu, 10 Nov 2022 20:59:55 +0200
