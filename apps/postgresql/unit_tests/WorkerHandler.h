@@ -59,6 +59,7 @@ public:
         config_parameters.emplace<string, TesterConfig::parameter_var>(PARAM_PG_ADDR_NAME "-postgres", {.type = TesterConfig::parameter_var::String, .u = {&address}});
         test_config::instance()->useCmdModule(config_parameters);
 
+        freePolicyFactory();
         makePolicyFactory(!external, &server);
         PGPool pool = GetPoolByAddress(address);
         pool.pool_size = 2;

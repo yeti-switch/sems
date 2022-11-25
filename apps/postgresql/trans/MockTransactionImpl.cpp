@@ -72,9 +72,10 @@ int MockTransactionImpl::fetch_result()
                 parent->handler->onErrorCode(parent, errorcode);
             }
         } else {
-            AmArg res = server->getResponse(query_);
-            if(!isArgUndef(res))
+            AmArg res;
+            while(server->getResponse(query_, res)) {
                 result.push(res);
+            }
         }
     } else if(current_query_number < query->get_size()){
         string errorcode;
@@ -84,9 +85,10 @@ int MockTransactionImpl::fetch_result()
                 parent->handler->onErrorCode(parent, errorcode);
             }
         } else {
-            AmArg res = server->getResponse(query_);
-            if(!isArgUndef(res))
+            AmArg res;
+            while(server->getResponse(query_, res)) {
                 result.push(res);
+            }
         }
         current_query_number++;
     } else {

@@ -27,7 +27,7 @@ public:
     TestServer(){}
 
     void addResponse(const string& query, const AmArg& response) {
-        responses.emplace(query, response);
+        responses[query].push(response);
     }
 
     void addError(const string& query, bool erase) {
@@ -58,8 +58,12 @@ public:
         return false;
     }
 
-    AmArg& getResponse(const string& query) {
-        return responses[query];
+    bool getResponse(const string& query, AmArg& res) {
+        if(responses.find(query) == responses.end()) return false;
+        if(!responses[query].size()) return false;
+        res = responses[query][0];
+        responses[query].erase((size_t)0);
+        return true;
     }
     
     bool checkTail(const string& query) {
