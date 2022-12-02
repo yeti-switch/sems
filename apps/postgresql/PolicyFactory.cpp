@@ -93,7 +93,7 @@ IQueryImpl * TestPolicy::createQueryPrepared(const std::string& cmd, bool single
 PolicyFactory * makePolicyFactory(bool test, TestServer* server)
 {
     if(PolicyFactory::instance_)
-        delete PolicyFactory::instance_;
+        return PolicyFactory::instance_;
 
     if(test)
         PolicyFactory::instance_ = new TestPolicy(server);
