@@ -1,3 +1,8 @@
+sems (1.96.3) stable; urgency=low
+  * AmSipRegistration: support for 'port' attribute in reg data hash
+  * postgres: fix mocking in unit tests
+ -- Michael Furmur <furmur@pm.me>  Fri, 02 Dec 2022 17:48:57 +0200
+
 sems (1.96.2) stable; urgency=low
   * fix symmetric RTP for SRTP media
   * pg: add 'sems_postgresql_queries_failed' and 'sems_postgresql_queries_canceled' metrics
