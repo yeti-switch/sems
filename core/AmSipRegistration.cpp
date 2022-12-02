@@ -90,7 +90,12 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
         return false;
     }
     DEF_AND_VALIDATE_MANDATORY_STR(domain);
-    DEF_AND_VALIDATE_OPTIONAL_INT(port, 0);
+
+    if(info.hasMember("port")) {
+        AmArg &a = info["port"];
+        if(isArgInt(a)) port = a.asInt();
+    }
+
     DEF_AND_VALIDATE_OPTIONAL_STR(user);
     DEF_AND_VALIDATE_OPTIONAL_STR(name);
     DEF_AND_VALIDATE_OPTIONAL_STR_ALT(auth_user, auth_username);
