@@ -62,6 +62,7 @@ static void reg2arg(const map<string, AmSIPRegistration*>::iterator &it, AmArg &
     r["handle"] = it->first;
     r["id"] = ri.id;
     r["domain"] = ri.domain;
+    r["port"] = ri.port;
     r["user"] = ri.user;
     r["display_name"] = ri.name;
     r["auth_user"] = ri.auth_user;

@@ -45,6 +45,7 @@ using std::string;
 struct SIPRegistrationInfo {
   string id;
   string domain;
+  int port;
   string user;
   string name;
   string auth_user;
@@ -86,30 +87,32 @@ struct SIPRegistrationInfo {
     const int& transaction_timeout,
     const int& srv_failover_timeout,
     const dns_priority& resolve_priority,
-    sip_uri::uri_scheme scheme_id = sip_uri::SIP)
-  : id(id),domain(domain),user(user),name(name),
-    auth_user(auth_user),pwd(pwd),proxy(proxy),contact(contact),
+    sip_uri::uri_scheme scheme_id = sip_uri::SIP,
+    int port = 0)
+  : id(id), domain(domain), port(port), user(user), name(name),
+    auth_user(auth_user), pwd(pwd),proxy(proxy), contact(contact),
     contact_uri_params(contact_uri_params),
     contact_params(contact_params),
     expires_interval(expires_interval),
-    force_expires_interval(force_expires_interval),
     retry_delay(retry_delay),
     max_attempts(max_attempts),
+    attempt(0),
     transport_protocol_id(transport_protocol_id),
     proxy_transport_protocol_id(proxy_transport_protocol_id),
-    attempt(0),
+    force_expires_interval(force_expires_interval),
     transaction_timeout(transaction_timeout),
     srv_failover_timeout(srv_failover_timeout),
     resolve_priority(resolve_priority),
     scheme_id(scheme_id)
   { }
   SIPRegistrationInfo()
-  : expires_interval(0)
-  , force_expires_interval(false)
+  : port(0)
+  , expires_interval(0)
   , retry_delay(0)
   , max_attempts(0)
   , transport_protocol_id(0)
   , proxy_transport_protocol_id(0)
+  , force_expires_interval(false)
   , transaction_timeout(0)
   , srv_failover_timeout(0)
   , resolve_priority(Dualstack)

@@ -90,19 +90,7 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
         return false;
     }
     DEF_AND_VALIDATE_MANDATORY_STR(domain);
-
-    int port;
     DEF_AND_VALIDATE_OPTIONAL_INT(port, 0);
-    if(port > 0 && port <= 0xffff) {
-        if(string::npos == domain.find(':')) {
-            //append port to the domain
-            domain += ':';
-            domain += int2str(port);
-        } else {
-            WARN("we have both 'port' attribute and port in the 'domain'. ignore 'port' attribute");
-        }
-    }
-
     DEF_AND_VALIDATE_OPTIONAL_STR(user);
     DEF_AND_VALIDATE_OPTIONAL_STR(name);
     DEF_AND_VALIDATE_OPTIONAL_STR_ALT(auth_user, auth_username);
@@ -267,6 +255,10 @@ void AmSIPRegistration::applyInfo()
 
     uri_parser.uri_host = info.domain;
     ensure_ipv6_reference(uri_parser.uri_host);
+
+    if(info.port) {
+        uri_parser.uri_port = int2str(info.port);
+    }
 
     //set scheme
     if(sip_uri::SIPS==info.scheme_id) {
