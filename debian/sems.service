@@ -12,6 +12,6 @@ LimitNOFILE=65536
 LimitCORE=infinity
 
 ExecStart=/usr/sbin/sems -f /etc/sems/sems.conf
-PIDFile=/var/run/sems.pid
+PIDFile=/run/sems.pid
 Type=simple
 Restart=on-abnormal
