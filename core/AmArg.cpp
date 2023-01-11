@@ -28,6 +28,7 @@
 #include "AmArg.h"
 #include "log.h"
 #include "AmUtils.h"
+#include <limits>
 
 #ifdef USE_AMARG_STATISTICS
     AtomicCounter& amargsize = stat_group(Gauge, "core", "amarg_memory").addAtomicCounter();

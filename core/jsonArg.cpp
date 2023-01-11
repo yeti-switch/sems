@@ -30,6 +30,7 @@
 #include "AmArg.h"
 #include "AmUtils.h"
 #include "log.h"
+#include <limits>
 
 #include "jsonArg.h"
 using std::string;
