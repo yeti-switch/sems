@@ -227,7 +227,9 @@ string arg2json(const AmArg &a) {
   case AmArg::Bool:
     return a.asBool()?"true":"false";
 
-  case AmArg::Double: 
+  case AmArg::Double:
+    if(a.asDouble() == std::numeric_limits<double>::infinity())
+        return "\"inf\"";
     return double2str(a.asDouble());
 
   case AmArg::CStr:

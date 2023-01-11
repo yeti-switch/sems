@@ -532,6 +532,8 @@ string AmArg::print(const AmArg &a) {
     case Bool:
       return a.asBool()?"true":"false";
     case Double:
+      if(a.asDouble() == std::numeric_limits<double>::infinity())
+        return "\"inf\"";
       return double2str(a.asDouble());
     case CStr:
       return "'" + string(a.asCStr()) + "'";
