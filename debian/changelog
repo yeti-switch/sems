@@ -1,3 +1,7 @@
+sems (1.96.6) stable; urgency=low
+  * fix app_mapping.conf reading
+ -- Michael Furmur <furmur@pm.me>  Thu, 12 Jan 2023 22:45:20 +0200
+
 sems (1.96.5) stable; urgency=low
   * AmArg: fix serialization for infinite double value to json
   * sems.service: PIDFile /var/run/sems.pid -> /run/sems.pid
