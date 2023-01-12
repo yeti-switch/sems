@@ -966,11 +966,11 @@ int AmLcConfig::readConfiguration(ConfigContainer* config)
         return -1;
     }
 
-    if(readRoutings(m_cfg, config)||
-       readGeneral(m_cfg, config) ||
+    if(readGeneral(m_cfg, config) ||
        readSigInterfaces(m_cfg, config) ||
        readMediaInterfaces(m_cfg, config) ||
        readModules(m_cfg, config) ||
+       readRoutings(m_cfg, config) ||
        checkSipInterfaces(config)) {
         return -1;
     }
