@@ -4,6 +4,7 @@ JsonRPCServer.cpp
 RpcPeer.cpp
 RpcServerLoop.cpp
 RpcServerThread.cpp
+WsRpcPeer.cpp
 )
 
 SET(jsonrpc_config_files "")

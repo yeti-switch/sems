@@ -189,6 +189,10 @@ void JsonrpcNetstringsConnection::resetRead() {
   msg_recv = true;
 }
 
+int JsonrpcNetstringsConnection::read_data(char* data, int size) {
+    return read(fd,data,size);
+}
+
 int JsonrpcNetstringsConnection::netstringsRead() {
   if (!in_msg) {
     while (true) {
@@ -198,7 +202,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	return REMOVE;
       }
       // reading length
-      ssize_t r=read(fd,&msgbuf[rcvd_size],1);
+      ssize_t r=read_data(&msgbuf[rcvd_size], 1);
       if (!r) {
 	DBG("closing connection [%p/%d] on peer hangup", this, fd);
 	close();
@@ -226,7 +230,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	}
 	// received len - switch to receive msg mode
 	in_msg = true;
-	rcvd_size = read(fd,msgbuf,msg_size+1);
+	rcvd_size = read_data(msgbuf,msg_size+1);
 	// DBG("received '%.*s'", rcvd_size, msgbuf);
 
 	if (rcvd_size == msg_size+1) { 
@@ -256,7 +260,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 	  close();
 	  return REMOVE;
 	}
-	       
+
 	return CONTINUE; 	
       } 
 
@@ -270,7 +274,7 @@ int JsonrpcNetstringsConnection::netstringsRead() {
       rcvd_size++;
     }
   } else {
-    ssize_t r = read(fd,msgbuf+rcvd_size,msg_size-rcvd_size+1);
+    ssize_t r = read_data(msgbuf+rcvd_size,msg_size-rcvd_size+1);
     if (r>0) {
       rcvd_size += r;
       DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
@@ -304,8 +308,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 }
 
 int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
-  struct pollfd poll_set;
-
   if (msg_size<0) {
     close();
     return REMOVE;
@@ -326,57 +328,61 @@ int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
 	 msg_size_s.length());
   ns_begin[msg_size_s.length()]=':';
   msgbuf[msg_size]=',';
-  
-  rcvd_size = 0;
-  size_t ns_total_len = msg_size+msg_size_s.length()+2;
 
-  poll_set.fd = fd;
-  poll_set.events = POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-
-  while (rcvd_size != ns_total_len) {
-    ssize_t written = send(fd,
-        &ns_begin[rcvd_size],
-        ns_total_len - rcvd_size,
-#ifdef MSG_NOSIGNAL
-       MSG_NOSIGNAL
-#else
-       0
-#endif
-    );
-
-	if ((written<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) ||
-		written==0)
-	{
-		int ret  = poll(&poll_set,1,POLL_TIMEOUT);
-		if(ret==1) {
-			if(poll_set.revents & POLLOUT)
-				continue;
-			else
-				ERROR("waiting for send: exception on socket");
-		} else {
-			if(ret==0)
-				ERROR("waiting for send: timeout");
-			else
-				ERROR("waiting for send: error %d",errno);
-		}
-		close();
-		return REMOVE;
-	}
-	if (written<0) {
-		if (errno == ECONNRESET)
-			DBG("closing connection [%p/%d] on peer hangup", this, fd);
-		else
-			INFO("error on connection [%p/%d]: %s", this, fd, strerror(errno));
-		close();
-		return REMOVE;
-	}
-	rcvd_size+=written;
-  }
+  if(!send_data(ns_begin, msg_size+msg_size_s.length()+2)) return REMOVE;
 
   rcvd_size = 0;
   msg_size = 0;
   return CONTINUE;
 }
+
+int JsonrpcNetstringsConnection::send_data(char* data, int size)
+{
+    struct pollfd poll_set;
+    rcvd_size = 0;
+    poll_set.fd = fd;
+    poll_set.events = POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+
+    while (rcvd_size != size) {
+        ssize_t written = send(fd, &data[rcvd_size], size - rcvd_size,
+#ifdef MSG_NOSIGNAL
+       MSG_NOSIGNAL
+#else
+       0
+#endif
+        );
+
+        if ((written<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) ||
+            written==0)
+        {
+            int ret  = poll(&poll_set,1,POLL_TIMEOUT);
+            if(ret==1) {
+                if(poll_set.revents & POLLOUT)
+                    continue;
+                else
+                    ERROR("waiting for send: exception on socket");
+            } else {
+                if(ret==0)
+                    ERROR("waiting for send: timeout");
+                else
+                    ERROR("waiting for send: error %d",errno);
+            }
+            close();
+            return 0;
+        }
+        if (written<0) {
+            if (errno == ECONNRESET)
+                DBG("closing connection [%p/%d] on peer hangup", this, fd);
+            else
+                INFO("error on connection [%p/%d]: %s", this, fd, strerror(errno));
+            close();
+            return 0;
+        }
+        rcvd_size+=written;
+    }
+    return size;
+}
+
 
 void JsonrpcNetstringsConnection::close() {
   if (fd>0) {

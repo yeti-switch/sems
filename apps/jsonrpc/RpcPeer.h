@@ -68,9 +68,17 @@ struct JsonrpcPeerConnection {
     FL_CLOSE_NO_NOTIF_RECV   = 16,  // close connection if notification queue missing
     FL_REJECTED              = 32,  // connection if not whitelists
   }; 
+  
+  enum {
+      PEER_UNKNOWN,
+      PEER_TCP,
+      PEER_TLS,
+      PEER_WS,
+      PEER_WSS
+  } conn_type;
 
   JsonrpcPeerConnection()
-    : flags(0)
+    : flags(0), conn_type(PEER_UNKNOWN)
   {
     req_id = rand()%1024;
   }
@@ -79,7 +87,8 @@ struct JsonrpcPeerConnection {
 
   JsonrpcPeerConnection(const std::string& id)
   : id(id),
-    flags(0)
+    flags(0),
+    conn_type(PEER_UNKNOWN)
   {
     DBG("created connection '%s'", id.c_str());
   }
@@ -106,9 +115,9 @@ struct JsonrpcNetstringsConnection
   bool msg_recv;
 
   JsonrpcNetstringsConnection(const std::string& id); 
-  ~JsonrpcNetstringsConnection(); 
+  virtual ~JsonrpcNetstringsConnection(); 
 
-  int connect(const std::string& host, int port, std::string& res_str);
+  virtual int connect(const std::string& host, int port, std::string& res_str);
 
   void close();
   enum {
@@ -118,13 +127,15 @@ struct JsonrpcNetstringsConnection
   } ReadResult;
 
   /** @returns ReadResult */
-  int netstringsRead();
+  virtual int netstringsRead();
+  virtual int read_data(char* data, int size);
 
   /** 
       blocking write: blocks until message in msgbuf 
       with size msg_size is written
   */
-  int netstringsBlockingWrite();
+  virtual int netstringsBlockingWrite();
+  virtual int send_data(char* data, int size);
 
   void resetRead();
 
