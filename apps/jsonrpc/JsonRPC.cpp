@@ -186,10 +186,10 @@ void JsonRPCServerModule::invoke(const string& method,
   if (method == "execRpc"){
 
     // todo: add connection id
-    args.assertArrayFmt("sssisis");   // evq_link, notificationReceiver, requestReceiver, 
-                                      // flags(i), host, port (i), method, [params]
-    if (args.size() > 7)  {
-      if (!isArgArray(args.get(7)) && !isArgStruct(args.get(7))) {
+    args.assertArrayFmt("sssiisis");   // evq_link, notificationReceiver, requestReceiver, 
+                                      // conn_type(i), flags(i), host, port (i), method, [params]
+    if (args.size() > 8)  {
+      if (!isArgArray(args.get(8)) && !isArgStruct(args.get(8))) {
 	ERROR("internal error: params to JSON-RPC must be struct or array");
 	throw AmArg::TypeMismatchException();
       }
@@ -228,22 +228,24 @@ void JsonRPCServerModule::invoke(const string& method,
 void JsonRPCServerModule::execRpc(const AmArg& args, AmArg& ret) {
   AmArg none_params;
   AmArg& params = none_params;
-  if (args.size()>7)
-    params = args.get(7);
+  if (args.size()>8)
+    params = args.get(8);
 
   AmArg u_none_params;
   AmArg& udata = u_none_params;
-  if (args.size()>8)
-    udata = args.get(8);
+  if (args.size()>9)
+    udata = args.get(9);
 
   JsonRPCServerLoop::execRpc(// evq_link, notification_link, request_link
 			     args.get(0).asCStr(), args.get(1).asCStr(),
-			     args.get(2).asCStr(), 
-			     // flags
+			     args.get(2).asCStr(),
+			     // conn_type
 			     args.get(3).asInt(), 
+			     // flags
+			     args.get(4).asInt(), 
 			     // host, port, method
-			     args.get(4).asCStr(), 
-			     args.get(5).asInt(), args.get(6).asCStr(), 
+			     args.get(5).asCStr(), 
+			     args.get(6).asInt(), args.get(7).asCStr(), 
 			     params, udata, ret);
 }
 

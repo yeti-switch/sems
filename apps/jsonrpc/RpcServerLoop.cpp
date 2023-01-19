@@ -138,8 +138,8 @@ inline constexpr size_t offset_of(T1 T2::*member) {
 static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
 
-    struct JsonrpcNetstringsConnection *peer= 
-        ((struct JsonrpcNetstringsConnection*)
+    class JsonrpcNetstringsConnection *peer= 
+        ((class JsonrpcNetstringsConnection*)
         (((char*)w) - offset_of(&JsonrpcNetstringsConnection::ev_read)));
 
     //DBG("read_cb in connection %p", peer);
@@ -530,16 +530,23 @@ void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn)
 void JsonRPCServerLoop::execRpc(const string& evq_link, 
 				const string& notificationReceiver,
 				const string& requestReceiver,
+                int conn_type,
 				int flags,
 				const string& host,
 				int port, const string& method, 
 				const AmArg& params,
 				const AmArg& udata,
 				AmArg& ret) {
+  if(conn_type <= WsRpcPeer::PEER_UNKNOWN || conn_type > WsRpcPeer::PEER_WSS) {
+    ret.push(400);
+    ret.push("incorrect type of rpc connection");
+    return;
+  }
+
   string connection_id = newConnectionId();
-  JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
+  JsonrpcNetstringsConnection* peer = new WsRpcPeer(connection_id);
   peer->flags = flags;
-  //TODO: peer->conn_type
+  peer->conn_type = (WsRpcPeer::ConnectionType)conn_type;
   peer->notificationReceiver = notificationReceiver;
   peer->requestReceiver = requestReceiver;
 

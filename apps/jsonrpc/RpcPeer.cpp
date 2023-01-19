@@ -398,3 +398,17 @@ bool JsonrpcNetstringsConnection::messagePending() {
 bool JsonrpcNetstringsConnection::messageIsRecv() { 
   return msg_recv; 
 }
+
+void JsonrpcNetstringsConnection::addMessage(const char* data, size_t len) {
+  memcpy(msgbuf, data, len);
+  msg_size = len;
+}
+
+char * JsonrpcNetstringsConnection::getMessage(size_t* len) {
+    *len = msg_size;
+    return msgbuf;
+}
+
+void JsonrpcNetstringsConnection::clearMessage() {
+    msg_size = 0;
+}

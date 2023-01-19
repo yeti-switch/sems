@@ -4,6 +4,7 @@
 #include "RpcPeer.h"
 #include <wslay/wslay.h>
 #include "sip/sip_parser.h"
+#include "sip/sip_parser_async.h"
 
 class WsRpcPeer : public JsonrpcNetstringsConnection
 {
@@ -13,8 +14,11 @@ class WsRpcPeer : public JsonrpcNetstringsConnection
     cstring          ws_accept;
     cstring          ws_key;
     list<char>       ws_resv_buffer;
+    list<char>       ws_send_buffer;
+    parser_state     pst;
 
     cstring get_sec_ws_accept_data(const cstring& key);
+    cstring get_sec_ws_key_data();
 protected:
     static ssize_t recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len, int flags, void *user_data);
     static void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data);
@@ -26,6 +30,7 @@ protected:
 
     int parse_input(sip_msg* s_msg);
     void send_reply(sip_msg* req, int reply_code, const string& reason);
+    void send_request();
 public:
     WsRpcPeer(const std::string& id);
     ~WsRpcPeer();
@@ -37,6 +42,9 @@ public:
 
     int send_data(char* data, int size) override;
     int netstringsBlockingWrite() override;
+
+    void addMessage(const char* data, size_t len) override;
+    void clearMessage() override;
 };
 
 #endif/*WS_RPC_PEER_H*/

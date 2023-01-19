@@ -39,7 +39,7 @@ using std::string;
 #define JSONRPC_MSG_REQUEST  0
 #define JSONRPC_MSG_RESPONSE 1
 #define JSONRPC_MSG_ERROR    2
-struct JsonrpcNetstringsConnection;
+class JsonrpcNetstringsConnection;
 
 #define JSONRPC_EVENT_ID 122
 #define JSONRPC_QUEUE_NAME "jsonrpc"

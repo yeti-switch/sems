@@ -69,7 +69,7 @@ struct JsonrpcPeerConnection {
     FL_REJECTED              = 32,  // connection if not whitelists
   }; 
   
-  enum {
+  enum ConnectionType{
       PEER_UNKNOWN,
       PEER_TCP,
       PEER_TLS,
@@ -98,22 +98,28 @@ struct JsonrpcPeerConnection {
   }
 
   void notifyDisconnect();
+
+  virtual void addMessage(const char* data, size_t len) = 0;
+  virtual void clearMessage() = 0;
 };
 
-struct JsonrpcNetstringsConnection 
+class JsonrpcNetstringsConnection 
   : public JsonrpcPeerConnection
 {
-  int fd;  
+public:
+  int fd;
   ev_io ev_write;
   ev_io ev_read;
-
+  bool msg_recv;
+  
+protected:
   char snd_size[MAX_NS_LEN_SIZE+1];
   char msgbuf[MAX_RPC_MSG_SIZE];
   unsigned int msg_size;
   unsigned int rcvd_size;
   bool in_msg;
-  bool msg_recv;
-
+  
+public:
   JsonrpcNetstringsConnection(const std::string& id); 
   virtual ~JsonrpcNetstringsConnection(); 
 
@@ -138,10 +144,12 @@ struct JsonrpcNetstringsConnection
   virtual int send_data(char* data, int size);
 
   void resetRead();
-
+  char* getMessage(size_t* len);
   bool messagePending();
-
   bool messageIsRecv();
+
+  void addMessage(const char* data, size_t len) override;
+  void clearMessage() override;
 };
 
 #endif
