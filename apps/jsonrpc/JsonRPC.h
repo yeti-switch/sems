@@ -74,6 +74,8 @@ class JsonRPCServerModule
   static int threads;
   static trsp_acl acl;
   static string tcp_md5_password;
+  static tls_server_settings server_settings;
+  static tls_client_settings client_settings;
 };
 
 #endif

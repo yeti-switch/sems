@@ -56,7 +56,7 @@
 #include <err.h>
 #include <stddef.h>
 
-#include "WsRpcPeer.h"
+#include "SecureRpcPeer.h"
 #include "JsonRPC.h"
 
 ev_io ev_accept;
@@ -208,7 +208,7 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     }
 
     string connection_id = JsonRPCServerLoop::newConnectionId();
-    JsonrpcNetstringsConnection* peer = new WsRpcPeer(connection_id);
+    JsonrpcNetstringsConnection* peer = new SecureRpcPeer(connection_id);
     peer->fd=client_fd;
     peer->flags=0;
     if (setnonblock(peer->fd) < 0) {
@@ -544,7 +544,7 @@ void JsonRPCServerLoop::execRpc(const string& evq_link,
   }
 
   string connection_id = newConnectionId();
-  JsonrpcNetstringsConnection* peer = new WsRpcPeer(connection_id);
+  JsonrpcNetstringsConnection* peer = new SecureRpcPeer(connection_id);
   peer->flags = flags;
   peer->conn_type = (WsRpcPeer::ConnectionType)conn_type;
   peer->notificationReceiver = notificationReceiver;

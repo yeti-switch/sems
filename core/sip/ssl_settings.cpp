@@ -18,7 +18,8 @@ void settings::load_certificates()
     AmLock l(mutex);
 
     certificate.reset(new Botan::X509_Certificate(certificate_path));
-    certificate_not_after_counter->set(certificate->not_after().time_since_epoch());
+    if(certificate_not_after_counter)
+        certificate_not_after_counter->set(certificate->not_after().time_since_epoch());
 
     Botan::DataSource_Stream stream(certificate_key_path);
     certificate_key = Botan::PKCS8::load_key(stream);
