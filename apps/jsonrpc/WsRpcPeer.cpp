@@ -53,21 +53,13 @@ int WsRpcPeer::connect(const std::string& host, int port, std::string& res_str) 
 }
 
 int WsRpcPeer::netstringsRead() {
-    INFO("WsRpcPeer::netstringsRead(), recv_size %d", rcvd_size);
     if(conn_type == PEER_TCP)
         return JsonrpcNetstringsConnection::netstringsRead();
 
     if(!ws_connected) {
         int r = read_data(msgbuf + rcvd_size, 1);
-        if (!r) {
-            DBG("closing connection [%p/%d] on peer hangup", this, fd);
-            close();
-            return REMOVE;
-        }
-
-        if ((r<0 && errno == EAGAIN) ||
-            (r<0 && errno == EWOULDBLOCK))
-                return CONTINUE;
+        if (!r) return CONTINUE;
+        if (r<0) return REMOVE;
 
         if (r != 1) {
             INFO("socket error on connection [%p/%d]: %s",
@@ -79,9 +71,12 @@ int WsRpcPeer::netstringsRead() {
         rcvd_size += 1;
 
         if(conn_type != PEER_WS && conn_type != PEER_WSS)
-            return CONTINUE;
+            return JsonrpcNetstringsConnection::netstringsRead();
 
-        rcvd_size += read_data(msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
+        r = read_data(msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
+        if (!r) return CONTINUE;
+        if (r<0) return REMOVE;
+        rcvd_size += r;
         int err = skip_sip_msg_async(&pst, (char*)(msgbuf+rcvd_size));
         if(err) {
             if(err == UNEXPECTED_EOT) {
@@ -99,12 +94,9 @@ int WsRpcPeer::netstringsRead() {
         char* err_msg=0;
         err = parse_http_msg(s_msg.get(), err_msg);
         if(err){
-            DBG("parse_http_msg returned %i",err);
-
             if(!err_msg){
                 err_msg = (char*)"unknown parsing error";
             }
-            DBG("parsing error: %s",err_msg);
 
             if((err != MALFORMED_FLINE) &&
             (s_msg->type == HTTP_REQUEST) &&
@@ -118,15 +110,8 @@ int WsRpcPeer::netstringsRead() {
             return REMOVE;
     } else {
         int r = read_data(msgbuf, MAX_RPC_MSG_SIZE);
-        if ((r<0 && errno == EAGAIN) ||
-            (r<0 && errno == EWOULDBLOCK))
-                return CONTINUE;
-
-        if (r<=0) {
-            DBG("closing connection [%p/%d] on peer hangup", this, fd);
-            close();
-            return REMOVE;
-        }
+        if (!r) return CONTINUE;
+        if (r<0) return REMOVE;
 
         msg_size = r;
         return DISPATCH;
@@ -135,8 +120,7 @@ int WsRpcPeer::netstringsRead() {
 }
 
 int WsRpcPeer::netstringsBlockingWrite() {
-    DBG("WsRpcPeer::netstringsBlockingWrite, ws_connected %d", ws_connected);
-    if(conn_type == PEER_TCP)
+    if(conn_type == PEER_TCP || conn_type == PEER_TLS)
         return JsonrpcNetstringsConnection::netstringsBlockingWrite();
 
     if(!send_data(msgbuf, msg_size)) return REMOVE;
@@ -146,11 +130,9 @@ int WsRpcPeer::netstringsBlockingWrite() {
 }
 
 int WsRpcPeer::send_data(char* data, int size) {
-    DBG("WsRpcPeer::send_data, ws_connected %d", ws_connected);
     if(conn_type == PEER_TCP || !ws_connected)
         return JsonrpcNetstringsConnection::send_data(data, size);
 
-    DBG("WsRpcPeer send_data %ld", size);
     wslay_event_msg e_msg = {
         .opcode = WSLAY_TEXT_FRAME,
         .msg = (uint8_t*)data,
@@ -181,8 +163,8 @@ cstring WsRpcPeer::get_sec_ws_accept_data(const cstring& key)
 }
 
 void WsRpcPeer::send_reply(sip_msg* req, int reply_code, const std::string& reason) {
-    static char close[] = "close";
-    static int close_len = strlen(close);
+    static char close_[] = "close";
+    static int close_len = strlen(close_);
     static char keepalive[] = "keep-alive";
     static int keepalive_len = strlen(keepalive);
 
@@ -206,7 +188,7 @@ void WsRpcPeer::send_reply(sip_msg* req, int reply_code, const std::string& reas
     msg_size += copy_hdr_len(&server);
     msg_size += copy_hdr_len(&date);
     if(reply_code >= 400) {
-        connection.value.set(close, close_len);
+        connection.value.set(close_, close_len);
         msg_size += copy_hdr_len(&connection);
     } else if(reply_code == 101) {
         msg_size += copy_hdr_len(&connection);
@@ -241,18 +223,17 @@ void WsRpcPeer::send_reply(sip_msg* req, int reply_code, const std::string& reas
     *c++ = CR;
     *c++ = LF;
     DBG("send message [%p/%d]\n%.*s", this, fd, msg_size, msgbuf);
-    netstringsBlockingWrite();
+    if(netstringsBlockingWrite() == REMOVE) close();
 }
 
 int WsRpcPeer::read_data(char* data, int size) {
-    INFO("WsRpcPeer::read_data(), recv_size %d", rcvd_size);
     if(conn_type == PEER_UNKNOWN) {
         if(size != 1) {
             ERROR("incorrect reading size of peer in initial state");
-            return 0;
+            return -1;
         }
         int recv_size = ws_recv_data((uint8_t*)data, 1);
-        if(recv_size != 1) return recv_size;
+        if(recv_size != 1) return -1;
         // http request(websocket)
         if(*data == 'G') {
             conn_type = PEER_WS;
@@ -261,22 +242,18 @@ int WsRpcPeer::read_data(char* data, int size) {
         } else if(*data >= '0' && *data <= '9') {
             conn_type = PEER_TCP;
         } else {
-            DBG("Unsupported protocol. Must be netstring or websocket.");
-            return 0;
+            INFO("Unsupported protocol. Must be netstring or websocket.");
+            return -1;
         }
         return 1;
     } else if(conn_type == PEER_TCP || !ws_connected) {
         return JsonrpcNetstringsConnection::read_data(data, size);
     }
 
-    INFO("WsRpcPeer::read_data(data, %d), ws_connected", size);
-    if(wslay_event_recv(ctx_)) return 0;
-    INFO("WsRpcPeer::read_data(data, %d), ws_resv_buffer size %d", size, ws_resv_buffer.size());
+    if(wslay_event_recv(ctx_)) return -1;
     size_t read_size = size > ws_resv_buffer.size() ? ws_resv_buffer.size() : size;
     memcpy(data, ws_resv_buffer.data(), read_size);
     ws_resv_buffer.erase(ws_resv_buffer.begin(), ws_resv_buffer.begin() + read_size);
-    INFO("WsRpcPeer::read_data(data, %d), read_size %d", size, read_size);
-    if(!read_size) return -1;
     return read_size;
 }
 
@@ -291,10 +268,8 @@ int WsRpcPeer::genmask_callback(wslay_event_context_ptr ctx, uint8_t* buf, size_
 void WsRpcPeer::on_msg_recv(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg* arg) {
     if(arg->opcode == WSLAY_TEXT_FRAME ||
        arg->opcode == WSLAY_CONTINUATION_FRAME) {
-        INFO("WsRpcPeer::on_msg_recv, ws_resv_buffer.size() %d, arg->msg_length %d", ws_resv_buffer.size(), arg->msg_length);
         size_t old_size = ws_resv_buffer.size();
         ws_resv_buffer.resize(old_size + arg->msg_length);
-        INFO("WsRpcPeer::on_msg_recv after resize ws_resv_buffer.size() %d, arg->msg_length %d", ws_resv_buffer.size(), arg->msg_length);
         memcpy(ws_resv_buffer.data() + old_size, arg->msg, arg->msg_length);
     } else if(arg->opcode == WSLAY_CONNECTION_CLOSE) {
         close();
@@ -307,19 +282,18 @@ void WsRpcPeer::on_msg_recv_callback(wslay_event_context_ptr ctx, const struct w
 }
 
 int WsRpcPeer::ws_recv_data(uint8_t* data, size_t len) {
-    return read(fd, data, len);
+    return JsonrpcNetstringsConnection::read_data((char*)data, len);
+}
+
 int WsRpcPeer::ws_send_data(const uint8_t* data, size_t len) {
     return JsonrpcNetstringsConnection::send_data((char*)data, len);
+}
+
+
 ssize_t WsRpcPeer::recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, int flags) {
     (void) flags;
-    int recv_size = ws_recv_data(data, len);
-//     if(!recv_size ||
-//        (recv_size<0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
-//         wslay_event_set_error(ctx, WSLAY_ERR_NO_MORE_MSG);
-//     }
-    INFO("WsRpcPeer::recv_callback, recv_size %d", recv_size);
-
-    return recv_size;
+    (void) ctx;
+    return ws_recv_data(data, len);
 }
 
 ssize_t WsRpcPeer::recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, int flags, void* user_data) {
@@ -332,7 +306,6 @@ ssize_t WsRpcPeer::recv_callback(wslay_event_context_ptr ctx, uint8_t* data, siz
 }
 
 ssize_t WsRpcPeer::send_callback(wslay_event_context_ptr ctx, const uint8_t* data, size_t len, int flags, void* user_data) {
-    DBG("WsRpcPeer on_send_callback %ld", len);
     WsRpcPeer* input = (WsRpcPeer*)user_data;
     return input->on_send_callback(ctx, data, len, flags);
 }
@@ -373,7 +346,7 @@ int WsRpcPeer::parse_input(sip_msg* s_msg) {
         if(ws_accept == s_msg->sec_ws_accept->value.s) {
             ws_connected = true;
             JsonrpcNetstringsConnection::addMessage(ws_send_buffer.data(), ws_send_buffer.size());
-            netstringsBlockingWrite();
+            if(netstringsBlockingWrite() == REMOVE) return -1;
         } else {
             return -1;
         }
@@ -434,14 +407,16 @@ void WsRpcPeer::send_request() {
     *c++ = LF;
 
     INFO("send message [%p/%d]\n%.*s", this, fd, msg_size, msgbuf);
-    netstringsBlockingWrite();
+    if(netstringsBlockingWrite() == REMOVE) close();
 }
 
 void WsRpcPeer::addMessage(const char* data, size_t len) {
     if(conn_type == PEER_TCP || ws_connected) JsonrpcNetstringsConnection::addMessage(data, len);
-    int old_size = ws_send_buffer.size();
-    ws_send_buffer.resize(old_size + len);
-    memcpy(ws_send_buffer.data() + old_size, data, len);
+    else {
+        int old_size = ws_send_buffer.size();
+        ws_send_buffer.resize(old_size + len);
+        memcpy(ws_send_buffer.data() + old_size, data, len);
+    }
 }
 
 void WsRpcPeer::clearMessage() {

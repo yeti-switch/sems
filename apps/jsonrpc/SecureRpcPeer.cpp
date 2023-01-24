@@ -283,7 +283,12 @@ int SecureRpcPeer::ws_recv_data(uint8_t *data, size_t len) {
 
 int SecureRpcPeer::ws_send_data(const uint8_t* data, size_t len) {
     if(conn_type == PEER_WSS) {
-        tls_channel->send(data, len);
+        try{
+            tls_channel->send(data, len);
+        } catch(Botan::Exception& ex) {
+            ERROR("Botan tls error: %s", ex.what());
+            return 0;
+        }
         return len;
     } else return WsRpcPeer::ws_send_data(data, len);
 }
@@ -292,11 +297,13 @@ SecureRpcPeer::SecureRpcPeer(const string& id)
 : WsRpcPeer(id)
 , settings(0)
 , tls_connected(false)
-, is_tls(false) {
+, is_tls(false)
+, tls_channel(0) {
 }
 
 SecureRpcPeer::~SecureRpcPeer() {
     if(settings) delete settings;
+    if(tls_channel) delete tls_channel;
 }
 
 int SecureRpcPeer::connect(const string& host, int port, string& res_str) {
@@ -310,7 +317,6 @@ int SecureRpcPeer::connect(const string& host, int port, string& res_str) {
 }
 
 int SecureRpcPeer::netstringsRead() {
-    INFO("SecureRpcPeer::netstringsRead(), recv_size %d", rcvd_size);
     if(conn_type == PEER_TCP)
         return JsonrpcNetstringsConnection::netstringsRead();
     else if(conn_type == PEER_WS)
@@ -318,16 +324,8 @@ int SecureRpcPeer::netstringsRead() {
 
     if(!tls_connected) {
         int r = read_data(msgbuf, 1);
-        if (!r) {
-            DBG("closing connection [%p/%d] on peer hangup", this, fd);
-            close();
-            return REMOVE;
-        }
-
-        if ((r<0 && errno == EAGAIN) ||
-            (r<0 && errno == EWOULDBLOCK))
-                return CONTINUE;
-
+        if (!r) return CONTINUE;
+        if (r<0)return REMOVE;
         if (r != 1) {
             INFO("socket error on connection [%p/%d]: %s",
                 this, fd, strerror(errno));
@@ -340,7 +338,10 @@ int SecureRpcPeer::netstringsRead() {
         if(conn_type == PEER_WS || conn_type == PEER_TCP)
             return CONTINUE;
 
-        rcvd_size += read_data(msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
+        r = read_data(msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
+        if (!r) return CONTINUE;
+        if (r<0)return REMOVE;
+        rcvd_size += r;
         try {
             tls_channel->received_data((uint8_t*)msgbuf, rcvd_size);
         } catch(Botan::Exception& ex) {
@@ -348,6 +349,15 @@ int SecureRpcPeer::netstringsRead() {
             return REMOVE;
         }
         rcvd_size = 0;
+        if(tls_connected) {            
+            if(conn_type == PEER_WSS) {
+                WsRpcPeer::addMessage(tls_send_buffer.data(), tls_send_buffer.size());
+                send_request();
+            } else if(conn_type == PEER_TLS) {
+                JsonrpcNetstringsConnection::addMessage(tls_send_buffer.data(), tls_send_buffer.size());
+                if(JsonrpcNetstringsConnection::netstringsBlockingWrite() == REMOVE) return REMOVE;
+            }
+        }
         return CONTINUE;
     }
 
@@ -355,14 +365,15 @@ int SecureRpcPeer::netstringsRead() {
 }
 
 int SecureRpcPeer::read_data(char* data, int size) {
-    INFO("SecureRpcPeer::read_data(), recv_size %d", rcvd_size);
     if(conn_type == PEER_UNKNOWN && !tls_connected && !is_tls) {
         if(size != 1) {
             ERROR("incorrect reading size of peer in initial state");
-            return 0;
+            return -1;
         }
-        int recv_size = read(fd, data, 1);
-        if(recv_size != 1) return recv_size;
+        int r = JsonrpcNetstringsConnection::read_data(data, 1);
+        if(r<0) return r;
+        if(r != 1) return -1;
+
         // tls data
         if(*data == Botan::TLS::Record_Type::HANDSHAKE) {
             is_tls = true;
@@ -374,8 +385,8 @@ int SecureRpcPeer::read_data(char* data, int size) {
         } else if(*data >= '0' && *data <= '9') {
             conn_type = PEER_TCP;
         } else {
-            DBG("Unsupported protocol. Must be netstring, websocket, secure websocket or secure netstring.");
-            return 0;
+            INFO("Unsupported protocol. Must be netstring, websocket, secure websocket or secure netstring.");
+            return -1;
         }
         return 1;
     } else if(conn_type == PEER_WS) {
@@ -387,13 +398,13 @@ int SecureRpcPeer::read_data(char* data, int size) {
     }
 
     if(tls_resv_buffer.empty()) {
-        int recv_size = read(fd, msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
-        if(!recv_size) return 0;
+        int r = JsonrpcNetstringsConnection::read_data(msgbuf + rcvd_size, MAX_RPC_MSG_SIZE - rcvd_size);
+        if(r <= 0) return r;
         try {
-            tls_channel->received_data((uint8_t*)msgbuf + rcvd_size, recv_size);
+            tls_channel->received_data((uint8_t*)msgbuf + rcvd_size, r);
         } catch(Botan::Exception& ex) {
             ERROR("Botan tls error: %s", ex.what());
-            return 0;
+            return -1;
         }
     }
 
@@ -407,8 +418,8 @@ int SecureRpcPeer::read_data(char* data, int size) {
         } else if(*data >= '0' && *data <= '9') {
             conn_type = PEER_TLS;
         } else {
-            DBG("Unsupported protocol. Must be netstring, websocket, secure websocket or secure netstring.");
-            return 0;
+            INFO("Unsupported protocol. Must be netstring, websocket, secure websocket or secure netstring.");
+            return -1;
         }
     }
 
@@ -423,7 +434,6 @@ int SecureRpcPeer::read_data(char* data, int size) {
 }
 
 int SecureRpcPeer::netstringsBlockingWrite() {
-    DBG("WsRpcPeer::netstringsBlockingWrite");
     if(conn_type == PEER_TCP)
         return JsonrpcNetstringsConnection::netstringsBlockingWrite();
     if(conn_type == PEER_WS || tls_connected)
@@ -442,40 +452,33 @@ int SecureRpcPeer::send_data(char* data, int size) {
         return WsRpcPeer::send_data(data, size);
 
     if(conn_type == PEER_WSS && ws_connected) {
-    INFO("%.*s", msg_size, msgbuf);
         return WsRpcPeer::send_data(data, size);
     } else {
-        tls_channel->send((const uint8_t*)data, size);
+        try {
+            tls_channel->send((const uint8_t*)data, size);
+        } catch(Botan::Exception& ex) {
+            ERROR("Botan tls error: %s", ex.what());
+            return 0;
+        }
     }
     return size;
 }
 
-void SecureRpcPeer::tls_emit_data(const uint8_t data[], size_t size)
-{
+void SecureRpcPeer::tls_emit_data(const uint8_t data[], size_t size) {
     JsonrpcNetstringsConnection::send_data((char*)data, size);
 }
 
-void SecureRpcPeer::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
-{
+void SecureRpcPeer::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) {
     int old_size = tls_resv_buffer.size();
     tls_resv_buffer.resize(old_size + size);
     memcpy(tls_resv_buffer.data() + old_size, data, size);
 }
 
-void SecureRpcPeer::tls_alert(Botan::TLS::Alert alert)
-{
-}
+void SecureRpcPeer::tls_alert(Botan::TLS::Alert alert){}
 
-bool SecureRpcPeer::tls_session_established(const Botan::TLS::Session& session)
-{
+bool SecureRpcPeer::tls_session_established(const Botan::TLS::Session& session) {
     DBG("************ on_tls_connect() ***********");
     tls_connected = true;
-    if(conn_type == PEER_WSS) {
-        send_request();
-    } else if(conn_type == PEER_TLS) {
-        JsonrpcNetstringsConnection::addMessage(tls_send_buffer.data(), tls_send_buffer.size());
-        netstringsBlockingWrite();
-    }
     return true;
 }
 
@@ -502,16 +505,16 @@ void SecureRpcPeer::tls_verify_cert_chain(const std::vector<Botan::X509_Certific
 }
 
 void SecureRpcPeer::addMessage(const char* data, size_t len) {
-    if(is_tls) {
+    if(conn_type == PEER_TCP || tls_connected) JsonrpcNetstringsConnection::addMessage(data, len);
+    else if(conn_type == PEER_WS) WsRpcPeer::addMessage(data, len);
+    else {
         int old_size = tls_send_buffer.size();
         tls_send_buffer.resize(old_size + len);
         memcpy(tls_send_buffer.data() + old_size, data, len);
     }
-    WsRpcPeer::addMessage(data, len);
 }
 
 void SecureRpcPeer::clearMessage() {
-    if(is_tls)
-        tls_send_buffer.clear();
+    tls_send_buffer.clear();
     WsRpcPeer::clearMessage();
 }
