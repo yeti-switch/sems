@@ -54,7 +54,7 @@ JsonRPCServerModule* JsonRPCServerModule::instance()
 }
 
 JsonRPCServerModule::JsonRPCServerModule(const string& mod_name) 
-  : AmDynInvokeFactory(mod_name), AmConfigFactory(mod_name)
+  : AmDynInvokeFactory(mod_name), AmConfigFactory(mod_name), use_tls(false)
 {
 }
 
@@ -142,7 +142,7 @@ int JsonRPCServerModule::configure(const std::string & config)
     cfg_opt_t opt[] = {
         CFG_SEC(sec_listen,listen_sec, CFGF_NONE),
         CFG_SEC(sec_acl,acl_sec, CFGF_NODEFAULT),
-        CFG_SEC(sec_tls,tls_sec, CFGF_NONE),
+        CFG_SEC(sec_tls,tls_sec, CFGF_NODEFAULT),
         CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
         CFG_STR(opt_tcp_md5_password, NULL, CFGF_NONE),
         CFG_END()
@@ -200,58 +200,61 @@ int JsonRPCServerModule::configure(const std::string & config)
         }
     }
 
-    cfg_t* tls = cfg_getsec(cfg, sec_tls);
-    cfg_t* server = cfg_getsec(tls, sec_server_tls);
-    for(unsigned int i = 0; i < cfg_size(server, opt_tls_protocols); i++) {
-        std::string protocol = cfg_getnstr(server, opt_tls_protocols, i);
-        server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
-    }
-    server_settings.certificate_path = cfg_getstr(server, opt_tls_certificate);
-    server_settings.certificate_key_path = cfg_getstr(server, opt_tls_certificate_key);
-    for(unsigned int i = 0; i < cfg_size(server, opt_tls_ciphers); i++) {
-        std::string cipher = cfg_getnstr(server, opt_tls_ciphers, i);
-        server_settings.cipher_list.push_back(cipher);
-    }
-    for(unsigned int i = 0; i < cfg_size(server, opt_tls_macs); i++) {
-        std::string mac = cfg_getnstr(server, opt_tls_macs, i);
-        server_settings.macs_list.push_back(mac);
-    }
-    server_settings.verify_client_certificate = cfg_getbool(server, opt_tls_verify_client_cert);
-    server_settings.require_client_certificate = cfg_getbool(server, opt_tls_require_client_cert);
-    server_settings.dhparam = cfg_getstr(server, opt_tls_dhparam);
-    for(unsigned int i = 0; i < cfg_size(server, opt_tls_ca_list); i++) {
-        std::string ca = cfg_getnstr(server, opt_tls_ca_list, i);
-        server_settings.ca_path_list.push_back(ca);
-    }
-    if(server_settings.verify_client_certificate && !server_settings.require_client_certificate) {
-        ERROR("incorrect server tls configuration: verify client certificate cannot be set, if clients certificate is not required");
-        return -1;
-    }
-    if(server_settings.certificate_path.empty() || server_settings.certificate_key_path.empty()) {
-        ERROR("incorrect server tls configuration: client certificate and key must be set");
-        return -1;
-    }
-
-    cfg_t* client = cfg_getsec(tls, sec_client_tls);
-    for(unsigned int i = 0; i < cfg_size(client, opt_tls_protocols); i++) {
-        std::string protocol = cfg_getnstr(client, opt_tls_protocols, i);
-        client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
-    }
-    client_settings.certificate_path = cfg_getstr(client, opt_tls_certificate);
-    client_settings.certificate_key_path = cfg_getstr(client, opt_tls_certificate_key);
-    client_settings.verify_certificate_chain = cfg_getbool(client, opt_tls_verify_certchain);
-    client_settings.verify_certificate_cn = cfg_getbool(client, opt_tls_verify_certcn);
-    for(unsigned int i = 0; i < cfg_size(client, opt_tls_ca_list); i++) {
-        std::string ca = cfg_getnstr(client, opt_tls_ca_list, i);
-        client_settings.ca_path_list.push_back(ca);
-    }
-
-    if(!client_settings.checkCertificateAndKey("jsonrpc","","client") ||
-       !server_settings.checkCertificateAndKey("jsonrpc","","server")) {
+    if(cfg_size(cfg, sec_tls)) {
+        use_tls = true;
+        cfg_t* tls = cfg_getsec(cfg, sec_tls);
+        cfg_t* server = cfg_getsec(tls, sec_server_tls);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_protocols); i++) {
+            std::string protocol = cfg_getnstr(server, opt_tls_protocols, i);
+            server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        server_settings.certificate_path = cfg_getstr(server, opt_tls_certificate);
+        server_settings.certificate_key_path = cfg_getstr(server, opt_tls_certificate_key);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_ciphers); i++) {
+            std::string cipher = cfg_getnstr(server, opt_tls_ciphers, i);
+            server_settings.cipher_list.push_back(cipher);
+        }
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_macs); i++) {
+            std::string mac = cfg_getnstr(server, opt_tls_macs, i);
+            server_settings.macs_list.push_back(mac);
+        }
+        server_settings.verify_client_certificate = cfg_getbool(server, opt_tls_verify_client_cert);
+        server_settings.require_client_certificate = cfg_getbool(server, opt_tls_require_client_cert);
+        server_settings.dhparam = cfg_getstr(server, opt_tls_dhparam);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_ca_list); i++) {
+            std::string ca = cfg_getnstr(server, opt_tls_ca_list, i);
+            server_settings.ca_path_list.push_back(ca);
+        }
+        if(server_settings.verify_client_certificate && !server_settings.require_client_certificate) {
+            ERROR("incorrect server tls configuration: verify client certificate cannot be set, if clients certificate is not required");
             return -1;
+        }
+        if(server_settings.certificate_path.empty() || server_settings.certificate_key_path.empty()) {
+            ERROR("incorrect server tls configuration: client certificate and key must be set");
+            return -1;
+        }
+
+        cfg_t* client = cfg_getsec(tls, sec_client_tls);
+        for(unsigned int i = 0; i < cfg_size(client, opt_tls_protocols); i++) {
+            std::string protocol = cfg_getnstr(client, opt_tls_protocols, i);
+            client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        client_settings.certificate_path = cfg_getstr(client, opt_tls_certificate);
+        client_settings.certificate_key_path = cfg_getstr(client, opt_tls_certificate_key);
+        client_settings.verify_certificate_chain = cfg_getbool(client, opt_tls_verify_certchain);
+        client_settings.verify_certificate_cn = cfg_getbool(client, opt_tls_verify_certcn);
+        for(unsigned int i = 0; i < cfg_size(client, opt_tls_ca_list); i++) {
+            std::string ca = cfg_getnstr(client, opt_tls_ca_list, i);
+            client_settings.ca_path_list.push_back(ca);
+        }
+
+        if(!client_settings.checkCertificateAndKey("jsonrpc","","client") ||
+        !server_settings.checkCertificateAndKey("jsonrpc","","server")) {
+                return -1;
+        }
+        client_settings.load_certificates();
+        server_settings.load_certificates();
     }
-    client_settings.load_certificates();
-    server_settings.load_certificates();
 
     cfg_free(cfg);
     return 0;

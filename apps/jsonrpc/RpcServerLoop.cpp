@@ -208,7 +208,11 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     }
 
     string connection_id = JsonRPCServerLoop::newConnectionId();
-    JsonrpcNetstringsConnection* peer = new SecureRpcPeer(connection_id);
+    JsonrpcNetstringsConnection* peer;
+    if(JsonRPCServerModule::instance()->use_tls)
+        peer = new SecureRpcPeer(connection_id);
+    else
+        peer = new WsRpcPeer(connection_id);
     peer->fd=client_fd;
     peer->flags=0;
     if (setnonblock(peer->fd) < 0) {
@@ -537,14 +541,23 @@ void JsonRPCServerLoop::execRpc(const string& evq_link,
 				const AmArg& params,
 				const AmArg& udata,
 				AmArg& ret) {
-  if(conn_type <= WsRpcPeer::PEER_UNKNOWN || conn_type > WsRpcPeer::PEER_WSS) {
+  if(conn_type <= JsonrpcPeerConnection::PEER_UNKNOWN || conn_type > JsonrpcPeerConnection::PEER_WSS) {
+    ret.push(400);
+    ret.push("incorrect type of rpc connection");
+    return;
+  }
+  if(!JsonRPCServerModule::instance()->use_tls && conn_type != JsonrpcPeerConnection::PEER_WS && conn_type != JsonrpcPeerConnection::PEER_TCP) {
     ret.push(400);
     ret.push("incorrect type of rpc connection");
     return;
   }
 
   string connection_id = newConnectionId();
-  JsonrpcNetstringsConnection* peer = new SecureRpcPeer(connection_id);
+  JsonrpcNetstringsConnection* peer;
+  if(JsonRPCServerModule::instance()->use_tls)
+    peer = new SecureRpcPeer(connection_id);
+  else
+    peer = new WsRpcPeer(connection_id);
   peer->flags = flags;
   peer->conn_type = (WsRpcPeer::ConnectionType)conn_type;
   peer->notificationReceiver = notificationReceiver;
