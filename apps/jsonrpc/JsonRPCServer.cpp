@@ -166,7 +166,9 @@ int JsonRpcServer::processMessage(const char* msgbuf, unsigned int msg_size,
         return -1;
     }
 
-    if(!rpc_params.hasMember("jsonrpc") || strcmp(rpc_params["jsonrpc"].asCStr(), "2.0")) {
+    if(!rpc_params.hasMember("jsonrpc") ||
+       !isArgCStr(rpc_params["jsonrpc"]) ||
+       strcmp(rpc_params["jsonrpc"].asCStr(), "2.0")) {
         INFO("wrong json-rpc version received; only 2.0 supported!");
         return -2; // todo: check value, reply with error?
     }
