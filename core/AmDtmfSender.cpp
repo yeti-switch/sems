@@ -28,6 +28,7 @@
 
 #include "AmDtmfSender.h"
 #include "AmRtpStream.h"
+#include "AmLcConfig.h"
 
 #include "rtp/telephone_event.h"
 
@@ -43,15 +44,18 @@ AmDtmfSender::AmDtmfSender()
 
 /** Add a DTMF event to the send queue */
 void AmDtmfSender::queueEvent(
-    int event,
-    unsigned int duration_ms,
+    int event, unsigned int duration_ms, int volume,
     unsigned int sample_rate, unsigned int frame_size)
 {
+    unsigned int event_volume = volume >= 0 ? volume : AmConfig.dtmf_default_volume;
+
     send_queue_mut.lock();
-    send_queue.emplace(event, duration_ms, sample_rate, frame_size);
+    send_queue.emplace(
+        event, duration_ms, event_volume,
+        sample_rate, frame_size);
     send_queue_mut.unlock();
-    DBG("enqueued DTMF event %i duration %u frame_size: %u queue: %p, size: %lu",
-        event, duration_ms, frame_size,
+    DBG("enqueued DTMF event:%i duration:%u volume:%d frame_size:%u queue:%p, size:%lu",
+        event, duration_ms, event_volume, frame_size,
         to_void(&send_queue), send_queue.size());
 }
 
@@ -109,7 +113,7 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 dtmf.event = static_cast<u_int8>(current_event.event);
                 dtmf.e = dtmf.r = 0;
                 dtmf.duration = htons(duration);
-                dtmf.volume = 20;
+                dtmf.volume = current_event.volume;
 
                 DBG("DTMF_SEND_SENDING: ts:%u send: event=%i; e=%i; r=%i; volume=%i; duration=%i; ts=%u",
                     ts, dtmf.event,dtmf.e,dtmf.r,dtmf.volume,duration,current_send_dtmf_ts);

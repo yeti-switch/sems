@@ -720,8 +720,9 @@ void AmSession::putDtmfAudio(const unsigned char *buf, int size, unsigned long l
   m_dtmfEventQueue.putDtmfAudio(dtmf_detected, buf, size, system_ts);
 }
 
-void AmSession::sendDtmf(int event, unsigned int duration_ms) {
-  RTPStream()->sendDtmf(event, duration_ms);
+void AmSession::sendDtmf(int event, unsigned int duration_ms, int volume)
+{
+    RTPStream()->sendDtmf(event, duration_ms, volume);
 }
 
 

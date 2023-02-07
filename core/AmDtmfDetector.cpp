@@ -198,7 +198,7 @@ void AmSipDtmfDetector::process(AmSipDtmfEvent *evt)
       ++stop.tv_sec;
       stop.tv_usec -= 1000000;
     }
-  m_keysink->registerKeyReleased(evt->event(), Dtmf::SOURCE_SIP, start, stop);
+  m_keysink->registerKeyReleased(evt->event(), -1, Dtmf::SOURCE_SIP, start, stop);
 }
 
 //
@@ -283,10 +283,11 @@ void AmDtmfDetector::flushKey(unsigned int event_id) {
   }
 }
 
-void AmDtmfDetector::registerKeyReleased(int event, Dtmf::EventSource source,
-                                         const struct timeval& start,
-                                         const struct timeval& stop,
-					 bool has_eventid, unsigned int event_id)
+void AmDtmfDetector::registerKeyReleased(
+    int event, int volume, Dtmf::EventSource source,
+    const struct timeval& start,
+    const struct timeval& stop,
+    bool has_eventid, unsigned int event_id)
 {
   // Old event has not been sent yet
   // push out it now
@@ -300,6 +301,7 @@ void AmDtmfDetector::registerKeyReleased(int event, Dtmf::EventSource source,
 
   m_eventPending = true;
   m_currentEvent = event;
+  m_currentVolume = volume;
   if (has_eventid) {
     m_current_eventid_i = true;
     m_current_eventid = event_id;
@@ -329,7 +331,9 @@ void AmDtmfDetector::registerKeyReleased(int event, Dtmf::EventSource source,
     }
 }
 
-void AmDtmfDetector::registerKeyPressed(int event, Dtmf::EventSource type, bool has_eventid, unsigned int event_id)
+void AmDtmfDetector::registerKeyPressed(
+    int event, int volume, Dtmf::EventSource type,
+    bool has_eventid, unsigned int event_id)
 {
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
   DBG("registerKeyPressed(%d, .., %s, %u); m_eventPending=%s, m_currentEvent=%d, "
@@ -344,6 +348,7 @@ void AmDtmfDetector::registerKeyPressed(int event, Dtmf::EventSource type, bool 
     {
       m_eventPending = true;
       m_currentEvent = event;
+      m_currentVolume = volume;
       memcpy(&m_startTime, &tm, sizeof(struct timeval));
       memcpy(&m_lastReportTime, &tm, sizeof(struct timeval));
       switch (type) {
@@ -427,9 +432,11 @@ void AmDtmfDetector::reportEvent()
   else if(m_inbandEventReceived) source = Dtmf::SOURCE_INBAND;
   else if(m_sipEventReceived) source = Dtmf::SOURCE_SIP;
 
-  m_dtmfSink->postDtmfEvent(new AmDtmfEvent(m_currentEvent, duration,source));
+  m_dtmfSink->postDtmfEvent(new AmDtmfEvent(
+    m_currentEvent, duration, m_currentVolume, source));
 
   m_eventPending = false;
+  m_currentVolume = -1;
   m_sipEventReceived = false;
   m_rtpEventReceived = false;
   m_inbandEventReceived = false;
@@ -480,6 +487,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
 	  gettimeofday(&m_startTime, NULL);
 	  m_eventPending = true;
 	  m_currentEvent = evt->event();
+	  m_currentVolume = evt->volume();
 	  m_currentTS = evt->ts();
 	  m_currentTS_i = true;
         }
@@ -504,6 +512,7 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
 	      gettimeofday(&m_startTime, NULL);
 	      m_eventPending = true;
 	      m_currentEvent = evt->event();
+		  m_currentVolume = evt->volume();
 	      m_currentTS = evt->ts();
 	      m_currentTS_i = true;
             }
@@ -511,7 +520,9 @@ void AmRtpDtmfDetector::process(AmRtpDtmfEvent *evt)
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
       DBG("registerKeyPressed %d, %u", m_currentEvent, m_currentTS);
 #endif
-      m_keysink->registerKeyPressed(m_currentEvent, Dtmf::SOURCE_RTP, true, m_currentTS);
+      m_keysink->registerKeyPressed(
+        m_currentEvent, m_currentVolume, Dtmf::SOURCE_RTP,
+        true, m_currentTS);
     }
 }
 
@@ -524,11 +535,14 @@ void AmRtpDtmfDetector::sendPending()
 #ifdef EXCESSIVE_DTMF_DEBUGINFO
       DBG("registerKeyReleased(%d, ... %u)", m_currentEvent, m_currentTS);
 #endif
-      m_keysink->registerKeyReleased(m_currentEvent, Dtmf::SOURCE_RTP, m_startTime, end_time, true, m_currentTS);
+      m_keysink->registerKeyReleased(
+        m_currentEvent, m_currentVolume, Dtmf::SOURCE_RTP,
+        m_startTime, end_time, true, m_currentTS);
+
       m_eventPending = false;
       m_currentTS_i = false;
       m_lastTS = m_currentTS;
-      m_lastTS_i = true;     
+      m_lastTS_i = true;
     }
 }
 
@@ -724,7 +738,8 @@ void AmSemsInbandDtmfDetector::isdn_audio_eval_dtmf_relative(bool &dtmf_detected
     if (what != ' ' && what != '.') {
         dtmf_detected = true;
         if (++m_count >= DTMF_INTERVAL) {
-            m_keysink->registerKeyPressed(m_lastCode, Dtmf::SOURCE_INBAND);
+            //TODO: set volume level
+            m_keysink->registerKeyPressed(m_lastCode, -1, Dtmf::SOURCE_INBAND);
         }
     } else {
         dtmf_detected = false;
@@ -732,7 +747,8 @@ void AmSemsInbandDtmfDetector::isdn_audio_eval_dtmf_relative(bool &dtmf_detected
             struct timeval stop;
             stop.tv_sec = m_last_ts / SAMPLERATE;
             stop.tv_usec = ((m_last_ts * 10000) / (SAMPLERATE/100)) % 1000000;
-            m_keysink->registerKeyReleased(m_lastCode, Dtmf::SOURCE_INBAND, m_startTime, stop);
+            //TODO: set volume level
+            m_keysink->registerKeyReleased(m_lastCode, -1, Dtmf::SOURCE_INBAND, m_startTime, stop);
         }
         m_count = 0;
     }
@@ -836,7 +852,7 @@ void AmSpanDSPInbandDtmfDetector::tone_report_f(int code, int level, int delay) 
   } else { // released
     struct timeval now;
     gettimeofday(&now, NULL);
-    m_keysink->registerKeyReleased(char2int(m_lastCode), Dtmf::SOURCE_INBAND, key_start, now);    
+    m_keysink->registerKeyReleased(char2int(m_lastCode), level, Dtmf::SOURCE_INBAND, key_start, now);    
   }
 }
 

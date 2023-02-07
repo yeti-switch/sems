@@ -502,7 +502,7 @@ public:
    * @param event event ID (e.g. key press), see rfc
    * @param duration_ms duration in milliseconds
    */
-  void sendDtmf(int event, unsigned int duration_ms);
+  void sendDtmf(int event, unsigned int duration_ms, int volume = -1);
 
   /* ---- general purpose application level timers ------------ */
 

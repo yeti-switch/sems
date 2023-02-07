@@ -131,6 +131,7 @@ struct ConfigContainer
     unsigned int dead_rtp_time;
     Dtmf::InbandDetectorType default_dtmf_detector;
     bool dtmf_offer_multirate;
+    unsigned int dtmf_default_volume;
     bool single_codec_in_ok;
     std::vector<std::string> codec_order;
     std::vector<std::string> exclude_payloads;

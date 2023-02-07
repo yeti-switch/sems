@@ -672,8 +672,8 @@ void AmRtpAudio::onRtpTimeout()
     session->postEvent(new AmRtpTimeoutEvent());
 }
 
-void AmRtpAudio::sendDtmf(int event, unsigned int duration_ms)
+void AmRtpAudio::sendDtmf(int event, unsigned int duration_ms, int volume)
 {
-    CLASS_DBG("AmRtpAudio::sendDtmf(event = %d, duration = %u)",event,duration_ms);
-    dtmf_sender.queueEvent(event,duration_ms,getLocalTelephoneEventRate(), frame_size);
+    CLASS_DBG("AmRtpAudio::sendDtmf(event = %d, duration = %u, volume = %d)",event,duration_ms, volume);
+    dtmf_sender.queueEvent(event, duration_ms, volume, getLocalTelephoneEventRate(), frame_size);
 }

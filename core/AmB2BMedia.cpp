@@ -489,10 +489,11 @@ void StreamData::setDtmfSink(AmDtmfSink *dtmf_sink)
     }
 }
 
-void StreamData::sendDtmf(int event, unsigned int duration_ms)
+void StreamData::sendDtmf(int event, unsigned int duration_ms, int volume)
 {
-  DBG("StreamData::sendDtmf(event = %d, duration = %u)",event,duration_ms);
-  if (stream) stream->sendDtmf(event,duration_ms);
+  DBG("StreamData::sendDtmf(event = %d, duration = %u, volume = %d)",
+      event, duration_ms, volume);
+  if (stream) stream->sendDtmf(event, duration_ms, volume);
 }
 
 void StreamData::updateSendStats()
@@ -817,7 +818,7 @@ void AmB2BMedia::processDtmfEvents()
   if (b) b->processDtmfEvents();
 }
 
-void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms)
+void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms, int volume)
 {
     AmLock lock(mutex);
     if(!streams.size())
@@ -826,8 +827,8 @@ void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms)
     // send the DTMFs using the first available stream
     for(auto &pair : streams) {
         if(!pair.audio) continue;
-        if(a_leg) pair.a.sendDtmf(event,duration_ms);
-        else pair.b.sendDtmf(event,duration_ms);
+        if(a_leg) pair.a.sendDtmf(event, duration_ms, volume);
+        else pair.b.sendDtmf(event, duration_ms, volume);
         break;
     }
 }

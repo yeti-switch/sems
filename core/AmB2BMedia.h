@@ -167,7 +167,7 @@ public:
     void processDtmfEvents() { if (dtmf_queue) dtmf_queue->processEvents(); }
 
     /** Sends DTMF */
-    void sendDtmf(int event, unsigned int duration_ms);
+    void sendDtmf(int event, unsigned int duration_ms, int volume);
 
     /** Writes data to won stream. Data are read either from local alternative
      * input (in) or from stream given by src parameter. 
@@ -431,7 +431,7 @@ class AmB2BMedia
     virtual void processDtmfEvents();
 
     /** Sends DTMF using the given call leg */
-    void sendDtmf(bool a_leg, int event, unsigned int duration_ms);
+    void sendDtmf(bool a_leg, int event, unsigned int duration_ms, int volume = -1);
 
     /** Release all RTP streams of both legs and both AmB2BSessions as well. 
      *

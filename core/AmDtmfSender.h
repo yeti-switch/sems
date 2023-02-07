@@ -40,14 +40,16 @@ class AmDtmfSender
     struct Dtmf {
         int event;
         unsigned int duration_ms;
+        unsigned int volume;
         unsigned int sample_rate;
         unsigned int frame_size;
         Dtmf() = default;
-        Dtmf(int event, unsigned int duration_ms,
+        Dtmf(int event, unsigned int duration_ms, unsigned int volume,
             unsigned int sample_rate,
             unsigned int frame_size)
           : event(event),
             duration_ms(duration_ms),
+            volume(volume),
             sample_rate(sample_rate),
             frame_size(frame_size)
         {}
@@ -82,7 +84,8 @@ class AmDtmfSender
     bool isSending() { return is_sending.load(); }
 
     /** Add a DTMF event to the send queue */
-    void queueEvent(int event, unsigned int duration_ms, unsigned int sample_rate, unsigned int frame_size);
+    void queueEvent(int event, unsigned int duration_ms, int volume,
+                    unsigned int sample_rate, unsigned int frame_size);
 
     /** Processes the send queue according to the timestamp */
     bool sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStream* stream);

@@ -95,18 +95,26 @@ class AmDtmfEvent : public AmEvent
   int m_duration_msec;
 
   /**
+   * Volume level (dBm0 without sign)
+   * The range of valid DTMF is from 0 to -36 dBm0
+   */
+  int m_volume;
+
+  /**
    * Constructor
    */
   AmDtmfEvent(int id)
     : AmEvent(id)
-    {
-    }
+    { }
 
  public:
-  AmDtmfEvent(int event, int duration, Dtmf::EventSource source = Dtmf::SOURCE_DETECTOR)
-    : AmEvent(source), m_event(event), m_duration_msec(duration)
-    {
-    }
+  AmDtmfEvent(
+    int event, int duration, int volume, Dtmf::EventSource source)
+    : AmEvent(source),
+      m_event(event),
+      m_duration_msec(duration),
+      m_volume(volume)
+    { }
   /**
    * Code of the key
    */
@@ -115,6 +123,11 @@ class AmDtmfEvent : public AmEvent
    * Duration of keypress in miliseconds
    */
   int duration() const { return m_duration_msec; }
+
+  /**
+   * Volume level in dBm0 without sign
+   */
+  int volume() const { return m_volume; }
 };
 
 /**
@@ -129,24 +142,29 @@ class AmKeyPressSink {
    * Through this method the AmDtmfDetector receives events that was
    * detected by specific detectors.
    * @param event code of key pressed
+   * @param volume level if applicable, -1 otherwise
    * @param source which detector posted this event
    * @param start time when key was pressed
    * @param stop time when key was released
    * @param has_eventid whether event has an id
    * @param event_id id of the event
    */
-  virtual void registerKeyReleased(int event, Dtmf::EventSource source,
-				   const struct timeval& start, const struct timeval& stop,
-				   bool has_eventid = false, unsigned int event_id = 0) = 0;
+  virtual void registerKeyReleased(
+    int event, int volume, Dtmf::EventSource source,
+    const struct timeval& start, const struct timeval& stop,
+    bool has_eventid = false, unsigned int event_id = 0) = 0;
   /**
    * Through this method the AmDtmfDetector receives events that was
    * detected by specific detectors.
    * @param event code of key released
+   * @param volume level if applicable, -1 otherwise
    * @param source which detector posted this event
    * @param has_eventid whether event has an id
    * @param event_id id of the event
    */
-  virtual void registerKeyPressed(int event, Dtmf::EventSource source, bool has_eventid=false, unsigned int event_id=0) = 0;
+  virtual void registerKeyPressed(
+    int event, int volume, Dtmf::EventSource source,
+    bool has_eventid = false, unsigned int event_id = 0) = 0;
   /**
    *   Flush (report to session) any pending key if ti matches the event id
    *   @param  event_id ID of the event (e.g. RTP TS)
@@ -355,6 +373,7 @@ class AmRtpDtmfDetector
    */
   bool m_eventPending;
   int m_currentEvent;
+  int m_currentVolume;
   unsigned int m_currentTS;
   bool m_currentTS_i;
   int m_packetCount;
@@ -427,6 +446,7 @@ class AmDtmfDetector
   struct timeval m_startTime;
   struct timeval m_lastReportTime;
   int m_currentEvent;
+  int m_currentVolume;
   bool m_eventPending;
 
   bool m_current_eventid_i;
@@ -453,20 +473,27 @@ class AmDtmfDetector
    * Through this method the AmDtmfDetector receives events that was
    * detected by specific detectors.
    * @param event code of key pressed
+   * @param volume level if applicable, -1 otherwise
    * @param source which detector posted this event
    * @param start time when key was pressed
    * @param stop time when key was released
    */
-  void registerKeyReleased(int event, Dtmf::EventSource source,
-			   const struct timeval& start, const struct timeval& stop,
-			   bool has_eventid = false, unsigned int event_id = 0);
+  void registerKeyReleased(
+    int event, int volume, Dtmf::EventSource source,
+    const struct timeval& start, const struct timeval& stop,
+    bool has_eventid = false, unsigned int event_id = 0);
   /**
    * Through this method the AmDtmfDetector receives events that was
    * detected by specific detectors.
    * @param event code of key released
+   * @param volume level if applicable, -1 otherwise
    * @param source which detector posted this event
+   * @param flag to indicate last parameter usage
+   * @param unique event id (current RTP timestamp for AmRtpDtmfDetector)
    */
-  void registerKeyPressed(int event, Dtmf::EventSource source, bool has_eventid=false, unsigned int event_id=0);
+  void registerKeyPressed(
+    int event, int volume, Dtmf::EventSource source,
+    bool has_eventid = false, unsigned int event_id = 0);
 
   void flushKey(unsigned int event_id);
 

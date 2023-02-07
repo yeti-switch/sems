@@ -169,6 +169,7 @@
 #define PARAM_CERT_CN_NAME           "verify_certificate_cn"
 #define PARAM_PROFILES_NAME          "profiles"
 #define PARAM_DTMF_OFFER_MRATE_NAME  "dtmf_offer_multirate"
+#define PARAM_DTMF_DEFAULT_VOLUME    "dtmf_default_volume"
 #define PARAM_SYMMETRIC_MODE_NAME    "symmetric_rtp_mode"
 #define PARAM_SYMMETRIC_PACKETS_NAME "symmetric_rtp_packets"
 #define PARAM_SYMMETRIC_DELAY_NAME   "symmetric_rtp_delay"
@@ -561,6 +562,7 @@ namespace Config {
         CFG_BOOL(PARAM_SINGLE_CODEC_INOK_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_ACCEPT_FORKED_DLG_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_DTMF_OFFER_MRATE_NAME, cfg_false, CFGF_NONE),
+        CFG_INT(PARAM_DTMF_DEFAULT_VOLUME, 20, CFGF_NONE),
         CFG_INT(PARAM_BL_TTL_NAME, VALUE_BL_TTL, CFGF_NONE),
         CFG_INT(PARAM_UDP_RECVBUF_NAME, VALUE_UDP_RECVBUF, CFGF_NONE),
         CFG_INT(PARAM_SESS_PROC_THREADS_NAME, VALUE_NUM_SESSION_PROCESSORS, CFGF_NODEFAULT),
@@ -1115,6 +1117,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(value == VALUE_SPANDSP) config->default_dtmf_detector = Dtmf::SpanDSP;
     else config->default_dtmf_detector = Dtmf::SEMSInternal;
     config->dtmf_offer_multirate = cfg_getbool(gen, PARAM_DTMF_OFFER_MRATE_NAME);
+    config->dtmf_default_volume = cfg_getint(gen, PARAM_DTMF_DEFAULT_VOLUME);
     for(unsigned int i = 0; i < cfg_size(gen, PARAM_CODEC_ORDER_NAME); i++) {
         config->codec_order.push_back(cfg_getnstr(gen, PARAM_CODEC_ORDER_NAME, i));
     }
