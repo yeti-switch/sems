@@ -1,3 +1,9 @@
+sems (1.97.0) stable; urgency=low
+  * jsonrpc: add WS/WSS/TLS transports
+  * improve DTMF volume level processing
+  * add option 'general.dtmf_default_volume'
+ -- Michael Furmur <furmur@pm.me>  Tue, 07 Feb 2023 21:51:51 +0200
+
 sems (1.96.6) stable; urgency=low
   * fix app_mapping.conf reading
  -- Michael Furmur <furmur@pm.me>  Thu, 12 Jan 2023 22:45:20 +0200
