@@ -56,7 +56,7 @@
 #include <err.h>
 #include <stddef.h>
 
-#include "RpcPeer.h"
+#include "SecureRpcPeer.h"
 #include "JsonRPC.h"
 
 ev_io ev_accept;
@@ -138,8 +138,8 @@ inline constexpr size_t offset_of(T1 T2::*member) {
 static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
 
-    struct JsonrpcNetstringsConnection *peer= 
-        ((struct JsonrpcNetstringsConnection*)
+    class JsonrpcNetstringsConnection *peer= 
+        ((class JsonrpcNetstringsConnection*)
         (((char*)w) - offset_of(&JsonrpcNetstringsConnection::ev_read)));
 
     //DBG("read_cb in connection %p", peer);
@@ -208,7 +208,11 @@ static void  accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     }
 
     string connection_id = JsonRPCServerLoop::newConnectionId();
-    JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
+    JsonrpcNetstringsConnection* peer;
+    if(JsonRPCServerModule::instance()->use_tls)
+        peer = new SecureRpcPeer(connection_id);
+    else
+        peer = new WsRpcPeer(connection_id);
     peer->fd=client_fd;
     peer->flags=0;
     if (setnonblock(peer->fd) < 0) {
@@ -530,15 +534,32 @@ void JsonRPCServerLoop::returnConnection(JsonrpcNetstringsConnection* conn)
 void JsonRPCServerLoop::execRpc(const string& evq_link, 
 				const string& notificationReceiver,
 				const string& requestReceiver,
+                int conn_type,
 				int flags,
 				const string& host,
 				int port, const string& method, 
 				const AmArg& params,
 				const AmArg& udata,
 				AmArg& ret) {
+  if(conn_type <= JsonrpcPeerConnection::PEER_UNKNOWN || conn_type > JsonrpcPeerConnection::PEER_WSS) {
+    ret.push(400);
+    ret.push("incorrect type of rpc connection");
+    return;
+  }
+  if(!JsonRPCServerModule::instance()->use_tls && conn_type != JsonrpcPeerConnection::PEER_WS && conn_type != JsonrpcPeerConnection::PEER_TCP) {
+    ret.push(400);
+    ret.push("incorrect type of rpc connection");
+    return;
+  }
+
   string connection_id = newConnectionId();
-  JsonrpcNetstringsConnection* peer = new JsonrpcNetstringsConnection(connection_id);
+  JsonrpcNetstringsConnection* peer;
+  if(JsonRPCServerModule::instance()->use_tls)
+    peer = new SecureRpcPeer(connection_id);
+  else
+    peer = new WsRpcPeer(connection_id);
   peer->flags = flags;
+  peer->conn_type = (WsRpcPeer::ConnectionType)conn_type;
   peer->notificationReceiver = notificationReceiver;
   peer->requestReceiver = requestReceiver;
 

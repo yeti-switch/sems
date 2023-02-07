@@ -67,8 +67,7 @@ int JsonRpcServer::createRequest(const string& evq_link, const string& method,
   }
 
   DBG("RPC message: >>%.*s<<", (int)rpc_params_json.length(), rpc_params_json.c_str());
-  memcpy(peer->msgbuf, rpc_params_json.c_str(), rpc_params_json.length());
-  peer->msg_size = rpc_params_json.length();
+  peer->addMessage(rpc_params_json.c_str(), rpc_params_json.length());
   // set peer connection up for sending
   peer->msg_recv = false;
   return 0;
@@ -96,18 +95,28 @@ int JsonRpcServer::createReply(
   }
 
   DBG("created RPC reply: >>%.*s<<", (int)res_s.length(), res_s.c_str());
-  memcpy(peer->msgbuf, res_s.c_str(), res_s.length());
-  peer->msg_size = res_s.length();
+  peer->addMessage(res_s.c_str(), res_s.length());
 
   return 0;
 }
 
-unsigned int generate_error_reply(char *buf, const string &id, bool id_is_int,
+void generate_error_reply(string &msgbuf, const string &id, bool id_is_int,
                                   int error_code, const char *error_message, ...)
 {
     va_list args;
     size_t offset;
+    int size = snprintf(0, 0,
+        "{ \"jsonrpc\": \"2.0\", \"id\": %s%s%s, \"error\": { \"code\": %d, \"message\": \"",
+        id_is_int ? "": "\"", id.data(), id_is_int ? "": "\"",
+        error_code);
+    va_start (args, error_message);
+    size += vsnprintf(0, 0,
+        error_message, args);
+    va_end (args);
+    size += snprintf(0, 0, "\" }}");
 
+    msgbuf.resize(size);
+    char* buf = (char*)msgbuf.c_str();
     offset = snprintf(buf, MAX_RPC_MSG_SIZE,
         "{ \"jsonrpc\": \"2.0\", \"id\": %s%s%s, \"error\": { \"code\": %d, \"message\": \"",
         id_is_int ? "": "\"", id.data(), id_is_int ? "": "\"",
@@ -119,16 +128,22 @@ unsigned int generate_error_reply(char *buf, const string &id, bool id_is_int,
     va_end (args);
 
     offset += snprintf(buf+offset, MAX_RPC_MSG_SIZE-offset, "\" }}");
-
-    return offset;
 }
 
-unsigned int generate_reply(char *buf, const string &id, bool id_is_int,
+void generate_reply(string &msgbuf, const string &id, bool id_is_int,
                                   const char *fmt, ...)
 {
     va_list args;
     size_t offset;
+    size_t size = snprintf(0, 0,
+        "{ \"jsonrpc\": \"2.0\", \"id\": %s%s%s, \"result\": ",
+        id_is_int ? "": "\"", id.data(), id_is_int ? "": "\"");
+    va_start (args, fmt);
+    size += vsnprintf(0,0,fmt, args);
+    va_end (args);
+    size += snprintf(0,0, "}");
 
+    char* buf = (char*)msgbuf.c_str();
     offset = snprintf(buf, MAX_RPC_MSG_SIZE,
         "{ \"jsonrpc\": \"2.0\", \"id\": %s%s%s, \"result\": ",
         id_is_int ? "": "\"", id.data(), id_is_int ? "": "\"");
@@ -139,21 +154,21 @@ unsigned int generate_reply(char *buf, const string &id, bool id_is_int,
     va_end (args);
 
     offset += snprintf(buf+offset, MAX_RPC_MSG_SIZE-offset, "}");
-
-    return offset;
 }
-int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
+int JsonRpcServer::processMessage(const char* msgbuf, unsigned int msg_size,
                                  JsonrpcPeerConnection* peer)
 {
     //DBG("parsing message ...");
     // const char* txt = "{\"jsonrpc\": \"2.0\", \"result\": 19, \"id\": 1}";
     AmArg rpc_params;
     if (!json2arg(msgbuf, rpc_params)) {
-        INFO("Error parsing message '%.*s'", (int)*msg_size, msgbuf);
+        INFO("Error parsing message '%.*s'", (int)msg_size, msgbuf);
         return -1;
     }
 
-    if(!rpc_params.hasMember("jsonrpc") || strcmp(rpc_params["jsonrpc"].asCStr(), "2.0")) {
+    if(!rpc_params.hasMember("jsonrpc") ||
+       !isArgCStr(rpc_params["jsonrpc"]) ||
+       strcmp(rpc_params["jsonrpc"].asCStr(), "2.0")) {
         INFO("wrong json-rpc version received; only 2.0 supported!");
         return -2; // todo: check value, reply with error?
     }
@@ -175,7 +190,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         rep_recv_q = peer->replyReceivers.find(id);
         if (rep_recv_q == peer->replyReceivers.end()) {
             DBG("received reply for unknown request");
-            *msg_size = 0;
+            peer->clearMessage();
 
             if (peer->flags & JsonrpcPeerConnection::FL_CLOSE_WRONG_REPLY) {
                 INFO("closing connection after unknown reply id %s received", id.c_str());
@@ -204,7 +219,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         if (!posted) {
             DBG("receiver event queue does not exist (any more)");
             peer->replyReceivers.erase(rep_recv_q);
-            *msg_size = 0;
+            peer->clearMessage();
             if (peer->flags & JsonrpcPeerConnection::FL_CLOSE_NO_REPLYLINK) {
                 INFO("closing connection where reply link missing");
                 return -2;
@@ -215,7 +230,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         DBG("successfully posted reply to event queue");
         peer->replyReceivers.erase(rep_recv_q);
         // don't send a reply
-        *msg_size = 0;
+        peer->clearMessage();
         return 0;
 
     } //if(!is_request)
@@ -246,38 +261,46 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     if(method == set_notify_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(
-                msgbuf,
+            string reply;
+            generate_error_reply(
+                reply,
                 arg2str(id), isArgInt(id),
                 500, "wrong 'params' type %s for method %s. expected string",
                 params.getTypeStr(), method.asCStr());
+            peer->addMessage(reply.c_str(), reply.size());
             return 0;
         }
 
-        *msg_size = generate_reply(
-            msgbuf,
+        string reply;
+        generate_reply(
+            reply,
             arg2str(id), isArgInt(id),
             "\"changed '%s' -> '%s'\"",
             peer->notificationReceiver.data(), params.asCStr());
+        peer->addMessage(reply.c_str(), reply.size());
 
         peer->notificationReceiver = params.asCStr();
         return 0;
     } else if(method == set_request_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
-            *msg_size = generate_error_reply(
-                msgbuf,
+            string reply;
+            generate_error_reply(
+                reply,
                 arg2str(id), isArgInt(id),
                 500, "wrong 'params' type %s for method %s. expected string",
                 params.getTypeStr(), method.asCStr());
+            peer->addMessage(reply.c_str(), reply.size());
             return 0;
         }
 
-        *msg_size = generate_reply(
-            msgbuf,
+        string reply;
+        generate_reply(
+            reply,
             arg2str(id), isArgInt(id),
             "\"changed '%s' -> '%s'\"",
             peer->requestReceiver.data(), params.asCStr());
+        peer->addMessage(reply.c_str(), reply.size());
 
         peer->requestReceiver = params.asCStr();
         return 0;
@@ -288,7 +311,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
         (!is_notify && !peer->requestReceiver.empty()))
     {
         // don't send a reply
-        *msg_size = 0;
+        peer->clearMessage();
 
         string dst_evqueue = is_notify ?
             peer->notificationReceiver.c_str() : peer->requestReceiver.c_str();
@@ -338,12 +361,14 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     AmArg rpc_res;
     if(execRpc(peer->id, rpc_params, rpc_res)) {
         DBG("request consumed by async invocation");
-        *msg_size = 0;
+        peer->clearMessage();
         return 0;
     }
 
-    if(!is_notify)
+    if(!is_notify) {
         rpc_res["id"] = id;
+        rpc_res["jsonrpc"] = "2.0";
+    }
 
     string res_s = arg2json(rpc_res);
     if (res_s.length() > MAX_RPC_MSG_SIZE) {
@@ -353,9 +378,7 @@ int JsonRpcServer::processMessage(char* msgbuf, unsigned int* msg_size,
     }
 
     //DBG("RPC result: >>%.*s<<", (int)res_s.length(), res_s.c_str());
-    memcpy(msgbuf, res_s.c_str(), res_s.length());
-    *msg_size = res_s.length();
-
+    peer->addMessage(res_s.c_str(), res_s.length());
     return 0;
 }
 

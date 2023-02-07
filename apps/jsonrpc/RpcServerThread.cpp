@@ -127,9 +127,11 @@ void RpcServerThread::process(AmEvent* event)
 
     int res = 0;
     if (connection->messagePending() && connection->messageIsRecv()) {
-        DBG("processing message >%.*s<", connection->msg_size, connection->msgbuf);
+        size_t msg_size = 0;
+        char* msg = connection->getMessage(&msg_size);
+        DBG("processing message >%.*s<", msg_size, msg);
         res = JsonRpcServer::processMessage(
-            connection->msgbuf, &connection->msg_size, connection);
+            msg, msg_size, connection);
         if (res<0) {
             INFO("error processing message - closing connection");
             connection->close();

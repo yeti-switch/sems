@@ -189,123 +189,108 @@ void JsonrpcNetstringsConnection::resetRead() {
   msg_recv = true;
 }
 
-int JsonrpcNetstringsConnection::netstringsRead() {
-  if (!in_msg) {
-    while (true) {
-      if (rcvd_size > MAX_NS_LEN_SIZE) {
-	DBG("closing connection [%p/%d]: oversize length", this, fd);
-	close();
-	return REMOVE;
-      }
-      // reading length
-      ssize_t r=read(fd,&msgbuf[rcvd_size],1);
-      if (!r) {
-	DBG("closing connection [%p/%d] on peer hangup", this, fd);
-	close();
-	return REMOVE;
-      }
-
-      if ((r<0 && errno == EAGAIN) || 
-	  (r<0 && errno == EWOULDBLOCK))
-	return CONTINUE;
-     
-      if (r != 1) {
-	INFO("socket error on connection [%p/%d]: %s",
-	     this, fd, strerror(errno));
-	close();
-	return REMOVE;
-      }
-      
-      //DBG("received '%c'", msgbuf[rcvd_size]);
-      if (msgbuf[rcvd_size] == ':') {
-	msgbuf[rcvd_size] = '\0';
-	if (str2i(std::string(msgbuf, rcvd_size), msg_size)) {
-	  ERROR("Protocol error decoding size '%s'", msgbuf);
-	  close();
-	  return REMOVE;
-	}
-	// received len - switch to receive msg mode
-	in_msg = true;
-	rcvd_size = read(fd,msgbuf,msg_size+1);
-	// DBG("received '%.*s'", rcvd_size, msgbuf);
-
-	if (rcvd_size == msg_size+1) { 
-	  if (msgbuf[msg_size] == ',') {
-	    msgbuf[msg_size+1] = '\0';
-	    return DISPATCH;
-	  }
-	  INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
-	       this, fd);
-	  close();
-	  return REMOVE;
-	}
-
-	if (!rcvd_size) {
-	  DBG("closing connection [%p/%d] on peer hangup", this, fd);
-	  close();
-	  return REMOVE;
-	}
-
-	if ((rcvd_size<0 && errno == EAGAIN) || 
-	    (rcvd_size<0 && errno == EWOULDBLOCK))
-	  return CONTINUE; // necessary?
-
-	if (rcvd_size<0) {
-	  INFO("socket error on connection [%p/%d]: %s",
-	       this, fd, strerror(errno));
-	  close();
-	  return REMOVE;
-	}
-	       
-	return CONTINUE; 	
-      } 
-
-      if (msgbuf[rcvd_size] < '0' || msgbuf[rcvd_size] > '9') {
-	INFO("Protocol error on connection [%p/%d]: invalid character in size",
-	     this, fd);
-	close();
-	return REMOVE;
-      }
-    
-      rcvd_size++;
-    }
-  } else {
-    ssize_t r = read(fd,msgbuf+rcvd_size,msg_size-rcvd_size+1);
-    if (r>0) {
-      rcvd_size += r;
-      DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
-      if (rcvd_size == msg_size+1) { 
-	DBG("msg_size = %d, rcvd_size = %d, <%c> ", msg_size, rcvd_size, msgbuf[msg_size-1]);
-	if (msgbuf[msg_size] == ',')
-	  return DISPATCH;
-	INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
-	     this, fd);
-	close();
-	return REMOVE;
-      }
-      return CONTINUE;
-    }
-
+int JsonrpcNetstringsConnection::read_data(char* data, int size) {
+    int r = read(fd,data,size);
     if (!r) {
-      DBG("closing connection [%p/%d] on peer hangup", this, fd);
-      close();
-      return REMOVE;
+        DBG("closing connection [%p/%d] on peer hangup", this, fd);
+        close();
+        return -1;
     }
 
-    if ((r<0 && errno == EAGAIN) || 
-	(r<0 && errno == EWOULDBLOCK))
-      return CONTINUE; // necessary?
+    if((r<0 && errno == EAGAIN) || 
+       (r<0 && errno == EWOULDBLOCK))
+        return 0;
 
-    INFO("socket error on connection [%p/%d]: %s",
-	 this, fd, strerror(errno));
-    close();
-    return REMOVE;
-  }
+    return r;
+}
+
+int JsonrpcNetstringsConnection::netstringsRead() {
+    if (!in_msg) {
+        while (true) {
+            if (rcvd_size > MAX_NS_LEN_SIZE) {
+                DBG("closing connection [%p/%d]: oversize length", this, fd);
+                close();
+                return REMOVE;
+            }
+            // reading length
+            int r=read_data(&msgbuf[rcvd_size], 1);
+            if (!r) return CONTINUE;
+            if (r<0) return REMOVE;
+     
+            if (r != 1) {
+                INFO("socket error on connection [%p/%d]: %s",
+                    this, fd, strerror(errno));
+                close();
+                return REMOVE;
+            }
+      
+            //DBG("received '%c'", msgbuf[rcvd_size]);
+            if (msgbuf[rcvd_size] == ':') {
+                msgbuf[rcvd_size] = '\0';
+                if (str2i(std::string(msgbuf, rcvd_size), msg_size)) {
+                    ERROR("Protocol error decoding size '%s'", msgbuf);
+                    close();
+                    return REMOVE;
+                }
+                // received len - switch to receive msg mode
+                in_msg = true;
+                r = read_data(msgbuf,msg_size+1);
+                if (!r) return CONTINUE;
+                if (r<0) return REMOVE;
+                rcvd_size = r;
+                // DBG("received '%.*s'", rcvd_size, msgbuf);
+
+                if (rcvd_size == msg_size+1) {
+                    if (msgbuf[msg_size] == ',') {
+                        msgbuf[msg_size+1] = '\0';
+                        return DISPATCH;
+                    }
+                    INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
+                        this, fd);
+                    close();
+                    return REMOVE;
+                }
+                return CONTINUE; 	
+            }
+
+            if (msgbuf[rcvd_size] < '0' || msgbuf[rcvd_size] > '9') {
+                INFO("%d\n%.*s", rcvd_size, rcvd_size, msgbuf);
+                INFO("Protocol error on connection [%p/%d]: invalid character '%c' in size",
+                    this, fd, msgbuf[rcvd_size]);
+                close();
+                return REMOVE;
+            }
+
+            rcvd_size++;
+        }
+    } else {
+        ssize_t r = read_data(msgbuf+rcvd_size,msg_size-rcvd_size+1);
+        if (r>0) {
+            rcvd_size += r;
+            //DBG("msgbuf='%.*s'", msg_size+1,msgbuf);
+            if (rcvd_size == msg_size+1) { 
+                //DBG("msg_size = %d, rcvd_size = %d, <%c> ", msg_size, rcvd_size, msgbuf[msg_size-1]);
+                if (msgbuf[msg_size] == ',')
+                    return DISPATCH;
+                INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
+                    this, fd);
+                close();
+                return REMOVE;
+            }
+            return CONTINUE;
+        }
+
+        if (r < 0) return REMOVE;
+        if (!r) return CONTINUE; // necessary?
+
+        INFO("socket error on connection [%p/%d]: %s",
+            this, fd, strerror(errno));
+        close();
+        return REMOVE;
+    }
 }
 
 int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
-  struct pollfd poll_set;
-
   if (msg_size<0) {
     close();
     return REMOVE;
@@ -326,57 +311,61 @@ int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
 	 msg_size_s.length());
   ns_begin[msg_size_s.length()]=':';
   msgbuf[msg_size]=',';
-  
-  rcvd_size = 0;
-  size_t ns_total_len = msg_size+msg_size_s.length()+2;
 
-  poll_set.fd = fd;
-  poll_set.events = POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-
-  while (rcvd_size != ns_total_len) {
-    ssize_t written = send(fd,
-        &ns_begin[rcvd_size],
-        ns_total_len - rcvd_size,
-#ifdef MSG_NOSIGNAL
-       MSG_NOSIGNAL
-#else
-       0
-#endif
-    );
-
-	if ((written<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) ||
-		written==0)
-	{
-		int ret  = poll(&poll_set,1,POLL_TIMEOUT);
-		if(ret==1) {
-			if(poll_set.revents & POLLOUT)
-				continue;
-			else
-				ERROR("waiting for send: exception on socket");
-		} else {
-			if(ret==0)
-				ERROR("waiting for send: timeout");
-			else
-				ERROR("waiting for send: error %d",errno);
-		}
-		close();
-		return REMOVE;
-	}
-	if (written<0) {
-		if (errno == ECONNRESET)
-			DBG("closing connection [%p/%d] on peer hangup", this, fd);
-		else
-			INFO("error on connection [%p/%d]: %s", this, fd, strerror(errno));
-		close();
-		return REMOVE;
-	}
-	rcvd_size+=written;
-  }
+  if(!send_data(ns_begin, msg_size+msg_size_s.length()+2)) return REMOVE;
 
   rcvd_size = 0;
   msg_size = 0;
   return CONTINUE;
 }
+
+int JsonrpcNetstringsConnection::send_data(char* data, int size)
+{
+    struct pollfd poll_set;
+    rcvd_size = 0;
+    poll_set.fd = fd;
+    poll_set.events = POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+
+    while (rcvd_size != size) {
+        ssize_t written = send(fd, &data[rcvd_size], size - rcvd_size,
+#ifdef MSG_NOSIGNAL
+       MSG_NOSIGNAL
+#else
+       0
+#endif
+        );
+
+        if ((written<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) ||
+            written==0)
+        {
+            int ret  = poll(&poll_set,1,POLL_TIMEOUT);
+            if(ret==1) {
+                if(poll_set.revents & POLLOUT)
+                    continue;
+                else
+                    ERROR("waiting for send: exception on socket");
+            } else {
+                if(ret==0)
+                    ERROR("waiting for send: timeout");
+                else
+                    ERROR("waiting for send: error %d",errno);
+            }
+            close();
+            return 0;
+        }
+        if (written<0) {
+            if (errno == ECONNRESET)
+                DBG("closing connection [%p/%d] on peer hangup", this, fd);
+            else
+                INFO("error on connection [%p/%d]: %s", this, fd, strerror(errno));
+            close();
+            return 0;
+        }
+        rcvd_size+=written;
+    }
+    return size;
+}
+
 
 void JsonrpcNetstringsConnection::close() {
   if (fd>0) {
@@ -391,4 +380,18 @@ bool JsonrpcNetstringsConnection::messagePending() {
 
 bool JsonrpcNetstringsConnection::messageIsRecv() { 
   return msg_recv; 
+}
+
+void JsonrpcNetstringsConnection::addMessage(const char* data, size_t len) {
+  memcpy(msgbuf, data, len);
+  msg_size = len;
+}
+
+char * JsonrpcNetstringsConnection::getMessage(size_t* len) {
+    *len = msg_size;
+    return msgbuf;
+}
+
+void JsonrpcNetstringsConnection::clearMessage() {
+    msg_size = 0;
 }

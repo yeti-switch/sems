@@ -75,6 +75,7 @@ class JsonRPCServerLoop
   static void execRpc(const string& evq_link, 
 		      const string& notificationReceiver,
 		      const string& requestReceiver,
+		      int conn_type,
 		      int flags,
 		      const string& host, 
 		      int port, const string& method, 

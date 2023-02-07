@@ -36,7 +36,7 @@
 using std::string;
 
 struct JsonrpcPeerConnection;
-struct JsonrpcNetstringsConnection;
+class JsonrpcNetstringsConnection;
 
 struct JsonRpcError {
   int code;
@@ -53,7 +53,7 @@ class JsonRpcServer {
   static bool execRpc(const string &connection_id, const string& method, const AmArg& id, const AmArg& params, AmArg& rpc_res);
   //static void runCoreMethod(const string& method, const AmArg& params, AmArg& res);
  public:
-  static int processMessage(char* msgbuf, unsigned int* msg_size,
+  static int processMessage(const char* msgbuf, unsigned int msg_size,
 			    JsonrpcPeerConnection* peer);
 
   static int createRequest(const string& evq_link, const string& method, AmArg& params, 

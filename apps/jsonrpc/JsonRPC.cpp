@@ -40,6 +40,8 @@ int JsonRPCServerModule::port = DEFAULT_JSONRPC_SERVER_PORT;
 int JsonRPCServerModule::threads = DEFAULT_JSONRPC_SERVER_THREADS;
 trsp_acl JsonRPCServerModule::acl;
 string JsonRPCServerModule::tcp_md5_password;
+tls_server_settings JsonRPCServerModule::server_settings;
+tls_client_settings JsonRPCServerModule::client_settings;
 
 EXPORT_PLUGIN_CLASS_FACTORY(JsonRPCServerModule)
 EXPORT_PLUGIN_CONF_FACTORY(JsonRPCServerModule)
@@ -52,7 +54,7 @@ JsonRPCServerModule* JsonRPCServerModule::instance()
 }
 
 JsonRPCServerModule::JsonRPCServerModule(const string& mod_name) 
-  : AmDynInvokeFactory(mod_name), AmConfigFactory(mod_name)
+  : AmDynInvokeFactory(mod_name), AmConfigFactory(mod_name), use_tls(false)
 {
 }
 
@@ -74,8 +76,24 @@ int JsonRPCServerModule::configure(const std::string & config)
     static const char opt_method[] = "method";
     static const char opt_server_threads[] = "server_threads";
     static const char opt_tcp_md5_password[] = "tcp_md5_password";
+
+    static const char opt_tls_protocols[] = "protocols";
+    static const char opt_tls_certificate[] = "certificate";
+    static const char opt_tls_certificate_key[] = "certificate_key";
+    static const char opt_tls_verify_certchain[] = "verify_certificate_chain";
+    static const char opt_tls_verify_certcn[] = "verify_certificate_cn";
+    static const char opt_tls_ca_list[] = "ca_list";
+    static const char opt_tls_verify_client_cert[] = "verify_client_certificate";
+    static const char opt_tls_require_client_cert[] = "require_client_certificate";
+    static const char opt_tls_ciphers[] = "ciphers";
+    static const char opt_tls_macs[] = "macs";
+    static const char opt_tls_dhparam[] = "dhparam";
+
     static const char sec_listen[] = "listen";
     static const char sec_acl[] = "acl";
+    static const char sec_tls[] = "tls";
+    static const char sec_server_tls[] = "server";
+    static const char sec_client_tls[] = "client";
 
     static cfg_opt_t acl_sec[]
     {
@@ -90,9 +108,41 @@ int JsonRPCServerModule::configure(const std::string & config)
         CFG_END()
     };
 
+    static cfg_opt_t tls_client[] =
+    {
+        CFG_STR_LIST(opt_tls_protocols, 0, CFGF_NODEFAULT),
+        CFG_STR(opt_tls_certificate, "", CFGF_NONE),
+        CFG_STR(opt_tls_certificate_key, "", CFGF_NONE),
+        CFG_BOOL(opt_tls_verify_certchain, cfg_true, CFGF_NONE),
+        CFG_BOOL(opt_tls_verify_certcn, cfg_true, CFGF_NONE),
+        CFG_STR_LIST(opt_tls_ca_list, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    static cfg_opt_t tls_server[] =
+    {
+        CFG_STR_LIST(opt_tls_protocols, 0, CFGF_NODEFAULT),
+        CFG_STR(opt_tls_certificate, "", CFGF_NONE),
+        CFG_STR(opt_tls_certificate_key, "", CFGF_NONE),
+        CFG_BOOL(opt_tls_verify_client_cert, cfg_true, CFGF_NONE),
+        CFG_BOOL(opt_tls_require_client_cert, cfg_true, CFGF_NONE),
+        CFG_STR_LIST(opt_tls_ciphers, 0, CFGF_NODEFAULT),
+        CFG_STR_LIST(opt_tls_macs, 0, CFGF_NODEFAULT),
+        CFG_STR(opt_tls_dhparam, "", CFGF_NONE),
+        CFG_STR_LIST(opt_tls_ca_list, 0, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    cfg_opt_t tls_sec[] = {
+        CFG_SEC(sec_server_tls, tls_server, CFGF_NONE),
+        CFG_SEC(sec_client_tls, tls_client, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t opt[] = {
         CFG_SEC(sec_listen,listen_sec, CFGF_NONE),
         CFG_SEC(sec_acl,acl_sec, CFGF_NODEFAULT),
+        CFG_SEC(sec_tls,tls_sec, CFGF_NODEFAULT),
         CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
         CFG_STR(opt_tcp_md5_password, NULL, CFGF_NONE),
         CFG_END()
@@ -150,6 +200,62 @@ int JsonRPCServerModule::configure(const std::string & config)
         }
     }
 
+    if(cfg_size(cfg, sec_tls)) {
+        use_tls = true;
+        cfg_t* tls = cfg_getsec(cfg, sec_tls);
+        cfg_t* server = cfg_getsec(tls, sec_server_tls);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_protocols); i++) {
+            std::string protocol = cfg_getnstr(server, opt_tls_protocols, i);
+            server_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        server_settings.certificate_path = cfg_getstr(server, opt_tls_certificate);
+        server_settings.certificate_key_path = cfg_getstr(server, opt_tls_certificate_key);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_ciphers); i++) {
+            std::string cipher = cfg_getnstr(server, opt_tls_ciphers, i);
+            server_settings.cipher_list.push_back(cipher);
+        }
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_macs); i++) {
+            std::string mac = cfg_getnstr(server, opt_tls_macs, i);
+            server_settings.macs_list.push_back(mac);
+        }
+        server_settings.verify_client_certificate = cfg_getbool(server, opt_tls_verify_client_cert);
+        server_settings.require_client_certificate = cfg_getbool(server, opt_tls_require_client_cert);
+        server_settings.dhparam = cfg_getstr(server, opt_tls_dhparam);
+        for(unsigned int i = 0; i < cfg_size(server, opt_tls_ca_list); i++) {
+            std::string ca = cfg_getnstr(server, opt_tls_ca_list, i);
+            server_settings.ca_path_list.push_back(ca);
+        }
+        if(server_settings.verify_client_certificate && !server_settings.require_client_certificate) {
+            ERROR("incorrect server tls configuration: verify client certificate cannot be set, if clients certificate is not required");
+            return -1;
+        }
+        if(server_settings.certificate_path.empty() || server_settings.certificate_key_path.empty()) {
+            ERROR("incorrect server tls configuration: client certificate and key must be set");
+            return -1;
+        }
+
+        cfg_t* client = cfg_getsec(tls, sec_client_tls);
+        for(unsigned int i = 0; i < cfg_size(client, opt_tls_protocols); i++) {
+            std::string protocol = cfg_getnstr(client, opt_tls_protocols, i);
+            client_settings.protocols.push_back(tls_settings::protocolFromStr(protocol));
+        }
+        client_settings.certificate_path = cfg_getstr(client, opt_tls_certificate);
+        client_settings.certificate_key_path = cfg_getstr(client, opt_tls_certificate_key);
+        client_settings.verify_certificate_chain = cfg_getbool(client, opt_tls_verify_certchain);
+        client_settings.verify_certificate_cn = cfg_getbool(client, opt_tls_verify_certcn);
+        for(unsigned int i = 0; i < cfg_size(client, opt_tls_ca_list); i++) {
+            std::string ca = cfg_getnstr(client, opt_tls_ca_list, i);
+            client_settings.ca_path_list.push_back(ca);
+        }
+
+        if(!client_settings.checkCertificateAndKey("jsonrpc","","client") ||
+        !server_settings.checkCertificateAndKey("jsonrpc","","server")) {
+                return -1;
+        }
+        client_settings.load_certificates();
+        server_settings.load_certificates();
+    }
+
     cfg_free(cfg);
     return 0;
 }
@@ -186,10 +292,10 @@ void JsonRPCServerModule::invoke(const string& method,
   if (method == "execRpc"){
 
     // todo: add connection id
-    args.assertArrayFmt("sssisis");   // evq_link, notificationReceiver, requestReceiver, 
-                                      // flags(i), host, port (i), method, [params]
-    if (args.size() > 7)  {
-      if (!isArgArray(args.get(7)) && !isArgStruct(args.get(7))) {
+    args.assertArrayFmt("sssiisis");   // evq_link, notificationReceiver, requestReceiver, 
+                                      // conn_type(i), flags(i), host, port (i), method, [params]
+    if (args.size() > 8)  {
+      if (!isArgArray(args.get(8)) && !isArgStruct(args.get(8))) {
 	ERROR("internal error: params to JSON-RPC must be struct or array");
 	throw AmArg::TypeMismatchException();
       }
@@ -228,22 +334,24 @@ void JsonRPCServerModule::invoke(const string& method,
 void JsonRPCServerModule::execRpc(const AmArg& args, AmArg& ret) {
   AmArg none_params;
   AmArg& params = none_params;
-  if (args.size()>7)
-    params = args.get(7);
+  if (args.size()>8)
+    params = args.get(8);
 
   AmArg u_none_params;
   AmArg& udata = u_none_params;
-  if (args.size()>8)
-    udata = args.get(8);
+  if (args.size()>9)
+    udata = args.get(9);
 
   JsonRPCServerLoop::execRpc(// evq_link, notification_link, request_link
 			     args.get(0).asCStr(), args.get(1).asCStr(),
-			     args.get(2).asCStr(), 
-			     // flags
+			     args.get(2).asCStr(),
+			     // conn_type
 			     args.get(3).asInt(), 
+			     // flags
+			     args.get(4).asInt(), 
 			     // host, port, method
-			     args.get(4).asCStr(), 
-			     args.get(5).asInt(), args.get(6).asCStr(), 
+			     args.get(5).asCStr(), 
+			     args.get(6).asInt(), args.get(7).asCStr(), 
 			     params, udata, ret);
 }
 
