@@ -813,7 +813,7 @@ void SIPRegistrarClient::invoke(
                 transaction_timeout = 0,
                 srv_failover_timeout = 0;
             bool force_expires_interval = false;
-            dns_priority priority;
+            dns_priority priority = Dualstack;
             size_t n = args.size();
 
             if(n < 6) {
