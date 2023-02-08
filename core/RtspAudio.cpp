@@ -18,7 +18,8 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
     agent(RtspClient::instance()),
     md(0),
     streamid(-1),
-    state(Ready)
+    state(Ready),
+    start_progress_time(0)
 {
     id = agent->addStream(*this);
 
@@ -54,6 +55,9 @@ void RtspAudio::open(const string& _uri)
     teardown();
 
     uri = _uri;
+    struct timeval tm;
+    gettimeofday(&tm, 0);
+    start_progress_time = tm.tv_sec*1000 + tm.tv_usec/1000;
 
     describe();
 }
@@ -71,8 +75,23 @@ void RtspAudio::teardown()
     }
 
     state = Ready;
+    start_progress_time = 0;
 }
 
+void RtspAudio::checkState(uint64_t timeout)
+{
+    if(!timeout) return;
+
+    struct timeval tm;
+    gettimeofday(&tm, 0);
+    uint64_t now = tm.tv_sec*1000 + tm.tv_usec/1000;
+    if(state == Progress && now - start_progress_time < timeout) {
+        if(session)
+            session->postEvent(new RtspTimeoutEvent(uri));
+        state = Ready;
+        start_progress_time = 0;
+    }
+}
 
 void RtspAudio::describe()
 {
@@ -233,6 +252,7 @@ void RtspAudio::onRtpTimeout()
         session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 
     state = Ready;
+    start_progress_time = 0;
 }
 
 void RtspAudio::onMaxRtpTimeReached()
@@ -243,6 +263,7 @@ void RtspAudio::onMaxRtpTimeReached()
         session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 
     state = Ready;
+    start_progress_time = 0;
 }
 
 void RtspAudio::onRtspPlayNotify(const RtspMsg & msg) {
@@ -256,6 +277,7 @@ void RtspAudio::onRtspPlayNotify(const RtspMsg & msg) {
 
     state = Ready;
     session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+    start_progress_time = 0;
 }
 
 

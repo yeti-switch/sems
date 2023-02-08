@@ -18,6 +18,7 @@
 #define PARAM_MAX_QUEUE_LENGTH_NAME     "max_queue_length"
 #define PARAM_RECONNECT_INTERVAL_NAME   "reconnect_interval"
 #define PARAM_SHUTDOWN_CODE_NAME        "shutdown_code"
+#define PARAM_OPEN_TIMEOUT_NAME         "open_timeout"
 #define PARAM_MEDIA_SERVERS_NAME        "media_servers"
 #define PARAM_USE_DNS_SRV_NAME          "use_dns_srv"
 #define PARAM_RTSP_INTERFACE_NAME_NAME  "rtsp_interface_name"
@@ -168,6 +169,7 @@ int RtspClient::configure(const std::string& conf)
         CFG_INT(PARAM_MAX_QUEUE_LENGTH_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_RECONNECT_INTERVAL_NAME, 0, CFGF_NONE),
         CFG_INT(PARAM_SHUTDOWN_CODE_NAME, 503, CFGF_NONE),
+        CFG_INT(PARAM_OPEN_TIMEOUT_NAME, 0, CFGF_NONE),
         CFG_STR_LIST(PARAM_MEDIA_SERVERS_NAME, 0, CFGF_NONE),
         CFG_BOOL(PARAM_USE_DNS_SRV_NAME, cfg_false, CFGF_NONE),
         CFG_STR(PARAM_RTSP_INTERFACE_NAME_NAME, "", CFGF_NODEFAULT),
@@ -193,6 +195,7 @@ int RtspClient::configure(const std::string& conf)
     config.max_queue_length     = cfg_getint(cfg, PARAM_MAX_QUEUE_LENGTH_NAME);
     config.reconnect_interval   = cfg_getint(cfg, PARAM_RECONNECT_INTERVAL_NAME);
     config.shutdown_code        = cfg_getint(cfg, PARAM_SHUTDOWN_CODE_NAME);
+    config.open_timeout         = cfg_getint(cfg, PARAM_OPEN_TIMEOUT_NAME);
     AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_RTSP_INTERFACE_NAME_NAME, config.rtsp_interface_name);
 
     int i = 0;
@@ -296,6 +299,10 @@ void RtspClient::on_timer()
 
     for (auto& sess : rtsp_session)
         sess.on_timer(val);
+
+    AmLock _lock(_streams_mtx);
+    for(auto& stream : streams)
+        stream.second->checkState(config.open_timeout);
 }
 
 
