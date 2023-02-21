@@ -468,7 +468,7 @@ int AmAudio::decode(unsigned int size)
     samples.swap();
   }
 
-  assert(s < AUDIO_BUFFER_SIZE);
+  assert(s <= AUDIO_BUFFER_SIZE);
 
   return s;
 }
@@ -488,7 +488,7 @@ int AmAudio::encode(unsigned int size)
     samples.swap();
   }
 
-  assert(s < AUDIO_BUFFER_SIZE);
+  assert(s <= AUDIO_BUFFER_SIZE);
 
   return s;
 }
