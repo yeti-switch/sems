@@ -31,6 +31,8 @@
 #include "AmAudio.h"
 #include "AmBufferedAudio.h"
 
+class AmSession;
+
 /** \brief \ref AmAudioFormat for file */
 class AmAudioFileFormat: public AmAudioFormat
 {
@@ -119,6 +121,8 @@ public:
 
   AmAudioFile();
   ~AmAudioFile();
+
+  virtual void init(AmSession* session);
 
   /**
    * Opens a file.

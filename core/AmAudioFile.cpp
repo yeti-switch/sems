@@ -28,6 +28,7 @@
 #include "AmAudioFile.h"
 #include "AmPlugIn.h"
 #include "AmUtils.h"
+#include "AmSession.h"
 
 #include <string.h>
 
@@ -74,6 +75,7 @@ void AmAudioFileFormat::setSubtypeId(int subtype_id)  {
     destroyCodec();
     subtype = subtype_id; 
     p_subtype = 0;
+    p_subtype = getSubtype();
     codec = getCodec();
   }
 }
@@ -150,6 +152,10 @@ string AmAudioFile::getSubtype(string& filename) {
   return res;
 }
 
+void AmAudioFile::init(AmSession* session)
+{
+    session->setOutput(this);
+}
 
 // returns 0 if everything's OK
 // return -1 if error
@@ -191,16 +197,6 @@ int AmAudioFile::fpopen(const string& filename, OpenMode mode, FILE* n_fp)
   on_close_done = false;
   string f_name = filename;
   string subtype = getSubtype(f_name);
-  return fpopen_int(f_name, mode, n_fp, subtype);
-}
-
-int AmAudioFile::fpopen_int(const string& filename, OpenMode mode, 
-			    FILE* n_fp, const string& subtype)
-{
-  _filename = filename;
-  open_mode = mode;
-  fp = n_fp;
-  fseek(fp,0L,SEEK_SET);
 
   AmAudioFileFormat* f_fmt = fileName2Fmt(filename, subtype);
   if(!f_fmt){
@@ -211,21 +207,30 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
   }
   fmt.reset(f_fmt);
 
+  return fpopen_int(f_name, mode, n_fp, subtype);
+}
+
+int AmAudioFile::fpopen_int(const string& filename, OpenMode mode, 
+			    FILE* n_fp, const string& subtype)
+{
+  (void)subtype;
+  _filename = filename;
+  open_mode = mode;
+  fp = n_fp;
+  fseek(fp,0L,SEEK_SET);
+
   amci_file_desc_t fd;
   memset(&fd, 0, sizeof(amci_file_desc_t));
 
   int ret = -1;
-
+  
+  AmAudioFileFormat* f_fmt = static_cast<AmAudioFileFormat*>(fmt.get());
   if(open_mode == AmAudioFile::Write){
 
-    if (f_fmt->channels<0 /*|| f_fmt->getRate()<0*/) {
-      if (f_fmt->channels<0)
-	ERROR("channel count must be set for output file.");
-      // if (f_fmt->getRate()<0)
-      // 	ERROR("sampling rate must be set for output file.");
-      close();
-      return -1;
-    }
+  if (f_fmt->channels<0)
+    ERROR("channel count must be set for output file.");
+    close();
+    return -1;
   }
 
   fd.subtype = f_fmt->getSubtypeId();
@@ -252,14 +257,6 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
     close();
     return ret;
   }
-
-  //     if(open_mode == AmAudioFile::Write){
-
-  // 	DBG("After open:");
-  // 	DBG("fmt::subtype = %i",f_fmt->getSubtypeId());
-  // 	DBG("fmt::channels = %i",f_fmt->channels);
-  // 	DBG("fmt::rate = %i",f_fmt->rate);
-  //     }
 
   return ret;
 }
