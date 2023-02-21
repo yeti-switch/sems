@@ -250,11 +250,11 @@ static unsigned int mp3_samples2bytes(long h_codec, unsigned int num_samples)
 #else
 
   /* 
-   * 150 bytes is about one frame as produced by the mp3 writer.
+   * 160 bytes is about one frame as produced by the mp3 writer.
    * for higher bitrate files this will only introduce the small performance 
    * penalty of multiple read() calls per frame-decode.
    */
-  return 150;
+  return 160;
 
 /*   or a full frame? */
 /*    we don't know bitrate - so use 128000 as max bitrate */
