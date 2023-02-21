@@ -6,6 +6,8 @@ mp3.cpp
 #	module_ldflags += -lmpg123
 #	module_cflags += -DWITH_MPG123DECODER
 
+ADD_DEFINITIONS(-DWITH_MPG123DECODER)
+
 SET(sems_module_name mp3)
-SET(sems_module_libs mp3lame)
+SET(sems_module_libs mp3lame mpg123)
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/module.rules.txt)

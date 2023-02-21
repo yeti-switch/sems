@@ -259,10 +259,10 @@ static unsigned int mp3_samples2bytes(long h_codec, unsigned int num_samples)
 /*   or a full frame? */
 /*    we don't know bitrate - so use 128000 as max bitrate */
 /*     144 * BitRate / (SampleRate + Padding) */  
-/*   unsigned int res =  144 * 128000 / (((mp3_coder_state*)h_codec)->rate + 1); */
-/*   if (res > AUDIO_BUFFER_SIZE) */
-/*     res = AUDIO_BUFFER_SIZE; */
-/*   return res; */
+//    unsigned int res =  144 * 128000 / (((mp3_coder_state*)h_codec)->rate + 1); 
+//    if (res > AUDIO_BUFFER_SIZE)
+//      res = AUDIO_BUFFER_SIZE; 
+//    return res; 
 
 #endif
 }
