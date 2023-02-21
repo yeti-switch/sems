@@ -90,4 +90,6 @@
 
 #define CODEC_OPUS 60
 
+#define CODEC_IEEE_FLOAT 61
+
 #endif

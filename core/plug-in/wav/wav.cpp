@@ -31,6 +31,8 @@
 #include "wav_hdr.h"
 #include "../../log.h"
 
+#include <limits>
+
 /**
  * @file plug-in/wav/wav.c
  * Wav file support / sample plug-in declaration.
@@ -72,10 +74,12 @@
 
 /** @def WAV_PCM subtype declaration. */
 #define WAV_PCM  1 
+/** @def WAV_IEEE_FLOAT subtype declaration. */
+#define WAV_IEEE_FLOAT 3
 /** @def WAV_ALAW subtype declaration. */
 #define WAV_ALAW 6 
 /** @def WAV_ULAW subtype declaration. */
-#define WAV_ULAW 7 
+#define WAV_ULAW 7
 
 static int ULaw_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
 			 unsigned int channels, unsigned int rate, long h_codec );
@@ -92,6 +96,15 @@ static int Pcm16_2_ALaw( unsigned char* out_buf, unsigned char* in_buf, unsigned
 static unsigned int g711_bytes2samples(long, unsigned int);
 static unsigned int g711_samples2bytes(long, unsigned int);
 
+static int Pcm16_2_IEEE_Float( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
+			 unsigned int channels, unsigned int rate, long h_codec );
+
+static int IEEE_Float_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
+			 unsigned int channels, unsigned int rate, long h_codec );
+
+static unsigned int ieee_float_samples2bytes(long, unsigned int);
+static unsigned int ieee_float_bytes2samples(long, unsigned int);
+
 BEGIN_EXPORTS( "wav" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
 
      BEGIN_CODECS
@@ -101,6 +114,9 @@ BEGIN_EXPORTS( "wav" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
       CODEC( CODEC_ALAW, Pcm16_2_ALaw, ALaw_2_Pcm16,
 	     AMCI_NO_CODEC_PLC, AMCI_NO_CODECCREATE, AMCI_NO_CODECDESTROY,
 	     g711_bytes2samples, g711_samples2bytes )
+      CODEC( CODEC_IEEE_FLOAT, Pcm16_2_IEEE_Float, IEEE_Float_2_Pcm16,
+	     AMCI_NO_CODEC_PLC, AMCI_NO_CODECCREATE, AMCI_NO_CODECDESTROY,
+	     ieee_float_bytes2samples, ieee_float_samples2bytes )
      END_CODECS
     
      BEGIN_PAYLOADS
@@ -114,9 +130,11 @@ BEGIN_EXPORTS( "wav" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
            SUBTYPE( WAV_PCM,  "Pcm16",  8000, 1, CODEC_PCM16 )
            SUBTYPE( WAV_ALAW, "A-Law",  8000, 1, CODEC_ALAW )
            SUBTYPE( WAV_ULAW, "Mu-Law", 8000, 1, CODEC_ULAW )
+           SUBTYPE( WAV_IEEE_FLOAT, "IEEE-Float", 8000, 1, CODEC_IEEE_FLOAT )
            SUBTYPE( WAV_PCM,  "Pcm16_2",  8000, 2, CODEC_PCM16 )
            SUBTYPE( WAV_ALAW, "A-Law_2",  8000, 2, CODEC_ALAW )
            SUBTYPE( WAV_ULAW, "Mu-Law_2", 8000, 2, CODEC_ULAW )
+           SUBTYPE( WAV_IEEE_FLOAT, "IEEE-Float", 8000, 2, CODEC_IEEE_FLOAT )
          END_SUBTYPES
        END_FILE_FORMAT
      END_FILE_FORMATS
@@ -133,6 +151,16 @@ static unsigned int g711_samples2bytes(long h_codec, unsigned int num_samples)
 {
   /* ALAW and ULAW formats has one sample per byte */
   return num_samples;
+}
+
+static unsigned int ieee_float_samples2bytes(long h_codec, unsigned int num_samples)
+{
+    return num_samples * 4;
+}
+
+static unsigned int ieee_float_bytes2samples(long h_codec, unsigned int num_bytes)
+{
+    return num_bytes/4;
 }
 
 static int ULaw_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
@@ -194,4 +222,34 @@ int Pcm16_2_ALaw( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   return size/2;
 }
 
+int IEEE_Float_2_Pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned int size, unsigned int channels, unsigned int rate, long h_codec)
+{
+    short* out_b         = (short*)out_buf;
+    float* in_b          = (float*)(in_buf);
+    float* end           = (float*)((unsigned char*)in_buf + size);
 
+    while(in_b != end){
+        int32_t s = (*(in_b++))*32768;
+        if(s < -32768) s = -32768;
+        if(s > 32767) s = 32767;
+        *(out_b++) = (short)s;
+    }
+
+    return size/2;
+}
+
+int Pcm16_2_IEEE_Float(unsigned char* out_buf, unsigned char* in_buf, unsigned int size, unsigned int channels, unsigned int rate, long h_codec)
+{
+  float* out_b = (float*)out_buf;
+  unsigned char*  in_b  = in_buf;
+  unsigned char*  end   = in_b + size;
+
+  while(in_b != end){
+    float f = (*(out_b++))/32768.0f;
+    if(f > 1) f = 1;
+    if(f < -1) f = -1;
+    *(out_b++)  = f;
+  }
+
+  return size*2;
+}
