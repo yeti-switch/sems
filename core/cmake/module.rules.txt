@@ -55,14 +55,14 @@ ENDIF(EXISTS ${CMAKE_SOURCE_DIR}/debian/changelog)
 MESSAGE(STATUS "set version of ${sems_module_name} - ${MODULE_VERSION}")
 ADD_DEFINITIONS(-DMOD_NAME="${sems_module_name}" -DMODULE_VERSION="${MODULE_VERSION}")
 
-IF(NOT ${sems_module_dependency})
+IF(DEFINED sems_module_dependency)
     MESSAGE(STATUS "sems_${sems_module_name} dependency: ${sems_module_dependency}")
     ADD_DEPENDENCIES(sems_${sems_module_name} ${sems_module_dependency})
 
     IF(${sems_module_name}_UNIT_SRCS)
         ADD_DEPENDENCIES(sems_${sems_module_name}_unit ${sems_module_dependency})
     ENDIF(${sems_module_name}_UNIT_SRCS)
-ENDIF(NOT ${sems_module_dependency})
+ENDIF(DEFINED sems_module_dependency)
 
 # all modules should be linked against ${CMAKE_DL_LIBS} at least
 # and with additional ${sems_module_libs} if they exists
