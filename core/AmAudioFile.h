@@ -74,6 +74,13 @@ public:
   void setSubtypeId(int subtype_id);
 };
 
+struct memfile_cookie {
+    char   *buf;        /* Dynamically sized buffer for data */
+    size_t  allocated;  /* Size of buf */
+    size_t  endpos;     /* Number of characters in buf */
+    off_t   offset;     /* Current file offset in buf */
+};
+
 /**
  * \brief AmAudio implementation for file access
  */
@@ -82,7 +89,8 @@ class AmAudioFile: public AmBufferedAudio
 public:
   /** Open mode. */
   enum OpenMode { Read=1, Write=2 };
-
+private:
+  memfile_cookie memfile;
 protected:
   /** Pointer to the file opened as last. */
   FILE* fp;
@@ -115,6 +123,7 @@ protected:
   /** internal function for opening the file */
   int fpopen_int(const string& filename, OpenMode mode, FILE* n_fp, const string& subtype);
 
+  virtual uint64_t get_cache_size(){ return 4; }
 public:
   AmSharedVar<bool> loop;
   AmSharedVar<bool> autorewind;

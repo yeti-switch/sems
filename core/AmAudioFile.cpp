@@ -142,6 +142,88 @@ int AmAudioFileFormat::getCodecId()
   return -1;
 }
 
+static ssize_t
+memfile_write(void *c, const char *buf, size_t size)
+{
+    char *new_buff;
+    struct memfile_cookie *cookie = (struct memfile_cookie*)c;
+
+   /* Buffer too small? Keep doubling size until big enough */
+
+   while (size + cookie->offset > cookie->allocated) {
+        new_buff = (char*)realloc(cookie->buf, cookie->allocated * 2);
+        if (new_buff == NULL) {
+            return -1;
+        } else {
+            cookie->allocated *= 2;
+            cookie->buf = new_buff;
+        }
+    }
+
+   memcpy(cookie->buf + cookie->offset, buf, size);
+
+   cookie->offset += size;
+    if (cookie->offset > cookie->endpos)
+        cookie->endpos = cookie->offset;
+
+   return size;
+}
+
+static ssize_t
+memfile_read(void *c, char *buf, size_t size)
+{
+    ssize_t xbytes;
+    struct memfile_cookie *cookie = (struct memfile_cookie*)c;
+
+   /* Fetch minimum of bytes requested and bytes available */
+
+   xbytes = size;
+    if (cookie->offset + size > cookie->endpos)
+        xbytes = cookie->endpos - cookie->offset;
+    if (xbytes < 0)     /* offset may be past endpos */
+       xbytes = 0;
+
+   memcpy(buf, cookie->buf + cookie->offset, xbytes);
+
+   cookie->offset += xbytes;
+    return xbytes;
+}
+
+static int
+memfile_seek(void *c, off64_t *offset, int whence)
+{
+    off64_t new_offset;
+    struct memfile_cookie *cookie =  (struct memfile_cookie*)c;
+
+   if (whence == SEEK_SET)
+        new_offset = *offset;
+    else if (whence == SEEK_END)
+        new_offset = cookie->endpos + *offset;
+    else if (whence == SEEK_CUR)
+        new_offset = cookie->offset + *offset;
+    else
+        return -1;
+
+   if (new_offset < 0)
+        return -1;
+
+   cookie->offset = new_offset;
+    *offset = new_offset;
+    return 0;
+}
+
+static int
+memfile_close(void *c)
+{
+    struct memfile_cookie *cookie = (struct memfile_cookie *)c;
+
+   free(cookie->buf);
+    cookie->allocated = 0;
+    cookie->buf = NULL;
+
+   return 0;
+}
+
 string AmAudioFile::getSubtype(string& filename) {
   string res;
   size_t dpos  = filename.rfind('|');
@@ -180,8 +262,16 @@ int  AmAudioFile::open(const string& filename, OpenMode mode, bool is_tmp)
 	ERROR("could not create/overwrite file: %s",f_name.c_str());
       return -1;
     }
-  } else {	
-    n_fp = tmpfile();
+  } else {
+    memfile.allocated = get_cache_size();
+    memfile.buf = (char*)malloc(memfile.allocated);
+    cookie_io_functions_t  memfile_func = {
+        .read  = memfile_read,
+        .write = memfile_write,
+        .seek  = memfile_seek,
+        .close = memfile_close
+    };
+    n_fp = fopencookie(&memfile,"w+", memfile_func);
     if(!n_fp){
       ERROR("could not create temporary file: %s",strerror(errno));
       return -1;
@@ -261,13 +351,13 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
   return ret;
 }
 
-
 AmAudioFile::AmAudioFile()
   : AmBufferedAudio(0, 0, 0), data_size(0),
     fp(0), begin(0), loop(false), autorewind(false),
     on_close_done(false),
     close_on_exit(true)
 {
+  memset(&memfile, 0, sizeof(memfile));
 }
 
 AmAudioFile::~AmAudioFile()
