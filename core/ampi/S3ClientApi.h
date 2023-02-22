@@ -58,12 +58,14 @@ class S3GetFilePart : public S3Event
 public:
     string name;
     string sender_id;
+    string version_id;
     uint64_t start;
     uint64_t size;
 
-    S3GetFilePart(const string& name_, const string& session_id, uint64_t start_, uint64_t size_)
+    S3GetFilePart(const string& name_, const string& version, const string& session_id, uint64_t start_, uint64_t size_)
     : S3Event(GetFilePart)
     , name(name_)
+    , version_id(version)
     , sender_id(session_id)
     , start(start_)
     , size(size_){}

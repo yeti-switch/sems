@@ -267,7 +267,7 @@ void S3Client::onS3GetFileInfo(S3GetFileInfo& e)
 
 void S3Client::onS3GetFilePart(S3GetFilePart& e)
 {
-    s3_get_file_part(e.name, e.start, e.size, new S3RequestData(this, new S3GetFilePart(e)));
+    s3_get_file_part(e.name, e.version_id, e.start, e.size, new S3RequestData(this, new S3GetFilePart(e)));
 }
 
 void S3Client::set_opt_connection(CURL* curl)
@@ -334,8 +334,14 @@ static S3Status showObjectCallback(const S3ResponseProperties* properties,void *
 {
     S3RequestData* data = (S3RequestData*)callbackData;
     data->response["size"] = properties->contentLength;
-    data->response["type"] = properties->contentType;
-    data->response["tag"] = properties->eTag;
+    data->response["type"] = properties->contentType ? properties->contentType : "";
+    data->response["etag"] = properties->eTag ? properties->eTag : "";
+    data->response["version_id"] = properties->versionId ? properties->versionId : "";
+    data->response["last_modified"] = properties->lastModified;
+    for(int i = 0; i < properties->metaDataCount; i++) {
+        S3NameValue nv = properties->metaData[i];
+        data->response[nv.name] = nv.value;
+    }
     return S3StatusOK;
 }
 
@@ -395,7 +401,7 @@ void S3Client::s3_get_file_info(const string& key, void* callbackData)
     S3_head_object(&bucketContext, key.c_str(), s3ctx, &showObjectHandler, callbackData);
 }
 
-void S3Client::s3_get_file_part(const std::string& key, uint64_t start, uint64_t size, void* callbackData)
+void S3Client::s3_get_file_part(const std::string& key, const std::string& version_id, uint64_t start, uint64_t size, void* callbackData)
 {
     S3BucketContext bucketContext;
     memset(&bucketContext, 0, sizeof(S3BucketContext));
@@ -410,77 +416,71 @@ void S3Client::s3_get_file_part(const std::string& key, uint64_t start, uint64_t
     getObjectHandler.responseHandler.completeCallback = &responseCompleteCallback;
     getObjectHandler.responseHandler.propertiesCallback = &responsePropertiesCallback;
     getObjectHandler.getObjectDataCallback = &getObjectDataCallback;
-    S3_get_object(&bucketContext, key.c_str(), NULL, start, size, s3ctx, &getObjectHandler, callbackData);
+
+    S3_get_object(&bucketContext, key.c_str(), version_id.empty() ? 0 : version_id.c_str(), 0, start, size, s3ctx, &getObjectHandler, callbackData);
 }
 
 void S3Client::process_jsonrpc_request(JsonRpcRequestEvent &request)
 {
-    switch(request.method_id) {
-    case MethodRunS3Request: {
-        S3ListBucketHandler listBucketHandler;
-        string cmd = request.params[0].asCStr();
-        if(cmd == "ls") {
-            S3BucketContext bucketContext;
-            memset(&bucketContext, 0, sizeof(S3BucketContext));
-            bucketContext.hostName = config.host.c_str();
-            bucketContext.bucketName = config.bucket.c_str();
-            bucketContext.protocol = config.secure ? S3ProtocolHTTPS : S3ProtocolHTTP;
-            bucketContext.uriStyle = S3UriStylePath;
-            bucketContext.accessKeyId = config.access_key.c_str();
-            bucketContext.secretAccessKey = config.secret_key.c_str();
+    try {
+        switch(request.method_id) {
+        case MethodRunS3Request: {
+            S3ListBucketHandler listBucketHandler;
+            string cmd = request.params[0].asCStr();
+            if(cmd == "ls") {
+                S3BucketContext bucketContext;
+                memset(&bucketContext, 0, sizeof(S3BucketContext));
+                bucketContext.hostName = config.host.c_str();
+                bucketContext.bucketName = config.bucket.c_str();
+                bucketContext.protocol = config.secure ? S3ProtocolHTTPS : S3ProtocolHTTP;
+                bucketContext.uriStyle = S3UriStylePath;
+                bucketContext.accessKeyId = config.access_key.c_str();
+                bucketContext.secretAccessKey = config.secret_key.c_str();
 
-            listBucketHandler.responseHandler.completeCallback = &responseCompleteCallback;
-            listBucketHandler.responseHandler.propertiesCallback = &responsePropertiesCallback;
-            listBucketHandler.listBucketCallback = &listBucketCallback;
-            S3_list_bucket(&bucketContext, NULL, NULL, NULL, 0, s3ctx, &listBucketHandler, new S3RequestData(request));
-        } else if(cmd == "get") {
-            if(request.params.size() < 2 || request.params.size() == 3 || !isArgCStr(request.params[1])) {
-                AmArg ret;
-                ret["message"] = "absent or incorrect parameter. usage s3_client.request get <path> [<byte_start> <byte_size>]";
-                ret["code"] = 500;
-                postJsonRpcReply(request, ret, true);
-                return;
-            }
-            long long byte_start = 0, byte_size = 0;
-            string key = request.params[1].asCStr();
-            if(request.params.size() > 2) {
-                if(isArgCStr(request.params[2]) && !str2longlong(request.params[2].asCStr(), byte_start)) {
-                    AmArg ret;
-                    ret["message"] = "incorrect 3 parameter";
-                    ret["code"] = 500;
-                    postJsonRpcReply(request, ret, true);
-                    return;
-                } else if(isArgNumber(request.params[2])) {
-                    byte_start = request.params[2].asLongLong();
+                listBucketHandler.responseHandler.completeCallback = &responseCompleteCallback;
+                listBucketHandler.responseHandler.propertiesCallback = &responsePropertiesCallback;
+                listBucketHandler.listBucketCallback = &listBucketCallback;
+                S3_list_bucket(&bucketContext, NULL, NULL, NULL, 0, s3ctx, &listBucketHandler, new S3RequestData(request));
+            } else if(cmd == "get") {
+                if(request.params.size() < 2 || request.params.size() == 4 || !isArgCStr(request.params[1]))
+                    throw AmSession::Exception(500, "absent or incorrect parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
+                long long byte_start = 0, byte_size = 0;
+                string key = request.params[1].asCStr();
+                string version;
+                if(request.params.size() > 2) {
+                    if(!isArgCStr(request.params[2])) 
+                        throw AmSession::Exception(500, "incorrect 3 parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
+                    version = request.params[2].asCStr();
                 }
-                if(isArgCStr(request.params[3]) && !str2longlong(request.params[3].asCStr(), byte_size)) {
-                    AmArg ret;
-                    ret["message"] = "incorrect 4 parameter";
-                    ret["code"] = 500;
-                    postJsonRpcReply(request, ret, true);
-                    return;
-                } else if(isArgNumber(request.params[3])) {
-                    byte_start = request.params[3].asLongLong();
+                if(request.params.size() > 3) {
+                    if(isArgCStr(request.params[3]) && !str2longlong(request.params[3].asCStr(), byte_start))
+                        throw AmSession::Exception(500, "incorrect 4 parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
+                    else if(isArgNumber(request.params[3]))
+                        byte_start = request.params[3].asLongLong();
+                    else 
+                        throw AmSession::Exception(500, "incorrect 4 parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
+                    if(isArgCStr(request.params[4]) && !str2longlong(request.params[4].asCStr(), byte_size))
+                        throw AmSession::Exception(500, "incorrect 5 parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
+                    else if(isArgNumber(request.params[4]))
+                        byte_start = request.params[4].asLongLong();
+                    else
+                        throw AmSession::Exception(500, "incorrect 5 parameter. usage s3_client.request get <path> [<versionId> [<byte_start> <byte_size>]]");
                 }
-            }
-            s3_get_file_part(key, byte_start, byte_size, new S3RequestData(request));
-        } else if(cmd == "show") {
-            if(request.params.size() < 2) {
-                AmArg ret;
-                ret["message"] = "absent or incorrect parameter. usage s3_client.request show <path>";
-                ret["code"] = 500;
-                postJsonRpcReply(request, ret, true);
-                return;
-            }
-            string key = request.params[1].asCStr();
-            s3_get_file_info(key, new S3RequestData(request));
-        } else {
-            AmArg ret;
-            ret["message"] = "unsupport command. using `ls`, `get`, `show` command";
-            ret["code"] = 500;
-            postJsonRpcReply(request, ret, true);
+                s3_get_file_part(key, version, byte_start, byte_size, new S3RequestData(request));
+            } else if(cmd == "show") {
+                if(request.params.size() < 2)
+                        throw AmSession::Exception(500, "absent or incorrect parameter. usage s3_client.request show <path>");
+                string key = request.params[1].asCStr();
+                s3_get_file_info(key, new S3RequestData(request));
+            } else 
+                throw AmSession::Exception(500, "unsupport command. using `ls`, `get`, `show` command");
+        } break;
         }
-    } break;
+    } catch(const AmSession::Exception& ex) {
+        AmArg ret;
+        ret["message"] = ex.reason;
+        ret["code"] = ex.code;
+        postJsonRpcReply(request, ret, true);
     }
 }
 

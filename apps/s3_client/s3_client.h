@@ -67,7 +67,7 @@ protected:
     void onS3GetFileInfo(S3GetFileInfo& e);
     void s3_get_file_info(const string& key, void* callbackData);
     void onS3GetFilePart(S3GetFilePart& e);
-    void s3_get_file_part(const string& key, uint64_t start, uint64_t size, void* callbackData);
+    void s3_get_file_part(const string& key, const std::string& version_id, uint64_t start, uint64_t size, void* callbackData);
 
     void set_opt_connection(CURL * curl) override;
 public:

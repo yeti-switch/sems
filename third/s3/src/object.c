@@ -238,6 +238,13 @@ void S3_get_object(const S3BucketContext *bucketContext, const char *key,
                    S3RequestContext *requestContext,
                    const S3GetObjectHandler *handler, void *callbackData)
 {
+    char versionIdParamName[] = "versionId=";
+    char *queryParams = 0;
+    if(versionId) {
+        queryParams = malloc(sizeof(versionIdParamName) + strlen(versionId));
+        strcpy(queryParams, versionIdParamName);
+        strcpy(queryParams + sizeof(versionIdParamName) - 1, versionId);
+    }
     // Set up the RequestParams
     RequestParams params =
     {
@@ -250,7 +257,7 @@ void S3_get_object(const S3BucketContext *bucketContext, const char *key,
           bucketContext->secretAccessKey },           // secretAccessKey
         key,                                          // key
         0,                                            // queryParams
-        0,                                            // subResource
+        queryParams,                                  // subResource
         0,                                            // copySourceBucketName
         0,                                            // copySourceKey
         getConditions,                                // getConditions
@@ -267,6 +274,8 @@ void S3_get_object(const S3BucketContext *bucketContext, const char *key,
 
     // Perform the request
     request_perform(&params, requestContext);
+    if(queryParams)
+        free(queryParams);
 }
 
 

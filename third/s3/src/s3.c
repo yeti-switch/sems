@@ -1970,7 +1970,7 @@ static void get_object(int argc, char **argv, int optindex)
     };
 
     do {
-        S3_get_object(&bucketContext, key, &getConditions, startByte,
+        S3_get_object(&bucketContext, key, 0, &getConditions, startByte,
                       byteCount, 0, &getObjectHandler, outfile);
     } while (S3_status_is_retryable(statusG) && should_retry());
 

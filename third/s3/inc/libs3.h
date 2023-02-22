@@ -547,6 +547,12 @@ typedef struct S3ResponseProperties
     const char *eTag;
 
     /**
+     * This optional field provides a string identifying the unique contents
+     * of the resource identified by the request. This is an version of the contents.
+     **/
+    const char* versionId;
+
+    /**
      * This optional field provides the last modified time, relative to the
      * Unix epoch, of the contents.  If this value is < 0, then the last
      * modified time was not provided in the response.  If this value is >= 0,
@@ -1670,6 +1676,7 @@ void S3_copy_object(const S3BucketContext *bucketContext,
  * @param bucketContext gives the bucket and associated parameters for this
  *        request
  * @param key is the key of the object to get
+ * @param versionId if non-NULL, uses version id in the key of the object to get
  * @param getConditions if non-NULL, gives a set of conditions which must be
  *        met in order for the request to succeed
  * @param startByte gives the start byte for the byte range of the contents
@@ -1685,6 +1692,7 @@ void S3_copy_object(const S3BucketContext *bucketContext,
  *        all callbacks for this request
  **/
 void S3_get_object(const S3BucketContext *bucketContext, const char *key,
+                   const char* versionId,
                    const S3GetConditions *getConditions,
                    uint64_t startByte, uint64_t byteCount,
                    S3RequestContext *requestContext,
