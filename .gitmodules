@@ -9,6 +9,3 @@
 [submodule "third/curl"]
 	path = third/curl
 	url = https://github.com/curl/curl.git
-[submodule "third/s3"]
-	path = third/s3
-	url = https://github.com/ceph/libs3.git
