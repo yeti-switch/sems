@@ -143,6 +143,7 @@ void generate_reply(string &msgbuf, const string &id, bool id_is_int,
     va_end (args);
     size += snprintf(0,0, "}");
 
+    msgbuf.resize(size);
     char* buf = (char*)msgbuf.c_str();
     offset = snprintf(buf, MAX_RPC_MSG_SIZE,
         "{ \"jsonrpc\": \"2.0\", \"id\": %s%s%s, \"result\": ",
