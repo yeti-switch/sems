@@ -1,3 +1,9 @@
+sems (1.97.1) stable; urgency=low
+  * jsonrpc: fix segfault in 'jsonrpc.setRequestSink' method
+  * registrar_client: fix default priority in 'createRegistration'
+  * rtsp_client: add option 'open_timeout'
+ -- Michael Furmur <furmur@pm.me>  Fri, 24 Feb 2023 19:05:46 +0200
+
 sems (1.97.0) stable; urgency=low
   * jsonrpc: add WS/WSS/TLS transports
   * improve DTMF volume level processing
