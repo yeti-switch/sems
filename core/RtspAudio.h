@@ -24,6 +24,7 @@ class RtspAudio : public AmRtpAudio
         int                 md;             /** media server descriptor */
         int                 streamid;       /** streamid from media server RTP-Info header */
         int                 last_sent_cseq; /** cseq of the last sent request */
+        uint64_t            start_progress_time; /** opening time **/
 
         State               state;
         string              uri;
@@ -54,6 +55,7 @@ class RtspAudio : public AmRtpAudio
 
         void    close();
         void    open(const string& uri);
+        void    checkState(uint64_t timeout);
         void    onRtspMessage(const RtspMsg &msg);
         void    onRtspPlayNotify(const RtspMsg &msg);
 
