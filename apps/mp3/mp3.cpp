@@ -250,19 +250,19 @@ static unsigned int mp3_samples2bytes(long h_codec, unsigned int num_samples)
 #else
 
   /* 
-   * 150 bytes is about one frame as produced by the mp3 writer.
+   * 160 bytes is about one frame as produced by the mp3 writer.
    * for higher bitrate files this will only introduce the small performance 
    * penalty of multiple read() calls per frame-decode.
    */
-  return 150;
+  return 160;
 
 /*   or a full frame? */
 /*    we don't know bitrate - so use 128000 as max bitrate */
 /*     144 * BitRate / (SampleRate + Padding) */  
-/*   unsigned int res =  144 * 128000 / (((mp3_coder_state*)h_codec)->rate + 1); */
-/*   if (res > AUDIO_BUFFER_SIZE) */
-/*     res = AUDIO_BUFFER_SIZE; */
-/*   return res; */
+//    unsigned int res =  144 * 128000 / (((mp3_coder_state*)h_codec)->rate + 1); 
+//    if (res > AUDIO_BUFFER_SIZE)
+//      res = AUDIO_BUFFER_SIZE; 
+//    return res; 
 
 #endif
 }
@@ -296,6 +296,11 @@ static int MP3_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned 
       ERROR("decoding mp3: '%s'", 
 	    mpg123_strerror(coder_state->mpg123_h));
       return -1;
+    }
+
+    if(decoded_size & 1) {
+        DBG("align decoded_size %d -> %d", decoded_size, decoded_size - 1);
+        decoded_size--;
     }
 /*     DBG("mp3: decoded %d", decoded_size); */
     return decoded_size;

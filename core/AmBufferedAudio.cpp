@@ -82,9 +82,13 @@ void AmBufferedAudio::clearBufferEOF() {
 int AmBufferedAudio::get(unsigned long long system_ts, unsigned char* buffer, 
 			 int output_sample_rate, unsigned int nb_samples) 
 {
-  if (!output_buffer_size) 
-    return AmAudio::get(system_ts, buffer, output_sample_rate, nb_samples);
+  if (!output_buffer_size) {
+    int ret =  AmAudio::get(system_ts, buffer, output_sample_rate, nb_samples);
+    //DBG("output_buffer_size = 0 AmAudio::get return %d", ret);
+    return ret;
+  }
 
+  //DBG("w %lld r %lld", w, r);
   if (w-r < low_buffer_thresh && !eof) {
     input_get_audio(system_ts);
   }
@@ -95,9 +99,12 @@ int AmBufferedAudio::get(unsigned long long system_ts, unsigned char* buffer,
 
   if (!nget) {
     // empty buffer and input error
-    if (eof)
+    if (eof) {
+      //DBG("eof file return error code %d", err_code);
       return err_code;
+    }
 
+    //DBG("empty buffer return 0");
     // empty buffer but no input error
     return 0;
   }
@@ -108,6 +115,7 @@ int AmBufferedAudio::get(unsigned long long system_ts, unsigned char* buffer,
   int size = resampleOutput(samples,nget,getSampleRate(),output_sample_rate);
   memcpy(buffer, (unsigned char*)samples,size);
 
+  //DBG("return %d", size);
   return size;
 }
 
@@ -117,6 +125,9 @@ void AmBufferedAudio::input_get_audio(unsigned int user_ts) {
     memmove(output_buffer, &output_buffer[r], w-r);
     w -= r; 
     r = 0;
+  } if(w == r) {
+      w = 0;
+      r = 0;
   }
   while (w < full_buffer_thresh) {
     int size = calcBytesToRead(PCM16_B2S(output_buffer_size - w));
@@ -126,7 +137,8 @@ void AmBufferedAudio::input_get_audio(unsigned int user_ts) {
     // resync might be delayed until buffer empty     // (but output resync never happens)
     size = read(user_ts + PCM16_B2S(w-r),size);
 //     DBG("read returned size = %d",size);
-    if(size <= 0){
+    if(size == 0) return;
+    if(size < 0){
       err_code = size;
       eof = true;
       return;

@@ -428,7 +428,7 @@ void AmAudio::stereo2mono(unsigned char* out_buf,unsigned char* in_buf,unsigned 
   short* in  = (short*)in_buf;
   short* end = (short*)(in_buf + size);
   short* out = (short*)out_buf;
-    
+
   while(in != end){
     *(out++) = (*in + *(in+1)) / 2;
     in += 2;
@@ -468,7 +468,7 @@ int AmAudio::decode(unsigned int size)
     samples.swap();
   }
 
-  assert(s < AUDIO_BUFFER_SIZE);
+  assert(s <= AUDIO_BUFFER_SIZE);
 
   return s;
 }
@@ -488,7 +488,7 @@ int AmAudio::encode(unsigned int size)
     samples.swap();
   }
 
-  assert(s < AUDIO_BUFFER_SIZE);
+  assert(s <= AUDIO_BUFFER_SIZE);
 
   return s;
 }
