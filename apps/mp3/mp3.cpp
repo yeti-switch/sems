@@ -297,6 +297,11 @@ static int MP3_2_Pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned 
 	    mpg123_strerror(coder_state->mpg123_h));
       return -1;
     }
+
+    if(decoded_size & 1) {
+        DBG("align decoded_size %d -> %d", decoded_size, decoded_size - 1);
+        decoded_size--;
+    }
 /*     DBG("mp3: decoded %d", decoded_size); */
     return decoded_size;
 #endif
