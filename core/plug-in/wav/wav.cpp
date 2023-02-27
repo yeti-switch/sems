@@ -200,7 +200,7 @@ int Pcm16_2_ULaw( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   short* in_b          = (short*)(in_buf);
   short* end           = (short*)((unsigned char*)in_buf + size);
 
-  while(in_b + 1 <= end){
+  while(in_b != end){
     short s = *(in_b++) >> 2;
     *(out_b++) = st_14linear2ulaw(s);
   }
@@ -214,7 +214,7 @@ int Pcm16_2_ALaw( unsigned char* out_buf, unsigned char* in_buf, unsigned int si
   short* in_b          = (short*)(in_buf);
   short* end           = (short*)((unsigned char*)in_buf + size);
 
-  while(in_b + 1 <= end){
+  while(in_b != end){
     short s = (*(in_b++)) >> 3;
     *(out_b++) = st_13linear2alaw(s);
   }
@@ -228,7 +228,7 @@ int IEEE_Float_2_Pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned i
     float* in_b          = (float*)(in_buf);
     float* end           = (float*)((unsigned char*)in_buf + size);
 
-    while(in_b + 1 <= end){
+    while(in_b != end){
         int32_t s = (*(in_b++))*32768;
         if(s < -32768) s = -32768;
         if(s > 32767) s = 32767;
