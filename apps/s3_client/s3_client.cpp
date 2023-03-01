@@ -24,7 +24,6 @@ class S3ClientFactory
     }
     ~S3ClientFactory()
     {
-        INFO("~S3ClientFactory");
         S3Client::dispose();
     }
   public:
@@ -110,24 +109,42 @@ int S3Client::configure(const std::string& cfg_)
         return -1;
     }
 
-#define checkMandatoryParam(attr, key) \
-    if(!cfg_size(cfg, key)) return -1;\
-    attr = cfg_getstr(cfg, key)
+    string missed_params;
 
-    checkMandatoryParam(config.host, PARAM_HOST_NAME);
-    checkMandatoryParam(config.bucket, PARAM_BUCKET_NAME);
-    checkMandatoryParam(config.access_key, PARAM_ACCESS_KEY_NAME);
-    checkMandatoryParam(config.secret_key, PARAM_SECRET_KEY_NAME);
-    if(!cfg_size(cfg, PARAM_SECURE_NAME)) return -1;
-    config.secure = cfg_getbool(cfg, PARAM_SECURE_NAME);
+    auto assignMandatoryStrParam = [&cfg, &missed_params](
+        string &param, const char *key)
+    {
+        if(!cfg_size(cfg, key)) {
+            if(!missed_params.empty()) missed_params += ", ";
+            missed_params += key;
+        } else {
+            param = cfg_getstr(cfg, key);
+        }
+    };
 
-#undef checkMandatoryParam
+    assignMandatoryStrParam(config.host, PARAM_HOST_NAME);
+    assignMandatoryStrParam(config.bucket, PARAM_BUCKET_NAME);
+    assignMandatoryStrParam(config.access_key, PARAM_ACCESS_KEY_NAME);
+    assignMandatoryStrParam(config.secret_key, PARAM_SECRET_KEY_NAME);
+
+    if(!cfg_size(cfg, PARAM_SECURE_NAME)) {
+        if(!missed_params.empty()) missed_params += ", ";
+        missed_params += PARAM_SECURE_NAME;
+    } else {
+        config.secure = cfg_getbool(cfg, PARAM_SECURE_NAME);
+    }
 
     config.verify_host = cfg_getbool(cfg, PARAM_VERIFY_HOST_NAME);
     config.verify_peer = cfg_getbool(cfg, PARAM_VERIFY_PEER_NAME);
     config.verify_status = cfg_getbool(cfg, PARAM_VERIFY_ST_NAME);
 
     cfg_free(cfg);
+
+    if(!missed_params.empty()) {
+        ERROR("missed mandatory parameters: %s", missed_params.data());
+        return -1;
+    }
+
     return 0;
 }
 
