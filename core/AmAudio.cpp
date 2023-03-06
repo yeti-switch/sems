@@ -221,8 +221,12 @@ unsigned int AmLibSamplerateResamplingState::resample(unsigned char* samples, un
             signed short* samples_s = (signed short*)(unsigned char*)samples;
 
             resample_out_buf_samples += src_data.output_frames_gen;
+
             s *= ratio;
+            if(s & 1) s--; //align to pcm16 (2 bytes)
+
             out_samples = PCM16_B2S(s);
+
             src_float_to_short_array(resample_out, samples_s, out_samples);
 
             if (resample_buf_samples != (unsigned int)src_data.input_frames_used) {
