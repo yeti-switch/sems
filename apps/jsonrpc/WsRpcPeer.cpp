@@ -332,13 +332,31 @@ int WsRpcPeer::parse_input(sip_msg* s_msg) {
             send_reply(s_msg,426,string("Upgrade Required"));
             return -1;
         }
-    } else if(s_msg->connection->value.len != upgrade_len ||
-        lower_cmp(s_msg->connection->value.s, upgrade, upgrade_len)) {
+    } else if(s_msg->connection->value.len != upgrade_len) {
+        string conn_h(s_msg->connection->value.s, s_msg->connection->value.len);
+        string delim(",");
+        auto conn_values = explode(conn_h, delim, true);
+        bool has_update = false;
+        for(auto& val : conn_values) {
+            string data = strip_header_params(val);
+            if(data.size() == upgrade_len &&
+               !lower_cmp(data.c_str(), upgrade, upgrade_len)) {
+                has_update = true;
+                break;
+            }
+        }
+        if(!has_update && s_msg->type == HTTP_REQUEST) {
+            send_reply(s_msg,400,string("Incorrect Connection Header"));
+            return -1;
+        }
+    } else if(lower_cmp(s_msg->connection->value.s, upgrade, upgrade_len)) {
         if(s_msg->type == HTTP_REQUEST) {
             send_reply(s_msg,400,string("Incorrect Connection Header"));
             return -1;
         }
-    } else if(s_msg->type == HTTP_REQUEST) {
+    }
+
+    if(s_msg->type == HTTP_REQUEST) {
         send_reply(s_msg,101,string("Switching Protocols"));
         ws_connected = true;
     } else if(s_msg->type == HTTP_REPLY) {

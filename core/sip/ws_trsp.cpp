@@ -19,6 +19,7 @@
 #include <event2/event.h>
 #include <string.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <sys/ioctl.h>
 #include <AmLcConfig.h>
 
@@ -242,11 +243,28 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
                lower_cmp(s_msg->upgrade->value.s, websocket, websocket_len)) {
                 if(s_msg->type == HTTP_REQUEST)
                     send_reply(s_msg,426,cstring("Upgrade Required"));
-            } else if(s_msg->connection->value.len != upgrade_len ||
-               lower_cmp(s_msg->connection->value.s, upgrade, upgrade_len)) {
+            } else if(s_msg->connection->value.len != upgrade_len) {
+                string conn_h(s_msg->connection->value.s, s_msg->connection->value.len);
+                string delim(",");
+                auto conn_values = explode(conn_h, delim, true);
+                bool has_update = false;
+                for(auto& val : conn_values) {
+                    string data = strip_header_params(val);
+                    if(data.size() == upgrade_len &&
+                    !lower_cmp(data.c_str(), upgrade, upgrade_len)) {
+                        has_update = true;
+                        break;
+                    }
+                }
+                if(!has_update && s_msg->type == HTTP_REQUEST) {
+                    send_reply(s_msg,400,cstring("Incorrect Connection Header"));
+                    return;
+                }
+            } else if(lower_cmp(s_msg->connection->value.s, upgrade, upgrade_len)) {
                 if(s_msg->type == HTTP_REQUEST)
                     send_reply(s_msg,400,cstring("Incorrect Connection Header"));
-            } else if(s_msg->type == HTTP_REQUEST) {
+            }
+            if(s_msg->type == HTTP_REQUEST) {
                 send_reply(s_msg,101,cstring("Switching Protocols"));
                 ws_connected = true;
                 output->on_ws_connected();
