@@ -103,7 +103,7 @@ protected:
   void setOAState(AmOfferAnswer::OAState n_st);
   void setOAEnabled(bool oa_enabled);
   unsigned int getOAcseq();
-  bool isOASubsequentSDP(unsigned int sip_msg_cseq);
+  bool isOASubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
   const AmSdp& getLocalSdp() { return oa.getLocalSdp(); }
   const AmSdp& getRemoteSdp() { return oa.getRemoteSdp(); }
 

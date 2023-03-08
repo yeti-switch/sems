@@ -101,10 +101,10 @@ int AmOfferAnswer::checkStateChange()
     return ret;
 }
 
-bool AmOfferAnswer::isSubsequentSDP(unsigned int sip_msg_cseq)
+bool AmOfferAnswer::isSubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method)
 {
     return (state == OA_Completed || state == OA_OfferRecved) &&
-           sip_msg_cseq == cseq;
+           sip_msg_cseq == cseq && sip_msg_method == SIP_METH_INVITE;
 }
 
 void AmOfferAnswer::clear()
@@ -138,7 +138,7 @@ int AmOfferAnswer::onRequestIn(const AmSipRequest& req)
         const AmMimeBody* sdp_body =
             req.body.hasContentType(SIP_APPLICATION_SDP);
         if(sdp_body)
-            err_code = onRxSdp(req.cseq,*sdp_body,&err_txt);
+            err_code = onRxSdp(req.cseq,req.method,*sdp_body,&err_txt);
     }
 
     if(checkStateChange()) {
@@ -182,14 +182,14 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
         const AmMimeBody* sdp_body =
             reply.body.hasContentType(SIP_APPLICATION_SDP);
         if(sdp_body) {
-            if(isSubsequentSDP(reply.cseq)) {
+            if(isSubsequentSDP(reply.cseq, reply.cseq_method)) {
                 DBG("ignoring subsequent SDP reply within the same transaction");
                 DBG("this usually happens when 183 and 200 have SDP");
                 /* Make sure that session is started when 200 OK is received */
                 if (reply.code == 200) dlg->onSdpCompleted();
             } else {
                 saveState();
-                err_code = onRxSdp(reply.cseq,reply.body,&err_txt);
+                err_code = onRxSdp(reply.cseq,reply.cseq_method,reply.body,&err_txt);
                 checkStateChange();
             }
         }
@@ -215,7 +215,8 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
     return 0;
 }
 
-int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const char** err_txt)
+int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const string &m_method,
+                           const AmMimeBody& body, const char** err_txt)
 {
     DBG("entering onRxSdp(), oa_state=%s", getOAStateStr(state));
     OAState old_oa_state = state;
@@ -247,7 +248,8 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const ch
         case OA_None:
         case OA_Completed:
             setState(OA_OfferRecved);
-            cseq = m_cseq;
+            if(m_method == SIP_METH_INVITE)
+                cseq = m_cseq;
             break;
         case OA_OfferSent:
             setState(OA_Completed);
@@ -268,7 +270,7 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const ch
     return err_code;
 }
 
-int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const AmMimeBody& body)
+int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const string &m_method, const AmMimeBody& body)
 {
     DBG("entering onTxSdp(), oa_state=%s", getOAStateStr(state));
 
@@ -282,7 +284,8 @@ int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const AmMimeBody& body)
     case OA_None:
     case OA_Completed:
         setState(OA_OfferSent);
-        cseq = m_cseq;
+        if(m_method == SIP_METH_INVITE)
+            cseq = m_cseq;
         break;
     case OA_OfferRecved:
         setState(OA_Completed);
@@ -335,7 +338,7 @@ int AmOfferAnswer::onRequestOut(AmSipRequest& req)
         }
     }
 
-    if(has_sdp && (onTxSdp(req.cseq,req.body) != 0)) {
+    if(has_sdp && (onTxSdp(req.cseq,req.method,req.body) != 0)) {
         DBG("onTxSdp() failed");
         return -1;
     }
@@ -422,7 +425,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
         }
     }
 
-    if (has_sdp && (onTxSdp(reply.cseq,reply.body) != 0)) {
+    if (has_sdp && (onTxSdp(reply.cseq,reply.cseq_method,reply.body) != 0)) {
         DBG("onTxSdp() failed");
         return -1;
     }

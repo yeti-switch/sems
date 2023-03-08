@@ -48,6 +48,7 @@ private:
   OAState      state;
   OAState      saved_state;
   unsigned int cseq;
+
   AmSdp        sdp_remote;
   AmSdp        sdp_local;
 
@@ -58,8 +59,9 @@ private:
   int  checkStateChange();
 
   /** SDP handling */
-  int  onRxSdp(unsigned int m_cseq, const AmMimeBody& body, const char** err_txt);
-  int  onTxSdp(unsigned int m_cseq, const AmMimeBody& body);
+  int  onRxSdp(unsigned int m_cseq, const string &m_method,
+               const AmMimeBody& body, const char** err_txt);
+  int  onTxSdp(unsigned int m_cseq, const string &m_method, const AmMimeBody& body);
   int  getSdpBody(string& sdp_body);
 
 public:
@@ -73,7 +75,7 @@ public:
   const AmSdp& getLocalSdp();
   const AmSdp& getRemoteSdp();
 
-  bool isSubsequentSDP(unsigned int sip_msg_cseq);
+  bool isSubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
 
   void clear();
   void clearTransitionalState();

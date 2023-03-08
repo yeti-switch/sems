@@ -44,6 +44,8 @@ static const string zero_connection("0.0.0.0");
 
 enum MediaActivity { Inactive, Sendonly, Recvonly, Sendrecv };
 
+static const string sip_method_invite_str(SIP_METH_INVITE);
+
 //
 // helper functions
 //
@@ -508,7 +510,8 @@ void AmB2BSession::onRequestSent(const AmSipRequest& req)
   AmSession::onRequestSent(req);
 }
 
-void AmB2BSession::updateLocalSdp(AmSdp &sdp, unsigned int)
+void AmB2BSession::updateLocalSdp(AmSdp &sdp,
+                                  const string &, unsigned int)
 {
   if (rtp_relay_mode == RTP_Direct) return; // nothing to do
 
@@ -522,7 +525,8 @@ void AmB2BSession::updateLocalSdp(AmSdp &sdp, unsigned int)
   media_session->replaceConnectionAddress(sdp, a_leg, atype);
 }
 
-void AmB2BSession::updateLocalBody(AmMimeBody& body, unsigned int sip_msg_cseq)
+void AmB2BSession::updateLocalBody(AmMimeBody& body,
+                                   const string &sip_msg_method, unsigned int sip_msg_cseq)
 {
   AmMimeBody *sdp = body.hasContentType(SIP_APPLICATION_SDP);
   if (!sdp) return;
@@ -538,7 +542,7 @@ void AmB2BSession::updateLocalBody(AmMimeBody& body, unsigned int sip_msg_cseq)
     return; // FIXME: throw an exception here?
   }
 
-  updateLocalSdp(parser_sdp, sip_msg_cseq);
+  updateLocalSdp(parser_sdp, sip_msg_method, sip_msg_cseq);
 
   // regenerate SDP
   string n_body;
@@ -869,7 +873,7 @@ int AmB2BSession::sendEstablishedReInvite() {
 
   try {
     AmMimeBody body(established_body); // contains only SDP
-    updateLocalBody(body, dlg->cseq);
+    updateLocalBody(body, sip_method_invite_str, dlg->cseq);
     return dlg->reinvite("", &body, SIP_FLAGS_VERBATIM);
   } catch (const string& s) {
     ERROR("sending established SDP reinvite: %s", s.c_str());
@@ -907,7 +911,7 @@ int AmB2BSession::relaySip(const AmSipRequest& req)
        req.method == SIP_METH_ACK ||
        req.method == SIP_METH_PRACK))
   {
-    updateLocalBody(body, dlg->cseq);
+    updateLocalBody(body, req.method, dlg->cseq);
   }
 
   if (req.method != "ACK") {
@@ -1002,7 +1006,7 @@ int AmB2BSession::relaySip(const AmSipRequest& orig, const AmSipReply& reply)
        orig.method == SIP_METH_ACK ||
        orig.method == SIP_METH_PRACK))
   {
-    updateLocalBody(body, orig.cseq);
+    updateLocalBody(body, orig.method, orig.cseq);
   }
 
   DBG("relaying SIP reply %u %s", reply.code, reply.reason.c_str());
@@ -1529,7 +1533,7 @@ void AmB2BCalleeSession::onB2BEvent(B2BEvent* ev)
 
     AmMimeBody body(co_ev->body);
     try {
-      updateLocalBody(body, dlg->cseq);
+      updateLocalBody(body, sip_method_invite_str, dlg->cseq);
     } catch (const string& s) {
       relayError(SIP_METH_INVITE, co_ev->r_cseq, co_ev->relayed_invite, 500, 
           SIP_REPLY_SERVER_INTERNAL_ERROR);

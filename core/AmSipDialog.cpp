@@ -225,9 +225,9 @@ unsigned int AmSipDialog::getOAcseq()
   return oa.getCseq();
 }
 
-bool AmSipDialog::isOASubsequentSDP(unsigned int sip_msg_cseq)
+bool AmSipDialog::isOASubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method)
 {
-  return oa.isSubsequentSDP(sip_msg_cseq);
+  return oa.isSubsequentSDP(sip_msg_cseq, sip_msg_method);
 }
 
 int AmSipDialog::onTxRequest(AmSipRequest& req, int& flags)
