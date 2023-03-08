@@ -1,3 +1,11 @@
+sems (1.98.0) stable; urgency=low
+  * add S3 client to play files from S3 buckets
+  * sip_parser_async: allow headers with empty values
+  * jsonrpc: ws/wss: fix Connection header parsing
+  * AmAudio: fix pcm16 alignment on resampling
+  * AmAudioFile: use fopencookie() instead of tmpfile() for buffer
+ -- Michael Furmur <furmur@pm.me>  Wed, 08 Mar 2023 14:13:45 +0200
+
 sems (1.97.1) stable; urgency=low
   * jsonrpc: fix segfault in 'jsonrpc.setRequestSink' method
   * registrar_client: fix default priority in 'createRegistration'
