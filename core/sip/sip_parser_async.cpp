@@ -124,8 +124,11 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
                 return MALFORMED_SIP_MSG;
             case H_VALUE_SWS:
                 if(!IS_WSP(**c)) {
-                    DBG("Malformed header: <%.*s>",(int)(*c-begin),begin);
-                    return MALFORMED_SIP_MSG;
+                    DBG("Malformed header: <%.*s>. set empty value",(int)(*c-begin),begin);
+
+                    static const char empty_header_value[] = "";
+                    hdr->value.set(empty_header_value, 1);
+                    return 0;
                 }
                 break;
             case H_VALUE:
