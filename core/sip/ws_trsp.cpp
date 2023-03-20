@@ -150,7 +150,10 @@ void ws_input::pre_write()
             msg->cursor = msg->msg;
             return;
         }
-        wslay_event_send(ctx_);
+        if(0 != (ret = wslay_event_send(ctx_))) {
+            WARN("wslay_event_send: %d. close connection", ret);
+            if(output) output->on_ws_close();
+        }
     }
 }
 

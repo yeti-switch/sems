@@ -136,12 +136,19 @@ int WsRpcPeer::send_data(char* data, int size) {
         .msg = (uint8_t*)data,
         .msg_length = (size_t)size
     };
+
     int ret = 0;
     if((ret = wslay_event_queue_msg(ctx_, &e_msg)) != 0) {
-        WARN("wslay_event_queue_msg return error %d. restore queue", ret);
+        WARN("connection:%s. wslay_event_queue_msg: %d. restore queue",
+             id.data(), ret);
         return 0;
     }
-    wslay_event_send(ctx_);
+
+    if(0 != (ret = wslay_event_send(ctx_))) {
+        WARN("connection:%s. wslay_event_send: %d", id.data(), ret);
+        return 0;
+    }
+
     return size;
 }
 
