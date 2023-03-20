@@ -1,3 +1,7 @@
+sems (1.99.2) stable; urgency=low
+  * jsonrpc, sip/ws_trsp: handle wslay_event_send() errors
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Mar 2023 22:16:21 +0200
+
 sems (1.99.1) stable; urgency=low
   * jsonrpc: fix socket closing on peer removal
  -- Michael Furmur <furmur@pm.me>  Mon, 20 Mar 2023 19:40:12 +0200
