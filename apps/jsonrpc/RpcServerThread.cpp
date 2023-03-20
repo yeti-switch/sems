@@ -149,6 +149,7 @@ void RpcServerThread::process(AmEvent* event)
     if (connection->messagePending() && !connection->messageIsRecv()) {
         res = connection->netstringsBlockingWrite();
         if (res == JsonrpcNetstringsConnection::REMOVE) {
+            connection->close();
             connection->notifyDisconnect();
             JsonRPCServerLoop::removeConnection(connection->id);
             delete connection;

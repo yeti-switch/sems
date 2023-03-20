@@ -155,6 +155,8 @@ static void read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
             return;
         case JsonrpcNetstringsConnection::REMOVE: {
             ev_io_stop(EV_A_ w);
+
+            peer->close();
             peer->notifyDisconnect();
 
             JsonRPCServerLoop::instance()->removeConnection(peer->id);

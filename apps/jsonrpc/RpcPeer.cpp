@@ -78,7 +78,9 @@ JsonrpcNetstringsConnection::JsonrpcNetstringsConnection(const std::string& id)
 {
 }
 
-JsonrpcNetstringsConnection::~JsonrpcNetstringsConnection() {
+JsonrpcNetstringsConnection::~JsonrpcNetstringsConnection()
+{
+    close();
 }
 
 int JsonrpcNetstringsConnection::connect(const string& host, int port,
@@ -209,7 +211,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
         while (true) {
             if (rcvd_size > MAX_NS_LEN_SIZE) {
                 DBG("closing connection [%p/%d]: oversize length", this, fd);
-                close();
                 return REMOVE;
             }
             // reading length
@@ -220,7 +221,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
             if (r != 1) {
                 INFO("socket error on connection [%p/%d]: %s",
                     this, fd, strerror(errno));
-                close();
                 return REMOVE;
             }
       
@@ -229,7 +229,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
                 msgbuf[rcvd_size] = '\0';
                 if (str2i(std::string(msgbuf, rcvd_size), msg_size)) {
                     ERROR("Protocol error decoding size '%s'", msgbuf);
-                    close();
                     return REMOVE;
                 }
                 // received len - switch to receive msg mode
@@ -247,7 +246,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
                     }
                     INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
                         this, fd);
-                    close();
                     return REMOVE;
                 }
                 return CONTINUE; 	
@@ -257,7 +255,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
                 INFO("%d\n%.*s", rcvd_size, rcvd_size, msgbuf);
                 INFO("Protocol error on connection [%p/%d]: invalid character '%c' in size",
                     this, fd, msgbuf[rcvd_size]);
-                close();
                 return REMOVE;
             }
 
@@ -274,7 +271,6 @@ int JsonrpcNetstringsConnection::netstringsRead() {
                     return DISPATCH;
                 INFO("Protocol error on connection [%p/%d]: netstring not terminated with ','",
                     this, fd);
-                close();
                 return REMOVE;
             }
             return CONTINUE;
@@ -285,14 +281,12 @@ int JsonrpcNetstringsConnection::netstringsRead() {
 
         INFO("socket error on connection [%p/%d]: %s",
             this, fd, strerror(errno));
-        close();
         return REMOVE;
     }
 }
 
 int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
   if (msg_size<0) {
-    close();
     return REMOVE;
   }
   if (msg_size==0)
@@ -302,7 +296,6 @@ int JsonrpcNetstringsConnection::netstringsBlockingWrite() {
   string msg_size_s = int2str(msg_size);
   if (msg_size_s.length()>MAX_NS_LEN_SIZE) {
     ERROR("too large return message size len");
-    close();
     return REMOVE;
   }
   char* ns_begin = msgbuf-(msg_size_s.length()+1);
@@ -371,6 +364,7 @@ void JsonrpcNetstringsConnection::close() {
   if (fd>0) {
     shutdown(fd, SHUT_RDWR);
     ::close(fd);
+    fd = 0;
   }
 }
 

@@ -64,7 +64,6 @@ int WsRpcPeer::netstringsRead() {
         if (r != 1) {
             INFO("socket error on connection [%p/%d]: %s",
                 this, fd, strerror(errno));
-            close();
             return REMOVE;
         }
 
@@ -83,7 +82,6 @@ int WsRpcPeer::netstringsRead() {
                 return CONTINUE;
             } else {
                 ERROR("parsing error %d",err);
-                close();
                 return REMOVE;
             }
         }

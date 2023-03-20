@@ -329,7 +329,6 @@ int SecureRpcPeer::netstringsRead() {
         if (r != 1) {
             INFO("socket error on connection [%p/%d]: %s",
                 this, fd, strerror(errno));
-            close();
             return REMOVE;
         }
 
