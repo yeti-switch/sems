@@ -1,3 +1,7 @@
+sems (1.99.1) stable; urgency=low
+  * jsonrpc: fix socket closing on peer removal
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Mar 2023 19:40:12 +0200
+
 sems (1.99.0) stable; urgency=low
   * AmB2BSession: fix ACK relay after the UPDATE in early stage
  -- Michael Furmur <furmur@pm.me>  Wed, 08 Mar 2023 22:15:41 +0200
