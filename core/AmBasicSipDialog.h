@@ -171,6 +171,11 @@ protected:
   virtual void onRequestTxed(const AmSipRequest& req);
 
   /**
+   * Executed on request sending failed
+   */
+  virtual void onRequestSendFailed(const AmSipRequest& req);
+
+  /**
    * Basic sanity check on received requests
    *
    * Note: At this point in the processing,
@@ -494,6 +499,9 @@ class AmBasicSipEventHandler
 
   /** Hook called after a request has been sent */
   virtual void onRequestSent(const AmSipRequest& req) {}
+
+  /** Hook called if request sending failed */
+  virtual void onRequestSendFailed(const AmSipRequest& req) {}
 
   /** Hook called after a reply has been sent */
   virtual void onReplySent(const AmSipRequest& req, const AmSipReply& reply) {}

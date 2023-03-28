@@ -863,6 +863,14 @@ void AmSession::onSipRequest(const AmSipRequest& req)
   }
 }
 
+void AmSession::onRequestSendFailed(const AmSipRequest& req)
+{
+//    if(req.method == SIP_METH_BYE && dlg->getStatus() == AmBasicSipDialog::Disconnecting) {
+        dlg->drop();
+        setStopped();
+//    }
+}
+
 void AmSession::onSipReply(const AmSipRequest& req, const AmSipReply& reply,
 			   AmBasicSipDialog::Status old_dlg_status)
 {

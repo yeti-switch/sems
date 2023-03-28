@@ -593,6 +593,8 @@ public:
   /** Entry point for SIP Requests   */
   virtual void onSipRequest(const AmSipRequest& req);
 
+  virtual void onRequestSendFailed(const AmSipRequest& req);
+
   /** Entry point for SIP Replies   */
   virtual void onSipReply(const AmSipRequest& req, const AmSipReply& reply, 
 			  AmBasicSipDialog::Status old_dlg_status);

@@ -751,6 +751,16 @@ void AmBasicSipDialog::onRequestTxed(const AmSipRequest& req)
   }
 }
 
+void AmBasicSipDialog::onRequestSendFailed(const AmSipRequest& req)
+{
+    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i",
+      req.method.c_str(),
+      req.r_uri.c_str(),
+      req.callid.c_str(),
+      req.cseq);
+    if(hdl) hdl->onRequestSendFailed(req);
+}
+
 int AmBasicSipDialog::reply(const AmSipRequest& req,
 			    unsigned int  code,
 			    const string& reason,
@@ -911,11 +921,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
                    logger,sensor,timers_override,
 				   redirects_allowed);
   if(res) {
-    DBG("Could not send request: method=%s; ruri=%s; call-id=%s; cseq=%i",
-      req.method.c_str(),
-      req.r_uri.c_str(),
-      req.callid.c_str(),
-      req.cseq);
+    onRequestSendFailed(req);
     return res;
   }
 
