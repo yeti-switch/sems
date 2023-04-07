@@ -17,9 +17,15 @@ void settings::load_certificates()
 {
     AmLock l(mutex);
 
-    certificate.reset(new Botan::X509_Certificate(certificate_path));
+    Botan::DataSource_Stream in(certificate_path);
+    while(true) {
+        try {
+            certificates.push_back(Botan::X509_Certificate(in));
+        } catch(const Botan::Exception&) { break; }
+    }
+
     if(certificate_not_after_counter)
-        certificate_not_after_counter->set(certificate->not_after().time_since_epoch());
+        certificate_not_after_counter->set(certificates[0].not_after().time_since_epoch());
 
     Botan::DataSource_Stream stream(certificate_key_path);
     certificate_key = Botan::PKCS8::load_key(stream);
@@ -58,7 +64,20 @@ bool settings::checkCertificateAndKey(
                 interface_type, interface_name,
                 getProtocolName(),role_name,
                 certificate_path.c_str());
-            Botan::X509_Certificate certificate_(certificate_path);
+            std::vector<Botan::X509_Certificate> certs;
+            Botan::DataSource_Stream in(certificate_path);
+            while(true) {
+                try {
+                    certs.push_back(Botan::X509_Certificate(in));
+                    auto &t = certs.back().not_after();
+                     if(t.cmp(Botan::X509_Time(std::chrono::_V2::system_clock::now())) < 0)
+                         throw Botan::Exception("certificate expired");
+                } catch(const Botan::Exception& ex) {
+                    if(certs.empty())
+                        throw Botan::Exception("certificates is absent");
+                    break;
+                }
+            }
         }
 
     } catch(const Botan::Exception& exc) {
@@ -68,18 +87,16 @@ bool settings::checkCertificateAndKey(
     return true;
 }
 
-std::unique_ptr<Botan::X509_Certificate> settings::getCertificateCopy()
+std::vector<Botan::X509_Certificate> settings::getCertificateCopy()
 {
     AmLock l(mutex);
-    std::unique_ptr<Botan::X509_Certificate>
-        ret(new Botan::X509_Certificate(*certificate));
-    return ret;
+    return certificates;
 }
 
 std::string settings::getCertificateFingerprint(const string &hash_name)
 {
     AmLock l(mutex);
-    return certificate.get()->fingerprint(hash_name);
+    return certificates[0].fingerprint(hash_name);
 }
 
 std::unique_ptr<Botan::Private_Key> settings::getCertificateKeyCopy()
