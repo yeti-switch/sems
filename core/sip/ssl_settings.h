@@ -15,7 +15,7 @@ class settings
 {
     AmMutex mutex;
 
-    std::unique_ptr<Botan::X509_Certificate> certificate;
+    std::vector<Botan::X509_Certificate> certificates;
     std::unique_ptr<Botan::Private_Key> certificate_key;
     std::vector<Botan::X509_Certificate> ca_list;
 
@@ -36,7 +36,7 @@ class settings
                                 const char* interface_type,
                                 const char *role_name);
 
-    std::unique_ptr<Botan::X509_Certificate> getCertificateCopy();
+    std::vector<Botan::X509_Certificate> getCertificateCopy();
     std::string getCertificateFingerprint(const std::string &hash_name);
     std::unique_ptr<Botan::Private_Key> getCertificateKeyCopy();
     vector<Botan::Certificate_Store*> getCertificateAuthorityCopy();

@@ -21,7 +21,7 @@
 #include <botan/tls_alert.h>
 
 tls_conf::tls_conf(tls_settings* settings)
-: certificate(settings->getCertificateCopy())
+: certificates(settings->getCertificateCopy())
 , key(settings->getCertificateKeyCopy())
 , policy_override(false)
 {
@@ -31,7 +31,7 @@ tls_conf::tls_conf(tls_settings* settings)
 
 tls_conf::tls_conf(const tls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
-, certificate(new Botan::X509_Certificate(*conf.certificate))
+, certificates(conf.certificates)
 , key(Botan::PKCS8::copy_key(*conf.key.get()))
 , policy_override(conf.policy_override)
 , cipher(conf.cipher)
@@ -43,7 +43,7 @@ void tls_conf::operator=(const tls_conf& conf)
 {
     s_client = conf.s_client;
     s_server = conf.s_server;
-    certificate.reset(new Botan::X509_Certificate(*conf.certificate));
+    certificates = conf.certificates;
     key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
     policy_override = conf.policy_override;
     cipher = conf.cipher;
@@ -223,11 +223,13 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
 vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
 {
     vector<Botan::X509_Certificate> certs;
-    std::string algorithm = certificate->load_subject_public_key()->algo_name();
-    for(auto& key : cert_key_types) {
-        if(algorithm == key) {
-            DBG("loaded certificate with algorithm %s", algorithm.c_str());
-            certs.push_back(*certificate);
+    for(auto& cert : certificates) {
+        std::string algorithm = cert.load_subject_public_key()->algo_name();
+        for(auto& key : cert_key_types) {
+            if(algorithm == key) {
+                DBG("added certificate with algorithm %s", algorithm.c_str());
+                certs.push_back(cert);
+            }
         }
     }
 

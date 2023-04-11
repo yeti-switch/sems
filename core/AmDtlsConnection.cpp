@@ -23,19 +23,19 @@ dtls_conf::dtls_conf()
 
 dtls_conf::dtls_conf(const dtls_conf& conf)
 : s_client(conf.s_client), s_server(conf.s_server)
-, certificate(new Botan::X509_Certificate(*conf.certificate))
+, certificates(conf.certificates)
 , key(Botan::PKCS8::copy_key(*conf.key.get()))
 , is_optional(conf.is_optional) {}
 
 dtls_conf::dtls_conf(dtls_client_settings* settings)
 : s_client(settings), s_server(0)
-, certificate(settings->getCertificateCopy())
+, certificates(settings->getCertificateCopy())
 , key(settings->getCertificateKeyCopy())
 , is_optional(false){}
 
 dtls_conf::dtls_conf(dtls_server_settings* settings)
 : s_client(0), s_server(settings)
-, certificate(settings->getCertificateCopy())
+, certificates(settings->getCertificateCopy())
 , key(settings->getCertificateKeyCopy())
 , is_optional(false){}
 
@@ -43,7 +43,7 @@ void dtls_conf::operator=(const dtls_conf& conf)
 {
     s_client = conf.s_client;
     s_server = conf.s_server;
-    certificate.reset(new Botan::X509_Certificate(*conf.certificate));
+    certificates = conf.certificates;
     is_optional = conf.is_optional;
     key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
 }
@@ -191,11 +191,13 @@ vector<string> dtls_conf::allowed_signature_methods() const
 vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
 {
     vector<Botan::X509_Certificate> certs;
-    std::string algorithm = certificate->load_subject_public_key()->algo_name();
-    for(auto& key : cert_key_types) {
-        if(algorithm == key) {
-            DBG("loaded certificate with algorithm %s", algorithm.c_str());
-            certs.push_back(*certificate);
+    for(auto& cert : certificates) {
+        std::string algorithm = cert.load_subject_public_key()->algo_name();
+        for(auto& key : cert_key_types) {
+            if(algorithm == key) {
+                DBG("added certificate with algorithm %s", algorithm.c_str());
+                certs.push_back(cert);
+            }
         }
     }
 

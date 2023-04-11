@@ -31,7 +31,7 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     friend class tls_trsp_socket;
     tls_client_settings* s_client;
     tls_server_settings* s_server;
-    std::unique_ptr<Botan::X509_Certificate> certificate;
+    std::vector<Botan::X509_Certificate> certificates;
     std::unique_ptr<Botan::Private_Key> key;
 
     //ciphersuite policy overrides

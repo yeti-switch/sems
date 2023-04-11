@@ -15,7 +15,7 @@ class tls_rpc_conf : public Botan::TLS::Policy, public Botan::Credentials_Manage
     friend class SecureRpcPeer;
     tls_client_settings* s_client;
     tls_server_settings* s_server;
-    std::unique_ptr<Botan::X509_Certificate> certificate;
+    std::vector<Botan::X509_Certificate> certificates;
     std::unique_ptr<Botan::Private_Key> key;
 
     //ciphersuite policy overrides

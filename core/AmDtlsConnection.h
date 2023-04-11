@@ -37,7 +37,7 @@ class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
     dtls_rand_generator rand_gen;
-    unique_ptr<Botan::X509_Certificate> certificate;
+    vector<Botan::X509_Certificate> certificates;
     unique_ptr<Botan::Private_Key> key;
 
     //for optional client connection
