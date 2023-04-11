@@ -274,8 +274,8 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
                dlg->getStatus() != AmBasicSipDialog::Connected)
             {
                 DBG("not sip-relaying BYE in not connected dlg, b2b-relaying 200 OK");
-                    relayError(req_ev->req.method, req_ev->req.cseq,
-                    true, 200, "OK");
+                relayError(req_ev->req.method, req_ev->req.cseq,
+                           true, 200, "OK");
                 terminateLeg(); //no any reasons to stay alive
                 return;
             }
@@ -283,8 +283,16 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
             int res = relaySip(req_ev->req);
             if(res < 0) {
                 // reply relayed request internally
-                relayError(req_ev->req.method, req_ev->req.cseq, true, res);
-                return;
+                if(req_ev->req.method == SIP_METH_BYE) {
+                    DBG("failed to send BYE request. generate 200 ok and drop dialog");
+                    relayError(req_ev->req.method, req_ev->req.cseq,
+                               true, 200, "OK");
+                    dlg->drop();
+                    //no return here. to call onOtherBye()
+                } else {
+                    relayError(req_ev->req.method, req_ev->req.cseq, true, res);
+                    return;
+                }
             }
         } //if(req_ev->forward)
 
