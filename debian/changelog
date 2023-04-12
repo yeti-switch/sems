@@ -1,3 +1,9 @@
+sems (1.100.0) stable; urgency=low
+  * tls: parse intermediate certificates
+  * AmB2BSession: relay 200ok and drop dlg on failed BYE. fixes session stuck
+  * AmRtpStream::init: show 'mute' flag related values
+ -- Michael Furmur <furmur@pm.me>  Wed, 12 Apr 2023 17:12:42 +0300
+
 sems (1.99.2) stable; urgency=low
   * jsonrpc, sip/ws_trsp: handle wslay_event_send() errors
  -- Michael Furmur <furmur@pm.me>  Mon, 20 Mar 2023 22:16:21 +0200
