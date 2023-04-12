@@ -294,15 +294,17 @@ int AmBasicSipDialog::getOutboundIf()
     }
 
     if(resolve_sip_uri(d_uri, remote_ip, static_cast<dns_priority>(resolve_priority)) < 0) {
-        DBG("No address for dest '%.*s' (local_tag='%s')",
-            d_uri.host.len, d_uri.host.s,
-            local_tag.c_str());
+        ERROR("Could not resolve URI host '%.*s' (local_tag='%s')",
+            d_uri.host.len, d_uri.host.s, local_tag.c_str());
+        goto error;
     }
+
     address_type = str2addrtype(remote_ip);
-    if(!address_type) {
+    if(AT_NONE == address_type) {
         address_type = AT_V4;
         ERROR("Could not resolve address type for resolved remote IP (local_tag='%s'; remote_ip='%s'). Use default: IPv4",
             local_tag.c_str(), remote_ip.c_str());
+        goto error;
     }
 
     if(force_outbound_interface_by_name.empty()) {
