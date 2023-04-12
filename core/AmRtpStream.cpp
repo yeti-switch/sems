@@ -898,9 +898,13 @@ int AmRtpStream::init(const AmSdp& local,
                         remote_media.setup == S_ACTIVE ||
                         force_passive_mode);
 
-    CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d",
+    bool transport_is_muted = rtptrans->isMute();
+
+    CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d "
+              "hold:%d remote_media.port:%u transport_is_muted:%d",
         local_media.recv, local_media.send,
-        remote_media.recv, remote_media.send);
+        remote_media.recv, remote_media.send,
+        hold, remote_media.port, transport_is_muted);
 
     if(local_media.recv && remote_media.send) {
         resume();
@@ -908,17 +912,15 @@ int AmRtpStream::init(const AmSdp& local,
         pause();
     }
 
-    sockaddr_storage raddr;
-    rtptrans->getRAddr(false, &raddr);
     if(local_media.send && !hold &&
        (remote_media.port != 0) &&
-       !rtptrans->isMute())
-     {
-         mute = false;
-     } else {
-         mute = true;
-     }
-     CLASS_DBG("mute = %d",mute);
+       !transport_is_muted)
+    {
+        mute = false;
+    } else {
+        mute = true;
+    }
+    CLASS_DBG("mute = %d",mute);
 
     gettimeofday(&rtp_stats.start, nullptr);
     rtcp_reports.init(l_ssrc);
