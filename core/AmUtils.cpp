@@ -821,7 +821,6 @@ int resolve_sip_uri(const struct sip_uri &uri, string& addr, dns_priority priori
     sockaddr_storage ip_ss;
     int err = resolve_sip_uri(uri, ip_ss, priority);
     if(err == -1) {
-        ERROR("While converting uri with host: '%s'", c2stlstr(uri.host).c_str());
         return -1;
     }
 
@@ -887,7 +886,7 @@ int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_prior
     }
 
     if(err == -1) {
-        ERROR("While converting uri with host: '%s'", c2stlstr(uri.host).c_str());
+        DBG("failed to convert uri with host: '%s'", c2stlstr(uri.host).c_str());
         return -1;
     }
 
