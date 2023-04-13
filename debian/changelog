@@ -1,3 +1,8 @@
+sems (1.100.1) stable; urgency=low
+  * AmMediaTransport: update raw connection raddr on initRtpConnection/initSrtpConnection.
+    fixes RTP relay on postponed remote endpoiont negotiation
+ -- Michael Furmur <furmur@pm.me>  Thu, 13 Apr 2023 23:14:35 +0300
+
 sems (1.100.0) stable; urgency=low
   * tls: parse intermediate certificates
   * AmB2BSession: relay 200ok and drop dlg on failed BYE. fixes session stuck
