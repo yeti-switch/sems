@@ -412,7 +412,7 @@ void AmMediaProcessorThread::processAudio(unsigned long long ts)
     for(auto &s : sessions) {
         if(s->readStreams(ts, buffer) < 0) {
             DBG("readStreams for media session %p returned value < 0",to_void(s));
-            postRequest(new SchedRequest(AmMediaProcessor::ClearSession, s));
+            AmMediaProcessor::instance()->clearSession(s);
         }
     }
 
@@ -420,7 +420,7 @@ void AmMediaProcessorThread::processAudio(unsigned long long ts)
     for(auto &s : sessions) {
         if (s->writeStreams(ts, buffer) < 0) {
             DBG("writeStreams for media session %p returned value < 0",to_void(s));
-            postRequest(new SchedRequest(AmMediaProcessor::ClearSession, s));
+            AmMediaProcessor::instance()->clearSession(s);
         }
     }
 
