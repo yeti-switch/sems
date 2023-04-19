@@ -1,3 +1,7 @@
+sems (1.100.2) stable; urgency=low
+  * AmMediaProcessorThread: fix session removal on write/readStreams errors
+ -- Michael Furmur <furmur@pm.me>  Wed, 19 Apr 2023 13:44:17 +0300
+
 sems (1.100.1) stable; urgency=low
   * AmMediaTransport: update raw connection raddr on initRtpConnection/initSrtpConnection.
     fixes RTP relay on postponed remote endpoiont negotiation
