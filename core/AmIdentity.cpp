@@ -354,6 +354,7 @@ bool AmIdentity::parse(const std::string& value)
 {
     std::string value_base64;
     std::string info;
+    std::string validation_error;
     size_t end = 0;
 
     last_errcode = 0;
@@ -440,7 +441,8 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     //process header
-    if(!IdentityHeaderValidator.validate(header)) {
+    if(!IdentityHeaderValidator.validate(header, validation_error)) {
+        ERROR("%s", validation_error.data());
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Unexpected JWT header layout";
         return false;
@@ -482,7 +484,8 @@ bool AmIdentity::parse(const std::string& value)
     try {
         switch(type.get()) {
         case PassportType::ES256_PASSPORT_SHAKEN: {
-            if(!IdentityShakenPayloadValidator.validate(payload)) {
+            if(!IdentityShakenPayloadValidator.validate(payload, validation_error)) {
+                ERROR("%s", validation_error.data());
                 last_errcode = ERR_JWT_VALUE;
                 last_errstr = "Unexpected JWT shaken payload layout";
                 return false;
@@ -500,7 +503,8 @@ bool AmIdentity::parse(const std::string& value)
 
         } break;
         case PassportType::ES256_PASSPORT_DIV:
-            if(!IdentityDivPayloadValidator.validate(payload)) {
+            if(!IdentityDivPayloadValidator.validate(payload, validation_error)) {
+                ERROR("%s", validation_error.data());
                 last_errcode = ERR_JWT_VALUE;
                 last_errstr = "Unexpected JWT div payload layout";
                 return false;
@@ -510,7 +514,8 @@ bool AmIdentity::parse(const std::string& value)
 
             break;
         case PassportType::ES256_PASSPORT_DIV_OPT:
-            if(!IdentityDivOptPayloadValidator.validate(payload)) {
+            if(!IdentityDivOptPayloadValidator.validate(payload, validation_error)) {
+                ERROR("%s", validation_error.data());
                 last_errcode = ERR_JWT_VALUE;
                 last_errstr = "Unexpected JWT div-o payload layout";
                 return false;

@@ -162,8 +162,9 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
 #define ASSIGN_OPTIONAL_STR(name)  if(a.hasMember(#name)) name = a[#name].asCStr();
 #define ASSIGN_OPTIONAL_INT(name) if(a.hasMember(#name)) name = a[#name].asInt();
 
-    if(!SipProbeAmArgValidator.validate(a)) {
-        DBG("data validation failed");
+    string validation_error;
+    if(!SipProbeAmArgValidator.validate(a, validation_error)) {
+        DBG("data validation failed: %s", validation_error.data());
         return false;
     }
     ASSIGN_MANDATORY_INT(id);
