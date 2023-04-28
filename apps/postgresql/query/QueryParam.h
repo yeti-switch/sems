@@ -31,6 +31,6 @@ public:
 };
 
 AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_null = false);
-vector<QueryParam> getParams(const vector<AmArg>& params);
+std::vector<QueryParam> getParams(const std::vector<AmArg>& params);
 
 unsigned int pg_typname2oid(const string &sql_type);

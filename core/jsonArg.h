@@ -37,7 +37,7 @@ std::string str2json(const char* str);
 std::string str2json(const std::string& str);
 std::string str2json(const char* str, size_t len);
 
-string arg2json(const AmArg &a);
+std::string arg2json(const AmArg &a);
 
 /** @return true on success */
 bool json2arg(std::istream& input, AmArg& res);

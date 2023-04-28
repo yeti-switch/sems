@@ -4,7 +4,7 @@
 #include "AmAudioFile.h"
 #include "AmUtils.h"
 
-int load_testing_source(string path,unsigned char *&buf)
+int load_testing_source(std::string path,unsigned char *&buf)
 {
 	AmAudioFile f;
 

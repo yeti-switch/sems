@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <unordered_map>
+#include <functional>
 
 #ifndef ntohll
 #define ntohll(b) __builtin_bswap64(b)
@@ -464,9 +465,9 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
     return ret;
 }
 
-vector<QueryParam> getParams(const vector<AmArg>& params)
+std::vector<QueryParam> getParams(const std::vector<AmArg>& params)
 {
-    vector<QueryParam> qparams;
+    std::vector<QueryParam> qparams;
     for(auto& param : params) {
         if(isArgUndef(param))
             qparams.emplace_back();

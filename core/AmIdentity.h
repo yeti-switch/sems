@@ -68,7 +68,7 @@ class AmIdentity
 
         void set(passport_type_id type_id);
         passport_type_id get();
-        const string &get_name();
+        const std::string &get_name();
 
         bool parse(const char* ppt_name);
     };

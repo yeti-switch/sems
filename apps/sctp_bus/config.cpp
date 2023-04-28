@@ -1,12 +1,13 @@
 #include "config.h"
 
-cfg_reader::cfg_reader(const string& mod_name)
-  : cfg(nullptr), mod_name(mod_name)
+cfg_reader::cfg_reader(const std::string& mod_name)
+  : mod_name(mod_name),
+    cfg(nullptr)
 {}
 
 cfg_reader::~cfg_reader()
 {
-  if(cfg) cfg_free(cfg);
+    if(cfg) cfg_free(cfg);
 }
 
 #define LOG_BUF_SIZE 2048
@@ -29,7 +30,7 @@ void cfg_reader_error(cfg_t *cfg, const char *fmt, va_list ap)
     ERROR("%.*s",l,buf);
 }
 
-bool cfg_reader::read(const string &config, cfg_opt_t *opts)
+bool cfg_reader::read(const std::string &config, cfg_opt_t *opts)
 {
     if(cfg)  cfg_free(cfg);
     cfg =  cfg_init(opts, CFGF_NONE);

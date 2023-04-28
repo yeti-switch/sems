@@ -34,6 +34,7 @@
 #include "../AmSubnet.h"
 #include <sys/socket.h>
 #include "AmArg.h"
+#include "AmStatistics.h"
 
 #include <string>
 using std::string;
