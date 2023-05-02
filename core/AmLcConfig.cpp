@@ -2006,7 +2006,7 @@ void AmLcConfig::fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config)
 
                 std::list<IPAddr>::iterator addr_it = intf_it->addrs.begin();
                 for(; addr_it != intf_it->addrs.end(); addr_it++) {
-                    if(addr_it->addr == (*info_it)->local_ip) {
+                    if(*addr_it == (*info_it)->local_ip) {
                         break;
                     }
                 }
@@ -2035,7 +2035,7 @@ int AmLcConfig::setNetInterface(ConfigContainer* config, IP_info& ip_if)
     for(unsigned int i=0; i < config->sys_ifs.size(); i++) {
         std::list<IPAddr>::iterator addr_it = config->sys_ifs[i].addrs.begin();
         while(addr_it != config->sys_ifs[i].addrs.end()) {
-            if(ip_if.local_ip == addr_it->addr) {
+            if(*addr_it == ip_if.local_ip) {
                 ip_if.net_if = config->sys_ifs[i].name;
                 ip_if.net_if_idx = i;
                 return 0;
