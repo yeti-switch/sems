@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <IPTree.h>
 #include <sip/ip_util.h>
+#include <AmLCContainers.h>
 
 TEST(Common, IPTree)
 {
@@ -55,5 +56,29 @@ TEST(Common, IPTree)
     //check result indexes ordering
     for(int i = 0; i < 3; i++) {
         EXPECT_EQ(match_result[i],i);
+    }
+}
+
+TEST(CommonTest, IPCompare)
+{
+    {
+        IPAddr saddr("[2a01:ad00:4:0::8]", AF_INET6);
+        string caddr("[2a01:ad00:4:0::8]");
+        EXPECT_TRUE(saddr == caddr);
+    }
+    {
+        IPAddr saddr("[2a01:ad00:4:0::8]", AF_INET6);
+        string caddr("[2a01:ad00:4::8]");
+        EXPECT_TRUE(saddr == caddr);
+    }
+    {
+        IPAddr saddr("2a01:ad00:4:0::8", AF_INET6);
+        string caddr("[2a01:ad00:4::8]");
+        EXPECT_TRUE(saddr == caddr);
+    }
+    {
+        IPAddr saddr("2a01:ad00:4:0::8", AF_INET6);
+        string caddr("2a01:ad00:4::8");
+        EXPECT_TRUE(saddr == caddr);
     }
 }

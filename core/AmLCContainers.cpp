@@ -137,3 +137,24 @@ void RTSP_info::iterateUsedPorts(std::function<void(const std::string&,unsigned 
     portmap.iterateUsedPorts(cl);
 }
 
+bool IPAddr::operator == (const string& ip) {
+    sockaddr_storage faddr;
+    if(!am_inet_pton(ip.c_str(), &faddr))
+        return false;
+
+    if(family != faddr.ss_family)
+        return false;
+
+    size_t addr_size = 0;
+    void *faddr_p = 0, *saddr_p = 0;
+    if(family == AF_INET) {
+        addr_size = sizeof(in_addr);
+        faddr_p = (void*)&((sockaddr_in*)&faddr)->sin_addr;
+        saddr_p = (void*)&((sockaddr_in*)&saddr)->sin_addr;
+    } else {
+        addr_size = sizeof(in6_addr);
+        faddr_p = (void*)&((sockaddr_in6*)&faddr)->sin6_addr;
+        saddr_p = (void*)&((sockaddr_in6*)&saddr)->sin6_addr;
+    }
+    return memcmp(faddr_p, saddr_p, addr_size) == 0;
+}

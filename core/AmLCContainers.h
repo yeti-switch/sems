@@ -11,6 +11,7 @@
 #include "sems.h"
 #include "AmStatistics.h"
 #include "AmSdp.h"
+#include "sip/ip_util.h"
 #include "sip/transport.h"
 #include "sip/ssl_settings.h"
 
@@ -503,12 +504,22 @@ class MEDIA_interface : public PI_interface<MEDIA_info*>
 
 class IPAddr
 {
+    sockaddr_storage saddr;
 public:
     IPAddr(const string& addr, const short family)
-        : addr(addr), family(family) {}
+        : addr(addr), family(family)
+    {
+        saddr.ss_family = family;
+        am_inet_pton(addr.c_str(), &saddr);
+    }
 
     IPAddr(const IPAddr& ip)
-        : addr(ip.addr), family(ip.family) {}
+        : addr(ip.addr), family(ip.family)
+    {
+        memcpy(&saddr, &ip.saddr, sizeof(struct sockaddr_storage));
+    }
+
+    bool operator == (const string& ip);
 
     std::string addr;
     short  family;
