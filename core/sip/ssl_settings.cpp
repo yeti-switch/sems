@@ -17,6 +17,7 @@ void settings::load_certificates()
 {
     AmLock l(mutex);
 
+    certificates.clear();
     Botan::DataSource_Stream in(certificate_path);
     while(true) {
         try {
