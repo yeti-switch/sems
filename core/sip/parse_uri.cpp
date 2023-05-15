@@ -318,6 +318,112 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
     return 0;
 }
 
+static int parse_tel_uri(sip_uri* uri, const char* beg, int len)
+{
+    //https://www.rfc-editor.org/rfc/rfc3966#section-3
+    enum {
+        TEL_NUMBER=0,
+        TEL_PNAME,
+        TEL_PVALUE
+    } st = TEL_NUMBER;
+
+    cstring tmp1, tmp2;
+    const char* c = beg;
+
+    uri->user.s = beg;
+
+    for(;c!=beg+len;c++) {
+        switch(*c) {
+        case SEMICOLON:
+            switch(st) {
+            case TEL_NUMBER:
+                uri->user.len = c - uri->user.s;
+                if(!uri->user.len) {
+                    DBG("empty number");
+                    return MALFORMED_URI;
+                }
+                st = TEL_PNAME;
+                tmp1.set(c+1,0);
+                break;
+            case TEL_PNAME:
+                tmp1.len = c - tmp1.s;
+                uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
+                tmp1.s = c+1;
+                break;
+            case TEL_PVALUE:
+                tmp2.len = c - tmp2.s;
+                uri->params.push_back(new sip_avp(tmp1,tmp2));
+                tmp1.s = c+1;
+                st = TEL_PNAME;
+                break;
+            }
+            break;
+        case '=':
+            switch(st) {
+            case TEL_NUMBER:
+                DBG("not allowed symbol");
+                return MALFORMED_URI;
+            case TEL_PNAME:
+                tmp1.len = c - tmp1.s;
+                if(!tmp1.len) {
+                    DBG("empty header name");
+                    return MALFORMED_URI;
+                }
+                tmp2.s = c+1;
+                st = TEL_PVALUE;
+                break;
+            case TEL_PVALUE:
+                break;
+            }
+            break;
+        /*
+        //global-number-digits = "+" *phonedigit DIGIT *phonedigit
+        case '+':
+            if(st==TEL_NUMBER && c!=beg) {
+                DBG("'+' is allowed at the number start only");
+                return MALFORMED_URI;
+            }
+            break;
+        //phonedigit = DIGIT / [ visual-separator ]
+        //visual-separator = "-" / "." / "(" / ")"
+        case '0'...'9':
+        case '-':
+        case '.':
+        case '(':
+        case ')':
+            break;
+        default:
+            if(st==TEL_NUMBER) {
+                DBG("not allowed symbol '%c' in the tel number",
+                    *c);
+                return MALFORMED_URI;
+            }
+            break;
+        */
+        }
+    }
+
+    switch(st) {
+    case TEL_NUMBER:
+        uri->user.len = c - uri->user.s;
+        if(!uri->user.len){
+            DBG("empty number");
+            return MALFORMED_URI;
+        }
+        break;
+    case TEL_PNAME:
+        tmp1.len = c - tmp1.s;
+        uri->params.push_back(new sip_avp(tmp1,cstring(0,0)));
+        break;
+    case TEL_PVALUE:
+        tmp2.len = c - tmp2.s;
+        uri->params.push_back(new sip_avp(tmp1,tmp2));
+        break;
+    }
+
+    return 0;
+}
+
 int parse_nameaddr(sip_uri* uri, const char* beg, int len, bool no_default_port)
 {
     enum {
@@ -427,7 +533,10 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
         SIP_S,   // Sip
         SIP_I,   // sIp
         SIP_P,   // siP
-        SIPS_S   // sipS
+        SIPS_S,  // sipS
+        TEL_T,   // Tel
+        TEL_E,   // tEl
+        TEL_L    // teL
     };
 
     int st = URI_BEG;
@@ -440,6 +549,10 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
             case 's':
             case 'S':
                 st = SIP_S;
+                continue;
+            case 't':
+            case 'T':
+                st = TEL_T;
                 continue;
             default:
                 DBG("Unknown URI scheme");
@@ -494,6 +607,38 @@ int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port)
                 return MALFORMED_URI;
             }
             break;
+        case TEL_T:
+            switch(*c) {
+            case 'e':
+            case 'E':
+                st = TEL_E;
+                continue;
+            default:
+                DBG("Unknown URI scheme");
+                return MALFORMED_URI;
+            }
+            break;
+        case TEL_E:
+            switch(*c) {
+            case 'l':
+            case 'L':
+                st = TEL_L;
+                continue;
+            default:
+                DBG("Unknown URI scheme");
+                return MALFORMED_URI;
+            }
+            break;
+        case TEL_L:
+            switch(*c) {
+            case HCOLON:
+                //DBG("scheme: sips");
+                uri->scheme = sip_uri::TEL;
+                return parse_tel_uri(uri,c+1,len-(c+1-beg));
+            default:
+                DBG("Unknown URI scheme");
+                return MALFORMED_URI;
+            }
         default:
             DBG("bug: unknown state");
             return UNDEFINED_ERR;

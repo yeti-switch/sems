@@ -40,9 +40,10 @@ struct sip_avp;
 struct sip_uri
 {
     enum uri_scheme {
-	UNKNOWN=0,
-	SIP,
-	SIPS
+        UNKNOWN=0,
+        SIP,
+        SIPS,
+        TEL
     };
 
     uri_scheme scheme;
