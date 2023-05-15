@@ -1,3 +1,9 @@
+sems (1.102.0) stable; urgency=low
+  * sip/parse_uri: add 'tel' scheme parsing
+  * fix TLS certificates reload
+  * fix interfaces lookup for IPv6 binding
+ -- Michael Furmur <furmur@pm.me>  Tue, 16 May 2023 01:07:35 +0300
+
 sems (1.101.0) stable; urgency=low
   * AmArg: add is<>(), assertType(), isNumber(), asNumber<>(), print() methods
   * support nested validator in AmArgHashValidator
