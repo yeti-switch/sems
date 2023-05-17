@@ -91,12 +91,6 @@ time_t start_time;
 /** SIP stack (controller interface) */
 #define sip_ctrl (*SipCtrlInterface::instance())
 
-
-const char *get_sems_version(void)
-{
-    return SEMS_VERSION;
-}
-
 static void print_supported_srtp_profiles() {
     printf(
         "  Supported SRTP profiles:\n"
