@@ -203,8 +203,8 @@ class AmArg
     const char* getTypeStr() const { return t2str(type); }
     static const char* t2str(int type);
 
-    std::string print() const;
     static std::string print(const AmArg &a);
+    std::string print() const;
 
     // operations on arrays and structs
 
@@ -286,6 +286,9 @@ class AmArg
     std::vector<AmObject*> asAmObjectVector() const;
     std::vector<ArgBlob> asArgBlobVector() const;
 };
+
+//gtest formatter
+void PrintTo(const AmArg& arg, std::ostream* os);
 
 bool operator==(const AmArg& lhs, const AmArg& rhs);
 

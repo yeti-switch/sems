@@ -810,6 +810,11 @@ std::vector<ArgBlob> AmArg::asArgBlobVector() const
     return res;
 }
 
+void PrintTo(const AmArg& arg, std::ostream* os)
+{
+    *os << arg.print();
+}
+
 bool operator==(const AmArg& lhs, const AmArg& rhs)
 {
     if(lhs.type != rhs.type)
