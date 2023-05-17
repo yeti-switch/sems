@@ -10,19 +10,20 @@ INCLUDE(${SEMS_CMAKE_DIR}/audio.rules.txt)
 
 add_definitions("-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=${sems_module_name}:")
 
+# common object file
+ADD_LIBRARY(sems_${sems_module_name}_obj OBJECT ${${sems_module_name}_SRCS})
+SET_PROPERTY(TARGET sems_${sems_module_name}_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# module shared library
+ADD_LIBRARY(sems_${sems_module_name} MODULE)
+target_sources(sems_${sems_module_name} PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
+
 IF(${sems_module_name}_UNIT_SRCS)
     MESSAGE(STATUS "using unit tests for ${sems_module_name}")
 
-    ADD_LIBRARY(sems_${sems_module_name}_obj OBJECT ${${sems_module_name}_SRCS})
-
-    ADD_LIBRARY(sems_${sems_module_name} MODULE)
-    target_sources(sems_${sems_module_name} PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
-
+    #unit test module shared library
     ADD_LIBRARY(sems_${sems_module_name}_unit MODULE ${${sems_module_name}_UNIT_SRCS})
     target_sources(sems_${sems_module_name}_unit PRIVATE $<TARGET_OBJECTS:sems_${sems_module_name}_obj>)
-
-ELSE(${sems_module_name}_UNIT_SRCS)
-    ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
 ENDIF(${sems_module_name}_UNIT_SRCS)
 
 IF(APPLE)
