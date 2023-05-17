@@ -40,7 +40,7 @@ Description: SIP Express Media Server, audio files
 Package: sems-modules-base
 Architecture: any
 Suggests: sems-sounds
-Depends: sems(= ${source:Version}), sems-sounds, ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: SIP Express Media Server, base applications, plugins and codecs
  SEMS, the SIP Express Media Server, is a free, high performance, extensible media
  server and SBC for SIP (RFC3261) based VoIP  services. It features voicemail, conferencing,
