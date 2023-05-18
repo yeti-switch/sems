@@ -32,7 +32,7 @@ bool AmArgHashValidator::validate(const AmArg &a, std::string &error) const
             if(f.allowed_types.end()==std::find(f.allowed_types.begin(), f.allowed_types.end(), fa.getType())) {
                 std::ostringstream ss;
                 ss << "unexpected type " << AmArg::t2str(fa.getType()) <<
-                      "for key '" << f.name << "' with value " << AmArg::print(fa);
+                      " for key '" << f.name << "' with value " << AmArg::print(fa);
                 error = ss.str();
                 return false;
             }
@@ -41,7 +41,7 @@ bool AmArgHashValidator::validate(const AmArg &a, std::string &error) const
         if(f.validate_callback) {
             if(!f.validate_callback(fa)) {
                 error = std::string("got error from validator callback for key '") + f.name +
-                        "with value" + AmArg::print(fa);
+                        "' with value " + AmArg::print(fa);
                 return false;
             }
         } else if(f.nested_validator) {
