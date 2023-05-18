@@ -264,7 +264,7 @@ AmArg::AmArg(std::map<std::string, AmArg>& v)
 AmArg::AmArg(std::vector<std::string>& v)
   : type(Array)
 {
-    assertArray(0);
+    assertArray();
     INC_AMARGSIZE(sizeof(*this));
     for(std::vector<std::string>::iterator it =
         v.begin(); it != v.end(); it++)
@@ -813,6 +813,17 @@ std::vector<ArgBlob> AmArg::asArgBlobVector() const
 void PrintTo(const AmArg& arg, std::ostream* os)
 {
     *os << arg.print();
+}
+
+AmArg &AmArg::assign_struct(std::initializer_list<std::pair<const std::string, AmArg> > l)
+{
+    invalidate();
+    assertStruct();
+    for(const auto &it: l) {
+        v_struct->emplace(it.first, it.second);
+    }
+    INC_AMARGSTRUCT_SIZE(v_struct);
+    return *this;
 }
 
 bool operator==(const AmArg& lhs, const AmArg& rhs)

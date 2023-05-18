@@ -34,6 +34,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <initializer_list>
 
 #include "atomic_types.h"
 
@@ -149,6 +150,31 @@ class AmArg
     AmArg(const std::vector<double>& v);
     AmArg(std::map<std::string, std::string>& v);
     AmArg(std::map<std::string, AmArg>& v);
+
+    template<typename T>
+    AmArg &assign_array(std::initializer_list<T> l)
+    {
+        invalidate();
+        assertArray();
+        for(const auto &it: l) {
+            v_array->emplace_back(it);
+        }
+        return *this;
+    }
+
+    template<typename T>
+    AmArg(std::initializer_list<T> l)
+      : AmArg()
+    {
+        assign_array(l);
+    }
+
+    AmArg &assign_struct(std::initializer_list<std::pair<const std::string, AmArg> > l);
+    AmArg(std::initializer_list<std::pair<const std::string, AmArg> > l)
+      : AmArg()
+    {
+        assign_struct(l);
+    }
 
     AmArg& operator=(const AmArg& rhs);
 
