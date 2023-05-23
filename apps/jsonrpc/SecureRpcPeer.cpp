@@ -9,6 +9,7 @@
 #include <botan/tls_exceptn.h>
 #include <botan/tls_alert.h>
 #include <botan/tls_magic.h>
+#include <botan/internal/tls_channel_impl.h>
 
 tls_rpc_conf::tls_rpc_conf(tls_settings* settings)
 : certificates(settings->getCertificateCopy())
@@ -124,52 +125,6 @@ size_t tls_rpc_conf::minimum_rsa_bits() const
     return 1024;
 }
 
-bool tls_rpc_conf::allow_tls10()  const
-{
-    tls_settings* settings = 0;
-    if(s_client) {
-        settings = s_client;
-    } else if(s_server) {
-        settings = s_server;
-    }
-
-    if(!settings) {
-        ERROR("incorrect pointer");
-        return false;
-    }
-
-    for(auto& proto : settings->protocols) {
-        if(proto == tls_client_settings::TLSv1) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool tls_rpc_conf::allow_tls11()  const
-{
-    tls_settings* settings = 0;
-    if(s_client) {
-        settings = s_client;
-    } else if(s_server) {
-        settings = s_server;
-    }
-
-    if(!settings) {
-        ERROR("incorrect pointer");
-        return false;
-    }
-
-    for(auto& proto : settings->protocols) {
-        if(proto == tls_client_settings::TLSv1_1) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool tls_rpc_conf::allow_tls12()  const
 {
     tls_settings* settings = 0;
@@ -210,11 +165,15 @@ vector<Botan::Certificate_Store*> tls_rpc_conf::trusted_certificate_authorities(
     return settings->getCertificateAuthorityCopy();
 }
 
-vector<Botan::X509_Certificate> tls_rpc_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
+vector<Botan::X509_Certificate> tls_rpc_conf::cert_chain(
+    const std::vector<std::string>& cert_key_types,
+    const std::vector<Botan::AlgorithmIdentifier>& cert_signature_schemes,
+    const std::string& type,
+    const std::string& context)
 {
     vector<Botan::X509_Certificate> certs;
     for(auto& cert : certificates) {
-        std::string algorithm = cert.load_subject_public_key()->algo_name();
+        std::string algorithm = cert.subject_public_key()->algo_name();
         for(auto& key : cert_key_types) {
             if(algorithm == key) {
                 DBG("added certificate with algorithm %s", algorithm.c_str());
@@ -231,10 +190,10 @@ vector<Botan::X509_Certificate> tls_rpc_conf::cert_chain(const vector<string>& c
     return certs;
 }
 
-Botan::Private_Key* tls_rpc_conf::private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context)
+std::shared_ptr<Botan::Private_Key> tls_rpc_conf::private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context)
 {
     if(key) {
-        return &*key;
+        return key;
     }
     return nullptr;
 }
@@ -255,17 +214,29 @@ void tls_rpc_conf::set_policy_overrides(std::string sig_, std::string cipher_, s
         cipher.c_str(), mac.c_str(), sig.c_str());
 }
 
-void SecureRpcPeer::initTls(bool server){
-    try{
+void SecureRpcPeer::initTls(bool server)
+{
+    try {
         if(server) {
-            settings = new tls_rpc_conf(&JsonRPCServerModule::instance()->server_settings);
-            tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), *settings, *settings,rand_gen, false);
+            settings = std::make_shared<tls_rpc_conf>(&JsonRPCServerModule::instance()->server_settings);
+            tls_channel = new Botan::TLS::Server(
+                tls_callbacks,
+                session_manager_tls::instance()->ssm,
+                settings,
+                settings,
+                rand_gen,
+                false);
         } else {
-            settings = new tls_rpc_conf(&JsonRPCServerModule::instance()->client_settings);
+            settings =  std::make_shared<tls_rpc_conf>(&JsonRPCServerModule::instance()->client_settings);
             settings->set_policy_overrides("RSA","AES-128","SHA-1");
-            tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), *settings, *settings,rand_gen,
-                                                Botan::TLS::Server_Information(JsonRPCServerModule::instance()->host.c_str(), JsonRPCServerModule::instance()->port),
-                                                Botan::TLS::Protocol_Version::TLS_V12);
+            tls_channel = new Botan::TLS::Client(
+                tls_callbacks,
+                session_manager_tls::instance()->ssm,
+                settings,
+                settings,
+                rand_gen,
+                Botan::TLS::Server_Information(JsonRPCServerModule::instance()->host.c_str(), JsonRPCServerModule::instance()->port),
+                Botan::TLS::Protocol_Version::TLS_V12);
         }
     } catch(Botan::Exception& ex) {
         ERROR("Botan tls error: %s", ex.what());
@@ -295,20 +266,66 @@ int SecureRpcPeer::ws_send_data(const uint8_t* data, size_t len) {
     } else return WsRpcPeer::ws_send_data(data, len);
 }
 
-SecureRpcPeer::SecureRpcPeer(const string& id)
-: WsRpcPeer(id)
-, settings(0)
-, tls_connected(false)
-, is_tls(false)
-, tls_channel(0) {
+void SecureRpcPeer::tls_emit_data(std::span<const uint8_t> data)
+{
+    JsonrpcNetstringsConnection::send_data((char*)data.data(), data.size());
 }
 
-SecureRpcPeer::~SecureRpcPeer() {
-    if(settings) delete settings;
+void SecureRpcPeer::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
+{
+    int old_size = tls_resv_buffer.size();
+    tls_resv_buffer.resize(old_size + data.size());
+    memcpy(tls_resv_buffer.data() + old_size, data.data(), data.size());
+}
+
+void SecureRpcPeer::tls_alert(Botan::TLS::Alert alert)
+{}
+
+void SecureRpcPeer::tls_session_established(const Botan::TLS::Session_Summary& session)
+{
+    DBG("************ on_tls_connect() ***********");
+    tls_connected = true;
+}
+
+void SecureRpcPeer::tls_verify_cert_chain(
+    const std::vector<Botan::X509_Certificate>& cert_chain,
+    const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
+    const std::vector<Botan::Certificate_Store*>& trusted_roots,
+    Botan::Usage_Type usage,
+    std::string_view hostname,
+    const Botan::TLS::Policy& policy)
+{
+    if((settings->s_client && !settings->s_client->verify_certificate_chain && !settings->s_client->verify_certificate_cn) ||
+        (settings->s_server && !settings->s_server->verify_client_certificate)) {
+        return;
+    }
+
+    if(settings->s_client && settings->s_client->verify_certificate_cn) {
+        if(settings->s_client->verify_certificate_chain) {
+            if(!cert_chain[0].matches_dns_name(hostname))
+                throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateStatusResponse, "Verify common name certificate failed");
+        } else
+            Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
+    } else
+        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
+}
+
+SecureRpcPeer::SecureRpcPeer(const string& id)
+  : WsRpcPeer(id),
+    tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this)),
+    rand_gen(std::make_shared<Botan::AutoSeeded_RNG>()),
+    is_tls(false),
+    tls_connected(false),
+    tls_channel(nullptr)
+{}
+
+SecureRpcPeer::~SecureRpcPeer()
+{
     if(tls_channel) delete tls_channel;
 }
 
-int SecureRpcPeer::connect(const string& host, int port, string& res_str) {
+int SecureRpcPeer::connect(const string& host, int port, string& res_str)
+{
     if(conn_type == PEER_TCP) return JsonrpcNetstringsConnection::connect(host, port, res_str);
     else if(conn_type == PEER_WS) return WsRpcPeer::connect(host, port, res_str);
     int ret = JsonrpcNetstringsConnection::connect(host, port, res_str);
@@ -350,7 +367,7 @@ int SecureRpcPeer::netstringsRead() {
             return REMOVE;
         }
         rcvd_size = 0;
-        if(tls_connected) {            
+        if(tls_connected) {
             if(conn_type == PEER_WSS) {
                 WsRpcPeer::addMessage(tls_send_buffer.data(), tls_send_buffer.size());
                 send_request();
@@ -376,7 +393,7 @@ int SecureRpcPeer::read_data(char* data, int size) {
         if(r != 1) return -1;
 
         // tls data
-        if(*data == Botan::TLS::Record_Type::HANDSHAKE) {
+        if(*data == static_cast<char>(Botan::TLS::Record_Type::Handshake)) {
             is_tls = true;
             initTls(true);
         } else if(*data == 'G'){
@@ -463,46 +480,6 @@ int SecureRpcPeer::send_data(char* data, int size) {
         }
     }
     return size;
-}
-
-void SecureRpcPeer::tls_emit_data(const uint8_t data[], size_t size) {
-    JsonrpcNetstringsConnection::send_data((char*)data, size);
-}
-
-void SecureRpcPeer::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size) {
-    int old_size = tls_resv_buffer.size();
-    tls_resv_buffer.resize(old_size + size);
-    memcpy(tls_resv_buffer.data() + old_size, data, size);
-}
-
-void SecureRpcPeer::tls_alert(Botan::TLS::Alert alert){}
-
-bool SecureRpcPeer::tls_session_established(const Botan::TLS::Session& session) {
-    DBG("************ on_tls_connect() ***********");
-    tls_connected = true;
-    return true;
-}
-
-void SecureRpcPeer::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
-                            const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
-                            const std::vector<Botan::Certificate_Store*>& trusted_roots,
-                            Botan::Usage_Type usage,
-                            const std::string& hostname,
-                            const Botan::TLS::Policy& policy)
-{
-    if((settings->s_client && !settings->s_client->verify_certificate_chain && !settings->s_client->verify_certificate_cn) ||
-        (settings->s_server && !settings->s_server->verify_client_certificate)) {
-        return;
-    }
-
-    if(settings->s_client && settings->s_client->verify_certificate_cn) {
-        if(settings->s_client->verify_certificate_chain) {
-            if(!cert_chain[0].matches_dns_name(hostname))
-                throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_STATUS_RESPONSE, "Verify common name certificate failed");
-        } else
-            Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
-    } else
-        Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, hostname, policy);
 }
 
 void SecureRpcPeer::addMessage(const char* data, size_t len) {
