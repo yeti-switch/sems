@@ -25,6 +25,10 @@ using std::string;
 #include <botan/tls_channel.h>
 #include <botan/tls_callbacks.h>
 #include <botan/credentials_manager.h>
+#include <botan/tls_session_manager_memory.h>
+#include <BotanHelpers.h>
+
+#define MAX_TLS_SESSIONS 8192
 
 class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
@@ -32,7 +36,7 @@ class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
     tls_client_settings* s_client;
     tls_server_settings* s_server;
     std::vector<Botan::X509_Certificate> certificates;
-    std::unique_ptr<Botan::Private_Key> key;
+    std::shared_ptr<Botan::Private_Key> key;
 
     //ciphersuite policy overrides
     bool policy_override;
@@ -51,18 +55,24 @@ public:
     vector<string> allowed_ciphers() const override;
     vector<string> allowed_macs() const override;
     size_t minimum_rsa_bits() const override;
-    bool allow_tls10()  const override;
-    bool allow_tls11()  const override;
     bool allow_tls12()  const override;
-    bool allow_dtls10() const override { return false;}
     bool allow_dtls12() const override { return false;}
     bool require_cert_revocation_info() const override { return false; }
     bool require_client_certificate_authentication() const override;
 
     //Credentials_Manager functions
     vector<Botan::Certificate_Store*> trusted_certificate_authorities(const string& type, const string& context) override;
-    vector<Botan::X509_Certificate> cert_chain(const vector<string>& cert_key_types, const string& type, const string& context) override;
-    Botan::Private_Key* private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context) override;
+
+    vector<Botan::X509_Certificate> cert_chain(
+        const vector<string>& cert_key_types,
+        const std::vector<Botan::AlgorithmIdentifier>& cert_signature_schemes,
+        const string& type,
+        const string& context) override;
+
+    std::shared_ptr<Botan::Private_Key> private_key_for(
+        const Botan::X509_Certificate& cert,
+        const string& type,
+        const string& context) override;
 
     void set_policy_overrides(std::string sig_, std::string cipher_, std::string mac_);
 };
@@ -80,14 +90,13 @@ public:
 
 class tls_session_manager
 {
-    tls_rand_generator rand_tls;
-public:
-    Botan::TLS::Session_Manager_In_Memory ssm;
-    tls_session_manager() : ssm(rand_tls){}
-    operator Botan::TLS::Session_Manager_In_Memory& () {
-        return ssm;
-    }
-    
+    std::shared_ptr<Botan::AutoSeeded_RNG> rng;
+  public:
+    std::shared_ptr<Botan::TLS::Session_Manager_In_Memory> ssm;
+    tls_session_manager()
+      : rng(std::make_shared<Botan::AutoSeeded_RNG>()),
+        ssm(std::make_shared<Botan::TLS::Session_Manager_In_Memory>(rng, MAX_TLS_SESSIONS))
+    {}
     void dispose(){}
 };
 
@@ -115,34 +124,40 @@ public:
     virtual int on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size);
 };
 
-class tls_trsp_socket: public tcp_base_trsp, public Botan::TLS::Callbacks
+class tls_trsp_socket
+  : public tcp_base_trsp,
+    public Botan::TLS::Callbacks
 {
+    std::shared_ptr<BotanTLSCallbacksProxy> tls_callbacks;
+
     bool tls_connected;
     uint16_t ciphersuite;
 
-    tls_rand_generator rand_gen;
+    std::shared_ptr<Botan::AutoSeeded_RNG> rand_gen;
     Botan::TLS::Channel* tls_channel;
-    tls_conf settings;
+    std::shared_ptr<tls_conf> settings;
 
     friend class tls_socket_factory;
     friend class tls_input;
-    tls_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
-                  const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
+    tls_trsp_socket(
+        trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
+        const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
 
     void init(const sockaddr_storage* sa);
 
     void generate_transport_errors();
 
-    void tls_emit_data(const uint8_t data[], size_t size);
-    void tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size);
+    void tls_emit_data(std::span<const uint8_t> data);
+    void tls_record_received(uint64_t seq_no, std::span<const uint8_t> data);
     void tls_alert(Botan::TLS::Alert alert);
-    bool tls_session_established(const Botan::TLS::Session& session);
-    void tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
-                                const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
-                                const std::vector<Botan::Certificate_Store*>& trusted_roots,
-                                Botan::Usage_Type usage,
-                                const std::string& hostname,
-                                const Botan::TLS::Policy& policy);
+    void tls_session_established(const Botan::TLS::Session_Summary& session);
+    void tls_verify_cert_chain(
+        const std::vector<Botan::X509_Certificate>& cert_chain,
+        const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
+        const std::vector<Botan::Certificate_Store*>& trusted_roots,
+        Botan::Usage_Type usage,
+        std::string_view hostname,
+        const Botan::TLS::Policy& policy);
 protected:
     deque<msg_buf*> orig_send_q;
 protected:

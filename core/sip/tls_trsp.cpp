@@ -134,52 +134,6 @@ size_t tls_conf::minimum_rsa_bits() const
     return 1024;
 }
 
-bool tls_conf::allow_tls10()  const
-{
-    tls_settings* settings = 0;
-    if(s_client) {
-        settings = s_client;
-    } else if(s_server) {
-        settings = s_server;
-    }
-
-    if(!settings) {
-        ERROR("incorrect pointer");
-        return false;
-    }
-
-    for(auto& proto : settings->protocols) {
-        if(proto == tls_client_settings::TLSv1) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool tls_conf::allow_tls11()  const
-{
-    tls_settings* settings = 0;
-    if(s_client) {
-        settings = s_client;
-    } else if(s_server) {
-        settings = s_server;
-    }
-
-    if(!settings) {
-        ERROR("incorrect pointer");
-        return false;
-    }
-
-    for(auto& proto : settings->protocols) {
-        if(proto == tls_client_settings::TLSv1_1) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool tls_conf::allow_tls12()  const
 {
     tls_settings* settings = 0;
@@ -220,11 +174,15 @@ vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(cons
     return settings->getCertificateAuthorityCopy();
 }
 
-vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
+vector<Botan::X509_Certificate> tls_conf::cert_chain(
+    const vector<string>& cert_key_types,
+    const std::vector<Botan::AlgorithmIdentifier>& cert_signature_schemes,
+    const string& type,
+    const string& context)
 {
     vector<Botan::X509_Certificate> certs;
     for(auto& cert : certificates) {
-        std::string algorithm = cert.load_subject_public_key()->algo_name();
+        std::string algorithm = cert.subject_public_key()->algo_name();
         for(auto& key : cert_key_types) {
             if(algorithm == key) {
                 DBG("added certificate with algorithm %s", algorithm.c_str());
@@ -241,10 +199,13 @@ vector<Botan::X509_Certificate> tls_conf::cert_chain(const vector<string>& cert_
     return certs;
 }
 
-Botan::Private_Key* tls_conf::private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context)
+std::shared_ptr<Botan::Private_Key> tls_conf::private_key_for(
+    const Botan::X509_Certificate& cert,
+    const string& type,
+    const string& context)
 {
     if(key) {
-        return &*key;
+        return key;
     }
     return nullptr;
 }
@@ -303,23 +264,31 @@ static tls_settings* getTlsSetting(int sd, int if_, int proto) {
         return &SIP_TLS_info::toSIP_TLS(AmConfig.sip_ifs[if_].proto_info[proto])->server_settings;
 }
 
-tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
-                 trsp_worker* server_worker,
-                 int sd, const sockaddr_storage* sa,
-                 trsp_socket::socket_transport transport,
-                 event_base* evbase, trsp_input* input)
-: tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input), tls_connected(false)
-  , settings(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx()))
+tls_trsp_socket::tls_trsp_socket(
+    trsp_server_socket* server_sock,
+    trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa,
+    trsp_socket::socket_transport transport,
+    event_base* evbase, trsp_input* input)
+  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input),
+    tls_connected(false),
+    settings(std::make_shared<tls_conf>(getTlsSetting(
+        sd, server_sock->get_if(), server_sock->get_proto_idx())))
 {
     init(sa);
 }
 
-tls_trsp_socket::tls_trsp_socket(trsp_server_socket* server_sock,
-				 trsp_worker* server_worker,
-				 int sd, const sockaddr_storage* sa,
-                 trsp_socket::socket_transport transport, struct event_base* evbase)
-  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tls_input), tls_connected(false)
-  , settings(getTlsSetting(sd, server_sock->get_if(), server_sock->get_proto_idx()))
+tls_trsp_socket::tls_trsp_socket(
+    trsp_server_socket* server_sock,
+    trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa,
+    trsp_socket::socket_transport transport, struct event_base* evbase)
+  : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, new tls_input),
+    tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this)),
+    tls_connected(false),
+    rand_gen(std::make_shared<Botan::AutoSeeded_RNG>()),
+    settings(std::make_shared<tls_conf>(getTlsSetting(
+        sd, server_sock->get_if(), server_sock->get_proto_idx())))
 {
     init(sa);
 }
@@ -336,16 +305,28 @@ void tls_trsp_socket::init(const sockaddr_storage* sa)
     if(sd == -1) {
         sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
         if(sa_ssl->ssl_marker) {
-            settings.set_policy_overrides(
+            settings->set_policy_overrides(
                 toString(sa_ssl->sig),
                 toString(sa_ssl->cipher),
                 toString(sa_ssl->mac));
         }
-        tls_channel = new Botan::TLS::Client(*this, *session_manager_tls::instance(), settings, settings,rand_gen,
-                                            Botan::TLS::Server_Information(get_peer_ip().c_str(), get_peer_port()),
-                                            Botan::TLS::Protocol_Version::TLS_V12);
+
+        tls_channel = new Botan::TLS::Client(
+            tls_callbacks,
+            session_manager_tls::instance()->ssm,
+            settings,
+            settings,
+            rand_gen,
+            Botan::TLS::Server_Information(
+                get_peer_ip().c_str(), get_peer_port()),
+                Botan::TLS::Protocol_Version::TLS_V12);
     } else {
-        tls_channel = new Botan::TLS::Server(*this, *session_manager_tls::instance(), settings, settings,rand_gen, false);
+        tls_channel = new Botan::TLS::Server(
+            tls_callbacks,
+            session_manager_tls::instance()->ssm,
+            settings,
+            settings,rand_gen,
+            false);
     }
 }
 
@@ -420,29 +401,34 @@ void tls_trsp_socket::copy_peer_addr(sockaddr_storage* sa)
     if(tls_connected) {
         sockaddr_ssl* sa_ssl = (sockaddr_ssl*)sa;
         sa_ssl->ssl_marker = true;
-        Botan::TLS::Ciphersuite cipherst = Botan::TLS::Ciphersuite::by_id(ciphersuite);
-        for(int i = sockaddr_ssl::SIG_SHA; i <= sockaddr_ssl::SIG_RSA; i++) {
-            if(toString((sockaddr_ssl::sig_method)i) == cipherst.kex_algo()) {
-                sa_ssl->sig = (sockaddr_ssl::sig_method)i;
+
+        auto cipherst_optional = Botan::TLS::Ciphersuite::by_id(ciphersuite);
+        if(cipherst_optional.has_value()) {
+            auto &cipherst = cipherst_optional.value();
+            for(int i = sockaddr_ssl::SIG_SHA; i <= sockaddr_ssl::SIG_RSA; i++) {
+                if(toString((sockaddr_ssl::sig_method)i) == cipherst.kex_algo()) {
+                    sa_ssl->sig = (sockaddr_ssl::sig_method)i;
+                }
             }
-        }
-        for(int i = sockaddr_ssl::CIPHER_AES256_OCB12; i <= sockaddr_ssl::CIPHER_3DES; i++) {
-            if(toString((sockaddr_ssl::cipher_method)i) == cipherst.cipher_algo()) {
-                sa_ssl->cipher = (sockaddr_ssl::cipher_method)i;
+            for(int i = sockaddr_ssl::CIPHER_AES256_OCB12; i <= sockaddr_ssl::CIPHER_3DES; i++) {
+                if(toString((sockaddr_ssl::cipher_method)i) == cipherst.cipher_algo()) {
+                    sa_ssl->cipher = (sockaddr_ssl::cipher_method)i;
+                }
             }
-        }
-        for(int i = sockaddr_ssl::MAC_AEAD; i <= sockaddr_ssl::MAC_SHA1; i++) {
-            if(toString((sockaddr_ssl::mac_method)i) == cipherst.mac_algo()) {
-                sa_ssl->mac = (sockaddr_ssl::mac_method)i;
+            for(int i = sockaddr_ssl::MAC_AEAD; i <= sockaddr_ssl::MAC_SHA1; i++) {
+                if(toString((sockaddr_ssl::mac_method)i) == cipherst.mac_algo()) {
+                    sa_ssl->mac = (sockaddr_ssl::mac_method)i;
+                }
             }
         }
     }
+
     return tcp_base_trsp::copy_peer_addr(sa);
 }
 
-void tls_trsp_socket::tls_emit_data(const uint8_t data[], size_t size)
+void tls_trsp_socket::tls_emit_data(std::span<const uint8_t> data)
 {
-    send_q.push_back(new msg_buf(&peer_addr,(char*)data,size));
+    send_q.push_back(new msg_buf(&peer_addr,(char*)data.data(),data.size()));
 
     if(connected) {
         add_write_event();
@@ -450,16 +436,15 @@ void tls_trsp_socket::tls_emit_data(const uint8_t data[], size_t size)
     }
 }
 
-void tls_trsp_socket::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
+void tls_trsp_socket::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
 {
-    static_cast<tls_input*>(input)->on_tls_record(this, data, size);
+    static_cast<tls_input*>(input)->on_tls_record(this, data.data(), data.size());
 }
 
 void tls_trsp_socket::tls_alert(Botan::TLS::Alert alert)
-{
-}
+{}
 
-bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session)
+void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary& session)
 {
     DBG("************ on_tls_connect() ***********");
     DBG("new TLS connection from %s:%u",
@@ -472,25 +457,31 @@ bool tls_trsp_socket::tls_session_established(const Botan::TLS::Session& session
     DBG("ssl_marker:%d sig:%d cipher:%d mac:%d", sa_ssl->ssl_marker, sa_ssl->sig, sa_ssl->cipher, sa_ssl->mac);
     add_write_event();
     DBG("write event added...");
-    return true;
 }
 
-void tls_trsp_socket::tls_verify_cert_chain(const std::vector<Botan::X509_Certificate>& cert_chain,
-                            const std::vector<std::shared_ptr<const Botan::OCSP::Response>>& ocsp_responses,
-                            const std::vector<Botan::Certificate_Store*>& trusted_roots,
-                            Botan::Usage_Type usage,
-                            const std::string& hostname,
-                            const Botan::TLS::Policy& policy)
+void tls_trsp_socket::tls_verify_cert_chain(
+    const std::vector<Botan::X509_Certificate>& cert_chain,
+    const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
+    const std::vector<Botan::Certificate_Store*>& trusted_roots,
+    Botan::Usage_Type usage,
+    std::string_view hostname,
+    const Botan::TLS::Policy& policy)
 {
-    if((settings.s_client && !settings.s_client->verify_certificate_chain && !settings.s_client->verify_certificate_cn) ||
-        (settings.s_server && !settings.s_server->verify_client_certificate)) {
+    if((settings->s_client &&
+        !settings->s_client->verify_certificate_chain &&
+        !settings->s_client->verify_certificate_cn) ||
+       (settings->s_server &&
+        !settings->s_server->verify_client_certificate))
+    {
         return;
     }
 
-    if(settings.s_client && settings.s_client->verify_certificate_cn) {
-        if(settings.s_client->verify_certificate_chain) {
+    if(settings->s_client &&
+       settings->s_client->verify_certificate_cn)
+    {
+        if(settings->s_client->verify_certificate_chain) {
             if(!cert_chain[0].matches_dns_name(hostname))
-                throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_STATUS_RESPONSE, "Verify common name certificate failed");
+                throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateStatusResponse, "Verify common name certificate failed");
         } else
             Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
     } else
