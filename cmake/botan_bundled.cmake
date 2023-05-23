@@ -4,7 +4,7 @@ set (BOTAN_DIR third/botan)
 set (BOTAN_PATCH_FILE ${PROJECT_SOURCE_DIR}/third/botan.patch)
 set (BOTAN_SRC_DIR ${PROJECT_SOURCE_DIR}/${BOTAN_DIR})
 set (BOTAN_BIN_DIR ${PROJECT_BINARY_DIR}/${BOTAN_DIR})
-set (BOTAN_BUNDLED_LIB ${BOTAN_BIN_DIR}/libbotan-2.a)
+set (BOTAN_BUNDLED_LIB ${BOTAN_BIN_DIR}/libbotan-3.a)
 
 set(BOTAN_CONFIG_ARGS --disable-shared-library --cxxflags=-fPIC --without-documentation)
 

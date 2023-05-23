@@ -1,50 +1,68 @@
-diff -c5 -r botan/src/lib/x509/x509_ext.cpp botan_patched/src/lib/x509/x509_ext.cpp
-*** botan/src/lib/x509/x509_ext.cpp	2020-03-24 13:32:12.088718780 +0200
---- botan_patched/src/lib/x509/x509_ext.cpp	2021-09-14 00:35:53.845208022 +0300
+diff -c5 -r a/src/lib/x509/x509_ext.cpp b/src/lib/x509/x509_ext.cpp
+*** a/src/lib/x509/x509_ext.cpp	2023-05-23 15:58:20.731786834 +0300
+--- b/src/lib/x509/x509_ext.cpp	2023-05-23 17:34:49.159557492 +0300
 ***************
-*** 87,96 ****
---- 87,100 ----
-        }
-     else if(oid == Cert_Extension::Authority_Information_Access::static_oid())
-        {
-        extn.reset(new Cert_Extension::Authority_Information_Access);
-        }
-+    else if(oid == Cert_Extension::TNAuthList::static_oid())
-+       {
-+       extn.reset(new Cert_Extension::TNAuthList);
-+       }
-     else
-        {
-        // some other unknown extension type
-        extn.reset(new Cert_Extension::Unknown_Extension(oid, critical));
-        }
+*** 10,19 ****
+--- 10,20 ----
+  #include <botan/x509_ext.h>
+  #include <botan/x509cert.h>
+  #include <botan/der_enc.h>
+  #include <botan/ber_dec.h>
+  #include <botan/hash.h>
++ #include <botan/asn1_obj.h>
+  #include <botan/internal/loadstor.h>
+  #include <botan/internal/bit_ops.h>
+  #include <algorithm>
+  #include <set>
+  #include <sstream>
 ***************
-*** 1003,1012 ****
---- 1007,1072 ----
-        }
+*** 65,74 ****
+--- 66,78 ----
+        return std::make_unique<Cert_Extension::Extended_Key_Usage>();
   
-     info.add("X509v3.CRLIssuingDistributionPoint", ss.str());
+     if(oid == Cert_Extension::Authority_Information_Access::static_oid())
+        return std::make_unique<Cert_Extension::Authority_Information_Access>();
+  
++    if(oid == Cert_Extension::TNAuthList::static_oid())
++       return std::make_unique<Cert_Extension::TNAuthList>();
++ 
+     return nullptr; // unknown
      }
   
-+ void TNAuthList::TNEntry::encode_into(class DER_Encoder&) const
-+    {
-+    throw Not_Implemented("TNEntry encoding");
-+    }
+  }
+  
+***************
+*** 853,862 ****
+--- 857,916 ----
+  
+  void OCSP_NoCheck::decode_inner(const std::vector<uint8_t>& buf)
+     {
+     BER_Decoder(buf).verify_end();
+     }
++    
++ TNAuthList::TNEntry::TNEntry()
++    {}
++ 
++ TNAuthList::TNEntry::~TNEntry()
++    {}
++ 
++ void TNAuthList::TNEntry::encode_into(DER_Encoder& to) const
++    {}
 + 
 + void TNAuthList::TNEntry::decode_from(class BER_Decoder& ber)
 +    {
 +       BER_Object obj = ber.get_next_object();
-+       if(obj.is_a(TN_ServiceProviderCode, ASN1_Tag(CONSTRUCTED | CONTEXT_SPECIFIC))) {
++       if(obj.is_a(TN_ServiceProviderCode, ASN1_Class::ContextSpecific | ASN1_Class::Constructed)) {
 +           //ServiceProviderCode
 +           type = TN_ServiceProviderCode;
 +           BER_Decoder v(obj.bits(),obj.length());
 +           ASN1_String s;
 +           s.decode_from(v);
 +           spc = s.value();
-+       } else if(obj.is_a(TN_TelephoneNumberRange, ASN1_Tag(CONSTRUCTED | CONTEXT_SPECIFIC))) {
++       } else if(obj.is_a(TN_TelephoneNumberRange, ASN1_Class::ContextSpecific | ASN1_Class::Constructed)) {
 +           //TelephoneNumberRange
 +           type = TN_TelephoneNumberRange;
-+           ber.start_cons(SEQUENCE);
++           ber.start_sequence();
 +           while(ber.more_items()) {
 +               range.emplace_back();
 +               auto &range_entry = range.back();
@@ -54,7 +72,7 @@ diff -c5 -r botan/src/lib/x509/x509_ext.cpp botan_patched/src/lib/x509/x509_ext.
 +               ber.decode(range_entry.count);
 +           }
 +           ber.end_cons();
-+       } else if(obj.is_a(TN_TelephoneNumber, ASN1_Tag(CONSTRUCTED | CONTEXT_SPECIFIC))) {
++       } else if(obj.is_a(TN_TelephoneNumber, ASN1_Class::ContextSpecific | ASN1_Class::Constructed)) {
 +           //TelephoneNumber
 +           type = TN_TelephoneNumber;
 +           BER_Decoder v(obj.bits(),obj.length());
@@ -66,45 +84,53 @@ diff -c5 -r botan/src/lib/x509/x509_ext.cpp botan_patched/src/lib/x509/x509_ext.
 +       }
 +    }
 + 
-+ std::vector<uint8_t> TNAuthList::encode_inner() const
-+    {
-+    throw Not_Implemented("TNAuthList encoding");
-+    }
-+ 
 + void TNAuthList::decode_inner(const std::vector<uint8_t>& in)
-+ {
++    {
 +    m_size = in.size();
 +    BER_Decoder(in).decode_list(m_tn_entries).verify_end();
-+ }
-+ 
-+ void TNAuthList::contents_to(Data_Store&, Data_Store&) const
-+    {
-+    // No information store
 +    }
-+ 
+  
   std::vector<uint8_t> Unknown_Extension::encode_inner() const
      {
      return m_bytes;
      }
-  
-diff -c5 -r botan/src/lib/x509/x509_ext.h botan_patched/src/lib/x509/x509_ext.h
-*** botan/src/lib/x509/x509_ext.h	2020-03-24 13:32:12.088718780 +0200
---- botan_patched/src/lib/x509/x509_ext.h	2021-09-14 00:35:53.845208022 +0300
+diff -c5 -r a/src/lib/x509/x509_ext.h b/src/lib/x509/x509_ext.h
+*** a/src/lib/x509/x509_ext.h	2023-05-23 15:58:20.731786834 +0300
+--- b/src/lib/x509/x509_ext.h	2023-05-23 17:38:52.456282185 +0300
 ***************
-*** 736,745 ****
---- 736,803 ----
+*** 7,17 ****
+--- 7,21 ----
   
-        CRL_Distribution_Points::Distribution_Point m_distribution_point;
+  #ifndef BOTAN_X509_EXTENSIONS_H_
+  #define BOTAN_X509_EXTENSIONS_H_
+  
+  #include <botan/pkix_types.h>
++ #include <botan/asn1_obj.h>
+  #include <set>
++ #include <string>
++ #include <vector>
++ #include <memory>
+  
+  namespace Botan {
+  
+  class X509_Certificate;
+  
+***************
+*** 482,491 ****
+--- 486,561 ----
+        std::vector<uint8_t> encode_inner() const override { return {}; }
+        void decode_inner(const std::vector<uint8_t>&) override;
      };
   
   /**
-+  * TNAuthList extension
-+  * https://datatracker.ietf.org/doc/html/rfc8226
++ * TNAuthList extension
++ *
++ * https://datatracker.ietf.org/doc/html/rfc8226
 + */
-+ class BOTAN_PUBLIC_API(2,0) TNAuthList final : public Certificate_Extension
++ class TNAuthList final : public Certificate_Extension
 +    {
 +    public:
-+       class BOTAN_PUBLIC_API(2,0) TNEntry final : public ASN1_Object
++       class TNEntry final : public ASN1_Object
 +          {
 +          public:
 +             enum Type {
@@ -114,20 +140,24 @@ diff -c5 -r botan/src/lib/x509/x509_ext.h botan_patched/src/lib/x509/x509_ext.h
 +             };
 +             struct TelephoneNumberRange {
 +                std::string start;   //TelephoneNumber (IA5String)
-+                size_t count;  //2..MAX
++                size_t count;        //2..MAX
 +             };
-+             void encode_into(class DER_Encoder&) const override;
-+             void decode_from(class BER_Decoder&) override;
++ 
++             TNEntry();
++             ~TNEntry();
++ 
++             void encode_into(DER_Encoder& to) const override;
++             void decode_from(class BER_Decoder& from) override;
 + 
 +             Type get_type() const { return type; }
 + 
-+             const std::string getServiceProviderCode() const
++             const std::string& getServiceProviderCode() const
 +             { return spc; }
 + 
-+             const std::vector<TelephoneNumberRange> getTelephoneNumberRange() const
++             const std::vector<TelephoneNumberRange>& getTelephoneNumberRange() const
 +             { return range; }
 + 
-+             const std::string getTelephoneNumber() const
++             const std::string& getTelephoneNumber() const
 +             { return one; }
 + 
 +          private:
@@ -137,19 +167,22 @@ diff -c5 -r botan/src/lib/x509/x509_ext.h botan_patched/src/lib/x509/x509_ext.h
 +             std::string one;                         //TelephoneNumber
 +          };
 + 
-+       TNAuthList* copy() const override { return new TNAuthList(); }
++       TNAuthList() = default;
++ 
++       std::unique_ptr<Certificate_Extension> copy() const override { return std::make_unique<TNAuthList>(); }
 +       static OID static_oid() { return OID("1.3.6.1.5.5.7.1.26"); }
 +       OID oid_of() const override { return static_oid(); }
 + 
 +       size_t get_size() const { return m_size; }
-+       const std::vector<TNEntry> get_entries() const { return m_tn_entries; }
++       const std::vector<TNEntry>& get_entries() const { return m_tn_entries; }
 + 
 +    private:
-+       std::string oid_name() const override { return "X509v3.TNAuthList"; }
++       std::string oid_name() const override
++        { return "X509v3.TNAuthList"; }
 + 
-+       std::vector<uint8_t> encode_inner() const override;
-+       void decode_inner(const std::vector<uint8_t>& in) override;
-+       void contents_to(Data_Store&, Data_Store&) const override;
++       bool should_encode() const override { return false; }
++       std::vector<uint8_t> encode_inner() const override { return {}; }
++       void decode_inner(const std::vector<uint8_t>&) override;
 + 
 +       size_t m_size;
 +       std::vector<TNEntry> m_tn_entries;
