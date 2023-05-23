@@ -4,6 +4,7 @@
 #include "cJSON.h"
 
 #include <botan/x509_ca.h>
+#include <botan/pkix_types.h>
 #include <botan/auto_rng.h>
 #include <botan/pkcs8.h>
 
@@ -398,10 +399,20 @@ int encode(int argc, char *argv[])
         return 1;
     }
 
-    Botan::AutoSeeded_RNG rng;
+    auto rng = std::make_shared<Botan::AutoSeeded_RNG>();
+
     std::unique_ptr<Botan::Private_Key> key;
+    //DataSource_Memory key_data(key_path);
+
     try {
-        key.reset(Botan::PKCS8::load_key(key_path, rng));
+        std::ifstream ifs;
+        ifs.open(key_path);
+        if(!ifs.is_open())
+            throw Botan::Exception(std::string("failed to open: ") + key_path);
+
+        Botan::DataSource_Stream datasource(ifs);
+
+        key = Botan::PKCS8::load_key(datasource, std::string_view());
 
         auto identity_header = identity.generate(key.get());
 
@@ -571,7 +582,7 @@ int verify(int argc, char *argv[])
         }
 
         ret = identity.verify(
-            crt.subject_public_key(),
+            crt.subject_public_key().get(),
             time(0) - identity.get_created() + 2);
         if(!ret) {
             last_errcode = identity.get_last_error(last_error);
