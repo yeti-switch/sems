@@ -2,12 +2,12 @@
 #include "log.h"
 #include "base64url.h"
 #include "jsonArg.h"
+#include "AmSession.h"
+#include "AmArgValidator.h"
+
 #include <botan/data_src.h>
 #include <botan/auto_rng.h>
 #include <botan/x509cert.h>
-#include <botan/pk_ops.h>
-#include "AmSession.h"
-#include "AmArgValidator.h"
 
 static const char *jwt_field_tn = "tn";
 static const char *jwt_field_uri = "uri";
@@ -266,8 +266,8 @@ time_t AmIdentity::get_created()
 
 std::string AmIdentity::generate(Botan::Private_Key* key)
 {
-    Botan::AutoSeeded_RNG rnd;
-    std::unique_ptr<Botan::PK_Ops::Signature> ops = key->create_signature_op(rnd, "EMSA1(SHA-256)", "");
+    Botan::AutoSeeded_RNG rng;
+    Botan::PK_Signer signer(*key, rng, "SHA-256");
 
     header[jwt_hdr_claim_alg] = alg_value_es256;
     header[jwt_hdr_claim_x5u] = x5u_url;
@@ -293,11 +293,11 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
     std::string base64_header = base64_url_encode(jwt_header);
     std::string base64_payload= base64_url_encode(jwt_payload);
-    ops->update((uint8_t*)base64_header.c_str(), base64_header.size());
-    ops->update((uint8_t*)".", 1);
-    ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
-    signature.resize(ops->signature_length());
-    Botan::secure_vector<uint8_t> sign_ = ops->sign(rnd);
+    signer.update((uint8_t*)base64_header.c_str(), base64_header.size());
+    signer.update((uint8_t*)".", 1);
+    signer.update((uint8_t*)base64_payload.c_str(), base64_payload.size());
+    signature.resize(signer.signature_length());
+    std::vector<uint8_t> sign_ = signer.signature(rng);
     memcpy((char*)signature.c_str(), sign_.data(), sign_.size());
 
     std::string ret = base64_url_encode(signature);
@@ -324,16 +324,16 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
         return false;
     }
 
-    std::unique_ptr<Botan::PK_Ops::Verification> ops = key->create_verification_op("EMSA1(SHA-256)", "");
+    Botan::PK_Verifier verifier(*key, "SHA-256");
 
     std::string base64_header = base64_url_encode(jwt_header);
     std::string base64_payload= base64_url_encode(jwt_payload);
 
-    ops->update((uint8_t*)base64_header.c_str(), base64_header.size());
-    ops->update((uint8_t*)".", 1);
-    ops->update((uint8_t*)base64_payload.c_str(), base64_payload.size());
+    verifier.update((uint8_t*)base64_header.c_str(), base64_header.size());
+    verifier.update((uint8_t*)".", 1);
+    verifier.update((uint8_t*)base64_payload.c_str(), base64_payload.size());
 
-    bool ret = ops->is_valid_signature((uint8_t*)signature.c_str(), signature.size());
+    bool ret = verifier.check_signature((uint8_t*)signature.c_str(), signature.size());
     if(!ret) {
         last_errstr = "Signature verification Failed";
         last_errcode = ERR_VERIFICATION;
