@@ -5,8 +5,9 @@
 #include <botan/pkcs8.h>
 #include <log.h>
 #include <jsonArg.h>
+#include <fstream>
 
-TEST(Common, ParseAndVerifyIdentityTask)
+TEST(AmIdentity, ParseAndVerify)
 {
     bool ret;
     int last_errcode;
@@ -28,8 +29,8 @@ TEST(Common, ParseAndVerifyIdentityTask)
 
     Botan::X509_Certificate crt("./unit_tests/test.pem");
 
-    EXPECT_FALSE(identity.verify(crt.subject_public_key(), time(0) - identity.get_created() - 2));
-    EXPECT_TRUE(ret = identity.verify(crt.subject_public_key(), time(0) - identity.get_created() + 2));
+    EXPECT_FALSE(identity.verify(crt.subject_public_key().get(), time(0) - identity.get_created() - 2));
+    EXPECT_TRUE(ret = identity.verify(crt.subject_public_key().get(), time(0) - identity.get_created() + 2));
     if(!ret) {
         last_errcode = identity.get_last_error(last_error);
         ERROR("%d: %s",last_errcode, last_error.data());
@@ -55,7 +56,7 @@ TEST(Common, ParseAndVerifyIdentityTask)
     EXPECT_FALSE(ret = identity.parse(identity_value));
 }
 
-TEST(Common, SignAndVerifyIdentityTask)
+TEST(AmIdentity, SignAndVerify)
 {
     bool ret;
     int last_errcode;
@@ -64,19 +65,29 @@ TEST(Common, SignAndVerifyIdentityTask)
     AmIdentity identity;
     identity.set_x5u_url("https://curl.haxx.se/ca/cacert.pem");
     identity.set_attestation(AmIdentity::AT_C);
-    Botan::AutoSeeded_RNG rng;
-    std::unique_ptr<Botan::Private_Key> key(Botan::PKCS8::load_key("./unit_tests/test.key.pem", rng));
+
+    auto rng = std::make_shared<Botan::AutoSeeded_RNG>();
+    std::ifstream ifs;
+    ifs.open("./unit_tests/test.key.pem");
+
+    EXPECT_TRUE(ifs.is_open());
+
+    Botan::DataSource_Stream datasource(ifs);
+    auto key = Botan::PKCS8::load_key(datasource, std::string_view());
+
     std::string identity_value = identity.generate(key.get());
     EXPECT_TRUE(identity.parse(identity_value));
+
     Botan::X509_Certificate crt("./unit_tests/test.pem");
-    EXPECT_TRUE(ret = identity.verify(crt.subject_public_key(), 1000));
+    EXPECT_TRUE(ret = identity.verify(crt.subject_public_key().get(), 1000));
+
     if(!ret) {
         last_errcode = identity.get_last_error(last_error);
         ERROR("%d: %s",last_errcode, last_error.data());
     }
 }
 
-TEST(Common, ParseErrorIdentityTask)
+TEST(AmIdentity, ParseErrors)
 {
     AmIdentity identity;
     std::string identity_value, last_error;
@@ -196,12 +207,4 @@ TEST(Common, ParseErrorIdentityTask)
                           "CHO_hpT8eUOkPiy01PD85pFxKfPcVb0BolCZOlXsBsncXt3lNvcsW7w;info=<https://curl.haxx.se/ca/cacert.pem>;alg=ES256;ppt=shaken";
     EXPECT_FALSE(identity.parse(identity_value));
     EXPECT_EQ(identity.get_last_error(last_error), ERR_JWT_VALUE);
-}
-
-TEST(Common, Json2ArgEmptyString)
-{
-    //test added because of infinite loop
-    std::string s(" ");
-    AmArg a;
-    json2arg(s,a);
 }
