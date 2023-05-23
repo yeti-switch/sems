@@ -324,12 +324,12 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
   int ret = -1;
   
   AmAudioFileFormat* f_fmt = static_cast<AmAudioFileFormat*>(fmt.get());
-  if(open_mode == AmAudioFile::Write){
-
-  if (f_fmt->channels<0)
-    ERROR("channel count must be set for output file.");
-    close();
-    return -1;
+  if(open_mode == AmAudioFile::Write) {
+    if (f_fmt->channels<0) {
+      ERROR("channel count must be set for output file.");
+      close();
+      return -1;
+    }
   }
 
   fd.subtype = f_fmt->getSubtypeId();
