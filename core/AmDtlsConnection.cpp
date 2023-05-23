@@ -48,10 +48,13 @@ void dtls_conf::operator=(const dtls_conf& conf)
     key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
 }
 
-Botan::Private_Key * dtls_conf::private_key_for(const Botan::X509_Certificate& cert, const string& type, const string& context)
+std::shared_ptr<Botan::Private_Key> dtls_conf::private_key_for(
+    const Botan::X509_Certificate& cert,
+    const string& type,
+    const string& context)
 {
     if(key) {
-        return &*key;
+        return key;
     }
     return nullptr;
 }
@@ -71,29 +74,6 @@ vector<Botan::Certificate_Store *> dtls_conf::trusted_certificate_authorities(co
     }
 
     return settings->getCertificateAuthorityCopy();
-}
-
-bool dtls_conf::allow_dtls10() const
-{
-    dtls_settings* settings = 0;
-    if(s_client) {
-        settings = s_client;
-    } else if(s_server) {
-        settings = s_server;
-    }
-
-    if(!settings) {
-        ERROR("incorrect pointer");
-        return false;
-    }
-
-    for(auto& proto : settings->protocols) {
-        if(proto == dtls_client_settings::DTLSv1) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 bool dtls_conf::allow_dtls12() const
@@ -188,11 +168,15 @@ vector<string> dtls_conf::allowed_signature_methods() const
     }
 }
 
-vector<Botan::X509_Certificate> dtls_conf::cert_chain(const vector<string>& cert_key_types, const string& type, const string& context)
+vector<Botan::X509_Certificate> dtls_conf::cert_chain(
+    const vector<string>& cert_key_types,
+    const std::vector<Botan::AlgorithmIdentifier>& cert_signature_schemes,
+    const string& type,
+    const string& context)
 {
     vector<Botan::X509_Certificate> certs;
     for(auto& cert : certificates) {
-        std::string algorithm = cert.load_subject_public_key()->algo_name();
+        std::string algorithm = cert.subject_public_key()->algo_name();
         for(auto& key : cert_key_types) {
             if(algorithm == key) {
                 DBG("added certificate with algorithm %s", algorithm.c_str());
@@ -246,14 +230,16 @@ void DtlsTimer::reset()
 }
 
 AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN)
-    , is_client(client)
-    , dtls_settings()
-    , dtls_channel(0)
-    , fingerprint(_fingerprint)
-    , srtp_profile(srtp_profile_reserved)
-    , activated(false)
-    , pending_handshake_timer(nullptr)
+  : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN),
+    tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
+    dtls_channel(nullptr),
+    dtls_settings(),
+    fingerprint(_fingerprint),
+    srtp_profile(srtp_profile_reserved),
+    rand_gen(std::make_shared<Botan::AutoSeeded_RNG>()),
+    activated(false),
+    is_client(client),
+    pending_handshake_timer(nullptr)
 {
     initConnection();
 }
@@ -284,13 +270,25 @@ void AmDtlsConnection::initConnection()
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     try {
         if(is_client) {
-            dtls_settings.reset(new dtls_conf(&rtpinfo->client_settings));
-            dtls_channel = new Botan::TLS::Client(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen,
-                                                Botan::TLS::Server_Information(r_host.c_str(), r_port),
-                                                Botan::TLS::Protocol_Version::DTLS_V12);
+            dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->client_settings);
+            dtls_channel = new Botan::TLS::Client(
+                tls_callbacks_proxy,
+                session_manager_dtls::instance()->ssm,
+                dtls_settings,
+                dtls_settings,
+                rand_gen,
+                Botan::TLS::Server_Information(
+                    r_host.c_str(), r_port),
+                    Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
-            dtls_settings.reset(new dtls_conf(&rtpinfo->server_settings));
-            dtls_channel = new Botan::TLS::Server(*this, *session_manager_dtls::instance(), *dtls_settings, *dtls_settings,rand_gen, true);
+            dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->server_settings);
+            dtls_channel = new Botan::TLS::Server(
+                tls_callbacks_proxy,
+                session_manager_dtls::instance()->ssm,
+                dtls_settings,
+                dtls_settings,
+                rand_gen,
+                true);
         }
 
         pending_handshake_timer = new DtlsTimer(this);
@@ -343,13 +341,16 @@ void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)
 {
 }
 
-void AmDtlsConnection::tls_emit_data(const uint8_t data[], size_t size)
+void AmDtlsConnection::tls_emit_data(std::span<const uint8_t> data)
 {
     assert(transport);
-    transport->send(&r_addr, (unsigned char*)data, size, AmStreamConnection::DTLS_CONN);
+    transport->send(
+        &r_addr,
+        (unsigned char*)data.data(), data.size(),
+        AmStreamConnection::DTLS_CONN);
 }
 
-void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[], size_t size)
+void AmDtlsConnection::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
 {
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
@@ -359,7 +360,7 @@ void AmDtlsConnection::tls_record_received(uint64_t seq_no, const uint8_t data[]
     p->relayed = false;
     p->setAddr(&r_addr);
     p->setLocalAddr(&laddr);
-    p->setBuffer((unsigned char*)data, size);
+    p->setBuffer((unsigned char*)data.data(), data.size());
     transport->onRawPacket(p, this);
 }
 
@@ -386,21 +387,21 @@ void AmDtlsConnection::tls_session_activated()
     activated = true;
 }
 
-bool AmDtlsConnection::tls_session_established(const Botan::TLS::Session& session)
+void AmDtlsConnection::tls_session_established(const Botan::TLS::Session_Summary& session)
 {
     DBG("************ on_dtls_connect() ***********");
     DBG("new DTLS connection from %s:%u", r_host.c_str(),r_port);
 
     srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();
-    return true;
 }
 
-void AmDtlsConnection::tls_verify_cert_chain(const vector<Botan::X509_Certificate>& cert_chain,
-                                             const vector<shared_ptr<const Botan::OCSP::Response> >& ocsp_responses,
-                                             const vector<Botan::Certificate_Store *>& trusted_roots,
-                                             Botan::Usage_Type usage,
-                                             const string& hostname,
-                                             const Botan::TLS::Policy& policy)
+void AmDtlsConnection::tls_verify_cert_chain(
+    const std::vector<Botan::X509_Certificate>& cert_chain,
+    const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
+    const std::vector<Botan::Certificate_Store*>& trusted_roots,
+    Botan::Usage_Type usage,
+    std::string_view hostname,
+    const Botan::TLS::Policy& policy)
 {
     if((dtls_settings->s_client && !dtls_settings->s_client->verify_certificate_chain &&
         !dtls_settings->s_client->verify_certificate_cn) ||
@@ -411,7 +412,7 @@ void AmDtlsConnection::tls_verify_cert_chain(const vector<Botan::X509_Certificat
     if(dtls_settings->s_client && dtls_settings->s_client->verify_certificate_cn) {
         if(!dtls_settings->s_client->verify_certificate_chain) {
             if(!cert_chain[0].matches_dns_name(hostname))
-                throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_STATUS_RESPONSE, "Verify common name certificate failed");
+                throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateStatusResponse, "Verify common name certificate failed");
         } else
             Botan::TLS::Callbacks::tls_verify_cert_chain(cert_chain, ocsp_responses, trusted_roots, usage, "", policy);
     } else
@@ -419,5 +420,5 @@ void AmDtlsConnection::tls_verify_cert_chain(const vector<Botan::X509_Certificat
 
     std::transform(fingerprint.hash.begin(), fingerprint.hash.end(), fingerprint.hash.begin(), static_cast<int(*)(int)>(std::toupper));
     if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
-        throw Botan::TLS::TLS_Exception(Botan::TLS::Alert::BAD_CERTIFICATE_HASH_VALUE, "fingerprint is not equal");
+        throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateHashValue, "fingerprint is not equal");
 }
