@@ -2,7 +2,7 @@
 #include "Config.h"
 #include "WorkersManager.h"
 #include <gtest/gtest.h>
-#include <botan/locking_allocator.h>
+#include <botan/internal/locking_allocator.h>
 #include "AmApi.h"
 #include "AmLcConfig.h"
 #include "AmSessionProcessor.h"

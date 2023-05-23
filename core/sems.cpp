@@ -82,7 +82,7 @@ using std::string;
 #include <getopt.h>
 #endif
 
-#include <botan/locking_allocator.h>
+#include <botan/internal/locking_allocator.h>
 
 const char* progname = NULL;    /**< Program name (actually argv[0])*/
 int main_pid = 0;               /**< Main process PID */

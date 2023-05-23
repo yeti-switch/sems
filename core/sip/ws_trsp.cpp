@@ -10,7 +10,7 @@
 #include "msg_hdrs.h"
 #include "defs.h"
 
-#include "botan/sha160.h"
+#include "botan/internal/sha1.h"
 #include "botan/base64.h"
 
 #include "AmUtils.h"
