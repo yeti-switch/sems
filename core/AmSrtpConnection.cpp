@@ -169,9 +169,9 @@ std::string AmSrtpConnection::gen_base64(unsigned int key_s_len)
 {
     unsigned int len = 0;
     std::vector<uint8_t> data;
-    dtls_rand_generator rand_gen;
     while(len != key_s_len) {
-        const Botan::UUID random_uuid(rand_gen);
+        Botan::AutoSeeded_RNG rng;
+        const Botan::UUID random_uuid(rng);
         if(key_s_len < len + random_uuid.binary_value().size()) {
             data.insert(data.end(), random_uuid.binary_value().begin(), random_uuid.binary_value().begin() + (key_s_len - len));
         } else {
