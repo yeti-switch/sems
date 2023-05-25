@@ -1065,6 +1065,8 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
                 connection_line_is_processed = true;
             }
 
+            setRtcpMultiplexing(m.is_multiplex);
+
             RTPStream()->setLocalIP(addrtype);
             RTPStream()->getSdpAnswer(media_index,m,answer_media);
 
