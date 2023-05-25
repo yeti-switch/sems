@@ -314,7 +314,9 @@ srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settin
     return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
 }
 
-void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size,
+                                        struct sockaddr_storage*,
+                                        struct timeval)
 {
     try {
         size_t res = dtls_channel->received_data(data, size);
@@ -322,8 +324,10 @@ void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size, struct
             CLASS_DBG("need else %zu", res);
         }
     } catch(Botan::Exception& exc) {
-        string error("unforseen error in dtls:");
-        transport->getRtpStream()->onErrorRtpTransport(DTLS_ERROR, error + exc.what(), transport);
+        transport->getRtpStream()->onErrorRtpTransport(
+            DTLS_ERROR,
+            string("DTLS error: ") + exc.what(),
+            transport);
     }
 }
 
