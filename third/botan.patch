@@ -1,6 +1,29 @@
+diff -c5 -r a/src/lib/tls/tls12/tls_channel_impl_12.cpp b/src/lib/tls/tls12/tls_channel_impl_12.cpp
+*** a/src/lib/tls/tls12/tls_channel_impl_12.cpp	2023-05-26 01:51:41.236304063 +0300
+--- b/src/lib/tls/tls12/tls_channel_impl_12.cpp	2023-05-26 01:55:01.684880698 +0300
+***************
+*** 344,353 ****
+--- 344,360 ----
+                 }
+              else if(auto pending = pending_state())
+                 {
+                 if(pending->server_hello() != nullptr && record.version() != pending->version())
+                    {
++                   if(m_is_datagram && record.type() == Record_Type::Handshake)
++                      {
++                      //ignore Client Hello retransmit
++                      //https://github.com/randombit/botan/issues/2316
++                      //FIXME: should we fix pending sequences marking instead ?
++                      return 0;
++                      }
+                    throw TLS_Exception(Alert::ProtocolVersion,
+                                           "Received unexpected record version");
+                    }
+                 }
+              else if(auto active = active_state())
 diff -c5 -r a/src/lib/x509/x509_ext.cpp b/src/lib/x509/x509_ext.cpp
-*** a/src/lib/x509/x509_ext.cpp	2023-05-23 15:58:20.731786834 +0300
---- b/src/lib/x509/x509_ext.cpp	2023-05-23 17:34:49.159557492 +0300
+*** a/src/lib/x509/x509_ext.cpp	2023-05-26 01:51:41.256304120 +0300
+--- b/src/lib/x509/x509_ext.cpp	2023-05-26 01:51:49.288327161 +0300
 ***************
 *** 10,19 ****
 --- 10,20 ----
@@ -95,8 +118,8 @@ diff -c5 -r a/src/lib/x509/x509_ext.cpp b/src/lib/x509/x509_ext.cpp
      return m_bytes;
      }
 diff -c5 -r a/src/lib/x509/x509_ext.h b/src/lib/x509/x509_ext.h
-*** a/src/lib/x509/x509_ext.h	2023-05-23 15:58:20.731786834 +0300
---- b/src/lib/x509/x509_ext.h	2023-05-23 17:38:52.456282185 +0300
+*** a/src/lib/x509/x509_ext.h	2023-05-26 01:51:41.256304120 +0300
+--- b/src/lib/x509/x509_ext.h	2023-05-26 01:51:49.276327127 +0300
 ***************
 *** 7,17 ****
 --- 7,21 ----
