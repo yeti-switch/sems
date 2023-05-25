@@ -1642,7 +1642,7 @@ void AmRtpStream::useIce()
 
 void AmRtpStream::setMultiplexing(bool multiplex)
 {
-    CLASS_DBG("set using rtcp-mux");
+    CLASS_DBG("set using rtcp-mux %d -> %d", multiplexing, multiplex);
     multiplexing = multiplex;
 }
 
