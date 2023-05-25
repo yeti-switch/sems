@@ -270,6 +270,10 @@ void AmDtlsConnection::initConnection()
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     try {
         if(is_client) {
+            if(!rtpinfo->dtls_enable)
+                throw string("DTLS is not configured on: ") +
+                    AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
+
             dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->client_settings);
             dtls_channel = new Botan::TLS::Client(
                 tls_callbacks_proxy,
@@ -281,6 +285,10 @@ void AmDtlsConnection::initConnection()
                     r_host.c_str(), r_port),
                     Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
+            if(!rtpinfo->dtls_enable)
+                throw string("DTLS is not configured on: ") +
+                    AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
+
             dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->server_settings);
             dtls_channel = new Botan::TLS::Server(
                 tls_callbacks_proxy,
