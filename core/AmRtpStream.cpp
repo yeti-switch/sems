@@ -186,7 +186,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     bzero(local_telephone_event_payloads, sizeof(local_telephone_event_payloads));
 
     if(_s) {
-        multiplexing = _s->isRtcpMultiplexing();
+        setMultiplexing(_s->isRtcpMultiplexing());
     }
 }
 
@@ -544,9 +544,14 @@ void AmRtpStream::initIP6Transport()
 
 void AmRtpStream::getSdp(SdpMedia& m)
 {
+    m.is_multiplex = multiplexing;
+
     m.port = getLocalPort();
+    m.rtcp_port = multiplexing ? 0 : getLocalRtcpPort();
     m.nports = 0;
+
     m.transport = transport;
+
     m.send = !hold;
     m.recv = receiving;
     m.dir = SdpMedia::DirBoth;
@@ -570,8 +575,8 @@ void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
     updateTransports();
 
     getSdp(offer);
-    offer.is_multiplex = multiplexing;
     offer.payloads.clear();
+
     if(transport == TP_UDPTL || transport == TP_UDPTLSUDPTL) {
         cur_udptl_trans->getSdpOffer(offer);
     } else {
@@ -593,8 +598,6 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
     sdp_media_index = index;
     transport = offer.transport;
     is_ice_stream = offer.is_use_ice();
-    answer.rtcp_port = getLocalRtcpPort();
-    answer.is_multiplex = multiplexing;
 
     updateTransports();
 
@@ -1639,7 +1642,7 @@ void AmRtpStream::useIce()
 
 void AmRtpStream::setMultiplexing(bool multiplex)
 {
-    CLASS_DBG("set using ice protocol");
+    CLASS_DBG("set using rtcp-mux");
     multiplexing = multiplex;
 }
 
