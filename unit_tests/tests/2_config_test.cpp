@@ -6,6 +6,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <unordered_set>
 
 void freePortBordersTest(unsigned short low, unsigned short high)
 {
@@ -127,6 +128,173 @@ TEST(Config, MediaFreePortAquireOrdering)
     } while(free_ports_left > 0);
 
     EXPECT_FALSE(info.getNextRtpAddress(ss));
+}
+
+bool rand_bool() {
+  int g = std::rand();
+  return (g % 2); // 1 is converted to true and 0 as false
+}
+
+TEST(Config, AccuireReleaseMediaPorts)
+{
+    std::srand(time(0));
+
+    int low = 64;
+    int high = 65535;
+
+    RTP_info port_map(low, high);
+    port_map.prepare("test");
+
+    int start = low >> 6;
+    int end = (high >> 6) + !!(high%64);
+
+    DBG("start %d end %d", start, end);
+
+    int aq_threads_count = 100;
+    int rm_threads_count = 100;
+    int aq_count = (end - start) * 8;
+    int rm_count = (end - start);
+
+    std::mutex m;
+    std::unordered_set<int> aquired_ports, port_map_used_ports;
+    std::vector<std::thread> threads;
+
+    DBG("start %d threads with %d aquires for range %d-%d",
+        aq_threads_count, aq_count, low, high);
+
+    for(int i = 0; i < aq_threads_count; ++i) {
+        threads.emplace_back([&]() {
+            int port;
+            sockaddr_storage ss;
+            for(int i = aq_count; i; --i) {
+                if (port_map.getNextRtpAddress(ss)) {
+                    port = am_get_port(&ss);
+
+                    m.lock();
+                    aquired_ports.emplace(port);
+                    m.unlock();
+                    //DBG(" >> aquire %d", port);
+                }
+            }
+        });
+    }
+
+    DBG("start %d threads with %d release for range %d-%d",
+        rm_threads_count, rm_count, low, high);
+
+    for(int i = 0; i < rm_threads_count; ++i) {
+        threads.emplace_back([&]() {
+            int port;
+            sockaddr_storage ss;
+            for(int i = rm_count; i; --i) {
+
+                m.lock();
+                auto it = aquired_ports.begin();
+                if (it != aquired_ports.end()) {
+                    port = *it;
+                    aquired_ports.erase(it);
+                    m.unlock();
+                } else {
+                    WARN("aquired_ports is empty");
+                    m.unlock();
+                    break;
+                }
+
+
+                //DBG("remove %d << ", port);
+                am_set_port(&ss, port);
+                port_map.freeRtpAddress(ss);
+            }
+        });
+    }
+
+    for(auto &t : threads)
+        t.join();
+
+    port_map.iterateUsedPorts([&](
+        const std::string& address,
+        unsigned short port1,
+        unsigned short port2) {
+        port_map_used_ports.emplace(port1);
+    });
+
+    INFO("compare resulst");
+    INFO("  aquired_ports.size() == %d", aquired_ports.size());
+    INFO("  port_map_used_ports.size() == %d", port_map_used_ports.size());
+    GTEST_ASSERT_EQ(aquired_ports, port_map_used_ports);
+}
+
+TEST(Config, FillPoolMediaPorts)
+{
+    std::srand(time(0));
+
+    int low = 64;
+    int high = 65535;
+
+    RTP_info port_map(low, high);
+    port_map.prepare("test");
+
+    int start = low >> 6;
+    int end = (high >> 6) + !!(high%64);
+
+    DBG("start %d end %d", start, end);
+
+    int aq_count = (end - start) * 32 + 1; // fill pool
+    int rm_count = (end - start) * 32;
+
+    std::mutex m;
+    std::unordered_set<int> aquired_ports, port_map_used_ports;
+
+    for (int i = 3; i; --i) {
+        int port;
+        sockaddr_storage ss;
+        DBG("start aquiring of %d items in %d-%d range", aq_count, low, high);
+        for(int i = aq_count; i; --i) {
+            if (port_map.getNextRtpAddress(ss)) {
+                port = am_get_port(&ss);
+
+                m.lock();
+                aquired_ports.emplace(port);
+                m.unlock();
+                //DBG("aquire %d", port);
+            } else {
+                DBG("pool is full");
+            }
+        }
+
+        DBG("start releasing of %d items in %d-%d range", rm_count, low, high);
+        for(int i = rm_count; i; --i) {
+
+            m.lock();
+            auto it = aquired_ports.begin();
+            if (it != aquired_ports.end()) {
+                port = *it;
+                aquired_ports.erase(it);
+                m.unlock();
+            } else {
+                WARN("aquired_ports is empty");
+                m.unlock();
+                break;
+            }
+
+
+            //DBG("remove %d", port);
+            am_set_port(&ss, port);
+            port_map.freeRtpAddress(ss);
+        }
+    }
+
+    port_map.iterateUsedPorts([&](
+        const std::string& address,
+        unsigned short port1,
+        unsigned short port2) {
+        port_map_used_ports.emplace(port1);
+    });
+
+    INFO("compare resulst");
+    INFO("  aquired_ports.size() == %d", aquired_ports.size());
+    INFO("  port_map_used_ports.size() == %d", port_map_used_ports.size());
+    GTEST_ASSERT_EQ(aquired_ports, port_map_used_ports);
 }
 
 TEST(Config, DISABLED_MediaAquireOrderingMultithreaded)
