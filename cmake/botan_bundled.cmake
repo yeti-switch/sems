@@ -6,7 +6,7 @@ set (BOTAN_SRC_DIR ${PROJECT_SOURCE_DIR}/${BOTAN_DIR})
 set (BOTAN_BIN_DIR ${PROJECT_BINARY_DIR}/${BOTAN_DIR})
 set (BOTAN_BUNDLED_LIB ${BOTAN_BIN_DIR}/libbotan-3.a)
 
-set(BOTAN_CONFIG_ARGS --disable-shared-library --cxxflags=-fPIC --without-documentation)
+set(BOTAN_CONFIG_ARGS --cxxflags=-fPIC --disable-shared-library --without-documentation --build-targets=static)
 
 add_custom_target(libbotan ALL DEPENDS ${BOTAN_BUNDLED_LIB})
 
