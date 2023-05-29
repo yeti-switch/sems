@@ -45,3 +45,5 @@ debian/sems-dev-utils
 debian/tmp
 doc/doxygen_doc
 *.kdev4
+third/confuse/support/config.*
+third/spandsp/support/config.*
