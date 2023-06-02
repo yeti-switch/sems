@@ -8,7 +8,7 @@
 #define MAX_TS_DIFF 160
 
 AmAudioFileRecorderStereo::file_data::file_data(const std::string& path)
-: path(path)
+: path(path), mark_stop(false)
 {
     open();
 }
@@ -96,7 +96,8 @@ int AmAudioFileRecorderStereo::put(unsigned char *lbuf, unsigned char *rbuf, siz
 {
     //DBG("    %s(%p,%p,%ld)",FUNC_NAME,lbuf,rbuf,l);
     for(auto &f: files) {
-        f->put(out,lbuf,rbuf,l);
+        if(!f->is_stopped())
+            f->put(out,lbuf,rbuf,l);
     }
     return 0;
 }
@@ -107,6 +108,20 @@ int AmAudioFileRecorderStereo::put(unsigned char *lbuf, unsigned char *rbuf, siz
     ? ((lsize) < (rsize) ? (lsize) : (rsize)) \
     : 0 \
 )
+
+void AmAudioFileRecorderStereo::markStopRecord(const string& file_path)
+{
+    int l = match_buffers(ts_l,size_l,ts_r,size_r);
+    if(l) {
+        put(samples_l,samples_r,l);
+        ts_l = 0;
+        ts_r = 0;
+    }
+    for(auto &f: files) {
+        if(file_path.empty() || file_path == f->get_path())
+            f->mark_stopped();
+    }
+}
 
 unsigned int AmAudioFileRecorderStereo::resample(
     AmAudioFileRecorderStereo::ResamplingStatePtr &state,

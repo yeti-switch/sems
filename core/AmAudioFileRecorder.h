@@ -45,6 +45,10 @@ class AmAudioFileRecorder {
     {
         throw std::logic_error("not implemented");
     }
+    virtual void markStopRecord(const string& file_path)
+    {
+        throw std::logic_error("not implemented");
+    }
 };
 
 struct AudioRecorderEvent
@@ -57,7 +61,8 @@ struct AudioRecorderEvent
         delRecorder,
         delStereoRecorder,
         putSamples,
-        putStereoSamples
+        putStereoSamples,
+        markStopRecord
     } event_id;
 
     AudioRecorderEvent(const string &recorder_id, event_type event_id)
@@ -81,6 +86,7 @@ struct AudioRecorderEvent
         case addStereoRecorder:
         case delStereoRecorder:
         case putStereoSamples:
+        case markStopRecord:
             return RecorderClassStereo;
         default:
             throw std::logic_error("unknown event type");

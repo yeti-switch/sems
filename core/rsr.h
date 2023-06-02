@@ -8,6 +8,7 @@ enum DataType
     //number of last symbol (ASCII table) >:)
     DATA_SAMPLES = 0x73,
     DATA_META    = 0x61,
+    DATA_NEW_META= 0x62,
     DATA_COMMON  = 0x6e
 };
 
@@ -29,6 +30,12 @@ struct file_metadata
     unsigned long long offset;
 };
 
+struct file_new_metadata
+{
+    unsigned long long offset;
+    unsigned long long offset_end;
+};
+
 struct common_data
 {
     unsigned long long timestamp;
@@ -44,6 +51,7 @@ struct chunk
         common_data common;
         samples_data samples;
         file_metadata file;
+        file_new_metadata new_file;
     } data;
 };
 

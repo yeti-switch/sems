@@ -11,7 +11,14 @@ public:
     AmAudioFileRecorderStereoRaw(const string& id);
     ~AmAudioFileRecorderStereoRaw();
 private:
-    map<string, unsigned long long> files;
+    struct file_offsets
+    {
+        unsigned long long begin;
+        unsigned long long end;
+        file_offsets(unsigned long long begin_)
+        : begin(begin_), end(0){}
+    };
+    map<string, file_offsets> files;
     map<unsigned char, unsigned long long> last_ts;
     FILE* fp;
     int max_sample_rate;
@@ -19,5 +26,8 @@ protected:
     virtual int init(const string &path, const string &sync_ctx);
     virtual int add_file(const string &path);
     virtual void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id);
+    virtual void markStopRecord(const string& file_path);
+
+    unsigned long long get_last_ts();
 };
 

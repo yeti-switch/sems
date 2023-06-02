@@ -42,6 +42,16 @@ struct AudioRecorderStereoSamplesEvent
     }
 };
 
+struct AudioRecorderMarkStopEvent
+  : AudioRecorderEvent
+{
+    string file_path;
+
+    AudioRecorderMarkStopEvent(const string& recorder_id, const string& file_path = "")
+      : AudioRecorderEvent(recorder_id, markStopRecord)
+      , file_path(file_path){}
+};
+
 class AmAudioFileRecorderStereo
   : public AmAudioFileRecorder
 {
@@ -72,6 +82,7 @@ protected:
       protected:
         string path;
         FILE* fp;
+        bool mark_stop;
         
         void open();
         void close();
@@ -79,12 +90,16 @@ protected:
         file_data(const string &path);
         virtual ~file_data();
         virtual int put(unsigned char *out, unsigned char *lbuf, unsigned char *rbuf, size_t l) = 0;
+        void mark_stopped() { mark_stop = true; }
+        bool is_stopped() { return mark_stop; }
+        string get_path() { return path; }
         
         bool operator ==(const string &new_path);
     };
     
     unsigned long long ts_l,
                        ts_r;
+
     unsigned char samples_l[IN_BUF_SIZE],
                   samples_r[IN_BUF_SIZE];
     unsigned char out[OUT_BUF_SIZE];
@@ -102,6 +117,7 @@ public:
     int init(const string &path, const string &sync_ctx);
     int add_file(const string &path);
     int put(unsigned char *lbuf, unsigned char *rbuf, size_t l);
+    void markStopRecord(const string& file_path);
 
     void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id);
 

@@ -35,10 +35,12 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
     meta_offset = static_cast<int>(ftell(fp));
 
     for(auto& file : files) {
-        data.data.file.offset = file.second;
-        data.header.type = DATA_META;
-        data.header.size = static_cast<unsigned int >(file.first.size() + sizeof(file_metadata));
-        fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata), fp);
+        data.data.new_file.offset = file.second.begin;
+        data.data.new_file.offset_end = file.second.end ? file.second.end : get_last_ts();
+        DBG("~AmAudioFileRecorderStereoRaw: file %s, offsets %llu-%llu", file.first.c_str(), file.second.begin, file.second.end);
+        data.header.type = DATA_NEW_META;
+        data.header.size = static_cast<unsigned int >(file.first.size() + sizeof(file_new_metadata));
+        fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_new_metadata), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
     }
 
@@ -71,13 +73,7 @@ int AmAudioFileRecorderStereoRaw::init(const string &path, const string &sync_ct
 
 int AmAudioFileRecorderStereoRaw::add_file(const string &path)
 {
-    unsigned long long ts = 0;
-    for(auto& i : last_ts) {
-        if(ts < i.second) {
-            ts = i.second;
-        }
-    }
-
+    unsigned long long ts = get_last_ts();
     files.emplace(path, ts);
     return 0;
 }
@@ -99,4 +95,25 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
     data.header.size = size + sizeof(samples_data);
     fwrite(&data, 1, sizeof(data_chunk) + sizeof(samples_data), fp);
     fwrite(samples, 1, size, fp);
+}
+
+void AmAudioFileRecorderStereoRaw::markStopRecord(const string& file_path)
+{
+    for(auto &file : files) {
+        if(file_path.empty() || file_path == file.first) {
+            if(!file.second.end) file.second.end = get_last_ts();
+            DBG("mark end of file %s on timestamp %llu", file_path.c_str(), file.second.end);
+        }
+    }
+}
+
+unsigned long long AmAudioFileRecorderStereoRaw::get_last_ts()
+{
+    unsigned long long ts = 0;
+    for(auto& i : last_ts) {
+        if(ts < i.second) {
+            ts = i.second;
+        }
+    }
+    return ts;
 }
