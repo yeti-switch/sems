@@ -8,7 +8,9 @@
 #define MAX_TS_DIFF 160
 
 AmAudioFileRecorderStereo::file_data::file_data(const std::string& path)
-: path(path), mark_stop(false)
+  : path(path),
+    fp(nullptr),
+    stopped(false)
 {
     open();
 }
@@ -109,7 +111,7 @@ int AmAudioFileRecorderStereo::put(unsigned char *lbuf, unsigned char *rbuf, siz
     : 0 \
 )
 
-void AmAudioFileRecorderStereo::markStopRecord(const string& file_path)
+void AmAudioFileRecorderStereo::markRecordStopped(const string& file_path)
 {
     int l = match_buffers(ts_l,size_l,ts_r,size_r);
     if(l) {

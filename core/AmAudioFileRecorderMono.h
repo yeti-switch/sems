@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AmAudioFileRecorder.h"
+#include "AmAudioFile.h"
 
 struct AudioRecorderSamplesEvent
   : AudioRecorderEvent

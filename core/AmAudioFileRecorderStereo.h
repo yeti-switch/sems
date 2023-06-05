@@ -42,14 +42,15 @@ struct AudioRecorderStereoSamplesEvent
     }
 };
 
-struct AudioRecorderMarkStopEvent
+struct AudioRecorderMarkStoppedEvent
   : AudioRecorderEvent
 {
     string file_path;
 
-    AudioRecorderMarkStopEvent(const string& recorder_id, const string& file_path = "")
-      : AudioRecorderEvent(recorder_id, markStopRecord)
-      , file_path(file_path){}
+    AudioRecorderMarkStoppedEvent(const string& recorder_id, const string& file_path = "")
+      : AudioRecorderEvent(recorder_id, markRecordStopped),
+        file_path(file_path)
+    {}
 };
 
 class AmAudioFileRecorderStereo
@@ -77,23 +78,28 @@ class AmAudioFileRecorderStereo
     AmAudioFileRecorderStereo(StereoRecorderType type, unsigned int file_samplerate, const string& id);
     virtual ~AmAudioFileRecorderStereo();
 
-protected:
+  protected:
     class file_data {
       protected:
         string path;
         FILE* fp;
-        bool mark_stop;
-        
+        bool stopped;
+
         void open();
         void close();
       public:
         file_data(const string &path);
         virtual ~file_data();
-        virtual int put(unsigned char *out, unsigned char *lbuf, unsigned char *rbuf, size_t l) = 0;
-        void mark_stopped() { mark_stop = true; }
-        bool is_stopped() { return mark_stop; }
+
+        virtual int put(unsigned char *out,
+                        unsigned char *lbuf,
+                        unsigned char *rbuf,
+                        size_t l) = 0;
+
         string get_path() { return path; }
-        
+        void mark_stopped() { stopped = true; }
+        bool is_stopped() { return stopped; }
+
         bool operator ==(const string &new_path);
     };
     
@@ -113,15 +119,19 @@ protected:
 
     virtual file_data* create_file_data(const string &path) = 0;
 
-public:
-    int init(const string &path, const string &sync_ctx);
-    int add_file(const string &path);
+  public:
+    int init(const string &path, const string &sync_ctx) override;
+    int add_file(const string &path) override;
+    void markRecordStopped(const string& file_path) override;
+    void writeStereoSamples(unsigned long long ts,
+                            unsigned char *samples,
+                            size_t size,
+                            int input_sample_rate,
+                            int channel_id) override;
+
     int put(unsigned char *lbuf, unsigned char *rbuf, size_t l);
-    void markStopRecord(const string& file_path);
 
-    void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id);
-
-private:
+  private:
     unsigned int resample(ResamplingStatePtr &state, unsigned char *samples, unsigned int size, int input_sample_rate);
 };
 

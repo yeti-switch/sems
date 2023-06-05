@@ -237,11 +237,13 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
         r.erase(recorder_it);
         recorders_closed++;
     break;
-    case AudioRecorderEvent::markStopRecord:
-        DBG("mark recorder %p as stopped with id: %s",
-            recorder,recorder_it->first.c_str());
-        AudioRecorderMarkStopEvent &stop_event = static_cast<AudioRecorderMarkStopEvent&>(ev);
-        recorder->markStopRecord(stop_event.file_path);
+    case AudioRecorderEvent::markRecordStopped:
+        const auto &stop_event = static_cast<AudioRecorderMarkStoppedEvent&>(ev);
+        DBG("mark recorder %p(%s) as stopped. file_path:'%s'",
+            recorder, recorder_it->first.c_str(),
+            stop_event.file_path.c_str()
+        );
+        recorder->markRecordStopped(stop_event.file_path);
     } //switch(ev.event_id)
 }
 

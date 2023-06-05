@@ -3,7 +3,6 @@
 #include <singleton.h>
 #include "AmEventFdQueue.h"
 #include "AmAudio.h"
-#include "AmAudioFile.h"
 
 #include <queue>
 #include <list>
@@ -37,15 +36,23 @@ class AmAudioFileRecorder {
     virtual int init(const string &path, const string &sync_ctx) = 0;
     virtual int add_file(const string &path) = 0;
 
-    virtual void writeSamples(unsigned char *samples, size_t size, int input_sample_rate)
+    virtual void writeSamples([[maybe_unused]] unsigned char *samples,
+                              [[maybe_unused]] size_t size,
+                              [[maybe_unused]] int input_sample_rate)
     {
         throw std::logic_error("not implemented");
     }
-    virtual void writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id)
+
+    virtual void writeStereoSamples([[maybe_unused]] unsigned long long ts,
+                                    [[maybe_unused]] unsigned char *samples,
+                                    [[maybe_unused]] size_t size,
+                                    [[maybe_unused]] int input_sample_rate,
+                                    [[maybe_unused]] int channel_id)
     {
         throw std::logic_error("not implemented");
     }
-    virtual void markStopRecord(const string& file_path)
+
+    virtual void markRecordStopped([[maybe_unused]] const string& file_path)
     {
         throw std::logic_error("not implemented");
     }
@@ -62,7 +69,7 @@ struct AudioRecorderEvent
         delStereoRecorder,
         putSamples,
         putStereoSamples,
-        markStopRecord
+        markRecordStopped
     } event_id;
 
     AudioRecorderEvent(const string &recorder_id, event_type event_id)
@@ -86,7 +93,7 @@ struct AudioRecorderEvent
         case addStereoRecorder:
         case delStereoRecorder:
         case putStereoSamples:
-        case markStopRecord:
+        case markRecordStopped:
             return RecorderClassStereo;
         default:
             throw std::logic_error("unknown event type");

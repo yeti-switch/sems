@@ -35,12 +35,17 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
     meta_offset = static_cast<int>(ftell(fp));
 
     for(auto& file : files) {
-        data.data.new_file.offset = file.second.begin;
-        data.data.new_file.offset_end = file.second.end ? file.second.end : get_last_ts();
-        DBG("~AmAudioFileRecorderStereoRaw: file %s, offsets %llu-%llu", file.first.c_str(), file.second.begin, file.second.end);
-        data.header.type = DATA_NEW_META;
-        data.header.size = static_cast<unsigned int >(file.first.size() + sizeof(file_new_metadata));
-        fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_new_metadata), fp);
+        DBG("~AmAudioFileRecorderStereoRaw(): file %s, offsets %llu-%llu",
+            file.first.c_str(), file.second.begin, file.second.end);
+
+        data.header.type = DATA_META_V2;
+        data.data.file_v2.offset = file.second.begin;
+        data.data.file_v2.offset_end =
+            file.second.end ? file.second.end : get_last_ts();
+
+        data.header.size = static_cast<unsigned int >(
+            file.first.size() + sizeof(file_metadata_v2));
+        fwrite(&data, 1, sizeof(data_chunk) + sizeof(file_metadata_v2), fp);
         fwrite(file.first.c_str(), 1, file.first.size(), fp);
     }
 
@@ -97,7 +102,7 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
     fwrite(samples, 1, size, fp);
 }
 
-void AmAudioFileRecorderStereoRaw::markStopRecord(const string& file_path)
+void AmAudioFileRecorderStereoRaw::markRecordStopped(const string& file_path)
 {
     for(auto &file : files) {
         if(file_path.empty() || file_path == file.first) {

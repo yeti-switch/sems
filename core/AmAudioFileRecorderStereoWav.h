@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AmAudioFileRecorderStereo.h"
+#include "AmAudioFile.h"
 
 class AmAudioFileRecorderStereoWav
   : public AmAudioFileRecorderStereo
