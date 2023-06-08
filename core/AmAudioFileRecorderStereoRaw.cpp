@@ -7,7 +7,7 @@
 using namespace RSR;
 
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
-: AmAudioFileRecorder(RecorderStereoRaw, id), max_sample_rate(0)
+: AmAudioFileRecorder(RecorderStereoRaw, id), max_sample_rate(0), wait_first_packet(false)
 {
     string filePath(AmConfig.rsr_path);
     filePath += "/" + id + ".rsr";
@@ -78,13 +78,23 @@ int AmAudioFileRecorderStereoRaw::init(const string &path, const string &sync_ct
 
 int AmAudioFileRecorderStereoRaw::add_file(const string &path)
 {
-    unsigned long long ts = get_last_ts();
-    files.emplace(path, ts);
+    files.emplace(path, file_offsets{});
+    wait_first_packet = true;
     return 0;
 }
 
 void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, unsigned char *samples, size_t size, int input_sample_rate, int channel_id)
 {
+    if(wait_first_packet) {
+        for(auto &file : files) {
+            if(file.second.wait_first_packet) {
+                file.second.begin = ts;
+                file.second.wait_first_packet = false;
+            }
+        }
+        wait_first_packet = false;
+    }
+
     last_ts[channel_id] = ts;
     if(!fp) return;
 

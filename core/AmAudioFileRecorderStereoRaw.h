@@ -15,13 +15,15 @@ private:
     {
         unsigned long long begin;
         unsigned long long end;
-        file_offsets(unsigned long long begin_)
-        : begin(begin_), end(0){}
+        bool wait_first_packet;
+        file_offsets()
+        : begin(0), wait_first_packet(true), end(0){}
     };
     map<string, file_offsets> files;
     map<unsigned char, unsigned long long> last_ts;
     FILE* fp;
     int max_sample_rate;
+    bool wait_first_packet;
 protected:
     virtual int init(const string &path, const string &sync_ctx) override;
     virtual int add_file(const string &path) override;
