@@ -7,24 +7,31 @@ using std::map;
 
 class AmAudioFileRecorderStereoRaw : public AmAudioFileRecorder
 {
-public:
+  public:
     AmAudioFileRecorderStereoRaw(const string& id);
     ~AmAudioFileRecorderStereoRaw();
-private:
+
+  private:
     struct file_offsets
     {
         unsigned long long begin;
         unsigned long long end;
-        bool wait_first_packet;
+        bool wait_for_initial_samples;
         file_offsets()
-        : begin(0), wait_first_packet(true), end(0){}
+          : begin(0),
+            end(0),
+            wait_for_initial_samples(true)
+        {}
     };
+
     map<string, file_offsets> files;
     map<unsigned char, unsigned long long> last_ts;
+
     FILE* fp;
     int max_sample_rate;
-    bool wait_first_packet;
-protected:
+    bool wait_for_initial_samples;
+
+  protected:
     virtual int init(const string &path, const string &sync_ctx) override;
     virtual int add_file(const string &path) override;
     virtual void writeStereoSamples(unsigned long long ts,
