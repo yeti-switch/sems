@@ -173,7 +173,7 @@ void dns_ip_entry::sort_by_priority(dns_handle* handle, dns_priority priority)
             if(IPv4==dynamic_cast<ip_entry*>(ip_vec[i])->type)
                 ret.emplace_back(i);
         }
-        if(priority == IPv4_only) return;
+        if(priority == IPv4_only || !ret.empty()) return;
         //add ipv6 tail
         for(i = 0; i < ip_vec.size(); i++) {
             if(IPv6==dynamic_cast<ip_entry*>(ip_vec[i])->type)
@@ -188,7 +188,7 @@ void dns_ip_entry::sort_by_priority(dns_handle* handle, dns_priority priority)
             if(IPv6==dynamic_cast<ip_entry*>(ip_vec[i])->type)
                 ret.emplace_back(i);
         }
-        if(priority==IPv6_only) return;
+        if(priority==IPv6_only || !ret.empty()) return;
         //add ipv4 tail
         for(i = 0; i < ip_vec.size(); i++) {
             if(IPv4==dynamic_cast<ip_entry*>(ip_vec[i])->type)
