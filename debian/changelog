@@ -1,3 +1,7 @@
+sems (1.106.1) stable; urgency=low
+  * resolver: lock to single address family for IPv4_pref/IPv6_pref
+ -- Michael Furmur <furmur@pm.me>  Fri, 09 Jun 2023 19:29:24 +0300
+
 sems (1.106.0) stable; urgency=low
   * raw recorder: fix start offset in the metadata for subsequent records
  -- Michael Furmur <furmur@pm.me>  Thu, 08 Jun 2023 19:10:54 +0300
