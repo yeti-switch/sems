@@ -302,8 +302,8 @@ static int parse_sip_uri(sip_uri* uri, const char* beg, int len, bool no_default
         uri->port = 5060;
     }
 
-    DBG("Converted URI port (%.*s) to int (%i)",
-        uri->port_str.len,uri->port_str.s,uri->port);
+    /*DBG("Converted URI port (%.*s) to int (%i)",
+        uri->port_str.len,uri->port_str.s,uri->port);*/
 
     for(list<sip_avp*>::iterator it = uri->params.begin();
         it != uri->params.end(); it++)
