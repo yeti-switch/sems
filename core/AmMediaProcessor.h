@@ -232,59 +232,61 @@ public:
  */
 class AmMediaProcessor
 {
-  static AmMediaProcessor* _instance;
+    static AmMediaProcessor* _instance;
 
-  unsigned int num_threads;
-  AmMediaProcessorThread**  threads;
+    unsigned int num_threads;
+    AmMediaProcessorThread**  threads;
 
-  struct callgroup_t {
-      std::set<AmMediaSession *> members;
-      unsigned int thread_id;
+    struct callgroup_t {
+        std::set<AmMediaSession *> members;
+        unsigned int thread_id;
 
-      callgroup_t(unsigned int thread_id, AmMediaSession* s)
-        : thread_id(thread_id),
-          members({s})
-      {}
-  };
-  std::unordered_map<string, callgroup_t> callgroups;
-  AmMutex group_mut;
+        callgroup_t(unsigned int thread_id, AmMediaSession* s)
+          : members({s}),
+            thread_id(thread_id)
+        {}
+    };
+    std::unordered_map<string, callgroup_t> callgroups;
+    AmMutex group_mut;
 
-  AmMediaProcessor();
-  ~AmMediaProcessor();
+    AmMediaProcessor();
+    ~AmMediaProcessor();
 
-  bool removeFromProcessor(AmMediaSession* s, unsigned int r_type);
-public:
-  /** 
-   * InsertSession     : inserts the session to the processor
-   * RemoveSession     : remove the session from the processor
-   * SoftRemoveSession : remove the session from the processor but leave it attached
-   * ClearSession      : remove the session from processor and clear audio
-   */
-  enum { InsertSession, RemoveSession, SoftRemoveSession, ClearSession };
+    bool removeFromProcessor(AmMediaSession* s, unsigned int r_type);
 
-  static AmMediaProcessor* instance();
+  public:
+    /** 
+    * InsertSession     : inserts the session to the processor
+    * RemoveSession     : remove the session from the processor
+    * SoftRemoveSession : remove the session from the processor but leave it attached
+    * ClearSession      : remove the session from processor and clear audio
+    */
+    enum { InsertSession, RemoveSession, SoftRemoveSession, ClearSession };
 
-  void init();
-  /** Add session s to processor */
-  bool addSession(AmMediaSession* s, const string& callgroup);
-  /** Add session s to sched_thread processor */
-  bool addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
-  /** Remove session s from processor */
-  bool removeSession(AmMediaSession* s);
-  /** Remove session s from processor and clear its audio */
-  bool clearSession(AmMediaSession* s);
-  /** Remove session s from processor but don't signal that to the session */
-  bool softRemoveSession(AmMediaSession* s);
-  /** Change the callgroup of a session (use with caution) */
-  bool changeCallgroup(AmMediaSession* s, const string& new_callgroup);
+    static AmMediaProcessor* instance();
 
-  void addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
-  void removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
+    void init();
 
-  void stop();
-  static void dispose();
+    /** Add session s to processor */
+    bool addSession(AmMediaSession* s, const string& callgroup);
+    /** Add session s to sched_thread processor */
+    bool addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
+    /** Remove session s from processor */
+    bool removeSession(AmMediaSession* s);
+    /** Remove session s from processor and clear its audio */
+    bool clearSession(AmMediaSession* s);
+    /** Remove session s from processor but don't signal that to the session */
+    bool softRemoveSession(AmMediaSession* s);
+    /** Change the callgroup of a session (use with caution) */
+    bool changeCallgroup(AmMediaSession* s, const string& new_callgroup);
 
-  void getInfo(AmArg& ret);
+    void addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
+    void removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
+
+    void stop();
+    static void dispose();
+
+    void getInfo(AmArg& ret);
 };
 
 

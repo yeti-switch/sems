@@ -113,9 +113,10 @@ public:
     }
 };
 
-class PGWorkerConfig : public PGEvent
+class PGWorkerConfig
+  : public PGEvent
 {
-public:
+  public:
     string worker_name;
     uint32_t batch_size;
     uint32_t batch_timeout;
@@ -143,18 +144,18 @@ public:
        uint32_t batch_timeout = PG_DEFAULT_BATCH_TIMEOUT,
        uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN,
        uint32_t conn_lifetime = PG_DEFAULT_CONN_LIFETIME)
-     : PGEvent(WorkerConfig)
-     , worker_name(name)
-     , use_pipeline(use_pipeline)
-     , failover_to_slave(failover_to_slave)
-     , retransmit_enable(retransmit_enable)
-     , retransmit_interval(retransmit_interval)
-     , reconnect_interval(reconnect_interval)
-     , trans_wait_time(trans_wait_time)
-     , batch_size(batch_size)
-     , batch_timeout(batch_timeout)
-     , max_queue_length(max_queue_length)
-     , connection_lifetime(conn_lifetime)
+      : PGEvent(WorkerConfig),
+        worker_name(name),
+        batch_size(batch_size),
+        batch_timeout(batch_timeout),
+        max_queue_length(max_queue_length),
+        failover_to_slave(failover_to_slave),
+        retransmit_enable(retransmit_enable),
+        trans_wait_time(trans_wait_time),
+        retransmit_interval(retransmit_interval),
+        reconnect_interval(reconnect_interval),
+        use_pipeline(use_pipeline),
+        connection_lifetime(conn_lifetime)
     {}
 
     PGPrepareData& addPrepared(const string& stmt_, const string& query_) {

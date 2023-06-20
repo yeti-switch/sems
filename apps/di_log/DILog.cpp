@@ -26,9 +26,9 @@ char DILog::ring_buf[MAX_LINES][MAX_LINE_LEN] = {{0}};
 int DILog::pos = 0;
 
 DILog::DILog(const string& name)
-    : AmDynInvokeFactory(name),
-      AmLoggingFacility(name, MODULE_VERSION, L_DBG),
-      AmConfigFactory(name, name)
+  : AmLoggingFacility(name, MODULE_VERSION, L_DBG),
+    AmDynInvokeFactory(name),
+    AmConfigFactory(name, name)
 { }
 
 int DILog::onLoad() {

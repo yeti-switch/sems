@@ -21,7 +21,7 @@ public:
 class FreezeTask : public ITask
 {
 public:
-    FreezeTask() : cond_(false), value(0) {}
+    FreezeTask() : value(0), cond_(false) {}
     ~FreezeTask(){}
 
     int execute() override

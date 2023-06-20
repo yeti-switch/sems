@@ -127,61 +127,62 @@ class SessionTimerFactory: public AmSessionEventHandlerFactory,
 struct SIPRequestInfo;
 
 /** \brief SessionEventHandler for implementing session timer logic for a session */
-class SessionTimer: public AmSessionEventHandler
+class SessionTimer
+  : public AmSessionEventHandler
 {
-protected:
-  AmSessionTimerConfig session_timer_conf;
-  AmSession* s;
+  protected:
+    AmSessionTimerConfig session_timer_conf;
+    AmSession* s;
 
-  // map to save sent requests, so we can resent in case of 422
-  //std::map<unsigned int, SIPRequestInfo> sent_requests;
+    // map to save sent requests, so we can resent in case of 422
+    //std::map<unsigned int, SIPRequestInfo> sent_requests;
 
-  enum SessionRefresher {
-    refresh_local,
-    refresh_remote
-  };
-  enum SessionRefresherRole {
-    UAC,
-    UAS
-  };
+    enum SessionRefresher {
+        refresh_local,
+        refresh_remote
+    };
+    enum SessionRefresherRole {
+        UAC,
+        UAS
+    };
 
-  bool                 remote_timer_aware;
-  unsigned int         min_se;
-  unsigned int         session_interval;  
-  SessionRefresher     session_refresher;
-  SessionRefresherRole session_refresher_role;
-  bool                 accept_501_reply;
+    bool                 remote_timer_aware;
+    unsigned int         min_se;
+    unsigned int         session_interval;  
+    SessionRefresher     session_refresher;
+    SessionRefresherRole session_refresher_role;
+    bool                 accept_501_reply;
 
-  void updateTimer(AmSession* s,const AmSipRequest& req);
-  void updateTimer(AmSession* s,const AmSipReply& reply);
-    
-  virtual void setTimers(AmSession* s);
-  void retryRefreshTimer(AmSession* s);
-  void removeTimers(AmSession* s);
+    void updateTimer(AmSession* s,const AmSipRequest& req);
+    void updateTimer(AmSession* s,const AmSipReply& reply);
 
-  string getReplyHeaders(const AmSipRequest& req);
-  string getRequestHeaders(const string& method);
+    virtual void setTimers(AmSession* s);
+    void retryRefreshTimer(AmSession* s);
+    void removeTimers(AmSession* s);
 
-  /* Session Timer: -ssa */
+    string getReplyHeaders(const AmSipRequest& req);
+    string getRequestHeaders(const string& method);
 
-  // @return true if OK
-  void onTimeout();
-  void onTimeoutEvent(AmTimeoutEvent* timeout_ev);
+    /* Session Timer: -ssa */
 
- public:
-  SessionTimer(AmSession*, const AmSessionTimerConfig&);
-  virtual ~SessionTimer();
+    // @return true if OK
+    void onTimeout();
+    void onTimeoutEvent(AmTimeoutEvent* timeout_ev);
 
-  /* @see AmSessionEventHandler */
-  virtual int  configure(AmConfigReader& conf); 
-  virtual bool process(AmEvent*);
+  public:
+    SessionTimer(AmSession*, const AmSessionTimerConfig&);
+    virtual ~SessionTimer();
 
-  virtual bool onSipRequest(const AmSipRequest&);
-  virtual bool onSipReply(const AmSipRequest&, const AmSipReply&, 
-			  AmBasicSipDialog::Status old_dlg_status);
+    /* @see AmSessionEventHandler */
+    virtual int  configure(AmConfigReader& conf); 
+    virtual bool process(AmEvent*);
 
-  virtual bool onSendRequest(AmSipRequest& req, int& flags);
-  virtual bool onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
+    virtual bool onSipRequest(const AmSipRequest&);
+    virtual bool onSipReply(const AmSipRequest&, const AmSipReply&, 
+              AmBasicSipDialog::Status old_dlg_status);
+
+    virtual bool onSendRequest(AmSipRequest& req, int& flags);
+    virtual bool onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
 };
 
 

@@ -63,12 +63,13 @@ public:
     uint64_t size;
 
     S3GetFilePart(const string& name_, const string& version, const string& session_id, uint64_t start_, uint64_t size_)
-    : S3Event(GetFilePart)
-    , name(name_)
-    , version_id(version)
-    , sender_id(session_id)
-    , start(start_)
-    , size(size_){}
+      : S3Event(GetFilePart),
+        name(name_),
+        sender_id(session_id),
+        version_id(version),
+        start(start_),
+        size(size_)
+    {}
 };
 
 class S3FilePart : public S3Event

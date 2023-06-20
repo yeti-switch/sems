@@ -35,8 +35,8 @@ SctpBus::SctpBus(const string& name)
     AmConfigFactory(name),
     AmEventFdQueue(this),
     reader(MOD_NAME),
-    epoll_fd(-1),
-    stopped(false)
+    stopped(false),
+    epoll_fd(-1)
 {}
 
 SctpBus::~SctpBus()

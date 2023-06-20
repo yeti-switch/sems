@@ -30,14 +30,15 @@
 #define IS_ONLY_ONCE       (flags & AUDIO_MIXIN_ONCE)
 #define IS_IMMEDIATE_START (flags & AUDIO_MIXIN_IMMEDIATE_START)
 
-AmAudioMixIn::AmAudioMixIn(AmAudio* A, AmAudio* B, 
-			   unsigned int s, double l,
-			   unsigned int flags) 
-  :   A(A),B(B), s(s), l(l), 
-      mixing(false), next_start_ts_i(false),
-      flags(flags)
-{
-}
+AmAudioMixIn::AmAudioMixIn(
+    AmAudio* A, AmAudio* B, 
+    unsigned int s, double l,
+    unsigned int flags) 
+  : A(A), B(B), s(s), l(l), 
+    flags(flags),
+    mixing(false),
+    next_start_ts_i(false)
+{}
 
 AmAudioMixIn::~AmAudioMixIn() { }
 

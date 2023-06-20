@@ -106,35 +106,33 @@ class StddevValue
  */
 class MeanArray: public MeanValue
 {
-  double *buffer;
-  size_t  buf_size;
+    double *buffer;
+    size_t  buf_size;
 
- public:
-  MeanArray(size_t size)
-    : buf_size(size),
-    MeanValue()
+  public:
+    MeanArray(size_t size)
+      : MeanValue(),
+        buf_size(size)
     {
-      buffer = new double[size];
-      memset(buffer, 0, sizeof(buffer[0])*size);
+        buffer = new double[size];
+        memset(buffer, 0, sizeof(buffer[0])*size);
     }
 
-  ~MeanArray(){
-    delete [] buffer;
-  }
+    ~MeanArray(){
+        delete [] buffer;
+    }
 
-  void push(double val){
+    void push(double val) {
+        cum_val -= buffer[n_val % buf_size];
+        buffer[n_val % buf_size] = val;
+        cum_val += val;
+        n_val++;
+    }
 
-    cum_val -= buffer[n_val % buf_size];
-    buffer[n_val % buf_size] = val;
-
-    cum_val += val;
-    n_val++;
-  }
-
-  double mean(){
-    if(!n_val) return 0.0;
-    return cum_val / double(n_val > buf_size ? buf_size : n_val);
-  }
+    double mean() {
+        if(!n_val) return 0.0;
+        return cum_val / double(n_val > buf_size ? buf_size : n_val);
+    }
 };
 
 #endif

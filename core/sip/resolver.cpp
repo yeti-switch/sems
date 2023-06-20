@@ -644,6 +644,9 @@ string ip_port_entry::to_str()
     return ip_entry::to_str() + ":" + int2str(port);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+
 dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
 {
     if(rr->type != ns_t_srv)
@@ -681,12 +684,17 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
     return srv_r;
 }
 
+#pragma GCC diagnostic pop
+
 string srv_entry::to_str()
 {
     return string("SRV/") + target + ":" + int2str(port)
         + "/" + int2str(p)
         + "/" + int2str(w);
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 
 dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* end)
 {
@@ -718,6 +726,8 @@ dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* e
 
     return cname_r;
 }
+
+#pragma GCC diagnostic pop
 
 dns_entry *dns_cname_entry::resolve_alias(dns_cache &cache, const dns_priority priority, dns_rr_type rr_type)
 {

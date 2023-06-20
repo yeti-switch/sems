@@ -77,11 +77,12 @@ struct wslay_event_callbacks ws_input::callbacks = {
 };
 
 ws_input::ws_input(ws_output* output_, bool server)
-: ws_connected(false)
-, ws_input_len(0), ws_input_pos(0)
-, is_server(server), output(output_)
+  : ws_input_len(0),
+    ws_input_pos(0),
+    ws_connected(false),
+    is_server(server),
+    output(output_)
 {
-
     Botan::SHA_1 sha;
     size_t size = Botan::base64_encode_max_output(sha.output_length());
     ws_accept.set(new char[size], size);

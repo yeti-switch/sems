@@ -20,8 +20,13 @@ RadiusConnection::RadiusConnection(
     string &secret,
     unsigned int timeout_msec,
     unsigned int attempts)
-  : last_id(0),
-    sock(-1),
+  : connection_id(connection_id),
+    name(name),
+    server(server),
+    port(port),
+    secret(secret),
+    timeout(timeout_msec),
+    attempts(attempts),
     requests_sent(0),
     replies_got(0),
     requests_err(0),
@@ -32,13 +37,8 @@ RadiusConnection::RadiusConnection(
     replies_validate_err(0),
     min_response_time(0),
     max_response_time(0),
-    connection_id(connection_id),
-    name(name),
-    server(server),
-    port(port),
-    secret(secret),
-    timeout(timeout_msec),
-    attempts(attempts)
+    last_id(0),
+    sock(-1)
 {
     timeout_tv.tv_sec = timeout/1000;
     timeout_tv.tv_usec = (timeout-timeout_tv.tv_sec*1000)*1000;

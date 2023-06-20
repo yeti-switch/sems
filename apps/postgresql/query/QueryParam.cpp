@@ -265,7 +265,7 @@ static bool iterate_pg_array(
         ST_ITEM,
         ST_QUOTED_ITEM,
         ST_ESCAPED_SYMBOL
-    } state = ST_ITEM_START, last_state;
+    } state = ST_ITEM_START, last_state = ST_ITEM_START;
 
     //tokenize ignoring quoted delimiter
     char *token = s;

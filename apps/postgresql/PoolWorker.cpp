@@ -21,28 +21,29 @@
 }
 
 PoolWorker::PoolWorker(const std::string& name, int epollfd)
-: name(name), epoll_fd(epollfd)
-, failover_to_slave(false)
-, retransmit_enable(false)
-, use_pipeline(false)
-, trans_wait_time(PG_DEFAULT_WAIT_TIME)
-, retransmit_interval(PG_DEFAULT_RET_INTERVAL)
-, reconnect_interval(PG_DEFAULT_REC_INTERVAL)
-, batch_size(PG_DEFAULT_BATCH_SIZE)
-, batch_timeout(PG_DEFAULT_BATCH_TIMEOUT)
-, max_queue_length(PG_DEFAULT_MAX_Q_LEN)
-, retransmit_next_time(0), wait_next_time(0)
-, reset_next_time(0), send_next_time(0)
-, reconn_next_time(0)
-, master(0), slave(0)
-, queue_size(stat_group(Gauge, MOD_NAME, "queries_queue_size").addAtomicCounter().addLabel("worker", name))
-, dropped(stat_group(Counter, MOD_NAME, "queries_dropped").addAtomicCounter().addLabel("worker", name))
-, ret_size(stat_group(Gauge, MOD_NAME, "queries_retry_queue_size").addAtomicCounter().addLabel("worker", name))
-, tr_size(stat_group(Gauge, MOD_NAME, "queries_active").addAtomicCounter().addLabel("worker", name))
-, finished(stat_group(Counter, MOD_NAME, "queries_finished").addAtomicCounter().addLabel("worker", name))
-, finished_time(stat_group(Counter, MOD_NAME, "queries_finished_time").addAtomicCounter().addLabel("worker", name))
-, canceled(stat_group(Counter, MOD_NAME, "queries_canceled").addAtomicCounter().addLabel("worker", name))
-, failed(stat_group(Counter, MOD_NAME, "queries_failed").addAtomicCounter().addLabel("worker", name))
+  : epoll_fd(epollfd),
+    name(name),
+    failover_to_slave(false),
+    retransmit_enable(false),
+    use_pipeline(false),
+    retransmit_interval(PG_DEFAULT_RET_INTERVAL),
+    reconnect_interval(PG_DEFAULT_REC_INTERVAL),
+    trans_wait_time(PG_DEFAULT_WAIT_TIME),
+    batch_timeout(PG_DEFAULT_BATCH_TIMEOUT),
+    batch_size(PG_DEFAULT_BATCH_SIZE),
+    max_queue_length(PG_DEFAULT_MAX_Q_LEN),
+    master(0), slave(0),
+    tr_size(stat_group(Gauge, MOD_NAME, "queries_active").addAtomicCounter().addLabel("worker", name)),
+    finished(stat_group(Counter, MOD_NAME, "queries_finished").addAtomicCounter().addLabel("worker", name)),
+    queue_size(stat_group(Gauge, MOD_NAME, "queries_queue_size").addAtomicCounter().addLabel("worker", name)),
+    ret_size(stat_group(Gauge, MOD_NAME, "queries_retry_queue_size").addAtomicCounter().addLabel("worker", name)),
+    dropped(stat_group(Counter, MOD_NAME, "queries_dropped").addAtomicCounter().addLabel("worker", name)),
+    finished_time(stat_group(Counter, MOD_NAME, "queries_finished_time").addAtomicCounter().addLabel("worker", name)),
+    canceled(stat_group(Counter, MOD_NAME, "queries_canceled").addAtomicCounter().addLabel("worker", name)),
+    failed(stat_group(Counter, MOD_NAME, "queries_failed").addAtomicCounter().addLabel("worker", name)),
+    retransmit_next_time(0), wait_next_time(0),
+    reset_next_time(0), send_next_time(0),
+    reconn_next_time(0)
 {
     workTimer.link(epoll_fd, true);
 }

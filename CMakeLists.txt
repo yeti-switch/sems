@@ -307,28 +307,31 @@ include_directories(${SEMS_SOURCE_DIR}/third/googletest/googletest/include)
 CONFIGURE_FILE( ${SEMS_SOURCE_DIR}/core/sems.h.cmake ${CMAKE_BINARY_DIR}/core/sems.h)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
 
-IF(CMAKE_COMPILER_IS_GNUCC)
-	#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -fPIC -g -O -fno-inline")
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -fPIC -g -O2")
-ENDIF(CMAKE_COMPILER_IS_GNUCC)
+# IF(CMAKE_COMPILER_IS_GNUCC)
+# 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -fPIC -g -O2")
+# ENDIF(CMAKE_COMPILER_IS_GNUCC)
 
-IF(CMAKE_COMPILER_IS_GNUCXX)
-	#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -Wno-reorder -fPIC -g -O -fno-inline")
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -Wno-reorder -fPIC -g -O2")
-ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+# IF(CMAKE_COMPILER_IS_GNUCXX)
+# 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_THREAD_SAFE -D_REENTRANT -Wall -Wno-reorder -fPIC -g -O2")
+# ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
-SET(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -D_DEBUG")
+add_definitions(-D_THREAD_SAFE -D_REENTRANT)
+add_compile_options(-Wall -Werror -fPIC -g -O2)
+
+add_definitions(-D_DEBUG)
+#SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
+#SET(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -D_DEBUG")
 
 # use AddressSanitizer
 IF(USE_ADDRESS_SANITIZER)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-    SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -fsanitize=address")
-    ADD_DEFINITIONS(-DVALGRIND)
+    add_compile_options(-fsanitize=address)
+    #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    #SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -fsanitize=address")
+    add_definitions(-DVALGRIND)
 ENDIF(USE_ADDRESS_SANITIZER)
 
 IF(USE_OBJECTS_COUNTERS)
-    ADD_DEFINITIONS(-DOBJECTS_COUNTER)
+    add_definitions(-DOBJECTS_COUNTER)
 ENDIF(USE_OBJECTS_COUNTERS)
 
 # compile with session thread pool support?
@@ -340,22 +343,22 @@ ENDIF(USE_OBJECTS_COUNTERS)
 #      if compiled without thread pool support, every
 #      session will have its own thread.
 #
-ADD_DEFINITIONS(-DSESSION_THREADPOOL)
+add_definitions(-DSESSION_THREADPOOL)
 
 #ADD_DEFINITIONS(-DNO_THREADID_LOG)
 #ADD_DEFINITIONS(-DLOG_LOC_DATA_ATEND)
-ADD_DEFINITIONS(-DSEMS_APP_NAME="${SEMS_APP}")
+add_definitions(-DSEMS_APP_NAME="${SEMS_APP}")
 
 # Support for long debug messages? (useful for debugging SIP messages' contents)
 #
 # disable for slight performance gain
-ADD_DEFINITIONS(-DLOG_BUFFER_LEN=2048)
+add_definitions(-DLOG_BUFFER_LEN=2048)
 
 #ADD_DEFINITIONS(-DDEBUG_PLAYOUTBUF)
 
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-ADD_DEFINITIONS(-Wno-deprecated)
+add_definitions(-Wno-deprecated)
 
 get_directory_property(CoreDefsList DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
 foreach( d ${CoreDefsList} )

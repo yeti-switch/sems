@@ -230,8 +230,8 @@ int ConferenceChannel::get(unsigned long long system_ts, unsigned char* buffer,
     unsigned int mixer_sample_rate = 0;
 
     mpmixer->GetChannelPacket(mpmixer_ch_id, system_ts, buffer, size, mixer_sample_rate);
-
-    if (mixer_sample_rate != output_sample_rate)
+    
+    if (mixer_sample_rate != static_cast<typeof mixer_sample_rate>(output_sample_rate))
         size = resampleOutput(buffer, size, mixer_sample_rate, output_sample_rate);
 
     return size;

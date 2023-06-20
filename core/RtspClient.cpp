@@ -49,14 +49,14 @@ void RtspClient::dispose()
 
 
 RtspClient::RtspClient()
-    : tostop(false), epoll_fd(-1), id_counter(0)
+  : epoll_fd(-1), tostop(false), id_counter(0)
 {
     _instance = this;
 }
 
 
 RtspClient::RtspClient(const string& name)
-      : tostop(false), epoll_fd(-1), id_counter(0)
+  : epoll_fd(-1), tostop(false), id_counter(0)
 {
     _instance = this;
 }

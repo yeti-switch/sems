@@ -474,9 +474,12 @@ int ethernet_msg_sensor::feed(const char* buf, int len,
 	snd_msg.msg_flags=0;
 
 	//hdr
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	mk_udp_hdr(&hdr.udp, from, to, (unsigned char*)buf, len, 1);
 	mk_ip_hdr(&hdr.ip, &SAv4(from)->sin_addr, &SAv4(to)->sin_addr,
 		  len + sizeof(hdr.udp), IPPROTO_UDP);
+#pragma GCC diagnostic pop
 	//upd_ipip_hdr(hdr.ipip,hdr.ip.ip_len + sizeof(struct ip));
 
 	//ethernet header

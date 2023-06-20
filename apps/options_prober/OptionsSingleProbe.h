@@ -62,9 +62,9 @@ public:
     SipSingleProbe();
 
     //DialogControl
-    AmBasicSipDialog* getDlg() { return &dlg; }
+    AmBasicSipDialog* getDlg() override { return &dlg; }
     //CredentialHolder
-    UACAuthCred* getCredentials() { return &cred; }
+    UACAuthCred* getCredentials() override { return &cred; }
 
     /**
      * @brief initialize using AmArg hash

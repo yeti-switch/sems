@@ -363,7 +363,7 @@ void JsonRPCServerLoop::process(AmEvent* ev)
             pending_events_mut.lock();
             // (need to copy event here: original event is deleted when event processed)
             pending_events.push_back(new JsonServerSendMessageEvent(*snd_msg_ev));
-            size_t q_size = pending_events.size();
+            //size_t q_size = pending_events.size();
             pending_events_mut.unlock();
             /*DBG("queued event for connection %s (total %zd events pending)", 
                 snd_msg_ev->connection_id.c_str(), q_size);*/

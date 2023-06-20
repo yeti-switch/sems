@@ -8,15 +8,15 @@
 #include <botan/uuid.h>
 
 AmSrtpConnection::AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
-    : AmStreamConnection(_transport, remote_addr, remote_port, conn_type)
-    , srtp_profile(srtp_profile_reserved)
-    , srtp_tx_session(nullptr)
-    , srtp_rx_session(nullptr)
-    , rx_context_initialized(false)
-    , tx_context_initialized(false)
-    , connection_invalidated(false)
-    , last_rx_ssrc_net_order(0)
-    , rx_ssrc_changes_count(0)
+  : AmStreamConnection(_transport, remote_addr, remote_port, conn_type),
+    rx_context_initialized(false),
+    tx_context_initialized(false),
+    connection_invalidated(false),
+    last_rx_ssrc_net_order(0),
+    rx_ssrc_changes_count(0),
+    srtp_profile(srtp_profile_reserved),
+    srtp_tx_session(nullptr),
+    srtp_rx_session(nullptr)
 {
     if(conn_type == RTP_CONN)
         s_stream = new AmRtpConnection(this, remote_addr, remote_port);

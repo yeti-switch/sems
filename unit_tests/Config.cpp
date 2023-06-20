@@ -107,7 +107,7 @@ int TesterConfig::readConfiguration(const string& filePath)
         allow_plugins.push_back(cfg_getnstr(m_cfg, PARAM_ALLOW_PLUGINS_NAME, i));
     }
 
-    int mCount = cfg_size(m_cfg, SECTION_MODULE_NAME);
+    unsigned int mCount = cfg_size(m_cfg, SECTION_MODULE_NAME);
     for(unsigned int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(m_cfg, SECTION_MODULE_NAME, i);
         std::string name = module->title;

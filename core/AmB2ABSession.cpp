@@ -31,19 +31,17 @@
 #include <assert.h>
 
 AmB2ABSession::AmB2ABSession()
-  : AmSession(), connector(NULL)
-{
-}
-
-AmB2ABSession::AmB2ABSession(const string& other_local_tag)
-  : other_id(other_local_tag),
-    AmSession()
+  : AmSession(),
+    connector(nullptr)
 {}
 
+AmB2ABSession::AmB2ABSession(const string& other_local_tag)
+  : AmSession(),
+    other_id(other_local_tag)
+{}
 
 AmB2ABSession::~AmB2ABSession()
-{
-}
+{}
 
 void AmB2ABSession::clear_other()
 {

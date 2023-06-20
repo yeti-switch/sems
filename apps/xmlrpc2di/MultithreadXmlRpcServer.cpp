@@ -19,9 +19,12 @@
 
 using namespace XmlRpc; 
 WorkerThread::WorkerThread(MultithreadXmlRpcServer* chief) 
-  : running(true), runcond(false), chief(chief), client_request_timeout(-1) {
-} 
- 
+  : chief(chief),
+    runcond(false),
+    running(true),
+    client_request_timeout(-1)
+{}
+
 // call this method before calling run 
 void WorkerThread::addXmlRpcSource(XmlRpcSource* source,unsigned eventMask) 
 { 

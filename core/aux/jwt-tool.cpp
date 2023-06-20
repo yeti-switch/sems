@@ -113,9 +113,9 @@ class options_parser
             int has_arg = no_argument)
           : name(name),
             callback(callback),
+            has_arg(has_arg),
             opt_desc_left(opt_desc_left),
-            opt_desc_right(opt_desc_right),
-            has_arg(has_arg)
+            opt_desc_right(opt_desc_right)
         {}
     };
     vector<long_opt_t> long_opts;

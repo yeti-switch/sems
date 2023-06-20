@@ -648,6 +648,20 @@ AmArg& AmArg::operator[](size_t idx)
     return (*v_array)[idx];
 }
 
+AmArg& AmArg::operator[](int idx)
+{
+    if(idx<0)
+        throw OutOfBoundsException();
+    assertArray(idx+1); 
+    return (*v_array)[idx];
+}
+
+AmArg& AmArg::operator[](unsigned int idx)
+{
+    assertArray(idx+1); 
+    return (*v_array)[idx];
+}
+
 AmArg& AmArg::operator[](size_t idx) const
 {
     assertArray();
@@ -657,20 +671,21 @@ AmArg& AmArg::operator[](size_t idx) const
     return (*v_array)[idx];
 }
 
-AmArg& AmArg::operator[](int idx)
-{
-    if(idx<0)
-        throw OutOfBoundsException();
-    assertArray(idx+1); 
-    return (*v_array)[idx];
-}
-
 AmArg& AmArg::operator[](int idx) const
 {
     if(idx<0)
         throw OutOfBoundsException();
     assertArray();
     if((size_t)idx >= v_array->size())
+        throw OutOfBoundsException();
+
+    return (*v_array)[idx];
+}
+
+AmArg& AmArg::operator[](unsigned int idx) const
+{
+    assertArray();
+    if(idx >= v_array->size())
         throw OutOfBoundsException();
 
     return (*v_array)[idx];

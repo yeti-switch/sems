@@ -163,7 +163,7 @@ memfile_write(void *c, const char *buf, size_t size)
    memcpy(cookie->buf + cookie->offset, buf, size);
 
    cookie->offset += size;
-    if (cookie->offset > cookie->endpos)
+   if (cookie->offset > static_cast<typeof cookie->offset>(cookie->endpos))
         cookie->endpos = cookie->offset;
 
    return size;
@@ -361,12 +361,13 @@ int AmAudioFile::fpopen_int(const string& filename, OpenMode mode,
 }
 
 AmAudioFile::AmAudioFile()
-  : AmBufferedAudio(0, 0, 0), data_size(0),
-    fp(0), begin(0), loop(false), autorewind(false),
-    on_close_done(false),
-    close_on_exit(true)
+  : AmBufferedAudio(0, 0, 0), fp(0),
+    begin(0), data_size(0),
+    on_close_done(false), close_on_exit(true),
+    loop(false),
+    autorewind(false)
 {
-  memset(&memfile, 0, sizeof(memfile));
+    memset(&memfile, 0, sizeof(memfile));
 }
 
 AmAudioFile::~AmAudioFile()

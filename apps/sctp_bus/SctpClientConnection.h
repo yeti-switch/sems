@@ -16,8 +16,8 @@ class SctpClientConnection
   public:
 
     SctpClientConnection()
-      : events_sent(0),
-        assoc_id(-1),
+      : assoc_id(-1),
+        events_sent(0),
         json_rpc(nullptr)
     {}
 
@@ -26,16 +26,16 @@ class SctpClientConnection
     int connect();
 
     int process(uint32_t events) override;
-    void handle_notification(const sockaddr_storage &from);
+    void handle_notification(const sockaddr_storage &from) override;
     int recv();
     int on_timer(time_t now) override;
 
-    virtual void send(const SctpBusSendEvent &e);
+    virtual void send(const SctpBusSendEvent &e) override;
     void send(const SctpBusRawRequest &e) override;
     void send(const SctpBusRawReply &e) override;
 
     void onIncomingPDU(const SctpBusPDU &e);
 
-    void getInfo(AmArg &info);
+    void getInfo(AmArg &info) override;
 };
 

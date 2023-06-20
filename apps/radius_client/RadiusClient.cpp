@@ -51,8 +51,8 @@ RadiusClient* RadiusClient::instance()
 RadiusClient::RadiusClient(const string& name)
   : AmDynInvokeFactory(name),
     AmEventFdQueue(this),
-    epoll_fd(-1),
-    stopped(false)
+    stopped(false),
+    epoll_fd(-1)
 {}
 
 RadiusClient::~RadiusClient()

@@ -80,8 +80,8 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     record_audio_enabled(false),
     processing_status(SESSION_PROCESSING_EVENTS),
 #ifdef SESSION_THREADPOOL
-    _pid(this),
     start_on_same_thread(false),
+    _pid(this),
 #endif
     no_reply(false),
     sess_stopped(false),
@@ -96,16 +96,15 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtp_proto_id(-1),
     input(nullptr), output(nullptr),
     refresh_method(REFRESH_UPDATE_FB_REINV),
-    dlg(p_dlg),
-    enable_zrtp(false)
-
+    enable_zrtp(false),
+    dlg(p_dlg)
 {
-  DBG("AmSession[%p](%p)",this,dlg);
-  if(!dlg) dlg = new AmSipDialog(this);
-  else {
-    dlg->setEventhandler(this);
-    dlg->setRel100Handler(this);
-  }
+    DBG("AmSession[%p](%p)",this,dlg);
+    if(!dlg) dlg = new AmSipDialog(this);
+    else {
+        dlg->setEventhandler(this);
+        dlg->setRel100Handler(this);
+    }
 }
 
 AmSession::~AmSession()

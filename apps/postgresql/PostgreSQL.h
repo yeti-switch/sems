@@ -33,15 +33,26 @@ public:
     string worker_name;
 
     ResetEvent(const string& name, PGWorkerPoolCreate::PoolType type)
-    : worker_name(name), type(PoolTypeReset), PGEvent(AdditionalTypeEvent::Reset){
+      : PGEvent(AdditionalTypeEvent::Reset),
+        type(PoolTypeReset),
+        worker_name(name)
+    {
         data.type = type;
     }
+
     ResetEvent(const string& name)
-    : worker_name(name), type(PoolsReset), PGEvent(AdditionalTypeEvent::Reset){
+      : PGEvent(AdditionalTypeEvent::Reset),
+        type(PoolsReset),
+        worker_name(name)
+    {
         data.fd = -1;
     }
+
     ResetEvent(const string& name, int fd)
-    : worker_name(name), type(FdReset), PGEvent(AdditionalTypeEvent::Reset){
+      : PGEvent(AdditionalTypeEvent::Reset),
+        type(FdReset),
+        worker_name(name)
+    {
         data.fd = fd;
     }
 };

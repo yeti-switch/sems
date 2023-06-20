@@ -60,13 +60,13 @@ AmSessionEventHandler* SessionTimerFactory::getHandler(AmSession* s)
 
 
 SessionTimer::SessionTimer(AmSession* s, const AmSessionTimerConfig& conf)
-  :AmSessionEventHandler(),
-   s(s),
-   session_timer_conf(conf),
-   min_se(0),
-   session_interval(0),
-   session_refresher(refresh_remote),
-   accept_501_reply(true)
+  : AmSessionEventHandler(),
+    session_timer_conf(conf),
+    s(s),
+    min_se(0),
+    session_interval(0),
+    session_refresher(refresh_remote),
+    accept_501_reply(true)
 {
     session_interval = session_timer_conf.getSessionExpires();
     min_se = session_timer_conf.getMinimumTimer();

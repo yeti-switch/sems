@@ -162,8 +162,8 @@ const string &AmIdentity::PassportType::get_name()
 }
 
 AmIdentity::AmIdentity()
-  : last_errcode(0),
-    type(PassportType::ES256_PASSPORT_SHAKEN)
+  : type(PassportType::ES256_PASSPORT_SHAKEN),
+    last_errcode(0)
 {}
 
 AmIdentity::~AmIdentity()

@@ -70,30 +70,35 @@ class AmAudioMixer
 };
 
 class AmAudioMixerConnector 
-: public AmAudio {
-  AmMultiPartyMixer& mixer;
-  unsigned int channel;
-  AmMutex* audio_mut;
-  std::set<AmAudio*>* sinks;
-  AmAudio* mix_channel;
+  : public AmAudio
+{
+    AmMultiPartyMixer& mixer;
+    unsigned int channel;
+    AmMutex* audio_mut;
+    std::set<AmAudio*>* sinks;
+    AmAudio* mix_channel;
 
- protected:
-  int get(unsigned long long system_ts, unsigned char* buffer, 
-	  int output_sample_rate, unsigned int nb_samples);
-  int put(unsigned long long system_ts, unsigned char* buffer, 
-	  int input_sample_rate, unsigned int size);
+  protected:
+    int get(unsigned long long system_ts, unsigned char* buffer,
+        int output_sample_rate, unsigned int nb_samples);
+    int put(unsigned long long system_ts, unsigned char* buffer,
+        int input_sample_rate, unsigned int size);
 
-  // dummies for AmAudio's pure virtual methods
-  int read(unsigned int user_ts, unsigned int size){ return -1; }
-  int write(unsigned int user_ts, unsigned int size){ return -1; }
+    // dummies for AmAudio's pure virtual methods
+    int read(unsigned int user_ts, unsigned int size){ return -1; }
+    int write(unsigned int user_ts, unsigned int size){ return -1; }
 
- public:
- AmAudioMixerConnector(AmMultiPartyMixer& mixer, unsigned int channel,
-		       AmAudio* mix_channel, 
-		       AmMutex* audio_mut = NULL, std::set<AmAudio*>* sinks = NULL) 
-   : mixer(mixer), channel(channel), mix_channel(mix_channel), 
-    audio_mut(audio_mut), sinks(sinks) { }
-  ~AmAudioMixerConnector() { }
+  public:
+    AmAudioMixerConnector(
+        AmMultiPartyMixer& mixer, unsigned int channel,
+        AmAudio* mix_channel,
+        AmMutex* audio_mut = NULL, std::set<AmAudio*>* sinks = NULL)\
+      : mixer(mixer),
+        channel(channel),
+        audio_mut(audio_mut), sinks(sinks),
+        mix_channel(mix_channel)
+      { }
+    ~AmAudioMixerConnector() { }
 
 };
 

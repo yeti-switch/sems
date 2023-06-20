@@ -68,17 +68,17 @@ inline trans_timer** fetch_timer(unsigned int timer_type, trans_timer** base)
 }
 
 sip_trans::sip_trans()
-    : msg(NULL),
-      targets(NULL),
-      retr_buf(NULL),
-      retr_socket(NULL),
-      retr_len(0),
-      last_rseq(0),
-      logger(NULL),
-      canceled(false),
-      sensor(NULL),
-      timer_m(0),
-      redirects_allowed(-1)
+  : msg(NULL),
+    last_rseq(0),
+    targets(NULL),
+    retr_buf(NULL),
+    retr_len(0),
+    retr_socket(NULL),
+    logger(NULL),
+    sensor(NULL),
+    canceled(false),
+    timer_m(0),
+    redirects_allowed(-1)
 {
     memset(timers,0,SIP_TRANS_TIMERS*sizeof(void*));
     gettimeofday(&time_created, 0);

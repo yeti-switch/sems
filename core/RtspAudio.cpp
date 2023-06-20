@@ -18,8 +18,8 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
     agent(RtspClient::instance()),
     md(0),
     streamid(-1),
-    state(Ready),
-    start_progress_time(0)
+    start_progress_time(0),
+    state(Ready)
 {
     id = agent->addStream(*this);
 

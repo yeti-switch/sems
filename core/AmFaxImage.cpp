@@ -275,12 +275,11 @@ ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
 /*                                           AmFaxImage                                            */
 /***************************************************************************************************/
 AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send)
-: m_filePath(filePath)
-, m_send(send)
-, m_t30_state(0)
-, eq(q)
-{
-}
+  : m_t30_state(0),
+    m_filePath(filePath),
+    m_send(send),
+    eq(q)
+{}
 
 AmFaxImage::~AmFaxImage()
 {

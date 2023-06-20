@@ -42,8 +42,8 @@ class TestSession : public AmSession
     AmCondition<bool> started;
 public:
     TestSession(const string& remote_uri, int OA)
-    : OAtype(OA), remote(0), audio(this)
-    , started(false)
+      : remote(0), audio(this), OAtype(OA),
+        started(false)
     {
         RTPStream()->setMonitorRTPTimeout(false);
 

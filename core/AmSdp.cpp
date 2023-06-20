@@ -369,11 +369,11 @@ AmSdp::AmSdp()
     origin(),
     sessionName(),
     conn(),
+    use_ice(false),
     setup(S_UNDEFINED),
     send(true),
     recv(true),
-    media(),
-    use_ice(false)
+    media()
 {
     origin.user = AmConfig.sdp_origin;
     origin.sessId = get_random();
@@ -385,12 +385,12 @@ AmSdp::AmSdp(const AmSdp& p_sdp_msg)
     origin(p_sdp_msg.origin),
     sessionName(p_sdp_msg.sessionName),
     conn(p_sdp_msg.conn),
-    attributes(p_sdp_msg.attributes),
+    use_ice(p_sdp_msg.use_ice),
     setup(p_sdp_msg.setup),
+    attributes(p_sdp_msg.attributes),
     send(p_sdp_msg.send),
     recv(p_sdp_msg.recv),
-    media(p_sdp_msg.media),
-    use_ice(p_sdp_msg.use_ice)
+    media(p_sdp_msg.media)
 {}
 
 int AmSdp::parse(const char* _sdp_msg)

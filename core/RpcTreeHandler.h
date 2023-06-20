@@ -68,32 +68,32 @@ class RpcTreeHandler
         string leaf_descr,func_descr,arg,arg_descr;
         AmArg leaves;
 
-        rpc_entry(string ld):
-            handler(nullptr), async_handler(nullptr),
+        rpc_entry(string ld)
+          :  handler(nullptr), async_handler(nullptr),
             leaf_descr(ld)
         {}
 
-        rpc_entry(string ld, member_handler h, string fd):
+        rpc_entry(string ld, member_handler h, string fd)
+          : handler(h), async_handler(nullptr),
             leaf_descr(ld),
-            handler(h), async_handler(nullptr),
             func_descr(fd)
         {}
 
-        rpc_entry(string ld, member_handler h, string fd, string a, string ad):
+        rpc_entry(string ld, member_handler h, string fd, string a, string ad)
+          : handler(h), async_handler(nullptr),
             leaf_descr(ld),
-            handler(h), async_handler(nullptr),
             func_descr(fd), arg(a), arg_descr(ad)
         {}
 
-        rpc_entry(string ld, async_member_handler h, string fd):
+        rpc_entry(string ld, async_member_handler h, string fd)
+          : handler(nullptr), async_handler(h),
             leaf_descr(ld),
-            handler(nullptr), async_handler(h),
             func_descr(fd)
         {}
 
-        rpc_entry(string ld, async_member_handler h, string fd, string a, string ad):
+        rpc_entry(string ld, async_member_handler h, string fd, string a, string ad)
+          : handler(nullptr), async_handler(h),
             leaf_descr(ld),
-            handler(nullptr), async_handler(h),
             func_descr(fd), arg(a), arg_descr(ad)
         {}
 

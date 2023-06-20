@@ -132,9 +132,12 @@ struct SdpCrypto
     SdpCrypto() : tag(0), profile(CP_NONE), alt_alias(false) {}
 
     SdpCrypto(const SdpCrypto& crypto)
-        : tag(crypto.tag), profile(crypto.profile)
-        , keys(crypto.keys), sp(crypto.sp)
-        , alt_alias(crypto.alt_alias){}
+      : tag(crypto.tag),
+        profile(crypto.profile),
+        alt_alias(crypto.alt_alias),
+        keys(crypto.keys),
+        sp(crypto.sp)
+    {}
 
     string print() const;
 
@@ -176,18 +179,21 @@ struct SdpIceCandidate
     IceCandidateType type;
     SdpConnection rel_conn;
     std::map<string, string> attrs;
-    
+
     SdpIceCandidate() 
-        : foundation(int2str(rand())), comp_id(0)
-        , priority((ICT_HOST << 24) | ((rand() << 16) >> 8) | (256 - comp_id)) // see rfc5245 4.1.2.1
-        , transport(ICTR_UDP), type(ICT_HOST) {}
-    
+      : foundation(int2str(rand())),
+        comp_id(0),
+        transport(ICTR_UDP),
+        priority((ICT_HOST << 24) | ((rand() << 16) >> 8) | (256 - comp_id)), // see rfc5245 4.1.2.1
+        type(ICT_HOST)
+    {}
+
     SdpIceCandidate(const SdpIceCandidate& ic)
         : foundation(ic.foundation), comp_id(ic.comp_id)
         , transport(ic.transport), priority(ic.priority)
         , conn(ic.conn), type(ic.type)
         , rel_conn(ic.rel_conn), attrs(ic.attrs){}
-        
+
     string print() const;
     static IceCandidateType str2type(string str);
 };
@@ -319,8 +325,8 @@ struct SdpMedia
       send(true),
       recv(true),
       has_mode_attribute(false),
-      is_ice(false),
-      is_multiplex(false)
+      is_multiplex(false),
+      is_ice(false)
   {}
 
   /** pretty print */

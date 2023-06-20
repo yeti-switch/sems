@@ -153,8 +153,8 @@ tcp_base_trsp::tcp_base_trsp(
         server_sock_->get_if(),
         server_sock_->get_proto_idx(),0,transport,0,sd),
     server_sock(server_sock_), server_worker(server_worker_),
-    closed(false), connected(false),
-    evbase(evbase_), input(input_),
+    input(input_), closed(false),
+    connected(false), evbase(evbase_),
     read_ev(NULL), write_ev(NULL)
 {
     sockaddr_ssl* sa_ssl = (sockaddr_ssl*)(sa);

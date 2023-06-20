@@ -2169,10 +2169,10 @@ static const char * param2str(int parm)
 
 
 AmISUP::AmISUP():
-	proto_type(SS7_UNKNOWN),
-	_buf(NULL),
-	_len(0),
-	message_type(ISUP_UNDEF)
+    _buf(NULL),
+    _len(0),
+    proto_type(SS7_UNKNOWN),
+    message_type(ISUP_UNDEF)
 { }
 
 AmISUP::AmISUP(const AmISUP& p_isup_msg)

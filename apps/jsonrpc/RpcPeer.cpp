@@ -73,10 +73,13 @@ void JsonrpcPeerConnection::notifyDisconnect()
 }
 
 JsonrpcNetstringsConnection::JsonrpcNetstringsConnection(const std::string& id) 
-  : JsonrpcPeerConnection(id), 
-    fd(0), msg_size(0), rcvd_size(0), in_msg(false), msg_recv(true)
-{
-}
+  : JsonrpcPeerConnection(id),
+    fd(0),
+    msg_recv(true),
+    msg_size(0),
+    rcvd_size(0),
+    in_msg(false)
+{}
 
 JsonrpcNetstringsConnection::~JsonrpcNetstringsConnection()
 {
@@ -228,7 +231,10 @@ int JsonrpcNetstringsConnection::netstringsRead() {
             if (msgbuf[rcvd_size] == ':') {
                 msgbuf[rcvd_size] = '\0';
                 if (str2i(std::string(msgbuf, rcvd_size), msg_size)) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
                     ERROR("Protocol error decoding size '%s'", msgbuf);
+#pragma GCC diagnostic pop
                     return REMOVE;
                 }
                 // received len - switch to receive msg mode
@@ -318,8 +324,8 @@ int JsonrpcNetstringsConnection::send_data(char* data, int size)
     rcvd_size = 0;
     poll_set.fd = fd;
     poll_set.events = POLLOUT | POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-
-    while (rcvd_size != size) {
+    
+    while (rcvd_size != static_cast<typeof rcvd_size>(size)) {
         ssize_t written = send(fd, &data[rcvd_size], size - rcvd_size,
 #ifdef MSG_NOSIGNAL
        MSG_NOSIGNAL

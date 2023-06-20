@@ -18,8 +18,8 @@ class CoreRpc final
     static timeval last_shutdown_time;
 
     CoreRpc()
-      : AmDynInvokeFactory("core"),
-        RpcTreeHandler<CoreRpc>(true)
+      : RpcTreeHandler<CoreRpc>(true),
+        AmDynInvokeFactory("core")
     { }
 
   protected:

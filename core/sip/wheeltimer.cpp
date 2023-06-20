@@ -43,8 +43,8 @@ timer::~timer()
 }
 
 _wheeltimer::_wheeltimer(const char *thread_name)
-    : wall_clock(0),
-      thread_name(thread_name)
+  : thread_name(thread_name),
+    wall_clock(0)
 {
     struct timeval now;
     gettimeofday(&now,NULL);

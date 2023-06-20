@@ -32,8 +32,11 @@ class DbTransaction
                                PGTransactionData::write_policy wp);
 public:
     DbTransaction(ITransactionHandler* handler)
-      : Transaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), handler)
-      , il(isolation), wp(rw), dummyParent("", false, false) {}
+      : Transaction(PolicyFactory::instance()->createTransaction(this, TR_POLICY), handler),
+        dummyParent("", false, false),
+        il(isolation),
+        wp(rw)
+    {}
     DbTransaction(const DbTransaction<isolation, rw>& trans);
     ~DbTransaction() {};
 };

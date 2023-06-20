@@ -132,7 +132,10 @@ public:
         from_tag;
 
         MixerEvent(const string &channel_id, unsigned int event_id, const string &from_tag)
-            : channel_id(channel_id), event_id(event_id), from_tag(from_tag)  {}
+          : event_id(event_id),
+            channel_id(channel_id),
+            from_tag(from_tag)
+        {}
     };
 
 private:

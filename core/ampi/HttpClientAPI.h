@@ -51,16 +51,16 @@ struct HttpUploadEvent
                   string session_id = string(),
                   const string &sync_ctx_id = string())
     : HttpEvent(Upload, session_id,token,sync_ctx_id),
-      destination_name(destination_name),
+      file_path(file_path),
       file_name(file_name),
-      file_path(file_path)
+      destination_name(destination_name)
   { }
 
   HttpUploadEvent(const HttpUploadEvent &src)
     : HttpEvent(Upload, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
-      destination_name(src.destination_name),
+      file_path(src.file_path),
       file_name(src.file_name),
-      file_path(src.file_path)
+      destination_name(src.destination_name)
   {}
 
   HttpUploadEvent *clone() {
@@ -83,10 +83,10 @@ struct HttpPostMultipartFormEvent
              const string &content_type,
              const string &value,
              Type type = ImmediateValue)
-          : name(name),
+          : type(type),
+            name(name),
             content_type(content_type),
-            value(value),
-            type(type)
+            value(value)
         {}
     };
     vector<Part> parts;
@@ -101,8 +101,8 @@ struct HttpPostMultipartFormEvent
 
     HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
       : HttpEvent(MultiPartForm, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
-        destination_name(src.destination_name),
-        parts(src.parts)
+        parts(src.parts),
+        destination_name(src.destination_name)
     { }
 
     HttpPostMultipartFormEvent *clone() {
@@ -135,8 +135,8 @@ struct HttpPostEvent
                 string session_id = string(),
                 const string &sync_ctx_id = string())
     : HttpEvent(Post, session_id,token,sync_ctx_id),
-      destination_name(destination_name),
-      data(data)
+      data(data),
+      destination_name(destination_name)
   {}
 
   HttpPostEvent(string destination_name, string data,
@@ -144,15 +144,15 @@ struct HttpPostEvent
                 string session_id = string(),
                 const string &sync_ctx_id = string())
     : HttpEvent(Post, session_id,token,sync_ctx_id),
-      destination_name(destination_name),
       data(data),
+      destination_name(destination_name),
       additional_headers(headers)
   {}
 
   HttpPostEvent(const HttpPostEvent &src)
     : HttpEvent(Post, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
-      destination_name(src.destination_name),
       data(src.data),
+      destination_name(src.destination_name),
       additional_headers(src.additional_headers)
   {}
 };
@@ -168,8 +168,8 @@ struct HttpPostResponseEvent
   HttpPostResponseEvent(long int code, string &data, string token = string())
     : AmEvent(E_PLUGIN),
       code(code),
-      data(data),
-      token(token)
+      token(token),
+      data(data)
   {}
 };
 
@@ -207,9 +207,9 @@ struct HttpGetResponseEvent
                         const string& mimetype, string token = string())
     : AmEvent(E_PLUGIN),
       code(code),
+      token(token),
       data(data.c_str(), data.size()),
-      mime_type(mimetype),
-      token(token)
+      mime_type(mimetype)
     {}
 };
 

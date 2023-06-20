@@ -40,8 +40,8 @@ public:
     AmCondition<bool> zrtp_activated;
 
     ZRTPSession(const string& remote_uri, int OA)
-    : OAtype(OA), remote(0), audio(this)
-    , started(false), zrtp_activated(false)
+      : remote(0), audio(this), OAtype(OA),
+        started(false), zrtp_activated(false)
     {
         srtp_init();
         RTPStream()->setMonitorRTPTimeout(false);

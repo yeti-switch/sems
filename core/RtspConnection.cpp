@@ -243,23 +243,18 @@ void RtspMsg::parse_msg(int type, const string &data)
     }
 }
 
-
 RtspMsg::RtspMsg(MSG_TYPE _type, const string &data)
-    : type(_type), ContentLength(0), code(0), cseq(0), r_rtp_port(0), size(0)
-
+  : type(_type), cseq(0), code(0), r_rtp_port(0), ContentLength(0), size(0)
 {
     parse_msg(type, data);
 }
 
-
 RtspMsg::RtspMsg(int method, const string &_uri, uint64_t owner_id)
-    : type(RTSP_REQUEST), method(method), uri(_uri), owner_id(owner_id), version("RTSP/1.0")
+  : owner_id(owner_id), type(RTSP_REQUEST), method(method), version("RTSP/1.0"), uri(_uri)
 {}
 
-
-
 RtspSession::RtspSession(RtspClient *_agent, const sockaddr_storage &_saddr, int _slot)
-    : agent(_agent), saddr(_saddr), state(Closed), cseq(0), fd(-1), slot(_slot)
+  : agent(_agent), slot(_slot), cseq(0), fd(-1), saddr(_saddr), state(Closed)
 {
     am_inet_pton(agent->localMediaIP().c_str(), &l_saddr);
     am_set_port(&l_saddr, 0);

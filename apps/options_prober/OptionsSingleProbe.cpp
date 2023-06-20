@@ -55,11 +55,11 @@ static AmArgHashValidator SipProbeAmArgValidator({
 });
 
 SipSingleProbe::SipSingleProbe()
-  : transport_protocol_id(sip_transport::UDP),
-    proxy_transport_protocol_id(sip_transport::UDP),
-    sip_schema_id(sip_uri::SIP),
+  : dlg(this),
     active_dialog(false),
-    dlg(this)
+    transport_protocol_id(sip_transport::UDP),
+    sip_schema_id(sip_uri::SIP),
+    proxy_transport_protocol_id(sip_transport::UDP)
 {}
 
 void SipSingleProbe::patch_transport(string &uri, int transport_protocol_id)

@@ -55,10 +55,19 @@ sctp_sendv(int s, struct iovec *iov, int iov_len,
 BusConnection::BusConnection(BusClient *_bus, const sockaddr_storage &_saddr,
                              int _slot, int _reconnect_interval, int _node_id,
                              int _so_rcvbuf, int _so_sndbuf)
-:   bus(_bus), saddr(_saddr), slot(_slot), state(Closed),
-    reconnect_interval(_reconnect_interval), last_activity(0), node_id(_node_id),
-    so_rcvbuf (_so_rcvbuf), so_sndbuf(_so_sndbuf),
-    e_send(0), e_recv(0), reconn(0), last_err(0)
+  : slot(_slot),
+    node_id(_node_id),
+    reconnect_interval(_reconnect_interval),
+    so_rcvbuf(_so_rcvbuf),
+    so_sndbuf(_so_sndbuf),
+    state(Closed),
+    last_activity(0),
+    bus(_bus),
+    saddr(_saddr),
+    e_send(0),
+    e_recv(0),
+    reconn(0),
+    last_err(0)
 {
     INFO("%s(): %s:%d", __func__, am_inet_ntop(&saddr).c_str(), am_get_port(&saddr));
 

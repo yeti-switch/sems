@@ -48,7 +48,7 @@ class _AmSipMsgInDlg
   timeval recv_timestamp;
   unsigned int transport_id;
 
-  _AmSipMsgInDlg() : cseq(0), rseq(0), transport_id(0), actual_port(0) { }
+  _AmSipMsgInDlg() : cseq(0), rseq(0), actual_port(0), transport_id(0) { }
   virtual ~_AmSipMsgInDlg() { }
 
   virtual string print() const = 0;
@@ -69,22 +69,24 @@ struct AmSipHeader
 /** \brief represents a SIP reply */
 class AmSipReply : public _AmSipMsgInDlg
 {
- public:
-  unsigned int code;
-  string       reason;
-  string       to_uri;
-  bool         local_reply;
+   public:
+    unsigned int code;
+    string       reason;
+    string       to_uri;
+    bool         local_reply;
 #ifdef PROPAGATE_UNPARSED_REPLY_HEADERS
-  list<AmSipHeader> unparsed_headers;
+    list<AmSipHeader> unparsed_headers;
 #endif
 
- AmSipReply()
-   : code(0),
-     local_reply(false),
-     _AmSipMsgInDlg()
- { }
-  ~AmSipReply() { }
-  string print() const;
+    AmSipReply()
+      : _AmSipMsgInDlg(),
+        code(0),
+        local_reply(false)
+    { }
+
+    ~AmSipReply() { }
+
+    string print() const;
 };
 
 

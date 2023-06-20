@@ -444,7 +444,9 @@ int SecureRpcPeer::read_data(char* data, int size) {
     if(conn_type == PEER_WSS && ws_connected) {
         return WsRpcPeer::read_data(data, size);
     } else {
-        int ret_size = size > tls_resv_buffer.size() ? tls_resv_buffer.size() : size;
+        int ret_size = size > static_cast<typeof size>(tls_resv_buffer.size()) ?
+            tls_resv_buffer.size() : size;
+
         memcpy(data, tls_resv_buffer.data(), ret_size);
         tls_resv_buffer.erase(tls_resv_buffer.begin(), tls_resv_buffer.begin() + ret_size);
         return ret_size;

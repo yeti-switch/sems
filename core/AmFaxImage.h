@@ -63,18 +63,20 @@ struct FaxCompleteEvent
 
 class AmFaxImage
 {
-protected:
+  protected:
     t30_state_t *m_t30_state;
     std::string m_filePath;
     bool m_send;
     AmEventQueue* eq;
-public:
+
+  public:
     AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send);
     virtual ~AmFaxImage();
 
     void init_t30();
     virtual void get_fax_params(std::map<std::string, std::string>& params){}
-protected:
+
+  protected:
     friend void spandsp_log_handler(int level, const char *text, void* user_data);
     friend int phase_b_handler(t30_state_t *s, void *user_data, int result);
     friend int phase_d_handler(t30_state_t *s, void *user_data, int result);

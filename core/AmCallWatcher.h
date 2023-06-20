@@ -55,29 +55,36 @@ class CallStatus;
 /** 
  * \brief event that carries out call status update
  */
-class CallStatusUpdateEvent : public AmEvent {
-  string call_id;
+class CallStatusUpdateEvent
+  : public AmEvent
+{
+    string call_id;
 
-  CallStatus* init_status;
+    CallStatus* init_status;
 
- public:
-  enum UpdateType {
-    Initialize = 0,
-    Update,
-    Obsolete
-  };
+  public:
+    enum UpdateType {
+        Initialize = 0,
+        Update,
+        Obsolete
+    };
 
-  CallStatusUpdateEvent(UpdateType t, const string& call_id)
-    : call_id(call_id), AmEvent(t)  { }
+    CallStatusUpdateEvent(UpdateType t, const string& call_id)
+      : AmEvent(t),
+        call_id(call_id)
+    { }
 
-  // implicit: initialize
-  CallStatusUpdateEvent(const string& call_id, CallStatus* init_status)
-    : call_id(call_id), init_status(init_status), AmEvent(Initialize)  { }
+    // implicit: initialize
+    CallStatusUpdateEvent(const string& call_id, CallStatus* init_status)
+      : AmEvent(Initialize),
+        call_id(call_id),
+        init_status(init_status)
+    { }
 
-  ~CallStatusUpdateEvent() { }
+    ~CallStatusUpdateEvent() { }
 
-  string get_call_id() { return call_id; }
-  CallStatus* get_init_status() { return init_status; }
+    string get_call_id() { return call_id; }
+    CallStatus* get_init_status() { return init_status; }
 };
 
 /** 

@@ -68,14 +68,14 @@ struct JsonRpcResponse
     bool is_error;
 
     JsonRpcResponse(bool is_error, string id, const AmArg& data)
-      : is_error(is_error),
-        id(id),
-        data(data)
+      : id(id),
+        data(data),
+        is_error(is_error)
     { }
 
     JsonRpcResponse(bool is_error, string id)
-      : is_error(is_error),
-        id(id)
+      : id(id),
+        is_error(is_error)
     { }
 
     ~JsonRpcResponse() { }
@@ -118,8 +118,8 @@ struct JsonRpcRequestEvent
     // notification with parameters
     JsonRpcRequestEvent(string method, AmArg params)
       : method(method),
-        params(params),
-        is_notify(true)
+        is_notify(true),
+        params(params)
     { }
 
     // request without parameters
@@ -178,9 +178,9 @@ struct JsonRpcRequestEvent
         int method_id,
         const AmArg &params)
       : JsonRpcEvent(connection_id),
+        method_id(method_id),
         id(id),
         is_notify(is_notify),
-        method_id(method_id),
         params(params)
     { }
 
@@ -222,16 +222,16 @@ struct JsonServerEvent
     JsonServerEvent(
         JsonrpcNetstringsConnection* c,
         EventType ev_type)
-      : conn(c),
-        AmEvent(ev_type)
+      : AmEvent(ev_type),
+        conn(c)
     { }
 
     JsonServerEvent(
         const string& connection_id,
         EventType ev_type)
-      : connection_id(connection_id),
-        AmEvent(ev_type),
-        conn(nullptr)
+      : AmEvent(ev_type),
+        conn(nullptr),
+        connection_id(connection_id)
     { }
 
     ~JsonServerEvent() { }
@@ -258,10 +258,10 @@ struct JsonServerSendMessageEvent
         const string& reply_link = "")
       : JsonServerEvent(connection_id, SendMessage),
         is_reply(is_reply),
-        reply_link(reply_link),
         method(method),
         id(id),
         params(params),
+        reply_link(reply_link),
         udata(udata)
     { }
 
@@ -283,10 +283,10 @@ struct JsonServerSendMessageEvent
         JsonrpcNetstringsConnection* conn)
       : JsonServerEvent(conn, SendMessage),
         is_reply(e.is_reply),
-        reply_link(e.reply_link),
         method(e.method),
         id(e.id),
         params(e.params),
+        reply_link(e.reply_link),
         is_error(e.is_error),
         udata(e.udata)
     {

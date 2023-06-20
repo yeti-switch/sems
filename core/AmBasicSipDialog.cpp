@@ -59,10 +59,7 @@ const char* AmBasicSipDialog::status2str[AmBasicSipDialog::__max_Status] = {
 
 AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
   : status(Disconnected),
-    cseq(10),r_cseq_i(false),hdl(h),
-	logger(NULL),sensor(NULL),
-    outbound_proxy(AmConfig.outbound_proxy),
-    force_outbound_proxy(AmConfig.force_outbound_proxy),
+    max_forwards(-1),
     force_cancel_route_set(AmConfig.force_cancel_route_set),
     next_hop(AmConfig.next_hop),
     next_hop_1st_req(AmConfig.next_hop_1st_req),
@@ -72,9 +69,15 @@ AmBasicSipDialog::AmBasicSipDialog(AmBasicSipEventHandler* h)
     outbound_proto_id(-1),
     outbound_address_type(AT_NONE),
     resolve_priority(IPv4_only),
-    nat_handling(AmConfig.sip_nat_handling),
     usages(0),
-    max_forwards(-1)
+    hdl(h),
+    logger(NULL),
+    sensor(NULL),
+    outbound_proxy(AmConfig.outbound_proxy),
+    force_outbound_proxy(AmConfig.force_outbound_proxy),
+    nat_handling(AmConfig.sip_nat_handling),
+    cseq(10),
+    r_cseq_i(false)
 {
   //assert(h);
 }

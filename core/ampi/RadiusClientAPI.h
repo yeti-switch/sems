@@ -78,8 +78,8 @@ struct RadiusRequestEvent
     string session_id,
     std::map<string,string> values)
     : AmEvent(Auth),
-      server_id(server_id),
       session_id(session_id),
+      server_id(server_id),
       values_hash(values)
   {
       gettimeofday(&created_at,NULL);
@@ -91,10 +91,10 @@ struct RadiusRequestEvent
     string session_id,
     std::map<string,string> values)
     : AmEvent(Accounting),
-      accounting_type(type),
-      server_id(server_id),
       session_id(session_id),
-     values_hash(values)
+      server_id(server_id),
+      values_hash(values),
+      accounting_type(type)
   {
       gettimeofday(&created_at,NULL);
   }

@@ -259,15 +259,13 @@ class AmArg
 
     /** resizes array if too small */
     AmArg& operator[](size_t idx);
+    AmArg& operator[](int idx);
+    AmArg& operator[](unsigned int idx);
 
     /** throws OutOfBoundsException if array too small */
     AmArg& operator[](size_t idx) const;
-
-    /** resizes array if too small */
-    AmArg& operator[](int idx);
-
-    /** throws OutOfBoundsException if array too small */
     AmArg& operator[](int idx) const;
+    AmArg& operator[](unsigned int idx) const;
 
     AmArg& operator[](std::string key);
     AmArg& operator[](std::string key) const;

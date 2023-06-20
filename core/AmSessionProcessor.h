@@ -63,7 +63,8 @@ struct AmSessionProcessorThreadAddEvent
 {
     AmSession* s;
     AmSessionProcessorThreadAddEvent(AmSession* s)
-      : s(s), AmEvent(120)
+      : AmEvent(120),
+        s(s)
     { }
 };
 

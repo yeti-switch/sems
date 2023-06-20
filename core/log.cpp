@@ -134,16 +134,16 @@ bool SyslogLogFac::setFacility(const char* str, const char* name) {
   return true;
 }
 
-void SyslogLogFac::log(int level, pid_t pid, pid_t tid,
+void SyslogLogFac::log(int level, [[maybe_unused]] pid_t pid, pid_t tid,
                        const char* func, const char* file, int line, const char* msg)
 {
   static const int log2syslog_level[] = { LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
 #ifdef _DEBUG
 
   // replace \r\n through a dot
-  for(char* c=msg; (*c); c++)
+  /*for(char* c=msg; (*c); c++)
     if(*c == '\r' || *c == '\n')
-      *c = '.';
+      *c = '.';*/
 
 # ifndef NO_THREADID_LOG
 #  ifdef LOG_LOC_DATA_ATEND

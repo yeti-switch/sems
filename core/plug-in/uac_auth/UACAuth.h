@@ -62,8 +62,8 @@ class UACAuthFactory
 {
     UACAuthFactory(const string& name)
       : AmSessionEventHandlerFactory(name),
-        AmConfigFactory(name),
-        AmDynInvokeFactory(name)
+        AmDynInvokeFactory(name),
+        AmConfigFactory(name)
     { }
 
     static UACAuthFactory* _instance;

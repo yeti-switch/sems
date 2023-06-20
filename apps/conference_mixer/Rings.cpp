@@ -19,7 +19,11 @@
 RxFrame     RxRing::rx[RX_RING_RX_SIZE];
 
 TxRing::TxRing(int sd, const vector<sockaddr_storage> &neighbor_saddr)
-    : offset(0), last_tx(0), pending(0), neighbor_saddr(neighbor_saddr), sockfd(sd)
+  : neighbor_saddr(neighbor_saddr),
+    sockfd(sd),
+    offset(0),
+    last_tx(0),
+    pending(0)
 {
     buffer = (unsigned char *)mmap(NULL, TX_RING_MMAP_SIZE, PROT_READ | PROT_WRITE,
                                          MAP_ANONYMOUS | MAP_PRIVATE , -1, 0);

@@ -3,7 +3,7 @@
 #include <assert.h>
 
 AmConferenceChannel::AmConferenceChannel(AmConferenceStatus* status, int channel_id, bool own_channel)
-  : status(status), channel_id(channel_id), own_channel(own_channel)
+  : own_channel(own_channel), channel_id(channel_id), status(status)
 {
   assert(status);
   conf_id = status->getConfID();

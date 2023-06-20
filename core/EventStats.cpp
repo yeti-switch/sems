@@ -2,10 +2,10 @@
 #include "AmUtils.h"
 
 EventTypeStats::EventTypeStats(const std::type_info &type_info, timeval &consumed_time, map<string,string> ext_labels)
-  : name(type_info.name()),
+  : labels(ext_labels),
+    name(type_info.name()),
     count(1),
-    consumed_time(consumed_time),
-    labels(ext_labels)
+    consumed_time(consumed_time)
 {
     labels.emplace("type", name);
 }

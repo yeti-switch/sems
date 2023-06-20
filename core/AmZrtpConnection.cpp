@@ -28,8 +28,8 @@ static int zrtp_startSrtpSession(void *clientData, const bzrtpSrtpSecrets_t *srt
 }
 
 zrtpContext::zrtpContext()
-: l_ssrc(0), context(0)
-, activated(false), started(false)
+  : context(0), l_ssrc(0),
+    started(false), activated(false)
 {
     timeval tm;
     gettimeofday(&tm, 0);

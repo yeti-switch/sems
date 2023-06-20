@@ -36,24 +36,24 @@ inline const char *transport_type2str(int type)
 }
 
 AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type)
-    : seq(TRANSPORT_SEQ_NONE)
-    , mode(TRANSPORT_MODE_DEFAULT)
-    , stream(_stream)
-    , cur_rtp_conn(nullptr)
-    , cur_rtcp_conn(nullptr)
-    , cur_raw_conn(nullptr)
-    , cur_udptl_conn(nullptr)
-    , logger(nullptr)
-    , sensor(nullptr)
-    , type(type)
-    , l_sd(0)
-    , l_sd_ctx(-1)
-    , l_port(0)
-    , l_if(_if)
-    , lproto_id(_proto_id)
-    , srtp_enable(false)
-    , dtls_enable(false)
-    , zrtp_enable(false)
+  : seq(TRANSPORT_SEQ_NONE),
+    mode(TRANSPORT_MODE_DEFAULT),
+    stream(_stream),
+    cur_rtp_conn(nullptr),
+    cur_rtcp_conn(nullptr),
+    cur_udptl_conn(nullptr),
+    cur_raw_conn(nullptr),
+    logger(nullptr),
+    sensor(nullptr),
+    type(type),
+    l_sd(0),
+    l_sd_ctx(-1),
+    l_port(0),
+    l_if(_if),
+    lproto_id(_proto_id),
+    srtp_enable(false),
+    dtls_enable(false),
+    zrtp_enable(false)
 {
     memset(&l_saddr, 0, sizeof(sockaddr_storage));
 

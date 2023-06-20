@@ -280,28 +280,26 @@ unsigned int AmInternalResamplerState::resample(unsigned char *samples, unsigned
 #endif
 
 AmAudio::AmAudio()
-  : fmt(new AmAudioFormat(CODEC_PCM16)),
+  : rec_time(0),
     max_rec_time(-1),
-    rec_time(0),
-    input_resampling_state(),
-    output_resampling_state(),
+    record_enabled(false),
     stereo_record_enabled(false),
     inband_detector_enabled(false),
-    record_enabled(false)
-{
-}
+    fmt(new AmAudioFormat(CODEC_PCM16)),
+    input_resampling_state(),
+    output_resampling_state()
+{}
 
 AmAudio::AmAudio(AmAudioFormat *_fmt)
-  : fmt(_fmt),
+  : rec_time(0),
     max_rec_time(-1),
-    rec_time(0),
-    input_resampling_state(),
-    output_resampling_state(),
+    record_enabled(false),
     stereo_record_enabled(false),
     inband_detector_enabled(false),
-    record_enabled(false)
-{
-}
+    fmt(_fmt),
+    input_resampling_state(),
+    output_resampling_state()
+{}
 
 AmAudio::~AmAudio()
 {

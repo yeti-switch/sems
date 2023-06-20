@@ -313,7 +313,7 @@ void S3Client::responseComplete(S3Status status, S3RequestData* data)
         } else {
             uint64_t size = data->response["size"].asLongLong();
             char *data_ = new char[size], *pos = data_;
-            for(int i = 0; i < data->response["data"].size(); i++) {
+            for(unsigned int i = 0; i < data->response["data"].size(); i++) {
                 ArgBlob* blob = data->response["data"][i].asBlob();
                 memcpy(pos, blob->data, blob->len);
                 pos += blob->len;

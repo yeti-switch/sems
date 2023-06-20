@@ -115,24 +115,30 @@ public:
  * read or written.
  */
 class AmPlaylistSeparator 
-  : public AmAudio {
-  bool notified;
-  AmEventQueue* ev_q;
-  int id;
-public:  
-  AmPlaylistSeparator(AmEventQueue* q, int id)
-    : ev_q(q), notified(false), id(id) { }
-  ~AmPlaylistSeparator() { }
+  : public AmAudio
+{
+    bool notified;
+    AmEventQueue* ev_q;
+    int id;
+  public:
+    AmPlaylistSeparator(AmEventQueue* q, int id)
+      : notified(false),
+        ev_q(q),
+        id(id)
+    { }
 
-  int read(unsigned int user_ts, unsigned int size){
-    if (!notified) 
-      ev_q->postEvent(new AmPlaylistSeparatorEvent(id)); 
-    notified = true; 
-    return 0; 
-  }
-  int write(unsigned int user_ts, unsigned int size){
-    return read(user_ts, size);
-  }
+    ~AmPlaylistSeparator() { }
+
+    int read(unsigned int user_ts, unsigned int size) {
+        if(!notified) 
+            ev_q->postEvent(new AmPlaylistSeparatorEvent(id)); 
+        notified = true; 
+        return 0; 
+    }
+
+    int write(unsigned int user_ts, unsigned int size) {
+        return read(user_ts, size);
+    }
 };
 
 

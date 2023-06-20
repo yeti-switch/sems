@@ -34,14 +34,12 @@
 
 
 AmCallWatcher::AmCallWatcher() 
-  : garbage_collector(new AmCallWatcherGarbageCollector(soft_states_mut, soft_states)),
-    AmEventQueue(this)
-{ 
-}
+  : AmEventQueue(this),
+    garbage_collector(new AmCallWatcherGarbageCollector(soft_states_mut, soft_states))
+{ }
 
 AmCallWatcher::~AmCallWatcher() 
-{ 
-}
+{ }
 
 void AmCallWatcher::run() {
   setThreadName("AmCW");

@@ -5,13 +5,13 @@
 #include "AmRtpStream.h"
 
 AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _priority)
-    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN)
-    , priority(_priority)
-    , isAuthentificated(false)
-    , err_code(0)
-    , depend_conn(0)
-    , count(0)
-    , intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500} //rfc5389 7.2.1.Sending over UDP
+  : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN),
+    depend_conn(0),
+    isAuthentificated(false),
+    err_code(0),
+    priority(_priority),
+    count(0),
+    intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500} //rfc5389 7.2.1.Sending over UDP
 {
     SA_transport(&r_addr) = transport->getTransportType();
     CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu",
