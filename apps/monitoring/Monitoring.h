@@ -72,7 +72,7 @@ class Monitor
   public AmDynInvoke   
 {
   static Monitor* _instance;
-  std::auto_ptr<MonitorGarbageCollector> gc_thread;
+  std::unique_ptr<MonitorGarbageCollector> gc_thread;
 
   enum filter_respone_type { frtype_id, frtype_info };
 

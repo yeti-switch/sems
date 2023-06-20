@@ -34,7 +34,6 @@
 #include <string.h>
 
 #include <memory>
-using std::auto_ptr;
 
 int parse_sip_version(const char* beg, int len)
 {

@@ -51,7 +51,6 @@
 
 using std::string;
 using std::vector;
-using std::auto_ptr;
 using std::pair;
 
 // return values of AmRtpStream::receive
