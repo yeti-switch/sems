@@ -358,8 +358,6 @@ add_definitions(-DLOG_BUFFER_LEN=2048)
 
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-add_definitions(-Wno-deprecated)
-
 get_directory_property(CoreDefsList DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
 foreach( d ${CoreDefsList} )
 #    message( STATUS "Define: " ${d} )

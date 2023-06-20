@@ -25,7 +25,7 @@ class ConferenceMedia
                                     run_to;
     /** Sample buffer. */
     DblBuffer                       samples;
-    auto_ptr<AmResamplingState>     input_resampling_state;
+    unique_ptr<AmResamplingState>   input_resampling_state;
 
     TxRing                          tx_ring;
 

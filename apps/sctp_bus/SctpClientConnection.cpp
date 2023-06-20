@@ -225,8 +225,8 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
         assoc_id,
         r.dst_node_id(),
         r.dst_session_id().c_str());
-
-    if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
+    
+    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
        ERROR("send(): %m");
     }
 
@@ -273,8 +273,8 @@ void SctpClientConnection::send(const SctpBusRawRequest &e)
         r.dst_node_id(),
         r.dst_session_id().c_str(),
         r.sequence());
-
-    if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
+    
+    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
        ERROR("send(): %m");
         sent_requests.erase(last_cseq);
         AmSessionContainer::instance()->postEvent(
@@ -317,8 +317,8 @@ void SctpClientConnection::send(const SctpBusRawReply &e)
         assoc_id,
         r.dst_node_id(),
         r.dst_session_id().c_str());
-
-    if(::send(fd, payload, size, SCTP_UNORDERED | MSG_NOSIGNAL) != size) {
+    
+    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
        ERROR("send(): %m");
        return;
     }

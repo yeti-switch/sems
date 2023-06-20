@@ -670,7 +670,7 @@ bool BusConnection::sendMsg(BusMsg *msg, uint32_t& msg_seq)
         (int)dst.addr_length, (char *)dst.addr,
         (int)data_size, (char *)data);
 
-    if (sctp_sendv(fd, iov, iov_len, &sinfo, SCTP_UNORDERED | MSG_NOSIGNAL) < 0) {
+    if (sctp_sendv(fd, iov, iov_len, &sinfo, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) < 0) {
         ERROR("sctp_send(): %m");
         return false;
 //        postError(msg->local_tag, "Bus send error");

@@ -21,17 +21,21 @@ class S3Client;
 struct S3RequestData
 {
     S3Client* client;
-    auto_ptr<S3Event> event;
-    auto_ptr<JsonRpcRequestEvent> request;
+    unique_ptr<S3Event> event;
+    unique_ptr<JsonRpcRequestEvent> request;
 
     AmArg response;
 
     S3RequestData(S3Client* client,
                   S3Event* event_)
-    : client(client)
-    , event(event_)
-    , request(0){}
-    S3RequestData(const JsonRpcRequestEvent& event) : client(0), event(0), request(new JsonRpcRequestEvent(event)){}
+      : client(client),
+        event(event_)
+    {}
+
+    S3RequestData(const JsonRpcRequestEvent& event)
+      : client(0),
+        request(new JsonRpcRequestEvent(event))
+    {}
 };
 
 class S3Client

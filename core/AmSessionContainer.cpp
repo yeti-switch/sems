@@ -237,7 +237,7 @@ void AmSessionContainer::destroySession(AmSession* s)
 
 string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_name, AmArg* session_params) {
 
-    auto_ptr<AmSession> session;
+    unique_ptr<AmSession> session;
     try {
         session.reset(createSession(req, app_name, true, session_params));
         if(session.get() != 0) {
@@ -317,7 +317,7 @@ void AmSessionContainer::startSessionUAS(AmSipRequest& req)
 {
   try {
       // Call-ID and From-Tag are unknown: it's a new session
-      auto_ptr<AmSession> session;
+      unique_ptr<AmSession> session;
       string app_name;
 
       session.reset(createSession(req,app_name));
@@ -444,7 +444,7 @@ void AmSessionContainer::setCPSSoftLimit(unsigned int percent)
       break;
     }
   }
-  CPSLimit = ((float)percent / 100) * ((float)cps_queue.size() / CPS_SAMPLERATE);
+  CPSLimit = ((float)percent / 100) * ((float)cps_queue.size() / static_cast<float>(CPS_SAMPLERATE));
   if(0 == CPSLimit) CPSLimit = 1;
 }
 
@@ -470,8 +470,8 @@ unsigned int AmSessionContainer::getAvgCPS()
       break;
     }
   }
-
-  return (float)cps_queue.size() / CPS_SAMPLERATE;
+  
+  return (float)cps_queue.size() / static_cast<float>(CPS_SAMPLERATE);
 }
 
 unsigned int AmSessionContainer::getMaxCPS()
@@ -498,8 +498,8 @@ bool AmSessionContainer::check_and_add_cps()
       break;
     }
   }
-
-  unsigned int cps = (float)cps_queue.size() / CPS_SAMPLERATE;
+  
+  unsigned int cps = (float)cps_queue.size() / static_cast<float>(CPS_SAMPLERATE);
   if (cps > max_cps) {
     max_cps = cps;
   }

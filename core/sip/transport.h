@@ -80,15 +80,15 @@ public:
     enum socket_transport {
         tr_invalid  = 0,
         udp_ipv4 = tr_proto_udp,
-        udp_ipv6 = tr_proto_udp | tr_addr_family_ipv6,
+        udp_ipv6 = tr_proto_udp | static_cast<int>(tr_addr_family_ipv6),
         tcp_ipv4 = tr_proto_tcp,
-        tcp_ipv6 = tr_proto_tcp | tr_addr_family_ipv6,
+        tcp_ipv6 = tr_proto_tcp | static_cast<int>(tr_addr_family_ipv6),
         tls_ipv4 = tr_proto_tls,
-        tls_ipv6 = tr_proto_tls | tr_addr_family_ipv6,
+        tls_ipv6 = tr_proto_tls | static_cast<int>(tr_addr_family_ipv6),
         ws_ipv4 =  tr_proto_ws,
-        ws_ipv6 =  tr_proto_ws  | tr_addr_family_ipv6,
+        ws_ipv6 =  tr_proto_ws  | static_cast<int>(tr_addr_family_ipv6),
         wss_ipv4 = tr_proto_wss,
-        wss_ipv6 = tr_proto_wss | tr_addr_family_ipv6
+        wss_ipv6 = tr_proto_wss | static_cast<int>(tr_addr_family_ipv6)
     };
     static const char *socket_transport2proto_str(const socket_transport transport);
 

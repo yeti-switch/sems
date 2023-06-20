@@ -154,8 +154,8 @@ void _wheeltimer::turn_wheel()
     }
 
     //increment time
-    wall_clock++;
-		
+    wall_clock = wall_clock+1;
+
     // Update existing timer entries
     update_wheel(i);
 	

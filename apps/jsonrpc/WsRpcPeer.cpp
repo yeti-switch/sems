@@ -87,7 +87,7 @@ int WsRpcPeer::netstringsRead() {
         }
 
         DBG("received message [%p/%d]\n%.*s", this, fd, rcvd_size, msgbuf);
-        std::auto_ptr<sip_msg> s_msg(new sip_msg((const char*)msgbuf, rcvd_size));
+        std::unique_ptr<sip_msg> s_msg(new sip_msg((const char*)msgbuf, rcvd_size));
         rcvd_size = 0;
         char* err_msg=0;
         err = parse_http_msg(s_msg.get(), err_msg);

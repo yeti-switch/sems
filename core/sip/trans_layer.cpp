@@ -2954,7 +2954,7 @@ int _trans_layer::try_next_ip(
             goto try_next_dest;
         }
 
-        auto_ptr<sip_trans> n_tr(copy_uac_trans(tr));
+        unique_ptr<sip_trans> n_tr(copy_uac_trans(tr));
 
         if(n_tr->flags & TR_FLAG_NEXT_HOP_RURI) {
             // patch R-URI, generate& parse new message

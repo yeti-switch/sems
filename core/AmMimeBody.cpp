@@ -7,7 +7,7 @@
 #include "AmUtils.h"
 
 #include <memory>
-using std::auto_ptr;
+using std::unique_ptr;
 #include <algorithm>
 using std::transform;
 
@@ -497,7 +497,7 @@ int AmMimeBody::parseSinglePart(unsigned char* buf, unsigned int len)
     return -1;
   }
 
-  auto_ptr<AmMimeBody> sub_part(new AmMimeBody());
+  unique_ptr<AmMimeBody> sub_part(new AmMimeBody());
 
   string sub_part_hdrs;
   string sub_part_ct;
