@@ -22,7 +22,7 @@ add_custom_command(OUTPUT ${CURL_BUNDLED_LIB}
     PRE_BUILD
     COMMAND ./buildconf
     COMMAND ./configure ${CURL_CONFIG_ARGS}
-    COMMAND $(MAKE)
+    COMMAND make
     WORKING_DIRECTORY ${CURL_BIN_DIR})
 
 set(CURL_BUNDLED_INCLUDE_DIRS ${CURL_BIN_DIR}/include)

@@ -85,10 +85,10 @@ class BusClient
         int         reconnect_interval;
         int         query_timeout;
         int         shutdown_code;
-        typedef struct {
+        struct dynamic_queue_config_t {
             string name;
             string application;
-        } dynamic_queue_config_t;
+        };
         vector<dynamic_queue_config_t> dynamic_queues;
     } config_t;
 
@@ -139,7 +139,7 @@ class BusClient
     void fillRouteInfo(AmArg &route, const route_methods_container::value_type &route_data);
     send_conn_result_t sendMessagetoConnection(BusConnection* c, BusMsg* msg);
 
-    rpc_handler postEvent;
+    rpc_handler postEventHdl;
     rpc_handler showConnections;
     rpc_handler showRoutes;
     rpc_handler requestRoutesTest;

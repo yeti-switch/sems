@@ -51,13 +51,15 @@ void AmEventFdQueue::processEvents()
         ev_queue.pop();
         m_queue.unlock();
 
+        auto& event_ref = *event.get();
+
         if(AmConfig.log_events)
-            DBG("before processing event (%s)", typeid(*event.get()).name());
+            DBG("before processing event (%s)", typeid(event_ref).name());
 
         handler->process(event.get());
 
         if(AmConfig.log_events)
-            DBG("event processed (%s)", typeid(*event.get()).name());
+            DBG("event processed (%s)", typeid(event_ref).name());
 
         event.reset(nullptr);
 

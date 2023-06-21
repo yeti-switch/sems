@@ -71,17 +71,17 @@ class UACAuthFactory
 
   public:
 
-    int onLoad();
+    int onLoad() override;
     int configure(const std::string& config) override;
     int reconfigure(const std::string& config) override;
 
     // SessionEventHandler API
-    AmSessionEventHandler* getHandler(AmSession* s);
-    bool onInvite(const AmSipRequest& req, AmConfigReader& conf);
+    AmSessionEventHandler* getHandler(AmSession* s) override;
+    bool onInvite(const AmSipRequest& req, AmConfigReader& conf) override;
 
     static UACAuthFactory* instance();
-    AmDynInvoke* getInstance() { return instance(); }
-    void invoke(const string& method, const AmArg& args, AmArg& ret);
+    AmDynInvoke* getInstance() override { return instance(); }
+    void invoke(const string& method, const AmArg& args, AmArg& ret) override;
 };
 
 /** \brief contains necessary information for UAC auth of a SIP request */

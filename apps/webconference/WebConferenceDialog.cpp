@@ -418,7 +418,10 @@ void WebConferenceDialog::process(AmEvent* ev)
   AmSession::process(ev);
 }
 
-void WebConferenceDialog::onDtmf(int event, int duration) {
+void WebConferenceDialog::onDtmf(AmDtmfEvent* e) {
+  auto event = e->event();
+  auto duration = e->duration();
+
   DBG("WebConferenceDialog::onDtmf: event %d duration %d", event, duration);
 
   if (EnteringPin == state) {

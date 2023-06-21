@@ -80,8 +80,8 @@ class ConferenceChannel
         : public AmAudio
 {
     int64_t                 ext_id;
-    int                     sample_rate,
-                            mpmixer_ch_id;
+    //int                     sample_rate,
+    int                     mpmixer_ch_id;
     mixer_ptr               mpmixer;
 
     void put_external(int neighbor_idx, unsigned long long ts, unsigned char *buffer,

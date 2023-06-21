@@ -178,8 +178,8 @@ void AmStunConnection::send_request()
         data[i] = (uint8_t)rand();
     }
     builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, data, STUN_TIE_BREAKER_LENGTH);
-    int priority = htonl(priority);
-    builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority, 4);
+    int priority_netorder = htonl(priority);
+    builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority_netorder, 4);
     builder.AddMessageIntegrityShortTerm(remote_password.c_str());
     builder.AddFingerprintAttribute();
 

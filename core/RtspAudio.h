@@ -21,7 +21,7 @@ class RtspAudio : public AmRtpAudio
         uint64_t            id;             /** unique RtspAudio ID */
         RtspClient          *agent;
 
-        int                 md;             /** media server descriptor */
+        //int                 md;             /** media server descriptor */
         int                 streamid;       /** streamid from media server RTP-Info header */
         int                 last_sent_cseq; /** cseq of the last sent request */
         uint64_t            start_progress_time; /** opening time **/
@@ -32,8 +32,8 @@ class RtspAudio : public AmRtpAudio
         // RtspMsg             req;
 
     private:
-        void    initIP4Transport();
-        void    initIP6Transport();
+        void    initIP4Transport() override;
+        void    initIP6Transport() override;
         bool    initSdpAnswer();
         void    initRtpAudio(unsigned short int r_rtp_port);
         int     initRtpAudio_by_sdp(const char *sdp_msg);
@@ -53,7 +53,7 @@ class RtspAudio : public AmRtpAudio
         int     getStreamID() { return streamid; }
         bool    isPlaying()    { return state == Playing; }
 
-        void    close();
+        void    close() override;
         void    open(const string& uri);
         void    checkState(uint64_t timeout);
         void    onRtspMessage(const RtspMsg &msg);

@@ -69,9 +69,9 @@ void TxRing::done()
     if (last_tx == pending)
         return;
 
-    int iov_len = 1; // delta last_tx - last_ring_tx
+    //int iov_len = 1; // delta last_tx - last_ring_tx
 
-    struct iovec iov[iov_len] = {};
+    struct iovec iov[1] = {};
 
     for ( ; last_tx != pending; ++last_tx) {
         MixerFrame *frame = &tx[last_tx & TX_RING_RX_MASK];
@@ -82,7 +82,7 @@ void TxRing::done()
         iov[0].iov_len  = hdr->length + sizeof(MixerFrameHdr);
     }
 
-    send((struct iovec*)&iov, iov_len);
+    send((struct iovec*)&iov, 1);
 }
 
 

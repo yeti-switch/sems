@@ -146,11 +146,11 @@ class AnswerMachineDialog : public AmSession
 
     ~AnswerMachineDialog();
 
-    void process(AmEvent* event);
+    void process(AmEvent* event) override;
 
-    void onSessionStart();
-    void onBye(const AmSipRequest& req);
-    void onDtmf(int event, int duration_msec) {}
+    void onSessionStart() override;
+    void onBye(const AmSipRequest& req) override;
+    void onDtmf(AmDtmfEvent* e) override {}
 
     friend class AnswerMachineFactory;
 };

@@ -90,7 +90,7 @@ public:
 
   // return true to continue processing
   virtual bool startup() { return true; }
-  virtual bool processingCycle() { processEvents(); return true; }
+  virtual bool processingCycle(EventStats *stats = nullptr) { processEvents(stats); return true; }
   virtual void finalize() { finalized = true; }
 };
 

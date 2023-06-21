@@ -45,7 +45,7 @@ public:
         dec_ref(t38);
     }
 
-    void process(AmEvent* ev)
+    void process(AmEvent* ev) override
     {
         FaxCompleteEvent* fax_ev = dynamic_cast<FaxCompleteEvent*>(ev);
         if(fax_ev){

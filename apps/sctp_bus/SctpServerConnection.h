@@ -29,5 +29,5 @@ class SctpServerConnection
     void handle_notification(const sockaddr_storage &from) override;
     int on_timer(time_t) override { return 0; }
 
-    void getInfo(AmArg &ret);
+    void getInfo(AmArg &ret) override;
 };

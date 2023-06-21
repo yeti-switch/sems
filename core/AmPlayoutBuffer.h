@@ -127,14 +127,14 @@ class AmAdaptivePlayout: public AmPlayoutBuffer
   virtual void reinit(unsigned int new_sample_rate) override;
 
   /** write len samples beginning from timestamp ts from buf */
-  void direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len);
+  void direct_write_buffer(unsigned int ts, ShortSample* buf, unsigned int len) override;
 
   /** write len samples which beginn from timestamp ts from buf
       reference ts of buffer (monotonic increasing buffer ts) is ref_ts */
-  void write_buffer(u_int32_t ref_ts, u_int32_t ts, int16_t* buf, u_int32_t len);
+  void write_buffer(u_int32_t ref_ts, u_int32_t ts, int16_t* buf, u_int32_t len) override;
 
   /** read len samples beginn from timestamp ts into buf */
-  u_int32_t read(u_int32_t ts, int16_t* buf, u_int32_t len);
+  u_int32_t read(u_int32_t ts, int16_t* buf, u_int32_t len) override;
 
 };
 

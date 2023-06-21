@@ -319,7 +319,7 @@ class AmB2BMedia
     std::list<StreamPair> streams;
 
     bool a_leg_muted, b_leg_muted;
-    bool a_leg_receiving, b_leg_receiving;
+    //bool a_leg_receiving, b_leg_receiving;
 
     bool relay_paused;
 
@@ -418,17 +418,17 @@ class AmB2BMedia
      * Because processing is driven by destination stream (i.e. we don't read
      * anything unless the destination stream is ready to send something - see
      * sendIntReached()) all processing is done in writeStreams */
-    virtual int readStreams(unsigned long long ts, unsigned char *buffer) { return 0; }
+    virtual int readStreams(unsigned long long ts, unsigned char *buffer) override { return 0; }
     
     /** Read and write all RTP streams if data are to be written (see
      * readStreams()). */
-    virtual int writeStreams(unsigned long long ts, unsigned char *buffer);
+    virtual int writeStreams(unsigned long long ts, unsigned char *buffer) override;
 
-    virtual void ping(unsigned long long ts);
+    virtual void ping(unsigned long long ts) override;
 
     /** Calls processDtmfEvent on both AmB2BSessions for which this AmB2BMedia
      * instance manages media. */
-    virtual void processDtmfEvents();
+    virtual void processDtmfEvents() override;
 
     /** Sends DTMF using the given call leg */
     void sendDtmf(bool a_leg, int event, unsigned int duration_ms, int volume = -1);
@@ -438,13 +438,13 @@ class AmB2BMedia
      * Though readStreams(), writeStreams() or processDtmfEvents() can be called
      * after call to clearAudio, they will do nothing because all relevant
      * information will be rlready eleased. */
-    virtual void clearAudio() { clearAudio(true); clearAudio(false); }
+    virtual void clearAudio() override { clearAudio(true); clearAudio(false); }
 
     /** release RTP streams for one leg */
     void clearAudio(bool a_leg);
 
     /** Clear RTP timeout of all streams in both call legs. */
-    virtual void clearRTPTimeout();
+    virtual void clearRTPTimeout() override;
 
     virtual void onMediaSessionExists() override;
 
@@ -487,7 +487,7 @@ class AmB2BMedia
     // print debug info
     void debug();
 
-	virtual void getInfo(AmArg &ret);
+	virtual void getInfo(AmArg &ret) override;
 };
 
 #endif

@@ -16,11 +16,11 @@
 #define htonll(b) __builtin_bswap64(b)
 #endif
 
-static inline bool      pq_get_bool(const char *value) { return (bool)*value; }
+[[maybe_unused]] static inline bool      pq_get_bool(const char *value) { return (bool)*value; }
 static inline int16_t   pg_get_int2(const char *value) { return (int16_t)ntohs(*(int16_t*)value); }
 static inline int32_t   pq_get_int4(const char *value) { return (int32_t)ntohl(*(int32_t*)value); }
 static inline int64_t   pq_get_int8(const char *value) { return ntohll(*(int64_t*)value); }
-static inline const char*     pq_get_text(const char *value) { return value; }
+[[maybe_unused]] static inline const char*     pq_get_text(const char *value) { return value; }
 static inline double    pq_get_float8(const char *value)
 {
     union {

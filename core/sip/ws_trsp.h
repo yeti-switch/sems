@@ -109,7 +109,7 @@ public:
 
 class ws_trsp_socket: public ws_output, public tcp_trsp_socket
 {
-    bool ws_connected;
+    //bool ws_connected;
     friend class ws_socket_factory;
     const char* get_transport() const { return "ws"; }
     int send_data(const char* msg, const int msg_len, unsigned int flags);

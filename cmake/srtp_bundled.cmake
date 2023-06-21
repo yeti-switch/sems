@@ -15,7 +15,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRTP_SRC_DIR} ${SRT
 add_custom_command(OUTPUT ${SRTP_BUNDLED_LIB}
     PRE_BUILD
     COMMAND ./configure ${SRTP_CONFIG_ARGS}
-    COMMAND $(MAKE)
+    COMMAND make
     WORKING_DIRECTORY ${SRTP_BIN_DIR})
 
 set(SRTP_BUNDLED_INCLUDE_DIRS ${SRTP_BIN_DIR}/include/)

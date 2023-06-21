@@ -56,9 +56,9 @@ public:
   ~EchoDialog();
 
   void onSessionStart(/*const AmSipRequest& req);
-			void onSessionStart(const AmSipReply& rep*/);
-  void onBye(const AmSipRequest& req);
-  void onDtmf(int event, int duration);
+			void onSessionStart(const AmSipReply& rep*/) override;
+  void onBye(const AmSipRequest& req) override;
+  void onDtmf(AmDtmfEvent* e) override;
 };
 
 

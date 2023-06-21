@@ -195,16 +195,16 @@ protected:
 
   /** process pending events,  
       @return whether everything went smoothly */
-  virtual bool processEventsCatchExceptions(EventStats &stats);
+  virtual bool processEventsCatchExceptions(EventStats *stats);
 
   /** @return whether startup was successful */
-  bool startup();
+  bool startup() override;
 
   /** @return whether session continues running */
-  virtual bool processingCycle(EventStats &stats);
+  virtual bool processingCycle(EventStats *stats) override;
 
   /** clean up session */
-  void finalize();
+  void finalize() override;
 
 public:
 
@@ -250,7 +250,7 @@ public:
   /**
    * @see AmEventHandler
    */
-  virtual void process(AmEvent*);
+  virtual void process(AmEvent*) override;
 
   /** post event into session */
   void postEvent(AmEvent* event) override;
@@ -354,7 +354,7 @@ public:
   /**
    * Clears input & ouput (no need to lock)
    */
-  virtual void clearAudio();
+  virtual void clearAudio() override;
 
   /** setter for rtp_str->mute */
   void setMute(bool mute) { RTPStream()->mute = mute; }
@@ -490,7 +490,7 @@ public:
   /**
    * Entry point for DTMF events
    */
-  void postDtmfEvent(AmDtmfEvent *);
+  void postDtmfEvent(AmDtmfEvent *) override;
 
   void setInbandDetector(Dtmf::InbandDetectorType t);
   bool isDtmfDetectionEnabled() { return m_dtmfDetectionEnabled; }
@@ -588,29 +588,29 @@ public:
   virtual void onBye(const AmSipRequest& req);
 
   /** remote side is unreachable - 408/481 reply received */
-  virtual void onRemoteDisappeared(const AmSipReply&);
+  virtual void onRemoteDisappeared(const AmSipReply&) override;
 
   /** Entry point for SIP Requests   */
-  virtual void onSipRequest(const AmSipRequest& req);
+  virtual void onSipRequest(const AmSipRequest& req) override;
 
-  virtual void onRequestSendFailed(const AmSipRequest& req) {}
+  virtual void onRequestSendFailed(const AmSipRequest& req) override {}
 
   /** Entry point for SIP Replies   */
   virtual void onSipReply(const AmSipRequest& req, const AmSipReply& reply, 
-			  AmBasicSipDialog::Status old_dlg_status);
+			  AmBasicSipDialog::Status old_dlg_status) override;
 
   /** 2xx reply has been received for an INVITE transaction */
-  virtual void onInvite2xx(const AmSipReply& reply);
+  virtual void onInvite2xx(const AmSipReply& reply) override;
 
-  virtual void onInvite1xxRel(const AmSipReply &);
+  virtual void onInvite1xxRel(const AmSipReply &) override;
 
   /** answer for a locally sent PRACK is received */
-  virtual void onPrack2xx(const AmSipReply &);
+  virtual void onPrack2xx(const AmSipReply &) override;
 
-  virtual void onFailure();
+  virtual void onFailure() override;
   
-  virtual void onNoAck(unsigned int cseq);
-  virtual void onNoPrack(const AmSipRequest &req, const AmSipReply &rpl);
+  virtual void onNoAck(unsigned int cseq) override;
+  virtual void onNoPrack(const AmSipRequest &req, const AmSipReply &rpl) override;
 
   /**
    * Entry point for Audio events
@@ -639,25 +639,25 @@ public:
   virtual void onSessionTimeout();
 
   /* Called by AmSipDialog when a request is sent */
-  virtual void onSendRequest(AmSipRequest& req, int& flags);
+  virtual void onSendRequest(AmSipRequest& req, int& flags) override;
 
   /** Called by AmSipDialog when a reply is sent */
-  virtual void onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
+  virtual void onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags) override;
 
   /** Hook called when an SDP offer is required */
-  virtual bool getSdpOffer(AmSdp& offer);
+  virtual bool getSdpOffer(AmSdp& offer) override;
 
   /** Hook called when an SDP offer is required */
-  virtual bool getSdpAnswer(const AmSdp& offer, AmSdp& answer);
+  virtual bool getSdpAnswer(const AmSdp& offer, AmSdp& answer) override;
 
   /** Hook called when an SDP OA transaction has been completed */
-  virtual int onSdpCompleted(const AmSdp& offer, const AmSdp& answer);
+  virtual int onSdpCompleted(const AmSdp& offer, const AmSdp& answer) override;
 
   /** Hook called when an early session starts (SDP OA completed + dialog in early state) */
-  virtual void onEarlySessionStart();
+  virtual void onEarlySessionStart() override;
 
   /** Hook called when the session creation is completed (INV trans replied with 200) */
-  virtual void onSessionStart();
+  virtual void onSessionStart() override;
 
   /** 
    * called in the session thread before the session is destroyed,
@@ -679,11 +679,11 @@ public:
   /* ----------------- media processing interface ------------------- */
 
 public: 
-  virtual int readStreams(unsigned long long ts, unsigned char *buffer);
-  virtual int writeStreams(unsigned long long ts, unsigned char *buffer);
-  virtual void ping(unsigned long long ts);
-  virtual void clearRTPTimeout() { RTPStream()->clearRTPTimeout(); }
-  virtual void processDtmfEvents();
+  virtual int readStreams(unsigned long long ts, unsigned char *buffer) override;
+  virtual int writeStreams(unsigned long long ts, unsigned char *buffer) override;
+  virtual void ping(unsigned long long ts) override;
+  virtual void clearRTPTimeout() override { RTPStream()->clearRTPTimeout(); }
+  virtual void processDtmfEvents() override;
 
   /**
    * Call-backs used by RTP stream(s)

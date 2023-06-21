@@ -54,19 +54,19 @@ class JsonRPCServerModule
  public:
   JsonRPCServerModule(const string& mod_name);
   ~JsonRPCServerModule();
-  int onLoad();
+  int onLoad() override;
 
   // Config factory
   int configure(const std::string & config) override;
   int reconfigure(const std::string& config) override;
   // DI factory
-  AmDynInvoke* getInstance() { return instance(); }
+  AmDynInvoke* getInstance() override { return instance(); }
 
   // DI API
   static JsonRPCServerModule* instance();
 
   void invoke(const string& method, 
-	      const AmArg& args, AmArg& ret);
+	      const AmArg& args, AmArg& ret) override;
 
   // configuration
   static string host;

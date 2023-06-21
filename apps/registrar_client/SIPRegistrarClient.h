@@ -100,20 +100,20 @@ class SIPRegistrarClient
     int configure(const std::string & config) override;
     int reconfigure(const std::string & config) override;
     // DI factory
-    AmDynInvoke* getInstance() { return instance(); }
+    AmDynInvoke* getInstance() override { return instance(); }
     // DI API
     static SIPRegistrarClient* instance();
     void invoke(const string& method,
-                const AmArg& args, AmArg& ret);
+                const AmArg& args, AmArg& ret) override;
     //StatCountersGroupsInterface
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
 
     bool onSipReply(const AmSipReply& rep, AmSipDialog::Status old_dlg_status);
-    int onLoad();
+    int onLoad() override;
 
-    void run();
-    void on_stop();
-    void process(AmEvent* ev);
+    void run() override;
+    void on_stop() override;
+    void process(AmEvent* ev) override;
 
     // API
     string createRegistration(

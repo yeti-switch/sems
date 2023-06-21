@@ -97,7 +97,7 @@ static unsigned int utf8ToCodepoint(const char*& s, const char* e) {
         if (calculated >= 0xD800 && calculated <= 0xDFFF)
             return REPLACEMENT_CHARACTER;
         // oversized encoded characters are invalid
-            return calculated < 0x800 ? REPLACEMENT_CHARACTER : calculated;
+        return calculated < 0x800 ? REPLACEMENT_CHARACTER : calculated;
     }
 
     if (firstByte < 0xF8) {

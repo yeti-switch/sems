@@ -576,7 +576,7 @@ int BusClient::reconfigure(const string&)
     return 0;
 }
 
-void BusClient::postEvent(const AmArg& args, AmArg& ret)
+void BusClient::postEventHdl(const AmArg& args, AmArg& ret)
 {
     try {
         args.assertArrayFmt("ssss");
@@ -658,7 +658,7 @@ void BusClient::requestRoutesTest(const AmArg& args, AmArg& ret)
 
 void BusClient::init_rpc_tree()
 {
-    reg_method(root,"postEvent","",&BusClient::postEvent);
+    reg_method(root,"postEvent","",&BusClient::postEventHdl);
 
     AmArg &show = reg_leaf(root,"show","");
     reg_method(show,"connections","",&BusClient::showConnections);

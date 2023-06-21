@@ -399,10 +399,10 @@ bool AmSession::startup() {
   return true;
 }
 
-bool AmSession::processEventsCatchExceptions(EventStats &stats) {
+bool AmSession::processEventsCatchExceptions(EventStats *stats) {
   try {
     try {	
-      processEvents(&stats);
+      processEvents(stats);
     } 
     catch(const AmSession::Exception& e){ throw e; }
     catch(const string& str){
@@ -434,7 +434,7 @@ void AmSession::postEvent(AmEvent* event)
 
 /** one cycle of the event processing loop. 
     this should be called until it returns false. */
-bool AmSession::processingCycle(EventStats &stats) {
+bool AmSession::processingCycle(EventStats *stats) {
 
     DBG("vv S [%s|%s] %s, %s, %i UACTransPending, %i usages vv",
         dlg->getCallid().c_str(),getLocalTag().c_str(),

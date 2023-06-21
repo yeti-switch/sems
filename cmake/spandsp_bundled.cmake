@@ -18,7 +18,7 @@ IF(NOT EXISTS ${SPANDSP_BIN_DIR}/configure_stdout)
 ENDIF(NOT EXISTS ${SPANDSP_BIN_DIR}/configure_stdout)
 
 add_custom_command(OUTPUT ${SPANDSP_BUNDLED_LIB}
-    COMMAND $(MAKE)
+    COMMAND make
     WORKING_DIRECTORY ${SPANDSP_BIN_DIR})
 
 add_library(SPANDSP_bundled STATIC IMPORTED)

@@ -10,7 +10,11 @@
 using std::vector;
 
 
+#if __clang__
+#define _hot
+#else
 #define _hot __attribute__((optimize("-O3")))
+#endif
 
 #define UDP_MESSAGE_MAX 65508
 
@@ -75,5 +79,5 @@ public:
     RxRing();
     ~RxRing();
 
-    void  handler(uint32_t ev, int fd) _hot;
+    void handler(uint32_t ev, int fd) _hot;
 };

@@ -20,7 +20,7 @@ ENDIF(NOT EXISTS ${BOTAN_BIN_DIR}/configure_stdout)
 
 add_custom_command(OUTPUT ${BOTAN_BUNDLED_LIB}
     PRE_BUILD
-    COMMAND $(MAKE)
+    COMMAND make
     WORKING_DIRECTORY ${BOTAN_BIN_DIR})
 
 set(BOTAN_BUNDLED_INCLUDE_DIRS ${BOTAN_BIN_DIR}/build/include/)

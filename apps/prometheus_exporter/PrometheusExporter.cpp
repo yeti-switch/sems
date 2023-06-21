@@ -210,8 +210,8 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
                     serialize_label(buf,l,begin);
 
                 //if(omit_timestamp) {
-                    evbuffer_add_printf(buf, "} %llu\n",
-                        value);
+                evbuffer_add_printf(buf, "} %llu\n",
+                    value);
                 /*} else {
                     evbuffer_add_printf(buf, "} %llu %llu\n",
                         value, timestamp);

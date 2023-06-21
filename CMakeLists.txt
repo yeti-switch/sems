@@ -6,8 +6,10 @@ IF(COMMAND cmake_policy)
 #	CMAKE_POLICY(SET CMP0003 NEW)
 ENDIF(COMMAND cmake_policy)
 
-set(CMAKE_C_COMPILER "/usr/bin/gcc")
-set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+#set(CMAKE_C_COMPILER "/usr/bin/gcc")
+#set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+set(CMAKE_C_COMPILER clang-14 CACHE STRING "c compiler" FORCE)
+set(CMAKE_CXX_COMPILER clang++-14 CACHE STRING "c++ compiler" FORCE)
 set(CMAKE_CXX_STANDARD 20)
 
 # Add path for additional FindXXX.cmake scenarios
@@ -317,6 +319,7 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PR
 
 add_definitions(-D_THREAD_SAFE -D_REENTRANT)
 add_compile_options(-Wall -Werror -fPIC -g -O2)
+add_compile_options(-Wno-unknown-warning-option)
 
 add_definitions(-D_DEBUG)
 #SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")

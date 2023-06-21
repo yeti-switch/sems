@@ -126,10 +126,10 @@ void EchoDialog::onBye(const AmSipRequest& req)
   setStopped();
 }
 
-void EchoDialog::onDtmf(int event, int duration)
+void EchoDialog::onDtmf(AmDtmfEvent* e)
 {
 #ifdef STAR_SWITCHES_PLAYOUTBUFFER
-  if (event == 10) {   
+  if (e->event() == 10) {
     const char* pt = "simple (fifo) playout buffer";
     if (playout_type == SIMPLE_PLAYOUT) {
       playout_type = ADAPTIVE_PLAYOUT;

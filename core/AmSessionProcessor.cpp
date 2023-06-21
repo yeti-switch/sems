@@ -181,7 +181,7 @@ void AmSessionProcessorThread::run()
         event_stats_mutex.lock();
         while (it != sessions.end()) {
             if ((pending_process_sessions.find(*it)!=pending_process_sessions.end())
-                && (!(*it)->processingCycle(event_stats)))
+                && (!(*it)->processingCycle(&event_stats)))
             {
                 fin_sessions.push_back(*it);
                 std::list<AmSession*>::iterator d_it = it;

@@ -33,7 +33,7 @@ class ConferenceMedia
     unsigned int resampleInput(unsigned char* buffer, unsigned int s, int input_sample_rate, int output_sample_rate);
 
 protected:
-    void onMediaTailProcessingTerminated();
+    void onMediaTailProcessingTerminated() override;
     int processMediaTail(unsigned long long ts) override;
     // Fake implement AmAudio's pure virtual methods
     // this avoids to copy the samples locally by implementing only get/put
@@ -45,11 +45,11 @@ public:
     ~ConferenceMedia();
 
     /* ----------------- media processing interface ------------------- */
-    int readStreams(unsigned long long ts, unsigned char *buffer);
-    int writeStreams(unsigned long long ts, unsigned char *buffer);
+    int readStreams(unsigned long long ts, unsigned char *buffer) override;
+    int writeStreams(unsigned long long ts, unsigned char *buffer) override;
 
-    void processDtmfEvents() {}
-    void clearAudio() {}
-    void clearRTPTimeout() {}
-    void onMediaProcessingTerminated() { dec_ref(this); }
+    void processDtmfEvents() override {}
+    void clearAudio() override {}
+    void clearRTPTimeout() override {}
+    void onMediaProcessingTerminated() override { dec_ref(this); }
 };

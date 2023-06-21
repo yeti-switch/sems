@@ -150,10 +150,10 @@ public:
 
   // AmAudio interface
   int get(unsigned long long system_ts, unsigned char* buffer, 
-	  int output_sample_rate, unsigned int nb_samples);
+	  int output_sample_rate, unsigned int nb_samples) override;
 
   int put(unsigned long long system_ts, unsigned char* buffer, 
-	  int input_sample_rate, unsigned int size);
+	  int input_sample_rate, unsigned int size) override;
 
   void put_on_idle(unsigned long long system_ts);
 
@@ -162,12 +162,12 @@ public:
   unsigned int bytes2samples(unsigned int) const;
 
   // AmRtpStream interface
-  void getSdpOffer(unsigned int index, SdpMedia& offer);
-  void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer);
+  void getSdpOffer(unsigned int index, SdpMedia& offer) override;
+  void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer) override;
 
   int init(const AmSdp& local,
 	   const AmSdp& remote,
-       bool force_symmetric_rtp = false);
+       bool force_symmetric_rtp = false) override;
 
   int ping(unsigned long long ts) override;
 
@@ -175,11 +175,11 @@ public:
 
 
   // AmPLCBuffer interface
-  void add_to_history(int16_t *buffer, unsigned int size);
+  void add_to_history(int16_t *buffer, unsigned int size) override;
 
   // Conceals packet loss into the out_buffer
   // @return length in bytes of the recivered segment
-  unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer);
+  unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer) override;
 
   bool isLastSamplesRelayed() { return last_recv_relayed; }
 
@@ -192,8 +192,8 @@ public:
 
   void setMaxRtpTime(uint32_t ts);
 protected:
-  int read(unsigned int user_ts, unsigned int size) { return 0; }
-  int write(unsigned int user_ts, unsigned int size) { return 0; }
+  int read(unsigned int user_ts, unsigned int size) override { return 0; }
+  int write(unsigned int user_ts, unsigned int size) override { return 0; }
   void virtual onRtpTimeout();
   void virtual onMaxRtpTimeReached();
 

@@ -117,7 +117,7 @@ class RtspSession
         CSec2AudioIdMap         cseq2id_map;
 
         RtspClient              *agent;
-        int                     md;                 /** media server descriptor */
+        //int                     md;                 /** media server descriptor */
         int                     reconnect_interval;
         int                     slot;
         int                     cseq;

@@ -63,11 +63,11 @@ struct cstring
 	len = 0;
     }
 
-    bool operator == (const cstring& rhs_str) {
+    bool operator == (const cstring& rhs_str) const {
       return memcmp(rhs_str.s,s,len <= rhs_str.len ? len : rhs_str.len) == 0;
     }
 
-    bool operator == (const char* rhs_str) {
+    bool operator == (const char* rhs_str) const {
       unsigned int rhs_len = strlen(rhs_str);
       return memcmp(rhs_str,s,len <= rhs_len ? len : rhs_len) == 0;
     }

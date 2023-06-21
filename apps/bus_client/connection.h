@@ -142,7 +142,7 @@ using std::string;
                             slot,
                             node_id,
                             reconnect_interval,
-                            failed_count,
+//                            failed_count,
                             so_rcvbuf,
                             so_sndbuf;
         state_t             state;

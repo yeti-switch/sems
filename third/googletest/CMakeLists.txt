@@ -10,6 +10,8 @@ endif (POLICY CMP0048)
 project(googletest-distribution)
 set(GOOGLETEST_VERSION 1.10.0)
 
+add_compile_options(-Wno-deprecated-copy)
+
 if (CMAKE_VERSION VERSION_LESS "3.1")
   add_definitions(-std=c++11)
 else()

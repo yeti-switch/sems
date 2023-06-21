@@ -64,7 +64,7 @@ class OptionsProber
     void process(AmEvent* ev) override;
 
     //RpcTreeHandler
-    void init_rpc_tree();
+    void init_rpc_tree() override;
     void ShowProbers(const AmArg &args, AmArg &ret);
 
     //StatCountersGroupsInterface

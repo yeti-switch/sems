@@ -112,7 +112,7 @@ public:
   void onEarlySessionStart();
   void onRinging(const AmSipReply& rep);
 
-  void onDtmf(int event, int duration);
+  void onDtmf(AmDtmfEvent* e) ;
   void onBye(const AmSipRequest& req);
 
   void onSessionTimeout();
