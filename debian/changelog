@@ -1,3 +1,10 @@
+sems (1.107.0) stable; urgency=low
+  * optimize AmMediaProcessor main cycle
+  * sip/parse_uri: comment out port converting logging
+  * switch to clang-14 + ninja
+  * rm -Wno-deprecated. add -Wall -Werror
+ -- Michael Furmur <furmur@pm.me>  Wed, 21 Jun 2023 23:50:42 +0300
+
 sems (1.106.1) stable; urgency=low
   * resolver: lock to single address family for IPv4_pref/IPv6_pref
  -- Michael Furmur <furmur@pm.me>  Fri, 09 Jun 2023 19:29:24 +0300
