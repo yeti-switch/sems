@@ -39,6 +39,42 @@
 
 #define CALLGROUPS_SIZE_ESTIMATE 1000
 
+inline bool timespec_is_lt(struct timespec &a,struct timespec &b)
+{
+    return a.tv_sec == b.tv_sec
+        ? a.tv_nsec < b.tv_nsec
+        : a.tv_sec < b.tv_sec;
+}
+
+inline void timespecadd(struct timespec &a,struct timespec &b, struct timespec &result)
+{
+    result.tv_sec = a.tv_sec + b.tv_sec;
+    result.tv_nsec = a.tv_nsec + b.tv_nsec;
+    if(result.tv_nsec >= 1000000000) {
+        ++result.tv_sec;
+        result.tv_nsec -= 1000000000;
+    }
+}
+
+inline void timespecsub(struct timespec &a,struct timespec &b, struct timespec &result)
+{
+    result.tv_sec = a.tv_sec - b.tv_sec;
+    result.tv_nsec = a.tv_nsec - b.tv_nsec;
+    if(result.tv_nsec < 0) {
+        --result.tv_sec;
+        result.tv_nsec += 1000000000;
+    }
+}
+
+/*inline void operator +=(struct timespec &a, struct timespec &b) {
+    a.tv_sec+=b.tv_sec;
+    a.tv_nsec+=b.tv_nsec;
+    if(a.tv_nsec >= 1000000000) {
+        ++a.tv_sec;
+        a.tv_nsec -= 1000000000;
+    }
+}*/
+
 /** \brief Request event to the MediaProcessor (remove,...) */
 struct SchedRequest
   : public AmEvent
@@ -355,7 +391,7 @@ AmMediaProcessorThread::~AmMediaProcessorThread()
 void AmMediaProcessorThread::on_stop()
 {
     INFO("requesting media processor to stop.");
-    stop_requested.set(true);
+    stop_requested = true;
 }
 
 void AmMediaProcessorThread::run()
@@ -363,29 +399,24 @@ void AmMediaProcessorThread::run()
     setThreadName("media-proc");
 
     stop_requested = false;
-    struct timeval now,next_tick,diff,tick;
+    struct timespec now,next_tick,diff,tick;
 
     // wallclock time
     ts = 0;//4294417296;
 
     tick.tv_sec  = 0;
-    tick.tv_usec = 1000*WC_INC_MS;
+    tick.tv_nsec = 1000*1000*WC_INC_MS;
 
-    gettimeofday(&now,nullptr);
-    timeradd(&tick,&now,&next_tick);
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    timespecadd(tick, now, next_tick);
 
-    while(!stop_requested.get()) {
-        gettimeofday(&now,nullptr);
+    while(!stop_requested) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
 
-        if(timercmp(&now,&next_tick,<)) {
-            struct timespec sdiff,rem;
-            timersub(&next_tick,&now,&diff);
-
-            sdiff.tv_sec  = diff.tv_sec;
-            sdiff.tv_nsec = diff.tv_usec * 1000;
-
-            if(sdiff.tv_nsec > 2000000) // 2 ms
-            nanosleep(&sdiff,&rem);
+        if(timespec_is_lt(now, next_tick)) {
+            timespecsub(next_tick, now, diff);
+            if(diff.tv_nsec > 2000000) // 2 ms
+                nanosleep(&diff, nullptr);
         }
 
         processAudio(ts);
@@ -393,7 +424,8 @@ void AmMediaProcessorThread::run()
         processDtmfEvents();
 
         ts = (ts + WC_INC) & WALLCLOCK_MASK;
-        timeradd(&tick,&next_tick,&next_tick);
+
+        timespecadd(tick, next_tick, next_tick);
     }
 }
 

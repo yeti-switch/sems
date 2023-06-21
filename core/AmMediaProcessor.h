@@ -207,8 +207,8 @@ class AmMediaProcessorThread :
   // AmThread interface
   void run();
   void on_stop();
-  AmSharedVar<bool> stop_requested;
-    
+  bool stop_requested;
+
   // AmEventHandler interface
   void process(AmEvent* e);
 public:
