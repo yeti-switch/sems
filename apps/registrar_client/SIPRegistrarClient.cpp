@@ -725,6 +725,7 @@ string SIPRegistrarClient::postSIPNewRegistrationEvent(
 
 void SIPRegistrarClient::init_rpc_tree()
 {
+    //back-compatiblity methods
     reg_method(root, "createRegistration",
         "create registration", &SIPRegistrarClient::createRegistration);
 
@@ -746,6 +747,36 @@ void SIPRegistrarClient::init_rpc_tree()
         "show registration by handle", &SIPRegistrarClient::showRegistration);
     reg_method(root, "showRegistrationById",
         "show registration by id", &SIPRegistrarClient::showRegistrationById);
+
+    //new methods
+    AmArg &request = reg_leaf(root,"request");
+        AmArg &request_registrations = reg_leaf(request,"registrations");
+        reg_method(request_registrations, "create",
+            "create registration", &SIPRegistrarClient::createRegistration);
+        reg_method(request_registrations, "flush",
+            "flush registrations", &SIPRegistrarClient::flushRegistrations);
+
+            AmArg &request_registration_remove_by
+                = reg_leaf(reg_leaf(request_registrations,"remove"), "by");
+            reg_method(request_registration_remove_by, "handle",
+                "remove registration by handle", &SIPRegistrarClient::removeRegistration);
+            reg_method(request_registration_remove_by, "id",
+                "remove registration by id", &SIPRegistrarClient::removeRegistrationById);
+
+    AmArg &show = reg_leaf(root,"show");
+        AmArg &show_registrations = reg_leaf(show,"registrations");
+        reg_method(reg_leaf(reg_leaf(show_registrations,"state"),"by"), "handle",
+            "return state and expires by handle", &SIPRegistrarClient::getRegistrationState);
+        reg_method(show_registrations, "list",
+            "list registrations", &SIPRegistrarClient::listRegistrations);
+        reg_method(show_registrations, "count",
+            "get registrations count", &SIPRegistrarClient::getRegistrationsCount);
+
+            AmArg &show_registrations_by = reg_leaf(show_registrations,"by");
+            reg_method(show_registrations_by, "handle",
+                "show registration by handle", &SIPRegistrarClient::showRegistration);
+            reg_method(show_registrations_by, "id",
+                "show registration by id", &SIPRegistrarClient::showRegistrationById);
 }
 
 struct RegistrationMetricGroup
