@@ -80,6 +80,10 @@ class SIPRegistrarClient
     void onSipReplyEvent(AmSipReplyEvent* ev);
     void onNewRegistration(SIPNewRegistrationEvent* new_reg);
     void onRemoveRegistration(SIPRemoveRegistrationEvent* reg);
+    /** flush all registrations
+     *  @return registrations count before flush
+     */
+    size_t onFlushRegistrations();
     void onBusEvent(BusReplyEvent* bus_event);
     void processAmArgRegistration(AmArg &data);
     void listRegistrations(AmArg& res);

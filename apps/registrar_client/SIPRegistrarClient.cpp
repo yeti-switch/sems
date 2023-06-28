@@ -465,6 +465,25 @@ void SIPRegistrarClient::onRemoveRegistration(SIPRemoveRegistrationEvent* reg)
     _reg->doUnregister();
 }
 
+size_t SIPRegistrarClient::onFlushRegistrations()
+{
+    size_t reg_count;
+    {
+        AmLock l(reg_mut);
+
+        reg_count = registrations.size();
+
+        for(const auto &reg: registrations)
+            reg.second->doUnregister();
+
+        registrations.clear();
+        registrations_by_id.clear();
+    }
+
+    DBG("onFlushRegistrations() flushed %zd registrations", reg_count);
+    return reg_count;
+}
+
 void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
 {
 #define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
@@ -508,12 +527,7 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
         }
         removeRegistrationById(id);
     } else if(action=="flush") {
-        DBG("flushRegistrations()");
-        AmLock l(reg_mut);
-        for(const auto &reg: registrations)
-            reg.second->doUnregister();
-        registrations.clear();
-        registrations_by_id.clear();
+        onFlushRegistrations();
     } else {
         ERROR("unknown action '%s'",action.c_str());
     }
@@ -918,17 +932,21 @@ void SIPRegistrarClient::invoke(
         showRegistrationById(args.get(0).asCStr(),ret);
     } else if(method == "getRegistrationsCount") {
         getRegistrationsCount(ret);
+    } else if(method == "flushRegistrations") {
+        ret = onFlushRegistrations();
     } else if(method == "_list") {
         ret.push(AmArg("createRegistration"));
         ret.push(AmArg("removeRegistration"));
         ret.push(AmArg("removeRegistrationById"));
+        ret.push(AmArg("flushRegistrations"));
         ret.push(AmArg("getRegistrationState"));
         ret.push(AmArg("listRegistrations"));
         ret.push(AmArg("showRegistration"));
         ret.push(AmArg("showRegistrationById"));
         ret.push(AmArg("getRegistrationsCount"));
-    }  else
+    } else {
         throw AmDynInvoke::NotImplemented(method);
+    }
 }
 
 struct RegistrationMetricGroup
