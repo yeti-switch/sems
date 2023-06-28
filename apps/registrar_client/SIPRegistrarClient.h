@@ -32,6 +32,7 @@
 #include "AmApi.h"
 #include "ampi/BusAPI.h"
 #include "RegShaper.h"
+#include "RpcTreeHandler.h"
 
 #include <sys/time.h>
 
@@ -48,7 +49,7 @@ class SIPRemoveRegistrationEvent;
 class SIPRegistrarClient
   : public AmDynInvokeFactory,
     public AmConfigFactory,
-    public AmDynInvoke,
+    public RpcTreeHandler<SIPRegistrarClient>,
     public AmThread,
     public AmEventFdQueue,
     public AmEventHandler,
@@ -86,10 +87,6 @@ class SIPRegistrarClient
     size_t onFlushRegistrations();
     void onBusEvent(BusReplyEvent* bus_event);
     void processAmArgRegistration(AmArg &data);
-    void listRegistrations(AmArg& res);
-    void showRegistration(const string& handle, AmArg &ret);
-    void showRegistrationById(const string& id, AmArg &ret);
-    void getRegistrationsCount(AmArg& res);
 
     static SIPRegistrarClient* _instance;
 
@@ -107,8 +104,7 @@ class SIPRegistrarClient
     AmDynInvoke* getInstance() override { return instance(); }
     // DI API
     static SIPRegistrarClient* instance();
-    void invoke(const string& method,
-                const AmArg& args, AmArg& ret) override;
+    void init_rpc_tree() override;
     //StatCountersGroupsInterface
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
 
@@ -120,7 +116,7 @@ class SIPRegistrarClient
     void process(AmEvent* ev) override;
 
     // API
-    string createRegistration(
+    string postSIPNewRegistrationEvent(
         const string& id,
         const string& domain,
         const string& user,
@@ -141,18 +137,24 @@ class SIPRegistrarClient
         const string& handle,
         const dns_priority& priority,
         sip_uri::uri_scheme scheme_id);
-    void removeRegistration(const string& handle);
-    void removeRegistrationById(const string& id);
     bool hasRegistration(const string& handle);
-    bool getRegistrationState(
-        const string& handle,
-        unsigned int& state,
-        unsigned int& expires_left);
 
     enum {
         AddRegistration,
         RemoveRegistration
     } RegEvents;
+
+    rpc_handler createRegistration;
+    rpc_handler removeRegistration;
+    rpc_handler removeRegistrationById;
+
+    rpc_handler getRegistrationState;
+    rpc_handler listRegistrations;
+    rpc_handler showRegistration;
+    rpc_handler showRegistrationById;
+    rpc_handler getRegistrationsCount;
+
+    rpc_handler flushRegistrations;
 };
 
 struct SIPNewRegistrationEvent : public AmEvent

@@ -298,6 +298,8 @@ void SIPRegistrarClient::checkTimeouts()
 
 int SIPRegistrarClient::onLoad()
 {
+    init_rpc();
+
     if((epoll_fd = epoll_create(3)) == -1){
         ERROR("epoll_create call failed");
         return false;
@@ -525,7 +527,7 @@ void SIPRegistrarClient::processAmArgRegistration(AmArg &data)
             ERROR("unexpected 'id' type. expected string or integer");
             return;
         }
-        removeRegistrationById(id);
+        instance()->postEvent(new SIPRemoveRegistrationEvent(id, true));
     } else if(action=="flush") {
         onFlushRegistrations();
     } else {
@@ -668,7 +670,7 @@ bool SIPRegistrarClient::add_reg(const string& reg_id, AmSIPRegistration* new_re
 
 
 // API
-string SIPRegistrarClient::createRegistration(
+string SIPRegistrarClient::postSIPNewRegistrationEvent(
     const string& id,
     const string& domain,
     const string& user,
@@ -690,8 +692,6 @@ string SIPRegistrarClient::createRegistration(
     const dns_priority& priority,
     sip_uri::uri_scheme scheme_id = sip_uri::SIP)
 {
-    DBG("createRegistration");
-
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
     instance()->postEvent(
         new SIPNewRegistrationEvent(
@@ -723,230 +723,29 @@ string SIPRegistrarClient::createRegistration(
     return l_handle;
 }
 
-void SIPRegistrarClient::removeRegistration(const string& handle)
+void SIPRegistrarClient::init_rpc_tree()
 {
-    instance()->postEvent(new SIPRemoveRegistrationEvent(handle));
-}
+    reg_method(root, "createRegistration",
+        "create registration", &SIPRegistrarClient::createRegistration);
 
-void SIPRegistrarClient::removeRegistrationById(const string& id)
-{
-    instance()->postEvent(new SIPRemoveRegistrationEvent(id,true));
-}
+    reg_method(root, "removeRegistration",
+        "remove registration by handle", &SIPRegistrarClient::removeRegistration);
+    reg_method(root, "removeRegistrationById",
+        "remove registration by id", &SIPRegistrarClient::removeRegistrationById);
+    reg_method(root, "flushRegistrations",
+        "flush registrations", &SIPRegistrarClient::flushRegistrations);
 
-bool SIPRegistrarClient::getRegistrationState(
-    const string& handle,
-    unsigned int& state,
-    unsigned int& expires_left)
-{
-    bool res = false;
-    reg_mut.lock();
+    reg_method(root, "getRegistrationState",
+        "return state and expires by handle", &SIPRegistrarClient::getRegistrationState);
 
-    AmSIPRegistration* reg = get_reg_unsafe(handle);
-    if (reg) {
-        res = true;
-        state = reg->getState();
-        expires_left = reg->getExpiresLeft();
-    }
-    reg_mut.unlock();
-    return res;
-}
-
-void SIPRegistrarClient::listRegistrations(AmArg& res)
-{
-    res.assertArray();
-    reg_mut.lock();
-    RegShaper::timep now(std::chrono::system_clock::now());
-    for (map<string, AmSIPRegistration*>::iterator it =
-         registrations.begin(); it != registrations.end(); it++)
-    {
-        reg2arg(it,res,now);
-    }
-    reg_mut.unlock();
-}
-
-void SIPRegistrarClient::showRegistration(const string& handle, AmArg &ret)
-{
-    AmLock l(reg_mut);
-    map<string, AmSIPRegistration*>::iterator it = registrations.find(handle);
-    ret.assertArray();
-    if(it!=registrations.end())
-        reg2arg(it,ret,std::chrono::system_clock::now());
-}
-
-void SIPRegistrarClient::showRegistrationById(const string& id, AmArg &ret)
-{
-    AmLock l(reg_mut);
-    RegHash::iterator it = registrations_by_id.find(id);
-    ret.assertArray();
-    if(it!=registrations_by_id.end())
-        reg2arg(it,ret,std::chrono::system_clock::now());
-}
-
-void SIPRegistrarClient::getRegistrationsCount(AmArg& res)
-{
-    reg_mut.lock();
-    res = registrations.size();
-    reg_mut.unlock();
-}
-
-void SIPRegistrarClient::invoke(
-    const string& method,
-    const AmArg& args,
-    AmArg& ret)
-{
-    if(method == "createRegistration"){
-        if(isArgStruct(args[0])) {
-
-#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
-    string key; \
-    if(args[0].hasMember(#key)) { \
-        AmArg & key ## _arg = args[0][#key]; \
-        if(!isArgCStr(key ## _arg)) throw AmSession::Exception(500,"unexpected '" #key "' type. expected string");\
-        key = key ## _arg.asCStr(); \
-    }
-
-            DEF_AND_VALIDATE_OPTIONAL_STR(handle);
-            DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
-            string l_handle = handle.empty() ? AmSession::getNewId() : handle;
-            SIPRegistrationInfo info;
-            info.init_from_amarg(args[0]);
-            instance()->postEvent(new SIPNewRegistrationEvent(info,l_handle,sess_link));
-            ret.push(true);
-
-#undef DEF_AND_VALIDATE_OPTIONAL_STR
-
-        } else {
-            string proxy, contact, handle, sess_link;
-            int expires_interval = 0,
-                force = 0,
-                retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
-                max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
-                transport_protocol_id = sip_transport::UDP,
-                proxy_transport_protocol_id = sip_transport::UDP,
-                scheme_id = sip_uri::SIP,
-                transaction_timeout = 0,
-                srv_failover_timeout = 0;
-            bool force_expires_interval = false;
-            dns_priority priority = Dualstack;
-            size_t n = args.size();
-
-            if(n < 6) {
-                throw AmSession::Exception(500,"expected at least 6 args");
-            }
-
-            for(int i = 0; i < 6; i++) {
-                if(!isArgCStr(args.get(i))) {
-                    throw AmSession::Exception(500,"expected string at arg: " + int2str(i+1));
-                }
-            }
-
-#define DEF_AND_VALIDATE_OPTIONAL_STR(index, name) \
-            if (args.size() > index) {\
-                AmArg &a = args.get(index);\
-                if(!isArgUndef(a)) {\
-                    if(!isArgCStr(a))\
-                        throw AmSession::Exception(500,"wrong " #name " arg. expected string or null");\
-                    name = a.asCStr();\
-                }\
-            } else break
-
-#define DEF_AND_VALIDATE_OPTIONAL_INT(index, name) \
-            if (args.size() > index) {\
-                AmArg &a = args.get(index);\
-                if(isArgInt(a)) {\
-                    name = a.asInt();\
-                } else if(isArgCStr(a) && !str2int(a.asCStr(), name)){\
-                    throw AmSession::Exception(500,"wrong " #name " argument");\
-                }\
-            } else break
-
-            do {
-                string priority_str;
-                DEF_AND_VALIDATE_OPTIONAL_STR(6, sess_link);
-                DEF_AND_VALIDATE_OPTIONAL_STR(7, proxy);
-                DEF_AND_VALIDATE_OPTIONAL_STR(8, contact);
-                DEF_AND_VALIDATE_OPTIONAL_INT(9, expires_interval);
-                DEF_AND_VALIDATE_OPTIONAL_INT(10, force);
-                DEF_AND_VALIDATE_OPTIONAL_INT(11, retry_delay);
-                DEF_AND_VALIDATE_OPTIONAL_INT(12, max_attempts);
-                DEF_AND_VALIDATE_OPTIONAL_INT(13, transport_protocol_id);
-                DEF_AND_VALIDATE_OPTIONAL_INT(14, proxy_transport_protocol_id);
-                DEF_AND_VALIDATE_OPTIONAL_INT(15, transaction_timeout);
-                DEF_AND_VALIDATE_OPTIONAL_INT(16, srv_failover_timeout);
-                DEF_AND_VALIDATE_OPTIONAL_STR(17, handle);
-                DEF_AND_VALIDATE_OPTIONAL_INT(18, scheme_id);
-                DEF_AND_VALIDATE_OPTIONAL_STR(19, priority_str);
-
-                priority = string_to_priority(priority_str);
-
-                if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
-                    throw AmSession::Exception(500,"unexpected scheme_id value");
-                }
-            } while(0);
-#undef DEF_AND_VALIDATE_OPTIONAL_STR
-#undef DEF_AND_VALIDATE_OPTIONAL_INT
-
-            ret.push(createRegistration(
-                args.get(0).asCStr(),
-                args.get(1).asCStr(),
-                args.get(2).asCStr(),
-                args.get(3).asCStr(),
-                args.get(4).asCStr(),
-                args.get(5).asCStr(),
-                sess_link,
-                proxy,
-                contact,
-                expires_interval,
-                force_expires_interval,
-                retry_delay,
-                max_attempts,
-                transport_protocol_id,
-                proxy_transport_protocol_id,
-                transaction_timeout,
-                srv_failover_timeout,
-                handle,
-                priority,
-                static_cast<sip_uri::uri_scheme>(scheme_id)));
-        }
-    } else if(method == "removeRegistration") {
-        removeRegistration(args.get(0).asCStr());
-    } else if(method == "removeRegistrationById") {
-        removeRegistrationById(args.get(0).asCStr());
-    } else if(method == "getRegistrationState") {
-        unsigned int state;
-        unsigned int expires;
-        if (instance()->getRegistrationState(args.get(0).asCStr(),
-            state, expires))
-        {
-            ret.push(1);
-            ret.push((int)state);
-            ret.push((int)expires);
-        } else {
-            ret.push(AmArg((int)0));
-        }
-    } else if(method == "listRegistrations") {
-        listRegistrations(ret);
-    } else if(method == "showRegistration") {
-        showRegistration(args.get(0).asCStr(),ret);
-    } else if(method == "showRegistrationById") {
-        showRegistrationById(args.get(0).asCStr(),ret);
-    } else if(method == "getRegistrationsCount") {
-        getRegistrationsCount(ret);
-    } else if(method == "flushRegistrations") {
-        ret = onFlushRegistrations();
-    } else if(method == "_list") {
-        ret.push(AmArg("createRegistration"));
-        ret.push(AmArg("removeRegistration"));
-        ret.push(AmArg("removeRegistrationById"));
-        ret.push(AmArg("flushRegistrations"));
-        ret.push(AmArg("getRegistrationState"));
-        ret.push(AmArg("listRegistrations"));
-        ret.push(AmArg("showRegistration"));
-        ret.push(AmArg("showRegistrationById"));
-        ret.push(AmArg("getRegistrationsCount"));
-    } else {
-        throw AmDynInvoke::NotImplemented(method);
-    }
+    reg_method(root, "listRegistrations",
+        "list registrations", &SIPRegistrarClient::listRegistrations);
+    reg_method(root, "getRegistrationsCount",
+        "get registrations count", &SIPRegistrarClient::getRegistrationsCount);
+    reg_method(root, "showRegistration",
+        "show registration by handle", &SIPRegistrarClient::showRegistration);
+    reg_method(root, "showRegistrationById",
+        "show registration by id", &SIPRegistrarClient::showRegistrationById);
 }
 
 struct RegistrationMetricGroup
@@ -1040,7 +839,7 @@ vector<string> RegistrationMetricGroup::metrics_help_strings = {
     "0:pending, 1:active, 2:error, 3:expired, 4:postponed"
 };
 
-void SIPRegistrarClient::operator ()(const string &name, iterate_groups_callback_type callback)
+void SIPRegistrarClient::operator ()(const string &, iterate_groups_callback_type callback)
 {
     AmArg ret;
     ret.assertArray();
@@ -1056,4 +855,222 @@ void SIPRegistrarClient::operator ()(const string &name, iterate_groups_callback
     }
 
     g.serialize(callback);
+}
+
+#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
+    string key; \
+    if(args[0].hasMember(#key)) { \
+        AmArg & key ## _arg = args[0][#key]; \
+        if(!isArgCStr(key ## _arg)) throw AmSession::Exception(500,"unexpected '" #key "' type. expected string");\
+        key = key ## _arg.asCStr(); \
+    }
+
+void SIPRegistrarClient::createRegistration(const AmArg& args, AmArg& ret)
+{
+    if(isArgStruct(args[0])) {
+#define DEF_AND_VALIDATE_OPTIONAL_STR(key) \
+        string key; \
+        if(args[0].hasMember(#key)) { \
+            AmArg & key ## _arg = args[0][#key]; \
+            if(!isArgCStr(key ## _arg)) throw AmSession::Exception(500,"unexpected '" #key "' type. expected string");\
+            key = key ## _arg.asCStr(); \
+        }
+
+        DEF_AND_VALIDATE_OPTIONAL_STR(handle);
+        DEF_AND_VALIDATE_OPTIONAL_STR(sess_link);
+        string l_handle = handle.empty() ? AmSession::getNewId() : handle;
+        SIPRegistrationInfo info;
+        info.init_from_amarg(args[0]);
+        instance()->postEvent(new SIPNewRegistrationEvent(info,l_handle,sess_link));
+        ret.push(true);
+
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+
+    } else {
+        string proxy, contact, handle, sess_link;
+        int expires_interval = 0,
+            force = 0,
+            retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
+            max_attempts = REGISTER_ATTEMPTS_UNLIMITED,
+            transport_protocol_id = sip_transport::UDP,
+            proxy_transport_protocol_id = sip_transport::UDP,
+            scheme_id = sip_uri::SIP,
+            transaction_timeout = 0,
+            srv_failover_timeout = 0;
+        bool force_expires_interval = false;
+        dns_priority priority = Dualstack;
+        size_t n = args.size();
+
+        if(n < 6) {
+            throw AmSession::Exception(500,"expected at least 6 args");
+        }
+
+        for(int i = 0; i < 6; i++) {
+            if(!isArgCStr(args.get(i))) {
+                throw AmSession::Exception(500,"expected string at arg: " + int2str(i+1));
+            }
+        }
+
+#define DEF_AND_VALIDATE_OPTIONAL_STR(index, name) \
+        if (args.size() > index) {\
+            AmArg &a = args.get(index);\
+            if(!isArgUndef(a)) {\
+                if(!isArgCStr(a))\
+                    throw AmSession::Exception(500,"wrong " #name " arg. expected string or null");\
+                name = a.asCStr();\
+            }\
+        } else break
+
+#define DEF_AND_VALIDATE_OPTIONAL_INT(index, name) \
+        if (args.size() > index) {\
+            AmArg &a = args.get(index);\
+            if(isArgInt(a)) {\
+                name = a.asInt();\
+            } else if(isArgCStr(a) && !str2int(a.asCStr(), name)){\
+                throw AmSession::Exception(500,"wrong " #name " argument");\
+            }\
+        } else break
+
+        do {
+            string priority_str;
+            DEF_AND_VALIDATE_OPTIONAL_STR(6, sess_link);
+            DEF_AND_VALIDATE_OPTIONAL_STR(7, proxy);
+            DEF_AND_VALIDATE_OPTIONAL_STR(8, contact);
+            DEF_AND_VALIDATE_OPTIONAL_INT(9, expires_interval);
+            DEF_AND_VALIDATE_OPTIONAL_INT(10, force);
+            DEF_AND_VALIDATE_OPTIONAL_INT(11, retry_delay);
+            DEF_AND_VALIDATE_OPTIONAL_INT(12, max_attempts);
+            DEF_AND_VALIDATE_OPTIONAL_INT(13, transport_protocol_id);
+            DEF_AND_VALIDATE_OPTIONAL_INT(14, proxy_transport_protocol_id);
+            DEF_AND_VALIDATE_OPTIONAL_INT(15, transaction_timeout);
+            DEF_AND_VALIDATE_OPTIONAL_INT(16, srv_failover_timeout);
+            DEF_AND_VALIDATE_OPTIONAL_STR(17, handle);
+            DEF_AND_VALIDATE_OPTIONAL_INT(18, scheme_id);
+            DEF_AND_VALIDATE_OPTIONAL_STR(19, priority_str);
+
+            priority = string_to_priority(priority_str);
+
+            if(scheme_id < sip_uri::SIP || scheme_id > sip_uri::SIPS) {
+                throw AmSession::Exception(500,"unexpected scheme_id value");
+            }
+        } while(0);
+
+#undef DEF_AND_VALIDATE_OPTIONAL_STR
+#undef DEF_AND_VALIDATE_OPTIONAL_INT
+
+        ret.push(postSIPNewRegistrationEvent(
+            args.get(0).asCStr(),
+            args.get(1).asCStr(),
+            args.get(2).asCStr(),
+            args.get(3).asCStr(),
+            args.get(4).asCStr(),
+            args.get(5).asCStr(),
+            sess_link,
+            proxy,
+            contact,
+            expires_interval,
+            force_expires_interval,
+            retry_delay,
+            max_attempts,
+            transport_protocol_id,
+            proxy_transport_protocol_id,
+            transaction_timeout,
+            srv_failover_timeout,
+            handle,
+            priority,
+            static_cast<sip_uri::uri_scheme>(scheme_id)));
+    }
+}
+
+void SIPRegistrarClient::removeRegistration(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("s");
+    string handle = args.get(0).asCStr();
+    instance()->postEvent(new SIPRemoveRegistrationEvent(handle));
+    ret = true;
+}
+
+void SIPRegistrarClient::removeRegistrationById(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("s");
+    string id = args.get(0).asCStr();
+    instance()->postEvent(new SIPRemoveRegistrationEvent(id, true));
+    ret = true;
+}
+
+void SIPRegistrarClient::getRegistrationState(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("s");
+    string handle = args.get(0).asCStr();
+
+    unsigned int state;
+    unsigned int expires;
+    bool res = false;
+    {
+        AmLock l(reg_mut);
+        AmSIPRegistration* reg = get_reg_unsafe(handle);
+        if(reg) {
+            res = true;
+            state = reg->getState();
+            expires = reg->getExpiresLeft();
+        }
+    }
+
+    if(res) {
+        ret.push(1);
+        ret.push(state);
+        ret.push(expires);
+    } else {
+        ret.push(0);
+    }
+}
+
+void SIPRegistrarClient::listRegistrations(const AmArg&, AmArg& ret)
+{
+    ret.assertArray();
+
+    AmLock l(reg_mut);
+
+    RegShaper::timep now(std::chrono::system_clock::now());
+
+    for (map<string, AmSIPRegistration*>::iterator it =
+         registrations.begin(); it != registrations.end(); it++)
+    {
+        reg2arg(it, ret, now);
+    }
+}
+
+void SIPRegistrarClient::showRegistration(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("s");
+    string handle = args.get(0).asCStr();
+
+    AmLock l(reg_mut);
+    map<string, AmSIPRegistration*>::iterator it = registrations.find(handle);
+    ret.assertArray();
+    if(it!=registrations.end())
+        reg2arg(it,ret,std::chrono::system_clock::now());
+}
+
+void SIPRegistrarClient::showRegistrationById(const AmArg& args, AmArg& ret)
+{
+    args.assertArrayFmt("s");
+    string id = args.get(0).asCStr();
+
+    AmLock l(reg_mut);
+    RegHash::iterator it = registrations_by_id.find(id);
+    ret.assertArray();
+    if(it!=registrations_by_id.end())
+        reg2arg(it,ret,std::chrono::system_clock::now());
+}
+
+void SIPRegistrarClient::getRegistrationsCount(const AmArg&, AmArg& ret)
+{
+    AmLock l(reg_mut);
+    ret = registrations.size();
+}
+
+void SIPRegistrarClient::flushRegistrations(const AmArg&, AmArg& ret)
+{
+    ret = onFlushRegistrations();
 }
