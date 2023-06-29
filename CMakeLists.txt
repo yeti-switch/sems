@@ -374,14 +374,13 @@ ADD_SUBDIRECTORY (apps)
 ADD_SUBDIRECTORY (debian)
 
 IF(SEMS_USE_GTEST)
-    ADD_SUBDIRECTORY (third/googletest)
+#    ADD_SUBDIRECTORY (third/googletest)
     ADD_SUBDIRECTORY (unit_tests)
-    INSTALL(DIRECTORY ${SEMS_SOURCE_DIR}/third/googletest/googletest/include/ DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
+#    INSTALL(DIRECTORY ${SEMS_SOURCE_DIR}/third/googletest/googletest/include/ DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
+    add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
 ENDIF(SEMS_USE_GTEST)
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
-
-add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
 
 add_custom_target(install-dev
     install -d /usr/include/sems
