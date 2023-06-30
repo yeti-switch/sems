@@ -1,3 +1,0 @@
-Usage: stunclient [OPTIONS] server [port]
-Try 'stunclient --help' for a complete set of options and description of paramters
-
