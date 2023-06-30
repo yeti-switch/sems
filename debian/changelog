@@ -1,3 +1,9 @@
+sems (1.108.0) stable; urgency=low
+  * conference_mixer: fix segfault on ConferenceChannel destructions
+  * use sems-external-libs-dev
+  * use libgtest-dev
+ -- Michael Furmur <furmur@pm.me>  Fri, 30 Jun 2023 20:28:03 +0300
+
 sems (1.107.1) stable; urgency=low
   * /usr/sbin/sems -> /usr/bin/sems
   * registrar_client: add RPC method to flush registrations
