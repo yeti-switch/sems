@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <netinet/in.h>
-#include <srtp.h>
+#include <srtp/srtp.h>
 
 // srtcp data size injected after rtcp packet
 // see rfc 3711 sec 3.4

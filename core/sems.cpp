@@ -74,7 +74,7 @@ using std::string;
 
 #if defined(__linux__)
 #include <sys/prctl.h>
-#include <srtp.h>
+#include <srtp/srtp.h>
 #include "PcapFileRecorder.h"
 #include "sip/tls_trsp.h"
 #include "sip/tr_blacklist.h"

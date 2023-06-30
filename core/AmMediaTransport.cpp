@@ -10,7 +10,7 @@
 #include "AmSession.h"
 #include "AmRtpStream.h"
 #include "AmLcConfig.h"
-#include "stuntypes.h"
+#include "stun/stuntypes.h"
 #include "sip/raw_sender.h"
 #include "botan/tls_magic.h"
 

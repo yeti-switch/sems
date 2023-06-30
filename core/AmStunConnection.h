@@ -4,8 +4,8 @@
 #include "AmRtpConnection.h"
 #include "AmStunProcessor.h"
 #include "sip/wheeltimer.h"
-#include <commonincludes.hpp>
-#include <stunreader.h>
+#include <stun/commonincludes.hpp>
+#include <stun/stunreader.h>
 #include <string>
 
 using std::string;

@@ -20,7 +20,7 @@ using std::shared_ptr;
 #include <botan/tls_session_manager_memory.h>
 #include <BotanHelpers.h>
 
-#include <srtp.h>
+#include <srtp/srtp.h>
 
 #define MAX_DTLS_SESSIONS 8192
 

@@ -1,5 +1,8 @@
 FIND_PACKAGE(Spandsp REQUIRED)
 FIND_PACKAGE(Wslay REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(TIFF REQUIRED libtiff-4)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
@@ -16,13 +19,8 @@ default_en.wav
 codecs_bench.wav
 )
 
-INCLUDE_DIRECTORIES (ampi)
-INCLUDE_DIRECTORIES (amci)
-INCLUDE_DIRECTORIES (${BOTAN_BUNDLED_INCLUDE_DIRS}
-                     ${SRTP_BUNDLED_INCLUDE_DIRS}
-                     ${CONFUSE_BUNDLED_INCLUDE_DIRS}
-                     ${STUN_BUNDLED_INCLUDE_DIRS}
-                     ${SPANDSP_BUNDLED_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(ampi)
+INCLUDE_DIRECTORIES(amci)
 
 SET(common_LIBS stdc++ resolv mp3lame event event_pthreads)
 
@@ -60,16 +58,9 @@ IF(WSLAY_FOUND)
 	LIST(APPEND common_LIBS wslay)
 ENDIF(WSLAY_FOUND)
 
-LIST(APPEND common_LIBS ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS} ${STUN_BUNDLED_LIBS} ${SPANDSP_BUNDLED_LIBS})
+LIST(APPEND common_LIBS BOTAN_bundled CONFUSE_bundled SPANDSP_bundled SRTP_bundled ${STUN_bundled} ${TIFF_LIBRARIES})
 
 TARGET_LINK_LIBRARIES(${SEMS_LIB} ${CMAKE_DL_LIBS} ${common_LIBS})
-#TARGET_LINK_LIBRARIES(${SEMS_LIB} ${BOTAN_BUNDLED_LIBS} ${CONFUSE_BUNDLED_LIBS} ${SRTP_BUNDLED_LIBS} ${STUN_BUNDLED_LIBS} ${SPANDSP_BUNDLDED_LIBS})
-#IF(SPANDSP_FOUND)
-#    TARGET_LINK_LIBRARIES(${SEMS_LIB} -Wl,--whole-archive ${SPANDSP_LIBRARIES} -Wl,--no-whole-archive)
-#ENDIF(SPANDSP_FOUND)
-
-MESSAGE(STATUS "${SEMS_LIB} dependency: ${sems_dependency_targets}")
-ADD_DEPENDENCIES(${SEMS_LIB} ${sems_dependency_targets})
 
 TARGET_LINK_LIBRARIES(${SEMS_APP} ${SEMS_LIB})
 FOREACH(aux_binary IN LISTS aux_binaries)

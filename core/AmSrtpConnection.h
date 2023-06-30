@@ -5,7 +5,7 @@
 #include "AmRtpConnection.h"
 
 #include <netinet/in.h>
-#include <srtp.h>
+#include <srtp/srtp.h>
 #include <memory>
 
 #define SRTP_KEY_SIZE 46

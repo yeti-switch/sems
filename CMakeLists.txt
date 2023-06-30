@@ -15,15 +15,9 @@ set(CMAKE_CXX_STANDARD 20)
 # Add path for additional FindXXX.cmake scenarios
 set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-PROJECT (SEMS)
+PROJECT(SEMS)
 
-include(cmake/botan_bundled.cmake)
-include(cmake/stun_bundled.cmake)
-include(cmake/srtp_bundled.cmake)
-include(cmake/curl_bundled.cmake)
-include(cmake/spandsp_bundled.cmake)
-include(cmake/confuse_bundled.cmake)
-include(cmake/s3_bundled.cmake)
+include(/usr/share/cmake/sems/sems_external_libs.cmake)
 
 SET(SEMS_APP sems)
 SET(PKGCFG_DIR /usr/lib/pkgconfig)
@@ -374,9 +368,7 @@ ADD_SUBDIRECTORY (apps)
 ADD_SUBDIRECTORY (debian)
 
 IF(SEMS_USE_GTEST)
-#    ADD_SUBDIRECTORY (third/googletest)
-    ADD_SUBDIRECTORY (unit_tests)
-#    INSTALL(DIRECTORY ${SEMS_SOURCE_DIR}/third/googletest/googletest/include/ DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
+    add_subdirectory(unit_tests)
     add_custom_target(test /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
 ENDIF(SEMS_USE_GTEST)
 
@@ -386,7 +378,7 @@ add_custom_target(install-dev
     install -d /usr/include/sems
     COMMAND install -v -D core/libsems.pc /usr/lib/pkgconfig/
     COMMAND install -v -D -t /usr/share/cmake/sems ${CMAKE_SOURCE_DIR}/core/cmake/*.txt ${CMAKE_SOURCE_DIR}/core/cmake/FindSEMS.cmake
-    COMMAND install -v -D -t /usr/include/sems ${CMAKE_SOURCE_DIR}/core/*.cc ${CMAKE_SOURCE_DIR}/core/*.h ${CONFUSE_BIN_DIR}/src/confuse.h ${CMAKE_BINARY_DIR}/core/sems.h
+    COMMAND install -v -D -t /usr/include/sems ${CMAKE_SOURCE_DIR}/core/*.cc ${CMAKE_SOURCE_DIR}/core/*.h ${CMAKE_BINARY_DIR}/core/sems.h
     COMMAND install -v -D -t /usr/include/sems/rtcp ${CMAKE_SOURCE_DIR}/core/rtcp/*.h
     COMMAND install -v -D -t /usr/include/sems/ampi ${CMAKE_SOURCE_DIR}/core/ampi/*.h
     COMMAND install -v -D -t /usr/include/sems/amci ${CMAKE_SOURCE_DIR}/core/amci/*.h
