@@ -1,3 +1,7 @@
+sems (1.108.1) stable; urgency=low
+  * conference_mixer: fix segfault on ConferenceChannel destructions
+ -- Michael Furmur <furmur@pm.me>  Fri, 30 Jun 2023 21:01:56 +0300
+
 sems (1.108.0) stable; urgency=low
   * conference_mixer: fix segfault on ConferenceChannel destructions
   * use sems-external-libs-dev
