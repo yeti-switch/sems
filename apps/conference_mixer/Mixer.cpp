@@ -531,27 +531,27 @@ channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t chann
 
     return
         channel_ptr(new ConferenceChannel(mpmixer_ch_id, channel_ext_id, std::move(mixer)),
-           [&](ConferenceChannel *p) {
+            [=](ConferenceChannel *p) -> void {
 
-               backlog_mut.lock(); /// fetched by reference
+                backlog_mut.lock(); /// fetched by reference
 
-               mixer_ptr _mixer = get_backlog(backlog_id)->mixer;
+                mixer_ptr _mixer = get_backlog(backlog_id)->mixer;
 
-               if (p->use_count() != 3) {/// 3 -> _mixer, *p and backlog.mixer refs
-                   AmLock l(_mixer->mpm_mut);
-                   _mixer->removeChannel(mpmixer_ch_id);
-               } else {
-                   /// last channel released, release backlog mixer refs
-                   backlog_data[backlog_id].mixer.reset();
-                   clear_bit(backlog_id, backlog_map);
-               }
+                if (p->use_count() != 3) {/// 3 -> _mixer, *p and backlog.mixer refs
+                    AmLock l(_mixer->mpm_mut);
+                    _mixer->removeChannel(mpmixer_ch_id);
+                } else {
+                    /// last channel released, release backlog mixer refs
+                    backlog_data[backlog_id].mixer.reset();
+                    clear_bit(backlog_id, backlog_map);
+                }
 
-               backlog_mut.unlock();
+                backlog_mut.unlock();
 
-               removeParticipant(channel_id, local_tag);
+                removeParticipant(channel_id, local_tag);
 
-               delete p;
-           });
+                delete p;
+            });
 }
 
 
