@@ -1,6 +1,8 @@
 #include "AmFaxImage.h"
 #include "AmSession.h"
 #include "udptl.h"
+#include "log.h"
+#include "sip/msg_logger.h"
 
 #define T38_FAX_RATE_DEFAULT "transferredTCF"
 #define T38_FAX_UDPEC_DEFAULT "t38UDPRedundancy"
@@ -20,6 +22,24 @@
 #define STAT_COMP_TYPE      "compression_type"
 
 #define FAX_RATE              8000
+
+
+#define FAX_LOG(fmt, args...) { \
+        char log[LOG_BUFFER_LEN] = {0}; \
+        int n = snprintf(log, LOG_BUFFER_LEN, fmt, ##args); \
+        if(logger) logger->log(log, n > LOG_BUFFER_LEN ? LOG_BUFFER_LEN : n, 0, 0, cstring());}
+
+#define FAX_ERROR(fmt, args...) \
+        CLASS_ERROR(fmt, ##args); \
+        FAX_LOG(fmt, ##args)
+
+#define FAX_DBG(fmt, args...) \
+        CLASS_DBG(fmt, ##args); \
+        FAX_LOG(fmt, ##args)
+
+#define FAX_WARN(fmt, args...) \
+        CLASS_WARN(fmt, ##args); \
+        FAX_LOG(fmt, ##args)
 
 static std::map<std::string, std::string> t38_option_map(const t38_options_t& opt)
 {
@@ -274,15 +294,19 @@ ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
 /***************************************************************************************************/
 /*                                           AmFaxImage                                            */
 /***************************************************************************************************/
-AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send)
+AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_)
   : m_t30_state(0),
     m_filePath(filePath),
     m_send(send),
-    eq(q)
-{}
+    eq(q),
+    logger(logger_)
+{
+    if(logger) inc_ref(logger);
+}
 
 AmFaxImage::~AmFaxImage()
 {
+    if(logger) dec_ref(logger);
 }
 
 void AmFaxImage::init_t30()
@@ -316,11 +340,11 @@ void AmFaxImage::logHandler(int level, const char* text)
     switch(level){
         case SPAN_LOG_ERROR:
         case SPAN_LOG_PROTOCOL_ERROR:
-            CLASS_ERROR("%s", text);
+            FAX_ERROR("%s", text);
             break;
         case SPAN_LOG_WARNING:
         case SPAN_LOG_PROTOCOL_WARNING:
-            CLASS_WARN("%s", text);
+            FAX_WARN("%s", text);
             break;
         case SPAN_LOG_FLOW:
         case SPAN_LOG_FLOW_2:
@@ -328,7 +352,7 @@ void AmFaxImage::logHandler(int level, const char* text)
         case SPAN_LOG_DEBUG:
         case SPAN_LOG_DEBUG_2:
         case SPAN_LOG_DEBUG_3:
-            CLASS_DBG("%s", text);
+            FAX_DBG("%s", text);
             break;
         default:
             break;
@@ -346,8 +370,8 @@ void AmFaxImage::faxComplete(bool isSuccess, const std::string& strResult, const
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send)
-: AmFaxImage(q, filePath, send)
+FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_)
+: AmFaxImage(q, filePath, send, logger_)
 , m_fax_state{0}
 {
 }
@@ -361,16 +385,16 @@ FaxAudioImage::~FaxAudioImage()
 
 int FaxAudioImage::init_tone_fax()
 {
-    CLASS_DBG("initialize tone fax");
+    FAX_DBG("initialize tone fax");
     fmt->setRate(FAX_RATE);
 
     if(m_fax_state) {
-        CLASS_ERROR("fax tone stack was inited");
+        FAX_ERROR("fax tone stack was inited");
         return -1;
     }
     m_fax_state = ::fax_init(m_fax_state, m_send ? TRUE : FALSE);
     if(!m_fax_state) {
-        CLASS_ERROR("fax tone stack initialisation failed");
+        FAX_ERROR("fax tone stack initialisation failed");
         return -1;
     }
 
@@ -385,7 +409,7 @@ int FaxAudioImage::init_tone_fax()
     m_t30_state = fax_get_t30_state(m_fax_state);
     init_t30();
 
-    CLASS_DBG("initialize tone fax complete");
+    FAX_DBG("initialize tone fax complete");
 
     return 0;
 }
@@ -414,8 +438,8 @@ int FaxAudioImage::write(unsigned int user_ts, unsigned int size)
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxT38Image::FaxT38Image(AmSession* sess, const std::string& filePath, bool send)
-: AmFaxImage(sess, filePath, send)
+FaxT38Image::FaxT38Image(AmSession* sess, const std::string& filePath, bool send, msg_logger* logger_)
+: AmFaxImage(sess, filePath, send, logger_)
 , m_sess(sess)
 , m_t38_state(0)
 , m_udptl_state(0)
@@ -434,21 +458,21 @@ FaxT38Image::~FaxT38Image()
 
 int FaxT38Image::init_t38()
 {
-    CLASS_DBG("initialize t38");
+    FAX_DBG("initialize t38");
     if(m_t38_state) {
-        CLASS_ERROR("t38 terminal was inited");
+        FAX_ERROR("t38 terminal was inited");
         return FALSE;
     }
     m_t38_state = t38_terminal_init(m_t38_state, m_send ? TRUE : FALSE, t38_tx_packet_handler, this);
     if(!m_t38_state) {
-        CLASS_ERROR("t38 terminal initialisation failed");
+        FAX_ERROR("t38 terminal initialisation failed");
         return FALSE;
     }
 
     m_t38_options.getT38DefaultOptions();
 
     if(m_t38_options.T38FaxMaxBuffer > T38_TX_BUF_LEN) {
-        CLASS_WARN("T38FaxMaxBuffer %d more then maximum packet len " NAME_TO_STRING(T38_TX_BUF_LEN), m_t38_options.T38FaxMaxBuffer);
+        FAX_WARN("T38FaxMaxBuffer %d more then maximum packet len " NAME_TO_STRING(T38_TX_BUF_LEN), m_t38_options.T38FaxMaxBuffer);
     }
 
     logging_state_t *logging = 0;
@@ -482,19 +506,19 @@ int FaxT38Image::init_t38()
     m_t30_state = t38_terminal_get_t30_state(m_t38_state);
     init_t30();
 
-    CLASS_DBG("initialize t38 complete, initialize udptl");
+    FAX_DBG("initialize t38 complete, initialize udptl");
     if(m_udptl_state) {
-        CLASS_ERROR("udptl stack was inited");
+        FAX_ERROR("udptl stack was inited");
         return FALSE;
     }
     m_udptl_state = udptl_init(m_udptl_state, UDPTL_ERROR_CORRECTION_REDUNDANCY, 3, 3, (udptl_rx_packet_handler_t *) t38_core_rx_ifp_packet, (void *) t38_core);
     if(!m_udptl_state) {
-        CLASS_ERROR("udptl stack initialisation failed");
+        FAX_ERROR("udptl stack initialisation failed");
         return FALSE;
     }
 
     gettimeofday(&m_lastTime, NULL);
-    CLASS_DBG("initialize udptl complete");
+    FAX_DBG("initialize udptl complete");
     return TRUE;
 }
 
@@ -508,18 +532,18 @@ int FaxT38Image::send_udptl_packet(const uint8_t* buf, int len)
     static const cstring empty;
 
     if(len > m_t38_options.T38FaxMaxBuffer) {
-        CLASS_WARN("send buffer %u more permission t38 packet len %u",
+        FAX_WARN("send buffer %u more permission t38 packet len %u",
                       len, m_t38_options.T38FaxMaxBuffer);
     }
 
     unsigned char data[RTP_PACKET_BUF_SIZE];
     int packet_len = udptl_build_packet(m_udptl_state, data , buf, len);
     if(packet_len <= 0) {
-        CLASS_ERROR("udptl_build_packet failed return %u", packet_len);
+        FAX_ERROR("udptl_build_packet failed return %u", packet_len);
         return -1;
     }
 
-    CLASS_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len, m_sess->RTPStream()->getRHost(FAX_TRANSPORT).c_str(), m_sess->RTPStream()->getRPort(FAX_TRANSPORT));
+    FAX_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len, m_sess->RTPStream()->getRHost(FAX_TRANSPORT).c_str(), m_sess->RTPStream()->getRPort(FAX_TRANSPORT));
     unsigned int tx_user_ts = m_last_ts * (FAX_RATE / 100) / (WALLCLOCK_RATE/100);
     int ret = m_sess->RTPStream()->send_udptl(tx_user_ts, data, packet_len);
     if(-1==ret) {
@@ -542,7 +566,7 @@ int FaxT38Image::readStreams(unsigned long long ts, unsigned char * buffer)
         return 0;
 
     if(udptl_rx_packet(m_udptl_state, rp->getBuffer(), rp->getBufferSize()) < 0) {
-        CLASS_ERROR("incorrect udptl packet [pkt-size=%u]", rp->getBufferSize());
+        FAX_ERROR("incorrect udptl packet [pkt-size=%u]", rp->getBufferSize());
         m_sess->RTPStream()->freeRtpPacket(rp);
         return 0;
     }

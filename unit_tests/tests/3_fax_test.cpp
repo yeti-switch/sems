@@ -32,8 +32,8 @@ public:
     {
         RTPStream()->setMonitorRTPTimeout(false);
 
-        audio = new FaxAudioImage(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER));
-        t38 = new FaxT38Image(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER));
+        audio = new FaxAudioImage(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER), 0);
+        t38 = new FaxT38Image(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER), 0);
         inc_ref(t38);
         audio->init_tone_fax();
         dlg->setRemoteUri(remote_uri);
