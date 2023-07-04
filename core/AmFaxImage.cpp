@@ -23,23 +23,9 @@
 
 #define FAX_RATE              8000
 
-
-#define FAX_LOG(fmt, args...) { \
-        char log[LOG_BUFFER_LEN] = {0}; \
-        int n = snprintf(log, LOG_BUFFER_LEN, fmt, ##args); \
-        if(logger) logger->log(log, n > LOG_BUFFER_LEN ? LOG_BUFFER_LEN : n, 0, 0, cstring());}
-
-#define FAX_ERROR(fmt, args...) \
-        CLASS_ERROR(fmt, ##args); \
-        FAX_LOG(fmt, ##args)
-
-#define FAX_DBG(fmt, args...) \
-        CLASS_DBG(fmt, ##args); \
-        FAX_LOG(fmt, ##args)
-
-#define FAX_WARN(fmt, args...) \
-        CLASS_WARN(fmt, ##args); \
-        FAX_LOG(fmt, ##args)
+#define FAX_ERROR(fmt, args...) CLASS_ERROR_CTX(logger, fmt, ##args);
+#define FAX_DBG(fmt, args...)   CLASS_DBG_CTX(logger, fmt, ##args);
+#define FAX_WARN(fmt, args...)  CLASS_WARN_CTX(logger, fmt, ##args);
 
 static std::map<std::string, std::string> t38_option_map(const t38_options_t& opt)
 {
@@ -294,7 +280,7 @@ ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
 /***************************************************************************************************/
 /*                                           AmFaxImage                                            */
 /***************************************************************************************************/
-AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_)
+AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_)
   : m_t30_state(0),
     m_filePath(filePath),
     m_send(send),
@@ -370,7 +356,7 @@ void AmFaxImage::faxComplete(bool isSuccess, const std::string& strResult, const
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_)
+FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_)
 : AmFaxImage(q, filePath, send, logger_)
 , m_fax_state{0}
 {
@@ -438,7 +424,7 @@ int FaxAudioImage::write(unsigned int user_ts, unsigned int size)
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxT38Image::FaxT38Image(AmSession* sess, const std::string& filePath, bool send, msg_logger* logger_)
+FaxT38Image::FaxT38Image(AmSession* sess, const std::string& filePath, bool send, ContextLoggingHook* logger_)
 : AmFaxImage(sess, filePath, send, logger_)
 , m_sess(sess)
 , m_t38_state(0)

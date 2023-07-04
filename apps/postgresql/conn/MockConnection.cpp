@@ -1,9 +1,10 @@
 #include "MockConnection.h"
 
-# include <sys/socket.h>
-# include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 
 MockConnection::MockConnection(IConnectionHandler* handler)

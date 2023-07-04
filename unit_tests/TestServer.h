@@ -7,6 +7,9 @@
 #include <string>
 #include <map>
 
+#include <time.h>
+#include <unistd.h>
+
 using std::map;
 using std::vector;
 using std::string;

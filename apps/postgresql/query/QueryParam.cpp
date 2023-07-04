@@ -1,6 +1,6 @@
 #include "QueryParam.h"
 #include "../pqtypes-int.h"
-
+#include "log.h"
 #include <jsonArg.h>
 
 #include <netinet/in.h>

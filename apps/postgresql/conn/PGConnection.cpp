@@ -1,4 +1,6 @@
 #include "PGConnection.h"
+#include "log.h"
+
 #include <cstring>
 
 PGConnection::PGConnection(const std::string& conn_info, const string& conn_log_info, IConnectionHandler* handler)

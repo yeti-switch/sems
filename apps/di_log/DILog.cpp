@@ -79,7 +79,8 @@ string DILog::dumpLog() {
 
 void DILog::log(
     int level, pid_t pid, pid_t tid,
-    const char* func, const char* file, int line, const char* msg)
+    [[maybe_unused]] const char* func, const char* file, int line,
+    const char* msg, int msg_len)
 {
   char ts[26];
   struct timeval tv;
@@ -89,11 +90,12 @@ void DILog::log(
   localtime_r(&tv.tv_sec,&t);
   strftime(ts, 26, "%b %d %T",&t);
 
-  snprintf(ring_buf[pos],MAX_LINE_LEN,"%s [%u:%u/%s:%d] %s: %s\n",
+  snprintf(ring_buf[pos],MAX_LINE_LEN,"%s [%u:%u/%s:%d] %s: %.*s\n",
     ts,/*ctime_r(&tv.tv_sec, ts),*/
     pid,tid,
     file,line,
-    log_level2str[level], msg
+    log_level2str[level],
+    msg_len, msg
   );
   //strncpy(ring_buf[pos], msg, sizeof(ring_buf[0]));
   pos = (pos + 1) % MAX_LINES;

@@ -1,4 +1,5 @@
 #include "config.h"
+#include "log.h"
 
 cfg_reader::cfg_reader(const std::string& mod_name)
   : mod_name(mod_name),

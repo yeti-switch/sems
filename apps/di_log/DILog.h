@@ -22,17 +22,18 @@ class DILog : public AmLoggingFacility
   DILog(const string& name);
   ~DILog();
   // DI factory
-  AmDynInvoke* getInstance() { return instance(); }
+  AmDynInvoke* getInstance() override { return instance(); }
   // DI API
   static DILog* instance();
-  void invoke(const string& method, const AmArg& args, AmArg& ret);
+  void invoke(const string& method, const AmArg& args, AmArg& ret) override;
 
-  int onLoad();
+  int onLoad() override;
 
-  virtual int configure(const std::string& config);
-  virtual int reconfigure(const std::string& config);
+  virtual int configure(const std::string& config) override;
+  virtual int reconfigure(const std::string& config) override;
   // LF API
   //void log(int level, const char* fmt);
   void log(int level, pid_t pid, pid_t tid,
-           const char* func, const char* file, int line, const char* msg);
+           const char* func, const char* file, int line,
+           const char* msg, int msg_len) override;
 };

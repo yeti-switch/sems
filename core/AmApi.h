@@ -262,7 +262,8 @@ class AmLoggingFacility : public AmPluginFactory
    * @param msg   message
    */
   virtual void log(int level, pid_t pid, pid_t tid,
-                   const char* func, const char* file, int line, const char* msg) = 0;
+                   const char* func, const char* file, int line,
+                   const char* msg, int msg_len) = 0;
   void on_destroy();
   int getLogLevel() { return _log_level; }
   void setLogLevel(int log_level_arg);

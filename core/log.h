@@ -33,6 +33,9 @@
 #include <pthread.h>	/* pthread_self() */
 #include <execinfo.h>   /* backtrace_symbols() */
 #include <cxxabi.h> /* __cxa_demangle() */
+#include <string>
+
+#include "atomic_types.h"
 
 extern __thread pthread_t _self_tid;
 extern __thread pid_t     _self_pid;
@@ -95,7 +98,7 @@ enum Log_Level {
 #ifdef LOG_LOC_DATA_ATEND
 #define COMPLETE_LOG_FMT "%s: %s" LOC_FMT "\n", log_level2str[level_], msg_, LOC_DATA
 #else
-#define COMPLETE_LOG_FMT LOC_FMT "%s: %s" "\n", LOC_DATA, log_level2str[level_], msg_
+#define COMPLETE_LOG_FMT LOC_FMT "%s: %.*s" "\n", LOC_DATA, log_level2str[level_], msg_len_, msg_
 #endif
 
 #ifndef LOG_BUFFER_LEN
@@ -105,32 +108,48 @@ enum Log_Level {
 extern int log_level;
 extern __thread char log_buf[LOG_BUFFER_LEN];
 
-void run_log_hooks(int, pid_t, pthread_t,
-                   const char*, const char*, int, const char*);
+void run_log_hooks(int level, pid_t pid, pthread_t tid,
+                   const char* func, const char* file, int line,
+                   const char* msg, int msg_len);
+
+class ContextLoggingHook
+  : public atomic_ref_cnt
+{
+  public:
+    virtual ~ContextLoggingHook() {}
+    virtual void log(int level, const char* msg, int msg_len) = 0;
+};
 
 template<class... Types> void write_log(
     int level, const char* func, const char* file, int line,
+    ContextLoggingHook *context_logger,
     const char *fmt, Types... args)
 {
     //level = FIX_LOG_LEVEL(level);
-    if(level > log_level) return;
+    if(level > log_level && !context_logger) return;
 
     if constexpr (sizeof...(args) > 0) {
-        /*int n = */snprintf(log_buf, sizeof(log_buf), fmt, args...);
-
-        /*if ((n < LOG_BUFFER_LEN) && (msg[n - 1] == '\n'))
-            msg[n - 1] = '\0';*/
+        int n = snprintf(log_buf, sizeof(log_buf), fmt, args...);
+        if(n < LOG_BUFFER_LEN && log_buf[n-1] == '\n') n--;
 
         run_log_hooks(level, _self_pid, _self_tid,
-                      func, file, line, log_buf);
+                      func, file, line, log_buf, n);
+        if(context_logger) context_logger->log(level, log_buf, n);
     } else {
+        int n = std::char_traits<char>::length(fmt);
+        if(fmt[n-1] == '\n') n--;
+
         run_log_hooks(level, _self_pid, _self_tid,
-                      func, file, line, fmt);
+                      func, file, line, fmt, n);
+        if(context_logger) context_logger->log(level, fmt, n);
     }
 }
 
 #define _LOG(level__, fmt, args...) \
-    write_log(level__, FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
+    write_log(level__, FUNC_NAME, __FILE__, __LINE__, nullptr, fmt, ##args)
+
+#define _LOG_CTX(context_logger, level__, fmt, args...) \
+    write_log(level__, FUNC_NAME, __FILE__, __LINE__, context_logger, fmt, ##args)
 
 /**
  * @{ Logging macros
@@ -144,6 +163,15 @@ _LOG(L_WARN, error_category fmt, ##args)
   _LOG(L_INFO, error_category fmt, ##args)
 #define CAT_DBG(error_category, fmt, args... ) \
   _LOG(L_DBG, error_category fmt, ##args)
+
+#define CAT_ERROR_CTX(context_logger, error_category, fmt, args... ) \
+  _LOG_CTX(context_logger, L_ERR, error_category fmt, ##args)
+#define CAT_WARN_CTX(context_logger, error_category, fmt, args... ) \
+  _LOG_CTX(context_logger, L_WARN, error_category fmt, ##args)
+#define CAT_INFO_CTX(context_logger, error_category, fmt, args... ) \
+  _LOG_CTX(context_logger, L_INFO, error_category fmt, ##args)
+#define CAT_DBG_CTX(context_logger, error_category, fmt, args... ) \
+  _LOG_CTX(context_logger, L_DBG, error_category fmt, ##args)
 
 #define CATEGORIZED_PREFIX    "SNMP:"
 #define CATEGORY_ERROR      CATEGORIZED_PREFIX "0"
@@ -168,12 +196,22 @@ _LOG(L_WARN, error_category fmt, ##args)
 #define INFO(fmt, args...)  CAT_INFO(ERROR_CATEGORY_IGENERAL, fmt, ##args)
 #define DBG(fmt, args...)   CAT_DBG(ERROR_CATEGORY_DGENERAL, fmt, ##args)
 
+#define ERROR_CTX(context_logger, fmt, args...) CAT_ERROR_CTX(context_logger, ERROR_CATEGORY_EGENERAL, fmt, ##args)
+#define WARN_CTX(context_logger, fmt, args...)  CAT_WARN_CTX(context_logger, ERROR_CATEGORY_WGENERAL, fmt, ##args)
+#define INFO_CTX(context_logger, fmt, args...)  CAT_INFO_CTX(context_logger, ERROR_CATEGORY_IGENERAL, fmt, ##args)
+#define DBG_CTX(context_logger, fmt, args...)   CAT_DBG_CTX(context_logger, ERROR_CATEGORY_DGENERAL, fmt, ##args)
+
 #define CLASS_LOG_FMT "[%p] "
 #define CLASS_ARGS static_cast<void *>(this)
 #define CLASS_ERROR(fmt, args...) ERROR(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_WARN(fmt, args...)  WARN(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_INFO(fmt, args...)  INFO(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_DBG(fmt, args...)   DBG(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+
+#define CLASS_ERROR_CTX(context_logger, fmt, args...) ERROR_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+#define CLASS_WARN_CTX(context_logger, fmt, args...)  WARN_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+#define CLASS_INFO_CTX(context_logger, fmt, args...)  INFO_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+#define CLASS_DBG_CTX(context_logger, fmt, args...)   DBG_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 
 //#define SOCKET_LOG(fmt, args...) INFO(fmt, ##args)
 #define SOCKET_LOG(fmt, args...) ;

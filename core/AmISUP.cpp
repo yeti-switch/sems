@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include "log.h"
+
 #define DUMP_ON_PARSING 1
 
 static void dump_buffer(const char *prefix, char *buf,size_t len)

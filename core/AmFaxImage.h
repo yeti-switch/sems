@@ -69,10 +69,10 @@ class AmFaxImage
     std::string m_filePath;
     bool m_send;
     AmEventQueue* eq;
-    msg_logger* logger;
+    ContextLoggingHook* logger;
 
   public:
-    AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_);
+    AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_);
     virtual ~AmFaxImage();
 
     void init_t30();
@@ -91,7 +91,7 @@ class FaxAudioImage : public AmAudio, public AmFaxImage
 {
     fax_state_t* m_fax_state;
 public:
-    FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, msg_logger* logger_);
+    FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_);
     ~FaxAudioImage();
 
     int write(unsigned int user_ts, unsigned int size) override;
@@ -109,7 +109,7 @@ class FaxT38Image : public AmMediaSession, public AmFaxImage, public atomic_ref_
     struct timeval m_lastTime;
     unsigned long long m_last_ts;
 public:
-    FaxT38Image(AmSession* sess, const std::string& filePath, bool send, msg_logger* logger_);
+    FaxT38Image(AmSession* sess, const std::string& filePath, bool send, ContextLoggingHook* logger_);
     ~FaxT38Image();
 
     int send_udptl_packet(const uint8_t *buf, int len);

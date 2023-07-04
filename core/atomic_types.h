@@ -28,7 +28,6 @@
 #endif
 
 #include <assert.h>
-#include "log.h"
 
 #if !HAVE_ATOMIC_CAS
 #include "AmThread.h"

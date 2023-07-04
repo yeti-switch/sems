@@ -84,14 +84,15 @@ class SyslogLogFac : public AmLoggingFacility {
     setlogmask(-1);
   }
   
-  int onLoad() {
+  int onLoad() override {
     /* unused (because it is a built-in plug-in */
     return 0;
   }
 
   bool setFacility(const char* str, const char* name);
   void log(int, pid_t, pid_t,
-           const char*, const char*, int, const char*);
+           const char*, const char*, int,
+           const char*, int) override;
 
   static SyslogLogFac &instance(){
 	  if(!_instance) _instance = new SyslogLogFac();
@@ -135,7 +136,8 @@ bool SyslogLogFac::setFacility(const char* str, const char* name) {
 }
 
 void SyslogLogFac::log(int level, [[maybe_unused]] pid_t pid, pid_t tid,
-                       const char* func, const char* file, int line, const char* msg)
+                       const char* func, const char* file, int line,
+                       const char* msg, int msg_len)
 {
   static const int log2syslog_level[] = { LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
 #ifdef _DEBUG
@@ -150,8 +152,8 @@ void SyslogLogFac::log(int level, [[maybe_unused]] pid_t pid, pid_t tid,
   syslog(log2syslog_level[level], "%s: %s [#%lx] [%s %s:%d]",
 	 log_level2str[level], msg, (unsigned long)tid, func, file, line);
 #  else
-  syslog(log2syslog_level[level], "[#%lx] [%s, %s:%d] %s: %s",
-	 (unsigned long)tid, func, file, line, log_level2str[level], msg);
+  syslog(log2syslog_level[level], "[#%lx] [%s, %s:%d] %s: %.*s",
+	 (unsigned long)tid, func, file, line, log_level2str[level], msg_len, msg);
 #  endif
 # else /* NO_THREADID_LOG */
 #  ifdef LOG_LOC_DATA_ATEND
@@ -195,7 +197,8 @@ class StderrLogFac : public AmLoggingFacility {
     ~StderrLogFac() {}
     int onLoad() {  return 0; }
     void log(int level_, pid_t pid, pid_t tid,
-             const char* func, const char* file, int line, const char* msg_)
+             const char* func, const char* file, int line,
+             const char* msg_, int msg_len_)
     {
         fprintf(stderr, COMPLETE_LOG_FMT);
         fflush(stderr);
@@ -225,8 +228,6 @@ void init_logging(const char* name)
 
 void cleanup_logging()
 {
-    //INFO("Logging cleanup");
-    //AmLock l(log_hooks_mutex);
     for(auto fac : log_hooks)
         dec_ref(fac);
     log_hooks.clear();
@@ -236,14 +237,12 @@ void cleanup_logging()
  * Run log hooks
  */
 void run_log_hooks(int level, pid_t pid, pthread_t tid,
-                   const char* func, const char* file, int line, const char* msg)
+                   const char* func, const char* file, int line,
+                   const char* msg, int msg_len)
 {
-  /*AmLock l(log_hooks_mutex);
-  (void)l;*/
-
   for(auto fac : log_hooks) {
     if(level <= fac->getLogLevel())
-      fac->log(level, pid, tid, func, file, line, msg);
+      fac->log(level, pid, tid, func, file, line, msg, msg_len);
   }
 }
 
@@ -259,15 +258,6 @@ void register_log_hook(AmLoggingFacility* fac)
         inc_ref(fac);
     }
 }
-
-/*void unregister_log_hook(AmLoggingFacility* fac){
-	AmLock lock(log_hooks_mutex);
-	vector<AmLoggingFacility*>::iterator fac_it = std::find(log_hooks.begin(),log_hooks.end(),fac);
-	if(fac_it!=log_hooks.end()) {
-        dec_ref(fac);
-		log_hooks.erase(fac_it);
-    }
-}*/
 
 bool get_higher_levels(int& log_level_arg) {
     //AmLock lock(log_hooks_mutex);
