@@ -1,3 +1,7 @@
+sems (1.110.0) stable; urgency=low
+  * fix logging segfault on log_buf overflow
+ -- Michael Furmur <furmur@pm.me>  Wed, 05 Jul 2023 22:11:47 +0300
+
 sems (1.109.0) stable; urgency=low
   * context logging support
   * context logging for AmFaxImage
