@@ -1,3 +1,8 @@
+sems (1.109.0) stable; urgency=low
+  * context logging support
+  * context logging for AmFaxImage
+ -- Michael Furmur <furmur@pm.me>  Wed, 05 Jul 2023 14:49:18 +0300
+
 sems (1.108.1) stable; urgency=low
   * conference_mixer: fix segfault on ConferenceChannel destructions
  -- Michael Furmur <furmur@pm.me>  Fri, 30 Jun 2023 21:01:56 +0300
