@@ -130,7 +130,8 @@ template<class... Types> void write_log(
 
     if constexpr (sizeof...(args) > 0) {
         int n = snprintf(log_buf, sizeof(log_buf), fmt, args...);
-        if(n < LOG_BUFFER_LEN && log_buf[n-1] == '\n') n--;
+        if(n > LOG_BUFFER_LEN) n = LOG_BUFFER_LEN;
+        if(log_buf[n-1] == '\n') n--;
 
         run_log_hooks(level, _self_pid, _self_tid,
                       func, file, line, log_buf, n);
