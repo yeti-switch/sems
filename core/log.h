@@ -98,7 +98,7 @@ enum Log_Level {
 #ifdef LOG_LOC_DATA_ATEND
 #define COMPLETE_LOG_FMT "%s: %s" LOC_FMT "\n", log_level2str[level_], msg_, LOC_DATA
 #else
-#define COMPLETE_LOG_FMT LOC_FMT "%s: %.*s" "\n", LOC_DATA, log_level2str[level_], msg_len_, msg_
+#define COMPLETE_LOG_FMT LOC_FMT " %s: %.*s" "\n", LOC_DATA, log_level2str[level_], msg_len_, msg_
 #endif
 
 #ifndef LOG_BUFFER_LEN
