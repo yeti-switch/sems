@@ -8,6 +8,7 @@
 #include <botan/data_src.h>
 #include <botan/auto_rng.h>
 #include <botan/x509cert.h>
+#include <botan/uuid.h>
 
 static const char *jwt_field_tn = "tn";
 static const char *jwt_field_uri = "uri";
@@ -277,7 +278,7 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
 
     payload[jwt_payload_claim_attest] = std::string(1, (char)at);
     payload[jwt_payload_claim_iat] = (int)time(0);
-    payload[jwt_payload_claim_origid] = orig_id = AmSession::getNewId();
+    payload[jwt_payload_claim_origid] = orig_id = Botan::UUID(rng).to_string();
 
     dest_data.serialize(payload[jwt_payload_claim_dest]);
     orig_data.serialize(payload[jwt_payload_claim_orig]);
