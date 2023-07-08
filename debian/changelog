@@ -1,3 +1,7 @@
+sems (1.111.0) stable; urgency=low
+  * AmIdentity: allow to set origid claim for identity. generate default value using Botan::UUID
+ -- Michael Furmur <furmur@pm.me>  Sat, 08 Jul 2023 15:17:57 +0300
+
 sems (1.110.0) stable; urgency=low
   * fix logging segfault on log_buf overflow
  -- Michael Furmur <furmur@pm.me>  Wed, 05 Jul 2023 22:11:47 +0300
