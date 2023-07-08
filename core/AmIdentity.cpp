@@ -255,6 +255,11 @@ std::string & AmIdentity::get_opt()
     return opt;
 }
 
+void AmIdentity::set_orig_id(const std::string &val)
+{
+    orig_id = val;
+}
+
 std::string & AmIdentity::get_orig_id()
 {
     return orig_id;

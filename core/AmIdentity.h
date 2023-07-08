@@ -97,7 +97,9 @@ class AmIdentity
     void set_opt(const std::string &opt_claim);
     std::string &get_opt();
 
+    void set_orig_id(const std::string &val);
     std::string& get_orig_id();
+
     time_t get_created();
 
     void add_orig_tn(const std::string& origtn);
