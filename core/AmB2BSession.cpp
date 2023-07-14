@@ -34,8 +34,8 @@
 #include <assert.h>
 
 // helpers
-static const string sdp_content_type(SIP_APPLICATION_SDP);
-static const string empty;
+//static const string sdp_content_type(SIP_APPLICATION_SDP);
+//static const string empty;
 static const string sendonly("sendonly");
 static const string recvonly("recvonly");
 static const string sendrecv("sendrecv");
