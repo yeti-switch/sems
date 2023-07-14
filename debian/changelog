@@ -1,3 +1,7 @@
+sems (1.112.0) stable; urgency=low
+  * AmStereoRecorderInfo: fix segfault in del()
+ -- Michael Furmur <furmur@pm.me>  Fri, 14 Jul 2023 10:46:36 +0300
+
 sems (1.111.0) stable; urgency=low
   * AmIdentity: allow to set origid claim for identity. generate default value using Botan::UUID
  -- Michael Furmur <furmur@pm.me>  Sat, 08 Jul 2023 15:17:57 +0300
