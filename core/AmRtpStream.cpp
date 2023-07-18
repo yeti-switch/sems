@@ -381,8 +381,7 @@ void AmRtpStream::calcRtpPorts(AmMediaTransport* tr_rtp, AmMediaTransport* tr_rt
             tr_rtp->getLocalProtoId()).getNextRtpAddress(l_rtp_addr))
         {
             //no free ports in PortMap. give up
-            retry = 0;
-            break;
+            throw string("no free RTP ports");
         }
 
         if(tr_rtp != tr_rtcp && tr_rtcp) {
@@ -434,7 +433,7 @@ try_another_port:
     if (!retry) {
         ERROR("could not bind RTP/RTCP ports considered free after %d attempts",
               BIND_ATTEMPTS_COUNT);
-        throw string("could not find a free RTP port\n");
+        throw string("could not find a free RTP port");
     }
 
 }
