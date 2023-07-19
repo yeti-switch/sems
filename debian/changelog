@@ -1,3 +1,8 @@
+sems (1.112.1) stable; urgency=low
+  * AmB2BMedia: StreamData: fix AmRtpAudiom leak on initialization exceptions
+  * AmRtpStream: fix error message on no free RTP ports
+ -- Michael Furmur <furmur@pm.me>  Thu, 20 Jul 2023 01:10:54 +0300
+
 sems (1.112.0) stable; urgency=low
   * AmStereoRecorderInfo: fix segfault in del()
  -- Michael Furmur <furmur@pm.me>  Fri, 14 Jul 2023 10:46:36 +0300
