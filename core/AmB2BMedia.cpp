@@ -169,9 +169,18 @@ void B2BMediaStatistics::getReport(const AmArg &, AmArg &ret)
 StreamData::StreamData(AmB2BSession* session, bool audio)
   : stream(nullptr),
     shared_stream(false),
-    initialized(false)
+    initialized(false),
+    dtmf_detector(nullptr),
+    dtmf_queue(nullptr),
+    outgoing_payload(UNDEFINED_PAYLOAD),
+    incoming_payload(UNDEFINED_PAYLOAD)
 {
-    initialize(session, audio);
+    try {
+        initialize(session, audio);
+    } catch(...) {
+        clear();
+        throw;
+    }
 }
 
 StreamData::~StreamData()

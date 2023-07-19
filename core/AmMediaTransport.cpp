@@ -95,7 +95,9 @@ AmMediaTransport::~AmMediaTransport()
             }
         }
         close(l_sd);
-        AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
+        if(am_get_port(&l_saddr)) {
+            AmConfig.media_ifs[l_if].proto_info[lproto_id]->freeRtpAddress(l_saddr);
+        }
     }
 
     for(auto conn : connections) {
