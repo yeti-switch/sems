@@ -77,12 +77,13 @@ class AmFaxImage
 
     void init_t30();
     virtual void get_fax_params(std::map<std::string, std::string>& params){}
+    t30_state_t *get_t30_state() { return m_t30_state; }
 
   protected:
-    friend void spandsp_log_handler(int level, const char *text, void* user_data);
-    friend int phase_b_handler(t30_state_t *s, void *user_data, int result);
-    friend int phase_d_handler(t30_state_t *s, void *user_data, int result);
-    friend void phase_e_handler(t30_state_t *s, void *user_data, int result);
+    friend void spandsp_log_handler(void* user_data, int level, const char *text);
+    friend int phase_b_handler(void *user_data, int result);
+    friend int phase_d_handler(void *user_data, int result);
+    friend void phase_e_handler(void *user_data, int result);
     void logHandler(int level, const char* text);
     void faxComplete(bool isSuccess, const std::string& strResult, const t30_stats_t& t);
 };

@@ -4,6 +4,9 @@
 #include "log.h"
 #include "sip/msg_logger.h"
 
+#define SAMPLE_RATE                 8000
+#define ms_to_samples(t)            ((t)*(SAMPLE_RATE/1000))
+
 #define T38_FAX_RATE_DEFAULT "transferredTCF"
 #define T38_FAX_UDPEC_DEFAULT "t38UDPRedundancy"
 #define NAME_TO_STRING(name) #name
@@ -85,7 +88,7 @@ static std::map<std::string, std::string> transfer_statistics_map(const t30_stat
     stat.insert(std::make_pair(STAT_BAD_ECM_FRAMES, intValue));
     sprintf(intValue, "%d", s.image_size);
     stat.insert(std::make_pair(STAT_ILENGTH, intValue));
-    sprintf(intValue, "%d", s.encoding);
+    sprintf(intValue, "%d", s.compression);
     stat.insert(std::make_pair(STAT_COMP_TYPE, intValue));
     return stat;
 }
@@ -103,13 +106,13 @@ static std::string transfer_statistics(t30_state_t *s)
     return log;
 }
 
-void spandsp_log_handler(int level, const char *text, void* user_data)
+void spandsp_log_handler(void* user_data, int level, const char *text)
 {
     AmFaxImage* image = (AmFaxImage*)user_data;
     image->logHandler(level, text);
 }
 
-int phase_b_handler(t30_state_t *s, void *user_data, int result)
+int phase_b_handler(void *user_data, int result)
 {
     char log[200];
 
@@ -119,11 +122,12 @@ int phase_b_handler(t30_state_t *s, void *user_data, int result)
     return T30_ERR_OK;
 }
 
-int phase_d_handler(t30_state_t *s, void *user_data, int result)
+int phase_d_handler(void *user_data, int result)
 {
     char log[200];
 
     AmFaxImage* image = (AmFaxImage*)user_data;
+    t30_state_t *s = image->get_t30_state();
     sprintf(log, "Phase D - (0x%X) %s\n", result, t30_frametype(result));
     std::string logStr(log);
     logStr += "--++--\n";
@@ -133,11 +137,12 @@ int phase_d_handler(t30_state_t *s, void *user_data, int result)
     return T30_ERR_OK;
 }
 
-void phase_e_handler(t30_state_t *s, void *user_data, int result)
+void phase_e_handler(void *user_data, int result)
 {
     char log[200];
 
     AmFaxImage* image = (AmFaxImage*)user_data;
+    t30_state_t *s = image->get_t30_state();
     sprintf(log, "Phase E - (%d) %s\n", result, t30_completion_code_to_str(result));
     t30_stats_t t;
     std::string logStr(log);
@@ -303,15 +308,65 @@ void AmFaxImage::init_t30()
     span_log_set_protocol(logging, "T30");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
     t30_set_ecm_capability(m_t30_state, TRUE);
-    t30_set_supported_image_sizes(m_t30_state, T30_SUPPORT_US_LETTER_LENGTH | T30_SUPPORT_US_LEGAL_LENGTH | T30_SUPPORT_UNLIMITED_LENGTH |
-                                               T30_SUPPORT_215MM_WIDTH | T30_SUPPORT_303MM_WIDTH);
-    t30_set_supported_resolutions(m_t30_state, T30_SUPPORT_STANDARD_RESOLUTION | T30_SUPPORT_FINE_RESOLUTION | T30_SUPPORT_SUPERFINE_RESOLUTION |
-                                               T30_SUPPORT_R8_RESOLUTION | T30_SUPPORT_R16_RESOLUTION |
-                                               T30_SUPPORT_300_300_RESOLUTION | T30_SUPPORT_400_400_RESOLUTION |
-                                               T30_SUPPORT_600_600_RESOLUTION | T30_SUPPORT_1200_1200_RESOLUTION | T30_SUPPORT_300_600_RESOLUTION |
-                                               T30_SUPPORT_400_800_RESOLUTION | T30_SUPPORT_600_1200_RESOLUTION);
-    t30_set_supported_compressions(m_t30_state, T30_SUPPORT_T4_1D_COMPRESSION | T30_SUPPORT_T4_2D_COMPRESSION | T30_SUPPORT_T6_COMPRESSION);
-    t30_set_supported_t30_features(m_t30_state, T30_SUPPORT_IDENTIFICATION | T30_SUPPORT_SELECTIVE_POLLING | T30_SUPPORT_SUB_ADDRESSING);
+    t30_set_supported_image_sizes(m_t30_state,
+                                          T4_SUPPORT_WIDTH_215MM
+                                        | T4_SUPPORT_WIDTH_255MM
+                                        | T4_SUPPORT_WIDTH_303MM
+                                        | T4_SUPPORT_LENGTH_US_LETTER
+                                        | T4_SUPPORT_LENGTH_US_LEGAL
+                                        | T4_SUPPORT_LENGTH_UNLIMITED);
+
+    /* Allow anything */
+    t30_set_supported_bilevel_resolutions(m_t30_state,
+                                          T4_RESOLUTION_R8_STANDARD
+                                        | T4_RESOLUTION_R8_FINE
+                                        | T4_RESOLUTION_R8_SUPERFINE
+                                        | T4_RESOLUTION_R16_SUPERFINE
+                                        | T4_RESOLUTION_200_100
+                                        | T4_RESOLUTION_200_200
+                                        | T4_RESOLUTION_200_400
+                                        | T4_RESOLUTION_300_300
+                                        | T4_RESOLUTION_300_600
+                                        | T4_RESOLUTION_400_400
+                                        | T4_RESOLUTION_400_800
+                                        | T4_RESOLUTION_600_600
+                                        | T4_RESOLUTION_600_1200
+                                        | T4_RESOLUTION_1200_1200);
+
+  t30_set_supported_colour_resolutions(m_t30_state,
+                                          T4_RESOLUTION_100_100
+                                        | T4_RESOLUTION_200_200
+                                        | T4_RESOLUTION_300_300
+                                        | T4_RESOLUTION_400_400
+                                        | T4_RESOLUTION_600_600
+                                        | T4_RESOLUTION_1200_1200);
+
+
+  t30_set_supported_compressions(m_t30_state,
+                                           T4_COMPRESSION_T4_1D
+                                         | T4_COMPRESSION_T4_2D
+                                         | T4_COMPRESSION_T6
+                                         | T4_COMPRESSION_T85
+                                         | T4_COMPRESSION_T85_L0
+                                         //| T4_COMPRESSION_T88
+                                         | T4_COMPRESSION_T43
+                                         | T4_COMPRESSION_T45
+                                         | T4_COMPRESSION_T42_T81
+                                         | T4_COMPRESSION_SYCC_T81
+                                         | T4_COMPRESSION_GRAYSCALE
+                                         | T4_COMPRESSION_COLOUR
+                                         | T4_COMPRESSION_12BIT
+                                         | T4_COMPRESSION_COLOUR_TO_GRAY
+                                         | T4_COMPRESSION_GRAY_TO_BILEVEL
+                                         | T4_COMPRESSION_COLOUR_TO_BILEVEL
+                                         | T4_COMPRESSION_RESCALING
+                                         | 0);
+
+  t30_set_supported_t30_features(m_t30_state,
+                                           T30_SUPPORT_IDENTIFICATION
+                                         | T30_SUPPORT_SELECTIVE_POLLING
+                                         | T30_SUPPORT_SUB_ADDRESSING);
+
     if(m_send)
         t30_set_tx_file(m_t30_state, m_filePath.c_str(), 0, -1);
     else
