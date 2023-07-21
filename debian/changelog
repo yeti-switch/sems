@@ -1,3 +1,7 @@
+sems (1.114.0) stable; urgency=low
+  * CoreRpc: fix instance() method
+ -- Michael Furmur <furmur@pm.me>  Fri, 21 Jul 2023 22:34:12 +0300
+
 sems (1.113.0) stable; urgency=low
   * use freeswitch spandsp
   * fix unhold for 'inactive' stream by 'sendrecv'
