@@ -774,8 +774,8 @@ void SdpMedia::calcAnswer(
     const AmPayloadProvider* payload_prov,
     SdpMedia& answer) const
 {
-    if(!recv) answer.send = false;
-    if(!send) answer.recv = false;
+    answer.recv = send;
+    answer.send = recv;
 
     switch(dir){
     case SdpMedia::DirBoth:
