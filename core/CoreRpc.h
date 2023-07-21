@@ -28,13 +28,10 @@ class CoreRpc final
     void log_invoke(const string& method, const AmArg& args) const;
 
   public:
+    static CoreRpc& instance();
+
     AmDynInvoke* getInstance() { return this; }
     int onLoad();
-    static CoreRpc& instance()
-    {
-        static CoreRpc _instance;
-        return _instance;
-    }
     static void set_system_shutdown(bool shutdown);
 
     CoreRpc(CoreRpc const&) = delete;

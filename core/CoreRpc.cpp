@@ -209,6 +209,12 @@ void CoreRpc::log_invoke(const string& method, const AmArg& args) const
     DBG("CoreRpc::log_invoke(%s,%s)",method.c_str(),AmArg::print(args).c_str());
 }
 
+CoreRpc& CoreRpc::instance()
+{
+    static CoreRpc _instance;
+    return _instance;
+}
+
 int CoreRpc::onLoad()
 {
     _inc_ref();
