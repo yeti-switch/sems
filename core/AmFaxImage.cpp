@@ -346,8 +346,8 @@ void AmFaxImage::init_t30()
                                            T4_COMPRESSION_T4_1D
                                          | T4_COMPRESSION_T4_2D
                                          | T4_COMPRESSION_T6
-                                         | T4_COMPRESSION_T85
-                                         | T4_COMPRESSION_T85_L0
+                                         //| T4_COMPRESSION_T85
+                                         //| T4_COMPRESSION_T85_L0
                                          //| T4_COMPRESSION_T88
                                          | T4_COMPRESSION_T43
                                          | T4_COMPRESSION_T45
@@ -356,10 +356,10 @@ void AmFaxImage::init_t30()
                                          | T4_COMPRESSION_GRAYSCALE
                                          | T4_COMPRESSION_COLOUR
                                          | T4_COMPRESSION_12BIT
-                                         | T4_COMPRESSION_COLOUR_TO_GRAY
+                                         /*| T4_COMPRESSION_COLOUR_TO_GRAY
                                          | T4_COMPRESSION_GRAY_TO_BILEVEL
                                          | T4_COMPRESSION_COLOUR_TO_BILEVEL
-                                         | T4_COMPRESSION_RESCALING
+                                         | T4_COMPRESSION_RESCALING*/
                                          | 0);
 
   t30_set_supported_t30_features(m_t30_state,
