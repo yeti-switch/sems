@@ -1,3 +1,7 @@
+sems (1.114.2) stable; urgency=low
+  * disable all new fax compression modes/resolutions
+ -- Michael Furmur <furmur@pm.me>  Thu, 27 Jul 2023 15:14:46 +0300
+
 sems (1.114.1) stable; urgency=low
   * disable fax T85 compression and dithering/rescaling
  -- Michael Furmur <furmur@pm.me>  Wed, 26 Jul 2023 16:18:26 +0300
