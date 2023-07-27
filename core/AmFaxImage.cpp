@@ -308,69 +308,71 @@ void AmFaxImage::init_t30()
     span_log_set_protocol(logging, "T30");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
     t30_set_ecm_capability(m_t30_state, TRUE);
+
     t30_set_supported_image_sizes(m_t30_state,
-                                          T4_SUPPORT_WIDTH_215MM
-                                        | T4_SUPPORT_WIDTH_255MM
-                                        | T4_SUPPORT_WIDTH_303MM
-                                        | T4_SUPPORT_LENGTH_US_LETTER
-                                        | T4_SUPPORT_LENGTH_US_LEGAL
-                                        | T4_SUPPORT_LENGTH_UNLIMITED);
+        T4_SUPPORT_WIDTH_215MM |
+        //T4_SUPPORT_WIDTH_255MM |
+        T4_SUPPORT_WIDTH_303MM |
+        T4_SUPPORT_LENGTH_US_LETTER |
+        T4_SUPPORT_LENGTH_US_LEGAL |
+        T4_SUPPORT_LENGTH_UNLIMITED);
 
     /* Allow anything */
     t30_set_supported_bilevel_resolutions(m_t30_state,
-                                          T4_RESOLUTION_R8_STANDARD
-                                        | T4_RESOLUTION_R8_FINE
-                                        | T4_RESOLUTION_R8_SUPERFINE
-                                        | T4_RESOLUTION_R16_SUPERFINE
-                                        | T4_RESOLUTION_200_100
-                                        | T4_RESOLUTION_200_200
-                                        | T4_RESOLUTION_200_400
-                                        | T4_RESOLUTION_300_300
-                                        | T4_RESOLUTION_300_600
-                                        | T4_RESOLUTION_400_400
-                                        | T4_RESOLUTION_400_800
-                                        | T4_RESOLUTION_600_600
-                                        | T4_RESOLUTION_600_1200
-                                        | T4_RESOLUTION_1200_1200);
+        T4_RESOLUTION_R8_STANDARD |
+        T4_RESOLUTION_R8_FINE |
+        T4_RESOLUTION_R8_SUPERFINE |
+        T4_RESOLUTION_R16_SUPERFINE |
+        //T4_RESOLUTION_200_100 |
+        T4_RESOLUTION_200_200 |
+        //T4_RESOLUTION_200_400 |
+        T4_RESOLUTION_300_300 |
+        //T4_RESOLUTION_300_600 |
+        T4_RESOLUTION_400_400 |
+        //T4_RESOLUTION_400_800 |
+        T4_RESOLUTION_600_600 |
+        //T4_RESOLUTION_600_1200 |
+        T4_RESOLUTION_1200_1200);
 
-  t30_set_supported_colour_resolutions(m_t30_state,
-                                          T4_RESOLUTION_100_100
-                                        | T4_RESOLUTION_200_200
-                                        | T4_RESOLUTION_300_300
-                                        | T4_RESOLUTION_400_400
-                                        | T4_RESOLUTION_600_600
-                                        | T4_RESOLUTION_1200_1200);
+    /*t30_set_supported_colour_resolutions(m_t30_state,
+        T4_RESOLUTION_100_100 |
+        T4_RESOLUTION_200_200 |
+        T4_RESOLUTION_300_300 |
+        T4_RESOLUTION_400_400 |
+        T4_RESOLUTION_600_600 |
+        T4_RESOLUTION_1200_1200);*/
 
 
-  t30_set_supported_compressions(m_t30_state,
-                                           T4_COMPRESSION_T4_1D
-                                         | T4_COMPRESSION_T4_2D
-                                         | T4_COMPRESSION_T6
-                                         //| T4_COMPRESSION_T85
-                                         //| T4_COMPRESSION_T85_L0
-                                         //| T4_COMPRESSION_T88
-                                         | T4_COMPRESSION_T43
-                                         | T4_COMPRESSION_T45
-                                         | T4_COMPRESSION_T42_T81
-                                         | T4_COMPRESSION_SYCC_T81
-                                         | T4_COMPRESSION_GRAYSCALE
-                                         | T4_COMPRESSION_COLOUR
-                                         | T4_COMPRESSION_12BIT
-                                         /*| T4_COMPRESSION_COLOUR_TO_GRAY
-                                         | T4_COMPRESSION_GRAY_TO_BILEVEL
-                                         | T4_COMPRESSION_COLOUR_TO_BILEVEL
-                                         | T4_COMPRESSION_RESCALING*/
-                                         | 0);
+    t30_set_supported_compressions(m_t30_state,
+        T4_COMPRESSION_T4_1D |
+        T4_COMPRESSION_T4_2D |
+        T4_COMPRESSION_T6 |
+        //T4_COMPRESSION_T85 |
+        //T4_COMPRESSION_T85_L0 |
+        //T4_COMPRESSION_T88 |
+        /*T4_COMPRESSION_T43 |
+        T4_COMPRESSION_T45 |
+        T4_COMPRESSION_T42_T81 |
+        T4_COMPRESSION_SYCC_T81 |
+        T4_COMPRESSION_GRAYSCALE |
+        T4_COMPRESSION_COLOUR |
+        T4_COMPRESSION_12BIT |*/
+        /*T4_COMPRESSION_COLOUR_TO_GRAY |
+        T4_COMPRESSION_GRAY_TO_BILEVEL |
+        T4_COMPRESSION_COLOUR_TO_BILEVEL |
+        T4_COMPRESSION_RESCALING*/
+        0);
 
-  t30_set_supported_t30_features(m_t30_state,
-                                           T30_SUPPORT_IDENTIFICATION
-                                         | T30_SUPPORT_SELECTIVE_POLLING
-                                         | T30_SUPPORT_SUB_ADDRESSING);
+    t30_set_supported_t30_features(m_t30_state,
+        T30_SUPPORT_IDENTIFICATION |
+        T30_SUPPORT_SELECTIVE_POLLING |
+        T30_SUPPORT_SUB_ADDRESSING);
 
     if(m_send)
         t30_set_tx_file(m_t30_state, m_filePath.c_str(), 0, -1);
     else
         t30_set_rx_file(m_t30_state, m_filePath.c_str(), -1);
+
     t30_set_phase_b_handler(m_t30_state, phase_b_handler, (void *) this);
     t30_set_phase_d_handler(m_t30_state, phase_d_handler, (void *) this);
     t30_set_phase_e_handler(m_t30_state, phase_e_handler, (void *) this);
