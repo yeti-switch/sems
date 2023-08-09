@@ -12,3 +12,5 @@ dh_opts=$(addprefix -O,$(dh_args))
 override_dh_strip:
 	#do not strip binaries
 
+override_dh_installsystemd:
+	dh_installsystemd --no-start --no-stop-on-upgrade
