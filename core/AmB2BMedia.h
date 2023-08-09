@@ -111,6 +111,7 @@ public:
     void setLogger(msg_logger *logger) { if (stream) stream->setLogger(logger); }
 	void setSensor(msg_sensor *sensor) { if (stream) stream->setSensor(sensor); }
     void setRtpTimeout(unsigned int timeout) { if(stream) stream->setRtpTimeout(timeout); }
+    void setMonitorRtpTimeout(bool enable) { if(stream) stream->setMonitorRTPTimeout(enable); }
     void stopStreamProcessing() { if(stream) stream->stopReceiving(); }
     void resumeStreamProcessing() { if(stream) stream->resumeReceiving(); }
     void clearRTPTimeout() { if (stream) stream->clearRTPTimeout(); }
@@ -289,6 +290,11 @@ class AmB2BMedia
             a.setRtpTimeout(timeout);
             b.setRtpTimeout(timeout);
         }
+        void setMonitorRtpTimeout(bool enable)
+        {
+            a.setMonitorRtpTimeout(enable);
+            b.setMonitorRtpTimeout(enable);
+        }
     };
 
     /** Callgroup reqired by AmMediaProcessor to distinguish
@@ -460,6 +466,7 @@ class AmB2BMedia
     void unmute(bool a_leg) { setMuteFlag(a_leg, false); }
     void setRtpTimeout(bool a_leg, unsigned int timeout);
     void setRtpTimeout(unsigned int timeout);
+    void setMonitorRtpTimeout(bool enable);
     bool isMuted(bool a_leg) { if (a_leg) return a_leg_muted; else return b_leg_muted; }
 
     void setFirstStreamInput(bool a_leg, AmAudio *in);

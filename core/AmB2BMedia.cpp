@@ -1455,6 +1455,13 @@ void AmB2BMedia::setRtpTimeout(unsigned int timeout)
         pair.setRtpTimeout(timeout);
 }
 
+void AmB2BMedia::setMonitorRtpTimeout(bool enable)
+{
+    AmLock lock(mutex);
+    for (auto &pair: streams)
+        pair.setMonitorRtpTimeout(enable);
+}
+
 void AmB2BMedia::setFirstStreamInput(bool a_leg, AmAudio *in)
 {
     AmLock lock(mutex);

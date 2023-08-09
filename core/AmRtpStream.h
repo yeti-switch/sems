@@ -637,7 +637,7 @@ class AmRtpStream
     bool getOnHold();
 
     /** setter for monitor_rtp_timeout */
-    void setMonitorRTPTimeout(bool m) { monitor_rtp_timeout = m; }
+    void setMonitorRTPTimeout(bool m);
     /** getter for monitor_rtp_timeout */
     bool getMonitorRTPTimeout() { return monitor_rtp_timeout; }
 

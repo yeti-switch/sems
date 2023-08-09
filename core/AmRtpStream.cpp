@@ -1753,6 +1753,12 @@ bool AmRtpStream::getOnHold()
     return hold;
 }
 
+void AmRtpStream::setMonitorRTPTimeout(bool m)
+{
+    monitor_rtp_timeout = m;
+    CLASS_DBG("set RTP timeout monitoring to %d", m);
+}
+
 void AmRtpStream::setRelayStream(AmRtpStream* stream)
 {
     relay_stream = stream;
