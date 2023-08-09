@@ -167,12 +167,6 @@ fi # if changing config
 
 #DEBHELPER#
 
-if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-  invoke-rc.d rsyslog restart 3>/dev/null || exit 0
-else
-  /etc/init.d/rsyslog restart 3>/dev/null || exit 0
-fi
-
 for dir in "cdrs/completed" "dump" "records" "logdump" "rsr"
 do
 	mkdir -p /var/spool/sems/$dir 
