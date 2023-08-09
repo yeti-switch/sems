@@ -1,4 +1,2 @@
 usr/bin/sems /usr/bin/
 etc/default etc/
-etc/logrotate.d etc/
-etc/rsyslog.d etc/

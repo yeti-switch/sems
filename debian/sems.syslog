@@ -1,2 +1,0 @@
-if $programname == 'sems' then /var/log/sems/sems-main.log
-& ~
