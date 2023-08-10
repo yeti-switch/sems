@@ -1,3 +1,7 @@
+sems (1.116.0) stable; urgency=low
+  * use sems-external-libs-dev >=·0.3.0 with fixed spandsp byte-ordering
+ -- Michael Furmur <furmur@pm.me>  Thu, 10 Aug 2023 21:19:37 +0300
+
 sems (1.115.0) stable; urgency=low
   * add AmB2BMedia::setMonitorRtpTimeout
   [pkg]
