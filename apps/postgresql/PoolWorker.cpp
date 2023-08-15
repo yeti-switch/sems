@@ -183,8 +183,8 @@ void PoolWorker::onStopTransaction(Transaction* trans)
 
 void PoolWorker::onConnectionFailed(Connection* conn, const std::string& error) {
     ERROR("pg connection %s:%p/%s failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
-    resetConnections.push_back(conn);
-    reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
+    resetConnections.insert(conn);
+    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
@@ -192,10 +192,11 @@ void PoolWorker::onConnectionFailed(Connection* conn, const std::string& error) 
 void PoolWorker::onDisconnect(Connection* conn) {
     INFO("pg connection %s:%p/%s disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
-    resetConnections.push_back(conn);
-    reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
-    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+    resetConnections.insert(conn);
+    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
+    DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
+    //setWorkTimer(true);
 }
 
 void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
@@ -223,7 +224,7 @@ void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
 
     if(ret < 0) {
         ERROR("epoll error. reset connection %p", conn);
-        resetConnections.push_back(conn);
+        resetConnections.insert(conn);
         reset_next_time = time(0) + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         setWorkTimer(false);
@@ -249,7 +250,7 @@ void PoolWorker::onErrorCode(Transaction* trans, const string& error) {
     if(reconnect_errors.empty() ||
        reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
     {
-        resetConnections.push_back(trans->get_conn());
+        resetConnections.insert(trans->get_conn());
         reset_next_time = time(0) + reconnect_interval;
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         setWorkTimer(false);
@@ -290,8 +291,8 @@ void PoolWorker::onFinish(Transaction* trans, const AmArg& result) {
 void PoolWorker::onPQError(Transaction* trans, const std::string& error) {
 
     DBG("Error of transaction \'%s\' : %s", trans->get_query()->get_query().c_str(), error.c_str());
-    resetConnections.push_back(trans->get_conn());
-    reset_next_time = resetConnections[0]->getDisconnectedTime() + reconnect_interval;
+    resetConnections.insert(trans->get_conn());
+    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
     //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
 }
@@ -756,7 +757,7 @@ void PoolWorker::onTimer()
         } else if(current - trans_it->createdTime > trans_wait_time*2 &&
                   trans_it->trans->get_status() == Transaction::CANCELING)
         {
-            resetConnections.emplace_back(trans_it->trans->get_conn());
+            resetConnections.insert(trans_it->trans->get_conn());
             tr_size.dec((long long)trans_it->trans->get_size());
             onErrorTransaction(*trans_it, "transaction cancel timeout");
             trans_it = transactions.erase(trans_it);
@@ -780,10 +781,14 @@ void PoolWorker::onTimer()
     auto conns = resetConnections;
     resetConnections.clear();
     reset_next_time = 0;
+    int i = 0;
+    DBG("reset conn size %d", conns.size());
     for(auto conn_it = conns.begin();
         conn_it != conns.end();)
     {
+        DBG("%d <= %d", (*conn_it)->getDisconnectedTime() + reconnect_interval, current);
         if((*conn_it)->getDisconnectedTime() + reconnect_interval <= current) {
+            DBG("reset conn count %d", ++i);
             (*conn_it)->reset();
             conn_it = conns.erase(conn_it);
             continue;
@@ -793,7 +798,7 @@ void PoolWorker::onTimer()
         //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         break;
     }
-    resetConnections.insert(resetConnections.begin(), conns.begin(), conns.end());
+    resetConnections.insert(conns.begin(), conns.end());
 
     if(conn_lifetime && reconn_next_time <= current) {
         reconn_next_time = 0;

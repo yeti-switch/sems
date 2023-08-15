@@ -7,10 +7,12 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <set>
 #include <list>
 
 using std::string;
 using std::vector;
+using std::set;
 using std::list;
 
 class PoolWorker
@@ -35,7 +37,7 @@ class PoolWorker
     ConnectionPool* master;
     ConnectionPool* slave;
 
-    vector<Connection*> resetConnections;
+    set<Connection*> resetConnections;
     struct TransContainer
     {
         Transaction* trans;
