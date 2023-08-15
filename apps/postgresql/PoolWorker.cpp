@@ -439,26 +439,22 @@ void PoolWorker::setWorkTimer(bool immediately)
         //DBG("set timer immediately");
     } else {
         time_t interval = 0;
-        if(reset_next_time && 
-          (!interval || reset_next_time < current || reset_next_time - current < interval)) {
-            interval = reset_next_time - current > 0 ? reset_next_time - current : 1;
-        }
-        if(retransmit_next_time &&
-          (!interval || retransmit_next_time < current || retransmit_next_time - current < interval)) {
-            interval = retransmit_next_time - current > 0 ? retransmit_next_time - current : 1;
-        }
-        if(wait_next_time &&
-          (!interval || wait_next_time < current || wait_next_time - current < interval)) {
-            interval = wait_next_time - current > 0 ? wait_next_time - current : 1;
-        }
-        if(send_next_time &&
-          (!interval || send_next_time < current || send_next_time - current < interval)) {
-            interval = send_next_time - current > 0 ? send_next_time - current : 1;
-        }
-        if(reconn_next_time &&
-           (!interval || reconn_next_time < current || reconn_next_time - current < interval)) {
-               interval = reconn_next_time - current > 0 ? reconn_next_time - current : 1;
-        }
+
+        auto update_timer_interval = [&interval, current](time_t next_time)
+        {
+            if(next_time &&
+               (!interval || next_time < current || next_time - current < interval))
+            {
+                interval = next_time - current > 0 ? next_time - current : 1;
+            }
+        };
+
+        update_timer_interval(reset_next_time);
+        update_timer_interval(retransmit_next_time);
+        update_timer_interval(wait_next_time);
+        update_timer_interval(send_next_time);
+        update_timer_interval(reconn_next_time);
+
         workTimer.set(interval*1000000, false);
         //DBG("set timer %lu", interval);
     }
