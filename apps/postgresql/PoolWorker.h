@@ -15,12 +15,12 @@ using std::vector;
 using std::set;
 using std::list;
 
-class conn_time_less
+class pending_reset_time_less
 {
 public:
   bool operator()(Connection* const a, Connection* const b) const
   {
-      if(a->getDisconnectedTime() <  b->getDisconnectedTime()) return true;
+      if(a->getPendingResetTime() <  b->getPendingResetTime()) return true;
       return a < b;
   }
 };
@@ -44,10 +44,18 @@ class PoolWorker
     uint32_t conn_lifetime;
 
     AmTimerFd workTimer;
+
     ConnectionPool* master;
     ConnectionPool* slave;
 
-    set<Connection*, conn_time_less> resetConnections;
+    struct resetConnectionsContainer
+      : public set<Connection*, pending_reset_time_less>
+    {
+        time_t getNearestResetTime() {
+            return (*begin())->getPendingResetTime();
+        }
+    } resetConnections;
+
     struct TransContainer
     {
         Transaction* trans;
@@ -91,7 +99,7 @@ class PoolWorker
     void checkQueue();
     int retransmitTransaction(TransContainer& trans);
     void setWorkTimer(bool immediately);
-
+    void scheduleConnectionReset(Connection *conn, time_t pending_reset_time = time(0));
   public:
     PoolWorker(const string& name, int epollfd);
     ~PoolWorker();

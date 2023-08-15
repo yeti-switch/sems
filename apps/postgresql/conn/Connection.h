@@ -21,6 +21,7 @@ protected:
     int conn_fd;
     time_t connected_time;
     time_t disconnected_time;
+    time_t pending_reset_time;
     uint64_t queries_finished;
 
     friend class Transaction;
@@ -49,6 +50,7 @@ public:
     , conn_fd(-1)
     , connected_time(0)
     , disconnected_time(::time(0))
+    , pending_reset_time(0)
     , queries_finished(0)
     , cur_transaction(nullptr)
     , planned(nullptr)
@@ -74,8 +76,13 @@ public:
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
+
     time_t getDisconnectedTime() const { return disconnected_time; }
     time_t getConnectedTime() { return connected_time; }
+
+    time_t getPendingResetTime() const { return pending_reset_time; }
+    void setPendingResetTime(time_t timepoint) { pending_reset_time = timepoint; }
+
     uint64_t getQueriesFinished() { return queries_finished; }
     Transaction* getCurrentTransaction() { return cur_transaction; }
 };

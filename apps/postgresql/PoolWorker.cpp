@@ -183,19 +183,13 @@ void PoolWorker::onStopTransaction(Transaction* trans)
 
 void PoolWorker::onConnectionFailed(Connection* conn, const std::string& error) {
     ERROR("pg connection %s:%p/%s failed: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
-    resetConnections.insert(conn);
-    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
-    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-    setWorkTimer(false);
+    scheduleConnectionReset(conn, conn->getDisconnectedTime() + reconnect_interval);
 }
 
 void PoolWorker::onDisconnect(Connection* conn) {
     INFO("pg connection %s:%p/%s disconnect", name.c_str(), conn, conn->getConnInfo().c_str());
     if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
-    resetConnections.insert(conn);
-    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
-    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-    setWorkTimer(false);
+    scheduleConnectionReset(conn);
 }
 
 void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
@@ -223,10 +217,7 @@ void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
 
     if(ret < 0) {
         ERROR("epoll error. reset connection %p", conn);
-        resetConnections.insert(conn);
-        reset_next_time = time(0) + reconnect_interval;
-        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-        setWorkTimer(false);
+        scheduleConnectionReset(conn);
     }
 }
 
@@ -249,10 +240,7 @@ void PoolWorker::onErrorCode(Transaction* trans, const string& error) {
     if(reconnect_errors.empty() ||
        reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
     {
-        resetConnections.insert(trans->get_conn());
-        reset_next_time = time(0) + reconnect_interval;
-        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-        setWorkTimer(false);
+        scheduleConnectionReset(trans->get_conn(), time(0) + reconnect_interval);
         return;
     }
 }
@@ -290,10 +278,7 @@ void PoolWorker::onFinish(Transaction* trans, const AmArg& result) {
 void PoolWorker::onPQError(Transaction* trans, const std::string& error) {
 
     DBG("Error of transaction \'%s\' : %s", trans->get_query()->get_query().c_str(), error.c_str());
-    resetConnections.insert(trans->get_conn());
-    reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
-    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
-    setWorkTimer(false);
+    scheduleConnectionReset(trans->get_conn());
 }
 
 void PoolWorker::onCancel(Transaction* trans) {
@@ -433,11 +418,11 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
 
 void PoolWorker::setWorkTimer(bool immediately)
 {
-    time_t current = time(0);
     if(immediately) {
         workTimer.set(1, false);
         //DBG("set timer immediately");
     } else {
+        time_t current = time(0);
         time_t interval = 0;
 
         auto update_timer_interval = [&interval, current](time_t next_time)
@@ -460,6 +445,14 @@ void PoolWorker::setWorkTimer(bool immediately)
     }
 //     DBG("worker \'%s\'\n\t\tcurrent_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu, reconn_next_time - %lu",
 //         get_name().c_str(), current, reset_next_time, retransmit_next_time, wait_next_time, send_next_time, reconn_next_time);
+}
+
+void PoolWorker::scheduleConnectionReset(Connection *conn, time_t pending_reset_time)
+{
+    conn->setPendingResetTime(pending_reset_time);
+    resetConnections.insert(conn);
+    reset_next_time = resetConnections.getNearestResetTime();
+    setWorkTimer(false);
 }
 
 void PoolWorker::checkQueue()
@@ -737,19 +730,19 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
 
 void PoolWorker::onTimer()
 {
-    time_t current = time(0);
+    time_t now = time(0);
 
     for(auto& tr : erased) delete tr;
     erased.clear();
 
     for(auto trans_it = transactions.begin();
         trans_wait_time && trans_it != transactions.end();) {
-        if(current - trans_it->createdTime > trans_wait_time &&
+        if(now - trans_it->createdTime > trans_wait_time &&
            trans_it->trans->get_status() == Transaction::ACTIVE)
         {
             onFireTransaction(*trans_it);
             trans_it++;
-        } else if(current - trans_it->createdTime > trans_wait_time*2 &&
+        } else if(now - trans_it->createdTime > trans_wait_time*2 &&
                   trans_it->trans->get_status() == Transaction::CANCELING)
         {
             resetConnections.insert(trans_it->trans->get_conn());
@@ -773,25 +766,26 @@ void PoolWorker::onTimer()
     }
 #endif
 
-    auto conns = resetConnections;
+
+    resetConnectionsContainer conns;
+    conns.swap(resetConnections);
     resetConnections.clear();
     reset_next_time = 0;
     for(auto conn_it = conns.begin();
         conn_it != conns.end();)
     {
-        if((*conn_it)->getDisconnectedTime() + reconnect_interval <= current) {
+        if(now > (*conn_it)->getPendingResetTime()) {
             (*conn_it)->reset();
             conn_it = conns.erase(conn_it);
             continue;
         }
-        if(!reset_next_time || reset_next_time > (*conn_it)->getDisconnectedTime() + reconnect_interval)
-            reset_next_time = (*conn_it)->getDisconnectedTime() + reconnect_interval;
-        //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
         break;
     }
-    resetConnections.insert(conns.begin(), conns.end());
+    resetConnections.merge(conns);
+    if(!resetConnections.empty())
+        reset_next_time = resetConnections.getNearestResetTime();
 
-    if(conn_lifetime && reconn_next_time <= current) {
+    if(conn_lifetime && reconn_next_time <= now) {
         reconn_next_time = 0;
         time_t nextTime = 0;
         if(master) {

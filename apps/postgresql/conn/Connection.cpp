@@ -93,6 +93,7 @@ bool Connection::reset()
 {
     disconnected_time = time(0);
     connected_time = 0;
+    pending_reset_time = 0;
     stopTransaction();
     if(reset_conn()) {
         check_conn();
