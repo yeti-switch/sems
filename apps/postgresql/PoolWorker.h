@@ -15,6 +15,16 @@ using std::vector;
 using std::set;
 using std::list;
 
+class conn_time_less
+{
+public:
+  bool operator()(Connection* const a, Connection* const b) const
+  {
+      if(a->getDisconnectedTime() <  b->getDisconnectedTime()) return true;
+      return a < b;
+  }
+};
+
 class PoolWorker
   : public ITransactionHandler,
     public IConnectionHandler
@@ -37,7 +47,7 @@ class PoolWorker
     ConnectionPool* master;
     ConnectionPool* slave;
 
-    set<Connection*> resetConnections;
+    set<Connection*, conn_time_less> resetConnections;
     struct TransContainer
     {
         Transaction* trans;

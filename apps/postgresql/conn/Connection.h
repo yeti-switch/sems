@@ -74,7 +74,7 @@ public:
     int getSocket() { return conn_fd; }
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
-    time_t getDisconnectedTime() { return disconnected_time; }
+    time_t getDisconnectedTime() const { return disconnected_time; }
     time_t getConnectedTime() { return connected_time; }
     uint64_t getQueriesFinished() { return queries_finished; }
     Transaction* getCurrentTransaction() { return cur_transaction; }

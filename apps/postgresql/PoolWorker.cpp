@@ -194,9 +194,8 @@ void PoolWorker::onDisconnect(Connection* conn) {
     if(master && !master->checkConnection(conn, false) && slave) slave->checkConnection(conn, false); 
     resetConnections.insert(conn);
     reset_next_time = (*resetConnections.begin())->getDisconnectedTime() + reconnect_interval;
-    DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
+    //DBG("worker \'%s\' set next reset time: %lu", name.c_str(), reset_next_time);
     setWorkTimer(false);
-    //setWorkTimer(true);
 }
 
 void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
@@ -781,14 +780,10 @@ void PoolWorker::onTimer()
     auto conns = resetConnections;
     resetConnections.clear();
     reset_next_time = 0;
-    int i = 0;
-    DBG("reset conn size %d", conns.size());
     for(auto conn_it = conns.begin();
         conn_it != conns.end();)
     {
-        DBG("%d <= %d", (*conn_it)->getDisconnectedTime() + reconnect_interval, current);
         if((*conn_it)->getDisconnectedTime() + reconnect_interval <= current) {
-            DBG("reset conn count %d", ++i);
             (*conn_it)->reset();
             conn_it = conns.erase(conn_it);
             continue;
