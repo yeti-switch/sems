@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#include <sys/eventfd.h>
 
 MockConnection::MockConnection(IConnectionHandler* handler)
   : Connection("mock", "mock", handler)
@@ -22,10 +22,16 @@ void MockConnection::check_conn()
     
     if(status == CONNECTION_BAD) {
         status = CONNECTION_MADE;
-        handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
+        handler->onSock(this, IConnectionHandler::PG_SOCK_WRITE);
     } else if(status == CONNECTION_MADE) {
         status = CONNECTION_OK;
         handler->onConnect(this);
+        handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
+    } else if(status == CONNECTION_OK) {
+        int64_t u;
+        do {
+            u = ::read(conn_fd, &u, sizeof(int64_t));
+        } while(u > 0);
     }
 }
 
@@ -46,7 +52,7 @@ bool MockConnection::reset_conn()
         conn_fd = -1;
     }
 
-    conn_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    conn_fd = eventfd(0, EFD_NONBLOCK);
     handler->onSock(this, IConnectionHandler::PG_SOCK_NEW);
 
     return true;
@@ -70,7 +76,8 @@ bool MockConnection::start_pipe()
 
 bool MockConnection::sync_pipe()
 {
-    return true;
+    uint64_t u;
+    return write(conn_fd, &u, sizeof(u)) == sizeof(u);
 }
 
 bool MockConnection::exit_pipe()
