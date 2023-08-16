@@ -76,7 +76,7 @@ bool MockConnection::start_pipe()
 
 bool MockConnection::sync_pipe()
 {
-    uint64_t u;
+    uint64_t u = 1;
     return write(conn_fd, &u, sizeof(u)) == sizeof(u);
 }
 
