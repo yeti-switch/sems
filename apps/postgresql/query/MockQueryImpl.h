@@ -9,5 +9,9 @@ public:
         : IQueryImpl(cmd, single){}
     virtual ~MockQueryImpl(){}
 
-    int exec() override { is_send = true; return 1; }
+    int exec() override {
+        uint64_t u = 1;
+        is_send = write(conn->getSocket(), &u, sizeof(u)) == sizeof(u);
+        return 1;
+    }
 };

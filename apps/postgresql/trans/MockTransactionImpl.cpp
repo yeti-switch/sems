@@ -1,6 +1,7 @@
 #include "MockTransactionImpl.h"
 
 #include "Transaction.h"
+#include "../conn/Connection.h"
 #include "../query/QueryChain.h"
 
 MockTransactionImpl::MockTransactionImpl(Transaction* h, TransactionType t, TestServer* server_)
@@ -32,12 +33,17 @@ bool MockTransactionImpl::check_trans()
         ERROR("unknown query");
         return true;
     }
-        
+
     if((status == PQTRANS_IDLE &&
        query->is_finished()) ||
         status == PQTRANS_ACTIVE) {
-        status = PQTRANS_ACTIVE;    
+        status = PQTRANS_ACTIVE;
         return !server->checkTail(query_);
+    } if(status == PQTRANS_INERROR && !synced) {
+        synced = true;
+        query->set_finished();
+    } else if(status == PQTRANS_INERROR && synced) {
+        status = PQTRANS_IDLE;
     }
 
     return true;
@@ -84,6 +90,7 @@ int MockTransactionImpl::fetch_result()
             if(!errorcode.empty()) {
                 parent->handler->onErrorCode(parent, errorcode);
             }
+            status = PQTRANS_INERROR;
         } else {
             AmArg res;
             while(server->getResponse(query_, res)) {
