@@ -94,6 +94,8 @@ class PoolWorker
     time_t reset_next_time;
     time_t send_next_time;
     time_t reconn_next_time;
+    time_t minimal_timer_time;
+    bool timer_is_set;
 
     void getFreeConnection(Connection **conn, ConnectionPool **pool, std::function<void(const string&)> func);
     void checkQueue();
@@ -121,6 +123,7 @@ class PoolWorker
 
     void onFireTransaction(const TransContainer& trans);
     void onErrorTransaction(const TransContainer& trans, const string& error);
+    void applyTimer();
     void onTimer();
 
     //IConnectionHandler

@@ -43,7 +43,8 @@ PoolWorker::PoolWorker(const std::string& name, int epollfd)
     failed(stat_group(Counter, MOD_NAME, "queries_failed").addAtomicCounter().addLabel("worker", name)),
     retransmit_next_time(0), wait_next_time(0),
     reset_next_time(0), send_next_time(0),
-    reconn_next_time(0)
+    reconn_next_time(0), minimal_timer_time(0),
+    timer_is_set(false)
 {
     workTimer.link(epoll_fd, true);
 }
@@ -419,11 +420,12 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
 void PoolWorker::setWorkTimer(bool immediately)
 {
     if(immediately) {
-        workTimer.set(1, false);
+        minimal_timer_time = 1;
+        timer_is_set = false;
         //DBG("set timer immediately");
     } else {
         time_t current = time(0);
-        time_t interval = 0;
+        time_t interval = minimal_timer_time/1000000;
 
         auto update_timer_interval = [&interval, current](time_t next_time)
         {
@@ -440,11 +442,14 @@ void PoolWorker::setWorkTimer(bool immediately)
         update_timer_interval(send_next_time);
         update_timer_interval(reconn_next_time);
 
-        workTimer.set(interval*1000000, false);
-        //DBG("set timer %lu", interval);
+        if(!minimal_timer_time || interval*1000000 < minimal_timer_time) {
+            minimal_timer_time = interval*1000000;
+            timer_is_set = false;
+        }
+        //DBG("set timer %lu, %lu", interval, minimal_timer_time);
     }
-//     DBG("worker \'%s\'\n\t\tcurrent_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu, reconn_next_time - %lu",
-//         get_name().c_str(), current, reset_next_time, retransmit_next_time, wait_next_time, send_next_time, reconn_next_time);
+    //DBG("worker \'%s\'\n\t\tcurrent_time - %lu, reset_next_time - %lu, retransmit_next_time - %lu, wait_next_time - %lu, send_next_time - %lu, reconn_next_time - %lu",
+    //    get_name().c_str(), time(0), reset_next_time, retransmit_next_time, wait_next_time, send_next_time, reconn_next_time);
 }
 
 void PoolWorker::scheduleConnectionReset(Connection *conn, time_t pending_reset_time)
@@ -728,8 +733,19 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
     failed.inc((long long)trans.trans->get_size());
 }
 
+void PoolWorker::applyTimer()
+{
+    //DBG("applyTimer() %d, %d", minimal_timer_time, timer_is_set);
+    if(minimal_timer_time && !timer_is_set) {
+        workTimer.set(minimal_timer_time, false);
+        timer_is_set = true;
+    }
+}
+
 void PoolWorker::onTimer()
 {
+    minimal_timer_time = 0;
+    timer_is_set = false;
     time_t now = time(0);
 
     for(auto& tr : erased) delete tr;

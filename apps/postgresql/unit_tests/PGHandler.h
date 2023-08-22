@@ -102,6 +102,8 @@ public:
                 conn->check();
             }
         }
+        for(auto& worker : workers)
+            worker->applyTimer();
         return 1;
     }
 protected:

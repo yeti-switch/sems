@@ -218,6 +218,8 @@ void PostgreSQL::run()
             }
         }
         checkFinished();
+        for(auto& worker : workers)
+            worker.second->applyTimer();
     } while(running);
 
     {
