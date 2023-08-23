@@ -91,6 +91,9 @@ bool PGConnection::reset_conn()
     if(!handler) return false;
 
     if(conn) {
+        //update conn_fd here to prevent fd racing with another connections
+        conn_fd = PQsocket(conn);
+
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         handler->onReset(this, connected);
         PQfinish(conn);

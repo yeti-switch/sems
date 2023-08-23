@@ -194,16 +194,21 @@ void PoolWorker::onDisconnect(Connection* conn) {
 
 void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
 {
-    int ret = 0;
+    int ret, conn_fd = conn->getSocket();
+    if(conn_fd < 0) {
+        return;
+    }
+
+    ret = 0;
     if(type == PG_SOCK_NEW) {
         epoll_event event;
         event.events = EPOLLIN | EPOLLERR;
         event.data.ptr = conn;
 
         // add the socket to the epoll file descriptors
-        ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn->getSocket(), &event);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_fd, &event);
     } else if(type == PG_SOCK_DEL) {
-        ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->getSocket(), nullptr);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn_fd, nullptr);
     } else {
         epoll_event event;
         event.events = EPOLLERR;
@@ -212,7 +217,7 @@ void PoolWorker::onSock(Connection* conn, IConnectionHandler::EventType type)
         if(type == PG_SOCK_READ) event.events |= EPOLLIN;
         if(type == PG_SOCK_RW) event.events |= EPOLLOUT | EPOLLIN;
 
-        ret = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn->getSocket(), &event);
+        ret = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn_fd, &event);
     }
 
     if(ret < 0) {
