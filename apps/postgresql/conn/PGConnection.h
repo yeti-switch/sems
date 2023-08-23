@@ -20,4 +20,6 @@ class PGConnection
 public:
     PGConnection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler);
     ~PGConnection();
+
+    int getSocket() override { return conn ? PQsocket(conn) : -1; }
 };

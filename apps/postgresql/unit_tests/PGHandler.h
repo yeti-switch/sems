@@ -140,6 +140,9 @@ protected:
 
     void onSock(Connection* conn, EventType type) override
     {
+        int conn_fd = conn->getSocket();
+        if(conn_fd < 0) return;
+
         //DBG("type posgres sock event %u", type);
         if(type == PG_SOCK_NEW) {
             epoll_event event;
@@ -147,9 +150,9 @@ protected:
             event.data.ptr = conn;
 
             // add the socket to the epoll file descriptors
-            epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn->getSocket(), &event);
+            epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_fd, &event);
         } else if(type == PG_SOCK_DEL) {
-            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn->getSocket(), nullptr);
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn_fd, nullptr);
         } else {
             epoll_event event;
             event.events = EPOLLERR;
@@ -159,7 +162,7 @@ protected:
             if(type == PG_SOCK_WRITE) event.events |= EPOLLOUT;
             if(type == PG_SOCK_RW) event.events |= EPOLLIN | EPOLLOUT;
 
-            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn->getSocket(), &event);
+            epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn_fd, &event);
         }
     }
 
