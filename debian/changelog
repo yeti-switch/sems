@@ -1,3 +1,9 @@
+sems (1.116.2) stable; urgency=low
+  [apps/postgresql]
+  * fix connection stucking on reconnect. resolved fd ownership racing
+  * optimize timers usage. remove excess timerfd_settime() calls
+ -- Michael Furmur <furmur@pm.me>  Wed, 23 Aug 2023 16:06:53 +0300
+
 sems (1.116.1) stable; urgency=low
   [postgresql]
   * fix connections reset sequence
