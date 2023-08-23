@@ -8,7 +8,8 @@
 #include <sys/eventfd.h>
 
 MockConnection::MockConnection(IConnectionHandler* handler)
-  : Connection("mock", "mock", handler)
+  : Connection("mock", "mock", handler),
+    conn_fd(-1)
 {}
 
 MockConnection::~MockConnection()

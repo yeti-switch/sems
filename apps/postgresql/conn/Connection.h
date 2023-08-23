@@ -18,7 +18,6 @@ protected:
     ConnStatusType status;
     PGpipelineStatus pipe_status;
     bool is_pipeline;
-    int conn_fd;
     time_t connected_time;
     time_t disconnected_time;
     time_t pending_reset_time;
@@ -47,7 +46,6 @@ public:
     , handler(handler)
     , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
     , is_pipeline(false)
-    , conn_fd(-1)
     , connected_time(0)
     , disconnected_time(::time(0))
     , pending_reset_time(0)
@@ -73,7 +71,9 @@ public:
     void cancelTransaction();
     ConnStatusType getStatus() { return status; }
     PGpipelineStatus getPipeStatus() { return pipe_status; }
-    int getSocket() { return conn_fd; }
+
+    virtual int getSocket() = 0;
+
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
 

@@ -4,6 +4,8 @@
 
 class MockConnection : public Connection
 {
+    int conn_fd;
+
     bool reset_conn() override;
     void check_conn() override;
     bool flush_conn() override;
@@ -15,4 +17,6 @@ class MockConnection : public Connection
 public:
     MockConnection(IConnectionHandler* handler);
     ~MockConnection();
+
+    int getSocket() override { return conn_fd; }
 };

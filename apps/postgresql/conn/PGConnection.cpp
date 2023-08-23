@@ -105,7 +105,6 @@ bool PGConnection::reset_conn()
         return false;
     }
 
-    conn_fd = PQsocket(conn);
     handler->onSock(this, IConnectionHandler::PG_SOCK_NEW);
     status = CONNECTION_BAD;
     pipe_status = PQ_PIPELINE_OFF;
