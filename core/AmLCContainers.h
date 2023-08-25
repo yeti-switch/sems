@@ -82,6 +82,8 @@ class IP_info
 
         return "";
     }
+
+    virtual std::string transportToStr() const = 0;
 };
 
 class SIP_info : public IP_info
@@ -108,7 +110,7 @@ public:
 
     trsp_acls acls;
 
-    std::string transportToStr() const {
+    std::string transportToStr() const override{
         if(type == SIP_info::TCP) {
             return "TCP";
         } else if(type == SIP_info::UDP) {
@@ -251,7 +253,7 @@ public:
     unsigned short low_port;
     unsigned short high_port;
 
-    std::string transportToStr() const {
+    std::string transportToStr() const override{
         if(mtype == MEDIA_info::RTP) {
             return "RTP";
         } else if(mtype == MEDIA_info::RTSP) {

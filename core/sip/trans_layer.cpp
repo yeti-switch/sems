@@ -971,7 +971,7 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 
 	err = parse_uri(&parsed_r_uri,r_uri.s,r_uri.len);
 	if(err < 0){
-	    ERROR("Invalid Request URI");
+	    ERROR("Invalid Request URI %.*s", r_uri.len, r_uri.s);
 	    return -1;
 	}
 	DBG("setting next-hop based on request-URI");
