@@ -221,6 +221,15 @@ string AmRtpStream::getRHost(int type)
     return "";
 }
 
+inline string addr_t_2_str(int at)
+{
+    switch(at){
+        case AT_V4: return "IP4";
+        case AT_V6: return "IP6";
+        default: return "<unknown address type>";
+    }
+}
+
 void AmRtpStream::setLocalIP(AddressType addrtype)
 {
     if(l_if < 0) {
@@ -270,7 +279,12 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
     }
 
     if(!cur_rtp_trans) {
-        throw string("AmRtpStream:setLocalIP. failed to get transport");
+        CLASS_ERROR("AmRtpStream:setLocalIP on interface(%d): failed to get transport for the address type %s",
+                    l_if, addr_t_2_str(addrtype).c_str());
+        string error("AmRtpStream:setLocalIP.");
+        error += ". failed to get transport for the address type ";
+        error += addr_t_2_str(addrtype);
+        throw error;
     }
 
     if(!cur_rtcp_trans) {
@@ -490,7 +504,7 @@ void AmRtpStream::addAdditionTransport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(type,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested %s proto in choosen media interface %d", type == AT_V4 ? "ipv4" : "ipv6", l_if);
+        CLASS_DBG("AmRtpTransport: missed requested %s proto in chosen media interface %d", type == AT_V4 ? "ipv4" : "ipv6", l_if);
     } else if((!multiplexing && transports->size() < 3) &&
               (multiplexing && transports->size() < 2)){
         AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id, FAX_TRANSPORT);
@@ -506,7 +520,7 @@ void AmRtpStream::initIP4Transport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested ipv4 proto in choosen media interface %d", l_if);
+        CLASS_ERROR("AmRtpTransport: missed requested ipv4 proto in chosen media interface %d", l_if);
     } else {
         AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
                          *rtcp = 0;
@@ -525,7 +539,7 @@ void AmRtpStream::initIP6Transport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested ipv6 proto in choosen media interface %d", l_if);
+        CLASS_ERROR("AmRtpTransport: missed requested ipv6 proto in chosen media interface %d", l_if);
     } else {
         AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
                          *rtcp = 0;
