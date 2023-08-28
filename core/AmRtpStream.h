@@ -720,6 +720,8 @@ class AmRtpStream
 
     void debug();
     virtual void getInfo(AmArg &ret);
+
+    const char *getSessionLocalTag() const;
 };
 
 // Local Variables:

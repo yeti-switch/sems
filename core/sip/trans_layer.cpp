@@ -47,7 +47,6 @@
 #include "socket_ssl.h"
 #include "defs.h"
 
-#include "wheeltimer.h"
 #include "sip_timers.h"
 #include "tr_blacklist.h"
 
@@ -969,11 +968,14 @@ int _trans_layer::set_next_hop(sip_msg* msg,
 	sip_uri parsed_r_uri;
 	cstring& r_uri = msg->u.request->ruri_str;
 
-	err = parse_uri(&parsed_r_uri,r_uri.s,r_uri.len);
-	if(err < 0){
-	    ERROR("Invalid Request URI %.*s", r_uri.len, r_uri.s);
-	    return -1;
-	}
+    err = parse_uri(&parsed_r_uri,r_uri.s,r_uri.len);
+    if(err < 0) {
+        ERROR("[%.*s] Invalid Request URI: '%.*s'",
+            msg->callid->value.len, msg->callid->value.s,
+            r_uri.len, r_uri.s);
+        return -1;
+    }
+
 	DBG("setting next-hop based on request-URI");
 	*next_hop  = parsed_r_uri.host;
 	if(parsed_r_uri.port_str.len)

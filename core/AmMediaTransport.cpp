@@ -396,12 +396,13 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
     if((offer.is_simple_srtp() && !srtp_enable) ||
        (offer.is_dtls_srtp() && !dtls_enable))
     {
-        std::string error("transport ");
-        error += offer.is_simple_srtp() ? "srtp": "dtls";
-        error += "is not supported";
-        CLASS_ERROR("%s on interface(%d/%s)", error.c_str(), l_if,
+        std::string error(offer.is_simple_srtp() ? "SRTP": "DTLS");
+        error += " transport is not supported";
+        CLASS_ERROR("[%s] %s on interface(%d/%s)",
+            stream ? stream->getSessionLocalTag() : "null",
+            error.c_str(), l_if,
             AmConfig.media_ifs[l_if].proto_info[lproto_id]->transportToStr().c_str());
-        throw AmSession::Exception(488,error);
+        throw AmSession::Exception(488, error);
     } else if(transport == TP_RTPSAVP || transport == TP_RTPSAVPF) {
         if(offer.crypto.empty()) {
             throw AmSession::Exception(488,"absent crypto attribute");

@@ -28,7 +28,6 @@
 #include "AmRtpStream.h"
 #include "AmSrtpConnection.h"
 #include "AmRtpPacket.h"
-#include "AmRtpReceiver.h"
 #include "AmLcConfig.h"
 #include "AmPlugIn.h"
 #include "AmAudio.h"
@@ -43,7 +42,6 @@
 #include "sip/resolver.h"
 #include "sip/ip_util.h"
 #include "sip/transport.h"
-#include "sip/raw_sender.h"
 #include "sip/msg_logger.h"
 
 #include "bitops.h"
@@ -61,12 +59,12 @@
 
 #include "rtp/rtp.h"
 
+#include "AmStunConnection.h"
+
 #include <set>
 using std::set;
 #include <algorithm>
 #include <sstream>
-#include "AmDtlsConnection.h"
-#include "AmStunConnection.h"
 
 #define ts_unsigned_diff(a,b) ((a)>=(b) ? (a)-(b) : (b)-(a))
 
@@ -224,8 +222,8 @@ string AmRtpStream::getRHost(int type)
 inline string addr_t_2_str(int at)
 {
     switch(at){
-        case AT_V4: return "IP4";
-        case AT_V6: return "IP6";
+        case AT_V4: return "IPv4";
+        case AT_V6: return "IPv6";
         default: return "<unknown address type>";
     }
 }
@@ -279,10 +277,11 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
     }
 
     if(!cur_rtp_trans) {
-        CLASS_ERROR("AmRtpStream:setLocalIP on interface(%d): failed to get transport for the address type %s",
-                    l_if, addr_t_2_str(addrtype).c_str());
-        string error("AmRtpStream:setLocalIP.");
-        error += ". failed to get transport for the address type ";
+        CLASS_ERROR("[%s] AmRtpStream:setLocalIP on the interface(%d): "
+            "failed to get transport for the address type %s",
+            getSessionLocalTag(),
+            l_if, addr_t_2_str(addrtype).c_str());
+        string error("failed to get transport for the address type: " );
         error += addr_t_2_str(addrtype);
         throw error;
     }
@@ -504,7 +503,10 @@ void AmRtpStream::addAdditionTransport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(type,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_DBG("AmRtpTransport: missed requested %s proto in chosen media interface %d", type == AT_V4 ? "ipv4" : "ipv6", l_if);
+        CLASS_DBG("[%s] AmRtpTransport: missed requested %s proto "
+            "in the chosen media interface %d",
+            getSessionLocalTag(),
+            addr_t_2_str(type).data(), l_if);
     } else if((!multiplexing && transports->size() < 3) &&
               (multiplexing && transports->size() < 2)){
         AmMediaTransport  *fax = new AmMediaTransport(this, l_if, proto_id, FAX_TRANSPORT);
@@ -520,7 +522,10 @@ void AmRtpStream::initIP4Transport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V4,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_ERROR("AmRtpTransport: missed requested ipv4 proto in chosen media interface %d", l_if);
+        CLASS_ERROR("[%s] AmRtpTransport: missed requested IPv4 proto "
+            "in the chosen media interface %d",
+            getSessionLocalTag(),
+            l_if);
     } else {
         AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
                          *rtcp = 0;
@@ -539,7 +544,10 @@ void AmRtpStream::initIP6Transport()
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(AT_V6,MEDIA_info::RTP);
     if(proto_id < 0) {
-        CLASS_ERROR("AmRtpTransport: missed requested ipv6 proto in chosen media interface %d", l_if);
+        CLASS_ERROR("[%s] AmRtpTransport: missed requested IPv6 proto "
+            "in the chosen media interface %d",
+            getSessionLocalTag(),
+            l_if);
     } else {
         AmMediaTransport *rtp = new AmMediaTransport(this, l_if, proto_id, RTP_TRANSPORT),
                          *rtcp = 0;
@@ -1004,10 +1012,10 @@ void AmRtpStream::onErrorRtpTransport(AmStreamConnection::ConnectionError err, c
     else if(err == AmStreamConnection::SRTP_UNPROTECT_ERROR) srtp_unprotect_errors++;
     else {
         CLASS_ERROR("%s (src_addr: %s:%i, "
-                "local_ssrc: 0x%x, local_tag: %s)\n",
-                error.c_str(),
-                get_addr_str(&laddr).c_str(),am_get_port(&laddr),
-                l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            "local_ssrc: 0x%x, local_tag: %s)\n",
+            error.c_str(),
+            get_addr_str(&laddr).c_str(),am_get_port(&laddr),
+            l_ssrc, getSessionLocalTag());
     }
 }
 
@@ -1039,7 +1047,7 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
             "local_ssrc: 0x%x, local_tag: %s)\n",
             get_addr_str(&laddr).c_str(),am_get_port(&laddr),
             get_addr_str(&raddr).c_str(),am_get_port(&raddr),
-            l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            l_ssrc, getSessionLocalTag());
         freeRtpPacket(p);
         return;
     }
@@ -1369,7 +1377,7 @@ int AmRtpStream::nextPacket(AmRtpPacket*& p)
             "(diff.tv_sec = %i, limit = %i, "
             "local_ssrc: 0x%x, local_tag: %s)\n",
             static_cast<unsigned int>(diff.tv_sec),dead_rtp_time,
-            l_ssrc,session ? session->getLocalTag().c_str() : "no session");
+            l_ssrc, getSessionLocalTag());
         receive_mut.unlock();
         return RTP_TIMEOUT;
     }
@@ -2207,6 +2215,13 @@ void AmRtpStream::getInfo(AmArg &ret){
         transport->getInfo(trsp);
         transports.push(trsp);
     }
+}
+
+const char *AmRtpStream::getSessionLocalTag() const
+{
+    if(session)
+        return session->getLocalTag().data();
+    return "null";
 }
 
 void AmRtpStream::update_sender_stats(const AmRtpPacket &p)
