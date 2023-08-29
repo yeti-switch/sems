@@ -1,3 +1,7 @@
+sems (1.118.0) stable; urgency=low
+  * RpcTreeHandler: fix non-array args invocation
+ -- Michael Furmur <furmur@pm.me>  Tue, 29 Aug 2023 19:24:17 +0300
+
 sems (1.117.0) stable; urgency=low
   * improve AmMediaTransport,AmRtpStream,trans_layer errors logging
  -- Michael Furmur <furmur@pm.me>  Mon, 28 Aug 2023 12:36:29 +0300
