@@ -202,7 +202,7 @@ bool RpcTreeHandler<C>::process_rpc_cmds(
         if(l.getType()!=AmArg::AObject)
             throw AmArg::TypeMismatchException();
         rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
-        if(args.size()>0){
+        if(isArgArray(args) && args.size()>0){
             if(e->hasLeaf(args[0].asCStr())){
                 AmArg nargs = args,sub_method;
                 nargs.pop(sub_method);
@@ -218,7 +218,10 @@ bool RpcTreeHandler<C>::process_rpc_cmds(
             }
         }
         if(e->isMethod()) {
-            if(args.size()&&strcmp(args.back().asCStr(),list_method)==0){
+            if(isArgArray(args)
+               && args.size()
+               && strcmp(args.back().asCStr(), list_method)==0)
+            {
                 if(!e->hasLeafs()&&e->arg.empty())
                     ret.assertArray();
                 return false;
