@@ -154,9 +154,9 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
     handleSymmetricRtp(recv_addr, &recv_time);
     if(!passive && !isAddrConnection(recv_addr)) {
         //got packet from unknown remote addr. ignore it
-        //TODO: update stream stats here
+        auto stream = transport->getRtpStream();
+        stream->inc_drop_pack();
         if((dropped_by_raddr_packets++ % 1500) == 0 /* 1/0.02*10 (every 10 seconds) */ ) {
-            auto stream = transport->getRtpStream();
             CLASS_DBG("%u packets dropped by raddr check. "
                 "packet raddr: %s:%hu, connection raddr: %s:%hu, stream:%p",
                 dropped_by_raddr_packets,
