@@ -1,3 +1,8 @@
+sems (1.118.1) stable; urgency=low
+  * update RTP stream stats on drop by raddr check
+  * fix global log_level adjustment
+ -- Michael Furmur <furmur@pm.me>  Wed, 30 Aug 2023 21:49:38 +0300
+
 sems (1.118.0) stable; urgency=low
   * RpcTreeHandler: fix non-array args invocation
  -- Michael Furmur <furmur@pm.me>  Tue, 29 Aug 2023 19:24:17 +0300
