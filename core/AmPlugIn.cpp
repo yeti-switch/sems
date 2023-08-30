@@ -226,11 +226,21 @@ int AmPlugIn::initLoggingPlugins()
     return 0;
 }
 
-void AmPlugIn::registerLoggingPlugins() {
+void AmPlugIn::registerLoggingPlugins()
+{
+    int plugin_log_level;
+
     // init logging facilities
     for(auto &it : name2logfac) {
         // register for receiving logging messages
         register_log_hook(it.second);
+        //adjust gloval loglevel
+        plugin_log_level = it.second->getLogLevel();
+        if(plugin_log_level > log_level ||
+           get_higher_levels(plugin_log_level))
+        {
+            log_level = plugin_log_level;
+        }
     }
 }
 
