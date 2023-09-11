@@ -369,6 +369,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
     case INETOID:
     case CIDROID:
     case MACADDROID:
+    case NUMERICOID:
         ret = AmArg(value);
         break;
     case BOOLOID:
@@ -403,9 +404,6 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
         ret = AmArg(mktime(&tm));
     } break;
     case VOIDOID:
-        break;
-    case NUMERICOID:
-        ret = AmArg(atof(value));
         break;
     case INT2OID:
         if(is_binary) ret = AmArg(pg_get_int2(value));
