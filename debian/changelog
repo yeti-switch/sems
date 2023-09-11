@@ -1,3 +1,7 @@
+sems (1.118.2) stable; urgency=low
+  * pg: store NUMERICOID as a string to keep precision
+ -- Michael Furmur <furmur@pm.me>  Mon, 11 Sep 2023 11:52:16 +0300
+
 sems (1.118.1) stable; urgency=low
   * update RTP stream stats on drop by raddr check
   * fix global log_level adjustment
