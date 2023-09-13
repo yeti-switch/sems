@@ -3,6 +3,7 @@
 #include "rsr.h"
 #include "AmSessionContainer.h"
 #include "ampi/HttpClientAPI.h"
+#include <filesystem>
 
 using namespace RSR;
 
@@ -13,6 +14,12 @@ AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
 {
     string filePath(AmConfig.rsr_path);
     filePath += "/" + id + ".rsr";
+
+    if(std::filesystem::exists(filePath)) {
+        WARN("file: %s already exists",filePath.c_str());
+        return;
+    }
+
     fp = fopen(filePath.c_str(),"w+");
     if(!fp) {
         ERROR("could not create/overwrite file: %s: %d",filePath.c_str(),errno);
