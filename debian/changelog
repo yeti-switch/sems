@@ -1,3 +1,8 @@
+sems (1.118.3) stable; urgency=low
+  * AmAudioFileRecorderStereoRaw: check if the RSR file exists. avoid overwriting
+  * AmArg: fix comparizon operator for arrays and structs
+ -- Michael Furmur <furmur@pm.me>  Wed, 13 Sep 2023 18:08:38 +0300
+
 sems (1.118.2) stable; urgency=low
   * pg: store NUMERICOID as a string to keep precision
  -- Michael Furmur <furmur@pm.me>  Mon, 11 Sep 2023 11:52:16 +0300
