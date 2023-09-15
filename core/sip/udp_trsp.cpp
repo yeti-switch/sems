@@ -167,133 +167,134 @@ int udp_trsp_socket::bind(const string& bind_ip, unsigned short bind_port)
 
 int udp_trsp_socket::set_recvbuf_size(int rcvbuf_size)
 {
-    if (rcvbuf_size > 0) {
-	DBG("trying to set SIP UDP socket buffer to %d", rcvbuf_size);
-	if(setsockopt(sd, SOL_SOCKET, SO_RCVBUF,
-		      (void*)&rcvbuf_size, sizeof (int)) == -1) {
-	    WARN("could not set SIP UDP socket buffer: '%s'",
-		 strerror(errno));
-	} else {
-	    int set_rcvbuf_size=0;
-	    socklen_t optlen = sizeof(int);
-	    if (getsockopt(sd, SOL_SOCKET, SO_RCVBUF,
-			   &set_rcvbuf_size, &optlen) == -1) {
-		WARN("could not read back SIP UDP socket buffer length: '%s'",
-		     strerror(errno));
-	    } else {
-		if (set_rcvbuf_size != rcvbuf_size) {
-		    WARN("failed to set SIP UDP RCVBUF size"
-			 " (wanted %d, got %d)\n",
-			 rcvbuf_size, set_rcvbuf_size);
-		}
-	    }
-	}
+    if(rcvbuf_size > 0) {
+        DBG("trying to set SIP UDP socket buffer to %d", rcvbuf_size);
+        if(setsockopt(sd, SOL_SOCKET, SO_RCVBUF,
+                  (void*)&rcvbuf_size, sizeof (int)) == -1) {
+            WARN("could not set SIP UDP socket buffer: '%s'",
+             strerror(errno));
+        } else {
+            int set_rcvbuf_size=0;
+            socklen_t optlen = sizeof(int);
+            if(getsockopt(sd, SOL_SOCKET, SO_RCVBUF,
+               &set_rcvbuf_size, &optlen) == -1)
+            {
+                WARN("could not read back SIP UDP socket buffer length: '%s'",
+                    strerror(errno));
+            } else {
+                if (set_rcvbuf_size != rcvbuf_size) {
+                    WARN("failed to set SIP UDP RCVBUF size"
+                     " (wanted %d, got %d)\n",
+                     rcvbuf_size, set_rcvbuf_size);
+                }
+            }
+        }
     }
-    
+
     return 0;
 }
 
-int udp_trsp_socket::sendto(const sockaddr_storage* sa, 
-			    const char* msg, 
-			    const int msg_len)
+int udp_trsp_socket::sendto(
+    const sockaddr_storage* sa,
+    const char* msg,
+    const int msg_len)
 {
-  int err = ::sendto(sd, msg, msg_len, 0, 
-		     (const struct sockaddr*)sa, 
-		     SA_len(sa));
+    int err = ::sendto(sd, msg, msg_len, 0,
+        (const struct sockaddr*)sa,
+        SA_len(sa));
 
-  if (err < 0) {
-    char host[NI_MAXHOST] = "";
-    ERROR("sendto(%i;%s:%i): %s", sd,
-	  am_inet_ntop_sip(sa,host,NI_MAXHOST),
-	  am_get_port(sa),strerror(errno));
-    return err;
-  }
-  else if (err != msg_len) {
-    ERROR("sendto: sent %i instead of %i bytes", err, msg_len);
-    return -1;
-  }
+    if (err < 0) {
+        char host[NI_MAXHOST] = "";
+        ERROR("sendto(%i;%s:%i): %s", sd,
+            am_inet_ntop_sip(sa,host,NI_MAXHOST),
+            am_get_port(sa),strerror(errno));
+        return err;
+    } else if (err != msg_len) {
+        ERROR("sendto: sent %i instead of %i bytes", err, msg_len);
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
 
-int udp_trsp_socket::sendmsg(const sockaddr_storage* sa, 
-			     const char* msg, 
-			     const int msg_len)
+int udp_trsp_socket::sendmsg(
+    const sockaddr_storage* sa,
+    const char* msg,
+    const int msg_len)
 {
     struct msghdr hdr;
     struct cmsghdr* cmsg;
 
-  union {
-    char cmsg4_buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
-    char cmsg6_buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-  } cmsg_buf;
+    union {
+        char cmsg4_buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+        char cmsg6_buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+    } cmsg_buf;
 
-  struct iovec msg_iov[1];
-  msg_iov[0].iov_base = (void*)msg;
-  msg_iov[0].iov_len  = msg_len;
+    struct iovec msg_iov[1];
+    msg_iov[0].iov_base = (void*)msg;
+    msg_iov[0].iov_len  = msg_len;
 
-  bzero(&hdr,sizeof(hdr));
-  hdr.msg_name = (void*)sa;
-  hdr.msg_namelen = SA_len(sa);
-  hdr.msg_iov = msg_iov;
-  hdr.msg_iovlen = 1;
+    bzero(&hdr,sizeof(hdr));
+    hdr.msg_name = (void*)sa;
+    hdr.msg_namelen = SA_len(sa);
+    hdr.msg_iov = msg_iov;
+    hdr.msg_iovlen = 1;
 
-  bzero(&cmsg_buf,sizeof(cmsg_buf));
-  hdr.msg_control = &cmsg_buf;
-  hdr.msg_controllen = sizeof(cmsg_buf);
+    bzero(&cmsg_buf,sizeof(cmsg_buf));
+    hdr.msg_control = &cmsg_buf;
+    hdr.msg_controllen = sizeof(cmsg_buf);
 
-  cmsg = CMSG_FIRSTHDR(&hdr);
-  if(sa->ss_family == AF_INET) {
+    cmsg = CMSG_FIRSTHDR(&hdr);
+    if(sa->ss_family == AF_INET) {
+        cmsg->cmsg_level = IPPROTO_IP;
+        cmsg->cmsg_type = IP_PKTINFO;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+        
+        struct in_pktinfo* pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
+        pktinfo->ipi_ifindex = sys_if_idx;
+    } else if(sa->ss_family == AF_INET6) {
+        cmsg->cmsg_level = IPPROTO_IPV6;
+        cmsg->cmsg_type = IPV6_PKTINFO;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 
-    cmsg->cmsg_level = IPPROTO_IP;
-    cmsg->cmsg_type = IP_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+        struct in6_pktinfo* pktinfo = (struct in6_pktinfo*) CMSG_DATA(cmsg);
+        pktinfo->ipi6_ifindex = sys_if_idx;
+    }
 
-    struct in_pktinfo* pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
-    pktinfo->ipi_ifindex = sys_if_idx;
-  }
-  else if(sa->ss_family == AF_INET6) {
-    cmsg->cmsg_level = IPPROTO_IPV6;
-    cmsg->cmsg_type = IPV6_PKTINFO;
-    cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-    
-    struct in6_pktinfo* pktinfo = (struct in6_pktinfo*) CMSG_DATA(cmsg);
-    pktinfo->ipi6_ifindex = sys_if_idx;
-  }
+    hdr.msg_controllen = cmsg->cmsg_len;
 
-  hdr.msg_controllen = cmsg->cmsg_len;
-  
-  // bytes_sent = ;
-  if(::sendmsg(sd, &hdr, 0) < 0) {
-      char host[NI_MAXHOST] = "";
-      ERROR("sendmsg(%i;%s:%i): %s", sd,
-	    am_inet_ntop_sip(sa,host,NI_MAXHOST),
-	    am_get_port(sa),strerror(errno));
-      return -1;
-  }
+    // bytes_sent = ;
+    if(::sendmsg(sd, &hdr, 0) < 0) {
+        char host[NI_MAXHOST] = "";
+        ERROR("sendmsg(%i;%s:%i): %s", sd,
+            am_inet_ntop_sip(sa,host,NI_MAXHOST),
+            am_get_port(sa),strerror(errno));
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
 
-int udp_trsp_socket::send(const sockaddr_storage* sa, 
-			  const char* msg, 
-			  const int msg_len,
-			  unsigned int flags)
+int udp_trsp_socket::send(
+    const sockaddr_storage* sa,
+    const char* msg,
+    const int msg_len,
+    [[maybe_unused]] unsigned int flags)
 {
     if (log_level_raw_msgs >= 0) {
-	_LOG(log_level_raw_msgs, 
-		 "send msg via UDP from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
-		 actual_ip.c_str(), actual_port,
-	     get_addr_str(sa).c_str(),
-	     ntohs(((sockaddr_in*)sa)->sin_port),
-	     msg_len, msg);
+        _LOG(log_level_raw_msgs, 
+             "send msg via UDP from %s:%i to %s:%i\n--++--\n%.*s--++--\n",
+            actual_ip.c_str(), actual_port,
+            get_addr_str(sa).c_str(),
+            ntohs(((sockaddr_in*)sa)->sin_port),
+            msg_len, msg);
     }
 
     if(socket_options & use_raw_sockets)
-    return raw_sender::send(msg,msg_len,sys_if_idx,&addr,sa,tos_byte);
+        return raw_sender::send(msg,msg_len,sys_if_idx,&addr,sa,tos_byte);
 
     if(socket_options & force_outbound_if)
-    	return sendmsg(sa,msg,msg_len);
+        return sendmsg(sa,msg,msg_len);
 
     return sendto(sa,msg,msg_len);
 }
@@ -308,7 +309,7 @@ int udp_trsp_socket::recv()
     cmsghdr*         cmsgptr; 
     sockaddr_storage from_addr;
     iovec            iov[1];
-    
+
     iov[0].iov_base = buf;
     iov[0].iov_len  = MAX_UDP_MSGLEN;
 
@@ -519,7 +520,7 @@ void udp_trsp::add_socket(udp_trsp_socket* sock)
         ERROR("epoll_ctl: add read sock error");
         return;
     }
-    
+
     sockets.push_back(sock);
     inc_ref(sock);
 }

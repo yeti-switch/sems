@@ -26,118 +26,117 @@ void trsp_base_input::on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_m
 
 int trsp_base_input::parse_input(tcp_base_trsp* socket)
 {
-  for(;;) {
-    int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
-    if(err) {
-        if(err == UNEXPECTED_EOT) {
-            if(pst.orig_buf > (char*)input_buf) {
-                int addr_shift = pst.orig_buf - (char*)input_buf;
-                memmove(input_buf, pst.orig_buf, input_len - addr_shift);
-                pst.orig_buf = (char*)input_buf;
-                pst.c -= addr_shift;
-                if(pst.beg)
-                    pst.beg -= addr_shift;
-                input_len -= addr_shift;
-                return 0;
-            } else if(get_input_free_space()){
-                return 0;
+    for(;;) {
+        int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
+        if(err) {
+            if(err == UNEXPECTED_EOT) {
+                if(pst.orig_buf > (char*)input_buf) {
+                    int addr_shift = pst.orig_buf - (char*)input_buf;
+                    memmove(input_buf, pst.orig_buf, input_len - addr_shift);
+                    pst.orig_buf = (char*)input_buf;
+                    pst.c -= addr_shift;
+                    if(pst.beg)
+                        pst.beg -= addr_shift;
+                    input_len -= addr_shift;
+                    return 0;
+                } else if(get_input_free_space()){
+                    return 0;
+                }
+                ERROR("message is too big. drop connection. peer %s:%d",
+                    socket->get_peer_ip().data(), socket->get_peer_port());
+            } else {
+                ERROR("parsing error %d. peer %s:%d",
+                      err, socket->get_peer_ip().data(), socket->get_peer_port());
             }
-            ERROR("message is too big. drop connection. peer %s:%d",
+
+            socket->inc_sip_parse_error();
+
+            pst.reset((char*)input_buf);
+            reset_input();
+
+            return -1;
+        } //if(err)
+
+        int msg_len = pst.get_msg_len();
+        if(msg_len > MAX_TCP_MSGLEN) {
+            ERROR("message is too big (%d > %d. drop connection. peer %s:%d",
+                msg_len, MAX_TCP_MSGLEN,
                 socket->get_peer_ip().data(), socket->get_peer_port());
-        } else {
-            ERROR("parsing error %d. peer %s:%d",
-                  err, socket->get_peer_ip().data(), socket->get_peer_port());
+            return -1;
         }
 
-        socket->inc_sip_parse_error();
+        sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
 
-        pst.reset((char*)input_buf);
-        reset_input();
+        gettimeofday(&s_msg->recv_timestamp,NULL);
 
-        return -1;
-    } //if(err)
+        //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
+        switch(socket->get_transport_id()) {
+        case tcp_base_trsp::tls_ipv4:
+        case tcp_base_trsp::tls_ipv6:
+            s_msg->transport_id = sip_transport::TLS;
+            break;
+        case tcp_base_trsp::ws_ipv4:
+        case tcp_base_trsp::ws_ipv6:
+            s_msg->transport_id = sip_transport::WS;
+            break;
+        case tcp_base_trsp::tcp_ipv4:
+        case tcp_base_trsp::tcp_ipv6:
+            s_msg->transport_id = sip_transport::TCP;
+            break;
+        case tcp_base_trsp::wss_ipv4:
+        case tcp_base_trsp::wss_ipv6:
+            s_msg->transport_id = sip_transport::WSS;
+            break;
+        default:
+            ERROR("unexpected socket transport_id: %d. set TCP as fallback", socket->get_transport_id());
+            s_msg->transport_id = sip_transport::TCP;
+        }
 
-    int msg_len = pst.get_msg_len();
-    if(msg_len > MAX_TCP_MSGLEN) {
-        ERROR("message is too big (%d > %d. drop connection. peer %s:%d",
-            msg_len, MAX_TCP_MSGLEN,
-            socket->get_peer_ip().data(), socket->get_peer_port());
-        return -1;
-    }
+        socket->copy_peer_addr(&s_msg->remote_ip);
+        socket->copy_addr_to(&s_msg->local_ip);
 
-    sip_msg* s_msg = new sip_msg((const char*)pst.orig_buf,msg_len);
+        char host[NI_MAXHOST] = "";
+        DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv"
+            "--++--\n%.*s--++--\n",
+            socket->get_transport(),
+            socket->sd,
+            am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
+            am_get_port(&s_msg->remote_ip),
+            am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
+            am_get_port(&s_msg->local_ip),
+            s_msg->len,
+            s_msg->len, s_msg->buf);
 
-    gettimeofday(&s_msg->recv_timestamp,NULL);
+        s_msg->local_socket = socket;
+        inc_ref(socket);
 
-    //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
-    switch(socket->get_transport_id()) {
-    case tcp_base_trsp::tls_ipv4:
-    case tcp_base_trsp::tls_ipv6:
-        s_msg->transport_id = sip_transport::TLS;
-        break;
-    case tcp_base_trsp::ws_ipv4:
-    case tcp_base_trsp::ws_ipv6:
-        s_msg->transport_id = sip_transport::WS;
-        break;
-    case tcp_base_trsp::tcp_ipv4:
-    case tcp_base_trsp::tcp_ipv6:
-        s_msg->transport_id = sip_transport::TCP;
-        break;
-    case tcp_base_trsp::wss_ipv4:
-    case tcp_base_trsp::wss_ipv6:
-        s_msg->transport_id = sip_transport::WSS;
-        break;
-    default:
-        ERROR("unexpected socket transport_id: %d. set TCP as fallback", socket->get_transport_id());
-        s_msg->transport_id = sip_transport::TCP;
-    }
+        // pass message to the parser / transaction layer
+        on_parsed_received_msg(socket, s_msg);
 
-    socket->copy_peer_addr(&s_msg->remote_ip);
-    socket->copy_addr_to(&s_msg->local_ip);
+        char* msg_end = pst.orig_buf + msg_len;
+        char* input_end = (char*)input_buf + input_len;
 
-    char host[NI_MAXHOST] = "";
-    DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv"
-        "--++--\n%.*s--++--\n",
-        socket->get_transport(),
-        socket->sd,
-        am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
-        am_get_port(&s_msg->remote_ip),
-        am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
-        am_get_port(&s_msg->local_ip),
-        s_msg->len,
-        s_msg->len, s_msg->buf);
+        if(msg_end < input_end) {
+            pst.reset(msg_end);
+        } else {
+            pst.reset((char*)input_buf);
+            reset_input();
+            return 0;
+        }
+    } //for(;;)
 
-    s_msg->local_socket = socket;
-    inc_ref(socket);
-
-    // pass message to the parser / transaction layer
-    on_parsed_received_msg(socket, s_msg);
-
-    char* msg_end = pst.orig_buf + msg_len;
-    char* input_end = (char*)input_buf + input_len;
-
-    if(msg_end < input_end) {
-      pst.reset(msg_end);
-    }
-    else {
-      pst.reset((char*)input_buf);
-      reset_input();
-      return 0;
-    }
-  }
-
-  // fake:
-  //return 0;
+    // fake:
+    //return 0;
 }
 
-void tcp_base_trsp::on_sock_read(int fd, short ev, void* arg)
+void tcp_base_trsp::on_sock_read([[maybe_unused]] int fd, short ev, void* arg)
 {
     if(ev & (EV_READ|EV_TIMEOUT)) {
         ((tcp_base_trsp*)arg)->on_read(ev);
     }
 }
 
-void tcp_base_trsp::on_sock_write(int fd, short ev, void* arg)
+void tcp_base_trsp::on_sock_write([[maybe_unused]] int fd, short ev, void* arg)
 {
     if(ev & (EV_WRITE|EV_TIMEOUT)) {
         ((tcp_base_trsp*)arg)->on_write(ev);
@@ -187,24 +186,25 @@ tcp_base_trsp::tcp_base_trsp(
 
 tcp_base_trsp::~tcp_base_trsp()
 {
-  CLASS_DBG("~tcp_base_trsp()");
-  if(read_ev) {
-      DBG("%p destroy read_ev %p",this, read_ev);
-      event_del(read_ev);
-      event_free(read_ev);
-  }
-  if(write_ev) {
-      DBG("%p destroy write_ev %p",this, write_ev);
-      event_del(write_ev);
-      event_free(write_ev);
-  }
+    CLASS_DBG("~tcp_base_trsp()");
+    if(read_ev) {
+        DBG("%p destroy read_ev %p",this, read_ev);
+        event_del(read_ev);
+        event_free(read_ev);
+    }
 
-  if(sd > 0) {
-    ::close(sd);
-    sd = -1;
-  }
+    if(write_ev) {
+        DBG("%p destroy write_ev %p",this, write_ev);
+        event_del(write_ev);
+        event_free(write_ev);
+    }
 
-  delete input;
+    if(sd > 0) {
+        ::close(sd);
+        sd = -1;
+    }
+
+    delete input;
 }
 
 void tcp_base_trsp::close()
@@ -268,9 +268,9 @@ void tcp_base_trsp::generate_transport_errors()
 
 void tcp_base_trsp::add_read_event_ul()
 {
-  sock_mut.unlock();
-  add_read_event();
-  sock_mut.lock();
+    sock_mut.unlock();
+    add_read_event();
+    sock_mut.lock();
 }
 
 void tcp_base_trsp::add_read_event()
@@ -281,9 +281,9 @@ void tcp_base_trsp::add_read_event()
 
 void tcp_base_trsp::add_write_event_ul(struct timeval* timeout)
 {
-  sock_mut.unlock();
-  add_write_event(timeout);
-  sock_mut.lock();
+    sock_mut.unlock();
+    add_write_event(timeout);
+    sock_mut.lock();
 }
 
 void tcp_base_trsp::add_write_event(struct timeval* timeout)
@@ -313,132 +313,130 @@ void tcp_base_trsp::create_events()
 
 int tcp_base_trsp::connect()
 {
-  int true_opt = 1;
+    int true_opt = 1;
 
-  sockaddr_ssl* peer_addr_ssl = reinterpret_cast<sockaddr_ssl*>(&peer_addr);
+    sockaddr_ssl* peer_addr_ssl = reinterpret_cast<sockaddr_ssl*>(&peer_addr);
 
-  CLASS_DBG("tcp_base_trsp::connect(): sd:%d ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d", sd,
-      peer_addr.ss_family,
-      am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr),
-      peer_addr_ssl->trsp,
-      peer_addr_ssl->ssl_marker,
-      peer_addr_ssl->sig,
-      peer_addr_ssl->cipher,
-      peer_addr_ssl->mac);
+    CLASS_DBG("tcp_base_trsp::connect(): sd:%d ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d", sd,
+        peer_addr.ss_family,
+        am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr),
+        peer_addr_ssl->trsp,
+        peer_addr_ssl->ssl_marker,
+        peer_addr_ssl->sig,
+        peer_addr_ssl->cipher,
+        peer_addr_ssl->mac);
 
-  if(sd > 0) {
-    ERROR("pending connection request: close first.");
-    return -1;
-  }
+    if(sd > 0) {
+        ERROR("pending connection request: close first.");
+        return -1;
+    }
 
-  if((sd = socket(peer_addr.ss_family,SOCK_STREAM,0)) == -1){
-    ERROR("socket: %s",strerror(errno));
-    return -1;
-  }
-  SOCKET_LOG("socket(peer_addr.ss_family(%d),SOCK_STREAM,0) = %d", peer_addr.ss_family, sd);
+    if((sd = socket(peer_addr.ss_family,SOCK_STREAM,0)) == -1){
+        ERROR("socket: %s",strerror(errno));
+        return -1;
+    }
+    SOCKET_LOG("socket(peer_addr.ss_family(%d),SOCK_STREAM,0) = %d", peer_addr.ss_family, sd);
 
-  if(ioctl(sd, FIONBIO , &true_opt) == -1) {
-    ERROR("could not make new connection non-blocking: %s",strerror(errno));
-    ::close(sd);
-    sd = -1;
-    return -1;
-  }
+    if(ioctl(sd, FIONBIO , &true_opt) == -1) {
+        ERROR("could not make new connection non-blocking: %s",strerror(errno));
+        ::close(sd);
+        sd = -1;
+        return -1;
+    }
 
-  if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
-     (void*)&true_opt, sizeof (true_opt)) == -1)
-  {
-    ERROR("setsockopt(SO_REUSEADDR): %s",strerror(errno));
-    ::close(sd);
-    return -1;
-  }
-
-  if(socket_options & static_client_port) {
-    if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR,
        (void*)&true_opt, sizeof (true_opt)) == -1)
     {
-      ERROR("setsockopt(SO_REUSEPORT): %s",strerror(errno));
-      ::close(sd);
-      return -1;
+        ERROR("setsockopt(SO_REUSEADDR): %s",strerror(errno));
+        ::close(sd);
+        return -1;
     }
+
+    if(socket_options & static_client_port) {
+        if(setsockopt(sd, SOL_SOCKET, SO_REUSEPORT,
+           (void*)&true_opt, sizeof (true_opt)) == -1)
+        {
+            ERROR("setsockopt(SO_REUSEPORT): %s",strerror(errno));
+            ::close(sd);
+            return -1;
+        }
 #if TCP_STATIC_CLIENT_PORT_CLOSE_NOWAIT==1
-    struct linger linger_opt = {
-      .l_onoff = 1,
-      .l_linger = 0
-    };
-    if(setsockopt(sd, SOL_SOCKET, SO_LINGER,
-       (void*)&linger_opt, sizeof (struct linger)) == -1)
-    {
-      ERROR("setsockopt(SO_LINGER): %s",strerror(errno));
-      return -1;
-    }
+        struct linger linger_opt = {
+            .l_onoff = 1,
+            .l_linger = 0
+        };
+        if(setsockopt(sd, SOL_SOCKET, SO_LINGER,
+           (void*)&linger_opt, sizeof (struct linger)) == -1)
+        {
+            ERROR("setsockopt(SO_LINGER): %s",strerror(errno));
+            return -1;
+        }
 #endif
-  } else {
-      am_set_port(&addr,0);
-  }
+    } else {
+        am_set_port(&addr,0);
+    }
 
-  if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
-    CLASS_ERROR("bind: %s",strerror(errno));
-    ::close(sd);
-    return -1;
-  }
+    if(::bind(sd,(const struct sockaddr*)&addr,SA_len(&addr)) < 0) {
+        CLASS_ERROR("bind: %s",strerror(errno));
+        ::close(sd);
+        return -1;
+    }
 
-  DBG("connecting to %s:%i...",
-      am_inet_ntop(&peer_addr).c_str(),
-      am_get_port(&peer_addr));
+    DBG("connecting to %s:%i...",
+        am_inet_ntop(&peer_addr).c_str(),
+        am_get_port(&peer_addr));
 
-  return ::connect(sd, (const struct sockaddr*)&peer_addr,
-		   SA_len(&peer_addr));
+    return ::connect(sd, (const struct sockaddr*)&peer_addr, SA_len(&peer_addr));
 }
 
 int tcp_base_trsp::check_connection()
 {
-  if(sd < 0){
-    int ret = connect();
-    if(ret < 0) {
-      if(errno != EINPROGRESS && errno != EALREADY) {
-	ERROR("could not connect to %s:%d: %s",
-          am_inet_ntop(&peer_addr).c_str(),
-          am_get_port(&peer_addr),
-          strerror(errno));
-	::close(sd);
-	sd = -1;
-	return -1;
-      }
-    }
+    if(sd < 0) {
+        int ret = connect();
+        if(ret < 0) {
+            if(errno != EINPROGRESS && errno != EALREADY) {
+                ERROR("could not connect to %s:%d: %s",
+                    am_inet_ntop(&peer_addr).c_str(),
+                    am_get_port(&peer_addr),
+                    strerror(errno));
+                ::close(sd);
+                sd = -1;
+                return -1;
+            }
+        }
 
-    //memorize actual ip/port
-    sockaddr_storage actual_addr;
-    socklen_t actual_addr_len = sizeof(actual_addr);
-    getsockname(sd,(sockaddr *)&actual_addr,&actual_addr_len);
-    actual_ip = am_inet_ntop(&actual_addr);
-    actual_port = am_get_port(&actual_addr);
+        //memorize actual ip/port
+        sockaddr_storage actual_addr;
+        socklen_t actual_addr_len = sizeof(actual_addr);
+        getsockname(sd,(sockaddr *)&actual_addr,&actual_addr_len);
+        actual_ip = am_inet_ntop(&actual_addr);
+        actual_port = am_get_port(&actual_addr);
 
-    // it's time to create the events...
-    create_events();
+        // it's time to create the events...
+        create_events();
 
-    if(ret < 0) {
-      add_write_event(server_sock->get_connect_timeout());
-      DBG("connect event added...");
+        if(ret < 0) {
+            add_write_event(server_sock->get_connect_timeout());
+            DBG("connect event added...");
 
-      // because of unlock in ad_write_event_ul,
-      // on_connect() might already have been scheduled
-      if(closed)
-	return -1;
-    }
-    else {
-      // connect succeeded immediatly
-      connected = true;
-      add_read_event();
-    }
-  }
+            // because of unlock in ad_write_event_ul,
+            // on_connect() might already have been scheduled
+            if(closed)
+                return -1;
+        } else {
+            // connect succeeded immediatly
+            connected = true;
+            add_read_event();
+        }
+    } //if(sd < 0)
 
-  return 0;
+    return 0;
 }
 
 void tcp_base_trsp::on_read(short ev)
 {
     assert(input);
-    
+
     int bytes = 0;
     {   // locked section
 
@@ -450,10 +448,9 @@ void tcp_base_trsp::on_read(short ev)
             _l.release_ownership();
             return;
         }
-        
+
         DBG("on_read (connected = %i, transport = %s)",connected, get_transport());
 
-        
         bytes = ::read(sd,input->get_input(),input->get_input_free_space());
         if(bytes < 0) {
             switch(errno) {
@@ -479,15 +476,14 @@ void tcp_base_trsp::on_read(short ev)
                 _l.release_ownership();
                 return;
             }
-        }
-        else if(bytes == 0) {
+        } else if(bytes == 0) {
             // connection closed
             DBG("connection has been closed (sd=%i)",sd);
             close();
             _l.release_ownership();
             return;
         }
-    }// end of - locked section
+    } // end of - locked section
 
     input->add_input_len(bytes);
 
@@ -571,7 +567,7 @@ void tcp_base_trsp::on_write(short ev)
 
         send_q.pop_front();
         delete msg;
-    }
+    } //while(!send_q.empty())
 
     post_write();
 }
@@ -611,18 +607,19 @@ int tcp_base_trsp::on_connect(short ev)
     return 0;
 }
 
-tcp_base_trsp::msg_buf::msg_buf(const sockaddr_storage* sa, const char* msg,
-				  const int msg_len)
+tcp_base_trsp::msg_buf::msg_buf(
+    const sockaddr_storage* sa, const char* msg,
+    const int msg_len)
   : msg_len(msg_len)
 {
-  memcpy(&addr,sa,sizeof(sockaddr_storage));
-  cursor = this->msg = new char[msg_len];
-  memcpy(this->msg,msg,msg_len);
+    memcpy(&addr,sa,sizeof(sockaddr_storage));
+    cursor = this->msg = new char[msg_len];
+    memcpy(this->msg,msg,msg_len);
 }
 
 tcp_base_trsp::msg_buf::~msg_buf()
 {
-  delete [] msg;
+    delete [] msg;
 }
 
 void tcp_base_trsp::copy_peer_addr(sockaddr_storage* sa)
@@ -630,12 +627,13 @@ void tcp_base_trsp::copy_peer_addr(sockaddr_storage* sa)
     memcpy(sa,&peer_addr,sizeof(sockaddr_storage));
 }
 
-tcp_base_trsp* trsp_socket_factory::new_connection(trsp_server_socket* server_sock,
-						 trsp_worker* server_worker,
-						  int sd, const sockaddr_storage* sa,
-						 struct event_base* evbase)
+tcp_base_trsp* trsp_socket_factory::new_connection(
+    trsp_server_socket* server_sock,
+    trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa,
+    struct event_base* evbase)
 {
-  return create_socket(server_sock, server_worker,sd,sa,evbase);
+    return create_socket(server_sock, server_worker,sd,sa,evbase);
 }
 
 trsp_worker::trsp_worker()
@@ -665,7 +663,7 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        sockaddr_storage sa = {0};
+        sockaddr_storage sa = {0, {0}, 0};
         client_sock->copy_peer_addr(&sa);
     }
 
@@ -677,18 +675,18 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
 
 void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
 {
-    string conn_id = client_sock->get_peer_ip()
-                     + ":" + int2str(client_sock->get_peer_port());
+    string conn_id = 
+        client_sock->get_peer_ip() + ":" + int2str(client_sock->get_peer_port());
 
     DBG("removing TCP connection from %s",conn_id.c_str());
 
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        sockaddr_storage sa = {0};
+        sockaddr_storage sa = {0, {0}, 0};
         client_sock->copy_peer_addr(&sa);
         dec_ref(sock_it->second);
-        
+
         DBG("TCP connection from %s removed",conn_id.c_str());
 
         connections.erase(sock_it);
@@ -696,8 +694,9 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     connections_mut.unlock();
 }
 
-int trsp_worker::send(trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
-                             const int msg_len, unsigned int flags)
+int trsp_worker::send(
+    trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
+    const int msg_len, unsigned int flags)
 {
     char host_buf[NI_MAXHOST];
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
@@ -949,9 +948,9 @@ void trsp_server_socket::add_workers(trsp_worker **trsp_workers, unsigned short 
     }
 }
 
-void trsp_server_socket::on_accept(int sd, short ev)
+void trsp_server_socket::on_accept(int sd, [[maybe_unused]] short ev)
 {
-    sockaddr_storage src_addr = {0};
+    sockaddr_storage src_addr = {0, {0}, 0};
     socklen_t        src_addr_len = sizeof(sockaddr_storage);
 
     int connection_sd = accept(sd,(sockaddr*)&src_addr,&src_addr_len);
@@ -1015,7 +1014,7 @@ struct timeval* trsp_server_socket::get_idle_timeout()
 
 trsp::trsp()
 {
-  evbase = event_base_new();
+    evbase = event_base_new();
 }
 
 trsp::~trsp()
@@ -1047,6 +1046,6 @@ void trsp::run()
 /** @see AmThread */
 void trsp::on_stop()
 {
-  event_base_loopbreak(evbase);
-  join();
+    event_base_loopbreak(evbase);
+    join();
 }

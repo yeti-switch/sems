@@ -4,8 +4,6 @@
 #include "parse_common.h"
 #include "sip_parser.h"
 #include "trans_layer.h"
-#include "hash.h"
-#include "parse_via.h"
 #include "msg_fline.h"
 #include "msg_hdrs.h"
 #include "defs.h"
@@ -29,8 +27,9 @@
 #define KEY_LEN 16  //see rfc6455 sec.4.1
 #define WEBSOCKET_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-ssize_t ws_input::recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len,
-                      int flags, void *user_data)
+ssize_t ws_input::recv_callback(
+    wslay_event_context_ptr ctx, uint8_t *data, size_t len,
+    int flags, void *user_data)
 {
     ws_input* input = (ws_input*)user_data;
     int ret = input->recv_callback(ctx, data, len, flags);
@@ -40,23 +39,27 @@ ssize_t ws_input::recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size
     return ret;
 }
 
-ssize_t ws_input::send_callback(wslay_event_context_ptr ctx,
-                      const uint8_t *data, size_t len, int flags,
-                      void *user_data)
+ssize_t ws_input::send_callback(
+    wslay_event_context_ptr ctx,
+    const uint8_t *data, size_t len, int flags,
+    void *user_data)
 {
     ws_input* input = (ws_input*)user_data;
     return input->on_send_callback(ctx, data, len, flags);
 }
 
-void ws_input::on_msg_recv_callback(wslay_event_context_ptr ctx,
-                        const struct wslay_event_on_msg_recv_arg *arg,
-                        void *user_data)
+void ws_input::on_msg_recv_callback(
+    wslay_event_context_ptr ctx,
+    const struct wslay_event_on_msg_recv_arg *arg,
+    void *user_data)
 {
     ws_input* input = (ws_input*)user_data;
     input->on_msg_recv(ctx, arg);
 }
 
-int ws_input::genmask_callback(wslay_event_context_ptr ctx, uint8_t *buf, size_t len, void *user_data)
+int ws_input::genmask_callback(
+    [[maybe_unused]] wslay_event_context_ptr ctx,
+    uint8_t *buf, size_t len, void *user_data)
 {
     //ws_input* input = (ws_input*)user_data;
     (void)user_data;
@@ -122,7 +125,6 @@ void ws_input::generate_transport_errors()
     sock_mut.unlock();
 
     while(!send_q.empty()) {
-
         tcp_base_trsp::msg_buf* msg = send_q.front();
         send_q.pop_front();
 
@@ -181,14 +183,16 @@ int ws_input::on_input(tcp_base_trsp* trsp)
     }
 }
 
-unsigned char*   ws_input::get_input() {
+unsigned char*   ws_input::get_input()
+{
     if(!ws_connected)
         return trsp_base_input::get_input();
     else
         return ws_input_buf + ws_input_pos + ws_input_len;
 }
 
-int ws_input::get_input_free_space() {
+int ws_input::get_input_free_space()
+{
     if(!ws_connected)
         return trsp_base_input::get_input_free_space();
     else {
@@ -196,12 +200,15 @@ int ws_input::get_input_free_space() {
         return MAX_TCP_MSGLEN - ws_input_len;
     }
 }
-void ws_input::reset_input() {
+
+void ws_input::reset_input()
+{
     ws_input_len = 0;
     ws_input_pos = 0;
 }
 
-void ws_input::add_input_len(int len) {
+void ws_input::add_input_len(int len)
+{
     if(!ws_connected)
         return trsp_base_input::add_input_len(len);
     else
@@ -287,7 +294,9 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
     }
 }
 
-ssize_t ws_input::recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, int flags)
+ssize_t ws_input::recv_callback(
+    [[maybe_unused]] wslay_event_context_ptr ctx,
+    uint8_t* data, size_t len, [[maybe_unused]] int flags)
 {
     ssize_t ret = (ws_input_len < len) ? ws_input_len : len;
     memcpy(data, ws_input_buf, ret);
@@ -298,7 +307,8 @@ ssize_t ws_input::recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size
     return ret;
 }
 
-void ws_input::on_msg_recv(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg* arg)
+void ws_input::on_msg_recv(
+    [[maybe_unused]] wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg* arg)
 {
     if(arg->opcode == WSLAY_TEXT_FRAME ||
        arg->opcode == WSLAY_CONTINUATION_FRAME) {
@@ -310,7 +320,8 @@ void ws_input::on_msg_recv(wslay_event_context_ptr ctx, const struct wslay_event
     }
 }
 
-ssize_t ws_input::on_send_callback(wslay_event_context_ptr ctx, const uint8_t* data, size_t len, int flags)
+ssize_t ws_input::on_send_callback(
+    [[maybe_unused]]wslay_event_context_ptr ctx, const uint8_t* data, size_t len, int flags)
 {
     DBG("on_send_callback %ld", len);
     output->send_data((char*)data, len, flags);
@@ -498,17 +509,16 @@ bool wss_input::is_connected()
 }
 
 ws_trsp_socket::ws_trsp_socket(trsp_server_socket* server_sock,
-				 trsp_worker* server_worker,
-				 int sd, const sockaddr_storage* sa,
-                 trsp_socket::socket_transport transport, struct event_base* evbase)
+    trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa,
+    trsp_socket::socket_transport transport, struct event_base* evbase)
   : tcp_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase, new ws_input(this, sd != -1))
 {}
 
 ws_trsp_socket::~ws_trsp_socket()
-{
-}
+{}
 
-int ws_trsp_socket::send_data(const char* msg, const int msg_len, unsigned int flags)
+int ws_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unused]] unsigned int flags)
 {
     send_q.push_back(new msg_buf(&peer_addr,(char*)msg,msg_len));
 
@@ -548,10 +558,12 @@ void ws_trsp_socket::post_write()
     tcp_trsp_socket::post_write();
 }
 
-int ws_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int msg_len, unsigned int flags)
+int ws_trsp_socket::send(
+    const sockaddr_storage* sa,
+    const char* msg, const int msg_len, [[maybe_unused]] unsigned int flags)
 {
-  if(closed || (check_connection() < 0))
-    return -1;
+    if(closed || (check_connection() < 0))
+        return -1;
 
   DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
             actual_ip.c_str(), actual_port,
@@ -559,14 +571,14 @@ int ws_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int 
             am_get_port(sa),
             msg_len,msg);
 
-  static_cast<ws_input*>(input)->send(new msg_buf(sa,msg,msg_len));
+    static_cast<ws_input*>(input)->send(new msg_buf(sa,msg,msg_len));
 
-  if(connected) {
-    add_write_event();
-    DBG("write event added...");
-  }
+    if(connected) {
+        add_write_event();
+        DBG("write event added...");
+    }
 
-  return 0;
+    return 0;
 }
 
 void ws_trsp_socket::generate_transport_errors()
@@ -575,19 +587,21 @@ void ws_trsp_socket::generate_transport_errors()
 }
 
 ws_socket_factory::ws_socket_factory(tcp_base_trsp::socket_transport transport)
- : trsp_socket_factory(transport)
+  : trsp_socket_factory(transport)
 {}
 
-tcp_base_trsp* ws_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
-                                                int sd, const sockaddr_storage* sa, event_base* evbase)
+tcp_base_trsp* ws_socket_factory::create_socket(
+    trsp_server_socket* server_sock, trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa, event_base* evbase)
 {
     return new ws_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
 }
 
-ws_server_socket::ws_server_socket(short unsigned int if_num, short unsigned int proto_idx, unsigned int opts, socket_transport transport)
-: trsp_server_socket(if_num, proto_idx, opts, new ws_socket_factory(transport))
-{
-}
+ws_server_socket::ws_server_socket(
+    short unsigned int if_num, short unsigned int proto_idx,
+    unsigned int opts, socket_transport transport)
+  : trsp_server_socket(if_num, proto_idx, opts, new ws_socket_factory(transport))
+{}
 
 
 wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
@@ -598,10 +612,9 @@ wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
 {}
 
 wss_trsp_socket::~wss_trsp_socket()
-{
-}
+{}
 
-int wss_trsp_socket::send_data(const char* msg, const int msg_len, unsigned int flags)
+int wss_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unused]] unsigned int flags)
 {
     orig_send_q.push_back(new msg_buf(&peer_addr,(char*)msg,msg_len));
 
@@ -641,25 +654,27 @@ void wss_trsp_socket::post_write()
     tls_trsp_socket::post_write();
 }
 
-int wss_trsp_socket::send(const sockaddr_storage* sa, const char* msg, const int msg_len, unsigned int flags)
+int wss_trsp_socket::send(
+    const sockaddr_storage* sa,
+    const char* msg, const int msg_len, [[maybe_unused]] unsigned int flags)
 {
-  if(closed || (check_connection() < 0))
-    return -1;
+    if(closed || (check_connection() < 0))
+        return -1;
 
-  DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
-            actual_ip.c_str(), actual_port,
-            get_addr_str(sa).c_str(),
-            am_get_port(sa),
-            msg_len,msg);
+    DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
+        actual_ip.c_str(), actual_port,
+        get_addr_str(sa).c_str(),
+        am_get_port(sa),
+        msg_len,msg);
 
-  static_cast<wss_input*>(input)->send(new msg_buf(sa,msg,msg_len));
+    static_cast<wss_input*>(input)->send(new msg_buf(sa,msg,msg_len));
 
-  if(connected) {
-    add_write_event();
-    DBG("write event added...");
-  }
+    if(connected) {
+        add_write_event();
+        DBG("write event added...");
+    }
 
-  return 0;
+    return 0;
 }
 
 void wss_trsp_socket::generate_transport_errors()
@@ -668,17 +683,18 @@ void wss_trsp_socket::generate_transport_errors()
 }
 
 wss_socket_factory::wss_socket_factory(tcp_base_trsp::socket_transport transport)
- : trsp_socket_factory(transport)
+  : trsp_socket_factory(transport)
 {}
 
-tcp_base_trsp* wss_socket_factory::create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
-                                                int sd, const sockaddr_storage* sa, event_base* evbase)
+tcp_base_trsp* wss_socket_factory::create_socket(
+    trsp_server_socket* server_sock, trsp_worker* server_worker,
+    int sd, const sockaddr_storage* sa, event_base* evbase)
 {
     return new wss_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase);
 }
 
-wss_server_socket::wss_server_socket(short unsigned int if_num, short unsigned int proto_idx,
-                                     unsigned int opts, socket_transport transport)
-: trsp_server_socket(if_num, proto_idx, opts, new wss_socket_factory(transport))
-{
-}
+wss_server_socket::wss_server_socket(
+    short unsigned int if_num, short unsigned int proto_idx,
+    unsigned int opts, socket_transport transport)
+  : trsp_server_socket(if_num, proto_idx, opts, new wss_socket_factory(transport))
+{}
