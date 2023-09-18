@@ -38,11 +38,43 @@
 #include "AmStatistics.h"
 
 #include <vector>
+#include <functional>
 #include <list>
 #include <set>
 
 class AmSessionProcessorThread;
 class AmSession;
+
+#define E_SESSION_PROC_ITERATE 105
+
+using iterate_func_cb_type = std::function<void (AmSession* session, void* user_data, AmArg& ret)>;
+using finish_func_cb_type = std::function<void (const AmArg& ret, void* user_data)>;
+
+struct AmSessionProcessorIterateRequestContainer
+{
+    AmSessionProcessorIterateRequestContainer(iterate_func_cb_type icb, finish_func_cb_type fcb, void* cb_ptr)
+    : iterate_callback(icb)
+    , finish_callback(fcb)
+    , callback_ptr(cb_ptr){}
+
+    iterate_func_cb_type iterate_callback;
+    finish_func_cb_type finish_callback;
+    void* callback_ptr;
+    atomic_int proc_index;
+    AmArg ret;
+};
+
+class AmSessionProcessorIterateRequestEvent : public AmEvent
+{
+public:
+    AmSessionProcessorIterateRequestEvent(AmSessionProcessorIterateRequestContainer* iterateContainer, int index)
+    : AmEvent(E_SESSION_PROC_ITERATE)
+    , container(iterateContainer)
+    , ret(&iterateContainer->ret[index]){}
+
+    AmSessionProcessorIterateRequestContainer* container;
+    AmArg* ret;
+};
 
 class AmSessionProcessor {
     static vector<AmSessionProcessorThread*> threads;
@@ -54,6 +86,7 @@ class AmSessionProcessor {
     static void stop();
     static AmSessionProcessorThread* getProcessorThread(bool same = false);
     static void addThreads(unsigned int num_threads);
+    static void sendIterateRequest(iterate_func_cb_type icb, finish_func_cb_type fcb, void* callback_ptr);
     static void get_statistics_count(StatCounterInterface::iterate_func_type f);
     static void get_statistics_time(StatCounterInterface::iterate_func_type f);
 };
@@ -89,6 +122,7 @@ class AmSessionProcessorThread
     // AmEventHandler interface
     void process(AmEvent* e);
 
+    void iterateSessions(iterate_func_cb_type callback, void* cb_ptr, AmArg& ret);
  public:
     AmSessionProcessorThread();
     ~AmSessionProcessorThread();
@@ -101,6 +135,7 @@ class AmSessionProcessorThread
     void notify(AmEventQueue* sender);
 
     void startSession(AmSession* s);
+    void sendIterateRequest(AmSessionProcessorIterateRequestEvent* req);
 
     void get_statistics_count(StatCounterInterface::iterate_func_type f);
     void get_statistics_time(StatCounterInterface::iterate_func_type f);

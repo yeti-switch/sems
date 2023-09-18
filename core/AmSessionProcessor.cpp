@@ -98,6 +98,19 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   threads_mut.unlock();
 }
 
+void AmSessionProcessor::sendIterateRequest(iterate_func_cb_type icb, finish_func_cb_type fcb, void* callback_ptr)
+{
+  threads_mut.lock();
+  AmSessionProcessorIterateRequestContainer* cnt =
+    new AmSessionProcessorIterateRequestContainer(icb, fcb, callback_ptr);
+  cnt->ret.assertArray(threads.size());
+  cnt->proc_index.set(threads.size());
+  int i = 0;
+  for(auto &t : threads)
+    t->sendIterateRequest(new AmSessionProcessorIterateRequestEvent(cnt, i++));
+  threads_mut.unlock();
+}
+
 void AmSessionProcessor::get_statistics_count(StatCounterInterface::iterate_func_type f)
 {
     //event_stats.iterate_count(f);
@@ -218,12 +231,34 @@ void AmSessionProcessorThread::process(AmEvent* e) {
   AmSessionProcessorThreadAddEvent* add_ev = 
     dynamic_cast<AmSessionProcessorThreadAddEvent*>(e);
 
-  if (NULL==add_ev) {
-    ERROR("received wrong event in AmSessionProcessorThread");
+  if (NULL!=add_ev) {
+    startup_sessions.push_back(add_ev->s);
     return;
   }
 
-  startup_sessions.push_back(add_ev->s);
+  AmSessionProcessorIterateRequestEvent* req_ev = 
+    dynamic_cast<AmSessionProcessorIterateRequestEvent*>(e);
+
+  if (NULL!=req_ev) {
+    iterateSessions(req_ev->container->iterate_callback, req_ev->container->callback_ptr, *req_ev->ret);
+    req_ev->container->proc_index.dec();
+    if(!req_ev->container->proc_index.get()) {
+        req_ev->container->finish_callback(req_ev->container->ret, req_ev->container->callback_ptr);
+        delete req_ev->container;
+    }
+    return;
+  }
+
+  ERROR("received wrong event in AmSessionProcessorThread");
+}
+
+void AmSessionProcessorThread::iterateSessions(iterate_func_cb_type cb, void* cb_ptr, AmArg& ret)
+{
+    std::list<AmSession*>::iterator it=sessions.begin();
+    while (it != sessions.end()) {
+      cb(*it, cb_ptr, ret);
+      it++;
+    }
 }
 
 void AmSessionProcessorThread::startSession(AmSession* s) {
@@ -237,6 +272,12 @@ void AmSessionProcessorThread::startSession(AmSession* s) {
   notify(s);
 
   // wakeup the thread
+  runcond.set(true);
+}
+
+void AmSessionProcessorThread::sendIterateRequest(AmSessionProcessorIterateRequestEvent* req)
+{
+  events.postEvent(req);
   runcond.set(true);
 }
 
