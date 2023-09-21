@@ -41,6 +41,19 @@ AmMutex AmSessionProcessor::threads_mut;
 vector<AmSessionProcessorThread*>::iterator 
 AmSessionProcessor::threads_it = AmSessionProcessor::threads.begin();
 
+AmSessionProcessorIterateRequestContext::AmSessionProcessorIterateRequestContext(
+    iterate_func_cb_type icb,
+    finish_func_cb_type fcb,
+    void* user_data,
+    int threads_count)
+  : iterate_callback(icb)
+  , finish_callback(fcb)
+  , user_data(user_data)
+{
+    aggregated_ret.assertArray(threads_count);
+    threads_awaited.set(threads_count);
+}
+
 void AmSessionProcessor::init()
 {
     stat_group(Counter, "core","session_processor_events_count").addFunctionGroupCounter(&get_statistics_count);
@@ -98,17 +111,23 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
   threads_mut.unlock();
 }
 
-void AmSessionProcessor::sendIterateRequest(iterate_func_cb_type icb, finish_func_cb_type fcb, void* callback_ptr)
+void AmSessionProcessor::sendIterateRequest(
+    AmSessionProcessorIterateRequestContext::iterate_func_cb_type icb,
+    AmSessionProcessorIterateRequestContext::finish_func_cb_type fcb,
+    void* callback_ptr)
 {
-  threads_mut.lock();
-  AmSessionProcessorIterateRequestContainer* cnt =
-    new AmSessionProcessorIterateRequestContainer(icb, fcb, callback_ptr);
-  cnt->ret.assertArray(threads.size());
-  cnt->proc_index.set(threads.size());
-  int i = 0;
-  for(auto &t : threads)
-    t->sendIterateRequest(new AmSessionProcessorIterateRequestEvent(cnt, i++));
-  threads_mut.unlock();
+    threads_mut.lock();
+
+    auto ctx = new AmSessionProcessorIterateRequestContext(
+        icb, fcb, callback_ptr, threads.size());
+
+    int i = 0;
+    for(auto &t : threads)
+        t->sendIterateRequest(
+            new AmSessionProcessorIterateRequestEvent(
+                ctx, i++));
+
+    threads_mut.unlock();
 }
 
 void AmSessionProcessor::get_statistics_count(StatCounterInterface::iterate_func_type f)
@@ -227,38 +246,42 @@ void AmSessionProcessorThread::on_stop() {
 }
 
 // AmEventHandler interface
-void AmSessionProcessorThread::process(AmEvent* e) {
-  AmSessionProcessorThreadAddEvent* add_ev = 
-    dynamic_cast<AmSessionProcessorThreadAddEvent*>(e);
-
-  if (NULL!=add_ev) {
-    startup_sessions.push_back(add_ev->s);
-    return;
-  }
-
-  AmSessionProcessorIterateRequestEvent* req_ev = 
-    dynamic_cast<AmSessionProcessorIterateRequestEvent*>(e);
-
-  if (NULL!=req_ev) {
-    iterateSessions(req_ev->container->iterate_callback, req_ev->container->callback_ptr, *req_ev->ret);
-    req_ev->container->proc_index.dec();
-    if(!req_ev->container->proc_index.get()) {
-        req_ev->container->finish_callback(req_ev->container->ret, req_ev->container->callback_ptr);
-        delete req_ev->container;
-    }
-    return;
-  }
-
-  ERROR("received wrong event in AmSessionProcessorThread");
-}
-
-void AmSessionProcessorThread::iterateSessions(iterate_func_cb_type cb, void* cb_ptr, AmArg& ret)
+void AmSessionProcessorThread::process(AmEvent* e)
 {
-    std::list<AmSession*>::iterator it=sessions.begin();
-    while (it != sessions.end()) {
-      cb(*it, cb_ptr, ret);
-      it++;
+    AmSessionProcessorThreadAddEvent* add_ev =
+        dynamic_cast<AmSessionProcessorThreadAddEvent*>(e);
+
+    if (nullptr!=add_ev) {
+        startup_sessions.push_back(add_ev->s);
+        return;
     }
+
+    if (auto req_ev =
+            dynamic_cast<AmSessionProcessorIterateRequestEvent*>(e))
+    {
+        auto ctx = req_ev->ctx;
+
+        //apply callback for all sessions
+        for(auto &session: sessions) {
+            ctx->iterate_callback(
+                session,
+                ctx->user_data,
+                req_ev->ret);
+        }
+
+        if(ctx->threads_awaited.dec_and_test()) {
+            //this thread is the last that finished the iteration
+            ctx->finish_callback(
+                ctx->aggregated_ret,
+                ctx->user_data);
+
+            delete ctx;
+        }
+
+        return;
+    }
+
+    ERROR("received wrong event in AmSessionProcessorThread");
 }
 
 void AmSessionProcessorThread::startSession(AmSession* s) {

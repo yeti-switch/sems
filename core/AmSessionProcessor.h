@@ -47,33 +47,41 @@ class AmSession;
 
 #define E_SESSION_PROC_ITERATE 105
 
-using iterate_func_cb_type = std::function<void (AmSession* session, void* user_data, AmArg& ret)>;
-using finish_func_cb_type = std::function<void (const AmArg& ret, void* user_data)>;
-
-struct AmSessionProcessorIterateRequestContainer
+struct AmSessionProcessorIterateRequestContext
 {
-    AmSessionProcessorIterateRequestContainer(iterate_func_cb_type icb, finish_func_cb_type fcb, void* cb_ptr)
-    : iterate_callback(icb)
-    , finish_callback(fcb)
-    , callback_ptr(cb_ptr){}
+    using iterate_func_cb_type = std::function<void (
+        AmSession* session, void* user_data, AmArg& ret)>;
+
+    using finish_func_cb_type = std::function<void (
+        const AmArg& ret, void* user_data)>;
 
     iterate_func_cb_type iterate_callback;
     finish_func_cb_type finish_callback;
-    void* callback_ptr;
-    atomic_int proc_index;
-    AmArg ret;
+    void* user_data;
+    atomic_int threads_awaited;
+    AmArg aggregated_ret;
+
+    AmSessionProcessorIterateRequestContext(
+        iterate_func_cb_type icb,
+        finish_func_cb_type fcb,
+        void* user_data,
+        int threads_count);
 };
 
-class AmSessionProcessorIterateRequestEvent : public AmEvent
+class AmSessionProcessorIterateRequestEvent
+  : public AmEvent
 {
-public:
-    AmSessionProcessorIterateRequestEvent(AmSessionProcessorIterateRequestContainer* iterateContainer, int index)
-    : AmEvent(E_SESSION_PROC_ITERATE)
-    , container(iterateContainer)
-    , ret(&iterateContainer->ret[index]){}
+  public:
+    AmSessionProcessorIterateRequestEvent(
+        AmSessionProcessorIterateRequestContext* iterateCtx,
+        int index)
+      : AmEvent(E_SESSION_PROC_ITERATE)
+      , ctx(iterateCtx)
+      , ret(iterateCtx->aggregated_ret[index])
+    {}
 
-    AmSessionProcessorIterateRequestContainer* container;
-    AmArg* ret;
+    AmSessionProcessorIterateRequestContext* ctx;
+    AmArg &ret;
 };
 
 class AmSessionProcessor {
@@ -86,7 +94,10 @@ class AmSessionProcessor {
     static void stop();
     static AmSessionProcessorThread* getProcessorThread(bool same = false);
     static void addThreads(unsigned int num_threads);
-    static void sendIterateRequest(iterate_func_cb_type icb, finish_func_cb_type fcb, void* callback_ptr);
+    static void sendIterateRequest(
+        AmSessionProcessorIterateRequestContext::iterate_func_cb_type icb,
+        AmSessionProcessorIterateRequestContext::finish_func_cb_type fcb,
+        void* callback_ptr);
     static void get_statistics_count(StatCounterInterface::iterate_func_type f);
     static void get_statistics_time(StatCounterInterface::iterate_func_type f);
 };
@@ -122,7 +133,6 @@ class AmSessionProcessorThread
     // AmEventHandler interface
     void process(AmEvent* e);
 
-    void iterateSessions(iterate_func_cb_type callback, void* cb_ptr, AmArg& ret);
  public:
     AmSessionProcessorThread();
     ~AmSessionProcessorThread();
