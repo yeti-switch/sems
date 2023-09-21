@@ -1,3 +1,7 @@
+sems (1.119.0) stable; urgency=low
+  * add sessions iterate functionality to the session processor
+ -- Michael Furmur <furmur@pm.me>  Fri, 22 Sep 2023 02:15:14 +0300
+
 sems (1.118.3) stable; urgency=low
   * AmAudioFileRecorderStereoRaw: check if the RSR file exists. avoid overwriting
   * AmArg: fix comparizon operator for arrays and structs
