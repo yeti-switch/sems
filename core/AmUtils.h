@@ -277,6 +277,9 @@ string get_addr_str_sip(const sockaddr_storage* addr);
 int resolve_sip_uri(const struct sip_uri &uri, string& addr, dns_priority priority);
 int resolve_sip_uri(const struct sip_uri &uri, sockaddr_storage& addr, dns_priority priority);
 
+int validate_ipv4_addr(const string& ip);
+int validate_ipv6_addr(const string& ip);
+
 /* Computes the local address for a specific destination address.
  * This is done using Netlink RTM_F_LOOKUP_TABLE request
  */

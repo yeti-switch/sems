@@ -14,6 +14,7 @@
 
 #define PARAM_MODE_NAME             "mode"
 #define PARAM_URL_NAME              "urls"
+#define PARAM_SOURCE_ADDRESS_NAME   "source_address"
 #define PARAM_REQUEUE_LIMIT_NAME    "requeue_limit"
 #define PARAM_SUCCESS_CODES_NAME    "succ_codes"
 #define PARAM_SUCCESS_ACTION_NAME   "succ_action"

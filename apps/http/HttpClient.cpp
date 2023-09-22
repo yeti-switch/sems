@@ -116,6 +116,23 @@ static int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
     return 0;
 }
 
+static int validate_source_address_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    int res;
+    std::string value = cfg_getstr(cfg, opt->name);
+
+    res = validate_ipv4_addr(value);
+    if (res > 0)
+        return 0;
+
+    res = validate_ipv6_addr(value);
+    if (res > 0)
+        return 0;
+
+    ERROR("invalid value \'%s\' of option \'%s\' - must be IPv4 or IPv6 address", value.c_str(), opt->name);
+    return 1;
+}
+
 static int validate_action_func(cfg_t *cfg, cfg_opt_t *opt)
 {
     std::string value = cfg_getstr(cfg, opt->name);
@@ -185,6 +202,7 @@ int HttpClient::configure(const string& config)
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
     if(!cfg) return -1;
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
+    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_SOURCE_ADDRESS_NAME, validate_source_address_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MAX_REPLY_SIZE_NAME, validate_size_func);

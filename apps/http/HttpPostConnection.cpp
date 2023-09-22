@@ -53,6 +53,9 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_WRITEFUNCTION,write_func_static);
     easy_setopt(CURLOPT_WRITEDATA,this);
 
+    if(!destination.source_address.empty())
+        easy_setopt(CURLOPT_INTERFACE, destination.source_address.c_str());
+
     return 0;
 }
 
