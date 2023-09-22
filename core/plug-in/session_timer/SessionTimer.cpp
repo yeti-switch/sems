@@ -181,6 +181,14 @@ bool SessionTimer::onSendRequest(AmSipRequest& req, int& flags)
   if  ((req.method != SIP_METH_INVITE) && (req.method != SIP_METH_UPDATE))
     return false; // session-expires / min-se only in INV/UPD
 
+  if(session_interval < min_se) {
+    //https://www.rfc-editor.org/rfc/rfc4028#section-7.1
+    /* If a Min-SE header is included in the
+     * initial session refresh request, the value of the Session-Expires
+     * MUST be greater than or equal to the value in Min-SE.*/
+    session_interval = min_se;
+  }
+
   removeHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES);
   removeHeader(req.hdrs, SIP_HDR_MIN_SE);
   req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) + CRLF
@@ -512,14 +520,20 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
     // minimum_timer
     if(cfg_size(cfg, PARAM_MINIMUM_TIMER_NAME)) {
         MinimumTimer = cfg_getint(cfg, PARAM_MINIMUM_TIMER_NAME);
+        if (MinimumTimer < MINIMUM_TIMER) {
+            ERROR("invalid value %d for %s. should be >= %d",
+                MinimumTimer, PARAM_MINIMUM_TIMER_NAME, MINIMUM_TIMER);
+            cfg_free(cfg);
+            return -1;
+        }
     }
 
     if (cfg_size(cfg, PARAM_MAXIMUM_TIMER_NAME)) {
         int maximum_timer = cfg_getint(cfg, PARAM_MAXIMUM_TIMER_NAME);
         if (maximum_timer<=0) {
-        ERROR("invalid value for maximum_timer '%d'",maximum_timer);
-        cfg_free(cfg);
-        return -1;
+            ERROR("invalid value for maximum_timer '%d'",maximum_timer);
+            cfg_free(cfg);
+            return -1;
         }
         MaximumTimer = (unsigned int) maximum_timer;
     }
@@ -545,6 +559,14 @@ int AmSessionTimerConfig::readFromConfig(const string& config)
 
     Accept501Reply = cfg_getbool(cfg, PARAM_ACCEPT_501_REPLY_NAME);
     cfg_free(cfg);
+
+    if (SessionExpires < MinimumTimer) {
+        ERROR("%s(%d) should be >= %s(%d)",
+            PARAM_SESSION_EXPIRES_NAME, SessionExpires,
+            PARAM_MINIMUM_TIMER_NAME, MinimumTimer);
+        return -1;
+    }
+
     return 0;
 }
 
