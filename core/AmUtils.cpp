@@ -737,6 +737,18 @@ int get_local_addr_for_dest(sockaddr_storage* remote_ip, sockaddr_storage* local
     return 0;
 }
 
+int validate_ipv4_addr(const string& ip)
+{
+    sockaddr_storage addr;
+    return inet_pton(AF_INET, ip.c_str(), &((sockaddr_in*)&addr)->sin_addr);
+}
+
+int validate_ipv6_addr(const string& ip)
+{
+    sockaddr_storage addr;
+    return inet_pton(AF_INET6, ip.c_str(), &((sockaddr_in6*)&addr)->sin6_addr);
+}
+
 int get_local_addr_for_dest(const string& remote_ip, string& local, dns_priority priority)
 {
   sockaddr_storage remote_ip_ss;

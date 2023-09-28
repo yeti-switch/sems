@@ -72,6 +72,9 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     //easy_setopt(CURLOPT_LOW_SPEED_TIME, 60L);
     //easy_setopt(CURLOPT_LOW_SPEED_LIMIT, 10L);
 
+    if(!destination.source_address.empty())
+        easy_setopt(CURLOPT_INTERFACE, destination.source_address.c_str());
+
     return 0;
 }
 

@@ -82,6 +82,7 @@ struct HttpDestination {
     string mode_str;
 
     vector<string> url;
+    string source_address;
     size_t max_failover_idx;
     unsigned int attempts_limit;
     unsigned int resend_queue_max;

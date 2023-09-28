@@ -220,6 +220,8 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
     else
         max_failover_idx = url.size()-1;
 
+    source_address = cfg_getstr(cfg, PARAM_SOURCE_ADDRESS_NAME);
+
     if(succ_codes.parse(cfg)) {
         ERROR("can't parse succ codes map");
         return -1;
@@ -300,9 +302,10 @@ void HttpDestination::dump(const string &key) const
             url_list += ",";
         url_list += url_;
     }
-    DBG("destination %s: %s %s, post_upload = %s %s, failed_upload = %s %s",
+    DBG("destination %s: %s %s, source_address = %s, post_upload = %s %s, failed_upload = %s %s",
         key.c_str(),
         mode_str.c_str(),url_list.c_str(),
+        source_address.c_str(),
         succ_action.str().c_str(), succ_action.data().c_str(),
         fail_action.str().c_str(), fail_action.data().c_str());
 }
@@ -317,6 +320,7 @@ void HttpDestination::dump(const string &, AmArg &ret) const
     }
     ret["url"] = url_list;
     ret["mode"] = mode_str.c_str();
+    ret["source_address"] = source_address.c_str();
     ret["succ_action"] = succ_action.str();
     if(succ_action.has_data()){
         ret["action_data"] = succ_action.data();

@@ -77,6 +77,9 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
     easy_setopt(CURLOPT_URL,destination.url[event.failover_idx].c_str());
     easy_setopt(CURLOPT_MIMEPOST,form);
 
+    if(!destination.source_address.empty())
+        easy_setopt(CURLOPT_INTERFACE, destination.source_address.c_str());
+
     return 0;
 }
 
