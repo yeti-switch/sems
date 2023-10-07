@@ -1,3 +1,7 @@
+sems (1.119.2) stable; urgency=low
+  * AmIdentity: fix 'dest' claim items to be an array
+ -- Michael Furmur <furmur@pm.me>  Sat, 07 Oct 2023 13:12:05 +0300
+
 sems (1.119.1) stable; urgency=low
   * http: add source IP binding. new option 'source_address' for the destination sections
   * session_timer: ensure session_interval >= min_se
