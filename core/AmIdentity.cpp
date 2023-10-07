@@ -99,24 +99,30 @@ void IdentData::parse(AmArg &a)
 }
 
 void IdentData::serialize_field(AmArg &a,
-                                std::vector<std::string> &field)
+                                const std::vector<std::string> &field,
+                                bool use_array)
 {
-    if(field.size() == 1) {
-        a = field[0];
-    } else {
+    if(use_array) {
         for(auto& tn_s : field) {
             a.push(AmArg(tn_s));
         }
+    } else {
+        if(field.size() != 1)
+            ERROR("wrong orig claim size %zd. expected 1",
+                field.size());
+
+        if(field.size())
+            a = field[0];
     }
 }
 
-void IdentData::serialize(AmArg &a)
+void IdentData::serialize(AmArg &a, bool use_array)
 {
     a.assertStruct();
     if(!uris.empty())
-        serialize_field(a[jwt_field_uri], uris);
+        serialize_field(a[jwt_field_uri], uris, use_array);
     if(!tns.empty())
-        serialize_field(a[jwt_field_tn], tns);
+        serialize_field(a[jwt_field_tn], tns, use_array);
 }
 
 std::vector<std::string> AmIdentity::PassportType::names = {
@@ -287,12 +293,12 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     if(orig_id.empty()) orig_id = Botan::UUID(rng).to_string();
     payload[jwt_payload_claim_origid] = orig_id;
 
-    dest_data.serialize(payload[jwt_payload_claim_dest]);
-    orig_data.serialize(payload[jwt_payload_claim_orig]);
+    dest_data.serialize(payload[jwt_payload_claim_dest], true);
+    orig_data.serialize(payload[jwt_payload_claim_orig], false);
 
     if(type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
         //ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
-        div_data.serialize(payload[jwt_payload_claim_div]);
+        div_data.serialize(payload[jwt_payload_claim_div], false);
         if(type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
             payload[jwt_payload_claim_opt] = opt;
     }
