@@ -37,8 +37,9 @@ struct IdentData
     void parse(AmArg &a);
 
     void serialize_field(AmArg &a,
-                         std::vector<std::string> &field);
-    void serialize(AmArg &a);
+                         const std::vector<std::string> &field,
+                         bool use_array);
+    void serialize(AmArg &a, bool use_array);
 };
 
 class AmIdentity
