@@ -187,6 +187,7 @@ StreamData::~StreamData()
 {
     if(stream) {
         ERROR("~StreamData() stream %p", stream);
+        log_stacktrace(L_ERR);
         stream->stopReceiving();
         clear();
     }
