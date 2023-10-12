@@ -87,7 +87,7 @@
 #if defined(WEBRTC_TARGET_PC)
 
 #if !defined(_MSC_VER)
-  #include <stdint.h>
+  #include <cstdint>
 #else
     // Define C99 equivalent types.
     // Since MSVC doesn't include these headers, we have to write our own
@@ -121,7 +121,7 @@
     #define WEBRTC_LITTLE_ENDIAN
 
 #elif defined(WEBRTC_TARGET_MAC_INTEL)
-    #include <stdint.h>
+    #include <cstdint>
 
     typedef int64_t             WebRtc_Word64;
     typedef uint64_t            WebRtc_UWord64;

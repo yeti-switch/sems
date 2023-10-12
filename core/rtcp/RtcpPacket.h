@@ -2,10 +2,10 @@
 
 #include "RtcpStat.h"
 
-#include <stdint.h>
 #include <netinet/in.h>
 #include <srtp/srtp.h>
 
+#include <cstdint>
 // srtcp data size injected after rtcp packet
 // see rfc 3711 sec 3.4
 // 4 bt - index

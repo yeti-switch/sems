@@ -3,7 +3,8 @@
 
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
-#include <stdint.h>
+
+#include <cstdint>
 
 enum dns_section_type {
 

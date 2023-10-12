@@ -3,9 +3,9 @@
 #include "AmThread.h"
 
 #include <time.h>
-#include <stdint.h>
 #include <sys/socket.h>
 
+#include <cstdint>
 #include <unordered_map>
 #include <cmath>
 

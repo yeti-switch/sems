@@ -1,12 +1,12 @@
 #ifndef AM_RTP_CONNECTION_H
 #define AM_RTP_CONNECTION_H
 
-#include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
 #include "AmArg.h"
 #include "ObjectsCounter.h"
 
+#include <cstdint>
 #include <string>
 using std::string;
 

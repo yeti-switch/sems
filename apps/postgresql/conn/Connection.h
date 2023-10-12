@@ -6,6 +6,7 @@
 #include <ctime>
 #include <atomic_types.h>
 
+#include <cstdint>
 #include <string>
 using std::string;
 

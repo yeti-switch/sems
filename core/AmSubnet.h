@@ -3,7 +3,8 @@
 #include "AmArg.h"
 
 #include <sys/socket.h>
-#include <stdint.h>
+
+#include <cstdint>
 #include <string>
 
 class AmSubnet {

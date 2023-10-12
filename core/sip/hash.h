@@ -37,7 +37,7 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 -------------------------------------------------------------------------------
 */
 
-#include <stdint.h>     /* defines uint32_t etc */
+#include <cstdint>     /* defines uint32_t etc */
 #include <sys/types.h>
 
 /*
