@@ -8,8 +8,8 @@ ENDIF(COMMAND cmake_policy)
 
 #set(CMAKE_C_COMPILER "/usr/bin/gcc")
 #set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-set(CMAKE_C_COMPILER clang-14 CACHE STRING "c compiler" FORCE)
-set(CMAKE_CXX_COMPILER clang++-14 CACHE STRING "c++ compiler" FORCE)
+set(CMAKE_C_COMPILER clang CACHE STRING "c compiler" FORCE)
+set(CMAKE_CXX_COMPILER clang++ CACHE STRING "c++ compiler" FORCE)
 set(CMAKE_CXX_STANDARD 20)
 
 # Add path for additional FindXXX.cmake scenarios
