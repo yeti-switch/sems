@@ -70,6 +70,8 @@ using std::list;
 // (the limit is the # bits in dns_handle::srv_used)
 #define MAX_SRV_RR (sizeof(unsigned int)*8)
 
+#define DNS_REPLY_BUFFER_SIZE NS_PACKETSZ*2
+
 /* in seconds */
 #define DNS_CACHE_CYCLE 10L
 
@@ -1192,7 +1194,7 @@ inline bool rr_type_supports_merging(dns_rr_type rr_type) {
 
 int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type addr_type)
 {
-    u_char dns_res[NS_PACKETSZ];
+    u_char dns_res[DNS_REPLY_BUFFER_SIZE];
 
     if(!name) return -1;
 
@@ -1200,7 +1202,7 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
 
     int dns_res_len = res_search(
         name,ns_c_in,dns_rr_type_tons_type(rr_type, addr_type),
-        dns_res,NS_PACKETSZ);
+        dns_res, DNS_REPLY_BUFFER_SIZE);
 
     if(dns_res_len < 0) {
         dns_error(h_errno,name,rr_type);
