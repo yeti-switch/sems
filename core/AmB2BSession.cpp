@@ -378,7 +378,11 @@ void AmB2BSession::onB2BEvent(B2BEvent* ev)
         terminateLeg();
         break;
 
-    } //switch(ev->event_id)
+    case B2BClearMedia:
+        DBG("clear media");
+        if(media_session) media_session->clearAudio(a_leg);
+        break;
+    }//switch(ev->event_id)
 
     //ERROR("unknown event caught");
 }

@@ -444,7 +444,7 @@ class AmB2BMedia
      * Though readStreams(), writeStreams() or processDtmfEvents() can be called
      * after call to clearAudio, they will do nothing because all relevant
      * information will be rlready eleased. */
-    virtual void clearAudio() override { clearAudio(true); clearAudio(false); }
+    virtual void clearAudio() override;
 
     /** release RTP streams for one leg */
     void clearAudio(bool a_leg);

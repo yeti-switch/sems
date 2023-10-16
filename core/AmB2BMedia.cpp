@@ -843,6 +843,12 @@ void AmB2BMedia::sendDtmf(bool a_leg, int event, unsigned int duration_ms, int v
     }
 }
 
+void AmB2BMedia::clearAudio()
+{
+    if(a) a->postEvent(new B2BEvent(B2BClearMedia));
+    if(b) b->postEvent(new B2BEvent(B2BClearMedia));
+}
+
 void AmB2BMedia::clearAudio(bool a_leg)
 {
     TRACE("[%p] clear %s leg audio\n",

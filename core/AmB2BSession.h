@@ -40,7 +40,8 @@ enum {
     B2BSipRequest,
     B2BSipReply,
     B2BMsgBody,
-    B2BDtmfEvent
+    B2BDtmfEvent,
+    B2BClearMedia,
 };
 
 /** \brief base class for event in B2B session */
