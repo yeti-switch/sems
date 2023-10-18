@@ -19,6 +19,7 @@ class TestServer
     map<string, AmArg> responses;
     map<string, bool> errors;
     map<string, string> errorcodes;
+    bool is_sync_error;
     struct tail
     {
         time_t time;
@@ -61,6 +62,8 @@ public:
         return false;
     }
 
+    bool isSyncError() {return is_sync_error;}
+    void setSyncError(){is_sync_error = true;}
     bool getResponse(const string& query, AmArg& res) {
         if(responses.find(query) == responses.end()) return false;
         if(!responses[query].size()) return false;
@@ -97,6 +100,7 @@ public:
     void clear() {
         responses.clear();
         errors.clear();
+        is_sync_error = false;
     }
 };
 

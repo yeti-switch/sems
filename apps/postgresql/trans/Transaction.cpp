@@ -201,9 +201,11 @@ IQuery * Transaction::get_current_query(bool parent)
 
     auto num = chain->get_result_got();
     if(num >= chain->get_size()) {
-        WARN("got result (%d) more than chain size (%d), return last query",
-             num, chain->get_size());
-        num = chain->get_size();
+        if(num != chain->get_size()) {
+            WARN("got result (%d) more than chain size (%d), return last query",
+                num, chain->get_size());
+        }
+        num = chain->get_size() - 1;
     }
     return chain->get_query(num);
 }

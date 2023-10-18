@@ -276,6 +276,7 @@ TEST_F(PostgresqlTest, ChainQueryTest)
     }
     ASSERT_EQ(handler.cur_state, PGHandler::FINISH);
     handler.cur_state = PGHandler::CONNECTED;
+    INFO("last success query %s", pg_create.get_query()->get_query().c_str());
 
     conn->close();
     delete conn;
@@ -332,6 +333,7 @@ TEST_F(PostgresqlTest, DbPipelineTest)
     while(pg.get_status() != Transaction::FINISH) {
         if(handler.check() < 1) return;
     }
+    INFO("last success query %s", pg.get_query()->get_query().c_str());
 }
 
 TEST_F(PostgresqlTest, DbPipelineErrorTest)
@@ -365,6 +367,31 @@ TEST_F(PostgresqlTest, DbPipelineErrorTest)
     conn->runTransaction(&pg2);
 
     while(pg2.get_status() != Transaction::FINISH) {
+        if(handler.check() < 1) return;
+    }
+}
+
+TEST_F(PostgresqlTest, DbPipelineSyncErrorTest)
+{
+    PGHandler handler;
+    std::string conn_str(address);
+    Connection *conn = PolicyFactory::instance()->createConnection(conn_str, conn_str, &handler);
+    conn->reset();
+    while(conn->getStatus() != CONNECTION_OK) {
+        if(handler.check() < 1) return;
+    }
+
+    conn->startPipeline();
+    NonTransaction pg1(&handler);
+    QueryChain* query = new QueryChain(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('0', 10), pg_sleep(1)", false, false));
+    query->addQuery(new QueryParams("SELECT repeat('1', 10), pg_sleep(1)", false, false));
+    pg1.exec(query);
+    server->setSyncError();
+
+    conn->runTransaction(&pg1);
+
+    while(pg1.get_status() != Transaction::FINISH) {
         if(handler.check() < 1) return;
     }
 }
