@@ -23,11 +23,9 @@ bool MockTransactionImpl::check_trans()
     string query_;
     if(single) {
         query_ = single->get_query();
-        //cur_query = single;
     } else if(chain) {
         if(current_query_number < query->get_size()) {
             query_ = chain->get_query(current_query_number)->get_query();
-            //cur_query = chain->get_query(current_query_number);
         }
     } else {
         ERROR("unknown query");
@@ -53,15 +51,12 @@ int MockTransactionImpl::fetch_result()
 {
     Query* single = dynamic_cast<Query*>(query);
     QueryChain* chain = dynamic_cast<QueryChain*>(query);
-    //IPGQuery* cur_query = 0;
     string query_;
     if(single) {
         query_ = single->get_query();
-        //cur_query = single;
     } else if(chain) {
         if(current_query_number < query->get_size()) {
             query_ = chain->get_query(current_query_number)->get_query();
-            //cur_query = chain->get_query(current_query_number);
         }
     } else {
         ERROR("unknown query");
@@ -98,9 +93,15 @@ int MockTransactionImpl::fetch_result()
             }
         }
         current_query_number++;
+        query->put_result();
     } else {
-        synced = true;
-        status = PQTRANS_IDLE;
+        if(server->isSyncError()) {
+            parent->handler->onError(parent, "sync error");
+            status = PQTRANS_INERROR;
+        } else {
+            synced = true;
+            status = PQTRANS_IDLE;
+        }
     }
 
     return 0;
@@ -109,6 +110,7 @@ int MockTransactionImpl::fetch_result()
 void MockTransactionImpl::reset(Connection *conn)
 {
     last_query = 0;
+    current_query_number = 0;
     TransactionImpl::reset(conn);
 }
 

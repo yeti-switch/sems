@@ -18,10 +18,10 @@ int QueryChain::exec()
 
 IQuery * QueryChain::get_current_query()
 {
-    if(current >= get_size()) return childs[current-1];
-    else if(!current) return childs[current];
-    else if(childs[current]->is_finished()) return childs[current];
-    else return childs[current-1];
+    if(current >= get_size()) return childs[childs.size()-1];       // finished last query
+    else if(!current) return childs[current];                       // incomplete first query
+    else if(childs[current]->is_finished()) return childs[current]; // finished current query
+    else return childs[current-1];                                  // incomplete current query
 }
 
 void QueryChain::put_result()
