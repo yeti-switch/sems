@@ -10,7 +10,7 @@ using std::string;
 using std::map;
 using std::vector;
 
-#include "../unit_tests/TestServer.h"
+#include "unit_tests/TestServer.h"
 
 class Connection;
 struct IConnectionHandler;

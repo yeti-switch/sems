@@ -11,7 +11,7 @@ SET(postgresql_config_files "")
 SET(postgresql_dist_files postgresql)
 
 FIND_LIBRARY(PQ pq)
-INCLUDE_DIRECTORIES(${PG_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${PG_INCLUDE_DIR} ${CMAKE_SOURCE_DIR})
 SET(sems_module_libs ${PQ})
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/module.rules.txt)
