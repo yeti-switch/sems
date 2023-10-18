@@ -1,3 +1,10 @@
+sems (1.121.0) stable; urgency=low
+  * postgresql: fix crash on sync error
+  * resolver: increase allowed DNS answer size 512 -> 1024
+  * AmB2BMedia: clear media from the session processor threads only
+  * AmB2BMedia/StreamData: remove dtor error
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 Oct 2023 02:47:28 +0300
+
 sems (1.120.0) stable; urgency=low
   * http: add source IP binding
   * session_timer: ensure session_interval >= min_se
