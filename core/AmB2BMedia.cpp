@@ -186,8 +186,9 @@ StreamData::StreamData(AmB2BSession* session, bool audio)
 StreamData::~StreamData()
 {
     if(stream) {
-        ERROR("~StreamData() stream %p", stream);
-        log_stacktrace(L_ERR);
+        /* prevent stream leak
+         * on streams.clear() in AmB2BMedia::clearAudio(bool a_leg)
+         * or AmB2BMedia destruction without explicit clearing */
         stream->stopReceiving();
         clear();
     }
