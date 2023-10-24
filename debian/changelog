@@ -1,3 +1,7 @@
+sems (1.122.0) stable; urgency=low
+  * AmIdentity: fix 'dest' claim items to be an array
+ -- Michael Furmur <furmur@pm.me>  Tue, 24 Oct 2023 18:57:48 +0300
+
 sems (1.121.0) stable; urgency=low
   * postgresql: fix crash on sync error
   * resolver: increase allowed DNS answer size 512 -> 1024
