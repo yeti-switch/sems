@@ -1,3 +1,8 @@
+sems (1.123.0) stable; urgency=low
+  * fix crash on tls inactive session
+  * atomic_types: add ReferenceGuard, atomic_ref_guard
+ -- Michael Furmur <furmur@pm.me>  Wed, 25 Oct 2023 21:38:37 +0300
+
 sems (1.122.0) stable; urgency=low
   * AmIdentity: fix 'dest' claim items to be an array
  -- Michael Furmur <furmur@pm.me>  Tue, 24 Oct 2023 18:57:48 +0300
