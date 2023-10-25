@@ -1,5 +1,4 @@
-#ifndef _atomic_types_h_
-#define _atomic_types_h_
+#pragma once
 
 #if	(__GNUC__ > 4) || \
 	(__GNUC__ == 4 && __GNUC_MINOR__ >= 1) && \
@@ -232,4 +231,21 @@ inline unsigned int get_ref(atomic_ref_cnt* rc)
   return rc->_get_ref();
 }
 
-#endif
+template<class Reference>
+class ReferenceGuard
+{
+    Reference *ref;
+
+  public:
+    ReferenceGuard(Reference *ref)
+      : ref(ref)
+    {
+        inc_ref(ref);
+    }
+    ~ReferenceGuard()
+    {
+        dec_ref(ref);
+    }
+};
+
+using atomic_ref_guard = ReferenceGuard<atomic_ref_cnt>;
