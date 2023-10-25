@@ -28,7 +28,9 @@ class TestServer
     };
     map<string, struct tail> tails;
 public:
-    TestServer(){}
+    TestServer()
+      : is_sync_error(false)
+    {}
 
     void addResponse(const string& query, const AmArg& response) {
         responses[query].push(response);
