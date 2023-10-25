@@ -209,7 +209,7 @@ tcp_base_trsp::~tcp_base_trsp()
 
 void tcp_base_trsp::close()
 {
-    inc_ref((atomic_ref_cnt*)this);
+    inc_ref(this);
 
     server_worker->remove_connection(this);
 
@@ -238,7 +238,7 @@ void tcp_base_trsp::close()
 
     generate_transport_errors();
 
-    dec_ref((atomic_ref_cnt*)this);
+    dec_ref(this);
 }
 
 void tcp_base_trsp::generate_transport_errors()
@@ -510,18 +510,20 @@ void tcp_base_trsp::getInfo(AmArg &ret)
 
 void tcp_base_trsp::on_write(short ev)
 {
+    inc_ref(this);
     AmControlledLock _l(sock_mut);
 
     DBG("on_write (connected = %i, transport = %s)",connected, get_transport());
     if(!connected) {
         if(on_connect(ev) != 0) {
             _l.release_ownership();
+            dec_ref(this);
             return;
         }
     }
 
     pre_write();
-    while(!send_q.empty()) {
+    while(!send_q.empty() && !closed) {
 
         msg_buf* msg = send_q.front();
         if(!msg || !msg->bytes_left()) {
@@ -547,6 +549,7 @@ void tcp_base_trsp::on_write(short ev)
                 _l.release_ownership();
                 break;
             }
+            dec_ref(this);
             return;
         }
 
@@ -562,6 +565,7 @@ void tcp_base_trsp::on_write(short ev)
         if(bytes < msg->bytes_left()) {
             msg->cursor += bytes;
             add_write_event();
+            dec_ref(this);
             return;
         }
 
@@ -569,7 +573,8 @@ void tcp_base_trsp::on_write(short ev)
         delete msg;
     } //while(!send_q.empty())
 
-    post_write();
+    if(!closed) post_write();
+    dec_ref(this);
 }
 
 int tcp_base_trsp::on_connect(short ev)
