@@ -1,3 +1,7 @@
+sems (1.123.1) stable; urgency=low
+  * add details for TCP connection and TLS input errors
+ -- Michael Furmur <furmur@pm.me>  Mon, 30 Oct 2023 15:14:52 +0200
+
 sems (1.123.0) stable; urgency=low
   * fix crash on tls inactive session
   * atomic_types: add ReferenceGuard, atomic_ref_guard
