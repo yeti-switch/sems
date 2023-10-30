@@ -240,7 +240,9 @@ int tls_input::on_input(tcp_base_trsp* trsp)
         reset_input();
         return ret;
     } catch(Botan::Exception& ex) {
-        ERROR("Botan tls error: %s", ex.what());
+        ERROR("Botan tls error: %s. peer %s:%d",
+            ex.what(),
+            trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
     }
 }
