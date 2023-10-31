@@ -50,6 +50,7 @@ ns_type dns_rr_type_tons_type(dns_rr_type rr_type, unsigned short addr_type)
 
 int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)
 {
+    int ret;
     u_char* begin = msg;
     u_char* p = begin + HEADER_OFFSET;
     u_char* end = msg + len;
@@ -74,8 +75,13 @@ int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)
             i++)
         {
             // expand name
-            if(dns_expand_name(&p,begin,end,(u_char*)rr.name,NS_MAXDNAME) < 0)
+            if((ret = dns_expand_name(
+                &p, begin, end,
+                (u_char*)rr.name, NS_MAXDNAME)) < 0)
+            {
+                DBG("dns_expand_name failed: %d", ret);
                 return -1;
+            }
 
             // at least 8 bytes for type+class+ttl left?
             if((p + 8) > end) return -1;
@@ -139,6 +145,18 @@ int dns_expand_name(
     u_char** ptr, u_char* begin, u_char* end,
     u_char* start_buf, unsigned int len)
 {
+    enum dns_expand_name_errors {
+        GENERIC = 1,
+        END_OF_LABEL,
+        NAME_PTR_SIZE_OVERFLOW,
+        NO_DATA_AFTER_NAME_PTR,
+        NAME_PTR_OFFSET_OVERFLOW,
+        RECURSIVE_PTR,
+        LABEL_SIZE_OVERFLOW,
+        LABEL_LENGTH_OVERFLOW,
+        MALFORMED_TRAILING_LABEL
+    };
+
     u_char* buf = start_buf;
     u_char* p = *ptr;
     bool    is_ptr = false;
@@ -153,17 +171,17 @@ int dns_expand_name(
                 }
                 return (buf-start_buf);
             }
-            return -1;
+            return -END_OF_LABEL;
         }
 
         if( (*p & 0xC0) == 0xC0 ) { // ptr
 
             unsigned short l_off = (((unsigned short)*p & 0x3F) << 8);
-            if(++p >= end) return -1;
+            if(++p >= end) return -NAME_PTR_SIZE_OVERFLOW;
             l_off |= *p;
-            if(++p >= end) return -1;
+            if(++p >= end) return -NO_DATA_AFTER_NAME_PTR;
 
-            if(begin + l_off + 1 >= end) return -1;
+            if(begin + l_off + 1 >= end) return -NAME_PTR_OFFSET_OVERFLOW;
 
             if(!is_ptr) {
                 *ptr = p;
@@ -175,11 +193,11 @@ int dns_expand_name(
         }
 
         if( (*p & 0x3F) != *p ) { // NOT a label
-            return -1;
+            return -RECURSIVE_PTR;
         }
 
-        if(p + *p + 1 >= end) return -1;
-        if(len <= *p) return -1;
+        if(p + *p + 1 >= end) return -LABEL_SIZE_OVERFLOW;
+        if(len <= *p) return -LABEL_LENGTH_OVERFLOW;
 
         memcpy(buf,p+1,*p);
         len -= *p;
@@ -187,10 +205,10 @@ int dns_expand_name(
         p += *p + 1;
 
         if(*p) {
-            if(!(--len)) return -1;
+            if(!(--len)) return -MALFORMED_TRAILING_LABEL;
             *(buf++) = '.';
         }
     } //while(p < end)
 
-    return -1;
+    return -GENERIC;
 }

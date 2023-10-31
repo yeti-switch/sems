@@ -654,18 +654,19 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
     if(rr->type != ns_t_srv)
         return nullptr;
 
+    int ret;
     u_char name_buf[NS_MAXDNAME];
     u_char * rdata = ns_rr_rdata(*rr);
 
     /* Expand the target's name */
     u_char* p = rdata+6;
-    if (dns_expand_name(
+    if ((ret = dns_expand_name(
         &p,begin,end,
         name_buf,    /* Result                */
-        NS_MAXDNAME) /* Size of result buffer */
+        NS_MAXDNAME))/* Size of result buffer */
         < 0)         /* Negative: error       */
     {
-        DBG("dns_expand_name failed");
+        DBG("dns_expand_name failed: %d", ret);
         return nullptr;
     }
 
@@ -703,18 +704,19 @@ dns_base_entry* dns_cname_entry::get_rr(dns_record* rr, u_char* begin, u_char* e
     if(rr->type != ns_t_cname)
         return nullptr;
 
+    int ret;
     u_char name_buf[NS_MAXDNAME];
     u_char* rdata = ns_rr_rdata(*rr);
 
     /* Expand the target's name */
     u_char* p = rdata;
-    if (dns_expand_name(
+    if ((ret = dns_expand_name(
         &p,begin,end,
         name_buf,    /* Result                */
-        NS_MAXDNAME) /* Size of result buffer */
+        NS_MAXDNAME))/* Size of result buffer */
         < 0)         /* Negative: error       */
     {    /* Negative: error       */
-        ERROR("dns_expand_name failed");
+        ERROR("dns_expand_name failed: %d", ret);
         return nullptr;
     }
 
