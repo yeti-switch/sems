@@ -1,3 +1,7 @@
+sems (1.123.2) stable; urgency=low
+  * resolver: fix ending SRV/CNAME entries processing
+ -- Michael Furmur <furmur@pm.me>  Wed, 01 Nov 2023 16:36:50 +0200
+
 sems (1.123.1) stable; urgency=low
   * add details for TCP connection and TLS input errors
  -- Michael Furmur <furmur@pm.me>  Mon, 30 Oct 2023 15:14:52 +0200
