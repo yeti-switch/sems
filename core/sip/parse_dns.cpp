@@ -146,15 +146,15 @@ int dns_expand_name(
     u_char* start_buf, unsigned int len)
 {
     enum dns_expand_name_errors {
-        GENERIC = 1,
-        END_OF_LABEL,
+        DNS_EXPAND_GENERIC = 1,
+        END_OF_LABEL_NO_SPACE_IN_OUT_BUF,
         NAME_PTR_SIZE_OVERFLOW,
-        NO_DATA_AFTER_NAME_PTR,
+        NAME_PTR_LENGTH_OVERFLOW,
         NAME_PTR_OFFSET_OVERFLOW,
-        RECURSIVE_PTR,
+        NAME_PTR_IS_RECURSIVE,
         LABEL_SIZE_OVERFLOW,
         LABEL_LENGTH_OVERFLOW,
-        MALFORMED_TRAILING_LABEL
+        LABEL_NO_SPACE_IN_OUT_BUF
     };
 
     u_char* buf = start_buf;
@@ -171,7 +171,7 @@ int dns_expand_name(
                 }
                 return (buf-start_buf);
             }
-            return -END_OF_LABEL;
+            return -END_OF_LABEL_NO_SPACE_IN_OUT_BUF;
         }
 
         if( (*p & 0xC0) == 0xC0 ) { // ptr
@@ -179,7 +179,11 @@ int dns_expand_name(
             unsigned short l_off = (((unsigned short)*p & 0x3F) << 8);
             if(++p >= end) return -NAME_PTR_SIZE_OVERFLOW;
             l_off |= *p;
-            if(++p >= end) return -NO_DATA_AFTER_NAME_PTR;
+
+            /* >= check is irrelevant for
+             * CNAME/SRV entries targets expanding
+             * target bytes could be the last in the DNS response */
+            if(++p > end) return -NAME_PTR_LENGTH_OVERFLOW;
 
             if(begin + l_off + 1 >= end) return -NAME_PTR_OFFSET_OVERFLOW;
 
@@ -193,7 +197,7 @@ int dns_expand_name(
         }
 
         if( (*p & 0x3F) != *p ) { // NOT a label
-            return -RECURSIVE_PTR;
+            return -NAME_PTR_IS_RECURSIVE;
         }
 
         if(p + *p + 1 >= end) return -LABEL_SIZE_OVERFLOW;
@@ -205,10 +209,10 @@ int dns_expand_name(
         p += *p + 1;
 
         if(*p) {
-            if(!(--len)) return -MALFORMED_TRAILING_LABEL;
+            if(!(--len)) return -LABEL_NO_SPACE_IN_OUT_BUF;
             *(buf++) = '.';
         }
     } //while(p < end)
 
-    return -GENERIC;
+    return -DNS_EXPAND_GENERIC;
 }
