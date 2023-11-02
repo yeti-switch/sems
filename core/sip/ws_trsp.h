@@ -38,7 +38,9 @@ public:
     virtual cstring get_host() = 0;
     virtual void on_ws_connected() = 0;
     virtual void on_ws_close() = 0;
-    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) = 0;
+    virtual void copy_addrs(
+        sockaddr_storage* sa_local, sockaddr_storage* sa_remote,
+        unsigned int &protocol_id) = 0;
 };
 
 class ws_input : public trsp_base_input
@@ -121,9 +123,13 @@ class ws_trsp_socket: public ws_output, public tcp_trsp_socket
         return cstring(get_peer_ip().c_str(), get_peer_ip().size());
     }
 
-    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) {
+    virtual void copy_addrs(
+        sockaddr_storage* sa_local, sockaddr_storage* sa_remote,
+        unsigned int &protocol_id)
+    {
         copy_peer_addr(sa_remote);
         copy_addr_to(sa_local);
+        protocol_id = get_transport_proto_id();
     }
 
     void generate_transport_errors();
@@ -158,9 +164,13 @@ class wss_trsp_socket: public ws_output, public tls_trsp_socket
         return cstring(get_peer_ip().c_str(), get_peer_ip().size());
     }
 
-    virtual void copy_addrs(sockaddr_storage* sa_local, sockaddr_storage* sa_remote) {
+    virtual void copy_addrs(
+        sockaddr_storage* sa_local, sockaddr_storage* sa_remote,
+        unsigned int &protocol_id)
+    {
         copy_peer_addr(sa_remote);
         copy_addr_to(sa_local);
+        protocol_id = get_transport_proto_id();
     }
 
     void generate_transport_errors();

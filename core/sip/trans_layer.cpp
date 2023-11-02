@@ -1040,6 +1040,7 @@ static void set_err_reply_from_req(sip_msg* err, sip_msg* req,
     err->cseq = req->cseq;
     err->callid = req->callid;
     err->via_p1 = req->via_p1;
+    err->transport_id = req->transport_id;
 }
 
 void _trans_layer::transport_error(sip_msg* msg)
@@ -1118,6 +1119,9 @@ static void gen_error_reply_from_req(sip_msg& reply, const sip_msg* req,
 	       reply.cseq->value.s,reply.cseq->value.len);
 
     translate_hdr(&reply,reply.callid, req,req->callid);
+
+    if(req->local_socket)
+        reply.transport_id = req->local_socket->get_transport_proto_id();
 }
 
 void _trans_layer::timeout(trans_bucket* bucket, sip_trans* t)

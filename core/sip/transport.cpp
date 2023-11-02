@@ -30,6 +30,8 @@
 #include "../log.h"
 #include "sip/ip_util.h"
 
+#include "parse_via.h"
+
 #include <assert.h>
 #include <netinet/in.h>
 #include <string.h> // memset, strerror, ...
@@ -100,6 +102,32 @@ int trsp_socket::set_tos_byte(uint8_t byte)
     tos_byte = byte;
 
     return 0;
+}
+
+int trsp_socket::get_transport_proto_id() const
+{
+    //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
+    switch(transport) {
+    case udp_ipv4:
+    case udp_ipv6:
+        return sip_transport::UDP;
+    case tcp_ipv4:
+    case tcp_ipv6:
+        return sip_transport::TCP;
+    case tls_ipv4:
+    case tls_ipv6:
+        return sip_transport::TLS;
+    case ws_ipv4:
+    case ws_ipv6:
+        return sip_transport::WS;
+    case wss_ipv4:
+    case wss_ipv6:
+        return sip_transport::WSS;
+    default:
+        ERROR("unexpected transport: %d. set UNPARSED as fallback",
+            transport);
+        return sip_transport::UNPARSED;
+    }
 }
 
 const char* trsp_socket::get_ip() const

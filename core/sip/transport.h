@@ -161,6 +161,8 @@ public:
      */
     socket_transport get_transport_id() const { return transport; }
 
+    int get_transport_proto_id() const;
+
     /**
      * Getter for IP address
      */

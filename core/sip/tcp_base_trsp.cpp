@@ -69,28 +69,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
 
         gettimeofday(&s_msg->recv_timestamp,NULL);
 
-        //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
-        switch(socket->get_transport_id()) {
-        case tcp_base_trsp::tls_ipv4:
-        case tcp_base_trsp::tls_ipv6:
-            s_msg->transport_id = sip_transport::TLS;
-            break;
-        case tcp_base_trsp::ws_ipv4:
-        case tcp_base_trsp::ws_ipv6:
-            s_msg->transport_id = sip_transport::WS;
-            break;
-        case tcp_base_trsp::tcp_ipv4:
-        case tcp_base_trsp::tcp_ipv6:
-            s_msg->transport_id = sip_transport::TCP;
-            break;
-        case tcp_base_trsp::wss_ipv4:
-        case tcp_base_trsp::wss_ipv6:
-            s_msg->transport_id = sip_transport::WSS;
-            break;
-        default:
-            ERROR("unexpected socket transport_id: %d. set TCP as fallback", socket->get_transport_id());
-            s_msg->transport_id = sip_transport::TCP;
-        }
+        s_msg->transport_id = socket->get_transport_proto_id();
 
         socket->copy_peer_addr(&s_msg->remote_ip);
         socket->copy_addr_to(&s_msg->local_ip);
@@ -259,6 +238,7 @@ void tcp_base_trsp::generate_transport_errors()
 
         copy_peer_addr(&s_msg.remote_ip);
         copy_addr_to(&s_msg.local_ip);
+        s_msg.transport_id = get_transport_proto_id();
 
         trans_layer::instance()->transport_error(&s_msg);
     }

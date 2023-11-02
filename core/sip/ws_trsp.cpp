@@ -131,7 +131,9 @@ void ws_input::generate_transport_errors()
         sip_msg s_msg(msg->msg,msg->msg_len);
         delete msg;
 
-        output->copy_addrs(&s_msg.local_ip, &s_msg.remote_ip);
+        output->copy_addrs(
+            &s_msg.local_ip, &s_msg.remote_ip,
+            s_msg.transport_id);
 
         trans_layer::instance()->transport_error(&s_msg);
     }

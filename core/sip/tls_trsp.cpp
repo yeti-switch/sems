@@ -352,6 +352,7 @@ void tls_trsp_socket::generate_transport_errors()
 
         copy_peer_addr(&s_msg.remote_ip);
         copy_addr_to(&s_msg.local_ip);
+        s_msg.transport_id = get_transport_proto_id();
 
         trans_layer::instance()->transport_error(&s_msg);
     }
