@@ -1,3 +1,7 @@
+sems (1.124.0) stable; urgency=low
+  * trans_layer: set transport_id for locally generated error replies
+ -- Michael Furmur <furmur@pm.me>  Mon, 06 Nov 2023 15:00:56 +0200
+
 sems (1.123.2) stable; urgency=low
   * resolver: fix ending SRV/CNAME entries processing
  -- Michael Furmur <furmur@pm.me>  Wed, 01 Nov 2023 16:36:50 +0200
