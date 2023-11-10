@@ -693,10 +693,10 @@ int AmPlugIn::addCodec(amci_codec_t* c)
     codecs.insert(std::make_pair(c->id,c));
 
     if(!c->bytes2samples) {
-        WARN("codec %i does not provide bytes2samples function",c->id);
+        DBG("codec %i does not provide bytes2samples function",c->id);
     }
     if(!c->samples2bytes) {
-        WARN("codec %i does not provide samples2bytes function",c->id);
+        DBG("codec %i does not provide samples2bytes function",c->id);
     }
 
     DBG("codec id %i inserted",c->id);
