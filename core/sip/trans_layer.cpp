@@ -178,9 +178,9 @@ int _trans_layer::set_trsp_socket(
         }
     }
 
+    inc_ref(prot_sock_it->second);
     if(msg->local_socket) dec_ref(msg->local_socket);
     msg->local_socket = prot_sock_it->second;
-    inc_ref(msg->local_socket);
 
     sockaddr_ssl* remote_ip_ssl = reinterpret_cast<sockaddr_ssl*>(&msg->remote_ip);
 

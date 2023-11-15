@@ -625,12 +625,12 @@ trsp_worker::trsp_worker()
 
 trsp_worker::~trsp_worker()
 {
-    event_base_free(evbase);
     connections_mut.lock();
     for(auto conn_m : connections) {
         dec_ref(conn_m.second);
     }
     connections_mut.unlock();
+    event_base_free(evbase);
 }
 
 void trsp_worker::add_connection(tcp_base_trsp* client_sock)

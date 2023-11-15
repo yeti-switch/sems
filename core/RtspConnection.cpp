@@ -386,9 +386,9 @@ void RtspSession::process_response(RtspMsg &msg)
         if (it == cseq2id_map.end())
             return;
 
-        cseq2id_map.erase(it);
-
         msg.owner_id = it->second;
+
+        cseq2id_map.erase(it);
     }
 
     agent->onRtspReply(msg);
