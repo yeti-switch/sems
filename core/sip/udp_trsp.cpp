@@ -499,14 +499,6 @@ void udp_trsp::run()
 void udp_trsp::on_stop()
 {
     stop_event.fire();
-    for(auto sock : sockets) {
-        if (epoll_ctl(ev, EPOLL_CTL_DEL, sock->get_sd(), nullptr) == -1) {
-            ERROR("epoll_ctl: remove read sock %d error: %d",
-                    sock->get_sd(),errno);
-        }
-        dec_ref(sock);
-    }
-    sockets.clear();
     stopped.wait_for();
 }
 
