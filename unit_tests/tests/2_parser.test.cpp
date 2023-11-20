@@ -4,6 +4,7 @@
 #include <sip/parse_header.h>
 #include <sip/parse_nameaddr.h>
 #include <sip/parse_from_to.h>
+#include <sip/parse_via.h>
 #include <AmUriParser.h>
 #include <AmSdp.h>
 
@@ -158,19 +159,19 @@ TEST(SipParser, WideRangeTest)
     msg.release();
 }
 
-// rfc4475 3.1.1.3
+// rfc4475 3.1.1.3-5
 TEST(SipParser, EscapeTest)
 {
     sip_msg msg;
     char data[] = "INVITE sip:sips%3Auser%40example.com@example.net SIP/2.0\r\n"
-                  "To: sip:%75se%72@example.com\r\n"
+                  "To: sip:%00se%72@example.com\r\n"
                   "From: <sip:I%20have%20spaces@example.net>;tag=938\r\n"
                   "Max-Forwards: 87\r\n"
                   "Call-ID: esc01.239409asdfakjkn23onasd0-3234\r\n"
                   "CSeq: 234234 INVITE\r\n"
                   "Via: SIP/2.0/UDP host5.example.net;branch=z9hG4bKkdjuw\r\n"
                   "Content-Type: application/sdp\r\n"
-                  "Contact: <sip:cal%6Cer@host5.example.net;%6C%72;n%61me=v%61lue%25%34%31>\r\n"
+                  "Contact: <sip:cal%6Cer@host5.example.net;%6C%72;n%61me=v%61lue%00%34%31>\r\n"
                   "Content-Length: 150\r\n"
                   "\r\n"
                   "v=0\r\n"
@@ -197,6 +198,173 @@ TEST(SipParser, EscapeTest)
     EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(),
                  string("sips%3Auser%40example.com").c_str());
     EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("example.net").c_str());
+    msg.release();
+}
+
+// rfc4475 3.1.1.8
+TEST(SipParser, ExtraOctetsTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "To: sip:j.user@example.com\r\n"
+                  "From: sip:j.user@example.com;tag=43251j3j324\r\n"
+                  "Max-Forwards: 8\r\n"
+                  "Call-ID: dblreq.0ha0isndaksdj99sdfafnl3lk233412\r\n"
+                  "Contact: sip:j.user@host.example.com\r\n"
+                  "CSeq: 8 REGISTER\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.125;branch=z9hG4bKkdjuw23492\r\n"
+                  "Content-Length: 0\r\n"
+                  "\r\n"
+                  "INVITE sip:joe@example.com SIP/2.0\r\n"
+                  "To: sip:joe@example.com\r\n"
+                  "From: sip:caller@example.net;tag=141334\r\n"
+                  "Max-Forwards: 8\r\n"
+                  "Call-ID: dblreq.0ha0isnda977644900765@192.0.2.15\r\n"
+                  "CSeq: 8 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.15;branch=z9hG4bKkdjuw380234\r\n"
+                  "Content-Length: 0\r\n";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg.to->type, sip_header::H_TO);
+    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg.type, SIP_REQUEST);
+    EXPECT_EQ(msg.u.request->method, sip_request::REGISTER);
+    msg.release();
+}
+
+// rfc4475 3.1.1.9
+TEST(SipParser, SemicolonSepTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:user;par=example.net@example.com SIP/2.0\r\n"
+                  "To: sip:j_user@example.com\r\n"
+                  "From: sip:caller@example.org;tag=33242\r\n"
+                  "Max-Forwards: 3\r\n"
+                  "Call-ID: semiuri.0ha0isndaksdj\r\n"
+                  "CSeq: 8 OPTIONS\r\n"
+                  "Accept: application/sdp, application/pkcs7-mime\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.1;branch=z9hG4bKkdjuw\r\n"
+                  "Content-Length: 0\r\n";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg.to->type, sip_header::H_TO);
+    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg.type, SIP_REQUEST);
+    EXPECT_EQ(msg.u.request->method, sip_request::OPTIONS);
+    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(),
+                 string("user;par=example.net").c_str());
+    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("example.com").c_str());
+    msg.release();
+}
+
+// rfc4475 3.1.1.10
+TEST(SipParser, TransportTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:user@example.com SIP/2.0\r\n"
+                  "To: sip:user@example.com\r\n"
+                  "From: <sip:caller@example.com>;tag=323\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Call-ID:  transports.kijh4akdnaqjkwendsasfdj\r\n"
+                  "Accept: application/sdp\r\n"
+                  "CSeq: 60 OPTIONS\r\n"
+                  "Via: SIP/2.0/UDP t1.example.com;branch=z9hG4bKkdjuw\r\n"
+                  "Via: SIP/2.0/SCTP t2.example.com;branch=z9hG4bKklasjdhf\r\n"
+                  "Via: SIP/2.0/TLS t3.example.com;branch=z9hG4bK2980unddj\r\n"
+                  "Via: SIP/2.0/UNKNOWN t4.example.com;branch=z9hG4bKasd0f3en\r\n"
+                  "Via: SIP/2.0/TCP t5.example.com;branch=z9hG4bK0a9idfnee\r\n"
+                  "Content-Length: 0\r\n";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg.to->type, sip_header::H_TO);
+    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg.type, SIP_REQUEST);
+    EXPECT_EQ(msg.u.request->method, sip_request::OPTIONS);
+    EXPECT_EQ(msg.vias.size(), 5);
+    sip_via* via1 = (sip_via*)msg.via1->p;
+    EXPECT_EQ(via1->parms.back()->trans.type, sip_transport::UDP);
+    msg.release();
+}
+
+// rfc4475 3.1.1.12
+TEST(SipParser, ReplyReasonTest)
+{
+    sip_msg msg;
+    char data[] = "SIP/2.0 200 = 2**3 * 5**2 но\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.198;branch=z9hG4bK1324923\r\n"
+                  "Call-ID: unreason.1234ksdfak3j2erwedfsASdf\r\n"
+                  "CSeq: 35 INVITE\r\n"
+                  "From: sip:user@example.com;tag=11141343\r\n"
+                  "To: sip:user@example.edu;tag=2229\r\n"
+                  "Content-Length: 154\r\n"
+                  "Content-Type: application/sdp\r\n"
+                  "Contact: <sip:user@host198.example.com>\r\n"
+                  "\r\n"
+                  "v=0\r\n"
+                  "o=mhandley 29739 7272939 IN IP4 192.0.2.198\r\n"
+                  "s=-\r\n"
+                  "c=IN IP4 192.0.2.198\r\n"
+                  "t=0 0\r\n"
+                  "m=audio 49217 RTP/AVP 0 12\r\n"
+                  "m=video 3227 RTP/AVP 31\r\n"
+                  "a=rtpmap:31 LPC";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg.to->type, sip_header::H_TO);
+    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg.type, SIP_REPLY);
+    EXPECT_EQ(msg.u.reply->code, 200);
+    EXPECT_STREQ(string(msg.u.reply->reason.s, msg.u.reply->reason.len).c_str(),
+                 string("= 2**3 * 5**2 но").c_str());
+    msg.release();
+}
+
+// rfc4475 3.1.1.13
+TEST(SipParser, EmptyReasonTest)
+{
+    sip_msg msg;
+    char data[] = "SIP/2.0 100 \r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.198;branch=z9hG4bK1324923\r\n"
+                  "Call-ID: unreason.1234ksdfak3j2erwedfsASdf\r\n"
+                  "CSeq: 35 INVITE\r\n"
+                  "From: sip:user@example.com;tag=11141343\r\n"
+                  "To: sip:user@example.edu;tag=2229\r\n"
+                  "Content-Length: 0\r\n"
+                  "Contact: <sip:user@host198.example.com>";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg.to->type, sip_header::H_TO);
+    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg.type, SIP_REPLY);
+    EXPECT_EQ(msg.u.reply->code, 100);
+    //TODO: now reason contains garbage. would you need to check on nil?
+    EXPECT_EQ((int64_t)msg.u.reply->reason.s, 0);
     msg.release();
 }
 
@@ -232,6 +400,16 @@ TEST(Parser, Nameaddr)
     const char* url = uri.c_str();
     ASSERT_EQ(parse_nameaddr_uri(&sipuri, &url, uri.size()), EXIT_SUCCESS);
     ASSERT_EQ(strncmp(sipuri.name.s, "\"test \\\"test\\\"\"", sipuri.name.len), 0);
+}
+
+// rfc4475 3.1.1.6
+TEST(Parser, WithoutSpaceTest)
+{
+    sip_nameaddr sipuri;
+    string uri = "caller<sip:caller@example.com>;tag=323";
+    const char* url = uri.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&sipuri, &url, uri.size()), EXIT_SUCCESS);
+    ASSERT_EQ(strncmp(sipuri.name.s, "caller", sipuri.name.len), 0);
 }
 
 TEST(Parser, parse_nameaddr_uri)
