@@ -1,7 +1,6 @@
 #include "AmMediaTransport.h"
 #include "AmFaxImage.h"
 #include "AmRtpConnection.h"
-#include "AmSrtpConnection.h"
 #include "AmStunConnection.h"
 #include "AmDtlsConnection.h"
 #include "AmZrtpConnection.h"
@@ -623,10 +622,18 @@ void AmMediaTransport::initSrtpConnection(const string& remote_address, int remo
         if(cur_rtp_conn) {
             CLASS_DBG("update SRTP connection endpoint");
             cur_rtp_conn->setRAddr(remote_address, remote_port);
+
+            if(AmSrtpConnection* conn = dynamic_cast<AmSrtpConnection *>(cur_rtp_conn)) {
+                 updateKeys(conn, local_media, remote_media);
+            }
         }
         if(cur_rtcp_conn) {
             CLASS_DBG("update SRTCP connection endpoint");
             cur_rtcp_conn->setRAddr(remote_address, remote_port);
+
+            if(AmSrtpConnection* conn = dynamic_cast<AmSrtpConnection *>(cur_rtcp_conn)) {
+                 updateKeys(conn, local_media, remote_media);
+            }
         }
         if(cur_raw_conn) {
             cur_raw_conn->setRAddr(remote_address, remote_port);
@@ -663,6 +670,16 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
                     conn->getRAddr(&raddr);
                     addrs.push_back(raddr);
                 }
+            } else if (seq == TRANSPORT_SEQ_RTP) {
+                if(conn->getConnType() != AmStreamConnection::AmStreamConnection::RTP_CONN &&
+                   conn->getConnType() != AmStreamConnection::AmStreamConnection::RTCP_CONN)
+                    continue;
+
+                AmSrtpConnection* srtp_conn = dynamic_cast<AmSrtpConnection *>(conn);
+                if(!srtp_conn)
+                    continue;
+
+                updateKeys(srtp_conn, srtp_profile, local_key, remote_key);
             }
         }
     }
@@ -672,6 +689,23 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
     }
 
     seq = TRANSPORT_SEQ_RTP;
+}
+
+void AmMediaTransport::updateKeys(AmSrtpConnection* conn, const SdpMedia& local_media, const SdpMedia& remote_media)
+{
+    string local_key, remote_key;
+    int srtp_profile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+    if(srtp_profile < 0)
+        return;
+
+    updateKeys(conn, srtp_profile, local_key, remote_key);
+}
+
+void AmMediaTransport::updateKeys(AmSrtpConnection* conn, uint16_t srtp_profile, const string& local_key, const string& remote_key)
+{
+    conn->update_key(static_cast<srtp_profile_t>(srtp_profile),
+        reinterpret_cast<const unsigned char*>(local_key.data()), local_key.size(),
+        reinterpret_cast<const unsigned char*>(remote_key.data()), remote_key.size());
 }
 
 void AmMediaTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)

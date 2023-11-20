@@ -4,6 +4,7 @@
 #include "AmRtpSession.h"
 #include "AmRtpConnection.h"
 #include "AmDtlsConnection.h"
+#include "AmSrtpConnection.h"
 #include "AmArg.h"
 #include "AmSdp.h"
 
@@ -176,6 +177,8 @@ protected:
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
 
     int getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& local_key, string& remote_key);
+    void updateKeys(AmSrtpConnection* conn, const SdpMedia& local_media, const SdpMedia& remote_media);
+    void updateKeys(AmSrtpConnection* conn, uint16_t srtp_profile, const string& local_key, const string& remote_key);
 public:
     AmStreamConnection::ConnectionType GetConnectionType(unsigned char* buf, unsigned int size);
     bool isStunMessage(unsigned char* buf, unsigned int size);

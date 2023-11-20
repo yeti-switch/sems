@@ -42,6 +42,7 @@ private:
     typedef std::vector<srtp_master_key_p> srtp_master_keys;
     unsigned char  c_key_tx[SRTP_KEY_SIZE];
     unsigned char  c_key_rx[SRTP_KEY_SIZE];
+    unsigned int c_key_tx_len, c_key_rx_len;
 
     bool rx_context_initialized;
     bool tx_context_initialized;
@@ -57,6 +58,12 @@ private:
     AmStreamConnection* s_stream;
 
     int ensure_rx_stream_context(uint32_t ssrc_net_order);
+    int is_valid_keys(srtp_profile_t profile,
+                 const unsigned char* key_tx, size_t key_tx_len,
+                 const unsigned char* key_rx, size_t key_rx_len);
+
+    void set_c_key_tx(const unsigned char* key, size_t key_len);
+    void set_c_key_rx(const unsigned char* key, size_t key_len);
 
 public:
     AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
@@ -65,6 +72,10 @@ public:
     void use_key(srtp_profile_t profile,
                  const unsigned char* key_tx, size_t key_tx_len,
                  const unsigned char* key_rx, size_t key_rx_len);
+
+    void update_key(srtp_profile_t profile,
+                    const unsigned char* key_tx, size_t key_tx_len,
+                    const unsigned char* key_rx, size_t key_rx_len);
 
     static void base64_key(const std::string& key,
                            unsigned char* key_s, unsigned int& key_s_len);

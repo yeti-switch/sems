@@ -53,15 +53,8 @@ void AmSrtpConnection::use_key(srtp_profile_t profile,
     CLASS_DBG("create s%s connection: profile %s", getConnType() == RTP_CONN ? "rtp" : "rtcp",
               SdpCrypto::profile2str((CryptoProfile)profile).c_str());
 
-    unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
-    master_key_len += srtp::profile_get_master_salt_length(profile);
-    if(master_key_len != key_tx_len || master_key_len != key_rx_len) {
-        char error[100];
-        sprintf(error, "srtp key are not correct. another size: needed %u in fact local-%lu, remote-%lu",
-                                master_key_len, key_tx_len, key_rx_len);
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_KEY_ERROR, error, transport);
+    if(is_valid_keys(profile, key_tx, key_tx_len, key_rx, key_rx_len) < 0)
         return;
-    }
 
     if (srtp_create(&srtp_tx_session, nullptr) != srtp_err_status_ok ||
         srtp_create(&srtp_rx_session, nullptr) != srtp_err_status_ok) {
@@ -69,10 +62,92 @@ void AmSrtpConnection::use_key(srtp_profile_t profile,
         return;
     }
 
-    memcpy(c_key_tx, key_tx, key_tx_len);
-    memcpy(c_key_rx, key_rx, key_rx_len);
 
+    set_c_key_tx(key_tx, key_tx_len);
+    set_c_key_rx(key_rx, key_rx_len);
     srtp_profile = profile;
+}
+
+void AmSrtpConnection::update_key(srtp_profile_t profile,
+                                  const unsigned char* key_tx, size_t key_tx_len,
+                                  const unsigned char* key_rx, size_t key_rx_len)
+{
+    if(srtp_tx_session == nullptr || srtp_rx_session == nullptr)
+        return;
+
+    if(is_valid_keys(profile, key_tx, key_tx_len, key_rx, key_rx_len) < 0)
+        return;
+
+    if (srtp_profile != profile)
+        srtp_profile = profile;
+
+    if (c_key_tx_len != key_tx_len || memcmp(c_key_tx, key_tx, key_tx_len) != 0)
+    {
+        CLASS_DBG("update c_key_tx");
+        set_c_key_tx(key_tx, key_tx_len);
+
+        if(tx_context_initialized) {
+            srtp_policy_t policy;
+            memset(&policy, 0, sizeof(policy));
+            srtp::crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
+            srtp::crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
+            policy.window_size = 128;
+            policy.num_master_keys = 1;
+            policy.key = c_key_tx;
+            policy.ssrc.value = transport->getRtpStream()->get_ssrc();
+            policy.ssrc.type = ssrc_any_outbound;
+            int ret = srtp_err_status_ok;
+            if((ret = srtp_update_stream(srtp_tx_session, &policy)) != srtp_err_status_ok) {
+                ERROR("srtp_update_stream error %d", ret);
+            }
+        }
+    }
+
+    if (c_key_rx_len != key_rx_len || memcmp(c_key_rx, key_rx, key_rx_len) != 0)
+    {
+        CLASS_DBG("update c_key_rx");
+        set_c_key_rx(key_rx, key_rx_len);
+
+        if(rx_context_initialized) {
+            srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
+            srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
+            rx_policy.key = c_key_rx;
+            int ret = srtp_err_status_ok;
+            if((ret = srtp_update_stream(srtp_rx_session, &rx_policy)) != srtp_err_status_ok) {
+                ERROR("srtp_update_stream error %d", ret);
+            }
+        }
+    }
+}
+
+int AmSrtpConnection::is_valid_keys(srtp_profile_t profile,
+                                    const unsigned char* key_tx, size_t key_tx_len,
+                                    const unsigned char* key_rx, size_t key_rx_len)
+{
+    unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
+    master_key_len += srtp::profile_get_master_salt_length(profile);
+
+    if(master_key_len != key_tx_len || master_key_len != key_rx_len) {
+        char error[100];
+        sprintf(error, "srtp key are not correct. another size: needed %u in fact local-%lu, remote-%lu",
+                                master_key_len, key_tx_len, key_rx_len);
+        transport->getRtpStream()->onErrorRtpTransport(SRTP_KEY_ERROR, error, transport);
+        return -1;
+    }
+
+    return 0;
+}
+
+void AmSrtpConnection::set_c_key_tx(const unsigned char* key, size_t key_len) {
+    memset(c_key_tx, 0, sizeof c_key_tx);
+    memcpy(c_key_tx, key, key_len);
+    c_key_tx_len = key_len;
+}
+
+void AmSrtpConnection::set_c_key_rx(const unsigned char* key, size_t key_len) {
+    memset(c_key_rx, 0, sizeof c_key_rx);
+    memcpy(c_key_rx, key, key_len);
+    c_key_rx_len = key_len;
 }
 
 void AmSrtpConnection::base64_key(const std::string& key,
