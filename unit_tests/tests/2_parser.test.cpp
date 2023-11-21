@@ -595,6 +595,58 @@ TEST(SipParser, OverloadResponceCodeTest)
     msg.release();
 }
 
+// rfc4475 3.3.1
+TEST(SipParser, MissingRequiredTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
+                  "CSeq: 193942 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.95;branch=z9hG4bKkdj.insuf\r\n"
+                  "Content-Type: application/sdp\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), INCOMPLETE_SIP_MSG);
+    msg.release();
+}
+
+// rfc4475 3.3.2-4
+TEST(SipParser, UnknownSchemeTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS nobodyKnowsThisScheme:totallyopaquecontent SIP/2.0\r\n"
+                  "To: sip:user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=384\r\n"
+                  "Max-Forwards: 3\r\n"
+                  "Call-ID: unkscm.nasdfasser0q239nwsdfasdkl34\r\n"
+                  "CSeq: 3923423 OPTIONS\r\n"
+                  "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.3.8-9
+TEST(SipParser, MultiplyValuesTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:example.com SIP/2.0\r\n"
+                  "To: sip:user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=384\r\n"
+                  "Max-Forwards: 3\r\n"
+                  "Call-ID: multi01.98asdh@192.0.2.1\r\n"
+                  "CSeq: 59 OPTIONS\r\n"
+                  "Call-ID: multi01.98asdh@192.0.2.2\r\n"
+                  "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
 TEST(HttpParser, Parsing)
 {
     sip_msg msg;
