@@ -368,6 +368,233 @@ TEST(SipParser, EmptyReasonTest)
     msg.release();
 }
 
+// rfc4475 3.1.2.2
+TEST(SipParser, ContentLargerTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
+                  "Max-Forwards: 80\r\n"
+                  "To: sip:j.user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=93942939o2\r\n"
+                  "Contact: <sip:caller@hungry.example.net>\r\n"
+                  "Call-ID: clerr.0ha0isndaksdjweiafasdk3\r\n"
+                  "CSeq: 8 INVITE\r\n"
+                  "Via: SIP/2.0/UDP host5.example.com;branch=z9hG4bK-39234-23523\r\n"
+                  "Content-Type: application/sdp\r\n"
+                  "Content-Length: 9999\r\n"
+                  "\r\n"
+                  "v=0\r\n"
+                  "o=mhandley 29739 7272939 IN IP4 192.0.2.155\r\n"
+                  "s=-\r\n"
+                  "c=IN IP4 192.0.2.155\r\n"
+                  "t=0 0\r\n"
+                  "m=audio 49217 RTP/AVP 0 12\r\n"
+                  "m=video 3227 RTP/AVP 31\r\n"
+                  "a=rtpmap:31 LPC";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
+// rfc4475 3.1.2.3
+TEST(SipParser, ContentNegativeTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
+                  "Max-Forwards: 254\r\n"
+                  "To: sip:j.user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=32394234\r\n"
+                  "Call-ID: ncl.0ha0isndaksdj2193423r542w35\r\n"
+                  "CSeq: 0 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.53;branch=z9hG4bKkdjuw\r\n"
+                  "Contact: <sip:caller@example53.example.net>\r\n"
+                  "Content-Type: application/sdp\r\n"
+                  "Content-Length: -999\r\n"
+                  "\r\n"
+                  "v=0\r\n"
+                  "o=mhandley 29739 7272939 IN IP4 192.0.2.53\r\n"
+                  "s=-\r\n"
+                  "c=IN IP4 192.0.2.53\r\n"
+                  "t=0 0\r\n"
+                  "m=audio 49217 RTP/AVP 0 12\r\n"
+                  "m=video 3227 RTP/AVP 31\r\n"
+                  "a=rtpmap:31 LPC";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
+// rfc4475 3.1.2.4-5
+TEST(SipParser, ScalarTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 36893488147419103232 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 300\r\n"
+                  "Expires: 1000000000\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
+// rfc4475 3.1.2.7
+TEST(SipParser, EnclosingTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE <sip:user@example.com> SIP/2.0\r\n"
+                  "To: sip:user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=39291\r\n"
+                  "Max-Forwards: 23\r\n"
+                  "Call-ID: ltgtruri.1@192.0.2.5\r\n"
+                  "CSeq: 1 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.5\r\n"
+                  "Contact: <sip:caller@host5.example.net>\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.8
+TEST(SipParser, EmbeddedLwsTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE sip:user@example.com; lr SIP/2.0\r\n"
+                  "To: sip:user@example.com;tag=3xfe-9921883-z9f\r\n"
+                  "From: sip:caller@example.net;tag=231413434\r\n"
+                  "Max-Forwards: 5\r\n"
+                  "Call-ID: lwsruri.asdfasdoeoi2323-asdfwrn23-asd834rk423\r\n"
+                  "CSeq: 2130706432 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bKkdjuw2395\r\n"
+                  "Contact: <sip:caller@host1.example.net>\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.9
+TEST(SipParser, MultipleSPTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE  sip:user@example.com  SIP/2.0\r\n"
+                  "To: sip:user@example.com;tag=3xfe-9921883-z9f\r\n"
+                  "From: sip:caller@example.net;tag=231413434\r\n"
+                  "Max-Forwards: 5\r\n"
+                  "Call-ID: lwsruri.asdfasdoeoi2323-asdfwrn23-asd834rk423\r\n"
+                  "CSeq: 2130706432 INVITE\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bKkdjuw2395\r\n"
+                  "Contact: <sip:caller@host1.example.net>\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.10
+TEST(SipParser, SPCharactersTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:remote-target@example.com SIP/2.0  \r\n"
+                  "Via: SIP/2.0/TCP host1.example.com;branch=z9hG4bK299342093\r\n"
+                  "To: <sip:remote-target@example.com>\r\n"
+                  "From: <sip:local-resource@example.com>;tag=329429089\r\n"
+                  "Call-ID: trws.oicu34958239neffasdhr2345r\r\n"
+                  "Accept: application/sdp\r\n"
+                  "CSeq: 238923 OPTIONS\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.11
+TEST(SipParser, EscapedHeadersTest)
+{
+    sip_msg msg;
+    char data[] = "INVITE sip:user@example.com?Route=%3Csip:example.com%3E SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host1.example.com;branch=z9hG4bK299342093\r\n"
+                  "To: <sip:remote-target@example.com>\r\n"
+                  "From: <sip:local-resource@example.com>;tag=329429089\r\n"
+                  "Call-ID: trws.oicu34958239neffasdhr2345r\r\n"
+                  "Accept: application/sdp\r\n"
+                  "CSeq: 238923 OPTIONS\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.16
+TEST(SipParser, UnknownProtocolVersionTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:t.watson@example.org SIP/7.0\r\n"
+                  "Via:     SIP/7.0/UDP c.example.com;branch=z9hG4bKkdjuw\r\n"
+                  "Max-Forwards:     70\r\n"
+                  "From:    A. Bell <sip:a.g.bell@example.com>;tag=qweoiqpe\r\n"
+                  "To:      T. Watson <sip:t.watson@example.org>\r\n"
+                  "Call-ID: badvers.31417@c.example.com\r\n"
+                  "CSeq:    1 OPTIONS\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
+// rfc4475 3.1.2.17-18
+TEST(SipParser, MethodsMismatchTest)
+{
+    sip_msg msg;
+    char data[] = "OPTIONS sip:user@example.com SIP/2.0\r\n"
+                  "To: sip:j.user@example.com\r\n"
+                  "From: sip:caller@example.net;tag=34525\r\n"
+                  "Max-Forwards: 6\r\n"
+                  "Call-ID: mismatch01.dj0234sxdfl3\r\n"
+                  "CSeq: 8 INVITE\r\n"
+                  "Via: SIP/2.0/UDP host.example.com;branch=z9hG4bKkdjuw\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
+// rfc4475 3.1.2.19
+TEST(SipParser, OverloadResponceCodeTest)
+{
+    sip_msg msg;
+    char data[] = "SIP/2.0 4294967301 better not break the receiver\r\n"
+                  "Via: SIP/2.0/UDP 192.0.2.105;branch=z9hG4bK2398ndaoe\r\n"
+                  "Call-ID: bigcode.asdof3uj203asdnf3429uasdhfas3ehjasdfas9i\r\n"
+                  "CSeq: 353494 INVITE\r\n"
+                  "From: <sip:user@example.com>;tag=39ansfi3\r\n"
+                  "To: <sip:user@example.edu>;tag=902jndnke3\r\n"
+                  "Contact: <sip:user@host105.example.com>\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
+    msg.release();
+}
+
 TEST(HttpParser, Parsing)
 {
     sip_msg msg;
@@ -410,6 +637,61 @@ TEST(Parser, WithoutSpaceTest)
     const char* url = uri.c_str();
     ASSERT_EQ(parse_nameaddr_uri(&sipuri, &url, uri.size()), EXIT_SUCCESS);
     ASSERT_EQ(strncmp(sipuri.name.s, "caller", sipuri.name.len), 0);
+}
+
+// rfc4475 3.1.2.1
+TEST(Parser, SeparatorTest)
+{
+    sip_via sipvia;
+    string via = "SIP/2.0/UDP 192.0.2.15;;,;,,";
+    const char* via_ = via.c_str();
+    ASSERT_EQ(parse_via(&sipvia, via_, via.size()), MALFORMED_SIP_MSG);
+}
+
+// rfc4475 3.1.2.6
+TEST(Parser, UnterminatedQuotedTest)
+{
+    sip_nameaddr p;
+    string name_addr_str =
+        "\"Mr J. User <sip:j.user@example.com> <sip:realj@example.net>";
+
+    const char* s = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
+}
+
+// rfc4475 3.1.2.13
+//TODO: can we use escaping?
+TEST(Parser, EscapingEncloseNameaddrTest)
+{
+    sip_nameaddr p;
+    string name_addr_str =
+        "sip:user@example.com?Route=%3Csip:sip.example.com%3E";
+
+    const char* s = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
+}
+
+// rfc4475 3.1.2.14
+TEST(Parser, SpacesAddrSpecTest)
+{
+    sip_nameaddr p;
+    string name_addr_str =
+        "\"Watson, Thomas\" < sip:t.watson@example.org >";
+
+    const char* s = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
+}
+
+// rfc4475 3.1.2.15
+//TODO: can we use spaces in display_name without quotes?
+TEST(Parser, NonTokenTest)
+{
+    sip_nameaddr p;
+    string name_addr_str =
+        "Bell, Alexander <sip:a.g.bell@example.com>;tag=43";
+
+    const char* s = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
 }
 
 TEST(Parser, parse_nameaddr_uri)
