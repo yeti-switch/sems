@@ -104,16 +104,26 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
   bool invite = (req.method == SIP_METH_INVITE);
   if(invite || (req.method == SIP_METH_UPDATE)) {
     bool pending = invite ? pending_invites : false;
-
-    if (offeranswer_enabled) {
+    //TODO: UPDATE with sdp is ignored and responded 500
+    //      alternative those is a:
+    //      bool internal_error = false;
+    bool internal_error = invite ? false : req.body.isContentType(SIP_APPLICATION_SDP);
+    bool offeranswer_check = invite ? true : req.body.isContentType(SIP_APPLICATION_SDP);
+    if (offeranswer_enabled && offeranswer_check) {
       // not sure this is needed here: could be in AmOfferAnswer as well
-      pending |= ((oa.getState() != AmOfferAnswer::OA_None) &&
-                  (oa.getState() != AmOfferAnswer::OA_Completed));
+      pending |= ((oa.getState() == AmOfferAnswer::OA_OfferSent));
+      internal_error |= (oa.getState() == AmOfferAnswer::OA_OfferRecved);
     }
 
     if(pending) {
       reply_error(
         req, 491, SIP_REPLY_PENDING,
+        SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
+        + int2str(get_random() % 10) + CRLF, logger);
+      return false;
+    } else if(internal_error) {
+      reply_error(
+        req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR,
         SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
         + int2str(get_random() % 10) + CRLF, logger);
       return false;
