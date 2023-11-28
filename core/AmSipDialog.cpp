@@ -62,6 +62,7 @@ static void addTranscoderStats(string &hdrs)
 AmSipDialog::AmSipDialog(AmSipDialogEventHandler* h)
   : AmBasicSipDialog(h),
     pending_invites(0),
+    pending_update(0),
     cancel_pending(false),
     cancel_final(false),
     sdp_local(),
@@ -103,9 +104,11 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
 
   bool invite = (req.method == SIP_METH_INVITE);
   if(invite || (req.method == SIP_METH_UPDATE)) {
-    bool pending = invite ? pending_invites : false;
+    DBG("AmSipDialog::onRxReqSanity: %s, pending %d", invite ? "INVITE" : "UPDATE",
+                                                      invite ? pending_invites : pending_update);
+    bool pending = invite ? pending_invites : pending_update;
     //TODO: UPDATE with sdp is ignored and responded 500
-    //      alternative those is a:
+    //      alternative to this:
     //      bool internal_error = false;
     bool internal_error = invite ? false : req.body.isContentType(SIP_APPLICATION_SDP);
     bool offeranswer_check = invite ? true : req.body.isContentType(SIP_APPLICATION_SDP);
@@ -131,6 +134,8 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
 
     if(invite)
       pending_invites++;
+    else
+      pending_update++;
   }
 
   return rel100.onRequestIn(req);
@@ -352,7 +357,9 @@ void AmSipDialog::onReplyTxed(const AmSipRequest& req, const AmSipReply& reply)
 
   if (reply.code >= 200) {
     if(reply.cseq_method == SIP_METH_INVITE)
-	pending_invites--;
+      pending_invites--;
+    if(reply.cseq_method == SIP_METH_UPDATE)
+      pending_update--;
   }
 }
 

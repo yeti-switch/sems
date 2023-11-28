@@ -43,8 +43,9 @@ class AmSipDialog
   : public AmBasicSipDialog
 {
 protected:
-  // Number of open UAS INVITE transactions
+  // Number of open UAS INVITE(UPDATE) transactions
   unsigned int pending_invites;
+  unsigned int pending_update;
 
   // In case a CANCEL should have been sent
   // while in 'Trying' state
