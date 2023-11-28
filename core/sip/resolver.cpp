@@ -1208,11 +1208,11 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
 {
     u_char dns_res[DNS_REPLY_BUFFER_SIZE];
 
-    stat_queries_total.inc();
-
     if(!name) return -1;
 
     DBG("Querying '%s' (%s)...",name,dns_rr_type_str(rr_type, addr_type));
+
+    stat_queries_total.inc();
 
     int dns_res_len = res_search(
         name,ns_c_in,dns_rr_type_tons_type(rr_type, addr_type),
@@ -1311,16 +1311,15 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
 {
     int ret;
 
-    stat_requests_total.inc();
-
     // already have a valid handle?
     if(h->valid()) {
         if(h->eoip()) {
-            stat_requests_failed.inc();
             return -1;
         }
         ret = h->next_ip(sa, priority);
     }
+
+    stat_requests_total.inc();
 
     if(rr_type == dns_r_ip) {
         // first try to detect if 'name' is already an IP address
