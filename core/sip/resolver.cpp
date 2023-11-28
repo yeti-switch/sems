@@ -1317,6 +1317,21 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
             return -1;
         }
         ret = h->next_ip(sa, priority);
+        if(ret > 0) {
+            switch(priority) {
+            case IPv4_only:
+                if(sa->ss_family == AF_INET) return ret;
+                break;
+            case IPv6_only:
+                if(sa->ss_family == AF_INET6) return ret;
+                break;
+            default:
+                return ret;
+            }
+            DBG("no entries for given priority: %s", dns_priority_str(priority));
+            return -1;
+        }
+        return ret;
     }
 
     stat_requests_total.inc();
