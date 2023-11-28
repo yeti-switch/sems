@@ -644,7 +644,7 @@ dns_base_entry* dns_srv_entry::get_rr(dns_record* rr, u_char* begin, u_char* end
         NS_MAXDNAME))/* Size of result buffer */
         < 0)         /* Negative: error       */
     {
-        DBG("dns_expand_name failed: %d", ret);
+        ERROR("dns_expand_name failed: %d", ret);
         return nullptr;
     }
 

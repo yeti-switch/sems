@@ -55,14 +55,23 @@ int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)
     u_char* p = begin + HEADER_OFFSET;
     u_char* end = msg + len;
 
-    if(p >= end) return -1;
+    if(p >= end) {
+        ERROR("buffer is too small");
+        return -1;
+    }
 
     // skip query section
     for(int i=0; i<dns_msg_count(begin,dns_s_qd); i++){
         // query name
-        if(dns_skip_name(&p,end) < 0) return -1;
+        if(dns_skip_name(&p,end) < 0) {
+            ERROR("error on question section names skipping");
+            return -1;
+        }
         // skip query type+class
-        if((p += 4) > end) return -1;
+        if((p += 4) > end) {
+            ERROR("buffer is too small on question section skipping");
+            return -1;
+        }
     }
 
     dns_record rr;
@@ -79,12 +88,15 @@ int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)
                 &p, begin, end,
                 (u_char*)rr.name, NS_MAXDNAME)) < 0)
             {
-                DBG("dns_expand_name failed: %d", ret);
+                ERROR("dns_expand_name failed at %d:%d: %d", s, i, ret);
                 return -1;
             }
 
             // at least 8 bytes for type+class+ttl left?
-            if((p + 8) > end) return -1;
+            if((p + 8) > end) {
+                ERROR("buffer is too small at %d:%d type+class+ttl parsing", s, i);
+                return -1;
+            }
 
             rr.type = dns_get_16(p);
             p += 2;
@@ -96,19 +108,26 @@ int dns_msg_parse(u_char* msg, int len, dns_parse_fct fct, void* data)
             p+= 4;
 
             // fetch rdata len
-            if(p+2 > end) return -1;
+            if(p+2 > end) {
+                ERROR("buffer is too small at %d:%d rdata.len parsing", s, i);
+                return -1;
+            }
 
             rr.rdata_len = *(p++) << 8;
             rr.rdata_len |= *(p++);
             rr.rdata = p;
 
             // skip rdata
-            if((p += rr.rdata_len) > end)
+            if((p += rr.rdata_len) > end) {
+                ERROR("buffer is too small at %d:%d rdata.len checking", s, i);
                 return -1;
+            }
 
             // call provided function
-            if(fct && (*fct)(&rr,(dns_section_type)s,begin,end,data))
+            if(fct && (*fct)(&rr,(dns_section_type)s,begin,end,data)) {
+                ERROR("functor error at %d:%d parsing", s, i);
                 return -1;
+            }
         } //loop over section's entries
     } //loop over sections
 
