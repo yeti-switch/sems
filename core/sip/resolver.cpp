@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -38,14 +38,15 @@
 #include "wheeltimer.h"
 
 #include "AmUtils.h"
+#include "AmStatistics.h"
 
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
 #include <assert.h>
 #include <resolv.h>
 #include <arpa/inet.h>
-#include <arpa/nameser.h> 
+#include <arpa/nameser.h>
 
 #include <list>
 #include <utility>
@@ -457,8 +458,8 @@ string dns_entry::to_str()
     return "[" + res + "]";
 }
 
-dns_bucket::dns_bucket(unsigned long id) 
-  : dns_bucket_base(id) 
+dns_bucket::dns_bucket(unsigned long id)
+  : dns_bucket_base(id)
 {}
 
 dns_bucket::~dns_bucket()
@@ -526,29 +527,6 @@ dns_entry* dns_bucket::find(const string& name)
     inc_ref(e);
     unlock();
     return e;
-}
-
-static void dns_error(int error, const char* domain, dns_rr_type type)
-{
-    switch(error) {
-        case HOST_NOT_FOUND:
-          DBG("%s/%d: Unknown domain", domain, type);
-          break;
-        case NO_DATA:
-          DBG("%s/%d: No records", domain, type);
-          break;
-        case TRY_AGAIN:
-          DBG("%s/%d: No response for query (try again)",domain, type);
-          break;
-        case NO_RECOVERY:
-          ERROR("%s/%d: Non recoverable error (FORMERR, REFUSED, NOTIMP)",
-              domain, type);
-          break;
-        default:
-          ERROR("%s/%d: Unexpected error. res_search returned: %d",
-                domain,type,error);
-          break;
-    }
 }
 
 bool ip_entry::operator == (const ip_entry& entry)
@@ -822,7 +800,7 @@ int rr_to_dns_entry(dns_record* rr, dns_section_type t,
     return 0;
 }
 
-dns_handle::dns_handle() 
+dns_handle::dns_handle()
   : srv_e(nullptr), srv_n(0),
     ip_e(nullptr), ip_n(0)
 {}
@@ -832,21 +810,21 @@ dns_handle::dns_handle(const dns_handle& h)
     *this = h;
 }
 
-dns_handle::~dns_handle() 
-{ 
-    if(ip_e) 
+dns_handle::~dns_handle()
+{
+    if(ip_e)
         dec_ref(ip_e);
-    if(srv_e) 
+    if(srv_e)
         dec_ref(srv_e);
 }
 
-bool dns_handle::valid() 
-{ 
+bool dns_handle::valid()
+{
     return (ip_e);
 }
 
-bool dns_handle::eoip()  
-{ 
+bool dns_handle::eoip()
+{
     if(srv_e)
         return (srv_n == -1) && (ip_n == -1);
     else
@@ -1178,15 +1156,47 @@ bool _resolver::disable_srv = false;
 
 _resolver::_resolver()
     : cache(DNS_CACHE_SIZE),
-      b_stop(false)
-{}
+      b_stop(false),
+      stat_requests_total(stat_group(Counter, "resolver", "requests_total")
+        .addAtomicCounter()),
+      stat_requests_cached(stat_group(Counter, "resolver", "requests_cached")
+        .addAtomicCounter()),
+      stat_requests_failed(stat_group(Counter, "resolver", "requests_failed")
+        .addAtomicCounter()),
+      stat_queries_total(stat_group(Counter, "resolver", "queries_total")
+        .addAtomicCounter()),
+      stat_queries_parsing_errors(stat_group(Counter, "resolver", "queries_parsing_errors")
+        .addAtomicCounter()),
+      stat_queries_search_errors_host_not_found(stat_group(Counter, "resolver", "queries_search_errors")
+        .addAtomicCounter()
+        .addLabel("reason", "host_not_found")),
+      stat_queries_search_errors_no_data(stat_group(Counter, "resolver", "queries_search_errors")
+        .addAtomicCounter()
+        .addLabel("reason", "no_data")),
+      stat_queries_search_errors_try_again(stat_group(Counter, "resolver", "queries_search_errors")
+        .addAtomicCounter()
+        .addLabel("reason", "try_again")),
+      stat_queries_search_errors_recovery(stat_group(Counter, "resolver", "queries_search_errors")
+        .addAtomicCounter()
+        .addLabel("reason", "recovery")),
+      stat_queries_search_errors_unknown(stat_group(Counter, "resolver", "queries_search_errors")
+        .addAtomicCounter()
+        .addLabel("reason", "unknown"))
+{
+    stat_group(Counter, "resolver", "requests_total").setHelp("resolving attempts total");
+    stat_group(Counter, "resolver", "requests_cached").setHelp("resolving attempts processed by the cache");
+    stat_group(Counter, "resolver", "requests_failed").setHelp("resolving attempts failed");
+    stat_group(Counter, "resolver", "queries_total").setHelp("DNS queries");
+    stat_group(Counter, "resolver", "queries_parsing_errors").setHelp("DNS replies parsing errors");
+    stat_group(Counter, "resolver", "queries_search_errors").setHelp("DNS search errors");
+}
 
 _resolver::~_resolver()
 {
     cache.cleanup();
 }
 
-void _resolver::dispose() { 
+void _resolver::dispose() {
     stop(true);
 }
 
@@ -1202,12 +1212,38 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
 
     DBG("Querying '%s' (%s)...",name,dns_rr_type_str(rr_type, addr_type));
 
+    stat_queries_total.inc();
+
     int dns_res_len = res_search(
         name,ns_c_in,dns_rr_type_tons_type(rr_type, addr_type),
         dns_res, DNS_REPLY_BUFFER_SIZE);
 
     if(dns_res_len < 0) {
-        dns_error(h_errno,name,rr_type);
+        switch(h_errno) {
+            case HOST_NOT_FOUND:
+              DBG("%s/%d: Unknown domain", name, rr_type);
+              stat_queries_search_errors_host_not_found.inc();
+              break;
+            case NO_DATA:
+              DBG("%s/%d: No records", name, rr_type);
+              stat_queries_search_errors_no_data.inc();
+              break;
+            case TRY_AGAIN:
+              DBG("%s/%d: No response for query (try again)", name, rr_type);
+              stat_queries_search_errors_try_again.inc();
+              break;
+            case NO_RECOVERY:
+              ERROR("%s/%d: Non recoverable error (FORMERR, REFUSED, NOTIMP)",
+                  name, rr_type);
+              stat_queries_search_errors_recovery.inc();
+              break;
+            default:
+              ERROR("%s/%d: Unexpected error. res_search returned: %d",
+                    name, rr_type, h_errno);
+              stat_queries_search_errors_unknown.inc();
+              break;
+        }
+
         return 0;
     }
 
@@ -1218,6 +1254,7 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
     dns_search_h h;
     if (dns_msg_parse(dns_res, dns_res_len, rr_to_dns_entry, &h) < 0) {
         DBG("Could not parse DNS reply");
+        stat_queries_parsing_errors.inc();
         return -1;
     }
 
@@ -1276,9 +1313,28 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
 
     // already have a valid handle?
     if(h->valid()) {
-        if(h->eoip()) return -1;
+        if(h->eoip()) {
+            return -1;
+        }
         ret = h->next_ip(sa, priority);
+        if(ret > 0) {
+            switch(priority) {
+            case IPv4_only:
+                if(sa->ss_family == AF_INET) return ret;
+                break;
+            case IPv6_only:
+                if(sa->ss_family == AF_INET6) return ret;
+                break;
+            default:
+                return ret;
+            }
+            DBG("no entries for given priority: %s", dns_priority_str(priority));
+            return -1;
+        }
+        return ret;
     }
+
+    stat_requests_total.inc();
 
     if(rr_type == dns_r_ip) {
         // first try to detect if 'name' is already an IP address
@@ -1289,6 +1345,8 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
             {
                 ERROR("Invalid argument, name %s is not compatible with priority type %s",
                       get_addr_str(sa).c_str(), dns_priority_str(priority));
+
+                stat_requests_failed.inc();
                 return -1;
             }
             h->ip_n = -1; // flag end of IP list
@@ -1299,7 +1357,10 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
 
     // name is NOT an IP address -> try a cache look up
     ret = resolve_name_cache(name, h, sa, priority, rr_type);
-    if(ret > 0) return ret;
+    if(ret > 0) {
+        stat_requests_cached.inc();
+        return ret;
+    }
 
     //query dns
     switch(rr_type) {
@@ -1309,6 +1370,7 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
         break;
     default:
         if(query_dns(name,rr_type, IPnone) < 0) {
+            stat_requests_failed.inc();
             return -1;
         }
     }
@@ -1318,6 +1380,7 @@ int _resolver::resolve_name(const char* name, dns_handle* h, sockaddr_storage* s
         return ret;
     }
 
+    stat_requests_failed.inc();
     return -1;
 }
 
@@ -1636,7 +1699,7 @@ void _resolver::run()
 
         if(++i >= cache.get_size()) i = 0;
     }
-    
+
     DBG("resolver thread finished");
 }
 

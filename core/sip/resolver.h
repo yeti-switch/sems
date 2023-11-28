@@ -350,6 +350,17 @@ protected:
 private:
     dns_cache cache;
     AmCondition<bool> b_stop;
+
+    AtomicCounter &stat_requests_total;
+    AtomicCounter &stat_requests_cached;
+    AtomicCounter &stat_requests_failed;
+    AtomicCounter &stat_queries_total;
+    AtomicCounter &stat_queries_parsing_errors;
+    AtomicCounter &stat_queries_search_errors_host_not_found;
+    AtomicCounter &stat_queries_search_errors_no_data;
+    AtomicCounter &stat_queries_search_errors_try_again;
+    AtomicCounter &stat_queries_search_errors_recovery;
+    AtomicCounter &stat_queries_search_errors_unknown;
 };
 
 typedef singleton<_resolver> resolver;
