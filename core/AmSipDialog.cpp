@@ -106,12 +106,16 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
         DBG("AmSipDialog::onRxReqSanity: %s, pending %d",
             invite ? "INVITE" : "UPDATE",
             invite ? pending_invites : pending_updates);
+
         bool pending = invite ? pending_invites : pending_updates;
+
         //TODO: UPDATE with sdp is ignored and responded 500
         //      alternative to this:
         //      bool internal_error = false;
-        bool internal_error = invite ? false : req.body.isContentType(SIP_APPLICATION_SDP);
-        bool offeranswer_check = invite ? true : req.body.isContentType(SIP_APPLICATION_SDP);
+        bool has_sdp = (req.body.hasContentType(SIP_APPLICATION_SDP) != nullptr);
+        bool internal_error = invite ? false : has_sdp;
+        bool offeranswer_check = invite ? true : has_sdp;
+
         if (offeranswer_enabled && offeranswer_check) {
             // not sure this is needed here: could be in AmOfferAnswer as well
             pending |= ((oa.getState() == AmOfferAnswer::OA_OfferSent));
