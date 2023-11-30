@@ -163,7 +163,7 @@ void AmSessionProcessorThread::run()
 {
     setThreadName("session-proc");
 
-    event_stats.addLabel("thread",long2str(_self_tid));
+    event_stats.addLabel("thread",int2str(gettid()));
 
     stop_requested = false;
     while(true) {
