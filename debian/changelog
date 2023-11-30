@@ -1,3 +1,12 @@
+sems (1.125.0) stable; urgency=low
+  [ Michael Furmur ]
+  * fix SRTP media relay after the hold/unhold with a key change
+  * fix UPDATE request handling in the early dialog
+  * fix trsp_worker,udp_trsp memory issues on termination
+  * add prometheus counters for DNS resolver errors
+  * use gettid() for sems_core_session_processor_events_* metrics thread label
+ -- Michael Furmur <furmur@pm.me>  Fri, 01 Dec 2023 00:36:16 +0200
+
 sems (1.124.0) stable; urgency=low
   * trans_layer: set transport_id for locally generated error replies
  -- Michael Furmur <furmur@pm.me>  Mon, 06 Nov 2023 15:00:56 +0200
