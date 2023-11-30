@@ -28,14 +28,7 @@
 #include "AmSipDialog.h"
 #include "AmSession.h"
 #include "AmUtils.h"
-#include "AmSipHeaders.h"
 #include "SipCtrlInterface.h"
-#include "sems.h"
-
-#include "sip/parse_route.h"
-#include "sip/parse_uri.h"
-#include "sip/parse_next_hop.h"
-
 #include "AmB2BMedia.h" // just because of statistics
 
 static void addTranscoderStats(string &hdrs)
@@ -101,41 +94,43 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
     if (!AmBasicSipDialog::onRxReqSanity(req))
         return false;
 
+    //INVITE: https://www.rfc-editor.org/rfc/rfc3261.html#section-14.2
+    //UPDATE: https://www.rfc-editor.org/rfc/rfc3311#section-5.2
     bool invite = (req.method == SIP_METH_INVITE);
     if (invite || (req.method == SIP_METH_UPDATE)) {
-        DBG("AmSipDialog::onRxReqSanity: %s, pending %d",
-            invite ? "INVITE" : "UPDATE",
-            invite ? pending_invites : pending_updates);
 
         bool pending = invite ? pending_invites : pending_updates;
 
-        //TODO: UPDATE with sdp is ignored and responded 500
-        //      alternative to this:
-        //      bool internal_error = false;
-        bool has_sdp = (req.body.hasContentType(SIP_APPLICATION_SDP) != nullptr);
-        bool internal_error = invite ? false : has_sdp;
-        bool offeranswer_check = invite ? true : has_sdp;
+        DBG("AmSipDialog::onRxReqSanity: %s, pending %d",
+            invite ? "INVITE" : "UPDATE", pending);
 
-        if (offeranswer_enabled && offeranswer_check) {
-            // not sure this is needed here: could be in AmOfferAnswer as well
-            pending |= ((oa.getState() == AmOfferAnswer::OA_OfferSent));
-            internal_error |= (oa.getState() == AmOfferAnswer::OA_OfferRecved);
-        }
-
-        if (pending) {
+        //check for pending UAS transactions
+        if(pending) {
             reply_error(
                 req, 491, SIP_REPLY_PENDING,
                 SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
                     + int2str(get_random() % 10) + CRLF,
                 logger);
             return false;
-        } else if (internal_error) {
-            reply_error(
-                req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR,
-                SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
-                    + int2str(get_random() % 10) + CRLF,
-                logger);
-            return false;
+        }
+
+        //check for OA state
+        bool has_sdp = (req.body.hasContentType(SIP_APPLICATION_SDP) != nullptr);
+        if (offeranswer_enabled &&
+            (invite || has_sdp)) //skip OA checking for UPDATE without SDP
+        {
+            // not sure this is needed here: could be in AmOfferAnswer as well
+            switch (oa.getState()) {
+            case AmOfferAnswer::OA_OfferSent:
+            case AmOfferAnswer::OA_OfferRecved:
+                reply_error(
+                    req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR,
+                    SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
+                        + int2str(get_random() % 10) + CRLF,
+                    logger);
+                return false;
+            default: break;
+            }
         }
 
         if (invite)
