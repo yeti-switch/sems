@@ -37,44 +37,39 @@ int DestinationAction::parse(const string &default_action, cfg_t* cfg)
     return 0;
 }
 
-int DestinationAction::perform(const string &file_path, const string &file_basename) const
+void DestinationAction::perform() const
 {
     switch(action){
     case Nothing: break;
     case Remove:
-        if(file_path.empty()) break;
+        if(file_path.empty() || !file_exists(file_path)) break;
         CDBG("remove '%s' after upload or min_file_size condition",file_path.c_str());
         if(0!=std::remove(file_path.c_str())){
             ERROR("can't remove '%s': %d",file_path.c_str(),errno);
         }
         break;
     case Move: {
-        if(file_path.empty()) break;
+        if(file_path.empty() || !file_exists(file_path)) break;
         string destination_path = action_data + "/" + file_basename;
         CDBG("move  '%s'->'%s' after upload or min_file_size condition",file_path.c_str(),destination_path.c_str());
         if(0!=std::rename(file_path.c_str(),destination_path.c_str())){
             ERROR("can't move '%s'->'%s': %d",file_path.c_str(),destination_path.c_str(),errno);
         }
     } break;
-    case Requeue:
-        return 1;
     default:
         break;
     }
-    return 0;
 }
 
-int DestinationAction::perform() const
+void DestinationAction::set_path(const std::string& path)
 {
-    switch(action){
-    case Requeue:
-        return 1;
-        break;
-    default:
-        break;
-    }
-    return 0;
+    if(path.empty()) return;
+    file_basename = filename_from_fullpath(path);
+    if(file_basename.empty())
+        file_basename = path;
+    file_path = path;
 }
+
 
 DestinationAction::HttpAction DestinationAction::str2Action(const string& action)
 {
@@ -302,12 +297,28 @@ void HttpDestination::dump(const string &key) const
             url_list += ",";
         url_list += url_;
     }
-    DBG("destination %s: %s %s, source_address = %s, post_upload = %s %s, failed_upload = %s %s",
+    string source_addr;
+    if(!source_address.empty()) {
+        source_addr = ", source_address = ";
+        source_addr += source_address;
+    }
+    string post_upload = ", post_upload = ";
+    if(!succ_action.str().empty()) {
+        post_upload += succ_action.str() + " " + succ_action.data();
+    } else if(!finish_action.str().empty()){
+        post_upload += finish_action.str() + " " + finish_action.data();
+    }
+    string failed_upload;
+    if(!fail_action.str().empty()) {
+        failed_upload = ", failed_upload = ";
+        failed_upload += fail_action.str() + " " + fail_action.data();
+    }
+    DBG("destination %s: %s %s%s%s%s",
         key.c_str(),
         mode_str.c_str(),url_list.c_str(),
-        source_address.c_str(),
-        succ_action.str().c_str(), succ_action.data().c_str(),
-        fail_action.str().c_str(), fail_action.data().c_str());
+        source_addr.c_str(),
+        post_upload.c_str(),
+        failed_upload.c_str());
 }
 
 void HttpDestination::dump(const string &, AmArg &ret) const
@@ -318,8 +329,8 @@ void HttpDestination::dump(const string &, AmArg &ret) const
             url_list += ",";
         url_list += url_;
     }
-    ret["url"] = url_list;
     ret["mode"] = mode_str.c_str();
+    ret["url"] = url_list;
     ret["source_address"] = source_address.c_str();
     ret["succ_action"] = succ_action.str();
     if(succ_action.has_data()){
@@ -425,32 +436,6 @@ void HttpDestination::showStats(AmArg& ret)
     ret["requests_failed"] = static_cast<unsigned long>(requests_failed.get());
 }
 
-int HttpDestination::post_upload(const string &file_path, const string &file_basename, bool failed) const
-{
-    int requeue = 0;
-
-    if(!failed) {
-        succ_action.perform(file_path,file_basename);
-    } else {
-        requeue = fail_action.perform(file_path,file_basename);
-    }
-
-    return requeue;
-}
-
-int HttpDestination::post_upload(bool failed) const
-{
-    int requeue = 0;
-
-    if(!failed) {
-        succ_action.perform();
-    } else {
-        requeue = fail_action.perform();
-    }
-
-    return requeue;
-}
-
 int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
     HttpDestination d(name);
@@ -475,7 +460,6 @@ int HttpDestinationsMap::configure(cfg_t * cfg, const DefaultValues& values)
             return -1;
         }
     }
-
     return 0;
 }
 

@@ -9,22 +9,21 @@
 
 class HttpGetConnection: public CurlConnection
 {
-  HttpDestination &destination;
-  HttpGetEvent event;
-  int response_code;
   struct curl_slist *headers;
   string response;
-  string mime_type;
+protected:
+  bool on_failed();
+  char* get_name();
+  void post_response_event();
+  const char* get_response_data();
 public:
-  HttpGetConnection(const HttpGetEvent &u, HttpDestination &destination, int epoll_fd);
+  HttpGetConnection(HttpDestination &destination,
+                    const HttpGetEvent &u,
+                    const string& connection_id,
+                    int epoll_fd);
   ~HttpGetConnection();
 
   int init(struct curl_slist* hosts, CURLM *curl_multi);
-
-  int on_finished();
-  void on_requeue();
-
-  void post_response_event();
 
   size_t write_func(void *ptr, size_t size, size_t nmemb, void *);
 };

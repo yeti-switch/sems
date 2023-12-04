@@ -21,11 +21,11 @@ public:
         Move,
         Requeue
     };
-    DestinationAction(): need_data(false) {}
+    DestinationAction(): action(Unknown), need_data(false) {}
 
     int parse(const string &default_action, cfg_t* cfg);
-    int perform(const string &file_path, const string &file_basename) const;
-    int perform() const;
+    void perform() const;
+    void set_path(const string& path);
 
     bool requeue() const { return action==Requeue; }
     bool has_data() const { return need_data; }
@@ -37,6 +37,8 @@ private:
     HttpAction action;
     string action_str;
     string action_data;
+    string file_path;
+    string file_basename;
     bool need_data;
 };
 
@@ -64,6 +66,7 @@ struct HttpDestination {
     HttpCodesMap succ_codes;
     DestinationAction succ_action;
     DestinationAction fail_action;
+    DestinationAction finish_action;
 
     string content_type;
 
@@ -119,6 +122,7 @@ class HttpDestinationsMap
   : public std::map<string,HttpDestination>
 {
     int configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values);
+    int configure_destination_group(const string &name, cfg_t *cfg);
   public:
 
     int configure(cfg_t *cfg, const DefaultValues& values);
