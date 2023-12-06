@@ -6,9 +6,9 @@
 #include "AmArgValidator.h"
 
 #include <botan/data_src.h>
-#include <botan/auto_rng.h>
 #include <botan/x509cert.h>
 #include <botan/uuid.h>
+#include <botan/system_rng.h>
 
 static const char *jwt_field_tn = "tn";
 static const char *jwt_field_uri = "uri";
@@ -278,7 +278,8 @@ time_t AmIdentity::get_created()
 
 std::string AmIdentity::generate(Botan::Private_Key* key)
 {
-    Botan::AutoSeeded_RNG rng;
+    auto &rng = Botan::system_rng();
+
     Botan::PK_Signer signer(*key, rng, "SHA-256");
 
     header[jwt_hdr_claim_alg] = alg_value_es256;

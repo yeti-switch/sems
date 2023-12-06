@@ -4,7 +4,7 @@
 #include "WsRpcPeer.h"
 #include "sip/ssl_settings.h"
 
-#include <botan/auto_rng.h>
+#include <botan/system_rng.h>
 #include <botan/tls_policy.h>
 #include <botan/tls_channel.h>
 #include <botan/tls_callbacks.h>
@@ -57,26 +57,14 @@ public:
     void set_policy_overrides(std::string sig_, std::string cipher_, std::string mac_);
 };
 
-class tls_rand_generator
-{
-public:
-    Botan::AutoSeeded_RNG rng;
-    operator Botan::RandomNumberGenerator& () {
-        return rng;
-    }
-
-    void dispose(){}
-};
-
 class tls_session_manager
 {
-    tls_rand_generator rand_tls;
-public:
-    std::shared_ptr<Botan::AutoSeeded_RNG> rng;
+  public:
+    std::shared_ptr<Botan::RandomNumberGenerator> rng;
     std::shared_ptr<Botan::TLS::Session_Manager_In_Memory> ssm;
 
     tls_session_manager()
-      : rng(std::make_shared<Botan::AutoSeeded_RNG>()),
+      : rng(std::make_shared<Botan::System_RNG>()),
         ssm(std::make_shared<Botan::TLS::Session_Manager_In_Memory>(rng, MAX_TLS_SESSIONS))
     {}
 

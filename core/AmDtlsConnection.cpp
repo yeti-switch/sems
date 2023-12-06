@@ -236,7 +236,7 @@ AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& r
     dtls_settings(),
     fingerprint(_fingerprint),
     srtp_profile(srtp_profile_reserved),
-    rand_gen(std::make_shared<Botan::AutoSeeded_RNG>()),
+    rand_gen(std::make_shared<Botan::System_RNG>()),
     activated(false),
     is_client(client),
     pending_handshake_timer(nullptr)

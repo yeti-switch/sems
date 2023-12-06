@@ -12,7 +12,7 @@ using std::unique_ptr;
 using std::shared_ptr;
 #include <atomic>
 
-#include <botan/auto_rng.h>
+#include <botan/system_rng.h>
 #include <botan/tls_policy.h>
 #include <botan/tls_channel.h>
 #include <botan/tls_callbacks.h>
@@ -24,19 +24,12 @@ using std::shared_ptr;
 
 #define MAX_DTLS_SESSIONS 8192
 
-class dtls_rand_generator
-{
-public:
-    std::shared_ptr<Botan::AutoSeeded_RNG> rng;
-};
-
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
     friend class AmDtlsConnection;
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
-    //dtls_rand_generator rand_gen;
     vector<Botan::X509_Certificate> certificates;
     shared_ptr<Botan::Private_Key> key;
 
@@ -84,11 +77,11 @@ public:
 
 class dtls_session_manager
 {
-    std::shared_ptr<Botan::AutoSeeded_RNG> rng;
+    std::shared_ptr<Botan::RandomNumberGenerator> rng;
   public:
     std::shared_ptr<Botan::TLS::Session_Manager_In_Memory> ssm;
     dtls_session_manager()
-      : rng(std::make_shared<Botan::AutoSeeded_RNG>()),
+      : rng(std::make_shared<Botan::System_RNG>()),
         ssm(std::make_shared<Botan::TLS::Session_Manager_In_Memory>(rng, MAX_DTLS_SESSIONS))
     {}
 };
@@ -143,7 +136,7 @@ class AmDtlsConnection
     shared_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
     srtp_profile_t srtp_profile;
-    std::shared_ptr<Botan::AutoSeeded_RNG> rand_gen;
+    std::shared_ptr<Botan::RandomNumberGenerator> rand_gen;
     bool activated;
     bool is_client;
 

@@ -5,7 +5,7 @@
 
 #include <botan/x509_ca.h>
 #include <botan/pkix_types.h>
-#include <botan/auto_rng.h>
+#include <botan/system_rng.h>
 #include <botan/pkcs8.h>
 
 #include <stdio.h>
@@ -399,10 +399,7 @@ int encode(int argc, char *argv[])
         return 1;
     }
 
-    auto rng = std::make_shared<Botan::AutoSeeded_RNG>();
-
     std::unique_ptr<Botan::Private_Key> key;
-    //DataSource_Memory key_data(key_path);
 
     try {
         std::ifstream ifs;

@@ -313,7 +313,7 @@ void SecureRpcPeer::tls_verify_cert_chain(
 SecureRpcPeer::SecureRpcPeer(const string& id)
   : WsRpcPeer(id),
     tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this)),
-    rand_gen(std::make_shared<Botan::AutoSeeded_RNG>()),
+    rand_gen(std::make_shared<Botan::System_RNG>()),
     is_tls(false),
     tls_connected(false),
     tls_channel(nullptr)
