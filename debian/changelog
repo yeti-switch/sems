@@ -1,3 +1,7 @@
+sems (1.126.0) stable; urgency=low
+  * change botan RNG: AutoSeeded_RNG => System_RNG
+ -- Michael Furmur <furmur@pm.me>  Wed, 06 Dec 2023 22:06:53 +0200
+
 sems (1.125.0) stable; urgency=low
   * fix SRTP media relay after the hold/unhold with a key change
   * fix UPDATE request handling in the early dialog
