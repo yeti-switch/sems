@@ -13,9 +13,11 @@
 
 static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection *self);
 
-HttpGetConnection::HttpGetConnection(const HttpGetEvent &u, HttpDestination &destination, int epoll_fd):
-    destination(destination),
-    event(u),
+HttpGetConnection::HttpGetConnection(HttpDestination &destination,
+                                     const HttpGetEvent &u,
+                                     const string& connection_id,
+                                     int epoll_fd):
+    CurlConnection(destination, u, connection_id),
     headers(nullptr)
 {
     CDBG("HttpGetConnection() %p",this);
@@ -34,7 +36,8 @@ int HttpGetConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
         return -1;
     }
 
-    easy_setopt(CURLOPT_URL,event.url.c_str());
+    HttpGetEvent* event_ = dynamic_cast<HttpGetEvent*>(event.get());
+    easy_setopt(CURLOPT_URL,event_->url.c_str());
     easy_setopt(CURLOPT_WRITEFUNCTION,write_func_static);
     easy_setopt(CURLOPT_WRITEDATA,this);
 
@@ -44,75 +47,36 @@ int HttpGetConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     return 0;
 }
 
-int HttpGetConnection::on_finished()
+bool HttpGetConnection::on_failed()
 {
-    int requeue = 0;
-    char *eff_url, *ct;
-    double speed_download, total_time;
-
-    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
-
-    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &eff_url);
-    curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD, &speed_download);
-    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
-    curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
-
-    DBG("get: %s finished with %ld in %.3f seconds (%.3f bytes/sec) with content type %s",
-        eff_url, http_response_code,
-        total_time, speed_download, ct ? ct : "(null)");
-
-    bool failed = false;
-    if(destination.succ_codes(http_response_code)) {
-        if(ct) mime_type = ct;
-        requeue = destination.post_upload(false);
-    } else {
-        failed = true;
-        ERROR("can't get to '%s'. http_code %ld",
-              eff_url,http_response_code);
-        event.failover_idx = 0;
-        event.attempt++;
-        requeue = destination.post_upload(true);
-    }
-
-    if(requeue &&
-       destination.attempts_limit &&
-       event.attempt >= destination.attempts_limit)
-    {
-        DBG("attempt limit(%i) reached. skip requeue",
-            destination.attempts_limit);
-        requeue = false;
-    }
-
-    if(!requeue) {
-        destination.requests_processed.inc();
-        if(failed) destination.requests_failed.inc();
-        post_response_event();
-    }
-
-    return requeue;
+    CurlConnection::on_failed();
+    event->failover_idx = 0;
+    event->attempt++;
+    return false;
 }
 
-void HttpGetConnection::on_requeue()
+char* HttpGetConnection::get_name()
 {
-    if(destination.check_queue()){
-        ERROR("reached max resend queue size %d. drop failed post request",destination.resend_queue_max);
-        post_response_event();
-    } else {
-        destination.addEvent(new HttpGetEvent(event));
-    }
+    static char name[] = "get";
+    return name;
 }
 
 void HttpGetConnection::post_response_event()
 {
-    if(event.session_id.empty())
+    if(event->session_id.empty())
         return;
     if(!AmSessionContainer::instance()->postEvent(
-        event.session_id,
-        new HttpGetResponseEvent(http_response_code, response, mime_type, event.token)))
+        event->session_id,
+        new HttpGetResponseEvent(http_response_code, response, mime_type, event->token)))
     {
         ERROR("failed to post HttpGetResponseEvent for session %s",
-            event.session_id.c_str());
+            event->session_id.c_str());
     }
+}
+
+const char* HttpGetConnection::get_response_data()
+{
+    return response.c_str();
 }
 
 size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection *self)

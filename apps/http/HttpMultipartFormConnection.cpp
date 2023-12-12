@@ -11,9 +11,10 @@
 
 #include "AmSessionContainer.h"
 
-HttpMultiPartFormConnection::HttpMultiPartFormConnection(const HttpPostMultipartFormEvent &u, HttpDestination &destination):
-    destination(destination),
-    event(u),
+HttpMultiPartFormConnection::HttpMultiPartFormConnection(HttpDestination &destination,
+                                                         const HttpPostMultipartFormEvent &u,
+                                                         const string& connection_id):
+    CurlConnection(destination, u, connection_id),
     form(0)
 {
     CDBG("HttpMultiPartFormConnection() %p",this);
@@ -37,7 +38,8 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
 
     form = curl_mime_init(curl);
 
-    for(const auto &part : event.parts ) {
+    HttpPostMultipartFormEvent* event_ = dynamic_cast<HttpPostMultipartFormEvent*>(event.get());
+    for(const auto &part : event_->parts ) {
         field = curl_mime_addpart(form);
         curl_mime_name(field, part.name.c_str());
         if(!part.content_type.empty()) {
@@ -58,15 +60,15 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
                 return -1;
             }
 
-            file_basename = filename_from_fullpath(file_path);
-
             unsigned int file_size = get_file_size();
             if(destination.min_file_size && file_size < destination.min_file_size) {
                 INFO("file '%s' is too small (%u < %u). skip request. perform on_success actions",
                      file_path.c_str(), file_size, destination.min_file_size);
                 curl_mime_free(form);
                 form = 0;
-                destination.succ_action.perform(file_path, file_basename);
+                DestinationAction action = destination.succ_action;
+                action.set_path(file_path);
+                action.perform();
                 return -1;
             }
 
@@ -74,7 +76,7 @@ int HttpMultiPartFormConnection::init(struct curl_slist* hosts, CURLM *curl_mult
         }
     }
 
-    easy_setopt(CURLOPT_URL,destination.url[event.failover_idx].c_str());
+    easy_setopt(CURLOPT_URL,destination.url[event->failover_idx].c_str());
     easy_setopt(CURLOPT_MIMEPOST,form);
 
     if(!destination.source_address.empty())
@@ -96,80 +98,49 @@ static void dump_event(const HttpPostMultipartFormEvent &event)
     }
 }
 
-int HttpMultiPartFormConnection::on_finished()
+bool HttpMultiPartFormConnection::on_failed()
 {
-    int requeue = 0;
-    char *eff_url;
-    double speed_upload, total_time;
-
-    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
-
-    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &eff_url);
-    curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD, &speed_upload);
-    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
-
-    DBG("post multipart form to %s finished with %ld in %.3f seconds (%.3f bytes/sec)",
-        eff_url, http_response_code,
-        total_time, speed_upload);
-
-    bool failed = false;
-    if(destination.succ_codes(http_response_code)) {
-        requeue = destination.post_upload(file_path,file_basename, false);
+    CurlConnection::on_failed();
+    if(!file_path.empty())
+        finish_action.set_path(file_path);
+    dump_event(*dynamic_cast<HttpPostMultipartFormEvent*>(event.get()));
+    if(event->failover_idx < destination.max_failover_idx) {
+        event->failover_idx++;
+        DBG("faiolver to the next destination. new failover index is %i",
+            event->failover_idx);
+        on_finish_requeue = true;
+        return true; //force requeue
     } else {
-        failed = true;
-        ERROR("failed to post multipart form to '%s'. http_code %ld. event ptr: %p",
-              eff_url,http_response_code,static_cast<void *>(&event));
-        dump_event(event);
-        if(event.failover_idx < destination.max_failover_idx) {
-            event.failover_idx++;
-            DBG("faiolver to the next destination. new failover index is %i",
-                event.failover_idx);
-            return true; //force requeue
-        } else {
-            event.attempt++;
-            event.failover_idx = 0;
-        }
-        requeue = destination.post_upload(file_path,file_basename,true);
+        event->attempt++;
+        event->failover_idx = 0;
     }
-
-    if(requeue &&
-       destination.attempts_limit &&
-       event.attempt >= destination.attempts_limit)
-    {
-        DBG("attempt limit(%i) reached. skip requeue",
-            destination.attempts_limit);
-        requeue = false;
-    }
-
-    if(!requeue) {
-        destination.requests_processed.inc();
-        if(failed) destination.requests_failed.inc();
-        post_response_event();
-    }
-
-    return requeue;
+    return false;
 }
 
-void HttpMultiPartFormConnection::on_requeue()
+bool HttpMultiPartFormConnection::on_success()
 {
-    if(destination.check_queue()){
-        ERROR("reached max resend queue size %d. drop failed multipart form request",destination.resend_queue_max);
-        post_response_event();
-    } else {
-        destination.addEvent(new HttpPostMultipartFormEvent(event));
-    }
+    CurlConnection::on_success();
+    if(!file_path.empty())
+        finish_action.set_path(file_path);
+    return false;
+}
+
+char * HttpMultiPartFormConnection::get_name()
+{
+    static char name[] = "post multipart form";
+    return name;
 }
 
 void HttpMultiPartFormConnection::post_response_event()
 {
-    if(event.session_id.empty())
+    if(event->session_id.empty())
         return;
     if(!AmSessionContainer::instance()->postEvent(
-        event.session_id,
-        new HttpUploadResponseEvent(http_response_code,event.token)))
+        event->session_id,
+        new HttpUploadResponseEvent(http_response_code,event->token)))
     {
         ERROR("failed to post HttpUploadResponseEvent for session %s",
-            event.session_id.c_str());
+            event->session_id.c_str());
     }
 }
 

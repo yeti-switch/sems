@@ -17,6 +17,7 @@
 using std::vector;
 
 #include <sys/epoll.h>
+#include <cJSON.h>
 
 #define MOD_NAME "http_client"
 
@@ -24,7 +25,10 @@ using std::vector;
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 
 enum RpcMethodId {
-    MethodShowDnsCache
+    MethodShowDnsCache,
+    MethodGetRequest,
+    MethodPostRequest,
+    MethodMultiRequest
 };
 
 class HttpClientFactory
@@ -301,31 +305,109 @@ void HttpClient::init_rpc_tree()
         reg_method(show,"destinations","destinations dump",&HttpClient::dstDump);
         reg_method(show, "stats", "show statistics", &HttpClient::showStats);
         reg_method(show, "dns_cache", "show statistics", &HttpClient::showDnsCache);
-    AmArg &post = reg_leaf(root,"request");
-        reg_method(post,"post","post request", &HttpClient::postRequest);
-        reg_method(post,"get","get request", &HttpClient::getRequest);
-        AmArg &cache = reg_leaf(post,"dns_cache");
+    AmArg &req = reg_leaf(root,"request");
+        reg_method(req,"post","post request", &HttpClient::postRequest);
+        reg_method(req,"get","get request", &HttpClient::getRequest);
+        reg_method(req, "multi", "multi request", &HttpClient::multiRequest);
+        AmArg &cache = reg_leaf(req,"dns_cache");
             reg_method(cache,"reset","reset dns_cache", &HttpClient::resetDnsCache);
 }
 
-void HttpClient::postRequest(const AmArg& args, AmArg&)
+bool HttpClient::postRequest(
+    const string& connection_id,
+    const AmArg& request_id,
+    const AmArg& params)
 {
-    args.assertArrayFmt("ss");
-    AmSessionContainer::instance()->postEvent(
-        HTTP_EVENT_QUEUE,
-        new HttpPostEvent(args.get(0).asCStr(), //destination
-                          args.get(1).asCStr(), //data
-                          string()));           //token
+    params.assertArrayFmt("ss");
+    HttpDestinationsMap::iterator destination = destinations.find(params.get(0).asCStr());
+    if(destination==destinations.end())
+        throw(AmDynInvoke::Exception(-1, "unknown destination"));
+    HttpDestination &d = destination->second;
+    if(d.mode!=HttpDestination::Post)
+        throw(AmDynInvoke::Exception(-2, "wrong destination"));
+
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodPostRequest, params));
+    return true;
 }
 
-void HttpClient::getRequest(const AmArg& args, AmArg&)
+bool HttpClient::getRequest(
+    const string& connection_id,
+    const AmArg& request_id,
+    const AmArg& params)
 {
-    args.assertArrayFmt("ss");
-    AmSessionContainer::instance()->postEvent(
-        HTTP_EVENT_QUEUE,
-        new HttpGetEvent(args.get(0).asCStr(), //destination
-                          args.get(1).asCStr(), //url
-                          string()));           //token
+    params.assertArrayFmt("ss");
+    HttpDestinationsMap::iterator destination = destinations.find(params.get(0).asCStr());
+    if(destination==destinations.end())
+        throw(AmDynInvoke::Exception(-1, "unknown destination"));
+    HttpDestination &d = destination->second;
+    if(d.mode!=HttpDestination::Get)
+        throw(AmDynInvoke::Exception(-2, "wrong destination"));
+
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodGetRequest, params));
+    return true;
+}
+
+bool HttpClient::multiRequest(
+    const std::string& connection_id,
+    const AmArg& request_id,
+    const AmArg& params)
+{
+    params.assertArrayFmt("s");
+
+    cJSON* data = cJSON_Parse(params.get(0).asCStr());
+    if(!data || !data->child) throw(AmArg::TypeMismatchException());
+    HttpMultiEvent* event = new HttpMultiEvent();
+    event->sync_ctx_id = AmSession::getNewId();
+    for(cJSON* dst = data->child; dst; dst = dst->next) {
+        HttpDestinationsMap::iterator destination = destinations.find(dst->string);
+        if(destination==destinations.end()) {
+            string err("unknown destination ");
+            err += dst->string;
+            throw(AmDynInvoke::Exception(-1, err));
+        }
+        cJSON* dst_val = cJSON_GetObjectItem(dst, "type");
+        if(!dst_val || dst_val->type != cJSON_String) {
+            string err("absent event type in destination ");
+            err += dst->string;
+            throw(AmDynInvoke::Exception(-1, err));
+        }
+        HttpEvent::Type type = HttpEvent::str2type(dst_val->valuestring);
+        if(type == HttpEvent::Unknown) {
+            string err("incorrect event type in destination ");
+            err += dst->string;
+            throw(AmDynInvoke::Exception(-1, err));
+        }
+        cJSON* data_val = cJSON_GetObjectItem(dst, "data");
+        if(!data_val || data_val->type != cJSON_String) {
+            string err("absent data in destination ");
+            err += dst->string;
+            throw(AmDynInvoke::Exception(-1, err));
+        }
+
+        string dst_name(dst->string);
+        string data(data_val->valuestring);
+        if(type == HttpEvent::Get) {
+            event->add_event(new HttpGetEvent(dst_name, data, string()));
+        } else if(type == HttpEvent::Post) {
+            event->add_event(new HttpPostEvent(dst_name, data, string()));
+        } else if(type == HttpEvent::Upload) {
+            string file_name = filename_from_fullpath(data);
+            if(file_name.empty())
+                file_name = data;
+            event->add_event(new HttpUploadEvent(dst_name, file_name, data, string()));
+        }
+    }
+
+    postEvent(new JsonRpcRequestEvent(
+        connection_id,
+        request_id,
+        false, MethodMultiRequest,
+        AmArg((AmObject*)event)));
+    return true;
 }
 
 void HttpClient::dstDump(const AmArg&, AmArg& ret)
@@ -464,6 +546,29 @@ void HttpClient::process_jsonrpc_request(JsonRpcRequestEvent &request)
         }
         postJsonRpcReply(request, ret);
     } break;
+    case MethodGetRequest: {
+        HttpGetEvent event(request.params.get(0).asCStr(), //destination
+                           request.params.get(1).asCStr(), //url
+                           string());           //token
+        event.sync_ctx_id = AmSession::getNewId();
+        rpc_requests.emplace(event.sync_ctx_id, request);
+        process_http_event(&event);
+    } break;
+    case MethodPostRequest: {
+        HttpPostEvent event(request.params.get(0).asCStr(), //destination
+                           request.params.get(1).asCStr(), //data
+                           string());           //token
+        event.sync_ctx_id = AmSession::getNewId();
+        rpc_requests.emplace(event.sync_ctx_id, request);
+        sync_contexts.emplace(event.sync_ctx_id, -1);
+        process_http_event(&event);
+    } break;
+    case MethodMultiRequest: {
+        HttpMultiEvent* event = (HttpMultiEvent*)request.params.asObject();
+        rpc_requests.emplace(event->sync_ctx_id, request);
+        sync_contexts.emplace(event->sync_ctx_id, -1);
+        process_http_event(event);
+    } break;
     }
 }
 
@@ -485,6 +590,10 @@ void HttpClient::process_http_event(AmEvent * ev)
     case HttpEvent::Get: {
         if(HttpGetEvent* e = dynamic_cast<HttpGetEvent*>(ev))
             on_get_request(e);
+    } break;
+    case HttpEvent::Multi: {
+        if(HttpMultiEvent*e = dynamic_cast<HttpMultiEvent*>(ev))
+            on_multi_request(e);
     } break;
     default:
         WARN("unknown event received. event_id:%d", ev->event_id);
@@ -523,7 +632,7 @@ bool HttpClient::check_http_event_sync_ctx(const EventType &u)
         return POSTPONE_EVENT;
     }
 
-    DBG("check_http_event_sync_ctx: found negative context %s(%d). increase counter. pass event",
+    DBG("check_http_event_sync_ctx: found context %s(%d). increase counter. pass event",
         u.sync_ctx_id.c_str(),it->second.counter);
 
     it->second.counter++;
@@ -546,6 +655,40 @@ bool HttpClient::check_http_event_sync_ctx(const EventType &u)
     }
 
     return PASS_EVENT;
+}
+
+bool HttpClient::checkMultiResponse(const DestinationAction& action, string& connection_id)
+{
+    auto it = multi_data_entries.find(connection_id);
+    if(it != multi_data_entries.end()) {
+        string sync_token = it->second.sync_token;
+        multi_data_entries.erase(it);
+
+        SyncMultiData& smd = sync_multies.at(sync_token);
+        DBG("found ctx for: %s. sync_token:%s, counter:%d",
+            connection_id.data(), sync_token.data(), smd.counter);
+
+        smd.counter--;
+
+        smd.actions.emplace_back(action);
+
+        if(!smd.counter) {
+            DBG("run multi-event finalization actions");
+            for(auto& action : smd.actions) {
+                action.perform();
+            }
+            connection_id = sync_token;
+            sync_multies.erase(sync_token);
+        }
+        return true;
+    }
+    return false;
+}
+
+void HttpClient::sendRpcResponse(RpcRequestsMap::iterator &it, const AmArg &ret)
+{
+    postJsonRpcReply(it->second, ret);
+    rpc_requests.erase(it);
 }
 
 void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
@@ -616,9 +759,10 @@ void HttpClient::on_sync_context_timer()
 void HttpClient::on_upload_request(HttpUploadEvent *u)
 {
     HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
-    if(destination==destinations.end()){
+    if(destination==destinations.end()) {
         ERROR("event with unknown destination '%s' from session %s. ignore it",
             u->destination_name.c_str(),u->session_id.c_str());
+        on_init_connection_error(u->sync_ctx_id);
         return;
     }
 
@@ -653,10 +797,11 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    HttpUploadConnection *c = new HttpUploadConnection(*u,d);
+    HttpUploadConnection *c = new HttpUploadConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
         DBG("http upload connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
 }
@@ -667,6 +812,7 @@ void HttpClient::on_post_request(HttpPostEvent *u)
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
             u->destination_name.c_str(),u->session_id.c_str());
+        on_init_connection_error(u->sync_ctx_id);
         return;
     }
 
@@ -699,10 +845,11 @@ void HttpClient::on_post_request(HttpPostEvent *u)
         return;
     }
 
-    HttpPostConnection *c = new HttpPostConnection(*u,d);
+    HttpPostConnection *c = new HttpPostConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
         DBG("http post connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
 }
@@ -713,6 +860,7 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
             u->destination_name.c_str(),u->session_id.c_str());
+        on_init_connection_error(u->sync_ctx_id);
         return;
     }
 
@@ -745,10 +893,11 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(*u,d);
+    HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
         DBG("http multipart form connection intialization error");
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        on_init_connection_error(u->sync_ctx_id);
         delete c;
     }
 }
@@ -759,6 +908,7 @@ void HttpClient::on_get_request(HttpGetEvent *e)
     if(destination==destinations.end()){
         ERROR("event with unknown destination '%s' from session %s. ignore it",
             e->destination_name.c_str(),e->session_id.c_str());
+        on_init_connection_error(e->sync_ctx_id);
         return;
     }
 
@@ -786,12 +936,48 @@ void HttpClient::on_get_request(HttpGetEvent *e)
         return;
     }
 
-    HttpGetConnection *c = new HttpGetConnection(*e,d,epoll_fd);
+    HttpGetConnection *c = new HttpGetConnection(d, *e, e->sync_ctx_id,epoll_fd);
     if(c->init(hosts, curl_multi)){
         DBG("http get connection intialization error");
         e->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
+        on_init_connection_error(e->sync_ctx_id);
         delete c;
     }
+}
+
+void HttpClient::on_init_connection_error(const string& conn_id)
+{
+    string connection_id = conn_id;
+    bool success = checkMultiResponse(DestinationAction(), connection_id);
+
+    auto it = rpc_requests.find(connection_id);
+    if(it != rpc_requests.end()) {
+        AmArg ret;
+        ret["result"] = success ? "finished" : "failed";
+        sendRpcResponse(it, ret);
+    }
+}
+
+void HttpClient::on_multi_request(HttpMultiEvent* e)
+{
+    if(check_http_event_sync_ctx(*e)) {
+        DBG("http multi request is consumed by synchronization contexts handler");
+        return;
+    }
+
+    string sync_token = e->sync_ctx_id.empty() ? AmSession::getNewId() : e->sync_ctx_id;
+    int count = 0;
+    for(auto& ev : e->multi_events) {
+        ev->sync_ctx_id = ev->sync_ctx_id.empty() ? AmSession::getNewId() : ev->sync_ctx_id;
+        multi_data_entries.try_emplace(ev->sync_ctx_id, sync_token, ev->token, ev->session_id);
+        count++;
+        if(ev->event_id < HttpEvent::Get) {
+            //Upload, Post, MultiPartForm
+            sync_contexts.emplace(ev->sync_ctx_id, -1);
+        }
+        postEvent(ev.release());
+    }
+    sync_multies.emplace(sync_token, count);
 }
 
 void HttpClient::on_resend_timer_event()
@@ -888,8 +1074,26 @@ void HttpClient::update_resolve_list()
     resolve_timer.set(next_time);
 }
 
-void HttpClient::on_connection_delete(CurlConnection *)
+void HttpClient::on_connection_delete(CurlConnection *c)
 {
+    string connection_id = c->get_connection_id();
+    bool is_multi = c->is_requeue() ? false : checkMultiResponse(c->get_action(), connection_id);
+    AmArg ret;
+
+    if(!is_multi) c->run_action();
+
+    auto it = rpc_requests.find(connection_id);
+    if(it != rpc_requests.end()) {
+        AmArg ret;
+
+        if(is_multi)
+            ret["result"] = "finished";
+        else
+            c->get_response(ret);
+
+        sendRpcResponse(it, ret);
+    }
+
     for(auto& dest : destinations) {
         dest.second.send_postponed_events(this);
     }

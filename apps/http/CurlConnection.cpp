@@ -27,9 +27,15 @@ static int curl_debugfunction_callback(
     return 0;
 }
 
-CurlConnection::CurlConnection()
+CurlConnection::CurlConnection(HttpDestination& destination,
+                               const HttpEvent& event,
+                               const string& connection_id)
   : curl(nullptr),
-    resolve_hosts(0)
+    resolve_hosts(0),
+    destination(destination),
+    event(event.http_clone()),
+    connection_id(connection_id),
+    finished(false)
 { }
 
 CurlConnection::~CurlConnection()
@@ -91,7 +97,7 @@ void CurlConnection::on_curl_error(CURLcode result)
     http_response_code = -result;
 }
 
-int CurlConnection::finish(CURLcode result)
+void CurlConnection::finish(CURLcode result)
 {
     if(result!=CURLE_OK)
     {
@@ -102,6 +108,94 @@ int CurlConnection::finish(CURLcode result)
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response_code);
     }
 
-    return on_finished();
+    event->attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
+    if(need_requeue())
+        on_requeue();
+    on_finished();
 }
 
+bool CurlConnection::need_requeue()
+{
+    if(destination.succ_codes(http_response_code)) {
+        failed = false;
+        if(on_success()) return on_finish_requeue;
+        else on_finish_requeue = destination.succ_action.requeue();
+    } else {
+        failed = true;
+        if(on_failed()) return on_finish_requeue;
+        on_finish_requeue = destination.fail_action.requeue();
+    }
+
+    if(on_finish_requeue &&
+       destination.attempts_limit &&
+       event->attempt >= destination.attempts_limit)
+    {
+        DBG("attempt limit(%i) reached. skip requeue",
+            destination.attempts_limit);
+        on_finish_requeue = false;
+    }
+
+    return on_finish_requeue;
+}
+
+void CurlConnection::on_finished()
+{
+    char *eff_url, *ct;
+    double speed_download;
+
+    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &eff_url);
+    curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD, &speed_download);
+    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
+    curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
+
+    DBG("%s: %s finished with %ld in %.3f seconds (%.3f bytes/sec) with content type %s",
+        get_name(), eff_url, http_response_code,
+        total_time, speed_download, ct ? ct : "(null)");
+
+    if(destination.succ_codes(http_response_code)) {
+        if(ct) mime_type = ct;
+    } else {
+        ERROR("can't %s to '%s'. http_code %ld",
+              get_name(), eff_url,http_response_code);
+    }
+
+    if(!on_finish_requeue) {
+        destination.requests_processed.inc();
+        if(failed) destination.requests_failed.inc();
+        post_response_event();
+    }
+    finished = true;
+}
+
+void CurlConnection::on_requeue()
+{
+    if(destination.check_queue()){
+        ERROR("reached max resend queue size %d. drop failed %s request",destination.resend_queue_max, get_name());
+        post_response_event();
+    } else {
+        destination.addEvent(event.release());
+        event = 0;
+    }
+}
+
+bool CurlConnection::on_failed()
+{
+    finish_action = destination.fail_action;
+    return false;
+}
+
+bool CurlConnection::on_success()
+{
+    finish_action = destination.succ_action;
+    return false;
+}
+
+void CurlConnection::get_response(AmArg& ret)
+{
+    ret["http_code"] = http_response_code;
+    ret["mime_type"] = mime_type;
+    ret["total_time"] = total_time;
+    ret["result"] = failed ? "failed" : "success";
+    //const char* data = get_response_data();
+    //if(data) ret["data"] = data;
+}

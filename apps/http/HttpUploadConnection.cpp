@@ -11,9 +11,10 @@
 
 #include "AmSessionContainer.h"
 
-HttpUploadConnection::HttpUploadConnection(const HttpUploadEvent &u, HttpDestination &destination):
-    destination(destination),
-    event(u),
+HttpUploadConnection::HttpUploadConnection(HttpDestination &destination,
+                                           const HttpUploadEvent &u,
+                                           const string& connection_id):
+    CurlConnection(destination, u, connection_id),
     fd(nullptr)
 {
     CDBG("HttpUploadConnection() %p",this);
@@ -29,31 +30,34 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
 {
     struct stat file_info;
 
-    file_basename = filename_from_fullpath(event.file_path);
+    HttpUploadEvent* event_ = dynamic_cast<HttpUploadEvent*>(event.get());
+    file_basename = filename_from_fullpath(event_->file_path);
     if(file_basename.empty()){
-        ERROR("invalid file path: %s",event.file_path.c_str());
+        ERROR("invalid file path: %s",event_->file_path.c_str());
         return -1;
     }
 
-    if(event.file_name.empty()){
-        event.file_name = file_basename;
+    if(event_->file_name.empty()){
+        event_->file_name = file_basename;
     }
 
-    if(!(fd = fopen(event.file_path.c_str(), "rb"))){
-        ERROR("can't open file to upload: %s",event.file_path.c_str());
+    if(!(fd = fopen(event_->file_path.c_str(), "rb"))){
+        ERROR("can't open file to upload: %s",event_->file_path.c_str());
         return -1;
     }
 
     if(0!=fstat(fileno(fd), &file_info)) {
-        ERROR("can't stat file: %s",event.file_path.c_str());
+        ERROR("can't stat file: %s",event_->file_path.c_str());
         return -1;
     }
 
     if(destination.min_file_size && file_info.st_size < destination.min_file_size) {
         INFO("file '%s' is too small (%ld < %u). skip request. perform on_success actions",
-             event.file_path.c_str(), file_info.st_size, destination.min_file_size);
+             event_->file_path.c_str(), file_info.st_size, destination.min_file_size);
         //process file indentically to the success action
-        destination.succ_action.perform(event.file_path, file_basename);
+        DestinationAction action = destination.succ_action;
+        action.set_path(event_->file_path);
+        action.perform();
         return -1;
     }
 
@@ -62,7 +66,7 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
         return -1;
     }
 
-    string upload_url = destination.url[event.failover_idx]+'/'+event.file_name;
+    string upload_url = destination.url[event->failover_idx]+'/'+event_->file_name;
 
     easy_setopt(CURLOPT_URL,upload_url.c_str());
     easy_setopt(CURLOPT_UPLOAD, 1L);
@@ -78,79 +82,49 @@ int HttpUploadConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     return 0;
 }
 
-int HttpUploadConnection::on_finished()
+
+bool HttpUploadConnection::on_failed()
 {
-    int requeue = 0;
-    char *eff_url;
-    double speed_upload, total_time;
-
-    event.attempt ? destination.resend_count_connection.dec() : destination.count_connection.dec();
-
-    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &eff_url);
-    curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD, &speed_upload);
-    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
-
-    DBG("upload: %s => %s finished with %ld in %.3f seconds (%.3f bytes/sec)",
-        event.file_path.c_str(), eff_url, http_response_code,
-        total_time, speed_upload);
-
-    bool failed = false;
-    if(destination.succ_codes(http_response_code)) {
-        requeue = destination.post_upload(event.file_path,file_basename, false);
+    CurlConnection::on_failed();
+    HttpUploadEvent* event_ = dynamic_cast<HttpUploadEvent*>(event.get());
+    finish_action.set_path(event_->file_path);
+    if(event->failover_idx < destination.max_failover_idx) {
+        event->failover_idx++;
+        DBG("faiolver to the next destination. new failover index is %i",
+            event->failover_idx);
+        on_finish_requeue = true;
+        return true; //force requeue
     } else {
-        failed = true;
-        ERROR("can't upload '%s' to '%s'. http_code %ld",
-              event.file_path.c_str(), eff_url,http_response_code);
-        if(event.failover_idx < destination.max_failover_idx) {
-            event.failover_idx++;
-            DBG("faiolver to the next destination. new failover index is %i",
-                event.failover_idx);
-            return true; //force requeue
-        } else {
-            event.attempt++;
-            event.failover_idx = 0;
-        }
-        requeue = destination.post_upload(event.file_path,file_basename,true);
+        event->attempt++;
+        event->failover_idx = 0;
     }
-
-    if(requeue &&
-       destination.attempts_limit &&
-       event.attempt >= destination.attempts_limit)
-    {
-        DBG("attempt limit(%i) reached. skip requeue",
-            destination.attempts_limit);
-        requeue = false;
-    }
-
-    if(!requeue) {
-        destination.requests_processed.inc();
-        if(failed) destination.requests_failed.inc();
-        post_response_event();
-    }
-
-    return requeue;
+    return false;
 }
 
-void HttpUploadConnection::on_requeue()
+bool HttpUploadConnection::on_success()
 {
-    if(destination.check_queue()){
-        ERROR("reached max resend queue size %d. drop failed upload request",destination.resend_queue_max);
-        post_response_event();
-    } else {
-        destination.addEvent(new HttpUploadEvent(event));
-    }
+    CurlConnection::on_success();
+    HttpUploadEvent* event_ = dynamic_cast<HttpUploadEvent*>(event.get());
+    finish_action.set_path(event_->file_path);
+    return false;
+}
+
+char * HttpUploadConnection::get_name()
+{
+    static char name[] = "upload";
+    return name;    
 }
 
 void HttpUploadConnection::post_response_event()
 {
-    if(event.session_id.empty())
+    if(event->session_id.empty())
         return;
     if(!AmSessionContainer::instance()->postEvent(
-        event.session_id,
-        new HttpUploadResponseEvent(http_response_code,event.token)))
+        event->session_id,
+        new HttpUploadResponseEvent(http_response_code,event->token)))
     {
         ERROR("failed to post HttpUploadResponseEvent for session %s",
-            event.session_id.c_str());
+            event->session_id.c_str());
     }
 }
 

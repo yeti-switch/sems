@@ -9,21 +9,22 @@
 
 class HttpPostConnection: public CurlConnection
 {
-  HttpDestination &destination;
-  HttpPostEvent event;
-  int response_code;
   struct curl_slist *headers;
   string response;
+protected:
+  bool on_failed();
+  char* get_name();
+  void post_response_event();
+  const char* get_response_data();
 public:
-  HttpPostConnection(const HttpPostEvent &u, HttpDestination &destination);
+  HttpPostConnection(HttpDestination &destination,
+                     const HttpPostEvent &u,
+                     const string& connection_id);
   ~HttpPostConnection();
 
   int init(struct curl_slist* hosts, CURLM *curl_multi);
 
-  int on_finished();
-  void on_requeue();
-
-  void post_response_event();
+  void run_action();
 
   size_t write_func(void *ptr, size_t size, size_t nmemb, void *);
 };

@@ -64,6 +64,40 @@ class HttpClient
     AmTimerFd sync_contexts_timer;
     AmTimerFd resolve_timer;
 
+    struct MultiDataEntry {
+      string sync_token;
+      string token;
+      string session_id;
+      MultiDataEntry(string sync_token, string token, string session_id)
+      : sync_token(sync_token),
+        token(token),
+        session_id(session_id)
+      {}
+    };
+    using MultiDataEntryMap = std::unordered_map<string, MultiDataEntry>;
+    /* contexts for each event in the HttpMultiEvent
+     * see:
+     *  HttpClient::on_multi_request
+     *  HttpClient::checkMultiResponse
+     */
+    MultiDataEntryMap multi_data_entries;
+
+    struct SyncMultiData {
+      unsigned int counter;
+      std::vector<DestinationAction> actions;
+
+      SyncMultiData(unsigned int counter)
+        : counter(counter)
+      {}
+    };
+    using SyncMultiDataMap = std::unordered_map<string, SyncMultiData>;
+    /* sync contexts for Upload, Post, MultiPartForm events in the HttpMultiEvent
+     * to trigger destinations finalization actions */
+    SyncMultiDataMap sync_multies;
+
+    using RpcRequestsMap = std::unordered_map<string, JsonRpcRequestEvent>;
+    RpcRequestsMap rpc_requests;
+
     int configure(const string& config);
     int init();
 
@@ -74,14 +108,17 @@ class HttpClient
     void on_post_request(HttpPostEvent *u);
     void on_multpart_form_request(HttpPostMultipartFormEvent *u);
     void on_get_request(HttpGetEvent *e);
+    void on_init_connection_error(const string& conn_id);
+    void on_multi_request(HttpMultiEvent* e);
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
     void on_sync_context_timer();
     void on_resend_timer_event();
     void update_resolve_list();
 
     rpc_handler showStats;
-    rpc_handler postRequest;
-    rpc_handler getRequest;
+    async_rpc_handler postRequest;
+    async_rpc_handler getRequest;
+    async_rpc_handler multiRequest;
     rpc_handler dstDump;
     async_rpc_handler showDnsCache;
     rpc_handler resetDnsCache;
@@ -89,6 +126,12 @@ class HttpClient
     /* true if event consumed */
     template<typename EventType>
     bool check_http_event_sync_ctx(const EventType &u);
+
+    /* true if event response in multi request,
+     * connection_id - sets it after finish multi request in sync_ctx_id of it
+     */
+    bool checkMultiResponse(const DestinationAction& action, string& connection_id);
+    void sendRpcResponse(RpcRequestsMap::iterator &it, const AmArg &ret);
 
     bool reloadCache();
   public:
