@@ -499,7 +499,7 @@ int tls_trsp_socket::send(
     const sockaddr_storage* sa, const char* msg,
     const int msg_len, [[maybe_unused]] unsigned int flags)
 {
-    AmLock _l(sock_mut);
+    std::unique_lock _l(sock_mut);
 
     if(closed || (check_connection() < 0))
         return -1;

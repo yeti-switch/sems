@@ -421,12 +421,12 @@ void tcp_base_trsp::on_read(short ev)
     int bytes = 0;
     {   // locked section
 
-        AmControlledLock _l(sock_mut);
+        std::unique_lock _l(sock_mut);
 
         if(ev & EV_TIMEOUT) {
             DBG("************ idle timeout: closing connection **********");
             close();
-            _l.release_ownership();
+            _l.release();
             return;
         }
 
@@ -442,26 +442,26 @@ void tcp_base_trsp::on_read(short ev)
             case ENOTCONN:
                 DBG("connection has been closed (sd=%i)",sd);
                 close();
-                _l.release_ownership();
+                _l.release();
                 return;
 
             case ETIMEDOUT:
                 DBG("transmission timeout (sd=%i)",sd);
                 close();
-                _l.release_ownership();
+                _l.release();
                 return;
 
             default:
                 DBG("unknown error (%i): %s",errno,strerror(errno));
                 close();
-                _l.release_ownership();
+                _l.release();
                 return;
             }
         } else if(bytes == 0) {
             // connection closed
             DBG("connection has been closed (sd=%i)",sd);
             close();
-            _l.release_ownership();
+            _l.release();
             return;
         }
     } // end of - locked section
@@ -479,7 +479,7 @@ void tcp_base_trsp::on_read(short ev)
 
 void tcp_base_trsp::getInfo(AmArg &ret)
 {
-    AmLock l(sock_mut);
+    std::unique_lock _l(sock_mut);
 
     ret["sd"] = sd;
     ret["actual_address"] = get_actual_ip();
@@ -492,12 +492,12 @@ void tcp_base_trsp::getInfo(AmArg &ret)
 void tcp_base_trsp::on_write(short ev)
 {
     atomic_ref_guard _ref_guard(this);
-    AmControlledLock _l(sock_mut);
+    std::unique_lock _l(sock_mut);
 
     DBG("on_write (connected = %i, transport = %s)",connected, get_transport());
     if(!connected) {
         if(on_connect(ev) != 0) {
-            _l.release_ownership();
+            _l.release();
             return;
         }
     }
@@ -526,7 +526,7 @@ void tcp_base_trsp::on_write(short ev)
                 ERROR("unforseen error: close connection (%i/%s)",
                       errno,strerror(errno));
                 close();
-                _l.release_ownership();
+                _l.release();
                 break;
             }
             return;

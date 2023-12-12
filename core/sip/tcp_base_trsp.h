@@ -4,6 +4,7 @@
 #include "transport.h"
 #include "sip_parser_async.h"
 
+#include <mutex>
 #include <map>
 #include <string>
 #include <deque>
@@ -96,7 +97,7 @@ public:
     };
 
 protected:
-    AmMutex sock_mut;
+    std::mutex sock_mut;
     deque<msg_buf*> send_q;
 
 
