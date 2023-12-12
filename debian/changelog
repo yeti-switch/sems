@@ -1,3 +1,8 @@
+sems (1.127.0) stable; urgency=low
+  * http: add HttpMultiEvent support
+  * http: add jsonrpc method 'request.multi'
+ -- Michael Furmur <furmur@pm.me>  Tue, 12 Dec 2023 17:12:02 +0200
+
 sems (1.126.0) stable; urgency=low
   * change botan RNG: AutoSeeded_RNG => System_RNG
  -- Michael Furmur <furmur@pm.me>  Wed, 06 Dec 2023 22:06:53 +0200
