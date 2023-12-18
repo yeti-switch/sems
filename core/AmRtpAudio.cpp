@@ -115,7 +115,11 @@ AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
     /*last_ts_i(false),*/ use_default_plc(true),
     last_check(0),last_check_i(false), send_int(false),
     last_send_ts_i(false),
-    max_rtp_time(0)
+    last_recv_system_ts(0),
+    max_empty_packets_time(AmConfig.dead_rtp_time),
+    last_recv_i(true),
+    max_rtp_time(0),
+    ignore_recording(false)
 {
 #ifdef USE_SPANDSP_PLC
     plc_state = plc_init(NULL);
@@ -226,6 +230,8 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             return (decoded_size < 0) ? -1 : 0;
         }
 
+        last_recv_system_ts = system_ts;
+
         // This only works because the possible ratio (Rate/TSRate)
         // is 2. Rate and TSRate are only different in case of g722.
         // For g722, TSRate=8000 and Rate=16000
@@ -287,6 +293,14 @@ int AmRtpAudio::get(
 
     unsigned int user_ts = scaleSystemTS(system_ts);
 
+    unsigned int diff_sec = (system_ts - last_recv_system_ts)/WALLCLOCK_RATE;
+    if(ret == 0 && max_empty_packets_time &&
+        diff_sec > max_empty_packets_time) {
+        last_recv_i = false;
+    } else {
+        last_recv_i = true;
+    }
+
     nb_samples = static_cast<unsigned int>(
         static_cast<float>(nb_samples) * static_cast<float>(getSampleRate())
         / static_cast<float>(output_sample_rate));
@@ -327,13 +341,15 @@ int AmRtpAudio::put(
     if(!fmt.get())
       return 0;
 
-    if(record_enabled) {
+    if(record_enabled && !ignore_recording) {
         RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
     }
 
-    if(stereo_record_enabled) {
+    if(stereo_record_enabled && !ignore_recording) {
         stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
     }
+
+    ignore_recording = false;
 
     memcpy(static_cast<unsigned char*>(samples),buffer,size);
     size = resampleInput(
@@ -660,6 +676,12 @@ void AmRtpAudio::setMaxRtpTime(uint32_t ts)
 {
     CLASS_DBG("AmRtpAudio::setLastRtpTime(%u)", ts);
     max_rtp_time = ts;
+}
+
+void AmRtpAudio::setMaxEmptyPacketsTime(uint32_t ts)
+{
+    CLASS_DBG("AmRtpAudio::setMaxEmptyPacketsTime(%u)", ts);
+    max_empty_packets_time = ts;
 }
 
 void AmRtpAudio::onMaxRtpTimeReached()

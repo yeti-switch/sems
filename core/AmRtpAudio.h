@@ -114,11 +114,21 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
   unsigned long long last_send_ts;
   bool               last_send_ts_i;
 
+  unsigned long long last_recv_system_ts;
+  unsigned int       max_empty_packets_time;
+  bool               last_recv_i;
+
   /**
    last expected RTP timestamp to receive
    causes onMaxRtpTimeReached() to be called if reached
    */
   unsigned long long max_rtp_time;
+  
+  /**
+   * one-time flag to ignore put samples to record
+   * flag is controlled by function ignoreRecording()
+   */
+  bool ignore_recording;
 
   //
   // Default packet loss concealment functions
@@ -182,6 +192,8 @@ public:
   unsigned int conceal_loss(unsigned int ts_diff, unsigned char *out_buffer) override;
 
   bool isLastSamplesRelayed() { return last_recv_relayed; }
+  
+  bool isLastRecv() { return last_recv_i; }
 
   /**
   * send a DTMF as RTP payload (RFC4733)
@@ -191,6 +203,8 @@ public:
   void sendDtmf(int event, unsigned int duration_ms, int volume = -1);
 
   void setMaxRtpTime(uint32_t ts);
+  void setMaxEmptyPacketsTime(uint32_t ts);
+  void ignoreRecording() { ignore_recording = true; }
 protected:
   int read(unsigned int user_ts, unsigned int size) override { return 0; }
   int write(unsigned int user_ts, unsigned int size) override { return 0; }
