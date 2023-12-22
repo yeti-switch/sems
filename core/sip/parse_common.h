@@ -98,8 +98,8 @@ using std::list;
 // SIP version constants
 //
 
-#define SIP_str    "SIP"
-#define SUP_SIPVER "/2.0"
+#define SIP_str     "SIP"
+#define SUP_SIPVER  "2.0"
 
 #define HTTP_str    "HTTP"
 
@@ -108,9 +108,9 @@ using std::list;
 
 #define HTTP_len        (sizeof(HTTP_str)-/*0-term*/1)
 
-#define SIPVER_len (SIP_len+SUP_SIPVER_len)
+#define SIPVER_len (SIP_len+1+SUP_SIPVER_len) // 'SIP/2.0'
 
-#define HTTPVER_len (HTTP_len+SUP_SIPVER_len)
+#define HTTPVER_len (HTTP_len+1+SUP_SIPVER_len) // 'HTTP/2.0' fixme
 
 //
 // Common states: (>100)

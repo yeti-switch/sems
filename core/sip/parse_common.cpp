@@ -37,30 +37,81 @@
 
 int parse_sip_version(const char* beg, int len)
 {
-    const char* c = beg;
-    //char* end = c+len;
+    enum {
+        BEG,
+        SIP,
+        SIP_SLASH,
+        VER,
+        END
+    };
 
-    if(len!=SIPVER_len){
-	DBG("SIP-Version string length != SIPVER_len");
-	return MALFORMED_SIP_MSG;
-    }
+    const char *c = beg;
+    int st = BEG;
 
-    if( ((c[0] != 'S')&&(c[0] != 's')) || 
-	((c[1] != 'I')&&(c[1] != 'i')) ||
-	((c[2] != 'P')&&(c[2] != 'p')) ) {
+    while(len > 0) {
+        if (st == END)
+            break;
 
-	DBG("SIP-Version does not begin with \"SIP\"");
-	return MALFORMED_SIP_MSG;
-    }
-    c += SIP_len;
+        if (*c == CR || *c == LF || *c == SP) {
+            c += 1;
+            len -= 1;
+            continue;
+        }
 
-    if(memcmp(c,SUP_SIPVER,SUP_SIPVER_len) != 0){
-	DBG("Unsupported or malformed SIP-Version");
-	return MALFORMED_SIP_MSG;
+        switch(st) {
+            case BEG:
+                if ((*c == 'S' || *c == 's') &&
+                    len >= SIP_len &&
+                    (*(c+1) == 'I' || *(c+1) == 'i') &&
+                    (*(c+2) == 'P' || *(c+2) == 'p')) {
+                    st = SIP;
+                    c += SIP_len;
+                    len -= SIP_len;
+                } else {
+                    DBG("SIP-Version does not begin with \"SIP\"");
+                    return MALFORMED_SIP_MSG;
+                }
+                break;
+
+            case SIP:
+                if (*c == '/') {
+                    st = SIP_SLASH;
+                    c += 1;
+                    len -= 1;
+                } else {
+                    DBG("Missing '/' after \"SIP\"");
+                    return MALFORMED_SIP_MSG;
+                }
+                break;
+
+            case VER:
+                if (*c == '/') {
+                    st = END;
+                    c += 1;
+                    len -= 1;
+                } else {
+                    DBG("Missing '/' after SIP version");
+                    return MALFORMED_SIP_MSG;
+                }
+                break;
+
+            case SIP_SLASH:
+                if (*c == SUP_SIPVER[0] &&
+                    len >= SUP_SIPVER_len &&
+                    memcmp(c, SUP_SIPVER, SUP_SIPVER_len) == 0) {
+                    st = VER;
+                    c += SUP_SIPVER_len;
+                    len -= SUP_SIPVER_len;
+                } else {
+                    DBG("Unsupported or malformed SIP-Version");
+                    return MALFORMED_SIP_MSG;
+                }
+                break;
+        }
     }
 
     //DBG("SIP-Version OK");
-    return 0;
+    return c - beg;
 }
 
 static int _parse_gen_params(list<sip_avp*>* params, const char** c, 

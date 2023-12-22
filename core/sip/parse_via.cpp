@@ -80,41 +80,36 @@ sip_via::~sip_via()
 
 static int parse_transport(sip_transport* t, const char** c, int len)
 {
+    int res;
     enum {
-
-	TR_BEG,
-	TR_UDP,
-	TR_T,
-	TR_W,
-	TR_TCP,
-	TR_TLS,
-	TR_SCTP,
-	TR_WS,
-	TR_WSS,
-	TR_OTHER
+        TR_BEG,
+        TR_UDP,
+        TR_T,
+        TR_W,
+        TR_TCP,
+        TR_TLS,
+        TR_SCTP,
+        TR_WS,
+        TR_WSS,
+        TR_OTHER
     };
 
     if(len < (int)SIPVER_len + 2){ // at least "SIP/2.0/?"
-	DBG("Transport protocol is too small");
-	return MALFORMED_SIP_MSG;
+        DBG("Transport protocol is too small");
+        return MALFORMED_SIP_MSG;
     }
 
-    if (parse_sip_version(*c,SIPVER_len)) {
-	DBG("Wrong/unsupported SIP version");
-	return MALFORMED_SIP_MSG;
+    res = parse_sip_version(*c, len);
+    if (res < 0) {
+        DBG("Wrong/unsupported SIP version");
+        return MALFORMED_SIP_MSG;
     }
-    
-    *c += SIPVER_len;
-    
-    if (*(*c)++ != '/') {
-	DBG("Missing '/' after SIP version");
-	return MALFORMED_SIP_MSG;
-    }
+    len -= res;
+    *c += res;
 
     int st = TR_BEG;
     t->val.s = *c;
 
-    len -= SIPVER_len+1;
     const char* end = *c + len;
 
     for(;**c && (*c!=end);(*c)++){
@@ -162,7 +157,12 @@ static int parse_transport(sip_transport* t, const char** c, int len)
 		else
 		    st = TR_OTHER;
 		break;
-		
+
+		case CR:
+		case LF:
+		case SP:
+			continue;
+
 	    default:
 		st = TR_OTHER;
 		break;
