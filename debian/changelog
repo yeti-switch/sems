@@ -1,3 +1,11 @@
+sems (1.127.1) stable; urgency=low
+  [apps/postgresql]
+  * move PQpipelineSync calls to the end/rollback processing
+  * fix PQflush call after sync
+  * improve PQflush/PQpipelineSync errors logging
+  * improve transactions log writing (disabled in the release)
+ -- Michael Furmur <furmur@pm.me>  Mon, 25 Dec 2023 22:08:33 +0200
+
 sems (1.127.0) stable; urgency=low
   * http: add HttpMultiEvent support
   * http: add jsonrpc method 'request.multi'
