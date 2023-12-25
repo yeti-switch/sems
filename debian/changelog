@@ -1,3 +1,7 @@
+sems (1.127.2) stable; urgency=low
+  * apps/postgresql: add 'backend_pid' to the connection stats
+ -- Michael Furmur <furmur@pm.me>  Mon, 25 Dec 2023 22:52:23 +0200
+
 sems (1.127.1) stable; urgency=low
   [apps/postgresql]
   * move PQpipelineSync calls to the end/rollback processing
