@@ -15,3 +15,9 @@ bool TransactionImpl::is_pipeline()
 {
     return conn->getPipeStatus() == PQ_PIPELINE_ON;
 }
+
+bool TransactionImpl::sync_pipeline()
+{
+    sync_sent = true;
+    return true;
+}

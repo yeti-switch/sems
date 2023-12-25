@@ -17,7 +17,9 @@
 #define TRANS_LOG(trans, fmt, args...) \
     trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args);\
     if(trans->get_status() == Transaction::FINISH)\
-        trans->deleteLog();
+        trans->deleteLog();\
+    else if(trans->get_status() == Transaction::ERROR)\
+        trans->saveLog();
 #else
 #define TRANS_LOG(trans, fmt, args...) ;
 #endif
@@ -53,9 +55,9 @@ class Transaction
     Status status;
     DbState state;
 
-    virtual int begin() { state = BODY; return 1; }
-    virtual int end() { state = END; return 1; }
-    virtual int rollback() { state = END; return 1; }
+    virtual int begin();
+    virtual int end();
+    virtual int rollback();
     virtual int execute();
     virtual bool is_finished() { return is_pipeline() ? tr_impl->is_synced() : tr_impl->query->is_finished(); }
     virtual bool is_equal(Transaction* trans) { return trans->get_type() == get_type(); }

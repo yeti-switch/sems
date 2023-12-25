@@ -28,6 +28,7 @@ class TransactionImpl
     virtual bool check_trans() = 0;
     virtual bool cancel_trans() = 0;
     virtual int fetch_result() = 0;
+    virtual bool sync_pipeline();
     virtual void reset(Connection* conn);
 
   public:

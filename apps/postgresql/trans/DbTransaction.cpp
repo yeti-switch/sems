@@ -1,5 +1,6 @@
 #include "DbTransaction.h"
 #include "../query/QueryChain.h"
+#include "../conn/Connection.h"
 
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_write>;
 template class DbTransaction<PGTransactionData::read_committed, PGTransactionData::write_policy::read_only>;
@@ -73,11 +74,13 @@ int DbTransaction<isolation, rw>::rollback()
         state = END;
         tr_impl->pipeline_aborted = false;
         tr_impl->synced = false;
+        tr_impl->sync_sent = false;
         if(ret) tr_impl->query->set_finished();
         TRANS_LOG(this, "exec: ROLLBACK");
-        return ret ? 0 : -1;
+        if(!ret) return -1;
+        return get_conn()->getPipeStatus() == PQ_PIPELINE_ON ? 2 : 1;
     }
-    return 1;
+    return 0;
 }
 
 template<PGTransactionData::isolation_level isolation, PGTransactionData::write_policy rw>
@@ -120,9 +123,10 @@ int DbTransaction<isolation, rw>::end()
         delete end_q;
         state = END;
         TRANS_LOG(this, "exec: END");
-        return ret ? 0 : -1;
+        if(!ret) return -1;
+        return get_conn()->getPipeStatus() == PQ_PIPELINE_ON ? 2 : 1;
     }
-    return 1;
+    return 0;
 }
 
 Transaction* createDbTransaction(ITransactionHandler* handler,

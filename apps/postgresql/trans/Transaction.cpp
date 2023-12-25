@@ -49,6 +49,21 @@ Transaction::Transaction(TransactionImpl* impl, ITransactionHandler* handler)
 #endif
 }
 
+int Transaction::begin() {
+    state = BODY;
+    return 1;
+}
+
+int Transaction::end() {
+    state = END;
+    return tr_impl->is_pipeline() ? 2 : 1;
+}
+
+int Transaction::rollback() {
+    state = END;
+    return 1;
+}
+
 int Transaction::execute()
 {
      if(tr_impl->query->exec() < 0)
@@ -157,10 +172,12 @@ int Transaction::check()
 
             //END request
             if(0==ret) {
-                //  0 - success
+                //  1 - success
+                //  2 - success in pipeline mode
+                //  0 - error: incorrect state
                 // -1 - no connection or "END" query exec() error
                 ret = end();
-                if(ret < 0) {
+                if(ret <= 0) {
                     ERROR("end(): %d. query: %s, last_error:%s",
                         ret, tr_impl->query->get_query().data(),
                         tr_impl->query->get_last_error());
@@ -168,13 +185,17 @@ int Transaction::check()
                     handler->onPQError(this, tr_impl->query->get_last_error());
                     return 0;
                 }
+                if(ret == 2) {
+                    TRANS_LOG(this, "send Sync");
+                    tr_impl->sync_pipeline();
+                }
             }
 
             break;
 
         case PQTRANS_INERROR:
-            TRANS_LOG(this, "status aborted - roolback");
             status = ERROR;
+            TRANS_LOG(this, "status aborted - roolback");
             ret = rollback();
             if(ret < 0) {
                 ERROR("rollback(): %d. query: %s, last_error:%s",
@@ -184,8 +205,10 @@ int Transaction::check()
                 handler->onPQError(this, tr_impl->query->get_last_error());
                 return 0;
             }
-            if(tr_impl->conn->getPipeStatus() == PQ_PIPELINE_ON)
-                tr_impl->conn->syncPipeline();
+            if(ret == 2) {
+                TRANS_LOG(this, "send Sync");
+                tr_impl->sync_pipeline();
+            }
             break;
         default:
             ERROR("unexpected tr_impl->status: %d", tr_impl->status);

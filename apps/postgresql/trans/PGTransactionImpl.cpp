@@ -22,10 +22,7 @@ bool PGTransactionImpl::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sent) {
-        if(!conn->flush()) {
-            TRANS_LOG(parent, "send Sync");
-            if(conn->syncPipeline()) sync_sent = true;
-        }
+        conn->flush();
     }
 
     status = PQtransactionStatus(*conn);
@@ -144,4 +141,10 @@ int PGTransactionImpl::fetch_result()
     } while (res);
 
     return 0;
+}
+
+bool PGTransactionImpl::sync_pipeline()
+{
+    sync_sent = true;
+    return conn->syncPipeline();
 }
