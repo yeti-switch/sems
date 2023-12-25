@@ -9,6 +9,14 @@ DbMockTransactionImpl::DbMockTransactionImpl(Transaction* handler, TestServer* s
 DbMockTransactionImpl::~DbMockTransactionImpl()
 {}
 
+int DbMockTransactionImpl::fetch_result()
+{
+    if(current_query_number == 0 && query->get_result_got() == 0) {
+        query->put_result();
+    }
+    return MockTransactionImpl::fetch_result();
+}
+
 bool DbMockTransactionImpl::check_trans()
 {
     if(status == PQTRANS_IDLE && query->get_current_query()->is_finished()) {

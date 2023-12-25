@@ -10,6 +10,7 @@
 #include <postgresql/libpq-fe.h>
 #include <string>
 #include <chrono>
+#include <iomanip>
 
 //uncomment to enable in-memory transaction logging
 #define TRANS_LOG_ENABLE
@@ -125,6 +126,7 @@ template<class... Types> void Transaction::add_log(const char* func, const char*
     } else {
         tlog.data = format;
     }
+
     // counter++;
     // if(counter > 10) {
     //     saveLog();

@@ -141,7 +141,11 @@ bool PGConnection::start_pipe()
 bool PGConnection::sync_pipe()
 {
     if(!conn) return false;
-    return PQpipelineSync(conn);
+    int ret = PQpipelineSync(conn);
+    if(!ret) {
+        ERROR("connection not sending sync message");
+    }
+    return ret;
 }
 
 bool PGConnection::exit_pipe()

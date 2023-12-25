@@ -10,7 +10,6 @@
 
 #include <stdarg.h>
 #include <netinet/in.h>
-#include <iomanip>
 
 #define MAX_BUF_SIZE 256
 
@@ -174,10 +173,10 @@ int Transaction::check()
             if(0==ret) {
                 //  1 - success
                 //  2 - success in pipeline mode
-                //  0 - error: incorrect state
+                //  0 - incorrect state, ignore
                 // -1 - no connection or "END" query exec() error
                 ret = end();
-                if(ret <= 0) {
+                if(ret < 0) {
                     ERROR("end(): %d. query: %s, last_error:%s",
                         ret, tr_impl->query->get_query().data(),
                         tr_impl->query->get_last_error());

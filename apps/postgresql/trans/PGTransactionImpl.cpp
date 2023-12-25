@@ -22,7 +22,9 @@ bool PGTransactionImpl::check_trans()
     }
 
     if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished()) {
-        conn->flush();
+        if(conn->flush()) {
+            TRANS_LOG(parent, "flush data");
+        }
     }
 
     status = PQtransactionStatus(*conn);

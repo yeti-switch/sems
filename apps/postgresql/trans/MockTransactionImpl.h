@@ -6,9 +6,9 @@ class MockTransactionImpl
   : public TransactionImpl
 {
     IQuery* last_query;
-    size_t current_query_number;
 
   protected:
+    size_t current_query_number;
     TestServer* server;
     bool check_trans() override;
     bool cancel_trans() override;
