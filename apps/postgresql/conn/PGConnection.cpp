@@ -78,9 +78,15 @@ void PGConnection::check_conn()
 
 bool PGConnection::flush_conn()
 {
-    if(1==PQflush(conn)) {
+    int ret = PQflush(conn);
+    switch(ret) {
+    case 0:
+        break;
+    case 1:
         handler->onSock(this, IConnectionHandler::PG_SOCK_RW);
         return true;
+    default: /* -1 */
+        ERROR("PQflush(%p): %d. %s", conn, ret, PQerrorMessage(conn));
     }
 
     return false;
@@ -143,7 +149,7 @@ bool PGConnection::sync_pipe()
     if(!conn) return false;
     int ret = PQpipelineSync(conn);
     if(!ret) {
-        ERROR("connection not sending sync message");
+        ERROR("PQpipelineSync: %d. %s", ret, PQerrorMessage(conn));
     }
     return ret;
 }
