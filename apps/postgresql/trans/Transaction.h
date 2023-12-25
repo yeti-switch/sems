@@ -13,7 +13,7 @@
 #include <iomanip>
 
 //uncomment to enable in-memory transaction logging
-#define TRANS_LOG_ENABLE
+//#define TRANS_LOG_ENABLE
 #ifdef TRANS_LOG_ENABLE
 #define TRANS_LOG(trans, fmt, args...) \
     trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args);\
