@@ -21,7 +21,7 @@ bool PGTransactionImpl::check_trans()
         return false;
     }
 
-    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished() && !sync_sent) {
+    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished()) {
         conn->flush();
     }
 
