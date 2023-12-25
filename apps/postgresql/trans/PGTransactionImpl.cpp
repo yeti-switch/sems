@@ -127,9 +127,10 @@ int PGTransactionImpl::fetch_result()
                 ERROR("unexpected ExecStatusType:%d", st);
             }
 
+            if(!res && !pipeline_aborted && !synced) query->put_result();
+
             PQclear(res);
             res = PQgetResult(*conn);
-            if(!res && !pipeline_aborted && !synced) query->put_result();
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
 

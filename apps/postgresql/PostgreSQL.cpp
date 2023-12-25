@@ -66,6 +66,7 @@ class PostgreSQLFactory
 };
 
 EXPORT_PLUGIN_CLASS_FACTORY(PostgreSQLFactory);
+EXPORT_PLUGIN_CONF_FACTORY(PostgreSQLFactory);
 DEFINE_FACTORY_INSTANCE(PostgreSQLFactory, MOD_NAME);
 
 PostgreSQL* PostgreSQL::_instance=0;
@@ -273,6 +274,10 @@ void PostgreSQL::getConnectionLog(const AmArg& params, AmArg& ret)
         }
     }
     ret = res;
+}
+std::string PostgreSQL::getConnectionLogPath()
+{
+    return log_dir;
 }
 #endif
 

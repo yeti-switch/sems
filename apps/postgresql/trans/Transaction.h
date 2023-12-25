@@ -12,9 +12,12 @@
 #include <chrono>
 
 //uncomment to enable in-memory transaction logging
-//#define TRANS_LOG_ENABLE
+#define TRANS_LOG_ENABLE
 #ifdef TRANS_LOG_ENABLE
-#define TRANS_LOG(trans, fmt, args...) trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
+#define TRANS_LOG(trans, fmt, args...) \
+    trans->add_log(FUNC_NAME, __FILE__, __LINE__, fmt, ##args);\
+    if(trans->get_status() == Transaction::FINISH)\
+        trans->deleteLog();
 #else
 #define TRANS_LOG(trans, fmt, args...) ;
 #endif
@@ -60,13 +63,7 @@ class Transaction
     virtual PGTransactionData policy() = 0;
     virtual IQuery* get_current_query(bool parent);
 
-    Transaction(TransactionImpl* impl, ITransactionHandler* handler)
-        : handler(handler), tr_impl(impl)
-        , status(ACTIVE), state(BEGIN)
-#ifdef TRANS_LOG_ENABLE
-        , trans_log_written(false)
-#endif
-    {}
+    Transaction(TransactionImpl* impl, ITransactionHandler* handler);
 
   public:
     virtual ~Transaction() { delete tr_impl; }
@@ -102,12 +99,14 @@ class Transaction
         {}
     };
 #ifdef TRANS_LOG_ENABLE
-    bool trans_log_written;
     vector<TransLog> translog;
+    string file_path;
+    int counter;
     template<class... Types> void add_log(const char* func, const char* file, int line,
                                           const char* format, Types... args);
     string get_transaction_log();
-    bool saveLog(const char* path);
+    bool saveLog();
+    void deleteLog();
 #endif
 };
 
@@ -124,5 +123,10 @@ template<class... Types> void Transaction::add_log(const char* func, const char*
     } else {
         tlog.data = format;
     }
+    // counter++;
+    // if(counter > 10) {
+    //     saveLog();
+    //     counter = 0;
+    // }
 }
 #endif

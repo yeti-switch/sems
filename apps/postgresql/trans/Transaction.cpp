@@ -1,5 +1,6 @@
 #include "Transaction.h"
 
+#include "../PostgreSQL.h"
 #include "../conn/Connection.h"
 #include "../query/QueryChain.h"
 
@@ -14,6 +15,39 @@
 #define MAX_BUF_SIZE 256
 
 char pg_log_buf[BUFSIZ];
+
+Transaction::Transaction(TransactionImpl* impl, ITransactionHandler* handler)
+    : handler(handler), tr_impl(impl)
+    , status(ACTIVE), state(BEGIN)
+#ifdef TRANS_LOG_ENABLE
+    , counter(0)
+{
+    string dirPath = PostgreSQL::instance()->getConnectionLogPath();
+    if(dirPath.empty()) dirPath = ".";
+    auto dirPathes = explode(dirPath, "/", true);
+
+    std::string dir;
+    for(auto &dirName : dirPathes) {
+        dir += "/";
+        dir += dirName;
+        if(access(dir.c_str(), 0) != 0) {
+            mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        }
+    }
+
+    struct timeval tv;
+    struct tm t;
+    gettimeofday(&tv,NULL);
+    localtime_r(&tv.tv_sec,&t);
+
+    strftime(pg_log_buf, 26, "%d-%b-%T",&t);
+    file_path.append(pg_log_buf);
+    snprintf(pg_log_buf, PATH_MAX, "%s/%p_%s.log", dirPath.c_str(), this, file_path.c_str());
+    file_path = pg_log_buf;
+#else
+{
+#endif
+}
 
 int Transaction::execute()
 {
@@ -225,44 +259,21 @@ string Transaction::get_transaction_log()
     return ss.str();
 }
 
-bool Transaction::saveLog(const char* path)
+bool Transaction::saveLog()
 {
-    if(trans_log_written) return true;
-
-    string dirPath = path;
-    if(dirPath.empty()) return false;
-    auto dirPathes = explode(dirPath, "/", true);
-
-    std::string dir;
-    for(auto &dirName : dirPathes) {
-        dir += "/";
-        dir += dirName;
-        if(access(dir.c_str(), 0) != 0) {
-            mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        }
-    }
-
     string result_log(get_transaction_log());
-    struct timeval tv;
-    struct tm t;
-
-    gettimeofday(&tv,NULL);
-    localtime_r(&tv.tv_sec,&t);
-
-    string file_path;
-    strftime(pg_log_buf, 26, "%d-%b-%T",&t);
-    file_path.append(pg_log_buf);
-    snprintf(pg_log_buf, PATH_MAX, "%s/%d_%s.log", path, get_conn()->getSocket(), file_path.c_str());
-    file_path = pg_log_buf;
 
     FILE* f = fopen(file_path.c_str(), "wb");
     if(!f) return false;
-
     fwrite(result_log.c_str(), result_log.size(), 1, f);
     fclose(f);
 
-    trans_log_written = true;
-
     return true;
 }
+
+void Transaction::deleteLog()
+{
+    unlink(file_path.c_str());
+}
+
 #endif

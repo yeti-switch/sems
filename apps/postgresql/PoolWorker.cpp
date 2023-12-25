@@ -131,8 +131,7 @@ bool PoolWorker::getConnectionLog(const AmArg& args)
     Transaction* trans = conn->getCurrentTransaction();
     if(!trans) return false;
 
-    trans->trans_log_written = false;
-    return trans->saveLog(args[1].asCStr());
+    return trans->saveLog();
 }
 #endif
 
@@ -780,9 +779,9 @@ void PoolWorker::onTimer()
 #ifdef TRANS_LOG_ENABLE
     for(auto trans_it = transactions.begin();
         PostgreSQL::instance()->getLogTime() && trans_it != transactions.end(); trans_it++) {
-        if(current - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
+        if(now - trans_it->createdTime > PostgreSQL::instance()->getLogTime() &&
            trans_it->trans->get_status() == Transaction::ACTIVE) {
-            trans_it->trans->saveLog(PostgreSQL::instance()->getLogDir().c_str());
+            trans_it->trans->saveLog();
         }
     }
 #endif

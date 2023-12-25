@@ -109,6 +109,7 @@ class PostgreSQL
 
 #ifdef TRANS_LOG_ENABLE
     void getConnectionLog(const AmArg& params, AmArg& ret);
+    string getConnectionLogPath();
 #endif
     void showConfig(const AmArg& params, AmArg& ret);
 
