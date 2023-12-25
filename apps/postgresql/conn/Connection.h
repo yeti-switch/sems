@@ -74,6 +74,7 @@ public:
     PGpipelineStatus getPipeStatus() { return pipe_status; }
 
     virtual int getSocket() = 0;
+    virtual int getBackendPid() { return -1; }
 
     string getConnInfo() { return connection_log_info; }
     bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }

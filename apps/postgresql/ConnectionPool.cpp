@@ -134,6 +134,7 @@ void ConnectionPool::getStats(AmArg& stats, uint32_t conn_lifetime)
         conn_info["status"] = conn->getStatus();
         conn_info["pipe_status"] = conn->getPipeStatus();
         conn_info["socket"] = conn->getSocket();
+        conn_info["backend_pid"] = conn->getBackendPid();
         conn_info["busy"] = conn->isBusy();
         conn_info["queries_finished"] = conn->getQueriesFinished();
 

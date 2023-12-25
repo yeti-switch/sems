@@ -22,4 +22,5 @@ public:
     ~PGConnection();
 
     int getSocket() override { return conn ? PQsocket(conn) : -1; }
+    int getBackendPid() override { return conn ? PQbackendPID(conn) : -1; }
 };
