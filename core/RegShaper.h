@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include "log.h"
 
 #include <chrono>
 #include <ratio>
@@ -16,15 +17,18 @@ class RegShaper {
   private:
     typedef timep ThrottlingHashValue;
     typedef map<ThrottlingHashKey,ThrottlingHashValue> ThrottlingHash;
+    typedef map<ThrottlingHashKey,std::chrono::milliseconds> ThrottlingIntervalsHash;
 
     bool enabled;
     std::chrono::milliseconds min_interval;
     ThrottlingHash throttling_hash;
+    ThrottlingIntervalsHash throttling_intervals_hash;
 
   public:
 
     RegShaper()
       : enabled(false)
+      , min_interval(std::chrono::milliseconds::zero())
     {}
 
     /**
@@ -49,6 +53,17 @@ class RegShaper {
     void set_min_interval(int msec)
     {
         min_interval = std::chrono::milliseconds(msec);
+        enabled = true;
+    }
+
+    void set_key_min_interval(const string& key, int msec)
+    {
+        if (min_interval != std::chrono::milliseconds::zero() &&
+            min_interval > std::chrono::milliseconds(msec))
+        {
+            WARN("global restrictions(%u) is more than key's(%s) restrictions(%u)", min_interval, key.c_str(), msec);
+        }
+        throttling_intervals_hash.emplace(key, std::chrono::milliseconds(msec));
         enabled = true;
     }
 };

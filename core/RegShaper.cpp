@@ -15,25 +15,37 @@ bool RegShaper::check_rate_limit(const string &key,
                                  const  timep &now,
                                  timep &next_attempt_time)
 {
-    if(!enabled) return false;
+    if (!enabled) return false;
 
-    ThrottlingHash::iterator i = throttling_hash.find(key);
-    if(i == throttling_hash.end()) {
+    auto i = throttling_hash.find(key);
+    if (i == throttling_hash.end()) {
         //the first operation for this key
         throttling_hash[key] = now;
         return false;
     }
+    auto &last_request_time = i->second;
 
-    //we have previous operations for this key
-    timep &last_request_time = i->second;
-    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_request_time);
-    if(diff > min_interval) {
-        last_request_time = now;
-        return false;
+    const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_request_time);
+    //check global interval
+    if (diff > min_interval) {
+        const auto j = throttling_intervals_hash.find(key);
+        if (j == throttling_intervals_hash.end() ||
+            diff > j->second)
+        {
+            last_request_time = now;
+            return false;
+        }
+
+        DBG("per-domain throttling limit reached for key: <%s>. (diff: %ld, min: %ld)",
+            key.c_str(), diff.count(), j->second.count());
+        last_request_time += j->second;
+        next_attempt_time = last_request_time;
+        return true;
     }
-    DBG("throttling limit reached for key: <%s>. (diff: %ld, min: %ld)",
-        key.c_str(),diff.count(),min_interval.count());
-    last_request_time+=min_interval;
+
+    DBG("global throttling limit reached for key: <%s>. (diff: %ld, min: %ld)",
+        key.c_str(), diff.count(), min_interval.count());
+    last_request_time += min_interval;
     next_attempt_time = last_request_time;
     return true;
 }

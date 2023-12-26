@@ -39,6 +39,7 @@
 #define CFG_OPT_NAME_SHAPER_MIN_INTERVAL "min_interval_per_domain_msec"
 #define CFG_OPT_NAME_DEFAULT_EXPIRES "default_expires"
 #define CFG_OPT_NAME_EXPORT_METRICS "export_metrics"
+#define CFG_OPT_NAME_MIN_INTERVAL_MSEC "min_interval_msec"
 
 #define DEFAULT_EXPIRES 1800
 
@@ -130,6 +131,7 @@ int SIPRegistrarClient::configure(const std::string& config)
 {
     cfg_opt_t opt[] = {
         CFG_INT(CFG_OPT_NAME_SHAPER_MIN_INTERVAL, 0, CFGF_NODEFAULT),
+        CFG_FLOAT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT),
         CFG_INT(CFG_OPT_NAME_DEFAULT_EXPIRES, DEFAULT_EXPIRES, CFGF_NONE),
         CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE),
         CFG_END()
@@ -152,9 +154,22 @@ int SIPRegistrarClient::configure(const std::string& config)
     if(cfg_size(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL)) {
         int i = cfg_getint(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL);
         if(i) {
-            DBG("set shaper min interval to %dmsec",i);
+            DBG("set shaper min interval per domain to %dmsec",i);
             if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
-                WARN("shaper min interval %dmsec is less than timer interval %dmsec. "
+                WARN("shaper min interval per domain %dmsec is less than timer interval %dmsec. "
+                     "set it to timer interval",
+                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
+                i = TIMEOUT_CHECKING_INTERVAL/1000;
+            }
+            shaper_min_interval_per_domain = i;
+        }
+    }
+    if(cfg_size(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC)) {
+        int i = cfg_getfloat(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC)*1000;
+        if(i) {
+            DBG("set shaper global min interval to %dmsec",i);
+            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
+                WARN("shaper global min interval %dmsec is less than timer interval %dmsec. "
                      "set it to timer interval",
                      i,(TIMEOUT_CHECKING_INTERVAL/1000));
                 i = TIMEOUT_CHECKING_INTERVAL/1000;
@@ -381,6 +396,7 @@ void SIPRegistrarClient::onSipReplyEvent(AmSipReplyEvent* ev)
 
 void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
 {
+    shaper.set_key_min_interval(new_reg->info.domain, shaper_min_interval_per_domain);
     AmSIPRegistration* reg =
         new AmSIPRegistration(new_reg->handle,
                               new_reg->info,

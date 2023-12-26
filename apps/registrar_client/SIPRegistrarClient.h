@@ -71,6 +71,7 @@ class SIPRegistrarClient
 
     RegShaper shaper;
     int default_expires;
+    int shaper_min_interval_per_domain;
 
     bool add_reg(const string& reg_id, AmSIPRegistration* new_reg);
     AmSIPRegistration* remove_reg(const string& reg_id);

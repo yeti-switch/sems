@@ -39,7 +39,7 @@ using std::string;
 
 #include "sip/parse_uri.h"
 
-#define DEFAULT_REGISTER_RETRY_DELAY 5
+#define DEFAULT_REGISTER_RETRY_DELAY 120
 #define REGISTER_ATTEMPTS_UNLIMITED 0
 
 struct SIPRegistrationInfo {
