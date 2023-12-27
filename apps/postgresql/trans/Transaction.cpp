@@ -119,9 +119,9 @@ int Transaction::check()
         case PQTRANS_ACTIVE:
             connection_is_busy = tr_impl->fetch_result();
             if(is_finished()) {
+                TRANS_LOG(this, "transaction finished get %u results", get_query(true)->get_result_got());
                 status = FINISH;
                 handler->onFinish(this, tr_impl->result);
-                TRANS_LOG(this, "transaction finished get %u results", get_query(true)->get_result_got());
                 return connection_is_busy;
             }
             next = true;
