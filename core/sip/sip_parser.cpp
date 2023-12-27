@@ -35,10 +35,9 @@
 #include "parse_cseq.h"
 #include "parse_from_to.h"
 #include "parse_100rel.h"
-
 #include "transport.h"
-
 #include "log.h"
+#include "../AmUtils.h"
 
 #include <memory>
 using std::unique_ptr;
@@ -663,8 +662,8 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     int err = parse_first_line(msg,&c,end);
 
     if(err) {
-	err_msg = (char*)"Could not parse first line";
-	return MALFORMED_FLINE;
+        err_msg = (char*)"Could not parse first line";
+        return MALFORMED_FLINE;
     }
 
     err = parse_headers(msg,&c,end);
@@ -676,18 +675,18 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     }*/
 
     if(!err){
-	msg->body.set(c,msg->len - (c - msg->buf));
+        msg->body.set(c,msg->len - (c - msg->buf));
     }
 
-	if(msg->type > SIP_REPLY){
-	    err_msg = (char*)"incorrect type of protocol";
+    if(msg->type > SIP_REPLY){
+        err_msg = (char*)"incorrect type of protocol";
         return MALFORMED_SIP_MSG;
-	}
+    }
 
-	if(msg->type == SIP_REQUEST && msg->u.request->method > sip_request::REGISTER){
-	    err_msg = (char*)"incorrect method of protocol";
+    if(msg->type == SIP_REQUEST && msg->u.request->method > sip_request::REGISTER){
+        err_msg = (char*)"incorrect method of protocol";
         return MALFORMED_SIP_MSG;
-	}
+    }
 
     if(!msg->via1 ||
        !msg->cseq ||
@@ -695,74 +694,74 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
        !msg->to ||
        !msg->callid) {
 
-	if(!msg->via1){
-	    err_msg = (char*)"missing Via header field";
-	}
-	else if(!msg->cseq){
-	    err_msg = (char*)"missing CSeq header field";
-	}
-	else if(!msg->from){
-	    err_msg = (char*)"missing From header field";
-	}
-	else if(!msg->to){
-	    err_msg = (char*)"missing To header field";
-	}
-	else if(!msg->callid){
-	    err_msg = (char*)"missing Call-ID header field";
-	}
+        if(!msg->via1){
+            err_msg = (char*)"missing Via header field";
+        }
+        else if(!msg->cseq){
+            err_msg = (char*)"missing CSeq header field";
+        }
+        else if(!msg->from){
+            err_msg = (char*)"missing From header field";
+        }
+        else if(!msg->to){
+            err_msg = (char*)"missing To header field";
+        }
+        else if(!msg->callid){
+            err_msg = (char*)"missing Call-ID header field";
+        }
 
-	return INCOMPLETE_SIP_MSG;
+        return INCOMPLETE_SIP_MSG;
     }
 
     unique_ptr<sip_via> via(new sip_via());
     if(!parse_via(via.get(), 
-		  msg->via1->value.s,
-		  msg->via1->value.len) && 
-       !via->parms.empty() ) {
+        msg->via1->value.s,
+        msg->via1->value.len) &&
+        !via->parms.empty() ) {
 
-	msg->via_p1 = *via->parms.begin();
-	msg->via1->p = via.release();
+        msg->via_p1 = *via->parms.begin();
+        msg->via1->p = via.release();
     }
     else {
-	err_msg = (char*)"could not parse Via hf";
-	return MALFORMED_SIP_MSG;
+        err_msg = (char*)"could not parse Via hf";
+        return MALFORMED_SIP_MSG;
     }
 
     unique_ptr<sip_cseq> cseq(new sip_cseq());
     if(!parse_cseq(cseq.get(),
-		   msg->cseq->value.s,
-		   msg->cseq->value.len) &&
-       cseq->num_str.len &&
-       cseq->method_str.len ) {
+        msg->cseq->value.s,
+        msg->cseq->value.len) &&
+        cseq->num_str.len &&
+        cseq->method_str.len ) {
 
-	msg->cseq->p = cseq.release();
+        msg->cseq->p = cseq.release();
     }
     else {
-	err_msg = (char*)"could not parse CSeq hf";
-	return MALFORMED_SIP_MSG;
+        err_msg = (char*)"could not parse CSeq hf";
+        return MALFORMED_SIP_MSG;
     }
 
     unique_ptr<sip_from_to> from(new sip_from_to());
     if(parse_from_to(from.get(), msg->from->value.s, msg->from->value.len) != 0) {
-	err_msg = (char*)"could not parse From hf";
-	return MALFORMED_SIP_MSG;
+        err_msg = (char*)"could not parse From hf";
+        return MALFORMED_SIP_MSG;
     }
     if(!from->tag.len) {
-	err_msg = (char*)"missing From-tag";
-	return MALFORMED_SIP_MSG;
+        err_msg = (char*)"missing From-tag";
+        return MALFORMED_SIP_MSG;
     }
     msg->from->p = from.release();
 
     unique_ptr<sip_from_to> to(new sip_from_to());
     if(!parse_from_to(to.get(),
-		      msg->to->value.s,
-		      msg->to->value.len)) {
+              msg->to->value.s,
+              msg->to->value.len)) {
 
-	msg->to->p = to.release();
+        msg->to->p = to.release();
     }
     else {
-	err_msg = (char*)"could not parse To hf";
-	return MALFORMED_SIP_MSG;
+        err_msg = (char*)"could not parse To hf";
+        return MALFORMED_SIP_MSG;
     }
 
     if (msg->rack) {
@@ -772,6 +771,17 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
         } else {
             err_msg = (char *)"could not parse RAck hf";
             return MALFORMED_SIP_MSG;
+        }
+    }
+
+    if (msg->content_length && msg->content_length->value.isEmpty() == false) {
+        int c_len;
+        if (str2int(msg->content_length->value.s,
+                    msg->content_length->value.len,
+                    c_len))
+        {
+            if (c_len < 0 || (c_len > 0 && c_len > msg->body.len + 2)) // + 2 (CR+LF)
+                return MALFORMED_SIP_MSG;
         }
     }
 

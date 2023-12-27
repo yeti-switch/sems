@@ -185,6 +185,16 @@ bool str2int(const string& str, int& result);
  */
 bool str2int(char*& str, int& result, char sep = ' ');
 
+/**
+ * Internal version of preceeding 'str2int' method.
+ * @param str    [in] string to convert
+ * @param len    [in] length of string
+ * @param result [out] result of the function
+ * @param sep    [in] character seprating the number to convert and the next token
+ * @return true on success (!!!)
+ */
+bool str2int(const char* str, int len, int& result, char sep = ' ');
+
 /** 
  * Convert a string to a long int. 
  * On many systems nowadays this could be the same as str2int.

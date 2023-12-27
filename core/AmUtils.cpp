@@ -413,6 +413,63 @@ bool str2int(char*& str, int& result, char sep)
   return false;
 }
 
+bool str2int(const char* str, int len, int& result, char sep)
+{
+  int ret=0;
+  int i=0;
+  const char* init = str;
+  const char* end = init + len;
+  int sign = 1;
+
+  for (; str != end && *str == ' '; ++str);
+
+  if (*str == '-') {
+    sign = -1;
+    str++;
+
+    for(; str != end && *str == ' '; ++str);
+  }
+
+  if (str == end)
+    goto error_no_digits;
+
+  for (; str != end; ++str) {
+    if (*str <= '9' && *str >= '0') {
+      ret=ret*10+*str-'0';
+      i++;
+      if (i>10) goto error_digits;
+    } else {
+      bool eol = false;
+      switch(*str){
+      case 0xd:
+      case 0xa:
+      case 0x0:
+        eol = true;
+      }
+
+      if((*str != sep) && !eol)
+        goto error_char;
+
+      break;
+    }
+  }
+
+  result = ret * sign;
+  return true;
+
+  error_no_digits:
+  DBG("no digits");
+  return false;
+
+  error_digits:
+  DBG("str2int: too many digits in [%s]", init);
+  return false;
+
+  error_char:
+  DBG("str2i: unexpected char 0x%x in %s", *str, init);
+  return false;
+}
+
 // long int could probably be the same size as int
 bool str2long(const string& str, long& result)
 {
