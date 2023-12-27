@@ -126,7 +126,7 @@ int PGTransactionImpl::fetch_result()
                 ERROR("unexpected ExecStatusType:%d", st);
             }
 
-            if(!pipeline_aborted && !synced) query->put_result();
+            if(!pipeline_aborted && !synced && !single) query->put_result();
 
             PQclear(res);
             res = PQgetResult(*conn);
