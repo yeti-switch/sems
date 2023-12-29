@@ -816,6 +816,27 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
         //msg->expires->value.set(EXPIRES_DEFAULT_NUM_str, EXPIRES_DEFAULT_NUM_len);
     }
 
+    if (msg->type == SIP_REQUEST &&
+        msg->u.request &&
+        msg->cseq && msg->cseq->p)
+    {
+        sip_cseq* cseq = (sip_cseq *)msg->cseq->p;
+        sip_request* req = msg->u.request;
+
+        if (cseq->method != req->method ||
+            strncmp2(cseq->method_str.s, cseq->method_str.len,
+                     req->method_str.s, req->method_str.len) != 0)
+        {
+            WARN("\"%s\" method %.*s mismatched for the %.*s method in the start line",
+                 SIP_HDR_CSEQ,
+                 cseq->method_str.len, cseq->method_str.s,
+                 req->method_str.len, req->method_str.s);
+
+            return MALFORMED_SIP_MSG;
+        }
+    }
+
+
     return 0;
 }
 
