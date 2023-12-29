@@ -31,6 +31,7 @@
 #define _CSTRING_H
 
 #include <string.h>
+#include <string>
 
 struct cstring 
 {
@@ -65,6 +66,10 @@ struct cstring
 
     bool isEmpty(){
         return s == NULL || len == 0;
+    }
+
+    std::string toString() const {
+        return std::string(s, len);
     }
 
     bool operator == (const cstring& rhs_str) const {

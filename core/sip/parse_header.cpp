@@ -55,6 +55,7 @@ using std::unique_ptr;
 #define CALL_ID_len        SIP_HDR_LEN(SIP_HDR_CALL_ID) // 7
 #define CONTACT_len        SIP_HDR_LEN(SIP_HDR_CONTACT) // 7
 #define REQUIRE_len        SIP_HDR_LEN(SIP_HDR_REQUIRE) // 7
+#define EXPIRES_len        SIP_HDR_LEN(SIP_HDR_EXPIRES) // 7
 #define	UPGRADE_len        SIP_HDR_LEN(HTTP_HDR_UPGRADE) // 7
 #define	CONNECTION_len     SIP_HDR_LEN(HTTP_HDR_CONNECTION) // 10
 #define CONTENT_TYPE_len   SIP_HDR_LEN(SIP_HDR_CONTENT_TYPE) // 12
@@ -200,6 +201,7 @@ int parse_header_type(sip_header* h)
 
     //case CALL_ID_len:
     //case REQUIRE_len:
+    //case EXPIRES_len:
     case CONTACT_len:
 	switch(h->name.s[0]){
 	case 'c':
@@ -229,6 +231,12 @@ int parse_header_type(sip_header* h)
         if (! lower_cmp(h->name.s+1, &SIP_HDR_REQUIRE[1],
             SIP_HDR_LEN(SIP_HDR_REQUIRE)-1))
             h->type = sip_header::H_REQUIRE;
+        break;
+    case 'e':
+    case 'E':
+        if (! lower_cmp(h->name.s+1, &SIP_HDR_EXPIRES[1],
+            SIP_HDR_LEN(SIP_HDR_EXPIRES)-1))
+            h->type = sip_header::H_EXPIRES;
         break;
     case 'u':
     case 'U':

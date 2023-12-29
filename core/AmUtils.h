@@ -380,6 +380,9 @@ void inplaceHeadersErase(string &hdrs,const char *hdrv[]);
 bool is_valid_utf8(const std::string &s);
 bool fixup_utf8_inplace(std::string &s);
 
+/** augmented strncmp function which also compares string lengths */
+int strncmp2(const char* str1, size_t len1, const char* str2, size_t len2);
+
 #endif
 
 // Local Variables:

@@ -130,6 +130,8 @@ struct sip_msg
     sip_via_parm*      via_p1;
 
     sip_header*        callid;
+    sip_header*        max_forwards;
+    sip_header*        expires;
 
     list<sip_header*>  contacts;
     list<sip_header*>  route;

@@ -72,6 +72,7 @@ struct sip_header
     H_SEC_WS_EXT,
     H_SEC_WS_ACCEPT,
     H_SEC_WS_PROTOCOL,
+    H_EXPIRES,
 	
 	H_OTHER
     };

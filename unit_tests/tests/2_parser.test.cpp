@@ -446,6 +446,109 @@ TEST(SipParser, ScalarTest)
     msg.release();
 }
 
+TEST(SipParser, ScalarCSeqOverlargeTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 36893488147419103232 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Expires: 3600\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
+    msg.release();
+}
+
+TEST(SipParser, ScalarMaxForwardsAcceptableTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 1 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Expires: 3600\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    ASSERT_NE(msg.max_forwards, nullptr);
+    ASSERT_STREQ(msg.max_forwards->value.toString().c_str(), "70");
+    msg.release();
+}
+
+TEST(SipParser, ScalarMaxForwardsOverlargeTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 1 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 300\r\n"
+                  "Expires: 3600\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    ASSERT_STREQ(msg.max_forwards->value.toString().c_str(), "300");
+    msg.release();
+}
+
+TEST(SipParser, ScalarExpiresOverlargeTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 1 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Expires: 4294967296\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    ASSERT_STREQ(msg.expires->value.toString().c_str(), "4294967296");
+    msg.release();
+}
+
+TEST(SipParser, ScalarContactExpiresOverlargeTest)
+{
+    sip_msg msg;
+    char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
+                  "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
+                  "To: <sip:user@example.com>\r\n"
+                  "From: <sip:user@example.com>;tag=239232jh3\r\n"
+                  "CSeq: 1 REGISTER\r\n"
+                  "Call-ID: scalar02.23o0pd9vanlq3wnrlnewofjas9ui32\r\n"
+                  "Max-Forwards: 70\r\n"
+                  "Expires: 3600\r\n"
+                  "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
+                  "Content-Length: 0";
+    char* err;
+    msg.copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    const sip_header* contact = msg.contacts.empty() ? nullptr : *msg.contacts.begin();
+    ASSERT_NE(contact, nullptr);
+    ASSERT_STREQ(contact->value.toString().c_str(),
+        "<sip:user@host129.example.com>;expires=280297596632815");
+    msg.release();
+}
+
 // rfc4475 3.1.2.7
 TEST(SipParser, EnclosingTest)
 {

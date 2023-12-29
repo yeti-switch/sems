@@ -38,6 +38,7 @@
 #include "transport.h"
 #include "log.h"
 #include "../AmUtils.h"
+#include "defs.h"
 
 #include <memory>
 using std::unique_ptr;
@@ -88,6 +89,8 @@ sip_msg::sip_msg()
     rack(NULL),via1(NULL),
     via_p1(NULL),
     callid(NULL),
+    max_forwards(NULL),
+    expires(NULL),
     contacts(),
     route(),
     record_route(),
@@ -566,6 +569,10 @@ int parse_headers(sip_msg* msg, char** c, char* end)
 		msg->callid = hdr; 
 		break;
 
+	    case sip_header::H_MAX_FORWARDS:
+		msg->max_forwards = hdr;
+		break;
+
 	    case sip_header::H_CONTACT:
 		msg->contacts.push_back(hdr);
 		break;
@@ -646,6 +653,10 @@ int parse_headers(sip_msg* msg, char** c, char* end)
 	    case sip_header::H_SEC_WS_ACCEPT:
 		msg->sec_ws_accept = hdr;
 		break;
+
+	    case sip_header::H_EXPIRES:
+		msg->expires = hdr;
+		break;
 	    }
 	    msg->hdrs.push_back(hdr);
 	}
@@ -658,6 +669,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
 {
     char* c = msg->buf;
     char* end = msg->buf + msg->len;
+    int num;
 
     int err = parse_first_line(msg,&c,end);
 
@@ -774,15 +786,34 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
         }
     }
 
-    if (msg->content_length && msg->content_length->value.isEmpty() == false) {
-        int c_len;
-        if (str2int(msg->content_length->value.s,
-                    msg->content_length->value.len,
-                    c_len))
-        {
-            if (c_len < 0 || (c_len > 0 && c_len > msg->body.len + 2)) // + 2 (CR+LF)
-                return MALFORMED_SIP_MSG;
-        }
+    if (msg->content_length &&
+        msg->content_length->value.isEmpty() == false &&
+        str2int(msg->content_length->value.s, msg->content_length->value.len, num) &&
+        (num < 0 || (num > 0 && num > msg->body.len + 2))) // + 2 (CR+LF)
+    {
+        return MALFORMED_SIP_MSG;
+    }
+
+    if (msg->max_forwards &&
+        msg->max_forwards->value.isEmpty() == false &&
+        str2int(msg->max_forwards->value.s, msg->max_forwards->value.len, num) &&
+        num > MAX_FRW_MAX_NUM)
+    {
+        WARN("\"%s\" header value is greater than %d", SIP_HDR_MAX_FORWARDS, MAX_FRW_MAX_NUM);
+        /* exclude Max-Forwards from headers list */
+        //msg->hdrs.remove(msg->max_forwards);
+        //delete msg->max_forwards;
+        //msg->max_forwards = NULL;
+    }
+
+    if (msg->expires &&
+        msg->expires->value.isEmpty() == false &&
+        strncmp2(msg->expires->value.s, msg->expires->value.len,
+                 EXPIRES_MAX_NUM_str, EXPIRES_MAX_NUM_len) > 0)
+    {
+        WARN("\"%s\" header value is greater than %s", SIP_HDR_EXPIRES, EXPIRES_MAX_NUM_str);
+        /* use default value for Expires header */
+        //msg->expires->value.set(EXPIRES_DEFAULT_NUM_str, EXPIRES_DEFAULT_NUM_len);
     }
 
     return 0;

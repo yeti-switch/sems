@@ -113,6 +113,28 @@ using std::list;
 #define HTTPVER_len (HTTP_len+1+SUP_SIPVER_len) // 'HTTP/2.0' fixme
 
 //
+// SIP headers max values
+//
+
+#define GEN_MAX_NUM_str                 "4294967295" // (pow(2, 32) - 1)
+#define GEN_MAX_NUM_len                 (sizeof(GEN_MAX_NUM_str)-/*0-term*/1)
+
+#define CSEQ_MAX_NUM_str                GEN_MAX_NUM_str
+#define CSEQ_MAX_NUM_len                GEN_MAX_NUM_len
+#define MAX_FRW_MAX_NUM                 255
+#define EXPIRES_MAX_NUM_str             GEN_MAX_NUM_str
+#define EXPIRES_MAX_NUM_len             GEN_MAX_NUM_len
+#define CONTACT_EXPIRES_MAX_NUM_str     GEN_MAX_NUM_str
+#define CONTACT_EXPIRES_MAX_NUM_len     GEN_MAX_NUM_len
+
+//
+// SIP headers default values
+//
+
+#define EXPIRES_DEFAULT_NUM_str         "3600"
+#define EXPIRES_DEFAULT_NUM_len         (sizeof(EXPIRES_DEFAULT_NUM_str)-/*0-term*/1)
+
+//
 // Common states: (>100)
 //
 

@@ -1673,3 +1673,8 @@ void inplaceHeadersErase(string &hdrs,const char *hdrv[])
 		}
 	}
 }
+
+
+int strncmp2(const char* str1, size_t len1, const char* str2, size_t len2) {
+	return len1 == len2 ? strncmp(str1, str2, len1) : len1 > len2;
+}

@@ -29,15 +29,16 @@
 
 #include "parse_cseq.h"
 #include "parse_common.h"
-
 #include "log.h"
+#include "../AmUtils.h"
+#include "defs.h"
 
 int parse_cseq(sip_cseq* cseq, const char* beg, int len)
 {
     enum {
-	C_NUM=0,
-	C_NUM_SWS,
-	C_METHOD
+        C_NUM=0,
+        C_NUM_SWS,
+        C_METHOD
     };
 
 
@@ -48,82 +49,85 @@ int parse_cseq(sip_cseq* cseq, const char* beg, int len)
 
     for(;c!=end;c++){
 
-	switch(st){
+        switch(st){
 
-	case C_NUM:
-	    switch(*c){
+        case C_NUM:
+            switch(*c){
 
-	    case_CR_LF;
+            case_CR_LF;
 
-	    case SP:
-	    case HTAB:
-		st = C_NUM_SWS;
-		cseq->num_str.set(beg, c-beg);
-		break;
-		
-	    default:
-		if(!IS_DIGIT(*c)){
-		    return MALFORMED_SIP_MSG;
-		}
-		cseq->num = cseq->num*10 + *c - '0';
-		break;
-	    }
-	    break;
+            case SP:
+            case HTAB:
+                st = C_NUM_SWS;
+                cseq->num_str.set(beg, c-beg);
+                break;
 
-	case C_NUM_SWS:
-	    switch(*c){
+            default:
+                if(!IS_DIGIT(*c)){
+                    return MALFORMED_SIP_MSG;
+                }
+                cseq->num = cseq->num*10 + *c - '0';
+                break;
+            }
+            break;
 
-	    case_CR_LF;
+        case C_NUM_SWS:
+            switch(*c){
 
-	    case SP:
-	    case HTAB:
-		break;
-		
-	    default:
-		st = C_METHOD;
-		beg = c;
-		break;
-	    }
-	    break;
+            case_CR_LF;
 
-	case C_METHOD:
-	    switch(*c){
+            case SP:
+            case HTAB:
+                break;
 
-	    case_CR_LF;
+            default:
+                st = C_METHOD;
+                beg = c;
+                break;
+            }
+            break;
 
-	    case SP:
-	    case HTAB:
-		cseq->method_str.set(beg,c-beg);
-		return 0;
-	    }
-	    break;
+        case C_METHOD:
+            switch(*c){
 
-	case_ST_CR(*c);
+            case_CR_LF;
 
-	case ST_LF:
-	case ST_CRLF:
-	    switch(saved_st){
-	    case C_NUM:
-		cseq->num_str.set(beg,c-(st==ST_CRLF?2:1)-beg);
-		break;
-	    case C_METHOD:
-		cseq->method_str.set(beg,c-beg);
-		return 0;
-	    }
-	    st = saved_st;
-	    break;
-	}
+            case SP:
+            case HTAB:
+                cseq->method_str.set(beg,c-beg);
+                return 0;
+            }
+            break;
+
+        case_ST_CR(*c);
+
+        case ST_LF:
+        case ST_CRLF:
+            switch(saved_st){
+            case C_NUM:
+                cseq->num_str.set(beg,c-(st==ST_CRLF?2:1)-beg);
+                break;
+            case C_METHOD:
+                cseq->method_str.set(beg,c-beg);
+                return 0;
+            }
+            st = saved_st;
+            break;
+        }
     }
 
-    if(st != C_METHOD){
-	return MALFORMED_SIP_MSG;
+    if(st != C_METHOD)
+        return MALFORMED_SIP_MSG;
+
+    if(strncmp2(cseq->num_str.s, cseq->num_str.len, CSEQ_MAX_NUM_str, CSEQ_MAX_NUM_len) > 0) {
+        WARN("\"%s\" value is greater than %s", SIP_HDR_CSEQ, CSEQ_MAX_NUM_str);
+        return MALFORMED_SIP_MSG;
     }
 
     cseq->method_str.set(beg,c-beg);
     if(parse_method(&cseq->method, cseq->method_str.s, cseq->method_str.len) < 0){
-	
-	DBG("Cseq method parsing failed");
-	return MALFORMED_SIP_MSG;
+        DBG("\"%s\" method parsing failed", SIP_HDR_CSEQ);
+        return MALFORMED_SIP_MSG;
     }
 
     return 0;
