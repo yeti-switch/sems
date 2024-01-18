@@ -160,7 +160,14 @@ StatCountersSingleGroup &AmStatistics::group(StatCountersSingleGroup::Type type,
 {
     AmLock lock(groups_mutex);
 
-    auto it = counters_groups_containers.try_emplace(name, new StatCountersSingleGroup(type), true);
+    StatCountersSingleGroup *counter = new StatCountersSingleGroup(type);
+    auto it = counters_groups_containers.try_emplace(name, counter, true);
+
+    if (it.second == false) {
+        delete counter;
+        counter = nullptr;
+    }
+
     auto &existent_group = *dynamic_cast<StatCountersSingleGroup *>(it.first->second.groups_container);
 
     if(it.second == false && existent_group.getType() != type) {
