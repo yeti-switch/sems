@@ -10,7 +10,8 @@
 
 TEST(SipParser, Parsing)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data[] = "INVITE sip:ivan@test.com SIP/2.0\r\n"
                   "Via: SIP/2.0/UDP test.com:5060;branch=kjkjsd54df>\r\n"
                   "To: Ivan Ivanov <sip:ivan@test.com>\r\n"
@@ -21,40 +22,47 @@ TEST(SipParser, Parsing)
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.contacts.size(), 1);
-    EXPECT_EQ(msg.contacts.back()->type, sip_header::H_CONTACT);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.content_type->type, sip_header::H_CONTENT_TYPE);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::INVITE);
-    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
-    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(), string("ivan").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("test.com").c_str());
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->contacts.size(), 1);
+    EXPECT_EQ(msg->contacts.back()->type, sip_header::H_CONTACT);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->content_type->type, sip_header::H_CONTENT_TYPE);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::INVITE);
+    EXPECT_EQ(msg->u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg->u.request->ruri.user.s, msg->u.request->ruri.user.len).c_str(), string("ivan").c_str());
+    EXPECT_STREQ(string(msg->u.request->ruri.host.s, msg->u.request->ruri.host.len).c_str(), string("test.com").c_str());
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data1[] = "INVITE sip:ivan@test.com SIP/0.9\r\n\r\n";
-    msg.copy_msg_buf(data1, strlen(data1));
-    ASSERT_NE(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    msg.release();
+    msg->copy_msg_buf(data1, strlen(data1));
+    ASSERT_NE(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data2[] = "INVITE sip:ivan@test.com HTTP/1.0\r\n\r\n";
-    msg.copy_msg_buf(data2, strlen(data2));
-    ASSERT_NE(parse_sip_msg(&msg, err), EXIT_SUCCESS);
+    msg->copy_msg_buf(data2, strlen(data2));
+    ASSERT_NE(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data3[] = "GET / SIP/2.0\r\n\r\n";
-    msg.copy_msg_buf(data3, strlen(data3));
-    ASSERT_NE(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    msg.release();
+    msg->copy_msg_buf(data3, strlen(data3));
+    ASSERT_NE(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
 }
 
 // rfc4475 3.1.1.1
 TEST(SipParser, ShortTortuousTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data[] = "INVITE sip:vivekg@chair-dnrc.example.com;unknownparam SIP/2.0\r\n"
                   "TO :\r\n"
                   " sip:vivekg@chair-dnrc.example.com ;   tag    = 1918181833n\r\n"
@@ -93,29 +101,30 @@ TEST(SipParser, ShortTortuousTest)
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.route.size(), 1);
-    EXPECT_EQ(msg.route.back()->type, sip_header::H_ROUTE);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.content_type->type, sip_header::H_CONTENT_TYPE);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::INVITE);
-    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
-    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(), string("vivekg").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("chair-dnrc.example.com").c_str());
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->route.size(), 1);
+    EXPECT_EQ(msg->route.back()->type, sip_header::H_ROUTE);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->content_type->type, sip_header::H_CONTENT_TYPE);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::INVITE);
+    EXPECT_EQ(msg->u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg->u.request->ruri.user.s, msg->u.request->ruri.user.len).c_str(), string("vivekg").c_str());
+    EXPECT_STREQ(string(msg->u.request->ruri.host.s, msg->u.request->ruri.host.len).c_str(), string("chair-dnrc.example.com").c_str());
 }
 
 // rfc4475 3.1.1.2
 TEST(SipParser, WideRangeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "!interesting-Method0123456789_*+`.%indeed'~ "
                     "sip:1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*:&it+has=1,weird!*pas$wo~d_too.(doesn't-it)"
                     "@example.com SIP/2.0\r\n"
@@ -129,40 +138,41 @@ TEST(SipParser, WideRangeTest)
                   "extensionHeader-!.%*+_`'~:大停電\r\n"
                   "Content-Length: 0\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::OTHER_METHOD);
-    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
-    EXPECT_STREQ(string(msg.u.request->method_str.s, msg.u.request->method_str.len).c_str(),
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::OTHER_METHOD);
+    EXPECT_EQ(msg->u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg->u.request->method_str.s, msg->u.request->method_str.len).c_str(),
                  string("!interesting-Method0123456789_*+`.%indeed'~").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(),
+    EXPECT_STREQ(string(msg->u.request->ruri.user.s, msg->u.request->ruri.user.len).c_str(),
                  string("1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.passwd.s, msg.u.request->ruri.passwd.len).c_str(),
+    EXPECT_STREQ(string(msg->u.request->ruri.passwd.s, msg->u.request->ruri.passwd.len).c_str(),
                  string("&it+has=1,weird!*pas$wo~d_too.(doesn't-it)").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("example.com").c_str());
+    EXPECT_STREQ(string(msg->u.request->ruri.host.s, msg->u.request->ruri.host.len).c_str(), string("example.com").c_str());
 
-    sip_from_to* to = (sip_from_to*)msg.to->p;
-    sip_from_to* from = (sip_from_to*)msg.from->p;
+    sip_from_to* to = (sip_from_to*)msg->to->p;
+    sip_from_to* from = (sip_from_to*)msg->from->p;
     EXPECT_STREQ(string(to->nameaddr.name.s, to->nameaddr.name.len).c_str(),
                  string("\"BEL: NUL: DEL:\"").c_str());
     EXPECT_STREQ(string(from->nameaddr.name.s, from->nameaddr.name.len).c_str(),
                  string("token1~` token2'+_ token3*%!.-").c_str());
     EXPECT_STREQ(string(from->tag.s, from->tag.len).c_str(),
                  string("_token~1'+`*%!-.").c_str());
-    msg.release();
 }
 
 // rfc4475 3.1.1.3-5
 TEST(SipParser, EscapeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE sip:sips%3Auser%40example.com@example.net SIP/2.0\r\n"
                   "To: sip:%00se%72@example.com\r\n"
                   "From: <sip:I%20have%20spaces@example.net>;tag=938\r\n"
@@ -183,28 +193,29 @@ TEST(SipParser, EscapeTest)
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::INVITE);
-    EXPECT_EQ(msg.content_type->type, sip_header::H_CONTENT_TYPE);
-    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
-    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(),
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::INVITE);
+    EXPECT_EQ(msg->content_type->type, sip_header::H_CONTENT_TYPE);
+    EXPECT_EQ(msg->u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg->u.request->ruri.user.s, msg->u.request->ruri.user.len).c_str(),
                  string("sips%3Auser%40example.com").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("example.net").c_str());
-    msg.release();
+    EXPECT_STREQ(string(msg->u.request->ruri.host.s, msg->u.request->ruri.host.len).c_str(), string("example.net").c_str());
 }
 
 // rfc4475 3.1.1.8
 TEST(SipParser, ExtraOctetsTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "To: sip:j.user@example.com\r\n"
                   "From: sip:j.user@example.com;tag=43251j3j324\r\n"
@@ -224,23 +235,24 @@ TEST(SipParser, ExtraOctetsTest)
                   "Via: SIP/2.0/UDP 192.0.2.15;branch=z9hG4bKkdjuw380234\r\n"
                   "Content-Length: 0\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::REGISTER);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::REGISTER);
 }
 
 // rfc4475 3.1.1.9
 TEST(SipParser, SemicolonSepTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "OPTIONS sip:user;par=example.net@example.com SIP/2.0\r\n"
                   "To: sip:j_user@example.com\r\n"
                   "From: sip:caller@example.org;tag=33242\r\n"
@@ -251,27 +263,28 @@ TEST(SipParser, SemicolonSepTest)
                   "Via: SIP/2.0/UDP 192.0.2.1;branch=z9hG4bKkdjuw\r\n"
                   "Content-Length: 0\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::OPTIONS);
-    EXPECT_EQ(msg.u.request->ruri.scheme, sip_uri::SIP);
-    EXPECT_STREQ(string(msg.u.request->ruri.user.s, msg.u.request->ruri.user.len).c_str(),
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::OPTIONS);
+    EXPECT_EQ(msg->u.request->ruri.scheme, sip_uri::SIP);
+    EXPECT_STREQ(string(msg->u.request->ruri.user.s, msg->u.request->ruri.user.len).c_str(),
                  string("user;par=example.net").c_str());
-    EXPECT_STREQ(string(msg.u.request->ruri.host.s, msg.u.request->ruri.host.len).c_str(), string("example.com").c_str());
-    msg.release();
+    EXPECT_STREQ(string(msg->u.request->ruri.host.s, msg->u.request->ruri.host.len).c_str(), string("example.com").c_str());
 }
 
 // rfc4475 3.1.1.10
 TEST(SipParser, TransportTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "OPTIONS sip:user@example.com SIP/2.0\r\n"
                   "To: sip:user@example.com\r\n"
                   "From: <sip:caller@example.com>;tag=323\r\n"
@@ -286,26 +299,27 @@ TEST(SipParser, TransportTest)
                   "Via: SIP/2.0/TCP t5.example.com;branch=z9hG4bK0a9idfnee\r\n"
                   "Content-Length: 0\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REQUEST);
-    EXPECT_EQ(msg.u.request->method, sip_request::OPTIONS);
-    EXPECT_EQ(msg.vias.size(), 5);
-    sip_via* via1 = (sip_via*)msg.via1->p;
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REQUEST);
+    EXPECT_EQ(msg->u.request->method, sip_request::OPTIONS);
+    EXPECT_EQ(msg->vias.size(), 5);
+    sip_via* via1 = (sip_via*)msg->via1->p;
     EXPECT_EQ(via1->parms.back()->trans.type, sip_transport::UDP);
-    msg.release();
 }
 
 // rfc4475 3.1.1.12
 TEST(SipParser, ReplyReasonTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "SIP/2.0 200 = 2**3 * 5**2 но\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.198;branch=z9hG4bK1324923\r\n"
                   "Call-ID: unreason.1234ksdfak3j2erwedfsASdf\r\n"
@@ -325,25 +339,26 @@ TEST(SipParser, ReplyReasonTest)
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REPLY);
-    EXPECT_EQ(msg.u.reply->code, 200);
-    EXPECT_STREQ(string(msg.u.reply->reason.s, msg.u.reply->reason.len).c_str(),
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REPLY);
+    EXPECT_EQ(msg->u.reply->code, 200);
+    EXPECT_STREQ(string(msg->u.reply->reason.s, msg->u.reply->reason.len).c_str(),
                  string("= 2**3 * 5**2 но").c_str());
-    msg.release();
 }
 
 // rfc4475 3.1.1.13
 TEST(SipParser, EmptyReasonTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REPLY;
+
     char data[] = "SIP/2.0 100 \r\n"
                   "Via: SIP/2.0/UDP 192.0.2.198;branch=z9hG4bK1324923\r\n"
                   "Call-ID: unreason.1234ksdfak3j2erwedfsASdf\r\n"
@@ -353,25 +368,26 @@ TEST(SipParser, EmptyReasonTest)
                   "Content-Length: 0\r\n"
                   "Contact: <sip:user@host198.example.com>";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    EXPECT_EQ(msg.from->type, sip_header::H_FROM);
-    EXPECT_EQ(msg.to->type, sip_header::H_TO);
-    EXPECT_EQ(msg.via1->type, sip_header::H_VIA);
-    EXPECT_EQ(msg.callid->type, sip_header::H_CALL_ID);
-    EXPECT_EQ(msg.cseq->type, sip_header::H_CSEQ);
-    EXPECT_EQ(msg.content_length->type, sip_header::H_CONTENT_LENGTH);
-    EXPECT_EQ(msg.type, SIP_REPLY);
-    EXPECT_EQ(msg.u.reply->code, 100);
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    EXPECT_EQ(msg->from->type, sip_header::H_FROM);
+    EXPECT_EQ(msg->to->type, sip_header::H_TO);
+    EXPECT_EQ(msg->via1->type, sip_header::H_VIA);
+    EXPECT_EQ(msg->callid->type, sip_header::H_CALL_ID);
+    EXPECT_EQ(msg->cseq->type, sip_header::H_CSEQ);
+    EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
+    EXPECT_EQ(msg->type, SIP_REPLY);
+    EXPECT_EQ(msg->u.reply->code, 100);
     //TODO: now reason contains garbage. would you need to check on nil?
-    EXPECT_EQ((int64_t)msg.u.reply->reason.s, 0);
-    msg.release();
+    EXPECT_EQ((int64_t)msg->u.reply->reason.s, 0);
 }
 
 // rfc4475 3.1.2.2
 TEST(SipParser, ContentLargerTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
                   "Max-Forwards: 80\r\n"
                   "To: sip:j.user@example.com\r\n"
@@ -392,15 +408,16 @@ TEST(SipParser, ContentLargerTest)
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 // rfc4475 3.1.2.3
 TEST(SipParser, ContentNegativeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
                   "Max-Forwards: 254\r\n"
                   "To: sip:j.user@example.com\r\n"
@@ -421,15 +438,16 @@ TEST(SipParser, ContentNegativeTest)
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 // rfc4475 3.1.2.4-5
 TEST(SipParser, ScalarTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -441,14 +459,15 @@ TEST(SipParser, ScalarTest)
                   "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 TEST(SipParser, ScalarCSeqOverlargeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -460,14 +479,15 @@ TEST(SipParser, ScalarCSeqOverlargeTest)
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 TEST(SipParser, ScalarMaxForwardsAcceptableTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -479,16 +499,17 @@ TEST(SipParser, ScalarMaxForwardsAcceptableTest)
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    ASSERT_NE(msg.max_forwards, nullptr);
-    ASSERT_STREQ(msg.max_forwards->value.toString().c_str(), "70");
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    ASSERT_NE(msg->max_forwards, nullptr);
+    ASSERT_STREQ(msg->max_forwards->value.toString().c_str(), "70");
 }
 
 TEST(SipParser, ScalarMaxForwardsOverlargeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -500,15 +521,16 @@ TEST(SipParser, ScalarMaxForwardsOverlargeTest)
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    ASSERT_STREQ(msg.max_forwards->value.toString().c_str(), "300");
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    ASSERT_STREQ(msg->max_forwards->value.toString().c_str(), "300");
 }
 
 TEST(SipParser, ScalarExpiresOverlargeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -520,15 +542,14 @@ TEST(SipParser, ScalarExpiresOverlargeTest)
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    ASSERT_STREQ(msg.expires->value.toString().c_str(), "4294967296");
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    ASSERT_STREQ(msg->expires->value.toString().c_str(), "4294967296");
 }
 
 TEST(SipParser, ScalarContactExpiresOverlargeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
     char data[] = "REGISTER sip:example.com SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host129.example.com;branch=z9hG4bK342sdfoi3\r\n"
                   "To: <sip:user@example.com>\r\n"
@@ -540,19 +561,20 @@ TEST(SipParser, ScalarContactExpiresOverlargeTest)
                   "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), EXIT_SUCCESS);
-    const sip_header* contact = msg.contacts.empty() ? nullptr : *msg.contacts.begin();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
+    const sip_header* contact = msg->contacts.empty() ? nullptr : *msg->contacts.begin();
     ASSERT_NE(contact, nullptr);
     ASSERT_STREQ(contact->value.toString().c_str(),
         "<sip:user@host129.example.com>;expires=280297596632815");
-    msg.release();
 }
 
 // rfc4475 3.1.2.7
 TEST(SipParser, EnclosingTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE <sip:user@example.com> SIP/2.0\r\n"
                   "To: sip:user@example.com\r\n"
                   "From: sip:caller@example.net;tag=39291\r\n"
@@ -563,15 +585,16 @@ TEST(SipParser, EnclosingTest)
                   "Contact: <sip:caller@host5.example.net>\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.8
 TEST(SipParser, EmbeddedLwsTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE sip:user@example.com; lr SIP/2.0\r\n"
                   "To: sip:user@example.com;tag=3xfe-9921883-z9f\r\n"
                   "From: sip:caller@example.net;tag=231413434\r\n"
@@ -582,15 +605,16 @@ TEST(SipParser, EmbeddedLwsTest)
                   "Contact: <sip:caller@host1.example.net>\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.9
 TEST(SipParser, MultipleSPTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "INVITE  sip:user@example.com  SIP/2.0\r\n"
                   "To: sip:user@example.com;tag=3xfe-9921883-z9f\r\n"
                   "From: sip:caller@example.net;tag=231413434\r\n"
@@ -601,15 +625,16 @@ TEST(SipParser, MultipleSPTest)
                   "Contact: <sip:caller@host1.example.net>\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.10
 TEST(SipParser, SPCharactersTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "OPTIONS sip:remote-target@example.com SIP/2.0  \r\n"
                   "Via: SIP/2.0/TCP host1.example.com;branch=z9hG4bK299342093\r\n"
                   "To: <sip:remote-target@example.com>\r\n"
@@ -620,15 +645,16 @@ TEST(SipParser, SPCharactersTest)
                   "Max-Forwards: 70\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.11
 TEST(SipParser, EscapedHeadersTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "INVITE sip:user@example.com?Route=%3Csip:example.com%3E SIP/2.0\r\n"
                   "Via: SIP/2.0/TCP host1.example.com;branch=z9hG4bK299342093\r\n"
                   "To: <sip:remote-target@example.com>\r\n"
@@ -639,15 +665,16 @@ TEST(SipParser, EscapedHeadersTest)
                   "Max-Forwards: 70\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.16
 TEST(SipParser, UnknownProtocolVersionTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "OPTIONS sip:t.watson@example.org SIP/7.0\r\n"
                   "Via:     SIP/7.0/UDP c.example.com;branch=z9hG4bKkdjuw\r\n"
                   "Max-Forwards:     70\r\n"
@@ -657,15 +684,16 @@ TEST(SipParser, UnknownProtocolVersionTest)
                   "CSeq:    1 OPTIONS\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.1.2.17-18
 TEST(SipParser, MethodsMismatchTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "OPTIONS sip:user@example.com SIP/2.0\r\n"
                   "To: sip:j.user@example.com\r\n"
                   "From: sip:caller@example.net;tag=34525\r\n"
@@ -675,15 +703,16 @@ TEST(SipParser, MethodsMismatchTest)
                   "Via: SIP/2.0/UDP host.example.com;branch=z9hG4bKkdjuw\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 // rfc4475 3.1.2.19
 TEST(SipParser, OverloadResponceCodeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
+
     char data[] = "SIP/2.0 4294967301 better not break the receiver\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.105;branch=z9hG4bK2398ndaoe\r\n"
                   "Call-ID: bigcode.asdof3uj203asdnf3429uasdhfas3ehjasdfas9i\r\n"
@@ -693,30 +722,30 @@ TEST(SipParser, OverloadResponceCodeTest)
                   "Contact: <sip:user@host105.example.com>\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.3.1
 TEST(SipParser, MissingRequiredTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data[] = "INVITE sip:user@example.com SIP/2.0\r\n"
                   "CSeq: 193942 INVITE\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.95;branch=z9hG4bKkdj.insuf\r\n"
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), INCOMPLETE_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), INCOMPLETE_SIP_MSG);
 }
 
 // rfc4475 3.3.2-4
 TEST(SipParser, UnknownSchemeTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data[] = "OPTIONS nobodyKnowsThisScheme:totallyopaquecontent SIP/2.0\r\n"
                   "To: sip:user@example.com\r\n"
                   "From: sip:caller@example.net;tag=384\r\n"
@@ -726,15 +755,15 @@ TEST(SipParser, UnknownSchemeTest)
                   "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_FLINE);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
 
 // rfc4475 3.3.8-9
 TEST(SipParser, MultiplyValuesTest)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    //msg->type = SIP_REQUEST;
     char data[] = "OPTIONS sip:example.com SIP/2.0\r\n"
                   "To: sip:user@example.com\r\n"
                   "From: sip:caller@example.net;tag=384\r\n"
@@ -745,34 +774,41 @@ TEST(SipParser, MultiplyValuesTest)
                   "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
                   "Content-Length: 0";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(&msg, err), MALFORMED_SIP_MSG);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
 
 TEST(HttpParser, Parsing)
 {
-    sip_msg msg;
+    std::unique_ptr<sip_msg> msg(new sip_msg());
+    msg->type = SIP_REQUEST;
+
     char data[] = "GET /?encoding=text HTTP/1.1\r\n"
                   "Connection: Upgrade\r\n"
                   "Upgrade: websocket\r\n"
                   "Sec-WebSocket-Version: 13\r\n"
                   "Sec-WebSocket-Key: y1ceknN4VFPuHj7MkaAhVQ==\r\n";
     char* err;
-    msg.copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_http_msg(&msg, err), EXIT_SUCCESS);
-    msg.release();
+    msg->copy_msg_buf(data, strlen(data));
+    ASSERT_EQ(parse_http_msg(msg.get(), err), EXIT_SUCCESS);
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data1[] = "INVITE sip:ivan@test.com HTTP/0.9\r\n\r\n";
-    msg.copy_msg_buf(data1, strlen(data1));
-    ASSERT_NE(parse_http_msg(&msg, err), EXIT_SUCCESS);
-    msg.release();
+    msg->copy_msg_buf(data1, strlen(data1));
+    ASSERT_NE(parse_http_msg(msg.get(), err), EXIT_SUCCESS);
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data2[] = "INVITE sip:ivan@test.com HTTP/0.8\r\n\r\n";
-    msg.copy_msg_buf(data2, strlen(data2));
-    ASSERT_NE(parse_http_msg(&msg, err), EXIT_SUCCESS);
+    msg->copy_msg_buf(data2, strlen(data2));
+    ASSERT_NE(parse_http_msg(msg.get(), err), EXIT_SUCCESS);
+
+    msg.reset(new sip_msg());
+    msg->type = SIP_REQUEST;
     char data3[] = "GET / SIP/2.0\r\n\r\n";
-    msg.copy_msg_buf(data3, strlen(data3));
-    ASSERT_NE(parse_http_msg(&msg, err), EXIT_SUCCESS);
-    msg.release();
+    msg->copy_msg_buf(data3, strlen(data3));
+    ASSERT_NE(parse_http_msg(msg.get(), err), EXIT_SUCCESS);
 }
 
 TEST(Parser, Nameaddr)
