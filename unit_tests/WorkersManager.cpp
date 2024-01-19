@@ -110,5 +110,8 @@ void WorkerContainer::dispose()
 {
     for(auto& worker : workers) {
         worker->stop(true);
+        delete worker;
     }
+
+    workers.clear();
 }
