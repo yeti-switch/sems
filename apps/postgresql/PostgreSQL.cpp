@@ -98,6 +98,7 @@ PostgreSQL::PostgreSQL()
 PostgreSQL::~PostgreSQL()
 {
     AmEventDispatcher::instance()->delEventQueue(POSTGRESQL_QUEUE);
+    freePolicyFactory();
 }
 
 int PostgreSQL::onLoad()
