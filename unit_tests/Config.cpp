@@ -117,6 +117,7 @@ int TesterConfig::readConfiguration(const string& filePath)
                 return -1;
         } else {
             modules_cfg.emplace(name, module->raw_info->raw);
+            AmLcConfig::freeRawValues(module);
         }
     }
 

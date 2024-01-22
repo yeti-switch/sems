@@ -1213,6 +1213,8 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
             config->modules.push_back(name);
             config->module_config.insert(std::make_pair(name, module->raw_info->raw));
         }
+
+        freeRawValues(module);
     }
     mCount = cfg_size(modules_, SECTION_MODULE_GLOBAL_NAME);
     for(unsigned int i = 0; i < mCount; i++) {
@@ -1223,6 +1225,7 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
         config->modules.push_back(name);
         config->module_config.insert(std::make_pair(name, module->raw_info->raw));
         config->rtld_global_plugins.insert(name + ".so");
+        freeRawValues(module);
     }
 
     return 0;
