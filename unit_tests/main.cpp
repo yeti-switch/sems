@@ -29,6 +29,12 @@ class TesterLogFac : public AmLoggingFacility {
         fprintf(stderr, COMPLETE_LOG_FMT);
         fflush(stderr);
     }
+    static void dispose() {
+        if(_instance) {
+            delete _instance;
+            _instance = NULL;
+        }
+    }
 };
 TesterLogFac *TesterLogFac::_instance = NULL;
 
@@ -118,5 +124,6 @@ int main(int argc, char** argv)
     AmSessionContainer::dispose();
     statistics::dispose();
     test_config::dispose();
+    TesterLogFac::dispose();
     return ret;
 }
