@@ -228,6 +228,7 @@ void cleanup_logging();
 
 #ifndef DISABLE_SYSLOG_LOG
 int set_syslog_facility(const char*, const char* );
+void dispose_syslog_fac();
 #endif
 
 void log_stacktrace(int ll);

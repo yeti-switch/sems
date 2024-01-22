@@ -125,5 +125,6 @@ int main(int argc, char** argv)
     statistics::dispose();
     test_config::dispose();
     TesterLogFac::dispose();
+    dispose_syslog_fac();
     return ret;
 }

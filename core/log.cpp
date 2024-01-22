@@ -95,10 +95,16 @@ class SyslogLogFac : public AmLoggingFacility {
            const char*, int) override;
 
   static SyslogLogFac &instance(){
-	  if(!_instance) _instance = new SyslogLogFac();
-	  return *_instance;
+      if(!_instance) _instance = new SyslogLogFac();
+      return *_instance;
   }
 
+  static void dispose(){
+      if(_instance) {
+        delete _instance;
+        _instance = NULL;
+      }
+  }
 };
 SyslogLogFac *SyslogLogFac::_instance = NULL;
 
@@ -231,6 +237,11 @@ void cleanup_logging()
     for(auto fac : log_hooks)
         dec_ref(fac);
     log_hooks.clear();
+}
+
+void dispose_syslog_fac()
+{
+    SyslogLogFac::dispose();
 }
 
 /**
