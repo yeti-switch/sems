@@ -22,6 +22,10 @@ public:
         server = &WorkerHandler::instance().server;
         external = WorkerHandler::instance().external;
     }
+    virtual ~PostgresqlTest() {
+        WorkerHandler::dispose();
+        AmEventDispatcher::dispose();
+    }
     void SetUp() override
     {
         server->clear();

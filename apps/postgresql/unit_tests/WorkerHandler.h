@@ -31,6 +31,9 @@ PGPool GetPoolByAddress(const string& address);
 class WorkerHandler : public AmEventFdQueue
                     , public AmEventHandler
 {
+private:
+    inline static WorkerHandler *_instance = NULL;
+
 public:
     int epoll_fd;
     bool running;
@@ -67,15 +70,25 @@ public:
         AmEventDispatcher::instance()->addEventQueue(WORKER_HANDLER_QUEUE, this);
     }
     WorkerHandler(const WorkerHandler&) = delete;
-    ~WorkerHandler(){
+    virtual ~WorkerHandler(){
         AmEventDispatcher::instance()->delEventQueue(WORKER_HANDLER_QUEUE);
+        PostgreSQL::instance()->postEvent(new PGWorkerDestroy(WORKER_POOL_NAME));
         epoll_unlink(epoll_fd);
         close(epoll_fd);
     }
 
     static WorkerHandler& instance() {
-        static WorkerHandler handler;
-        return handler;
+        if (_instance == NULL)
+            _instance = new WorkerHandler();
+
+        return *_instance;
+    }
+
+    static void dispose(){
+        if(_instance) {
+            delete _instance;
+            _instance = NULL;
+        }
     }
     
     void set_expected_events(const vector<PGEvent::Type>& e) {
