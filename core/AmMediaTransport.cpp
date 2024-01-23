@@ -343,7 +343,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     case TP_UDPTLSRTPSAVP:
     case TP_UDPTLSRTPSAVPF: {
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(server_settings);
+            srtp_fingerprint_p fp = DtlsContext::gen_fingerprint(server_settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -359,7 +359,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
     } break;
     case TP_UDPTLSUDPTL: {
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(server_settings);
+            srtp_fingerprint_p fp = DtlsContext::gen_fingerprint(server_settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -432,7 +432,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
                                                     static_cast<dtls_settings*>(server_settings) :
                                                     static_cast<dtls_settings*>(client_settings);
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+            srtp_fingerprint_p fp = DtlsContext::gen_fingerprint(settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -455,7 +455,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
                                                     static_cast<dtls_settings*>(server_settings) :
                                                     static_cast<dtls_settings*>(client_settings);
         if(local_dtls_fingerprint.hash.empty()) {
-            srtp_fingerprint_p fp = AmDtlsConnection::gen_fingerprint(settings);
+            srtp_fingerprint_p fp = DtlsContext::gen_fingerprint(settings);
             local_dtls_fingerprint.hash = fp.hash;
             local_dtls_fingerprint.value = fp.value;
         }
@@ -524,9 +524,9 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                 srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
                 try {
                     if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
-                        addConnection(new AmDtlsConnection(this, address, port, fingerprint, true));
+                        addConnection(new AmDtlsConnection(this, address, port, stream->getDtlsContext(type), true));
                     } else if(local_media.setup == S_PASSIVE || remote_media.setup == S_ACTIVE) {
-                        addConnection(new AmDtlsConnection(this, address, port, fingerprint, false));
+                        addConnection(new AmDtlsConnection(this, address, port, stream->getDtlsContext(type), false));
                     }
                 } catch(string& error) {
                     CLASS_ERROR("ICE candidate DTLS connection error: %s", error.c_str());
@@ -718,15 +718,20 @@ void AmMediaTransport::initDtlsConnection(const string& remote_address, int remo
         seq = TRANSPORT_SEQ_DTLS;
         srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
         try {
+            AmDtlsConnection* connection = 0;
             if(local_media.setup == S_ACTIVE || remote_media.setup == S_PASSIVE) {
                 CLASS_DBG("create client DtlsConnection");
-                addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, true));
+                connection = new AmDtlsConnection(this, remote_address, remote_port, stream->getDtlsContext(type), true);
             } else if(local_media.setup == S_PASSIVE || remote_media.setup == S_ACTIVE) {
                 CLASS_DBG("create server DtlsConnection");
-                addConnection(new AmDtlsConnection(this, remote_address, remote_port, fingerprint, false));
+                connection = new AmDtlsConnection(this, remote_address, remote_port, stream->getDtlsContext(type), false);
             } else {
                 CLASS_DBG("DtlsConnection creation skipped because of no valid setup attributes. "
                           "local: %d, remote: %d", local_media.setup, remote_media.setup);
+            }
+            if(connection) {
+                addConnection(connection);
+                connection->initConnection();
             }
         } catch(string& error) {
             CLASS_ERROR("DTLS connection error: %s", error.c_str());
@@ -836,6 +841,16 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
         if(conn->getConnType() == AmRawConnection::ZRTP_CONN && conn->isAddrConnection(remote_addr)) {
             cur_rtp_conn = conn;
         }
+        if(conn->getConnType() == AmRawConnection::DTLS_CONN && conn->isAddrConnection(remote_addr)) {
+            try {
+                AmDtlsConnection* connection = dynamic_cast<AmDtlsConnection*>(conn);
+                if(connection) {
+                    connection->initConnection();
+                }
+            } catch(string& error) {
+                CLASS_ERROR("DTLS connection error: %s", error.c_str());
+            }
+        }
     }
     stream->allowStunConnection(this, priority);
 }
@@ -843,6 +858,11 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
 void AmMediaTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
     stream->dtlsSessionActivated(this, srtp_profile, local_key, remote_key);
+}
+
+void AmMediaTransport::dtls_alert(string alert)
+{
+    CLASS_ERROR("DTLS alert %s", alert.c_str());
 }
 
 void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)

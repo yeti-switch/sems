@@ -25,6 +25,8 @@ class AmRtpPacket;
 #define RTCP_TRANSPORT      2
 #define FAX_TRANSPORT       3
 
+#define MAX_TRANSPORT_TYPE  4
+
 class AmMediaTransport
   : public AmObject,
     public AmRtpSession
@@ -119,6 +121,7 @@ public:
 
     void allowStunConnection(sockaddr_storage* remote_addr, int priority);
     void dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void dtls_alert(string alert);
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn);

@@ -48,10 +48,15 @@ void dtls_conf::operator=(const dtls_conf& conf)
     key.reset(Botan::PKCS8::copy_key(*conf.key.get()).release());
 }
 
+bool dtls_conf::is_client()
+{
+    return s_client != 0;
+}
+
 std::shared_ptr<Botan::Private_Key> dtls_conf::private_key_for(
-    const Botan::X509_Certificate& cert,
-    const string& type,
-    const string& context)
+    const Botan::X509_Certificate&,
+    const string&,
+    const string&)
 {
     if(key) {
         return key;
@@ -170,9 +175,9 @@ vector<string> dtls_conf::allowed_signature_methods() const
 
 vector<Botan::X509_Certificate> dtls_conf::cert_chain(
     const vector<string>& cert_key_types,
-    const std::vector<Botan::AlgorithmIdentifier>& cert_signature_schemes,
-    const string& type,
-    const string& context)
+    const std::vector<Botan::AlgorithmIdentifier>&,
+    const string&,
+    const string&)
 {
     vector<Botan::X509_Certificate> certs;
     for(auto& cert : certificates) {
@@ -193,8 +198,8 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(
     return certs;
 }
 
-DtlsTimer::DtlsTimer(AmDtlsConnection* connection)
-: conn(connection),
+DtlsTimer::DtlsTimer(DtlsContext* context)
+: context(context),
   is_valid(true)
 {
     inc_ref(this);
@@ -210,7 +215,7 @@ void DtlsTimer::fire()
         dec_ref(this);
         return;
     }
-    if(conn->timer_check()) {
+    if(context->timer_check()) {
         reset();
     } else {
         dec_ref(this);
@@ -229,22 +234,20 @@ void DtlsTimer::reset()
     wheeltimer::instance()->insert_timer(this);
 }
 
-AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, const srtp_fingerprint_p& _fingerprint, bool client)
-  : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN),
-    tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
-    dtls_channel(nullptr),
-    dtls_settings(),
-    fingerprint(_fingerprint),
-    srtp_profile(srtp_profile_reserved),
-    rand_gen(std::make_shared<Botan::System_RNG>()),
-    activated(false),
-    is_client(client),
-    pending_handshake_timer(nullptr)
-{
-    initConnection();
-}
+DtlsContext::DtlsContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint)
+: tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
+  srtp_profile(srtp_profile_reserved),
+  dtls_channel(nullptr),
+  dtls_settings(),
+  fingerprint(_fingerprint),
+  rand_gen(std::make_shared<Botan::System_RNG>()),
+  activated(false),
+  pending_handshake_timer(nullptr),
+  rtp_stream(stream),
+  cur_conn(0)
+{}
 
-AmDtlsConnection::~AmDtlsConnection()
+DtlsContext::~DtlsContext() noexcept
 {
     if(pending_handshake_timer) {
         pending_handshake_timer->invalidate();
@@ -256,8 +259,15 @@ AmDtlsConnection::~AmDtlsConnection()
     }
 }
 
-void AmDtlsConnection::initConnection()
+srtp_fingerprint_p DtlsContext::gen_fingerprint(class dtls_settings* settings)
 {
+    static std::string hash("SHA-256");
+    return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
+}
+
+void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings) noexcept(false)
+{
+    cur_conn = conn;
     if(dtls_channel) {
         if(pending_handshake_timer) {
             pending_handshake_timer->invalidate();
@@ -267,14 +277,9 @@ void AmDtlsConnection::initConnection()
         delete dtls_channel;
     }
 
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     try {
-        if(is_client) {
-            if(!rtpinfo->dtls_enable)
-                throw string("DTLS is not configured on: ") +
-                    AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
-
-            dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->client_settings);
+        dtls_settings = settings;
+        if(dtls_settings->is_client()) {
             dtls_channel = new Botan::TLS::Client(
                 tls_callbacks_proxy,
                 session_manager_dtls::instance()->ssm,
@@ -282,14 +287,9 @@ void AmDtlsConnection::initConnection()
                 dtls_settings,
                 rand_gen,
                 Botan::TLS::Server_Information(
-                    r_host.c_str(), r_port),
+                    conn->getRHost().c_str(), conn->getRPort()),
                     Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
-            if(!rtpinfo->dtls_enable)
-                throw string("DTLS is not configured on: ") +
-                    AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
-
-            dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->server_settings);
             dtls_channel = new Botan::TLS::Server(
                 tls_callbacks_proxy,
                 session_manager_dtls::instance()->ssm,
@@ -308,39 +308,22 @@ void AmDtlsConnection::initConnection()
     }
 }
 
-srtp_fingerprint_p AmDtlsConnection::gen_fingerprint(class dtls_settings* settings)
+bool DtlsContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int size)
 {
-    static std::string hash("SHA-256");
-    return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
+    cur_conn = conn;
+    return dtls_channel->received_data(data, size) == 0;
 }
 
-void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size,
-                                        struct sockaddr_storage*,
-                                        struct timeval)
-{
-    try {
-        size_t res = dtls_channel->received_data(data, size);
-        if(res > 0) {
-            CLASS_DBG("need else %zu", res);
-        }
-    } catch(Botan::Exception& exc) {
-        transport->getRtpStream()->onErrorRtpTransport(
-            DTLS_ERROR,
-            string("DTLS error: ") + exc.what(),
-            transport);
-    }
-}
-
-ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
+bool DtlsContext::sendData(const uint8_t* data, unsigned int size)
 {
     if(activated) {
-        dtls_channel->send((const uint8_t*)packet->getBuffer(), packet->getBufferSize());
-        return packet->getBufferSize();
+        dtls_channel->send(data, size);
+        return true;
     }
-    return 0;
+    return false;
 }
 
-bool AmDtlsConnection::timer_check()
+bool DtlsContext::timer_check()
 {
     if(!activated) {
         dtls_channel->timeout_check();
@@ -349,35 +332,27 @@ bool AmDtlsConnection::timer_check()
     return false;
 }
 
-void AmDtlsConnection::tls_alert(Botan::TLS::Alert alert)
+void DtlsContext::tls_alert(Botan::TLS::Alert alert)
 {
+    assert(cur_conn);
+    cur_conn->getTransport()->dtls_alert(alert.type_string());
 }
 
-void AmDtlsConnection::tls_emit_data(std::span<const uint8_t> data)
+void DtlsContext::tls_emit_data(std::span<const uint8_t> data)
 {
-    assert(transport);
-    transport->send(
-        &r_addr,
-        (unsigned char*)data.data(), data.size(),
-        AmStreamConnection::DTLS_CONN);
+    assert(cur_conn);
+    cur_conn->send((unsigned char*)data.data(), data.size());
 }
 
-void AmDtlsConnection::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
+void DtlsContext::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
 {
-    sockaddr_storage laddr;
-    transport->getLocalAddr(&laddr);
-    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
-    if(!p) return;
-    p->recv_time = last_recv_time;
-    p->relayed = false;
-    p->setAddr(&r_addr);
-    p->setLocalAddr(&laddr);
-    p->setBuffer((unsigned char*)data.data(), data.size());
-    transport->onRawPacket(p, this);
+    assert(cur_conn);
+    cur_conn->onRecvData((unsigned char*)data.data(), data.size());
 }
 
-void AmDtlsConnection::tls_session_activated()
+void DtlsContext::tls_session_activated()
 {
+    assert(cur_conn);
     unsigned int key_len = srtp::profile_get_master_key_length(srtp_profile);
     unsigned int salt_size = srtp::profile_get_master_salt_length(srtp_profile);
     unsigned int export_key_size = key_len*2 + salt_size*2;
@@ -395,19 +370,20 @@ void AmDtlsConnection::tls_session_activated()
         remote_key.insert(remote_key.end(), key.begin() + key_len*2 + salt_size, key.end());
     }
 
-    transport->dtlsSessionActivated(srtp_profile, local_key, remote_key);
+    rtp_stream->dtlsSessionActivated(cur_conn->getTransport(), srtp_profile, local_key, remote_key);
     activated = true;
 }
 
-void AmDtlsConnection::tls_session_established(const Botan::TLS::Session_Summary& session)
+void DtlsContext::tls_session_established(const Botan::TLS::Session_Summary& session)
 {
+    assert(cur_conn);
     DBG("************ on_dtls_connect() ***********");
-    DBG("new DTLS connection from %s:%u", r_host.c_str(),r_port);
+    DBG("new DTLS connection from %s:%u", cur_conn->getRHost().c_str(),cur_conn->getRPort());
 
     srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();
 }
 
-void AmDtlsConnection::tls_verify_cert_chain(
+void DtlsContext::tls_verify_cert_chain(
     const std::vector<Botan::X509_Certificate>& cert_chain,
     const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
     const std::vector<Botan::Certificate_Store*>& trusted_roots,
@@ -433,4 +409,73 @@ void AmDtlsConnection::tls_verify_cert_chain(
     std::transform(fingerprint.hash.begin(), fingerprint.hash.end(), fingerprint.hash.begin(), static_cast<int(*)(int)>(std::toupper));
     if(fingerprint.is_use && cert_chain[0].fingerprint(fingerprint.hash) != fingerprint.value)
         throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateHashValue, "fingerprint is not equal");
+}
+
+AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, DtlsContext* context, bool client)
+  : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN),
+    dtls_context(context),
+    is_client(client)
+{}
+AmDtlsConnection::~AmDtlsConnection()
+{}
+
+void AmDtlsConnection::initConnection()
+{
+    if(dtls_context->is_inited()) return;
+
+    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
+    if(!rtpinfo->dtls_enable)
+        throw string("DTLS is not configured on: ") +
+            AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
+
+    std::shared_ptr<dtls_conf> dtls_settings;
+    if(is_client)
+        dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->client_settings);
+    else
+        dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->server_settings);
+    dtls_context->initContext(this, dtls_settings);
+}
+
+void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size,
+                                        struct sockaddr_storage*,
+                                        struct timeval)
+{
+    try {
+        dtls_context->onRecvData(this, data, size);
+    } catch(Botan::Exception& exc) {
+        transport->getRtpStream()->onErrorRtpTransport(
+            DTLS_ERROR,
+            string("DTLS error: ") + exc.what(),
+            transport);
+    }
+}
+
+ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
+{
+    if(dtls_context->sendData((const uint8_t*)packet->getBuffer(), packet->getBufferSize()))
+        return packet->getBufferSize();
+    return 0;
+}
+
+ssize_t AmDtlsConnection::send(uint8_t* data, unsigned int size)
+{
+    assert(transport);
+    return transport->send(
+        &r_addr,
+        (unsigned char*)data, size,
+        AmStreamConnection::DTLS_CONN);
+}
+
+void AmDtlsConnection::onRecvData(uint8_t* data, unsigned int size)
+{
+    sockaddr_storage laddr;
+    transport->getLocalAddr(&laddr);
+    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
+    if(!p) return;
+    p->recv_time = last_recv_time;
+    p->relayed = false;
+    p->setAddr(&r_addr);
+    p->setLocalAddr(&laddr);
+    p->setBuffer((unsigned char*)data, size);
+    transport->onRawPacket(p, this);
 }

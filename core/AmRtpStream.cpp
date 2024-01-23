@@ -865,6 +865,9 @@ int AmRtpStream::init(const AmSdp& local,
 
     try {
         if(remote_media.is_use_ice()) {
+            srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
+            dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media);
             }
@@ -876,12 +879,18 @@ int AmRtpStream::init(const AmSdp& local,
             if(cur_rtcp_trans != cur_rtp_trans)
                 cur_rtcp_trans->initSrtpConnection(rtcp_address, rtcp_port, local_media, remote_media);
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
+            srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
+            dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
-            if(cur_rtcp_trans != cur_rtp_trans)
+            if(cur_rtcp_trans != cur_rtp_trans) {
+                dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
                 cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
+            }
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
+            srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
+            dtls_context[FAX_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP
@@ -1041,6 +1050,8 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
         freeRtpPacket(p);
     } else if(parse_res==RTP_PACKET_PARSE_OK) {
         bufferPacket(p);
+        if(cur_rtp_trans != transport)
+            cur_rtp_trans = transport;
     } else {
         CLASS_ERROR("error parsing: rtp packet is RTCP"
             "(src_addr: %s:%i, remote_addr: %s:%i, "
@@ -1053,9 +1064,12 @@ void AmRtpStream::onRtpPacket(AmRtpPacket* p, AmMediaTransport* transport)
     }
 }
 
-void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmMediaTransport*)
+void AmRtpStream::onRtcpPacket(AmRtpPacket* p, AmMediaTransport* transport)
 {
     p->rtcp_parse_update_stats(rtp_stats);
+    if(cur_rtcp_trans != transport && multiplexing) {
+        cur_rtcp_trans = transport;
+    }
 }
 
 void AmRtpStream::onUdptlPacket(AmRtpPacket* p, AmMediaTransport*)
@@ -1108,6 +1122,12 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int priority)
 
 void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
+    if(cur_rtp_trans != transport) {
+        cur_rtp_trans = transport;
+        if(multiplexing) {
+            cur_rtcp_trans = transport;
+        }
+    }
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
     memcpy((void*)r_key.c_str(), remote_key.data(), remote_key.size());
@@ -1119,6 +1139,11 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
         if(transport->getTransportType() == tr->getTransportType())
             tr->initSrtpConnection(srtp_profile, l_key, r_key);
     }
+}
+
+DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
+    assert(transport_type < MAX_TRANSPORT_TYPE);
+    return dtls_context[transport_type].get();
 }
 
 #ifdef WITH_ZRTP

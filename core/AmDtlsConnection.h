@@ -27,7 +27,7 @@ using std::shared_ptr;
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
-    friend class AmDtlsConnection;
+    friend class DtlsContext;
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
     vector<Botan::X509_Certificate> certificates;
@@ -44,6 +44,7 @@ public:
     dtls_conf(dtls_server_settings* settings);
     dtls_conf(const dtls_conf& conf);
     void operator=(const dtls_conf& conf);
+    bool is_client();
 
     //Policy functions
     vector<string> allowed_key_exchange_methods() const override;
@@ -109,16 +110,18 @@ public:
     }
 };
 
+class DtlsContext;
 class AmDtlsConnection;
+class AmRtpStream;
 
 class DtlsTimer
   : public timer,
     public atomic_ref_cnt
 {
-    AmDtlsConnection* conn;
+    DtlsContext* context;
     std::atomic_bool is_valid;
   public:
-    DtlsTimer(AmDtlsConnection* connection);
+    DtlsTimer(DtlsContext* context);
     ~DtlsTimer();
     void fire() override;
     void invalidate();
@@ -126,39 +129,32 @@ class DtlsTimer
     void reset();
 };
 
-class AmDtlsConnection
-  : public AmStreamConnection,
-    public Botan::TLS::Callbacks
+class DtlsContext : public Botan::TLS::Callbacks
 {
     shared_ptr<BotanTLSCallbacksProxy> tls_callbacks_proxy;
 
+    srtp_profile_t srtp_profile;
     Botan::TLS::Channel* dtls_channel;
     shared_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
-    srtp_profile_t srtp_profile;
     std::shared_ptr<Botan::RandomNumberGenerator> rand_gen;
     bool activated;
-    bool is_client;
 
     DtlsTimer *pending_handshake_timer;
-protected:
-    void initConnection();
+
+    AmRtpStream* rtp_stream;
+    AmDtlsConnection* cur_conn;
 public:
-    AmDtlsConnection(
-        AmMediaTransport* transport,
-        const string& remote_addr, int remote_port,
-        const srtp_fingerprint_p& _fingerprint,
-        bool client);
-    virtual ~AmDtlsConnection();
+    DtlsContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint);
+    ~DtlsContext() noexcept;
 
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
-    void handleConnection(
-        uint8_t * data, unsigned int size,
-        struct sockaddr_storage * recv_addr,
-        struct timeval recv_time) override;
-    ssize_t send(AmRtpPacket * packet) override;
+    void initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings) noexcept(false);
+    bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false);
     bool timer_check();
+    bool sendData(const uint8_t * data, unsigned int size) noexcept(false);
+    bool is_inited() { return dtls_channel != nullptr; }
 
     //TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;
@@ -173,6 +169,30 @@ public:
         std::string_view hostname,
         const Botan::TLS::Policy& policy) override;
     void tls_session_activated() override;
+};
+
+class AmDtlsConnection
+  : public AmStreamConnection
+{
+    DtlsContext* dtls_context;
+    bool is_client;
+protected:
+    friend class DtlsContext;
+    ssize_t send(uint8_t * data, unsigned int size);
+    void onRecvData(uint8_t * data, unsigned int size);
+public:
+    AmDtlsConnection(
+        AmMediaTransport* transport,
+        const string& remote_addr, int remote_port,
+        DtlsContext* context, bool client);
+    virtual ~AmDtlsConnection();
+
+    void initConnection();
+    void handleConnection(
+        uint8_t * data, unsigned int size,
+        struct sockaddr_storage * recv_addr,
+        struct timeval recv_time) override;
+    ssize_t send(AmRtpPacket * packet) override;
 };
 
 #endif/*AM_DTLS_CONNECTION_H*/

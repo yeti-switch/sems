@@ -286,6 +286,7 @@ class AmRtpStream
     bool is_ice_stream;
     string ice_pwd;
     string ice_ufrag;
+    unique_ptr<DtlsContext> dtls_context[MAX_TRANSPORT_TYPE];
 
     vector<AmMediaTransport*> ip4_transports;
     vector<AmMediaTransport*> ip6_transports;
@@ -452,6 +453,7 @@ class AmRtpStream
     void allowStunConnection(AmMediaTransport* transport, int priority);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    DtlsContext* getDtlsContext(uint8_t transport_type);
     void update_sender_stats(const AmRtpPacket &p);
     void inc_drop_pack(){ dropped_packets_count++; }
 
