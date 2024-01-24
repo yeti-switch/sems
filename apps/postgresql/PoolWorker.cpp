@@ -370,7 +370,10 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
         return 0;
     } else if(trans.currentPool == master){
         if(!failover_to_slave && !retransmit_enable) {
-            delete trans.trans;
+            if (trans.trans != NULL) {
+                delete trans.trans;
+                trans.trans = NULL;
+            }
             return 0;
         } else if(current_time - trans.createdTime < retransmit_interval) {
             if(!is_ret_timer_set) {
@@ -398,7 +401,10 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
         } else if((failover_to_slave && !slave) ||
                   !failover_to_slave) {
             if(!retransmit_enable) {
-                delete trans.trans;
+                if (trans.trans != NULL) {
+                    delete trans.trans;
+                    trans.trans = NULL;
+                }
                 return 0;
             } else {
                 trans.currentPool = 0;
@@ -406,7 +412,11 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
             }
         }
     } if(!retransmit_enable) {
-        delete trans.trans;
+        if (trans.trans != NULL) {
+            delete trans.trans;
+            trans.trans = NULL;
+        }
+
         return 0;
     } else if(current_time - trans.createdTime < retransmit_interval) {
         if(!is_ret_timer_set) {
@@ -501,10 +511,13 @@ void PoolWorker::checkQueue()
             int ret = retransmitTransaction(tr);
             if(ret < 0) {
                 delete trans;
+                trans = NULL;
                 break;
             } else {
-                for(auto it = queue.begin(); it != next_it; it++)
+                for(auto it = queue.begin(); it != next_it; it++) {
                     delete it->trans;
+                    it->trans = NULL;
+                }
                 trans_it = queue.erase(queue.begin(), next_it);
                 queue_size.dec(count);
             }
