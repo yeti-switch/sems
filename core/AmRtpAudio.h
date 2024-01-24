@@ -114,9 +114,13 @@ class AmRtpAudio: public AmRtpStream, public AmAudio, public AmPLCBuffer
   unsigned long long last_send_ts;
   bool               last_send_ts_i;
 
-  unsigned long long last_recv_system_ts;
-  unsigned int       max_empty_packets_time;
-  bool               last_recv_i;
+  unsigned long long last_decoded_system_ts;
+  unsigned int       recv_samples_timeout_threshold;
+  /* indicates that there are
+   * no decoded samples for recv_samples_timeout_threshold seconds.
+   * used to skip recording on empty input
+   */
+  bool               recv_samples_timeout;
 
   /**
    last expected RTP timestamp to receive
@@ -193,7 +197,7 @@ public:
 
   bool isLastSamplesRelayed() { return last_recv_relayed; }
   
-  bool isLastRecv() { return last_recv_i; }
+  bool isRecvSamplesTimeout() { return recv_samples_timeout; }
 
   /**
   * send a DTMF as RTP payload (RFC4733)
@@ -203,7 +207,7 @@ public:
   void sendDtmf(int event, unsigned int duration_ms, int volume = -1);
 
   void setMaxRtpTime(uint32_t ts);
-  void setMaxEmptyPacketsTime(uint32_t ts);
+  void setRecvSamplesTimeout(uint32_t ts);
   void ignoreRecording() { ignore_recording = true; }
 protected:
   int read(unsigned int user_ts, unsigned int size) override { return 0; }
