@@ -1,3 +1,9 @@
+sems (1.128.0) stable; urgency=low
+  * AmRtpStream: use common DTLS context for all transports within the stream
+  * AmB2BMedia: skip silence writing to the RSR
+  * AmMediaTransport: fix ZRTP init crash
+ -- Michael Furmur <furmur@pm.me>  Wed, 24 Jan 2024 17:25:19 +0200
+
 sems (1.127.2) stable; urgency=low
   * apps/postgresql: add 'backend_pid' to the connection stats
  -- Michael Furmur <furmur@pm.me>  Mon, 25 Dec 2023 22:52:23 +0200
