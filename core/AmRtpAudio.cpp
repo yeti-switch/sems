@@ -115,7 +115,11 @@ AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
     /*last_ts_i(false),*/ use_default_plc(true),
     last_check(0),last_check_i(false), send_int(false),
     last_send_ts_i(false),
-    max_rtp_time(0)
+    last_decoded_system_ts(0),
+    recv_samples_timeout_threshold(AmConfig.dead_rtp_time),
+    recv_samples_timeout(false),
+    max_rtp_time(0),
+    ignore_recording(false)
 {
 #ifdef USE_SPANDSP_PLC
     plc_state = plc_init(NULL);
@@ -226,6 +230,8 @@ int AmRtpAudio::receive(unsigned long long system_ts)
             return (decoded_size < 0) ? -1 : 0;
         }
 
+        last_decoded_system_ts = system_ts;
+
         // This only works because the possible ratio (Rate/TSRate)
         // is 2. Rate and TSRate are only different in case of g722.
         // For g722, TSRate=8000 and Rate=16000
@@ -287,6 +293,17 @@ int AmRtpAudio::get(
 
     unsigned int user_ts = scaleSystemTS(system_ts);
 
+    if(recv_samples_timeout) {
+        if(ret > 0) {
+            recv_samples_timeout = false;
+        }
+    } else if(recv_samples_timeout_threshold) {
+        unsigned int diff_sec = (system_ts - last_decoded_system_ts)/WALLCLOCK_RATE;
+        if(diff_sec > recv_samples_timeout_threshold) {
+            recv_samples_timeout = true;
+        }
+    }
+
     nb_samples = static_cast<unsigned int>(
         static_cast<float>(nb_samples) * static_cast<float>(getSampleRate())
         / static_cast<float>(output_sample_rate));
@@ -327,12 +344,16 @@ int AmRtpAudio::put(
     if(!fmt.get())
       return 0;
 
-    if(record_enabled) {
-        RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
-    }
+    if(!ignore_recording) {
+        if(record_enabled) {
+            RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
+        }
 
-    if(stereo_record_enabled) {
-        stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
+        if(stereo_record_enabled) {
+            stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
+        }
+    } else {
+        ignore_recording = false;
     }
 
     memcpy(static_cast<unsigned char*>(samples),buffer,size);
@@ -660,6 +681,12 @@ void AmRtpAudio::setMaxRtpTime(uint32_t ts)
 {
     CLASS_DBG("AmRtpAudio::setLastRtpTime(%u)", ts);
     max_rtp_time = ts;
+}
+
+void AmRtpAudio::setRecvSamplesTimeout(uint32_t ts)
+{
+    CLASS_DBG("AmRtpAudio::setRecvSamplesTimeout(%u)", ts);
+    recv_samples_timeout_threshold = ts;
 }
 
 void AmRtpAudio::onMaxRtpTimeReached()

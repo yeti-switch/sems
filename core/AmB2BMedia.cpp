@@ -653,6 +653,9 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
         if (got > 0) {
             updateSendStats();
             //CLASS_DBG("stream->put(%llu,%d)",ts,got);
+            if(src_stream->isRecvSamplesTimeout()) {
+                stream->ignoreRecording();
+            }
             return stream->put(ts, buffer, sample_rate,
                                static_cast<unsigned int>(got));
         } else {
