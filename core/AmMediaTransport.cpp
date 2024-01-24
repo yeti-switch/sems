@@ -777,7 +777,7 @@ void AmMediaTransport::initZrtpConnection(const string& remote_address, int remo
             seq = TRANSPORT_SEQ_ZRTP;
             cur_rtp_conn = new AmZRTPConnection(this, remote_address, remote_port);
             addConnection(cur_rtp_conn);
-        } else {
+        } else if(seq == TRANSPORT_SEQ_ZRTP){
             CLASS_DBG("update ZRTP connection endpoint");
             cur_rtp_conn->setRAddr(remote_address, remote_port);
         }
