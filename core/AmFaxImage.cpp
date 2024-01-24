@@ -3,6 +3,7 @@
 #include "udptl.h"
 #include "log.h"
 #include "sip/msg_logger.h"
+#include <spandsp/expose.h>
 
 #define SAMPLE_RATE                 8000
 #define ms_to_samples(t)            ((t)*(SAMPLE_RATE/1000))
@@ -423,6 +424,8 @@ FaxAudioImage::~FaxAudioImage()
 {
     if(m_fax_state) {
         fax_release(m_fax_state);
+        delete m_fax_state;
+        m_fax_state = NULL;
     }
 }
 
@@ -435,7 +438,13 @@ int FaxAudioImage::init_tone_fax()
         FAX_ERROR("fax tone stack was inited");
         return -1;
     }
-    m_fax_state = ::fax_init(m_fax_state, m_send ? TRUE : FALSE);
+
+    m_fax_state = new fax_state_t();
+    if (::fax_init(m_fax_state, m_send ? TRUE : FALSE) == NULL) {
+        delete m_fax_state;
+        m_fax_state = NULL;
+    }
+
     if(!m_fax_state) {
         FAX_ERROR("fax tone stack initialisation failed");
         return -1;
