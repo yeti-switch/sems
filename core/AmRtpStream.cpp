@@ -866,8 +866,8 @@ int AmRtpStream::init(const AmSdp& local,
     try {
         if(remote_media.is_use_ice()) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
-            dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media);
             }
@@ -880,17 +880,17 @@ int AmRtpStream::init(const AmSdp& local,
                 cur_rtcp_trans->initSrtpConnection(rtcp_address, rtcp_port, local_media, remote_media);
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
             if(cur_rtcp_trans != cur_rtp_trans) {
-                dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+                if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
                 cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
             }
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            dtls_context[FAX_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
 #ifdef WITH_ZRTP

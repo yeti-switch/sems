@@ -134,6 +134,7 @@ class DtlsContext : public Botan::TLS::Callbacks
     shared_ptr<BotanTLSCallbacksProxy> tls_callbacks_proxy;
 
     srtp_profile_t srtp_profile;
+    AmMutex channelMutex;
     Botan::TLS::Channel* dtls_channel;
     shared_ptr<dtls_conf> dtls_settings;
     srtp_fingerprint_p fingerprint;
@@ -150,11 +151,10 @@ public:
 
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
-    void initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings) noexcept(false);
+    void initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false);
     bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false);
     bool timer_check();
     bool sendData(const uint8_t * data, unsigned int size) noexcept(false);
-    bool is_inited() { return dtls_channel != nullptr; }
 
     //TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;

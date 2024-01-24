@@ -265,8 +265,14 @@ srtp_fingerprint_p DtlsContext::gen_fingerprint(class dtls_settings* settings)
     return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
 }
 
-void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings) noexcept(false)
+void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings, bool reinit) noexcept(false)
 {
+    AmLock lock(channelMutex);
+    if(!reinit && dtls_channel) return;
+
+    CLASS_DBG("init %s dtls context of rtp_stream(%p), connection(%p), dtls_channel - %p",
+        settings->is_client() ? "client" : "server", rtp_stream, conn, dtls_channel);
+
     cur_conn = conn;
     if(dtls_channel) {
         if(pending_handshake_timer) {
@@ -310,12 +316,14 @@ void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> sett
 
 bool DtlsContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int size)
 {
+    AmLock lock(channelMutex);
     cur_conn = conn;
     return dtls_channel->received_data(data, size) == 0;
 }
 
 bool DtlsContext::sendData(const uint8_t* data, unsigned int size)
 {
+    AmLock lock(channelMutex);
     if(activated) {
         dtls_channel->send(data, size);
         return true;
@@ -325,7 +333,7 @@ bool DtlsContext::sendData(const uint8_t* data, unsigned int size)
 
 bool DtlsContext::timer_check()
 {
-    if(!activated) {
+    if(!activated && dtls_channel) {
         dtls_channel->timeout_check();
         return true;
     }
@@ -421,8 +429,6 @@ AmDtlsConnection::~AmDtlsConnection()
 
 void AmDtlsConnection::initConnection()
 {
-    if(dtls_context->is_inited()) return;
-
     RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
     if(!rtpinfo->dtls_enable)
         throw string("DTLS is not configured on: ") +

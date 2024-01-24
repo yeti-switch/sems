@@ -835,7 +835,7 @@ void AmMediaTransport::removeConnection(AmStreamConnection* conn)
 
 void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
 {
-    (void)remote_addr;
+    CLASS_DBG("allow stun connection by addr %s", am_inet_ntop(remote_addr).c_str());
     //TODO(alexey.v): set current connections by candidate priority
     for(auto& conn : connections) {
         if(conn->getConnType() == AmRawConnection::ZRTP_CONN && conn->isAddrConnection(remote_addr)) {
@@ -857,6 +857,7 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
 
 void AmMediaTransport::dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
 {
+    CLASS_DBG("dtls session activated for %d type: local addr %s", type, getLocalIP().c_str());
     stream->dtlsSessionActivated(this, srtp_profile, local_key, remote_key);
 }
 
