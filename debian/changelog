@@ -1,3 +1,7 @@
+sems (1.128.1) stable; urgency=low
+  * AmMediaTransport: ignore STUN packets from the not-matched ICE candidates
+ -- Michael Furmur <furmur@pm.me>  Wed, 24 Jan 2024 19:44:09 +0200
+
 sems (1.128.0) stable; urgency=low
   * AmRtpStream: use common DTLS context for all transports within the stream
   * AmB2BMedia: skip silence writing to the RSR
