@@ -1163,7 +1163,9 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
             }
         }
 
-        if(!s_conn && !conns_by_type.empty()) {
+        if (!s_conn && !conns_by_type.empty()
+            && ctype != AmStreamConnection::STUN_CONN)
+        {
             s_conn = conns_by_type[0];
         }
     }
