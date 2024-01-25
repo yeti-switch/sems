@@ -53,6 +53,8 @@ sip_msg::sip_msg(const char* msg_buf, int msg_len)
     rack(NULL),via1(NULL),
     via_p1(NULL),
     callid(NULL),
+    max_forwards(NULL),
+    expires(NULL),
     contacts(),
     route(),
     record_route(),
