@@ -423,8 +423,7 @@ FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool 
 FaxAudioImage::~FaxAudioImage()
 {
     if(m_fax_state) {
-        fax_release(m_fax_state);
-        delete m_fax_state;
+        fax_free(m_fax_state);
         m_fax_state = 0;
     }
 }
@@ -439,9 +438,9 @@ int FaxAudioImage::init_tone_fax()
         return -1;
     }
 
-    m_fax_state = new fax_state_t();
+    m_fax_state = (fax_state_t *)malloc(sizeof(fax_state_t));
     if (::fax_init(m_fax_state, m_send ? TRUE : FALSE) == NULL) {
-        delete m_fax_state;
+        free(m_fax_state);
         m_fax_state = 0;
     }
 
@@ -504,8 +503,7 @@ FaxT38Image::~FaxT38Image()
         udptl_release(m_udptl_state);
     }
     if(m_t38_state) {
-        t38_terminal_release(m_t38_state);
-        delete m_t38_state;
+        t38_terminal_free(m_t38_state);
         m_t38_state = 0;
     }
 }
@@ -518,9 +516,9 @@ int FaxT38Image::init_t38()
         return FALSE;
     }
 
-    m_t38_state = new t38_terminal_state_t();
+    m_t38_state = (t38_terminal_state_t*)malloc(sizeof(t38_terminal_state_t));
     if(t38_terminal_init(m_t38_state, m_send ? TRUE : FALSE, t38_tx_packet_handler, this) == NULL) {
-        delete m_t38_state;
+        free(m_t38_state);
         m_t38_state = 0;
     }
 
@@ -676,8 +674,7 @@ void FaxT38Image::onMediaProcessingTerminated()
         m_udptl_state = 0;
     }
     if(m_t38_state) {
-        t38_terminal_release(m_t38_state);
-        delete m_t38_state;
+        t38_terminal_free(m_t38_state);
         m_t38_state = 0;
     }
 
