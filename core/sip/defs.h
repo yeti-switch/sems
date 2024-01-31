@@ -32,6 +32,7 @@
 #define SIP_HDR_REQUIRE         "Require"
 #define SIP_HDR_SERVER          "Server"
 #define SIP_HDR_USER_AGENT      "User-Agent"
+#define SIP_HDR_PATH            "Path"
 #define SIP_HDR_MAX_FORWARDS    "Max-Forwards"
 #define SIP_HDR_P_ASSERTED_IDENTITY "P-Asserted-Identity"
 #define SIP_HDR_P_PREFERRED_IDENTITY "P-Preferred-Identity"

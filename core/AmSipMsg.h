@@ -86,6 +86,7 @@ class AmSipReply : public _AmSipMsgInDlg
 
     ~AmSipReply() { }
 
+    bool init(const sip_msg* msg);
     string print() const;
 };
 
@@ -118,6 +119,7 @@ class AmSipRequest : public _AmSipMsgInDlg
   AmSipRequest();
   ~AmSipRequest() { }
   
+  bool init(const sip_msg* msg, const trans_ticket* tt = 0);
   string print() const;
   void log(msg_logger *logger,msg_sensor *sensor) const;
 };

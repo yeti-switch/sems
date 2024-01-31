@@ -60,11 +60,13 @@ class trsp;
 class _SipCtrlInterface:
     public sip_ua
 {
-    bool sip_msg2am_request(const sip_msg *msg, const trans_ticket& tt, AmSipRequest &request);
-    bool sip_msg2am_reply(sip_msg *msg, AmSipReply &reply);
-    
-    void prepare_routes_uac(const list<sip_header*>& routes, string& route_field);
-    void prepare_routes_uas(const list<sip_header*>& routes, string& route_field);
+
+    friend bool AmSipRequest::init(const sip_msg*, const trans_ticket*);
+    static bool sip_msg2am_request(const sip_msg *msg,
+                                   std::function<void (const sip_msg* req, int reply_code, const cstring& reason)> callback,
+                                   AmSipRequest &request);
+    friend bool AmSipReply::init(const sip_msg*);
+    static bool sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply);
 
     friend class udp_trsp;
 

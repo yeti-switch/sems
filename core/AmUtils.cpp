@@ -1513,9 +1513,9 @@ string calculateMD5(const string& input) {
 }
 
 //stolen from apps/sbc/HeaderFiler.cpp
-static int skip_header(const std::string& hdr, size_t start_pos,
-						size_t& name_end, size_t& val_begin,
-						size_t& val_end, size_t& hdr_end) {
+int skip_header(const std::string& hdr, size_t start_pos,
+                size_t& name_end, size_t& val_begin,
+                size_t& val_end, size_t& hdr_end) {
 	// adapted from sip/parse_header.cpp
 	//stealed from
 

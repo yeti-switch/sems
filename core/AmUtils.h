@@ -377,6 +377,11 @@ void inplaceHeaderErase(string &hdrs,const char *hdr);
 /** remove all occurences of the given headers from SIP headers string */
 void inplaceHeadersErase(string &hdrs,const char *hdrv[]);
 
+/** helper function for inplaceHeadersErase func */
+int skip_header(const std::string& hdr, size_t start_pos,
+                size_t& name_end, size_t& val_begin,
+                size_t& val_end, size_t& hdr_end);
+
 bool is_valid_utf8(const std::string &s);
 bool fixup_utf8_inplace(std::string &s);
 

@@ -6,11 +6,28 @@
 #include "sip/sip_trans.h"
 #include "sip/sip_parser.h"
 #include "sip/msg_logger.h"
+#include "SipCtrlInterface.h"
+
+bool AmSipReply::init(const sip_msg* msg)
+{
+    return _SipCtrlInterface::sip_msg2am_reply(msg, *this);
+}
 
 AmSipRequest::AmSipRequest() 
   : _AmSipMsgInDlg(), 
     max_forwards(-1) 
 {
+}
+
+bool AmSipRequest::init(const sip_msg* msg, const trans_ticket* tt_)
+{
+  if(tt_) tt = *tt_;
+  auto callback = [tt_](const sip_msg* req, int reply_code, const cstring& reason)->int{
+      if(tt_)
+          return trans_layer::instance()->send_sf_error_reply(tt_, req, reply_code, reason);
+      return 0;
+  };
+  return _SipCtrlInterface::sip_msg2am_request(msg, callback, *this);
 }
 
 string getHeader(const string& hdrs,const string& hdr_name, bool single)
@@ -49,7 +66,6 @@ bool hasHeader(const string& hdrs,const string& hdr_name) {
   return findHeader(hdrs, hdr_name, skip, pos1, pos2, hdr_start);
 }
 
-#include "log.h"
 bool findHeader(const string& hdrs,const string& hdr_name, const size_t skip, 
 		size_t& pos1, size_t& pos2, size_t& hdr_start)
 {
