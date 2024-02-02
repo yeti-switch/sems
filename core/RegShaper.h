@@ -58,12 +58,14 @@ class RegShaper {
 
     void set_key_min_interval(const string& key, int msec)
     {
+        auto interval = std::chrono::milliseconds(msec);
         if (min_interval != std::chrono::milliseconds::zero() &&
-            min_interval > std::chrono::milliseconds(msec))
+            min_interval > interval)
         {
-            WARN("global restrictions(%u) is more than key's(%s) restrictions(%u)", min_interval, key.c_str(), msec);
+            WARN("global min interval(%ld) is greater than min interval(%ld) for key %s",
+                min_interval.count(), interval.count(), key.c_str());
         }
-        throttling_intervals_hash.emplace(key, std::chrono::milliseconds(msec));
+        throttling_intervals_hash.emplace(key, interval);
         enabled = true;
     }
 };
