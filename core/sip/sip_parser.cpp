@@ -679,7 +679,6 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
 	msg->body.set(c,msg->len - (c - msg->buf));
     }
 
-
 	if(msg->type > SIP_REPLY){
 	    err_msg = (char*)"incorrect type of protocol";
         return MALFORMED_SIP_MSG;

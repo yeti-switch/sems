@@ -4,6 +4,7 @@
 #include <sip/parse_header.h>
 #include <sip/parse_nameaddr.h>
 #include <AmUriParser.h>
+#include <AmSdp.h>
 
 TEST(SipParser, Parsing)
 {
@@ -203,4 +204,54 @@ TEST(Parser, AmUriParser)
     ASSERT_EQ(p.params.begin()->second, "hdr_param_v_1");
     ASSERT_EQ((++p.params.begin())->first, "hdr_param_n_2");
     ASSERT_EQ((++p.params.begin())->second, "hdr_param_v_2");
+}
+
+TEST(SdpParser, CryptoTest)
+{
+    string sdp_str =
+    "v=0\r\n"
+    "o=SBC 9476009 1001 IN IP4 141.147.136.71\r\n"
+    "s=VoipCall\r\n"
+    "c=IN IP4 141.147.136.71\r\n"
+    "t=0 0\r\n"
+    "m=audio 20786 RTP/SAVP 8 0 101\r\n"
+    "c=IN IP4 141.147.136.71\r\n"
+    "a=rtpmap:8 PCMA/8000\r\n"
+    "a=rtpmap:0 PCMU/8000\r\n"
+    "a=rtpmap:101 telephone-event/8000\r\n"
+    "a=fmtp:101 0-15\r\n"
+    "a=ptime:20\r\n"
+    "a=maxptime:40\r\n"
+    "a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:5LF9Y6retIPykkWDcD49NpnJfBVE7HqVBMPba08z|2^31|1:1;inline:p5UaU+nlSPW6ey/uwj2Hapvm1GV8wE3tviVkp34I|2^31|2:1\r\n"
+    "a=crypto:2 AES_CM_128_HMAC_SHA1_32 inline:TztUSnIHHtWZ8LG4XXX8CgwoL68n3QVWZu2+/U3Z|2^31|1:1\n"
+    "a=crypto:3 AES_256_CM_HMAC_SHA1_80 inline:bN7rll40RDDMly5JpUB0gB4881fHtWFMrWm5nPFWoEjzmy9jLRHz+sWZ0MkeOQ==;inline:dQDxVzWfwTHNumAaPwxszQiiSMb7O467X9D9R5h8YTr1A5JBGPj/T3V0hG9MUQ==\n"
+    "a=sendrecv\r\n"
+    "a=rtcp:20787";
+
+    AmSdp sdp;
+
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    ASSERT_EQ(sdp.media.size(), 1);
+    ASSERT_EQ(sdp.media[0].crypto.size(), 3);
+
+    auto &c1 = sdp.media[0].crypto[0];
+    ASSERT_EQ(c1.keys.size(), 2);
+
+    ASSERT_EQ(c1.keys[0].key, "5LF9Y6retIPykkWDcD49NpnJfBVE7HqVBMPba08z");
+    ASSERT_EQ(c1.keys[0].lifetime, "2^31");
+    ASSERT_EQ(c1.keys[0].mki.id, 1);
+    ASSERT_EQ(c1.keys[0].mki.len, 1);
+
+    ASSERT_EQ(c1.keys[1].key, "p5UaU+nlSPW6ey/uwj2Hapvm1GV8wE3tviVkp34I");
+    ASSERT_EQ(c1.keys[1].lifetime, "2^31");
+    ASSERT_EQ(c1.keys[1].mki.id, 2);
+    ASSERT_EQ(c1.keys[1].mki.len, 1);
+
+    ASSERT_EQ(sdp.media[0].crypto[1].keys.size(), 1);
+
+    auto &c2 = sdp.media[0].crypto[2];
+    ASSERT_EQ(c2.keys.size(), 2);
+    ASSERT_EQ(c2.keys[0].mki.id, 0);
+    ASSERT_EQ(c2.keys[0].mki.len, 0);
 }

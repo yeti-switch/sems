@@ -1,14 +1,71 @@
 #include "AmSrtpConnection.h"
 #include "AmRtpStream.h"
-#include "AmDtlsConnection.h"
-#include "rtp/rtp.h"
 
-#include <algorithm>
+#include "rtp/rtp.h"
 #include <botan/base64.h>
 #include <botan/uuid.h>
 
+#include <algorithm>
+
+#ifndef __cpp_lib_format
+// std::format polyfill using fmtlib
+#   include <fmt/core.h>
+    using fmt::format;
+#else
+#   include <format>
+    using std::format;
+#endif
+
+srtp_master_keys::strp_mater_key_container::strp_mater_key_container(
+    const string &key_,
+    uint32_t mki_id_,
+    uint32_t mki_size_)
+  : key_data(key_),
+    mki_id_data(mki_id_)
+{
+    key = reinterpret_cast<unsigned char *>(key_data.data());
+    mki_id = reinterpret_cast<unsigned char*>(&mki_id_data);
+    mki_size = mki_size_;
+}
+
+bool srtp_master_keys::strp_mater_key_container::operator==(const strp_mater_key_container& other) const
+{
+    if (mki_size != other.mki_size)
+        return false;
+
+    if (mki_id != other.mki_id)
+        return false;
+
+    if (key_data != other.key_data)
+        return false;
+
+    return true;
+}
+
+srtp_master_keys::srtp_master_keys(
+    const string& key,
+    uint32_t mki_id, uint32_t mki_size)
+{
+    add(key, mki_id, mki_size);
+}
+
+void srtp_master_keys::operator=(srtp_master_keys const &other)
+{
+    for(const auto &d : other.get_data())
+        add(d.key_data, d.mki_id_data, d.mki_size);
+}
+
+void srtp_master_keys::add(
+    const string& key,
+    uint32_t mki_id, uint32_t mki_size)
+{
+    auto &d = data.emplace_back(key, mki_id, mki_size);
+    srtp_data_ptrs.emplace_back(&d);
+}
+
 AmSrtpConnection::AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
   : AmStreamConnection(_transport, remote_addr, remote_port, conn_type),
+    use_mki(false),
     rx_context_initialized(false),
     tx_context_initialized(false),
     connection_invalidated(false),
@@ -41,113 +98,155 @@ AmSrtpConnection::~AmSrtpConnection()
         delete s_stream;
 }
 
-void AmSrtpConnection::use_key(srtp_profile_t profile,
-                               const unsigned char* key_tx, size_t key_tx_len,
-                               const unsigned char* key_rx, size_t key_rx_len)
+void AmSrtpConnection::use_keys(
+    srtp_profile_t profile,
+    const string &tx_key,
+    const srtp_master_keys& rx_keys)
 {
-    if(srtp_tx_session || srtp_rx_session) {
-        CLASS_DBG("attempt to call use_key() for initialized rx/tx sessions");
+    if (srtp_tx_session || srtp_rx_session) {
+        CLASS_DBG("attempt to call use_keys() for initialized rx/tx sessions");
         return;
     }
 
     CLASS_DBG("create s%s connection: profile %s", getConnType() == RTP_CONN ? "rtp" : "rtcp",
               SdpCrypto::profile2str((CryptoProfile)profile).c_str());
 
-    if(is_valid_keys(profile, key_tx, key_tx_len, key_rx, key_rx_len) < 0)
+    if (is_valid_keys(profile, tx_key, rx_keys) < 0)
         return;
 
     if (srtp_create(&srtp_tx_session, nullptr) != srtp_err_status_ok ||
-        srtp_create(&srtp_rx_session, nullptr) != srtp_err_status_ok) {
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_CREATION_ERROR, "srtp session not created", transport);
+        srtp_create(&srtp_rx_session, nullptr) != srtp_err_status_ok)
+    {
+        transport->getRtpStream()->onErrorRtpTransport(
+            SRTP_CREATION_ERROR, "srtp session was not created", transport);
         return;
     }
 
-
-    set_c_key_tx(key_tx, key_tx_len);
-    set_c_key_rx(key_rx, key_rx_len);
     srtp_profile = profile;
+
+    c_tx_key = tx_key;
+    c_rx_keys = rx_keys;
+    use_mki = rx_keys.has_mki();
 }
 
-void AmSrtpConnection::update_key(srtp_profile_t profile,
-                                  const unsigned char* key_tx, size_t key_tx_len,
-                                  const unsigned char* key_rx, size_t key_rx_len)
+void AmSrtpConnection::update_keys(
+    srtp_profile_t profile,
+    const string &tx_key,
+    const srtp_master_keys& rx_keys)
 {
-    if(srtp_tx_session == nullptr || srtp_rx_session == nullptr)
-        return;
-
-    if(is_valid_keys(profile, key_tx, key_tx_len, key_rx, key_rx_len) < 0)
+    if (is_valid_keys(profile, tx_key, rx_keys) < 0)
         return;
 
     if (srtp_profile != profile)
         srtp_profile = profile;
 
-    if (c_key_tx_len != key_tx_len || memcmp(c_key_tx, key_tx, key_tx_len) != 0)
-    {
-        CLASS_DBG("update c_key_tx");
-        set_c_key_tx(key_tx, key_tx_len);
+    do { //scope for session_tx_mutex
+        AmLock lock(session_tx_mutex);
 
-        if(tx_context_initialized) {
-            srtp_policy_t policy;
-            memset(&policy, 0, sizeof(policy));
-            srtp::crypto_policy_set_from_profile_for_rtp(&policy.rtp, srtp_profile);
-            srtp::crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, srtp_profile);
-            policy.window_size = 128;
-            policy.num_master_keys = 1;
-            policy.key = c_key_tx;
-            policy.ssrc.value = transport->getRtpStream()->get_ssrc();
-            policy.ssrc.type = ssrc_any_outbound;
-            int ret = srtp_err_status_ok;
-            if((ret = srtp_update_stream(srtp_tx_session, &policy)) != srtp_err_status_ok) {
-                ERROR("srtp_update_stream error %d", ret);
-            }
+        if (srtp_tx_session == nullptr)
+            break;
+
+        if (c_tx_key == tx_key)
+            break;
+
+        CLASS_DBG("update c_tx_key");
+        c_tx_key = tx_key;
+
+        if (!tx_context_initialized)
+            break;
+
+        srtp_policy_t tx_policy;
+        memset(&tx_policy, 0, sizeof(tx_policy));
+
+        srtp::crypto_policy_set_from_profile_for_rtp(&tx_policy.rtp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtcp(&tx_policy.rtcp, srtp_profile);
+
+        tx_policy.window_size = 128;
+        tx_policy.num_master_keys = 1;
+        tx_policy.key = reinterpret_cast<unsigned char *>(c_tx_key.data());
+        tx_policy.ssrc.value = transport->getRtpStream()->get_ssrc();
+        tx_policy.ssrc.type = ssrc_any_outbound;
+
+        if (auto ret = srtp_update_stream(srtp_tx_session, &tx_policy);
+            ret != srtp_err_status_ok)
+        {
+            ERROR("srtp_update_stream error %d", ret);
         }
-    }
+    } while(0);
 
-    if (c_key_rx_len != key_rx_len || memcmp(c_key_rx, key_rx, key_rx_len) != 0)
-    {
-        CLASS_DBG("update c_key_rx");
-        set_c_key_rx(key_rx, key_rx_len);
+    do { //scope for session_rx_mutex
+        AmLock lock(session_rx_mutex);
 
-        if(rx_context_initialized) {
-            srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
-            srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
-            rx_policy.key = c_key_rx;
-            int ret = srtp_err_status_ok;
-            if((ret = srtp_update_stream(srtp_rx_session, &rx_policy)) != srtp_err_status_ok) {
-                ERROR("srtp_update_stream error %d", ret);
-            }
+        if (srtp_rx_session == nullptr)
+            break;
+
+        if (c_rx_keys == rx_keys)
+            break;
+
+        CLASS_DBG("update c_rx_keys");
+        c_rx_keys = rx_keys;
+        use_mki = rx_keys.has_mki();
+
+        if (!rx_context_initialized)
+            break;
+
+        srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
+        srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
+
+        apply_rx_policy_keys();
+
+        if (auto ret = srtp_update_stream(srtp_rx_session, &rx_policy);
+            ret != srtp_err_status_ok)
+        {
+            ERROR("srtp_update_stream error %d", ret);
         }
-    }
+    } while(0);
 }
 
-int AmSrtpConnection::is_valid_keys(srtp_profile_t profile,
-                                    const unsigned char* key_tx, size_t key_tx_len,
-                                    const unsigned char* key_rx, size_t key_rx_len)
+int AmSrtpConnection::is_valid_keys(
+    srtp_profile_t profile,
+    const string &tx_key,
+    const srtp_master_keys& rx_keys)
 {
     unsigned int master_key_len = srtp::profile_get_master_key_length(profile);
     master_key_len += srtp::profile_get_master_salt_length(profile);
 
-    if(master_key_len != key_tx_len || master_key_len != key_rx_len) {
-        char error[100];
-        sprintf(error, "srtp key are not correct. another size: needed %u in fact local-%lu, remote-%lu",
-                                master_key_len, key_tx_len, key_rx_len);
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_KEY_ERROR, error, transport);
+    if(master_key_len != tx_key.length()) {
+        transport->getRtpStream()->onErrorRtpTransport(
+            SRTP_KEY_ERROR,
+            format("incorrect SRTP TX key size. expected:{}, got: {}",
+                master_key_len, tx_key.length()),
+            transport);
         return -1;
     }
 
+    if (!rx_keys.size()) {
+        transport->getRtpStream()->onErrorRtpTransport(
+            SRTP_KEY_ERROR, "missed RX keys", transport);
+        return -1;
+    }
+
+    for(const auto &key : rx_keys.get_data()) {
+        if(master_key_len != key.key_data.size()) {
+            transport->getRtpStream()->onErrorRtpTransport(
+                SRTP_KEY_ERROR,
+                format("incorrect SRTP RX key size. expected:{}, got:{}",
+                    master_key_len, key.key_data.size()),
+                transport);
+            return -1;
+        }
+
+        if(key.mki_size && key.mki_size > 4) {
+            transport->getRtpStream()->onErrorRtpTransport(
+                SRTP_KEY_ERROR,
+                format("SRTP mki_size larger than 4 bytes is not supported. received:{}",
+                    key.mki_size),
+                transport);
+            return -1;
+        }
+    }
+
     return 0;
-}
-
-void AmSrtpConnection::set_c_key_tx(const unsigned char* key, size_t key_len) {
-    memset(c_key_tx, 0, sizeof c_key_tx);
-    memcpy(c_key_tx, key, key_len);
-    c_key_tx_len = key_len;
-}
-
-void AmSrtpConnection::set_c_key_rx(const unsigned char* key, size_t key_len) {
-    memset(c_key_rx, 0, sizeof c_key_rx);
-    memcpy(c_key_rx, key, key_len);
-    c_key_rx_len = key_len;
 }
 
 void AmSrtpConnection::base64_key(const std::string& key,
@@ -155,7 +254,7 @@ void AmSrtpConnection::base64_key(const std::string& key,
 {
     Botan::secure_vector<uint8_t> data = Botan::base64_decode(key);
     if(data.size() > key_s_len) {
-        ERROR("key buffer less base64 decoded key");
+        ERROR("key buffer is less than base64 decoded key");
         return;
     }
     key_s_len = static_cast<unsigned int>(data.size());
@@ -256,18 +355,34 @@ std::string AmSrtpConnection::gen_base64(unsigned int key_s_len)
     return Botan::base64_encode(data);
 }
 
+void AmSrtpConnection::apply_rx_policy_keys()
+{
+    if (use_mki) {
+        rx_policy.key = nullptr;
+        rx_policy.keys = c_rx_keys.get_ptrs();
+        rx_policy.num_master_keys = c_rx_keys.size();
+    } else {
+        rx_policy.key = reinterpret_cast<unsigned char *>(c_rx_keys.get_first_key().data());
+        rx_policy.keys = nullptr;
+        rx_policy.num_master_keys = 1;
+    }
+}
+
 int AmSrtpConnection::ensure_rx_stream_context(uint32_t ssrc_net_order)
 {
     if(!rx_context_initialized) {
         rx_context_initialized = true;
 
         memset(&rx_policy, 0, sizeof(rx_policy));
+
         srtp::crypto_policy_set_from_profile_for_rtp(&rx_policy.rtp, srtp_profile);
         srtp::crypto_policy_set_from_profile_for_rtcp(&rx_policy.rtcp, srtp_profile);
+
         rx_policy.window_size = 128;
         rx_policy.num_master_keys = 1;
-        rx_policy.key = c_key_rx;
         rx_policy.ssrc.type = ssrc_specific;
+
+        apply_rx_policy_keys();
     } else {
         //context changed. remove the old one
         //!FIXME: maybe we have to keep old ctx in SRTP session
@@ -280,16 +395,18 @@ int AmSrtpConnection::ensure_rx_stream_context(uint32_t ssrc_net_order)
     rx_policy.ssrc.value = ntohl(ssrc_net_order);
 
     CLASS_DBG("add %s receive stream context. SSRC:0x%x",
-              getConnType() == RTP_CONN ? "RTP" : "RTCP",
-              rx_policy.ssrc.value);
+        getConnType() == RTP_CONN ? "RTP" : "RTCP",
+        rx_policy.ssrc.value);
 
-    int ret = srtp_err_status_ok;
-    if((ret = srtp_add_stream(srtp_rx_session, &rx_policy)) != srtp_err_status_ok) {
+    if (auto ret = srtp_add_stream(srtp_rx_session, &rx_policy);
+        ret != srtp_err_status_ok)
+    {
         ERROR("srtp_add_stream error %d", ret);
-        string error("failed to add S");
-        error.append(getConnType() == RTP_CONN ? "RTP" : "RTCP");
-        error.append(" rx stream context");
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_ADD_STREAM_ERROR, error, transport);
+        transport->getRtpStream()->onErrorRtpTransport(
+            SRTP_ADD_STREAM_ERROR,
+            format("failed to ass S{} rx stream context",
+                getConnType() == RTP_CONN ? "RTP" : "RTCP"),
+            transport);
         return 1;
     }
 
@@ -304,37 +421,41 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     if(connection_invalidated)
         return;
 
-    if(!srtp_rx_session) {
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_INIT_ERROR, "srtp session not initialized", transport);
-        return;
-    }
-
-    if(getConnType() == RTP_CONN) {
-        rtp_hdr_t *header = reinterpret_cast<rtp_hdr_t *>(data);
-        rx_ssrc_net_order = header->ssrc;
-    } else {
-        RtcpCommonHeader *header = reinterpret_cast<RtcpCommonHeader*>(data);
-        rx_ssrc_net_order = header->ssrc;
-    }
-
-    if(last_rx_ssrc_net_order != rx_ssrc_net_order) {
-        if(last_rx_ssrc_net_order) {
-            CLASS_DBG("SSRC changed 0x%x -> 0x%x. add new SRTP stream context",
-                      ntohl(last_rx_ssrc_net_order), ntohl(rx_ssrc_net_order));
-        } else {
-            CLASS_DBG("got first packet withing SRTP session. SSRC:0x%x. add new SRTP stream context",
-                      ntohl(rx_ssrc_net_order));
-        }
-
-        if(ensure_rx_stream_context(rx_ssrc_net_order)) {
+    {
+        AmLock lock(session_rx_mutex);
+        if(!srtp_rx_session) {
+            transport->getRtpStream()->onErrorRtpTransport(
+                SRTP_INIT_ERROR, "srtp session is not initialized", transport);
             return;
         }
-    }
 
-    if(getConnType() == RTP_CONN)
-        ret = srtp_unprotect(srtp_rx_session, data, reinterpret_cast<int *>(&size));
-    else
-        ret = srtp_unprotect_rtcp(srtp_rx_session, data, reinterpret_cast<int *>(&size));
+        if(getConnType() == RTP_CONN) {
+            rtp_hdr_t *header = reinterpret_cast<rtp_hdr_t *>(data);
+            rx_ssrc_net_order = header->ssrc;
+        } else {
+            RtcpCommonHeader *header = reinterpret_cast<RtcpCommonHeader*>(data);
+            rx_ssrc_net_order = header->ssrc;
+        }
+
+        if(last_rx_ssrc_net_order != rx_ssrc_net_order) {
+            if(last_rx_ssrc_net_order) {
+                CLASS_DBG("SSRC changed 0x%x -> 0x%x. add new SRTP stream context",
+                        ntohl(last_rx_ssrc_net_order), ntohl(rx_ssrc_net_order));
+            } else {
+                CLASS_DBG("got first packet withing SRTP session. SSRC:0x%x. add new SRTP stream context",
+                        ntohl(rx_ssrc_net_order));
+            }
+
+            if(ensure_rx_stream_context(rx_ssrc_net_order)) {
+                return;
+            }
+        }
+
+        if(getConnType() == RTP_CONN)
+            ret = srtp_unprotect_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
+        else
+            ret = srtp_unprotect_rtcp_mki(srtp_rx_session, data, reinterpret_cast<int *>(&size), use_mki);
+    }
 
     if(ret == srtp_err_status_ok || getConnType() == RTCP_CONN) {
         s_stream->process_packet(data, size, recv_addr, recv_time);
@@ -360,8 +481,10 @@ void AmSrtpConnection::setRAddr(const string& addr, unsigned short port)
 
 ssize_t AmSrtpConnection::send(AmRtpPacket* p)
 {
+    AmLock lock(session_tx_mutex);
     if(!srtp_tx_session){
-        transport->getRtpStream()->onErrorRtpTransport(SRTP_INIT_ERROR, "srtp session not initialized", transport);
+        transport->getRtpStream()->onErrorRtpTransport(
+            SRTP_INIT_ERROR, "srtp session is not initialized", transport);
         return -1;
     }
 
@@ -376,7 +499,7 @@ ssize_t AmSrtpConnection::send(AmRtpPacket* p)
         policy.num_master_keys = 1;
 
         CLASS_DBG("create s%s stream for sending stream", getConnType() == RTP_CONN ? "rtp" : "rtcp");
-        policy.key = c_key_tx;
+        policy.key = reinterpret_cast<unsigned char *>(c_tx_key.data());
         policy.ssrc.value = transport->getRtpStream()->get_ssrc();
         policy.ssrc.type = ssrc_any_outbound;
         int ret = srtp_err_status_ok;

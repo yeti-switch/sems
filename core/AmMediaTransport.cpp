@@ -335,7 +335,7 @@ void AmMediaTransport::getSdpOffer(SdpMedia& offer)
                 }
                 crypto.tag = ++i;
                 local_crypto.push_back(crypto);
-                local_crypto.back().keys.push_back(SdpKeyInfo(key, 0, 1));
+                local_crypto.back().keys.push_back(SdpKeyInfo(key));
             }
         }
         offer.crypto = local_crypto;
@@ -416,7 +416,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
                         c.keys.clear();
                         c.keys.emplace_back(
                             SdpKeyInfo(AmSrtpConnection::gen_base64_key(
-                                static_cast<srtp_profile_t>(c.profile)), 0, 1));
+                                static_cast<srtp_profile_t>(c.profile))));
                         break;
                     }
                 }
@@ -495,10 +495,11 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
     CLASS_DBG("initIceConnection() stream:%p, eq:%d", to_void(stream), seq);
     if(seq == TRANSPORT_SEQ_NONE) {
         seq = TRANSPORT_SEQ_ICE;
-        string local_key, remote_key;
+        string local_key;
         int cprofile = 0;
+        srtp_master_keys remote_keys;
         if(local_media.is_simple_srtp() && srtp_enable) {
-            cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+            cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_keys);
         }
         for(auto candidate : remote_media.ice_candidate) {
             if(candidate.transport != ICTR_UDP)
@@ -519,7 +520,7 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                 continue;
 
             if(local_media.is_simple_srtp() && srtp_enable) {
-                 addSrtpConnection(address, port, cprofile, local_key, remote_key);
+                 addSrtpConnection(address, port, cprofile, local_key, remote_keys);
             } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
                 srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
                 try {
@@ -612,12 +613,13 @@ void AmMediaTransport::initSrtpConnection(const string& remote_address, int remo
     {
         seq = TRANSPORT_SEQ_RTP;
 
-        string local_key, remote_key;
-        int cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+        string local_key;
+        srtp_master_keys remote_keys;
+        int cprofile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_keys);
         if(cprofile < 0)
             return;
 
-        addSrtpConnection(remote_address, remote_port, cprofile, local_key, remote_key);
+        addSrtpConnection(remote_address, remote_port, cprofile, local_key, remote_keys);
     } else {
         if(cur_rtp_conn) {
             CLASS_DBG("update SRTP connection endpoint");
@@ -647,6 +649,7 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
 
     CLASS_DBG("initSrtpConnection() stream:%p, seq:%d", to_void(stream), seq);
 
+    srtp_master_keys remote_keys(remote_key);
     vector<sockaddr_storage> addrs;
     {
         AmLock l(connections_mut);
@@ -679,13 +682,13 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
                 if(!srtp_conn)
                     continue;
 
-                updateKeys(srtp_conn, srtp_profile, local_key, remote_key);
+                updateKeys(srtp_conn, srtp_profile, local_key, remote_keys);
             }
         }
     }
 
     for(auto addr : addrs) {
-        addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_key);
+        addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_keys);
     }
 
     seq = TRANSPORT_SEQ_RTP;
@@ -693,19 +696,22 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
 
 void AmMediaTransport::updateKeys(AmSrtpConnection* conn, const SdpMedia& local_media, const SdpMedia& remote_media)
 {
-    string local_key, remote_key;
-    int srtp_profile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_key);
+    string local_key;
+    srtp_master_keys remote_keys;
+    int srtp_profile = getSrtpCredentialsBySdp(local_media, remote_media, local_key, remote_keys);
     if(srtp_profile < 0)
         return;
 
-    updateKeys(conn, srtp_profile, local_key, remote_key);
+    updateKeys(conn, srtp_profile, local_key, remote_keys);
 }
 
-void AmMediaTransport::updateKeys(AmSrtpConnection* conn, uint16_t srtp_profile, const string& local_key, const string& remote_key)
+void AmMediaTransport::updateKeys(
+    AmSrtpConnection* conn,
+    uint16_t srtp_profile,
+    const string& local_key,
+    const srtp_master_keys& remote_keys)
 {
-    conn->update_key(static_cast<srtp_profile_t>(srtp_profile),
-        reinterpret_cast<const unsigned char*>(local_key.data()), local_key.size(),
-        reinterpret_cast<const unsigned char*>(remote_key.data()), remote_key.size());
+    conn->update_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
 }
 
 void AmMediaTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
@@ -1177,7 +1183,9 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
     s_conn->process_packet(buf, size, &addr, recvtime);
 }
 
-int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& l_key, string& r_key)
+int AmMediaTransport::getSrtpCredentialsBySdp(
+    const SdpMedia& local_media, const SdpMedia& remote_media,
+    string& l_key, srtp_master_keys& r_keys)
 {
     CryptoProfile cprofile = CP_NONE;
     if(local_media.crypto.size() == 1) {
@@ -1216,6 +1224,7 @@ int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const
     local_crypto.resize(1);
 
     AmSrtpConnection::base64_key(local_crypto_profile_it->keys[0].key, local_key, local_key_size);
+    l_key.assign(reinterpret_cast<char *>(local_key), local_key_size);
 
     //get remote key
     auto remote_crypto_profile_it = std::find_if(remote_media.crypto.begin(), remote_media.crypto.end(),
@@ -1229,23 +1238,25 @@ int AmMediaTransport::getSrtpCredentialsBySdp(const SdpMedia& local_media, const
         CLASS_ERROR("remote secure audio stream without master key");
         return -1;
     }
-    AmSrtpConnection::base64_key(remote_crypto_profile_it->keys[0].key, remote_key, remote_key_size);
-
-    l_key.assign(reinterpret_cast<char *>(local_key), local_key_size);
-    r_key.assign(reinterpret_cast<char *>(remote_key), remote_key_size);
+    for(auto &key : remote_crypto_profile_it->keys) {
+        string rkey;
+        AmSrtpConnection::base64_key(key.key, remote_key, remote_key_size);
+        rkey.assign(reinterpret_cast<char *>(remote_key), remote_key_size);
+        r_keys.add(rkey, key.mki.id, key.mki.len);
+        if(!key.mki.len) break;
+    }
 
     return cprofile;
 }
 
 void AmMediaTransport::addSrtpConnection(const string& remote_address, int remote_port,
-                                       int srtp_profile, const string& local_key, const string& remote_key)
+                                       int srtp_profile, const string& local_key,
+                                       const srtp_master_keys& remote_keys)
 {
     if(type == RTP_TRANSPORT) {
         try {
             AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
-            conn->use_key(static_cast<srtp_profile_t>(srtp_profile),
-                          reinterpret_cast<const unsigned char*>(local_key.data()), local_key.size(),
-                          reinterpret_cast<const unsigned char*>(remote_key.data()), remote_key.size());
+            conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
             addConnection(conn);
             if(conn->isMute()) {
                 stream->mute = true;
@@ -1256,9 +1267,7 @@ void AmMediaTransport::addSrtpConnection(const string& remote_address, int remot
     }
     try {
         AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTCP_CONN);
-        conn->use_key(static_cast<srtp_profile_t>(srtp_profile),
-                      reinterpret_cast<const unsigned char*>(local_key.data()), local_key.size(),
-                      reinterpret_cast<const unsigned char*>(remote_key.data()), remote_key.size());
+        conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
         addConnection(conn);
     } catch(string& error) {
         CLASS_ERROR("SRTCP connection error: %s", error.c_str());

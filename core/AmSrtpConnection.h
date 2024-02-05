@@ -1,12 +1,11 @@
-#ifndef AM_SRTP_CONNECTION_H
-#define AM_SRTP_CONNECTION_H
+#pragma once
 
-#include "singleton.h"
 #include "AmRtpConnection.h"
 
 #include <netinet/in.h>
 #include <srtp/srtp.h>
-#include <memory>
+
+#include <list>
 
 #define SRTP_KEY_SIZE 46
 
@@ -14,19 +13,45 @@
 #define SRTP_PACKET_PARSE_OK 0
 #define SRTP_PACKET_PARSE_RTP 1
 
-class srtp_master_key_p
+class srtp_master_keys
 {
-public:
-    srtp_master_key_p(srtp_master_key_t key)
-        : master_key(key){}
-    ~srtp_master_key_p(){}
+  private:
+    vector<srtp_master_key_t *> srtp_data_ptrs;
 
-    operator srtp_master_key_t*()
+  public:
+    struct strp_mater_key_container
+      : srtp_master_key_t
     {
-        return &master_key;
-    }
+        string key_data;
+        uint32_t mki_id_data;
 
-    srtp_master_key_t master_key;
+        strp_mater_key_container() = delete;
+        strp_mater_key_container(const string &key_, uint32_t mki_id_, uint32_t mki_size_);
+        bool operator==(const strp_mater_key_container& other) const;
+    };
+
+    using data_container = std::list<strp_mater_key_container>;
+
+  private:
+    data_container data;
+
+  public:
+    srtp_master_keys() = default;
+    srtp_master_keys(const string& key, uint32_t mki_id = 0, uint32_t mki_size = 0);
+    srtp_master_keys(srtp_master_keys &&) = delete;
+    srtp_master_keys(srtp_master_keys const &) = delete;
+
+    void operator=(srtp_master_keys const & other);
+    void add(const string& key, uint32_t mki_id = 0, uint32_t mki_size = 0);
+
+    srtp_master_key_t **get_ptrs() { return srtp_data_ptrs.data(); }
+    const data_container& get_data() const { return data; }
+
+    bool has_mki() const { return data.front().mki_size != 0; }
+    string &get_first_key() { return data.front().key_data; }
+    size_t size() const { return srtp_data_ptrs.size(); }
+
+    bool operator==(const srtp_master_keys& other) const { return data == other.get_data(); }
 };
 
 namespace srtp {
@@ -38,11 +63,9 @@ namespace srtp {
 
 class AmSrtpConnection : public AmStreamConnection
 {
-private:
-    typedef std::vector<srtp_master_key_p> srtp_master_keys;
-    unsigned char  c_key_tx[SRTP_KEY_SIZE];
-    unsigned char  c_key_rx[SRTP_KEY_SIZE];
-    unsigned int c_key_tx_len, c_key_rx_len;
+    string c_tx_key;
+    srtp_master_keys c_rx_keys;
+    bool use_mki;
 
     bool rx_context_initialized;
     bool tx_context_initialized;
@@ -53,29 +76,29 @@ private:
 
     srtp_profile_t srtp_profile;
     srtp_t srtp_tx_session;
+    AmMutex session_tx_mutex;
     srtp_t srtp_rx_session;
+    AmMutex session_rx_mutex;
 
     AmStreamConnection* s_stream;
 
+    void apply_rx_policy_keys();
     int ensure_rx_stream_context(uint32_t ssrc_net_order);
     int is_valid_keys(srtp_profile_t profile,
-                 const unsigned char* key_tx, size_t key_tx_len,
-                 const unsigned char* key_rx, size_t key_rx_len);
+                      const string &tx_key,
+                      const srtp_master_keys& rx_keys);
 
-    void set_c_key_tx(const unsigned char* key, size_t key_len);
-    void set_c_key_rx(const unsigned char* key, size_t key_len);
-
-public:
+  public:
     AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
     ~AmSrtpConnection();
 
-    void use_key(srtp_profile_t profile,
-                 const unsigned char* key_tx, size_t key_tx_len,
-                 const unsigned char* key_rx, size_t key_rx_len);
+    void use_keys(srtp_profile_t profile,
+                  const string &tx_key,
+                  const srtp_master_keys& rx_keys);
 
-    void update_key(srtp_profile_t profile,
-                    const unsigned char* key_tx, size_t key_tx_len,
-                    const unsigned char* key_rx, size_t key_rx_len);
+    void update_keys(srtp_profile_t profile,
+                    const string &tx_key,
+                    const srtp_master_keys& rx_keys);
 
     static void base64_key(const std::string& key,
                            unsigned char* key_s, unsigned int& key_s_len);
@@ -88,5 +111,3 @@ public:
     ssize_t send(AmRtpPacket * packet) override;
     void setPassiveMode(bool p) override;
 };
-
-#endif/*AM_SRTP_CONNECTION_H*/

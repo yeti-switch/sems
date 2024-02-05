@@ -101,13 +101,16 @@ struct SdpOrigin
 struct SdpKeyInfo
 {
     string key;
-    unsigned int lifetime;
-    unsigned short mki;
+    string lifetime;
+    struct {
+      uint32_t id;
+      uint32_t len;
+    } mki;
 
-    SdpKeyInfo() : lifetime(0), mki(0) {}
+    SdpKeyInfo() {}
 
-    SdpKeyInfo(const string& key_, unsigned int lifetime_, unsigned short mki_)
-        : key(key_), lifetime(lifetime_), mki(mki_) {}
+    SdpKeyInfo(const string& key_, string lifetime_ = "")
+        : key(key_), lifetime(lifetime_), mki{0, 0} {}
 
     SdpKeyInfo(const SdpKeyInfo& key)
         : key(key.key), lifetime(key.lifetime)
