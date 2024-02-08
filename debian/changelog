@@ -1,3 +1,9 @@
+sems (1.128.2) stable; urgency=low
+  * registrar_client: add min_interval_msec parameter
+  * AmB2BMedia: fix crash on uninitialized stream
+  * AmAudioFile: fix opening for files with subtype in the name
+ -- Michael Furmur <furmur@pm.me>  Thu, 08 Feb 2024 14:22:06 +0200
+
 sems (1.128.1) stable; urgency=low
   * AmMediaTransport: ignore STUN packets from the not-matched ICE candidates
  -- Michael Furmur <furmur@pm.me>  Wed, 24 Jan 2024 19:44:09 +0200
