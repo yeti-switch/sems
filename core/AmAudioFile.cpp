@@ -253,10 +253,10 @@ int  AmAudioFile::open(const string& filename, OpenMode mode, bool is_tmp)
   string f_name = filename;
   string subtype = getSubtype(f_name);
 
-  AmAudioFileFormat* f_fmt = fileName2Fmt(filename, subtype);
+  AmAudioFileFormat* f_fmt = fileName2Fmt(f_name, subtype);
   if(!f_fmt){
     ERROR("while trying to determine the format of '%s'",
-	  filename.c_str());
+	  f_name.c_str());
     close();
     return -1;
   }
