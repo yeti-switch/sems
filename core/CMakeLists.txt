@@ -58,6 +58,17 @@ IF(WSLAY_FOUND)
 	LIST(APPEND common_LIBS wslay)
 ENDIF(WSLAY_FOUND)
 
+include(CheckIncludeFileCXX)
+check_include_file_cxx("format" CXX_FORMAT_SUPPORT)
+if (NOT CXX_FORMAT_SUPPORT)
+    find_package(fmt REQUIRED)
+endif()
+
+if (NOT CXX_FORMAT_SUPPORT)
+	MESSAGE(STATUS "cxx format not support, use fmt library")
+	LIST(APPEND common_LIBS fmt)
+endif()
+
 LIST(APPEND common_LIBS BOTAN_bundled CONFUSE_bundled SPANDSP_bundled SRTP_bundled ${STUN_bundled} ${TIFF_LIBRARIES})
 
 TARGET_LINK_LIBRARIES(${SEMS_LIB} ${CMAKE_DL_LIBS} ${common_LIBS})

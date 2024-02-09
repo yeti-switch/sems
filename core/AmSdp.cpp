@@ -1456,8 +1456,9 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
     } else if(attr == "crypto") {
         media.crypto.emplace_back();
         SdpCrypto &crypto = media.crypto.back();
+        char sep = ' ';
         while(attr_line < line_end) {
-            next = parse_until(attr_line, line_end, ' ');
+            next = parse_until(attr_line, line_end, sep);
             switch(crypto_st) {
             case TAG: {
                 string tag_number(attr_line, static_cast<size_t>(next-attr_line)-1);
@@ -1472,22 +1473,48 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
                 break;
             }
             case KEY: {
+                sep = ';';
                 char* key_data = parse_until(attr_line, next, ':');
                 if(key_data < line_end) {
                     string method = string(attr_line, static_cast<size_t>(key_data-attr_line)-1);
                     if(method == "inline") {
                         crypto.keys.emplace_back();
                         SdpKeyInfo &info = crypto.keys.back();
+                        info.mki.id = 0;
+                        info.mki.len = 0;
                         size_t line_len;
-                        next = skip_till_next_line(key_data, line_len);
-                        char* key_end = parse_until(key_data, key_data+line_len+1, '|');
-                        info.key = string(key_data, static_cast<size_t>(key_end-key_data-1));
-                        //TODO: parse parameters as described in https://tools.ietf.org/html/rfc4568#section-9.2
-                        info.lifetime = 0;
-                        info.mki = 1;
+                        next = parse_until(key_data, next, ';');
+                        line_len = next - key_data - 1;
+                        if(*(next - 2) == '\r')
+                            line_len--;
+                        do {
+                            char* key_end = parse_until(key_data, key_data+line_len+1, '|');
+                            string mki;
+                            string *data;
+                            if(info.key.empty())
+                                data = &info.key;
+                            else if(key_data[0] == '2' && key_data[1] == '^')
+                                data = &info.lifetime;
+                            else
+                                data = &mki;
+                            *data = string(key_data, static_cast<size_t>(key_end-key_data-1));
+                            if(data == &mki) {
+                                size_t pos = data->find(":");
+                                if(pos != string::npos) {
+                                    str2i(string(data->c_str(), pos), info.mki.id);
+                                    str2i(string(data->c_str() + pos + 1), info.mki.len);
+                                }
+                            }
+                            line_len -= data->size();
+                            if(line_len) line_len--;
+                            key_data = key_end;
+                        } while(line_len);
+                        DBG("key %s-%d, lifetime %s-%d, mki %d-%d", info.key.c_str(), info.key.size(), info.lifetime.c_str(), info.lifetime.size(), info.mki.id, info.mki.len);
                         break;
                     }
+                    break;
                 }
+                sep = ' ';
                 crypto_st = SESS_PARAM;
             }
             case SESS_PARAM: {

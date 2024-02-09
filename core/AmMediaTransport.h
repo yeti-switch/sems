@@ -168,7 +168,11 @@ public:
 
     AmRtpStream* getRtpStream() { return stream; }
 protected:
-    void addSrtpConnection(const string& remote_address, int remote_port, int srtp_ptrofile, const string& local_key, const string& remote_key);
+    void addSrtpConnection(
+        const string& remote_address, int remote_port,
+        int srtp_ptrofile,
+        const string& local_key,
+        const srtp_master_keys& remote_keys);
     void addRtpConnection(const string& remote_address, int remote_port);
 
     ssize_t recv(int sd);
@@ -179,9 +183,14 @@ protected:
     void log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type);
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
 
-    int getSrtpCredentialsBySdp(const SdpMedia& local_media, const SdpMedia& remote_media, string& local_key, string& remote_key);
-    void updateKeys(AmSrtpConnection* conn, const SdpMedia& local_media, const SdpMedia& remote_media);
-    void updateKeys(AmSrtpConnection* conn, uint16_t srtp_profile, const string& local_key, const string& remote_key);
+    int getSrtpCredentialsBySdp(
+        const SdpMedia& local_media, const SdpMedia& remote_media,
+        string& local_key, srtp_master_keys& remote_keys);
+    void updateKeys(AmSrtpConnection* conn,
+        const SdpMedia& local_media, const SdpMedia& remote_media);
+    void updateKeys(AmSrtpConnection* conn,
+        uint16_t srtp_profile,
+        const string& local_key, const srtp_master_keys& remote_keys);
 public:
     AmStreamConnection::ConnectionType GetConnectionType(unsigned char* buf, unsigned int size);
     bool isStunMessage(unsigned char* buf, unsigned int size);

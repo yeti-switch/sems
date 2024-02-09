@@ -105,7 +105,6 @@ void AmAudioRtpFormat::initCodec()
     }
 }
 
-
 AmRtpAudio::AmRtpAudio(AmSession* _s, int _if)
   : AmRtpStream(_s,_if),
     AmAudio(nullptr),
