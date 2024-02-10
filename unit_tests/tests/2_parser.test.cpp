@@ -378,7 +378,7 @@ TEST(SipParser, EmptyReasonTest)
     EXPECT_EQ(msg->content_length->type, sip_header::H_CONTENT_LENGTH);
     EXPECT_EQ(msg->type, SIP_REPLY);
     EXPECT_EQ(msg->u.reply->code, 100);
-    //TODO: now reason contains garbage. would you need to check on nil?
+    EXPECT_EQ(msg->u.reply->reason.len, 0);
     EXPECT_EQ((int64_t)msg->u.reply->reason.s, 0);
 }
 

@@ -542,10 +542,14 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
 
 	case ST_LF:
 	case ST_CRLF:
-	    if(saved_st == FL_REASON){
-		msg->u.reply->reason.set(beg,*c-(st==ST_CRLF?2:1)-beg);
-	    }
-	    return 0;
+	    if (saved_st == FL_REASON) {
+            if (int reason_len = *c-(st==ST_CRLF?2:1)-beg;
+                reason_len != 0)
+            {
+                msg->u.reply->reason.set(beg, reason_len);
+            }
+        }
+        return 0;
 
 	default:
 	    DBG("Bad state! st=%i",st);
