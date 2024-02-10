@@ -320,7 +320,7 @@ TEST(SipParser, ReplyReasonTest)
     std::unique_ptr<sip_msg> msg(new sip_msg());
     msg->type = SIP_REQUEST;
 
-    char data[] = "SIP/2.0 200 = 2**3 * 5**2 но\r\n"
+    char data[] = "SIP/2.0 200 = 2**3 * 5**2 но сто девяносто девять - простое\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.198;branch=z9hG4bK1324923\r\n"
                   "Call-ID: unreason.1234ksdfak3j2erwedfsASdf\r\n"
                   "CSeq: 35 INVITE\r\n"
@@ -350,7 +350,7 @@ TEST(SipParser, ReplyReasonTest)
     EXPECT_EQ(msg->type, SIP_REPLY);
     EXPECT_EQ(msg->u.reply->code, 200);
     EXPECT_STREQ(string(msg->u.reply->reason.s, msg->u.reply->reason.len).c_str(),
-                 string("= 2**3 * 5**2 но").c_str());
+                 string("= 2**3 * 5**2 но сто девяносто девять - простое").c_str());
 }
 
 // rfc4475 3.1.1.13
