@@ -661,12 +661,17 @@ TEST(SipParser, EscapedHeadersTest)
                   "From: <sip:local-resource@example.com>;tag=329429089\r\n"
                   "Call-ID: trws.oicu34958239neffasdhr2345r\r\n"
                   "Accept: application/sdp\r\n"
-                  "CSeq: 238923 OPTIONS\r\n"
+                  "CSeq: 149209342 INVITE\r\n"
                   "Max-Forwards: 70\r\n"
                   "Content-Length: 0";
     char* err;
     msg->copy_msg_buf(data, strlen(data));
-    ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
+    ASSERT_EQ(parse_sip_msg(msg.get(), err), 0);
+    //assert that escaped Request-URI headers are not translated to the msg headers
+    for(const auto &h: msg->hdrs) {
+        ASSERT_NE(h->type, sip_header::H_ROUTE);
+        ASSERT_NE(h->name.toString(), "Route");
+    }
 }
 
 // rfc4475 3.1.2.16
