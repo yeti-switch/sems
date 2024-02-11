@@ -765,7 +765,7 @@ TEST(SipParser, UnknownSchemeTest)
 }
 
 // rfc4475 3.3.8-9
-TEST(SipParser, MultiplyValuesTest)
+TEST(SipParser, MultipleValuesTest)
 {
     std::unique_ptr<sip_msg> msg(new sip_msg());
     //msg->type = SIP_REQUEST;
