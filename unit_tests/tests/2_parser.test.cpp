@@ -866,8 +866,8 @@ TEST(Parser, EscapingEncloseNameaddrTest)
     const char* s = name_addr_str.c_str();
     ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), 0);
     ASSERT_EQ(p.uri.hdrs.size(), 1);
-    ASSERT_EQ((*p.uri.hdrs.begin())->name, "Route");
-    ASSERT_EQ((*p.uri.hdrs.begin())->value, "%3Csip:sip.example.com%3E");
+    ASSERT_EQ((*p.uri.hdrs.begin())->name.toString(), "Route");
+    ASSERT_EQ((*p.uri.hdrs.begin())->value.toString(), "%3Csip:sip.example.com%3E");
 }
 
 // rfc4475 3.1.2.14
@@ -882,7 +882,7 @@ TEST(Parser, SpacesAddrSpecTest)
 }
 
 // rfc4475 3.1.2.15
-//TODO: can we use spaces in display_name without quotes?
+// be liberal. accept unquoted non-token characters in the display name
 TEST(Parser, NonTokenTest)
 {
     sip_nameaddr p;
@@ -890,7 +890,8 @@ TEST(Parser, NonTokenTest)
         "Bell, Alexander <sip:a.g.bell@example.com>;tag=43";
 
     const char* s = name_addr_str.c_str();
-    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), 0);
+    ASSERT_EQ(p.name.toString(), "Bell, Alexander");
 }
 
 TEST(Parser, parse_nameaddr_uri)
