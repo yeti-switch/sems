@@ -856,7 +856,7 @@ TEST(Parser, UnterminatedQuotedTest)
 }
 
 // rfc4475 3.1.2.13
-//TODO: can we use escaping?
+// be liberal on no ambiguity. parse parameter as uri_header
 TEST(Parser, EscapingEncloseNameaddrTest)
 {
     sip_nameaddr p;
@@ -864,7 +864,10 @@ TEST(Parser, EscapingEncloseNameaddrTest)
         "sip:user@example.com?Route=%3Csip:sip.example.com%3E";
 
     const char* s = name_addr_str.c_str();
-    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), UNDEFINED_ERR);
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), 0);
+    ASSERT_EQ(p.uri.hdrs.size(), 1);
+    ASSERT_EQ((*p.uri.hdrs.begin())->name, "Route");
+    ASSERT_EQ((*p.uri.hdrs.begin())->value, "%3Csip:sip.example.com%3E");
 }
 
 // rfc4475 3.1.2.14
