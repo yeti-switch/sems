@@ -35,12 +35,11 @@
 #include "trans_layer.h"
 #include "transport.h"
 #include "msg_logger.h"
-#include "ip_util.h"
-
+#include "resolver.h"
 #include "log.h"
-
-#include <assert.h>
 #include "parse_header.h"
+
+#include <cassert>
 
 int _timer_type_lookup[] = { 
     0,1,2, // STIMER_A, STIMER_B, STIMER_D

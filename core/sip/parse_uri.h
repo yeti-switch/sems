@@ -33,7 +33,6 @@
 #include "cstring.h"
 
 #include <list>
-using std::list;
 
 struct sip_avp;
 
@@ -55,9 +54,9 @@ struct sip_uri
     cstring    port_str;
     short unsigned int  port;
 
-    list<sip_avp*> params;
-    list<sip_avp*> uri_params;
-    list<sip_avp*> hdrs;
+    std::list<sip_avp*> params;
+    std::list<sip_avp*> uri_params;
+    std::list<sip_avp*> hdrs;
     sip_avp*       trsp;
 
     sip_uri();

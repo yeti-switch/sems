@@ -27,7 +27,9 @@
 #include "parse_route.h"
 #include "parse_from_to.h"
 #include "parse_common.h"
+#include "log.h"
 
+#include <cassert>
 #include <memory>
 using std::unique_ptr;
 

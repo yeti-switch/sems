@@ -14,8 +14,8 @@ protected:
     static struct wslay_event_callbacks callbacks;
     cstring          ws_accept;
     cstring          ws_key;
-    vector<char>     ws_resv_buffer;
-    vector<char>     ws_send_buffer;
+    std::vector<char>     ws_resv_buffer;
+    std::vector<char>     ws_send_buffer;
     parser_state     pst;
 
     cstring get_sec_ws_accept_data(const cstring& key);
@@ -34,13 +34,13 @@ protected:
     virtual int ws_recv_data(uint8_t *data, size_t len);
     virtual int ws_send_data(const uint8_t *data, size_t len);
     int parse_input(sip_msg* s_msg);
-    void send_reply(sip_msg* req, int reply_code, const string& reason);
+    void send_reply(sip_msg* req, int reply_code, const std::string& reason);
     void send_request();
 public:
-    WsRpcPeer(const string& id);
+    WsRpcPeer(const std::string& id);
     ~WsRpcPeer();
 
-    int connect(const string & host, int port, string & res_str) override;
+    int connect(const std::string & host, int port, std::string & res_str) override;
 
     int read_data(char* data, int size) override;
     int netstringsRead() override;

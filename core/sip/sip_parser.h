@@ -27,15 +27,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _SIP_PARSER_H
-#define _SIP_PARSER_H
+#pragma once
 
 #include "cstring.h"
 #include "parse_uri.h"
-#include "resolver.h"
-
-#include <list>
-using std::list;
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -63,23 +58,22 @@ enum {
 struct sip_request
 {
     enum {
-	OTHER_METHOD=0,
-    //sip method
-	INVITE,
-	ACK,
+        OTHER_METHOD=0,
+        //sip method
+        INVITE,
+        ACK,
         PRACK,
-	OPTIONS,
-	BYE,
-	CANCEL,
-	REGISTER,
-    //http method
-    GET
+        OPTIONS,
+        BYE,
+        CANCEL,
+        REGISTER,
+        //http method
+        GET
     };
-    
+
     //
     // Request methods
     //
-    
     cstring  method_str;
     int      method;
 
@@ -94,13 +88,13 @@ struct sip_reply
     bool local_reply;
 
     sip_reply()
-    : code(0),
-      local_reply(false)
+      : code(0),
+        local_reply(false)
     {}
 
     sip_reply(int code, const cstring& reason)
-    : code(code), reason(reason),
-      local_reply(false)
+      : code(code), reason(reason),
+        local_reply(false)
     {}
 };
 
@@ -113,19 +107,19 @@ struct sip_msg
     int     type; 
 
     union {
-	struct sip_request* request;
-	struct sip_reply*   reply;
-    }u;
+        struct sip_request* request;
+        struct sip_reply*   reply;
+    } u;
 
-    list<sip_header*>  hdrs;
-    
+    std::list<sip_header*>  hdrs;
+
     sip_header*        to;
     sip_header*        from;
 
     sip_header*        cseq;
     sip_header*        rack;
 
-    list<sip_header*>  vias;
+    std::list<sip_header*>  vias;
     sip_header*        via1;
     sip_via_parm*      via_p1;
 
@@ -133,9 +127,9 @@ struct sip_msg
     sip_header*        max_forwards;
     sip_header*        expires;
 
-    list<sip_header*>  contacts;
-    list<sip_header*>  route;
-    list<sip_header*>  record_route;
+    std::list<sip_header*>  contacts;
+    std::list<sip_header*>  route;
+    std::list<sip_header*>  record_route;
     sip_header*        content_type;
     sip_header*        content_length;
     cstring            body;
@@ -179,8 +173,6 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg);
 int parse_http_msg(sip_msg* msg, char*& err_msg);
 
 #define get_contact(msg) (msg->contacts.empty() ? NULL : (*msg->contacts.begin()))
-
-#endif
 
 /** EMACS **
  * Local variables:
