@@ -21,7 +21,7 @@ TEST(SipParser, Parsing)
                   "Contact: <sip:ivan@test.com>\r\n"
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -100,7 +100,7 @@ TEST(SipParser, ShortTortuousTest)
                   "m=audio 49217 RTP/AVP 0 12\r\n"
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -137,7 +137,7 @@ TEST(SipParser, WideRangeTest)
                   "Max-Forwards: 255\r\n"
                   "extensionHeader-!.%*+_`'~:大停電\r\n"
                   "Content-Length: 0\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -192,7 +192,7 @@ TEST(SipParser, EscapeTest)
                   "m=audio 49217 RTP/AVP 0 12\r\n"
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -234,7 +234,7 @@ TEST(SipParser, ExtraOctetsTest)
                   "CSeq: 8 INVITE\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.15;branch=z9hG4bKkdjuw380234\r\n"
                   "Content-Length: 0\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -262,7 +262,7 @@ TEST(SipParser, SemicolonSepTest)
                   "Accept: application/sdp, application/pkcs7-mime\r\n"
                   "Via: SIP/2.0/UDP 192.0.2.1;branch=z9hG4bKkdjuw\r\n"
                   "Content-Length: 0\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -298,7 +298,7 @@ TEST(SipParser, TransportTest)
                   "Via: SIP/2.0/UNKNOWN t4.example.com;branch=z9hG4bKasd0f3en\r\n"
                   "Via: SIP/2.0/TCP t5.example.com;branch=z9hG4bK0a9idfnee\r\n"
                   "Content-Length: 0\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -338,7 +338,7 @@ TEST(SipParser, ReplyReasonTest)
                   "m=audio 49217 RTP/AVP 0 12\r\n"
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -367,7 +367,7 @@ TEST(SipParser, EmptyReasonTest)
                   "To: sip:user@example.edu;tag=2229\r\n"
                   "Content-Length: 0\r\n"
                   "Contact: <sip:user@host198.example.com>";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     EXPECT_EQ(msg->from->type, sip_header::H_FROM);
@@ -407,7 +407,7 @@ TEST(SipParser, ContentLargerTest)
                   "m=audio 49217 RTP/AVP 0 12\r\n"
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -437,7 +437,7 @@ TEST(SipParser, ContentNegativeTest)
                   "m=audio 49217 RTP/AVP 0 12\r\n"
                   "m=video 3227 RTP/AVP 31\r\n"
                   "a=rtpmap:31 LPC";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -458,7 +458,7 @@ TEST(SipParser, ScalarTest)
                   "Expires: 1000000000\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -478,7 +478,7 @@ TEST(SipParser, ScalarCSeqOverlargeTest)
                   "Expires: 3600\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -498,7 +498,7 @@ TEST(SipParser, ScalarMaxForwardsAcceptableTest)
                   "Expires: 3600\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     ASSERT_NE(msg->max_forwards, nullptr);
@@ -520,7 +520,7 @@ TEST(SipParser, ScalarMaxForwardsOverlargeTest)
                   "Expires: 3600\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     ASSERT_STREQ(msg->max_forwards->value.toString().c_str(), "300");
@@ -541,7 +541,7 @@ TEST(SipParser, ScalarExpiresOverlargeTest)
                   "Expires: 4294967296\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=3600\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     ASSERT_STREQ(msg->expires->value.toString().c_str(), "4294967296");
@@ -560,7 +560,7 @@ TEST(SipParser, ScalarContactExpiresOverlargeTest)
                   "Expires: 3600\r\n"
                   "Contact: <sip:user@host129.example.com>;expires=280297596632815\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), EXIT_SUCCESS);
     const sip_header* contact = msg->contacts.empty() ? nullptr : *msg->contacts.begin();
@@ -584,7 +584,7 @@ TEST(SipParser, EnclosingTest)
                   "Via: SIP/2.0/UDP 192.0.2.5\r\n"
                   "Contact: <sip:caller@host5.example.net>\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -604,7 +604,7 @@ TEST(SipParser, EmbeddedLwsTest)
                   "Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bKkdjuw2395\r\n"
                   "Contact: <sip:caller@host1.example.net>\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -624,7 +624,7 @@ TEST(SipParser, MultipleSPTest)
                   "Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bKkdjuw2395\r\n"
                   "Contact: <sip:caller@host1.example.net>\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -644,7 +644,7 @@ TEST(SipParser, SPCharactersTest)
                   "CSeq: 238923 OPTIONS\r\n"
                   "Max-Forwards: 70\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -664,7 +664,7 @@ TEST(SipParser, EscapedHeadersTest)
                   "CSeq: 149209342 INVITE\r\n"
                   "Max-Forwards: 70\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), 0);
     //assert that escaped Request-URI headers are not translated to the msg headers
@@ -688,7 +688,7 @@ TEST(SipParser, UnknownProtocolVersionTest)
                   "Call-ID: badvers.31417@c.example.com\r\n"
                   "CSeq:    1 OPTIONS\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -707,7 +707,7 @@ TEST(SipParser, MethodsMismatchTest)
                   "CSeq: 8 INVITE\r\n"
                   "Via: SIP/2.0/UDP host.example.com;branch=z9hG4bKkdjuw\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -726,7 +726,7 @@ TEST(SipParser, OverloadResponceCodeTest)
                   "To: <sip:user@example.edu>;tag=902jndnke3\r\n"
                   "Contact: <sip:user@host105.example.com>\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -741,7 +741,7 @@ TEST(SipParser, MissingRequiredTest)
                   "Via: SIP/2.0/UDP 192.0.2.95;branch=z9hG4bKkdj.insuf\r\n"
                   "Content-Type: application/sdp\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), INCOMPLETE_SIP_MSG);
 }
@@ -759,7 +759,7 @@ TEST(SipParser, UnknownSchemeTest)
                   "CSeq: 3923423 OPTIONS\r\n"
                   "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_FLINE);
 }
@@ -778,7 +778,7 @@ TEST(SipParser, MultipleValuesTest)
                   "Call-ID: multi01.98asdh@192.0.2.2\r\n"
                   "Via: SIP/2.0/TCP host9.example.com;branch=z9hG4bKkdjuw39234\r\n"
                   "Content-Length: 0";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_sip_msg(msg.get(), err), MALFORMED_SIP_MSG);
 }
@@ -793,7 +793,7 @@ TEST(HttpParser, Parsing)
                   "Upgrade: websocket\r\n"
                   "Sec-WebSocket-Version: 13\r\n"
                   "Sec-WebSocket-Key: y1ceknN4VFPuHj7MkaAhVQ==\r\n";
-    char* err;
+    const char* err;
     msg->copy_msg_buf(data, strlen(data));
     ASSERT_EQ(parse_http_msg(msg.get(), err), EXIT_SUCCESS);
 

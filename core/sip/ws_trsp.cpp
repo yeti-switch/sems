@@ -220,7 +220,7 @@ void ws_input::add_input_len(int len)
 void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
 {
     if(!ws_connected) {
-        char* err_msg=0;
+        const char* err_msg=0;
         int err = parse_http_msg(s_msg, err_msg);
         if(err){
             DBG("parse_sip_msg returned %i",err);

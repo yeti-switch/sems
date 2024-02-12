@@ -538,7 +538,7 @@ static int parse_first_line(sip_msg* msg, char** c, char* end)
     return UNEXPECTED_EOT;
 }
 
-int parse_headers(sip_msg* msg, char** c, char* end)
+int parse_headers(sip_msg* msg, char** c, char* end, const char*& err_msg)
 {
     list<sip_header*> hdrs;
     int err = parse_headers(hdrs,c,end);
@@ -547,10 +547,18 @@ int parse_headers(sip_msg* msg, char** c, char* end)
             switch(hdr->type) {
 
             case sip_header::H_CALL_ID:
+                if (msg->callid) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated Call-ID header";
+                }
                 msg->callid = hdr;
                 break;
 
             case sip_header::H_MAX_FORWARDS:
+                if (msg->max_forwards) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated Max-Forwards header";
+                }
                 msg->max_forwards = hdr;
                 break;
 
@@ -559,6 +567,10 @@ int parse_headers(sip_msg* msg, char** c, char* end)
                 break;
 
             case sip_header::H_CONTENT_LENGTH:
+                if (msg->content_length) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated Content-Length header";
+                }
                 msg->content_length = hdr;
                 break;
 
@@ -567,10 +579,18 @@ int parse_headers(sip_msg* msg, char** c, char* end)
                 break;
 
             case sip_header::H_FROM:
+                if (msg->from) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated From header";
+                }
                 msg->from = hdr;
                 break;
 
             case sip_header::H_TO:
+                if (msg->to) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated To header";
+                }
                 msg->to = hdr;
                 break;
 
@@ -592,6 +612,10 @@ int parse_headers(sip_msg* msg, char** c, char* end)
                 break;
 
             case sip_header::H_CSEQ:
+                if (msg->cseq) {
+                    err = MALFORMED_SIP_MSG;
+                    err_msg = "duplicated CSeq header";
+                }
                 msg->cseq = hdr;
                 break;
 
@@ -641,13 +665,14 @@ int parse_headers(sip_msg* msg, char** c, char* end)
             } //switch(hdr->type)
 
             msg->hdrs.push_back(hdr);
+            if (err) break;
         } //for(auto hdr: hdrs)
     }
 
     return err;
 }
 
-int parse_sip_msg(sip_msg* msg, char*& err_msg)
+int parse_sip_msg(sip_msg* msg, const char*& err_msg)
 {
     char* c = msg->buf;
     char* end = msg->buf + msg->len;
@@ -656,29 +681,28 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     int err = parse_first_line(msg,&c,end);
 
     if (err) {
-        err_msg = (char*)"Could not parse first line";
+        err_msg = "Could not parse first line";
         return MALFORMED_FLINE;
     }
 
-    err = parse_headers(msg,&c,end);
+    err = parse_headers(msg,&c,end,err_msg);
     /*for(const auto &h: msg->hdrs) {
         DBG("h: type:%d, name:'%.*s', value:'%.*s'",
             h->type,
             h->name.len, h->name.s,
             h->value.len, h->value.s);
     }*/
+    if(err) return err;
 
-    if (!err) {
-        msg->body.set(c,msg->len - (c - msg->buf));
-    }
+    msg->body.set(c,msg->len - (c - msg->buf));
 
     if (msg->type > SIP_REPLY) {
-        err_msg = (char*)"incorrect type of protocol";
+        err_msg = "incorrect type of protocol";
         return MALFORMED_SIP_MSG;
     }
 
     if (msg->type == SIP_REQUEST && msg->u.request->method > sip_request::REGISTER) {
-        err_msg = (char*)"incorrect method of protocol";
+        err_msg = "incorrect method of protocol";
         return MALFORMED_SIP_MSG;
     }
 
@@ -689,19 +713,19 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
        !msg->callid)
     {
         if(!msg->via1) {
-            err_msg = (char*)"missing Via header field";
+            err_msg = "missing Via header field";
         }
         else if (!msg->cseq) {
-            err_msg = (char*)"missing CSeq header field";
+            err_msg = "missing CSeq header field";
         }
         else if (!msg->from) {
-            err_msg = (char*)"missing From header field";
+            err_msg = "missing From header field";
         }
         else if (!msg->to) {
-            err_msg = (char*)"missing To header field";
+            err_msg = "missing To header field";
         }
         else if (!msg->callid) {
-            err_msg = (char*)"missing Call-ID header field";
+            err_msg = "missing Call-ID header field";
         }
 
         return INCOMPLETE_SIP_MSG;
@@ -716,7 +740,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
         msg->via_p1 = *via->parms.begin();
         msg->via1->p = via.release();
     } else {
-        err_msg = (char*)"could not parse Via hf";
+        err_msg = "could not parse Via hf";
         return MALFORMED_SIP_MSG;
     }
 
@@ -729,17 +753,17 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     {
         msg->cseq->p = cseq.release();
     } else {
-        err_msg = (char*)"could not parse CSeq hf";
+        err_msg = "could not parse CSeq hf";
         return MALFORMED_SIP_MSG;
     }
 
     unique_ptr<sip_from_to> from(new sip_from_to());
     if (parse_from_to(from.get(), msg->from->value.s, msg->from->value.len) != 0) {
-        err_msg = (char*)"could not parse From hf";
+        err_msg = "could not parse From hf";
         return MALFORMED_SIP_MSG;
     }
     if (!from->tag.len) {
-        err_msg = (char*)"missing From-tag";
+        err_msg = "missing From-tag";
         return MALFORMED_SIP_MSG;
     }
     msg->from->p = from.release();
@@ -751,7 +775,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     {
         msg->to->p = to.release();
     } else {
-        err_msg = (char*)"could not parse To hf";
+        err_msg = "could not parse To hf";
         return MALFORMED_SIP_MSG;
     }
 
@@ -760,7 +784,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
         if (parse_rack(rack.get(), msg->rack->value.s, msg->rack->value.len)) {
             msg->rack->p = rack.release();
         } else {
-            err_msg = (char *)"could not parse RAck hf";
+            err_msg = "could not parse RAck hf";
             return MALFORMED_SIP_MSG;
         }
     }
@@ -818,7 +842,7 @@ int parse_sip_msg(sip_msg* msg, char*& err_msg)
     return 0;
 }
 
-int parse_http_msg(sip_msg* msg, char*& err_msg)
+int parse_http_msg(sip_msg* msg, const char*& err_msg)
 {
     char* c = msg->buf;
     char* end = msg->buf + msg->len;
@@ -826,23 +850,23 @@ int parse_http_msg(sip_msg* msg, char*& err_msg)
     int err = parse_first_line(msg,&c,end);
 
     if (err) {
-        err_msg = (char*)"Could not parse first line";
+        err_msg = "Could not parse first line";
         return MALFORMED_FLINE;
     }
 
-    err = parse_headers(msg,&c,end);
+    err = parse_headers(msg,&c,end,err_msg);
 
     if (!err) {
         msg->body.set(c,msg->len - (c - msg->buf));
     }
 
     if (msg->type < HTTP_REQUEST) {
-        err_msg = (char*)"incorrect type of protocol";
+        err_msg = "incorrect type of protocol";
         return MALFORMED_SIP_MSG;
     }
 
     if (msg->type == HTTP_REQUEST && msg->u.request->method < sip_request::GET) {
-        err_msg = (char*)"incorrect method of protocol";
+        err_msg = "incorrect method of protocol";
         return MALFORMED_SIP_MSG;
     }
 
@@ -851,25 +875,25 @@ int parse_http_msg(sip_msg* msg, char*& err_msg)
         !msg->sec_ws_version)
     {
         if (!msg->connection) {
-            err_msg = (char*)"missing Connection header field";
+            err_msg = "missing Connection header field";
         }
         else if (!msg->upgrade) {
-            err_msg = (char*)"missing upgrade header field";
+            err_msg = "missing upgrade header field";
         }
         else if (!msg->sec_ws_version) {
-            err_msg = (char*)"missing sec_websocket_version header field";
+            err_msg = "missing sec_websocket_version header field";
         }
 
         return INCOMPLETE_SIP_MSG;
     }
 
     if (msg->type == HTTP_REQUEST && !msg->sec_ws_key) {
-        err_msg = (char*)"missing sec_websocket_key header field";
+        err_msg = "missing sec_websocket_key header field";
         return INCOMPLETE_SIP_MSG;
     }
 
     if(msg->type == HTTP_REPLY && !msg->sec_ws_accept) {
-        err_msg = (char*)"missing sec_websocket_accept header field";
+        err_msg = "missing sec_websocket_accept header field";
         return INCOMPLETE_SIP_MSG;
     }
 
