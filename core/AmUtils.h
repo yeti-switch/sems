@@ -186,7 +186,7 @@ bool str2int(const string& str, int& result);
 bool str2int(char*& str, int& result, char sep = ' ');
 
 /**
- * Internal version of preceeding 'str2int' method.
+ * Convert a lengthed string to an int
  * @param str    [in] string to convert
  * @param len    [in] length of string
  * @param result [out] result of the function
