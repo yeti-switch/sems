@@ -47,6 +47,17 @@ ConnectionPool::~ConnectionPool()
     for(auto& conn : connections_copy) delete conn;
 }
 
+bool ConnectionPool::processEvent(void* p)
+{
+    for(auto& conn : connections) {
+        if(conn == p) {
+            conn->check();
+            return true;
+        }
+    }
+    return false;
+}
+
 Connection * ConnectionPool::getFreeConnection()
 {
     for(auto& conn : connections) {

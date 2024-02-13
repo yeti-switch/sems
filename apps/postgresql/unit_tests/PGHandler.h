@@ -24,7 +24,6 @@ public:
     }
     virtual ~PostgresqlTest() {
         WorkerHandler::dispose();
-        AmEventDispatcher::dispose();
     }
     void SetUp() override
     {
@@ -95,7 +94,6 @@ public:
             bool is_connection = true;
             for(auto& worker : workers) {
                 if(worker->processEvent(p)) {
-                    //DBG("worker event");
                     is_connection = false;
                     break;
                 }

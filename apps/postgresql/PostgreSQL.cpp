@@ -206,16 +206,9 @@ void PostgreSQL::run()
                 running = false;
                 break;
             } else {
-                bool is_connection = true;
                 for(auto& worker : workers) {
-                    if(worker.second->processEvent(p)) {
-                        is_connection = false;
+                    if(worker.second->processEvent(p)) 
                         break;
-                    }
-                }
-                if(is_connection) {
-                    Connection* conn = (Connection*)e.data.ptr;
-                    conn->check();
                 }
             }
         }
@@ -499,10 +492,13 @@ bool PostgreSQL::checkQueryData(const PGQueryData& data)
 
 void PostgreSQL::onWorkerPoolCreate(const PGWorkerPoolCreate& e)
 {
+    PoolWorker* worker = 0;
     if(workers.find(e.worker_name) == workers.end()) {
-        workers[e.worker_name] = new PoolWorker(e.worker_name, epoll_fd);
+        worker = new PoolWorker(e.worker_name, epoll_fd);
+        workers[e.worker_name] = worker;
+        worker->init();
     }
-    PoolWorker* worker = workers[e.worker_name];
+    worker = workers[e.worker_name];
     worker->createPool(e.type, e.pool);
 }
 

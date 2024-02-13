@@ -29,6 +29,7 @@ public:
     ConnectionPool(const PGPool& pool, PoolWorker* worker, PGWorkerPoolCreate::PoolType type);
     ~ConnectionPool();
 
+    bool processEvent(void* p);
     Connection* getFreeConnection();
     Connection* getConnection(int fd);
     vector<Connection*> getLifetimeOverConnections(time_t& nextTime);

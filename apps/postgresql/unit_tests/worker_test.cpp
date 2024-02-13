@@ -270,6 +270,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -411,6 +412,7 @@ TEST_F(PostgresqlTest, WorkerQueueTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;
@@ -444,6 +446,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -498,6 +501,7 @@ TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -552,6 +556,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -601,6 +606,7 @@ TEST_F(PostgresqlTest, WorkerSearchPathTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 2;
@@ -634,6 +640,7 @@ TEST_F(PostgresqlTest, WorkerReconnectErrorTest)
 {
     PGHandler handler;
     PoolWorker worker("test", handler.epoll_fd);
+    worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
     pool.pool_size = 1;

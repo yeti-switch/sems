@@ -46,7 +46,6 @@ PoolWorker::PoolWorker(const std::string& name, int epollfd)
     reconn_next_time(0), minimal_timer_time(0),
     timer_is_set(false)
 {
-    workTimer.link(epoll_fd, true);
 }
 
 PoolWorker::~PoolWorker()
@@ -74,6 +73,11 @@ PoolWorker::~PoolWorker()
         slave = 0;
         delete destroyed;
     }
+}
+
+void PoolWorker::init()
+{
+    workTimer.link(epoll_fd, true);
 }
 
 uint64_t PoolWorker::getActiveTasksCount()
@@ -310,6 +314,8 @@ bool PoolWorker::processEvent(void* p)
         workTimer.read();
         return true;
     }
+    if(master && master->processEvent(p)) return true;
+    if(slave && slave->processEvent(p)) return true;
     return false;
 }
 
@@ -614,6 +620,7 @@ void PoolWorker::setSearchPath(const vector<string>& search_path)
         master->runTransactionForPool(tr);
     if(slave)
         slave->runTransactionForPool(tr);
+    delete tr;
 }
 
 void PoolWorker::setReconnectErrors(const vector<std::string>& errors)

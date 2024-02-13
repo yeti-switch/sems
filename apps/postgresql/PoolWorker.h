@@ -106,6 +106,8 @@ class PoolWorker
     PoolWorker(const string& name, int epollfd);
     ~PoolWorker();
 
+    void init();
+
     bool processEvent(void* p);
 
     void createPool(PGWorkerPoolCreate::PoolType type, const PGPool& pool);
