@@ -1,3 +1,11 @@
+sems (1.129.0) stable; urgency=low
+  * add SRTP MKI support
+  * fix SRTP context send/recv racing
+  * fix SIP version parsing
+  * add SIP parser dups/values checks for Content-Length/CSeq/Call-ID/To/From/Max-Forwards headers
+  * fix fax/statistics memory leaks
+ -- Michael Furmur <furmur@pm.me>  Fri, 16 Feb 2024 14:20:31 +0200
+
 sems (1.128.2) stable; urgency=low
   * registrar_client: add min_interval_msec parameter
   * AmB2BMedia: fix crash on uninitialized stream
