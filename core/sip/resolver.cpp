@@ -382,7 +382,12 @@ public:
             e->target.c_str(), ntohs(reinterpret_cast<sockaddr_in*>(sa)->sin_port));
 
         dns_handle htmp;
-        return resolver::instance()->resolve_name(e->target.c_str(),&htmp,sa,priority);
+        if(resolver::instance()->resolve_name(e->target.c_str(),&htmp,sa,priority) >= 0) {
+            h->reset(dns_r_ip);
+            h->prepare(htmp.ip_e, priority);
+            return h->next_ip(sa, priority);
+        }
+        return -1;
     }
 };
 
