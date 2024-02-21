@@ -381,7 +381,8 @@ public:
         DBG("target '%s' must be resolved first. srv_port: %i",
             e->target.c_str(), ntohs(reinterpret_cast<sockaddr_in*>(sa)->sin_port));
 
-        return resolver::instance()->resolve_name(e->target.c_str(),h,sa,priority);
+        dns_handle htmp;
+        return resolver::instance()->resolve_name(e->target.c_str(),&htmp,sa,priority);
     }
 };
 
@@ -820,7 +821,7 @@ dns_handle::~dns_handle()
 
 bool dns_handle::valid()
 {
-    return (ip_e);
+    return (ip_e) || (srv_e);
 }
 
 bool dns_handle::eoip()
