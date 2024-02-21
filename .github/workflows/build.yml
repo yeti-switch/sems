@@ -28,3 +28,8 @@ jobs:
         run: apt update && apt -y --no-install-recommends build-dep .
       - name: build
         run: debuild -us -uc -b -j$(nproc)
+      - name: upload to pkg.yeti-switch.org. bookworm 1.13 main
+        run: ci/deploy.sh bookworm 1.13 main ../*.deb
+        env:
+          PKG_API_BASE: ${{secrets.PKG_API_BASE}}
+        if: startsWith(github.ref, 'refs/tags/v')
