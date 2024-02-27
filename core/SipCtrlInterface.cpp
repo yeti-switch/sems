@@ -1010,6 +1010,7 @@ inline bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
     for(const auto &h: msg->hdrs) {
         switch(h->type) {
         case sip_header::H_OTHER:
+        case sip_header::H_EXPIRES:
         case sip_header::H_REQUIRE: {
             string value = c2stlstr(h->value);
             size_t rpos = 0;
@@ -1128,6 +1129,7 @@ inline bool _SipCtrlInterface::sip_msg2am_reply(sip_msg *msg, AmSipReply &reply)
 #endif
         switch (h->type) {
         case sip_header::H_OTHER:
+        case sip_header::H_EXPIRES:
         case sip_header::H_REQUIRE: {
             string value = c2stlstr(h->value);
             size_t rpos = 0;
