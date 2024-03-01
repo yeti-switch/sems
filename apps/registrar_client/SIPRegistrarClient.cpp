@@ -929,7 +929,7 @@ void SIPRegistrarClient::createRegistration(const AmArg& args, AmArg& ret)
         SIPRegistrationInfo info;
         info.init_from_amarg(args[0]);
         instance()->postEvent(new SIPNewRegistrationEvent(info,l_handle,sess_link));
-        ret.push(true);
+        ret.push(l_handle);
 
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 
