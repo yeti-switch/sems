@@ -111,6 +111,7 @@ class SIPRegistrarClient
 
     bool onSipReply(const AmSipReply& rep, AmSipDialog::Status old_dlg_status);
     int onLoad() override;
+    void onShutdown() override;
 
     void run() override;
     void on_stop() override;

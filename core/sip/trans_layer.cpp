@@ -3242,12 +3242,14 @@ int _trans_layer::retarget(sip_trans* t, sip_msg* &msg,
 
 void trans_ticket::lock_bucket() const
 {
-    _bucket->lock();
+	if(_bucket)
+		_bucket->lock();
 }
 
 void trans_ticket::unlock_bucket() const
 {
-    _bucket->unlock();
+	if(_bucket)
+		_bucket->unlock();
 }
 
 const sip_trans* trans_ticket::get_trans() const
@@ -3260,7 +3262,8 @@ const sip_trans* trans_ticket::get_trans() const
 
 void trans_ticket::remove_trans()
 {
-    _bucket->remove(_t);
+	if(_bucket)
+		_bucket->remove(_t);
 }
 
 void trans_ticket::assign_if_differs(const trans_ticket& other)

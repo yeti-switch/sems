@@ -265,6 +265,7 @@ void SIPRegistrarClient::run()
 
     onServerShutdown();
     stopped.set(true);
+    DBG("SIPRegistrarClient ending...");
 }
 
 void SIPRegistrarClient::checkTimeouts()
@@ -333,6 +334,11 @@ int SIPRegistrarClient::onLoad()
     return 0;
 }
 
+void SIPRegistrarClient::onShutdown()
+{
+    stop(true);
+}
+
 void SIPRegistrarClient::onServerShutdown()
 {
     // TODO: properly wait until unregistered, with timeout
@@ -351,7 +357,7 @@ void SIPRegistrarClient::process(AmEvent* ev)
     if (ev->event_id == E_SYSTEM) {
         AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
         if(sys_ev){
-            DBG("Session received system Event");
+            DBG("Session received system Event %d", sys_ev->sys_event);
             if (sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
                 stop_event.fire();
             }
