@@ -1,3 +1,7 @@
+sems (1.129.3) stable; urgency=low
+  * resolver: fix SRV entry FQDN resolving
+ -- Michael Furmur <furmur@pm.me>  Thu, 07 Mar 2024 21:17:57 +0200
+
 sems (1.129.2) stable; urgency=low
   * fix Expires header presence in the AmSipRequest
  -- Michael Furmur <furmur@pm.me>  Tue, 27 Feb 2024 23:22:06 +0200
