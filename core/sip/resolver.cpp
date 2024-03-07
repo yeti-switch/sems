@@ -381,12 +381,24 @@ public:
         DBG("target '%s' must be resolved first. srv_port: %i",
             e->target.c_str(), ntohs(reinterpret_cast<sockaddr_in*>(sa)->sin_port));
 
-        dns_handle htmp;
-        if(resolver::instance()->resolve_name(e->target.c_str(),&htmp,sa,priority) >= 0) {
-            h->reset(dns_r_ip);
-            h->prepare(htmp.ip_e, priority);
-            return h->next_ip(sa, priority);
+        dns_handle tmp_handle;
+        if ((resolver::instance()->resolve_name(e->target.c_str(),&tmp_handle,sa,priority) >= 0)
+            && tmp_handle.ip_e)
+        {
+            const auto &v = tmp_handle.ip_e->ip_vec;
+            switch(v.size()) {
+            case 0:
+                break;
+            case 1:
+                dynamic_cast<ip_entry*>(v[0])->to_sa(sa);
+                return 1;
+            default:
+                //return random address from the resolved A/AAAA entries
+                dynamic_cast<ip_entry*>(v[std::rand() % v.size()])->to_sa(sa);
+                return 1;
+            }
         }
+
         return -1;
     }
 };
