@@ -1,2 +1,3 @@
-usr/lib/sems/plug-in usr/lib/sems/
+usr/lib/sems/plug-in/*.so
 etc/sems/etc etc/sems/
+etc/sems/scripts

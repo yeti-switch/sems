@@ -3,9 +3,6 @@
 #include <string>
 using std::string;
 
-#include <list>
-using std::list;
-
 #define CFG_PARAM_USE_FUNCTIONS         "use_functions"
 #define CFG_PARAM_EXPIRES_MIN           "expires_min"
 #define CFG_PARAM_EXPIRES_MAX           "expires_max"
@@ -36,5 +33,5 @@ class Configurable
 class SipRegistrarConfig
 {
   public:
-    static int parse(const string& config, list<Configurable *> sub_conf_objs);
+    static int parse(const string& config, Configurable* obj);
 };

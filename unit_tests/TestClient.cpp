@@ -1,46 +1,39 @@
-#include "RegistrarHandler.h"
-#include "log.h"
-#include "AmEventDispatcher.h"
+#include "TestClient.h"
+
+#include <log.h>
+#include <AmEventDispatcher.h>
 #include <gtest/gtest.h>
 
 #define EPOLL_MAX_EVENTS    2048
 
-RegistrarHandler* RegistrarHandler::_instance = NULL;
+TestClient::TestClient()
+  : TestClient(TEST_CLIENT_QUEUE)
+{}
 
-RegistrarHandler* RegistrarHandler::instance()
-{
-    if(_instance == nullptr){
-        _instance = new RegistrarHandler();
-    }
-    return _instance;
-}
-
-void RegistrarHandler::dispose()
-{
-    if(_instance != nullptr){
-        delete _instance;
-    }
-    _instance = nullptr;
-}
-
-RegistrarHandler::RegistrarHandler()
-    : AmEventFdQueue(this)
+TestClient::TestClient(const string &queue_name)
+  : AmEventFdQueue(this),
+    queue_name(queue_name)
 {
     epoll_fd = epoll_create(10);
     epoll_link(epoll_fd, true);
     stop_event.link(epoll_fd,true);
-
-    AmEventDispatcher::instance()->addEventQueue(REGISTRAR_HANDLER_QUEUE, this);
+    AmEventDispatcher::instance()->addEventQueue(queue_name, this);
 }
 
-RegistrarHandler::~RegistrarHandler()
+TestClient::~TestClient()
 {
-    AmEventDispatcher::instance()->delEventQueue(REGISTRAR_HANDLER_QUEUE);
+    AmEventDispatcher::instance()->delEventQueue(queue_name);
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 }
 
-void RegistrarHandler::run()
+void TestClient::reset() {
+    reply_available.set(false);
+    reply_data = 0;
+    reply_user_data = nullptr;
+}
+
+void TestClient::run()
 {
     void *p;
     bool running;
@@ -56,8 +49,8 @@ void RegistrarHandler::run()
         }
 
         if(ret < 1) {
-            GTEST_FATAL_FAILURE_("expected event has not got");
-            break;
+            ERROR("ret < 1");
+            continue;
         }
 
         for (int n = 0; n < ret; ++n) {
@@ -75,32 +68,25 @@ void RegistrarHandler::run()
 
     } while(running);
 
-    DBG("RegistrarHandler stopped");
+    DBG("TestClient stopped");
     stopped.set(true);
 }
 
-void RegistrarHandler::on_stop()
+void TestClient::on_stop()
 {
     stop_event.fire();
     stopped.wait_for();
 }
 
-void RegistrarHandler::process(AmEvent* event)
+void TestClient::process(AmEvent* event)
 {
     switch(event->event_id) {
         case E_SYSTEM: {
             AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(event);
-            if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
+            if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown)
                 stop_event.fire();
-            }
+
             return;
         }
     }
-
-    if(handle_event) {
-        handle_event(event);
-        handle_event = nullptr;
-    }
-
-    stop_event.fire();
 }

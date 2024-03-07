@@ -295,7 +295,9 @@ INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core/amci)
 INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/core)
 INCLUDE_DIRECTORIES (${CMAKE_BINARY_DIR}/core)
 INCLUDE_DIRECTORIES (${SPANDSP_INCLUDE_DIR})
-include_directories(${SEMS_SOURCE_DIR}/third/googletest/googletest/include)
+INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/third/googletest/googletest/include)
+INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/unit_tests)
+INCLUDE_DIRECTORIES (${SEMS_SOURCE_DIR}/apps/redis/unit_tests/)
 
 CONFIGURE_FILE( ${SEMS_SOURCE_DIR}/core/sems.h.cmake ${CMAKE_BINARY_DIR}/core/sems.h)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PREFIX}/include/sems/)
@@ -384,4 +386,5 @@ add_custom_target(install-dev
     COMMAND install -v -D -t /usr/include/sems/sip ${CMAKE_SOURCE_DIR}/core/sip/*.h
     COMMAND install -v -D -t /usr/include/sems/resample ${CMAKE_SOURCE_DIR}/core/resample/*.h
     COMMAND install -v -D -t /usr/include/sems/unit_tests ${CMAKE_SOURCE_DIR}/unit_tests/*.h
+    COMMAND install -v -D -t /usr/include/sems/apps/redis/unit_tests ${CMAKE_SOURCE_DIR}/apps/redis/unit_tests/*.h
 )

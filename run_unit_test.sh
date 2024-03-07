@@ -20,7 +20,8 @@ apps/http/http_client.so \
 apps/jsonrpc/jsonrpc.so \
 core/plug-in/wav/wav.so \
 apps/postgresql/postgresql_unit.so \
-apps/registrar/registrar_unit.so
+apps/registrar/registrar_unit.so \
+apps/redis/redis_unit.so
 do
     name=$(basename $m)
     cp -uv $BUILD_DIR/$m $TEST_TMP_DIR/lib/${name//"_unit"/}

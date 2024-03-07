@@ -53,7 +53,7 @@ struct SipRegistrarRegisterResponseEvent
     SipRegistrarRegisterResponseEvent(
         int code, const std::string &reason,
         const std::string &hdrs = string())
-      : AmEvent(E_PLUGIN),
+      : AmEvent(SipRegistrarEvent::RegisterRequest),
         code(code), reason(reason), hdrs(hdrs)
     {}
 };
@@ -89,18 +89,16 @@ struct SipRegistrarResolveResponseEvent
         {}
     };
 
-    //std::map<RegistrationIdType, aor_data> aors;
     std::map<RegistrationIdType, std::list<aor_data>> aors;
 
-
     SipRegistrarResolveResponseEvent()
-      : AmEvent(E_PLUGIN)
+      : AmEvent(SipRegistrarEvent::ResolveAors)
     {}
 
     SipRegistrarResolveResponseEvent(
         const std::map<RegistrationIdType, std::list<aor_data>> &aors
     )
-      : AmEvent(E_PLUGIN),
+      : AmEvent(SipRegistrarEvent::ResolveAors),
         aors(aors)
     {}
 };

@@ -1,8 +1,12 @@
 #pragma once
 
+#include <apps/redis/unit_tests/RedisTest.h>
 #include <singleton.h>
+
 #include <gtest/gtest.h>
-#include "RedisTestServer.h"
+#include <string>
+
+using std::string;
 
 #define DEFAULT_REDIS_TIMEOUT_MSEC 1000
 
@@ -16,40 +20,17 @@ const char aor_lookup_script_path[] = "/etc/sems/scripts/aor_lookup.lua";
 const char rpc_aor_lookup_script_path[] = "/etc/sems/scripts/rpc_aor_lookup.lua";
 const char load_contacts_script_path[] = "/etc/sems/scripts/load_contacts.lua";
 
-class ContactsSubscriptionConnection;
-class RegistrarRedisConnection;
-
 class RegistrarTest : public testing::Test
 {
 protected:
-    RedisTestServer* server;
+    RedisSettings settings;
+    RedisTestServer* test_server;
+
 public:
     RegistrarTest();
 
     void SetUp() override;
 
-    ContactsSubscriptionConnection* get_contacts_subscription();
-    RegistrarRedisConnection* get_registrar_redis();
+    void dumpKeepAliveContexts(AmArg& ret);
     void clear_keepalive_context();
 };
-
-struct RegistrarTestFactory
-{
-    RedisTestServer server;
-    struct RedisSettings{
-        bool external;
-        string host;
-        int port;
-        int timeout;
-        RedisSettings()
-          : timeout(DEFAULT_REDIS_TIMEOUT_MSEC)
-        {}
-    } redis;
-
-    RegistrarTestFactory();
-    ~RegistrarTestFactory();
-
-    void dispose(){}
-};
-
-typedef singleton<RegistrarTestFactory> registrar_test;

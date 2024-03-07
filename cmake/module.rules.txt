@@ -8,7 +8,7 @@ INCLUDE(${CMAKE_SOURCE_DIR}/cmake/doc.rules.txt)
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/config.rules.txt)
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
-INCLUDE_DIRECTORIES(${SPANDSP_BUNDLED_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 
 IF(SEMS_USE_AMARG_STAT)
     add_definitions("-DUSE_AMARG_STATISTICS")
@@ -71,6 +71,12 @@ INSTALL(
 	TARGETS sems_${sems_module_name}
 	LIBRARY DESTINATION ${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/
 )
+IF(${sems_module_name}_UNIT_INSTALL)
+    INSTALL(
+        TARGETS sems_${sems_module_name}_unit
+        LIBRARY DESTINATION ${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/unit_tests
+    )
+ENDIF(${sems_module_name}_UNIT_INSTALL)
 
 IF(NOT DEFINED ${sems_module_name}_docs)
 	IF(EXISTS ${CMAKE_SOURCE_DIR}/doc/Readme.${sems_module_name}.txt)
@@ -89,7 +95,6 @@ ENDIF(NOT DEFINED ${sems_module_name}_config_files)
 IF(DEFINED ${sems_module_name}_config_dist_files)
 	SEMS_INSTALL_DIST_CONFIGS("${${sems_module_name}_config_dist_files}")
 ENDIF(DEFINED ${sems_module_name}_config_dist_files)
-
 
 IF(DEFINED ${sems_module_name}_audio_files)
 	SEMS_INSTALL_AUDIO("${sems_module_name}" "${${sems_module_name}_audio_files}")

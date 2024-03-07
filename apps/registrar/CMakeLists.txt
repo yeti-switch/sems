@@ -7,10 +7,5 @@ endif(SEMS_USE_GTEST)
 
 add_subdirectory(etc)
 
-find_package(Hiredis REQUIRED)
-if (HIREDIS_FOUND)
-    SET(sems_module_libs ${HIREDIS_LIBRARIES})
-endif()
-
 set(sems_module_name registrar)
 include(${CMAKE_SOURCE_DIR}/cmake/module.rules.txt)

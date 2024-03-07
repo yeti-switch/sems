@@ -12,3 +12,4 @@ unit_tests/*.h usr/include/sems/unit_tests/
 core/rtp usr/include/sems/
 usr/lib/pkgconfig usr/lib/
 usr/share/cmake/sems usr/share/cmake/
+apps/redis/unit_tests/*.h usr/include/sems/apps/redis/unit_tests

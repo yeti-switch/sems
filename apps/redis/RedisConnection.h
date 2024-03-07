@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <cmath>
+#include "./unit_tests/RedisTest.h"
 
 template <typename T>
 inline unsigned int len_in_chars(T s)
@@ -29,6 +30,7 @@ class RedisConnectionStateListener {
 class RedisConnection
 {
   private:
+    friend RedisTest;
     int epoll_fd;
 
     string host;

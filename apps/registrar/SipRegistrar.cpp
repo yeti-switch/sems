@@ -6,19 +6,34 @@
 #include "AmUtils.h"
 #include "sip/defs.h"
 #include "sip/parse_nameaddr.h"
-#include "Config.h"
 
-#include <map>
-using std::map;
+#include <ampi/RedisApi.h>
+#include <AmSipEvent.h>
 
 #include <vector>
 using std::vector;
 
 #define EPOLL_MAX_EVENTS    2048
+#define session_container AmSessionContainer::instance()
+#define event_dispatcher AmEventDispatcher::instance()
+#define registrar SipRegistrar::instance()
 
-#define REDIS_REGISTER_TYPE_ID 0
-#define REDIS_AOR_LOOKUP_TYPE_ID 1
-#define REDIS_BLOCKING_REQ_CTX_TYPE_ID 2
+enum UserTypeId {
+    Register = 0,
+    ResolveAors,
+    BlockingReqCtx,
+    ContactSubscribe,
+    ContactData
+};
+
+/* Helpers */
+
+bool post_request(const string &conn_id, const vector<AmArg>& args,
+    AmObject *user_data = nullptr, int user_type_id = 0, bool persistent_ctx = false)
+{
+    return session_container->postEvent(REDIS_APP_QUEUE,
+        new RedisRequest(SIP_REGISTRAR_QUEUE, conn_id, args, user_data, user_type_id, persistent_ctx));
+}
 
 /* SipRegistrarFactory */
 
@@ -43,25 +58,25 @@ class SipRegistrarFactory
         DECLARE_FACTORY_INSTANCE(SipRegistrarFactory);
 
         AmDynInvoke* getInstance() {
-            return SipRegistrar::instance();
+            return registrar;
         }
 
         int onLoad() {
-            return SipRegistrar::instance()->onLoad();
+            return registrar->onLoad();
         }
 
         void on_destroy() {
-            SipRegistrar::instance()->stop();
+            registrar->stop();
         }
 
         /* AmConfigFactory */
 
         int configure(const string& config) {
-            return SipRegistrar::instance()->configure(config);
+            return SipRegistrarConfig::parse(config, registrar);
         }
 
         int reconfigure(const string& config) {
-            return SipRegistrar::instance()->reconfigure(config);
+            return configure(config);
         }
 
         /* AmSessionFactory */
@@ -74,8 +89,7 @@ class SipRegistrarFactory
         }
 
         void onOoDRequest(const AmSipRequest& req) {
-            AmSessionContainer::instance()->postEvent(
-                SIP_REGISTRAR_QUEUE,
+            session_container->postEvent(SIP_REGISTRAR_QUEUE,
                 new SipRegistrarRegisterRequestEvent(req, string(), "17")); // !!! 17 // FIXME: need to remove 17
         }
 };
@@ -108,9 +122,9 @@ struct aor_lookup_reply {
     Aors aors;
 
     //return false on errors
-    bool parse(const RedisReplyEvent &e)
+    bool parse(const RedisReply &e)
     {
-        if(RedisReplyEvent::SuccessReply!=e.result) {
+        if(RedisReply::SuccessReply!=e.result) {
             ERROR("error reply from redis %d %s",
                 e.result,
                 AmArg::print(e.data).c_str());
@@ -187,7 +201,7 @@ struct RedisBlockingRequestCtx
 {
   public:
     AmCondition<bool> cond;
-    RedisReplyEvent::result_type result;
+    RedisReply::result_type result;
     AmArg data;
 };
 
@@ -197,31 +211,34 @@ SipRegistrar* SipRegistrar::_instance = NULL;
 
 SipRegistrar* SipRegistrar::instance()
 {
-    if(_instance == nullptr){
+    if(_instance == nullptr)
         _instance = new SipRegistrar();
-    }
+
     return _instance;
 }
 
 void SipRegistrar::dispose()
 {
-    if(_instance != nullptr){
+    if(_instance != nullptr) {
         delete _instance;
+        _instance = nullptr;
     }
-    _instance = nullptr;
 }
 
 SipRegistrar::SipRegistrar()
-  : AmEventFdQueue(this)
+  : AmEventFdQueue(this),
+    max_interval_drift(1),
+    max_registrations_per_slot(1)
 {
-    makeRedisInstance(false);
-    AmEventDispatcher::instance()->addEventQueue(SIP_REGISTRAR_QUEUE, this);
+    event_dispatcher->addEventQueue(SIP_REGISTRAR_QUEUE, this);
 }
 
 SipRegistrar::~SipRegistrar()
 {
-    AmEventDispatcher::instance()->delEventQueue(SIP_REGISTRAR_QUEUE);
-    freeRedisInstance();
+    event_dispatcher->delEventQueue(SIP_REGISTRAR_QUEUE);
+
+    for(auto &dlg: uac_dlgs)
+        delete dlg.second;
 }
 
 int SipRegistrar::onLoad()
@@ -232,17 +249,6 @@ int SipRegistrar::onLoad()
     }
     start();
     return 0;
-}
-
-int SipRegistrar::configure(const std::string& config)
-{
-    return SipRegistrarConfig::parse(config,
-        {this, &registrar_redis, &contacts_subscription});
-}
-
-int SipRegistrar::reconfigure(const std::string& config)
-{
-    return configure(config);
 }
 
 int SipRegistrar::init()
@@ -257,10 +263,7 @@ int SipRegistrar::init()
 
     init_rpc();
 
-    registrar_redis.start();
-
-    if(keepalive_interval) {
-        contacts_subscription.start();
+    if(keepalive_interval.count()) {
         keepalive_timer.link(epoll_fd);
         keepalive_timer.set(1000000 /* 1 seconds */,true);
     }
@@ -278,8 +281,10 @@ void SipRegistrar::run()
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName("sip-registrar");
-
     running = true;
+
+    RegistrarRedisClient::connect_all();
+
     do {
         int ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
 
@@ -303,7 +308,7 @@ void SipRegistrar::run()
             }
 
             if(e.data.fd==keepalive_timer){
-                contacts_subscription.on_keepalive_timer();
+                on_keepalive_timer();
                 keepalive_timer.read();
                 break;
             }
@@ -322,10 +327,6 @@ void SipRegistrar::on_stop()
 {
     stop_event.fire();
     stopped.wait_for();
-    registrar_redis.stop();
-
-    if(keepalive_interval)
-        contacts_subscription.stop();
 }
 
 int SipRegistrar::configure(cfg_t* cfg)
@@ -333,8 +334,37 @@ int SipRegistrar::configure(cfg_t* cfg)
     expires_min = cfg_getint(cfg, CFG_PARAM_EXPIRES_MIN);
     expires_max = cfg_getint(cfg, CFG_PARAM_EXPIRES_MAX);
     expires_default = cfg_getint(cfg, CFG_PARAM_EXPIRES_DEFAULT);
-    keepalive_interval = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_INTERVAL);
-    return 0;
+    keepalive_interval = seconds{cfg_getint(cfg, CFG_PARAM_KEEPALIVE_INTERVAL)};
+    max_interval_drift = keepalive_interval/10; //allow 10% interval drift
+    return RegistrarRedisClient::configure(cfg);
+}
+
+void SipRegistrar::connect(const Connection &conn)
+{
+    session_container->postEvent(REDIS_APP_QUEUE,
+        new RedisAddConnection(SIP_REGISTRAR_QUEUE, conn.id, conn.info));
+}
+
+void SipRegistrar::on_connect(const string &conn_id, const RedisConnectionInfo &info)
+{
+    RegistrarRedisClient::on_connect(conn_id, info);
+
+    if(subscr_read_conn->id == conn_id)
+        load_contacts(nullptr, UserTypeId::ContactData);
+}
+
+/* RpcTreeHandler */
+
+void SipRegistrar::init_rpc_tree()
+{
+    AmArg &show = reg_leaf(root,"show");
+    reg_method(show, "aors", "show registered AoRs", &SipRegistrar::rpc_show_aors,"");
+    reg_method(show, "keepalive_contexts", "show keepalive contexts",
+               &SipRegistrar::rpc_show_keepalive_contexts,"");
+
+    AmArg &request = reg_leaf(root,"request");
+    reg_method(request, "bind", "bind contact", &SipRegistrar::rpc_bind,"");
+    reg_method(request, "unbind", "unbind contact", &SipRegistrar::rpc_unbind,"");
 }
 
 /* RPC */
@@ -344,10 +374,10 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
     size_t i,j;
 
     RedisBlockingRequestCtx ctx;
-    registrar_redis.rpc_resolve_aors(&ctx, REDIS_BLOCKING_REQ_CTX_TYPE_ID, SIP_REGISTRAR_QUEUE, arg);
+    rpc_resolve_aors(&ctx, UserTypeId::BlockingReqCtx, arg);
     ctx.cond.wait_for();
 
-    if(RedisReplyEvent::SuccessReply!=ctx.result)
+    if(RedisReply::SuccessReply!=ctx.result)
         throw AmSession::Exception(500, AmArg::print(ctx.data));
 
     if(!isArgArray(ctx.data) || ctx.data.size()%2!=0)
@@ -391,16 +421,16 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
 
 void SipRegistrar::rpc_show_keepalive_contexts(const AmArg&, AmArg& ret)
 {
-    contacts_subscription.dumpKeepAliveContexts(ret);
+    dump_keep_alive_contexts(ret);
 }
 
 void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
 {
     RedisBlockingRequestCtx ctx;
-    registrar_redis.rpc_bind(&ctx, REDIS_BLOCKING_REQ_CTX_TYPE_ID, SIP_REGISTRAR_QUEUE, arg);
+    rpc_bind_(&ctx, UserTypeId::BlockingReqCtx, arg);
     ctx.cond.wait_for();
 
-    if(RedisReplyEvent::SuccessReply!=ctx.result)
+    if(RedisReply::SuccessReply!=ctx.result)
         throw AmSession::Exception(500, AmArg::print(ctx.data));
 
     if(!isArgArray(ctx.data))
@@ -431,9 +461,9 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
         r["path"] = d[3];
         r["interface_id"] = d[4];
 
-        if(keepalive_interval) {
+        if(keepalive_interval.count()) {
             //update KeepAliveContexts
-            contacts_subscription.createOrUpdateKeepAliveContext(
+            create_or_update_keep_alive_context(
                 d[2].asCStr(),  //key
                 d[0].asCStr(),  //aor
                 d[3].asCStr(),  //path
@@ -446,10 +476,10 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
 void SipRegistrar::rpc_unbind(const AmArg& arg, AmArg& ret)
 {
     RedisBlockingRequestCtx ctx;
-    registrar_redis.rpc_unbind(&ctx, REDIS_BLOCKING_REQ_CTX_TYPE_ID, SIP_REGISTRAR_QUEUE, arg);
+    rpc_unbind_(&ctx, UserTypeId::BlockingReqCtx, arg);
     ctx.cond.wait_for();
 
-    if(RedisReplyEvent::SuccessReply!=ctx.result)
+    if(RedisReply::SuccessReply!=ctx.result)
         throw AmSession::Exception(500, AmArg::print(ctx.data));
 
     DBG("%s", AmArg::print(ctx.data).c_str());
@@ -501,9 +531,23 @@ void SipRegistrar::process(AmEvent* event)
 
             return;
         }
+        case -1:
+            if (auto e = dynamic_cast<AmSipReplyEvent *>(event)) {
+                process_sip_reply(*e);
+                return;
+            }
+            break;
+    }
 
-        case REDIS_REPLY_EVENT_ID:
-            if(auto e = dynamic_cast<RedisReplyEvent*>(event)) {
+    switch(event->event_id) {
+        case RedisEvent::ConnectionState:
+            if(auto e = dynamic_cast<RedisConnectionState*>(event)) {
+                process_redis_conn_state_event(*e);
+                return;
+            }
+            break;
+        case RedisEvent::Reply:
+            if(auto e = dynamic_cast<RedisReply*>(event)) {
                 process_redis_reply_event(*e);
                 return;
             }
@@ -529,26 +573,12 @@ void SipRegistrar::process(AmEvent* event)
     ERROR("got unexpected event ev %d", event->event_id);
 }
 
-/* RpcTreeHandler */
-
-void SipRegistrar::init_rpc_tree()
-{
-    AmArg &show = reg_leaf(root,"show");
-    reg_method(show, "aors", "show registered AoRs", &SipRegistrar::rpc_show_aors,"");
-    reg_method(show, "keepalive_contexts", "show keepalive contexts",
-               &SipRegistrar::rpc_show_keepalive_contexts,"");
-
-    AmArg &request = reg_leaf(root,"request");
-    reg_method(request, "bind", "bind contact", &SipRegistrar::rpc_bind,"");
-    reg_method(request, "unbind", "unbind contact", &SipRegistrar::rpc_unbind,"");
-}
-
 void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEvent& event)
 {
     const AmSipRequest* req = event.req.get();
     if(!req) {
         ERROR("req is null");
-        postRegisterResponse(event.session_id, nullptr, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(event.session_id, nullptr, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         return;
     }
 
@@ -561,7 +591,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         req->contact.c_str(), static_cast<int>(req->contact.length())) < 0)
     {
         DBG("could not parse contact list");
-        postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         return;
     }
 
@@ -575,7 +605,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         AmUriParser contact_uri;
         if (!contact_uri.parse_contact(c2stlstr(c), 0, end)) {
             DBG("error parsing contact: '%.*s'",c.len, c.s);
-            postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+            post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
             return;
         } else {
             DBG("successfully parsed contact %s@%s",
@@ -587,19 +617,16 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     if(asterisk_contact && !contacts.empty()) {
         DBG("additional Contact headers with Contact: *");
-        postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         return;
     }
 
     if(contacts.empty() && !asterisk_contact) {
         //request bindings list
         auto* user_data = new RedisRequestUserData(event.session_id, *req);
-
-        if(!registrar_redis.fetch_all(user_data, REDIS_REGISTER_TYPE_ID, SIP_REGISTRAR_QUEUE, event.registration_id)) {
-            delete user_data;
-            user_data = nullptr;
-
-            postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        if(!fetch_all(user_data, UserTypeId::Register, event.registration_id)) {
+            delete user_data; user_data = nullptr;
+            post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         }
 
         return;
@@ -652,7 +679,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     if(expires_found) {
         if(!str2int(expires, expires_int)) {
             DBG("failed to cast expires value '%s'",expires.c_str());
-            postRegisterResponse(event.session_id, req, 400, "Invalid Request");
+            post_register_response(event.session_id, req, 400, "Invalid Request");
             return;
         }
 
@@ -666,7 +693,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
                 expires_int, expires_min);
             static string min_expires_header =
                 SIP_HDR_COL("Min-Expires") + int2str(expires_min) + CRLF;
-            postRegisterResponse(event.session_id, req, 423, "Interval Too Brief", min_expires_header);
+            post_register_response(event.session_id, req, 423, "Interval Too Brief", min_expires_header);
             return;
         }
         if(expires_max && expires_int > expires_max)
@@ -684,17 +711,15 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     if(asterisk_contact) {
         if(expires_int!=0) {
             DBG("non zero expires with Contact: *");
-            postRegisterResponse(event.session_id, req, 400, "Invalid Request");
+            post_register_response(event.session_id, req, 400, "Invalid Request");
             return;
         }
 
         //unbind all
         auto* user_data = new RedisRequestUserData(event.session_id, *req);
-        if(!registrar_redis.unbind_all(user_data, REDIS_REGISTER_TYPE_ID, SIP_REGISTRAR_QUEUE, event.registration_id)) {
-            delete user_data;
-            user_data = nullptr;
-
-            postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        if(!unbind_all(user_data, UserTypeId::Register, event.registration_id)) {
+            delete user_data; user_data = nullptr;
+            post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         }
         return;
     }
@@ -726,38 +751,49 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     // bind
     auto* user_data = new RedisRequestUserData(event.session_id, *req);
-    if(!registrar_redis.bind(user_data, REDIS_REGISTER_TYPE_ID, SIP_REGISTRAR_QUEUE, event.registration_id,
+    if(!bind(user_data, UserTypeId::Register, event.registration_id,
         contact, expires_int, user_agent, path, req->local_if))
     {
-        delete user_data;
-        user_data = nullptr;
-
-        postRegisterResponse(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        delete user_data; user_data = nullptr;
+        post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
     }
 }
 
 void SipRegistrar::process_resolve_request_event(SipRegistrarResolveRequestEvent& event)
 {
     auto* user_data = new RedisRequestUserData(event.session_id);
-    if(!registrar_redis.resolve_aors(user_data, REDIS_AOR_LOOKUP_TYPE_ID, SIP_REGISTRAR_QUEUE, event.aor_ids)) {
-        delete user_data;
-        user_data = nullptr;
-
-        postResolveResponse(event.session_id);
+    if(!resolve_aors(user_data, UserTypeId::ResolveAors, event.aor_ids)) {
+        delete user_data; user_data = nullptr;
+        post_resolve_response(event.session_id);
     }
 }
 
-void SipRegistrar::process_redis_reply_event(RedisReplyEvent& redis_reply) {
+void SipRegistrar::process_redis_conn_state_event(RedisConnectionState& event)
+{
+    if(event.state == RedisConnectionState::Connected)
+        on_connect(event.conn_id, event.info);
+    else
+        on_disconnect(event.conn_id, event.info);
+}
+
+void SipRegistrar::process_redis_reply_event(RedisReply& redis_reply)
+{
     //DBG("redis reply user_type_id %d status %d", redis_reply->result, redis_reply->user_type_id);
     switch(redis_reply.user_type_id) {
-    case REDIS_REGISTER_TYPE_ID:
+    case UserTypeId::Register:
         process_redis_reply_register_event(redis_reply);
         break;
-    case REDIS_AOR_LOOKUP_TYPE_ID:
-        process_redis_reply_aor_lookup_event(redis_reply);
+    case UserTypeId::ResolveAors:
+        process_redis_reply_resolve_aors_event(redis_reply);
         break;
-    case REDIS_BLOCKING_REQ_CTX_TYPE_ID:
+    case UserTypeId::BlockingReqCtx:
         process_redis_reply_blocking_req_ctx_event(redis_reply);
+        break;
+    case UserTypeId::ContactSubscribe:
+        process_redis_reply_contact_subscribe_event(redis_reply);
+        break;
+    case UserTypeId::ContactData:
+        process_redis_reply_contact_data_event(redis_reply);
         break;
     default:
         ERROR("unexpected reply event with type: %d", redis_reply.user_type_id);
@@ -765,13 +801,13 @@ void SipRegistrar::process_redis_reply_event(RedisReplyEvent& redis_reply) {
     }
 }
 
-void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
+void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
     auto user_data = dynamic_cast<RedisRequestUserData*>(event.user_data.get());
     const AmSipRequest* req = user_data ? user_data->req.get() : nullptr;
     const string& session_id = user_data ? user_data->session_id : string();
 
     // reply 'failed' response
-    if(!req || event.result != RedisReplyEvent::SuccessReply) {
+    if(!req || event.result != RedisReply::SuccessReply) {
         if(req) {
             ERROR("error reply from redis %s. for request from %s:%hu",
                   AmArg::print(event.data).c_str(),
@@ -780,7 +816,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
             ERROR("error reply from redis %s.", AmArg::print(event.data).c_str());
         }
 
-        postRegisterResponse(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        post_register_response(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         return;
     }
 
@@ -791,7 +827,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
 
     if(isArgUndef(event.data)) {
         DBG("nil reply from redis. no bindings");
-        postRegisterResponse(session_id, req, 200, "OK");
+        post_register_response(session_id, req, 200, "OK");
         return;
     }
 
@@ -809,9 +845,9 @@ void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
               req->remote_ip.data(), req->remote_port,
               req->contact.data());
         if(event.data.is<AmArg::CStr>()) {
-            postRegisterResponse(session_id, req, 500, event.data.asCStr());
+            post_register_response(session_id, req, 500, event.data.asCStr());
         } else {
-            postRegisterResponse(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+            post_register_response(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
         }
         return;
     }
@@ -852,9 +888,9 @@ void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
         hdrs+=expires_param_prefix+longlong2str(expires_arg.asLongLong());
         hdrs+=CRLF;
 
-        if(keepalive_interval) {
+        if(keepalive_interval.count()) {
             //update KeepAliveContexts
-            contacts_subscription.createOrUpdateKeepAliveContext(
+            create_or_update_keep_alive_context(
                 d[2].asCStr(),  //key
                 contact,        //aor
                 d[3].asCStr(),  //path
@@ -864,21 +900,20 @@ void SipRegistrar::process_redis_reply_register_event(RedisReplyEvent& event) {
     }
 
     // reply 'success'
-    postRegisterResponse(session_id, req, 200, "OK", hdrs);
+    post_register_response(session_id, req, 200, "OK", hdrs);
 }
 
-void SipRegistrar::process_redis_reply_aor_lookup_event(RedisReplyEvent& event)
+void SipRegistrar::process_redis_reply_resolve_aors_event(RedisReply& event)
 {
     RedisRequestUserData* user_data = dynamic_cast<RedisRequestUserData*>(event.user_data.get());
     const string& session_id = user_data ? user_data->session_id : string();
 
     // reply 'failed' response
-    if(event.result != RedisReplyEvent::SuccessReply) {
+    if(event.result != RedisReply::SuccessReply) {
         ERROR("error reply from redis %s.", AmArg::print(event.data).c_str());
-        postResolveResponse(session_id);
+        post_resolve_response(session_id);
         return;
     }
-
 
     DBG("data: %s", AmArg::print(event.data).c_str());
 
@@ -886,7 +921,7 @@ void SipRegistrar::process_redis_reply_aor_lookup_event(RedisReplyEvent& event)
     aor_lookup_reply r;
     if(!r.parse(event)) {
         ERROR("aor lookup parser error");
-        postResolveResponse(session_id);
+        post_resolve_response(session_id);
         return;
     }
 
@@ -898,10 +933,10 @@ void SipRegistrar::process_redis_reply_aor_lookup_event(RedisReplyEvent& event)
         }
     }
 
-    postResolveResponse(session_id, r.aors);
+    post_resolve_response(session_id, r.aors);
 }
 
-void SipRegistrar::process_redis_reply_blocking_req_ctx_event(RedisReplyEvent& event)
+void SipRegistrar::process_redis_reply_blocking_req_ctx_event(RedisReply& event)
 {
     RedisBlockingRequestCtx* ctx = dynamic_cast<RedisBlockingRequestCtx *>(event.user_data.release());
     if(!ctx) return;
@@ -911,7 +946,79 @@ void SipRegistrar::process_redis_reply_blocking_req_ctx_event(RedisReplyEvent& e
     ctx->cond.set(true);
 }
 
-void SipRegistrar::postRegisterResponse(const string& session_id,
+void SipRegistrar::process_redis_reply_contact_subscribe_event(RedisReply& event)
+{
+    if(isArgArray(event.data) && event.data.size() == 3) {
+        if(!isArgCStr(event.data[2])) //skip 'subscription' replies
+            return;
+
+        DBG("process expired/removed key: '%s'", event.data[2].asCStr());
+        remove_keep_alive_context(event.data[2].asCStr());
+    }
+}
+
+void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
+{
+    clear_keep_alive_contexts();
+
+    if(!isArgArray(event.data))
+        return;
+
+    seconds keepalive_interval_offset{0};
+
+    DBG("process_loaded_contacts");
+    int n = static_cast<int>(event.data.size());
+    for(int i = 0; i < n; i++) {
+        AmArg &d = event.data[i];
+        if(!isArgArray(d) || d.size() != 4) //validate
+            continue;
+        if(arg2int(d[0]) != AmConfig.node_id) //skip other nodes registrations
+            continue;
+        DBG("process contact: %s",AmArg::print(d).c_str());
+
+        string key(d[3].asCStr());
+
+        auto pos = key.find_first_of(':');
+        if(pos == string::npos) {
+            ERROR("wrong key format: %s",key.c_str());
+            continue;
+        }
+        pos = key.find_first_of(':',pos+1);
+        if(pos == string::npos) {
+            ERROR("wrong key format: %s",key.c_str());
+            continue;
+        }
+        pos++;
+
+        create_or_update_keep_alive_context(
+            key,
+            key.substr(pos), //aor
+            d[1].asCStr(),   //path
+            arg2int(d[2]),   //interface_id
+            keepalive_interval_offset - keepalive_interval);
+
+        keepalive_interval_offset++;
+        keepalive_interval_offset %= keepalive_interval;
+    }
+
+    //keepalive_contexts.dump();
+
+    if(!subscribe(UserTypeId::ContactSubscribe))
+        ERROR("failed to subscribe");
+}
+
+void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
+{
+    //DBG("got redis reply. check in local hash");
+    auto it = uac_dlgs.find(event.reply.callid);
+    if(it != uac_dlgs.end()) {
+        //DBG("found ctx. remove dlg");
+        delete it->second;
+        uac_dlgs.erase(it);
+    }
+}
+
+void SipRegistrar::post_register_response(const string& session_id,
     const AmSipRequest* req, int code, const string& reason, const string& hdrs)
 {
     if(session_id.empty()) {
@@ -921,26 +1028,327 @@ void SipRegistrar::postRegisterResponse(const string& session_id,
         return;
     }
 
-    AmSessionContainer::instance()->postEvent(session_id,
-        new SipRegistrarRegisterResponseEvent(code, reason, hdrs));
+    session_container->postEvent(session_id, new SipRegistrarRegisterResponseEvent(code, reason, hdrs));
 }
 
-void SipRegistrar::postResolveResponse(const string& session_id, const Aors &aors)
+void SipRegistrar::post_resolve_response(const string& session_id, const Aors &aors)
 {
-    if(session_id.empty()) {
-        return;
+    if(session_id.empty() == false)
+        session_container->postEvent(session_id, new SipRegistrarResolveResponseEvent(aors));
+}
+
+/* Command Requests */
+
+bool SipRegistrar::fetch_all(AmObject* user_data, int user_type_id, const string &registration_id)
+{
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL", "register", 1, registration_id.c_str()};
+    else
+    {
+        auto script = write_conn->script(REGISTER_SCRIPT);
+        if(!script || !script->is_loaded()) {
+            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            return false;
+        }
+
+        args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str()};
     }
 
-    AmSessionContainer::instance()->postEvent(session_id,
-        new SipRegistrarResolveResponseEvent(aors));
+    return post_request(write_conn->id, args, user_data, user_type_id);
 }
 
-bool SipRegistrar::is_loaded() {
-    return registrar_redis.is_all_scripts_loaded() &&
-        contacts_subscription.is_all_scripts_loaded();
+bool SipRegistrar::unbind_all(AmObject* user_data, int user_type_id, const string &registration_id)
+{
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL", "register", 1, registration_id.c_str(), 0};
+    else
+    {
+        auto script = write_conn->script(REGISTER_SCRIPT);
+        if(!script || !script->is_loaded()) {
+            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            return false;
+        }
+
+        args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0};
+    }
+
+    return post_request(write_conn->id, args, user_data, user_type_id);
 }
 
-void SipRegistrar::reload() {
-    registrar_redis.load_all_scripts();
-    contacts_subscription.load_all_scripts();
+bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
+    const string &registration_id, const string &contact, int expires,
+    const string &user_agent, const string &path, unsigned short local_if)
+{
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+    else
+    {
+        auto script = write_conn->script(REGISTER_SCRIPT);
+        if(!script || !script->is_loaded()) {
+            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            return false;
+        }
+
+        args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+    }
+    return post_request(write_conn->id, args, user_data, user_type_id);
+}
+
+bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids)
+{
+    DBG("got %ld AoR ids to resolve", aor_ids.size());
+
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL_RO", "aor_lookup", (int)aor_ids.size()};
+    else
+    {
+        auto script = read_conn->script(AOR_LOOKUP_SCRIPT);
+        if(!script || !script->is_loaded()) {
+            ERROR("%s script not loaded", AOR_LOOKUP_SCRIPT);
+            return false;
+        }
+
+        args = {"EVALSHA",  script->hash.c_str(), (int)aor_ids.size()};
+    }
+
+    for(const auto &id : aor_ids)
+        args.emplace_back(id.c_str());
+
+    return post_request(read_conn->id, args, user_data, user_type_id);
+}
+
+bool SipRegistrar::load_contacts(AmObject *user_data, int user_type_id)
+{
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL_RO", "load_contacts", 0};
+    else
+    {
+        auto script = subscr_read_conn->script(LOAD_CONTACTS_SCRIPT);
+        if(!script || !script->is_loaded()) {
+            ERROR("%s script not loaded", LOAD_CONTACTS_SCRIPT);
+            return false;
+        }
+
+        args = {"EVALSHA", script->hash.c_str(), 0};
+    }
+
+    return post_request(subscr_read_conn->id, args, user_data, user_type_id);
+}
+
+bool SipRegistrar::subscribe(int user_type_id)
+{
+    return post_request(subscr_read_conn->id,
+        {"SUBSCRIBE", "__keyevent@0__:expired", "__keyevent@0__:del"},
+        nullptr, user_type_id, true);
+}
+
+void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg &arg)
+{
+    const string registration_id = arg2str(arg[0]);
+    const string contact = arg2str(arg[1]);
+    int expires = arg2int(arg[2]);
+    const string path = arg.size() > 3 ? arg2str(arg[3]) : "";
+    const string user_agent = arg.size() > 4 ? arg2str(arg[4]) : "";
+    unsigned short local_if = arg.size() > 5 ? arg2int(arg[5]) : 0;
+
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+    else
+    {
+        auto script = write_conn->script(REGISTER_SCRIPT);
+        if(!script || !script->is_loaded())
+            throw AmSession::Exception(500,"registrar is not enabled");
+
+        args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+    }
+
+    if(post_request(write_conn->id, args, user_data, user_type_id) == false)
+        throw AmSession::Exception(500, "failed to post bind request");
+}
+
+void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmArg &arg)
+{
+    const string registration_id = arg2str(arg[0]);
+
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL", "register", 1, registration_id.c_str(), 0}; // expires 0
+    else
+    {
+        auto script = write_conn->script(REGISTER_SCRIPT);
+        if(!script || !script->is_loaded())
+            throw AmSession::Exception(500,"registrar is not enabled");
+
+        args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0}; // expires 0
+    }
+
+    if(arg.size() > 1)
+        args.emplace_back(arg[1].asCStr()); // contact
+
+    if(post_request(write_conn->id, args, user_data, user_type_id) == false)
+        throw AmSession::Exception(500, "failed to post unbind request");
+}
+
+void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg)
+{
+    vector<AmArg> args;
+    if(use_functions)
+        args = {"FCALL_RO", "rpc_aor_lookup", (int)arg.size()};
+    else
+    {
+        auto script = read_conn->script(RPC_AOR_LOOKUP_SCRIPT);
+        if(!script || !script->is_loaded())
+            throw AmSession::Exception(500,"registrar is not enabled");
+
+        args = {"EVALSHA", script->hash.c_str(), (int)arg.size()};
+    }
+
+    for(int i = 0; i < arg.size(); ++i)
+        args.emplace_back(arg[i].asCStr()); // contact
+
+    if(post_request(read_conn->id, args, user_data, user_type_id) == false)
+        throw AmSession::Exception(500, "failed to post resolve_aors request");
+}
+
+/* Keepalive */
+
+void SipRegistrar::on_keepalive_timer()
+{
+    auto now{system_clock::now()};
+    uint32_t sent = 0;
+    seconds drift_interval{0};
+    auto double_max_interval_drift = max_interval_drift*2;
+
+    //DBG("on keepalive timer");
+    AmLock l(keepalive_contexts.mutex);
+
+    for(auto &ctx_it : keepalive_contexts) {
+        auto &ctx = ctx_it.second;
+
+        if(now < ctx.next_send) continue;
+
+        sent++;
+        //send OPTIONS query for each ctx
+        std::unique_ptr<AmSipDialog> dlg(new AmSipDialog());
+
+        dlg->setRemoteUri(ctx.aor);
+        dlg->setLocalParty(ctx.aor); //TODO: configurable From
+        dlg->setRemoteParty(ctx.aor);
+
+        if(!ctx.path.empty())
+            dlg->setRouteSet(ctx.path);
+        //dlg->setOutboundInterface(ctx.interface_id);
+
+        dlg->setLocalTag(SIP_REGISTRAR_QUEUE); //From-tag and queue to handle replies
+        dlg->setCallid(AmSession::getNewId());
+
+        if(0==dlg->sendRequest(SIP_METH_OPTIONS))
+        {
+            //add dlg to local hash
+            auto dlg_ptr = dlg.release();
+            uac_dlgs.emplace(dlg_ptr->getCallid(), dlg_ptr);
+        } else {
+            ERROR("failed to send keep alive OPTIONS request for %s",
+                ctx.aor.data());
+        }
+
+        ctx.next_send += keepalive_interval;
+
+        if(sent > max_registrations_per_slot) {
+            //cycle drift_interval over the range: [ 0, 2*max_interval_drift ]
+            drift_interval++;
+            drift_interval %= double_max_interval_drift;
+
+            /* adjust around keepalive_interval
+             * within the range: [ -max_interval_drift, max_interval_drift ] */
+            ctx.next_send += drift_interval - max_interval_drift;
+        }
+    }
+}
+
+SipRegistrar::keepalive_ctx_data::keepalive_ctx_data(const string &aor, const string &path, int interface_id,
+    const system_clock::time_point &next_send)
+    : aor(aor), path(path), interface_id(interface_id), next_send(next_send)
+{}
+
+void SipRegistrar::keepalive_ctx_data::update(const string &_aor, const string &_path, int _interface_id,
+    const system_clock::time_point &_next_send)
+{
+    aor = _aor;
+    path = _path;
+    interface_id = _interface_id;
+    next_send = _next_send;
+}
+
+void SipRegistrar::keepalive_ctx_data::dump(const string &key, const system_clock::time_point &now) const
+{
+    DBG("keepalive_context. key: '%s', "
+        "aor: '%s', path: '%s', interface_id: %d, "
+        "next_send-now: %d",
+        key.c_str(),
+        aor.data(), path.data(), interface_id,
+        std::chrono::duration_cast<seconds>(next_send - now).count());
+}
+
+void SipRegistrar::keepalive_ctx_data::dump(const string &key, AmArg &ret, const system_clock::time_point &now) const
+{
+    ret["key"] = key;
+    ret["aor"] = aor;
+    ret["path"] = path;
+    ret["interface_id"] = interface_id;
+    ret["next_send_in"] = std::chrono::duration_cast<seconds>(next_send - now).count();
+}
+
+void SipRegistrar::KeepAliveContexts::dump()
+{
+    //AmLock l(mutex);
+    auto now{system_clock::now()};
+    DBG("%zd keepalive contexts", size());
+    for(const auto &i : *this)
+        i.second.dump(i.first, now);
+}
+
+void SipRegistrar::KeepAliveContexts::dump(AmArg &ret)
+{
+    ret.assertArray();
+    auto now{system_clock::now()};
+    AmLock l(mutex);
+    for(const auto &i : *this) {
+        ret.push(AmArg());
+        i.second.dump(i.first, ret.back(), now);
+    }
+}
+
+void SipRegistrar::create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
+    int interface_id, const seconds &keep_alive_interval_offset)
+{
+    auto next_time = system_clock::now() + keepalive_interval + keep_alive_interval_offset;
+    AmLock l(keepalive_contexts.mutex);
+    auto it = keepalive_contexts.find(key);
+    if(it == keepalive_contexts.end())
+        keepalive_contexts.try_emplace(key, aor, path, interface_id, next_time);
+    else
+        it->second.update(aor, path, interface_id, next_time);
+}
+
+void SipRegistrar::remove_keep_alive_context(const string &key)
+{
+    AmLock l(keepalive_contexts.mutex);
+    keepalive_contexts.erase(key);
+}
+
+void SipRegistrar::clear_keep_alive_contexts()
+{
+    AmLock l(keepalive_contexts.mutex);
+    keepalive_contexts.clear();
 }

@@ -348,7 +348,7 @@ end:
     return 0;
 
 error:
-    dlclose(h_dl);
+//    dlclose(h_dl);
     return -1;
 }
 

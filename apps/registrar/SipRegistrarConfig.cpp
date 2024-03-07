@@ -1,10 +1,8 @@
-#include "Config.h"
+#include "SipRegistrarConfig.h"
 #include <log.h>
 
-int SipRegistrarConfig::parse(const string& config, list<Configurable *> objs)
+int SipRegistrarConfig::parse(const string& config, Configurable* obj)
 {
-    int res = 0;
-
     cfg_opt_t redis_pool_opts[] = {
         CFG_STR(CFG_PARAM_HOST, DEFAULT_REDIS_HOST, CFGF_NONE),
         CFG_INT(CFG_PARAM_PORT, DEFAULT_REDIS_PORT, CFGF_NONE),
@@ -46,12 +44,7 @@ int SipRegistrarConfig::parse(const string& config, list<Configurable *> objs)
         return -1;
     }
 
-    for(auto conj_obj : objs) {
-        res = conj_obj->configure(cfg);
-        if(res == -1)
-            break;
-    }
-
+    int res = obj->configure(cfg);
     cfg_free(cfg);
     return res;
 }
