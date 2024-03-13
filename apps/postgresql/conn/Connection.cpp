@@ -130,3 +130,8 @@ void Connection::stopTransaction()
     planned = 0;
 }
 
+void Connection::setPendingResetTime(time_t timepoint) {
+    pending_reset_time = timepoint;
+    //change status to avoid to be returned by ConnectionPool::getFreeConnection()
+    status = CONNECTION_BAD;
+}

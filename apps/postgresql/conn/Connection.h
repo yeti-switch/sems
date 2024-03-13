@@ -83,7 +83,7 @@ public:
     time_t getConnectedTime() { return connected_time; }
 
     time_t getPendingResetTime() const { return pending_reset_time; }
-    void setPendingResetTime(time_t timepoint) { pending_reset_time = timepoint; }
+    void setPendingResetTime(time_t timepoint);
 
     uint64_t getQueriesFinished() { return queries_finished; }
     Transaction* getCurrentTransaction() { return cur_transaction; }
