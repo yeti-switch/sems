@@ -164,6 +164,7 @@ void PoolWorker::onReset(Connection* conn, bool connected) {
 }
 void PoolWorker::onPQError(Connection* conn, const std::string& error) {
     ERROR("pg connection %s:%p/%s error: %s", name.c_str(), conn, conn->getConnInfo().c_str(), error.c_str());
+    scheduleConnectionReset(conn, conn->getDisconnectedTime() + reconnect_interval);
 }
 
 void PoolWorker::onStopTransaction(Transaction* trans)
