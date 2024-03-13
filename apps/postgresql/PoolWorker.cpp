@@ -250,7 +250,7 @@ void PoolWorker::onErrorCode(Transaction* trans, const string& error) {
     if(reconnect_errors.empty() ||
        reconnect_errors.end() != std::find(reconnect_errors.begin(), reconnect_errors.end(), error))
     {
-        scheduleConnectionReset(trans->get_conn(), time(0) + reconnect_interval);
+        scheduleConnectionReset(trans->get_conn());
         return;
     }
 }
