@@ -1,3 +1,10 @@
+sems (1.130.0) stable; urgency=low
+  * pg: fix reconnect after network failure
+  * pg: fix reconnect and wrong connection reuse on errors
+  * pg: remove reconnect delay on errors
+  * registrar_client: return handle on registration creation
+ -- Michael Furmur <furmur@pm.me>  Wed, 13 Mar 2024 20:03:44 +0200
+
 sems (1.129.3) stable; urgency=low
   * resolver: fix SRV entry FQDN resolving
  -- Michael Furmur <furmur@pm.me>  Thu, 07 Mar 2024 21:17:57 +0200
