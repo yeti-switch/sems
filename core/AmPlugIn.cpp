@@ -159,6 +159,17 @@ void AmPlugIn::init()
     addPayload(&_payload_tevent_48);
 }
 
+static void shutdown_plugin_factory(std::pair<string, AmPluginFactory*> pf)
+{
+    DBG("shutdown plug-in: %s", pf.first.c_str());
+    pf.second->onShutdown();
+}
+
+void AmPlugIn::shutdown()
+{
+    std::for_each(plugins_objects.begin(), plugins_objects.end(), shutdown_plugin_factory);
+}
+
 int AmPlugIn::load(const string& directory, const std::vector<std::string>& plugins)
 {
     int err=0;

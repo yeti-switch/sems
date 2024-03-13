@@ -106,6 +106,7 @@ class AmPluginFactory
    * @return 1 on error.
    */
   virtual int onLoad()=0;
+  virtual void onShutdown(){}
 };
 
 /**

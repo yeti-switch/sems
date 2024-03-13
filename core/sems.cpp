@@ -858,6 +858,8 @@ int main(int argc, char* argv[])
         success = true;
 
   error:
+  
+    AmPlugIn::instance()->shutdown();
     // session container stops active sessions
     INFO("Disposing session container");
     AmSessionContainer::dispose();

@@ -142,6 +142,7 @@ class AmPlugIn : public AmPayloadProvider
   static void dispose();
 
   void init();
+  void shutdown();
 
   /** 
    * Loads all plug-ins from the directory given as parameter. 
