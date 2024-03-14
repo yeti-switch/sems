@@ -488,6 +488,7 @@ void AmMediaTransport::getIceCandidate(SdpMedia& media)
     candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
     candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(l_port);
     media.ice_candidate.push_back(candidate);
+    ice_cred.lpriority = candidate.priority;
 }
 
 void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
@@ -495,6 +496,12 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
     CLASS_DBG("initIceConnection() stream:%p, eq:%d", to_void(stream), seq);
     if(seq == TRANSPORT_SEQ_NONE) {
         seq = TRANSPORT_SEQ_ICE;
+
+        ice_cred.luser = local_media.ice_ufrag;
+        ice_cred.lpassword = local_media.ice_pwd;
+        ice_cred.ruser = remote_media.ice_ufrag;
+        ice_cred.rpassword = remote_media.ice_pwd;
+
         string local_key;
         int cprofile = 0;
         srtp_master_keys remote_keys;
@@ -546,7 +553,7 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
             }
 
             try {
-                AmStunConnection* conn = new AmStunConnection(this, address, port, candidate.priority);
+                AmStunConnection* conn = new AmStunConnection(this, address, port, ice_cred.lpriority, candidate.priority);
                 if(cur_rtp_conn) {
                     conn->setDependentConnection(cur_rtp_conn);
                 }
@@ -1177,7 +1184,15 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
     }
 
     if(!s_conn) {
-        return;
+        if(ctype == AmStreamConnection::STUN_CONN) {
+            // add new pair connection with priority 0
+            AmStunConnection* conn = new AmStunConnection(this, am_inet_ntop(&addr), am_get_port(&addr), ice_cred.lpriority);
+            if(cur_rtp_conn) {
+                conn->setDependentConnection(cur_rtp_conn);
+            }
+            conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
+            addConnection(conn);
+        } else return;
     }
 
     s_conn->process_packet(buf, size, &addr, recvtime);

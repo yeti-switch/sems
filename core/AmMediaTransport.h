@@ -34,6 +34,14 @@ class AmMediaTransport
     , ObjCounter(AmMediaTransport)
 #endif
 {
+    struct
+    {
+        string luser;
+        string lpassword;
+        string ruser;
+        string rpassword;
+        int lpriority;
+    } ice_cred;
 public:
     enum Mode {
         TRANSPORT_MODE_DEFAULT,

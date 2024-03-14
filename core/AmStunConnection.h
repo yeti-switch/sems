@@ -15,10 +15,16 @@ using std::string;
 class AmStunConnection : public AmStreamConnection
 {
 private:
+    enum AuthDirection {
+        AUTH_RESPONCE = 0,
+        AUTH_REQUEST,
+        MAX_DIRECTION
+    };
     AmStreamConnection* depend_conn;
-    bool isAuthentificated;
+    bool isAuthentificated[MAX_DIRECTION];
     int err_code;
     int priority;
+    int lpriority;
     string local_password;
     string remote_password;
     string local_user;
@@ -28,8 +34,9 @@ private:
 
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
+    void checkAllowPair();
 public:
-    AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int priority);
+    AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int lpriority, int priority = 0);
     virtual ~AmStunConnection();
 
     void set_credentials(const string& luser, const string& lpassword,
@@ -41,7 +48,7 @@ public:
 
     void send_request();
     void updateStunTimer(bool remove = true);
-    bool getConnectionState();
+    bool isAllowPair();
 };
 
 #endif/*AM_STUN_CONNECTION_H*/

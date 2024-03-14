@@ -4,12 +4,13 @@
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
 
-AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _priority)
+AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _lpriority, int _priority)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN),
     depend_conn(0),
-    isAuthentificated(false),
+    isAuthentificated{false,false},
     err_code(0),
     priority(_priority),
+    lpriority(_lpriority),
     count(0),
     intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500} //rfc5389 7.2.1.Sending over UDP
 {
@@ -91,9 +92,24 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
         valid = false;
     }
     StunTransactionId trnsId;
-    StunAttribute controlling;
+    StunAttribute priority_attr;
     reader->GetTransactionId(&trnsId);
-    reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLING, &controlling);
+    if(reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_PRIORITY, &priority_attr)) {
+        if(priority_attr.size == 4)
+            priority = htonl(*(int*)(reader->GetStream().GetDataPointerUnsafe() + priority_attr.offset));
+        else {
+            err_code = STUN_ERROR_BADREQUEST;
+            error_str = "incorrect priority attribute size";
+            valid = false;
+        }
+
+        // see rfc8445 5.1.2
+        if (priority >= (unsigned int)(1<<31) || priority <= 0) {
+            err_code = STUN_ERROR_BADREQUEST;
+            error_str = "incorrect priority attribute value";
+            valid = false;
+        }
+    }
 
     CStunMessageBuilder builder;
     builder.AddBindingResponseHeader(valid);
@@ -113,12 +129,25 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         transport->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
-        if(valid && !isAuthentificated) {
-            isAuthentificated = true;
-            if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
-            transport->allowStunConnection(addr, priority);
+        if(valid && !isAuthentificated[AUTH_REQUEST]) {
+            isAuthentificated[AUTH_REQUEST] = true;
+            checkAllowPair();
         }
     }
+}
+
+bool AmStunConnection::isAllowPair() {
+    for(int i = 0; i < sizeof(isAuthentificated); i++)
+        if(!isAuthentificated[i]) return false;
+    return true;
+}
+
+
+void AmStunConnection::checkAllowPair()
+{
+    if(!isAllowPair()) return;
+    if(depend_conn) depend_conn->setRAddr(am_inet_ntop(&r_addr), am_get_port(&r_addr));
+    transport->allowStunConnection(&r_addr, priority);
 }
 
 void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
@@ -142,10 +171,9 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         valid = false;
     }
 
-    if(valid && !isAuthentificated) {
-        isAuthentificated = true;
-        if(depend_conn) depend_conn->setRAddr(am_inet_ntop(addr), am_get_port(addr));
-        transport->allowStunConnection(addr, priority);
+    if(valid && !isAuthentificated[AUTH_RESPONCE]) {
+        isAuthentificated[AUTH_RESPONCE] = true;
+        checkAllowPair();
     } else if(!valid){
         string error("valid stun message is false ERR = ");
         transport->getRtpStream()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
@@ -156,7 +184,10 @@ void AmStunConnection::send_request()
 {
     CLASS_DBG("AmStunConnection::send_request()");
 
-    updateStunTimer(false);
+    // see rfc8445 5.1.2
+    bool issend = (lpriority >= (unsigned int)(1<<31) || lpriority <= 0);
+    updateStunTimer(issend);
+    if(issend) return;
 
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
@@ -178,7 +209,7 @@ void AmStunConnection::send_request()
         data[i] = (uint8_t)rand();
     }
     builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, data, STUN_TIE_BREAKER_LENGTH);
-    int priority_netorder = htonl(priority);
+    int priority_netorder = htonl(lpriority);
     builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority_netorder, 4);
     builder.AddMessageIntegrityShortTerm(remote_password.c_str());
     builder.AddFingerprintAttribute();
@@ -195,13 +226,8 @@ void AmStunConnection::updateStunTimer(bool remove)
     if(remove)
         stun_processor::instance()->remove_timer(this);
     DBG("stun request update timer: count %d", count);
-    if((isAuthentificated && count == STUN_INTERVALS_COUNT) ||
+    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
         ++count <= STUN_INTERVALS_COUNT) {
         stun_processor::instance()->set_timer(this, intervals[count]);
     }
-}
-
-bool AmStunConnection::getConnectionState()
-{
-    return isAuthentificated;
 }
