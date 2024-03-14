@@ -58,7 +58,7 @@ public:
     void setLogger(msg_logger *_logger);
     void setSensor(msg_sensor *_sensor);
 
-    bool isMute();
+    bool isMute(int type);
 
     /**
     * Gets RTP local ip.

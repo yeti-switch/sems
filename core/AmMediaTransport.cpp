@@ -143,12 +143,12 @@ void AmMediaTransport::setMode(Mode _mode)
     mode = _mode;
 }
 
-bool AmMediaTransport::isMute()
+bool AmMediaTransport::isMute(int type)
 {
     bool ret = false;
     AmLock l(connections_mut);
     for(auto conn : connections) {
-        if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
+        if(conn->getConnType() == type/*AmStreamConnection::RAW_CONN*/) {
             ret = conn->isMute();
             break;
         }
@@ -976,11 +976,11 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
     
     ssize_t ret = 0;
     if(cur_stream) {
-        ret = cur_stream->send(packet);
+        if(!cur_stream->isMute()) ret = cur_stream->send(packet);
     } else {
         AmLock l(connections_mut);
         for(auto conn : connections) {
-            if(conn->isUseConnection(type)) {
+            if(conn->isUseConnection(type) && !conn->isMute()) {
                 ret = conn->send(packet);
                 break;
             }
@@ -1281,9 +1281,6 @@ void AmMediaTransport::addRtpConnection(const string& remote_address, int remote
         try {
             conn = new AmRtpConnection(this, remote_address, remote_port);
             addConnection(conn);
-            if(conn->isMute()) {
-                stream->mute = true;
-            }
         } catch(string& error) {
             CLASS_ERROR("RTP connection error: %s", error.c_str());
         }
