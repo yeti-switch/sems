@@ -35,6 +35,7 @@ class SipSingleProbe
     string last_reply_reason;
     string last_reply_contact;
     std::chrono::milliseconds last_reply_delay;
+    string last_error_reason;
 
     //probe fields
     unsigned int id;
