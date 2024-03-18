@@ -57,6 +57,7 @@ static AmArgHashValidator SipProbeAmArgValidator({
 SipSingleProbe::SipSingleProbe()
   : dlg(this),
     active_dialog(false),
+    last_reply_code(0),
     transport_protocol_id(sip_transport::UDP),
     sip_schema_id(sip_uri::SIP),
     proxy_transport_protocol_id(sip_transport::UDP)
@@ -272,6 +273,7 @@ bool SipSingleProbe::process(timep &now)
 
     if (dlg.sendRequest(req.method, nullptr, options_hdrs, options_flags) < 0) {
         DBG("failed to send OPTIONS. ruri: %s",req.r_uri.data());
+        last_error_reason = "failed to send request";
     }
 
     active_dialog = true;
@@ -293,6 +295,7 @@ void SipSingleProbe::onSipReply(
     last_reply_delay = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now() - last_send_time);
     last_reply_contact = !reply.contact.empty() ? reply.contact : getHeader(reply.hdrs, "Contact", "m", false);
+    last_error_reason.clear();
 }
 
 void SipSingleProbe::getInfo(AmArg &a)
@@ -314,6 +317,7 @@ void SipSingleProbe::getInfo(AmArg &a)
     a["last_reply_reason"] = last_reply_reason;
     a["last_reply_contact"] = last_reply_contact;
     a["last_reply_delay_ms"] = last_reply_delay.count();
+    a["last_error_reason"] = last_error_reason;
 }
 
 void SipSingleProbe::serializeStats(map<string, string> &labels, unsigned long long *values) const
