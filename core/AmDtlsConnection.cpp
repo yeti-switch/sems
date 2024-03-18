@@ -317,6 +317,12 @@ void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> sett
 bool DtlsContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int size)
 {
     AmLock lock(channelMutex);
+    if(!dtls_channel) {
+        /* ignore DTLS packets for uninitilazed context. see:
+         * * AmMediaTransport::initIceConnection
+         * * AmMediaTransport::allowStunConnection */
+        return true;
+    }
     cur_conn = conn;
     return dtls_channel->received_data(data, size) == 0;
 }
