@@ -1,3 +1,7 @@
+sems (1.130.3) stable; urgency=low
+  * fix segfault on early DTLS packets for uninitialized ICE connection
+ -- Michael Furmur <furmur@pm.me>  Mon, 18 Mar 2024 14:50:48 +0200
+
 sems (1.130.2) stable; urgency=low
   * fix segfault on process_packet() for newly created STUN connection
  -- Michael Furmur <furmur@pm.me>  Mon, 18 Mar 2024 13:12:39 +0200
