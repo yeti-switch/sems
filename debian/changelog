@@ -1,3 +1,9 @@
+sems (1.130.1) stable; urgency=low
+  * allow ICE trickle
+  * fix stream muting on zeroed IPv6 remote address
+  * options_prober.show.probers: add 'last_error_reason' attribute
+ -- Michael Furmur <furmur@pm.me>  Mon, 18 Mar 2024 12:49:33 +0200
+
 sems (1.130.0) stable; urgency=low
   * pg: fix reconnect after network failure
   * pg: fix reconnect and wrong connection reuse on errors
