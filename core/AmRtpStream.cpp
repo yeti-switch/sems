@@ -666,9 +666,10 @@ int AmRtpStream::init(const AmSdp& local,
         while(sdp_it != local_media.payloads.end()) {
             int int_pt;
 
-            if ((local_media.transport == TP_RTPAVP ||
-                local_media.transport == TP_UDPTLSRTPSAVP ||
-                local_media.transport == TP_RTPSAVP) && sdp_it->payload_type < 20)
+            bool isAllowTransport = (local_media.transport == TP_RTPAVP ||
+                                     local_media.transport == TP_UDPTLSRTPSAVP ||
+                                     local_media.transport == TP_RTPSAVP);
+            if (isAllowTransport && sdp_it->payload_type < 20)
                 int_pt = sdp_it->payload_type;
             else int_pt = payload_provider->getDynPayload(sdp_it->encoding_name,
                                                         sdp_it->clock_rate,
@@ -721,7 +722,10 @@ int AmRtpStream::init(const AmSdp& local,
             //       Some codecs define multiple payloads
             //       with different encoding parameters
             PayloadMappingTable::iterator pmt_it = pl_map.end();
-            if(sdp_it->encoding_name.empty() || (local_media.transport == TP_RTPAVP && sdp_it->payload_type < 20))
+            bool isAllowTransport = (local_media.transport == TP_RTPAVP ||
+                                     local_media.transport == TP_UDPTLSRTPSAVP ||
+                                     local_media.transport == TP_RTPSAVP);
+            if(sdp_it->encoding_name.empty() || (isAllowTransport && sdp_it->payload_type < 20))
             {
                 // must be a static payload
                 pmt_it = pl_map.find(sdp_it->payload_type);

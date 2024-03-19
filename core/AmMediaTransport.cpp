@@ -1192,6 +1192,7 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
                 conn->setDependentConnection(cur_rtp_conn);
             }
             conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
+            conn->updateStunTimer();
             addConnection(conn);
             s_conn = conn;
         } else return;
