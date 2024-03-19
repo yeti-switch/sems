@@ -34,17 +34,6 @@ class AmStunProcessor
     std::unordered_map<AmStunConnection *, unsigned long long> connections;
     AmMutex connections_mutex;
 
-    struct set_timer_event {
-        AmStunConnection *connection;
-        unsigned long long timeout;
-        set_timer_event(AmStunConnection *connection, unsigned long long timeout = 0)
-          : connection(connection),
-            timeout(timeout)
-        {}
-    };
-    std::list<set_timer_event> set_timer_events;
-    AmMutex set_timer_events_mutex;
-
     void on_timer();
 
   protected:

@@ -560,6 +560,7 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                 conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
                 addConnection(conn);
                 conn->send_request();
+                conn->updateStunTimer();
             } catch(string& error) {
                 CLASS_ERROR("ICE candidate STUN connection error: %s", error.c_str());
             }

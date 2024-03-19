@@ -66,27 +66,16 @@ void AmStunProcessor::set_timer(AmStunConnection *connection, unsigned long long
 {
     DBG("AmStunProcessor::set_timer connection: %p, timeout: %llu",
         connection, timeout);
-    AmLock l(set_timer_events_mutex);
-    set_timer_events.emplace_back(connection, timeout);
+    AmLock l(connections_mutex);
+    auto now = wheeltimer::instance()->unix_ms_clock.get();
+    connections[connection] = now + timeout;
 }
 
 void AmStunProcessor::remove_timer(AmStunConnection *connection)
 {
     DBG("AmStunProcessor::remove_timer for %p", connection);
-
-    connections_mutex.lock();
-    set_timer_events_mutex.lock();
-
+    AmLock l(connections_mutex);
     connections.erase(connection);
-
-    auto i = set_timer_events.begin();
-    while(i != set_timer_events.end()) {
-        if(i->connection == connection) i = set_timer_events.erase(i);
-        else ++i;
-    }
-
-    set_timer_events_mutex.unlock();
-    connections_mutex.unlock();
 }
 
 void AmStunProcessor::on_timer()
@@ -95,8 +84,8 @@ void AmStunProcessor::on_timer()
 
     //DBG("AmStunProcessor::on_timer %llu", now);
 
+    AmLock connections_lock(connections_mutex);
     //process connections
-    connections_mutex.lock();
     auto i = connections.begin();
     while(i != connections.end()) {
         /*DBG("AmStunProcessor::on_timer process connection: %p, now: %llu, timeout: %llu",
@@ -104,23 +93,17 @@ void AmStunProcessor::on_timer()
         if(now > i->second) {
             //DBG("send_request for connection %p", i->first);
             i->first->send_request();
-            i = connections.erase(i);
+            unsigned long long timeout;
+            if(i->first->updateStunTimer(timeout)) {
+                i->second = now + timeout;
+                i++;
+            } else 
+                i = connections.erase(i);
             continue;
         }
         ++i;
     }
-    connections_mutex.unlock();
 
-    //process add_timer_events
-    AmLock timer_events_lock(set_timer_events_mutex);
-
-    while(!set_timer_events.empty()) {
-        auto &e = set_timer_events.front();
-        /*DBG("AmStunProcessor::process set timer event: %p, %llu",
-            e.connection, e.timeout);*/
-        connections[e.connection] = now + e.timeout;
-        set_timer_events.pop_front();
-    }
 }
 
 #if 0

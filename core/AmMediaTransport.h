@@ -40,7 +40,7 @@ class AmMediaTransport
         string lpassword;
         string ruser;
         string rpassword;
-        int lpriority;
+        unsigned int lpriority;
     } ice_cred;
 public:
     enum Mode {

@@ -177,7 +177,7 @@ struct SdpIceCandidate
     string foundation;
     int  comp_id;
     IceCandidateTransport transport;
-    int priority;
+    unsigned int priority;
     SdpConnection conn;
     IceCandidateType type;
     SdpConnection rel_conn;
@@ -187,7 +187,7 @@ struct SdpIceCandidate
       : foundation(int2str(rand())),
         comp_id(0),
         transport(ICTR_UDP),
-        priority((ICT_HOST << 24) | ((rand() << 16) >> 8) | (256 - comp_id)), // see rfc5245 4.1.2.1
+        priority((ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - comp_id)), // see rfc5245 4.1.2.1
         type(ICT_HOST)
     {}
 

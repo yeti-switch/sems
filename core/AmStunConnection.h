@@ -23,8 +23,8 @@ private:
     AmStreamConnection* depend_conn;
     bool isAuthentificated[MAX_DIRECTION];
     int err_code;
-    int priority;
-    int lpriority;
+    unsigned int priority;
+    unsigned int lpriority;
     string local_password;
     string remote_password;
     string local_user;
@@ -35,8 +35,9 @@ private:
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
     void checkAllowPair();
+
 public:
-    AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int lpriority, int priority = 0);
+    AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int lpriority, unsigned int priority = 0);
     virtual ~AmStunConnection();
 
     void set_credentials(const string& luser, const string& lpassword,
@@ -47,8 +48,12 @@ public:
     void setDependentConnection(AmStreamConnection* conn);
 
     void send_request();
-    void updateStunTimer(bool remove = true);
     bool isAllowPair();
+
+    //function for other clients
+    void updateStunTimer();
+    //function for stun processor
+    bool updateStunTimer(unsigned long long& interval);
 };
 
 #endif/*AM_STUN_CONNECTION_H*/

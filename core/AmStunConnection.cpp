@@ -4,7 +4,7 @@
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
 
-AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, int _lpriority, int _priority)
+AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int _lpriority, unsigned int _priority)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN),
     depend_conn(0),
     isAuthentificated{false,false},
@@ -28,6 +28,7 @@ AmStunConnection::~AmStunConnection()
 void AmStunConnection::set_credentials(const string& luser, const string& lpassword,
                                        const string& ruser, const string& rpassword)
 {
+    DBG("set credentials: %s:%s/%s:%s", luser.c_str(), lpassword.c_str(), ruser.c_str(), rpassword.c_str());
     local_user = luser;
     remote_user = ruser;
     local_password = lpassword;
@@ -185,9 +186,9 @@ void AmStunConnection::send_request()
     CLASS_DBG("AmStunConnection::send_request()");
 
     // see rfc8445 5.1.2
-    bool issend = (lpriority >= (unsigned int)(1<<31) || lpriority <= 0);
-    updateStunTimer(issend);
-    if(issend) return;
+    if(lpriority >= (unsigned int)(1<<31) || lpriority <= 0) {
+        WARN("stun priority inccorect: fix generation");
+    }
 
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
@@ -221,13 +222,25 @@ void AmStunConnection::send_request()
     }
 }
 
-void AmStunConnection::updateStunTimer(bool remove)
+void AmStunConnection::updateStunTimer()
 {
-    if(remove)
-        stun_processor::instance()->remove_timer(this);
     DBG("stun request update timer: count %d", count);
     if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
         ++count <= STUN_INTERVALS_COUNT) {
         stun_processor::instance()->set_timer(this, intervals[count]);
+    } else {
+        stun_processor::instance()->remove_timer(this);
     }
 }
+
+bool AmStunConnection::updateStunTimer(unsigned long long& interval)
+{
+    DBG("will update stun timer: count %d", count);
+    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
+        ++count <= STUN_INTERVALS_COUNT) {
+        interval = intervals[count];
+        return true;
+    }
+    return false;
+}
+
