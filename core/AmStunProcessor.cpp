@@ -93,13 +93,12 @@ void AmStunProcessor::on_timer()
         if(now > i->second) {
             //DBG("send_request for connection %p", i->first);
             i->first->send_request();
-            unsigned long long timeout;
-            if(i->first->updateStunTimer(timeout)) {
-                i->second = now + timeout;
-                i++;
-            } else 
+            if(auto interval = i->first->checkStunTimer(); interval.has_value()) {
+                i->second = now + interval.value();
+            } else {
                 i = connections.erase(i);
-            continue;
+                continue;
+            }
         }
         ++i;
     }

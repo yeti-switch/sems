@@ -222,25 +222,22 @@ void AmStunConnection::send_request()
     }
 }
 
+std::optional<unsigned long long> AmStunConnection::checkStunTimer()
+{
+    DBG("will update stun timer: count %d", count);
+    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
+        ++count <= STUN_INTERVALS_COUNT)
+    {
+        return intervals[count];
+    }
+    return std::nullopt;
+}
+
 void AmStunConnection::updateStunTimer()
 {
-    DBG("stun request update timer: count %d", count);
-    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
-        ++count <= STUN_INTERVALS_COUNT) {
-        stun_processor::instance()->set_timer(this, intervals[count]);
+    if(auto interval = checkStunTimer(); interval.has_value()) {
+        stun_processor::instance()->set_timer(this, interval.value());
     } else {
         stun_processor::instance()->remove_timer(this);
     }
 }
-
-bool AmStunConnection::updateStunTimer(unsigned long long& interval)
-{
-    DBG("will update stun timer: count %d", count);
-    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
-        ++count <= STUN_INTERVALS_COUNT) {
-        interval = intervals[count];
-        return true;
-    }
-    return false;
-}
-

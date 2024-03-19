@@ -7,6 +7,7 @@
 #include <stun/commonincludes.hpp>
 #include <stun/stunreader.h>
 #include <string>
+#include <optional>
 
 using std::string;
 
@@ -50,10 +51,10 @@ public:
     void send_request();
     bool isAllowPair();
 
-    //function for other clients
+    /** @return interval to be scheduled or nullopt */
+    std::optional<unsigned long long> checkStunTimer();
+
     void updateStunTimer();
-    //function for stun processor
-    bool updateStunTimer(unsigned long long& interval);
 };
 
 #endif/*AM_STUN_CONNECTION_H*/
