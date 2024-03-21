@@ -5,6 +5,9 @@
 #define DEFAULT_RESEND_CONNECTION_LIMIT 10
 #define DEFAULT_CONNECTION_LIMIT 10
 
+
+extern int http_dest_header_func(cfg_t */*cfg*/, cfg_opt_t */*opt*/, int argc, const char **argv);
+
 cfg_opt_t http_action_opt[]
 {
     CFG_STR(PARAM_ACTION_NAME, "", CFGF_NODEFAULT),
@@ -15,6 +18,10 @@ cfg_opt_t http_action_opt[]
 cfg_opt_t http_dest_opt[]
 {
     CFG_STR(PARAM_MODE_NAME, "", CFGF_NODEFAULT),
+    CFG_BOOL(PARAM_HTTP2_TLS, cfg_false, CFGF_NONE),
+    CFG_FUNC(PARAM_HEADER, http_dest_header_func),
+    CFG_STR(PARAM_CERT, "", CFGF_NONE),
+    CFG_STR(PARAM_CERT_KEY, "", CFGF_NONE),
     CFG_STR_LIST(PARAM_URL_NAME, 0, CFGF_NODEFAULT),
     CFG_STR(PARAM_SOURCE_ADDRESS_NAME, "", CFGF_NONE),
     CFG_INT(PARAM_REQUEUE_LIMIT_NAME, 0, CFGF_NONE),

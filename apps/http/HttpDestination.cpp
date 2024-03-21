@@ -10,6 +10,11 @@
 #include <vector>
 using std::vector;
 #include <cstdio>
+#include <unistd.h>
+
+
+static map<string,vector<string>> http_dest_headers;
+
 
 int DestinationAction::parse(const string &default_action, cfg_t* cfg)
 {
@@ -172,7 +177,7 @@ bool HttpCodesMap::operator ()(long int code) const
 }
 
 HttpDestination::HttpDestination(const string &name)
-  : min_file_size(0), max_reply_size(0)
+  : http2_tls(false), min_file_size(0), max_reply_size(0)
   , count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
   , count_connection(stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
   , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
@@ -190,6 +195,23 @@ HttpDestination::~HttpDestination()
 }
 extern long parse_size(const string& size);
 
+
+extern int http_dest_header_func(cfg_t *cfg, cfg_opt_t */*opt*/, int argc, const char **argv)
+{
+    if(argc != 2) {
+        ERROR("header(%s,%s): unexpected option args count."
+              "expected format: header(header_name, header_value)",
+              argv[0],argv[1]);
+        return -1;
+    }
+
+    string header = string(argv[0]) + ": ";
+    header += argv[1];
+
+    http_dest_headers[cfg_title(cfg)].emplace_back(header);
+    return 0;
+}
+
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values)
 {
     AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
@@ -200,6 +222,22 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
     }
 
     attempts_limit = cfg_getint(cfg, PARAM_REQUEUE_LIMIT_NAME);
+    http2_tls = cfg_getbool(cfg, PARAM_HTTP2_TLS);
+    certificate = cfg_getstr(cfg, PARAM_CERT);
+    certificate_key = cfg_getstr(cfg, PARAM_CERT_KEY);
+
+    if(!certificate.empty() && ::access(certificate.c_str(), F_OK | R_OK) != 0){
+        ERROR("can't access the certificate file %s: %m", certificate.c_str());
+        return -1;
+    }
+
+    if(!certificate_key.empty() && ::access(certificate_key.c_str(), F_OK | R_OK) != 0){
+        ERROR("can't access the certificate_key file %s: %m", certificate_key.c_str());
+        return -1;
+    }
+
+    if(http_dest_headers.count(name))
+        http_headers.swap(http_dest_headers[name]);
 
     for(unsigned int i = 0; i < cfg_size(cfg, PARAM_URL_NAME); i++) {
         string url_ = cfg_getnstr(cfg, PARAM_URL_NAME, i);
@@ -329,8 +367,20 @@ void HttpDestination::dump(const string &, AmArg &ret) const
             url_list += ",";
         url_list += url_;
     }
+    ret["http2_tls"] = http2_tls;
     ret["mode"] = mode_str.c_str();
     ret["url"] = url_list;
+
+    if(!certificate.empty())
+        ret["certificate"] = certificate.c_str();
+    if(!certificate_key.empty())
+        ret["certificate_key"] = certificate_key.c_str();
+    if(http_headers.size()) {
+        auto &_headers=ret["headers"];
+        for(const auto &h : http_headers)
+            _headers.push(h);
+    }
+
     ret["source_address"] = source_address.c_str();
     ret["succ_action"] = succ_action.str();
     if(succ_action.has_data()){

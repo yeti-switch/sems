@@ -13,6 +13,10 @@
 #define PARAM_CONNECTION_LIMIT_NAME         "connection_limit"
 
 #define PARAM_MODE_NAME             "mode"
+#define PARAM_HTTP2_TLS             "http2_tls"
+#define PARAM_CERT                  "certificate"
+#define PARAM_CERT_KEY              "certificate_key"
+#define PARAM_HEADER                "header"
 #define PARAM_URL_NAME              "urls"
 #define PARAM_SOURCE_ADDRESS_NAME   "source_address"
 #define PARAM_REQUEUE_LIMIT_NAME    "requeue_limit"
