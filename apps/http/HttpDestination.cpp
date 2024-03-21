@@ -199,9 +199,8 @@ extern long parse_size(const string& size);
 extern int http_dest_header_func(cfg_t *cfg, cfg_opt_t */*opt*/, int argc, const char **argv)
 {
     if(argc != 2) {
-        ERROR("header(%s,%s): unexpected option args count."
-              "expected format: header(header_name, header_value)",
-              argv[0],argv[1]);
+        ERROR("header(): unexpected option args count %d, "
+              "expected format: header(header_name, header_value)", argc);
         return -1;
     }
 
