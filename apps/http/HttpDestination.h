@@ -84,7 +84,11 @@ struct HttpDestination {
     } mode;
     string mode_str;
 
+    bool http2_tls;
+    string certificate;
+    string certificate_key;
     vector<string> url;
+    vector<string> http_headers;
     string source_address;
     size_t max_failover_idx;
     unsigned int attempts_limit;

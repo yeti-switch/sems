@@ -35,6 +35,17 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
         return -1;
     }
 
+    if(destination.http2_tls)
+        easy_setopt(CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+
+    if(!destination.certificate.empty())
+        easy_setopt(CURLOPT_SSLCERT, destination.certificate.c_str());
+    if(!destination.certificate_key.empty())
+        easy_setopt(CURLOPT_SSLKEY, destination.certificate_key.c_str());
+
+    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
+        headers = curl_slist_append(headers, it->c_str());
+
     if(!destination.content_type.empty()) {
         string content_type_header = "Content-Type: ";
         content_type_header += destination.content_type;
