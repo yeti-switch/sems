@@ -215,7 +215,7 @@ int skip_sip_msg_async(parser_state* pst, char* end)
     /*int& st = pst->st;
     int& saved_st = pst->saved_st;*/
 
-    while(c < end) {
+    while(c <= end) {
         switch(stage) {
         case ST_FL:
             err = skip_line_async(pst,end);
@@ -228,11 +228,10 @@ int skip_sip_msg_async(parser_state* pst, char* end)
         case ST_BODY:
             if(!pst->content_len)
                 return 0;
-            if(pst->content_len > end-c) {
+            if(pst->content_len > end-c)
                 return UNEXPECTED_EOT;
-            } else {
+            else
                 return 0;
-            }
             break;
 
         default:
