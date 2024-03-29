@@ -1,3 +1,8 @@
+sems (1.130.6) stable; urgency=low
+  * http opts: http2_tls, certificate, certificate_key
+  * TCP/TLS SIP parsing for messages splitted on headers/sdp border
+ -- Michael Furmur <furmur@pm.me>  Fri, 29 Mar 2024 11:55:02 +0200
+
 sems (1.130.5) stable; urgency=low
   * fix trickled ICE candidate STUN timer set
   * fix static payloads mapping for RTP/SAVP, UDP/TLS/RTP/SAVP media types
