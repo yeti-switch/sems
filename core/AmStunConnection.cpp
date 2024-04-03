@@ -187,7 +187,7 @@ void AmStunConnection::send_request()
 
     // see rfc8445 5.1.2
     if(lpriority >= (unsigned int)(1<<31) || lpriority == 0) {
-        WARN("stun priority inccorect: fix generation");
+        WARN("stun priority inccorect(0x%x): fix generation", lpriority);
     }
 
     CStunMessageBuilder builder;

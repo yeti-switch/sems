@@ -533,6 +533,7 @@ class AmRtpStream
 
     /** Set using ice protocol */
     void useIce();
+    bool isIceStream();
 
     /** Set using multiplexing for rtcp */
     virtual void setMultiplexing(bool multiplex);

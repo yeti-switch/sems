@@ -1185,7 +1185,7 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
     }
 
     if(!s_conn) {
-        if(ctype == AmStreamConnection::STUN_CONN) {
+        if(ctype == AmStreamConnection::STUN_CONN && stream->isIceStream()) {
             // add new pair connection with priority 0
             AmStunConnection* conn = new AmStunConnection(this, am_inet_ntop(&addr), am_get_port(&addr), ice_cred.lpriority);
             if(cur_rtp_conn) {
