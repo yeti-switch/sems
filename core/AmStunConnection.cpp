@@ -105,7 +105,7 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
         }
 
         // see rfc8445 5.1.2
-        if (priority >= (unsigned int)(1<<31) || priority <= 0) {
+        if (priority >= (unsigned int)(1<<31) || priority == 0) {
             err_code = STUN_ERROR_BADREQUEST;
             error_str = "incorrect priority attribute value";
             valid = false;
@@ -186,7 +186,7 @@ void AmStunConnection::send_request()
     CLASS_DBG("AmStunConnection::send_request()");
 
     // see rfc8445 5.1.2
-    if(lpriority >= (unsigned int)(1<<31) || lpriority <= 0) {
+    if(lpriority >= (unsigned int)(1<<31) || lpriority == 0) {
         WARN("stun priority inccorect: fix generation");
     }
 
