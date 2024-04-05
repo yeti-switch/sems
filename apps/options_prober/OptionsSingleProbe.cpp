@@ -246,6 +246,10 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
         }
         dlg.resetOutboundIf();
         dlg.setOutboundInterfaceName(sip_interface_name);
+
+        //force outbound interface resolving
+        auto outbound_interface_id = dlg.getOutboundIf();
+        DBG("outbound_interface_id was resolved to: %d", outbound_interface_id);
     }
 
     //process contact_uri and append hdrs
