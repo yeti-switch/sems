@@ -33,9 +33,14 @@ private:
     int count;
     int intervals[STUN_INTERVALS_COUNT+1];
 
+    uint64_t tiebreaker;
+    bool ice_controlled;
+
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
     void checkAllowPair();
+
+    void change_ice_role();
 
 public:
     AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int lpriority, unsigned int priority = 0);
