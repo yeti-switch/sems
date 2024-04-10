@@ -101,6 +101,7 @@ static void errCode2RelayedReply(AmSipReply &reply, int err_code, unsigned defau
     case 400: reply.reason = "Bad Request"; break;
     case 478: reply.reason = "Unresolvable destination"; break;
     case 488: reply.reason = SIP_REPLY_NOT_ACCEPTABLE_HERE; break;
+    case 491: reply.reason = SIP_REPLY_PENDING; break;
     default: reply.reason = SIP_REPLY_SERVER_INTERNAL_ERROR;
     }
 }
