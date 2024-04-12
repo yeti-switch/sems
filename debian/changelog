@@ -1,3 +1,7 @@
+sems (1.130.8) stable; urgency=low
+  * use ICE roles in STUN requests
+ -- Michael Furmur <furmur@pm.me>  Fri, 12 Apr 2024 13:05:24 +0300
+
 sems (1.130.7) stable; urgency=low
   * options_prober: fix sip_interface_name resolving
   * ignore STUN packets for non-ICE connections
