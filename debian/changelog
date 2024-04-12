@@ -1,3 +1,7 @@
+sems (1.130.9) stable; urgency=low
+  * AmB2BSession: generate 491 reply for reINVITE onTxSdp pending offer error
+ -- Michael Furmur <furmur@pm.me>  Fri, 12 Apr 2024 14:13:27 +0300
+
 sems (1.130.8) stable; urgency=low
   * use ICE roles in STUN requests
  -- Michael Furmur <furmur@pm.me>  Fri, 12 Apr 2024 13:05:24 +0300
