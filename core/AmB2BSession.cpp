@@ -215,6 +215,14 @@ void AmB2BSession::relayError(const string &method, unsigned cseq,
         n_reply.cseq = cseq;
         n_reply.cseq_method = method;
         n_reply.from_tag = dlg->getLocalTag();
+        n_reply.remote_port = 0;
+        n_reply.local_reply = true;
+
+        if(n_reply.code == 491) {
+            //add Retry-After header with random 2-10 seconds
+            n_reply.hdrs += SIP_HDR_COLSP(SIP_HDR_RETRY_AFTER)
+                + int2str((get_random() % 8) + 2) + CRLF;
+        }
 
         DBG("relaying B2B SIP error reply %u %s", n_reply.code, n_reply.reason.c_str());
         relayEvent(new B2BSipReplyEvent(n_reply, forward, method, getLocalTag()));
@@ -232,6 +240,7 @@ void AmB2BSession::relayError(const string &method, unsigned cseq, bool forward,
         n_reply.cseq_method = method;
         n_reply.from_tag = dlg->getLocalTag();
         n_reply.remote_port = 0;
+        n_reply.local_reply = true;
 
         DBG("relaying B2B SIP reply %d %s", sip_code, reason);
         relayEvent(new B2BSipReplyEvent(n_reply, forward, method, getLocalTag()));
