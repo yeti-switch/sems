@@ -898,8 +898,9 @@ int AmBasicSipDialog::sendRequest(const string& method,
     req.body = *body;
   }
 
-  if(onTxRequest(req,flags) < 0)
-    return -1;
+  int res = 0;
+  if(res = onTxRequest(req,flags); res < 0)
+    return res;
 
   if (!(flags & SIP_FLAGS_NOCONTACT)) {
     req.contact = getContactHdr();
@@ -918,7 +919,7 @@ int AmBasicSipDialog::sendRequest(const string& method,
     send_flags |= TR_FLAG_DISABLE_BL;
   }
 
-  int res = SipCtrlInterface::send(req, local_tag,
+  res = SipCtrlInterface::send(req, local_tag,
 				   remote_tag.empty() || !next_hop_1st_req ?
 				   next_hop : "",
 				   outbound_interface,

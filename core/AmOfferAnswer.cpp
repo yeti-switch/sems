@@ -293,7 +293,7 @@ int AmOfferAnswer::onTxSdp(unsigned int m_cseq, const string &m_method, const Am
     case OA_OfferSent:
         // There is already a pending offer!!!
         DBG("There is already a pending offer, onTxSdp fails");
-        return -1;
+        return -491;
     default:
         break;
     }
@@ -338,9 +338,12 @@ int AmOfferAnswer::onRequestOut(AmSipRequest& req)
         }
     }
 
-    if(has_sdp && (onTxSdp(req.cseq,req.method,req.body) != 0)) {
-        DBG("onTxSdp() failed");
-        return -1;
+    int res = 0;
+    if(has_sdp) {
+        if(res = onTxSdp(req.cseq,req.method,req.body); res != 0) {
+            DBG("onTxSdp() failed");
+            return res;
+        }
     }
 
     return 0;

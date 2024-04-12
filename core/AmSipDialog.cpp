@@ -255,8 +255,11 @@ int AmSipDialog::onTxRequest(AmSipRequest& req, int& flags)
 {
     rel100.onRequestOut(req);
 
-    if (offeranswer_enabled && oa.onRequestOut(req))
-        return -1;
+    int res = 0;
+    if (offeranswer_enabled) {
+        if(res = oa.onRequestOut(req); res < 0)
+            return res;
+    }
 
     if (AmBasicSipDialog::onTxRequest(req,flags) < 0)
         return -1;
