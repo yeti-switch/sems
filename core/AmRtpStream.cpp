@@ -636,6 +636,7 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
 
 int AmRtpStream::init(const AmSdp& local,
     const AmSdp& remote,
+    bool sdp_offer_owner,
     bool force_passive_mode)
 {
     init_error.clear();
@@ -651,7 +652,8 @@ int AmRtpStream::init(const AmSdp& local,
     const SdpMedia& local_media = local.media[sdp_media_index];
     const SdpMedia& remote_media = remote.media[sdp_media_index];
 
-    CLASS_DBG("AmRtpStream[%p]::init() sdp_media_index = %d",this,sdp_media_index);
+    CLASS_DBG("AmRtpStream[%p]::init() sdp_media_index = %d, sdp_offer_owner = %d",
+        this, sdp_media_index, sdp_offer_owner);
 
     if(local_media.type == MT_AUDIO) {
         payloads.clear();
@@ -874,10 +876,10 @@ int AmRtpStream::init(const AmSdp& local,
             if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             for(auto transport : ip4_transports) {
-                transport->initIceConnection(local_media, remote_media);
+                transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
             }
             for(auto transport : ip6_transports) {
-                transport->initIceConnection(local_media, remote_media);
+                transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
             }
         } else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
             cur_rtp_trans->initSrtpConnection(address, port, local_media, remote_media);
@@ -2173,6 +2175,12 @@ void AmRtpStream::getMediaAcl(trsp_acl& acl)
 {
     if(session)
         session->getMediaAcl(acl);
+}
+
+bool AmRtpStream::getSdpOfferOwner()
+{
+    if(session) session->getSdpOfferOwner();
+    return false;
 }
 
 void AmRtpStream::debug()

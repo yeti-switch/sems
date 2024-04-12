@@ -232,27 +232,27 @@ class AmB2BSession: public AmSession, protected RelayController
 
 
     /** @see AmSession */
-    virtual void updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cseq);
+    virtual void updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cseq) override;
 
-    void onSipRequest(const AmSipRequest& req);
+    void onSipRequest(const AmSipRequest& req) override;
     void onSipReply(const AmSipRequest& req, const AmSipReply& reply,
-                    AmBasicSipDialog::Status old_dlg_status);
+                    AmBasicSipDialog::Status old_dlg_status) override;
 
-    void onRequestSent(const AmSipRequest& req);
-    void onReplySent(const AmSipRequest& req, const AmSipReply& reply);
+    void onRequestSent(const AmSipRequest& req) override;
+    void onReplySent(const AmSipRequest& req, const AmSipReply& reply) override;
 
-    void onInvite2xx(const AmSipReply& reply);
+    void onInvite2xx(const AmSipReply& reply) override;
 
-    int onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp);
+    int onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp, bool sdp_offer_owner) override;
 
     virtual void onHoldRequest() {}
     virtual void onResumeRequest() {}
 
-    void onRemoteDisappeared(const AmSipReply& reply);
+    void onRemoteDisappeared(const AmSipReply& reply) override;
 
-    void onRtpTimeout();
-    void onSessionTimeout();
-    void onNoAck(unsigned int cseq);
+    void onRtpTimeout() override;
+    void onSessionTimeout() override;
+    void onNoAck(unsigned int cseq) override;
 
     /** send re-INVITE with established session description
      *  @return 0 on success
@@ -260,13 +260,13 @@ class AmB2BSession: public AmSession, protected RelayController
     int sendEstablishedReInvite();
 
     /** do session refresh */
-    bool refresh(int flags = 0);
+    bool refresh(int flags = 0) override;
 
     /** @see AmEventQueue */
-    void process(AmEvent* event);
+    void process(AmEvent* event) override;
 
     /** @see AmEventQueue */
-    void finalize();
+    void finalize() override;
 
     /** B2BEvent handler */
     virtual void onB2BEvent(B2BEvent* ev);
@@ -417,7 +417,9 @@ class AmB2BSession: public AmSession, protected RelayController
     void onSessionChange(AmB2BSession *new_session);
 
     // see RelayController
-    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map);
+    virtual void computeRelayMask(
+        const SdpMedia &m, bool &enable,
+        PayloadMask &mask, PayloadRelayMap& map) override;
 };
 
 class AmB2BCalleeSession;

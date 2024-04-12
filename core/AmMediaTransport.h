@@ -162,7 +162,7 @@ public:
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
     void getIceCandidate(SdpMedia& media);
     
-    void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media);
+    void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner);
     void initRtpConnection(const string& remote_address, int remote_port);
     void initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
     void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);

@@ -70,7 +70,7 @@ public:
     int init()
     {
         setInOut(&audio, &audio);
-        return RTPStream()->init(local, *remote);
+        return RTPStream()->init(local, *remote, true, false);
     }
 
     virtual void zrtpSessionActivated(const bzrtpSrtpSecrets_t*) override

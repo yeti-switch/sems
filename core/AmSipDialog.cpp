@@ -174,12 +174,12 @@ bool AmSipDialog::onRxReqStatus(const AmSipRequest& req)
     return cont;
 }
 
-int AmSipDialog::onSdpCompleted()
+int AmSipDialog::onSdpCompleted(bool sdp_offer_owner)
 {
     if (!hdl) return 0;
 
     int ret = ((AmSipDialogEventHandler*)hdl)->
-        onSdpCompleted(oa.getLocalSdp(), oa.getRemoteSdp());
+        onSdpCompleted(oa.getLocalSdp(), oa.getRemoteSdp(), sdp_offer_owner);
 
     if (!ret) {
         sdp_local = oa.getLocalSdp();

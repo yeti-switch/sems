@@ -95,7 +95,7 @@ int AmOfferAnswer::checkStateChange()
     if((saved_state != state) &&
        (state == OA_Completed))
     {
-        ret = dlg->onSdpCompleted();
+        ret = dlg->onSdpCompleted(saved_state == OA_OfferSent);
     }
 
     return ret;
@@ -186,7 +186,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
                 DBG("ignoring subsequent SDP reply within the same transaction");
                 DBG("this usually happens when 183 and 200 have SDP");
                 /* Make sure that session is started when 200 OK is received */
-                if (reply.code == 200) dlg->onSdpCompleted();
+                if (reply.code == 200) dlg->onSdpCompleted(true);
             } else {
                 saveState();
                 err_code = onRxSdp(reply.cseq,reply.cseq_method,reply.body,&err_txt);
@@ -471,7 +471,7 @@ int AmOfferAnswer::onReplySent(const AmSipReply& reply)
        reply.cseq_method == SIP_METH_INVITE)
     {
         /* Make sure that session is started when 200 OK is sent */
-        ret = dlg->onSdpCompleted();
+        ret = dlg->onSdpCompleted(false);
     } else {
         ret = checkStateChange();
     }

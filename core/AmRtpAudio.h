@@ -180,8 +180,9 @@ public:
   void getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMedia& answer) override;
 
   int init(const AmSdp& local,
-	   const AmSdp& remote,
-       bool force_symmetric_rtp = false) override;
+       const AmSdp& remote,
+       bool sdp_offer_owner,
+       bool force_passive_mode) override;
 
   int ping(unsigned long long ts) override;
 

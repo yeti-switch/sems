@@ -2,12 +2,10 @@
 #include "AmStunConnection.h"
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
+#include "stun/stunbuilder.h"
+#include "sip/ip_util.h"
 
-#include <stun/stunbuilder.h>
-
-#ifndef htonll
-#define htonll(b) __builtin_bswap64(b)
-#endif
+#include <byteswap.h>
 
 #define STUN_ERROR_ROLECONFLICT 487
 
@@ -20,14 +18,14 @@ AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& r
     lpriority(_lpriority),
     count(0),
     intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500},//rfc5389 7.2.1.Sending over UDP
-    ice_controlled(false)
+    local_ice_role_is_controlled(false)
 {
     SA_transport(&r_addr) = transport->getTransportType();
     CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu",
               r_host.data(), r_port, SA_transport(&r_addr));
 
-    ((uint32_t*)&tiebreaker)[0] = rand();
-    ((uint32_t*)&tiebreaker)[1] = rand();
+    ((uint32_t*)&local_tiebreaker)[0] = rand();
+    ((uint32_t*)&local_tiebreaker)[1] = rand();
 }
 
 AmStunConnection::~AmStunConnection()
@@ -104,30 +102,45 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
         valid = false;
     }
 
+    //ICE_CONTROLLING/ICE_CONTROLLED, rfc5245#section-7.2.1.1
+
+    uint64_t remote_tiebreaker = 0;
+    std::optional<bool> remote_ice_role_is_controlled;
     StunAttribute ice_ctrl_attr;
-    uint64_t agent = 0, candidate = 0;
-    if(ice_controlled && reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLED, &ice_ctrl_attr)) {
-        uint64_t ice_ctrl_data = htonll(*(uint64_t*)(reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
-        agent = ice_ctrl_data;
-        candidate = tiebreaker;
-    } else if(!ice_controlled && reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLING, &ice_ctrl_attr)) {
-        uint64_t ice_ctrl_data = htonll(*(uint64_t*)(reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
-        candidate = ice_ctrl_data;
-        agent = tiebreaker;
+    if (S_OK == reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLING, &ice_ctrl_attr)) {
+        remote_ice_role_is_controlled = false;
+    } if (S_OK ==reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_CONTROLLED, &ice_ctrl_attr)) {
+        remote_ice_role_is_controlled = true;
     }
-    if(valid && agent && candidate) {
-        if(agent < candidate) {
-            change_ice_role();
-        } else {
-            err_code = STUN_ERROR_ROLECONFLICT;
-            error_str = "ice controlled role conflict";
-            valid = false;
+
+    if(remote_ice_role_is_controlled.has_value()) {
+        remote_tiebreaker = bswap_64(*(uint64_t*)(
+            reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
+
+        if(valid && ((*remote_ice_role_is_controlled) == local_ice_role_is_controlled)) {
+            //roles conflict. less tiebreaker value means controlled mode
+            bool tiebreaked_local_role_is_controlled = local_tiebreaker < remote_tiebreaker;
+            if(tiebreaked_local_role_is_controlled != local_ice_role_is_controlled) {
+                //accept role change
+                change_ice_role();
+            } else {
+                //reject ICE role change
+                err_code = STUN_ERROR_ROLECONFLICT;
+                error_str = "Role Conflict";
+                valid = false;
+            }
         }
+    } else {
+        DBG("no ICE_CONTROLLING/ICE_CONTROLLED attributes in the STUN binding request from %s:%hu",
+            am_inet_ntop(addr).data(), am_get_port(addr));
     }
+
+    // ICE_PRIORITY
+
     StunTransactionId trnsId;
     StunAttribute priority_attr;
     reader->GetTransactionId(&trnsId);
-    if(valid && reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_PRIORITY, &priority_attr)) {
+    if(valid && (S_OK == reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_PRIORITY, &priority_attr))) {
         if(priority_attr.size == 4)
             priority = htonl(*(int*)(reader->GetStream().GetDataPointerUnsafe() + priority_attr.offset));
         else {
@@ -186,9 +199,7 @@ void AmStunConnection::checkAllowPair()
 //rfc8445 7.2.5.1
 void AmStunConnection::change_ice_role()
 {
-    ice_controlled = !ice_controlled;
-    ((uint32_t*)&tiebreaker)[0] = rand();
-    ((uint32_t*)&tiebreaker)[1] = rand();
+    local_ice_role_is_controlled = !local_ice_role_is_controlled;
 }
 
 void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
@@ -197,8 +208,9 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
     std::string error_str;
     uint16_t error_code = 0;
     if(reader->GetErrorCode(&error_code) == S_OK) {
-        if(error_code == STUN_ERROR_ROLECONFLICT)
+        if(error_code == STUN_ERROR_ROLECONFLICT) {
             change_ice_role();
+        }
         err_code = error_code;
         error_str = "error response";
         valid = false;
@@ -220,11 +232,11 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         valid = false;
     }
 
-    if(valid && !isAuthentificated[AUTH_RESPONCE]) {
-        isAuthentificated[AUTH_RESPONCE] = true;
+    if(valid && !isAuthentificated[AUTH_RESPONSE]) {
+        isAuthentificated[AUTH_RESPONSE] = true;
         checkAllowPair();
     } else if(!valid){
-        string error("valid stun message is false ERR = ");
+        string error("invalid stun message: ");
         transport->getRtpStream()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
     }
 }
@@ -235,7 +247,8 @@ void AmStunConnection::send_request()
 
     // see rfc8445 5.1.2
     if(lpriority >= (unsigned int)(1<<31) || lpriority == 0) {
-        WARN("stun priority inccorect(0x%x): fix generation", lpriority);
+        WARN("stun priority (0x%x) is incorrect. raddr: %s:%hu",
+            lpriority, am_inet_ntop(&r_addr).data(), am_get_port(&r_addr));
     }
 
     CStunMessageBuilder builder;
@@ -253,11 +266,11 @@ void AmStunConnection::send_request()
     nt_info[0] = htons(1);
     builder.AddAttribute(STUN_ATTRIBUTE_NETWORK_INFO, &nt_info, 4);
 
-    uint64_t tb = htonll(tiebreaker);
-    if(ice_controlled)
-        builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLED, (uint8_t*)&tb, STUN_TIE_BREAKER_LENGTH);
-    else
-        builder.AddAttribute(STUN_ATTRIBUTE_ICE_CONTROLLING, (uint8_t*)&tb, STUN_TIE_BREAKER_LENGTH);
+    uint64_t tb = bswap_64(local_tiebreaker);
+    builder.AddAttribute(
+        local_ice_role_is_controlled ? STUN_ATTRIBUTE_ICE_CONTROLLED: STUN_ATTRIBUTE_ICE_CONTROLLING,
+        (uint8_t*)&tb, STUN_TIE_BREAKER_LENGTH);
+
     int priority_netorder = htonl(lpriority);
     builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority_netorder, 4);
     builder.AddMessageIntegrityShortTerm(remote_password.c_str());

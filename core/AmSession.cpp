@@ -94,6 +94,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtcp_multiplexing(false),
     rtp_interface(-1),
     rtp_proto_id(-1),
+    sdp_offer_owner(true),
     input(nullptr), output(nullptr),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     enable_zrtp(false),
@@ -1122,9 +1123,10 @@ bool AmSession::getSdpAnswer(const AmSdp& offer, AmSdp& answer)
     return true;
 }
 
-int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
+int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp, bool sdp_offer_owner)
 {
-  DBG("AmSession::onSdpCompleted(...) ...");
+  DBG("AmSession::onSdpCompleted(..., %d) ...", sdp_offer_owner);
+  this->sdp_offer_owner = sdp_offer_owner;
 
   if(local_sdp.media.empty() || remote_sdp.media.empty()) {
 
@@ -1161,7 +1163,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
   int ret = 0;
 
   try {
-    ret = RTPStream()->init(local_sdp, remote_sdp, AmConfig.force_symmetric_rtp);
+    ret = RTPStream()->init(local_sdp, remote_sdp, sdp_offer_owner, AmConfig.force_symmetric_rtp);
   } catch (const string& s) {
     ERROR("Error while initializing RTP stream: '%s'", s.c_str());
     ret = -1;

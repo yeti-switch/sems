@@ -628,7 +628,9 @@ class AmRtpStream
     * @warning It is necessary to call getSdpOffer/getSdpAnswer prior to init(...)
     * @warning so that the internal SDP media line index is set properly.
     */
-    virtual int init(const AmSdp& local, const AmSdp& remote, bool force_passive_mode = false);
+    virtual int init(const AmSdp& local, const AmSdp& remote,
+                     bool sdp_offer_owner,
+                     bool force_passive_mode);
 
     void updateTransports();
     void applyIceParams(SdpMedia& sdp);
@@ -720,6 +722,7 @@ class AmRtpStream
     void setForceBuffering(bool buffering) { force_buffering = buffering; }
 
     void getMediaAcl(trsp_acl& acl);
+    bool getSdpOfferOwner();
 
     void debug();
     virtual void getInfo(AmArg &ret);

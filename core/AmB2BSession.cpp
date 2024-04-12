@@ -672,9 +672,13 @@ void AmB2BSession::onInvite2xx(const AmSipReply& reply)
     }
 }
 
-int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp)
+int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp, bool sdp_offer_owner)
 {
-    CLASS_DBG("AmB2BSession::onSdpCompleted");
+    CLASS_DBG("AmB2BSession::onSdpCompleted(). %s SDP offer owner",
+        sdp_offer_owner ? "local": "remote");
+
+    this->sdp_offer_owner = sdp_offer_owner;
+
     HoldMethod method;
     if(isHoldRequest(remote_sdp,method)) {
         if(!remote_on_hold) {
@@ -704,7 +708,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
                     remote_sdp);
             }
             DBG("media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this); aleg = %d, this = %p",a_leg,this);
-            media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this);
+            media_session->createUpdateStreams(a_leg, local_sdp, remote_sdp, this, sdp_offer_owner);
         }
     }
 
@@ -717,7 +721,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
             DBG("rtp_stream_shared. skip AmSession::onSdpCompleted");
             return 0;
         }
-        return AmSession::onSdpCompleted(local_sdp,remote_sdp);
+        return AmSession::onSdpCompleted(local_sdp,remote_sdp,sdp_offer_owner);
     }
 
     return 0;

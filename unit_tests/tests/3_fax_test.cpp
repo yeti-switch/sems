@@ -74,7 +74,7 @@ public:
     int init()
     {
         setInOut(audio, audio);
-        return RTPStream()->init(local, *remote);
+        return RTPStream()->init(local, *remote, true, false);
     }
 
     virtual void onStart() override

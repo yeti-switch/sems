@@ -186,6 +186,9 @@ protected:
   int rtp_interface;
   int rtp_proto_id;
 
+   /** Are we generated SDP Offer for the last completed SDP OA negotiation */
+   bool sdp_offer_owner;
+
   /** Session event handlers (ex: session timer, UAC auth, etc...) */
   vector<AmSessionEventHandler*> ev_handlers;
 
@@ -651,7 +654,7 @@ public:
   virtual bool getSdpAnswer(const AmSdp& offer, AmSdp& answer) override;
 
   /** Hook called when an SDP OA transaction has been completed */
-  virtual int onSdpCompleted(const AmSdp& offer, const AmSdp& answer) override;
+  virtual int onSdpCompleted(const AmSdp& offer, const AmSdp& answer, bool sdp_offer_owner) override;
 
   /** Hook called when an early session starts (SDP OA completed + dialog in early state) */
   virtual void onEarlySessionStart() override;
@@ -703,6 +706,7 @@ public:
   int setRtpProtoId(int _rtp_proto_id);
   void getMediaAcl(trsp_acl& acl);
   void setMediaAcl(const std::vector<AmSubnet>& networks);
+  bool getSdpOfferOwner() { return sdp_offer_owner; }
 };
 
 inline AmRtpAudio* AmSession::RTPStream() {

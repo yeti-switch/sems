@@ -77,7 +77,7 @@ public:
     {
         setInOut(&audio, &audio);
         if(AmSessionContainer::instance()->addSession(getLocalTag(), this) != AmSessionContainer::Inserted) return EXIT_FAILURE;
-        return RTPStream()->init(local, *remote);
+        return RTPStream()->init(local, *remote, true, false);
     }
 
     virtual void onStart() override

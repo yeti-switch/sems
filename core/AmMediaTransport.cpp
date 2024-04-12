@@ -491,7 +491,7 @@ void AmMediaTransport::getIceCandidate(SdpMedia& media)
     ice_cred.lpriority = candidate.priority;
 }
 
-void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media)
+void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner)
 {
     CLASS_DBG("initIceConnection() stream:%p, eq:%d", to_void(stream), seq);
     if(seq == TRANSPORT_SEQ_NONE) {
@@ -558,6 +558,7 @@ void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpM
                     conn->setDependentConnection(cur_rtp_conn);
                 }
                 conn->set_credentials(local_media.ice_ufrag, local_media.ice_pwd, remote_media.ice_ufrag, remote_media.ice_pwd);
+                conn->set_ice_role_controlled(!sdp_offer_owner); //rfc5245#section-5.2
                 addConnection(conn);
                 conn->send_request();
                 conn->updateStunTimer();
@@ -1192,7 +1193,9 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
                 conn->setDependentConnection(cur_rtp_conn);
             }
             conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
+            conn->set_ice_role_controlled(!stream->getSdpOfferOwner()); //rfc5245#section-5.2
             conn->updateStunTimer();
+
             addConnection(conn);
             s_conn = conn;
         } else return;

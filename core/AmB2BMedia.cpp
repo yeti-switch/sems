@@ -278,7 +278,7 @@ bool StreamData::initStream(PlayoutType playout_type,
 
     stream->setOnHold(false); // just hack to do correctly mute detection in stream->init
 
-    if (stream->init(local_sdp, remote_sdp, force_symmetric_rtp) == 0) {
+    if (stream->init(local_sdp, remote_sdp, sdp_offer_owner, force_symmetric_rtp) == 0) {
         stream->setPlayoutType(playout_type);
         initialized = true;
 
@@ -1207,7 +1207,7 @@ void AmB2BMedia::updateRelayStream(
 void AmB2BMedia::createUpdateStreams(
     bool a_leg,
     const AmSdp &local_sdp, const AmSdp &remote_sdp,
-    RelayController *ctrl)
+    RelayController *ctrl, bool sdp_offer_owner)
 {
     TRACE("%s (%c): create/updating streams with local & remote SDP\n",
           a_leg ? (a ? a->getLocalTag().c_str() : NULL) : (b ? b->getLocalTag().c_str() : NULL),
@@ -1232,16 +1232,16 @@ void AmB2BMedia::createUpdateStreams(
     // create missing streams
     createStreams(local_sdp); // FIXME: remote_sdp?
 
-    updateStreamsUnsafe(a_leg, ctrl);
+    updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner);
 }
 
-void AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl)
+void AmB2BMedia::updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner)
 {
     AmLock l(mutex);
-    updateStreamsUnsafe(a_leg, ctrl);
+    updateStreamsUnsafe(a_leg, ctrl, sdp_offer_owner);
 }
 
-void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
+void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner)
 {
     const AmSdp &remote_sdp = a_leg ? a_leg_remote_sdp : b_leg_remote_sdp;
 
@@ -1252,6 +1252,8 @@ void AmB2BMedia::updateStreamsUnsafe(bool a_leg, RelayController *ctrl)
 
     auto audio_pair = streams.end(), relay_pair = streams.end();
     for(auto i = streams.begin(); i != streams.end(); ++i) {
+        (a_leg ? i->a : i->b).setSdpOfferOwner(sdp_offer_owner);
+
         if(i->audio) {
             if(audio_pair == streams.end()) audio_pair = i;
         } else {

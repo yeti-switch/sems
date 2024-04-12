@@ -92,8 +92,9 @@ class AmSipDialog
    /**
     * Calls onSdpCompleted on the session event handler
     * and executes onSessionStart/onEarlySessionStart when required.
+    * @param[in] sdp_offer_owner true if we generated SDP offer for related OA transaction
     */
-    int onSdpCompleted();
+    int onSdpCompleted(bool sdp_offer_owner);
 
     bool getSdpOffer(AmSdp& offer);
     bool getSdpAnswer(const AmSdp& offer, AmSdp& answer);
@@ -200,7 +201,7 @@ class AmSipDialogEventHandler
     virtual bool getSdpAnswer(const AmSdp& offer, AmSdp& answer)=0;
 
     /** Hook called when an SDP OA transaction has been completed */
-    virtual int onSdpCompleted(const AmSdp& local, const AmSdp& remote)=0;
+    virtual int onSdpCompleted(const AmSdp& local, const AmSdp& remote, bool sdp_offer_owner)=0;
 
     /** Hook called when an early session starts 
     *  (SDP OA completed + dialog in early state) */

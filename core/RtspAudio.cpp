@@ -205,7 +205,7 @@ void RtspAudio::initRtpAudio(unsigned short int  r_rtp_port)
         return;
     }
 
-    AmRtpAudio::init(answer, offer);
+    AmRtpAudio::init(answer, offer, true, false);
     resumeReceiving();
 }
 
@@ -230,7 +230,7 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 
     //INFO("******* SDP answer body:\n%s", sdp_body.c_str());
 
-    AmRtpAudio::init(answer, offer);
+    AmRtpAudio::init(answer, offer, true, false);
     resumeReceiving();
 
     return getLocalPort();

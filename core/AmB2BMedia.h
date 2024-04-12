@@ -92,6 +92,8 @@ class StreamData {
     int incoming_payload;
     string outgoing_payload_name;
     string incoming_payload_name;
+
+    bool sdp_offer_owner;
 public:
     StreamData() = delete;
     StreamData(StreamData const &) = delete;
@@ -122,6 +124,7 @@ public:
     void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType type) {
         if(stream) stream->replaceAudioMediaParameters(m, idx, type);
     }
+    void setSdpOfferOwner(bool owner) { sdp_offer_owner = owner; }
 
     /** initialize given stream for transcoding & regular audio processing
      *
@@ -330,7 +333,7 @@ class AmB2BMedia
     bool relay_paused;
 
     void createStreams(const AmSdp &sdp);
-    void updateStreamsUnsafe(bool a_leg, RelayController *ctrl);
+    void updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
     void updateStreamPair(StreamPair &pair);
     void updateAudioStreams();
     void updateRelayStream(AmRtpStream *stream, AmB2BSession *session,
@@ -407,8 +410,8 @@ class AmB2BMedia
 	const AmSdp &getRemoteSdp(bool a_leg);
 
     /** Update media session with local & remote SDP. */
-    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl);
-    void updateStreams(bool a_leg, RelayController *ctrl);
+    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl, bool sdp_offer_owner);
+    void updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
     void setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
     /** Clear audio for given leg and stop processing if both legs stopped. 
