@@ -852,20 +852,50 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
 {
     CLASS_DBG("allow stun connection by addr %s", am_inet_ntop(remote_addr).c_str());
     //TODO(alexey.v): set current connections by candidate priority
+    enum {
+        REQ_NONE,
+        DTLS_REQ_NEED,
+        ZRTP_REQ_NEED,
+        DTLS_REQ_INITED,
+        ZRTP_REQ_INITED
+    } sequre_req_state = REQ_NONE;
+    bool is_client = false;
     for(auto& conn : connections) {
-        if(conn->getConnType() == AmRawConnection::ZRTP_CONN && conn->isAddrConnection(remote_addr)) {
-            cur_rtp_conn = conn;
-        }
-        if(conn->getConnType() == AmRawConnection::DTLS_CONN && conn->isAddrConnection(remote_addr)) {
-            try {
-                AmDtlsConnection* connection = dynamic_cast<AmDtlsConnection*>(conn);
-                if(connection) {
-                    connection->initConnection();
-                }
-            } catch(string& error) {
-                CLASS_ERROR("DTLS connection error: %s", error.c_str());
+        if(conn->getConnType() == AmRawConnection::ZRTP_CONN) {
+            if(sequre_req_state == REQ_NONE) sequre_req_state = ZRTP_REQ_NEED;
+            if(conn->isAddrConnection(remote_addr)) {
+                cur_rtp_conn = conn;
+                sequre_req_state = ZRTP_REQ_INITED;
             }
         }
+        if(conn->getConnType() == AmRawConnection::DTLS_CONN) {
+            if(sequre_req_state == REQ_NONE) sequre_req_state = DTLS_REQ_NEED;
+            AmDtlsConnection* connection = dynamic_cast<AmDtlsConnection*>(conn);
+            if(connection) continue;
+            is_client = connection->isClient();
+            if(conn->isAddrConnection(remote_addr)) {
+                try {
+                    connection->initConnection();
+                    sequre_req_state = DTLS_REQ_INITED;
+                } catch(string& error) {
+                    CLASS_ERROR("DTLS connection error: %s", error.c_str());
+                }
+            }
+        }
+    }
+    if(sequre_req_state == DTLS_REQ_NEED) {
+        AmDtlsConnection* connection = new AmDtlsConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr), stream->getDtlsContext(type), is_client);
+        addConnection(connection);
+        try {
+            connection->initConnection();
+        } catch(string& error) {
+            CLASS_ERROR("DTLS connection error: %s", error.c_str());
+        }
+#ifdef WITH_ZRTP
+    } else if(sequre_req_state == ZRTP_REQ_NEED) {
+        cur_rtp_conn = new AmZRTPConnection(this, am_inet_ntop(remote_addr), am_get_port(remote_addr));
+        addConnection(cur_rtp_conn);
+#endif/*WITH_ZRTP*/
     }
     stream->allowStunConnection(this, priority);
 }

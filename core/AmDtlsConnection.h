@@ -193,6 +193,7 @@ public:
         struct sockaddr_storage * recv_addr,
         struct timeval recv_time) override;
     ssize_t send(AmRtpPacket * packet) override;
+    bool isClient() { return is_client; }
 };
 
 #endif/*AM_DTLS_CONNECTION_H*/
