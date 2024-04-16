@@ -1,3 +1,7 @@
+sems (1.131.1) stable; urgency=low
+  * fix DTLS/ZRTP connections creation on ICE trickle
+ -- Michael Furmur <furmur@pm.me>  Tue, 16 Apr 2024 17:48:04 +0300
+
 sems (1.131.0) stable; urgency=low
   * fix ICE roles conflict resolving
  -- Michael Furmur <furmur@pm.me>  Fri, 12 Apr 2024 23:45:24 +0300
