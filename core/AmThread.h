@@ -309,11 +309,13 @@ class AmEventFd
 class AmTimerFd
 {
     int timer_fd;
+    bool active;
 
     int settime(unsigned int umsec, unsigned int repeat_umsec);
 
   public:
     AmTimerFd(unsigned int umsec = 0, bool repeat = true)
+      : active(false)
     {
         if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
             throw string("timerfd. timerfd_create call failed");
@@ -373,6 +375,8 @@ class AmTimerFd
     {
         epoll_ctl(fd,EPOLL_CTL_DEL,timer_fd,nullptr);
     }
+
+    bool is_active() { return active; }
 };
 
 /**

@@ -57,6 +57,7 @@ class SIPRegistrarClient
 {
     int epoll_fd;
     AmTimerFd timer;
+    AmTimerFd postponed_regs_timer;
     AmEventFd stop_event;
     AmCondition<bool> stopped;
 
@@ -94,7 +95,10 @@ class SIPRegistrarClient
     AmDynInvoke* uac_auth_i;
 
     void checkTimeouts();
+    void checkPostponedRegs();
     void onServerShutdown();
+    void doRegistrationWithShaper(AmSIPRegistration &reg);
+
   public:
     SIPRegistrarClient(const string& name);
 

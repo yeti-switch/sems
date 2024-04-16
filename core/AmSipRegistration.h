@@ -35,7 +35,7 @@ using std::string;
 #include "ampi/UACAuthAPI.h"
 #include "AmUriParser.h"
 #include "AmSessionEventHandler.h"
-#include "RegShaper.h"
+#include <chrono>
 
 #include "sip/parse_uri.h"
 
@@ -147,7 +147,7 @@ class AmSIPRegistration
   unsigned int expires_interval;
   bool force_expires_interval;
 
-  RegShaper &shaper;
+  typedef std::chrono::system_clock::time_point timep;
 
   sip_timers_override reg_timers_override;
 
@@ -156,8 +156,7 @@ class AmSIPRegistration
  public:
   AmSIPRegistration(const string& handle,
 		    const SIPRegistrationInfo& info,
-			const string& sess_link,
-			RegShaper &shaper);
+			const string& sess_link);
   ~AmSIPRegistration();
 
   void setRegistrationInfo(const SIPRegistrationInfo& _info);
@@ -168,15 +167,13 @@ class AmSIPRegistration
   void setExpiresInterval(unsigned int desired_expires);
   void setForceExpiresInterval(bool force);
 
-  bool doRegistration(bool skip_shaper = false);
+  bool doRegistration();
   bool doUnregister();
 	
   bool timeToReregister(time_t now_sec);
   bool registerExpired(time_t now_sec);
-  bool postponingExpired(RegShaper::timep now);
   void onRegisterExpired();
   void onRegisterSendTimeout();
-  void onPostponeExpired();
 
   bool registerSendTimeout(time_t now_sec);
 
@@ -206,7 +203,7 @@ class AmSIPRegistration
   time_t reg_begin;
   unsigned int reg_expires;
   time_t reg_send_begin;
-  RegShaper::timep postponed_next_attempt;
+  timep postponed_next_attempt;
 
   string request_contact;
   string reply_contacts;

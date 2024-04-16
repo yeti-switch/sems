@@ -68,7 +68,9 @@ int AmTimerFd::settime(unsigned int umsec, unsigned int repeat_umsec)
     struct itimerspec tmr;
     longlong2timespec(tmr.it_value,umsec);
     longlong2timespec(tmr.it_interval,repeat_umsec);
-    return timerfd_settime(timer_fd,0,&tmr,nullptr);
+    int res = timerfd_settime(timer_fd,0,&tmr,nullptr);
+    active = (res == 0 && (tmr.it_value.tv_sec != 0 || tmr.it_value.tv_nsec != 0));
+    return res;
 }
 
 AmThread::AmThread()

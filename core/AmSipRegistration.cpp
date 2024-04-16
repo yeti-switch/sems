@@ -158,8 +158,7 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg& info)
 AmSIPRegistration::AmSIPRegistration(
     const string& handle,
     const SIPRegistrationInfo& info,
-    const string& sess_link,
-    RegShaper &shaper)
+    const string& sess_link)
   : dlg(this),
     cred(info.domain, info.auth_user, info.pwd),
     info(info),
@@ -168,7 +167,6 @@ AmSIPRegistration::AmSIPRegistration(
     seh(nullptr),
     expires_interval(3600),
     force_expires_interval(false),
-    shaper(shaper),
     active(false),
     remove(false),
     waiting_result(false),
@@ -326,7 +324,7 @@ void AmSIPRegistration::setForceExpiresInterval(bool force)
     force_expires_interval = force;
 }
 
-bool AmSIPRegistration::doRegistration(bool skip_shaper)
+bool AmSIPRegistration::doRegistration()
 {
     if(postponed) {
         ERROR("programming error: attempt to call doRegistration() for postponed registration. "
@@ -335,20 +333,13 @@ bool AmSIPRegistration::doRegistration(bool skip_shaper)
         return false;
     }
 
-    if(!skip_shaper &&
-       shaper.check_rate_limit(info.domain,postponed_next_attempt))
-    {
-        DBG("registration %s(%s): rate limit reached for %s. postpone sending request",
-            handle.c_str(),info.id.c_str(),info.domain.c_str());
-        unregistering = false;
-        postponed = true;
-        return false;
-    }
+    /*auto now = std::chrono::system_clock::now();
+    long value = std::chrono::time_point_cast<std::chrono::milliseconds>(now).time_since_epoch().count();
+    DBG("send register id %s key %s now %ld", info.id.c_str(), info.domain.c_str(), value%100000);*/
 
     bool res = true;
     waiting_result = true;
     unregistering = false;
-    postponed = false;
 
     while(!info.sip_interface_name.empty() && info.sip_interface_name != "default") {
         auto name_it = AmConfig.sip_if_names.find(info.sip_interface_name);
@@ -504,7 +495,6 @@ void AmSIPRegistration::onRegisterExpired()
     error_code = 500;
     error_reason = "register expired";
     error_initiatior = REG_ERROR_LOCAL;
-    doRegistration();
 }
 
 void AmSIPRegistration::onRegisterSendTimeout()
@@ -522,15 +512,6 @@ void AmSIPRegistration::onRegisterSendTimeout()
     DBG("Registration '%s' REGISTER request timeout.",
         (info.user+"@"+info.domain).c_str());
     active = false;
-    doRegistration();
-}
-
-void AmSIPRegistration::onPostponeExpired()
-{
-    DBG("Registration %s(%s) postponing timeout. REGISTER immediately ignoring shaper",
-        handle.c_str(),info.id.c_str());
-    postponed = false;
-    doRegistration(true);
 }
 
 bool AmSIPRegistration::registerSendTimeout(time_t now_sec)
@@ -548,11 +529,6 @@ bool AmSIPRegistration::timeToReregister(time_t now_sec)
 bool AmSIPRegistration::registerExpired(time_t now_sec)
 {
     return ((reg_begin+reg_expires) < static_cast<unsigned int>(now_sec));
-}
-
-bool AmSIPRegistration::postponingExpired(RegShaper::timep now)
-{
-    return now >= postponed_next_attempt;
 }
 
 void AmSIPRegistration::onSipReply(const AmSipRequest& req,

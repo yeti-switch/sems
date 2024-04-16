@@ -9,26 +9,31 @@
 
 using std::string;
 using std::map;
+using std::chrono::milliseconds;
+using std::chrono::system_clock;
 
 class RegShaper {
   public:
-    typedef std::chrono::system_clock::time_point timep;
+    typedef system_clock::time_point timep;
     typedef string ThrottlingHashKey;
   private:
     typedef timep ThrottlingHashValue;
     typedef map<ThrottlingHashKey,ThrottlingHashValue> ThrottlingHash;
-    typedef map<ThrottlingHashKey,std::chrono::milliseconds> ThrottlingIntervalsHash;
+    typedef map<ThrottlingHashKey,milliseconds> ThrottlingIntervalsHash;
 
     bool enabled;
-    std::chrono::milliseconds min_interval;
+    milliseconds min_interval;
     ThrottlingHash throttling_hash;
     ThrottlingIntervalsHash throttling_intervals_hash;
+    ThrottlingHashValue global_last_req_time;
+
+    milliseconds diff(const timep& tp1, const timep& tp2);
 
   public:
 
     RegShaper()
       : enabled(false)
-      , min_interval(std::chrono::milliseconds::zero())
+      , min_interval(milliseconds::zero())
     {}
 
     /**
@@ -52,14 +57,19 @@ class RegShaper {
 
     void set_min_interval(int msec)
     {
-        min_interval = std::chrono::milliseconds(msec);
+        min_interval = milliseconds(msec);
         enabled = true;
+    }
+
+    int get_min_interval()
+    {
+        return min_interval.count();
     }
 
     void set_key_min_interval(const string& key, int msec)
     {
-        auto interval = std::chrono::milliseconds(msec);
-        if (min_interval != std::chrono::milliseconds::zero() &&
+        auto interval = milliseconds(msec);
+        if (min_interval != milliseconds::zero() &&
             min_interval > interval)
         {
             WARN("global min interval(%ld) is greater than min interval(%ld) for key %s",

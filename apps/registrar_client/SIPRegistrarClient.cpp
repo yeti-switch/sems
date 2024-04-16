@@ -36,10 +36,10 @@
 
 #include <unistd.h>
 
-#define CFG_OPT_NAME_SHAPER_MIN_INTERVAL "min_interval_per_domain_msec"
-#define CFG_OPT_NAME_DEFAULT_EXPIRES "default_expires"
-#define CFG_OPT_NAME_EXPORT_METRICS "export_metrics"
-#define CFG_OPT_NAME_MIN_INTERVAL_MSEC "min_interval_msec"
+#define CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC   "min_interval_per_domain_msec"
+#define CFG_OPT_NAME_MIN_INTERVAL_MSEC              "min_interval_msec"
+#define CFG_OPT_NAME_DEFAULT_EXPIRES                "default_expires"
+#define CFG_OPT_NAME_EXPORT_METRICS                 "export_metrics"
 
 #define DEFAULT_EXPIRES 1800
 
@@ -130,8 +130,8 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
 int SIPRegistrarClient::configure(const std::string& config)
 {
     cfg_opt_t opt[] = {
-        CFG_INT(CFG_OPT_NAME_SHAPER_MIN_INTERVAL, 0, CFGF_NODEFAULT),
-        CFG_FLOAT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT),
+        CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC, 0, CFGF_NODEFAULT),
+        CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT),
         CFG_INT(CFG_OPT_NAME_DEFAULT_EXPIRES, DEFAULT_EXPIRES, CFGF_NONE),
         CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE),
         CFG_END()
@@ -151,29 +151,17 @@ int SIPRegistrarClient::configure(const std::string& config)
         return -1;
     }
 
-    if(cfg_size(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL)) {
-        int i = cfg_getint(cfg, CFG_OPT_NAME_SHAPER_MIN_INTERVAL);
+    if(cfg_size(cfg, CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC)) {
+        int i = cfg_getint(cfg, CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC);
         if(i) {
             DBG("set shaper min interval per domain to %dmsec",i);
-            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
-                WARN("shaper min interval per domain %dmsec is less than timer interval %dmsec. "
-                     "set it to timer interval",
-                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
-                i = TIMEOUT_CHECKING_INTERVAL/1000;
-            }
             shaper_min_interval_per_domain = i;
         }
     }
     if(cfg_size(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC)) {
-        int i = cfg_getfloat(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC)*1000;
+        int i = cfg_getint(cfg, CFG_OPT_NAME_MIN_INTERVAL_MSEC);
         if(i) {
             DBG("set shaper global min interval to %dmsec",i);
-            if(i < (TIMEOUT_CHECKING_INTERVAL/1000)) {
-                WARN("shaper global min interval %dmsec is less than timer interval %dmsec. "
-                     "set it to timer interval",
-                     i,(TIMEOUT_CHECKING_INTERVAL/1000));
-                i = TIMEOUT_CHECKING_INTERVAL/1000;
-            }
             shaper.set_min_interval(i);
         }
     }
@@ -248,6 +236,9 @@ void SIPRegistrarClient::run()
             if(f==timer){
                 checkTimeouts();
                 timer.read();
+            } else if(f==postponed_regs_timer){
+                checkPostponedRegs();
+                postponed_regs_timer.read();
             } else if(f== -queue_fd()){
                 clear_pending();
                 processEvents();
@@ -272,25 +263,24 @@ void SIPRegistrarClient::checkTimeouts()
 {
     struct timeval now;
     gettimeofday(&now, NULL);
-    RegShaper::timep now_point(std::chrono::system_clock::now());
     reg_mut.lock();
     vector<string> remove_regs;
+    bool is_postponed_reg_exists = false;
 
-    for (map<string, AmSIPRegistration*>::iterator it = registrations.begin();
-        it != registrations.end(); it++)
+    for (auto it = registrations.begin(); it != registrations.end(); it++)
     {
         AmSIPRegistration* reg = it->second;
+
         if (reg->postponed) {
-            if(reg->postponingExpired(now_point)) {
-                reg->onPostponeExpired();
-            }
+            // ignore postponed: it will be handled in checkPostponedRegs()
         } else if (reg->active) {
             if (reg->registerExpired(now.tv_sec)) {
                 reg->onRegisterExpired();
+                doRegistrationWithShaper(*reg);
             } else if (!reg->waiting_result &&
                        reg->timeToReregister(now.tv_sec))
             {
-                reg->doRegistration();
+                doRegistrationWithShaper(*reg);
             }
         } else if (reg->remove) {
             remove_regs.push_back(it->first);
@@ -298,15 +288,48 @@ void SIPRegistrarClient::checkTimeouts()
                    reg->registerSendTimeout(now.tv_sec))
         {
             reg->onRegisterSendTimeout();
+            doRegistrationWithShaper(*reg);
         }
+
+        is_postponed_reg_exists = is_postponed_reg_exists || reg->postponed;
     }
 
-    for (vector<string>::iterator it = remove_regs.begin();
-         it != remove_regs.end(); it++)
+    for(auto it = remove_regs.begin(); it != remove_regs.end(); it++)
     {
         AmSIPRegistration *reg = remove_reg_unsafe(*it);
         if (reg)
             delete reg;
+    }
+
+    reg_mut.unlock();
+
+    // reset postponed_regs_timer if needed
+    if(is_postponed_reg_exists) {
+        if (postponed_regs_timer.is_active() == false) {
+            postponed_regs_timer.set(shaper.get_min_interval()*1000);
+        }
+    } else {
+        if (postponed_regs_timer.is_active()) {
+            postponed_regs_timer.set(0, false);
+        }
+    }
+}
+
+void SIPRegistrarClient::checkPostponedRegs()
+{
+    RegShaper::timep now_point(std::chrono::system_clock::now());
+    reg_mut.lock();
+    for (auto it = registrations.begin(); it != registrations.end(); it++)
+    {
+        AmSIPRegistration* reg = it->second;
+
+        if(!reg->postponed || now_point < reg->postponed_next_attempt)
+            continue;
+
+        DBG("Registration %s(%s) postponing timeout. Do REGISTER.",
+            reg->getHandle().c_str(), reg->getInfo().id.c_str());
+        reg->postponed = false;
+        reg->doRegistration();
     }
 
     reg_mut.unlock();
@@ -327,6 +350,9 @@ int SIPRegistrarClient::onLoad()
     timer.set(TIMEOUT_CHECKING_INTERVAL);
     timer.link(epoll_fd);
 
+    postponed_regs_timer.set(0, false);
+    postponed_regs_timer.link(epoll_fd);
+
     AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
 
     instance()->start();
@@ -343,13 +369,26 @@ void SIPRegistrarClient::onServerShutdown()
 {
     // TODO: properly wait until unregistered, with timeout
     DBG("shutdown SIP registrar client: deregistering");
-    for (std::map<std::string, AmSIPRegistration*>::iterator it=
-         registrations.begin(); it != registrations.end(); it++)
+    for(auto it = registrations.begin(); it != registrations.end(); it++)
     {
         it->second->doUnregister();
         delete it->second;
         AmEventDispatcher::instance()->delEventQueue(it->first);
     }
+}
+
+void SIPRegistrarClient::doRegistrationWithShaper(AmSIPRegistration &reg)
+{
+    if(shaper.check_rate_limit(reg.getInfo().domain, reg.postponed_next_attempt))
+    {
+        DBG("registration %s(%s): rate limit reached for %s. postpone sending request",
+            reg.getHandle().c_str(), reg.getInfo().id.c_str(), reg.getInfo().domain.c_str());
+        reg.unregistering = false;
+        reg.postponed = true;
+        return;
+    }
+
+    reg.doRegistration();
 }
 
 void SIPRegistrarClient::process(AmEvent* ev) 
@@ -406,8 +445,7 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
     AmSIPRegistration* reg =
         new AmSIPRegistration(new_reg->handle,
                               new_reg->info,
-                              new_reg->sess_link,
-                              shaper);
+                              new_reg->sess_link);
 
     if (uac_auth_i != NULL) {
         DBG("enabling UAC Auth for new registration.");
@@ -442,7 +480,7 @@ void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
     if(!add_reg(new_reg->handle, reg))
         return;
 
-    reg->doRegistration();
+    doRegistrationWithShaper(*reg);
 }
 
 void SIPRegistrarClient::onRemoveRegistration(SIPRemoveRegistrationEvent* reg)
@@ -605,8 +643,7 @@ AmSIPRegistration* SIPRegistrarClient::get_reg(const string& reg_id)
     DBG("get registration '%s'", reg_id.c_str());
     AmSIPRegistration* res = NULL;
     reg_mut.lock();
-    map<string, AmSIPRegistration*>::iterator it =
-        registrations.find(reg_id);
+    auto it = registrations.find(reg_id);
     if (it!=registrations.end())
         res = it->second;
     reg_mut.unlock();
@@ -618,8 +655,7 @@ AmSIPRegistration* SIPRegistrarClient::get_reg_unsafe(const string& reg_id)
 {
     //	DBG("get registration_unsafe '%s'", reg_id.c_str());
     AmSIPRegistration* res = NULL;
-    map<string, AmSIPRegistration*>::iterator it =
-        registrations.find(reg_id);
+    auto it = registrations.find(reg_id);
     if (it!=registrations.end())
         res = it->second;
     //     DBG("get registration_unsafe : res = '%ld' (this = %ld)", (long)res, (long)this);
@@ -638,8 +674,7 @@ AmSIPRegistration* SIPRegistrarClient::remove_reg_unsafe(const string& reg_id)
 {
     DBG("removing registration %s", reg_id.c_str());
     AmSIPRegistration* reg = NULL;
-    map<string, AmSIPRegistration*>::iterator it =
-        registrations.find(reg_id);
+    auto it = registrations.find(reg_id);
     if (it!=registrations.end()) {
         reg = it->second;
         registrations.erase(it);
@@ -654,8 +689,7 @@ bool SIPRegistrarClient::add_reg(const string& reg_id, AmSIPRegistration* new_re
         reg_id.c_str(), new_reg->getInfo().id.c_str());
     AmSIPRegistration* reg = NULL;
     reg_mut.lock();
-    map<string, AmSIPRegistration*>::iterator it =
-        registrations.find(reg_id);
+    auto it = registrations.find(reg_id);
     if (it!=registrations.end()) {
         reg = it->second;
     }
@@ -1086,8 +1120,7 @@ void SIPRegistrarClient::listRegistrations(const AmArg&, AmArg& ret)
 
     RegShaper::timep now(std::chrono::system_clock::now());
 
-    for (map<string, AmSIPRegistration*>::iterator it =
-         registrations.begin(); it != registrations.end(); it++)
+    for(auto it = registrations.begin(); it != registrations.end(); it++)
     {
         reg2arg(it, ret, now);
     }
@@ -1099,7 +1132,7 @@ void SIPRegistrarClient::showRegistration(const AmArg& args, AmArg& ret)
     string handle = args.get(0).asCStr();
 
     AmLock l(reg_mut);
-    map<string, AmSIPRegistration*>::iterator it = registrations.find(handle);
+    auto it = registrations.find(handle);
     ret.assertArray();
     if(it!=registrations.end())
         reg2arg(it,ret,std::chrono::system_clock::now());
