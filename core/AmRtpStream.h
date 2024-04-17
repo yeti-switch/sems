@@ -400,6 +400,7 @@ class AmRtpStream
 
     virtual void initIP4Transport();
     virtual void initIP6Transport();
+    void setCurrentTransport(AmMediaTransport* transport);
   public:
 
     /** Mute */

@@ -4,6 +4,7 @@
 #include "AmRtpSession.h"
 #include "AmRtpConnection.h"
 #include "AmDtlsConnection.h"
+#include "AmStunConnection.h"
 #include "AmSrtpConnection.h"
 #include "AmArg.h"
 #include "AmSdp.h"
@@ -127,7 +128,7 @@ public:
     ssize_t send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
     int sendmsg(unsigned char* buf, int size);
 
-    void allowStunConnection(sockaddr_storage* remote_addr, int priority);
+    void allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);
     void dtlsSessionActivated(uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     void dtls_alert(string alert);
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
@@ -161,6 +162,7 @@ public:
     */
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
     void getIceCandidate(SdpMedia& media);
+    uint32_t getPriorityCurrentConnection();
     
     void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner);
     void initRtpConnection(const string& remote_address, int remote_port);
@@ -280,6 +282,8 @@ private:
     vector<AmStreamConnection*> connections;
     AmMutex                     connections_mut;
     AmMutex                     stream_mut;
+
+    map<uint32_t, sockaddr_storage> allowed_ice_addrs;
 
     trsp_acl media_acl;
 };

@@ -560,6 +560,18 @@ void AmRtpStream::initIP6Transport()
     }
 }
 
+void AmRtpStream::setCurrentTransport(AmMediaTransport* transport)
+{
+    if(transport->getTransportType() == RTP_TRANSPORT) {
+        cur_rtp_trans = transport;
+        if(!cur_rtcp_trans && multiplexing) {
+            cur_rtcp_trans = transport;
+        }
+    } else if(transport->getTransportType() == RTCP_TRANSPORT) {
+        cur_rtcp_trans = transport;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with sdp message(answer, offer)
 
@@ -1110,25 +1122,25 @@ void AmRtpStream::onSymmetricRtp()
 }
 
 
-void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int priority)
+void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int)
 {
-    if(transport->getTransportType() == RTP_TRANSPORT) {
-        cur_rtp_trans = transport;
-        if(!cur_rtcp_trans && multiplexing) {
-            cur_rtcp_trans = transport;
-        }
-    } else if(transport->getTransportType() == RTCP_TRANSPORT) {
-        cur_rtcp_trans = transport;
-    }
+    setCurrentTransport(transport);
 
+    uint32_t current_ice_priority = transport->getPriorityCurrentConnection();
     for(auto tr : ip4_transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
             tr->updateStunTimers();
+            if(tr->getPriorityCurrentConnection() > current_ice_priority) {
+                setCurrentTransport(tr);
+            }
         }
     }
     for(auto tr : ip6_transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
             tr->updateStunTimers();
+            if(tr->getPriorityCurrentConnection() > current_ice_priority) {
+                setCurrentTransport(tr);
+            }
         }
     }
 }

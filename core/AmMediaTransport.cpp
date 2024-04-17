@@ -1,8 +1,5 @@
 #include "AmMediaTransport.h"
 #include "AmFaxImage.h"
-#include "AmRtpConnection.h"
-#include "AmStunConnection.h"
-#include "AmDtlsConnection.h"
 #include "AmZrtpConnection.h"
 #include "AmRtpReceiver.h"
 #include "AmRtpPacket.h"
@@ -491,6 +488,12 @@ void AmMediaTransport::getIceCandidate(SdpMedia& media)
     ice_cred.lpriority = candidate.priority;
 }
 
+uint32_t AmMediaTransport::getPriorityCurrentConnection()
+{
+    if(allowed_ice_addrs.empty()) return 0;
+    return allowed_ice_addrs.rbegin()->first;
+}
+
 void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner)
 {
     CLASS_DBG("initIceConnection() stream:%p, eq:%d", to_void(stream), seq);
@@ -848,10 +851,9 @@ void AmMediaTransport::removeConnection(AmStreamConnection* conn)
     }
 }
 
-void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int priority)
+void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
 {
     CLASS_DBG("allow stun connection by addr %s", am_inet_ntop(remote_addr).c_str());
-    //TODO(alexey.v): set current connections by candidate priority
     enum {
         CONN_STATE_NONE,
         CONN_STATE_INITIALIZED,
@@ -861,8 +863,11 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
 #endif
     } secure_connection_state = CONN_STATE_NONE;
 
+    allowed_ice_addrs.emplace(priority, *remote_addr);
+
     bool is_dtls_client = false;
     AmDtlsConnection* dtls_connection;
+    sockaddr_storage target_addr = allowed_ice_addrs.rbegin()->second;
 
     for(auto& conn : connections) {
         switch(conn->getConnType()) {
@@ -918,11 +923,11 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, int pr
             } //switch(secure_connection_state)
 
             break;
+        case AmRawConnection::RTP_CONN:
+            if(conn->isAddrConnection(&target_addr))
+                cur_rtp_conn = conn;
         default: break;
         } //switch(conn->getConnType())
-
-        if(secure_connection_state == CONN_STATE_INITIALIZED)
-            break;
     } //for(auto& conn : connections)
 
     //create connection for ICE trickle
@@ -1272,8 +1277,8 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
 
     if(!s_conn) {
         if(ctype == AmStreamConnection::STUN_CONN && stream->isIceStream()) {
-            // add new pair connection with priority 0
-            AmStunConnection* conn = new AmStunConnection(this, am_inet_ntop(&addr), am_get_port(&addr), ice_cred.lpriority);
+            uint32_t lpriority = (ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - type);
+            AmStunConnection* conn = new AmStunConnection(this, am_inet_ntop(&addr), am_get_port(&addr), lpriority);
             if(cur_rtp_conn) {
                 conn->setDependentConnection(cur_rtp_conn);
             }
