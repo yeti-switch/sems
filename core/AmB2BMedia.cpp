@@ -288,7 +288,10 @@ bool StreamData::initStream(PlayoutType playout_type,
         // there still can be payloads to be relayed (if all possible payloads are
         // to be relayed this needs not to be an error)
     }
-    stream->setOnHold(muted);
+
+    /* prioritize stream disabled sending over StreamData::muted */
+    if (!stream->getOnHold())
+        stream->setOnHold(muted);
 
     // NOTE: commented out because of incorrect overriding of the stream state negotiated by SDP
     // this change breaks setReceiving(bool receiving_a, bool receiving_b) behavior
