@@ -294,9 +294,6 @@ class AmRtpStream
     AmMediaTransport* cur_rtcp_trans;
     AmMediaTransport* cur_udptl_trans;
 
-    /** mute && port == 0 */
-    bool           hold;
-
     /** marker flag */
     bool           begin_talk;
 
@@ -319,7 +316,9 @@ class AmRtpStream
     RtpEventQueue   rtp_ev_qu;
     AmMutex         receive_mut;
 
-    /** should we receive packets? if not -> drop */
+    /** should we send packets? affects SDP media send indication */
+    bool sending;
+    /** should we receive packets? if not -> drop. affect SDP media recv indication */
     bool receiving;
 
     /** if relay_stream is initialized, received RTP is relayed there */

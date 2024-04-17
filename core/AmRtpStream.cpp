@@ -37,7 +37,6 @@
 #include "AmDtmfDetector.h"
 #include "rtp/telephone_event.h"
 #include "amci/codecs.h"
-#include "AmJitterBuffer.h"
 
 #include "sip/resolver.h"
 #include "sip/ip_util.h"
@@ -146,8 +145,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
     cur_udptl_trans(0),
-    hold(false),
     monitor_rtp_timeout(true),
+    sending(true),
     receiving(true),
     relay_enabled(false),
     relay_raw(false),
@@ -573,7 +572,7 @@ void AmRtpStream::getSdp(SdpMedia& m)
 
     m.transport = transport;
 
-    m.send = !hold;
+    m.send = sending;
     m.recv = receiving;
     m.dir = SdpMedia::DirBoth;
 }
@@ -947,10 +946,10 @@ int AmRtpStream::init(const AmSdp& local,
     bool relay_is_muted = rtptrans->isMute(AmStreamConnection::RAW_CONN);
 
     CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d "
-              "hold:%d remote_media.port:%u relay_is_muted:%d, conn_mute: %d",
+              "sending:%d remote_media.port:%u relay_is_muted:%d, conn_mute: %d",
         local_media.recv, local_media.send,
         remote_media.recv, remote_media.send,
-        hold, remote_media.port, relay_is_muted, ismute);
+        sending, remote_media.port, relay_is_muted, ismute);
 
     if(local_media.recv && remote_media.send) {
         resume();
@@ -958,7 +957,7 @@ int AmRtpStream::init(const AmSdp& local,
         pause();
     }
 
-    if(local_media.send && !hold &&
+    if(local_media.send && sending &&
        (remote_media.port != 0) &&
        !relay_is_muted && !ismute)
     {
@@ -1205,7 +1204,7 @@ void AmRtpStream::zrtpSessionActivated(const bzrtpSrtpSecrets_t* srtpSecrets)
 
 int AmRtpStream::send_zrtp(unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     AmRtpPacket rp;
@@ -1457,7 +1456,7 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 //                   send functions
 int AmRtpStream::send_udptl(unsigned int ts, unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     AmRtpPacket rp;
@@ -1535,7 +1534,7 @@ unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
 
 int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     if(process_dtmf_queue(user_ts))
@@ -1565,7 +1564,7 @@ void AmRtpStream::relay(AmRtpPacket* p)
 {
     // not yet initialized
     // or muted/on-hold
-    if (mute || hold)
+    if (mute || (!sending))
         return;
 
     if(!cur_rtp_trans) return;
@@ -1810,12 +1809,12 @@ void AmRtpStream::resume()
 
 void AmRtpStream::setOnHold(bool on_hold)
 {
-    hold = on_hold;
+    sending = !on_hold;
 }
 
 bool AmRtpStream::getOnHold()
 {
-    return hold;
+    return !sending;
 }
 
 void AmRtpStream::setMonitorRTPTimeout(bool m)
@@ -2202,8 +2201,8 @@ void AmRtpStream::debug()
         CLASS_DBG("\tno relay");
     }
 
-    CLASS_DBG("\tmute: %s, hold: %s, receiving: %s",
-        BOOL_STR(mute), BOOL_STR(hold), BOOL_STR(receiving));
+    CLASS_DBG("\tmute: %s, sending: %s, receiving: %s",
+        BOOL_STR(mute), BOOL_STR(sending), BOOL_STR(receiving));
 #undef BOOL_STR
 }
 
@@ -2248,7 +2247,7 @@ void AmRtpStream::getInfo(AmArg &ret){
     }
 
     ret["mute"] = mute;
-    ret["hold"] = hold;
+    ret["sending"] = sending;
     ret["receiving"] = receiving;
 
     AmArg& transports = ret["transports"];

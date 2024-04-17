@@ -338,7 +338,7 @@ int AmRtpAudio::put(
 
     if(!size) return 0;
 
-    if(mute || hold) return 0;
+    if(mute || (!sending)) return 0;
 
     if(!fmt.get())
       return 0;
@@ -378,7 +378,7 @@ void AmRtpAudio::put_on_idle(unsigned long long system_ts)
     last_send_ts_i = true;
     last_send_ts = system_ts;
 
-    if (mute || hold)
+    if (mute || (!sending))
         return;
 
     update_user_ts(system_ts);
