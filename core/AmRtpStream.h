@@ -316,6 +316,8 @@ class AmRtpStream
     RtpEventQueue   rtp_ev_qu;
     AmMutex         receive_mut;
 
+    /** precomputed or forced stream mute state */
+    bool mute;
     /** should we send packets? affects SDP media send indication */
     bool sending;
     /** should we receive packets? if not -> drop. affect SDP media recv indication */
@@ -400,9 +402,6 @@ class AmRtpStream
     virtual void initIP4Transport();
     virtual void initIP6Transport();
   public:
-
-    /** Mute */
-    bool mute;
 
     /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
     bool force_receive_dtmf;
@@ -639,6 +638,9 @@ class AmRtpStream
 
     /** get whether RTP stream is on hold  */
     bool getOnHold();
+
+    /** force stream mute flag */
+    void setMute(bool mute) { this->mute = mute; }
 
     /** setter for monitor_rtp_timeout */
     void setMonitorRTPTimeout(bool m);
