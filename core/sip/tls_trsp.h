@@ -184,11 +184,12 @@ class tls_server_socket : public trsp_server_socket
 public:
     struct tls_statistics : public tcp_server_socket::tcp_statistics
     {
-        AtomicCounter& tlsConnectedCount;
+        AtomicCounter& tlsInConnectedCount;
+        AtomicCounter& tlsOutConnectedCount;
         tls_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~tls_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incTlsConnected();
+        void incTlsConnected(bool is_client);
     };
 
     tls_server_socket(unsigned short if_num, unsigned short proto_idx,

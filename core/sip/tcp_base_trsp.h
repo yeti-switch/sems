@@ -248,9 +248,8 @@ class stream_statistics
 public:
     struct stream_st_base
     {
-        AtomicCounter& countActiveConnections;
-        AtomicCounter& countClientConnections;
-        AtomicCounter& countServerConnections;
+        AtomicCounter& countOutConnections;
+        AtomicCounter& countInConnections;
         AtomicCounter& sipParseErrors;
         stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         virtual ~stream_st_base(){}

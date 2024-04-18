@@ -1032,15 +1032,15 @@ void trsp::on_stop()
 }
 
 stream_statistics::stream_st_base::stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
-: countActiveConnections(stat_group(Gauge, "core", "active_connections").addAtomicCounter()
+: countOutConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
+            .addLabel("direction", "out")
+            .addLabel("state", "pending")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-, countClientConnections(stat_group(Gauge, "core", "client_connections").addAtomicCounter()
-            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
-            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-, countServerConnections(stat_group(Gauge, "core","server_connections").addAtomicCounter()
+, countInConnections(stat_group(Gauge, "core","connections").addAtomicCounter()
+            .addLabel("direction", "in")
+            .addLabel("state", "pending")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
@@ -1054,12 +1054,9 @@ stream_statistics::stream_st_base::stream_st_base(trsp_socket::socket_transport 
 void stream_statistics::stream_st_base::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
     if(remove) {
-        countActiveConnections.dec();
-        if(socket->is_client()) countClientConnections.dec();
-        else countServerConnections.dec();
+        if(socket->is_client()) countOutConnections.dec();
+        else countInConnections.dec();
     } else {
-        countActiveConnections.inc();
-        if(socket->is_client()) countClientConnections.inc();
-        else countServerConnections.inc();
+        if(socket->is_client()) countOutConnections.inc();
     }
 }

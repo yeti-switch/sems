@@ -479,7 +479,7 @@ void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary&
         get_peer_port());
 
     tls_server_socket::tls_statistics* tls_stats = dynamic_cast<tls_server_socket::tls_statistics*>(server_sock->get_statistics());
-    if(tls_stats) tls_stats->incTlsConnected();
+    if(tls_stats) tls_stats->incTlsConnected(is_client());
 
     tls_connected = true;
     ciphersuite = session.ciphersuite_code();
@@ -578,23 +578,42 @@ tls_server_socket::tls_server_socket(
 
 tls_server_socket::tls_statistics::tls_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
 : tcp_server_socket::tcp_statistics(transport, if_num, proto_idx)
-, tlsConnectedCount(stat_group(Gauge, "core", "tls_connected").addAtomicCounter()
+, tlsInConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+            .addLabel("direction", "in")
+            .addLabel("state", "tls_connected")
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+, tlsOutConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+            .addLabel("direction", "out")
+            .addLabel("state", "tls_connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
 
 void tls_server_socket::tls_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
-    tcp_server_socket::tcp_statistics::changeCountConnection(remove, socket);
     tls_trsp_socket* tls_socket = dynamic_cast<tls_trsp_socket*>(socket);
-    if(!tls_socket) return;
-    if(remove && tls_socket->is_tls_connected())
-        tlsConnectedCount.dec();
+    assert(tls_socket);
+    if(remove && tls_socket->is_tls_connected()) {
+        if(socket->is_client())
+            tlsOutConnectedCount.dec();
+        else
+            tlsInConnectedCount.dec();
+    } else {
+        tcp_server_socket::tcp_statistics::changeCountConnection(remove, socket);
+    }
 }
 
-void tls_server_socket::tls_statistics::incTlsConnected()
+void tls_server_socket::tls_statistics::incTlsConnected(bool is_client)
 {
-    tlsConnectedCount.inc();
+    if(is_client) {
+        tlsOutConnectedCount.inc();
+        clientOutConnectedCount.dec();
+    } else {
+        tlsInConnectedCount.inc();
+        clientInConnectedCount.dec();
+    }
 }
 
 void tls_cleanup()

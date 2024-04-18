@@ -64,7 +64,9 @@ class tcp_server_socket: public trsp_server_socket
 public:
     class tcp_statistics : public stream_statistics::stream_st_base
     {
-        AtomicCounter& clientConnectedCount;
+    protected:
+        AtomicCounter& clientOutConnectedCount;
+        AtomicCounter& clientInConnectedCount;
     public:
         tcp_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~tcp_statistics(){}

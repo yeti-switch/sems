@@ -209,11 +209,12 @@ class ws_server_socket: public trsp_server_socket
 public:
     struct ws_statistics : public tcp_server_socket::tcp_statistics
     {
-        AtomicCounter& wsConnectedCount;
+        AtomicCounter& wsInConnectedCount;
+        AtomicCounter& wsOutConnectedCount;
         ws_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~ws_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incWsConnected();
+        void incWsConnected(bool client);
     };
 
   ws_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
@@ -226,11 +227,12 @@ class wss_server_socket: public trsp_server_socket
 public:
     struct wss_statistics : public tls_server_socket::tls_statistics
     {
-        AtomicCounter& wsConnectedCount;
+        AtomicCounter& wsInConnectedCount;
+        AtomicCounter& wsOutConnectedCount;
         wss_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~wss_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incWsConnected();
+        void incWsConnected(bool client);
     };
 
   wss_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);

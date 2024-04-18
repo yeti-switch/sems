@@ -90,19 +90,35 @@ tcp_server_socket::tcp_server_socket(
 
 tcp_server_socket::tcp_statistics::tcp_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
   : stream_statistics::stream_st_base(transport, if_num, proto_idx)
-  , clientConnectedCount(stat_group(Gauge, "core", "client_connected").addAtomicCounter()
+  , clientOutConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+            .addLabel("direction", "out")
+            .addLabel("state", "connected")
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+  , clientInConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+            .addLabel("direction", "in")
+            .addLabel("state", "connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
 
 void tcp_server_socket::tcp_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
-    if(remove && socket->is_client() && socket->is_connected())
-        clientConnectedCount.inc();
-    stream_st_base::changeCountConnection(remove, socket);
+    if(!remove && !socket->is_client()) {
+        clientInConnectedCount.inc();
+    } else if(remove && socket->is_connected()) {
+        if(socket->is_client())
+            clientOutConnectedCount.dec();
+        else
+            clientInConnectedCount.dec();
+    } else {
+        stream_st_base::changeCountConnection(remove, socket);
+    }
 }
 
 void tcp_server_socket::tcp_statistics::incClientConnected()
 {
-    clientConnectedCount.inc();
+    clientOutConnectedCount.inc();
+    countOutConnections.dec();
 }
