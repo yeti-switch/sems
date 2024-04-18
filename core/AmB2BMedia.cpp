@@ -276,8 +276,6 @@ bool StreamData::initStream(PlayoutType playout_type,
     // TODO: try to init only in case there are some payloads which can't be relayed
     stream->forceSdpMediaIndex(media_idx);
 
-    stream->setOnHold(false); // just hack to do correctly mute detection in stream->init
-
     if (stream->init(local_sdp, remote_sdp, sdp_offer_owner, force_symmetric_rtp) == 0) {
         stream->setPlayoutType(playout_type);
         initialized = true;
@@ -290,7 +288,10 @@ bool StreamData::initStream(PlayoutType playout_type,
         // there still can be payloads to be relayed (if all possible payloads are
         // to be relayed this needs not to be an error)
     }
-    stream->setOnHold(muted);
+
+    /* prioritize stream disabled sending over StreamData::muted */
+    if (!stream->getOnHold())
+        stream->setOnHold(muted);
 
     // NOTE: commented out because of incorrect overriding of the stream state negotiated by SDP
     // this change breaks setReceiving(bool receiving_a, bool receiving_b) behavior

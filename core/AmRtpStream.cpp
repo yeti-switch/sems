@@ -37,7 +37,6 @@
 #include "AmDtmfDetector.h"
 #include "rtp/telephone_event.h"
 #include "amci/codecs.h"
-#include "AmJitterBuffer.h"
 
 #include "sip/resolver.h"
 #include "sip/ip_util.h"
@@ -146,8 +145,9 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
     cur_udptl_trans(0),
-    hold(false),
     monitor_rtp_timeout(true),
+    mute(false),
+    sending(true),
     receiving(true),
     relay_enabled(false),
     relay_raw(false),
@@ -165,7 +165,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     active(false),
     multiplexing(false),
     reuse_media_trans(true),
-    mute(false),
     force_receive_dtmf(false),
     rtp_endpoint_learned_notified(false)
 {
@@ -585,7 +584,7 @@ void AmRtpStream::getSdp(SdpMedia& m)
 
     m.transport = transport;
 
-    m.send = !hold;
+    m.send = sending;
     m.recv = receiving;
     m.dir = SdpMedia::DirBoth;
 }
@@ -881,7 +880,7 @@ int AmRtpStream::init(const AmSdp& local,
     int rtcp_port = static_cast<int>(remote_media.rtcp_port ?
         remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1));
 
-    bool ismute = false;
+    bool connection_is_muted = false;
     try {
         if(remote_media.is_use_ice()) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
@@ -897,7 +896,7 @@ int AmRtpStream::init(const AmSdp& local,
             cur_rtp_trans->initSrtpConnection(address, port, local_media, remote_media);
             if(cur_rtcp_trans != cur_rtp_trans)
                 cur_rtcp_trans->initSrtpConnection(rtcp_address, rtcp_port, local_media, remote_media);
-            ismute = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
+            connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
             if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
@@ -906,16 +905,16 @@ int AmRtpStream::init(const AmSdp& local,
                 if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
                 cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
             }
-            ismute = cur_rtp_trans->isMute(AmStreamConnection::DTLS_CONN);
+            connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::DTLS_CONN);
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
             cur_udptl_trans->initUdptlConnection(address, port);
-            ismute = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
+            connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
             if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
-            ismute = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
+            connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
 #ifdef WITH_ZRTP
         } else if(isZrtpEnabled() && AmConfig.enable_srtp) {
                 if(remote_media.zrtp_hash.is_use) {
@@ -924,7 +923,7 @@ int AmRtpStream::init(const AmSdp& local,
                 cur_rtp_trans->initZrtpConnection(address, port);
                 if(cur_rtcp_trans != cur_rtp_trans)
                     cur_rtcp_trans->initRtpConnection(address, port);
-                ismute = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
+                connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
 
                 RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(
                     &AmConfig.getMediaProtoInfo(cur_rtp_trans->getLocalIf(), cur_rtp_trans->getLocalProtoId()));
@@ -940,7 +939,7 @@ int AmRtpStream::init(const AmSdp& local,
             if(cur_rtcp_trans != cur_rtp_trans) {
                 cur_rtcp_trans->initRtpConnection(rtcp_address, rtcp_port);
             }
-            ismute = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
+            connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
         }
     } catch(string& error) {
         log_demangled_stacktrace(L_ERR);
@@ -959,10 +958,10 @@ int AmRtpStream::init(const AmSdp& local,
     bool relay_is_muted = rtptrans->isMute(AmStreamConnection::RAW_CONN);
 
     CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d "
-              "hold:%d remote_media.port:%u relay_is_muted:%d, conn_mute: %d",
+              "sending:%d remote_media.port:%u relay_is_muted:%d, conn_mute: %d",
         local_media.recv, local_media.send,
         remote_media.recv, remote_media.send,
-        hold, remote_media.port, relay_is_muted, ismute);
+        sending, remote_media.port, relay_is_muted, connection_is_muted);
 
     if(local_media.recv && remote_media.send) {
         resume();
@@ -970,15 +969,13 @@ int AmRtpStream::init(const AmSdp& local,
         pause();
     }
 
-    if(local_media.send && !hold &&
-       (remote_media.port != 0) &&
-       !relay_is_muted && !ismute)
-    {
-        mute = false;
-    } else {
-        mute = true;
-    }
-    CLASS_DBG("mute = %d",mute);
+    mute =
+        (!local_media.send) ||
+        (remote_media.port == 0) ||
+        relay_is_muted ||
+        connection_is_muted;
+
+    CLASS_DBG("mute = %d", mute);
 
     gettimeofday(&rtp_stats.start, nullptr);
     rtcp_reports.init(l_ssrc);
@@ -1217,7 +1214,7 @@ void AmRtpStream::zrtpSessionActivated(const bzrtpSrtpSecrets_t* srtpSecrets)
 
 int AmRtpStream::send_zrtp(unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     AmRtpPacket rp;
@@ -1420,6 +1417,7 @@ int AmRtpStream::nextPacket(AmRtpPacket*& p)
 
     if(monitor_rtp_timeout &&
        dead_rtp_time &&
+       sending &&
        (diff.tv_sec > 0) &&
        (static_cast<unsigned int>(diff.tv_sec) > dead_rtp_time))
     {
@@ -1469,7 +1467,7 @@ AmRtpPacket *AmRtpStream::reuseBufferedPacket()
 //                   send functions
 int AmRtpStream::send_udptl(unsigned int ts, unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     AmRtpPacket rp;
@@ -1547,7 +1545,7 @@ unsigned int AmRtpStream::get_adjusted_ts(unsigned int ts)
 
 int AmRtpStream::send(unsigned int user_ts, unsigned char* buffer, unsigned int size)
 {
-    if ((mute) || (hold))
+    if ((mute) || (!sending))
         return 0;
 
     if(process_dtmf_queue(user_ts))
@@ -1577,7 +1575,7 @@ void AmRtpStream::relay(AmRtpPacket* p)
 {
     // not yet initialized
     // or muted/on-hold
-    if (mute || hold)
+    if (mute || (!sending))
         return;
 
     if(!cur_rtp_trans) return;
@@ -1822,12 +1820,12 @@ void AmRtpStream::resume()
 
 void AmRtpStream::setOnHold(bool on_hold)
 {
-    hold = on_hold;
+    sending = !on_hold;
 }
 
 bool AmRtpStream::getOnHold()
 {
-    return hold;
+    return !sending;
 }
 
 void AmRtpStream::setMonitorRTPTimeout(bool m)
@@ -2214,8 +2212,8 @@ void AmRtpStream::debug()
         CLASS_DBG("\tno relay");
     }
 
-    CLASS_DBG("\tmute: %s, hold: %s, receiving: %s",
-        BOOL_STR(mute), BOOL_STR(hold), BOOL_STR(receiving));
+    CLASS_DBG("\tmute: %s, sending: %s, receiving: %s",
+        BOOL_STR(mute), BOOL_STR(sending), BOOL_STR(receiving));
 #undef BOOL_STR
 }
 
@@ -2260,7 +2258,7 @@ void AmRtpStream::getInfo(AmArg &ret){
     }
 
     ret["mute"] = mute;
-    ret["hold"] = hold;
+    ret["sending"] = sending;
     ret["receiving"] = receiving;
 
     AmArg& transports = ret["transports"];

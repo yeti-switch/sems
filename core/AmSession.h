@@ -360,7 +360,7 @@ public:
   virtual void clearAudio() override;
 
   /** setter for rtp_str->mute */
-  void setMute(bool mute) { RTPStream()->mute = mute; }
+  void setMute(bool mute) { RTPStream()->setMute(mute); }
 
   /** setter for rtp_str->receiving */
   void setReceiving(bool receive) { RTPStream()->setReceiving(receive); }

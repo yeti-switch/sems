@@ -1368,10 +1368,8 @@ void AmMediaTransport::addSrtpConnection(const string& remote_address, int remot
         try {
             AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
             conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
+            stream->setMute(conn->isMute());
             addConnection(conn);
-            if(conn->isMute()) {
-                stream->mute = true;
-            }
         } catch(string& error) {
             CLASS_ERROR("SRTP connection error: %s", error.c_str());
         }
