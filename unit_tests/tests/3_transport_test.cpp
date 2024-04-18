@@ -73,7 +73,7 @@ class ws_server_test : public trsp_server_socket
 public:
     ws_server_test()
     : trsp_server_socket(0, 0, 0, new ws_factory_test(trsp_socket::socket_transport::ws_ipv4),
-                         new stream_statistics::stream_st_base(trsp_socket::socket_transport::ws_ipv4, 0, 0))
+                         new trsp_statistics::trsp_st_base(trsp_socket::socket_transport::ws_ipv4, 0, 0))
     {
         
     }

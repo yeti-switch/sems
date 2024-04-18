@@ -89,7 +89,7 @@ tcp_server_socket::tcp_server_socket(
 {}
 
 tcp_server_socket::tcp_statistics::tcp_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
-  : stream_statistics::stream_st_base(transport, if_num, proto_idx)
+  : trsp_statistics::trsp_st_base(transport, if_num, proto_idx)
   , clientOutConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
             .addLabel("state", "connected")
@@ -113,7 +113,7 @@ void tcp_server_socket::tcp_statistics::changeCountConnection(bool remove, tcp_b
         else
             clientInConnectedCount.dec();
     } else {
-        stream_st_base::changeCountConnection(remove, socket);
+        trsp_st_base::changeCountConnection(remove, socket);
     }
 }
 

@@ -62,7 +62,7 @@ public:
 class tcp_server_socket: public trsp_server_socket
 {
 public:
-    class tcp_statistics : public stream_statistics::stream_st_base
+    class tcp_statistics : public trsp_statistics::trsp_st_base
     {
     protected:
         AtomicCounter& clientOutConnectedCount;

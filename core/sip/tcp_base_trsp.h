@@ -243,22 +243,22 @@ public:
     void getInfo(AmArg &ret);
 };
 
-class stream_statistics
+class trsp_statistics
 {
 public:
-    struct stream_st_base
+    struct trsp_st_base
     {
         AtomicCounter& countOutConnections;
         AtomicCounter& countInConnections;
         AtomicCounter& sipParseErrors;
-        stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx);
-        virtual ~stream_st_base(){}
+        trsp_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx);
+        virtual ~trsp_st_base(){}
         virtual void changeCountConnection(bool remove, tcp_base_trsp* socket);
     };
 private:
-    vector<stream_st_base*> stats;
+    vector<trsp_st_base*> stats;
 public:
-    void add_stream_statistics(stream_st_base* stream) {
+    void add_trsp_statistics(trsp_st_base* stream) {
         stats.push_back(stream);
     }
     void dispose() {
@@ -266,12 +266,12 @@ public:
     }
 };
 
-typedef singleton<stream_statistics> stream_stats;
+typedef singleton<trsp_statistics> stream_stats;
 
 class trsp_server_socket : public trsp_socket
 {
 protected:
-    stream_statistics::stream_st_base* statistics;
+    trsp_statistics::trsp_st_base* statistics;
     struct event_base* evbase;
     struct event*      ev_accept;
 
@@ -297,7 +297,7 @@ protected:
 
     static uint32_t hash_addr(const sockaddr_storage* addr);
 
-    trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory, stream_statistics::stream_st_base* statistics);
+    trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory, trsp_statistics::trsp_st_base* statistics);
     ~trsp_server_socket();
 
 public:
@@ -329,7 +329,7 @@ public:
     struct timeval* get_idle_timeout();
 
     void inc_sip_parse_error() override{ statistics->sipParseErrors.inc(); }
-    stream_statistics::stream_st_base* get_statistics() { return statistics; }
+    trsp_statistics::trsp_st_base* get_statistics() { return statistics; }
 };
 
 class trsp: public AmThread

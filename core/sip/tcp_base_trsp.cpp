@@ -799,7 +799,7 @@ void trsp_worker::on_stop()
 
 trsp_server_socket::trsp_server_socket(
     unsigned short if_num, unsigned short proto_idx, unsigned int opts,
-    trsp_socket_factory* sock_factory, stream_statistics::stream_st_base* statistics)
+    trsp_socket_factory* sock_factory, trsp_statistics::trsp_st_base* statistics)
   : trsp_socket(if_num, proto_idx, opts, sock_factory->transport),
     statistics(statistics),
     ev_accept(nullptr),
@@ -1031,7 +1031,7 @@ void trsp::on_stop()
     join();
 }
 
-stream_statistics::stream_st_base::stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
+trsp_statistics::trsp_st_base::trsp_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
 : countOutConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
             .addLabel("state", "pending")
@@ -1048,10 +1048,10 @@ stream_statistics::stream_st_base::stream_st_base(trsp_socket::socket_transport 
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){
-     stream_stats::instance()->add_stream_statistics(this);
+     stream_stats::instance()->add_trsp_statistics(this);
 }
 
-void stream_statistics::stream_st_base::changeCountConnection(bool remove, tcp_base_trsp* socket)
+void trsp_statistics::trsp_st_base::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
     if(remove) {
         if(socket->is_client()) countOutConnections.dec();
