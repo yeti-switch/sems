@@ -624,6 +624,25 @@ int _SipCtrlInterface::load()
                 }).addLabel("transport", "wss");
     }
 
+    stat_group(Gauge, "core", "accept_queue_size").addFunctionGroupCounter([](StatCounterInterface::iterate_func_type f){
+            SipCtrlInterface* sip_ctrl = SipCtrlInterface::instance();
+            for(int i = 0; i < sip_ctrl->nr_tcp_sockets; i++) {
+                tcp_server_socket* socket = sip_ctrl->tcp_sockets[i];
+                socket->getAcceptQueueSize(f);
+            }
+            for(int i = 0; i < sip_ctrl->nr_tls_sockets; i++) {
+                tls_server_socket* socket = sip_ctrl->tls_sockets[i];
+                socket->getAcceptQueueSize(f);
+            }
+            for(int i = 0; i < sip_ctrl->nr_ws_sockets; i++) {
+                ws_server_socket* socket = sip_ctrl->ws_sockets[i];
+                socket->getAcceptQueueSize(f);
+            }
+            for(int i = 0; i < sip_ctrl->nr_wss_sockets; i++) {
+                wss_server_socket* socket = sip_ctrl->wss_sockets[i];
+                socket->getAcceptQueueSize(f);
+            }
+        });
     return 0;
 }
 

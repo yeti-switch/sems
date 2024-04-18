@@ -335,6 +335,7 @@ public:
 
     void inc_sip_parse_error() override{ statistics->sipParseErrors.inc(); }
     trsp_statistics::trsp_st_base* get_statistics() { return statistics; }
+    void getAcceptQueueSize(StatCounterInterface::iterate_func_type f);
 };
 
 class trsp: public AmThread

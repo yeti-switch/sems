@@ -1045,6 +1045,15 @@ struct timeval* trsp_server_socket::get_idle_timeout()
     return NULL;
 }
 
+void trsp_server_socket::getAcceptQueueSize(StatCounterInterface::iterate_func_type f)
+{
+    std::map<string, string> labels;
+    labels.emplace("interface", AmConfig.sip_ifs[if_num].name);
+    labels.emplace("transport", trsp_socket::socket_transport2proto_str(transport));
+    labels.emplace("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr());
+    f(event_base_get_num_events(evbase, EVENT_BASE_COUNT_ACTIVE), labels);
+}
+
 trsp::trsp()
 {
     evbase = event_base_new();
@@ -1099,7 +1108,8 @@ trsp_statistics::trsp_st_base::trsp_st_base(trsp_socket::socket_transport transp
 , sipParseErrors(stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
-            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+{
      stream_stats::instance()->add_trsp_statistics(this);
 }
 
