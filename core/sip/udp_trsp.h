@@ -54,12 +54,7 @@ class udp_trsp_socket: public trsp_socket
     udp_trsp_socket(
         unsigned short if_num, unsigned short proto_idx, unsigned int opts,
         socket_transport transport, unsigned int sys_if_idx = 0)
-  : trsp_socket(
-        stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
-            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-            .addLabel("transport", socket_transport2proto_str(transport))
-            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()),
-        if_num, proto_idx,opts,transport,sys_if_idx)
+  : trsp_socket(if_num, proto_idx,opts,transport,sys_if_idx)
     {}
     ~udp_trsp_socket() {
         close(sd);

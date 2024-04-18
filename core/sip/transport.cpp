@@ -58,13 +58,11 @@ const char * trsp_socket::socket_transport2proto_str(const socket_transport tran
 }
 
 trsp_socket::trsp_socket(
-    AtomicCounter& parse_errors_counter,
     unsigned short if_num_, unsigned short proto_idx_, unsigned int opts,
     socket_transport trans, unsigned int sys_if_idx_, int sd_)
-  : sd(sd_), ip(), port(0), actual_ip(), actual_port(0),
+  : sd(sd_), client(sd == -1 ? true : false), ip(), port(0), actual_ip(), actual_port(0),
     if_num(if_num_), proto_idx(proto_idx_), sys_if_idx(sys_if_idx_),
-    socket_options(opts), transport(trans), tos_byte(0),
-    sip_parse_errors(parse_errors_counter)
+    socket_options(opts), transport(trans), tos_byte(0)
 {
     memset(&addr,0,sizeof(sockaddr_storage));
 }

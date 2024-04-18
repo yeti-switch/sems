@@ -41,12 +41,13 @@ protected:
   tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                   const sockaddr_storage* sa, socket_transport transport,
                   event_base* evbase, trsp_input* input);
-  const char* get_transport() const { return "tcp"; }
+  const char* get_transport() const override{ return "tcp"; }
 public:
   ~tcp_trsp_socket();
 
   int send(const sockaddr_storage* sa, const char* msg,
-	   const int msg_len, unsigned int flags);
+	   const int msg_len, unsigned int flags) override;
+  int on_connect(short ev) override; 
 };
 
 class tcp_socket_factory : public trsp_socket_factory
@@ -61,9 +62,18 @@ public:
 class tcp_server_socket: public trsp_server_socket
 {
 public:
+    class tcp_statistics : public stream_statistics::stream_st_base
+    {
+        AtomicCounter& clientConnectedCount;
+    public:
+        tcp_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
+        ~tcp_statistics(){}
+        void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
+        void incClientConnected();
+    };
   tcp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
 
-  const char* get_transport() const { return "tcp"; }
+  const char* get_transport() const override { return "tcp"; }
 };
 
 #endif/*_tcp_trsp_h_*/

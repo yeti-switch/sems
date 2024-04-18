@@ -97,6 +97,7 @@ public:
 protected:
     // socket descriptor
     int sd;
+    bool client;
 
     // bound address
     sockaddr_storage addr;
@@ -134,12 +135,8 @@ protected:
 
     uint8_t tos_byte;
 
-    AtomicCounter& sip_parse_errors;
-
 public:
-    trsp_socket(
-        AtomicCounter& parse_errors_counter,
-        unsigned short if_num, unsigned short proto_idx, unsigned int opts,
+    trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
         socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);
     virtual ~trsp_socket();
 
@@ -252,6 +249,7 @@ public:
      */
     bool match_addr(sockaddr_storage* other_addr) const;
 
+    bool is_client() { return client; }
     /**
      * Sends a message.
      * @return -1 if error(s) occured.
@@ -261,8 +259,7 @@ public:
 
 	virtual void getInfo(AmArg &) {}
 
-    virtual void inc_sip_parse_error() { sip_parse_errors.inc(); }
-    AtomicCounter& get_sip_parse_errors() { return sip_parse_errors; }
+    virtual void inc_sip_parse_error() {};
 };
 
 class trsp_acl {

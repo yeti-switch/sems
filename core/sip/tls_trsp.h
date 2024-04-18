@@ -3,7 +3,7 @@
 
 #include "singleton.h"
 #include "transport.h"
-#include "tcp_base_trsp.h"
+#include "tcp_trsp.h"
 #include "sip_parser_async.h"
 #include "ssl_settings.h"
 
@@ -167,6 +167,7 @@ public:
 	   const int msg_len, unsigned int flags);
 
     void getInfo(AmArg &ret);
+    bool is_tls_connected() { return tls_connected; }
 };
 
 class tls_socket_factory : public trsp_socket_factory
@@ -181,11 +182,19 @@ public:
 class tls_server_socket : public trsp_server_socket
 {
 public:
+    struct tls_statistics : public tcp_server_socket::tcp_statistics
+    {
+        AtomicCounter& tlsConnectedCount;
+        tls_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
+        ~tls_statistics(){}
+        void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
+        void incTlsConnected();
+    };
+
     tls_server_socket(unsigned short if_num, unsigned short proto_idx,
                       unsigned int opts, socket_transport transport);
 
-    const char* get_transport() const { return "tls"; }
-
+    const char* get_transport() const override { return "tls"; }
 };
 
 void tls_cleanup();

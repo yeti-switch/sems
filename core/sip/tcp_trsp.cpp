@@ -63,6 +63,13 @@ int tcp_trsp_socket::send(
     return 0;
 }
 
+int tcp_trsp_socket::on_connect(short ev)
+{
+    tcp_server_socket::tcp_statistics* tcp_stats = dynamic_cast<tcp_server_socket::tcp_statistics*>(server_sock->get_statistics());
+    if(tcp_stats) tcp_stats->incClientConnected();
+    return tcp_base_trsp::on_connect(ev);
+}
+
 tcp_socket_factory::tcp_socket_factory(tcp_base_trsp::socket_transport transport)
   : trsp_socket_factory(transport)
 {}
@@ -77,5 +84,25 @@ tcp_base_trsp* tcp_socket_factory::create_socket(
 tcp_server_socket::tcp_server_socket(
     short unsigned int if_num, short unsigned int proto_idx,
     unsigned int opts, socket_transport transport)
-  : trsp_server_socket(if_num, proto_idx, opts, new tcp_socket_factory(transport))
+  : trsp_server_socket(if_num, proto_idx, opts, new tcp_socket_factory(transport)
+  , new tcp_statistics(transport, if_num, proto_idx))
 {}
+
+tcp_server_socket::tcp_statistics::tcp_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
+  : stream_statistics::stream_st_base(transport, if_num, proto_idx)
+  , clientConnectedCount(stat_group(Gauge, "core", "client_connected").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
+
+void tcp_server_socket::tcp_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
+{
+    if(remove && socket->is_client() && socket->is_connected())
+        clientConnectedCount.inc();
+    stream_st_base::changeCountConnection(remove, socket);
+}
+
+void tcp_server_socket::tcp_statistics::incClientConnected()
+{
+    clientConnectedCount.inc();
+}

@@ -533,6 +533,8 @@ int ws_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unused
 
 void ws_trsp_socket::on_ws_connected()
 {
+    ws_server_socket::ws_statistics* ws_stats = dynamic_cast<ws_server_socket::ws_statistics*>(server_sock->get_statistics());
+    if(ws_stats) ws_stats->incWsConnected();
     DBG("************ on_ws_connect() ***********");
     DBG("new WS connection from %s:%u",
         get_peer_ip().c_str(),
@@ -602,9 +604,8 @@ tcp_base_trsp* ws_socket_factory::create_socket(
 ws_server_socket::ws_server_socket(
     short unsigned int if_num, short unsigned int proto_idx,
     unsigned int opts, socket_transport transport)
-  : trsp_server_socket(if_num, proto_idx, opts, new ws_socket_factory(transport))
+  : trsp_server_socket(if_num, proto_idx, opts, new ws_socket_factory(transport), new ws_statistics(transport, if_num, proto_idx))
 {}
-
 
 wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
 				 trsp_worker* server_worker,
@@ -613,6 +614,27 @@ wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
   : tls_trsp_socket(server_sock, server_worker, sd, sa, transport, evbase, new wss_input(this, sd != -1))
 {}
 
+ws_server_socket::ws_statistics::ws_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
+: tcp_server_socket::tcp_statistics(transport, if_num, proto_idx)
+, wsConnectedCount(stat_group(Gauge, "core", "ws_connected").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
+
+void ws_server_socket::ws_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
+{
+    tcp_server_socket::tcp_statistics::changeCountConnection(remove, socket);
+    ws_trsp_socket* ws_socket = dynamic_cast<ws_trsp_socket*>(socket);
+    if(!ws_socket) return;
+    if(remove && ws_socket->is_ws_connected())
+        wsConnectedCount.dec();
+}
+
+void ws_server_socket::ws_statistics::incWsConnected()
+{
+    wsConnectedCount.inc();
+}
+            
 wss_trsp_socket::~wss_trsp_socket()
 {}
 
@@ -629,6 +651,8 @@ int wss_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unuse
 
 void wss_trsp_socket::on_ws_connected()
 {
+    wss_server_socket::wss_statistics* wss_stats = dynamic_cast<wss_server_socket::wss_statistics*>(server_sock->get_statistics());
+    if(wss_stats) wss_stats->incWsConnected();
     DBG("************ on_wss_connect() ***********");
     DBG("new WSS connection from %s:%u",
         get_peer_ip().c_str(),
@@ -698,5 +722,27 @@ tcp_base_trsp* wss_socket_factory::create_socket(
 wss_server_socket::wss_server_socket(
     short unsigned int if_num, short unsigned int proto_idx,
     unsigned int opts, socket_transport transport)
-  : trsp_server_socket(if_num, proto_idx, opts, new wss_socket_factory(transport))
+  : trsp_server_socket(if_num, proto_idx, opts, new wss_socket_factory(transport), new wss_statistics(transport, if_num, proto_idx))
 {}
+
+wss_server_socket::wss_statistics::wss_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
+: tls_server_socket::tls_statistics(transport, if_num, proto_idx)
+, wsConnectedCount(stat_group(Gauge, "core", "ws_connected").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
+
+void wss_server_socket::wss_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
+{
+    tls_server_socket::tls_statistics::changeCountConnection(remove, socket);
+    wss_trsp_socket* wss_socket = dynamic_cast<wss_trsp_socket*>(socket);
+    if(!wss_socket) return;
+    if(remove && wss_socket->is_ws_connected())
+        wsConnectedCount.dec();
+}
+
+void wss_server_socket::wss_statistics::incWsConnected()
+{
+    wsConnectedCount.inc();
+}
+

@@ -162,7 +162,7 @@ protected:
     int check_connection();
 
 
-    int  on_connect(short ev);
+    virtual int on_connect(short ev);
     void on_write(short ev);
     void on_read(short ev);
 
@@ -243,9 +243,36 @@ public:
     void getInfo(AmArg &ret);
 };
 
+class stream_statistics
+{
+public:
+    struct stream_st_base
+    {
+        AtomicCounter& countActiveConnections;
+        AtomicCounter& countClientConnections;
+        AtomicCounter& countServerConnections;
+        AtomicCounter& sipParseErrors;
+        stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx);
+        virtual ~stream_st_base(){}
+        virtual void changeCountConnection(bool remove, tcp_base_trsp* socket);
+    };
+private:
+    vector<stream_st_base*> stats;
+public:
+    void add_stream_statistics(stream_st_base* stream) {
+        stats.push_back(stream);
+    }
+    void dispose() {
+        for(auto stream : stats) delete stream;
+    }
+};
+
+typedef singleton<stream_statistics> stream_stats;
+
 class trsp_server_socket : public trsp_socket
 {
 protected:
+    stream_statistics::stream_st_base* statistics;
     struct event_base* evbase;
     struct event*      ev_accept;
 
@@ -271,20 +298,20 @@ protected:
 
     static uint32_t hash_addr(const sockaddr_storage* addr);
 
-    trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory);
+    trsp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory, stream_statistics::stream_st_base* statistics);
     ~trsp_server_socket();
 
 public:
     void add_workers(trsp_worker **trsp_workers, unsigned short n_trsp_workers);
 
-    bool        is_reliable() const   { return true; }
+    bool        is_reliable() const  override { return true; }
 
     /* activates libevent on_accept callback */
     void add_event(struct event_base *evbase);
 
-    int bind(const string& address, unsigned short port);
+    int bind(const string& address, unsigned short port) override;
     int send(const sockaddr_storage* sa, const char* msg,
-        const int msg_len, unsigned int flags);
+        const int msg_len, unsigned int flags) override;
 
     /**
     * Set timeout in milliseconds for the connection
@@ -302,7 +329,8 @@ public:
     struct timeval* get_connect_timeout();
     struct timeval* get_idle_timeout();
 
-    void inc_sip_parse_error() { sip_parse_errors.inc(); }
+    void inc_sip_parse_error() override{ statistics->sipParseErrors.inc(); }
+    stream_statistics::stream_st_base* get_statistics() { return statistics; }
 };
 
 class trsp: public AmThread

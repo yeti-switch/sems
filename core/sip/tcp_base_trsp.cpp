@@ -49,7 +49,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
                       err, socket->get_peer_ip().data(), socket->get_peer_port());
             }
 
-            socket->inc_sip_parse_error();
+            socket->server_sock->inc_sip_parse_error();
 
             pst.reset((char*)input_buf);
             reset_input();
@@ -126,9 +126,7 @@ tcp_base_trsp::tcp_base_trsp(
     trsp_server_socket* server_sock_, trsp_worker* server_worker_,
     int sd, const sockaddr_storage* sa, trsp_socket::socket_transport transport,
     event_base* evbase_, trsp_input* input_)
-  : trsp_socket(
-        server_sock_->get_sip_parse_errors(),
-        server_sock_->get_if(),
+  : trsp_socket(server_sock_->get_if(),
         server_sock_->get_proto_idx(),0,transport,0,sd),
     server_sock(server_sock_), server_worker(server_worker_),
     input(input_), closed(false),
@@ -615,7 +613,9 @@ tcp_base_trsp* trsp_socket_factory::new_connection(
     int sd, const sockaddr_storage* sa,
     struct event_base* evbase)
 {
-    return create_socket(server_sock, server_worker,sd,sa,evbase);
+    tcp_base_trsp* socket = create_socket(server_sock, server_worker,sd,sa,evbase);
+    server_sock->get_statistics()->changeCountConnection(false, socket);
+    return socket;
 }
 
 trsp_worker::trsp_worker()
@@ -662,6 +662,8 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
 
     DBG("removing TCP connection from %s",conn_id.c_str());
 
+    if(client_sock->server_sock->statistics)
+        client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
@@ -796,13 +798,10 @@ void trsp_worker::on_stop()
 }
 
 trsp_server_socket::trsp_server_socket(
-    unsigned short if_num, unsigned short proto_idx, unsigned int opts, trsp_socket_factory* sock_factory)
-  : trsp_socket(
-        stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
-            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
-            .addLabel("transport", socket_transport2proto_str(sock_factory->transport))
-            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()),
-        if_num, proto_idx, opts, sock_factory->transport),
+    unsigned short if_num, unsigned short proto_idx, unsigned int opts,
+    trsp_socket_factory* sock_factory, stream_statistics::stream_st_base* statistics)
+  : trsp_socket(if_num, proto_idx, opts, sock_factory->transport),
+    statistics(statistics),
     ev_accept(nullptr),
     sock_factory(sock_factory)
 {
@@ -1030,4 +1029,37 @@ void trsp::on_stop()
 {
     event_base_loopbreak(evbase);
     join();
+}
+
+stream_statistics::stream_st_base::stream_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
+: countActiveConnections(stat_group(Gauge, "core", "active_connections").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+, countClientConnections(stat_group(Gauge, "core", "client_connections").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+, countServerConnections(stat_group(Gauge, "core","server_connections").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
+, sipParseErrors(stat_group(Counter, "core", "sip_parse_errors").addAtomicCounter()
+            .addLabel("interface", AmConfig.sip_ifs[if_num].name)
+            .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
+            .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){
+     stream_stats::instance()->add_stream_statistics(this);
+}
+
+void stream_statistics::stream_st_base::changeCountConnection(bool remove, tcp_base_trsp* socket)
+{
+    if(remove) {
+        countActiveConnections.dec();
+        if(socket->is_client()) countClientConnections.dec();
+        else countServerConnections.dec();
+    } else {
+        countActiveConnections.inc();
+        if(socket->is_client()) countClientConnections.inc();
+        else countServerConnections.inc();
+    }
 }

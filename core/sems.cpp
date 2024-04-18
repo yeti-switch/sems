@@ -928,6 +928,7 @@ int main(int argc, char* argv[])
     INFO("Disposing plug-ins");
     AmPlugIn::dispose();
 
+    stream_stats::dispose();
     tls_cleanup();
     srtp_shutdown();
     statistics::dispose();
