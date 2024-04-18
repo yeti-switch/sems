@@ -1126,11 +1126,11 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int)
 {
     setCurrentTransport(transport);
 
-    uint32_t current_ice_priority = transport->getPriorityCurrentConnection();
+    uint32_t current_ice_priority = transport->getCurrentConnectionPriority();
     for(auto tr : ip4_transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
             tr->updateStunTimers();
-            if(tr->getPriorityCurrentConnection() > current_ice_priority) {
+            if(tr->getCurrentConnectionPriority() > current_ice_priority) {
                 setCurrentTransport(tr);
             }
         }
@@ -1138,7 +1138,7 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, int)
     for(auto tr : ip6_transports) {
         if(transport->getTransportType() == tr->getTransportType()) {
             tr->updateStunTimers();
-            if(tr->getPriorityCurrentConnection() > current_ice_priority) {
+            if(tr->getCurrentConnectionPriority() > current_ice_priority) {
                 setCurrentTransport(tr);
             }
         }

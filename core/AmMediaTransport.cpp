@@ -488,7 +488,7 @@ void AmMediaTransport::getIceCandidate(SdpMedia& media)
     ice_cred.lpriority = candidate.priority;
 }
 
-uint32_t AmMediaTransport::getPriorityCurrentConnection()
+uint32_t AmMediaTransport::getCurrentConnectionPriority()
 {
     if(allowed_ice_addrs.empty()) return 0;
     return allowed_ice_addrs.rbegin()->first;

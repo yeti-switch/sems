@@ -162,8 +162,8 @@ public:
     */
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
     void getIceCandidate(SdpMedia& media);
-    uint32_t getPriorityCurrentConnection();
-    
+    uint32_t getCurrentConnectionPriority();
+
     void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner);
     void initRtpConnection(const string& remote_address, int remote_port);
     void initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
