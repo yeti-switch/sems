@@ -548,12 +548,20 @@ int tls_trsp_socket::send(
 
 void tls_trsp_socket::getInfo(AmArg& ret)
 {
-    sockaddr_ssl* ssl = (sockaddr_ssl*)&peer_addr;
-    ret["ssl_sig"] = toString(ssl->sig);
-    ret["ssl_cipher"] = toString(ssl->cipher);
-    ret["ssl_mac"] = toString(ssl->mac);
-    ret["tls_queue_size"] = orig_send_q.size();
+    {
+        std::unique_lock _l(sock_mut);
+        sockaddr_ssl* ssl = (sockaddr_ssl*)&peer_addr;
+        ret["ssl_sig"] = toString(ssl->sig);
+        ret["ssl_cipher"] = toString(ssl->cipher);
+        ret["ssl_mac"] = toString(ssl->mac);
+        ret["tls_queue_size"] = orig_send_q.size();
+    }
     tcp_base_trsp::getInfo(ret);
+}
+
+unsigned long long tls_trsp_socket::getQueueSize()
+{
+    return orig_send_q.size();
 }
 
 tls_socket_factory::tls_socket_factory(tcp_base_trsp::socket_transport transport)

@@ -169,6 +169,10 @@ public:
         sip_trans *tr, trans_bucket *buk=0);
 
     void getInfo(AmArg &ret);
+    unsigned long long getTcpQueueSize();
+    unsigned long long getTlsQueueSize();
+    unsigned long long getWsQueueSize();
+    unsigned long long getWssQueueSize();
 };
 
 typedef singleton<_SipCtrlInterface> SipCtrlInterface;

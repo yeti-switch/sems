@@ -603,6 +603,27 @@ int _SipCtrlInterface::load()
         wss_idx++;
     }
 
+    if(nr_tcp_sockets || nr_tls_sockets || nr_ws_sockets || nr_wss_sockets) {
+        stat_group(Gauge, "core", "queue_packets_count").addFunctionCounter([]()->unsigned long long{
+                    return SipCtrlInterface::instance()->getTcpQueueSize();
+                }).addLabel("transport", "tcp");
+    }
+    if(nr_tls_sockets || nr_wss_sockets) {
+        stat_group(Gauge, "core", "queue_packets_count").addFunctionCounter([]()->unsigned long long{
+                    return SipCtrlInterface::instance()->getTlsQueueSize();
+                }).addLabel("transport", "tls");
+    }
+    if(nr_ws_sockets) {
+        stat_group(Gauge, "core", "queue_packets_count").addFunctionCounter([]()->unsigned long long{
+                    return SipCtrlInterface::instance()->getWsQueueSize();
+                }).addLabel("transport", "ws");
+    }
+    if(nr_wss_sockets) {
+        stat_group(Gauge, "core", "queue_packets_count").addFunctionCounter([]()->unsigned long long{
+                    return SipCtrlInterface::instance()->getWssQueueSize();
+                }).addLabel("transport", "wss");
+    }
+
     return 0;
 }
 
@@ -1377,6 +1398,46 @@ void _SipCtrlInterface::getInfo(AmArg &ret)
         trsp_worker &trsp_worker = *trsp_workers[i];
         trsp_worker.getInfo(ret);
     }
+}
+
+unsigned long long _SipCtrlInterface::getTcpQueueSize()
+{
+    unsigned long long qsize = 0;
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        qsize += trsp_worker.getTcpQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long _SipCtrlInterface::getTlsQueueSize()
+{
+    unsigned long long qsize = 0;
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        qsize += trsp_worker.getTlsQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long _SipCtrlInterface::getWsQueueSize()
+{
+    unsigned long long qsize = 0;
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        qsize += trsp_worker.getWsQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long _SipCtrlInterface::getWssQueueSize()
+{
+    unsigned long long qsize = 0;
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        qsize += trsp_worker.getWssQueueSize();
+    }
+    return qsize;
 }
 
 /** EMACS **

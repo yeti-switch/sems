@@ -166,8 +166,10 @@ public:
     int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);
 
-    void getInfo(AmArg &ret);
     bool is_tls_connected() { return tls_connected; }
+
+    void getInfo(AmArg &ret);
+    unsigned long long getQueueSize();
 };
 
 class tls_socket_factory : public trsp_socket_factory

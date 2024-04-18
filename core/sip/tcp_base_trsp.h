@@ -193,6 +193,7 @@ public:
     }
 
     void getInfo(AmArg &ret);
+    unsigned long long getQueueSize();
 };
 
 class trsp_socket_factory
@@ -241,6 +242,10 @@ public:
     void add_connection(tcp_base_trsp* client_sock);
     void remove_connection(tcp_base_trsp* client_sock);
     void getInfo(AmArg &ret);
+    unsigned long long getTcpQueueSize();
+    unsigned long long getTlsQueueSize();
+    unsigned long long getWsQueueSize();
+    unsigned long long getWssQueueSize();
 };
 
 class trsp_statistics

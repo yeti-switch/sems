@@ -296,6 +296,12 @@ void ws_input::on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg)
     }
 }
 
+unsigned long long ws_input::getQueueSize()
+{
+    AmLock lock(sock_mut);
+    return send_q.size();
+}
+
 ssize_t ws_input::recv_callback(
     [[maybe_unused]] wslay_event_context_ptr ctx,
     uint8_t* data, size_t len, [[maybe_unused]] int flags)
@@ -510,6 +516,11 @@ bool wss_input::is_connected()
     return input.is_connected();
 }
 
+unsigned long long wss_input::getQueueSize()
+{
+    return input.getQueueSize();
+}
+
 ws_trsp_socket::ws_trsp_socket(trsp_server_socket* server_sock,
     trsp_worker* server_worker,
     int sd, const sockaddr_storage* sa,
@@ -583,6 +594,11 @@ int ws_trsp_socket::send(
     }
 
     return 0;
+}
+
+unsigned long long ws_trsp_socket::getQueueSize()
+{
+    return static_cast<ws_input*>(input)->getQueueSize();
 }
 
 void ws_trsp_socket::generate_transport_errors()
@@ -720,6 +736,11 @@ int wss_trsp_socket::send(
     }
 
     return 0;
+}
+
+unsigned long long wss_trsp_socket::getQueueSize()
+{
+    return static_cast<wss_input*>(input)->getQueueSize();
 }
 
 void wss_trsp_socket::generate_transport_errors()

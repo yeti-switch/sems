@@ -92,6 +92,7 @@ public:
     bool is_connected() {
         return ws_connected;
     }
+    unsigned long long getQueueSize();
 };
 
 class wss_input : public tls_input
@@ -107,6 +108,7 @@ public:
     int send(tcp_base_trsp::msg_buf* buf);
     void generate_transport_errors();
     bool is_connected();
+    unsigned long long getQueueSize();
 };
 
 class ws_trsp_socket: public ws_output, public tcp_trsp_socket
@@ -146,6 +148,7 @@ public:
     void post_write();
     int send(const sockaddr_storage* sa, const char* msg, const int msg_len, unsigned int flags);
     bool is_ws_connected() { return static_cast<ws_input*>(input)->is_connected(); }
+    unsigned long long getQueueSize();
 };
 
 class wss_trsp_socket: public ws_output, public tls_trsp_socket
@@ -184,6 +187,7 @@ public:
     void post_write();
     int send(const sockaddr_storage* sa, const char* msg, const int msg_len, unsigned int flags);
     bool is_ws_connected() { return static_cast<wss_input*>(input)->is_connected(); }
+    unsigned long long getQueueSize();
 };
 
 class wss_socket_factory : public trsp_socket_factory

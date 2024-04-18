@@ -1,7 +1,7 @@
 #include <sys/ioctl.h>
 #include <algorithm>
-#include "tcp_base_trsp.h"
 #include "socket_ssl.h"
+#include "ws_trsp.h"
 #include "hash.h"
 #include "ip_util.h"
 #include "trans_layer.h"
@@ -487,6 +487,12 @@ void tcp_base_trsp::getInfo(AmArg &ret)
     ret["queue_size"] = send_q.size();
 }
 
+unsigned long long tcp_base_trsp::getQueueSize()
+{
+    std::unique_lock _l(sock_mut);
+    return send_q.size();
+}
+
 void tcp_base_trsp::on_write(short ev)
 {
     atomic_ref_guard _ref_guard(this);
@@ -765,6 +771,52 @@ void trsp_worker::getInfo(AmArg &ret)
         AmArg &r = ret[sip_if.name];
         con_it.second->getInfo(r[con_it.first]);
     }
+}
+
+unsigned long long trsp_worker::getTcpQueueSize()
+{
+    AmLock l(connections_mut);
+    unsigned long long qsize = 0;
+    for(auto const &con_it: connections) {
+        qsize = con_it.second->getQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long trsp_worker::getTlsQueueSize()
+{
+    AmLock l(connections_mut);
+    unsigned long long qsize = 0;
+    for(auto const &con_it: connections) {
+        tls_trsp_socket* socket = dynamic_cast<tls_trsp_socket*>(con_it.second);
+        if(!socket) continue;
+        qsize = socket->getQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long trsp_worker::getWsQueueSize()
+{
+    AmLock l(connections_mut);
+    unsigned long long qsize = 0;
+    for(auto const &con_it: connections) {
+        ws_trsp_socket* socket = dynamic_cast<ws_trsp_socket*>(con_it.second);
+        if(!socket) continue;
+        qsize = socket->getQueueSize();
+    }
+    return qsize;
+}
+
+unsigned long long trsp_worker::getWssQueueSize()
+{
+    AmLock l(connections_mut);
+    unsigned long long qsize = 0;
+    for(auto const &con_it: connections) {
+        wss_trsp_socket* socket = dynamic_cast<wss_trsp_socket*>(con_it.second);
+        if(!socket) continue;
+        qsize = socket->getQueueSize();
+    }
+    return qsize;
 }
 
 void trsp_worker::run()
