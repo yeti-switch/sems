@@ -857,6 +857,9 @@ trsp_server_socket::trsp_server_socket(
     ev_accept(nullptr),
     sock_factory(sock_factory)
 {
+    labels.emplace("interface", AmConfig.sip_ifs[if_num].name);
+    labels.emplace("transport", trsp_socket::socket_transport2proto_str(transport));
+    labels.emplace("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr());
     inc_ref(sock_factory);
 }
 
@@ -1047,10 +1050,6 @@ struct timeval* trsp_server_socket::get_idle_timeout()
 
 void trsp_server_socket::getAcceptQueueSize(StatCounterInterface::iterate_func_type f)
 {
-    std::map<string, string> labels;
-    labels.emplace("interface", AmConfig.sip_ifs[if_num].name);
-    labels.emplace("transport", trsp_socket::socket_transport2proto_str(transport));
-    labels.emplace("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr());
     f(event_base_get_num_events(evbase, EVENT_BASE_COUNT_ACTIVE), labels);
 }
 

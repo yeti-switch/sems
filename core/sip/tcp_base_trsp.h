@@ -276,6 +276,7 @@ typedef singleton<trsp_statistics> stream_stats;
 class trsp_server_socket : public trsp_socket
 {
 protected:
+    std::map<string, string> labels;
     trsp_statistics::trsp_st_base* statistics;
     struct event_base* evbase;
     struct event*      ev_accept;
