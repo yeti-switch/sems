@@ -265,15 +265,14 @@ srtp_fingerprint_p DtlsContext::gen_fingerprint(class dtls_settings* settings)
     return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
 }
 
-void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings, bool reinit) noexcept(false)
+void DtlsContext::initContext(const string& host, uint16_t port, shared_ptr<dtls_conf> settings, bool reinit) noexcept(false)
 {
     AmLock lock(channelMutex);
     if(!reinit && dtls_channel) return;
 
-    CLASS_DBG("init %s dtls context of rtp_stream(%p), connection(%p), dtls_channel - %p",
-        settings->is_client() ? "client" : "server", rtp_stream, conn, dtls_channel);
+    CLASS_DBG("init %s dtls context of rtp_stream(%p), dtls_channel - %p",
+        settings->is_client() ? "client" : "server", rtp_stream, dtls_channel);
 
-    cur_conn = conn;
     if(dtls_channel) {
         if(pending_handshake_timer) {
             pending_handshake_timer->invalidate();
@@ -292,8 +291,7 @@ void DtlsContext::initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> sett
                 dtls_settings,
                 dtls_settings,
                 rand_gen,
-                Botan::TLS::Server_Information(
-                    conn->getRHost().c_str(), conn->getRPort()),
+                Botan::TLS::Server_Information(host.c_str(), port),
                     Botan::TLS::Protocol_Version::DTLS_V12);
         } else {
             dtls_channel = new Botan::TLS::Server(
@@ -432,21 +430,6 @@ AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& r
 {}
 AmDtlsConnection::~AmDtlsConnection()
 {}
-
-void AmDtlsConnection::initConnection()
-{
-    MEDIA_interface& media_if = AmConfig.media_ifs[transport->getLocalIf()];
-    if(!media_if.srtp->dtls_enable)
-        throw string("DTLS is not configured on: ") +
-            AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
-
-    std::shared_ptr<dtls_conf> dtls_settings;
-    if(is_client)
-        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->client_settings);
-    else
-        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->server_settings);
-    dtls_context->initContext(this, dtls_settings);
-}
 
 void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size,
                                         struct sockaddr_storage*,

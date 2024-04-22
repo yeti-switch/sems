@@ -151,7 +151,8 @@ public:
 
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
 
-    void initContext(AmDtlsConnection* conn, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false);
+    void initContext(const string& host, uint16_t port, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false);
+    void setCurrentConnection(AmDtlsConnection* conn) { cur_conn = conn; }
     bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false);
     bool timer_check();
     bool sendData(const uint8_t * data, unsigned int size) noexcept(false);
@@ -187,7 +188,6 @@ public:
         DtlsContext* context, bool client);
     virtual ~AmDtlsConnection();
 
-    void initConnection();
     void handleConnection(
         uint8_t * data, unsigned int size,
         struct sockaddr_storage * recv_addr,

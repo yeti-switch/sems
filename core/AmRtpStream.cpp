@@ -1167,6 +1167,28 @@ DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
     return dtls_context[transport_type].get();
 }
 
+void AmRtpStream::initDtls(uint8_t transport_type, bool client)
+{
+    MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+    if(!media_if.srtp->dtls_enable)
+        throw string("DTLS is not configured on: ") + media_if.name;
+    std::shared_ptr<dtls_conf> dtls_settings;
+    if(client)
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->client_settings);
+    else
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->server_settings);
+    AmMediaTransport* transport = 0;
+    if(transport_type == RTP_TRANSPORT)
+        transport = cur_rtp_trans;
+    else if(transport_type == RTCP_TRANSPORT)
+        transport = cur_rtcp_trans;
+    else
+        transport = cur_udptl_trans;
+    assert(transport);
+    getDtlsContext(transport_type)->initContext(transport->getLocalIP(), transport->getLocalPort(), dtls_settings);
+}
+
+
 #ifdef WITH_ZRTP
 extern "C" {
 #include <bzrtp/bzrtp.h>
