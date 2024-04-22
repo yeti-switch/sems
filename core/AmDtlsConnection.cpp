@@ -435,16 +435,16 @@ AmDtlsConnection::~AmDtlsConnection()
 
 void AmDtlsConnection::initConnection()
 {
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]);
-    if(!rtpinfo->dtls_enable)
+    MEDIA_interface& media_if = AmConfig.media_ifs[transport->getLocalIf()];
+    if(!media_if.srtp->dtls_enable)
         throw string("DTLS is not configured on: ") +
             AmConfig.getMediaIfaceInfo(transport->getLocalIf()).name;
 
     std::shared_ptr<dtls_conf> dtls_settings;
     if(is_client)
-        dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->client_settings);
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->client_settings);
     else
-        dtls_settings = std::make_shared<dtls_conf>(&rtpinfo->server_settings);
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->server_settings);
     dtls_context->initContext(this, dtls_settings);
 }
 

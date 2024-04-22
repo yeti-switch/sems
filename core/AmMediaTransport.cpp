@@ -67,15 +67,13 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     recv_msg.msg_control    = recv_ctl_buf;
     recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
 
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(&AmConfig.getMediaProtoInfo(_if, _proto_id));
-    if(rtpinfo) {
-        server_settings = &rtpinfo->server_settings;
-        client_settings = &rtpinfo->client_settings;
-        allowed_srtp_profiles = rtpinfo->profiles;
-        srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
-        dtls_enable = srtp_enable && rtpinfo->dtls_enable;
-        zrtp_enable = srtp_enable && rtpinfo->zrtp_enable;
-    }
+    MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(_if);
+    server_settings = &media_if.srtp->server_settings;
+    client_settings = &media_if.srtp->client_settings;
+    allowed_srtp_profiles = media_if.srtp->profiles;
+    srtp_enable = media_if.srtp->srtp_enable && AmConfig.enable_srtp;
+    dtls_enable = srtp_enable && media_if.srtp->dtls_enable;
+    zrtp_enable = srtp_enable && media_if.srtp->zrtp_enable;
 
     stream->getMediaAcl(media_acl);
 }

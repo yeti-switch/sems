@@ -925,13 +925,12 @@ int AmRtpStream::init(const AmSdp& local,
                     cur_rtcp_trans->initRtpConnection(address, port);
                 connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
 
-                RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(
-                    &AmConfig.getMediaProtoInfo(cur_rtp_trans->getLocalIf(), cur_rtp_trans->getLocalProtoId()));
-                zrtp_context.init(ZRTP_HASH_TYPE, rtpinfo->zrtp_hashes);
-                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, rtpinfo->zrtp_ciphers);
-                zrtp_context.init(ZRTP_AUTHTAG_TYPE, rtpinfo->zrtp_authtags);
-                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, rtpinfo->zrtp_dhmodes);
-                zrtp_context.init(ZRTP_SAS_TYPE, rtpinfo->zrtp_sas);
+                MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+                zrtp_context.init(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
+                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
+                zrtp_context.init(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
+                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
+                zrtp_context.init(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
                 zrtp_context.start();
 #endif/*WITH_ZRTP*/
         } else {
