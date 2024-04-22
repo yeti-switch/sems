@@ -12,7 +12,17 @@
 #define PARAM_RESEND_CONNECTION_LIMIT_NAME  "resend_connection_limit"
 #define PARAM_CONNECTION_LIMIT_NAME         "connection_limit"
 
+#define SECTION_AUTH_NAME           "auth"
+#define PARAM_AUTH_TYPE             "type"
+#define AUTH_TYPE_FB_OA2_VALUE      "firebase_oauth2"
+#define PARAM_AUTH_PRIVATE_KEY      "private_key"
+#define PARAM_AUTH_JWT_KIT          "jwt_kid"
+#define PARAM_AUTH_JWT_ISS          "jwt_iss"
+#define PARAM_AUTH_TOKEN_LIFETIME   "token_lifetime"
+
 #define PARAM_MODE_NAME             "mode"
+#define PARAM_AUTH_NAME             "auth"
+#define PARAM_AUTH_USRPWD           "usrpwd"
 #define PARAM_HTTP2_TLS             "http2_tls"
 #define PARAM_CERT                  "certificate"
 #define PARAM_CERT_KEY              "certificate_key"
@@ -36,5 +46,6 @@
 #define ACTION_NOTHING_VALUE    "nothing"
 #define ACTION_MOVE_VALUE       "move"
 #define ACTION_REQUEUE_VALUE    "requeue"
+#define ACTION_AUTH_REFRESH     "auth_refresh"
 
 extern cfg_opt_t http_client_opt[];

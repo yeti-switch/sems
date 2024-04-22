@@ -84,6 +84,9 @@ class AmIdentity
 
     std::string generate(Botan::Private_Key* key);
 
+    std::string generate_firebase_assertion(Botan::Private_Key* key, unsigned int expire,
+                const std::string &kid, const std::string &iss);
+
     bool parse(const std::string& value);
 
     void set_passport_type(PassportType::passport_type_id type);

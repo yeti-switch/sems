@@ -61,6 +61,7 @@ class HttpClient
     };
     using SyncContextsMap = std::unordered_map<string, SyncContextData>;
     SyncContextsMap sync_contexts;
+    AmTimerFd auth_timer;
     AmTimerFd sync_contexts_timer;
     AmTimerFd resolve_timer;
 
@@ -98,11 +99,15 @@ class HttpClient
     using RpcRequestsMap = std::unordered_map<string, JsonRpcRequestEvent>;
     RpcRequestsMap rpc_requests;
 
+    using HttpAuthsMap = std::map<string, HttpDestination*>;
+
+    HttpAuthsMap auths;
+    HttpDestinationsMap destinations;
+
     int configure(const string& config);
     int init();
 
-    HttpDestinationsMap destinations;
-
+    friend struct HttpAuth;
     friend struct HttpDestination;
     void on_upload_request(HttpUploadEvent *u);
     void on_post_request(HttpPostEvent *u);
@@ -111,14 +116,17 @@ class HttpClient
     void on_init_connection_error(const string& conn_id);
     void on_multi_request(HttpMultiEvent* e);
     void on_trigger_sync_context(const HttpTriggerSyncContext &e);
+    void on_auth_timer();
     void on_sync_context_timer();
     void on_resend_timer_event();
     void update_resolve_list();
+    void authorization(HttpDestination &d, HttpPostEvent *u);
 
     rpc_handler showStats;
     async_rpc_handler postRequest;
     async_rpc_handler getRequest;
     async_rpc_handler multiRequest;
+    rpc_handler authDump;
     rpc_handler dstDump;
     async_rpc_handler showDnsCache;
     rpc_handler resetDnsCache;

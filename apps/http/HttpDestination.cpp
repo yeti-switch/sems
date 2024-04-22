@@ -1,8 +1,11 @@
 #include "HttpDestination.h"
+#include "HttpPostConnection.h"
 #include "http_client_cfg.h"
 #include "AmLcConfig.h"
+#include "AmIdentity.h"
 #include "AmUtils.h"
 #include "HttpClient.h"
+#include "jsonArg.h"
 #include "log.h"
 #include "defs.h"
 
@@ -10,6 +13,8 @@
 #include <vector>
 using std::vector;
 #include <cstdio>
+#include <fstream>
+#include <iostream>
 #include <unistd.h>
 
 
@@ -177,7 +182,7 @@ bool HttpCodesMap::operator ()(long int code) const
 }
 
 HttpDestination::HttpDestination(const string &name)
-  : http2_tls(false), min_file_size(0), max_reply_size(0)
+  : auth_type(AuthType_Unknown), is_auth_destination(false), http2_tls(false), min_file_size(0), max_reply_size(0)
   , count_failed_events(stat_group(Gauge, MOD_NAME, "failed_events").addAtomicCounter().addLabel("destination", name))
   , count_connection(stat_group(Gauge, MOD_NAME, "active_connections").addAtomicCounter().addLabel("destination", name))
   , resend_count_connection(stat_group(Gauge, MOD_NAME, "active_resend_connections").addAtomicCounter().addLabel("destination", name))
@@ -211,7 +216,7 @@ extern int http_dest_header_func(cfg_t *cfg, cfg_opt_t */*opt*/, int argc, const
     return 0;
 }
 
-int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values)
+int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values, bool is_auth = false)
 {
     AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
     mode = str2Mode(mode_str);
@@ -220,6 +225,37 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         return -1;
     }
 
+    if (is_auth) {
+        AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_AUTH_TYPE, auth_type_str);
+        is_auth_destination = is_auth;
+        auth_type = str2AuthType(auth_type_str);
+
+        switch (auth_type) {
+        case AuthType_Firebase_oauth2: {
+            std::ifstream ifs;
+            std::stringstream stream;
+
+            jwt_kid = cfg_getstr(cfg, PARAM_AUTH_JWT_KIT);
+            jwt_iss = cfg_getstr(cfg, PARAM_AUTH_JWT_ISS);
+            key_file = cfg_getstr(cfg, PARAM_AUTH_PRIVATE_KEY);
+            token_lifetime = cfg_getint(cfg, PARAM_AUTH_TOKEN_LIFETIME);
+
+            if(key_file.empty()
+              || (ifs.open(key_file), !ifs.is_open())) {
+                ERROR("can't access the private_key file %s: %m", key_file.c_str());
+                return -1;
+          }
+          stream << ifs.rdbuf();
+          key_data = stream.str();
+          ifs.close();
+          break;
+      }
+      default:;
+      }
+    }
+
+    auth_required = cfg_getstr(cfg, PARAM_AUTH_NAME);
+    auth_usrpwd = cfg_getstr(cfg, PARAM_AUTH_USRPWD);
     attempts_limit = cfg_getint(cfg, PARAM_REQUEUE_LIMIT_NAME);
     http2_tls = cfg_getbool(cfg, PARAM_HTTP2_TLS);
     certificate = cfg_getstr(cfg, PARAM_CERT);
@@ -370,6 +406,15 @@ void HttpDestination::dump(const string &, AmArg &ret) const
     ret["mode"] = mode_str.c_str();
     ret["url"] = url_list;
 
+    if(!access_token.empty())
+        ret["access_token"] = access_token;
+
+    if(!auth_required.empty())
+        ret["auth"] = auth_required;
+
+    if(!auth_usrpwd.empty())
+        ret["auth_usrpwd"] = auth_usrpwd;
+
     if(!certificate.empty())
         ret["certificate"] = certificate.c_str();
     if(!certificate_key.empty())
@@ -400,6 +445,15 @@ void HttpDestination::dump(const string &, AmArg &ret) const
 }
 
 
+HttpDestination::AuthType HttpDestination::str2AuthType(const string& type)
+{
+    if(type == AUTH_TYPE_FB_OA2_VALUE) {
+        return AuthType_Firebase_oauth2;
+    }
+    return AuthType_Unknown;
+}
+
+
 HttpDestination::Mode HttpDestination::str2Mode(const string& mode)
 {
     if(mode == MODE_PUT_VALUE) {
@@ -422,6 +476,73 @@ void HttpDestination::addEvent(HttpEvent* event)
         count_pending_events.inc();
     }
 }
+
+void HttpDestination::on_finish(bool failed, string responce)
+{
+    AmArg res;
+
+    if(!is_auth_destination)
+        return;
+
+    if(failed || responce.empty())
+        return;
+
+    if(!json2arg(responce, res)) {
+        ERROR("failed deserialize json payload: '%s'", responce.c_str());
+        return;
+    }
+
+    if (!res.hasMember("access_token")
+        || !isArgCStr(res["access_token"])) {
+            ERROR("access_token as string expected");
+            return;
+    }
+
+    access_token = res["access_token"].asCStr();
+
+    expires = res.hasMember("expires_in") && isArgInt(res["expires_in"])
+                  ? res["expires_in"].asInt()
+                  : token_lifetime;
+
+    gettimeofday(&token_created_at, NULL);
+}
+
+void HttpDestination::credentials_refresh(HttpClient* client, const string &name)
+{
+    Botan::DataSource_Memory ds(key_data);
+    std::unique_ptr<Botan::Private_Key> pk = Botan::PKCS8::load_key(ds);
+    AmIdentity identity;
+    AmArg data;
+
+    data["assertion"] = identity.generate_firebase_assertion(pk.get(), token_lifetime, jwt_kid, jwt_iss);
+    data["grant_type"] = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
+    HttpPostEvent *ev = new HttpPostEvent(name, arg2json(data), string());
+    client->on_post_request(ev);
+    delete ev;
+}
+
+void HttpDestination::auth_on_timer_event(HttpClient* client, const std::string &name)
+{
+    if(auth_type != AuthType_Firebase_oauth2)
+        return;
+
+    if(!access_token.empty()) {
+
+        struct timeval delta, now;
+
+        gettimeofday(&now , nullptr);
+        timersub(&now, &token_created_at, &delta);
+
+        auto ttl = delta.tv_sec + 5;
+
+        if (ttl < expires)
+            return;
+    }
+
+    credentials_refresh(client, name);
+}
+
 void HttpDestination::send_failed_events(HttpClient* client)
 {
     HttpEvent* event;
@@ -485,10 +606,10 @@ void HttpDestination::showStats(AmArg& ret)
     ret["requests_failed"] = static_cast<unsigned long>(requests_failed.get());
 }
 
-int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values)
+int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values, bool is_auth = false)
 {
     HttpDestination d(name);
-    if(d.parse(name,cfg, values)){
+    if(d.parse(name,cfg, values, is_auth)){
         return -1;
     }
     std::pair<HttpDestinationsMap::iterator,bool> ret;
@@ -500,8 +621,16 @@ int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, c
     return 0;
 }
 
-int HttpDestinationsMap::configure(cfg_t * cfg, const DefaultValues& values)
+int HttpDestinationsMap::configure(cfg_t * cfg, DefaultValues& values)
 {
+    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_AUTH_NAME); i++) {
+        cfg_t *dist = cfg_getnsec(cfg, SECTION_AUTH_NAME, i);
+        if(configure_destination(dist->title, dist, values, true)) {
+            ERROR("can't configure auth destination %s",dist->title);
+            return -1;
+        }
+    }
+
     for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DIST_NAME); i++) {
         cfg_t *dist = cfg_getnsec(cfg, SECTION_DIST_NAME, i);
         if(configure_destination(dist->title, dist, values)) {

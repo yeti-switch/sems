@@ -11,6 +11,7 @@ using std::string;
 using std::list;
 
 class HttpClient;
+class CurlConnection;
 
 class DestinationAction {
 public:
@@ -52,7 +53,6 @@ class HttpCodesMap {
 };
 
 struct DefaultValues {
-
     unsigned int resend_queue_max;
     unsigned int resend_connection_limit;
     unsigned int connection_limit;
@@ -70,7 +70,7 @@ struct HttpDestination {
 
     string content_type;
 
-    int parse(const string &name, cfg_t *cfg, const DefaultValues& values);
+    int parse(const string &name, cfg_t *cfg, const DefaultValues& values, bool is_auth);
 
     bool need_requeue() const { return fail_action.requeue(); }
 
@@ -84,7 +84,26 @@ struct HttpDestination {
     } mode;
     string mode_str;
 
+    /** this destination is used for auth purposes */
+    enum AuthType {
+        AuthType_Unknown,
+        AuthType_Firebase_oauth2,
+    } auth_type;
+    string auth_type_str;
+
+    bool is_auth_destination;
+    string key_file;
+    string key_data;
+    string access_token;
+    string jwt_kid;
+    string jwt_iss;
+    int token_lifetime;
+    timeval token_created_at;
+    int     expires;
+
     bool http2_tls;
+    string auth_required; /** this destination requires the specified authentication */
+    string auth_usrpwd;   /** this destination uses username:password authentication */
     string certificate;
     string certificate_key;
     vector<string> url;
@@ -108,14 +127,18 @@ struct HttpDestination {
 
     string succ_codes_str;
 
+    void on_finish(bool failed, string responce);
     int post_upload(const string &file_path, const string &file_basename, bool failed) const;
     int post_upload(bool failed) const;
 
     void dump(const string &key) const;
     void dump(const string &key, AmArg &ret) const;
     static Mode str2Mode(const string& mode);
+    static AuthType str2AuthType(const string& type);
 
     void addEvent(HttpEvent* event);
+    void credentials_refresh(HttpClient* client, const string &name);
+    void auth_on_timer_event(HttpClient* client, const string &name);
     void send_failed_events(HttpClient* client);
     void send_postponed_events(HttpClient* client);
     bool check_queue();
@@ -125,11 +148,11 @@ struct HttpDestination {
 class HttpDestinationsMap
   : public std::map<string,HttpDestination>
 {
-    int configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values);
+    int configure_destination(const string &name, cfg_t *cfg, const DefaultValues& values, bool is_auth);
     int configure_destination_group(const string &name, cfg_t *cfg);
   public:
 
-    int configure(cfg_t *cfg, const DefaultValues& values);
+    int configure(cfg_t *cfg, DefaultValues &values);
     void dump();
     void dump(AmArg &ret);
 

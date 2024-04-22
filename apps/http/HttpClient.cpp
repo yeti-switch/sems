@@ -23,6 +23,7 @@ using std::vector;
 
 #define SYNC_CONTEXTS_TIMER_INVERVAL 500000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
+#define AUTH_TIMER_INVERVAL 2000000
 
 enum RpcMethodId {
     MethodShowDnsCache,
@@ -108,6 +109,17 @@ HttpClient::HttpClient()
 
 HttpClient::~HttpClient()
 { }
+
+static int validate_type_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    HttpDestination::AuthType type= HttpDestination::str2AuthType(value);
+    if(type == HttpDestination::AuthType_Unknown) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'basic\' or \'firebase_oauth2\'", value.c_str(), opt->name);
+        return 1;
+    }
+    return 0;
+}
 
 static int validate_mode_func(cfg_t *cfg, cfg_opt_t *opt)
 {
@@ -205,6 +217,7 @@ int HttpClient::configure(const string& config)
 {
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
     if(!cfg) return -1;
+    cfg_set_validate_func(cfg, SECTION_AUTH_NAME "|" PARAM_AUTH_TYPE, validate_type_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_SOURCE_ADDRESS_NAME, validate_source_address_func);
     cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
@@ -225,21 +238,33 @@ int HttpClient::configure(const string& config)
         cfg_free(cfg);
         return -1;
     }
-
     resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME)*1000;
     DefaultValues vals;
     vals.resend_queue_max = resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
     vals.resend_connection_limit = resend_connection_limit = cfg_getint(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME);
     vals.connection_limit = connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
 
+    auths.clear();
     destinations.clear();
+
     if(destinations.configure(cfg, vals)){
         ERROR("can't configure destinations");
         cfg_free(cfg);
         return -1;
     }
-    destinations.dump();
 
+    for (auto &[name, dest] : destinations)
+        if (dest.is_auth_destination)
+            auths.emplace(name, &dest);
+
+    for(const auto &[name, dest] : destinations) {
+        if(!dest.auth_required.empty() && auths.find(dest.auth_required) == auths.end()) {
+            ERROR("Destination '%s' has unknown auth '%s'", name.c_str(), dest.auth_required.c_str());
+            return -1;
+        }
+    }
+
+    destinations.dump();
     cfg_free(cfg);
     return 0;
 }
@@ -256,8 +281,12 @@ int HttpClient::init()
         resend_timer.set(resend_interval);
     }
 
+    auth_timer.link(epoll_fd,true);
+    auth_timer.set(AUTH_TIMER_INVERVAL);
+
     sync_contexts_timer.link(epoll_fd,true);
     sync_contexts_timer.set(SYNC_CONTEXTS_TIMER_INVERVAL);
+
 
     resolve_timer.link(epoll_fd, true);
     //resolve_timer.set(1, false);
@@ -302,6 +331,7 @@ int HttpClient::onLoad()
 void HttpClient::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root,"show");
+        reg_method(show,"auth","auths dump",&HttpClient::authDump);
         reg_method(show,"destinations","destinations dump",&HttpClient::dstDump);
         reg_method(show, "stats", "show statistics", &HttpClient::showStats);
         reg_method(show, "dns_cache", "show statistics", &HttpClient::showDnsCache);
@@ -410,6 +440,14 @@ bool HttpClient::multiRequest(
     return true;
 }
 
+void HttpClient::authDump(const AmArg&, AmArg& ret)
+{
+    ret.assertStruct();
+    for(HttpAuthsMap::const_iterator i =
+        auths.begin(); i!=auths.end();i++)
+          i->second->dump(i->first,ret[i->first]);
+}
+
 void HttpClient::dstDump(const AmArg&, AmArg& ret)
 {
     destinations.dump(ret);
@@ -467,7 +505,9 @@ void HttpClient::run()
                 on_resend_timer_event();
             } else if(p==&sync_contexts_timer) {
                 on_sync_context_timer();
-            } else if(p==&resolve_timer) {
+            } else if(p==&auth_timer) {
+                on_auth_timer();
+            }  else if(p==&resolve_timer) {
                 DBG("DNS cache timer expired");
                 update_resolve_list();
             } else if(p==static_cast<AmEventFdQueue *>(this)){
@@ -806,6 +846,25 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
     }
 }
 
+void HttpClient::authorization(HttpDestination &d, HttpPostEvent *u)
+{
+    HttpAuthsMap::iterator it = auths.find(d.auth_required);
+
+    if(it == auths.end())
+        return;
+
+    auto auth = it->second;
+
+    switch (auth->auth_type) {
+    case HttpDestination::AuthType::AuthType_Firebase_oauth2:
+        if(!auth->access_token.empty())
+          u->additional_headers.emplace("Authorization",
+                                        "Bearer " + auth->access_token);
+        break;
+    default:;
+    }
+}
+
 void HttpClient::on_post_request(HttpPostEvent *u)
 {
     HttpDestinationsMap::iterator destination = destinations.find(u->destination_name);
@@ -822,6 +881,8 @@ void HttpClient::on_post_request(HttpPostEvent *u)
               u->destination_name.c_str(),u->session_id.c_str());
         return;
     }
+
+    authorization(d, u);
 
     if(u->token.empty()){
         DBG("http post request url: %s [%i/%i]",
@@ -978,6 +1039,14 @@ void HttpClient::on_multi_request(HttpMultiEvent* e)
         postEvent(ev.release());
     }
     sync_multies.emplace(sync_token, count);
+}
+
+void HttpClient::on_auth_timer()
+{
+    auth_timer.read();
+
+    for(auto& [name, auth] : auths)
+        auth->auth_on_timer_event(this, name);
 }
 
 void HttpClient::on_resend_timer_event()

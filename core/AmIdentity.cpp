@@ -328,6 +328,48 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     return ret;
 }
 
+std::string AmIdentity::generate_firebase_assertion(Botan::Private_Key* key,
+      unsigned int expire, const string &kid, const string &iss)
+{
+    int now = (int)time(0);
+
+    header["typ"] = "JWT";
+    header["alg"] = "RS256";
+    header["kid"] = kid;
+
+    payload["iat"] = now;
+    payload["exp"] = now + expire;
+    payload["iss"]  = iss;
+    payload["aud"] = "https://oauth2.googleapis.com/token";
+    payload["scope"] = "https://www.googleapis.com/auth/firebase.messaging";
+
+    jwt_header = arg2json(header);
+    jwt_payload = arg2json(payload);
+
+    std::string base64_header = base64_url_encode(jwt_header);
+    std::string base64_payload= base64_url_encode(jwt_payload);
+
+    auto &rng = Botan::system_rng();
+    Botan::PK_Signer signer(*key, rng, "EMSA3(SHA-256)");
+
+    signer.update((uint8_t*)base64_header.c_str(), base64_header.size());
+    signer.update((uint8_t*)".", 1);
+    signer.update((uint8_t*)base64_payload.c_str(), base64_payload.size());
+
+    signature.resize(signer.signature_length());
+    std::vector<uint8_t> sign_ = signer.signature(rng);
+    memcpy((char*)signature.c_str(), sign_.data(), sign_.size());
+
+    std::string assertion = base64_header;
+
+    assertion.append(".");
+    assertion.append(base64_payload);
+    assertion.append(".");
+    assertion.append(base64_url_encode(signature));
+
+    return assertion;
+}
+
 bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
 {
     last_errcode = 0;

@@ -73,6 +73,9 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_PRIVATE, this);
     easy_setopt(CURLOPT_ERRORBUFFER, curl_error);
 
+    if(!destination.auth_usrpwd.empty())
+        easy_setopt(CURLOPT_USERPWD, destination.auth_usrpwd.c_str());
+
     resolve_hosts = clone_resolve_slist(hosts);
     easy_setopt(CURLOPT_CONNECT_TO, resolve_hosts);
 #ifdef ENABLE_DEBUG
@@ -158,6 +161,8 @@ void CurlConnection::on_finished()
         ERROR("can't %s to '%s'. http_code %ld",
               get_name(), eff_url,http_response_code);
     }
+
+    destination.on_finish(failed, get_response_data());
 
     if(!on_finish_requeue) {
         destination.requests_processed.inc();
