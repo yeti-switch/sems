@@ -409,7 +409,7 @@ void CoreRpc::stopSslKeyLog(const AmArg&, AmArg& ret) {
 
 void CoreRpc::restartSslKeyLog(const AmArg& args, AmArg& ret)
 {
-    string path;
+    string path = AmConfig.ssl_key_log_filepath;
     if(args.size()){
         args.assertArrayFmt("s");
         path = args[0].asCStr();
