@@ -62,7 +62,7 @@ public:
         if(proto == "TLSv1.2") {
             return TLSv1_2;
         } else if(proto == "TLSv1.3") {
-            return TLSv1_2;
+            return TLSv1_3;
         }
 
         return UNSUPPORT;
