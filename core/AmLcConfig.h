@@ -141,6 +141,7 @@ struct ConfigContainer
     std::string pcap_upload_queue_name;
     AmAudio::ResamplingImplementationType resampling_implementation_type;
     int dump_level;
+    std::string ssl_key_log_filepath;
 
     bool enable_zrtp;
 

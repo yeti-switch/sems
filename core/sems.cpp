@@ -78,6 +78,7 @@ using std::string;
 #include "PcapFileRecorder.h"
 #include "sip/tls_trsp.h"
 #include "sip/tr_blacklist.h"
+#include "sip/ssl_key_logger.h"
 #include "AmStatistics.h"
 #include <getopt.h>
 #endif
@@ -748,6 +749,7 @@ int main(int argc, char* argv[])
         DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
     }
 
+    restart_ssl_key_logger(AmConfig.ssl_key_log_filepath);
     AmThreadWatcher::instance();
     if(CoreRpc::instance().onLoad()) {
         ERROR("failed to initialize CoreRpc");

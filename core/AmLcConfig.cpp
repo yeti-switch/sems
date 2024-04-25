@@ -173,6 +173,7 @@
 #define PARAM_SYMMETRIC_MODE_NAME    "symmetric_rtp_mode"
 #define PARAM_SYMMETRIC_PACKETS_NAME "symmetric_rtp_packets"
 #define PARAM_SYMMETRIC_DELAY_NAME   "symmetric_rtp_delay"
+#define PARAM_TLS_SSL_KEY_LOG_FILE   "ssl_key_log_file"
 
 #define VALUE_OFF                    "off"
 #define VALUE_DROP                   "drop"
@@ -627,6 +628,7 @@ namespace Config {
         CFG_INT(PARAM_SIP_TIMER_BL_NAME, DEFAULT_BL_TIMER, CFGF_NONE),
         CFG_INT(PARAM_SIP_TIMER_T2_NAME, DEFAULT_T2_TIMER, CFGF_NONE),
         CFG_BOOL(PARAM_ENABLE_ZRTP_NAME, cfg_true, CFGF_NONE),
+        CFG_STR(PARAM_TLS_SSL_KEY_LOG_FILE, "", CFGF_NONE),
 #ifdef USE_LIBSAMPLERATE
 #ifndef USE_INTERNAL_RESAMPLER
         CFG_STR(PARAM_RESAMPLE_LIBRARY_NAME, VALUE_LIBSAMPLERATE, CFGF_NONE),
@@ -1202,6 +1204,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     else if(value == VALUE_UNAVAILABLE) config->resampling_implementation_type = AmAudio::UNAVAILABLE;
     else if(value == VALUE_INTERNAL) config->resampling_implementation_type = AmAudio::INTERNAL_RESAMPLER;
     config->enable_zrtp = cfg_getbool(gen, PARAM_ENABLE_ZRTP_NAME);
+    config->ssl_key_log_filepath = cfg_getstr(gen, PARAM_TLS_SSL_KEY_LOG_FILE);
 #ifndef DISABLE_DAEMON_MODE
     config->deamon_mode = cfg_getbool(gen, PARAM_DEAMON_NAME);
     config->deamon_uid = cfg_getstr(gen, PARAM_DEAMON_UID_NAME);

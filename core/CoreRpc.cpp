@@ -19,6 +19,7 @@
 #include <map>
 #include "sip/tr_blacklist.h"
 #include "sip/trans_layer.h"
+#include "sip/ssl_key_logger.h"
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -184,6 +185,9 @@ void CoreRpc::init_rpc_tree()
 
     //set
     AmArg &set = reg_leaf(root,"set");
+        AmArg &set_ssl_key_log = reg_leaf(set,"ssl_key_log");
+            reg_method(set_ssl_key_log,"stop","",&CoreRpc::stopSslKeyLog);
+            reg_method(set_ssl_key_log,"restart","",&CoreRpc::restartSslKeyLog);
         AmArg &set_loglevel = reg_leaf(set,"log-level");
             reg_method(set_loglevel,"syslog","<log_level>",&CoreRpc::setLogSyslogLevel);
             reg_method(set_loglevel,"di_log","<log_level>",&CoreRpc::setLogDiLogLevel);
@@ -396,6 +400,22 @@ void CoreRpc::showLogLevel(const AmArg& args, AmArg& ret)
     addLoggingFacilityLogLevel(ret["facilities"],"syslog");
     addLoggingFacilityLogLevel(ret["facilities"],"di_log");
     addLoggingFacilityLogLevel(ret["facilities"],"stderr");
+}
+
+void CoreRpc::stopSslKeyLog(const AmArg&, AmArg& ret) {
+    ssl_key_logger()->stop();
+    ret = RPC_CMD_SUCC;
+}
+
+void CoreRpc::restartSslKeyLog(const AmArg& args, AmArg& ret)
+{
+    string path;
+    if(args.size()){
+        args.assertArrayFmt("s");
+        path = args[0].asCStr();
+    }
+    restart_ssl_key_logger(path);
+    ret = RPC_CMD_SUCC;
 }
 
 void CoreRpc::setLogSyslogLevel(const AmArg& args, AmArg& ret)

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <botan/tls_callbacks.h>
+#include <botan/hex.h>
+#include "sip/ssl_key_logger.h"
 
 class BotanTLSCallbacksProxy
     : public Botan::TLS::Callbacks
@@ -52,5 +54,14 @@ class BotanTLSCallbacksProxy
     void tls_session_activated() override
     {
         parent.tls_session_activated();
+    }
+    
+    void tls_ssl_key_log_data(const char* label,
+                              const std::vector<uint8_t>& client_random,
+                              const Botan::secure_vector<uint8_t>& secret) override
+    {
+        ssl_key_logger()->log(label,
+                            Botan::hex_encode(client_random.data(), client_random.size()),
+                            Botan::hex_encode(secret.data(), secret.size()));
     }
 };

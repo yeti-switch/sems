@@ -47,6 +47,7 @@ public:
     bool is_client();
 
     //Policy functions
+    bool allow_ssl_key_log_file() const override{ return true; }
     vector<string> allowed_key_exchange_methods() const override;
     vector<string> allowed_signature_methods() const override;
     vector<string> allowed_ciphers() const override;
