@@ -56,6 +56,7 @@ public:
     vector<string> allowed_macs() const override;
     size_t minimum_rsa_bits() const override;
     bool allow_tls12()  const override;
+    bool allow_tls13()  const override;
     bool allow_dtls12() const override { return false;}
     bool require_cert_revocation_info() const override { return false; }
     bool require_client_certificate_authentication() const override;

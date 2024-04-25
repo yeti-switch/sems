@@ -1071,9 +1071,9 @@ signaling-interfaces {
                     *
                     * list of supported protocols
                     *
-                    * available values: TLSv1, TLSv1.1, TLSv1.2
+                    * available values: TLSv1.2, TLSv1.3
                     */
-                    protocols =  { TLSv1, TLSv1.1, TLSv1.2 }
+                    protocols =  { TLSv1.2, TLSv1.3 }
 
                     /* optional parameters certificate
                     *
@@ -1122,9 +1122,9 @@ signaling-interfaces {
                     *
                     * list of supported protocols
                     *
-                    * available values: TLSv1, TLSv1.1, TLSv1.2
+                    * available values: TLSv1.2, TLSv1.3
                     */
-                    protocols =  { TLSv1, TLSv1.1, TLSv1.2 }
+                    protocols =  { TLSv1.2, TLSv1.3 }
 
                     /* mandatory parameters certificate
                     *
@@ -1309,9 +1309,9 @@ media-interfaces {
                             *
                             * list of supported protocols
                             *
-                            * available values: DTLSv1, DTLSv1.2
+                            * available values: DTLSv1.2
                             */
-                            protocols =  { DTLSv1, DTLSv1.2 }
+                            protocols =  { DTLSv1.2 }
 
                             /* optional parameters certificate
                             *
@@ -1370,9 +1370,9 @@ media-interfaces {
                             *
                             * list of supported protocols
                             *
-                            * available values: DTLSv1, DTLSv1.2
+                            * available values: DTLSv1.2
                             */
-                            protocols =  { DTLSv1, DTLSv1.2 }
+                            protocols =  { DTLSv1.2 }
 
                             /* mandatory parameters certificate
                             *
