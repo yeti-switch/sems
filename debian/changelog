@@ -1,3 +1,7 @@
+sems (1.132.1) stable; urgency=low
+  * http: add firebase_oauth2 support
+ -- Michael Furmur <furmur@pm.me>  Mon, 29 Apr 2024 21:31:09 +0300
+
 sems (1.132.0) stable; urgency=low
   * ignore RTP timeout for streams being on hold
   * fix ICE pair choosing by candidates priority
