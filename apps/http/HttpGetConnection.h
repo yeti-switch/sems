@@ -12,10 +12,10 @@ class HttpGetConnection: public CurlConnection
   struct curl_slist *headers;
   string response;
 protected:
-  bool on_failed();
-  char* get_name();
-  void post_response_event();
-  const char* get_response_data();
+  bool on_failed() override;
+  char* get_name() override;
+  void post_response_event() override;
+  const string &get_response() override;
 public:
   HttpGetConnection(HttpDestination &destination,
                     const HttpGetEvent &u,

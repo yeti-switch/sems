@@ -162,7 +162,7 @@ void CurlConnection::on_finished()
               get_name(), eff_url,http_response_code);
     }
 
-    destination.on_finish(failed, get_response_data());
+    destination.on_finish(failed, get_response());
 
     if(!on_finish_requeue) {
         destination.requests_processed.inc();
@@ -201,6 +201,5 @@ void CurlConnection::get_response(AmArg& ret)
     ret["mime_type"] = mime_type;
     ret["total_time"] = total_time;
     ret["result"] = failed ? "failed" : "success";
-    //const char* data = get_response_data();
-    //if(data) ret["data"] = data;
+    //ret["data"] = get_response();
 }

@@ -127,7 +127,7 @@ struct HttpDestination {
 
     string succ_codes_str;
 
-    void on_finish(bool failed, string responce);
+    void on_finish(bool failed, const string &response);
     int post_upload(const string &file_path, const string &file_basename, bool failed) const;
     int post_upload(bool failed) const;
 

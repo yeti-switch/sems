@@ -477,18 +477,18 @@ void HttpDestination::addEvent(HttpEvent* event)
     }
 }
 
-void HttpDestination::on_finish(bool failed, string responce)
+void HttpDestination::on_finish(bool failed, const string &response)
 {
     AmArg res;
 
     if(!is_auth_destination)
         return;
 
-    if(failed || responce.empty())
+    if(failed || response.empty())
         return;
 
-    if(!json2arg(responce, res)) {
-        ERROR("failed deserialize json payload: '%s'", responce.c_str());
+    if(!json2arg(response, res)) {
+        ERROR("failed deserialize json payload: '%s'", response.c_str());
         return;
     }
 

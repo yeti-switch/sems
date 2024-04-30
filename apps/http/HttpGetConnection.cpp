@@ -74,9 +74,9 @@ void HttpGetConnection::post_response_event()
     }
 }
 
-const char* HttpGetConnection::get_response_data()
+const string &HttpGetConnection::get_response()
 {
-    return response.c_str();
+    return response;
 }
 
 size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpGetConnection *self)

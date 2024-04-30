@@ -31,7 +31,10 @@ protected:
 
   virtual bool on_success();
   virtual bool on_failed();
-  virtual const char* get_response_data() { return 0; }
+  virtual const string &get_response() {
+    static string empty_string;
+    return empty_string;
+  }
   virtual void post_response_event() = 0;
   virtual char* get_name() = 0;
 public:
