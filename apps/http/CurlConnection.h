@@ -25,6 +25,8 @@ protected:
   bool on_finish_requeue;
   DestinationAction finish_action;
 
+  string get_url();
+
   void on_finished();
   bool need_requeue();
   void on_requeue();

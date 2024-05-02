@@ -60,7 +60,7 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     }
 
     if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
-    easy_setopt(CURLOPT_URL,destination.url[0].c_str());
+    easy_setopt(CURLOPT_URL,get_url().c_str());
     easy_setopt(CURLOPT_POSTFIELDS,event_->data.c_str());
 
     easy_setopt(CURLOPT_WRITEFUNCTION,write_func_static);

@@ -3,6 +3,8 @@
 #include "AmEvent.h"
 #include "sys/time.h"
 
+#include <map>
+
 #define HTTP_EVENT_QUEUE "http"
 
 struct HttpEvent
@@ -17,6 +19,8 @@ struct HttpEvent
         Multi,
         TriggerSyncContext
     };
+
+    std::map<std::string, std::string> url_placeholders;
 
     string session_id;
     string token;
@@ -71,7 +75,7 @@ struct HttpUploadEvent
     {}
 
     HttpUploadEvent(const HttpUploadEvent &src)
-      : HttpEvent(Upload, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      : HttpEvent(src),
         file_path(src.file_path),
         file_name(src.file_name),
         destination_name(src.destination_name)
@@ -116,7 +120,7 @@ struct HttpPostMultipartFormEvent
     {}
 
     HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
-      : HttpEvent(MultiPartForm, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      : HttpEvent(src),
         parts(src.parts),
         destination_name(src.destination_name)
     {}
@@ -160,14 +164,15 @@ struct HttpPostEvent
         map<string, string> headers, string token,
         string session_id = string(),
         const string &sync_ctx_id = string())
-      : HttpEvent(Post, session_id,token,sync_ctx_id),
+      : HttpEvent(Post,
+        session_id,token,sync_ctx_id),
         data(data),
         destination_name(destination_name),
         additional_headers(headers)
     {}
 
     HttpPostEvent(const HttpPostEvent &src)
-      : HttpEvent(Post, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      : HttpEvent(src),
         data(src.data),
         destination_name(src.destination_name),
         additional_headers(src.additional_headers)
@@ -209,7 +214,7 @@ struct HttpGetEvent
     {}
 
     HttpGetEvent(const HttpGetEvent &src)
-      : HttpEvent(Get, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt),
+      : HttpEvent(src),
         destination_name(src.destination_name),
         url(src.url)
     {}
@@ -250,7 +255,7 @@ struct HttpMultiEvent
     {}
 
     HttpMultiEvent(const HttpMultiEvent &src)
-      : HttpEvent(Multi, src.session_id,src.token,src.sync_ctx_id,src.failover_idx,src.attempt)
+      : HttpEvent(src)
     {
         for(auto& e : src.multi_events)
             add_event(e->http_clone());

@@ -5,6 +5,9 @@
 #include <sys/epoll.h>
 #include <errno.h>
 
+#include <regex>
+#include <format>
+
 #define easy_setopt(opt,val) \
     if(CURLE_OK!=curl_easy_setopt(curl,opt,val)){ \
         ERROR("curl_easy_setopt error for option" #opt); \
@@ -139,6 +142,24 @@ bool CurlConnection::need_requeue()
     }
 
     return on_finish_requeue;
+}
+
+string CurlConnection::get_url()
+{
+    string url = destination.url[event->failover_idx];
+    for(auto& [name,value]: event->url_placeholders) {
+        char *escaped = curl_easy_escape(
+            curl, value.data(),value.size());
+        try {
+            std::regex regex(std::format("\\{{{}\\}}", name));
+            url = std::regex_replace(url, regex, escaped);
+        } catch(std::regex_error &e) {
+            ERROR("failed to replace url_placeholder %s => %s: %s",
+                name.data(), value.data(), e.what());
+        }
+        curl_free(escaped);
+    }
+    return url;
 }
 
 void CurlConnection::on_finished()
