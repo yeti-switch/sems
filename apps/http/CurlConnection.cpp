@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include <regex>
-#include <format>
+#include <sstream>
 
 #define easy_setopt(opt,val) \
     if(CURLE_OK!=curl_easy_setopt(curl,opt,val)){ \
@@ -151,8 +151,9 @@ string CurlConnection::get_url()
         char *escaped = curl_easy_escape(
             curl, value.data(),value.size());
         try {
-            std::regex regex(std::format("\\{{{}\\}}", name));
-            url = std::regex_replace(url, regex, escaped);
+            std::ostringstream oss;
+            oss << "\\{" << name << "\\}";
+            url = std::regex_replace(url, std::regex(oss.str()), escaped);
         } catch(std::regex_error &e) {
             ERROR("failed to replace url_placeholder %s => %s: %s",
                 name.data(), value.data(), e.what());
