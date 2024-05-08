@@ -79,7 +79,7 @@ class BusClient
     typedef std::unordered_map<int, std::unique_ptr<BusDynamicQueue> > DynamicQueuesMap;
     DynamicQueuesMap dynamic_queues;
 
-    typedef struct {
+    struct config_t {
         int         so_rcvbuf;
         int         so_sndbuf;
         int         reconnect_interval;
@@ -90,7 +90,7 @@ class BusClient
             string application;
         };
         vector<dynamic_queue_config_t> dynamic_queues;
-    } config_t;
+    } config;
 
     typedef struct {
         int priority;
@@ -121,7 +121,6 @@ class BusClient
 
     int                         epoll_fd;
     bool                        tostop;
-    config_t                    config;
 
     map<string, sockaddr_storage>   bus_nodes;
     map<string, int>   bus_nodes_index;
