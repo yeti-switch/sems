@@ -453,6 +453,7 @@ class AmRtpStream
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     DtlsContext* getDtlsContext(uint8_t transport_type);
+    void initDtls(uint8_t transport_type, bool client);
     void update_sender_stats(const AmRtpPacket &p);
     void inc_drop_pack(){ dropped_packets_count++; }
 

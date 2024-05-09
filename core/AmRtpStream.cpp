@@ -925,13 +925,12 @@ int AmRtpStream::init(const AmSdp& local,
                     cur_rtcp_trans->initRtpConnection(address, port);
                 connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
 
-                RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(
-                    &AmConfig.getMediaProtoInfo(cur_rtp_trans->getLocalIf(), cur_rtp_trans->getLocalProtoId()));
-                zrtp_context.init(ZRTP_HASH_TYPE, rtpinfo->zrtp_hashes);
-                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, rtpinfo->zrtp_ciphers);
-                zrtp_context.init(ZRTP_AUTHTAG_TYPE, rtpinfo->zrtp_authtags);
-                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, rtpinfo->zrtp_dhmodes);
-                zrtp_context.init(ZRTP_SAS_TYPE, rtpinfo->zrtp_sas);
+                MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+                zrtp_context.init(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
+                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
+                zrtp_context.init(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
+                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
+                zrtp_context.init(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
                 zrtp_context.start();
 #endif/*WITH_ZRTP*/
         } else {
@@ -1167,6 +1166,28 @@ DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
     assert(transport_type < MAX_TRANSPORT_TYPE);
     return dtls_context[transport_type].get();
 }
+
+void AmRtpStream::initDtls(uint8_t transport_type, bool client)
+{
+    MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+    if(!media_if.srtp->dtls_enable)
+        throw string("DTLS is not configured on: ") + media_if.name;
+    std::shared_ptr<dtls_conf> dtls_settings;
+    if(client)
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->client_settings);
+    else
+        dtls_settings = std::make_shared<dtls_conf>(&media_if.srtp->server_settings);
+    AmMediaTransport* transport = 0;
+    if(transport_type == RTP_TRANSPORT)
+        transport = cur_rtp_trans;
+    else if(transport_type == RTCP_TRANSPORT)
+        transport = cur_rtcp_trans;
+    else
+        transport = cur_udptl_trans;
+    assert(transport);
+    getDtlsContext(transport_type)->initContext(transport->getLocalIP(), transport->getLocalPort(), dtls_settings);
+}
+
 
 #ifdef WITH_ZRTP
 extern "C" {

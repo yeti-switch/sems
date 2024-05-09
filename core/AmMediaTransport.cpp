@@ -67,15 +67,13 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     recv_msg.msg_control    = recv_ctl_buf;
     recv_msg.msg_controllen = RTP_PACKET_TIMESTAMP_DATASIZE;
 
-    RTP_info* rtpinfo = RTP_info::toMEDIA_RTP(&AmConfig.getMediaProtoInfo(_if, _proto_id));
-    if(rtpinfo) {
-        server_settings = &rtpinfo->server_settings;
-        client_settings = &rtpinfo->client_settings;
-        allowed_srtp_profiles = rtpinfo->profiles;
-        srtp_enable = rtpinfo->srtp_enable && AmConfig.enable_srtp;
-        dtls_enable = srtp_enable && rtpinfo->dtls_enable;
-        zrtp_enable = srtp_enable && rtpinfo->zrtp_enable;
-    }
+    MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(_if);
+    server_settings = &media_if.srtp->server_settings;
+    client_settings = &media_if.srtp->client_settings;
+    allowed_srtp_profiles = media_if.srtp->profiles;
+    srtp_enable = media_if.srtp->srtp_enable && AmConfig.enable_srtp;
+    dtls_enable = srtp_enable && media_if.srtp->dtls_enable;
+    zrtp_enable = srtp_enable && media_if.srtp->zrtp_enable;
 
     stream->getMediaAcl(media_acl);
 }
@@ -749,7 +747,8 @@ void AmMediaTransport::initDtlsConnection(const string& remote_address, int remo
             }
             if(connection) {
                 addConnection(connection);
-                connection->initConnection();
+                stream->initDtls(type, connection->isClient());
+                stream->getDtlsContext(type)->setCurrentConnection(connection);
             }
         } catch(string& error) {
             CLASS_ERROR("DTLS connection error: %s", error.c_str());
@@ -908,8 +907,8 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
                     try {
                             //mark as initialized first to avoid new connection on errors for the matched one
                             secure_connection_state = CONN_STATE_INITIALIZED;
-
-                            dtls_connection->initConnection();
+                            stream->initDtls(type, is_dtls_client);
+                            stream->getDtlsContext(type)->setCurrentConnection(dtls_connection);
                     } catch(string& error) {
                         CLASS_ERROR("DTLS connection error: %s", error.c_str());
                     }
@@ -938,8 +937,9 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
             stream->getDtlsContext(type), is_dtls_client);
 
         try {
-            dtls_connection->initConnection();
             addConnection(dtls_connection);
+            stream->initDtls(type, dtls_connection->isClient());
+            stream->getDtlsContext(type)->setCurrentConnection(dtls_connection);
         } catch(string& error) {
             CLASS_ERROR("DTLS connection error: %s", error.c_str());
         }

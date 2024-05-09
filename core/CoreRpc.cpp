@@ -287,6 +287,13 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
         MEDIA_interface& iface = AmConfig.media_ifs[i];
         AmArg am_iface;
         am_iface["idx"] = i;
+        AmArg& secure = am_iface["secure"];
+        secure["srtp_enable"] = iface.srtp->srtp_enable;
+        secure["dtls_enable"] = iface.srtp->dtls_enable;
+        secure["server_require_client_certificate"] = iface.srtp->server_settings.require_client_certificate;
+        secure["server_verify_client_certificate"] = iface.srtp->server_settings.verify_client_certificate;
+        secure["client_verify_certificate_chain"] = iface.srtp->client_settings.verify_certificate_chain;
+        secure["client_verify_certificate_cn"] = iface.srtp->client_settings.verify_certificate_cn;
         AmArg am_mearr;
         am_mearr.assertArray();
         for(int j = 0; j < (int)iface.proto_info.size(); j++) {
@@ -305,18 +312,6 @@ void CoreRpc::showInterfaces(const AmArg& args, AmArg& ret)
             am_minfo["use_raw_sockets"] = (minfo->sig_sock_opts&trsp_socket::use_raw_sockets)!= 0;
             am_minfo["dscp"] = minfo->dscp;
             am_minfo["tos_byte"] = minfo->tos_byte;
-
-            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(minfo);
-            if(rtp_info) {
-                AmArg &am_rinfo = am_minfo["rtp_info"];
-                am_rinfo["srtp_enable"] = rtp_info->srtp_enable;
-                am_rinfo["dtls_enable"] = rtp_info->dtls_enable;
-                am_rinfo["server_require_client_certificate"] = rtp_info->server_settings.require_client_certificate;
-                am_rinfo["server_verify_client_certificate"] = rtp_info->server_settings.verify_client_certificate;
-                am_rinfo["client_verify_certificate_chain"] = rtp_info->client_settings.verify_certificate_chain;
-                am_rinfo["client_verify_certificate_cn"] = rtp_info->client_settings.verify_certificate_cn;
-            }
-
             am_mearr.push(am_minfo);
         }
         am_iface["media_addrs"] = am_mearr;
@@ -771,19 +766,16 @@ void CoreRpc::requestReloadCertificate(const AmArg& args, AmArg& ret)
     }
 
     for(auto& media_if : AmConfig.media_ifs) {
-        for(auto& proto : media_if.proto_info) {
-            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(proto);
-            if(rtp_info && rtp_info->srtp_enable) {
-                if(rtp_info->client_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","client")) {
-                    settings.push_back(&rtp_info->client_settings);
-                } else {
-                    throw AmSession::Exception(500,"certificates checking failed");
-                }
-                if(rtp_info->server_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","server")) {
-                    settings.push_back(&rtp_info->server_settings);
-                } else {
-                    throw AmSession::Exception(500,"certificates checking failed");
-                }
+        if(media_if.srtp->srtp_enable) {
+            if(media_if.srtp->client_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","client")) {
+                settings.push_back(&media_if.srtp->client_settings);
+            } else {
+                throw AmSession::Exception(500,"certificates checking failed");
+            }
+            if(media_if.srtp->server_settings.checkCertificateAndKey(media_if.name.c_str(),"RTP","server")) {
+                settings.push_back(&media_if.srtp->server_settings);
+            } else {
+                throw AmSession::Exception(500,"certificates checking failed");
             }
         }
     }

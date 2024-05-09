@@ -321,7 +321,6 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_VIA_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_STAT_CL_PORT_NAME, cfg_false, CFGF_NONE),
         CFG_INT(PARAM_DSCP_NAME, 0, CFGF_NONE),
-        CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NODEFAULT),
         CFG_END()
     };
 
@@ -482,6 +481,20 @@ namespace Config {
     static cfg_opt_t interfaces[] =
     {
         CFG_SEC(SECTION_IF_NAME, interface, CFGF_MULTI | CFGF_TITLE),
+        CFG_END()
+    };
+
+    static cfg_opt_t media_interface[] =
+    {
+        CFG_SEC(SECTION_IP4_NAME, ip, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_IP6_NAME, ip, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NODEFAULT),
+        CFG_END()
+    };
+
+    static cfg_opt_t media_interfaces[] =
+    {
+        CFG_SEC(SECTION_IF_NAME, media_interface, CFGF_MULTI | CFGF_TITLE),
         CFG_END()
     };
 
@@ -651,7 +664,7 @@ namespace Config {
     static cfg_opt_t opt[] =
     {
         CFG_SEC(SECTION_SIGIF_NAME, interfaces, CFGF_NODEFAULT),
-        CFG_SEC(SECTION_MEDIAIF_NAME, interfaces, CFGF_NODEFAULT),
+        CFG_SEC(SECTION_MEDIAIF_NAME, media_interfaces, CFGF_NODEFAULT),
         CFG_SEC(SECTION_MODULES_NAME, modules, CFGF_NODEFAULT),
         CFG_SEC(SECTION_GENERAL_NAME, general, CFGF_NODEFAULT),
         CFG_SEC(SECTION_ROUTING_NAME, routing, CFGF_NODEFAULT),
@@ -1374,6 +1387,141 @@ int AmLcConfig::readMediaInterfaces(cfg_t* cfg, ConfigContainer* config)
         MEDIA_interface &media_if = config->media_ifs.back();
         cfg_t* if_ = cfg_getnsec(mediaif, SECTION_IF_NAME, i);
         media_if.name = if_->title;
+        if(cfg_size(if_, SECTION_SRTP_NAME)) {
+            //RTP->SRTP specific opts
+            if(cfg_size(if_, SECTION_SRTP_NAME)) {
+                cfg_t* srtp = cfg_getsec(if_, SECTION_SRTP_NAME);
+                if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, media_if.srtp->srtp_enable)) {
+                    return -1;
+                }
+                cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
+                for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
+                    char* profile_name = cfg_getnstr(sdes, PARAM_PROFILES_NAME, i);
+                    CryptoProfile profile = SdpCrypto::str2profile(profile_name);
+                    if(profile == CP_NONE) {
+                        ERROR("incorrect or not supported profile name %s", profile_name);
+                        return -1;
+                    }
+                    media_if.srtp->profiles.push_back(profile);
+                }
+
+                cfg_t* zrtp = cfg_getsec(srtp, SECTION_ZRTP_NAME);
+                if(!zrtp) {
+                    media_if.srtp->zrtp_enable = false;
+                } else {
+                    media_if.srtp->zrtp_enable = true;
+                    for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_HASHES_NAME); i++) {
+                        std::string hash = cfg_getnstr(zrtp, PARAM_HASHES_NAME, i);
+                        int ihash = media_if.zrtp_hash_from_str(hash);
+                        if(!ihash) {
+                            ERROR("incorrect or not supported zrtp hash name %s", hash.c_str());
+                            return -1;
+                        }
+                        media_if.srtp->zrtp_hashes.push_back(ihash);
+                    }
+                    for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_CIPHERS_NAME); i++) {
+                        std::string cipher = cfg_getnstr(zrtp, PARAM_CIPHERS_NAME, i);
+                        int icipher = media_if.zrtp_cipher_from_str(cipher);
+                        if(!icipher) {
+                            ERROR("incorrect or not supported zrtp cipher name %s", cipher.c_str());
+                            return -1;
+                        }
+                        media_if.srtp->zrtp_ciphers.push_back(icipher);
+                    }
+                    for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_AUTHTAGS_NAME); i++) {
+                        std::string authtag = cfg_getnstr(zrtp, PARAM_AUTHTAGS_NAME, i);
+                        int iauthtag = media_if.zrtp_authtag_from_str(authtag);
+                        if(!iauthtag) {
+                            ERROR("incorrect or not supported zrtp authtag name %s", authtag.c_str());
+                            return -1;
+                        }
+                        media_if.srtp->zrtp_authtags.push_back(iauthtag);
+                    }
+                    for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_DHMODES_NAME); i++) {
+                        std::string dhmode = cfg_getnstr(zrtp, PARAM_DHMODES_NAME, i);
+                        int idhmode = media_if.zrtp_dhmode_from_str(dhmode);
+                        if(!idhmode) {
+                            ERROR("incorrect or not supported zrtp dhmode name %s", dhmode.c_str());
+                            return -1;
+                        }
+                        media_if.srtp->zrtp_dhmodes.push_back(idhmode);
+                    }
+                    for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_SAS_NAME); i++) {
+                        std::string sas = cfg_getnstr(zrtp, PARAM_SAS_NAME, i);
+                        int isas= media_if.zrtp_sas_from_str(sas);
+                        if(!isas) {
+                            ERROR("incorrect or not supported zrtp sas name %s", sas.c_str());
+                            return -1;
+                        }
+                        media_if.srtp->zrtp_sas.push_back(isas);
+                    }
+                }
+
+                cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
+                if(!dtls) {
+                    media_if.srtp->dtls_enable = false;
+                } else {
+                    media_if.srtp->dtls_enable = true;
+                    cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
+                    if(!server) {
+                        ERROR("absent mandatory section 'server' in dtls configuration");
+                        return -1;
+                    }
+                    for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
+                        std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
+                        media_if.srtp->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+                    }
+                    for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
+                        media_if.srtp->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
+                    }
+                    if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, media_if.srtp->server_settings.certificate_path) ||
+                    getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, media_if.srtp->server_settings.certificate_key_path)){
+                        return -1;
+                    }
+                    for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
+                        std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
+                        media_if.srtp->server_settings.cipher_list.push_back(cipher);
+                    }
+                    for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
+                        std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
+                        media_if.srtp->server_settings.macs_list.push_back(mac);
+                    }
+                    media_if.srtp->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
+                    media_if.srtp->server_settings.require_client_certificate = true;
+                    media_if.srtp->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
+                    for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
+                        std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
+                        media_if.srtp->server_settings.ca_path_list.push_back(ca);
+                    }
+
+                    if(media_if.srtp->server_settings.verify_client_certificate && !media_if.srtp->server_settings.require_client_certificate) {
+                        ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", media_if.name.c_str());
+                        return -1;
+                    }
+
+                    cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
+                    if(!client) {
+                        ERROR("absent mandatory section 'client' in dtls configuration");
+                        return -1;
+                    }
+                    for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
+                        std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
+                        media_if.srtp->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
+                    }
+                    for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
+                        media_if.srtp->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
+                    }
+                    media_if.srtp->client_settings.certificate_path = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
+                    media_if.srtp->client_settings.certificate_key_path = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
+                    media_if.srtp->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
+                    media_if.srtp->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
+                    for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
+                        std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
+                        media_if.srtp->client_settings.ca_path_list.push_back(ca);
+                    }
+                }
+            }
+        }
         if(cfg_size(if_, SECTION_IP4_NAME)) {
             cfg_t* ip4 = cfg_getsec(if_, SECTION_IP4_NAME);
             if(cfg_size(ip4, SECTION_RTP_NAME)) {
@@ -1533,140 +1681,6 @@ IP_info* AmLcConfig::readInterface(cfg_t* cfg, const std::string& if_name, Addre
                (rtpinfo->type_ip == AT_V6 && validate_ip6(address)))
                 return nullptr;
             rtpinfo->addMediaAddress(address);
-        }
-    }
-
-    //RTP->SRTP specific opts
-    if(rtpinfo && cfg_size(cfg, SECTION_SRTP_NAME)) {
-        cfg_t* srtp = cfg_getsec(cfg, SECTION_SRTP_NAME);
-        if(getMandatoryParameter(srtp, PARAM_ENABLE_SRTP_NAME, rtpinfo->srtp_enable)) {
-            return nullptr;
-        }
-        cfg_t* sdes = cfg_getsec(srtp, SECTION_SDES_NAME);
-        for(unsigned int i = 0; i < cfg_size(sdes, PARAM_PROFILES_NAME); i++) {
-            char* profile_name = cfg_getnstr(sdes, PARAM_PROFILES_NAME, i);
-            CryptoProfile profile = SdpCrypto::str2profile(profile_name);
-            if(profile == CP_NONE) {
-                ERROR("incorrect or not supported profile name %s", profile_name);
-                return nullptr;
-            }
-            rtpinfo->profiles.push_back(profile);
-        }
-
-        cfg_t* zrtp = cfg_getsec(srtp, SECTION_ZRTP_NAME);
-        if(!zrtp) {
-            rtpinfo->zrtp_enable = false;
-        } else {
-            rtpinfo->zrtp_enable = true;
-            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_HASHES_NAME); i++) {
-                std::string hash = cfg_getnstr(zrtp, PARAM_HASHES_NAME, i);
-                int ihash = rtpinfo->zrtp_hash_from_str(hash);
-                if(!ihash) {
-                    ERROR("incorrect or not supported zrtp hash name %s", hash.c_str());
-                    return nullptr;
-                }
-                rtpinfo->zrtp_hashes.push_back(ihash);
-            }
-            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_CIPHERS_NAME); i++) {
-                std::string cipher = cfg_getnstr(zrtp, PARAM_CIPHERS_NAME, i);
-                int icipher = rtpinfo->zrtp_cipher_from_str(cipher);
-                if(!icipher) {
-                    ERROR("incorrect or not supported zrtp cipher name %s", cipher.c_str());
-                    return nullptr;
-                }
-                rtpinfo->zrtp_ciphers.push_back(icipher);
-            }
-            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_AUTHTAGS_NAME); i++) {
-                std::string authtag = cfg_getnstr(zrtp, PARAM_AUTHTAGS_NAME, i);
-                int iauthtag = rtpinfo->zrtp_authtag_from_str(authtag);
-                if(!iauthtag) {
-                    ERROR("incorrect or not supported zrtp authtag name %s", authtag.c_str());
-                    return nullptr;
-                }
-                rtpinfo->zrtp_authtags.push_back(iauthtag);
-            }
-            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_DHMODES_NAME); i++) {
-                std::string dhmode = cfg_getnstr(zrtp, PARAM_DHMODES_NAME, i);
-                int idhmode = rtpinfo->zrtp_dhmode_from_str(dhmode);
-                if(!idhmode) {
-                    ERROR("incorrect or not supported zrtp dhmode name %s", dhmode.c_str());
-                    return nullptr;
-                }
-                rtpinfo->zrtp_dhmodes.push_back(idhmode);
-            }
-            for(unsigned int i = 0; i < cfg_size(zrtp, PARAM_SAS_NAME); i++) {
-                std::string sas = cfg_getnstr(zrtp, PARAM_SAS_NAME, i);
-                int isas= rtpinfo->zrtp_sas_from_str(sas);
-                if(!isas) {
-                    ERROR("incorrect or not supported zrtp sas name %s", sas.c_str());
-                    return nullptr;
-                }
-                rtpinfo->zrtp_sas.push_back(isas);
-            }
-        }
-
-        cfg_t* dtls = cfg_getsec(srtp, SECTION_DTLS_NAME);
-        if(!dtls) {
-            rtpinfo->dtls_enable = false;
-        } else {
-            rtpinfo->dtls_enable = true;
-            cfg_t* server = cfg_getsec(dtls, SECTION_SERVER_NAME);
-            if(!server) {
-                ERROR("absent mandatory section 'server' in dtls configuration");
-                return nullptr;
-            }
-            for(unsigned int i = 0; i < cfg_size(server, PARAM_PROTOCOLS_NAME); i++) {
-                std::string protocol = cfg_getnstr(server, PARAM_PROTOCOLS_NAME, i);
-                rtpinfo->server_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
-            }
-            for(unsigned int i = 0; i < cfg_size(server, PARAM_PROFILES_NAME); i++) {
-                rtpinfo->server_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(server, PARAM_PROFILES_NAME, i)));
-            }
-            if(getMandatoryParameter(server, PARAM_CERTIFICATE_NAME, rtpinfo->server_settings.certificate_path) ||
-            getMandatoryParameter(server, PARAM_CERTIFICATE_KEY_NAME, rtpinfo->server_settings.certificate_key_path)){
-                return nullptr;
-            }
-            for(unsigned int i = 0; i < cfg_size(server, PARAM_CIPHERS_NAME); i++) {
-                std::string cipher = cfg_getnstr(server, PARAM_CIPHERS_NAME, i);
-                rtpinfo->server_settings.cipher_list.push_back(cipher);
-            }
-            for(unsigned int i = 0; i < cfg_size(server, PARAM_MACS_NAME); i++) {
-                std::string mac = cfg_getnstr(server, PARAM_MACS_NAME, i);
-                rtpinfo->server_settings.macs_list.push_back(mac);
-            }
-            rtpinfo->server_settings.verify_client_certificate = cfg_getbool(server, PARAM_VERIFY_CERT_NAME);
-            rtpinfo->server_settings.require_client_certificate = true;
-            rtpinfo->server_settings.dhparam = cfg_getstr(server, PARAM_DH_PARAM_NAME);
-            for(unsigned int i = 0; i < cfg_size(server, PARAM_CA_LIST_NAME); i++) {
-                std::string ca = cfg_getnstr(server, PARAM_CA_LIST_NAME, i);
-                rtpinfo->server_settings.ca_path_list.push_back(ca);
-            }
-
-            if(rtpinfo->server_settings.verify_client_certificate && !rtpinfo->server_settings.require_client_certificate) {
-                ERROR("incorrect server tls configuration for interface %s: verify client certificate cannot be set, if clients certificate is not required", if_name.c_str());
-                return nullptr;
-            }
-
-            cfg_t* client = cfg_getsec(dtls, SECTION_CLIENT_NAME);
-            if(!client) {
-                ERROR("absent mandatory section 'client' in dtls configuration");
-                return nullptr;
-            }
-            for(unsigned int i = 0; i < cfg_size(client, PARAM_PROTOCOLS_NAME); i++) {
-                std::string protocol = cfg_getnstr(client, PARAM_PROTOCOLS_NAME, i);
-                rtpinfo->client_settings.protocols.push_back(dtls_settings::protocolFromStr(protocol));
-            }
-            for(unsigned int i = 0; i < cfg_size(client, PARAM_PROFILES_NAME); i++) {
-                rtpinfo->client_settings.srtp_profiles.push_back(SdpCrypto::str2profile(cfg_getnstr(client, PARAM_PROFILES_NAME, i)));
-            }
-            rtpinfo->client_settings.certificate_path = cfg_getstr(client, PARAM_CERTIFICATE_NAME);
-            rtpinfo->client_settings.certificate_key_path = cfg_getstr(client, PARAM_CERTIFICATE_KEY_NAME);
-            rtpinfo->client_settings.verify_certificate_chain = cfg_getbool(client, PARAM_CERT_CHAIN_NAME);
-            rtpinfo->client_settings.verify_certificate_cn = cfg_getbool(client, PARAM_CERT_CN_NAME);
-            for(unsigned int i = 0; i < cfg_size(client, PARAM_CA_LIST_NAME); i++) {
-                std::string ca = cfg_getnstr(client, PARAM_CA_LIST_NAME, i);
-                rtpinfo->client_settings.ca_path_list.push_back(ca);
-            }
         }
     }
 
@@ -1880,6 +1894,27 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 static_cast<unsigned short>(if_iterator - config->media_ifs.begin())));
         }
 
+        if(if_iterator->srtp->dtls_enable) {
+            if(!if_iterator->srtp->client_settings.checkCertificateAndKey(
+                    if_iterator->name.c_str(),"media","client") ||
+                !if_iterator->srtp->server_settings.checkCertificateAndKey(
+                    if_iterator->name.c_str(),"media","server"))
+            {
+                return -1;
+            }
+
+            if_iterator->srtp->client_settings.initNotAfterCounter()
+                .addLabel("interface", if_iterator->name)
+                .addLabel("role", "client");
+
+            if_iterator->srtp->server_settings.initNotAfterCounter()
+                .addLabel("interface", if_iterator->name)
+                .addLabel("role", "server");
+
+            if_iterator->srtp->client_settings.load_certificates();
+            if_iterator->srtp->server_settings.load_certificates();
+        }
+
         unsigned short i = 0;
         for(auto& info : if_iterator->proto_info) {
             std::string local_ip = info->local_ip;
@@ -1894,31 +1929,6 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
                 return -1;
             }
 
-            RTP_info* rtp_info = RTP_info::toMEDIA_RTP(info);
-            if(rtp_info && rtp_info->dtls_enable) {
-                if(!rtp_info->client_settings.checkCertificateAndKey(
-                        if_iterator->name.c_str(),"media","client") ||
-                    !rtp_info->server_settings.checkCertificateAndKey(
-                        if_iterator->name.c_str(),"media","server"))
-                {
-                    return -1;
-                }
-
-                rtp_info->client_settings.initNotAfterCounter()
-                    .addLabel("interface", if_iterator->name)
-                    .addLabel("protocol", rtp_info->ipTypeToStr())
-                    .addLabel("transport", rtp_info->transportToStr())
-                    .addLabel("role", "client");
-
-                rtp_info->server_settings.initNotAfterCounter()
-                    .addLabel("interface", if_iterator->name)
-                    .addLabel("protocol", rtp_info->ipTypeToStr())
-                    .addLabel("transport", rtp_info->transportToStr())
-                    .addLabel("role", "server");
-
-                rtp_info->client_settings.load_certificates();
-                rtp_info->server_settings.load_certificates();
-            }
             i++;
         }
     }
