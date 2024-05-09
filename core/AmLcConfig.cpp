@@ -735,7 +735,7 @@ int validate_log_func(cfg_t *cfg, cfg_opt_t *opt)
     std::string value = cfg_getstr(cfg, opt->name);
     bool valid = parse_log_level(value) >= 0;
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - \
+        ERROR("invalid value \'%s\' of the option \'%s\' - \
               must be \'no\',\'error\',\'info\',\'warn\',\'debug\' or number from %d to %d",
               value.c_str(), opt->name, L_ERR, L_DBG);
     }
@@ -747,7 +747,7 @@ int validate_method_func(cfg_t *cfg, cfg_opt_t *opt)
     std::string value = cfg_getstr(cfg, opt->name);
     bool valid = (value == VALUE_DROP || value == VALUE_REJECT);
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'drop\' or \'reject\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'drop\' or \'reject\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -756,13 +756,13 @@ int validate_ip6(const std::string& address)
 {
     sockaddr_storage addr;
     if(!am_inet_pton(address.c_str(), &addr)){
-        ERROR("invalid value \'%s\' of address", address.c_str());
+        ERROR("invalid value \'%s\' for the addressL: not an address", address.c_str());
         return 1;
     }
 
     bool valid = addr.ss_family == AF_INET6;
     if(!valid) {
-        ERROR("invalid value \'%s\' of address: not ip6 address", address.c_str());
+        ERROR("invalid value \'%s\' for the address: not IPv6 address", address.c_str());
     }
     return valid ? 0 : 1;
 }
@@ -783,7 +783,7 @@ int validate_ip4(const std::string& address)
 
     bool valid = addr.ss_family == AF_INET;
     if(!valid) {
-        ERROR("invalid value \'%s\' of address: not ip4 address", address.c_str());
+        ERROR("invalid value \'%s\' for the address: not IPv4 address", address.c_str());
     }
     return valid ? 0 : 1;
 }
@@ -799,7 +799,7 @@ int validate_dtmf_func(cfg_t *cfg, cfg_opt_t *opt)
     std::string value = cfg_getstr(cfg, opt->name);
     bool valid = (value == VALUE_SPANDSP || value == VALUE_INTERNAL);
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'spandsp\' or \'internal\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'spandsp\' or \'internal\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -812,7 +812,7 @@ int validate_100rel_func(cfg_t *cfg, cfg_opt_t *opt)
                   value == VALUE_SUPPORTED ||
                   value == VALUE_REQUIRE);
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'disabled\', \'supported\', \'require\' or \'off\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'disabled\', \'supported\', \'require\' or \'off\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -824,7 +824,7 @@ int validate_resampling_func(cfg_t *cfg, cfg_opt_t *opt)
                   value == VALUE_UNAVAILABLE ||
                   value == VALUE_INTERNAL);
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'libsamplerate\', \'internal\' or \'unavailable\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'libsamplerate\', \'internal\' or \'unavailable\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -835,7 +835,7 @@ int validate_symmetric_mode_func(cfg_t *cfg, cfg_opt_t *opt)
     bool valid = (value == VALUE_PACKETS ||
                   value == VALUE_DELAY);
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'packets\' or \'delay\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'packets\' or \'delay\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -845,7 +845,7 @@ int validate_tls_protocol_func(cfg_t *cfg, cfg_opt_t *opt)
     std::string value = cfg_getstr(cfg, opt->name);
     bool valid = tls_settings::protocolFromStr(value) != tls_settings::UNSUPPORT;
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'TLSv1.2\' or \'TLSv1.3\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'TLSv1.2\' or \'TLSv1.3\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
@@ -855,7 +855,7 @@ int validate_dtls_protocol_func(cfg_t *cfg, cfg_opt_t *opt)
     std::string value = cfg_getstr(cfg, opt->name);
     bool valid = dtls_settings::protocolFromStr(value) != dtls_settings::UNSUPPORT;
     if(!valid) {
-        ERROR("invalid value \'%s\' of option \'%s\' - must be \'DTLSv1.2\'", value.c_str(), opt->name);
+        ERROR("invalid value \'%s\' of the option \'%s\' - must be \'DTLSv1.2\'", value.c_str(), opt->name);
     }
     return valid ? 0 : 1;
 }
