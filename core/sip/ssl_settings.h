@@ -53,29 +53,29 @@ public:
     virtual ~tls_settings(){}
 
     enum Protocol {
-        TLSv1,
-        TLSv1_1,
-        TLSv1_2
+        UNSUPPORT,
+        TLSv1_2,
+        TLSv1_3
     };
 
     static Protocol protocolFromStr(const std::string& proto) {
-        if(proto == "TLSv1") {
-            return TLSv1;
-        } else if(proto == "TLSv1.1") {
-            return TLSv1_1;
+        if(proto == "TLSv1.2") {
+            return TLSv1_2;
+        } else if(proto == "TLSv1.3") {
+            return TLSv1_3;
         }
 
-        return TLSv1_2;
+        return UNSUPPORT;
     }
 
     static  std::string protocolToStr(Protocol proto) {
-        if(proto == TLSv1) {
-            return "TLSv1";
-        } else if(proto == TLSv1_1) {
-            return "TLSv1.1";
+        if(proto == TLSv1_2) {
+            return "TLSv1.2";
+        } else if(proto == TLSv1_3) {
+            return "TLSv1.3";
         }
 
-        return "TLSv1.2";
+        return "";
     }
 
     virtual const char *getProtocolName();
@@ -90,24 +90,22 @@ public:
     virtual ~dtls_settings(){}
 
     enum Protocol {
-        DTLSv1,
+        UNSUPPORT,
         DTLSv1_2
     };
 
     static Protocol protocolFromStr(const std::string& proto) {
-        if(proto == "DTLSv1") {
-            return DTLSv1;
-        } else {
+        if(proto == "DTLSv1.2") {
             return DTLSv1_2;
         }
+        return UNSUPPORT;
     }
 
     static  std::string protocolToStr(Protocol proto) {
-        if(proto == DTLSv1) {
-            return "DTLSv1";
-        } else {
+        if(proto == DTLSv1_2) {
             return "DTLSv1.2";
         }
+        return "";
     }
 
     virtual const char *getProtocolName();

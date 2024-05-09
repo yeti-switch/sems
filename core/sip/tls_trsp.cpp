@@ -157,6 +157,29 @@ bool tls_conf::allow_tls12()  const
     return false;
 }
 
+bool tls_conf::allow_tls13()  const
+{
+    tls_settings* settings = 0;
+    if(s_client) {
+        settings = s_client;
+    } else if(s_server) {
+        settings = s_server;
+    }
+
+    if(!settings) {
+        ERROR("incorrect pointer");
+        return false;
+    }
+
+    for(auto& proto : settings->protocols) {
+        if(proto == tls_client_settings::TLSv1_3) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 vector<Botan::Certificate_Store*> tls_conf::trusted_certificate_authorities(
     [[maybe_unused]] const string& type, [[maybe_unused]] const string& context)
 {

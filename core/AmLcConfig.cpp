@@ -840,6 +840,26 @@ int validate_symmetric_mode_func(cfg_t *cfg, cfg_opt_t *opt)
     return valid ? 0 : 1;
 }
 
+int validate_tls_protocol_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    bool valid = tls_settings::protocolFromStr(value) != tls_settings::UNSUPPORT;
+    if(!valid) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'TLSv1.2\' or \'TLSv1.3\'", value.c_str(), opt->name);
+    }
+    return valid ? 0 : 1;
+}
+
+int validate_dtls_protocol_func(cfg_t *cfg, cfg_opt_t *opt)
+{
+    std::string value = cfg_getstr(cfg, opt->name);
+    bool valid = dtls_settings::protocolFromStr(value) != dtls_settings::UNSUPPORT;
+    if(!valid) {
+        ERROR("invalid value \'%s\' of option \'%s\' - must be \'DTLSv1.2\'", value.c_str(), opt->name);
+    }
+    return valid ? 0 : 1;
+}
+
 static int check_dir_write_permissions(const string &dir, const char *opt_name)
 {
     std::ofstream st;
@@ -940,6 +960,39 @@ void AmLcConfig::setValidationFunction(cfg_t* cfg)
     set_ip_func_validator(SECTION_MEDIAIF_NAME, SECTION_RTSP_NAME);
 
 #undef set_ip_func_validator
+
+#define set_tls_version_func_validator(INTERFACE_NAME, PROTO_NAME) \
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"\
+        PROTO_NAME "|" SECTION_CLIENT_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_tls_protocol_func);\
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"\
+        PROTO_NAME "|" SECTION_SERVER_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_tls_protocol_func);\
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"\
+        PROTO_NAME "|" SECTION_CLIENT_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_tls_protocol_func);\
+    cfg_set_validate_func(cfg,\
+        INTERFACE_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"\
+        PROTO_NAME "|" SECTION_SERVER_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_tls_protocol_func);\
+
+    set_tls_version_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_TLS_NAME);
+    set_tls_version_func_validator(SECTION_SIGIF_NAME, SECTION_SIP_WSS_NAME);
+    cfg_set_validate_func(cfg,
+        SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP6_NAME "|"\
+        SECTION_RTP_NAME "|" SECTION_SRTP_NAME "|" SECTION_DTLS_NAME "|"
+        SECTION_SERVER_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_dtls_protocol_func);
+    cfg_set_validate_func(cfg,
+        SECTION_MEDIAIF_NAME "|" SECTION_IF_NAME "|" SECTION_IP4_NAME "|"\
+        SECTION_RTP_NAME "|" SECTION_SRTP_NAME "|" SECTION_DTLS_NAME "|"
+        SECTION_SERVER_NAME "|" PARAM_PROTOCOLS_NAME,\
+        validate_dtls_protocol_func);
+
+#undef set_tls_version_func_validator
 
 // general validation
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_LOG_RAW_NAME , validate_log_func);
