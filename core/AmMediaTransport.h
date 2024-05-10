@@ -125,7 +125,7 @@ public:
     void removeConnection(AmStreamConnection* conn);
 
     ssize_t send(AmRtpPacket* packet, AmStreamConnection::ConnectionType type);
-    ssize_t send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
+    virtual ssize_t send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
     int sendmsg(unsigned char* buf, int size);
 
     void allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);

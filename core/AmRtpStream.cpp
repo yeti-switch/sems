@@ -884,8 +884,8 @@ int AmRtpStream::init(const AmSdp& local,
     try {
         if(remote_media.is_use_ice()) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
-            if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint));
+            if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint));
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
             }
@@ -899,10 +899,10 @@ int AmRtpStream::init(const AmSdp& local,
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint));
             cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
             if(cur_rtcp_trans != cur_rtp_trans) {
-                if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+                if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint));
                 cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
             }
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::DTLS_CONN);
@@ -911,7 +911,7 @@ int AmRtpStream::init(const AmSdp& local,
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
             srtp_fingerprint_p fingerprint(remote_media.fingerprint.hash, remote_media.fingerprint.value);
-            if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT] = std::make_unique<DtlsContext>(this, fingerprint);
+            if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT].reset(new RtpSecureContext(this, fingerprint));
             cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
             cur_udptl_trans->initUdptlConnection(address, port);
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);

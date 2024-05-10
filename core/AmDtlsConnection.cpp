@@ -198,6 +198,12 @@ vector<Botan::X509_Certificate> dtls_conf::cert_chain(
     return certs;
 }
 
+srtp_fingerprint_p DtlsContext::gen_fingerprint(class dtls_settings* settings)
+{
+    static std::string hash("SHA-256");
+    return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
+}
+
 DtlsTimer::DtlsTimer(DtlsContext* context)
 : context(context),
   is_valid(true)
@@ -234,7 +240,7 @@ void DtlsTimer::reset()
     wheeltimer::instance()->insert_timer(this);
 }
 
-DtlsContext::DtlsContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint)
+RtpSecureContext::RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint)
 : tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
   srtp_profile(srtp_profile_reserved),
   dtls_channel(nullptr),
@@ -247,7 +253,7 @@ DtlsContext::DtlsContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerp
   cur_conn(0)
 {}
 
-DtlsContext::~DtlsContext() noexcept
+RtpSecureContext::~RtpSecureContext() noexcept
 {
     if(pending_handshake_timer) {
         pending_handshake_timer->invalidate();
@@ -259,13 +265,7 @@ DtlsContext::~DtlsContext() noexcept
     }
 }
 
-srtp_fingerprint_p DtlsContext::gen_fingerprint(class dtls_settings* settings)
-{
-    static std::string hash("SHA-256");
-    return srtp_fingerprint_p(hash, settings->getCertificateFingerprint(hash));
-}
-
-void DtlsContext::initContext(const string& host, uint16_t port, shared_ptr<dtls_conf> settings, bool reinit) noexcept(false)
+void RtpSecureContext::initContext(const string& host, int port, shared_ptr<dtls_conf> settings, bool reinit) noexcept(false)
 {
     AmLock lock(channelMutex);
     if(!reinit && dtls_channel) return;
@@ -312,7 +312,7 @@ void DtlsContext::initContext(const string& host, uint16_t port, shared_ptr<dtls
     }
 }
 
-bool DtlsContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int size)
+bool RtpSecureContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int size)
 {
     AmLock lock(channelMutex);
     if(!dtls_channel) {
@@ -325,7 +325,7 @@ bool DtlsContext::onRecvData(AmDtlsConnection* conn, uint8_t* data, unsigned int
     return dtls_channel->received_data(data, size) == 0;
 }
 
-bool DtlsContext::sendData(const uint8_t* data, unsigned int size)
+bool RtpSecureContext::sendData(const uint8_t* data, unsigned int size)
 {
     AmLock lock(channelMutex);
     if(activated) {
@@ -335,7 +335,7 @@ bool DtlsContext::sendData(const uint8_t* data, unsigned int size)
     return false;
 }
 
-bool DtlsContext::timer_check()
+bool RtpSecureContext::timer_check()
 {
     if(!activated && dtls_channel) {
         dtls_channel->timeout_check();
@@ -344,25 +344,25 @@ bool DtlsContext::timer_check()
     return false;
 }
 
-void DtlsContext::tls_alert(Botan::TLS::Alert alert)
+void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 {
     assert(cur_conn);
     cur_conn->getTransport()->dtls_alert(alert.type_string());
 }
 
-void DtlsContext::tls_emit_data(std::span<const uint8_t> data)
+void RtpSecureContext::tls_emit_data(std::span<const uint8_t> data)
 {
     assert(cur_conn);
     cur_conn->send((unsigned char*)data.data(), data.size());
 }
 
-void DtlsContext::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
+void RtpSecureContext::tls_record_received(uint64_t seq_no, std::span<const uint8_t> data)
 {
     assert(cur_conn);
     cur_conn->onRecvData((unsigned char*)data.data(), data.size());
 }
 
-void DtlsContext::tls_session_activated()
+void RtpSecureContext::tls_session_activated()
 {
     assert(cur_conn);
     unsigned int key_len = srtp::profile_get_master_key_length(srtp_profile);
@@ -386,7 +386,7 @@ void DtlsContext::tls_session_activated()
     activated = true;
 }
 
-void DtlsContext::tls_session_established(const Botan::TLS::Session_Summary& session)
+void RtpSecureContext::tls_session_established(const Botan::TLS::Session_Summary& session)
 {
     assert(cur_conn);
     DBG("************ on_dtls_connect() ***********");
@@ -395,7 +395,7 @@ void DtlsContext::tls_session_established(const Botan::TLS::Session_Summary& ses
     srtp_profile = (srtp_profile_t)session.dtls_srtp_profile();
 }
 
-void DtlsContext::tls_verify_cert_chain(
+void RtpSecureContext::tls_verify_cert_chain(
     const std::vector<Botan::X509_Certificate>& cert_chain,
     const std::vector<std::optional<Botan::OCSP::Response>>& ocsp_responses,
     const std::vector<Botan::Certificate_Store*>& trusted_roots,

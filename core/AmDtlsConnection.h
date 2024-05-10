@@ -27,7 +27,7 @@ using std::shared_ptr;
 class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class AmSrtpConnection;
-    friend class DtlsContext;
+    friend class RtpSecureContext;
     dtls_client_settings* s_client;
     dtls_server_settings* s_server;
     vector<Botan::X509_Certificate> certificates;
@@ -111,7 +111,7 @@ public:
     }
 };
 
-class DtlsContext;
+struct DtlsContext;
 class AmDtlsConnection;
 class AmRtpStream;
 
@@ -130,7 +130,20 @@ class DtlsTimer
     void reset();
 };
 
-class DtlsContext : public Botan::TLS::Callbacks
+struct DtlsContext
+{
+    DtlsContext(){}
+    virtual ~DtlsContext(){}
+
+    static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
+    virtual void initContext(const string& host, int port, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false) = 0;
+    virtual void setCurrentConnection(AmDtlsConnection* conn) noexcept(false) = 0;
+    virtual bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false) = 0;
+    virtual bool timer_check() = 0;
+    virtual bool sendData(const uint8_t * data, unsigned int size) noexcept(false) = 0;
+};
+
+class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext
 {
     shared_ptr<BotanTLSCallbacksProxy> tls_callbacks_proxy;
 
@@ -147,16 +160,14 @@ class DtlsContext : public Botan::TLS::Callbacks
     AmRtpStream* rtp_stream;
     AmDtlsConnection* cur_conn;
 public:
-    DtlsContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint);
-    ~DtlsContext() noexcept;
+    RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint);
+    ~RtpSecureContext() noexcept;
 
-    static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
-
-    void initContext(const string& host, uint16_t port, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false);
-    void setCurrentConnection(AmDtlsConnection* conn) { cur_conn = conn; }
-    bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false);
-    bool timer_check();
-    bool sendData(const uint8_t * data, unsigned int size) noexcept(false);
+    void initContext(const string& host, int port, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false) override;
+    bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false) override;
+    bool timer_check() override;
+    bool sendData(const uint8_t * data, unsigned int size) noexcept(false) override;
+    void setCurrentConnection(AmDtlsConnection* conn) noexcept(false) override { cur_conn = conn; }
 
     //TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;
@@ -179,7 +190,7 @@ class AmDtlsConnection
     DtlsContext* dtls_context;
     bool is_client;
 protected:
-    friend class DtlsContext;
+    friend class RtpSecureContext;
     ssize_t send(uint8_t * data, unsigned int size);
     void onRecvData(uint8_t * data, unsigned int size);
 public:
