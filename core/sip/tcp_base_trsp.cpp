@@ -778,7 +778,7 @@ unsigned long long trsp_worker::getTcpQueueSize()
     AmLock l(connections_mut);
     unsigned long long qsize = 0;
     for(auto const &con_it: connections) {
-        qsize = con_it.second->getQueueSize();
+        qsize += con_it.second->getQueueSize();
     }
     return qsize;
 }
@@ -790,7 +790,7 @@ unsigned long long trsp_worker::getTlsQueueSize()
     for(auto const &con_it: connections) {
         tls_trsp_socket* socket = dynamic_cast<tls_trsp_socket*>(con_it.second);
         if(!socket) continue;
-        qsize = socket->getQueueSize();
+        qsize += socket->getQueueSize();
     }
     return qsize;
 }
@@ -802,7 +802,7 @@ unsigned long long trsp_worker::getWsQueueSize()
     for(auto const &con_it: connections) {
         ws_trsp_socket* socket = dynamic_cast<ws_trsp_socket*>(con_it.second);
         if(!socket) continue;
-        qsize = socket->getQueueSize();
+        qsize += socket->getQueueSize();
     }
     return qsize;
 }
@@ -814,7 +814,7 @@ unsigned long long trsp_worker::getWssQueueSize()
     for(auto const &con_it: connections) {
         wss_trsp_socket* socket = dynamic_cast<wss_trsp_socket*>(con_it.second);
         if(!socket) continue;
-        qsize = socket->getQueueSize();
+        qsize += socket->getQueueSize();
     }
     return qsize;
 }
