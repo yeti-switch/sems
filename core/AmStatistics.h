@@ -172,6 +172,11 @@ class StatCountersSingleGroup final
 
     void operator ()(const string &name, iterate_groups_callback_type callback) override;
     void iterate_counters(iterate_counters_callback_type callback) override;
+
+    StatCountersSingleGroup &setHelp(const string& help) {
+        StatCountersGroupsInterface::setHelp(help);
+        return *this;
+    }
 };
 
 class AmStatistics
