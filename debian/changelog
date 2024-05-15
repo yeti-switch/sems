@@ -1,3 +1,11 @@
+sems (1.134.0) stable; urgency=low
+  * tcp stats: add sems_core_connections, sems_core_transport_accept_queue_size, sems_core_transport_send_queue_size metrics
+  * add SSLKEYLOGFILE support. new rpc methods: core.set.ssl_key_log.restart, core.set.ssl_key_log.stop. new option: general.ssl_key_log_file
+  * registrar_client: fix global registrations shaping
+  * cfg: change supported 'protocol' values to {TLSv1.2, TLSv1.3}, {DTLSv1.2}
+  * cfg: move 'srtp' section to the 'interface'
+ -- Michael Furmur <furmur@pm.me>  Wed, 15 May 2024 20:13:48 +0300
+
 sems (1.133.0) stable; urgency=low
   * http: add url placeholders support
  -- Michael Furmur <furmur@pm.me>  Thu, 02 May 2024 16:00:01 +0300
