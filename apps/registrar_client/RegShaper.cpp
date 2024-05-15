@@ -36,7 +36,7 @@ bool RegShaper::check_rate_limit(const string &key,
     }
 
     // update global_last_req_time
-    if (diff(now, global_last_req_time).count() > 0)
+    if (now > global_last_req_time)
         global_last_req_time = now;
 
     auto &last_request_time = last_request->second;
