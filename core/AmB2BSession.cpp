@@ -1602,11 +1602,14 @@ bool isHoldRequest(const AmSdp &sdp, HoldMethod &method)
     for(std::vector<SdpMedia>::const_iterator m = sdp.media.begin();
         m != sdp.media.end(); ++m)
     {
-        if(m->port == 0) continue; // this stream is disabled, handle like inactive (?)
+        // ignore zeroed connection hold for ICE. rfc5245#section-9.1.1.1
+        if(m->is_ice == false) {
+            if(m->port == 0) continue; // this stream is disabled, handle like inactive (?)
 
-        if(!connectionActive(m->conn, connection_active)) {
-            method = ZeroedConnection;
-            continue;
+            if(!connectionActive(m->conn, connection_active)) {
+                method = ZeroedConnection;
+                continue;
+            }
         }
 
         switch(getMediaActivity(*m, session_activity)) {
