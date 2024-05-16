@@ -1,3 +1,7 @@
+sems (1.134.1) stable; urgency=low
+  * ignore zeroed connection hold method for ICE
+ -- Michael Furmur <furmur@pm.me>  Thu, 16 May 2024 14:02:14 +0300
+
 sems (1.134.0) stable; urgency=low
   * tcp stats: add sems_core_connections, sems_core_transport_accept_queue_size, sems_core_transport_send_queue_size metrics
   * add SSLKEYLOGFILE support. new rpc methods: core.set.ssl_key_log.restart, core.set.ssl_key_log.stop. new option: general.ssl_key_log_file
