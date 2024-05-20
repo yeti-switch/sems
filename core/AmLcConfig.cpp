@@ -473,6 +473,7 @@ namespace Config {
 
     static cfg_opt_t interface[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_STR(PARAM_DEFAULT_MEDIAIF_NAME, "", CFGF_NONE),
         CFG_SEC(SECTION_IP4_NAME, ip, CFGF_NODEFAULT),
         CFG_SEC(SECTION_IP6_NAME, ip, CFGF_NODEFAULT),
@@ -481,12 +482,14 @@ namespace Config {
 
     static cfg_opt_t interfaces[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_SEC(SECTION_IF_NAME, interface, CFGF_MULTI | CFGF_TITLE),
         CFG_END()
     };
 
     static cfg_opt_t media_interface[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_SEC(SECTION_IP4_NAME, ip, CFGF_NODEFAULT),
         CFG_SEC(SECTION_IP6_NAME, ip, CFGF_NODEFAULT),
         CFG_SEC(SECTION_SRTP_NAME, srtp, CFGF_NODEFAULT),
@@ -495,6 +498,7 @@ namespace Config {
 
     static cfg_opt_t media_interfaces[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_SEC(SECTION_IF_NAME, media_interface, CFGF_MULTI | CFGF_TITLE),
         CFG_END()
     };
@@ -510,11 +514,11 @@ namespace Config {
 
     static cfg_opt_t modules[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_STR(PARAM_PATH_NAME, "/usr/lib/sems/plug-in", CFGF_NONE),
         CFG_STR(PARAM_CPATH_NAME, "/etc/sems/etc/", CFGF_NONE),
         CFG_SEC(SECTION_MODULE_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
         CFG_SEC(SECTION_MODULE_GLOBAL_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
-        CFG_FUNC("include", &cfg_include),
         CFG_END()
     };
 
@@ -551,6 +555,7 @@ namespace Config {
 
     static cfg_opt_t general[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_SEC(SECTION_SESSION_LIMIT_NAME, slimit, CFGF_NONE),
         CFG_SEC(SECTION_OSLIM_NAME, options_slimit, CFGF_NONE),
         CFG_SEC(SECTION_CPS_LIMIT_NAME, cps_limit, CFGF_NONE),
@@ -654,6 +659,7 @@ namespace Config {
 /**********************************************************************************************/
     static cfg_opt_t routing[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_STR(PARAM_APP_REG_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_APP_OPT_NAME, "", CFGF_NONE),
         CFG_STR(PARAM_APP_NAME, "", CFGF_NONE),
@@ -665,6 +671,7 @@ namespace Config {
 /**********************************************************************************************/
     static cfg_opt_t opt[] =
     {
+        CFG_FUNC("include", &cfg_include),
         CFG_SEC(SECTION_SIGIF_NAME, interfaces, CFGF_NODEFAULT),
         CFG_SEC(SECTION_MEDIAIF_NAME, media_interfaces, CFGF_NODEFAULT),
         CFG_SEC(SECTION_MODULES_NAME, modules, CFGF_NODEFAULT),
