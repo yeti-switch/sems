@@ -182,12 +182,12 @@ void CoreRpc::init_rpc_tree()
             reg_method(request_resolver,"get","",&CoreRpc::requestResolverGet);
         AmArg &request_cerificates = reg_leaf(request ,"certificates");
             reg_method(request_cerificates ,"reload","",&CoreRpc::requestReloadCertificate);
+        AmArg &set_ssl_key_log = reg_leaf(request,"ssl_key_log");
+            reg_method(set_ssl_key_log,"stop","",&CoreRpc::stopSslKeyLog);
+            reg_method(set_ssl_key_log,"restart","",&CoreRpc::restartSslKeyLog);
 
     //set
     AmArg &set = reg_leaf(root,"set");
-        AmArg &set_ssl_key_log = reg_leaf(set,"ssl_key_log");
-            reg_method(set_ssl_key_log,"stop","",&CoreRpc::stopSslKeyLog);
-            reg_method(set_ssl_key_log,"restart","",&CoreRpc::restartSslKeyLog);
         AmArg &set_loglevel = reg_leaf(set,"log-level");
             reg_method(set_loglevel,"syslog","<log_level>",&CoreRpc::setLogSyslogLevel);
             reg_method(set_loglevel,"di_log","<log_level>",&CoreRpc::setLogDiLogLevel);
@@ -409,12 +409,11 @@ void CoreRpc::stopSslKeyLog(const AmArg&, AmArg& ret) {
 
 void CoreRpc::restartSslKeyLog(const AmArg& args, AmArg& ret)
 {
-    string path = AmConfig.ssl_key_log_filepath;
-    if(args.size()){
-        args.assertArrayFmt("s");
-        path = args[0].asCStr();
+    if(AmConfig.ssl_key_log_filepath.empty()) {
+        ret = "general.ssl_key_log_file is not set. ignore restart request";
+        return;
     }
-    restart_ssl_key_logger(path);
+    restart_ssl_key_logger(AmConfig.ssl_key_log_filepath);
     ret = RPC_CMD_SUCC;
 }
 
