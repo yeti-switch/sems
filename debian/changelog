@@ -1,3 +1,8 @@
+sems (1.134.3) stable; urgency=low
+  * 100rel: fix provisional reply retransmit detection
+  * rpc: mv ssl_key_log from set to request. remove restart path arg
+ -- Michael Furmur <furmur@pm.me>  Thu, 23 May 2024 12:42:57 +0300
+
 sems (1.134.2) stable; urgency=low
   * cfg: add include() for all 1st,2nd level sections
  -- Michael Furmur <furmur@pm.me>  Mon, 20 May 2024 18:53:14 +0300
