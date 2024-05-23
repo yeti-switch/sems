@@ -15,6 +15,7 @@ Am100rel::Am100rel(AmSipDialog* dlg, AmSipDialogEventHandler* hdl)
     rseq(0),
     rseq_confirmed(false),
     rseq_1st(0),
+    rseq_last(0),
     dlg(dlg), hdl(hdl)
 {
   // if (reliable_1xx)
@@ -129,9 +130,12 @@ int  Am100rel::onReplyIn(const AmSipReply& reply)
                       "(reliable) 1xx. callid: %s",reply.callid.c_str());
                 dlg->bye();
                 if (hdl) hdl->onFailure();
-            } else {
+            } else if(rseq_last < reply.rseq) {
                 DBG(SIP_EXT_100REL " now active. callid: %s",reply.callid.c_str());
                 if (hdl) ((AmSipDialogEventHandler*)hdl)->onInvite1xxRel(reply);
+                rseq_last = reply.rseq;
+            } else {
+                DBG(SIP_EXT_100REL " ignore retransmit. callid: %s",reply.callid.c_str());
             }
             break;
 
