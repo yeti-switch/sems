@@ -52,6 +52,7 @@
 #include <utility>
 #include <algorithm>
 #include <iterator>
+#include <string_view>
 
 using std::pair;
 using std::make_pair;
@@ -1534,10 +1535,15 @@ int _resolver::resolve_name_cache(
     const dns_priority priority,
     dns_rr_type t)
 {
+    std::string_view name_{name};
     int ret, limit;
 
-    dns_bucket* b = cache.get_bucket(hashlittle(name,strlen(name),0));
-    dns_entry* e = b->find(name);
+    // omit final dot
+    if (name_.ends_with("."))
+        name_.remove_suffix(1);
+
+    dns_bucket* b = cache.get_bucket(hashlittle(name_.data(),name_.length(),0));
+    dns_entry* e = b->find(string{name_});
 
     // first attempt to get a valid IP
     // (from the cache)
