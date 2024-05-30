@@ -385,16 +385,18 @@ public:
         if ((resolver::instance()->resolve_name(e->target.c_str(),&tmp_handle,sa,priority) >= 0)
             && tmp_handle.ip_e)
         {
+            const auto &indexes = tmp_handle.ip_indexes; // See dns_ip_entry::sort_by_priority()
             const auto &v = tmp_handle.ip_e->ip_vec;
-            switch(v.size()) {
+
+            switch(indexes.size()) {
             case 0:
                 break;
             case 1:
-                dynamic_cast<ip_entry*>(v[0])->to_sa(sa);
+                dynamic_cast<ip_entry*>(v[indexes[0]])->to_sa(sa);
                 return 1;
             default:
                 //return random address from the resolved A/AAAA entries
-                dynamic_cast<ip_entry*>(v[std::rand() % v.size()])->to_sa(sa);
+                dynamic_cast<ip_entry*>(v[indexes[std::rand() % indexes.size()]])->to_sa(sa);
                 return 1;
             }
         }
