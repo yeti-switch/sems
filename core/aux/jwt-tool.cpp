@@ -2,8 +2,10 @@
 #include "AmIdentity.h"
 #include "sems.h"
 #include "cJSON.h"
+#include "jsonArg.h"
 
 #include <botan/x509_ca.h>
+#include "botan/x509_ext.h"
 #include <botan/pkix_types.h>
 #include <botan/system_rng.h>
 #include <botan/pkcs8.h>
@@ -599,6 +601,111 @@ int verify(int argc, char *argv[])
     return 1;
 }
 
+static void serializeCert(AmArg &info, const Botan::X509_Certificate &cert)
+{
+    info["subject"] = cert.subject_dn().to_string();
+    info["issuer"] = cert.issuer_dn().to_string();
+    info["fingerprint_sha1"] = cert.fingerprint("SHA-1");
+
+    if(auto i = cert.subject_info("X509.Certificate.serial"); !i.empty())
+        info["serial"] = *i.begin();
+    if(auto i = cert.subject_info("X509v3.SubjectKeyIdentifier"); !i.empty())
+        info["subject_key_identifier"] = *i.begin();
+    if(auto i = cert.subject_info("X509v3.AuthorityKeyIdentifier"); !i.empty())
+        info["authority_key_identifier"] = *i.begin();
+
+    if(const auto *tn_auth_list =
+        cert.v3_extensions().get_extension_object_as<Botan::Cert_Extension::TNAuthList>())
+    {
+        AmArg &tn_list = info["tn_auth_list"];
+        for(const auto &e:  tn_auth_list->get_entries()) {
+            tn_list.push(AmArg());
+            auto &tn = tn_list.back();
+            tn.assertStruct();
+            switch(e.get_type()) {
+            case Botan::Cert_Extension::TNAuthList::TNEntry::TN_ServiceProviderCode:
+                tn["spc"] = e.getServiceProviderCode();
+                break;
+            case Botan::Cert_Extension::TNAuthList::TNEntry::TN_TelephoneNumberRange: {
+                auto &ranges = tn["range"];
+                ranges.assertArray();
+                for(auto &range : e.getTelephoneNumberRange()) {
+                    ranges.push(AmArg());
+                    auto &r = ranges.back();
+                    r["start"] = range.start;
+                    r["count"] = range.count;
+                }
+            } break;
+            case Botan::Cert_Extension::TNAuthList::TNEntry::TN_TelephoneNumber:
+                tn["one"] = e.getTelephoneNumber();
+                break;
+            }
+        }
+    }
+}
+
+int cert_decode(int argc, char *argv[])
+{
+    string in;
+
+    optind = 2;
+    options_parser p("(-i FILE | INPUT)");
+    if(p
+        .add('i',"-i file","input file ('-' for stdin)",true,
+             [&in](const char *value){ in = value; })
+        .parse(argc, argv))
+    {
+        return 1;
+    }
+
+    if(in.empty()) {
+        if (optind >= argc) {
+            p.print_hint("no data to decode");
+            return 1;
+        }
+        for(int i = optind; i < argc; i++) {
+            in += argv[i];
+        }
+    } else if(in == "-") {
+        in.clear();
+        for(string l; getline(cin,l);)
+            in += l;
+    } else {
+        std::ifstream f(in);
+        if(!f.is_open()) {
+            p.print_hint("failed to open: '%s'",in.data());
+            return 1;
+        }
+        in.clear();
+
+        std::ostringstream sstr;
+        sstr << f.rdbuf();
+        in = sstr.str();
+    }
+
+    if(in.empty()) {
+        p.print_hint("empty input");
+        return 1;
+    }
+
+    Botan::DataSource_Memory data_source(in);
+    while(!data_source.end_of_data()) {
+        try {
+            AmArg info;
+            std::unique_ptr<Botan::X509_Certificate> cert(
+                new Botan::X509_Certificate(data_source));
+
+            serializeCert(info, *cert);
+
+            printf("%s\n", getFormattedJSON(arg2json(info).data()));
+        } catch(Botan::Exception &e) {
+            //throw e;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     register_stderr_facility();
@@ -608,6 +715,7 @@ int main(int argc, char *argv[])
         .add("encode", encode)
         .add("decode", decode)
         .add("verify", verify)
+        .add("decode_TNAuthList_cert", cert_decode)
         .add("version",[](int argc, char *argv[]) -> int {
             printf("%s\n", SEMS_VERSION);
             return 0;
