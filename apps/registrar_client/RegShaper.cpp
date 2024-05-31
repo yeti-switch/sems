@@ -22,7 +22,9 @@ bool RegShaper::check_rate_limit(const string &key,
         // last_request not found; first operation for this key
 
         // check min_interval
-        if (diff(now, global_last_req_time) >= min_interval) {
+        if (min_interval == milliseconds::zero() ||
+            diff(now, global_last_req_time) >= min_interval)
+        {
             global_last_req_time = now;
             throttling_hash[key] = global_last_req_time;
             return false;

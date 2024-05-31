@@ -441,7 +441,11 @@ void SIPRegistrarClient::onSipReplyEvent(AmSipReplyEvent* ev)
 
 void SIPRegistrarClient::onNewRegistration(SIPNewRegistrationEvent* new_reg)
 {
-    shaper.set_key_min_interval(new_reg->info.domain, shaper_min_interval_per_domain);
+    if(shaper_min_interval_per_domain)
+        shaper.set_key_min_interval(
+            new_reg->info.domain,
+            shaper_min_interval_per_domain);
+
     AmSIPRegistration* reg =
         new AmSIPRegistration(new_reg->handle,
                               new_reg->info,
