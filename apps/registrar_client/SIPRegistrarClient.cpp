@@ -124,6 +124,7 @@ SIPRegistrarClient::SIPRegistrarClient(const string& name)
     AmEventFdQueue(this),
     stopped(false),
     default_expires(DEFAULT_EXPIRES),
+    shaper_min_interval_per_domain(0),
     uac_auth_i(NULL)
 { }
 
