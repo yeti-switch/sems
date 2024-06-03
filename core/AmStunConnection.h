@@ -22,7 +22,6 @@ private:
         MAX_DIRECTION
     };
 
-    AmStreamConnection* depend_conn;
     bool isAuthentificated[MAX_DIRECTION];
     int err_code;
     unsigned int priority;
@@ -53,8 +52,6 @@ public:
     void set_ice_role_controlled(bool ice_role_controlled) { this->local_ice_role_is_controlled = ice_role_controlled; }
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
-
-    void setDependentConnection(AmStreamConnection* conn);
 
     void send_request();
     bool isAllowPair();

@@ -132,7 +132,8 @@ class DtlsTimer
 
 struct DtlsContext
 {
-    DtlsContext(){}
+    bool is_client;
+    DtlsContext(bool client) : is_client(client){}
     virtual ~DtlsContext(){}
 
     static srtp_fingerprint_p gen_fingerprint(class dtls_settings* settings);
@@ -141,6 +142,8 @@ struct DtlsContext
     virtual bool onRecvData(AmDtlsConnection* conn, uint8_t * data, unsigned int size) noexcept(false) = 0;
     virtual bool timer_check() = 0;
     virtual bool sendData(const uint8_t * data, unsigned int size) noexcept(false) = 0;
+    virtual bool getDtlsKeysMaterial(srtp_profile_t& srtp_profile, vector<uint8_t>& local_key, vector<uint8_t>& remote_key) = 0;
+    virtual bool isInited() = 0;
 };
 
 class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext
@@ -148,6 +151,7 @@ class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext
     shared_ptr<BotanTLSCallbacksProxy> tls_callbacks_proxy;
 
     srtp_profile_t srtp_profile;
+    vector<uint8_t> local_key, remote_key;
     AmMutex channelMutex;
     Botan::TLS::Channel* dtls_channel;
     shared_ptr<dtls_conf> dtls_settings;
@@ -160,7 +164,7 @@ class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext
     AmRtpStream* rtp_stream;
     AmDtlsConnection* cur_conn;
 public:
-    RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint);
+    RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint, bool client);
     ~RtpSecureContext() noexcept;
 
     void initContext(const string& host, int port, shared_ptr<dtls_conf> settings, bool reinit = false) noexcept(false) override;
@@ -168,6 +172,8 @@ public:
     bool timer_check() override;
     bool sendData(const uint8_t * data, unsigned int size) noexcept(false) override;
     void setCurrentConnection(AmDtlsConnection* conn) noexcept(false) override { cur_conn = conn; }
+    bool getDtlsKeysMaterial(srtp_profile_t& srtp_profile, vector<uint8_t>& local_key, vector<uint8_t>& remote_key) override;
+    bool isInited() override;
 
     //TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;
@@ -188,7 +194,6 @@ class AmDtlsConnection
   : public AmStreamConnection
 {
     DtlsContext* dtls_context;
-    bool is_client;
 protected:
     friend class RtpSecureContext;
     ssize_t send(uint8_t * data, unsigned int size);
@@ -197,7 +202,7 @@ public:
     AmDtlsConnection(
         AmMediaTransport* transport,
         const string& remote_addr, int remote_port,
-        DtlsContext* context, bool client);
+        DtlsContext* context);
     virtual ~AmDtlsConnection();
 
     void handleConnection(
@@ -205,7 +210,6 @@ public:
         struct sockaddr_storage * recv_addr,
         struct timeval recv_time) override;
     ssize_t send(AmRtpPacket * packet) override;
-    bool isClient() { return is_client; }
 };
 
 #endif/*AM_DTLS_CONNECTION_H*/

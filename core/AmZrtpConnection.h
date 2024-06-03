@@ -10,7 +10,7 @@ extern "C" typedef struct bzrtpSrtpSecrets_struct bzrtpSrtpSecrets_t;
 
 class ZrtpContextSubscriber {
 public:
-    virtual void zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets) = 0;
+    virtual void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key) = 0;
     virtual int send_zrtp(unsigned char* buffer, unsigned int size){ return 0; }
 };
 
@@ -21,6 +21,8 @@ class zrtpContext
     uint32_t now;
     bool started;
     bool activated;
+    srtp_profile_t srtp_profile;
+    vector<uint8_t> local_key, remote_key;
     std::vector<ZrtpContextSubscriber*> subscribers;
 public:
     zrtpContext();
@@ -38,6 +40,7 @@ public:
     int onRecvData(uint8_t* data, unsigned int size);
     int onSendData(uint8_t* data, unsigned int size);
     int onActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
+    bool getZrtpKeysMaterial(srtp_profile_t& srtp_profile, vector<uint8_t>& local_key, vector<uint8_t>& remote_key);
 
     void iterate(uint32_t timestamp);
 };
@@ -55,7 +58,7 @@ public:
     virtual bool isUseConnection(ConnectionType type);
     virtual ssize_t send(AmRtpPacket* packet);
     virtual void setPassiveMode(bool p);
-    virtual void zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
+    virtual void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
 
     int send(uint8_t* data, unsigned int size);
 };

@@ -240,8 +240,9 @@ void DtlsTimer::reset()
     wheeltimer::instance()->insert_timer(this);
 }
 
-RtpSecureContext::RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint)
-: tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
+RtpSecureContext::RtpSecureContext(AmRtpStream* stream, const srtp_fingerprint_p& _fingerprint, bool client)
+: DtlsContext(client),
+  tls_callbacks_proxy(std::make_shared<BotanTLSCallbacksProxy>(*this)),
   srtp_profile(srtp_profile_reserved),
   dtls_channel(nullptr),
   dtls_settings(),
@@ -344,6 +345,20 @@ bool RtpSecureContext::timer_check()
     return false;
 }
 
+bool RtpSecureContext::getDtlsKeysMaterial(srtp_profile_t& srtpprofile, vector<uint8_t>& lkey, vector<uint8_t>& rkey)
+{
+    if(!activated) return false;
+    srtpprofile = srtp_profile;
+    lkey = local_key;
+    rkey = remote_key;
+    return true;
+}
+
+bool RtpSecureContext::isInited()
+{
+    return dtls_channel != 0;
+}
+
 void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 {
     assert(cur_conn);
@@ -364,18 +379,17 @@ void RtpSecureContext::tls_record_received(uint64_t seq_no, std::span<const uint
 
 void RtpSecureContext::tls_session_activated()
 {
-    assert(cur_conn);
+    activated = true;
     unsigned int key_len = srtp::profile_get_master_key_length(srtp_profile);
     unsigned int salt_size = srtp::profile_get_master_salt_length(srtp_profile);
     unsigned int export_key_size = key_len*2 + salt_size*2;
     Botan::SymmetricKey key = dtls_channel->key_material_export("EXTRACTOR-dtls_srtp", "", export_key_size);
-    vector<uint8_t> local_key, remote_key;
     if(dtls_settings->s_server) {
         remote_key.insert(remote_key.end(), key.begin(), key.begin() + key_len);
         local_key.insert(local_key.end(), key.begin() + key_len, key.begin() + key_len*2);
         remote_key.insert(remote_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
         local_key.insert(local_key.end(), key.begin() + key_len*2 + salt_size, key.end());
-    } else {//TODO: need approve for client side,
+    } else {
         local_key.insert(local_key.end(), key.begin(), key.begin() + key_len);
         remote_key.insert(remote_key.end(), key.begin() + key_len, key.begin() + key_len*2);
         local_key.insert(local_key.end(), key.begin() + key_len*2, key.begin() + key_len*2 + salt_size);
@@ -383,7 +397,6 @@ void RtpSecureContext::tls_session_activated()
     }
 
     rtp_stream->dtlsSessionActivated(cur_conn->getTransport(), srtp_profile, local_key, remote_key);
-    activated = true;
 }
 
 void RtpSecureContext::tls_session_established(const Botan::TLS::Session_Summary& session)
@@ -423,10 +436,9 @@ void RtpSecureContext::tls_verify_cert_chain(
         throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateHashValue, "fingerprint is not equal");
 }
 
-AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, DtlsContext* context, bool client)
+AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, DtlsContext* context)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN),
-    dtls_context(context),
-    is_client(client)
+    dtls_context(context)
 {}
 AmDtlsConnection::~AmDtlsConnection()
 {}

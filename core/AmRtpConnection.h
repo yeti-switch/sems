@@ -50,6 +50,9 @@ public:
 
         UNKNOWN_CONN
     };
+
+    static string connType2Str(ConnectionType type);
+
     AmStreamConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type);
     AmStreamConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port, ConnectionType type);
     virtual ~AmStreamConnection();

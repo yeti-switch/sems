@@ -11,7 +11,6 @@
 
 AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int _lpriority, unsigned int _priority)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN),
-    depend_conn(0),
     isAuthentificated{false,false},
     err_code(0),
     priority(_priority),
@@ -57,11 +56,6 @@ void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct
     } else if(msgClass == StunMsgClassSuccessResponse) {
         check_response(&reader, recv_addr);
     }
-}
-
-void AmStunConnection::setDependentConnection(AmStreamConnection* conn)
-{
-    depend_conn = conn;
 }
 
 void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storage* addr)
@@ -192,8 +186,7 @@ bool AmStunConnection::isAllowPair() {
 void AmStunConnection::checkAllowPair()
 {
     if(!isAllowPair()) return;
-    if(depend_conn) depend_conn->setRAddr(am_inet_ntop(&r_addr), am_get_port(&r_addr));
-    transport->allowStunConnection(&r_addr, priority);
+    transport->getRtpStream()->allowStunConnection(transport, &r_addr, priority);
 }
 
 //rfc8445 7.2.5.1
