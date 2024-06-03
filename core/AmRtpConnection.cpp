@@ -242,6 +242,27 @@ void AmStreamConnection::setPassiveMode(bool p)
     }
 }
 
+string AmStreamConnection::connType2Str(ConnectionType type) {
+    switch(type) {
+        case RTP_CONN:
+            return "RTP";
+        case RTCP_CONN:
+            return "RTCP";
+        case STUN_CONN:
+            return "STUN";
+        case DTLS_CONN:
+            return "DTLS";
+        case UDPTL_CONN:
+            return "UDPTL";
+        case ZRTP_CONN:
+            return "ZRTP";
+        case RAW_CONN:
+            return "RAW";
+        case UNKNOWN_CONN:
+            return "UNKNOWN";
+    };
+}
+
 AmRawConnection::AmRawConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::RAW_CONN)
 {}
@@ -321,4 +342,3 @@ void AmRtcpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     transport->onRtcpPacket(p, parent ? parent : this);
     transport->getRtpStream()->freeRtpPacket(p);
 }
-

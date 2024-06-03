@@ -56,11 +56,11 @@ class BotanTLSCallbacksProxy
         parent.tls_session_activated();
     }
     
-    void tls_ssl_key_log_data(const char* label,
-                              const std::vector<uint8_t>& client_random,
-                              const Botan::secure_vector<uint8_t>& secret) override
+    void tls_ssl_key_log_data(std::string_view label,
+                              std::span<const uint8_t> client_random,
+                              std::span<const uint8_t> secret) const override
     {
-        ssl_key_logger()->log(label,
+        ssl_key_logger()->log(label.data(),
                             Botan::hex_encode(client_random.data(), client_random.size()),
                             Botan::hex_encode(secret.data(), secret.size()));
     }
