@@ -1,3 +1,10 @@
+sems (1.136.0) stable; urgency=low
+  * disable symmetric RTP for ICE
+  * fix symmetric RTP for ZRTP-SRTP, DTLS-SRTP connections
+  * fix ZRTP-SRTP connection for ICE
+  * fix media transport FSM
+ -- Michael Furmur <furmur@pm.me>  Tue, 04 Jun 2024 00:15:50 +0300
+
 sems (1.135.0) stable; urgency=low
   * sems-external-libs-dev 0.4.5
   * fix ICE restart handling
