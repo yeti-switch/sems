@@ -402,6 +402,8 @@ class AmRtpStream
     virtual void initIP4Transport();
     virtual void initIP6Transport();
     void setCurrentTransport(AmMediaTransport* transport);
+
+    void initSrtpConnections(int transport_type);
   public:
 
     /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
@@ -449,7 +451,7 @@ class AmRtpStream
     void onSymmetricRtp();
     bool rtp_endpoint_learned_notified;
 
-    void allowStunConnection(AmMediaTransport* transport, int priority);
+    void allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     DtlsContext* getDtlsContext(uint8_t transport_type);
@@ -487,7 +489,7 @@ class AmRtpStream
 
 #ifdef WITH_ZRTP
     zrtpContext* getZrtpContext() { return &zrtp_context; }
-    void zrtpSessionActivated(const bzrtpSrtpSecrets_t *srtpSecrets);
+    void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     int send_zrtp(unsigned char* buffer, unsigned int size);
 #endif/*WITH_ZRTP*/
 

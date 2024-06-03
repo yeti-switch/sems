@@ -73,7 +73,9 @@ public:
         return RTPStream()->init(local, *remote, true, false);
     }
 
-    virtual void zrtpSessionActivated(const bzrtpSrtpSecrets_t*) override
+    virtual void zrtpSessionActivated(srtp_profile_t srtp_profile,
+                                      const vector<uint8_t>& local_key,
+                                      const vector<uint8_t>& remote_key) override
     {
         zrtp_activated.set(true);
         setStopped();
