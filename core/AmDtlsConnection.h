@@ -209,6 +209,7 @@ public:
         uint8_t * data, unsigned int size,
         struct sockaddr_storage * recv_addr,
         struct timeval recv_time) override;
+    void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) override;
     ssize_t send(AmRtpPacket * packet) override;
 };
 

@@ -188,19 +188,24 @@ AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
 
 AmStreamConnection* AmMediaTransport::findRtpConnection(struct sockaddr_storage* addr)
 {
+    AmStreamConnection* rtp_conn = 0;
     AmLock l(connections_mut);
     for(auto& conn : connections) {
-        switch(conn->getConnType()) {
-            case AmRawConnection::RTP_CONN:
-            case AmRawConnection::ZRTP_CONN:
-                if(conn->isAddrConnection(addr))
+        if(conn->isAddrConnection(addr)) {
+            switch(conn->getConnType()) {
+                case AmRawConnection::RTP_CONN:
+                    rtp_conn = conn;
+                    break;
+
+                case AmRawConnection::ZRTP_CONN:
                     return conn;
 
-            default: break;
+                default: break;
+            }
         }
     }
 
-    return nullptr;
+    return rtp_conn;
 }
 
 string AmMediaTransport::getRHost(bool rtcp)
@@ -484,7 +489,7 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
         answer.payloads.clear();
         answer.fmt = T38_FMT;
 #ifdef WITH_ZRTP
-    } else if(stream->isZrtpEnabled() && zrtp_enable) {
+    } else if(stream->isZrtpEnabled() && zrtp_enable && offer.zrtp_hash.is_use) {
         answer.zrtp_hash.hash = stream->getZrtpContext()->getLocalHash(stream->get_ssrc());
         if(!answer.zrtp_hash.hash.empty()) answer.zrtp_hash.is_use = true;
 #endif/*WITH_ZRTP*/
@@ -668,8 +673,9 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
     {
         AmLock l(connections_mut);
         for(auto conn : connections) {
-            if(state == TRANSPORT_STATE_ICE_DTLS ||
-               state == TRANSPORT_STATE_ICE_RESTART) {
+            if(state == TRANSPORT_STATE_ICE_DTLS ||     // dtls connect
+               state == TRANSPORT_STATE_ICE_RTP ||      // zrtp connect
+               state == TRANSPORT_STATE_ICE_RESTART) {  // ice restart with secure agreement
                 if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
                     sockaddr_storage raddr;
                     conn->getRAddr(&raddr);
@@ -688,8 +694,6 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
                     conn->getRAddr(&raddr);
                     addrs.push_back(raddr);
                 }
-            } else {
-                CLASS_WARN("incorrect state in called function, ignore it");
             }
         }
     }
@@ -702,15 +706,20 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
     }
 
     switch(state) {
-        case TRANSPORT_STATE_ICE_SRTP:
-            return;
         case TRANSPORT_STATE_ICE_RESTART:
         case TRANSPORT_STATE_ICE_DTLS:
         case TRANSPORT_STATE_ICE_RTP:
             state = TRANSPORT_STATE_ICE_SRTP;
             break;
-        default:
+        case TRANSPORT_STATE_DTLS:
+        case TRANSPORT_STATE_ZRTP:
             state = TRANSPORT_STATE_RTP;
+        case TRANSPORT_STATE_ICE_SRTP:
+        case TRANSPORT_STATE_RTP:
+            break;
+        default:
+            CLASS_WARN("incorrect state in called function, ignore it");
+            return;
     }
 }
 
@@ -868,8 +877,6 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
     CLASS_DBG("allow stun connection by addr:%s, port:%d, state:%s, type:%s",
               remote_address.c_str(), remote_port, state2str().c_str(), type2str().c_str());
 
-    if(remote_addr->ss_family != l_saddr.ss_family) return;
-
     if(state == TRANSPORT_STATE_ICE_RESTART) {
         allowed_ice_addrs.clear();
         cur_rtp_conn = 0;
@@ -882,35 +889,53 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
         state = TRANSPORT_STATE_ICE_INIT;
     }
 
+    DtlsContext* dtls_context = stream->getDtlsContext(type);
     if(state == TRANSPORT_STATE_ICE_INIT) {
-        auto dtls_context = stream->getDtlsContext(type);
         if(dtls_context) {
             state = TRANSPORT_STATE_ICE_DTLS;
-            addDtlsConnection(remote_address, remote_port, dtls_context);
         } else {
-            state = TRANSPORT_STATE_ICE_RTP;
-
-            if(srtp_cred.srtp_profile > srtp_profile_reserved) {
-                if(type == RTP_TRANSPORT)
-                    addSrtpConnection(remote_address, remote_port);
-
-                addSrtcpConnection(remote_address, remote_port);
-            #ifdef WITH_ZRTP
-            } else if(stream->isZrtpEnabled() && zrtp_enable) {
-                addZrtpConnection(remote_address, remote_port);
-            #endif
-            } else {
-                if(type == RTP_TRANSPORT)
-                    addRtpConnection(remote_address, remote_port);
-
-                addRtcpConnection(remote_address, remote_port);
-            }
+            if(srtp_cred.srtp_profile > srtp_profile_reserved)
+                state = TRANSPORT_STATE_ICE_SRTP;
+            else
+                state = TRANSPORT_STATE_ICE_RTP;
         }
     }
 
-    allowed_ice_addrs.emplace(priority, *remote_addr);
-    sockaddr_storage target_addr = allowed_ice_addrs.rbegin()->second;
-    cur_rtp_conn = findRtpConnection(&target_addr);
+    if(remote_addr->ss_family == l_saddr.ss_family) {
+        switch(state) {
+            case TRANSPORT_STATE_ICE_DTLS:
+                addDtlsConnection(remote_address, remote_port, dtls_context);
+                break;
+            case TRANSPORT_STATE_ICE_SRTP:
+                if(type == RTP_TRANSPORT)
+                    addSrtpConnection(remote_address, remote_port);
+                addSrtcpConnection(remote_address, remote_port);
+                break;
+            case TRANSPORT_STATE_ICE_RTP:
+#ifdef WITH_ZRTP
+                if(stream->isZrtpEnabled() &&
+                   zrtp_enable &&
+                   !stream->getZrtpContext()->getRemoteHash().empty()) {
+                        addZrtpConnection(remote_address, remote_port);
+                        stream->initZrtp();
+#endif
+                } else {
+                    if(type == RTP_TRANSPORT)
+                        addRtpConnection(remote_address, remote_port);
+                    addRtcpConnection(remote_address, remote_port);
+                }
+                break;
+            default:
+                CLASS_WARN("incorrect state after transition");
+                break;
+        }
+        allowed_ice_addrs.emplace(priority, *remote_addr);
+    }
+    if(!allowed_ice_addrs.empty()) {
+        sockaddr_storage target_addr = allowed_ice_addrs.rbegin()->second;
+        cur_rtp_conn = findRtpConnection(&target_addr);
+        DBG("current rtp connection type %s", cur_rtp_conn ? AmStreamConnection::connType2Str(cur_rtp_conn->getConnType()).c_str() : "");
+    }
 }
 
 void AmMediaTransport::dtls_alert(string alert)

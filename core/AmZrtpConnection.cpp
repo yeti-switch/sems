@@ -53,10 +53,17 @@ void zrtpContext::addSubscriber(ZrtpContextSubscriber* subscriber)
 
 void zrtpContext::setRemoteHash(const std::string& hash)
 {
-    if(!context || bzrtp_setPeerHelloHash((bzrtpContext_t*)context, l_ssrc, (uint8_t*)hash.c_str(), hash.size()))
+    if(!context || bzrtp_setPeerHelloHash((bzrtpContext_t*)context, l_ssrc, (uint8_t*)hash.c_str(), hash.size())) {
         throw string("error set peer hello hash");
-    else
+    } else {
+        remote_hash = hash;
         DBG("set zrtp remote hash to zrtp context for ssrc %d", l_ssrc);
+    }
+}
+
+std::string zrtpContext::getRemoteHash()
+{
+    return remote_hash;
 }
 
 void zrtpContext::init(uint8_t type, const std::vector<uint8_t>& values)

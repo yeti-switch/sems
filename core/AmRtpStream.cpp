@@ -156,6 +156,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     force_relay_dtmf(true),
     relay_timestamp_aligning(false),
     symmetric_rtp_endless(false),
+    symmetric_rtp_enable(false),
+    rtp_endpoint_learned_notified(false),
     rtp_ping(false),
     force_buffering(false),
     session(_s),
@@ -163,8 +165,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     active(false),
     multiplexing(false),
     reuse_media_trans(true),
-    force_receive_dtmf(false),
-    rtp_endpoint_learned_notified(false)
+    force_receive_dtmf(false)
 {
     DBG("AmRtpStream[%p](%p)",this,session);
 
@@ -579,8 +580,6 @@ void AmRtpStream::setCurrentTransport(AmMediaTransport* transport)
 
 void AmRtpStream::initSrtpConnections(int transport_type)
 {
-    CLASS_DBG("initSrtpConnection() stream:%p, transport:%d, dtls_context:%p", to_void(this), transport_type, dtls_context[transport_type].get());
-
     srtp_profile_t srtp_profile;
     vector<uint8_t> local_key, remote_key;
     if(dtls_context[transport_type]) {
@@ -592,6 +591,8 @@ void AmRtpStream::initSrtpConnections(int transport_type)
     } else {
         return;
     }
+
+    CLASS_DBG("initSrtpConnection() stream:%p, transport:%d, dtls_context:%p", to_void(this), transport_type, dtls_context[transport_type].get());
 
     string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
     memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
@@ -933,6 +934,9 @@ int AmRtpStream::init(const AmSdp& local,
                 if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
             }
         }
+        if(remote_media.zrtp_hash.is_use) {
+            zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
+        }
 
         if(remote_media.is_use_ice()) {
             for(auto transport : ip4_transports) {
@@ -960,22 +964,14 @@ int AmRtpStream::init(const AmSdp& local,
             cur_udptl_trans->initUdptlConnection(address, port);
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
 #ifdef WITH_ZRTP
-        } else if(isZrtpEnabled() && AmConfig.enable_srtp) {
-                if(remote_media.zrtp_hash.is_use) {
-                    zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
-                }
-                cur_rtp_trans->initZrtpConnection(address, port);
-                if(cur_rtcp_trans != cur_rtp_trans)
-                    cur_rtcp_trans->initRtpConnection(address, port);
-                connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
-
-                MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
-                zrtp_context.init(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
-                zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
-                zrtp_context.init(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
-                zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
-                zrtp_context.init(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
-                zrtp_context.start();
+        } else if(isZrtpEnabled() &&
+                  AmConfig.enable_srtp &&
+                  remote_media.zrtp_hash.is_use) {
+                    cur_rtp_trans->initZrtpConnection(address, port);
+                    if(cur_rtcp_trans != cur_rtp_trans)
+                        cur_rtcp_trans->initRtpConnection(address, port);
+                    connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
+                    initZrtp();
 #endif/*WITH_ZRTP*/
         } else {
             cur_rtp_trans->initRtpConnection(address, port);
@@ -1155,20 +1151,25 @@ void AmRtpStream::onRawPacket(AmRtpPacket* p, AmMediaTransport*)
 
 void AmRtpStream::onSymmetricRtp()
 {
+    if(!symmetric_rtp_endless) {
+        symmetric_rtp_enable = false;
+    }
     if(!rtp_endpoint_learned_notified) {
         rtp_endpoint_learned_notified = true;
         if(session) session->onRtpEndpointLearned();
     }
 }
 
+bool AmRtpStream::isSymmetricRtpEnable()
+{
+    return symmetric_rtp_enable;
+}
 
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority)
 {
-    //TODO: fast fix, remove after fix symmetric rtp for ice
-    onSymmetricRtp();
-    //-------
     setCurrentTransport(transport);
     initSrtpConnections(transport->getTransportType());
+    onSymmetricRtp();
 
     uint32_t current_ice_priority = transport->getCurrentConnectionPriority();
     for(auto tr : ip4_transports) {
@@ -1228,7 +1229,6 @@ void AmRtpStream::initDtls(uint8_t transport_type, bool client)
     getDtlsContext(transport_type)->initContext(transport->getLocalIP(), transport->getLocalPort(), dtls_settings);
 }
 
-
 #ifdef WITH_ZRTP
 extern "C" {
 #include <bzrtp/bzrtp.h>
@@ -1239,6 +1239,17 @@ void AmRtpStream::zrtpSessionActivated(srtp_profile_t,
                                        const vector<uint8_t>&)
 {
     initSrtpConnections(RTP_TRANSPORT);
+}
+
+void AmRtpStream::initZrtp()
+{
+    MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+    zrtp_context.init(ZRTP_HASH_TYPE, media_if.srtp->zrtp_hashes);
+    zrtp_context.init(ZRTP_CIPHERBLOCK_TYPE, media_if.srtp->zrtp_ciphers);
+    zrtp_context.init(ZRTP_AUTHTAG_TYPE, media_if.srtp->zrtp_authtags);
+    zrtp_context.init(ZRTP_KEYAGREEMENT_TYPE, media_if.srtp->zrtp_dhmodes);
+    zrtp_context.init(ZRTP_SAS_TYPE, media_if.srtp->zrtp_sas);
+    zrtp_context.start();
 }
 
 int AmRtpStream::send_zrtp(unsigned char* buffer, unsigned int size)
@@ -1811,6 +1822,9 @@ void AmRtpStream::setPayloadProvider(AmPayloadProvider* pl_prov)
 
 void AmRtpStream::setPassiveMode(bool p)
 {
+    if(p && !is_ice_stream) {
+        symmetric_rtp_enable = true;
+    }
     for(auto transport : ip4_transports) {
         transport->setPassiveMode(p);
     }

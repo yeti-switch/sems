@@ -22,6 +22,7 @@ class zrtpContext
     bool started;
     bool activated;
     srtp_profile_t srtp_profile;
+    string remote_hash;
     vector<uint8_t> local_key, remote_key;
     std::vector<ZrtpContextSubscriber*> subscribers;
 public:
@@ -32,6 +33,7 @@ public:
 
     string getLocalHash(unsigned int ssrc);
     void setRemoteHash(const string& hash);
+    string getRemoteHash();
     void init(uint8_t type, const std::vector<uint8_t>& values);
     void start();
     bool isStarted() {return started;}
@@ -55,6 +57,7 @@ public:
     ~AmZRTPConnection();
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
+    virtual void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) { /*symmetric rtp is dsabled for zrtp connection*/ }
     virtual bool isUseConnection(ConnectionType type);
     virtual ssize_t send(AmRtpPacket* packet);
     virtual void setPassiveMode(bool p);

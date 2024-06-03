@@ -457,6 +457,11 @@ void AmDtlsConnection::handleConnection(uint8_t* data, unsigned int size,
     }
 }
 
+void AmDtlsConnection::handleSymmetricRtp(struct sockaddr_storage*, struct timeval*)
+{
+    /*symmetric rtp is disabled for dtls connections*/
+}
+
 ssize_t AmDtlsConnection::send(AmRtpPacket* packet)
 {
     if(dtls_context->sendData((const uint8_t*)packet->getBuffer(), packet->getBufferSize()))

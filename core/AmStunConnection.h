@@ -52,6 +52,7 @@ public:
     void set_ice_role_controlled(bool ice_role_controlled) { this->local_ice_role_is_controlled = ice_role_controlled; }
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
+    virtual void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*){ /*symmetric rtp is disabled for ice*/ }
 
     void send_request();
     bool isAllowPair();

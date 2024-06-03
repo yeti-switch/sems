@@ -31,7 +31,7 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
     , r_host(remote_addr)
     , r_port(remote_port)
     , conn_type(type)
-    , passive(false)
+    , passive(transport->getRtpStream()->isSymmetricRtpEnable())
     , passive_set_time{0}
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -49,7 +49,7 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     , r_host(remote_addr)
     , r_port(remote_port)
     , conn_type(type)
-    , passive(false)
+    , passive(_parent->transport->getRtpStream()->isSymmetricRtpEnable())
     , passive_set_time{0}
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
@@ -166,6 +166,8 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
         }
         return;
     }
+
+    memcpy(&last_recv_time, &recv_time, sizeof(struct timeval));
     handleConnection(data, size, recv_addr, recv_time);
 }
 
@@ -210,8 +212,6 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
             setRAddr(get_addr_str(recv_addr), am_get_port(recv_addr));
         }
     }
-
-    memcpy(&last_recv_time, rv_time, sizeof(struct timeval));
 }
 
 void AmStreamConnection::getInfo(AmArg& ret)

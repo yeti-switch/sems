@@ -346,8 +346,12 @@ class AmRtpStream
     /** relay CN payload type  */
     bool            force_relay_cn;
 
-    /** endless symmetric rtp switching */
+    /** symmetric rtp switching flags*/
     bool            symmetric_rtp_endless;
+    bool            symmetric_rtp_enable;
+    /** rtp endpoint learned flag*/
+    bool            rtp_endpoint_learned_notified;
+    
     /** send initial rtp packet */
     bool            rtp_ping;
 
@@ -449,7 +453,7 @@ class AmRtpStream
     void onRawPacket(AmRtpPacket* packet, AmMediaTransport* transport);
 
     void onSymmetricRtp();
-    bool rtp_endpoint_learned_notified;
+    bool isSymmetricRtpEnable();
 
     void allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
@@ -489,6 +493,7 @@ class AmRtpStream
 
 #ifdef WITH_ZRTP
     zrtpContext* getZrtpContext() { return &zrtp_context; }
+    void initZrtp();
     void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
     int send_zrtp(unsigned char* buffer, unsigned int size);
 #endif/*WITH_ZRTP*/
