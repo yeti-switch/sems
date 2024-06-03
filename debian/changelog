@@ -1,3 +1,10 @@
+sems (1.134.4) stable; urgency=low
+  * resolver: fix SRV entries resolving on mixed A/AAAA records
+  * resolver: fix resolving for names with dot suffix
+  * registrar_client: fix shaping for the unconfigured global ratelimit
+  * sems-jwt-tool: add decode_TNAuthList_cert action
+ -- Michael Furmur <furmur@pm.me>  Mon, 03 Jun 2024 10:47:09 +0300
+
 sems (1.134.3) stable; urgency=low
   * 100rel: fix provisional reply retransmit detection
   * rpc: mv ssl_key_log from set to request. remove restart path arg
