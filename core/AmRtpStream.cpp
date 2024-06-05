@@ -1010,6 +1010,7 @@ int AmRtpStream::init(const AmSdp& local,
         pause();
     }
 
+    sending = local_media.send;
     mute =
         (remote_media.port < 1024) ||   // fake ports see https://datatracker.ietf.org/doc/html/rfc2327 p.18
         relay_is_muted ||
