@@ -170,6 +170,8 @@ public:
     void getIceCandidate(SdpMedia& media);
     uint32_t getCurrentConnectionPriority();
 
+    void onIceRestart();
+
     void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner);
     void initStunConnections(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner);
     void initRtpConnection(const string& remote_address, int remote_port);

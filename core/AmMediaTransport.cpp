@@ -513,6 +513,18 @@ uint32_t AmMediaTransport::getCurrentConnectionPriority()
     return allowed_ice_addrs.rbegin()->first;
 }
 
+void AmMediaTransport::onIceRestart()
+{
+    allowed_ice_addrs.clear();
+    cur_rtp_conn = 0;
+    cur_rtcp_conn = 0;
+
+    removeAllConnection(AmStreamConnection::RTP_CONN);
+    removeAllConnection(AmStreamConnection::RTCP_CONN);
+    removeAllConnection(AmStreamConnection::DTLS_CONN);
+    removeAllConnection(AmStreamConnection::ZRTP_CONN);
+}
+
 void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner)
 {
     CLASS_DBG("initIceConnection() stream:%p, state:%s", to_void(stream), state2str().c_str());
@@ -665,6 +677,9 @@ void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& l
     if(!srtp_enable) return;
 
     CLASS_DBG("initSrtpConnection() stream:%p, state:%s, type:%s", to_void(stream), state2str().c_str(), type2str().c_str());
+
+    if(state == TRANSPORT_STATE_ICE_RESTART)
+        onIceRestart();
 
     //store_srtp_cred(srtp_profile, local_key, srtp_master_keys(remote_key));
     srtp_master_keys remote_keys = srtp_master_keys(remote_key);
@@ -878,14 +893,7 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
               remote_address.c_str(), remote_port, state2str().c_str(), type2str().c_str());
 
     if(state == TRANSPORT_STATE_ICE_RESTART) {
-        allowed_ice_addrs.clear();
-        cur_rtp_conn = 0;
-        cur_rtcp_conn = 0;
-
-        removeAllConnection(AmStreamConnection::RTP_CONN);
-        removeAllConnection(AmStreamConnection::RTCP_CONN);
-        removeAllConnection(AmStreamConnection::DTLS_CONN);
-        removeAllConnection(AmStreamConnection::ZRTP_CONN);
+        onIceRestart();
         state = TRANSPORT_STATE_ICE_INIT;
     }
 
@@ -907,9 +915,11 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
                 addDtlsConnection(remote_address, remote_port, dtls_context);
                 break;
             case TRANSPORT_STATE_ICE_SRTP:
-                if(type == RTP_TRANSPORT)
-                    addSrtpConnection(remote_address, remote_port);
-                addSrtcpConnection(remote_address, remote_port);
+                if(srtp_cred.srtp_profile > srtp_profile_reserved) {
+                    if(type == RTP_TRANSPORT)
+                        addSrtpConnection(remote_address, remote_port);
+                    addSrtcpConnection(remote_address, remote_port);
+                }
                 break;
             case TRANSPORT_STATE_ICE_RTP:
 #ifdef WITH_ZRTP
@@ -934,6 +944,7 @@ void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32
     if(!allowed_ice_addrs.empty()) {
         sockaddr_storage target_addr = allowed_ice_addrs.rbegin()->second;
         cur_rtp_conn = findRtpConnection(&target_addr);
+        setRAddr(am_inet_ntop(&target_addr), am_get_port(&target_addr));
         DBG("current rtp connection type %s", cur_rtp_conn ? AmStreamConnection::connType2Str(cur_rtp_conn->getConnType()).c_str() : "");
     }
 }
@@ -1378,15 +1389,9 @@ AmStreamConnection* AmMediaTransport::addSrtpConnection(const string& remote_add
         AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
         conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
 
-        //TODO: remove in the future when fixed mute on ice
         if(conn->isMute()) {
-            stream->setMute(conn->isMute());
+            stream->setMute(true);
         }
-
-        //TODO: is a correct code: uncomment after fixed mute in ice
-        //if(!stream->isIceStream() && conn->isMute()) {
-        //    stream->setMute(true);
-        //}
 
         addConnection(conn);
         return conn;
