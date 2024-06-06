@@ -97,6 +97,7 @@ std::vector<Botan::X509_Certificate> settings::getCertificateCopy()
 std::string settings::getCertificateFingerprint(const string &hash_name)
 {
     AmLock l(mutex);
+    if(certificates.empty()) { return ""; }
     return certificates[0].fingerprint(hash_name);
 }
 
