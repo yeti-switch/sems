@@ -2,12 +2,12 @@
 #define AM_RTP_TRANSPORT_H
 
 #include "AmRtpSession.h"
-#include "AmRtpConnection.h"
-#include "AmDtlsConnection.h"
 #include "AmStunConnection.h"
 #include "AmSrtpConnection.h"
 #include "AmArg.h"
 #include "AmSdp.h"
+#include "AmMediaConnectionFactory.h"
+#include "AmMediaConnectionsHolder.h"
 
 #include "sip/ip_util.h"
 #include "sip/types.h"
@@ -17,6 +17,7 @@
 
 class AmRtpStream;
 class AmRtpPacket;
+class AmMediaState;
 
 #define RTP_PACKET_BUF_SIZE 4096
 #define RTP_PACKET_TIMESTAMP_DATASIZE (CMSG_SPACE(sizeof(struct timeval)))
@@ -29,26 +30,15 @@ class AmRtpPacket;
 #define MAX_TRANSPORT_TYPE  4
 
 class AmMediaTransport
-  : public AmObject,
+  : public AmMediaConnectionsHolder,
     public AmRtpSession
 #ifdef OBJECTS_COUNTER
     , ObjCounter(AmMediaTransport)
 #endif
 {
-    struct
-    {
-        string luser;
-        string lpassword;
-        string ruser;
-        string rpassword;
-        unsigned int lpriority;
-    } ice_cred;
-
-    struct {
-        srtp_profile_t srtp_profile;
-        string local_key;
-        srtp_master_keys remote_keys;
-    } srtp_cred;
+    AmMutex state_mutex;
+    unique_ptr<AmMediaState> state;
+    AmMediaConnectionFactory conn_factory;
 
 public:
     enum Mode {
@@ -61,20 +51,32 @@ public:
     AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type);
     virtual ~AmMediaTransport();
 
+    void setState(AmMediaState* state);
+    AmMediaState* getState();
+    AmMediaState* updateState(const AmArg args);
+    AmMediaState* addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner);
+    AmMediaState* allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);
+    AmMediaState* onSrtpKeysAvailable();
+    const char* state2str();
+    const char* state2strUnsafe();
+
     int getTransportType() { return type; }
     void setTransportType(int _type) { type = _type; }
 
     int getLocalIf() { return l_if; }
     int getLocalProtoId() { return lproto_id; }
+    AddressType getLocalAddrType() { return getLocalAddrFamily() == AF_INET ? AT_V4 : AT_V6; }
+    int getLocalAddrFamily() { return l_saddr.ss_family; }
 
     bool isSrtpEnable() { return srtp_enable; }
     bool isDtlsEnable() { return dtls_enable; }
+    bool isZrtpEnable() { return zrtp_enable; }
 
     /** set destination for logging all received/sent packets */
     void setLogger(msg_logger *_logger);
     void setSensor(msg_sensor *_sensor);
 
-    bool isMute(int type);
+    bool isMute(AmStreamConnection::ConnectionType type);
 
     /**
     * Gets RTP local ip.
@@ -128,14 +130,10 @@ public:
     */
     void setMode(Mode mode);
 
-    void addConnection(AmStreamConnection* conn);
-    void removeConnection(AmStreamConnection* conn);
-
     ssize_t send(AmRtpPacket* packet, AmStreamConnection::ConnectionType type);
     virtual ssize_t send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
     int sendmsg(unsigned char* buf, int size);
 
-    void allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);
     void dtls_alert(string alert);
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
@@ -147,7 +145,7 @@ public:
     void resumeReceiving();
 
     void setPassiveMode(bool p);
-    bool getPassiveMode() { return cur_rtp_conn ? cur_rtp_conn->getPassiveMode() : false;}
+    bool getPassiveMode() { return getCurRtpConn() ? getCurRtpConn()->getPassiveMode() : false;}
 
     /** returns the socket descriptor for local socket (initialized or not) */
     int hasLocalSocket();
@@ -167,44 +165,18 @@ public:
     * @param answer the local answer to be filled/completed.
     */
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
-    void getIceCandidate(SdpMedia& media);
+    void prepareIceCandidate(SdpIceCandidate& candidate);
     uint32_t getCurrentConnectionPriority();
-
-    void onIceRestart();
-
-    void initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner);
-    void initStunConnections(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner);
-    void initRtpConnection(const string& remote_address, int remote_port);
-    void initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
-    void initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key);
-    void initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media);
-    void initUdptlConnection(const string& remote_address, int remote_port);
-#ifdef WITH_ZRTP
-    void initZrtpConnection(const string& remote_address, int remote_port);
-#endif/*WITH_ZRTP*/
-    void initRawConnection();
+    void storeAllowedIceAddr(sockaddr_storage* remote_addr, uint32_t priority);
+    sockaddr_storage* getAllowedIceAddr();
+    void removeAllowedIceAddrs();
+    void setIcePriority(unsigned int priority);
     void getInfo(AmArg& ret);
 
     AmRtpStream* getRtpStream() { return stream; }
+    AmMediaConnectionFactory* getConnFactory() { return &conn_factory; }
+
 protected:
-    AmStreamConnection* addStunConnection(const string& remote_address, int remote_port,
-                                          unsigned int lpriority, unsigned int priority = 0);
-    AmStreamConnection* addDtlsConnection(const string& remote_address, int remote_port,
-                                          DtlsContext* context);
-
-    AmStreamConnection* addSrtpConnection(const string& remote_address, int remote_port);
-    AmStreamConnection* addSrtpConnection(const string& remote_address, int remote_port,
-                                          int srtp_profile, const string& local_key,
-                                          const srtp_master_keys& remote_keys);
-
-    AmStreamConnection* addSrtcpConnection(const string& remote_address, int remote_port);
-    AmStreamConnection* addSrtcpConnection(const string& remote_address, int remote_port,
-                                           int srtp_profile, const string& local_key,
-                                           const srtp_master_keys& remote_keys);
-
-    AmStreamConnection* addZrtpConnection(const string& remote_address, int remote_port);
-    AmStreamConnection* addRtpConnection(const string& remote_address, int remote_port);
-    AmStreamConnection* addRtcpConnection(const string& remote_address, int remote_port);
 
     ssize_t recv(int sd);
     void recvPacket(int fd) override;
@@ -214,11 +186,6 @@ protected:
     void log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type);
     void log_sent_packet(const char *buffer, int len, struct sockaddr_storage &send_addr, AmStreamConnection::ConnectionType type);
 
-    void updateKeys(AmSrtpConnection* conn,
-        const SdpMedia& local_media, const SdpMedia& remote_media);
-    void updateKeys(AmSrtpConnection* conn,
-        uint16_t srtp_profile,
-        const string& local_key, const srtp_master_keys& remote_keys);
 public:
     int getSrtpCredentialsBySdp(
         const SdpMedia& local_media, const SdpMedia& remote_media,
@@ -232,40 +199,16 @@ public:
     bool isZRTPMessage(unsigned char* buf, unsigned int size);
 
     msg_sensor::packet_type_t streamConnType2sensorPackType(AmStreamConnection::ConnectionType type);
-protected:
-    enum {
-        TRANSPORT_STATE_NONE,
-        TRANSPORT_STATE_ICE_INIT,
-        TRANSPORT_STATE_ICE_RESTART,
-        TRANSPORT_STATE_ICE_SRTP,
-        TRANSPORT_STATE_ICE_DTLS,
-        TRANSPORT_STATE_ICE_RTP,
-        TRANSPORT_STATE_DTLS,
-        TRANSPORT_STATE_RTP,
-        TRANSPORT_STATE_UDPTL,
-        TRANSPORT_STATE_RAW,
-        TRANSPORT_STATE_ZRTP
-    } state;
 
-    string state2str();
-    string type2str();
+    const char* type2str();
+
+protected:
 
     Mode mode;
 
     /** Stream owning this transport */
     AmRtpStream* stream;
-    AmStreamConnection* cur_rtp_conn;
-    AmStreamConnection* cur_rtcp_conn;
-    AmStreamConnection* cur_udptl_conn;
-    AmStreamConnection* cur_raw_conn;
-
     AmStreamConnection* getSuitableConnection(bool rtcp);
-    AmStreamConnection* findRtpConnection(struct sockaddr_storage* addr);
-    void removeAllConnection(AmStreamConnection::ConnectionType type);
-
-    int store_ice_cred(const SdpMedia& local_media, const SdpMedia& remote_media);
-    int store_srtp_cred(const SdpMedia& local_media, const SdpMedia& remote_media);
-    int store_srtp_cred(int cptrofile, const string& local_key, const srtp_master_keys& remote_keys);
 
 private:
     msg_logger *logger;
@@ -315,8 +258,6 @@ private:
     vector<SdpCrypto> local_crypto;
     SdpFingerPrint local_dtls_fingerprint;
 
-    vector<AmStreamConnection*> connections;
-    AmMutex                     connections_mut;
     AmMutex                     stream_mut;
 
     map<uint32_t, sockaddr_storage> allowed_ice_addrs;

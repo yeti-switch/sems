@@ -406,8 +406,12 @@ class AmRtpStream
     virtual void initIP4Transport();
     virtual void initIP6Transport();
     void setCurrentTransport(AmMediaTransport* transport);
+    void onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile, const string& local_key, const string& remote_key);
 
-    void initSrtpConnections(int transport_type);
+    void iterateTransports(std::function<void(AmMediaTransport* transport)> iterator);
+    template<class T>
+    void updateTransportState(AmMediaTransport* transport, const AmArg& args);
+
   public:
 
     /** should we receive RFC-2833-style DTMF even when receiving is disabled? */
