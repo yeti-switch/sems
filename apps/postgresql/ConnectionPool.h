@@ -20,6 +20,7 @@ extern const string pool_type_slave;
 class ConnectionPool
 {
     vector<Connection*> connections;
+    unsigned int cur_conn;
     PoolWorker* worker;
     PGPool pool;
     PGWorkerPoolCreate::PoolType type;

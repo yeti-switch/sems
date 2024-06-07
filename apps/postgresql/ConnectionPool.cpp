@@ -13,7 +13,7 @@ const string pool_type_master("master");
 const string pool_type_slave("slave");
 
 ConnectionPool::ConnectionPool(const PGPool& pool, PoolWorker* worker, PGWorkerPoolCreate::PoolType type)
-  : worker(worker), pool(pool), type(type),
+  : cur_conn(0), worker(worker), pool(pool), type(type),
     connected(stat_group(Gauge, MOD_NAME, "pool_connected").addAtomicCounter()
         .addLabel("worker", worker->get_name())
         .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave)),
@@ -60,8 +60,15 @@ bool ConnectionPool::processEvent(void* p)
 
 Connection * ConnectionPool::getFreeConnection()
 {
-    for(auto& conn : connections) {
-        if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) return conn;
+    for(unsigned int i = 0, cur_i = cur_conn + 1; i < connections.size(); i++, cur_i++) {
+        if(cur_i == connections.size())
+            cur_i = 0;
+
+        Connection* conn = connections[cur_i];
+        if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) {
+            cur_conn = cur_i;
+            return conn;
+        }
     }
     return 0;
 }
