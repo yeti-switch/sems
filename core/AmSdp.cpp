@@ -119,7 +119,11 @@ inline string profile_t_2_str(int pt, bool alternative)
 //         case CP_AEAD_AES_256_GCM: return "AEAD_AES_256_GCM";
 //         case CP_AES192_CM_SHA1_80: return "AES_CM_192_HMAC_SHA1_80";
 //         case CP_AES192_CM_SHA1_32: return "AES_CM_192_HMAC_SHA1_32";
-        default: return "<unknown_profile_type>";
+        default: {
+            std::ostringstream stringStream;
+            stringStream << "<unknown_profile_type " << pt << ">";
+            return stringStream.str();
+        }
     }
 }
 

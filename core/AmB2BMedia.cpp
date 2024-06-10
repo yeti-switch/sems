@@ -290,8 +290,7 @@ bool StreamData::initStream(PlayoutType playout_type,
     }
 
     /* prioritize stream disabled sending over StreamData::muted */
-    if (!stream->getOnHold())
-        stream->setOnHold(muted);
+    stream->setMute(muted);
 
     // NOTE: commented out because of incorrect overriding of the stream state negotiated by SDP
     // this change breaks setReceiving(bool receiving_a, bool receiving_b) behavior
@@ -468,7 +467,7 @@ void StreamData::mute(bool set_mute)
     DBG("mute(%s) - RTP stream [%p]", set_mute?"true":"false", static_cast<void *>(stream));
 
     if (stream) {
-        stream->setOnHold(set_mute);
+        stream->setMute(set_mute);
         if (muted != set_mute) stream->clearRTPTimeout();
     }
     muted = set_mute;

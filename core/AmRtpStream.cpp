@@ -451,14 +451,10 @@ try_another_port:
 
 void AmRtpStream::setRAddr(const string& addr, unsigned short port)
 {
-    CLASS_DBG("RTP remote address set to %s:%u", addr.c_str(),port);
+    //ignore setting raddr for ice streams
+    if(isIceStream()) { return; }
 
-    //TODO: remove in the future when fixed mute on ice
-    if(addr.empty() || addr == "0.0.0.0" || port < 1024) {
-        CLASS_DBG("ignore %s:%u", addr.c_str(),port);
-        return;
-    }
-    //--------------
+    CLASS_DBG("RTP remote address set to %s:%u", addr.c_str(),port);
 
     bool find_transport = true;
     sockaddr_storage raddr, laddr;
@@ -995,6 +991,7 @@ int AmRtpStream::init(const AmSdp& local,
                         force_passive_mode);
 
     bool relay_is_muted = rtptrans->isMute(AmStreamConnection::RAW_CONN);
+    sending = local_media.send;
 
     CLASS_DBG("local_recv:%d, local_send:%d, remote_recv:%d, remote_send:%d "
               "sending:%d remote_media.port:%u relay_is_muted:%d, conn_mute: %d",
@@ -1009,8 +1006,7 @@ int AmRtpStream::init(const AmSdp& local,
     }
 
     mute =
-        (!local_media.send) ||
-        (remote_media.port == 0) ||
+        (remote_media.port < 1024) ||   // fake ports see https://datatracker.ietf.org/doc/html/rfc2327 p.18
         relay_is_muted ||
         connection_is_muted;
 
@@ -1190,6 +1186,8 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_stor
             }
         }
     }
+
+    mute = cur_rtp_trans->isMute(AmStreamConnection::RAW_CONN);
 }
 
 void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
@@ -1863,6 +1861,7 @@ void AmRtpStream::resume()
 
 void AmRtpStream::setOnHold(bool on_hold)
 {
+    CLASS_DBG("set hold %d", on_hold);
     sending = !on_hold;
 }
 

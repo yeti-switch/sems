@@ -67,7 +67,7 @@ struct SdpConnection
     : network(NT_OTHER), addrType(AT_NONE)
   {
       bzero(&ipv4, sizeof(struct sockaddr_in));
-      bzero(&ipv6, sizeof(struct sockaddr_in));
+      bzero(&ipv6, sizeof(struct sockaddr_in6));
   }
 
   bool operator == (const SdpConnection& other) const;
