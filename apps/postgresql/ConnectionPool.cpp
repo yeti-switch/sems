@@ -13,7 +13,7 @@ const string pool_type_master("master");
 const string pool_type_slave("slave");
 
 ConnectionPool::ConnectionPool(const PGPool& pool, PoolWorker* worker, PGWorkerPoolCreate::PoolType type)
-  : cur_conn(0), worker(worker), pool(pool), type(type),
+  : last_returned_conn_idx(0), worker(worker), pool(pool), type(type),
     connected(stat_group(Gauge, MOD_NAME, "pool_connected").addAtomicCounter()
         .addLabel("worker", worker->get_name())
         .addLabel("type", type == PGWorkerPoolCreate::Master ? pool_type_master : pool_type_slave)),
@@ -60,17 +60,23 @@ bool ConnectionPool::processEvent(void* p)
 
 Connection * ConnectionPool::getFreeConnection()
 {
-    for(unsigned int i = 0, cur_i = cur_conn + 1; i < connections.size(); i++, cur_i++) {
-        if(cur_i == connections.size())
-            cur_i = 0;
+    const auto connections_count = connections.size();
 
-        Connection* conn = connections[cur_i];
+    for(auto connections_to_check = connections_count, conn_idx = last_returned_conn_idx + 1;
+        connections_to_check--;
+        conn_idx++)
+    {
+        if(conn_idx == connections_count)
+            conn_idx = 0;
+
+        Connection* conn = connections[conn_idx];
         if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) {
-            cur_conn = cur_i;
+            last_returned_conn_idx = conn_idx;
             return conn;
         }
     }
-    return 0;
+
+    return nullptr;
 }
 
 Connection * ConnectionPool::getConnection(int fd)
