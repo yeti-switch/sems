@@ -373,16 +373,26 @@ void BusConnection::pdu_handler(int status, const string &src, const string &dst
     AmArg               event_data;
 
     if(b_size)
-        if (!json2arg(body, event_data))
+        if (!json2arg(body, event_data)) {
             ERROR("failed deserialize json payload. body: '%s'",
                   body);
+            postError(dst, "incorrect json payload");
+            return;
+        }
 
     if(p_size) {
         string conf = inflatePacked(packed, p_size);
         AmArg args;
-        if (!json2arg(conf, args))
+        if (!json2arg(conf, args)) {
             ERROR("failed deserialize json payload. packed: '%s'",
                   conf.c_str());
+            postError(dst, "incorrect json payload");
+            return;
+        }
+        if(!isArgStruct(args)) {
+            postError(dst, "incorrect json payload");
+            return;
+        }
         for(auto& arg : args) {
             event_data[arg.first] = arg.second;
         }
