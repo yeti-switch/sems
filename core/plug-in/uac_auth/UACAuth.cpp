@@ -712,7 +712,7 @@ bool UACAuth::do_auth(
     /* do authentication */
     uac_calc_HA1( challenge, credential, cnonce, ha1);
     uac_calc_HA2( method, uri, challenge, qop_auth_int ? hentity : nullptr, ha2);
-    uac_calc_response( ha1, ha2, challenge, cnonce, qop_value, nonce_count, response);
+    uac_calc_response( ha1, ha2, challenge, cnonce, qop_value, int2hex(nonce_count), response);
     DBG("calculated response = %s", response);
 
     // compile auth response
@@ -824,10 +824,9 @@ void UACAuth::uac_calc_hentity(const string& body, HASHHEX hentity)
 /* 
  * calculate request-digest/response-digest as per HTTP Digest spec 
  */
-void UACAuth::uac_calc_response(
-    HASHHEX ha1, HASHHEX ha2,
+void UACAuth::uac_calc_response(HASHHEX ha1, HASHHEX ha2,
     const UACAuthDigestChallenge& challenge, const string& cnonce,
-    const string& qop_value, unsigned int nonce_count, HASHHEX response)
+    const string& qop_value, const string& nonce_count_str, HASHHEX response)
 {
     static unsigned char hc[1] = {':'};
     MD5_CTX Md5Ctx;
@@ -841,7 +840,7 @@ void UACAuth::uac_calc_response(
 
 
     if(!qop_value.empty()) {
-        w_MD5Update(&Md5Ctx, int2hex(nonce_count,true));
+        w_MD5Update(&Md5Ctx, nonce_count_str);
         MD5Update(&Md5Ctx, hc, 1);
         w_MD5Update(&Md5Ctx, cnonce);
         MD5Update(&Md5Ctx, hc, 1);
@@ -1012,7 +1011,7 @@ void UACAuth::checkAuthentication(
         credential.pwd = pwd;
 
         unsigned int client_nonce_count = 1;
-
+        string client_nonce_count_str = "1";
         HASHHEX ha1;
         HASHHEX ha2;
         HASHHEX hentity;
@@ -1029,9 +1028,9 @@ void UACAuth::checkAuthentication(
 
             if(qop_auth || qop_auth_int) {
                 // get nonce count from request
-                string nonce_count_str = r_challenge.find_attribute("nc");
-                if(hex2int(nonce_count_str, client_nonce_count)) {
-                    DBG("Error parsing nonce_count '%s'", nonce_count_str.c_str());
+                client_nonce_count_str = r_challenge.find_attribute("nc");
+                if(hex2int(client_nonce_count_str, client_nonce_count)) {
+                    DBG("Error parsing nonce_count '%s'", client_nonce_count_str.c_str());
                     internal_code = UACAuthNonceCountParse;
                     internal_reason = "Error parsing nonce_count";
                     goto auth_end;
@@ -1054,7 +1053,7 @@ void UACAuth::checkAuthentication(
 
         uac_calc_HA1(r_challenge, &credential, r_cnonce, ha1);
         uac_calc_HA2(req->method, r_uri, r_challenge, qop_auth_int ? hentity : nullptr, ha2);
-        uac_calc_response( ha1, ha2, r_challenge, r_cnonce, qop_value, client_nonce_count, response);
+        uac_calc_response( ha1, ha2, r_challenge, r_cnonce, qop_value, client_nonce_count_str, response);
         DBG("calculated our response vs request: '%s' vs '%s'", response, r_response.c_str());
 
         if(tc_isequal((const char*)response, r_response.c_str(), HASHHEXLEN)) {
@@ -1157,7 +1156,7 @@ void UACAuth::checkAuthenticationByHA1(
         // }
 
         unsigned int client_nonce_count = 1;
-
+        string nonce_count_str = "1";
         HASHHEX ha1;
         strncpy((char *)ha1, HA1.c_str(), HASHHEXLEN);
         HASHHEX ha2;
@@ -1198,7 +1197,7 @@ void UACAuth::checkAuthenticationByHA1(
         }
 
         uac_calc_HA2(req->method, r_uri, r_challenge, qop_auth_int ? hentity : NULL, ha2);
-        uac_calc_response( ha1, ha2, r_challenge, r_cnonce, qop_value, client_nonce_count, response);
+        uac_calc_response( ha1, ha2, r_challenge, r_cnonce, qop_value, nonce_count_str, response);
         DBG("calculated our response vs request: '%s' vs '%s'", response, r_response.c_str());
 
         if(!strncmp((const char*)response, r_response.c_str(), HASHHEXLEN)) {
