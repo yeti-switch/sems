@@ -1,3 +1,8 @@
+sems (1.137.1) stable; urgency=low
+  * uac_auth: fix nonce count case-sensivity
+  * bus_client: fix crash on reply processing 
+ -- Michael Furmur <furmur@pm.me>  Thu, 13 Jun 2024 10:26:59 +0300
+
 sems (1.137.0) stable; urgency=low
   * fix mute and relay processing on ICE usage
   * pg: use round-robin on getting free connection
