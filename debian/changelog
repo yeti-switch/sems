@@ -1,3 +1,7 @@
+sems (1.137.3) stable; urgency=low
+  * fix ICE SDP offers processing for sessions with disabled ICE
+ -- Michael Furmur <furmur@pm.me>  Thu, 13 Jun 2024 17:29:18 +0300
+
 sems (1.137.2) stable; urgency=low
   * sems-tester: rm ldhelper shared library
  -- Michael Furmur <furmur@pm.me>  Thu, 13 Jun 2024 12:25:48 +0300
