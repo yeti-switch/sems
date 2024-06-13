@@ -64,6 +64,8 @@ int UACAuth::allowed_qop_types;
 int UACAuth::nonce_expire;
 static string qop_str_value;
 
+static string default_nonce_count("00000001");
+
 UACAuthFactory* UACAuthFactory::instance()
 {
     if(!_instance)
@@ -1011,7 +1013,7 @@ void UACAuth::checkAuthentication(
         credential.pwd = pwd;
 
         unsigned int client_nonce_count = 1;
-        string client_nonce_count_str = "1";
+        string client_nonce_count_str(default_nonce_count);
         HASHHEX ha1;
         HASHHEX ha2;
         HASHHEX hentity;
@@ -1156,7 +1158,7 @@ void UACAuth::checkAuthenticationByHA1(
         // }
 
         unsigned int client_nonce_count = 1;
-        string nonce_count_str = "1";
+        string nonce_count_str(default_nonce_count);
         HASHHEX ha1;
         strncpy((char *)ha1, HA1.c_str(), HASHHEXLEN);
         HASHHEX ha2;
