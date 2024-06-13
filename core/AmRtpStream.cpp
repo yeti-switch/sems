@@ -664,7 +664,8 @@ void AmRtpStream::getSdpAnswer(unsigned int index, const SdpMedia& offer, SdpMed
 
     sdp_media_index = index;
     transport = offer.transport;
-    is_ice_stream = offer.is_use_ice();
+    is_ice_stream = offer.is_use_ice() &&
+        (session ? session->isUseIceMediaStream() : false);
 
     updateTransports();
 
@@ -934,7 +935,7 @@ int AmRtpStream::init(const AmSdp& local,
             zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
         }
 
-        if(remote_media.is_use_ice()) {
+        if(remote_media.is_use_ice() && is_ice_stream) {
             for(auto transport : ip4_transports) {
                 transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
             }
