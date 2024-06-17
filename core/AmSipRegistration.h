@@ -206,7 +206,7 @@ class AmSIPRegistration
   timep postponed_next_attempt;
 
   string request_contact;
-  string reply_contacts;
+  AmArg reply_contacts;
 
   enum error_initiator {
     REG_ERROR_LOCAL = 0,

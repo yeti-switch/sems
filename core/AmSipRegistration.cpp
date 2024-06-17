@@ -548,15 +548,10 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
             contacts = getHeader(reply.hdrs, "Contact", "m", true);
 
         if (unregistering) {
-            DBG("received positive reply to De-REGISTER");
-
             active = false;
             error_code = 0;
             remove = true;
 
-            if (!contacts.length()) {
-                DBG("no contacts registered any more");
-            }
             if (sess_link.length()) {
                 AmSessionContainer::instance()->postEvent(
                     sess_link,
@@ -565,9 +560,6 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                     reply.code, reply.reason));
             }
         } else {
-            DBG("%s(%s) positive reply to REGISTER!",
-                req.from_tag.c_str(),info.id.c_str());
-
             size_t end  = 0;
             AmUriParser server_contact;
 
@@ -577,8 +569,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
             bool found = false;
 
             if (!contacts.length()) {
-                // should not happen - positive reply without contact
-                DBG("%s(%s) no contacts registered any more",
+                DBG("%s(%s) no contacts in register positive reply",
                     handle.c_str(),info.id.c_str());
                 active = false;
                 error_code = 500;
@@ -588,43 +579,44 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                 end = 0;
                 while(contacts.length() != end) {
                     if (!server_contact.parse_contact(contacts, end, end)) {
-                        DBG("while parsing contact");
+                        DBG("[%s](%s) failed to parse contact",
+                            handle.c_str(), info.id.c_str());
                         break;
                     }
-                    //server_contact.dump();
 
-                    if(!reply_contacts.empty())
-                        reply_contacts+=", ";
-                    reply_contacts += server_contact.nameaddr_str();
+                    if(end < contacts.length())
+                        end++; //skip ','. see: _SipCtrlInterface::sip_msg2am_reply
+
+                    reply_contacts.push(server_contact.nameaddr_str());
 
                     if(found) continue;
 
                     if(server_contact.isEqual(local_contact)) {
-                        DBG("contact found");
-
                         const auto contact_expires = server_contact.params.find("expires");
                         if(contact_expires == server_contact.params.end()) {
-                            DBG("no 'expires' param in matched Contact header. check for Expires header");
-                             auto expires_header = getHeader(reply.hdrs, SIP_HDR_EXPIRES, true);
-                             if(expires_header.empty()) {
-                                 ERROR("missed both 'expires' param on macthed contact and Expires header");
-                                 active = false;
-                                 error_code = 500;
-                                 error_reason = "Failed to extract expires value from matched contact";
-                                 error_initiatior =  REG_ERROR_LOCAL;
-                                 return;
-                             }
-                             if (str2i(expires_header, reg_expires)) {
-                                 ERROR("could not extract Expires header value");
-                                 active = false;
-                                 error_code = 500;
-                                 error_reason = "Failed to extract Expires header value on missed 'expires' param";
-                                 error_initiatior =  REG_ERROR_LOCAL;
-                                 return;
-                             }
+                            auto expires_header = getHeader(reply.hdrs, SIP_HDR_EXPIRES, true);
+                            if(expires_header.empty()) {
+                                ERROR("[%s](%s) missed both 'expires' param on matched contact and Expires header",
+                                    handle.c_str(), info.id.c_str());
+                                active = false;
+                                error_code = 500;
+                                error_reason = "Failed to extract expires value from matched contact";
+                                error_initiatior =  REG_ERROR_LOCAL;
+                                return;
+                            }
+                            if (str2i(expires_header, reg_expires)) {
+                                ERROR("[%s](%s) could not extract Expires header value",
+                                    handle.c_str(), info.id.c_str());
+                                active = false;
+                                error_code = 500;
+                                error_reason = "Failed to extract Expires header value on missed 'expires' param";
+                                error_initiatior =  REG_ERROR_LOCAL;
+                                return;
+                            }
                         } else {
                             if (str2i(contact_expires->second, reg_expires)) {
-                                ERROR("could not extract expires value");
+                                ERROR("[%s](%s) could not extract expires value",
+                                    handle.c_str(), info.id.c_str());
                                 active = false;
                                 error_code = 500;
                                 error_reason = "Failed to extract expires value from matched contact";
@@ -633,11 +625,8 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                             }
                         }
 
-                        DBG("got an expires of %d", reg_expires);
-
                         if(force_expires_interval) {
                             reg_expires = expires_interval;
-                            DBG("expires forced to %d", reg_expires);
                         }
 
                         found = active = true;
@@ -648,7 +637,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                         reg_begin = time(nullptr);
 
                         if (sess_link.length()) {
-                            DBG("%s(%s) posting SIPRegistrationEvent to '%s'",
+                            DBG("[%s](%s) posting SIPRegistrationEvent to '%s'",
                                 handle.c_str(),info.id.c_str(),
                                 sess_link.c_str());
                             AmSessionContainer::instance()->
@@ -657,7 +646,6 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                                 handle,info.id,
                                 reply.code, reply.reason));
                         }
-                        break;
                     }
                 } //while(contacts.length() != end)
             } //if (!contacts.length()) else
@@ -671,7 +659,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
                             reply.code, reply.reason));
                 }
 
-                DBG("Registration %s(%s) no matching Contact - deregistered",
+                DBG("[%s](%s) no matching Contact - deregistered",
                     handle.c_str(),info.id.c_str());
 
                 active = false;
@@ -682,7 +670,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
         } // if (unregistering) else
     } else if (reply.code >= 300) {
         if(unregistering) {
-            DBG("De-Registration %s(%s) failed with code %d. remove it anyway",
+            DBG("[%s](%s) De-Registration failed with code %d. remove it anyway",
                 handle.c_str(),info.id.c_str(),reply.code);
 
             if (sess_link.length()) {
@@ -700,7 +688,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest& req,
             return;
         }
 
-        DBG("Registration %s(%s) failed with code %d",
+        DBG("[%s](%s) Registration failed with code %d",
             handle.c_str(),info.id.c_str(),reply.code);
 
         error_code = static_cast<int>(reply.code);
