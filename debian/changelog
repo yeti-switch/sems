@@ -1,3 +1,7 @@
+sems (1.137.4) stable; urgency=low
+  * registrar_client: fix reply contacts saving
+ -- Michael Furmur <furmur@pm.me>  Tue, 18 Jun 2024 16:28:06 +0300
+
 sems (1.137.3) stable; urgency=low
   * fix ICE SDP offers processing for sessions with disabled ICE
  -- Michael Furmur <furmur@pm.me>  Thu, 13 Jun 2024 17:29:18 +0300
