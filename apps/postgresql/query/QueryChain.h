@@ -39,6 +39,7 @@ public:
     bool is_single_mode() override { return get_current_query()->is_single_mode(); }
     bool is_finished() override { return is_sent || finished; }
     const char* get_last_error() override { return get_current_query()->get_last_error(); }
+    void set_last_error(const char* error) override { get_current_query()->set_last_error(error); }
     std::string get_query() override { return get_current_query()->get_query(); }
     void set_finished() override { finished = true; }
     uint32_t get_size() override { return (uint32_t)childs.size(); }

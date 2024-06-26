@@ -22,7 +22,8 @@ using std::vector;
 
 enum RpcMethodId {
     MethodShowStats,
-    MethodShowConfig
+    MethodShowConfig,
+    MethodShowRetransmit
 #ifdef TRANS_LOG_ENABLE
     , MethodTransLog
 #endif
@@ -285,12 +286,37 @@ bool PostgreSQL::showConfiguration(const string& connection_id,
     return true;
 }
 
+bool PostgreSQL::showRetransmits(const std::string& connection_id,
+                            const AmArg& request_id,
+                            const AmArg& params)
+{
+    if(!params.size() ||
+       !isArgCStr(params[0])) {
+        throw AmSession::Exception(500, "usage: postgresql.show.retransmit <worker>");
+    }
+
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodShowRetransmit, params));
+    return true;
+}
+
+
 void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
 {
     AmArg& wrs_arr = ret["workers"];
     for(auto& dest : workers) {
         AmArg& worker = wrs_arr[dest.first.c_str()];
         dest.second->getConfig(worker);
+    }
+}
+
+void PostgreSQL::showRetransmit(const AmArg& params, AmArg& ret)
+{
+    for(auto& dest : workers) {
+        if(dest.first == params[0].asCStr()) {
+            dest.second->getRetransmits(ret);
+        }
     }
 }
 
@@ -366,6 +392,7 @@ void PostgreSQL::init_rpc_tree()
     AmArg &show = reg_leaf(root,"show");
         reg_method(show, "stats", "show statistics", &PostgreSQL::showStatistics);
         reg_method(show, "config", "show config", &PostgreSQL::showConfiguration);
+        reg_method(show, "retransmit", "show retransmit queue", &PostgreSQL::showRetransmits);
     AmArg &request = reg_leaf(root,"request");
         reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
         reg_method(request, "reset", "reset pq connection", &PostgreSQL::requestReset);
@@ -463,6 +490,11 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
     case MethodShowConfig: {
         AmArg ret;
         showConfig(request.params, ret);
+        postJsonRpcReply(request, ret);
+    } break;
+    case MethodShowRetransmit: {
+        AmArg ret;
+        showRetransmit(request.params, ret);
         postJsonRpcReply(request, ret);
     } break;
     }

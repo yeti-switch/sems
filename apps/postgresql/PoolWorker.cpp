@@ -1,6 +1,6 @@
 #include "PoolWorker.h"
 
-#include "AmUtils.h"
+#include <AmUtils.h>
 #include <AmSessionContainer.h>
 #include <AmStatistics.h>
 
@@ -102,6 +102,38 @@ void PoolWorker::getConfig(AmArg& ret)
     ret["connection_lifetime"] = conn_lifetime;
 }
 
+void PoolWorker::getRetransmits(AmArg& ret)
+{
+    for(auto& rtt : retransmit_q) {
+        AmArg arg;
+        arg["id"] = rtt.trans_id;
+        arg["sender"] = rtt.sender_id;
+        arg["token"] = rtt.token;
+        arg["tr_size"] = rtt.trans->get_size();
+        AmArg& queries = arg["queries"];
+        queries.assertArray();
+        if(rtt.trans->get_size() > 1) {
+            QueryChain* chain = dynamic_cast<QueryChain*>(rtt.trans->get_query(true));
+            for(int i = 0; chain && i < chain->get_size(); i++) {
+                AmArg query;
+                query["query"] = chain->get_query(i)->get_query();
+                QueryParams* qparam = dynamic_cast<QueryParams*>(chain->get_query(i));
+                if(qparam) 
+                    qparam->getParams(query["params"]);
+                queries.push(query);
+            }
+        } else {
+            AmArg query;
+            query["query"] = rtt.trans->get_query(true)->get_query();
+            QueryParams* qparam = dynamic_cast<QueryParams*>(rtt.trans->get_query(true));
+            if(qparam)
+                qparam->getParams(query["params"]);
+            queries.push(query);
+        }
+        ret.push(arg);
+    }
+}
+
 void PoolWorker::getStats(AmArg& ret)
 {
     ret["queue"] = (long long)queue_size.get();
@@ -176,7 +208,7 @@ void PoolWorker::onStopTransaction(Transaction* trans)
     for(auto tr_it = transactions.begin();
         tr_it != transactions.end(); tr_it++) {
         if(trans == tr_it->trans) {
-            retransmit_q.emplace_back(tr_it->trans, (ConnectionPool*)0, tr_it->sender_id, tr_it->token);
+            retransmit_q.emplace_back(tr_it->trans, (ConnectionPool*)0, tr_it->sender_id, tr_it->token, tr_it->trans_id);
             tr_size.dec((long long)tr_it->trans->get_size());
             ret_size.inc((long long)tr_it->trans->get_size());
             failed.inc((long long)tr_it->trans->get_size());
@@ -368,7 +400,7 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
         string token = trans.token;
         getFreeConnection(&conn, &pool, ERROR_CALLBACK);
         if(!conn) return -1;
-        transactions.emplace_back(trans.trans, pool, sender_id, token);
+        transactions.emplace_back(trans.trans, pool, sender_id, token, trans.trans_id);
         tr_size.inc((long long)trans.trans->get_size());
         wait_next_time = transactions.front().createdTime + trans_wait_time;
         //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
@@ -398,7 +430,7 @@ int PoolWorker::retransmitTransaction(TransContainer& trans)
         if(failover_to_slave && slave && !conn)
             return 1;
         else if(failover_to_slave && conn) {
-            transactions.emplace_back(trans.trans, pool, trans.sender_id, token);
+            transactions.emplace_back(trans.trans, pool, trans.sender_id, token, trans.trans_id);
             tr_size.inc((long long)trans.trans->get_size());
             wait_next_time = transactions.front().createdTime + trans_wait_time;
             //DBG("worker \'%s\' set next wait time %lu", name.c_str(), wait_next_time);
@@ -514,7 +546,7 @@ void PoolWorker::checkQueue()
 
         auto next_it = trans_it; next_it++;
         if(count >= batch_size || need_send || next_it == queue.end()) {
-            TransContainer tr(trans, (ConnectionPool*)0, trans_it->sender_id, trans_it->token);
+            TransContainer tr(trans, (ConnectionPool*)0, trans_it->sender_id, trans_it->token, trans_it->trans_id);
             int ret = retransmitTransaction(tr);
             if(ret < 0) {
                 delete trans;
@@ -724,7 +756,7 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {
             trans_ = new NonTransaction(this);
             trans_->exec(trans.trans->get_query(false)->clone());
-            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
+            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token, trans.trans_id);
             ret_size.inc((long long)trans_->get_size());
         } else if(trans.trans->get_type() == TR_POLICY ||
                 (trans.trans->get_type() == TR_NON && use_pipeline)){
@@ -738,7 +770,7 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
                 chain->removeQuery(q_ret);
             }
             trans_ = trans.trans->clone();
-            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
+            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token, trans.trans_id);
             ret_size.inc((long long)trans.trans->get_size());
             if(qsize > 1) {
                 if(trans.trans->get_type() == TR_POLICY)
@@ -751,7 +783,7 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
             }
         } else {
             trans_ = trans.trans->clone();
-            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token);
+            retransmit_q.emplace_back(trans_, trans.currentPool, trans.sender_id, trans.token, trans.trans_id);
             ret_size.inc((long long)trans.trans->get_size());
         }
     }

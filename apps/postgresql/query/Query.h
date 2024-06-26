@@ -34,4 +34,5 @@ public:
     Connection* getConnection() override { return impl->getConnection(); }
     void put_result() override {}
     uint32_t get_result_got() override { return 1; };
+    void set_last_error(const char* error) override { impl->set_last_error(error); };
 };

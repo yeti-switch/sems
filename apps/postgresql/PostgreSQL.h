@@ -112,9 +112,11 @@ class PostgreSQL
     string getConnectionLogPath();
 #endif
     void showConfig(const AmArg& params, AmArg& ret);
+    void showRetransmit(const AmArg& params, AmArg& ret);
 
     async_rpc_handler showStatistics;
     async_rpc_handler showConfiguration;
+    async_rpc_handler showRetransmits;
     rpc_handler requestReconnect;
     rpc_handler requestReset;
 #ifdef TRANS_LOG_ENABLE

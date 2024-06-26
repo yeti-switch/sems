@@ -13,7 +13,7 @@ void TransactionImpl::reset(Connection *conn_)
 
 bool TransactionImpl::is_pipeline()
 {
-    return conn->getPipeStatus() == PQ_PIPELINE_ON;
+    return conn ? conn->getPipeStatus() == PQ_PIPELINE_ON : false;
 }
 
 bool TransactionImpl::sync_pipeline()
