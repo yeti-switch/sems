@@ -449,7 +449,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
-    pool.pool_size = 2;
+    pool.pool_size = 3;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, false, 3, 1);
     config.batch_size = 4;

@@ -125,6 +125,7 @@ class PoolWorker
     void configure(const PGWorkerConfig& e);
     void resetPools(PGWorkerPoolCreate::PoolType type);
     void resetConnection(int fd);
+    void removeTrans(const char* id);
     void resetPools();
 
     void onFireTransaction(const TransContainer& trans);

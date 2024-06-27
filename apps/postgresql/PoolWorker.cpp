@@ -709,6 +709,27 @@ void PoolWorker::resetConnection(int fd)
     if(conn) conn->reset();
 }
 
+void PoolWorker::removeTrans(const char* id)
+{
+    for(auto tr = queue.begin(); tr != queue.end(); tr++) {
+        if(tr->trans_id == id) {
+            queue_size.dec(tr->trans->get_size());
+            dropped.inc(tr->trans->get_size());
+            queue.erase(tr);
+            return;
+        }
+    }
+
+    for(auto tr = retransmit_q.begin(); tr != retransmit_q.end(); tr++) {
+        if(tr->trans_id == id) {
+            ret_size.dec(tr->trans->get_size());
+            dropped.inc(tr->trans->get_size());
+            retransmit_q.erase(tr);
+            return;
+        }
+    }
+}
+
 void PoolWorker::resetPools()
 {
     if(master) master->resetConnections();
