@@ -3,6 +3,7 @@
 #include "../RedisScript.h"
 
 #include <hiredis/read.h>
+#include <stdarg.h>
 
 RedisTestServer::RedisTestServer()
   : response_enabled(true)
