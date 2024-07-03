@@ -931,9 +931,13 @@ int AmRtpStream::init(const AmSdp& local,
                 if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
             }
         }
-        if(remote_media.zrtp_hash.is_use) {
+#ifdef WITH_ZRTP
+        if(isZrtpEnabled() &&
+           AmConfig.enable_srtp &&
+           remote_media.zrtp_hash.is_use) {
             zrtp_context.setRemoteHash(remote_media.zrtp_hash.hash);
         }
+#endif/*WITH_ZRTP*/
 
         if(remote_media.is_use_ice() && is_ice_stream) {
             for(auto transport : ip4_transports) {
