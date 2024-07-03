@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ampi/PostgreSqlAPI.h>
+#include <AmSession.h>
 
 #include "ConnectionPool.h"
 
@@ -64,10 +65,13 @@ class PoolWorker
         std::chrono::steady_clock::time_point sendTime;
         string token;
         string sender_id;
+        string trans_id;
         TransContainer(Transaction* trans, ConnectionPool* pool,
-                       const string& sender, const string& token)
+                       const string& sender, const string& token,
+                       const string& id = "")
             : trans(trans), currentPool(pool), createdTime(time(0))
-            , token(token), sender_id(sender) {}
+            , token(token), sender_id(sender)
+            , trans_id(id.empty() ? AmSession::getNewId() : id) {}
     };
 
     AtomicCounter& tr_size;
@@ -121,6 +125,7 @@ class PoolWorker
     void configure(const PGWorkerConfig& e);
     void resetPools(PGWorkerPoolCreate::PoolType type);
     void resetConnection(int fd);
+    void removeTrans(const char* id);
     void resetPools();
 
     void onFireTransaction(const TransContainer& trans);
@@ -149,6 +154,7 @@ class PoolWorker
     uint64_t getActiveTasksCount();
     void getStats(AmArg& ret);
     void getConfig(AmArg& ret);
+    void getRetransmits(AmArg& ret);
 #ifdef TRANS_LOG_ENABLE
     bool getConnectionLog(const AmArg& args);
 #endif

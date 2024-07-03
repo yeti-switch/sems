@@ -138,6 +138,7 @@ TEST_F(PostgresqlTest, WorkerTransactionParamTest)
     WorkerHandler::instance().set_expected_events(types);
 
     PGWorkerConfig* wc = new PGWorkerConfig(WORKER_POOL_NAME, false, true, false, 1, 1, 1, PG_DEFAULT_BATCH_SIZE, 1);
+    wc->addReconnectError("42P02");
     PostgreSQL::instance()->postEvent(wc);
 
     string query;
@@ -273,7 +274,7 @@ TEST_F(PostgresqlTest, WorkerPipelineTest)
     worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
-    pool.pool_size = 2;
+    pool.pool_size = 3;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, false, 15, 1);
     config.batch_size = 10;
@@ -449,7 +450,7 @@ TEST_F(PostgresqlTest, WorkerQueueErrorTest)
     worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
-    pool.pool_size = 2;
+    pool.pool_size = 3;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, false, 3, 1);
     config.batch_size = 4;
@@ -504,7 +505,7 @@ TEST_F(PostgresqlTest, WorkerPipelineQueueErrorTest)
     worker.init();
     handler.workers.push_back(&worker);
     PGPool pool = GetPoolByAddress(address);
-    pool.pool_size = 2;
+    pool.pool_size = 3;
     worker.createPool(PGWorkerPoolCreate::Master, pool);
     PGWorkerConfig config("test", false, true, true, 3, 1);
     config.batch_size = 4;

@@ -22,4 +22,5 @@ struct IQuery
     virtual Connection* getConnection() = 0;
     virtual void put_result() = 0;
     virtual uint32_t get_result_got() = 0;
+    virtual void set_last_error(const char* error) = 0;
 };

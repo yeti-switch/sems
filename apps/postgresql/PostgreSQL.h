@@ -24,11 +24,13 @@ public:
     union {
         PGWorkerPoolCreate::PoolType type;
         int fd;
+        char* trans_id;
     } data;
     enum {
         PoolTypeReset,
         PoolsReset,
-        FdReset
+        FdReset,
+        TransRemove
     } type;
     string worker_name;
 
@@ -38,6 +40,14 @@ public:
         worker_name(name)
     {
         data.type = type;
+    }
+
+    ResetEvent(const string& name, const string& trans_id)
+      : PGEvent(AdditionalTypeEvent::Reset),
+        type(TransRemove),
+        worker_name(name)
+    {
+        data.trans_id = strdup(trans_id.c_str());
     }
 
     ResetEvent(const string& name)
@@ -54,6 +64,12 @@ public:
         worker_name(name)
     {
         data.fd = fd;
+    }
+
+    ~ResetEvent()
+    {
+        if(type == TransRemove)
+            free(data.trans_id);
     }
 };
 
@@ -112,11 +128,14 @@ class PostgreSQL
     string getConnectionLogPath();
 #endif
     void showConfig(const AmArg& params, AmArg& ret);
+    void showRetransmit(const AmArg& params, AmArg& ret);
 
     async_rpc_handler showStatistics;
     async_rpc_handler showConfiguration;
+    async_rpc_handler showRetransmits;
     rpc_handler requestReconnect;
-    rpc_handler requestReset;
+    rpc_handler resetConnection;
+    rpc_handler removeTrans;
 #ifdef TRANS_LOG_ENABLE
     async_rpc_handler transLog;
 #endif

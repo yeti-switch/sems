@@ -101,6 +101,7 @@ int PGTransactionImpl::fetch_result()
             case PGRES_FATAL_ERROR: {
                 TRANS_LOG(parent, "error");
                 char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
+                parent->get_query()->get_current_query()->set_last_error(error);
                 parent->handler->onError(parent, error ? error : "");
                 char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
                 parent->handler->onErrorCode(parent, errorfield ? errorfield : "");
