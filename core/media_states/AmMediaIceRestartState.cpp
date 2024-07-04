@@ -1,5 +1,6 @@
 #include "AmMediaIceRestartState.h"
 #include "AmMediaState.h"
+#include "AmMediaTransport.h"
 
 AmMediaIceRestartState::AmMediaIceRestartState(AmMediaTransport *transport)
   : AmMediaState(transport), AmMediaIceState(transport)

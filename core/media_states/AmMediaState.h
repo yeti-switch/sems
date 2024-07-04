@@ -1,7 +1,8 @@
 #pragma once
 
-#include "AmMediaTransport.h"
 #include "AmMediaConnectionFactory.h"
+
+class AmMediaTransport;
 
 class AmMediaState
 {

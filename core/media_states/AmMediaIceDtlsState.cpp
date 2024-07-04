@@ -1,6 +1,7 @@
 #include "AmMediaIceDtlsState.h"
 #include "AmMediaIceSrtpState.h"
 #include "AmMediaState.h"
+#include "AmMediaTransport.h"
 
 AmMediaIceDtlsState::AmMediaIceDtlsState(AmMediaTransport *transport)
   : AmMediaState(transport), AmMediaIceState(transport), AmMediaDtlsState(transport)

@@ -33,13 +33,6 @@
 #include "AmAudio.h"
 #include "AmUtils.h"
 #include "AmSession.h"
-#include "media_states/AmMediaState.h"
-#include "media_states/AmMediaRtpState.h"
-#include "media_states/AmMediaSrtpState.h"
-#include "media_states/AmMediaZrtpState.h"
-#include "media_states/AmMediaDtlsState.h"
-#include "media_states/AmMediaIceState.h"
-#include "media_states/AmMediaUdptlState.h"
 #include "AmDtmfDetector.h"
 #include "rtp/telephone_event.h"
 #include "amci/codecs.h"
@@ -595,19 +588,6 @@ void AmRtpStream::iterateTransports(std::function<void(AmMediaTransport* transpo
     for(auto tr : ip6_transports) iterator(tr);
 }
 
-template<class T>
-void AmRtpStream::updateTransportState(AmMediaTransport* transport, const AmArg& args)
-{
-    AmMediaState* next_state = nullptr;
-    if(!transport->getState()) {
-        next_state = new T(transport);
-        next_state = next_state->init(args);
-    } else {
-        next_state = transport->updateState(args);
-    }
-
-    transport->setState(next_state);
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with sdp message(answer, offer)
@@ -946,16 +926,16 @@ int AmRtpStream::init(const AmSdp& local,
             iterateTransports([&](auto tr){
                 CLASS_DBG("init ice stream:%p, state:%s", to_void(this), tr->state2str());
                 auto conn_factory = tr->getConnFactory();
-                const bool need_restart = tr->getState() && !conn_factory->is_remote_ice_creds_equal(remote_media);
+                const bool need_restart = !conn_factory->is_remote_ice_creds_equal(remote_media);
                 conn_factory->store_ice_cred(local_media, remote_media);
 
                 // store srtp cred (sdes+srtp)
-                if(!tr->getState() && tr->isSrtpEnable() && local_media.is_simple_srtp())
+                if(tr->isSrtpEnable() && local_media.is_simple_srtp())
                     conn_factory->store_srtp_cred(local_media, remote_media);
 
                 AmArg args;
                 args["need_restart"] = need_restart;
-                this->updateTransportState<AmMediaIceState>(tr, args);
+                tr->template updateState<AmMediaIceState>(args);
 
                 auto next_state = tr->addCandidates(remote_media.ice_candidate, sdp_offer_owner);
                 tr->setState(next_state);
@@ -973,7 +953,7 @@ int AmRtpStream::init(const AmSdp& local,
                 if(local_media.is_simple_srtp())
                     cur_rtp_trans->getConnFactory()->store_srtp_cred(local_media, remote_media);
 
-                updateTransportState<AmMediaSrtpState>(cur_rtp_trans, args);
+                cur_rtp_trans->updateState<AmMediaSrtpState>(args);
             }
 
             if(cur_rtcp_trans != cur_rtp_trans && cur_rtcp_trans->isSrtpEnable()) {
@@ -986,7 +966,7 @@ int AmRtpStream::init(const AmSdp& local,
                 if(local_media.is_simple_srtp())
                     cur_rtcp_trans->getConnFactory()->store_srtp_cred(local_media, remote_media);
 
-                updateTransportState<AmMediaSrtpState>(cur_rtcp_trans, args);
+                cur_rtcp_trans->updateState<AmMediaSrtpState>(args);
             }
 
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
@@ -999,7 +979,7 @@ int AmRtpStream::init(const AmSdp& local,
             if(cur_rtp_trans->isDtlsEnable()) {
                 CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
                           cur_rtp_trans->state2str(), cur_rtp_trans->type2str());
-                updateTransportState<AmMediaDtlsState>(cur_rtp_trans, args);
+                cur_rtp_trans->updateState<AmMediaDtlsState>(args);
             }
 
             if(cur_rtcp_trans != cur_rtp_trans && cur_rtcp_trans->isDtlsEnable()) {
@@ -1008,7 +988,7 @@ int AmRtpStream::init(const AmSdp& local,
 
                 CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
                           cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str());
-                updateTransportState<AmMediaDtlsState>(cur_rtcp_trans, args);
+                cur_rtcp_trans->updateState<AmMediaDtlsState>(args);
             }
 
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::DTLS_CONN);
@@ -1019,7 +999,7 @@ int AmRtpStream::init(const AmSdp& local,
             AmArg args;
             args["address"] = address;
             args["port"] = port;
-            updateTransportState<AmMediaUdptlState>(cur_udptl_trans, args);
+            cur_udptl_trans->updateState<AmMediaUdptlState>(args);
 
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
@@ -1031,12 +1011,12 @@ int AmRtpStream::init(const AmSdp& local,
             if(cur_udptl_trans->isDtlsEnable()) {
                 CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
                           cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
-                updateTransportState<AmMediaDtlsState>(cur_udptl_trans, args);
+                cur_udptl_trans->updateState<AmMediaDtlsState>(args);
             }
 
             CLASS_DBG("init udptl stream:%p, state:%s, type:%s", to_void(this),
                       cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
-            updateTransportState<AmMediaUdptlState>(cur_udptl_trans, args);
+            cur_udptl_trans->updateState<AmMediaUdptlState>(args);
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
 #ifdef WITH_ZRTP
         } else if(isZrtpEnabled() &&AmConfig.enable_srtp &&remote_media.zrtp_hash.is_use) {
@@ -1045,7 +1025,7 @@ int AmRtpStream::init(const AmSdp& local,
             AmArg args;
             args["address"] = address;
             args["port"] = port;
-            updateTransportState<AmMediaZrtpState>(cur_rtp_trans, args);
+            cur_rtp_trans->updateState<AmMediaZrtpState>(args);
 
             if(cur_rtcp_trans != cur_rtp_trans) {
                 args["address"] = rtcp_address;
@@ -1054,7 +1034,7 @@ int AmRtpStream::init(const AmSdp& local,
                           address.data(), port, to_void(this),
                           cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
                           cur_rtcp_trans->getCurRtpConn());
-                updateTransportState<AmMediaRtpState>(cur_rtcp_trans, args);
+                cur_rtcp_trans->updateState<AmMediaRtpState>(args);
             }
 
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
@@ -1068,7 +1048,7 @@ int AmRtpStream::init(const AmSdp& local,
                       address.data(), port, to_void(this),
                       cur_rtp_trans->state2str(), cur_rtp_trans->type2str(),
                       cur_rtp_trans->getCurRtpConn());
-            updateTransportState<AmMediaRtpState>(cur_rtp_trans, args);
+            cur_rtp_trans->updateState<AmMediaRtpState>(args);
 
             if(cur_rtcp_trans != cur_rtp_trans) {
                 args["address"] = rtcp_address;
@@ -1077,7 +1057,7 @@ int AmRtpStream::init(const AmSdp& local,
                           rtcp_address.data(), rtcp_port, to_void(this),
                           cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
                           cur_rtcp_trans->getCurRtpConn());
-                updateTransportState<AmMediaRtpState>(cur_rtcp_trans, args);
+                cur_rtcp_trans->updateState<AmMediaRtpState>(args);
             }
 
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);

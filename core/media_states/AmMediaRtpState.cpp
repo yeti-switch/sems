@@ -1,3 +1,4 @@
+#include "AmMediaTransport.h"
 #include "AmMediaRtpState.h"
 
 AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)

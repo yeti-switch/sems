@@ -9,6 +9,14 @@
 #include "AmMediaConnectionFactory.h"
 #include "AmMediaConnectionsHolder.h"
 
+#include "media_states/AmMediaState.h"
+#include "media_states/AmMediaRtpState.h"
+#include "media_states/AmMediaSrtpState.h"
+#include "media_states/AmMediaZrtpState.h"
+#include "media_states/AmMediaDtlsState.h"
+#include "media_states/AmMediaIceState.h"
+#include "media_states/AmMediaUdptlState.h"
+
 #include "sip/ip_util.h"
 #include "sip/types.h"
 #include "sip/msg_logger.h"
@@ -51,9 +59,21 @@ public:
     AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type);
     virtual ~AmMediaTransport();
 
+    template<class T> void updateState(const AmArg& args) {
+        AmLock l(state_mutex);
+        AmMediaState* next_state = nullptr;
+        if(!state) {
+            next_state = new T(this);
+            next_state = next_state->init(args);
+        } else {
+            next_state = state->update(args);
+        }
+
+        if(state.get() != next_state)
+            state.reset(next_state);
+    }
     void setState(AmMediaState* state);
-    AmMediaState* getState();
-    AmMediaState* updateState(const AmArg args);
+
     AmMediaState* addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner);
     AmMediaState* allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);
     AmMediaState* onSrtpKeysAvailable();

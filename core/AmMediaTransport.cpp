@@ -89,18 +89,6 @@ void AmMediaTransport::setState(AmMediaState* new_state)
         state.reset(new_state);
 }
 
-AmMediaState* AmMediaTransport::getState()
-{
-    AmLock l(state_mutex);
-    return state.get();
-}
-
-AmMediaState* AmMediaTransport::updateState(const AmArg args)
-{
-    AmLock l(state_mutex);
-    if(state) return state->update(args);
-    return nullptr;
-}
 
 AmMediaState* AmMediaTransport::addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner)
 {
@@ -601,7 +589,7 @@ void AmMediaTransport::stopReceiving()
 {
     AmLock l1(stream_mut);
     CLASS_DBG("stopReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str(), type2str());
-    if(hasLocalSocket() && getState()) {
+    if(hasLocalSocket() && state) {
         CLASS_DBG("remove stream %p %s transport from RTP receiver", to_void(stream), type2str());
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
         l_sd_ctx = -1;
@@ -612,7 +600,7 @@ void AmMediaTransport::resumeReceiving()
 {
     AmLock l1(stream_mut);
     CLASS_DBG("resumeReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str(), type2str());
-    if(hasLocalSocket() && getState()) {
+    if(hasLocalSocket() && state) {
         CLASS_DBG("add/resume stream %p %s transport into RTP receiver", to_void(stream), type2str());
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
         if(l_sd_ctx < 0) {
