@@ -7,27 +7,25 @@ AmMediaIceZrtpState::AmMediaIceZrtpState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaIceZrtpState::init(const AmArg& args)
+AmMediaState* AmMediaIceZrtpState::init(const AmMediaStateArgs& args)
 {
     return AmMediaZrtpState::init(args);
 }
 
-AmMediaState* AmMediaIceZrtpState::update(const AmArg& args)
+AmMediaState* AmMediaIceZrtpState::update(const AmMediaStateArgs& args)
 {
     return AmMediaIceState::update(args);
-}
-
-AmMediaState* AmMediaIceZrtpState::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
-{
-    transport->storeAllowedIceAddr(remote_addr, priority);
-    resetCurRtpConnection();
-    return this;
 }
 
 AmMediaState* AmMediaIceZrtpState::onSrtpKeysAvailable()
 {
     auto ice_srtp_state = new AmMediaIceSrtpState(transport);
     return ice_srtp_state->initSrtp(AmStreamConnection::ZRTP_CONN);
+}
+
+AmMediaState* AmMediaIceZrtpState::nextState()
+{
+    return this;
 }
 
 const char* AmMediaIceZrtpState::state2str()

@@ -1,5 +1,5 @@
 #include "AmStunProcessor.h"
-#include "AmStunConnection.h"
+#include "media/AmStunConnection.h"
 #include "AmUtils.h"
 #include "sip/ip_util.h"
 

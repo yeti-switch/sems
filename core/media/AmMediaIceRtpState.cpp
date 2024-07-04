@@ -6,20 +6,18 @@ AmMediaIceRtpState::AmMediaIceRtpState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaIceRtpState::init(const AmArg& args)
+AmMediaState* AmMediaIceRtpState::init(const AmMediaStateArgs& args)
 {
     return AmMediaRtpState::init(args);
 }
 
-AmMediaState* AmMediaIceRtpState::update(const AmArg& args)
+AmMediaState* AmMediaIceRtpState::update(const AmMediaStateArgs& args)
 {
     return AmMediaIceState::update(args);
 }
 
-AmMediaState* AmMediaIceRtpState::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
+AmMediaState* AmMediaIceRtpState::nextState()
 {
-    transport->storeAllowedIceAddr(remote_addr, priority);
-    resetCurRtpConnection();
     return this;
 }
 

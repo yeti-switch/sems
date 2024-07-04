@@ -11,32 +11,40 @@ AmMediaIceState::AmMediaIceState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaIceState::init(const AmArg& args)
+AmMediaState* AmMediaIceState::init(const AmMediaStateArgs& args)
 {
     removeStunConnections();
-    return this;
-}
 
-AmMediaState* AmMediaIceState::update(const AmArg& args)
-{
-    const bool need_restart = args["need_restart"].asBool();
-    if(need_restart)
-        return new AmMediaIceRestartState(transport);
+    if(args.candidates && args.sdp_offer_owner)
+        addStunConnections(*args.candidates, *args.sdp_offer_owner);
 
     return this;
 }
 
-AmMediaState* AmMediaIceState::addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner)
+AmMediaState* AmMediaIceState::update(const AmMediaStateArgs& args)
 {
-    addStunConnections(candidates, sdp_offer_owner);
+    if(args.need_restart.value_or(false)) {
+        auto next_state = new AmMediaIceRestartState(transport);
+        next_state->init(args);
+        return next_state;
+    }
+
+    if(args.candidates && args.sdp_offer_owner)
+        addStunConnections(*args.candidates, *args.sdp_offer_owner);
+
+    if(args.remote_addr && args.priority)
+        return allowStunConnection(*args.remote_addr, *args.priority);
+
     return this;
 }
 
-void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner)
+void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidates, bool sdp_offer_owner)
 {
+    if(!candidates) return;
+
     CLASS_DBG("addStunConnections state:%s, type:%s", state2str(), transport->type2str());
 
-    for(auto candidate : candidates) {
+    for(auto candidate : *candidates) {
         if(candidate.transport != ICTR_UDP)
             continue;
 
@@ -87,7 +95,7 @@ void AmMediaIceState::removeStunConnections()
     transport->removeConnections(AmStreamConnection::STUN_CONN);
 }
 
-AmMediaState* AmMediaIceState::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
+AmMediaState* AmMediaIceState::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
 {
     transport->storeAllowedIceAddr(remote_addr, priority);
 
@@ -102,11 +110,16 @@ AmMediaState* AmMediaIceState::allowStunConnection(sockaddr_storage* remote_addr
     }
 
     AmMediaState* next_state = nextState();
-    AmArg args;
-    args["address"] = address;
-    args["port"] = port;
-    if(isDtls()) args["dtls_srtp"] = true;
-    next_state->init(args);
+    AmMediaStateArgs args;
+    args.address = address;
+    args.port = port;
+    if(isDtls()) args.dtls_srtp = true;
+
+    if(next_state != this)
+        next_state->init(args);
+    else
+        next_state->addConnections(args);
+
     resetCurRtpConnection();
     return next_state;
 }

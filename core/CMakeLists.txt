@@ -6,7 +6,7 @@ pkg_check_modules(TIFF REQUIRED libtiff-4)
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/audio.rules.txt)
 
-FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c" "rtcp/*.cpp"  "media_states/*.cpp")
+FILE (GLOB sems_SRCS "*.cpp" "sip/*.cpp" "resample/*.cpp" "*.c" "rtcp/*.cpp"  "media/*.cpp")
 
 SET(SEMS_LIB libsems)
 

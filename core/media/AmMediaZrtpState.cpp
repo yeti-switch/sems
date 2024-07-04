@@ -7,49 +7,56 @@ AmMediaZrtpState::AmMediaZrtpState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaZrtpState::init(const AmArg& args)
+AmMediaState* AmMediaZrtpState::init(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    addConnections(args);
+    transport->getRtpStream()->initZrtp();
+    return this;
+}
+
+AmMediaState* AmMediaZrtpState::update(const AmMediaStateArgs& args)
+{
+    updateConnections(args);
+    transport->getRtpStream()->initZrtp();
+    return this;
+}
+
+void AmMediaZrtpState::addConnections(const AmMediaStateArgs& args)
+{
+    if(!args.address || !args.port) return;
 
     try {
         CLASS_DBG("add zrtp connection, state:%s, type:%s, remote_address:%s, remote_port:%d",
-                  state2str(), transport->type2str(), address.c_str(), port);
-        auto new_zrtp_conn = transport->getConnFactory()->createZrtpConnection(address, port, transport->getRtpStream()->getZrtpContext());
+                  state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
+        auto new_zrtp_conn = transport->getConnFactory()->createZrtpConnection(
+            *args.address, *args.port, transport->getRtpStream()->getZrtpContext());
         transport->addConnection(new_zrtp_conn, [&]() {
             transport->setCurRtpConn(new_zrtp_conn);
         });
 
         CLASS_DBG("add rtcp connection, state:%s, type:%s, remote_address:%s, remote_port:%d",
-                  state2str(), transport->type2str(), address.c_str(), port);
-        auto new_rtcp_conn = transport->getConnFactory()->createRtcpConnection(address, port);
+                  state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
+        auto new_rtcp_conn = transport->getConnFactory()->createRtcpConnection(*args.address, *args.port);
         transport->addConnection(new_rtcp_conn, [&]() {
             transport->setCurRtcpConn(new_rtcp_conn);
         });
     } catch(string& error) {
         CLASS_ERROR("ZRTP connection error: %s", error.c_str());
     }
-
-    transport->getRtpStream()->initZrtp();
-    return this;
 }
 
-AmMediaState* AmMediaZrtpState::update(const AmArg& args)
+void AmMediaZrtpState::updateConnections(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    if(!args.address || !args.port) return;
 
     try {
         transport->findCurRtpConn([&](auto conn) {
             CLASS_DBG("update ZRTP connection endpoint");
-            conn->setRAddr(address, port);
+            conn->setRAddr(*args.address, *args.port);
         });
     } catch(string& error) {
         CLASS_ERROR("ZRTP connection error: %s", error.c_str());
     }
-
-    transport->getRtpStream()->initZrtp();
-    return this;
 }
 
 AmMediaState* AmMediaZrtpState::onSrtpKeysAvailable()

@@ -6,60 +6,54 @@ AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaRtpState::init(const AmArg& args)
+void AmMediaRtpState::addConnections(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    if(!args.address || !args.port) return;
 
     if(transport->getTransportType() == RTP_TRANSPORT) {
         CLASS_DBG("add rtp connection, state:%s, type:%s, raddr:%s, rport:%d",
-            state2str(), transport->type2str(), address.c_str(), port);
+            state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
         transport->addConnection(
-            transport->getConnFactory()->createRtpConnection(address, port));
+            transport->getConnFactory()->createRtpConnection(*args.address, *args.port));
     }
 
     CLASS_DBG("add rtcp connection, state:%s, type:%s, raddr:%s, rport:%d",
-        state2str(), transport->type2str(), address.c_str(), port);
+        state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
     transport->addConnection(
-        transport->getConnFactory()->createRtcpConnection(address, port));
-
-    return this;
+        transport->getConnFactory()->createRtcpConnection(*args.address, *args.port));
 }
 
-AmMediaState* AmMediaRtpState::update(const AmArg& args)
+void AmMediaRtpState::updateConnections(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    if(!args.address || !args.port) return;
 
     if(transport->getCurRtpConn()) {
         transport->findCurRtpConn([&](auto conn) {
             CLASS_DBG("setRAddr for cur_rtp_conn %p", conn);
-            conn->setRAddr(address, port);
+            conn->setRAddr(*args.address, *args.port);
         });
     } else {
         CLASS_DBG("setRAddr for all RTP connections");
         transport->iterateConnections(AmStreamConnection::RTP_CONN, [&](auto conn, bool& stop) {
-            conn->setRAddr(address, port);
+            conn->setRAddr(*args.address, *args.port);
         });
     }
 
     if(transport->getCurRtcpConn()) {
         transport->findCurRtcpConn([&](auto conn) {
             CLASS_DBG("setRAddr for cur_rtcp_conn %p", conn);
-            conn->setRAddr(address, port);
+            conn->setRAddr(*args.address, *args.port);
         });
     } else {
         CLASS_DBG("setRAddr for all RTCP connections");
         transport->iterateConnections(AmStreamConnection::RTCP_CONN, [&](auto conn, bool& stop) {
-            conn->setRAddr(address, port);
+            conn->setRAddr(*args.address, *args.port);
         });
     }
 
     if(transport->getCurRawConn()) {
-        transport->getCurRawConn()->setRAddr(address, port);
+        transport->getCurRawConn()->setRAddr(*args.address, *args.port);
     }
-
-    return this;
 }
 
 const char* AmMediaRtpState::state2str()

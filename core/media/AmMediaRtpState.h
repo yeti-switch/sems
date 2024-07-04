@@ -7,7 +7,7 @@ class AmMediaRtpState
 {
 public:
     AmMediaRtpState(AmMediaTransport *transport);
-    AmMediaState* init(const AmArg& args) override;
-    AmMediaState* update(const AmArg& args) override;
+    void addConnections(const AmMediaStateArgs& args) override;
+    void updateConnections(const AmMediaStateArgs& args) override;
     const char* state2str() override;
 };

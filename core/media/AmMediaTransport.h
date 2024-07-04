@@ -4,18 +4,19 @@
 #include "AmRtpSession.h"
 #include "AmStunConnection.h"
 #include "AmSrtpConnection.h"
+
 #include "AmArg.h"
 #include "AmSdp.h"
 #include "AmMediaConnectionFactory.h"
 #include "AmMediaConnectionsHolder.h"
 
-#include "media_states/AmMediaState.h"
-#include "media_states/AmMediaRtpState.h"
-#include "media_states/AmMediaSrtpState.h"
-#include "media_states/AmMediaZrtpState.h"
-#include "media_states/AmMediaDtlsState.h"
-#include "media_states/AmMediaIceState.h"
-#include "media_states/AmMediaUdptlState.h"
+#include "AmMediaState.h"
+#include "AmMediaRtpState.h"
+#include "AmMediaSrtpState.h"
+#include "AmMediaZrtpState.h"
+#include "AmMediaDtlsState.h"
+#include "AmMediaIceState.h"
+#include "AmMediaUdptlState.h"
 
 #include "sip/ip_util.h"
 #include "sip/types.h"
@@ -59,7 +60,7 @@ public:
     AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type);
     virtual ~AmMediaTransport();
 
-    template<class T> void updateState(const AmArg& args) {
+    template<class T> void updateState(const AmMediaStateArgs& args) {
         AmLock l(state_mutex);
         AmMediaState* next_state = nullptr;
         if(!state) {
@@ -73,9 +74,6 @@ public:
             state.reset(next_state);
     }
     void setState(AmMediaState* state);
-
-    AmMediaState* addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner);
-    AmMediaState* allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority);
     AmMediaState* onSrtpKeysAvailable();
     const char* state2str();
     const char* state2strUnsafe();
@@ -187,7 +185,7 @@ public:
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
     void prepareIceCandidate(SdpIceCandidate& candidate);
     uint32_t getCurrentConnectionPriority();
-    void storeAllowedIceAddr(sockaddr_storage* remote_addr, uint32_t priority);
+    void storeAllowedIceAddr(const sockaddr_storage* remote_addr, uint32_t priority);
     sockaddr_storage* getAllowedIceAddr();
     void removeAllowedIceAddrs();
     void setIcePriority(unsigned int priority);

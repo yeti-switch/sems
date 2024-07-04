@@ -7,6 +7,7 @@ class AmMediaUdptlState
 {
 public:
     AmMediaUdptlState(AmMediaTransport *transport);
-    AmMediaState* init(const AmArg& args) override;
+    AmMediaState* init(const AmMediaStateArgs& args) override;
+    void addConnections(const AmMediaStateArgs& args) override;
     const char* state2str() override;
 };

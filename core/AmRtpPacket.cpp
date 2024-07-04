@@ -46,7 +46,7 @@
 #include <arpa/inet.h>
 
 #include "sip/msg_logger.h"
-#include "AmSrtpConnection.h"
+#include "media/AmSrtpConnection.h"
 
 #define RTCP_PAYLOAD_MIN 72
 #define RTCP_PAYLOAD_MAX 76

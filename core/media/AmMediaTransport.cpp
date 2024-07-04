@@ -1,5 +1,5 @@
 #include "AmMediaTransport.h"
-#include "media_states/AmMediaState.h"
+#include "media/AmMediaState.h"
 #include "AmFaxImage.h"
 #include "AmZrtpConnection.h"
 #include "AmRtpReceiver.h"
@@ -87,21 +87,6 @@ void AmMediaTransport::setState(AmMediaState* new_state)
     AmLock l(state_mutex);
     if(state.get() != new_state)
         state.reset(new_state);
-}
-
-
-AmMediaState* AmMediaTransport::addCandidates(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner)
-{
-    AmLock l(state_mutex);
-    if(state) return state->addCandidates(candidates, sdp_offer_owner);
-    return nullptr;
-}
-
-AmMediaState* AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
-{
-    AmLock l(state_mutex);
-    if(state) return state->allowStunConnection(remote_addr, priority);
-    return nullptr;
 }
 
 AmMediaState* AmMediaTransport::onSrtpKeysAvailable()
@@ -515,7 +500,7 @@ void AmMediaTransport::removeAllowedIceAddrs()
     allowed_ice_addrs.clear();
 }
 
-void AmMediaTransport::storeAllowedIceAddr(sockaddr_storage* remote_addr, uint32_t priority)
+void AmMediaTransport::storeAllowedIceAddr(const sockaddr_storage* remote_addr, uint32_t priority)
 {
     if(remote_addr->ss_family == getLocalAddrFamily())
         allowed_ice_addrs.emplace(priority, *remote_addr);

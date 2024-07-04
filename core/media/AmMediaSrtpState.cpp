@@ -6,36 +6,34 @@ AmMediaSrtpState::AmMediaSrtpState(AmMediaTransport *transport)
 {
 }
 
-AmMediaState* AmMediaSrtpState::init(const AmArg& args)
+void AmMediaSrtpState::addConnections(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    if(!args.address || !args.port) return;
+
     if(transport->getTransportType() == RTP_TRANSPORT) {
         CLASS_DBG("add srtp connection, state:%s, type:%s, raddr:%s, rport:%d",
-            state2str(), transport->type2str(), address.c_str(), port);
+            state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
         transport->addConnection(
-            transport->getConnFactory()->createSrtpConnection(address, port),
+            transport->getConnFactory()->createSrtpConnection(*args.address, *args.port),
             [&](){ transport->setCurRtpConn(0); /* it's need for zrtp media connection establishing*/ }
         );
     }
 
     CLASS_DBG("add srtcp connection, state:%s, type:%s, raddr:%s, rport:%d",
-        state2str(), transport->type2str(), address.c_str(), port);
+        state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
     transport->addConnection(
-        transport->getConnFactory()->createSrtcpConnection(address, port),
+        transport->getConnFactory()->createSrtcpConnection(*args.address, *args.port),
         [&](){ transport->setCurRtcpConn(0); }
     );
-
-    return this;
 }
 
-AmMediaState* AmMediaSrtpState::update(const AmArg& args)
+void AmMediaSrtpState::updateConnections(const AmMediaStateArgs& args)
 {
-    string address = args["address"].asCStr();
-    int port = args["port"].asInt();
+    if(!args.address || !args.port) return;
+
     transport->findCurRtpConn([&](auto conn) {
         CLASS_DBG("update SRTP connection endpoint");
-        conn->setRAddr(address, port);
+        conn->setRAddr(*args.address, *args.port);
 
         if(AmSrtpConnection* srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
             auto & cred = this->transport->getConnFactory()->srtp_cred;
@@ -45,7 +43,7 @@ AmMediaState* AmMediaSrtpState::update(const AmArg& args)
 
     transport->findCurRtcpConn([&](auto conn) {
         CLASS_DBG("update SRTCP connection endpoint");
-        conn->setRAddr(address, port);
+        conn->setRAddr(*args.address, *args.port);
 
         if(AmSrtpConnection* srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
             auto & cred = this->transport->getConnFactory()->srtp_cred;
@@ -54,10 +52,8 @@ AmMediaState* AmMediaSrtpState::update(const AmArg& args)
     });
 
     transport->findCurRawConn([&](auto conn) {
-        conn->setRAddr(address, port);
+        conn->setRAddr(*args.address, *args.port);
     });
-
-    return this;
 }
 
 AmMediaState* AmMediaSrtpState::initSrtp(AmStreamConnection::ConnectionType base_conn_type)

@@ -8,9 +8,11 @@ class AmMediaIceZrtpState
 {
 public:
     AmMediaIceZrtpState(AmMediaTransport *transport);
-    AmMediaState* init(const AmArg& args) override;
-    AmMediaState* update(const AmArg& args) override;
-    AmMediaState* allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority) override;
+    AmMediaState* init(const AmMediaStateArgs& args) override;
+    AmMediaState* update(const AmMediaStateArgs& args) override;
     AmMediaState* onSrtpKeysAvailable() override;
     const char* state2str() override;
+
+protected:
+    AmMediaState* nextState();
 };
