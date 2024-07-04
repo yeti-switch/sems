@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sems/unit_tests/TestServer.h>
+#include <unit_tests/TestServer.h>
 #include <AmThread.h>
 #include <map>
 #include <string>
