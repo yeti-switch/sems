@@ -14,14 +14,13 @@ AmMediaState* AmMediaSecureUdptlState::init(const AmMediaStateArgs& args)
 
 void AmMediaSecureUdptlState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port || !args.family) return;
-    if(*args.family != transport->getLocalAddrFamily()) return;
+    if(!args.family || *args.family != transport->getLocalAddrFamily()) return;
 
     vector<AmStreamConnection *> new_conns;
     transport->iterateConnections(AmStreamConnection::DTLS_CONN, [&](auto conn, bool& stop) {
         CLASS_DBG("add dtls-udptl connection, state:%s, type:%s, raddr:%s, rport:%d",
-                  state2str(), transport->type2str(), args.address.value().c_str(), *args.port);
-        new_conns.push_back(transport->getConnFactory()->createDtlsUdptlConnection(*args.address, *args.port, conn));
+                  state2str(), transport->type2str(), conn->getRHost().c_str(), conn->getRPort());
+        new_conns.push_back(transport->getConnFactory()->createDtlsUdptlConnection(conn->getRHost(), conn->getRPort(), conn));
     });
 
     transport->addConnections(new_conns);

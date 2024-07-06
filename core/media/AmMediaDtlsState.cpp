@@ -18,13 +18,6 @@ AmMediaState* AmMediaDtlsState::init(const AmMediaStateArgs& args)
 AmMediaState* AmMediaDtlsState::update(const AmMediaStateArgs& args)
 {
     is_dtls_srtp = args.dtls_srtp.value_or(false);
-    if(!is_dtls_srtp) {
-        // if not dtls+srtp consider as dtls+udptl
-        auto sec_udpt_state = new AmMediaSecureUdptlState(transport);
-        sec_udpt_state->init(args);
-        return sec_udpt_state;
-    }
-
     return AmMediaState::update(args);
 }
 
@@ -67,9 +60,14 @@ AmMediaState* AmMediaDtlsState::onSrtpKeysAvailable()
     if(is_dtls_srtp) {
         auto srtp_state = new AmMediaSrtpState(transport);
         return srtp_state->initSrtp(AmStreamConnection::DTLS_CONN);
+    } else {
+        // if not dtls+srtp consider as dtls+udptl
+        auto sec_udpt_state = new AmMediaSecureUdptlState(transport);
+        AmMediaStateArgs args;
+        args.family = transport->getLocalAddrFamily();
+        sec_udpt_state->init(args);
+        return sec_udpt_state;
     }
-
-    return this;
 }
 
 const char* AmMediaDtlsState::state2str()

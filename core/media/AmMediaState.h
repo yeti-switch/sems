@@ -16,6 +16,7 @@ struct AmMediaStateArgs
     optional<bool> sdp_offer_owner;
     optional<const vector<SdpIceCandidate>*> candidates;
     optional<int> family;
+    optional<bool> udptl;
 };
 
 class AmMediaState

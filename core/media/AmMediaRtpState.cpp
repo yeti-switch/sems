@@ -6,6 +6,15 @@ AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)
 {
 }
 
+AmMediaState* AmMediaRtpState::update(const AmMediaStateArgs& args)
+{
+    if(args.udptl.value_or(false)) {
+        auto new_state = new AmMediaUdptlState(transport);
+        return new_state->init(args);
+    } else
+        return AmMediaState::update(args);
+}
+
 void AmMediaRtpState::addConnections(const AmMediaStateArgs& args)
 {
     if(!args.address || !args.port || !args.family) return;

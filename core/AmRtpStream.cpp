@@ -242,28 +242,22 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
         transports = &ip6_transports;
     }
 
-    int count = 1;
-
     for(auto transport : *transports) {
-        if(count == RTP_TRANSPORT) {
+        if(transport->getTransportType() == RTP_TRANSPORT) {
             CLASS_DBG("set current rtp transport %p", transport);
             cur_rtp_trans = transport;
-            count++;
-            if(multiplexing) count++;
             continue;
         }
 
-        if(count == FAX_TRANSPORT) {
+        if(transport->getTransportType() == FAX_TRANSPORT) {
             CLASS_DBG("set current udptl transport %p", transport);
             cur_udptl_trans = transport;
-            count++;
             continue;
         }
 
-        if(count == RTCP_TRANSPORT) {
+        if(transport->getTransportType() == RTCP_TRANSPORT) {
             CLASS_DBG("set current rtcp transport %p", transport);
             cur_rtcp_trans = transport;
-            count++;
             continue;
         }
     }
@@ -992,6 +986,7 @@ int AmRtpStream::init(const AmSdp& local,
 
             args.address = address;
             args.port = port;
+            args.udptl = true;
             cur_udptl_trans->updateState<AmMediaUdptlState>(args);
 
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
@@ -1008,9 +1003,6 @@ int AmRtpStream::init(const AmSdp& local,
                       cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
             cur_udptl_trans->updateState<AmMediaDtlsState>(args);
 
-            CLASS_DBG("init udptl stream:%p, state:%s, type:%s", to_void(this),
-                      cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
-            cur_udptl_trans->updateState<AmMediaUdptlState>(args);
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
 #ifdef WITH_ZRTP
         } else if(isZrtpEnabled() &&AmConfig.enable_srtp &&remote_media.zrtp_hash.is_use) {
