@@ -15,8 +15,6 @@ struct AmMediaStateArgs
     optional<bool> dtls_srtp;
     optional<bool> sdp_offer_owner;
     optional<const vector<SdpIceCandidate>*> candidates;
-    optional<const sockaddr_storage*> remote_addr;
-    optional<uint32_t> priority;
 };
 
 class AmMediaState

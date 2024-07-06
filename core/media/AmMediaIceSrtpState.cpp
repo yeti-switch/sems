@@ -14,7 +14,25 @@ AmMediaState* AmMediaIceSrtpState::init(const AmMediaStateArgs& args)
 
 AmMediaState* AmMediaIceSrtpState::update(const AmMediaStateArgs& args)
 {
+    updateConnections(args);
     return AmMediaIceState::update(args);
+}
+
+void AmMediaIceSrtpState::updateConnections(const AmMediaStateArgs& args)
+{
+    transport->findCurRtpConn([&](auto conn) {
+        if(AmSrtpConnection* srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
+            auto & cred = this->transport->getConnFactory()->srtp_cred;
+            srtp_conn->update_keys(cred.srtp_profile, cred.local_key, cred.remote_keys);
+        }
+    });
+
+    transport->findCurRtcpConn([&](auto conn) {
+        if(AmSrtpConnection* srtp_conn = dynamic_cast<AmSrtpConnection *>(conn)) {
+            auto & cred = this->transport->getConnFactory()->srtp_cred;
+            srtp_conn->update_keys(cred.srtp_profile, cred.local_key, cred.remote_keys);
+        }
+    });
 }
 
 AmMediaState* AmMediaIceSrtpState::onSrtpKeysAvailable()

@@ -32,9 +32,6 @@ AmMediaState* AmMediaIceState::update(const AmMediaStateArgs& args)
     if(args.candidates && args.sdp_offer_owner)
         addStunConnections(*args.candidates, *args.sdp_offer_owner);
 
-    if(args.remote_addr && args.priority)
-        return allowStunConnection(*args.remote_addr, *args.priority);
-
     return this;
 }
 
