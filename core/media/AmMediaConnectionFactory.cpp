@@ -52,6 +52,7 @@ AmStreamConnection* AmMediaConnectionFactory::createDtlsConnection(const string&
 {
     AmDtlsConnection* conn = new AmDtlsConnection(transport, raddr, rport, context);
 
+    context->setCurrentConnection(conn);
     if(!context->isInited()) {
         try {
             transport->getRtpStream()->initDtls(transport->getTransportType(), context->is_client);
@@ -60,7 +61,6 @@ AmStreamConnection* AmMediaConnectionFactory::createDtlsConnection(const string&
         }
     }
 
-    context->setCurrentConnection(conn);
     return conn;
 }
 

@@ -108,6 +108,7 @@ int main(int argc, char** argv)
 
 	TesterLogFac::instance().setLogLevel(test_config::instance()->log_level);
 
+    restart_ssl_key_logger("");
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
 
