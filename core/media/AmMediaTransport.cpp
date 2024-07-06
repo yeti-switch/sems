@@ -82,18 +82,14 @@ AmMediaTransport::~AmMediaTransport()
     if (sensor) dec_ref(sensor);
 }
 
-void AmMediaTransport::setState(AmMediaState* new_state)
+void AmMediaTransport::onSrtpKeysAvailable()
 {
     AmLock l(state_mutex);
-    if(state.get() != new_state)
-        state.reset(new_state);
-}
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->onSrtpKeysAvailable();
 
-AmMediaState* AmMediaTransport::onSrtpKeysAvailable()
-{
-    AmLock l(state_mutex);
-    if(state) return state->onSrtpKeysAvailable();
-    return nullptr;
+    if(state.get() != next_state)
+        state.reset(next_state);
 }
 
 const char* AmMediaTransport::state2str()

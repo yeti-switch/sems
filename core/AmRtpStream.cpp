@@ -577,8 +577,7 @@ void AmRtpStream::onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile,
 
         CLASS_DBG("onSrtpKeysAvailable() stream:%p, state:%s, type:%s", to_void(this), tr->state2str(), tr->type2str());
         tr->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
-        auto next_state = tr->onSrtpKeysAvailable();
-        tr->setState(next_state);
+        tr->onSrtpKeysAvailable();
     });
 }
 
