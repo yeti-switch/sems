@@ -528,6 +528,10 @@ void AmMediaTransport::getInfo(AmArg& ret)
     if(type == FAX_TRANSPORT) ret["type"] = "fax";
     if(type == RTP_TRANSPORT) ret["type"] = "rtp";
     if(type == RTCP_TRANSPORT) ret["type"] = "rtcp";
+    {
+        AmLock lock(state_mutex);
+        ret["state"] = state->state2str();
+    }
     AmArg& conns = ret["connections"];
     iterateConnections([&](auto conn, bool& stop) {
         AmArg arg_conn;

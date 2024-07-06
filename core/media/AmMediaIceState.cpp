@@ -63,10 +63,7 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
                    conn->getRHost() == address &&
                    conn->getRPort() == port;
         };
-
-        if(transport->getConnection(pred)){
-            continue;
-        }
+        if(transport->getConnection(pred)) continue;
 
         try {
             CLASS_DBG("add stun connection, state:%s, type:%s, raddr:%s, rport:%d",
@@ -98,18 +95,14 @@ AmMediaState* AmMediaIceState::allowStunConnection(const sockaddr_storage* remot
 
     const string address = am_inet_ntop(remote_addr);
     const int port = am_get_port(remote_addr);
-    CLASS_DBG("allow stun connection by addr:%s, port:%d, state:%s, type:%s",
+    CLASS_DBG("allow stun connection by addr: %s, port: %d, state: %s, type: %s",
               address.c_str(), port, state2str(), transport->type2str());
-
-    if(remote_addr->ss_family != transport->getLocalAddrFamily()) {
-        resetCurRtpConnection();
-        return this;
-    }
 
     AmMediaState* next_state = nextState();
     AmMediaStateArgs args;
     args.address = address;
     args.port = port;
+    args.family = remote_addr->ss_family;
     if(isDtls()) args.dtls_srtp = true;
 
     if(next_state != this)

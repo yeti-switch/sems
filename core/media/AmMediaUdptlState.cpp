@@ -14,7 +14,8 @@ AmMediaState* AmMediaUdptlState::init(const AmMediaStateArgs& args)
 
 void AmMediaUdptlState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port) return;
+    if(!args.address || !args.port || !args.family) return;
+    if(*args.family != transport->getLocalAddrFamily()) return;
 
     CLASS_DBG("add udptl connection, state:%s, type:%s, raddr:%s, rport:%d",
         state2str(), transport->type2str(), args.address.value().c_str(), *args.port);

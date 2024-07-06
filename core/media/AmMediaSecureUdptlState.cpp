@@ -14,7 +14,8 @@ AmMediaState* AmMediaSecureUdptlState::init(const AmMediaStateArgs& args)
 
 void AmMediaSecureUdptlState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port) return;
+    if(!args.address || !args.port || !args.family) return;
+    if(*args.family != transport->getLocalAddrFamily()) return;
 
     vector<AmStreamConnection *> new_conns;
     transport->iterateConnections(AmStreamConnection::DTLS_CONN, [&](auto conn, bool& stop) {

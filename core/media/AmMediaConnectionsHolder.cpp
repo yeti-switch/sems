@@ -89,7 +89,7 @@ void AmMediaConnectionsHolder::findConnections(const vector<AmStreamConnection::
 
 AmStreamConnection* AmMediaConnectionsHolder::getConnection(Predicate predicate)
 {
-    AmStreamConnection* res;
+    AmStreamConnection* res = 0;
     findItem(predicate, [&](auto conn){ res = conn; });
     return res;
 }

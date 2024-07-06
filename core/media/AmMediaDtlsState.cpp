@@ -30,7 +30,17 @@ AmMediaState* AmMediaDtlsState::update(const AmMediaStateArgs& args)
 
 void AmMediaDtlsState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port) return;
+    if(!args.address || !args.port || !args.family) return;
+    if(*args.family != transport->getLocalAddrFamily()) return;
+
+    // check is dtls connection already exists
+    auto pred = [&](auto conn) {
+        return conn->getConnType() == AmStreamConnection::DTLS_CONN &&
+                conn->getRHost() == *args.address &&
+                conn->getRPort() == *args.port;
+    };
+    if(transport->getConnection(pred)) return;
+
     auto dtls_context = transport->getRtpStream()->getDtlsContext(transport->getTransportType());
     if(!dtls_context) return;
     CLASS_DBG("add dtls connection, state:%s, type:%s, raddr:%s, rport:%d",

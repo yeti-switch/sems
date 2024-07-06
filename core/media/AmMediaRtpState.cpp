@@ -8,7 +8,16 @@ AmMediaRtpState::AmMediaRtpState(AmMediaTransport *transport)
 
 void AmMediaRtpState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port) return;
+    if(!args.address || !args.port || !args.family) return;
+    if(args.family.value() != transport->getLocalAddrFamily()) return;
+
+    // check is rtp connection already exists
+    auto pred = [&](auto conn) {
+        return conn->getConnType() == AmStreamConnection::RTP_CONN &&
+                conn->getRHost() == *args.address &&
+                conn->getRPort() == *args.port;
+    };
+    if(transport->getConnection(pred)) return;
 
     if(transport->getTransportType() == RTP_TRANSPORT) {
         CLASS_DBG("add rtp connection, state:%s, type:%s, raddr:%s, rport:%d",

@@ -23,7 +23,16 @@ AmMediaState* AmMediaZrtpState::update(const AmMediaStateArgs& args)
 
 void AmMediaZrtpState::addConnections(const AmMediaStateArgs& args)
 {
-    if(!args.address || !args.port) return;
+    if(!args.address || !args.port || !args.family) return;
+    if(*args.family != transport->getLocalAddrFamily()) return;
+
+    // check is zrtp connection already exists
+    auto pred = [&](auto conn) {
+        return conn->getConnType() == AmStreamConnection::ZRTP_CONN &&
+                conn->getRHost() == *args.address &&
+                conn->getRPort() == *args.port;
+    };
+    if(transport->getConnection(pred)) return;
 
     try {
         CLASS_DBG("add zrtp connection, state:%s, type:%s, remote_address:%s, remote_port:%d",

@@ -60,8 +60,9 @@ public:
     AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type);
     virtual ~AmMediaTransport();
 
-    template<class T> void updateState(const AmMediaStateArgs& args) {
+    template<class T> void updateState(AmMediaStateArgs& args) {
         AmLock l(state_mutex);
+        args.family = getLocalAddrFamily();
         AmMediaState* next_state = nullptr;
         if(!state) {
             next_state = new T(this);
