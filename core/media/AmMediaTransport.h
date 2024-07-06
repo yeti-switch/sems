@@ -73,6 +73,7 @@ public:
         if(state.get() != next_state)
             state.reset(next_state);
     }
+    void allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority);
     void onSrtpKeysAvailable();
     const char* state2str();
     const char* state2strUnsafe();

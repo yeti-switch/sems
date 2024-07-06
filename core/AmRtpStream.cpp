@@ -1250,10 +1250,7 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_stor
         if(transport->getTransportType() != tr->getTransportType())
             return;
 
-        AmMediaStateArgs args;
-        args.remote_addr = remote_addr;
-        args.priority = priority;
-        tr->template updateState<AmMediaIceState>(args);
+        tr->allowStunConnection(remote_addr, priority);
         tr->updateStunTimers();
 
         if(tr->getCurrentConnectionPriority() > current_ice_priority)

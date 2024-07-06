@@ -15,7 +15,7 @@ protected:
     void addStunConnections(const vector<SdpIceCandidate>* candidates, bool sdp_offer_owner);
     void removeStunConnections();
     void resetCurRtpConnection();
-    virtual AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority);
+    AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority) override;
     AmMediaState* nextState();
     bool isSrtp();
     bool isDtls();

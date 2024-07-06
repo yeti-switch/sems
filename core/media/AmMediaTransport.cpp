@@ -82,6 +82,16 @@ AmMediaTransport::~AmMediaTransport()
     if (sensor) dec_ref(sensor);
 }
 
+void AmMediaTransport::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
+{
+    AmLock l(state_mutex);
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->allowStunConnection(remote_addr, priority);
+
+    if(state.get() != next_state)
+        state.reset(next_state);
+}
+
 void AmMediaTransport::onSrtpKeysAvailable()
 {
     AmLock l(state_mutex);
