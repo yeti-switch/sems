@@ -69,15 +69,16 @@ AmStreamConnection* AmMediaConnectionFactory::createSrtpConnection(const string&
     return createSrtpConnection(raddr, rport,
                              srtp_cred.srtp_profile,
                              srtp_cred.local_key,
-                             srtp_cred.remote_keys);
+                             srtp_cred.remote_keys,
+                             false);
 }
 
 AmStreamConnection* AmMediaConnectionFactory::createSrtpConnection(const string& raddr, int rport,
                                                         int srtp_profile, const string& local_key,
-                                                        const srtp_master_keys& remote_keys)
+                                                        const srtp_master_keys& remote_keys, bool rtcp)
 {
     try {
-        AmSrtpConnection* conn = new AmSrtpConnection(transport, raddr, rport, AmStreamConnection::RTP_CONN);
+        AmSrtpConnection* conn = new AmSrtpConnection(transport, raddr, rport, rtcp ? AmStreamConnection::RTCP_CONN : AmStreamConnection::RTP_CONN);
         conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
 
         if(conn->isMute()) {
@@ -97,22 +98,8 @@ AmStreamConnection* AmMediaConnectionFactory::createSrtcpConnection(const string
     return createSrtpConnection(raddr, rport,
                              srtp_cred.srtp_profile,
                              srtp_cred.local_key,
-                             srtp_cred.remote_keys);
-}
-
-AmStreamConnection* AmMediaConnectionFactory::createSrtcpConnection(const string& raddr, int rport,
-                                                         int srtp_profile, const string& local_key,
-                                                         const srtp_master_keys& remote_keys)
-{
-    try {
-        AmSrtpConnection* conn = new AmSrtpConnection(transport, raddr, rport, AmStreamConnection::RTCP_CONN);
-        conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
-        return conn;
-    } catch(string& error) {
-        CLASS_ERROR("SRTCP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
+                             srtp_cred.remote_keys,
+                             true);
 }
 
 AmStreamConnection* AmMediaConnectionFactory::createZrtpConnection(const string& raddr, int rport, zrtpContext* context) {

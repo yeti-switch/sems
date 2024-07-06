@@ -21,11 +21,7 @@ private:
 
     AmStreamConnection* createSrtpConnection(const string& raddr, int rport,
                                           int srtp_profile, const string& local_key,
-                                          const srtp_master_keys& remote_keys);
-    AmStreamConnection* createSrtcpConnection(const string& raddr, int rport,
-                                           int srtp_profile, const string& local_key,
-                                           const srtp_master_keys& remote_keys);
-
+                                          const srtp_master_keys& remote_keys, bool rtcp);
 public:
 
     struct
