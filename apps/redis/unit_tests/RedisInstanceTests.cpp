@@ -64,6 +64,7 @@ class TestRedisConnection
     bool wait_connected() { return conn->wait_connected(); }
     bool is_gotreply() {return gotreply.get(); }
     bool wait_reply() { return gotreply.wait_for_to(500); }
+    void drop_gotreply() { gotreply.set(false); }
 
     RedisReply::result_type get_result_type() { return rstatus; }
     AmArg& get_result() { return result; }
@@ -99,6 +100,7 @@ TEST_F(RedisTest, RedisConnectionTest)
     while(!conn.wait_reply()){
         ASSERT_FALSE(time(0) - time_ > 30);
     }
+    conn.drop_gotreply();
 
     redis::redisFormatCommand(&cmd,"HGET %s %d", "r:471", 8);
 
