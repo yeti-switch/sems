@@ -1193,7 +1193,7 @@ void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmAr
     }
 
     if(arg.size() > 1)
-        args.emplace_back(arg[1].asCStr()); // contact
+        args.emplace_back(arg2str(arg[1])); // contact
 
     if(post_request(write_conn->id, args, user_data, user_type_id) == false)
         throw AmSession::Exception(500, "failed to post unbind request");
