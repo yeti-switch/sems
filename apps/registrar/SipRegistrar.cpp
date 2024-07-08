@@ -1213,8 +1213,8 @@ void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const
         args = {"EVALSHA", script->hash.c_str(), (int)arg.size()};
     }
 
-    for(int i = 0; i < arg.size(); ++i)
-        args.emplace_back(arg[i].asCStr()); // contact
+    for(auto i = 0U; i < arg.size(); ++i)
+        args.emplace_back(arg2str(arg[i])); // contact
 
     if(post_request(read_conn->id, args, user_data, user_type_id) == false)
         throw AmSession::Exception(500, "failed to post resolve_aors request");
