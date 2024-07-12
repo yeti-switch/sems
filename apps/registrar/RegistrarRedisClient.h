@@ -51,4 +51,5 @@ class RegistrarRedisClient
     virtual ~RegistrarRedisClient() {}
     virtual void connect_all();
     int configure(cfg_t* cfg) override;
+    bool is_connected();
 };

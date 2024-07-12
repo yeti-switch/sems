@@ -103,3 +103,12 @@ void RegistrarRedisClient::on_disconnect(const string &conn_id, const RedisConne
             break;
         }
 }
+
+bool RegistrarRedisClient::is_connected()
+{
+    for(auto & conn : connections)
+        if(!conn->is_connected)
+            return false;
+
+    return true;
+}
