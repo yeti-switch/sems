@@ -40,7 +40,7 @@ class TestRedisConnection
 
   public:
     TestRedisConnection()
-      : RedisConnectionPool("test", "regTest"),
+      : RedisConnectionPool("test", "redisTest"),
         gotreply(false),
         rstatus(RedisReply::SuccessReply)
     {}
