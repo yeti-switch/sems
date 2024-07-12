@@ -1,4 +1,5 @@
 #include "AmMediaTransport.h"
+#include "media/AmMediaState.h"
 #include "AmFaxImage.h"
 #include "AmZrtpConnection.h"
 #include "AmRtpReceiver.h"
@@ -16,27 +17,12 @@
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 #define ZRTP_MAGIC_COOKIE   0x5a525450
 
-inline const char *transport_type2str(int type)
-{
-    static const char *rtp = "RTP";
-    static const char *rtcp = "RTCP";
-    static const char *fax = "FAX";
-    static const char *raw = "RAW";
-    switch(type) {
-    case RTP_TRANSPORT: return rtp;
-    case RTCP_TRANSPORT: return rtcp;
-    case FAX_TRANSPORT: return fax;
-    default: return raw; }
-}
 
 AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type)
-  : state(TRANSPORT_STATE_NONE),
+  : state(nullptr),
+    conn_factory(this),
     mode(TRANSPORT_MODE_DEFAULT),
     stream(_stream),
-    cur_rtp_conn(nullptr),
-    cur_rtcp_conn(nullptr),
-    cur_udptl_conn(nullptr),
-    cur_raw_conn(nullptr),
     logger(nullptr),
     sensor(nullptr),
     type(type),
@@ -49,7 +35,6 @@ AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id,
     dtls_enable(false),
     zrtp_enable(false)
 {
-    srtp_cred.srtp_profile = srtp_profile_reserved;
     memset(&l_saddr, 0, sizeof(sockaddr_storage));
 
     recv_iov[0].iov_base = buffer;
@@ -93,14 +78,41 @@ AmMediaTransport::~AmMediaTransport()
         }
     }
 
-    for(auto conn : connections) {
-        delete conn;
-    }
-
-    connections.clear();
-
     if (logger) dec_ref(logger);
     if (sensor) dec_ref(sensor);
+}
+
+void AmMediaTransport::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
+{
+    AmLock l(state_mutex);
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->allowStunConnection(remote_addr, priority);
+
+    if(state.get() != next_state)
+        state.reset(next_state);
+}
+
+void AmMediaTransport::onSrtpKeysAvailable()
+{
+    AmLock l(state_mutex);
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->onSrtpKeysAvailable();
+
+    if(state.get() != next_state)
+        state.reset(next_state);
+}
+
+const char* AmMediaTransport::state2str()
+{
+    AmLock l(state_mutex);
+    return state2strUnsafe();
+}
+
+const char* AmMediaTransport::state2strUnsafe()
+{
+    static const char *unknown = "UNKNOWN";
+    if(state) return state->state2str();
+    else return unknown;
 }
 
 void AmMediaTransport::setLogger(msg_logger* _logger)
@@ -120,16 +132,19 @@ void AmMediaTransport::setSensor(msg_sensor *_sensor)
 void AmMediaTransport::setRAddr(const string& addr, unsigned short port)
 {
     CLASS_DBG("AmMediaTransport::setRAddr(%s, %d)", addr.data(), port);
-    AmLock l(connections_mut);
-    for(auto conn : connections) {
-        if(conn->getConnType() == AmStreamConnection::RAW_CONN) {
-            conn->setRAddr(addr, port);
-            return;
-        }
-    }
+    AmStreamConnection* raw_conn = nullptr;
+    findConnection(AmStreamConnection::RAW_CONN, [&](auto conn){
+        conn->setRAddr(addr, port);
+        raw_conn = conn;
+    });
 
-    connections.push_back(new AmRawConnection(this, addr, port));
-    cur_raw_conn = connections.back();
+    if(raw_conn)
+        return;
+
+    CLASS_DBG("create raw connection, state:%s, type:%s, raddr:%s, rport:%d",
+              state2strUnsafe(), type2str(), addr.c_str(), port);
+    auto new_raw_conn = conn_factory.createRawConnection(addr, port);
+    addConnection(new_raw_conn, [&]() { setCurRawConn(new_raw_conn); });
 }
 
 void AmMediaTransport::setMode(Mode _mode)
@@ -137,18 +152,11 @@ void AmMediaTransport::setMode(Mode _mode)
     mode = _mode;
 }
 
-bool AmMediaTransport::isMute(int type)
+bool AmMediaTransport::isMute(AmStreamConnection::ConnectionType type)
 {
-    bool ret = false;
-    AmLock l(connections_mut);
-    for(auto conn : connections) {
-        if(conn->getConnType() == type/*AmStreamConnection::RAW_CONN*/) {
-            ret = conn->isMute();
-            break;
-        }
-    }
-
-    return ret;
+    bool is_mute = false;
+    findConnection(type, [&](auto conn){ is_mute = conn->isMute(); });
+    return is_mute;
 }
 
 string AmMediaTransport::getLocalIP()
@@ -176,36 +184,14 @@ AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
 {
     if(mode == TRANSPORT_MODE_DEFAULT) {
         if(!rtcp) {
-            if(cur_rtp_conn) return cur_rtp_conn;
-        } else if(cur_rtcp_conn)
-            return cur_rtcp_conn;
+            if(getCurRtpConn()) return getCurRtpConn();
+        } else if(getCurRtcpConn())
+            return getCurRtcpConn();
     } else if(mode == TRANSPORT_MODE_FAX ||
               mode == TRANSPORT_MODE_DTLS_FAX) {
-        if(cur_udptl_conn) return cur_udptl_conn;
+        if(getCurUdptlConn()) return getCurUdptlConn();
     }
-    return cur_raw_conn;
-}
-
-AmStreamConnection* AmMediaTransport::findRtpConnection(struct sockaddr_storage* addr)
-{
-    AmStreamConnection* rtp_conn = 0;
-    AmLock l(connections_mut);
-    for(auto& conn : connections) {
-        if(conn->isAddrConnection(addr)) {
-            switch(conn->getConnType()) {
-                case AmRawConnection::RTP_CONN:
-                    rtp_conn = conn;
-                    break;
-
-                case AmRawConnection::ZRTP_CONN:
-                    return conn;
-
-                default: break;
-            }
-        }
-    }
-
-    return rtp_conn;
+    return getCurRawConn();
 }
 
 string AmMediaTransport::getRHost(bool rtcp)
@@ -230,7 +216,7 @@ void AmMediaTransport::getRAddr(bool rtcp, sockaddr_storage* addr)
 
 void AmMediaTransport::getRAddr(sockaddr_storage* addr)
 {
-    if(cur_raw_conn) cur_raw_conn->getRAddr(addr);
+    if(getCurRawConn()) getCurRawConn()->getRAddr(addr);
 }
 
 int AmMediaTransport::hasLocalSocket()
@@ -496,15 +482,17 @@ void AmMediaTransport::getSdpAnswer(const SdpMedia& offer, SdpMedia& answer)
     }
 }
 
-void AmMediaTransport::getIceCandidate(SdpMedia& media)
+void AmMediaTransport::prepareIceCandidate(SdpIceCandidate& candidate)
 {
-    SdpIceCandidate candidate;
     candidate.conn.network = NT_IN;
     candidate.comp_id = type;
     candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
     candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(l_port);
-    media.ice_candidate.push_back(candidate);
-    ice_cred.lpriority = candidate.priority;
+}
+
+void AmMediaTransport::setIcePriority(unsigned int priority)
+{
+    conn_factory.ice_cred.lpriority = priority;
 }
 
 uint32_t AmMediaTransport::getCurrentConnectionPriority()
@@ -513,320 +501,21 @@ uint32_t AmMediaTransport::getCurrentConnectionPriority()
     return allowed_ice_addrs.rbegin()->first;
 }
 
-void AmMediaTransport::onIceRestart()
+void AmMediaTransport::removeAllowedIceAddrs()
 {
     allowed_ice_addrs.clear();
-    cur_rtp_conn = 0;
-    cur_rtcp_conn = 0;
-
-    removeAllConnection(AmStreamConnection::RTP_CONN);
-    removeAllConnection(AmStreamConnection::RTCP_CONN);
-    removeAllConnection(AmStreamConnection::DTLS_CONN);
-    removeAllConnection(AmStreamConnection::ZRTP_CONN);
 }
 
-void AmMediaTransport::initIceConnection(const SdpMedia& local_media, const SdpMedia& remote_media, bool sdp_offer_owner)
+void AmMediaTransport::storeAllowedIceAddr(const sockaddr_storage* remote_addr, uint32_t priority)
 {
-    CLASS_DBG("initIceConnection() stream:%p, state:%s", to_void(stream), state2str().c_str());
-    if(state == TRANSPORT_STATE_NONE) {
-        state = TRANSPORT_STATE_ICE_INIT;
-        store_ice_cred(local_media, remote_media);
-
-        if(local_media.is_simple_srtp() && srtp_enable)
-            store_srtp_cred(local_media, remote_media);
-
-        initStunConnections(remote_media.ice_candidate, sdp_offer_owner);
-
-    } else if (ice_cred.ruser != remote_media.ice_ufrag || ice_cred.rpassword != remote_media.ice_pwd) {
-        state = TRANSPORT_STATE_ICE_RESTART;
-        store_ice_cred(local_media, remote_media);
-        initStunConnections(remote_media.ice_candidate, sdp_offer_owner);
-    }
+    if(remote_addr->ss_family == getLocalAddrFamily())
+        allowed_ice_addrs.emplace(priority, *remote_addr);
 }
 
-void AmMediaTransport::initStunConnections(const vector<SdpIceCandidate>& candidates, bool sdp_offer_owner)
+sockaddr_storage* AmMediaTransport::getAllowedIceAddr()
 {
-    CLASS_DBG("initStunConnections state:%s, type:%s", state2str().c_str(), type2str().c_str());
-    // remove old stun connections if needed
-    switch(state) {
-        case TRANSPORT_STATE_ICE_INIT:
-        case TRANSPORT_STATE_ICE_RESTART:
-        removeAllConnection(AmStreamConnection::STUN_CONN);
-        allowed_ice_addrs.clear(); // drop allowed_ice_addrs
-        break;
-    default:
-        break;
-    }
-
-    for(auto candidate : candidates) {
-        if(candidate.transport != ICTR_UDP)
-            continue;
-
-        string addr = candidate.conn.address;
-        vector<string> addr_port = explode(addr, " ");
-
-        if(addr_port.size() != 2) continue;
-        string address = addr_port[0];
-        int port = 0;
-        str2int(addr_port[1], port);
-
-        if(type != candidate.comp_id)
-            continue;
-
-        if(l_saddr.ss_family != (candidate.conn.addrType == AT_V4 ? AF_INET : AF_INET6))
-            continue;
-
-        try {
-            auto conn = (AmStunConnection *)addStunConnection(address, port, ice_cred.lpriority, candidate.priority);
-            conn->send_request();
-        } catch(string& error) {
-            CLASS_ERROR("ICE candidate STUN connection error: %s", error.c_str());
-        }
-    }
-}
-
-void AmMediaTransport::initRtpConnection(const string& remote_address, int remote_port)
-{
-    CLASS_DBG("initRtpConnection(%s, %d) stream:%p, state:%s, type:%s",
-              remote_address.data(), remote_port,
-              to_void(stream), state2str().c_str(), type2str().c_str());
-
-    CLASS_DBG("AmMediaTransport::initRtpConnection(%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p",
-              remote_address.data(), remote_port, to_void(stream), state2str().c_str(), type2str().c_str(), cur_rtp_conn);
-    if(state == TRANSPORT_STATE_NONE) {
-        state = TRANSPORT_STATE_RTP;
-        if(type == RTP_TRANSPORT)
-            addRtpConnection(remote_address, remote_port);
-
-        addRtcpConnection(remote_address, remote_port);
-    } else {
-        if(state != TRANSPORT_STATE_RTP) {
-            CLASS_WARN("incorrect state:%s, must be `TRANSPORT_STATE_RTP`", state2str().c_str());
-        }
-        if(cur_rtp_conn) {
-            CLASS_DBG("setRAddr for cur_rtp_conn %p", cur_rtp_conn);
-            cur_rtp_conn->setRAddr(remote_address, remote_port);
-        } else {
-            CLASS_DBG("setRAddr for all RTP connections");
-            AmLock l(connections_mut);
-            for(auto &c : connections) {
-               if(c->getConnType()==AmStreamConnection::RTP_CONN) {
-                   c->setRAddr(remote_address, remote_port);
-               }
-            }
-        }
-        if(cur_rtcp_conn) {
-            CLASS_DBG("setRAddr for cur_rtcp_conn %p", cur_rtcp_conn);
-            cur_rtcp_conn->setRAddr(remote_address, remote_port);
-        } else {
-            CLASS_DBG("setRAddr for all RTCP connections");
-            AmLock l(connections_mut);
-            for(auto &c : connections) {
-               if(c->getConnType()==AmStreamConnection::RTCP_CONN) {
-                   c->setRAddr(remote_address, remote_port);
-               }
-            }
-        }
-        if(cur_raw_conn) {
-            cur_raw_conn->setRAddr(remote_address, remote_port);
-        }
-    }
-}
-
-void AmMediaTransport::initSrtpConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
-{
-    if(!srtp_enable) return;
-
-    CLASS_DBG("initSrtpConnection() stream:%p, state:%s, type:%s", to_void(stream), state2str().c_str(), type2str().c_str());
-
-    if(state == TRANSPORT_STATE_NONE) {
-        state = TRANSPORT_STATE_RTP;
-
-        if(store_srtp_cred(local_media, remote_media) < 0)
-            return;
-
-        if(type == RTP_TRANSPORT)
-            addSrtpConnection(remote_address, remote_port);
-
-        addSrtcpConnection(remote_address, remote_port);
-    } else {
-        if(cur_rtp_conn) {
-            CLASS_DBG("update SRTP connection endpoint");
-            cur_rtp_conn->setRAddr(remote_address, remote_port);
-
-            if(AmSrtpConnection* conn = dynamic_cast<AmSrtpConnection *>(cur_rtp_conn)) {
-                 updateKeys(conn, local_media, remote_media);
-            }
-        }
-        if(cur_rtcp_conn) {
-            CLASS_DBG("update SRTCP connection endpoint");
-            cur_rtcp_conn->setRAddr(remote_address, remote_port);
-
-            if(AmSrtpConnection* conn = dynamic_cast<AmSrtpConnection *>(cur_rtcp_conn)) {
-                 updateKeys(conn, local_media, remote_media);
-            }
-        }
-        if(cur_raw_conn) {
-            cur_raw_conn->setRAddr(remote_address, remote_port);
-        }
-    }
-}
-
-void AmMediaTransport::initSrtpConnection(uint16_t srtp_profile, const string& local_key, const string& remote_key)
-{
-    if(!srtp_enable) return;
-
-    CLASS_DBG("initSrtpConnection() stream:%p, state:%s, type:%s", to_void(stream), state2str().c_str(), type2str().c_str());
-
-    if(state == TRANSPORT_STATE_ICE_RESTART)
-        onIceRestart();
-
-    //store_srtp_cred(srtp_profile, local_key, srtp_master_keys(remote_key));
-    srtp_master_keys remote_keys = srtp_master_keys(remote_key);
-
-    vector<sockaddr_storage> addrs;
-    {
-        AmLock l(connections_mut);
-        for(auto conn : connections) {
-            if(state == TRANSPORT_STATE_ICE_DTLS ||     // dtls connect
-               state == TRANSPORT_STATE_ICE_RTP ||      // zrtp connect
-               state == TRANSPORT_STATE_ICE_RESTART) {  // ice restart with secure agreement
-                if(conn->getConnType() == AmStreamConnection::STUN_CONN) {
-                    sockaddr_storage raddr;
-                    conn->getRAddr(&raddr);
-                    addrs.push_back(raddr);
-                }
-            } else if(state == TRANSPORT_STATE_DTLS) {
-                if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
-                    sockaddr_storage raddr;
-                    conn->getRAddr(&raddr);
-                    addrs.push_back(raddr);
-                }
-            } else if(state == TRANSPORT_STATE_ZRTP) {
-                if(conn->getConnType() == AmStreamConnection::ZRTP_CONN) {
-                    cur_rtp_conn = 0;
-                    sockaddr_storage raddr;
-                    conn->getRAddr(&raddr);
-                    addrs.push_back(raddr);
-                }
-            }
-        }
-    }
-
-    for(auto addr : addrs) {
-        if(type == RTP_TRANSPORT)
-            addSrtpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_keys);
-
-        addSrtcpConnection(am_inet_ntop(&addr), am_get_port(&addr), srtp_profile, local_key, remote_keys);
-    }
-
-    switch(state) {
-        case TRANSPORT_STATE_ICE_RESTART:
-        case TRANSPORT_STATE_ICE_DTLS:
-        case TRANSPORT_STATE_ICE_RTP:
-            state = TRANSPORT_STATE_ICE_SRTP;
-            break;
-        case TRANSPORT_STATE_DTLS:
-        case TRANSPORT_STATE_ZRTP:
-            state = TRANSPORT_STATE_RTP;
-        case TRANSPORT_STATE_ICE_SRTP:
-        case TRANSPORT_STATE_RTP:
-            break;
-        default:
-            CLASS_WARN("incorrect state in called function, ignore it");
-            return;
-    }
-}
-
-void AmMediaTransport::updateKeys(AmSrtpConnection* conn, const SdpMedia& local_media, const SdpMedia& remote_media)
-{
-    if(store_srtp_cred(local_media, remote_media) < 0)
-        return;
-
-    updateKeys(conn, srtp_cred.srtp_profile,
-               srtp_cred.local_key, srtp_cred.remote_keys);
-}
-
-void AmMediaTransport::updateKeys(
-    AmSrtpConnection* conn,
-    uint16_t srtp_profile,
-    const string& local_key,
-    const srtp_master_keys& remote_keys)
-{
-    conn->update_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
-}
-
-void AmMediaTransport::initDtlsConnection(const string& remote_address, int remote_port, const SdpMedia& local_media, const SdpMedia& remote_media)
-{
-    if(!dtls_enable) return;
-
-    CLASS_DBG("initDtlsConnection() stream:%p, state:%s, type:%s", to_void(stream), state2str().c_str(), type2str().c_str());
-
-    if(state == TRANSPORT_STATE_NONE) {
-        auto dtls_context = stream->getDtlsContext(type);
-        if(dtls_context) {
-            state = TRANSPORT_STATE_DTLS;
-            addDtlsConnection(remote_address, remote_port, dtls_context);
-        }
-    } else {
-        CLASS_DBG("update DTLS connection endpoint");
-        for(auto& c : connections) {
-            if (c->getConnType() == AmStreamConnection::DTLS_CONN ||
-                c->getConnType() == AmStreamConnection::RTP_CONN  ||
-                c->getConnType() == AmStreamConnection::RTCP_CONN ) {
-                    c->setRAddr(remote_address, remote_port);
-            }
-        }
-    }
-}
-
-void AmMediaTransport::initUdptlConnection(const string& remote_address, int remote_port)
-{
-    if(state == TRANSPORT_STATE_NONE || state == TRANSPORT_STATE_RTP) {
-        state = TRANSPORT_STATE_UDPTL;
-        addConnection(new UDPTLConnection(this, remote_address, remote_port));
-        mode = TRANSPORT_MODE_FAX;
-        cur_udptl_conn = connections.back();
-    } else if(state == TRANSPORT_STATE_DTLS) {
-        state = TRANSPORT_STATE_UDPTL;
-        {
-        AmLock l(connections_mut);
-            for(auto &conn : connections) {
-                if(conn->getConnType() == AmStreamConnection::DTLS_CONN) {
-                    connections.push_back(new DTLSUDPTLConnection(this, remote_address, remote_port, conn));
-                }
-            }
-        }
-        mode = TRANSPORT_MODE_DTLS_FAX;
-    }
-}
-
-#ifdef WITH_ZRTP
-void AmMediaTransport::initZrtpConnection(const string& remote_address, int remote_port)
-{
-    CLASS_DBG("initZrtpConnection() stream:%p, state:%s, type:%s", to_void(stream), state2str().c_str(), type2str().c_str());
-
-    try {
-        if(state == TRANSPORT_STATE_NONE) {
-            state = TRANSPORT_STATE_ZRTP;
-            cur_rtp_conn = addZrtpConnection(remote_address, remote_port);
-        } else if(state == TRANSPORT_STATE_ZRTP){
-            CLASS_DBG("update ZRTP connection endpoint");
-            cur_rtp_conn->setRAddr(remote_address, remote_port);
-        }
-    } catch(string& error) {
-        CLASS_ERROR("ZRTP connection error: %s", error.c_str());
-    }
-}
-#endif/*WITH_ZRTP*/
-
-void AmMediaTransport::initRawConnection()
-{
-    DBG("initRawConnection: state:%s, type:%s", state2str().c_str(), type2str().c_str());
-    setMode(TRANSPORT_MODE_RAW);
-    if(state == TRANSPORT_STATE_NONE) {
-        state = TRANSPORT_STATE_RAW;
-    }
+    if (allowed_ice_addrs.empty()) return nullptr;
+    return &allowed_ice_addrs.rbegin()->second;
 }
 
 void AmMediaTransport::getInfo(AmArg& ret)
@@ -839,114 +528,16 @@ void AmMediaTransport::getInfo(AmArg& ret)
     if(type == FAX_TRANSPORT) ret["type"] = "fax";
     if(type == RTP_TRANSPORT) ret["type"] = "rtp";
     if(type == RTCP_TRANSPORT) ret["type"] = "rtcp";
+    {
+        AmLock lock(state_mutex);
+        ret["state"] = state->state2str();
+    }
     AmArg& conns = ret["connections"];
-    AmLock l(connections_mut);
-    for(auto& connection : connections) {
-        AmArg conn;
-        connection->getInfo(conn);
-        conns.push(conn);
-    }
-}
-
-void AmMediaTransport::addConnection(AmStreamConnection* conn)
-{
-    AmLock l(connections_mut);
-    connections.push_back(conn);
-}
-
-void AmMediaTransport::removeConnection(AmStreamConnection* conn)
-{
-    AmLock l(connections_mut);
-    for(auto conn_it = connections.begin(); conn_it != connections.end(); conn_it++) {
-        if(*conn_it == conn) {
-            connections.erase(conn_it);
-            delete conn;
-            break;
-        }
-    }
-}
-
-void AmMediaTransport::removeAllConnection(AmStreamConnection::ConnectionType type)
-{
-    CLASS_DBG("removeAllConnection, conn_type:%s, state:%s, type:%s",
-              AmStreamConnection::connType2Str(type).c_str(),
-              state2str().c_str(), type2str().c_str());
-
-    AmLock l(connections_mut);
-    for(auto it = connections.begin(); it != connections.end();) {
-        auto conn = *it;
-        if(conn->getConnType() == type) {
-            it = connections.erase(it);
-            delete conn;
-            continue;
-        }
-
-        ++it;
-    }
-}
-
-void AmMediaTransport::allowStunConnection(sockaddr_storage* remote_addr, uint32_t priority)
-{
-    const string remote_address = am_inet_ntop(remote_addr);
-    const int remote_port = am_get_port(remote_addr);
-    CLASS_DBG("allow stun connection by addr:%s, port:%d, state:%s, type:%s",
-              remote_address.c_str(), remote_port, state2str().c_str(), type2str().c_str());
-
-    if(state == TRANSPORT_STATE_ICE_RESTART) {
-        onIceRestart();
-        state = TRANSPORT_STATE_ICE_INIT;
-    }
-
-    DtlsContext* dtls_context = stream->getDtlsContext(type);
-    if(state == TRANSPORT_STATE_ICE_INIT) {
-        if(dtls_context) {
-            state = TRANSPORT_STATE_ICE_DTLS;
-        } else {
-            if(srtp_cred.srtp_profile > srtp_profile_reserved)
-                state = TRANSPORT_STATE_ICE_SRTP;
-            else
-                state = TRANSPORT_STATE_ICE_RTP;
-        }
-    }
-
-    if(remote_addr->ss_family == l_saddr.ss_family) {
-        switch(state) {
-            case TRANSPORT_STATE_ICE_DTLS:
-                addDtlsConnection(remote_address, remote_port, dtls_context);
-                break;
-            case TRANSPORT_STATE_ICE_SRTP:
-                if(srtp_cred.srtp_profile > srtp_profile_reserved) {
-                    if(type == RTP_TRANSPORT)
-                        addSrtpConnection(remote_address, remote_port);
-                    addSrtcpConnection(remote_address, remote_port);
-                }
-                break;
-            case TRANSPORT_STATE_ICE_RTP:
-#ifdef WITH_ZRTP
-                if(stream->isZrtpEnabled() &&
-                   zrtp_enable &&
-                   !stream->getZrtpContext()->getRemoteHash().empty()) {
-                        addZrtpConnection(remote_address, remote_port);
-                        stream->initZrtp();
-#endif
-                } else {
-                    if(type == RTP_TRANSPORT)
-                        addRtpConnection(remote_address, remote_port);
-                    addRtcpConnection(remote_address, remote_port);
-                }
-                break;
-            default:
-                CLASS_WARN("incorrect state after transition");
-                break;
-        }
-        allowed_ice_addrs.emplace(priority, *remote_addr);
-    }
-    if(!allowed_ice_addrs.empty()) {
-        sockaddr_storage target_addr = allowed_ice_addrs.rbegin()->second;
-        cur_rtp_conn = findRtpConnection(&target_addr);
-        setRAddr(am_inet_ntop(&target_addr), am_get_port(&target_addr));
-        DBG("current rtp connection type %s", cur_rtp_conn ? AmStreamConnection::connType2Str(cur_rtp_conn->getConnType()).c_str() : "");
-    }
+    iterateConnections([&](auto conn, bool& stop) {
+        AmArg arg_conn;
+        conn->getInfo(arg_conn);
+        conns.push(arg_conn);
+    });
 }
 
 void AmMediaTransport::dtls_alert(string alert)
@@ -956,15 +547,15 @@ void AmMediaTransport::dtls_alert(string alert)
 
 void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
-    if(!cur_rtp_conn)
-        cur_rtp_conn = conn;
+    if(!getCurRtpConn())
+        setCurRtpConn(conn);
     stream->onRtpPacket(packet, this);
 }
 
 void AmMediaTransport::onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
 {
-    if(!cur_rtcp_conn)
-        cur_rtcp_conn = conn;
+    if(!getCurRtcpConn())
+        setCurRtcpConn(conn);
     stream->onRtcpPacket(packet, this);
 }
 
@@ -974,30 +565,27 @@ void AmMediaTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn
         onPacket(packet->getBuffer(), packet->getBufferSize(), packet->saddr, packet->recv_time);
         stream->freeRtpPacket(packet);
     } else if(mode == TRANSPORT_MODE_FAX || mode == TRANSPORT_MODE_DTLS_FAX) {
-        cur_udptl_conn = conn;
+        setCurUdptlConn(conn);
         stream->onUdptlPacket(packet, this);
     } else {
-        cur_raw_conn = conn;
+        setCurRawConn(conn);
         stream->onRawPacket(packet, this);
     }
 }
 
 void AmMediaTransport::updateStunTimers()
 {
-    AmLock l(connections_mut);
-    for(auto conn : connections) {
-        if(conn->getConnType() == AmStreamConnection::STUN_CONN)
-            static_cast<AmStunConnection*>(conn)->updateStunTimer();
-    }
+    iterateConnections(AmStreamConnection::STUN_CONN, [](auto conn, bool& stop) {
+        static_cast<AmStunConnection*>(conn)->updateStunTimer();
+    });
 }
 
 void AmMediaTransport::stopReceiving()
 {
-    AmLock l(stream_mut);
-    CLASS_DBG("stopReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str().c_str(), type2str().c_str());
-    if(hasLocalSocket() && state != TRANSPORT_STATE_NONE) {
-        CLASS_DBG("remove stream %p %s transport from RTP receiver",
-            to_void(stream), transport_type2str(getTransportType()));
+    AmLock l1(stream_mut);
+    CLASS_DBG("stopReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str(), type2str());
+    if(hasLocalSocket() && state) {
+        CLASS_DBG("remove stream %p %s transport from RTP receiver", to_void(stream), type2str());
         AmRtpReceiver::instance()->removeStream(getLocalSocket(),l_sd_ctx);
         l_sd_ctx = -1;
     }
@@ -1005,11 +593,10 @@ void AmMediaTransport::stopReceiving()
 
 void AmMediaTransport::resumeReceiving()
 {
-    AmLock l(stream_mut);
-    CLASS_DBG("resumeReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str().c_str(), type2str().c_str());
-    if(hasLocalSocket() && state != TRANSPORT_STATE_NONE) {
-        CLASS_DBG("add/resume stream %p %s transport into RTP receiver",
-            to_void(stream), transport_type2str(getTransportType()));
+    AmLock l1(stream_mut);
+    CLASS_DBG("resumeReceiving() l_sd:%d, state:%s, type:%s", l_sd, state2str(), type2str());
+    if(hasLocalSocket() && state) {
+        CLASS_DBG("add/resume stream %p %s transport into RTP receiver", to_void(stream), type2str());
         l_sd_ctx = AmRtpReceiver::instance()->addStream(l_sd, this, l_sd_ctx);
         if(l_sd_ctx < 0) {
             CLASS_DBG("error on add/resuming stream. l_sd_ctx = %d", l_sd_ctx);
@@ -1019,10 +606,7 @@ void AmMediaTransport::resumeReceiving()
 
 void AmMediaTransport::setPassiveMode(bool p)
 {
-    AmLock l(connections_mut);
-    for(auto conn : connections) {
-        conn->setPassiveMode(p);
-    }
+    iterateConnections([&](auto conn, bool& stop) { conn->setPassiveMode(p); });
 }
 
 void AmMediaTransport::log_rcvd_packet(const char *buffer, int len, struct sockaddr_storage &recv_addr, AmStreamConnection::ConnectionType type)
@@ -1048,26 +632,22 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
     //CLASS_DBG("send(%p,%d)", packet, type);
     AmStreamConnection* cur_stream = nullptr;
     if(type == AmStreamConnection::RTP_CONN) {
-        cur_stream = cur_rtp_conn;
+        cur_stream = getCurRtpConn();
     } else if(type == AmStreamConnection::RTCP_CONN) {
-        cur_stream = cur_rtcp_conn;
+        cur_stream = getCurRtcpConn();
     } else if(type == AmStreamConnection::RAW_CONN) {
-        cur_stream = cur_raw_conn;
+        cur_stream = getCurRawConn();
     } else if(type == AmStreamConnection::UDPTL_CONN) {
-        cur_stream = cur_udptl_conn;
+        cur_stream = getCurUdptlConn();
     }
-    
+
     ssize_t ret = 0;
     if(cur_stream) {
         if(!cur_stream->isMute()) ret = cur_stream->send(packet);
     } else {
-        AmLock l(connections_mut);
-        for(auto conn : connections) {
-            if(conn->isUseConnection(type) && !conn->isMute()) {
-                ret = conn->send(packet);
-                break;
-            }
-        }
+        findConnection(
+            [&](auto conn) { return conn->isUseConnection(type) && !conn->isMute(); },
+            [&](auto conn) { ret = conn->send(packet); });
     }
 
     if(ret > 0) {
@@ -1234,35 +814,30 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
 
     log_rcvd_packet(reinterpret_cast<const char*>(buf), static_cast<int>(size), addr, ctype);
 
-    vector<AmStreamConnection*> conns_by_type;
     AmStreamConnection* s_conn = nullptr;
 
-    {
-        AmLock l(connections_mut);
-        for(auto conn : connections) {
-            if(conn->isUseConnection(ctype)) {
-                conns_by_type.push_back(conn);
-            }
-        }
+    findConnection(
+        [&](auto conn) { return conn->isUseConnection(ctype) && conn->isAddrConnection(&addr); },
+        [&](auto conn) { s_conn = conn; }
+    );
 
-        for(auto conn : conns_by_type) {
-            if(conn->isAddrConnection(&addr)) {
-                s_conn = conn;
-                break;
-            }
-        }
-
-        if (!s_conn && !conns_by_type.empty()
-            && ctype != AmStreamConnection::STUN_CONN)
-        {
-            s_conn = conns_by_type[0];
-        }
-    }
+    if (!s_conn && ctype != AmStreamConnection::STUN_CONN)
+        findConnection(
+            [&](auto conn) { return conn->isUseConnection(ctype); },
+            [&](auto conn) { s_conn = conn; }
+        );
 
     if(!s_conn) {
         if(ctype == AmStreamConnection::STUN_CONN && stream->isIceStream()) {
-            uint32_t lpriority = (ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - type);
-            s_conn = addStunConnection(am_inet_ntop(&addr), am_get_port(&addr), lpriority);
+            const uint32_t lpriority = (ICT_HOST << 24) | ((rand() & 0xffff) << 8) | (256 - type);
+            const string addr_str = am_inet_ntop(&addr);
+            const int port = am_get_port(&addr);
+
+            CLASS_DBG("add stun connection, state:%s, type:%s, addr:%s, port:%d",
+                      state2str(), type2str(), addr_str.c_str(), port);
+
+            s_conn = conn_factory.createStunConnection(addr_str, port, lpriority);
+            addConnection(s_conn);
         } else return;
     }
 
@@ -1333,141 +908,6 @@ int AmMediaTransport::getSrtpCredentialsBySdp(
     }
 
     return cprofile;
-}
-
-AmStreamConnection* AmMediaTransport::addStunConnection(const string& remote_address, int remote_port,
-                                                        unsigned int lpriority, unsigned int priority)
-{
-    CLASS_DBG("addStunConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    AmStunConnection* conn = new AmStunConnection(this, remote_address, remote_port, lpriority, priority);
-    conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
-    conn->set_ice_role_controlled(!stream->getSdpOfferOwner()); //rfc5245#section-5.2
-    conn->updateStunTimer();
-    addConnection(conn);
-    return conn;
-}
-
-AmStreamConnection* AmMediaTransport::addDtlsConnection(const string& remote_address, int remote_port, DtlsContext* context)
-{
-    CLASS_DBG("addDtlsConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    AmDtlsConnection* conn = new AmDtlsConnection(this, remote_address, remote_port, context);
-    addConnection(conn);
-
-    if(!context->isInited()) {
-        try {
-            stream->initDtls(type, context->is_client);
-        } catch(string& error) {
-            CLASS_ERROR("DTLS connection error: %s", error.c_str());
-        }
-    }
-
-    context->setCurrentConnection(conn);
-    return conn;
-}
-
-
-AmStreamConnection* AmMediaTransport::addSrtpConnection(const string& remote_address, int remote_port)
-{
-    return addSrtpConnection(remote_address, remote_port,
-                             srtp_cred.srtp_profile,
-                             srtp_cred.local_key,
-                             srtp_cred.remote_keys);
-}
-
-AmStreamConnection* AmMediaTransport::addSrtpConnection(const string& remote_address, int remote_port,
-                                                        int srtp_profile, const string& local_key,
-                                                        const srtp_master_keys& remote_keys)
-{
-    CLASS_DBG("addSrtpConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    try {
-        AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTP_CONN);
-        conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
-
-        if(conn->isMute()) {
-            stream->setMute(true);
-        }
-
-        addConnection(conn);
-        return conn;
-    } catch(string& error) {
-        CLASS_ERROR("SRTP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
-}
-
-AmStreamConnection* AmMediaTransport::addSrtcpConnection(const string& remote_address, int remote_port)
-{
-    return addSrtpConnection(remote_address, remote_port,
-                             srtp_cred.srtp_profile,
-                             srtp_cred.local_key,
-                             srtp_cred.remote_keys);
-}
-
-AmStreamConnection* AmMediaTransport::addSrtcpConnection(const string& remote_address, int remote_port,
-                                                         int srtp_profile, const string& local_key,
-                                                         const srtp_master_keys& remote_keys)
-{
-    CLASS_DBG("addSrtcpConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    try {
-        AmSrtpConnection* conn = new AmSrtpConnection(this, remote_address, remote_port, AmStreamConnection::RTCP_CONN);
-        conn->use_keys(static_cast<srtp_profile_t>(srtp_profile), local_key, remote_keys);
-        addConnection(conn);
-        return conn;
-    } catch(string& error) {
-        CLASS_ERROR("SRTCP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
-}
-
-AmStreamConnection* AmMediaTransport::addZrtpConnection(const string& remote_address, int remote_port) {
-    CLASS_DBG("addZrtpConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    AmZRTPConnection* conn = new AmZRTPConnection(this, remote_address, remote_port);
-    addConnection(conn);
-    return conn;
-}
-
-AmStreamConnection* AmMediaTransport::addRtpConnection(const string& remote_address, int remote_port)
-{
-    CLASS_DBG("addRtpConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    try {
-        AmStreamConnection* conn = new AmRtpConnection(this, remote_address, remote_port);
-        addConnection(conn);
-        return conn;
-    } catch(string& error) {
-        CLASS_ERROR("RTP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
-}
-
-AmStreamConnection* AmMediaTransport::addRtcpConnection(const string& remote_address, int remote_port)
-{
-    CLASS_DBG("addRtcpConnection state:%s, type:%s, raddr:%s, rport:%d",
-              state2str().c_str(), type2str().c_str(), remote_address.c_str(), remote_port);
-
-    try {
-        AmStreamConnection* conn = new AmRtcpConnection(this, remote_address, remote_port);
-        addConnection(conn);
-        return conn;
-    } catch(string& error) {
-        CLASS_ERROR("RTCP connection error: %s", error.c_str());
-    }
-
-    return nullptr;
 }
 
 AmStreamConnection::ConnectionType AmMediaTransport::GetConnectionType(unsigned char* buf, unsigned int size)
@@ -1570,71 +1010,19 @@ msg_sensor::packet_type_t AmMediaTransport::streamConnType2sensorPackType(AmStre
     }
 }
 
-int AmMediaTransport::store_ice_cred(const SdpMedia& local_media, const SdpMedia& remote_media)
+const char* AmMediaTransport::type2str()
 {
-    ice_cred.luser = local_media.ice_ufrag;
-    ice_cred.lpassword = local_media.ice_pwd;
-    ice_cred.ruser = remote_media.ice_ufrag;
-    ice_cred.rpassword = remote_media.ice_pwd;
-    return 0;
-}
+    static const char *rtp = "RTP";
+    static const char *rtcp = "RTCP";
+    static const char *fax = "FAX";
+    static const char *raw = "RAW";
+    static const char *unknown = "UNKNOWN";
 
-int AmMediaTransport::store_srtp_cred(const SdpMedia& local_media, const SdpMedia& remote_media)
-{
-    int cprofile = getSrtpCredentialsBySdp(local_media, remote_media, srtp_cred.local_key, srtp_cred.remote_keys);
-    if(cprofile < 0) return -1;
-    srtp_cred.srtp_profile = static_cast<srtp_profile_t>(cprofile);
-    return 0;
-}
-
-int AmMediaTransport::store_srtp_cred(int cptrofile, const string& local_key, const srtp_master_keys& remote_keys)
-{
-    srtp_cred.srtp_profile = static_cast<srtp_profile_t>(cptrofile);
-    srtp_cred.local_key = local_key;
-    srtp_cred.remote_keys = remote_keys;
-    return 0;
-}
-
-string AmMediaTransport::state2str()
-{
-    switch(state) {
-        case TRANSPORT_STATE_NONE:
-            return "NONE";
-        case TRANSPORT_STATE_ICE_INIT:
-            return "ICE_INIT";
-        case TRANSPORT_STATE_ICE_RESTART:
-            return "ICE_RESTART";
-        case TRANSPORT_STATE_ICE_SRTP:
-            return "ICE_SRTP";
-        case TRANSPORT_STATE_ICE_DTLS:
-            return "ICE_DTLS";
-        case TRANSPORT_STATE_ICE_RTP:
-            return "ICE_RTP";
-        case TRANSPORT_STATE_DTLS:
-            return "DTLS";
-        case TRANSPORT_STATE_RTP:
-            return "RTP";
-        case TRANSPORT_STATE_UDPTL:
-            return "UDPTL";
-        case TRANSPORT_STATE_RAW:
-            return "RAW";
-        case TRANSPORT_STATE_ZRTP:
-            return "ZRTP";
-    }
-}
-
-string AmMediaTransport::type2str()
-{
     switch(type) {
-        case RAW_TRANSPORT:
-            return "RAW";
-        case RTP_TRANSPORT:
-            return "RTP";
-        case RTCP_TRANSPORT:
-            return "RTCP";
-        case FAX_TRANSPORT:
-            return "FAX";
-        default:
-            return "UNKNOWN";
+        case RTP_TRANSPORT: return rtp;
+        case RTCP_TRANSPORT: return rtcp;
+        case FAX_TRANSPORT: return fax;
+        case RAW_TRANSPORT: return raw;
+        default: return unknown;
     }
 }

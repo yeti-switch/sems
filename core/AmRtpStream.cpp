@@ -26,14 +26,13 @@
  */
 
 #include "AmRtpStream.h"
-#include "AmSrtpConnection.h"
+#include "media/AmSrtpConnection.h"
 #include "AmRtpPacket.h"
 #include "AmLcConfig.h"
 #include "AmPlugIn.h"
 #include "AmAudio.h"
 #include "AmUtils.h"
 #include "AmSession.h"
-
 #include "AmDtmfDetector.h"
 #include "rtp/telephone_event.h"
 #include "amci/codecs.h"
@@ -190,12 +189,7 @@ AmRtpStream::~AmRtpStream()
 {
     DBG("~AmRtpStream[%p]() session = %p",this,session);
     if(session) session->onRTPStreamDestroy(this);
-    for(auto trans : ip4_transports) {
-        delete trans;
-    }
-    for(auto trans : ip6_transports) {
-        delete trans;
-    }
+    iterateTransports([](auto tr) { delete tr; });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -248,28 +242,22 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
         transports = &ip6_transports;
     }
 
-    int count = 1;
-
     for(auto transport : *transports) {
-        if(count == RTP_TRANSPORT) {
+        if(transport->getTransportType() == RTP_TRANSPORT) {
             CLASS_DBG("set current rtp transport %p", transport);
             cur_rtp_trans = transport;
-            count++;
-            if(multiplexing) count++;
             continue;
         }
 
-        if(count == FAX_TRANSPORT) {
+        if(transport->getTransportType() == FAX_TRANSPORT) {
             CLASS_DBG("set current udptl transport %p", transport);
             cur_udptl_trans = transport;
-            count++;
             continue;
         }
 
-        if(count == RTCP_TRANSPORT) {
+        if(transport->getTransportType() == RTCP_TRANSPORT) {
             CLASS_DBG("set current rtcp transport %p", transport);
             cur_rtcp_trans = transport;
-            count++;
             continue;
         }
     }
@@ -574,37 +562,25 @@ void AmRtpStream::setCurrentTransport(AmMediaTransport* transport)
     }
 }
 
-void AmRtpStream::initSrtpConnections(int transport_type)
+void AmRtpStream::onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile, const string& local_key, const string& remote_key)
 {
-    srtp_profile_t srtp_profile;
-    vector<uint8_t> local_key, remote_key;
-    if(dtls_context[transport_type]) {
-        if(!dtls_context[transport_type]->getDtlsKeysMaterial(srtp_profile, local_key, remote_key)) return;
-#ifdef WITH_ZRTP
-    } else if(transport_type == RTP_TRANSPORT && zrtp_context.isActivated()) {
-        if(!zrtp_context.getZrtpKeysMaterial(srtp_profile, local_key, remote_key)) return;
-#endif
-    } else {
-        return;
-    }
+    CLASS_DBG("onSrtpKeysAvailable() stream:%p, transport:%d", to_void(this), transport_type);
+    iterateTransports([&](auto tr){
+        if(transport_type != tr->getTransportType() || !tr->isSrtpEnable())
+            return;
 
-    CLASS_DBG("initSrtpConnection() stream:%p, transport:%d, dtls_context:%p", to_void(this), transport_type, dtls_context[transport_type].get());
-
-    string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
-    memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
-    memcpy((void*)r_key.c_str(), remote_key.data(), remote_key.size());
-
-    for(auto tr : ip4_transports) {
-        if(transport_type == tr->getTransportType()) {
-            tr->initSrtpConnection(srtp_profile, l_key, r_key);
-        }
-    }
-    for(auto tr : ip6_transports) {
-        if(transport_type == tr->getTransportType()) {
-            tr->initSrtpConnection(srtp_profile, l_key, r_key);
-        }
-    }
+        CLASS_DBG("onSrtpKeysAvailable() stream:%p, state:%s, type:%s", to_void(this), tr->state2str(), tr->type2str());
+        tr->getConnFactory()->store_srtp_cred(srtp_profile, local_key, remote_key);
+        tr->onSrtpKeysAvailable();
+    });
 }
+
+void AmRtpStream::iterateTransports(std::function<void(AmMediaTransport* transport)> iterator)
+{
+    for(auto tr : ip4_transports) iterator(tr);
+    for(auto tr : ip6_transports) iterator(tr);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with sdp message(answer, offer)
@@ -939,46 +915,135 @@ int AmRtpStream::init(const AmSdp& local,
         }
 #endif/*WITH_ZRTP*/
 
+        AmMediaStateArgs args;
+
         if(remote_media.is_use_ice() && is_ice_stream) {
-            for(auto transport : ip4_transports) {
-                transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
-            }
-            for(auto transport : ip6_transports) {
-                transport->initIceConnection(local_media, remote_media, sdp_offer_owner);
-            }
+            iterateTransports([&](auto tr){
+                CLASS_DBG("init ice stream:%p, state:%s", to_void(this), tr->state2str());
+                auto conn_factory = tr->getConnFactory();
+                args.candidates = &remote_media.ice_candidate;
+                args.sdp_offer_owner = sdp_offer_owner;
+                args.need_restart = !conn_factory->is_remote_ice_creds_equal(remote_media);
+                conn_factory->store_ice_cred(local_media, remote_media);
+
+                // store srtp cred (sdes+srtp)
+                if(tr->isSrtpEnable() && local_media.is_simple_srtp())
+                    conn_factory->store_srtp_cred(local_media, remote_media);
+
+                tr->template updateState<AmMediaIceState>(args);
+            });
         } else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
-            cur_rtp_trans->initSrtpConnection(address, port, local_media, remote_media);
-            if(cur_rtcp_trans != cur_rtp_trans)
-                cur_rtcp_trans->initSrtpConnection(rtcp_address, rtcp_port, local_media, remote_media);
+            MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+            if(!media_if.srtp->srtp_enable)
+                throw string("SRTP is not configured on: ") + media_if.name;
+
+            args.address = address;
+            args.port = port;
+
+            CLASS_DBG("init srtp stream:%p, state:%s, type:%s",
+                      to_void(this), cur_rtp_trans->state2str(), cur_rtp_trans->type2str());
+            cur_rtp_trans->getConnFactory()->store_srtp_cred(local_media, remote_media);
+            cur_rtp_trans->updateState<AmMediaSrtpState>(args);
+
+            if(cur_rtcp_trans != cur_rtp_trans) {
+                args.address = rtcp_address;
+                args.port = rtcp_port;
+
+                CLASS_DBG("init srtp stream:%p, state:%s, type:%s",
+                          to_void(this), cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str());
+
+                cur_rtcp_trans->getConnFactory()->store_srtp_cred(local_media, remote_media);
+                cur_rtcp_trans->updateState<AmMediaSrtpState>(args);
+            }
+
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
         } else if(local_media.is_dtls_srtp() && AmConfig.enable_srtp) {
-            cur_rtp_trans->initDtlsConnection(address, port, local_media, remote_media);
+            MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+            if(!media_if.srtp->dtls_enable)
+                throw string("DTLS is not configured on: ") + media_if.name;
+
+            args.address = address;
+            args.port = port;
+            args.dtls_srtp = (local_media.is_dtls_srtp() && AmConfig.enable_srtp);
+
+            CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
+                      cur_rtp_trans->state2str(), cur_rtp_trans->type2str());
+            cur_rtp_trans->updateState<AmMediaDtlsState>(args);
+
             if(cur_rtcp_trans != cur_rtp_trans) {
-                cur_rtcp_trans->initDtlsConnection(rtcp_address, rtcp_port, local_media, remote_media);
+                args.address = rtcp_address;
+                args.port = rtcp_port;
+
+                CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
+                          cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str());
+                cur_rtcp_trans->updateState<AmMediaDtlsState>(args);
             }
+
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::DTLS_CONN);
         } else if(local_media.transport == TP_UDPTL && cur_udptl_trans) {
-            cur_udptl_trans->initUdptlConnection(address, port);
+            CLASS_DBG("init udptl stream:%p, state:%s, type:%s", to_void(this),
+                      cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
+
+            args.address = address;
+            args.port = port;
+            args.udptl = true;
+            cur_udptl_trans->updateState<AmMediaUdptlState>(args);
+
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::UDPTL_CONN);
         } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
-            cur_udptl_trans->initDtlsConnection(address, port, local_media, remote_media);
-            cur_udptl_trans->initUdptlConnection(address, port);
+            MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
+            if(!media_if.srtp->dtls_enable)
+                throw string("DTLS is not configured on: ") + media_if.name;
+
+            args.address = address;
+            args.port = port;
+            args.dtls_srtp = false;
+
+            CLASS_DBG("init dtls stream:%p, state:%s, type:%s", to_void(this),
+                      cur_udptl_trans->state2str(), cur_udptl_trans->type2str());
+            cur_udptl_trans->updateState<AmMediaDtlsState>(args);
+
             connection_is_muted = cur_udptl_trans->isMute(AmStreamConnection::DTLS_CONN);
 #ifdef WITH_ZRTP
-        } else if(isZrtpEnabled() &&
-                  AmConfig.enable_srtp &&
-                  remote_media.zrtp_hash.is_use) {
-                    cur_rtp_trans->initZrtpConnection(address, port);
-                    if(cur_rtcp_trans != cur_rtp_trans)
-                        cur_rtcp_trans->initRtpConnection(address, port);
-                    connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
-                    initZrtp();
+        } else if(isZrtpEnabled() &&AmConfig.enable_srtp &&remote_media.zrtp_hash.is_use) {
+            CLASS_DBG("init zrtp stream:%p, state:%s, type:%s", to_void(this),
+                      cur_rtp_trans->state2str(), cur_rtp_trans->type2str());
+            args.address = address;
+            args.port = port;
+            cur_rtp_trans->updateState<AmMediaZrtpState>(args);
+
+            if(cur_rtcp_trans != cur_rtp_trans) {
+                args.address = rtcp_address;
+                args.port = rtcp_port;
+                CLASS_DBG("init rtcp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p",
+                          address.data(), port, to_void(this),
+                          cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
+                          cur_rtcp_trans->getCurRtpConn());
+                cur_rtcp_trans->updateState<AmMediaRtpState>(args);
+            }
+
+            connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::ZRTP_CONN);
 #endif/*WITH_ZRTP*/
         } else {
-            cur_rtp_trans->initRtpConnection(address, port);
+            args.address = address;
+            args.port = port;
+
+            CLASS_DBG("init rtp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p",
+                      address.data(), port, to_void(this),
+                      cur_rtp_trans->state2str(), cur_rtp_trans->type2str(),
+                      cur_rtp_trans->getCurRtpConn());
+            cur_rtp_trans->updateState<AmMediaRtpState>(args);
+
             if(cur_rtcp_trans != cur_rtp_trans) {
-                cur_rtcp_trans->initRtpConnection(rtcp_address, rtcp_port);
+                args.address = rtcp_address;
+                args.port = rtcp_port;
+                CLASS_DBG("init rtcp (%s, %d) stream:%p, state:%s, type:%s, cur_rtp_conn:%p",
+                          rtcp_address.data(), rtcp_port, to_void(this),
+                          cur_rtcp_trans->state2str(), cur_rtcp_trans->type2str(),
+                          cur_rtcp_trans->getCurRtpConn());
+                cur_rtcp_trans->updateState<AmMediaRtpState>(args);
             }
+
             connection_is_muted = cur_rtp_trans->isMute(AmStreamConnection::RTP_CONN);
         }
     } catch(string& error) {
@@ -1010,6 +1075,7 @@ int AmRtpStream::init(const AmSdp& local,
         pause();
     }
 
+    sending = local_media.send;
     mute =
         (remote_media.port < 1024) ||   // fake ports see https://datatracker.ietf.org/doc/html/rfc2327 p.18
         relay_is_muted ||
@@ -1058,12 +1124,12 @@ void AmRtpStream::applyIceParams(SdpMedia& sdp_media)
             ice_ufrag.append(data.begin(), data.begin() + ICE_UFRAG_SIZE);
         }
         sdp_media.ice_ufrag = ice_ufrag;
-        for(auto transport : ip4_transports) {
-            transport->getIceCandidate(sdp_media);
-        }
-        for(auto transport : ip6_transports) {
-            transport->getIceCandidate(sdp_media);
-        }
+        iterateTransports([&](auto tr){
+            SdpIceCandidate candidate;
+            tr->prepareIceCandidate(candidate);
+            tr->setIcePriority(candidate.priority);
+            sdp_media.ice_candidate.push_back(candidate);
+        });
     } else {
         sdp_media.is_ice = false;
         sdp_media.ice_pwd.clear();
@@ -1169,28 +1235,19 @@ bool AmRtpStream::isSymmetricRtpEnable()
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority)
 {
     setCurrentTransport(transport);
-    initSrtpConnections(transport->getTransportType());
     onSymmetricRtp();
 
     uint32_t current_ice_priority = transport->getCurrentConnectionPriority();
-    for(auto tr : ip4_transports) {
-        if(transport->getTransportType() == tr->getTransportType()) {
-            tr->allowStunConnection(remote_addr, priority);
-            tr->updateStunTimers();
-            if(tr->getCurrentConnectionPriority() > current_ice_priority) {
-                setCurrentTransport(tr);
-            }
-        }
-    }
-    for(auto tr : ip6_transports) {
-        if(transport->getTransportType() == tr->getTransportType()) {
-            tr->allowStunConnection(remote_addr, priority);
-            tr->updateStunTimers();
-            if(tr->getCurrentConnectionPriority() > current_ice_priority) {
-                setCurrentTransport(tr);
-            }
-        }
-    }
+    iterateTransports([&](auto tr){
+        if(transport->getTransportType() != tr->getTransportType())
+            return;
+
+        tr->allowStunConnection(remote_addr, priority);
+        tr->updateStunTimers();
+
+        if(tr->getCurrentConnectionPriority() > current_ice_priority)
+            setCurrentTransport(tr);
+    });
 
     mute = cur_rtp_trans->isMute(AmStreamConnection::RAW_CONN);
 }
@@ -1203,7 +1260,11 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
             cur_rtcp_trans = transport;
         }
     }
-    initSrtpConnections(transport->getTransportType());
+
+    string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
+    memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
+    memcpy((void*)r_key.c_str(), remote_key.data(), remote_key.size());
+    onSrtpKeysAvailable(transport->getTransportType(), srtp_profile, l_key, r_key);
 }
 
 DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
@@ -1237,11 +1298,14 @@ extern "C" {
 #include <bzrtp/bzrtp.h>
 }
 
-void AmRtpStream::zrtpSessionActivated(srtp_profile_t,
-                                       const vector<uint8_t>&,
-                                       const vector<uint8_t>&)
+void AmRtpStream::zrtpSessionActivated(srtp_profile_t srtp_profile,
+                                       const vector<uint8_t>& local_key,
+                                       const vector<uint8_t>& remote_key)
 {
-    initSrtpConnections(RTP_TRANSPORT);
+    string l_key(local_key.size(), 0), r_key(remote_key.size(), 0);
+    memcpy((void*)l_key.c_str(), local_key.data(), local_key.size());
+    memcpy((void*)r_key.c_str(), remote_key.data(), remote_key.size());
+    onSrtpKeysAvailable(RTP_TRANSPORT, srtp_profile, l_key, r_key);
 }
 
 void AmRtpStream::initZrtp()
@@ -1825,15 +1889,10 @@ void AmRtpStream::setPayloadProvider(AmPayloadProvider* pl_prov)
 
 void AmRtpStream::setPassiveMode(bool p)
 {
-    if(p && !is_ice_stream) {
+    if(p && !is_ice_stream)
         symmetric_rtp_enable = true;
-    }
-    for(auto transport : ip4_transports) {
-        transport->setPassiveMode(p);
-    }
-    for(auto transport : ip6_transports) {
-        transport->setPassiveMode(p);
-    }
+
+    iterateTransports([&](auto tr){ tr->setPassiveMode(p); });
 }
 
 void AmRtpStream::setReceiving(bool r)
@@ -1913,9 +1972,8 @@ void AmRtpStream::setRawRelay(bool enable)
 {
     CLASS_DBG("%sabled RAW relay", enable ? "en" : "dis");
     relay_raw = enable;
-    if(cur_rtp_trans) {
-        cur_rtp_trans->initRawConnection();
-    }
+    if(cur_rtp_trans)
+        cur_rtp_trans->setMode(AmMediaTransport::TRANSPORT_MODE_RAW);
 }
 
 bool AmRtpStream::isRawRelay()
@@ -2015,43 +2073,23 @@ string AmRtpStream::getPayloadName(int payload_type)
 ///
 void AmRtpStream::stopReceiving()
 {
-    for(auto& transport : ip4_transports) {
-        transport->stopReceiving();
-    }
-    for(auto& transport : ip6_transports) {
-        transport->stopReceiving();
-    }
+    iterateTransports([](auto tr) { tr->stopReceiving(); });
 }
 
 void AmRtpStream::resumeReceiving()
 {
-    for(auto& transport : ip4_transports) {
-        transport->resumeReceiving();
-    }
-    for(auto& transport : ip6_transports) {
-        transport->resumeReceiving();
-    }
+    iterateTransports([](auto tr) { tr->resumeReceiving(); });
 }
 
 void AmRtpStream::setLogger(msg_logger* _logger)
 {
-    for(auto trans : ip4_transports) {
-        trans->setLogger(_logger);
-    }
-    for(auto trans : ip6_transports) {
-        trans->setLogger(_logger);
-    }
+    iterateTransports([&](auto tr) { tr->setLogger(_logger); });
 }
 
 void AmRtpStream::setSensor(msg_sensor *_sensor)
 {
     CLASS_DBG("AmRtpStream: change sensor to %p",_sensor);
-    for(auto trans : ip4_transports) {
-        trans->setSensor(_sensor);
-    }
-    for(auto trans : ip6_transports) {
-        trans->setSensor(_sensor);
-    }
+    iterateTransports([&](auto tr) { tr->setSensor(_sensor); });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////

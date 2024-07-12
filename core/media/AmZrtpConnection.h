@@ -47,13 +47,12 @@ public:
     void iterate(uint32_t timestamp);
 };
 
-class AmZRTPConnection : public AmStreamConnection, public ZrtpContextSubscriber
+class AmZRTPConnection : public AmStreamConnection
 {
     zrtpContext* context;
     AmRtpConnection rtp_conn;
-    AmRtcpConnection *rtcp_conn;
 public:
-    AmZRTPConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port);
+    AmZRTPConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port, zrtpContext* context);
     ~AmZRTPConnection();
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
@@ -61,7 +60,6 @@ public:
     virtual bool isUseConnection(ConnectionType type);
     virtual ssize_t send(AmRtpPacket* packet);
     virtual void setPassiveMode(bool p);
-    virtual void zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
 
     int send(uint8_t* data, unsigned int size);
 };

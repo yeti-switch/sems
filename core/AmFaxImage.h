@@ -2,7 +2,7 @@
 #define AM_FAX_IMAGE_H
 
 #include "AmSdp.h"
-#include "AmRtpConnection.h"
+#include "media/AmRtpConnection.h"
 #include "AmAudio.h"
 #include "AmMediaProcessor.h"
 #include <spandsp.h>

@@ -177,14 +177,11 @@ void zrtpContext::iterate(uint32_t timestamp)
     now = last;
 }
 
-AmZRTPConnection::AmZRTPConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port)
+AmZRTPConnection::AmZRTPConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port, zrtpContext* context)
 : AmStreamConnection(transport, remote_addr, remote_port, AmStreamConnection::ZRTP_CONN)
-, context(transport->getRtpStream()->getZrtpContext())
+, context(context)
 , rtp_conn(this, remote_addr, remote_port)
 {
-    rtcp_conn = new AmRtcpConnection(transport, remote_addr, remote_port);
-    transport->addConnection(rtcp_conn);
-    context->addSubscriber(this);
 }
 
 AmZRTPConnection::~AmZRTPConnection()
@@ -203,11 +200,6 @@ void AmZRTPConnection::handleConnection(uint8_t* data, unsigned int size, struct
     } else if(getTransport()->isRTPMessage(data, size)) {
         rtp_conn.process_packet(data, size, recv_addr, recv_time);
     }
-}
-
-void AmZRTPConnection::zrtpSessionActivated(srtp_profile_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
-{
-    getTransport()->removeConnection(rtcp_conn);
 }
 
 void AmZRTPConnection::setPassiveMode(bool p)

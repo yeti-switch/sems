@@ -36,8 +36,7 @@
 #include "AmDtmfSender.h"
 #include "sip/msg_sensor.h"
 #include "sip/ssl_settings.h"
-#include "AmMediaTransport.h"
-#include "AmZrtpConnection.h"
+#include "media/AmMediaTransport.h"
 #include "ObjectsCounter.h"
 
 #include <netinet/in.h>
@@ -406,8 +405,9 @@ class AmRtpStream
     virtual void initIP4Transport();
     virtual void initIP6Transport();
     void setCurrentTransport(AmMediaTransport* transport);
+    void onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile, const string& local_key, const string& remote_key);
+    void iterateTransports(std::function<void(AmMediaTransport* transport)> iterator);
 
-    void initSrtpConnections(int transport_type);
   public:
 
     /** should we receive RFC-2833-style DTMF even when receiving is disabled? */

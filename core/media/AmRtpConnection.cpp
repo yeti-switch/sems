@@ -122,6 +122,7 @@ void AmStreamConnection::resolveRemoteAddress(const string& remote_addr, int rem
     AddressType addr_type = AmConfig.media_ifs[transport->getLocalIf()].proto_info[transport->getLocalProtoId()]->type_ip;
     dns_handle dh;
     dns_priority priority = IPv4_only;
+    DBG("addr type %d", addr_type);
     if(addr_type == AT_V6) {
         priority = IPv6_only;
     }
