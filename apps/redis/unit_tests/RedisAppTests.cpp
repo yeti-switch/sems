@@ -56,7 +56,7 @@ TEST_F(RedisTest, RedisAppConnectScript1)
     redis_client.start();
 
     {
-        RedisScript script("load_contacts", "apps/registrar/etc/load_contacts.lua");
+        RedisScript script("test_script_1", "apps/redis/unit_tests/etc/test_script_1.lua");
         test_server->addLoadScriptCommandResponse(script.path, "a74bd2c0d28faea0cba58a939af200414ad87ef0");
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, "RedisAppConnectScript1",
             RedisConnectionInfo(host, port, "", "", {script})));
@@ -77,10 +77,10 @@ TEST_F(RedisTest, RedisAppConnectScript2)
     redis_client.start();
 
     {
-        RedisScript script1("register", "apps/registrar/etc/register.lua");
-        RedisScript script2("aor_lookup", "apps/registrar/etc/aor_lookup.lua");
-        RedisScript script3("rpc_aor_lookup", "apps/registrar/etc/rpc_aor_lookup.lua");
-        RedisScript script4("load_contacts", "apps/registrar/etc/load_contacts.lua");
+        RedisScript script1("test_script_1", "apps/redis/unit_tests/etc/test_script_1.lua");
+        RedisScript script2("test_script_2", "apps/redis/unit_tests/etc/test_script_2.lua");
+        RedisScript script3("test_script_3", "apps/redis/unit_tests/etc/test_script_3.lua");
+        RedisScript script4("test_script_4", "apps/redis/unit_tests/etc/test_script_4.lua");
         test_server->addLoadScriptCommandResponse(script1.path, "5f43acad4661a5abf51ab3f32fdf2d1b1a9fec65");
         test_server->addLoadScriptCommandResponse(script2.path, "af857bc30e9cd6e67f316dc9b0910a19f939f84e");
         test_server->addLoadScriptCommandResponse(script3.path, "91d6959f211b09a6e7b0f1c3c9fd5bf717a371c9");
