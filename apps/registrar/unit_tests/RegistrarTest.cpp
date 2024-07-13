@@ -44,6 +44,13 @@ void RegistrarTest::SetUp() {
     test_server->addLoadScriptCommandResponse(rpc_aor_lookup_script_path, rpc_aor_lookup_script_hash);
     test_server->addLoadScriptCommandResponse(load_contacts_script_path, load_contacts_script_hash);
     test_server->response_enabled.set(true);
+
+    time_t time_ = time(0);
+    while(!SipRegistrar::instance()->is_connected()) {
+        DBG("waiting for database connection");
+        usleep(100);
+        ASSERT_FALSE(time(0) - time_ > 3);
+    }
 }
 
 void RegistrarTest::dumpKeepAliveContexts(AmArg& ret)
