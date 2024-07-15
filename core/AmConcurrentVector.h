@@ -9,27 +9,46 @@ using std::vector;
 using std::function;
 
 template<typename Item>
-class AmConcurrentVector: protected vector<Item>
+void StandartDeleter(Item* item) {
+    delete item;
+}
+
+template<typename Item>
+void ReferenceDeleter(Item* item) {
+    dec_ref(item);
+}
+
+template<typename Item>
+void ReferenceInserter(Item* item) {
+    inc_ref(item);
+}
+
+template<typename Item, void (*Inserter)(Item* item) = nullptr, void (*Deleter)(Item* item) = StandartDeleter<Item> >
+class AmConcurrentVector: protected vector<Item*>
 {
 protected:
     AmMutex mutex;
 
 public:
-    typedef function<bool(Item item)> Predicate;
-    typedef function<void(Item item)> Result;
-    typedef function<void(vector<Item> items)> MultipleResult;
-    typedef function<void(Item item, bool& stop)> Iterator;
+    typedef function<bool(Item* item)> Predicate;
+    typedef function<void(Item* item)> Result;
+    typedef function<void(vector<Item*> items)> MultipleResult;
+    typedef function<void(Item* item, bool& stop)> Iterator;
     typedef function<void()> Completed;
 
-    void addItem(Item item, Completed completed = nullptr) {
+    void addItem(Item* item, Completed completed = nullptr) {
         AmLock l(mutex);
+        if(Inserter) Inserter(item);
         this->push_back(item);
         if(completed) completed();
     }
 
-    void addItems(const vector<Item>& items, Completed completed = nullptr) {
+    void addItems(const vector<Item*>& items, Completed completed = nullptr) {
         AmLock l(mutex);
-        this->insert(this->end(), items.begin(), items.end());
+        for(auto item : items) {
+            if(Inserter) Inserter(item);
+            this->push_back(item);
+        }
         if(completed) completed();
     }
 
@@ -46,7 +65,7 @@ public:
 
     void findItems(Predicate predicate, MultipleResult result) {
         AmLock l(mutex);
-        vector<Item> res;
+        vector<Item*> res;
         for(auto it = this->begin(); it != this->end(); ++it) {
             auto item = *it;
             if(predicate(item))
@@ -86,7 +105,7 @@ public:
             auto item = *it;
             if(predicate(item)) {
                 this->erase(it);
-                delete item;
+                Deleter(item);
                 break;
             }
         }
@@ -98,7 +117,7 @@ public:
         for(auto it = this->begin(); it != this->end();) {
             auto item = *it;
             it = this->erase(it);
-            delete item;
+            Deleter(item);
         }
         if(completed) completed();
     }
@@ -109,7 +128,7 @@ public:
             auto item = *it;
             if(predicate(item)) {
                 it = this->erase(it);
-                delete item;
+                Deleter(item);
                 continue;
             }
 

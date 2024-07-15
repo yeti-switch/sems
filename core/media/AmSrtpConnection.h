@@ -90,7 +90,7 @@ class AmSrtpConnection : public AmStreamConnection
 
   public:
     AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
-    ~AmSrtpConnection();
+    virtual ~AmSrtpConnection();
 
     void use_keys(srtp_profile_t profile,
                   const string &tx_key,

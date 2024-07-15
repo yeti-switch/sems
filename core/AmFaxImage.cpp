@@ -267,10 +267,12 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::string& remote_addr, int remote_port, AmStreamConnection* dtls)
 : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls)
 {
+    if(m_dtls_conn) inc_ref(m_dtls_conn);
 }
 
 DTLSUDPTLConnection::~DTLSUDPTLConnection()
 {
+    if(m_dtls_conn) dec_ref(m_dtls_conn);
 }
 
 void DTLSUDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)

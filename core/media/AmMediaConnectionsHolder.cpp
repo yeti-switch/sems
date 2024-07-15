@@ -20,7 +20,32 @@ AmMediaConnectionsHolder::AmMediaConnectionsHolder()
 
 AmMediaConnectionsHolder::~AmMediaConnectionsHolder()
 {
+    if(cur_rtp_conn) dec_ref(cur_rtp_conn);
+    if(cur_raw_conn) dec_ref(cur_raw_conn);
+    if(cur_rtcp_conn) dec_ref(cur_rtcp_conn);
+    if(cur_udptl_conn) dec_ref(cur_udptl_conn);
     removeConnections();
+}
+
+void AmMediaConnectionsHolder::setCurRtpConn(AmStreamConnection* conn) {
+    if(conn) inc_ref(conn);
+    if(cur_rtp_conn) dec_ref(cur_rtp_conn);
+    cur_rtp_conn = conn;
+}
+void AmMediaConnectionsHolder::setCurRtcpConn(AmStreamConnection* conn) {
+    if(conn) inc_ref(conn);
+    if(cur_rtcp_conn) dec_ref(cur_rtcp_conn);
+    cur_rtcp_conn = conn;
+}
+void AmMediaConnectionsHolder::setCurUdptlConn(AmStreamConnection* conn) {
+    if(conn) inc_ref(conn);
+    if(cur_udptl_conn) dec_ref(cur_udptl_conn);
+    cur_udptl_conn = conn;
+}
+void AmMediaConnectionsHolder::setCurRawConn(AmStreamConnection* conn) {
+    if(conn) inc_ref(conn);
+    if(cur_raw_conn) dec_ref(cur_raw_conn);
+    cur_raw_conn = conn;
 }
 
 void AmMediaConnectionsHolder::addConnection(AmStreamConnection* conn, Completed completed)
@@ -72,21 +97,6 @@ void AmMediaConnectionsHolder::findCurRawConn(Result result)
         findConnection(cur_raw_conn, result);
 }
 
-void AmMediaConnectionsHolder::findConnections(Predicate predicate, MultipleResult result)
-{
-    findItems(predicate, result);
-}
-
-void AmMediaConnectionsHolder::findConnections(AmStreamConnection::ConnectionType type, MultipleResult result)
-{
-    findConnections(PredicateByConnType, result);
-}
-
-void AmMediaConnectionsHolder::findConnections(const vector<AmStreamConnection::ConnectionType>& types, MultipleResult result)
-{
-    findConnections(PredicateByConnTypes, result);
-}
-
 AmStreamConnection* AmMediaConnectionsHolder::getConnection(Predicate predicate)
 {
     AmStreamConnection* res = 0;
@@ -102,25 +112,6 @@ AmStreamConnection* AmMediaConnectionsHolder::getConnection(AmStreamConnection* 
 AmStreamConnection* AmMediaConnectionsHolder::getConnection(AmStreamConnection::ConnectionType type)
 {
     return getConnection(PredicateByConnType);
-}
-
-vector<AmStreamConnection*> AmMediaConnectionsHolder::getConnections(Predicate predicate)
-{
-    vector<AmStreamConnection*> res;
-    findItems(predicate, [&](auto conns){
-        res.insert(res.end(), conns.begin(), conns.end());
-    });
-    return res;
-}
-
-vector<AmStreamConnection*> AmMediaConnectionsHolder::getConnections(AmStreamConnection::ConnectionType type)
-{
-    return getConnections(PredicateByConnType);
-}
-
-vector<AmStreamConnection*> AmMediaConnectionsHolder::getConnections(const vector<AmStreamConnection::ConnectionType>& types)
-{
-    return getConnections(PredicateByConnTypes);
 }
 
 void AmMediaConnectionsHolder::removeConnection(Predicate predicate, Completed completed)

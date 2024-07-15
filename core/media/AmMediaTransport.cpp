@@ -643,6 +643,7 @@ ssize_t AmMediaTransport::send(AmRtpPacket* packet, AmStreamConnection::Connecti
 
     ssize_t ret = 0;
     if(cur_stream) {
+        ReferenceGuard<AmStreamConnection> rg(cur_stream);
         if(!cur_stream->isMute()) ret = cur_stream->send(packet);
     } else {
         findConnection(
@@ -841,6 +842,7 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
         } else return;
     }
 
+    ReferenceGuard<AmStreamConnection> rg(s_conn);
     s_conn->process_packet(buf, size, &addr, recvtime);
 }
 

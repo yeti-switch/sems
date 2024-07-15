@@ -6,7 +6,7 @@
 
 class AmMediaConnectionsHolder
   : public AmObject,
-    protected AmConcurrentVector<AmStreamConnection*>
+    protected AmConcurrentVector<AmStreamConnection, ReferenceInserter<AmStreamConnection>, ReferenceDeleter<AmStreamConnection> >
 {
 private:
     AmStreamConnection* cur_rtp_conn;
@@ -20,14 +20,13 @@ public:
 
     typedef function<bool(AmStreamConnection* conn)> Predicate;
     typedef function<void(AmStreamConnection* conn)> Result;
-    typedef function<void(vector<AmStreamConnection*> conns)> MultipleResult;
     typedef function<void(AmStreamConnection* conn, bool& stop)> Iterator;
     typedef function<void()> Completed;
 
-    void setCurRtpConn(AmStreamConnection* conn) { cur_rtp_conn = conn; }
-    void setCurRtcpConn(AmStreamConnection* conn) { cur_rtcp_conn = conn; }
-    void setCurUdptlConn(AmStreamConnection* conn) { cur_udptl_conn = conn; }
-    void setCurRawConn(AmStreamConnection* conn) { cur_raw_conn = conn; }
+    void setCurRtpConn(AmStreamConnection* conn);
+    void setCurRtcpConn(AmStreamConnection* conn);
+    void setCurUdptlConn(AmStreamConnection* conn);
+    void setCurRawConn(AmStreamConnection* conn);
 
     AmStreamConnection* getCurRtpConn() { return cur_rtp_conn; }
     AmStreamConnection* getCurRtcpConn() { return cur_rtcp_conn; }
@@ -46,17 +45,9 @@ public:
     void findCurUdptlConn(Result result);
     void findCurRawConn(Result result);
 
-    void findConnections(Predicate predicate, MultipleResult result);
-    void findConnections(AmStreamConnection::ConnectionType type, MultipleResult result);
-    void findConnections(const vector<AmStreamConnection::ConnectionType>& types, MultipleResult result);
-
     AmStreamConnection* getConnection(Predicate predicate);
     AmStreamConnection* getConnection(AmStreamConnection* conn);
     AmStreamConnection* getConnection(AmStreamConnection::ConnectionType type);
-
-    vector<AmStreamConnection*> getConnections(Predicate predicate);
-    vector<AmStreamConnection*> getConnections(AmStreamConnection::ConnectionType type);
-    vector<AmStreamConnection*> getConnections(const vector<AmStreamConnection::ConnectionType>& types);
 
     void removeConnection(Predicate predicate, Completed completed = nullptr);
     void removeConnection(AmStreamConnection* conn, Completed completed = nullptr);

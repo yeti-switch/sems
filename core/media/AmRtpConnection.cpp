@@ -61,9 +61,7 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     resolveRemoteAddress(remote_addr, remote_port);
 }
 
-AmStreamConnection::~AmStreamConnection()
-{
-}
+AmStreamConnection::~AmStreamConnection(){}
 
 bool AmStreamConnection::isUseConnection(ConnectionType type)
 {

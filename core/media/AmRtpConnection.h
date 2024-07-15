@@ -14,8 +14,9 @@ class AmMediaTransport;
 class AmRtpPacket;
 
 class AmStreamConnection
+  : public atomic_ref_cnt
 #ifdef OBJECTS_COUNTER
-  : ObjCounter(AmStreamConnection)
+  , ObjCounter(AmStreamConnection)
 #endif
 {
 public:

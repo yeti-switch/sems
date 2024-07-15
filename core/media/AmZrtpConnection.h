@@ -53,7 +53,7 @@ class AmZRTPConnection : public AmStreamConnection
     AmRtpConnection rtp_conn;
 public:
     AmZRTPConnection(AmMediaTransport* transport, const string& remote_addr, int remote_port, zrtpContext* context);
-    ~AmZRTPConnection();
+    virtual ~AmZRTPConnection();
 
     virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
     virtual void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) { /*symmetric rtp is dsabled for zrtp connection*/ }
