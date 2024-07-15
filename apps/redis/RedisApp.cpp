@@ -133,6 +133,17 @@ void RedisApp::process(AmEvent* event)
 
 void RedisApp::process_redis_add_connection_event(RedisAddConnection &e)
 {
+    // check is connection already exists
+    for(auto conn : connections) {
+        if(conn.id != e.conn_id)
+            continue;
+
+        if(!conn.is_connected() && conn.redis_conn->is_connected())
+            conn.on_connect();
+
+        return;
+    }
+
     auto redis_conn = addConnection(e.info.host, e.info.port);
 
     if(!redis_conn) {
@@ -187,25 +198,20 @@ void RedisApp::process_internal_reply(const RedisConnection *c, int result, cons
     }
 
     auto script = script_req->script;
-    if(!script) {
-        conn->on_disconnect();
-        return;
-    }
-
     if(data.getType() != AmArg::CStr) {
-        ERROR("script '%s' loaded hash with wrong type", script->name.c_str());
+        ERROR("script '%s' loaded hash with wrong type", script.name.c_str());
         conn->on_disconnect();
         return;
     }
 
     const char* hash = data.asCStr();
     if(!hash) {
-        ERROR("script '%s' loaded hash is nil", script->name.c_str());
+        ERROR("script '%s' loaded hash is nil", script.name.c_str());
         conn->on_disconnect();
         return;
     }
 
-    DBG("script '%s' loaded with hash '%s'", script->name.c_str(), hash);
+    DBG("script '%s' loaded with hash '%s'", script.name.c_str(), hash);
     conn->on_script_loaded(script, hash);
 }
 
@@ -278,7 +284,7 @@ bool RedisApp::Connection::is_connected()
     return redis_conn->is_connected() && is_scripts_loaded();
 }
 
-void RedisApp::Connection::on_script_loaded(const RedisScript *script, const char *hash)
+void RedisApp::Connection::on_script_loaded(const RedisScript& script, const char *hash)
 {
     set_script_hash(script, hash);
 
@@ -295,10 +301,10 @@ bool RedisApp::Connection::is_scripts_loaded()
     return true;
 }
 
-void RedisApp::Connection::set_script_hash(const RedisScript *script, const char *hash)
+void RedisApp::Connection::set_script_hash(const RedisScript& script, const char *hash)
 {
     for(auto &s : info.scripts) {
-        if(s.name != script->name)
+        if(s.name != script.name)
             continue;
 
         s.hash = hash;
@@ -319,7 +325,7 @@ void RedisApp::Connection::load_scripts()
         }
 
         redis_app->process_internal_request(redis_conn,
-            new RedisScriptLoadRequest(&s), "SCRIPT LOAD %s", data.c_str());
+            new RedisScriptLoadRequest(s), "SCRIPT LOAD %s", data.c_str());
     }
 }
 

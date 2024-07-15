@@ -53,9 +53,9 @@ class RedisApp
         void on_connect();
         void on_disconnect();
         bool is_connected();
-        void on_script_loaded(const RedisScript *script, const char *hash);
+        void on_script_loaded(const RedisScript& script, const char *hash);
         bool is_scripts_loaded();
-        void set_script_hash(const RedisScript *script, const char *hash);
+        void set_script_hash(const RedisScript& script, const char *hash);
         void load_scripts();
         void drop_data();
         void post_conn_state(RedisConnectionState::RedisConnState state);

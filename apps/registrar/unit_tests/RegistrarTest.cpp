@@ -1,32 +1,7 @@
 #include "RegistrarTest.h"
 #include "../SipRegistrar.h"
 
-class RegistrarTestInitialiser
-{
-protected:
-    RedisSettings settings;
-    RedisTestServer* test_server;
-
-    void initTestServer()
-    {
-        test_server->response_enabled.set(false);
-        test_server->addLoadScriptCommandResponse(register_script_path, register_script_hash);
-        test_server->addLoadScriptCommandResponse(aor_lookup_script_path, aor_lookup_script_hash);
-        test_server->addLoadScriptCommandResponse(rpc_aor_lookup_script_path, rpc_aor_lookup_script_hash);
-        test_server->addLoadScriptCommandResponse(load_contacts_script_path, load_contacts_script_hash);
-        test_server->response_enabled.set(true);
-    }
-public:
-    RegistrarTestInitialiser()
-    {
-        DBG("RegistrarTestInitialiser");
-        test_server = &redis_test::instance()->test_server;
-        settings = redis_test::instance()->settings;
-        initTestServer();
-    }
-};
-typedef singleton<RegistrarTestInitialiser> registrar_init;
-static registrar_init* registrar_global = registrar_init::instance();
+#define registrar SipRegistrar::instance()
 
 RegistrarTest::RegistrarTest() {
     DBG("RegistrarTest");
@@ -39,15 +14,44 @@ void RegistrarTest::SetUp() {
 
     test_server->response_enabled.set(false);
     test_server->clear();
-    test_server->addLoadScriptCommandResponse(register_script_path, register_script_hash);
-    test_server->addLoadScriptCommandResponse(aor_lookup_script_path, aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(rpc_aor_lookup_script_path, rpc_aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(load_contacts_script_path, load_contacts_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(REGISTER_SCRIPT), register_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(LOAD_CONTACTS_SCRIPT), load_contacts_script_hash);
     test_server->response_enabled.set(true);
 
+    auto isConnExists = [&](ConnState state)
+    {
+        for(auto & conn : registrar->connections)
+            if(conn->state == state) return true;
+
+        return false;
+    };
+
+    /*
+     * registrar tries to connect all connections on SipRegistrar::run();
+     * if we are using test server 'SCRIPT LOAD' cached answer can be absent;
+     * that's why some of connections can be disconnected at this point;
+     * connection is considered as 'Connected' only when it connected to db
+     * and all connection's scripts are loaded to db;
+     * wait for 'Connected' or 'Disconnected' states;
+     *
+     */
+
     time_t time_ = time(0);
-    while(!SipRegistrar::instance()->is_connected()) {
-        DBG("waiting for database connection");
+    while(isConnExists(ConnState::None)) {
+        DBG("waiting for connections states");
+        usleep(100);
+        ASSERT_FALSE(time(0) - time_ > 3);
+    }
+
+    // check is need to reconnect
+    if(isConnExists(ConnState::Disconnected))
+        registrar->connect_all();
+
+    time_ = time(0);
+    while(isConnExists(ConnState::Disconnected)) {
+        DBG("waiting for all connections in 'Connected' state");
         usleep(100);
         ASSERT_FALSE(time(0) - time_ > 3);
     }
@@ -55,10 +59,10 @@ void RegistrarTest::SetUp() {
 
 void RegistrarTest::dumpKeepAliveContexts(AmArg& ret)
 {
-    SipRegistrar::instance()->dump_keep_alive_contexts(ret);
+    registrar->dump_keep_alive_contexts(ret);
 }
 
 void RegistrarTest::clear_keepalive_context()
 {
-    SipRegistrar::instance()->clear_keep_alive_contexts();
+    registrar->clear_keep_alive_contexts();
 }

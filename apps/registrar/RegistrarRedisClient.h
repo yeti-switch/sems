@@ -12,25 +12,34 @@ using std::unique_ptr;
 
 #include "SipRegistrarConfig.h"
 
-#define REG_READ_CONN_ID "registrar_read"
-#define REG_SUBSCR_READ_CONN_ID "subscription_read"
-#define REG_WRITE_CONN_ID "registrar_write"
+#define REG_READ_CONN_ID            "registrar_read"
+#define REG_SUBSCR_READ_CONN_ID     "subscription_read"
+#define REG_WRITE_CONN_ID           "registrar_write"
 
-#define REGISTER_SCRIPT "register_script"
-#define LOAD_CONTACTS_SCRIPT "load_contacts_script"
-#define AOR_LOOKUP_SCRIPT "aor_lookup_script"
-#define RPC_AOR_LOOKUP_SCRIPT "rpc_aor_lookup_script"
+#define REGISTER_SCRIPT             "register"
+#define LOAD_CONTACTS_SCRIPT        "load_contacts"
+#define AOR_LOOKUP_SCRIPT           "aor_lookup"
+#define RPC_AOR_LOOKUP_SCRIPT       "rpc_aor_lookup"
+
+class RegistrarTest;
 
 class RegistrarRedisClient
   : public Configurable
 {
   protected:
+    friend RegistrarTest;
+
     bool use_functions;
+    string scripts_dir;
 
     struct Connection {
         string id;
         RedisConnectionInfo info;
-        bool is_connected;
+        enum State{
+            None,
+            Connected,
+            Disconnected
+        } state;
 
         Connection(const string &id);
         virtual ~Connection();
@@ -46,10 +55,11 @@ class RegistrarRedisClient
     virtual void on_connect(const string &conn_id, const RedisConnectionInfo &info);
     virtual void on_disconnect(const string &conn_id, const RedisConnectionInfo &info);
 
+    string get_script_path(const string &sript_name);
+
   public:
     RegistrarRedisClient();
     virtual ~RegistrarRedisClient() {}
     virtual void connect_all();
     int configure(cfg_t* cfg) override;
-    bool is_connected();
 };

@@ -9,9 +9,9 @@ struct Utils
 struct RedisScriptLoadRequest
   : AmObject
 {
-    const RedisScript *script;
+    RedisScript script;
 
-    RedisScriptLoadRequest(const RedisScript *script)
+    RedisScriptLoadRequest(const RedisScript& script)
       : script(script)
     {}
 };
