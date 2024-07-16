@@ -68,7 +68,7 @@ bool AmStreamConnection::isUseConnection(ConnectionType type)
     return type == conn_type;
 }
 
-bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr)
+bool AmStreamConnection::isAddrConnection(struct sockaddr_storage* recv_addr) const
 {
     if(recv_addr->ss_family == AF_INET) {
         return SAv4(&r_addr)->sin_port==SAv4(recv_addr)->sin_port &&
@@ -172,6 +172,14 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
 
 void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* rv_time)
 {
+    if(!passive && transport->getRtpStream()->isSymmetricCandidateEnable()) {
+        AmStreamConnection* conn = transport->getCurRtpConn();
+        if(transport->getTransportType() == RTCP_TRANSPORT)
+            conn = transport->getCurRtcpConn();
+        if(conn && conn != this)
+            setPassiveMode(true);
+    }
+
     if(parent) parent->handleSymmetricRtp(recv_addr, rv_time);
 
     if(passive)
@@ -189,6 +197,12 @@ void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, 
         }
 
         transport->getRtpStream()->onSymmetricRtp();
+
+        // symmetric ice candidate
+        if(transport->getRtpStream()->isSymmetricCandidateEnable()) {
+            IceContext* context = transport->getRtpStream()->getIceContext(transport->getTransportType());
+            if(context) context->connectionTrafficDetected(recv_addr);
+        }
 
         // symmetric RTP
         if(!transport->getRtpStream()->isSymmetricRtpEndless()) {

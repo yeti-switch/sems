@@ -73,7 +73,6 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
                             transport->getConnFactory()->ice_cred.lpriority,
                             candidate.priority);
             transport->addConnection(conn);
-            conn->send_request();
         } catch(string& error) {
             CLASS_ERROR("ICE candidate STUN connection error: %s", error.c_str());
         }
@@ -85,14 +84,11 @@ void AmMediaIceState::removeStunConnections()
     CLASS_DBG("removeConnections, conn_type:%s, state:%s, type:%s",
               AmStreamConnection::connType2Str(AmStreamConnection::STUN_CONN).c_str(),
               state2str(), transport->type2str());
-    transport->removeAllowedIceAddrs();
     transport->removeConnections(AmStreamConnection::STUN_CONN);
 }
 
 AmMediaState* AmMediaIceState::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
 {
-    transport->storeAllowedIceAddr(remote_addr, priority);
-
     const string address = am_inet_ntop(remote_addr);
     const int port = am_get_port(remote_addr);
     CLASS_DBG("allow stun connection by addr: %s, port: %d, state: %s, type: %s",
@@ -114,24 +110,64 @@ AmMediaState* AmMediaIceState::allowStunConnection(const sockaddr_storage* remot
     return next_state;
 }
 
+AmMediaState* AmMediaIceState::allowStunPair(const sockaddr_storage* remote_addr)
+{
+    const string address = am_inet_ntop(remote_addr);
+    const int port = am_get_port(remote_addr);
+    CLASS_DBG("allow stun pair by addr: %s, port: %d, state: %s, type: %s",
+              address.c_str(), port, state2str(), transport->type2str());
+
+    resetCurRtpConnection();
+    return this;
+}
+
+AmMediaState * AmMediaIceState::connectionTrafficDetected(const sockaddr_storage* remote_addr)
+{
+    const string address = am_inet_ntop(remote_addr);
+    const int port = am_get_port(remote_addr);
+    CLASS_DBG("connection trafic detected by addr: %s, port: %d, state: %s, type: %s",
+              address.c_str(), port, state2str(), transport->type2str());
+
+    resetCurRtpConnection();
+    return this;
+}
+
+void AmMediaIceState::setCurrentConnection(AmStreamConnection* conn)
+{
+    if(transport->getTransportType() == RTP_TRANSPORT)
+        transport->setCurRtpConn(conn);
+    else if(transport->getTransportType() == RTCP_TRANSPORT)
+        transport->setCurRtcpConn(conn);
+}
+
 void AmMediaIceState::resetCurRtpConnection() {
+    setCurrentConnection(nullptr);
     auto target_addr = transport->getAllowedIceAddr();
     if(!target_addr) return;
 
+    AmStreamConnection::ConnectionType conn_type = AmStreamConnection::RTP_CONN;
+    if(transport->getTransportType() == RTCP_TRANSPORT) {
+        conn_type = AmStreamConnection::RTCP_CONN;
+    }
+
     transport->findConnection(
-        [&](auto conn) { return conn->getConnType() == AmRawConnection::ZRTP_CONN && conn->isAddrConnection(target_addr); },
-        [&](auto conn) { transport->setCurRtpConn(conn); }
+        [&](auto conn) { return conn->getConnType() == AmStreamConnection::ZRTP_CONN && conn->isAddrConnection(target_addr); },
+        [&](auto conn) { setCurrentConnection(conn); }
     );
 
     if(!transport->getCurRtpConn()) {
         transport->findConnection(
-            [&](auto conn) { return conn->getConnType() == AmRawConnection::RTP_CONN && conn->isAddrConnection(target_addr); },
-            [&](auto conn) { transport->setCurRtpConn(conn); }
+            [&](auto conn) { return conn->getConnType() == conn_type && conn->isAddrConnection(target_addr); },
+            [&](auto conn) { setCurrentConnection(conn); }
         );
     }
 
+    AmStreamConnection* conn = transport->getCurRtpConn();
+    if(transport->getTransportType() == RTCP_TRANSPORT)
+        conn = transport->getCurRtcpConn();
     transport->setRAddr(am_inet_ntop(target_addr), am_get_port(target_addr));
-    DBG("current rtp connection type %s", transport->getCurRtpConn() ? AmStreamConnection::connType2Str(transport->getCurRtpConn()->getConnType()).c_str() : "");
+    DBG("current %s connection type %s", transport->getTransportType() == RTP_TRANSPORT ? "rtp" : "rtcp",
+                                         conn ? AmStreamConnection::connType2Str(conn->getConnType()).c_str() : "");
 }
 
 bool AmMediaIceState::isSrtp()

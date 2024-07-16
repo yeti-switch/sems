@@ -95,7 +95,8 @@
 #define PARAM_FORCE_OUTBOUND_NAME    "force_outbound_proxy"
 #define PARAM_FORCE_OUTBOUND_IF_NAME "force_outbound_if"
 #define PARAM_FORCE_CANCEL_ROUTE_SET "force_cancel_route_set"
-#define PARAM_FORCE_SYMMETRIC_NAME   "force_symmetric_rtp"
+#define PARAM_FORCE_SYMM_RTP_NAME    "force_symmetric_rtp"
+#define PARAM_FORCE_SYMM_PAIR_NAME   "force_symmetric_candidate"
 #define PARAM_USE_RAW_SOCK_NAME      "use_raw_sockets"
 #define PARAM_DISABLE_DNS_SRV_NAME   "disable_dns_srv"
 #define PARAM_DETECT_INBAND_NAME     "detect_inband_dtmf"
@@ -565,7 +566,8 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_OUTBOUND_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_OUTBOUND_IF_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_CANCEL_ROUTE_SET, cfg_false, CFGF_NONE),
-        CFG_BOOL(PARAM_FORCE_SYMMETRIC_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_SYMM_RTP_NAME, cfg_false, CFGF_NONE),
+        CFG_BOOL(PARAM_FORCE_SYMM_PAIR_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_USE_RAW_SOCK_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_DISABLE_DNS_SRV_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_DETECT_INBAND_NAME, cfg_false, CFGF_NONE),
@@ -1126,7 +1128,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->force_outbound_proxy = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_NAME);
     config->force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
     config->force_cancel_route_set = cfg_getbool(gen, PARAM_FORCE_CANCEL_ROUTE_SET);
-    config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMMETRIC_NAME);
+    config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMM_RTP_NAME);
+    config->force_symmetric_candidate = cfg_getbool(gen, PARAM_FORCE_SYMM_PAIR_NAME);
     config->symmetric_rtp_packets = cint(cfg_getint(gen, PARAM_SYMMETRIC_PACKETS_NAME));
     config->symmetric_rtp_delay = cint(cfg_getint(gen, PARAM_SYMMETRIC_DELAY_NAME));
     config->use_raw_sockets = cfg_getbool(gen, PARAM_USE_RAW_SOCK_NAME);

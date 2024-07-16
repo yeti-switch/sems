@@ -464,6 +464,9 @@ int AmRtpAudio::init(
         setStereoRecorders(session->getStereoRecorders());
     }
 
+    setSymmetricCandidate(session->getRtpSymmetricCandidate());
+    setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
+
     return 0;
 }
 

@@ -59,7 +59,7 @@ public:
     virtual ~AmStreamConnection();
 
     virtual bool isUseConnection(ConnectionType type);
-    bool isAddrConnection(struct sockaddr_storage* recv_addr);
+    bool isAddrConnection(struct sockaddr_storage* recv_addr) const;
     ConnectionType getConnType();
     virtual ssize_t send(AmRtpPacket* packet);
     virtual void process_packet(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
@@ -73,7 +73,7 @@ public:
     void getRAddr(sockaddr_storage* addr) { memcpy(addr, &r_addr, sizeof(sockaddr_storage)); }
     bool isMute() { return mute; }
     AmMediaTransport* getTransport() { return transport; }
-    void getInfo(AmArg& ret);
+    virtual void getInfo(AmArg& ret);
 protected:
     void resolveRemoteAddress(const string& remote_addr, int remote_port);
 protected:

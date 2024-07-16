@@ -12,6 +12,13 @@ AmMediaState* AmMediaIceSrtpState::init(const AmMediaStateArgs& args)
     return AmMediaSrtpState::init(args);
 }
 
+AmMediaState * AmMediaIceSrtpState::initSrtp(AmStreamConnection::ConnectionType base_conn_type)
+{
+    AmMediaSrtpState::initSrtp(base_conn_type);
+    resetCurRtpConnection();
+    return this;
+}
+
 AmMediaState* AmMediaIceSrtpState::update(const AmMediaStateArgs& args)
 {
     updateConnections(args);

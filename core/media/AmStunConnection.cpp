@@ -2,35 +2,344 @@
 #include "AmStunConnection.h"
 #include "AmMediaTransport.h"
 #include "AmRtpStream.h"
+#include "AmConcurrentVector.h"
 #include "stun/stunbuilder.h"
 #include "sip/ip_util.h"
 
 #include <byteswap.h>
 
 #define STUN_ERROR_ROLECONFLICT 487
+#define STUN_ERROR_INCORRECT_TRANSID 404
+
+static const uint16_t STUN_ATTRIBUTE_USE_CANDIDATE = 0x0025;
+
+ReferenceUniquePtr::ReferenceUniquePtr(AmStunConnection* conn)
+ : std::unique_ptr<AmStunConnection, void (*)(AmStunConnection* item) >(conn, ReferenceDeleter){
+     if(conn) inc_ref(conn);
+}
+ 
+void ReferenceUniquePtr::reset(AmStunConnection* conn)
+{
+    if(conn) inc_ref(conn);
+    std::unique_ptr<AmStunConnection, void (*)(AmStunConnection* item) >::reset(conn);
+}
+
+void ReferenceUniquePtr::reset(const ReferenceUniquePtr& ptr)
+{
+    if(ptr) inc_ref(ptr.get());
+    std::unique_ptr<AmStunConnection, void (*)(AmStunConnection* item) >::reset(ptr.get());
+}
+
+ReferenceUniquePtr::operator AmStunConnection *()
+{
+    return get();
+}
+
+IceContext::IceContext(AmRtpStream* stream, int type)
+: stream(stream)
+, state(ICE_INITIAL)
+, type(type)
+, current_candidate(nullptr)
+{
+    CLASS_DBG("IceContext(): transport type %d", type);
+    stun_processor::instance()->add_ice_context(this);
+}
+
+IceContext::~IceContext() {
+    stun_processor::instance()->remove_ice_context(this);
+    reset();
+}
+
+void IceContext::addConnection(AmStunConnection* conn) {
+    CLASS_DBG("add pair in ice context %s:%u/%s:%u, priority %u",
+              conn->getTransport()->getLocalIP().c_str(), conn->getTransport()->getLocalPort(),
+              conn->getRHost().c_str(), conn->getRPort(), conn->getPriority());
+    AmLock lock(pairs_mut);
+    pairs.emplace(conn->getPriority(), conn);
+    if(state == ICE_KEEP_ALIVE ||
+       state == ICE_NOMINATIONS)
+        state = ICE_CONNECTIVITY_CHECK;
+}
+
+void IceContext::updateConnection(AmStunConnection* conn)
+{
+    CLASS_DBG("update pair in ice context %s:%u/%s:%u, priority %u",
+              conn->getTransport()->getLocalIP().c_str(), conn->getTransport()->getLocalPort(),
+              conn->getRHost().c_str(), conn->getRPort(), conn->getPriority());
+
+    ReferenceGuard guard(conn);
+    removeConnection(conn);
+    addConnection(conn);
+}
+
+void IceContext::removeConnection(AmStunConnection* conn)
+{
+    AmLock lock(pairs_mut);
+    for(auto pair = pairs.begin(); pair != pairs.end(); pair++) {
+        if(pair->second == conn) {
+            pairs.erase(pair);
+            break;
+        }
+    }
+}
+
+void IceContext::useCandidate(AmStunConnection* conn)
+{
+    switch(state) {
+    case ICE_NOMINATIONS:
+    case ICE_KEEP_ALIVE:
+        setCurrentCandidate(conn);
+        allowStunPair();
+        break;
+    case ICE_CONNECTIVITY_CHECK: 
+        WARN("use candidate in incorrect ice state %d", state);
+    default: break;
+    }
+}
+
+void IceContext::initContext()
+{
+    if(state == ICE_INITIAL) {
+        setCurrentCandidate(nullptr);
+        state = ICE_CONNECTIVITY_CHECK;
+    }
+}
+
+void IceContext::connectionTrafficDetected(sockaddr_storage* remote_addr)
+{
+    ReferenceUniquePtr conn(nullptr);
+    {
+        AmLock lock(pairs_mut);
+        conn.reset(current_candidate.get());
+    }
+    if(state == ICE_KEEP_ALIVE && conn) {
+        bool found = false;
+        if(!conn->isAddrConnection(const_cast<sockaddr_storage*>(remote_addr))) {
+            AmLock lock(pairs_mut);
+            for(auto& pair : pairs) {
+                if(pair.second->isAddrConnection(const_cast<sockaddr_storage*>(remote_addr))) {
+                    found = true;
+                    conn.reset(pair.second);
+                    break;
+                }
+            }
+        }
+        if(found) {
+            setCurrentCandidate(conn);
+            AmMediaTransport* transport = conn->getTransport();
+            stream->connectionTrafficDetected(transport, remote_addr);
+        }
+    }
+}
+
+AmStunConnection* IceContext::getNominatedPair()
+{
+    AmLock lock(pairs_mut);
+    for(auto pair = pairs.rbegin();
+        pair != pairs.rend(); pair++) {
+            AmStunConnection::PairState state = pair->second->getState();
+            if(state == AmStunConnection::PAIR_SUCCEEDED) {
+                return pair->second;
+            }
+    }
+    return nullptr;
+}
+
+sockaddr_storage* IceContext::getAllowedIceAddr(int family)
+{
+    AmLock lock(pairs_mut);
+    if(current_candidate) {
+        sockaddr_storage* sa = &current_family_addr[family];
+        if(family == current_candidate->getTransport()->getLocalAddrFamily()) {
+            current_candidate->getRAddr(sa);
+            return sa;
+        }
+    }
+    for(auto& pair : pairs) {
+        AmStunConnection::PairState state = pair.second->getState();
+        sockaddr_storage* sa = &current_family_addr[family];
+        if(state == AmStunConnection::PAIR_SUCCEEDED &&
+           family == pair.second->getTransport()->getLocalAddrFamily()) {
+            pair.second->getRAddr(sa);
+            return sa;
+        }
+    }
+    return nullptr;
+}
+
+AmMediaTransport* IceContext::getCurrentTransport()
+{
+    AmLock lock(pairs_mut);
+    for(auto& pair : pairs) {
+        AmStunConnection::PairState state = pair.second->getState();
+        if(state == AmStunConnection::PAIR_SUCCEEDED) {
+            return pair.second->getTransport();
+        }
+    }
+    return nullptr;
+}
+
+void IceContext::reset() {
+    CLASS_DBG("reset ice context: type %d", type);
+    AmLock lock(pairs_mut);
+    for(auto& pair : pairs) {
+        stun_processor::instance()->remove_timer(pair.second);
+    }
+    pairs.clear();
+    current_candidate.reset(nullptr);
+    state = ICE_INITIAL;
+}
+
+bool IceContext::isUseCandidate(AmStunConnection* conn)
+{
+    AmLock lock(pairs_mut);
+    if(state == ICE_NOMINATIONS || state == ICE_KEEP_ALIVE) {
+        if(!stream->isIceControlled() && conn == current_candidate.get()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void IceContext::failedCandidate(AmStunConnection*)
+{
+    switch(state) {
+    case ICE_NOMINATIONS:
+    case ICE_KEEP_ALIVE: {
+        state = ICE_NOMINATIONS;
+        setCurrentCandidate(nullptr);
+    }
+    default: break;
+    };
+}
+
+void IceContext::allowCandidate(AmStunConnection* conn)
+{
+    if(conn->getState() == AmStunConnection::PAIR_WAITING &&
+       state == ICE_KEEP_ALIVE) {
+        state = ICE_NOMINATIONS;
+        setCurrentCandidate(nullptr);
+    }
+
+    sockaddr_storage ss;
+    conn->getRAddr(&ss);
+    stream->allowStunConnection(conn->getTransport(), &ss, conn->getPriority());
+}
+
+void IceContext::allowStunPair()
+{
+    sockaddr_storage ss;
+    AmMediaTransport* transport;
+    {
+        AmLock lock(pairs_mut);
+        assert(current_candidate);
+        current_candidate->getRAddr(&ss);
+        transport = current_candidate->getTransport();
+    }
+    stream->allowStunPair(transport, &ss);
+}
+
+void IceContext::setCurrentCandidate(AmStunConnection* conn)
+{
+    AmLock lock(pairs_mut);
+    current_candidate.reset(conn);
+}
+
+void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigned long long>& connections)
+{
+    ReferenceUniquePtr conn(nullptr);
+    switch(state) {
+    case ICE_CONNECTIVITY_CHECK:
+    {
+        bool finish = true, is_first = true;
+        {
+            AmLock lock(pairs_mut);
+            if(pairs.empty()) break;
+
+            auto pair = pairs.rbegin();
+            while(pair != pairs.rend()) {
+                AmStunConnection::PairState pstate = pair->second->getState();
+                switch(pstate) {
+                case AmStunConnection::PAIR_WAITING:
+                    connections[pair->second] = STUN_TA_TIMEOUT;
+                case AmStunConnection::PAIR_FROZEN:
+                    if(is_first) {
+                        conn.reset(pair->second);
+                        is_first = false;
+                        connections[pair->second] = STUN_TA_TIMEOUT;
+                    }
+                case AmStunConnection::PAIR_IN_PROGRESS:
+                    finish = false;
+                default: break;
+                }
+                pair++;
+            }
+        }
+        if(finish) {
+            DBG("ice: finished connectivity check phase(type %d)", type);
+            state = ICE_NOMINATIONS;
+        } else if(conn) {
+            conn->checkState();
+        }
+        break;
+    }
+    case ICE_NOMINATIONS:
+    {
+        {
+            AmLock lock(pairs_mut);
+            conn.reset(current_candidate.get());
+        }
+        if(conn) {
+            if(conn->getState() == AmStunConnection::PAIR_SUCCEEDED) {
+                DBG("ice: finished nomination phase(type %d)", type);
+                state = ICE_KEEP_ALIVE;
+            } else return;
+        } else {
+            conn.reset(getNominatedPair());
+            if(conn) {
+                setCurrentCandidate(conn.get());
+                if(stream->isIceControlled()) {
+                    DBG("ice: finished nomination phase(type %d)", type);
+                    state = ICE_KEEP_ALIVE;
+                } else {
+                    conn->checkState();
+                    connections[conn.get()] = STUN_TA_TIMEOUT;
+                    return;
+                }
+            } else return;
+        }
+        allowStunPair();
+        break;
+    }
+    case ICE_KEEP_ALIVE:
+    {
+        AmLock lock(pairs_mut);
+        connections[current_candidate.get()] = STUN_KEEPALIVE_TIMEOUT;
+        break;
+    }
+    default: break;
+    }
+}
 
 AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int _lpriority, unsigned int _priority)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::STUN_CONN),
-    isAuthentificated{false,false},
-    err_code(0),
+    state(PAIR_FROZEN),
     priority(_priority),
     lpriority(_lpriority),
+    current_trans_id(0),
     count(0),
-    intervals{0, 500, 1500, 3500, 7500, 15500, 31500, 39500},//rfc5389 7.2.1.Sending over UDP
-    local_ice_role_is_controlled(false)
+    retransmit_intervals{500, 1500, 3500, 7500, 15500, 31500, 39500},//rfc5389 7.2.1.Sending over UDP
+    context(transport->getRtpStream()->getIceContext(transport->getTransportType()))
 {
-    SA_transport(&r_addr) = transport->getTransportType();
     CLASS_DBG("AmStunConnection() r_host: %s, r_port: %d, transport: %hhu",
               r_host.data(), r_port, SA_transport(&r_addr));
-
-    ((uint32_t*)&local_tiebreaker)[0] = rand();
-    ((uint32_t*)&local_tiebreaker)[1] = rand();
+    SA_transport(&r_addr) = transport->getTransportType();
+    context->addConnection(this);
 }
 
 AmStunConnection::~AmStunConnection()
 {
     CLASS_DBG("~AmStunConnection()");
-    stun_processor::instance()->remove_timer(this);
 }
 
 void AmStunConnection::set_credentials(const string& luser, const string& lpassword,
@@ -41,6 +350,15 @@ void AmStunConnection::set_credentials(const string& luser, const string& lpassw
     remote_user = ruser;
     local_password = lpassword;
     remote_password = rpassword;
+}
+
+unsigned int AmStunConnection::getPriority()
+{
+    // see rfc 8445 6.1.2.3
+    unsigned long long pair_priority =
+        ((unsigned long long)1<<32)*(priority <= lpriority ? priority : lpriority) +
+        2*(priority <= lpriority ? lpriority : priority);
+    return pair_priority;
 }
 
 void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
@@ -55,6 +373,32 @@ void AmStunConnection::handleConnection(uint8_t* data, unsigned int size, struct
         check_request(&reader, recv_addr);
     } else if(msgClass == StunMsgClassSuccessResponse) {
         check_response(&reader, recv_addr);
+    }
+}
+
+void AmStunConnection::getInfo(AmArg& ret)
+{
+    AmStreamConnection::getInfo(ret);
+    ret["state"] = state2str(state);
+    ret["priority"] = getPriority();
+    ret["retransmit_count"] = count;
+}
+
+std::string AmStunConnection::state2str(AmStunConnection::PairState state)
+{
+    switch(state) {
+    case PAIR_FROZEN:
+        return "FROZEN";
+    case PAIR_WAITING:
+        return "WAITING";
+    case PAIR_IN_PROGRESS:
+        return "IN_PROGRESS";
+    case PAIR_RETRANSMIT:
+        return "RETRANSMIT";
+    case PAIR_FAILED:
+        return "FAILED";
+    case PAIR_SUCCEEDED:
+        return "SUCCEEDED";
     }
 }
 
@@ -111,12 +455,12 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
         remote_tiebreaker = bswap_64(*(uint64_t*)(
             reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
 
-        if(valid && ((*remote_ice_role_is_controlled) == local_ice_role_is_controlled)) {
+        if(valid && ((*remote_ice_role_is_controlled) == transport->getRtpStream()->isIceControlled())) {
             //roles conflict. less tiebreaker value means controlled mode
-            bool tiebreaked_local_role_is_controlled = local_tiebreaker < remote_tiebreaker;
-            if(tiebreaked_local_role_is_controlled != local_ice_role_is_controlled) {
+            bool tiebreaked_local_role_is_controlled = transport->getRtpStream()->getIceTieBreaker() < remote_tiebreaker;
+            if(tiebreaked_local_role_is_controlled != transport->getRtpStream()->isIceControlled()) {
                 //accept role change
-                change_ice_role();
+                transport->getRtpStream()->onIceRoleConflict();
             } else {
                 //reject ICE role change
                 err_code = STUN_ERROR_ROLECONFLICT;
@@ -134,9 +478,10 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     StunTransactionId trnsId;
     StunAttribute priority_attr;
     reader->GetTransactionId(&trnsId);
+    unsigned int new_priority = 0;
     if(valid && (S_OK == reader->GetAttributeByType(STUN_ATTRIBUTE_ICE_PRIORITY, &priority_attr))) {
         if(priority_attr.size == 4)
-            priority = htonl(*(int*)(reader->GetStream().GetDataPointerUnsafe() + priority_attr.offset));
+            new_priority = htonl(*(int*)(reader->GetStream().GetDataPointerUnsafe() + priority_attr.offset));
         else {
             err_code = STUN_ERROR_BADREQUEST;
             error_str = "incorrect priority attribute size";
@@ -144,13 +489,29 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
         }
 
         // see rfc8445 5.1.2
-        if (priority >= (unsigned int)(1<<31) || priority == 0) {
+        if (valid && (new_priority >= (unsigned int)(1<<31) || new_priority == 0)) {
             err_code = STUN_ERROR_BADREQUEST;
             error_str = "incorrect priority attribute value";
             valid = false;
         }
     }
+    if(new_priority != priority) {
+        priority = new_priority;
+        context->updateConnection(this);
+    }
 
+    bool use_candidate = false;
+    StunAttribute useCandidate;
+    if(valid && (S_OK == reader->GetAttributeByType(STUN_ATTRIBUTE_USE_CANDIDATE, &useCandidate))) {
+        if(transport->getRtpStream()->isIceControlled())
+            use_candidate = true;
+        else {
+            err_code = STUN_ERROR_BADREQUEST;
+            error_str = "invalid role for use candidate attribute";
+            valid = false;
+        }
+    }
+    
     CStunMessageBuilder builder;
     builder.AddBindingResponseHeader(valid);
     builder.AddTransactionId(trnsId);
@@ -169,42 +530,52 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     HRESULT ret = builder.GetResult(&buffer);
     if(ret == S_OK) {
         transport->send(addr, (unsigned char*)buffer->GetData(), buffer->GetSize(), AmStreamConnection::STUN_CONN);
-        if(valid && !isAuthentificated[AUTH_REQUEST]) {
-            isAuthentificated[AUTH_REQUEST] = true;
-            checkAllowPair();
+        if(valid) {
+            allow_candidate(use_candidate);
         }
     }
 }
 
-bool AmStunConnection::isAllowPair() {
-    for(int i = 0; i < sizeof(isAuthentificated); i++)
-        if(!isAuthentificated[i]) return false;
-    return true;
-}
-
-
-void AmStunConnection::checkAllowPair()
+void AmStunConnection::allow_candidate(bool use_candidate)
 {
-    if(!isAllowPair()) return;
-    transport->getRtpStream()->allowStunConnection(transport, &r_addr, priority);
-}
-
-//rfc8445 7.2.5.1
-void AmStunConnection::change_ice_role()
-{
-    local_ice_role_is_controlled = !local_ice_role_is_controlled;
+    switch(state) {
+    case PAIR_WAITING:
+    case PAIR_IN_PROGRESS:
+    case PAIR_RETRANSMIT:
+        state = PAIR_SUCCEEDED;
+        break;
+    case PAIR_FAILED:
+        state = PAIR_WAITING;
+        break;
+    case PAIR_FROZEN:
+    case PAIR_SUCCEEDED:
+        return;
+    }
+    CLASS_DBG("stun pair %s:%d", getRHost().c_str(), getRPort());
+    context->allowCandidate(this);
+    if(use_candidate)
+        context->useCandidate(this);
+    stun_processor::instance()->remove_timer(this);
 }
 
 void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_storage* addr)
 {
     bool valid = true;
     std::string error_str;
-    uint16_t error_code = 0;
-    if(reader->GetErrorCode(&error_code) == S_OK) {
-        if(error_code == STUN_ERROR_ROLECONFLICT) {
-            change_ice_role();
+    uint16_t err_code = 0;
+
+    StunTransactionId trnsId;
+    reader->GetTransactionId(&trnsId);
+    if(*(unsigned short*)trnsId.id != current_trans_id) {
+        error_str = "invalid stun transaction id";
+        err_code = STUN_ERROR_INCORRECT_TRANSID;
+        valid = false;
+    }
+
+    if(valid && reader->GetErrorCode(&err_code) == S_OK) {
+        if(err_code == STUN_ERROR_ROLECONFLICT) {
+            transport->getRtpStream()->onIceRoleConflict();
         }
-        err_code = error_code;
         error_str = "error response";
         valid = false;
     }
@@ -225,12 +596,17 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         valid = false;
     }
 
-    if(valid && !isAuthentificated[AUTH_RESPONSE]) {
-        isAuthentificated[AUTH_RESPONSE] = true;
-        checkAllowPair();
+    if(valid) {
+        allow_candidate(false);
     } else if(!valid){
         string error("invalid stun message: ");
         transport->getRtpStream()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
+        if(err_code == STUN_ERROR_INCORRECT_TRANSID) return;
+        if(state == PAIR_IN_PROGRESS) {
+            state = PAIR_FAILED;
+            context->failedCandidate(this);
+            stun_processor::instance()->remove_timer(this);
+        }
     }
 }
 
@@ -251,6 +627,7 @@ void AmStunConnection::send_request()
     for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
         trnsId.id[i] = (uint8_t)rand();
     }
+    current_trans_id = *(unsigned short*)trnsId.id;
     builder.AddTransactionId(trnsId);
     string username = remote_user + ":" + local_user;
     builder.AddUserName(username.c_str());
@@ -259,10 +636,12 @@ void AmStunConnection::send_request()
     nt_info[0] = htons(1);
     builder.AddAttribute(STUN_ATTRIBUTE_NETWORK_INFO, &nt_info, 4);
 
-    uint64_t tb = bswap_64(local_tiebreaker);
+    uint64_t tb = bswap_64(transport->getRtpStream()->getIceTieBreaker());
     builder.AddAttribute(
-        local_ice_role_is_controlled ? STUN_ATTRIBUTE_ICE_CONTROLLED: STUN_ATTRIBUTE_ICE_CONTROLLING,
+        transport->getRtpStream()->isIceControlled() ? STUN_ATTRIBUTE_ICE_CONTROLLED: STUN_ATTRIBUTE_ICE_CONTROLLING,
         (uint8_t*)&tb, STUN_TIE_BREAKER_LENGTH);
+    if(context->isUseCandidate(this))
+        builder.AddAttribute(STUN_ATTRIBUTE_USE_CANDIDATE, nullptr, 0);
 
     int priority_netorder = htonl(lpriority);
     builder.AddAttribute(STUN_ATTRIBUTE_ICE_PRIORITY, (char*)&priority_netorder, 4);
@@ -276,22 +655,38 @@ void AmStunConnection::send_request()
     }
 }
 
+void AmStunConnection::checkState()
+{
+    CLASS_DBG("checkState: state = %hhu", state);
+    if(state == PAIR_FROZEN) {
+        state = PAIR_WAITING;
+        return;
+    } else if(state == PAIR_SUCCEEDED ||
+              state == PAIR_FAILED) {
+        state = PAIR_WAITING;
+    } else if(state == PAIR_WAITING) {
+        count = 0;
+        state = PAIR_IN_PROGRESS;
+    } else if(state == PAIR_IN_PROGRESS) {
+        state = PAIR_RETRANSMIT;
+        context->failedCandidate(this);
+    } else if(state == PAIR_RETRANSMIT) {
+        if(count == STUN_INTERVALS_COUNT) {
+            state = PAIR_FAILED;
+            context->failedCandidate(this);
+        }
+    } else return;
+    send_request();
+}
+
 std::optional<unsigned long long> AmStunConnection::checkStunTimer()
 {
-    DBG("will update stun timer: count %d", count);
-    if((isAllowPair() && count == STUN_INTERVALS_COUNT) ||
-        ++count <= STUN_INTERVALS_COUNT)
-    {
-        return intervals[count];
+    if(state == PAIR_IN_PROGRESS || state == PAIR_RETRANSMIT) {
+        DBG("will update retransmit stun timer: count %d", count);
+        if(++count < STUN_INTERVALS_COUNT){
+            return retransmit_intervals[count];
+        }
     }
     return std::nullopt;
 }
 
-void AmStunConnection::updateStunTimer()
-{
-    if(auto interval = checkStunTimer(); interval.has_value()) {
-        stun_processor::instance()->set_timer(this, interval.value());
-    } else {
-        stun_processor::instance()->remove_timer(this);
-    }
-}

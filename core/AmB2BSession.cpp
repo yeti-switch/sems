@@ -123,7 +123,6 @@ AmB2BSession::AmB2BSession(
     subs(p_subs),
     rtp_relay_mode(RTP_Direct),
     rtp_relay_force_symmetric_rtp(false),
-    symmetric_rtp_endless(false),
     rtp_ping(false),
     rtp_relay_transparent_seqno(true),
     rtp_relay_transparent_ssrc(true),
@@ -1076,11 +1075,6 @@ void AmB2BSession::setRtpInterface(int relay_interface) {
 void AmB2BSession::setRtpRelayForceSymmetricRtp(bool force_symmetric)
 {
     rtp_relay_force_symmetric_rtp = force_symmetric;
-}
-
-void AmB2BSession::setRtpEndlessSymmetricRtp(bool endless)
-{
-    symmetric_rtp_endless = endless;
 }
 
 void AmB2BSession::setRtpRelayTransparentSeqno(bool transparent)

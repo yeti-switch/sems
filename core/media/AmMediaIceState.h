@@ -2,9 +2,12 @@
 
 #include "AmMediaState.h"
 
+class AmStreamConnection;
+
 class AmMediaIceState
   : public virtual AmMediaState
 {
+    void setCurrentConnection(AmStreamConnection* conn);
 public:
     AmMediaIceState(AmMediaTransport *transport);
     AmMediaState* init(const AmMediaStateArgs& args) override;
@@ -16,6 +19,8 @@ protected:
     void removeStunConnections();
     void resetCurRtpConnection();
     AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority) override;
+    AmMediaState* allowStunPair(const sockaddr_storage* remote_addr) override;
+    AmMediaState * connectionTrafficDetected(const sockaddr_storage * remote_addr) override;
     AmMediaState* nextState();
     bool isSrtp();
     bool isDtls();

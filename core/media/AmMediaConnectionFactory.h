@@ -41,7 +41,6 @@ public:
 
     AmMediaConnectionFactory(AmMediaTransport* transport);
 
-    bool is_remote_ice_creds_equal(const SdpMedia& remote_media);
     int store_ice_cred(const SdpMedia& local_media, const SdpMedia& remote_media);
     int store_srtp_cred(const SdpMedia& local_media, const SdpMedia& remote_media);
     int store_srtp_cred(uint16_t srtp_profile, const string& local_key, const string& remote_key);

@@ -75,6 +75,8 @@ public:
             state.reset(next_state);
     }
     void allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority);
+    void allowStunPair(const sockaddr_storage* remote_addr);
+    void connectionTrafficDetected(const sockaddr_storage* remote_addr);
     void onSrtpKeysAvailable();
     const char* state2str();
     const char* state2strUnsafe();
@@ -158,8 +160,6 @@ public:
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn);
 
-    void updateStunTimers();
-
     void stopReceiving();
     void resumeReceiving();
 
@@ -185,10 +185,7 @@ public:
     */
     void getSdpAnswer(const SdpMedia& offer, SdpMedia& answer);
     void prepareIceCandidate(SdpIceCandidate& candidate);
-    uint32_t getCurrentConnectionPriority();
-    void storeAllowedIceAddr(const sockaddr_storage* remote_addr, uint32_t priority);
     sockaddr_storage* getAllowedIceAddr();
-    void removeAllowedIceAddrs();
     void setIcePriority(unsigned int priority);
     void getInfo(AmArg& ret);
 
@@ -228,6 +225,7 @@ protected:
     /** Stream owning this transport */
     AmRtpStream* stream;
     AmStreamConnection* getSuitableConnection(bool rtcp);
+    IceContext* getIceContext();
 
 private:
     msg_logger *logger;
@@ -277,10 +275,7 @@ private:
     vector<SdpCrypto> local_crypto;
     SdpFingerPrint local_dtls_fingerprint;
 
-    AmMutex                     stream_mut;
-
-    map<uint32_t, sockaddr_storage> allowed_ice_addrs;
-
+    AmMutex stream_mut;
     trsp_acl media_acl;
 };
 

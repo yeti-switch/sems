@@ -3,7 +3,7 @@
 #include "AmUtils.h"
 #include "sip/ip_util.h"
 
-#define STUN_TIMER_INTERVAL_MICROSECONDS 125000
+#define STUN_TIMER_INTERVAL_MICROSECONDS STUN_TA_TIMEOUT*1000
 
 AmStunProcessor::AmStunProcessor()
   : epoll_fd(-1),
@@ -62,11 +62,39 @@ void AmStunProcessor::dispose()
     stop(true);
 }
 
+void AmStunProcessor::add_ice_context(IceContext* context)
+{
+    AmLock l(connections_mutex);
+    for(auto ctx : contexts) {
+        if(context == ctx) return;
+    }
+
+    DBG("AmStunProcessor::add ice context type: %d, stream %p",
+        context->getType(), context->getStream());
+    contexts.push_back(context);
+}
+
+void AmStunProcessor::remove_ice_context(IceContext* context)
+{
+    DBG("AmStunProcessor::remove ice context type: %d, stream %p",
+        context->getType(), context->getStream());
+    AmLock l(connections_mutex);
+    auto ctx = contexts.begin();
+    while(ctx != contexts.end()) {
+        if(context == *ctx) {
+            contexts.erase(ctx);
+            return;
+        }
+        ctx++;
+    }
+}
+
 void AmStunProcessor::set_timer(AmStunConnection *connection, unsigned long long timeout)
 {
     DBG("AmStunProcessor::set_timer connection: %p, timeout: %llu",
         connection, timeout);
     AmLock l(connections_mutex);
+    inc_ref(connection);
     auto now = wheeltimer::instance()->unix_ms_clock.get();
     connections[connection] = now + timeout;
 }
@@ -75,7 +103,8 @@ void AmStunProcessor::remove_timer(AmStunConnection *connection)
 {
     DBG("AmStunProcessor::remove_timer for %p", connection);
     AmLock l(connections_mutex);
-    connections.erase(connection);
+    if(connections.erase(connection))
+        dec_ref(connection);
 }
 
 void AmStunProcessor::on_timer()
@@ -88,14 +117,12 @@ void AmStunProcessor::on_timer()
     //process connections
     auto i = connections.begin();
     while(i != connections.end()) {
-        /*DBG("AmStunProcessor::on_timer process connection: %p, now: %llu, timeout: %llu",
-            i->first, now, i->second);*/
         if(now > i->second) {
-            //DBG("send_request for connection %p", i->first);
-            i->first->send_request();
+            i->first->checkState();
             if(auto interval = i->first->checkStunTimer(); interval.has_value()) {
                 i->second = now + interval.value();
             } else {
+                dec_ref(i->first);
                 i = connections.erase(i);
                 continue;
             }
@@ -103,65 +130,15 @@ void AmStunProcessor::on_timer()
         ++i;
     }
 
-}
-
-#if 0
-bool AmStunProcessor::exist(const sockaddr_storage* addr)
-{
-    bool res;
-
-    sp_bucket_base* bucket = get_bucket(hashlittle(addr, SA_len(addr), 0) & STUN_PEER_HT_MASK);
-
-    bucket->lock();
-    res = bucket->exist(*(const sp_addr*)addr);
-    bucket->unlock();
-
-    return res;
-}
-
-void AmStunProcessor::insert(const sockaddr_storage* addr, AmStunConnection* conn)
-{
-    DBG("AmStunProcessor::insert(%s:%hu/%hhu,%p)",
-        get_addr_str(addr).data(),
-        am_get_port(addr),
-        SA_transport(const_cast<sockaddr_storage * >(addr)),
-        conn);
-
-    sp_bucket_base* bucket = get_bucket(hashlittle(addr, SA_len(addr), 0) & STUN_PEER_HT_MASK);
-
-    bucket->lock();
-    if(!bucket->exist(*(const sp_addr*)addr)) {
-        bucket->insert(*(const sp_addr*)addr,conn);
-    } else {
-        DBG("AmStunProcessor::insert() entry exists. insert skipped");
+    std::unordered_map<AmStunConnection *, unsigned long long> new_conns;
+    for(auto context : contexts) {
+        context->updateStunTimers(new_conns);
     }
-    bucket->unlock();
-}
-
-void AmStunProcessor::remove(const sockaddr_storage* addr)
-{
-    DBG("AmStunProcessor::remove(%s:%hu/%hhu)",
-        get_addr_str(addr).data(),
-        am_get_port(addr),
-        SA_transport(const_cast<sockaddr_storage * >(addr)));
-
-    sp_bucket_base* bucket = get_bucket(hashlittle(addr, SA_len(addr), 0) & STUN_PEER_HT_MASK);
-
-    bucket->lock();
-    bucket->remove(*(const sp_addr*)addr);
-    bucket->unlock();
-}
-
-void AmStunProcessor::fire(const sockaddr_storage* addr)
-{
-    //DBG("AmStunProcessor::fire(%s)", get_addr_str(addr).data());
-    sp_bucket_base* bucket = get_bucket(hashlittle(addr, SA_len(addr), 0) & STUN_PEER_HT_MASK);
-
-    bucket->lock();
-    auto c = bucket->get(addr);
-    if(c) {
-        c->send_request();
+    for(auto conn : new_conns) {
+        if(connections.find(conn.first) == connections.end()) {
+            inc_ref(conn.first);
+            connections[conn.first] = now + conn.second;
+        }
     }
-    bucket->unlock();
 }
-#endif
+

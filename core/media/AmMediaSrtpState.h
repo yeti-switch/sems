@@ -9,7 +9,7 @@ class AmMediaSrtpState
 public:
     AmMediaSrtpState(AmMediaTransport *transport);
     /* dtls+srtp, zrtp+srtp; base_conn_type is dtls or zrtp */
-    AmMediaState* initSrtp(AmStreamConnection::ConnectionType base_conn_type);
+    virtual AmMediaState* initSrtp(AmStreamConnection::ConnectionType base_conn_type);
     void addConnections(const AmMediaStateArgs& args) override;
     void updateConnections(const AmMediaStateArgs& args) override;
     const char* state2str() override;

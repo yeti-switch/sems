@@ -9,6 +9,7 @@ class AmMediaIceSrtpState
 public:
     AmMediaIceSrtpState(AmMediaTransport *transport);
     AmMediaState* init(const AmMediaStateArgs& args) override;
+    AmMediaState* initSrtp(AmStreamConnection::ConnectionType base_conn_type) override;
     AmMediaState* update(const AmMediaStateArgs& args) override;
     AmMediaState* onSrtpKeysAvailable() override;
     void updateConnections(const AmMediaStateArgs & args) override;

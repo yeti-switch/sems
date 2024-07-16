@@ -9,7 +9,6 @@ AmMediaIceRestartState::AmMediaIceRestartState(AmMediaTransport *transport)
 
 AmMediaState* AmMediaIceRestartState::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
 {
-    transport->removeAllowedIceAddrs();
     removeConnections();
     return AmMediaIceState::allowStunConnection(remote_addr, priority);
 }

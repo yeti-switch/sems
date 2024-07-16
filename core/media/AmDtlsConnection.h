@@ -211,6 +211,7 @@ public:
         struct timeval recv_time) override;
     void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) override;
     ssize_t send(AmRtpPacket * packet) override;
+    void getInfo(AmArg& ret) override;
 };
 
 #endif/*AM_DTLS_CONNECTION_H*/

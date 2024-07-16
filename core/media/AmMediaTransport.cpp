@@ -92,6 +92,26 @@ void AmMediaTransport::allowStunConnection(const sockaddr_storage* remote_addr, 
         state.reset(next_state);
 }
 
+void AmMediaTransport::allowStunPair(const sockaddr_storage* remote_addr)
+{
+    AmLock l(state_mutex);
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->allowStunPair(remote_addr);
+
+    if(state.get() != next_state)
+        state.reset(next_state);
+}
+
+void AmMediaTransport::connectionTrafficDetected(const sockaddr_storage* remote_addr)
+{
+    AmLock l(state_mutex);
+    AmMediaState* next_state = 0;
+    if(state) next_state = state->connectionTrafficDetected(remote_addr);
+
+    if(state.get() != next_state)
+        state.reset(next_state);
+}
+
 void AmMediaTransport::onSrtpKeysAvailable()
 {
     AmLock l(state_mutex);
@@ -192,6 +212,11 @@ AmStreamConnection* AmMediaTransport::getSuitableConnection(bool rtcp)
         if(getCurUdptlConn()) return getCurUdptlConn();
     }
     return getCurRawConn();
+}
+
+IceContext * AmMediaTransport::getIceContext()
+{
+    return stream->getIceContext(type);
 }
 
 string AmMediaTransport::getRHost(bool rtcp)
@@ -490,32 +515,14 @@ void AmMediaTransport::prepareIceCandidate(SdpIceCandidate& candidate)
     candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(l_port);
 }
 
+sockaddr_storage * AmMediaTransport::getAllowedIceAddr()
+{
+    return getIceContext()->getAllowedIceAddr(getLocalAddrFamily());
+}
+
 void AmMediaTransport::setIcePriority(unsigned int priority)
 {
     conn_factory.ice_cred.lpriority = priority;
-}
-
-uint32_t AmMediaTransport::getCurrentConnectionPriority()
-{
-    if(allowed_ice_addrs.empty()) return 0;
-    return allowed_ice_addrs.rbegin()->first;
-}
-
-void AmMediaTransport::removeAllowedIceAddrs()
-{
-    allowed_ice_addrs.clear();
-}
-
-void AmMediaTransport::storeAllowedIceAddr(const sockaddr_storage* remote_addr, uint32_t priority)
-{
-    if(remote_addr->ss_family == getLocalAddrFamily())
-        allowed_ice_addrs.emplace(priority, *remote_addr);
-}
-
-sockaddr_storage* AmMediaTransport::getAllowedIceAddr()
-{
-    if (allowed_ice_addrs.empty()) return nullptr;
-    return &allowed_ice_addrs.rbegin()->second;
 }
 
 void AmMediaTransport::getInfo(AmArg& ret)
@@ -528,10 +535,9 @@ void AmMediaTransport::getInfo(AmArg& ret)
     if(type == FAX_TRANSPORT) ret["type"] = "fax";
     if(type == RTP_TRANSPORT) ret["type"] = "rtp";
     if(type == RTCP_TRANSPORT) ret["type"] = "rtcp";
-    {
-        AmLock lock(state_mutex);
-        ret["state"] = state->state2str();
-    }
+
+    ret["state"] = state2str();
+
     AmArg& conns = ret["connections"];
     iterateConnections([&](auto conn, bool& stop) {
         AmArg arg_conn;
@@ -571,13 +577,6 @@ void AmMediaTransport::onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn
         setCurRawConn(conn);
         stream->onRawPacket(packet, this);
     }
-}
-
-void AmMediaTransport::updateStunTimers()
-{
-    iterateConnections(AmStreamConnection::STUN_CONN, [](auto conn, bool& stop) {
-        static_cast<AmStunConnection*>(conn)->updateStunTimer();
-    });
 }
 
 void AmMediaTransport::stopReceiving()

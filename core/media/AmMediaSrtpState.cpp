@@ -13,7 +13,12 @@ void AmMediaSrtpState::addConnections(const AmMediaStateArgs& args)
 
     // check is srtp connection already exists
     auto pred = [&](auto conn) {
-        return conn->getConnType() == AmStreamConnection::RTP_CONN &&
+        int conn_type = 0;
+        if(transport->getTransportType() == RTP_TRANSPORT)
+            conn_type = AmStreamConnection::RTP_CONN;
+        else
+            conn_type = AmStreamConnection::RTCP_CONN;
+        return conn->getConnType() == conn_type &&
                 conn->getRHost() == *args.address &&
                 conn->getRPort() == *args.port;
     };

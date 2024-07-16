@@ -60,7 +60,6 @@ AmSrtpConnection::AmSrtpConnection(AmMediaTransport* _transport, const string& r
     use_mki(false),
     rx_context_initialized(false),
     tx_context_initialized(false),
-    connection_invalidated(false),
     last_rx_ssrc_net_order(0),
     rx_ssrc_changes_count(0),
     srtp_profile(srtp_profile_reserved),
@@ -410,9 +409,6 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
     srtp_err_status_t ret;
     uint32_t rx_ssrc_net_order;
 
-    if(connection_invalidated)
-        return;
-
     {
         AmLock lock(session_rx_mutex);
         if(!srtp_rx_session) {
@@ -430,6 +426,7 @@ void AmSrtpConnection::handleConnection(uint8_t* data, unsigned int size, struct
         }
 
         if(last_rx_ssrc_net_order != rx_ssrc_net_order) {
+            rx_ssrc_changes_count++;
             if(last_rx_ssrc_net_order) {
                 CLASS_DBG("SSRC changed 0x%x -> 0x%x. add new SRTP stream context",
                         ntohl(last_rx_ssrc_net_order), ntohl(rx_ssrc_net_order));
@@ -529,3 +526,15 @@ void AmSrtpConnection::setPassiveMode(bool p)
     s_stream->setPassiveMode(p);
     AmStreamConnection::setPassiveMode(p);
 }
+
+void AmSrtpConnection::getInfo(AmArg& ret)
+{
+    AmStreamConnection::getInfo(ret);
+    ret["use_mki"] = use_mki;
+    ret["rx_initialized"] = rx_context_initialized;
+    ret["tx_initialized"] = tx_context_initialized;
+    ret["rx_ssrc"] = last_rx_ssrc_net_order;
+    ret["rx_ssrc_changed"] = rx_ssrc_changes_count;
+    ret["srtp_profile"] = SdpCrypto::profile2str(static_cast<CryptoProfile>(srtp_profile));
+}
+

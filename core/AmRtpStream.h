@@ -282,10 +282,21 @@ class AmRtpStream
     bool           r_ssrc_i;
 
     TransProt transport;
+
+    /** ice attributes*/
     bool is_ice_stream;
     string ice_pwd;
     string ice_ufrag;
+    string ice_remote_pwd;
+    string ice_remote_ufrag;
+    bool ice_controlled;
+    uint64_t ice_tiebreaker;
+
+    unique_ptr<IceContext> ice_context[MAX_TRANSPORT_TYPE];
     unique_ptr<DtlsContext> dtls_context[MAX_TRANSPORT_TYPE];
+#ifdef WITH_ZRTP
+    zrtpContext zrtp_context;
+#endif/*WITH_ZRTP*/
 
     vector<AmMediaTransport*> ip4_transports;
     vector<AmMediaTransport*> ip6_transports;
@@ -348,6 +359,7 @@ class AmRtpStream
     /** symmetric rtp switching flags*/
     bool            symmetric_rtp_endless;
     bool            symmetric_rtp_enable;
+    bool            symmetric_candidate_enable;
     /** rtp endpoint learned flag*/
     bool            rtp_endpoint_learned_notified;
     
@@ -387,9 +399,7 @@ class AmRtpStream
 
     /* reusing media transport for udptl packets(fax stream) */
     bool reuse_media_trans;
-#ifdef WITH_ZRTP
-    zrtpContext zrtp_context;
-#endif/*WITH_ZRTP*/
+
     RtcpReportsPreparedData rtcp_reports;
 
     /**
@@ -407,6 +417,7 @@ class AmRtpStream
     void setCurrentTransport(AmMediaTransport* transport);
     void onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile, const string& local_key, const string& remote_key);
     void iterateTransports(std::function<void(AmMediaTransport* transport)> iterator);
+    void initIce();
 
   public:
 
@@ -454,12 +465,18 @@ class AmRtpStream
 
     void onSymmetricRtp();
     bool isSymmetricRtpEnable();
+    bool isSymmetricCandidateEnable();
 
     void allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority);
+    void allowStunPair(AmMediaTransport* transport, sockaddr_storage* remote_addr);
+    void connectionTrafficDetected(AmMediaTransport* transport, sockaddr_storage* remote_addr);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+    void onIceRoleConflict();
     DtlsContext* getDtlsContext(uint8_t transport_type);
+    IceContext* getIceContext(uint8_t transport_type);
     void initDtls(uint8_t transport_type, bool client);
+
     void update_sender_stats(const AmRtpPacket &p);
     void inc_drop_pack(){ dropped_packets_count++; }
 
@@ -535,12 +552,17 @@ class AmRtpStream
     void setPassiveMode(bool p);
     bool getPassiveMode() { return cur_rtp_trans ? cur_rtp_trans->getPassiveMode() : false; }
 
+    /** Symmetric Candidate */
+    void setSymmetricCandidate(bool p);
+
     /** Set using transport */
     void setTransport(TransProt trans);
 
     /** Set using ice protocol */
     void useIce();
     bool isIceStream();
+    bool isIceControlled();
+    uint64_t getIceTieBreaker();
 
     /** Set using multiplexing for rtcp */
     virtual void setMultiplexing(bool multiplex);

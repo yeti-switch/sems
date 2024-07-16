@@ -139,6 +139,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     r_ssrc_i(false),
     transport(TP_RTPAVP),
     is_ice_stream(false),
+    ice_controlled(false),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
     cur_udptl_trans(0),
@@ -156,6 +157,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     relay_timestamp_aligning(false),
     symmetric_rtp_endless(false),
     symmetric_rtp_enable(false),
+    symmetric_candidate_enable(true),
     rtp_endpoint_learned_notified(false),
     rtp_ping(false),
     force_buffering(false),
@@ -170,6 +172,8 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 
     l_ssrc = get_random();
     sequence = get_random();
+    ((uint32_t*)&ice_tiebreaker)[0] = get_random();
+    ((uint32_t*)&ice_tiebreaker)[1] = get_random();
     clearRTPTimeout();
 
     // by default the system codecs
@@ -552,6 +556,7 @@ void AmRtpStream::initIP6Transport()
 
 void AmRtpStream::setCurrentTransport(AmMediaTransport* transport)
 {
+    if(!transport) return;
     if(transport->getTransportType() == RTP_TRANSPORT) {
         cur_rtp_trans = transport;
         if(!cur_rtcp_trans && multiplexing) {
@@ -581,6 +586,13 @@ void AmRtpStream::iterateTransports(std::function<void(AmMediaTransport* transpo
     for(auto tr : ip6_transports) iterator(tr);
 }
 
+void AmRtpStream::initIce()
+{
+    if(!ice_context[RTP_TRANSPORT])
+            ice_context[RTP_TRANSPORT].reset(new IceContext(this, RTP_TRANSPORT));
+    if(!ice_context[RTCP_TRANSPORT] && !multiplexing)
+            ice_context[RTCP_TRANSPORT].reset(new IceContext(this, RTCP_TRANSPORT));
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                   functions for job with sdp message(answer, offer)
@@ -918,12 +930,24 @@ int AmRtpStream::init(const AmSdp& local,
         AmMediaStateArgs args;
 
         if(remote_media.is_use_ice() && is_ice_stream) {
+            initIce();
+            bool need_restart = !(ice_remote_ufrag == remote_media.ice_ufrag &&
+                                    ice_remote_pwd == remote_media.ice_pwd);
+            if(need_restart) {
+                ice_controlled = getSdpOfferOwner();
+                ice_remote_ufrag = remote_media.ice_ufrag;
+                ice_remote_pwd = remote_media.ice_pwd;
+
+                getIceContext(RTP_TRANSPORT)->reset();
+                if(!multiplexing)
+                    getIceContext(RTCP_TRANSPORT)->reset();
+            }
             iterateTransports([&](auto tr){
                 CLASS_DBG("init ice stream:%p, state:%s", to_void(this), tr->state2str());
                 auto conn_factory = tr->getConnFactory();
                 args.candidates = &remote_media.ice_candidate;
                 args.sdp_offer_owner = sdp_offer_owner;
-                args.need_restart = !conn_factory->is_remote_ice_creds_equal(remote_media);
+                args.need_restart = need_restart;
                 conn_factory->store_ice_cred(local_media, remote_media);
 
                 // store srtp cred (sdes+srtp)
@@ -932,6 +956,9 @@ int AmRtpStream::init(const AmSdp& local,
 
                 tr->template updateState<AmMediaIceState>(args);
             });
+            getIceContext(RTP_TRANSPORT)->initContext();
+            if(!multiplexing)
+                getIceContext(RTCP_TRANSPORT)->initContext();
         } else if(local_media.is_simple_srtp() && AmConfig.enable_srtp) {
             MEDIA_interface& media_if = AmConfig.getMediaIfaceInfo(l_if);
             if(!media_if.srtp->srtp_enable)
@@ -1234,24 +1261,43 @@ bool AmRtpStream::isSymmetricRtpEnable()
     return symmetric_rtp_enable;
 }
 
+bool AmRtpStream::isSymmetricCandidateEnable()
+{
+    return is_ice_stream && symmetric_candidate_enable;
+}
+
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority)
 {
-    setCurrentTransport(transport);
     onSymmetricRtp();
 
-    uint32_t current_ice_priority = transport->getCurrentConnectionPriority();
     iterateTransports([&](auto tr){
         if(transport->getTransportType() != tr->getTransportType())
             return;
-
         tr->allowStunConnection(remote_addr, priority);
-        tr->updateStunTimers();
-
-        if(tr->getCurrentConnectionPriority() > current_ice_priority)
-            setCurrentTransport(tr);
     });
+    setCurrentTransport(getIceContext(transport->getTransportType())->getCurrentTransport());
 
     mute = cur_rtp_trans->isMute(AmStreamConnection::RAW_CONN);
+}
+
+void AmRtpStream::allowStunPair(AmMediaTransport* transport, sockaddr_storage* remote_addr)
+{
+    iterateTransports([&](auto tr){
+        if(transport->getTransportType() != tr->getTransportType())
+            return;
+        tr->allowStunPair(remote_addr);
+    });
+    setCurrentTransport(transport);
+}
+
+void AmRtpStream::connectionTrafficDetected(AmMediaTransport* transport, sockaddr_storage* remote_addr)
+{
+    iterateTransports([&](auto tr){
+        if(transport->getTransportType() != tr->getTransportType())
+            return;
+        tr->connectionTrafficDetected(remote_addr);
+    });
+    setCurrentTransport(transport);
 }
 
 void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile, const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key)
@@ -1269,9 +1315,22 @@ void AmRtpStream::dtlsSessionActivated(AmMediaTransport* transport, uint16_t srt
     onSrtpKeysAvailable(transport->getTransportType(), srtp_profile, l_key, r_key);
 }
 
+void AmRtpStream::onIceRoleConflict()
+{
+    ice_controlled = !ice_controlled;
+    ((uint32_t*)&ice_tiebreaker)[0] = get_random();
+    ((uint32_t*)&ice_tiebreaker)[1] = get_random();
+}
+
 DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
     assert(transport_type < MAX_TRANSPORT_TYPE);
     return dtls_context[transport_type].get();
+}
+
+IceContext * AmRtpStream::getIceContext(uint8_t transport_type)
+{
+    assert(transport_type < MAX_TRANSPORT_TYPE);
+    return ice_context[transport_type].get();
 }
 
 void AmRtpStream::initDtls(uint8_t transport_type, bool client)
@@ -1512,7 +1571,7 @@ void AmRtpStream::recvDtmfPacket(AmRtpPacket* p)
 
 int AmRtpStream::nextPacket(AmRtpPacket*& p)
 {
-    //if (!receiving && !getPassiveMode())
+    //if (!receiving)
     // ignore 'passive' flag to avoid false RTP timeout for passive stream in sendonly mode
     if (!receiving)
         return RTP_EMPTY;
@@ -1823,6 +1882,16 @@ bool AmRtpStream::isIceStream()
     return is_ice_stream;
 }
 
+bool AmRtpStream::isIceControlled()
+{
+    return ice_controlled;
+}
+
+uint64_t AmRtpStream::getIceTieBreaker()
+{
+    return ice_tiebreaker;
+}
+
 void AmRtpStream::setMultiplexing(bool multiplex)
 {
     CLASS_DBG("set using rtcp-mux %d -> %d", multiplexing, multiplex);
@@ -1895,6 +1964,12 @@ void AmRtpStream::setPassiveMode(bool p)
         symmetric_rtp_enable = true;
 
     iterateTransports([&](auto tr){ tr->setPassiveMode(p); });
+}
+
+void AmRtpStream::setSymmetricCandidate(bool p)
+{
+    CLASS_DBG("set symmetric candidate=%s",p?"true":"false");
+    symmetric_candidate_enable = p;
 }
 
 void AmRtpStream::setReceiving(bool r)

@@ -7,22 +7,8 @@
 
 #include <unordered_map>
 
-#define STUN_PEER_HT_POWER 6
-#define STUN_PEER_HT_SIZE  (1 << STUN_PEER_HT_POWER)
-#define STUN_PEER_HT_MASK  (STUN_PEER_HT_SIZE - 1)
-
-/**
- * Blacklist bucket: key type
- */
-typedef sa_storage_transport_key<STUN_PEER_HT_MASK> sp_addr;
-
+class IceContext;
 class AmStunConnection;
-
-typedef ht_map_bucket<sp_addr,AmStunConnection,
-                      ht_fake<AmStunConnection>,
-                      sp_addr::less> sp_bucket_base;
-
-typedef hash_table<sp_bucket_base> stun_pair_ht;
 
 class AmStunProcessor
   : public AmThread
@@ -32,6 +18,7 @@ class AmStunProcessor
     bool stopped;
 
     std::unordered_map<AmStunConnection *, unsigned long long> connections;
+    std::vector<IceContext*> contexts;
     AmMutex connections_mutex;
 
     void on_timer();
@@ -41,6 +28,8 @@ class AmStunProcessor
     virtual ~AmStunProcessor();
 
   public:
+    void add_ice_context(IceContext* context);
+    void remove_ice_context(IceContext* context);
     void set_timer(AmStunConnection *connection, unsigned long long timeout);
     void remove_timer(AmStunConnection *connection);
 

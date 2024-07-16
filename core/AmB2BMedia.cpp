@@ -217,7 +217,6 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
         stream->setRtpForceRelayDtmf(session->getEnableDtmfForceRelay());
         stream->setRtpForceRelayCN(session->getEnableCNForceRelay());
         stream->setRtpTimeout(session->getRtpTimeout());
-        stream->setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
         stream->setRtpPing(session->getRtpPing());
         stream->setRtpRelayTimestampAligning(session->getRtpRelayTimestampAligning());
 

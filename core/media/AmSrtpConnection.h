@@ -69,7 +69,6 @@ class AmSrtpConnection : public AmStreamConnection
 
     bool rx_context_initialized;
     bool tx_context_initialized;
-    bool connection_invalidated;
     uint32_t last_rx_ssrc_net_order;
     unsigned int rx_ssrc_changes_count;
     srtp_policy_t rx_policy;
@@ -110,4 +109,5 @@ class AmSrtpConnection : public AmStreamConnection
     void setRAddr(const string& addr, unsigned short port) override;
     ssize_t send(AmRtpPacket * packet) override;
     void setPassiveMode(bool p) override;
+    void getInfo(AmArg & ret) override;
 };

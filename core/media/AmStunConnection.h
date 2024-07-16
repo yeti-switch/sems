@@ -10,38 +10,106 @@
 #include <optional>
 
 using std::string;
+using std::multimap;
+
+class AmRtpConnection;
+class AmRtpStream;
 
 #define STUN_INTERVALS_COUNT    7
+#define STUN_TA_TIMEOUT 50
+#define STUN_KEEPALIVE_TIMEOUT 2500
+
+class ReferenceUniquePtr : public std::unique_ptr<AmStunConnection, void (*)(AmStunConnection* item) >
+{
+public:
+    ReferenceUniquePtr(AmStunConnection* conn);
+
+    void reset(AmStunConnection* conn);
+    void reset(const ReferenceUniquePtr& ptr);
+
+    operator AmStunConnection* ();
+};
+
+class IceContext
+{
+    AmRtpStream* stream;
+    enum {
+        ICE_INITIAL = 0,
+        ICE_CONNECTIVITY_CHECK,
+        ICE_NOMINATIONS,
+        ICE_KEEP_ALIVE
+    } state;
+    int type;
+    AmMutex pairs_mut;
+    multimap<unsigned int, ReferenceUniquePtr> pairs;
+
+    map<int, sockaddr_storage> current_family_addr;
+    ReferenceUniquePtr current_candidate;
+protected:
+    AmStunConnection* getNominatedPair();
+    void allowStunPair();
+    void setCurrentCandidate(AmStunConnection* conn);
+public:
+    IceContext(AmRtpStream* stream, int type);
+    ~IceContext();
+
+    sockaddr_storage* getAllowedIceAddr(int family);
+    AmMediaTransport* getCurrentTransport();
+
+    int getType() { return type; }
+    AmRtpStream* getStream() { return stream; }
+
+    //functions for AmRtpStream and AmMediaTransport
+    void initContext();
+    void addConnection(AmStunConnection* conn);
+    void removeConnection(AmStunConnection* conn);
+    void connectionTrafficDetected(sockaddr_storage* remote_addr);
+    void reset();
+
+    //function for AmStunProcessor
+    void updateStunTimers(std::unordered_map<AmStunConnection *, unsigned long long>& connections);
+
+    //functions for AmStunConnection
+    bool isUseCandidate(AmStunConnection* conn);
+    void failedCandidate(AmStunConnection* conn);
+    void allowCandidate(AmStunConnection* conn);
+    void useCandidate(AmStunConnection* conn);
+    void updateConnection(AmStunConnection* conn);
+};
 
 class AmStunConnection : public AmStreamConnection
 {
-private:
-    enum AuthDirection {
-        AUTH_RESPONSE = 0,
-        AUTH_REQUEST,
-        MAX_DIRECTION
+public:
+    enum PairState{
+        PAIR_FROZEN = 0,
+        PAIR_WAITING,
+        PAIR_IN_PROGRESS,
+        PAIR_RETRANSMIT,
+        PAIR_FAILED,
+        PAIR_SUCCEEDED
     };
+    static string state2str(PairState state);
+private:
+    PairState state;
 
-    bool isAuthentificated[MAX_DIRECTION];
-    int err_code;
     unsigned int priority;
     unsigned int lpriority;
     string local_password;
     string remote_password;
     string local_user;
     string remote_user;
-    int count;
-    int intervals[STUN_INTERVALS_COUNT+1];
 
-    uint64_t local_tiebreaker;
-    bool local_ice_role_is_controlled;
+    unsigned short current_trans_id;
+    int count;
+    int retransmit_intervals[STUN_INTERVALS_COUNT];
+    
+    IceContext* context;
 
     void check_request(CStunMessageReader* reader, sockaddr_storage* addr);
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
-    void checkAllowPair();
+    void allow_candidate(bool use_candidate);
 
-    void change_ice_role();
-
+    void send_request();
 public:
     AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int lpriority, unsigned int priority = 0);
     virtual ~AmStunConnection();
@@ -49,18 +117,17 @@ public:
     void set_credentials(const string& luser, const string& lpassword,
                         const string& ruser, const string& rpassword);
 
-    void set_ice_role_controlled(bool ice_role_controlled) { this->local_ice_role_is_controlled = ice_role_controlled; }
+    unsigned int getPriority();
 
-    virtual void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time);
-    virtual void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*){ /*symmetric rtp is disabled for ice*/ }
+    void handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time) override;
+    void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) override { /*symmetric rtp is disabled for ice*/ }
+    void getInfo(AmArg & ret) override;
 
-    void send_request();
-    bool isAllowPair();
+    void checkState();
+    PairState getState() { return state; }
 
     /** @return interval to be scheduled or nullopt */
     std::optional<unsigned long long> checkStunTimer();
-
-    void updateStunTimer();
 };
 
 #endif/*AM_STUN_CONNECTION_H*/

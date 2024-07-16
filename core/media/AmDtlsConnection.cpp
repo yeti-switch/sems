@@ -491,3 +491,9 @@ void AmDtlsConnection::onRecvData(uint8_t* data, unsigned int size)
     p->setBuffer((unsigned char*)data, size);
     transport->onRawPacket(p, this);
 }
+
+void AmDtlsConnection::getInfo(AmArg& ret)
+{
+    AmStreamConnection::getInfo(ret);
+    ret["is_client"] = dtls_context->is_client;
+}

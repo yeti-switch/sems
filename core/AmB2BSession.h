@@ -292,8 +292,6 @@ class AmB2BSession: public AmSession, protected RelayController
 
     /** force symmetric RTP */
     bool rtp_relay_force_symmetric_rtp;
-    /** endless switching for symmetric rtp */
-    bool symmetric_rtp_endless;
     /** send rtp ping  */
     bool rtp_ping;
     /** transparent seqno for RTP relay */
@@ -367,7 +365,6 @@ class AmB2BSession: public AmSession, protected RelayController
     RTPRelayMode getRtpRelayMode() const { return rtp_relay_mode; }
     bool getRtpStreamShare() const { return rtp_stream_shared; }
     bool getRtpRelayForceSymmetricRtp() const { return rtp_relay_force_symmetric_rtp; }
-    bool getRtpEndlessSymmetricRtp() const { return symmetric_rtp_endless; }
     bool getRtpPing() const { return rtp_ping; }
     unsigned int getRtpTimeout() const { return dead_rtp_time; }
     bool getEnableDtmfTranscoding() const { return enable_dtmf_transcoding; }
@@ -382,7 +379,6 @@ class AmB2BSession: public AmSession, protected RelayController
 
     virtual void setRtpInterface(int relay_interface);
     virtual void setRtpRelayForceSymmetricRtp(bool force_symmetric);
-    virtual void setRtpEndlessSymmetricRtp(bool endless);
     void setRtpRelayTransparentSeqno(bool transparent);
     void setRtpRelayTransparentSSRC(bool transparent);
     void setRtpRelayTimestampAligning(bool enable);

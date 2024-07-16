@@ -8,11 +8,6 @@ AmMediaConnectionFactory::AmMediaConnectionFactory(AmMediaTransport* transport)
     srtp_cred.srtp_profile = srtp_profile_reserved;
 }
 
-bool AmMediaConnectionFactory::is_remote_ice_creds_equal(const SdpMedia& remote_media)
-{
-    return ice_cred.ruser == remote_media.ice_ufrag && ice_cred.rpassword == remote_media.ice_pwd;
-}
-
 int AmMediaConnectionFactory::store_ice_cred(const SdpMedia& local_media, const SdpMedia& remote_media)
 {
     ice_cred.luser = local_media.ice_ufrag;
@@ -43,8 +38,6 @@ AmStreamConnection* AmMediaConnectionFactory::createStunConnection(const string&
 {
     AmStunConnection* conn = new AmStunConnection(transport, raddr, rport, lpriority, priority);
     conn->set_credentials(ice_cred.luser, ice_cred.lpassword, ice_cred.ruser, ice_cred.rpassword);
-    conn->set_ice_role_controlled(!transport->getRtpStream()->getSdpOfferOwner()); //rfc5245#section-5.2
-    conn->updateStunTimer();
     return conn;
 }
 
