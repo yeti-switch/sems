@@ -1083,7 +1083,9 @@ int AmRtpStream::init(const AmSdp& local,
 
     CLASS_DBG("mute = %d", mute);
 
-    gettimeofday(&rtp_stats.start, nullptr);
+    if(!timerisset(&rtp_stats.start))
+        gettimeofday(&rtp_stats.start, nullptr);
+
     rtcp_reports.init(l_ssrc);
 
     last_not_supported_rx_payload = -1;

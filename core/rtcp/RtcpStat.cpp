@@ -24,7 +24,8 @@ RtcpUnidirectionalStat::RtcpUnidirectionalStat()
 }
 
 RtcpBidirectionalStat::RtcpBidirectionalStat()
-  : current_rx(nullptr),
+  : start{0,0},
+    current_rx(nullptr),
     rtcp_rr_sent(0), rtcp_rr_recv(0),
     rtcp_sr_sent(0), rtcp_sr_recv(0),
     max_seq(0),
