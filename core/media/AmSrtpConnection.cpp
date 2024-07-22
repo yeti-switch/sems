@@ -1,20 +1,12 @@
 #include "AmSrtpConnection.h"
 #include "AmRtpStream.h"
+#include <format_helper.h>
 
 #include "rtp/rtp.h"
 #include <botan/base64.h>
 #include <botan/uuid.h>
 
 #include <algorithm>
-
-#ifndef __cpp_lib_format
-// std::format polyfill using fmtlib
-#   include <fmt/core.h>
-    using fmt::format;
-#else
-#   include <format>
-    using std::format;
-#endif
 
 srtp_master_keys::strp_mater_key_container::strp_mater_key_container(
     const string &key_,

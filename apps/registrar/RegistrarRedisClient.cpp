@@ -1,14 +1,6 @@
 #include "RegistrarRedisClient.h"
 #include <AmPlugIn.h>
-
-#ifndef __cpp_lib_format
-// format polyfill using fmtlib
-#   include <fmt/core.h>
-    using fmt::format;
-#else
-#   include <format>
-    using std::format;
-#endif
+#include <format_helper.h>
 
 /* Connection */
 
