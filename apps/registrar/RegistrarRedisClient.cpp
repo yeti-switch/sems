@@ -1,10 +1,11 @@
 #include "RegistrarRedisClient.h"
 #include <AmPlugIn.h>
+#include <format_helper.h>
 
 /* Connection */
 
 RegistrarRedisClient::Connection::Connection(const string &id)
-  : id(id), info(), is_connected()
+  : id(id), info(), state(None)
 {
     DBG("RegistrarRedisClient::Connection::Connection(..)");
 }
@@ -42,6 +43,7 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
         return -1;
 
     use_functions = cfg_getbool(reg_redis, CFG_PARAM_USE_FUNCTIONS);
+    scripts_dir = cfg_getstr(reg_redis, CFG_PARAM_SCRIPTS_DIR);
     auto reg_redis_write = cfg_getsec(reg_redis, CFG_SEC_WRITE);
     auto reg_redis_read = cfg_getsec(reg_redis, CFG_SEC_READ);
     if(!reg_redis_read || !reg_redis_write)
@@ -63,11 +65,11 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
     cfg_conn_info(reg_redis_write, write_conn->info);
 
     read_conn->info.scripts = {
-        {AOR_LOOKUP_SCRIPT, "/etc/sems/scripts/aor_lookup.lua"},
-        {RPC_AOR_LOOKUP_SCRIPT, "/etc/sems/scripts/rpc_aor_lookup.lua"}
+        {AOR_LOOKUP_SCRIPT, get_script_path(AOR_LOOKUP_SCRIPT)},
+        {RPC_AOR_LOOKUP_SCRIPT, get_script_path(RPC_AOR_LOOKUP_SCRIPT)}
     };
-    subscr_read_conn->info.scripts = {{LOAD_CONTACTS_SCRIPT, "/etc/sems/scripts/load_contacts.lua"}};
-    write_conn->info.scripts = {{REGISTER_SCRIPT, "/etc/sems/scripts/register.lua"}};
+    subscr_read_conn->info.scripts = {{LOAD_CONTACTS_SCRIPT, get_script_path(LOAD_CONTACTS_SCRIPT)}};
+    write_conn->info.scripts = {{REGISTER_SCRIPT, get_script_path(REGISTER_SCRIPT)}};
 
     // check dependencies
     if(!AmPlugIn::instance()->getFactory4Config("redis")) {
@@ -76,6 +78,11 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
     }
 
     return 0;
+}
+
+string RegistrarRedisClient::get_script_path(const string &sript_name)
+{
+    return format("{}/{}.lua", scripts_dir, sript_name);
 }
 
 void RegistrarRedisClient::connect_all()
@@ -88,7 +95,7 @@ void RegistrarRedisClient::on_connect(const string &conn_id, const RedisConnecti
 {
     for(auto & conn : connections)
         if(conn->id == conn_id) {
-            conn->is_connected = true;
+            conn->state = Connection::Connected;
             conn->info = info;
             break;
         }
@@ -98,17 +105,8 @@ void RegistrarRedisClient::on_disconnect(const string &conn_id, const RedisConne
 {
     for(auto & conn : connections)
         if(conn->id == conn_id) {
-            conn->is_connected = false;
+            conn->state = Connection::Disconnected;
             conn->info = info;
             break;
         }
-}
-
-bool RegistrarRedisClient::is_connected()
-{
-    for(auto & conn : connections)
-        if(!conn->is_connected)
-            return false;
-
-    return true;
 }

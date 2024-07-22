@@ -28,14 +28,16 @@ do
 done
 
 if [ $# -lt 1 ]; then
-    $SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_list_tests
-    exit 0
+    cmd="$SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_list_tests"
+else
+    filter=$1
+    shift
+    if [ $filter == "all" ]; then
+        cmd="$SEMS_TESTER -c $SEMS_TESTER_CFG $@"
+    else
+        cmd="$SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_also_run_disabled_tests --gtest_filter=$filter $@"
+    fi
 fi
 
-filter=$1
-shift
-if [ $filter == "all" ]; then
-    $SEMS_TESTER -c $SEMS_TESTER_CFG $@
-else
-    $SEMS_TESTER -c $SEMS_TESTER_CFG --gtest_also_run_disabled_tests --gtest_filter=$filter $@
-fi
+echo $cmd
+exec $cmd
