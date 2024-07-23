@@ -668,14 +668,15 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
 
     DBG("removing TCP connection from %s",conn_id.c_str());
 
-    if(client_sock->server_sock->statistics)
-        client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
         sockaddr_storage sa = {0, {0}, 0};
         client_sock->copy_peer_addr(&sa);
         dec_ref(sock_it->second);
+
+        if(client_sock->server_sock->statistics)
+            client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
 
         DBG("TCP connection from %s removed",conn_id.c_str());
 
