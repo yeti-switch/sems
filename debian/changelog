@@ -1,3 +1,10 @@
+sems (1.139.0) stable; urgency=low
+  * media layer refactoring for better ICE support
+  * tls_trsp: show size,free_space values on 'too big message' error
+  * redis: add option 'scripts_dir'
+  * add option 'general.force_symmetric_candidate = false'
+ -- Michael Furmur <furmur@pm.me>  Thu, 25 Jul 2024 19:21:29 +0300
+
 sems (1.138.0) stable; urgency=low
   * add redis module
   * add registrar module
