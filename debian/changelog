@@ -1,3 +1,7 @@
+sems (1.139.1) stable; urgency=low
+  * libsems1-dev: fix media/ headers
+ -- Michael Furmur <furmur@pm.me>  Fri, 26 Jul 2024 00:25:47 +0300
+
 sems (1.139.0) stable; urgency=low
   * media layer refactoring for better ICE support
   * tls_trsp: show size,free_space values on 'too big message' error
