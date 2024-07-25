@@ -6,6 +6,7 @@ core/resample/*.h usr/include/sems/resample/
 core/ampi usr/include/sems/
 core/amci usr/include/sems/
 core/rtcp usr/include/sems/
+core/media usr/include/sems/
 core/compat/*.h usr/include/sems/compat/
 core/compat/*.c usr/include/sems/compat/
 unit_tests/*.h usr/include/sems/unit_tests/
