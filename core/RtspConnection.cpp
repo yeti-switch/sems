@@ -189,7 +189,7 @@ void RtspMsg::parse_header_line(const char *line, size_t len)
     len -= hdr_len + 1;
 
     // ltrim()
-    while (isspace(*val)) {
+    while (len && isspace(*val)) {
         val++; --len;
     }
 
