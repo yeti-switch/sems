@@ -26,6 +26,7 @@ void trsp_base_input::on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_m
 
 int trsp_base_input::parse_input(tcp_base_trsp* socket)
 {
+    last_parse_input_messages_size.clear();
     for(;;) {
         int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
         if(err) {
@@ -58,6 +59,8 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
         } //if(err)
 
         int msg_len = pst.get_msg_len();
+        last_parse_input_messages_size.push_back(msg_len);
+
         if(msg_len > MAX_TCP_MSGLEN) {
             ERROR("message is too big (%d > %d. drop connection. peer %s:%d",
                 msg_len, MAX_TCP_MSGLEN,

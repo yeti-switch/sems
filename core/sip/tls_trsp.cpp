@@ -277,10 +277,23 @@ int tls_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t s
     if(size < (size_t)input_free_space) {
         memcpy(trsp_base_input::get_input(), data, size);
         trsp_base_input::add_input_len(size);
-        return parse_input(trsp);
+        last_parse_input_ret = parse_input(trsp);
+        return last_parse_input_ret;
     } else {
-        ERROR("message is too big (size: %zd, input_free_space: %d). drop connection. peer %s:%d",
-              size, input_free_space, trsp->get_peer_ip().data(), trsp->get_peer_port());
+        std::ostringstream msg_sizes;
+        for(auto v : last_parse_input_messages_size)
+            msg_sizes << v << ",";
+
+        ERROR("message is too big ("
+              "size: %zd, input_free_space: %d, "
+              "parse_input_reply:%d, "
+              "parse_input_messages_size:[%s]"
+              ") drop connection. peer %s:%d",
+            size, input_free_space,
+            last_parse_input_ret,
+            msg_sizes.str().data(),
+            trsp->get_peer_ip().data(), trsp->get_peer_port());
+
         throw Botan::Exception("message is too big!");
     }
 }

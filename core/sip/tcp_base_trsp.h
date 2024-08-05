@@ -43,6 +43,7 @@ class trsp_base_input : public trsp_input
     unsigned char    input_buf[MAX_TCP_MSGLEN];
     int              input_len;
     parser_state     pst;
+
 public:
     trsp_base_input();
     virtual ~trsp_base_input(){}
@@ -60,6 +61,10 @@ public:
     }
     void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg);
     int parse_input(tcp_base_trsp* socket);
+
+    // parse_input dbg fields
+    int last_parse_input_ret;
+    std::list<int> last_parse_input_messages_size;
 };
 
 class tcp_base_trsp : public trsp_socket
