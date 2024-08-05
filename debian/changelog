@@ -1,3 +1,8 @@
+sems (1.139.2) stable; urgency=low
+  * dbg parse_input() for tls_trsp
+  * RTSP parser: fix crash on reply with empty Session
+ -- Michael Furmur <furmur@pm.me>  Mon, 05 Aug 2024 10:57:48 +0300
+
 sems (1.139.1) stable; urgency=low
   * libsems1-dev: fix media/ headers
  -- Michael Furmur <furmur@pm.me>  Fri, 26 Jul 2024 00:25:47 +0300
