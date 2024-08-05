@@ -154,8 +154,19 @@ struct aor_lookup_reply {
             for(int j = 0; j < m; j+=2) {
                 AmArg &contact_arg = aor_data_arg[j];
                 AmArg &path_arg = aor_data_arg[j+1];
-                if(!isArgCStr(contact_arg) || !isArgCStr(path_arg)) {
-                    ERROR("unexpected contact_arg||path_arg type. skip entry");
+                if(!isArgCStr(contact_arg)) {
+                    ERROR("unexpected contact_arg. skip entry");
+                    continue;
+                }
+
+                string path;
+                if(isArgCStr(path_arg)) {
+                    path = path_arg.asCStr();
+                } else if (isArgUndef(path_arg)) {
+                    // it's expected that 'path' can be nil
+                    path = "";
+                } else {
+                    ERROR("unexpected path_arg type. skip entry");
                     continue;
                 }
 
@@ -165,7 +176,7 @@ struct aor_lookup_reply {
                         std::pair<RegistrationIdType,
                                   std::list<AorData> >(reg_id,  std::list<AorData>()));
                 }
-                it->second.emplace_back(contact_arg.asCStr(), path_arg.asCStr());
+                it->second.emplace_back(contact_arg.asCStr(), path.c_str());
             }
         }
         return true;
