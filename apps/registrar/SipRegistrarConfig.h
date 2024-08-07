@@ -19,7 +19,7 @@ using std::string;
 #define CFG_SEC_WRITE                           "write"
 #define CFG_SEC_READ                            "read"
 
-#define DEFAULT_SCRIPTS_DIR                     "/etc/sems/scripts"
+#define DEFAULT_SCRIPTS_DIR                     "/usr/lib/sems/scripts/registrar"
 #define DEFAULT_REGISTRAR_KEEPALIVE_INTERVAL    60
 #define DEFAULT_REDIS_HOST                      "127.0.0.1"
 #define DEFAULT_REDIS_PORT                      6379
