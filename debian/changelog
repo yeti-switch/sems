@@ -1,3 +1,7 @@
+sems (1.139.3) stable; urgency=low
+  * registrar: move scripts to /usr/lib/sems/scripts/registrar
+ -- Michael Furmur <furmur@pm.me>  Wed, 07 Aug 2024 22:10:34 +0300
+
 sems (1.139.2) stable; urgency=low
   * dbg parse_input() for tls_trsp
   * RTSP parser: fix crash on reply with empty Session
