@@ -1129,8 +1129,6 @@ void AmRtpStream::updateTransports()
         cur_udptl_trans->setTransportType(FAX_TRANSPORT);
     } else {
         cur_rtp_trans->setTransportType(RTP_TRANSPORT);
-        if(cur_rtp_trans != cur_rtcp_trans)
-            cur_rtcp_trans->setTransportType(RTCP_TRANSPORT);
     }
 }
 
