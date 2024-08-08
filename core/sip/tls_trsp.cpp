@@ -267,6 +267,8 @@ int tls_input::on_input(tcp_base_trsp* trsp)
             ex.what(),
             trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
+    } catch(std::logic_error&) {
+        return -1;
     }
 }
 
@@ -480,7 +482,9 @@ void tls_trsp_socket::tls_emit_data(std::span<const uint8_t> data)
 
 void tls_trsp_socket::tls_record_received([[maybe_unused]] uint64_t seq_no, std::span<const uint8_t> data)
 {
-    static_cast<tls_input*>(input)->on_tls_record(this, data.data(), data.size());
+    if(static_cast<tls_input*>(input)->on_tls_record(this, data.data(), data.size()) < 0) {
+        throw std::logic_error("parsing error");
+    }
 }
 
 void tls_trsp_socket::tls_alert([[maybe_unused]] Botan::TLS::Alert alert)
