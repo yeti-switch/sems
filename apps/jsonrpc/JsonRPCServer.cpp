@@ -39,6 +39,8 @@
 #include "AmSession.h"
 #include "AmUtils.h"
 
+std::map<std::string, std::string> JsonRpcServer::rpc_methods_mapping;
+
 int JsonRpcServer::createRequest(const string& evq_link, const string& method, 
 				 AmArg& params, JsonrpcNetstringsConnection* peer, 
 				 const AmArg& udata,
@@ -389,12 +391,17 @@ bool JsonRpcServer::execRpc(const string &connection_id, const AmArg& rpc_params
     AmArg& params = none_params;
     if (rpc_params.hasMember("params")) {
       params = rpc_params["params"];
-    } 
+    }
+
     string method = rpc_params["method"].asCStr();
+
     AmArg id;
     if (rpc_params.hasMember("id")) {
         id = rpc_params["id"];
     }
+
+    if(rpc_methods_mapping.contains(method))
+        method = rpc_methods_mapping[method];
 
     return execRpc(connection_id, method, id, params, rpc_res);
 }

@@ -67,6 +67,20 @@ int JsonRPCServerModule::onLoad() {
   return instance()->load();
 }
 
+int add_methods_mapping(cfg_t */*cfg*/, cfg_opt_t */*opt*/, int argc, const char **argv)
+{
+    if(argc != 2) {
+        ERROR("map(%s,%s): unexpected option args count."
+              "expected format: map(src_method:string, dst_method:string)",
+              argv[0],argv[1]);
+        return 1;
+    }
+
+    JsonRpcServer::rpc_methods_mapping.emplace(argv[0], argv[1]);
+    DBG("add method mapping '%s' -> '%s'", argv[0], argv[1]);
+
+    return 0;
+}
 
 int JsonRPCServerModule::configure(const std::string & config)
 {
@@ -76,6 +90,7 @@ int JsonRPCServerModule::configure(const std::string & config)
     static const char opt_method[] = "method";
     static const char opt_server_threads[] = "server_threads";
     static const char opt_tcp_md5_password[] = "tcp_md5_password";
+    static const char opt_func_name_map[] = "map";
 
     static const char opt_tls_protocols[] = "protocols";
     static const char opt_tls_certificate[] = "certificate";
@@ -145,6 +160,7 @@ int JsonRPCServerModule::configure(const std::string & config)
         CFG_SEC(sec_tls,tls_sec, CFGF_NODEFAULT),
         CFG_INT(opt_server_threads, DEFAULT_JSONRPC_SERVER_THREADS, CFGF_NONE),
         CFG_STR(opt_tcp_md5_password, NULL, CFGF_NONE),
+        CFG_FUNC(opt_func_name_map, add_methods_mapping),
         CFG_END()
     };
 

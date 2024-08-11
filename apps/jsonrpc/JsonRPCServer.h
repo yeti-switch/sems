@@ -62,6 +62,8 @@ class JsonRpcServer {
 
   static int createReply(JsonrpcNetstringsConnection* peer, const AmArg &id,
                          AmArg& result, bool is_error);
+
+  static std::map<std::string, std::string> rpc_methods_mapping;
 };
 
 #endif // _JsonRPCServer_h_
