@@ -1,3 +1,7 @@
+sems (1.139.5) stable; urgency=low
+  * jsonrpc: add cfg macro map(src_method, dst_method)
+ -- Michael Furmur <furmur@pm.me>  Sun, 11 Aug 2024 15:50:45 +0300
+
 sems (1.139.4) stable; urgency=low
   * close TLS/WSS connections on SIP parsing errors
   * fix segfault on RTCP transport type update
