@@ -533,7 +533,6 @@ void SipRegistrar::rpc_unbind(const AmArg& arg, AmArg& ret)
 
 void SipRegistrar::process(AmEvent* event)
 {
-    INFO("process ev %d", event->event_id);
     switch(event->event_id) {
         case E_SYSTEM: {
             AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(event);

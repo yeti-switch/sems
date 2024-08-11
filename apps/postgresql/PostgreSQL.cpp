@@ -41,7 +41,6 @@ class PostgreSQLFactory
     }
     ~PostgreSQLFactory()
     {
-        INFO("~PostgreSQLFactory");
         PostgreSQL::dispose();
     }
   public:

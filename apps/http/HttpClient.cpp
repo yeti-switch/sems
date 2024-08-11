@@ -44,7 +44,6 @@ class HttpClientFactory
     }
     ~HttpClientFactory()
     {
-        INFO("~HttpClientFactory");
         HttpClient::dispose();
     }
   public:
