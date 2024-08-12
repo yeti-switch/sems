@@ -802,7 +802,7 @@ int parse_sip_msg(sip_msg* msg, const char*& err_msg)
         str2int(msg->max_forwards->value.s, msg->max_forwards->value.len, num) &&
         num > MAX_FRW_MAX_NUM)
     {
-        WARN("\"%s\" header value is greater than %d", SIP_HDR_MAX_FORWARDS, MAX_FRW_MAX_NUM);
+        DBG("\"%s\" header value is greater than %d", SIP_HDR_MAX_FORWARDS, MAX_FRW_MAX_NUM);
         /* exclude Max-Forwards from headers list */
         //msg->hdrs.remove(msg->max_forwards);
         //delete msg->max_forwards;
@@ -814,7 +814,7 @@ int parse_sip_msg(sip_msg* msg, const char*& err_msg)
         strncmp2(msg->expires->value.s, msg->expires->value.len,
                  EXPIRES_MAX_NUM_str, EXPIRES_MAX_NUM_len) > 0)
     {
-        WARN("\"%s\" header value is greater than %s", SIP_HDR_EXPIRES, EXPIRES_MAX_NUM_str);
+        DBG("\"%s\" header value is greater than %s", SIP_HDR_EXPIRES, EXPIRES_MAX_NUM_str);
         /* use default value for Expires header */
         //msg->expires->value.set(EXPIRES_DEFAULT_NUM_str, EXPIRES_DEFAULT_NUM_len);
     }
@@ -830,7 +830,7 @@ int parse_sip_msg(sip_msg* msg, const char*& err_msg)
             strncmp2(cseq->method_str.s, cseq->method_str.len,
                      req->method_str.s, req->method_str.len) != 0)
         {
-            WARN("\"%s\" method %.*s mismatched for the %.*s method in the start line",
+            DBG("\"%s\" method %.*s mismatched for the %.*s method in the start line",
                  SIP_HDR_CSEQ,
                  cseq->method_str.len, cseq->method_str.s,
                  req->method_str.len, req->method_str.s);
