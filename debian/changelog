@@ -1,3 +1,7 @@
+sems (1.139.6) stable; urgency=low
+  * remove excess warning,info messages
+ -- Michael Furmur <furmur@pm.me>  Mon, 12 Aug 2024 11:07:27 +0300
+
 sems (1.139.5) stable; urgency=low
   * jsonrpc: add cfg macro map(src_method, dst_method)
  -- Michael Furmur <furmur@pm.me>  Sun, 11 Aug 2024 15:50:45 +0300
