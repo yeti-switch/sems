@@ -121,6 +121,7 @@ void RedisApp::process(AmEvent* event)
             break;
 
         case RedisEvent::Request:
+        case RedisEvent::RequestMulti:
             if(auto e = dynamic_cast<RedisRequest*>(event)) {
                 process_redis_request_event(*e);
                 return;

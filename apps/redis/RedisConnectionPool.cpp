@@ -183,40 +183,48 @@ void RedisConnectionPool::process_request_event(RedisRequest& event, RedisConnec
         return;
     }
 
+    bool multi = event.event_id == RedisEvent::RequestMulti;
     // args
-    vector<string> args(event.args.size());
+    vector<string> args;
+
+    if(multi)
+        args.emplace_back("MULTI");
+
     for(int i = 0; i < event.args.size(); i++) {
         AmArg &child = event.args[i];
 
         if(isArgCStr(child)) {
-            args[i] = std::string(child.asCStr());
+            args.emplace_back(std::string(child.asCStr()));
             continue;
         }
 
         if(isArgInt(child)) {
             std::ostringstream strs;
             strs << child.asInt();
-            args[i] = strs.str();
+            args.emplace_back(strs.str());
             continue;
         }
 
         if(isArgLongLong(child)) {
             std::ostringstream strs;
             strs << child.asLongLong();
-            args[i] = strs.str();
+            args.emplace_back(strs.str());
             continue;
         }
 
         if(isArgDouble(child)) {
             std::ostringstream strs;
             strs << child.asDouble();
-            args[i] = strs.str();
+            args.emplace_back(strs.str());
             continue;
         }
 
         DBG("Unsupported arg type in pos %d", i);
         break;
     }
+
+    if(multi)
+        args.emplace_back("EXEC");
 
     vector<const char*> argv(args.size());
     vector<size_t> argvlen(args.size());
