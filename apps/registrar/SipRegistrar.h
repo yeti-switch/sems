@@ -46,6 +46,7 @@ class SipRegistrar
     int expires_min;
     int expires_max;
     int expires_default;
+    int bindings_max;
     AmTimerFd keepalive_timer;
     seconds keepalive_interval;
     seconds max_interval_drift;

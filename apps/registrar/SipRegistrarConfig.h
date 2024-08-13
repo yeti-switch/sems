@@ -14,6 +14,7 @@ using std::string;
 #define CFG_PARAM_USERNAME                      "username"
 #define CFG_PARAM_PASSWORD                      "password"
 #define CFG_PARAM_KEEPALIVE_INTERVAL            "keepalive_interval"
+#define CFG_PARAM_BINDINGS_MAX                  "bindings_max"
 
 #define CFG_SEC_REDIS                           "redis"
 #define CFG_SEC_WRITE                           "write"
@@ -23,6 +24,7 @@ using std::string;
 #define DEFAULT_REGISTRAR_KEEPALIVE_INTERVAL    60
 #define DEFAULT_REDIS_HOST                      "127.0.0.1"
 #define DEFAULT_REDIS_PORT                      6379
+#define DEFAULT_BINDINGS_MAX                    10
 
 #include <confuse.h>
 
