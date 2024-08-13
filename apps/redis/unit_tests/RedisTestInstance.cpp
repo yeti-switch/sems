@@ -180,6 +180,16 @@ public:
         return REDIS_OK;
     }
 
+    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) override
+    {
+        return REDIS_ERR;
+    }
+
+    int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) override
+    {
+        return REDIS_ERR;
+    }
+
     int redisAppendCommand(redisContext* , const char* format, va_list argptr) override
     {
         Command current;

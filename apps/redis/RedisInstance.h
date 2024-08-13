@@ -51,6 +51,8 @@ void redisAsyncHandleWrite(redisAsyncContext *ac);
 int redisAppendCommand(redisContext *c, const char *format, ...);
 int redisGetReply(redisContext *c, void **reply);
 int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd, size_t len);
+int redisvAsyncCommand(redisAsyncContext* ac, redisCallbackFn *fn, void *privdata, const char* format, ...);
+int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen);
 
 bool isReplyError(redisReply* reply);
 bool isReplyStatus(redisReply* reply);
@@ -119,6 +121,8 @@ public:
     virtual void redisAsyncHandleWrite(redisAsyncContext *ac) = 0;
     virtual int redisGetReply(redisContext* c, void ** reply) = 0;
     virtual int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd, size_t len) = 0;
+    virtual int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) = 0;
+    virtual int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) = 0;
     virtual void freeReplyObject(void *reply) = 0;
     virtual void redisFree(redisContext* ctx) = 0;
     virtual RedisInstance* clone(redisInstanceContext* async_context) = 0;

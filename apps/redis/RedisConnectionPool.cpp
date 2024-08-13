@@ -172,9 +172,118 @@ void RedisConnectionPool::process(AmEvent* ev)
     }
 }
 
+static void append_args(vector<string> &args, const AmArg &child)
+{
+    switch(child.getType()) {
+    case AmArg::CStr:
+        args.emplace_back(std::string(child.asCStr()));
+        break;
+    case AmArg::Int: {
+        std::ostringstream strs;
+        strs << child.asInt();
+        args.emplace_back(strs.str());
+        break;
+    }
+    case AmArg::LongLong:  {
+        std::ostringstream strs;
+        strs << child.asLongLong();
+        args.emplace_back(strs.str());
+        break;
+    }
+    case AmArg::Double: {
+        std::ostringstream strs;
+        strs << child.asDouble();
+        args.emplace_back(strs.str());
+        break;
+    }
+    default:  DBG("Unsupported arg type %s", child.getTypeStr());
+    }
+}
+
+/** vector<AmArg> event_args consist of Redis command and its arguments
+ *  event_args[0] : cmd
+ *  event_args[1] : arg0
+ *  ...
+ *  event_args[N] : argN */
+static int parse_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
+{
+    vector<string> args;
+
+    for(const auto &a: event_args)
+        append_args(args, a);
+
+    vector<const char*> argv(args.size());
+    vector<size_t> argvlen(args.size());
+    for(unsigned i = 0; i < args.size(); ++i) {
+        argv[i] = args[i].c_str();
+        argvlen[i] = args[i].length();
+    }
+
+    char *cmd = nullptr;
+    ssize_t cmd_size = redis::redisFormatCommandArgv(&cmd, args.size(), argv.data(), argvlen.data());
+    int ret = cmd_size > 0
+            ? redis::redisAsyncFormattedCommand(ac, &redis_request_cb_static, ctx, cmd, cmd_size)
+            : -1;
+
+    if(cmd)
+        free(cmd);
+
+    return ret;
+}
+
+/** vector<AmArg> event_args consist of AmArg arrays of Redis commands and their arguments
+ * event_args[0] : [cmd0, arg0, arg1 ... argN]
+ * event_args[1] : [cmd1, arg0, arg1 ... argN]
+ *  ...
+ * event_args[N] : [cmdN, arg0, arg1 ... argN] */
+static int parse_multi_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
+{
+    if(redis::redisvAsyncCommand(ac, nullptr, nullptr, "MULTI") != REDIS_OK)
+        return -1;
+
+    for(const auto &c: event_args) {
+        if(!isArgArray(c)) {
+            DBG("MULTI event arg expected Array, got %s", c.getTypeStr());
+            continue;
+        }
+
+        vector<string> args;
+        char *cmd = nullptr;
+        size_t cmd_size;
+        int ret;
+
+        for(size_t i = 0; i < c.size(); i++)
+            append_args(args, c[i]);
+
+        vector<const char*> argv(args.size());
+        vector<size_t> argvlen(args.size());
+        for(unsigned i = 0; i < args.size(); ++i) {
+            argv[i] = args[i].c_str();
+            argvlen[i] = args[i].length();
+        }
+
+        cmd_size = redis::redisFormatCommandArgv(&cmd, args.size(), argv.data(), argvlen.data());
+        if(cmd_size < 0)
+            goto failed;
+
+        ret = redis::redisAsyncFormattedCommand(ac, nullptr, nullptr, cmd, cmd_size);
+        free(cmd);
+
+        if(ret != REDIS_OK)
+            goto failed;
+    }
+
+    if(redis::redisvAsyncCommand(ac, redis_request_cb_static, ctx, "EXEC") == REDIS_OK)
+        return 0;
+
+failed:
+    redis::redisvAsyncCommand(ac, nullptr, nullptr, "DISCARD");
+    return -1;
+}
+
 void RedisConnectionPool::process_request_event(RedisRequest& event, RedisConnection *c)
 {
-    redisAsyncContext* context = c->get_async_context();
+    redisAsyncContext* ac = c->get_async_context();
     if(c->is_connected() == false) {
         if(event.session_id.empty() == false)
             session_container->postEvent(event.session_id,
@@ -183,87 +292,29 @@ void RedisConnectionPool::process_request_event(RedisRequest& event, RedisConnec
         return;
     }
 
-    bool multi = event.event_id == RedisEvent::RequestMulti;
-    // args
-    vector<string> args;
+    RedisReplyCtx *ctx = new RedisReplyCtx(c, event);
+    int ret = event.event_id == RedisEvent::RequestMulti
+              ? parse_multi_event_args(ac, ctx, event.args)
+              : parse_event_args(ac, ctx, event.args);
 
-    if(multi)
-        args.emplace_back("MULTI");
-
-    for(int i = 0; i < event.args.size(); i++) {
-        AmArg &child = event.args[i];
-
-        if(isArgCStr(child)) {
-            args.emplace_back(std::string(child.asCStr()));
-            continue;
+    if(ret == REDIS_OK) {
+        if(event.user_data && event.persistent_ctx) {
+            ERROR("%s:%d user_data is not allowed for persistent context. clear it",
+                  event.session_id.data(), event.user_type_id);
+            event.user_data.reset();
         }
 
-        if(isArgInt(child)) {
-            std::ostringstream strs;
-            strs << child.asInt();
-            args.emplace_back(strs.str());
-            continue;
-        }
+        //set reply ctx for persistent contexts
+        if(ctx->persistent_ctx)
+            persistent_reply_contexts.push_back(ctx);
 
-        if(isArgLongLong(child)) {
-            std::ostringstream strs;
-            strs << child.asLongLong();
-            args.emplace_back(strs.str());
-            continue;
-        }
-
-        if(isArgDouble(child)) {
-            std::ostringstream strs;
-            strs << child.asDouble();
-            args.emplace_back(strs.str());
-            continue;
-        }
-
-        DBG("Unsupported arg type in pos %d", i);
-        break;
-    }
-
-    if(multi)
-        args.emplace_back("EXEC");
-
-    vector<const char*> argv(args.size());
-    vector<size_t> argvlen(args.size());
-    for(int i = 0; i < args.size(); ++i) {
-        argv[i] = args[i].c_str();
-        argvlen[i] = args[i].length();
-    }
-
-    char *cmd = nullptr;
-    int ret = redis::redisFormatCommandArgv(&cmd, args.size(), argv.data(), argvlen.data());
-    //DBG("cmd %s ret %d", cmd, ret);
-
-    if(ret <= 0)
-        return;
-
-    if(event.user_data && event.persistent_ctx) {
-        ERROR("%s:%d user_data is not allowed for persistent context. clear it",
-            event.session_id.data(), event.user_type_id);
-        event.user_data.reset();
-    }
-
-    size_t cmd_size = static_cast<size_t>(ret);
-    auto ctx = new RedisReplyCtx(c,event);
-    if(REDIS_OK != redis::redisAsyncFormattedCommand(context, &redis_request_cb_static, ctx, cmd, cmd_size)) {
+    } else {  /** FAILED */
         if(event.session_id.empty() == false)
-            session_container->postEvent(ctx->session_id,
-            new RedisReply(event.conn_id, RedisReply::FailedToSend, AmArg(),
-                    event.user_data, event.user_type_id));
-
-        delete ctx; ctx = nullptr;
-        delete cmd; cmd = nullptr;
-        return;
+          session_container->postEvent(ctx->session_id,
+              new RedisReply(event.conn_id, RedisReply::FailedToSend, AmArg(),
+                      event.user_data, event.user_type_id));
+        delete ctx;
     }
-    //set reply ctx for persistent contexts
-    if(ctx->persistent_ctx) {
-        persistent_reply_contexts.push_back(ctx);
-    }
-
-    delete cmd; cmd = nullptr;
 }
 
 void RedisConnectionPool::process_internal_request(RedisConnection *c, AmObject *user_data, const char *fmt...)

@@ -98,6 +98,16 @@ public:
         return ::redisAsyncFormattedCommand(ac, fn, privdata, cmd, len);
     }
 
+    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) override
+    {
+      return ::redisAsyncCommandArgv(ac, fn, privdata, argc, argv, argvlen);
+    }
+
+    int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) override
+    {
+      return ::redisvAsyncCommand(ac, fn, privdata, format, argptr);
+    }
+
     int redisGetReply(redisContext* c, void ** reply) override
     {
         return ::redisGetReply(c, reply);
@@ -176,6 +186,22 @@ namespace redis {
     void redisFreeCommand(char* cmd)
     {
         ::redisFreeCommand(cmd);
+    }
+
+    int redisvAsyncCommand(redisAsyncContext* ac, redisCallbackFn *fn, void *privdata, const char* format, ...)
+    {
+        va_list argptr;
+        va_start (argptr, format);
+        redisInstanceContext* context = (redisInstanceContext*)ac;
+        int ret = context->instance->redisvAsyncCommand(context->original.ac, fn, privdata, format, argptr);
+        va_end(argptr);
+        return ret;
+    }
+
+    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen)
+    {
+        redisInstanceContext* context = (redisInstanceContext*)ac;
+        return context->instance->redisAsyncCommandArgv(context->original.ac, fn, privdata, argc, argv, argvlen);
     }
 
     int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd, size_t len)
