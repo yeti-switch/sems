@@ -151,6 +151,15 @@ class AmArg
     AmArg(std::map<std::string, std::string>& v);
     AmArg(std::map<std::string, AmArg>& v);
 
+    template<typename ... Args>
+    AmArg &assign_array(Args&& ... args)
+    {
+        invalidate();
+        assertArray();
+        (v_array->emplace_back(std::forward<Args>(args)), ...);
+        return *this;
+    }
+
     template<typename T>
     AmArg &assign_array(std::initializer_list<T> l)
     {
