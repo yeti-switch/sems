@@ -1044,17 +1044,28 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
 {
     auto it = uac_dlgs.find(event.reply.callid);
     if(it != uac_dlgs.end()) {
-        if(event.reply.code == keepalive_failure_code) {
-            const auto & key = it->second.first;
+        const auto & key = it->second.first;
+
+        {
             AmLock l(keepalive_contexts.mutex);
             auto it = keepalive_contexts.find(key);
             if(it != keepalive_contexts.end()) {
-                if(auto reg_id = parseRegId(key); reg_id) {
-                    DBG("unbind %s, %s", reg_id.value().c_str(), it->second.aor.c_str());
-                    bind(nullptr/*user data*/, UserTypeId::Unbind,
-                         reg_id.value(), it->second.aor.c_str(),
-                         0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
-                         it->second.interface_id);
+                it->second.last_reply_code = event.reply.code;
+                it->second.last_reply_reason = event.reply.reason;
+
+                if(event.reply.local_reply)
+                    it->second.last_reply_rtt_ms = milliseconds{0};
+                else
+                    it->second.last_reply_rtt_ms = std::chrono::duration_cast<milliseconds>(system_clock::now() - it->second.last_sent);
+
+                if(event.reply.code == keepalive_failure_code) {
+                    if(auto reg_id = parseRegId(key); reg_id) {
+                        DBG("unbind %s, %s", reg_id.value().c_str(), it->second.aor.c_str());
+                        bind(nullptr/*user data*/, UserTypeId::Unbind,
+                             reg_id.value(), it->second.aor.c_str(),
+                             0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
+                             it->second.interface_id);
+                    }
                 }
             }
         }
@@ -1300,6 +1311,7 @@ void SipRegistrar::on_keepalive_timer()
 
         if(0==dlg->sendRequest(SIP_METH_OPTIONS))
         {
+            ctx.last_sent = system_clock::now();
             //add dlg to local hash
             auto dlg_ptr = dlg.release();
             uac_dlgs.emplace(dlg_ptr->getCallid(), pair{ctx_it.first, dlg_ptr});
@@ -1324,7 +1336,9 @@ void SipRegistrar::on_keepalive_timer()
 
 SipRegistrar::keepalive_ctx_data::keepalive_ctx_data(const string &aor, const string &path, int interface_id,
     const system_clock::time_point &next_send)
-    : aor(aor), path(path), interface_id(interface_id), next_send(next_send)
+    : aor(aor), path(path), interface_id(interface_id),
+      next_send(next_send), last_sent(),
+      last_reply_code(0), last_reply_reason(), last_reply_rtt_ms()
 {}
 
 void SipRegistrar::keepalive_ctx_data::update(const string &_aor, const string &_path, int _interface_id,
@@ -1353,6 +1367,9 @@ void SipRegistrar::keepalive_ctx_data::dump(const string &key, AmArg &ret, const
     ret["path"] = path;
     ret["interface_id"] = interface_id;
     ret["next_send_in"] = std::chrono::duration_cast<seconds>(next_send - now).count();
+    ret["last_reply_code"] = last_reply_code;
+    ret["last_reply_reason"] = last_reply_reason;
+    ret["last_reply_rtt_ms"] = last_reply_rtt_ms.count();
 }
 
 void SipRegistrar::KeepAliveContexts::dump()

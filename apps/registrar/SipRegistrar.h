@@ -22,6 +22,7 @@ using std::map;
 using std::list;
 using std::unordered_map;
 using std::chrono::seconds;
+using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
 using RegistrationIdType = SipRegistrarEvent::RegistrationIdType;
@@ -66,6 +67,10 @@ class SipRegistrar
         string path;
         int interface_id;
         system_clock::time_point next_send;
+        system_clock::time_point last_sent;
+        unsigned int last_reply_code;
+        string last_reply_reason;
+        milliseconds last_reply_rtt_ms;
 
         keepalive_ctx_data(const string &aor, const string &path, int interface_id,
             const system_clock::time_point &next_send);
