@@ -109,8 +109,8 @@ struct RedisRequest
     {}
 
     RedisRequest(string session_id, string conn_id, const vector<AmArg>& args,
-        AmObject *user_data = nullptr, int user_type_id = 0, bool persistent_ctx = false, int event_id = RedisEvent::Request)
-      : RedisEvent(event_id, conn_id),
+        AmObject *user_data = nullptr, int user_type_id = 0, bool persistent_ctx = false, bool multi = false)
+      : RedisEvent(multi ? RedisEvent::RequestMulti : RedisEvent::Request, conn_id),
         session_id(session_id), args(args),
         user_data(user_data), user_type_id(user_type_id),
         persistent_ctx(persistent_ctx)
