@@ -205,7 +205,7 @@ static void append_args(vector<string> &args, const AmArg &child)
  *  event_args[1] : arg0
  *  ...
  *  event_args[N] : argN */
-static int parse_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
+static int perform_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
 {
     vector<string> args;
 
@@ -236,7 +236,7 @@ static int parse_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vec
  * event_args[1] : [cmd1, arg0, arg1 ... argN]
  *  ...
  * event_args[N] : [cmdN, arg0, arg1 ... argN] */
-static int parse_multi_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
+static int perform_multi_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
 {
     if(redis::redisvAsyncCommand(ac, nullptr, nullptr, "MULTI") != REDIS_OK)
         return -1;
@@ -294,8 +294,8 @@ void RedisConnectionPool::process_request_event(RedisRequest& event, RedisConnec
 
     RedisReplyCtx *ctx = new RedisReplyCtx(c, event);
     int ret = event.event_id == RedisEvent::RequestMulti
-              ? parse_multi_event_args(ac, ctx, event.args)
-              : parse_event_args(ac, ctx, event.args);
+              ? perform_multi_event(ac, ctx, event.args)
+              : perform_event(ac, ctx, event.args);
 
     if(ret == REDIS_OK) {
         if(event.user_data && event.persistent_ctx) {
