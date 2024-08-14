@@ -22,7 +22,7 @@ public:
     void stop();
 };
 
-SSLKeyLogger* ssl_key_logger();
-SSLKeyLogger* restart_ssl_key_logger(const string& path);
+std::shared_ptr<SSLKeyLogger> ssl_key_logger();
+std::shared_ptr<SSLKeyLogger> restart_ssl_key_logger(const string& path);
 
 #endif/*SSLKEY_LOGGER_H*/

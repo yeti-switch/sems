@@ -32,15 +32,15 @@ void SSLKeyLogger::stop()
     is_enable = false;
 }
 
-std::shared_ptr<SSLKeyLogger> _ssl_key_logger;
+std::atomic<std::shared_ptr<SSLKeyLogger>> _ssl_key_logger;
 
-SSLKeyLogger* ssl_key_logger()
+std::shared_ptr<SSLKeyLogger> ssl_key_logger()
 {
-    return _ssl_key_logger.get();
+    return _ssl_key_logger.load();
 }
 
-SSLKeyLogger* restart_ssl_key_logger(const string& path)
+std::shared_ptr<SSLKeyLogger> restart_ssl_key_logger(const string& path)
 {
-    std::atomic_exchange(&_ssl_key_logger, std::make_shared<SSLKeyLogger>(path));
-    return _ssl_key_logger.get();
+    _ssl_key_logger.store(std::make_shared<SSLKeyLogger>(path));
+    return _ssl_key_logger.load(std::memory_order_acquire);
 }
