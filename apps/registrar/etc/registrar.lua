@@ -127,6 +127,7 @@ local function register(keys, args)
     local local_interface_id = args[4]
     local user_agent = args[5]
     local path = args[6]
+    local bindings_max = tonumber(args[7])
 
     if not user_agent then
         user_agent = ''
@@ -144,7 +145,7 @@ local function register(keys, args)
     end
 
     -- check for max allowed bindings
-    if redis.call('SCARD', auth_id) >= 10 then
+    if redis.call('SCARD', auth_id) >= bindings_max then
         return 'Too many registered contacts'
     end
 

@@ -347,6 +347,8 @@ int SipRegistrar::configure(cfg_t* cfg)
     expires_default = cfg_getint(cfg, CFG_PARAM_EXPIRES_DEFAULT);
     keepalive_interval = seconds{cfg_getint(cfg, CFG_PARAM_KEEPALIVE_INTERVAL)};
     max_interval_drift = keepalive_interval/10; //allow 10% interval drift
+    bindings_max = cfg_getint(cfg, CFG_PARAM_BINDINGS_MAX);
+    if(bindings_max <= 0) bindings_max = DEFAULT_BINDINGS_MAX;
     return RegistrarRedisClient::configure(cfg);
 }
 
@@ -1094,7 +1096,7 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1104,7 +1106,7 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
         }
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
     }
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
@@ -1171,7 +1173,7 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1179,7 +1181,7 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
             throw AmSession::Exception(500,"registrar is not enabled");
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str()};
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
     }
 
     if(post_request(write_conn->id, args, user_data, user_type_id) == false)

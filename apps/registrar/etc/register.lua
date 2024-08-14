@@ -64,6 +64,7 @@ local node_id = ARGV[3]
 local local_interface_id = ARGV[4]
 local user_agent = ARGV[5]
 local path = ARGV[6]
+local bindings_max = tonumber(ARGV[7])
 
 if not user_agent then
     user_agent = ''
@@ -81,7 +82,7 @@ for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
 end
 
 -- check for max allowed bindings
-if redis.call('SCARD', auth_id) >= 10 then
+if redis.call('SCARD', auth_id) >= bindings_max then
     return 'Too many registered contacts'
 end
 
