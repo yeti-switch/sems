@@ -23,7 +23,8 @@ enum UserTypeId {
     ResolveAors,
     BlockingReqCtx,
     ContactSubscribe,
-    ContactData
+    ContactData,
+    Unbind
 };
 
 /* Helpers */
@@ -33,6 +34,16 @@ bool post_request(const string &conn_id, const vector<AmArg>& args,
 {
     return session_container->postEvent(REDIS_APP_QUEUE,
         new RedisRequest(SIP_REGISTRAR_QUEUE, conn_id, args, user_data, user_type_id, persistent_ctx));
+}
+
+bool parseRegId(const string &str, string &res) {
+    static char delim = ':';
+    int pos1 = str.find(delim, 0);
+    if(pos1 < 0) return false;
+    int pos2 = str.find(delim, pos1 + 1);
+    if(pos2 < 0) return false;
+    res = str.substr(pos1 + 1, pos2 - pos1 - 1);
+    return true;
 }
 
 /* SipRegistrarFactory */
@@ -249,7 +260,7 @@ SipRegistrar::~SipRegistrar()
     event_dispatcher->delEventQueue(SIP_REGISTRAR_QUEUE);
 
     for(auto &dlg: uac_dlgs)
-        delete dlg.second;
+        delete dlg.second.second;
 }
 
 int SipRegistrar::onLoad()
@@ -349,6 +360,7 @@ int SipRegistrar::configure(cfg_t* cfg)
     max_interval_drift = keepalive_interval/10; //allow 10% interval drift
     bindings_max = cfg_getint(cfg, CFG_PARAM_BINDINGS_MAX);
     if(bindings_max <= 0) bindings_max = DEFAULT_BINDINGS_MAX;
+    keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
     return RegistrarRedisClient::configure(cfg);
 }
 
@@ -807,6 +819,9 @@ void SipRegistrar::process_redis_reply_event(RedisReply& redis_reply)
     case UserTypeId::ContactData:
         process_redis_reply_contact_data_event(redis_reply);
         break;
+    case UserTypeId::Unbind:
+        process_redis_reply_unbind_event(redis_reply);
+        break;
     default:
         ERROR("unexpected reply event with type: %d", redis_reply.user_type_id);
         break;
@@ -1019,13 +1034,31 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
         ERROR("failed to subscribe");
 }
 
+void SipRegistrar::process_redis_reply_unbind_event(RedisReply& event) {
+    DBG("data: %s", AmArg::print(event.data).c_str());
+}
+
 void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
 {
-    //DBG("got redis reply. check in local hash");
+    //DBG("process_sip_reply");
     auto it = uac_dlgs.find(event.reply.callid);
     if(it != uac_dlgs.end()) {
-        //DBG("found ctx. remove dlg");
-        delete it->second;
+        if(event.reply.code == keepalive_failure_code) {
+            const auto & key = it->second.first;
+            AmLock l(keepalive_contexts.mutex);
+            auto it = keepalive_contexts.find(key);
+            if(it != keepalive_contexts.end()) {
+                //DBG("found ka ctx");
+                string reg_id;
+                if(parseRegId(key, reg_id)) {
+                    DBG("unbind %s, %s", reg_id.c_str(), it->second.aor.c_str());
+                    bind(nullptr/*user data*/, UserTypeId::Unbind, reg_id, it->second.aor.c_str(),
+                         0/*expires*/, ""/*user agent*/, ""/*path*/, it->second.interface_id);
+                }
+            }
+        }
+
+        delete it->second.second;
         uac_dlgs.erase(it);
     }
 }
@@ -1268,7 +1301,7 @@ void SipRegistrar::on_keepalive_timer()
         {
             //add dlg to local hash
             auto dlg_ptr = dlg.release();
-            uac_dlgs.emplace(dlg_ptr->getCallid(), dlg_ptr);
+            uac_dlgs.emplace(dlg_ptr->getCallid(), pair{ctx_it.first, dlg_ptr});
         } else {
             ERROR("failed to send keep alive OPTIONS request for %s",
                 ctx.aor.data());

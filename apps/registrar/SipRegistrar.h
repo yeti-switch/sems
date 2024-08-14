@@ -47,10 +47,17 @@ class SipRegistrar
     int expires_max;
     int expires_default;
     int bindings_max;
+    int keepalive_failure_code;
     AmTimerFd keepalive_timer;
     seconds keepalive_interval;
     seconds max_interval_drift;
-    unordered_map<string, AmSipDialog* > uac_dlgs;
+    /*
+     * uac_dlgs
+     * key: call_id
+     * value: pair.first: ka ctx key
+     * value: pair.second: dlg ptr
+     */
+    unordered_map<string, pair<string, AmSipDialog*>> uac_dlgs;
     uint32_t max_registrations_per_slot;
 
     //contains data to generate correct keepalive OPTIONS requests
@@ -134,6 +141,7 @@ class SipRegistrar
     void process_redis_reply_blocking_req_ctx_event(RedisReply& event);
     void process_redis_reply_contact_subscribe_event(RedisReply& event);
     void process_redis_reply_contact_data_event(RedisReply& event);
+    void process_redis_reply_unbind_event(RedisReply& event);
     void process_sip_reply(const AmSipReplyEvent &event);
 
   public:
