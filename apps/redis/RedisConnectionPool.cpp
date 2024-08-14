@@ -226,7 +226,7 @@ static int parse_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, const vec
             : -1;
 
     if(cmd)
-        free(cmd);
+        redis::redisFreeCommand(cmd);
 
     return ret;
 }
@@ -267,7 +267,7 @@ static int parse_multi_event_args(redisAsyncContext *ac, RedisReplyCtx *ctx, con
             goto failed;
 
         ret = redis::redisAsyncFormattedCommand(ac, nullptr, nullptr, cmd, cmd_size);
-        free(cmd);
+        redis::redisFreeCommand(cmd);
 
         if(ret != REDIS_OK)
             goto failed;
