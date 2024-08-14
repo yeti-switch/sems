@@ -33,7 +33,7 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
 {
     RedisReplyCtx *ctx = static_cast<RedisReplyCtx *>(privdata);
     redisReply* reply = static_cast<redisReply *>(r);
-    DBG("got reply from redis");
+
     if(reply == nullptr) {
         ERROR("%s: I/O error", ctx->session_id.c_str());
     } else if(redis::isReplyError(reply)) {
