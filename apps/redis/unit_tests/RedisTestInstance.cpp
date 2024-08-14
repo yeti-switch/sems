@@ -182,12 +182,42 @@ public:
 
     int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) override
     {
-        return REDIS_ERR;
+        if(ac->ev.addWrite)
+           ac->ev.addWrite(ac->ev.data);
+
+        Command current;
+        sds cmd;
+        long long len;
+        current.replyfn = fn;
+        current.privdata = privdata;
+
+        if((len = redisFormatSdsCommandArgv(&cmd, argc, argv, argvlen)) < 0)
+            return REDIS_ERR;
+
+        current.command = string(cmd, len);
+        q.push(current);
+        redisFreeSdsCommand(cmd);
+        return REDIS_OK;
     }
 
     int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) override
     {
-        return REDIS_ERR;
+        if(ac->ev.addWrite)
+           ac->ev.addWrite(ac->ev.data);
+
+        Command current;
+        current.replyfn = fn;
+        current.privdata = privdata;
+        char* cmd;
+        int len;
+
+        if((len = redisvFormatCommand(&cmd, format, argptr))<0)
+            return REDIS_ERR;
+
+        current.command = string(cmd, len);
+        q.push(current);
+        redisFreeCommand(cmd);
+        return REDIS_OK;
     }
 
     int redisAppendCommand(redisContext* , const char* format, va_list argptr) override
