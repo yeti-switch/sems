@@ -94,7 +94,7 @@ TEST_F(RedisTest, RedisConnectionTest)
     redis::redisFormatCommand(&cmd,"HSET %s %d %d","r:471",8,0);
     test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_NIL, AmArg());
     conn.process_request(conn.get_connection(), nullptr, "HSET %s %d %d","r:471",8,0);
-    delete cmd; cmd = nullptr;
+    redis::redisFreeCommand(cmd); cmd = nullptr;
 
     time_ = time(0);
     while(!conn.wait_reply()){
@@ -109,7 +109,7 @@ TEST_F(RedisTest, RedisConnectionTest)
     res.push("0");
     test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_ARRAY, res);
     conn.process_request(conn.get_connection(), nullptr, "HGET %s %d", "r:471", 8);
-    delete cmd; cmd = nullptr;
+    redis::redisFreeCommand(cmd); cmd = nullptr;
 
     time_ = time(0);
     while(!conn.wait_reply()){
@@ -138,7 +138,7 @@ TEST_F(RedisTest, RedisConnectionTest1)
     redis::redisFormatCommand(&cmd,"HSET %s %d %d","r:471",8,0);
     test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_NIL, AmArg());
     conn.process_request(conn.get_connection(), nullptr, "HSET %s %d %d","r:471",8,0);
-    delete cmd; cmd = nullptr;
+    redis::redisFreeCommand(cmd); cmd = nullptr;
 
     redis::redisFormatCommand(&cmd,"HGET %s %d", "r:471", 8);
 
@@ -147,7 +147,7 @@ TEST_F(RedisTest, RedisConnectionTest1)
     res.push("0");
     test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_ARRAY, res);
     conn.process_request(conn.get_connection(), nullptr, "HGET %s %d", "r:471", 8);
-    delete cmd; cmd = nullptr;
+    redis::redisFreeCommand(cmd); cmd = nullptr;
 
     for(int i = 0; i < 2; i++) {
         time_ = time(0);

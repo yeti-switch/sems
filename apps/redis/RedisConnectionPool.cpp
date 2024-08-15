@@ -342,7 +342,8 @@ void RedisConnectionPool::process_internal_vrequest(RedisConnection *c, AmObject
         delete ctx; ctx = nullptr;
     }
 
-    delete cmd; cmd = nullptr;
+    if(cmd)
+        redis::redisFreeCommand(cmd);
 }
 
 void RedisConnectionPool::process_stop_event()
