@@ -8,9 +8,11 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 using std::string;
 using std::vector;
 using std::map;
+using std::unique_ptr;
 
 class PostgreSqlMock
   : public AmThread,
@@ -25,17 +27,23 @@ class PostgreSqlMock
     AmCondition<bool> stopped;
     int epoll_fd;
 
+    struct Response {
+        string value;
+        string error;
+        bool timeout;
+    };
+
     int init();
     bool checkQueryData(const PGQueryData& data);
-    string find_resp_for_query(const string& query);
+    Response* find_resp_for_query(const string& query);
     void handle_query(const string& query, const string& sender_id, const string& token);
     void handle_query_data(const PGQueryData& qdata);
     void onSimpleExecute(const PGExecute& e);
     void onParamExecute(const PGParamExecute& e);
     void onPrepareExecute(const PGPrepareExec& e);
 
-    vector<string> resp_stack;
-    map<string, string> resp_map;
+    vector<unique_ptr<Response>> resp_stack;
+    map<string, unique_ptr<Response>> resp_map;
 
   protected:
     rpc_handler stackPush;
@@ -62,4 +70,6 @@ class PostgreSqlMock
     int onLoad();
     int configure(const string& config);
     int reconfigure(const string& config);
+
+    void insert_resp_map(const string& query, const string& resp, const string& error = string(), bool timeout = false);
 };

@@ -1,8 +1,9 @@
 #include "PostgreSqlMock.h"
-
 #include "log.h"
 #include "AmEventDispatcher.h"
 #include "Config.h"
+
+#include <jsonArg.h>
 
 #define eventDispatcher     AmEventDispatcher::instance()
 #define sessionContainer    AmSessionContainer::instance()
@@ -112,15 +113,6 @@ int PostgreSqlMock::configure(const string& config)
         return -1;
     }
 
-    cfg_t *cfg_map = cfg_getsec(cfg, CFG_OPT_MAP);
-
-    for(int i = 0; i < cfg_size(cfg_map, CFG_OPT_PAIR); ++i) {
-        cfg_t *cfg_pair = cfg_getnsec(cfg_map, CFG_OPT_PAIR, i);
-        auto query = cfg_getstr(cfg_pair, CFG_OPT_QUERY);
-        auto response = cfg_getstr(cfg_pair, CFG_OPT_RESPONSE);
-        resp_map[query] = response;
-    }
-
     cfg_free(cfg);
     return 0;
 }
@@ -144,6 +136,8 @@ int PostgreSqlMock::init()
     DBG("PostgreSqlMock Client initialized");
     return 0;
 }
+
+/* AmThread */
 
 void PostgreSqlMock::run()
 {
@@ -192,10 +186,18 @@ void PostgreSqlMock::on_stop()
     stopped.wait_for();
 }
 
+/* rpc handlers */
+
 void PostgreSqlMock::stackPush(const AmArg& args, AmArg&)
 {
-    for(int i = 0; i < args.size(); ++i)
-        resp_stack.emplace_back(arg2str(args[i]));
+    if(args.size() == 0) return;
+
+    auto response = new Response();
+    response->value = arg2str(args[0]);
+    if(args.size() > 1) response->error = arg2str(args[1]);
+    if(args.size() > 2) response->timeout = (arg2str(args[2]) == "true");
+
+    resp_stack.emplace_back(response);
 }
 
 void PostgreSqlMock::stackClear(const AmArg& args, AmArg&)
@@ -205,13 +207,25 @@ void PostgreSqlMock::stackClear(const AmArg& args, AmArg&)
 
 void PostgreSqlMock::stackShow(const AmArg& args, AmArg& ret)
 {
-    for(auto & it : resp_stack)
-        ret.push(AmArg(it.c_str()));
+    for(auto & it : resp_stack) {
+        ret.push(AmArg());
+        AmArg &r = ret.back();
+        r.push(AmArg(it->value));
+        r.push(AmArg(it->error));
+        r.push(AmArg(it->timeout));
+    }
 }
 
 void PostgreSqlMock::mapInsert(const AmArg& args, AmArg&)
 {
-    resp_map[arg2str(args[0])] = arg2str(args[1]);
+    if(args.size() == 0) return;
+
+    auto resp = new Response();
+    if(args.size() > 1) resp->value = arg2str(args[1]);
+    if(args.size() > 2) resp->error = arg2str(args[2]);
+    if(args.size() > 3) resp->timeout = (arg2str(args[3]) == "true");
+
+    resp_map.try_emplace(arg2str(args[0])/*query*/, resp);
 }
 
 void PostgreSqlMock::mapClear(const AmArg& args, AmArg&)
@@ -222,13 +236,17 @@ void PostgreSqlMock::mapClear(const AmArg& args, AmArg&)
 void PostgreSqlMock::mapShow(const AmArg& args, AmArg& ret)
 {
     ret.assertArray();
-    for(auto it : resp_map) {
+    for(auto & it : resp_map) {
         ret.push(AmArg());
         AmArg &r = ret.back();
-        r.push(AmArg(it.first.c_str()));
-        r.push(AmArg(it.second.c_str()));
+        r.push(AmArg(it.first.c_str()/*query*/));
+        r.push(AmArg(it.second->value.c_str()));
+        r.push(AmArg(it.second->error.c_str()));
+        r.push(AmArg(it.second->timeout));
     }
 }
+
+/* RpcTreeHandler */
 
 void PostgreSqlMock::init_rpc_tree()
 {
@@ -241,6 +259,8 @@ void PostgreSqlMock::init_rpc_tree()
     reg_method(map, "clear", "map clear", &PostgreSqlMock::mapClear);
     reg_method(map, "show", "map show", &PostgreSqlMock::mapShow);
 }
+
+/* AmEventHandler */
 
 void PostgreSqlMock::process(AmEvent* ev)
 {
@@ -289,26 +309,43 @@ bool PostgreSqlMock::checkQueryData(const PGQueryData& data)
     return true;
 }
 
-string PostgreSqlMock::find_resp_for_query(const string& query)
+PostgreSqlMock::Response* PostgreSqlMock::find_resp_for_query(const string& query)
 {
-    string response = resp_map[query];
+    auto resp_it = resp_map.find(query);
+    if(resp_it == resp_map.end()) {
+        if(resp_stack.empty())
+            return nullptr;
 
-    if(response.empty()) {
-        response = resp_stack.back();
+        auto resp = resp_stack.back().release();
         resp_stack.pop_back();
+        return resp;
     }
 
-    return response;
+    return resp_it->second.get();
 }
 
 void PostgreSqlMock::handle_query(const string& query, const string& sender_id, const string& token)
 {
-    const string response = find_resp_for_query(query);
+    const auto response = find_resp_for_query(query);
+    if(!response) return;
 
-    if(!response.empty())
-        sessionContainer->postEvent(sender_id, new PGResponse(response, token));
-    else
-        sessionContainer->postEvent(sender_id, new PGResponseError("response is unavailable", token));
+    if(!response->error.empty()) {
+        sessionContainer->postEvent(sender_id, new PGResponseError(response->error, token));
+        return;
+    }
+
+    if(response->timeout) {
+        sessionContainer->postEvent(sender_id, new PGTimeout(token));
+        return;
+    }
+
+    AmArg resp_arg;
+    if(!json2arg(response->value, resp_arg)) {
+        DBG("json2arg failed for value '%s'", response->value.c_str());
+        return;
+    }
+
+    sessionContainer->postEvent(sender_id, new PGResponse(resp_arg, token));
 }
 
 void PostgreSqlMock::handle_query_data(const PGQueryData& qdata)
@@ -332,4 +369,14 @@ void PostgreSqlMock::onParamExecute(const PGParamExecute& e)
 void PostgreSqlMock::onPrepareExecute(const PGPrepareExec& e)
 {
     handle_query(e.info.query, e.sender_id, e.token);
+}
+
+void PostgreSqlMock::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
+{
+    DBG("query [%s]: \n\t - value: %s \n\t - error: %s \n\t - timout: %d", query.c_str(), resp.c_str(), error.c_str(), timeout);
+    auto response = new Response();
+    response->value = resp;
+    response->error = error;
+    response->timeout = timeout;
+    resp_map.try_emplace(query, response);
 }
