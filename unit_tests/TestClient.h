@@ -12,7 +12,7 @@
     cond.set(false);\
 
 #define stop(client)\
-    client.stop();\
+    client.stop(true);\
     client.reset()\
 
 /* TestUserData */
