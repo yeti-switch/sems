@@ -1,3 +1,9 @@
+sems (1.140.0) stable; urgency=low
+  * registrar: max bindings as a parameter
+  * redis: support MULTI/EXEC requests event
+  * AmArg array multi type initializer
+ -- Michael Furmur <furmur@pm.me>  Sat, 17 Aug 2024 16:50:59 +0300
+
 sems (1.139.6) stable; urgency=low
   * remove excess warning,info messages
  -- Michael Furmur <furmur@pm.me>  Mon, 12 Aug 2024 11:07:27 +0300
