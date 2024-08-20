@@ -230,6 +230,7 @@ class trsp_worker
     map<string,tcp_base_trsp*>   connections;
     AmCondition<bool> stopped;
 
+    template<class socket> unsigned long long getQueueSize();
 protected:
     void run();
     void on_stop();

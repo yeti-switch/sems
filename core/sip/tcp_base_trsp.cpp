@@ -767,60 +767,64 @@ tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, cons
 
 void trsp_worker::getInfo(AmArg &ret)
 {
-    AmLock l(connections_mut);
+    map<string,tcp_base_trsp*> conns;
+    {
+        AmLock l(connections_mut);
+        for(auto const & con_it : connections) {
+            inc_ref(con_it.second);
+            conns.emplace(con_it.first, con_it.second);
+        }
+    }
 
     ret.assertStruct();
-    for(auto const &con_it: connections) {
+    for(auto const &con_it: conns) {
         SIP_interface &sip_if = AmConfig.sip_ifs[con_it.second->get_if()];
         AmArg &r = ret[sip_if.name];
         con_it.second->getInfo(r[con_it.first]);
+        dec_ref(con_it.second);
     }
+}
+
+template<class socket>
+unsigned long long trsp_worker::getQueueSize()
+{
+    vector<socket*> conns;
+    {
+        AmLock l(connections_mut);
+        for(auto const & con_it : connections) {
+            socket* sock = dynamic_cast<socket*>(con_it.second);
+            if(!sock) continue;
+            inc_ref(con_it.second);
+            conns.push_back(sock);
+        }
+    }
+
+    unsigned long long qsize = 0;
+    for(auto const &con_it: conns) {
+        qsize += con_it->getQueueSize();
+        dec_ref(con_it);
+    }
+    return qsize;
 }
 
 unsigned long long trsp_worker::getTcpQueueSize()
 {
-    AmLock l(connections_mut);
-    unsigned long long qsize = 0;
-    for(auto const &con_it: connections) {
-        qsize += con_it.second->getQueueSize();
-    }
-    return qsize;
+    return getQueueSize<tcp_base_trsp>();
 }
 
 unsigned long long trsp_worker::getTlsQueueSize()
 {
-    AmLock l(connections_mut);
-    unsigned long long qsize = 0;
-    for(auto const &con_it: connections) {
-        tls_trsp_socket* socket = dynamic_cast<tls_trsp_socket*>(con_it.second);
-        if(!socket) continue;
-        qsize += socket->getQueueSize();
-    }
-    return qsize;
+    return getQueueSize<tls_trsp_socket>();
 }
 
 unsigned long long trsp_worker::getWsQueueSize()
 {
-    AmLock l(connections_mut);
-    unsigned long long qsize = 0;
-    for(auto const &con_it: connections) {
-        ws_trsp_socket* socket = dynamic_cast<ws_trsp_socket*>(con_it.second);
-        if(!socket) continue;
-        qsize += socket->getQueueSize();
-    }
-    return qsize;
+    return getQueueSize<ws_trsp_socket>();
 }
 
 unsigned long long trsp_worker::getWssQueueSize()
 {
-    AmLock l(connections_mut);
-    unsigned long long qsize = 0;
-    for(auto const &con_it: connections) {
-        wss_trsp_socket* socket = dynamic_cast<wss_trsp_socket*>(con_it.second);
-        if(!socket) continue;
-        qsize += socket->getQueueSize();
-    }
-    return qsize;
+    return getQueueSize<wss_trsp_socket>();
 }
 
 void trsp_worker::run()
