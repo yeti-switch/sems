@@ -80,9 +80,10 @@ public:
     RedisConnectionPool(const char *name, const string &queue_name);
     virtual ~RedisConnectionPool();
 
-    RedisConnection* addConnection(const string &_host, int _port);
+    RedisConnection* addConnection(const string& name, const string& host, int port);
+    void removeConnection(RedisConnection* c);
     string get_queue_name() { return queue_name; }
-    virtual void process_internal_reply(const RedisConnection *c, int result,
+    virtual void process_internal_reply(RedisConnection *c, int result,
         const AmObject *user_data, const AmArg &data) {};
 };
 

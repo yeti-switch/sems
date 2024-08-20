@@ -29,21 +29,22 @@ int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
     return 0;
 }
 
-static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata)
+static void redis_request_cb_static(redisAsyncContext* , void *r, void *privdata)
 {
     RedisReplyCtx *ctx = static_cast<RedisReplyCtx *>(privdata);
     redisReply* reply = static_cast<redisReply *>(r);
 
+    bool access_error = false;
     if(reply == nullptr) {
         ERROR("%s: I/O error", ctx->session_id.c_str());
     } else if(redis::isReplyError(reply)) {
         ERROR("%s: error: %s", ctx->session_id.c_str(), redis::getReplyError(reply));
+        access_error = (strstr(redis::getReplyError(reply), "READONLY") != nullptr);
     }
 
     RedisReply::result_type result;
     AmArg data;
     parseReply(reply, result, data);
-    //DBG("reply data %s", >data.print().c_str());
 
     if(ctx->pool)
         ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.release(), data);
@@ -51,6 +52,10 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
         session_container->postEvent(ctx->session_id,
             new RedisReply(ctx->conn_id, result, data, ctx->user_data, ctx->user_type_id));
 
+    if(access_error) {
+        ERROR("Error Access, reconnect");
+        redis::redisAsyncDisconnect(ctx->c->get_async_context());
+    }
     if(!ctx->persistent_ctx) delete ctx;
 }
 
@@ -353,9 +358,9 @@ void RedisConnectionPool::process_stop_event()
             redis::redisAsyncDisconnect(connection->get_async_context());
 }
 
-RedisConnection* RedisConnectionPool::addConnection(const std::string& host, int port)
+RedisConnection* RedisConnectionPool::addConnection(const string& name, const string& host, int port)
 {
-    RedisConnection* conn = new RedisConnection(name, this);
+    RedisConnection* conn = new RedisConnection(name.c_str(), this);
     if(conn->init(epoll_fd, host, port) != 0) {
         delete conn;
         return 0;

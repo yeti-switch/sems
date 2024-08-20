@@ -34,14 +34,15 @@ class RedisApp
         string id;
         RedisConnectionInfo info;
         string session_id;
-        RedisConnection *redis_conn;
+        int next_addr_index;
+        RedisConnection* redis_conn;
         AtomicCounter& connected_stat;
         AtomicCounter& retry_reqs_count_stat;
         AtomicCounter& dropped_reqs_count_stat;
 
         Connection(const string &id, const RedisConnectionInfo &info,
-            const string &session_id, RedisConnection *redis_conn)
-          : id(id), info(info), session_id(session_id), redis_conn(redis_conn),
+            const string &session_id, int next_addr_index)
+          : id(id), info(info), session_id(session_id), next_addr_index(next_addr_index), redis_conn(0),
             connected_stat(stat_group(Gauge, MOD_NAME, "connected")
                 .addAtomicCounter().addLabel("connection", id)),
             retry_reqs_count_stat(stat_group(Gauge, MOD_NAME, "retry_reqs_count")
@@ -50,8 +51,9 @@ class RedisApp
                 .addAtomicCounter().addLabel("connection", id))
         {}
 
-        void on_connect();
-        void on_disconnect();
+        void on_connected();
+        void on_connect(RedisConnection* c);
+        void on_disconnect(RedisConnection* c);
         bool is_connected();
         void on_script_loaded(const RedisScript& script, const char *hash);
         bool is_scripts_loaded();
@@ -71,7 +73,7 @@ class RedisApp
     void process(AmEvent* ev) override;
     void process_redis_add_connection_event(RedisAddConnection &event);
     void process_redis_request_event(RedisRequest &event);
-    void process_internal_reply(const RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) override;
+    void process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) override;
     void process_retry_reqs(Connection *conn);
     void on_connect(RedisConnection* conn) override;
     void on_disconnect(RedisConnection* conn) override;

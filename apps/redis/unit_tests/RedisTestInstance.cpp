@@ -34,10 +34,12 @@ class RedisTestConnection : public RedisInstance
     };
 
     queue<Command> q;
+    redisAsyncContext* disconnect;
 public:
     RedisTestConnection(RedisTestServer* server)
     : server(server)
-    , async_connected(false){}
+    , async_connected(false)
+    , disconnect(0){}
 
     redisAsyncContext *redisAsyncConnect(const char *ip, int port) override
     {
@@ -53,11 +55,8 @@ public:
 
     void redisAsyncDisconnect(redisAsyncContext *ac) override
     {
-        if(ac->ev.cleanup)
-            ac->ev.cleanup(ac->ev.data);
-        redisFree(&ac->c);
-        if(ac->onDisconnect)
-            ac->onDisconnect(ac, REDIS_OK);
+        disconnect = ac;
+        ac->ev.addWrite(ac->ev.data);
     }
 
     redisContext * redisConnectWithTimeout(const char* ip, int port, const struct timeval tv) override
@@ -142,15 +141,6 @@ public:
         if(!async_connected && ac->onConnect) {
             async_connected = true;
             ac->onConnect(ac, REDIS_OK);
-
-            if(q.empty()) {
-                if(ac->ev.delWrite) {
-                    ac->ev.delWrite(ac->ev.data);
-                } else {
-                    ERROR("absent event function in redis context");
-                }
-            }
-
         } else {
             redisReply* reply;
             Command cmd = q.front();
@@ -158,13 +148,21 @@ public:
             if(cmd.replyfn)
                 cmd.replyfn(ac, reply, cmd.privdata);
             freeReplyObject(reply);
-            if(q.empty()) {
-                if(ac->ev.delWrite) {
-                    ac->ev.delWrite(ac->ev.data);
-                } else {
-                    ERROR("absent event function in redis context");
-                }
+        }
+        
+        if(disconnect || q.empty()) {
+            if(ac->ev.delWrite) {
+                ac->ev.delWrite(ac->ev.data);
+            } else {
+                ERROR("absent event function in redis context");
             }
+        }
+        if(disconnect) {
+            if(ac->ev.cleanup)
+                ac->ev.cleanup(ac->ev.data);
+            redisFree(&ac->c);
+            if(ac->onDisconnect)
+                ac->onDisconnect(ac, REDIS_OK);
         }
     }
 

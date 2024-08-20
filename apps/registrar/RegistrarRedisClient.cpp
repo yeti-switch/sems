@@ -49,20 +49,36 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
     if(!reg_redis_read || !reg_redis_write)
         return -1;
 
-    auto cfg_conn_info = [](cfg_t* cfg, RedisConnectionInfo &info) {
-        info.host = cfg_getstr(cfg, CFG_PARAM_HOST);
-        info.port = cfg_getint(cfg, CFG_PARAM_PORT);
+    auto cfg_conn_info = [&](cfg_t* cfg, RedisConnectionInfo &info) -> int {
+        if(reg_redis_read == cfg) {
+            info.role = RedisSlave;
+            if(redis_read_addrs.empty()) {
+                ERROR("absent redis read connections");
+                return -1;
+            }
+            info.addrs = redis_read_addrs;
+        }
+        if(reg_redis_write == cfg) {
+            info.role = RedisMaster;
+            if(redis_write_addrs.empty()) {
+                ERROR("absent redis write connections");
+                return -1;
+            }
+            info.addrs = redis_write_addrs;
+        }
 
         if(cfg_size(cfg, CFG_PARAM_PASSWORD)) {
             info.password = cfg_getstr(cfg, CFG_PARAM_PASSWORD);
             if(cfg_size(cfg, CFG_PARAM_USERNAME))
                 info.username = cfg_getstr(cfg, CFG_PARAM_USERNAME);
         }
+        return 0;
     };
 
-    cfg_conn_info(reg_redis_read, read_conn->info);
-    cfg_conn_info(reg_redis_read, subscr_read_conn->info);
-    cfg_conn_info(reg_redis_write, write_conn->info);
+    if(cfg_conn_info(reg_redis_read, read_conn->info) ||
+       cfg_conn_info(reg_redis_read, subscr_read_conn->info) ||
+       cfg_conn_info(reg_redis_write, write_conn->info))
+        return -1;
 
     read_conn->info.scripts = {
         {AOR_LOOKUP_SCRIPT, get_script_path(AOR_LOOKUP_SCRIPT)},

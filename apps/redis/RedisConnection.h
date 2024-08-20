@@ -38,6 +38,7 @@ class RedisConnection
 
     redisAsyncContext* async_context;
     AmCondition<bool> connected;
+    AmCondition<bool> master;
     int mask;
 
     bool needAutorization;
@@ -50,6 +51,7 @@ class RedisConnection
     void on_connect();
     void on_disconnect();
 
+    void detect_role();
   public:
 
     RedisConnection(const char* name, RedisConnectionStateListener* state_listener);
@@ -57,10 +59,13 @@ class RedisConnection
     int init(int epoll_fd, const string &host, int port);
     void set_auth_data(const string& password, const string& username = "");
     void reconnect();
+    int reconnect(const string &host, int port);
 
     redisAsyncContext* get_async_context() {return async_context; }
     void cleanup();
     bool is_connected() { return connected.get(); }
+    bool is_master() { return master.get(); }
+    const char* get_name() { return name.c_str(); }
 
     //for unit_tests
     bool wait_connected() {
@@ -70,6 +75,7 @@ class RedisConnection
     redisConnectCallback connectCallback;
     redisDisconnectCallback disconnectCallback;
     redisCallbackFn authCallback;
+    redisCallbackFn roleCallback;
 
     int add_event(int flag);
     int del_event(int flag);

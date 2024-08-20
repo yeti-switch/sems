@@ -10,6 +10,7 @@
 RedisConnection::RedisConnection(const char* name, RedisConnectionStateListener* state_listener)
   : async_context(0),
     connected(false),
+    master(false),
     needAutorization(false),
     name(name),
     state_listener(state_listener)
@@ -20,6 +21,8 @@ RedisConnection::RedisConnection(const char* name, RedisConnectionStateListener*
 
 RedisConnection::~RedisConnection()
 {
+    connected = false;
+    master = false;
     CLASS_DBG("RedisConnection::~RedisConnection()");
 }
 
@@ -138,6 +141,34 @@ void RedisConnection::authCallback(struct redisAsyncContext*, void* r, void*)
         redisReply2Amarg(result, reply);
         DBG("redis connection auth success: %s", AmArg::print(result).c_str());
 
+        detect_role();
+        return;
+    }
+
+    redis::redisAsyncDisconnect(async_context);
+}
+
+static void roleCallback_static(redisAsyncContext* c, void *r, void *privdata)
+{
+    RedisConnection *conn = static_cast<RedisConnection*>(privdata);
+    DBG("%p", conn);
+    conn->roleCallback(c, r, privdata);
+}
+
+void RedisConnection::roleCallback(struct redisAsyncContext*, void* r, void*)
+{
+    redisReply* reply = static_cast<redisReply *>(r);
+    //DBG("got reply from redis");
+    if(reply == nullptr) {
+        ERROR("auth I/O error");
+    } else if(redis::isReplyError(reply)) {
+        ERROR("auth error: %s", redis::getReplyError(reply));
+    } else {
+        AmArg result;
+        redisReply2Amarg(result, reply);
+        DBG("redis connection role success: %s", AmArg::print(result).c_str());
+        master = (result[0] == "master");
+
         connected = true;
         state_listener->on_connect(this);
         return;
@@ -191,6 +222,17 @@ void RedisConnection::reconnect()
     }
 }
 
+int RedisConnection::reconnect(const std::string& host, int port)
+{
+    if(!connected.get()) {
+        this->host = host;
+        this->port = port;
+        return 0;
+    }
+
+    return -1;
+}
+
 void RedisConnection::on_connect() {
     if(needAutorization) {
         char *cmd;
@@ -205,14 +247,27 @@ void RedisConnection::on_connect() {
                 cmd,ret)) {
             ERROR("failed send auth request");
         }
-        delete cmd;
+        free(cmd);
     } else {
-        connected = true;
-        state_listener->on_connect(this);
+        detect_role();
     }
 }
 
 void RedisConnection::on_disconnect() {
     connected = false;
     state_listener->on_disconnect(this);
+}
+
+void RedisConnection::detect_role()
+{
+    char *cmd;
+    int ret;
+    ret = redis::redisFormatCommand(&cmd, "ROLE");
+    if(REDIS_OK!=redis::redisAsyncFormattedCommand(
+            async_context,
+            &roleCallback_static, this,
+            cmd,ret)) {
+        ERROR("failed send role request");
+    }
+    free(cmd);
 }

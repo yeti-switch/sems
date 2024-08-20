@@ -41,24 +41,41 @@ struct RedisScript
     bool is_loaded() const { return hash.empty() == false; }
 };
 
-struct RedisConnectionInfo
+struct RedisAddr
 {
     string host;
     int port;
+    RedisAddr()
+    : host(), port(0) {}
+    RedisAddr(const string &host, const int port)
+    : host(host), port(port) {}
+};
+
+enum RedisRole
+{
+  RedisMaster,
+  RedisSlave
+};
+
+struct RedisConnectionInfo
+{
+    vector<RedisAddr> addrs;
+    string name;
     string username;
     string password;
     vector<RedisScript> scripts;
+    RedisRole role;
 
     RedisConnectionInfo()
-      : host(), port(), username(), password(), scripts()
+      : username(), password(), scripts()
     {}
 
-    RedisConnectionInfo(const string &host, const int port,
+    RedisConnectionInfo(const string &host, const int port, RedisRole role,
         const string &username = string(), const string &password = string(),
         const vector<RedisScript> &scripts = {})
-      : host(host), port(port), username(username), password(password),
-        scripts(scripts)
-    {}
+      : username(username), password(password),
+        scripts(scripts), role(role)
+    { addrs.emplace_back(host, port); }
 };
 
 class RedisAddConnection
@@ -101,10 +118,10 @@ struct RedisRequest
     int user_type_id;
     bool persistent_ctx;
 
-    RedisRequest(RedisRequest &req)
+    RedisRequest(const RedisRequest &req)
       : RedisEvent(req.event_id, req.conn_id),
         session_id(req.session_id), args(req.args),
-        user_data(req.user_data.release()), user_type_id(req.user_type_id),
+        user_data(const_cast<RedisRequest &>(req).user_data.release()), user_type_id(req.user_type_id),
         persistent_ctx(req.persistent_ctx)
     {}
 

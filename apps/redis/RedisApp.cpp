@@ -101,9 +101,10 @@ RedisApp::Connection* RedisApp::find_conn(const string& id) {
 }
 
 RedisApp::Connection* RedisApp::find_conn(const RedisConnection* c) {
-    for(auto& conn : connections)
+    for(auto& conn : connections) {
         if(conn.redis_conn == c)
             return &conn;
+    }
 
     return nullptr;
 }
@@ -139,33 +140,38 @@ void RedisApp::process_redis_add_connection_event(RedisAddConnection &e)
         if(conn.id != e.conn_id)
             continue;
 
-        if(!conn.is_connected() && conn.redis_conn->is_connected())
-            conn.on_connect();
+        if(!conn.is_connected() && conn.redis_conn && conn.redis_conn->is_connected())
+            conn.on_connect(conn.redis_conn);
 
         return;
     }
 
-    auto redis_conn = addConnection(e.info.host, e.info.port);
-
-    if(!redis_conn) {
+    RedisConnection* conn = nullptr;
+    int cur_addr = 0;
+    auto addr_it = e.info.addrs.begin();
+    for(;addr_it != e.info.addrs.end(); addr_it++, cur_addr++) {
+        conn = addConnection(e.conn_id, addr_it->host, addr_it->port);
+        if(!conn) {
+            continue;
+        }
+        if(e.info.password.empty() == false)
+            conn->set_auth_data(e.info.password, e.info.username);
+        break;
+    }
+    if(!conn) {
         DBG("Failed to add connection.");
         session_container->postEvent(e.session_id,
             new RedisConnectionState(e.conn_id, RedisConnectionState::Disconnected, e.info));
-        return;
     }
 
-    const auto & conn = connections.emplace_back(e.conn_id, e.info, e.session_id, redis_conn);
-
-    if(conn.info.password.empty() == false)
-        redis_conn->set_auth_data(conn.info.password, conn.info.username);
+    connections.emplace_back(e.conn_id, e.info, e.session_id, cur_addr+1);
 }
 
 void RedisApp::process_redis_request_event(RedisRequest &event)
 {
     auto conn = find_conn(event.conn_id);
     if(!conn) return;
-
-    if(conn->is_connected()) {
+    if(conn->redis_conn) {
         process_request_event(event, conn->redis_conn);
         return;
     }
@@ -186,7 +192,7 @@ void RedisApp::process_redis_request_event(RedisRequest &event)
     conn->dropped_reqs_count_stat.inc();
 }
 
-void RedisApp::process_internal_reply(const RedisConnection *c, int result, const AmObject *user_data, const AmArg &data)
+void RedisApp::process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data)
 {
     auto conn = find_conn(c);
     if(!conn)
@@ -194,21 +200,21 @@ void RedisApp::process_internal_reply(const RedisConnection *c, int result, cons
 
     auto script_req = dynamic_cast<const RedisScriptLoadRequest *>(user_data);
     if(!script_req) {
-        conn->on_disconnect();
+        conn->on_disconnect(c);
         return;
     }
 
     auto script = script_req->script;
     if(data.getType() != AmArg::CStr) {
         ERROR("script '%s' loaded hash with wrong type", script.name.c_str());
-        conn->on_disconnect();
+        conn->on_disconnect(c);
         return;
     }
 
     const char* hash = data.asCStr();
     if(!hash) {
         ERROR("script '%s' loaded hash is nil", script.name.c_str());
-        conn->on_disconnect();
+        conn->on_disconnect(c);
         return;
     }
 
@@ -222,9 +228,19 @@ void RedisApp::process_retry_reqs(Connection *conn)
     if(res == retry_reqs.end()) return;
     auto & queue = res->second;
 
+    std::queue<RedisRequest> ret_q;
     for(int i = 0; i < max_batch_size && queue.size(); ++i) {
-        process_request_event(queue.front(), conn->redis_conn);
+        RedisRequest& req = queue.front();
+        if(conn->redis_conn)
+            process_request_event(req, conn->redis_conn);
+        else
+            ret_q.push(req);
         queue.pop();
+    }
+
+    while(ret_q.size()) {
+        queue.push(ret_q.front());
+        ret_q.pop();
     }
 
     conn->retry_reqs_count_stat.set(queue.size());
@@ -239,14 +255,15 @@ void RedisApp::process_retry_reqs(Connection *conn)
 
 void RedisApp::on_connect(RedisConnection* c)
 {
-    if(auto conn = find_conn(c))
-        conn->on_connect();
+    if(auto conn = find_conn(c->get_name()))
+        conn->on_connect(c);
 }
 
 void RedisApp::on_disconnect(RedisConnection* c)
 {
-    if(auto conn = find_conn(c))
-        conn->on_disconnect();
+    if(auto conn = find_conn(c->get_name())) {
+        conn->on_disconnect(c);
+    }
 }
 
 /* Configurable */
@@ -260,29 +277,68 @@ int RedisApp::configure(cfg_t* cfg)
 }
 
 /* Connection */
-
-void RedisApp::Connection::on_connect()
+void RedisApp::Connection::on_connected()
 {
-    if(is_scripts_loaded() == false) {
-        load_scripts();
-        return;
-    }
-
     post_conn_state(RedisConnectionState::Connected);
     redis_app->process_retry_reqs(this);
     connected_stat.set(1);
 }
 
-void RedisApp::Connection::on_disconnect()
+void RedisApp::Connection::on_connect(RedisConnection* c)
 {
-    drop_data();
-    post_conn_state(RedisConnectionState::Disconnected);
-    connected_stat.set(0);
+    if((c->is_master() && info.role != RedisMaster) ||
+    (!c->is_master() && info.role != RedisSlave)) {
+        redis::redisAsyncDisconnect(c->get_async_context());
+        return;
+    }
+    redis_conn = c;
+    next_addr_index = 0;
+    if(is_scripts_loaded() == false) {
+        load_scripts();
+        return;
+    }
+
+    on_connected();
+}
+
+void RedisApp::Connection::on_disconnect(RedisConnection* c)
+{
+    RedisConnection* connection = nullptr;
+    if(next_addr_index) {
+        auto addr_it = info.addrs.begin() + next_addr_index;
+        for(;addr_it != info.addrs.end(); next_addr_index++) {
+            if(c->reconnect(addr_it->host, addr_it->port))
+                continue;
+            connection = c;
+            next_addr_index++;
+            break;
+        }
+        if(!connection) {
+            DBG("Failed found connection %s.", id.c_str());
+            session_container->postEvent(session_id,
+                new RedisConnectionState(id, RedisConnectionState::Disconnected, info));
+            next_addr_index = 0;
+        }
+    } else {
+        drop_data();
+        post_conn_state(RedisConnectionState::Disconnected);
+        connected_stat.set(0);
+    }
+
+    // try reconnect from start of address list
+    // if the disconnect has happened on connected state
+    // or if attempts to connect by all address has failed
+    if(!connection) {
+        if(!info.addrs.empty()) {
+            next_addr_index = 1;
+            c->reconnect(info.addrs[0].host, info.addrs[0].port);
+        }
+    }
 }
 
 bool RedisApp::Connection::is_connected()
 {
-    return redis_conn->is_connected() && is_scripts_loaded();
+    return is_scripts_loaded();
 }
 
 void RedisApp::Connection::on_script_loaded(const RedisScript& script, const char *hash)
@@ -290,7 +346,7 @@ void RedisApp::Connection::on_script_loaded(const RedisScript& script, const cha
     set_script_hash(script, hash);
 
     if(is_scripts_loaded())
-        on_connect();
+        on_connected();
 }
 
 bool RedisApp::Connection::is_scripts_loaded()
@@ -321,7 +377,7 @@ void RedisApp::Connection::load_scripts()
 
         string data;
         if(Utils::read_file_data(s.path, data) < 0) {
-            on_disconnect();
+            on_disconnect(redis_conn);
             break;
         }
 
