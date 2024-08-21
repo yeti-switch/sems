@@ -37,6 +37,7 @@ public:
     typedef function<void()> Completed;
 
     void addItem(Item* item, Completed completed = nullptr) {
+        if(!item) return;
         AmLock l(mutex);
         if(Inserter) Inserter(item);
         this->push_back(item);
@@ -46,6 +47,7 @@ public:
     void addItems(const vector<Item*>& items, Completed completed = nullptr) {
         AmLock l(mutex);
         for(auto item : items) {
+            if(!item) continue;
             if(Inserter) Inserter(item);
             this->push_back(item);
         }
