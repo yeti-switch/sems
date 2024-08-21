@@ -36,14 +36,16 @@ bool post_request(const string &conn_id, const vector<AmArg>& args,
         new RedisRequest(SIP_REGISTRAR_QUEUE, conn_id, args, user_data, user_type_id, persistent_ctx));
 }
 
-bool parseRegId(const string &str, string &res) {
+std::optional<string> parseRegId(const string &str) {
     static char delim = ':';
-    int pos1 = str.find(delim, 0);
-    if(pos1 < 0) return false;
-    int pos2 = str.find(delim, pos1 + 1);
-    if(pos2 < 0) return false;
-    res = str.substr(pos1 + 1, pos2 - pos1 - 1);
-    return true;
+
+    auto pos1 = str.find(delim, 0);
+    if(pos1 == string::npos) return std::nullopt;
+
+    auto pos2 = str.find(delim, pos1 + 1);
+    if(pos2 == string::npos) return std::nullopt;
+
+    return str.substr(pos1 + 1, pos2 - pos1 - 1);
 }
 
 /* SipRegistrarFactory */
@@ -1040,7 +1042,6 @@ void SipRegistrar::process_redis_reply_unbind_event(RedisReply& event) {
 
 void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
 {
-    //DBG("process_sip_reply");
     auto it = uac_dlgs.find(event.reply.callid);
     if(it != uac_dlgs.end()) {
         if(event.reply.code == keepalive_failure_code) {
@@ -1048,12 +1049,12 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
             AmLock l(keepalive_contexts.mutex);
             auto it = keepalive_contexts.find(key);
             if(it != keepalive_contexts.end()) {
-                //DBG("found ka ctx");
-                string reg_id;
-                if(parseRegId(key, reg_id)) {
-                    DBG("unbind %s, %s", reg_id.c_str(), it->second.aor.c_str());
-                    bind(nullptr/*user data*/, UserTypeId::Unbind, reg_id, it->second.aor.c_str(),
-                         0/*expires*/, ""/*user agent*/, ""/*path*/, it->second.interface_id);
+                if(auto reg_id = parseRegId(key); reg_id) {
+                    DBG("unbind %s, %s", reg_id.value().c_str(), it->second.aor.c_str());
+                    bind(nullptr/*user data*/, UserTypeId::Unbind,
+                         reg_id.value(), it->second.aor.c_str(),
+                         0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
+                         it->second.interface_id);
                 }
             }
         }
