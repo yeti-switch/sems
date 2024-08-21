@@ -1,3 +1,10 @@
+sems (1.140.1) stable; urgency=low
+  * registrar: 430 Flow Failed processing
+  * registrar: track keepalive_contexts replies
+  * fix deadlock on tcp_base_trsp
+  * fix crash on the stream connections creation exception
+ -- Michael Furmur <furmur@pm.me>  Wed, 21 Aug 2024 16:42:30 +0300
+
 sems (1.140.0) stable; urgency=low
   * registrar: max bindings as a parameter
   * redis: support MULTI/EXEC requests event
