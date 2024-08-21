@@ -260,9 +260,6 @@ SipRegistrar::SipRegistrar()
 SipRegistrar::~SipRegistrar()
 {
     event_dispatcher->delEventQueue(SIP_REGISTRAR_QUEUE);
-
-    for(auto &dlg: uac_dlgs)
-        delete dlg.second.second;
 }
 
 int SipRegistrar::onLoad()
@@ -1042,36 +1039,37 @@ void SipRegistrar::process_redis_reply_unbind_event(RedisReply& event) {
 
 void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
 {
-    auto it = uac_dlgs.find(event.reply.callid);
-    if(it != uac_dlgs.end()) {
-        const auto & key = it->second.first;
+    auto dlg_it = uac_dlgs.find(event.reply.callid);
+    if(dlg_it != uac_dlgs.end()) {
+        const auto & key = dlg_it->second.first;
 
         {
             AmLock l(keepalive_contexts.mutex);
             auto it = keepalive_contexts.find(key);
             if(it != keepalive_contexts.end()) {
-                it->second.last_reply_code = event.reply.code;
-                it->second.last_reply_reason = event.reply.reason;
+                auto &ctx = it->second;
+
+                ctx.last_reply_code = event.reply.code;
+                ctx.last_reply_reason = event.reply.reason;
 
                 if(event.reply.local_reply)
-                    it->second.last_reply_rtt_ms = milliseconds{0};
+                    ctx.last_reply_rtt_ms = milliseconds{0};
                 else
-                    it->second.last_reply_rtt_ms = std::chrono::duration_cast<milliseconds>(system_clock::now() - it->second.last_sent);
+                    ctx.last_reply_rtt_ms = std::chrono::duration_cast<milliseconds>(system_clock::now() - it->second.last_sent);
 
                 if(event.reply.code == keepalive_failure_code) {
                     if(auto reg_id = parseRegId(key); reg_id) {
-                        DBG("unbind %s, %s", reg_id.value().c_str(), it->second.aor.c_str());
+                        DBG("unbind %s, %s", reg_id.value().c_str(), ctx.aor.c_str());
                         bind(nullptr/*user data*/, UserTypeId::Unbind,
-                             reg_id.value(), it->second.aor.c_str(),
+                             reg_id.value(), ctx.aor.c_str(),
                              0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
-                             it->second.interface_id);
+                             ctx.interface_id);
                     }
                 }
             }
         }
 
-        delete it->second.second;
-        uac_dlgs.erase(it);
+        uac_dlgs.erase(dlg_it);
     }
 }
 

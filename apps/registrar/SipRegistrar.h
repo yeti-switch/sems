@@ -58,7 +58,7 @@ class SipRegistrar
      * value: pair.first: ka ctx key
      * value: pair.second: dlg ptr
      */
-    unordered_map<string, pair<string, AmSipDialog*>> uac_dlgs;
+    unordered_map<string, pair<string, unique_ptr<AmSipDialog>>> uac_dlgs;
     uint32_t max_registrations_per_slot;
 
     //contains data to generate correct keepalive OPTIONS requests
