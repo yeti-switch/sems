@@ -21,8 +21,6 @@ RedisConnection::RedisConnection(const char* name, RedisConnectionStateListener*
 
 RedisConnection::~RedisConnection()
 {
-    connected = false;
-    master = false;
     CLASS_DBG("RedisConnection::~RedisConnection()");
 }
 
@@ -140,7 +138,6 @@ void RedisConnection::authCallback(struct redisAsyncContext*, void* r, void*)
         AmArg result;
         redisReply2Amarg(result, reply);
         DBG("redis connection auth success: %s", AmArg::print(result).c_str());
-
         detect_role();
         return;
     }
@@ -167,9 +164,8 @@ void RedisConnection::roleCallback(struct redisAsyncContext*, void* r, void*)
         AmArg result;
         redisReply2Amarg(result, reply);
         DBG("redis connection role success: %s", AmArg::print(result).c_str());
-        master = (result[0] == "master");
-
-        connected = true;
+        master.set(result[0] == "master");
+        connected.set(true);
         state_listener->on_connect(this);
         return;
     }
@@ -254,7 +250,7 @@ void RedisConnection::on_connect() {
 }
 
 void RedisConnection::on_disconnect() {
-    connected = false;
+    connected.set(false);
     state_listener->on_disconnect(this);
 }
 

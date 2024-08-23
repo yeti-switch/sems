@@ -155,6 +155,7 @@ class AmCondition
   public:
     AmCondition() : t() { init_cond(); }
     AmCondition(const T& _t) : t(_t) { init_cond(); }
+    AmCondition(const AmCondition&) = delete;
 
     ~AmCondition()
     {
@@ -162,6 +163,7 @@ class AmCondition
         pthread_mutex_destroy(&m);
     }
 
+    void operator = (const AmCondition&) = delete;
     /** Change the condition's value. */
     void set(const T& newval)
     {
