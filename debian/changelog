@@ -1,3 +1,7 @@
+sems (1.140.2) stable; urgency=low
+  * add dbg for tls/tcp transport and async SIP parser
+ -- Michael Furmur <furmur@pm.me>  Fri, 23 Aug 2024 11:23:44 +0300
+
 sems (1.140.1) stable; urgency=low
   * registrar: 430 Flow Failed processing
   * registrar: track keepalive_contexts replies
