@@ -286,11 +286,12 @@ void RedisApp::Connection::on_connected()
 
 void RedisApp::Connection::on_connect(RedisConnection* c)
 {
-    if((c->is_master() && info.role != RedisMaster) ||
-    (!c->is_master() && info.role != RedisSlave)) {
+    if(info.role == RedisMaster && (!c->is_master())) {
+        DBG("mismatched ROLE for the '%s' connection", c->get_name());
         redis::redisAsyncDisconnect(c->get_async_context());
         return;
     }
+
     redis_conn = c;
     next_addr_index = 0;
     if(is_scripts_loaded() == false) {
@@ -314,7 +315,7 @@ void RedisApp::Connection::on_disconnect(RedisConnection* c)
             break;
         }
         if(!connection) {
-            DBG("Failed found connection %s.", id.c_str());
+            DBG("failed to find connection: %s", id.c_str());
             session_container->postEvent(session_id,
                 new RedisConnectionState(id, RedisConnectionState::Disconnected, info));
             next_addr_index = 0;
