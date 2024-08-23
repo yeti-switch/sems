@@ -209,7 +209,7 @@ vector<Botan::X509_Certificate> tls_conf::cert_chain(
         std::string algorithm = cert.subject_public_key()->algo_name();
         for(auto& key : cert_key_types) {
             if(algorithm == key) {
-                DBG("added certificate with algorithm %s", algorithm.c_str());
+                //DBG("added certificate with algorithm %s", algorithm.c_str());
                 certs.push_back(cert);
             }
         }
@@ -259,15 +259,19 @@ int tls_input::on_input(tcp_base_trsp* trsp)
 {
     try {
         tls_trsp_socket* tls_socket = dynamic_cast<tls_trsp_socket*>(trsp);
+        DBG("sd:%d received_data(orig_input_len: %d)", trsp->get_sd(), orig_input_len);
         int ret = tls_socket->tls_channel->received_data(orig_input_buf, orig_input_len);
         reset_input();
         return ret;
-    } catch(Botan::Exception& ex) {
+    } catch(Botan::Exception& e) {
         ERROR("Botan tls error: %s. peer %s:%d",
-            ex.what(),
+            e.what(),
             trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
-    } catch(std::logic_error&) {
+    } catch(std::logic_error& e) {
+        ERROR("logic_error: %s. peer %s:%d",
+            e.what(),
+            trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
     }
 }
@@ -275,6 +279,9 @@ int tls_input::on_input(tcp_base_trsp* trsp)
 int tls_input::on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size)
 {
     auto input_free_space = trsp_base_input::get_input_free_space();
+
+    DBG("sd:%d, size: %zd, input_free_space:%d",
+        trsp->get_sd(), size, input_free_space);
 
     if(size < (size_t)input_free_space) {
         memcpy(trsp_base_input::get_input(), data, size);
@@ -435,7 +442,6 @@ void tls_trsp_socket::post_write()
         }
         if(!orig_send_q.empty()) {
             add_write_event();
-            DBG("write event added...");
         }
     }
 }
@@ -476,7 +482,6 @@ void tls_trsp_socket::tls_emit_data(std::span<const uint8_t> data)
 
     if(connected) {
         add_write_event();
-        DBG("write event added...");
     }
 }
 

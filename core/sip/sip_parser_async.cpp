@@ -27,9 +27,10 @@ static int skip_line_async(parser_state* pst, char* end)
         case_ST_CR(*c);
         case ST_LF:
         case ST_CRLF:
+            DBG("first line is skipped");
             return 0;
         default:
-            DBG("Bad state! st=%i",st);
+            DBG("bad state. st:%i", st);
             return -99;
         } //switch(st)
     }
@@ -116,7 +117,7 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
             switch(saved_st) {
             case H_NAME:
                 if((*c-(st==ST_CRLF?2:1))-begin == 0) {
-                    //DBG("Detected end of headers");
+                    DBG("detected end of headers");
                     return 0;
                 }
                 DBG("Illegal CR or LF in header name: <%.*s>",
@@ -154,13 +155,14 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
     switch(st) {
     case H_NAME:
     case H_VALUE:
+        DBG("Incomplete header (st=%i;saved_st=%i)",st,saved_st);
         return UNEXPECTED_EOT;
     case ST_LF:
     case ST_CRLF:
         switch(saved_st) {
             case H_NAME:
                 if((*c-(st==ST_CRLF?2:1))-begin == 0) {
-                    //DBG("Detected end of headers");
+                    DBG("detected end of headers");
                     return 0;
                 }
                 DBG("Illegal CR or LF in header name");
@@ -180,16 +182,21 @@ int parse_headers_async(parser_state* pst, char* end)
 
     while(c < end) {
         int err = parse_header_async(hdr, pst, end);
-        if(err) return err;
+
+        if(err) {
+            DBG("parse_header_async = %d", err);
+            return err;
+        }
 
         if(hdr->name.len && hdr->value.len) {
             int type = parse_header_type(hdr);
             if(type == sip_header::H_CONTENT_LENGTH)
-                str2int(c2stlstr(hdr->value),pst->content_len);
+                str2int(c2stlstr(hdr->value), pst->content_len);
         }
 
         if(!hdr->name.len && !hdr->value.len) {
             // end-of-headers
+            DBG("end of headers");
             return 0;
         }
 
@@ -197,6 +204,7 @@ int parse_headers_async(parser_state* pst, char* end)
         pst->reset_hdr_parser();
     }
 
+    DBG("incomplete headers");
     return UNEXPECTED_EOT;
 }
 
@@ -212,8 +220,8 @@ int skip_sip_msg_async(parser_state* pst, char* end)
 
     char*& c = pst->c;
     int& stage = pst->stage;
-    /*int& st = pst->st;
-    int& saved_st = pst->saved_st;*/
+
+    DBG("stage:%d, st:%d, saved_st:%d", stage, pst->st, pst->saved_st);
 
     while(c <= end) {
         switch(stage) {
@@ -226,16 +234,22 @@ int skip_sip_msg_async(parser_state* pst, char* end)
             break;
 
         case ST_BODY:
-            if(!pst->content_len)
+            if(!pst->content_len) {
+                DBG("empty body");
                 return 0;
-            if(pst->content_len > end-c)
+            }
+            if(pst->content_len > end-c) {
+                DBG("incomplete body. content_len:%d, data_left:%d",
+                    pst->content_len, end-c);
                 return UNEXPECTED_EOT;
-            else
+            } else {
+                DBG("end of body");
                 return 0;
+            }
             break;
 
         default:
-            ERROR("unkown state!!!");
+            ERROR("unknown stage:%d", stage);
             return -1;
         } //switch(stage)
 

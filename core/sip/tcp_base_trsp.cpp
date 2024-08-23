@@ -27,8 +27,16 @@ void trsp_base_input::on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_m
 int trsp_base_input::parse_input(tcp_base_trsp* socket)
 {
     last_parse_input_messages_size.clear();
-    for(;;) {
+
+    DBG("sd:%d", socket->sd);
+
+    for(int i = 0;;i++) {
+        DBG("pst.st: %d", pst.st);
         int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
+
+        DBG("sd:%d, skip_sip_msg_async = %d, st:%d, stage:%d, i:%d",
+            socket->get_sd(), err, pst.st, pst.stage, i);
+
         if(err) {
             if(err == UNEXPECTED_EOT) {
                 if(pst.orig_buf > (char*)input_buf) {
@@ -39,15 +47,19 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
                     if(pst.beg)
                         pst.beg -= addr_shift;
                     input_len -= addr_shift;
+                    DBG("incomplete message. move existent data to the buffer start. sd:%d addr_shift:%d",
+                        socket->sd, addr_shift);
                     return 0;
-                } else if(get_input_free_space()){
+                } else if(get_input_free_space()) {
+                    DBG("incomplete message at the buffer start. sd:%d",
+                        socket->sd);
                     return 0;
                 }
-                ERROR("message is too big. drop connection. peer %s:%d",
-                    socket->get_peer_ip().data(), socket->get_peer_port());
+                ERROR("message is too big. drop connection. sd:%d peer %s:%d",
+                    socket->sd, socket->get_peer_ip().data(), socket->get_peer_port());
             } else {
-                ERROR("parsing error %d. peer %s:%d",
-                      err, socket->get_peer_ip().data(), socket->get_peer_port());
+                ERROR("parsing error %d. sd:%d peer %s:%d",
+                      err, socket->sd, socket->get_peer_ip().data(), socket->get_peer_port());
             }
 
             socket->server_sock->inc_sip_parse_error();
@@ -431,9 +443,13 @@ void tcp_base_trsp::on_read(short ev)
             return;
         }
 
-        DBG("on_read (connected = %i, transport = %s)",connected, get_transport());
+        auto input_free_space = input->get_input_free_space();
 
-        bytes = ::read(sd,input->get_input(),input->get_input_free_space());
+        bytes = ::read(sd,input->get_input(), input_free_space);
+
+        DBG("on_read (sd:%d, connected:%i, transport:%s, input_free_space:%d) read = %d",
+            sd, connected, get_transport(), input_free_space, bytes);
+
         if(bytes < 0) {
             switch(errno) {
             case EAGAIN:
@@ -441,26 +457,26 @@ void tcp_base_trsp::on_read(short ev)
 
             case ECONNRESET:
             case ENOTCONN:
-                DBG("connection has been closed (sd=%i)",sd);
+                DBG("connection has been closed (sd:%i)",sd);
                 close();
                 _l.release();
                 return;
 
             case ETIMEDOUT:
-                DBG("transmission timeout (sd=%i)",sd);
+                DBG("transmission timeout (sd:%i)",sd);
                 close();
                 _l.release();
                 return;
 
             default:
-                DBG("unknown error (%i): %s",errno,strerror(errno));
+                DBG("unknown error sd:%d (%i): %s", sd, errno, strerror(errno));
                 close();
                 _l.release();
                 return;
             }
         } else if(bytes == 0) {
             // connection closed
-            DBG("connection has been closed (sd=%i)",sd);
+            DBG("connection has been closed (sd:%i)",sd);
             close();
             _l.release();
             return;
@@ -471,7 +487,7 @@ void tcp_base_trsp::on_read(short ev)
 
     // ... and parse it
     if(input->on_input(this) < 0) {
-        DBG("Error while parsing input: closing connection!");
+        DBG("Error while parsing input: closing connection (sd:%d)", sd);
         sock_mut.lock();
         close();
         //sock_mut.unlock();
@@ -501,7 +517,9 @@ void tcp_base_trsp::on_write(short ev)
     atomic_ref_guard _ref_guard(this);
     std::unique_lock _l(sock_mut);
 
-    DBG("on_write (connected = %i, transport = %s)",connected, get_transport());
+    DBG("on_write (sd:%d, connected:%i, transport:%s)",
+        sd, connected, get_transport());
+
     if(!connected) {
         if(on_connect(ev) != 0) {
             _l.release();

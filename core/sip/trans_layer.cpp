@@ -1769,29 +1769,31 @@ int _trans_layer::cancel(
 void _trans_layer::received_msg(sip_msg* msg, const trsp_acls &acls)
 {
     const char* err_msg=0;
-    int err = parse_sip_msg(msg,err_msg);
+    int err = parse_sip_msg(msg, err_msg);
 
-    if(err){
-	DBG("parse_sip_msg returned %i",err);
-    msg->local_socket->inc_sip_parse_error();
+    if(err) {
+        DBG("parse_sip_msg returned %i", err);
 
-	if(!err_msg){
-	    err_msg = (char*)"unknown parsing error";
-	}
+        msg->local_socket->inc_sip_parse_error();
 
-	DBG("parsing error: %s",err_msg);
+        if(!err_msg) {
+            err_msg = (char*)"unknown parsing error";
+        }
 
-	DBG("Message was: \"%.*s\"",msg->len,msg->buf);
+        DBG("parsing error: %s",err_msg);
 
-	if((err != MALFORMED_FLINE)
-	   && (msg->type == SIP_REQUEST)
-	   && (msg->u.request->method != sip_request::ACK)){
+        DBG("Message was: \"%.*s\"", msg->len, msg->buf);
 
-	    send_sl_reply(msg,400,cstring(err_msg),
-			  cstring(),cstring());
-	}
+        if ((err != MALFORMED_FLINE)
+            && (msg->type == SIP_REQUEST)
+            && (msg->u.request->method != sip_request::ACK))
+        {
+            send_sl_reply(
+                msg, 400, cstring(err_msg),
+                cstring(), cstring());
+        }
 
-	DROP_MSG;
+        DROP_MSG;
     }
 
     process_rcvd_msg(msg,acls);
