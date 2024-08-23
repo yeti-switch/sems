@@ -147,9 +147,9 @@ class RtspSession
 
     public:
 
-        RtspSession(RtspClient *_dispatcher,const sockaddr_storage &_saddr, int _slot);
-        RtspSession(RtspSession&&) = default;
-        RtspSession& operator=(RtspSession&&) = default;
+        RtspSession(RtspClient *_dispatcher, const sockaddr_storage &_saddr, int _slot);
+        /*RtspSession(RtspSession&&) = default;
+        RtspSession& operator=(RtspSession&&) = default;*/
         ~RtspSession();
 
         state_t get_state() { return state; }

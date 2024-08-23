@@ -141,8 +141,10 @@ void RtspClient::init_connections()
 {
     int active_connections = 0;
 
-    for (auto& saddr : media_nodes)
-        rtsp_session.emplace_back(this, saddr, active_connections++);
+    for (auto& saddr : media_nodes) {
+        auto &session = rtsp_session.emplace_back(this, saddr, active_connections++);
+        rtsp_session_by_slot.push_back(&session);
+    }
 }
 
 static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
@@ -350,7 +352,7 @@ void RtspClient::run()
             case -TIMER : on_timer(); break;
             case -EVENT : on_event(); break;
 
-            default: rtsp_session[ev_info].handler(ev);
+            default: rtsp_session_by_slot[ev_info]->handler(ev);
             }
         }
 

@@ -165,7 +165,7 @@ void AmSessionProcessorThread::run()
 
     event_stats.addLabel("thread",int2str(gettid()));
 
-    stop_requested = false;
+    stop_requested.set(false);
     while(true) {
 
         DBG("running processing loop");

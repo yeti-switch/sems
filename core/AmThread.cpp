@@ -35,34 +35,6 @@
 #include <string>
 using std::string;
 
-AmMutex::AmMutex(bool recursive)
-{
-    if(recursive) {
-        pthread_mutexattr_t attr;
-
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-        pthread_mutex_init(&m, &attr);
-    } else {
-        pthread_mutex_init(&m,nullptr);
-    }
-}
-
-AmMutex::~AmMutex()
-{
-    pthread_mutex_destroy(&m);
-}
-
-void AmMutex::lock() 
-{
-    pthread_mutex_lock(&m);
-}
-
-void AmMutex::unlock() 
-{
-    pthread_mutex_unlock(&m);
-}
-
 int AmTimerFd::settime(unsigned int umsec, unsigned int repeat_umsec)
 {
     struct itimerspec tmr;

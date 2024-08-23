@@ -38,25 +38,14 @@
 #include <errno.h>
 #include <string.h>
 #include <queue>
+#include <mutex>
 
 #include <string>
 using std::string;
 
 #include "log.h"
 
-/**
- * \brief C++ Wrapper class for pthread mutex
- */
-class AmMutex
-{
-    pthread_mutex_t m;
-
-  public:
-    AmMutex(bool recursive = false);
-    ~AmMutex();
-    void lock();
-    void unlock();
-};
+using AmMutex = std::mutex;
 
 /**
  * \brief  Simple lock class
@@ -68,6 +57,7 @@ class AmLock
     AmLock(AmMutex& _m) : m(_m) {
         m.lock();
     }
+    AmLock(const AmLock&) = delete;
     ~AmLock(){
         m.unlock();
     }
@@ -84,10 +74,12 @@ class AmControlledLock
     AmControlledLock(AmMutex& _m) : m(_m), ownership(true) {
         m.lock();
     }
+    AmControlledLock(const AmControlledLock&) = delete;
     ~AmControlledLock(){
         if(ownership)
             m.unlock();
     }
+
     void release_ownership() {
         ownership = false;
     }
@@ -115,7 +107,10 @@ class AmSharedVar
 
   public:
     AmSharedVar(const T& _t) : t(_t) {}
+    AmSharedVar(const AmSharedVar&) = delete;
     AmSharedVar() {}
+
+    AmSharedVar& operator= (const AmSharedVar&) = delete;
 
     T get() {
         lock();
@@ -163,7 +158,8 @@ class AmCondition
         pthread_mutex_destroy(&m);
     }
 
-    void operator = (const AmCondition&) = delete;
+    AmCondition& operator= (const AmCondition&) = delete;
+
     /** Change the condition's value. */
     void set(const T& newval)
     {
@@ -261,6 +257,8 @@ class AmEventFd
         }
     }
 
+    AmEventFd(const AmEventFd &) = delete;
+
     ~AmEventFd()
     {
         if(!external) close(epoll_fd);
@@ -324,6 +322,8 @@ class AmTimerFd
         if(settime(umsec,repeat?umsec:0))
             throw string("timerfd. timer set failed");
     }
+
+    AmTimerFd(const AmTimerFd &) = delete;
 
     ~AmTimerFd()
     {
@@ -464,6 +464,8 @@ class AmThreadLocalStorage
     AmThreadLocalStorage() {
         pthread_key_create(&key,__del_tls_obj);
     }
+
+    AmThreadLocalStorage(const AmThreadLocalStorage &) = delete;
 
     ~AmThreadLocalStorage() {
         pthread_key_delete(key);

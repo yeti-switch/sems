@@ -74,7 +74,8 @@ class RtspClient : public AmThread, public AmEventQueueInterface,
 
         config_t                    config;
         vector<sockaddr_storage>    media_nodes;
-        vector<RtspSession>         rtsp_session;
+        list<RtspSession>           rtsp_session;
+        vector<RtspSession *>       rtsp_session_by_slot;
         uint64_t                    id_counter;
 
         RtspClient();
