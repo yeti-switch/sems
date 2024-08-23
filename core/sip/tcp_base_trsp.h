@@ -47,19 +47,19 @@ class trsp_base_input : public trsp_input
 public:
     trsp_base_input();
     virtual ~trsp_base_input(){}
-    unsigned char*   get_input() { return input_buf + input_len; }
-    int              get_input_free_space() {
+    unsigned char*   get_input() override { return input_buf + input_len; }
+    int              get_input_free_space() override {
         if(input_len > MAX_TCP_MSGLEN) return 0;
         return MAX_TCP_MSGLEN - input_len;
     }
-    void add_input_len(int len){
+    void add_input_len(int len) override{
         input_len += len;
     }
 
     void reset_input() {
         input_len = 0;
     }
-    void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg);
+    void on_parsed_received_msg(tcp_base_trsp* socket, sip_msg* s_msg) override;
     int parse_input(tcp_base_trsp* socket);
 
     // parse_input dbg fields

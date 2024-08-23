@@ -82,12 +82,12 @@ public:
     int send(tcp_base_trsp::msg_buf* buf);
     void generate_transport_errors();
 
-    unsigned char*   get_input();
-    int get_input_free_space();
+    unsigned char*   get_input() override;
+    int get_input_free_space() override;
     void reset_input();
-    void add_input_len(int len);
-    int on_input(tcp_base_trsp* trsp);
-    void on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg);
+    void add_input_len(int len) override;
+    int on_input(tcp_base_trsp* trsp) override;
+    void on_parsed_received_msg(tcp_base_trsp* trsp, sip_msg* s_msg) override;
 
     bool is_connected() {
         return ws_connected;
@@ -101,7 +101,7 @@ class wss_input : public tls_input
 public:
     wss_input(ws_output* output, bool server)
     : input(output, server){}
-    int on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size);
+    int on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size) override;
 
     void pre_write();
     void post_write();

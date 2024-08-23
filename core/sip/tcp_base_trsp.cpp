@@ -50,7 +50,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
                     DBG("incomplete message. move existent data to the buffer start. sd:%d addr_shift:%d",
                         socket->sd, addr_shift);
                     return 0;
-                } else if(get_input_free_space()) {
+                } else if(trsp_base_input::get_input_free_space()){
                     DBG("incomplete message at the buffer start. sd:%d",
                         socket->sd);
                     return 0;

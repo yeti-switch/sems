@@ -99,18 +99,18 @@ class tls_input : public trsp_base_input
     int              orig_input_len;
 public:
     tls_input();
-    unsigned char*   get_input() { return orig_input_buf + orig_input_len; }
-    int              get_input_free_space() {
+    unsigned char*   get_input() override { return orig_input_buf + orig_input_len; }
+    int              get_input_free_space() override {
         if(orig_input_len > MAX_TCP_MSGLEN) return 0;
         return MAX_TCP_MSGLEN - orig_input_len;
     }
     void reset_input() {
         orig_input_len = 0;
     }
-    void add_input_len(int len){
+    void add_input_len(int len) override{
         orig_input_len += len;
     }
-    int on_input(tcp_base_trsp* trsp);
+    int on_input(tcp_base_trsp* trsp) override;
 
     virtual int on_tls_record(tcp_base_trsp* trsp, const uint8_t data[], size_t size);
 };
