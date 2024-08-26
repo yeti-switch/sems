@@ -48,22 +48,7 @@ using std::string;
 #include "log.h"
 
 using AmMutex = std::mutex;
-
-/**
- * \brief  Simple lock class
- */
-class AmLock
-{
-    AmMutex& m;
-  public:
-    AmLock(AmMutex& _m) : m(_m) {
-        m.lock();
-    }
-    AmLock(const AmLock&) = delete;
-    ~AmLock(){
-        m.unlock();
-    }
-};
+using AmLock = std::lock_guard<std::mutex>;
 
 /**
  * \brief  Simple lock class witth ability to release mutex onwership
