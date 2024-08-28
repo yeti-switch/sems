@@ -5,6 +5,9 @@
 #include <hiredis/read.h>
 #include <stdarg.h>
 
+static string role_redis_cmd{"*1\r\n$4\r\nROLE\r\n"};
+static AmArg role_redis_cmd_reply{{"master"}};
+
 RedisTestServer::RedisTestServer()
   : response_enabled(true)
 {}
@@ -53,6 +56,9 @@ int RedisTestServer::getStatus(const string& cmd)
     if(response_enabled.get() == false)
         response_enabled.wait_for();
 
+    if(cmd == role_redis_cmd)
+        return REDIS_REPLY_ARRAY;
+
     if(statuses.find(cmd) != statuses.end()) {
         return statuses[cmd];
     }
@@ -63,6 +69,11 @@ bool RedisTestServer::getResponse(const string& cmd, AmArg& res)
 {
     if(response_enabled.get() == false)
         response_enabled.wait_for();
+
+    if(cmd == role_redis_cmd) {
+        res = role_redis_cmd_reply;
+        return true;
+    }
 
     while(checkTail(cmd)){}
     return TestServer::getResponse(cmd, res);
