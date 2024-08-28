@@ -155,11 +155,10 @@ static void roleCallback_static(redisAsyncContext* c, void *r, void *privdata)
 void RedisConnection::roleCallback(struct redisAsyncContext*, void* r, void*)
 {
     redisReply* reply = static_cast<redisReply *>(r);
-    //DBG("got reply from redis");
     if(reply == nullptr) {
-        ERROR("auth I/O error");
+        ERROR("role I/O error");
     } else if(redis::isReplyError(reply)) {
-        ERROR("auth error: %s", redis::getReplyError(reply));
+        ERROR("role error: %s", redis::getReplyError(reply));
     } else {
         AmArg result;
         redisReply2Amarg(result, reply);
