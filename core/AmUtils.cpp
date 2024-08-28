@@ -684,6 +684,164 @@ std::string URL_encode(const std::string &s)
     return escaped;
 }
 
+std::optional<std::pair<string, uint16_t>> parse_hostport(const std::string & host_port, bool allow_fqdn)
+{
+    std::pair<string, uint16_t> ret;
+    auto &[host, port] = ret;
+
+    if(host_port.empty()) {
+        ERROR("empty host:port string");
+        return std::nullopt;
+    }
+
+    enum state {
+        host_part_start,
+        host_part_fqdn,
+        host_part_ipv4,
+        host_part_ipv6_reference,
+        host_port_delimiter,
+        port_part,
+    } st = host_part_start;
+
+    port = 0;
+
+    string::size_type host_start_pos = 0;
+    string::size_type port_start_pos = 0;
+    string::size_type pos = 0;
+
+    bool ipv6 = false, ipv4 = false;
+
+    for(auto const &c : host_port) {
+        switch(st) {
+        case host_part_start:
+            switch(c) {
+            case '[':
+                st = host_part_ipv6_reference;
+                ipv6 = true;
+                host_start_pos++;
+                break;
+            case '.':
+            case '0'...'9':
+                ipv4 = true;
+                st = host_part_ipv4;
+                break;
+            case 'a'...'z':
+            case 'A'...'Z':
+                if(!allow_fqdn) {
+                    ERROR("fqdn is not allowed for host_port string '%s'",
+                        host_port.data());
+                    return std::nullopt;
+                }
+                st = host_part_fqdn;
+                break;
+            default:
+                ERROR("unexpected starting char '%c' in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            break;
+        case host_part_fqdn:
+            switch(c) {
+            case '.':
+            case '-':
+            case '0'...'9':
+            case 'a'...'z':
+            case 'A'...'Z':
+                break;
+            case ':':
+                host = host_port.substr(host_start_pos, pos - host_start_pos);
+                port_start_pos = pos + 1;
+                st = port_part;
+                break;
+            default:
+                ERROR("unexpected fqdn char '%c' in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            break;
+        case host_part_ipv4:
+            switch(c) {
+            case '.':
+            case '0'...'9':
+                break;
+            case ':':
+                host = host_port.substr(host_start_pos, pos - host_start_pos);
+                port_start_pos = pos + 1;
+                st = port_part;
+                break;
+            default:
+                ERROR("unexpected ipv4 address char '%c' in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            break;
+        case host_part_ipv6_reference:
+            switch(c) {
+            case ':':
+            case '0'...'9':
+            case 'a'...'f':
+            case 'A'...'F':
+                break;
+            case ']':
+                host = host_port.substr(host_start_pos, pos - host_start_pos);
+                st = host_port_delimiter;
+                break;
+            default:
+                ERROR("unexpected ipv6 address char '%c' in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            break;
+        case host_port_delimiter:
+            if(c != ':') {
+                ERROR("unexpected char '%c' after the ipv6 reference in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            port_start_pos = pos + 1;
+            st = port_part;
+            break;
+        case port_part:
+            switch(c) {
+            case '0'...'9':
+                port = port*10 + c-'0';
+                break;
+            default:
+                ERROR("unexpected char '%c' for port in host_port string '%s'",
+                    c, host_port.data());
+                return std::nullopt;
+            }
+            break;
+        }
+
+        pos++;
+    }
+
+    if (st != port_part || port_start_pos == host_port.length()) {
+        ERROR("empty port for host_port string '%s'", host_port.data());
+        return std::nullopt;
+    }
+
+    if (std::to_string(port) != host_port.substr(port_start_pos, host_port.length())) {
+        ERROR("port value overflow for host_port string '%s'", host_port.data());
+        return std::nullopt;
+    }
+
+    if(ipv4 && 1!=validate_ipv4_addr(host)) {
+        ERROR("incorrect IPv4 address '%s' for host_port string '%s'",
+            host.data(), host_port.data());
+        return std::nullopt;
+    }
+
+    if(ipv6 && 1!=validate_ipv6_addr(host)) {
+        ERROR("incorrect IPv6 address '%s' for host_port string '%s'",
+            host.data(), host_port.data());
+        return std::nullopt;
+    }
+
+    return ret;
+}
+
 int parse_return_code(const char* lbuf, unsigned int& res_code, string& res_msg )
 {
   char res_code_str[4] = {'\0'};

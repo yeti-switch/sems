@@ -42,6 +42,7 @@ using std::string;
 #include <vector>
 #include <utility>
 #include <map>
+#include <optional>
 
 #include "md5.h"
 #include "sip/resolver.h"
@@ -236,6 +237,14 @@ bool str2bool(const string &s, bool &dst);
 
 std::string URL_decode(const std::string& s);
 std::string URL_encode(const std::string& s);
+
+/**
+ * @brief Parse/validate string with 'host:port' format
+ * @param[in] host_port     string to parse
+ * @param[in] allow_fqdn    whether to allow domain names. default:false
+ * @return std::pair with parsed host and port values
+ */
+std::optional<std::pair<string, uint16_t>> parse_hostport(const std::string & host_port, bool allow_fqdn = false);
 
 /**
  * Parse code/reason line.
