@@ -148,7 +148,6 @@ void RedisConnection::authCallback(struct redisAsyncContext*, void* r, void*)
 static void roleCallback_static(redisAsyncContext* c, void *r, void *privdata)
 {
     RedisConnection *conn = static_cast<RedisConnection*>(privdata);
-    DBG("%p", conn);
     conn->roleCallback(c, r, privdata);
 }
 
