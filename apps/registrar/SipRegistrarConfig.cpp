@@ -2,35 +2,10 @@
 #include <log.h>
 #include <AmUtils.h>
 
-vector<RedisAddr> redis_write_addrs;
-vector<RedisAddr> redis_read_addrs;
-
-int redis_connection_func(cfg_t *cfg, cfg_opt_t */*opt*/, int argc, const char **argv)
-{
-    if(argc != 2) {
-        ERROR("header(): unexpected option args count %d, "
-              "expected format: connection(host, port)", argc);
-        return -1;
-    }
-
-    string host = argv[0];
-    int port =  0;
-    if(!str2int(argv[1], port)) {
-        ERROR("incorrect second parameter in redis connection option(port): must be int");
-        return -1;
-    }
-
-    if(strcmp(cfg->name, CFG_SEC_WRITE) == 0)
-        redis_write_addrs.emplace_back(host, port);
-    else if(strcmp(cfg->name, CFG_SEC_READ) == 0)
-        redis_read_addrs.emplace_back(host, port);
-    return 0;
-}
-
 int SipRegistrarConfig::parse(const string& config, Configurable* obj)
 {
     cfg_opt_t redis_pool_opts[] = {
-        CFG_FUNC(CFG_PARAM_CONNECTION, redis_connection_func),
+        CFG_STR_LIST(CFG_PARAM_HOSTS, 0, CFGF_NODEFAULT),
         CFG_INT(CFG_PARAM_TIMEOUT, 0, CFGF_NODEFAULT),
         CFG_STR(CFG_PARAM_USERNAME, "", CFGF_NODEFAULT),
         CFG_STR(CFG_PARAM_PASSWORD, "", CFGF_NODEFAULT),

@@ -8,7 +8,7 @@ using std::string;
 #define CFG_PARAM_EXPIRES_MIN                   "expires_min"
 #define CFG_PARAM_EXPIRES_MAX                   "expires_max"
 #define CFG_PARAM_EXPIRES_DEFAULT               "expires_default"
-#define CFG_PARAM_CONNECTION                    "connection"
+#define CFG_PARAM_HOSTS                         "hosts"
 #define CFG_PARAM_TIMEOUT                       "timeout"
 #define CFG_PARAM_USERNAME                      "username"
 #define CFG_PARAM_PASSWORD                      "password"
@@ -41,6 +41,3 @@ class SipRegistrarConfig
   public:
     static int parse(const string& config, Configurable* obj);
 };
-
-extern vector<RedisAddr> redis_write_addrs;
-extern vector<RedisAddr> redis_read_addrs;
