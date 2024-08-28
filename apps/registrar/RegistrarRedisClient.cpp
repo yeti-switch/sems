@@ -37,6 +37,14 @@ RegistrarRedisClient::RegistrarRedisClient()
     connections.emplace_back(write_conn);
 }
 
+inline void fill_info_addrs(cfg_t* cfg, RedisConnectionInfo &info) {
+    for(unsigned int i = 0; i < cfg_size(cfg, CFG_PARAM_HOSTS); i++) {
+        auto host_port = parse_hostport(cfg_getnstr(cfg, CFG_PARAM_HOSTS, i));
+        if(host_port.has_value())
+            info.addrs.emplace_back(host_port.value().first, host_port.value().second);
+    }
+}
+
 int RegistrarRedisClient::configure(cfg_t* cfg)
 {
     auto reg_redis = cfg_getsec(cfg, CFG_SEC_REDIS);
@@ -50,14 +58,10 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
     if(!reg_redis_read || !reg_redis_write)
         return -1;
 
-    auto cfg_conn_info = [&](cfg_t* cfg, RedisConnectionInfo &info) -> int {
+    auto cfg_conn_info = [&reg_redis_read, &reg_redis_write](cfg_t* cfg, RedisConnectionInfo &info) -> int {
         if(reg_redis_read == cfg) {
             info.role = RedisSlave;
-            for(unsigned int i = 0; i < cfg_size(cfg, CFG_PARAM_HOSTS); i++) {
-                auto host_port = parse_hostport(cfg_getnstr(cfg, CFG_PARAM_HOSTS, i));
-                if(host_port.has_value())
-                    info.addrs.emplace_back(host_port.value().first, host_port.value().second);
-            }
+            fill_info_addrs(cfg, info);
             if(info.addrs.empty()) {
                 ERROR("absent redis read connections");
                 return -1;
@@ -66,11 +70,7 @@ int RegistrarRedisClient::configure(cfg_t* cfg)
 
         if(reg_redis_write == cfg) {
             info.role = RedisMaster;
-            for(unsigned int i = 0; i < cfg_size(cfg, CFG_PARAM_HOSTS); i++) {
-                auto host_port = parse_hostport(cfg_getnstr(cfg, CFG_PARAM_HOSTS, i));
-                if(host_port.has_value())
-                    info.addrs.emplace_back(host_port.value().first, host_port.value().second);
-            }
+            fill_info_addrs(cfg, info);
             if(info.addrs.empty()) {
                 ERROR("absent redis write connections");
                 return -1;
