@@ -43,11 +43,7 @@ class TestRedisConnection
       : RedisConnectionPool("test", "redisTest"),
         gotreply(false),
         rstatus(RedisReply::SuccessReply)
-    {
-        AmArg ret;
-        ret.push("master");
-        redis_test::instance()->test_server.addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
-    }
+    {}
     ~TestRedisConnection() {}
 
     void process_internal_reply(RedisConnection *c, int result,

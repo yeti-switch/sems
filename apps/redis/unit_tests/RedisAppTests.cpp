@@ -24,9 +24,6 @@ TEST_F(RedisTest, RedisAppConnect)
     redis_client.start();
 
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE,
             "RedisAppConnect1", RedisConnectionInfo(host, port, RedisMaster)));
         wait_for_cond(redis_client.connected);
@@ -42,9 +39,6 @@ TEST_F(RedisTest, RedisAppConnectScript1)
     redis_client.start();
 
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         RedisScript script("test_script_1", "apps/redis/unit_tests/etc/test_script_1.lua");
         test_server->addLoadScriptCommandResponse(script.path, "a74bd2c0d28faea0cba58a939af200414ad87ef0");
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, "RedisAppConnectScript1",
@@ -66,9 +60,6 @@ TEST_F(RedisTest, RedisAppConnectScript2)
     redis_client.start();
 
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         RedisScript script1("test_script_1", "apps/redis/unit_tests/etc/test_script_1.lua");
         RedisScript script2("test_script_2", "apps/redis/unit_tests/etc/test_script_2.lua");
         RedisScript script3("test_script_3", "apps/redis/unit_tests/etc/test_script_3.lua");
@@ -106,9 +97,6 @@ TEST_F(RedisTest, RedisAppRequest1)
     redis_client.start();
 
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         const string conn_id = "RedisAppRequest1";
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, conn_id,
             RedisConnectionInfo(host, port, RedisMaster)));
@@ -207,9 +195,6 @@ TEST_F(RedisTest, RedisAppRequest2)
 
     // user_data, user_type_id
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         const string conn_id = "RedisAppRequest2";
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, conn_id,
             RedisConnectionInfo(host, port, RedisMaster)));
@@ -247,9 +232,6 @@ TEST_F(RedisTest, RedisAppRequest3)
 
     // waiting_reqs
     {
-        AmArg ret;
-        ret.push("master");
-        test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, ret);
         const string conn_id = "RedisAppRequest3";
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, conn_id,
             RedisConnectionInfo(host, port, RedisMaster)));

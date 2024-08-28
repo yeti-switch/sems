@@ -15,9 +15,6 @@ void RegistrarTest::SetUp() {
 
     test_server->response_enabled.set(false);
     test_server->clear();
-    AmArg master;
-    master.push("master");
-    test_server->addCommandResponse("ROLE", REDIS_REPLY_ARRAY, master);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(REGISTER_SCRIPT), register_script_hash);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
