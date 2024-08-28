@@ -122,7 +122,6 @@ static void redisCleanup(void *ctx)
 static void authCallback_static(redisAsyncContext* c, void *r, void *privdata)
 {
     RedisConnection *conn = static_cast<RedisConnection*>(privdata);
-    DBG("%p", conn);
     conn->authCallback(c, r, privdata);
 }
 
@@ -131,13 +130,13 @@ void RedisConnection::authCallback(struct redisAsyncContext*, void* r, void*)
     redisReply* reply = static_cast<redisReply *>(r);
     //DBG("got reply from redis");
     if(reply == nullptr) {
-        ERROR("auth I/O error");
+        ERROR("auth I/O error for connection '%s'", name.data());
     } else if(redis::isReplyError(reply)) {
-        ERROR("auth error: %s", redis::getReplyError(reply));
+        ERROR("auth error for connection '%s': %s", name.data(), redis::getReplyError(reply));
     } else {
         AmArg result;
         redisReply2Amarg(result, reply);
-        DBG("redis connection auth success: %s", AmArg::print(result).c_str());
+        DBG("redis connection '%s' auth success: %s", name.data(), AmArg::print(result).c_str());
         detect_role();
         return;
     }
@@ -155,13 +154,13 @@ void RedisConnection::roleCallback(struct redisAsyncContext*, void* r, void*)
 {
     redisReply* reply = static_cast<redisReply *>(r);
     if(reply == nullptr) {
-        ERROR("role I/O error");
+        ERROR("role I/O error for connection '%s'", name.data());
     } else if(redis::isReplyError(reply)) {
-        ERROR("role error: %s", redis::getReplyError(reply));
+        ERROR("role error for connection '%s': %s", name.data(), redis::getReplyError(reply));
     } else {
         AmArg result;
         redisReply2Amarg(result, reply);
-        DBG("redis connection role success: %s", AmArg::print(result).c_str());
+        DBG("redis connection '%s' role success: %s", name.data(), AmArg::print(result).c_str());
         master.set(result[0] == "master");
         connected.set(true);
         state_listener->on_connect(this);
