@@ -1,6 +1,7 @@
 #include "RedisApp.h"
 #include "log.h"
 #include "RedisScript.h"
+#include "format_helper.h"
 
 #define session_container AmSessionContainer::instance()
 #define redis_app RedisApp::instance()
