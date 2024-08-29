@@ -282,6 +282,10 @@ void RedisApp::Connection::on_connected()
     post_conn_state(RedisConnectionState::Connected);
     redis_app->process_retry_reqs(this);
     connected_stat.set(1);
+    connected_stat.updateLabel("endpoint",
+        format("{}:{}",
+            redis_conn->get_host(),
+            redis_conn->get_port()));
 }
 
 void RedisApp::Connection::on_connect(RedisConnection* c)
@@ -324,6 +328,7 @@ void RedisApp::Connection::on_disconnect(RedisConnection* c)
         drop_data();
         post_conn_state(RedisConnectionState::Disconnected);
         connected_stat.set(0);
+        connected_stat.clearLabel("endpoint");
     }
 
     // try reconnect from start of address list

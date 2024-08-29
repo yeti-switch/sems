@@ -66,6 +66,8 @@ class RedisConnection
     bool is_connected() { return connected.get(); }
     bool is_master() { return master.get(); }
     const char* get_name() { return name.c_str(); }
+    const string &get_host() const { return host; }
+    int get_port() const { return port; }
 
     //for unit_tests
     bool wait_connected() {
