@@ -1,3 +1,12 @@
+sems (1.141.0) stable; urgency=low
+  * redis: add redis ROLE detection
+  * registrar: redis.{read,write}.connection() -> hosts{}
+  * AmThread: use std::mutex for AmMutex, delete copy ctor/assignment-operator for the related classes
+  * AmThread: use std::lock_guard for AmLock
+  * AmThread: use std::condition_variable for AmCondition
+  * AmUtils: add parse_hostport helper
+ -- Michael Furmur <furmur@pm.me>  Thu, 29 Aug 2024 11:10:37 +0300
+
 sems (1.140.2) stable; urgency=low
   * add dbg for tls/tcp transport and async SIP parser
  -- Michael Furmur <furmur@pm.me>  Fri, 23 Aug 2024 11:23:44 +0300
