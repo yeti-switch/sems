@@ -16,12 +16,33 @@ template <class Parent>
 class StatLabelsContainer {
   protected:
     map<string, string> labels;
+    std::mutex labels_mutex;
     void addLabelInternal(const string& name, const string& value)
     {
+        std::lock_guard lk(labels_mutex);
         labels.emplace(name, value);
     }
   public:
-    const map<string, string>& getLabels() { return labels; }
+    map<string, string> getLabels()
+    {
+        std::lock_guard lk(labels_mutex);
+        return labels;
+    }
+    const map<string, string> &getLabelsUnsafe()
+    {
+        return labels;
+    }
+    void updateLabel(const string &name, const string &value)
+    {
+        std::lock_guard lk(labels_mutex);
+        labels[name] = value;
+    }
+    void clearLabel(const string &name)
+    {
+        std::lock_guard lk(labels_mutex);
+        labels.erase(name);
+    }
+
     virtual Parent &addLabel(const string& name, const string& value) = 0;
 };
 

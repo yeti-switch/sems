@@ -187,7 +187,7 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
         {
             //auto &timestamp = timet ? timet : now;
             //bool &omit_timestamp = timet ? omit_update_timestamp : omit_now_timestamp;
-            auto &common_labels = statistics::instance()->getLabels();
+            auto &common_labels = statistics::instance()->getLabelsUnsafe();
 
             if(common_labels.empty() && counter_labels.empty()) {
                 //if(omit_timestamp) {
