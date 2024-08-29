@@ -1,3 +1,9 @@
+sems (1.141.1) stable; urgency=low
+  * sip_parser_async: fix stucking in incomplete state on malformed messages
+  * redis: add 'endpoint' label to the sems_redis_connected metrics
+  * AmStatistics: support labels update for metrics
+ -- Michael Furmur <furmur@pm.me>  Thu, 29 Aug 2024 20:39:44 +0300
+
 sems (1.141.0) stable; urgency=low
   * redis: add redis ROLE detection
   * registrar: redis.{read,write}.connection() -> hosts{}
