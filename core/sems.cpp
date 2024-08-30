@@ -361,7 +361,7 @@ static void signal_handler(int sig)
         if(!is_shutting_down.get()) {
             is_shutting_down.set(true);
 
-            INFO("Stopping SIP stack after signal");
+            DBG("Stopping SIP stack after signal");
             sip_ctrl.stop();
         }
     } else {
@@ -422,7 +422,7 @@ int set_fd_limit()
         return -1;
     }
 
-    INFO("Open FDs limit has been raised to %u",
+    DBG("Open FDs limit has been raised to %u",
          (unsigned int)rlim.rlim_cur);
 
     return 0;
@@ -542,23 +542,15 @@ int main(int argc, char* argv[])
     if(AmLcConfig::instance().finalizeIpConfig() < 0)
         goto error;
 
-    printf("Configuration:\n"
-#ifdef _DEBUG
-         "       syslog log level:    %s (%i)\n"
-         "       log to stderr:       %s\n"
-#endif
-        "       configuration file:  %s\n"
-        "       plug-in path:        %s\n"
+    printf("Starting sems " SEMS_VERSION "\n"
+        "   configuration file:  %s\n"
+        "   plug-in path:        %s\n"
 #ifndef DISABLE_DAEMON_MODE
-        "       daemon mode:         %s\n"
-        "       daemon UID:          %s\n"
-        "       daemon GID:          %s\n"
+        "    daemon mode:         %s\n"
+        "    daemon UID:          %s\n"
+        "    daemon GID:          %s\n"
 #endif
         "\n",
-#ifdef _DEBUG
-        log_level2str[AmConfig.log_level], AmConfig.log_level,
-        AmConfig.log_stderr ? "yes" : "no",
-#endif
         AmLcConfig::instance().config_path.c_str(),
         AmConfig.modules_path.c_str()
 #ifndef DISABLE_DAEMON_MODE
@@ -568,8 +560,6 @@ int main(int argc, char* argv[])
 #endif
     );
     fflush(stdout);
-
-    AmLcConfig::instance().dump_Ifs();
 
     /*printf("-----BEGIN CFG DUMP-----\n"
         "%s\n"
@@ -756,29 +746,29 @@ int main(int argc, char* argv[])
         goto error;
     }
 
-    INFO("Starting application timer scheduler");
+    DBG("Starting application timer scheduler");
     AmAppTimer::instance()->start();
     AmThreadWatcher::instance()->add(AmAppTimer::instance());
 
-    INFO("Starting session container");
+    DBG("Starting session container");
     AmSessionContainer::instance()->start();
 
 #ifdef SESSION_THREADPOOL
-    INFO("Starting session processor threads");
+    DBG("Starting session processor threads");
     AmSessionProcessor::addThreads(AmConfig.session_proc_threads);
 #endif 
     AmSessionProcessor::init();
 
-    INFO("Starting audio recorder");
+    DBG("Starting audio recorder");
     AmAudioFileRecorderProcessor::instance()->start();
 
-    INFO("Starting pcap recorder");
+    DBG("Starting pcap recorder");
     PcapFileRecorderProcessor::instance()->start();
 
-    INFO("Starting media processor");
+    DBG("Starting media processor");
     AmMediaProcessor::instance()->init();
 
-    INFO("Starting stun processor");
+    DBG("Starting stun processor");
     stun_processor::instance()->start();
 
     // init thread usage with libevent
@@ -791,15 +781,15 @@ int main(int argc, char* argv[])
     // start the asynchronous file writer (sorry, no better place...)
     //async_file_writer::instance()->start();
 
-    INFO("Starting RTP receiver");
+    DBG("Starting RTP receiver");
     AmRtpReceiver::instance()->start();
 
-    INFO("Starting SIP stack (control interface)");
+    DBG("Starting SIP stack (control interface)");
     if(sip_ctrl.load()) {
         goto error;
     }
 
-    INFO("Loading plug-ins");
+    DBG("Loading plug-ins");
     AmPlugIn::instance()->init();
 
     if(AmPlugIn::instance()->load(AmConfig.modules_path, AmConfig.modules))
@@ -863,7 +853,7 @@ int main(int argc, char* argv[])
   
     AmPlugIn::instance()->shutdown();
     // session container stops active sessions
-    INFO("Disposing session container");
+    DBG("Disposing session container");
     AmSessionContainer::dispose();
 
     /*INFO("Disposing app timer");
@@ -876,29 +866,29 @@ int main(int argc, char* argv[])
     cleanup_transaction();
 
     if(AmConfig.enable_rtsp) {
-        INFO("Disposing RTSP client");
+        DBG("Disposing RTSP client");
         RtspClient::dispose();
     }
 
-    INFO("Disposing RTP receiver");
+    DBG("Disposing RTP receiver");
     AmRtpReceiver::dispose();
 
-    INFO("Stop session processor");
+    DBG("Stop session processor");
     AmSessionProcessor::stop();
 
-    INFO("Disposing media processor");
+    DBG("Disposing media processor");
     AmMediaProcessor::dispose();
 
-    INFO("Disposing stun processor");
+    DBG("Disposing stun processor");
     stun_processor::dispose();
 
-    INFO("Disposing audio file recorder");
+    DBG("Disposing audio file recorder");
     AmAudioFileRecorderProcessor::dispose();
 
-    INFO("Disposing pcap file recorder");
+    DBG("Disposing pcap file recorder");
     PcapFileRecorderProcessor::dispose();
 
-    INFO("Disposing event dispatcher");
+    DBG("Disposing event dispatcher");
     AmEventDispatcher::dispose();
 
     //async_file_writer::instance()->stop();
@@ -925,7 +915,7 @@ int main(int argc, char* argv[])
 
     AmThreadWatcher::instance()->cleanup();
 
-    INFO("Disposing plug-ins");
+    DBG("Disposing plug-ins");
     AmPlugIn::dispose();
 
     stream_stats::dispose();

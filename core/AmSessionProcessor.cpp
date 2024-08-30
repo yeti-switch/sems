@@ -240,7 +240,7 @@ void AmSessionProcessorThread::run()
 }
 
 void AmSessionProcessorThread::on_stop() {
-  INFO("requesting session to stop.");
+  DBG("requesting session to stop.");
   stop_requested.set(true);
   runcond.set(true);
 }

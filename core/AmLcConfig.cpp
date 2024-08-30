@@ -16,6 +16,7 @@
 #include "RtspClient.h"
 
 #include <fstream>
+#include <iostream>
 
 #define SECTION_SIGIF_NAME           "signaling-interfaces"
 #define SECTION_MEDIAIF_NAME         "media-interfaces"
@@ -2001,77 +2002,6 @@ int AmLcConfig::finalizeIpConfig(ConfigContainer* config)
 
     fillMissingLocalSIPIPfromSysIntfs(config);
     return 0;
-}
-
-void AmLcConfig::dump_Ifs(ConfigContainer* config)
-{
-    INFO("Signaling interfaces:");
-    for(unsigned int i=0; i<config->sip_ifs.size(); i++) {
-        SIP_interface& it_ref = config->sip_ifs[i];
-        INFO("\t(%i) name='%s'", i,it_ref.name.c_str());
-        std::vector<SIP_info*>::iterator it = it_ref.proto_info.begin();
-        for(; it != it_ref.proto_info.end(); it++) {
-            if((*it)->type == SIP_info::TCP) {
-                SIP_TCP_info* info = SIP_TCP_info::toSIP_TCP(*it);
-                INFO("\t\tTCP %u/%u",
-                    info->tcp_connect_timeout,
-                    info->tcp_idle_timeout);
-            } else if((*it)->type == SIP_info::TLS) {
-                SIP_TLS_info* info = SIP_TLS_info::toSIP_TLS(*it);
-                INFO("\t\tTLS %u/%u",
-                    info->tcp_connect_timeout,
-                    info->tcp_idle_timeout);
-
-                info->client_settings.dump("client");
-                info->server_settings.dump("server");
-            } else {
-                INFO("\t\tUDP");
-            }
-           INFO("\t\tLocalIP='%s'"
-                ";local_port='%u'"
-                ";PublicIP='%s'; DSCP=%u",
-                (*it)->local_ip.c_str(),
-                (*it)->local_port,
-                (*it)->public_ip.c_str(),
-                (*it)->dscp);
-        }
-    }
-
-    INFO("Signaling address map:");
-    for(std::map<std::string,unsigned short>::iterator it = config->local_sip_ip2if.begin();
-            it != config->local_sip_ip2if.end(); ++it) {
-        if(config->sip_ifs[it->second].name.empty()) {
-            INFO("\t%s -> default",it->first.c_str());
-        }
-        else {
-            INFO("\t%s -> %s",it->first.c_str(),
-                 config->sip_ifs[it->second].name.c_str());
-        }
-    }
-
-    INFO("Media interfaces:");
-    for(unsigned int i=0; i<config->media_ifs.size(); i++) {
-
-        MEDIA_interface& it_ref = config->media_ifs[i];
-        INFO("\t(%i) name='%s'", i,it_ref.name.c_str());
-        std::vector<MEDIA_info*>::iterator it = it_ref.proto_info.begin();
-        for(; it != it_ref.proto_info.end(); it++) {
-            if((*it)->mtype == MEDIA_info::RTP) {
-                INFO("\t\tRTP");
-            } else {
-                INFO("\t\tRTSP");
-            }
-           INFO("\t\tLocalIP='%s'"
-                ";Ports=[%u;%u]"
-                ";MediaCapacity=%u"
-                ";PublicIP='%s'; DSCP=%u",
-                (*it)->local_ip.c_str(),
-                (*it)->low_port,(*it)->high_port,
-                ((*it)->high_port - (*it)->low_port+1)/2,
-                (*it)->public_ip.c_str(),
-                (*it)->dscp);
-        }
-    }
 }
 
 void AmLcConfig::fillMissingLocalSIPIPfromSysIntfs(ConfigContainer* config)

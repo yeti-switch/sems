@@ -430,7 +430,7 @@ void udp_trsp::run()
 
     setThreadName("sip-udp-rx");
 
-    INFO("Started SIP server UDP transport");
+    DBG("Started SIP server UDP transport");
 
     int ret;
     udp_trsp_socket *sock;
@@ -483,14 +483,14 @@ void udp_trsp::run()
     }
 
     for(auto& sock : sockets) {
-        INFO("Removed SIP server UDP transport on %s:%d",
+        DBG("Removed SIP server UDP transport on %s:%d",
              sock->get_ip(), sock->get_port());
         dec_ref(sock);
     }
     sockets.clear();
     delete[] events;
 
-    INFO("Finished SIP server UDP transport");
+    DBG("Finished SIP server UDP transport");
 
     stopped.set(true);
 }
@@ -504,7 +504,7 @@ void udp_trsp::on_stop()
 
 void udp_trsp::add_socket(udp_trsp_socket* sock)
 {
-    INFO("Added SIP server UDP transport on %s:%d", sock->get_ip(), sock->get_port());
+    DBG("Added SIP server UDP transport on %s:%d", sock->get_ip(), sock->get_port());
     struct epoll_event event;
     event.events = EPOLLIN | EPOLLEXCLUSIVE | EPOLLERR;
     event.data.ptr = sock;

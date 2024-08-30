@@ -58,7 +58,7 @@ void RpcServerThread::run() {
 }
 
 void RpcServerThread::on_stop() {
-  INFO("TODO: stop server thread");
+  DBG("stop server thread");
   ev_pending.set(true);
   is_stop.set(true);
   join();

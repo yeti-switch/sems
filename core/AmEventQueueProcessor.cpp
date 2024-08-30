@@ -142,7 +142,7 @@ void EventQueueWorker::run()
 
 void EventQueueWorker::on_stop() 
 {
-  INFO("requesting worker to stop.");
+  DBG("requesting worker to stop.");
   stop_requested.set(true);
   runcond.set(true);
   join();

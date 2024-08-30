@@ -171,7 +171,6 @@ public:
 
     int readConfiguration(ConfigContainer* config = &AmConfig);
     int finalizeIpConfig(ConfigContainer* config = &AmConfig);
-    void dump_Ifs(ConfigContainer* config = &AmConfig);
     std::string fixIface2IP(const std::string& dev_name, bool v6_for_sip, ConfigContainer* config = &AmConfig);
     
     int setLogLevel(const std::string& level, bool apply = true);

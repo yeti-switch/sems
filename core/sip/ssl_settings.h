@@ -2,6 +2,7 @@
 
 #include "AmThread.h"
 #include "AmStatistics.h"
+#include "AmArg.h"
 
 #include <vector>
 #include <map>
@@ -40,8 +41,6 @@ class settings
     std::string getCertificateFingerprint(const std::string &hash_name);
     std::unique_ptr<Botan::Private_Key> getCertificateKeyCopy();
     vector<Botan::Certificate_Store*> getCertificateAuthorityCopy();
-
-    void dump(const std::string& prefix);
 
     virtual const char *getProtocolName() = 0;
     virtual std::vector<std::string> getSupportedProtocols() = 0;

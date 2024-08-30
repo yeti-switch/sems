@@ -240,7 +240,7 @@ void msg_sensor::getInfo(AmArg &ret){
 
 ipip_msg_sensor::~ipip_msg_sensor()
 {
-	INFO("destroyed ipip_msg_sensor[%p] raw socket %d",this,s);
+	DBG("destroyed ipip_msg_sensor[%p] raw socket %d",this,s);
 	if(s!=-1) close(s);
 }
 
@@ -351,7 +351,7 @@ void ipip_msg_sensor::getInfo(AmArg &ret){
 
 ethernet_msg_sensor::~ethernet_msg_sensor()
 {
-	INFO("destroyed ethernet_msg_sensor[%p] raw socket %d",this,s);
+	DBG("destroyed ethernet_msg_sensor[%p] raw socket %d",this,s);
 	if(s!=-1) close(s);
 }
 

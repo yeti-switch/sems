@@ -117,32 +117,6 @@ vector<Botan::Certificate_Store*> settings::getCertificateAuthorityCopy()
     return ca;
 }
 
-void settings::dump(const std::string&)
-{
-    std::string ca_list("{");
-    for(auto& ca : ca_path_list) {
-        ca_list.append(ca);
-        ca_list.push_back(',');
-    }
-    ca_list.pop_back();
-    ca_list.push_back('}');
-
-    std::string protocols;
-    auto supp_proto = getSupportedProtocols();
-    for(auto& protocol : supp_proto) {
-        protocols.append(protocol);
-        protocols.push_back(',');
-    }
-    protocols.pop_back();
-    protocols.push_back('}');
-    INFO("\t\tclient: certificate='%s'"
-        ";key='%s';ca='%s'"
-        ";supported_protocols='%s'",
-        certificate_path.c_str(),
-        certificate_key_path.c_str(),
-        ca_list.c_str(), protocols.c_str());
-}
-
 #define getSupportedProtocols(class_setting) \
 std::vector<std::string> class_setting::getSupportedProtocols() \
 { \

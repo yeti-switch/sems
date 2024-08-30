@@ -195,7 +195,7 @@ void AmSessionContainer::on_stop()
       usleep(10000);
 
     if (!AmEventDispatcher::instance()->empty()) {
-      WARN("Not all calls cleanly ended!");
+      WARN("Not all sessions cleanly ended!");
     }
     
     DBG("cleaning sessions...");

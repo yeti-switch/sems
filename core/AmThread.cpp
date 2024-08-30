@@ -63,13 +63,13 @@ void * AmThread::_start(void * _t)
     _self_tid = static_cast<pthread_t>(GET_TID());
     unsigned long _tid = _this->_pid;
 
-    INFO("Thread %lu is starting", static_cast<unsigned long>(_tid));
+    DBG("Thread %lu is starting", static_cast<unsigned long>(_tid));
 
     _this->run();
 
     char thread_name[16];
     pthread_getname_np(_tid, thread_name,16);
-    INFO("Thread %s %lu is ending",
+    DBG("Thread %s %lu is ending",
         thread_name, static_cast<unsigned long>(_tid));
 
     _this->_stopped.set(true);

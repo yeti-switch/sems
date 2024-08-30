@@ -27,7 +27,7 @@ unsigned char hepv3_magic[] = { 0x48, 0x45, 0x50, 0x33 };
 
 hep_msg_sensor::~hep_msg_sensor()
 {
-	INFO("destroyed hep_msg_sensor[%p] udp socket %d",this,s);
+	DBG("destroyed hep_msg_sensor[%p] udp socket %d",this,s);
 	if(s!=-1) close(s);
 }
 

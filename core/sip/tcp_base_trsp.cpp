@@ -1094,20 +1094,20 @@ trsp::~trsp()
 void trsp::add_socket(trsp_server_socket* sock)
 {
     sock->add_event(evbase);
-    INFO("Added SIP server %s transport on %s:%i",
+    DBG("Added SIP server %s transport on %s:%i",
         sock->get_transport(), sock->get_ip(),sock->get_port());
 }
 
 /** @see AmThread */
 void trsp::run()
 {
-    INFO("Started SIP server thread");
+    DBG("Started SIP server thread");
     setThreadName("sip-server-trsp");
 
     /* Start the event loop. */
     event_base_dispatch(evbase);
 
-    INFO("SIP server thread finished");
+    DBG("SIP server thread finished");
 }
 
 /** @see AmThread */
