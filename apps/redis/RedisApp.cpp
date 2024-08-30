@@ -292,7 +292,8 @@ void RedisApp::Connection::on_connected()
 void RedisApp::Connection::on_connect(RedisConnection* c)
 {
     if(info.role == RedisMaster && (!c->is_master())) {
-        DBG("mismatched ROLE for the '%s' connection", c->get_name());
+        INFO("mismatched ROLE for the '%s' connection %s:%d",
+            c->get_name(), c->get_host().data(), c->get_port());
         redis::redisAsyncDisconnect(c->get_async_context());
         return;
     }
