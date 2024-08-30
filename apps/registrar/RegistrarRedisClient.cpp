@@ -39,7 +39,7 @@ RegistrarRedisClient::RegistrarRedisClient()
 
 inline void fill_info_addrs(cfg_t* cfg, RedisConnectionInfo &info) {
     for(unsigned int i = 0; i < cfg_size(cfg, CFG_PARAM_HOSTS); i++) {
-        auto host_port = parse_hostport(cfg_getnstr(cfg, CFG_PARAM_HOSTS, i));
+        auto host_port = parse_hostport(cfg_getnstr(cfg, CFG_PARAM_HOSTS, i), true);
         if(host_port.has_value())
             info.addrs.emplace_back(host_port.value().first, host_port.value().second);
     }
