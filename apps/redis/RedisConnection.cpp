@@ -48,12 +48,12 @@ static void disconnectCallback_static(const redisAsyncContext *c, int status)
 }
 void RedisConnection::disconnectCallback(const redisAsyncContext *c, int status)
 {
-    on_disconnect();
     if(status == REDIS_OK) {
         INFO("redis %s[%p] %s:%d disconnected", name.c_str(), c, host.c_str(), port);
     } else {
         ERROR("redis %s[%p] %s:%d: %s",name.c_str(), c, host.c_str(), port, redis::redisGetError((void*)c));
     }
+    on_disconnect();
 }
 
 static int add_event_static(void *c, int flag)
