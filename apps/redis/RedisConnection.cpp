@@ -37,6 +37,7 @@ void RedisConnection::connectCallback(const struct redisAsyncContext* c, int sta
         on_connect();
     } else {
         ERROR("redis %s[%p] %s:%d: %s",name.c_str(), c, host.c_str(), port, redis::redisGetError((void*)c));
+        on_disconnect();
     }
 }
 
