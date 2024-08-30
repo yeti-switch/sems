@@ -223,33 +223,6 @@ ELSE(SEMS_USE_OPENSSL)
 	MESSAGE(STATUS "Using OpenSSL: NO (default)")
 ENDIF(SEMS_USE_OPENSSL)
 
-# Let's try to find Python development files
-FIND_PACKAGE(PythonLibs)
-IF(PYTHONLIBS_FOUND OR PYTHON_LIBRARIES)
-	SET(PYTHONLIBS_FOUND TRUE)
-	MESSAGE(STATUS "Found Python includes:	${PYTHON_INCLUDE_PATH}/Python.h")
-	MESSAGE(STATUS "Found Python library: ${PYTHON_LIBRARIES}")
-	MESSAGE(STATUS "Using Python: YES")
-ELSE(PYTHONLIBS_FOUND OR PYTHON_LIBRARIES)
-	MESSAGE(STATUS "Using Python: NO")
-ENDIF(PYTHONLIBS_FOUND OR PYTHON_LIBRARIES)
-
-# Let's try to find SIP (Python bindings generator) development files
-FIND_PACKAGE(SIP)
-IF(SIP_FOUND)
-	MESSAGE(STATUS "Using SIP: YES")
-ELSE(SIP_FOUND)
-	MESSAGE(STATUS "Using SIP: NO")
-ENDIF(SIP_FOUND)
-
-# Let's try to find MySQL++ development files
-FIND_PACKAGE(MySQLpp)
-IF(MYSQLPP_FOUND)
-	MESSAGE(STATUS "Using MySQL++: YES")
-ELSE(MYSQLPP_FOUND)
-	MESSAGE(STATUS "Using MySQL++: NO")
-ENDIF(MYSQLPP_FOUND)
-
 # Let's try to find Flite library and header files
 IF(SEMS_USE_TTS)
 	FIND_PACKAGE(Flite REQUIRED)
