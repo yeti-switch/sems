@@ -237,6 +237,14 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
         r.erase(recorder_it);
         recorders_closed++;
     break;
+    case AudioRecorderEvent::setTag: {
+        const auto &tag_event = static_cast<AudioRecorderSetTagEvent&>(ev);
+        DBG("tag recorder %p(%s) channel_id %u, tag %u",
+            recorder, recorder_it->first.c_str(),
+            tag_event.channel_id, tag_event.tag);
+        recorder->setTag(tag_event.channel_id, tag_event.tag);
+    } break;
+
     case AudioRecorderEvent::markRecordStopped:
         const auto &stop_event = static_cast<AudioRecorderMarkStoppedEvent&>(ev);
         DBG("mark recorder %p(%s) as stopped. file_path:'%s'",

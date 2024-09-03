@@ -52,6 +52,12 @@ class AmAudioFileRecorder {
         throw std::logic_error("not implemented");
     }
 
+    virtual void setTag([[maybe_unused]] unsigned int channel_id,
+                        [[maybe_unused]] unsigned int tag)
+    {
+        throw std::logic_error("not implemented");
+    }
+
     virtual void markRecordStopped([[maybe_unused]] const string& file_path)
     {
         throw std::logic_error("not implemented");
@@ -69,7 +75,8 @@ struct AudioRecorderEvent
         delStereoRecorder,
         putSamples,
         putStereoSamples,
-        markRecordStopped
+        markRecordStopped,
+        setTag
     } event_id;
 
     AudioRecorderEvent(const string &recorder_id, event_type event_id)
@@ -94,6 +101,7 @@ struct AudioRecorderEvent
         case delStereoRecorder:
         case putStereoSamples:
         case markRecordStopped:
+        case setTag:
             return RecorderClassStereo;
         default:
             throw std::logic_error("unknown event type");
@@ -120,6 +128,19 @@ struct AudioRecorderCtlEvent
       : AudioRecorderEvent(recorder_id,event_id),
         file_path(file_path), sync_ctx_id(sync_ctx_id),
         rtype(rtype)
+    {}
+};
+
+struct AudioRecorderSetTagEvent
+  : AudioRecorderEvent
+{
+    unsigned int channel_id;
+    unsigned int tag;
+
+    AudioRecorderSetTagEvent(const string &recorder_id, event_type event_id,
+                             unsigned int channel_id, unsigned int tag)
+      : AudioRecorderEvent(recorder_id, event_id),
+        channel_id(channel_id), tag(tag)
     {}
 };
 

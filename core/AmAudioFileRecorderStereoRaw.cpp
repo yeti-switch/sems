@@ -122,6 +122,18 @@ void AmAudioFileRecorderStereoRaw::writeStereoSamples(unsigned long long ts, uns
     fwrite(samples, 1, size, fp);
 }
 
+
+void AmAudioFileRecorderStereoRaw::setTag(unsigned int channel_id, unsigned int tag)
+{
+    chunk data;
+    data.data.tag.channel_id = channel_id;
+    data.data.tag.val = tag;
+    data.header.type = DATA_TAG;
+    data.header.size = sizeof(tag_data);
+    fwrite(&data, 1, sizeof(data_chunk) + sizeof(tag_data), fp);
+}
+
+
 void AmAudioFileRecorderStereoRaw::markRecordStopped(const string& file_path)
 {
     for(auto &file : files) {

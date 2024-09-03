@@ -39,6 +39,7 @@ class AmAudioFileRecorderStereoRaw : public AmAudioFileRecorder
                                     size_t size,
                                     int input_sample_rate,
                                     int channel_id) override;
+    virtual void setTag(unsigned int channel_id, unsigned int tag) override;
     virtual void markRecordStopped(const string& file_path) override;
 
     unsigned long long get_last_ts();
