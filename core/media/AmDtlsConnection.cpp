@@ -217,20 +217,25 @@ DtlsTimer::~DtlsTimer()
 
 void DtlsTimer::fire()
 {
-    if(!is_valid.load()) {
+    v_mut.lock();
+    if(!is_valid) {
+        v_mut.unlock();
         dec_ref(this);
         return;
     }
     if(context->timer_check()) {
         reset();
+        v_mut.unlock();
     } else {
+        v_mut.unlock();
         dec_ref(this);
     }
 }
 
 void DtlsTimer::invalidate()
 {
-    is_valid.store(false);
+    AmLock lock(v_mut);
+    is_valid = false;
 }
 
 void DtlsTimer::reset()

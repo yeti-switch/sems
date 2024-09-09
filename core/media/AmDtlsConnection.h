@@ -120,7 +120,8 @@ class DtlsTimer
     public atomic_ref_cnt
 {
     DtlsContext* context;
-    std::atomic_bool is_valid;
+    AmMutex v_mut;
+    bool is_valid;
   public:
     DtlsTimer(DtlsContext* context);
     ~DtlsTimer();
