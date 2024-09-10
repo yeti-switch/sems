@@ -1,3 +1,7 @@
+sems (1.143.2) stable; urgency=low
+  * SipRegistrar: prettify redis error messages
+ -- Michael Furmur <furmur@pm.me>  Tue, 10 Sep 2024 11:00:27 +0300
+
 sems (1.143.1) stable; urgency=low
   * fix DtlsTimer crash
  -- Michael Furmur <furmur@pm.me>  Tue, 10 Sep 2024 10:19:06 +0300
