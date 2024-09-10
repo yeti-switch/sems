@@ -154,7 +154,7 @@ struct RedisReply : public RedisEvent
     : RedisEvent(RedisEvent::Reply, conn_id), result(result), data(rdata),
         user_data(udata.release()), user_type_id(utype_id) {}
     ~RedisReply() {}
-    static string resultStr(result_type type) {
+    static const char *resultStr(result_type type) {
       switch(type) {
         case SuccessReply:
           return "SuccessReply";

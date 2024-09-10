@@ -835,11 +835,15 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
     // reply 'failed' response
     if(!req || event.result != RedisReply::SuccessReply) {
         if(req) {
-            ERROR("error reply from redis %s. for request from %s:%hu",
-                  AmArg::print(event.data).c_str(),
-                  req->remote_ip.data(), req->remote_port);
+            ERROR("redis %s(%s) for request from %s:%hu. ci:%s",
+                RedisReply::resultStr(event.result),
+                event.data.print().c_str(),
+                req->remote_ip.data(), req->remote_port,
+                req->callid.data());
         } else {
-            ERROR("error reply from redis %s.", AmArg::print(event.data).c_str());
+            ERROR("redis %s(%s)",
+                RedisReply::resultStr(event.result),
+                event.data.print().c_str());
         }
 
         post_register_response(session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
@@ -1103,7 +1107,7 @@ bool SipRegistrar::fetch_all(AmObject* user_data, int user_type_id, const string
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
         if(!script || !script->is_loaded()) {
-            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            ERROR("%s script is not loaded", REGISTER_SCRIPT);
             return false;
         }
 
@@ -1122,7 +1126,7 @@ bool SipRegistrar::unbind_all(AmObject* user_data, int user_type_id, const strin
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
         if(!script || !script->is_loaded()) {
-            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            ERROR("%s script is not loaded", REGISTER_SCRIPT);
             return false;
         }
 
@@ -1144,7 +1148,7 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
         if(!script || !script->is_loaded()) {
-            ERROR("%s script not loaded", REGISTER_SCRIPT);
+            ERROR("%s script is not loaded", REGISTER_SCRIPT);
             return false;
         }
 
@@ -1165,7 +1169,7 @@ bool SipRegistrar::resolve_aors(AmObject *user_data, int user_type_id, std::set<
     {
         auto script = read_conn->script(AOR_LOOKUP_SCRIPT);
         if(!script || !script->is_loaded()) {
-            ERROR("%s script not loaded", AOR_LOOKUP_SCRIPT);
+            ERROR("%s script is not loaded", AOR_LOOKUP_SCRIPT);
             return false;
         }
 
@@ -1187,7 +1191,7 @@ bool SipRegistrar::load_contacts(AmObject *user_data, int user_type_id)
     {
         auto script = subscr_read_conn->script(LOAD_CONTACTS_SCRIPT);
         if(!script || !script->is_loaded()) {
-            ERROR("%s script not loaded", LOAD_CONTACTS_SCRIPT);
+            ERROR("%s script is not loaded", LOAD_CONTACTS_SCRIPT);
             return false;
         }
 
