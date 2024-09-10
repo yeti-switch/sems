@@ -836,13 +836,13 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
     if(!req || event.result != RedisReply::SuccessReply) {
         if(req) {
             ERROR("redis %s(%s) for request from %s:%hu. ci:%s",
-                RedisReply::resultStr(event.result),
+                RedisReply::resultStr(event.result).data(),
                 event.data.print().c_str(),
                 req->remote_ip.data(), req->remote_port,
                 req->callid.data());
         } else {
             ERROR("redis %s(%s)",
-                RedisReply::resultStr(event.result),
+                RedisReply::resultStr(event.result).data(),
                 event.data.print().c_str());
         }
 
