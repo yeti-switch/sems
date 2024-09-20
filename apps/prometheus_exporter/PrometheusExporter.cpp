@@ -175,9 +175,9 @@ void PrometheusExporter::status_request_cb(struct evhttp_request* req)
     {
         auto type = StatCountersGroupsInterface::type2str(group.getType());
 
-        evbuffer_add_printf(buf, "#TYPE %s_%s %s\n", prefix.c_str(), name.data(), type);
+        evbuffer_add_printf(buf, "# TYPE %s_%s %s\n", prefix.c_str(), name.data(), type);
         if(!group.getHelp().empty()) {
-            evbuffer_add_printf(buf, "#HELP %s_%s %s\n", prefix.c_str(), name.data(), group.getHelp().data());
+            evbuffer_add_printf(buf, "# HELP %s_%s %s\n", prefix.c_str(), name.data(), group.getHelp().data());
         }
 
         group.iterate_counters([this, &name, /*&now,*/ buf](
