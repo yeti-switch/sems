@@ -125,6 +125,7 @@ public:
 
     void checkState();
     PairState getState() { return state; }
+    void setState(PairState st) { state = st; }
 
     /** @return interval to be scheduled or nullopt */
     std::optional<unsigned long long> checkStunTimer();

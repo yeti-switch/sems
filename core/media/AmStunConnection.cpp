@@ -100,6 +100,12 @@ void IceContext::useCandidate(AmStunConnection* conn)
 void IceContext::initContext()
 {
     if(state == ICE_INITIAL) {
+        {
+            AmLock lock(pairs_mut);
+            if(!pairs.empty())
+                pairs.rbegin()->second->setState(AmStunConnection::PAIR_WAITING);
+        }
+
         setCurrentCandidate(nullptr);
         state = ICE_CONNECTIVITY_CHECK;
     }
@@ -251,7 +257,9 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
     switch(state) {
     case ICE_CONNECTIVITY_CHECK:
     {
-        bool finish = true, is_first = true;
+        bool finish = true;
+        ReferenceUniquePtr wait_conn(nullptr);
+        ReferenceUniquePtr frozen_conn(nullptr);
         {
             AmLock lock(pairs_mut);
             if(pairs.empty()) break;
@@ -259,15 +267,13 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
             auto pair = pairs.rbegin();
             while(pair != pairs.rend()) {
                 AmStunConnection::PairState pstate = pair->second->getState();
+                if(pstate == AmStunConnection::PAIR_WAITING && !wait_conn) 
+                    wait_conn.reset(pair->second);
+                if(pstate == AmStunConnection::PAIR_FROZEN && !frozen_conn) 
+                    frozen_conn.reset(pair->second);
                 switch(pstate) {
                 case AmStunConnection::PAIR_WAITING:
-                    connections[pair->second] = STUN_TA_TIMEOUT;
                 case AmStunConnection::PAIR_FROZEN:
-                    if(is_first) {
-                        conn.reset(pair->second);
-                        is_first = false;
-                        connections[pair->second] = STUN_TA_TIMEOUT;
-                    }
                 case AmStunConnection::PAIR_IN_PROGRESS:
                     finish = false;
                 default: break;
@@ -278,8 +284,13 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
         if(finish) {
             DBG("ice: finished connectivity check phase(type %d)", type);
             state = ICE_NOMINATIONS;
-        } else if(conn) {
-            conn->checkState();
+        } else {
+            if(wait_conn) {
+                wait_conn->checkState();
+                connections[wait_conn] = wait_conn->checkStunTimer().value();
+            }
+            if(frozen_conn)
+                frozen_conn->checkState();
         }
         break;
     }
@@ -302,7 +313,7 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
                     DBG("ice: finished nomination phase(type %d)", type);
                     state = ICE_KEEP_ALIVE;
                 } else {
-                    conn->checkState();
+                    conn->setState(AmStunConnection::PAIR_WAITING);
                     connections[conn.get()] = STUN_TA_TIMEOUT;
                     return;
                 }
@@ -602,6 +613,10 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
         string error("invalid stun message: ");
         transport->getRtpStream()->onErrorRtpTransport(STUN_VALID_ERROR, error + error_str, transport);
         if(err_code == STUN_ERROR_INCORRECT_TRANSID) return;
+        if(err_code == STUN_ERROR_ROLECONFLICT) {
+            state = PAIR_WAITING;
+            return;
+        }
         if(state == PAIR_IN_PROGRESS) {
             state = PAIR_FAILED;
             context->failedCandidate(this);
@@ -623,11 +638,15 @@ void AmStunConnection::send_request()
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
     StunTransactionId trnsId;
-    *(int*)trnsId.id = htonl(STUN_COOKIE);
-    for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
-        trnsId.id[i] = (uint8_t)rand();
+    if(!count) {
+        *(int*)trnsId.id = htonl(STUN_COOKIE);
+        for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
+            trnsId.id[i] = (uint8_t)rand();
+        }
+        current_trans_id = *(unsigned short*)trnsId.id;
+    } else { // retransmit
+        *(unsigned short*)trnsId.id = current_trans_id;
     }
-    current_trans_id = *(unsigned short*)trnsId.id;
     builder.AddTransactionId(trnsId);
     string username = remote_user + ":" + local_user;
     builder.AddUserName(username.c_str());
@@ -662,9 +681,8 @@ void AmStunConnection::checkState()
         state = PAIR_WAITING;
         return;
     } else if(state == PAIR_SUCCEEDED ||
-              state == PAIR_FAILED) {
-        state = PAIR_WAITING;
-    } else if(state == PAIR_WAITING) {
+              state == PAIR_FAILED ||
+              state == PAIR_WAITING) {
         count = 0;
         state = PAIR_IN_PROGRESS;
     } else if(state == PAIR_IN_PROGRESS) {
