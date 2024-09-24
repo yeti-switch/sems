@@ -9,6 +9,7 @@
 #include "AmAudio.h"
 #include "AmUtils.h"
 #include "ShutdownHandlersProcessor.h"
+#include "IPTree.h"
 
 #define VALUE_LOG_NO                 "no"
 #define VALUE_LOG_DEBUG              "debug"
@@ -143,6 +144,7 @@ struct ConfigContainer
     AmAudio::ResamplingImplementationType resampling_implementation_type;
     int dump_level;
     std::string ssl_key_log_filepath;
+    std::vector<IPTree> ice_candidate_acl;
 
     bool enable_zrtp;
 

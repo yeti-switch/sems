@@ -66,6 +66,19 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
         if(transport->getConnection(pred)) continue;
 
         try {
+            if(!AmConfig.ice_candidate_acl.empty()) {
+                    sockaddr_storage addr;
+                    AmRawConnection tmp(transport, address, port);
+                    tmp.getRAddr(&addr);
+                    IPTree::MatchResult result;
+                    for(auto& acl : AmConfig.ice_candidate_acl) {
+                        acl.match(addr, result);
+                        if(result.empty()) continue;
+                        break;
+                    }
+                    if(!result[0]) continue;
+            }
+
             CLASS_DBG("add stun connection, state:%s, type:%s, raddr:%s, rport:%d",
                       state2str(), transport->type2str(), address.c_str(), port);
             auto conn = (AmStunConnection *)transport->getConnFactory()->createStunConnection(

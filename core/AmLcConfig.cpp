@@ -49,6 +49,10 @@
 #define SECTION_SDES_NAME            "sdes"
 #define SECTION_DTLS_NAME            "dtls"
 #define SECTION_ZRTP_NAME            "zrtp"
+#define SECTION_ICE_CAND_FILTER_NAME "ice_candidate_filter"
+
+#define FUNCTION_ALLOW_NAME          "allow"
+#define FUNCTION_DENY_NAME           "deny"
 
 #define PARAM_LIMIT_NAME             "limit"
 #define PARAM_CODE_NAME              "code"
@@ -217,6 +221,9 @@
 
 #define cuint(expr) static_cast<unsigned int>(expr)
 #define cint(expr) static_cast<int>(expr)
+
+static int ice_candidate_allow(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv);
+static int ice_candidate_deny(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv);
 
 /*******************************************************************************************************/
 /*                                                                                                     */
@@ -555,9 +562,16 @@ namespace Config {
         CFG_END()
     };
 
+    static cfg_opt_t ice_cand_filter[] {
+        CFG_FUNC(FUNCTION_ALLOW_NAME, &ice_candidate_allow),
+        CFG_FUNC(FUNCTION_DENY_NAME, &ice_candidate_deny),
+        CFG_END()
+    };
+
     static cfg_opt_t general[] =
     {
         CFG_FUNC("include", &cfg_include),
+        CFG_SEC(SECTION_ICE_CAND_FILTER_NAME, ice_cand_filter, CFGF_NONE),
         CFG_SEC(SECTION_SESSION_LIMIT_NAME, slimit, CFGF_NONE),
         CFG_SEC(SECTION_OSLIM_NAME, options_slimit, CFGF_NONE),
         CFG_SEC(SECTION_CPS_LIMIT_NAME, cps_limit, CFGF_NONE),
@@ -685,6 +699,41 @@ namespace Config {
 };
 
 #pragma GCC diagnostic pop
+
+/*******************************************************************************************************/
+/*                                                                                                     */
+/*                                       config functions                                              */
+/*                                                                                                     */
+/*******************************************************************************************************/
+static int ice_candidate_allow(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv)
+{
+    AmConfig.ice_candidate_acl.emplace_back();
+    IPTree& acl = AmConfig.ice_candidate_acl.back();
+    for(int i = 0; i < argc; i++) {
+        AmSubnet net;
+        if(!net.parse(argv[i])) {
+            ERROR("incorrect subnet addr %s in ice candidate allow filter", argv[i]);
+            return -1;
+        }
+        acl.addSubnet(net, true);
+    }
+    return 0;
+}
+
+static int ice_candidate_deny(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv)
+{
+    AmConfig.ice_candidate_acl.emplace_back();
+    IPTree& acl = AmConfig.ice_candidate_acl.back();
+    for(int i = 0; i < argc; i++) {
+        AmSubnet net;
+        if(!net.parse(argv[i])) {
+            ERROR("incorrect subnet addr %s in ice candidate deny filter", argv[i]);
+            return -1;
+        }
+        acl.addSubnet(net, false);
+    }
+    return 0;
+}
 
 /*******************************************************************************************************/
 /*                                                                                                     */
