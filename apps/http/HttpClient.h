@@ -120,7 +120,7 @@ class HttpClient
     void on_sync_context_timer();
     void on_resend_timer_event();
     void update_resolve_list();
-    void authorization(HttpDestination &d, HttpPostEvent *u);
+    void authorization(HttpDestination &d, HttpEvent *u);
 
     rpc_handler showStats;
     async_rpc_handler postRequest;

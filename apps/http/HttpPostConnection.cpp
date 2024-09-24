@@ -16,8 +16,7 @@ static size_t write_func_static(void *ptr, size_t size, size_t nmemb, HttpPostCo
 HttpPostConnection::HttpPostConnection(HttpDestination &destination,
                                        const HttpPostEvent &u,
                                        const string& connection_id):
-    CurlConnection(destination, u, connection_id),
-    headers(nullptr)
+    CurlConnection(destination, u, connection_id)
 {
     CDBG("HttpPostConnection() %p",this);
     u.attempt ? destination.resend_count_connection.inc() : destination.count_connection.inc();
@@ -25,7 +24,6 @@ HttpPostConnection::HttpPostConnection(HttpDestination &destination,
 
 HttpPostConnection::~HttpPostConnection() {
     CDBG("~HttpPostConnection() %p curl = %p",this,curl);
-    if(headers) curl_slist_free_all(headers);
 }
 
 int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
@@ -43,24 +41,8 @@ int HttpPostConnection::init(struct curl_slist* hosts, CURLM *curl_multi)
     if(!destination.certificate_key.empty())
         easy_setopt(CURLOPT_SSLKEY, destination.certificate_key.c_str());
 
-    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
-        headers = curl_slist_append(headers, it->c_str());
-
-    if(!destination.content_type.empty()) {
-        string content_type_header = "Content-Type: ";
-        content_type_header += destination.content_type;
-        headers = curl_slist_append(headers, content_type_header.c_str());
-    }
-
-    HttpPostEvent* event_ = dynamic_cast<HttpPostEvent*>(event.get());
-    for(auto& header : event_->additional_headers) {
-        string user_header = header.first + ": ";
-        user_header += header.second;
-        headers = curl_slist_append(headers, user_header.c_str());
-    }
-
-    if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
     easy_setopt(CURLOPT_URL,get_url().c_str());
+    HttpPostEvent* event_ = dynamic_cast<HttpPostEvent*>(event.get());
     easy_setopt(CURLOPT_POSTFIELDS,event_->data.c_str());
 
     easy_setopt(CURLOPT_WRITEFUNCTION,write_func_static);

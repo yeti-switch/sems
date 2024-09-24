@@ -88,6 +88,7 @@ struct HttpDestination {
     enum AuthType {
         AuthType_Unknown,
         AuthType_Firebase_oauth2,
+        AuthType_s3,
     } auth_type;
     string auth_type_str;
 
@@ -100,6 +101,8 @@ struct HttpDestination {
     int token_lifetime;
     timeval token_created_at;
     int     expires;
+    string access_key;
+    string secret_key;
 
     bool http2_tls;
     string auth_required; /** this destination requires the specified authentication */

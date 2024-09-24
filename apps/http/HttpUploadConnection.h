@@ -1,8 +1,5 @@
 #pragma once
 
-#include "curl/curl.h"
-#include "stdint.h"
-
 #include "HttpDestination.h"
 #include "HttpClientAPI.h"
 #include "CurlConnection.h"

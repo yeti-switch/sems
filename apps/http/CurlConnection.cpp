@@ -35,6 +35,7 @@ CurlConnection::CurlConnection(HttpDestination& destination,
                                const string& connection_id)
   : curl(nullptr),
     resolve_hosts(0),
+    headers(nullptr),
     destination(destination),
     event(event.http_clone()),
     connection_id(connection_id),
@@ -45,6 +46,7 @@ CurlConnection::~CurlConnection()
 {
     if(curl) curl_easy_cleanup(curl);
     if(resolve_hosts) curl_slist_free_all(resolve_hosts);
+    if(headers) curl_slist_free_all(headers);
 }
 
 static struct curl_slist* clone_resolve_slist(struct curl_slist* hosts)
@@ -87,6 +89,23 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     //ensure we never print to the stdout
     easy_setopt(CURLOPT_DEBUGFUNCTION, curl_debugfunction_callback);
 #endif
+
+    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
+        headers = curl_slist_append(headers, it->c_str());
+
+    if(!destination.content_type.empty()) {
+        string content_type_header = "Content-Type: ";
+        content_type_header += destination.content_type;
+        headers = curl_slist_append(headers, content_type_header.c_str());
+    }
+
+    for(auto& header : event.get()->headers) {
+        string user_header = header.first + ": ";
+        user_header += header.second;
+        headers = curl_slist_append(headers, user_header.c_str());
+    }
+
+    if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
 
     if(curl_multi) {
         if(CURLM_OK!=curl_multi_add_handle(curl_multi,curl)){

@@ -218,12 +218,7 @@ extern int http_dest_header_func(cfg_t *cfg, cfg_opt_t */*opt*/, int argc, const
 
 int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& values, bool is_auth = false)
 {
-    AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
-    mode = str2Mode(mode_str);
-    if(mode == Unknown) {
-        ERROR("%s: uknown mode: %s",name.c_str(),mode_str.c_str());
-        return -1;
-    }
+    bool need_destination = false;
 
     if (is_auth) {
         AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_AUTH_TYPE, auth_type_str);
@@ -231,27 +226,47 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         auth_type = str2AuthType(auth_type_str);
 
         switch (auth_type) {
-        case AuthType_Firebase_oauth2: {
-            std::ifstream ifs;
-            std::stringstream stream;
+            case AuthType_Firebase_oauth2: {
+                std::ifstream ifs;
+                std::stringstream stream;
 
-            jwt_kid = cfg_getstr(cfg, PARAM_AUTH_JWT_KIT);
-            jwt_iss = cfg_getstr(cfg, PARAM_AUTH_JWT_ISS);
-            key_file = cfg_getstr(cfg, PARAM_AUTH_PRIVATE_KEY);
-            token_lifetime = cfg_getint(cfg, PARAM_AUTH_TOKEN_LIFETIME);
+                jwt_kid = cfg_getstr(cfg, PARAM_AUTH_JWT_KIT);
+                jwt_iss = cfg_getstr(cfg, PARAM_AUTH_JWT_ISS);
+                key_file = cfg_getstr(cfg, PARAM_AUTH_PRIVATE_KEY);
+                token_lifetime = cfg_getint(cfg, PARAM_AUTH_TOKEN_LIFETIME);
+                need_destination = true;
 
-            if(key_file.empty()
-              || (ifs.open(key_file), !ifs.is_open())) {
-                ERROR("can't access the private_key file %s: %m", key_file.c_str());
-                return -1;
+                if(key_file.empty() || (ifs.open(key_file), !ifs.is_open())) {
+                    ERROR("can't access the private_key file %s: %m", key_file.c_str());
+                    return -1;
+                }
+
+                stream << ifs.rdbuf();
+                key_data = stream.str();
+                ifs.close();
+                break;
+            }
+            case AuthType_s3: {
+                access_key = cfg_getstr(cfg, PARAM_AUTH_ACCESS_KEY);
+                secret_key = cfg_getstr(cfg, PARAM_AUTH_SECRET_KEY);
+                break;
           }
-          stream << ifs.rdbuf();
-          key_data = stream.str();
-          ifs.close();
-          break;
+          default:;
       }
-      default:;
-      }
+    } else {
+        need_destination = true;
+    }
+
+    if(!need_destination) {
+        mode = Unknown;
+        return 0;
+    }
+
+    AmLcConfig::instance().getMandatoryParameter(cfg, PARAM_MODE_NAME, mode_str);
+    mode = str2Mode(mode_str);
+    if(mode == Unknown) {
+        ERROR("%s: uknown mode: %s",name.c_str(),mode_str.c_str());
+        return -1;
     }
 
     auth_required = cfg_getstr(cfg, PARAM_AUTH_NAME);
@@ -329,6 +344,9 @@ int HttpDestination::parse(const string &name, cfg_t *cfg, const DefaultValues& 
         }
         content_type = cfg_getstr(cfg, PARAM_CONTENT_TYPE_NAME);
     }
+
+    if(mode==Put && cfg_size(cfg, PARAM_CONTENT_TYPE_NAME))
+        content_type = cfg_getstr(cfg, PARAM_CONTENT_TYPE_NAME);
 
     if(cfg_size(cfg, PARAM_CONNECTION_LIMIT_NAME)) connection_limit = cfg_getint(cfg, PARAM_CONNECTION_LIMIT_NAME);
     else connection_limit = values.connection_limit;
@@ -437,6 +455,12 @@ void HttpDestination::dump(const string &, AmArg &ret) const
     if(mode==Post && !content_type.empty()) {
         ret["content_type"] = content_type;
     }
+    if(!access_key.empty()) {
+        ret["access_key"] = access_key;
+    }
+    if(!secret_key.empty()) {
+        ret["secret_key"] = secret_key;
+    }
     ret["attempts_limit"] = static_cast<int>(attempts_limit);
     ret["resend_queue_max"] = static_cast<int>(resend_queue_max);
     ret["connection_limit"] = static_cast<int>(resend_connection_limit);
@@ -450,6 +474,11 @@ HttpDestination::AuthType HttpDestination::str2AuthType(const string& type)
     if(type == AUTH_TYPE_FB_OA2_VALUE) {
         return AuthType_Firebase_oauth2;
     }
+
+    if(type == AUTH_TYPE_S3_VALUE) {
+        return AuthType_s3;
+    }
+
     return AuthType_Unknown;
 }
 
@@ -624,17 +653,17 @@ int HttpDestinationsMap::configure_destination(const string &name, cfg_t *cfg, c
 int HttpDestinationsMap::configure(cfg_t * cfg, DefaultValues& values)
 {
     for(unsigned int i = 0; i < cfg_size(cfg, SECTION_AUTH_NAME); i++) {
-        cfg_t *dist = cfg_getnsec(cfg, SECTION_AUTH_NAME, i);
-        if(configure_destination(dist->title, dist, values, true)) {
-            ERROR("can't configure auth destination %s",dist->title);
+        cfg_t *auth = cfg_getnsec(cfg, SECTION_AUTH_NAME, i);
+        if(configure_destination(auth->title, auth, values, true)) {
+            ERROR("can't configure auth destination %s",auth->title);
             return -1;
         }
     }
 
-    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DIST_NAME); i++) {
-        cfg_t *dist = cfg_getnsec(cfg, SECTION_DIST_NAME, i);
-        if(configure_destination(dist->title, dist, values)) {
-            ERROR("can't configure destination %s",dist->title);
+    for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DEST_NAME); i++) {
+        cfg_t *dest = cfg_getnsec(cfg, SECTION_DEST_NAME, i);
+        if(configure_destination(dest->title, dest, values)) {
+            ERROR("can't configure destination %s",dest->title);
             return -1;
         }
     }

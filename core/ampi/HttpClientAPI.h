@@ -20,7 +20,8 @@ struct HttpEvent
         TriggerSyncContext
     };
 
-    std::map<std::string, std::string> url_placeholders;
+    map<string, string> url_placeholders;
+    map<string, string> headers;
 
     string session_id;
     string token;
@@ -31,13 +32,43 @@ struct HttpEvent
 
     HttpEvent(
         int event_id,
-        string session_id, string token, const string &sync_ctx_id = string(),
+        string session_id, string token,
+        const string &sync_ctx_id = string(),
         unsigned int failover_idx = 0,
         unsigned int attempt = 0)
       : AmEvent(event_id),
         session_id(session_id), token(token), sync_ctx_id(sync_ctx_id),
         failover_idx(failover_idx),
         attempt(attempt)
+    {
+        gettimeofday(&created_at,NULL);
+    }
+
+    HttpEvent(
+        int event_id,
+        string session_id, string token,
+        map<string, string> headers,
+        const string &sync_ctx_id = string(),
+        unsigned int failover_idx = 0,
+        unsigned int attempt = 0)
+      : AmEvent(event_id),
+        headers(headers),
+        session_id(session_id), token(token), sync_ctx_id(sync_ctx_id),
+        failover_idx(failover_idx),
+        attempt(attempt)
+    {
+        gettimeofday(&created_at,NULL);
+    }
+
+    HttpEvent(const HttpEvent &src)
+      : AmEvent(src),
+        url_placeholders(src.url_placeholders),
+        headers(src.headers),
+        session_id(src.session_id),
+        token(src.token),
+        sync_ctx_id(src.sync_ctx_id),
+        failover_idx(src.failover_idx),
+        attempt(src.attempt)
     {
         gettimeofday(&created_at,NULL);
     }
@@ -69,6 +100,17 @@ struct HttpUploadEvent
         string session_id = string(),
         const string &sync_ctx_id = string())
       : HttpEvent(Upload, session_id,token,sync_ctx_id),
+        file_path(file_path),
+        file_name(file_name),
+        destination_name(destination_name)
+    {}
+
+    HttpUploadEvent(
+        string destination_name, string file_name, string file_path, string token,
+        map<string, string> headers,
+        string session_id = string(),
+        const string &sync_ctx_id = string())
+      : HttpEvent(Upload, session_id,token,headers,sync_ctx_id),
         file_path(file_path),
         file_name(file_name),
         destination_name(destination_name)
@@ -119,6 +161,15 @@ struct HttpPostMultipartFormEvent
         destination_name(destination_name)
     {}
 
+    HttpPostMultipartFormEvent(
+        string destination_name, string token,
+        map<string, string> headers,
+        string session_id = string(),
+        const string &sync_ctx_id = string())
+      : HttpEvent(MultiPartForm, session_id,token,headers,sync_ctx_id),
+        destination_name(destination_name)
+    {}
+
     HttpPostMultipartFormEvent(const HttpPostMultipartFormEvent &src)
       : HttpEvent(src),
         parts(src.parts),
@@ -148,7 +199,6 @@ struct HttpPostEvent
 {
     string data;
     string destination_name;
-    map<string, string> additional_headers;
 
     HttpPostEvent(
         string destination_name, string data, string token,
@@ -164,18 +214,15 @@ struct HttpPostEvent
         map<string, string> headers, string token,
         string session_id = string(),
         const string &sync_ctx_id = string())
-      : HttpEvent(Post,
-        session_id,token,sync_ctx_id),
+      : HttpEvent(Post, session_id,token,headers,sync_ctx_id),
         data(data),
-        destination_name(destination_name),
-        additional_headers(headers)
+        destination_name(destination_name)
     {}
 
     HttpPostEvent(const HttpPostEvent &src)
       : HttpEvent(src),
         data(src.data),
-        destination_name(src.destination_name),
-        additional_headers(src.additional_headers)
+        destination_name(src.destination_name)
     {}
 
     HttpEvent *http_clone() const override {
@@ -209,6 +256,16 @@ struct HttpGetEvent
         const string& url, string token,
         const string &session_id = string())
       : HttpEvent(Get, session_id, token),
+        destination_name(destination_name),
+        url(url)
+    {}
+
+    HttpGetEvent(
+        const string& destination_name,
+        const string& url, string token,
+        map<string, string> headers,
+        const string &session_id = string())
+      : HttpEvent(Get, session_id, token, headers),
         destination_name(destination_name),
         url(url)
     {}
@@ -252,6 +309,13 @@ struct HttpMultiEvent
         const string& token = string(),
         const string &sync_ctx_id = string())
       : HttpEvent(Multi, string(), token, sync_ctx_id)
+    {}
+
+    HttpMultiEvent(
+        map<string, string> headers,
+        const string& token = string(),
+        const string &sync_ctx_id = string())
+      : HttpEvent(Multi, string(), token, headers, sync_ctx_id)
     {}
 
     HttpMultiEvent(const HttpMultiEvent &src)

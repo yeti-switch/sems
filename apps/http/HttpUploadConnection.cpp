@@ -1,5 +1,4 @@
 #include "HttpUploadConnection.h"
-
 #include "AmUtils.h"
 
 #include <sys/epoll.h>
@@ -8,7 +7,6 @@
 #include <errno.h>
 
 #include "defs.h"
-
 #include "AmSessionContainer.h"
 
 HttpUploadConnection::HttpUploadConnection(HttpDestination &destination,
@@ -127,4 +125,3 @@ void HttpUploadConnection::post_response_event()
             event->session_id.c_str());
     }
 }
-

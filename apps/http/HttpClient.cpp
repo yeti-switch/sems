@@ -18,12 +18,19 @@ using std::vector;
 
 #include <sys/epoll.h>
 #include <cJSON.h>
+#include <botan/hex.h>
+#include <botan/mac.h>
+#include <botan/base64.h>
 
 #define MOD_NAME "http_client"
 
 #define SYNC_CONTEXTS_TIMER_INVERVAL 500000
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 #define AUTH_TIMER_INVERVAL 2000000
+
+static int get_url_resource(const string& url, string& resource);
+static int get_date_str(string& date);
+static string compute_mac(const string& msg, const string& key);
 
 enum RpcMethodId {
     MethodShowDnsCache,
@@ -217,12 +224,12 @@ int HttpClient::configure(const string& config)
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
     if(!cfg) return -1;
     cfg_set_validate_func(cfg, SECTION_AUTH_NAME "|" PARAM_AUTH_TYPE, validate_type_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_SOURCE_ADDRESS_NAME, validate_source_address_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MAX_REPLY_SIZE_NAME, validate_size_func);
-    cfg_set_validate_func(cfg, SECTION_DIST_NAME "|" PARAM_MIN_FILE_SIZE_NAME, validate_size_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_SOURCE_ADDRESS_NAME, validate_source_address_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" SECTION_ON_SUCCESS_NAME "|" PARAM_ACTION_NAME, validate_action_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" SECTION_ON_FAIL_NAME "|" PARAM_ACTION_NAME, validate_action_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_MAX_REPLY_SIZE_NAME, validate_size_func);
+    cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_MIN_FILE_SIZE_NAME, validate_size_func);
     cfg_set_error_function(cfg,cfg_error_callback);
 
     switch(cfg_parse_buf(cfg, config.c_str())) {
@@ -836,6 +843,8 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
+    authorization(d, u);
+
     HttpUploadConnection *c = new HttpUploadConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
         DBG("http upload connection intialization error");
@@ -845,8 +854,11 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
     }
 }
 
-void HttpClient::authorization(HttpDestination &d, HttpPostEvent *u)
+void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
 {
+    if(d.auth_required.empty())
+        return;
+
     HttpAuthsMap::iterator it = auths.find(d.auth_required);
 
     if(it == auths.end())
@@ -855,12 +867,37 @@ void HttpClient::authorization(HttpDestination &d, HttpPostEvent *u)
     auto auth = it->second;
 
     switch (auth->auth_type) {
-    case HttpDestination::AuthType::AuthType_Firebase_oauth2:
-        if(!auth->access_token.empty())
-          u->additional_headers.emplace("Authorization",
-                                        "Bearer " + auth->access_token);
-        break;
-    default:;
+        case HttpDestination::AuthType::AuthType_Firebase_oauth2:
+            if(auth->access_token.empty())
+                return;
+
+            u->headers.emplace("Authorization", "Bearer "+auth->access_token);
+            break;
+
+        case HttpDestination::AuthType::AuthType_s3:
+            if(auth->access_key.empty() || auth->secret_key.empty())
+                return;
+
+            if(auto upload_event = dynamic_cast<HttpUploadEvent*>(u)) {
+                string url = d.url[upload_event->failover_idx]+'/'+upload_event->file_name;
+                string resource;
+                if(get_url_resource(url, resource) == -1) return;
+                string date;
+                if(get_date_str(date) == -1) return;
+                string sig_str = "PUT\n\n"+d.content_type+"\n"+date+"\n"+resource;
+                string signature = compute_mac(sig_str, auth->secret_key);
+
+                // if failover happens renew headers (e.g. 'resource' or 'date' can be changed)
+                upload_event->headers.erase("Authorization");
+                upload_event->headers.erase("Date");
+
+                upload_event->headers.emplace("Authorization", "AWS "+auth->access_key+':'+signature);
+                upload_event->headers.emplace("Date", date);
+            }
+
+            break;
+
+        default:;
     }
 }
 
@@ -953,6 +990,8 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
+    authorization(d, u);
+
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
         DBG("http multipart form connection intialization error");
@@ -995,6 +1034,8 @@ void HttpClient::on_get_request(HttpGetEvent *e)
         d.addEvent(new HttpGetEvent(*e));
         return;
     }
+
+    authorization(d, e);
 
     HttpGetConnection *c = new HttpGetConnection(d, *e, e->sync_ctx_id,epoll_fd);
     if(c->init(hosts, curl_multi)){
@@ -1198,4 +1239,35 @@ uint64_t HttpClient::get_active_tasks_count()
     }
 
     return tasks;
+}
+
+static int get_url_resource(const string& url, string& resource)
+{
+    size_t end = url.find('/', 0);
+    if (end == string::npos) return -1;
+    resource = url.substr(end);
+    return 0;
+}
+
+static int get_date_str(string& date)
+{
+    struct timeval now;
+    gettimeofday(&now, nullptr);
+    time_t t = now.tv_sec;
+    struct tm tt;
+    localtime_r(&t,&tt);
+    char s[64] = {0};
+    int len = strftime(s, sizeof s, "%a, %d %b %Y %X %z", &tt);
+    if(len <= 0) return -1;
+    date = string(s,len);
+    return 0;
+}
+
+static string compute_mac(const string& msg, const string& key)
+{
+   Botan::secure_vector<uint8_t> sec_key(key.begin(), key.end());
+   auto hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-1)");
+   hmac->set_key(sec_key);
+   hmac->update(msg);
+   return Botan::base64_encode(hmac->final());
 }

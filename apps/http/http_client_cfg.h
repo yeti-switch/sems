@@ -2,7 +2,7 @@
 
 #include <confuse.h>
 
-#define SECTION_DIST_NAME           "destination"
+#define SECTION_DEST_NAME           "destination"
 #define SECTION_ON_SUCCESS_NAME     "on_success"
 #define SECTION_ON_FAIL_NAME        "on_failure"
 
@@ -15,10 +15,13 @@
 #define SECTION_AUTH_NAME           "auth"
 #define PARAM_AUTH_TYPE             "type"
 #define AUTH_TYPE_FB_OA2_VALUE      "firebase_oauth2"
+#define AUTH_TYPE_S3_VALUE          "s3"
 #define PARAM_AUTH_PRIVATE_KEY      "private_key"
 #define PARAM_AUTH_JWT_KIT          "jwt_kid"
 #define PARAM_AUTH_JWT_ISS          "jwt_iss"
 #define PARAM_AUTH_TOKEN_LIFETIME   "token_lifetime"
+#define PARAM_AUTH_ACCESS_KEY       "access_key"
+#define PARAM_AUTH_SECRET_KEY       "secret_key"
 
 #define PARAM_MODE_NAME             "mode"
 #define PARAM_AUTH_NAME             "auth"

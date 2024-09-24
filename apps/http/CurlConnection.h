@@ -11,6 +11,7 @@ class CurlConnection
 protected:
   CURL *curl;
   struct curl_slist* resolve_hosts;
+  struct curl_slist *headers;
 
   HttpDestination& destination;
   std::unique_ptr<HttpEvent> event;

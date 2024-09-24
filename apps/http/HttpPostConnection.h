@@ -9,7 +9,6 @@
 
 class HttpPostConnection: public CurlConnection
 {
-  struct curl_slist *headers;
   string response;
 protected:
   bool on_failed() override;
