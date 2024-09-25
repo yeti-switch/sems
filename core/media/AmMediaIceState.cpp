@@ -35,6 +35,31 @@ AmMediaState* AmMediaIceState::update(const AmMediaStateArgs& args)
     return this;
 }
 
+bool AmMediaIceState::candidate_address_is_allowed(const string& addr_str)
+{
+    sockaddr_storage addr;
+
+    if(AmConfig.ice_candidate_acl.empty())
+        return true;
+
+    if(resolver::instance()->str2ip(addr_str.data(), &addr, (address_type)(IPv4 | IPv6)) != 1) {
+        /* allow FQDNs
+         * TODO: create special ACL entry for FQDNs
+         *  OR add option to force resolving before ACL checking */
+        return true;
+    }
+
+    for(const auto& acl : AmConfig.ice_candidate_acl) {
+        if(auto ret = acl.match(addr); ret.has_value()) {
+            //see: AmLcConfig ice_candidate_allow, ice_candidate_deny
+            return ret.value()[0];
+        }
+    }
+
+    //allow if no any allow,deny actions matched
+    return true;
+}
+
 void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidates, bool sdp_offer_owner)
 {
     if(!candidates) return;
@@ -66,18 +91,8 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
         if(transport->getConnection(pred)) continue;
 
         try {
-            if(!AmConfig.ice_candidate_acl.empty()) {
-                    sockaddr_storage addr;
-                    AmRawConnection tmp(transport, address, port);
-                    tmp.getRAddr(&addr);
-                    IPTree::MatchResult result;
-                    for(auto& acl : AmConfig.ice_candidate_acl) {
-                        acl.match(addr, result);
-                        if(result.empty()) continue;
-                        break;
-                    }
-                    if(!result[0]) continue;
-            }
+            if(!candidate_address_is_allowed(address))
+                continue;
 
             CLASS_DBG("add stun connection, state:%s, type:%s, raddr:%s, rport:%d",
                       state2str(), transport->type2str(), address.c_str(), port);

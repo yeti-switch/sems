@@ -8,6 +8,7 @@ class AmMediaIceState
   : public virtual AmMediaState
 {
     void setCurrentConnection(AmStreamConnection* conn);
+    bool candidate_address_is_allowed(const string& addr_str);
 public:
     AmMediaIceState(AmMediaTransport *transport);
     AmMediaState* init(const AmMediaStateArgs& args) override;
