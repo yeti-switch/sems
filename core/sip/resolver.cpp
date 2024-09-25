@@ -1416,8 +1416,8 @@ int _resolver::str2ip(
             reinterpret_cast<sockaddr_in*>(sa)->sin_family = AF_INET;
             return 1;
         } else if(ret < 0) {
-            ERROR("while trying to detect an IPv4 address '%s': %s",
-                  name,strerror(errno));
+            /*ERROR("while trying to detect an IPv4 address '%s': %s",
+                  name,strerror(errno));*/
             return ret;
         }
     }
@@ -1434,8 +1434,8 @@ int _resolver::str2ip(
             reinterpret_cast<sockaddr_in6*>(sa)->sin6_family = AF_INET6;
             return 1;
         } else if(ret < 0) {
-            ERROR("while trying to detect an IPv6 address '%s': %s",
-                  name,strerror(errno));
+            /*ERROR("while trying to detect an IPv6 address '%s': %s",
+                  name,strerror(errno));*/
             return ret;
         }
     }
