@@ -91,8 +91,10 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
         if(transport->getConnection(pred)) continue;
 
         try {
-            if(!candidate_address_is_allowed(address))
+            if(!candidate_address_is_allowed(address)) {
+                DBG("skip candidate %s:%d by ACL", address.data(), port);
                 continue;
+            }
 
             CLASS_DBG("add stun connection, state:%s, type:%s, raddr:%s, rport:%d",
                       state2str(), transport->type2str(), address.c_str(), port);
