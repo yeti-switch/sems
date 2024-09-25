@@ -92,7 +92,7 @@ void IPTree::addSubnet(const AmSubnet &subnet, int external_index)
     node->indexes.emplace(external_index);
 }
 
-void IPTree::match(const sockaddr_storage &addr, MatchResult &ret)
+void IPTree::match(const sockaddr_storage &addr, MatchResult &ret) const
 {
     if(addr.ss_family==AF_INET) {
         auto *node = &ipv4_root;
@@ -125,6 +125,17 @@ void IPTree::match(const sockaddr_storage &addr, MatchResult &ret)
             }
         } while(node);
     }
+}
+
+std::optional<IPTree::MatchResult> IPTree::match(const sockaddr_storage &addr) const
+{
+    IPTree::MatchResult result;
+
+    match(addr, result);
+
+    if(result.empty())
+        return std::nullopt;
+    return result;
 }
 
 IPTree::operator AmArg() const

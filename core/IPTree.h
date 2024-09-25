@@ -6,6 +6,8 @@
 #include <set>
 #include <string>
 #include <memory>
+#include <optional>
+
 #include <sys/socket.h>
 
 class IPTree
@@ -30,7 +32,8 @@ class IPTree
 
     void addSubnet(const AmSubnet &subnet, int external_index);
     /* fills ret with matched nodes */
-    void match(const sockaddr_storage &addr, MatchResult &ret);
+    void match(const sockaddr_storage &addr, MatchResult &ret) const;
+    std::optional<MatchResult> match(const sockaddr_storage &addr) const;
 
     operator AmArg() const;
 };
