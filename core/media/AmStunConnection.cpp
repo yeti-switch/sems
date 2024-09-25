@@ -6,7 +6,7 @@
 #include "stun/stunbuilder.h"
 #include "sip/ip_util.h"
 
-#include <byteswap.h>
+#include <endian.h>
 
 #define STUN_ERROR_ROLECONFLICT 487
 #define STUN_ERROR_INCORRECT_TRANSID 404
@@ -463,16 +463,22 @@ void AmStunConnection::check_request(CStunMessageReader* reader, sockaddr_storag
     }
 
     if(remote_ice_role_is_controlled.has_value()) {
-        remote_tiebreaker = bswap_64(*(uint64_t*)(
+        remote_tiebreaker = be64toh(*(uint64_t*)(
             reader->GetStream().GetDataPointerUnsafe() + ice_ctrl_attr.offset));
 
         if(valid && ((*remote_ice_role_is_controlled) == transport->getRtpStream()->isIceControlled())) {
             //roles conflict. less tiebreaker value means controlled mode
+            DBG("roles conflict. local:0x%llx, remote:0x%llx",
+                transport->getRtpStream()->getIceTieBreaker(),
+                remote_tiebreaker);
+
             bool tiebreaked_local_role_is_controlled = transport->getRtpStream()->getIceTieBreaker() < remote_tiebreaker;
             if(tiebreaked_local_role_is_controlled != transport->getRtpStream()->isIceControlled()) {
+                DBG("accept role change");
                 //accept role change
                 transport->getRtpStream()->onIceRoleConflict();
             } else {
+                DBG("reject role change");
                 //reject ICE role change
                 err_code = STUN_ERROR_ROLECONFLICT;
                 error_str = "Role Conflict";
@@ -655,7 +661,7 @@ void AmStunConnection::send_request()
     nt_info[0] = htons(1);
     builder.AddAttribute(STUN_ATTRIBUTE_NETWORK_INFO, &nt_info, 4);
 
-    uint64_t tb = bswap_64(transport->getRtpStream()->getIceTieBreaker());
+    uint64_t tb = htobe64(transport->getRtpStream()->getIceTieBreaker());
     builder.AddAttribute(
         transport->getRtpStream()->isIceControlled() ? STUN_ATTRIBUTE_ICE_CONTROLLED: STUN_ATTRIBUTE_ICE_CONTROLLING,
         (uint8_t*)&tb, STUN_TIE_BREAKER_LENGTH);
