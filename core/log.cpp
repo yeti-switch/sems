@@ -206,7 +206,20 @@ class StderrLogFac : public AmLoggingFacility {
              const char* func, const char* file, int line,
              const char* msg_, int msg_len_)
     {
-        fprintf(stderr, COMPLETE_LOG_FMT);
+        struct timeval now;
+        gettimeofday (&now, nullptr);
+
+        fprintf(stderr,
+            "%ld.%06ld"
+            LOC_FMT
+            " %s: %.*s" "\n",
+
+            now.tv_sec, now.tv_usec,
+            LOC_DATA,
+            log_level2str[level_],
+            msg_len_,
+            msg_);
+
         fflush(stderr);
     }
 };
