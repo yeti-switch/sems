@@ -879,6 +879,10 @@ void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
                 return;
 
             if(auto upload_event = dynamic_cast<HttpUploadEvent*>(u)) {
+                if(upload_event->file_name.empty()) {
+                    upload_event->file_name = filename_from_fullpath(upload_event->file_path);
+                }
+
                 string url = d.url[upload_event->failover_idx]+'/'+upload_event->file_name;
                 string resource;
                 if(get_url_resource(url, resource) == -1) return;
