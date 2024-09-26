@@ -28,9 +28,9 @@ using std::vector;
 #define SYNC_CONTEXTS_TIMEOUT_INVERVAL 60 //seconds
 #define AUTH_TIMER_INVERVAL 2000000
 
-static int get_url_resource(const string& url, string& resource);
-static int get_date_str(string& date);
-static string compute_mac(const string& msg, const string& key);
+static std::optional<string> get_url_resource(const string& url);
+static string get_rfc5322_date_str();
+static string compute_hmac_sha1(const string& msg, const string& key);
 
 enum RpcMethodId {
     MethodShowDnsCache,
@@ -883,19 +883,26 @@ void HttpClient::authorization(HttpDestination &d, HttpEvent *u)
                     upload_event->file_name = filename_from_fullpath(upload_event->file_path);
                 }
 
-                string url = d.url[upload_event->failover_idx]+'/'+upload_event->file_name;
-                string resource;
-                if(get_url_resource(url, resource) == -1) return;
-                string date;
-                if(get_date_str(date) == -1) return;
-                string sig_str = "PUT\n\n"+d.content_type+"\n"+date+"\n"+resource;
-                string signature = compute_mac(sig_str, auth->secret_key);
+                auto resource = get_url_resource(
+                    d.url[upload_event->failover_idx]+'/'+upload_event->file_name);
+                if(!resource) return;
+
+                string date(get_rfc5322_date_str());
+
+                string sig_str;
+                sig_str.reserve(256);
+
+                sig_str += "PUT\n\n";
+                sig_str += d.content_type; sig_str += '\n';
+                sig_str += date; sig_str += '\n';
+                sig_str += *resource;
 
                 // if failover happens renew headers (e.g. 'resource' or 'date' can be changed)
                 upload_event->headers.erase("Authorization");
                 upload_event->headers.erase("Date");
 
-                upload_event->headers.emplace("Authorization", "AWS "+auth->access_key+':'+signature);
+                upload_event->headers.emplace("Authorization",
+                    "AWS " + auth->access_key + ':' + compute_hmac_sha1(sig_str, auth->secret_key));
                 upload_event->headers.emplace("Date", date);
             }
 
@@ -1245,47 +1252,45 @@ uint64_t HttpClient::get_active_tasks_count()
     return tasks;
 }
 
-static int get_url_resource(const string& url, string& resource)
+static std::optional<string> get_url_resource(const string& url)
 {
     CURLU *h = curl_url();
     if(CURLUE_OK!=curl_url_set(h, CURLUPART_URL, url.data(), 0)) {
         curl_url_cleanup(h);
-        return -1;
+        return std::nullopt;
     }
 
     char *path;
     if(CURLUE_OK!=curl_url_get(h, CURLUPART_PATH, &path, 0)) {
         curl_url_cleanup(h);
-        return -1;
+        return std::nullopt;
     }
 
-    resource.assign(path);
+    string ret(path);
 
     curl_free(path);
     curl_url_cleanup(h);
 
-    return 0;
+    return ret;
 }
 
-static int get_date_str(string& date)
+static string get_rfc5322_date_str()
 {
-    struct timeval now;
-    gettimeofday(&now, nullptr);
-    time_t t = now.tv_sec;
+    auto t = std::time(nullptr);
     struct tm tt;
     localtime_r(&t,&tt);
     char s[64] = {0};
     int len = strftime(s, sizeof s, "%a, %d %b %Y %X %z", &tt);
-    if(len <= 0) return -1;
-    date = string(s,len);
-    return 0;
+    if(len <= 0) return string();
+    return string(s, len);
 }
 
-static string compute_mac(const string& msg, const string& key)
+
+static string compute_hmac_sha1(const string& msg, const string& key)
 {
-   Botan::secure_vector<uint8_t> sec_key(key.begin(), key.end());
-   auto hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-1)");
-   hmac->set_key(sec_key);
-   hmac->update(msg);
-   return Botan::base64_encode(hmac->final());
+    Botan::secure_vector<uint8_t> sec_key(key.begin(), key.end());
+    auto hmac = Botan::MessageAuthenticationCode::create_or_throw("HMAC(SHA-1)");
+    hmac->set_key(sec_key);
+    hmac->update(msg);
+    return Botan::base64_encode(hmac->final());
 }
