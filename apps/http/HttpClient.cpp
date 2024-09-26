@@ -1247,9 +1247,23 @@ uint64_t HttpClient::get_active_tasks_count()
 
 static int get_url_resource(const string& url, string& resource)
 {
-    size_t end = url.find('/', 0);
-    if (end == string::npos) return -1;
-    resource = url.substr(end);
+    CURLU *h = curl_url();
+    if(CURLUE_OK!=curl_url_set(h, CURLUPART_URL, url.data(), 0)) {
+        curl_url_cleanup(h);
+        return -1;
+    }
+
+    char *path;
+    if(CURLUE_OK!=curl_url_get(h, CURLUPART_PATH, &path, 0)) {
+        curl_url_cleanup(h);
+        return -1;
+    }
+
+    resource.assign(path);
+
+    curl_free(path);
+    curl_url_cleanup(h);
+
     return 0;
 }
 
