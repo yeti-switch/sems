@@ -99,7 +99,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
     bool invite = (req.method == SIP_METH_INVITE);
     if (invite || (req.method == SIP_METH_UPDATE)) {
 
-        bool pending = invite ? pending_invites : pending_updates;
+        bool pending = invite ? (pending_invites || getUACInvTransPending()) : pending_updates;
 
         DBG("AmSipDialog::onRxReqSanity: %s, pending %d",
             invite ? "INVITE" : "UPDATE", pending);
