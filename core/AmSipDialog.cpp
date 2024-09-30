@@ -565,7 +565,7 @@ bool AmSipDialog::getUACInvTransPending()
 
 AmSipRequest* AmSipDialog::getUASPendingInv()
 {
-    for (auto &t: uac_trans)
+    for (auto &t: uas_trans)
         if (t.second.method == SIP_METH_INVITE)
             return &(t.second);
     return nullptr;
