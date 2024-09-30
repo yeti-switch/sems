@@ -337,7 +337,7 @@ AmStunConnection::AmStunConnection(AmMediaTransport* _transport, const string& r
     state(PAIR_FROZEN),
     priority(_priority),
     lpriority(_lpriority),
-    current_trans_id(0),
+    current_trans_id{0},
     count(0),
     retransmit_intervals{500, 1500, 3500, 7500, 15500, 31500, 39500},//rfc5389 7.2.1.Sending over UDP
     context(transport->getRtpStream()->getIceContext(transport->getTransportType()))
@@ -583,10 +583,12 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
 
     StunTransactionId trnsId;
     reader->GetTransactionId(&trnsId);
-    if(*(unsigned short*)trnsId.id != current_trans_id) {
-        error_str = "invalid stun transaction id";
-        err_code = STUN_ERROR_INCORRECT_TRANSID;
-        valid = false;
+    for(size_t i = 0; i < STUN_TRANSACTION_ID_LENGTH && valid; i++) {
+        if(trnsId.id[i] != current_trans_id.id[i]) {
+            error_str = "invalid stun transaction id";
+            err_code = STUN_ERROR_INCORRECT_TRANSID;
+            valid = false;
+        }
     }
 
     if(valid && reader->GetErrorCode(&err_code) == S_OK) {
@@ -649,9 +651,9 @@ void AmStunConnection::send_request()
         for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
             trnsId.id[i] = (uint8_t)rand();
         }
-        current_trans_id = *(unsigned short*)trnsId.id;
+        current_trans_id = trnsId;
     } else { // retransmit
-        *(unsigned short*)trnsId.id = current_trans_id;
+        trnsId = current_trans_id;
     }
     builder.AddTransactionId(trnsId);
     string username = remote_user + ":" + local_user;

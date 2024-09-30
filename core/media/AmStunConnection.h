@@ -99,7 +99,7 @@ private:
     string local_user;
     string remote_user;
 
-    unsigned short current_trans_id;
+    StunTransactionId current_trans_id;
     int count;
     int retransmit_intervals[STUN_INTERVALS_COUNT];
     
