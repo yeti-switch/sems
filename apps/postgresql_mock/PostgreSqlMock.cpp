@@ -345,13 +345,7 @@ void PostgreSqlMock::handle_query(const string& query, const string& sender_id, 
         return;
     }
 
-    AmArg resp_arg;
-    if(!json2arg(response->value, resp_arg)) {
-        DBG("json2arg failed for value '%s'", response->value.c_str());
-        return;
-    }
-
-    sessionContainer->postEvent(sender_id, new PGResponse(resp_arg, token));
+    sessionContainer->postEvent(sender_id, new PGResponse(response->parsed_value, token));
 }
 
 void PostgreSqlMock::handle_query_data(const PGQueryData& qdata)
@@ -377,12 +371,23 @@ void PostgreSqlMock::onPrepareExecute(const PGPrepareExec& e)
     handle_query(e.info.query, e.sender_id, e.token);
 }
 
-void PostgreSqlMock::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
+int PostgreSqlMock::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
 {
-    DBG("query [%s]: \n\t - value: %s \n\t - error: %s \n\t - timout: %d", query.c_str(), resp.c_str(), error.c_str(), timeout);
-    auto response = new Response();
+    DBG("query [%s]: \n\t - value: %s \n\t - error: %s \n\t - timeout: %d",
+        query.c_str(), resp.c_str(), error.c_str(), timeout);
+
+    std::unique_ptr<Response> response{new Response()};
+
     response->value = resp;
     response->error = error;
     response->timeout = timeout;
-    resp_map.try_emplace(query, response);
+
+    if(!json2arg(response->value, response->parsed_value)) {
+        DBG("json2arg failed for value '%s'", response->value.c_str());
+        return 1;
+    }
+
+    resp_map.try_emplace(query, response.release());
+
+    return 0;
 }

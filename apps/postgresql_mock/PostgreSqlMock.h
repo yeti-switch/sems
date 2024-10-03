@@ -29,6 +29,7 @@ class PostgreSqlMock
 
     struct Response {
         string value;
+        AmArg parsed_value;
         string error;
         bool timeout;
     };
@@ -71,5 +72,5 @@ class PostgreSqlMock
     int configure(const string& config);
     int reconfigure(const string& config);
 
-    void insert_resp_map(const string& query, const string& resp, const string& error = string(), bool timeout = false);
+    int insert_resp_map(const string& query, const string& resp, const string& error = string(), bool timeout = false);
 };

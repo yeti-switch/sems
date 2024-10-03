@@ -15,8 +15,8 @@ int map_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     const char* response = argv[1];
     const char* error = argc > 2 ? argv[2] : "";
     const bool timeout = argc > 3 ? (strcmp(argv[3], "true") == 0) : false;
-    PostgreSqlMock::instance()->insert_resp_map(query, response, error, timeout);
-    return 0;
+
+    return PostgreSqlMock::instance()->insert_resp_map(query, response, error, timeout);
 }
 
 int map_file_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
@@ -42,8 +42,7 @@ int map_file_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
         return 1;
     }
 
-    PostgreSqlMock::instance()->insert_resp_map(query, data);
-    return 0;
+    return PostgreSqlMock::instance()->insert_resp_map(query, data);
 }
 
 cfg_opt_t pg_opts[] =
