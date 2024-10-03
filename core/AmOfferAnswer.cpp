@@ -349,7 +349,7 @@ int AmOfferAnswer::onRequestOut(AmSipRequest& req)
     return 0;
 }
 
-int AmOfferAnswer::onReplyOut(AmSipReply& reply)
+int AmOfferAnswer::onReplyOut(const AmSipRequest& req, AmSipReply& reply)
 {
     AmMimeBody* sdp_body = reply.body.hasContentType(SIP_APPLICATION_SDP);
 
@@ -359,8 +359,7 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
     if(!has_sdp && !generate_sdp) {
         // let's see whether we should force SDP or not.
         if(reply.cseq_method == SIP_METH_INVITE) {
-            if((reply.code == 183) ||
-               ((reply.code >= 200) && (reply.code < 300)))
+            if(reply.code == 183 || (reply.code >= 200 && reply.code < 300))
             {
                 // either offer received or no offer at all:
                 //  -> force SDP
@@ -370,8 +369,8 @@ int AmOfferAnswer::onReplyOut(AmSipReply& reply)
                     (state == OA_Completed);
             }
         } else if(reply.cseq_method == SIP_METH_UPDATE) {
-            if((reply.code >= 200) &&
-               (reply.code < 300))
+            if(reply.code >= 200 && reply.code < 300 &&
+               req.body.hasContentType(SIP_APPLICATION_SDP))
             {
                 // offer received:
                 //  -> force SDP

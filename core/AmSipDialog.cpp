@@ -285,7 +285,7 @@ int AmSipDialog::onTxRequest(AmSipRequest& req, int& flags)
 int AmSipDialog::onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flags)
 {
     if (offeranswer_enabled) {
-        if (oa.onReplyOut(reply) < 0)
+        if (oa.onReplyOut(req, reply) < 0)
             return -1;
     }
 
