@@ -327,7 +327,10 @@ PostgreSqlMock::Response* PostgreSqlMock::find_resp_for_query(const string& quer
 void PostgreSqlMock::handle_query(const string& query, const string& sender_id, const string& token)
 {
     const auto response = find_resp_for_query(query);
-    if(!response) return;
+    if(!response) {
+        ERROR("no mapping for the query: <%s>", query.data());
+        return;
+    }
 
     if(!response->error.empty()) {
         sessionContainer->postEvent(sender_id, new PGResponseError(response->error, token));
