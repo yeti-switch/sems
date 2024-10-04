@@ -4,6 +4,7 @@
 #include "Config.h"
 
 #include <jsonArg.h>
+#include <math.h>
 
 #define eventDispatcher     AmEventDispatcher::instance()
 #define sessionContainer    AmSessionContainer::instance()
@@ -76,11 +77,16 @@ PostgreSqlMock::PostgreSqlMock()
  : AmEventFdQueue(this)
 {
     eventDispatcher->addEventQueue(POSTGRESQL_QUEUE, this);
+    state = luaL_newstate();
+    luaL_openlibs(state);
+    lua_pushlightuserdata(state, state);
+    lua_setglobal(state, "pgtimeout");
 }
 
 PostgreSqlMock::~PostgreSqlMock()
 {
     eventDispatcher->delEventQueue(POSTGRESQL_QUEUE);
+    lua_close(state);
 }
 
 int PostgreSqlMock::onLoad()
@@ -192,6 +198,7 @@ void PostgreSqlMock::stackPush(const AmArg& args, AmArg&)
     if(args.size() == 0) return;
 
     auto response = new Response();
+    response->ref_index = 0;
     response->value = arg2str(args[0]);
     if(args.size() > 1) response->error = arg2str(args[1]);
     if(args.size() > 2) response->timeout = (arg2str(args[2]) == "true");
@@ -220,6 +227,7 @@ void PostgreSqlMock::mapInsert(const AmArg& args, AmArg&)
     if(args.size() == 0) return;
 
     auto resp = new Response();
+    resp->ref_index = 0;
     if(args.size() > 1) resp->value = arg2str(args[1]);
     if(args.size() > 2) resp->error = arg2str(args[2]);
     if(args.size() > 3) resp->timeout = (arg2str(args[3]) == "true");
@@ -239,6 +247,7 @@ void PostgreSqlMock::mapShow(const AmArg& args, AmArg& ret)
         ret.push(AmArg());
         AmArg &r = ret.back();
         r.push(AmArg(it.first.c_str()/*query*/));
+        r.push(AmArg(it.second->ref_index));
         r.push(AmArg(it.second->value.c_str()));
         r.push(AmArg(it.second->error.c_str()));
         r.push(AmArg(it.second->timeout));
@@ -323,7 +332,47 @@ PostgreSqlMock::Response* PostgreSqlMock::find_resp_for_query(const string& quer
     return resp_it->second.get();
 }
 
-void PostgreSqlMock::handle_query(const string& query, const string& sender_id, const string& token)
+static inline bool lua_isnumeric(lua_State* state, int index) {
+    return lua_type(state, index) == LUA_TNUMBER;
+}
+
+static inline bool is_index(const char* name)
+{
+    char* endptr = NULL;
+    long l_i = strtol(name, &endptr, 10);
+    return endptr && *endptr  == '\0' && l_i;
+}
+
+void response2AmArg(lua_State* state, AmArg& arg)
+{
+    if(lua_isnumeric(state, -1)) {
+        double number = lua_tonumber(state, -1);
+        if(floor(number) == number) arg = (int)floor(number);
+        else arg = number;
+    } else if(lua_isstring(state, -1))
+        arg = lua_tostring(state, -1);
+    else if(lua_isboolean(state, -1))
+        arg = (lua_toboolean(state, -1) == 1);
+    else if(lua_istable(state, -1)) {
+        lua_pushnil(state);
+        while (lua_next(state, -2) != 0) {
+            lua_pushvalue(state, -2);
+            AmArg* value;
+            if(is_index(lua_tostring(state, -1))) {
+                int index;
+                str2int(lua_tostring(state, -1), index);
+                value = &arg[index-1];
+            } else {
+                value = &arg[lua_tostring(state, -1)];
+            }
+            lua_pushvalue(state, -2);
+            response2AmArg(state, *value);
+            lua_pop(state, 3);
+        }
+    }
+}
+
+void PostgreSqlMock::handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params)
 {
     static string no_mapped_error{"no mapping"};
 
@@ -332,6 +381,35 @@ void PostgreSqlMock::handle_query(const string& query, const string& sender_id, 
         ERROR("no mapping for the query: <%s>", query.data());
         sessionContainer->postEvent(sender_id, new PGResponseError(no_mapped_error, token));
         return;
+    }
+
+    if(response->ref_index) {
+        response->timeout = false;
+        response->error.clear();
+        response->parsed_value.clear();
+        response->value.clear();
+
+        lua_rawgeti(state, LUA_REGISTRYINDEX, response->ref_index);
+        lua_pushstring(state, query.c_str());
+        for(auto param : params) {
+            if(isArgBool(param))
+                lua_pushboolean(state, param.asBool());
+        }
+        int ret = lua_pcall(state, params.size(), 1, 0);
+        if(ret) {
+            response->error = lua_tostring(state, -1);
+        } else if(lua_isuserdata(state, -1)) {
+            if(lua_touserdata(state, -1) == state)
+                response->timeout = true;
+            else {
+                response->error = "unknown userdata returned by function";
+            }
+        } else {
+            response2AmArg(state, response->parsed_value);
+        }
+
+        lua_gc(state, LUA_GCCOLLECT, 0);
+        lua_pop(state, lua_gettop(state));
     }
 
     if(!response->error.empty()) {
@@ -350,7 +428,7 @@ void PostgreSqlMock::handle_query(const string& query, const string& sender_id, 
 void PostgreSqlMock::handle_query_data(const PGQueryData& qdata)
 {
     for(auto qinfo : qdata.info)
-        handle_query(qinfo.query, qdata.sender_id, qdata.token);
+        handle_query(qinfo.query, qdata.sender_id, qdata.token, qinfo.params);
 }
 
 void PostgreSqlMock::onSimpleExecute(const PGExecute& e)
@@ -367,7 +445,8 @@ void PostgreSqlMock::onParamExecute(const PGParamExecute& e)
 
 void PostgreSqlMock::onPrepareExecute(const PGPrepareExec& e)
 {
-    handle_query(e.info.query, e.sender_id, e.token);
+    vector<AmArg> params;
+    handle_query(e.info.query, e.sender_id, e.token, params);
 }
 
 int PostgreSqlMock::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
@@ -378,6 +457,7 @@ int PostgreSqlMock::insert_resp_map(const string& query, const string& resp, con
     std::unique_ptr<Response> response{new Response()};
 
     response->value = resp;
+    response->ref_index = 0;
     response->error = error;
     response->timeout = timeout;
 
@@ -388,5 +468,30 @@ int PostgreSqlMock::insert_resp_map(const string& query, const string& resp, con
 
     resp_map.try_emplace(query, response.release());
 
+    return 0;
+}
+
+int PostgreSqlMock::insert_resp_lua(const string& query, const string& path)
+{
+    if(luaL_loadfile(state, path.c_str())) {
+        ERROR("error lua script: `%s`", lua_isstring(state, -1) ? lua_tostring(state, -1) : "");
+        return 1;
+    }
+    int ret = lua_pcall(state, 0, 1, 0);
+    if(ret) {
+        ERROR("lua script abort: `%s`", lua_isstring(state, -1) ? lua_tostring(state, -1) : "");
+        return 1;
+    } else if(!lua_isfunction(state, -1)) {
+        ERROR("lua script `%s` has to return function", path.c_str());
+        return 1;
+    }
+
+    std::unique_ptr<Response> response{new Response()};
+    response->ref_index = luaL_ref(state, LUA_REGISTRYINDEX);
+    response->timeout = false;
+    resp_map.try_emplace(query, response.release());
+
+    lua_gc(state, LUA_GCCOLLECT, 0);
+    lua_pop(state, lua_gettop(state));
     return 0;
 }

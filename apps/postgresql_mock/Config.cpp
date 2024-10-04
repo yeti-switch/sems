@@ -45,9 +45,21 @@ int map_file_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     return PostgreSqlMock::instance()->insert_resp_map(query, data);
 }
 
+int map_lua_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
+{
+    if(argc != 2)
+        return 1;
+
+    const char* query = argv[0];
+    const char* file_path = argv[1];
+
+    return PostgreSqlMock::instance()->insert_resp_lua(query, file_path);
+}
+
 cfg_opt_t pg_opts[] =
 {
     CFG_FUNC(CFG_OPT_MAP, &map_func),
     CFG_FUNC(CFG_OPT_MAP_FILE, &map_file_func),
+    CFG_FUNC(CFG_OPT_MAP_LUA, &map_lua_func),
     CFG_END()
 };
