@@ -91,13 +91,10 @@ void PostgreSQL::dispose()
 PostgreSQL::PostgreSQL()
  : AmEventFdQueue(this),
    ShutdownHandler(MOD_NAME, POSTGRESQL_QUEUE)
-{
-    AmEventDispatcher::instance()->addEventQueue(POSTGRESQL_QUEUE, this);
-}
+{ }
 
 PostgreSQL::~PostgreSQL()
 {
-    AmEventDispatcher::instance()->delEventQueue(POSTGRESQL_QUEUE);
     freePolicyFactory();
 }
 
@@ -149,6 +146,7 @@ int PostgreSQL::configure(const std::string& config)
 
     log_time = cfg_getint(cfg, PARAM_LOG_TIME_NAME);
     log_dir = cfg_getstr(cfg, PARAM_LOG_DIR_NAME);
+    events_queue_name = cfg_getstr(cfg, PARAM_EVENTS_QUEUE_NAME);
 
     cfg_free(cfg);
     return 0;
@@ -183,6 +181,8 @@ void PostgreSQL::run()
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName("pg-client");
+
+    AmEventDispatcher::instance()->addEventQueue(events_queue_name, this);
 
     running = true;
     do {
@@ -224,6 +224,8 @@ void PostgreSQL::run()
 
     epoll_unlink(epoll_fd);
     close(epoll_fd);
+
+    AmEventDispatcher::instance()->delEventQueue(events_queue_name);
 
     DBG("PostgreSQL Client stopped");
 

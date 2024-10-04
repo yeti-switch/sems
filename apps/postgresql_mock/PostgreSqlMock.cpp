@@ -9,7 +9,6 @@
 #define sessionContainer    AmSessionContainer::instance()
 
 #define EPOLL_MAX_EVENTS            2048
-#define POSTGRESQL_QUEUE_MOCK       "postgresql"
 
 class PostgreSqlMockFactory
   : public AmDynInvokeFactory
@@ -76,12 +75,12 @@ void PostgreSqlMock::dispose()
 PostgreSqlMock::PostgreSqlMock()
  : AmEventFdQueue(this)
 {
-    eventDispatcher->addEventQueue(POSTGRESQL_QUEUE_MOCK, this);
+    eventDispatcher->addEventQueue(POSTGRESQL_QUEUE, this);
 }
 
 PostgreSqlMock::~PostgreSqlMock()
 {
-    eventDispatcher->delEventQueue(POSTGRESQL_QUEUE_MOCK);
+    eventDispatcher->delEventQueue(POSTGRESQL_QUEUE);
 }
 
 int PostgreSqlMock::onLoad()

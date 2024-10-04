@@ -90,6 +90,7 @@ class PostgreSQL
 
     time_t log_time;
     string log_dir;
+    string events_queue_name;
 
     int init();
 
