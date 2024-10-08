@@ -54,6 +54,16 @@ EXPORT_PLUGIN_CLASS_FACTORY(PostgreSqlMockFactory);
 EXPORT_PLUGIN_CONF_FACTORY(PostgreSqlMockFactory);
 DEFINE_FACTORY_INSTANCE(PostgreSqlMockFactory, MOD_NAME);
 
+enum RpcMethodId {
+    MethodReload,
+    MethodStackPush,
+    MethodStackClear,
+    MethodStackShow,
+    MethodMapInsert,
+    MethodMapClear,
+    MethodMapShow,
+};
+
 PostgreSqlMock* PostgreSqlMock::_instance=0;
 
 PostgreSqlMock* PostgreSqlMock::instance()
@@ -118,6 +128,7 @@ int PostgreSqlMock::configure(const string& config)
         return -1;
     }
 
+    module_config = config;
     cfg_free(cfg);
     return 0;
 }
@@ -193,7 +204,77 @@ void PostgreSqlMock::on_stop()
 
 /* rpc handlers */
 
-void PostgreSqlMock::stackPush(const AmArg& args, AmArg&)
+bool PostgreSqlMock::stackPush(const string& connection_id,
+                               const AmArg& request_id,
+                               const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodStackPush, params));
+    return true;
+}
+
+bool PostgreSqlMock::stackClear(const string& connection_id,
+                                const AmArg& request_id,
+                                const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodStackClear, params));
+    return true;
+}
+
+bool PostgreSqlMock::stackShow(const string& connection_id,
+                               const AmArg& request_id,
+                               const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodStackShow, params));
+    return true;
+}
+
+bool PostgreSqlMock::reload(const string& connection_id,
+                            const AmArg& request_id,
+                            const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodReload, params));
+    return true;
+}
+
+bool PostgreSqlMock::mapClear(const string& connection_id,
+                              const AmArg& request_id,
+                              const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodMapClear, params));
+    return true;
+}
+
+bool PostgreSqlMock::mapInsert(const string& connection_id,
+                               const AmArg& request_id,
+                               const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodMapInsert, params));
+    return true;
+}
+
+bool PostgreSqlMock::mapShow(const string& connection_id,
+                             const AmArg& request_id,
+                             const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodMapShow, params));
+    return true;
+}
+
+void PostgreSqlMock::pushStack(const AmArg& args, AmArg&)
 {
     if(args.size() == 0) return;
 
@@ -202,16 +283,15 @@ void PostgreSqlMock::stackPush(const AmArg& args, AmArg&)
     response->value = arg2str(args[0]);
     if(args.size() > 1) response->error = arg2str(args[1]);
     if(args.size() > 2) response->timeout = (arg2str(args[2]) == "true");
-
     resp_stack.emplace_back(response);
 }
 
-void PostgreSqlMock::stackClear(const AmArg& args, AmArg&)
+void PostgreSqlMock::clearStack(const AmArg&, AmArg&)
 {
     resp_stack.clear();
 }
 
-void PostgreSqlMock::stackShow(const AmArg& args, AmArg& ret)
+void PostgreSqlMock::showStack(const AmArg& args, AmArg& ret)
 {
     for(auto & it : resp_stack) {
         ret.push(AmArg());
@@ -222,7 +302,7 @@ void PostgreSqlMock::stackShow(const AmArg& args, AmArg& ret)
     }
 }
 
-void PostgreSqlMock::mapInsert(const AmArg& args, AmArg&)
+void PostgreSqlMock::insertMap(const AmArg& args, AmArg&)
 {
     if(args.size() == 0) return;
 
@@ -235,12 +315,12 @@ void PostgreSqlMock::mapInsert(const AmArg& args, AmArg&)
     resp_map.try_emplace(arg2str(args[0])/*query*/, resp);
 }
 
-void PostgreSqlMock::mapClear(const AmArg& args, AmArg&)
+void PostgreSqlMock::clearMap(const AmArg&, AmArg&)
 {
     resp_map.clear();
 }
 
-void PostgreSqlMock::mapShow(const AmArg& args, AmArg& ret)
+void PostgreSqlMock::showMap(const AmArg& args, AmArg& ret)
 {
     ret.assertArray();
     for(auto & it : resp_map) {
@@ -254,10 +334,16 @@ void PostgreSqlMock::mapShow(const AmArg& args, AmArg& ret)
     }
 }
 
+void PostgreSqlMock::reloadMap(const AmArg&, AmArg&)
+{
+    reconfigure(module_config);
+}
+
 /* RpcTreeHandler */
 
 void PostgreSqlMock::init_rpc_tree()
 {
+    reg_method(root, "reload", "reload all maps", &PostgreSqlMock::reload);
     AmArg &stack = reg_leaf(root,"stack");
     reg_method(stack, "push", "stack push", &PostgreSqlMock::stackPush);
     reg_method(stack, "clear", "stack clear", &PostgreSqlMock::stackClear);
@@ -285,11 +371,14 @@ void PostgreSqlMock::process(AmEvent* ev)
             }
         } break;
         default:
-            process_postgres_event(ev);
+            if(PGEvent* pgev = dynamic_cast<PGEvent*>(ev))
+                process_postgres_event(pgev);
+            else if(JsonRpcRequestEvent* jsonprc = dynamic_cast<JsonRpcRequestEvent*>(ev))
+                process_jsonrpc_event(jsonprc);
     }
 }
 
-void PostgreSqlMock::process_postgres_event(AmEvent* ev)
+void PostgreSqlMock::process_postgres_event(PGEvent* ev)
 {
     switch(ev->event_id) {
         case PGEvent::SimpleExecute: {
@@ -305,6 +394,36 @@ void PostgreSqlMock::process_postgres_event(AmEvent* ev)
                 onPrepareExecute(*e);
         } break;
     }
+}
+
+void PostgreSqlMock::process_jsonrpc_event(JsonRpcRequestEvent* ev)
+{
+    AmArg ret;
+    switch(ev->method_id) {
+    case MethodReload:
+        reloadMap(ev->params, ret);
+        break;
+    case MethodStackPush:
+        pushStack(ev->params, ret);
+        break;
+    case MethodStackClear:
+        clearStack(ev->params, ret);
+        break;
+    case MethodStackShow:
+        showStack(ev->params, ret);
+        break;
+    case MethodMapClear:
+        clearMap(ev->params, ret);
+        break;
+    case MethodMapInsert:
+        insertMap(ev->params, ret);
+        break;
+    case MethodMapShow:
+        showMap(ev->params, ret);
+        break;
+    }
+
+    postJsonRpcReply(*ev, ret);
 }
 
 bool PostgreSqlMock::checkQueryData(const PGQueryData& data)
@@ -466,7 +585,13 @@ int PostgreSqlMock::insert_resp_map(const string& query, const string& resp, con
         return 1;
     }
 
-    resp_map.try_emplace(query, response.release());
+    map<string, unique_ptr<Response>>::iterator resp_it;
+    if((resp_it = resp_map.find(query), resp_it != resp_map.end())) {
+        if(resp_it->second->ref_index)
+            luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
+        resp_it->second.reset(response.release());
+    } else
+        resp_map.emplace(query, response.release());
 
     return 0;
 }
@@ -489,9 +614,17 @@ int PostgreSqlMock::insert_resp_lua(const string& query, const string& path)
     std::unique_ptr<Response> response{new Response()};
     response->ref_index = luaL_ref(state, LUA_REGISTRYINDEX);
     response->timeout = false;
-    resp_map.try_emplace(query, response.release());
 
     lua_gc(state, LUA_GCCOLLECT, 0);
     lua_pop(state, lua_gettop(state));
+
+    map<string, unique_ptr<Response>>::iterator resp_it;
+    if((resp_it = resp_map.find(query), resp_it != resp_map.end())) {
+        if(resp_it->second->ref_index)
+            luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
+        resp_it->second.reset(response.release());
+    } else
+        resp_map.emplace(query, response.release());
+
     return 0;
 }
