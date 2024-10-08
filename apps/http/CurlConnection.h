@@ -40,6 +40,8 @@ protected:
   }
   virtual void post_response_event() = 0;
   virtual char* get_name() = 0;
+  virtual void configure_headers();
+
 public:
   CurlConnection(HttpDestination& destination,
                  const HttpEvent& event,

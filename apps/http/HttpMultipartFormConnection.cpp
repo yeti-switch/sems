@@ -144,6 +144,18 @@ void HttpMultiPartFormConnection::post_response_event()
     }
 }
 
+void HttpMultiPartFormConnection::configure_headers()
+{
+    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
+        headers = curl_slist_append(headers, it->c_str());
+
+    for(auto& header : event.get()->headers) {
+        string user_header = header.first + ": ";
+        user_header += header.second;
+        headers = curl_slist_append(headers, user_header.c_str());
+    }
+}
+
 unsigned int HttpMultiPartFormConnection::get_file_size()
 {
     struct stat buf;

@@ -19,6 +19,7 @@ protected:
   bool on_success();
   char* get_name();
   void post_response_event();
+  void configure_headers();
 public:
   HttpMultiPartFormConnection(HttpDestination &destination,
                               const HttpPostMultipartFormEvent &u,

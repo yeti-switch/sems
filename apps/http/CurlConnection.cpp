@@ -90,6 +90,21 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_DEBUGFUNCTION, curl_debugfunction_callback);
 #endif
 
+    configure_headers();
+    if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
+
+    if(curl_multi) {
+        if(CURLM_OK!=curl_multi_add_handle(curl_multi,curl)){
+            ERROR("can't add handler to curl_multi");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+void CurlConnection::configure_headers()
+{
     for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
         headers = curl_slist_append(headers, it->c_str());
 
@@ -104,17 +119,6 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
         user_header += header.second;
         headers = curl_slist_append(headers, user_header.c_str());
     }
-
-    if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
-
-    if(curl_multi) {
-        if(CURLM_OK!=curl_multi_add_handle(curl_multi,curl)){
-            ERROR("can't add handler to curl_multi");
-            return -1;
-        }
-    }
-
-    return 0;
 }
 
 void CurlConnection::on_curl_error(CURLcode result)
