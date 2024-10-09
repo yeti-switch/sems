@@ -1,5 +1,5 @@
-file(GLOB_RECURSE postgresql_mock_SRCS *.cpp)
-set(sems_module_name postgresql_mock)
+file(GLOB_RECURSE postgresql_proxy_SRCS *.cpp)
+set(sems_module_name postgresql_proxy)
 
 find_package(Lua 5.3 EXACT REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})

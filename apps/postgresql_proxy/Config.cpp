@@ -1,5 +1,5 @@
 #include "Config.h"
-#include "PostgreSqlMock.h"
+#include "PostgreSqlProxy.h"
 
 #include <fstream>
 #include <string>
@@ -16,7 +16,7 @@ int map_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     const char* error = argc > 2 ? argv[2] : "";
     const bool timeout = argc > 3 ? (strcmp(argv[3], "true") == 0) : false;
 
-    return PostgreSqlMock::instance()->insert_resp_map(query, response, error, timeout);
+    return PostgreSqlProxy::instance()->insert_resp_map(query, response, error, timeout);
 }
 
 int map_file_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
@@ -42,7 +42,7 @@ int map_file_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
         return 1;
     }
 
-    return PostgreSqlMock::instance()->insert_resp_map(query, data);
+    return PostgreSqlProxy::instance()->insert_resp_map(query, data);
 }
 
 int map_lua_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
@@ -53,7 +53,7 @@ int map_lua_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     const char* query = argv[0];
     const char* file_path = argv[1];
 
-    return PostgreSqlMock::instance()->insert_resp_lua(query, file_path);
+    return PostgreSqlProxy::instance()->insert_resp_lua(query, file_path);
 }
 
 cfg_opt_t pg_opts[] =

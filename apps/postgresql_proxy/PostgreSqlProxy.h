@@ -16,14 +16,14 @@ using std::vector;
 using std::map;
 using std::unique_ptr;
 
-class PostgreSqlMock
+class PostgreSqlProxy
   : public AmThread,
     public AmEventFdQueue,
     public AmEventHandler,
-    public RpcTreeHandler<PostgreSqlMock>
+    public RpcTreeHandler<PostgreSqlProxy>
 {
     friend class PostgreSqlMockFactory;
-    static PostgreSqlMock* _instance;
+    static PostgreSqlProxy* _instance;
 
     AmEventFd stop_event;
     AmCondition<bool> stopped;
@@ -75,10 +75,10 @@ class PostgreSqlMock
     void process_jsonrpc_event(JsonRpcRequestEvent* ev);
 
   public:
-    PostgreSqlMock();
-    ~PostgreSqlMock();
+    PostgreSqlProxy();
+    ~PostgreSqlProxy();
 
-    static PostgreSqlMock* instance();
+    static PostgreSqlProxy* instance();
     static void dispose();
     AmDynInvoke* getInstance() { return static_cast<AmDynInvoke*>(instance()); }
 

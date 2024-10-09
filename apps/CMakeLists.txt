@@ -20,7 +20,7 @@ ADD_SUBDIRECTORY(s3_client)
 ADD_SUBDIRECTORY(redis)
 
 ADD_SUBDIRECTORY(postgresql)
-ADD_SUBDIRECTORY(postgresql_mock)
+ADD_SUBDIRECTORY(postgresql_proxy)
 
 ADD_SUBDIRECTORY(bus_client)
 ADD_SUBDIRECTORY(sctp_bus)
