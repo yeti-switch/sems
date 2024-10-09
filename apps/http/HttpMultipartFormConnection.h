@@ -15,11 +15,11 @@ class HttpMultiPartFormConnection: public CurlConnection
 
   unsigned int get_file_size();
 protected:
-  bool on_failed();
-  bool on_success();
-  char* get_name();
-  void post_response_event();
-  void configure_headers();
+  bool on_failed() override;
+  bool on_success() override;
+  char* get_name() override;
+  void post_response_event() override;
+  void configure_headers() override;
 public:
   HttpMultiPartFormConnection(HttpDestination &destination,
                               const HttpPostMultipartFormEvent &u,

@@ -1,6 +1,7 @@
 #include "CurlConnection.h"
 #include "log.h"
 #include "defs.h"
+#include "format_helper.h"
 
 #include <sys/epoll.h>
 #include <errno.h>
@@ -90,7 +91,16 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_DEBUGFUNCTION, curl_debugfunction_callback);
 #endif
 
+    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
+        headers = curl_slist_append(headers, it->c_str());
+
+    for(auto& [hdr_name,hdr_value] : event.get()->headers) {
+        headers = curl_slist_append(headers,
+            format("{}: {}", hdr_name, hdr_value).data());
+    }
+
     configure_headers();
+
     if(headers) easy_setopt(CURLOPT_HTTPHEADER, headers);
 
     if(curl_multi) {
@@ -105,19 +115,9 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
 
 void CurlConnection::configure_headers()
 {
-    for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
-        headers = curl_slist_append(headers, it->c_str());
-
     if(!destination.content_type.empty()) {
-        string content_type_header = "Content-Type: ";
-        content_type_header += destination.content_type;
-        headers = curl_slist_append(headers, content_type_header.c_str());
-    }
-
-    for(auto& header : event.get()->headers) {
-        string user_header = header.first + ": ";
-        user_header += header.second;
-        headers = curl_slist_append(headers, user_header.c_str());
+        headers = curl_slist_append(headers,
+            format("Content-Type: {}", destination.content_type).data());
     }
 }
 
