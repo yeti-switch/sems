@@ -342,7 +342,7 @@ ADD_SUBDIRECTORY (debian)
 
 IF(SEMS_USE_GTEST)
     add_subdirectory(unit_tests)
-    add_custom_target(test USES_TERMINAL COMMAND /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:PostgresqlTest.*:RedisTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
+    add_custom_target(test USES_TERMINAL COMMAND /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
 ENDIF(SEMS_USE_GTEST)
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)

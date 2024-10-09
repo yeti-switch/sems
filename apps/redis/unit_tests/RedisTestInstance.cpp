@@ -141,6 +141,8 @@ public:
         if(!async_connected && ac->onConnect) {
             async_connected = true;
             ac->onConnect(ac, REDIS_OK);
+        } else if (q.empty()) {
+            ERROR("q is empty");
         } else {
             redisReply* reply;
             Command cmd = q.front();
@@ -168,21 +170,20 @@ public:
 
     int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata_, const char *cmd, size_t len) override
     {
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
         Command current;
         current.replyfn = fn;
         current.privdata = privdata_;
         current.command = string(cmd, len);
         q.push(current);
+
+        if(ac->ev.addWrite)
+           ac->ev.addWrite(ac->ev.data);
+
         return REDIS_OK;
     }
 
     int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) override
     {
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
-
         Command current;
         sds cmd;
         long long len;
@@ -194,15 +195,16 @@ public:
 
         current.command = string(cmd, len);
         q.push(current);
+
+        if(ac->ev.addWrite)
+           ac->ev.addWrite(ac->ev.data);
+
         redisFreeSdsCommand(cmd);
         return REDIS_OK;
     }
 
     int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) override
     {
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
-
         Command current;
         current.replyfn = fn;
         current.privdata = privdata;
@@ -214,6 +216,10 @@ public:
 
         current.command = string(cmd, len);
         q.push(current);
+
+        if(ac->ev.addWrite)
+           ac->ev.addWrite(ac->ev.data);
+
         redisFreeCommand(cmd);
         return REDIS_OK;
     }
