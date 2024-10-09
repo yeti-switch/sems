@@ -520,6 +520,48 @@ void response2AmArg(lua_State* state, AmArg& arg)
     }
 }
 
+[[maybe_unused]] static void push_query_param(lua_State *L, AmArg &param)
+{
+    //see: apps/postgresql/query/QueryParam.cpp: getParams(const std::vector<AmArg>& params)
+    if(isArgUndef(param))
+        lua_pushnil(L);
+    else if(isArgInt(param))
+        lua_pushinteger(L, param.asInt());
+    else if(isArgLongLong(param))
+        lua_pushinteger(L, param.asLongLong());
+    else if(isArgCStr(param))
+        lua_pushstring(L, param.asCStr());
+    else if(isArgDouble(param))
+        lua_pushnumber(L, param.asDouble());
+    else if (isArgArray(param)) {
+        //TODO: create lua table here
+        lua_pushstring(L, arg2json(param).data());
+    } else if(isArgBool(param))
+        lua_pushboolean(L, param.asBool());
+    else if(isArgStruct(param)) {
+        if(param.hasMember("pg")) {
+            AmArg &a = param["pg"];
+            if (isArgArray(a) &&
+                a.size()==2 &&
+                isArgCStr(a[0]))
+            {
+                //TODO: mimic QueryParam::QueryParam(unsigned int param_oid, const AmArg &val)
+                //recursive serialization to the lua table ?
+                lua_pushstring(L, arg2json(a[1]).data());
+            } else {
+                ERROR("unexpected format in typed param: %s. add as json",
+                      AmArg::print(param).data());
+                lua_pushstring(L, arg2json(a[1]).data());
+            }
+        } else {
+            lua_pushstring(L, arg2json(param).data());
+        }
+    } else {
+        WARN("unsupported AmArg type: %s. replace with nil", param.getTypeStr());
+        lua_pushnil(L);
+    }
+}
+
 std::optional<string> PostgreSqlProxy::handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params)
 {
     static string no_mapped_error{"no mapping"};
@@ -537,13 +579,19 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
         response->parsed_value.clear();
         response->value.clear();
 
+        if(!lua_checkstack(state, params.size() + 2)) {
+            sessionContainer->postEvent(sender_id,
+                new PGResponseError("failed to ensure lua stacksize", token));
+            return std::nullopt;
+        }
+
         lua_rawgeti(state, LUA_REGISTRYINDEX, response->ref_index);
         lua_pushstring(state, query.c_str());
-        for(auto param : params) {
-            if(isArgBool(param))
-                lua_pushboolean(state, param.asBool());
-        }
-        int ret = lua_pcall(state, params.size(), 1, 0);
+        for(auto param : params)
+            push_query_param(state, param);
+
+        int ret = lua_pcall(state, params.size() + 1, 1, 0);
+
         if(ret) {
             response->error = lua_tostring(state, -1);
         } else if(lua_isuserdata(state, -1)) {
@@ -559,10 +607,7 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
         lua_gc(state, LUA_GCCOLLECT, 0);
         lua_pop(state, lua_gettop(state));
 
-        return std::nullopt;
-    }
-
-    if(!response->upstream_queue.empty()) {
+    } else if(!response->upstream_queue.empty()) {
         return response->upstream_queue;
     }
 
