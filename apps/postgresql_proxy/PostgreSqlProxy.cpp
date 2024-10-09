@@ -61,6 +61,7 @@ enum RpcMethodId {
     MethodMapInsert,
     MethodMapClear,
     MethodMapShow,
+    MethodShowStats
 };
 
 PostgreSqlProxy* PostgreSqlProxy::_instance=0;
@@ -273,6 +274,16 @@ bool PostgreSqlProxy::mapShow(const string& connection_id,
     return true;
 }
 
+bool PostgreSqlProxy::showStatsAsync(const string& connection_id,
+                             const AmArg& request_id,
+                             const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodShowStats, params));
+    return true;
+}
+
 void PostgreSqlProxy::pushStack(const AmArg& args, AmArg&)
 {
     if(args.size() == 0) return;
@@ -333,6 +344,19 @@ void PostgreSqlProxy::showMap(const AmArg&, AmArg& ret)
     }
 }
 
+void PostgreSqlProxy::showStatsSync(const AmArg&, AmArg& ret)
+{
+    size_t queue_size;
+    {
+        AmLock l(m_queue);
+        queue_size = ev_queue.size();
+    };
+
+    ret = AmArg{
+        { "queue_size", queue_size }
+    };
+}
+
 void PostgreSqlProxy::reloadMap(const AmArg&, AmArg&)
 {
     reconfigure(module_config);
@@ -351,6 +375,9 @@ void PostgreSqlProxy::init_rpc_tree()
     reg_method(map, "insert", "map insert", &PostgreSqlProxy::mapInsert);
     reg_method(map, "clear", "map clear", &PostgreSqlProxy::mapClear);
     reg_method(map, "show", "map show", &PostgreSqlProxy::mapShow);
+
+    AmArg &show = reg_leaf(root, "show");
+    reg_method(show, "stats", "show module stats", &PostgreSqlProxy::showStatsAsync);
 }
 
 /* AmEventHandler */
@@ -449,6 +476,9 @@ void PostgreSqlProxy::process_jsonrpc_event(JsonRpcRequestEvent* ev)
         break;
     case MethodMapShow:
         showMap(ev->params, ret);
+        break;
+    case MethodShowStats:
+        showStatsSync(ev->params, ret);
         break;
     }
 

@@ -66,6 +66,7 @@ class PostgreSqlProxy
     async_rpc_handler mapInsert;
     async_rpc_handler mapClear;
     async_rpc_handler mapShow;
+    async_rpc_handler showStatsAsync;
     async_rpc_handler reload;
     void reloadMap(const AmArg& args, AmArg& ret);
     void pushStack(const AmArg& args, AmArg& ret);
@@ -74,6 +75,7 @@ class PostgreSqlProxy
     void insertMap(const AmArg& args, AmArg& ret);
     void clearMap(const AmArg& args, AmArg& ret);
     void showMap(const AmArg& args, AmArg& ret);
+    void showStatsSync(const AmArg& args, AmArg& ret);
 
     void init_rpc_tree() override;
     void on_stop() override;
