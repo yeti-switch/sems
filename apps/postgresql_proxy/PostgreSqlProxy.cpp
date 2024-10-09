@@ -326,7 +326,7 @@ void PostgreSqlProxy::showMap(const AmArg&, AmArg& ret)
         ret.push({
             { "query", query },
             { "ref_index", resp->ref_index },
-            { "value", resp->value },
+            { "value", resp->parsed_value },
             { "error", resp->error },
             { "timeout", resp->timeout }
         });
