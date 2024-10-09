@@ -116,6 +116,11 @@ class AmEventHandler
 {
  public:
   virtual void process(AmEvent*)=0;
+  //returns true if event was consumed by handler to avoid destroy by queue processor
+  virtual bool process_consuming(AmEvent* e) {
+    process(e);
+    return false;
+  }
   virtual ~AmEventHandler() { };
 };
 

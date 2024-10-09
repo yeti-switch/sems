@@ -56,12 +56,12 @@ void AmEventFdQueue::processEvents()
         if(AmConfig.log_events)
             DBG("before processing event (%s)", typeid(event_ref).name());
 
-        handler->process(event.get());
+        auto consumed = handler->process_consuming(event.get());
 
         if(AmConfig.log_events)
-            DBG("event processed (%s)", typeid(event_ref).name());
+            DBG("event processed");
 
-        event.reset(nullptr);
+        if(consumed) event.release();
 
         m_queue.lock();
     }
@@ -83,10 +83,12 @@ void AmEventFdQueue::processSingleEvent()
 
       if (AmConfig.log_events)
         DBG("before processing event");
-      handler->process(event);
+
+      if(!handler->process_consuming(event))
+        delete event;
+
       if (AmConfig.log_events)
         DBG("event processed");
-      delete event;
 
       m_queue.lock();
     }
