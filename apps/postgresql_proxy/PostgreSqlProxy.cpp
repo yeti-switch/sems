@@ -320,17 +320,17 @@ void PostgreSqlProxy::clearMap(const AmArg&, AmArg&)
     resp_map.clear();
 }
 
-void PostgreSqlProxy::showMap(const AmArg& args, AmArg& ret)
+void PostgreSqlProxy::showMap(const AmArg&, AmArg& ret)
 {
     ret.assertArray();
-    for(auto & it : resp_map) {
-        ret.push(AmArg());
-        AmArg &r = ret.back();
-        r.push(AmArg(it.first.c_str()/*query*/));
-        r.push(AmArg(it.second->ref_index));
-        r.push(AmArg(it.second->value.c_str()));
-        r.push(AmArg(it.second->error.c_str()));
-        r.push(AmArg(it.second->timeout));
+    for(auto &[query, resp] : resp_map) {
+        ret.push({
+            { "query", query },
+            { "ref_index", resp->ref_index },
+            { "value", resp->value },
+            { "error", resp->error },
+            { "timeout", resp->timeout }
+        });
     }
 }
 
