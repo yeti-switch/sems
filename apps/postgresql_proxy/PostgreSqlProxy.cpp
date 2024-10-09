@@ -23,7 +23,6 @@ class PostgreSqlProxyFactory
     }
     ~PostgreSqlProxyFactory()
     {
-        INFO("~PostgreSqlMockFactory");
         PostgreSqlProxy::dispose();
     }
   public:
@@ -149,7 +148,7 @@ int PostgreSqlProxy::init()
     stop_event.link(epoll_fd,true);
     init_rpc();
 
-    DBG("PostgreSqlMock Client initialized");
+    DBG("PostgreSqlProxy Client initialized");
     return 0;
 }
 
@@ -161,7 +160,7 @@ void PostgreSqlProxy::run()
     bool running;
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
-    setThreadName("pg-client-mock");
+    setThreadName("pg-client-proxy");
 
     running = true;
     do {
@@ -191,7 +190,7 @@ void PostgreSqlProxy::run()
     epoll_unlink(epoll_fd);
     close(epoll_fd);
 
-    DBG("PostgreSqlMock Client stopped");
+    DBG("PostgreSqlProxy Client stopped");
 
     stopped.set(true);
 }
