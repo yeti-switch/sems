@@ -56,10 +56,34 @@ int map_lua_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     return PostgreSqlProxy::instance()->insert_resp_lua(query, file_path);
 }
 
+int map_upstream_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
+{
+    if(argc != 2)
+        return 1;
+
+    const char* query = argv[0];
+    const char* queue = argv[1];
+
+    return PostgreSqlProxy::instance()->insert_upstream_mapping(query, queue);
+}
+
+int map_upstream_worker_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
+{
+    if(argc != 2)
+        return 1;
+
+    const char* query = argv[0];
+    const char* queue = argv[1];
+
+    return PostgreSqlProxy::instance()->insert_upstream_worker_mapping(query, queue);
+}
+
 cfg_opt_t pg_opts[] =
 {
     CFG_FUNC(CFG_OPT_MAP, &map_func),
     CFG_FUNC(CFG_OPT_MAP_FILE, &map_file_func),
     CFG_FUNC(CFG_OPT_MAP_LUA, &map_lua_func),
+    CFG_FUNC(CFG_OPT_MAP_UPSTREAM, &map_upstream_func),
+    CFG_FUNC(CFG_OPT_MAP_UPSTREAM_WORKER, &map_upstream_worker_func),
     CFG_END()
 };

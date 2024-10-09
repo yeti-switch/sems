@@ -355,7 +355,8 @@ void PostgreSqlProxy::init_rpc_tree()
 
 /* AmEventHandler */
 
-void PostgreSqlProxy::process(AmEvent* ev)
+void PostgreSqlProxy::process(AmEvent*) {}
+bool PostgreSqlProxy::process_consuming(AmEvent* ev)
 {
     switch(ev->event_id) {
         case E_SYSTEM: {
@@ -371,28 +372,57 @@ void PostgreSqlProxy::process(AmEvent* ev)
         } break;
         default:
             if(PGEvent* pgev = dynamic_cast<PGEvent*>(ev))
-                process_postgres_event(pgev);
+                return process_postgres_event(pgev);
             else if(JsonRpcRequestEvent* jsonprc = dynamic_cast<JsonRpcRequestEvent*>(ev))
                 process_jsonrpc_event(jsonprc);
     }
+
+    return false;
 }
 
-void PostgreSqlProxy::process_postgres_event(PGEvent* ev)
+bool PostgreSqlProxy::process_postgres_event(PGEvent* ev)
 {
+    std::optional<string> ret;
+
     switch(ev->event_id) {
-        case PGEvent::SimpleExecute: {
+        case PGEvent::SimpleExecute:
             if(PGExecute *e = dynamic_cast<PGExecute*>(ev))
-                onSimpleExecute(*e);
-        } break;
-        case PGEvent::ParamExecute: {
+                ret = onSimpleExecute(*e);
+            break;
+        case PGEvent::ParamExecute:
             if(PGParamExecute *e = dynamic_cast<PGParamExecute*>(ev))
-                onParamExecute(*e);
-        } break;
-        case PGEvent::PrepareExec: {
+                ret = onParamExecute(*e);
+            break;
+        case PGEvent::PrepareExec:
             if(PGPrepareExec *e = dynamic_cast<PGPrepareExec*>(ev))
-                onPrepareExecute(*e);
-        } break;
+                ret = onPrepareExecute(*e);
+            break;
+        case PGEvent::WorkerPoolCreate:
+            if(auto *e = dynamic_cast<PGWorkerPoolCreate*>(ev))
+                ret = onCfgWorkerManagementEvent(e->worker_name);
+            break;
+        case PGEvent::WorkerConfig:
+            if(auto *e = dynamic_cast<PGWorkerConfig*>(ev))
+                ret = onCfgWorkerManagementEvent(e->worker_name);
+            break;
+        case PGEvent::WorkerDestroy:
+            if(auto *e = dynamic_cast<PGWorkerDestroy*>(ev))
+                ret = onCfgWorkerManagementEvent(e->worker_name);
+            break;
+        case PGEvent::SetSearchPath:
+            if(auto *e = dynamic_cast<PGSetSearchPath*>(ev))
+                ret = onCfgWorkerManagementEvent(e->worker_name);
+            break;
     }
+
+    if(ret) {
+        if(eventDispatcher->post(ret.value(), ev)) {
+            return true;
+        }
+        return false;
+    }
+
+    return false;
 }
 
 void PostgreSqlProxy::process_jsonrpc_event(JsonRpcRequestEvent* ev)
@@ -490,7 +520,7 @@ void response2AmArg(lua_State* state, AmArg& arg)
     }
 }
 
-void PostgreSqlProxy::handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params)
+std::optional<string> PostgreSqlProxy::handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params)
 {
     static string no_mapped_error{"no mapping"};
 
@@ -498,7 +528,7 @@ void PostgreSqlProxy::handle_query(const string& query, const string& sender_id,
     if(!response) {
         ERROR("no mapping for the query: <%s>", query.data());
         sessionContainer->postEvent(sender_id, new PGResponseError(no_mapped_error, token));
-        return;
+        return std::nullopt;
     }
 
     if(response->ref_index) {
@@ -528,43 +558,73 @@ void PostgreSqlProxy::handle_query(const string& query, const string& sender_id,
 
         lua_gc(state, LUA_GCCOLLECT, 0);
         lua_pop(state, lua_gettop(state));
+
+        return std::nullopt;
+    }
+
+    if(!response->upstream_queue.empty()) {
+        return response->upstream_queue;
     }
 
     if(!response->error.empty()) {
         sessionContainer->postEvent(sender_id, new PGResponseError(response->error, token));
-        return;
+        return std::nullopt;
     }
 
     if(response->timeout) {
         sessionContainer->postEvent(sender_id, new PGTimeout(token));
-        return;
+        return std::nullopt;
     }
 
     sessionContainer->postEvent(sender_id, new PGResponse(response->parsed_value, token));
+
+    return std::nullopt;
 }
 
-void PostgreSqlProxy::handle_query_data(const PGQueryData& qdata)
+std::optional<string> PostgreSqlProxy::handle_query_data(const PGQueryData& qdata)
 {
-    for(auto qinfo : qdata.info)
-        handle_query(qinfo.query, qdata.sender_id, qdata.token, qinfo.params);
+    for(auto qinfo : qdata.info) {
+        //assume that combined events always use the same mapping
+        auto ret = handle_query(qinfo.query, qdata.sender_id, qdata.token, qinfo.params);
+        if(ret) return ret;
+    }
+    return std::nullopt;
 }
 
-void PostgreSqlProxy::onSimpleExecute(const PGExecute& e)
+std::optional<string> PostgreSqlProxy::onSimpleExecute(const PGExecute& e)
 {
-    if(!checkQueryData(e.qdata)) return;
-    handle_query_data(e.qdata);
+    if(!checkQueryData(e.qdata)) return std::nullopt;
+    return handle_query_data(e.qdata);
 }
 
-void PostgreSqlProxy::onParamExecute(const PGParamExecute& e)
+std::optional<string> PostgreSqlProxy::onParamExecute(const PGParamExecute& e)
 {
-    if(!checkQueryData(e.qdata)) return;
-    handle_query_data(e.qdata);
+    if(!checkQueryData(e.qdata)) return std::nullopt;
+    return handle_query_data(e.qdata);
 }
 
-void PostgreSqlProxy::onPrepareExecute(const PGPrepareExec& e)
+std::optional<string> PostgreSqlProxy::onPrepareExecute(const PGPrepareExec& e)
 {
     vector<AmArg> params;
-    handle_query(e.info.query, e.sender_id, e.token, params);
+    return handle_query(e.info.query, e.sender_id, e.token, params);
+}
+
+std::optional<string> PostgreSqlProxy::onCfgWorkerManagementEvent(const string &worker_name)
+{
+    if(auto it = upstream_workers.find(worker_name); it != upstream_workers.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+void PostgreSqlProxy::insert_response(const string& query, std::unique_ptr<Response> &response)
+{
+    if(auto resp_it = resp_map.find(query); resp_it != resp_map.end()) {
+        if(resp_it->second->ref_index)
+            luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
+        resp_it->second.reset(response.release());
+    } else
+        resp_map.emplace(query, response.release());
 }
 
 int PostgreSqlProxy::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
@@ -584,13 +644,7 @@ int PostgreSqlProxy::insert_resp_map(const string& query, const string& resp, co
         return 1;
     }
 
-    map<string, unique_ptr<Response>>::iterator resp_it;
-    if((resp_it = resp_map.find(query), resp_it != resp_map.end())) {
-        if(resp_it->second->ref_index)
-            luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
-        resp_it->second.reset(response.release());
-    } else
-        resp_map.emplace(query, response.release());
+    insert_response(query, response);
 
     return 0;
 }
@@ -617,13 +671,26 @@ int PostgreSqlProxy::insert_resp_lua(const string& query, const string& path)
     lua_gc(state, LUA_GCCOLLECT, 0);
     lua_pop(state, lua_gettop(state));
 
-    map<string, unique_ptr<Response>>::iterator resp_it;
-    if((resp_it = resp_map.find(query), resp_it != resp_map.end())) {
-        if(resp_it->second->ref_index)
-            luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
-        resp_it->second.reset(response.release());
-    } else
-        resp_map.emplace(query, response.release());
+    insert_response(query, response);
 
+    return 0;
+}
+
+int PostgreSqlProxy::insert_upstream_mapping(const string& query, const string &queue)
+{
+    std::unique_ptr<Response> response{new Response()};
+
+    response->upstream_queue = queue;
+    response->ref_index = 0;
+    response->timeout = false;
+
+    insert_response(query, response);
+
+    return 0;
+}
+
+int PostgreSqlProxy::insert_upstream_worker_mapping(const string& worker, const string &queue)
+{
+    upstream_workers.emplace(worker, queue);
     return 0;
 }

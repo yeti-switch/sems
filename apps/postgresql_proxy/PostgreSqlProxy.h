@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <memory>
 using std::string;
 using std::vector;
@@ -31,6 +32,9 @@ class PostgreSqlProxy
 
     struct Response {
         int ref_index;
+
+        string upstream_queue;
+
         string value;
         AmArg parsed_value;
         string error;
@@ -40,16 +44,20 @@ class PostgreSqlProxy
     int init();
     bool checkQueryData(const PGQueryData& data);
     Response* find_resp_for_query(const string& query);
-    void handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params);
-    void handle_query_data(const PGQueryData& qdata);
-    void onSimpleExecute(const PGExecute& e);
-    void onParamExecute(const PGParamExecute& e);
-    void onPrepareExecute(const PGPrepareExec& e);
+    std::optional<string> handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params);
+    std::optional<string> handle_query_data(const PGQueryData& qdata);
+    std::optional<string> onSimpleExecute(const PGExecute& e);
+    std::optional<string> onParamExecute(const PGParamExecute& e);
+    std::optional<string> onPrepareExecute(const PGPrepareExec& e);
+    std::optional<string> onCfgWorkerManagementEvent(const string &worker_name);
 
     vector<unique_ptr<Response>> resp_stack;
-    map<string, unique_ptr<Response>> resp_map;
+    std::unordered_map<string, unique_ptr<Response>> resp_map;
+    std::unordered_map<string, string> upstream_workers;
     lua_State* state;
     string module_config;
+
+    void insert_response(const string& query, std::unique_ptr<Response> &response);
 
   protected:
     async_rpc_handler stackPush;
@@ -71,7 +79,8 @@ class PostgreSqlProxy
     void on_stop() override;
     void run() override;
     void process(AmEvent* ev) override;
-    void process_postgres_event(PGEvent* ev);
+    bool process_consuming(AmEvent* ev) override;
+    bool process_postgres_event(PGEvent* ev);
     void process_jsonrpc_event(JsonRpcRequestEvent* ev);
 
   public:
@@ -88,4 +97,6 @@ class PostgreSqlProxy
 
     int insert_resp_map(const string& query, const string& resp, const string& error = string(), bool timeout = false);
     int insert_resp_lua(const string& query, const string& path);
+    int insert_upstream_mapping(const string& query, const string &queue);
+    int insert_upstream_worker_mapping(const string& worker, const string &queue);
 };
