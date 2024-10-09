@@ -91,7 +91,9 @@ void PostgreSQL::dispose()
 PostgreSQL::PostgreSQL()
  : AmEventFdQueue(this),
    ShutdownHandler(MOD_NAME, POSTGRESQL_QUEUE)
-{ }
+{
+    AmEventDispatcher::instance()->addEventQueue(POSTGRESQL_QUEUE, this);
+}
 
 PostgreSQL::~PostgreSQL()
 {
@@ -170,8 +172,6 @@ int PostgreSQL::init()
 
     makePolicyFactory(false);
     init_rpc();
-
-    AmEventDispatcher::instance()->addEventQueue(events_queue_name, this);
 
     DBG("PostgreSQL Client initialized");
     return 0;
