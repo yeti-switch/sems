@@ -119,7 +119,12 @@ AmPlugIn::~AmPlugIn()
     std::for_each(name2logfac.begin(), name2logfac.end(), delete_plugin_factory);
     std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
     std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
-    std::for_each(plugins_objects.begin(), plugins_objects.end(), delete_plugin_factory);
+    std::for_each(plugins_objects.begin(), plugins_objects.end(), [](
+        std::pair<std::tuple<int, string>, AmPluginFactory*> pf)
+    {
+        DBG("decreasing reference to plug-in factory: %s", std::get<1>(pf.first).c_str());
+         dec_ref(pf.second);
+    });
     std::for_each(name2config.begin(), name2config.end(), delete_plugin_factory);
 
     // if _DEBUG is set do not unload shared libs to allow better debugging
@@ -159,9 +164,9 @@ void AmPlugIn::init()
     addPayload(&_payload_tevent_48);
 }
 
-static void shutdown_plugin_factory(std::pair<string, AmPluginFactory*> pf)
+static void shutdown_plugin_factory(std::pair<std::tuple<int, string>, AmPluginFactory*> pf)
 {
-    DBG("shutdown plug-in: %s", pf.first.c_str());
+    DBG("shutdown plug-in: %s", std::get<1>(pf.first).c_str());
     pf.second->onShutdown();
 }
 
@@ -215,7 +220,7 @@ int AmPlugIn::initPlugins()
             continue;
         }
 
-        DBG("initialize plug-in %s", plugin.first.data());
+        DBG("initialize plug-in %s", std::get<1>(plugin.first).data());
 
         int err = plugin.second->onLoad();
         if(err)
@@ -335,7 +340,12 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name)
 
     if(NULL != plugin) {
         inc_ref(plugin);
-        plugins_objects[plugin_name] = plugin;
+
+        int idx = 0;
+        if(auto last_object = plugins_objects.rbegin(); last_object != plugins_objects.rend()) {
+            idx = std::get<0>(last_object->first);
+        }
+        plugins_objects.emplace(std::make_tuple(idx + 1, plugin_name), plugin);
     }
 
     if(!has_sym){
@@ -885,7 +895,7 @@ void AmPlugIn::dumpPlugins(std::map<string, string>& ret)
 {
     std::for_each(
         plugins_objects.begin(), plugins_objects.end(),
-        [&ret](const std::pair<string, AmPluginFactory*>& pf)
+        [&ret](const std::pair<std::tuple<int, string>, AmPluginFactory*>& pf)
     {
         ret[pf.second->getName()] = pf.second->getVersion();
     });

@@ -108,7 +108,7 @@ class AmPlugIn : public AmPayloadProvider
   std::map<string,AmConfigFactory*>              name2config;
   std::map<string,AmPluginFactory*>              module_objects;
 
-  std::map<string,AmPluginFactory*>              plugins_objects;
+  std::map<std::tuple<int, string>,AmPluginFactory*> plugins_objects;
 
   //AmCtrlInterfaceFactory *ctrlIface;
 
