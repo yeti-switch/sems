@@ -95,6 +95,7 @@ PostgreSQL::PostgreSQL()
 
 PostgreSQL::~PostgreSQL()
 {
+    AmEventDispatcher::instance()->delEventQueue(events_queue_name);
     freePolicyFactory();
 }
 
@@ -170,6 +171,8 @@ int PostgreSQL::init()
     makePolicyFactory(false);
     init_rpc();
 
+    AmEventDispatcher::instance()->addEventQueue(events_queue_name, this);
+
     DBG("PostgreSQL Client initialized");
     return 0;
 }
@@ -181,8 +184,6 @@ void PostgreSQL::run()
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName("pg-client");
-
-    AmEventDispatcher::instance()->addEventQueue(events_queue_name, this);
 
     running = true;
     do {
@@ -224,8 +225,6 @@ void PostgreSQL::run()
 
     epoll_unlink(epoll_fd);
     close(epoll_fd);
-
-    AmEventDispatcher::instance()->delEventQueue(events_queue_name);
 
     DBG("PostgreSQL Client stopped");
 
