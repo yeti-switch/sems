@@ -569,8 +569,8 @@ void PostgreSqlProxy::onPrepareExecute(const PGPrepareExec& e)
 
 int PostgreSqlProxy::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
 {
-    DBG("query [%s]: \n\t - value: %s \n\t - error: %s \n\t - timeout: %d",
-        query.c_str(), resp.c_str(), error.c_str(), timeout);
+    /*DBG("query [%s]: \n\t - value: %s \n\t - error: %s \n\t - timeout: %d",
+        query.c_str(), resp.c_str(), error.c_str(), timeout);*/
 
     std::unique_ptr<Response> response{new Response()};
 
