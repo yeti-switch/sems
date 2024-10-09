@@ -91,9 +91,7 @@ void PostgreSQL::dispose()
 PostgreSQL::PostgreSQL()
  : AmEventFdQueue(this),
    ShutdownHandler(MOD_NAME, POSTGRESQL_QUEUE)
-{
-    AmEventDispatcher::instance()->addEventQueue(POSTGRESQL_QUEUE, this);
-}
+{}
 
 PostgreSQL::~PostgreSQL()
 {
@@ -107,6 +105,9 @@ int PostgreSQL::onLoad()
         ERROR("initialization error");
         return -1;
     }
+
+    AmEventDispatcher::instance()->addEventQueue(events_queue_name, this);
+
     start();
     return 0;
 }
