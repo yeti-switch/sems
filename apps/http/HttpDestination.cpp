@@ -575,6 +575,9 @@ void HttpDestination::auth_on_timer_event(HttpClient* client, const std::string 
 void HttpDestination::send_failed_events(HttpClient* client)
 {
     HttpEvent* event;
+
+    if(events.empty()) return;
+
     unsigned int count_will_send = (resend_count_connection.get() < resend_connection_limit) ?
                                     resend_connection_limit - resend_count_connection.get() : 0;
     while(!events.empty() &&
