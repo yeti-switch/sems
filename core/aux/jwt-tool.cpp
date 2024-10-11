@@ -3,6 +3,7 @@
 #include "sems.h"
 #include "cJSON.h"
 #include "jsonArg.h"
+#include "AmUtils.h"
 
 #include <botan/x509_ca.h>
 #include "botan/x509_ext.h"
@@ -283,6 +284,7 @@ int encode(int argc, char *argv[])
     identity.set_attestation(AmIdentity::AT_C);
 
     int verbose = 0;
+    bool raw = false;
     if(p
         .add(
             'a',
@@ -384,6 +386,54 @@ int encode(int argc, char *argv[])
             {
                 identity.add_div_url(value);
             })
+        .add_long(
+            "raw",
+            "--raw", "encode raw JWT", no_argument,
+            [&raw](const char *)
+            {
+                raw = true;
+            })
+        .add_long(
+            "claim",
+            "--claim=key[:val[/{i,b}]]",
+            "add custom claim (e.g null_key, str_key:str_val, int_key:42/i)",
+            required_argument,
+            [&identity](const char *claim_value)
+            {
+                std::string_view claim{claim_value}, key, value;
+                if(auto p = claim.find(':'); std::string::npos != p) {
+                    key = claim.substr(0, p);
+                    value = claim.substr(p+1);
+                } else {
+                    key = claim;
+                }
+
+                auto &claim_arg = identity.get_payload()[std::string{key}];
+
+                if(value.empty()) {
+                    //add null claim
+                    return;
+                }
+
+                if(auto p = value.find_last_of('/'); std::string::npos != p) {
+                    auto type = value.substr(p+1);
+                    if (type == "i") {
+                        long i;
+                        value = value.substr(0, p);
+                        str2long(std::string{value}.data(), i);
+                        claim_arg = i;
+                        return;
+                    } else if(type == "b") {
+                        bool b;
+                        value = value.substr(0, p);
+                        str2bool(std::string{value}, b);
+                        claim_arg = b;
+                        return;
+                    }
+                }
+
+                claim_arg = value.data();
+            })
         .parse(argc, argv))
     {
         return 1;
@@ -413,17 +463,17 @@ int encode(int argc, char *argv[])
 
         key = Botan::PKCS8::load_key(datasource, std::string_view());
 
-        auto identity_header = identity.generate(key.get());
+        auto identity_header = identity.generate(key.get(), raw);
 
         if(verbose) {
             printf("public key fingerprint (SHA-256):\n%s\n\n",
                    key->fingerprint_public().data());
 
             printf("header:\n%s\n\n",
-                getFormattedJSON(identity.get_header()));
+                getFormattedJSON(identity.get_jwt_header()));
 
             printf("payload:\n%s\n\n",
-                getFormattedJSON(identity.get_payload()));
+                getFormattedJSON(identity.get_jwt_payload()));
 
             printf("output:\n");
         }
@@ -441,12 +491,20 @@ int encode(int argc, char *argv[])
 int decode(int argc, char *argv[])
 {
     string in;
+    bool raw = false;
 
     optind = 2;
     options_parser p("(-i FILE | INPUT)");
     if(p
         .add('i',"-i file","input file ('-' for stdin)",true,
              [&in](const char *value){ in = value; })
+        .add_long(
+            "raw",
+            "--raw", "decode raw JWT", no_argument,
+            [&raw](const char *)
+            {
+                raw = true;
+            })
         .parse(argc, argv))
     {
         return 1;
@@ -485,7 +543,7 @@ int decode(int argc, char *argv[])
     printf("input:\n%s\n\n", in.data());
 
     AmIdentity identity;
-    int ret = identity.parse(in);
+    int ret = identity.parse(in, raw);
     if(!ret) {
         int last_errcode;
         std::string last_error;
@@ -496,10 +554,10 @@ int decode(int argc, char *argv[])
     }
 
     printf("header:\n%s\n\n",
-        getFormattedJSON(identity.get_header()));
+        getFormattedJSON(identity.get_jwt_header()));
 
     printf("payload:\n%s\n\n",
-        getFormattedJSON(identity.get_payload()));
+        getFormattedJSON(identity.get_jwt_payload()));
 
     return 0;
 }
@@ -509,6 +567,7 @@ int verify(int argc, char *argv[])
     string in;
     AmIdentity identity;
     string cert_path;
+    bool raw = false;
 
     optind = 2;
     options_parser p("--cert=cert_path (-i FILE | INPUT)");
@@ -521,6 +580,13 @@ int verify(int argc, char *argv[])
             [&cert_path](const char *value)
             {
                 cert_path = value;
+            })
+        .add_long(
+            "raw",
+            "--raw", "verify raw JWT", no_argument,
+            [&raw](const char *)
+            {
+                raw = true;
             })
         .parse(argc, argv))
     {
@@ -572,7 +638,7 @@ int verify(int argc, char *argv[])
 
         Botan::X509_Certificate crt(cert_path);
 
-        int ret = identity.parse(in);
+        int ret = identity.parse(in, raw);
         if(!ret) {
             last_errcode = identity.get_last_error(last_error);
             printf("parse error: %d %s\n",

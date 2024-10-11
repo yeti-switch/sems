@@ -82,12 +82,12 @@ class AmIdentity
 
     bool verify(Botan::Public_Key* key, unsigned int expire);
 
-    std::string generate(Botan::Private_Key* key);
+    std::string generate(Botan::Private_Key* key, bool raw = false);
 
     std::string generate_firebase_assertion(Botan::Private_Key* key, unsigned int expire,
                 const std::string &kid, const std::string &iss);
 
-    bool parse(const std::string& value);
+    bool parse(const std::string& value, bool raw = false);
 
     void set_passport_type(PassportType::passport_type_id type);
     PassportType::passport_type_id get_passport_type();
@@ -120,11 +120,11 @@ class AmIdentity
 
     int get_last_error(std::string& err);
 
-    const AmArg &get_parsed_header() { return header; }
-    const AmArg &get_parsed_payload() { return payload; }
+    AmArg &get_header() { return header; }
+    AmArg &get_payload() { return payload; }
 
-    const std::string &get_header() { return jwt_header; }
-    const std::string &get_payload() { return jwt_payload; }
+    std::string &get_jwt_header() { return jwt_header; }
+    std::string &get_jwt_payload() { return jwt_payload; }
 
   private:
     //header claims

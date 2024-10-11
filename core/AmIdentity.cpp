@@ -38,6 +38,10 @@ static const char *identity_hdr_param_info = "info";
 static const char *identity_hdr_param_alg = "alg";
 static const char *identity_hdr_param_ppt = "ppt";
 
+static AmArgHashValidator JwtHeaderValidator({
+    {jwt_hdr_claim_alg, true, {AmArg::CStr}}
+});
+
 static AmArgHashValidator IdentityHeaderValidator({
     {jwt_hdr_claim_alg, true, {AmArg::CStr}},
     {jwt_hdr_claim_x5u, true, {AmArg::CStr}},
@@ -276,32 +280,36 @@ time_t AmIdentity::get_created()
     return created;
 }
 
-std::string AmIdentity::generate(Botan::Private_Key* key)
+std::string AmIdentity::generate(Botan::Private_Key* key, bool raw)
 {
     auto &rng = Botan::system_rng();
 
     Botan::PK_Signer signer(*key, rng, "SHA-256");
 
     header[jwt_hdr_claim_alg] = alg_value_es256;
-    header[jwt_hdr_claim_x5u] = x5u_url;
-    header[jwt_hdr_claim_ppt] = type.get_name();
-    header[jwt_hdr_claim_typ] = typ_value_passport;
+    if(!raw) {
+        header[jwt_hdr_claim_x5u] = x5u_url;
+        header[jwt_hdr_claim_ppt] = type.get_name();
+        header[jwt_hdr_claim_typ] = typ_value_passport;
+    }
     jwt_header = arg2json(header);
 
-    payload[jwt_payload_claim_attest] = std::string(1, (char)at);
-    payload[jwt_payload_claim_iat] = (int)time(0);
+    if(!raw) {
+        payload[jwt_payload_claim_attest] = std::string(1, (char)at);
+        payload[jwt_payload_claim_iat] = (int)time(0);
 
-    if(orig_id.empty()) orig_id = Botan::UUID(rng).to_string();
-    payload[jwt_payload_claim_origid] = orig_id;
+        if(orig_id.empty()) orig_id = Botan::UUID(rng).to_string();
+        payload[jwt_payload_claim_origid] = orig_id;
 
-    dest_data.serialize(payload[jwt_payload_claim_dest], true);
-    orig_data.serialize(payload[jwt_payload_claim_orig], false);
+        dest_data.serialize(payload[jwt_payload_claim_dest], true);
+        orig_data.serialize(payload[jwt_payload_claim_orig], false);
 
-    if(type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
-        //ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
-        div_data.serialize(payload[jwt_payload_claim_div], false);
-        if(type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
-            payload[jwt_payload_claim_opt] = opt;
+        if(type.get() > PassportType::ES256_PASSPORT_SHAKEN) {
+            //ES256_PASSPORT_DIV and ES256_PASSPORT_DIV_OPT
+            div_data.serialize(payload[jwt_payload_claim_div], false);
+            if(type.get() == PassportType::ES256_PASSPORT_DIV_OPT)
+                payload[jwt_payload_claim_opt] = opt;
+        }
     }
 
     jwt_payload = arg2json(payload);
@@ -320,11 +328,12 @@ std::string AmIdentity::generate(Botan::Private_Key* key)
     ret.insert(0, base64_payload);
     ret.insert(0, ".");
     ret.insert(0, base64_header);
-    ret.append(";info=<");
-    ret.append(x5u_url);
-    ret.append(">;alg=ES256;ppt=");
-    ret.append(type.get_name());
-
+    if(!raw) {
+        ret.append(";info=<");
+        ret.append(x5u_url);
+        ret.append(">;alg=ES256;ppt=");
+        ret.append(type.get_name());
+    }
     return ret;
 }
 
@@ -398,7 +407,9 @@ bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
     return ret;
 }
 
-bool AmIdentity::verify_attestation(Botan::Public_Key* key, unsigned int expire, const IdentData& orig_, const IdentData& dest_)
+bool AmIdentity::verify_attestation(
+    Botan::Public_Key* key, unsigned int expire,
+    const IdentData&, const IdentData&)
 {
     if(!verify(key, expire)) return false;
 
@@ -407,7 +418,7 @@ bool AmIdentity::verify_attestation(Botan::Public_Key* key, unsigned int expire,
     return true;
 }
 
-bool AmIdentity::parse(const std::string& value)
+bool AmIdentity::parse(const std::string& value, bool raw)
 {
     std::string value_base64;
     std::string info;
@@ -498,7 +509,8 @@ bool AmIdentity::parse(const std::string& value)
     }
 
     //process header
-    if(!IdentityHeaderValidator.validate(header, validation_error)) {
+    auto &header_validator = raw ? JwtHeaderValidator : IdentityHeaderValidator;
+    if(!header_validator.validate(header, validation_error)) {
         ERROR("%s", validation_error.data());
         last_errcode = ERR_JWT_VALUE;
         last_errstr = "Unexpected JWT header layout";
@@ -517,25 +529,27 @@ bool AmIdentity::parse(const std::string& value)
             last_errstr = "Unsupported alg. 'ES256' expected";
             return false;
         }
+        if(!raw) {
+            if(strcmp(type_arg.asCStr(), typ_value_passport)) {
+                last_errcode = ERR_UNSUPPORTED;
+                last_errstr = "Unsupported typ. 'passport' expected";
+                return false;
+            }
 
-        if(strcmp(type_arg.asCStr(), typ_value_passport)) {
-            last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unsupported typ. 'passport' expected";
-            return false;
+            if(!type.parse(ppt_arg.asCStr())) {
+                last_errcode = ERR_UNSUPPORTED;
+                last_errstr = "Unsupported ppt. 'shaken','div','div-o' expected";
+                return false;
+            }
+            x5u_url = x5u_arg.asCStr();
         }
-
-        if(!type.parse(ppt_arg.asCStr())) {
-            last_errcode = ERR_UNSUPPORTED;
-            last_errstr = "Unsupported ppt. 'shaken','div','div-o' expected";
-            return false;
-        }
-
-        x5u_url = x5u_arg.asCStr();
     } catch(...) {
         last_errcode = ERR_HEADER_VALUE;
         last_errstr = "Malformed JWT header layout";
         return false;
     }
+
+    if(raw) return true;
 
     //process payload
     try {
