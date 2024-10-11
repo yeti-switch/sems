@@ -379,21 +379,24 @@ std::string AmIdentity::generate_firebase_assertion(Botan::Private_Key* key,
     return assertion;
 }
 
-bool AmIdentity::verify(Botan::Public_Key* key, unsigned int expire)
+bool AmIdentity::verify(const Botan::Public_Key* key, unsigned int expire)
 {
     last_errcode = 0;
     last_errstr.clear();
-    time_t t = time(0);
-    if(t - created > expire) {
-        last_errcode = ERR_EXPIRE_TIMEOUT;
-        last_errstr = "Expired Timeout";
-        return false;
+
+    if(expire) {
+        time_t t = time(0);
+        if((t - created) > expire) {
+            last_errcode = ERR_EXPIRE_TIMEOUT;
+            last_errstr = "Expired Timeout";
+            return false;
+        }
     }
 
     Botan::PK_Verifier verifier(*key, "SHA-256");
 
     std::string base64_header = base64_url_encode(jwt_header);
-    std::string base64_payload= base64_url_encode(jwt_payload);
+    std::string base64_payload = base64_url_encode(jwt_payload);
 
     verifier.update((uint8_t*)base64_header.c_str(), base64_header.size());
     verifier.update((uint8_t*)".", 1);
@@ -418,10 +421,10 @@ bool AmIdentity::verify_attestation(
     return true;
 }
 
-bool AmIdentity::parse(const std::string& value, bool raw)
+bool AmIdentity::parse(const std::string_view& value, bool raw)
 {
-    std::string value_base64;
-    std::string info;
+    std::string_view value_base64;
+    std::string_view info;
     std::string validation_error;
     size_t end = 0;
 
@@ -442,12 +445,12 @@ bool AmIdentity::parse(const std::string& value, bool raw)
     if(pos == std::string::npos) {
         value_base64 = value;
     } else {
-        value_base64.append(value.begin(), value.begin() + pos);
-        info.append(value.begin() + pos+1, value.end());
+        value_base64 = value.substr(0, pos);
+        info = value.substr(pos+1);
     }
 
     //Header.Payload.Signature
-    std::string data_base64[3];
+    std::string_view data_base64[3];
     for(int i = 0; i < 2; i++) {
         pos = value_base64.find('.', end);
         if(pos == std::string::npos) {
@@ -459,11 +462,11 @@ bool AmIdentity::parse(const std::string& value, bool raw)
             }
             return false;
         }
-        data_base64[i].append(value_base64.begin() + end, value_base64.begin() + pos);
+        data_base64[i] = value_base64.substr(end, pos-end);
         end = pos + 1;
     }
 
-    data_base64[2].append(value_base64.begin() + end, value_base64.end());
+    data_base64[2]  = value_base64.substr(end);
 
     if(data_base64[0].empty()) {
         last_errcode = ERR_JWT_VALUE;

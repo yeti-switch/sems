@@ -80,14 +80,14 @@ class AmIdentity
     bool verify_attestation(Botan::Public_Key* key, unsigned int expire,
                const IdentData& orig, const IdentData& dest);
 
-    bool verify(Botan::Public_Key* key, unsigned int expire);
+    bool verify(const Botan::Public_Key* key, unsigned int expire = 0);
 
     std::string generate(Botan::Private_Key* key, bool raw = false);
 
     std::string generate_firebase_assertion(Botan::Private_Key* key, unsigned int expire,
                 const std::string &kid, const std::string &iss);
 
-    bool parse(const std::string& value, bool raw = false);
+    bool parse(const std::string_view& value, bool raw = false);
 
     void set_passport_type(PassportType::passport_type_id type);
     PassportType::passport_type_id get_passport_type();
