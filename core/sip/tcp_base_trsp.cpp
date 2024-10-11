@@ -705,7 +705,7 @@ int trsp_worker::send(
     trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
     const int msg_len, unsigned int flags)
 {
-    char host_buf[NI_MAXHOST];
+    char host_buf[NI_MAXHOST] = "";
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* sock = NULL;
@@ -768,7 +768,7 @@ void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, cons
 
 tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa)
 {
-    char host_buf[NI_MAXHOST];
+    char host_buf[NI_MAXHOST] = "";
     string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
     dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,-1,sa,evbase);

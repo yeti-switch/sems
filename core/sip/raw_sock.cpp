@@ -185,7 +185,7 @@ int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl)
     /* FIXME: probe_max_receive_buffer(sock) missing */
     if (ip) {
         if (bind(sock, (sockaddr*)ip, SA_len(ip))==-1) {
-            char ip_str[NI_MAXHOST];
+            char ip_str[NI_MAXHOST] = "";
             ERROR("raw_socket: bind(%s) failed: %s [%d]",
                 am_inet_ntop(ip,ip_str,NI_MAXHOST), strerror(errno), errno);
             goto error;
