@@ -503,7 +503,10 @@ void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary&
         get_peer_port());
 
     tls_server_socket::tls_statistics* tls_stats = dynamic_cast<tls_server_socket::tls_statistics*>(server_sock->get_statistics());
-    if(tls_stats) tls_stats->incTlsConnected(is_client());
+    if(tls_stats) {
+        tls_stats->incTlsConnected(is_client());
+        INFO("add tls %s: conn_id %s:%d", is_client() ? "client" : "server", get_peer_ip().c_str(), get_peer_port());
+    }
 
     tls_connected = true;
     ciphersuite = session.ciphersuite_code();
@@ -628,10 +631,13 @@ void tls_server_socket::tls_statistics::changeCountConnection(bool remove, tcp_b
     tls_trsp_socket* tls_socket = dynamic_cast<tls_trsp_socket*>(socket);
     assert(tls_socket);
     if(remove && tls_socket->is_tls_connected()) {
-        if(socket->is_client())
+        if(socket->is_client()) {
             tlsOutConnectedCount.dec();
-        else
+        } else
             tlsInConnectedCount.dec();
+
+        INFO("remove tls %s: conn_id %s:%d", socket->is_client() ? "client" : "server", socket->get_peer_ip().c_str(), socket->get_peer_port());
+        INFO("tls %s count %llu", socket->is_client() ? "out" : "in", socket->is_client() ? tlsOutConnectedCount.get() : tlsInConnectedCount.get());
     } else {
         tcp_server_socket::tcp_statistics::changeCountConnection(remove, socket);
     }
@@ -646,6 +652,7 @@ void tls_server_socket::tls_statistics::incTlsConnected(bool is_client)
         tlsInConnectedCount.inc();
         clientInConnectedCount.dec();
     }
+    INFO("tls %s count %llu", is_client ? "out" : "in", is_client ? tlsOutConnectedCount.get() : tlsInConnectedCount.get());
 }
 
 void tls_cleanup()
