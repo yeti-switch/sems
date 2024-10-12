@@ -7,6 +7,7 @@
 
 #include <botan/x509_ca.h>
 #include "botan/x509_ext.h"
+#include "botan/x509_key.h"
 #include <botan/pkix_types.h>
 #include <botan/system_rng.h>
 #include <botan/pkcs8.h>
@@ -566,7 +567,7 @@ int verify(int argc, char *argv[])
 {
     string in;
     AmIdentity identity;
-    string cert_path;
+    string cert_path, key_path;
     bool raw = false;
 
     optind = 2;
@@ -576,10 +577,17 @@ int verify(int argc, char *argv[])
              [&in](const char *value){ in = value; })
         .add_long(
             "cert",
-            "--cert=cert_path", "set certificate path to verify signature (mandatory)", required_argument,
+            "--cert=cert_path", "set certificate path to verify signature (mandatory or key)", optional_argument,
             [&cert_path](const char *value)
             {
                 cert_path = value;
+            })
+        .add_long(
+            "key",
+            "--key=key_path", "set public key path to verify signature (mandatory or cert)", optional_argument,
+            [&key_path](const char *value)
+            {
+                key_path = value;
             })
         .add_long(
             "raw",
@@ -590,6 +598,11 @@ int verify(int argc, char *argv[])
             })
         .parse(argc, argv))
     {
+        return 1;
+    }
+
+    if(key_path.empty() && cert_path.empty()) {
+        p.print_hint("specify --key or --cert");
         return 1;
     }
 
@@ -623,8 +636,8 @@ int verify(int argc, char *argv[])
         return 1;
     }
 
-    if(cert_path.empty()) {
-        p.print_hint("missing mandatory option '--cert'");
+    if(key_path.empty() && cert_path.empty()) {
+        p.print_hint("missed mandatory --key or --cert");
         return 1;
     }
 
@@ -636,7 +649,18 @@ int verify(int argc, char *argv[])
 
         AmIdentity identity;
 
-        Botan::X509_Certificate crt(cert_path);
+        std::unique_ptr<Botan::Public_Key> key;
+        if(!cert_path.empty()) {
+            Botan::X509_Certificate crt(cert_path);
+            key = crt.subject_public_key();
+            printf("parsed certificate (%s)\n",
+                   crt.issuer_dn().to_string().data());
+        } else {
+            key = Botan::X509::load_key(key_path);
+        }
+
+        printf("verify with key (%s)\n",
+            key->fingerprint_public().data());
 
         int ret = identity.parse(in, raw);
         if(!ret) {
@@ -647,8 +671,9 @@ int verify(int argc, char *argv[])
         }
 
         ret = identity.verify(
-            crt.subject_public_key().get(),
+            key.get(),
             time(0) - identity.get_created() + 2);
+
         if(!ret) {
             last_errcode = identity.get_last_error(last_error);
             printf("verify error: %d %s\n",
@@ -656,10 +681,10 @@ int verify(int argc, char *argv[])
             return 1;
         }
 
-        printf("verified with certificate (%s)\n",
-               crt.issuer_dn().to_string().data());
+        printf("verified\n");
 
         return 0;
+
     } catch(Botan::Exception &e) {
         cout << e.what() << endl;
     }
