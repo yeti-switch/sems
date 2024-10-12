@@ -70,11 +70,11 @@ openssl ec -in key.pem -pubout -out pub.pem
 ### sems-jwt-tool examples
 ```sh
 #gen JWT token
-sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))
+sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i
 
 #gen&decode JWT token
-sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400)) | sems-jwt-tool decode -i - --raw
+sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool decode -i - --raw
 
 #gen&verify JWT token
-sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400)) | sems-jwt-tool decode -i - --raw --key pub.pem
+sems-jwt-tool encode --key key.pem --raw --claim=id:1/i --claim=iat:$(date +%s)/i --claim=exp:$(($(date +%s) + 38400))/i | sems-jwt-tool decode -i - --raw --key pub.pem
 ```
