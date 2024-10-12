@@ -46,7 +46,7 @@ openssl req -new -nodes -key sp-key.pem -keyform PEM -subj '/C=US/ST=VA/L=IQNT/O
 openssl x509 -req -in sp-csr.pem -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial  -days 825 -sha256 -extfile openssl.conf -extensions v3_req -out sp-cert.pem
 ```
 
-# sems-jwt-tool examples
+### sems-jwt-tool examples
 ```sh
 # gen&decode STIR/SHAKEN JWT token
 sems-jwt-tool encode --key sp-key-p8.pem --x5u=https://invalid.domain/sp-cert.pem --orig_tn=1111 --dest_tn=2222 | sems-jwt-tool decode -i -
