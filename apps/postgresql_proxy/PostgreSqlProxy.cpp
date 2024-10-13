@@ -420,6 +420,10 @@ bool PostgreSqlProxy::process_postgres_event(PGEvent* ev)
             if(PGParamExecute *e = dynamic_cast<PGParamExecute*>(ev))
                 ret = onParamExecute(*e);
             break;
+        case PGEvent::Prepare:
+            if(PGPrepare *e = dynamic_cast<PGPrepare*>(ev))
+                 ret = onCfgWorkerManagementEvent(e->worker_name);
+            break;
         case PGEvent::PrepareExec:
             if(PGPrepareExec *e = dynamic_cast<PGPrepareExec*>(ev))
                 ret = onPrepareExecute(*e);
