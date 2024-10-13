@@ -1,3 +1,9 @@
+sems (1.147.0) stable; urgency=low
+  * AmIdentity: support raw JWT
+  * sems-jwt-tool: support --key for verify action
+  * postgresql_proxy: fix PGPrepare forwarding to upstream
+ -- Michael Furmur <furmur@pm.me>  Sun, 13 Oct 2024 14:00:30 +0300
+
 sems (1.146.0) stable; urgency=low
   * preserve modules initialization order to match config
   * allow AmEventHandler to consume events
