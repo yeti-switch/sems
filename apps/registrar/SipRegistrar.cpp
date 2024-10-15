@@ -6,6 +6,7 @@
 #include "AmUtils.h"
 #include "sip/defs.h"
 #include "sip/parse_nameaddr.h"
+#include "jsonArg.h"
 
 #include <ampi/RedisApi.h>
 #include <AmSipEvent.h>
@@ -17,6 +18,8 @@ using std::vector;
 #define session_container AmSessionContainer::instance()
 #define event_dispatcher AmEventDispatcher::instance()
 #define registrar SipRegistrar::instance()
+
+std::string registration_event_channel_name("reg");
 
 enum UserTypeId {
     Register = 0,
@@ -284,9 +287,9 @@ int SipRegistrar::init()
 
     init_rpc();
 
-    if(keepalive_interval.count()) {
-        keepalive_timer.link(epoll_fd);
-        keepalive_timer.set(1000000 /* 1 seconds */,true);
+    if(keepalive_interval.count() || process_subscriptions) {
+        timer.link(epoll_fd);
+        timer.set(1000000 /* 1 seconds */,true);
     }
 
     DBG("SIPRegistrar initialized");
@@ -328,9 +331,9 @@ void SipRegistrar::run()
                 break;
             }
 
-            if(e.data.fd==keepalive_timer){
-                on_keepalive_timer();
-                keepalive_timer.read();
+            if(e.data.fd==timer){
+                on_timer();
+                timer.read();
                 break;
             }
         }
@@ -360,6 +363,7 @@ int SipRegistrar::configure(cfg_t* cfg)
     bindings_max = cfg_getint(cfg, CFG_PARAM_BINDINGS_MAX);
     if(bindings_max <= 0) bindings_max = DEFAULT_BINDINGS_MAX;
     keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
+    process_subscriptions = cfg_getbool(cfg, CFG_PARAM_PROCESS_SUBSCRIPTIONS);
     return RegistrarRedisClient::configure(cfg);
 }
 
@@ -591,6 +595,18 @@ void SipRegistrar::process(AmEvent* event)
                 return;
             }
             break;
+        case SipRegistrarEvent::ResolveAorsSubscribe:
+            if(auto e = dynamic_cast<SipRegistrarResolveAorsSubscribeEvent*>(event)) {
+                process_resolve_subscribe_event(*e);
+                return;
+            }
+            break;
+        case SipRegistrarEvent::ResolveAorsUnsubscribe:
+            if(auto e = dynamic_cast<SipRegistrarResolveAorsUnsubscribeEvent*>(event)) {
+                process_resolve_unsubscribe_event(*e);
+                return;
+            }
+            break;
     }
 
     ERROR("got unexpected event ev %d", event->event_id);
@@ -785,9 +801,38 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 void SipRegistrar::process_resolve_request_event(SipRegistrarResolveRequestEvent& event)
 {
     auto* user_data = new RedisRequestUserData(event.session_id);
+
     if(!resolve_aors(user_data, UserTypeId::ResolveAors, event.aor_ids)) {
         delete user_data; user_data = nullptr;
         post_resolve_response(event.session_id);
+    }
+}
+
+void SipRegistrar::process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent& event)
+{
+    if(!process_subscriptions) {
+        post_resolve_response(event.session_id);
+        return;
+    }
+
+    for(auto &aor_id: event.aor_ids) {
+        DBG("add subscription %s -> %s", aor_id.data(), event.session_id.data());
+        aor_lookup_subscribers.emplace(aor_id, LookupSubscriber{event.session_id, event.timeout});
+    }
+}
+
+void SipRegistrar::process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent& event)
+{
+    for(auto &aor_id: event.aor_ids) {
+        auto range = aor_lookup_subscribers.equal_range(aor_id);
+        for(auto it = range.first; it != range.second;) {
+            if(it->second.session_id == event.session_id) {
+                DBG("erase subscription %s -> %s", aor_id.data(), it->second.session_id.data());
+                it = aor_lookup_subscribers.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 }
 
@@ -963,6 +1008,20 @@ void SipRegistrar::process_redis_reply_resolve_aors_event(RedisReply& event)
         }
     }
 
+    /*if (process_push_tokens &&
+        r.aors.empty() &&
+        user_data &&
+        !user_data->push_data.empty() &&
+        !session_id.empty())
+    {
+        DBG("no registrations. try to send push notification and subscribe to reg events");
+        for(const auto &p: user_data->push_data) {
+            DBG("%s -> %s", p.aor_id.data(), session_id.data());
+            aor_lookup_subscribers.emplace(p.aor_id, session_id);
+        }
+        return;
+    }*/
+
     post_resolve_response(session_id, r.aors);
 }
 
@@ -982,9 +1041,53 @@ void SipRegistrar::process_redis_reply_contact_subscribe_event(RedisReply& event
         if(!isArgCStr(event.data[2])) //skip 'subscription' replies
             return;
 
+        if(registration_event_channel_name==event.data[1].asCStr()) {
+            process_redis_reply_contact_subscribe_reg_channel_event(event);
+            return;
+        }
+
         DBG("process expired/removed key: '%s'", event.data[2].asCStr());
         remove_keep_alive_context(event.data[2].asCStr());
     }
+}
+
+void SipRegistrar::process_redis_reply_contact_subscribe_reg_channel_event(RedisReply& event)
+{
+    if(!process_subscriptions)
+        return;
+
+    AmArg reg_data;
+
+    if(!json2arg(event.data[2].asCStr(), reg_data)) {
+        DBG("failed to decode reg data: %s", event.data[2].asCStr());
+        return;
+    }
+
+    DBG("got reg event with data: %s", reg_data.print().data());
+
+    aor_lookup_reply r;
+    event.data = reg_data;
+    if(!r.parse(event)) {
+        ERROR("reg aor data parser error for: %s",
+            event.data.print().data());
+        return;
+    }
+
+    if(r.aors.empty()) {
+        ERROR("empty aors after parsing for: %s",
+            event.data.print().data());
+        return;
+    }
+
+    const auto &aor_id = r.aors.begin()->first;
+
+    auto range = aor_lookup_subscribers.equal_range(aor_id);
+    for(auto it = range.first; it != range.second; ++it) {
+        DBG("send reg_id %s resolving reply to the session_id: %s",
+            aor_id.data(), it->second.session_id.data());
+        post_resolve_response(it->second.session_id, r.aors);
+    }
+    aor_lookup_subscribers.erase(range.first, range.second);
 }
 
 void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
@@ -1155,6 +1258,7 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
             contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
     }
+
     return post_request(write_conn->id, args, user_data, user_type_id);
 }
 
@@ -1203,9 +1307,15 @@ bool SipRegistrar::load_contacts(AmObject *user_data, int user_type_id)
 
 bool SipRegistrar::subscribe(int user_type_id)
 {
-    return post_request(subscr_read_conn->id,
-        {"SUBSCRIBE", "__keyevent@0__:expired", "__keyevent@0__:del"},
-        nullptr, user_type_id, true);
+    vector<AmArg> channels{
+        "SUBSCRIBE",
+        "__keyevent@0__:expired",
+        "__keyevent@0__:del",
+    };
+    if(process_subscriptions) {
+        channels.push_back(registration_event_channel_name);
+    }
+    return post_request(subscr_read_conn->id, channels, nullptr, user_type_id, true);
 }
 
 void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg &arg)
@@ -1279,16 +1389,29 @@ void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const
         throw AmSession::Exception(500, "failed to post resolve_aors request");
 }
 
-/* Keepalive */
-
-void SipRegistrar::on_keepalive_timer()
+void SipRegistrar::on_timer()
 {
     auto now{system_clock::now()};
     uint32_t sent = 0;
     seconds drift_interval{0};
     auto double_max_interval_drift = max_interval_drift*2;
 
-    //DBG("on keepalive timer");
+    //subscriptions
+    for(auto it = aor_lookup_subscribers.begin(); it!= aor_lookup_subscribers.end();) {
+        const auto &sub = it->second;
+        /*DBG("check subscription: %s -> %s",
+            it->first.data(), sub.session_id.data());*/
+        if(now - sub.created_at >  sub.timeout_interval) {
+            DBG("subscription timeout: %s -> %s", it->first.data(), sub.session_id.data());
+            //generate SipRegistrarResolveResponseEvent with empty AoRs
+            post_resolve_response(it->second.session_id);
+            it = aor_lookup_subscribers.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    //keepalive
     AmLock l(keepalive_contexts.mutex);
 
     for(auto &ctx_it : keepalive_contexts) {

@@ -49,7 +49,7 @@ local function aor_lookup(keys)
         local auth_id = 'a:'..id
         for j,c in ipairs(redis.call('SMEMBERS',auth_id)) do
             local contact_key = 'c:'..id..':'..c
-            if redis.call('EXISTS', contact_key) then
+            if 1==redis.call('EXISTS', contact_key) then
                 cset[#cset + 1] = c
                 cset[#cset + 1] = redis.call('HGET',contact_key,'path')
             end
@@ -160,8 +160,22 @@ local function register(keys, args)
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)
 
+    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_id')
+
+    local _,first_binding = next(bindings)
+    if first_binding ~= nil then
+        -- publish json encoded data in the AoR resolving format to the 'reg' channel
+        redis.call('PUBLISH', 'reg', cjson.encode({
+            id,
+            {
+                first_binding[1],
+                first_binding[4]
+            }
+        }))
+    end
+
     -- return active bindings
-    return get_bindings(id, auth_id, true, 'path', 'interface_id')
+    return bindings
 end
 
 redis.register_function("register", register)

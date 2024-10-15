@@ -97,5 +97,19 @@ redis.call('HMSET', contact_key,
 -- set TTL
 redis.call('EXPIRE', contact_key, expires)
 
+local bindings = get_bindings()
+
+local _,first_binding = next(bindings)
+if first_binding ~= nil then
+    -- publish json encoded data in the AoR resolving format to the 'reg' channel
+    redis.call('PUBLISH', 'reg', cjson.encode({
+        id,
+        {
+            first_binding[1],
+            first_binding[4]
+        }
+    }))
+end
+
 -- return active bindings
-return get_bindings()
+return bindings

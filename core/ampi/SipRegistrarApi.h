@@ -17,7 +17,9 @@ struct SipRegistrarEvent
     enum Type {
         RegisterRequest,
         ResolveAors,
-        TransportDown
+        ResolveAorsSubscribe,
+        ResolveAorsUnsubscribe,
+        TransportDown,
     };
 
     std::string session_id;
@@ -72,6 +74,27 @@ struct SipRegistrarResolveRequestEvent
         const std::string &session_id)
       : SipRegistrarEvent(ResolveAors, session_id),
         aor_ids(aor_ids)
+    {}
+};
+
+struct SipRegistrarResolveAorsSubscribeEvent
+  : public SipRegistrarEvent
+{
+    std::set<RegistrationIdType> aor_ids;
+    std::chrono::milliseconds timeout;
+
+    SipRegistrarResolveAorsSubscribeEvent(const std::string &session_id)
+      : SipRegistrarEvent(ResolveAorsSubscribe, session_id)
+    {}
+};
+
+struct SipRegistrarResolveAorsUnsubscribeEvent
+  : public SipRegistrarEvent
+{
+    std::set<RegistrationIdType> aor_ids;
+
+    SipRegistrarResolveAorsUnsubscribeEvent(const std::string &session_id)
+      : SipRegistrarEvent(ResolveAorsUnsubscribe, session_id)
     {}
 };
 

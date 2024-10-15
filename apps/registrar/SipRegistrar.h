@@ -49,9 +49,12 @@ class SipRegistrar
     int expires_default;
     int bindings_max;
     unsigned int keepalive_failure_code;
-    AmTimerFd keepalive_timer;
+    AmTimerFd timer;
     seconds keepalive_interval;
     seconds max_interval_drift;
+
+    bool process_subscriptions;
+
     /*
      * uac_dlgs
      * key: call_id
@@ -97,6 +100,20 @@ class SipRegistrar
         void dump(AmArg &ret);
     } keepalive_contexts;
 
+    struct LookupSubscriber {
+        std::chrono::system_clock::time_point created_at;
+        std::chrono::milliseconds timeout_interval;
+        string session_id;
+
+        LookupSubscriber(const string &session_id, std::chrono::milliseconds timeout_interval)
+          : created_at(std::chrono::system_clock::now()),
+            timeout_interval(timeout_interval),
+            session_id(session_id)
+        {}
+    };
+
+    std::unordered_multimap<RegistrationIdType, LookupSubscriber> aor_lookup_subscribers;
+
     rpc_handler rpc_show_aors;
     rpc_handler rpc_show_keepalive_contexts;
     rpc_handler rpc_bind;
@@ -114,12 +131,14 @@ class SipRegistrar
     void rpc_unbind_(AmObject *user_data, int user_type_id, const AmArg &arg);
     void rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg);
 
-    void on_keepalive_timer();
+    void on_timer();
     void remove_keep_alive_context(const string &key);
     void clear_keep_alive_contexts();
     void dump_keep_alive_contexts(AmArg &ret) { keepalive_contexts.dump(ret); }
     void create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
         int interface_id, const seconds &keep_alive_interval_offset = seconds{0});
+
+    void process_redis_reply_contact_subscribe_reg_channel_event(RedisReply& event);
 
   protected:
     friend class SipRegistrarFactory;
@@ -139,6 +158,8 @@ class SipRegistrar
     void post_resolve_response(const string& session_id, const Aors& aors = Aors());
     void process_register_request_event(SipRegistrarRegisterRequestEvent& event);
     void process_resolve_request_event(SipRegistrarResolveRequestEvent& event);
+    void process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent& event);
+    void process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent& event);
     void process_redis_conn_state_event(RedisConnectionState& event);
     void process_redis_reply_event(RedisReply& event);
     void process_redis_reply_register_event(RedisReply& event);
