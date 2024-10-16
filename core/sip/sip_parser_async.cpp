@@ -27,7 +27,7 @@ static int skip_line_async(parser_state* pst, char* end)
         case_ST_CR(*c);
         case ST_LF:
         case ST_CRLF:
-            DBG("first line is skipped");
+            DBG3("first line is skipped");
             return 0;
         default:
             DBG("bad state. st:%i", st);
@@ -162,7 +162,7 @@ static int parse_header_async(sip_header* hdr, parser_state* pst, char* end)
         switch(saved_st) {
             case H_NAME:
                 if((*c-(st==ST_CRLF?2:1))-begin == 0) {
-                    DBG("detected end of headers");
+                    DBG3("detected end of headers");
                     return 0;
                 }
                 DBG("Illegal CR or LF in header name");
@@ -196,7 +196,7 @@ int parse_headers_async(parser_state* pst, char* end)
 
         if(!hdr->name.len && !hdr->value.len) {
             // end-of-headers
-            DBG("end of headers");
+            DBG3("end of headers");
             return 0;
         }
 
@@ -221,7 +221,7 @@ int skip_sip_msg_async(parser_state* pst, char* end)
     char*& c = pst->c;
     int& stage = pst->stage;
 
-    DBG("stage:%d, st:%d, saved_st:%d", stage, pst->st, pst->saved_st);
+    DBG3("stage:%d, st:%d, saved_st:%d", stage, pst->st, pst->saved_st);
 
     while(c <= end) {
         switch(stage) {
@@ -235,7 +235,7 @@ int skip_sip_msg_async(parser_state* pst, char* end)
 
         case ST_BODY:
             if(!pst->content_len) {
-                DBG("empty body");
+                DBG3("empty body");
                 return 0;
             }
             if(pst->content_len > end-c) {
@@ -243,7 +243,7 @@ int skip_sip_msg_async(parser_state* pst, char* end)
                     pst->content_len, end-c);
                 return UNEXPECTED_EOT;
             } else {
-                DBG("end of body");
+                DBG3("end of body");
                 return 0;
             }
             break;

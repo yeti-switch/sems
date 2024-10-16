@@ -67,7 +67,7 @@ unsigned int AmOfferAnswer::getCseq()
 
 void AmOfferAnswer::setState(AmOfferAnswer::OAState n_st)
 {
-    DBG("setting SIP dialog O/A status: %s->%s",
+    DBG3("setting SIP dialog O/A status: %s->%s",
         getOAStateStr(state), getOAStateStr(n_st));
     state = n_st;
 }
@@ -218,7 +218,7 @@ int AmOfferAnswer::onReplyIn(const AmSipReply& reply)
 int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const string &m_method,
                            const AmMimeBody& body, const char** err_txt)
 {
-    DBG("entering onRxSdp(), oa_state=%s", getOAStateStr(state));
+    DBG3("entering onRxSdp(), oa_state=%s", getOAStateStr(state));
     OAState old_oa_state = state;
 
     int err_code = 0;
@@ -264,7 +264,7 @@ int AmOfferAnswer::onRxSdp(unsigned int m_cseq, const string &m_method,
         }
     }
 
-    DBG("oa_state: %s -> %s",
+    DBG3("oa_state: %s -> %s",
         getOAStateStr(old_oa_state), getOAStateStr(state));
 
     return err_code;

@@ -13,12 +13,14 @@
 
 #define VALUE_LOG_NO                 "no"
 #define VALUE_LOG_DEBUG              "debug"
+#define VALUE_LOG_DEBUG2             "debug2"
+#define VALUE_LOG_DEBUG3             "debug3"
 #define VALUE_LOG_ERR                "error"
 #define VALUE_LOG_WARN               "warn"
 #define VALUE_LOG_INFO               "info"
 
 extern int validate_log_func(cfg_t *cfg, cfg_opt_t *opt);
-extern int parse_log_level(const std::string& level);
+extern std::optional<int> parse_log_level(const std::string& level);
 
 #define AmConfig AmLcConfig::instance().m_config
 

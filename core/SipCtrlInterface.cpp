@@ -1042,7 +1042,7 @@ bool _SipCtrlInterface::sip_msg2am_request(const sip_msg *msg,
                 msg->body.len) < 0) {
             DBG("could not parse MIME body");
         } else {
-            DBG("MIME body successfully parsed");
+            DBG3("MIME body successfully parsed");
             // some debug infos?
         }
     }
@@ -1205,7 +1205,7 @@ bool _SipCtrlInterface::sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply)
 
 
 #define DBG_PARAM(p)\
-    DBG("%s = <%s>",#p,p.c_str());
+    DBG3("%s = <%s>",#p,p.c_str());
 
 void _SipCtrlInterface::handle_sip_request(const trans_ticket& tt, sip_msg* msg)
 {
@@ -1232,10 +1232,10 @@ void _SipCtrlInterface::handle_sip_request(const trans_ticket& tt, sip_msg* msg)
 	DBG_PARAM(req.callid);
 	DBG_PARAM(req.from_tag);
 	DBG_PARAM(req.to_tag);
-	DBG("cseq = <%i>",req.cseq);
+	DBG3("cseq = <%i>",req.cseq);
 	DBG_PARAM(req.route);
-	DBG("hdrs = <%s>",req.hdrs.c_str());
-	DBG("body-ct = <%s>",req.body.getCTStr().c_str());
+	DBG3("hdrs = <%s>",req.hdrs.c_str());
+	DBG3("body-ct = <%s>",req.body.getCTStr().c_str());
     }
 
     AmSipDispatcher::instance()->handleSipMsg(req);

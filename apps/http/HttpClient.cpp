@@ -1188,8 +1188,8 @@ void HttpClient::update_resolve_list()
     }
     curl_url_cleanup(curlu);
 
-    if(next_time) DBG("set resolve_timer interval to: %f sec", next_time/1e6);
-    else DBG("disarm resolve_timer");
+    if(next_time) DBG3("set resolve_timer interval to: %f sec", next_time/1e6);
+    else DBG3("disarm resolve_timer");
 
     resolve_timer.set(next_time);
 }

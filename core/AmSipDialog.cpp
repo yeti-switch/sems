@@ -101,7 +101,7 @@ bool AmSipDialog::onRxReqSanity(const AmSipRequest& req)
 
         bool pending = invite ? (pending_invites || getUACInvTransPending()) : pending_updates;
 
-        DBG("AmSipDialog::onRxReqSanity: %s, pending %d",
+        DBG3("AmSipDialog::onRxReqSanity: %s, pending %d",
             invite ? "INVITE" : "UPDATE", pending);
 
         //check for pending UAS transactions
@@ -225,7 +225,7 @@ void AmSipDialog::setOAState(AmOfferAnswer::OAState n_st)
 
 void AmSipDialog::setRel100State(Am100rel::State rel100_state)
 {
-    DBG("setting 100rel state for '%s' to %i", local_tag.c_str(), rel100_state);
+    DBG3("setting 100rel state for '%s' to %i", local_tag.c_str(), rel100_state);
     rel100.setState(rel100_state);
 }
 
@@ -236,7 +236,7 @@ void AmSipDialog::setRel100Handler(AmSipDialogEventHandler* h)
 
 void AmSipDialog::setOAEnabled(bool oa_enabled)
 {
-    DBG("%sabling offer_answer on SIP dialog '%s'",
+    DBG3("%sabling offer_answer on SIP dialog '%s'",
         oa_enabled?"en":"dis", local_tag.c_str());
     offeranswer_enabled = oa_enabled;
 }

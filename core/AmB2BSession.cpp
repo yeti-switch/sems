@@ -144,12 +144,12 @@ AmB2BSession::~AmB2BSession()
 {
     clearRtpReceiverRelay();
 
-    DBG("relayed_req.size() = %zu",relayed_req.size());
+    DBG3("relayed_req.size() = %zu",relayed_req.size());
 
     map<int,AmSipRequest>::iterator it = recvd_req.begin();
-    DBG("recvd_req.size() = %zu",recvd_req.size());
+    DBG3("recvd_req.size() = %zu",recvd_req.size());
     for(;it != recvd_req.end(); ++it){
-        DBG("  <%i,%s>",it->first,it->second.method.c_str());
+        DBG3("  <%i,%s>",it->first,it->second.method.c_str());
     }
 
     if(subs)
@@ -652,7 +652,7 @@ void AmB2BSession::onReplySent(const AmSipRequest& req, const AmSipReply& reply)
         if((req.method == SIP_METH_INVITE) && (reply.code >= 300)) {
             DBG("relayed INVITE failed with %u %s", reply.code, reply.reason.c_str());
         }
-        DBG("recvd_req.erase(<%u,%s>)", req.cseq, req.method.c_str());
+        DBG3("recvd_req.erase(<%u,%s>)", req.cseq, req.method.c_str());
         recvd_req.erase(reply.cseq);
     }
 
@@ -728,7 +728,7 @@ int AmB2BSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp
 
 int AmB2BSession::relayEvent(AmEvent* ev)
 {
-    DBG("AmB2BSession::relayEvent: to other_id='%s'",
+    DBG3("AmB2BSession::relayEvent: to other_id='%s'",
         other_id.c_str());
 
     if(!other_id.empty()) {

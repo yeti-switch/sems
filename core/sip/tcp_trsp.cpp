@@ -47,17 +47,20 @@ int tcp_trsp_socket::send(
     if(closed || (check_connection() < 0))
         return -1;
 
-    DBG("add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
-        actual_ip.c_str(), actual_port,
-        get_addr_str(sa).c_str(),
-        am_get_port(sa),
-        msg_len,msg);
+    if (trsp_socket::log_level_raw_msgs >= 0) {
+        _LOG(trsp_socket::log_level_raw_msgs,
+            "add msg to send deque/from %s:%i to %s:%i\n--++--\n%.*s--++--",
+            actual_ip.c_str(), actual_port,
+            get_addr_str(sa).c_str(),
+            am_get_port(sa),
+            msg_len,msg);
+    }
 
     send_q.push_back(new msg_buf(sa,msg,msg_len));
 
     if(connected) {
         add_write_event();
-        DBG("write event added...");
+        DBG3("write event added...");
     }
 
     return 0;

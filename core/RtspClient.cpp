@@ -256,7 +256,7 @@ int RtspClient::init()
 
     init_connections();
 
-    DBG("RtspClient initialized");
+    DBG3("RtspClient initialized");
 
     return 0;
 }

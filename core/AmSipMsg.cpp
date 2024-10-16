@@ -269,7 +269,7 @@ string AmSipRequest::print() const
 
 void AmSipRequest::log(msg_logger *logger,msg_sensor *sensor) const
 {
-  DBG("AmSipRequest::log(logger = %p,sensor = %p)",logger,sensor);
+  DBG3("AmSipRequest::log(logger = %p,sensor = %p)",logger,sensor);
   tt.lock_bucket();
   const sip_trans* t = tt.get_trans();
   if (t) {

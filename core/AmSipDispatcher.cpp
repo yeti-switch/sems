@@ -106,7 +106,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
     return;
   }
 
-  DBG("method: `%s' [%zd].", req.method.c_str(), req.method.length());
+  DBG3("method: `%s' [%zd].", req.method.c_str(), req.method.length());
 
   if(req.method == SIP_METH_BYE ||
 		req.method == SIP_METH_PRACK){

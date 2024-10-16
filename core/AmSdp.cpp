@@ -846,7 +846,7 @@ static bool parse_sdp_line_ex(AmSdp* sdp_msg, char*& s)
     //default state
     state=SDP_DESCR;
 
-    DBG("parsing SDP message...");
+    DBG3("parsing SDP message...");
 
     while(*s != '\0') {
         switch(state) {
@@ -1061,11 +1061,11 @@ static char* parse_sdp_connection(AmSdp* sdp_msg, char* s, char t)
 
     if(t == 'd') {
         sdp_msg->conn = c;
-        DBG("SDP: got session level connection: %s", c.debugPrint().c_str());
+        DBG3("SDP: got session level connection: %s", c.debugPrint().c_str());
     } else if(t == 'm'){
         SdpMedia& media = sdp_msg->media.back();
         media.conn = c;
-        DBG("SDP: got media level connection: %s", c.debugPrint().c_str());
+        DBG3("SDP: got media level connection: %s", c.debugPrint().c_str());
     }
 
     //DBG("parse_sdp_line_ex: parse_sdp_connection: done parsing sdp connection");
@@ -1208,7 +1208,7 @@ static void parse_sdp_media(AmSdp* sdp_msg, char* s)
 
     sdp_msg->media.push_back(m);
 
-    DBG("SDP: got media: %s", m.debugPrint().c_str());
+    DBG3("SDP: got media: %s", m.debugPrint().c_str());
     //DBG("parse_sdp_line_ex: parse_sdp_media: done parsing media description ");
     return;
 }

@@ -208,7 +208,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
 
     ip_entry* new_ip = new ip_entry();
     if(rr->type == ns_t_a) {
-        DBG("A: TTL=%i %s %i.%i.%i.%i",
+        DBG3("A: TTL=%i %s %i.%i.%i.%i",
             ns_rr_ttl(*rr), ns_rr_name(*rr),
             ns_rr_rdata(*rr)[0], ns_rr_rdata(*rr)[1],
             ns_rr_rdata(*rr)[2], ns_rr_rdata(*rr)[3]);
@@ -216,7 +216,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
         memcpy(&(new_ip->addr), ns_rr_rdata(*rr), sizeof(in_addr));
     } else if(rr->type == ns_t_aaaa) {
         const u_short* a = reinterpret_cast<const u_short *>(ns_rr_rdata(*rr));
-        DBG("AAAA: TTL=%i %s %x:%x:%x:%x:%x:%x:%x:%x",
+        DBG3("AAAA: TTL=%i %s %x:%x:%x:%x:%x:%x:%x:%x",
             ns_rr_ttl(*rr), ns_rr_name(*rr),
             htons(a[0]), htons(a[1]), htons(a[2]), htons(a[3]),
             htons(a[4]), htons(a[5]), htons(a[6]), htons(a[7]));
@@ -427,7 +427,7 @@ dns_entry::dns_entry(dns_rr_type type)
 
 dns_entry::~dns_entry()
 {
-    DBG("dns_entry::~dns_entry(): %s",to_str().c_str());
+    DBG3("dns_entry::~dns_entry(): %s",to_str().c_str());
     for(vector<dns_base_entry*>::iterator it = ip_vec.begin();
         it != ip_vec.end(); ++it)
     {
@@ -1231,7 +1231,7 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
 
     if(!name) return -1;
 
-    DBG("Querying '%s' (%s)...",name,dns_rr_type_str(rr_type, addr_type));
+    DBG3("Querying '%s' (%s)...",name,dns_rr_type_str(rr_type, addr_type));
 
     stat_queries_total.inc();
 
@@ -1292,14 +1292,14 @@ int _resolver::query_dns(const char* name, dns_rr_type rr_type, address_type add
         if(!hash_entry) {
             parsed_entry->init();
             if(b->insert(name,parsed_entry)) {
-                DBG("DNS cache: inserted new entry: '%s' -> %s",
+                DBG3("DNS cache: inserted new entry: '%s' -> %s",
                     name.c_str(),
                     parsed_entry->to_str().c_str());
             }
         } else if(hash_entry->get_type() == parsed_entry->get_type()) {
             if(rr_type_supports_merging(parsed_entry->get_type())) {
                 if(hash_entry->union_rr(parsed_entry->ip_vec)) {
-                    DBG("DNS cache: merged entries. name:'%s', merged: %s, parsed: %s",
+                    DBG3("DNS cache: merged entries. name:'%s', merged: %s, parsed: %s",
                         name.c_str(),
                         hash_entry->to_str().c_str(),
                         parsed_entry->to_str().c_str());
@@ -1707,7 +1707,7 @@ void _resolver::run()
                 dns_bucket::value_map::iterator tmp_it = it;
                 bool end_of_bucket = (++it == bucket->elmts.end());
 
-                DBG("DNS record expired (%p) '%s' -> %s",
+                DBG3("DNS record expired (%p) '%s' -> %s",
                     static_cast<void*>(dns_e),
                     tmp_it->first.c_str(),dns_e->to_str().c_str());
 

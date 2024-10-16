@@ -422,7 +422,7 @@ int set_fd_limit()
         return -1;
     }
 
-    DBG("Open FDs limit has been raised to %u",
+    DBG3("Open FDs limit has been raised to %u",
          (unsigned int)rlim.rlim_cur);
 
     return 0;
@@ -736,7 +736,6 @@ int main(int argc, char* argv[])
             ERROR("Cannot initialize RTSP client");
             goto error;
         }
-        DBG("sizeof(RtspAudio) = %zd",sizeof(RtspAudio));
     }
 
     restart_ssl_key_logger(AmConfig.ssl_key_log_filepath);

@@ -545,7 +545,7 @@ inline int parse_via_params(sip_via_parm* parm, const char** c, int len)
 	switch(st){
 	case VP_BRANCH:
 	    parm->branch = (*it)->value;
-	    DBG("parsed branch: %.*s",(*it)->value.len,(*it)->value.s);
+	    DBG3("parsed branch: %.*s",(*it)->value.len,(*it)->value.s);
 	    break;
 	case VP_RECVD:
 	    parm->recved = (*it)->value;
@@ -568,8 +568,8 @@ inline int parse_via_params(sip_via_parm* parm, const char** c, int len)
 	continue; // makes compiler happy
     }
 
-    DBG("has_rport: %i",parm->has_rport);
-    
+    DBG3("has_rport: %i",parm->has_rport);
+
     return ret;
 }
 

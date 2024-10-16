@@ -763,12 +763,12 @@ static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 /*                                       Validation functions                                          */
 /*                                                                                                     */
 /*******************************************************************************************************/
-int parse_log_level(const std::string& level)
+std::optional<int> parse_log_level(const std::string& level)
 {
     int n;
     if (sscanf(level.c_str(), "%i", &n) == 1) {
-        if (n < L_ERR || n > L_DBG) {
-            return -1;
+        if (n < L_ERR || n > L_DBG_3) {
+            return std::nullopt;
         }
         return n;
     }
@@ -776,7 +776,9 @@ int parse_log_level(const std::string& level)
     std::string s(level);
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 
-    if (s == VALUE_LOG_ERR) {
+    if (s == VALUE_LOG_NO) {
+        n = -1;
+    } else if (s == VALUE_LOG_ERR) {
         n = L_ERR;
     } else if (s == VALUE_LOG_WARN) {
         n = L_WARN;
@@ -784,9 +786,13 @@ int parse_log_level(const std::string& level)
         n = L_INFO;
     } else if (s==VALUE_LOG_DEBUG) {
         n = L_DBG;
+    } else if (s==VALUE_LOG_DEBUG2) {
+        n = L_DBG_2;
+    } else if (s==VALUE_LOG_DEBUG3) {
+        n = L_DBG_3;
     } else {
         fprintf(stderr,"unknown loglevel value: %s",level.c_str());
-        return -1;
+        return std::nullopt;
     }
     return n;
 }
@@ -794,13 +800,13 @@ int parse_log_level(const std::string& level)
 int validate_log_func(cfg_t *cfg, cfg_opt_t *opt)
 {
     std::string value = cfg_getstr(cfg, opt->name);
-    bool valid = parse_log_level(value) >= 0;
-    if(!valid) {
+    auto ret = parse_log_level(value);
+    if(!ret) {
         ERROR("invalid value \'%s\' of the option \'%s\' - \
               must be \'no\',\'error\',\'info\',\'warn\',\'debug\' or number from %d to %d",
               value.c_str(), opt->name, L_ERR, L_DBG);
     }
-    return valid ? 0 : 1;
+    return ret ? 0 : 1;
 }
 
 int validate_method_func(cfg_t *cfg, cfg_opt_t *opt)
@@ -1127,7 +1133,8 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(config == &m_config) {
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
         _trans_layer::default_bl_ttl = cuint(cfg_getint(gen, PARAM_BL_TTL_NAME));
-        trsp_socket::log_level_raw_msgs = parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME));
+        trsp_socket::log_level_raw_msgs =
+            parse_log_level(cfg_getstr(gen, PARAM_LOG_RAW_NAME)).value_or(L_DBG);
         _SipCtrlInterface::log_parsed_messages = cfg_getbool(gen, PARAM_LOG_PARS_NAME);
         _SipCtrlInterface::udp_rcvbuf = static_cast<int>(cfg_getint(gen, PARAM_UDP_RECVBUF_NAME));
         sip_timer_t2 = cuint(cfg_getint(gen, PARAM_SIP_TIMER_T2_NAME));
@@ -1135,7 +1142,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
             std::string timer_cfg = std::string("sip_timer_") +
                 static_cast<char>(tolower(*timer_name(cuint(t))));
             sip_timers[t] = cuint(cfg_getint(gen, timer_cfg.c_str()));
-            DBG("Set SIP Timer '%s' to %u ms", timer_name(cuint(t)), sip_timers[t]);
+            DBG3("Set SIP Timer '%s' to %u ms", timer_name(cuint(t)), sip_timers[t]);
         }
 
         setLogLevel(cfg_getstr(gen, PARAM_LOG_LEVEL_NAME));
@@ -1257,7 +1264,9 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(value == VALUE_DISABLE || value == VALUE_OFF) config->rel100 = Am100rel::REL100_DISABLED;
     else if(value == VALUE_SUPPORTED) config->rel100 = Am100rel::REL100_SUPPORTED;
     else if(value == VALUE_REQUIRE) config->rel100 = Am100rel::REL100_REQUIRE;
-    config->unhandled_reply_log_level = static_cast<Log_Level>(parse_log_level(cfg_getstr(gen, PARAM_UNHDL_REP_LOG_LVL_NAME)));
+    config->unhandled_reply_log_level =
+        static_cast<Log_Level>(
+            parse_log_level(cfg_getstr(gen, PARAM_UNHDL_REP_LOG_LVL_NAME)).value_or(L_ERR));
     config->pcap_upload_queue_name = cfg_getstr(gen, PARAM_PCAP_UPLOAD_QUEUE_NAME);
     value = cfg_getstr(gen, PARAM_RESAMPLE_LIBRARY_NAME);
     if(value == VALUE_LIBSAMPLERATE) config->resampling_implementation_type = AmAudio::LIBSAMPLERATE;
@@ -2152,7 +2161,8 @@ std::string AmLcConfig::fixIface2IP(const std::string& dev_name, bool v6_for_sip
 int AmLcConfig::setLogLevel(const std::string& level, bool apply)
 {
     int n;
-    if(-1==(n = parse_log_level(level))) return 0;
+    if(-1==(n = parse_log_level(level).value_or(-1)))
+        return 0;
     log_level = static_cast<Log_Level>(n);
     if (apply)
         set_log_level(log_level);
@@ -2162,7 +2172,8 @@ int AmLcConfig::setLogLevel(const std::string& level, bool apply)
 int AmLcConfig::setStderrLogLevel(const std::string& level, bool apply)
 {
     int n;
-    if(-1==(n = parse_log_level(level))) return 0;
+    if(-1==(n = parse_log_level(level).value_or(-1)))
+        return 0;
     log_level = static_cast<Log_Level>(n);
     if (apply && m_config.log_stderr)
         set_stderr_log_level(log_level);
@@ -2263,7 +2274,7 @@ bool AmLcConfig::fillSysIntfList(ConfigContainer* config)
             }
         }
 
-        DBG("iface='%s';ip='%s';flags=0x%x",p_if->ifa_name,host,p_if->ifa_flags);
+        DBG3("iface='%s';ip='%s';flags=0x%x",p_if->ifa_name,host,p_if->ifa_flags);
         intf_it->addrs.push_back(IPAddr(fixIface2IP(host, true),
             static_cast<short>(p_if->ifa_addr->sa_family)));
     }

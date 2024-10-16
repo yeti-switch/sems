@@ -590,11 +590,11 @@ int AmMimeBody::parse(const string& content_type,
   
   if(ct.isType(MULTIPART)) {
 
-    DBG("parsing multi-part body");
+    DBG3("parsing multi-part body");
     return parseMultipart(buf,len);
   }
   else {
-    DBG("saving single-part body");
+    DBG3("saving single-part body");
     setPayload(buf,len);
   }
 

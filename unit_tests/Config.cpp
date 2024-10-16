@@ -2,7 +2,7 @@
 #include "AmLcConfig.h"
 
 extern int validate_log_func(cfg_t *cfg, cfg_opt_t *opt);
-extern int parse_log_level(const std::string& level);
+extern std::optional<int> parse_log_level(const std::string& level);
 
 #define PARAM_SEMS_CONFIG_PATH_NAME "sems_config_path"
 #define PARAM_SIG_INTERFACE_NAME    "signalling_interface_name"
@@ -91,7 +91,7 @@ int TesterConfig::readConfiguration(const string& filePath)
         return -1;
     }
     signalling_interface = cfg_getstr(m_cfg, PARAM_SIG_INTERFACE_NAME);
-    log_level = parse_log_level(cfg_getstr(m_cfg, PARAM_LOG_LEVEL_NAME));
+    log_level = parse_log_level(cfg_getstr(m_cfg, PARAM_LOG_LEVEL_NAME)).value_or(L_INFO);
 
     cfg_t* m_stress = cfg_getsec(m_cfg, SECTION_STRESS_NAME);
     stress_session_duration = cfg_getint(m_stress, PARAM_SESSION_DURATION_NAME);

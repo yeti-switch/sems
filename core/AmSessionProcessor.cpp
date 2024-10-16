@@ -107,7 +107,6 @@ void AmSessionProcessor::addThreads(unsigned int num_threads) {
     threads.back()->start();
   }
   threads_it = threads.begin();
-  DBG("now %zd session processor threads running",  threads.size());
   threads_mut.unlock();
 }
 
@@ -168,7 +167,7 @@ void AmSessionProcessorThread::run()
     stop_requested.set(false);
     while(true) {
 
-        DBG("running processing loop");
+        DBG3("running processing loop");
 
         runcond.wait_for();
 
@@ -188,12 +187,12 @@ void AmSessionProcessorThread::run()
 
         // startup all new sessions
         if (!startup_sessions.empty()) {
-            DBG("starting up %zd sessions", startup_sessions.size());
+            DBG3("starting up %zd sessions", startup_sessions.size());
 
             for (std::vector<AmSession*>::iterator it = startup_sessions.begin();
                  it != startup_sessions.end(); it++)
             {
-                DBG("starting up [%s|%s]: [%p]",
+                DBG3("starting up [%s|%s]: [%p]",
                     (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str(),*it);
 
                 if ((*it)->startup()) {
@@ -207,7 +206,7 @@ void AmSessionProcessorThread::run()
 
         std::vector<AmSession*> fin_sessions;
 
-        DBG("processing events for  up to %zd sessions", pending_process_sessions.size());
+        DBG3("processing events for  up to %zd sessions", pending_process_sessions.size());
 
         std::list<AmSession*>::iterator it=sessions.begin();
         event_stats_mutex.lock();
@@ -226,11 +225,11 @@ void AmSessionProcessorThread::run()
         event_stats_mutex.unlock();
 
         if (fin_sessions.size()) {
-            DBG("finalizing %zd sessions", fin_sessions.size());
+            DBG3("finalizing %zd sessions", fin_sessions.size());
             for (std::vector<AmSession*>::iterator it=fin_sessions.begin();
                  it != fin_sessions.end(); it++)
             {
-                DBG("finalizing session [%p/%s/%s]",
+                DBG3("finalizing session [%p/%s/%s]",
                     *it, (*it)->getCallID().c_str(), (*it)->getLocalTag().c_str());
 
                 (*it)->finalize();

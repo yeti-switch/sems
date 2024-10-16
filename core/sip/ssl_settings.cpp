@@ -44,7 +44,7 @@ bool settings::checkCertificateAndKey(
 {
     try {
         if(!certificate_key_path.empty()) {
-            DBG("checking %s interface %s %s %s certificate_key: %s",
+            DBG3("checking %s interface %s %s %s certificate_key: %s",
                 interface_type, interface_name,
                 getProtocolName(),role_name,
                 certificate_key_path.c_str());
@@ -53,7 +53,7 @@ bool settings::checkCertificateAndKey(
         }
 
         for(auto& cert : ca_path_list) {
-                DBG("checking %s interface %s %s %s ca_list: %s",
+                DBG3("checking %s interface %s %s %s ca_list: %s",
                     interface_type, interface_name,
                     getProtocolName(),role_name,
                     cert.c_str());
@@ -61,7 +61,7 @@ bool settings::checkCertificateAndKey(
         }
 
         if(!certificate_path.empty()) {
-            DBG("checking %s interface %s %s %s certificate: %s",
+            DBG3("checking %s interface %s %s %s certificate: %s",
                 interface_type, interface_name,
                 getProtocolName(),role_name,
                 certificate_path.c_str());

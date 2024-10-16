@@ -47,12 +47,14 @@ enum Log_Level {
   L_ERR = 0,
   L_WARN,
   L_INFO,
-  L_DBG
+  L_DBG,
+  L_DBG_2,
+  L_DBG_3
 };
 /** @} */
 
 #define FIX_LOG_LEVEL(level) \
-  ((level) < L_ERR ? L_ERR : ((level) > L_DBG ? L_DBG : (level)))
+  ((level) < L_ERR ? L_ERR : ((level) > L_DBG_3 ? L_DBG_3 : (level)))
 
 #ifndef __FILENAME__
 #define __FILENAME__ __FILE__
@@ -164,6 +166,11 @@ _LOG(L_WARN, error_category fmt, ##args)
   _LOG(L_INFO, error_category fmt, ##args)
 #define CAT_DBG(error_category, fmt, args... ) \
   _LOG(L_DBG, error_category fmt, ##args)
+#define CAT_DBG_2(error_category, fmt, args... ) \
+  _LOG(L_DBG_2, error_category fmt, ##args)
+#define CAT_DBG_3(error_category, fmt, args... ) \
+  _LOG(L_DBG_3, error_category fmt, ##args)
+
 
 #define CAT_ERROR_CTX(context_logger, error_category, fmt, args... ) \
   _LOG_CTX(context_logger, L_ERR, error_category fmt, ##args)
@@ -196,6 +203,9 @@ _LOG(L_WARN, error_category fmt, ##args)
 #define WARN(fmt, args...)  CAT_WARN(ERROR_CATEGORY_WGENERAL, fmt, ##args)
 #define INFO(fmt, args...)  CAT_INFO(ERROR_CATEGORY_IGENERAL, fmt, ##args)
 #define DBG(fmt, args...)   CAT_DBG(ERROR_CATEGORY_DGENERAL, fmt, ##args)
+#define DBG1(fmt, args...)   CAT_DBG(ERROR_CATEGORY_DGENERAL, fmt, ##args)
+#define DBG2(fmt, args...)   CAT_DBG_2(ERROR_CATEGORY_DGENERAL, fmt, ##args)
+#define DBG3(fmt, args...)   CAT_DBG_3(ERROR_CATEGORY_DGENERAL, fmt, ##args)
 
 #define ERROR_CTX(context_logger, fmt, args...) CAT_ERROR_CTX(context_logger, ERROR_CATEGORY_EGENERAL, fmt, ##args)
 #define WARN_CTX(context_logger, fmt, args...)  CAT_WARN_CTX(context_logger, ERROR_CATEGORY_WGENERAL, fmt, ##args)
@@ -208,6 +218,8 @@ _LOG(L_WARN, error_category fmt, ##args)
 #define CLASS_WARN(fmt, args...)  WARN(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_INFO(fmt, args...)  INFO(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_DBG(fmt, args...)   DBG(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+#define CLASS_DBG2(fmt, args...)   DBG2(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
+#define CLASS_DBG3(fmt, args...)   DBG3(CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 
 #define CLASS_ERROR_CTX(context_logger, fmt, args...) ERROR_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)
 #define CLASS_WARN_CTX(context_logger, fmt, args...)  WARN_CTX(context_logger, CLASS_LOG_FMT fmt, CLASS_ARGS, ##args)

@@ -126,7 +126,7 @@ int DILog::configure(const std::string& config)
     }
 
     if(cfg_size(cfg, PARAM_LOG_LEVEL_NAME))
-        setLogLevel(parse_log_level(cfg_getstr(cfg, PARAM_LOG_LEVEL_NAME)));
+        setLogLevel(parse_log_level(cfg_getstr(cfg, PARAM_LOG_LEVEL_NAME)).value_or(L_ERR));
 
     cfg_free(cfg);
     return 0;

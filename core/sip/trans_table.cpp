@@ -94,9 +94,9 @@ sip_trans* trans_bucket::match_request(sip_msg* msg, unsigned int ttype)
     // sip_cseq* cseq  = dynamic_cast<sip_cseq*>(msg->cseq->p);
     // assert(cseq);
 
-    DBG("Matching %.*s request",
-	msg->u.request->method_str.len,
-	msg->u.request->method_str.s);
+    DBG3("Matching %.*s request",
+        msg->u.request->method_str.len,
+        msg->u.request->method_str.s);
 
     //this should have been checked before
     assert(msg->via_p1);

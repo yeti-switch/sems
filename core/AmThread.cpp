@@ -63,13 +63,13 @@ void * AmThread::_start(void * _t)
     _self_tid = static_cast<pthread_t>(GET_TID());
     unsigned long _tid = _this->_pid;
 
-    DBG("Thread %lu is starting", static_cast<unsigned long>(_tid));
+    DBG3("Thread %lu is starting", static_cast<unsigned long>(_tid));
 
     _this->run();
 
     char thread_name[16];
     pthread_getname_np(_tid, thread_name,16);
-    DBG("Thread %s %lu is ending",
+    DBG3("Thread %s %lu is ending",
         thread_name, static_cast<unsigned long>(_tid));
 
     _this->_stopped.set(true);
@@ -232,13 +232,13 @@ AmThreadWatcher* AmThreadWatcher::instance()
 
 void AmThreadWatcher::add(AmThread* t)
 {
-    DBG("trying to add thread %lu to thread watcher",
+    DBG3("trying to add thread %lu to thread watcher",
         static_cast<unsigned long int>(t->_pid));
     q_mut.lock();
     thread_queue.push(t);
     //_run_cond.set(true);
     q_mut.unlock();
-    DBG("added thread %lu to thread watcher",
+    DBG3("added thread %lu to thread watcher",
         static_cast<unsigned long int>(t->_pid));
 }
 

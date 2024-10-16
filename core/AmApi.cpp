@@ -181,7 +181,7 @@ void AmLoggingFacility::adjustGlobalLogLevel()
 void AmLoggingFacility::setLogLevel(int log_level_arg){
 	if(log_level_arg == _log_level)
 		return;
-	_log_level = log_level_arg;
+	_log_level = FIX_LOG_LEVEL(log_level_arg);
 	adjustGlobalLogLevel();
 }
 

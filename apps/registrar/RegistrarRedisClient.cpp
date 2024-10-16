@@ -8,12 +8,12 @@
 RegistrarRedisClient::Connection::Connection(const string &id)
   : id(id), info(), state(None)
 {
-    DBG("RegistrarRedisClient::Connection::Connection(..)");
+    DBG3("RegistrarRedisClient::Connection::Connection(..)");
 }
 
 RegistrarRedisClient::Connection::~Connection()
 {
-    DBG("RegistrarRedisClient::Connection::~Connection()");
+    DBG3("RegistrarRedisClient::Connection::~Connection()");
 }
 
 const RedisScript* RegistrarRedisClient::Connection::script(const string &name) {

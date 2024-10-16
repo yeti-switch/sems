@@ -102,7 +102,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     enable_zrtp(false),
     dlg(p_dlg)
 {
-    DBG("AmSession[%p](%p)",this,dlg);
+    DBG3("AmSession[%p](%p)",this,dlg);
     if(!dlg) dlg = new AmSipDialog(this);
     else {
         dlg->setEventhandler(this);
@@ -112,7 +112,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
 
 AmSession::~AmSession()
 {
-  DBG("~AmSession[%p]",this);
+  DBG3("~AmSession[%p]",this);
 
   for(vector<AmSessionEventHandler*>::iterator evh = ev_handlers.begin();
       evh != ev_handlers.end(); evh++) {
@@ -276,13 +276,13 @@ void AmSession::setLocalTag()
   if (dlg->getLocalTag().empty()) {
     string new_id = getNewId();
     dlg->setLocalTag(new_id);
-    DBG("AmSession::setLocalTag() - session id set to %s", new_id.c_str());
+    DBG3("AmSession::setLocalTag() - session id set to %s", new_id.c_str());
   }
 }
 
 void AmSession::setLocalTag(const string& tag)
 {
-  DBG("AmSession::setLocalTag(%s)",tag.c_str());
+  DBG3("AmSession::setLocalTag(%s)",tag.c_str());
   dlg->setLocalTag(tag);
 }
 
@@ -538,7 +538,7 @@ bool AmSession::processingCycle(EventStats *stats) {
 
 void AmSession::finalize()
 {
-  DBG("running finalize sequence...");
+  DBG3("running finalize sequence...");
   dlg->finalize();
 
   onBeforeDestroy();
@@ -546,7 +546,7 @@ void AmSession::finalize()
   
   session_stopped();
 
-  DBG("session is stopped.");
+  DBG3("session is stopped.");
 }
 #ifndef SESSION_THREADPOOL
   void AmSession::on_stop() 
@@ -554,7 +554,7 @@ void AmSession::finalize()
   void AmSession::stop()
 #endif  
 {
-  DBG("AmSession::stop()");
+  DBG3("AmSession::stop()");
 
   if (!isDetached())
     AmMediaProcessor::instance()->clearSession(this);
@@ -583,7 +583,7 @@ string AmSession::getAppParam(const string& param_name) const
 }
 
 void AmSession::destroy() {
-  DBG("AmSession::destroy()");
+  DBG3("AmSession::destroy()");
   AmSessionContainer::instance()->destroySession(this);
 }
 
@@ -747,7 +747,7 @@ void AmSession::clearAudio()
   }
 
   unlockAudio();
-  DBG("Audio cleared !!!");
+  DBG3("Audio cleared !!!");
   postEvent(new AmAudioEvent(AmAudioEvent::cleared));
 }
 
@@ -755,12 +755,12 @@ void AmSession::process(AmEvent* ev)
 {
   CALL_EVENT_H(process,ev);
 
-  DBG("AmSession processing event");
+  DBG3("AmSession processing event");
 
   if (ev->event_id == E_SYSTEM) {
     AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
     if(sys_ev){	
-      DBG("Session received system Event");
+      DBG3("Session received system Event");
       onSystemEvent(sys_ev);
       return;
     }
@@ -780,7 +780,7 @@ void AmSession::process(AmEvent* ev)
 
   AmDtmfEvent* dtmf_ev = dynamic_cast<AmDtmfEvent*>(ev);
   if (dtmf_ev) {
-    DBG("Session received DTMF, event = %d, duration = %d", 
+    DBG3("Session received DTMF, event = %d, duration = %d", 
 	dtmf_ev->event(), dtmf_ev->duration());
     onDtmf(dtmf_ev);
     return;
@@ -797,7 +797,7 @@ void AmSession::onSipRequest(const AmSipRequest& req)
 {
   CALL_EVENT_H(onSipRequest,req);
 
-  DBG("onSipRequest: method = %s",req.method.c_str());
+  DBG3("onSipRequest: method = %s",req.method.c_str());
 
   updateRefreshMethod(req.hdrs);
 

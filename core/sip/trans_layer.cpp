@@ -452,7 +452,7 @@ int _trans_layer::send_reply(sip_msg* msg, const trans_ticket* tt,
     char* reply_buf = new char[reply_len];
     char* c = reply_buf;
 
-    DBG("reply_len = %i",reply_len);
+    DBG3("reply_len = %i",reply_len);
 
     sip_status_line_wr(&c,reply_code,msg->u.reply->reason);
 
@@ -2414,7 +2414,7 @@ int _trans_layer::update_uac_request(
 
 int _trans_layer::update_uas_reply(trans_bucket* bucket, sip_trans* t, int reply_code)
 {
-    DBG("update_uas_reply(t=%p)", t);
+    DBG3("update_uas_reply(t=%p)", t);
 
     t->reply_status = reply_code;
     bool reliable_trsp = t->retr_socket->is_reliable();

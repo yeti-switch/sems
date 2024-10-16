@@ -108,15 +108,15 @@ bool AmSessionContainer::clean_sessions() {
 		d_sessions.pop();
 		ds_mut.unlock();
 
-		DBG("Session cleaner: got session %p",cur_session);
+		DBG3("Session cleaner: got session %p",cur_session);
 
 		if(cur_session->is_stopped() && !cur_session->isProcessingMedia()){
 			DBG("Session cleaner: call monitoring hook");
 			MONITORING_MARK_FINISHED(cur_session->getLocalTag().c_str());
-			DBG("session [%p] has been destroyed",(void*)cur_session->_pid);
+			DBG3("session [%p] has been destroyed",(void*)cur_session->_pid);
 			delete cur_session;
 		} else {
-			DBG("session [%p] still running",(void*)cur_session->_pid);
+			DBG3("session [%p] still running",(void*)cur_session->_pid);
 			n_sessions.push(cur_session);
 		}
 		ds_mut.lock();

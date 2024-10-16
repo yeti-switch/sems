@@ -908,7 +908,7 @@ void AmPlugIn::dumpPlugins(std::map<string, string>& ret)
     }\
     inc_ref(f);\
     instance()->map_name.insert(std::make_pair(param_name,f));\
-    DBG(comp_name " '%s' registered.",param_name.c_str());\
+    DBG3(comp_name " '%s' registered.",param_name.c_str());\
     return true;
 
 bool AmPlugIn::registerSIPEventHandler(const string& seh_name, AmSessionEventHandlerFactory* f)

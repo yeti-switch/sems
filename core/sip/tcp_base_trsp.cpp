@@ -28,13 +28,13 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
 {
     last_parse_input_messages_size.clear();
 
-    DBG("sd:%d", socket->sd);
+    DBG3("sd:%d", socket->sd);
 
     for(int i = 0;;i++) {
-        DBG("pst.st: %d", pst.st);
+        DBG3("pst.st: %d", pst.st);
         int err = skip_sip_msg_async(&pst, (char*)(input_buf+input_len));
 
-        DBG("sd:%d, skip_sip_msg_async = %d, st:%d, stage:%d, i:%d",
+        DBG3("sd:%d, skip_sip_msg_async = %d, st:%d, stage:%d, i:%d",
             socket->get_sd(), err, pst.st, pst.stage, i);
 
         if(err) {
@@ -90,17 +90,19 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
         socket->copy_addr_to(&s_msg->local_ip);
 
         char host[NI_MAXHOST] = "";
-        DBG("vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv"
-            "--++--\n%.*s--++--\n",
-            socket->get_transport(),
-            socket->sd,
-            am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
-            am_get_port(&s_msg->remote_ip),
-            am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
-            am_get_port(&s_msg->local_ip),
-            s_msg->len,
-            s_msg->len, s_msg->buf);
-
+        if (trsp_socket::log_level_raw_msgs >= 0) {
+            _LOG(trsp_socket::log_level_raw_msgs,
+                "vv M [|] u recvd msg via %s/%i from %s:%i to %s:%i. bytes: %d vv"
+                "--++--\n%.*s--++--\n",
+                socket->get_transport(),
+                socket->sd,
+                am_inet_ntop_sip(&s_msg->remote_ip,host,NI_MAXHOST),
+                am_get_port(&s_msg->remote_ip),
+                am_inet_ntop_sip(&s_msg->local_ip,host,NI_MAXHOST),
+                am_get_port(&s_msg->local_ip),
+                s_msg->len,
+                s_msg->len, s_msg->buf);
+        }
         s_msg->local_socket = socket;
         inc_ref(socket);
 
@@ -149,7 +151,7 @@ tcp_base_trsp::tcp_base_trsp(
     read_ev(NULL), write_ev(NULL)
 {
     sockaddr_ssl* sa_ssl = (sockaddr_ssl*)(sa);
-    CLASS_DBG("tcp_base_trsp() server_socket:%p transport:%d sa:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
+    CLASS_DBG3("tcp_base_trsp() server_socket:%p transport:%d sa:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d",
               server_sock, transport,
               am_inet_ntop(sa).c_str(), am_get_port(sa),
               sa_ssl->trsp,
@@ -178,15 +180,15 @@ tcp_base_trsp::tcp_base_trsp(
 
 tcp_base_trsp::~tcp_base_trsp()
 {
-    CLASS_DBG("~tcp_base_trsp()");
+    CLASS_DBG3("~tcp_base_trsp()");
     if(read_ev) {
-        DBG("%p destroy read_ev %p",this, read_ev);
+        DBG3("%p destroy read_ev %p",this, read_ev);
         event_del(read_ev);
         event_free(read_ev);
     }
 
     if(write_ev) {
-        DBG("%p destroy write_ev %p",this, write_ev);
+        DBG3("%p destroy write_ev %p",this, write_ev);
         event_del(write_ev);
         event_free(write_ev);
     }
@@ -206,18 +208,18 @@ void tcp_base_trsp::close()
     server_worker->remove_connection(this);
 
     closed = true;
-    DBG("********* closing connection ***********");
-    DBG("connection type %s", get_transport());
+    DBG3("********* closing connection ***********");
+    DBG3("connection type %s", get_transport());
 
     if(read_ev) {
-        DBG("%p destroy read_ev %p", this, read_ev);
+        DBG3("%p destroy read_ev %p", this, read_ev);
         event_del(read_ev);
         event_free(read_ev);
         read_ev = NULL;
     }
 
     if(write_ev) {
-        DBG("%p destroy write_ev %p", this, write_ev);
+        DBG3("%p destroy write_ev %p", this, write_ev);
         event_del(write_ev);
         event_free(write_ev);
         write_ev = NULL;
@@ -266,7 +268,7 @@ void tcp_base_trsp::add_read_event_ul()
 
 void tcp_base_trsp::add_read_event()
 {
-    DBG("%p add read_ev %p",this, read_ev);
+    DBG3("%p add read_ev %p",this, read_ev);
     event_add(read_ev, server_sock->get_idle_timeout());
 }
 
@@ -279,7 +281,7 @@ void tcp_base_trsp::add_write_event_ul(struct timeval* timeout)
 
 void tcp_base_trsp::add_write_event(struct timeval* timeout)
 {
-    DBG("%p add write_ev %p",this, write_ev);
+    DBG3("%p add write_ev %p",this, write_ev);
     event_add(write_ev, timeout);
 }
 
@@ -291,7 +293,7 @@ void tcp_base_trsp::create_events()
     read_ev = event_new(evbase, sd, EV_READ|EV_PERSIST,
                         tcp_base_trsp::on_sock_read,
                         (void *)this);
-    DBG("%p created read_ev %p with base %p",this, read_ev, evbase);
+    DBG3("%p created read_ev %p with base %p",this, read_ev, evbase);
 
     if(write_ev) {
         ERROR("write event already created: transport %s, ip %s, port %d", get_transport(), am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr));
@@ -299,7 +301,7 @@ void tcp_base_trsp::create_events()
     write_ev = event_new(evbase, sd, EV_WRITE,
                          tcp_base_trsp::on_sock_write,
                          (void *)this);
-    DBG("%p created write_ev %p with base %p",this, write_ev, evbase);
+    DBG3("%p created write_ev %p with base %p",this, write_ev, evbase);
 }
 
 int tcp_base_trsp::connect()
@@ -308,7 +310,7 @@ int tcp_base_trsp::connect()
 
     sockaddr_ssl* peer_addr_ssl = reinterpret_cast<sockaddr_ssl*>(&peer_addr);
 
-    CLASS_DBG("tcp_base_trsp::connect(): sd:%d ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d", sd,
+    CLASS_DBG3("tcp_base_trsp::connect(): sd:%d ss_family:%d addr:%s:%i trsp:%d ssl_marker:%d sig:%d cipher:%d mac:%d", sd,
         peer_addr.ss_family,
         am_inet_ntop(&peer_addr).c_str(), am_get_port(&peer_addr),
         peer_addr_ssl->trsp,
@@ -447,7 +449,7 @@ void tcp_base_trsp::on_read(short ev)
 
         bytes = ::read(sd,input->get_input(), input_free_space);
 
-        DBG("on_read (sd:%d, connected:%i, transport:%s, input_free_space:%d) read = %d",
+        DBG3("on_read (sd:%d, connected:%i, transport:%s, input_free_space:%d) read = %d",
             sd, connected, get_transport(), input_free_space, bytes);
 
         if(bytes < 0) {
@@ -476,7 +478,7 @@ void tcp_base_trsp::on_read(short ev)
             }
         } else if(bytes == 0) {
             // connection closed
-            DBG("connection has been closed (sd:%i)",sd);
+            DBG3("connection has been closed (sd:%i)",sd);
             close();
             _l.release();
             return;
@@ -517,7 +519,7 @@ void tcp_base_trsp::on_write(short ev)
     atomic_ref_guard _ref_guard(this);
     std::unique_lock _l(sock_mut);
 
-    DBG("on_write (sd:%d, connected:%i, transport:%s)",
+    DBG3("on_write (sd:%d, connected:%i, transport:%s)",
         sd, connected, get_transport());
 
     if(!connected) {
@@ -557,14 +559,17 @@ void tcp_base_trsp::on_write(short ev)
             return;
         }
 
-        DBG("sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d",
-            get_transport(),
-            sd,
-            actual_ip.c_str(), actual_port,
-            get_addr_str(&msg->addr).c_str(),
-            am_get_port(&msg->addr),
-            bytes,
-            msg->bytes_left());
+        if (trsp_socket::log_level_raw_msgs >= 0) {
+            _LOG(trsp_socket::log_level_raw_msgs,
+                "sent msg via %s/%i from %s:%i to %s:%i. bytes: %d/%d",
+                get_transport(),
+                sd,
+                actual_ip.c_str(), actual_port,
+                get_addr_str(&msg->addr).c_str(),
+                am_get_port(&msg->addr),
+                bytes,
+                msg->bytes_left());
+        }
 
         if(bytes < msg->bytes_left()) {
             msg->cursor += bytes;
@@ -665,7 +670,7 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
     string conn_id = client_sock->get_peer_ip()
                      + ":" + int2str(client_sock->get_peer_port());
 
-    DBG("new TCP connection from %s:%u",
+    DBG3("new TCP connection from %s:%u",
         client_sock->get_peer_ip().c_str(),
         client_sock->get_peer_port());
 
@@ -687,7 +692,7 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     string conn_id = 
         client_sock->get_peer_ip() + ":" + int2str(client_sock->get_peer_port());
 
-    DBG("removing TCP connection from %s",conn_id.c_str());
+    DBG3("removing TCP connection from %s",conn_id.c_str());
 
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
@@ -699,7 +704,7 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
         if(client_sock->server_sock->statistics)
             client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
 
-        DBG("TCP connection from %s removed",conn_id.c_str());
+        DBG3("TCP connection from %s removed",conn_id.c_str());
 
         connections.erase(sock_it);
     }
@@ -997,8 +1002,8 @@ void trsp_server_socket::add_event(struct event_base *evbase)
     if(!ev_accept) {
         ev_accept = event_new(evbase, sd, EV_READ|EV_PERSIST,
                               trsp_server_socket::on_accept, (void *)this);
-        DBG("%p created ev_accept %p with base %p",this, ev_accept, evbase);
-        DBG("%p add ev_accept %p",this, ev_accept);
+        DBG3("%p created ev_accept %p with base %p",this, ev_accept, evbase);
+        DBG3("%p add ev_accept %p",this, ev_accept);
         event_add(ev_accept, NULL); // no timeout
     }
 }
@@ -1033,7 +1038,7 @@ void trsp_server_socket::on_accept(int sd, [[maybe_unused]] short ev)
     unsigned int idx = h % workers.size();
 
     // in case of thread pooling, do following in worker thread
-    DBG("trsp_server_socket::create_connected (idx = %u)",idx);
+    DBG3("trsp_server_socket::create_connected (idx = %u)",idx);
     workers[idx]->create_connected(this, connection_sd,&src_addr);
 }
 

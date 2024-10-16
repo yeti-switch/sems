@@ -51,7 +51,10 @@ int log_level  = L_INFO;	/**< log level */
 __thread char log_buf[LOG_BUFFER_LEN];
 
 /** Map log levels to text labels */
-const char* log_level2str[] = { "ERROR", "WARNING", "INFO", "DEBUG" };
+const char* log_level2str[] = {
+    "ERROR", "WARNING", "INFO",
+    "DEBUG", "DEBUG2", "DEBUG3"
+};
 
 /** Registered logging hooks */
 static vector<AmLoggingFacility*> log_hooks;
@@ -145,7 +148,10 @@ void SyslogLogFac::log(int level, [[maybe_unused]] pid_t pid, pid_t tid,
                        const char* func, const char* file, int line,
                        const char* msg, int msg_len)
 {
-  static const int log2syslog_level[] = { LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
+  static const int log2syslog_level[] = {
+    LOG_ERR, LOG_WARNING, LOG_INFO,
+    LOG_DEBUG, LOG_DEBUG, LOG_DEBUG
+  };
 #ifdef _DEBUG
 
   // replace \r\n through a dot

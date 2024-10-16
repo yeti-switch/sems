@@ -294,7 +294,7 @@ int JsonRPCServerModule::load() {
   if(tcp_md5_password.size()) {
     DBG("use tcp md5 password");
   }
-  DBG("starting server loop thread");
+  DBG3("starting server loop thread");
   server_loop = JsonRPCServerLoop::instance();
   if(server_loop->configure())
       return 1;

@@ -462,12 +462,12 @@ int JsonRPCServerLoop::configure()
 void JsonRPCServerLoop::run()
 {
     setThreadName("rpc-server");
-    DBG("adding %d more server threads ",
+    DBG3("adding %d more server threads ",
         JsonRPCServerModule::threads - 1);
 
     threadpool.addThreads(JsonRPCServerModule::threads - 1);
 
-    DBG("running server loop; listening on %s:%d",
+    DBG3("running server loop; listening on %s:%d",
         JsonRPCServerModule::host.c_str(),
         JsonRPCServerModule::port);
 
@@ -479,7 +479,7 @@ void JsonRPCServerLoop::run()
     ev_async_init (&async_w, async_cb);
     ev_async_start (EV_A_ &async_w);
 
-    DBG("running event loop");
+    DBG3("running event loop");
 
     setEventNotificationSink(this);
     AmEventDispatcher::instance()->addEventQueue(JSONRPC_QUEUE_NAME,this);
@@ -487,7 +487,7 @@ void JsonRPCServerLoop::run()
     ev_loop (loop, 0);
 
     AmEventDispatcher::instance()->delEventQueue(JSONRPC_QUEUE_NAME);
-    DBG("event loop finished");
+    DBG3("event loop finished");
     threadpool.cleanup();
     close(listen_fd);
     listen_fd = 0;

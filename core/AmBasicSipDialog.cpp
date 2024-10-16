@@ -125,7 +125,7 @@ bool AmBasicSipDialog::getUACTransPending()
 
 void AmBasicSipDialog::setStatus(Status new_status)
 {
-  DBG("setting SIP dialog status: %s->%s",
+  DBG3("setting SIP dialog status: %s->%s",
       getStatusStr(), getStatusStr(new_status));
 
   status = new_status;
@@ -208,23 +208,23 @@ string AmBasicSipDialog::getRoute(bool for_cancel)
 }
 
 void AmBasicSipDialog::setOutboundInterfaceName(const string &iface_name) {
-  DBG("setting outbound interface name to %s", iface_name.data());
+  DBG3("setting outbound interface name to %s", iface_name.data());
   force_outbound_interface_by_name = iface_name;
 }
 
 void AmBasicSipDialog::setOutboundInterface(int interface_id) {
-  DBG("setting outbound interface to %i for dialog %p",  interface_id, this);
+  DBG3("setting outbound interface to %i for dialog %p",  interface_id, this);
   outbound_interface = interface_id;
 }
 
 void AmBasicSipDialog::setOutboundAddrType(AddressType type_id)
 {
-  DBG("setting outbound address type to %i",  type_id);
+  DBG3("setting outbound address type to %i",  type_id);
   outbound_address_type = type_id;
 }
 
 void AmBasicSipDialog::setOutboundProtoId(int proto_id) {
-  DBG("setting outbound proto id to %i",  proto_id);
+  DBG3("setting outbound proto id to %i",  proto_id);
   outbound_proto_id = proto_id;
 }
 
@@ -468,7 +468,7 @@ bool AmBasicSipDialog::onRxReqSanity(const AmSipRequest& req)
 
 void AmBasicSipDialog::onRxRequest(const AmSipRequest& req)
 {
-  DBG("AmBasicSipDialog::onRxRequest(req = %s)", req.method.c_str());
+  DBG3("AmBasicSipDialog::onRxRequest(req = %s)", req.method.c_str());
 
   if(req.method != SIP_METH_ACK) {
     // log only non-initial received requests, the initial one is already logged
@@ -937,22 +937,22 @@ int AmBasicSipDialog::sendRequest(const string& method,
 
 void AmBasicSipDialog::dump()
 {
-  DBG("callid = %s",callid.c_str());
-  DBG("local_tag = %s",local_tag.c_str());
-  DBG("uac_trans.size() = %zu",uac_trans.size());
+  DBG3("callid = %s",callid.c_str());
+  DBG3("local_tag = %s",local_tag.c_str());
+  DBG3("uac_trans.size() = %zu",uac_trans.size());
   if(uac_trans.size()){
     for(TransMap::iterator it = uac_trans.begin();
 	it != uac_trans.end(); it++){
 
-      DBG("    cseq = %i; method = %s",it->first,it->second.method.c_str());
+      DBG3("    cseq = %i; method = %s",it->first,it->second.method.c_str());
     }
   }
-  DBG("uas_trans.size() = %zu",uas_trans.size());
+  DBG3("uas_trans.size() = %zu",uas_trans.size());
   if(uas_trans.size()){
     for(TransMap::iterator it = uas_trans.begin();
 	it != uas_trans.end(); it++){
 
-      DBG("    cseq = %i; method = %s",it->first,it->second.method.c_str());
+      DBG3("    cseq = %i; method = %s",it->first,it->second.method.c_str());
     }
   }
 }
@@ -977,7 +977,7 @@ void AmBasicSipDialog::setMsgLogger(msg_logger* logger)
 
 void AmBasicSipDialog::setMsgSensor(msg_sensor* _sensor)
 {
-	DBG("AmBasicSipDialog[%p]: change sensor to %p",this,_sensor);
+	DBG3("AmBasicSipDialog[%p]: change sensor to %p",this,_sensor);
 	if(sensor) dec_ref(sensor);
 	sensor = _sensor;
 	if(sensor) inc_ref(sensor);
