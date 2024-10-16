@@ -1,3 +1,8 @@
+sems (1.148.0) stable; urgency=low
+  * registrar: add registration subscriptions support. new option 'process_subscriptions' (default: false)
+  * registrar: fix aor_lookup EXISTS call
+ -- Michael Furmur <furmur@pm.me>  Wed, 16 Oct 2024 13:13:53 +0300
+
 sems (1.147.0) stable; urgency=low
   * AmIdentity: support raw JWT
   * sems-jwt-tool: support --key for verify action
