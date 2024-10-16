@@ -197,7 +197,7 @@ void JsonrpcNetstringsConnection::resetRead() {
 int JsonrpcNetstringsConnection::read_data(char* data, int size) {
     int r = read(fd,data,size);
     if (!r) {
-        DBG("closing connection [%p/%d] on peer hangup", this, fd);
+        DBG3("closing connection [%p/%d] on peer hangup", this, fd);
         close();
         return -1;
     }

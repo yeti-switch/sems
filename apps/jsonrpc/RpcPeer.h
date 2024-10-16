@@ -90,11 +90,11 @@ struct JsonrpcPeerConnection {
     flags(0),
     conn_type(PEER_UNKNOWN)
   {
-    DBG("created connection '%s'", id.c_str());
+    DBG3("created connection '%s'", id.c_str());
   }
 
   virtual ~JsonrpcPeerConnection() { 
-    DBG("destroying connection '%s'", id.c_str());
+    DBG3("destroying connection '%s'", id.c_str());
   }
 
   void notifyDisconnect();

@@ -363,7 +363,7 @@ int JsonRpcServer::processMessage(const char* msgbuf, unsigned int msg_size,
 
     AmArg rpc_res;
     if(execRpc(peer->id, rpc_params, rpc_res)) {
-        DBG("request consumed by async invocation");
+        DBG3("request consumed by async invocation");
         peer->clearMessage();
         return 0;
     }
@@ -496,7 +496,7 @@ try  {
     string fact_meth = method.substr(method.find('.')+1);
 
     try {
-        DBG("searching for factory '%s' method '%s'",
+        DBG3("searching for factory '%s' method '%s'",
             factory.c_str(), fact_meth.c_str());
         AmDynInvokeFactory* fact =
             AmPlugIn::instance()->getFactory4Di(factory);

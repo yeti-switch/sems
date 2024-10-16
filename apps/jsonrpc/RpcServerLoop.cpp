@@ -642,7 +642,7 @@ bool JsonRPCServerLoop::registerConnection(JsonrpcPeerConnection* peer, const st
   connections[id] = peer;
   connections_mut.unlock();
 
-  DBG("registered connection '%s'", id.c_str());
+  DBG3("registered connection '%s'", id.c_str());
   return res;
 }
 
@@ -656,7 +656,7 @@ bool JsonRPCServerLoop::removeConnection(const string& id) {
     connections.erase(it);
   }
   connections_mut.unlock();
-  DBG("deregistered connection '%s'", id.c_str());
+  DBG3("deregistered connection '%s'", id.c_str());
   return res;
 }
 
