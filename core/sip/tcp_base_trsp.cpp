@@ -690,13 +690,12 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        dec_ref(sock_it->second);
 
         if(client_sock->server_sock->statistics)
             client_sock->server_sock->statistics->changeCountConnection(true, client_sock);
 
+        dec_ref(sock_it->second);
         DBG3("TCP connection from %s removed",conn_id.c_str());
-
         connections.erase(sock_it);
     }
     connections_mut.unlock();
