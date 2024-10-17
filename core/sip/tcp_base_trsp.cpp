@@ -675,14 +675,7 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
         client_sock->get_peer_port());
 
     connections_mut.lock();
-    auto sock_it = connections.find(conn_id);
-    if(sock_it != connections.end()) {
-        sockaddr_storage sa = {0, {0}, 0};
-        client_sock->copy_peer_addr(&sa);
-    }
-
     connections[conn_id] = client_sock;
-
     inc_ref(client_sock);
     connections_mut.unlock();
 }
@@ -697,8 +690,6 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     connections_mut.lock();
     auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
-        sockaddr_storage sa = {0, {0}, 0};
-        client_sock->copy_peer_addr(&sa);
         dec_ref(sock_it->second);
 
         if(client_sock->server_sock->statistics)
