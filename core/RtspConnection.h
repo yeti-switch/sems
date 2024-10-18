@@ -67,6 +67,7 @@ struct RtspMsg {
     int             notify_reason;
     int             streamid;
     uint32_t        rtptime;
+    uint32_t        ssrc;
     int             cseq;
 
     int             code;

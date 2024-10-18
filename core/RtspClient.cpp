@@ -437,7 +437,9 @@ void RtspClient::onRtspPlayNotify(const RtspMsg &msg)
     auto it = std::find_if(
         std::begin(streams),std::end(streams),
         [&msg](RtspStreamMap::value_type &it) {
-            return it.second->isPlaying() && it.second->getStreamID() == msg.streamid;
+            return it.second->isPlaying()
+                    && it.second->getStreamSSRC() == msg.ssrc
+                    && it.second->getStreamID() == msg.streamid;
         });
 
     if(it != std::end(streams)) {

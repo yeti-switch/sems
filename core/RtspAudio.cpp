@@ -17,6 +17,7 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
   : AmRtpAudio(_s, RtspClient::instance()->getRtpInterface()),
     agent(RtspClient::instance()),
 //    md(0),
+    ssrc(0),
     streamid(-1),
     start_progress_time(0),
     state(Ready)
@@ -267,8 +268,8 @@ void RtspAudio::onMaxRtpTimeReached()
 }
 
 void RtspAudio::onRtspPlayNotify(const RtspMsg & msg) {
-    DBG("onRtspPlayNotify() id: %ld, streamid: %d, rtptime: %u, uri: %s",
-        id,streamid, msg.rtptime, uri.c_str());
+    DBG("onRtspPlayNotify() id: %ld, streamid: %d, ssrc: %04x, rtptime: %u, uri: %s",
+        id,streamid, ssrc, msg.rtptime, uri.c_str());
 
     if(msg.rtptime) {
         setMaxRtpTime(msg.rtptime);
@@ -321,6 +322,8 @@ void RtspAudio::onRtspMessage(const RtspMsg &msg)
 
     /** Check Transport header after SETUP request */
     it  = msg.header.find(H_Transport);
-    if (it != msg.header.end())
+    if (it != msg.header.end()) {
+        ssrc = msg.ssrc;
         rtsp_play(msg);
+    }
 }

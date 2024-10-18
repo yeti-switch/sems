@@ -22,6 +22,7 @@ class RtspAudio : public AmRtpAudio
         RtspClient          *agent;
 
         //int                 md;             /** media server descriptor */
+        uint32_t            ssrc;
         int                 streamid;       /** streamid from media server RTP-Info header */
         int                 last_sent_cseq; /** cseq of the last sent request */
         uint64_t            start_progress_time; /** opening time **/
@@ -50,6 +51,7 @@ class RtspAudio : public AmRtpAudio
         RtspAudio(AmSession* _s, const string &uri);
         ~RtspAudio();
 
+        uint32_t getStreamSSRC() { return ssrc; }
         int     getStreamID() { return streamid; }
         bool    isPlaying()    { return state == Playing; }
 

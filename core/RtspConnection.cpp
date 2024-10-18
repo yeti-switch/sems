@@ -119,11 +119,24 @@ void RtspMsg::parse_status_line(const char *line, size_t len)
 }
 
 
+/** workaround for leading space (must be a zero char) "ssrc= aaabbbb" */
+static void hextrim(string& v, unsigned int& result)
+{
+  // ltrim to hex char
+  v.erase(v.begin(), std::find_if(v.begin(), v.end(), [](unsigned char ch) { return std::isxdigit(ch); }));
+
+  // rtrim to hex char
+  v.erase(std::find_if(v.begin(), v.end(), [](unsigned char ch) { return !std::isxdigit(ch); }), v.end());
+  hex2int(v, result);
+}
+
+
 void RtspMsg::process_header(int hdr, const char *v, size_t vl)
 {
 #define SRV_PORT_PARAM "server_port="
 #define STREAMID_PARAM "streamid="
 #define RTPTIME_PARAM "rtptime="
+#define SSRC_PARAM "ssrc="
     const char *s;
 
     switch(hdr) {
@@ -138,6 +151,13 @@ void RtspMsg::process_header(int hdr, const char *v, size_t vl)
                 s += sizeof(SRV_PORT_PARAM)-1;
                 r_rtp_port = atoi(s);
             };
+
+            if((s = strstr(v, SSRC_PARAM)) ) {
+                s += sizeof(SSRC_PARAM)-1;
+                string v(s);
+                hextrim(v, ssrc);
+                DBG("H_Transport ssrc=%04x", ssrc);
+            }
             break;
         }
 
@@ -160,6 +180,12 @@ void RtspMsg::process_header(int hdr, const char *v, size_t vl)
         if((s = strstr(v, RTPTIME_PARAM)) ) {
             s += sizeof(RTPTIME_PARAM)-1;
             rtptime = atol(s);
+        };
+        if((s = strstr(v, SSRC_PARAM)) ) {
+            s += sizeof(SSRC_PARAM)-1;
+            string v(s);
+            hextrim(v, ssrc);
+            DBG("H_RTP_Info ssrc=%04x", ssrc);
         };
         break;
 
@@ -244,7 +270,7 @@ void RtspMsg::parse_msg(int type, const string &data)
 }
 
 RtspMsg::RtspMsg(MSG_TYPE _type, const string &data)
-  : type(_type), cseq(0), code(0), r_rtp_port(0), ContentLength(0), size(0)
+  : type(_type), ssrc(0), cseq(0), code(0), r_rtp_port(0), ContentLength(0), size(0)
 {
     parse_msg(type, data);
 }
