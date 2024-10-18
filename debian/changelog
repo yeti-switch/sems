@@ -1,3 +1,7 @@
+sems (1.149.1) stable; urgency=low
+  * fixed dead lock in statictics
+ -- Michael Furmur <furmur@pm.me>  Fri, 18 Oct 2024 19:12:57 +0300
+
 sems (1.149.0) stable; urgency=low
   * add L_DBG_2, L_DBG_3 loglevels
   * improve trsp level raw msgs logging
