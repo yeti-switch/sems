@@ -145,9 +145,16 @@ AmStatistics& AmStatistics::addLabel(const string& name, const string& value)
 
 void AmStatistics::iterate_groups(StatsCountersGroupsContainerInterface::iterate_groups_callback_type callback)
 {
-    AmLock lock(groups_mutex);
-    for(auto &it : counters_groups_containers) {
-        (*it.second.groups_container)(it.first, callback);
+    map<string, StatsCountersGroupsContainerInterface*> groups_container;
+    {
+        AmLock lock(groups_mutex);
+        for(auto &it : counters_groups_containers) {
+            groups_container.emplace(it.first, it.second.groups_container);
+        }
+    }
+
+    for(auto it : groups_container) {
+        (*it.second)(it.first, callback);
     }
 }
 
