@@ -501,7 +501,7 @@ bool UACAuth::onSipReply(
         if (hdrs == "\r\n" || hdrs == "\r" || hdrs == "\n")
            hdrs = result;
         else
-           hdrs += result;
+           hdrs.insert(hdrs.begin(), result.begin(), result.end());
 
         if(dlg->getStatus() < AmSipDialog::Connected &&
             ri->second.method != SIP_METH_BYE)
@@ -580,7 +580,7 @@ bool UACAuth::onSendRequest(AmSipRequest& req, int& flags)
         if (req.hdrs == "\r\n" || req.hdrs == "\r" || req.hdrs == "\n")
             req.hdrs = result;
         else
-            req.hdrs += result;
+            req.hdrs.insert(req.hdrs.begin(), result.begin(), result.end());
 
         nonce_reuse = true;
     } else {
