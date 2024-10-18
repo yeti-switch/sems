@@ -1,3 +1,9 @@
+sems (1.149.0) stable; urgency=low
+  * add L_DBG_2, L_DBG_3 loglevels
+  * improve trsp level raw msgs logging
+  * uac_auth: fix auth hdr insert
+ -- Michael Furmur <furmur@pm.me>  Fri, 18 Oct 2024 17:32:39 +0300
+
 sems (1.148.0) stable; urgency=low
   * registrar: add registration subscriptions support. new option 'process_subscriptions' (default: false)
   * registrar: fix aor_lookup EXISTS call
