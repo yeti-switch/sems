@@ -71,12 +71,13 @@ void RtspAudio::teardown()
     if (state == Ready)
         return;
 
-    if(state == Playing) {
-        last_sent_cseq = agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
-    }
+    bool teardown = state == Playing;
 
     state = Ready;
     start_progress_time = 0;
+
+    if(teardown)
+        last_sent_cseq = agent->RtspRequest(RtspMsg(TEARDOWN, uri + "/streamid=" + int2str(streamid), id));
 }
 
 void RtspAudio::checkState(uint64_t timeout)
