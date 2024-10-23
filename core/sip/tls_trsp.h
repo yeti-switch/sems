@@ -165,7 +165,7 @@ public:
 
     int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags);
-
+    void set_connected(bool val);
     bool is_tls_connected() { return tls_connected; }
 
     void getInfo(AmArg &ret);
@@ -186,12 +186,13 @@ class tls_server_socket : public trsp_server_socket
 public:
     struct tls_statistics : public tcp_server_socket::tcp_statistics
     {
-        AtomicCounter& tlsInConnectedCount;
-        AtomicCounter& tlsOutConnectedCount;
+        AtomicCounter& countInTlsConnectedConnections;
+        AtomicCounter& countOutTlsConnectedConnections;
         tls_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~tls_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incTlsConnected(bool is_client);
+        void incTlsConnectedConnectionsCount(tcp_base_trsp* socket);
+        void decTlsConnectedConnectionsCount(tcp_base_trsp* socket);
     };
 
     tls_server_socket(unsigned short if_num, unsigned short proto_idx,

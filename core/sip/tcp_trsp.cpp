@@ -66,11 +66,16 @@ int tcp_trsp_socket::send(
     return 0;
 }
 
-int tcp_trsp_socket::on_connect(short ev)
+void tcp_trsp_socket::set_connected(bool val)
 {
-    tcp_server_socket::tcp_statistics* tcp_stats = dynamic_cast<tcp_server_socket::tcp_statistics*>(server_sock->get_statistics());
-    if(tcp_stats) tcp_stats->incClientConnected();
-    return tcp_base_trsp::on_connect(ev);
+    if(connected != val) {
+        tcp_base_trsp::set_connected(val);
+
+        if(connected) {
+            tcp_server_socket::tcp_statistics* tcp_stats = dynamic_cast<tcp_server_socket::tcp_statistics*>(server_sock->get_statistics());
+            if(tcp_stats) tcp_stats->incConnectedConnectionsCount(this);
+        }
+    }
 }
 
 tcp_socket_factory::tcp_socket_factory(tcp_base_trsp::socket_transport transport)
@@ -93,13 +98,13 @@ tcp_server_socket::tcp_server_socket(
 
 tcp_server_socket::tcp_statistics::tcp_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
   : trsp_statistics::trsp_st_base(transport, if_num, proto_idx)
-  , clientOutConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+  , countOutConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
             .addLabel("state", "connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-  , clientInConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+  , countInConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "in")
             .addLabel("state", "connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
@@ -108,20 +113,29 @@ tcp_server_socket::tcp_statistics::tcp_statistics(trsp_socket::socket_transport 
 
 void tcp_server_socket::tcp_statistics::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
-    if(!remove && !socket->is_client()) {
-        clientInConnectedCount.inc();
-    } else if(remove && socket->is_connected()) {
-        if(socket->is_client())
-            clientOutConnectedCount.dec();
-        else
-            clientInConnectedCount.dec();
-    } else {
-        trsp_st_base::changeCountConnection(remove, socket);
-    }
+    trsp_st_base::changeCountConnection(remove, socket);
+
+    if(!socket->is_connected())
+        return;
+
+    if(remove)
+        decConnectedConnectionsCount(socket);
+    else
+        incConnectedConnectionsCount(socket);
 }
 
-void tcp_server_socket::tcp_statistics::incClientConnected()
+void tcp_server_socket::tcp_statistics::incConnectedConnectionsCount(tcp_base_trsp* socket)
 {
-    clientOutConnectedCount.inc();
-    countOutConnections.dec();
+    if(socket->is_client())
+        countOutConnectedConnections.inc();
+    else
+        countInConnectedConnections.inc();
+}
+
+void tcp_server_socket::tcp_statistics::decConnectedConnectionsCount(tcp_base_trsp* socket)
+{
+    if(socket->is_client())
+        countOutConnectedConnections.dec();
+    else
+        countInConnectedConnections.dec();
 }

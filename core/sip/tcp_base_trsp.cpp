@@ -421,7 +421,7 @@ int tcp_base_trsp::check_connection()
                 return -1;
         } else {
             // connect succeeded immediatly
-            connected = true;
+            set_connected(true);
             add_read_event();
         }
     } //if(sd < 0)
@@ -493,6 +493,16 @@ void tcp_base_trsp::on_read(short ev)
         sock_mut.lock();
         close();
         //sock_mut.unlock();
+    }
+}
+
+void tcp_base_trsp::set_connected(bool val)
+{
+    if(connected != val) {
+        connected = val;
+
+        if(connected)
+            server_sock->get_statistics()->decPendingConnectionsCount(this);
     }
 }
 
@@ -613,7 +623,7 @@ int tcp_base_trsp::on_connect(short ev)
     DBG("TCP connection from %s:%u",
         get_peer_ip().c_str(),
         get_peer_port());
-    connected = true;
+    set_connected(true);
     add_read_event();
 
     return 0;
@@ -758,7 +768,7 @@ void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, cons
     tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,sd,sa,evbase);
     if(new_sock) {
         add_connection(new_sock);
-        new_sock->connected = true;
+        new_sock->set_connected(true);
         new_sock->add_read_event();
     } else {
         close(sd);
@@ -1113,13 +1123,13 @@ void trsp::on_stop()
 }
 
 trsp_statistics::trsp_st_base::trsp_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
-: countOutConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
+: countOutPendingConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
             .addLabel("state", "pending")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-, countInConnections(stat_group(Gauge, "core","connections").addAtomicCounter()
+, countInPendingConnections(stat_group(Gauge, "core","connections").addAtomicCounter()
             .addLabel("direction", "in")
             .addLabel("state", "pending")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
@@ -1135,10 +1145,25 @@ trsp_statistics::trsp_st_base::trsp_st_base(trsp_socket::socket_transport transp
 
 void trsp_statistics::trsp_st_base::changeCountConnection(bool remove, tcp_base_trsp* socket)
 {
-    if(remove) {
-        if(socket->is_client()) countOutConnections.dec();
-        else countInConnections.dec();
-    } else {
-        if(socket->is_client()) countOutConnections.inc();
-    }
+    if(socket->is_connected())
+        return;
+
+    if (remove)
+        decPendingConnectionsCount(socket);
+    else
+        incPendingConnectionsCount(socket);
+}
+
+void trsp_statistics::trsp_st_base::incPendingConnectionsCount(tcp_base_trsp* socket) {
+    if(socket->is_client())
+        countOutPendingConnections.inc();
+    else
+        countInPendingConnections.inc();
+}
+
+void trsp_statistics::trsp_st_base::decPendingConnectionsCount(tcp_base_trsp* socket) {
+    if(socket->is_client())
+        countOutPendingConnections.dec();
+    else
+        countInPendingConnections.dec();
 }
