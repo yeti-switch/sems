@@ -321,7 +321,9 @@ tls_trsp_socket::tls_trsp_socket(
     trsp_socket::socket_transport transport,
     event_base* evbase, trsp_input* input)
   : tcp_base_trsp(server_sock, server_worker, sd, sa, transport, evbase, input),
+    tls_callbacks(std::make_shared<BotanTLSCallbacksProxy>(*this)),
     tls_connected(false),
+    rand_gen(std::make_shared<Botan::System_RNG>()),
     settings(std::make_shared<tls_conf>(getTlsSetting(
         sd, server_sock->get_if(), server_sock->get_proto_idx())))
 {
