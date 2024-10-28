@@ -287,7 +287,8 @@ void IceContext::updateStunTimers(std::unordered_map<AmStunConnection *, unsigne
         } else {
             if(wait_conn) {
                 wait_conn->checkState();
-                connections[wait_conn] = wait_conn->checkStunTimer().value();
+                if(auto interval = wait_conn->checkStunTimer(); interval.has_value())
+                    connections[wait_conn] = interval.value();
             }
             if(frozen_conn)
                 frozen_conn->checkState();
