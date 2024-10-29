@@ -1,3 +1,9 @@
+sems (1.150.1) stable; urgency=low
+  * AmStunConnection: fix checkStunTimer() nullopt checking
+  * RtspAudio: fix status racing
+  * init tls_callbacks, rand_gen for wss_trsp_socket
+ -- Michael Furmur <furmur@pm.me>  Tue, 29 Oct 2024 10:03:05 +0200
+
 sems (1.150.0) stable; urgency=low
   * RtspAudio: use ssrc and streamid for streams matching
  -- Michael Furmur <furmur@pm.me>  Sat, 19 Oct 2024 08:09:51 +0300
