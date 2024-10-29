@@ -55,10 +55,10 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
                         socket->sd);
                     return 0;
                 }
-                ERROR("message is too big. drop connection. sd:%d peer %s:%d",
+                DBG("message is too big. drop connection. sd:%d peer %s:%d",
                     socket->sd, socket->get_peer_ip().data(), socket->get_peer_port());
             } else {
-                ERROR("parsing error %d. sd:%d peer %s:%d",
+                DBG("parsing error %d. sd:%d peer %s:%d",
                       err, socket->sd, socket->get_peer_ip().data(), socket->get_peer_port());
             }
 
@@ -74,7 +74,7 @@ int trsp_base_input::parse_input(tcp_base_trsp* socket)
         last_parse_input_messages_size.push_back(msg_len);
 
         if(msg_len > MAX_TCP_MSGLEN) {
-            ERROR("message is too big (%d > %d. drop connection. peer %s:%d",
+            DBG("message is too big (%d > %d. drop connection. peer %s:%d",
                 msg_len, MAX_TCP_MSGLEN,
                 socket->get_peer_ip().data(), socket->get_peer_port());
             return -1;

@@ -548,7 +548,7 @@ void AmMediaTransport::getInfo(AmArg& ret)
 
 void AmMediaTransport::dtls_alert(string alert)
 {
-    CLASS_ERROR("DTLS alert %s", alert.c_str());
+    CLASS_DBG("DTLS alert %s", alert.c_str());
 }
 
 void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
@@ -799,7 +799,7 @@ void AmMediaTransport::onPacket(unsigned char* buf, unsigned int size, sockaddr_
     if(mode == TRANSPORT_MODE_DEFAULT) {
         ctype = GetConnectionType(buf, size);
         if(ctype == AmStreamConnection::UNKNOWN_CONN) {
-            CLASS_WARN("Unknown packet type from %s:%d, ignore it",
+            CLASS_DBG("Unknown packet type from %s:%d, ignore it",
                        am_inet_ntop(&addr).c_str(),
                        am_get_port(&addr));
             return;
