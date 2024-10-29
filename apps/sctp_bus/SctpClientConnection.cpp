@@ -94,7 +94,7 @@ int SctpClientConnection::process(uint32_t events) {
 
         getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
 
-        ERROR("%s:%u (%d,%d) connection error: %s",
+        WARN("%s:%u (%d,%d) connection error: %s",
             am_inet_ntop(&addr).c_str(), am_get_port(&addr),fd,events,
             err ? strerror(err) : "Peer shutdown");
 
