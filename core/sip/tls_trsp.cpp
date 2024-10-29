@@ -273,6 +273,9 @@ int tls_input::on_input(tcp_base_trsp* trsp)
             e.what(),
             trsp->get_peer_ip().data(), trsp->get_peer_port());
         return -1;
+    } catch(ConnectionCloseException &e) {
+        DBG("ConnectionCloseException");
+        return -1;
     }
 }
 

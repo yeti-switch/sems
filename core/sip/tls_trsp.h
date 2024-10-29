@@ -30,6 +30,8 @@ using std::string;
 
 #define MAX_TLS_SESSIONS 8192
 
+struct ConnectionCloseException {};
+
 class tls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager
 {
     friend class tls_trsp_socket;

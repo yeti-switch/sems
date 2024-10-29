@@ -43,7 +43,7 @@ protected:
                   event_base* evbase, trsp_input* input);
   const char* get_transport() const override{ return "tcp"; }
 public:
-  ~tcp_trsp_socket();
+  virtual ~tcp_trsp_socket();
 
   int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags) override;
