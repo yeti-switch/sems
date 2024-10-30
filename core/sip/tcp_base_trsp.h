@@ -197,6 +197,8 @@ public:
         return connected;
     }
 
+    virtual void set_connected(bool val);
+
     void getInfo(AmArg &ret);
     unsigned long long getQueueSize();
 };
@@ -259,12 +261,14 @@ class trsp_statistics
 public:
     struct trsp_st_base
     {
-        AtomicCounter& countOutConnections;
-        AtomicCounter& countInConnections;
+        AtomicCounter& countOutPendingConnections;
+        AtomicCounter& countInPendingConnections;
         AtomicCounter& sipParseErrors;
         trsp_st_base(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         virtual ~trsp_st_base(){}
         virtual void changeCountConnection(bool remove, tcp_base_trsp* socket);
+        void incPendingConnectionsCount(tcp_base_trsp* socket);
+        void decPendingConnectionsCount(tcp_base_trsp* socket);
     };
 private:
     vector<trsp_st_base*> stats;

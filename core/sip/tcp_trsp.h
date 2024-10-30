@@ -47,7 +47,7 @@ public:
 
   int send(const sockaddr_storage* sa, const char* msg,
 	   const int msg_len, unsigned int flags) override;
-  int on_connect(short ev) override; 
+  void set_connected(bool val) override;
 };
 
 class tcp_socket_factory : public trsp_socket_factory
@@ -65,13 +65,14 @@ public:
     class tcp_statistics : public trsp_statistics::trsp_st_base
     {
     protected:
-        AtomicCounter& clientOutConnectedCount;
-        AtomicCounter& clientInConnectedCount;
+        AtomicCounter& countOutConnectedConnections;
+        AtomicCounter& countInConnectedConnections;
     public:
         tcp_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~tcp_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incClientConnected();
+        void incConnectedConnectionsCount(tcp_base_trsp* socket);
+        void decConnectedConnectionsCount(tcp_base_trsp* socket);
     };
   tcp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
 

@@ -213,12 +213,13 @@ class ws_server_socket: public trsp_server_socket
 public:
     struct ws_statistics : public tcp_server_socket::tcp_statistics
     {
-        AtomicCounter& wsInConnectedCount;
-        AtomicCounter& wsOutConnectedCount;
+        AtomicCounter& countInWsConnectedConnections;
+        AtomicCounter& countOutWsConnectedConnections;
         ws_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~ws_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incWsConnected(bool client);
+        void incWsConnectedConnectionsCount(tcp_base_trsp* socket);
+        void decWsConnectedConnectionsCount(tcp_base_trsp* socket);
     };
 
   ws_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
@@ -231,12 +232,13 @@ class wss_server_socket: public trsp_server_socket
 public:
     struct wss_statistics : public tls_server_socket::tls_statistics
     {
-        AtomicCounter& wsInConnectedCount;
-        AtomicCounter& wsOutConnectedCount;
+        AtomicCounter& countInWssConnectedConnections;
+        AtomicCounter& countOutWssConnectedConnections;
         wss_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
         ~wss_statistics(){}
         void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incWsConnected(bool client);
+        void incWssConnectedConnectionsCount(tcp_base_trsp* socket);
+        void decWssConnectedConnectionsCount(tcp_base_trsp* socket);
     };
 
   wss_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);

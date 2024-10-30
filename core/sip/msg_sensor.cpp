@@ -336,7 +336,7 @@ int ipip_msg_sensor::feed(const char* buf, int len,
 }
 
 void ipip_msg_sensor::getInfo(AmArg &ret){
-	char addr[NI_MAXHOST];
+	char addr[NI_MAXHOST] = "";
 
 	am_inet_ntop(&sensor_src_ip,addr,NI_MAXHOST);
 	ret["sensor_src_ip"] = addr;

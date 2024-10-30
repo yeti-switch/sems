@@ -545,7 +545,11 @@ int ws_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unused
 void ws_trsp_socket::on_ws_connected()
 {
     ws_server_socket::ws_statistics* ws_stats = dynamic_cast<ws_server_socket::ws_statistics*>(server_sock->get_statistics());
-    if(ws_stats) ws_stats->incWsConnected(is_client());
+    if(ws_stats) {
+        ws_stats->incWsConnectedConnectionsCount(this);
+        ws_stats->decConnectedConnectionsCount(this);
+    }
+
     DBG("************ on_ws_connect() ***********");
     DBG("new WS connection from %s:%u",
         get_peer_ip().c_str(),
@@ -632,13 +636,13 @@ wss_trsp_socket::wss_trsp_socket(trsp_server_socket* server_sock,
 
 ws_server_socket::ws_statistics::ws_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
 : tcp_server_socket::tcp_statistics(transport, if_num, proto_idx)
-, wsInConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+, countInWsConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "in")
             .addLabel("state", "ws_connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-, wsOutConnectedCount(stat_group(Gauge, "core", "connections").addAtomicCounter()
+, countOutWsConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
             .addLabel("state", "ws_connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
@@ -650,26 +654,28 @@ void ws_server_socket::ws_statistics::changeCountConnection(bool remove, tcp_bas
     ws_trsp_socket* ws_socket = dynamic_cast<ws_trsp_socket*>(socket);
     assert(ws_socket);
     if(remove && ws_socket->is_ws_connected()) {
-        if(ws_socket->is_client())
-            wsOutConnectedCount.dec();
-        else
-            wsInConnectedCount.dec();
+        decWsConnectedConnectionsCount(ws_socket);
     } else {
         tcp_server_socket::tcp_statistics::changeCountConnection(remove, socket);
     }
 }
 
-void ws_server_socket::ws_statistics::incWsConnected(bool client)
+void ws_server_socket::ws_statistics::incWsConnectedConnectionsCount(tcp_base_trsp* socket)
 {
-    if(client) {
-        wsOutConnectedCount.inc();
-        clientOutConnectedCount.dec();
-    } else {
-        wsInConnectedCount.inc();
-        clientInConnectedCount.dec();
-    }
+    if(socket->is_client())
+        countOutWsConnectedConnections.inc();
+    else
+        countInWsConnectedConnections.inc();
 }
-            
+
+void ws_server_socket::ws_statistics::decWsConnectedConnectionsCount(tcp_base_trsp* socket)
+{
+    if(socket->is_client())
+        countOutWsConnectedConnections.dec();
+    else
+        countInWsConnectedConnections.dec();
+}
+
 wss_trsp_socket::~wss_trsp_socket()
 {}
 
@@ -687,7 +693,11 @@ int wss_trsp_socket::send_data(const char* msg, const int msg_len, [[maybe_unuse
 void wss_trsp_socket::on_ws_connected()
 {
     wss_server_socket::wss_statistics* wss_stats = dynamic_cast<wss_server_socket::wss_statistics*>(server_sock->get_statistics());
-    if(wss_stats) wss_stats->incWsConnected(is_client());
+    if(wss_stats) {
+        wss_stats->incWssConnectedConnectionsCount(this);
+        wss_stats->decTlsConnectedConnectionsCount(this);
+    }
+
     DBG("************ on_wss_connect() ***********");
     DBG("new WSS connection from %s:%u",
         get_peer_ip().c_str(),
@@ -767,15 +777,15 @@ wss_server_socket::wss_server_socket(
 
 wss_server_socket::wss_statistics::wss_statistics(trsp_socket::socket_transport transport, unsigned short if_num, unsigned short proto_idx)
 : tls_server_socket::tls_statistics(transport, if_num, proto_idx)
-, wsInConnectedCount(stat_group(Gauge, "core", "ws_connected").addAtomicCounter()
+, countInWssConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "in")
-            .addLabel("state", "ws_connected")
+            .addLabel("state", "wss_connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr()))
-, wsOutConnectedCount(stat_group(Gauge, "core", "ws_connected").addAtomicCounter()
+, countOutWssConnectedConnections(stat_group(Gauge, "core", "connections").addAtomicCounter()
             .addLabel("direction", "out")
-            .addLabel("state", "ws_connected")
+            .addLabel("state", "wss_connected")
             .addLabel("interface", AmConfig.sip_ifs[if_num].name)
             .addLabel("transport", trsp_socket::socket_transport2proto_str(transport))
             .addLabel("protocol", AmConfig.sip_ifs[if_num].proto_info[proto_idx]->ipTypeToStr())){}
@@ -785,22 +795,24 @@ void wss_server_socket::wss_statistics::changeCountConnection(bool remove, tcp_b
     wss_trsp_socket* wss_socket = dynamic_cast<wss_trsp_socket*>(socket);
     assert(wss_socket);
     if(remove && wss_socket->is_ws_connected()) {
-        if(socket->is_client())
-            wsOutConnectedCount.dec();
-        else
-            wsInConnectedCount.dec();
+        decWssConnectedConnectionsCount(socket);
     } else 
         tls_server_socket::tls_statistics::changeCountConnection(remove, socket);
 }
 
-void wss_server_socket::wss_statistics::incWsConnected(bool is_client)
+void wss_server_socket::wss_statistics::incWssConnectedConnectionsCount(tcp_base_trsp* socket)
 {
-    if(is_client) {
-        wsOutConnectedCount.inc();
-        tlsOutConnectedCount.dec();
-    } else {
-        wsInConnectedCount.inc();
-        tlsInConnectedCount.dec();
-    }
+    if(socket->is_client())
+        countOutWssConnectedConnections.inc();
+    else
+        countInWssConnectedConnections.inc();
+}
+
+void wss_server_socket::wss_statistics::decWssConnectedConnectionsCount(tcp_base_trsp* socket)
+{
+    if(socket->is_client())
+        countOutWssConnectedConnections.dec();
+    else
+        countInWssConnectedConnections.dec();
 }
 
