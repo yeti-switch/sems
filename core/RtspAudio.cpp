@@ -122,7 +122,9 @@ void RtspAudio::rtsp_play(const RtspMsg &msg)
     try {
         initRtpAudio(msg.r_rtp_port);
 
-        last_sent_cseq = agent->RtspRequest(RtspMsg(PLAY, uri, id));
+        string uri_with_ssrc = uri + "/ssrc=" + int2hex(ssrc);
+
+        last_sent_cseq = agent->RtspRequest(RtspMsg(PLAY, uri_with_ssrc, id));
 
         play();
 
