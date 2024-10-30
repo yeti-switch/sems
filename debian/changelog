@@ -1,3 +1,9 @@
+sems (1.150.2) stable; urgency=low
+  * RtspAudio: add SSRC for PLAY request URI
+  * fix sigsegv on ws/wss connection closing
+  * fix sems_core_connections 'connected' tls counter
+ -- Michael Furmur <furmur@pm.me>  Wed, 30 Oct 2024 21:31:07 +0200
+
 sems (1.150.1) stable; urgency=low
   * AmStunConnection: fix checkStunTimer() nullopt checking
   * RtspAudio: fix status racing
