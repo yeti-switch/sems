@@ -84,7 +84,9 @@ ws_input::ws_input(ws_output* output_, bool server)
     ws_input_pos(0),
     ws_connected(false),
     is_server(server),
-    output(output_)
+    output(output_),
+    ctx_(nullptr),
+    connection_close(false)
 {
     Botan::SHA_1 sha;
     size_t size = Botan::base64_encode_max_output(sha.output_length());
@@ -101,7 +103,9 @@ ws_input::~ws_input()
 {
     delete ws_accept.s;
     delete ws_key.s;
-    wslay_event_context_free(ctx_);
+
+    if(ctx_)
+        wslay_event_context_free(ctx_);
 }
 
 int ws_input::send(tcp_base_trsp::msg_buf* msg)
@@ -179,7 +183,13 @@ void ws_input::post_write()
 int ws_input::on_input(tcp_base_trsp* trsp)
 {
     if(ws_connected) {
-        return wslay_event_recv(ctx_);
+        int res = wslay_event_recv(ctx_);
+
+        if(is_connection_close()) {
+            output->on_close_msg();
+        }
+
+        return res;
     } else {
         return parse_input(trsp);
     }
@@ -324,7 +334,7 @@ void ws_input::on_msg_recv(
         trsp_base_input::add_input_len(arg->msg_length);
         parse_input(dynamic_cast<tcp_base_trsp*>(output));
     } else if(arg->opcode == WSLAY_CONNECTION_CLOSE) {
-        output->on_ws_close();
+        connection_close = true;
     }
 }
 
@@ -563,6 +573,11 @@ void ws_trsp_socket::on_ws_close()
     close();
 }
 
+void ws_trsp_socket::on_close_msg()
+{
+    close();
+}
+
 void ws_trsp_socket::pre_write()
 {
     if(static_cast<ws_input*>(input)->is_connected())
@@ -709,6 +724,11 @@ void wss_trsp_socket::on_ws_connected()
 void wss_trsp_socket::on_ws_close()
 {
     close();
+}
+
+void wss_trsp_socket::on_close_msg()
+{
+    throw ConnectionCloseException();
 }
 
 void wss_trsp_socket::pre_write()

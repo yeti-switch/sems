@@ -38,6 +38,7 @@ public:
     virtual cstring get_host() = 0;
     virtual void on_ws_connected() = 0;
     virtual void on_ws_close() = 0;
+    virtual void on_close_msg() = 0;
     virtual void copy_addrs(
         sockaddr_storage* sa_local, sockaddr_storage* sa_remote,
         unsigned int &protocol_id) = 0;
@@ -59,6 +60,7 @@ protected:
     bool is_server;
     ws_output* output;
     wslay_event_context_ptr ctx_;
+    bool connection_close;
 
     static struct wslay_event_callbacks callbacks;
     static ssize_t recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len, int flags, void *user_data);
@@ -91,6 +93,9 @@ public:
 
     bool is_connected() {
         return ws_connected;
+    }
+    bool is_connection_close() {
+        return connection_close;
     }
     unsigned long long getQueueSize();
 };
@@ -138,11 +143,12 @@ class ws_trsp_socket: public ws_output, public tcp_trsp_socket
 protected:
     void on_ws_connected();
     void on_ws_close();
+    void on_close_msg();
 
     ws_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
                     const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
 public:
-    ~ws_trsp_socket();
+    virtual ~ws_trsp_socket();
 
     void pre_write();
     void post_write();
@@ -180,6 +186,7 @@ class wss_trsp_socket: public ws_output, public tls_trsp_socket
 
     void on_ws_connected();
     void on_ws_close();
+    void on_close_msg();
 public:
     ~wss_trsp_socket();
 
