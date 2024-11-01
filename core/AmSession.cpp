@@ -402,24 +402,25 @@ bool AmSession::startup() {
   return true;
 }
 
-bool AmSession::processEventsCatchExceptions(EventStats *stats) {
-  try {
-    try {	
-      processEvents(stats);
-    } 
-    catch(const AmSession::Exception& e){ throw e; }
-    catch(const string& str){
-      DBG("%s",str.c_str());
-      throw AmSession::Exception(500,"unexpected exception.");
-    } 
-    catch(...){
-      throw AmSession::Exception(500,"unexpected exception.");
-    }    
-  } catch(const AmSession::Exception& e){
-    DBG("processEventsCatchExceptions(): got exception %i %s",e.code,e.reason.c_str());
-    return onException(e.code,e.reason);
-  }
-  return true;
+bool AmSession::processEventsCatchExceptions(EventStats *stats)
+{
+    try {
+        try {
+            processEvents(stats);
+        } catch(const AmSession::Exception& e) {
+            throw e;
+        } catch(const string& str) {
+            DBG("%s", str.c_str());
+            throw AmSession::Exception(500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        } catch(...) {
+            throw AmSession::Exception(500, SIP_REPLY_SERVER_INTERNAL_ERROR);
+        }
+    } catch(const AmSession::Exception& e) {
+        DBG("processEventsCatchExceptions(): got exception %i %s", e.code,e.reason.c_str());
+        return onException(e.code,e.reason);
+    }
+
+    return true;
 }
 
 void AmSession::postEvent(AmEvent* event)
