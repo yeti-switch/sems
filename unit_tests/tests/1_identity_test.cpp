@@ -211,10 +211,6 @@ TEST(AmIdentity, ParseErrors)
 
 TEST(AmIdentity, NonArrayDest)
 {
-    //bool ret;
-    //int last_errcode;
-    //std::string last_error;
-
     AmIdentity identity;
     identity.set_x5u_url("https://curl.haxx.se/ca/cacert.pem");
     identity.set_attestation(AmIdentity::AT_C);
