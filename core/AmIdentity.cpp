@@ -73,9 +73,13 @@ static AmArgHashValidator IdentityDivOptPayloadValidator({
 });
 
 void IdentData::parse_field(AmArg &a,
-                            std::vector<std::string> &field)
+                            std::vector<std::string> &field,
+                            bool array_is_required)
 {
     if(isArgCStr(a)) {
+        if(array_is_required) {
+            throw AmArg::TypeMismatchException();
+        }
         field.push_back(a.asCStr());
     } else if(isArgArray(a)) {
         for(int i = 0; i < static_cast<int>(a.size()); i++) {
@@ -91,15 +95,15 @@ void IdentData::parse_field(AmArg &a,
     }
 }
 
-void IdentData::parse(AmArg &a)
+void IdentData::parse(AmArg &a, bool array_is_required)
 {
     tns.clear();
     if(a.hasMember(jwt_field_tn))
-        parse_field(a[jwt_field_tn], tns);
+        parse_field(a[jwt_field_tn], tns, array_is_required);
 
     uris.clear();
     if(a.hasMember(jwt_field_uri))
-         parse_field(a[jwt_field_uri], uris);
+         parse_field(a[jwt_field_uri], uris, array_is_required);
 }
 
 void IdentData::serialize_field(AmArg &a,
@@ -604,7 +608,7 @@ bool AmIdentity::parse(const std::string_view& value, bool raw)
         created = payload[jwt_payload_claim_iat].asInt();
 
         orig_data.parse(payload[jwt_payload_claim_orig]);
-        dest_data.parse(payload[jwt_payload_claim_dest]);
+        dest_data.parse(payload[jwt_payload_claim_dest], true);
 
     } catch(AmArg::TypeMismatchException& exc) {
         last_errcode = ERR_JWT_VALUE;

@@ -33,8 +33,9 @@ struct IdentData
     std::vector<std::string> tns;
 
     void parse_field(AmArg &arg,
-                     std::vector<std::string> &ident);
-    void parse(AmArg &a);
+                     std::vector<std::string> &ident,
+                     bool array_is_required);
+    void parse(AmArg &a, bool array_is_required = false);
 
     void serialize_field(AmArg &a,
                          const std::vector<std::string> &field,

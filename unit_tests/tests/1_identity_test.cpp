@@ -208,3 +208,28 @@ TEST(AmIdentity, ParseErrors)
     EXPECT_FALSE(identity.parse(identity_value));
     EXPECT_EQ(identity.get_last_error(last_error), ERR_JWT_VALUE);
 }
+
+TEST(AmIdentity, NonArrayDest)
+{
+    //bool ret;
+    //int last_errcode;
+    //std::string last_error;
+
+    AmIdentity identity;
+    identity.set_x5u_url("https://curl.haxx.se/ca/cacert.pem");
+    identity.set_attestation(AmIdentity::AT_C);
+
+    identity.get_payload()["dest"]["tn"]  = "test";
+
+    auto rng = std::make_shared<Botan::AutoSeeded_RNG>();
+    std::ifstream ifs;
+    ifs.open("./unit_tests/test.key.pem");
+
+    EXPECT_TRUE(ifs.is_open());
+
+    Botan::DataSource_Stream datasource(ifs);
+    auto key = Botan::PKCS8::load_key(datasource, std::string_view());
+
+    std::string identity_value = identity.generate(key.get());
+    EXPECT_FALSE(identity.parse(identity_value));
+}
