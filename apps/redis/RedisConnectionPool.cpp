@@ -373,7 +373,8 @@ RedisConnection* RedisConnectionPool::addConnection(const string& name, const st
 void RedisConnectionPool::reconnect()
 {
     for(auto& connection : connections)
-        connection->reconnect();
+        if(!connection->is_connected())
+            connection->connect();
 }
 
 void RedisConnectionPool::init_retry_reqs_timer(unsigned int timeout_ms)
