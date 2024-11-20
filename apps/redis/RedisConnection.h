@@ -58,7 +58,7 @@ class RedisConnection
     virtual ~RedisConnection();
     int init(int epoll_fd, const string &host, int port);
     void set_auth_data(const string& password, const string& username = "");
-    void reconnect();
+    void connect();
     int reconnect(const string &host, int port);
 
     redisAsyncContext* get_async_context() {return async_context; }

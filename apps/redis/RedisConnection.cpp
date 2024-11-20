@@ -209,7 +209,7 @@ void RedisConnection::set_auth_data(const string& password, const string& userna
     this->username = username;
 }
 
-void RedisConnection::reconnect()
+void RedisConnection::connect()
 {
     if(!connected.get()) {
         init(epoll_fd, host, port);
@@ -222,6 +222,8 @@ int RedisConnection::reconnect(const std::string& host, int port)
         this->host = host;
         this->port = port;
         return 0;
+    } else {
+        redis::redisAsyncDisconnect(async_context);
     }
 
     return -1;
