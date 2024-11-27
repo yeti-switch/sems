@@ -91,6 +91,8 @@ int CurlConnection::init_curl(struct curl_slist* hosts, CURLM *curl_multi)
     easy_setopt(CURLOPT_DEBUGFUNCTION, curl_debugfunction_callback);
 #endif
 
+    easy_setopt(CURLOPT_TCP_KEEPALIVE, 1L);
+
     for(auto it = destination.http_headers.rbegin(); it != destination.http_headers.rend(); ++it)
         headers = curl_slist_append(headers, it->c_str());
 
