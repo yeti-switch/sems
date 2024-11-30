@@ -1,3 +1,7 @@
+sems (1.151.1) stable; urgency=low
+  * http_client: enable TCP keep-alive
+ -- Michael Furmur <furmur@pm.me>  Sat, 30 Nov 2024 12:25:20 +0200
+
 sems (1.151.0) stable; urgency=low
   * redis: fix reconnect on initialization errors
   * stir/shaken: validate 'dest' claim 'tn'/'uri' data to be an array
