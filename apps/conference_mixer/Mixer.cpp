@@ -531,7 +531,7 @@ channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t chann
 
     return
         channel_ptr(new ConferenceChannel(mpmixer_ch_id, channel_ext_id, std::move(mixer)),
-            [=](ConferenceChannel *p) -> void {
+            [=, this](ConferenceChannel *p) -> void {
 
                 backlog_mut.lock(); /// fetched by reference
 

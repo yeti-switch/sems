@@ -287,6 +287,7 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/core/sems.h DESTINATION ${SEMS_EXEC_PR
 add_definitions(-D_THREAD_SAFE -D_REENTRANT)
 add_compile_options(-Wall -Werror -fPIC -g -O2)
 add_compile_options(-Wno-unknown-warning-option)
+add_compile_options(-Wno-vla-cxx-extension)
 
 add_definitions(-D_DEBUG)
 #SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")

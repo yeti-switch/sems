@@ -8,7 +8,7 @@
 
 using std::vector;
 
-#define INFINITY -1
+#define JOIN_NO_TIMEOUT -1
 #define DEFAULT_WORKERS_COUNT   10
 
 class ITask
@@ -34,9 +34,9 @@ public:
 
     virtual int execute() = 0;
     virtual void stop(){}
-    virtual void join(int ms = INFINITY)
+    virtual void join(int ms = JOIN_NO_TIMEOUT)
     {
-        if(ms == INFINITY) {
+        if(ms == JOIN_NO_TIMEOUT) {
             status_.wait_for();
         } else {
             status_.wait_for_to(ms);
