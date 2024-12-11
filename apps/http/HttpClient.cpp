@@ -785,7 +785,7 @@ void HttpClient::on_sync_context_timer()
         if(now - it->second.created_at > SYNC_CONTEXTS_TIMEOUT_INVERVAL) {
             auto &postponed_events = it->second.postponed_events;
 
-            DBG("on_sync_context_timer: remove context %s, counter: %d on timeout. requeue postponed events %ld",
+            ERROR("remove context %s on timeout, counter: %d. requeue %ld postponed events",
                 it->first.c_str(),it->second.counter,postponed_events.size());
 
             while(!postponed_events.empty()) {
