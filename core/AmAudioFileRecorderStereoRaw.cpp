@@ -9,29 +9,10 @@ using namespace RSR;
 
 AmAudioFileRecorderStereoRaw::AmAudioFileRecorderStereoRaw(const string& id)
   : AmAudioFileRecorder(RecorderStereoRaw, id),
+    fp(nullptr),
     max_sample_rate(0),
     wait_for_initial_samples(false)
-{
-    string filePath(AmConfig.rsr_path);
-    filePath += "/" + id + ".rsr";
-
-    if(std::filesystem::exists(filePath)) {
-        WARN("file: %s already exists",filePath.c_str());
-        return;
-    }
-
-    fp = fopen(filePath.c_str(),"w+");
-    if(!fp) {
-        ERROR("could not create/overwrite file: %s: %d",filePath.c_str(),errno);
-        return;
-    }
-    fseek(fp,0L,SEEK_SET);
-    chunk data;
-    data.header.type = DATA_COMMON;
-    data.header.size = sizeof(common_data);
-    memset(&data.data, 0, sizeof(common_data));
-    fwrite(&data, 1, sizeof(data_chunk) + sizeof(common_data), fp);
-}
+{}
 
 AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
 {
@@ -82,6 +63,33 @@ AmAudioFileRecorderStereoRaw::~AmAudioFileRecorderStereoRaw()
 int AmAudioFileRecorderStereoRaw::init(const string &path, const string &sync_ctx)
 {
     sync_ctx_id = sync_ctx;
+
+    string filePath(AmConfig.rsr_path + "/" + recorder_id + ".rsr");
+
+    if(std::filesystem::exists(filePath)) {
+        WARN("file: %s already exists",filePath.c_str());
+        return -1;
+    }
+
+    fp = fopen(filePath.c_str(),"w+");
+    if(nullptr==fp) {
+        ERROR("could not create/overwrite file: %s: %d",filePath.c_str(),errno);
+        return -1;
+    }
+
+    if(0!=fseek(fp,0L,SEEK_SET)) {
+        ERROR("fseek for file: %s: %d",filePath.c_str(), errno);
+        fclose(fp);
+        fp = nullptr;
+        return -1;
+    }
+
+    chunk data;
+    data.header.type = DATA_COMMON;
+    data.header.size = sizeof(common_data);
+    memset(&data.data, 0, sizeof(common_data));
+    fwrite(&data, 1, sizeof(data_chunk) + sizeof(common_data), fp);
+
     return add_file(path);
 }
 
