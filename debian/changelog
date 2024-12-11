@@ -1,3 +1,7 @@
+sems (1.151.2) stable; urgency=low
+  * improve raw stereo recorder and http sync context logging
+ -- Michael Furmur <furmur@pm.me>  Wed, 11 Dec 2024 18:58:11 +0200
+
 sems (1.151.1) stable; urgency=low
   * http_client: enable TCP keep-alive
  -- Michael Furmur <furmur@pm.me>  Sat, 30 Nov 2024 12:25:20 +0200
