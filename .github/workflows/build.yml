@@ -22,16 +22,18 @@ jobs:
           echo "deb [arch=amd64] http://pkg.yeti-switch.org/debian/bookworm 1.13 main" > /etc/apt/sources.list.d/yeti.list &&
           curl https://pkg.yeti-switch.org/key.gpg | gpg --dearmor > /etc/apt/trusted.gpg.d/pkg.yeti-switch.org.gpg
       - run: apt update
+
       - name: clone repo
         uses: actions/checkout@v3
         with:
           submodules: true
+
       - name: install build-deps
         run: apt update && apt -y --no-install-recommends build-dep .
       - name: build
         run: debuild -us -uc -b -j$(nproc)
-      - name: upload to pkg.yeti-switch.org. bookworm 1.13 main
-        run: ci/deploy.sh bookworm 1.13 main ../*.deb
-        env:
-          PKG_API_BASE: ${{secrets.PKG_API_BASE}}
+
+      - uses: furmur/upload-debian-pkg-action@v1
+        with:
+          pkgs: '../*.deb'
         if: startsWith(github.ref, 'refs/tags/v')
