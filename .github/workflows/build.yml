@@ -37,4 +37,4 @@ jobs:
         secrets: inherit
         with:
           pkgs: '../*.deb'
-       if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v')
