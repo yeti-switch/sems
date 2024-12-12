@@ -38,6 +38,7 @@ jobs:
           pkgs: '../*.deb'
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          aws_bucket: ${{ secrets.DEB_AWS_BUCKET }}
         env:
           PKG_API_BASE: ${{secrets.PKG_API_BASE}}
           AWS_ACCESS_KEY_ID: ${{secrets.DEB_AWS_ACCESS_KEY_ID}}
