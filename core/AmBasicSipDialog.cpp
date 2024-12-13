@@ -811,6 +811,11 @@ int AmBasicSipDialog::reply(const AmSipRequest& req,
     reply.contact = getContactHdr();
   }
 
+  if(code == 200 && (req.method == SIP_METH_INVITE || req.method == SIP_METH_UPDATE)) {
+    addOptionTags(reply.hdrs, SIP_HDR_SUPPORTED, supported_tags);
+    addOptionTags(reply.hdrs, SIP_HDR_ALLOW, allowed_methods);
+  }
+
   int ret = SipCtrlInterface::send(reply,local_tag,logger,sensor);
   if(ret){
     ERROR("Could not send reply: code=%i; reason='%s'; method=%s;"
@@ -889,6 +894,11 @@ int AmBasicSipDialog::sendRequest(const string& method,
   req.callid = callid;
 
   req.hdrs = hdrs;
+
+  if(req.method == SIP_METH_INVITE || req.method == SIP_METH_UPDATE) {
+    addOptionTags(req.hdrs, SIP_HDR_SUPPORTED, supported_tags);
+    addOptionTags(req.hdrs, SIP_HDR_ALLOW, allowed_methods);
+  }
 
   req.max_forwards = max_forwards;
 

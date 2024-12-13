@@ -180,11 +180,11 @@ void Am100rel::onRequestOut(AmSipRequest& req)
         return;
     case REL100_SUPPORTED:
         if (! key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL))
-            req.hdrs += SIP_HDR_COLSP(SIP_HDR_SUPPORTED) SIP_EXT_100REL CRLF;
+            addOptionTag(req.hdrs, SIP_HDR_SUPPORTED, SIP_EXT_100REL);
         break;
     case REL100_REQUIRE:
         if (! key_in_list(getHeader(req.hdrs, SIP_HDR_REQUIRE), SIP_EXT_100REL))
-            req.hdrs += SIP_HDR_COLSP(SIP_HDR_REQUIRE) SIP_EXT_100REL CRLF;
+            addOptionTag(req.hdrs, SIP_HDR_REQUIRE, SIP_EXT_100REL);
         break;
     default:
         ERROR("BUG: unexpected reliability switch value of '%d'. callid: %s",
@@ -205,12 +205,12 @@ void Am100rel::onReplyOut(AmSipReply& reply)
             switch(uas_state) {
             case REL100_SUPPORTED:
                 if (! key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE),SIP_EXT_100REL))
-                    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_SUPPORTED) SIP_EXT_100REL CRLF;
+                    addOptionTag(reply.hdrs, SIP_HDR_SUPPORTED, SIP_EXT_100REL);
                 break;
             case REL100_REQUIRE:
                 // add Require HF
                 if (! key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE),SIP_EXT_100REL))
-                    reply.hdrs += SIP_HDR_COLSP(SIP_HDR_REQUIRE) SIP_EXT_100REL CRLF;
+                    addOptionTag(reply.hdrs, SIP_HDR_REQUIRE, SIP_EXT_100REL);
                 // add RSeq HF
                 if (getHeader(reply.hdrs, SIP_HDR_RSEQ).length())
                     // already added (by app?)

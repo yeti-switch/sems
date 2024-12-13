@@ -145,6 +145,9 @@ bool removeHeader(string& hdrs, const string& hdr_name);
 /** add an option tag @param tag to list @param hdr_name */
 void addOptionTag(string& hdrs, const string& hdr_name, const string& tag);
 
+/** add an option tags @param tags to list @param hdr_name */
+void addOptionTags(string& hdrs, const string& hdr_name, const vector<string>& tags);
+
 /** remove an option tag @param tag from list @param hdr_name */
 void removeOptionTag(string& hdrs, const string& hdr_name, const string& tag);
 

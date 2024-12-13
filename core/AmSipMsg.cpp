@@ -167,6 +167,11 @@ bool removeHeader(string& hdrs, const string& hdr_name) {
   return found;
 }
 
+void addOptionTags(string& hdrs, const string& hdr_name, const vector<string>& tags){
+  for(auto it = tags.rbegin(); it != tags.rend(); ++it)
+    addOptionTag(hdrs, hdr_name, *it);
+}
+
 void addOptionTag(string& hdrs, const string& hdr_name, const string& tag) {
   // see if option tag already exists
   string options = getHeader(hdrs, hdr_name);

@@ -116,6 +116,9 @@ protected:
   string remote_ua; // User-Agent/Server
   uint32_t max_forwards; //Max-Forwards
 
+  vector<string> supported_tags;
+  vector<string> allowed_methods;
+
   string route;
   bool force_cancel_route_set;
 
@@ -334,6 +337,12 @@ public:
   bool getNextHopFixed() const { return next_hop_fixed; }
   virtual void setNextHopFixed(bool nh_fixed)
   { next_hop_fixed = nh_fixed; }
+
+  void addSupportedTag(const string &tag) { supported_tags.emplace_back(tag); }
+  void setSupportedTags(const vector<string> &tags) { supported_tags = tags; }
+
+  void addAllowedMethod(const string &method) { allowed_methods.emplace_back(method); }
+  void setAllowedMethods(const vector<string> &methods) { allowed_methods = methods; }
 
   /**
    * Compute the Contact-HF for the next request
