@@ -35,12 +35,13 @@ int main(int argc, char **argv)
 
     if(argc > 2) {
         if(stat(out_path,&s)==0) {
+            fclose(in);
             err("output file '%s' already exists\n",out_path);
         }
         out = fopen(out_path,"w");
         if(!out) {
+            fclose(in);
             err("can't open output file '%s' for writing\n",out_path);
-            return EXIT_FAILURE;
         }
     }
 
