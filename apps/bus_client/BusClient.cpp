@@ -619,7 +619,7 @@ void BusClient::fillRouteInfo(AmArg &route, const route_methods_container::value
     groups.assertStruct();
     for(auto& conn_group : route_data.second) {
         AmArg &group = groups[int2str(conn_group.first)];
-        for(auto& c: conn_group.second) {
+        for(const auto& c: conn_group.second) {
             group.push(AmArg());
             AmArg &connection = group.back();
             const route_conn_params_t &cparam = c.second;
