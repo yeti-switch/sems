@@ -98,13 +98,13 @@ bool BusClient::init_connections()
 
 bool BusClient::init_routing()
 {
-    for(auto& method : route_methods) {
-        for(auto& conn_group : method.second) {
+    for(auto& route_method : route_methods) {
+        for(auto& conn_group : route_method.second) {
             for(auto& c: conn_group.second) {
                 auto bus_it = bus_nodes_index.find(c.second.name_conn);
                 if(bus_it == bus_nodes_index.end()) {
-                    ERROR("unknown connection '%s' as route for method '%s'",
-                          c.second.name_conn.c_str(), method.first.name.c_str());
+                    ERROR("unknown connection '%s' as route for route_methods '%s'",
+                          c.second.name_conn.c_str(), route_method.first.name.c_str());
                     return false;
                 }
                 c.second.conn = conn[bus_it->second];
@@ -257,10 +257,9 @@ void BusClient::sendMsg(BusMsg *msg)
         return;
     }
 
-    auto &method = method_it->second;
     bool broadcast = method_it->first.broadcast;
 
-    for(auto const &failover_group: method) {
+    for(auto const &failover_group: method_it->second) {
         const auto &balancing_group = failover_group.second;
 
         DBG("try group with priority %d, size: %zd for method %s from session %s",
@@ -527,11 +526,11 @@ int BusClient::configure(const string& config_)
     
     for(unsigned int i = 0; i < cfg_size(routing, SECTION_METHOD_NAME); i++) {
         route_method_t route_method;
-        cfg_t* method = cfg_getnsec(routing, SECTION_METHOD_NAME, i);
+        cfg_t* method_cfg = cfg_getnsec(routing, SECTION_METHOD_NAME, i);
         map<int, bool> zero_weigth;
-        bool broadcast = cfg_getbool(method, PARAM_BROADCAST_NAME);
-        for(unsigned int i = 0; i < cfg_size(method, SECTION_BUS_NODE_NAME); i++) {
-            cfg_t* bus_node = cfg_getnsec(method, SECTION_BUS_NODE_NAME, i);
+        bool broadcast = cfg_getbool(method_cfg, PARAM_BROADCAST_NAME);
+        for(unsigned int i = 0; i < cfg_size(method_cfg, SECTION_BUS_NODE_NAME); i++) {
+            cfg_t* bus_node = cfg_getnsec(method_cfg, SECTION_BUS_NODE_NAME, i);
             route_conn_params_t param;
             param.name_conn = bus_node->title;
             param.priority = cfg_getint(bus_node, PARAM_PRIORITY_NAME);
@@ -553,11 +552,11 @@ int BusClient::configure(const string& config_)
             route.second = balance;
         }
         if(route_method.empty()) {
-            ERROR("absent connections in method %s section\n", method->title);
+            ERROR("absent connections in method %s section\n", method_cfg->title);
             cfg_free(cfg);
             return -1;
         }
-        route_methods.emplace_back(route_method_param_t{.name = method->title, .broadcast = broadcast}, route_method);
+        route_methods.emplace_back(route_method_param_t{.name = method_cfg->title, .broadcast = broadcast}, route_method);
     }
 
     for(unsigned int i = 0; i < cfg_size(cfg, SECTION_DYN_QUEUE_NAME); i++) {
@@ -636,10 +635,10 @@ void BusClient::fillRouteInfo(AmArg &route, const route_methods_container::value
 void BusClient::showRoutes(const AmArg&, AmArg& ret)
 {
     ret.assertArray();
-    for(auto& method : route_methods) {
+    for(auto& route_method : route_methods) {
         ret.push(AmArg());
         AmArg &route = ret.back();
-        fillRouteInfo(route, method);
+        fillRouteInfo(route, route_method);
     }
 }
 
