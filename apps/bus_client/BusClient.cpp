@@ -515,26 +515,26 @@ int BusClient::configure(const string& config_)
         return -1;
     }
     
-    cfg_t* routing;
+    cfg_t* routing_cfg;
     if(cfg_size(cfg, SECTION_ROUTING_NAME)) {
-        routing = cfg_getsec(cfg, SECTION_ROUTING_NAME);
+        routing_cfg = cfg_getsec(cfg, SECTION_ROUTING_NAME);
     } else {
         ERROR("absent routing section\n");
         cfg_free(cfg);
         return -1;
     }
     
-    for(unsigned int i = 0; i < cfg_size(routing, SECTION_METHOD_NAME); i++) {
+    for(unsigned int i = 0; i < cfg_size(routing_cfg, SECTION_METHOD_NAME); i++) {
         route_method_t route_method;
-        cfg_t* method_cfg = cfg_getnsec(routing, SECTION_METHOD_NAME, i);
+        cfg_t* method_cfg = cfg_getnsec(routing_cfg, SECTION_METHOD_NAME, i);
         map<int, bool> zero_weigth;
         bool broadcast = cfg_getbool(method_cfg, PARAM_BROADCAST_NAME);
-        for(unsigned int i = 0; i < cfg_size(method_cfg, SECTION_BUS_NODE_NAME); i++) {
-            cfg_t* bus_node = cfg_getnsec(method_cfg, SECTION_BUS_NODE_NAME, i);
+        for(unsigned int k = 0; k < cfg_size(method_cfg, SECTION_BUS_NODE_NAME); k++) {
+            cfg_t* bus_node_cfg = cfg_getnsec(method_cfg, SECTION_BUS_NODE_NAME, k);
             route_conn_params_t param;
-            param.name_conn = bus_node->title;
-            param.priority = cfg_getint(bus_node, PARAM_PRIORITY_NAME);
-            param.weight = cfg_getint(bus_node, PARAM_WEIGHT_NAME);
+            param.name_conn = bus_node_cfg->title;
+            param.priority = cfg_getint(bus_node_cfg, PARAM_PRIORITY_NAME);
+            param.weight = cfg_getint(bus_node_cfg, PARAM_WEIGHT_NAME);
             zero_weigth[param.priority] = true;
             if(param.weight) zero_weigth[param.priority] = false;
             route_method[param.priority].emplace(param.weight,param);
