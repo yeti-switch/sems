@@ -167,7 +167,7 @@ class BusClient
     void sendMsg(BusMsg *msg);
     void process(AmEvent* ev);
 
-    BusClient(const string& name);
+    explicit BusClient(const string& name);
     static BusClient *instance();
 
     int onLoad();
