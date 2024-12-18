@@ -40,10 +40,13 @@ BusClient::BusClient(const string& name)
       AmConfigFactory(name),
       AmEventFdQueue(this),
       timer_val(0),
+      query_timer_val(0),
       stopped(false),
+      config {},
       epoll_fd(-1),
       tostop(false),
-      active_connections(0)
+      active_connections(0),
+      conn {nullptr}
 {
     _instance = this;
 }
