@@ -266,13 +266,13 @@ void BusClient::sendMsg(BusMsg *msg)
             method_it->first.name.c_str(),
             msg->local_tag.c_str());
         if(!broadcast) {
+            list<pair<unsigned int, route_methods_balancing_group_t::const_iterator> > weights_list;
+
             if(1==balancing_group.size()) {
                 //skip balancing for group with 1 connection only
                 route_data = &balancing_group.begin()->second;
             } else{
                 //skip balancing for method with broadcast option
-                list<pair<unsigned int, route_methods_balancing_group_t::const_iterator> > weights_list;
-
                 //prepare list with running sum
                 w_sum = 0;
                 for(auto c_it = balancing_group.cbegin();
