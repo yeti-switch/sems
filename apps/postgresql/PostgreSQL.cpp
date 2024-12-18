@@ -567,18 +567,14 @@ void PostgreSQL::onSimpleExecute(const PGExecute& e)
         query = chain;
     }
 
-    if(!e.initial) {
-        Transaction* trans = 0;
-        if(!e.tdata.use_transaction)
-            trans = new NonTransaction(worker);
-        else
-            trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
+    Transaction* trans = 0;
+    if(!e.tdata.use_transaction)
+        trans = new NonTransaction(worker);
+    else
+        trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
 
-        trans->exec(query);
-        worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
-    } else {
-        worker->runInitial(query);
-    }
+    trans->exec(query);
+    worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
 }
 
 void PostgreSQL::onParamExecute(const PGParamExecute& e)
@@ -600,18 +596,14 @@ void PostgreSQL::onParamExecute(const PGParamExecute& e)
             query = chain;
         }
 
-        if(!e.initial) {
-            Transaction* trans = 0;
-            if(!e.tdata.use_transaction)
-                trans = new NonTransaction(worker);
-            else
-                trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
+        Transaction* trans = 0;
+        if(!e.tdata.use_transaction)
+            trans = new NonTransaction(worker);
+        else
+            trans = createDbTransaction(worker, e.tdata.il, e.tdata.wp);
 
-            trans->exec(query);
-            worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
-        } else {
-            worker->runInitial(query);
-        }
+        trans->exec(query);
+        worker->runTransaction(trans, e.qdata.sender_id, e.qdata.token);
     }
 }
 

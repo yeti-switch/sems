@@ -2,8 +2,12 @@
 
 #include "AmEvent.h"
 
+#include <variant>
 #include <string>
+#include <list>
+
 using std::string;
+
 
 #define POSTGRESQL_QUEUE       "postgresql"
 #define PG_DEFAULT_POOL_SIZE      6
@@ -113,64 +117,6 @@ public:
     }
 };
 
-class PGWorkerConfig
-  : public PGEvent
-{
-  public:
-    string worker_name;
-    uint32_t batch_size;
-    uint32_t batch_timeout;
-    uint32_t max_queue_length;
-    bool failover_to_slave;
-    bool retransmit_enable;
-    uint32_t trans_wait_time;
-    uint32_t retransmit_interval;
-    uint32_t reconnect_interval;
-    bool use_pipeline;
-    uint32_t connection_lifetime;
-    vector<PGPrepareData> prepeared;
-    vector<string> search_pathes;
-    vector<string> reconnect_errors;
-
-    PGWorkerConfig(
-        const string& name,
-       bool failover_to_slave,
-       bool retransmit_enable,
-       bool use_pipeline,
-       uint32_t trans_wait_time = PG_DEFAULT_WAIT_TIME,
-       uint32_t retransmit_interval = PG_DEFAULT_RET_INTERVAL,
-       uint32_t reconnect_interval = PG_DEFAULT_REC_INTERVAL,
-       uint32_t batch_size = PG_DEFAULT_BATCH_SIZE,
-       uint32_t batch_timeout = PG_DEFAULT_BATCH_TIMEOUT,
-       uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN,
-       uint32_t conn_lifetime = PG_DEFAULT_CONN_LIFETIME)
-      : PGEvent(WorkerConfig),
-        worker_name(name),
-        batch_size(batch_size),
-        batch_timeout(batch_timeout),
-        max_queue_length(max_queue_length),
-        failover_to_slave(failover_to_slave),
-        retransmit_enable(retransmit_enable),
-        trans_wait_time(trans_wait_time),
-        retransmit_interval(retransmit_interval),
-        reconnect_interval(reconnect_interval),
-        use_pipeline(use_pipeline),
-        connection_lifetime(conn_lifetime)
-    {}
-
-    PGPrepareData& addPrepared(const string& stmt_, const string& query_) {
-        return prepeared.emplace_back(stmt_, query_);
-    }
-
-    void addSearchPath(const string& search_path) {
-        search_pathes.push_back(search_path);
-    }
-
-    void addReconnectError(const string& error) {
-        reconnect_errors.push_back(error);
-    }
-};
-
 class PGSetSearchPath : public PGEvent
 {
 public:
@@ -273,16 +219,13 @@ class PGExecute : public PGEvent
 public:
     PGQueryData qdata;
     PGTransactionData tdata;
-    bool initial;
 
     PGExecute(
         const PGQueryData& qdata_,
-        const PGTransactionData& tdata_,
-        bool initial = false)
+        const PGTransactionData& tdata_)
       : PGEvent(SimpleExecute),
         qdata(qdata_),
-        tdata(tdata_),
-        initial(initial)
+        tdata(tdata_)
     {}
 };
 
@@ -292,18 +235,15 @@ public:
     PGQueryData qdata;
     PGTransactionData tdata;
     bool prepared;
-    bool initial;
 
     PGParamExecute(
         const PGQueryData& qdata_,
         const PGTransactionData& tdata_,
-        bool prepared_,
-        bool initial = false)
+        bool prepared_)
      : PGEvent(ParamExecute),
        qdata(qdata_),
        tdata(tdata_),
-       prepared(prepared_),
-       initial(initial)
+       prepared(prepared_)
     {}
 
     template<typename T>
@@ -311,6 +251,70 @@ public:
     {
         assert(!qdata.info.empty());
         return qdata.info[0].addParam(param);
+    }
+};
+
+class PGWorkerConfig
+  : public PGEvent
+{
+  public:
+    string worker_name;
+    uint32_t batch_size;
+    uint32_t batch_timeout;
+    uint32_t max_queue_length;
+    bool failover_to_slave;
+    bool retransmit_enable;
+    uint32_t trans_wait_time;
+    uint32_t retransmit_interval;
+    uint32_t reconnect_interval;
+    bool use_pipeline;
+    uint32_t connection_lifetime;
+    vector<PGPrepareData> prepared;
+    vector<string> search_pathes;
+    vector<string> reconnect_errors;
+    std::list<std::variant<PGExecute, PGParamExecute>> initial_queries;
+
+    PGWorkerConfig(
+        const string& name,
+       bool failover_to_slave,
+       bool retransmit_enable,
+       bool use_pipeline,
+       uint32_t trans_wait_time = PG_DEFAULT_WAIT_TIME,
+       uint32_t retransmit_interval = PG_DEFAULT_RET_INTERVAL,
+       uint32_t reconnect_interval = PG_DEFAULT_REC_INTERVAL,
+       uint32_t batch_size = PG_DEFAULT_BATCH_SIZE,
+       uint32_t batch_timeout = PG_DEFAULT_BATCH_TIMEOUT,
+       uint32_t max_queue_length = PG_DEFAULT_MAX_Q_LEN,
+       uint32_t conn_lifetime = PG_DEFAULT_CONN_LIFETIME)
+      : PGEvent(WorkerConfig),
+        worker_name(name),
+        batch_size(batch_size),
+        batch_timeout(batch_timeout),
+        max_queue_length(max_queue_length),
+        failover_to_slave(failover_to_slave),
+        retransmit_enable(retransmit_enable),
+        trans_wait_time(trans_wait_time),
+        retransmit_interval(retransmit_interval),
+        reconnect_interval(reconnect_interval),
+        use_pipeline(use_pipeline),
+        connection_lifetime(conn_lifetime)
+    {}
+
+    PGPrepareData& addPrepared(const string& stmt_, const string& query_) {
+        return prepared.emplace_back(stmt_, query_);
+    }
+
+    void addSearchPath(const string& search_path) {
+        search_pathes.push_back(search_path);
+    }
+
+    void addReconnectError(const string& error) {
+        reconnect_errors.push_back(error);
+    }
+
+    template<typename T>
+    void addInitialQuery(T &&event) {
+        initial_queries.emplace_back(event);
     }
 };
 

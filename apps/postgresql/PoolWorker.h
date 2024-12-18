@@ -117,7 +117,6 @@ class PoolWorker
     void createPool(PGWorkerPoolCreate::PoolType type, const PGPool& pool);
 
     void runPrepared(const PGPrepareData& prepared);
-    void runInitial(IQuery *query);
     void setSearchPath(const vector<string>& search_path);
     void setReconnectErrors(const vector<string>& errors);
 

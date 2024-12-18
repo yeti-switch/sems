@@ -14,6 +14,8 @@
 
 #include "query/QueryChain.h"
 
+#include <variant>
+
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\
     if(!sender_id.empty())\
@@ -624,19 +626,6 @@ void PoolWorker::runPrepared(const PGPrepareData& prepared)
         slave->runTransactionForPool(trans.get());
 }
 
-void PoolWorker::runInitial(IQuery *query)
-{
-    init_queries.emplace_back(query->clone());
-
-    NonTransaction tr(this);
-    tr.exec(query);
-
-    if(master)
-        master->runTransactionForPool(&tr);
-    if(slave)
-        slave->runTransactionForPool(&tr);
-}
-
 void PoolWorker::setSearchPath(const vector<string>& search_path)
 {
     search_pathes = search_path;
@@ -679,10 +668,71 @@ void PoolWorker::configure(const PGWorkerConfig& e)
     max_queue_length = e.max_queue_length;
     conn_lifetime = e.connection_lifetime;
 
-    setSearchPath(e.search_pathes);
-    setReconnectErrors(e.reconnect_errors);
-    for(auto& prepared : e.prepeared)
-        runPrepared(prepared);
+    search_pathes = e.search_pathes;
+    for(const auto &p: e.prepared) {
+        auto it = prepareds.emplace(p.stmt, p);
+        auto &new_p = it.first->second;
+        if(new_p.sql_types.size()) {
+            new_p.oids.clear();
+            for(const auto &sql_type: new_p.sql_types) {
+                auto oid = pg_typname2oid(sql_type);
+                if(oid == INVALIDOID) {
+                    ERROR("unsupported typname '%s' for prepared statement: %s. skip",
+                        sql_type.data(), new_p.stmt.data());
+                    new_p.oids.clear();
+                    break;
+                }
+                new_p.oids.emplace_back(oid);
+            }
+        }
+    }
+    //see: PostgreSQL::onSimpleExecute, PostgreSQL::onParamExecute
+    for(const auto &initial_query : e.initial_queries) {
+        IQuery* query;
+        if(0==initial_query.index()) {
+            auto &e = std::get<PGExecute>(initial_query);
+            if(e.qdata.info.empty()) {
+                ERROR("skip empty PGExecute initial query");
+                continue;
+            }
+            query = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, false);
+            if(e.qdata.info.size() > 1) {
+                QueryChain* chain = new QueryChain(query);
+                for(size_t i = 1;i < e.qdata.info.size(); i++) {
+                    chain->addQuery(new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, false));
+                }
+                query = chain;
+            }
+        } else {
+            auto &e = std::get<PGParamExecute>(initial_query);
+            if(e.qdata.info.empty()) {
+                ERROR("skip empty PGParamExecute initial query");
+                continue;
+            }
+            QueryParams* qparams = new QueryParams(e.qdata.info[0].query, e.qdata.info[0].single, e.prepared);
+            qparams->addParams(getParams(e.qdata.info[0].params));
+            query = qparams;
+            if(e.qdata.info.size() > 1) {
+                QueryChain* chain = new QueryChain(query);
+                for(size_t i = 1;i < e.qdata.info.size(); i++) {
+                    qparams = new QueryParams(e.qdata.info[i].query, e.qdata.info[i].single, e.prepared);
+                    qparams->addParams(getParams(e.qdata.info[i].params));
+                    chain->addQuery(qparams);
+                }
+                query = chain;
+            }
+        }
+
+        init_queries.emplace_back(query);
+    }
+
+    if(!prepareds.empty() || !search_pathes.empty() || !init_queries.empty()) {
+        auto trans = new ConfigTransaction(prepareds, search_pathes, init_queries, this);
+        if(master)
+            master->runTransactionForPool(trans);
+        if(slave)
+            slave->runTransactionForPool(trans);
+    }
 
     if(master) master->usePipeline(use_pipeline);
     if(slave) slave->usePipeline(use_pipeline);
