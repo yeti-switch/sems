@@ -59,9 +59,18 @@
 #define SAFE_READ(buf,s,fp,sr) \
     sr = fread(buf,s,1,fp);\
     if((sr != 1) || ferror(fp)) { \
-      ERROR("fread: %s (sr=%d)", strerror(errno), sr);	\
-    return -1;					\
+      ERROR("fread: %s (sr=%d)", strerror(errno), sr); \
+      return -1; \
     }
+
+#define SAFE_READ_AND_FREE_BUF(buf,s,fp,sr) \
+    sr = fread(buf,s,1,fp);\
+    if((sr != 1) || ferror(fp)) { \
+      ERROR("fread: %s (sr=%d)", strerror(errno), sr); \
+      free(buf); \
+      return -1; \
+    }\
+    free(buf);
 \
 
 /** \brief The file header of RIFF-WAVE files (*.wav). 
@@ -99,8 +108,7 @@ int wav_dummyread(FILE *fp, unsigned int size)
       return -1;
   }
 
-  SAFE_READ(dummybuf,size,fp,s);
-  free(dummybuf);
+  SAFE_READ_AND_FREE_BUF(dummybuf,size,fp,s);
   return 0;
 } 
 
