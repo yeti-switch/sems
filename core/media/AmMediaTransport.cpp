@@ -18,14 +18,14 @@
 #define ZRTP_MAGIC_COOKIE   0x5a525450
 
 
-AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int type)
+AmMediaTransport::AmMediaTransport(AmRtpStream* _stream, int _if, int _proto_id, int _type)
   : state(nullptr),
     conn_factory(this),
     mode(TRANSPORT_MODE_DEFAULT),
     stream(_stream),
     logger(nullptr),
     sensor(nullptr),
-    type(type),
+    type(_type),
     l_sd(0),
     l_sd_ctx(-1),
     l_port(0),

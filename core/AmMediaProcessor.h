@@ -241,9 +241,9 @@ class AmMediaProcessor
         std::set<AmMediaSession *> members;
         unsigned int thread_id;
 
-        callgroup_t(unsigned int thread_id, AmMediaSession* s)
+        callgroup_t(unsigned int _thread_id, AmMediaSession* s)
           : members({s}),
-            thread_id(thread_id)
+            thread_id(_thread_id)
         {}
     };
     std::unordered_map<string, callgroup_t> callgroups;
