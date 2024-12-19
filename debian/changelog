@@ -1,3 +1,7 @@
+sems (1.152.0) stable; urgency=low
+  * pg: support initial queries for PGWorkerConfig
+ -- Michael Furmur <furmur@pm.me>  Thu, 19 Dec 2024 20:33:51 +0200
+
 sems (1.151.2) stable; urgency=low
   * improve raw stereo recorder and http sync context logging
  -- Michael Furmur <furmur@pm.me>  Wed, 11 Dec 2024 18:58:11 +0200
