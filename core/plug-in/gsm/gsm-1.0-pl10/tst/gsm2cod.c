@@ -26,7 +26,7 @@ usage P0()
 
 void process P2((f, filename), FILE * f, char * filename)
 {
-	gsm_frame	buf;
+	gsm_frame	buf{};
 	gsm_signal	source[76];
 
 	int		cc;
