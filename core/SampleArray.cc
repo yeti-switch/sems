@@ -34,13 +34,13 @@
 // inline bool cmp_ts(unsigned int t1, unsigned int t2)
 // {
 //     // t1 < t2
-//     return (t1 - t2 > (unsigned int)(1<<31));
+//     return (t1 - t2 > (1U<<31));
 // }
 
 inline bool ts_less::operator()(const unsigned int& l, 
 				const unsigned int& r) const
 {
-  return (l - r > (unsigned int)(1<<31));
+  return (l - r > (1U<<31));
 }
 
 inline bool sys_ts_less::operator()(const unsigned long long& l, 

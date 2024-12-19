@@ -18,7 +18,7 @@ IPTree::Node *IPTree::get_node_ipv4(const sockaddr_storage &addr, unsigned int m
     }
 
     auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
-    unsigned int bit_mask = 1 << 31;
+    unsigned int bit_mask = 1U << 31;
     while(mask_len--) {
         auto &child = (addr_bytes & bit_mask) ? node->one : node->zero;
         node = child.get();
@@ -97,7 +97,7 @@ void IPTree::match(const sockaddr_storage &addr, MatchResult &ret) const
     if(addr.ss_family==AF_INET) {
         auto *node = &ipv4_root;
         auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
-        unsigned int bit_mask = 1 << 31;
+        unsigned int bit_mask = 1U << 31;
         do {
             for(const auto &idx : node->indexes)
                 ret.push_back(idx);
