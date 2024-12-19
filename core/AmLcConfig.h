@@ -122,6 +122,8 @@ struct ConfigContainer
     bool enable_rtsp;
     std::string options_transcoder_out_stats_hdr;
     std::string options_transcoder_in_stats_hdr;
+    std::vector<std::string> options_supported_hdr_value;
+    std::vector<std::string> options_allow_hdr_value;
     std::string transcoder_out_stats_hdr;
     std::string transcoder_in_stats_hdr;
     bool log_sessions;

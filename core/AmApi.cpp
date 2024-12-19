@@ -116,6 +116,14 @@ void AmSessionFactory::replyOptions(const AmSipRequest& req) {
       hdrs += CRLF;
     }
 
+    if (!AmConfig.options_supported_hdr_value.empty()) {
+      addOptionTags(hdrs, SIP_HDR_SUPPORTED, AmConfig.options_supported_hdr_value);
+    }
+
+    if (!AmConfig.options_allow_hdr_value.empty()) {
+      addOptionTags(hdrs, SIP_HDR_ALLOW, AmConfig.options_allow_hdr_value);
+    }
+
     // Basic OPTIONS support
     if (AmConfig.options_session_limit &&
 	(AmSession::getSessionNum() >= AmConfig.options_session_limit)) {
