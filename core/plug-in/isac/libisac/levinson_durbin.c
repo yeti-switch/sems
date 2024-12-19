@@ -156,8 +156,7 @@ WebRtc_Word16 WebRtcSpl_LevinsonDurbin(WebRtc_Word32 *R, WebRtc_Word16 *A, WebRt
 
         // Put K on hi and low format
         K_hi = (WebRtc_Word16)WEBRTC_SPL_RSHIFT_W32(temp3W32, 16);
-        K_low = (WebRtc_Word16)WEBRTC_SPL_RSHIFT_W32((temp3W32
-                - WEBRTC_SPL_LSHIFT_W32((WebRtc_Word32)K_hi, 16)), 1);
+        K_low = (WebRtc_Word16)WEBRTC_SPL_RSHIFT_W32((temp3W32 - WEBRTC_SPL_LSHIFT_W32(K_hi, 16)), 1);
 
         // Store Reflection coefficient in Q15
         K[i - 1] = K_hi;
