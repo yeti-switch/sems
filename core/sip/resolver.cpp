@@ -206,7 +206,7 @@ dns_base_entry* dns_ip_entry::get_rr(dns_record* rr, u_char*, u_char*)
 {
     //TODO: check record size
 
-    ip_entry* new_ip = new ip_entry();
+    ip_entry* new_ip = new ip_entry{};
     if(rr->type == ns_t_a) {
         DBG3("A: TTL=%i %s %i.%i.%i.%i",
             ns_rr_ttl(*rr), ns_rr_name(*rr),
