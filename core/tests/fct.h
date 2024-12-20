@@ -1175,6 +1175,7 @@ fct_ts__is_more_tests(fct_ts_t const *ts)
 static void
 fct_ts__test_begin(fct_ts_t *ts)
 {
+    FCT_ASSERT( ts != NULL );
     FCT_ASSERT( !fct_ts__is_end(ts) );
     ++(ts->curr_test_num);
 }
@@ -1217,6 +1218,7 @@ setup mode. You must be already in setup mode for this to work! */
 static void
 fct_ts__setup_end(fct_ts_t *ts)
 {
+    FCT_ASSERT( ts != NULL );
     if ( ts->mode != ts_mode_abort )
     {
         ts->mode = ts_mode_test;
@@ -1227,6 +1229,7 @@ fct_ts__setup_end(fct_ts_t *ts)
 static fct_test_t *
 fct_ts__make_abort_test(fct_ts_t *ts)
 {
+    FCT_ASSERT( ts != NULL );
     char setup_testname[FCT_MAX_LOG_LINE+1] = {'\0'};
     char const *suitename = fct_ts__name(ts);
     fct_snprintf(setup_testname, FCT_MAX_LOG_LINE, "setup_%s", suitename);
@@ -1246,6 +1249,7 @@ into setup mode (for the next 'iteration'). */
 static void
 fct_ts__teardown_end(fct_ts_t *ts)
 {
+    FCT_ASSERT( ts != NULL );
     if ( ts->mode == ts_mode_abort )
     {
         return; /* Because we are aborting . */
