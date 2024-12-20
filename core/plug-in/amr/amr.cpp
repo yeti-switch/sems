@@ -322,14 +322,14 @@ static int amr_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned i
     int octed_aligned = 1;
 
     struct {
-	unsigned char ft;
-	unsigned char q;
-    } toc[50];	    //(BUFFER_SAMPLES*1000)/(SAMPLES_PER_SEC_NB*20) 8000*1000/8000*20
+        unsigned char ft;
+        unsigned char q;
+    } toc[50] {};	    //(BUFFER_SAMPLES*1000)/(SAMPLES_PER_SEC_NB*20) 8000*1000/8000*20
 
 
     if (!h_codec) {
-	ERROR("Codec not initialized (h_codec = %li)?!?\n", h_codec);
-	return -1;
+        ERROR("Codec not initialized (h_codec = %li)?!?\n", h_codec);
+        return -1;
     }
 
     unsigned char* end_ptr = in_buf + size;
@@ -458,7 +458,7 @@ static int amrwb_2_pcm16(unsigned char* out_buf, unsigned char* in_buf, unsigned
     struct {
 	unsigned char ft;
 	unsigned char q;
-    } toc[50];	    //(BUFFER_SAMPLES*1000)/(SAMPLES_PER_SEC_NB*20) 8000*1000/8000*20
+    } toc[50] {};	    //(BUFFER_SAMPLES*1000)/(SAMPLES_PER_SEC_NB*20) 8000*1000/8000*20
 
 
     if (!h_codec) {
