@@ -1,3 +1,7 @@
+sems (1.152.1) stable; urgency=low
+  * pg: fix segfault on nullptr in QueryParam value
+ -- Michael Furmur <furmur@pm.me>  Sat, 21 Dec 2024 17:33:32 +0200
+
 sems (1.152.0) stable; urgency=low
   * pg: support initial queries for PGWorkerConfig
  -- Michael Furmur <furmur@pm.me>  Thu, 19 Dec 2024 20:33:51 +0200
