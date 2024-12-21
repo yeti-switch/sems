@@ -359,7 +359,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
 
     //TODO: rewrite to use hash with oid -> parser routine mapping
 
-    if(is_null)
+    if(is_null || 0==value)
         return AmArg();
 
     switch(oid) {
