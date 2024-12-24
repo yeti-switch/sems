@@ -193,6 +193,8 @@ AmRtpStream::~AmRtpStream()
 {
     DBG("~AmRtpStream[%p]() session = %p",this,session);
     if(session) session->onRTPStreamDestroy(this);
+    for(int i = 0; i < MAX_TRANSPORT_TYPE; i++)
+        ice_context[i].reset(nullptr);
     iterateTransports([](auto tr) { delete tr; });
 }
 
