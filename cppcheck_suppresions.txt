@@ -1,0 +1,41 @@
+# error: syntax error
+#timercmp
+syntaxError:apps/monitoring/Monitoring.cpp:305
+syntaxError:apps/radius_client/RadiusConnection.cpp:330
+syntaxError:core/AmDtmfDetector.cpp:312
+syntaxError:core/AmPeriodicThread.cpp:50
+syntaxError:core/sip/wheeltimer.cpp:95
+
+# error: syntax error
+# else return SASR( (longword)a * (longword)b, 15 );
+syntaxError:core/plug-in/gsm/gsm-1.0-pl10/src/add.c:38
+
+# error: Code 'classAmControlledLock{' is invalid C code.
+syntaxError:core/AmThread.h:56
+
+# error: failed to expand 'CLASS_DBG', it is invalid to use a preprocessor directive as macro parameter
+preprocessorErrorDirective:core/AmRtpStream.cpp:858
+
+# error: error: failed to expand 'CALL_EVENT_H', Invalid ## usage when expanding 'CALL_EVENT_H': Unexpected token '('
+preprocessorErrorDirective:core/AmSessionEventHandler.h:98
+
+# error: #error "can't determine v4 socket option (IP_RECVDSTADDR or IP_PKTINFO)"
+# error "can't determine v4 socket option (IP_RECVDSTADDR or IP_PKTINFO)"
+preprocessorErrorDirective:core/sip/udp_trsp.cpp:63
+
+# error: The one definition rule is violated, different classes/structs have the same name 'CurlMultiHandler'
+ctuOneDefinitionRuleViolation:apps/http/CurlMultiHandler.h:10
+
+# error: The one definition rule is violated, different classes/structs have the same name 'tls_session_manager'
+ctuOneDefinitionRuleViolation:apps/jsonrpc/SecureRpcPeer.h:60
+
+# error: The one definition rule is violated, different classes/structs have the same name 'SIPRequestInfo'
+ctuOneDefinitionRuleViolation:core/plug-in/session_timer/SessionTimer.h:190
+
+# error: There is an unknown macro here somewhere. Configuration is required. If P is a macro then please configure it.
+# int (*output   ) P((gsm_signal *)),
+unknownMacro:core/plug-in/gsm/gsm-1.0-pl10/src/toast.c:45
+
+# error: There is an unknown macro here somewhere. Configuration is required. If CONFIG_FILE is a macro then please configure it.
+# "    -f <file>            set configuration file (default: " CONFIG_FILE ")\n"
+unknownMacro:core/sems.cpp:144
