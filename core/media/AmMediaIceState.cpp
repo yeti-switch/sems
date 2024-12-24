@@ -218,7 +218,7 @@ bool AmMediaIceState::isZrtp()
             transport->getRtpStream()->isZrtpEnabled() &&
             transport->isZrtpEnable() &&
            !transport->getRtpStream()->getZrtpContext()->getRemoteHash().empty();
-#elif
+#else
     return false;
 #endif
 }
