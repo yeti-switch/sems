@@ -1,3 +1,8 @@
+sems (1.152.2) stable; urgency=low
+  * fix crash on ICE connection timer/cleanup racing
+  * fix crash on uninitialized stream in media processor
+ -- Michael Furmur <furmur@pm.me>  Wed, 25 Dec 2024 14:11:42 +0200
+
 sems (1.152.1) stable; urgency=low
   * pg: fix segfault on nullptr in QueryParam value
  -- Michael Furmur <furmur@pm.me>  Sat, 21 Dec 2024 17:33:32 +0200
