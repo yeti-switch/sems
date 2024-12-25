@@ -1,3 +1,7 @@
+sems (1.152.3) stable; urgency=low
+  * fix crash on STUN request in T38 state
+ -- Michael Furmur <furmur@pm.me>  Thu, 26 Dec 2024 01:25:36 +0200
+
 sems (1.152.2) stable; urgency=low
   * fix crash on ICE connection timer/cleanup racing
   * fix crash on uninitialized stream in media processor
