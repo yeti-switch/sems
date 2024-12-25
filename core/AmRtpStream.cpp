@@ -1324,12 +1324,16 @@ void AmRtpStream::onIceRoleConflict()
 
 DtlsContext* AmRtpStream::getDtlsContext(uint8_t transport_type) {
     assert(transport_type < MAX_TRANSPORT_TYPE);
+    if(transport_type == FAX_TRANSPORT && reuse_media_trans)
+        transport_type = RTP_TRANSPORT;
     return dtls_context[transport_type].get();
 }
 
 IceContext * AmRtpStream::getIceContext(uint8_t transport_type)
 {
     assert(transport_type < MAX_TRANSPORT_TYPE);
+    if(transport_type == FAX_TRANSPORT && reuse_media_trans)
+        transport_type = RTP_TRANSPORT;
     return ice_context[transport_type].get();
 }
 
