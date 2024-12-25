@@ -1467,16 +1467,24 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
 
   AmRtpAudio *stream = RTPStream();
   if (stream->sendIntReached()) { // FIXME: shouldn't depend on checkInterval call before!
-    unsigned int f_size = stream->getFrameSize();
+    auto f_size = stream->getFrameSize();
+    auto output_sample_rate = stream->getSampleRate();
     int got = 0;
+
+    if(0==output_sample_rate) [[unlikely]] {
+        unlockAudio();
+        return 0;
+    }
+
     if (output) {
-        got = output->get(ts, buffer, stream->getSampleRate(), f_size);
+        got = output->get(ts, buffer, output_sample_rate, f_size);
         if(got < 0) got = 0; //suppress errors
     }
+
     stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
     if (got < 0) res = -1;
     if (got > 0) {
-        res = stream->put(ts, buffer, stream->getSampleRate(), got);
+        res = stream->put(ts, buffer, output_sample_rate, got);
     } else {
         stream->put_on_idle(ts);
     }

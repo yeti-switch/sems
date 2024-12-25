@@ -571,6 +571,10 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
 
         if(src_stream->checkInterval(ts)) {
             int sample_rate = src_stream->getSampleRate();
+            if(0==sample_rate) [[unlikely]] {
+                return 0;
+            }
+
             int got = src_stream->get(ts, buffer, sample_rate, src_stream->getFrameSize());
             //CLASS_DBG("src_stream->get(%llu,%d)",ts,got);
             if (got < 0) return -1;
@@ -590,6 +594,9 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
     if (stream->sendIntReached(ts)) {
         // A leg is ready to send data
         int sample_rate = stream->getSampleRate();
+        if(0==sample_rate) [[unlikely]] {
+            return 0;
+        }
         int got = 0;
         if (in) {
             //process src_stream even if custom input enabled
