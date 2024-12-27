@@ -784,14 +784,18 @@ void HttpClient::on_sync_context_timer()
     for(auto it = sync_contexts.begin(); it != sync_contexts.end(); ) {
         if(now - it->second.created_at > SYNC_CONTEXTS_TIMEOUT_INVERVAL) {
             auto &postponed_events = it->second.postponed_events;
+            if(!postponed_events.empty()) {
+                ERROR("remove context %s on timeout, counter: %d. requeue %ld postponed events",
+                    it->first.c_str(),it->second.counter,postponed_events.size());
 
-            ERROR("remove context %s on timeout, counter: %d. requeue %ld postponed events",
-                it->first.c_str(),it->second.counter,postponed_events.size());
-
-            while(!postponed_events.empty()) {
-                process_http_event(postponed_events.front());
-                delete postponed_events.front();
-                postponed_events.pop();
+                while(!postponed_events.empty()) {
+                    process_http_event(postponed_events.front());
+                    delete postponed_events.front();
+                    postponed_events.pop();
+                }
+            } else {
+                DBG("remove context %s on timeout, counter: %d",
+                    it->first.c_str(),it->second.counter);
             }
 
             it = sync_contexts.erase(it);
