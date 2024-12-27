@@ -1,3 +1,7 @@
+sems (1.152.4) stable; urgency=low
+  * http: move unused sync context timeout logging to dbg
+ -- Michael Furmur <furmur@pm.me>  Fri, 27 Dec 2024 16:02:52 +0200
+
 sems (1.152.3) stable; urgency=low
   * fix crash on STUN request in T38 state
  -- Michael Furmur <furmur@pm.me>  Thu, 26 Dec 2024 01:25:36 +0200
