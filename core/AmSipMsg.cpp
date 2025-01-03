@@ -8,6 +8,8 @@
 #include "sip/msg_logger.h"
 #include "SipCtrlInterface.h"
 
+#include <sstream>
+
 bool AmSipReply::init(const sip_msg* msg)
 {
     return _SipCtrlInterface::sip_msg2am_reply(msg, *this);
@@ -242,45 +244,66 @@ void removeOptionTag(string& hdrs, const string& hdr_name, const string& tag)
     hdrs += hdr_name + COLSP + o_hdr + CRLF;
 }
 
-/* Print Member */
-#define _PM(member, name)			\
-    do {						\
-        if (! member.empty())			\
-        buf += string(name) + ":" + member + ";"; \
-    } while (0)
+struct format_member
+{
+    const string &member;
+    const char *name;
+    format_member(const string &member, const char *name)
+      : member(member),
+        name(name)
+    {}
+};
 
-/* Print Member in Brackets */
-#define _PMB(member, name)					\
-    do {								\
-        if (! member.empty())					\
-        buf += string(name) + ":" + "[" + member + "]" + ";";	\
-    } while (0)
+std::ostream& operator<<(std::ostream& out, const format_member& fmt)
+{
+    if(!fmt.member.empty())
+        out << fmt.name << ':' << fmt.member << ";";
+    return out;
+}
+
+struct format_member_brackets
+{
+    const string &member;
+    const char *name;
+    format_member_brackets(const string &member, const char *name)
+      : member(member),
+        name(name)
+    {}
+};
+
+std::ostream& operator<<(std::ostream& out, const format_member_brackets& fmt)
+{
+    if(!fmt.member.empty())
+        out << fmt.name << ":[" << fmt.member << "];";
+    return out;
+}
 
 string AmSipRequest::print() const
 {
-    string buf;
+    std::ostringstream buf;
 
-    _PM(r_uri, "r-uri");
-    _PM(callid, "i");
-    _PM(int2str(cseq), "cseq");
-    _PM(from_tag, "l-tag");
-    _PM(to_tag, "r-tag");
-    _PMB(route, "rtset");
-    _PM(contact, "m");
+    buf << method << " [" <<
+        format_member(r_uri, "r-uri") <<
+        format_member(callid, "i") <<
+        format_member(int2str(cseq), "cseq") <<
+        format_member(from_tag, "l-tag") <<
+        format_member(to_tag, "r-tag") <<
+        format_member_brackets(route, "rtset") <<
+        format_member(contact, "m") <<
 
-    _PMB(hdrs, "hdr");
-    //TODO: find some good debug info to print here
-    //_PM(content_type, "c");
-    //_PMB(body, "body");
+        format_member_brackets(hdrs, "hdr") <<
+        //TODO: find some good debug info to print here
+        //format_member(content_type, "c") <<
+        //format_member_brackets(body, "body") <<
 
-    _PM(user, "user");
-    _PM(domain, "domain");
-    _PM(from_uri, "f-uri");
-    _PM(from, "from");
-    _PM(to, "to");
+        format_member(user, "user") <<
+        format_member(domain, "domain") <<
+        format_member(from_uri, "f-uri") <<
+        format_member(from, "from") <<
+        format_member(to, "to") <<
+    "]";
 
-    buf = method + " [" + buf + "]";
-    return buf;
+    return buf.str();
 }
 
 void AmSipRequest::log(msg_logger *logger,msg_sensor *sensor) const
@@ -302,32 +325,30 @@ void AmSipRequest::log(msg_logger *logger,msg_sensor *sensor) const
 
 string AmSipReply::print() const
 {
-    string buf;
+    std::ostringstream buf;
 
-    _PM(int2str(code), "code");
-    _PMB(reason, "phrase");
-    _PM(callid, "i");
-    _PM(int2str(cseq), "cseq");
-    //_PM(method, "cseq meth");
-    _PM(from_tag, "from-tag");
-    _PM(to_tag, "to-tag");
-    //_PM(next_hop, "nhop");
-    _PMB(route, "rtset");
-    _PM(contact, "m");
+    buf << " [" <<
+        format_member(int2str(code), "code") <<
+        format_member_brackets(reason, "phrase") <<
+        format_member(callid, "i") <<
+        format_member(int2str(cseq), "cseq") <<
+        //format_member(method, "cseq meth") <<
+        format_member(from_tag, "from-tag") <<
+        format_member(to_tag, "to-tag") <<
+        //format_member(next_hop, "nhop") <<
+        format_member_brackets(route, "rtset") <<
+        format_member(contact, "m") <<
 
-    _PMB(hdrs, "hdr");
-    //TODO: find some good debug info to print here
-    //_PM(content_type, "c");
-    //_PMB(body, "body");
+        format_member_brackets(hdrs, "hdr") <<
+        //TODO: find some good debug info to print here
+        //format_member(content_type, "c") <<
+        //format_memberB(body, "body") <<
 
-    _PM(contact, "contact");
+        format_member(contact, "contact") <<
+    "]";
 
-    buf = /*method +*/ " [" + buf + "]";
-    return buf;
+    return buf.str();
 }
-
-#undef _PM
-#undef _PMB
 
 /** EMACS **
  * Local variables:
