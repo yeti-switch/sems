@@ -13,45 +13,45 @@ using std::string;
 class _AmSipMsgInDlg
   : public AmObject
 {
- public:
-  string from;
-  string from_tag;
+  public:
+    string from;
+    string from_tag;
 
-  string to;
-  string to_tag;
+    string to;
+    string to_tag;
 
-  string callid;
+    string callid;
 
-  unsigned int cseq;
-  string cseq_method;
+    unsigned int cseq;
+    string cseq_method;
 
-  unsigned int rseq;
+    unsigned int rseq;
 
-  string route;
-  string contact;
+    string route;
+    string contact;
 
-  string hdrs;
+    string hdrs;
 
-  AmMimeBody body;
+    AmMimeBody body;
 
-  // transaction ticket from sip stack
-  trans_ticket tt;
+    // transaction ticket from sip stack
+    trans_ticket tt;
 
-  string         remote_ip;
-  unsigned short remote_port;
-  string         local_ip;
-  unsigned short local_port;
-  string         actual_ip;
-  unsigned short actual_port;
-  string         trsp;
+    string         remote_ip;
+    unsigned short remote_port;
+    string         local_ip;
+    unsigned short local_port;
+    string         actual_ip;
+    unsigned short actual_port;
+    string         trsp;
 
-  timeval recv_timestamp;
-  unsigned int transport_id;
+    timeval recv_timestamp;
+    unsigned int transport_id;
 
-  _AmSipMsgInDlg() : cseq(0), rseq(0), actual_port(0), transport_id(0) { }
-  virtual ~_AmSipMsgInDlg() { }
+    _AmSipMsgInDlg() : cseq(0), rseq(0), actual_port(0), transport_id(0) { }
+    virtual ~_AmSipMsgInDlg() { }
 
-  virtual string print() const = 0;
+    virtual string print() const = 0;
 };
 
 #ifdef PROPAGATE_UNPARSED_REPLY_HEADERS
@@ -69,7 +69,7 @@ struct AmSipHeader
 /** \brief represents a SIP reply */
 class AmSipReply : public _AmSipMsgInDlg
 {
-   public:
+  public:
     unsigned int code;
     string       reason;
     string       to_uri;
@@ -94,48 +94,48 @@ class AmSipReply : public _AmSipMsgInDlg
 /** \brief represents a SIP request */
 class AmSipRequest : public _AmSipMsgInDlg
 {
- public:
-  string method;
+  public:
+    string method;
 
-  string scheme;
-  string user;
-  string domain;
-  string r_uri;
-  string from_uri;
+    string scheme;
+    string user;
+    string domain;
+    string r_uri;
+    string from_uri;
 
-  string rack_method;
-  unsigned int rack_cseq;
+    string rack_method;
+    unsigned int rack_cseq;
 
-  string vias;
-  string via1;
-  string via_branch;
-  bool   first_hop;
+    string vias;
+    string via1;
+    string via_branch;
+    bool   first_hop;
 
-  int max_forwards;
+    int max_forwards;
 
-  unsigned short local_if;
-  unsigned short proto_idx;
+    unsigned short local_if;
+    unsigned short proto_idx;
 
-  AmSipRequest();
-  ~AmSipRequest() { }
-  
-  bool init(const sip_msg* msg, const trans_ticket* tt = 0);
-  string print() const;
-  void log(msg_logger *logger,msg_sensor *sensor) const;
+    AmSipRequest();
+    ~AmSipRequest() { }
+
+    bool init(const sip_msg* msg, const trans_ticket* tt = 0);
+    string print() const;
+    void log(msg_logger *logger,msg_sensor *sensor) const;
 };
 
 string getHeader(const string& hdrs,const string& hdr_name, bool single = false);
 
-string getHeader(const string& hdrs,const string& hdr_name, 
-		 const string& compact_hdr_name, bool single = false);
+string getHeader(const string& hdrs,const string& hdr_name,
+                 const string& compact_hdr_name, bool single = false);
 
 /** find a header, starting from char skip
     if found, value is between pos1 and pos2 
     and hdr start is the start of the header 
     @return true if found */
 bool findHeader(const string& hdrs,const string& hdr_name, const size_t skip, 
-		size_t& pos1, size_t& pos2, 
-		size_t& hdr_start);
+                size_t& pos1, size_t& pos2,
+                size_t& hdr_start);
 
 /** @return whether header hdr_name is in hdrs */
 bool hasHeader(const string& hdrs,const string& hdr_name);
