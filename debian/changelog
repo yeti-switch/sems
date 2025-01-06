@@ -1,3 +1,9 @@
+sems (1.153.0) stable; urgency=low
+  * AmBasicSipDialog: add addSupportedTag/setSupportedTags, addAllowedMethod/setAllowedMethods methods
+  * add global options options_supported_hdr_value, options_allow_hdr_value to be configured by modules
+  * cppcheck fixes
+ -- Michael Furmur <furmur@pm.me>  Mon, 06 Jan 2025 13:53:50 +0200
+
 sems (1.152.4) stable; urgency=low
   * http: move unused sync context timeout logging to dbg
  -- Michael Furmur <furmur@pm.me>  Fri, 27 Dec 2024 16:02:52 +0200
