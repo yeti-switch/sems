@@ -212,6 +212,10 @@ public:
   void ignoreRecording() { ignore_recording = true; }
   void updateStereoRecorders();
 
+  bool hasSession() { return session!=nullptr; }
+  void lockSessionAudio();
+  void unlockSessionAudio();
+
 protected:
   int read(unsigned int user_ts, unsigned int size) override { return 0; }
   int write(unsigned int user_ts, unsigned int size) override { return 0; }
