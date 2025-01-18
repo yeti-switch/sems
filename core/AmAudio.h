@@ -404,8 +404,6 @@ public:
 
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
-  void addStereoRecorder(const string &id, int channel_id);
-  void delStereoRecorder(const string &id, int channel_id);
   void setStereoRecorders(const StereoRecordersList &recorders);
   bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
 

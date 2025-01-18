@@ -320,21 +320,6 @@ void AmAudio::setRecorder(const string &id) {
   }
 }
 
-void AmAudio::addStereoRecorder(const string &id, int channel_id) {
-  if(id.empty())
-    return;
-
-  CLASS_DBG("add stereo recorder. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
-  stereo_recorders.add(id,channel_id);
-  stereo_record_enabled = true;
-}
-
-void AmAudio::delStereoRecorder(const string &id, int channel_id)
-{
-  CLASS_DBG("remove stereo recorder. recorder_id: %s, channel_id: %d",id.c_str(),channel_id);
-  stereo_record_enabled = stereo_recorders.del(id, channel_id);
-}
-
 void AmAudio::setStereoRecorders(const StereoRecordersList &recorders) {
     stereo_recorders = recorders;
     stereo_record_enabled = !stereo_recorders.empty();
