@@ -460,10 +460,6 @@ int AmRtpAudio::init(
         setRecorder(session->getLocalTag());
     }
 
-    if(session->getRecordStereoAudio()) {
-        setStereoRecorders(session->getStereoRecorders());
-    }
-
     setSymmetricCandidate(session->getRtpSymmetricCandidate());
     setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
 
@@ -690,6 +686,13 @@ void AmRtpAudio::setRecvSamplesTimeout(uint32_t ts)
 {
     CLASS_DBG("AmRtpAudio::setRecvSamplesTimeout(%u)", ts);
     recv_samples_timeout_threshold = ts;
+}
+
+void AmRtpAudio::updateStereoRecorders()
+{
+    if(session) {
+        setStereoRecorders(session->getStereoRecorders(), session);
+    }
 }
 
 void AmRtpAudio::onMaxRtpTimeReached()

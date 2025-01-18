@@ -26,7 +26,7 @@
  */
 
 #include "AmAudio.h"
-#include "AmAudioFileRecorderStereoMP3.h"
+#include "AmSession.h"
 #include "AmPlugIn.h"
 #include "AmUtils.h"
 #include "AmSdp.h"
@@ -37,9 +37,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <errno.h>
-
-#include <typeinfo>
 
 void adjust_media_frame_size(int &frame_size)
 {
@@ -320,9 +317,13 @@ void AmAudio::setRecorder(const string &id) {
   }
 }
 
-void AmAudio::setStereoRecorders(const StereoRecordersList &recorders) {
+void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, AmSession *lock_session) {
+    if(lock_session) lock_session->lockAudio();
+
     stereo_recorders = recorders;
     stereo_record_enabled = !stereo_recorders.empty();
+
+    if(lock_session) lock_session->unlockAudio();
 }
 
 void AmAudio::setInbandDetector(AmInbandDetector *detector)

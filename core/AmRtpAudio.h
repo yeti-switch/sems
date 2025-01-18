@@ -210,6 +210,8 @@ public:
   void setMaxRtpTime(uint32_t ts);
   void setRecvSamplesTimeout(uint32_t ts);
   void ignoreRecording() { ignore_recording = true; }
+  void updateStereoRecorders();
+
 protected:
   int read(unsigned int user_ts, unsigned int size) override { return 0; }
   int write(unsigned int user_ts, unsigned int size) override { return 0; }

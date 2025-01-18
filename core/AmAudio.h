@@ -35,6 +35,8 @@
 #include "AmStereoRecorderInfo.h"
 #include "AmInbandDetector.h"
 
+class AmSession;
+
 #include <stdio.h>
 
 #include <memory>
@@ -404,7 +406,7 @@ public:
 
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
-  void setStereoRecorders(const StereoRecordersList &recorders);
+  void setStereoRecorders(const StereoRecordersList &recorders, AmSession *lock_session);
   bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
 
   void setInbandDetector(AmInbandDetector *detector);

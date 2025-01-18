@@ -314,10 +314,8 @@ void AmSession::addStereoRecorder(int channel_id, const string &recorder_id)
 
     DBG("update RTP stream stereo recorders info");
 
-    lockAudio();
-    RTPStream()->setStereoRecorders(stereo_recorders);
+    RTPStream()->setStereoRecorders(stereo_recorders, this);
     RTPStream()->disableRtpRelay();
-    unlockAudio();
 }
 
 void AmSession::delStereoRecorder(int channel_id, const string &recorder_id)
@@ -333,9 +331,7 @@ void AmSession::delStereoRecorder(int channel_id, const string &recorder_id)
 
     DBG("update RTP stream stereo recorders info");
 
-    lockAudio();
-    RTPStream()->setStereoRecorders(stereo_recorders);
-    unlockAudio();
+    RTPStream()->setStereoRecorders(stereo_recorders, this);
 }
 
 #ifdef SESSION_THREADPOOL
@@ -1167,6 +1163,7 @@ int AmSession::onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp, b
 
   try {
     ret = RTPStream()->init(local_sdp, remote_sdp, sdp_offer_owner, AmConfig.force_symmetric_rtp);
+    RTPStream()->setStereoRecorders(getStereoRecorders(), nullptr);
   } catch (const string& s) {
     ERROR("Error while initializing RTP stream: '%s'", s.c_str());
     ret = -1;
