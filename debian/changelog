@@ -1,3 +1,7 @@
+sems (1.154.0) stable; urgency=low
+  * fix AmAudio::stereo_recorders r/w racing between session and media processors threads
+ -- Michael Furmur <furmur@pm.me>  Sat, 18 Jan 2025 17:51:30 +0200
+
 sems (1.153.0) stable; urgency=low
   * AmBasicSipDialog: add addSupportedTag/setSupportedTags, addAllowedMethod/setAllowedMethods methods
   * add global options options_supported_hdr_value, options_allow_hdr_value to be configured by modules
