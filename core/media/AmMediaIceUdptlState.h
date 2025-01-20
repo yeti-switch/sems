@@ -1,13 +1,13 @@
 #pragma once
 
-#include "AmMediaRtpState.h"
 #include "AmMediaIceState.h"
+#include "AmMediaUdptlState.h"
 
-class AmMediaIceRtpState
-  : public AmMediaIceState, public AmMediaRtpState
+class AmMediaIceUdptlState
+  : public AmMediaIceState, public AmMediaUdptlState
 {
 public:
-    AmMediaIceRtpState(AmMediaTransport *transport);
+    AmMediaIceUdptlState(AmMediaTransport *transport);
     AmMediaState* init(const AmMediaStateArgs& args) override;
     AmMediaState* update(const AmMediaStateArgs& args) override;
     const char* state2str() override;
@@ -15,3 +15,4 @@ public:
 protected:
     AmMediaState* nextState() override;
 };
+

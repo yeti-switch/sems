@@ -568,7 +568,7 @@ class AmRtpStream
     virtual void setMultiplexing(bool multiplex);
 
     void setReuseMediaPort(bool reuse_media);
-    void addAdditionTransport();
+    void addAdditionTransport(AddressType type = AT_NONE);
 
     unsigned int get_ssrc() { return l_ssrc; }
     unsigned int get_rsrc() { return r_ssrc; }

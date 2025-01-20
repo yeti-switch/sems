@@ -364,6 +364,11 @@ bool RtpSecureContext::isInited()
     return dtls_channel != 0;
 }
 
+bool RtpSecureContext::isActivated()
+{
+    return activated;
+}
+
 void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 {
     assert(cur_conn);

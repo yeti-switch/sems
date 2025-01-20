@@ -7,6 +7,7 @@ class AmStreamConnection;
 class AmMediaIceState
   : public virtual AmMediaState
 {
+    bool is_udptl;
     void setCurrentConnection(AmStreamConnection* conn);
     bool candidate_address_is_allowed(const string& addr_str);
 public:
@@ -22,9 +23,10 @@ protected:
     AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority) override;
     AmMediaState* allowStunPair(const sockaddr_storage* remote_addr) override;
     AmMediaState * connectionTrafficDetected(const sockaddr_storage * remote_addr) override;
-    AmMediaState* nextState();
+    virtual AmMediaState* nextState();
     bool isSrtp();
     bool isDtls();
     bool isZrtp();
     bool isRtp();
+    bool isSecured();
 };

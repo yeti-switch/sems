@@ -83,6 +83,7 @@ public:
 
     int getTransportType() { return type; }
     void setTransportType(int _type) { type = _type; }
+    int getComponentId() { return type == RTCP_TRANSPORT ? 2 : 1; }
 
     int getLocalIf() { return l_if; }
     int getLocalProtoId() { return lproto_id; }

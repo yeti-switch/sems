@@ -26,10 +26,12 @@ void AmMediaIceRestartState::removeConnections()
         {AmStreamConnection::RTP_CONN,
          AmStreamConnection::RTCP_CONN,
          AmStreamConnection::DTLS_CONN,
-         AmStreamConnection::ZRTP_CONN
+         AmStreamConnection::ZRTP_CONN,
+         AmStreamConnection::UDPTL_CONN
         }, [&](){
             transport->setCurRtpConn(0);
             transport->setCurRtcpConn(0);
+            transport->setCurUdptlConn(0);
         });
 }
 

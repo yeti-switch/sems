@@ -1,17 +1,19 @@
 #pragma once
 
-#include "AmMediaRtpState.h"
+#include "AmMediaSecureUdptlState.h"
 #include "AmMediaIceState.h"
 
-class AmMediaIceRtpState
-  : public AmMediaIceState, public AmMediaRtpState
+class AmMediaIceSecureUdptlState
+  : public AmMediaIceState, public AmMediaSecureUdptlState
 {
 public:
-    AmMediaIceRtpState(AmMediaTransport *transport);
+    AmMediaIceSecureUdptlState(AmMediaTransport *transport);
     AmMediaState* init(const AmMediaStateArgs& args) override;
     AmMediaState* update(const AmMediaStateArgs& args) override;
+    void addConnections(const AmMediaStateArgs& args) override;
     const char* state2str() override;
 
 protected:
     AmMediaState* nextState() override;
 };
+

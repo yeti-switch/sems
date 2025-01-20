@@ -3,7 +3,7 @@
 #include "AmMediaState.h"
 
 class AmMediaSecureUdptlState
-  : public AmMediaState
+  : virtual public AmMediaState
 {
 public:
     AmMediaSecureUdptlState(AmMediaTransport *transport);

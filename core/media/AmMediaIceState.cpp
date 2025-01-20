@@ -5,9 +5,11 @@
 #include "AmMediaIceZrtpState.h"
 #include "AmMediaIceRtpState.h"
 #include "AmMediaIceRestartState.h"
+#include "AmMediaIceUdptlState.h"
+#include "AmMediaIceSecureUdptlState.h"
 
 AmMediaIceState::AmMediaIceState(AmMediaTransport *transport)
-  : AmMediaState(transport)
+  : AmMediaState(transport), is_udptl(false)
 {
 }
 
@@ -18,6 +20,7 @@ AmMediaState* AmMediaIceState::init(const AmMediaStateArgs& args)
     if(args.candidates && args.sdp_offer_owner)
         addStunConnections(*args.candidates, *args.sdp_offer_owner);
 
+    is_udptl = args.udptl.value_or(false);
     return this;
 }
 
@@ -32,6 +35,7 @@ AmMediaState* AmMediaIceState::update(const AmMediaStateArgs& args)
     if(args.candidates && args.sdp_offer_owner)
         addStunConnections(*args.candidates, *args.sdp_offer_owner);
 
+    is_udptl = args.udptl.value_or(false);
     return this;
 }
 
@@ -78,7 +82,7 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
         int port = 0;
         str2int(addr_port[1], port);
 
-        if(transport->getTransportType() != candidate.comp_id ||
+        if(transport->getComponentId() != candidate.comp_id ||
            transport->getLocalAddrType() != candidate.conn.addrType)
             continue;
 
@@ -129,7 +133,7 @@ AmMediaState* AmMediaIceState::allowStunConnection(const sockaddr_storage* remot
     args.address = address;
     args.port = port;
     args.family = remote_addr->ss_family;
-    if(isDtls()) args.dtls_srtp = true;
+    if(isDtls()) args.dtls_srtp = !is_udptl;
 
     if(next_state != this)
         next_state->init(args);
@@ -210,6 +214,19 @@ bool AmMediaIceState::isDtls()
     return !isSrtp() && transport->getRtpStream()->getDtlsContext(transport->getTransportType());
 }
 
+bool AmMediaIceState::isSecured()
+{
+    auto dtls_context = transport->getRtpStream()->getDtlsContext(transport->getTransportType());
+#ifdef WITH_ZRTP
+    auto zrtp_context = transport->getRtpStream()->getZrtpContext();
+#endif
+    return (dtls_context && dtls_context->isActivated())
+#ifdef WITH_ZRTP
+        || (zrtp_context && zrtp_context->isActivated())
+#endif
+    ;
+}
+
 bool AmMediaIceState::isZrtp()
 {
 #ifdef WITH_ZRTP
@@ -230,11 +247,21 @@ bool AmMediaIceState::isRtp()
 
 AmMediaState* AmMediaIceState::nextState()
 {
-    if(isSrtp()) // sdes+srtp or keys alredy available via dtls or zrtp
+    if(isSecured()) { // srtp keys already available via dtls or zrtp
+        if(is_udptl)
+            return new AmMediaIceSecureUdptlState(transport);
+        else
+            return new AmMediaIceSrtpState(transport);
+    }
+
+    if(isSrtp()) // sdes+srtp
         return new AmMediaIceSrtpState(transport);
 
     if(isDtls()) // dtls+srtp
         return new AmMediaIceDtlsState(transport);
+
+    if(is_udptl) //udptl
+        return new AmMediaIceUdptlState(transport);
 
 #ifdef WITH_ZRTP
     if(isZrtp()) // zrtp+srtp

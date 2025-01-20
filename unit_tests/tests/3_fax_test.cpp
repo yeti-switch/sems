@@ -3,6 +3,7 @@
 #include "../TestPayloadProvider.h"
 #include <AmSessionContainer.h>
 #include <AmMediaProcessor.h>
+#include <AmStunProcessor.h>
 #include <AmFaxImage.h>
 #include <AmRtpReceiver.h>
 #include <AmSipDialog.h>
@@ -106,11 +107,13 @@ protected:
     {
         AmMediaProcessor::instance()->init();
         AmRtpReceiver::instance()->start();
+        stun_processor::instance()->start();
     }
     void TearDown() override
     {
         AmRtpReceiver::dispose();
         AmMediaProcessor::dispose();
+        stun_processor::dispose();
     }
 };
 
@@ -136,6 +139,55 @@ TEST_F(FaxTest, SingleT38Test) {
         sessionB.setMediaTransport(TP_UDPTL);
         sessionB.setMediaType(MT_IMAGE);
         GTEST_ASSERT_NE(sessionA.local.media.size(), 0);
+        sessionB.getSdpAnswer(sessionA.local, sessionB.local);
+        GTEST_ASSERT_EQ(sessionB.local.media.size(), 1);
+        options.negotiateT38Options(sessionB.local.media[sessionA.RTPStream()->getSdpMediaIndex()].attributes);
+        sessionB.t38->setOptions(options);
+
+        sessionA.setRemoteSdp(sessionB.getLocalSdp());
+        sessionB.setRemoteSdp(sessionA.getLocalSdp());
+        EXPECT_EQ(sessionA.init(), 0);
+        EXPECT_EQ(sessionB.init(), 0);
+        sessionA.start();
+        sessionB.start();
+        sessionA.wait_started();
+        sessionB.wait_started();
+        while(AmSession::getSessionNum()) { usleep(100); }
+        sessionA.checkData();
+        sessionB.checkData();
+    } catch(const AmSession::Exception& except) {
+        error = except.reason;
+    } catch(const string& reason) {
+        error = reason.c_str();
+    }
+
+    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+}
+
+TEST_F(FaxTest, IceT38Test) {
+    string error;
+    try {
+        unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
+        string ip;
+        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        ASSERT_FALSE(ip.empty());
+        ip.insert(0, "sip:");
+
+        FaxSession sessionA(ip, OFFER), sessionB(ip, ANSWER);
+        t38_option options;
+
+        sessionA.setMediaTransport(TP_UDPTL);
+        sessionA.setMediaType(MT_IMAGE);
+        sessionA.useIceMediaStream();
+        sessionA.getSdpOffer(sessionA.local);
+        GTEST_ASSERT_EQ(sessionA.local.media.size(), 1);
+        options.negotiateT38Options(sessionA.local.media[sessionA.RTPStream()->getSdpMediaIndex()].attributes);
+        sessionA.t38->setOptions(options);
+
+        sessionB.setMediaTransport(TP_UDPTL);
+        sessionB.setMediaType(MT_IMAGE);
+        GTEST_ASSERT_NE(sessionA.local.media.size(), 0);
+        sessionB.useIceMediaStream();
         sessionB.getSdpAnswer(sessionA.local, sessionB.local);
         GTEST_ASSERT_EQ(sessionB.local.media.size(), 1);
         options.negotiateT38Options(sessionB.local.media[sessionA.RTPStream()->getSdpMediaIndex()].attributes);

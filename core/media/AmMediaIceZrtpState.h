@@ -14,5 +14,5 @@ public:
     const char* state2str() override;
 
 protected:
-    AmMediaState* nextState();
+    AmMediaState* nextState() override;
 };

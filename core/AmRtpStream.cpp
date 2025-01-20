@@ -470,7 +470,7 @@ void AmRtpStream::setRAddr(const string& addr, unsigned short port)
     }
 }
 
-void AmRtpStream::addAdditionTransport()
+void AmRtpStream::addAdditionTransport(AddressType type)
 {
     if(reuse_media_trans) {
         return;
@@ -486,16 +486,20 @@ void AmRtpStream::addAdditionTransport()
     }
 
     vector<AmMediaTransport*>* transports;
-    AddressType type;
-    sockaddr_storage sa;
-    cur_rtp_trans->getLocalAddr(&sa);
-    if(sa.ss_family == AF_INET) {
+    if(type == AT_NONE) {
+        sockaddr_storage sa;
+        cur_rtp_trans->getLocalAddr(&sa);
+        if(sa.ss_family == AF_INET) {
+            transports = &ip4_transports;
+            type = AT_V4;
+        } else {
+            transports = &ip6_transports;
+            type = AT_V6;
+        }
+    } else if(type == AT_V4)
         transports = &ip4_transports;
-        type = AT_V4;
-    } else {
+    else if(type == AT_V6)
         transports = &ip6_transports;
-        type = AT_V6;
-    }
 
     int proto_id = AmConfig.media_ifs[l_if].findProto(type,MEDIA_info::RTP);
     if(proto_id < 0) {
@@ -564,6 +568,8 @@ void AmRtpStream::setCurrentTransport(AmMediaTransport* transport)
         if(!cur_rtcp_trans && multiplexing) {
             cur_rtcp_trans = transport;
         }
+    } else if(transport->getTransportType() == FAX_TRANSPORT) {
+        cur_udptl_trans = transport;
     } else if(transport->getTransportType() == RTCP_TRANSPORT) {
         cur_rtcp_trans = transport;
     }
@@ -918,7 +924,9 @@ int AmRtpStream::init(const AmSdp& local,
                 if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
                 if(!dtls_context[RTCP_TRANSPORT]) dtls_context[RTCP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
             } else if(local_media.is_dtls_udptl() && cur_udptl_trans) {
-                if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
+                if(reuse_media_trans) {
+                    if(!dtls_context[RTP_TRANSPORT]) dtls_context[RTP_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
+                } else if(!dtls_context[FAX_TRANSPORT]) dtls_context[FAX_TRANSPORT].reset(new RtpSecureContext(this, fingerprint, is_client));
             }
         }
 #ifdef WITH_ZRTP
@@ -950,6 +958,7 @@ int AmRtpStream::init(const AmSdp& local,
                 args.candidates = &remote_media.ice_candidate;
                 args.sdp_offer_owner = sdp_offer_owner;
                 args.need_restart = need_restart;
+                args.udptl = (local_media.is_dtls_udptl() || local_media.is_udptl());
                 conn_factory->store_ice_cred(local_media, remote_media);
 
                 // store srtp cred (sdes+srtp)

@@ -145,6 +145,7 @@ struct DtlsContext
     virtual bool sendData(const uint8_t * data, unsigned int size) noexcept(false) = 0;
     virtual bool getDtlsKeysMaterial(srtp_profile_t& srtp_profile, vector<uint8_t>& local_key, vector<uint8_t>& remote_key) = 0;
     virtual bool isInited() = 0;
+    virtual bool isActivated() = 0;
 };
 
 class RtpSecureContext : public Botan::TLS::Callbacks, public DtlsContext
@@ -175,6 +176,7 @@ public:
     void setCurrentConnection(AmDtlsConnection* conn) noexcept(false) override { cur_conn = conn; }
     bool getDtlsKeysMaterial(srtp_profile_t& srtp_profile, vector<uint8_t>& local_key, vector<uint8_t>& remote_key) override;
     bool isInited() override;
+    bool isActivated() override;
 
     //TODO: move methods to the separate class and remove AmDtlsConnectionTLSCallbacksProxy
     void tls_emit_data(std::span<const uint8_t> data) override;
