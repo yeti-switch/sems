@@ -1449,6 +1449,7 @@ int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
       if (isDtmfDetectionEnabled())
         putDtmfAudio(buffer, got, ts);
       stream->feedInbandDetector(buffer, got, ts);
+      input->applyPendingStereoRecorders(nullptr);
       if (input) res = input->put(ts, buffer, stream->getSampleRate(), got);
     }
   }
