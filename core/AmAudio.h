@@ -280,6 +280,10 @@ protected:
   bool stereo_record_enabled;
   StereoRecordersList stereo_recorders;
 
+  bool has_pending_stereo_recorders;
+  /** R/W is guarded by AmSession::audio_mut */
+  StereoRecordersList pending_stereo_recorders;
+
   bool inband_detector_enabled;
   std::unique_ptr<AmInbandDetector> inband_detector;
 
@@ -370,6 +374,7 @@ protected:
    *Get assumed samples count after decoding size bytes from buffer
    */
   unsigned int decoded_samples_count(amci_codec_t* codec, long h_codec, unsigned int size);
+
 public:
   /** Destructor */
   virtual ~AmAudio();
@@ -406,7 +411,7 @@ public:
 
   void setFormat(AmAudioFormat* new_fmt);
   void setRecorder(const string &id);
-  void setStereoRecorders(const StereoRecordersList &recorders, AmSession *lock_session);
+  void setStereoRecorders(const StereoRecordersList &recorders, const AmSession *lock_session);
   bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
 
   void setInbandDetector(AmInbandDetector *detector);
@@ -422,6 +427,7 @@ public:
    */
   unsigned int scaleSystemTS(unsigned long long system_ts);
 
+  void applyPendingStereoRecorders(const AmSession *lock_session);
 };
 
 

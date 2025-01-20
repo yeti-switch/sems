@@ -273,10 +273,10 @@ void AmRtpAudio::record(
         RecorderPutSamples(recorder_id,buffer,size,input_sample_rate);
     }
 
+    applyPendingStereoRecorders(session);
+
     if(stereo_record_enabled) {
-        if(session) session->lockAudio();
         stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
-        if(session) session->unlockAudio();
     }
 }
 
@@ -695,16 +695,6 @@ void AmRtpAudio::updateStereoRecorders()
     if(session) {
         setStereoRecorders(session->getStereoRecorders(), session);
     }
-}
-
-void AmRtpAudio::lockSessionAudio()
-{
-    session->lockAudio();
-}
-
-void AmRtpAudio::unlockSessionAudio()
-{
-    session->unlockAudio();
 }
 
 void AmRtpAudio::onMaxRtpTimeReached()

@@ -213,8 +213,7 @@ public:
   void updateStereoRecorders();
 
   bool hasSession() { return session!=nullptr; }
-  void lockSessionAudio();
-  void unlockSessionAudio();
+  const AmSession *getSession() { return session; }
 
 protected:
   int read(unsigned int user_ts, unsigned int size) override { return 0; }

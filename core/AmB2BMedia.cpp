@@ -581,16 +581,10 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
             if (got > 0) {
                 updateRecvStats(src_stream);
                 //CLASS_DBG("out->put(%llu,%d)",ts,got);
-                if(out->isRecordEnabled() && src_stream->hasSession()) {
-                    src_stream->lockSessionAudio();
-                    got = out->put(ts, buffer, sample_rate,
-                                    static_cast<unsigned int>(got));
-                    src_stream->unlockSessionAudio();
-                    return got;
-                } else {
-                    return out->put(ts, buffer, sample_rate,
-                                    static_cast<unsigned int>(got));
-                }
+                out->applyPendingStereoRecorders(stream->getSession());
+
+                return out->put(ts, buffer, sample_rate,
+                                static_cast<unsigned int>(got));
             }
         }
         return 0;
@@ -670,16 +664,11 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
             if(src_stream && src_stream->isRecvSamplesTimeout()) {
                 stream->ignoreRecording();
             }
-            if(stream->isRecordEnabled() && stream->hasSession()) {
-                stream->lockSessionAudio();
-                got = stream->put(ts, buffer, sample_rate,
-                                   static_cast<unsigned int>(got));
-                stream->unlockSessionAudio();
-                return got;
-            } else {
-                return stream->put(ts, buffer, sample_rate,
-                                   static_cast<unsigned int>(got));
-            }
+
+            stream->applyPendingStereoRecorders(stream->getSession());
+
+            return stream->put(ts, buffer, sample_rate,
+                               static_cast<unsigned int>(got));
         } else {
             //to process stuff like dtmf queues even on no data received for stream
             stream->put_on_idle(ts);

@@ -219,12 +219,12 @@ bool AmSession::isAudioSet()
   return set;
 }
 
-void AmSession::lockAudio()
+void AmSession::lockAudio() const
 { 
   audio_mut.lock();
 }
 
-void AmSession::unlockAudio()
+void AmSession::unlockAudio() const
 {
   audio_mut.unlock();
 }
@@ -1479,8 +1479,10 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
     }
 
     stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
+
     if (got < 0) res = -1;
     if (got > 0) {
+        stream->applyPendingStereoRecorders(nullptr);
         res = stream->put(ts, buffer, output_sample_rate, got);
     } else {
         stream->put_on_idle(ts);

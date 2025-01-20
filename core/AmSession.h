@@ -79,7 +79,7 @@ class AmSession :
   , ObjCounter(AmSession)
 #endif
 {
-  AmMutex      audio_mut;
+  mutable AmMutex      audio_mut;
 
 protected:
   vector<SdpPayload *>  m_payloads;
@@ -334,13 +334,13 @@ public:
    * Lock audio input & output
    * (inclusive RTP stream)
    */
-  void lockAudio();
+  void lockAudio() const;
 
   /**
    * Unlock audio input & output
    * (inclusive RTP stream)
    */
-  void unlockAudio();
+  void unlockAudio() const;
 
   /**
    * Audio input getter .

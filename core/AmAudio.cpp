@@ -281,6 +281,7 @@ AmAudio::AmAudio()
     max_rec_time(-1),
     record_enabled(false),
     stereo_record_enabled(false),
+    has_pending_stereo_recorders(false),
     inband_detector_enabled(false),
     fmt(new AmAudioFormat(CODEC_PCM16)),
     input_resampling_state(),
@@ -317,11 +318,11 @@ void AmAudio::setRecorder(const string &id) {
   }
 }
 
-void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, AmSession *lock_session) {
+void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, const AmSession *lock_session) {
     if(lock_session) lock_session->lockAudio();
 
-    stereo_recorders = recorders;
-    stereo_record_enabled = !stereo_recorders.empty();
+    pending_stereo_recorders = recorders;
+    has_pending_stereo_recorders = true; //always true on changes allowing to set empty recorders list
 
     if(lock_session) lock_session->unlockAudio();
 }
@@ -597,6 +598,19 @@ int AmAudio::incRecordTime(unsigned int samples)
   return rec_time += samples;
 }
 
+void AmAudio::applyPendingStereoRecorders(const AmSession *lock_session)
+{
+    if(has_pending_stereo_recorders) {
+        if(lock_session) lock_session->lockAudio();
+
+        stereo_recorders = pending_stereo_recorders;
+        stereo_record_enabled = !stereo_recorders.empty();
+
+        has_pending_stereo_recorders = false;
+
+        if(lock_session) lock_session->unlockAudio();
+    }
+}
 
 DblBuffer::DblBuffer()
   : active_buf(0)
