@@ -1,3 +1,7 @@
+sems (1.155.0) stable; urgency=low
+  * AmB2BMedia: optimize AmSession::audio_mut locking
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Jan 2025 17:07:33 +0200
+
 sems (1.154.0) stable; urgency=low
   * fix AmAudio::stereo_recorders r/w racing between session and media processors threads
  -- Michael Furmur <furmur@pm.me>  Sat, 18 Jan 2025 17:51:30 +0200
