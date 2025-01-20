@@ -1,3 +1,7 @@
+sems (1.155.1) stable; urgency=low
+  * AmSession: fix pending stereo recorders applying for 'input'
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Jan 2025 21:06:21 +0200
+
 sems (1.155.0) stable; urgency=low
   * AmB2BMedia: optimize AmSession::audio_mut locking
  -- Michael Furmur <furmur@pm.me>  Mon, 20 Jan 2025 17:07:33 +0200
