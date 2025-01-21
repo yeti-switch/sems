@@ -46,6 +46,8 @@ class StreamData {
     /** The RTP stream itself.*/
     AmRtpAudio *stream;
     bool shared_stream;
+    /** Owner session. store it here for locking in the non-stream mode */
+    AmB2BSession *owner_session;
     /** Flag set when streams in A/B leg are correctly initialized (for
      * transcoding purposes). */
     bool initialized;

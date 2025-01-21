@@ -169,6 +169,7 @@ void B2BMediaStatistics::getReport(const AmArg &, AmArg &ret)
 StreamData::StreamData(AmB2BSession* session, bool audio)
   : stream(nullptr),
     shared_stream(false),
+    owner_session(session),
     initialized(false),
     dtmf_detector(nullptr),
     dtmf_queue(nullptr),
@@ -362,6 +363,8 @@ void StreamData::getInfo(AmArg &ret)
 
 void StreamData::changeSession(AmB2BSession *session)
 {
+    owner_session = session;
+
     if(!stream) {
         // the stream was not created yet
         TRACE("delayed stream initialization for session %p", static_cast<void *>(session));
@@ -581,7 +584,7 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
             if (got > 0) {
                 updateRecvStats(src_stream);
                 //CLASS_DBG("out->put(%llu,%d)",ts,got);
-                out->applyPendingStereoRecorders(stream->getSession());
+                out->applyPendingStereoRecorders(owner_session);
 
                 return out->put(ts, buffer, sample_rate,
                                 static_cast<unsigned int>(got));
@@ -665,7 +668,7 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
                 stream->ignoreRecording();
             }
 
-            stream->applyPendingStereoRecorders(stream->getSession());
+            stream->applyPendingStereoRecorders(owner_session);
 
             return stream->put(ts, buffer, sample_rate,
                                static_cast<unsigned int>(got));
