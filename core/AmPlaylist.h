@@ -72,18 +72,18 @@ class AmPlaylist: public AmAudio
     
  protected:
   /** Fake implement AmAudio's pure virtual methods */
-  int read(unsigned int user_ts, unsigned int size){ return -1; }
-  int write(unsigned int user_ts, unsigned int size){ return -1; }
+  int read(unsigned int user_ts, unsigned int size) override { return -1; }
+  int write(unsigned int user_ts, unsigned int size) override { return -1; }
 
   /** override AmAudio */
-  int get(unsigned long long system_ts, unsigned char* buffer, 
-	  int output_sample_rate, unsigned int nb_samples);
+  int get(unsigned long long system_ts, unsigned char* buffer,
+	  int output_sample_rate, unsigned int nb_samples) override;
 
-  int put(unsigned long long system_ts, unsigned char* buffer, 
-	  int input_sample_rate, unsigned int size);
+  int put(unsigned long long system_ts, unsigned char* buffer,
+	  int input_sample_rate, unsigned int size) override;
 	
   /** from AmAudio */
-  void close();
+  void close() override;
     
  public:
   AmPlaylist(AmEventQueue* q = NULL);
@@ -95,6 +95,8 @@ class AmPlaylist: public AmAudio
   void addToPlayListFront(AmPlaylistItem* item);
 
   void flush();
+
+  void applyPendingStereoRecorders(const AmSession *lock_session) override;
 };
 
 /**

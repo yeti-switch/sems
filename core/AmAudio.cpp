@@ -604,6 +604,7 @@ void AmAudio::applyPendingStereoRecorders(const AmSession *lock_session)
         if(lock_session) lock_session->lockAudio();
 
         stereo_recorders = pending_stereo_recorders;
+        pending_stereo_recorders.clear();
         stereo_record_enabled = !stereo_recorders.empty();
 
         has_pending_stereo_recorders = false;

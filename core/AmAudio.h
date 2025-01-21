@@ -427,7 +427,7 @@ public:
    */
   unsigned int scaleSystemTS(unsigned long long system_ts);
 
-  void applyPendingStereoRecorders(const AmSession *lock_session);
+  virtual void applyPendingStereoRecorders(const AmSession *lock_session);
 };
 
 

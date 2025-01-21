@@ -26,6 +26,7 @@
  */
 
 #include "AmPlaylist.h"
+#include "AmSession.h"
 #include "amci/codecs.h"
 #include "log.h"
 
@@ -174,4 +175,17 @@ bool AmPlaylist::isEmpty()
   cur_mut.unlock();
 
   return res;
+}
+
+void AmPlaylist::applyPendingStereoRecorders(const AmSession *lock_session)
+{
+    if(lock_session) lock_session->lockAudio();
+
+    cur_mut.lock();
+    if(cur_item && cur_item->record) {
+        cur_item->record->applyPendingStereoRecorders(nullptr);
+    }
+    cur_mut.unlock();
+
+    if(lock_session) lock_session->unlockAudio();
 }
