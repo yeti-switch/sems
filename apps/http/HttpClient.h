@@ -130,6 +130,7 @@ class HttpClient
     rpc_handler dstDump;
     async_rpc_handler showDnsCache;
     rpc_handler resetDnsCache;
+    rpc_handler setEventsLogLevel;
 
     /* true if event consumed */
     template<typename EventType>
@@ -149,6 +150,8 @@ class HttpClient
     static HttpClient* instance();
     static void dispose();
     AmDynInvoke* getInstance() { return static_cast<AmDynInvoke*>(instance()); }
+
+    static int events_log_level;
 
     int onLoad();
 

@@ -1,4 +1,5 @@
 #include "CurlConnection.h"
+#include "HttpClient.h"
 #include "log.h"
 #include "defs.h"
 #include "format_helper.h"
@@ -161,8 +162,11 @@ bool CurlConnection::need_requeue()
        destination.attempts_limit &&
        event->attempt >= destination.attempts_limit)
     {
-        DBG("attempt limit(%i) reached. skip requeue",
-            destination.attempts_limit);
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "attempt limit(%i) reached. skip requeue",
+                destination.attempts_limit);
+        }
         on_finish_requeue = false;
     }
 
@@ -198,9 +202,12 @@ void CurlConnection::on_finished()
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
     curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
 
-    DBG("%s: %s finished with %ld in %.3f seconds (%.3f bytes/sec) with content type %s",
-        get_name(), eff_url, http_response_code,
-        total_time, speed_download, ct ? ct : "(null)");
+    if (HttpClient::events_log_level >= 0) {
+        _LOG(HttpClient::events_log_level,
+            "%s: %p %s finished with %ld in %.3f seconds (%.3f bytes/sec) with content type %s",
+            get_name(), this, eff_url, http_response_code,
+            total_time, speed_download, ct ? ct : "(null)");
+    }
 
     if(destination.succ_codes(http_response_code)) {
         if(ct) mime_type = ct;

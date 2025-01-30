@@ -11,6 +11,7 @@
 #define PARAM_RESEND_QUEUE_MAX_NAME         "resend_queue_max"
 #define PARAM_RESEND_CONNECTION_LIMIT_NAME  "resend_connection_limit"
 #define PARAM_CONNECTION_LIMIT_NAME         "connection_limit"
+#define PARAM_EVENTS_LOG_LEVEL              "events_log_level"
 
 #define SECTION_AUTH_NAME           "auth"
 #define PARAM_AUTH_TYPE             "type"

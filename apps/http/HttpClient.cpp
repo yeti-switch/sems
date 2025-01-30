@@ -1,6 +1,7 @@
 #include "HttpClient.h"
 #include "defs.h"
 #include "log.h"
+#include "format_helper.h"
 
 #include "AmSessionContainer.h"
 #include "AmEventDispatcher.h"
@@ -38,6 +39,8 @@ enum RpcMethodId {
     MethodPostRequest,
     MethodMultiRequest
 };
+
+int HttpClient::events_log_level = L_DBG;
 
 class HttpClientFactory
   : public AmDynInvokeFactory
@@ -107,7 +110,7 @@ HttpClient::HttpClient()
     ShutdownHandler(MOD_NAME, HTTP_EVENT_QUEUE),
     stopped(false),
     epoll_fd(-1)
-{ 
+{
     stat_group(Gauge, MOD_NAME, "sync_context_count").addFunctionCounter([]()->unsigned long long {
        return HttpClient::instance()->sync_contexts.size();
     });
@@ -223,6 +226,8 @@ int HttpClient::configure(const string& config)
 {
     cfg_t *cfg = cfg_init(http_client_opt, CFGF_NONE);
     if(!cfg) return -1;
+
+    cfg_set_validate_func(cfg, PARAM_EVENTS_LOG_LEVEL, validate_log_func);
     cfg_set_validate_func(cfg, SECTION_AUTH_NAME "|" PARAM_AUTH_TYPE, validate_type_func);
     cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_MODE_NAME, validate_mode_func);
     cfg_set_validate_func(cfg, SECTION_DEST_NAME "|" PARAM_SOURCE_ADDRESS_NAME, validate_source_address_func);
@@ -244,7 +249,11 @@ int HttpClient::configure(const string& config)
         cfg_free(cfg);
         return -1;
     }
+
     resend_interval = cfg_getint(cfg, PARAM_RESEND_INTERVAL_NAME)*1000;
+    events_log_level =
+        parse_log_level(cfg_getstr(cfg, PARAM_EVENTS_LOG_LEVEL)).value_or(L_DBG);
+
     DefaultValues vals;
     vals.resend_queue_max = resend_queue_max = cfg_getint(cfg, PARAM_RESEND_QUEUE_MAX_NAME);
     vals.resend_connection_limit = resend_connection_limit = cfg_getint(cfg, PARAM_RESEND_CONNECTION_LIMIT_NAME);
@@ -347,6 +356,8 @@ void HttpClient::init_rpc_tree()
         reg_method(req, "multi", "multi request", &HttpClient::multiRequest);
         AmArg &cache = reg_leaf(req,"dns_cache");
             reg_method(cache,"reset","reset dns_cache", &HttpClient::resetDnsCache);
+    AmArg &set = reg_leaf(root,"set");
+        reg_method(set, "events_log_level", "", &HttpClient::setEventsLogLevel);
 }
 
 bool HttpClient::postRequest(
@@ -475,6 +486,21 @@ void HttpClient::resetDnsCache(const AmArg&, AmArg&)
 {
     resolve_timer.set(1);
 }
+
+void HttpClient::setEventsLogLevel(const AmArg& arg, AmArg& ret)
+{
+    if(!isArgArray(arg) || arg.size()<1)
+        throw AmDynInvoke::Exception(500, "expected array with log_level in the first item");
+
+    try {
+        int l = arg2int(arg[0]);
+        ret = format("events_log_level changed {} -> {}", events_log_level, l);
+        events_log_level = l;
+    } catch(...) {
+        throw AmDynInvoke::Exception(500, "failed to parse log_level");
+    }
+}
+
 
 void HttpClient::run()
 {
@@ -741,15 +767,20 @@ void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
 {
     auto it = sync_contexts.find(e.sync_ctx_id);
     if(it == sync_contexts.end()) {
-        DBG("on_trigger_sync_context: no context '%s'. create new with counter %d",
-            e.sync_ctx_id.c_str(),-e.quantity);
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "on_trigger_sync_context: no context '%s'. create new with counter %d",
+                e.sync_ctx_id.c_str(),-e.quantity);
+        }
         sync_contexts.emplace(e.sync_ctx_id,-e.quantity);
         return;
     }
 
-    DBG("on_trigger_sync_context: found context %s. counter %d. requeue postponed events and decrease counter by %d",
-        e.sync_ctx_id.c_str(),it->second.counter,e.quantity);
-
+    if (HttpClient::events_log_level >= 0) {
+        _LOG(HttpClient::events_log_level,
+            "on_trigger_sync_context: found context %s. counter %d. requeue postponed events and decrease counter by %d",
+            e.sync_ctx_id.c_str(),it->second.counter,e.quantity);
+    }
     it->second.counter-=e.quantity;
 
     auto &postponed_events = it->second.postponed_events;
@@ -760,8 +791,11 @@ void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
     }
 
     if(it->second.counter < 0) {
-        DBG("on_trigger_sync_context: finished. context %s. counter %d",
-            e.sync_ctx_id.c_str(),it->second.counter);
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "on_trigger_sync_context: finished. context %s. counter %d",
+                e.sync_ctx_id.c_str(),it->second.counter);
+        }
         return;
     }
 
@@ -771,8 +805,11 @@ void HttpClient::on_trigger_sync_context(const HttpTriggerSyncContext &e)
                e.sync_ctx_id.c_str());
     }
 
-    DBG("on_trigger_sync_context: remove context %s",
-        e.sync_ctx_id.c_str());
+    if (HttpClient::events_log_level >= 0) {
+        _LOG(HttpClient::events_log_level,
+            "on_trigger_sync_context: remove context %s",
+            e.sync_ctx_id.c_str());
+    }
 
     sync_contexts.erase(it);
 }
@@ -794,8 +831,11 @@ void HttpClient::on_sync_context_timer()
                     postponed_events.pop();
                 }
             } else {
-                DBG("remove context %s on timeout, counter: %d",
-                    it->first.c_str(),it->second.counter);
+                if (HttpClient::events_log_level >= 0) {
+                    _LOG(HttpClient::events_log_level,
+                        "remove context %s on timeout, counter: %d",
+                        it->first.c_str(),it->second.counter);
+                }
             }
 
             it = sync_contexts.erase(it);
@@ -823,26 +863,43 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
         return;
     }
 
-    if(u->token.empty()){
-        DBG("http upload request: %s => %s [%i/%i]",
-            u->file_path.c_str(),
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt);
-    } else {
-        DBG("http upload request: %s => %s [%i/%i] token: %s",
-            u->file_path.c_str(),
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt,
-            u->token.c_str());
+    if (HttpClient::events_log_level >= 0) {
+        if(u->token.empty()) {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http upload request: %s => %s [%i/%i]",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                u->file_path.c_str(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt);
+        } else {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http upload request: %s => %s [%i/%i] token: %s",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                u->file_path.c_str(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt,
+                u->token.c_str());
+        }
     }
 
     if(check_http_event_sync_ctx(*u)) {
-        DBG("http upload request is consumed by synchronization contexts handler");
+        if (HttpClient::events_log_level >= 0) {
+             _LOG(HttpClient::events_log_level,
+                "http upload request is consumed by synchronization contexts handler %s",
+                u->sync_ctx_id.data());
+        }
         return;
     }
 
     if(!u->attempt && d.count_connection.get() >= d.connection_limit) {
-        DBG("http upload request marked as postponed");
+        if (HttpClient::events_log_level >= 0) {
+             _LOG(HttpClient::events_log_level,
+                "[%s/%s] http upload request marked as postponed",
+                u->session_id.data(),
+                u->sync_ctx_id.data());
+        }
         d.addEvent(new HttpUploadEvent(*u));
         return;
     }
@@ -851,7 +908,9 @@ void HttpClient::on_upload_request(HttpUploadEvent *u)
 
     HttpUploadConnection *c = new HttpUploadConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
-        DBG("http upload connection intialization error");
+        ERROR("[%s/%s] http upload connection intialization error",
+            u->session_id.data(),
+            u->sync_ctx_id.data());
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
@@ -935,31 +994,50 @@ void HttpClient::on_post_request(HttpPostEvent *u)
 
     authorization(d, u);
 
-    if(u->token.empty()){
-        DBG("http post request url: %s [%i/%i]",
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt);
-    } else {
-        DBG("http post request url: %s [%i/%i], token: %s",
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt,
-            u->token.c_str());
+    if (HttpClient::events_log_level >= 0) {
+        if(u->token.empty()){
+             _LOG(HttpClient::events_log_level,
+                "[%s/%s] http post request url: %s [%i/%i]",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt);
+        } else {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http post request url: %s [%i/%i], token: %s",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt,
+                u->token.c_str());
+        }
     }
 
     if(check_http_event_sync_ctx(*u)) {
-        DBG("http post request is consumed by synchronization contexts handler");
+        if (HttpClient::events_log_level >= 0) {
+             _LOG(HttpClient::events_log_level,
+                "http post request is consumed by synchronization contexts handler %s",
+                u->sync_ctx_id.data());
+        }
         return;
     }
 
     if(!u->attempt && d.count_connection.get() == d.connection_limit) {
-        DBG("http post request marked as postponed");
+        if (HttpClient::events_log_level >= 0) {
+             _LOG(HttpClient::events_log_level,
+                "[%s/%s] http post request marked as postponed",
+                u->session_id.data(),
+                u->sync_ctx_id.data());
+        }
         d.addEvent(new HttpPostEvent(*u));
         return;
     }
 
     HttpPostConnection *c = new HttpPostConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
-        DBG("http post connection intialization error");
+        ERROR("[%s/%s] http post connection intialization error",
+            u->session_id.data(),
+            u->sync_ctx_id.data());
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
@@ -983,24 +1061,41 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
         return;
     }
 
-    if(u->token.empty()){
-        DBG("http multipart form request url: %s [%i/%i]",
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt);
-    } else {
-        DBG("http multipart form request url: %s [%i/%i], token: %s",
-            d.url[u->failover_idx].c_str(),
-            u->failover_idx,u->attempt,
-            u->token.c_str());
+    if (HttpClient::events_log_level >= 0) {
+        if(u->token.empty()){
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http multipart form request url: %s [%i/%i]",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt);
+        } else {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http multipart form request url: %s [%i/%i], token: %s",
+                u->session_id.data(),
+                u->sync_ctx_id.data(),
+                d.url[u->failover_idx].c_str(),
+                u->failover_idx,u->attempt,
+                u->token.c_str());
+        }
     }
 
     if(check_http_event_sync_ctx(*u)) {
-        DBG("multipart form request is consumed by synchronization contexts handler");
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "multipart form request is consumed by synchronization contexts handler %s",
+                 u->sync_ctx_id.data());
+        }
         return;
     }
 
     if(!u->attempt && d.count_connection.get() == d.connection_limit) {
-        DBG("http multipart form request marked as postponed");
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http multipart form request marked as postponed",
+                u->session_id.data(),
+                u->sync_ctx_id.data());
+        }
         d.addEvent(new HttpPostMultipartFormEvent(*u));
         return;
     }
@@ -1009,7 +1104,9 @@ void HttpClient::on_multpart_form_request(HttpPostMultipartFormEvent *u)
 
     HttpMultiPartFormConnection *c = new HttpMultiPartFormConnection(d, *u, u->sync_ctx_id);
     if(c->init(hosts, curl_multi)){
-        DBG("http multipart form connection intialization error");
+        ERROR("[%s/%s] http multipart form connection intialization error",
+            u->session_id.data(),
+            u->sync_ctx_id.data());
         u->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         on_init_connection_error(u->sync_ctx_id);
         delete c;
@@ -1033,19 +1130,32 @@ void HttpClient::on_get_request(HttpGetEvent *e)
         return;
     }
 
-    if(e->token.empty()){
-        DBG("http get request url: %s [%i/%i]",
-            e->url.c_str(),
-            e->failover_idx,e->attempt);
-    } else {
-        DBG("http get request url: %s [%i/%i], token: %s",
-            e->url.c_str(),
-            e->failover_idx,e->attempt,
-            e->token.c_str());
+    if (HttpClient::events_log_level >= 0) {
+        if(e->token.empty()){
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http get request url: %s [%i/%i]",
+                e->session_id.data(),
+                e->sync_ctx_id.data(),
+                e->url.c_str(),
+                e->failover_idx,e->attempt);
+        } else {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http get request url: %s [%i/%i], token: %s",
+                e->session_id.data(),
+                e->sync_ctx_id.data(),
+                e->url.c_str(),
+                e->failover_idx,e->attempt,
+                e->token.c_str());
+        }
     }
 
     if(!e->attempt && d.count_connection.get() == d.connection_limit) {
-        DBG("http get request");
+        if (HttpClient::events_log_level >= 0) {
+             _LOG(HttpClient::events_log_level,
+                "[%s/%s] http get request marked as postponed",
+                e->session_id.data(),
+                e->sync_ctx_id.data());
+        }
         d.addEvent(new HttpGetEvent(*e));
         return;
     }
@@ -1054,7 +1164,9 @@ void HttpClient::on_get_request(HttpGetEvent *e)
 
     HttpGetConnection *c = new HttpGetConnection(d, *e, e->sync_ctx_id,epoll_fd);
     if(c->init(hosts, curl_multi)){
-        DBG("http get connection intialization error");
+        ERROR("[%s/%s] http get connection intialization error",
+            e->session_id.data(),
+            e->sync_ctx_id.data());
         e->attempt ? d.resend_count_connection.dec() : d.count_connection.dec();
         on_init_connection_error(e->sync_ctx_id);
         delete c;
@@ -1077,7 +1189,13 @@ void HttpClient::on_init_connection_error(const string& conn_id)
 void HttpClient::on_multi_request(HttpMultiEvent* e)
 {
     if(check_http_event_sync_ctx(*e)) {
-        DBG("http multi request is consumed by synchronization contexts handler");
+        if (HttpClient::events_log_level >= 0) {
+            _LOG(HttpClient::events_log_level,
+                "[%s/%s] http multi request is consumed by synchronization contexts handler %s",
+                e->session_id.data(),
+                e->sync_ctx_id.data(),
+                e->sync_ctx_id.data());
+        }
         return;
     }
 
