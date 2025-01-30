@@ -1,3 +1,7 @@
+sems (1.156.1) stable; urgency=low
+  * http: add 'events_log_level' option
+ -- Michael Furmur <furmur@pm.me>  Thu, 30 Jan 2025 23:42:06 +0200
+
 sems (1.156.0) stable; urgency=low
   * AmB2BMedia: fix segfault. save owner session to the StreamData
  -- Michael Furmur <furmur@pm.me>  Tue, 21 Jan 2025 13:04:17 +0200
