@@ -183,19 +183,26 @@ void RxRing::handler(uint32_t ev, int fd)
         if (!bl)
             continue;
 
-        unsigned next = (bl->end.get() + 1) & MIXER_BACKLOG_MASK;
+        do {
+            bl_position_t last, next;
 
-        bl->frame[next].neighbor_id = neighbor_id;
-        bl->frame[next].hdr         = hdr;
+            last.pair = next.pair = bl->position.pair;
+            ++next.end &= MIXER_BACKLOG_MASK;
 
-        if (bl->start.get() != next)
-            bl->end.set(next);
-        else {
-            DBG("Backlog overrun for %ld", hdr->id);
-            continue;
-        }
+            if (last.start == next.end) {
+                DBG("Backlog overrun for %ld", hdr->id);
+                break;
+            }
 
-        prepare_next_frame(length);
+            bl->frame[next.end].neighbor_id = neighbor_id;
+            bl->frame[next.end].hdr         = hdr;
+
+            if (__sync_bool_compare_and_swap(&bl->position.pair, last.pair, next.pair)) {
+                prepare_next_frame(length);
+                break;
+            }
+
+        } while (true);
 
     } while (true);
 }

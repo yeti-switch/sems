@@ -65,12 +65,21 @@ typedef struct {
 
 using mixer_ptr = std::shared_ptr<MultiPartyMixer>;
 
+typedef struct  __attribute__((packed, aligned(8))) {
+    union {
+    uint64_t pair;
+    struct { /** if start == end => frame queue is empty */
+        uint32_t start;
+        uint32_t end;
+    };
+    };
+} bl_position_t;
+
+
 struct backlog {
+    volatile bl_position_t position;
     uint64_t     id;
     mixer_ptr   mixer;
-
-    atomic_int  start; /** if start == end => frame queue is empty */
-    atomic_int  end;
     RxFrame     frame[MIXER_BACKLOG_SIZE];
 };
 

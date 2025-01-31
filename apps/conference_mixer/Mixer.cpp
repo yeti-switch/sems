@@ -543,6 +543,7 @@ channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t chann
                 } else {
                     /// last channel released, release backlog mixer refs
                     backlog_data[backlog_id].mixer.reset();
+                    backlog_data[backlog_id].position.pair = 0;
                     clear_bit(backlog_id, backlog_map);
                 }
 
