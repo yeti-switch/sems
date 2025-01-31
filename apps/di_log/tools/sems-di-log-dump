@@ -21,7 +21,7 @@ e='&DILog::ring_buf[DILog::pos]'
 cmd="dump binary memory $di_log_dump $s $e"
 
 echo -e "run gdb for corefile '$core_file' with command:\n\t$cmd"
-echo $cmd | gdb -q -n /usr/sbin/sems "$core_file"
+echo $cmd | gdb -q -n /usr/bin/sems "$core_file"
 
 if [ ! -f "$di_log_dump" ]; then
     exit 1;
