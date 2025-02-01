@@ -75,7 +75,9 @@ int raw_sender::send(const char* buf, unsigned int len, int sys_if_idx,
                 tos);
   }
   if(ret < 0) {
-    ERROR("send(): %s",strerror(errno));
+    if(AmConfig.rtp_send_errors_log_level >= 0) {
+      _LOG(AmConfig.rtp_send_errors_log_level, "send(): %s",strerror(errno));
+    }
     return ret;
   }
 

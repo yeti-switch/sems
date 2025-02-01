@@ -94,10 +94,13 @@ ssize_t AmStreamConnection::send(AmRtpPacket* packet)
         getConnType());
 
     if(ret < 0) {
-        CLASS_ERROR("AmStreamConnection::send: ret: %ld. r_addr:'%s':%hu, r_host:'%s', r_port: %d",
-            ret,
-            get_addr_str(&r_addr).data(),am_get_port(&r_addr),
-            r_host.data(),r_port);
+        if(AmConfig.rtp_send_errors_log_level >= 0) {
+            _LOG(AmConfig.rtp_send_errors_log_level,
+                "AmStreamConnection::send: ret: %ld. r_addr:'%s':%hu, r_host:'%s', r_port: %d",
+                ret,
+                get_addr_str(&r_addr).data(),am_get_port(&r_addr),
+                r_host.data(),r_port);
+        }
     }
 
     return ret;

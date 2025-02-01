@@ -1781,9 +1781,12 @@ void AmRtpStream::relay(AmRtpPacket* p)
     } //if(!relay_raw)
 
     if(cur_rtp_trans->send(p, relay_raw ? AmStreamConnection::RAW_CONN : AmStreamConnection::RTP_CONN) < 0) {
-        CLASS_ERROR("while sending RTP packet to '%s':%i",
-                    cur_rtp_trans->getRHost(false).c_str(),
-                    cur_rtp_trans->getRPort(false));
+        if(AmConfig.rtp_send_errors_log_level >= 0) {
+            _LOG(AmConfig.rtp_send_errors_log_level,
+                "while sending RTP packet to '%s':%i",
+                cur_rtp_trans->getRHost(false).c_str(),
+                cur_rtp_trans->getRPort(false));
+        }
     } else {
         p->relayed = true;
         if(session) {

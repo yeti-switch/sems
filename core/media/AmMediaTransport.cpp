@@ -687,12 +687,15 @@ ssize_t AmMediaTransport::send(sockaddr_storage* raddr, unsigned char* buf, int 
         reinterpret_cast<const struct sockaddr*>(raddr), SA_len(raddr));
 
     if(err == -1) {
-        CLASS_ERROR("sendto(%d,%p,%d,0,%p,%ld): errno: %d, raddr:'%s', type: %d",
-            l_sd,
-            static_cast<void *>(buf),size,
-            static_cast<void *>(raddr),SA_len(raddr),
-            errno, get_addr_str(raddr).data(), type);
-        log_stacktrace(L_DBG);
+        if(AmConfig.rtp_send_errors_log_level >= 0) {
+            _LOG(AmConfig.rtp_send_errors_log_level,
+                "sendto(%d,%p,%d,0,%p,%ld): errno: %d, raddr:'%s', type: %d",
+                l_sd,
+                static_cast<void *>(buf),size,
+                static_cast<void *>(raddr),SA_len(raddr),
+                errno, get_addr_str(raddr).data(), type);
+            //log_stacktrace(L_DBG);
+        }
         return -1;
     }
     return err;

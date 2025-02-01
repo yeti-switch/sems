@@ -132,6 +132,7 @@
 #define PARAM_ACCEPT_FORKED_DLG_NAME "accept_forked_dialogs"
 #define PARAM_100REL_NAME            "100rel"
 #define PARAM_UNHDL_REP_LOG_LVL_NAME "unhandled_reply_loglevel"
+#define PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME "log_rtp_send_errors"
 #define PARAM_PCAP_UPLOAD_QUEUE_NAME "pcap_upload_queue"
 #define PARAM_RESAMPLE_LIBRARY_NAME  "resampling_library"
 #define PARAM_ENABLE_ZRTP_NAME       "enable_zrtp"
@@ -631,6 +632,7 @@ namespace Config {
         CFG_STR(PARAM_DTMF_DETECTOR_NAME, VALUE_SPANDSP, CFGF_NONE),
         CFG_STR(PARAM_100REL_NAME, VALUE_SUPPORTED, CFGF_NONE),
         CFG_STR(PARAM_UNHDL_REP_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
+        CFG_STR(PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
         CFG_STR(PARAM_PCAP_UPLOAD_QUEUE_NAME, "", CFGF_NONE),
         CFG_STR_LIST(PARAM_CODEC_ORDER_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_EXCLUDE_PAYLOADS_NAME, 0, CFGF_NODEFAULT),
@@ -1068,6 +1070,7 @@ void AmLcConfig::setValidationFunction(cfg_t* cfg)
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_DTMF_DETECTOR_NAME , validate_dtmf_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_100REL_NAME , validate_100rel_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_UNHDL_REP_LOG_LVL_NAME , validate_log_func);
+    cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME , validate_log_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_RESAMPLE_LIBRARY_NAME , validate_resampling_func);
     cfg_set_validate_func(cfg, SECTION_GENERAL_NAME "|" PARAM_SYMMETRIC_MODE_NAME , validate_symmetric_mode_func);
 
@@ -1267,6 +1270,9 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->unhandled_reply_log_level =
         static_cast<Log_Level>(
             parse_log_level(cfg_getstr(gen, PARAM_UNHDL_REP_LOG_LVL_NAME)).value_or(L_ERR));
+    config->rtp_send_errors_log_level =
+        static_cast<Log_Level>(
+            parse_log_level(cfg_getstr(gen, PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME)).value_or(L_ERR));
     config->pcap_upload_queue_name = cfg_getstr(gen, PARAM_PCAP_UPLOAD_QUEUE_NAME);
     value = cfg_getstr(gen, PARAM_RESAMPLE_LIBRARY_NAME);
     if(value == VALUE_LIBSAMPLERATE) config->resampling_implementation_type = AmAudio::LIBSAMPLERATE;
