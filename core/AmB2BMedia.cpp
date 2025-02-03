@@ -393,6 +393,10 @@ void StreamData::setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session)
     shared_stream = true;
     if(session) {
         force_symmetric_rtp = session->getRtpRelayForceSymmetricRtp();
+
+        // update owner_session if it doesn't exist
+        if(!owner_session && stream->getSession() == session)
+            owner_session = session;
     }
     initialized = true;
 }
