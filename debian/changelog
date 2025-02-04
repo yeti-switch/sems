@@ -1,3 +1,9 @@
+sems (1.157.0) stable; urgency=low
+  * AmB2BMedia: fix stereo recorders racing. initalize StreamData::owner_session for applyPendingStereoRecorders
+  * fix conference mixer ring racing
+  * opus: use OPUS_BANDWIDTH_FULLBAND (20 kHz) passband and complexity 10
+ -- Michael Furmur <furmur@pm.me>  Tue, 04 Feb 2025 17:11:04 +0200
+
 sems (1.156.2) stable; urgency=low
   * add option general.log_rtp_send_errors
  -- Michael Furmur <furmur@pm.me>  Sat, 01 Feb 2025 21:37:42 +0200
