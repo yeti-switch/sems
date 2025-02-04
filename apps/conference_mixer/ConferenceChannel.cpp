@@ -156,7 +156,8 @@ void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer
     struct backlog *bl = get_backlog(mpmixer->backlog_id);
 
     while (bl->position.start != bl->position.end) {
-        RxFrame         &fr = bl->frame[bl->position.start];
+        unsigned        next = (bl->position.start + 1) & MIXER_BACKLOG_MASK;
+        RxFrame         &fr = bl->frame[next];
         MixerFrameHdr   *h = fr.hdr;
         NeighborData    *d = &data[fr.neighbor_id];
 
@@ -171,7 +172,6 @@ void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer
             d->length += h->length;
         }
 
-        unsigned next = (bl->position.start + 1) & MIXER_BACKLOG_MASK;
         bl->position.start = next;
     }
 
