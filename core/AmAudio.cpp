@@ -281,7 +281,7 @@ AmAudio::AmAudio()
     max_rec_time(-1),
     record_enabled(false),
     stereo_record_enabled(false),
-    has_pending_stereo_recorders(false),
+    has_pending_stereo_recorders{false},
     inband_detector_enabled(false),
     fmt(new AmAudioFormat(CODEC_PCM16)),
     input_resampling_state(),
@@ -322,7 +322,9 @@ void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, const AmS
     if(lock_session) lock_session->lockAudio();
 
     pending_stereo_recorders = recorders;
-    has_pending_stereo_recorders = true; //always true on changes allowing to set empty recorders list
+
+    //always true on changes allowing to set empty recorders list
+    has_pending_stereo_recorders.store(true, std::memory_order_release);
 
     if(lock_session) lock_session->unlockAudio();
 }
@@ -600,17 +602,22 @@ int AmAudio::incRecordTime(unsigned int samples)
 
 void AmAudio::applyPendingStereoRecorders(const AmSession *lock_session)
 {
-    if(has_pending_stereo_recorders) {
-        if(lock_session) lock_session->lockAudio();
-
-        stereo_recorders = pending_stereo_recorders;
-        pending_stereo_recorders.clear();
-        stereo_record_enabled = !stereo_recorders.empty();
-
-        has_pending_stereo_recorders = false;
-
-        if(lock_session) lock_session->unlockAudio();
+    bool expected{true};
+    if(!has_pending_stereo_recorders.compare_exchange_strong(
+        expected, false,
+        std::memory_order_release,
+        std::memory_order_relaxed))
+    {
+        return;
     }
+
+    if(lock_session) lock_session->lockAudio();
+
+    stereo_recorders = pending_stereo_recorders;
+    pending_stereo_recorders.clear();
+    stereo_record_enabled = !stereo_recorders.empty();
+
+    if(lock_session) lock_session->unlockAudio();
 }
 
 DblBuffer::DblBuffer()

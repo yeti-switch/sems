@@ -280,7 +280,7 @@ protected:
   bool stereo_record_enabled;
   StereoRecordersList stereo_recorders;
 
-  bool has_pending_stereo_recorders;
+  std::atomic_bool has_pending_stereo_recorders;
   /** R/W is guarded by AmSession::audio_mut */
   StereoRecordersList pending_stereo_recorders;
 
