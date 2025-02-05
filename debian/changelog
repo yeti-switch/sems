@@ -1,3 +1,7 @@
+sems (1.158.0) stable; urgency=low
+  * AmAudio: use atomic for has_pending_stereo_recorders
+ -- Michael Furmur <furmur@pm.me>  Wed, 05 Feb 2025 12:01:50 +0200
+
 sems (1.157.0) stable; urgency=low
   * AmB2BMedia: fix stereo recorders racing. initalize StreamData::owner_session for applyPendingStereoRecorders
   * fix conference mixer ring racing
