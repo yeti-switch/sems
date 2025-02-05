@@ -194,11 +194,9 @@ void _AmAudioFileRecorderProcessor::processRecorderEvent(AudioRecorderEvent &ev)
 
             r[ev.recorder_id] = recorder;
             recorders_opened++;
-        } else {
-            ERROR("event %d for not existent recorder %s",
-                ev.event_id, ev.recorder_id.data());
+        }/*else {
             //non add event for not existent recorder. ignore it
-        }
+        }*/
         return;
     }
 
