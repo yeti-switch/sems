@@ -323,6 +323,12 @@ void AmAudio::setStereoRecorders(const StereoRecordersList &recorders, const AmS
 
     pending_stereo_recorders = recorders;
 
+    /* have to set it before applyPendingStereoRecorders
+     * to ensure correct relay mode for RtpStream.
+     *  see: StreamData::setRelayStream
+     *  and: AmAudio::isRecordEnabled */
+    stereo_record_enabled = !recorders.empty();
+
     //always true on changes allowing to set empty recorders list
     has_pending_stereo_recorders.store(true, std::memory_order_release);
 
