@@ -1,3 +1,8 @@
+sems (1.158.2) stable; urgency=low
+  * AmAudioFileRecorder: log events to nx recorders
+  * fix relay disabling on enabled stereo recording
+ -- Michael Furmur <furmur@pm.me>  Thu, 06 Feb 2025 01:30:15 +0200
+
 sems (1.158.1) stable; urgency=low
   * AmAudioFileRecorder: log events to nx recorders
  -- Michael Furmur <furmur@pm.me>  Wed, 05 Feb 2025 12:43:24 +0200
