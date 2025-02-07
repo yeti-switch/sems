@@ -105,6 +105,7 @@ int PGTransactionImpl::fetch_result()
                 parent->handler->onError(parent, error ? error : "");
                 char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
                 parent->handler->onErrorCode(parent, errorfield ? errorfield : "");
+                PQfreemem(error);
                 break;
             }
             case PGRES_SINGLE_TUPLE:

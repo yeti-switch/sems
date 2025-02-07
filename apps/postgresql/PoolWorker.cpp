@@ -550,25 +550,27 @@ void PoolWorker::checkQueue()
         if(count >= batch_size || need_send || next_it == queue.end()) {
             TransContainer tr(trans, (ConnectionPool*)0, trans_it->sender_id, trans_it->token, trans_it->trans_id);
             int ret = retransmitTransaction(tr);
-            if(ret < 0) {
+            if(ret != 0) {
                 delete trans;
                 trans = NULL;
-                break;
-            } else {
+            }
+            if(ret < 0) break;
+            else {
                 for(auto it = queue.begin(); it != next_it; it++) {
                     delete it->trans;
                     it->trans = NULL;
                 }
                 trans_it = queue.erase(queue.begin(), next_it);
                 queue_size.dec(count);
+                trans = NULL;
             }
             count = 0;
             need_send = false;
-            trans = 0;
         } else {
             trans_it++;
         }
     }
+    if(trans) delete trans;
     if(!queue.size()) send_next_time = 0;
     else send_next_time = time(0) + batch_timeout;
 
@@ -765,6 +767,7 @@ void PoolWorker::removeTrans(const char* id)
         if(tr->trans_id == id) {
             queue_size.dec(tr->trans->get_size());
             dropped.inc(tr->trans->get_size());
+            delete tr->trans;
             queue.erase(tr);
             return;
         }
@@ -774,6 +777,7 @@ void PoolWorker::removeTrans(const char* id)
         if(tr->trans_id == id) {
             ret_size.dec(tr->trans->get_size());
             dropped.inc(tr->trans->get_size());
+            delete tr->trans;
             retransmit_q.erase(tr);
             return;
         }
