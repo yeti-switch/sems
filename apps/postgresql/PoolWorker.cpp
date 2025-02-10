@@ -218,6 +218,7 @@ void PoolWorker::onStopTransaction(Transaction* trans)
             return;
         }
     }
+    delete trans;
 }
 
 void PoolWorker::onConnectionFailed(Connection* conn, const std::string& error) {
