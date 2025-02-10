@@ -13,12 +13,13 @@ using namespace Rtsp;
 
 static const int RTP_TIMEOUT_SEC =  1;
 
-RtspAudio::RtspAudio(AmSession* _s, const string &uri)
+RtspAudio::RtspAudio(AmSession* _s, const string &uri, int samplerate_hint)
   : AmRtpAudio(_s, RtspClient::instance()->getRtpInterface()),
     agent(RtspClient::instance()),
 //    md(0),
     ssrc(0),
     streamid(-1),
+    samplerate(samplerate_hint),
     start_progress_time(0),
     state(Ready)
 {
@@ -29,7 +30,7 @@ RtspAudio::RtspAudio(AmSession* _s, const string &uri)
     am_inet_pton(agent->localMediaIP().c_str(), &ss);
     AmRtpAudio::setLocalIP(ss.ss_family == AF_INET ? AT_V4 : AT_V6);
 
-    open(uri);
+    open(uri, samplerate);
 }
 
 
@@ -49,7 +50,7 @@ void RtspAudio::close()
 }
 
 
-void RtspAudio::open(const string& _uri)
+void RtspAudio::open(const string& _uri, int samplerate_hint)
 {
     DBG("####### %s: '%s'", __func__, _uri.c_str());
 
@@ -59,6 +60,7 @@ void RtspAudio::open(const string& _uri)
     struct timeval tm;
     gettimeofday(&tm, 0);
     start_progress_time = tm.tv_sec*1000 + tm.tv_usec/1000;
+    samplerate = samplerate_hint;
 
     describe();
 }
@@ -97,8 +99,14 @@ void RtspAudio::checkState(uint64_t timeout)
 
 void RtspAudio::describe()
 {
+    struct RtspMsg msg = RtspMsg(DESCRIBE, uri, id);
+
     state = Progress;
-    last_sent_cseq = agent->RtspRequest(RtspMsg(DESCRIBE, uri, id));
+
+    if (samplerate)
+        msg.header[H_X_Samplerate_Hint] = int2str(samplerate);
+
+    last_sent_cseq = agent->RtspRequest(msg);
 }
 
 
@@ -107,6 +115,9 @@ void RtspAudio::setup(int l_port)
     struct RtspMsg msg = RtspMsg(SETUP, uri, id) ;
 
     msg.header[H_Transport] = "RTP/AVP;unicast;client_port=" + int2str(l_port)+"-"+int2str(l_port + 1);
+
+    if (samplerate)
+        msg.header[H_X_Samplerate_Hint] = int2str(samplerate);
 
     last_sent_cseq = agent->RtspRequest(msg);
 }

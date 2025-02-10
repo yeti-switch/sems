@@ -45,6 +45,7 @@ enum {
     H_Range,
     H_Notify_Reason,
     H_RTP_Info,
+    H_X_Samplerate_Hint
 };
 
 

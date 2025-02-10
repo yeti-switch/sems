@@ -43,7 +43,8 @@ static const char *Header_str[] = { "Unknown",
                                     "Date",
                                     "Range",
                                     "Notify-Reason",
-                                    "RTP-Info" };
+                                    "RTP-Info",
+                                    "X-Samplerate-Hint" };
 
 static const char *Notify_rsn_str[] = { "unknown",
                                         "end-of-stream",
