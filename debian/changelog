@@ -1,3 +1,9 @@
+sems (1.159.0) stable; urgency=low
+  * rtsp: add X-Samplerate-Hint
+  * add ICE support for UDPTL
+  * pg: fixed memory leak on failed transactions
+ -- Michael Furmur <furmur@pm.me>  Tue, 11 Feb 2025 21:38:55 +0200
+
 sems (1.158.2) stable; urgency=low
   * AmAudioFileRecorder: log events to nx recorders
   * fix relay disabling on enabled stereo recording
