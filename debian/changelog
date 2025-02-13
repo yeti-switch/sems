@@ -1,3 +1,7 @@
+sems (1.159.1) stable; urgency=low
+  * enablle L16/24000 rate
+ -- Michael Furmur <furmur@pm.me>  Thu, 13 Feb 2025 16:33:44 +0200
+
 sems (1.159.0) stable; urgency=low
   * rtsp: add X-Samplerate-Hint
   * add ICE support for UDPTL
