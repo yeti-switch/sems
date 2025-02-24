@@ -61,6 +61,7 @@ public:
 
     //functions for AmRtpStream and AmMediaTransport
     void initContext();
+    void destroyContext();
     void addConnection(AmStunConnection* conn);
     void removeConnection(AmStunConnection* conn);
     void connectionTrafficDetected(sockaddr_storage* remote_addr);

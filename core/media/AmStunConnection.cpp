@@ -44,11 +44,7 @@ IceContext::IceContext(AmRtpStream* stream, int type)
     CLASS_DBG("IceContext(): transport type %d", type);
     stun_processor::instance()->add_ice_context(this);
 }
-
-IceContext::~IceContext() {
-    stun_processor::instance()->remove_ice_context(this);
-    reset();
-}
+IceContext::~IceContext() {}
 
 void IceContext::addConnection(AmStunConnection* conn) {
     CLASS_DBG("add pair in ice context %s:%u/%s:%u, priority %u",
@@ -109,6 +105,12 @@ void IceContext::initContext()
         setCurrentCandidate(nullptr);
         state = ICE_CONNECTIVITY_CHECK;
     }
+}
+
+void IceContext::destroyContext()
+{
+    stun_processor::instance()->remove_ice_context(this);
+    reset();
 }
 
 void IceContext::connectionTrafficDetected(sockaddr_storage* remote_addr)
