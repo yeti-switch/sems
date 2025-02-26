@@ -31,6 +31,7 @@
 #include "AmUtils.h"
 #include "log.h"
 #include <limits>
+#include <cmath>
 
 #include "jsonArg.h"
 using std::string;
@@ -229,8 +230,9 @@ string arg2json(const AmArg &a) {
     return a.asBool()?"true":"false";
 
   case AmArg::Double:
-    if(a.asDouble() == std::numeric_limits<double>::infinity())
-        return "\"inf\"";
+    if(std::isnan(a.asDouble()) || std::isinf(a.asDouble()))
+        return "null";
+
     return double2str(a.asDouble());
 
   case AmArg::CStr:
