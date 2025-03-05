@@ -14,6 +14,12 @@
 #include "AmSessionContainer.h"
 #include "AmEventDispatcher.h"
 
+void SctpClientConnection::setState(SctpConnection::state_t st)
+{
+    state = st;
+    connection_status.set(state);
+}
+
 int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_seconds,
                                const string &sink)
 {
@@ -22,6 +28,11 @@ int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_
     reconnect_interval = reconnect_seconds;
     timerclear(&last_connect_attempt);
     event_sink = sink;
+    connection_status.addLabel("id", int2str(_id))
+                     .addLabel("host", am_inet_ntop(&a).c_str());
+    connection_send_failed.addLabel("id", int2str(_id))
+                          .addLabel("host", am_inet_ntop(&a).c_str());
+    connection_status.set(state);
 
     if(-1 == connect())
         return -1;
@@ -40,7 +51,7 @@ int SctpClientConnection::connect()
         sctp_sys_err("socket()");
     SOCKET_LOG("socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP ) = %d",fd);
 
-    state = Connected;
+    setState(Connected);
 
     int opt = 1;
     if( ::setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&opt, sizeof(int)) < 0 )
@@ -58,7 +69,7 @@ int SctpClientConnection::connect()
 
     if(::connect(fd, reinterpret_cast<sockaddr *>(&addr), SA_len(&addr)) == -1) {
         if(errno == EINPROGRESS)
-            state = Connecting;
+            setState(Connecting);
         else
             return -1;
     }
@@ -103,7 +114,7 @@ int SctpClientConnection::process(uint32_t events) {
     }
 
     if(events & EPOLLOUT) {
-        state = Connected;
+        setState(Connected);
         INFO("connected to %s:%u/%d (%d) ",
              am_inet_ntop(&addr).c_str(),
              am_get_port(&addr),
@@ -194,6 +205,7 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
 {
     if(state!=Connected) {
         ERROR("attempt to send event to not connected peer %d",_id);
+        connection_send_failed.inc();
         return;
     }
 
@@ -214,6 +226,7 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
 
     if(!r.SerializePartialToArray(payload,sizeof(payload))){
         ERROR("event serialization failed");
+        connection_send_failed.inc();
         return;
     }
 
@@ -228,6 +241,8 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
     
     if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
        ERROR("send(): %m");
+        connection_send_failed.inc();
+        return;
     }
 
     events_sent++;

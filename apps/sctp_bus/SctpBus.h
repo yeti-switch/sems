@@ -18,6 +18,8 @@
 using std::string;
 using std::map;
 
+#define MOD_NAME "sctp_bus"
+
 class SctpBus
 : public AmDynInvokeFactory,
   public AmConfigFactory,

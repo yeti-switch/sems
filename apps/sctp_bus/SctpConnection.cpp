@@ -91,7 +91,7 @@ int SctpConnection::close()
     ::close(fd);
     fd = -1;
 
-    state = Closed;
+    setState(Closed);
 
     if(!event_sink.empty()) {
         AmSessionContainer::instance()->postEvent(

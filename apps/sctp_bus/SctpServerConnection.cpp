@@ -15,6 +15,8 @@
 #include "jsonArg.h"
 #include "AmSessionContainer.h"
 
+SctpServerConnection* SctpServerConnection::instance;
+
 int SctpServerConnection::init(int efd, const sockaddr_storage &a)
 {
     int opt = 1;

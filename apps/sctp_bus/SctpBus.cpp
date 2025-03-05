@@ -10,8 +10,6 @@
 #include "SctpClientConnection.h"
 #include "SctpServerConnection.h"
 
-#define MOD_NAME "sctp_bus"
-
 #include <vector>
 using std::vector;
 
@@ -417,13 +415,13 @@ int SctpBus::addClientConnection(
     }
 
     auto c = new SctpClientConnection();
+    c->set_id(id);
     if(0!=c->init(epoll_fd,a,reconnect_interval,event_sink))
     {
         DBG("connection %u initialization error",id);
         delete c;
         return -1;
     }
-    c->set_id(id);
 
     int conn_sock = c->get_sock();
 

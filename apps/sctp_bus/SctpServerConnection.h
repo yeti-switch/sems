@@ -21,8 +21,17 @@ class SctpServerConnection
     typedef std::map<int,client_info> ClientsMap;
     ClientsMap clients;
     AmMutex clients_mutex;
+    FunctionCounter& server_clients;
+    static SctpServerConnection* instance;
 
   public:
+    SctpServerConnection() :
+      server_clients(stat_group(Counter, MOD_NAME, "connections")
+                     .setHelp("count of sctp server connections")
+                     .addFunctionCounter([]()->unsigned long long{
+                       AmLock lock(instance->clients_mutex);
+                       return instance->clients.size();
+                    })){ instance = this; }
     int init(int efd, const sockaddr_storage &a);
 
     int process(uint32_t events) override;

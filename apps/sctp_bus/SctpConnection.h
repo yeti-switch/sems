@@ -49,6 +49,7 @@ class SctpConnection {
 
     string event_sink;
 
+    virtual void setState(state_t st) { state = st; }
   public:
     SctpConnection();
     virtual ~SctpConnection();
