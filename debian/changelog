@@ -1,3 +1,7 @@
+sems (1.160.1) stable; urgency=low
+  * add sctp_bus metrics
+ -- Michael Furmur <furmur@pm.me>  Fri, 07 Mar 2025 11:28:44 +0200
+
 sems (1.160.0) stable; urgency=low
   * fix AmArg json serialization for double 'nan' and 'inf'
   * fix crash in ICE context on RTP stream destroyng
