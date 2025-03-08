@@ -29,9 +29,9 @@ int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_
     timerclear(&last_connect_attempt);
     event_sink = sink;
     connection_status.addLabel("id", int2str(_id))
-                     .addLabel("host", am_inet_ntop(&a).c_str());
+                     .addLabel("endpoint", am_inet_ntop(&a).c_str());
     connection_send_failed.addLabel("id", int2str(_id))
-                          .addLabel("host", am_inet_ntop(&a).c_str());
+                          .addLabel("endpoint", am_inet_ntop(&a).c_str());
     connection_status.set(state);
 
     if(-1 == connect())
