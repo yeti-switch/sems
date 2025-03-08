@@ -1,3 +1,7 @@
+sems (1.160.2) stable; urgency=low
+  * sctp_bus: rename metrics label host -> endpoint
+ -- Michael Furmur <furmur@pm.me>  Sat, 08 Mar 2025 16:58:05 +0200
+
 sems (1.160.1) stable; urgency=low
   * add sctp_bus metrics
  -- Michael Furmur <furmur@pm.me>  Fri, 07 Mar 2025 11:28:44 +0200
