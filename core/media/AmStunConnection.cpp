@@ -88,7 +88,8 @@ void IceContext::useCandidate(AmStunConnection* conn)
         allowStunPair();
         break;
     case ICE_CONNECTIVITY_CHECK: 
-        WARN("use candidate in incorrect ice state %d", state);
+        DBG("use candidate in incorrect ice state %d", state);
+        break;
     default: break;
     }
 }
