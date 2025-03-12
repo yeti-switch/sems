@@ -1,3 +1,8 @@
+sems (1.160.3) stable; urgency=low
+  * sems-external-libs-dev 0.4.9
+  * IceContext::useCandidate: warn -> dbg for connectivity check state
+ -- Michael Furmur <furmur@pm.me>  Sat, 08 Mar 2025 16:58:05 +0200
+
 sems (1.160.2) stable; urgency=low
   * sctp_bus: rename metrics label host -> endpoint
  -- Michael Furmur <furmur@pm.me>  Sat, 08 Mar 2025 16:58:05 +0200
