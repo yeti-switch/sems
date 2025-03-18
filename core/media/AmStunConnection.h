@@ -32,23 +32,27 @@ public:
 
 class IceContext
 {
-    AmRtpStream* stream;
-    enum {
+public:
+    enum State{
         ICE_INITIAL = 0,
         ICE_CONNECTIVITY_CHECK,
         ICE_NOMINATIONS,
         ICE_KEEP_ALIVE
-    } state;
+    };
+private:
+    AmRtpStream* stream;
+    State  state;
     int type;
     AmMutex pairs_mut;
     multimap<unsigned int, ReferenceUniquePtr> pairs;
 
     map<int, sockaddr_storage> current_family_addr;
     ReferenceUniquePtr current_candidate;
-protected:
+public:
+    void setCurrentCandidate(AmStunConnection* conn);
     AmStunConnection* getNominatedPair();
     void allowStunPair();
-    void setCurrentCandidate(AmStunConnection* conn);
+    void setState(State initial);
 public:
     IceContext(AmRtpStream* stream, int type);
     ~IceContext();
@@ -110,13 +114,13 @@ private:
     void check_response(CStunMessageReader* reader, sockaddr_storage* addr);
     void allow_candidate(bool use_candidate);
 
-    void send_request();
 public:
     AmStunConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, unsigned int lpriority, unsigned int priority = 0);
     virtual ~AmStunConnection();
 
     void set_credentials(const string& luser, const string& lpassword,
                         const string& ruser, const string& rpassword);
+    void setLocalPriority(unsigned int priority) { lpriority = priority; }
 
     unsigned int getPriority();
 
@@ -127,6 +131,9 @@ public:
     void checkState();
     PairState getState() { return state; }
     void setState(PairState st) { state = st; }
+
+    void send_request(StunTransactionId trans_id);
+    void retransmit();
 
     /** @return interval to be scheduled or nullopt */
     std::optional<unsigned long long> checkStunTimer();

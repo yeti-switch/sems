@@ -248,6 +248,11 @@ void IceContext::allowStunPair()
     stream->allowStunPair(transport, &ss);
 }
 
+void IceContext::setState(IceContext::State initial)
+{
+    state = initial;
+}
+
 void IceContext::setCurrentCandidate(AmStunConnection* conn)
 {
     AmLock lock(pairs_mut);
@@ -637,7 +642,7 @@ void AmStunConnection::check_response(CStunMessageReader* reader, sockaddr_stora
     }
 }
 
-void AmStunConnection::send_request()
+void AmStunConnection::send_request(StunTransactionId trans_id)
 {
     CLASS_DBG("AmStunConnection::send_request()");
 
@@ -649,17 +654,8 @@ void AmStunConnection::send_request()
 
     CStunMessageBuilder builder;
     builder.AddBindingRequestHeader();
-    StunTransactionId trnsId;
-    if(!count) {
-        *(int*)trnsId.id = htonl(STUN_COOKIE);
-        for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
-            trnsId.id[i] = (uint8_t)rand();
-        }
-        current_trans_id = trnsId;
-    } else { // retransmit
-        trnsId = current_trans_id;
-    }
-    builder.AddTransactionId(trnsId);
+    current_trans_id = trans_id;
+    builder.AddTransactionId(trans_id);
     string username = remote_user + ":" + local_user;
     builder.AddUserName(username.c_str());
 
@@ -686,6 +682,11 @@ void AmStunConnection::send_request()
     }
 }
 
+void AmStunConnection::retransmit()
+{
+    send_request(current_trans_id);
+}
+
 void AmStunConnection::checkState()
 {
     CLASS_DBG("checkState: state = %hhu", state);
@@ -706,7 +707,18 @@ void AmStunConnection::checkState()
             context->failedCandidate(this);
         }
     } else return;
-    send_request();
+
+    StunTransactionId trnsId;
+    if(!count) {
+        *(int*)trnsId.id = htonl(STUN_COOKIE);
+        for(int i = 4; i < STUN_TRANSACTION_ID_LENGTH; i++) {
+            trnsId.id[i] = (uint8_t)rand();
+        }
+        current_trans_id = trnsId;
+        send_request(trnsId);
+    } else {
+        retransmit();
+    }
 }
 
 std::optional<unsigned long long> AmStunConnection::checkStunTimer()
