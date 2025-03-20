@@ -548,7 +548,8 @@ void AmMediaTransport::getInfo(AmArg& ret)
 
 void AmMediaTransport::dtls_alert(string alert)
 {
-    CLASS_DBG("DTLS alert %s", alert.c_str());
+    CLASS_ERROR("DTLS local_tag:%s, alert:%s",
+        stream->getSessionLocalTag(), alert.c_str());
 }
 
 void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)
