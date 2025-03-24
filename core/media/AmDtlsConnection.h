@@ -191,6 +191,9 @@ public:
         std::string_view hostname,
         const Botan::TLS::Policy& policy) override;
     void tls_session_activated() override;
+    void tls_ssl_key_log_data(std::string_view label,
+                              std::span<const uint8_t> client_random,
+                              std::span<const uint8_t> secret) const override;
 };
 
 class AmDtlsConnection

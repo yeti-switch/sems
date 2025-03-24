@@ -16,7 +16,8 @@ private:
 
   int write_file_header() override {return 0;}
 public:
-    SSLKeyLogger(const string& path);
+    SSLKeyLogger(const string& path, bool upload = false);
+    ~SSLKeyLogger();
 
     void log(const char* label, const string& client_random, const string& secret);
     void stop();

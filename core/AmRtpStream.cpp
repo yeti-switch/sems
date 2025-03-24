@@ -140,6 +140,7 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     transport(TP_RTPAVP),
     is_ice_stream(false),
     ice_controlled(false),
+    ssl_key_log_file(nullptr),
     cur_rtp_trans(0),
     cur_rtcp_trans(0),
     cur_udptl_trans(0),
@@ -206,6 +207,7 @@ AmRtpStream::~AmRtpStream()
     iterateTransports([](auto tr) { delete tr; });
     for(int i = 0; i < MAX_TRANSPORT_TYPE; i++)
         ice_context[i].reset(nullptr);
+    if(ssl_key_log_file) dec_ref(ssl_key_log_file);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1354,6 +1356,15 @@ IceContext * AmRtpStream::getIceContext(uint8_t transport_type)
     if(transport_type == FAX_TRANSPORT && reuse_media_trans)
         transport_type = RTP_TRANSPORT;
     return ice_context[transport_type].get();
+}
+
+void AmRtpStream::setSklfile(SSLKeyLogger* logger)
+{
+    if(ssl_key_log_file)
+        dec_ref(ssl_key_log_file);
+    if(logger)
+        inc_ref(logger);
+    ssl_key_log_file = logger;
 }
 
 void AmRtpStream::initDtls(uint8_t transport_type, bool client)

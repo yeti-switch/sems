@@ -63,5 +63,6 @@ class BotanTLSCallbacksProxy
         ssl_key_logger()->log(label.data(),
                             Botan::hex_encode(client_random.data(), client_random.size()),
                             Botan::hex_encode(secret.data(), secret.size()));
+        parent.tls_ssl_key_log_data(label, client_random, secret);
     }
 };

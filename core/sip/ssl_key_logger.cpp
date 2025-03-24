@@ -1,10 +1,23 @@
 #include "ssl_key_logger.h"
+#include <AmLcConfig.h>
 
-SSLKeyLogger::SSLKeyLogger(const std::string& path)
+SSLKeyLogger::SSLKeyLogger(const std::string& path, bool upload)
 : is_enable(true)
 {
     if(path.empty()) is_enable = false;
-    else open(path.c_str());
+    else is_enable = (open(path.c_str()) == 0);
+    if(upload) upload_destination = &AmConfig.skl_upload_queue_name;
+}
+
+SSLKeyLogger::~SSLKeyLogger()
+{
+    DBG("~SSLKeyLogger()");
+    struct stat buf;
+    if(stat(path.c_str(), &buf) || !buf.st_size) {
+        unlink(path.c_str());
+        upload_destination = nullptr;
+        return;
+    }
 }
 
 int SSLKeyLogger::log(const char* buf, int len, sockaddr_storage*, sockaddr_storage*, cstring, int)

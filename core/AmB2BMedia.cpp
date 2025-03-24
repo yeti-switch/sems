@@ -697,6 +697,7 @@ AmB2BMedia::AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b):
     a_leg_muted(false), b_leg_muted(false),
     relay_paused(false),
     logger(nullptr),
+    sklfile(nullptr),
     asensor(nullptr), bsensor(nullptr),
     ignore_relay_streams(false)
 {
@@ -714,6 +715,7 @@ AmB2BMedia::~AmB2BMedia()
               static_cast<void *>(this), streams.size());
     }
     if (logger) dec_ref(logger);
+    if (sklfile) dec_ref(sklfile);
     if (asensor) dec_ref(asensor);
     if (bsensor) dec_ref(bsensor);
 }
@@ -796,6 +798,7 @@ void AmB2BMedia::changeSessionUnsafe(bool a_leg, AmB2BSession *new_session)
 
             // reset logger (needed if a stream changes)
             pair.setLogger(logger);
+            pair.setSklLogger(sklfile);
             pair.setASensor(asensor);
             pair.setBSensor(bsensor);
 
@@ -953,6 +956,7 @@ void AmB2BMedia::createStreams(const AmSdp &sdp)
             streams_pair->a.mute(a_leg_muted);
             streams_pair->b.mute(b_leg_muted);
             streams_pair->setLogger(logger);
+            streams_pair->setSklLogger(sklfile);
             streams_pair->setASensor(asensor);
             streams_pair->setBSensor(bsensor);
         } else if(!ignore_relay_streams && canRelay(*m)) {// non-audio streams that we can relay
@@ -970,6 +974,7 @@ void AmB2BMedia::createStreams(const AmSdp &sdp)
                 streams_pair->media_idx = -1;
             }
             streams_pair->setLogger(logger);
+            streams_pair->setSklLogger(sklfile);
             streams_pair->setASensor(asensor);
             streams_pair->setBSensor(bsensor);
         } else continue; // non-audio stream that we can not relay
@@ -1218,6 +1223,7 @@ void AmB2BMedia::updateRelayStream(
             stream->setRtpRelayTransparentSSRC(session->getRtpRelayTransparentSSRC());
         }
         stream->setLogger(logger);
+        stream->setSklfile(sklfile);
         stream->resumeReceiving();
     } else {
         DBG("disabled stream");
@@ -1618,6 +1624,21 @@ void AmB2BMedia::setRtpLogger(msg_logger* _logger)
     // walk through all the streams and use logger for them
     for(auto &pair: streams)
         pair.setLogger(logger);
+}
+
+void AmB2BMedia::setSklLogger(SSLKeyLogger* logger)
+{
+    DBG("AmB2BMedia::setSklLogger");
+
+    AmLock lock(mutex);
+
+    if (sklfile) dec_ref(sklfile);
+    if (logger) inc_ref(logger);
+    sklfile = logger;
+
+    // walk through all the streams and use logger for them
+    for(auto &pair: streams)
+        pair.setSklLogger(logger);
 }
 
 void AmB2BMedia::setRtpASensor(msg_sensor* _sensor)

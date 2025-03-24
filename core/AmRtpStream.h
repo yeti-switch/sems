@@ -294,6 +294,7 @@ class AmRtpStream
 
     unique_ptr<IceContext> ice_context[MAX_TRANSPORT_TYPE];
     unique_ptr<DtlsContext> dtls_context[MAX_TRANSPORT_TYPE];
+    SSLKeyLogger* ssl_key_log_file;
 #ifdef WITH_ZRTP
     zrtpContext zrtp_context;
 #endif/*WITH_ZRTP*/
@@ -475,6 +476,8 @@ class AmRtpStream
     void onIceRoleConflict();
     DtlsContext* getDtlsContext(uint8_t transport_type);
     IceContext* getIceContext(uint8_t transport_type);
+    SSLKeyLogger* getSklfile() { return ssl_key_log_file; }
+    void setSklfile(SSLKeyLogger* logger);
     void initDtls(uint8_t transport_type, bool client);
 
     void update_sender_stats(const AmRtpPacket &p);

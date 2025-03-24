@@ -146,6 +146,7 @@ struct ConfigContainer
     Log_Level unhandled_reply_log_level;
     Log_Level rtp_send_errors_log_level;
     std::string pcap_upload_queue_name;
+    std::string skl_upload_queue_name;
     AmAudio::ResamplingImplementationType resampling_implementation_type;
     int dump_level;
     std::string ssl_key_log_filepath;

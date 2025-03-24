@@ -113,6 +113,7 @@ public:
     AmRtpAudio *getStream() { return stream; }
     bool isInitialized() { return initialized; }
     void setLogger(msg_logger *logger) { if (stream) stream->setLogger(logger); }
+    void setSklLogger(SSLKeyLogger *logger) { if (stream) stream->setSklfile(logger); }
 	void setSensor(msg_sensor *sensor) { if (stream) stream->setSensor(sensor); }
     void setRtpTimeout(unsigned int timeout) { if(stream) stream->setRtpTimeout(timeout); }
     void setMonitorRtpTimeout(bool enable) { if(stream) stream->setMonitorRTPTimeout(enable); }
@@ -283,6 +284,7 @@ class AmB2BMedia
                 return false;
         }
         void setLogger(msg_logger *logger) { a.setLogger(logger); b.setLogger(logger); }
+        void setSklLogger(SSLKeyLogger *logger) { a.setSklLogger(logger); b.setSklLogger(logger); }
         void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
         void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
         void setRtpTimeout(bool a_leg, unsigned int timeout)
@@ -346,6 +348,7 @@ class AmB2BMedia
     void changeSessionUnsafe(bool a_leg, AmB2BSession *new_session);
 
     msg_logger* logger; // log RTP traffic
+    SSLKeyLogger* sklfile; // log secure keys
 	msg_sensor* asensor; // RTP traffic mirroring
 	msg_sensor* bsensor;
 
@@ -480,6 +483,7 @@ class AmB2BMedia
     void createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer, bool use_zero_con);
 
     void setRtpLogger(msg_logger* _logger);
+    void setSklLogger(SSLKeyLogger* logger);
 	void setRtpASensor(msg_sensor* _sensor);
 	void setRtpBSensor(msg_sensor* _sensor);
 

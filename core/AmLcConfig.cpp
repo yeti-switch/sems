@@ -134,6 +134,7 @@
 #define PARAM_UNHDL_REP_LOG_LVL_NAME "unhandled_reply_loglevel"
 #define PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME "log_rtp_send_errors"
 #define PARAM_PCAP_UPLOAD_QUEUE_NAME "pcap_upload_queue"
+#define PARAM_SKL_UPLOAD_QUEUE_NAME  "skl_upload_queue"
 #define PARAM_RESAMPLE_LIBRARY_NAME  "resampling_library"
 #define PARAM_ENABLE_ZRTP_NAME       "enable_zrtp"
 #define PARAM_EXCLUDE_PAYLOADS_NAME  "exclude_payloads"
@@ -634,6 +635,7 @@ namespace Config {
         CFG_STR(PARAM_UNHDL_REP_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
         CFG_STR(PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME, VALUE_LOG_ERR, CFGF_NONE),
         CFG_STR(PARAM_PCAP_UPLOAD_QUEUE_NAME, "", CFGF_NONE),
+        CFG_STR(PARAM_SKL_UPLOAD_QUEUE_NAME, "", CFGF_NONE),
         CFG_STR_LIST(PARAM_CODEC_ORDER_NAME, 0, CFGF_NODEFAULT),
         CFG_STR_LIST(PARAM_EXCLUDE_PAYLOADS_NAME, 0, CFGF_NODEFAULT),
         CFG_INT(PARAM_SIP_TIMER_A_NAME, DEFAULT_A_TIMER, CFGF_NONE),
@@ -1274,6 +1276,7 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
         static_cast<Log_Level>(
             parse_log_level(cfg_getstr(gen, PARAM_RTP_SEND_ERRORS_LOG_LVL_NAME)).value_or(L_ERR));
     config->pcap_upload_queue_name = cfg_getstr(gen, PARAM_PCAP_UPLOAD_QUEUE_NAME);
+    config->skl_upload_queue_name = cfg_getstr(gen, PARAM_SKL_UPLOAD_QUEUE_NAME);
     value = cfg_getstr(gen, PARAM_RESAMPLE_LIBRARY_NAME);
     if(value == VALUE_LIBSAMPLERATE) config->resampling_implementation_type = AmAudio::LIBSAMPLERATE;
     else if(value == VALUE_UNAVAILABLE) config->resampling_implementation_type = AmAudio::UNAVAILABLE;

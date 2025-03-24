@@ -446,6 +446,18 @@ void RtpSecureContext::tls_verify_cert_chain(
         throw Botan::TLS::TLS_Exception(Botan::TLS::AlertType::BadCertificateHashValue, "fingerprint is not equal");
 }
 
+void RtpSecureContext::tls_ssl_key_log_data(std::string_view label,
+                                            std::span<const uint8_t> client_random,
+                                            std::span<const uint8_t> secret) const
+{
+    auto log = rtp_stream->getSklfile();
+    if(log) {
+        log->log(label.data(),
+                 Botan::hex_encode(client_random.data(), client_random.size()),
+                 Botan::hex_encode(secret.data(), secret.size()));
+    }
+}
+
 AmDtlsConnection::AmDtlsConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, DtlsContext* context)
   : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::DTLS_CONN),
     dtls_context(context)
