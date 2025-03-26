@@ -146,6 +146,7 @@ private:
   friend class AmSessionProcessorThread;
 
   unique_ptr<AmRtpAudio> _rtp_str;
+  AmRtpAudio* external_rtp_str;
 
   /** Application parameters passed through P-App-Param HF */
   map<string,string> app_params;
@@ -688,6 +689,16 @@ public:
    * Creates a new Id which can be used within sessions.
    */
   static string getNewId();
+
+  /**
+   * Set external rtp stream
+   */
+  void setExternalRtpStr(AmRtpAudio* rtp_str);
+
+  /**
+   * Get external rtp stream
+   */
+  AmRtpAudio* getExternalRtpStr();
 
   /* ----------------- media processing interface ------------------- */
 

@@ -192,7 +192,13 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
 AmRtpStream::~AmRtpStream()
 {
     DBG("~AmRtpStream[%p]() session = %p",this,session);
-    if(session) session->onRTPStreamDestroy(this);
+    if(session) {
+        session->onRTPStreamDestroy(this);
+
+        if(session->getExternalRtpStr() == this)
+            session->setExternalRtpStr(nullptr);
+    }
+
     for(int i = 0; i < MAX_TRANSPORT_TYPE; i++) {
         if(ice_context[i])
             ice_context[i]->destroyContext();

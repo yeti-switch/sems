@@ -84,6 +84,7 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     _pid(this),
 #endif
     no_reply(false),
+    external_rtp_str(nullptr),
     sess_stopped(false),
     accept_early_session(false),
     override_frame_size(0),
@@ -122,6 +123,8 @@ AmSession::~AmSession()
   }
 
   delete dlg;
+
+  if(external_rtp_str) external_rtp_str->changeSession(nullptr);
 }
 
 AmSipDialog* AmSession::createSipDialog()
@@ -1519,6 +1522,16 @@ void AmSession::setRtpEndlessSymmetricRtp(bool endless)
 void AmSession::setRtpSymmetricCandidate(bool e)
 {
     symmetric_candidate = e;
+}
+
+void AmSession::setExternalRtpStr(AmRtpAudio* _ext_rtp_str)
+{
+    external_rtp_str = _ext_rtp_str;
+}
+
+AmRtpAudio* AmSession::getExternalRtpStr()
+{
+    return external_rtp_str;
 }
 
 /** EMACS **
