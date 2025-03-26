@@ -351,6 +351,7 @@ class AmB2BMedia
 
 	bool ignore_relay_streams; //skip relay streams create/update
 
+  protected:
     virtual ~AmB2BMedia();
 
   public:
