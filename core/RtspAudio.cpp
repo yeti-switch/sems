@@ -255,7 +255,7 @@ int RtspAudio::initRtpAudio_by_sdp(const char *sdp_msg)
 void RtspAudio::play()
 {
     state = Playing;
-    session->setOutput(this);
+    if(session) session->setOutput(this);
 }
 
 
@@ -264,7 +264,7 @@ void RtspAudio::onRtpTimeout()
     DBG("onRtpTimeout() id: %ld, streamid: %d, uri: %s",
         id,streamid,uri.c_str());
     if (state == Playing)
-        session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+        if(session) session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 
     state = Ready;
     start_progress_time = 0;
@@ -275,7 +275,7 @@ void RtspAudio::onMaxRtpTimeReached()
     DBG("onMaxRtpTimeReached() id: %ld, streamid: %d, uri: %s",
         id,streamid,uri.c_str());
     if (state == Playing)
-        session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+        if(session) session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 
     state = Ready;
     start_progress_time = 0;
@@ -291,7 +291,7 @@ void RtspAudio::onRtspPlayNotify(const RtspMsg & msg) {
     }
 
     state = Ready;
-    session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+    if(session) session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
     start_progress_time = 0;
 }
 
@@ -313,7 +313,7 @@ void RtspAudio::onRtspMessage(const RtspMsg &msg)
     }
 
     if (msg.code != 200) {
-        session->postEvent(new RtspNoFileEvent(uri));
+        if(session) session->postEvent(new RtspNoFileEvent(uri));
         return;
     }
 

@@ -241,7 +241,7 @@ void AmRtpStream::setLocalIP(AddressType addrtype)
     }
 
     if(addrtype == AT_NONE)
-        addrtype = session->getLocalMediaAddressType();
+        if(session) addrtype = session->getLocalMediaAddressType();
 
     vector<AmMediaTransport*>* transports;
     if(addrtype == AT_V4) {
@@ -2227,7 +2227,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
     m.setup = S_UNDEFINED;
     m.transport = transport;
 
-    auto &dlg = session->dlg;
+    auto * dlg = session ? session->dlg : nullptr;
     if(!dlg) {
         CLASS_DBG("no dlg");
         return;

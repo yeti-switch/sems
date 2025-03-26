@@ -436,7 +436,7 @@ int AmRtpAudio::init(
         }
 
         const SdpMedia& remote_media = remote.media[sdp_media_index];
-        if(!session->getRtpFrameSize(frame_size)) frame_size = remote_media.frame_size;
+        if(session && !session->getRtpFrameSize(frame_size)) frame_size = remote_media.frame_size;
 
         AmAudioRtpFormat* fmt_p = new AmAudioRtpFormat();
         fmt_p->setCurrentPayload(payloads[pl_it->second.index], frame_size);
@@ -458,12 +458,14 @@ int AmRtpAudio::init(
         }
     }
 
-    if(session->getRecordAudio()) {
-        setRecorder(session->getLocalTag());
-    }
+    if(session) {
+        if(session->getRecordAudio()) {
+            setRecorder(session->getLocalTag());
+        }
 
-    setSymmetricCandidate(session->getRtpSymmetricCandidate());
-    setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
+        setSymmetricCandidate(session->getRtpSymmetricCandidate());
+        setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
+    }
 
     return 0;
 }
@@ -654,25 +656,25 @@ void AmRtpAudio::setPlayoutType(PlayoutType type)
 {
     if (m_playout_type != type) {
         if (type == ADAPTIVE_PLAYOUT) {
-            session->lockAudio();
+            if(session) session->lockAudio();
             m_playout_type = type;
             if (fmt.get())
                 playout_buffer.reset(new AmAdaptivePlayout(this,static_cast<unsigned int>(getSampleRate())));
-            session->unlockAudio();
+            if(session) session->unlockAudio();
             DBG("Adaptive playout buffer activated");
         } else if (type == JB_PLAYOUT) {
-            session->lockAudio();
+            if(session) session->lockAudio();
             m_playout_type = type;
             if (fmt.get())
                 playout_buffer.reset(new AmJbPlayout(this,static_cast<unsigned int>(getSampleRate())));
-            session->unlockAudio();
+            if(session) session->unlockAudio();
             DBG("Adaptive jitter buffer activated");
         } else {
-            session->lockAudio();
+            if(session) session->lockAudio();
             m_playout_type = type;
             if (fmt.get())
                 playout_buffer.reset(new AmPlayoutBuffer(this,static_cast<unsigned int>(getSampleRate())));
-            session->unlockAudio();
+            if(session) session->unlockAudio();
             DBG("Simple playout buffer activated");
         }
     }
@@ -699,12 +701,12 @@ void AmRtpAudio::updateStereoRecorders()
 
 void AmRtpAudio::onMaxRtpTimeReached()
 {
-    session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+    if(session) session->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
 }
 
 void AmRtpAudio::onRtpTimeout()
 {
-    session->postEvent(new AmRtpTimeoutEvent());
+    if(session) session->postEvent(new AmRtpTimeoutEvent());
 }
 
 void AmRtpAudio::sendDtmf(int event, unsigned int duration_ms, int volume)
