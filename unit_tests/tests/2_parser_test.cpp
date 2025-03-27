@@ -1145,6 +1145,45 @@ TEST(SdpParser, EmptyLastLineTest)
     ASSERT_EQ(sdp.media[0].payloads[1].encoding_name, "telephone-event");
 }
 
+TEST(SdpParser, EmptyLastLineTest1)
+{
+    string sdp_str =
+            "v=0\r\n"
+            "o=- 3615077380 3615077398 IN IP4 192.168.0.110\r\n"
+            "s=-\r\n"
+            "c=IN IP4 192.168.0.110\r\n"
+            "t=0 0\r\n"
+            "m=audio 21964 RTP/AVP 0 101\r\n"
+            "a=sendrecv\r\n"
+            "a=ptime:20\r\n"
+            "a=rtpmap:0 PCMU/8000\r\n"
+            "a=rtpmap:101 telephone-event/8000\r\n"
+            "a=fmtp:101 0-15\r\n";
+    AmSdp sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    ASSERT_EQ(sdp.media.size(), 1);
+    ASSERT_EQ(sdp.origin.sessV, 3615077398);
+    ASSERT_EQ(sdp.origin.sessId, 3615077380);
+    ASSERT_EQ(sdp.origin.user, "-");
+    ASSERT_EQ(sdp.origin.conn.address, "192.168.0.110");
+    ASSERT_EQ(sdp.origin.conn.network, NT_IN);
+    ASSERT_EQ(sdp.origin.conn.addrType, AT_V4);
+
+    ASSERT_EQ(sdp.conn.address, "192.168.0.110");
+    ASSERT_EQ(sdp.conn.network, NT_IN);
+    ASSERT_EQ(sdp.conn.addrType, AT_V4);
+
+    ASSERT_EQ(sdp.media[0].type, MT_AUDIO);
+    ASSERT_EQ(sdp.media[0].port, 21964);
+    ASSERT_EQ(sdp.media[0].transport, TP_RTPAVP);
+    ASSERT_EQ(sdp.media[0].payloads.size(), 2);
+    ASSERT_EQ(sdp.media[0].payloads[0].payload_type, 0);
+    ASSERT_EQ(sdp.media[0].payloads[1].payload_type, 101);
+    ASSERT_EQ(sdp.media[0].payloads[0].encoding_name, "PCMU");
+    ASSERT_EQ(sdp.media[0].payloads[1].encoding_name, "telephone-event");
+}
+
 TEST(SdpParser, SessVMaxValueTest)
 {
     string sdp_str =
