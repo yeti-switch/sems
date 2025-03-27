@@ -504,7 +504,7 @@ int AmSdp::parse(const char* _sdp_msg)
 void AmSdp::print(string& body) const
 {
     string out_buf = "v="+int2str(version)+"\r\n"
-           "o="+origin.user+" "+int2str(origin.sessId)+" "+
+           "o="+origin.user+" "+std::to_string(origin.sessId)+" "+
            std::to_string(origin.sessV)+" IN ";
 
     if (!origin.conn.address.empty())
@@ -1832,7 +1832,7 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
                 break;
             }
             string id(origin_line, static_cast<size_t>(next-origin_line)-1);
-            str2i(id, origin.sessId);
+            origin.sessId = strtoul(id.c_str(), 0, 10);
             origin_line = next;
             origin_st = VERSION_ST;
             break;

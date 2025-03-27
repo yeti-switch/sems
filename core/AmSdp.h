@@ -79,7 +79,7 @@ struct SdpConnection
 struct SdpOrigin
 {
   string user;
-  unsigned int sessId;
+  uint64_t sessId;
   uint64_t sessV;
   SdpConnection conn;
 
