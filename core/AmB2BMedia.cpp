@@ -201,7 +201,7 @@ void StreamData::initialize(AmB2BSession* session, bool audio)
     if(session || !audio) {
         if(!stream) {
             stream = new AmRtpAudio(session, session ? session->getRtpInterface() : -1);
-            if(session) session->setExternalRtpStr(stream);
+            if(session) session->setReferencingRtpStr(stream);
             DBG("StreamData::initialize: stream: %p", stream);
         } else {
             ERROR("StreamData::initialize(%p[%s],%d): stream:%p. "
@@ -374,7 +374,7 @@ void StreamData::changeSession(AmB2BSession *session)
         // the stream is already created
         if (session) {
             stream->changeSession(session);
-            if(session) session->setExternalRtpStr(stream);
+            if(session) session->setReferencingRtpStr(stream);
         } else {
             clear(); // free the stream and other stuff because it can't be used anyway
         }

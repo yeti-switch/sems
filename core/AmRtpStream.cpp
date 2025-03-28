@@ -195,8 +195,8 @@ AmRtpStream::~AmRtpStream()
     if(session) {
         session->onRTPStreamDestroy(this);
 
-        if(session->getExternalRtpStr() == this)
-            session->setExternalRtpStr(nullptr);
+        if(session->getReferencingRtpStr() == this)
+            session->setReferencingRtpStr(nullptr);
     }
 
     for(int i = 0; i < MAX_TRANSPORT_TYPE; i++) {

@@ -146,7 +146,7 @@ private:
   friend class AmSessionProcessorThread;
 
   unique_ptr<AmRtpAudio> _rtp_str;
-  AmRtpAudio* external_rtp_str;
+  AmRtpStream* referencing_rtp_str;
 
   /** Application parameters passed through P-App-Param HF */
   map<string,string> app_params;
@@ -691,14 +691,14 @@ public:
   static string getNewId();
 
   /**
-   * Set external rtp stream
+   * Set referencing rtp stream
    */
-  void setExternalRtpStr(AmRtpAudio* rtp_str);
+  void setReferencingRtpStr(AmRtpStream* rtp_str);
 
   /**
-   * Get external rtp stream
+   * Get referencing rtp stream
    */
-  AmRtpAudio* getExternalRtpStr();
+  AmRtpStream* getReferencingRtpStr();
 
   /* ----------------- media processing interface ------------------- */
 
