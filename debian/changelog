@@ -1,3 +1,7 @@
+sems (1.161.1) stable; urgency=low
+  * SSLKeyLogger: disable upload on empty skl_upload_queue_name
+ -- Michael Furmur <furmur@pm.me>  Fri, 28 Mar 2025 22:33:44 +0200
+
 sems (1.161.0) stable; urgency=low
   * use uint64 for SDP session id and version
   * support per session SSLKEYLOGFILE
