@@ -505,7 +505,7 @@ void AmSdp::print(string& body) const
 {
     string out_buf = "v="+int2str(version)+"\r\n"
            "o="+origin.user+" "+int2str(origin.sessId)+" "+
-           int2str(origin.sessV)+" IN ";
+           std::to_string(origin.sessV)+" IN ";
 
     if (!origin.conn.address.empty())
         if (origin.conn.address.find(".") != std::string::npos)
@@ -1845,7 +1845,7 @@ static void parse_sdp_origin(AmSdp* sdp_msg, char* s)
                 break;
             }
             string version(origin_line, static_cast<size_t>(next-origin_line)-1);
-            str2i(version, origin.sessV);
+            origin.sessV = strtoul(version.c_str(), 0, 10);
             origin_line = next;
             origin_st = NETTYPE;
             break;

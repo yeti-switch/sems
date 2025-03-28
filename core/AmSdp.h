@@ -80,7 +80,7 @@ struct SdpOrigin
 {
   string user;
   unsigned int sessId;
-  unsigned int sessV;
+  uint64_t sessV;
   SdpConnection conn;
 
   SdpOrigin() : user(), conn() {}
