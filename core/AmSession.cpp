@@ -122,9 +122,13 @@ AmSession::~AmSession()
       delete *evh;
   }
 
-  delete dlg;
+  if(referencing_rtp_str) {
+    ERROR("%s still references stream %p on destruction",
+        dlg->getLocalTag().data(), referencing_rtp_str);
+    referencing_rtp_str->changeSession(nullptr);
+  }
 
-  if(referencing_rtp_str) referencing_rtp_str->changeSession(nullptr);
+  delete dlg;
 }
 
 AmSipDialog* AmSession::createSipDialog()
