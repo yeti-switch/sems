@@ -6,7 +6,9 @@ SSLKeyLogger::SSLKeyLogger(const std::string& path, bool upload)
 {
     if(path.empty()) is_enable = false;
     else is_enable = (open(path.c_str()) == 0);
-    if(upload) upload_destination = &AmConfig.skl_upload_queue_name;
+    if(upload && !AmConfig.skl_upload_queue_name.empty()) {
+        upload_destination = &AmConfig.skl_upload_queue_name;
+    }
 }
 
 SSLKeyLogger::~SSLKeyLogger()
