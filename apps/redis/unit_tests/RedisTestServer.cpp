@@ -1,6 +1,7 @@
 #include "RedisTestServer.h"
 #include "../RedisInstance.h"
 #include "../RedisScript.h"
+#include "../RedisUtils.h"
 
 #include <hiredis/read.h>
 #include <stdarg.h>
@@ -11,6 +12,21 @@ static AmArg role_redis_cmd_reply{{"master"}};
 RedisTestServer::RedisTestServer()
   : response_enabled(true)
 {}
+
+void RedisTestServer::addCommandResponse(const vector<AmArg>& args, int status, AmArg response)
+{
+    char *command = nullptr;
+    ssize_t cmd_size = args2redis_cmd(args, &command);
+
+    if(cmd_size > 0) {
+        statuses.emplace(command, status);
+        if(status != REDIS_REPLY_STATUS && !isArgUndef(response))
+            addResponse(command, response);
+    }
+
+    if(command)
+        free_redis_cmd(command);
+}
 
 void RedisTestServer::addCommandResponse(const string& cmd, int status, AmArg response, ...)
 {

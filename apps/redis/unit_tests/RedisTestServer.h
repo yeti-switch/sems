@@ -22,6 +22,7 @@ public:
     AmCondition<bool> response_enabled;
 
     RedisTestServer();
+    void addCommandResponse(const vector<AmArg>& args, int status, AmArg response);
     void addCommandResponse(const string& cmd, int status, AmArg response, ...);
     void addFormattedCommandResponse(const string& cmd, int status, AmArg response);
     void addTail(const string& cmd, int sec, ...);
