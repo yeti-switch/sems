@@ -1,5 +1,6 @@
 #include "RedisConnectionPool.h"
 #include "RedisConnection.h"
+#include "RedisUtils.h"
 
 #include <AmEventDispatcher.h>
 
@@ -177,34 +178,6 @@ void RedisConnectionPool::process(AmEvent* ev)
     }
 }
 
-static void append_args(vector<string> &args, const AmArg &child)
-{
-    switch(child.getType()) {
-    case AmArg::CStr:
-        args.emplace_back(std::string(child.asCStr()));
-        break;
-    case AmArg::Int: {
-        std::ostringstream strs;
-        strs << child.asInt();
-        args.emplace_back(strs.str());
-        break;
-    }
-    case AmArg::LongLong:  {
-        std::ostringstream strs;
-        strs << child.asLongLong();
-        args.emplace_back(strs.str());
-        break;
-    }
-    case AmArg::Double: {
-        std::ostringstream strs;
-        strs << child.asDouble();
-        args.emplace_back(strs.str());
-        break;
-    }
-    default:  DBG("Unsupported arg type %s", child.getTypeStr());
-    }
-}
-
 /** vector<AmArg> event_args consist of Redis command and its arguments
  *  event_args[0] : cmd
  *  event_args[1] : arg0
@@ -212,26 +185,13 @@ static void append_args(vector<string> &args, const AmArg &child)
  *  event_args[N] : argN */
 static int perform_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
 {
-    vector<string> args;
-
-    for(const auto &a: event_args)
-        append_args(args, a);
-
-    vector<const char*> argv(args.size());
-    vector<size_t> argvlen(args.size());
-    for(unsigned i = 0; i < args.size(); ++i) {
-        argv[i] = args[i].c_str();
-        argvlen[i] = args[i].length();
-    }
-
     char *cmd = nullptr;
-    ssize_t cmd_size = redis::redisFormatCommandArgv(&cmd, args.size(), argv.data(), argvlen.data());
+    ssize_t cmd_size = args2redis_cmd(event_args, &cmd);
     int ret = cmd_size > 0
             ? redis::redisAsyncFormattedCommand(ac, &redis_request_cb_static, ctx, cmd, cmd_size)
             : -1;
-
     if(cmd)
-        redis::redisFreeCommand(cmd);
+        free_redis_cmd(cmd);
 
     return ret;
 }
@@ -252,27 +212,16 @@ static int perform_multi_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const 
             continue;
         }
 
-        vector<string> args;
         char *cmd = nullptr;
         size_t cmd_size;
         int ret;
 
-        for(size_t i = 0; i < c.size(); i++)
-            append_args(args, c[i]);
-
-        vector<const char*> argv(args.size());
-        vector<size_t> argvlen(args.size());
-        for(unsigned i = 0; i < args.size(); ++i) {
-            argv[i] = args[i].c_str();
-            argvlen[i] = args[i].length();
-        }
-
-        cmd_size = redis::redisFormatCommandArgv(&cmd, args.size(), argv.data(), argvlen.data());
+        cmd_size = args2redis_cmd(c, &cmd);
         if(cmd_size < 0)
             goto failed;
 
         ret = redis::redisAsyncFormattedCommand(ac, nullptr, nullptr, cmd, cmd_size);
-        redis::redisFreeCommand(cmd);
+        free_redis_cmd(cmd);
 
         if(ret != REDIS_OK)
             goto failed;
