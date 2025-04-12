@@ -71,6 +71,7 @@ void PGConnection::check_conn()
             //DBG("error %s", PQerrorMessage(conn));
             disconnected_time = time(0);
             connected_time = 0;
+            handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
             handler->onConnectionFailed(this, PQerrorMessage(conn));
         }
     }

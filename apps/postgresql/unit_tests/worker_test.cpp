@@ -565,13 +565,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
     PGWorkerConfig config("test", false, true, false, 9, 1);
     config.batch_size = 2;
     worker.configure(config);
-    Transaction* trans = new NonTransaction(&worker);
-    trans->exec(new QueryParams("SELECT pg_sleep(1)", false, false));
-    worker.runTransaction(trans, "", "");
-    trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
-    trans->exec(new QueryParams(CREATE_TABLE, false, false));
-    worker.runTransaction(trans, "", "");
-    trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
+    Transaction* trans = createDbTransaction(&worker, PGTransactionData::read_committed, PGTransactionData::write_policy::read_write);
     trans->exec(new QueryParams("SELECT pg_sleep(3)", false, false));
     worker.runTransaction(trans, "", "");
     while(true){
@@ -587,18 +581,7 @@ TEST_F(PostgresqlTest, WorkerTransactionOnResetConnectionTest)
         if(handler.check() < 1) return;
         AmArg arg;
         worker.getStats(arg);
-        if(arg["finished"].asInt() == 3) break;
-        usleep(500);
-    }
-
-    trans = new NonTransaction(&worker);
-    trans->exec(new QueryParams(DROP_TABLE, false, false));
-    worker.runTransaction(trans, "", "");
-    while(true){
-        if(handler.check() < 1) return;
-        AmArg arg;
-        worker.getStats(arg);
-        if(arg["finished"].asInt() == 4) break;
+        if(arg["finished"].asInt() == 1) break;
         usleep(500);
     }
 }

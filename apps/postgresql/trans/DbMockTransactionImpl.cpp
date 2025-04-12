@@ -1,6 +1,7 @@
 #include "DbMockTransactionImpl.h"
 
 #include "Transaction.h"
+#include <apps/postgresql/conn/Connection.h>
 
 DbMockTransactionImpl::DbMockTransactionImpl(Transaction* handler, TestServer* server_)
   : MockTransactionImpl(handler, TR_POLICY, server_)
@@ -40,4 +41,10 @@ bool DbMockTransactionImpl::check_trans()
         status = PQTRANS_ACTIVE;
     }
     return true;
+}
+
+void DbMockTransactionImpl::reset(Connection* conn)
+{
+    status = PQTRANS_IDLE;
+    MockTransactionImpl::reset(conn);
 }

@@ -877,6 +877,7 @@ void PoolWorker::applyTimer()
 
 void PoolWorker::onTimer()
 {
+    wait_next_time = 0;
     minimal_timer_time = 0;
     timer_is_set = false;
     time_t now = time(0);
