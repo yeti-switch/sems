@@ -257,6 +257,9 @@ int WsRpcPeer::read_data(char* data, int size) {
 
     if(wslay_event_recv(ctx_)) return -1;
 
+    //check closed connection
+    if(!fd) return -1;
+
     size_t read_size = size > static_cast<typeof(size)>(ws_resv_buffer.size()) ?
         ws_resv_buffer.size() : size;
 
