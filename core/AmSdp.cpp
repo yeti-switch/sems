@@ -132,6 +132,7 @@ inline string transport_ice_2_str(int tp)
   switch(tp){
   case ICTR_UDP: return "UDP";
   case ICTR_TCP: return "TCP";
+  case ICTR_TCP_ACT: return "TCP-ACT";
   default: return "<unknown transport type>";
   }
 }
@@ -1646,6 +1647,10 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
 
 static char* parse_ice_candidate(SdpMedia* media, char* s)
 {
+    static const string tcp_transport_name("tcp");
+    static const string tcp_act_transport_name("tcp-act");
+    static const string udp_transport_name("udp");
+
     SdpIceCandidate candidate;
     sdp_attr_candidate_st cd_st = FND;
     size_t line_len;
@@ -1677,10 +1682,17 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                 break;
             case TRANSPORT:
                 data = string(param, int(next-param)-1);
-                if(strcasecmp(data.c_str(),"tcp") == 0) {
-                    candidate.transport = ICTR_TCP;
-                } else if(strcasecmp(data.c_str(), "udp") == 0) {
-                    candidate.transport = ICTR_UDP;
+                if(data.length() == 3) {
+                    if(strncasecmp(data.c_str(),"tcp" , 3) == 0) {
+                        candidate.transport = ICTR_TCP;
+                    } else if(strncasecmp(data.c_str(), "udp", 3) == 0) {
+                        candidate.transport = ICTR_UDP;
+                    }
+                } else if(
+                    data.length() == 7 &&
+                    strncasecmp(data.c_str(), "tcp-act", 7) == 0)
+                {
+                    candidate.transport = ICTR_TCP_ACT;
                 } else {
                     ERROR("invalid transport of ice candidate attribute %s", data.c_str());
                     parsing = 0;

@@ -23,7 +23,7 @@ enum CryptoProfile {
 
 enum IceCandidateType { ICT_NONE = 0, ICT_HOST = 0x7E, ICT_SRFLX = 0x64, ICT_PRFLX = 0x5A, ICT_RELAY = 0x40 }; // see rfc5245 4.1.2.1
 
-enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP };
+enum IceCandidateTransport{ ICTR_UDP = 0, ICTR_TCP, ICTR_TCP_ACT };
 
 enum Setup { S_HOLD=0, S_ACTIVE=1, S_PASSIVE=2, S_ACTPASS=3, S_UNDEFINED=4 }; //see rfc4145 4.
 
