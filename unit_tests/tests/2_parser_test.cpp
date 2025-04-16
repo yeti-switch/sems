@@ -1210,3 +1210,79 @@ TEST(SdpParser, SessVMaxValueTest)
     sdp.print(sdp_out);
     ASSERT_EQ(sdp_out, sdp_str);
 }
+
+TEST(SdpParser, ICECandidatesParsingTest)
+{
+    string sdp_str =
+            "v=0\r\n"
+            "o=- 18446744073709551615 18446744073709551615 IN IP4 192.168.0.110\r\n"
+            "s=-\r\n"
+            "c=IN IP4 192.168.0.110\r\n"
+            "t=0 0\r\n"
+            "m=audio 11111 RTP/AVP 0 101\r\n"
+            "a=ice-pwd:K9jMdzkyw8QdZMLCC+W9Axes\r\n"
+            "a=ice-ufrag:nkQC\r\n"
+            "a=candidate:3019838621 1 UDP 2122260223 127.0.0.1 10001 typ host generation 0 network-cost 10 network-id 1\r\n"
+            "a=candidate:1752031335 1 TCP 2122063615 127.0.0.2 10002 typ host\r\n"
+            "a=candidate:2034365167 1 TCP-ACT 2122136831 127.0.0.3 10003 typ host\r\n"
+            "a=candidate:2525604672 1 UDP 1686052607 127.0.0.4 10004 typ srflx raddr 127.0.0.5 rport 10005\r\n"
+            "a=candidate:2525604673 1 UDP 1686052608 127.0.0.10 10010 typ prflx raddr 127.0.0.11 rport 10011\r\n"
+            "a=candidate:2525604674 1 UDP 1686052609 127.0.0.20 10020 typ relay raddr 127.0.0.21 rport 10021\r\n"
+            "a=ptime:20\r\n"
+            "a=sendrecv\r\n"
+            "a=direction:both\r\n"
+            ;
+    AmSdp sdp;
+    ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
+
+    const auto &m = sdp.media[0];
+    ASSERT_EQ(m.ice_candidate.size(), 6);
+
+    auto assert_candidate_values = [](
+        const SdpIceCandidate &candidate,
+        const string &foundation,
+        int component_id,
+        IceCandidateTransport transport,
+        int priority,
+        const string &address,
+        IceCandidateType type,
+        const string &reflexive_address)
+    {
+        ASSERT_EQ(candidate.foundation, foundation);
+        ASSERT_EQ(candidate.comp_id, component_id);
+        ASSERT_EQ(candidate.transport, transport);
+        ASSERT_EQ(candidate.type, type);
+        ASSERT_EQ(candidate.priority, priority);
+        ASSERT_EQ(candidate.conn.address, address);
+        ASSERT_EQ(candidate.type, type);
+        ASSERT_EQ(candidate.rel_conn.address, reflexive_address);
+    };
+
+    assert_candidate_values(m.ice_candidate[0],
+        "3019838621", 1, ICTR_UDP, 2122260223,
+        "127.0.0.1 10001", ICT_HOST, "");
+
+    assert_candidate_values(m.ice_candidate[1],
+        "1752031335", 1, ICTR_TCP, 2122063615,
+        "127.0.0.2 10002", ICT_HOST, "");
+
+    assert_candidate_values(m.ice_candidate[2],
+        "2034365167", 1, ICTR_TCP_ACT, 2122136831,
+        "127.0.0.3 10003", ICT_HOST, "");
+
+    assert_candidate_values(m.ice_candidate[3],
+        "2525604672", 1, ICTR_UDP, 1686052607,
+        "127.0.0.4 10004", ICT_SRFLX, "127.0.0.5 10005");
+
+    assert_candidate_values(m.ice_candidate[4],
+        "2525604673", 1, ICTR_UDP, 1686052608,
+        "127.0.0.10 10010", ICT_PRFLX, "127.0.0.11 10011");
+
+    assert_candidate_values(m.ice_candidate[5],
+        "2525604674", 1, ICTR_UDP, 1686052609,
+        "127.0.0.20 10020", ICT_RELAY, "127.0.0.21 10021");
+
+    string sdp_out;
+    sdp.print(sdp_out);
+    ASSERT_EQ(sdp_str, sdp_out);
+}
