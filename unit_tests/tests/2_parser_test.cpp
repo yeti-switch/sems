@@ -1245,8 +1245,10 @@ TEST(SdpParser, ICECandidatesParsingTest)
         IceCandidateTransport transport,
         int priority,
         const string &address,
+        int port,
         IceCandidateType type,
-        const string &reflexive_address)
+        const string &reflexive_address = "",
+        int reflexive_port = 0)
     {
         ASSERT_EQ(candidate.foundation, foundation);
         ASSERT_EQ(candidate.comp_id, component_id);
@@ -1254,33 +1256,35 @@ TEST(SdpParser, ICECandidatesParsingTest)
         ASSERT_EQ(candidate.type, type);
         ASSERT_EQ(candidate.priority, priority);
         ASSERT_EQ(candidate.conn.address, address);
+        ASSERT_EQ(candidate.conn.port, port);
         ASSERT_EQ(candidate.type, type);
         ASSERT_EQ(candidate.rel_conn.address, reflexive_address);
+        ASSERT_EQ(candidate.rel_conn.port, reflexive_port);
     };
 
     assert_candidate_values(m.ice_candidate[0],
         "3019838621", 1, ICTR_UDP, 2122260223,
-        "127.0.0.1 10001", ICT_HOST, "");
+        "127.0.0.1", 10001, ICT_HOST, "");
 
     assert_candidate_values(m.ice_candidate[1],
         "1752031335", 1, ICTR_TCP, 2122063615,
-        "127.0.0.2 10002", ICT_HOST, "");
+        "127.0.0.2", 10002, ICT_HOST, "");
 
     assert_candidate_values(m.ice_candidate[2],
         "2034365167", 1, ICTR_TCP_ACT, 2122136831,
-        "127.0.0.3 10003", ICT_HOST, "");
+        "127.0.0.3", 10003, ICT_HOST, "");
 
     assert_candidate_values(m.ice_candidate[3],
         "2525604672", 1, ICTR_UDP, 1686052607,
-        "127.0.0.4 10004", ICT_SRFLX, "127.0.0.5 10005");
+        "127.0.0.4", 10004, ICT_SRFLX, "127.0.0.5", 10005);
 
     assert_candidate_values(m.ice_candidate[4],
         "2525604673", 1, ICTR_UDP, 1686052608,
-        "127.0.0.10 10010", ICT_PRFLX, "127.0.0.11 10011");
+        "127.0.0.10", 10010, ICT_PRFLX, "127.0.0.11", 10011);
 
     assert_candidate_values(m.ice_candidate[5],
         "2525604674", 1, ICTR_UDP, 1686052609,
-        "127.0.0.20 10020", ICT_RELAY, "127.0.0.21 10021");
+        "127.0.0.20", 10020, ICT_RELAY, "127.0.0.21", 10021);
 
     string sdp_out;
     sdp.print(sdp_out);

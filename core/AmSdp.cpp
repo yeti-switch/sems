@@ -232,10 +232,10 @@ string SdpIceCandidate::print() const
     string data("a=candidate:");
     data += foundation + " " + int2str(comp_id) + " ";
     data += transport_ice_2_str(transport) + " ";
-    data += int2str((unsigned int)priority) + " " + conn.address + " ";
+    data += int2str((unsigned int)priority) + " " + conn.address + " " + int2str(conn.port) + " ";
     data += "typ " + ice_candidate_2_str(type);
     if(type != ICT_HOST) {
-        data += " " + rel_conn.address;
+        data += " raddr " + rel_conn.address + " rport " + int2str(rel_conn.port);
     }
     for(auto attr : attrs) {
         data += " " + attr.first + " " + attr.second;
@@ -1734,8 +1734,13 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                     parsing = 0;
                     break;
                 }
-                attr = data + " ";
-                cd_st = (cd_st == CADDR) ? CPORT : RPORT;
+                if(cd_st == CADDR) {
+                    candidate.conn.address = data;
+                    cd_st = CPORT;
+                } else if(cd_st == RADDR) {
+                    candidate.rel_conn.address = data;
+                    cd_st = RPORT;
+                }
                 break;
             case CPORT:
             case RPORT:
@@ -1753,11 +1758,11 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                     parsing = 0;
                     break;
                 }
-                attr += data;
                 if(cd_st == CPORT)
-                    candidate.conn.address = attr;
-                else if(cd_st == RPORT)
-                    candidate.rel_conn.address = attr;
+                    candidate.conn.port = idata;
+                else if(cd_st == RPORT) {
+                    candidate.rel_conn.port = idata;
+                }
                 cd_st = (cd_st == CPORT) ? CTYPE : ATTR_NAME;
                 break;
             case CTYPE:
@@ -1786,7 +1791,7 @@ static char* parse_ice_candidate(SdpMedia* media, char* s)
                 }
                 break;
             case ATTR_NAME:
-                attr = string(param, next);
+                attr = string(param, next - 1);
                 cd_st = ATTR_VALUE;
                 break;
             case ATTR_VALUE:

@@ -74,13 +74,8 @@ void AmMediaIceState::addStunConnections(const vector<SdpIceCandidate>* candidat
         if(candidate.transport != ICTR_UDP)
             continue;
 
-        string addr = candidate.conn.address;
-        vector<string> addr_port = explode(addr, " ");
-
-        if(addr_port.size() != 2) continue;
-        string address = addr_port[0];
-        int port = 0;
-        str2int(addr_port[1], port);
+        string address = candidate.conn.address;
+        int port = candidate.conn.port;
 
         if(transport->getComponentId() != candidate.comp_id ||
            transport->getLocalAddrType() != candidate.conn.addrType)

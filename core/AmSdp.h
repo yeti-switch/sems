@@ -62,9 +62,10 @@ struct SdpConnection
   struct sockaddr_in6 ipv6;
   /** IP address */
   string address;
+  int port;
 
   SdpConnection()
-    : network(NT_OTHER), addrType(AT_NONE)
+    : network(NT_OTHER), addrType(AT_NONE), port(0)
   {
       bzero(&ipv4, sizeof(struct sockaddr_in));
       bzero(&ipv6, sizeof(struct sockaddr_in6));

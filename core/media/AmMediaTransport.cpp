@@ -512,7 +512,8 @@ void AmMediaTransport::prepareIceCandidate(SdpIceCandidate& candidate)
     candidate.conn.network = NT_IN;
     candidate.comp_id = getComponentId();
     candidate.conn.addrType = (l_saddr.ss_family == AF_INET) ? AT_V4 : AT_V6;
-    candidate.conn.address = am_inet_ntop(&l_saddr) + " " + int2str(l_port);
+    candidate.conn.address = am_inet_ntop(&l_saddr);
+    candidate.conn.port = l_port;
 }
 
 sockaddr_storage * AmMediaTransport::getAllowedIceAddr()
