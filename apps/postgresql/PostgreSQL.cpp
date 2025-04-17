@@ -15,6 +15,8 @@
 
 #include "query/QueryChain.h"
 
+#include "pg_log.h"
+
 #include <vector>
 using std::vector;
 
@@ -23,10 +25,11 @@ using std::vector;
 enum RpcMethodId {
     MethodShowStats,
     MethodShowConfig,
-    MethodShowRetransmit
+    MethodShowRetransmit,
 #ifdef TRANS_LOG_ENABLE
-    , MethodTransLog
+    MethodTransLog,
 #endif
+    MethodLogPgEvents
 };
 
 class PostgreSQLFactory
@@ -151,6 +154,7 @@ int PostgreSQL::configure(const std::string& config)
     log_time = cfg_getint(cfg, PARAM_LOG_TIME_NAME);
     log_dir = cfg_getstr(cfg, PARAM_LOG_DIR_NAME);
     events_queue_name = cfg_getstr(cfg, PARAM_EVENTS_QUEUE_NAME);
+    log_pg_events = cfg_getbool(cfg, PARAM_LOG_PG_EVENTS_NAME);
 
     cfg_free(cfg);
     return 0;
@@ -302,6 +306,16 @@ bool PostgreSQL::showRetransmits(const std::string& connection_id,
     return true;
 }
 
+bool PostgreSQL::logPgEventsAsync(const string& connection_id,
+                                  const AmArg& request_id,
+                                  const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodLogPgEvents, params));
+    return true;
+}
+
 
 void PostgreSQL::showConfig(const AmArg&, AmArg& ret)
 {
@@ -319,6 +333,18 @@ void PostgreSQL::showRetransmit(const AmArg& params, AmArg& ret)
             dest.second->getRetransmits(ret);
         }
     }
+}
+
+void PostgreSQL::logPgEventsSync(const AmArg& args, AmArg& ret)
+{
+    if(args.size() == 0) return;
+
+    if(args.size() > 0)
+        log_pg_events = (arg2str(args[0]) == "true");
+
+    ret = AmArg{
+        { "log_pg_events", log_pg_events }
+    };
 }
 
 void PostgreSQL::requestReconnect(const AmArg& args, AmArg&)
@@ -416,6 +442,8 @@ void PostgreSQL::init_rpc_tree()
 #ifdef TRANS_LOG_ENABLE
         reg_method(request, "get_connection_log", "get log of pq connection", &PostgreSQL::transLog);
 #endif
+    AmArg &set = reg_leaf(root,"set");
+        reg_method(set, "logPgEvents", "enable/disable pg events logs", &PostgreSQL::logPgEventsAsync);
 }
 
 void PostgreSQL::process(AmEvent* ev)
@@ -449,6 +477,9 @@ void PostgreSQL::process(AmEvent* ev)
 
 void PostgreSQL::process_postgres_event(AmEvent* ev)
 {
+    if(log_pg_events)
+        DBG(pg_log::print_pg_event(ev).c_str());
+
     switch(ev->event_id) {
     case PGEvent::WorkerPoolCreate: {
         if(PGWorkerPoolCreate *e = dynamic_cast<PGWorkerPoolCreate*>(ev))
@@ -514,6 +545,11 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent& request)
         showRetransmit(request.params, ret);
         postJsonRpcReply(request, ret);
     } break;
+    case MethodLogPgEvents: {
+        AmArg ret;
+        logPgEventsSync(request.params, ret);
+        postJsonRpcReply(request, ret);
+    } break;
     }
 }
 
@@ -521,9 +557,14 @@ PoolWorker* PostgreSQL::getWorker(const PGQueryData& e)
 {
     if(workers.find(e.worker_name) == workers.end()) {
         ERROR("worker %s not found", e.worker_name.c_str());
-        if(!e.sender_id.empty())
-            AmSessionContainer::instance()->postEvent(
-                e.sender_id, new PGResponseError("worker not found", e.token));
+        if(!e.sender_id.empty()) {
+            auto * ev = new PGResponseError("worker not found", e.token);
+
+            if(log_pg_events)
+                DBG(pg_log::print_pg_event(ev).c_str());
+
+            AmSessionContainer::instance()->postEvent(e.sender_id, ev);
+        }
         return 0;
     }
     return workers[e.worker_name];
@@ -532,8 +573,12 @@ PoolWorker* PostgreSQL::getWorker(const PGQueryData& e)
 bool PostgreSQL::checkQueryData(const PGQueryData& data)
 {
     if(data.info.empty()) {
-        AmSessionContainer::instance()->postEvent(
-            data.sender_id, new PGResponseError("absent query", data.token));
+        auto * ev = new PGResponseError("absent query", data.token);
+
+        if(log_pg_events)
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        AmSessionContainer::instance()->postEvent(data.sender_id, ev);
         return false;
     }
     return true;

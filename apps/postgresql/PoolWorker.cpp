@@ -14,12 +14,18 @@
 
 #include "query/QueryChain.h"
 
+#include "pg_log.h"
+
 #include <variant>
 
 #define ERROR_CALLBACK \
 [token, sender_id](const string& error) {\
-    if(!sender_id.empty())\
-        AmSessionContainer::instance()->postEvent(sender_id, new PGResponseError(error, token));\
+    if(!sender_id.empty()) {\
+        auto * ev = new PGResponseError(error, token);\
+        if(PostgreSQL::instance()->getLogPgEvents())\
+            DBG(pg_log::print_pg_event(ev).c_str());\
+        AmSessionContainer::instance()->postEvent(sender_id, ev);\
+    }\
 }
 
 PoolWorker::PoolWorker(const std::string& name, int epollfd)
@@ -306,8 +312,12 @@ void PoolWorker::onFinish(Transaction* trans, const AmArg& result) {
                 AmArg::print(result).c_str());*/
 
             if(!tr_it->sender_id.empty()) {
-                AmSessionContainer::instance()->postEvent(
-                    tr_it->sender_id, new PGResponse(result, tr_it->token));
+                auto * ev = new PGResponse(result, tr_it->token);
+
+                if(PostgreSQL::instance()->getLogPgEvents())
+                    DBG(pg_log::print_pg_event(ev).c_str());
+
+                AmSessionContainer::instance()->postEvent(tr_it->sender_id, ev);
             }
             finished.inc((long long)tr_it->trans->get_size());
             tr_size.dec((long long)tr_it->trans->get_size());
@@ -586,9 +596,15 @@ void PoolWorker::runTransaction(Transaction* trans, const string& sender_id, con
         sender.clear();
     }
     if(max_queue_length && queue_size.get() >= max_queue_length) {
-        if(!sender.empty())
-            AmSessionContainer::instance()->postEvent(
-                sender, new PGResponseError("queue is full", token));
+        if(!sender.empty()) {
+            auto * ev = new PGResponseError("queue is full", token);
+
+            if(PostgreSQL::instance()->getLogPgEvents())
+                DBG(pg_log::print_pg_event(ev).c_str());
+
+            AmSessionContainer::instance()->postEvent(sender, ev);
+        }
+
         dropped.inc((long long)trans->get_size());
         delete trans;
         return;
@@ -804,8 +820,12 @@ void PoolWorker::onFireTransaction(const TransContainer& trans)
        (!failover_to_slave || trans.currentPool == slave) &&
        !trans.sender_id.empty())
     {
-        AmSessionContainer::instance()->postEvent(
-            trans.sender_id, new PGTimeout(trans.token));
+        auto * ev = new PGTimeout(trans.token);
+
+        if(PostgreSQL::instance()->getLogPgEvents())
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        AmSessionContainer::instance()->postEvent(trans.sender_id, ev);
     }
     trans.trans->cancel();
     canceled.inc((long long)trans.trans->get_size());
@@ -825,8 +845,12 @@ void PoolWorker::onErrorTransaction(const TransContainer& trans, const string& e
        (!failover_to_slave || trans.currentPool == slave) &&
        !trans.sender_id.empty())
     {
-        AmSessionContainer::instance()->postEvent(
-            trans.sender_id, new PGResponseError(error, trans.token));
+        auto * ev = new PGResponseError(error, trans.token);
+
+        if(PostgreSQL::instance()->getLogPgEvents())
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        AmSessionContainer::instance()->postEvent(trans.sender_id, ev);
     } else {
         Transaction* trans_ = 0;
         if(trans.trans->get_type() == TR_NON && !use_pipeline) {

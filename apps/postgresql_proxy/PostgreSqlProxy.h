@@ -56,6 +56,7 @@ class PostgreSqlProxy
     std::unordered_map<string, string> upstream_workers;
     lua_State* state;
     string module_config;
+    bool log_pg_events;
 
     void insert_response(const string& query, std::unique_ptr<Response> &response);
 
@@ -68,6 +69,7 @@ class PostgreSqlProxy
     async_rpc_handler mapShow;
     async_rpc_handler showStatsAsync;
     async_rpc_handler reload;
+    async_rpc_handler logPgEventsAsync;
     void reloadMap(const AmArg& args, AmArg& ret);
     void pushStack(const AmArg& args, AmArg& ret);
     void clearStack(const AmArg& args, AmArg& ret);
@@ -76,6 +78,7 @@ class PostgreSqlProxy
     void clearMap(const AmArg& args, AmArg& ret);
     void showMap(const AmArg& args, AmArg& ret);
     void showStatsSync(const AmArg& args, AmArg& ret);
+    void logPgEventsSync(const AmArg& args, AmArg& ret);
 
     void init_rpc_tree() override;
     void on_stop() override;

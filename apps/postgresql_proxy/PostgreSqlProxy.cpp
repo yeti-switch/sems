@@ -2,6 +2,7 @@
 #include "log.h"
 #include "AmEventDispatcher.h"
 #include "Config.h"
+#include "pg_log.h"
 
 #include <jsonArg.h>
 #include <math.h>
@@ -61,7 +62,8 @@ enum RpcMethodId {
     MethodMapInsert,
     MethodMapClear,
     MethodMapShow,
-    MethodShowStats
+    MethodShowStats,
+    MethodLogPgEvents
 };
 
 PostgreSqlProxy* PostgreSqlProxy::_instance=0;
@@ -128,6 +130,7 @@ int PostgreSqlProxy::configure(const string& config)
         return -1;
     }
 
+    log_pg_events = cfg_getbool(cfg, CFG_OPT_LOG_PG_EVENTS_NAME);
     module_config = config;
     cfg_free(cfg);
     return 0;
@@ -244,6 +247,16 @@ bool PostgreSqlProxy::reload(const string& connection_id,
     return true;
 }
 
+bool PostgreSqlProxy::logPgEventsAsync(const string& connection_id,
+                                  const AmArg& request_id,
+                                  const AmArg& params)
+{
+    postEvent(new JsonRpcRequestEvent(
+        connection_id, request_id, false,
+        MethodLogPgEvents, params));
+    return true;
+}
+
 bool PostgreSqlProxy::mapClear(const string& connection_id,
                               const AmArg& request_id,
                               const AmArg& params)
@@ -357,6 +370,18 @@ void PostgreSqlProxy::showStatsSync(const AmArg&, AmArg& ret)
     };
 }
 
+void PostgreSqlProxy::logPgEventsSync(const AmArg& args, AmArg& ret)
+{
+    if(args.size() == 0) return;
+
+    if(args.size() > 0)
+        log_pg_events = (arg2str(args[0]) == "true");
+
+    ret = AmArg{
+        { "log_pg_events", log_pg_events }
+    };
+}
+
 void PostgreSqlProxy::reloadMap(const AmArg&, AmArg&)
 {
     reconfigure(module_config);
@@ -378,6 +403,9 @@ void PostgreSqlProxy::init_rpc_tree()
 
     AmArg &show = reg_leaf(root, "show");
     reg_method(show, "stats", "show module stats", &PostgreSqlProxy::showStatsAsync);
+
+    AmArg &set = reg_leaf(root, "set");
+    reg_method(set, "logPgEvents", "enable/disable pg events logs", &PostgreSqlProxy::logPgEventsAsync);
 }
 
 /* AmEventHandler */
@@ -410,6 +438,9 @@ bool PostgreSqlProxy::process_consuming(AmEvent* ev)
 bool PostgreSqlProxy::process_postgres_event(PGEvent* ev)
 {
     std::optional<string> ret;
+
+    if(log_pg_events)
+        DBG(pg_log::print_pg_event(ev).c_str());
 
     switch(ev->event_id) {
         case PGEvent::SimpleExecute:
@@ -484,6 +515,9 @@ void PostgreSqlProxy::process_jsonrpc_event(JsonRpcRequestEvent* ev)
     case MethodShowStats:
         showStatsSync(ev->params, ret);
         break;
+    case MethodLogPgEvents:
+        logPgEventsSync(ev->params, ret);
+        break;
     }
 
     postJsonRpcReply(*ev, ret);
@@ -492,7 +526,12 @@ void PostgreSqlProxy::process_jsonrpc_event(JsonRpcRequestEvent* ev)
 bool PostgreSqlProxy::checkQueryData(const PGQueryData& data)
 {
     if(data.info.empty()) {
-        sessionContainer->postEvent(data.sender_id, new PGResponseError("absent query", data.token));
+        auto * ev = new PGResponseError("absent query", data.token);
+
+        if(log_pg_events)
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        sessionContainer->postEvent(data.sender_id, ev);
         return false;
     }
 
@@ -603,7 +642,12 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
     const auto response = find_resp_for_query(query);
     if(!response) {
         ERROR("no mapping for the query: <%s>", query.data());
-        sessionContainer->postEvent(sender_id, new PGResponseError(no_mapped_error, token));
+        auto * ev = new PGResponseError(no_mapped_error, token);
+
+        if(log_pg_events)
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        sessionContainer->postEvent(sender_id, ev);
         return std::nullopt;
     }
 
@@ -614,8 +658,12 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
         response->value.clear();
 
         if(!lua_checkstack(state, params.size() + 2)) {
-            sessionContainer->postEvent(sender_id,
-                new PGResponseError("failed to ensure lua stacksize", token));
+            auto * ev = new PGResponseError("failed to ensure lua stacksize", token);
+
+            if(log_pg_events)
+                DBG(pg_log::print_pg_event(ev).c_str());
+
+            sessionContainer->postEvent(sender_id, ev);
             return std::nullopt;
         }
 
@@ -646,16 +694,31 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
     }
 
     if(!response->error.empty()) {
-        sessionContainer->postEvent(sender_id, new PGResponseError(response->error, token));
+        auto * ev = new PGResponseError(response->error, token);
+
+        if(log_pg_events)
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        sessionContainer->postEvent(sender_id, ev);
         return std::nullopt;
     }
 
     if(response->timeout) {
-        sessionContainer->postEvent(sender_id, new PGTimeout(token));
+        auto * ev = new PGTimeout(token);
+
+        if(log_pg_events)
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        sessionContainer->postEvent(sender_id, ev);
         return std::nullopt;
     }
 
-    sessionContainer->postEvent(sender_id, new PGResponse(response->parsed_value, token));
+    auto * ev = new PGResponse(response->parsed_value, token);
+
+    if(log_pg_events)
+        DBG(pg_log::print_pg_event(ev).c_str());
+
+    sessionContainer->postEvent(sender_id, ev);
 
     return std::nullopt;
 }

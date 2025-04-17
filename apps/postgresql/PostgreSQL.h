@@ -91,6 +91,7 @@ class PostgreSQL
     time_t log_time;
     string log_dir;
     string events_queue_name;
+    bool log_pg_events;
 
     int init();
 
@@ -130,10 +131,12 @@ class PostgreSQL
 #endif
     void showConfig(const AmArg& params, AmArg& ret);
     void showRetransmit(const AmArg& params, AmArg& ret);
+    void logPgEventsSync(const AmArg& args, AmArg& ret);
 
     async_rpc_handler showStatistics;
     async_rpc_handler showConfiguration;
     async_rpc_handler showRetransmits;
+    async_rpc_handler logPgEventsAsync;
     rpc_handler requestReconnect;
     rpc_handler resetConnection;
     rpc_handler removeTrans;
@@ -149,6 +152,7 @@ class PostgreSQL
 
     time_t getLogTime() { return log_time; }
     string getLogDir() { return log_dir; }
+    bool getLogPgEvents() { return log_pg_events; }
 
     uint64_t get_active_tasks_count() override;
 };
