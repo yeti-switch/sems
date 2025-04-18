@@ -16,6 +16,7 @@
 #include "query/QueryChain.h"
 
 #include "pg_log.h"
+#include "format_helper.h"
 
 #include <vector>
 using std::vector;
@@ -337,10 +338,18 @@ void PostgreSQL::showRetransmit(const AmArg& params, AmArg& ret)
 
 void PostgreSQL::logPgEventsSync(const AmArg& args, AmArg& ret)
 {
-    if(args.size() == 0) return;
+    if(args.size() != 1) {
+        ret = "argument expected";
+        return;
+    }
 
-    if(args.size() > 0)
-        log_pg_events = (arg2str(args[0]) == "true");
+    bool new_value;
+    if(!str2bool(arg2str(args[0]), new_value)) {
+        ret = format("failed to convert '{}' to bool", arg2str(args[0]));
+        return;
+    }
+
+    log_pg_events = new_value;
 
     ret = AmArg{
         { "log_pg_events", log_pg_events }
