@@ -526,7 +526,7 @@ namespace Config {
     static cfg_opt_t modules[] =
     {
         CFG_FUNC("include", &cfg_include),
-        CFG_STR(PARAM_PATH_NAME, "/usr/lib/sems/plug-in", CFGF_NONE),
+        CFG_STR_LIST(PARAM_PATH_NAME, 0, CFGF_NODEFAULT),
         CFG_STR(PARAM_CPATH_NAME, "/etc/sems/etc/", CFGF_NONE),
         CFG_SEC(SECTION_MODULE_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
         CFG_SEC(SECTION_MODULE_GLOBAL_NAME, module, CFGF_MULTI | CFGF_TITLE | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
@@ -949,15 +949,13 @@ static int check_dir_write_permissions(const string &dir, const char *opt_name)
 
 
 ConfigContainer::ConfigContainer()
-: plugin_path(PLUG_IN_PATH)
-, log_dump_path()
-, session_proc_threads(VALUE_NUM_SESSION_PROCESSORS)
-, ignore_sig_chld(true)
-, ignore_sig_pipe(true)
-, shutdown_mode(false)
-, dump_level(0)
+ : session_proc_threads(VALUE_NUM_SESSION_PROCESSORS)
+ , ignore_sig_chld(true)
+ , ignore_sig_pipe(true)
+ , shutdown_mode(false)
+ , dump_level(0)
 #ifndef DISABLE_DAEMON_MODE
-, deamon_pid_file(DEFAULT_DAEMON_PID_FILE)
+ , deamon_pid_file(DEFAULT_DAEMON_PID_FILE)
 #endif
 {}
 
@@ -1336,6 +1334,13 @@ int AmLcConfig::readRoutings(cfg_t* cfg, ConfigContainer* config)
     return 0;
 }
 
+inline void for_each_str_list(cfg_t *cfg, const char *param_name, std::function<void (const char *)> cb)
+{
+    for(auto i = 0u; i < cfg_size(cfg, param_name); i++) {
+        cb(cfg_getnstr(cfg, param_name, i));
+    }
+}
+
 int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
 {
     if(!cfg_size(cfg, SECTION_MODULES_NAME)) {
@@ -1344,9 +1349,14 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
     }
     cfg_t* modules_ = cfg_getsec(cfg, SECTION_MODULES_NAME);
 
-    unsigned int mCount;
-    config->modules_path = cfg_getstr(modules_, PARAM_PATH_NAME);
+    for_each_str_list(modules_, PARAM_PATH_NAME, [&config](auto path) {
+        config->modules_path.emplace_back(path);
+    });
+    config->modules_path.emplace_back(PLUG_IN_PATH);
+
     config->configs_path = cfg_getstr(modules_, PARAM_CPATH_NAME);
+
+    unsigned int mCount;
     mCount = cfg_size(modules_, SECTION_MODULE_NAME);
     for(unsigned int i = 0; i < mCount; i++) {
         cfg_t* module = cfg_getnsec(modules_, SECTION_MODULE_NAME, i);
@@ -1371,7 +1381,7 @@ int AmLcConfig::readModules(cfg_t* cfg, ConfigContainer* config)
               module->title, (int)module->raw_info->raw_len, module->raw_info->raw);*/
         config->modules.push_back(name);
         config->module_config.insert(std::make_pair(name, module->raw_info->raw));
-        config->rtld_global_plugins.insert(name + ".so");
+        config->rtld_global_plugins.insert(name);
         freeRawValues(module);
     }
 
@@ -2447,4 +2457,15 @@ int AmLcConfig::addUasSignature(char *buf) const
 
 int AmLcConfig::getUasSignatureLen() const {
     return signature_header_uas.size();
+}
+
+string AmLcConfig::getModulesPathList() const
+{
+    std::ostringstream ret;
+    for(const auto &path: m_config.modules_path) {
+        if(ret.tellp() != 0)
+            ret << ":";
+        ret << path;
+    }
+    return ret.str();
 }

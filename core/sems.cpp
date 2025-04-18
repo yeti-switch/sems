@@ -262,7 +262,7 @@ static bool apply_args(std::map<char,string>& args)
             AmLcConfig::instance().config_path = it->second;
             break;
         case 'x':
-            AmConfig.modules_path = it->second;
+            AmConfig.modules_path.emplace_back(it->second);
             break;
 #ifndef DISABLE_DAEMON_MODE
         case 'P':
@@ -552,7 +552,7 @@ int main(int argc, char* argv[])
 #endif
         "\n",
         AmLcConfig::instance().config_path.c_str(),
-        AmConfig.modules_path.c_str()
+        AmLcConfig::instance().getModulesPathList().c_str()
 #ifndef DISABLE_DAEMON_MODE
         , AmConfig.deamon_mode ? "yes" : "no",
         AmConfig.deamon_uid.empty() ? "<not set>" : AmConfig.deamon_uid.c_str(),

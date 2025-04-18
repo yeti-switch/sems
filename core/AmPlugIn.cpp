@@ -28,6 +28,7 @@
 
 #include "AmPlugIn.h"
 #include "AmApi.h"
+#include "AmSdp.h"
 #include "AmUtils.h"
 #include "AmLcConfig.h"
 #include "sip/defs.h"
@@ -46,7 +47,8 @@
 #include <set>
 #include <vector>
 #include <algorithm>
-#include "AmSdp.h"
+#include <filesystem>
+
 using std::set;
 
 static unsigned int pcm16_bytes2samples([[maybe_unused]] long h_codec, unsigned int num_bytes)
@@ -175,27 +177,42 @@ void AmPlugIn::shutdown()
     std::for_each(plugins_objects.begin(), plugins_objects.end(), shutdown_plugin_factory);
 }
 
-int AmPlugIn::load(const string& directory, const std::vector<std::string>& plugins)
+int AmPlugIn::load(const vector<string>& directories, const std::vector<std::string>& plugins)
 {
     int err=0;
 
-    for (auto plugin_file : plugins) {
-        if (plugin_file == "sipctrl") {
+    for (const auto &plugin_name : plugins) {
+        if (plugin_name == "sipctrl") {
             WARN("sipctrl is integrated into the core, loading sipctrl "
                  "module is not necessary any more");
             WARN("please update your configuration to not load sipctrl module");
             continue;
         }
 
-        if(plugin_file.find(".so",plugin_file.length()-3) == string::npos )
-            plugin_file+=".so";
+        string plugin_base_name(plugin_name + ".so");
 
-        plugin_file = directory + "/"  + plugin_file;
+        bool plugin_found = false;
+        string plugin_path;
+        for(const auto &directory: directories) {
+            std::error_code ec;
+            string path(directory + "/" + plugin_base_name);
+            if(std::filesystem::exists(path, ec)) {
+                plugin_path.swap(path);
+                plugin_found = true;
+                break;
+            }
+        }
+        if(!plugin_found) {
+            ERROR("failed to find '%s' in any of the configured modules directories (%s)",
+                plugin_base_name.data(),
+                AmLcConfig::instance().getModulesPathList().c_str());
+            return -1;
+        }
 
-        DBG("loading %s...",plugin_file.c_str());
+        DBG("loading %s...", plugin_path.c_str());
 
-        if((err = loadPlugIn(plugin_file, plugin_file)) < 0 ) {
-            ERROR("while loading plug-in '%s'",plugin_file.c_str());
+        if((err = loadPlugIn(plugin_path, plugin_name)) < 0 ) {
+            ERROR("while loading plug-in '%s'", plugin_path.c_str());
             // be strict here: if plugin not loaded, stop!
             return err;
         }
@@ -265,20 +282,11 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name)
     AmPluginFactory* plugin = NULL; // default: not loaded
     int dlopen_flags = RTLD_NOW;
 
-    char* pname = strdup(plugin_name.c_str());
-    char* bname = basename(pname);
-
-    // possibly others
-    for(std::set<string>::iterator it=AmConfig.rtld_global_plugins.begin();
-       it!=AmConfig.rtld_global_plugins.end();it++)
-    {
-        if(!strcmp(bname, it->c_str())) {
-            dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
-            DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'", file.c_str());
-            break;
-        }
+    const auto &rtld = AmConfig.rtld_global_plugins;
+    if(rtld.find(plugin_name) != rtld.end()) {
+        dlopen_flags |= RTLD_GLOBAL;
+        DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'", file.c_str());
     }
-    free(pname);
 
     void* h_dl = dlopen(file.c_str(),dlopen_flags);
     if(!h_dl) {

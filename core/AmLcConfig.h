@@ -71,9 +71,8 @@ struct ConfigContainer
     std::vector<std::string> modules;
     std::map<std::string, std::string> module_config;
     std::set<string> rtld_global_plugins;
-    std::string modules_path;
+    std::vector<std::string> modules_path;
     std::string configs_path;
-    std::string plugin_path;
 
     std::string rsr_path;
     std::string log_dump_path;
@@ -199,6 +198,8 @@ public:
     int getUacSignatureLen() const;
     int addUasSignature(char *buf) const;
     int getUasSignatureLen() const;
+
+    string getModulesPathList() const;
 
     /**
      * helper func for fixing memory leak for cfg_raw_update (confuse.c:1069)
