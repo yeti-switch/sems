@@ -1,3 +1,11 @@
+sems (1.162.0) stable; urgency=low
+  * cfg: allow multiple directories for modules.path
+  * AmSdp: add tcp-act ICE candidate type parsing
+  * postgresql,postgresql_proxy: add 'log_pg_events' parameter
+  * postgresql: fix high cpu usage on reconnects
+  * jsonrpc: fix wspeer high cpu usage on missed connection closing
+ -- Michael Furmur <furmur@pm.me>  Fri, 28 Mar 2025 22:33:44 +0200
+
 sems (1.161.1) stable; urgency=low
   * SSLKeyLogger: disable upload on empty skl_upload_queue_name
  -- Michael Furmur <furmur@pm.me>  Fri, 28 Mar 2025 22:33:44 +0200
