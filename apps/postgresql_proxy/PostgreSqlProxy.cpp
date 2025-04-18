@@ -3,6 +3,7 @@
 #include "AmEventDispatcher.h"
 #include "Config.h"
 #include "pg_log.h"
+#include "format_helper.h"
 
 #include <jsonArg.h>
 #include <math.h>
