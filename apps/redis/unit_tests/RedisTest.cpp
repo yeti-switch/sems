@@ -56,7 +56,7 @@ void RedisTestFactory::read_config()
         CFG_END()
     };
 
-    AmArg data = test_config::instance()->configureModule("redis", opts);
+    AmArg data = test_config::instance()->configureModule("redis_unit", opts);
     settings.external = data[PARAM_EXT_REDIS_NAME].asBool();
     settings.host = data[PARAM_REDIS_HOST_NAME].asCStr();
     settings.port = data[PARAM_REDIS_PORT_NAME].asLong();

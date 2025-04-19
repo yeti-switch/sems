@@ -283,7 +283,9 @@ int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name)
     int dlopen_flags = RTLD_NOW;
 
     const auto &rtld = AmConfig.rtld_global_plugins;
-    if(rtld.find(plugin_name) != rtld.end()) {
+    if(rtld.find(plugin_name) != rtld.end() ||
+       rtld.find(plugin_name.substr(0, plugin_name.find("_unit"))) != rtld.end())
+    {
         dlopen_flags |= RTLD_GLOBAL;
         DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'", file.c_str());
     }

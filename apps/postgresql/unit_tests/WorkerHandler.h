@@ -54,7 +54,7 @@ public:
             CFG_STR(PARAM_PG_ADDR_NAME, POOL_ADDRESS_STR, CFGF_NONE),
             CFG_END()
         };
-        AmArg data = test_config::instance()->configureModule("postgresql", postres);
+        AmArg data = test_config::instance()->configureModule("postgresql_unit", postres);
         external = data[PARAM_EXT_POSTGRES_NAME].asBool();
         address = data[PARAM_PG_ADDR_NAME].asCStr();
         TesterConfig::ConfigParameters config_parameters;
