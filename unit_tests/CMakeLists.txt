@@ -21,7 +21,7 @@ install(TARGETS ${SEMS_UT} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 
 gtest_discover_tests(${SEMS_UT}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    TEST_FILTER "-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket"
+    TEST_FILTER "-*.DISABLED_*:FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket"
 )
 
 file(MAKE_DIRECTORY
