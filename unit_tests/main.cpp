@@ -38,7 +38,7 @@ class TesterLogFac : public AmLoggingFacility {
 };
 TesterLogFac *TesterLogFac::_instance = NULL;
 
-static string config_path = "./sems_test.cfg";
+static string config_path = "./unit_tests/etc/sems_test.cfg";
 
 void GetConfigPath(int argc, char** argv) {
     for(int i = 1; i < argc; i++) {

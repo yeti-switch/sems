@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.6.2)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 
 IF(COMMAND cmake_policy)
 #	# Don't do automatic escaping of variables
@@ -16,6 +16,8 @@ set(CMAKE_CXX_STANDARD 20)
 set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 PROJECT(SEMS)
+
+include(CTest)
 
 include(/usr/share/cmake/sems/sems_external_libs.cmake)
 
@@ -341,10 +343,9 @@ ADD_SUBDIRECTORY (apps)
 #ADD_SUBDIRECTORY (tools)
 ADD_SUBDIRECTORY (debian)
 
-IF(SEMS_USE_GTEST)
+IF(BUILD_TESTING AND SEMS_USE_GTEST)
     add_subdirectory(unit_tests)
-    add_custom_target(test USES_TERMINAL COMMAND /bin/bash ${CMAKE_SOURCE_DIR}/run_unit_test.sh all --gtest_filter=-FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket)
-ENDIF(SEMS_USE_GTEST)
+ENDIF()
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
 
