@@ -1,3 +1,7 @@
+sems (1.162.1) stable; urgency=low
+  * use ctest. avoid modules copying on tests
+ -- Michael Furmur <furmur@pm.me>  Thu, 24 Apr 2025 19:18:46 +0300
+
 sems (1.162.0) stable; urgency=low
   * cfg: allow multiple directories for modules.path
   * AmSdp: add tcp-act ICE candidate type parsing
