@@ -330,13 +330,13 @@ void PostgreSqlProxy::insertMap(const AmArg& args, AmArg&)
 {
     if(args.size() == 0) return;
 
-    auto resp = new Response();
-    resp->ref_index = 0;
-    if(args.size() > 1) resp->value = arg2str(args[1]);
-    if(args.size() > 2) resp->error = arg2str(args[2]);
-    if(args.size() > 3) resp->timeout = (arg2str(args[3]) == "true");
+    std::unique_ptr<Response> response{new Response()};
+    response->ref_index = 0;
+    if(args.size() > 1) response->parsed_value = args[1];
+    if(args.size() > 2) response->error = arg2str(args[2]);
+    if(args.size() > 3) response->timeout = (arg2str(args[3]) == "true");
 
-    resp_map.try_emplace(arg2str(args[0])/*query*/, resp);
+    insert_response(arg2str(args[0])/*query*/, response);
 }
 
 void PostgreSqlProxy::clearMap(const AmArg&, AmArg&)
