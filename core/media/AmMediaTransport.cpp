@@ -547,10 +547,13 @@ void AmMediaTransport::getInfo(AmArg& ret)
     });
 }
 
-void AmMediaTransport::dtls_alert(string alert)
+void AmMediaTransport::dtls_alert(const Botan::TLS::Alert &alert)
 {
+    if(alert.type() == Botan::TLS::Alert::CloseNotify)
+        return;
+
     CLASS_ERROR("DTLS local_tag:%s, alert:%s",
-        stream->getSessionLocalTag(), alert.c_str());
+        stream->getSessionLocalTag(), alert.type_string().c_str());
 }
 
 void AmMediaTransport::onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn)

@@ -372,7 +372,7 @@ bool RtpSecureContext::isActivated()
 void RtpSecureContext::tls_alert(Botan::TLS::Alert alert)
 {
     assert(cur_conn);
-    cur_conn->getTransport()->dtls_alert(alert.type_string());
+    cur_conn->getTransport()->dtls_alert(alert);
 }
 
 void RtpSecureContext::tls_emit_data(std::span<const uint8_t> data)

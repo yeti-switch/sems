@@ -156,7 +156,7 @@ public:
     virtual ssize_t send(sockaddr_storage* raddr, unsigned char* buf, int size, AmStreamConnection::ConnectionType type);
     int sendmsg(unsigned char* buf, int size);
 
-    void dtls_alert(string alert);
+    void dtls_alert(const Botan::TLS::Alert &alert);
     void onRtpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRtcpPacket(AmRtpPacket* packet, AmStreamConnection* conn);
     void onRawPacket(AmRtpPacket* packet, AmStreamConnection* conn);
