@@ -390,8 +390,6 @@ void AmFaxImage::logHandler(int level, const char* text)
             break;
         case SPAN_LOG_WARNING:
         case SPAN_LOG_PROTOCOL_WARNING:
-            FAX_WARN("%s", text);
-            break;
         case SPAN_LOG_FLOW:
         case SPAN_LOG_FLOW_2:
         case SPAN_LOG_FLOW_3:
@@ -436,7 +434,7 @@ int FaxAudioImage::init_tone_fax()
     fmt->setRate(FAX_RATE);
 
     if(m_fax_state) {
-        FAX_ERROR("fax tone stack was inited");
+        FAX_DBG("fax tone stack was inited");
         return -1;
     }
 
@@ -626,7 +624,7 @@ int FaxT38Image::readStreams(unsigned long long ts, unsigned char * buffer)
         return 0;
 
     if(udptl_rx_packet(m_udptl_state, rp->getBuffer(), rp->getBufferSize()) < 0) {
-        FAX_ERROR("incorrect udptl packet [pkt-size=%u]", rp->getBufferSize());
+        FAX_DBG("incorrect udptl packet [pkt-size=%u]", rp->getBufferSize());
         m_sess->RTPStream()->freeRtpPacket(rp);
         return 0;
     }
