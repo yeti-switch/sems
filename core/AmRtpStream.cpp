@@ -1197,7 +1197,9 @@ void AmRtpStream::onErrorRtpTransport(AmStreamConnection::ConnectionError err, c
     transport->getLocalAddr(&laddr);
     if(err == AmStreamConnection::RTP_PARSER_ERROR) rtp_parse_errors++;
     else if(err == AmStreamConnection::SRTP_UNPROTECT_ERROR) srtp_unprotect_errors++;
-    else if(err == AmStreamConnection::STUN_DROPPED_ERROR) {
+    else if(err == AmStreamConnection::STUN_DROPPED_ERROR ||
+            err == AmStreamConnection::STUN_VALID_ERROR)
+    {
         CLASS_DBG("%s (src_addr: %s:%i, "
             "local_ssrc: 0x%x, local_tag: %s)\n",
             error.c_str(),
