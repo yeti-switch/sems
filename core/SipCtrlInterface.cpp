@@ -1136,8 +1136,7 @@ bool _SipCtrlInterface::sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply)
 	sip_nameaddr na;
 	cstring contact = get_contact(msg)->value;
 	if(parse_first_nameaddr(&na,contact.s,contact.len) < 0) {
-
-	    ERROR("Contact nameaddr parsing failed ('%.*s')",
+	    WARN("Contact nameaddr parsing failed ('%.*s')",
 		  contact.len,contact.s);
 	}
 	else {
