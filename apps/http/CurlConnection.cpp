@@ -212,8 +212,8 @@ void CurlConnection::on_finished()
     if(destination.succ_codes(http_response_code)) {
         if(ct) mime_type = ct;
     } else {
-        ERROR("can't %s to '%s'. http_code %ld",
-              get_name(), eff_url,http_response_code);
+        ERROR("%s failed for '%s'. http_code %ld",
+              get_name(), eff_url, http_response_code);
     }
 
     destination.on_finish(failed, get_response());
