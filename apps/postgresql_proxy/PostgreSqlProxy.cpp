@@ -326,7 +326,7 @@ void PostgreSqlProxy::showStack(const AmArg& args, AmArg& ret)
     }
 }
 
-void PostgreSqlProxy::insertMap(const AmArg& args, AmArg&)
+void PostgreSqlProxy::insertMap(const AmArg& args, AmArg& ret)
 {
     if(args.size() == 0) return;
 
@@ -334,8 +334,15 @@ void PostgreSqlProxy::insertMap(const AmArg& args, AmArg&)
     response->ref_index = 0;
     if(args.size() > 1) response->parsed_value = args[1];
     if(args.size() > 2) response->error = arg2str(args[2]);
-    if(args.size() > 3) response->timeout = (arg2str(args[3]) == "true");
+    if(args.size() > 3){
+        bool new_value;
+        if(!str2bool(arg2str(args[3]), new_value)) {
+            ret = format("failed to convert '{}' to bool", arg2str(args[3]));
+            return;
+        }
 
+        response->timeout = new_value;
+    }
     insert_response(arg2str(args[0])/*query*/, response);
 }
 
