@@ -539,6 +539,14 @@ bool str2bool(const string &s, bool &dst)
   return false;
 }
 
+std::optional<bool> str2bool(const string &s) {
+  bool ret;
+  if(str2bool(s, ret)) {
+    return ret;
+  }
+  return std::nullopt;
+}
+
 bool str2longlong(const string& str, long long& result)
 {
   char* s = (char*)str.c_str();

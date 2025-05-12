@@ -14,7 +14,7 @@ int map_func(cfg_t *cfg, cfg_opt_t *, int argc, const char **argv)
     const char* query = argv[0];
     const char* response = argv[1];
     const char* error = argc > 2 ? argv[2] : "";
-    const bool timeout = argc > 3 ? (strcmp(argv[3], "true") == 0) : false;
+    const bool timeout = argc > 3 ? str2bool(argv[3]).value_or(false) : false;
 
     return PostgreSqlProxy::instance()->insert_resp_map(query, response, error, timeout);
 }
