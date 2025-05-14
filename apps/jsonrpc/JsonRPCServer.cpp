@@ -261,6 +261,7 @@ int JsonRpcServer::processMessage(const char* msgbuf, unsigned int msg_size,
     const auto &method = rpc_params["method"];
     static AmArg set_notify_sink_arg("jsonrpc.setNotifySink");
     static AmArg set_request_sink_arg("jsonrpc.setRequestSink");
+    static AmArg get_conn_id_arg("jsonrpc.getConnId");
     if(method == set_notify_sink_arg) {
         AmArg &params = rpc_params["params"];
         if(!isArgCStr(params)) {
@@ -305,6 +306,16 @@ int JsonRpcServer::processMessage(const char* msgbuf, unsigned int msg_size,
             peer->requestReceiver.data(), params.asCStr());
         peer->addMessage(reply.c_str(), reply.size());
 
+        peer->requestReceiver = params.asCStr();
+        return 0;
+    } else if(method == get_conn_id_arg) {
+        AmArg &params = rpc_params["params"];
+        string reply;
+        generate_reply(
+            reply,
+            arg2str(id), isArgInt(id),
+            "\"%s\"", peer->id.c_str());
+        peer->addMessage(reply.c_str(), reply.size());
         peer->requestReceiver = params.asCStr();
         return 0;
     }
