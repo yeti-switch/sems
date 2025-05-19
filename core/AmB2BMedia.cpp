@@ -1357,6 +1357,7 @@ void AmB2BMedia::setFirstAudioPairStream(
     AmRtpAudio *stream,
     const AmSdp &local_sdp, const AmSdp &remote_sdp)
 {
+    AmLock lock(mutex);
     StreamData *adata = 0;
     for(auto &pair : streams) {
         if(pair.audio) {
@@ -1792,6 +1793,7 @@ void AmB2BMedia::getInfo(AmArg &ret)
     arg_audio.assertArray();
     arg_relay_streams.assertArray();
 
+    AmLock lock(mutex);
     for(auto &pair : streams) {
         AmArg *arg;
         if(pair.audio) arg = &arg_audio;
