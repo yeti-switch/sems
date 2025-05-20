@@ -64,7 +64,8 @@ local node_id = ARGV[3]
 local local_interface_id = ARGV[4]
 local user_agent = ARGV[5]
 local path = ARGV[6]
-local bindings_max = tonumber(ARGV[7])
+local headers = ARGV[7]
+local bindings_max = tonumber(ARGV[8])
 
 if not user_agent then
     user_agent = ''
@@ -92,7 +93,8 @@ redis.call('HMSET', contact_key,
     'node_id',node_id,
     'interface_id',local_interface_id,
     'agent',user_agent,
-    'path',path)
+    'path',path,
+    'headers', headers)
 
 -- set TTL
 redis.call('EXPIRE', contact_key, expires)

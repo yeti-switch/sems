@@ -96,15 +96,16 @@ TEST_F(RegistrarTest, TestRegister1)
             "Call-ID: xpoxwvvkzlbbwvl@debian\r\n"
             "CSeq: 100 REGISTER\r\n"
             "Contact: <sip:Name1@127.0.0.1:6057>;expires=3600\r\n"
+            "X-Orig-Proto: tcp\r\n"
             "User-Agent: Twinkle/1.10.2\r\n";
         str2am_sip_request(req_str, req);
 
         AmArg ret;
         json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", 0]])", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "{\"x-orig-proto\":\"tcp\"}", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "{\"x-orig-proto\":\"tcp\"}", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -199,11 +200,11 @@ TEST_F(RegistrarTest, TestRegister2)
 
         AmArg ret;
         json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", 0]])", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "", 10);
+            AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -234,10 +235,10 @@ TEST_F(RegistrarTest, TestRegister2)
                     ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", 0]
                 ]
             )raw", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -306,10 +307,10 @@ TEST_F(RegistrarTest, TestRegister2)
 
         AmArg ret;
         json2arg(R"([["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", 0]])", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 0 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 0 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
+        test_server->addCommandResponse("FCALL register 1 %s 0 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 0 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -335,10 +336,10 @@ TEST_F(RegistrarTest, TestRegister2)
 
         AmArg ret;
         ret.assertArray();
-        test_server->addCommandResponse("FCALL register 1 %s 0 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 0 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
+        test_server->addCommandResponse("FCALL register 1 %s 0 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 0 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -376,10 +377,10 @@ TEST_F(RegistrarTest, TestRegister3)
 
         AmArg ret;
         json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", 0]])", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
-            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", 10);
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
+            REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(), AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -410,12 +411,12 @@ TEST_F(RegistrarTest, TestRegister3)
                     ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", 0]
                 ]
             )raw", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+            AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "", 10);
+            AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -450,12 +451,12 @@ TEST_F(RegistrarTest, TestRegister3)
                 ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", 0],
                 ["sip:Name3@127.0.0.1:6057", 3600, "c:test:sip:Name3@127.0.0.1:6057", "", 0]
             ])raw", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name3@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name3@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name3@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+            AmConfig.node_id, req.local_if, "", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name3@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "", 10);
+            AmConfig.node_id, req.local_if, "", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);
@@ -703,12 +704,12 @@ TEST_F(RegistrarTest, TestSubscribe1)
 
         AmArg ret;
         json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", 0]])", ret);
-        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+        test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "<sip:path1.test.com;lr>", 10);
-        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %d",
+            AmConfig.node_id, req.local_if, "<sip:path1.test.com;lr>", "", 10);
+        test_server->addCommandResponse("EVALSHA %s 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %d Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, register_script_hash, registration_id.c_str(),
-            AmConfig.node_id, req.local_if, "<sip:path1.test.com;lr>", 10);
+            AmConfig.node_id, req.local_if, "<sip:path1.test.com;lr>", "", 10);
 
         post_register(req, registration_id);
         wait_for_cond(registrar_client.reply_available);

@@ -82,13 +82,13 @@ local function rpc_aor_lookup(keys)
 
     for id in pairs(aor_keys) do
         ret[#ret + 1] = id
-        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id','interface_id','agent','path')
+        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id','interface_id','agent','path', 'headers')
     end
 
     return ret
 end
 
--- auth_id [ expires [ contact node_id interace_id user_agent path ] ]
+-- auth_id [ expires [ contact node_id interace_id user_agent path headers ] ]
 local function register(keys, args)
     local id = keys[1]
     local auth_id = 'a:'..id
@@ -127,7 +127,8 @@ local function register(keys, args)
     local local_interface_id = args[4]
     local user_agent = args[5]
     local path = args[6]
-    local bindings_max = tonumber(args[7])
+    local headers = args[7]
+    local bindings_max = tonumber(args[8])
 
     if not user_agent then
         user_agent = ''
@@ -155,7 +156,8 @@ local function register(keys, args)
         'node_id',node_id,
         'interface_id',local_interface_id,
         'agent',user_agent,
-        'path',path)
+        'path',path,
+        'headers', headers)
 
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)

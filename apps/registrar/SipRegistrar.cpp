@@ -367,6 +367,9 @@ int SipRegistrar::configure(cfg_t* cfg)
     if(bindings_max <= 0) bindings_max = DEFAULT_BINDINGS_MAX;
     keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
     process_subscriptions = cfg_getbool(cfg, CFG_PARAM_PROCESS_SUBSCRIPTIONS);
+    for(int i = 0; i < cfg_size(cfg, CFG_PARAM_HEADERS); i++) {
+        headers.emplace_back(cfg_getnstr(cfg, CFG_PARAM_HEADERS, i));
+    }
     return RegistrarRedisClient::configure(cfg);
 }
 
@@ -507,7 +510,7 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
 
         for(j = 0; j < aor_data_arg.size(); j++) {
             AmArg &aor_entry_arg = aor_data_arg[j];
-            if(!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 7) {
+            if(!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 8) {
                 ERROR("unexpected aor_entry_arg layout. skip entry");
                 continue;
             }
@@ -521,6 +524,7 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
             r["interface_id"]  = aor_entry_arg[4];
             r["user_agent"]  = aor_entry_arg[5];
             r["path"]  = aor_entry_arg[6];
+            r["headers"]  = aor_entry_arg[7];
 
             parse_path(aor_entry_arg[6], r["path_decoded"]);
         }
@@ -843,7 +847,8 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         return;
     }
 
-    //find Path/User-Agent headers
+    //find Path/User-Agent and predefined config headers
+    AmArg hdrs_arg;
     string path;
     string user_agent;
     size_t start_pos = 0;
@@ -865,13 +870,22 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         {
             user_agent = req->hdrs.substr(val_begin, val_end-val_begin);
         }
+        for(auto& header : headers)
+        {
+            if(0==strncasecmp(req->hdrs.c_str() + start_pos, header.c_str(), name_end-start_pos))
+                hdrs_arg[header] = req->hdrs.substr(val_begin, val_end-val_begin);
+        }
         start_pos = hdr_end;
     }
+
+    string hdrs;
+    if(isArgStruct(hdrs_arg))
+        hdrs = arg2json(hdrs_arg);
 
     // bind
     auto* user_data = new RedisRequestUserData(event.session_id, *req);
     if(!bind(user_data, UserTypeId::Register, event.registration_id,
-        contact, expires_int, user_agent, path, req->local_if))
+        contact, expires_int, user_agent, path, req->local_if, hdrs))
     {
         delete user_data; user_data = nullptr;
         post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
@@ -1250,7 +1264,7 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
                         bind(nullptr/*user data*/, UserTypeId::Unbind,
                              reg_id.value(), ctx.aor.c_str(),
                              0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
-                             ctx.interface_id);
+                             ctx.interface_id, "");
                     }
                 }
             }
@@ -1321,12 +1335,12 @@ bool SipRegistrar::unbind_all(AmObject* user_data, int user_type_id, const strin
 
 bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
     const string &registration_id, const string &contact, int expires,
-    const string &user_agent, const string &path, unsigned short local_if)
+    const string &user_agent, const string &path, unsigned short local_if, const string& headers)
 {
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1336,7 +1350,7 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
         }
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
     }
 
     return post_request(write_conn->id, args, user_data, user_type_id);
@@ -1406,11 +1420,12 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     const string path = arg.size() > 3 ? arg2str(arg[3]) : "";
     const string user_agent = arg.size() > 4 ? arg2str(arg[4]) : "";
     unsigned short local_if = arg.size() > 5 ? arg2int(arg[5]) : 0;
+    const string headers = arg.size() > 6 ? arg2str(arg[6]) : "";
 
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
+            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers, bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1418,7 +1433,7 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
             throw AmSession::Exception(500,"registrar is not enabled");
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), bindings_max};
+            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers, bindings_max};
     }
 
     if(post_request(write_conn->id, args, user_data, user_type_id) == false)

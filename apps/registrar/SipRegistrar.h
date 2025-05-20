@@ -13,11 +13,13 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <list>
 #include <unordered_map>
 #include <chrono>
 
 using std::string;
+using std::vector;
 using std::map;
 using std::list;
 using std::unordered_map;
@@ -49,6 +51,7 @@ class SipRegistrar
     int expires_default;
     int bindings_max;
     unsigned int keepalive_failure_code;
+    vector<string> headers;
     AmTimerFd timer;
     seconds keepalive_interval;
     seconds max_interval_drift;
@@ -123,7 +126,7 @@ class SipRegistrar
     bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
     bool bind(AmObject *user_data, int user_type_id,
         const string &registration_id, const string &contact, int expires,
-        const string &user_agent, const string &path, unsigned short local_if);
+        const string &user_agent, const string &path, unsigned short local_if, const string& headers);
     bool resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids);
     bool load_contacts(AmObject *user_data, int user_type_id);
     bool subscribe(int user_type_id);
