@@ -188,6 +188,7 @@ class UACAuth : public AmSessionEventHandler
 
     static string calcNonce();
     static nonce_check_result_t checkNonce(const string& nonce);
+    static void fetchAuthentication(const AmSipRequest *req, AmArg &ret);
     static void checkAuthentication(const AmSipRequest* req, const string& realm,
                                     const string& user, const string& pwd, AmArg& ret);
     static string getChallengeHeader(const string& realm);

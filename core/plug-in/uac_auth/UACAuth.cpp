@@ -118,6 +118,18 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
             req, args.get(1).asCStr(),
             args.get(2).asCStr(),
             args.get(3).asCStr(), ret);
+    } else if (method == "fetchCred") {
+        // params: Request
+        if (args.size() < 1) {
+            ERROR("missing arguments to uac_auth fetchCred function, expected Request");
+            throw AmArg::TypeMismatchException();
+        }
+
+        AmSipRequest *req = dynamic_cast<AmSipRequest *>(args.get(0).asObject());
+        if (nullptr == req)
+            throw AmArg::TypeMismatchException();
+
+        UACAuth::fetchAuthentication(req, ret);
     } else
         throw AmDynInvoke::NotImplemented(method);
 }
@@ -930,6 +942,21 @@ void UACAuth::setAllowedQops(int allowed_qop_mask) {
 void UACAuth::setNonceExpire(int nonce_expire)
 {
     UACAuth::nonce_expire = nonce_expire;
+}
+
+void UACAuth::fetchAuthentication(const AmSipRequest *req, AmArg &ret)
+{
+    string auth_hdr = getHeader(req->hdrs, "Authorization");
+
+    if (auth_hdr.size()) {
+        UACAuthDigestChallenge r_challenge;
+
+        if (r_challenge.parse(auth_hdr)) {
+            ret["realm"] = r_challenge.realm;
+            ret["username"] = r_challenge.find_attribute("username");
+            ret["uri"] = r_challenge.find_attribute("uri");
+        }
+    }
 }
 
 void UACAuth::checkAuthentication(
