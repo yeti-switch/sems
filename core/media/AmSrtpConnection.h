@@ -63,6 +63,7 @@ namespace srtp {
 
 class AmSrtpConnection : public AmStreamConnection
 {
+    bool keys_expired;
     string c_tx_key;
     srtp_master_keys c_rx_keys;
     bool use_mki;
@@ -91,6 +92,7 @@ class AmSrtpConnection : public AmStreamConnection
     AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type);
     virtual ~AmSrtpConnection();
 
+    void setKeysExpired(){ keys_expired = true; }
     void use_keys(srtp_profile_t profile,
                   const string &tx_key,
                   const srtp_master_keys& rx_keys);

@@ -57,6 +57,7 @@ void srtp_master_keys::add(
 
 AmSrtpConnection::AmSrtpConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection::ConnectionType conn_type)
   : AmStreamConnection(_transport, remote_addr, remote_port, conn_type),
+    keys_expired(false),
     use_mki(false),
     rx_context_initialized(false),
     tx_context_initialized(false),
@@ -470,6 +471,8 @@ void AmSrtpConnection::setRAddr(const string& addr, unsigned short port)
 
 ssize_t AmSrtpConnection::send(AmRtpPacket* p)
 {
+    if(keys_expired) return 0;
+
     AmLock lock(session_tx_mutex);
     if(!srtp_tx_session){
         transport->getRtpStream()->onErrorRtpTransport(

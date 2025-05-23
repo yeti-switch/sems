@@ -122,6 +122,17 @@ void AmMediaTransport::onSrtpKeysAvailable()
         state.reset(next_state);
 }
 
+void AmMediaTransport::onCloseDtlsSession()
+{
+    vector<AmStreamConnection::ConnectionType> types{AmStreamConnection::UDPTL_CONN, AmStreamConnection::RTP_CONN};
+    iterateConnections(types, [](AmStreamConnection* conn, bool& stop){
+        DTLSUDPTLConnection* dtls_udptl = dynamic_cast<DTLSUDPTLConnection*>(conn);
+        AmSrtpConnection* srtp = dynamic_cast<AmSrtpConnection*>(conn);
+        if(dtls_udptl) dtls_udptl->setDtlsSessionClosed();
+        if(srtp) srtp->setKeysExpired();
+    });
+}
+
 const char* AmMediaTransport::state2str()
 {
     AmLock l(state_mutex);
@@ -549,8 +560,10 @@ void AmMediaTransport::getInfo(AmArg& ret)
 
 void AmMediaTransport::dtls_alert(const Botan::TLS::Alert &alert)
 {
-    if(alert.type() == Botan::TLS::Alert::CloseNotify)
+    if(alert.type() == Botan::TLS::Alert::CloseNotify) {
+        stream->onCloseDtlsSession(getTransportType());
         return;
+    }
 
     CLASS_ERROR("DTLS local_tag:%s, alert:%s",
         stream->getSessionLocalTag(), alert.type_string().c_str());

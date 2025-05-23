@@ -42,6 +42,7 @@ public:
 class DTLSUDPTLConnection : public AmStreamConnection
 {
     AmStreamConnection* m_dtls_conn;
+    bool dtls_session_closed;
 public:
     DTLSUDPTLConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, AmStreamConnection* dtls);
     virtual ~DTLSUDPTLConnection();
@@ -49,6 +50,7 @@ public:
     void handleConnection(uint8_t * data, unsigned int size, struct sockaddr_storage * recv_addr, struct timeval recv_time) override;
     void handleSymmetricRtp(struct sockaddr_storage*, struct timeval*) override {}
     ssize_t send(AmRtpPacket * packet) override;
+    void setDtlsSessionClosed() { dtls_session_closed = true; }
 };
 
 struct FaxCompleteEvent

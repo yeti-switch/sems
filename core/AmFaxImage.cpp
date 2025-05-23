@@ -265,7 +265,7 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
 DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::string& remote_addr, int remote_port, AmStreamConnection* dtls)
-: AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls)
+: AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls), dtls_session_closed(false)
 {
     if(m_dtls_conn) inc_ref(m_dtls_conn);
 }
@@ -282,6 +282,7 @@ void DTLSUDPTLConnection::handleConnection(uint8_t* data, unsigned int size, str
 
 ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
 {
+    if(dtls_session_closed) return 0;
     return m_dtls_conn->send(packet);
 }
 

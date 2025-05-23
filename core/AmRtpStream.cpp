@@ -600,6 +600,14 @@ void AmRtpStream::onSrtpKeysAvailable(int transport_type, uint16_t srtp_profile,
     });
 }
 
+void AmRtpStream::onCloseDtlsSession(uint8_t transport_type)
+{
+    iterateTransports([&](auto tr){
+        if(tr->getTransportType() != transport_type) return;
+        tr->onCloseDtlsSession();
+    });
+}
+
 void AmRtpStream::iterateTransports(std::function<void(AmMediaTransport* transport)> iterator)
 {
     for(auto tr : ip4_transports) iterator(tr);

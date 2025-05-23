@@ -473,6 +473,8 @@ class AmRtpStream
     void connectionTrafficDetected(AmMediaTransport* transport, sockaddr_storage* remote_addr);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
+
+    void onCloseDtlsSession(uint8_t transport_type);
     void onIceRoleConflict();
     DtlsContext* getDtlsContext(uint8_t transport_type);
     IceContext* getIceContext(uint8_t transport_type);
