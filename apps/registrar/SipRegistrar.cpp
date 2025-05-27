@@ -35,6 +35,11 @@ enum UserTypeId {
 
 /* Helpers */
 
+static int normalize_header_name(int c) {
+    if(c=='-') return '_';
+    return ::tolower(c);
+}
+
 bool post_request(const string &conn_id, const vector<AmArg>& args,
     AmObject *user_data = nullptr, int user_type_id = 0, bool persistent_ctx = false)
 {
@@ -368,7 +373,9 @@ int SipRegistrar::configure(cfg_t* cfg)
     keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
     process_subscriptions = cfg_getbool(cfg, CFG_PARAM_PROCESS_SUBSCRIPTIONS);
     for(int i = 0; i < cfg_size(cfg, CFG_PARAM_HEADERS); i++) {
-        headers.emplace_back(cfg_getnstr(cfg, CFG_PARAM_HEADERS, i));
+        string header_name(cfg_getnstr(cfg, CFG_PARAM_HEADERS, i));
+        std::transform(header_name.begin(), header_name.end(), header_name.begin(), normalize_header_name);
+        headers.emplace_back(header_name);
     }
     return RegistrarRedisClient::configure(cfg);
 }
@@ -524,7 +531,12 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
             r["interface_id"]  = aor_entry_arg[4];
             r["user_agent"]  = aor_entry_arg[5];
             r["path"]  = aor_entry_arg[6];
-            r["headers"]  = aor_entry_arg[7];
+
+            const AmArg& hdrs_arg = aor_entry_arg[7];
+            if(isArgCStr(hdrs_arg)) {
+                if(!json2arg(hdrs_arg.asCStr(), r["headers"]))
+                    r["headers"].assertStruct();
+            }
 
             parse_path(aor_entry_arg[6], r["path_decoded"]);
         }
@@ -852,7 +864,10 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     string path;
     string user_agent;
     size_t start_pos = 0;
-    while (start_pos<req->hdrs.length()) {
+
+    hdrs_arg.assertStruct();
+
+    while (start_pos < req->hdrs.length()) {
         size_t name_end, val_begin, val_end, hdr_end;
         int res;
         if ((res = skip_header(req->hdrs, start_pos, name_end, val_begin,
@@ -860,32 +875,35 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         {
             break;
         }
-        if(0==strncasecmp(req->hdrs.c_str() + start_pos,
-                          SIP_HDR_PATH, name_end-start_pos))
+
+        string hdr_name = req->hdrs.substr(start_pos, name_end-start_pos);
+
+        if(0==strncasecmp(
+            hdr_name.c_str(),
+            SIP_HDR_PATH, hdr_name.size()))
         {
             if(!path.empty()) path += ",";
             path += req->hdrs.substr(val_begin, val_end-val_begin);
-        } else if(0==strncasecmp(req->hdrs.c_str() + start_pos,
-                              SIP_HDR_USER_AGENT, name_end-start_pos))
+        } else if(0==strncasecmp(
+            hdr_name.c_str(),
+            SIP_HDR_USER_AGENT, hdr_name.size()))
         {
             user_agent = req->hdrs.substr(val_begin, val_end-val_begin);
+        } else {
+            std::transform(hdr_name.begin(), hdr_name.end(), hdr_name.begin(), normalize_header_name);
+            for(auto& header : headers) {
+                if(hdr_name == header)
+                    hdrs_arg[header] = req->hdrs.substr(val_begin, val_end-val_begin);
+            }
         }
-        for(auto& header : headers)
-        {
-            if(0==strncasecmp(req->hdrs.c_str() + start_pos, header.c_str(), name_end-start_pos))
-                hdrs_arg[header] = req->hdrs.substr(val_begin, val_end-val_begin);
-        }
+
         start_pos = hdr_end;
     }
-
-    string hdrs;
-    if(isArgStruct(hdrs_arg))
-        hdrs = arg2json(hdrs_arg);
 
     // bind
     auto* user_data = new RedisRequestUserData(event.session_id, *req);
     if(!bind(user_data, UserTypeId::Register, event.registration_id,
-        contact, expires_int, user_agent, path, req->local_if, hdrs))
+        contact, expires_int, user_agent, path, req->local_if, arg2json(hdrs_arg)))
     {
         delete user_data; user_data = nullptr;
         post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
