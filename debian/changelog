@@ -1,3 +1,15 @@
+sems (1.163.0) stable; urgency=low
+  * AmB2BMedia: fixed crash on racing for ping()
+  * stop SRTP packets sending after DTLS close alert received
+  * registrar: decode flow tokens from Path
+  * registrar: add 'headers' option
+  * uac_auth: add rpc method to parse auth fields
+  * jsonrpc: add jsonrpc.getConnId method
+  * postgresql_proxy: save parsed json on mapping insert
+  * AmUtils: add str2bool with std::optional return value
+  * di_log: fix sems-di-log-dump util
+ -- Michael Furmur <furmur@pm.me>  Tue, 27 May 2025 15:35:47 +0300
+
 sems (1.162.1) stable; urgency=low
   * use ctest. avoid modules copying on tests
  -- Michael Furmur <furmur@pm.me>  Thu, 24 Apr 2025 19:18:46 +0300
