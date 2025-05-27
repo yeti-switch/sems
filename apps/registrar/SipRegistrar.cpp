@@ -398,11 +398,86 @@ void SipRegistrar::init_rpc_tree()
     reg_method(request, "unbind", "unbind contact", &SipRegistrar::rpc_unbind,"");
 }
 
-/* RPC */
+static std::optional<AmArg> parse_flow_token(const string &flow_token)
+{
+    if(flow_token.empty())
+        return std::nullopt;
 
+    Botan::secure_vector<uint8_t> fl_decode;
+    try {
+        fl_decode = Botan::base64_decode(flow_token.c_str(), flow_token.size());
+    } catch(Botan::Invalid_Argument &e) {
+        return std::nullopt;
+    }
+
+    if(fl_decode.size() < 10)
+        return std::nullopt;
+
+    uint8_t* flc = fl_decode.data() + 10;
+
+    sockaddr_storage ss;
+    if(*flc & 0x80)
+        ss.ss_family = AF_INET6;
+    else
+        ss.ss_family = AF_INET;
+
+    uint8_t protoindex = *(flc++) & 0x7f;
+    if(protoindex >= fl_protos.size())
+        return std::nullopt;
+
+    AmArg fl;
+    fl["proto"] = fl_protos[protoindex];
+
+    uint32_t* addr;
+    if(ss.ss_family == AF_INET) {
+        addr = (uint32_t*)&((struct sockaddr_in*)&ss)->sin_addr;
+    } else {
+        addr = (uint32_t*)&((struct sockaddr_in6*)&ss)->sin6_addr.s6_addr32;
+    }
+
+    for(int k = 0; k < (ss.ss_family == AF_INET6 ? 16 : 4); k+=4, flc+=4)
+        addr[k] = *(uint32_t*)flc;
+    fl["dst_addr"] = am_inet_ntop(&ss);
+    fl["dst_port"] = ntohs(*(uint16_t*)flc);
+    flc+=2;
+
+    for(int k = 0; k < (ss.ss_family == AF_INET6 ? 16 : 4); k+=4, flc+=4)
+        addr[k] = *(uint32_t*)flc;
+    fl["src_addr"] = am_inet_ntop(&ss);
+    fl["src_port"] = ntohs(*(uint16_t*)flc);
+
+    return fl;
+}
+
+static void parse_path(const AmArg& path_arg, AmArg& pd)
+{
+    pd.assertArray();
+
+    auto pathes = explode(path_arg.asCStr(), ",");
+    for(auto& path : pathes) {
+        AmArg pdata;
+
+        AmUriParser r;
+        if(!r.parse_nameaddr(path)) {
+            pd.push(pdata);
+            continue;
+        }
+
+        pdata["uri"] = r.uri_str();
+
+        auto fl = parse_flow_token(r.uri_user);
+        if(fl) {
+            pdata["flow_token"] = fl.value();
+        }
+
+        pd.push(pdata);
+    }
+}
+
+/* RPC */
 void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
 {
-    size_t i,j, k;
+    size_t i,j;
 
     RedisBlockingRequestCtx ctx;
     rpc_resolve_aors(&ctx, UserTypeId::BlockingReqCtx, arg);
@@ -447,57 +522,7 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
             r["user_agent"]  = aor_entry_arg[5];
             r["path"]  = aor_entry_arg[6];
 
-            //decode flowtokens
-            AmArg& pd = r["path_decoded"];
-            pd.assertArray();
-            auto pathes = explode(aor_entry_arg[6].asCStr(), ",");
-            for(auto& path : pathes) {
-                AmArg pdata;
-                AmArg& fl = pdata["flowtokens"];
-                fl.assertStruct();
-                AmUriParser r;
-                if(r.parse_nameaddr(path)) {
-                    //formation uri string
-                    string uri = r.canon_uri_str();
-                    if(!r.uri_param.empty())
-                    uri += ";" + r.uri_param;
-                    pdata["uri"] = uri;
-
-                    //parse flowtoken
-                    if(r.uri_user.empty()) break;
-                    auto fl_decode = Botan::base64_decode(r.uri_user.c_str(), r.uri_user.size());
-                    if(fl_decode.size() < 10) break;
-                    uint8_t* flc = fl_decode.data() + 10;
-                    sockaddr_storage ss;
-                    if(*flc & 0x80)
-                        ss.ss_family = AF_INET6;
-                    else
-                        ss.ss_family = AF_INET;
-                    uint8_t protoindex = *(flc++) & 0x7f;
-                    if(protoindex >= fl_protos.size()) break;
-                    fl["proto"] = fl_protos[protoindex];
-                    uint32_t* addr;
-                    uint16_t* port;
-                    if(ss.ss_family == AF_INET) {
-                        addr = (uint32_t*)&((struct sockaddr_in*)&ss)->sin_addr;
-                        port = (uint16_t*)&((struct sockaddr_in*)&ss)->sin_port;
-                    } else {
-                        addr = (uint32_t*)&((struct sockaddr_in6*)&ss)->sin6_addr.s6_addr32;
-                        port = (uint16_t*)&((struct sockaddr_in6*)&ss)->sin6_port;
-                    }
-                    for(k = 0; k < (ss.ss_family == AF_INET6 ? 16 : 4); k+=4, flc+=4)
-                        addr[k] = *(uint32_t*)flc;
-                    *port = *(uint16_t*)flc; flc+=2;
-                    fl["dst_addr"] = am_inet_ntop(&ss);
-                    fl["dst_port"] = am_get_port(&ss);
-                    for(k = 0; k < (ss.ss_family == AF_INET6 ? 16 : 4); k+=4, flc+=4)
-                        addr[k] = *(uint32_t*)flc;
-                    *port = *(uint16_t*)flc; flc+=2;
-                    fl["src_addr"] = am_inet_ntop(&ss);
-                    fl["src_port"] = am_get_port(&ss);
-                }
-                pd.push(pdata);
-            }
+            parse_path(aor_entry_arg[6], r["path_decoded"]);
         }
     }
 }
