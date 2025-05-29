@@ -426,6 +426,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char* value, bool is_nu
         else ret = AmArg(atof(value));
         break;
     case JSONOID:
+    case JSONBOID:
         json2arg(value, ret);
         break;
     case INT2ARRAYOID:
