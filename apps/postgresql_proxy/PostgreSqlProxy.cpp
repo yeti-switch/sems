@@ -133,6 +133,8 @@ int PostgreSqlProxy::configure(const string& config)
 
     log_pg_events = cfg_getbool(cfg, CFG_OPT_LOG_PG_EVENTS_NAME);
     module_config = config;
+    if(cfg_size(cfg, CFG_OPT_UPSTREAM_QUEUE))
+        upstream_queue = cfg_getstr(cfg, CFG_OPT_UPSTREAM_QUEUE);
     cfg_free(cfg);
     return 0;
 }
@@ -328,22 +330,55 @@ void PostgreSqlProxy::showStack(const AmArg& args, AmArg& ret)
 
 void PostgreSqlProxy::insertMap(const AmArg& args, AmArg& ret)
 {
-    if(args.size() == 0) return;
-
+    string query;
+    vector<AmArg> params;
     std::unique_ptr<Response> response{new Response()};
-    response->ref_index = 0;
-    if(args.size() > 1) response->parsed_value = args[1];
-    if(args.size() > 2) response->error = arg2str(args[2]);
-    if(args.size() > 3){
-        bool new_value;
-        if(!str2bool(arg2str(args[3]), new_value)) {
-            ret = format("failed to convert '{}' to bool", arg2str(args[3]));
-            return;
-        }
+    if(isArgArray(args)) {
+        if(args.size() == 0) return;
 
-        response->timeout = new_value;
+        query = arg2str(args[0]);
+        response->ref_index = 0;
+        if(args.size() > 1) response->parsed_value = args[1];
+        if(args.size() > 2) response->error = arg2str(args[2]);
+        if(args.size() > 3){
+            bool new_value;
+            if(!str2bool(arg2str(args[3]), new_value)) {
+                ret = format("failed to convert '{}' to bool", arg2str(args[3]));
+                return;
+            }
+
+            response->timeout = new_value;
+        }
+    } else if(isArgStruct(args)) {
+        if(!args.hasMember("query") ||
+           !args.hasMember("response")) {
+                ret = format("incorrect arguments of commands");
+                return;
+        }
+        if(args.hasMember("params") &&
+           !isArgArray(args["params"])) {
+                ret = format("incorrect arguments of commands");
+                return;
+        }
+        query = arg2str(args["query"]);
+        if(args.hasMember("params")) {
+            for(int i = 0; i < args["params"].size(); i++)
+                params.push_back(args["params"][i]);
+        }
+        if(args["response"].hasMember("error"))
+            response->error = arg2str(args["response"]["error"]);
+        if(args["response"].hasMember("value"))
+            response->parsed_value = args["response"]["value"];
+        if(args["response"].hasMember("timeout")) {
+            if(!isArgBool(args["response"]["timeout"])) {
+                ret = format("incorrect type of timeout value in repsponse");
+                return;
+            }
+
+            response->timeout = args["response"]["timeout"].asBool();
+        }
     }
-    insert_response(arg2str(args[0])/*query*/, response);
+    insert_response(query, params, response);
 }
 
 void PostgreSqlProxy::clearMap(const AmArg&, AmArg&)
@@ -356,12 +391,14 @@ void PostgreSqlProxy::showMap(const AmArg&, AmArg& ret)
     ret.assertArray();
     for(auto &[query, resp] : resp_map) {
         ret.push({
-            { "query", query },
+            { "query", query.query },
             { "ref_index", resp->ref_index },
             { "value", resp->parsed_value },
             { "error", resp->error },
             { "timeout", resp->timeout }
         });
+        for(auto& param: query.params)
+            ret.back()["params"].push(param);
     }
 }
 
@@ -554,10 +591,11 @@ bool PostgreSqlProxy::checkQueryData(const PGQueryData& data)
     return true;
 }
 
-PostgreSqlProxy::Response* PostgreSqlProxy::find_resp_for_query(const string& query)
+PostgreSqlProxy::Response* PostgreSqlProxy::find_resp_for_query(const string& query, const vector<AmArg>& params)
 {
-    auto resp_it = resp_map.find(query);
-    if(resp_it == resp_map.end()) {
+    auto resp_it1 = resp_map.find(Query(query, params));
+    auto resp_it2 = resp_map.find(Query(query, vector<AmArg>()));
+    if(resp_it1 == resp_map.end() && resp_it2 == resp_map.end()) {
         if(resp_stack.empty())
             return nullptr;
 
@@ -566,7 +604,7 @@ PostgreSqlProxy::Response* PostgreSqlProxy::find_resp_for_query(const string& qu
         return resp;
     }
 
-    return resp_it->second.get();
+    return resp_it1 == resp_map.end() ? resp_it2->second.get() : resp_it1->second.get();
 }
 
 static inline bool lua_isnumeric(lua_State* state, int index) {
@@ -655,8 +693,8 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
 {
     static string no_mapped_error{"no mapping"};
 
-    const auto response = find_resp_for_query(query);
-    if(!response) {
+    const auto response = find_resp_for_query(query, params);
+    if(!response && upstream_queue.empty()) {
         ERROR("no mapping for the query: <%s>", query.data());
         auto * ev = new PGResponseError(no_mapped_error, token);
 
@@ -665,7 +703,8 @@ std::optional<string> PostgreSqlProxy::handle_query(const string& query, const s
 
         sessionContainer->postEvent(sender_id, ev);
         return std::nullopt;
-    }
+    } else if(!response)
+        return upstream_queue;
 
     if(response->ref_index) {
         response->timeout = false;
@@ -775,14 +814,14 @@ std::optional<string> PostgreSqlProxy::onCfgWorkerManagementEvent(const string &
     return std::nullopt;
 }
 
-void PostgreSqlProxy::insert_response(const string& query, std::unique_ptr<Response> &response)
+void PostgreSqlProxy::insert_response(const string& query, const vector<AmArg>& params, std::unique_ptr<Response> &response)
 {
-    if(auto resp_it = resp_map.find(query); resp_it != resp_map.end()) {
+    if(auto resp_it = resp_map.find(Query(query, params)); resp_it != resp_map.end()) {
         if(resp_it->second->ref_index)
             luaL_unref(state, LUA_REGISTRYINDEX, resp_it->second->ref_index);
         resp_it->second.reset(response.release());
     } else
-        resp_map.emplace(query, response.release());
+        resp_map.emplace(Query(query, params), response.release());
 }
 
 int PostgreSqlProxy::insert_resp_map(const string& query, const string& resp, const string& error, bool timeout)
@@ -802,7 +841,7 @@ int PostgreSqlProxy::insert_resp_map(const string& query, const string& resp, co
         return 1;
     }
 
-    insert_response(query, response);
+    insert_response(query, vector<AmArg>()/*params*/, response);
 
     return 0;
 }
@@ -829,7 +868,7 @@ int PostgreSqlProxy::insert_resp_lua(const string& query, const string& path)
     lua_gc(state, LUA_GCCOLLECT, 0);
     lua_pop(state, lua_gettop(state));
 
-    insert_response(query, response);
+    insert_response(query, vector<AmArg>()/*params*/, response);
 
     return 0;
 }
@@ -842,7 +881,7 @@ int PostgreSqlProxy::insert_upstream_mapping(const string& query, const string &
     response->ref_index = 0;
     response->timeout = false;
 
-    insert_response(query, response);
+    insert_response(query, vector<AmArg>()/*params*/, response);
 
     return 0;
 }

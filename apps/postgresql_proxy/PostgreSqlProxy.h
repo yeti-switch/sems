@@ -41,9 +41,28 @@ class PostgreSqlProxy
         bool timeout;
     };
 
+    struct Query
+    {
+        string query;
+        vector<AmArg> params;
+        Query(const string& query, const vector<AmArg>& params)
+        : query(query), params(params){}
+        bool operator == (const Query& q) const
+        {
+            if(query != q.query) return false;
+            return params == q.params;
+        }
+        struct KeyHash
+        {
+            size_t operator()(const Query& q) const {
+               return std::hash<string>()(q.query);
+            }
+        };
+    };
+
     int init();
     bool checkQueryData(const PGQueryData& data);
-    Response* find_resp_for_query(const string& query);
+    Response* find_resp_for_query(const string& query, const vector<AmArg>& params);
     std::optional<string> handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params);
     std::optional<string> handle_query_data(const PGQueryData& qdata);
     std::optional<string> onSimpleExecute(const PGExecute& e);
@@ -52,13 +71,14 @@ class PostgreSqlProxy
     std::optional<string> onCfgWorkerManagementEvent(const string &worker_name);
 
     vector<unique_ptr<Response>> resp_stack;
-    std::unordered_map<string, unique_ptr<Response>> resp_map;
+    std::unordered_map<Query, unique_ptr<Response>, Query::KeyHash> resp_map;
     std::unordered_map<string, string> upstream_workers;
     lua_State* state;
     string module_config;
+    string upstream_queue;
     bool log_pg_events;
 
-    void insert_response(const string& query, std::unique_ptr<Response> &response);
+    void insert_response(const string& query, const vector<AmArg>& params, std::unique_ptr<Response> &response);
 
   protected:
     async_rpc_handler stackPush;

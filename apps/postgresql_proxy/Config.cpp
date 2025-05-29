@@ -86,5 +86,6 @@ cfg_opt_t pg_opts[] =
     CFG_FUNC(CFG_OPT_MAP_UPSTREAM, &map_upstream_func),
     CFG_FUNC(CFG_OPT_MAP_UPSTREAM_WORKER, &map_upstream_worker_func),
     CFG_BOOL(CFG_OPT_LOG_PG_EVENTS_NAME, cfg_false, CFGF_NONE),
+    CFG_STR(CFG_OPT_UPSTREAM_QUEUE, "", CFGF_NONE),
     CFG_END()
 };
