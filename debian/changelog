@@ -1,3 +1,9 @@
+sems (1.163.1) stable; urgency=low
+  * postgresql:add jsonb type support in response
+  * postgresql_proxy: add pstream_queue config parameter
+  * postgresql_proxy: mapping with parameters
+ -- Michael Furmur <furmur@pm.me>  Fri, 30 May 2025 15:52:29 +0300
+
 sems (1.163.0) stable; urgency=low
   * AmB2BMedia: fixed crash on racing for ping()
   * stop SRTP packets sending after DTLS close alert received
