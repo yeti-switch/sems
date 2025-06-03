@@ -41,4 +41,5 @@ jobs:
           s3_access_key_id: ${{ secrets.DEB_AWS_ACCESS_KEY_ID }}
           s3_secret_access_key: ${{ secrets.DEB_AWS_SECRET_ACCESS_KEY }}
           s3_endpoint_url: ${{ secrets.DEB_AWS_ENDPOINT }}
+          s3_prefix: '1.14'
         if: startsWith(github.ref, 'refs/tags/v')
