@@ -1,5 +1,7 @@
 #include "PGConnection.h"
 #include "log.h"
+#include "../PostgreSQL.h"
+#include "../pg_log.h"
 
 #include <cstring>
 
@@ -33,11 +35,14 @@ void PGConnection::check_conn()
         }
     }
 
-    PostgresPollingStatusType   st = PQconnectPoll(conn);
+    PostgresPollingStatusType poll_status = PQconnectPoll(conn);
     status = PQstatus(conn);
     pipe_status = PQpipelineStatus(conn);
-    //DBG("check status %u, poll_st %u, pipe %s", status, st, pipe_status == PQ_PIPELINE_ON ? "true" : "false");
-    switch((int)st) {
+
+    if(PostgreSQL::instance()->getLogPgEvents())
+        DBG(pg_log::print_pg_conn_status(PQdb(conn), status, poll_status, pipe_status).c_str());
+
+    switch((int)poll_status) {
         case PGRES_POLLING_OK:
             flush_conn();
             if(!connected && status == CONNECTION_OK) {

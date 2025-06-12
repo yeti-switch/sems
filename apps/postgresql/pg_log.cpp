@@ -265,3 +265,64 @@ string print_prepare_data(const PGPrepareData& pd,  string prefix, string margin
 
     return string(ss.str());
 }
+
+
+/* libpq logs */
+
+static const char* connStatus2str(ConnStatusType type)
+{
+    switch(type) {
+    case CONNECTION_OK: return "OK";
+    case CONNECTION_BAD: return "BAD";
+    case CONNECTION_STARTED: return "STARTED";
+    case CONNECTION_MADE: return "MADE";
+    case CONNECTION_AWAITING_RESPONSE: return "AWAITING_RESPONSE";
+    case CONNECTION_AUTH_OK: return "AUTH_OK";
+    case CONNECTION_SETENV: return "SETENV";
+    case CONNECTION_SSL_STARTUP: return "SSL_STARTUP";
+    case CONNECTION_NEEDED: return "NEEDED";
+    case CONNECTION_CHECK_WRITABLE: return "CHECK_WRITABLE";
+    case CONNECTION_CONSUME: return "CONSUME";
+    case CONNECTION_GSS_STARTUP: return "GSS_STARTUP";
+    case CONNECTION_CHECK_TARGET: return "CHECK_TARGET";
+    case CONNECTION_CHECK_STANDBY: return "CHECK_STANDBY";
+    case CONNECTION_ALLOCATED: return "ALLOCATED";
+    default: return "UNKNOWN";
+    }
+}
+
+static const char* pollStatus2str(PostgresPollingStatusType type)
+{
+    switch(type) {
+    case PGRES_POLLING_FAILED: return "FAILED";
+    case PGRES_POLLING_READING: return "READING";
+    case PGRES_POLLING_WRITING: return "WRITING";
+    case PGRES_POLLING_OK: return "OK";
+    case PGRES_POLLING_ACTIVE: return "ACTIVE";
+    default: return "UNKNOWN";
+    }
+}
+
+static const char* pipeStatus2str(PGpipelineStatus type)
+{
+    switch(type) {
+    case PQ_PIPELINE_OFF: return "OFF";
+    case PQ_PIPELINE_ON: return "ON";
+    case PQ_PIPELINE_ABORTED: return "ABORTED";
+    default: return "UNKNOWN";
+    }
+}
+
+string pg_log::print_pg_conn_status(const char* name,
+                                    ConnStatusType conn_status,
+                                    PostgresPollingStatusType poll_status,
+                                    PGpipelineStatus pipe_status)
+{
+    std::stringstream ss;
+    ss << PG_LOG_PREFIX << "check status for " << name;
+    ss << ": conn = " << connStatus2str(conn_status);
+    ss << ", poll = " << pollStatus2str(poll_status);
+    ss << ", pipe = " << pipeStatus2str(pipe_status);
+
+    return string(ss.str());
+}
