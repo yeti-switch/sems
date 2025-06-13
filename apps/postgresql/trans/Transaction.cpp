@@ -229,8 +229,6 @@ void Transaction::reset(Connection *conn)
 {
     status = ACTIVE;
     state = BEGIN;
-    if(tr_impl->conn)
-        tr_impl->conn->cur_transaction = 0;
     tr_impl->reset(conn);
 }
 
