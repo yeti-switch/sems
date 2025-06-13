@@ -101,7 +101,6 @@
 #define PARAM_FORCE_OUTBOUND_IF_NAME "force_outbound_if"
 #define PARAM_FORCE_CANCEL_ROUTE_SET "force_cancel_route_set"
 #define PARAM_FORCE_SYMM_RTP_NAME    "force_symmetric_rtp"
-#define PARAM_FORCE_SYMM_PAIR_NAME   "force_symmetric_candidate"
 #define PARAM_USE_RAW_SOCK_NAME      "use_raw_sockets"
 #define PARAM_DISABLE_DNS_SRV_NAME   "disable_dns_srv"
 #define PARAM_DETECT_INBAND_NAME     "detect_inband_dtmf"
@@ -584,7 +583,6 @@ namespace Config {
         CFG_BOOL(PARAM_FORCE_OUTBOUND_IF_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_CANCEL_ROUTE_SET, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_FORCE_SYMM_RTP_NAME, cfg_false, CFGF_NONE),
-        CFG_BOOL(PARAM_FORCE_SYMM_PAIR_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_USE_RAW_SOCK_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_DISABLE_DNS_SRV_NAME, cfg_false, CFGF_NONE),
         CFG_BOOL(PARAM_DETECT_INBAND_NAME, cfg_false, CFGF_NONE),
@@ -613,7 +611,7 @@ namespace Config {
         CFG_INT(PARAM_MAX_SHUTDOWN_TIME_NAME, VALUE_MAX_SHUTDOWN_TIME, CFGF_NONE),
         CFG_INT(PARAM_DEAD_RTP_TIME_NAME, VALUE_DEAD_RTP_TIME, CFGF_NONE),
         CFG_INT(PARAM_SYMMETRIC_DELAY_NAME, VALUE_SYMMETRIC_RTP_DELAY, CFGF_NONE),
-        CFG_INT(PARAM_SYMMETRIC_PACKETS_NAME, 0, CFGF_NONE),
+        CFG_INT(PARAM_SYMMETRIC_PACKETS_NAME, 1, CFGF_NONE),
         CFG_STR(PARAM_SYMMETRIC_MODE_NAME, VALUE_PACKETS, CFGF_NONE),
         CFG_STR(PARAM_RSR_PATH_NAME, VALUE_RSR_PATH, CFGF_NONE),
         CFG_STR(PARAM_DUMP_PATH_NAME, VALUE_LOG_DUMP_PATH, CFGF_NONE),
@@ -1189,7 +1187,6 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     config->force_outbound_if = cfg_getbool(gen, PARAM_FORCE_OUTBOUND_IF_NAME);
     config->force_cancel_route_set = cfg_getbool(gen, PARAM_FORCE_CANCEL_ROUTE_SET);
     config->force_symmetric_rtp = cfg_getbool(gen, PARAM_FORCE_SYMM_RTP_NAME);
-    config->force_symmetric_candidate = cfg_getbool(gen, PARAM_FORCE_SYMM_PAIR_NAME);
     config->symmetric_rtp_packets = cint(cfg_getint(gen, PARAM_SYMMETRIC_PACKETS_NAME));
     config->symmetric_rtp_delay = cint(cfg_getint(gen, PARAM_SYMMETRIC_DELAY_NAME));
     config->use_raw_sockets = cfg_getbool(gen, PARAM_USE_RAW_SOCK_NAME);
@@ -1210,6 +1207,15 @@ int AmLcConfig::readGeneral(cfg_t* cfg, ConfigContainer* config)
     if(cfg_size(gen, PARAM_NEXT_HOP_NAME)) {
         config->next_hop = cfg_getstr(gen, PARAM_NEXT_HOP_NAME);
         config->next_hop_1st_req = cfg_getbool(gen, PARAM_NEXT_HOP_1ST_NAME);
+    }
+    if(config->symmetric_rtp_packets <= 0) {
+        WARN("incorrect value for " PARAM_SYMMETRIC_PACKETS_NAME ". should be greater than zero. Set to 1");
+        config->symmetric_rtp_packets = 1;
+    }
+    if(config->symmetric_rtp_delay <= 0) {
+        WARN("incorrect value for " PARAM_SYMMETRIC_DELAY_NAME ". should be greater than zero. Set to %u",
+            VALUE_SYMMETRIC_RTP_DELAY);
+        config->symmetric_rtp_packets = VALUE_SYMMETRIC_RTP_DELAY;
     }
 
     WITH_SECTION(SECTION_SESSION_LIMIT_NAME) {

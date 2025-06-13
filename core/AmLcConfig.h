@@ -88,7 +88,6 @@ struct ConfigContainer
     bool force_outbound_if;
     bool force_cancel_route_set;
     bool force_symmetric_rtp;
-    bool force_symmetric_candidate;
     SymmetricRtpMode symmetric_rtp_mode;
     int symmetric_rtp_delay;
     int symmetric_rtp_packets;

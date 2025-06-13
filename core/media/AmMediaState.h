@@ -28,7 +28,6 @@ public:
     virtual AmMediaState* update(const AmMediaStateArgs& args);
     virtual AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority) { return this; };
     virtual AmMediaState* allowStunPair(const sockaddr_storage* remote_addr) { return this; }
-    virtual AmMediaState* connectionTrafficDetected(const sockaddr_storage* remote_addr) { return this; }
     virtual AmMediaState* onSrtpKeysAvailable() { return this; };
     virtual void addConnections(const AmMediaStateArgs& args) {};
     virtual void updateConnections(const AmMediaStateArgs& args) {};

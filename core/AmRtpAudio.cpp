@@ -463,7 +463,6 @@ int AmRtpAudio::init(
             setRecorder(session->getLocalTag());
         }
 
-        setSymmetricCandidate(session->getRtpSymmetricCandidate());
         setSymmetricRtpEndless(session->getRtpEndlessSymmetricRtp());
     }
 

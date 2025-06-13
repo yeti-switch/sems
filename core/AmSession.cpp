@@ -97,7 +97,6 @@ AmSession::AmSession(AmSipDialog* p_dlg)
     rtp_proto_id(-1),
     sdp_offer_owner(true),
     symmetric_rtp_endless(false),
-    symmetric_candidate(AmConfig.force_symmetric_candidate),
     input(nullptr), output(nullptr),
     refresh_method(REFRESH_UPDATE_FB_REINV),
     enable_zrtp(false),
@@ -1521,11 +1520,6 @@ const char *AmSession::getProcessingStatusStr() const
 void AmSession::setRtpEndlessSymmetricRtp(bool endless)
 {
     symmetric_rtp_endless = endless;
-}
-
-void AmSession::setRtpSymmetricCandidate(bool e)
-{
-    symmetric_candidate = e;
 }
 
 void AmSession::setReferencingRtpStr(AmRtpStream* _ref_rtp_str)

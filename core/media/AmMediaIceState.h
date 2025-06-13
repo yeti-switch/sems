@@ -22,7 +22,6 @@ protected:
     void resetCurRtpConnection();
     AmMediaState* allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority) override;
     AmMediaState* allowStunPair(const sockaddr_storage* remote_addr) override;
-    AmMediaState * connectionTrafficDetected(const sockaddr_storage * remote_addr) override;
     virtual AmMediaState* nextState();
     bool isSrtp();
     bool isDtls();

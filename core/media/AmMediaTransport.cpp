@@ -102,16 +102,6 @@ void AmMediaTransport::allowStunPair(const sockaddr_storage* remote_addr)
         state.reset(next_state);
 }
 
-void AmMediaTransport::connectionTrafficDetected(const sockaddr_storage* remote_addr)
-{
-    AmLock l(state_mutex);
-    AmMediaState* next_state = 0;
-    if(state) next_state = state->connectionTrafficDetected(remote_addr);
-
-    if(state.get() != next_state)
-        state.reset(next_state);
-}
-
 void AmMediaTransport::onSrtpKeysAvailable()
 {
     AmLock l(state_mutex);

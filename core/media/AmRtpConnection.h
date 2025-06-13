@@ -19,7 +19,20 @@ class AmStreamConnection
   , ObjCounter(AmStreamConnection)
 #endif
 {
-public:
+  public:
+      enum ConnectionType
+    {
+        RTP_CONN = 0,
+        RTCP_CONN,
+        STUN_CONN,
+        DTLS_CONN,
+        UDPTL_CONN,
+        ZRTP_CONN,
+        RAW_CONN,
+
+        UNKNOWN_CONN
+    };
+
     enum ConnectionError {
         RTP_BUFFER_SIZE_ERROR = 0,
         RTP_PARSER_ERROR = 0,
@@ -39,24 +52,11 @@ public:
         UNKNOWN_ERR
     };
 
-    enum ConnectionType
-    {
-        RTP_CONN = 0,
-        RTCP_CONN,
-        STUN_CONN,
-        DTLS_CONN,
-        UDPTL_CONN,
-        ZRTP_CONN,
-        RAW_CONN,
-
-        UNKNOWN_CONN
-    };
-
-    static string connType2Str(ConnectionType type);
-
     AmStreamConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port, ConnectionType type);
     AmStreamConnection(AmStreamConnection* _parent, const string& remote_addr, int remote_port, ConnectionType type);
     virtual ~AmStreamConnection();
+
+    static string connType2Str(ConnectionType type);
 
     virtual bool isUseConnection(ConnectionType type);
     bool isAddrConnection(struct sockaddr_storage* recv_addr) const;
@@ -85,8 +85,16 @@ protected:
     ConnectionType conn_type;
     bool mute;
 
+    /** AmRtpStream::is_ice_stream */
+    bool stream_is_ice_stream;
+    /** AmRtpStream::symmetric_rtp_endless */
+    bool stream_symmetric_rtp_endless;
+
     /** symmetric RTP | RTCP */
     bool passive;
+    /** flag for the one-time onRtpEndpointLearned() calling in the active mode.
+     *  see: AmStreamConnection::handleSymmetricRtp() */
+    bool active_raddr_packet_received;
     /** Timestamp of the last received RTP packet */
     struct timeval last_recv_time;
     struct timeval passive_set_time;

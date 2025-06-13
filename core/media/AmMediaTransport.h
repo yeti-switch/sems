@@ -76,7 +76,6 @@ public:
     }
     void allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority);
     void allowStunPair(const sockaddr_storage* remote_addr);
-    void connectionTrafficDetected(const sockaddr_storage* remote_addr);
     void onSrtpKeysAvailable();
     void onCloseDtlsSession();
     const char* state2str();

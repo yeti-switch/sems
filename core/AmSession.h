@@ -192,8 +192,6 @@ protected:
 
   /** endless switching for symmetric rtp */
   bool symmetric_rtp_endless;
-  /** force symmetric candidate */
-  bool symmetric_candidate;
 
   /** Session event handlers (ex: session timer, UAC auth, etc...) */
   vector<AmSessionEventHandler*> ev_handlers;
@@ -305,8 +303,6 @@ public:
 
   bool getRtpEndlessSymmetricRtp() const { return symmetric_rtp_endless; }
   virtual void setRtpEndlessSymmetricRtp(bool endless);
-  bool getRtpSymmetricCandidate() const { return symmetric_candidate; }
-  virtual void setRtpSymmetricCandidate(bool e);
 
   TransProt getMediaTransport() const { return media_transport; }
   void setMediaTransport(TransProt trsp);

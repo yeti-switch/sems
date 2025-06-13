@@ -68,7 +68,6 @@ public:
     void destroyContext();
     void addConnection(AmStunConnection* conn);
     void removeConnection(AmStunConnection* conn);
-    void connectionTrafficDetected(sockaddr_storage* remote_addr);
     void reset();
 
     //function for AmStunProcessor

@@ -114,33 +114,6 @@ void IceContext::destroyContext()
     reset();
 }
 
-void IceContext::connectionTrafficDetected(sockaddr_storage* remote_addr)
-{
-    ReferenceUniquePtr conn(nullptr);
-    {
-        AmLock lock(pairs_mut);
-        conn.reset(current_candidate.get());
-    }
-    if(state == ICE_KEEP_ALIVE && conn) {
-        bool found = false;
-        if(!conn->isAddrConnection(const_cast<sockaddr_storage*>(remote_addr))) {
-            AmLock lock(pairs_mut);
-            for(auto& pair : pairs) {
-                if(pair.second->isAddrConnection(const_cast<sockaddr_storage*>(remote_addr))) {
-                    found = true;
-                    conn.reset(pair.second);
-                    break;
-                }
-            }
-        }
-        if(found) {
-            setCurrentCandidate(conn);
-            AmMediaTransport* transport = conn->getTransport();
-            stream->connectionTrafficDetected(transport, remote_addr);
-        }
-    }
-}
-
 AmStunConnection* IceContext::getNominatedPair()
 {
     AmLock lock(pairs_mut);

@@ -158,8 +158,6 @@ AmRtpStream::AmRtpStream(AmSession* _s, int _if)
     relay_timestamp_aligning(false),
     symmetric_rtp_endless(false),
     symmetric_rtp_enable(false),
-    symmetric_candidate_enable(true),
-    rtp_endpoint_learned_notified(false),
     rtp_ping(false),
     force_buffering(false),
     session(_s),
@@ -1282,15 +1280,14 @@ void AmRtpStream::onRawPacket(AmRtpPacket* p, AmMediaTransport*)
     bufferPacket(p);
 }
 
-void AmRtpStream::onSymmetricRtp()
+void AmRtpStream::onLeavePassiveMode()
 {
-    if(!symmetric_rtp_endless) {
-        symmetric_rtp_enable = false;
-    }
-    if(!rtp_endpoint_learned_notified) {
-        rtp_endpoint_learned_notified = true;
-        if(session) session->onRtpEndpointLearned();
-    }
+    symmetric_rtp_enable = false;
+}
+
+void AmRtpStream::onRtpEndpointLearned()
+{
+    if(session) session->onRtpEndpointLearned();
 }
 
 bool AmRtpStream::isSymmetricRtpEnable()
@@ -1298,15 +1295,8 @@ bool AmRtpStream::isSymmetricRtpEnable()
     return symmetric_rtp_enable;
 }
 
-bool AmRtpStream::isSymmetricCandidateEnable()
-{
-    return is_ice_stream && symmetric_candidate_enable;
-}
-
 void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority)
 {
-    onSymmetricRtp();
-
     iterateTransports([&](auto tr){
         if(transport->getTransportType() != tr->getTransportType())
             return;
@@ -1319,20 +1309,13 @@ void AmRtpStream::allowStunConnection(AmMediaTransport* transport, sockaddr_stor
 
 void AmRtpStream::allowStunPair(AmMediaTransport* transport, sockaddr_storage* remote_addr)
 {
+    onLeavePassiveMode();
+    onRtpEndpointLearned();
+
     iterateTransports([&](auto tr){
         if(transport->getTransportType() != tr->getTransportType())
             return;
         tr->allowStunPair(remote_addr);
-    });
-    setCurrentTransport(transport);
-}
-
-void AmRtpStream::connectionTrafficDetected(AmMediaTransport* transport, sockaddr_storage* remote_addr)
-{
-    iterateTransports([&](auto tr){
-        if(transport->getTransportType() != tr->getTransportType())
-            return;
-        tr->connectionTrafficDetected(remote_addr);
     });
     setCurrentTransport(transport);
 }
@@ -2017,12 +2000,6 @@ void AmRtpStream::setPassiveMode(bool p)
         symmetric_rtp_enable = true;
 
     iterateTransports([&](auto tr){ tr->setPassiveMode(p); });
-}
-
-void AmRtpStream::setSymmetricCandidate(bool p)
-{
-    CLASS_DBG("set symmetric candidate=%s",p?"true":"false");
-    symmetric_candidate_enable = p;
 }
 
 void AmRtpStream::setReceiving(bool r)

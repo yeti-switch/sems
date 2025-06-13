@@ -150,17 +150,6 @@ AmMediaState* AmMediaIceState::allowStunPair(const sockaddr_storage* remote_addr
     return this;
 }
 
-AmMediaState * AmMediaIceState::connectionTrafficDetected(const sockaddr_storage* remote_addr)
-{
-    const string address = am_inet_ntop(remote_addr);
-    const int port = am_get_port(remote_addr);
-    CLASS_DBG("connection trafic detected by addr: %s, port: %d, state: %s, type: %s",
-              address.c_str(), port, state2str(), transport->type2str());
-
-    resetCurRtpConnection();
-    return this;
-}
-
 void AmMediaIceState::setCurrentConnection(AmStreamConnection* conn)
 {
     if(transport->getTransportType() == RTP_TRANSPORT)

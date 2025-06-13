@@ -360,10 +360,7 @@ class AmRtpStream
     /** symmetric rtp switching flags*/
     bool            symmetric_rtp_endless;
     bool            symmetric_rtp_enable;
-    bool            symmetric_candidate_enable;
-    /** rtp endpoint learned flag*/
-    bool            rtp_endpoint_learned_notified;
-    
+
     /** send initial rtp packet */
     bool            rtp_ping;
 
@@ -464,13 +461,12 @@ class AmRtpStream
     void onUdptlPacket(AmRtpPacket* packet, AmMediaTransport* transport);
     void onRawPacket(AmRtpPacket* packet, AmMediaTransport* transport);
 
-    void onSymmetricRtp();
+    void onLeavePassiveMode();
+    void onRtpEndpointLearned();
     bool isSymmetricRtpEnable();
-    bool isSymmetricCandidateEnable();
 
     void allowStunConnection(AmMediaTransport* transport, sockaddr_storage* remote_addr, int priority);
     void allowStunPair(AmMediaTransport* transport, sockaddr_storage* remote_addr);
-    void connectionTrafficDetected(AmMediaTransport* transport, sockaddr_storage* remote_addr);
     void dtlsSessionActivated(AmMediaTransport* transport, uint16_t srtp_profile,
                               const vector<uint8_t>& local_key, const vector<uint8_t>& remote_key);
 
@@ -556,9 +552,6 @@ class AmRtpStream
     /** Symmetric RTP & RTCP: passive mode ? */
     void setPassiveMode(bool p);
     bool getPassiveMode() { return cur_rtp_trans ? cur_rtp_trans->getPassiveMode() : false; }
-
-    /** Symmetric Candidate */
-    void setSymmetricCandidate(bool p);
 
     /** Set using transport */
     void setTransport(TransProt trans);

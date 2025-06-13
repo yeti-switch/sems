@@ -31,8 +31,11 @@ AmStreamConnection::AmStreamConnection(AmMediaTransport* _transport, const strin
     , r_host(remote_addr)
     , r_port(remote_port)
     , conn_type(type)
+    , stream_is_ice_stream(transport->getRtpStream()->isIceStream())
+    , stream_symmetric_rtp_endless(transport->getRtpStream()->isSymmetricRtpEndless())
     , passive(transport->getRtpStream()->isSymmetricRtpEnable())
-    , passive_set_time{0}
+    , active_raddr_packet_received(false)
+    , passive_set_time{0,0}
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
 {
@@ -49,8 +52,11 @@ AmStreamConnection::AmStreamConnection(AmStreamConnection* _parent, const string
     , r_host(remote_addr)
     , r_port(remote_port)
     , conn_type(type)
-    , passive(_parent->transport->getRtpStream()->isSymmetricRtpEnable())
-    , passive_set_time{0}
+    , stream_is_ice_stream(transport->getRtpStream()->isIceStream())
+    , stream_symmetric_rtp_endless(transport->getRtpStream()->isSymmetricRtpEndless())
+    , passive(transport->getRtpStream()->isSymmetricRtpEnable())
+    , active_raddr_packet_received(false)
+    , passive_set_time{0,0}
     , passive_packets(0)
     , dropped_by_raddr_packets(0)
 {
@@ -111,6 +117,11 @@ void AmStreamConnection::setRAddr(const string& addr, unsigned short port)
     CLASS_DBG("setRAddr(%s,%hu) type:%d, endpoint: %s:%d",
               addr.data(), port, conn_type,
               r_host.data(), r_port);
+
+    if(port != r_port || addr != r_host) {
+        active_raddr_packet_received = false;
+    }
+
     resolveRemoteAddress(addr, port);
 }
 
@@ -175,58 +186,96 @@ void AmStreamConnection::process_packet(uint8_t* data, unsigned int size,
 
 void AmStreamConnection::handleSymmetricRtp(struct sockaddr_storage* recv_addr, struct timeval* rv_time)
 {
-    if(!passive && transport->getRtpStream()->isSymmetricCandidateEnable()) {
-        AmStreamConnection* conn = transport->getCurRtpConn();
-        if(transport->getTransportType() == RTCP_TRANSPORT)
-            conn = transport->getCurRtcpConn();
-        if(conn && conn != this)
-            setPassiveMode(true);
-    }
+    if(stream_is_ice_stream) return;
 
     if(parent) parent->handleSymmetricRtp(recv_addr, rv_time);
 
-    if(passive)
-    {
-        uint64_t now = last_recv_time.tv_sec*1000-last_recv_time.tv_usec/1000,
-                 set_time = passive_set_time.tv_sec*1000-passive_set_time.tv_usec/1000;
-
-        if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_PACKETS &&
-            passive_packets < (unsigned int)AmConfig.symmetric_rtp_packets) {
-            passive_packets++;
-            return;
-        } else if(AmConfig.symmetric_rtp_mode == ConfigContainer::SM_RTP_DELAY &&
-            now - set_time < (uint64_t)AmConfig.symmetric_rtp_delay) {
-            return;
+    if(!passive) {
+        //active mode
+        if(!active_raddr_packet_received && isAddrConnection(recv_addr)) {
+            active_raddr_packet_received = true;
+            transport->getRtpStream()->onRtpEndpointLearned();
         }
+        return;
+    }
 
-        transport->getRtpStream()->onSymmetricRtp();
+    //passive mode
 
-        // symmetric ice candidate
-        if(transport->getRtpStream()->isSymmetricCandidateEnable()) {
-            IceContext* context = transport->getRtpStream()->getIceContext(transport->getTransportType());
-            if(context) context->connectionTrafficDetected(recv_addr);
-        }
+    auto stream = transport->getRtpStream();
+    auto recv_from_raddr = isAddrConnection(recv_addr);
 
-        // symmetric RTP
-        if(!transport->getRtpStream()->isSymmetricRtpEndless()) {
-            //normal mode
-            const char* prot = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
-            if (!isAddrConnection(recv_addr)) {
-                string addr_str = get_addr_str(recv_addr);
-                unsigned short port = am_get_port(recv_addr);
-                setRAddr(addr_str, port);
-                CLASS_DBG("Symmetric %s: setting new remote address: %s:%i",
-                          prot, addr_str.c_str(),port);
+    switch(AmConfig.symmetric_rtp_mode) {
+    case ConfigContainer::SM_RTP_PACKETS:
+        if(passive_packets < (unsigned int)AmConfig.symmetric_rtp_packets) {
+            if(recv_from_raddr) {
+                if(stream_symmetric_rtp_endless) {
+                    //clear passive counter on the packet from the actual r_addr
+                    passive_packets = 0;
+                    return;
+                }
+                //no return to leave passive mode immediately
             } else {
-                CLASS_DBG("Symmetric %s: remote end sends %s from advertised address."
-                          " Leaving passive mode.\n",
-                          prot,prot);
+                passive_packets++;
+                return;
             }
-            passive = false;
-        } else if(!isAddrConnection(recv_addr)) {
-            //endless mode
-            setRAddr(get_addr_str(recv_addr), am_get_port(recv_addr));
         }
+        //no return when packets count condition is reached
+        break;
+    case ConfigContainer::SM_RTP_DELAY: {
+        struct timeval delta;
+        timersub(&last_recv_time, &passive_set_time, &delta);
+        int delta_ms = delta.tv_sec*1000 + delta.tv_usec/1000;
+
+        if(delta_ms < AmConfig.symmetric_rtp_delay) {
+            if(recv_from_raddr) {
+                if(stream_symmetric_rtp_endless) {
+                    //clear passive time on the packet from the actual r_addr
+                    memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
+                    return;
+                }
+                //no return to leave passive mode immediately
+            } else {
+                //no actions for delay condition
+                return;
+            }
+        }
+        //no return when delay condition is reached
+    } break;
+    default:
+        //unexpected symmetric_rtp_mode
+        return;
+    }
+
+    //symmetric RTP condition reached
+
+    passive_packets = 0;
+    memcpy(&passive_set_time, &last_recv_time, sizeof(struct timeval));
+
+    const char* proto_str = (conn_type == RTP_CONN) ? "RTP" : "RTCP";
+
+    if(!stream_symmetric_rtp_endless) {
+        //normal mode
+        if(!recv_from_raddr) {
+            string addr_str = get_addr_str(recv_addr);
+            unsigned short port = am_get_port(recv_addr);
+            setRAddr(addr_str, port);
+            CLASS_DBG("Symmetric %s: set new remote address: %s:%i. Leave passive mode",
+                proto_str, addr_str.c_str(), port);
+        } else {
+            CLASS_DBG("Symmetric %s: received packet from the advertised address. Leave passive mode",
+                proto_str);
+        }
+        passive = false;
+        stream->onLeavePassiveMode();
+    } else {
+        //endless mode
+        string addr_str = get_addr_str(recv_addr);
+        unsigned short port = am_get_port(recv_addr);
+        setRAddr(addr_str, port);
+        CLASS_DBG("Symmetric %s: set new remote address: %s:%i. Stay in passive mode",
+            proto_str, addr_str.c_str(), port);
+
+        stream->onRtpEndpointLearned();
     }
 }
 
