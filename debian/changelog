@@ -1,3 +1,12 @@
+sems (1.164.0) stable; urgency=low
+  * pg: fix transactions leak on reset
+  * media: symmetric RTP refactoring
+   * avoid endpoint switching when we have packets from the active endpoint
+   * leave passive mode immediately on packets from the active endpoint
+   * remove ICE symmetric candidate support
+   * remove option: general.force_symmetric_candidate
+ -- Michael Furmur <furmur@pm.me>  Wed, 18 Jun 2025 17:01:04 +0300
+
 sems (1.163.1) stable; urgency=low
   * postgresql:add jsonb type support in response
   * postgresql_proxy: add pstream_queue config parameter
