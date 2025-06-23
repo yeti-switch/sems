@@ -77,7 +77,8 @@ Connection * ConnectionPool::getFreeConnection()
             conn_idx = 0;
 
         Connection* conn = connections[conn_idx];
-        if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK) {
+
+        if(!conn->isBusy() && conn->getStatus() == CONNECTION_OK && !worker->isResetPlanned(conn)) {
             last_returned_conn_idx = conn_idx;
             return conn;
         }

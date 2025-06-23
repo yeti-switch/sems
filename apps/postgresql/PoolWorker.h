@@ -132,6 +132,8 @@ class PoolWorker
     void applyTimer();
     void onTimer();
 
+    bool isResetPlanned(Connection* conn);
+
     //IConnectionHandler
     void onSock(Connection* conn, EventType type) override;
     void onConnect(Connection* conn) override;

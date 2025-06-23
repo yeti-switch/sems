@@ -980,3 +980,9 @@ void PoolWorker::onTimer()
     checkQueue();
     setWorkTimer(false);
 }
+
+bool PoolWorker::isResetPlanned(Connection* conn)
+{
+    return conn->getPendingResetTime() > 0 ||
+           resetConnections.find(conn) != resetConnections.end();
+}
