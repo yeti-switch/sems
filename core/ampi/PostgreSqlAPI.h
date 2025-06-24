@@ -9,15 +9,16 @@
 using std::string;
 
 
-#define POSTGRESQL_QUEUE       "postgresql"
-#define PG_DEFAULT_POOL_SIZE      6
-#define PG_DEFAULT_BATCH_SIZE     0
-#define PG_DEFAULT_MAX_Q_LEN      10000
-#define PG_DEFAULT_BATCH_TIMEOUT  1      //in sec
-#define PG_DEFAULT_RET_INTERVAL   10     //in sec
-#define PG_DEFAULT_REC_INTERVAL   1      //in sec
-#define PG_DEFAULT_WAIT_TIME      5      //in sec
-#define PG_DEFAULT_CONN_LIFETIME  0      //in sec
+#define POSTGRESQL_QUEUE                "postgresql"
+#define PG_DEFAULT_POOL_SIZE            6
+#define PG_DEFAULT_BATCH_SIZE           0
+#define PG_DEFAULT_MAX_Q_LEN            10000
+#define PG_DEFAULT_BATCH_TIMEOUT        1      //in sec
+#define PG_DEFAULT_RET_INTERVAL         10     //in sec
+#define PG_DEFAULT_REC_INTERVAL         1      //in sec
+#define PG_DEFAULT_WAIT_TIME            5      //in sec
+#define PG_DEFAULT_CONN_LIFETIME        0      //in sec
+#define PG_DEFAULT_KEEPALIVES_INTERVAL  10     //in sec
 
 class PGEvent : public AmEvent
 {
@@ -52,14 +53,19 @@ struct PGPool
 
     //optional parameters
     uint8_t pool_size;
+    int keepalives_interval;
 
     PGPool(const string& host_, uint16_t port_,
            const string& name_, const string& user_, const string& pass_)
         : host(host_), port(port_), name(name_), user(user_), pass(pass_)
-        , pool_size(PG_DEFAULT_POOL_SIZE){}
+        , pool_size(PG_DEFAULT_POOL_SIZE)
+        , keepalives_interval(PG_DEFAULT_KEEPALIVES_INTERVAL)
+    {}
     PGPool(const PGPool& pool)
         : host(pool.host), port(pool.port), name(pool.name), user(pool.user), pass(pool.pass)
-        , pool_size(pool.pool_size){}
+        , pool_size(pool.pool_size)
+        , keepalives_interval(pool.keepalives_interval)
+    {}
 };
 
 class PGWorkerPoolCreate : public PGEvent

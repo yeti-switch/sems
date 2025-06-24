@@ -29,6 +29,13 @@ ConnectionPool::ConnectionPool(const PGPool& pool, PoolWorker* worker, PGWorkerP
     conn_info << " user=" << pool.user;
     conn_info << " password=" << pool.pass;
 
+    if(pool.keepalives_interval > 0) {
+        conn_info << " keepalives=" << 1;
+        conn_info << " keepalives_idle=" << pool.keepalives_interval;
+        conn_info << " keepalives_interval=" << pool.keepalives_interval;
+        conn_info << " keepalives_count=" << 2;
+    }
+
     conn_log_info << pool.host << ":" << pool.port << "/" << pool.name;
 
     for(int i = 0; i < pool.pool_size; i++) {
