@@ -10,6 +10,32 @@
 #include "parse_via.h"
 #include "AmLcConfig.h"
 #include "AmUtils.h"
+#include "format_helper.h"
+
+inline string get_connection_id(
+    const string &dst_ip,
+    unsigned short dst_port,
+    unsigned short if_num)
+{
+    return format("{}:{}/{}", dst_ip, dst_port, if_num);
+}
+
+inline string get_connection_id(tcp_base_trsp* client_sock)
+{
+    return ::get_connection_id(
+        client_sock->get_peer_ip(),
+        client_sock->get_peer_port(),
+        client_sock->get_if());
+}
+
+inline string get_connection_id(const sockaddr_storage* sa, trsp_server_socket* server_sock)
+{
+    char host_buf[NI_MAXHOST] = "";
+    return ::get_connection_id(
+        am_inet_ntop(sa,host_buf,NI_MAXHOST),
+        am_get_port(sa),
+        server_sock->get_if());
+}
 
 trsp_base_input::trsp_base_input()
 : input_len(0)
@@ -677,8 +703,7 @@ trsp_worker::~trsp_worker()
 
 void trsp_worker::add_connection(tcp_base_trsp* client_sock)
 {
-    string conn_id = client_sock->get_peer_ip()
-                     + ":" + int2str(client_sock->get_peer_port());
+    string conn_id = get_connection_id(client_sock);
 
     DBG3("new TCP connection from %s:%u",
         client_sock->get_peer_ip().c_str(),
@@ -692,8 +717,7 @@ void trsp_worker::add_connection(tcp_base_trsp* client_sock)
 
 void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
 {
-    string conn_id = 
-        client_sock->get_peer_ip() + ":" + int2str(client_sock->get_peer_port());
+    string conn_id = get_connection_id(client_sock);
 
     DBG3("removing TCP connection from %s",conn_id.c_str());
 
@@ -715,15 +739,12 @@ int trsp_worker::send(
     trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
     const int msg_len, unsigned int flags)
 {
-    char host_buf[NI_MAXHOST] = "";
-    string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
-    dest += ":" + int2str(am_get_port(sa));
     tcp_base_trsp* sock = NULL;
-
+    string conn_id = get_connection_id(sa, server_sock);
 
     bool new_conn=false;
     connections_mut.lock();
-    auto sock_it = connections.find(dest);
+    auto sock_it = connections.find(conn_id);
     if(sock_it != connections.end()) {
         sock = sock_it->second;
         inc_ref(sock);
@@ -778,12 +799,11 @@ void trsp_worker::create_connected(trsp_server_socket* server_sock, int sd, cons
 
 tcp_base_trsp* trsp_worker::new_connection(trsp_server_socket* server_sock, const sockaddr_storage* sa)
 {
-    char host_buf[NI_MAXHOST] = "";
-    string dest = am_inet_ntop(sa,host_buf,NI_MAXHOST);
-    dest += ":" + int2str(am_get_port(sa));
+    string conn_id = get_connection_id(sa, server_sock);
+
     tcp_base_trsp* new_sock = server_sock->sock_factory->new_connection(server_sock,this,-1,sa,evbase);
     if(!new_sock) return 0;
-    connections[dest] = new_sock;
+    connections[conn_id] = new_sock;
     inc_ref(new_sock);
     return new_sock;
 }
