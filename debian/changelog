@@ -1,3 +1,7 @@
+sems (1.165.2) stable; urgency=low
+  * postgresql: fix response handling after connection errors
+ -- Michael Furmur <furmur@pm.me>  Mon, 30 Jun 2025 17:13:18 +0300
+
 sems (1.165.1) stable; urgency=low
   * avoid tcp connections reuse for different logical interfaces
  -- Michael Furmur <furmur@pm.me>  Sat, 28 Jun 2025 19:04:31 +0300
