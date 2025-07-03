@@ -338,6 +338,9 @@ public:
   virtual void setNextHopFixed(bool nh_fixed)
   { next_hop_fixed = nh_fixed; }
 
+  void setMaxForwards(uint32_t mf) { max_forwards = mf; }
+  uint32_t getMaxForwards() const { return max_forwards; }
+
   void addSupportedTag(const string &tag) { supported_tags.emplace_back(tag); }
   void setSupportedTags(const vector<string> &tags) { supported_tags = tags; }
 
