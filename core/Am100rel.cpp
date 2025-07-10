@@ -201,7 +201,8 @@ void Am100rel::onReplyOut(AmSipReply& reply)
     }
 
     if (reply.cseq_method == SIP_METH_INVITE) {
-        if (100 < reply.code && reply.code < 200) {
+        if (100 == reply.code) return;
+        else if (100 < reply.code && reply.code < 200) {
             switch(uas_state) {
             case REL100_SUPPORTED:
                 if (! key_in_list(getHeader(reply.hdrs, SIP_HDR_REQUIRE),SIP_EXT_100REL))
