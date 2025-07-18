@@ -191,8 +191,14 @@ bool SessionTimer::onSendRequest(AmSipRequest& req, int& flags)
 
   removeHeader(req.hdrs, SIP_HDR_SESSION_EXPIRES);
   removeHeader(req.hdrs, SIP_HDR_MIN_SE);
-  req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) + CRLF
+  if(req.to_tag.empty()) {
+    req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval) + CRLF
     + SIP_HDR_COLSP(SIP_HDR_MIN_SE) + int2str(min_se) + CRLF;
+  } else {
+    req.hdrs += SIP_HDR_COLSP(SIP_HDR_SESSION_EXPIRES) + int2str(session_interval)
+    + ";refresher="+(session_refresher==refresh_local ? "uac":"uas")+CRLF
+    + SIP_HDR_COLSP(SIP_HDR_MIN_SE) + int2str(min_se) + CRLF;
+  }
 
   return false;
 }
@@ -350,6 +356,10 @@ void SessionTimer::updateTimer(AmSession* s, const AmSipRequest& req) {
       session_refresher_role = UAS;
     }
     
+    DBG("refresher is %s role %s",
+        session_refresher == refresh_local ? "local" : "remote",
+        session_refresher_role == UAC ? "uac" : "uas");
+
     removeTimers(s);
     setTimers(s);
 
@@ -625,8 +635,7 @@ int AmSessionTimerConfig::readFromConfig(AmConfigReader& cfg)
     HaveRefreshMethod = false;
   }
 
-  if (cfg.getParameter("accept_501_reply")=="no")
-    Accept501Reply = false;
+  Accept501Reply = str2bool(cfg.getParameter("accept_501_reply")).value_or(false);
 
   return 0;
 }
