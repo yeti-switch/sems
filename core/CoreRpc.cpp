@@ -169,6 +169,8 @@ void CoreRpc::init_rpc_tree()
 
     //request
     AmArg &request = reg_leaf(root,"request");
+        AmArg &request_conn = reg_leaf(request,"connection");
+            reg_method(request_conn, "terminate", "", &CoreRpc::requestConnTerminate);
         AmArg &request_log = reg_leaf(request,"log");
             reg_method(request_log,"dump","",&CoreRpc::requestLogDump);
         AmArg &request_shutdown = reg_leaf(request,"shutdown");
@@ -760,6 +762,26 @@ void CoreRpc::requestLogDump(const AmArg& args, AmArg& ret)
     di_log_args.push(path);
 
     di_log->getInstance()->invoke("dumplogtodisk",di_log_args,ret);
+}
+
+void CoreRpc::requestConnTerminate(const AmArg& args, AmArg&)
+{
+    args.assertArrayFmt("s");
+    string conn = args[0].asCStr();
+    auto addr_ifnum = explode(conn, "/");
+    if(addr_ifnum.size() != 2)
+        throw AmSession::Exception(500,"incorrect connection format");
+    size_t pos = addr_ifnum[0].find_last_of(":");
+    if(pos == string::npos)
+        throw AmSession::Exception(500,"incorrect connection format");
+    string portstr(addr_ifnum[0], pos + 1);
+    string ip(addr_ifnum[0], 0, pos);
+    unsigned int port, if_num;
+    if(str2i(portstr, port) ||
+       str2i(addr_ifnum[1], if_num)) {
+        throw AmSession::Exception(500,"incorrect connection format");
+    }
+    SipCtrlInterface::instance()->terminateConection(ip, port, if_num);
 }
 
 void CoreRpc::requestReloadCertificate(const AmArg& args, AmArg& ret)

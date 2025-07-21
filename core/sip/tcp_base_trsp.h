@@ -249,6 +249,7 @@ public:
     
     void add_connection(tcp_base_trsp* client_sock);
     void remove_connection(tcp_base_trsp* client_sock);
+    bool remove_connection(const string& ip, unsigned short port, unsigned short if_num);
     void getInfo(AmArg &ret);
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();

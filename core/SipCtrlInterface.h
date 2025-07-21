@@ -170,6 +170,7 @@ public:
     void handle_reply_timeout(AmSipTimeoutEvent::EvType evt,
         sip_trans *tr, trans_bucket *buk=0);
 
+    void terminateConection(const string& ip, unsigned short port, unsigned short if_num);
     void getInfo(AmArg &ret);
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();

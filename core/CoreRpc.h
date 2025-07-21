@@ -85,7 +85,7 @@ class CoreRpc final
 
     rpc_handler requestResolverClear;
     rpc_handler requestResolverGet;
-
+    rpc_handler requestConnTerminate;
     rpc_handler requestLogDump;
 
     rpc_handler plugin;

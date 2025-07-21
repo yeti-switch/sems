@@ -1405,6 +1405,16 @@ void prepare_routes_uas(const list<sip_header*>& routes, string& route_field)
     }
 }
 
+void _SipCtrlInterface::terminateConection(const std::string& ip,
+                                           unsigned short port,
+                                           unsigned short if_num)
+{
+    for(unsigned int i = 0; i < nr_trsp_workers; i++) {
+        trsp_worker &trsp_worker = *trsp_workers[i];
+        if(trsp_worker.remove_connection(ip, port, if_num)) break;
+    }
+}
+
 void _SipCtrlInterface::getInfo(AmArg &ret)
 {
     ret.assertStruct();

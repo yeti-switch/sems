@@ -735,6 +735,25 @@ void trsp_worker::remove_connection(tcp_base_trsp* client_sock)
     connections_mut.unlock();
 }
 
+bool trsp_worker::remove_connection(const string& ip, unsigned short port, unsigned short if_num)
+{
+    string conn_id = get_connection_id(ip, port, if_num);
+    connections_mut.lock();
+    auto sock_it = connections.find(conn_id);
+    if(sock_it != connections.end()) {
+        if(sock_it->second->server_sock->statistics)
+            sock_it->second->server_sock->statistics->changeCountConnection(true, sock_it->second);
+
+        dec_ref(sock_it->second);
+        DBG3("TCP connection from %s removed",conn_id.c_str());
+        connections.erase(sock_it);
+        connections_mut.unlock();
+        return true;
+    }
+    connections_mut.unlock();
+    return false;
+}
+
 int trsp_worker::send(
     trsp_server_socket* server_sock, const sockaddr_storage* sa, const char* msg,
     const int msg_len, unsigned int flags)
