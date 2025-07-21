@@ -1,3 +1,9 @@
+sems (1.167.0) stable; urgency=low
+  * session_timer: fix refresh value in subsequent requests
+  * IceContext: fix pairs_mut lock-ordering
+  * Am100Rel: fix REL100_SUPPORTED mode
+ -- Michael Furmur <furmur@pm.me>  Mon, 21 Jul 2025 16:35:17 +0300
+
 sems (1.166.0) stable; urgency=low
   * AmBasicSipDialog: add setMaxForwards/getMaxForwards
  -- Michael Furmur <furmur@pm.me>  Thu, 03 Jul 2025 15:27:25 +0300
