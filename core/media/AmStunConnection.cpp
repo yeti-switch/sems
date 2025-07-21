@@ -174,7 +174,23 @@ void IceContext::reset() {
 
 bool IceContext::isUseCandidate(AmStunConnection* conn)
 {
-    AmLock lock(pairs_mut);
+    /* current_candidate can be changed in parallel
+       so function can return not an actual value.
+
+       locking IceContext::pairs_mut here causes lock-ordering issue with AmStunProcessor::connections_mutex
+        * AmStunProcessor::on_timer //AmLock connections_lock(connections_mutex);
+            AmStunConnection::send_request()
+                AmStunConnection::checkState()
+                    IceContext::isUseCandidate() //AmLock lock(pairs_mut);
+        * AmRtpStream::~AmRtpStream
+            IceContext::reset() //AmLock lock(pairs_mut);
+               AmStunProcessor::remove_timer() //AmLock l(connections_mutex);
+
+        we do not use current_candidate and only compare pointers
+        so it's safe to comment-out locking */
+
+    //AmLock lock(pairs_mut);
+
     if(state == ICE_NOMINATIONS || state == ICE_KEEP_ALIVE) {
         if(!stream->isIceControlled() && conn == current_candidate.get()) {
             return true;
