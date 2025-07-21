@@ -135,6 +135,8 @@ protected:
 
     uint8_t tos_byte;
 
+    uint64_t time_created;
+
 public:
     trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts,
         socket_transport trans, unsigned int sys_if_idx = 0, int sd = 0);

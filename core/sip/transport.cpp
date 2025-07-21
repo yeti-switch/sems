@@ -65,6 +65,7 @@ trsp_socket::trsp_socket(
     socket_options(opts), transport(trans), tos_byte(0)
 {
     memset(&addr,0,sizeof(sockaddr_storage));
+    time_created = time(0);
 }
 
 trsp_socket::~trsp_socket()

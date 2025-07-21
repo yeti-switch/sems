@@ -542,6 +542,7 @@ void tcp_base_trsp::getInfo(AmArg &ret)
     ret["proto"] = get_transport();
     ret["ifnum"] = if_num;
     ret["queue_size"] = send_q.size();
+    ret["uptime"] = time(0) - time_created;
 }
 
 unsigned long long tcp_base_trsp::getQueueSize()
