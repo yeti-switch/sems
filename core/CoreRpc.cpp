@@ -20,6 +20,7 @@
 #include "sip/tr_blacklist.h"
 #include "sip/trans_layer.h"
 #include "sip/ssl_key_logger.h"
+#include "format_helper.h"
 
 static const bool RPC_CMD_SUCC = true;
 
@@ -409,14 +410,24 @@ void CoreRpc::stopSslKeyLog(const AmArg&, AmArg& ret) {
     ret = RPC_CMD_SUCC;
 }
 
-void CoreRpc::restartSslKeyLog(const AmArg& args, AmArg& ret)
+void CoreRpc::restartSslKeyLog(const AmArg&, AmArg& ret)
 {
-    if(AmConfig.ssl_key_log_filepath.empty()) {
-        ret = "general.ssl_key_log_file is not set. ignore restart request";
-        return;
+    string ssl_key_log_filepath = AmConfig.ssl_key_log_filepath;
+    if(ssl_key_log_filepath.empty()) {
+        if(AmConfig.log_dump_path.empty())
+            throw AmSession::Exception(500, "not ssl_key_log_file nor log_dump_path is set");
+
+        struct timeval t;
+        gettimeofday(&t,NULL);
+
+        ssl_key_log_filepath = format("{}/secrets_{}.skl",
+            AmConfig.log_dump_path,
+            t.tv_sec);
     }
-    restart_ssl_key_logger(AmConfig.ssl_key_log_filepath);
-    ret = RPC_CMD_SUCC;
+
+    restart_ssl_key_logger(ssl_key_log_filepath);
+
+    ret = "restarted with path: " + ssl_key_log_filepath;
 }
 
 void CoreRpc::setLogSyslogLevel(const AmArg& args, AmArg& ret)
