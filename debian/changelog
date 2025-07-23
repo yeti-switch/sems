@@ -1,3 +1,7 @@
+sems (1.167.2) stable; urgency=low
+  * core.request.ssl_key_log.restart: allow usage without general.ssl_key_log_file set
+ -- Michael Furmur <furmur@pm.me>  Wed, 23 Jul 2025 17:50:03 +0300
+
 sems (1.167.1) stable; urgency=low
   * add core.request.connection.terminate RPC command
   * core.show.connections: add connection uptime
