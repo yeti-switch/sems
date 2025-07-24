@@ -10,6 +10,7 @@ for i,id in ipairs(KEYS) do
         if 1==redis.call('EXISTS', contact_key) then
             cset[#cset + 1] = c
             cset[#cset + 1] = redis.call('HGET',contact_key,'path')
+            cset[#cset + 1] = redis.call('HGET',contact_key,'interface_name')
         end
     end
 

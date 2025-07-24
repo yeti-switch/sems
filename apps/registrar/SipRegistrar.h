@@ -71,17 +71,17 @@ class SipRegistrar
     struct keepalive_ctx_data {
         string aor;
         string path;
-        int interface_id;
+        string interface_name;
         system_clock::time_point next_send;
         system_clock::time_point last_sent;
         unsigned int last_reply_code;
         string last_reply_reason;
         milliseconds last_reply_rtt_ms;
 
-        keepalive_ctx_data(const string &aor, const string &path, int interface_id,
-            const system_clock::time_point &next_send);
-        void update(const string &_aor, const string &_path, int _interface_id,
-            const system_clock::time_point &_next_send);
+        keepalive_ctx_data(const string &aor, const string &path,
+            const string &interface_name, const system_clock::time_point &next_send);
+        void update(const string &_aor, const string &_path,
+            const string &_interface_name, const system_clock::time_point &_next_send);
         void dump(const string &key, const system_clock::time_point &now) const;
         void dump(const string &key, AmArg &ret, const system_clock::time_point &now) const;
     };
@@ -126,7 +126,8 @@ class SipRegistrar
     bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
     bool bind(AmObject *user_data, int user_type_id,
         const string &registration_id, const string &contact, int expires,
-        const string &user_agent, const string &path, unsigned short local_if, const string& headers);
+        const string &user_agent, const string &path, const string &interface_name,
+        const string& headers);
     bool resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids);
     bool load_contacts(AmObject *user_data, int user_type_id);
     bool subscribe(int user_type_id);
@@ -139,9 +140,10 @@ class SipRegistrar
     void clear_keep_alive_contexts();
     void dump_keep_alive_contexts(AmArg &ret) { keepalive_contexts.dump(ret); }
     void create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
-        int interface_id, const seconds &keep_alive_interval_offset = seconds{0});
+        const string& interface_name, const seconds &keep_alive_interval_offset = seconds{0});
 
     void process_redis_reply_contact_subscribe_reg_channel_event(RedisReply& event);
+    string get_interface_name(int interface_id);
 
   protected:
     friend class SipRegistrarFactory;

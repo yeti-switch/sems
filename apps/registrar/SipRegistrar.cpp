@@ -169,15 +169,16 @@ struct aor_lookup_reply {
             RegistrationIdType reg_id = id_arg.asCStr();
 
             AmArg &aor_data_arg = e.data[i+1];
-            if(!isArgArray(aor_data_arg) || aor_data_arg.size()%2!=0) {
+            if(!isArgArray(aor_data_arg) || aor_data_arg.size()%3!=0) {
                 ERROR("unexpected aor_data_arg layout. skip entry");
                 continue;
             }
 
             int m = static_cast<int>(aor_data_arg.size())-1;
-            for(int j = 0; j < m; j+=2) {
+            for(int j = 0; j < m; j+=3) {
                 AmArg &contact_arg = aor_data_arg[j];
                 AmArg &path_arg = aor_data_arg[j+1];
+                AmArg &if_name_arg = aor_data_arg[j+2];
                 if(!isArgCStr(contact_arg)) {
                     ERROR("unexpected contact_arg. skip entry");
                     continue;
@@ -194,13 +195,24 @@ struct aor_lookup_reply {
                     continue;
                 }
 
+                string interface_name;
+                if(isArgCStr(if_name_arg)) {
+                    interface_name = if_name_arg.asCStr();
+                } else if (isArgUndef(if_name_arg)) {
+                    // it's expected that 'interface_name' can be nil
+                    interface_name = "";
+                } else {
+                    ERROR("unexpected if_name_arg type. skip entry");
+                    continue;
+                }
+
                 auto it = aors.find(reg_id);
                 if(it == aors.end()) {
                     it = aors.insert(aors.begin(),
                         std::pair<RegistrationIdType,
                                   std::list<AorData> >(reg_id,  std::list<AorData>()));
                 }
-                it->second.emplace_back(contact_arg.asCStr(), path.c_str());
+                it->second.emplace_back(contact_arg.asCStr(), path.c_str(), interface_name.c_str());
             }
         }
         return true;
@@ -528,7 +540,7 @@ void SipRegistrar::rpc_show_aors(const AmArg& arg, AmArg& ret)
             r["contact"]  = aor_entry_arg[0];
             r["expires"]  = aor_entry_arg[1];
             r["node_id"]  = aor_entry_arg[3];
-            r["interface_id"]  = aor_entry_arg[4];
+            r["interface_name"]  = aor_entry_arg[4];
             r["user_agent"]  = aor_entry_arg[5];
             r["path"]  = aor_entry_arg[6];
 
@@ -583,7 +595,7 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
         r["expires"] = d[1];
         r["key"] = d[2];
         r["path"] = d[3];
-        r["interface_id"] = d[4];
+        r["interface_name"] = d[4];
 
         if(keepalive_interval.count()) {
             //update KeepAliveContexts
@@ -591,7 +603,7 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
                 d[2].asCStr(),  //key
                 d[0].asCStr(),  //aor
                 d[3].asCStr(),  //path
-                arg2int(d[4])   //interface_id
+                d[4].asCStr()   //interface_name
             );
         }
     }
@@ -638,7 +650,7 @@ void SipRegistrar::rpc_unbind(const AmArg& arg, AmArg& ret)
         r["expires"] = d[1];
         r["key"] = d[2];
         r["path"] = d[3];
-        r["interface_id"] = d[4];
+        r["interface_name"] = d[4];
     }
 }
 
@@ -902,8 +914,9 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
 
     // bind
     auto* user_data = new RedisRequestUserData(event.session_id, *req);
+    auto interface_name = get_interface_name(req->local_if);
     if(!bind(user_data, UserTypeId::Register, event.registration_id,
-        contact, expires_int, user_agent, path, req->local_if, arg2json(hdrs_arg)))
+        contact, expires_int, user_agent, path, interface_name, arg2json(hdrs_arg)))
     {
         delete user_data; user_data = nullptr;
         post_register_response(event.session_id, req, 500, SIP_REPLY_SERVER_INTERNAL_ERROR);
@@ -1020,8 +1033,8 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
 
     /* response layout:
      * [
-     *   [ contact1 , expires1, contact_key1, path1, interface_id1 ]
-     *   [ contact2 , expires2, contact_key2, path2, interface_id2 ]
+     *   [ contact1 , expires1, contact_key1, path1, interface_name1 ]
+     *   [ contact2 , expires2, contact_key2, path2, interface_name2 ]
      *   ...
      * ]
      */
@@ -1081,7 +1094,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
                 d[2].asCStr(),  //key
                 contact,        //aor
                 d[3].asCStr(),  //path
-                arg2int(d[4])   //interface_id
+                d[4].asCStr()   //interface_name
             );
         }
     }
@@ -1239,7 +1252,7 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
             key,
             key.substr(pos), //aor
             d[1].asCStr(),   //path
-            arg2int(d[2]),   //interface_id
+            d[2].asCStr(),   //interface_name
             keepalive_interval_offset - keepalive_interval);
 
         keepalive_interval_offset++;
@@ -1282,7 +1295,7 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
                         bind(nullptr/*user data*/, UserTypeId::Unbind,
                              reg_id.value(), ctx.aor.c_str(),
                              0/*expires*/, std::string()/*user agent*/, std::string()/*path*/,
-                             ctx.interface_id, "");
+                             ctx.interface_name, "");
                     }
                 }
             }
@@ -1353,12 +1366,14 @@ bool SipRegistrar::unbind_all(AmObject* user_data, int user_type_id, const strin
 
 bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
     const string &registration_id, const string &contact, int expires,
-    const string &user_agent, const string &path, unsigned short local_if, const string& headers)
+    const string &user_agent, const string &path,
+    const string &interface_name, const string& headers)
 {
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
+            AmConfig.node_id, interface_name.c_str(),
+            user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1368,7 +1383,8 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id,
         }
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
+            contact.c_str(), AmConfig.node_id, interface_name.c_str(),
+            user_agent.c_str(), path.c_str(), headers.c_str(), bindings_max};
     }
 
     return post_request(write_conn->id, args, user_data, user_type_id);
@@ -1542,7 +1558,11 @@ void SipRegistrar::on_timer()
 
         if(!ctx.path.empty())
             dlg->setRouteSet(ctx.path);
-        //dlg->setOutboundInterface(ctx.interface_id);
+
+        if(ctx.interface_name.empty() == false) {
+            dlg->resetOutboundIf();
+            dlg->setOutboundInterfaceName(ctx.interface_name);
+        }
 
         dlg->setLocalTag(SIP_REGISTRAR_QUEUE); //From-tag and queue to handle replies
         dlg->setCallid(AmSession::getNewId());
@@ -1572,29 +1592,29 @@ void SipRegistrar::on_timer()
     }
 }
 
-SipRegistrar::keepalive_ctx_data::keepalive_ctx_data(const string &aor, const string &path, int interface_id,
-    const system_clock::time_point &next_send)
-    : aor(aor), path(path), interface_id(interface_id),
+SipRegistrar::keepalive_ctx_data::keepalive_ctx_data(const string &aor, const string &path,
+    const string &interface_name, const system_clock::time_point &next_send)
+    : aor(aor), path(path), interface_name(interface_name),
       next_send(next_send), last_sent(),
       last_reply_code(0), last_reply_reason(), last_reply_rtt_ms()
 {}
 
-void SipRegistrar::keepalive_ctx_data::update(const string &_aor, const string &_path, int _interface_id,
-    const system_clock::time_point &_next_send)
+void SipRegistrar::keepalive_ctx_data::update(const string &_aor, const string &_path,
+    const string &_interface_name, const system_clock::time_point &_next_send)
 {
     aor = _aor;
     path = _path;
-    interface_id = _interface_id;
+    interface_name = _interface_name;
     next_send = _next_send;
 }
 
 void SipRegistrar::keepalive_ctx_data::dump(const string &key, const system_clock::time_point &now) const
 {
     DBG("keepalive_context. key: '%s', "
-        "aor: '%s', path: '%s', interface_id: %d, "
+        "aor: '%s', path: '%s', interface_name: %s, "
         "next_send-now: %d",
         key.c_str(),
-        aor.data(), path.data(), interface_id,
+        aor.data(), path.data(), interface_name.c_str(),
         std::chrono::duration_cast<seconds>(next_send - now).count());
 }
 
@@ -1603,7 +1623,7 @@ void SipRegistrar::keepalive_ctx_data::dump(const string &key, AmArg &ret, const
     ret["key"] = key;
     ret["aor"] = aor;
     ret["path"] = path;
-    ret["interface_id"] = interface_id;
+    ret["interface_name"] = interface_name;
     ret["next_send_in"] = std::chrono::duration_cast<seconds>(next_send - now).count();
     ret["last_reply_code"] = last_reply_code;
     ret["last_reply_reason"] = last_reply_reason;
@@ -1631,15 +1651,15 @@ void SipRegistrar::KeepAliveContexts::dump(AmArg &ret)
 }
 
 void SipRegistrar::create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
-    int interface_id, const seconds &keep_alive_interval_offset)
+    const string& interface_name, const seconds &keep_alive_interval_offset)
 {
     auto next_time = system_clock::now() + keepalive_interval + keep_alive_interval_offset;
     AmLock l(keepalive_contexts.mutex);
     auto it = keepalive_contexts.find(key);
     if(it == keepalive_contexts.end())
-        keepalive_contexts.try_emplace(key, aor, path, interface_id, next_time);
+        keepalive_contexts.try_emplace(key, aor, path, interface_name, next_time);
     else
-        it->second.update(aor, path, interface_id, next_time);
+        it->second.update(aor, path, interface_name, next_time);
 }
 
 void SipRegistrar::remove_keep_alive_context(const string &key)
@@ -1652,4 +1672,12 @@ void SipRegistrar::clear_keep_alive_contexts()
 {
     AmLock l(keepalive_contexts.mutex);
     keepalive_contexts.clear();
+}
+
+string SipRegistrar::get_interface_name(int interface_id) {
+    for (auto it = AmConfig.sip_if_names.begin(); it != AmConfig.sip_if_names.end(); ++it)
+        if (it->second == interface_id)
+            return it->first;
+
+    return string();
 }

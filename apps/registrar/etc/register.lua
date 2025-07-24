@@ -17,7 +17,7 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_id')
+            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name')
             local d = { c, expires, contact_key, hash_data[1], hash_data[2] }
             ret[#ret+1] = d
         else
@@ -61,7 +61,7 @@ end
 
 local contact_key = 'c:'..id..':'..contact
 local node_id = ARGV[3]
-local local_interface_id = ARGV[4]
+local interface_name = ARGV[4]
 local user_agent = ARGV[5]
 local path = ARGV[6]
 local headers = ARGV[7]
@@ -90,10 +90,10 @@ end
 -- add binding
 redis.call('SADD', auth_id, contact)
 redis.call('HMSET', contact_key,
-    'node_id',node_id,
-    'interface_id',local_interface_id,
-    'agent',user_agent,
-    'path',path,
+    'node_id', node_id,
+    'interface_name', interface_name,
+    'agent', user_agent,
+    'path', path,
     'headers', headers)
 
 -- set TTL

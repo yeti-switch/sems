@@ -106,9 +106,11 @@ struct SipRegistrarResolveResponseEvent
     struct aor_data {
         string contact;
         string path;
-        aor_data(const char *contact, const char *path)
+        string interface_name;
+        aor_data(const char *contact, const char *path, const char *interface_name)
           : contact(contact),
-            path(path)
+            path(path),
+            interface_name(interface_name)
         {}
     };
 

@@ -16,6 +16,7 @@ const char register_script_hash[] = "5f43acad4661a5abf51ab3f32fdf2d1b1a9fec65";
 const char aor_lookup_script_hash[] = "af857bc30e9cd6e67f316dc9b0910a19f939f84e";
 const char rpc_aor_lookup_script_hash[] = "91d6959f211b09a6e7b0f1c3c9fd5bf717a371c9";
 const char load_contacts_script_hash[] = "a74bd2c0d28faea0cba58a939af200414ad87ef0";
+const char interface_name[] = "input";
 
 class RegistrarTest : public testing::Test
 {

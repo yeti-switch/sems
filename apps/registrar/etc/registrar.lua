@@ -31,7 +31,7 @@ local function load_contacts()
     repeat
         r = redis.call('SCAN', r[1], 'MATCH', 'c:*')
         for k,v in pairs(r[2]) do
-            e = redis.call('HMGET',v,'node_id','path','interface_id')
+            e = redis.call('HMGET',v,'node_id','path','interface_name')
             e[#e + 1] = v
             data[#data +1] = e
         end
@@ -82,7 +82,7 @@ local function rpc_aor_lookup(keys)
 
     for id in pairs(aor_keys) do
         ret[#ret + 1] = id
-        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id','interface_id','agent','path', 'headers')
+        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id','interface_name','agent','path', 'headers')
     end
 
     return ret
@@ -95,7 +95,7 @@ local function register(keys, args)
 
     if not args[1] then
         -- no expires. fetch all bindings
-        return get_bindings(id, auth_id, true, 'path', 'interface_id')
+        return get_bindings(id, auth_id, true, 'path', 'interface_name')
     end
 
     local expires = tonumber(args[1])
@@ -118,13 +118,13 @@ local function register(keys, args)
             -- remove specific binding
             redis.call('SREM', auth_id, contact)
             redis.call('DEL', contact_key)
-            return get_bindings(id, auth_id, true, 'path', 'interface_id')
+            return get_bindings(id, auth_id, true, 'path','interface_name')
         end
     end
 
     local contact_key = 'c:'..id..':'..contact
     local node_id = args[3]
-    local local_interface_id = args[4]
+    local interface_name = args[4]
     local user_agent = args[5]
     local path = args[6]
     local headers = args[7]
@@ -154,7 +154,7 @@ local function register(keys, args)
     redis.call('SADD', auth_id, contact)
     redis.call('HMSET', contact_key,
         'node_id',node_id,
-        'interface_id',local_interface_id,
+        'interface_name',interface_name,
         'agent',user_agent,
         'path',path,
         'headers', headers)
@@ -162,7 +162,7 @@ local function register(keys, args)
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)
 
-    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_id')
+    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name')
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then
