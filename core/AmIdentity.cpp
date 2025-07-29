@@ -4,11 +4,13 @@
 #include "jsonArg.h"
 #include "AmSession.h"
 #include "AmArgValidator.h"
+#include "format_helper.h"
 
 #include <botan/data_src.h>
 #include <botan/x509cert.h>
 #include <botan/uuid.h>
 #include <botan/system_rng.h>
+#include <botan/internal/oid_map.h>
 
 static const char *jwt_field_tn = "tn";
 static const char *jwt_field_uri = "uri";
@@ -286,6 +288,16 @@ time_t AmIdentity::get_created()
 
 std::string AmIdentity::generate(Botan::Private_Key* key, bool raw)
 {
+    static auto ecdsa_oid(Botan::OID_Map::global_registry().str2oid("ECDSA"));
+
+    if(key->object_identifier() != ecdsa_oid) {
+        const auto &key_oid = key->object_identifier();
+        DBG("got key type %s while %s expected",
+            key_oid.to_formatted_string().c_str(),
+            ecdsa_oid.to_formatted_string().c_str());
+        throw Botan::Exception(format("unexpected key type {}", key_oid.to_formatted_string()));
+    }
+
     auto &rng = Botan::system_rng();
 
     Botan::PK_Signer signer(*key, rng, "SHA-256");

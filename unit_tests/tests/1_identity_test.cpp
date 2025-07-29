@@ -229,3 +229,29 @@ TEST(AmIdentity, NonArrayDest)
     std::string identity_value = identity.generate(key.get());
     EXPECT_FALSE(identity.parse(identity_value));
 }
+
+TEST(AmIdentity, WrongKeyType)
+{
+    AmIdentity identity;
+    identity.set_x5u_url("https://curl.haxx.se/ca/cacert.pem");
+    identity.set_attestation(AmIdentity::AT_C);
+
+    identity.get_payload()["dest"]["tn"]  = "test";
+
+    auto rng = std::make_shared<Botan::AutoSeeded_RNG>();
+    std::ifstream ifs;
+    ifs.open("./unit_tests/test_rsa.key.pem");
+
+    EXPECT_TRUE(ifs.is_open());
+
+    Botan::DataSource_Stream datasource(ifs);
+    auto key = Botan::PKCS8::load_key(datasource, std::string_view());
+    EXPECT_THROW({
+        try {
+            identity.generate(key.get());
+        } catch(Botan::Exception &e) {
+            EXPECT_STREQ("unexpected key type RSA", e.what());
+            throw;
+        }
+    }, Botan::Exception);
+}
