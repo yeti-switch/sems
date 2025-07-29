@@ -1675,9 +1675,9 @@ void SipRegistrar::clear_keep_alive_contexts()
 }
 
 string SipRegistrar::get_interface_name(int interface_id) {
-    for (auto it = AmConfig.sip_if_names.begin(); it != AmConfig.sip_if_names.end(); ++it)
-        if (it->second == interface_id)
-            return it->first;
+    for (const auto& [iface_name,iface_id]: AmConfig.sip_if_names)
+        if (iface_id == interface_id)
+            return iface_name;
 
     return string();
 }
