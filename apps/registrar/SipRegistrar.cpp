@@ -1252,7 +1252,7 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
             key,
             key.substr(pos), //aor
             d[1].asCStr(),   //path
-            d[2].asCStr(),   //interface_name
+            arg2str(d[2]),   //interface_name
             keepalive_interval_offset - keepalive_interval);
 
         keepalive_interval_offset++;
