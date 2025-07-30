@@ -1,3 +1,7 @@
+sems (1.168.1) stable; urgency=low
+  * registrar: fix crash on nx interface_name field
+ -- Michael Furmur <furmur@pm.me>  Wed, 30 Jul 2025 11:33:24 +0300
+
 sems (1.168.0) stable; urgency=low
   * registrar: save registration interface name
   * check key type on identity signing
