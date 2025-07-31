@@ -1,5 +1,11 @@
+sems (1.168.2) stable; urgency=low
+  * skip signalling ACLs for all in-dialog requests
+  * registrar: avoid duplicate keepalive contexts
+  * registrar: fix crash on nx interface_name field on redis reply for REGISTER
+ -- Michael Furmur <furmur@pm.me>  Thu, 31 Jul 2025 15:07:10 +0300
+
 sems (1.168.1) stable; urgency=low
-  * registrar: fix crash on nx interface_name field
+  * registrar: fix crash on nx interface_name field on initial keepalive contexts loading
  -- Michael Furmur <furmur@pm.me>  Wed, 30 Jul 2025 11:33:24 +0300
 
 sems (1.168.0) stable; urgency=low
