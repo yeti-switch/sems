@@ -103,7 +103,7 @@ TEST_F(RegistrarTest, TestRegister1)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id,
             interface_name, "", "{\"x_orig_proto\":\"tcp\"}", 10);
@@ -134,7 +134,7 @@ TEST_F(RegistrarTest, TestRegister1)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str());
         test_server->addCommandResponse("EVALSHA %s 1 %s",
@@ -208,7 +208,7 @@ TEST_F(RegistrarTest, TestRegister2)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id,
             interface_name, "", "{}", 10);
@@ -242,8 +242,8 @@ TEST_F(RegistrarTest, TestRegister2)
         AmArg ret;
         json2arg(R"raw(
                 [
-                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"],
-                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input"]
+                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1],
+                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input", 1]
                 ]
             )raw", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
@@ -283,8 +283,8 @@ TEST_F(RegistrarTest, TestRegister2)
         AmArg ret;
         json2arg(R"raw(
                 [
-                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"],
-                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input"]
+                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1],
+                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input", 1]
                 ]
             )raw", ret);
         test_server->addCommandResponse("FCALL register 1 %s",
@@ -321,7 +321,7 @@ TEST_F(RegistrarTest, TestRegister2)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 0 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id,
             interface_name, "", "{}", 10);
@@ -397,7 +397,7 @@ TEST_F(RegistrarTest, TestRegister3)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(), AmConfig.node_id,
             interface_name, "", "{}", 10);
@@ -431,8 +431,8 @@ TEST_F(RegistrarTest, TestRegister3)
         AmArg ret;
         json2arg(R"raw(
                 [
-                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"],
-                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input"]
+                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1],
+                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input", 1]
                 ]
             )raw", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
@@ -472,9 +472,9 @@ TEST_F(RegistrarTest, TestRegister3)
 
         AmArg ret;
         json2arg(R"raw([
-                ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"],
-                ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input"],
-                ["sip:Name3@127.0.0.1:6057", 3600, "c:test:sip:Name3@127.0.0.1:6057", "", "input"]
+                ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1],
+                ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "", "input", 1],
+                ["sip:Name3@127.0.0.1:6057", 3600, "c:test:sip:Name3@127.0.0.1:6057", "", "input", 1]
             ])raw", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name3@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
@@ -527,7 +527,7 @@ TEST_F(RegistrarTest, TestResolve1)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
             AmConfig.node_id, interface_name, "<sip:path1.test.com;lr>", 10);
@@ -555,7 +555,7 @@ TEST_F(RegistrarTest, TestResolve1)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str());
         test_server->addCommandResponse("EVALSHA %s 1 %s",
@@ -618,7 +618,7 @@ TEST_F(RegistrarTest, TestResolve2)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
             AmConfig.node_id, interface_name, "<sip:path1.test.com;lr>", 10);
@@ -650,8 +650,8 @@ TEST_F(RegistrarTest, TestResolve2)
         AmArg ret;
         json2arg(R"raw(
                 [
-                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input"],
-                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "<sip:path2.test.com;lr>", "input"]
+                    ["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input", 1],
+                    ["sip:Name2@127.0.0.1:6057", 3600, "c:test:sip:Name2@127.0.0.1:6057", "<sip:path2.test.com;lr>", "input", 1]
                 ]
             )raw", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name2@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s",
@@ -745,7 +745,7 @@ TEST_F(RegistrarTest, TestSubscribe1)
         req.local_if = 0;
 
         AmArg ret;
-        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input"]])", ret);
+        json2arg(R"([["sip:Name1@127.0.0.1:6057", 3600, "c:test:sip:Name1@127.0.0.1:6057", "<sip:path1.test.com;lr>", "input", 1]])", ret);
         test_server->addCommandResponse("FCALL register 1 %s 3600 sip:Name1@127.0.0.1:6057 %d %s Twinkle/1.10.2 %s %s %d",
             REDIS_TEST_REPLY_ARRAY, ret, registration_id.c_str(),
             AmConfig.node_id, interface_name, "<sip:path1.test.com;lr>", "{}", 10);

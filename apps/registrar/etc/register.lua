@@ -17,8 +17,8 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name')
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2] }
+            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name', 'node_id')
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3] }
             ret[#ret+1] = d
         else
             -- cleanup obsolete SET members

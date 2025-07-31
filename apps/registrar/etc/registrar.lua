@@ -13,7 +13,7 @@ local function get_bindings(id, auth_id, cleanup, ...)
         local expires = redis.call('TTL', contact_key)
         if expires > 0 then
             local hash_data = redis.call('HMGET',contact_key, ...)
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4] }
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5] }
             ret[#ret+1] = d
         elseif cleanup then
             -- cleanup obsolete SET members
@@ -82,20 +82,20 @@ local function rpc_aor_lookup(keys)
 
     for id in pairs(aor_keys) do
         ret[#ret + 1] = id
-        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id','interface_name','agent','path', 'headers')
+        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id', 'interface_name', 'agent','path', 'headers')
     end
 
     return ret
 end
 
--- auth_id [ expires [ contact node_id interace_id user_agent path headers ] ]
+-- auth_id [ expires [ contact node_id interace_name user_agent path headers ] ]
 local function register(keys, args)
     local id = keys[1]
     local auth_id = 'a:'..id
 
     if not args[1] then
         -- no expires. fetch all bindings
-        return get_bindings(id, auth_id, true, 'path', 'interface_name')
+        return get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id')
     end
 
     local expires = tonumber(args[1])
@@ -118,7 +118,7 @@ local function register(keys, args)
             -- remove specific binding
             redis.call('SREM', auth_id, contact)
             redis.call('DEL', contact_key)
-            return get_bindings(id, auth_id, true, 'path','interface_name')
+            return get_bindings(id, auth_id, true, 'path','interface_name', 'node_id')
         end
     end
 
@@ -162,7 +162,7 @@ local function register(keys, args)
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)
 
-    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name')
+    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id')
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then

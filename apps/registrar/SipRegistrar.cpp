@@ -1033,8 +1033,8 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
 
     /* response layout:
      * [
-     *   [ contact1 , expires1, contact_key1, path1, interface_name1 ]
-     *   [ contact2 , expires2, contact_key2, path2, interface_name2 ]
+     *   [ contact1 , expires1, contact_key1, path1, interface_name1, node_id1 ]
+     *   [ contact2 , expires2, contact_key2, path2, interface_name2, node_id2 ]
      *   ...
      * ]
      */
@@ -1056,7 +1056,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
     int n = static_cast<int>(event.data.size());
     for(int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
-        if(!isArgArray(d) || d.size()!=5) {
+        if(!isArgArray(d) || d.size()!=6) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it",AmArg::print(d).c_str());
             continue;
         }
