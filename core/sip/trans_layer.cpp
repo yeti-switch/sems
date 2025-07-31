@@ -1896,18 +1896,14 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
                      inv_bucket->unlock();
                      bucket->lock();
                      // no break
- 
+
                  default:
                      trsp_acl::action_t acl_action;
 
-                     switch(msg->u.request->method){
+                     if(static_cast<sip_from_to*>(msg->to->p)->tag.isEmpty()) {
+                         switch(msg->u.request->method) {
                          case sip_request::INVITE:
-                             if(nullptr==static_cast<sip_from_to*>(msg->to->p)->tag.s) {
-                                 //check ACL for initial INVITEs (without To-tag) only
-                                 acl_action = acls.inv.check(msg->remote_ip);
-                             } else {
-                                 acl_action = trsp_acl::Allow;
-                             }
+                             acl_action = acls.inv.check(msg->remote_ip);
                              break;
                          case sip_request::OPTIONS:
                              acl_action = acls.opt.check(msg->remote_ip);
@@ -1917,6 +1913,9 @@ void _trans_layer::process_rcvd_msg(sip_msg* msg, const trsp_acls &acls)
                              break;
                          default:
                              acl_action = trsp_acl::Allow;
+                         }
+                     } else {
+                         acl_action = trsp_acl::Allow;
                      }
 
                      switch(acl_action) {
