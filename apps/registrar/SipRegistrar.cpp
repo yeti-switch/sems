@@ -1094,7 +1094,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
                 d[2].asCStr(),  //key
                 contact,        //aor
                 d[3].asCStr(),  //path
-                d[4].asCStr()   //interface_name
+                arg2str(d[4])   //interface_name
             );
         }
     }
