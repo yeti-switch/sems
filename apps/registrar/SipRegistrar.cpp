@@ -1088,7 +1088,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
         hdrs+=expires_param_prefix+longlong2str(expires_arg.asLongLong());
         hdrs+=CRLF;
 
-        if(keepalive_interval.count()) {
+        if(keepalive_interval.count() && arg2int(d[5]) == AmConfig.node_id) {
             //update KeepAliveContexts
             create_or_update_keep_alive_context(
                 d[2].asCStr(),  //key

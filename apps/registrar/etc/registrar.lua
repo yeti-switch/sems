@@ -13,7 +13,7 @@ local function get_bindings(id, auth_id, cleanup, ...)
         local expires = redis.call('TTL', contact_key)
         if expires > 0 then
             local hash_data = redis.call('HMGET',contact_key, ...)
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5] }
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4] }
             ret[#ret+1] = d
         elseif cleanup then
             -- cleanup obsolete SET members
