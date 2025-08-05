@@ -636,6 +636,10 @@ void AmRtpStream::getSdp(SdpMedia& m)
     m.send = sending;
     m.recv = receiving;
     m.dir = SdpMedia::DirBoth;
+
+    //https://datatracker.ietf.org/doc/html/rfc3550#section-6.5.1
+    m.cname = getLocalAddress();
+    m.ssrc = l_ssrc;
 }
 
 void AmRtpStream::getSdpOffer(unsigned int index, SdpMedia& offer)
@@ -930,6 +934,13 @@ int AmRtpStream::init(const AmSdp& local,
     int rtcp_port = static_cast<int>(remote_media.rtcp_port ?
         remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port+1));
 
+    if(!remote_media.cname.empty()) {
+        r_ssrc = remote_media.ssrc;
+        r_ssrc_i = true;
+    }
+    if(!local_media.cname.empty())
+        l_ssrc = local_media.ssrc;
+
     bool connection_is_muted = false;
     try {
         {
@@ -1142,7 +1153,7 @@ int AmRtpStream::init(const AmSdp& local,
     if(!timerisset(&rtp_stats.start))
         gettimeofday(&rtp_stats.start, nullptr);
 
-    rtcp_reports.init(l_ssrc);
+    rtcp_reports.init(l_ssrc, local_media.cname);
 
     last_not_supported_rx_payload = -1;
     last_not_supported_tx_payload = -1;
@@ -1849,8 +1860,8 @@ void AmRtpStream::processRtcpTimers(unsigned long long system_ts, unsigned int u
 void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 {
     void *buf;
-    struct timeval now;
     unsigned int len;
+    struct timeval now;
 
     if(l_if < 0) return;
 
@@ -1864,23 +1875,23 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
             fill_sender_report(rtcp_reports.sr.sr.sender,now,user_ts);
             fill_receiver_report(rtcp_reports.sr.sr.receiver, now);
             buf = &rtcp_reports.sr;
-            len = sizeof(rtcp_reports.sr);
+            len = rtcp_reports.sr.packet_length;
         } else {
             //SR without RR data
             fill_sender_report(rtcp_reports.sr_empty.sr.sender,now,user_ts);
             buf = &rtcp_reports.sr_empty;
-            len = sizeof(rtcp_reports.sr_empty);
+            len = rtcp_reports.sr_empty.packet_length;
         }
    } else { //no data sent
         if(rtp_stats.current_rx && rtp_stats.current_rx->pkt) {
             //RR with data
             fill_receiver_report(rtcp_reports.rr.rr.receiver, now);
             buf = &rtcp_reports.rr;
-            len = sizeof(rtcp_reports.rr);
+            len = rtcp_reports.rr.packet_length;
         } else {
             //RR without data
             buf = &rtcp_reports.rr_empty;
-            len = sizeof(rtcp_reports.rr_empty);
+            len = rtcp_reports.rr_empty.packet_length;
         }
     }
 
@@ -1888,6 +1899,7 @@ void AmRtpStream::rtcp_send_report(unsigned int user_ts)
 
     AmRtpPacket rp;
     rp.compile_raw((unsigned char*)buf,len);
+
     if(cur_rtcp_trans && cur_rtcp_trans->send(&rp, AmStreamConnection::RTCP_CONN) < 0) {
          CLASS_ERROR("failed to send RTCP packet: errno: %d, fd: %d, raddr: %s:%d, buf: %p:%d",
                      errno,
@@ -2227,16 +2239,6 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
         }
     }
 
-    //ensure correct crypto parameters
-    m.crypto.clear();
-#ifdef WITH_ZRTP
-    m.zrtp_hash.hash.clear();
-    m.zrtp_hash.is_use = false;
-#endif
-    m.dir = SdpMedia::DirUndefined;
-    m.setup = S_UNDEFINED;
-    m.transport = transport;
-
     auto * dlg = session ? session->dlg : nullptr;
     if(!dlg) {
         CLASS_DBG("no dlg");
@@ -2246,6 +2248,18 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
         CLASS_DBG("no current RTP transport set");
         return;
     }
+
+    //ensure correct crypto parameters
+    m.crypto.clear();
+#ifdef WITH_ZRTP
+    m.zrtp_hash.hash.clear();
+    m.zrtp_hash.is_use = false;
+#endif
+    m.dir = SdpMedia::DirUndefined;
+    m.setup = S_UNDEFINED;
+    m.transport = transport;
+    m.ssrc = get_random();
+    m.cname = getLocalAddress();
 
     switch(dlg->getOAState()) {
     case AmOfferAnswer::OA_None:

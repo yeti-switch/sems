@@ -1080,7 +1080,9 @@ TEST(SdpParser, SimpleTest)
             "a=ptime:20\r\n"
             "a=rtpmap:0 PCMU/8000\r\n"
             "a=rtpmap:101 telephone-event/8000\r\n"
-            "a=fmtp:101 0-15";
+            "a=fmtp:101 0-15\r\n"
+            "a=ssrc:3932456184 cname:2201:056D::112E:144A:1E24\r\n"
+            "a=ssrc:1274186329 msid:64683664-dc32-4d6d-bbfc-ce276d867aa7 def03f67-90d8-4395-834e-e7396cf2764a\r\n";
     AmSdp sdp;
     ASSERT_EQ(sdp.parse(sdp_str.c_str()), 0);
 
@@ -1104,6 +1106,9 @@ TEST(SdpParser, SimpleTest)
     ASSERT_EQ(sdp.media[0].payloads[1].payload_type, 101);
     ASSERT_EQ(sdp.media[0].payloads[0].encoding_name, "PCMU");
     ASSERT_EQ(sdp.media[0].payloads[1].encoding_name, "telephone-event");
+    ASSERT_EQ(sdp.media[0].ssrc, 3932456184);
+    ASSERT_EQ(sdp.media[0].cname, "2201:056D::112E:144A:1E24");
+    ASSERT_EQ(sdp.media[0].attributes.size(), 0);
 }
 
 TEST(SdpParser, EmptyLastLineTest)

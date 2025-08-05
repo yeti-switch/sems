@@ -291,6 +291,8 @@ struct SdpMedia
   Direction     dir;  // a=direction
   Setup         setup;
   string        fmt;  // format in case proto != RTP/AVP or RTP/SAVP
+  unsigned int  ssrc;
+  string        cname;
 
   // sendrecv|sendonly|recvonly|inactive
   bool          send;
@@ -326,6 +328,7 @@ struct SdpMedia
       frame_size(20),
       dir(DirUndefined),
       setup(S_UNDEFINED),
+      ssrc(0),
       send(true),
       recv(true),
       has_mode_attribute(false),

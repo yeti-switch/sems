@@ -460,6 +460,21 @@ int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
     return size;
 }
 
+int AmRtpPacket::compile_raw(const std::vector<iovec> &iovecs)
+{
+    b_size = 0;
+    for (const auto& iov : iovecs) {
+        if (b_size + iov.iov_len > RTP_PACKET_BUF_SIZE) {
+            return -1;
+        }
+        std::memcpy(buffer + b_size, iov.iov_base, iov.iov_len);
+        b_size += iov.iov_len;
+    }
+    d_size = b_size;
+
+    return b_size;
+}
+
 void AmRtpPacket::setBuffer(unsigned char* buf, unsigned int b)
 {
     memcpy(buffer, buf, b);

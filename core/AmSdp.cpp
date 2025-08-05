@@ -669,6 +669,10 @@ void AmSdp::print(string& body) const
                 case S_HOLD: out_buf += "a=setup:holdconn\r\n"; break;
                 case S_UNDEFINED: break;
             }
+
+            if(!media_it->cname.empty()) {
+                out_buf += "a=ssrc:"+int2str(media_it->ssrc) + " cname:" + media_it->cname + "\r\n";
+            }
         } //if(!is_t38_transport)
 
         // add attributes (media level)
@@ -1536,6 +1540,25 @@ static char* parse_sdp_attr(AmSdp* sdp_msg, char* s)
         size_t val_len = 0;
         next = skip_till_next_line(attr_line, val_len);
         media.fingerprint.value = string(attr_line, val_len);
+    } else if(attr == "ssrc") {
+        next = parse_until(attr_line, line_end, ' ');
+        string ssrc_str(attr_line, next - 1);
+        while(next != line_end) {
+            attr_line = next;
+            next = parse_until(next, line_end, ':');
+            string ssrc_attr(attr_line, next - 1);
+            if(ssrc_attr == "cname") {
+                attr_line = next;
+                next = parse_until(attr_line, line_end, ' ');
+                if(next == line_end) next--;
+                media.cname = string(attr_line, next - 1);
+                str2i(ssrc_str, media.ssrc);
+            }//TODO()parse another attribute
+            // else if(ssrc_attr == "previous-ssrc") {}
+            // else if(ssrc_attr == "msid") {}
+            else
+                next = parse_until(next, line_end, ' ');
+        }
   } else if(attr == "ice-pwd") {
     size_t val_len = 0;
     next = skip_till_next_line(attr_line, val_len);

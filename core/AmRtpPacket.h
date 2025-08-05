@@ -84,8 +84,9 @@ class AmRtpPacket
 
     // returns -1 if error, else 0
     int compile(unsigned char* data_buf, unsigned int size);
-    // returns -1 if error, else 0
+    // returns -1 if error, else size
     int compile_raw(unsigned char* data_buf, unsigned int size);
+    int compile_raw(const std::vector<iovec> &iovecs);
 
     int rtp_parse(AmObject *caller = NULL);
     bool isRtcp();

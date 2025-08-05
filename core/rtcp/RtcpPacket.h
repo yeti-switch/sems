@@ -5,7 +5,6 @@
 #include <netinet/in.h>
 #include <srtp/srtp.h>
 
-#include <cstdint>
 // srtcp data size injected after rtcp packet
 // see rfc 3711 sec 3.4
 // 4 bt - index
@@ -89,7 +88,10 @@ struct RtcpSourceDescriptionHeader
 struct RtcpSdesData {
     RtcpCommonHeader header;
     RtcpSourceDescriptionHeader item;
-    unsigned char padding[2];
+    /* 46 requires 1 byte padding (8 + 46 + 1 END item byte + 1 pad byte)
+     * https://www.rfc-editor.org/rfc/rfc3550#section-6.5 */
+    unsigned char data[INET6_ADDRSTRLEN + 1];
+    unsigned int packet_length;
 };
 
 struct RtcpSenderReportDataFull {
@@ -99,6 +101,7 @@ struct RtcpSenderReportDataFull {
         RtcpReceiverReportHeader receiver;
     } sr;
     RtcpSdesData sdes;
+    unsigned int packet_length;
 };
 
 struct RtcpSenderReportDataNoReceiver {
@@ -107,6 +110,7 @@ struct RtcpSenderReportDataNoReceiver {
         RtcpSenderReportHeader sender;
     } sr;
     RtcpSdesData sdes;
+    unsigned int packet_length;
 };
 
 struct RtcpReceiverReportDataFull {
@@ -115,6 +119,7 @@ struct RtcpReceiverReportDataFull {
         RtcpReceiverReportHeader receiver;
     } rr;
     RtcpSdesData sdes;
+    unsigned int packet_length;
 };
 
 struct RtcpEmptyReceiverReport {
@@ -122,23 +127,16 @@ struct RtcpEmptyReceiverReport {
         RtcpCommonHeader header;
     } rr;
     RtcpSdesData sdes;
-};
-
-struct SrtcpData {
-    unsigned char trailer[SRTP_MAX_TRAILER_LEN];
+    unsigned int packet_length;
 };
 
 struct RtcpReportsPreparedData {
     RtcpEmptyReceiverReport rr_empty;           //no report blocks
-    SrtcpData  rr_empty_srtp_data_padding;
     RtcpSenderReportDataNoReceiver sr_empty;    //no report blocks
-    SrtcpData  sr_empty_srtp_data_padding;
     RtcpReceiverReportDataFull rr;
-    SrtcpData  rr_srtp_data_padding;
     RtcpSenderReportDataFull sr;
-    SrtcpData  sr_srtp_data_padding;
 
-    void init(unsigned int l_ssrc);
+    void init(unsigned int l_ssrc, const string& cname);
     void update(unsigned int r_ssrc);
 };
 
