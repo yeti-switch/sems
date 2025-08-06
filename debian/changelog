@@ -1,3 +1,8 @@
+sems (1.169.0) stable; urgency=low
+  * SDP: parse and generate 'ssrc' media attribute
+  * add cname for RTCP SDES packets
+ -- Michael Furmur <furmur@pm.me>  Thu, 31 Jul 2025 15:07:10 +0300
+
 sems (1.168.2) stable; urgency=low
   * skip signalling ACLs for all in-dialog requests
   * registrar: avoid duplicate keepalive contexts
