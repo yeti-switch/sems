@@ -17,8 +17,11 @@ int RegistrarClickhouse::configure(cfg_t* cfg)
     }
 
     cfg_t* clickhouse = cfg_getsec(cfg, CFG_SEC_CLICKHOUSE);
-    if(!clickhouse)
-        return -1;
+    if(!clickhouse) {
+        WARN("disable registrar snapshots because absent clickhouse section in config");
+        clickhouse_enable = false;
+        return 0;
+    }
 
     for(int i= 0; i < cfg_size(clickhouse, CFG_PARAM_DESTINATIONS); i++)
         clickhouse_dest.push_back(cfg_getnstr(clickhouse, CFG_PARAM_DESTINATIONS, i));

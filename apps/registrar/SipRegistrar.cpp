@@ -33,6 +33,14 @@ enum UserTypeId {
     Unbind
 };
 
+static void repack_headers(const string& headers, AmArg& ret) {
+    AmArg data;
+    if(!json2arg(headers, data)) return;
+    for(auto& header : data) {
+        ret["header_"+header.first] = header.second;
+    }
+}
+
 /* Helpers */
 
 static int normalize_header_name(int c) {
@@ -355,12 +363,10 @@ void SipRegistrar::run()
             if(e.data.fd==timer){
                 on_timer();
                 timer.read();
-                break;
             }
             if(e.data.fd==clickhouse_timer){
                 RegistrarClickhouse::on_timer();
                 clickhouse_timer.read();
-                break;
             }
         }
     } while(running);
@@ -617,7 +623,7 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
                     data["path"] = d[3];
                     data["interface_name"] = d[4];
                     data["expires"] = d[1];
-                    data["headers"] = d[7];
+                    repack_headers(d[7].asCStr(), data);
                     data["node_id"] = d[5];
                     data["user_agent"] = d[6];
                 });
@@ -1113,7 +1119,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
                     data["path"] = d[3];
                     data["interface_name"] = d[4];
                     data["expires"] = d[1];
-                    data["headers"] = d[7];
+                    repack_headers(d[7].asCStr(), data);
                     data["node_id"] = d[5];
                     data["user_agent"] = d[6];
                 });
@@ -1261,7 +1267,7 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
                     data["path"] = d[1];
                     data["interface_name"] = d[2];
                     data["expires"] = d[6];
-                    data["headers"] = d[5];
+                    repack_headers(d[5].asCStr(), data);
                     data["node_id"] = d[0];
                     data["user_agent"] = d[4];
             },
@@ -1708,6 +1714,7 @@ void SipRegistrar::create_or_update_keep_alive_context(const string &key,
         ctx = &it->second;
         ctx->update(contact, data["path"].asCStr(), data["interface_name"].asCStr(), next_time);
     }
+    data.erase("path");
     ctx->clickhouse_data = data;
 }
 
