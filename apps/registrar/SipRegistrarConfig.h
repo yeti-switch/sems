@@ -17,10 +17,14 @@ using std::string;
 #define CFG_PARAM_KEEPALIVE_FAILURE_CODE        "keepalive_failure_code"
 #define CFG_PARAM_PROCESS_SUBSCRIPTIONS         "process_subscriptions"
 #define CFG_PARAM_HEADERS                       "headers"
+#define CFG_PARAM_DESTINATIONS                  "destinations"
+#define CFG_PARAM_TABLE                         "table"
+#define CFG_PARAM_PERIOD                        "period"
 
 #define CFG_SEC_REDIS                           "redis"
 #define CFG_SEC_WRITE                           "write"
 #define CFG_SEC_READ                            "read"
+#define CFG_SEC_CLICKHOUSE                      "clickhouse"
 
 #define DEFAULT_SCRIPTS_DIR                     "/usr/lib/sems/scripts/registrar"
 #define DEFAULT_REGISTRAR_KEEPALIVE_INTERVAL    60
@@ -28,6 +32,8 @@ using std::string;
 #define DEFAULT_REDIS_PORT                      6379
 #define DEFAULT_BINDINGS_MAX                    10
 #define DEFAULT_KEEPALIVE_FAILURE_CODE          430
+#define DEFAULT_TABLE                           "registrations"
+#define DEFAULT_PERIOD                          60
 
 #include <confuse.h>
 #include <RedisApi.h>

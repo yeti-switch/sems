@@ -312,8 +312,9 @@ int SipRegistrar::init()
         timer.set(1000000 /* 1 seconds */,true);
     }
 
+    int ret = RegistrarClickhouse::init(epoll_fd);
     DBG("SIPRegistrar initialized");
-    return 0;
+    return ret;
 }
 
 /* AmThread */
@@ -356,6 +357,11 @@ void SipRegistrar::run()
                 timer.read();
                 break;
             }
+            if(e.data.fd==clickhouse_timer){
+                RegistrarClickhouse::on_timer();
+                clickhouse_timer.read();
+                break;
+            }
         }
     } while(running);
 
@@ -389,7 +395,8 @@ int SipRegistrar::configure(cfg_t* cfg)
         std::transform(header_name.begin(), header_name.end(), header_name.begin(), normalize_header_name);
         headers.emplace_back(header_name);
     }
-    return RegistrarRedisClient::configure(cfg);
+    return RegistrarRedisClient::configure(cfg) |
+           RegistrarClickhouse::configure(cfg);
 }
 
 void SipRegistrar::connect(const Connection &conn)
@@ -404,6 +411,11 @@ void SipRegistrar::on_connect(const string &conn_id, const RedisConnectionInfo &
 
     if(subscr_read_conn->id == conn_id)
         load_contacts(nullptr, UserTypeId::ContactData);
+}
+
+void SipRegistrar::getSnapshot(AmArg& ret)
+{
+    keepalive_contexts.getSnapshot(ret);
 }
 
 /* RpcTreeHandler */
@@ -584,7 +596,7 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
     int n = static_cast<int>(ctx.data.size());
     for(int i = 0; i < n; ++i) {
         AmArg &d = ctx.data[i];
-        if(!isArgArray(d) || d.size()!=5) {
+        if(!isArgArray(d) || d.size()<8) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it", AmArg::print(d).c_str());
             continue;
         }
@@ -600,11 +612,15 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
         if(keepalive_interval.count()) {
             //update KeepAliveContexts
             create_or_update_keep_alive_context(
-                d[2].asCStr(),  //key
-                d[0].asCStr(),  //aor
-                d[3].asCStr(),  //path
-                d[4].asCStr()   //interface_name
-            );
+                d[2].asCStr(),
+                [d](AmArg& data){
+                    data["path"] = d[3];
+                    data["interface_name"] = d[4];
+                    data["expires"] = d[1];
+                    data["headers"] = d[7];
+                    data["node_id"] = d[5];
+                    data["user_agent"] = d[6];
+                });
         }
     }
 }
@@ -1056,7 +1072,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
     int n = static_cast<int>(event.data.size());
     for(int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
-        if(!isArgArray(d) || d.size()!=6) {
+        if(!isArgArray(d) || d.size()<8) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it",AmArg::print(d).c_str());
             continue;
         }
@@ -1092,10 +1108,15 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
             //update KeepAliveContexts
             create_or_update_keep_alive_context(
                 d[2].asCStr(),  //key
-                contact,        //aor
-                d[3].asCStr(),  //path
-                arg2str(d[4])   //interface_name
-            );
+                [d](AmArg& data)
+                {
+                    data["path"] = d[3];
+                    data["interface_name"] = d[4];
+                    data["expires"] = d[1];
+                    data["headers"] = d[7];
+                    data["node_id"] = d[5];
+                    data["user_agent"] = d[6];
+                });
         }
     }
 
@@ -1228,31 +1249,22 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
     int n = static_cast<int>(event.data.size());
     for(int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
-        if(!isArgArray(d) || d.size() != 4) //validate
+        if(!isArgArray(d) || d.size() < 7) //validate
             continue;
         if(arg2int(d[0]) != AmConfig.node_id) //skip other nodes registrations
             continue;
         DBG("process contact: %s",AmArg::print(d).c_str());
 
-        string key(d[3].asCStr());
-
-        auto pos = key.find_first_of(':');
-        if(pos == string::npos) {
-            ERROR("wrong key format: %s",key.c_str());
-            continue;
-        }
-        pos = key.find_first_of(':',pos+1);
-        if(pos == string::npos) {
-            ERROR("wrong key format: %s",key.c_str());
-            continue;
-        }
-        pos++;
-
         create_or_update_keep_alive_context(
-            key,
-            key.substr(pos), //aor
-            d[1].asCStr(),   //path
-            arg2str(d[2]),   //interface_name
+            d[3].asCStr(),
+            [d](AmArg& data) {
+                    data["path"] = d[1];
+                    data["interface_name"] = d[2];
+                    data["expires"] = d[6];
+                    data["headers"] = d[5];
+                    data["node_id"] = d[0];
+                    data["user_agent"] = d[4];
+            },
             keepalive_interval_offset - keepalive_interval);
 
         keepalive_interval_offset++;
@@ -1453,13 +1465,13 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
     int expires = arg2int(arg[2]);
     const string path = arg.size() > 3 ? arg2str(arg[3]) : "";
     const string user_agent = arg.size() > 4 ? arg2str(arg[4]) : "";
-    unsigned short local_if = arg.size() > 5 ? arg2int(arg[5]) : 0;
+    string interface_name = arg.size() > 5 ? arg2str(arg[5]) : 0;
     const string headers = arg.size() > 6 ? arg2str(arg[6]) : "";
 
     vector<AmArg> args;
     if(use_functions)
         args = {"FCALL", "register", 1, registration_id.c_str(), expires, contact.c_str(),
-            AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers, bindings_max};
+            AmConfig.node_id, interface_name, user_agent.c_str(), path.c_str(), headers, bindings_max};
     else
     {
         auto script = write_conn->script(REGISTER_SCRIPT);
@@ -1467,7 +1479,7 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
             throw AmSession::Exception(500,"registrar is not enabled");
 
         args = {"EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), expires,
-            contact.c_str(), AmConfig.node_id, local_if, user_agent.c_str(), path.c_str(), headers, bindings_max};
+            contact.c_str(), AmConfig.node_id, interface_name, user_agent.c_str(), path.c_str(), headers, bindings_max};
     }
 
     if(post_request(write_conn->id, args, user_data, user_type_id) == false)
@@ -1650,16 +1662,53 @@ void SipRegistrar::KeepAliveContexts::dump(AmArg &ret)
     }
 }
 
-void SipRegistrar::create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
-    const string& interface_name, const seconds &keep_alive_interval_offset)
+void SipRegistrar::KeepAliveContexts::getSnapshot(AmArg &ret)
 {
+    AmLock l(mutex);
+    for(const auto &i : *this)
+        ret.push(i.second.clickhouse_data);
+}
+
+void SipRegistrar::create_or_update_keep_alive_context(const string &key,
+                                                       std::function<void(AmArg& data)> f_load,
+                                                       const seconds &keep_alive_interval_offset)
+{
+    size_t begin = key.find(":");
+    if(begin == string::npos){
+        ERROR("attempt add registrar`s keep alive context: incorrect contact key");
+        return;
+    }
+    size_t end = key.find(":", begin + 1);
+    if(end == string::npos){
+        ERROR("attempt add registrar`s keep alive context: incorrect contact key");
+        return;
+    }
+
+    AmArg data;
+    f_load(data);
+    string contact = string(key.begin() + end + 1, key.end());
+    data["auth_id"] = string(key.begin() + begin + 1, key.begin() + end);
+    data["contact"] = contact;
+    if(!data.hasMember("path") ||
+       !data.hasMember("interface_name")){
+        ERROR("attempt add registrar`s keep alive context: absent mandatory parameters");
+        return;
+    }
+
     auto next_time = system_clock::now() + keepalive_interval + keep_alive_interval_offset;
     AmLock l(keepalive_contexts.mutex);
     auto it = keepalive_contexts.find(key);
-    if(it == keepalive_contexts.end())
-        keepalive_contexts.try_emplace(key, aor, path, interface_name, next_time);
-    else
-        it->second.update(aor, path, interface_name, next_time);
+    keepalive_ctx_data* ctx;
+    if(it == keepalive_contexts.end()) {
+        ctx = &keepalive_contexts.try_emplace(key, contact,
+                                                   data["path"].asCStr(),
+                                                   data["interface_name"].asCStr(),
+                                                   next_time).first->second;
+    } else {
+        ctx = &it->second;
+        ctx->update(contact, data["path"].asCStr(), data["interface_name"].asCStr(), next_time);
+    }
+    ctx->clickhouse_data = data;
 }
 
 void SipRegistrar::remove_keep_alive_context(const string &key)

@@ -3,10 +3,10 @@
 local id = KEYS[1]
 local auth_id = 'a:'..id
 
--- a:auth_id: (SET)
+-- a:id: (auth_id)(SET)
 --   * contact_uri1
 --   * contact_uri2
--- c:contact_uri1 (expires in TTL)
+-- c:id:contact_uri1 (expires in TTL)
 --   * path: 127.0.0.1:5060
 
 local function get_bindings()
@@ -17,8 +17,8 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name', 'node_id')
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3] }
+            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name', 'node_id', "agent", "headers")
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5] }
             ret[#ret+1] = d
         else
             -- cleanup obsolete SET members

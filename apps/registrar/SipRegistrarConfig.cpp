@@ -20,6 +20,13 @@ int SipRegistrarConfig::parse(const string& config, Configurable* obj)
         CFG_END()
     };
 
+    cfg_opt_t clickhouse_opts[] {
+        CFG_STR_LIST(CFG_PARAM_DESTINATIONS, 0, CFGF_NODEFAULT),
+        CFG_STR(CFG_PARAM_TABLE, DEFAULT_TABLE, CFGF_NONE),
+        CFG_INT(CFG_PARAM_PERIOD, DEFAULT_PERIOD, CFGF_NONE),
+        CFG_END()
+    };
+
     cfg_opt_t opts[] {
         CFG_INT(CFG_PARAM_EXPIRES_MIN, 0, CFGF_NODEFAULT),
         CFG_INT(CFG_PARAM_EXPIRES_MAX, 0, CFGF_NODEFAULT),
@@ -30,6 +37,7 @@ int SipRegistrarConfig::parse(const string& config, Configurable* obj)
         CFG_BOOL(CFG_PARAM_PROCESS_SUBSCRIPTIONS, cfg_false, CFGF_NONE),
         CFG_STR_LIST(CFG_PARAM_HEADERS, 0, CFGF_NONE),
         CFG_SEC(CFG_SEC_REDIS, redis_opts, CFGF_NONE),
+        CFG_SEC(CFG_SEC_CLICKHOUSE, clickhouse_opts, CFGF_NONE),
         CFG_END()
     };
 

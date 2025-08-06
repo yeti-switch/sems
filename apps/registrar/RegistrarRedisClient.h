@@ -24,7 +24,7 @@ using std::unique_ptr;
 class RegistrarTest;
 
 class RegistrarRedisClient
-  : public Configurable
+  : public virtual Configurable
 {
   protected:
     friend RegistrarTest;
