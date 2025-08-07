@@ -1715,7 +1715,10 @@ void SipRegistrar::create_or_update_keep_alive_context(const string &key,
         ctx = &it->second;
         ctx->update(contact, data["path"].asCStr(), data["interface_name"].asCStr(), next_time);
     }
+
     data.erase("path");
+    data["node_id"] = AmConfig.node_id;
+
     ctx->clickhouse_data = data;
 }
 
