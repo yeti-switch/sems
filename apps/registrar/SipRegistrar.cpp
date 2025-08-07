@@ -1670,6 +1670,7 @@ void SipRegistrar::KeepAliveContexts::dump(AmArg &ret)
 
 void SipRegistrar::KeepAliveContexts::getSnapshot(AmArg &ret)
 {
+    ret.assertArray();
     AmLock l(mutex);
     for(const auto &i : *this)
         ret.push(i.second.clickhouse_data);
