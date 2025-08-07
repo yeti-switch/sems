@@ -52,8 +52,13 @@ int RegistrarClickhouse::init(int epoll_fd)
 void RegistrarClickhouse::on_timer()
 {
     string data = snapshots_body_header;
+
     AmArg snapshot;
     getSnapshot(snapshot);
+
+    if(!snapshot.size())
+        return;
+
     for(unsigned int i = 0;i < snapshot.size();i++)
         data+=arg2json(snapshot[i])+"\n";
 
