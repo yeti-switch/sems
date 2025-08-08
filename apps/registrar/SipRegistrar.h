@@ -104,7 +104,7 @@ class SipRegistrar
         AmMutex mutex;
         void dump();
         void dump(AmArg &ret);
-        void getSnapshot(AmArg &ret);
+        void getSnapshot(AmArg &ret, std::function<void(AmArg& data)> f_enrich_entry);
     } keepalive_contexts;
 
     struct LookupSubscriber {
@@ -160,7 +160,7 @@ class SipRegistrar
     int configure(cfg_t* cfg) override;
     void connect(const Connection &conn) override;
     void on_connect(const string &conn_id, const RedisConnectionInfo &info) override;
-    void getSnapshot(AmArg& ret) override;
+    void getSnapshot(AmArg& ret, std::function<void(AmArg& data)> f_enrich_entry) override;
 
     int init();
     int onLoad();

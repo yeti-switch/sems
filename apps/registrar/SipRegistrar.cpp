@@ -419,9 +419,9 @@ void SipRegistrar::on_connect(const string &conn_id, const RedisConnectionInfo &
         load_contacts(nullptr, UserTypeId::ContactData);
 }
 
-void SipRegistrar::getSnapshot(AmArg& ret)
+void SipRegistrar::getSnapshot(AmArg& ret, std::function<void(AmArg& data)> f_enrich_entry)
 {
-    keepalive_contexts.getSnapshot(ret);
+    keepalive_contexts.getSnapshot(ret, f_enrich_entry);
 }
 
 /* RpcTreeHandler */
@@ -1668,12 +1668,16 @@ void SipRegistrar::KeepAliveContexts::dump(AmArg &ret)
     }
 }
 
-void SipRegistrar::KeepAliveContexts::getSnapshot(AmArg &ret)
+void SipRegistrar::KeepAliveContexts::getSnapshot(
+    AmArg &ret,
+    std::function<void(AmArg& data)> f_enrich_entry)
 {
     ret.assertArray();
     AmLock l(mutex);
-    for(const auto &i : *this)
+    for(const auto &i : *this) {
         ret.push(i.second.clickhouse_data);
+        f_enrich_entry(ret.back());
+    }
 }
 
 void SipRegistrar::create_or_update_keep_alive_context(const string &key,

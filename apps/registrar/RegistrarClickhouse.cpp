@@ -6,7 +6,11 @@
 
 RegistrarClickhouse::RegistrarClickhouse()
   : clickhouse_enable(false)
+  , last_snapshot_ts(0)
 {
+    snapshot_id.fields.sign    = 0;
+    snapshot_id.fields.node_id = AmConfig.node_id;
+    snapshot_id.fields.counter = 0;
 }
 
 int RegistrarClickhouse::configure(cfg_t* cfg)
@@ -53,8 +57,28 @@ void RegistrarClickhouse::on_timer()
 {
     string data = snapshots_body_header;
 
+    time_t snapshot_ts;
+    time(&snapshot_ts);
+    snapshot_ts = snapshot_ts - (snapshot_ts % clickhouse_period);
+    if (last_snapshot_ts && last_snapshot_ts == snapshot_ts) {
+        ERROR("duplicate snapshot %lu timestamp. "
+              "ignore timer event (can lead to time gap between snapshots)",
+              snapshot_ts);
+        return;
+    }
+    struct tm snapshot_tm;
+    localtime_r(&snapshot_ts, &snapshot_tm);
+    char strftime_buf[32];
+    strftime(strftime_buf, sizeof strftime_buf, "%F %T", &snapshot_tm);
+
+    snapshot_id.fields.timestamp = snapshot_ts;
+    snapshot_id.fields.counter++;
+
     AmArg snapshot;
-    getSnapshot(snapshot);
+    getSnapshot(snapshot, [&](AmArg &data) {
+        data["id"] = snapshot_id.v;
+        data["snapshot_timestamp"] = strftime_buf;
+    });
 
     if(!snapshot.size())
         return;
