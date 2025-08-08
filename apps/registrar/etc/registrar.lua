@@ -1,9 +1,9 @@
 #!lua name=registrar
 
--- a:auth_id: (SET)
+-- a:id: (auth_id)(SET)
 --   * contact_uri1
 --   * contact_uri2
--- c:contact_uri1 (expires in TTL)
+-- c:id:contact_uri1 (expires in TTL)
 --   * path: 127.0.0.1:5060
 local function get_bindings(id, auth_id, cleanup, ...)
     local ret = {}
@@ -13,7 +13,7 @@ local function get_bindings(id, auth_id, cleanup, ...)
         local expires = redis.call('TTL', contact_key)
         if expires > 0 then
             local hash_data = redis.call('HMGET',contact_key, ...)
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4] }
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5]}
             ret[#ret+1] = d
         elseif cleanup then
             -- cleanup obsolete SET members
@@ -27,12 +27,16 @@ end
 local function load_contacts()
     local data = {}
     local r = { 0 }
-    local e
+    local e, other
     repeat
         r = redis.call('SCAN', r[1], 'MATCH', 'c:*')
         for k,v in pairs(r[2]) do
             e = redis.call('HMGET',v,'node_id','path','interface_name')
-            e[#e + 1] = v
+            table.insert(e, v)
+            other = redis.call('HMGET',v,'agent','headers')
+            for _, value in ipairs(other) do
+                table.insert(e, value)
+            end
             data[#data +1] = e
         end
     until(tonumber(r[1]) == 0)
@@ -95,7 +99,7 @@ local function register(keys, args)
 
     if not args[1] then
         -- no expires. fetch all bindings
-        return get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id')
+        return get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id', 'agent', 'headers')
     end
 
     local expires = tonumber(args[1])
@@ -118,7 +122,7 @@ local function register(keys, args)
             -- remove specific binding
             redis.call('SREM', auth_id, contact)
             redis.call('DEL', contact_key)
-            return get_bindings(id, auth_id, true, 'path','interface_name', 'node_id')
+            return get_bindings(id, auth_id, true, 'path','interface_name', 'node_id', 'agent', 'headers')
         end
     end
 
@@ -162,7 +166,7 @@ local function register(keys, args)
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)
 
-    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id')
+    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id', 'agent', 'headers')
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then

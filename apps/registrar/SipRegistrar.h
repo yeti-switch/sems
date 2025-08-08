@@ -2,6 +2,7 @@
 
 #include "SipRegistrarConfig.h"
 #include "RegistrarRedisClient.h"
+#include "RegistrarClickhouse.h"
 #include "ampi/SipRegistrarApi.h"
 #include "unit_tests/RegistrarTest.h"
 
@@ -36,7 +37,8 @@ class SipRegistrar
     public AmEventFdQueue,
     public AmEventHandler,
     public RpcTreeHandler<SipRegistrar>,
-    public RegistrarRedisClient
+    public RegistrarRedisClient,
+    public RegistrarClickhouse
 {
   private:
     friend RegistrarTest;
@@ -72,6 +74,7 @@ class SipRegistrar
         string aor;
         string path;
         string interface_name;
+        AmArg clickhouse_data;
         system_clock::time_point next_send;
         system_clock::time_point last_sent;
         unsigned int last_reply_code;
@@ -101,6 +104,7 @@ class SipRegistrar
         AmMutex mutex;
         void dump();
         void dump(AmArg &ret);
+        void getSnapshot(AmArg &ret, std::function<void(AmArg& data)> f_enrich_entry);
     } keepalive_contexts;
 
     struct LookupSubscriber {
@@ -139,8 +143,9 @@ class SipRegistrar
     void remove_keep_alive_context(const string &key);
     void clear_keep_alive_contexts();
     void dump_keep_alive_contexts(AmArg &ret) { keepalive_contexts.dump(ret); }
-    void create_or_update_keep_alive_context(const string &key, const string &aor, const string &path,
-        const string& interface_name, const seconds &keep_alive_interval_offset = seconds{0});
+    void create_or_update_keep_alive_context(const string &key,
+                                             std::function<void(AmArg& data)> f_load,
+                                             const seconds &keep_alive_interval_offset = seconds{0});
 
     void process_redis_reply_contact_subscribe_reg_channel_event(RedisReply& event);
     string get_interface_name(int interface_id);
@@ -155,6 +160,7 @@ class SipRegistrar
     int configure(cfg_t* cfg) override;
     void connect(const Connection &conn) override;
     void on_connect(const string &conn_id, const RedisConnectionInfo &info) override;
+    void getSnapshot(AmArg& ret, std::function<void(AmArg& data)> f_enrich_entry) override;
 
     int init();
     int onLoad();
