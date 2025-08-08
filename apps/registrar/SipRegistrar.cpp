@@ -622,7 +622,6 @@ void SipRegistrar::rpc_bind(const AmArg& arg, AmArg& ret)
                 [d](AmArg& data){
                     data["path"] = d[3];
                     data["interface_name"] = d[4];
-                    data["expires"] = d[1];
                     repack_headers(d[7].asCStr(), data);
                     data["node_id"] = d[5];
                     data["user_agent"] = d[6];
@@ -1118,7 +1117,6 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply& event) {
                 {
                     data["path"] = d[3];
                     data["interface_name"] = d[4];
-                    data["expires"] = d[1];
                     repack_headers(d[7].asCStr(), data);
                     data["node_id"] = d[5];
                     data["user_agent"] = d[6];
@@ -1255,7 +1253,7 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
     int n = static_cast<int>(event.data.size());
     for(int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
-        if(!isArgArray(d) || d.size() < 7) //validate
+        if(!isArgArray(d) || d.size() < 6) //validate
             continue;
         if(arg2int(d[0]) != AmConfig.node_id) //skip other nodes registrations
             continue;
@@ -1266,7 +1264,6 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply& event)
             [d](AmArg& data) {
                     data["path"] = d[1];
                     data["interface_name"] = d[2];
-                    data["expires"] = d[6];
                     repack_headers(d[5].asCStr(), data);
                     data["node_id"] = d[0];
                     data["user_agent"] = d[4];
