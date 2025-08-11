@@ -88,7 +88,7 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
                   (unsigned long)c, (unsigned long)cc);
         }
     } else if (method == "checkAuth") {
-        // params: Request realm user pwd
+        // params: Request realm user pwd [default_realm]
         if(args.size() < 4) {
             ERROR("missing arguments to uac_auth checkAuth function, expected Request realm user pwd");
             throw AmArg::TypeMismatchException();
@@ -98,9 +98,33 @@ void UACAuthFactory::invoke(const string& method, const AmArg& args, AmArg& ret)
         if (nullptr == req)
             throw AmArg::TypeMismatchException();
 
-        UACAuth::checkAuthentication(req, args.get(1).asCStr(),
+        const AmArg &realms_arg = args.get(1);
+        vector<string> realms;
+        switch(realms_arg.getType()) {
+        case AmArg::CStr:
+            realms.emplace_back(realms_arg.asCStr());
+            break;
+        case AmArg::Array:
+            if(!realms_arg.size())
+                throw AmArg::TypeMismatchException();
+            realms = realms_arg.asStringVector();
+            break;
+        default: throw AmArg::TypeMismatchException();
+        };
+
+        string default_realm;
+        if (args.size() >= 5) {
+            const AmArg &default_realm_arg = args.get(4);
+            if (isArgCStr(default_realm_arg))
+                default_realm = default_realm_arg.asCStr();
+        }
+        if(default_realm.empty())
+            default_realm = realms[0];
+
+        UACAuth::checkAuthentication(req, realms,
                                      args.get(2).asCStr(),
-                                     args.get(3).asCStr(), ret);
+                                     args.get(3).asCStr(),
+                                     default_realm, ret);
     } else if(method == "getChallenge") {
         ret = UACAuth::getChallengeHeader(args.get(0).asCStr());
     } else if(method == "checkAuthHA1") {
@@ -960,8 +984,10 @@ void UACAuth::fetchAuthentication(const AmSipRequest *req, AmArg &ret)
 }
 
 void UACAuth::checkAuthentication(
-    const AmSipRequest* req, const string& realm, const string& user,
-    const string& pwd, AmArg& ret)
+    const AmSipRequest* req,  const vector<string>& realms, const string& user,
+    const string& pwd,
+    const string& default_realm,
+    AmArg& ret)
 {
     if(req->method == SIP_METH_ACK || req->method == SIP_METH_CANCEL) {
         DBG("letting pass %s request without authentication", req->method.c_str());
@@ -975,6 +1001,7 @@ void UACAuth::checkAuthentication(
     bool authenticated = false;
     string internal_reason;
     int internal_code = UACAuthGeneric;
+    string r_realm;
 
     if(auth_hdr.size()) {
         UACAuthDigestChallenge r_challenge;
@@ -990,22 +1017,23 @@ void UACAuth::checkAuthentication(
         string r_username = r_challenge.find_attribute("username");
         string r_uri = r_challenge.find_attribute("uri");
         string r_cnonce = r_challenge.find_attribute("cnonce");
+        r_realm = r_challenge.realm;
 
         DBG("got realm '%s' nonce '%s', qop '%s', response '%s', username '%s' uri '%s' cnonce '%s'",
             r_challenge.realm.c_str(), r_challenge.nonce.c_str(), r_challenge.qop.c_str(),
             r_response.c_str(), r_username.c_str(), r_uri.c_str(), r_cnonce.c_str() );
 
+        if(std::find(realms.begin(), realms.end(), r_realm) == realms.end()) {
+            DBG("Auth: unknown realm '%s'", r_realm.c_str());
+            internal_code = UACAuthRealmMismatch;
+            internal_reason = "Realm mismatch";
+            goto auth_end;
+        }
+
         if(r_response.size() != HASHHEXLEN) {
             DBG("Auth: response length mismatch (wanted %u hex chars): '%s'", HASHHEXLEN, r_response.c_str());
             internal_code = UACAuthResponseLength;
             internal_reason = "Response length mismatch";
-            goto auth_end;
-        }
-
-        if(realm != r_challenge.realm) {
-            DBG("Auth: realm mismatch: required '%s' vs '%s'", realm.c_str(), r_challenge.realm.c_str());
-            internal_code = UACAuthRealmMismatch;
-            internal_reason = "Realm mismatch";
             goto auth_end;
         }
 
@@ -1107,7 +1135,11 @@ void UACAuth::checkAuthentication(
     } else {
         ret.push(401);
         ret.push("Unauthorized");
-        ret.push(getChallengeHeader(realm));
+        if(!r_realm.empty() && internal_code != UACAuthRealmMismatch) {
+            ret.push(getChallengeHeader(r_realm));
+        } else {
+            ret.push(getChallengeHeader(default_realm));
+        }
     }
     ret.push(internal_reason);
     ret.push(internal_code);
