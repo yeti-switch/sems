@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmAudio.h */
@@ -56,7 +56,7 @@ using std::string;
 #define PCM16_B2S(b) ((b) >> 1)
 #define PCM16_S2B(s) ((s) << 1)
 
-//#define SYSTEM_SAMPLERATE 8000 // fixme: sr per session
+// #define SYSTEM_SAMPLERATE 8000 // fixme: sr per session
 #ifndef SYSTEM_SAMPLECLOCK_RATE
 #define SYSTEM_SAMPLECLOCK_RATE 32000
 #endif
@@ -77,27 +77,29 @@ using std::string;
 //
 // Wallclock increments
 #define WC_INC_MS 10LL /* 10 ms */
-#define WC_INC ((WALLCLOCK_RATE*WC_INC_MS)/1000LL)
+#define WC_INC    ((WALLCLOCK_RATE * WC_INC_MS) / 1000LL)
 
 struct SdpPayload;
 struct CodecContainer;
 struct Payload;
 
 /** \brief Audio Event */
-class AmAudioEvent: public AmEvent
-{
-public:
-  enum EventType {
-	
-    noAudio, // Audio class has nothing to play and/or record anymore
+class AmAudioEvent : public AmEvent {
+  public:
+    enum EventType {
 
-    // Audio input & output have been cleared: 
-    // !!! sent only from AmSession !!!
-    cleared  
-  };
+        noAudio, // Audio class has nothing to play and/or record anymore
 
-  AmAudioEvent(int id):AmEvent(id){}
-  virtual ~AmAudioEvent() { }
+        // Audio input & output have been cleared:
+        // !!! sent only from AmSession !!!
+        cleared
+    };
+
+    AmAudioEvent(int id)
+        : AmEvent(id)
+    {
+    }
+    virtual ~AmAudioEvent() {}
 };
 
 
@@ -106,22 +108,21 @@ public:
  * Implements double buffering.
  */
 
-class DblBuffer
-{
-  /** Buffer. */
-  unsigned char samples[AUDIO_BUFFER_SIZE * 2];
-  /** 0 for first buffer, 1 for the second. */
-  int active_buf;
+class DblBuffer {
+    /** Buffer. */
+    unsigned char samples[AUDIO_BUFFER_SIZE * 2];
+    /** 0 for first buffer, 1 for the second. */
+    int active_buf;
 
-public:
-  /** Constructs a double buffer. */
-  DblBuffer();
-  /** Returns a pointer to the current front buffer. */
-  operator unsigned char*();
-  /** Returns a pointer to the current back buffer. */
-  unsigned char* back_buffer();
-  /** swaps front and back buffer. */
-  void swap();
+  public:
+    /** Constructs a double buffer. */
+    DblBuffer();
+    /** Returns a pointer to the current front buffer. */
+    operator unsigned char *();
+    /** Returns a pointer to the current back buffer. */
+    unsigned char *back_buffer();
+    /** swaps front and back buffer. */
+    void swap();
 };
 
 class AmAudio;
@@ -138,115 +139,111 @@ class AmAudio;
 
 void adjust_media_frame_size(int &frame_size);
 
-class AmAudioFormat
-{
-public:
-  /** Number of channels. */
-  int channels;
+class AmAudioFormat {
+  public:
+    /** Number of channels. */
+    int channels;
 
-  string sdp_format_parameters;
-    
-  AmAudioFormat(int codec_id = CODEC_PCM16,
-		unsigned int rate = SYSTEM_SAMPLECLOCK_RATE);
+    string sdp_format_parameters;
 
-  virtual ~AmAudioFormat();
+    AmAudioFormat(int codec_id = CODEC_PCM16, unsigned int rate = SYSTEM_SAMPLECLOCK_RATE);
 
-  /** @return The format's codec pointer. */
-  virtual amci_codec_t* getCodec();
-  void resetCodec();
+    virtual ~AmAudioFormat();
 
-  /** return the sampling rate */
-  unsigned int getRate() { return rate; }
+    /** @return The format's codec pointer. */
+    virtual amci_codec_t *getCodec();
+    void                  resetCodec();
 
-  /** set the sampling rate */
-  void setRate(unsigned int sample_rate);
+    /** return the sampling rate */
+    unsigned int getRate() { return rate; }
 
-  /** return the frame size */
-  unsigned int getFrameSize() { return frame_size; }
+    /** set the sampling rate */
+    void setRate(unsigned int sample_rate);
 
-  /** set the frame size */
-  void setFrameSize(unsigned int frame_size);
+    /** return the frame size */
+    unsigned int getFrameSize() { return frame_size; }
 
-  /** return the frame size */
-  unsigned int getFrameTime() { return frame_time; }
+    /** set the frame size */
+    void setFrameSize(unsigned int frame_size);
 
-  /** @return Handler returned by the codec's init function.*/
-  long             getHCodec();
-  long             getHCodecNoInit() { return h_codec; } // do not initialize
+    /** return the frame size */
+    unsigned int getFrameTime() { return frame_time; }
 
-  unsigned int calcBytesToRead(unsigned int needed_samples) const;
-  unsigned int bytes2samples(unsigned int) const;
+    /** @return Handler returned by the codec's init function.*/
+    long getHCodec();
+    long getHCodecNoInit() { return h_codec; } // do not initialize
 
-  /** @return true if same format. */
-  bool operator == (const AmAudioFormat& r) const;
-  /** @return false if same format. */
-  bool operator != (const AmAudioFormat& r) const;
+    unsigned int calcBytesToRead(unsigned int needed_samples) const;
+    unsigned int bytes2samples(unsigned int) const;
 
-protected:
-  /** Codec id: @see amci/codecs.h */
-  int codec_id;
+    /** @return true if same format. */
+    bool operator==(const AmAudioFormat &r) const;
+    /** @return false if same format. */
+    bool operator!=(const AmAudioFormat &r) const;
 
-  /** Sampling rate. */
-  unsigned int rate;
+  protected:
+    /** Codec id: @see amci/codecs.h */
+    int codec_id;
 
-  /* frame size in samples */
-  unsigned int frame_size;
+    /** Sampling rate. */
+    unsigned int rate;
 
-  /* frame size in ms */
-  unsigned int frame_time;
+    /* frame size in samples */
+    unsigned int frame_size;
 
-  /** ==0 if not yet initialized. */
-  amci_codec_t*   codec;
-  /** ==0 if not yet initialized. */
-  long            h_codec;
+    /* frame size in ms */
+    unsigned int frame_time;
 
-  /** Calls amci_codec_t::destroy() */
-  void destroyCodec();
-  /** Calls amci_codec_t::init() */
-  virtual void initCodec();
+    /** ==0 if not yet initialized. */
+    amci_codec_t *codec;
+    /** ==0 if not yet initialized. */
+    long h_codec;
 
-private:
-  void operator = (const AmAudioFormat& r);
+    /** Calls amci_codec_t::destroy() */
+    void destroyCodec();
+    /** Calls amci_codec_t::init() */
+    virtual void initCodec();
+
+  private:
+    void operator=(const AmAudioFormat &r);
 };
 
 /**
  * \brief keeps the resampling state for one direction (input or output)
  */
-class AmResamplingState
-{
-public:
-  virtual unsigned int resample(unsigned char* samples, unsigned int size, double ratio) = 0;
-  virtual ~AmResamplingState() {}
+class AmResamplingState {
+  public:
+    virtual unsigned int resample(unsigned char *samples, unsigned int size, double ratio) = 0;
+    virtual ~AmResamplingState() {}
 };
 
 #ifdef USE_LIBSAMPLERATE
-class AmLibSamplerateResamplingState: public AmResamplingState
-{
-private:
-  SRC_STATE* resample_state;
-  float resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE)*2*8];
-  float resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE)*8];
-  size_t resample_buf_samples;
-  size_t resample_out_buf_samples;
-public:
-  AmLibSamplerateResamplingState();
-  virtual ~AmLibSamplerateResamplingState();
+class AmLibSamplerateResamplingState : public AmResamplingState {
+  private:
+    SRC_STATE *resample_state;
+    float      resample_in[PCM16_B2S(AUDIO_BUFFER_SIZE) * 2 * 8];
+    float      resample_out[PCM16_B2S(AUDIO_BUFFER_SIZE) * 8];
+    size_t     resample_buf_samples;
+    size_t     resample_out_buf_samples;
 
-  virtual unsigned int resample(unsigned char* samples, unsigned int size, double ratio);
+  public:
+    AmLibSamplerateResamplingState();
+    virtual ~AmLibSamplerateResamplingState();
+
+    virtual unsigned int resample(unsigned char *samples, unsigned int size, double ratio);
 };
 #endif
 
 #ifdef USE_INTERNAL_RESAMPLER
-class AmInternalResamplerState: public AmResamplingState
-{
-private:
-  Resample *rstate;
+class AmInternalResamplerState : public AmResamplingState {
+  private:
+    Resample *rstate;
 
-public:
-  AmInternalResamplerState();
-  virtual ~AmInternalResamplerState();
+  public:
+    AmInternalResamplerState();
+    virtual ~AmInternalResamplerState();
 
-  virtual unsigned int resample(unsigned char* samples, unsigned int size, double ratio);
+    virtual unsigned int resample(unsigned char *samples, unsigned int size, double ratio);
 };
 #endif
 
@@ -257,177 +254,173 @@ public:
  * <br>Internal Format: PCM signed 16 bit (mono | stereo).
  */
 
-class AmAudio
-  : public AmObject
-{
-private:
-  int rec_time; // in samples
-  int max_rec_time;
+class AmAudio : public AmObject {
+  private:
+    int rec_time; // in samples
+    int max_rec_time;
 
-public:
-  enum ResamplingImplementationType {
-	LIBSAMPLERATE,
-	INTERNAL_RESAMPLER,
-	UNAVAILABLE
-  };
-  
-  static AmResamplingState* makeResamplingState();
+  public:
+    enum ResamplingImplementationType { LIBSAMPLERATE, INTERNAL_RESAMPLER, UNAVAILABLE };
 
-protected:
-  string recorder_id;
-  bool record_enabled;
+    static AmResamplingState *makeResamplingState();
 
-  bool stereo_record_enabled;
-  StereoRecordersList stereo_recorders;
+  protected:
+    string recorder_id;
+    bool   record_enabled;
 
-  std::atomic_bool has_pending_stereo_recorders;
-  /** R/W is guarded by AmSession::audio_mut */
-  StereoRecordersList pending_stereo_recorders;
+    bool                stereo_record_enabled;
+    StereoRecordersList stereo_recorders;
 
-  bool inband_detector_enabled;
-  std::unique_ptr<AmInbandDetector> inband_detector;
+    std::atomic_bool has_pending_stereo_recorders;
+    /** R/W is guarded by AmSession::audio_mut */
+    StereoRecordersList pending_stereo_recorders;
 
-  /** Sample buffer. */
-  DblBuffer samples;
-  
-  /** Audio format. @see AmAudioFormat */
-  unique_ptr<AmAudioFormat> fmt;
-  
-  /** Resampling states. @see AmResamplingState */
-  unique_ptr<AmResamplingState> input_resampling_state;
-  unique_ptr<AmResamplingState> output_resampling_state;
+    bool                              inband_detector_enabled;
+    std::unique_ptr<AmInbandDetector> inband_detector;
 
-  AmAudio();
-  AmAudio(AmAudioFormat *);
+    /** Sample buffer. */
+    DblBuffer samples;
 
-  /** Gets 'size' bytes directly from stream (Read,Pull). */
-  virtual int read(unsigned int user_ts, unsigned int size) = 0;
-  /** Puts 'size' bytes directly from stream (Write,Push). */
-  virtual int write(unsigned int user_ts, unsigned int size) = 0;
+    /** Audio format. @see AmAudioFormat */
+    unique_ptr<AmAudioFormat> fmt;
 
-  /** 
-   * Converts a buffer from stereo to mono. 
-   * @param size [in,out] size in bytes
-   * <ul><li>Before call is size = input size</li><li>After the call is size = output size</li></ul>
-   */
-  void stereo2mono(unsigned char* out_buf,unsigned char* in_buf,unsigned int& size);
+    /** Resampling states. @see AmResamplingState */
+    unique_ptr<AmResamplingState> input_resampling_state;
+    unique_ptr<AmResamplingState> output_resampling_state;
 
-  /**
-   * Converts from the input format to the internal format.
-   * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
-   * @param size [in] size in bytes
-   * @return new size in bytes
-   */
-  int decode(unsigned int size);
-  /**
-   * Converts from the internal format to the output format.
-   * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
-   * @param size [in] size in bytes
-   * @return new size in bytes
-   */
-  int encode(unsigned int size);
+    AmAudio();
+    AmAudio(AmAudioFormat *);
 
-  /**
-   * Converts to mono depending on the format.
-   * @return new size in bytes
-   */
-  unsigned int downMix(unsigned int size);
+    /** Gets 'size' bytes directly from stream (Read,Pull). */
+    virtual int read(unsigned int user_ts, unsigned int size) = 0;
+    /** Puts 'size' bytes directly from stream (Write,Push). */
+    virtual int write(unsigned int user_ts, unsigned int size) = 0;
 
-  /**
-   * Resamples from the given input sample rate to the given output sample rate
-   * using the input resampling state. The input resampling state is created if
-   * it does not exist.
-   *
-   */
-  unsigned int resampleInput(unsigned char *buffer, unsigned int size, int input_sample_rate, int output_sample_rate);
+    /**
+     * Converts a buffer from stereo to mono.
+     * @param size [in,out] size in bytes
+     * <ul><li>Before call is size = input size</li><li>After the call is size = output size</li></ul>
+     */
+    void stereo2mono(unsigned char *out_buf, unsigned char *in_buf, unsigned int &size);
 
-  /**
-   * Resamples from the given input sample rate to the given output sample rate
-   * using the output resampling state. The output resampling state is created if
-   * it does not exist.
-   *
-   */
-  unsigned int resampleOutput(unsigned char *buffer, unsigned int size, int input_sample_rate, int output_sample_rate);
+    /**
+     * Converts from the input format to the internal format.
+     * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
+     * @param size [in] size in bytes
+     * @return new size in bytes
+     */
+    int decode(unsigned int size);
+    /**
+     * Converts from the internal format to the output format.
+     * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
+     * @param size [in] size in bytes
+     * @return new size in bytes
+     */
+    int encode(unsigned int size);
 
-  /**
-   * Resamples from the given input sample rate to the given output sample rate using
-   * the given resampling state.
-   * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
-   * @param rstate resampling state to be used
-   * @param size [in] size in bytes
-   * @param output_sample_rate desired output sample rate
-   * @return new size in bytes
-   */
-  unsigned int resample(AmResamplingState& rstate, unsigned char *buffer, unsigned int size, int input_sample_rate, int output_sample_rate);
-   
-  /**
-   * Get the number of bytes to read from encoded, depending on the format.
-   */
-  unsigned int calcBytesToRead(unsigned int needed_samples) const;
+    /**
+     * Converts to mono depending on the format.
+     * @return new size in bytes
+     */
+    unsigned int downMix(unsigned int size);
 
-  /**
-   * Convert the size from bytes to samples, depending on the format.
-   */
-  unsigned int bytes2samples(unsigned int bytes) const;
+    /**
+     * Resamples from the given input sample rate to the given output sample rate
+     * using the input resampling state. The input resampling state is created if
+     * it does not exist.
+     *
+     */
+    unsigned int resampleInput(unsigned char *buffer, unsigned int size, int input_sample_rate, int output_sample_rate);
 
-  /**
-   *Get assumed samples count after decoding size bytes from buffer
-   */
-  unsigned int decoded_samples_count(amci_codec_t* codec, long h_codec, unsigned int size);
+    /**
+     * Resamples from the given input sample rate to the given output sample rate
+     * using the output resampling state. The output resampling state is created if
+     * it does not exist.
+     *
+     */
+    unsigned int resampleOutput(unsigned char *buffer, unsigned int size, int input_sample_rate,
+                                int output_sample_rate);
 
-public:
-  /** Destructor */
-  virtual ~AmAudio();
+    /**
+     * Resamples from the given input sample rate to the given output sample rate using
+     * the given resampling state.
+     * <ul><li>input = front buffer</li><li>output = back buffer</li></ul>
+     * @param rstate resampling state to be used
+     * @param size [in] size in bytes
+     * @param output_sample_rate desired output sample rate
+     * @return new size in bytes
+     */
+    unsigned int resample(AmResamplingState &rstate, unsigned char *buffer, unsigned int size, int input_sample_rate,
+                          int output_sample_rate);
 
-  /** Closes the audio pipe. */
-  virtual void close();
+    /**
+     * Get the number of bytes to read from encoded, depending on the format.
+     */
+    unsigned int calcBytesToRead(unsigned int needed_samples) const;
 
-  /** 
-   * Get some samples from input stream.
-   * @warning For packet based payloads / file formats, use:
-   * <pre>           nb_sample = input buffer size / sample size of the reference format
-   * </pre>           whereby the format with/from which the codec works is the reference one.
-   * @return # bytes read, else -1 if error (0 is OK) 
-   */
-  virtual int get(unsigned long long system_ts, unsigned char* buffer, 
-		  int output_sample_rate, unsigned int nb_samples);
+    /**
+     * Convert the size from bytes to samples, depending on the format.
+     */
+    unsigned int bytes2samples(unsigned int bytes) const;
 
-  /** 
-   * Put some samples to the output stream.
-   * @warning For packet based payloads / file formats, use:
-   * <pre>           nb_sample = input buffer size / sample size of the reference format
-   * </pre>           whereby the format with/from which the codec works is the reference one.
-   * @return # bytes written, else -1 if error (0 is OK) 
-   */
-  virtual int put(unsigned long long system_ts, unsigned char* buffer, 
-		  int input_sample_rate, unsigned int size);
-  
-  int  getSampleRate();
+    /**
+     *Get assumed samples count after decoding size bytes from buffer
+     */
+    unsigned int decoded_samples_count(amci_codec_t *codec, long h_codec, unsigned int size);
 
-  void setRecordTime(unsigned int ms);
-  int  incRecordTime(unsigned int samples);
+  public:
+    /** Destructor */
+    virtual ~AmAudio();
 
-  void setBufferedOutput(unsigned int buffer_size);
+    /** Closes the audio pipe. */
+    virtual void close();
 
-  void setFormat(AmAudioFormat* new_fmt);
-  void setRecorder(const string &id);
-  void setStereoRecorders(const StereoRecordersList &recorders, const AmSession *lock_session);
-  bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
+    /**
+     * Get some samples from input stream.
+     * @warning For packet based payloads / file formats, use:
+     * <pre>           nb_sample = input buffer size / sample size of the reference format
+     * </pre>           whereby the format with/from which the codec works is the reference one.
+     * @return # bytes read, else -1 if error (0 is OK)
+     */
+    virtual int get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate,
+                    unsigned int nb_samples);
 
-  void setInbandDetector(AmInbandDetector *detector);
-  void clearInbandDetector();
-  inline void feedInbandDetector(const unsigned char* samples, unsigned int size, unsigned long long system_ts)
-  {
-    if(!inband_detector_enabled) return;
-    inband_detector->streamPut(samples, size, system_ts);
-  }
+    /**
+     * Put some samples to the output stream.
+     * @warning For packet based payloads / file formats, use:
+     * <pre>           nb_sample = input buffer size / sample size of the reference format
+     * </pre>           whereby the format with/from which the codec works is the reference one.
+     * @return # bytes written, else -1 if error (0 is OK)
+     */
+    virtual int put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate, unsigned int size);
 
-  /**
-   * Scale a system timestamp down dependent on the sample rate.
-   */
-  unsigned int scaleSystemTS(unsigned long long system_ts);
+    int getSampleRate();
 
-  virtual void applyPendingStereoRecorders(const AmSession *lock_session);
+    void setRecordTime(unsigned int ms);
+    int  incRecordTime(unsigned int samples);
+
+    void setBufferedOutput(unsigned int buffer_size);
+
+    void setFormat(AmAudioFormat *new_fmt);
+    void setRecorder(const string &id);
+    void setStereoRecorders(const StereoRecordersList &recorders, const AmSession *lock_session);
+    bool isRecordEnabled() { return record_enabled || stereo_record_enabled; }
+
+    void        setInbandDetector(AmInbandDetector *detector);
+    void        clearInbandDetector();
+    inline void feedInbandDetector(const unsigned char *samples, unsigned int size, unsigned long long system_ts)
+    {
+        if (!inband_detector_enabled)
+            return;
+        inband_detector->streamPut(samples, size, system_ts);
+    }
+
+    /**
+     * Scale a system timestamp down dependent on the sample rate.
+     */
+    unsigned int scaleSystemTS(unsigned long long system_ts);
+
+    virtual void applyPendingStereoRecorders(const AmSession *lock_session);
 };
 
 
@@ -436,6 +429,3 @@ public:
 // Local Variables:
 // mode:C++
 // End:
-
-
-

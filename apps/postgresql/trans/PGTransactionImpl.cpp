@@ -7,22 +7,22 @@
 
 #define MAX_BUF_SIZE 256
 
-PGTransactionImpl::PGTransactionImpl(Transaction* h, TransactionType t)
-  : TransactionImpl(h, t)
-{}
+PGTransactionImpl::PGTransactionImpl(Transaction *h, TransactionType t)
+    : TransactionImpl(h, t)
+{
+}
 
-PGTransactionImpl::~PGTransactionImpl()
-{}
+PGTransactionImpl::~PGTransactionImpl() {}
 
 bool PGTransactionImpl::check_trans()
 {
-    if(!conn) {
+    if (!conn) {
         ERROR("absent connection");
         return false;
     }
 
-    if(conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished()) {
-        if(conn->flush()) {
+    if (conn->getPipeStatus() == PQ_PIPELINE_ON && query->is_finished()) {
+        if (conn->flush()) {
             TRANS_LOG(parent, "flush data");
         }
     }
@@ -34,15 +34,15 @@ bool PGTransactionImpl::check_trans()
 
 bool PGTransactionImpl::cancel_trans()
 {
-    if(!conn) {
+    if (!conn) {
         ERROR("absent connection");
         return true;
     }
 
-    bool ret = true;
-    char errbuf[MAX_BUF_SIZE] = {0};
-    PGcancel* cancel = PQgetCancel(*conn);
-    if(!PQcancel(cancel, errbuf, MAX_BUF_SIZE)) {
+    bool      ret                  = true;
+    char      errbuf[MAX_BUF_SIZE] = { 0 };
+    PGcancel *cancel               = PQgetCancel(*conn);
+    if (!PQcancel(cancel, errbuf, MAX_BUF_SIZE)) {
         parent->handler->onPQError(parent, errbuf);
         ret = true;
     }
@@ -50,26 +50,26 @@ bool PGTransactionImpl::cancel_trans()
     return ret;
 }
 
-void PGTransactionImpl::make_result(PGresult* res, bool single)
+void PGTransactionImpl::make_result(PGresult *res, bool single)
 {
-    int rows = PQntuples(res);
-    int fields= PQnfields(res);
+    int            rows   = PQntuples(res);
+    int            fields = PQnfields(res);
     vector<string> field_names;
-    vector<Oid> field_types;
-    vector<bool> field_format;
-    for(int j = 0; j < fields; j++) {
+    vector<Oid>    field_types;
+    vector<bool>   field_format;
+    for (int j = 0; j < fields; j++) {
         field_names.push_back(PQfname(res, j));
         field_types.push_back(PQftype(res, j));
         field_format.push_back(PQfformat(res, j));
     }
-    for(int i = 0; i < rows; i++) {
+    for (int i = 0; i < rows; i++) {
         AmArg row;
-        for(int j = 0; j < fields; j++) {
-            row.push(field_names[j], get_result(
-                field_types[j], field_format[j],
-                PQgetvalue(res, i, j), PQgetisnull(res, i, j)));
+        for (int j = 0; j < fields; j++) {
+            row.push(field_names[j],
+                     get_result(field_types[j], field_format[j], PQgetvalue(res, i, j), PQgetisnull(res, i, j)));
         }
-        if(single) parent->handler->onTuple(parent, row);
+        if (single)
+            parent->handler->onTuple(parent, row);
         result.push(row);
     }
     TRANS_LOG(parent, "result: %s", AmArg::print(result).c_str());
@@ -77,33 +77,32 @@ void PGTransactionImpl::make_result(PGresult* res, bool single)
 
 int PGTransactionImpl::fetch_result()
 {
-    if(!conn) {
+    if (!conn) {
         ERROR("absent connection");
         return 0;
     }
 
-    PGresult* res = nullptr;
+    PGresult *res = nullptr;
     do {
-        if(!res) {
+        if (!res) {
             res = PQgetResult(*conn);
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
-        while(res) {
-            bool single = false;
-            ExecStatusType st = PQresultStatus(res);
+        while (res) {
+            bool           single = false;
+            ExecStatusType st     = PQresultStatus(res);
             switch (st) {
-            case PGRES_COMMAND_OK:
-                TRANS_LOG(parent, "command ok");
-                break;
+            case PGRES_COMMAND_OK: TRANS_LOG(parent, "command ok"); break;
             case PGRES_EMPTY_QUERY:
             case PGRES_BAD_RESPONSE:
             case PGRES_NONFATAL_ERROR:
-            case PGRES_FATAL_ERROR: {
+            case PGRES_FATAL_ERROR:
+            {
                 TRANS_LOG(parent, "error");
-                char* error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
+                char *error = PQresultVerboseErrorMessage(res, PQERRORS_DEFAULT, PQSHOW_CONTEXT_NEVER);
                 parent->get_query()->get_current_query()->set_last_error(error);
                 parent->handler->onError(parent, error ? error : "");
-                char* errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
+                char *errorfield = PQresultErrorField(res, PG_DIAG_SQLSTATE);
                 parent->handler->onErrorCode(parent, errorfield ? errorfield : "");
                 PQfreemem(error);
                 break;
@@ -124,18 +123,18 @@ int PGTransactionImpl::fetch_result()
                 TRANS_LOG(parent, "pipeline aborted");
                 pipeline_aborted = true;
                 break;
-            default:
-                ERROR("unexpected ExecStatusType:%d", st);
+            default: ERROR("unexpected ExecStatusType:%d", st);
             }
 
-            if(!pipeline_aborted && !synced && !single) query->put_result();
+            if (!pipeline_aborted && !synced && !single)
+                query->put_result();
 
             PQclear(res);
             res = PQgetResult(*conn);
             TRANS_LOG(parent, "PQgetResult(*conn)) = %p", res);
         }
 
-        if(PQisBusy(*conn)) {
+        if (PQisBusy(*conn)) {
             TRANS_LOG(parent, "PQisBusy:1. break fetch cycle");
             return 1;
         }

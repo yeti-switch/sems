@@ -5,54 +5,49 @@
 
 #define TEST_CLIENT_QUEUE "test_client_queue"
 
-#define wait_for_cond(cond)\
-    if(cond.get() == false)\
-        cond.wait_for();\
-    GTEST_ASSERT_EQ(cond.get(), true);\
-    cond.set(false);\
+#define wait_for_cond(cond)                                                                                            \
+    if (cond.get() == false)                                                                                           \
+        cond.wait_for();                                                                                               \
+    GTEST_ASSERT_EQ(cond.get(), true);                                                                                 \
+    cond.set(false);
 
-#define stop(client)\
-    client.stop(true);\
-    client.reset()\
+#define stop(client)                                                                                                   \
+    client.stop(true);                                                                                                 \
+    client.reset()
 
 /* TestUserData */
 
-class TestUserData
-  : public AmObject
-{
+class TestUserData : public AmObject {
   public:
     string value;
     TestUserData()
-      : value("")
-    {}
+        : value("")
+    {
+    }
 };
 
 /* TestClient */
 
-class TestClient
-  : public AmThread,
-    public AmEventFdQueue,
-    public AmEventHandler
-{
-private:
-    int epoll_fd;
+class TestClient : public AmThread, public AmEventFdQueue, public AmEventHandler {
+  private:
+    int               epoll_fd;
     AmCondition<bool> stopped;
-    AmEventFd stop_event;
-    string queue_name;
+    AmEventFd         stop_event;
+    string            queue_name;
 
-protected:
+  protected:
     void run() override;
     void on_stop() override;
-    void process(AmEvent* e) override;
+    void process(AmEvent *e) override;
 
-public:
+  public:
     TestClient();
     TestClient(const string &queue_name);
-    TestClient(const TestClient&) = delete;
+    TestClient(const TestClient &) = delete;
     virtual ~TestClient();
     virtual void reset();
 
     AmCondition<bool> reply_available;
-    AmArg reply_data;
-    AmObject* reply_user_data;
+    AmArg             reply_data;
+    AmObject         *reply_user_data;
 };

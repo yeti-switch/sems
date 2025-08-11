@@ -26,33 +26,30 @@
 #if !defined(_SPANDSP_UDPTL_H_)
 #define _SPANDSP_UDPTL_H_
 
-#define LOCAL_FAX_MAX_DATAGRAM      400
-#define LOCAL_FAX_MAX_FEC_PACKETS   5
+#define LOCAL_FAX_MAX_DATAGRAM    400
+#define LOCAL_FAX_MAX_FEC_PACKETS 5
 
-#define UDPTL_BUF_MASK              15
+#define UDPTL_BUF_MASK 15
 
-typedef int (udptl_rx_packet_handler_t) (void *user_data, const uint8_t msg[], int len, int seq_no);
+typedef int(udptl_rx_packet_handler_t)(void *user_data, const uint8_t msg[], int len, int seq_no);
 
-typedef struct
-{
-    int buf_len;
+typedef struct {
+    int     buf_len;
     uint8_t buf[LOCAL_FAX_MAX_DATAGRAM];
 } udptl_fec_tx_buffer_t;
 
-typedef struct
-{
-    int buf_len;
+typedef struct {
+    int     buf_len;
     uint8_t buf[LOCAL_FAX_MAX_DATAGRAM];
-    int fec_len[LOCAL_FAX_MAX_FEC_PACKETS];
+    int     fec_len[LOCAL_FAX_MAX_FEC_PACKETS];
     uint8_t fec[LOCAL_FAX_MAX_FEC_PACKETS][LOCAL_FAX_MAX_DATAGRAM];
-    int fec_span;
-    int fec_entries;
+    int     fec_span;
+    int     fec_entries;
 } udptl_fec_rx_buffer_t;
 
-struct udptl_state_s
-{
+struct udptl_state_s {
     udptl_rx_packet_handler_t *rx_packet_handler;
-    void *user_data;
+    void                      *user_data;
 
     /*! This option indicates the error correction scheme used in transmitted UDPTL
         packets. */
@@ -84,12 +81,7 @@ struct udptl_state_s
     udptl_fec_rx_buffer_t rx[UDPTL_BUF_MASK + 1];
 };
 
-enum
-{
-    UDPTL_ERROR_CORRECTION_NONE,
-    UDPTL_ERROR_CORRECTION_FEC,
-    UDPTL_ERROR_CORRECTION_REDUNDANCY
-};
+enum { UDPTL_ERROR_CORRECTION_NONE, UDPTL_ERROR_CORRECTION_FEC, UDPTL_ERROR_CORRECTION_REDUNDANCY };
 
 typedef struct udptl_state_s udptl_state_t;
 
@@ -144,7 +136,8 @@ int udptl_get_far_max_datagram(udptl_state_t *s);
     \param rx_packet_handler The callback function, used to report arriving IFP packets.
     \param user_data An opaque pointer supplied to rx_packet_handler.
     \return A pointer to the UDPTL context, or NULL if there was a problem. */
-udptl_state_t *udptl_init(udptl_state_t *s, int ec_scheme, int span, int entries, udptl_rx_packet_handler_t rx_packet_handler, void *user_data);
+udptl_state_t *udptl_init(udptl_state_t *s, int ec_scheme, int span, int entries,
+                          udptl_rx_packet_handler_t rx_packet_handler, void *user_data);
 
 /*! \brief Release a UDPTL context.
     \param s The UDPTL context.

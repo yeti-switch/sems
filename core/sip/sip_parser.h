@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -46,20 +46,13 @@ class trsp_socket;
 // SIP message types:
 //
 
-enum {
-    SIP_UNKNOWN=0,
-    SIP_REQUEST,
-    SIP_REPLY,
-    HTTP_REQUEST,
-    HTTP_REPLY
-};
+enum { SIP_UNKNOWN = 0, SIP_REQUEST, SIP_REPLY, HTTP_REQUEST, HTTP_REPLY };
 
 
-struct sip_request
-{
+struct sip_request {
     enum {
-        OTHER_METHOD=0,
-        //sip method
+        OTHER_METHOD = 0,
+        // sip method
         INVITE,
         ACK,
         PRACK,
@@ -67,95 +60,96 @@ struct sip_request
         BYE,
         CANCEL,
         REGISTER,
-        //http method
+        // http method
         GET
     };
 
     //
     // Request methods
     //
-    cstring  method_str;
-    int      method;
+    cstring method_str;
+    int     method;
 
-    cstring  ruri_str;
-    sip_uri  ruri;
+    cstring ruri_str;
+    sip_uri ruri;
 };
 
-struct sip_reply
-{
+struct sip_reply {
     int     code;
     cstring reason;
-    bool local_reply;
+    bool    local_reply;
 
     sip_reply()
-      : code(0),
-        local_reply(false)
-    {}
+        : code(0)
+        , local_reply(false)
+    {
+    }
 
-    sip_reply(int code, const cstring& reason)
-      : code(code), reason(reason),
-        local_reply(false)
-    {}
+    sip_reply(int code, const cstring &reason)
+        : code(code)
+        , reason(reason)
+        , local_reply(false)
+    {
+    }
 };
 
-struct sip_msg
-{
-    char*   buf;
-    int     len;
+struct sip_msg {
+    char *buf;
+    int   len;
 
     // Request or Reply?
-    int     type; 
+    int type;
 
     union {
-        struct sip_request* request;
-        struct sip_reply*   reply;
+        struct sip_request *request;
+        struct sip_reply   *reply;
     } u;
 
-    std::list<sip_header*>  hdrs;
+    std::list<sip_header *> hdrs;
 
-    sip_header*        to;
-    sip_header*        from;
+    sip_header *to;
+    sip_header *from;
 
-    sip_header*        cseq;
-    sip_header*        rack;
+    sip_header *cseq;
+    sip_header *rack;
 
-    std::list<sip_header*>  vias;
-    sip_header*        via1;
-    sip_via_parm*      via_p1;
+    std::list<sip_header *> vias;
+    sip_header             *via1;
+    sip_via_parm           *via_p1;
 
-    sip_header*        callid;
-    sip_header*        max_forwards;
-    sip_header*        expires;
+    sip_header *callid;
+    sip_header *max_forwards;
+    sip_header *expires;
 
-    std::list<sip_header*>  contacts;
-    std::list<sip_header*>  route;
-    std::list<sip_header*>  record_route;
-    sip_header*        content_type;
-    sip_header*        content_length;
-    cstring            body;
+    std::list<sip_header *> contacts;
+    std::list<sip_header *> route;
+    std::list<sip_header *> record_route;
+    sip_header             *content_type;
+    sip_header             *content_length;
+    cstring                 body;
 
-    sip_header*        connection;
-    sip_header*        upgrade;
-    sip_header*        origin;
-    sip_header*        sec_ws_version;
-    sip_header*        sec_ws_key;
-    sip_header*        sec_ws_ext;
-    sip_header*        sec_ws_accept;
-    sip_header*        sec_ws_protocol;
+    sip_header *connection;
+    sip_header *upgrade;
+    sip_header *origin;
+    sip_header *sec_ws_version;
+    sip_header *sec_ws_key;
+    sip_header *sec_ws_ext;
+    sip_header *sec_ws_accept;
+    sip_header *sec_ws_protocol;
 
-    sockaddr_storage   local_ip;
-    trsp_socket*       local_socket;
+    sockaddr_storage local_ip;
+    trsp_socket     *local_socket;
 
-    sockaddr_storage   remote_ip;
+    sockaddr_storage remote_ip;
 
-    timeval recv_timestamp;
+    timeval      recv_timestamp;
     unsigned int transport_id;
 
     sip_msg();
-    sip_msg(const char* msg_buf, int msg_len);
+    sip_msg(const char *msg_buf, int msg_len);
     ~sip_msg();
 
-    void copy_msg_buf(const char* msg_buf, int msg_len);
+    void copy_msg_buf(const char *msg_buf, int msg_len);
 
     int send(unsigned flags);
 
@@ -167,10 +161,10 @@ struct sip_msg
     void release();
 };
 
-int parse_method(int* method, const char* beg, int len);
-int parse_headers(sip_msg* msg, char** c, char* end, const char*& err_msg);
-int parse_sip_msg(sip_msg* msg, const char*& err_msg);
-int parse_http_msg(sip_msg* msg, const char*& err_msg);
+int parse_method(int *method, const char *beg, int len);
+int parse_headers(sip_msg *msg, char **c, char *end, const char *&err_msg);
+int parse_sip_msg(sip_msg *msg, const char *&err_msg);
+int parse_http_msg(sip_msg *msg, const char *&err_msg);
 
 #define get_contact(msg) (msg->contacts.empty() ? NULL : (*msg->contacts.begin()))
 

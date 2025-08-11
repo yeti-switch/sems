@@ -7,186 +7,180 @@
 #include <list>
 #include <map>
 
-using std::string;
 using std::list;
 using std::map;
+using std::string;
 
-struct AmContentType
-{
-  struct Param
-  {
+struct AmContentType {
+    struct Param {
 
-    enum Type {
-      UNPARSED=0,
-      BOUNDARY,
-      OTHER
+        enum Type { UNPARSED = 0, BOUNDARY, OTHER };
+
+        Type   type;
+        string name;
+        string value;
+
+        Param(const string &name, const string &value)
+            : type(UNPARSED)
+            , name(name)
+            , value(value)
+        {
+        }
+
+        int parseType();
     };
 
-    Type   type;
-    string name;
-    string value;
+    typedef list<Param *> Params;
 
-    Param(const string& name, const string& value)
-      : type(UNPARSED), name(name), value(value) {}
+    string type;
+    string subtype;
+    Params params;
+    Param *mp_boundary;
 
-    int parseType();
-  };
+    AmContentType();
+    AmContentType(const AmContentType &ct);
+    ~AmContentType();
 
-  typedef list<Param*> Params;
+    const AmContentType &operator=(const AmContentType &r_ct);
 
-  string type;
-  string subtype;
-  Params params;
-  Param* mp_boundary;
+    int parse(const string &ct);
+    int parseParams(const char *c, const char *end);
 
-  AmContentType();
-  AmContentType(const AmContentType& ct);
-  ~AmContentType();
+    void setType(const string &t);
+    void setSubType(const string &st);
+    void tolower();
 
-  const AmContentType& operator = (const AmContentType& r_ct);
+    bool isType(const string &t) const;
+    bool isSubType(const string &st) const;
+    bool hasContentType(const string &content_type) const;
 
-  int  parse(const string& ct);
-  int  parseParams(const char* c, const char* end);
+    /** get content-type without any parameters */
+    string getStr() const;
 
-  void setType(const string& t);
-  void setSubType(const string& st);
-  void tolower();
+    /** get content-type with parameters */
+    string getHdr() const;
 
-  bool isType(const string& t) const;
-  bool isSubType(const string& st) const;
-  bool hasContentType(const string& content_type) const;
+    /** Clear and free param list */
+    void clearParams();
 
-  /** get content-type without any parameters */
-  string getStr() const;
+    /** set a random boundary string */
+    void resetBoundary();
 
-  /** get content-type with parameters */
-  string getHdr() const;
-
-  /** Clear and free param list */
-  void clearParams();
-
-  /** set a random boundary string */
-  void resetBoundary();
-
-  void clear();
+    void clear();
 };
 
-class AmMimeBody
-: public AmObject
-{
-public:
-  typedef list<AmMimeBody*>  Parts;
+class AmMimeBody : public AmObject {
+  public:
+    typedef list<AmMimeBody *> Parts;
 
-private:
-  AmContentType  ct;
-  string         hdrs;
-  unsigned int   content_len;
-  unsigned char* payload;
-  
-  Parts parts;
+  private:
+    AmContentType  ct;
+    string         hdrs;
+    unsigned int   content_len;
+    unsigned char *payload;
 
-  void clearParts();
-  void clearPart(Parts::iterator position);
-  void clearPayload();
+    Parts parts;
 
-  int parseMultipart(const unsigned char* buf, unsigned int len);
-  int findNextBoundary(unsigned char** beg, unsigned char** end);
-  int parseSinglePart(unsigned char* buf, unsigned int len);
+    void clearParts();
+    void clearPart(Parts::iterator position);
+    void clearPayload();
 
-  void convertToMultipart();
-  void convertToSinglepart();
+    int parseMultipart(const unsigned char *buf, unsigned int len);
+    int findNextBoundary(unsigned char **beg, unsigned char **end);
+    int parseSinglePart(unsigned char *buf, unsigned int len);
 
-public:
-  /** Empty constructor */
-  AmMimeBody();
+    void convertToMultipart();
+    void convertToSinglepart();
 
-  /** Deep-copy constructor */
-  AmMimeBody(const AmMimeBody& body);
+  public:
+    /** Empty constructor */
+    AmMimeBody();
 
-  /** Destuctor */
-  ~AmMimeBody();
+    /** Deep-copy constructor */
+    AmMimeBody(const AmMimeBody &body);
 
-  /** Deep copy operator */
-  const AmMimeBody& operator = (const AmMimeBody& r_body);
+    /** Destuctor */
+    ~AmMimeBody();
 
-  /** Parse a body (single & multi-part) */
-  int  parse(const string& content_type, 
-	     const unsigned char* buf, 
-	     unsigned int len);
+    /** Deep copy operator */
+    const AmMimeBody &operator=(const AmMimeBody &r_body);
 
-  /** Set the payload of this body */
-  void setPayload(const unsigned char* buf, unsigned int len);
+    /** Parse a body (single & multi-part) */
+    int parse(const string &content_type, const unsigned char *buf, unsigned int len);
 
-  /** Set part headers (intended for sub-parts)*/
-  void setHeaders(const string& hdrs);
+    /** Set the payload of this body */
+    void setPayload(const unsigned char *buf, unsigned int len);
 
-  /** 
-   * Add a new part to this body, possibly
-   * converting to multi-part if necessary.
-   * @return a pointer to the new empty part.
-   */
-  AmMimeBody* addPart(const string& content_type);
-  /**
-   * Delete a body part, converting resulting body to single-part if necessary.
-   */
-  int deletePart(const string& content_type);
+    /** Set part headers (intended for sub-parts)*/
+    void setHeaders(const string &hdrs);
 
-  /** Get content-type without any parameters */
-  string getCTStr() const { return ct.getStr(); }
+    /**
+     * Add a new part to this body, possibly
+     * converting to multi-part if necessary.
+     * @return a pointer to the new empty part.
+     */
+    AmMimeBody *addPart(const string &content_type);
+    /**
+     * Delete a body part, converting resulting body to single-part if necessary.
+     */
+    int deletePart(const string &content_type);
 
-  /** Get content-type with parameters */
-  string getCTHdr() const { return ct.getHdr(); }
-  
-  /** @return the list of sub-parts */
-  const Parts& getParts() const { return parts; }
+    /** Get content-type without any parameters */
+    string getCTStr() const { return ct.getStr(); }
 
-  /** @return the sub-part headers */
-  const string& getHeaders() const { return hdrs; }
+    /** Get content-type with parameters */
+    string getCTHdr() const { return ct.getHdr(); }
 
-  /**
-   * @return a pointer to the payload of this part.
-   *         in case of multi-part, NULL is returned.
-   */
-  const unsigned char* getPayload() const { return payload; }
+    /** @return the list of sub-parts */
+    const Parts &getParts() const { return parts; }
 
-  /**
-   * @return the payload length of this part.
-   *         in case of multi-part, 0 is returned.
-   */
-  unsigned int   getLen() const { return content_len; }
+    /** @return the sub-part headers */
+    const string &getHeaders() const { return hdrs; }
 
-  /** @return true if no payload assigned and no sub-parts available */
-  bool empty() const;
+    /**
+     * @return a pointer to the payload of this part.
+     *         in case of multi-part, NULL is returned.
+     */
+    const unsigned char *getPayload() const { return payload; }
 
-  /** @return true if this part has the provided content-type */
-  bool isContentType(const string& content_type) const;
+    /**
+     * @return the payload length of this part.
+     *         in case of multi-part, 0 is returned.
+     */
+    unsigned int getLen() const { return content_len; }
 
-  /** 
-   * @return a pointer to a part of the coresponding 
-   *         content-type (if available).
-   *         This could be a pointer to this body.
-   */
-  AmMimeBody* hasContentType(const string& content_type);
+    /** @return true if no payload assigned and no sub-parts available */
+    bool empty() const;
 
-  /** 
-   * @return a const pointer to a part of the coresponding 
-   *         content-type (if available).
-   *         This could be a pointer to this body.
-   */
-  const AmMimeBody* hasContentType(const string& content_type) const;
+    /** @return true if this part has the provided content-type */
+    bool isContentType(const string &content_type) const;
 
-  /**
-   * Print the body including sub-parts suitable for sending
-   * within the body of a SIP message.
-   */
-  void print(string& buf) const;
+    /**
+     * @return a pointer to a part of the coresponding
+     *         content-type (if available).
+     *         This could be a pointer to this body.
+     */
+    AmMimeBody *hasContentType(const string &content_type);
 
-  const AmContentType &getContentType() const  { return ct; }
-  void setContentType(const AmContentType &_ct) { ct = _ct; }
-  void normalizeContentType();
-  void addPart(const AmMimeBody &part) { parts.push_back(new AmMimeBody(part)); }
+    /**
+     * @return a const pointer to a part of the coresponding
+     *         content-type (if available).
+     *         This could be a pointer to this body.
+     */
+    const AmMimeBody *hasContentType(const string &content_type) const;
 
-  void clear();
+    /**
+     * Print the body including sub-parts suitable for sending
+     * within the body of a SIP message.
+     */
+    void print(string &buf) const;
+
+    const AmContentType &getContentType() const { return ct; }
+    void                 setContentType(const AmContentType &_ct) { ct = _ct; }
+    void                 normalizeContentType();
+    void                 addPart(const AmMimeBody &part) { parts.push_back(new AmMimeBody(part)); }
+
+    void clear();
 };
 
 #endif

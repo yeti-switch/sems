@@ -8,8 +8,10 @@
 
 
 TimerFD::TimerFD()
-    : timer_fd (-1), timer_val(0)
-{}
+    : timer_fd(-1)
+    , timer_val(0)
+{
+}
 
 
 TimerFD::~TimerFD()
@@ -20,8 +22,8 @@ TimerFD::~TimerFD()
 
 void inline set_timespec(struct timespec *tmr, unsigned long long ustime)
 {
-        tmr->tv_sec = (time_t) (ustime / 1000000ULL);
-        tmr->tv_nsec = (long) (1000ULL * (ustime % 1000000ULL));
+    tmr->tv_sec  = (time_t)(ustime / 1000000ULL);
+    tmr->tv_nsec = (long)(1000ULL * (ustime % 1000000ULL));
 }
 
 
@@ -30,11 +32,10 @@ bool TimerFD::init(int epoll_fd, int _timer_interval_usec, int ev_data_fd)
     struct itimerspec tmr;
 
 
-    if( timer_fd >= 0 )
+    if (timer_fd >= 0)
         return true;
 
-    if( (timer_fd = ::timerfd_create( CLOCK_MONOTONIC, TFD_NONBLOCK )) == -1 )
-    {
+    if ((timer_fd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1) {
         ERROR("timerfd_create(): %m");
         return false;
     }
@@ -45,19 +46,18 @@ bool TimerFD::init(int epoll_fd, int _timer_interval_usec, int ev_data_fd)
     set_timespec(&tmr.it_value, timer_interval_usec);
     set_timespec(&tmr.it_interval, timer_interval_usec);
 
-    if(::timerfd_settime(timer_fd, 0, &tmr, NULL))
-    {
+    if (::timerfd_settime(timer_fd, 0, &tmr, NULL)) {
         ERROR("timerfd_settime(): %m");
         return false;
     }
 
-    struct epoll_event  ev;
+    struct epoll_event ev;
 
-    bzero(&ev,sizeof(struct epoll_event));
-    ev.events   = EPOLLIN;
-    ev.data.fd  = ev_data_fd;
+    bzero(&ev, sizeof(struct epoll_event));
+    ev.events  = EPOLLIN;
+    ev.data.fd = ev_data_fd;
 
-    if( ::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &ev) != -1 )
+    if (::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &ev) != -1)
         return true;
 
     ERROR("%s epoll_ctl(): %m", __func__);
@@ -70,7 +70,7 @@ uint64_t TimerFD::handler()
     uint64_t ticks = 0;
 
 
-    if( ::read(timer_fd, &ticks, sizeof(uint64_t)) == sizeof(uint64_t) )
+    if (::read(timer_fd, &ticks, sizeof(uint64_t)) == sizeof(uint64_t))
         timer_val += ticks;
     else
         ERROR("read(): %m");

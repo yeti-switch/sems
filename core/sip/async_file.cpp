@@ -2,7 +2,7 @@
 #include "async_file_writer.h"
 #include "log.h"
 
-#define MIN_WRITE_SIZE 128*1024 /* 128 KB */
+#define MIN_WRITE_SIZE 128 * 1024 /* 128 KB */
 
 #include <event2/event_struct.h>
 
@@ -20,106 +20,116 @@ Possible issue:
 */
 
 async_file::async_file(unsigned int buf_len)
-  : fifo_buffer(buf_len),
-    evbase(NULL), closed(false), error(false), write_thresh(MIN_WRITE_SIZE)
+    : fifo_buffer(buf_len)
+    , evbase(NULL)
+    , closed(false)
+    , error(false)
+    , write_thresh(MIN_WRITE_SIZE)
 {
-  if (buf_len <= MIN_WRITE_SIZE) {
-    ERROR("application error: async_file with buffer size <=128k (%u), "
-	  "using %u write threshold\n", buf_len, buf_len/2);
-    write_thresh = buf_len / 2;
-  }
+    if (buf_len <= MIN_WRITE_SIZE) {
+        ERROR("application error: async_file with buffer size <=128k (%u), "
+              "using %u write threshold\n",
+              buf_len, buf_len / 2);
+        write_thresh = buf_len / 2;
+    }
 
-  evbase = async_file_writer::instance()->get_evbase();
-  ev_write = event_new(evbase,-1,0,write_cb,this);
+    evbase   = async_file_writer::instance()->get_evbase();
+    ev_write = event_new(evbase, -1, 0, write_cb, this);
 }
 
 async_file::~async_file()
 {
-  event_free(ev_write);
-  ev_write = NULL;
+    event_free(ev_write);
+    ev_write = NULL;
 }
 
-int async_file::write(const void* buf, unsigned int len)
+int async_file::write(const void *buf, unsigned int len)
 {
-  std::lock_guard<std::recursive_mutex> _l(*this);
-  if(closed) return Closed;
-  if(error)  return Error;
+    std::lock_guard<std::recursive_mutex> _l(*this);
+    if (closed)
+        return Closed;
+    if (error)
+        return Error;
 
-  int ret = fifo_buffer::write(buf,len);
+    int ret = fifo_buffer::write(buf, len);
 
-  if(fifo_buffer::get_buffered_bytes() >= write_thresh) {
-    event_active(ev_write, 0, 0);
-  }
+    if (fifo_buffer::get_buffered_bytes() >= write_thresh) {
+        event_active(ev_write, 0, 0);
+    }
 
-  if(ret < 0) return BufferFull;
+    if (ret < 0)
+        return BufferFull;
 
-  return ret;
+    return ret;
 }
 
 int async_file::writev(const struct iovec *iov, int iovcnt)
 {
-  std::lock_guard<std::recursive_mutex> _l(*this);
-  if(closed) return Closed;
-  if(error)  return Error;
+    std::lock_guard<std::recursive_mutex> _l(*this);
+    if (closed)
+        return Closed;
+    if (error)
+        return Error;
 
-  int ret = fifo_buffer::writev(iov,iovcnt);
+    int ret = fifo_buffer::writev(iov, iovcnt);
 
-  if(fifo_buffer::get_buffered_bytes() >= write_thresh) {
-    event_active(ev_write, 0, 0);
-  }
+    if (fifo_buffer::get_buffered_bytes() >= write_thresh) {
+        event_active(ev_write, 0, 0);
+    }
 
-  if(ret < 0) return BufferFull;
+    if (ret < 0)
+        return BufferFull;
 
-  return ret;
+    return ret;
 }
 
 void async_file::close()
 {
-  std::lock_guard<std::recursive_mutex> _l(*this);
-  closed = true;
-  event_active(ev_write, 0, 0);
+    std::lock_guard<std::recursive_mutex> _l(*this);
+    closed = true;
+    event_active(ev_write, 0, 0);
 }
 
-void async_file::write_cb(int sd, short what, void* ctx)
+void async_file::write_cb(int sd, short what, void *ctx)
 {
-  ((async_file*)ctx)->write_cycle();
+    ((async_file *)ctx)->write_cycle();
 }
 
 void async_file::write_cycle()
 {
-  int read_bs = 0;
+    int read_bs = 0;
 
-  lock();
-  read_bs = get_read_bs();
-  unlock();
+    lock();
+    read_bs = get_read_bs();
+    unlock();
 
-  while(!error && (read_bs > 0)) {
+    while (!error && (read_bs > 0)) {
 
-    int bytes = write_to_file(get_read_ptr(),read_bs);
-    if(bytes < 0) {
-      error  = true;
-      ERROR("Error detected: stopped writing");
-      break;
+        int bytes = write_to_file(get_read_ptr(), read_bs);
+        if (bytes < 0) {
+            error = true;
+            ERROR("Error detected: stopped writing");
+            break;
+        }
+
+        lock();
+        skip(bytes);
+        read_bs = get_read_bs();
+        unlock();
     }
 
     lock();
-    skip(bytes);
-    read_bs = get_read_bs();
+    if (closed) {
+        if (error || !fifo_buffer::get_buffered_bytes())
+            on_flushed();
+        else
+            event_active(ev_write, 0, 0);
+    }
     unlock();
-  }
-
-  lock();
-  if(closed) {
-    if(error || !fifo_buffer::get_buffered_bytes())
-      on_flushed();
-    else
-      event_active(ev_write, 0, 0);
-  }
-  unlock();
 }
 
 unsigned int async_file::get_buffered_bytes()
 {
-  std::lock_guard<std::recursive_mutex> _l(*this);
-  return fifo_buffer::get_buffered_bytes();
+    std::lock_guard<std::recursive_mutex> _l(*this);
+    return fifo_buffer::get_buffered_bytes();
 }

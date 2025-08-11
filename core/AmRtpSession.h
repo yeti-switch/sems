@@ -2,6 +2,6 @@
 
 class AmRtpSession {
   public:
-    virtual ~AmRtpSession() { }
+    virtual ~AmRtpSession() {}
     virtual void recvPacket(int fd) = 0;
 };

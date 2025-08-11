@@ -15,53 +15,51 @@
 #include <map>
 #include "RpcTreeHandler.h"
 
-using std::string;
 using std::map;
+using std::string;
 
 #define MOD_NAME "sctp_bus"
 
-class SctpBus
-: public AmDynInvokeFactory,
-  public AmConfigFactory,
-  public AmThread,
-  public AmEventFdQueue,
-  public AmEventHandler,
-  public RpcTreeHandler<SctpBus>
-{
-    static SctpBus* _instance;
+class SctpBus : public AmDynInvokeFactory,
+                public AmConfigFactory,
+                public AmThread,
+                public AmEventFdQueue,
+                public AmEventHandler,
+                public RpcTreeHandler<SctpBus> {
+    static SctpBus *_instance;
 
     typedef map<unsigned int, SctpConnection *> Connections;
-    Connections connections_by_sock;
-    Connections connections_by_id;
+    Connections                                 connections_by_sock;
+    Connections                                 connections_by_id;
 
     SctpServerConnection server_connection;
-    cfg_reader reader;
+    cfg_reader           reader;
 
-    AmEventFd stop_event;
-    AmTimerFd timer;
+    AmEventFd         stop_event;
+    AmTimerFd         timer;
     AmCondition<bool> stopped;
 
     int epoll_fd;
 
   protected:
     void init_rpc_tree();
-    int configure();
+    int  configure();
 
   public:
-    SctpBus(const string& name);
+    SctpBus(const string &name);
     ~SctpBus();
 
-    static SctpBus* instance();
-    AmDynInvoke* getInstance() { return SctpBus::instance(); }
+    static SctpBus *instance();
+    AmDynInvoke    *getInstance() { return SctpBus::instance(); }
 
     int onLoad();
-    int configure(const std::string& config);
-    int reconfigure(const std::string& config);
+    int configure(const std::string &config);
+    int reconfigure(const std::string &config);
 
     void run();
     void on_stop();
 
-    void process(AmEvent* ev);
+    void process(AmEvent *ev);
     void on_timer();
     void process_client_connection(int sock, uint32_t events);
 
@@ -72,14 +70,11 @@ class SctpBus
     void onConnectionRemove(const SctpBusRemoveConnection &e);
     void onReloadEvent();
 
-    //client connections management
-    int addClientConnection(unsigned int id,
-                            const sockaddr_storage &a,
-                            int reconnect_interval,
+    // client connections management
+    int addClientConnection(unsigned int id, const sockaddr_storage &a, int reconnect_interval,
                             const string &event_sink = string());
 
     void showServerAssocations(const AmArg &args, AmArg &ret);
     void showClientConnections(const AmArg &args, AmArg &ret);
     void reload(const AmArg &args, AmArg &ret);
 };
-

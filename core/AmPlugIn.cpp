@@ -21,8 +21,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -71,46 +71,28 @@ static unsigned int tevent_samples2bytes([[maybe_unused]] long h_codec, unsigned
     return num_samples;
 }
 
-amci_codec_t _codec_pcm16 = { 
-    CODEC_PCM16,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    pcm16_bytes2samples,
-    pcm16_samples2bytes,
-    nullptr
-};
+amci_codec_t _codec_pcm16 = { CODEC_PCM16,         NULL,   NULL, NULL, NULL, NULL, pcm16_bytes2samples,
+                              pcm16_samples2bytes, nullptr };
 
-amci_codec_t _codec_tevent = { 
-    CODEC_TELEPHONE_EVENT,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    tevent_bytes2samples,
-    tevent_samples2bytes,
-    nullptr
-};
+amci_codec_t _codec_tevent = { CODEC_TELEPHONE_EVENT, NULL,   NULL, NULL, NULL, NULL, tevent_bytes2samples,
+                               tevent_samples2bytes,  nullptr };
 
-#define tevent_payload_initializer(RATE) \
-    { -1, "telephone-event", 800, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
+#define tevent_payload_initializer(RATE) { -1, "telephone-event", 800, RATE, -1, CODEC_TELEPHONE_EVENT, -1 }
 
-static amci_payload_t _payload_tevent_8 = tevent_payload_initializer(8000);
+static amci_payload_t _payload_tevent_8  = tevent_payload_initializer(8000);
 static amci_payload_t _payload_tevent_16 = tevent_payload_initializer(16000);
 static amci_payload_t _payload_tevent_24 = tevent_payload_initializer(24000);
 static amci_payload_t _payload_tevent_32 = tevent_payload_initializer(32000);
 static amci_payload_t _payload_tevent_48 = tevent_payload_initializer(48000);
 
-AmPlugIn* AmPlugIn::_instance = nullptr;
+AmPlugIn *AmPlugIn::_instance = nullptr;
 
 AmPlugIn::AmPlugIn()
-  : dynamic_pl(DYNAMIC_PAYLOAD_TYPE_START)
-{}
+    : dynamic_pl(DYNAMIC_PAYLOAD_TYPE_START)
+{
+}
 
-static void delete_plugin_factory(std::pair<string, AmPluginFactory*> pf)
+static void delete_plugin_factory(std::pair<string, AmPluginFactory *> pf)
 {
     DBG("decreasing reference to plug-in factory: %s", pf.first.c_str());
     dec_ref(pf.second);
@@ -121,38 +103,37 @@ AmPlugIn::~AmPlugIn()
     std::for_each(name2logfac.begin(), name2logfac.end(), delete_plugin_factory);
     std::for_each(name2di.begin(), name2di.end(), delete_plugin_factory);
     std::for_each(name2seh.begin(), name2seh.end(), delete_plugin_factory);
-    std::for_each(plugins_objects.begin(), plugins_objects.end(), [](
-        std::pair<std::tuple<int, string>, AmPluginFactory*> pf)
-    {
-        DBG("decreasing reference to plug-in factory: %s", std::get<1>(pf.first).c_str());
-         dec_ref(pf.second);
-    });
+    std::for_each(plugins_objects.begin(), plugins_objects.end(),
+                  [](std::pair<std::tuple<int, string>, AmPluginFactory *> pf) {
+                      DBG("decreasing reference to plug-in factory: %s", std::get<1>(pf.first).c_str());
+                      dec_ref(pf.second);
+                  });
     std::for_each(name2config.begin(), name2config.end(), delete_plugin_factory);
 
     // if _DEBUG is set do not unload shared libs to allow better debugging
 #ifndef _DEBUG
-    //for(vector<void*>::iterator it=dlls.begin();it!=dlls.end();++it)
-    //dlclose(*it);
+    // for(vector<void*>::iterator it=dlls.begin();it!=dlls.end();++it)
+    // dlclose(*it);
 #endif
 }
 
 void AmPlugIn::dispose()
 {
-    if(_instance) {
+    if (_instance) {
         delete _instance;
     }
 }
 
-AmPlugIn* AmPlugIn::instance()
+AmPlugIn *AmPlugIn::instance()
 {
-    if(!_instance)
+    if (!_instance)
         _instance = new AmPlugIn();
     return _instance;
 }
 
 void AmPlugIn::init()
 {
-    for(const auto &p: AmConfig.exclude_payloads)
+    for (const auto &p : AmConfig.exclude_payloads)
         excluded_payloads.emplace(p);
 
     DBG("adding built-in codecs...");
@@ -166,7 +147,7 @@ void AmPlugIn::init()
     addPayload(&_payload_tevent_48);
 }
 
-static void shutdown_plugin_factory(std::pair<std::tuple<int, string>, AmPluginFactory*> pf)
+static void shutdown_plugin_factory(std::pair<std::tuple<int, string>, AmPluginFactory *> pf)
 {
     DBG("shutdown plug-in: %s", std::get<1>(pf.first).c_str());
     pf.second->onShutdown();
@@ -177,9 +158,9 @@ void AmPlugIn::shutdown()
     std::for_each(plugins_objects.begin(), plugins_objects.end(), shutdown_plugin_factory);
 }
 
-int AmPlugIn::load(const vector<string>& directories, const std::vector<std::string>& plugins)
+int AmPlugIn::load(const vector<string> &directories, const std::vector<std::string> &plugins)
 {
-    int err=0;
+    int err = 0;
 
     for (const auto &plugin_name : plugins) {
         if (plugin_name == "sipctrl") {
@@ -191,27 +172,26 @@ int AmPlugIn::load(const vector<string>& directories, const std::vector<std::str
 
         string plugin_base_name(plugin_name + ".so");
 
-        bool plugin_found = false;
+        bool   plugin_found = false;
         string plugin_path;
-        for(const auto &directory: directories) {
+        for (const auto &directory : directories) {
             std::error_code ec;
-            string path(directory + "/" + plugin_base_name);
-            if(std::filesystem::exists(path, ec)) {
+            string          path(directory + "/" + plugin_base_name);
+            if (std::filesystem::exists(path, ec)) {
                 plugin_path.swap(path);
                 plugin_found = true;
                 break;
             }
         }
-        if(!plugin_found) {
-            ERROR("failed to find '%s' in any of the configured modules directories (%s)",
-                plugin_base_name.data(),
-                AmLcConfig::instance().getModulesPathList().c_str());
+        if (!plugin_found) {
+            ERROR("failed to find '%s' in any of the configured modules directories (%s)", plugin_base_name.data(),
+                  AmLcConfig::instance().getModulesPathList().c_str());
             return -1;
         }
 
         DBG("loading %s...", plugin_path.c_str());
 
-        if((err = loadPlugIn(plugin_path, plugin_name)) < 0 ) {
+        if ((err = loadPlugIn(plugin_path, plugin_name)) < 0) {
             ERROR("while loading plug-in '%s'", plugin_path.c_str());
             // be strict here: if plugin not loaded, stop!
             return err;
@@ -225,22 +205,19 @@ int AmPlugIn::load(const vector<string>& directories, const std::vector<std::str
 
 int AmPlugIn::initPlugins()
 {
-    for(auto &plugin : plugins_objects) {
+    for (auto &plugin : plugins_objects) {
 
-        if(name2logfac.end() != std::find_if(
-            name2logfac.begin(),name2logfac.end(),
-            [&plugin](auto &it) {
-                return it.second == plugin.second;
-            }
-        )) {
-            //ignore logging plugins
+        if (name2logfac.end() != std::find_if(name2logfac.begin(), name2logfac.end(),
+                                              [&plugin](auto &it) { return it.second == plugin.second; }))
+        {
+            // ignore logging plugins
             continue;
         }
 
         DBG("initialize plug-in %s", std::get<1>(plugin.first).data());
 
         int err = plugin.second->onLoad();
-        if(err)
+        if (err)
             return err;
     }
     return 0;
@@ -248,12 +225,12 @@ int AmPlugIn::initPlugins()
 
 int AmPlugIn::initLoggingPlugins()
 {
-    for(auto &plugin : name2logfac) {
+    for (auto &plugin : name2logfac) {
 
         DBG("initialize logging plug-in %s", plugin.first.data());
 
         int err = plugin.second->onLoad();
-        if(err)
+        if (err)
             return err;
     }
     return 0;
@@ -264,102 +241,100 @@ void AmPlugIn::registerLoggingPlugins()
     int plugin_log_level;
 
     // init logging facilities
-    for(auto &it : name2logfac) {
+    for (auto &it : name2logfac) {
         // register for receiving logging messages
         register_log_hook(it.second);
-        //adjust gloval loglevel
+        // adjust gloval loglevel
         plugin_log_level = it.second->getLogLevel();
-        if(plugin_log_level > log_level ||
-           get_higher_levels(plugin_log_level))
-        {
+        if (plugin_log_level > log_level || get_higher_levels(plugin_log_level)) {
             log_level = plugin_log_level;
         }
     }
 }
 
-int AmPlugIn::loadPlugIn(const string& file, const string& plugin_name)
+int AmPlugIn::loadPlugIn(const string &file, const string &plugin_name)
 {
-    AmPluginFactory* plugin = NULL; // default: not loaded
-    int dlopen_flags = RTLD_NOW;
+    AmPluginFactory *plugin       = NULL; // default: not loaded
+    int              dlopen_flags = RTLD_NOW;
 
     const auto &rtld = AmConfig.rtld_global_plugins;
-    if(rtld.find(plugin_name) != rtld.end() ||
-       rtld.find(plugin_name.substr(0, plugin_name.find("_unit"))) != rtld.end())
+    if (rtld.find(plugin_name) != rtld.end() ||
+        rtld.find(plugin_name.substr(0, plugin_name.find("_unit"))) != rtld.end())
     {
         dlopen_flags |= RTLD_GLOBAL;
         DBG("using RTLD_NOW | RTLD_GLOBAL to dlopen '%s'", file.c_str());
     }
 
-    void* h_dl = dlopen(file.c_str(),dlopen_flags);
-    if(!h_dl) {
-        ERROR("AmPlugIn::loadPlugIn: %s: %s",file.c_str(),dlerror());
+    void *h_dl = dlopen(file.c_str(), dlopen_flags);
+    if (!h_dl) {
+        ERROR("AmPlugIn::loadPlugIn: %s: %s", file.c_str(), dlerror());
         return -1;
     }
 
-    FactoryCreate fc = NULL;
-    amci_exports_t* exports = (amci_exports_t*)dlsym(h_dl,"amci_exports");
+    FactoryCreate   fc      = NULL;
+    amci_exports_t *exports = (amci_exports_t *)dlsym(h_dl, "amci_exports");
 
-    bool has_sym=false;
-    if(exports) {
-        if(loadAudioPlugIn(exports))
+    bool has_sym = false;
+    if (exports) {
+        if (loadAudioPlugIn(exports))
             goto error;
         goto end;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_SESSION_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadAppPlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_SESSION_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadAppPlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_SESSION_EVENT_HANDLER_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadSehPlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_SESSION_EVENT_HANDLER_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadSehPlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadBasePlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_PLUGIN_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadBasePlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CLASS_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadDiPlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_PLUGIN_CLASS_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadDiPlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_PLUGIN_CONF_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadConfPlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_PLUGIN_CONF_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadConfPlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if((fc = (FactoryCreate)dlsym(h_dl,FACTORY_LOG_FACILITY_EXPORT_STR)) != NULL) {
-        plugin = (AmPluginFactory*)fc();
-        if(loadLogFacPlugIn(plugin))
+    if ((fc = (FactoryCreate)dlsym(h_dl, FACTORY_LOG_FACILITY_EXPORT_STR)) != NULL) {
+        plugin = (AmPluginFactory *)fc();
+        if (loadLogFacPlugIn(plugin))
             goto error;
-        has_sym=true;
+        has_sym = true;
     }
 
-    if(NULL != plugin) {
+    if (NULL != plugin) {
         inc_ref(plugin);
 
         int idx = 0;
-        if(auto last_object = plugins_objects.rbegin(); last_object != plugins_objects.rend()) {
+        if (auto last_object = plugins_objects.rbegin(); last_object != plugins_objects.rend()) {
             idx = std::get<0>(last_object->first);
         }
         plugins_objects.emplace(std::make_tuple(idx + 1, plugin_name), plugin);
     }
 
-    if(!has_sym){
-        ERROR("Plugin type could not be detected (%s)(%s)",file.c_str(),dlerror());
+    if (!has_sym) {
+        ERROR("Plugin type could not be detected (%s)(%s)", file.c_str(), dlerror());
         goto error;
     }
 
@@ -368,24 +343,22 @@ end:
     return 0;
 
 error:
-//    dlclose(h_dl);
+    //    dlclose(h_dl);
     return -1;
 }
 
 
-amci_inoutfmt_t* AmPlugIn::fileFormat(const string& fmt_name, const string& ext)
+amci_inoutfmt_t *AmPlugIn::fileFormat(const string &fmt_name, const string &ext)
 {
-    if(!fmt_name.empty()) {
-        std::map<std::string,amci_inoutfmt_t*>::iterator it = file_formats.find(fmt_name);
-        if((it != file_formats.end()) &&
-            (ext.empty() || (ext == it->second->ext)))
-        {
+    if (!fmt_name.empty()) {
+        std::map<std::string, amci_inoutfmt_t *>::iterator it = file_formats.find(fmt_name);
+        if ((it != file_formats.end()) && (ext.empty() || (ext == it->second->ext))) {
             return it->second;
         }
-    } else if(!ext.empty()) {
-        std::map<std::string,amci_inoutfmt_t*>::iterator it = file_formats.begin();
-        for(;it != file_formats.end();++it) {
-            if(ext == it->second->ext)
+    } else if (!ext.empty()) {
+        std::map<std::string, amci_inoutfmt_t *>::iterator it = file_formats.begin();
+        for (; it != file_formats.end(); ++it) {
+            if (ext == it->second->ext)
                 return it->second;
         }
     }
@@ -393,34 +366,28 @@ amci_inoutfmt_t* AmPlugIn::fileFormat(const string& fmt_name, const string& ext)
     return 0;
 }
 
-amci_codec_t* AmPlugIn::codec(int id)
+amci_codec_t *AmPlugIn::codec(int id)
 {
-    std::map<int,amci_codec_t*>::const_iterator it = codecs.find(id);
-    if(it != codecs.end())
+    std::map<int, amci_codec_t *>::const_iterator it = codecs.find(id);
+    if (it != codecs.end())
         return it->second;
     return 0;
 }
 
-amci_payload_t*  AmPlugIn::payload(int payload_id) const
+amci_payload_t *AmPlugIn::payload(int payload_id) const
 {
-    std::map<int,amci_payload_t*>::const_iterator it = payloads.find(payload_id);
-    if(it != payloads.end())
+    std::map<int, amci_payload_t *>::const_iterator it = payloads.find(payload_id);
+    if (it != payloads.end())
         return it->second;
     return 0;
 }
 
-int AmPlugIn::getDynPayload(const string& name, int rate, int encoding_param) const
+int AmPlugIn::getDynPayload(const string &name, int rate, int encoding_param) const
 {
     // find a dynamic payload by name/rate and encoding_param (channels, if > 0)
-    for(std::map<int, amci_payload_t*>::const_iterator pl_it = payloads.begin();
-        pl_it != payloads.end(); ++pl_it)
-    {
-        if((!strcasecmp(name.c_str(),pl_it->second->name)
-           && (rate == pl_it->second->advertised_sample_rate)) )
-        {
-            if ((encoding_param > 0) && (pl_it->second->channels > 0) && 
-                (encoding_param != pl_it->second->channels))
-            {
+    for (std::map<int, amci_payload_t *>::const_iterator pl_it = payloads.begin(); pl_it != payloads.end(); ++pl_it) {
+        if ((!strcasecmp(name.c_str(), pl_it->second->name) && (rate == pl_it->second->advertised_sample_rate))) {
+            if ((encoding_param > 0) && (pl_it->second->channels > 0) && (encoding_param != pl_it->second->channels)) {
                 continue;
             }
             return pl_it->first;
@@ -431,82 +398,85 @@ int AmPlugIn::getDynPayload(const string& name, int rate, int encoding_param) co
 }
 
 /** return 0, or -1 in case of error. */
-void AmPlugIn::getPayloads(vector<SdpPayload>& pl_vec) const
+void AmPlugIn::getPayloads(vector<SdpPayload> &pl_vec) const
 {
-    for(std::map<int,int>::const_iterator it = payload_order.begin(); it != payload_order.end(); ++it) {
-        std::map<int,amci_payload_t*>::const_iterator pl_it = payloads.find(it->second);
-        if(pl_it != payloads.end()) {
-      // if channels==2 use that value; otherwise don't add channels param
-      pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate, pl_it->second->channels==2?2:0));
-    } else {
-      ERROR("Payload %d (from the payload_order map) was not found in payloads map!", it->second);
+    for (std::map<int, int>::const_iterator it = payload_order.begin(); it != payload_order.end(); ++it) {
+        std::map<int, amci_payload_t *>::const_iterator pl_it = payloads.find(it->second);
+        if (pl_it != payloads.end()) {
+            // if channels==2 use that value; otherwise don't add channels param
+            pl_vec.push_back(SdpPayload(pl_it->first, pl_it->second->name, pl_it->second->advertised_sample_rate,
+                                        pl_it->second->channels == 2 ? 2 : 0));
+        } else {
+            ERROR("Payload %d (from the payload_order map) was not found in payloads map!", it->second);
+        }
     }
-  }
 }
 
-amci_subtype_t* AmPlugIn::subtype(amci_inoutfmt_t* iofmt, int subtype)
+amci_subtype_t *AmPlugIn::subtype(amci_inoutfmt_t *iofmt, int subtype)
 {
-    if(!iofmt)
+    if (!iofmt)
         return 0;
 
-    amci_subtype_t* st = iofmt->subtypes;
-    if(subtype<0) // default subtype wanted
+    amci_subtype_t *st = iofmt->subtypes;
+    if (subtype < 0) // default subtype wanted
         return st;
 
-    for(;;st++) {
-        if(!st || st->type<0) break;
-        if(st->type == subtype)
-        return st;
+    for (;; st++) {
+        if (!st || st->type < 0)
+            break;
+        if (st->type == subtype)
+            return st;
     }
 
     return 0;
 }
 
-amci_subtype_t* AmPlugIn::subtype(amci_inoutfmt_t* iofmt, const string& subtype_name)
+amci_subtype_t *AmPlugIn::subtype(amci_inoutfmt_t *iofmt, const string &subtype_name)
 {
-    if(!iofmt)
+    if (!iofmt)
         return NULL;
 
     DBG("looking for subtype '%s'", subtype_name.c_str());
 
-    amci_subtype_t* st = iofmt->subtypes;
-    if(subtype_name.empty()) // default subtype wanted
+    amci_subtype_t *st = iofmt->subtypes;
+    if (subtype_name.empty()) // default subtype wanted
         return st;
 
-    for(;;st++) {
-        if(!st || st->type<0) break;
-        if(st->name == subtype_name)
+    for (;; st++) {
+        if (!st || st->type < 0)
+            break;
+        if (st->name == subtype_name)
             return st;
     }
 
     return NULL;
 }
 
-AmSessionFactory* AmPlugIn::getFactory4App(const string& app_name)
+AmSessionFactory *AmPlugIn::getFactory4App(const string &app_name)
 {
-    AmSessionFactory* res = NULL;
+    AmSessionFactory *res = NULL;
 
     name2app_mut.lock();
-    std::map<std::string,AmSessionFactory*>::iterator it = name2app.find(app_name);
-    if(it != name2app.end())
+    std::map<std::string, AmSessionFactory *>::iterator it = name2app.find(app_name);
+    if (it != name2app.end())
         res = it->second;
     name2app_mut.unlock();
 
     return res;
 }
 
-AmSessionEventHandlerFactory* AmPlugIn::getFactory4Seh(const string& name)
+AmSessionEventHandlerFactory *AmPlugIn::getFactory4Seh(const string &name)
 {
-    std::map<std::string,AmSessionEventHandlerFactory*>::iterator it = name2seh.find(name);
-    if(it != name2seh.end())
+    std::map<std::string, AmSessionEventHandlerFactory *>::iterator it = name2seh.find(name);
+    if (it != name2seh.end())
         return it->second;
     return 0;
 }
 
-AmDynInvokeFactory* AmPlugIn::getFactory4Di(const string& name)
+AmDynInvokeFactory *AmPlugIn::getFactory4Di(const string &name)
 {
-    std::map<std::string,AmDynInvokeFactory*>::iterator it = name2di.find(name);
-    if(it != name2di.end())
+    std::map<std::string, AmDynInvokeFactory *>::iterator it = name2di.find(name);
+    if (it != name2di.end())
         return it->second;
     return 0;
 }
@@ -514,17 +484,15 @@ AmDynInvokeFactory* AmPlugIn::getFactory4Di(const string& name)
 void AmPlugIn::listFactories4Di(AmArg &ret)
 {
     ret.assertArray();
-    for(std::map<string,AmDynInvokeFactory*>::const_iterator it = name2di.begin();
-        it != name2di.end(); it++)
-    {
+    for (std::map<string, AmDynInvokeFactory *>::const_iterator it = name2di.begin(); it != name2di.end(); it++) {
         ret.push(it->first);
     }
 }
 
-AmConfigFactory* AmPlugIn::getFactory4Config(const string& name)
+AmConfigFactory *AmPlugIn::getFactory4Config(const string &name)
 {
-    std::map<std::string,AmConfigFactory*>::iterator it = name2config.find(name);
-    if(it != name2config.end())
+    std::map<std::string, AmConfigFactory *>::iterator it = name2config.find(name);
+    if (it != name2config.end())
         return it->second;
     return 0;
 }
@@ -532,24 +500,22 @@ AmConfigFactory* AmPlugIn::getFactory4Config(const string& name)
 void AmPlugIn::listFactories4Config(AmArg &ret)
 {
     ret.assertArray();
-    for(std::map<string,AmConfigFactory*>::const_iterator it = name2config.begin();
-        it != name2config.end(); it++)
-    {
+    for (std::map<string, AmConfigFactory *>::const_iterator it = name2config.begin(); it != name2config.end(); it++) {
         ret.push(it->first);
     }
 }
 
-AmLoggingFacility* AmPlugIn::getFactory4LogFaclty(const string& name)
+AmLoggingFacility *AmPlugIn::getFactory4LogFaclty(const string &name)
 {
-    std::map<std::string,AmLoggingFacility*>::iterator it = name2logfac.find(name);
-    if(it != name2logfac.end())
+    std::map<std::string, AmLoggingFacility *>::iterator it = name2logfac.find(name);
+    if (it != name2logfac.end())
         return it->second;
     return 0;
 }
 
-int AmPlugIn::loadAudioPlugIn(amci_exports_t* exports)
+int AmPlugIn::loadAudioPlugIn(amci_exports_t *exports)
 {
-    if(!exports) {
+    if (!exports) {
         ERROR("audio plug-in doesn't contain any exports !");
         return -1;
     }
@@ -561,18 +527,18 @@ int AmPlugIn::loadAudioPlugIn(amci_exports_t* exports)
         }
     }
 
-    for(amci_codec_t* c=exports->codecs; c->id>=0; c++ ) {
-        if(addCodec(c))
+    for (amci_codec_t *c = exports->codecs; c->id >= 0; c++) {
+        if (addCodec(c))
             goto error;
     }
 
-    for(amci_payload_t* p=exports->payloads; p->name; p++ ) {
-        if(addPayload(p))
+    for (amci_payload_t *p = exports->payloads; p->name; p++) {
+        if (addPayload(p))
             goto error;
     }
 
-    for(amci_inoutfmt_t* f = exports->file_formats; f->name; f++ ) {
-        if(addFileFormat(f))
+    for (amci_inoutfmt_t *f = exports->file_formats; f->name; f++) {
+        if (addFileFormat(f))
             goto error;
     }
 
@@ -582,27 +548,27 @@ error:
 }
 
 
-int AmPlugIn::loadAppPlugIn(AmPluginFactory* f)
+int AmPlugIn::loadAppPlugIn(AmPluginFactory *f)
 {
-    AmSessionFactory* sf = dynamic_cast<AmSessionFactory*>(f);
-    if(!sf) {
+    AmSessionFactory *sf = dynamic_cast<AmSessionFactory *>(f);
+    if (!sf) {
         ERROR("invalid application plug-in!");
         return -1;
     }
 
     name2app_mut.lock();
 
-    if(name2app.find(sf->getName()) != name2app.end()) {
-        ERROR("application '%s' already loaded !",sf->getName().c_str());
+    if (name2app.find(sf->getName()) != name2app.end()) {
+        ERROR("application '%s' already loaded !", sf->getName().c_str());
         name2app_mut.unlock();
         return -1;
     }
 
-    name2app.insert(std::make_pair(sf->getName(),sf));
-    DBG("application '%s' loaded.",sf->getName().c_str());
+    name2app.insert(std::make_pair(sf->getName(), sf));
+    DBG("application '%s' loaded.", sf->getName().c_str());
 
     inc_ref(sf);
-    if(!module_objects.insert(std::make_pair(sf->getName(),sf)).second) {
+    if (!module_objects.insert(std::make_pair(sf->getName(), sf)).second) {
         // insertion failed
         dec_ref(sf);
     }
@@ -611,81 +577,81 @@ int AmPlugIn::loadAppPlugIn(AmPluginFactory* f)
     return 0;
 }
 
-int AmPlugIn::loadSehPlugIn(AmPluginFactory* f)
+int AmPlugIn::loadSehPlugIn(AmPluginFactory *f)
 {
-    AmSessionEventHandlerFactory* sf = dynamic_cast<AmSessionEventHandlerFactory*>(f);
-    if(!sf) {
+    AmSessionEventHandlerFactory *sf = dynamic_cast<AmSessionEventHandlerFactory *>(f);
+    if (!sf) {
         ERROR("invalid session component plug-in!");
         goto error;
     }
 
-    if(name2seh.find(sf->getName()) != name2seh.end()) {
-        ERROR("session component '%s' already loaded !",sf->getName().c_str());
+    if (name2seh.find(sf->getName()) != name2seh.end()) {
+        ERROR("session component '%s' already loaded !", sf->getName().c_str());
         goto error;
     }
 
     inc_ref(sf);
-    name2seh.insert(std::make_pair(sf->getName(),sf));
-    DBG("session component '%s' loaded.",sf->getName().c_str());
+    name2seh.insert(std::make_pair(sf->getName(), sf));
+    DBG("session component '%s' loaded.", sf->getName().c_str());
 
     return 0;
 error:
     return -1;
 }
 
-int AmPlugIn::loadBasePlugIn(AmPluginFactory* f)
+int AmPlugIn::loadBasePlugIn(AmPluginFactory *f)
 {
     inc_ref(f);
-    if(!name2base.insert(std::make_pair(f->getName(),f)).second) {
+    if (!name2base.insert(std::make_pair(f->getName(), f)).second) {
         // insertion failed
         dec_ref(f);
     }
     return 0;
 }
 
-int AmPlugIn::loadDiPlugIn(AmPluginFactory* f)
+int AmPlugIn::loadDiPlugIn(AmPluginFactory *f)
 {
-    AmDynInvokeFactory* sf = dynamic_cast<AmDynInvokeFactory*>(f);
-    if(!sf) {
+    AmDynInvokeFactory *sf = dynamic_cast<AmDynInvokeFactory *>(f);
+    if (!sf) {
         ERROR("invalid component plug-in!");
         goto error;
     }
 
-    if(name2di.find(sf->getName()) != name2di.end()) {
-        ERROR("component '%s' already loaded !",sf->getName().c_str());
+    if (name2di.find(sf->getName()) != name2di.end()) {
+        ERROR("component '%s' already loaded !", sf->getName().c_str());
         goto error;
     }
 
-    name2di.insert(std::make_pair(sf->getName(),sf));
+    name2di.insert(std::make_pair(sf->getName(), sf));
     inc_ref(sf);
-    DBG("component '%s' loaded.",sf->getName().c_str());
+    DBG("component '%s' loaded.", sf->getName().c_str());
 
     return 0;
 error:
     return -1;
 }
 
-int AmPlugIn::loadConfPlugIn(AmPluginFactory* f)
+int AmPlugIn::loadConfPlugIn(AmPluginFactory *f)
 {
     std::map<std::string, std::string>::iterator module_it;
-    AmConfigFactory* sf = dynamic_cast<AmConfigFactory*>(f);
-    if(!sf) {
+    AmConfigFactory                             *sf = dynamic_cast<AmConfigFactory *>(f);
+    if (!sf) {
         ERROR("invalid component plug-in %s!", f->getName().c_str());
         goto error;
     }
 
     module_it = AmConfig.module_config.find(f->getName());
-    if(module_it == AmConfig.module_config.end()) {
+    if (module_it == AmConfig.module_config.end()) {
         ERROR("don't have plug-in %s configuration!", f->getName().c_str());
         goto error;
     }
 
-    if(sf->configure(module_it->second)) {
+    if (sf->configure(module_it->second)) {
         ERROR("error in plug-in %s configuration!", f->getName().c_str());
         goto error;
     }
 
-    name2config.insert(std::make_pair(sf->getName(),sf));
+    name2config.insert(std::make_pair(sf->getName(), sf));
     inc_ref(sf);
 
     return 0;
@@ -693,63 +659,63 @@ error:
     return -1;
 }
 
-int AmPlugIn::loadLogFacPlugIn(AmPluginFactory* f)
+int AmPlugIn::loadLogFacPlugIn(AmPluginFactory *f)
 {
-    AmLoggingFacility* sf = dynamic_cast<AmLoggingFacility*>(f);
-    if(!sf) {
+    AmLoggingFacility *sf = dynamic_cast<AmLoggingFacility *>(f);
+    if (!sf) {
         ERROR("invalid logging facility plug-in!");
         goto error;
     }
 
-    if(name2logfac.find(sf->getName()) != name2logfac.end()) {
+    if (name2logfac.find(sf->getName()) != name2logfac.end()) {
         ERROR("logging facility '%s' already loaded !", sf->getName().c_str());
         goto error;
     }
 
-    name2logfac.insert(std::make_pair(sf->getName(),sf));
+    name2logfac.insert(std::make_pair(sf->getName(), sf));
     inc_ref(sf);
-    DBG("logging facility component '%s' loaded.",sf->getName().c_str());
+    DBG("logging facility component '%s' loaded.", sf->getName().c_str());
 
     return 0;
 error:
     return -1;
 }
 
-int AmPlugIn::addCodec(amci_codec_t* c)
+int AmPlugIn::addCodec(amci_codec_t *c)
 {
-    if(codecs.find(c->id) != codecs.end()) {
-        ERROR("codec id (%i) already supported",c->id);
+    if (codecs.find(c->id) != codecs.end()) {
+        ERROR("codec id (%i) already supported", c->id);
         return -1;
     }
-    codecs.insert(std::make_pair(c->id,c));
+    codecs.insert(std::make_pair(c->id, c));
 
-    if(!c->bytes2samples) {
-        DBG("codec %i does not provide bytes2samples function",c->id);
+    if (!c->bytes2samples) {
+        DBG("codec %i does not provide bytes2samples function", c->id);
     }
-    if(!c->samples2bytes) {
-        DBG("codec %i does not provide samples2bytes function",c->id);
+    if (!c->samples2bytes) {
+        DBG("codec %i does not provide samples2bytes function", c->id);
     }
 
-    DBG("codec id %i inserted",c->id);
+    DBG("codec id %i inserted", c->id);
     return 0;
 }
 
-int AmPlugIn::addPayload(amci_payload_t* p)
+int AmPlugIn::addPayload(amci_payload_t *p)
 {
-    if(excluded_payloads.find(p->name) != excluded_payloads.end()) {
+    if (excluded_payloads.find(p->name) != excluded_payloads.end()) {
         DBG("Not enabling excluded payload '%s'", p->name);
         return 0;
     }
 
-    amci_codec_t* c;
-    unsigned int i, id;
-    if(!(c = codec(p->codec_id))) {
+    amci_codec_t *c;
+    unsigned int  i, id;
+    if (!(c = codec(p->codec_id))) {
         ERROR("in payload '%s': codec id (%i) not supported", p->name, p->codec_id);
         return -1;
     }
-    if(p->payload_id != -1) {
-        if(payloads.find(p->payload_id) != payloads.end()) {
-            ERROR("payload id (%i) already supported",p->payload_id);
+    if (p->payload_id != -1) {
+        if (payloads.find(p->payload_id) != payloads.end()) {
+            ERROR("payload id (%i) already supported", p->payload_id);
             return -1;
         }
     } else {
@@ -757,83 +723,84 @@ int AmPlugIn::addPayload(amci_payload_t* p)
         dynamic_pl++;
     }
 
-    payloads.insert(std::make_pair(p->payload_id,p));
+    payloads.insert(std::make_pair(p->payload_id, p));
     id = p->payload_id;
 
-    for(i = 0; i < AmConfig.codec_order.size(); i++) {
-        if (p->name == AmConfig.codec_order[i]) break;
+    for (i = 0; i < AmConfig.codec_order.size(); i++) {
+        if (p->name == AmConfig.codec_order[i])
+            break;
     }
 
-    if(i >= AmConfig.codec_order.size()) {
+    if (i >= AmConfig.codec_order.size()) {
         payload_order.insert(std::make_pair(id + 100, id));
-        DBG("payload '%s/%i' inserted with id %i and order %i",
-            p->name, p->sample_rate, id, id + 100);
+        DBG("payload '%s/%i' inserted with id %i and order %i", p->name, p->sample_rate, id, id + 100);
     } else {
-      payload_order.insert(std::make_pair(i, id));
-      DBG("payload '%s/%i' inserted with id %i and order %i",
-          p->name, p->sample_rate, id, i);
+        payload_order.insert(std::make_pair(i, id));
+        DBG("payload '%s/%i' inserted with id %i and order %i", p->name, p->sample_rate, id, i);
     }
 
     return 0;
 }
 
-int AmPlugIn::addFileFormat(amci_inoutfmt_t* f)
+int AmPlugIn::addFileFormat(amci_inoutfmt_t *f)
 {
-    if(file_formats.find(f->name) != file_formats.end()){
-        ERROR("file format '%s' already supported",f->name);
+    if (file_formats.find(f->name) != file_formats.end()) {
+        ERROR("file format '%s' already supported", f->name);
         return -1;
     }
 
-    amci_subtype_t* st = f->subtypes;
-    for(; st->type >= 0; st++ ) {
-        if(!codec(st->codec_id) ) {
-            ERROR("in '%s' subtype %i: codec id (%i) not supported",
-                  f->name,st->type,st->codec_id);
+    amci_subtype_t *st = f->subtypes;
+    for (; st->type >= 0; st++) {
+        if (!codec(st->codec_id)) {
+            ERROR("in '%s' subtype %i: codec id (%i) not supported", f->name, st->type, st->codec_id);
             return -1;
         }
 
-        if(st->sample_rate < 0) {
+        if (st->sample_rate < 0) {
             ERROR("in '%s' subtype %i: rate must be specified!"
-                  " (ubr no longer supported)\n", f->name,st->type);
+                  " (ubr no longer supported)\n",
+                  f->name, st->type);
             return -1;
         }
 
-        if(st->channels < 0) {
+        if (st->channels < 0) {
             ERROR("in '%s' subtype %i: channels must be specified!"
-                  "(unspecified channel count no longer supported)\n", f->name,st->type);
+                  "(unspecified channel count no longer supported)\n",
+                  f->name, st->type);
             return -1;
         }
     }
 
-    DBG("file format %s inserted",f->name);
-    file_formats.insert(std::make_pair(f->name,f));
+    DBG("file format %s inserted", f->name);
+    file_formats.insert(std::make_pair(f->name, f));
 
     return 0;
 }
 
-bool AmPlugIn::registerFactory4App(const string& app_name, AmSessionFactory* f)
+bool AmPlugIn::registerFactory4App(const string &app_name, AmSessionFactory *f)
 {
     bool res;
 
     name2app_mut.lock();
-    std::map<std::string,AmSessionFactory*>::iterator it = name2app.find(app_name);
-    if(it != name2app.end()) {
+    std::map<std::string, AmSessionFactory *>::iterator it = name2app.find(app_name);
+    if (it != name2app.end()) {
         WARN("Application '%s' has already been registered and cannot be "
-             "registered a second time\n", app_name.c_str());
-        res =  false;
+             "registered a second time\n",
+             app_name.c_str());
+        res = false;
     } else {
-        name2app.insert(make_pair(app_name,f));
+        name2app.insert(make_pair(app_name, f));
         res = true;
     }
     name2app_mut.unlock();
 
-    //add module version metric
-    auto &group = stat_group(Gauge,"module", "version");
-    //TODO: add explicit size() method for StatCountersGroupsInterface
+    // add module version metric
+    auto &group = stat_group(Gauge, "module", "version");
+    // TODO: add explicit size() method for StatCountersGroupsInterface
     int counters = 0;
-    group.iterate_counters([&counters](unsigned long long, const map<string, string>&){ counters++; });
-    if(!counters) {
-        group.addFunctionCounter([]()-> unsigned long long { return 1; })
+    group.iterate_counters([&counters](unsigned long long, const map<string, string> &) { counters++; });
+    if (!counters) {
+        group.addFunctionCounter([]() -> unsigned long long { return 1; })
             .addLabel("name", f->getName())
             .addLabel("version", f->getVersion());
     }
@@ -842,96 +809,85 @@ bool AmPlugIn::registerFactory4App(const string& app_name, AmSessionFactory* f)
 }
 
 // static alias to registerFactory4App
-bool AmPlugIn::registerApplication(const string& app_name, AmSessionFactory* f)
+bool AmPlugIn::registerApplication(const string &app_name, AmSessionFactory *f)
 {
     bool res = instance()->registerFactory4App(app_name, f);
-    if(res) {
+    if (res) {
         DBG("Application '%s' registered.", app_name.c_str());
     }
     return res;
 }
 
-AmSessionFactory* AmPlugIn::findSessionFactory(const AmSipRequest& req, string& app_name)
+AmSessionFactory *AmPlugIn::findSessionFactory(const AmSipRequest &req, string &app_name)
 {
     string m_app_name;
 
-    if(AmConfig.register_application.length() && SIP_METH_REGISTER==req.method)
+    if (AmConfig.register_application.length() && SIP_METH_REGISTER == req.method)
         m_app_name = AmConfig.register_application;
-    else if(AmConfig.options_application.length() && SIP_METH_OPTIONS==req.method)
+    else if (AmConfig.options_application.length() && SIP_METH_OPTIONS == req.method)
         m_app_name = AmConfig.options_application;
     else {
-        for(const auto &app_selector : AmConfig.applications) {
+        for (const auto &app_selector : AmConfig.applications) {
             switch (app_selector.app_select) {
-            case ConfigContainer::App_RURIUSER:
-                m_app_name = req.user;
-                break;
-            case ConfigContainer::App_APPHDR:
-                m_app_name = getHeader(req.hdrs, APPNAME_HDR, true);
-                break;
-            case ConfigContainer::App_RURIPARAM:
-                m_app_name = get_header_param(req.r_uri, "app");
-                break;
+            case ConfigContainer::App_RURIUSER:  m_app_name = req.user; break;
+            case ConfigContainer::App_APPHDR:    m_app_name = getHeader(req.hdrs, APPNAME_HDR, true); break;
+            case ConfigContainer::App_RURIPARAM: m_app_name = get_header_param(req.r_uri, "app"); break;
             case ConfigContainer::App_MAPPING:
                 m_app_name = ""; // no match if not found
                 run_regex_mapping(app_selector.app_mapping, req.r_uri.c_str(), m_app_name);
                 break;
-            case ConfigContainer::App_SPECIFIED:
-                m_app_name = app_selector.application;
-                break;
+            case ConfigContainer::App_SPECIFIED: m_app_name = app_selector.application; break;
             }
-            if(!m_app_name.empty()) break;
+            if (!m_app_name.empty())
+                break;
         }
     }
 
-    if(m_app_name.empty()) {
-      DBG("src_ip: %s callid: %s ruri: %s - "
-          "could not find any application matching configured criteria",
-          req.remote_ip.c_str(),
-          req.callid.c_str(),
-          req.r_uri.c_str());
-      return NULL;
+    if (m_app_name.empty()) {
+        DBG("src_ip: %s callid: %s ruri: %s - "
+            "could not find any application matching configured criteria",
+            req.remote_ip.c_str(), req.callid.c_str(), req.r_uri.c_str());
+        return NULL;
     }
 
-    AmSessionFactory* session_factory = getFactory4App(m_app_name);
-    if(!session_factory) {
-      ERROR("AmPlugIn::findSessionFactory: application '%s' not found !", m_app_name.c_str());
+    AmSessionFactory *session_factory = getFactory4App(m_app_name);
+    if (!session_factory) {
+        ERROR("AmPlugIn::findSessionFactory: application '%s' not found !", m_app_name.c_str());
     }
 
     app_name = m_app_name;
     return session_factory;
 }
 
-void AmPlugIn::dumpPlugins(std::map<string, string>& ret)
+void AmPlugIn::dumpPlugins(std::map<string, string> &ret)
 {
-    std::for_each(
-        plugins_objects.begin(), plugins_objects.end(),
-        [&ret](const std::pair<std::tuple<int, string>, AmPluginFactory*>& pf)
-    {
-        ret[pf.second->getName()] = pf.second->getVersion();
-    });
+    std::for_each(plugins_objects.begin(), plugins_objects.end(),
+                  [&ret](const std::pair<std::tuple<int, string>, AmPluginFactory *> &pf) {
+                      ret[pf.second->getName()] = pf.second->getVersion();
+                  });
 }
 
-#define REGISTER_STUFF(comp_name, map_name, param_name)\
-    if(instance()->map_name.find(param_name) != instance()->map_name.end()) {\
-        ERROR(comp_name "'%s' already registered !", param_name.c_str());	\
-        return false;\
-    }\
-    inc_ref(f);\
-    instance()->map_name.insert(std::make_pair(param_name,f));\
-    DBG3(comp_name " '%s' registered.",param_name.c_str());\
+#define REGISTER_STUFF(comp_name, map_name, param_name)                                                                \
+    if (instance()->map_name.find(param_name) != instance()->map_name.end()) {                                         \
+        ERROR(comp_name "'%s' already registered !", param_name.c_str());                                              \
+        return false;                                                                                                  \
+    }                                                                                                                  \
+    inc_ref(f);                                                                                                        \
+    instance()->map_name.insert(std::make_pair(param_name, f));                                                        \
+    DBG3(comp_name " '%s' registered.", param_name.c_str());                                                           \
     return true;
 
-bool AmPlugIn::registerSIPEventHandler(const string& seh_name, AmSessionEventHandlerFactory* f)
+bool AmPlugIn::registerSIPEventHandler(const string &seh_name, AmSessionEventHandlerFactory *f)
 {
     REGISTER_STUFF("SIP Event handler", name2seh, seh_name);
 }
 
-bool AmPlugIn::registerDIInterface(const string& di_name, AmDynInvokeFactory* f)
+bool AmPlugIn::registerDIInterface(const string &di_name, AmDynInvokeFactory *f)
 {
     REGISTER_STUFF("DI Interface", name2di, di_name);
 }
 
-bool AmPlugIn::registerLoggingFacility(const string& lf_name, AmLoggingFacility* f)
+bool AmPlugIn::registerLoggingFacility(const string &lf_name, AmLoggingFacility *f)
 {
     REGISTER_STUFF("Logging Facility", name2logfac, lf_name);
 }

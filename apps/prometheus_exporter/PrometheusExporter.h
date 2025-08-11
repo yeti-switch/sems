@@ -11,32 +11,31 @@
 #include <string>
 using std::string;
 
-class PrometheusExporter
-    : public AmThread
-{
+class PrometheusExporter : public AmThread {
     friend class PrometheusExporterFactory;
-    static PrometheusExporter* _instance;
+    static PrometheusExporter *_instance;
 
-    string ip;
+    string   ip;
     uint16_t port;
-    string prefix;
-    //bool omit_now_timestamp;
-    //bool omit_update_timestamp;
+    string   prefix;
+    // bool omit_now_timestamp;
+    // bool omit_update_timestamp;
     trsp_acl acl;
 
-    struct event_base          *ev_base;
-    struct evhttp              *ev_http;
+    struct event_base *ev_base;
+    struct evhttp     *ev_http;
 
     void status_request_cb(struct evhttp_request *req);
 
-    int configure(const string& config);
-    int readAcl(cfg_t* cfg);
-public:
+    int configure(const string &config);
+    int readAcl(cfg_t *cfg);
+
+  public:
     PrometheusExporter();
     ~PrometheusExporter();
 
-    static PrometheusExporter* instance();
-    static void dispose();
+    static PrometheusExporter *instance();
+    static void                dispose();
 
     int onLoad();
     int init();

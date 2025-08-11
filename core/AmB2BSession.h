@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmB2BSession.h */
@@ -45,8 +45,7 @@ enum {
 };
 
 /** \brief base class for event in B2B session */
-struct B2BEvent: public AmEvent
-{
+struct B2BEvent : public AmEvent {
     enum B2BEventType {
         B2BCore,
         B2BApplication,
@@ -55,94 +54,101 @@ struct B2BEvent: public AmEvent
     map<string, string> params;
 
     B2BEvent(int ev_id)
-      : AmEvent(ev_id), ev_type(B2BCore)
-    {}
+        : AmEvent(ev_id)
+        , ev_type(B2BCore)
+    {
+    }
 
     B2BEvent(int ev_id, B2BEventType ev_type)
-      : AmEvent(ev_id), ev_type(ev_type)
-    { }
+        : AmEvent(ev_id)
+        , ev_type(ev_type)
+    {
+    }
 
     B2BEvent(int ev_id, B2BEventType ev_type, map<string, string> params)
-      : AmEvent(ev_id), ev_type(ev_type), params(params)
-    { }
+        : AmEvent(ev_id)
+        , ev_type(ev_type)
+        , params(params)
+    {
+    }
 };
 
 /** \brief base class for SIP event in B2B session */
-struct B2BSipEvent: public B2BEvent
-{
+struct B2BSipEvent : public B2BEvent {
     bool forward;
 
     B2BSipEvent(int ev_id, bool forward)
-      : B2BEvent(ev_id),
-        forward(forward)
-    {}
+        : B2BEvent(ev_id)
+        , forward(forward)
+    {
+    }
 };
 
 /** \brief SIP request in B2B session */
-struct B2BSipRequestEvent: public B2BSipEvent
-{
+struct B2BSipRequestEvent : public B2BSipEvent {
     AmSipRequest req;
 
-    B2BSipRequestEvent(const AmSipRequest& req, bool forward)
-      : B2BSipEvent(B2BSipRequest,forward),
-        req(req)
-    { }
+    B2BSipRequestEvent(const AmSipRequest &req, bool forward)
+        : B2BSipEvent(B2BSipRequest, forward)
+        , req(req)
+    {
+    }
 };
 
 /** \brief SIP reply in B2B session */
-struct B2BSipReplyEvent: public B2BSipEvent
-{
+struct B2BSipReplyEvent : public B2BSipEvent {
     AmSipReply reply;
-    string trans_method;
-    string sender_ltag;
+    string     trans_method;
+    string     sender_ltag;
 
-    B2BSipReplyEvent(const AmSipReply& reply, bool forward,
-                     string trans_method, string sender_ltag)
-      : B2BSipEvent(B2BSipReply,forward),
-        reply(reply), trans_method(trans_method), sender_ltag(sender_ltag)
-    { }
+    B2BSipReplyEvent(const AmSipReply &reply, bool forward, string trans_method, string sender_ltag)
+        : B2BSipEvent(B2BSipReply, forward)
+        , reply(reply)
+        , trans_method(trans_method)
+        , sender_ltag(sender_ltag)
+    {
+    }
 
-    B2BSipReplyEvent(const B2BSipReplyEvent& e)
-      : B2BSipEvent(B2BSipReply,e.forward),
-        reply(e.reply), trans_method(e.trans_method), sender_ltag(e.sender_ltag)
-    { }
-
+    B2BSipReplyEvent(const B2BSipReplyEvent &e)
+        : B2BSipEvent(B2BSipReply, e.forward)
+        , reply(e.reply)
+        , trans_method(e.trans_method)
+        , sender_ltag(e.sender_ltag)
+    {
+    }
 };
 
 /** \brief trigger connecting the callee leg in B2B session */
-struct B2BConnectEvent: public B2BEvent
-{
+struct B2BConnectEvent : public B2BEvent {
     string remote_party;
     string remote_uri;
 
     AmMimeBody body;
-    string hdrs;
+    string     hdrs;
 
-    bool relayed_invite;
+    bool         relayed_invite;
     unsigned int r_cseq;
 
-    B2BConnectEvent(const string& remote_party,
-                    const string& remote_uri)
-      : B2BEvent(B2BConnectLeg),
-        remote_party(remote_party),
-        remote_uri(remote_uri),
-        relayed_invite(false),
-        r_cseq(0)
-    {}
+    B2BConnectEvent(const string &remote_party, const string &remote_uri)
+        : B2BEvent(B2BConnectLeg)
+        , remote_party(remote_party)
+        , remote_uri(remote_uri)
+        , relayed_invite(false)
+        , r_cseq(0)
+    {
+    }
 };
 
 enum HoldMethod { SendonlyStream, InactiveStream, ZeroedConnection };
 
 /**
  * \brief Base class for Sessions in B2BUA mode.
- * 
+ *
  * It has two legs as independent sessions:
  * Callee- and caller-leg.
  */
-class AmB2BSession: public AmSession, protected RelayController
-{
+class AmB2BSession : public AmSession, protected RelayController {
   public:
-
     enum RTPRelayMode {
         /* audio will go directly between caller and callee
          * SDP bodies of relayed requests are filtered */
@@ -177,9 +183,9 @@ class AmB2BSession: public AmSession, protected RelayController
 
     bool a_leg;
 
-    bool remote_on_hold; // remote is on hold
-    bool rtp_stream_shared; //for cases when AmB2BMedia uses existent stream from _rtp_str
-    //enum { HoldRequested, ResumeRequested, PreserveHoldStatus } hold;
+    bool remote_on_hold;    // remote is on hold
+    bool rtp_stream_shared; // for cases when AmB2BMedia uses existent stream from _rtp_str
+    // enum { HoldRequested, ResumeRequested, PreserveHoldStatus } hold;
 
     /**
      * Requests which have been relayed
@@ -195,7 +201,7 @@ class AmB2BSession: public AmSession, protected RelayController
     unsigned int est_invite_other_cseq;
 
     /** SUBSCRIBE/NOTIFY handling */
-    AmSipSubscription* subs;
+    AmSipSubscription *subs;
 
     /** body of established session */
     AmMimeBody established_body;
@@ -204,22 +210,21 @@ class AmB2BSession: public AmSession, protected RelayController
     uint32_t body_hash;
 
     /** save current session description (SDP) */
-    virtual bool saveSessionDescription(const AmMimeBody& body);
+    virtual bool saveSessionDescription(const AmMimeBody &body);
 
     /** @return whether session description (SDP) has changed */
-    virtual bool updateSessionDescription(const AmMimeBody& body);
+    virtual bool updateSessionDescription(const AmMimeBody &body);
 
     /** reset relation with other leg */
     virtual void clear_other();
 
     /** send a relayed SIP Request */
-    int relaySip(const AmSipRequest& req);
+    int relaySip(const AmSipRequest &req);
 
     /** send a relayed SIP Reply */
-    int relaySip(const AmSipRequest& orig, const AmSipReply& reply);
+    int relaySip(const AmSipRequest &orig, const AmSipReply &reply);
 
   public:
-
     void relayError(const string &method, unsigned cseq, bool forward, int sip_code, const char *reason);
     void relayError(const string &method, unsigned cseq, bool forward, int err_code);
 
@@ -234,21 +239,20 @@ class AmB2BSession: public AmSession, protected RelayController
     /** @see AmSession */
     virtual void updateUACTransCSeq(unsigned int old_cseq, unsigned int new_cseq) override;
 
-    void onSipRequest(const AmSipRequest& req) override;
-    void onSipReply(const AmSipRequest& req, const AmSipReply& reply,
-                    AmBasicSipDialog::Status old_dlg_status) override;
+    void onSipRequest(const AmSipRequest &req) override;
+    void onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_dlg_status) override;
 
-    void onRequestSent(const AmSipRequest& req) override;
-    void onReplySent(const AmSipRequest& req, const AmSipReply& reply) override;
+    void onRequestSent(const AmSipRequest &req) override;
+    void onReplySent(const AmSipRequest &req, const AmSipReply &reply) override;
 
-    void onInvite2xx(const AmSipReply& reply) override;
+    void onInvite2xx(const AmSipReply &reply) override;
 
-    int onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp, bool sdp_offer_owner) override;
+    int onSdpCompleted(const AmSdp &local_sdp, const AmSdp &remote_sdp, bool sdp_offer_owner) override;
 
     virtual void onHoldRequest() {}
     virtual void onResumeRequest() {}
 
-    void onRemoteDisappeared(const AmSipReply& reply) override;
+    void onRemoteDisappeared(const AmSipReply &reply) override;
 
     void onRtpTimeout() override;
     void onSessionTimeout() override;
@@ -263,31 +267,29 @@ class AmB2BSession: public AmSession, protected RelayController
     bool refresh(int flags = 0) override;
 
     /** @see AmEventQueue */
-    void process(AmEvent* event) override;
+    void process(AmEvent *event) override;
 
     /** @see AmEventQueue */
     void finalize() override;
 
     /** B2BEvent handler */
-    virtual void onB2BEvent(B2BEvent* ev);
+    virtual void onB2BEvent(B2BEvent *ev);
 
     /** handle BYE on other leg */
-    virtual void onOtherBye(const AmSipRequest& req);
+    virtual void onOtherBye(const AmSipRequest &req);
 
     /**
      * Reply received from other leg has been replied
      * @return true if reply was processed (should be absorbed)
      * @return false if reply was not processed
      */
-    virtual bool onOtherReply(const AmSipReply& reply);
+    virtual bool onOtherReply(const AmSipReply &reply);
 
-    AmB2BSession(const string& other_local_tag = "",
-                 AmSipDialog* p_dlg=nullptr,
-                 AmSipSubscription* p_subs=nullptr);
+    AmB2BSession(const string &other_local_tag = "", AmSipDialog *p_dlg = nullptr, AmSipSubscription *p_subs = nullptr);
 
     virtual ~AmB2BSession();
 
-      /** flag to enable RTP relay mode */
+    /** flag to enable RTP relay mode */
     RTPRelayMode rtp_relay_mode;
 
     /** force symmetric RTP */
@@ -325,34 +327,28 @@ class AmB2BSession: public AmSession, protected RelayController
     /** clear our and the other side's RTP streams from RTPReceiver */
     void clearRtpReceiverRelay();
     /** update remote connection in relay_streams */
-    void updateRelayStreams(const AmMimeBody& body,
-                            AmSdp& parser_sdp);
+    void updateRelayStreams(const AmMimeBody &body, AmSdp &parser_sdp);
 
     /** replace connection with our address */
-    void updateLocalBody(AmMimeBody& body,
-                         const string &sip_msg_method, unsigned int sip_msg_cseq);
+    void updateLocalBody(AmMimeBody &body, const string &sip_msg_method, unsigned int sip_msg_cseq);
 
     /** Called when SDP relayed from other leg should be sent to the remote party.
-      * Default implementation updates connection address and ports. */
-    virtual void updateLocalSdp(AmSdp &sdp,
-                                const string &sip_msg_method, unsigned int sip_msg_cseq);
+     * Default implementation updates connection address and ports. */
+    virtual void updateLocalSdp(AmSdp &sdp, const string &sip_msg_method, unsigned int sip_msg_cseq);
 
     /**
      * Returns true and sets mapped_id if refer_id corresponds to an existing
      * refer event subscription which has been relayed.
      */
-    bool getMappedReferID(unsigned int refer_id, unsigned int& mapped_id) const;
+    bool         getMappedReferID(unsigned int refer_id, unsigned int &mapped_id) const;
     virtual void insertMappedReferID(unsigned int refer_id, unsigned int mapped_id);
 
   public:
-
-    virtual void setOtherId(const string& n_other_id) {
-        other_id = n_other_id;
-    }
-    virtual const string& getOtherId() const { return other_id; }
+    virtual void          setOtherId(const string &n_other_id) { other_id = n_other_id; }
+    virtual const string &getOtherId() const { return other_id; }
 
     /** Relay one event to the other side. @return 0 on success */
-    virtual int relayEvent(AmEvent* ev);
+    virtual int relayEvent(AmEvent *ev);
 
     void set_sip_relay_only(bool r);
 
@@ -363,26 +359,26 @@ class AmB2BSession: public AmSession, protected RelayController
 
     /** link RTP streams of other_session to our streams */
     RTPRelayMode getRtpRelayMode() const { return rtp_relay_mode; }
-    bool getRtpStreamShare() const { return rtp_stream_shared; }
-    bool getRtpRelayForceSymmetricRtp() const { return rtp_relay_force_symmetric_rtp; }
-    bool getRtpPing() const { return rtp_ping; }
+    bool         getRtpStreamShare() const { return rtp_stream_shared; }
+    bool         getRtpRelayForceSymmetricRtp() const { return rtp_relay_force_symmetric_rtp; }
+    bool         getRtpPing() const { return rtp_ping; }
     unsigned int getRtpTimeout() const { return dead_rtp_time; }
-    bool getEnableDtmfTranscoding() const { return enable_dtmf_transcoding; }
-    bool getEnableInboundDtmfFiltering() const { return enable_inbound_dtmf_filtering; }
-    bool getEnableDtmfRtpFiltering() const { return enable_dtmf_rtp_filtering; }
-    bool getEnableDtmfRtpDetection() const { return enable_dtmf_rtp_detection; }
-    bool getEnableDtmfForceRelay() const { return enable_dtmf_rtp_force_relay; }
-    bool getEnableCNForceRelay() const { return enable_cn_rtp_force_relay; }
-    bool getRtpRelayTimestampAligning() const { return rtp_relay_timestamp_aligning; }
-    bool getIgnoreRelayStreams() const { return ignore_relay_streams; }
-    void getLowFiPLs(vector<SdpPayload>& lowfi_payloads) const;
+    bool         getEnableDtmfTranscoding() const { return enable_dtmf_transcoding; }
+    bool         getEnableInboundDtmfFiltering() const { return enable_inbound_dtmf_filtering; }
+    bool         getEnableDtmfRtpFiltering() const { return enable_dtmf_rtp_filtering; }
+    bool         getEnableDtmfRtpDetection() const { return enable_dtmf_rtp_detection; }
+    bool         getEnableDtmfForceRelay() const { return enable_dtmf_rtp_force_relay; }
+    bool         getEnableCNForceRelay() const { return enable_cn_rtp_force_relay; }
+    bool         getRtpRelayTimestampAligning() const { return rtp_relay_timestamp_aligning; }
+    bool         getIgnoreRelayStreams() const { return ignore_relay_streams; }
+    void         getLowFiPLs(vector<SdpPayload> &lowfi_payloads) const;
 
     virtual void setRtpInterface(int relay_interface);
     virtual void setRtpRelayForceSymmetricRtp(bool force_symmetric);
-    void setRtpRelayTransparentSeqno(bool transparent);
-    void setRtpRelayTransparentSSRC(bool transparent);
-    void setRtpRelayTimestampAligning(bool enable);
-    void setIgnoreRelayStreams(bool ignore);
+    void         setRtpRelayTransparentSeqno(bool transparent);
+    void         setRtpRelayTransparentSSRC(bool transparent);
+    void         setRtpRelayTimestampAligning(bool enable);
+    void         setIgnoreRelayStreams(bool ignore);
 
     void setEnableDtmfTranscoding(bool enable);
     void setEnableInboundDtmfFiltering(bool enable);
@@ -392,7 +388,7 @@ class AmB2BSession: public AmSession, protected RelayController
     void setRtpTimeout(unsigned int timeout);
     void setEnableDtmfForceRelay(bool enable);
     void setEnableCNForceRelay(bool enable);
-    void setLowFiPLs(const vector<SdpPayload>& lowfi_payloads);
+    void setLowFiPLs(const vector<SdpPayload> &lowfi_payloads);
 
     bool getRtpRelayTransparentSeqno() { return rtp_relay_transparent_seqno; }
     bool getRtpRelayTransparentSSRC() { return rtp_relay_transparent_ssrc; }
@@ -408,39 +404,31 @@ class AmB2BSession: public AmSession, protected RelayController
 
   public:
     virtual void setMediaSession(AmB2BMedia *new_session);
-    AmB2BMedia *getMediaSession() { return media_session; }
-    //called when owned AmB2BMedia changes session
+    AmB2BMedia  *getMediaSession() { return media_session; }
+    // called when owned AmB2BMedia changes session
     void onSessionChange(AmB2BSession *new_session);
 
     // see RelayController
-    virtual void computeRelayMask(
-        const SdpMedia &m, bool &enable,
-        PayloadMask &mask, PayloadRelayMap& map) override;
+    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap &map) override;
 };
 
 class AmB2BCalleeSession;
 
 /** \brief Caller leg of a B2B session */
-class AmB2BCallerSession: public AmB2BSession
-{
+class AmB2BCallerSession : public AmB2BSession {
   public:
-    enum CalleeStatus {
-        None=0,
-        NoReply,
-        Ringing,
-        Connected
-    };
+    enum CalleeStatus { None = 0, NoReply, Ringing, Connected };
 
   private:
     // Callee Status
     CalleeStatus callee_status;
 
-    int reinviteCaller(const AmSipReply& callee_reply);
+    int reinviteCaller(const AmSipReply &callee_reply);
 
   protected:
     AmSipRequest invite_req;
     virtual void createCalleeSession();
-    int relayEvent(AmEvent* ev);
+    int          relayEvent(AmEvent *ev);
 
     /** Tell if the session should
      *  relay early media SDPs to
@@ -449,55 +437,52 @@ class AmB2BCallerSession: public AmB2BSession
     bool sip_relay_early_media_sdp;
 
   public:
-    AmB2BCallerSession(const string& other_local_tag = "", AmSipDialog* p_dlg = nullptr);
+    AmB2BCallerSession(const string &other_local_tag = "", AmSipDialog *p_dlg = nullptr);
     virtual ~AmB2BCallerSession();
 
     CalleeStatus getCalleeStatus() { return callee_status; }
-    void setCalleeStatus(CalleeStatus c) { callee_status = c; }
+    void         setCalleeStatus(CalleeStatus c) { callee_status = c; }
 
-    virtual AmB2BCalleeSession* newCalleeSession();
+    virtual AmB2BCalleeSession *newCalleeSession();
 
-    void connectCallee(const string& remote_party,
-                       const string& remote_uri,
-                       bool relayed_invite = false);
+    void connectCallee(const string &remote_party, const string &remote_uri, bool relayed_invite = false);
 
-    const AmSipRequest& getOriginalRequest() { return invite_req; }
+    const AmSipRequest &getOriginalRequest() { return invite_req; }
 
     // @see AmSession
-    void onInvite(const AmSipRequest& req);
-    void onInvite2xx(const AmSipReply& reply);
-    void onCancel(const AmSipRequest& req);
-    void onBye(const AmSipRequest& req);
+    void onInvite(const AmSipRequest &req);
+    void onInvite2xx(const AmSipReply &reply);
+    void onCancel(const AmSipRequest &req);
+    void onBye(const AmSipRequest &req);
 
-    void onRemoteDisappeared(const AmSipReply& reply);
+    void onRemoteDisappeared(const AmSipReply &reply);
 
-    void onSystemEvent(AmSystemEvent* ev);
+    void onSystemEvent(AmSystemEvent *ev);
 
     // @see AmB2BSession
-    void terminateLeg();
-    void terminateOtherLeg();
-    virtual void onB2BEvent(B2BEvent* ev);
+    void         terminateLeg();
+    void         terminateOtherLeg();
+    virtual void onB2BEvent(B2BEvent *ev);
 
-    AmSipRequest* getInviteReq() { return &invite_req; }
+    AmSipRequest *getInviteReq() { return &invite_req; }
 
     void set_sip_relay_early_media_sdp(bool r);
 
     /** initialize RTP relay mode, if rtp_relay_enabled
         must be called *before* callee_session is started
      */
-    void initializeRTPRelay(AmB2BCalleeSession* callee_session);
+    void initializeRTPRelay(AmB2BCalleeSession *callee_session);
 };
 
 /** \brief Callee leg of a B2B session */
-class AmB2BCalleeSession: public AmB2BSession
-{
+class AmB2BCalleeSession : public AmB2BSession {
   public:
-    AmB2BCalleeSession(const string& other_local_tag);
-    AmB2BCalleeSession(const AmB2BCallerSession* caller);
+    AmB2BCalleeSession(const string &other_local_tag);
+    AmB2BCalleeSession(const AmB2BCallerSession *caller);
 
     virtual ~AmB2BCalleeSession();
 
-    virtual void onB2BEvent(B2BEvent* ev);
+    virtual void onB2BEvent(B2BEvent *ev);
 };
 
 bool isHoldRequest(const AmSdp &sdp, HoldMethod &method);

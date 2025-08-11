@@ -3,18 +3,16 @@
 #include "AmMediaIceState.h"
 #include "AmMediaSrtpState.h"
 
-class AmMediaIceSrtpState
-  : public AmMediaIceState, public AmMediaSrtpState
-{
-public:
+class AmMediaIceSrtpState : public AmMediaIceState, public AmMediaSrtpState {
+  public:
     AmMediaIceSrtpState(AmMediaTransport *transport);
-    AmMediaState* init(const AmMediaStateArgs& args) override;
-    AmMediaState* initSrtp(AmStreamConnection::ConnectionType base_conn_type) override;
-    AmMediaState* update(const AmMediaStateArgs& args) override;
-    AmMediaState* onSrtpKeysAvailable() override;
-    void updateConnections(const AmMediaStateArgs & args) override;
-    const char* state2str() override;
+    AmMediaState *init(const AmMediaStateArgs &args) override;
+    AmMediaState *initSrtp(AmStreamConnection::ConnectionType base_conn_type) override;
+    AmMediaState *update(const AmMediaStateArgs &args) override;
+    AmMediaState *onSrtpKeysAvailable() override;
+    void          updateConnections(const AmMediaStateArgs &args) override;
+    const char   *state2str() override;
 
-protected:
-    AmMediaState* nextState() override;
+  protected:
+    AmMediaState *nextState() override;
 };

@@ -5,7 +5,7 @@
 
 #define DEFAULT_BENCH_FILE_PATH "/usr/lib/sems/audio/codecs_bench.wav"
 
-int load_testing_source(std::string path,unsigned char *&buf);
-void get_codec_cost(int payload_id,unsigned char *buf, int size, AmArg &cost);
+int  load_testing_source(std::string path, unsigned char *&buf);
+void get_codec_cost(int payload_id, unsigned char *buf, int size, AmArg &cost);
 
 #endif // CODECS_BENCH_H

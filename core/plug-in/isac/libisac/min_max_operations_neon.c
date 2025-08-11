@@ -15,33 +15,33 @@
 #include "signal_processing_library.h"
 
 // Maximum absolute value of word16 vector.
-WebRtc_Word16 WebRtcSpl_MaxAbsValueW16(const WebRtc_Word16* vector,
-                                       WebRtc_Word16 length) {
-  WebRtc_Word32 temp_max = 0;
-  WebRtc_Word32 abs_val;
-  WebRtc_Word16 tot_max;
-  int i;
+WebRtc_Word16 WebRtcSpl_MaxAbsValueW16(const WebRtc_Word16 *vector, WebRtc_Word16 length)
+{
+    WebRtc_Word32 temp_max = 0;
+    WebRtc_Word32 abs_val;
+    WebRtc_Word16 tot_max;
+    int           i;
 
-  __asm__("vmov.i16 d25, #0" : : : "d25");
+    __asm__("vmov.i16 d25, #0" : : : "d25");
 
-  for (i = 0; i < length - 7; i += 8) {
-    __asm__("vld1.16 {d26, d27}, [%0]" : : "r"(&vector[i]) : "q13");
-    __asm__("vabs.s16 q13, q13" : : : "q13");
-    __asm__("vpmax.s16 d26, d27" : : : "q13");
-    __asm__("vpmax.s16 d25, d26" : : : "d25", "d26");
-  }
-  __asm__("vpmax.s16 d25, d25" : : : "d25");
-  __asm__("vpmax.s16 d25, d25" : : : "d25");
-  __asm__("vmov.s16 %0, d25[0]" : "=r"(temp_max): : "d25");
-
-  for (; i < length; i++) {
-    abs_val = WEBRTC_SPL_ABS_W32((vector[i]));
-    if (abs_val > temp_max) {
-      temp_max = abs_val;
+    for (i = 0; i < length - 7; i += 8) {
+        __asm__("vld1.16 {d26, d27}, [%0]" : : "r"(&vector[i]) : "q13");
+        __asm__("vabs.s16 q13, q13" : : : "q13");
+        __asm__("vpmax.s16 d26, d27" : : : "q13");
+        __asm__("vpmax.s16 d25, d26" : : : "d25", "d26");
     }
-  }
-  tot_max = (WebRtc_Word16)WEBRTC_SPL_MIN(temp_max, WEBRTC_SPL_WORD16_MAX);
-  return tot_max;
+    __asm__("vpmax.s16 d25, d25" : : : "d25");
+    __asm__("vpmax.s16 d25, d25" : : : "d25");
+    __asm__("vmov.s16 %0, d25[0]" : "=r"(temp_max) : : "d25");
+
+    for (; i < length; i++) {
+        abs_val = WEBRTC_SPL_ABS_W32((vector[i]));
+        if (abs_val > temp_max) {
+            temp_max = abs_val;
+        }
+    }
+    tot_max = (WebRtc_Word16)WEBRTC_SPL_MIN(temp_max, WEBRTC_SPL_WORD16_MAX);
+    return tot_max;
 }
 
 #endif

@@ -4,41 +4,39 @@
 #include "sip/ip_util.h"
 
 MEDIA_info::MEDIA_info(MEDIA_type type)
-  : IP_info(),
-    mtype(type),
-    low_port(RTP_LOWPORT),
-    high_port(RTP_HIGHPORT)
-{}
-
-MEDIA_info::~MEDIA_info()
-{ }
-
-int MEDIA_info::prepare(const std::string& iface_name)
+    : IP_info()
+    , mtype(type)
+    , low_port(RTP_LOWPORT)
+    , high_port(RTP_HIGHPORT)
 {
-    if(low_port < 1) {
-        ERROR("%s: invalid port range: %hu-%hu. low_port should be greater than zero",
-              iface_name.data(),low_port,high_port);
+}
+
+MEDIA_info::~MEDIA_info() {}
+
+int MEDIA_info::prepare(const std::string &iface_name)
+{
+    if (low_port < 1) {
+        ERROR("%s: invalid port range: %hu-%hu. low_port should be greater than zero", iface_name.data(), low_port,
+              high_port);
         return 1;
     }
-    if(low_port%2) {
-        ERROR("%s: invalid port range: %hu-%hu. low_port should be even",
-              iface_name.data(),low_port,high_port);
+    if (low_port % 2) {
+        ERROR("%s: invalid port range: %hu-%hu. low_port should be even", iface_name.data(), low_port, high_port);
         return 1;
     }
-    if(!(high_port%2)) {
-        ERROR("%s: invalid port range: %hu-%hu. high_port should be odd",
-              iface_name.data(),low_port,high_port);
+    if (!(high_port % 2)) {
+        ERROR("%s: invalid port range: %hu-%hu. high_port should be odd", iface_name.data(), low_port, high_port);
         return 1;
     }
-    if(high_port <= low_port) {
-        ERROR("%s:invalid port range: %hu-%hu. high_port should be greater than low_port",
-              iface_name.data(),low_port,high_port);
+    if (high_port <= low_port) {
+        ERROR("%s:invalid port range: %hu-%hu. high_port should be greater than low_port", iface_name.data(), low_port,
+              high_port);
         return 1;
     }
-    if((high_port - low_port) < 3) {
+    if ((high_port - low_port) < 3) {
         ERROR("%s: invalid port range: %hu-%hu. specified range is to small for even one B2B call. "
               "actual range is: %d",
-              iface_name.data(),low_port,high_port,high_port-low_port);
+              iface_name.data(), low_port, high_port, high_port - low_port);
         return 1;
     }
 
@@ -51,24 +49,24 @@ void RTP_info::addMediaAddress(const std::string &address)
     addresses.back().setAddress(address);
 }
 
-int RTP_info::prepare(const std::string& iface_name)
+int RTP_info::prepare(const std::string &iface_name)
 {
-    if(MEDIA_info::prepare(iface_name)) return 1;
-    for(auto& it : addresses) {
-        if(it.prepare(iface_name, low_port, high_port,
-                      ipTypeToStr(), transportToStr()))
+    if (MEDIA_info::prepare(iface_name))
+        return 1;
+    for (auto &it : addresses) {
+        if (it.prepare(iface_name, low_port, high_port, ipTypeToStr(), transportToStr()))
             return 1;
     }
-    single_address = addresses.size()==1;
+    single_address = addresses.size() == 1;
     return 0;
 }
 
-bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
-{ 
+bool RTP_info::getNextRtpAddress(sockaddr_storage &ss)
+{
     unsigned short port;
 
-    if(single_address) {
-        if((port = addresses.begin()->getNextRtpPort())) {
+    if (single_address) {
+        if ((port = addresses.begin()->getNextRtpPort())) {
             addresses.begin()->copy_addr(ss);
             am_set_port(&ss, port);
             return true;
@@ -76,8 +74,8 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
         return false;
     }
 
-    for(auto &it : addresses) {
-        if((port = it.getNextRtpPort())) {
+    for (auto &it : addresses) {
+        if ((port = it.getNextRtpPort())) {
             it.copy_addr(ss);
             am_set_port(&ss, port);
             return true;
@@ -87,74 +85,75 @@ bool RTP_info::getNextRtpAddress(sockaddr_storage& ss)
     return false;
 }
 
-void RTP_info::freeRtpAddress(const sockaddr_storage& ss)
+void RTP_info::freeRtpAddress(const sockaddr_storage &ss)
 {
-    if(single_address) {
+    if (single_address) {
         addresses.begin()->freeRtpPort(am_get_port(&ss));
         return;
     }
 
-    for(auto& it : addresses) {
-        if(it.match_addr(ss)) {
+    for (auto &it : addresses) {
+        if (it.match_addr(ss)) {
             it.freeRtpPort(am_get_port(&ss));
             break;
         }
     }
 }
 
-void RTP_info::iterateUsedPorts(std::function<void (const std::string &, unsigned short, unsigned short)> cl)
+void RTP_info::iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl)
 {
-    for(auto& it : addresses) {
+    for (auto &it : addresses) {
         it.iterateUsedPorts(cl);
     }
 }
 
-int RTSP_info::prepare(const std::string& iface_name)
+int RTSP_info::prepare(const std::string &iface_name)
 {
-    if(MEDIA_info::prepare(iface_name)) return 1;
+    if (MEDIA_info::prepare(iface_name))
+        return 1;
     portmap.setAddress(local_ip);
-    return portmap.prepare(iface_name, low_port, high_port,
-                           ipTypeToStr(), transportToStr());
+    return portmap.prepare(iface_name, low_port, high_port, ipTypeToStr(), transportToStr());
 }
 
-bool RTSP_info::getNextRtpAddress(sockaddr_storage& ss)
+bool RTSP_info::getNextRtpAddress(sockaddr_storage &ss)
 {
     portmap.copy_addr(ss);
     unsigned short port;
-    if(!(port = portmap.getNextRtpPort()))
+    if (!(port = portmap.getNextRtpPort()))
         return false;
     am_set_port(&ss, port);
     return true;
 }
 
-void RTSP_info::freeRtpAddress(const sockaddr_storage& ss)
+void RTSP_info::freeRtpAddress(const sockaddr_storage &ss)
 {
     portmap.freeRtpPort(am_get_port(&ss));
 }
 
-void RTSP_info::iterateUsedPorts(std::function<void(const std::string&,unsigned short, unsigned short)> cl)
+void RTSP_info::iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl)
 {
     portmap.iterateUsedPorts(cl);
 }
 
-bool IPAddr::operator == (const string& ip) {
+bool IPAddr::operator==(const string &ip)
+{
     sockaddr_storage faddr;
-    if(!am_inet_pton(ip.c_str(), &faddr))
+    if (!am_inet_pton(ip.c_str(), &faddr))
         return false;
 
-    if(family != faddr.ss_family)
+    if (family != faddr.ss_family)
         return false;
 
     size_t addr_size = 0;
-    void *faddr_p = 0, *saddr_p = 0;
-    if(family == AF_INET) {
+    void  *faddr_p = 0, *saddr_p = 0;
+    if (family == AF_INET) {
         addr_size = sizeof(in_addr);
-        faddr_p = (void*)&((sockaddr_in*)&faddr)->sin_addr;
-        saddr_p = (void*)&((sockaddr_in*)&saddr)->sin_addr;
+        faddr_p   = (void *)&((sockaddr_in *)&faddr)->sin_addr;
+        saddr_p   = (void *)&((sockaddr_in *)&saddr)->sin_addr;
     } else {
         addr_size = sizeof(in6_addr);
-        faddr_p = (void*)&((sockaddr_in6*)&faddr)->sin6_addr;
-        saddr_p = (void*)&((sockaddr_in6*)&saddr)->sin6_addr;
+        faddr_p   = (void *)&((sockaddr_in6 *)&faddr)->sin6_addr;
+        saddr_p   = (void *)&((sockaddr_in6 *)&saddr)->sin6_addr;
     }
     return memcmp(faddr_p, saddr_p, addr_size) == 0;
 }

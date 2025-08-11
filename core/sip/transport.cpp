@@ -39,62 +39,61 @@
 
 int trsp_socket::log_level_raw_msgs = L_DBG;
 
-const char * trsp_socket::socket_transport2proto_str(const socket_transport transport)
+const char *trsp_socket::socket_transport2proto_str(const socket_transport transport)
 {
-	switch(transport & sock_transport_proto_mask) {
-	case tr_proto_udp:
-		return "udp";
-	case tr_proto_tcp:
-		return "tcp";
-	case tr_proto_tls:
-		return "tls";
-	case tr_proto_ws:
-		return "ws";
-	case tr_proto_wss:
-		return "wss";
-	default:
-		return "invalid";
-	}
+    switch (transport & sock_transport_proto_mask) {
+    case tr_proto_udp: return "udp";
+    case tr_proto_tcp: return "tcp";
+    case tr_proto_tls: return "tls";
+    case tr_proto_ws:  return "ws";
+    case tr_proto_wss: return "wss";
+    default:           return "invalid";
+    }
 }
 
-trsp_socket::trsp_socket(
-    unsigned short if_num_, unsigned short proto_idx_, unsigned int opts,
-    socket_transport trans, unsigned int sys_if_idx_, int sd_)
-  : sd(sd_), client(sd == -1 ? true : false), ip(), port(0), actual_ip(), actual_port(0),
-    if_num(if_num_), proto_idx(proto_idx_), sys_if_idx(sys_if_idx_),
-    socket_options(opts), transport(trans), tos_byte(0)
+trsp_socket::trsp_socket(unsigned short if_num_, unsigned short proto_idx_, unsigned int opts, socket_transport trans,
+                         unsigned int sys_if_idx_, int sd_)
+    : sd(sd_)
+    , client(sd == -1 ? true : false)
+    , ip()
+    , port(0)
+    , actual_ip()
+    , actual_port(0)
+    , if_num(if_num_)
+    , proto_idx(proto_idx_)
+    , sys_if_idx(sys_if_idx_)
+    , socket_options(opts)
+    , transport(trans)
+    , tos_byte(0)
 {
-    memset(&addr,0,sizeof(sockaddr_storage));
+    memset(&addr, 0, sizeof(sockaddr_storage));
     time_created = time(0);
 }
 
-trsp_socket::~trsp_socket()
-{
-}
+trsp_socket::~trsp_socket() {}
 
 int trsp_socket::set_tos_byte(uint8_t byte)
 {
-    DBG("trying to set IP_TOS for %d socket buffer to 0x%02x",
-        sd,byte);
+    DBG("trying to set IP_TOS for %d socket buffer to 0x%02x", sd, byte);
 
     int tos = byte;
 
-    int ret = setsockopt(sd, IPPROTO_IP, IP_TOS,  &tos, sizeof(tos));
-    if(ret < 0) {
-        ERROR("failed to set IP_TOS 0x%0x for socket %d. err: %d",byte,sd,ret);
+    int ret = setsockopt(sd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+    if (ret < 0) {
+        ERROR("failed to set IP_TOS 0x%0x for socket %d. err: %d", byte, sd, ret);
         return 1;
     }
 
-    int set_tos;
+    int       set_tos;
     socklen_t toslen = sizeof(tos);
-    ret = getsockopt(sd, IPPROTO_IP, IP_TOS,  &set_tos, &toslen);
-    if(ret < 0) {
-        ERROR("failed to get IP_TOS for socket %d. err: %d",sd,ret);
+    ret              = getsockopt(sd, IPPROTO_IP, IP_TOS, &set_tos, &toslen);
+    if (ret < 0) {
+        ERROR("failed to get IP_TOS for socket %d. err: %d", sd, ret);
         return 1;
     }
 
-    if(set_tos != tos) {
-        ERROR("failed to set IP_TOS for %d",sd);
+    if (set_tos != tos) {
+        ERROR("failed to set IP_TOS for %d", sd);
         return 1;
     }
 
@@ -105,31 +104,23 @@ int trsp_socket::set_tos_byte(uint8_t byte)
 
 int trsp_socket::get_transport_proto_id() const
 {
-    //TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
-    switch(transport) {
+    // TODO: use bitmask here as for PI_interface::local_ip_proto2addr_if
+    switch (transport) {
     case udp_ipv4:
-    case udp_ipv6:
-        return sip_transport::UDP;
+    case udp_ipv6: return sip_transport::UDP;
     case tcp_ipv4:
-    case tcp_ipv6:
-        return sip_transport::TCP;
+    case tcp_ipv6: return sip_transport::TCP;
     case tls_ipv4:
-    case tls_ipv6:
-        return sip_transport::TLS;
+    case tls_ipv6: return sip_transport::TLS;
     case ws_ipv4:
-    case ws_ipv6:
-        return sip_transport::WS;
+    case ws_ipv6:  return sip_transport::WS;
     case wss_ipv4:
-    case wss_ipv6:
-        return sip_transport::WSS;
-    default:
-        ERROR("unexpected transport: %d. set UNPARSED as fallback",
-            transport);
-        return sip_transport::UNPARSED;
+    case wss_ipv6: return sip_transport::WSS;
+    default:       ERROR("unexpected transport: %d. set UNPARSED as fallback", transport); return sip_transport::UNPARSED;
     }
 }
 
-const char* trsp_socket::get_ip() const
+const char *trsp_socket::get_ip() const
 {
     return ip.c_str();
 }
@@ -139,7 +130,7 @@ unsigned short trsp_socket::get_port() const
     return port;
 }
 
-const string& trsp_socket::get_actual_ip() const
+const string &trsp_socket::get_actual_ip() const
 {
     return actual_ip;
 }
@@ -154,12 +145,12 @@ unsigned int trsp_socket::get_options() const
     return socket_options;
 }
 
-void trsp_socket::set_public_ip(const string& ip)
+void trsp_socket::set_public_ip(const string &ip)
 {
     public_ip = ip;
 }
 
-void trsp_socket::set_public_domain(const string& domain)
+void trsp_socket::set_public_domain(const string &domain)
 {
     public_domain = domain;
 }
@@ -174,12 +165,12 @@ bool trsp_socket::get_announce_port() const
     return announce_port;
 }
 
-const char* trsp_socket::get_advertised_host() const
+const char *trsp_socket::get_advertised_host() const
 {
-    if(!public_domain.empty())
+    if (!public_domain.empty())
         return public_domain.data();
 
-    if(!public_ip.empty())
+    if (!public_ip.empty())
         return public_ip.c_str();
 
     return get_ip();
@@ -187,31 +178,29 @@ const char* trsp_socket::get_advertised_host() const
 
 bool trsp_socket::is_opt_set(unsigned int mask) const
 {
-    //DBG("trsp_socket::socket_options = 0x%x",socket_options);
+    // DBG("trsp_socket::socket_options = 0x%x",socket_options);
     return (socket_options & mask) == mask;
 }
 
-void trsp_socket::copy_addr_to(sockaddr_storage* sa) const
+void trsp_socket::copy_addr_to(sockaddr_storage *sa) const
 {
-    memcpy(sa,&addr,sizeof(sockaddr_storage));
+    memcpy(sa, &addr, sizeof(sockaddr_storage));
 }
 
 /**
  * Match with the given address
  * @return true if address matches
  */
-bool trsp_socket::match_addr(sockaddr_storage* other_addr) const
+bool trsp_socket::match_addr(sockaddr_storage *other_addr) const
 {
 
-    if(addr.ss_family != other_addr->ss_family)
+    if (addr.ss_family != other_addr->ss_family)
         return false;
 
-    if(addr.ss_family == AF_INET) {
-        return SAv4(&addr)->sin_addr.s_addr==SAv4(other_addr)->sin_addr.s_addr;
-    } else if(addr.ss_family == AF_INET6) {
-        return IN6_ARE_ADDR_EQUAL(
-            &(SAv6(&addr))->sin6_addr,
-            &(SAv6(other_addr))->sin6_addr);
+    if (addr.ss_family == AF_INET) {
+        return SAv4(&addr)->sin_addr.s_addr == SAv4(other_addr)->sin_addr.s_addr;
+    } else if (addr.ss_family == AF_INET6) {
+        return IN6_ARE_ADDR_EQUAL(&(SAv6(&addr))->sin6_addr, &(SAv6(other_addr))->sin6_addr);
     }
 
     return false;
@@ -234,12 +223,11 @@ unsigned short trsp_socket::get_proto_idx() const
 
 trsp_acl::action_t trsp_acl::check(const sockaddr_storage &ip) const
 {
-    if(networks.empty()) return Allow;
+    if (networks.empty())
+        return Allow;
 
-    for(vector<AmSubnet>::const_iterator i = networks.begin();
-        i!=networks.end();++i)
-    {
-        if(i->contains(ip))
+    for (vector<AmSubnet>::const_iterator i = networks.begin(); i != networks.end(); ++i) {
+        if (i->contains(ip))
             return Allow;
     }
     return action;

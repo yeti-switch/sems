@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmEvent.h */
@@ -43,33 +43,32 @@ using std::string;
 /** \brief base event class */
 struct AmEvent
 #ifdef OBJECTS_COUNTER
-  : ObjCounter(AmEvent)
+    : ObjCounter(AmEvent)
 #endif
 {
-  int event_id;
-  bool processed;
+    int  event_id;
+    bool processed;
 
-  AmEvent(int event_id);
-  AmEvent(const AmEvent& rhs);
+    AmEvent(int event_id);
+    AmEvent(const AmEvent &rhs);
 
-  virtual ~AmEvent();
+    virtual ~AmEvent();
 
-  virtual AmEvent* clone();
+    virtual AmEvent *clone();
 };
 
-/** 
- * \brief named event for inter-plugin-API 
+/**
+ * \brief named event for inter-plugin-API
  *
  * Optionally the AmPluginEvent also holds a dynamic argument array.
  */
-struct AmPluginEvent: public AmEvent
-{
-  string      name;
-  AmArg       data;
+struct AmPluginEvent : public AmEvent {
+    string name;
+    AmArg  data;
 
-  AmPluginEvent(const string& n);
+    AmPluginEvent(const string &n);
 
-  AmPluginEvent(const string& n, const AmArg& d);
+    AmPluginEvent(const string &n, const AmArg &d);
 };
 
 /**
@@ -81,47 +80,44 @@ struct AmPluginEvent: public AmEvent
  * \brief User Timer Event
  * data[0]: int timer_id
  */
-class AmTimeoutEvent : public AmPluginEvent
-{
- public:
-  AmTimeoutEvent(int timer_id);
+class AmTimeoutEvent : public AmPluginEvent {
+  public:
+    AmTimeoutEvent(int timer_id);
 };
 
 /**
- * \brief named event for system events (e.g. server stopped) 
+ * \brief named event for system events (e.g. server stopped)
  */
-struct AmSystemEvent : public AmEvent 
-{
-  enum EvType {
-    ServerShutdown = 0,
-    User,
-    GracefulShutdownRequested,
-    GracefulShutdownCancelled,
-  };
+struct AmSystemEvent : public AmEvent {
+    enum EvType {
+        ServerShutdown = 0,
+        User,
+        GracefulShutdownRequested,
+        GracefulShutdownCancelled,
+    };
 
-  EvType sys_event;
+    EvType sys_event;
 
-  AmSystemEvent(EvType e);
+    AmSystemEvent(EvType e);
 
-  AmSystemEvent(const AmSystemEvent& rhs);
+    AmSystemEvent(const AmSystemEvent &rhs);
 
-  AmEvent* clone();
+    AmEvent *clone();
 
-  static const char* getDescription(EvType t);
-
+    static const char *getDescription(EvType t);
 };
 
 /** \brief event handler interface */
-class AmEventHandler
-{
- public:
-  virtual void process(AmEvent*)=0;
-  //returns true if event was consumed by handler to avoid destroy by queue processor
-  virtual bool process_consuming(AmEvent* e) {
-    process(e);
-    return false;
-  }
-  virtual ~AmEventHandler() { };
+class AmEventHandler {
+  public:
+    virtual void process(AmEvent *) = 0;
+    // returns true if event was consumed by handler to avoid destroy by queue processor
+    virtual bool process_consuming(AmEvent *e)
+    {
+        process(e);
+        return false;
+    }
+    virtual ~AmEventHandler() {};
 };
 
 #endif

@@ -4,24 +4,24 @@
 
 #include <AmEventDispatcher.h>
 
-#define EPOLL_MAX_EVENTS 2048
+#define EPOLL_MAX_EVENTS  2048
 #define session_container AmSessionContainer::instance()
-#define event_dispatcher AmEventDispatcher::instance()
+#define event_dispatcher  AmEventDispatcher::instance()
 
 int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
 {
-    if(!reply) {
+    if (!reply) {
         result = RedisReply::IOError;
         return -1;
     }
 
-    //serialize redisReply to AmArg
-    if(redis::isReplyError(reply)) {
+    // serialize redisReply to AmArg
+    if (redis::isReplyError(reply)) {
         result = RedisReply::ErrorReply;
-        //data = string("error: ") + string(reply->str,reply->len);
-    } else if(redis::isReplyStatus(reply)) {
+        // data = string("error: ") + string(reply->str,reply->len);
+    } else if (redis::isReplyStatus(reply)) {
         result = RedisReply::StatusReply;
-        //data = string("status: ") + string(reply->str,reply->len);
+        // data = string("status: ") + string(reply->str,reply->len);
     } else {
         result = RedisReply::SuccessReply;
     }
@@ -30,42 +30,43 @@ int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
     return 0;
 }
 
-static void redis_request_cb_static(redisAsyncContext* , void *r, void *privdata)
+static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata)
 {
-    RedisReplyCtx *ctx = static_cast<RedisReplyCtx *>(privdata);
-    redisReply* reply = static_cast<redisReply *>(r);
+    RedisReplyCtx *ctx   = static_cast<RedisReplyCtx *>(privdata);
+    redisReply    *reply = static_cast<redisReply *>(r);
 
     bool access_error = false;
-    if(reply == nullptr) {
+    if (reply == nullptr) {
         ERROR("%s: I/O error", ctx->session_id.c_str());
-    } else if(redis::isReplyError(reply)) {
+    } else if (redis::isReplyError(reply)) {
         ERROR("%s: error: %s", ctx->session_id.c_str(), redis::getReplyError(reply));
         access_error = (strstr(redis::getReplyError(reply), "READONLY") != nullptr);
     }
 
     RedisReply::result_type result;
-    AmArg data;
+    AmArg                   data;
     parseReply(reply, result, data);
 
-    if(ctx->pool)
+    if (ctx->pool)
         ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.release(), data);
-    else if(ctx->session_id.empty() == false)
+    else if (ctx->session_id.empty() == false)
         session_container->postEvent(ctx->session_id,
-            new RedisReply(ctx->conn_id, result, data, ctx->user_data, ctx->user_type_id));
+                                     new RedisReply(ctx->conn_id, result, data, ctx->user_data, ctx->user_type_id));
 
-    if(access_error) {
+    if (access_error) {
         ERROR("Error Access, reconnect");
         redis::redisAsyncDisconnect(ctx->c->get_async_context());
     }
-    if(!ctx->persistent_ctx) delete ctx;
+    if (!ctx->persistent_ctx)
+        delete ctx;
 }
 
-RedisConnectionPool::RedisConnectionPool(const char* name, const string &queue_name)
-  : AmEventFdQueue(this),
-    epoll_fd(-1),
-    name(name),
-    queue_name(queue_name),
-    stopped(false)
+RedisConnectionPool::RedisConnectionPool(const char *name, const string &queue_name)
+    : AmEventFdQueue(this)
+    , epoll_fd(-1)
+    , name(name)
+    , queue_name(queue_name)
+    , stopped(false)
 {
     event_dispatcher->addEventQueue(queue_name, this);
 }
@@ -75,10 +76,10 @@ RedisConnectionPool::~RedisConnectionPool()
     CLASS_DBG("RedisConnectionPool::~RedisConnectionPool()");
     event_dispatcher->delEventQueue(queue_name);
 
-    for(auto &ctx: persistent_reply_contexts)
+    for (auto &ctx : persistent_reply_contexts)
         delete ctx;
 
-    while(!connections.empty()) {
+    while (!connections.empty()) {
         delete connections.front();
         connections.pop_front();
     }
@@ -86,28 +87,28 @@ RedisConnectionPool::~RedisConnectionPool()
 
 int RedisConnectionPool::init()
 {
-    if((epoll_fd = epoll_create(10)) == -1) {
+    if ((epoll_fd = epoll_create(10)) == -1) {
         ERROR("epoll_create call failed");
         return -1;
     }
 
-    stop_event.link(epoll_fd,true);
+    stop_event.link(epoll_fd, true);
 
-    reconnect_timer.link(epoll_fd,true);
-    reconnect_timer.set(2e6,true);
+    reconnect_timer.link(epoll_fd, true);
+    reconnect_timer.set(2e6, true);
 
-    retry_reqs_timer.link(epoll_fd,true);
-    retry_reqs_timer.set(0,false);
+    retry_reqs_timer.link(epoll_fd, true);
+    retry_reqs_timer.set(0, false);
 
-    epoll_link(epoll_fd,true);
+    epoll_link(epoll_fd, true);
     return 0;
 }
 
 void RedisConnectionPool::run()
 {
-    int ret;
-    void *p;
-    bool running;
+    int                ret;
+    void              *p;
+    bool               running;
     struct epoll_event events[EPOLL_MAX_EVENTS];
 
     setThreadName(name);
@@ -115,47 +116,47 @@ void RedisConnectionPool::run()
     DBG("start async redis '%s'", name);
 
     auto self_queue_ptr = dynamic_cast<AmEventFdQueue *>(this);
-    running = true;
+    running             = true;
     do {
         ret = epoll_wait(epoll_fd, events, EPOLL_MAX_EVENTS, -1);
 
-        if(ret == -1 && errno != EINTR){
-            ERROR("epoll_wait: %s",strerror(errno));
+        if (ret == -1 && errno != EINTR) {
+            ERROR("epoll_wait: %s", strerror(errno));
         }
 
-        if(ret < 1)
+        if (ret < 1)
             continue;
 
         for (int n = 0; n < ret; ++n) {
             struct epoll_event &e = events[n];
-            p = e.data.ptr;
-            if(p==&reconnect_timer) {
+            p                     = e.data.ptr;
+            if (p == &reconnect_timer) {
                 reconnect_timer.read();
                 reconnect();
-            } else if(p==&retry_reqs_timer) {
+            } else if (p == &retry_reqs_timer) {
                 retry_reqs_timer.read();
                 on_retry_reqs_timer();
-            } else if(p==&stop_event) {
+            } else if (p == &stop_event) {
                 process_stop_event();
                 stop_event.read();
                 running = false;
                 break;
-            } else if(p==self_queue_ptr) {
+            } else if (p == self_queue_ptr) {
                 processEvents();
             } else {
-                if(!p) {
+                if (!p) {
                     CLASS_ERROR("got event on null async_context. ignore");
                     continue;
                 }
-                if(e.events & EPOLLIN) {
-                    redis::redisAsyncHandleRead((redisAsyncContext*)p);
+                if (e.events & EPOLLIN) {
+                    redis::redisAsyncHandleRead((redisAsyncContext *)p);
                 }
-                if(e.events & EPOLLOUT) {
-                    redis::redisAsyncHandleWrite((redisAsyncContext*)p);
+                if (e.events & EPOLLOUT) {
+                    redis::redisAsyncHandleWrite((redisAsyncContext *)p);
                 }
             }
         }
-    } while(running);
+    } while (running);
 
     epoll_unlink(epoll_fd);
     close(epoll_fd);
@@ -165,16 +166,17 @@ void RedisConnectionPool::run()
     stopped.set(true);
 }
 
-void RedisConnectionPool::process(AmEvent* ev)
+void RedisConnectionPool::process(AmEvent *ev)
 {
-    switch(ev->event_id) {
-        case E_SYSTEM: {
-            AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
-            if(sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown){
-                stop_event.fire();
-            }
-            return;
+    switch (ev->event_id) {
+    case E_SYSTEM:
+    {
+        AmSystemEvent *sys_ev = dynamic_cast<AmSystemEvent *>(ev);
+        if (sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
+            stop_event.fire();
         }
+        return;
+    }
     }
 }
 
@@ -185,12 +187,10 @@ void RedisConnectionPool::process(AmEvent* ev)
  *  event_args[N] : argN */
 static int perform_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
 {
-    char *cmd = nullptr;
+    char   *cmd      = nullptr;
     ssize_t cmd_size = args2redis_cmd(event_args, &cmd);
-    int ret = cmd_size > 0
-            ? redis::redisAsyncFormattedCommand(ac, &redis_request_cb_static, ctx, cmd, cmd_size)
-            : -1;
-    if(cmd)
+    int ret = cmd_size > 0 ? redis::redisAsyncFormattedCommand(ac, &redis_request_cb_static, ctx, cmd, cmd_size) : -1;
+    if (cmd)
         free_redis_cmd(cmd);
 
     return ret;
@@ -203,31 +203,31 @@ static int perform_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector
  * event_args[N] : [cmdN, arg0, arg1 ... argN] */
 static int perform_multi_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector<AmArg> &event_args)
 {
-    if(redis::redisvAsyncCommand(ac, nullptr, nullptr, "MULTI") != REDIS_OK)
+    if (redis::redisvAsyncCommand(ac, nullptr, nullptr, "MULTI") != REDIS_OK)
         return -1;
 
-    for(const auto &c: event_args) {
-        if(!isArgArray(c)) {
+    for (const auto &c : event_args) {
+        if (!isArgArray(c)) {
             DBG("MULTI event arg expected Array, got %s", c.getTypeStr());
             continue;
         }
 
-        char *cmd = nullptr;
+        char  *cmd = nullptr;
         size_t cmd_size;
-        int ret;
+        int    ret;
 
         cmd_size = args2redis_cmd(c, &cmd);
-        if(cmd_size < 0)
+        if (cmd_size < 0)
             goto failed;
 
         ret = redis::redisAsyncFormattedCommand(ac, nullptr, nullptr, cmd, cmd_size);
         free_redis_cmd(cmd);
 
-        if(ret != REDIS_OK)
+        if (ret != REDIS_OK)
             goto failed;
     }
 
-    if(redis::redisvAsyncCommand(ac, redis_request_cb_static, ctx, "EXEC") == REDIS_OK)
+    if (redis::redisvAsyncCommand(ac, redis_request_cb_static, ctx, "EXEC") == REDIS_OK)
         return 0;
 
 failed:
@@ -235,38 +235,36 @@ failed:
     return -1;
 }
 
-void RedisConnectionPool::process_request_event(RedisRequest& event, RedisConnection *c)
+void RedisConnectionPool::process_request_event(RedisRequest &event, RedisConnection *c)
 {
-    redisAsyncContext* ac = c->get_async_context();
-    if(c->is_connected() == false) {
-        if(event.session_id.empty() == false)
-            session_container->postEvent(event.session_id,
-                new RedisReply(event.conn_id, RedisReply::NotConnected, AmArg(),
-                    event.user_data, event.user_type_id));
+    redisAsyncContext *ac = c->get_async_context();
+    if (c->is_connected() == false) {
+        if (event.session_id.empty() == false)
+            session_container->postEvent(
+                event.session_id,
+                new RedisReply(event.conn_id, RedisReply::NotConnected, AmArg(), event.user_data, event.user_type_id));
         return;
     }
 
     RedisReplyCtx *ctx = new RedisReplyCtx(c, event);
-    int ret = event.event_id == RedisEvent::RequestMulti
-              ? perform_multi_event(ac, ctx, event.args)
-              : perform_event(ac, ctx, event.args);
+    int            ret = event.event_id == RedisEvent::RequestMulti ? perform_multi_event(ac, ctx, event.args)
+                                                                    : perform_event(ac, ctx, event.args);
 
-    if(ret == REDIS_OK) {
-        if(event.user_data && event.persistent_ctx) {
-            ERROR("%s:%d user_data is not allowed for persistent context. clear it",
-                  event.session_id.data(), event.user_type_id);
+    if (ret == REDIS_OK) {
+        if (event.user_data && event.persistent_ctx) {
+            ERROR("%s:%d user_data is not allowed for persistent context. clear it", event.session_id.data(),
+                  event.user_type_id);
             event.user_data.reset();
         }
 
-        //set reply ctx for persistent contexts
-        if(ctx->persistent_ctx)
+        // set reply ctx for persistent contexts
+        if (ctx->persistent_ctx)
             persistent_reply_contexts.push_back(ctx);
 
-    } else {  /** FAILED */
-        if(event.session_id.empty() == false)
-          session_container->postEvent(ctx->session_id,
-              new RedisReply(event.conn_id, RedisReply::FailedToSend, AmArg(),
-                      event.user_data, event.user_type_id));
+    } else { /** FAILED */
+        if (event.session_id.empty() == false)
+            session_container->postEvent(ctx->session_id, new RedisReply(event.conn_id, RedisReply::FailedToSend,
+                                                                         AmArg(), event.user_data, event.user_type_id));
         delete ctx;
     }
 }
@@ -279,38 +277,40 @@ void RedisConnectionPool::process_internal_request(RedisConnection *c, AmObject 
     va_end(args);
 }
 
-void RedisConnectionPool::process_internal_vrequest(RedisConnection *c, AmObject *user_data, const char *fmt, va_list args)
+void RedisConnectionPool::process_internal_vrequest(RedisConnection *c, AmObject *user_data, const char *fmt,
+                                                    va_list args)
 {
-    redisAsyncContext* context = c->get_async_context();
-    if(c->is_connected() == false)
+    redisAsyncContext *context = c->get_async_context();
+    if (c->is_connected() == false)
         return;
 
     char *cmd;
-    int ret = redis::redisvFormatCommand(&cmd, fmt, args);
-    if(ret <= 0)
+    int   ret = redis::redisvFormatCommand(&cmd, fmt, args);
+    if (ret <= 0)
         return;
 
     size_t cmd_size = static_cast<size_t>(ret);
-    auto ctx = new RedisReplyCtx(c, user_data, this);
-    if(REDIS_OK != redis::redisAsyncFormattedCommand(context, &redis_request_cb_static, ctx, cmd, cmd_size)) {
-        delete ctx; ctx = nullptr;
+    auto   ctx      = new RedisReplyCtx(c, user_data, this);
+    if (REDIS_OK != redis::redisAsyncFormattedCommand(context, &redis_request_cb_static, ctx, cmd, cmd_size)) {
+        delete ctx;
+        ctx = nullptr;
     }
 
-    if(cmd)
+    if (cmd)
         redis::redisFreeCommand(cmd);
 }
 
 void RedisConnectionPool::process_stop_event()
 {
-    for(auto& connection : connections)
-        if(connection->is_connected())
+    for (auto &connection : connections)
+        if (connection->is_connected())
             redis::redisAsyncDisconnect(connection->get_async_context());
 }
 
-RedisConnection* RedisConnectionPool::addConnection(const string& name, const string& host, int port)
+RedisConnection *RedisConnectionPool::addConnection(const string &name, const string &host, int port)
 {
-    RedisConnection* conn = new RedisConnection(name.c_str(), this);
-    if(conn->init(epoll_fd, host, port) != 0) {
+    RedisConnection *conn = new RedisConnection(name.c_str(), this);
+    if (conn->init(epoll_fd, host, port) != 0) {
         delete conn;
         return 0;
     }
@@ -321,8 +321,8 @@ RedisConnection* RedisConnectionPool::addConnection(const string& name, const st
 
 void RedisConnectionPool::reconnect()
 {
-    for(auto& connection : connections)
-        if(!connection->is_connected())
+    for (auto &connection : connections)
+        if (!connection->is_connected())
             connection->connect();
 }
 

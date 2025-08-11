@@ -19,7 +19,7 @@
 
 void WebRtcSpl_ComplexBitReverse(WebRtc_Word16 frfi[], int stages)
 {
-    int mr, nn, n, l, m;
+    int           mr, nn, n, l, m;
     WebRtc_Word16 tr, ti;
 
     n = 1 << stages;
@@ -28,11 +28,9 @@ void WebRtcSpl_ComplexBitReverse(WebRtc_Word16 frfi[], int stages)
     nn = n - 1;
 
     // decimation in time - re-order data
-    for (m = 1; m <= nn; ++m)
-    {
+    for (m = 1; m <= nn; ++m) {
         l = n;
-        do
-        {
+        do {
             l >>= 1;
         } while (mr + l > nn);
         mr = (mr & (l - 1)) + l;
@@ -40,12 +38,12 @@ void WebRtcSpl_ComplexBitReverse(WebRtc_Word16 frfi[], int stages)
         if (mr <= m)
             continue;
 
-        tr = frfi[2 * m];
-        frfi[2 * m] = frfi[2 * mr];
+        tr           = frfi[2 * m];
+        frfi[2 * m]  = frfi[2 * mr];
         frfi[2 * mr] = tr;
 
-        ti = frfi[2 * m + 1];
-        frfi[2 * m + 1] = frfi[2 * mr + 1];
+        ti               = frfi[2 * m + 1];
+        frfi[2 * m + 1]  = frfi[2 * mr + 1];
         frfi[2 * mr + 1] = ti;
     }
 }

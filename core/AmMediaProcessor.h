@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmMediaProcessor.h */
@@ -52,8 +52,7 @@ struct SchedTailRequest;
  * events detected when reading data from media streams.
  */
 
-class AmMediaSession
-{
+class AmMediaSession {
   private:
     AmCondition<bool> processing_media;
 
@@ -62,11 +61,14 @@ class AmMediaSession
     string media_session_callgroup;
 
   public:
-    AmMediaSession(): processing_media(false) { }
-    virtual ~AmMediaSession() { }
+    AmMediaSession()
+        : processing_media(false)
+    {
+    }
+    virtual ~AmMediaSession() {}
 
-    void setMediaCallGroup(const std::string &id) { media_session_callgroup = id; }
-    void clearMediaCallGroup() { media_session_callgroup.clear(); }
+    void          setMediaCallGroup(const std::string &id) { media_session_callgroup = id; }
+    void          clearMediaCallGroup() { media_session_callgroup.clear(); }
     const string &getMediaCallGroup() { return media_session_callgroup; }
 
     /** Read from all media streams.
@@ -74,47 +76,47 @@ class AmMediaSession
      * To preserve current media processing scheme it is needed to read from all
      * streams first and then write to them. This can be important for example
      * in case of conferences where we need to have media from all streams ready
-     * for mixing them. 
+     * for mixing them.
      *
      * So the AmMediaProcessorThread first calls readStreams on all sessions and
      * then writeStreams on all sessions.
      *
      * \param ts timestamp for which the processing is currently running
      *
-     * \param buffer multi-purpose space given from outside (AmMediaProcessorThread) 
+     * \param buffer multi-purpose space given from outside (AmMediaProcessorThread)
      *
      * Buffer given as parametr is usable for anything, originally was intended for data
-     * read from one stream before putting to another stream. 
+     * read from one stream before putting to another stream.
      *
      * The reason for having this buffer as parameter is that buffer size for
      * audio processing is quite large (2K here) and thus allocating it on stack
-     * on some architectures may be problematic. 
+     * on some architectures may be problematic.
      *
      * On other hand having the buffer dynamically allocated for each media
-     * session would significantly increase memory consumption per call. 
+     * session would significantly increase memory consumption per call.
      *
      * So for now it seems to be the simplest way just to give the buffer as
      * parameter from AmMediaProcessorThread and reuse it in all sessions handled
      * by this thread (processing is done sequentially one session after another). */
     virtual int readStreams(unsigned long long ts, unsigned char *buffer) = 0;
-    
+
     /** Write to all media streams.
      *
      * For the meaning of parameters see description of readStreams() method. */
     virtual int writeStreams(unsigned long long ts, unsigned char *buffer) = 0;
 
     /** Handle events in DTMF event queue.
-     * 
+     *
      * DTMF events should be detected from RTP stream when reading data (see
      * readStreams()) and put into an event queue for later processing to avoid
-     * blocking of audio processing for too long time. 
+     * blocking of audio processing for too long time.
      *
      * This DTMF event queue should be processed then, within this method, which
      * is triggered by AmMediaProcessorThread once reading/writing from media
      * streams is finished. */
     virtual void processDtmfEvents() = 0;
 
-    /** Reset all media processing elements. 
+    /** Reset all media processing elements.
      *
      * Called as part of cleanup when removing session from media processor upon
      * an processing error (either readStreams() or writeStreams() returning
@@ -130,14 +132,14 @@ class AmMediaSession
     /** ping the remote side, to open NATs and enable symmetric RTP */
     virtual void ping(unsigned long long ts) {}
 
-    /** Callback function called when a session is added to media processor.  
+    /** Callback function called when a session is added to media processor.
      *
      * Default implementation sets internal variable usable for detection if the
      * object is in use by AmMediaProcessorThread. */
     virtual void onMediaProcessingStarted() { processing_media.set(true); }
 
     /** Callback function called when a session is already exists in media processor on adding */
-    virtual void onMediaSessionExists() { }
+    virtual void onMediaSessionExists() {}
 
     /* Callback function called when a session is removed from media processor.
      *
@@ -146,7 +148,7 @@ class AmMediaSession
     virtual void onMediaProcessingTerminated() { processing_media.set(false); }
 
     /** Indicates if the object is used by media processor.
-     * 
+     *
      * Returns value of internal variable for distinguishing if the object is
      * already added into media processor. It should be avoided to insert one
      * session into media processor multiple times.
@@ -154,24 +156,26 @@ class AmMediaSession
      * Note that using default implementation of onMediaProcessingStarted and
      * onMediaProcessingTerminated is required for proper function. */
     virtual bool isProcessingMedia() { return processing_media.get(); }
-  
+
     /** Indicates if the object is used by media processor.
-     * 
+     *
      * Seems to be duplicate to isProcessingMedia(). It was kept to reduce
      * number of changes in existing code. */
     virtual bool isDetached() { return !isProcessingMedia(); }
 
-	virtual void getInfo(AmArg &ret) { ret = "not implemented"; }
+    virtual void getInfo(AmArg &ret) { ret = "not implemented"; }
 };
 
-class AmMediaTailHandler
-{
+class AmMediaTailHandler {
   private:
     AmCondition<bool> processing_media_tail;
 
   public:
-    AmMediaTailHandler(): processing_media_tail(false) { }
-    virtual ~AmMediaTailHandler() { }
+    AmMediaTailHandler()
+        : processing_media_tail(false)
+    {
+    }
+    virtual ~AmMediaTailHandler() {}
 
     virtual int processMediaTail(unsigned long long ts) = 0;
 
@@ -183,117 +187,109 @@ class AmMediaTailHandler
 
 /**
  * \brief Media processing thread
- * 
+ *
  * This class implements a media processing thread.
  * It processes the media and triggers the sending of RTP
  * of all sessions added to it.
  */
-class AmMediaProcessorThread :
-  public AmThread,
-  public AmEventHandler
-{
-  AmEventQueue    events;
-  unsigned char   buffer[AUDIO_BUFFER_SIZE];
-  set<AmMediaSession*> sessions;
-  set<AmMediaTailHandler *> tail_handlers;
-  unsigned long long ts;
+class AmMediaProcessorThread : public AmThread, public AmEventHandler {
+    AmEventQueue              events;
+    unsigned char             buffer[AUDIO_BUFFER_SIZE];
+    set<AmMediaSession *>     sessions;
+    set<AmMediaTailHandler *> tail_handlers;
+    unsigned long long        ts;
 
-  void processAudio(unsigned long long ts);
-  /**
-   * Process pending DTMF events
-   */
-  void processDtmfEvents();
+    void processAudio(unsigned long long ts);
+    /**
+     * Process pending DTMF events
+     */
+    void processDtmfEvents();
 
-  // AmThread interface
-  void run();
-  void on_stop();
-  bool stop_requested;
+    // AmThread interface
+    void run();
+    void on_stop();
+    bool stop_requested;
 
-  // AmEventHandler interface
-  void process(AmEvent* e);
-public:
-  AmMediaProcessorThread();
-  ~AmMediaProcessorThread();
+    // AmEventHandler interface
+    void process(AmEvent *e);
 
-  inline void postRequest(SchedRequest* sr);
-  inline void postTailRequest(SchedTailRequest* sr);
+  public:
+    AmMediaProcessorThread();
+    ~AmMediaProcessorThread();
 
-  unsigned int getLoad();
-  void getInfo(AmArg &ret);
+    inline void postRequest(SchedRequest *sr);
+    inline void postTailRequest(SchedTailRequest *sr);
+
+    unsigned int getLoad();
+    void         getInfo(AmArg &ret);
 };
 
 /**
  * \brief Media processing thread manager
- * 
- * This class implements the manager that assigns and removes 
- * the Sessions to the various \ref MediaProcessorThreads, 
- * according to their call group. This class contains the API 
+ *
+ * This class implements the manager that assigns and removes
+ * the Sessions to the various \ref MediaProcessorThreads,
+ * according to their call group. This class contains the API
  * for the MediaProcessor.
  */
-class AmMediaProcessor
-{
-    static AmMediaProcessor* _instance;
+class AmMediaProcessor {
+    static AmMediaProcessor *_instance;
 
-    unsigned int num_threads;
-    AmMediaProcessorThread**  threads;
+    unsigned int             num_threads;
+    AmMediaProcessorThread **threads;
 
     struct callgroup_t {
         std::set<AmMediaSession *> members;
-        unsigned int thread_id;
+        unsigned int               thread_id;
 
-        callgroup_t(unsigned int _thread_id, AmMediaSession* s)
-          : members({s}),
-            thread_id(_thread_id)
-        {}
+        callgroup_t(unsigned int _thread_id, AmMediaSession *s)
+            : members({ s })
+            , thread_id(_thread_id)
+        {
+        }
     };
     std::unordered_map<string, callgroup_t> callgroups;
-    AmMutex group_mut;
+    AmMutex                                 group_mut;
 
     AmMediaProcessor();
     ~AmMediaProcessor();
 
-    bool removeFromProcessor(AmMediaSession* s, unsigned int r_type);
+    bool removeFromProcessor(AmMediaSession *s, unsigned int r_type);
 
   public:
-    /** 
-    * InsertSession     : inserts the session to the processor
-    * RemoveSession     : remove the session from the processor
-    * SoftRemoveSession : remove the session from the processor but leave it attached
-    * ClearSession      : remove the session from processor and clear audio
-    */
+    /**
+     * InsertSession     : inserts the session to the processor
+     * RemoveSession     : remove the session from the processor
+     * SoftRemoveSession : remove the session from the processor but leave it attached
+     * ClearSession      : remove the session from processor and clear audio
+     */
     enum { InsertSession, RemoveSession, SoftRemoveSession, ClearSession };
 
-    static AmMediaProcessor* instance();
+    static AmMediaProcessor *instance();
 
     void init();
 
     /** Add session s to processor */
-    bool addSession(AmMediaSession* s, const string& callgroup);
+    bool addSession(AmMediaSession *s, const string &callgroup);
     /** Add session s to sched_thread processor */
-    bool addSession(AmMediaSession* s, const string& callgroup,  unsigned int sched_thread);
+    bool addSession(AmMediaSession *s, const string &callgroup, unsigned int sched_thread);
     /** Remove session s from processor */
-    bool removeSession(AmMediaSession* s);
+    bool removeSession(AmMediaSession *s);
     /** Remove session s from processor and clear its audio */
-    bool clearSession(AmMediaSession* s);
+    bool clearSession(AmMediaSession *s);
     /** Remove session s from processor but don't signal that to the session */
-    bool softRemoveSession(AmMediaSession* s);
+    bool softRemoveSession(AmMediaSession *s);
     /** Change the callgroup of a session (use with caution) */
-    bool changeCallgroup(AmMediaSession* s, const string& new_callgroup);
+    bool changeCallgroup(AmMediaSession *s, const string &new_callgroup);
 
-    void addTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
-    void removeTailHandler(AmMediaTailHandler* h, unsigned int sched_thread);
+    void addTailHandler(AmMediaTailHandler *h, unsigned int sched_thread);
+    void removeTailHandler(AmMediaTailHandler *h, unsigned int sched_thread);
 
-    void stop();
+    void        stop();
     static void dispose();
 
-    void getInfo(AmArg& ret);
+    void getInfo(AmArg &ret);
 };
 
 
 #endif
-
-
-
-
-
-

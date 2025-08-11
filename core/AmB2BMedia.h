@@ -11,12 +11,11 @@
 
 class AmB2BSession;
 
-class B2BMediaStatistics
-{
+class B2BMediaStatistics {
   private:
     std::map<string, int> codec_write_usage;
     std::map<string, int> codec_read_usage;
-    AmMutex mutex;
+    AmMutex               mutex;
 
   public:
     void reportCodecWriteUsage(string &dst);
@@ -24,10 +23,10 @@ class B2BMediaStatistics
     void getReport(const AmArg &args, AmArg &ret);
 
     static B2BMediaStatistics *instance();
-    void incCodecWriteUsage(const string &codec_name);
-    void decCodecWriteUsage(const string &codec_name);
-    void incCodecReadUsage(const string &codec_name);
-    void decCodecReadUsage(const string &codec_name);
+    void                       incCodecWriteUsage(const string &codec_name);
+    void                       decCodecWriteUsage(const string &codec_name);
+    void                       incCodecReadUsage(const string &codec_name);
+    void                       decCodecReadUsage(const string &codec_name);
 };
 
 /** \brief Class for computing mask of payloads to relay
@@ -35,31 +34,31 @@ class B2BMediaStatistics
  * */
 class RelayController {
   public:
-    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap& map) = 0;
-    virtual ~RelayController() { }
+    virtual void computeRelayMask(const SdpMedia &m, bool &enable, PayloadMask &mask, PayloadRelayMap &map) = 0;
+    virtual ~RelayController() {}
 };
 
 class StreamData {
   private:
-//----------------------------------------------
-//      common stream data parameters (use in relay stream)
+    //----------------------------------------------
+    //      common stream data parameters (use in relay stream)
     /** The RTP stream itself.*/
     AmRtpAudio *stream;
-    bool shared_stream;
+    bool        shared_stream;
     /** Owner session. store it here for locking in the non-stream mode */
     AmB2BSession *owner_session;
     /** Flag set when streams in A/B leg are correctly initialized (for
      * transcoding purposes). */
     bool initialized;
-//----------------------------------------------
-//      audio stream data parameters
+    //----------------------------------------------
+    //      audio stream data parameters
     /** Non-stream input (required for music on hold for example). */
     AmAudio *in;
     /** Non-stream output */
     AmAudio *out;
 
     /** remembered value of the option from AmB2BSession */
-    bool            force_symmetric_rtp;
+    bool force_symmetric_rtp;
     /** Enables inband dtmf detection */
     bool enable_dtmf_transcoding;
     /** filter out samples with inbound dtmf */
@@ -72,7 +71,7 @@ class StreamData {
     vector<SdpPayload> lowfi_payloads;
     /** DTMF detector used by dtmf_queue */
     AmDtmfDetector *dtmf_detector;
-    /** Queue for handling raw DTMF events. 
+    /** Queue for handling raw DTMF events.
      *
      * It is rather quick hack to make B2B media working with current code.
      * Each stream can use different sampling rate and thus DTMF detection need
@@ -81,51 +80,103 @@ class StreamData {
 
     /** RTP relay (temporarily) paused?
      * relay stream may still be set up and updated */
-    bool relay_paused;
-    bool relay_enabled;
-    std::string relay_address;
-    int relay_port;
-    PayloadMask relay_mask;
+    bool            relay_paused;
+    bool            relay_enabled;
+    std::string     relay_address;
+    int             relay_port;
+    PayloadMask     relay_mask;
     PayloadRelayMap relay_map;
 
     bool muted;
     // for performance monitoring
-    int outgoing_payload;
-    int incoming_payload;
+    int    outgoing_payload;
+    int    incoming_payload;
     string outgoing_payload_name;
     string incoming_payload_name;
 
     bool sdp_offer_owner;
-public:
-    StreamData() = delete;
-    StreamData(StreamData const &) = delete;
+
+  public:
+    StreamData()                    = delete;
+    StreamData(StreamData const &)  = delete;
     StreamData(StreamData const &&) = delete;
-    StreamData(AmB2BSession* session, bool audio);
+    StreamData(AmB2BSession *session, bool audio);
     ~StreamData();
 
     void clear();
-    void initialize(AmB2BSession* session, bool audio);
+    void initialize(AmB2BSession *session, bool audio);
     void setStreamUnsafe(AmRtpAudio *s, AmB2BSession *session);
     void debug();
-	void getInfo(AmArg &ret);
+    void getInfo(AmArg &ret);
     void mute(bool set_mute);
 
     AmRtpAudio *getStream() { return stream; }
-    bool isInitialized() { return initialized; }
-    void setLogger(msg_logger *logger) { if (stream) stream->setLogger(logger); }
-    void setSklLogger(SSLKeyLogger *logger) { if (stream) stream->setSklfile(logger); }
-	void setSensor(msg_sensor *sensor) { if (stream) stream->setSensor(sensor); }
-    void setRtpTimeout(unsigned int timeout) { if(stream) stream->setRtpTimeout(timeout); }
-    void setMonitorRtpTimeout(bool enable) { if(stream) stream->setMonitorRTPTimeout(enable); }
-    void stopStreamProcessing() { if(stream) stream->stopReceiving(); }
-    void resumeStreamProcessing() { if(stream) stream->resumeReceiving(); }
-    void clearRTPTimeout() { if (stream) stream->clearRTPTimeout(); }
-    void setReceiving(bool r) {  if (stream) { stream->setReceiving(r); } }
-    void setLocalIP(AddressType type) { if (stream) stream->setLocalIP(type); }
-    void getSdpOffer(int media_idx, SdpMedia &m) { if (stream) stream->getSdpOffer(media_idx, m); }
-    void getSdpAnswer(int media_idx, const SdpMedia &offer, SdpMedia &answer) { if (stream) stream->getSdpAnswer(media_idx, offer, answer); }
-    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType type) {
-        if(stream) stream->replaceAudioMediaParameters(m, idx, type);
+    bool        isInitialized() { return initialized; }
+    void        setLogger(msg_logger *logger)
+    {
+        if (stream)
+            stream->setLogger(logger);
+    }
+    void setSklLogger(SSLKeyLogger *logger)
+    {
+        if (stream)
+            stream->setSklfile(logger);
+    }
+    void setSensor(msg_sensor *sensor)
+    {
+        if (stream)
+            stream->setSensor(sensor);
+    }
+    void setRtpTimeout(unsigned int timeout)
+    {
+        if (stream)
+            stream->setRtpTimeout(timeout);
+    }
+    void setMonitorRtpTimeout(bool enable)
+    {
+        if (stream)
+            stream->setMonitorRTPTimeout(enable);
+    }
+    void stopStreamProcessing()
+    {
+        if (stream)
+            stream->stopReceiving();
+    }
+    void resumeStreamProcessing()
+    {
+        if (stream)
+            stream->resumeReceiving();
+    }
+    void clearRTPTimeout()
+    {
+        if (stream)
+            stream->clearRTPTimeout();
+    }
+    void setReceiving(bool r)
+    {
+        if (stream) {
+            stream->setReceiving(r);
+        }
+    }
+    void setLocalIP(AddressType type)
+    {
+        if (stream)
+            stream->setLocalIP(type);
+    }
+    void getSdpOffer(int media_idx, SdpMedia &m)
+    {
+        if (stream)
+            stream->getSdpOffer(media_idx, m);
+    }
+    void getSdpAnswer(int media_idx, const SdpMedia &offer, SdpMedia &answer)
+    {
+        if (stream)
+            stream->getSdpAnswer(media_idx, offer, answer);
+    }
+    void replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, AddressType type)
+    {
+        if (stream)
+            stream->replaceAudioMediaParameters(m, idx, type);
     }
     void setSdpOfferOwner(bool owner) { sdp_offer_owner = owner; }
 
@@ -136,8 +187,8 @@ public:
      * relaying could be still available in this case). */
     bool initStream(PlayoutType playout_type, AmSdp &local_sdp, AmSdp &remote_sdp, int media_idx);
 
-    void setInput(AmAudio *_in) { in = _in; }
-    void setOutput(AmAudio *_in) { out = _in; }
+    void     setInput(AmAudio *_in) { in = _in; }
+    void     setOutput(AmAudio *_in) { out = _in; }
     AmAudio *getInput() { return in; }
     AmAudio *getOutput() { return out; }
 
@@ -162,7 +213,7 @@ public:
      * other remote end directly) */
     void setRelayPayloads(const SdpMedia &m, RelayController *ctrl);
 
-    void setRelayDestination(const string& connection_address, int port);
+    void setRelayDestination(const string &connection_address, int port);
 
     /** set relay temporarily to paused (stream relation may still be up) */
     void setRelayPaused(bool paused);
@@ -171,13 +222,17 @@ public:
     void setDtmfSink(AmDtmfSink *dtmf_sink);
 
     /** Processes raw DTMF events in own queue. */
-    void processDtmfEvents() { if (dtmf_queue) dtmf_queue->processEvents(); }
+    void processDtmfEvents()
+    {
+        if (dtmf_queue)
+            dtmf_queue->processEvents();
+    }
 
     /** Sends DTMF */
     void sendDtmf(int event, unsigned int duration_ms, int volume);
 
     /** Writes data to won stream. Data are read either from local alternative
-     * input (in) or from stream given by src parameter. 
+     * input (in) or from stream given by src parameter.
      *
      * Buffer is just space used to read data before writing them,
      * AmMediaProcessor buffer should be propagated here (see AmMediaSession) */
@@ -246,10 +301,10 @@ public:
  *    need it?
  */
 
-class AmB2BMedia
-  : public AmMediaSession
+class AmB2BMedia : public AmMediaSession
 #ifdef OBJECTS_COUNTER
-  , ObjCounter(AmB2BMedia)
+    ,
+                   ObjCounter(AmB2BMedia)
 #endif
 {
   private:
@@ -260,37 +315,57 @@ class AmB2BMedia
     AmB2BSession *a, *b;
 
     class StreamPair {
-    public:
+      public:
         StreamData a, b;
-        bool audio;
-        int media_idx;
-    public:
-        StreamPair() = delete;
-        StreamPair(StreamPair const &) = delete;
+        bool       audio;
+        int        media_idx;
+
+      public:
+        StreamPair()                    = delete;
+        StreamPair(StreamPair const &)  = delete;
         StreamPair(StreamPair const &&) = delete;
         StreamPair(AmB2BSession *_a, AmB2BSession *_b)
-            : a(_a, false), b(_b, false)
-            , audio(false), media_idx(-1) { }
+            : a(_a, false)
+            , b(_b, false)
+            , audio(false)
+            , media_idx(-1)
+        {
+        }
 
         StreamPair(AmB2BSession *_a, AmB2BSession *_b, int _media_idx)
-            : a(_a, true), b(_b, true)
-            , audio(true) , media_idx(_media_idx) { }
+            : a(_a, true)
+            , b(_b, true)
+            , audio(true)
+            , media_idx(_media_idx)
+        {
+        }
 
-        ~StreamPair() { }
-        bool requiresProcessing() {
-            if(audio)
+        ~StreamPair() {}
+        bool requiresProcessing()
+        {
+            if (audio)
                 return a.getInput() || b.getInput();
             else
                 return false;
         }
-        void setLogger(msg_logger *logger) { a.setLogger(logger); b.setLogger(logger); }
-        void setSklLogger(SSLKeyLogger *logger) { a.setSklLogger(logger); b.setSklLogger(logger); }
+        void setLogger(msg_logger *logger)
+        {
+            a.setLogger(logger);
+            b.setLogger(logger);
+        }
+        void setSklLogger(SSLKeyLogger *logger)
+        {
+            a.setSklLogger(logger);
+            b.setSklLogger(logger);
+        }
         void setASensor(msg_sensor *sensor) { a.setSensor(sensor); }
         void setBSensor(msg_sensor *sensor) { b.setSensor(sensor); }
         void setRtpTimeout(bool a_leg, unsigned int timeout)
         {
-            if (a_leg) a.setRtpTimeout(timeout);
-            else b.setRtpTimeout(timeout);
+            if (a_leg)
+                a.setRtpTimeout(timeout);
+            else
+                b.setRtpTimeout(timeout);
         }
         void setRtpTimeout(unsigned int timeout)
         {
@@ -311,54 +386,53 @@ class AmB2BMedia
      * and callee's one. (FIXME: not sure if it is worth consumed additional
      * resources). */
     string callgroup;
-      
+
     // needed for updating relayed payloads
     AmSdp a_leg_local_sdp, a_leg_remote_sdp;
     AmSdp b_leg_local_sdp, b_leg_remote_sdp;
-    bool have_a_leg_local_sdp, have_a_leg_remote_sdp;
-    bool have_b_leg_local_sdp, have_b_leg_remote_sdp;
+    bool  have_a_leg_local_sdp, have_a_leg_remote_sdp;
+    bool  have_b_leg_local_sdp, have_b_leg_remote_sdp;
 
     AmMutex mutex;
-    int ref_cnt;
+    int     ref_cnt;
 
     /** Playout type describes what kind of buffering will be used for audio
      * streams. Please note that ADAPTIVE_PLAYOUT requires some kind of
      * detection if there is really data to read from the buffer because the get
      * function always return something regardless if something was written into
-     * or not. 
+     * or not.
      */
     PlayoutType playout_type;
 
     std::list<StreamPair> streams;
 
     bool a_leg_muted, b_leg_muted;
-    //bool a_leg_receiving, b_leg_receiving;
+    // bool a_leg_receiving, b_leg_receiving;
 
     bool relay_paused;
 
     void createStreams(const AmSdp &sdp);
     void updateStreamsUnsafe(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
-    void updateStreamPair(StreamPair &pair);
+    void updateStreamPair(StreamPair & pair);
     void updateAudioStreams();
-    void updateRelayStream(AmRtpStream *stream, AmB2BSession *session,
-			   const string& connection_address,
-			   const SdpMedia &m, AmRtpStream *relay_to);
+    void updateRelayStream(AmRtpStream * stream, AmB2BSession * session, const string &connection_address,
+                           const SdpMedia &m, AmRtpStream *relay_to);
 
     void setMuteFlag(bool a_leg, bool set);
     void changeSessionUnsafe(bool a_leg, AmB2BSession *new_session);
 
-    msg_logger* logger; // log RTP traffic
-    SSLKeyLogger* sklfile; // log secure keys
-	msg_sensor* asensor; // RTP traffic mirroring
-	msg_sensor* bsensor;
+    msg_logger   *logger;  // log RTP traffic
+    SSLKeyLogger *sklfile; // log secure keys
+    msg_sensor   *asensor; // RTP traffic mirroring
+    msg_sensor   *bsensor;
 
-	bool ignore_relay_streams; //skip relay streams create/update
+    bool ignore_relay_streams; // skip relay streams create/update
 
   protected:
     virtual ~AmB2BMedia();
 
   public:
-    AmB2BMedia(AmB2BSession *_a, AmB2BSession *_b);
+    AmB2BMedia(AmB2BSession * _a, AmB2BSession * _b);
 
     /**
      * To add a AmB2BMedia session to the media processor, *this method
@@ -375,7 +449,7 @@ class AmB2BMedia
 
     void changeSession(bool a_leg, AmB2BSession *new_session);
 
-    //void updateRelayPayloads(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp);
+    // void updateRelayPayloads(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
     /**
      * Adds a reference.
@@ -404,23 +478,24 @@ class AmB2BMedia
     /** Replace connection address and ports within SDP.
      *
      * Throws an exception (string) in case of error. (FIXME?) */
-    void replaceConnectionAddress(AmSdp &parser_sdp, bool a_leg, AddressType addr_type);
+    void replaceConnectionAddress(AmSdp & parser_sdp, bool a_leg, AddressType addr_type);
 
     /** replace offer inside given SDP with locally generated one (media streams
      * etc must be initialised like in case replaceConnectionAddress) */
-    bool replaceOffer(AmSdp &sdp, bool a_leg);
+    bool replaceOffer(AmSdp & sdp, bool a_leg);
 
-	bool haveLocalSdp(bool a_leg);
-	bool haveRemoteSdp(bool a_leg);
-	const AmSdp &getLocalSdp(bool a_leg);
-	const AmSdp &getRemoteSdp(bool a_leg);
+    bool         haveLocalSdp(bool a_leg);
+    bool         haveRemoteSdp(bool a_leg);
+    const AmSdp &getLocalSdp(bool a_leg);
+    const AmSdp &getRemoteSdp(bool a_leg);
 
     /** Update media session with local & remote SDP. */
-    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl, bool sdp_offer_owner);
+    void createUpdateStreams(bool a_leg, const AmSdp &local_sdp, const AmSdp &remote_sdp, RelayController *ctrl,
+                             bool sdp_offer_owner);
     void updateStreams(bool a_leg, RelayController *ctrl, bool sdp_offer_owner);
     void setFirstAudioPairStream(bool a_leg, AmRtpAudio *stream, const AmSdp &local_sdp, const AmSdp &remote_sdp);
 
-    /** Clear audio for given leg and stop processing if both legs stopped. 
+    /** Clear audio for given leg and stop processing if both legs stopped.
      *
      * Releases all RTP streams and removes itself from media processor if still
      * there. */
@@ -428,13 +503,16 @@ class AmB2BMedia
 
     // ---- AmMediaSession interface for processing audio in a standard way ----
 
-    /** Should read from all streams before writing to the other streams. 
-     * 
+    /** Should read from all streams before writing to the other streams.
+     *
      * Because processing is driven by destination stream (i.e. we don't read
      * anything unless the destination stream is ready to send something - see
      * sendIntReached()) all processing is done in writeStreams */
-    virtual int readStreams(unsigned long long ts, unsigned char *buffer) override { return 0; }
-    
+    virtual int readStreams(unsigned long long ts, unsigned char *buffer) override
+    {
+        return 0;
+    }
+
     /** Read and write all RTP streams if data are to be written (see
      * readStreams()). */
     virtual int writeStreams(unsigned long long ts, unsigned char *buffer) override;
@@ -448,7 +526,7 @@ class AmB2BMedia
     /** Sends DTMF using the given call leg */
     void sendDtmf(bool a_leg, int event, unsigned int duration_ms, int volume = -1);
 
-    /** Release all RTP streams of both legs and both AmB2BSessions as well. 
+    /** Release all RTP streams of both legs and both AmB2BSessions as well.
      *
      * Though readStreams(), writeStreams() or processDtmfEvents() can be called
      * after call to clearAudio, they will do nothing because all relevant
@@ -465,27 +543,39 @@ class AmB2BMedia
 
     /** Callback function called once media processor releases this instance
      * from processing loop.
-     * 
+     *
      * Deletes itself if there are no other references! FIXME: might be
      * returning something like "release me" and calling delete from media
      * processor would be better? */
     virtual void onMediaProcessingTerminated() override;
 
-    void mute(bool a_leg) { setMuteFlag(a_leg, true); }
-    void unmute(bool a_leg) { setMuteFlag(a_leg, false); }
+    void mute(bool a_leg)
+    {
+        setMuteFlag(a_leg, true);
+    }
+    void unmute(bool a_leg)
+    {
+        setMuteFlag(a_leg, false);
+    }
     void setRtpTimeout(bool a_leg, unsigned int timeout);
     void setRtpTimeout(unsigned int timeout);
     void setMonitorRtpTimeout(bool enable);
-    bool isMuted(bool a_leg) { if (a_leg) return a_leg_muted; else return b_leg_muted; }
+    bool isMuted(bool a_leg)
+    {
+        if (a_leg)
+            return a_leg_muted;
+        else
+            return b_leg_muted;
+    }
 
     void setFirstStreamInput(bool a_leg, AmAudio *in);
     void setFirstStreamOutput(bool a_leg, AmAudio *out);
     void createHoldAnswer(bool a_leg, const AmSdp &offer, AmSdp &answer, bool use_zero_con);
 
-    void setRtpLogger(msg_logger* _logger);
-    void setSklLogger(SSLKeyLogger* logger);
-	void setRtpASensor(msg_sensor* _sensor);
-	void setRtpBSensor(msg_sensor* _sensor);
+    void setRtpLogger(msg_logger * _logger);
+    void setSklLogger(SSLKeyLogger * logger);
+    void setRtpASensor(msg_sensor * _sensor);
+    void setRtpBSensor(msg_sensor * _sensor);
 
     /** enable or disable DTMF receiving on relay streams */
     void setRelayDTMFReceiving(bool enabled);
@@ -499,12 +589,12 @@ class AmB2BMedia
     /** set 'receving' property of RTP/relay streams (not receiving=drop incoming packets) */
     void setReceiving(bool receiving_a, bool receiving_b);
 
-	void setIgnoreRelayStreams(bool ignore);
+    void setIgnoreRelayStreams(bool ignore);
 
     // print debug info
     void debug();
 
-	virtual void getInfo(AmArg &ret) override;
+    virtual void getInfo(AmArg & ret) override;
 };
 
 #endif

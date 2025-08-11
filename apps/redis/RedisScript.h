@@ -1,17 +1,15 @@
 #pragma once
 #include <ampi/RedisApi.h>
 
-struct Utils
-{
+struct Utils {
     static int read_file_data(const string &path, string &data);
 };
 
-struct RedisScriptLoadRequest
-  : AmObject
-{
+struct RedisScriptLoadRequest : AmObject {
     RedisScript script;
 
-    RedisScriptLoadRequest(const RedisScript& script)
-      : script(script)
-    {}
+    RedisScriptLoadRequest(const RedisScript &script)
+        : script(script)
+    {
+    }
 };

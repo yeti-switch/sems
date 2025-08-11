@@ -6,19 +6,21 @@
 #include <list>
 using std::list;
 
-struct sip_destination
-{
-  cstring        scheme;
-  cstring        host;
-  unsigned short port;
-  cstring        trsp;
+struct sip_destination {
+    cstring        scheme;
+    cstring        host;
+    unsigned short port;
+    cstring        trsp;
 
-  sip_destination()
-    : scheme(), host(), port(0), trsp()
-  {}
+    sip_destination()
+        : scheme()
+        , host()
+        , port(0)
+        , trsp()
+    {
+    }
 };
 
-int parse_next_hop(const cstring& next_hop,
-		   list<sip_destination>& dest_list);
+int parse_next_hop(const cstring &next_hop, list<sip_destination> &dest_list);
 
 #endif

@@ -13,43 +13,47 @@
 
 using std::queue;
 
-static void connectCallback(const struct redisAsyncContext* ctx, int status) {
-    RedisInstance* instance = (RedisInstance*)ctx->data;
+static void connectCallback(const struct redisAsyncContext *ctx, int status)
+{
+    RedisInstance *instance = (RedisInstance *)ctx->data;
     instance->onConnect(status);
 }
 
-static void disconnectCallback(const struct redisAsyncContext* ctx, int status) {
-    RedisInstance* instance = (RedisInstance*)ctx->data;
+static void disconnectCallback(const struct redisAsyncContext *ctx, int status)
+{
+    RedisInstance *instance = (RedisInstance *)ctx->data;
     instance->onDisconnect(status);
 }
 
-class RedisTestConnection : public RedisInstance
-{
-    RedisTestServer* server;
-    bool async_connected;
-    struct Command{
+class RedisTestConnection : public RedisInstance {
+    RedisTestServer *server;
+    bool             async_connected;
+    struct Command {
         redisCallbackFn *replyfn;
-        void* privdata;
-        string command;
+        void            *privdata;
+        string           command;
     };
 
-    queue<Command> q;
-    redisAsyncContext* disconnect;
-public:
-    RedisTestConnection(RedisTestServer* server)
-    : server(server)
-    , async_connected(false)
-    , disconnect(0){}
+    queue<Command>     q;
+    redisAsyncContext *disconnect;
+
+  public:
+    RedisTestConnection(RedisTestServer *server)
+        : server(server)
+        , async_connected(false)
+        , disconnect(0)
+    {
+    }
 
     redisAsyncContext *redisAsyncConnect(const char *ip, int port) override
     {
-        redisAsyncContext* ctx = (redisAsyncContext*)malloc(sizeof(redisAsyncContext));
+        redisAsyncContext *ctx = (redisAsyncContext *)malloc(sizeof(redisAsyncContext));
         memset(ctx, 0, sizeof(redisAsyncContext));
-        ctx->c.tcp.host = strdup(ip);
+        ctx->c.tcp.host        = strdup(ip);
         ctx->c.tcp.source_addr = strdup(ip);
-        ctx->c.tcp.port = port;
+        ctx->c.tcp.port        = port;
         ctx->c.connection_type = REDIS_CONN_TCP;
-        ctx->c.fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        ctx->c.fd              = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         return ctx;
     }
 
@@ -59,22 +63,22 @@ public:
         ac->ev.addWrite(ac->ev.data);
     }
 
-    redisContext * redisConnectWithTimeout(const char* ip, int port, const struct timeval tv) override
+    redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv) override
     {
-        redisContext* ctx = (redisContext*)malloc(sizeof(redisContext));
+        redisContext *ctx = (redisContext *)malloc(sizeof(redisContext));
         memset(ctx, 0, sizeof(redisContext));
-        ctx->tcp.host = strdup(ip);
+        ctx->tcp.host        = strdup(ip);
         ctx->tcp.source_addr = strdup(ip);
-        ctx->tcp.port = port;
+        ctx->tcp.port        = port;
         ctx->connection_type = REDIS_CONN_TCP;
 #if HIREDIS_MAJOR > 0
-        ctx->connect_timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->connect_timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->connect_timeout = tv;
 
-        ctx->command_timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->command_timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->command_timeout = tv;
 #else
-        ctx->timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->timeout = tv;
 #endif
         ctx->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -83,34 +87,40 @@ public:
 
     redisContext *redisConnectUnixWithTimeout(const char *path, const struct timeval tv) override
     {
-        redisContext* ctx = (redisContext*)malloc(sizeof(redisContext));
+        redisContext *ctx = (redisContext *)malloc(sizeof(redisContext));
         memset(ctx, 0, sizeof(redisContext));
-        ctx->unix_sock.path = strdup(path);
+        ctx->unix_sock.path  = strdup(path);
         ctx->connection_type = REDIS_CONN_UNIX;
 #if HIREDIS_MAJOR > 0
-        ctx->connect_timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->connect_timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->connect_timeout = tv;
 
-        ctx->command_timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->command_timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->command_timeout = tv;
 #else
-        ctx->timeout = (struct timeval*)malloc(sizeof(struct timeval));
+        ctx->timeout  = (struct timeval *)malloc(sizeof(struct timeval));
         *ctx->timeout = tv;
 #endif
         ctx->fd = socket(AF_UNIX, SOCK_STREAM, 0);
         return ctx;
     }
 
-    void redisFree(redisContext* ctx) override
+    void redisFree(redisContext *ctx) override
     {
-        if(ctx->tcp.host) free(ctx->tcp.host);
-        if(ctx->tcp.source_addr) free(ctx->tcp.source_addr);
-        if(ctx->unix_sock.path) free(ctx->unix_sock.path);
+        if (ctx->tcp.host)
+            free(ctx->tcp.host);
+        if (ctx->tcp.source_addr)
+            free(ctx->tcp.source_addr);
+        if (ctx->unix_sock.path)
+            free(ctx->unix_sock.path);
 #if HIREDIS_MAJOR > 0
-        if(ctx->connect_timeout) free(ctx->connect_timeout);
-        if(ctx->command_timeout) free(ctx->command_timeout);
+        if (ctx->connect_timeout)
+            free(ctx->connect_timeout);
+        if (ctx->command_timeout)
+            free(ctx->command_timeout);
 #else
-        if(ctx->timeout) free(ctx->timeout);
+        if (ctx->timeout)
+            free(ctx->timeout);
 #endif
         close(ctx->fd);
         free(ctx);
@@ -119,8 +129,8 @@ public:
     int redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn) override
     {
         connect_callback = fn;
-        ac->onConnect = &connectCallback;
-        if(ac->ev.addWrite) {
+        ac->onConnect    = &connectCallback;
+        if (ac->ev.addWrite) {
             ac->ev.addWrite(ac->ev.data);
         } else {
             ERROR("absent event function in redis context");
@@ -131,105 +141,108 @@ public:
     int redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn) override
     {
         disconnect_callback = fn;
-        ac->onDisconnect = &disconnectCallback;
+        ac->onDisconnect    = &disconnectCallback;
         return REDIS_OK;
     }
 
     void redisAsyncHandleRead(redisAsyncContext *) override {}
     void redisAsyncHandleWrite(redisAsyncContext *ac) override
     {
-        if(!async_connected && ac->onConnect) {
+        if (!async_connected && ac->onConnect) {
             async_connected = true;
             ac->onConnect(ac, REDIS_OK);
         } else if (q.empty()) {
             ERROR("q is empty");
         } else {
-            redisReply* reply;
-            Command cmd = q.front();
-            redisGetReply(&ac->c, (void**)&reply);
-            if(cmd.replyfn)
+            redisReply *reply;
+            Command     cmd = q.front();
+            redisGetReply(&ac->c, (void **)&reply);
+            if (cmd.replyfn)
                 cmd.replyfn(ac, reply, cmd.privdata);
             freeReplyObject(reply);
         }
-        
-        if(disconnect || q.empty()) {
-            if(ac->ev.delWrite) {
+
+        if (disconnect || q.empty()) {
+            if (ac->ev.delWrite) {
                 ac->ev.delWrite(ac->ev.data);
             } else {
                 ERROR("absent event function in redis context");
             }
         }
-        if(disconnect) {
-            if(ac->ev.cleanup)
+        if (disconnect) {
+            if (ac->ev.cleanup)
                 ac->ev.cleanup(ac->ev.data);
             redisFree(&ac->c);
-            if(ac->onDisconnect)
+            if (ac->onDisconnect)
                 ac->onDisconnect(ac, REDIS_OK);
         }
     }
 
-    int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata_, const char *cmd, size_t len) override
+    int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata_, const char *cmd,
+                                   size_t len) override
     {
         Command current;
-        current.replyfn = fn;
+        current.replyfn  = fn;
         current.privdata = privdata_;
-        current.command = string(cmd, len);
+        current.command  = string(cmd, len);
         q.push(current);
 
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
+        if (ac->ev.addWrite)
+            ac->ev.addWrite(ac->ev.data);
 
         return REDIS_OK;
     }
 
-    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv, const size_t *argvlen) override
+    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv,
+                              const size_t *argvlen) override
     {
-        Command current;
-        sds cmd;
+        Command   current;
+        sds       cmd;
         long long len;
-        current.replyfn = fn;
+        current.replyfn  = fn;
         current.privdata = privdata;
 
-        if((len = redisFormatSdsCommandArgv(&cmd, argc, argv, argvlen)) < 0)
+        if ((len = redisFormatSdsCommandArgv(&cmd, argc, argv, argvlen)) < 0)
             return REDIS_ERR;
 
         current.command = string(cmd, len);
         q.push(current);
 
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
+        if (ac->ev.addWrite)
+            ac->ev.addWrite(ac->ev.data);
 
         redisFreeSdsCommand(cmd);
         return REDIS_OK;
     }
 
-    int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char* format, va_list argptr) override
+    int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *format,
+                           va_list argptr) override
     {
         Command current;
-        current.replyfn = fn;
+        current.replyfn  = fn;
         current.privdata = privdata;
-        char* cmd;
-        int len;
+        char *cmd;
+        int   len;
 
-        if((len = redisvFormatCommand(&cmd, format, argptr))<0)
+        if ((len = redisvFormatCommand(&cmd, format, argptr)) < 0)
             return REDIS_ERR;
 
         current.command = string(cmd, len);
         q.push(current);
 
-        if(ac->ev.addWrite)
-           ac->ev.addWrite(ac->ev.data);
+        if (ac->ev.addWrite)
+            ac->ev.addWrite(ac->ev.data);
 
         redisFreeCommand(cmd);
         return REDIS_OK;
     }
 
-    int redisAppendCommand(redisContext* , const char* format, va_list argptr) override
+    int redisAppendCommand(redisContext *, const char *format, va_list argptr) override
     {
         Command current;
-        current.replyfn = 0;
+        current.replyfn  = 0;
         current.privdata = 0;
-        char* cmd;
+        char *cmd;
         redisvFormatCommand(&cmd, format, argptr);
         current.command = cmd;
         q.push(current);
@@ -237,26 +250,26 @@ public:
         return REDIS_OK;
     }
 
-    int redisGetReply(redisContext* c, void ** reply) override
+    int redisGetReply(redisContext *c, void **reply) override
     {
-        Command& cmd = q.front();
+        Command &cmd = q.front();
 
         AmArg r;
-        if(server) {
+        if (server) {
             server->getResponse(cmd.command, r);
         }
 
-        Amarg2redisReply(r, (redisReply**)reply);
-        //INFO("redisGetReply type %d", (*(redisReply**)reply)->type);
-        redisReply* _reply = (redisReply*)*reply;
-        if(server && server->getStatus(cmd.command) == REDIS_REPLY_STATUS && _reply->type == REDIS_REPLY_NIL) {
+        Amarg2redisReply(r, (redisReply **)reply);
+        // INFO("redisGetReply type %d", (*(redisReply**)reply)->type);
+        redisReply *_reply = (redisReply *)*reply;
+        if (server && server->getStatus(cmd.command) == REDIS_REPLY_STATUS && _reply->type == REDIS_REPLY_NIL) {
             q.pop();
             _reply->type = REDIS_REPLY_STATUS;
             return REDIS_OK;
-        } else if(server && _reply->type != server->getStatus(cmd.command)) {
+        } else if (server && _reply->type != server->getStatus(cmd.command)) {
             q.pop();
             _reply->type = REDIS_REPLY_ERROR;
-            c->err = REDIS_REPLY_ERROR;
+            c->err       = REDIS_REPLY_ERROR;
             return REDIS_REPLY_ERROR;
         }
         q.pop();
@@ -265,27 +278,29 @@ public:
 
     void freeReplyObject(void *reply) override
     {
-        if(!reply) return;
-        redisReply* _reply = (redisReply*)reply;
-        if(_reply->str) free(_reply->str);
-        if(_reply->element) {
-            for(size_t i = 0; i < _reply->elements; i++)
+        if (!reply)
+            return;
+        redisReply *_reply = (redisReply *)reply;
+        if (_reply->str)
+            free(_reply->str);
+        if (_reply->element) {
+            for (size_t i = 0; i < _reply->elements; i++)
                 freeReplyObject(_reply->element[i]);
             free(_reply->element);
         }
         free(reply);
     }
 
-    RedisInstance* clone(redisInstanceContext* async_context) override {
-        RedisTestConnection* instance = new RedisTestConnection(server);
-        instance->async_context = async_context;
+    RedisInstance *clone(redisInstanceContext *async_context) override
+    {
+        RedisTestConnection *instance = new RedisTestConnection(server);
+        instance->async_context       = async_context;
         return instance;
     }
 };
 
-void makeRedisInstance(RedisTestServer* server_)
+void makeRedisInstance(RedisTestServer *server_)
 {
-    if(!_redis_instance_)
+    if (!_redis_instance_)
         _redis_instance_ = new RedisTestConnection(server_);
 }
-

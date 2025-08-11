@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -43,219 +43,214 @@ timer::~timer()
 }
 
 _wheeltimer::_wheeltimer(const char *thread_name)
-  : thread_name(thread_name),
-    wall_clock(0)
+    : thread_name(thread_name)
+    , wall_clock(0)
 {
     struct timeval now;
-    gettimeofday(&now,NULL);
+    gettimeofday(&now, NULL);
     unix_clock.set(now.tv_sec);
-    unix_ms_clock.set(now.tv_sec*1000 + now.tv_usec/1000);
+    unix_ms_clock.set(now.tv_sec * 1000 + now.tv_usec / 1000);
 }
 
-_wheeltimer::~_wheeltimer()
-{}
+_wheeltimer::~_wheeltimer() {}
 
-void _wheeltimer::insert_timer(timer* t)
+void _wheeltimer::insert_timer(timer *t)
 {
-    //add new timer to user request list
+    // add new timer to user request list
     reqs_m.lock();
-    reqs_backlog.push_back(timer_req(t,true));
+    reqs_backlog.push_back(timer_req(t, true));
     reqs_m.unlock();
 }
 
-void _wheeltimer::remove_timer(timer* t)
+void _wheeltimer::remove_timer(timer *t)
 {
-    if (t == NULL){
-	return;
+    if (t == NULL) {
+        return;
     }
 
-    //add timer to remove to user request list
+    // add timer to remove to user request list
     reqs_m.lock();
-    reqs_backlog.push_back(timer_req(t,false));
+    reqs_backlog.push_back(timer_req(t, false));
     reqs_m.unlock();
 }
 
 void _wheeltimer::run()
 {
-  is_stop.set(false);
-  struct timeval now,next_tick,diff,tick;
+    is_stop.set(false);
+    struct timeval now, next_tick, diff, tick;
 
-  setThreadName(thread_name);
+    setThreadName(thread_name);
 
-  tick.tv_sec = 0;
-  tick.tv_usec = TIMER_RESOLUTION;
-  
-  gettimeofday(&now, NULL);
-  timeradd(&tick,&now,&next_tick);
+    tick.tv_sec  = 0;
+    tick.tv_usec = TIMER_RESOLUTION;
 
-  while(!is_stop.get()){
+    gettimeofday(&now, NULL);
+    timeradd(&tick, &now, &next_tick);
 
-    gettimeofday(&now,NULL);
+    while (!is_stop.get()) {
 
-    if(timercmp(&now,&next_tick,<)){
+        gettimeofday(&now, NULL);
 
-      struct timespec sdiff,rem;
-      timersub(&next_tick, &now,&diff);
-      
-      sdiff.tv_sec = diff.tv_sec;
-      sdiff.tv_nsec = diff.tv_usec * 1000;
+        if (timercmp(&now, &next_tick, <)) {
 
-      if(sdiff.tv_nsec > 2000000) // 2 ms 
-	nanosleep(&sdiff,&rem);
+            struct timespec sdiff, rem;
+            timersub(&next_tick, &now, &diff);
+
+            sdiff.tv_sec  = diff.tv_sec;
+            sdiff.tv_nsec = diff.tv_usec * 1000;
+
+            if (sdiff.tv_nsec > 2000000) // 2 ms
+                nanosleep(&sdiff, &rem);
+        }
+        // else {
+        // printf("missed one tick\n");
+        // }
+
+        gettimeofday(&now, NULL);
+        unix_clock.set(now.tv_sec);
+        unix_ms_clock.set(now.tv_sec * 1000 + now.tv_usec / 1000);
+
+        turn_wheel();
+        timeradd(&tick, &next_tick, &next_tick);
     }
-    //else {
-    //printf("missed one tick\n");
-    //}
-
-    gettimeofday(&now,NULL);
-    unix_clock.set(now.tv_sec);
-    unix_ms_clock.set(now.tv_sec*1000 + now.tv_usec/1000);
-
-    turn_wheel();
-    timeradd(&tick,&next_tick,&next_tick);
-  }
 }
-
 
 
 void _wheeltimer::update_wheel(int wheel)
 {
     // do not try do update wheel 0
-    if(!wheel)
-	return;
-    
-    for(;wheel;wheel--){
+    if (!wheel)
+        return;
 
-	int pos = (wall_clock >> (wheel*BITS_PER_WHEEL))
-	    & ((1<<BITS_PER_WHEEL)-1);
-	
-	timer *t = (timer*)wheels[wheel][pos].next;
-	while( t ) {
-	    
-	    timer* t1 = (timer*)t->next;
-	    place_timer(t,wheel-1);
-	    t = t1;
-	}
+    for (; wheel; wheel--) {
 
-	wheels[wheel][pos].next = NULL;
+        int pos = (wall_clock >> (wheel * BITS_PER_WHEEL)) & ((1 << BITS_PER_WHEEL) - 1);
+
+        timer *t = (timer *)wheels[wheel][pos].next;
+        while (t) {
+
+            timer *t1 = (timer *)t->next;
+            place_timer(t, wheel - 1);
+            t = t1;
+        }
+
+        wheels[wheel][pos].next = NULL;
     }
 }
 
 void _wheeltimer::turn_wheel()
 {
-    u_int32_t mask = ((1<<BITS_PER_WHEEL)-1); // 0x00 00 00 FF
-    int i=0;
-	
-    //determine which wheel should be updated
-    for(;i<WHEELS;i++){
-	if((wall_clock & mask) ^ mask)
-	    break;
-	mask <<= BITS_PER_WHEEL;
+    u_int32_t mask = ((1 << BITS_PER_WHEEL) - 1); // 0x00 00 00 FF
+    int       i    = 0;
+
+    // determine which wheel should be updated
+    for (; i < WHEELS; i++) {
+        if ((wall_clock & mask) ^ mask)
+            break;
+        mask <<= BITS_PER_WHEEL;
     }
 
-    //increment time
-    wall_clock = wall_clock+1;
+    // increment time
+    wall_clock = wall_clock + 1;
 
     // Update existing timer entries
     update_wheel(i);
-	
+
     // Swap the lists for timer insertion/deletion requests
     reqs_m.lock();
     reqs_process.swap(reqs_backlog);
     reqs_m.unlock();
 
-    while(!reqs_process.empty()) {
-	timer_req rq = reqs_process.front();
-	reqs_process.pop_front();
+    while (!reqs_process.empty()) {
+        timer_req rq = reqs_process.front();
+        reqs_process.pop_front();
 
-	if(rq.insert) {
-	    place_timer(rq.t);
-	}
-	else {
-	    delete_timer(rq.t);
-	}
+        if (rq.insert) {
+            place_timer(rq.t);
+        } else {
+            delete_timer(rq.t);
+        }
     }
-	
-    //check for expired timer to process
+
+    // check for expired timer to process
     process_current_timers();
 }
 
 void _wheeltimer::process_current_timers()
 {
     timer *t = (timer *)wheels[0][wall_clock & 0xFF].next;
-    
-    while(t){
 
-	timer* t1 = (timer*)t->next;
+    while (t) {
 
-	t->next = NULL;
-	t->prev = NULL;
+        timer *t1 = (timer *)t->next;
 
-	t->fire();
+        t->next = NULL;
+        t->prev = NULL;
 
-	t = t1;
+        t->fire();
+
+        t = t1;
     }
-    
+
     wheels[0][wall_clock & 0xFF].next = NULL;
 }
 
 inline bool less_ts(unsigned int t1, unsigned int t2)
 {
     // t1 < t2
-    return (t1 - t2 > (1U<<31));
+    return (t1 - t2 > (1U << 31));
 }
 
-void _wheeltimer::place_timer(timer* t)
+void _wheeltimer::place_timer(timer *t)
 {
-    if(less_ts(t->expires,wall_clock)){
+    if (less_ts(t->expires, wall_clock)) {
 
-	// we put the late ones at the beginning of next wheel turn
-	add_timer_to_wheel(t,0,((1<<BITS_PER_WHEEL)-1) & wall_clock);
-	
- 	return;
+        // we put the late ones at the beginning of next wheel turn
+        add_timer_to_wheel(t, 0, ((1 << BITS_PER_WHEEL) - 1) & wall_clock);
+
+        return;
     }
 
-    place_timer(t,WHEELS-1);
+    place_timer(t, WHEELS - 1);
 }
 
-void _wheeltimer::place_timer(timer* t, int wheel)
+void _wheeltimer::place_timer(timer *t, int wheel)
 {
     unsigned int pos;
     unsigned int clock_mask = t->expires ^ wall_clock;
 
-    for(; wheel; wheel--){
+    for (; wheel; wheel--) {
 
-	if( (clock_mask >> (wheel*BITS_PER_WHEEL))
-	    & ((1<<BITS_PER_WHEEL)-1) ) {
+        if ((clock_mask >> (wheel * BITS_PER_WHEEL)) & ((1 << BITS_PER_WHEEL) - 1)) {
 
-	    break;
-	}
+            break;
+        }
     }
 
     // we went down to wheel 0
-    pos = (t->expires >> (wheel*BITS_PER_WHEEL)) & ((1<<BITS_PER_WHEEL)-1);
-    add_timer_to_wheel(t,wheel,pos);
+    pos = (t->expires >> (wheel * BITS_PER_WHEEL)) & ((1 << BITS_PER_WHEEL) - 1);
+    add_timer_to_wheel(t, wheel, pos);
 }
 
-void _wheeltimer::add_timer_to_wheel(timer* t, int wheel, unsigned int pos)
+void _wheeltimer::add_timer_to_wheel(timer *t, int wheel, unsigned int pos)
 {
-    t->next = wheels[wheel][pos].next;
+    t->next                 = wheels[wheel][pos].next;
     wheels[wheel][pos].next = t;
 
-    if(t->next){
-	((timer*)t->next)->prev = t;
+    if (t->next) {
+        ((timer *)t->next)->prev = t;
     }
 
     t->prev = &(wheels[wheel][pos]);
 }
 
-void _wheeltimer::delete_timer(timer* t)
+void _wheeltimer::delete_timer(timer *t)
 {
-    if(t->prev)
-	t->prev->next = t->next;
+    if (t->prev)
+        t->prev->next = t->next;
 
-    if(t->next)
-	((timer*)t->next)->prev = t->prev;
+    if (t->next)
+        ((timer *)t->next)->prev = t->prev;
 
     t->onDelete();
 }

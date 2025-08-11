@@ -8,15 +8,15 @@
 
 void ShutdownHandlersProcessor::shutdownIfFinished()
 {
-    for(auto h: handlers) {
-        if(!h->isFinished()) {
-            //found handler with active tasks
+    for (auto h : handlers) {
+        if (!h->isFinished()) {
+            // found handler with active tasks
             return;
         }
     }
 
     INFO("no active shutdown handlers in graceful shutdown mode. shutdown");
-    kill(getpid(),SIGINT);
+    kill(getpid(), SIGINT);
 }
 
 void ShutdownHandlersProcessor::registerShutdownHandler(ShutdownHandler *handler)
@@ -27,7 +27,7 @@ void ShutdownHandlersProcessor::registerShutdownHandler(ShutdownHandler *handler
 
 void ShutdownHandlersProcessor::onHandlerFinished(ShutdownHandler *handler)
 {
-    if(!AmConfig.shutdown_mode)
+    if (!AmConfig.shutdown_mode)
         return;
 
     AmLock l(mutex);
@@ -41,16 +41,15 @@ void ShutdownHandlersProcessor::onShutdownRequested()
 {
     AmLock l(mutex);
 
-    for(auto h: handlers)
+    for (auto h : handlers)
         h->clearFinished();
 
-    for(auto h: handlers) {
-        if(!AmSessionContainer::instance()->postEvent(
-            h->getQueueName(),
-            new AmSystemEvent(AmSystemEvent::GracefulShutdownRequested)))
+    for (auto h : handlers) {
+        if (!AmSessionContainer::instance()->postEvent(h->getQueueName(),
+                                                       new AmSystemEvent(AmSystemEvent::GracefulShutdownRequested)))
         {
-            //failed to post event to the graceful shutdown handler queue
-            //consider it finished
+            // failed to post event to the graceful shutdown handler queue
+            // consider it finished
             h->setFinished();
         }
     }
@@ -60,24 +59,23 @@ void ShutdownHandlersProcessor::onShutdownRequested()
 
 void ShutdownHandlersProcessor::onShutdownCancelled()
 {
-    for(auto h: handlers) {
+    for (auto h : handlers) {
         h->clearFinished();
-        AmSessionContainer::instance()->postEvent(
-            h->getQueueName(),
-            new AmSystemEvent(AmSystemEvent::GracefulShutdownCancelled));
+        AmSessionContainer::instance()->postEvent(h->getQueueName(),
+                                                  new AmSystemEvent(AmSystemEvent::GracefulShutdownCancelled));
     }
 }
 
 void ShutdownHandlersProcessor::getStatus(AmArg &status)
 {
     status.assertArray();
-    for(auto h : handlers) {
+    for (auto h : handlers) {
         status.push(AmArg());
-        AmArg &a = status.back();
-        a["name"] = h->getName();
-        a["queue_name"] = h->getQueueName();
-        a["finished"] = h->isFinished();
+        AmArg &a           = status.back();
+        a["name"]          = h->getName();
+        a["queue_name"]    = h->getQueueName();
+        a["finished"]      = h->isFinished();
         a["shutdown_mode"] = h->isShutdownMode();
-        a["tasks_count"] = h->isShutdownMode() ? h->getActiveTasksCount() : AmArg();
+        a["tasks_count"]   = h->isShutdownMode() ? h->getActiveTasksCount() : AmArg();
     }
 }

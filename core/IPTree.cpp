@@ -13,16 +13,16 @@ void IPTree::Node::clear()
 IPTree::Node *IPTree::get_node_ipv4(const sockaddr_storage &addr, unsigned int mask_len)
 {
     Node *node = &ipv4_root;
-    if(!mask_len) {
+    if (!mask_len) {
         return node;
     }
 
-    auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
-    unsigned int bit_mask = 1U << 31;
-    while(mask_len--) {
+    auto         addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
+    unsigned int bit_mask   = 1U << 31;
+    while (mask_len--) {
         auto &child = (addr_bytes & bit_mask) ? node->one : node->zero;
-        node = child.get();
-        if(!node) {
+        node        = child.get();
+        if (!node) {
             node = new Node();
             child.reset(node);
         }
@@ -35,22 +35,22 @@ IPTree::Node *IPTree::get_node_ipv4(const sockaddr_storage &addr, unsigned int m
 IPTree::Node *IPTree::get_node_ipv6(const sockaddr_storage &addr, unsigned int mask_len)
 {
     Node *node = &ipv6_root;
-    if(!mask_len) {
+    if (!mask_len) {
         return node;
     }
 
     const uint8_t *addr_bytes = &SAv6(&addr)->sin6_addr.s6_addr[0];
-    unsigned int bit_mask = 1 << 7;
-    while(mask_len--) {
+    unsigned int   bit_mask   = 1 << 7;
+    while (mask_len--) {
         auto &child = ((*addr_bytes) & bit_mask) ? node->one : node->zero;
-        node = child.get();
-        if(!node) {
+        node        = child.get();
+        if (!node) {
             node = new Node();
             child.reset(node);
         }
 
         bit_mask >>= 1;
-        if(!bit_mask) {
+        if (!bit_mask) {
             bit_mask = 1 << 7;
             addr_bytes++;
         }
@@ -61,15 +61,15 @@ IPTree::Node *IPTree::get_node_ipv6(const sockaddr_storage &addr, unsigned int m
 void IPTree::serialize_nodes_tree(const Node &node, AmArg &ret) const
 {
     ret.assertStruct();
-    if(!node.indexes.empty()) {
+    if (!node.indexes.empty()) {
         auto &a = ret["idx"];
-        for(const auto &idx : node.indexes)
+        for (const auto &idx : node.indexes)
             a.push(idx);
     }
-    if(node.one.get()) {
+    if (node.one.get()) {
         serialize_nodes_tree(*node.one.get(), ret["1"]);
     }
-    if(node.zero.get()) {
+    if (node.zero.get()) {
         serialize_nodes_tree(*node.zero.get(), ret["0"]);
     }
 }
@@ -82,48 +82,44 @@ void IPTree::clear()
 
 void IPTree::addSubnet(const AmSubnet &subnet, int external_index)
 {
-    auto mask_len = subnet.get_mask_len();
-    const auto &addr = subnet.get_addr();
+    auto        mask_len = subnet.get_mask_len();
+    const auto &addr     = subnet.get_addr();
 
-    Node *node = (addr.ss_family == AF_INET) ?
-        get_node_ipv4(addr, mask_len) :
-        get_node_ipv6(addr, mask_len);
+    Node *node = (addr.ss_family == AF_INET) ? get_node_ipv4(addr, mask_len) : get_node_ipv6(addr, mask_len);
 
     node->indexes.emplace(external_index);
 }
 
 void IPTree::match(const sockaddr_storage &addr, MatchResult &ret) const
 {
-    if(addr.ss_family==AF_INET) {
-        auto *node = &ipv4_root;
-        auto addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
-        unsigned int bit_mask = 1U << 31;
+    if (addr.ss_family == AF_INET) {
+        auto        *node       = &ipv4_root;
+        auto         addr_bytes = bswap_32(SAv4(&addr)->sin_addr.s_addr);
+        unsigned int bit_mask   = 1U << 31;
         do {
-            for(const auto &idx : node->indexes)
+            for (const auto &idx : node->indexes)
                 ret.push_back(idx);
 
-            node = (addr_bytes & bit_mask) ?
-                node->one.get() : node->zero.get();
+            node = (addr_bytes & bit_mask) ? node->one.get() : node->zero.get();
 
             bit_mask >>= 1;
-        } while(node);
+        } while (node);
     } else {
-        auto *node = &ipv6_root;
+        auto          *node       = &ipv6_root;
         const uint8_t *addr_bytes = &SAv6(&addr)->sin6_addr.s6_addr[0];
-        unsigned int bit_mask = 1 << 7;
+        unsigned int   bit_mask   = 1 << 7;
         do {
-            for(const auto &idx : node->indexes)
+            for (const auto &idx : node->indexes)
                 ret.push_back(idx);
 
-            node = ((*addr_bytes) & bit_mask) ?
-                node->one.get() : node->zero.get();
+            node = ((*addr_bytes) & bit_mask) ? node->one.get() : node->zero.get();
 
             bit_mask >>= 1;
-            if(!bit_mask) {
+            if (!bit_mask) {
                 bit_mask = 1 << 7;
                 addr_bytes++;
             }
-        } while(node);
+        } while (node);
     }
 }
 
@@ -133,7 +129,7 @@ std::optional<IPTree::MatchResult> IPTree::match(const sockaddr_storage &addr) c
 
     match(addr, result);
 
-    if(result.empty())
+    if (result.empty())
         return std::nullopt;
     return result;
 }

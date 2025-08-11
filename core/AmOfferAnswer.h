@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmOfferAnswer.h */
@@ -33,61 +33,53 @@
 
 class AmSipDialog;
 
-class AmOfferAnswer 
-{
-public:
-  enum OAState {
-    OA_None=0,
-    OA_OfferRecved,
-    OA_OfferSent,
-    OA_Completed,
-    __max_OA
-  };
+class AmOfferAnswer {
+  public:
+    enum OAState { OA_None = 0, OA_OfferRecved, OA_OfferSent, OA_Completed, __max_OA };
 
-private:
-  OAState      state;
-  OAState      saved_state;
-  unsigned int cseq;
+  private:
+    OAState      state;
+    OAState      saved_state;
+    unsigned int cseq;
 
-  AmSdp        sdp_remote;
-  AmSdp        sdp_local;
+    AmSdp sdp_remote;
+    AmSdp sdp_local;
 
-  AmSipDialog* dlg;
+    AmSipDialog *dlg;
 
-  /** State maintenance */
-  void saveState();
-  int  checkStateChange();
+    /** State maintenance */
+    void saveState();
+    int  checkStateChange();
 
-  /** SDP handling */
-  int  onRxSdp(unsigned int m_cseq, const string &m_method,
-               const AmMimeBody& body, const char** err_txt);
-  int  onTxSdp(unsigned int m_cseq, const string &m_method, const AmMimeBody& body);
-  int  getSdpBody(string& sdp_body);
+    /** SDP handling */
+    int onRxSdp(unsigned int m_cseq, const string &m_method, const AmMimeBody &body, const char **err_txt);
+    int onTxSdp(unsigned int m_cseq, const string &m_method, const AmMimeBody &body);
+    int getSdpBody(string &sdp_body);
 
-public:
-  /** Constructor */
-  AmOfferAnswer(AmSipDialog* dlg);
+  public:
+    /** Constructor */
+    AmOfferAnswer(AmSipDialog *dlg);
 
-  /** Accessors */
-  OAState getState();
-  unsigned int getCseq();
-  void setState(OAState n_st);
-  const AmSdp& getLocalSdp();
-  const AmSdp& getRemoteSdp();
+    /** Accessors */
+    OAState      getState();
+    unsigned int getCseq();
+    void         setState(OAState n_st);
+    const AmSdp &getLocalSdp();
+    const AmSdp &getRemoteSdp();
 
-  bool isSubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
+    bool isSubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
 
-  void clear();
-  void clearTransitionalState();
+    void clear();
+    void clearTransitionalState();
 
-  /** Event handlers */
-  int onRequestIn(const AmSipRequest& req);
-  int onReplyIn(const AmSipReply& reply);
-  int onRequestOut(AmSipRequest& req);
-  int onReplyOut(const AmSipRequest& req, AmSipReply& reply);
-  int onRequestSent(const AmSipRequest& req);
-  int onReplySent(const AmSipReply& reply);
-  void onNoAck(unsigned int ack_cseq);
+    /** Event handlers */
+    int  onRequestIn(const AmSipRequest &req);
+    int  onReplyIn(const AmSipReply &reply);
+    int  onRequestOut(AmSipRequest &req);
+    int  onReplyOut(const AmSipRequest &req, AmSipReply &reply);
+    int  onRequestSent(const AmSipRequest &req);
+    int  onReplySent(const AmSipReply &reply);
+    void onNoAck(unsigned int ack_cseq);
 };
 
 #endif

@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -30,17 +30,15 @@
 #include "SampleArray.h"
 
 /** \brief audio device that echos audio from input to output */
-class AmAudioEcho : public AmAudio
-{
-  SampleArrayShort timed_buffer;
+class AmAudioEcho : public AmAudio {
+    SampleArrayShort timed_buffer;
 
-  int read(unsigned int user_ts, unsigned int size);
-  int write(unsigned int user_ts, unsigned int size);
+    int read(unsigned int user_ts, unsigned int size);
+    int write(unsigned int user_ts, unsigned int size);
 
-public:
-  AmAudioEcho();
-  ~AmAudioEcho();
+  public:
+    AmAudioEcho();
+    ~AmAudioEcho();
 };
 
 #endif
-

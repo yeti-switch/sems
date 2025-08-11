@@ -20,21 +20,18 @@ void SctpClientConnection::setState(SctpConnection::state_t st)
     connection_status.set(state);
 }
 
-int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_seconds,
-                               const string &sink)
+int SctpClientConnection::init(int efd, const sockaddr_storage &a, int reconnect_seconds, const string &sink)
 {
     set_addr(a);
     set_epoll_fd(efd);
     reconnect_interval = reconnect_seconds;
     timerclear(&last_connect_attempt);
     event_sink = sink;
-    connection_status.addLabel("id", int2str(_id))
-                     .addLabel("endpoint", am_inet_ntop(&a).c_str());
-    connection_send_failed.addLabel("id", int2str(_id))
-                          .addLabel("endpoint", am_inet_ntop(&a).c_str());
+    connection_status.addLabel("id", int2str(_id)).addLabel("endpoint", am_inet_ntop(&a).c_str());
+    connection_send_failed.addLabel("id", int2str(_id)).addLabel("endpoint", am_inet_ntop(&a).c_str());
     connection_status.set(state);
 
-    if(-1 == connect())
+    if (-1 == connect())
         return -1;
 
     return 0;
@@ -42,104 +39,87 @@ int SctpClientConnection::init(int efd, const sockaddr_storage &a,int reconnect_
 
 int SctpClientConnection::connect()
 {
-    DBG("connect to %s:%d",am_inet_ntop(&addr).c_str(),am_get_port(&addr));
+    DBG("connect to %s:%d", am_inet_ntop(&addr).c_str(), am_get_port(&addr));
 
     close();
     events_sent = 0;
 
-    if((fd = socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP )) == -1)
+    if ((fd = socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP)) == -1)
         sctp_sys_err("socket()");
-    SOCKET_LOG("socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP ) = %d",fd);
+    SOCKET_LOG("socket(addr.ss_family, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_SCTP ) = %d", fd);
 
     setState(Connected);
 
     int opt = 1;
-    if( ::setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&opt, sizeof(int)) < 0 )
+    if (::setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&opt, sizeof(int)) < 0)
         sctp_sys_err("setsockopt(IPPROTO_SCTP, SCTP_NODELAY)");
 
     struct sctp_event_subscribe event;
     bzero(&event, sizeof(struct sctp_event_subscribe));
     event.sctp_association_event = 1;
-    event.sctp_shutdown_event = 1;
+    event.sctp_shutdown_event    = 1;
 
-    if(::setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) < 0)
+    if (::setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) < 0)
         sctp_sys_err("setsockopt(SCTP_EVENTS)");
 
-    gettimeofday(&last_connect_attempt,NULL);
+    gettimeofday(&last_connect_attempt, NULL);
 
-    if(::connect(fd, reinterpret_cast<sockaddr *>(&addr), SA_len(&addr)) == -1) {
-        if(errno == EINPROGRESS)
+    if (::connect(fd, reinterpret_cast<sockaddr *>(&addr), SA_len(&addr)) == -1) {
+        if (errno == EINPROGRESS)
             setState(Connecting);
         else
             return -1;
     }
 
-    struct epoll_event ev = {
-        .events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR,
-        .data = {
-            .fd = fd
-        }
-    };
+    struct epoll_event ev = { .events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR, .data = { .fd = fd } };
 
-    if(state != Connected) {
+    if (state != Connected) {
         ev.events |= EPOLLOUT;
     } else {
-        if(!event_sink.empty()) {
+        if (!event_sink.empty()) {
             AmSessionContainer::instance()->postEvent(
-                event_sink,
-                new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
+                event_sink, new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
         }
     }
 
-    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sctp_sys_err("epoll_ctl(EPOLL_CTL_ADD)");
 
     return fd;
 }
 
-int SctpClientConnection::process(uint32_t events) {
+int SctpClientConnection::process(uint32_t events)
+{
 
-    if(events & ~(EPOLLIN | EPOLLOUT)) {
-        int err = 0;
+    if (events & ~(EPOLLIN | EPOLLOUT)) {
+        int       err = 0;
         socklen_t len = sizeof(err);
 
         getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
 
-        WARN("%s:%u (%d,%d) connection error: %s",
-            am_inet_ntop(&addr).c_str(), am_get_port(&addr),fd,events,
-            err ? strerror(err) : "Peer shutdown");
+        WARN("%s:%u (%d,%d) connection error: %s", am_inet_ntop(&addr).c_str(), am_get_port(&addr), fd, events,
+             err ? strerror(err) : "Peer shutdown");
 
-        //state = Closed;
+        // state = Closed;
         return close();
     }
 
-    if(events & EPOLLOUT) {
+    if (events & EPOLLOUT) {
         setState(Connected);
-        INFO("connected to %s:%u/%d (%d) ",
-             am_inet_ntop(&addr).c_str(),
-             am_get_port(&addr),
-             assoc_id, fd);
-        struct epoll_event ev = {
-            .events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR,
-            .data = {
-                .fd = fd
-            }
-        };
-        if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1) {
-            DBG("epoll_ctl(%d,EPOLL_CTL_MOD,%d,EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR): %m",
-                epoll_fd,fd);
+        INFO("connected to %s:%u/%d (%d) ", am_inet_ntop(&addr).c_str(), am_get_port(&addr), assoc_id, fd);
+        struct epoll_event ev = { .events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR, .data = { .fd = fd } };
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1) {
+            DBG("epoll_ctl(%d,EPOLL_CTL_MOD,%d,EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR): %m", epoll_fd, fd);
             return close();
         }
 
-        if(!event_sink.empty()) {
+        if (!event_sink.empty()) {
             AmSessionContainer::instance()->postEvent(
-                event_sink,
-                new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
+                event_sink, new SctpBusConnectionStatus(_id, SctpBusConnectionStatus::Connected));
         }
-
     }
 
-    if(events & EPOLLIN) {
+    if (events & EPOLLIN) {
         return recv();
     }
 
@@ -151,34 +131,28 @@ int SctpClientConnection::recv()
     struct sctp_sndrcvinfo  sinfo;
     int                     flags = 0;
     struct sockaddr_storage from;
-    socklen_t               fromlen = sizeof (struct sockaddr_in6);
+    socklen_t               fromlen = sizeof(struct sockaddr_in6);
 
-    ssize_t nread = sctp_recvmsg(
-        fd, payload, sizeof(payload)-1,
-        (struct sockaddr *)&from,
-        &fromlen,
-        &sinfo, &flags);
+    ssize_t nread = sctp_recvmsg(fd, payload, sizeof(payload) - 1, (struct sockaddr *)&from, &fromlen, &sinfo, &flags);
 
-    if(nread < 1) {
-        ERROR("sctp_recvmsg(fd=%d): %m",fd);
+    if (nread < 1) {
+        ERROR("sctp_recvmsg(fd=%d): %m", fd);
         return close();
     }
 
-    if( flags & MSG_NOTIFICATION ) {
+    if (flags & MSG_NOTIFICATION) {
         handle_notification(from);
         return 0;
     }
 
-    if(!(flags & MSG_EOR)) {
+    if (!(flags & MSG_EOR)) {
         ERROR("Truncated message received");
         return 0;
     }
 
     SctpBusPDU r;
-    if(!r.ParseFromArray(payload,nread)){
-        ERROR("failed to deserialize PDU from: %s,with len: %ld",
-              am_inet_ntop(&from).c_str(),
-              nread);
+    if (!r.ParseFromArray(payload, nread)) {
+        ERROR("failed to deserialize PDU from: %s,with len: %ld", am_inet_ntop(&from).c_str(), nread);
         return 0;
     }
     onIncomingPDU(r);
@@ -189,13 +163,12 @@ int SctpClientConnection::recv()
 void SctpClientConnection::handle_notification(const sockaddr_storage &from)
 {
     const auto sn = (sctp_notification *)payload;
-    switch(sn->sn_header.sn_type) {
-    case SCTP_ASSOC_CHANGE: {
+    switch (sn->sn_header.sn_type) {
+    case SCTP_ASSOC_CHANGE:
+    {
         const auto &sac = sn->sn_assoc_change;
-        assoc_id = sac.sac_assoc_id;
-        INFO("SCTP_ASSOC_CHANGE: %d. remote: %s:%u",
-             assoc_id,
-             am_inet_ntop(&addr).c_str(), am_get_port(&addr));
+        assoc_id        = sac.sac_assoc_id;
+        INFO("SCTP_ASSOC_CHANGE: %d. remote: %s:%u", assoc_id, am_inet_ntop(&addr).c_str(), am_get_port(&addr));
     } break;
     default:;
     }
@@ -203,15 +176,15 @@ void SctpClientConnection::handle_notification(const sockaddr_storage &from)
 
 void SctpClientConnection::send(const SctpBusSendEvent &e)
 {
-    if(state!=Connected) {
-        ERROR("attempt to send event to not connected peer %d",_id);
+    if (state != Connected) {
+        ERROR("attempt to send event to not connected peer %d", _id);
         connection_send_failed.inc();
         return;
     }
 
     SctpBusPDU r;
 
-    if(!AmConfig.node_id) {
+    if (!AmConfig.node_id) {
         WARN("node_id is 0 (default value). this may cause not intended behavior");
     }
 
@@ -220,11 +193,11 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
     r.set_dst_node_id(_id);
     r.set_dst_session_id(e.dst_session_id);
 
-    //!TODO: implement direct serialization AmArg -> protobuf
+    //! TODO: implement direct serialization AmArg -> protobuf
     r.set_payload(arg2json(e.data));
-    //r.set_json_data(arg2json(e.data));
+    // r.set_json_data(arg2json(e.data));
 
-    if(!r.SerializePartialToArray(payload,sizeof(payload))){
+    if (!r.SerializePartialToArray(payload, sizeof(payload))) {
         ERROR("event serialization failed");
         connection_send_failed.inc();
         return;
@@ -232,15 +205,11 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
 
     ssize_t size = r.ByteSizeLong();
 
-    DBG("SEND sctp_bus event %d:%s/%d -> %d:%s",
-        r.src_node_id(),
-        r.src_session_id().c_str(),
-        assoc_id,
-        r.dst_node_id(),
+    DBG("SEND sctp_bus event %d:%s/%d -> %d:%s", r.src_node_id(), r.src_session_id().c_str(), assoc_id, r.dst_node_id(),
         r.dst_session_id().c_str());
-    
-    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
-       ERROR("send(): %m");
+
+    if (::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
+        ERROR("send(): %m");
         connection_send_failed.inc();
         return;
     }
@@ -250,13 +219,12 @@ void SctpClientConnection::send(const SctpBusSendEvent &e)
 
 void SctpClientConnection::send(const SctpBusRawRequest &e)
 {
-    if(state!=Connected) {
-        ERROR("attempt to send event to not connected peer %d",_id);
-        //FIXME: maybe wait for connect/reconnect here or send reply event with error
-        if(e.reply_timeout) {
-            AmSessionContainer::instance()->postEvent(
-                e.src_session_id,
-                new SctpBusRawReply(e,SctpBusRawReply::RES_NOT_CONNECTED));
+    if (state != Connected) {
+        ERROR("attempt to send event to not connected peer %d", _id);
+        // FIXME: maybe wait for connect/reconnect here or send reply event with error
+        if (e.reply_timeout) {
+            AmSessionContainer::instance()->postEvent(e.src_session_id,
+                                                      new SctpBusRawReply(e, SctpBusRawReply::RES_NOT_CONNECTED));
         }
         return;
     }
@@ -272,29 +240,23 @@ void SctpClientConnection::send(const SctpBusRawRequest &e)
     r.set_sequence(last_cseq);
     sent_requests.emplace(last_cseq, e);
 
-    r.set_payload(e.data.data(),e.data.size());
+    r.set_payload(e.data.data(), e.data.size());
 
-    if(!r.SerializePartialToArray(payload,sizeof(payload))){
+    if (!r.SerializePartialToArray(payload, sizeof(payload))) {
         ERROR("event serialization failed");
         return;
     }
 
     ssize_t size = r.ByteSizeLong();
 
-    DBG("SEND sctp_bus event request %d:%s/%d -> %d:%s seq: %ld",
-        r.src_node_id(),
-        r.src_session_id().c_str(),
-        assoc_id,
-        r.dst_node_id(),
-        r.dst_session_id().c_str(),
-        r.sequence());
-    
-    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
-       ERROR("send(): %m");
+    DBG("SEND sctp_bus event request %d:%s/%d -> %d:%s seq: %ld", r.src_node_id(), r.src_session_id().c_str(), assoc_id,
+        r.dst_node_id(), r.dst_session_id().c_str(), r.sequence());
+
+    if (::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
+        ERROR("send(): %m");
         sent_requests.erase(last_cseq);
-        AmSessionContainer::instance()->postEvent(
-            e.src_session_id,
-            new SctpBusRawReply(e,SctpBusRawReply::RES_SEND_SOCKET_ERROR));
+        AmSessionContainer::instance()->postEvent(e.src_session_id,
+                                                  new SctpBusRawReply(e, SctpBusRawReply::RES_SEND_SOCKET_ERROR));
         return;
     }
 
@@ -303,8 +265,8 @@ void SctpClientConnection::send(const SctpBusRawRequest &e)
 
 void SctpClientConnection::send(const SctpBusRawReply &e)
 {
-    if(state!=Connected) {
-        ERROR("attempt to send event to not connected peer %d",_id);
+    if (state != Connected) {
+        ERROR("attempt to send event to not connected peer %d", _id);
         return;
     }
 
@@ -317,25 +279,21 @@ void SctpClientConnection::send(const SctpBusRawReply &e)
     r.set_dst_session_id(e.req.src_session_id);
     r.set_sequence(e.req.cseq);
 
-    r.set_payload(e.data.data(),e.data.size());
+    r.set_payload(e.data.data(), e.data.size());
 
-    if(!r.SerializePartialToArray(payload,sizeof(payload))){
+    if (!r.SerializePartialToArray(payload, sizeof(payload))) {
         ERROR("event serialization failed");
         return;
     }
 
     ssize_t size = r.ByteSizeLong();
 
-    DBG("SEND sctp_bus event reply %d:%s/%d -> %d:%s",
-        r.src_node_id(),
-        r.src_session_id().c_str(),
-        assoc_id,
-        r.dst_node_id(),
-        r.dst_session_id().c_str());
-    
-    if(::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
-       ERROR("send(): %m");
-       return;
+    DBG("SEND sctp_bus event reply %d:%s/%d -> %d:%s", r.src_node_id(), r.src_session_id().c_str(), assoc_id,
+        r.dst_node_id(), r.dst_session_id().c_str());
+
+    if (::send(fd, payload, size, static_cast<int>(SCTP_UNORDERED) | MSG_NOSIGNAL) != size) {
+        ERROR("send(): %m");
+        return;
     }
 
     events_sent++;
@@ -346,25 +304,21 @@ int SctpClientConnection::on_timer(time_t now)
     /*DBG("client on timer. state = %d, last connect: %s",
         state,timeval2str_ntp(last_connect_attempt).c_str());*/
 
-    for(auto it = sent_requests.begin(); it != sent_requests.end(); ) {
+    for (auto it = sent_requests.begin(); it != sent_requests.end();) {
         const sent_info &i = it->second;
-        if(i.expire_time > now) {
-            AmSessionContainer::instance()->postEvent(
-                i.req.src_session_id,
-                new SctpBusRawReply(i.req,SctpBusRawReply::RES_TIMEOUT));
+        if (i.expire_time > now) {
+            AmSessionContainer::instance()->postEvent(i.req.src_session_id,
+                                                      new SctpBusRawReply(i.req, SctpBusRawReply::RES_TIMEOUT));
             it = sent_requests.erase(it);
             continue;
         }
         ++it;
     }
 
-    if(state==Closed
-       && timerisset(&last_connect_attempt)
-       && now > last_connect_attempt.tv_sec + reconnect_interval)
+    if (state == Closed && timerisset(&last_connect_attempt) && now > last_connect_attempt.tv_sec + reconnect_interval)
     {
-        DBG("reconnect timeout for not connected %s:%d",
-            am_inet_ntop(&addr).c_str(),am_get_port(&addr));
-            return connect();
+        DBG("reconnect timeout for not connected %s:%d", am_inet_ntop(&addr).c_str(), am_get_port(&addr));
+        return connect();
     }
 
     return 0;
@@ -372,50 +326,39 @@ int SctpClientConnection::on_timer(time_t now)
 
 void SctpClientConnection::onIncomingPDU(const SctpBusPDU &e)
 {
-    if(e.type()==SctpBusPDU::REQUEST) {
-        DBG("got request PDU for session %s",e.dst_session_id().c_str());
+    if (e.type() == SctpBusPDU::REQUEST) {
+        DBG("got request PDU for session %s", e.dst_session_id().c_str());
         SctpBusRawRequest *r =
-            new SctpBusRawRequest(
-                e.src_session_id(),
-                e.dst_node_id(),
-                e.dst_session_id(),
-                e.payload());
+            new SctpBusRawRequest(e.src_session_id(), e.dst_node_id(), e.dst_session_id(), e.payload());
         r->src_id = _id;
 
-        if(!AmSessionContainer::instance()->postEvent(e.dst_session_id(),r)) {
-            DBG("failed to post SctpBusRawRequest for sesson %s",
-                e.dst_session_id().c_str());
+        if (!AmSessionContainer::instance()->postEvent(e.dst_session_id(), r)) {
+            DBG("failed to post SctpBusRawRequest for sesson %s", e.dst_session_id().c_str());
         }
 
     } else {
-        if(!e.has_sequence()) {
+        if (!e.has_sequence()) {
             ERROR("got reply PDU without sequence. ignore it");
             return;
         }
         auto it = sent_requests.find(e.sequence());
-        if(it == sent_requests.end()) {
-            ERROR("reply PDU with sequence %ld has not matching sent request. ignore it",
-                  e.sequence());
+        if (it == sent_requests.end()) {
+            ERROR("reply PDU with sequence %ld has not matching sent request. ignore it", e.sequence());
             return;
         }
         const SctpBusRawRequest &req = it->second.req;
-        AmSessionContainer::instance()->postEvent(
-            e.dst_session_id(),
-            new SctpBusRawReply(
-                req,
-                e.payload()));
+        AmSessionContainer::instance()->postEvent(e.dst_session_id(), new SctpBusRawReply(req, e.payload()));
         sent_requests.erase(it);
     }
 }
 
 void SctpClientConnection::getInfo(AmArg &info)
 {
-    static const char *status_str[] = {"Closed","Connecting","Connected"};
+    static const char *status_str[] = { "Closed", "Connecting", "Connected" };
 
-    info["assoc_id"] = (unsigned long)assoc_id;
+    info["assoc_id"]    = (unsigned long)assoc_id;
     info["events_sent"] = events_sent;
     info["remote_host"] = am_inet_ntop(&addr);
     info["remote_port"] = am_get_port(&addr);
-    info["state"] = status_str[state];
+    info["state"]       = status_str[state];
 }
-

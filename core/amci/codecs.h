@@ -20,15 +20,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef _codecs_h_
 #define _codecs_h_
 
-/** 
+/**
  * @file codecs.h
  * Centralized definition of all codec IDs.
  * Look at the source file for declarations.
@@ -40,8 +40,8 @@
 #define CODEC_ALAW    2
 #define CODEC_GSM0610 3
 
-#define CODEC_ILBC    4
-#define CODEC_MP3     5
+#define CODEC_ILBC 4
+#define CODEC_MP3  5
 
 #define CODEC_TELEPHONE_EVENT 6
 
@@ -50,7 +50,7 @@
 #define CODEC_G726_32 10
 #define CODEC_G726_40 11
 
-#define CODEC_L16     12
+#define CODEC_L16 12
 
 #define CODEC_G722_NB 13
 
@@ -85,7 +85,7 @@
 #define CODEC_G723 50
 #define CODEC_G729 51
 
-#define CODEC_AMR 55
+#define CODEC_AMR   55
 #define CODEC_AMRWB 56
 
 #define CODEC_OPUS 60

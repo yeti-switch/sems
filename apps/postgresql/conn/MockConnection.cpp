@@ -7,10 +7,11 @@
 #include <unistd.h>
 #include <sys/eventfd.h>
 
-MockConnection::MockConnection(IConnectionHandler* handler)
-  : Connection("mock", "mock", handler),
-    conn_fd(-1)
-{}
+MockConnection::MockConnection(IConnectionHandler *handler)
+    : Connection("mock", "mock", handler)
+    , conn_fd(-1)
+{
+}
 
 MockConnection::~MockConnection()
 {
@@ -19,20 +20,21 @@ MockConnection::~MockConnection()
 
 void MockConnection::check_conn()
 {
-    if(!handler) return;
-    
-    if(status == CONNECTION_BAD) {
+    if (!handler)
+        return;
+
+    if (status == CONNECTION_BAD) {
         status = CONNECTION_MADE;
         handler->onSock(this, IConnectionHandler::PG_SOCK_WRITE);
-    } else if(status == CONNECTION_MADE) {
+    } else if (status == CONNECTION_MADE) {
         status = CONNECTION_OK;
         handler->onConnect(this);
         handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
-    } else if(status == CONNECTION_OK) {
+    } else if (status == CONNECTION_OK) {
         int64_t u;
         do {
             u = ::read(conn_fd, &u, sizeof(int64_t));
-        } while(u > 0);
+        } while (u > 0);
     }
 }
 
@@ -43,9 +45,10 @@ bool MockConnection::flush_conn()
 
 bool MockConnection::reset_conn()
 {
-    if(!handler) return false;
+    if (!handler)
+        return false;
 
-    if(conn_fd != -1) {
+    if (conn_fd != -1) {
         handler->onReset(this, false);
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         status = CONNECTION_BAD;
@@ -61,7 +64,7 @@ bool MockConnection::reset_conn()
 
 void MockConnection::close_conn()
 {
-    if(conn_fd != -1) {
+    if (conn_fd != -1) {
         handler->onSock(this, IConnectionHandler::PG_SOCK_DEL);
         status = CONNECTION_BAD;
         ::close(conn_fd);

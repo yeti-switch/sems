@@ -8,10 +8,10 @@
 
 /* Generate code to pack a bit array from a name:#bits description */
 
-#include	<stdio.h>
-#include	"taste.h"
-#include	"proto.h"
-#include	<limits.h>
+#include <stdio.h>
+#include "taste.h"
+#include "proto.h"
+#include <limits.h>
 
 /* This module goes back to one Jeff Chilton used for his implementation
  * of the #49 WAV GSM format.  (In his original patch 8, it replaced
@@ -38,52 +38,50 @@
  *  right-hand remainder of a C array.)
  */
 
-#define WORD_BITS	16	/* sizeof(uword) * CHAR_BIT on the 
-				 * target architecture---if this isn't 16,
-				 * you're in trouble with this library anyway.
-				 */
+#define WORD_BITS                                                                                                      \
+    16 /* sizeof(uword) * CHAR_BIT on the                                                                              \
+        * target architecture---if this isn't 16,                                                                      \
+        * you're in trouble with this library anyway.                                                                  \
+        */
 
-#define CHAR_BITS	 8	/* CHAR_BIT on the target architecture---
-				 * if this isn't 8, you're in *deep* trouble.
-				 */
+#define CHAR_BITS                                                                                                      \
+    8 /* CHAR_BIT on the target architecture---                                                                        \
+       * if this isn't 8, you're in *deep* trouble.                                                                    \
+       */
 
-void write_code P2((s_spex, n_spex), struct spex * s_spex, int n_spex)
+void write_code P2((s_spex, n_spex), struct spex *s_spex, int n_spex)
 {
-	struct spex	* sp = s_spex;
-	int		  n_in = 0;
+    struct spex *sp   = s_spex;
+    int          n_in = 0;
 
-	printf("uword sr = 0;\n");
+    printf("uword sr = 0;\n");
 
-	for (; n_spex > 0; n_spex--, sp++) {
+    for (; n_spex > 0; n_spex--, sp++) {
 
-		/*	insert       old 
-		 *	new var	     value     unused
-		 *	here  
-		 *
-		 *	[____________xxxxxx**********]
-		 *
-		 *	<----- n_in ------>
-		 */
-		printf("sr = sr >> %d | %s << %d;\n",
-			sp->varsize,
-			sp->var, 
-			WORD_BITS - sp->varsize);
+        /*	insert       old
+         *	new var	     value     unused
+         *	here
+         *
+         *	[____________xxxxxx**********]
+         *
+         *	<----- n_in ------>
+         */
+        printf("sr = sr >> %d | %s << %d;\n", sp->varsize, sp->var, WORD_BITS - sp->varsize);
 
-		n_in += sp->varsize;
+        n_in += sp->varsize;
 
-		while (n_in >= CHAR_BIT) {
-			printf("*c++ = sr >> %d;\n",
-				WORD_BITS - n_in);
-			n_in -= CHAR_BIT;
-		}
-	}
+        while (n_in >= CHAR_BIT) {
+            printf("*c++ = sr >> %d;\n", WORD_BITS - n_in);
+            n_in -= CHAR_BIT;
+        }
+    }
 
-	while (n_in >= CHAR_BIT) {
-		printf("*c++ = sr >> %d;\n", WORD_BITS - n_in);
-		n_in -= CHAR_BIT;
-	}
+    while (n_in >= CHAR_BIT) {
+        printf("*c++ = sr >> %d;\n", WORD_BITS - n_in);
+        n_in -= CHAR_BIT;
+    }
 
-	if (n_in > 0) {
-		fprintf(stderr, "warning: %d bits left over\n", n_in);
-	}
+    if (n_in > 0) {
+        fprintf(stderr, "warning: %d bits left over\n", n_in);
+    }
 }

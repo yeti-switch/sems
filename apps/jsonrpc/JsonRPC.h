@@ -2,7 +2,7 @@
  * $Id: ModMysql.cpp 1764 2010-04-01 14:33:30Z peter_lemenkov $
  *
  * Copyright (C) 2010 TelTech Systems Inc.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -36,47 +36,42 @@
 #define DEFAULT_JSONRPC_SERVER_PORT    7080
 #define DEFAULT_JSONRPC_SERVER_THREADS 5
 
-class JsonRPCServerModule
-: public AmDynInvokeFactory, 
-  public AmConfigFactory,
-  public AmDynInvoke 
-{
-  static JsonRPCServerModule* _instance;
+class JsonRPCServerModule : public AmDynInvokeFactory, public AmConfigFactory, public AmDynInvoke {
+    static JsonRPCServerModule *_instance;
 
-  int load();
+    int load();
 
-  JsonRPCServerLoop* server_loop;
+    JsonRPCServerLoop *server_loop;
 
-  // DI methods
-  void execRpc(const AmArg& args, AmArg& ret);
-  void sendMessage(const AmArg& args, AmArg& ret);
+    // DI methods
+    void execRpc(const AmArg &args, AmArg &ret);
+    void sendMessage(const AmArg &args, AmArg &ret);
 
- public:
-  JsonRPCServerModule(const string& mod_name);
-  ~JsonRPCServerModule();
-  int onLoad() override;
+  public:
+    JsonRPCServerModule(const string &mod_name);
+    ~JsonRPCServerModule();
+    int onLoad() override;
 
-  // Config factory
-  int configure(const std::string & config) override;
-  int reconfigure(const std::string& config) override;
-  // DI factory
-  AmDynInvoke* getInstance() override { return instance(); }
+    // Config factory
+    int configure(const std::string &config) override;
+    int reconfigure(const std::string &config) override;
+    // DI factory
+    AmDynInvoke *getInstance() override { return instance(); }
 
-  // DI API
-  static JsonRPCServerModule* instance();
+    // DI API
+    static JsonRPCServerModule *instance();
 
-  void invoke(const string& method, 
-	      const AmArg& args, AmArg& ret) override;
+    void invoke(const string &method, const AmArg &args, AmArg &ret) override;
 
-  // configuration
-  static string host;
-  static int port;
-  static int threads;
-  static trsp_acl acl;
-  static string tcp_md5_password;
-  bool use_tls;
-  static tls_server_settings server_settings;
-  static tls_client_settings client_settings;
+    // configuration
+    static string              host;
+    static int                 port;
+    static int                 threads;
+    static trsp_acl            acl;
+    static string              tcp_md5_password;
+    bool                       use_tls;
+    static tls_server_settings server_settings;
+    static tls_client_settings client_settings;
 };
 
 #endif

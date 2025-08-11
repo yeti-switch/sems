@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -30,33 +30,27 @@
 #include "AmSession.h"
 #include "AmSessionContainer.h"
 
-string AmUAC::dialout(const string& user,
-		      const string& app_name,
-		      const string& r_uri, 
-		      const string& from,
-		      const string& from_uri,
-		      const string& to,
-		      const string& local_tag,
-		      const string& hdrs,
-		      AmArg*  session_params) {
- 
-  AmSipRequest req;
-  string m_app_name = app_name;
+string AmUAC::dialout(const string &user, const string &app_name, const string &r_uri, const string &from,
+                      const string &from_uri, const string &to, const string &local_tag, const string &hdrs,
+                      AmArg *session_params)
+{
 
-  req.user     = user;
-  req.method   = "INVITE";
-  req.r_uri    = r_uri;
-  req.from     = from;
-  req.from_uri = from_uri;
-  if (!local_tag.length())
-    req.from_tag   = AmSession::getNewId();
-  else 
-    req.from_tag   = local_tag;
-  req.to       = to;
-  req.to_tag   = "";
-  req.callid   = AmSession::getNewId();
-  req.hdrs     = hdrs;
-    
-  return AmSessionContainer::instance()->startSessionUAC(req, m_app_name, session_params);
+    AmSipRequest req;
+    string       m_app_name = app_name;
+
+    req.user     = user;
+    req.method   = "INVITE";
+    req.r_uri    = r_uri;
+    req.from     = from;
+    req.from_uri = from_uri;
+    if (!local_tag.length())
+        req.from_tag = AmSession::getNewId();
+    else
+        req.from_tag = local_tag;
+    req.to     = to;
+    req.to_tag = "";
+    req.callid = AmSession::getNewId();
+    req.hdrs   = hdrs;
+
+    return AmSessionContainer::instance()->startSessionUAC(req, m_app_name, session_params);
 }
-

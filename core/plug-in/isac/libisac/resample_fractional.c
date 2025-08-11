@@ -19,21 +19,21 @@
 
 // interpolation coefficients
 static const WebRtc_Word16 kCoefficients48To32[2][8] = {
-        {778, -2050, 1087, 23285, 12903, -3783, 441, 222},
-        {222, 441, -3783, 12903, 23285, 1087, -2050, 778}
+    { 778, -2050,  1087, 23285, 12903, -3783,   441, 222 },
+    { 222,   441, -3783, 12903, 23285,  1087, -2050, 778 }
 };
 
 static const WebRtc_Word16 kCoefficients32To24[3][8] = {
-        {767, -2362, 2434, 24406, 10620, -3838, 721, 90},
-        {386, -381, -2646, 19062, 19062, -2646, -381, 386},
-        {90, 721, -3838, 10620, 24406, 2434, -2362, 767}
+    { 767, -2362,  2434, 24406, 10620, -3838,   721,  90 },
+    { 386,  -381, -2646, 19062, 19062, -2646,  -381, 386 },
+    {  90,   721, -3838, 10620, 24406,  2434, -2362, 767 }
 };
 
 static const WebRtc_Word16 kCoefficients44To32[4][9] = {
-        {117, -669, 2245, -6183, 26267, 13529, -3245, 845, -138},
-        {-101, 612, -2283, 8532, 29790, -5138, 1789, -524, 91},
-        {50, -292, 1016, -3064, 32010, 3933, -1147, 315, -53},
-        {-156, 974, -3863, 18603, 21691, -6246, 2353, -712, 126}
+    {  117, -669,  2245, -6183, 26267, 13529, -3245,  845, -138 },
+    { -101,  612, -2283,  8532, 29790, -5138,  1789, -524,   91 },
+    {   50, -292,  1016, -3064, 32010,  3933, -1147,  315,  -53 },
+    { -156,  974, -3863, 18603, 21691, -6246,  2353, -712,  126 }
 };
 
 //   Resampling ratio: 2/3
@@ -41,8 +41,7 @@ static const WebRtc_Word16 kCoefficients44To32[4][9] = {
 // output: WebRtc_Word32 (shifted 15 positions to the left, + offset 16384) :: size 2 * K
 //      K: number of blocks
 
-void WebRtcSpl_Resample48khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
-                                    const WebRtc_Word32 K)
+void WebRtcSpl_Resample48khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out, const WebRtc_Word32 K)
 {
     /////////////////////////////////////////////////////////////
     // Filter operation:
@@ -52,8 +51,7 @@ void WebRtcSpl_Resample48khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
     WebRtc_Word32 tmp;
     WebRtc_Word32 m;
 
-    for (m = 0; m < K; m++)
-    {
+    for (m = 0; m < K; m++) {
         tmp = 1 << 14;
         tmp += kCoefficients48To32[0][0] * In[0];
         tmp += kCoefficients48To32[0][1] * In[1];
@@ -87,8 +85,7 @@ void WebRtcSpl_Resample48khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
 // output: WebRtc_Word32 (shifted 15 positions to the left, + offset 16384) :: size 3 * K
 //      K: number of blocks
 
-void WebRtcSpl_Resample32khzTo24khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
-                                    const WebRtc_Word32 K)
+void WebRtcSpl_Resample32khzTo24khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out, const WebRtc_Word32 K)
 {
     /////////////////////////////////////////////////////////////
     // Filter operation:
@@ -98,8 +95,7 @@ void WebRtcSpl_Resample32khzTo24khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
     WebRtc_Word32 m;
     WebRtc_Word32 tmp;
 
-    for (m = 0; m < K; m++)
-    {
+    for (m = 0; m < K; m++) {
         tmp = 1 << 14;
         tmp += kCoefficients32To24[0][0] * In[0];
         tmp += kCoefficients32To24[0][1] * In[1];
@@ -147,8 +143,7 @@ void WebRtcSpl_Resample32khzTo24khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
 
 // compute two inner-products and store them to output array
 static void WebRtcSpl_ResampDotProduct(const WebRtc_Word32 *in1, const WebRtc_Word32 *in2,
-                               const WebRtc_Word16 *coef_ptr, WebRtc_Word32 *out1,
-                               WebRtc_Word32 *out2)
+                                       const WebRtc_Word16 *coef_ptr, WebRtc_Word32 *out1, WebRtc_Word32 *out2)
 {
     WebRtc_Word32 tmp1 = 16384;
     WebRtc_Word32 tmp2 = 16384;
@@ -186,7 +181,7 @@ static void WebRtcSpl_ResampDotProduct(const WebRtc_Word32 *in1, const WebRtc_Wo
     tmp1 += coef * in1[7];
     tmp2 += coef * in2[-7];
 
-    coef = coef_ptr[8];
+    coef  = coef_ptr[8];
     *out1 = tmp1 + coef * in1[8];
     *out2 = tmp2 + coef * in2[-8];
 }
@@ -196,8 +191,7 @@ static void WebRtcSpl_ResampDotProduct(const WebRtc_Word32 *in1, const WebRtc_Wo
 // output: WebRtc_Word32 (shifted 15 positions to the left, + offset 16384) :: size  8 * K
 //      K: number of blocks
 
-void WebRtcSpl_Resample44khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
-                                    const WebRtc_Word32 K)
+void WebRtcSpl_Resample44khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out, const WebRtc_Word32 K)
 {
     /////////////////////////////////////////////////////////////
     // Filter operation:
@@ -207,8 +201,7 @@ void WebRtcSpl_Resample44khzTo32khz(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
     WebRtc_Word32 tmp;
     WebRtc_Word32 m;
 
-    for (m = 0; m < K; m++)
-    {
+    for (m = 0; m < K; m++) {
         tmp = 1 << 14;
 
         // first output sample

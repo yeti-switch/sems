@@ -9,99 +9,98 @@
 #include <unordered_map>
 #include <cmath>
 
-const int MAX_DROPOUT = 3000;
-const int MAX_MISORDER = 100;
-const int MIN_SEQUENTIAL = 2;
-const int MAX_RX_STATS = 10;
+const int MAX_DROPOUT      = 3000;
+const int MAX_MISORDER     = 100;
+const int MIN_SEQUENTIAL   = 2;
+const int MAX_RX_STATS     = 10;
 const int MAX_STREAM_STATS = 5;
 
-template <typename T = int>
-struct MathStat
-{
-    int n;                                /* number of samples    */
-    T max;                                /* maximum value        */
-    T min;                                /* minimum value        */
-    T last;                               /* last value           */
-    float mean;                           /* mean                 */
-    double variance_multiplied_by_n;      /* variance * n         */
+template <typename T = int> struct MathStat {
+    int    n;                        /* number of samples    */
+    T      max;                      /* maximum value        */
+    T      min;                      /* minimum value        */
+    T      last;                     /* last value           */
+    float  mean;                     /* mean                 */
+    double variance_multiplied_by_n; /* variance * n         */
 
     MathStat()
-      /*: n(0),
-        max(0),
-        min(0),
-        mean(0),
-        variance_multiplied_by_n(0)*/
+    /*: n(0),
+      max(0),
+      min(0),
+      mean(0),
+      variance_multiplied_by_n(0)*/
     {
-        bzero(this,sizeof(MathStat<T>));
+        bzero(this, sizeof(MathStat<T>));
     }
 
-    inline void update(T v) {
+    inline void update(T v)
+    {
         float diff;
 
         last = v;
 
-        if(n++) {
-            if(min > v) min = v;
-            if(max < v) max = v;
+        if (n++) {
+            if (min > v)
+                min = v;
+            if (max < v)
+                max = v;
         } else {
             min = v;
             max = v;
         }
 
-        diff = v-mean;
-        mean += diff/n;
+        diff = v - mean;
+        mean += diff / n;
 
-        variance_multiplied_by_n += diff*(v-mean);
+        variance_multiplied_by_n += diff * (v - mean);
     }
 
-    inline long double sd() const //standard deviation
+    inline long double sd() const // standard deviation
     {
-        if(n==0) return 0;
-        return std::sqrt(variance_multiplied_by_n/n);
+        if (n == 0)
+            return 0;
+        return std::sqrt(variance_multiplied_by_n / n);
     }
 };
 
-struct RtcpUnidirectionalStat
-{
-    timeval     update;        /**< Time of last update.                   */
-    unsigned    update_cnt;	   /**< Number of updates (to calculate avg)   */
-    uint32_t    pkt;           /**< Total number of packets                */
-    uint32_t    bytes;         /**< Total number of payload/bytes          */
-    unsigned    discard;       /**< Total number of discarded packets.     */
-    unsigned    loss;          /**< Total number of packets lost           */
-    unsigned    reorder;       /**< Total number of out of order packets   */
-    unsigned    dup;           /**< Total number of duplicates packets     */
-    unsigned    decode_err;    /**< Total number of decoding packet errors */
+struct RtcpUnidirectionalStat {
+    timeval  update;     /**< Time of last update.                   */
+    unsigned update_cnt; /**< Number of updates (to calculate avg)   */
+    uint32_t pkt;        /**< Total number of packets                */
+    uint32_t bytes;      /**< Total number of payload/bytes          */
+    unsigned discard;    /**< Total number of discarded packets.     */
+    unsigned loss;       /**< Total number of packets lost           */
+    unsigned reorder;    /**< Total number of out of order packets   */
+    unsigned dup;        /**< Total number of duplicates packets     */
+    unsigned decode_err; /**< Total number of decoding packet errors */
 
     struct {
-        unsigned    burst:1;   /**< Burst/sequential packet lost detected  */
-        unsigned    random:1;  /**< Random packet lost detected.           */
-    } loss_type;               /**< Types of loss detected.                */
+        unsigned burst  : 1; /**< Burst/sequential packet lost detected  */
+        unsigned random : 1; /**< Random packet lost detected.           */
+    } loss_type;             /**< Types of loss detected.                */
 
-    int         rtcp_jitter;   /** scaled RTCP jitter                      */
+    int rtcp_jitter; /** scaled RTCP jitter                      */
 
-    struct sockaddr_storage addr;        /**< rx remote address                 */
-    MathStat<long>     rx_delta;         /**< rx delta statistic(in usec)       */
-    MathStat<double>   jitter_usec;      /**< rx jitter statistic(in usec)      */
-    MathStat<uint32_t> rtcp_jitter_usec; /**< rx rtcp jitter statistic(in usec) */
-    MathStat<uint32_t>  loss_period;     /**< Loss period statistics (in usec)  */
+    struct sockaddr_storage addr;             /**< rx remote address                 */
+    MathStat<long>          rx_delta;         /**< rx delta statistic(in usec)       */
+    MathStat<double>        jitter_usec;      /**< rx jitter statistic(in usec)      */
+    MathStat<uint32_t>      rtcp_jitter_usec; /**< rx rtcp jitter statistic(in usec) */
+    MathStat<uint32_t>      loss_period;      /**< Loss period statistics (in usec)  */
 
     RtcpUnidirectionalStat();
 };
 
-struct RtcpBidirectionalStat
-  : public AmMutex
-{
+struct RtcpBidirectionalStat : public AmMutex {
     using RxStatMap = std::unordered_map<unsigned int, RtcpUnidirectionalStat>;
 
-    timeval    start;             /**< Time when session was created       */
+    timeval start; /**< Time when session was created       */
 
-    uint32_t    rtp_tx_last_ts;   /**< Last TX RTP timestamp.              */
-    uint16_t    rtp_tx_last_seq;  /**< Last TX RTP sequence.               */
+    uint32_t rtp_tx_last_ts;  /**< Last TX RTP timestamp.              */
+    uint16_t rtp_tx_last_seq; /**< Last TX RTP sequence.               */
 
     RtcpUnidirectionalStat  tx; /**< Send stream statistics.             */
     RxStatMap               rx; /**< Recv stream statistics.             */
-    RtcpUnidirectionalStat* current_rx;
+    RtcpUnidirectionalStat *current_rx;
 
     uint32_t rtcp_rr_sent, rtcp_rr_recv;
     uint32_t rtcp_sr_sent, rtcp_sr_recv;
@@ -118,21 +117,20 @@ struct RtcpBidirectionalStat
     uint32_t received_prior; /* packet received at last interval */
     uint32_t transit;        /* relative trans time for prev pkt */
 
-    timeval  rx_recv_time;
+    timeval rx_recv_time;
 
     uint32_t total_lost;
     uint8_t  fraction_lost;
 
-    uint32_t sr_lsr;         /* last SR timestamp from sender report */
+    uint32_t sr_lsr; /* last SR timestamp from sender report */
     timeval  sr_recv_time;
 
-    MathStat<uint32_t>       rtt;          /**< Round trip delay statistic(in usec) */
-    MathStat<uint32_t>       rtcp_remote_jitter;  /** rx jitter from remote reports statistic(in usec) */
+    MathStat<uint32_t> rtt;                /**< Round trip delay statistic(in usec) */
+    MathStat<uint32_t> rtcp_remote_jitter; /** rx jitter from remote reports statistic(in usec) */
 
     void init_seq(uint32_t ssrc, uint16_t seq);
-    int update_seq(uint32_t ssrc, uint16_t seq);
+    int  update_seq(uint32_t ssrc, uint16_t seq);
     void update_lost();
 
     RtcpBidirectionalStat();
 };
-

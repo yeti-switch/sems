@@ -7,46 +7,56 @@
 
 #define TIMER_RECEIVER_QUEUE_NAME "TimerReceiver"
 
-class TimerEvent : public AmEvent
-{
-public:
+class TimerEvent : public AmEvent {
+  public:
     int seq;
-    TimerEvent(int seq) : AmEvent(0), seq(seq){}
-    AmEvent * clone() override {
-        return new TimerEvent(*this);
+    TimerEvent(int seq)
+        : AmEvent(0)
+        , seq(seq)
+    {
     }
+    AmEvent *clone() override { return new TimerEvent(*this); }
 };
 
 class TimerTest;
 
-class ReuseTimer : public DirectAppTimer
-{
-public:
-    int seq;
-    TimerTest* test;
+class ReuseTimer : public DirectAppTimer {
+  public:
+    int        seq;
+    TimerTest *test;
 
-    ReuseTimer(TimerTest* t) : seq(0), test(t){}
+    ReuseTimer(TimerTest *t)
+        : seq(0)
+        , test(t)
+    {
+    }
 
     void onTimer() override;
 };
 
-class TimerTest : public AmEventProcessingThread, public ::testing::Test
-{
-protected:
+class TimerTest : public AmEventProcessingThread, public ::testing::Test {
+  protected:
     friend class ReuseTimer;
     ReuseTimer timer;
-    bool is_stop;
-    int seq;
-public:
-    TimerTest() : timer(this), is_stop(false), seq(0){}
-    ~TimerTest() {
-    }
+    bool       is_stop;
+    int        seq;
 
-    void SetUp() override {
+  public:
+    TimerTest()
+        : timer(this)
+        , is_stop(false)
+        , seq(0)
+    {
+    }
+    ~TimerTest() {}
+
+    void SetUp() override
+    {
         AmAppTimer::instance()->start();
         AmEventDispatcher::instance()->addEventQueue(TIMER_RECEIVER_QUEUE_NAME, this);
     }
-    void TearDown() override {
+    void TearDown() override
+    {
         AmEventDispatcher::instance()->delEventQueue(TIMER_RECEIVER_QUEUE_NAME);
         AmAppTimer::instance()->stop(true);
     }
@@ -59,18 +69,19 @@ public:
         }
     }
 
-    void onEvent(AmEvent* event) override {
-        TimerEvent* tev = dynamic_cast<TimerEvent*>(event);
-        if(tev) {
+    void onEvent(AmEvent *event) override
+    {
+        TimerEvent *tev = dynamic_cast<TimerEvent *>(event);
+        if (tev) {
             EXPECT_EQ(tev->seq, seq);
-            if(tev->seq == 0) {
+            if (tev->seq == 0) {
                 seq++;
 
-                //new logic: object is new(other content)
-                //timer shouldn't removed
+                // new logic: object is new(other content)
+                // timer shouldn't removed
                 /*timer.seq++;
                 AmAppTimer::instance()->removeTimer(timer);*/
-            } else if(tev->seq == 1) {
+            } else if (tev->seq == 1) {
                 is_stop = true;
             }
         }
@@ -84,10 +95,8 @@ void ReuseTimer::onTimer()
     test->timer.set(0);
 }
 
-TEST_F(TimerTest, ReuseTimer) {
+TEST_F(TimerTest, ReuseTimer)
+{
     timer.set(0);
     run();
 }
-
-
-

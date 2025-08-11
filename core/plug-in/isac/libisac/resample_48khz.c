@@ -24,8 +24,8 @@
 ////////////////////////////
 
 // 48 -> 16 resampler
-void WebRtcSpl_Resample48khzTo16khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                    WebRtcSpl_State48khzTo16khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample48khzTo16khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State48khzTo16khz *state,
+                                    WebRtc_Word32 *tmpmem)
 {
     ///// 48 --> 48(LP) /////
     // WebRtc_Word16  in[480]
@@ -50,7 +50,7 @@ void WebRtcSpl_Resample48khzTo16khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 48 -> 16 resampler
-void WebRtcSpl_ResetResample48khzTo16khz(WebRtcSpl_State48khzTo16khz* state)
+void WebRtcSpl_ResetResample48khzTo16khz(WebRtcSpl_State48khzTo16khz *state)
 {
     memset(state->S_48_48, 0, 16 * sizeof(WebRtc_Word32));
     memset(state->S_48_32, 0, 8 * sizeof(WebRtc_Word32));
@@ -62,8 +62,8 @@ void WebRtcSpl_ResetResample48khzTo16khz(WebRtcSpl_State48khzTo16khz* state)
 ////////////////////////////
 
 // 16 -> 48 resampler
-void WebRtcSpl_Resample16khzTo48khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                    WebRtcSpl_State16khzTo48khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample16khzTo48khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State16khzTo48khz *state,
+                                    WebRtc_Word32 *tmpmem)
 {
     ///// 16 --> 32 /////
     // WebRtc_Word16  in[160]
@@ -88,7 +88,7 @@ void WebRtcSpl_Resample16khzTo48khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 16 -> 48 resampler
-void WebRtcSpl_ResetResample16khzTo48khz(WebRtcSpl_State16khzTo48khz* state)
+void WebRtcSpl_ResetResample16khzTo48khz(WebRtcSpl_State16khzTo48khz *state)
 {
     memset(state->S_16_32, 0, 8 * sizeof(WebRtc_Word32));
     memset(state->S_32_24, 0, 8 * sizeof(WebRtc_Word32));
@@ -100,8 +100,8 @@ void WebRtcSpl_ResetResample16khzTo48khz(WebRtcSpl_State16khzTo48khz* state)
 ////////////////////////////
 
 // 48 -> 8 resampler
-void WebRtcSpl_Resample48khzTo8khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                   WebRtcSpl_State48khzTo8khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample48khzTo8khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State48khzTo8khz *state,
+                                   WebRtc_Word32 *tmpmem)
 {
     ///// 48 --> 24 /////
     // WebRtc_Word16  in[480]
@@ -132,7 +132,7 @@ void WebRtcSpl_Resample48khzTo8khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 48 -> 8 resampler
-void WebRtcSpl_ResetResample48khzTo8khz(WebRtcSpl_State48khzTo8khz* state)
+void WebRtcSpl_ResetResample48khzTo8khz(WebRtcSpl_State48khzTo8khz *state)
 {
     memset(state->S_48_24, 0, 8 * sizeof(WebRtc_Word32));
     memset(state->S_24_24, 0, 16 * sizeof(WebRtc_Word32));
@@ -145,8 +145,8 @@ void WebRtcSpl_ResetResample48khzTo8khz(WebRtcSpl_State48khzTo8khz* state)
 ////////////////////////////
 
 // 8 -> 48 resampler
-void WebRtcSpl_Resample8khzTo48khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                   WebRtcSpl_State8khzTo48khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample8khzTo48khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State8khzTo48khz *state,
+                                   WebRtc_Word32 *tmpmem)
 {
     ///// 8 --> 16 /////
     // WebRtc_Word16  in[80]
@@ -177,7 +177,7 @@ void WebRtcSpl_Resample8khzTo48khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 8 -> 48 resampler
-void WebRtcSpl_ResetResample8khzTo48khz(WebRtcSpl_State8khzTo48khz* state)
+void WebRtcSpl_ResetResample8khzTo48khz(WebRtcSpl_State8khzTo48khz *state)
 {
     memset(state->S_8_16, 0, 8 * sizeof(WebRtc_Word32));
     memset(state->S_16_12, 0, 8 * sizeof(WebRtc_Word32));

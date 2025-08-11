@@ -42,14 +42,14 @@ static snd_pcm_t *init_hw(unsigned int samplerate, int fr)
 
 
 ConferenceChannel::ConferenceChannel(int mpmixer_ch_id, int64_t ext_id, mixer_ptr mpmixer)
-    : ext_id(ext_id), mpmixer_ch_id(mpmixer_ch_id), mpmixer(mpmixer)
-{}
+    : ext_id(ext_id)
+    , mpmixer_ch_id(mpmixer_ch_id)
+    , mpmixer(mpmixer)
+{
+}
 
 
-void ConferenceChannel::put_external(int neighbor_idx,
-                                     unsigned long long ts,
-                                     unsigned char *buffer,
-                                     int sample_rate,
+void ConferenceChannel::put_external(int neighbor_idx, unsigned long long ts, unsigned char *buffer, int sample_rate,
                                      int size)
 {
     // fprintf(stderr,"%s #%d rate %d size %d\n", __func__, neighbor_num, sample_rate, size);
@@ -59,13 +59,12 @@ void ConferenceChannel::put_external(int neighbor_idx,
         mpmixer->PutExtChannelPacket(neighbor_idx, ts, buffer, size);
     else {
 
-        const MultiPartyMixer::ext_resampling_state_ptr
-                &resampler  = mpmixer->get_ext_resampler(neighbor_idx);
+        const MultiPartyMixer::ext_resampling_state_ptr &resampler = mpmixer->get_ext_resampler(neighbor_idx);
 
-        memcpy((unsigned char*)samples, buffer, size);
-         // size = resampleInput(samples, size, sample_rate, current_sample_rate);
-        size = resampler->resample(samples, size, ((double) current_sample_rate) / ((double) sample_rate ));
-        mpmixer->PutExtChannelPacket(neighbor_idx, ts, (unsigned char*)samples, size);
+        memcpy((unsigned char *)samples, buffer, size);
+        // size = resampleInput(samples, size, sample_rate, current_sample_rate);
+        size = resampler->resample(samples, size, ((double)current_sample_rate) / ((double)sample_rate));
+        mpmixer->PutExtChannelPacket(neighbor_idx, ts, (unsigned char *)samples, size);
     }
 }
 
@@ -133,33 +132,33 @@ void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer
  * Линеаризуем буфера из backlog раздельно по каждому neighbor
  * контроль изменения sample_rate при линеаризации -
  *  игнорируем кадры с изменившимся sample_rate...
-*/
-void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer)
+ */
+void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char *buffer)
 {
     struct NeighborData {
-        int             length;
-        int             sample_rate;
-        unsigned char   buf[AUDIO_BUFFER_SIZE * MIXER_BACKLOG_SIZE];
+        int           length;
+        int           sample_rate;
+        unsigned char buf[AUDIO_BUFFER_SIZE * MIXER_BACKLOG_SIZE];
     };
 
     int neighbors_num = getNeighbors_num();
-    if(!neighbors_num) {
-        //ERROR("incorrect configuration or anything else: neighbors_num = 0");
+    if (!neighbors_num) {
+        // ERROR("incorrect configuration or anything else: neighbors_num = 0");
         return;
     }
 
-    NeighborData   data[neighbors_num];
+    NeighborData data[neighbors_num];
 
-    for (int i=0; i< neighbors_num; ++i)
+    for (int i = 0; i < neighbors_num; ++i)
         data[i].length = data[i].sample_rate = 0;
 
     struct backlog *bl = get_backlog(mpmixer->backlog_id);
 
     while (bl->position.start != bl->position.end) {
-        unsigned        next = (bl->position.start + 1) & MIXER_BACKLOG_MASK;
-        RxFrame         &fr = bl->frame[next];
-        MixerFrameHdr   *h = fr.hdr;
-        NeighborData    *d = &data[fr.neighbor_id];
+        unsigned       next = (bl->position.start + 1) & MIXER_BACKLOG_MASK;
+        RxFrame       &fr   = bl->frame[next];
+        MixerFrameHdr *h    = fr.hdr;
+        NeighborData  *d    = &data[fr.neighbor_id];
 
         // fprintf(stderr,"BL) #%d length=%d idx=%d\n", last, h->length, fr.neighbor_id);
 
@@ -175,7 +174,7 @@ void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer
         bl->position.start = next;
     }
 
-    for (int i=0; i< neighbors_num; ++i)
+    for (int i = 0; i < neighbors_num; ++i)
         if (data[i].length && data[i].sample_rate)
             put_external(i, ts, data[i].buf, data[i].sample_rate, data[i].length);
 }
@@ -183,8 +182,8 @@ void ConferenceChannel::run_backlog(unsigned long long ts, unsigned char* buffer
 
 /** I) step in media round:
         ConferenceChannel::put (this) */
-int ConferenceChannel::put(unsigned long long system_ts, unsigned char* buffer,
-                           int input_sample_rate, unsigned int size)
+int ConferenceChannel::put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate,
+                           unsigned int size)
 {
     AmLock l(mpmixer->mpm_mut);
 
@@ -193,19 +192,19 @@ int ConferenceChannel::put(unsigned long long system_ts, unsigned char* buffer,
 
     run_backlog(system_ts, buffer);
 
-    if(stereo_record_enabled) {
-      stereo_recorders.put(system_ts,buffer,size,input_sample_rate);
+    if (stereo_record_enabled) {
+        stereo_recorders.put(system_ts, buffer, size, input_sample_rate);
     }
 
     int samplerate = mpmixer->GetCurrentSampleRate();
 
-    if (input_sample_rate != samplerate)  {
+    if (input_sample_rate != samplerate) {
         // is it necessary memcpy() for resample hire, can we resample buffer ???
-        memcpy((unsigned char*)samples,buffer,size);
+        memcpy((unsigned char *)samples, buffer, size);
         size = resampleInput(samples, size, input_sample_rate, samplerate);
-        mpmixer->PutChannelPacket(mpmixer_ch_id, system_ts, (unsigned char*)samples, size);
+        mpmixer->PutChannelPacket(mpmixer_ch_id, system_ts, (unsigned char *)samples, size);
     } else
-        mpmixer->PutChannelPacket(mpmixer_ch_id,system_ts, buffer,size);
+        mpmixer->PutChannelPacket(mpmixer_ch_id, system_ts, buffer, size);
 
     return size;
 }
@@ -215,21 +214,20 @@ int ConferenceChannel::put(unsigned long long system_ts, unsigned char* buffer,
         ConferenceChannel::put,
         ConferenceMedia::readStreams
         ConferenceChannel::get (this) */
-int ConferenceChannel::get(unsigned long long system_ts, unsigned char* buffer,
-                           int output_sample_rate, unsigned int nb_samples)
+int ConferenceChannel::get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate,
+                           unsigned int nb_samples)
 {
     if (!nb_samples || !output_sample_rate)
         return 0;
 
     AmLock l(mpmixer->mpm_mut);
 
-    unsigned int size = output_sample_rate
-            ? PCM16_S2B(nb_samples * mpmixer->GetCurrentSampleRate() / output_sample_rate)
-            : 0;
+    unsigned int size =
+        output_sample_rate ? PCM16_S2B(nb_samples * mpmixer->GetCurrentSampleRate() / output_sample_rate) : 0;
     unsigned int mixer_sample_rate = 0;
 
     mpmixer->GetChannelPacket(mpmixer_ch_id, system_ts, buffer, size, mixer_sample_rate);
-    
+
     if (mixer_sample_rate != static_cast<typeof mixer_sample_rate>(output_sample_rate))
         size = resampleOutput(buffer, size, mixer_sample_rate, output_sample_rate);
 

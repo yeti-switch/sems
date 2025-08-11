@@ -4,9 +4,9 @@
 
 void TransactionImpl::reset(Connection *conn_)
 {
-    conn = conn_;
-    synced = false;
-    sync_sent = false;
+    conn             = conn_;
+    synced           = false;
+    sync_sent        = false;
     pipeline_aborted = false;
     query->reset(conn);
 }

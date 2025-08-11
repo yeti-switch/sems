@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmConferenceChannel.h */
@@ -31,38 +31,34 @@
 #include "AmAudio.h"
 #include "AmConferenceStatus.h"
 
-/** 
+/**
  * \brief one channel of a conference
- * 
- * A ConferenceChannel is one channel, i.e. to/from one 
- * participant, in a conference. 
+ *
+ * A ConferenceChannel is one channel, i.e. to/from one
+ * participant, in a conference.
  */
-class AmConferenceChannel: public AmAudio
-{
-  bool                own_channel;
-  int                 channel_id;
-  string              conf_id;
-  AmConferenceStatus* status;
+class AmConferenceChannel : public AmAudio {
+    bool                own_channel;
+    int                 channel_id;
+    string              conf_id;
+    AmConferenceStatus *status;
 
- protected:
-  // Fake implement AmAudio's pure virtual methods
-  // this avoids to copy the samples locally by implementing only get/put
-  int read(unsigned int user_ts, unsigned int size){ return -1; }
-  int write(unsigned int user_ts, unsigned int size){ return -1; }
+  protected:
+    // Fake implement AmAudio's pure virtual methods
+    // this avoids to copy the samples locally by implementing only get/put
+    int read(unsigned int user_ts, unsigned int size) { return -1; }
+    int write(unsigned int user_ts, unsigned int size) { return -1; }
 
-  // override AmAudio
-  int get(unsigned long long system_ts, unsigned char* buffer, 
-	  int output_sample_rate, unsigned int nb_samples);
-  int put(unsigned long long system_ts, unsigned char* buffer, 
-	  int input_sample_rate, unsigned int size);
+    // override AmAudio
+    int get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate, unsigned int nb_samples);
+    int put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate, unsigned int size);
 
- public:
-  AmConferenceChannel(AmConferenceStatus* status, 
-		      int channel_id, bool own_channel);
+  public:
+    AmConferenceChannel(AmConferenceStatus *status, int channel_id, bool own_channel);
 
-  ~AmConferenceChannel();
+    ~AmConferenceChannel();
 
-  string getConfID() { return conf_id; }
+    string getConfID() { return conf_id; }
 };
 
 #endif

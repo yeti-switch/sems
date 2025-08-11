@@ -5,12 +5,12 @@
 #include "sip/msg_logger.h"
 #include <spandsp/expose.h>
 
-#define SAMPLE_RATE                 8000
-#define ms_to_samples(t)            ((t)*(SAMPLE_RATE/1000))
+#define SAMPLE_RATE      8000
+#define ms_to_samples(t) ((t) * (SAMPLE_RATE / 1000))
 
-#define T38_FAX_RATE_DEFAULT "transferredTCF"
+#define T38_FAX_RATE_DEFAULT  "transferredTCF"
 #define T38_FAX_UDPEC_DEFAULT "t38UDPRedundancy"
-#define NAME_TO_STRING(name) #name
+#define NAME_TO_STRING(name)  #name
 
 #define STAT_ECM            "ecm"
 #define STAT_BIT_RATE       "bit_rate"
@@ -25,16 +25,16 @@
 #define STAT_BAD_ECM_FRAMES "bad_ecm_frames"
 #define STAT_COMP_TYPE      "compression_type"
 
-#define FAX_RATE              8000
+#define FAX_RATE 8000
 
 #define FAX_ERROR(fmt, args...) CLASS_ERROR_CTX(logger, fmt, ##args);
 #define FAX_DBG(fmt, args...)   CLASS_DBG_CTX(logger, fmt, ##args);
 #define FAX_WARN(fmt, args...)  CLASS_WARN_CTX(logger, fmt, ##args);
 
-static std::map<std::string, std::string> t38_option_map(const t38_options_t& opt)
+static std::map<std::string, std::string> t38_option_map(const t38_options_t &opt)
 {
     std::map<std::string, std::string> options;
-    char intValue[20];
+    char                               intValue[20];
     sprintf(intValue, "%d", opt.T38FaxVersion);
     options.insert(std::make_pair(NAME_TO_STRING(T38FaxVersion), intValue));
     sprintf(intValue, "%d", opt.T38MaxBitRate);
@@ -53,12 +53,12 @@ static std::map<std::string, std::string> t38_option_map(const t38_options_t& op
     return options;
 }
 
-static std::map<std::string, std::string> transfer_statistics_map(const t30_stats_t& s)
+static std::map<std::string, std::string> transfer_statistics_map(const t30_stats_t &s)
 {
     std::map<std::string, std::string> stat;
-    char intValue[20];
-    std::string data;
-    stat.insert(std::make_pair(STAT_ECM, (s.error_correcting_mode)  ?  "yes"  :  "no"));
+    char                               intValue[20];
+    std::string                        data;
+    stat.insert(std::make_pair(STAT_ECM, (s.error_correcting_mode) ? "yes" : "no"));
     sprintf(intValue, "%d", s.bit_rate);
     stat.insert(std::make_pair(STAT_BIT_RATE, intValue));
     sprintf(intValue, "%d", s.pages_tx);
@@ -101,15 +101,15 @@ static std::string transfer_statistics(t30_state_t *s)
     t30_get_transfer_statistics(s, &t);
     std::map<std::string, std::string> stat_map = transfer_statistics_map(t);
 
-    for(auto& stat_pair : stat_map) {
+    for (auto &stat_pair : stat_map) {
         log += stat_pair.first + " " + stat_pair.second + "\n";
     }
     return log;
 }
 
-void spandsp_log_handler(void* user_data, int level, const char *text)
+void spandsp_log_handler(void *user_data, int level, const char *text)
 {
-    AmFaxImage* image = (AmFaxImage*)user_data;
+    AmFaxImage *image = (AmFaxImage *)user_data;
     image->logHandler(level, text);
 }
 
@@ -117,7 +117,7 @@ int phase_b_handler(void *user_data, int result)
 {
     char log[200];
 
-    AmFaxImage* image = (AmFaxImage*)user_data;
+    AmFaxImage *image = (AmFaxImage *)user_data;
     sprintf(log, "Phase B - (0x%X) %s", result, t30_frametype(result));
     image->logHandler(SPAN_LOG_FLOW, log);
     return T30_ERR_OK;
@@ -127,8 +127,8 @@ int phase_d_handler(void *user_data, int result)
 {
     char log[200];
 
-    AmFaxImage* image = (AmFaxImage*)user_data;
-    t30_state_t *s = image->get_t30_state();
+    AmFaxImage  *image = (AmFaxImage *)user_data;
+    t30_state_t *s     = image->get_t30_state();
     sprintf(log, "Phase D - (0x%X) %s\n", result, t30_frametype(result));
     std::string logStr(log);
     logStr += "--++--\n";
@@ -142,8 +142,8 @@ void phase_e_handler(void *user_data, int result)
 {
     char log[200];
 
-    AmFaxImage* image = (AmFaxImage*)user_data;
-    t30_state_t *s = image->get_t30_state();
+    AmFaxImage  *image = (AmFaxImage *)user_data;
+    t30_state_t *s     = image->get_t30_state();
     sprintf(log, "Phase E - (%d) %s\n", result, t30_completion_code_to_str(result));
     t30_stats_t t;
     std::string logStr(log);
@@ -157,9 +157,9 @@ void phase_e_handler(void *user_data, int result)
 
 int t38_tx_packet_handler(t38_core_state_t *s, void *user_data, const uint8_t *buf, int len, int count)
 {
-    FaxT38Image* image = (FaxT38Image*)user_data;
-    image->send_udptl_packet(buf,len);
-    //FIXME: should we ignore send errors here ?
+    FaxT38Image *image = (FaxT38Image *)user_data;
+    image->send_udptl_packet(buf, len);
+    // FIXME: should we ignore send errors here ?
     return 0;
 }
 
@@ -170,47 +170,47 @@ int t38_tx_packet_handler(t38_core_state_t *s, void *user_data, const uint8_t *b
 /***************************************************************************************************/
 void t38_option::getT38DefaultOptions()
 {
-    T38FaxVersion = 0;
-    T38MaxBitRate = 14400;
-    T38FaxFillBitRemoval = 1;
-    T38FaxTranscodingMMR = 0;
+    T38FaxVersion         = 0;
+    T38MaxBitRate         = 14400;
+    T38FaxFillBitRemoval  = 1;
+    T38FaxTranscodingMMR  = 0;
     T38FaxTranscodingJBIG = 0;
-    T38FaxRateManagement = T38_FAX_RATE_DEFAULT;
-    T38FaxMaxBuffer = 2000;
-    T38FaxMaxDatagram = LOCAL_FAX_MAX_DATAGRAM;
-    T38FaxMaxIFP = 40;
-    T38FaxUdpEC = T38_FAX_UDPEC_DEFAULT;
+    T38FaxRateManagement  = T38_FAX_RATE_DEFAULT;
+    T38FaxMaxBuffer       = 2000;
+    T38FaxMaxDatagram     = LOCAL_FAX_MAX_DATAGRAM;
+    T38FaxMaxIFP          = 40;
+    T38FaxUdpEC           = T38_FAX_UDPEC_DEFAULT;
 }
 
-void t38_option::negotiateT38Options(const std::vector<SdpAttribute>& attr)
+void t38_option::negotiateT38Options(const std::vector<SdpAttribute> &attr)
 {
     getT38DefaultOptions();
-    for(auto &attribute : attr) {
-        if(attribute.attribute == NAME_TO_STRING(T38FaxVersion)) {
+    for (auto &attribute : attr) {
+        if (attribute.attribute == NAME_TO_STRING(T38FaxVersion)) {
             T38FaxVersion = (uint16_t)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38MaxBitRate)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38MaxBitRate)) {
             T38MaxBitRate = (uint32_t)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxFillBitRemoval)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxFillBitRemoval)) {
             T38FaxFillBitRemoval = (bool)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxTranscodingMMR)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxTranscodingMMR)) {
             T38FaxTranscodingMMR = (bool)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxTranscodingJBIG)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxTranscodingJBIG)) {
             T38FaxTranscodingJBIG = (bool)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxRateManagement)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxRateManagement)) {
             T38FaxRateManagement = attribute.value;
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxMaxBuffer)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxMaxBuffer)) {
             T38FaxMaxBuffer = (uint32_t)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxMaxDatagram)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxMaxDatagram)) {
             T38FaxMaxDatagram = (uint32_t)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxMaxIFP)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxMaxIFP)) {
             T38FaxMaxIFP = (uint32_t)atoi(attribute.value.c_str());
-        } else if(attribute.attribute == NAME_TO_STRING(T38FaxUdpEC)){
+        } else if (attribute.attribute == NAME_TO_STRING(T38FaxUdpEC)) {
             T38FaxUdpEC = attribute.value;
         }
     }
 }
 
-void t38_option::getAttributes(SdpMedia& m)
+void t38_option::getAttributes(SdpMedia &m)
 {
     char data[100];
     sprintf(data, "%d", T38FaxVersion);
@@ -236,25 +236,25 @@ void t38_option::getAttributes(SdpMedia& m)
 /***************************************************************************************************/
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
-UDPTLConnection::UDPTLConnection(AmMediaTransport* _transport, const string& remote_addr, int remote_port)
-: AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN)
+UDPTLConnection::UDPTLConnection(AmMediaTransport *_transport, const string &remote_addr, int remote_port)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN)
 {
 }
 
-UDPTLConnection::~UDPTLConnection()
-{
-}
+UDPTLConnection::~UDPTLConnection() {}
 
-void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval rv_time)
+void UDPTLConnection::handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
+                                       struct timeval rv_time)
 {
     sockaddr_storage laddr;
     transport->getLocalAddr(&laddr);
 
-    AmRtpPacket* p = transport->getRtpStream()->createRtpPacket();
-    if(!p) return;
+    AmRtpPacket *p = transport->getRtpStream()->createRtpPacket();
+    if (!p)
+        return;
 
     p->recv_time = rv_time;
-    p->relayed = false;
+    p->relayed   = false;
     p->setAddr(recv_addr);
     p->setLocalAddr(&laddr);
     p->setBuffer(data, size);
@@ -264,79 +264,82 @@ void UDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct 
 /***************************************************************************************************/
 /*                                         UDPTLConnection                                         */
 /***************************************************************************************************/
-DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport* _transport, const std::string& remote_addr, int remote_port, AmStreamConnection* dtls)
-: AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN), m_dtls_conn(dtls), dtls_session_closed(false)
+DTLSUDPTLConnection::DTLSUDPTLConnection(AmMediaTransport *_transport, const std::string &remote_addr, int remote_port,
+                                         AmStreamConnection *dtls)
+    : AmStreamConnection(_transport, remote_addr, remote_port, AmStreamConnection::UDPTL_CONN)
+    , m_dtls_conn(dtls)
+    , dtls_session_closed(false)
 {
-    if(m_dtls_conn) inc_ref(m_dtls_conn);
+    if (m_dtls_conn)
+        inc_ref(m_dtls_conn);
 }
 
 DTLSUDPTLConnection::~DTLSUDPTLConnection()
 {
-    if(m_dtls_conn) dec_ref(m_dtls_conn);
+    if (m_dtls_conn)
+        dec_ref(m_dtls_conn);
 }
 
-void DTLSUDPTLConnection::handleConnection(uint8_t* data, unsigned int size, struct sockaddr_storage* recv_addr, struct timeval recv_time)
+void DTLSUDPTLConnection::handleConnection(uint8_t *data, unsigned int size, struct sockaddr_storage *recv_addr,
+                                           struct timeval recv_time)
 {
     ERROR("NOT IMPLEMENTED. that's wrong - this function doesn't to called");
 }
 
-ssize_t DTLSUDPTLConnection::send(AmRtpPacket* packet)
+ssize_t DTLSUDPTLConnection::send(AmRtpPacket *packet)
 {
-    if(dtls_session_closed) return 0;
+    if (dtls_session_closed)
+        return 0;
     return m_dtls_conn->send(packet);
 }
 
 /***************************************************************************************************/
 /*                                           AmFaxImage                                            */
 /***************************************************************************************************/
-AmFaxImage::AmFaxImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_)
-  : m_t30_state(0),
-    m_filePath(filePath),
-    m_send(send),
-    eq(q),
-    logger(logger_)
+AmFaxImage::AmFaxImage(AmEventQueue *q, const std::string &filePath, bool send, ContextLoggingHook *logger_)
+    : m_t30_state(0)
+    , m_filePath(filePath)
+    , m_send(send)
+    , eq(q)
+    , logger(logger_)
 {
-    if(logger) inc_ref(logger);
+    if (logger)
+        inc_ref(logger);
 }
 
 AmFaxImage::~AmFaxImage()
 {
-    if(logger) dec_ref(logger);
+    if (logger)
+        dec_ref(logger);
 }
 
 void AmFaxImage::init_t30()
 {
     logging_state_t *logging = 0;
-    logging = t30_get_logging_state(m_t30_state);
+    logging                  = t30_get_logging_state(m_t30_state);
     span_log_set_level(logging, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_DEBUG);
     span_log_set_protocol(logging, "T30");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
     t30_set_ecm_capability(m_t30_state, TRUE);
 
-    t30_set_supported_image_sizes(m_t30_state,
-        T4_SUPPORT_WIDTH_215MM |
-        //T4_SUPPORT_WIDTH_255MM |
-        T4_SUPPORT_WIDTH_303MM |
-        T4_SUPPORT_LENGTH_US_LETTER |
-        T4_SUPPORT_LENGTH_US_LEGAL |
-        T4_SUPPORT_LENGTH_UNLIMITED);
+    t30_set_supported_image_sizes(m_t30_state, T4_SUPPORT_WIDTH_215MM |
+                                                   // T4_SUPPORT_WIDTH_255MM |
+                                                   T4_SUPPORT_WIDTH_303MM | T4_SUPPORT_LENGTH_US_LETTER |
+                                                   T4_SUPPORT_LENGTH_US_LEGAL | T4_SUPPORT_LENGTH_UNLIMITED);
 
     /* Allow anything */
-    t30_set_supported_bilevel_resolutions(m_t30_state,
-        T4_RESOLUTION_R8_STANDARD |
-        T4_RESOLUTION_R8_FINE |
-        T4_RESOLUTION_R8_SUPERFINE |
-        T4_RESOLUTION_R16_SUPERFINE |
-        //T4_RESOLUTION_200_100 |
-        T4_RESOLUTION_200_200 |
-        //T4_RESOLUTION_200_400 |
-        T4_RESOLUTION_300_300 |
-        //T4_RESOLUTION_300_600 |
-        T4_RESOLUTION_400_400 |
-        //T4_RESOLUTION_400_800 |
-        T4_RESOLUTION_600_600 |
-        //T4_RESOLUTION_600_1200 |
-        T4_RESOLUTION_1200_1200);
+    t30_set_supported_bilevel_resolutions(m_t30_state, T4_RESOLUTION_R8_STANDARD | T4_RESOLUTION_R8_FINE |
+                                                           T4_RESOLUTION_R8_SUPERFINE | T4_RESOLUTION_R16_SUPERFINE |
+                                                           // T4_RESOLUTION_200_100 |
+                                                           T4_RESOLUTION_200_200 |
+                                                           // T4_RESOLUTION_200_400 |
+                                                           T4_RESOLUTION_300_300 |
+                                                           // T4_RESOLUTION_300_600 |
+                                                           T4_RESOLUTION_400_400 |
+                                                           // T4_RESOLUTION_400_800 |
+                                                           T4_RESOLUTION_600_600 |
+                                                           // T4_RESOLUTION_600_1200 |
+                                                           T4_RESOLUTION_1200_1200);
 
     /*t30_set_supported_colour_resolutions(m_t30_state,
         T4_RESOLUTION_100_100 |
@@ -347,64 +350,54 @@ void AmFaxImage::init_t30()
         T4_RESOLUTION_1200_1200);*/
 
 
-    t30_set_supported_compressions(m_t30_state,
-        T4_COMPRESSION_T4_1D |
-        T4_COMPRESSION_T4_2D |
-        T4_COMPRESSION_T6 |
-        //T4_COMPRESSION_T85 |
-        //T4_COMPRESSION_T85_L0 |
-        //T4_COMPRESSION_T88 |
-        /*T4_COMPRESSION_T43 |
-        T4_COMPRESSION_T45 |
-        T4_COMPRESSION_T42_T81 |
-        T4_COMPRESSION_SYCC_T81 |
-        T4_COMPRESSION_GRAYSCALE |
-        T4_COMPRESSION_COLOUR |
-        T4_COMPRESSION_12BIT |*/
-        /*T4_COMPRESSION_COLOUR_TO_GRAY |
-        T4_COMPRESSION_GRAY_TO_BILEVEL |
-        T4_COMPRESSION_COLOUR_TO_BILEVEL |
-        T4_COMPRESSION_RESCALING*/
-        0);
+    t30_set_supported_compressions(m_t30_state, T4_COMPRESSION_T4_1D | T4_COMPRESSION_T4_2D | T4_COMPRESSION_T6 |
+                                                    // T4_COMPRESSION_T85 |
+                                                    // T4_COMPRESSION_T85_L0 |
+                                                    // T4_COMPRESSION_T88 |
+                                                    /*T4_COMPRESSION_T43 |
+                                                    T4_COMPRESSION_T45 |
+                                                    T4_COMPRESSION_T42_T81 |
+                                                    T4_COMPRESSION_SYCC_T81 |
+                                                    T4_COMPRESSION_GRAYSCALE |
+                                                    T4_COMPRESSION_COLOUR |
+                                                    T4_COMPRESSION_12BIT |*/
+                                                    /*T4_COMPRESSION_COLOUR_TO_GRAY |
+                                                    T4_COMPRESSION_GRAY_TO_BILEVEL |
+                                                    T4_COMPRESSION_COLOUR_TO_BILEVEL |
+                                                    T4_COMPRESSION_RESCALING*/
+                                                    0);
 
-    t30_set_supported_t30_features(m_t30_state,
-        T30_SUPPORT_IDENTIFICATION |
-        T30_SUPPORT_SELECTIVE_POLLING |
-        T30_SUPPORT_SUB_ADDRESSING);
+    t30_set_supported_t30_features(m_t30_state, T30_SUPPORT_IDENTIFICATION | T30_SUPPORT_SELECTIVE_POLLING |
+                                                    T30_SUPPORT_SUB_ADDRESSING);
 
-    if(m_send)
+    if (m_send)
         t30_set_tx_file(m_t30_state, m_filePath.c_str(), 0, -1);
     else
         t30_set_rx_file(m_t30_state, m_filePath.c_str(), -1);
 
-    t30_set_phase_b_handler(m_t30_state, phase_b_handler, (void *) this);
-    t30_set_phase_d_handler(m_t30_state, phase_d_handler, (void *) this);
-    t30_set_phase_e_handler(m_t30_state, phase_e_handler, (void *) this);
+    t30_set_phase_b_handler(m_t30_state, phase_b_handler, (void *)this);
+    t30_set_phase_d_handler(m_t30_state, phase_d_handler, (void *)this);
+    t30_set_phase_e_handler(m_t30_state, phase_e_handler, (void *)this);
 }
 
-void AmFaxImage::logHandler(int level, const char* text)
+void AmFaxImage::logHandler(int level, const char *text)
 {
-    switch(level){
-        case SPAN_LOG_ERROR:
-        case SPAN_LOG_PROTOCOL_ERROR:
-            FAX_ERROR("%s", text);
-            break;
-        case SPAN_LOG_WARNING:
-        case SPAN_LOG_PROTOCOL_WARNING:
-        case SPAN_LOG_FLOW:
-        case SPAN_LOG_FLOW_2:
-        case SPAN_LOG_FLOW_3:
-        case SPAN_LOG_DEBUG:
-        case SPAN_LOG_DEBUG_2:
-        case SPAN_LOG_DEBUG_3:
-            FAX_DBG("%s", text);
-            break;
-        default:
-            break;
+    switch (level) {
+    case SPAN_LOG_ERROR:
+    case SPAN_LOG_PROTOCOL_ERROR:   FAX_ERROR("%s", text); break;
+    case SPAN_LOG_WARNING:
+    case SPAN_LOG_PROTOCOL_WARNING:
+    case SPAN_LOG_FLOW:
+    case SPAN_LOG_FLOW_2:
+    case SPAN_LOG_FLOW_3:
+    case SPAN_LOG_DEBUG:
+    case SPAN_LOG_DEBUG_2:
+    case SPAN_LOG_DEBUG_3:          FAX_DBG("%s", text); break;
+    default:                        break;
     }
 }
 
-void AmFaxImage::faxComplete(bool isSuccess, const std::string& strResult, const t30_stats_t& t)
+void AmFaxImage::faxComplete(bool isSuccess, const std::string &strResult, const t30_stats_t &t)
 {
     std::map<std::string, std::string> stat = transfer_statistics_map(t);
     std::map<std::string, std::string> params;
@@ -415,15 +408,15 @@ void AmFaxImage::faxComplete(bool isSuccess, const std::string& strResult, const
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxAudioImage::FaxAudioImage(AmEventQueue* q, const std::string& filePath, bool send, ContextLoggingHook* logger_)
-: AmFaxImage(q, filePath, send, logger_)
-, m_fax_state{0}
+FaxAudioImage::FaxAudioImage(AmEventQueue *q, const std::string &filePath, bool send, ContextLoggingHook *logger_)
+    : AmFaxImage(q, filePath, send, logger_)
+    , m_fax_state{ 0 }
 {
 }
 
 FaxAudioImage::~FaxAudioImage()
 {
-    if(m_fax_state) {
+    if (m_fax_state) {
         fax_free(m_fax_state);
         m_fax_state = 0;
     }
@@ -434,7 +427,7 @@ int FaxAudioImage::init_tone_fax()
     FAX_DBG("initialize tone fax");
     fmt->setRate(FAX_RATE);
 
-    if(m_fax_state) {
+    if (m_fax_state) {
         FAX_DBG("fax tone stack was inited");
         return -1;
     }
@@ -445,13 +438,13 @@ int FaxAudioImage::init_tone_fax()
         m_fax_state = 0;
     }
 
-    if(!m_fax_state) {
+    if (!m_fax_state) {
         FAX_ERROR("fax tone stack initialisation failed");
         return -1;
     }
 
     logging_state_t *logging = 0;
-    logging = fax_get_logging_state(m_fax_state);
+    logging                  = fax_get_logging_state(m_fax_state);
     span_log_set_level(logging, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_DEBUG);
     span_log_set_protocol(logging, "INBOUND FAX");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
@@ -468,10 +461,10 @@ int FaxAudioImage::init_tone_fax()
 
 int FaxAudioImage::read(unsigned int user_ts, unsigned int size)
 {
-    if(m_fax_state) {
-        unsigned char* amp = AmAudio::samples;
+    if (m_fax_state) {
+        unsigned char *amp = AmAudio::samples;
         memset(amp, 0, size);
-        int ret = fax_tx(m_fax_state, (int16_t*)amp, fmt->bytes2samples(size));
+        int ret = fax_tx(m_fax_state, (int16_t *)amp, fmt->bytes2samples(size));
         return fmt->calcBytesToRead(ret);
     }
     return -1;
@@ -479,9 +472,9 @@ int FaxAudioImage::read(unsigned int user_ts, unsigned int size)
 
 int FaxAudioImage::write(unsigned int user_ts, unsigned int size)
 {
-    if(m_fax_state) {
-        unsigned char* amp = AmAudio::samples;
-        /*int ret = */fax_rx(m_fax_state, (int16_t*)amp, fmt->bytes2samples(size));
+    if (m_fax_state) {
+        unsigned char *amp = AmAudio::samples;
+        /*int ret = */ fax_rx(m_fax_state, (int16_t *)amp, fmt->bytes2samples(size));
         return size;
     }
     return -1;
@@ -490,20 +483,20 @@ int FaxAudioImage::write(unsigned int user_ts, unsigned int size)
 /***************************************************************************************************/
 /*                                        FaxAudioImage                                            */
 /***************************************************************************************************/
-FaxT38Image::FaxT38Image(AmSession* sess, const std::string& filePath, bool send, ContextLoggingHook* logger_)
-: AmFaxImage(sess, filePath, send, logger_)
-, m_sess(sess)
-, m_t38_state(0)
-, m_udptl_state(0)
+FaxT38Image::FaxT38Image(AmSession *sess, const std::string &filePath, bool send, ContextLoggingHook *logger_)
+    : AmFaxImage(sess, filePath, send, logger_)
+    , m_sess(sess)
+    , m_t38_state(0)
+    , m_udptl_state(0)
 {
 }
 
 FaxT38Image::~FaxT38Image()
 {
-    if(m_udptl_state) {
+    if (m_udptl_state) {
         udptl_release(m_udptl_state);
     }
-    if(m_t38_state) {
+    if (m_t38_state) {
         t38_terminal_free(m_t38_state);
         m_t38_state = 0;
     }
@@ -512,30 +505,31 @@ FaxT38Image::~FaxT38Image()
 int FaxT38Image::init_t38()
 {
     FAX_DBG("initialize t38");
-    if(m_t38_state) {
+    if (m_t38_state) {
         FAX_ERROR("t38 terminal was inited");
         return FALSE;
     }
 
-    m_t38_state = (t38_terminal_state_t*)malloc(sizeof(t38_terminal_state_t));
-    if(t38_terminal_init(m_t38_state, m_send ? TRUE : FALSE, t38_tx_packet_handler, this) == NULL) {
+    m_t38_state = (t38_terminal_state_t *)malloc(sizeof(t38_terminal_state_t));
+    if (t38_terminal_init(m_t38_state, m_send ? TRUE : FALSE, t38_tx_packet_handler, this) == NULL) {
         free(m_t38_state);
         m_t38_state = 0;
     }
 
-    if(!m_t38_state) {
+    if (!m_t38_state) {
         FAX_ERROR("t38 terminal initialisation failed");
         return FALSE;
     }
 
     m_t38_options.getT38DefaultOptions();
 
-    if(m_t38_options.T38FaxMaxBuffer > T38_TX_BUF_LEN) {
-        FAX_WARN("T38FaxMaxBuffer %d more then maximum packet len " NAME_TO_STRING(T38_TX_BUF_LEN), m_t38_options.T38FaxMaxBuffer);
+    if (m_t38_options.T38FaxMaxBuffer > T38_TX_BUF_LEN) {
+        FAX_WARN("T38FaxMaxBuffer %d more then maximum packet len " NAME_TO_STRING(T38_TX_BUF_LEN),
+                 m_t38_options.T38FaxMaxBuffer);
     }
 
     logging_state_t *logging = 0;
-    logging = t38_terminal_get_logging_state(m_t38_state);
+    logging                  = t38_terminal_get_logging_state(m_t38_state);
     span_log_set_level(logging, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_DEBUG);
     span_log_set_protocol(logging, "T38 TERMINAL");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
@@ -546,8 +540,8 @@ int FaxT38Image::init_t38()
     } else {
         method = 1;
     }
-    t38_core_state_t* t38_core = t38_terminal_get_t38_core_state(m_t38_state);
-    logging = t38_core_get_logging_state(t38_core);
+    t38_core_state_t *t38_core = t38_terminal_get_t38_core_state(m_t38_state);
+    logging                    = t38_core_get_logging_state(t38_core);
     span_log_set_level(logging, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_DEBUG);
     span_log_set_protocol(logging, "T38 CORE");
     span_log_set_message_handler(logging, spandsp_log_handler, this);
@@ -566,12 +560,13 @@ int FaxT38Image::init_t38()
     init_t30();
 
     FAX_DBG("initialize t38 complete, initialize udptl");
-    if(m_udptl_state) {
+    if (m_udptl_state) {
         FAX_ERROR("udptl stack was inited");
         return FALSE;
     }
-    m_udptl_state = udptl_init(m_udptl_state, UDPTL_ERROR_CORRECTION_REDUNDANCY, 3, 3, (udptl_rx_packet_handler_t *) t38_core_rx_ifp_packet, (void *) t38_core);
-    if(!m_udptl_state) {
+    m_udptl_state = udptl_init(m_udptl_state, UDPTL_ERROR_CORRECTION_REDUNDANCY, 3, 3,
+                               (udptl_rx_packet_handler_t *)t38_core_rx_ifp_packet, (void *)t38_core);
+    if (!m_udptl_state) {
         FAX_ERROR("udptl stack initialisation failed");
         return FALSE;
     }
@@ -581,50 +576,50 @@ int FaxT38Image::init_t38()
     return TRUE;
 }
 
-void FaxT38Image::setOptions(const t38_options_t& t38_options)
+void FaxT38Image::setOptions(const t38_options_t &t38_options)
 {
     m_t38_options = t38_options;
 }
 
-int FaxT38Image::send_udptl_packet(const uint8_t* buf, int len)
+int FaxT38Image::send_udptl_packet(const uint8_t *buf, int len)
 {
     static const cstring empty;
 
-    if(len > m_t38_options.T38FaxMaxBuffer) {
-        FAX_WARN("send buffer %u more permission t38 packet len %u",
-                      len, m_t38_options.T38FaxMaxBuffer);
+    if (len > m_t38_options.T38FaxMaxBuffer) {
+        FAX_WARN("send buffer %u more permission t38 packet len %u", len, m_t38_options.T38FaxMaxBuffer);
     }
 
     unsigned char data[RTP_PACKET_BUF_SIZE];
-    int packet_len = udptl_build_packet(m_udptl_state, data , buf, len);
-    if(packet_len <= 0) {
+    int           packet_len = udptl_build_packet(m_udptl_state, data, buf, len);
+    if (packet_len <= 0) {
         FAX_ERROR("udptl_build_packet failed return %u", packet_len);
         return -1;
     }
 
-    FAX_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len, m_sess->RTPStream()->getRHost(FAX_TRANSPORT).c_str(), m_sess->RTPStream()->getRPort(FAX_TRANSPORT));
-    unsigned int tx_user_ts = m_last_ts * (FAX_RATE / 100) / (WALLCLOCK_RATE/100);
-    int ret = m_sess->RTPStream()->send_udptl(tx_user_ts, data, packet_len);
-    if(-1==ret) {
-        CLASS_ERROR("sendto: %d, errno = %d",ret,errno);
+    FAX_DBG("udptl fax packet (len = %d) send to %s:%d", packet_len,
+            m_sess->RTPStream()->getRHost(FAX_TRANSPORT).c_str(), m_sess->RTPStream()->getRPort(FAX_TRANSPORT));
+    unsigned int tx_user_ts = m_last_ts * (FAX_RATE / 100) / (WALLCLOCK_RATE / 100);
+    int          ret        = m_sess->RTPStream()->send_udptl(tx_user_ts, data, packet_len);
+    if (-1 == ret) {
+        CLASS_ERROR("sendto: %d, errno = %d", ret, errno);
         return ret;
     }
 
     return ret;
 }
 
-int FaxT38Image::readStreams(unsigned long long ts, unsigned char * buffer)
+int FaxT38Image::readStreams(unsigned long long ts, unsigned char *buffer)
 {
-    AmRtpPacket* rp = NULL;
-    int err = m_sess->RTPStream()->nextPacket(rp);
+    AmRtpPacket *rp  = NULL;
+    int          err = m_sess->RTPStream()->nextPacket(rp);
 
-    if(err <= 0)
+    if (err <= 0)
         return err;
 
     if (!rp)
         return 0;
 
-    if(udptl_rx_packet(m_udptl_state, rp->getBuffer(), rp->getBufferSize()) < 0) {
+    if (udptl_rx_packet(m_udptl_state, rp->getBuffer(), rp->getBufferSize()) < 0) {
         FAX_DBG("incorrect udptl packet [pkt-size=%u]", rp->getBufferSize());
         m_sess->RTPStream()->freeRtpPacket(rp);
         return 0;
@@ -634,15 +629,15 @@ int FaxT38Image::readStreams(unsigned long long ts, unsigned char * buffer)
     return 0;
 }
 
-int FaxT38Image::writeStreams(unsigned long long ts, unsigned char * buffer)
+int FaxT38Image::writeStreams(unsigned long long ts, unsigned char *buffer)
 {
     timeval now;
     gettimeofday(&now, NULL);
-    m_last_ts = ts;
-    uint64_t last_ = m_lastTime.tv_sec*1000 + m_lastTime.tv_usec/1000;
-    uint64_t now_ = now.tv_sec*1000 + now.tv_usec/1000;
-    m_lastTime = now;
-    if(m_t38_state && last_) {
+    m_last_ts      = ts;
+    uint64_t last_ = m_lastTime.tv_sec * 1000 + m_lastTime.tv_usec / 1000;
+    uint64_t now_  = now.tv_sec * 1000 + now.tv_usec / 1000;
+    m_lastTime     = now;
+    if (m_t38_state && last_) {
         int samples = ms_to_samples((now_ - last_));
         t38_terminal_send_timeout(m_t38_state, samples);
     }
@@ -660,7 +655,7 @@ void FaxT38Image::onMediaProcessingStarted()
 void FaxT38Image::onMediaSessionExists()
 {
     CLASS_DBG("onMediaSessionExists()");
-    //cleanup ref aquired by onMediaProcessingStarted()
+    // cleanup ref aquired by onMediaProcessingStarted()
     dec_ref(this);
 }
 
@@ -670,11 +665,11 @@ void FaxT38Image::onMediaProcessingTerminated()
 
     AmMediaSession::onMediaProcessingTerminated();
 
-    if(m_udptl_state) {
+    if (m_udptl_state) {
         udptl_release(m_udptl_state);
         m_udptl_state = 0;
     }
-    if(m_t38_state) {
+    if (m_t38_state) {
         t38_terminal_free(m_t38_state);
         m_t38_state = 0;
     }
@@ -682,20 +677,16 @@ void FaxT38Image::onMediaProcessingTerminated()
     dec_ref(this);
 }
 
-void FaxT38Image::clearAudio()
-{
-}
+void FaxT38Image::clearAudio() {}
 
-void FaxT38Image::processDtmfEvents()
-{
-}
+void FaxT38Image::processDtmfEvents() {}
 
 void FaxT38Image::clearRTPTimeout()
 {
     m_sess->RTPStream()->clearRTPTimeout();
 }
 
-void FaxT38Image::get_fax_params(std::map<std::string, std::string>& params)
+void FaxT38Image::get_fax_params(std::map<std::string, std::string> &params)
 {
     params = t38_option_map(m_t38_options);
 }

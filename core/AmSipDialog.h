@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmSipDialog.h */
@@ -38,9 +38,7 @@ class AmSipDialogEventHandler;
 /**
  * \brief implements the dialog state machine
  */
-class AmSipDialog
-  : public AmBasicSipDialog
-{
+class AmSipDialog : public AmBasicSipDialog {
   protected:
     // Number of open UAS INVITE(UPDATE) transactions
     unsigned int pending_invites;
@@ -48,75 +46,74 @@ class AmSipDialog
 
     // In case a CANCEL should have been sent
     // while in 'Trying' state
-    bool         cancel_pending;
+    bool cancel_pending;
 
-    //In case when we can't connect leg after INVITE/200 for CANCEL
-    bool         cancel_final;
+    // In case when we can't connect leg after INVITE/200 for CANCEL
+    bool cancel_final;
 
-    AmSdp   sdp_local;
-    AmSdp   sdp_remote;
+    AmSdp sdp_local;
+    AmSdp sdp_remote;
 
     bool early_session_started;
     bool session_started;
 
     // Current offer/answer transaction
     AmOfferAnswer oa;
-    bool offeranswer_enabled;
+    bool          offeranswer_enabled;
 
     // Reliable provisional reply support
     Am100rel rel100;
 
-    int onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
-    int onTxRequest(AmSipRequest& req, int& flags);
+    int onTxReply(const AmSipRequest &req, AmSipReply &reply, int &flags);
+    int onTxRequest(AmSipRequest &req, int &flags);
 
-    void onReplyTxed(const AmSipRequest& req, const AmSipReply& reply);
-    void onRequestTxed(const AmSipRequest& req);
+    void onReplyTxed(const AmSipRequest &req, const AmSipReply &reply);
+    void onRequestTxed(const AmSipRequest &req);
 
-    bool onRxReqSanity(const AmSipRequest& req);
-    bool onRxReqStatus(const AmSipRequest& req);
+    bool onRxReqSanity(const AmSipRequest &req);
+    bool onRxReqStatus(const AmSipRequest &req);
 
-    bool onRxReplySanity(const AmSipReply& reply);
-    bool onRxReplyStatus(const AmSipReply& reply);
+    bool onRxReplySanity(const AmSipReply &reply);
+    bool onRxReplyStatus(const AmSipReply &reply);
 
   public:
-
-    AmSipDialog(AmSipDialogEventHandler* h=NULL);
+    AmSipDialog(AmSipDialogEventHandler *h = NULL);
     ~AmSipDialog();
 
     /** @return whether UAC INVITE transaction is pending */
-    bool   getUACInvTransPending();
+    bool getUACInvTransPending();
 
     /** @return a pending UAS INVITE transaction or NULL */
-    AmSipRequest* getUASPendingInv();
+    AmSipRequest *getUASPendingInv();
 
-   /**
-    * Calls onSdpCompleted on the session event handler
-    * and executes onSessionStart/onEarlySessionStart when required.
-    * @param[in] sdp_offer_owner true if we generated SDP offer for related OA transaction
-    */
+    /**
+     * Calls onSdpCompleted on the session event handler
+     * and executes onSessionStart/onEarlySessionStart when required.
+     * @param[in] sdp_offer_owner true if we generated SDP offer for related OA transaction
+     */
     int onSdpCompleted(bool sdp_offer_owner);
 
-    bool getSdpOffer(AmSdp& offer);
-    bool getSdpAnswer(const AmSdp& offer, AmSdp& answer);
+    bool getSdpOffer(AmSdp &offer);
+    bool getSdpAnswer(const AmSdp &offer, AmSdp &answer);
 
     AmOfferAnswer::OAState getOAState();
-    void setOAState(AmOfferAnswer::OAState n_st);
-    void setOAEnabled(bool oa_enabled);
-    unsigned int getOAcseq();
-    bool isOASubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
-    const AmSdp& getLocalSdp() { return oa.getLocalSdp(); }
-    const AmSdp& getRemoteSdp() { return oa.getRemoteSdp(); }
+    void                   setOAState(AmOfferAnswer::OAState n_st);
+    void                   setOAEnabled(bool oa_enabled);
+    unsigned int           getOAcseq();
+    bool                   isOASubsequentSDP(unsigned int sip_msg_cseq, const string &sip_msg_method);
+    const AmSdp           &getLocalSdp() { return oa.getLocalSdp(); }
+    const AmSdp           &getRemoteSdp() { return oa.getRemoteSdp(); }
 
     void setRel100State(Am100rel::State rel100_state);
-    void setRel100Handler(AmSipDialogEventHandler* h);
+    void setRel100Handler(AmSipDialogEventHandler *h);
 
-    void uasTimeout(AmSipTimeoutEvent* to_ev);
+    void uasTimeout(AmSipTimeoutEvent *to_ev);
 
-    bool checkReply100rel(AmSipReply& reply);
+    bool checkReply100rel(AmSipReply &reply);
 
     /** @return 0 on success (deprecated) */
     // int reply(const AmSipRequest& req,
-    // 	    unsigned int  code, 
+    // 	    unsigned int  code,
     // 	    const string& reason,
     // 	    const AmMimeBody* body = NULL,
     // 	    const string& hdrs = "",
@@ -124,92 +121,86 @@ class AmSipDialog
 
     /** @return 0 on success */
     // int reply(const AmSipTransaction& t,
-    // 	    unsigned int  code, 
+    // 	    unsigned int  code,
     // 	    const string& reason,
     // 	    const AmMimeBody* body = NULL,
     // 	    const string& hdrs = "",
     // 	    int flags = 0);
 
     /** @return 0 on success */
-    // int sendRequest(const string& method, 
+    // int sendRequest(const string& method,
     // 		  const AmMimeBody* body = NULL,
     // 		  const string& hdrs = "",
     // 		  int flags = 0);
 
     /** @return 0 on success */
-    int send_200_ack(
-        unsigned int inv_cseq,
-        const AmMimeBody* body = NULL,
-        const string& hdrs = "",
-        int flags = 0);
+    int send_200_ack(unsigned int inv_cseq, const AmMimeBody *body = NULL, const string &hdrs = "", int flags = 0);
 
     /** @return 0 on success */
-    int bye(const string& hdrs = "", int flags = 0, bool final = false);
+    int bye(const string &hdrs = "", int flags = 0, bool final = false);
 
     /** @return 0 on success */
-    int cancel(bool final = false, const string& hdrs = "");
+    int cancel(bool final = false, const string &hdrs = "");
 
     /** @return 0 on success */
-    int prack(const AmSipReply &reply1xx, const AmMimeBody* body, const string &hdrs);
+    int prack(const AmSipReply &reply1xx, const AmMimeBody *body, const string &hdrs);
 
     /** @return 0 on success */
-    int update(const AmMimeBody* body, const string &hdrs);
+    int update(const AmMimeBody *body, const string &hdrs);
 
     /** @return 0 on success */
-    int reinvite(const string& hdrs, const AmMimeBody* body, int flags = 0);
+    int reinvite(const string &hdrs, const AmMimeBody *body, int flags = 0);
 
     /** @return 0 on success */
-    int invite(const string& hdrs, const AmMimeBody* body);
+    int invite(const string &hdrs, const AmMimeBody *body);
 
     /** @return 0 on success */
-    int refer(const string& refer_to, int expires = -1, const string& referred_by = "");
+    int refer(const string &refer_to, int expires = -1, const string &referred_by = "");
 
     /** @return 0 on success */
-    int info(const string& hdrs, const AmMimeBody* body);
+    int info(const string &hdrs, const AmMimeBody *body);
 
     /** @return 0 on success */
-    int transfer(const string& target);
+    int transfer(const string &target);
     int drop();
 };
 
 /**
- * \brief base class for SIP request/reply event handler 
+ * \brief base class for SIP request/reply event handler
  */
-class AmSipDialogEventHandler 
-  : public AmBasicSipEventHandler
-{
+class AmSipDialogEventHandler : public AmBasicSipEventHandler {
   public:
     /** Hook called when a provisional reply is received with 100rel active */
-    virtual void onInvite1xxRel(const AmSipReply &)=0;
+    virtual void onInvite1xxRel(const AmSipReply &) = 0;
 
     /** Hook called when a local INVITE request has been replied with 2xx */
-    virtual void onInvite2xx(const AmSipReply& reply)=0;
+    virtual void onInvite2xx(const AmSipReply &reply) = 0;
 
     /** Hook called when an answer for a locally sent PRACK is received */
-    virtual void onPrack2xx(const AmSipReply &)=0;
+    virtual void onPrack2xx(const AmSipReply &) = 0;
 
     /** Hook called when a UAS INVITE transaction did not receive the ACK */
-    virtual void onNoAck(unsigned int ack_cseq)=0;
+    virtual void onNoAck(unsigned int ack_cseq) = 0;
 
     /** Hook called when a UAS INVITE transaction did not receive the PRACK */
-    virtual void onNoPrack(const AmSipRequest &req, const AmSipReply &rpl)=0;
+    virtual void onNoPrack(const AmSipRequest &req, const AmSipReply &rpl) = 0;
 
     /** Hook called when an SDP offer is required */
-    virtual bool getSdpOffer(AmSdp& offer)=0;
+    virtual bool getSdpOffer(AmSdp &offer) = 0;
 
     /** Hook called when an SDP offer is required */
-    virtual bool getSdpAnswer(const AmSdp& offer, AmSdp& answer)=0;
+    virtual bool getSdpAnswer(const AmSdp &offer, AmSdp &answer) = 0;
 
     /** Hook called when an SDP OA transaction has been completed */
-    virtual int onSdpCompleted(const AmSdp& local, const AmSdp& remote, bool sdp_offer_owner)=0;
+    virtual int onSdpCompleted(const AmSdp &local, const AmSdp &remote, bool sdp_offer_owner) = 0;
 
-    /** Hook called when an early session starts 
-    *  (SDP OA completed + dialog in early state) */
-    virtual void onEarlySessionStart()=0;
+    /** Hook called when an early session starts
+     *  (SDP OA completed + dialog in early state) */
+    virtual void onEarlySessionStart() = 0;
 
-    /** Hook called when the session creation is completed 
-    *  (INV trans replied with 200) */
-    virtual void onSessionStart()=0;
+    /** Hook called when the session creation is completed
+     *  (INV trans replied with 200) */
+    virtual void onSessionStart() = 0;
 
     virtual ~AmSipDialogEventHandler() {};
 };

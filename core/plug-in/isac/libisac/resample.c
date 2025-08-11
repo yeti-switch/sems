@@ -19,19 +19,17 @@
 #include "resample_by_2_internal.h"
 
 // Declaration of internally used functions
-static void WebRtcSpl_32khzTo22khzIntToShort(const WebRtc_Word32 *In, WebRtc_Word16 *Out,
-                                             const WebRtc_Word32 K);
+static void WebRtcSpl_32khzTo22khzIntToShort(const WebRtc_Word32 *In, WebRtc_Word16 *Out, const WebRtc_Word32 K);
 
-void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32 *In, WebRtc_Word32 *Out,
-                                    const WebRtc_Word32 K);
+void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32 *In, WebRtc_Word32 *Out, const WebRtc_Word32 K);
 
 // interpolation coefficients
 static const WebRtc_Word16 kCoefficients32To22[5][9] = {
-        {127, -712,  2359, -6333, 23456, 16775, -3695,  945, -154},
-        {-39,  230,  -830,  2785, 32366, -2324,   760, -218,   38},
-        {117, -663,  2222, -6133, 26634, 13070, -3174,  831, -137},
-        {-77,  457, -1677,  5958, 31175, -4136,  1405, -408,   71},
-        { 98, -560,  1900, -5406, 29240,  9423, -2480,  663, -110}
+    { 127, -712,  2359, -6333, 23456, 16775, -3695,  945, -154 },
+    { -39,  230,  -830,  2785, 32366, -2324,   760, -218,   38 },
+    { 117, -663,  2222, -6133, 26634, 13070, -3174,  831, -137 },
+    { -77,  457, -1677,  5958, 31175, -4136,  1405, -408,   71 },
+    {  98, -560,  1900, -5406, 29240,  9423, -2480,  663, -110 }
 };
 
 //////////////////////
@@ -39,17 +37,16 @@ static const WebRtc_Word16 kCoefficients32To22[5][9] = {
 //////////////////////
 
 // number of subblocks; options: 1, 2, 4, 5, 10
-#define SUB_BLOCKS_22_16    5
+#define SUB_BLOCKS_22_16 5
 
 // 22 -> 16 resampler
-void WebRtcSpl_Resample22khzTo16khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                    WebRtcSpl_State22khzTo16khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample22khzTo16khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State22khzTo16khz *state,
+                                    WebRtc_Word32 *tmpmem)
 {
     int k;
 
     // process two blocks of 10/SUB_BLOCKS_22_16 ms (to reduce temp buffer size)
-    for (k = 0; k < SUB_BLOCKS_22_16; k++)
-    {
+    for (k = 0; k < SUB_BLOCKS_22_16; k++) {
         ///// 22 --> 44 /////
         // WebRtc_Word16  in[220/SUB_BLOCKS_22_16]
         // WebRtc_Word32 out[440/SUB_BLOCKS_22_16]
@@ -61,14 +58,14 @@ void WebRtcSpl_Resample22khzTo16khz(const WebRtc_Word16* in, WebRtc_Word16* out,
         // WebRtc_Word32 out[320/SUB_BLOCKS_22_16]
         /////
         // copy state to and from input array
-        tmpmem[8] = state->S_44_32[0];
-        tmpmem[9] = state->S_44_32[1];
-        tmpmem[10] = state->S_44_32[2];
-        tmpmem[11] = state->S_44_32[3];
-        tmpmem[12] = state->S_44_32[4];
-        tmpmem[13] = state->S_44_32[5];
-        tmpmem[14] = state->S_44_32[6];
-        tmpmem[15] = state->S_44_32[7];
+        tmpmem[8]         = state->S_44_32[0];
+        tmpmem[9]         = state->S_44_32[1];
+        tmpmem[10]        = state->S_44_32[2];
+        tmpmem[11]        = state->S_44_32[3];
+        tmpmem[12]        = state->S_44_32[4];
+        tmpmem[13]        = state->S_44_32[5];
+        tmpmem[14]        = state->S_44_32[6];
+        tmpmem[15]        = state->S_44_32[7];
         state->S_44_32[0] = tmpmem[440 / SUB_BLOCKS_22_16 + 8];
         state->S_44_32[1] = tmpmem[440 / SUB_BLOCKS_22_16 + 9];
         state->S_44_32[2] = tmpmem[440 / SUB_BLOCKS_22_16 + 10];
@@ -93,11 +90,10 @@ void WebRtcSpl_Resample22khzTo16khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 22 -> 16 resampler
-void WebRtcSpl_ResetResample22khzTo16khz(WebRtcSpl_State22khzTo16khz* state)
+void WebRtcSpl_ResetResample22khzTo16khz(WebRtcSpl_State22khzTo16khz *state)
 {
     int k;
-    for (k = 0; k < 8; k++)
-    {
+    for (k = 0; k < 8; k++) {
         state->S_22_44[k] = 0;
         state->S_44_32[k] = 0;
         state->S_32_16[k] = 0;
@@ -109,17 +105,16 @@ void WebRtcSpl_ResetResample22khzTo16khz(WebRtcSpl_State22khzTo16khz* state)
 //////////////////////
 
 // number of subblocks; options: 1, 2, 4, 5, 10
-#define SUB_BLOCKS_16_22    4
+#define SUB_BLOCKS_16_22 4
 
 // 16 -> 22 resampler
-void WebRtcSpl_Resample16khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                    WebRtcSpl_State16khzTo22khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample16khzTo22khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State16khzTo22khz *state,
+                                    WebRtc_Word32 *tmpmem)
 {
     int k;
 
     // process two blocks of 10/SUB_BLOCKS_16_22 ms (to reduce temp buffer size)
-    for (k = 0; k < SUB_BLOCKS_16_22; k++)
-    {
+    for (k = 0; k < SUB_BLOCKS_16_22; k++) {
         ///// 16 --> 32 /////
         // WebRtc_Word16  in[160/SUB_BLOCKS_16_22]
         // WebRtc_Word32 out[320/SUB_BLOCKS_16_22]
@@ -131,14 +126,14 @@ void WebRtcSpl_Resample16khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
         // WebRtc_Word32 out[220/SUB_BLOCKS_16_22]
         /////
         // copy state to and from input array
-        tmpmem[0] = state->S_32_22[0];
-        tmpmem[1] = state->S_32_22[1];
-        tmpmem[2] = state->S_32_22[2];
-        tmpmem[3] = state->S_32_22[3];
-        tmpmem[4] = state->S_32_22[4];
-        tmpmem[5] = state->S_32_22[5];
-        tmpmem[6] = state->S_32_22[6];
-        tmpmem[7] = state->S_32_22[7];
+        tmpmem[0]         = state->S_32_22[0];
+        tmpmem[1]         = state->S_32_22[1];
+        tmpmem[2]         = state->S_32_22[2];
+        tmpmem[3]         = state->S_32_22[3];
+        tmpmem[4]         = state->S_32_22[4];
+        tmpmem[5]         = state->S_32_22[5];
+        tmpmem[6]         = state->S_32_22[6];
+        tmpmem[7]         = state->S_32_22[7];
         state->S_32_22[0] = tmpmem[320 / SUB_BLOCKS_16_22];
         state->S_32_22[1] = tmpmem[320 / SUB_BLOCKS_16_22 + 1];
         state->S_32_22[2] = tmpmem[320 / SUB_BLOCKS_16_22 + 2];
@@ -157,11 +152,10 @@ void WebRtcSpl_Resample16khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 16 -> 22 resampler
-void WebRtcSpl_ResetResample16khzTo22khz(WebRtcSpl_State16khzTo22khz* state)
+void WebRtcSpl_ResetResample16khzTo22khz(WebRtcSpl_State16khzTo22khz *state)
 {
     int k;
-    for (k = 0; k < 8; k++)
-    {
+    for (k = 0; k < 8; k++) {
         state->S_16_32[k] = 0;
         state->S_32_22[k] = 0;
     }
@@ -172,17 +166,16 @@ void WebRtcSpl_ResetResample16khzTo22khz(WebRtcSpl_State16khzTo22khz* state)
 //////////////////////
 
 // number of subblocks; options: 1, 2, 5, 10
-#define SUB_BLOCKS_22_8     2
+#define SUB_BLOCKS_22_8 2
 
 // 22 -> 8 resampler
-void WebRtcSpl_Resample22khzTo8khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                   WebRtcSpl_State22khzTo8khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample22khzTo8khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State22khzTo8khz *state,
+                                   WebRtc_Word32 *tmpmem)
 {
     int k;
 
     // process two blocks of 10/SUB_BLOCKS_22_8 ms (to reduce temp buffer size)
-    for (k = 0; k < SUB_BLOCKS_22_8; k++)
-    {
+    for (k = 0; k < SUB_BLOCKS_22_8; k++) {
         ///// 22 --> 22 lowpass /////
         // WebRtc_Word16  in[220/SUB_BLOCKS_22_8]
         // WebRtc_Word32 out[220/SUB_BLOCKS_22_8]
@@ -194,14 +187,14 @@ void WebRtcSpl_Resample22khzTo8khz(const WebRtc_Word16* in, WebRtc_Word16* out,
         // WebRtc_Word32 out[160/SUB_BLOCKS_22_8]
         /////
         // copy state to and from input array
-        tmpmem[8] = state->S_22_16[0];
-        tmpmem[9] = state->S_22_16[1];
-        tmpmem[10] = state->S_22_16[2];
-        tmpmem[11] = state->S_22_16[3];
-        tmpmem[12] = state->S_22_16[4];
-        tmpmem[13] = state->S_22_16[5];
-        tmpmem[14] = state->S_22_16[6];
-        tmpmem[15] = state->S_22_16[7];
+        tmpmem[8]         = state->S_22_16[0];
+        tmpmem[9]         = state->S_22_16[1];
+        tmpmem[10]        = state->S_22_16[2];
+        tmpmem[11]        = state->S_22_16[3];
+        tmpmem[12]        = state->S_22_16[4];
+        tmpmem[13]        = state->S_22_16[5];
+        tmpmem[14]        = state->S_22_16[6];
+        tmpmem[15]        = state->S_22_16[7];
         state->S_22_16[0] = tmpmem[220 / SUB_BLOCKS_22_8 + 8];
         state->S_22_16[1] = tmpmem[220 / SUB_BLOCKS_22_8 + 9];
         state->S_22_16[2] = tmpmem[220 / SUB_BLOCKS_22_8 + 10];
@@ -226,15 +219,14 @@ void WebRtcSpl_Resample22khzTo8khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 22 -> 8 resampler
-void WebRtcSpl_ResetResample22khzTo8khz(WebRtcSpl_State22khzTo8khz* state)
+void WebRtcSpl_ResetResample22khzTo8khz(WebRtcSpl_State22khzTo8khz *state)
 {
     int k;
-    for (k = 0; k < 8; k++)
-    {
-        state->S_22_22[k] = 0;
+    for (k = 0; k < 8; k++) {
+        state->S_22_22[k]     = 0;
         state->S_22_22[k + 8] = 0;
-        state->S_22_16[k] = 0;
-        state->S_16_8[k] = 0;
+        state->S_22_16[k]     = 0;
+        state->S_16_8[k]      = 0;
     }
 }
 
@@ -243,17 +235,16 @@ void WebRtcSpl_ResetResample22khzTo8khz(WebRtcSpl_State22khzTo8khz* state)
 //////////////////////
 
 // number of subblocks; options: 1, 2, 5, 10
-#define SUB_BLOCKS_8_22     2
+#define SUB_BLOCKS_8_22 2
 
 // 8 -> 22 resampler
-void WebRtcSpl_Resample8khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
-                                   WebRtcSpl_State8khzTo22khz* state, WebRtc_Word32* tmpmem)
+void WebRtcSpl_Resample8khzTo22khz(const WebRtc_Word16 *in, WebRtc_Word16 *out, WebRtcSpl_State8khzTo22khz *state,
+                                   WebRtc_Word32 *tmpmem)
 {
     int k;
 
     // process two blocks of 10/SUB_BLOCKS_8_22 ms (to reduce temp buffer size)
-    for (k = 0; k < SUB_BLOCKS_8_22; k++)
-    {
+    for (k = 0; k < SUB_BLOCKS_8_22; k++) {
         ///// 8 --> 16 /////
         // WebRtc_Word16  in[80/SUB_BLOCKS_8_22]
         // WebRtc_Word32 out[160/SUB_BLOCKS_8_22]
@@ -265,14 +256,14 @@ void WebRtcSpl_Resample8khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
         // WebRtc_Word32 out[110/SUB_BLOCKS_8_22]
         /////
         // copy state to and from input array
-        tmpmem[10] = state->S_16_11[0];
-        tmpmem[11] = state->S_16_11[1];
-        tmpmem[12] = state->S_16_11[2];
-        tmpmem[13] = state->S_16_11[3];
-        tmpmem[14] = state->S_16_11[4];
-        tmpmem[15] = state->S_16_11[5];
-        tmpmem[16] = state->S_16_11[6];
-        tmpmem[17] = state->S_16_11[7];
+        tmpmem[10]        = state->S_16_11[0];
+        tmpmem[11]        = state->S_16_11[1];
+        tmpmem[12]        = state->S_16_11[2];
+        tmpmem[13]        = state->S_16_11[3];
+        tmpmem[14]        = state->S_16_11[4];
+        tmpmem[15]        = state->S_16_11[5];
+        tmpmem[16]        = state->S_16_11[6];
+        tmpmem[17]        = state->S_16_11[7];
         state->S_16_11[0] = tmpmem[160 / SUB_BLOCKS_8_22 + 10];
         state->S_16_11[1] = tmpmem[160 / SUB_BLOCKS_8_22 + 11];
         state->S_16_11[2] = tmpmem[160 / SUB_BLOCKS_8_22 + 12];
@@ -297,21 +288,19 @@ void WebRtcSpl_Resample8khzTo22khz(const WebRtc_Word16* in, WebRtc_Word16* out,
 }
 
 // initialize state of 8 -> 22 resampler
-void WebRtcSpl_ResetResample8khzTo22khz(WebRtcSpl_State8khzTo22khz* state)
+void WebRtcSpl_ResetResample8khzTo22khz(WebRtcSpl_State8khzTo22khz *state)
 {
     int k;
-    for (k = 0; k < 8; k++)
-    {
-        state->S_8_16[k] = 0;
+    for (k = 0; k < 8; k++) {
+        state->S_8_16[k]  = 0;
         state->S_16_11[k] = 0;
         state->S_11_22[k] = 0;
     }
 }
 
 // compute two inner-products and store them to output array
-static void WebRtcSpl_DotProdIntToInt(const WebRtc_Word32* in1, const WebRtc_Word32* in2,
-                                      const WebRtc_Word16* coef_ptr, WebRtc_Word32* out1,
-                                      WebRtc_Word32* out2)
+static void WebRtcSpl_DotProdIntToInt(const WebRtc_Word32 *in1, const WebRtc_Word32 *in2, const WebRtc_Word16 *coef_ptr,
+                                      WebRtc_Word32 *out1, WebRtc_Word32 *out2)
 {
     WebRtc_Word32 tmp1 = 16384;
     WebRtc_Word32 tmp2 = 16384;
@@ -349,15 +338,14 @@ static void WebRtcSpl_DotProdIntToInt(const WebRtc_Word32* in1, const WebRtc_Wor
     tmp1 += coef * in1[7];
     tmp2 += coef * in2[-7];
 
-    coef = coef_ptr[8];
+    coef  = coef_ptr[8];
     *out1 = tmp1 + coef * in1[8];
     *out2 = tmp2 + coef * in2[-8];
 }
 
 // compute two inner-products and store them to output array
-static void WebRtcSpl_DotProdIntToShort(const WebRtc_Word32* in1, const WebRtc_Word32* in2,
-                                        const WebRtc_Word16* coef_ptr, WebRtc_Word16* out1,
-                                        WebRtc_Word16* out2)
+static void WebRtcSpl_DotProdIntToShort(const WebRtc_Word32 *in1, const WebRtc_Word32 *in2,
+                                        const WebRtc_Word16 *coef_ptr, WebRtc_Word16 *out1, WebRtc_Word16 *out2)
 {
     WebRtc_Word32 tmp1 = 16384;
     WebRtc_Word32 tmp2 = 16384;
@@ -419,9 +407,7 @@ static void WebRtcSpl_DotProdIntToShort(const WebRtc_Word32* in1, const WebRtc_W
 // output: WebRtc_Word32 (shifted 15 positions to the left, + offset 16384) :: size 11 * K
 //      K: Number of blocks
 
-void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32* In,
-                                    WebRtc_Word32* Out,
-                                    const WebRtc_Word32 K)
+void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32 *In, WebRtc_Word32 *Out, const WebRtc_Word32 K)
 {
     /////////////////////////////////////////////////////////////
     // Filter operation:
@@ -430,8 +416,7 @@ void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32* In,
     // process in sub blocks of size 16 samples.
     WebRtc_Word32 m;
 
-    for (m = 0; m < K; m++)
-    {
+    for (m = 0; m < K; m++) {
         // first output sample
         Out[0] = ((WebRtc_Word32)In[3] << 15) + (1 << 14);
 
@@ -461,9 +446,7 @@ void WebRtcSpl_32khzTo22khzIntToInt(const WebRtc_Word32* In,
 // output: WebRtc_Word16 (saturated) :: size 11 * K
 //      K: Number of blocks
 
-void WebRtcSpl_32khzTo22khzIntToShort(const WebRtc_Word32 *In,
-                                      WebRtc_Word16 *Out,
-                                      const WebRtc_Word32 K)
+void WebRtcSpl_32khzTo22khzIntToShort(const WebRtc_Word32 *In, WebRtc_Word16 *Out, const WebRtc_Word32 K)
 {
     /////////////////////////////////////////////////////////////
     // Filter operation:
@@ -473,8 +456,7 @@ void WebRtcSpl_32khzTo22khzIntToShort(const WebRtc_Word32 *In,
     WebRtc_Word32 tmp;
     WebRtc_Word32 m;
 
-    for (m = 0; m < K; m++)
-    {
+    for (m = 0; m < K; m++) {
         // first output sample
         tmp = In[3];
         if (tmp > (WebRtc_Word32)0x00007FFF)

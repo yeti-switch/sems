@@ -9,12 +9,13 @@
 
 using namespace std;
 
-int fixup_file(char *path) {
+int fixup_file(char *path)
+{
     ifstream f(path, ifstream::in);
-    string s;
+    string   s;
 
-    if(!f.is_open()) {
-        ERROR("failed to opend file: %s",path);
+    if (!f.is_open()) {
+        ERROR("failed to opend file: %s", path);
         return EXIT_FAILURE;
     }
 
@@ -22,14 +23,13 @@ int fixup_file(char *path) {
     s.reserve(f.tellg());
     f.seekg(0, ios::beg);
 
-    s.assign(istreambuf_iterator<char>(f),
-             istreambuf_iterator<char>());
+    s.assign(istreambuf_iterator<char>(f), istreambuf_iterator<char>());
 
-    DBG("read %ld bytes from file %s",s.size(),path);
-    DBG("original data:\n--\n%s\n--",s.data());
+    DBG("read %ld bytes from file %s", s.size(), path);
+    DBG("original data:\n--\n%s\n--", s.data());
 
-    if(fixup_utf8_inplace(s)) {
-        DBG("fixed data:\n--\n%s\n--",s.data());
+    if (fixup_utf8_inplace(s)) {
+        DBG("fixed data:\n--\n%s\n--", s.data());
     } else {
         DBG("not modified");
     }
@@ -43,9 +43,8 @@ int main(int argc, char *argv[])
     register_stderr_facility();
     set_stderr_log_level(L_DBG);
 
-    if(argc > 1)
+    if (argc > 1)
         return fixup_file(argv[1]);
 
     return EXIT_SUCCESS;
 }
-

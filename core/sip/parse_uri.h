@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -36,14 +36,8 @@
 
 struct sip_avp;
 
-struct sip_uri
-{
-    enum uri_scheme {
-        UNKNOWN=0,
-        SIP,
-        SIPS,
-        TEL
-    };
+struct sip_uri {
+    enum uri_scheme { UNKNOWN = 0, SIP, SIPS, TEL };
 
     uri_scheme scheme;
     cstring    name_addr;
@@ -51,20 +45,20 @@ struct sip_uri
     cstring    passwd;
     cstring    host;
 
-    cstring    port_str;
-    short unsigned int  port;
+    cstring            port_str;
+    short unsigned int port;
 
-    std::list<sip_avp*> params;
-    std::list<sip_avp*> uri_params;
-    std::list<sip_avp*> hdrs;
-    sip_avp*       trsp;
+    std::list<sip_avp *> params;
+    std::list<sip_avp *> uri_params;
+    std::list<sip_avp *> hdrs;
+    sip_avp             *trsp;
 
     sip_uri();
     ~sip_uri();
 };
 
-int parse_uri(sip_uri* uri, const char* beg, int len, bool no_default_port = false);
-int parse_nameaddr(sip_uri* uri, const char* beg, int len, bool no_default_port = false);
+int parse_uri(sip_uri *uri, const char *beg, int len, bool no_default_port = false);
+int parse_nameaddr(sip_uri *uri, const char *beg, int len, bool no_default_port = false);
 
 #endif
 

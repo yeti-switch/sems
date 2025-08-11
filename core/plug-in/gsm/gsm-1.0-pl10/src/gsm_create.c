@@ -4,25 +4,26 @@
  * details.  THERE IS ABSOLUTELY NO WARRANTY FOR THIS SOFTWARE.
  */
 
-static char const	ident[] = "$Header: /cvsroot/sems/answer_machine/plug-in/gsm/gsm-1.0-pl10/src/gsm_create.c,v 1.1 2003/02/03 15:04:56 rco Exp $";
+static char const ident[] = "$Header: /cvsroot/sems/answer_machine/plug-in/gsm/gsm-1.0-pl10/src/gsm_create.c,v 1.1 "
+                            "2003/02/03 15:04:56 rco Exp $";
 
-#include	"config.h"
+#include "config.h"
 
-#ifdef	HAS_STRING_H
-#include	<string.h>
+#ifdef HAS_STRING_H
+#include <string.h>
 #else
-#	include "proto.h"
-	extern char	* memset P((char *, int, int));
+#include "proto.h"
+extern char *memset P((char *, int, int));
 #endif
 
-#ifdef	HAS_STDLIB_H
-#	include	<stdlib.h>
+#ifdef HAS_STDLIB_H
+#include <stdlib.h>
 #else
-#	ifdef	HAS_MALLOC_H
-#		include 	<malloc.h>
-#	else
-		extern char * malloc();
-#	endif
+#ifdef HAS_MALLOC_H
+#include <malloc.h>
+#else
+extern char *malloc();
+#endif
 #endif
 
 #include <stdio.h>
@@ -33,13 +34,14 @@ static char const	ident[] = "$Header: /cvsroot/sems/answer_machine/plug-in/gsm/g
 
 gsm gsm_create P0()
 {
-	gsm  r;
+    gsm r;
 
-	r = (gsm)malloc(sizeof(struct gsm_state));
-	if (!r) return r;
+    r = (gsm)malloc(sizeof(struct gsm_state));
+    if (!r)
+        return r;
 
-	memset((char *)r, 0, sizeof(*r));
-	r->nrp = 40;
+    memset((char *)r, 0, sizeof(*r));
+    r->nrp = 40;
 
-	return r;
+    return r;
 }

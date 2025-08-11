@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _sip_ua_h_
@@ -35,17 +35,15 @@
 class trans_ticket;
 struct sip_msg;
 
-class sip_ua
-{
-public:
+class sip_ua {
+  public:
     virtual ~sip_ua() {}
 
-    virtual void handle_sip_request(const trans_ticket& tt, sip_msg* msg)=0;
-    virtual void handle_sip_reply(const trans_ticket& tt, const string& dialog_id, sip_msg* msg)=0;
+    virtual void handle_sip_request(const trans_ticket &tt, sip_msg *msg)                        = 0;
+    virtual void handle_sip_reply(const trans_ticket &tt, const string &dialog_id, sip_msg *msg) = 0;
 
-    //virtual void handle_request_timeout(const sip_msg *msg)=0;
-    virtual void handle_reply_timeout(AmSipTimeoutEvent::EvType evt,
-        sip_trans *tr, trans_bucket *buk=0)=0;
+    // virtual void handle_request_timeout(const sip_msg *msg)=0;
+    virtual void handle_reply_timeout(AmSipTimeoutEvent::EvType evt, sip_trans *tr, trans_bucket *buk = 0) = 0;
 };
 
 #endif

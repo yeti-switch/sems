@@ -2,7 +2,7 @@
  * $Id: ModMysql.cpp 1764 2010-04-01 14:33:30Z peter_lemenkov $
  *
  * Copyright (C) 2010 TelTech Systems Inc.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -33,18 +33,18 @@
 #include <iostream>
 #include "AmArg.h"
 
-std::string str2json(const char* str);
-std::string str2json(const std::string& str);
-std::string str2json(const char* str, size_t len);
+std::string str2json(const char *str);
+std::string str2json(const std::string &str);
+std::string str2json(const char *str, size_t len);
 
 std::string arg2json(const AmArg &a);
 
 /** @return true on success */
-bool json2arg(std::istream& input, AmArg& res);
+bool json2arg(std::istream &input, AmArg &res);
 
 /** @return true on success */
-bool json2arg(const char* input, AmArg& res);
+bool json2arg(const char *input, AmArg &res);
 
 /** @return true on success */
-bool json2arg(const std::string& input, AmArg& res);
+bool json2arg(const std::string &input, AmArg &res);
 #endif

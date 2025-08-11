@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -30,44 +30,44 @@
 
 #include <typeinfo>
 #include "AmLcConfig.h"
-AmEventQueue::AmEventQueue(AmEventHandler* handler)
-  : handler(handler),
-    wakeup_handler(NULL),
-    ev_pending(false),
-    finalized(false)
+AmEventQueue::AmEventQueue(AmEventHandler *handler)
+    : handler(handler)
+    , wakeup_handler(NULL)
+    , ev_pending(false)
+    , finalized(false)
 {
 }
 
 AmEventQueue::~AmEventQueue()
 {
-  m_queue.lock();
-  while(!ev_queue.empty()){
-    delete ev_queue.front();
-    ev_queue.pop();
-  }
-  m_queue.unlock();
+    m_queue.lock();
+    while (!ev_queue.empty()) {
+        delete ev_queue.front();
+        ev_queue.pop();
+    }
+    m_queue.unlock();
 }
 
-void AmEventQueue::postEvent(AmEvent* event)
+void AmEventQueue::postEvent(AmEvent *event)
 {
-  if (AmConfig.log_events) 
-    DBG("AmEventQueue: trying to post event");
+    if (AmConfig.log_events)
+        DBG("AmEventQueue: trying to post event");
 
-  m_queue.lock();
+    m_queue.lock();
 
-  if(event)
-    ev_queue.push(event);
+    if (event)
+        ev_queue.push(event);
 
-  if(!ev_pending.get()) {
-    ev_pending.set(true);
-    if (NULL != wakeup_handler)
-      wakeup_handler->notify(this);
-  }
+    if (!ev_pending.get()) {
+        ev_pending.set(true);
+        if (NULL != wakeup_handler)
+            wakeup_handler->notify(this);
+    }
 
-  m_queue.unlock();
+    m_queue.unlock();
 
-  if (AmConfig.log_events) 
-    DBG("AmEventQueue: event posted");
+    if (AmConfig.log_events)
+        DBG("AmEventQueue: event posted");
 }
 
 void AmEventQueue::processEvents(EventStats *stats)
@@ -76,29 +76,29 @@ void AmEventQueue::processEvents(EventStats *stats)
 
     m_queue.lock();
 
-    while(!ev_queue.empty()) {
+    while (!ev_queue.empty()) {
         std::unique_ptr<AmEvent> event(ev_queue.front());
         ev_queue.pop();
         m_queue.unlock();
 
-        if(stats) {
+        if (stats) {
             gettimeofday(&start, nullptr);
         }
 
-        auto& event_ref = *event.get();
+        auto &event_ref = *event.get();
 
         if (AmConfig.log_events)
             DBG("before processing event (%s)", typeid(event_ref).name());
 
         auto consumed = handler->process_consuming(event.get());
 
-        if(AmConfig.log_events)
+        if (AmConfig.log_events)
             DBG("event processed");
 
-        if(!consumed) {
-            if(stats) {
+        if (!consumed) {
+            if (stats) {
                 gettimeofday(&end, nullptr);
-                timersub(&end,&start,&consumed_time);
+                timersub(&end, &start, &consumed_time);
                 stats->update(event.get(), consumed_time);
             }
         } else {
@@ -114,49 +114,50 @@ void AmEventQueue::processEvents(EventStats *stats)
 
 void AmEventQueue::waitForEvent()
 {
-  ev_pending.wait_for();
+    ev_pending.wait_for();
 }
 
 void AmEventQueue::processSingleEvent()
 {
-  m_queue.lock();
-
-  if (!ev_queue.empty()) {
-
-    AmEvent* event = ev_queue.front();
-    ev_queue.pop();
-    m_queue.unlock();
-
-    if (AmConfig.log_events) 
-      DBG("before processing event");
-
-    if(!handler->process_consuming(event))
-        delete event;
-
-    if (AmConfig.log_events)
-      DBG("event processed");
-
     m_queue.lock();
-    if (ev_queue.empty())
-      ev_pending.set(false);
-  }
 
-  m_queue.unlock();
+    if (!ev_queue.empty()) {
+
+        AmEvent *event = ev_queue.front();
+        ev_queue.pop();
+        m_queue.unlock();
+
+        if (AmConfig.log_events)
+            DBG("before processing event");
+
+        if (!handler->process_consuming(event))
+            delete event;
+
+        if (AmConfig.log_events)
+            DBG("event processed");
+
+        m_queue.lock();
+        if (ev_queue.empty())
+            ev_pending.set(false);
+    }
+
+    m_queue.unlock();
 }
 
-bool AmEventQueue::eventPending() {
-  m_queue.lock();
-  bool res = !ev_queue.empty();
-  m_queue.unlock();
-  return res;
+bool AmEventQueue::eventPending()
+{
+    m_queue.lock();
+    bool res = !ev_queue.empty();
+    m_queue.unlock();
+    return res;
 }
 
-void AmEventQueue::setEventNotificationSink(AmEventNotificationSink* 
-					    _wakeup_handler) {
-  // locking actually not necessary - if replacing pointer is atomic 
-  m_queue.lock(); 
-  wakeup_handler = _wakeup_handler;
-  if(wakeup_handler && ev_pending.get())
-    wakeup_handler->notify(this);
-  m_queue.unlock();
+void AmEventQueue::setEventNotificationSink(AmEventNotificationSink *_wakeup_handler)
+{
+    // locking actually not necessary - if replacing pointer is atomic
+    m_queue.lock();
+    wakeup_handler = _wakeup_handler;
+    if (wakeup_handler && ev_pending.get())
+        wakeup_handler->notify(this);
+    m_queue.unlock();
 }

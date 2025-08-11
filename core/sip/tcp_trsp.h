@@ -20,63 +20,59 @@ using std::vector;
 #include <map>
 #include <deque>
 #include <string>
-using std::map;
 using std::deque;
+using std::map;
 using std::string;
 
 class tcp_server_socket;
 
-class tcp_input : public trsp_base_input
-{
-public:
-    int on_input(tcp_base_trsp * socket);
+class tcp_input : public trsp_base_input {
+  public:
+    int on_input(tcp_base_trsp *socket);
 };
 
-class tcp_trsp_socket: public tcp_base_trsp
-{
-  friend class tcp_socket_factory;
-  tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
-                  const sockaddr_storage* sa, socket_transport transport, event_base* evbase);
-protected:
-  tcp_trsp_socket(trsp_server_socket* server_sock, trsp_worker* server_worker, int sd,
-                  const sockaddr_storage* sa, socket_transport transport,
-                  event_base* evbase, trsp_input* input);
-  const char* get_transport() const override{ return "tcp"; }
-public:
-  virtual ~tcp_trsp_socket();
+class tcp_trsp_socket : public tcp_base_trsp {
+    friend class tcp_socket_factory;
+    tcp_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd, const sockaddr_storage *sa,
+                    socket_transport transport, event_base *evbase);
 
-  int send(const sockaddr_storage* sa, const char* msg,
-	   const int msg_len, unsigned int flags) override;
-  void set_connected(bool val) override;
+  protected:
+    tcp_trsp_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd, const sockaddr_storage *sa,
+                    socket_transport transport, event_base *evbase, trsp_input *input);
+    const char *get_transport() const override { return "tcp"; }
+
+  public:
+    virtual ~tcp_trsp_socket();
+
+    int  send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags) override;
+    void set_connected(bool val) override;
 };
 
-class tcp_socket_factory : public trsp_socket_factory
-{
-public:
+class tcp_socket_factory : public trsp_socket_factory {
+  public:
     tcp_socket_factory(tcp_base_trsp::socket_transport transport);
 
-    tcp_base_trsp* create_socket(trsp_server_socket* server_sock, trsp_worker* server_worker,
-                                         int sd, const sockaddr_storage* sa, event_base* evbase);
+    tcp_base_trsp *create_socket(trsp_server_socket *server_sock, trsp_worker *server_worker, int sd,
+                                 const sockaddr_storage *sa, event_base *evbase);
 };
 
-class tcp_server_socket: public trsp_server_socket
-{
-public:
-    class tcp_statistics : public trsp_statistics::trsp_st_base
-    {
-    protected:
-        AtomicCounter& countOutConnectedConnections;
-        AtomicCounter& countInConnectedConnections;
-    public:
+class tcp_server_socket : public trsp_server_socket {
+  public:
+    class tcp_statistics : public trsp_statistics::trsp_st_base {
+      protected:
+        AtomicCounter &countOutConnectedConnections;
+        AtomicCounter &countInConnectedConnections;
+
+      public:
         tcp_statistics(socket_transport transport, unsigned short if_num, unsigned short proto_idx);
-        ~tcp_statistics(){}
-        void changeCountConnection(bool remove, tcp_base_trsp* socket) override;
-        void incConnectedConnectionsCount(tcp_base_trsp* socket);
-        void decConnectedConnectionsCount(tcp_base_trsp* socket);
+        ~tcp_statistics() {}
+        void changeCountConnection(bool remove, tcp_base_trsp *socket) override;
+        void incConnectedConnectionsCount(tcp_base_trsp *socket);
+        void decConnectedConnectionsCount(tcp_base_trsp *socket);
     };
-  tcp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
+    tcp_server_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport);
 
-  const char* get_transport() const override { return "tcp"; }
+    const char *get_transport() const override { return "tcp"; }
 };
 
-#endif/*_tcp_trsp_h_*/
+#endif /*_tcp_trsp_h_*/

@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _SipCtrlInterface_h_
@@ -36,8 +36,8 @@
 #include <string>
 #include <list>
 #include "AmLCContainers.h"
-using std::string;
 using std::list;
+using std::string;
 
 class AmSipRequest;
 class AmSipReply;
@@ -57,121 +57,114 @@ class wss_server_socket;
 class trsp_worker;
 class trsp;
 
-class _SipCtrlInterface:
-    public sip_ua
-{
+class _SipCtrlInterface : public sip_ua {
 
-    friend bool AmSipRequest::init(const sip_msg*, const trans_ticket*);
-    static bool sip_msg2am_request(const sip_msg *msg,
-                                   std::function<void (const sip_msg* req, int reply_code, const cstring& reason)> callback,
-                                   AmSipRequest &request);
-    friend bool AmSipReply::init(const sip_msg*);
+    friend bool AmSipRequest::init(const sip_msg *, const trans_ticket *);
+    static bool
+                sip_msg2am_request(const sip_msg                                                                 *msg,
+                                   std::function<void(const sip_msg *req, int reply_code, const cstring &reason)> callback,
+                                   AmSipRequest                                                                  &request);
+    friend bool AmSipReply::init(const sip_msg *);
     static bool sip_msg2am_reply(const sip_msg *msg, AmSipReply &reply);
 
     friend class udp_trsp;
 
     AmCondition<bool> stopped;
-    
+
     unsigned short    nr_udp_sockets;
-    udp_trsp_socket** udp_sockets;
+    udp_trsp_socket **udp_sockets;
 
-    unsigned short    nr_udp_servers;
-    udp_trsp**        udp_servers;
+    unsigned short nr_udp_servers;
+    udp_trsp     **udp_servers;
 
-    unsigned short    nr_tcp_sockets;
-    tcp_server_socket** tcp_sockets;
+    unsigned short      nr_tcp_sockets;
+    tcp_server_socket **tcp_sockets;
 
-    unsigned short    nr_tls_sockets;
-    tls_server_socket** tls_sockets;
+    unsigned short      nr_tls_sockets;
+    tls_server_socket **tls_sockets;
 
-    unsigned short    nr_ws_sockets;
-    ws_server_socket** ws_sockets;
+    unsigned short     nr_ws_sockets;
+    ws_server_socket **ws_sockets;
 
-    unsigned short    nr_wss_sockets;
-    wss_server_socket** wss_sockets;
+    unsigned short      nr_wss_sockets;
+    wss_server_socket **wss_sockets;
 
-    unsigned short    nr_trsp_workers;
-    trsp_worker** trsp_workers;
-    
-    trsp* trsp_server;
+    unsigned short nr_trsp_workers;
+    trsp_worker  **trsp_workers;
+
+    trsp *trsp_server;
 
     int alloc_udp_structs();
-    int init_udp_sockets(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+    int init_udp_sockets(unsigned short if_num, unsigned short proto_idx, SIP_info &info);
     int init_udp_servers();
 
     int alloc_trsp_worker_structs();
     int init_trsp_workers();
 
     int alloc_tcp_structs();
-    int init_tcp_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+    int init_tcp_servers(unsigned short if_num, unsigned short proto_idx, SIP_info &info);
 
     int alloc_tls_structs();
-    int init_tls_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+    int init_tls_servers(unsigned short if_num, unsigned short proto_idx, SIP_info &info);
 
     int alloc_ws_structs();
-    int init_ws_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
+    int init_ws_servers(unsigned short if_num, unsigned short proto_idx, SIP_info &info);
 
     int alloc_wss_structs();
-    int init_wss_servers(unsigned short if_num, unsigned short proto_idx, SIP_info& info);
-public:
+    int init_wss_servers(unsigned short if_num, unsigned short proto_idx, SIP_info &info);
 
-    static string outbound_host;
+  public:
+    static string       outbound_host;
     static unsigned int outbound_port;
-    static bool log_parsed_messages;
-    static int udp_rcvbuf;
+    static bool         log_parsed_messages;
+    static int          udp_rcvbuf;
 
     _SipCtrlInterface();
     ~_SipCtrlInterface();
 
     int load();
 
-    int run();
+    int  run();
     void stop();
     void cleanup();
-    void dispose(){};
+    void dispose() {};
 
     /**
      * Sends a SIP request.
      *
-     * @param req The request to send. If the request creates a transaction, 
+     * @param req The request to send. If the request creates a transaction,
      *            its ticket is written into req.tt.
      */
-    static int send(AmSipRequest &req, const string& dialog_id,
-		    const string& next_hop, int outbound_interface,
-			unsigned int flags, sip_target_set* target_set_override,
-            msg_logger* logger = NULL, msg_sensor *sensor = NULL,
-			sip_timers_override *timers_override = NULL,
-			int redirects_allowed = -1);
+    static int send(AmSipRequest &req, const string &dialog_id, const string &next_hop, int outbound_interface,
+                    unsigned int flags, sip_target_set *target_set_override, msg_logger *logger = NULL,
+                    msg_sensor *sensor = NULL, sip_timers_override *timers_override = NULL, int redirects_allowed = -1);
 
     /**
-     * Sends a SIP reply. 
+     * Sends a SIP reply.
      *
-     * @param rep The reply to be sent. 'rep.tt' should be set to transaction 
+     * @param rep The reply to be sent. 'rep.tt' should be set to transaction
      *            ticket included in the SIP request.
      */
-    static int send(const AmSipReply &rep, const string& dialog_id,
-			msg_logger* logger = NULL, msg_sensor* sensor = NULL);
+    static int send(const AmSipReply &rep, const string &dialog_id, msg_logger *logger = NULL,
+                    msg_sensor *sensor = NULL);
 
     /**
      * CANCELs an INVITE transaction.
      *
      * @param tt transaction ticket of the request to cancel.
      */
-    static int cancel(
-        trans_ticket* tt, const string& dialog_id,
-        unsigned int inv_cseq, unsigned int maxf,
-        const string& hdrs, const string &dlg_route_set);
+    static int cancel(trans_ticket *tt, const string &dialog_id, unsigned int inv_cseq, unsigned int maxf,
+                      const string &hdrs, const string &dlg_route_set);
 
     /**
      * From sip_ua
      */
-    void handle_sip_request(const trans_ticket& tt, sip_msg* msg);
-    void handle_sip_reply(const trans_ticket& tt, const string& dialog_id, sip_msg* msg);
-    void handle_reply_timeout(AmSipTimeoutEvent::EvType evt,
-        sip_trans *tr, trans_bucket *buk=0);
+    void handle_sip_request(const trans_ticket &tt, sip_msg *msg);
+    void handle_sip_reply(const trans_ticket &tt, const string &dialog_id, sip_msg *msg);
+    void handle_reply_timeout(AmSipTimeoutEvent::EvType evt, sip_trans *tr, trans_bucket *buk = 0);
 
-    void terminateConection(const string& ip, unsigned short port, unsigned short if_num);
-    void getInfo(AmArg &ret);
+    void               terminateConection(const string &ip, unsigned short port, unsigned short if_num);
+    void               getInfo(AmArg &ret);
     unsigned long long getTcpQueueSize();
     unsigned long long getTlsQueueSize();
     unsigned long long getWsQueueSize();

@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -32,160 +32,158 @@
 
 void AmPlaylist::updateCurrentItem()
 {
-  if(!cur_item){
-    items_mut.lock();
-    if(!items.empty()){
-      cur_item = items.front();
-      items.pop_front();
+    if (!cur_item) {
+        items_mut.lock();
+        if (!items.empty()) {
+            cur_item = items.front();
+            items.pop_front();
+        }
+        items_mut.unlock();
     }
-    items_mut.unlock();
-  }
 }
 
 void AmPlaylist::gotoNextItem(bool notify)
 {
-  bool had_item = false;
-  if(cur_item){
+    bool had_item = false;
+    if (cur_item) {
 
-    delete cur_item;
-    cur_item = 0;
-    had_item = true;
-  }
+        delete cur_item;
+        cur_item = 0;
+        had_item = true;
+    }
 
-  updateCurrentItem();
-  if(notify && had_item && !cur_item && ev_q){
-    DBG("posting AmAudioEvent::noAudio event!");
-    ev_q->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
-  }
+    updateCurrentItem();
+    if (notify && had_item && !cur_item && ev_q) {
+        DBG("posting AmAudioEvent::noAudio event!");
+        ev_q->postEvent(new AmAudioEvent(AmAudioEvent::noAudio));
+    }
 }
 
-int AmPlaylist::get(unsigned long long system_ts, unsigned char* buffer, 
-		    int output_sample_rate, unsigned int nb_samples)
+int AmPlaylist::get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate,
+                    unsigned int nb_samples)
 {
-  int ret = -1;
+    int ret = -1;
 
-  cur_mut.lock();
-  updateCurrentItem();
+    cur_mut.lock();
+    updateCurrentItem();
 
-  while(cur_item && 
-	cur_item->play && 
-	(ret = cur_item->play->get(system_ts,buffer,
-				   output_sample_rate,
-				   nb_samples)) <= 0) {
+    while (cur_item && cur_item->play &&
+           (ret = cur_item->play->get(system_ts, buffer, output_sample_rate, nb_samples)) <= 0)
+    {
 
-    DBG("get: gotoNextItem");
-    gotoNextItem(true);
-  }
+        DBG("get: gotoNextItem");
+        gotoNextItem(true);
+    }
 
-  if(!cur_item || !cur_item->play) {
-    ret = calcBytesToRead(nb_samples);
-    memset(buffer,0,ret);
-  }
+    if (!cur_item || !cur_item->play) {
+        ret = calcBytesToRead(nb_samples);
+        memset(buffer, 0, ret);
+    }
 
-  cur_mut.unlock();
-  return ret;
+    cur_mut.unlock();
+    return ret;
 }
 
-int AmPlaylist::put(unsigned long long system_ts, unsigned char* buffer, 
-		    int input_sample_rate, unsigned int size)
+int AmPlaylist::put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate, unsigned int size)
 {
-  int ret = -1;
+    int ret = -1;
 
-  cur_mut.lock();
-  updateCurrentItem();
-  while(cur_item && 
-	cur_item->record &&
-	(ret = cur_item->record->put(system_ts,buffer,
-				     input_sample_rate,
-				     size)) < 0) {
+    cur_mut.lock();
+    updateCurrentItem();
+    while (cur_item && cur_item->record &&
+           (ret = cur_item->record->put(system_ts, buffer, input_sample_rate, size)) < 0)
+    {
 
-    DBG("put: gotoNextItem");
-    gotoNextItem(true);
-  }
+        DBG("put: gotoNextItem");
+        gotoNextItem(true);
+    }
 
-  if(!cur_item || !cur_item->record)
-    ret = size;
-    
-  cur_mut.unlock();
-  return ret;
+    if (!cur_item || !cur_item->record)
+        ret = size;
+
+    cur_mut.unlock();
+    return ret;
 }
 
-AmPlaylist::AmPlaylist(AmEventQueue* q)
-  : AmAudio(new AmAudioFormat(CODEC_PCM16)),
-    cur_item(0),
-    ev_q(q)
-{}
-
-AmPlaylist::~AmPlaylist() {
-  flush();
-}
-
-void AmPlaylist::addToPlaylist(AmPlaylistItem* item)
+AmPlaylist::AmPlaylist(AmEventQueue *q)
+    : AmAudio(new AmAudioFormat(CODEC_PCM16))
+    , cur_item(0)
+    , ev_q(q)
 {
-  items_mut.lock();
-  items.push_back(item);
-  items_mut.unlock();
 }
 
-void AmPlaylist::addToPlayListFront(AmPlaylistItem* item)
+AmPlaylist::~AmPlaylist()
 {
-  cur_mut.lock();
-  items_mut.lock();
-  if(cur_item){
-    items.push_front(cur_item);
-    cur_item = item;
-  }
-  else {
-    items.push_front(item);
-  }    
-  items_mut.unlock();
-  cur_mut.unlock();
+    flush();
+}
+
+void AmPlaylist::addToPlaylist(AmPlaylistItem *item)
+{
+    items_mut.lock();
+    items.push_back(item);
+    items_mut.unlock();
+}
+
+void AmPlaylist::addToPlayListFront(AmPlaylistItem *item)
+{
+    cur_mut.lock();
+    items_mut.lock();
+    if (cur_item) {
+        items.push_front(cur_item);
+        cur_item = item;
+    } else {
+        items.push_front(item);
+    }
+    items_mut.unlock();
+    cur_mut.unlock();
 }
 
 void AmPlaylist::close()
 {
-  DBG("flushing playlist before closing");
-  flush();
-  AmAudio::close();
+    DBG("flushing playlist before closing");
+    flush();
+    AmAudio::close();
 }
 
 void AmPlaylist::flush()
 {
-  cur_mut.lock();
-  if(!cur_item && !items.empty()){
-    cur_item = items.front();
-    items.pop_front();
-  }
+    cur_mut.lock();
+    if (!cur_item && !items.empty()) {
+        cur_item = items.front();
+        items.pop_front();
+    }
 
-  while(cur_item)
-    gotoNextItem(false);
-  cur_mut.unlock();
+    while (cur_item)
+        gotoNextItem(false);
+    cur_mut.unlock();
 }
 
 bool AmPlaylist::isEmpty()
 {
-  bool res(true);
+    bool res(true);
 
-  cur_mut.lock();
-  items_mut.lock();
+    cur_mut.lock();
+    items_mut.lock();
 
-  res = (!cur_item) && items.empty();
-    
-  items_mut.unlock();
-  cur_mut.unlock();
+    res = (!cur_item) && items.empty();
 
-  return res;
+    items_mut.unlock();
+    cur_mut.unlock();
+
+    return res;
 }
 
 void AmPlaylist::applyPendingStereoRecorders(const AmSession *lock_session)
 {
-    if(lock_session) lock_session->lockAudio();
+    if (lock_session)
+        lock_session->lockAudio();
 
     cur_mut.lock();
-    if(cur_item && cur_item->record) {
+    if (cur_item && cur_item->record) {
         cur_item->record->applyPendingStereoRecorders(nullptr);
     }
     cur_mut.unlock();
 
-    if(lock_session) lock_session->unlockAudio();
+    if (lock_session)
+        lock_session->unlockAudio();
 }

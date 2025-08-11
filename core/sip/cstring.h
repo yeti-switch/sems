@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -33,59 +33,64 @@
 #include <string.h>
 #include <string>
 
-struct cstring 
-{
-    const char*  s;
-    unsigned int  len;
+struct cstring {
+    const char  *s;
+    unsigned int len;
 
     cstring()
-        : s(0), len(0)
-    {}
+        : s(0)
+        , len(0)
+    {
+    }
 
-    cstring(char* s)
-        : s(s), len(strlen(s))
-    {}
+    cstring(char *s)
+        : s(s)
+        , len(strlen(s))
+    {
+    }
 
-    cstring(const char* s)
-        : s(s), len(strlen(s))
-    {}
+    cstring(const char *s)
+        : s(s)
+        , len(strlen(s))
+    {
+    }
 
-    cstring(const char* s, unsigned int l)
-        : s(s), len(l)
-    {}
+    cstring(const char *s, unsigned int l)
+        : s(s)
+        , len(l)
+    {
+    }
 
-    void set(const char* _s, unsigned int _len){
-        s = _s;
+    void set(const char *_s, unsigned int _len)
+    {
+        s   = _s;
         len = _len;
     }
-    
-    void clear(){
-        s = 0;
+
+    void clear()
+    {
+        s   = 0;
         len = 0;
     }
 
-    bool isEmpty(){
-        return s == NULL || len == 0;
+    bool isEmpty() { return s == NULL || len == 0; }
+
+    std::string toString() const { return std::string(s, len); }
+
+    bool operator==(const cstring &rhs_str) const
+    {
+        return memcmp(rhs_str.s, s, len <= rhs_str.len ? len : rhs_str.len) == 0;
     }
 
-    std::string toString() const {
-        return std::string(s, len);
-    }
-
-    bool operator == (const cstring& rhs_str) const {
-        return memcmp(rhs_str.s,s,len <= rhs_str.len ? len : rhs_str.len) == 0;
-    }
-
-    bool operator == (const char* rhs_str) const {
+    bool operator==(const char *rhs_str) const
+    {
         unsigned int rhs_len = strlen(rhs_str);
-        return memcmp(rhs_str,s,len <= rhs_len ? len : rhs_len) == 0;
+        return memcmp(rhs_str, s, len <= rhs_len ? len : rhs_len) == 0;
     }
 };
 
-#define c2stlstr(str) \
-          string((str).s,(str).len)
+#define c2stlstr(str) string((str).s, (str).len)
 
-#define stl2cstr(str) \
-          cstring((char*)(str).c_str(),(str).length())
+#define stl2cstr(str) cstring((char *)(str).c_str(), (str).length())
 
 #endif

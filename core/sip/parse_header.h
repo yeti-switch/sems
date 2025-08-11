@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -35,64 +35,62 @@
 #include <list>
 using std::list;
 
-struct sip_parsed_hdr
-{
-    virtual ~sip_parsed_hdr(){}
+struct sip_parsed_hdr {
+    virtual ~sip_parsed_hdr() {}
 };
 
 
-struct sip_header
-{
+struct sip_header {
     //
     // Header types
     //
-    
+
     enum {
-	H_UNPARSED=0,
-	
-	H_TO,
-	H_VIA,
-	H_FROM,
-	H_CSEQ,
+        H_UNPARSED = 0,
+
+        H_TO,
+        H_VIA,
+        H_FROM,
+        H_CSEQ,
         H_RSEQ,
         H_RACK,
-	H_ROUTE,
-	H_CALL_ID,
-	H_CONTACT,
+        H_ROUTE,
+        H_CALL_ID,
+        H_CONTACT,
         H_REQUIRE,
-	H_RECORD_ROUTE,
-	H_CONTENT_TYPE,
-	H_CONTENT_LENGTH,
-	H_MAX_FORWARDS,
-    H_CONNECTION,
-    H_UPGRADE,
-    H_ORIGIN,
-    H_SEC_WS_VERSION,
-    H_SEC_WS_KEY,
-    H_SEC_WS_EXT,
-    H_SEC_WS_ACCEPT,
-    H_SEC_WS_PROTOCOL,
-    H_EXPIRES,
-	
-	H_OTHER
+        H_RECORD_ROUTE,
+        H_CONTENT_TYPE,
+        H_CONTENT_LENGTH,
+        H_MAX_FORWARDS,
+        H_CONNECTION,
+        H_UPGRADE,
+        H_ORIGIN,
+        H_SEC_WS_VERSION,
+        H_SEC_WS_KEY,
+        H_SEC_WS_EXT,
+        H_SEC_WS_ACCEPT,
+        H_SEC_WS_PROTOCOL,
+        H_EXPIRES,
+
+        H_OTHER
     };
 
     int     type;
     cstring name;
     cstring value;
 
-    sip_parsed_hdr* p;
+    sip_parsed_hdr *p;
 
     sip_header();
-    sip_header(const sip_header& hdr);
-    sip_header(int type, const cstring& name, const cstring& value);
+    sip_header(const sip_header &hdr);
+    sip_header(int type, const cstring &name, const cstring &value);
     ~sip_header();
 };
 
-int parse_header_type(sip_header* h);
+int parse_header_type(sip_header *h);
 
-int parse_headers(list<sip_header*>& hdrs, char** c, char* end);
-void free_headers(list<sip_header*>& hdrs);
+int  parse_headers(list<sip_header *> &hdrs, char **c, char *end);
+void free_headers(list<sip_header *> &hdrs);
 
 #endif
 

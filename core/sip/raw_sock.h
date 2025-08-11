@@ -20,7 +20,7 @@
  *  @ingroup core
  *  Module: @ref core
  */
-/* 
+/*
  * History:
  * --------
  *  2010-06-07  initial version (from older code) andrei
@@ -31,20 +31,15 @@
 
 #include <sys/socket.h>
 
-int raw_socket(int ip_version, int proto, sockaddr_storage* ip, int iphdr_incl);
+int raw_socket(int ip_version, int proto, sockaddr_storage *ip, int iphdr_incl);
 int raw_udp_socket(int iphdr_incl);
 int raw_udp_socket6(int iphdr_incl);
 
-int raw_udp4_send(int rsock, char* buf, unsigned int len,
-		  sockaddr_storage* from, sockaddr_storage* to);
+int raw_udp4_send(int rsock, char *buf, unsigned int len, sockaddr_storage *from, sockaddr_storage *to);
 
-int raw_iphdr_udp4_send(int rsock, const char* buf, unsigned int len,
-			const sockaddr_storage* from,
-			const sockaddr_storage* to,
-			unsigned short mtu, int tos);
+int raw_iphdr_udp4_send(int rsock, const char *buf, unsigned int len, const sockaddr_storage *from,
+                        const sockaddr_storage *to, unsigned short mtu, int tos);
 
-int raw_iphdr_udp6_send(int rsock, const char* buf, unsigned int len,
-			const sockaddr_storage* from,
-			const sockaddr_storage* to,
-			unsigned short mtu, int tos);
+int raw_iphdr_udp6_send(int rsock, const char *buf, unsigned int len, const sockaddr_storage *from,
+                        const sockaddr_storage *to, unsigned short mtu, int tos);
 #endif /* _raw_sock_h */

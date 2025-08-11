@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -34,35 +34,36 @@
 struct sip_nameaddr;
 struct sip_uri;
 
-struct route_elmt
-{
-  sip_nameaddr* addr;
-  cstring       route;
+struct route_elmt {
+    sip_nameaddr *addr;
+    cstring       route;
 
-  route_elmt()
-    : addr(NULL), route()
-  {}
+    route_elmt()
+        : addr(NULL)
+        , route()
+    {
+    }
 
-  ~route_elmt();
+    ~route_elmt();
 };
 
-struct sip_route: public sip_parsed_hdr
-{
-  list<route_elmt*> elmts;
+struct sip_route : public sip_parsed_hdr {
+    list<route_elmt *> elmts;
 
-  sip_route() 
-    : sip_parsed_hdr(),
-      elmts()
-  {}
+    sip_route()
+        : sip_parsed_hdr()
+        , elmts()
+    {
+    }
 
-  ~sip_route();
+    ~sip_route();
 };
 
-int parse_route(sip_header* rh);
+int parse_route(sip_header *rh);
 
-int parse_first_route_uri(sip_header* fr);
-sip_uri* get_first_route_uri(sip_header* fr);
+int      parse_first_route_uri(sip_header *fr);
+sip_uri *get_first_route_uri(sip_header *fr);
 
-bool is_loose_route(const sip_uri* fr_uri);
+bool is_loose_route(const sip_uri *fr_uri);
 
 #endif

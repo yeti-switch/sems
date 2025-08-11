@@ -28,7 +28,7 @@ extern const WebRtc_UWord16 WebRtcIsac_kQPitchGainCdf[255];
 /* index limits and ranges */
 extern const WebRtc_Word16 WebRtcIsac_kIndexLowerLimitGain[3];
 
-extern const WebRtc_Word16 WebRtcIsac_kIndexUpperLimitGain[3];
+extern const WebRtc_Word16  WebRtcIsac_kIndexUpperLimitGain[3];
 extern const WebRtc_UWord16 WebRtcIsac_kIndexMultsGain[2];
 
 /* mean values of pitch filter gains */

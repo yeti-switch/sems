@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -37,7 +37,7 @@
 
 #include "atomic_types.h"
 
-#define BITS_PER_WHEEL 8
+#define BITS_PER_WHEEL  8
 #define ELMTS_PER_WHEEL (1 << BITS_PER_WHEEL)
 
 // 20 ms == 20000 us
@@ -48,55 +48,61 @@
 
 class base_timer
 #ifdef OBJECTS_COUNTER
-  : ObjCounter(base_timer)
+    : ObjCounter(base_timer)
 #endif
 {
-public:
-    base_timer* next;
+  public:
+    base_timer *next;
 
-    base_timer():next(0) {}
+    base_timer()
+        : next(0)
+    {
+    }
     virtual ~base_timer() {}
 };
 
-class timer: public base_timer
-{
-public:
-    base_timer*  prev;
-    u_int32_t    expires;
+class timer : public base_timer {
+  public:
+    base_timer *prev;
+    u_int32_t   expires;
 
-    timer() 
-	: base_timer(),
-	  prev(0), expires(0) 
-    {}
+    timer()
+        : base_timer()
+        , prev(0)
+        , expires(0)
+    {
+    }
 
     timer(unsigned int expires)
-        : base_timer(),
-	  prev(0), expires(expires)
-    {}
+        : base_timer()
+        , prev(0)
+        , expires(expires)
+    {
+    }
 
-    ~timer(); 
+    ~timer();
 
-    virtual void fire()=0;
+    virtual void fire() = 0;
     virtual void onDelete() { delete this; };
 };
 
 #include "singleton.h"
 
-class _wheeltimer:
-    public AmThread
-{
+class _wheeltimer : public AmThread {
     struct timer_req {
 
-	timer* t;
-	bool   insert; // false -> remove
-	
-	timer_req(timer* t, bool insert)
-	    : t(t), insert(insert)
-	{}
+        timer *t;
+        bool   insert; // false -> remove
+
+        timer_req(timer *t, bool insert)
+            : t(t)
+            , insert(insert)
+        {
+        }
     };
 
     const char *thread_name;
-    //the timer wheel
+    // the timer wheel
     base_timer wheels[WHEELS][ELMTS_PER_WHEEL];
 
     AmCondition<bool> is_stop;
@@ -108,35 +114,35 @@ class _wheeltimer:
     void turn_wheel();
     void update_wheel(int wheel);
 
-    void place_timer(timer* t);
-    void place_timer(timer* t, int wheel);
+    void place_timer(timer *t);
+    void place_timer(timer *t, int wheel);
 
-    void add_timer_to_wheel(timer* t, int wheel, unsigned int pos);
-    void delete_timer(timer* t);
+    void add_timer_to_wheel(timer *t, int wheel, unsigned int pos);
+    void delete_timer(timer *t);
 
     void process_current_timers();
 
-protected:
+  protected:
     void run();
-    void on_stop(){is_stop.set(true);}
+    void on_stop() { is_stop.set(true); }
 
     _wheeltimer(const char *thread_name = "sip-wheeltimer");
     ~_wheeltimer();
-    void dispose(){}
+    void dispose() {}
 
-public:
-    //clock reference
+  public:
+    // clock reference
     volatile u_int32_t wall_clock; // 32 bits
 #ifdef __LP64__
-    atomic_int64 unix_clock; // 64 bits
+    atomic_int64 unix_clock;    // 64 bits
     atomic_int64 unix_ms_clock; // 64 bits
 #else
-    atomic_int unix_clock; // 32 bits
+    atomic_int unix_clock;    // 32 bits
     atomic_int unix_ms_clock; // 32 bits
 #endif
 
-    void insert_timer(timer* t);
-    void remove_timer(timer* t);
+    void insert_timer(timer *t);
+    void remove_timer(timer *t);
 };
 
 typedef singleton<_wheeltimer> wheeltimer;

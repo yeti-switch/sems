@@ -44,32 +44,27 @@
    override police_event() function.
  */
 
-class AmEventProcessingThread
-: public AmThread,
-  public AmEventQueue,
-  public AmEventHandler
-{
-  
-  bool processing_events;
+class AmEventProcessingThread : public AmThread, public AmEventQueue, public AmEventHandler {
 
-  void process(AmEvent* ev);
+    bool processing_events;
 
- protected:
-  void run();
-  void on_stop();
+    void process(AmEvent *ev);
 
-  virtual void onEvent(AmEvent* ev) { }
+  protected:
+    void run();
+    void on_stop();
 
-  virtual bool police_event(AmEvent* ev);
+    virtual void onEvent(AmEvent *ev) {}
 
- public:
-  AmEventProcessingThread();
-  ~AmEventProcessingThread();
+    virtual bool police_event(AmEvent *ev);
 
-  void postEvent(AmEvent* ev);
+  public:
+    AmEventProcessingThread();
+    ~AmEventProcessingThread();
 
-  void stop_processing();
+    void postEvent(AmEvent *ev);
 
+    void stop_processing();
 };
 
 #endif

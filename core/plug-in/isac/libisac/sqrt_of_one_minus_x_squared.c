@@ -17,19 +17,17 @@
 
 #include "signal_processing_library.h"
 
-void WebRtcSpl_SqrtOfOneMinusXSquared(WebRtc_Word16 *xQ15, int vector_length,
-                                      WebRtc_Word16 *yQ15)
+void WebRtcSpl_SqrtOfOneMinusXSquared(WebRtc_Word16 *xQ15, int vector_length, WebRtc_Word16 *yQ15)
 {
     WebRtc_Word32 sq;
-    int m;
+    int           m;
     WebRtc_Word16 tmp;
 
-    for (m = 0; m < vector_length; m++)
-    {
-        tmp = xQ15[m];
-        sq = WEBRTC_SPL_MUL_16_16(tmp, tmp); // x^2 in Q30
-        sq = 1073741823 - sq; // 1-x^2, where 1 ~= 0.99999999906 is 1073741823 in Q30
-        sq = WebRtcSpl_Sqrt(sq); // sqrt(1-x^2) in Q15
+    for (m = 0; m < vector_length; m++) {
+        tmp     = xQ15[m];
+        sq      = WEBRTC_SPL_MUL_16_16(tmp, tmp); // x^2 in Q30
+        sq      = 1073741823 - sq;                // 1-x^2, where 1 ~= 0.99999999906 is 1073741823 in Q30
+        sq      = WebRtcSpl_Sqrt(sq);             // sqrt(1-x^2) in Q15
         yQ15[m] = (WebRtc_Word16)sq;
     }
 }

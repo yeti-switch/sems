@@ -22,10 +22,7 @@
 #include "structs.h"
 
 /* decode complex spectrum (return number of bytes in stream) */
-int WebRtcIsac_DecodeSpecLb(Bitstr *streamdata,
-                            double *fr,
-                            double *fi,
-                            WebRtc_Word16 AvgPitchGain_Q12);
+int WebRtcIsac_DecodeSpecLb(Bitstr *streamdata, double *fr, double *fi, WebRtc_Word16 AvgPitchGain_Q12);
 
 /******************************************************************************
  * WebRtcIsac_DecodeSpecUB16()
@@ -48,10 +45,7 @@ int WebRtcIsac_DecodeSpecLb(Bitstr *streamdata,
  * Return value             : < 0 if an error occures
  *                              0 if succeeded.
  */
-int WebRtcIsac_DecodeSpecUB16(
-    Bitstr* streamdata,
-    double* fr,
-    double* fi);
+int WebRtcIsac_DecodeSpecUB16(Bitstr *streamdata, double *fr, double *fi);
 
 
 /******************************************************************************
@@ -75,16 +69,11 @@ int WebRtcIsac_DecodeSpecUB16(
  * Return value             : < 0 if an error occures
  *                              0 if succeeded.
  */
-int WebRtcIsac_DecodeSpecUB12(
-    Bitstr* streamdata,
-    double* fr,
-    double* fi);
+int WebRtcIsac_DecodeSpecUB12(Bitstr *streamdata, double *fr, double *fi);
 
 
 /* encode complex spectrum */
-int WebRtcIsac_EncodeSpecLb(const WebRtc_Word16* fr,
-                            const WebRtc_Word16* fi,
-                            Bitstr* streamdata,
+int WebRtcIsac_EncodeSpecLb(const WebRtc_Word16 *fr, const WebRtc_Word16 *fi, Bitstr *streamdata,
                             WebRtc_Word16 AvgPitchGain_Q12);
 
 
@@ -109,10 +98,7 @@ int WebRtcIsac_EncodeSpecLb(const WebRtc_Word16* fr,
  * Return value             : < 0 if an error occures
  *                              0 if succeeded.
  */
-int WebRtcIsac_EncodeSpecUB16(
-    const WebRtc_Word16* fr,
-    const WebRtc_Word16* fi,
-    Bitstr*            streamdata);
+int WebRtcIsac_EncodeSpecUB16(const WebRtc_Word16 *fr, const WebRtc_Word16 *fi, Bitstr *streamdata);
 
 
 /******************************************************************************
@@ -136,25 +122,20 @@ int WebRtcIsac_EncodeSpecUB16(
  * Return value             : < 0 if an error occures
  *                              0 if succeeded.
  */
-int WebRtcIsac_EncodeSpecUB12(
-    const WebRtc_Word16* fr,
-    const WebRtc_Word16* fi,
-    Bitstr*            streamdata);
+int WebRtcIsac_EncodeSpecUB12(const WebRtc_Word16 *fr, const WebRtc_Word16 *fi, Bitstr *streamdata);
 
 
 /* decode & dequantize LPC Coef */
 int WebRtcIsac_DecodeLpcCoef(Bitstr *streamdata, double *LPCCoef, int *outmodel);
-int WebRtcIsac_DecodeLpcCoefUB(
-    Bitstr*     streamdata,
-    double*     lpcVecs,
-    double*     percepFilterGains,
-    WebRtc_Word16 bandwidth);
+int WebRtcIsac_DecodeLpcCoefUB(Bitstr *streamdata, double *lpcVecs, double *percepFilterGains, WebRtc_Word16 bandwidth);
 
 int WebRtcIsac_DecodeLpc(Bitstr *streamdata, double *LPCCoef_lo, double *LPCCoef_hi, int *outmodel);
 
 /* quantize & code LPC Coef */
-void WebRtcIsac_EncodeLpcLb(double *LPCCoef_lo, double *LPCCoef_hi, int *model, double *size, Bitstr *streamdata, ISAC_SaveEncData_t* encData);
-void WebRtcIsac_EncodeLpcGainLb(double *LPCCoef_lo, double *LPCCoef_hi, int model, Bitstr *streamdata, ISAC_SaveEncData_t* encData);
+void WebRtcIsac_EncodeLpcLb(double *LPCCoef_lo, double *LPCCoef_hi, int *model, double *size, Bitstr *streamdata,
+                            ISAC_SaveEncData_t *encData);
+void WebRtcIsac_EncodeLpcGainLb(double *LPCCoef_lo, double *LPCCoef_hi, int model, Bitstr *streamdata,
+                                ISAC_SaveEncData_t *encData);
 
 /******************************************************************************
  * WebRtcIsac_EncodeLpcUB()
@@ -189,12 +170,8 @@ void WebRtcIsac_EncodeLpcGainLb(double *LPCCoef_lo, double *LPCCoef_hi, int mode
  * Return value             : 0 if encoding is successful,
  *                           <0 if failed to encode.
  */
-WebRtc_Word16 WebRtcIsac_EncodeLpcUB(
-    double*                  lpcCoeff,
-    Bitstr*                  streamdata,
-    double*                  interpolLPCCoeff,
-    WebRtc_Word16              bandwidth,
-    ISACUBSaveEncDataStruct* encData);
+WebRtc_Word16 WebRtcIsac_EncodeLpcUB(double *lpcCoeff, Bitstr *streamdata, double *interpolLPCCoeff,
+                                     WebRtc_Word16 bandwidth, ISACUBSaveEncDataStruct *encData);
 
 /******************************************************************************
  * WebRtcIsac_DecodeInterpolLpcUb()
@@ -224,10 +201,7 @@ WebRtc_Word16 WebRtcIsac_EncodeLpcUB(
  * Return value             : 0 if encoding is successful,
  *                           <0 if failed to encode.
  */
-WebRtc_Word16 WebRtcIsac_DecodeInterpolLpcUb(
-    Bitstr*     streamdata,
-    double*     percepFilterParam,
-    WebRtc_Word16 bandwidth);
+WebRtc_Word16 WebRtcIsac_DecodeInterpolLpcUb(Bitstr *streamdata, double *percepFilterParam, WebRtc_Word16 bandwidth);
 
 /* decode & dequantize RC */
 int WebRtcIsac_DecodeRc(Bitstr *streamdata, WebRtc_Word16 *RCQ15);
@@ -241,16 +215,17 @@ int WebRtcIsac_DecodeGain2(Bitstr *streamdata, WebRtc_Word32 *Gain2);
 /* quantize & code squared Gain (input is squared gain) */
 int WebRtcIsac_EncodeGain2(WebRtc_Word32 *gain2, Bitstr *streamdata);
 
-void WebRtcIsac_EncodePitchGain(WebRtc_Word16* PitchGains_Q12, Bitstr* streamdata,  ISAC_SaveEncData_t* encData);
+void WebRtcIsac_EncodePitchGain(WebRtc_Word16 *PitchGains_Q12, Bitstr *streamdata, ISAC_SaveEncData_t *encData);
 
-void WebRtcIsac_EncodePitchLag(double* PitchLags, WebRtc_Word16* PitchGain_Q12, Bitstr* streamdata, ISAC_SaveEncData_t* encData);
+void WebRtcIsac_EncodePitchLag(double *PitchLags, WebRtc_Word16 *PitchGain_Q12, Bitstr *streamdata,
+                               ISAC_SaveEncData_t *encData);
 
 int WebRtcIsac_DecodePitchGain(Bitstr *streamdata, WebRtc_Word16 *PitchGain_Q12);
 int WebRtcIsac_DecodePitchLag(Bitstr *streamdata, WebRtc_Word16 *PitchGain_Q12, double *PitchLag);
 
-int WebRtcIsac_DecodeFrameLen(Bitstr *streamdata, WebRtc_Word16 *framelength);
-int WebRtcIsac_EncodeFrameLen(WebRtc_Word16 framelength, Bitstr *streamdata);
-int WebRtcIsac_DecodeSendBW(Bitstr *streamdata, WebRtc_Word16 *BWno);
+int  WebRtcIsac_DecodeFrameLen(Bitstr *streamdata, WebRtc_Word16 *framelength);
+int  WebRtcIsac_EncodeFrameLen(WebRtc_Word16 framelength, Bitstr *streamdata);
+int  WebRtcIsac_DecodeSendBW(Bitstr *streamdata, WebRtc_Word16 *BWno);
 void WebRtcIsac_EncodeReceiveBw(int *BWno, Bitstr *streamdata);
 
 /* step-down */
@@ -259,8 +234,7 @@ void WebRtcIsac_Poly2Rc(double *a, int N, double *RC);
 /* step-up */
 void WebRtcIsac_Rc2Poly(double *RC, int N, double *a);
 
-void WebRtcIsac_TranscodeLPCCoef(double *LPCCoef_lo, double *LPCCoef_hi, int model,
-                                 int *index_g);
+void WebRtcIsac_TranscodeLPCCoef(double *LPCCoef_lo, double *LPCCoef_hi, int model, int *index_g);
 
 
 /******************************************************************************
@@ -279,10 +253,7 @@ void WebRtcIsac_TranscodeLPCCoef(double *LPCCoef_lo, double *LPCCoef_hi, int mod
  *  - lpcGainIndex          : quantization indices for lpc gains, these will
  *                            be stored to be used  for FEC.
  */
-void WebRtcIsac_EncodeLpcGainUb(
-    double* lpGains,
-    Bitstr* streamdata,
-    int*    lpcGainIndex);
+void WebRtcIsac_EncodeLpcGainUb(double *lpGains, Bitstr *streamdata, int *lpcGainIndex);
 
 
 /******************************************************************************
@@ -298,9 +269,7 @@ void WebRtcIsac_EncodeLpcGainUb(
  *                            coding.
  *
  */
-void WebRtcIsac_StoreLpcGainUb(
-    double* lpGains,
-    Bitstr* streamdata);
+void WebRtcIsac_StoreLpcGainUb(double *lpGains, Bitstr *streamdata);
 
 
 /******************************************************************************
@@ -318,9 +287,7 @@ void WebRtcIsac_StoreLpcGainUb(
  * Return value             : 0 if succeeded.
  *                           <0 if failed.
  */
-WebRtc_Word16 WebRtcIsac_DecodeLpcGainUb(
-    double* lpGains,
-    Bitstr* streamdata);
+WebRtc_Word16 WebRtcIsac_DecodeLpcGainUb(double *lpGains, Bitstr *streamdata);
 
 
 /******************************************************************************
@@ -339,9 +306,7 @@ WebRtc_Word16 WebRtcIsac_DecodeLpcGainUb(
  * Return value             : 0 if succeeded.
  *                           <0 if failed.
  */
-WebRtc_Word16 WebRtcIsac_EncodeBandwidth(
-    enum ISACBandwidth bandwidth,
-    Bitstr*            streamData);
+WebRtc_Word16 WebRtcIsac_EncodeBandwidth(enum ISACBandwidth bandwidth, Bitstr *streamData);
 
 
 /******************************************************************************
@@ -361,9 +326,7 @@ WebRtc_Word16 WebRtcIsac_EncodeBandwidth(
  * Return value             : 0 if succeeded.
  *                           <0 if failed.
  */
-WebRtc_Word16 WebRtcIsac_DecodeBandwidth(
-    Bitstr*             streamData,
-    enum ISACBandwidth* bandwidth);
+WebRtc_Word16 WebRtcIsac_DecodeBandwidth(Bitstr *streamData, enum ISACBandwidth *bandwidth);
 
 
 /******************************************************************************
@@ -383,9 +346,7 @@ WebRtc_Word16 WebRtcIsac_DecodeBandwidth(
  * Return value             : 0 if succeeded.
  *                           <0 if failed.
  */
-WebRtc_Word16 WebRtcIsac_EncodeJitterInfo(
-    WebRtc_Word32 jitterIndex,
-    Bitstr*     streamData);
+WebRtc_Word16 WebRtcIsac_EncodeJitterInfo(WebRtc_Word32 jitterIndex, Bitstr *streamData);
 
 
 /******************************************************************************
@@ -405,8 +366,6 @@ WebRtc_Word16 WebRtcIsac_EncodeJitterInfo(
  * Return value             : 0 if succeeded.
  *                           <0 if failed.
  */
-WebRtc_Word16 WebRtcIsac_DecodeJitterInfo(
-    Bitstr*      streamData,
-    WebRtc_Word32* jitterInfo);
+WebRtc_Word16 WebRtcIsac_DecodeJitterInfo(Bitstr *streamData, WebRtc_Word32 *jitterInfo);
 
 #endif /* WEBRTC_MODULES_AUDIO_CODING_CODECS_ISAC_MAIN_SOURCE_ENTROPY_CODING_H_ */

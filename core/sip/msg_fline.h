@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -39,49 +39,37 @@ struct sip_msg;
 //
 // Request-line builder
 //
-inline int sip_request_line_len(const cstring& method,
-			    const cstring& ruri)
+inline int sip_request_line_len(const cstring &method, const cstring &ruri)
 {
-    return method.len + ruri.len + SIPVER_len
-	+ 4; // 2*SP + CRLF
+    return method.len + ruri.len + SIPVER_len + 4; // 2*SP + CRLF
 }
 
-inline int http_request_line_len(const cstring& method,
-			    const cstring& ruri)
+inline int http_request_line_len(const cstring &method, const cstring &ruri)
 {
-    return method.len + ruri.len + HTTPVER_len
-	+ 4; // 2*SP + CRLF
+    return method.len + ruri.len + HTTPVER_len + 4; // 2*SP + CRLF
 }
 
-void sip_request_line_wr(char** c,
-		     const cstring& method,
-		     const cstring& ruri);
+void sip_request_line_wr(char **c, const cstring &method, const cstring &ruri);
 
-void http_request_line_wr(char** c,
-		     const cstring& method,
-		     const cstring& ruri);
+void http_request_line_wr(char **c, const cstring &method, const cstring &ruri);
 
 //
 // Status-line builder
 //
-inline int sip_status_line_len(const cstring& reason)
+inline int sip_status_line_len(const cstring &reason)
 {
-    return SIPVER_len + 3/*status code*/
-	+ reason.len
-	+ 4; // 2*SP + CRLF
+    return SIPVER_len + 3    /*status code*/
+           + reason.len + 4; // 2*SP + CRLF
 }
-inline int http_status_line_len(const cstring& reason)
+inline int http_status_line_len(const cstring &reason)
 {
-    return HTTPVER_len + 3/*status code*/
-	+ reason.len
-	+ 4; // 2*SP + CRLF
+    return HTTPVER_len + 3   /*status code*/
+           + reason.len + 4; // 2*SP + CRLF
 }
 
-void sip_status_line_wr(char** c, int status_code,
-		    const cstring& reason);
+void sip_status_line_wr(char **c, int status_code, const cstring &reason);
 
-void http_status_line_wr(char** c, int status_code,
-		    const cstring& reason);
+void http_status_line_wr(char **c, int status_code, const cstring &reason);
 
 
 #endif

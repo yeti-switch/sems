@@ -21,8 +21,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "parse_nameaddr.h"
@@ -33,336 +33,304 @@
 
 sip_nameaddr::~sip_nameaddr()
 {
-  free_gen_params(&params);
+    free_gen_params(&params);
 }
 
-int parse_nameaddr(sip_nameaddr* na, const char** c, int len)
+int parse_nameaddr(sip_nameaddr *na, const char **c, int len)
 {
     enum {
 
-	NA_SWS,
-	NA_MAYBE_URI,
-	NA_MAYBE_URI_END,
-	NA_DISP,
-	NA_DISP_ENDING_SPACES,
-	NA_DISP_QUOTED,
-	NA_DISP_LAQUOT,
-	NA_URI
+        NA_SWS,
+        NA_MAYBE_URI,
+        NA_MAYBE_URI_END,
+        NA_DISP,
+        NA_DISP_ENDING_SPACES,
+        NA_DISP_QUOTED,
+        NA_DISP_LAQUOT,
+        NA_URI
     };
 
 
-    const char* beg = *c;
-    const char* end = *c + len;
+    const char *beg      = *c;
+    const char *end      = *c + len;
     const char *name_end = NULL;
 
-    const char* uri_end=0;
+    const char *uri_end = 0;
 
-    int saved_st=0, st=NA_SWS;
-    //int ret=0;
+    int saved_st = 0, st = NA_SWS;
+    // int ret=0;
 
-    for(;*c!=end;(*c)++){
-	switch(st){
+    for (; *c != end; (*c)++) {
+        switch (st) {
 
-	case NA_SWS:
-	    switch(**c){
+        case NA_SWS:
+            switch (**c) {
 
-	    case '\"':
-		st = NA_DISP_QUOTED;
-	        beg = *c;
-		break;
+            case '\"':
+                st  = NA_DISP_QUOTED;
+                beg = *c;
+                break;
 
-	    case '<':
-		st = NA_URI;
-		beg = *c+1;
-		break;
+            case '<':
+                st  = NA_URI;
+                beg = *c + 1;
+                break;
 
-	    case CR:
-	    case LF:
-	    case SP:
-	    case HTAB:
-		break;
+            case CR:
+            case LF:
+            case SP:
+            case HTAB: break;
 
-	    default:
-		st = NA_MAYBE_URI;
-		beg = *c;
-		break;
-	    }
-	    break;
+            default:
+                st  = NA_MAYBE_URI;
+                beg = *c;
+                break;
+            }
+            break;
 
-	case NA_MAYBE_URI:
-	    switch(**c){
+        case NA_MAYBE_URI:
+            switch (**c) {
 
-	    case_CR_LF;
+                case_CR_LF;
 
-	    case SP:
-	    case HTAB:
-		st = NA_MAYBE_URI_END;
-		uri_end = *c;
-		break;
+            case SP:
+            case HTAB:
+                st      = NA_MAYBE_URI_END;
+                uri_end = *c;
+                break;
 
-	    case '<':
-		st = NA_URI;
-		na->name.set(beg, *c - beg);
-		beg = *c+1;		
-		break;
+            case '<':
+                st = NA_URI;
+                na->name.set(beg, *c - beg);
+                beg = *c + 1;
+                break;
 
-	    case ';':
-		na->addr.set(beg, *c - beg);
-		return parse_gen_params_sc(&na->params,c, end-*c, 0);
-	    }
-	    break;
+            case ';': na->addr.set(beg, *c - beg); return parse_gen_params_sc(&na->params, c, end - *c, 0);
+            }
+            break;
 
-	case NA_MAYBE_URI_END:
-	    switch(**c){
+        case NA_MAYBE_URI_END:
+            switch (**c) {
 
-	    case_CR_LF;
+                case_CR_LF;
 
-	    case ';':
-		na->addr.set(beg, uri_end - beg);
-		return parse_gen_params_sc(&na->params,c, end-*c, 0);
+            case ';': na->addr.set(beg, uri_end - beg); return parse_gen_params_sc(&na->params, c, end - *c, 0);
 
-	    case '<':
-		st = NA_URI;
-		na->name.set(beg, uri_end - beg);
-		beg = *c+1;
-		break;
+            case '<':
+                st = NA_URI;
+                na->name.set(beg, uri_end - beg);
+                beg = *c + 1;
+                break;
 
-	    case SP:
-	    case HTAB:
-		break;
+            case SP:
+            case HTAB: break;
 
-	    default:
-		st = NA_DISP;
-		break;
-	    }
-	    break;
+            default:   st = NA_DISP; break;
+            }
+            break;
 
-	case NA_DISP:
-	    switch(**c){
+        case NA_DISP:
+            switch (**c) {
 
-	    case '\"':
-		st = NA_DISP_QUOTED;
-	        beg = *c;
-		break;
+            case '\"':
+                st  = NA_DISP_QUOTED;
+                beg = *c;
+                break;
 
-	    case '<':
-		st = NA_URI;
-		na->name.set(beg, *c - beg);
-		beg = *c+1;
-		break;
-		case SP:
-			st = NA_DISP_ENDING_SPACES;
-			name_end = *c;
-			break;
-		}
-		break;
+            case '<':
+                st = NA_URI;
+                na->name.set(beg, *c - beg);
+                beg = *c + 1;
+                break;
+            case SP:
+                st       = NA_DISP_ENDING_SPACES;
+                name_end = *c;
+                break;
+            }
+            break;
 
-	case NA_DISP_ENDING_SPACES:
-		switch(**c){
-		case '\"':
-			st = NA_DISP_QUOTED;
-			beg = *c;
-			break;
-		case '<':
-			st = NA_URI;
-			na->name.set(beg, name_end-beg);
-			beg = *c+1;
-			break;
-		case SP:
-			break;
-		default:
-			st = NA_DISP;
-		}
-		break;
+        case NA_DISP_ENDING_SPACES:
+            switch (**c) {
+            case '\"':
+                st  = NA_DISP_QUOTED;
+                beg = *c;
+                break;
+            case '<':
+                st = NA_URI;
+                na->name.set(beg, name_end - beg);
+                beg = *c + 1;
+                break;
+            case SP: break;
+            default: st = NA_DISP;
+            }
+            break;
 
-	case NA_DISP_QUOTED:
-	    switch(**c){
+        case NA_DISP_QUOTED:
+            switch (**c) {
 
-	    case '\"':
-		st = NA_DISP_LAQUOT;
-		na->name.set(beg, *c - beg + 1);
-		break;
+            case '\"':
+                st = NA_DISP_LAQUOT;
+                na->name.set(beg, *c - beg + 1);
+                break;
 
-	    case '\\':
-		if(!*(++(*c))){
-		    DBG("Escape char in quoted str at EoT!!!");
-		    return MALFORMED_SIP_MSG;
-		}
-		break;
-	    }
-	    break;
+            case '\\':
+                if (!*(++(*c))) {
+                    DBG("Escape char in quoted str at EoT!!!");
+                    return MALFORMED_SIP_MSG;
+                }
+                break;
+            }
+            break;
 
-	case NA_DISP_LAQUOT:
-	    switch(**c){
+        case NA_DISP_LAQUOT:
+            switch (**c) {
 
-	    case_CR_LF;
+                case_CR_LF;
 
-	    case '<':
-		st = NA_URI;
-		beg = *c+1;
-		break;
+            case '<':
+                st  = NA_URI;
+                beg = *c + 1;
+                break;
 
-	    case SP:
-	    case HTAB:
-		break;
+            case SP:
+            case HTAB: break;
 
-	    default:
-		DBG("'<' expected, found %c",**c);
-		return MALFORMED_SIP_MSG;
-	    }
-	    break;
+            default:   DBG("'<' expected, found %c", **c); return MALFORMED_SIP_MSG;
+            }
+            break;
 
-	case NA_URI:
-	    if(**c == '>'){
+        case NA_URI:
+            if (**c == '>') {
 
-		na->addr.set(beg, *c - beg);
-		(*c)++;
-		return parse_gen_params_sc(&na->params,c, end-*c, 0);
-	    }
-	    break;
+                na->addr.set(beg, *c - beg);
+                (*c)++;
+                return parse_gen_params_sc(&na->params, c, end - *c, 0);
+            }
+            break;
 
-	case_ST_CR(**c);
+            case_ST_CR(**c);
 
-	case ST_LF:
-	case ST_CRLF:
-	    switch(saved_st){
-	    case NA_MAYBE_URI:
-		saved_st = NA_MAYBE_URI_END;
-		uri_end = *c - (st==ST_CRLF?2:1);
-		break;
-	    }
-	    st = saved_st;
-	    break;
-	}
+        case ST_LF:
+        case ST_CRLF:
+            switch (saved_st) {
+            case NA_MAYBE_URI:
+                saved_st = NA_MAYBE_URI_END;
+                uri_end  = *c - (st == ST_CRLF ? 2 : 1);
+                break;
+            }
+            st = saved_st;
+            break;
+        }
     }
 
 
-    switch(st){
-    case NA_MAYBE_URI:
-	uri_end = *c;
-    case NA_MAYBE_URI_END:
-	na->addr.set(beg, uri_end - beg);
-	break;
+    switch (st) {
+    case NA_MAYBE_URI:     uri_end = *c;
+    case NA_MAYBE_URI_END: na->addr.set(beg, uri_end - beg); break;
 
-    default:
-	DBG("Incomplete name-addr (st=%i) <%.*s>",st,(int)(end-beg),beg);
-	return MALFORMED_SIP_MSG;
+    default:               DBG("Incomplete name-addr (st=%i) <%.*s>", st, (int)(end - beg), beg); return MALFORMED_SIP_MSG;
     }
-    
-    return parse_gen_params_sc(&na->params,c, end-*c, 0);
+
+    return parse_gen_params_sc(&na->params, c, end - *c, 0);
 }
 
-int parse_nameaddr_uri(sip_nameaddr* na, const char** c, int len)
+int parse_nameaddr_uri(sip_nameaddr *na, const char **c, int len)
 {
-    if(parse_nameaddr(na, c, len) < 0) {
-      
-      DBG("Parsing name-addr failed");
-      return -1;
+    if (parse_nameaddr(na, c, len) < 0) {
+
+        DBG("Parsing name-addr failed");
+        return -1;
     }
-    
-    if(parse_uri(&na->uri,na->addr.s,na->addr.len) < 0) {
-	
-	DBG("Parsing uri failed");
-	return -1;
+
+    if (parse_uri(&na->uri, na->addr.s, na->addr.len) < 0) {
+
+        DBG("Parsing uri failed");
+        return -1;
     }
 
     return 0;
 }
 
-static int skip_2_next_nameaddr(const char*& c, 
-				const char*& na_end,
-				const char*  end)
+static int skip_2_next_nameaddr(const char *&c, const char *&na_end, const char *end)
 {
-    assert(c && end && (c<=end));
+    assert(c && end && (c <= end));
 
     // detect beginning of next nameaddr
     enum {
-	RR_BEGIN=0,
-	RR_QUOTED,
-	RR_SWS,
-	RR_SEP_SWS,  // space(s) after ','
-	RR_NXT_NA
+        RR_BEGIN = 0,
+        RR_QUOTED,
+        RR_SWS,
+        RR_SEP_SWS, // space(s) after ','
+        RR_NXT_NA
     };
 
     int st = RR_BEGIN;
     na_end = NULL;
-    for(;c<end;c++){
-		
-	switch(st){
-	case RR_BEGIN:
-	    switch(*c){
-	    case SP:
-	    case HTAB:
-	    case CR:
-	    case LF:
-	        st = RR_SWS;
-	        na_end = c;
-		break;
-	    case COMMA:
-		st = RR_SEP_SWS;
-		na_end = c;
-		break;
-	    case DQUOTE:
-		st = RR_QUOTED;
-		break;
-	    }
-	    break;
-	case RR_QUOTED:
-	    switch(*c){
-	    case BACKSLASH:
-		if(++c == end) goto error;
-		break;
-	    case DQUOTE:
-		st = RR_BEGIN;
-		break;
-	    }
-	    break;
-	case RR_SWS:
-	    switch(*c){
-	    case SP:
-	    case HTAB:
-	    case CR:
-	    case LF:
-		break;
-	    case COMMA:
-		st = RR_SEP_SWS;
-		break;
-	    default:
-		st = RR_BEGIN;
-		na_end = NULL;
-		break;
-	    }
-	    break;
-	case RR_SEP_SWS:
-	    switch(*c){
-	    case SP:
-	    case HTAB:
-	    case CR:
-	    case LF:
-		break;
-	    default:
-		st = RR_NXT_NA;
-		goto nxt_nameaddr;
-	    }
-	    break;
-	}
+    for (; c < end; c++) {
+
+        switch (st) {
+        case RR_BEGIN:
+            switch (*c) {
+            case SP:
+            case HTAB:
+            case CR:
+            case LF:
+                st     = RR_SWS;
+                na_end = c;
+                break;
+            case COMMA:
+                st     = RR_SEP_SWS;
+                na_end = c;
+                break;
+            case DQUOTE: st = RR_QUOTED; break;
+            }
+            break;
+        case RR_QUOTED:
+            switch (*c) {
+            case BACKSLASH:
+                if (++c == end)
+                    goto error;
+                break;
+            case DQUOTE: st = RR_BEGIN; break;
+            }
+            break;
+        case RR_SWS:
+            switch (*c) {
+            case SP:
+            case HTAB:
+            case CR:
+            case LF:    break;
+            case COMMA: st = RR_SEP_SWS; break;
+            default:
+                st     = RR_BEGIN;
+                na_end = NULL;
+                break;
+            }
+            break;
+        case RR_SEP_SWS:
+            switch (*c) {
+            case SP:
+            case HTAB:
+            case CR:
+            case LF:   break;
+            default:   st = RR_NXT_NA; goto nxt_nameaddr;
+            }
+            break;
+        }
     }
 
- nxt_nameaddr:
- error:
-	    
-    switch(st){
-    case RR_QUOTED:
-	DBG("Malformed nameaddr");
-	return -1;
+nxt_nameaddr:
+error:
+
+    switch (st) {
+    case RR_QUOTED: DBG("Malformed nameaddr"); return -1;
 
     case RR_SEP_SWS: // not fine, but acceptable
-    case RR_BEGIN: // end of route header
+    case RR_BEGIN:   // end of route header
         na_end = c;
         return 0;
 
-    case RR_NXT_NA:
-        return 1; // next nameaddr available
+    case RR_NXT_NA: return 1; // next nameaddr available
     }
 
     // should never be reached
@@ -370,44 +338,44 @@ static int skip_2_next_nameaddr(const char*& c,
     return 0;
 }
 
-int parse_nameaddr_list(list<cstring>& nas, const char* c, int len)
+int parse_nameaddr_list(list<cstring> &nas, const char *c, int len)
 {
-    const char* end = c + len;
-    const char* na_end = NULL;
+    const char *end    = c + len;
+    const char *na_end = NULL;
 
-    while(c < end) {
+    while (c < end) {
 
-      const char* na_begin = c;
-      int err = skip_2_next_nameaddr(c,na_end,end);
-      if(err < 0){
-	ERROR("While parsing nameaddr list ('%.*s')",len,na_begin);
-	return -1;
-      }
+        const char *na_begin = c;
+        int         err      = skip_2_next_nameaddr(c, na_end, end);
+        if (err < 0) {
+            ERROR("While parsing nameaddr list ('%.*s')", len, na_begin);
+            return -1;
+        }
 
-      if(na_end) {
-	nas.push_back(cstring(na_begin, na_end-na_begin));
-      }
+        if (na_end) {
+            nas.push_back(cstring(na_begin, na_end - na_begin));
+        }
 
-      if(err == 0)
-	break;
+        if (err == 0)
+            break;
     }
 
     return 0;
 }
 
-int parse_first_nameaddr(sip_nameaddr* na, const char* c, int len)
+int parse_first_nameaddr(sip_nameaddr *na, const char *c, int len)
 {
-  const char* tmp_c = c;
-  const char* end = c + len;
-  const char* na_end = NULL;
-  //const char* na_begin = c;
+    const char *tmp_c  = c;
+    const char *end    = c + len;
+    const char *na_end = NULL;
+    // const char* na_begin = c;
 
-  int err = skip_2_next_nameaddr(tmp_c,na_end,end);
-  if(err < 0){
-    ERROR("While parsing first nameaddr ('%.*s')",len,c);
-    return -1;
-  }
+    int err = skip_2_next_nameaddr(tmp_c, na_end, end);
+    if (err < 0) {
+        ERROR("While parsing first nameaddr ('%.*s')", len, c);
+        return -1;
+    }
 
-  tmp_c = c;
-  return parse_nameaddr(na,&tmp_c,na_end-tmp_c);
+    tmp_c = c;
+    return parse_nameaddr(na, &tmp_c, na_end - tmp_c);
 }

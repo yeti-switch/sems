@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _sip_timers_h_
@@ -35,29 +35,29 @@
 enum sip_timer_type {
 
     // INVITE client transaction
-    STIMER_A=0,// Calling: (re-)send INV
-    STIMER_B,  // Calling -> Terminated
-    STIMER_D,  // Completed -> Terminated
+    STIMER_A = 0, // Calling: (re-)send INV
+    STIMER_B,     // Calling -> Terminated
+    STIMER_D,     // Completed -> Terminated
 
     // non-INVITE client transaction
-    STIMER_E,  // Trying/Proceeding: (re-)send request
-    STIMER_F,  // Trying/Proceeding -> Terminated
-    STIMER_K,  // Completed -> Terminated
+    STIMER_E, // Trying/Proceeding: (re-)send request
+    STIMER_F, // Trying/Proceeding -> Terminated
+    STIMER_K, // Completed -> Terminated
 
     // INVITE server transaction
-    STIMER_G,  // Completed: (re-)send response
-    STIMER_H,  // Completed -> Terminated
-    STIMER_I,  // Confirmed -> Terminated
+    STIMER_G, // Completed: (re-)send response
+    STIMER_H, // Completed -> Terminated
+    STIMER_I, // Confirmed -> Terminated
 
     // non-INVITE server transaction
-    STIMER_J,  // Completed -> Terminated
+    STIMER_J, // Completed -> Terminated
 
     // These timers are not defined by
-    // RFC 3261. 
+    // RFC 3261.
 
     // Used to handle 200 ACKs automatically
     // in INVITE client transactions.
-    STIMER_L,  // Terminated_200 -> Terminated
+    STIMER_L, // Terminated_200 -> Terminated
 
     // Transport address failover timer:
     // - used to cycle throught multiple addresses
@@ -65,7 +65,7 @@ enum sip_timer_type {
     STIMER_M,
 
     // INVITE client transaction
-    STIMER_C,  // Proceeding -> Terminated
+    STIMER_C, // Proceeding -> Terminated
 
     // Blacklist grace timer
     STIMER_BL,
@@ -77,56 +77,56 @@ enum sip_timer_type {
  * SIP transaction timer default values
  */
 
-#define T1_TIMER  500 /* 500 ms */
+#define T1_TIMER         500  /* 500 ms */
 #define DEFAULT_T2_TIMER 4000 /*   4 s  */
-#define T4_TIMER 5000 /*   5 s  */
+#define T4_TIMER         5000 /*   5 s  */
 
-//type 0x01
-#define DEFAULT_A_TIMER  T1_TIMER
+// type 0x01
+#define DEFAULT_A_TIMER T1_TIMER
 
-//type 0x02
-#define DEFAULT_B_TIMER  64*T1_TIMER
+// type 0x02
+#define DEFAULT_B_TIMER 64 * T1_TIMER
 
-//type 0x0d
-#define DEFAULT_C_TIMER  (3*60*1000)
+// type 0x0d
+#define DEFAULT_C_TIMER (3 * 60 * 1000)
 
-//type 0x03
-#define DEFAULT_D_TIMER  64*T1_TIMER
+// type 0x03
+#define DEFAULT_D_TIMER 64 * T1_TIMER
 
-//type 0x04
-#define DEFAULT_E_TIMER  T1_TIMER
+// type 0x04
+#define DEFAULT_E_TIMER T1_TIMER
 
-//type 0x05
-#define DEFAULT_F_TIMER  64*T1_TIMER
+// type 0x05
+#define DEFAULT_F_TIMER 64 * T1_TIMER
 
-//type 0x06
-#define DEFAULT_K_TIMER  T4_TIMER
+// type 0x06
+#define DEFAULT_K_TIMER T4_TIMER
 
-//type 0x07
-#define DEFAULT_G_TIMER  T1_TIMER
+// type 0x07
+#define DEFAULT_G_TIMER T1_TIMER
 
-//type 0x08
-#define DEFAULT_H_TIMER  64*T1_TIMER
+// type 0x08
+#define DEFAULT_H_TIMER 64 * T1_TIMER
 
-//type 0x09
-#define DEFAULT_I_TIMER  T4_TIMER
+// type 0x09
+#define DEFAULT_I_TIMER T4_TIMER
 
-//type 0x0a
-#define DEFAULT_J_TIMER  64*T1_TIMER
+// type 0x0a
+#define DEFAULT_J_TIMER 64 * T1_TIMER
 
 // Following timer values are not defined by
 // RFC 3261.
 
 // Used to handle 200 ACKs automatically
 // in INVITE client transactions.
-//type 0x0b
-#define DEFAULT_L_TIMER  64*T1_TIMER
+// type 0x0b
+#define DEFAULT_L_TIMER 64 * T1_TIMER
 
 // Transport address failover timer:
 // - used to cycle throught multiple addresses
 //   in case the R-URI resolves to multiple addresses
-//type 0x0c
-#define DEFAULT_M_TIMER  (DEFAULT_B_TIMER/4)
+// type 0x0c
+#define DEFAULT_M_TIMER (DEFAULT_B_TIMER / 4)
 
 // Blacklist grace timer (client transaction only)
 // - set after locally generated 408
@@ -158,17 +158,18 @@ extern unsigned int sip_timers[__STIMER_MAX];
 #define T2_TIMER sip_timer_t2
 extern unsigned int sip_timer_t2;
 
-const char* timer_name(unsigned int type);
+const char *timer_name(unsigned int type);
 
 struct sip_timers_override {
-	unsigned int stimer_b;
-	unsigned int stimer_f;
-	unsigned int stimer_m;
-	sip_timers_override():
-		stimer_b(0),
-		stimer_f(0),
-		stimer_m(0)
-	{}
+    unsigned int stimer_b;
+    unsigned int stimer_f;
+    unsigned int stimer_m;
+    sip_timers_override()
+        : stimer_b(0)
+        , stimer_f(0)
+        , stimer_m(0)
+    {
+    }
 };
 
 #endif

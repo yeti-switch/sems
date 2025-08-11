@@ -2,7 +2,7 @@
  * $Id: ModMysql.cpp 1764 2010-04-01 14:33:30Z peter_lemenkov $
  *
  * Copyright (C) 2010 TelTech Systems Inc.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -35,36 +35,33 @@
 #include "AmThread.h"
 #include "RpcPeer.h"
 
-class RpcServerThread 
-: public AmThread, public AmEventQueue, public AmEventHandler 
-{
+class RpcServerThread : public AmThread, public AmEventQueue, public AmEventHandler {
 
-  char rcvbuf[MAX_RPC_MSG_SIZE];
-  AmCondition<bool> is_stop;
+    char              rcvbuf[MAX_RPC_MSG_SIZE];
+    AmCondition<bool> is_stop;
 
- public:
-  RpcServerThread();
-  ~RpcServerThread();
+  public:
+    RpcServerThread();
+    ~RpcServerThread();
 
-  void run();
-  void on_stop();
+    void run();
+    void on_stop();
 
-  void process(AmEvent* event);
+    void process(AmEvent *event);
 };
 
-class RpcServerThreadpool 
-{
-  vector<RpcServerThread*> threads;
-  vector<RpcServerThread*>::iterator t_it;
-  AmMutex threads_mut;
+class RpcServerThreadpool {
+    vector<RpcServerThread *>           threads;
+    vector<RpcServerThread *>::iterator t_it;
+    AmMutex                             threads_mut;
 
- public:
-  RpcServerThreadpool();
-  ~RpcServerThreadpool();
-  
-  void dispatch(AmEvent* ev);
-  void addThreads(unsigned int cnt);
-  void cleanup();
+  public:
+    RpcServerThreadpool();
+    ~RpcServerThreadpool();
+
+    void dispatch(AmEvent *ev);
+    void addThreads(unsigned int cnt);
+    void cleanup();
 };
 
 #endif

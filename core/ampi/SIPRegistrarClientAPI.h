@@ -26,42 +26,50 @@
 
 using std::string;
 struct SIPRegistrationEvent : public AmEvent {
-  string handle;
-  string id;
-  unsigned int code;
-  string reason;
-	
- SIPRegistrationEvent(int t, const string& handle, const string& id,
-		      unsigned int code=0, const string& reason="")
-   : AmEvent(t), handle(handle), id(id), code(code), reason(reason) {}
+    string       handle;
+    string       id;
+    unsigned int code;
+    string       reason;
 
-  enum {
-    RegisterSuccess=0,
-    RegisterFailed,
-    RegisterNoContact,
-    RegisterTimeout,
-    RegisterSendTimeout,
-    RegisterDuplicate
-  };
+    SIPRegistrationEvent(int t, const string &handle, const string &id, unsigned int code = 0,
+                         const string &reason = "")
+        : AmEvent(t)
+        , handle(handle)
+        , id(id)
+        , code(code)
+        , reason(reason)
+    {
+    }
+
+    enum {
+        RegisterSuccess = 0,
+        RegisterFailed,
+        RegisterNoContact,
+        RegisterTimeout,
+        RegisterSendTimeout,
+        RegisterDuplicate
+    };
 };
 
-inline const char* getSIPRegistationStateString(unsigned int s) {
-  switch (s) {
-  case 0: return "RegisterPending";
-  case 1: return "RegisterActive";
-  case 2: return "RegisterError";
-  case 3: return "RegisterExpired";
-  case 4: return "RegisterPostponed";
-  default: return "unknown";
-  }
+inline const char *getSIPRegistationStateString(unsigned int s)
+{
+    switch (s) {
+    case 0:  return "RegisterPending";
+    case 1:  return "RegisterActive";
+    case 2:  return "RegisterError";
+    case 3:  return "RegisterExpired";
+    case 4:  return "RegisterPostponed";
+    default: return "unknown";
+    }
 }
 
-inline const char* getSIPRegistationErrorInitiatorString(unsigned int s) {
-  switch(s) {
-  case 0: return "local";
-  case 1: return "remote";
-  default: return "unknown";
-  }
+inline const char *getSIPRegistationErrorInitiatorString(unsigned int s)
+{
+    switch (s) {
+    case 0:  return "local";
+    case 1:  return "remote";
+    default: return "unknown";
+    }
 }
 
 #endif

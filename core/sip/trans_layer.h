@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _trans_layer_h_
@@ -66,13 +66,13 @@ class trans_timer;
 class trsp_socket;
 class sip_ua;
 
-//draft msg logging
+// draft msg logging
 class msg_logger;
 
 // replace the RURI-host with next-hop IP / port
 #define TR_FLAG_NEXT_HOP_RURI 1
 // disable blacklist
-#define TR_FLAG_DISABLE_BL    2
+#define TR_FLAG_DISABLE_BL 2
 // allow 301/302 redirrect
 #define TR_FLAG_ALLOW_REDIRECT 4
 
@@ -80,8 +80,7 @@ class msg_logger;
  * of the stats class later without touching the code using it. (One possible
  * solution is to make all the numbers guarded by one mutex to have whole set of
  * transaction statistics being atomic) */
-class trans_stats
-{
+class trans_stats {
   private:
     AtomicCounter &sent_requests;
     AtomicCounter &sent_replies;
@@ -132,22 +131,20 @@ class trans_stats
     unsigned get_sent_reply_retrans() const { return sent_reply_retrans.atomic_int64::get(); }
 };
 
-/** 
+/**
  * The transaction layer object.
  * Uses the singleton pattern.
  */
-class _trans_layer
-{
-private:
+class _trans_layer {
+  private:
     trans_stats stats;
-    sip_ua*     ua;
+    sip_ua     *ua;
 
-    typedef map<trsp_socket::socket_transport,trsp_socket*> prot_collection;
+    typedef map<trsp_socket::socket_transport, trsp_socket *> prot_collection;
 
     vector<prot_collection> transports;
 
-public:
-
+  public:
     /**
      * Config option: default blacklist time-to-live
      */
@@ -157,13 +154,13 @@ public:
      * Register a SIP UA.
      * This method MUST be called ONCE.
      */
-    void register_ua(sip_ua* ua);
+    void register_ua(sip_ua *ua);
 
     /**
      * Register a transport instance.
      * This method MUST be called at least once.
      */
-    int register_transport(trsp_socket* trsp);
+    int register_transport(trsp_socket *trsp);
 
     /**
      * Clears all registered transport instances.
@@ -176,8 +173,8 @@ public:
      * include a well-formed 'Content-Type', but no
      * 'Content-Length' header.
      */
-    int send_reply(sip_msg* msg, const trans_ticket* tt, const cstring& dialog_id,
-		   const cstring& to_tag, msg_logger* logger=NULL, msg_sensor *sensor=NULL);
+    int send_reply(sip_msg *msg, const trans_ticket *tt, const cstring &dialog_id, const cstring &to_tag,
+                   msg_logger *logger = NULL, msg_sensor *sensor = NULL);
 
     /**
      * Sends a UAC request.
@@ -186,45 +183,42 @@ public:
      * @param [in]  msg Pre-built message.
      * @param [out] tt transaction ticket (needed for replies & CANCEL)
      */
-    int send_request(sip_msg* msg, trans_ticket* tt, const cstring& dialog_id,
-		     const cstring& _next_hop, int out_interface = -1,
-			 unsigned int flags=0, msg_logger* logger=NULL,msg_sensor *sensor=NULL,
-			 sip_timers_override *timers_override = NULL,
-			 sip_target_set* target_set_override = NULL,
-			 int redirects_allowed = -1);
+    int send_request(sip_msg *msg, trans_ticket *tt, const cstring &dialog_id, const cstring &_next_hop,
+                     int out_interface = -1, unsigned int flags = 0, msg_logger *logger = NULL,
+                     msg_sensor *sensor = NULL, sip_timers_override *timers_override = NULL,
+                     sip_target_set *target_set_override = NULL, int redirects_allowed = -1);
 
     /**
-     * Cancels a request. 
+     * Cancels a request.
      * A CANCEL request is sent if necessary.
      * @param tt transaction ticket from the original INVITE.
      */
-    int cancel(trans_ticket* tt, const cstring& dialog_id,
-               unsigned int inv_cseq, unsigned int maxf,
-               const cstring& hdrs, const cstring &dlg_route_set_hdrs);
+    int cancel(trans_ticket *tt, const cstring &dialog_id, unsigned int inv_cseq, unsigned int maxf,
+               const cstring &hdrs, const cstring &dlg_route_set_hdrs);
 
     /**
      * Called by the transport layer
      * when a new message has been recived.
      */
-    void received_msg(sip_msg* msg, const trsp_acls &acls);
+    void received_msg(sip_msg *msg, const trsp_acls &acls);
 
     /**
      * This is called by the transaction timer callback.
      * At this place, the bucket is already locked, so
      * please be quick.
      */
-    void timer_expired(trans_timer* t, trans_bucket* bucket, sip_trans* tr);
+    void timer_expired(trans_timer *t, trans_bucket *bucket, sip_trans *tr);
 
     /**
      * Tries to find an interface suitable for
      * sending to the destination supplied.
      */
-    int find_outbound_if(sockaddr_storage* remote_ip);
+    int find_outbound_if(sockaddr_storage *remote_ip);
 
     /**
      * Send ACK coresponding to error replies
      */
-    void send_non_200_ack(sip_msg* reply, sip_trans* t);
+    void send_non_200_ack(sip_msg *reply, sip_trans *t);
 
     /**
      * Sends a stateless reply. Useful for error replies.
@@ -232,56 +226,48 @@ public:
      * include a well-formed 'Content-Type', but no
      * 'Content-Length' header.
      */
-    int send_sl_reply(sip_msg* req, int reply_code, 
-		      const cstring& reason, 
-		      const cstring& hdrs, const cstring& body);
-    
+    int send_sl_reply(sip_msg *req, int reply_code, const cstring &reason, const cstring &hdrs, const cstring &body);
+
     /**
      * Sends a stateful error reply.
      * If a body is included, the hdrs parameter should
      * include a well-formed 'Content-Type', but no
      * 'Content-Length' header.
      */
-    int send_sf_error_reply(const trans_ticket* tt, const sip_msg* req,
-			    int reply_code, const cstring& reason, 
-			    const cstring& hdrs = cstring(),
-			    const cstring& body = cstring());
+    int send_sf_error_reply(const trans_ticket *tt, const sip_msg *req, int reply_code, const cstring &reason,
+                            const cstring &hdrs = cstring(), const cstring &body = cstring());
 
     /**
-     * Allows the transport layer to signal 
+     * Allows the transport layer to signal
      * an asynchronous error while sending out
      * a SIP message.
      */
-    void transport_error(sip_msg* msg);
+    void transport_error(sip_msg *msg);
 
     /**
      * Transaction timeout
      */
-    void timeout(trans_bucket* bucket, sip_trans* t);
+    void timeout(trans_bucket *bucket, sip_trans *t);
 
     const trans_stats &get_stats() { return stats; }
-    const int get_trans_count();
-    void get_trans_list(AmArg& ret);
+    const int          get_trans_count();
+    void               get_trans_list(AmArg &ret);
 
-protected:
-
+  protected:
     /**
-     * Fills the address structure passed and modifies 
+     * Fills the address structure passed and modifies
      * R-URI and Route headers as needed.
      */
-    int set_next_hop(sip_msg* msg, cstring* next_hop,
-		     unsigned short* next_port, cstring* next_trsp,
-             cstring* scheme);
+    int set_next_hop(sip_msg *msg, cstring *next_hop, unsigned short *next_port, cstring *next_trsp, cstring *scheme);
 
     /**
      * Fills the local_socket attribute using the given
      * transport and interface. If out_interface == -1,
      * we will try hard to find an interface based on msg->remote_ip.
      */
-    int set_trsp_socket(sip_msg* msg, const trsp_socket::socket_transport& next_trsp,
-			int out_interface);
+    int set_trsp_socket(sip_msg *msg, const trsp_socket::socket_transport &next_trsp, int out_interface);
 
-    sip_trans* copy_uac_trans(sip_trans* tr);
+    sip_trans *copy_uac_trans(sip_trans *tr);
 
     /**
      * If the destination has multiple IPs (SRV records),
@@ -289,58 +275,62 @@ protected:
      * @return 0 if the message has been re-sent.
      *        -1 if no additional destination has been found.
      */
-    int try_next_ip(trans_bucket* bucket, sip_trans* tr, bool use_new_trans);
+    int try_next_ip(trans_bucket *bucket, sip_trans *tr, bool use_new_trans);
 
-    int retarget(sip_trans* t, sip_msg* &msg,
-                 std::unique_ptr<sip_trans> &new_tr);
+    int retarget(sip_trans *t, sip_msg *&msg, std::unique_ptr<sip_trans> &new_tr);
 
     /**
      * Implements the state changes for the UAC state machine
      * @return -1 if errors
      * @return transaction state if successfull
      */
-    int update_uac_reply(trans_bucket* bucket, sip_trans* t, sip_msg* &msg);
-    int update_uac_request(
-        trans_bucket* bucket,
-        sip_trans*& t, sip_msg* msg,
-        sip_timers_override *timers_override = NULL,
-        int redirects_allowed = -1);
+    int update_uac_reply(trans_bucket *bucket, sip_trans *t, sip_msg *&msg);
+    int update_uac_request(trans_bucket *bucket, sip_trans *&t, sip_msg *msg,
+                           sip_timers_override *timers_override = NULL, int redirects_allowed = -1);
 
     /**
      * Implements the state changes for the UAS state machine
      */
-    int update_uas_request(trans_bucket* bucket, sip_trans* t, sip_msg* msg);
-    int update_uas_reply(trans_bucket* bucket, sip_trans* t, int reply_code);
+    int update_uas_request(trans_bucket *bucket, sip_trans *t, sip_msg *msg);
+    int update_uas_reply(trans_bucket *bucket, sip_trans *t, int reply_code);
 
     /** Avoid external instantiation. @see singleton. */
     _trans_layer();
     ~_trans_layer();
-    void dispose(){}
+    void dispose() {}
 
     /**
      * Processes a parsed SIP message
      */
-    void process_rcvd_msg(sip_msg* msg, const trsp_acls &acls);
+    void process_rcvd_msg(sip_msg *msg, const trsp_acls &acls);
 };
 
 typedef singleton<_trans_layer> trans_layer;
 
-class trans_ticket
-{
-    sip_trans*    _t;
-    trans_bucket* _bucket;
-    
+class trans_ticket {
+    sip_trans    *_t;
+    trans_bucket *_bucket;
+
     friend class _trans_layer;
 
-public:
+  public:
     trans_ticket()
-	: _t(0), _bucket(0) {}
+        : _t(0)
+        , _bucket(0)
+    {
+    }
 
-    trans_ticket(sip_trans* t, trans_bucket* bucket)
-	: _t(t), _bucket(bucket) {}
+    trans_ticket(sip_trans *t, trans_bucket *bucket)
+        : _t(t)
+        , _bucket(bucket)
+    {
+    }
 
-    trans_ticket(const trans_ticket& ticket)
-	: _t(ticket._t), _bucket(ticket._bucket) {}
+    trans_ticket(const trans_ticket &ticket)
+        : _t(ticket._t)
+        , _bucket(ticket._bucket)
+    {
+    }
 
     /**
      * Locks the transaction bucket before accessing the transaction pointer.
@@ -356,7 +346,7 @@ public:
      * Get the transaction pointer
      * Note: the transaction bucket must be locked before
      */
-    const sip_trans* get_trans() const;
+    const sip_trans *get_trans() const;
 
     /**
      * Remove the transaction
@@ -365,7 +355,7 @@ public:
     void remove_trans();
 
     /** assign _bucket,_t from other ticket if both transactions exist and differ */
-    void assign_if_differs(const trans_ticket& other);
+    void assign_if_differs(const trans_ticket &other);
 };
 
 #endif // _trans_layer_h_

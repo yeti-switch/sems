@@ -10,81 +10,82 @@
 #include <string>
 using std::string;
 
-class Connection
-{
-protected:
-    string connection_info;
-    string connection_log_info;
-    IConnectionHandler* handler;
-    ConnStatusType status;
-    PGpipelineStatus pipe_status;
-    bool is_pipeline;
-    time_t connected_time;
-    time_t disconnected_time;
-    time_t pending_reset_time;
-    uint64_t queries_finished;
+class Connection {
+  protected:
+    string              connection_info;
+    string              connection_log_info;
+    IConnectionHandler *handler;
+    ConnStatusType      status;
+    PGpipelineStatus    pipe_status;
+    bool                is_pipeline;
+    time_t              connected_time;
+    time_t              disconnected_time;
+    time_t              pending_reset_time;
+    uint64_t            queries_finished;
 
     friend class Transaction;
-    Transaction* cur_transaction;
-    Transaction* planned;
+    Transaction *cur_transaction;
+    Transaction *planned;
 
     void check_mode();
 
-    virtual void check_conn() = 0;
-    virtual PGconn* get_pg_conn() { return nullptr; }
-    virtual bool flush_conn() = 0;
-    virtual bool reset_conn() = 0;
-    virtual void close_conn() = 0;
-    virtual bool start_pipe() = 0;
-    virtual bool exit_pipe()  = 0;
-    virtual bool sync_pipe() = 0;
-    virtual bool flush_pipe() = 0;
+    virtual void    check_conn() = 0;
+    virtual PGconn *get_pg_conn() { return nullptr; }
+    virtual bool    flush_conn() = 0;
+    virtual bool    reset_conn() = 0;
+    virtual void    close_conn() = 0;
+    virtual bool    start_pipe() = 0;
+    virtual bool    exit_pipe()  = 0;
+    virtual bool    sync_pipe()  = 0;
+    virtual bool    flush_pipe() = 0;
 
-public:
-    Connection(const string& conn_info, const string& conn_log_info, IConnectionHandler* handler)
-    : connection_info(conn_info)
-    , connection_log_info(conn_log_info)
-    , handler(handler)
-    , status(CONNECTION_BAD), pipe_status(PQ_PIPELINE_OFF)
-    , is_pipeline(false)
-    , connected_time(0)
-    , disconnected_time(::time(0))
-    , pending_reset_time(0)
-    , queries_finished(0)
-    , cur_transaction(nullptr)
-    , planned(nullptr)
-    {}
+  public:
+    Connection(const string &conn_info, const string &conn_log_info, IConnectionHandler *handler)
+        : connection_info(conn_info)
+        , connection_log_info(conn_log_info)
+        , handler(handler)
+        , status(CONNECTION_BAD)
+        , pipe_status(PQ_PIPELINE_OFF)
+        , is_pipeline(false)
+        , connected_time(0)
+        , disconnected_time(::time(0))
+        , pending_reset_time(0)
+        , queries_finished(0)
+        , cur_transaction(nullptr)
+        , planned(nullptr)
+    {
+    }
     virtual ~Connection();
 
-    operator PGconn * () { return get_pg_conn(); }
+    operator PGconn *() { return get_pg_conn(); }
 
-    void check();
-    bool reset();
-    void close();
-    bool flush();
-    bool runTransaction(Transaction* trans);
-    bool addPlannedTransaction(Transaction* trans);
-    void startPipeline();
-    bool syncPipeline();
-    bool flushPipeline();
-    void exitPipeline();
-    void stopTransaction();
-    void cancelTransaction();
-    ConnStatusType getStatus() { return status; }
+    void             check();
+    bool             reset();
+    void             close();
+    bool             flush();
+    bool             runTransaction(Transaction *trans);
+    bool             addPlannedTransaction(Transaction *trans);
+    void             startPipeline();
+    bool             syncPipeline();
+    bool             flushPipeline();
+    void             exitPipeline();
+    void             stopTransaction();
+    void             cancelTransaction();
+    ConnStatusType   getStatus() { return status; }
     PGpipelineStatus getPipeStatus() { return pipe_status; }
 
     virtual int getSocket() = 0;
     virtual int getBackendPid() { return -1; }
 
     string getConnInfo() { return connection_log_info; }
-    bool isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
+    bool   isBusy() { return cur_transaction ? true : (status != CONNECTION_OK); }
 
     time_t getDisconnectedTime() const { return disconnected_time; }
     time_t getConnectedTime() { return connected_time; }
 
     time_t getPendingResetTime() const { return pending_reset_time; }
-    void setPendingResetTime(time_t timepoint);
+    void   setPendingResetTime(time_t timepoint);
 
-    uint64_t getQueriesFinished() { return queries_finished; }
-    Transaction* getCurrentTransaction() { return cur_transaction; }
+    uint64_t     getQueriesFinished() { return queries_finished; }
+    Transaction *getCurrentTransaction() { return cur_transaction; }
 };

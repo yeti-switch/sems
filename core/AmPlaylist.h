@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmPlaylist.h */
@@ -35,115 +35,112 @@
 #include <deque>
 using std::deque;
 /** \brief entry in an \ref AmPlaylist */
-struct AmPlaylistItem
-{
+struct AmPlaylistItem {
 
-  AmAudio* play;
-  AmAudio* record;
+    AmAudio *play;
+    AmAudio *record;
 
-  AmPlaylistItem(AmAudio* play,
-		 AmAudio* record)
-    : play(play), record(record) {}
+    AmPlaylistItem(AmAudio *play, AmAudio *record)
+        : play(play)
+        , record(record)
+    {
+    }
 
-  virtual ~AmPlaylistItem() { }
+    virtual ~AmPlaylistItem() {}
 };
 
 /**
- * \brief AmAudio component that plays entries serially 
- * 
- * This class can be plugged to the Input or Output of a 
+ * \brief AmAudio component that plays entries serially
+ *
+ * This class can be plugged to the Input or Output of a
  * session. Entries can be added or removed from the playlist,
  * and the current entry is played until it is finished,
  * then the next entry is played.
  */
-class AmPlaylist: public AmAudio
-{
-    
-  AmMutex                items_mut;
-  deque<AmPlaylistItem*> items;
+class AmPlaylist : public AmAudio {
 
-  AmMutex                cur_mut;
-  AmPlaylistItem*        cur_item;
+    AmMutex                 items_mut;
+    deque<AmPlaylistItem *> items;
 
-  AmEventQueue*          ev_q;
+    AmMutex         cur_mut;
+    AmPlaylistItem *cur_item;
 
-  void updateCurrentItem();
-  void gotoNextItem(bool notify);
-    
- protected:
-  /** Fake implement AmAudio's pure virtual methods */
-  int read(unsigned int user_ts, unsigned int size) override { return -1; }
-  int write(unsigned int user_ts, unsigned int size) override { return -1; }
+    AmEventQueue *ev_q;
 
-  /** override AmAudio */
-  int get(unsigned long long system_ts, unsigned char* buffer,
-	  int output_sample_rate, unsigned int nb_samples) override;
+    void updateCurrentItem();
+    void gotoNextItem(bool notify);
 
-  int put(unsigned long long system_ts, unsigned char* buffer,
-	  int input_sample_rate, unsigned int size) override;
-	
-  /** from AmAudio */
-  void close() override;
-    
- public:
-  AmPlaylist(AmEventQueue* q = NULL);
-  ~AmPlaylist();
+  protected:
+    /** Fake implement AmAudio's pure virtual methods */
+    int read(unsigned int user_ts, unsigned int size) override { return -1; }
+    int write(unsigned int user_ts, unsigned int size) override { return -1; }
 
-  bool isEmpty();
+    /** override AmAudio */
+    int get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate,
+            unsigned int nb_samples) override;
 
-  void addToPlaylist(AmPlaylistItem* item);
-  void addToPlayListFront(AmPlaylistItem* item);
+    int put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate, unsigned int size) override;
 
-  void flush();
+    /** from AmAudio */
+    void close() override;
 
-  void applyPendingStereoRecorders(const AmSession *lock_session) override;
+  public:
+    AmPlaylist(AmEventQueue *q = NULL);
+    ~AmPlaylist();
+
+    bool isEmpty();
+
+    void addToPlaylist(AmPlaylistItem *item);
+    void addToPlayListFront(AmPlaylistItem *item);
+
+    void flush();
+
+    void applyPendingStereoRecorders(const AmSession *lock_session) override;
 };
 
 /**
  * \brief event fired by the AmPlaylistSeparator
  */
-class AmPlaylistSeparatorEvent : 
-  public AmEvent {
-public:
-  AmPlaylistSeparatorEvent(int id)
-    : AmEvent(id) { }
+class AmPlaylistSeparatorEvent : public AmEvent {
+  public:
+    AmPlaylistSeparatorEvent(int id)
+        : AmEvent(id)
+    {
+    }
 };
 
 /**
  * \brief playlistelement to notify session about the playlist progress
  *
- * null-playlist element which notifies session that this position in 
- * playlist is reached. It fies a AmPlaylistSeparatorEvent if it is 
+ * null-playlist element which notifies session that this position in
+ * playlist is reached. It fies a AmPlaylistSeparatorEvent if it is
  * read or written.
  */
-class AmPlaylistSeparator 
-  : public AmAudio
-{
-    bool notified;
-    AmEventQueue* ev_q;
-    int id;
+class AmPlaylistSeparator : public AmAudio {
+    bool          notified;
+    AmEventQueue *ev_q;
+    int           id;
+
   public:
-    AmPlaylistSeparator(AmEventQueue* q, int id)
-      : notified(false),
-        ev_q(q),
-        id(id)
-    { }
-
-    ~AmPlaylistSeparator() { }
-
-    int read(unsigned int user_ts, unsigned int size) {
-        if(!notified) 
-            ev_q->postEvent(new AmPlaylistSeparatorEvent(id)); 
-        notified = true; 
-        return 0; 
+    AmPlaylistSeparator(AmEventQueue *q, int id)
+        : notified(false)
+        , ev_q(q)
+        , id(id)
+    {
     }
 
-    int write(unsigned int user_ts, unsigned int size) {
-        return read(user_ts, size);
+    ~AmPlaylistSeparator() {}
+
+    int read(unsigned int user_ts, unsigned int size)
+    {
+        if (!notified)
+            ev_q->postEvent(new AmPlaylistSeparatorEvent(id));
+        notified = true;
+        return 0;
     }
+
+    int write(unsigned int user_ts, unsigned int size) { return read(user_ts, size); }
 };
-
-
 
 
 #endif

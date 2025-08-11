@@ -1,26 +1,31 @@
 #include "Connection.h"
 #include "../trans/Transaction.h"
 #include <log.h>
-# include <sys/socket.h>
-# include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <AmUtils.h>
 
-Connection::~Connection() {
-    if(planned) delete planned;
+Connection::~Connection()
+{
+    if (planned)
+        delete planned;
 }
 
 void Connection::check_mode()
 {
-    if(isBusy()) return;
-    if(pipe_status == PQ_PIPELINE_ON && !is_pipeline) exit_pipe();
-    else if(pipe_status == PQ_PIPELINE_OFF && is_pipeline) start_pipe();
+    if (isBusy())
+        return;
+    if (pipe_status == PQ_PIPELINE_ON && !is_pipeline)
+        exit_pipe();
+    else if (pipe_status == PQ_PIPELINE_OFF && is_pipeline)
+        start_pipe();
 }
 
-bool Connection::runTransaction(Transaction* trans)
+bool Connection::runTransaction(Transaction *trans)
 {
-    if(cur_transaction)
+    if (cur_transaction)
         return false;
     trans->reset(this);
     cur_transaction = trans;
@@ -28,9 +33,9 @@ bool Connection::runTransaction(Transaction* trans)
     return true;
 }
 
-bool Connection::addPlannedTransaction(Transaction* trans)
+bool Connection::addPlannedTransaction(Transaction *trans)
 {
-    if(planned) {
+    if (planned) {
         WARN("exist planned transaction, rewrite it");
         delete planned;
     }
@@ -46,13 +51,15 @@ void Connection::startPipeline()
 
 bool Connection::flushPipeline()
 {
-    if(pipe_status != PQ_PIPELINE_ON) return false;
+    if (pipe_status != PQ_PIPELINE_ON)
+        return false;
     return flush_pipe();
 }
 
 bool Connection::syncPipeline()
 {
-    if(pipe_status != PQ_PIPELINE_ON) return false;
+    if (pipe_status != PQ_PIPELINE_ON)
+        return false;
     return sync_pipe();
 }
 
@@ -64,26 +71,27 @@ void Connection::exitPipeline()
 
 void Connection::check()
 {
-    if(status != CONNECTION_BAD) {
+    if (status != CONNECTION_BAD) {
         check_conn();
     }
 
-    if(status == CONNECTION_OK && !getConnectedTime()) {
+    if (status == CONNECTION_OK && !getConnectedTime()) {
         connected_time = time(0);
     }
 
-    if(status == CONNECTION_OK && cur_transaction) {
-        if(cur_transaction->check()) {
-            //PQisBusy() returned 1 during transaction processing
-            //CLASS_DBG("PQisBusy() returned 1 during transaction processing");
+    if (status == CONNECTION_OK && cur_transaction) {
+        if (cur_transaction->check()) {
+            // PQisBusy() returned 1 during transaction processing
+            // CLASS_DBG("PQisBusy() returned 1 during transaction processing");
             handler->onSock(this, IConnectionHandler::PG_SOCK_READ);
         }
-        if(cur_transaction->get_status() == Transaction::FINISH) {
-            //DBG("finish transaction");
+        if (cur_transaction->get_status() == Transaction::FINISH) {
+            // DBG("finish transaction");
             queries_finished += cur_transaction->get_size();
             cur_transaction = 0;
             check_mode();
-            if(planned) runTransaction(planned);
+            if (planned)
+                runTransaction(planned);
             planned = 0;
         }
     }
@@ -91,11 +99,11 @@ void Connection::check()
 
 bool Connection::reset()
 {
-    disconnected_time = time(0);
-    connected_time = 0;
+    disconnected_time  = time(0);
+    connected_time     = 0;
     pending_reset_time = 0;
     stopTransaction();
-    if(reset_conn()) {
+    if (reset_conn()) {
         check_conn();
         return true;
     }
@@ -105,7 +113,7 @@ bool Connection::reset()
 void Connection::close()
 {
     disconnected_time = time(0);
-    connected_time = 0;
+    connected_time    = 0;
     stopTransaction();
     close_conn();
 }
@@ -117,19 +125,21 @@ bool Connection::flush()
 
 void Connection::cancelTransaction()
 {
-    if(cur_transaction && cur_transaction->get_status() != Transaction::FINISH) {
+    if (cur_transaction && cur_transaction->get_status() != Transaction::FINISH) {
         cur_transaction->cancel();
     }
 }
 
 void Connection::stopTransaction()
 {
-    if(handler && cur_transaction) handler->onStopTransaction(cur_transaction);
+    if (handler && cur_transaction)
+        handler->onStopTransaction(cur_transaction);
     cur_transaction = 0;
     delete planned;
     planned = 0;
 }
 
-void Connection::setPendingResetTime(time_t timepoint) {
+void Connection::setPendingResetTime(time_t timepoint)
+{
     pending_reset_time = timepoint;
 }

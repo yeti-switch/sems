@@ -42,7 +42,7 @@ extern const WebRtc_UWord16 WebRtcIsac_kLpcGainCdfVec4[78];
 
 extern const WebRtc_UWord16 WebRtcIsac_kLpcGainCdfVec5[171];
 
-extern const WebRtc_UWord16* WebRtcIsac_kLpcGainCdfMat[SUBFRAMES];
+extern const WebRtc_UWord16 *WebRtcIsac_kLpcGainCdfMat[SUBFRAMES];
 
 extern const double WebRtcIsac_kLpcGainDecorrMat[SUBFRAMES][SUBFRAMES];
 

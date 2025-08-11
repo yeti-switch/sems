@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -34,140 +34,134 @@
 #include "parse_common.h"
 #include "parse_via.h"
 
-inline int copy_hdr_len(sip_header* hdr)
+inline int copy_hdr_len(sip_header *hdr)
 {
-    return hdr->name.len + hdr->value.len
-	+ 4/* ': ' + CRLF */;
+    return hdr->name.len + hdr->value.len + 4 /* ': ' + CRLF */;
 }
 
-inline void copy_hdr_wr(char** c, const sip_header* hdr)
+inline void copy_hdr_wr(char **c, const sip_header *hdr)
 {
-    memcpy(*c,hdr->name.s,hdr->name.len);
+    memcpy(*c, hdr->name.s, hdr->name.len);
     *c += hdr->name.len;
-    
+
     *((*c)++) = ':';
     *((*c)++) = SP;
-    
-    memcpy(*c,hdr->value.s,hdr->value.len);
+
+    memcpy(*c, hdr->value.s, hdr->value.len);
     *c += hdr->value.len;
-    
+
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-inline int contact_len(const cstring& contact)
+inline int contact_len(const cstring &contact)
 {
-    return 11/*'Contact: ' + CRLF*/
-	+ contact.len;
+    return 11 /*'Contact: ' + CRLF*/
+           + contact.len;
 }
 
-inline void contact_wr(char** c,const cstring& contact)
+inline void contact_wr(char **c, const cstring &contact)
 {
-    memcpy(*c,"Contact: ",9);
-    *c += 9/*'Contact: '*/;
-    
-    memcpy(*c,contact.s,contact.len);
+    memcpy(*c, "Contact: ", 9);
+    *c += 9 /*'Contact: '*/;
+
+    memcpy(*c, contact.s, contact.len);
     *c += contact.len;
-    
+
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-inline int via_len(const cstring& trsp, const cstring& addr, 
-		   const cstring& branch, bool rport)
+inline int via_len(const cstring &trsp, const cstring &addr, const cstring &branch, bool rport)
 {
-    return 16/* 'Via: SIP/2.0/' + SP + CRLF */
-        + trsp.len
-	+ addr.len
-	+ 8 + MAGIC_BRANCH_LEN/*';branch=' + MAGIC_BRANCH_COOKIE*/
-	+ branch.len
-        + (rport ? 6/*;rport*/ : 0 );
+    return 16                                           /* 'Via: SIP/2.0/' + SP + CRLF */
+           + trsp.len + addr.len + 8 + MAGIC_BRANCH_LEN /*';branch=' + MAGIC_BRANCH_COOKIE*/
+           + branch.len + (rport ? 6 /*;rport*/ : 0);
 }
 
-inline void via_wr(char** c, const cstring& trsp, const cstring& addr, 
-		   const cstring& branch, bool rport)
+inline void via_wr(char **c, const cstring &trsp, const cstring &addr, const cstring &branch, bool rport)
 {
-    memcpy(*c,"Via: SIP/2.0/",13);
-    *c += 13/*'Via: SIP/2.0/'*/;
+    memcpy(*c, "Via: SIP/2.0/", 13);
+    *c += 13 /*'Via: SIP/2.0/'*/;
 
-    for(unsigned int i=0; i<trsp.len; i++) {
-      if(trsp.s[i] >= 'a' && trsp.s[i] <= 'z')
-	*((*c)++) = trsp.s[i] - 'a' + 'A';
+    for (unsigned int i = 0; i < trsp.len; i++) {
+        if (trsp.s[i] >= 'a' && trsp.s[i] <= 'z')
+            *((*c)++) = trsp.s[i] - 'a' + 'A';
     }
-    
+
     *((*c)++) = SP;
 
-    memcpy(*c,addr.s,addr.len);
+    memcpy(*c, addr.s, addr.len);
     *c += addr.len;
 
-    memcpy(*c,";branch=" MAGIC_BRANCH_COOKIE,8+MAGIC_BRANCH_LEN);
-    *c += 8+MAGIC_BRANCH_LEN;
+    memcpy(*c, ";branch=" MAGIC_BRANCH_COOKIE, 8 + MAGIC_BRANCH_LEN);
+    *c += 8 + MAGIC_BRANCH_LEN;
 
-    memcpy(*c,branch.s,branch.len);
+    memcpy(*c, branch.s, branch.len);
     *c += branch.len;
-    
-    if(rport){
-      memcpy(*c,";rport",6);
-      *c += 6;
+
+    if (rport) {
+        memcpy(*c, ";rport", 6);
+        *c += 6;
     }
 
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-inline int cseq_len(const cstring& num, const cstring& method)
+inline int cseq_len(const cstring &num, const cstring &method)
 {
-    return 9/*'CSeq: ' + SP + CRLF*/
-	+ num.len + method.len;
+    return 9 /*'CSeq: ' + SP + CRLF*/
+           + num.len + method.len;
 }
 
-inline void cseq_wr(char** c, const cstring& num, const cstring& method)
+inline void cseq_wr(char **c, const cstring &num, const cstring &method)
 {
-    memcpy(*c,"CSeq: ",6);
-    *c += 6/*'CSeq: '*/;
+    memcpy(*c, "CSeq: ", 6);
+    *c += 6 /*'CSeq: '*/;
 
-    memcpy(*c,num.s,num.len);
+    memcpy(*c, num.s, num.len);
     *c += num.len;
 
     *((*c)++) = SP;
 
-    memcpy(*c,method.s,method.len);
+    memcpy(*c, method.s, method.len);
     *c += method.len;
-    
+
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-inline int content_length_len(const cstring& len)
+inline int content_length_len(const cstring &len)
 {
-    return 18/*'Content-Length: ' + CRLF*/
-	+ len.len;
+    return 18 /*'Content-Length: ' + CRLF*/
+           + len.len;
 }
 
-inline void content_length_wr(char** c, const cstring& len)
+inline void content_length_wr(char **c, const cstring &len)
 {
-    memcpy(*c,"Content-Length: ",16);
-    *c += 16/*'Content-Length: '*/;
+    memcpy(*c, "Content-Length: ", 16);
+    *c += 16 /*'Content-Length: '*/;
 
-    memcpy(*c,len.s,len.len);
+    memcpy(*c, len.s, len.len);
     *c += len.len;
 
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-inline int content_type_len(const cstring& len)
+inline int content_type_len(const cstring &len)
 {
-    return 16/*'Content-Type: ' + CRLF*/
-	+ len.len;
+    return 16 /*'Content-Type: ' + CRLF*/
+           + len.len;
 }
 
-inline void content_type_wr(char** c, const cstring& len)
+inline void content_type_wr(char **c, const cstring &len)
 {
-    memcpy(*c,"Content-Type: ",14);
-    *c += 14/*'Content-Type: '*/;
+    memcpy(*c, "Content-Type: ", 14);
+    *c += 14 /*'Content-Type: '*/;
 
-    memcpy(*c,len.s,len.len);
+    memcpy(*c, len.s, len.len);
     *c += len.len;
 
     *((*c)++) = CR;
@@ -178,12 +172,12 @@ inline void content_type_wr(char** c, const cstring& len)
 using std::list;
 
 
-int  copy_hdrs_len(const list<sip_header*>& hdrs);
-int  copy_hdrs_len_no_via_contact_content_length(const list<sip_header*>& hdrs);
+int copy_hdrs_len(const list<sip_header *> &hdrs);
+int copy_hdrs_len_no_via_contact_content_length(const list<sip_header *> &hdrs);
 
-void copy_hdrs_wr(char** c, const list<sip_header*>& hdrs);
-void copy_hdrs_wr_no_via(char** c, const list<sip_header*>& hdrs);
-void copy_hdrs_wr_no_via_contact_content_length(char** c, const list<sip_header*>& hdrs);
+void copy_hdrs_wr(char **c, const list<sip_header *> &hdrs);
+void copy_hdrs_wr_no_via(char **c, const list<sip_header *> &hdrs);
+void copy_hdrs_wr_no_via_contact_content_length(char **c, const list<sip_header *> &hdrs);
 
 
 #endif

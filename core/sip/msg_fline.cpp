@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -33,82 +33,76 @@
 #include <assert.h>
 #include <stdlib.h>
 
-inline void status_code_wr(char** c, int code)
+inline void status_code_wr(char **c, int code)
 {
-    div_t d = div(code, 100);
+    div_t d   = div(code, 100);
     *((*c)++) = d.quot + '0';
-    d = div(d.rem, 10);
+    d         = div(d.rem, 10);
     *((*c)++) = d.quot + '0';
     *((*c)++) = d.rem + '0';
 }
 
 
-void sip_status_line_wr(char** c, int status_code,
-		    const cstring& reason)
+void sip_status_line_wr(char **c, int status_code, const cstring &reason)
 {
-    memcpy(*c,"SIP/2.0 ",8);
+    memcpy(*c, "SIP/2.0 ", 8);
     *c += 8;
-    
-    status_code_wr(c,status_code);
+
+    status_code_wr(c, status_code);
 
     *((*c)++) = SP;
 
-    memcpy(*c,reason.s,reason.len);
+    memcpy(*c, reason.s, reason.len);
     *c += reason.len;
 
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-void http_status_line_wr(char** c, int status_code,
-		    const cstring& reason)
+void http_status_line_wr(char **c, int status_code, const cstring &reason)
 {
-    memcpy(*c,"HTTP/1.1 ",9);
+    memcpy(*c, "HTTP/1.1 ", 9);
     *c += 9;
 
-    status_code_wr(c,status_code);
+    status_code_wr(c, status_code);
 
     *((*c)++) = SP;
 
-    memcpy(*c,reason.s,reason.len);
+    memcpy(*c, reason.s, reason.len);
     *c += reason.len;
 
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-void sip_request_line_wr(char** c,
-		     const cstring& method,
-		     const cstring& ruri)
+void sip_request_line_wr(char **c, const cstring &method, const cstring &ruri)
 {
-    memcpy(*c,method.s,method.len);
+    memcpy(*c, method.s, method.len);
     *c += method.len;
 
     *((*c)++) = SP;
-    
-    memcpy(*c,ruri.s,ruri.len);
+
+    memcpy(*c, ruri.s, ruri.len);
     *c += ruri.len;
-    
-    memcpy(*c," SIP/2.0",8);
+
+    memcpy(*c, " SIP/2.0", 8);
     *c += 8;
 
     *((*c)++) = CR;
     *((*c)++) = LF;
 }
 
-void http_request_line_wr(char** c,
-		     const cstring& method,
-		     const cstring& ruri)
+void http_request_line_wr(char **c, const cstring &method, const cstring &ruri)
 {
-    memcpy(*c,method.s,method.len);
+    memcpy(*c, method.s, method.len);
     *c += method.len;
 
     *((*c)++) = SP;
 
-    memcpy(*c,ruri.s,ruri.len);
+    memcpy(*c, ruri.s, ruri.len);
     *c += ruri.len;
 
-    memcpy(*c," HTTP/1.1",9);
+    memcpy(*c, " HTTP/1.1", 9);
     *c += 9;
 
     *((*c)++) = CR;

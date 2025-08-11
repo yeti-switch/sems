@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmMultiPartyMixer.h */
@@ -30,7 +30,7 @@
 #include "AmThread.h"
 #include "SampleArray.h"
 
-//#define RORPP_PLC
+// #define RORPP_PLC
 
 #ifdef RORPP_PLC
 #include "LowcFE.h"
@@ -39,79 +39,71 @@
 #include <map>
 #include <set>
 
-struct MixerBufferState
-{
-  typedef std::map<int,SampleArrayShort*> ChannelMap;
+struct MixerBufferState {
+    typedef std::map<int, SampleArrayShort *> ChannelMap;
 
-  unsigned int sample_rate;
-  unsigned int last_ts;
-  ChannelMap channels;
-  SampleArrayInt *mixed_channel;
+    unsigned int    sample_rate;
+    unsigned int    last_ts;
+    ChannelMap      channels;
+    SampleArrayInt *mixed_channel;
 
-  MixerBufferState(unsigned int sample_rate, std::set<int>& channelids);
-  MixerBufferState(const MixerBufferState& other);
-  ~MixerBufferState();
+    MixerBufferState(unsigned int sample_rate, std::set<int> &channelids);
+    MixerBufferState(const MixerBufferState &other);
+    ~MixerBufferState();
 
-  void add_channel(unsigned int channel_id);
-  void remove_channel(unsigned int channel_id);
-  SampleArrayShort* get_channel(unsigned int channel_id);
-  void fix_channels(std::set<int>& curchannelids);
-  void free_channels();
+    void              add_channel(unsigned int channel_id);
+    void              remove_channel(unsigned int channel_id);
+    SampleArrayShort *get_channel(unsigned int channel_id);
+    void              fix_channels(std::set<int> &curchannelids);
+    void              free_channels();
 };
 
 /**
  * \brief Mixer for one conference.
- * 
+ *
  * AmMultiPartyMixer mixes the audio from all channels,
- * and returns the audio of all other channels. 
+ * and returns the audio of all other channels.
  */
-class AmMultiPartyMixer
-{
-  typedef std::set<int> ChannelIdSet;
-  typedef std::map<int,int> SampleRateMap;
-  typedef std::multiset<int> SampleRateSet;
+class AmMultiPartyMixer {
+    typedef std::set<int>      ChannelIdSet;
+    typedef std::map<int, int> SampleRateMap;
+    typedef std::multiset<int> SampleRateSet;
 
-  SampleRateMap    sampleratemap;
-  SampleRateSet    samplerates;
-  ChannelIdSet     channelids;
-  std::deque<MixerBufferState> buffer_state;
+    SampleRateMap                sampleratemap;
+    SampleRateSet                samplerates;
+    ChannelIdSet                 channelids;
+    std::deque<MixerBufferState> buffer_state;
 
-  AmMutex          audio_mut;
-  int              scaling_factor; 
-  int              tmp_buffer[AUDIO_BUFFER_SIZE/2];
+    AmMutex audio_mut;
+    int     scaling_factor;
+    int     tmp_buffer[AUDIO_BUFFER_SIZE / 2];
 
-  std::deque<MixerBufferState>::iterator findOrCreateBufferState(unsigned int sample_rate);
-  std::deque<MixerBufferState>::iterator findBufferStateForReading(unsigned int sample_rate, 
-								   unsigned long long last_ts);
-  void cleanupBufferStates(unsigned int last_ts);
+    std::deque<MixerBufferState>::iterator findOrCreateBufferState(unsigned int sample_rate);
+    std::deque<MixerBufferState>::iterator findBufferStateForReading(unsigned int       sample_rate,
+                                                                     unsigned long long last_ts);
+    void                                   cleanupBufferStates(unsigned int last_ts);
 
-  void mix_add(int* dest,int* src1,short* src2,unsigned int size);
-  void mix_sub(int* dest,int* src1,short* src2,unsigned int size);
-  void scale(short* buffer,int* tmp_buf,unsigned int size);
+    void mix_add(int *dest, int *src1, short *src2, unsigned int size);
+    void mix_sub(int *dest, int *src1, short *src2, unsigned int size);
+    void scale(short *buffer, int *tmp_buf, unsigned int size);
 
-public:
-  AmMultiPartyMixer();
-  ~AmMultiPartyMixer();
-    
-  unsigned int addChannel(unsigned int external_sample_rate);
-  void removeChannel(unsigned int channel_id);
+  public:
+    AmMultiPartyMixer();
+    ~AmMultiPartyMixer();
 
-  void PutChannelPacket(unsigned int   channel_id,
-			unsigned long long system_ts,
-			unsigned char* buffer, 
-			unsigned int   size);
+    unsigned int addChannel(unsigned int external_sample_rate);
+    void         removeChannel(unsigned int channel_id);
 
-  void GetChannelPacket(unsigned int   channel,
-			unsigned long long system_ts,
-			unsigned char* buffer, 
-			unsigned int&  size,
-			unsigned int&  output_sample_rate);
+    void PutChannelPacket(unsigned int channel_id, unsigned long long system_ts, unsigned char *buffer,
+                          unsigned int size);
 
-  int GetCurrentSampleRate();
+    void GetChannelPacket(unsigned int channel, unsigned long long system_ts, unsigned char *buffer, unsigned int &size,
+                          unsigned int &output_sample_rate);
 
-  void lock();
-  void unlock();
+    int GetCurrentSampleRate();
+
+    void lock();
+    void unlock();
 };
 
 #endif
-

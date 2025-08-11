@@ -6,12 +6,10 @@
 
 #ifdef OBJECTS_COUNTER
 
-#define ObjCounter(T) ObjectsCounter<T>
+#define ObjCounter(T)     ObjectsCounter<T>
 #define ObjCounterInit(T) ObjectsCounter<T>::init_object_counters()
 
-template <typename T>
-struct ObjectsCounter
-{
+template <typename T> struct ObjectsCounter {
 
     static inline AtomicCounter *objects_created;
     static inline AtomicCounter *objects_alive;
@@ -22,7 +20,7 @@ struct ObjectsCounter
         objects_alive->inc();
     }
 
-    ObjectsCounter(const ObjectsCounter&)
+    ObjectsCounter(const ObjectsCounter &)
     {
         objects_created->inc();
         objects_alive->inc();
@@ -30,28 +28,18 @@ struct ObjectsCounter
 
     static void init_object_counters()
     {
-        int status;
+        int    status;
         size_t length = 64;
-        char buf[length];
+        char   buf[length];
 
-        auto *tname = abi::__cxa_demangle(
-            typeid(T).name(), buf, &length, &status);
+        auto *tname = abi::__cxa_demangle(typeid(T).name(), buf, &length, &status);
 
-        objects_created =
-            &stat_group(Counter, "obj", "created")
-                .addAtomicCounter()
-                .addLabel("type",tname);
-        objects_alive =
-            &stat_group(Counter, "obj", "alive")
-                .addAtomicCounter()
-                .addLabel("type",tname);
+        objects_created = &stat_group(Counter, "obj", "created").addAtomicCounter().addLabel("type", tname);
+        objects_alive   = &stat_group(Counter, "obj", "alive").addAtomicCounter().addLabel("type", tname);
     }
 
   protected:
-    ~ObjectsCounter()
-    {
-        objects_alive->dec();
-    }
+    ~ObjectsCounter() { objects_alive->dec(); }
 };
 
 #else

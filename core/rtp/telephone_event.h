@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -44,17 +44,17 @@ typedef unsigned int   u_int32;
  * DTMF Payload
  */
 typedef struct {
-    
-    u_int8  event;
+
+    u_int8 event;
 
 #if (defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN))
-    u_int8  e:1;
-    u_int8  r:1;
-    u_int8  volume:6;
+    u_int8 e      : 1;
+    u_int8 r      : 1;
+    u_int8 volume : 6;
 #else
-    u_int8  volume:6;
-    u_int8  r:1;
-    u_int8  e:1;
+    u_int8 volume : 6;
+    u_int8 r      : 1;
+    u_int8 e      : 1;
 #endif
 
     u_int16 duration;

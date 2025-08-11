@@ -17,34 +17,29 @@
 
 #include "signal_processing_library.h"
 
-int WebRtcSpl_DownsampleFast(WebRtc_Word16 *in_ptr, WebRtc_Word16 in_length,
-                             WebRtc_Word16 *out_ptr, WebRtc_Word16 out_length,
-                             WebRtc_Word16 *B, WebRtc_Word16 B_length, WebRtc_Word16 factor,
+int WebRtcSpl_DownsampleFast(WebRtc_Word16 *in_ptr, WebRtc_Word16 in_length, WebRtc_Word16 *out_ptr,
+                             WebRtc_Word16 out_length, WebRtc_Word16 *B, WebRtc_Word16 B_length, WebRtc_Word16 factor,
                              WebRtc_Word16 delay)
 {
     WebRtc_Word32 o;
-    int i, j;
+    int           i, j;
 
     WebRtc_Word16 *downsampled_ptr = out_ptr;
     WebRtc_Word16 *b_ptr;
     WebRtc_Word16 *x_ptr;
-    WebRtc_Word16 endpos = delay
-            + (WebRtc_Word16)WEBRTC_SPL_MUL_16_16(factor, (out_length - 1)) + 1;
+    WebRtc_Word16  endpos = delay + (WebRtc_Word16)WEBRTC_SPL_MUL_16_16(factor, (out_length - 1)) + 1;
 
-    if (in_length < endpos)
-    {
+    if (in_length < endpos) {
         return -1;
     }
 
-    for (i = delay; i < endpos; i += factor)
-    {
+    for (i = delay; i < endpos; i += factor) {
         b_ptr = &B[0];
         x_ptr = &in_ptr[i];
 
         o = (WebRtc_Word32)2048; // Round val
 
-        for (j = 0; j < B_length; j++)
-        {
+        for (j = 0; j < B_length; j++) {
             o += WEBRTC_SPL_MUL_16_16(*b_ptr++, *x_ptr--);
         }
 

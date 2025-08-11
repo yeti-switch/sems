@@ -1,13 +1,15 @@
 #include <gtest/gtest.h>
 #include "../WorkersManager.h"
 
-#define TEST_VALUE  10
+#define TEST_VALUE 10
 
-class EmptyTask : public ITask
-{
-public:
-    EmptyTask() : value(0) {}
-    ~EmptyTask(){}
+class EmptyTask : public ITask {
+  public:
+    EmptyTask()
+        : value(0)
+    {
+    }
+    ~EmptyTask() {}
 
     int execute() override
     {
@@ -18,11 +20,14 @@ public:
     int value;
 };
 
-class FreezeTask : public ITask
-{
-public:
-    FreezeTask() : value(0), cond_(false) {}
-    ~FreezeTask(){}
+class FreezeTask : public ITask {
+  public:
+    FreezeTask()
+        : value(0)
+        , cond_(false)
+    {
+    }
+    ~FreezeTask() {}
 
     int execute() override
     {
@@ -31,12 +36,9 @@ public:
         return 0;
     }
 
-    void stop() override
-    {
-        cond_.set(true);
-    }
+    void stop() override { cond_.set(true); }
 
-    int value;
+    int               value;
     AmCondition<bool> cond_;
 };
 
@@ -61,15 +63,15 @@ TEST(WorkerManager, RunFreezeTask)
 
 TEST(WorkerManager, RunMuchTask)
 {
-    FreezeTask* ftask = new FreezeTask[worker_manager::instance()->get_workers()];
-    for(int i = 0; i < worker_manager::instance()->get_workers(); i++) {
+    FreezeTask *ftask = new FreezeTask[worker_manager::instance()->get_workers()];
+    for (int i = 0; i < worker_manager::instance()->get_workers(); i++) {
         EXPECT_EQ(worker_manager::instance()->run_task(&ftask[i]), true);
     }
 
     EmptyTask etask;
     EXPECT_EQ(worker_manager::instance()->run_task(&etask), false);
 
-    for(int i = 0; i < worker_manager::instance()->get_workers(); i++) {
+    for (int i = 0; i < worker_manager::instance()->get_workers(); i++) {
         ftask[i].stop();
         ftask[i].join(1000);
         EXPECT_EQ(ftask[i].value, TEST_VALUE);

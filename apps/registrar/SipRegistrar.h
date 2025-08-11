@@ -19,44 +19,42 @@
 #include <unordered_map>
 #include <chrono>
 
-using std::string;
-using std::vector;
-using std::map;
 using std::list;
+using std::map;
+using std::string;
 using std::unordered_map;
-using std::chrono::seconds;
+using std::vector;
 using std::chrono::milliseconds;
+using std::chrono::seconds;
 using std::chrono::system_clock;
 
 using RegistrationIdType = SipRegistrarEvent::RegistrationIdType;
-using AorData = SipRegistrarResolveResponseEvent::aor_data;
-using Aors = map<RegistrationIdType, list<AorData>>;
+using AorData            = SipRegistrarResolveResponseEvent::aor_data;
+using Aors               = map<RegistrationIdType, list<AorData>>;
 
-class SipRegistrar
-  : public AmThread,
-    public AmEventFdQueue,
-    public AmEventHandler,
-    public RpcTreeHandler<SipRegistrar>,
-    public RegistrarRedisClient,
-    public RegistrarClickhouse
-{
+class SipRegistrar : public AmThread,
+                     public AmEventFdQueue,
+                     public AmEventHandler,
+                     public RpcTreeHandler<SipRegistrar>,
+                     public RegistrarRedisClient,
+                     public RegistrarClickhouse {
   private:
     friend RegistrarTest;
-    static SipRegistrar* _instance;
+    static SipRegistrar *_instance;
 
-    int epoll_fd;
-    AmEventFd stop_event;
+    int               epoll_fd;
+    AmEventFd         stop_event;
     AmCondition<bool> stopped;
 
-    int expires_min;
-    int expires_max;
-    int expires_default;
-    int bindings_max;
-    unsigned int keepalive_failure_code;
+    int            expires_min;
+    int            expires_max;
+    int            expires_default;
+    int            bindings_max;
+    unsigned int   keepalive_failure_code;
     vector<string> headers;
-    AmTimerFd timer;
-    seconds keepalive_interval;
-    seconds max_interval_drift;
+    AmTimerFd      timer;
+    seconds        keepalive_interval;
+    seconds        max_interval_drift;
 
     bool process_subscriptions;
 
@@ -67,24 +65,24 @@ class SipRegistrar
      * value: pair.second: dlg ptr
      */
     unordered_map<string, pair<string, unique_ptr<AmSipDialog>>> uac_dlgs;
-    uint32_t max_registrations_per_slot;
+    uint32_t                                                     max_registrations_per_slot;
 
-    //contains data to generate correct keepalive OPTIONS requests
+    // contains data to generate correct keepalive OPTIONS requests
     struct keepalive_ctx_data {
-        string aor;
-        string path;
-        string interface_name;
-        AmArg clickhouse_data;
+        string                   aor;
+        string                   path;
+        string                   interface_name;
+        AmArg                    clickhouse_data;
         system_clock::time_point next_send;
         system_clock::time_point last_sent;
-        unsigned int last_reply_code;
-        string last_reply_reason;
-        milliseconds last_reply_rtt_ms;
+        unsigned int             last_reply_code;
+        string                   last_reply_reason;
+        milliseconds             last_reply_rtt_ms;
 
-        keepalive_ctx_data(const string &aor, const string &path,
-            const string &interface_name, const system_clock::time_point &next_send);
-        void update(const string &_aor, const string &_path,
-            const string &_interface_name, const system_clock::time_point &_next_send);
+        keepalive_ctx_data(const string &aor, const string &path, const string &interface_name,
+                           const system_clock::time_point &next_send);
+        void update(const string &_aor, const string &_path, const string &_interface_name,
+                    const system_clock::time_point &_next_send);
         void dump(const string &key, const system_clock::time_point &now) const;
         void dump(const string &key, AmArg &ret, const system_clock::time_point &now) const;
     };
@@ -98,25 +96,24 @@ class SipRegistrar
      *   - expire events from redis
      *   - del events from redis
      */
-    struct KeepAliveContexts
-      : public unordered_map<string, keepalive_ctx_data>
-    {
+    struct KeepAliveContexts : public unordered_map<string, keepalive_ctx_data> {
         AmMutex mutex;
-        void dump();
-        void dump(AmArg &ret);
-        void getSnapshot(AmArg &ret, std::function<void(AmArg& data)> f_enrich_entry);
+        void    dump();
+        void    dump(AmArg &ret);
+        void    getSnapshot(AmArg &ret, std::function<void(AmArg &data)> f_enrich_entry);
     } keepalive_contexts;
 
     struct LookupSubscriber {
         std::chrono::system_clock::time_point created_at;
-        std::chrono::milliseconds timeout_interval;
-        string session_id;
+        std::chrono::milliseconds             timeout_interval;
+        string                                session_id;
 
         LookupSubscriber(const string &session_id, std::chrono::milliseconds timeout_interval)
-          : created_at(std::chrono::system_clock::now()),
-            timeout_interval(timeout_interval),
-            session_id(session_id)
-        {}
+            : created_at(std::chrono::system_clock::now())
+            , timeout_interval(timeout_interval)
+            , session_id(session_id)
+        {
+        }
     };
 
     std::unordered_multimap<RegistrationIdType, LookupSubscriber> aor_lookup_subscribers;
@@ -128,10 +125,8 @@ class SipRegistrar
 
     bool fetch_all(AmObject *user_data, int user_type_id, const string &registration_id);
     bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
-    bool bind(AmObject *user_data, int user_type_id,
-        const string &registration_id, const string &contact, int expires,
-        const string &user_agent, const string &path, const string &interface_name,
-        const string& headers);
+    bool bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact, int expires,
+              const string &user_agent, const string &path, const string &interface_name, const string &headers);
     bool resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids);
     bool load_contacts(AmObject *user_data, int user_type_id);
     bool subscribe(int user_type_id);
@@ -143,11 +138,10 @@ class SipRegistrar
     void remove_keep_alive_context(const string &key);
     void clear_keep_alive_contexts();
     void dump_keep_alive_contexts(AmArg &ret) { keepalive_contexts.dump(ret); }
-    void create_or_update_keep_alive_context(const string &key,
-                                             std::function<void(AmArg& data)> f_load,
-                                             const seconds &keep_alive_interval_offset = seconds{0});
+    void create_or_update_keep_alive_context(const string &key, std::function<void(AmArg &data)> f_load,
+                                             const seconds &keep_alive_interval_offset = seconds{ 0 });
 
-    void process_redis_reply_contact_subscribe_reg_channel_event(RedisReply& event);
+    void   process_redis_reply_contact_subscribe_reg_channel_event(RedisReply &event);
     string get_interface_name(int interface_id);
 
   protected:
@@ -155,36 +149,36 @@ class SipRegistrar
 
     void run() override;
     void on_stop() override;
-    void process(AmEvent* ev) override;
+    void process(AmEvent *ev) override;
     void init_rpc_tree() override;
-    int configure(cfg_t* cfg) override;
+    int  configure(cfg_t *cfg) override;
     void connect(const Connection &conn) override;
     void on_connect(const string &conn_id, const RedisConnectionInfo &info) override;
-    void getSnapshot(AmArg& ret, std::function<void(AmArg& data)> f_enrich_entry) override;
+    void getSnapshot(AmArg &ret, std::function<void(AmArg &data)> f_enrich_entry) override;
 
-    int init();
-    int onLoad();
-    void post_register_response(const string& session_id, const AmSipRequest* req,
-            int code, const string& reason, const string& hdrs = "");
-    void post_resolve_response(const string& session_id, const Aors& aors = Aors());
-    void process_register_request_event(SipRegistrarRegisterRequestEvent& event);
-    void process_resolve_request_event(SipRegistrarResolveRequestEvent& event);
-    void process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent& event);
-    void process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent& event);
-    void process_redis_conn_state_event(RedisConnectionState& event);
-    void process_redis_reply_event(RedisReply& event);
-    void process_redis_reply_register_event(RedisReply& event);
-    void process_redis_reply_resolve_aors_event(RedisReply& event);
-    void process_redis_reply_blocking_req_ctx_event(RedisReply& event);
-    void process_redis_reply_contact_subscribe_event(RedisReply& event);
-    void process_redis_reply_contact_data_event(RedisReply& event);
-    void process_redis_reply_unbind_event(RedisReply& event);
+    int  init();
+    int  onLoad();
+    void post_register_response(const string &session_id, const AmSipRequest *req, int code, const string &reason,
+                                const string &hdrs = "");
+    void post_resolve_response(const string &session_id, const Aors &aors = Aors());
+    void process_register_request_event(SipRegistrarRegisterRequestEvent &event);
+    void process_resolve_request_event(SipRegistrarResolveRequestEvent &event);
+    void process_resolve_subscribe_event(SipRegistrarResolveAorsSubscribeEvent &event);
+    void process_resolve_unsubscribe_event(SipRegistrarResolveAorsUnsubscribeEvent &event);
+    void process_redis_conn_state_event(RedisConnectionState &event);
+    void process_redis_reply_event(RedisReply &event);
+    void process_redis_reply_register_event(RedisReply &event);
+    void process_redis_reply_resolve_aors_event(RedisReply &event);
+    void process_redis_reply_blocking_req_ctx_event(RedisReply &event);
+    void process_redis_reply_contact_subscribe_event(RedisReply &event);
+    void process_redis_reply_contact_data_event(RedisReply &event);
+    void process_redis_reply_unbind_event(RedisReply &event);
     void process_sip_reply(const AmSipReplyEvent &event);
 
   public:
     SipRegistrar();
     virtual ~SipRegistrar();
 
-    static SipRegistrar* instance();
-    static void dispose();
+    static SipRegistrar *instance();
+    static void          dispose();
 };

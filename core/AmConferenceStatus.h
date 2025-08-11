@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmConferenceStatus.h */
@@ -37,87 +37,78 @@ using std::string;
 
 class AmConferenceChannel;
 
-enum { ConfNewParticipant = 1,
-       ConfParticipantLeft };
+enum { ConfNewParticipant = 1, ConfParticipantLeft };
 
 /** \brief event in a conference*/
-struct ConferenceEvent: public AmEvent
-{
-  unsigned int participants;
-  string       conf_id;
-  string       sess_id;
+struct ConferenceEvent : public AmEvent {
+    unsigned int participants;
+    string       conf_id;
+    string       sess_id;
 
-  ConferenceEvent(int event_id, 
-		  unsigned int participants,
-		  const string& conf_id,
-		  const string& sess_id)
-    : AmEvent(event_id),
-      participants(participants),
-      conf_id(conf_id),
-      sess_id(sess_id)
-  {}
+    ConferenceEvent(int event_id, unsigned int participants, const string &conf_id, const string &sess_id)
+        : AmEvent(event_id)
+        , participants(participants)
+        , conf_id(conf_id)
+        , sess_id(sess_id)
+    {
+    }
 };
 
 /**
  * \brief One conference (room).
- * 
+ *
  * The ConferenceStatus manages one conference.
  */
-class AmConferenceStatus
-{
-  static std::map<string,AmConferenceStatus*> cid2status;
-  static AmMutex                         cid2s_mut;
+class AmConferenceStatus {
+    static std::map<string, AmConferenceStatus *> cid2status;
+    static AmMutex                                cid2s_mut;
 
-  struct SessInfo {
+    struct SessInfo {
 
-    string       sess_id;
-    unsigned int ch_id;
+        string       sess_id;
+        unsigned int ch_id;
 
-    SessInfo(const string& local_tag,
-	     unsigned int  ch_id)
-      : sess_id(local_tag),
-	ch_id(ch_id)
-    {}
-  };
+        SessInfo(const string &local_tag, unsigned int ch_id)
+            : sess_id(local_tag)
+            , ch_id(ch_id)
+        {
+        }
+    };
 
-  string                 conf_id;
-  AmMultiPartyMixer      mixer;
-    
-  // sess_id -> ch_id
-  std::map<string, unsigned int> sessions;
+    string            conf_id;
+    AmMultiPartyMixer mixer;
 
-  // ch_id -> sess_id
-  std::map<unsigned int, SessInfo*> channels;
+    // sess_id -> ch_id
+    std::map<string, unsigned int> sessions;
 
-  AmMutex                      sessions_mut;
+    // ch_id -> sess_id
+    std::map<unsigned int, SessInfo *> channels;
 
-  AmConferenceStatus(const string& conference_id);
-  ~AmConferenceStatus();
+    AmMutex sessions_mut;
 
-  AmConferenceChannel* getChannel(const string& sess_id, int input_sample_rate);
+    AmConferenceStatus(const string &conference_id);
+    ~AmConferenceStatus();
 
-  int releaseChannel(unsigned int ch_id);
+    AmConferenceChannel *getChannel(const string &sess_id, int input_sample_rate);
 
-  void postConferenceEvent(int event_id, const string& sess_id);
+    int releaseChannel(unsigned int ch_id);
 
-public:
-  const string&      getConfID() { return conf_id; }
-  AmMultiPartyMixer* getMixer()  { return &mixer; }
+    void postConferenceEvent(int event_id, const string &sess_id);
 
-  static AmConferenceChannel* getChannel(const string& cid, 
-					 const string& local_tag,
-                                         int input_sample_rate);
+  public:
+    const string      &getConfID() { return conf_id; }
+    AmMultiPartyMixer *getMixer() { return &mixer; }
 
-  static void releaseChannel(const string& cid, unsigned int ch_id);
+    static AmConferenceChannel *getChannel(const string &cid, const string &local_tag, int input_sample_rate);
 
-  static void postConferenceEvent(const string& cid, int event_id, 
-				  const string& sess_id);
+    static void releaseChannel(const string &cid, unsigned int ch_id);
 
-  static size_t getConferenceSize(const string& cid);
+    static void postConferenceEvent(const string &cid, int event_id, const string &sess_id);
+
+    static size_t getConferenceSize(const string &cid);
 };
 
 #endif
 // Local Variables:
 // mode:C++
 // End:
-

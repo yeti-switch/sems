@@ -21,8 +21,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _parse_nameaddr_h_
@@ -30,23 +30,22 @@
 
 #include "parse_uri.h"
 
-struct sip_nameaddr
-{
+struct sip_nameaddr {
 
     cstring name;
     cstring addr;
 
     sip_uri uri;
 
-    std::list<sip_avp*> params;
+    std::list<sip_avp *> params;
 
     sip_nameaddr() {}
     ~sip_nameaddr();
 };
 
-int parse_nameaddr(sip_nameaddr* na, const char** c, int len);
-int parse_nameaddr_uri(sip_nameaddr* na, const char** c, int len);
-int parse_first_nameaddr(sip_nameaddr* na, const char* c, int len);
-int parse_nameaddr_list(std::list<cstring>& nas, const char* c, int len);
+int parse_nameaddr(sip_nameaddr *na, const char **c, int len);
+int parse_nameaddr_uri(sip_nameaddr *na, const char **c, int len);
+int parse_first_nameaddr(sip_nameaddr *na, const char *c, int len);
+int parse_nameaddr_list(std::list<cstring> &nas, const char *c, int len);
 
 #endif

@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmRtpReceiver.h */
@@ -48,20 +48,19 @@ class _AmRtpReceiver;
 #define MAX_RTP_SESSIONS 2048
 #endif
 
-//!TODO: implement using bit map
-template <unsigned int len>
-class UsageMap {
+//! TODO: implement using bit map
+template <unsigned int len> class UsageMap {
     bool bits[len];
-  public:
-    UsageMap() {
-        memset(bits, 0, len);
-    }
 
-    int get_free_idx(){
-        bool *e = bits;
+  public:
+    UsageMap() { memset(bits, 0, len); }
+
+    int get_free_idx()
+    {
+        bool        *e   = bits;
         unsigned int idx = 0;
-        for(; idx < len; idx++, e++){
-            if(!*e){
+        for (; idx < len; idx++, e++) {
+            if (!*e) {
                 *e = true;
                 return idx;
             }
@@ -69,30 +68,31 @@ class UsageMap {
         return -1;
     }
 
-    void clear_idx(int idx){
-        bits[idx] = false;
-    }
+    void clear_idx(int idx) { bits[idx] = false; }
 
-    bool used(int idx){
-        return bits[idx];
-    }
+    bool used(int idx) { return bits[idx]; }
 };
 
 class StreamCtxMap {
   public:
     struct StreamCtx {
-        bool valid;
-        int stream_fd;
-        AmRtpSession* stream;
-        StreamCtx(): valid(false) {}
+        bool          valid;
+        int           stream_fd;
+        AmRtpSession *stream;
+        StreamCtx()
+            : valid(false)
+        {
+        }
     };
+
   private:
     UsageMap<MAX_RTP_SESSIONS> usage;
-    StreamCtx ctxs[MAX_RTP_SESSIONS];
-    std::list<int> ctxs_to_put;
+    StreamCtx                  ctxs[MAX_RTP_SESSIONS];
+    std::list<int>             ctxs_to_put;
+
   public:
     StreamCtxMap() {}
-    int ctx_get(int fd, AmRtpSession* s);
+    int  ctx_get(int fd, AmRtpSession *s);
     void ctx_put(int ctx_idx);
     void ctx_put_immediate(int ctx_idx);
     bool is_double_add(int old_ctx_idx, AmRtpSession *stream);
@@ -103,53 +103,52 @@ class StreamCtxMap {
 /**
  * \brief receiver for RTP for all streams.
  *
- * The RtpReceiver receives RTP packets for all streams 
- * that are registered to it. It places the received packets in 
- * the stream's buffer. 
+ * The RtpReceiver receives RTP packets for all streams
+ * that are registered to it. It places the received packets in
+ * the stream's buffer.
  */
-class AmRtpReceiverThread: public AmThread {
+class AmRtpReceiverThread : public AmThread {
 
-  StreamCtxMap streams;
-  AmMutex  streams_mut;
-  AmEventFd stop_event;
-  AmEventFd stream_remove_event;
+    StreamCtxMap streams;
+    AmMutex      streams_mut;
+    AmEventFd    stop_event;
+    AmEventFd    stream_remove_event;
 
-  int poll_fd;
+    int poll_fd;
 
-  AmRtpReceiverThread();
-  ~AmRtpReceiverThread();
-    
-  void run();
-  void on_stop();
+    AmRtpReceiverThread();
+    ~AmRtpReceiverThread();
 
-  int addStream(int sd, AmRtpSession* stream, int old_ctx_idx);
-  void removeStream(int sd, int ctx_idx);
+    void run();
+    void on_stop();
 
-  void stop_and_wait();
+    int  addStream(int sd, AmRtpSession *stream, int old_ctx_idx);
+    void removeStream(int sd, int ctx_idx);
 
-  friend class _AmRtpReceiver;
+    void stop_and_wait();
+
+    friend class _AmRtpReceiver;
 };
 
-class _AmRtpReceiver
-{
-  AmRtpReceiverThread* receivers;
-  unsigned int         n_receivers;
+class _AmRtpReceiver {
+    AmRtpReceiverThread *receivers;
+    unsigned int         n_receivers;
 
-  atomic_int next_index;
-  AtomicCounter& drop_counter;
+    atomic_int     next_index;
+    AtomicCounter &drop_counter;
 
-protected:
-  _AmRtpReceiver();
-  ~_AmRtpReceiver();
+  protected:
+    _AmRtpReceiver();
+    ~_AmRtpReceiver();
 
-  void dispose();
+    void dispose();
 
-public:
-  void start();
+  public:
+    void start();
 
-  int addStream(int sd, AmRtpSession* stream, int old_ctx_idx);
-  void removeStream(int sd, int ctx_idx);
-  void inc_drop_packets();
+    int  addStream(int sd, AmRtpSession *stream, int old_ctx_idx);
+    void removeStream(int sd, int ctx_idx);
+    void inc_drop_packets();
 };
 
 typedef singleton<_AmRtpReceiver> AmRtpReceiver;

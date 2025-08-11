@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _AmUriParser_h_
@@ -33,43 +33,43 @@ using std::map;
 using std::string;
 
 struct AmUriParser {
-  string display_name;
-  string uri;
+    string display_name;
+    string uri;
 
-  string uri_user;
-  string uri_host;
-  string uri_port;
-  string uri_scheme;
-  string uri_headers;
-  string uri_param;		// <sip:user@host;uri_param>
-                                // <sip:user;user_param@host>
+    string uri_user;
+    string uri_host;
+    string uri_port;
+    string uri_scheme;
+    string uri_headers;
+    string uri_param; // <sip:user@host;uri_param>
+                      // <sip:user;user_param@host>
 
-  map<string, string> params; 	// <sip:user;@host>;params
+    map<string, string> params; // <sip:user;@host>;params
 
-  bool isEqual(const AmUriParser& c) const;
-  /** @return true on success */
-  bool parse_nameaddr(const string& line);
-  /** parse nameaddr from pos
-       @return true on success
-       @return end of current nameaddr */
-  bool parse_contact(const string& line, size_t pos, size_t& end);
-  /** @return true on success */
-  bool parse_uri();
-  bool parse_params(const string& line, int& pos);
+    bool isEqual(const AmUriParser &c) const;
+    /** @return true on success */
+    bool parse_nameaddr(const string &line);
+    /** parse nameaddr from pos
+         @return true on success
+         @return end of current nameaddr */
+    bool parse_contact(const string &line, size_t pos, size_t &end);
+    /** @return true on success */
+    bool parse_uri();
+    bool parse_params(const string &line, int &pos);
 
-  /** param_string is semicolon separated list of parameters with or without value.
-   * method can be used to add/replace param for uri and user parameters */
-  static string add_param_to_param_list(const string& param_name,
-	    const string& param_value, const string& param_list);
+    /** param_string is semicolon separated list of parameters with or without value.
+     * method can be used to add/replace param for uri and user parameters */
+    static string add_param_to_param_list(const string &param_name, const string &param_value,
+                                          const string &param_list);
 
-  void dump() const;
-  string uri_str() const;
-  string canon_uri_str() const;
-  string nameaddr_str() const;
+    void   dump() const;
+    string uri_str() const;
+    string canon_uri_str() const;
+    string nameaddr_str() const;
 
-  AmUriParser() { }
+    AmUriParser() {}
 
-  string print();
+    string print();
 };
 
 #endif

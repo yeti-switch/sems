@@ -10,15 +10,13 @@ using std::vector;
 #include "SipRegistrarConfig.h"
 
 
-class RegistrarClickhouse
-  : public virtual Configurable
-{
-    bool clickhouse_enable;
-    time_t last_snapshot_ts;
-    string clickhouse_table;
-    string snapshots_body_header;
+class RegistrarClickhouse : public virtual Configurable {
+    bool           clickhouse_enable;
+    time_t         last_snapshot_ts;
+    string         clickhouse_table;
+    string         snapshots_body_header;
     vector<string> clickhouse_dest;
-    int clickhouse_period;
+    int            clickhouse_period;
 
     union {
         uint64_t v;
@@ -44,12 +42,12 @@ class RegistrarClickhouse
 
   public:
     RegistrarClickhouse();
-    virtual ~RegistrarClickhouse(){}
+    virtual ~RegistrarClickhouse() {}
 
-    int configure(cfg_t* cfg) override;
+    int configure(cfg_t *cfg) override;
 
-    int init(int epoll_fd);
+    int  init(int epoll_fd);
     void on_timer();
 
-    virtual void getSnapshot(AmArg& data, std::function<void(AmArg& data)> f_enrich_entry) = 0;
+    virtual void getSnapshot(AmArg &data, std::function<void(AmArg &data)> f_enrich_entry) = 0;
 };

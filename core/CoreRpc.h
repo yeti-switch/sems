@@ -3,42 +3,39 @@
 #include "AmApi.h"
 #include "RpcTreeHandler.h"
 
-#define LOG_NONE_MASK   0x0
-#define LOG_SIP_MASK    0x1
-#define LOG_RTP_MASK    0x2
-#define LOG_FULL_MASK   (LOG_SIP_MASK|LOG_RTP_MASK)
+#define LOG_NONE_MASK 0x0
+#define LOG_SIP_MASK  0x1
+#define LOG_RTP_MASK  0x2
+#define LOG_FULL_MASK (LOG_SIP_MASK | LOG_RTP_MASK)
 
 const char *dump_level2str(int dump_level);
 
-class CoreRpc final
-  : public RpcTreeHandler<CoreRpc>,
-    public AmDynInvokeFactory
-{
-    time_t start_time;
+class CoreRpc final : public RpcTreeHandler<CoreRpc>, public AmDynInvokeFactory {
+    time_t         start_time;
     static timeval last_shutdown_time;
 
     CoreRpc()
-      : RpcTreeHandler<CoreRpc>(true),
-        AmDynInvokeFactory("core")
-    { }
+        : RpcTreeHandler<CoreRpc>(true)
+        , AmDynInvokeFactory("core")
+    {
+    }
 
   protected:
-
     void init_rpc_tree();
-    void log_invoke(const string& method, const AmArg& args) const;
+    void log_invoke(const string &method, const AmArg &args) const;
 
   public:
-    static CoreRpc& instance();
+    static CoreRpc &instance();
 
-    AmDynInvoke* getInstance() { return this; }
-    int onLoad();
-    static void set_system_shutdown(bool shutdown);
+    AmDynInvoke *getInstance() { return this; }
+    int          onLoad();
+    static void  set_system_shutdown(bool shutdown);
 
-    CoreRpc(CoreRpc const&) = delete;
-    void operator=(CoreRpc const&) = delete;
+    CoreRpc(CoreRpc const &)        = delete;
+    void operator=(CoreRpc const &) = delete;
     ~CoreRpc();
 
-    //make some of the handlers public for back-compatibility
+    // make some of the handlers public for back-compatibility
     rpc_handler showVersion;
     rpc_handler showConfig;
     rpc_handler showMediaStreams;
@@ -89,6 +86,4 @@ class CoreRpc final
     rpc_handler requestLogDump;
 
     rpc_handler plugin;
-
 };
-

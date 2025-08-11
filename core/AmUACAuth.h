@@ -5,22 +5,22 @@
 #include "AmArg.h"
 
 class AmUACAuth {
- protected:
-  AmUACAuth();
-  ~AmUACAuth();
- public:
-  /**
-     unpack UAC auth credentials from an AmArg 
-     @return UACAuthCred object, NULL if failed 
-  */
+  protected:
+    AmUACAuth();
+    ~AmUACAuth();
 
-  static UACAuthCred* unpackCredentials(const AmArg& arg);
+  public:
+    /**
+       unpack UAC auth credentials from an AmArg
+       @return UACAuthCred object, NULL if failed
+    */
 
-  /**
-     enable SIP UAC authentication
-     @return true if successful
-  */
-  static bool enable(AmSession* s);
+    static UACAuthCred *unpackCredentials(const AmArg &arg);
 
+    /**
+       enable SIP UAC authentication
+       @return true if successful
+    */
+    static bool enable(AmSession *s);
 };
 #endif

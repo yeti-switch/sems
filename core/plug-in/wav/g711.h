@@ -22,7 +22,7 @@ extern int16_t _st_alaw2linear16[256];
 #define st_alaw2linear16(uc) (_st_alaw2linear16[uc])
 #else
 unsigned char st_13linear2alaw(int16_t pcm_val); /*  REGPARM(1); */
-int16_t st_alaw2linear16(unsigned char); /*  REGPARM(1); */
+int16_t       st_alaw2linear16(unsigned char);   /*  REGPARM(1); */
 #endif
 
 #ifdef FAST_ULAW_CONVERSION
@@ -32,7 +32,5 @@ extern int16_t _st_ulaw2linear16[256];
 #define st_ulaw2linear16(uc) (_st_ulaw2linear16[uc])
 #else
 unsigned char st_14linear2ulaw(int16_t pcm_val); /*  REGPARM(1); */
-int16_t st_ulaw2linear16(unsigned char); /*  REGPARM(1); */
+int16_t       st_ulaw2linear16(unsigned char);   /*  REGPARM(1); */
 #endif
-
-

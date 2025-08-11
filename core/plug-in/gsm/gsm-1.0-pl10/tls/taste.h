@@ -3,18 +3,18 @@
  * Universitaet Berlin.  See the accompanying file "COPYRIGHT" for
  * details.  THERE IS ABSOLUTELY NO WARRANTY FOR THIS SOFTWARE.
  */
- 
+
 /*
  * common code to sweet.c and bitter.c
  */
 
-#ifndef	TASTE_H
-#define	TASTE_H
+#ifndef TASTE_H
+#define TASTE_H
 
 struct spex {
 
-	char	* var;
-	int	varsize;
-} ;
+    char *var;
+    int   varsize;
+};
 
-#endif	/* TASTE_H */
+#endif /* TASTE_H */

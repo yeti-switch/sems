@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -31,7 +31,7 @@
 #include <errno.h>
 
 // Not on Solaris!
-#if !defined (__SVR4) && !defined (__sun)
+#if !defined(__SVR4) && !defined(__sun)
 #include <strings.h>
 #endif
 
@@ -41,174 +41,181 @@
 
 #define EPOLL_MAX_EVENTS 2048
 
-int StreamCtxMap::ctx_get(int fd, AmRtpSession* s){
+int StreamCtxMap::ctx_get(int fd, AmRtpSession *s)
+{
     int idx = usage.get_free_idx();
-    if(-1==idx) return -1;
+    if (-1 == idx)
+        return -1;
 
     StreamCtx &ctx = ctxs[idx];
 
     ctx.stream_fd = fd;
-    ctx.stream = s;
-    ctx.valid = true;
-    //CLASS_DBG("ctx_get(%d, %p) = %d",fd,s,idx);
+    ctx.stream    = s;
+    ctx.valid     = true;
+    // CLASS_DBG("ctx_get(%d, %p) = %d",fd,s,idx);
     return idx;
 }
 
-void StreamCtxMap::ctx_put(int ctx_idx) {
+void StreamCtxMap::ctx_put(int ctx_idx)
+{
     auto &ctx = ctxs[ctx_idx];
 
-    DBG("put ctx_idx:%d. valid:%d, stream_fd:%d, stream:%p ",
-        ctx_idx, ctx.valid, ctx.stream_fd, to_void(ctx.stream));
+    DBG("put ctx_idx:%d. valid:%d, stream_fd:%d, stream:%p ", ctx_idx, ctx.valid, ctx.stream_fd, to_void(ctx.stream));
 
     ctx.valid = false;
     ctxs_to_put.push_back(ctx_idx);
 }
 
-void StreamCtxMap::ctx_put_immediate(int ctx_idx){
+void StreamCtxMap::ctx_put_immediate(int ctx_idx)
+{
     ctxs[ctx_idx].valid = false;
     usage.clear_idx(ctx_idx);
 }
 
-bool StreamCtxMap::is_double_add(int old_ctx_idx, AmRtpSession *stream){
-    return (-1!=old_ctx_idx) && (ctxs[old_ctx_idx].stream==stream);
+bool StreamCtxMap::is_double_add(int old_ctx_idx, AmRtpSession *stream)
+{
+    return (-1 != old_ctx_idx) && (ctxs[old_ctx_idx].stream == stream);
 }
 
-void StreamCtxMap::recv(int ctx_idx){
+void StreamCtxMap::recv(int ctx_idx)
+{
     StreamCtx &ctx = ctxs[ctx_idx];
-    if(ctx.valid){
+    if (ctx.valid) {
         ctx.stream->recvPacket(ctx.stream_fd);
     } else {
         ctxs_to_put.push_back(ctx_idx);
     }
 }
 
-void StreamCtxMap::put_pended(){
-    while(!ctxs_to_put.empty()){
-        //CLASS_DBG("put pended %d",ctxs_to_put.front());
+void StreamCtxMap::put_pended()
+{
+    while (!ctxs_to_put.empty()) {
+        // CLASS_DBG("put pended %d",ctxs_to_put.front());
         usage.clear_idx(ctxs_to_put.front());
         ctxs_to_put.pop_front();
     }
 }
 
-_AmRtpReceiver::_AmRtpReceiver() :
-    drop_counter(stat_group(Counter, "core", "media_acl_dropped").addAtomicCounter())
+_AmRtpReceiver::_AmRtpReceiver()
+    : drop_counter(stat_group(Counter, "core", "media_acl_dropped").addAtomicCounter())
 {
-  n_receivers = AmConfig.rtp_recv_threads;
-  receivers = new AmRtpReceiverThread[n_receivers];
+    n_receivers = AmConfig.rtp_recv_threads;
+    receivers   = new AmRtpReceiverThread[n_receivers];
 }
 
 _AmRtpReceiver::~_AmRtpReceiver()
 {
-  delete [] receivers;
+    delete[] receivers;
 }
 
 AmRtpReceiverThread::AmRtpReceiverThread()
-  : poll_fd(-1) { }
+    : poll_fd(-1)
+{
+}
 
 AmRtpReceiverThread::~AmRtpReceiverThread()
 {
-  DBG("RTP receiver has been recycled.");
+    DBG("RTP receiver has been recycled.");
 }
 
 void AmRtpReceiverThread::on_stop()
 {
-  DBG("requesting RTP receiver to stop.");
-  stop_event.fire();
+    DBG("requesting RTP receiver to stop.");
+    stop_event.fire();
 }
 
 void AmRtpReceiverThread::stop_and_wait()
 {
-  if(!is_stopped()) {
-    stop();
-    
-    while(!is_stopped()) 
-      usleep(10000);
-  }
+    if (!is_stopped()) {
+        stop();
+
+        while (!is_stopped())
+            usleep(10000);
+    }
 }
 
-void _AmRtpReceiver::dispose() 
+void _AmRtpReceiver::dispose()
 {
-  for(unsigned int i=0; i<n_receivers; i++){
-    receivers[i].stop_and_wait();
-  }
+    for (unsigned int i = 0; i < n_receivers; i++) {
+        receivers[i].stop_and_wait();
+    }
 }
 
 void AmRtpReceiverThread::run()
 {
-  struct epoll_event events[EPOLL_MAX_EVENTS];
+    struct epoll_event events[EPOLL_MAX_EVENTS];
 
-  poll_fd = epoll_create(EPOLL_MAX_EVENTS);
-  if (poll_fd == -1) {
-    throw string("failed epoll_create in AmRtpReceiverThread: "+string(strerror(errno)));
-  }
-
-  stop_event.link(poll_fd);
-  stream_remove_event.link(poll_fd);
-
-  setThreadName("rtp-rx");
-
-  bool stop = false;
-  while(!stop){
-    int ret = epoll_wait(poll_fd,events,EPOLL_MAX_EVENTS,-1);
-    if(ret == -1 && errno != EINTR){
-      ERROR("AmRtpReceiver: epoll_wait: %s",strerror(errno));
+    poll_fd = epoll_create(EPOLL_MAX_EVENTS);
+    if (poll_fd == -1) {
+        throw string("failed epoll_create in AmRtpReceiverThread: " + string(strerror(errno)));
     }
-    if(ret < 1)
-      continue;
 
-    streams_mut.lock();
-    for (int n = 0; n < ret; ++n) {
-      struct epoll_event &e = events[n];
-      if(!(e.events & EPOLLIN)){
-        continue;
-      }
-      if(e.data.fd==stop_event){
-          stop_event.read();
-          stop = true;
-          break;
-      }
-      if(e.data.fd==stream_remove_event){
-          stream_remove_event.read();
-          /* do nothing. this event is fired just to ensure that
-           * streams.put_pended(ctxs) will be called even if
-           * no rtp packets will be received */
-          continue;
-      }
-      streams.recv(e.data.fd);
-    }
-    streams.put_pended();
-    streams_mut.unlock();
-  } //while(!stop)
-  close(poll_fd);
+    stop_event.link(poll_fd);
+    stream_remove_event.link(poll_fd);
+
+    setThreadName("rtp-rx");
+
+    bool stop = false;
+    while (!stop) {
+        int ret = epoll_wait(poll_fd, events, EPOLL_MAX_EVENTS, -1);
+        if (ret == -1 && errno != EINTR) {
+            ERROR("AmRtpReceiver: epoll_wait: %s", strerror(errno));
+        }
+        if (ret < 1)
+            continue;
+
+        streams_mut.lock();
+        for (int n = 0; n < ret; ++n) {
+            struct epoll_event &e = events[n];
+            if (!(e.events & EPOLLIN)) {
+                continue;
+            }
+            if (e.data.fd == stop_event) {
+                stop_event.read();
+                stop = true;
+                break;
+            }
+            if (e.data.fd == stream_remove_event) {
+                stream_remove_event.read();
+                /* do nothing. this event is fired just to ensure that
+                 * streams.put_pended(ctxs) will be called even if
+                 * no rtp packets will be received */
+                continue;
+            }
+            streams.recv(e.data.fd);
+        }
+        streams.put_pended();
+        streams_mut.unlock();
+    } // while(!stop)
+    close(poll_fd);
 }
 
-int AmRtpReceiverThread::addStream(int sd, AmRtpSession* stream, int old_ctx_idx)
+int AmRtpReceiverThread::addStream(int sd, AmRtpSession *stream, int old_ctx_idx)
 {
     CLASS_DBG("> addStream(sd:%d, stream:%p, old_ctx_id:%d)", sd, to_void(stream), old_ctx_idx);
 
     AmLock l(streams_mut);
     (void)l;
 
-    if(streams.is_double_add(old_ctx_idx,stream)) {
+    if (streams.is_double_add(old_ctx_idx, stream)) {
         CLASS_DBG("< skip double add for ctx %d. return it back", old_ctx_idx);
         return old_ctx_idx;
     }
 
-    int ctx_idx = streams.ctx_get(sd,stream);
-    if(-1==ctx_idx) {
-        CLASS_ERROR("< streams contexts storage exhausted on attempt to add stream: %p",
-            to_void(stream));
+    int ctx_idx = streams.ctx_get(sd, stream);
+    if (-1 == ctx_idx) {
+        CLASS_ERROR("< streams contexts storage exhausted on attempt to add stream: %p", to_void(stream));
         throw string("streams contexts storage exhausted");
     }
 
     struct epoll_event ev;
     bzero(&ev, sizeof(struct epoll_event));
-    ev.events = EPOLLIN;
+    ev.events  = EPOLLIN;
     ev.data.fd = ctx_idx;
 
-    if(epoll_ctl(poll_fd,EPOLL_CTL_ADD,sd,&ev) == -1) {
+    if (epoll_ctl(poll_fd, EPOLL_CTL_ADD, sd, &ev) == -1) {
         CLASS_ERROR("< failed to add to epoll structure stream:%p with sd:%i, old_ctx_idx:%d, ctx_idx:%d, error: %s",
-            to_void(stream),sd,old_ctx_idx,ctx_idx,strerror(errno));
+                    to_void(stream), sd, old_ctx_idx, ctx_idx, strerror(errno));
         streams.ctx_put_immediate(ctx_idx);
         return old_ctx_idx;
     }
@@ -220,14 +227,14 @@ void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
 {
     CLASS_DBG("> removeStream(sd:%d, ctx_id:%d)", sd, ctx_idx);
 
-    if(ctx_idx == -1) return;
+    if (ctx_idx == -1)
+        return;
 
     AmLock l(streams_mut);
     (void)l;
 
-    if(epoll_ctl(poll_fd,EPOLL_CTL_DEL,sd,nullptr) == -1) {
-        CLASS_ERROR("removeStream epoll_ctl_del sd:%d ctx_idx:%d error:%s",
-            sd,ctx_idx,strerror(errno));
+    if (epoll_ctl(poll_fd, EPOLL_CTL_DEL, sd, nullptr) == -1) {
+        CLASS_ERROR("removeStream epoll_ctl_del sd:%d ctx_idx:%d error:%s", sd, ctx_idx, strerror(errno));
     }
     streams.ctx_put(ctx_idx);
     stream_remove_event.fire();
@@ -235,20 +242,20 @@ void AmRtpReceiverThread::removeStream(int sd, int ctx_idx)
 
 void _AmRtpReceiver::start()
 {
-  for(unsigned int i=0; i<n_receivers; i++)
-    receivers[i].start();
+    for (unsigned int i = 0; i < n_receivers; i++)
+        receivers[i].start();
 }
 
-int _AmRtpReceiver::addStream(int sd, AmRtpSession* stream, int old_ctx_idx)
+int _AmRtpReceiver::addStream(int sd, AmRtpSession *stream, int old_ctx_idx)
 {
-  unsigned int i = sd % n_receivers;
-  return receivers[i].addStream(sd,stream,old_ctx_idx);
+    unsigned int i = sd % n_receivers;
+    return receivers[i].addStream(sd, stream, old_ctx_idx);
 }
 
 void _AmRtpReceiver::removeStream(int sd, int ctx_idx)
 {
-  unsigned int i = sd % n_receivers;
-  receivers[i].removeStream(sd,ctx_idx);
+    unsigned int i = sd % n_receivers;
+    receivers[i].removeStream(sd, ctx_idx);
 }
 
 void _AmRtpReceiver::inc_drop_packets()

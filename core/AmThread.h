@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 /** @file AmThread.h */
@@ -48,30 +48,33 @@ using std::string;
 #include "log.h"
 
 using AmMutex = std::mutex;
-using AmLock = std::lock_guard<std::mutex>;
+using AmLock  = std::lock_guard<std::mutex>;
 
 /**
  * \brief  Simple lock class witth ability to release mutex onwership
  */
-class AmControlledLock
-{
-    AmMutex& m;
-    bool ownership;
+class AmControlledLock {
+    AmMutex &m;
+    bool     ownership;
+
   public:
-    AmControlledLock(AmMutex& _m) : m(_m), ownership(true) {
+    AmControlledLock(AmMutex &_m)
+        : m(_m)
+        , ownership(true)
+    {
         m.lock();
     }
-    AmControlledLock(const AmControlledLock&) = delete;
-    ~AmControlledLock(){
-        if(ownership)
+    AmControlledLock(const AmControlledLock &) = delete;
+    ~AmControlledLock()
+    {
+        if (ownership)
             m.unlock();
     }
 
-    void release_ownership() {
-        ownership = false;
-    }
-    void release() {
-        if(ownership) {
+    void release_ownership() { ownership = false; }
+    void release()
+    {
+        if (ownership) {
             m.unlock();
             ownership = false;
         }
@@ -83,30 +86,33 @@ class AmControlledLock
  *
  * Include a variable and its mutex.
  * @warning Don't use safe functions (set,get)
- * within a {lock(); ... unlock();} block. Use 
+ * within a {lock(); ... unlock();} block. Use
  * unsafe function instead.
  */
-template<class T>
-class AmSharedVar
-{
-    T t;
+template <class T> class AmSharedVar {
+    T       t;
     AmMutex m;
 
   public:
-    AmSharedVar(const T& _t) : t(_t) {}
-    AmSharedVar(const AmSharedVar&) = delete;
+    AmSharedVar(const T &_t)
+        : t(_t)
+    {
+    }
+    AmSharedVar(const AmSharedVar &) = delete;
     AmSharedVar() {}
 
-    AmSharedVar& operator= (const AmSharedVar&) = delete;
+    AmSharedVar &operator=(const AmSharedVar &) = delete;
 
-    T get() {
+    T get()
+    {
         lock();
         T res = unsafe_get();
         unlock();
         return res;
     }
 
-    void set(const T& new_val) {
+    void set(const T &new_val)
+    {
         lock();
         unsafe_set(new_val);
         unlock();
@@ -115,36 +121,40 @@ class AmSharedVar
     void lock() { m.lock(); }
     void unlock() { m.unlock(); }
 
-    const T& unsafe_get() { return t; }
-    void unsafe_set(const T& new_val) { t = new_val; }
+    const T &unsafe_get() { return t; }
+    void     unsafe_set(const T &new_val) { t = new_val; }
 };
 
 /**
  * \brief C++ Wrapper class for pthread condition
  */
-template<class T>
-class AmCondition
-{
-    T t;
-    std::mutex m;
+template <class T> class AmCondition {
+    T                       t;
+    std::mutex              m;
     std::condition_variable cv;
 
   public:
-    AmCondition() : t() { }
-    AmCondition(const T& _t) : t(_t) { }
-    AmCondition(const AmCondition&) = delete;
+    AmCondition()
+        : t()
+    {
+    }
+    AmCondition(const T &_t)
+        : t(_t)
+    {
+    }
+    AmCondition(const AmCondition &) = delete;
 
-    AmCondition& operator= (const AmCondition&) = delete;
+    AmCondition &operator=(const AmCondition &) = delete;
 
     /** Change the condition's value. */
-    void set(const T& newval)
+    void set(const T &newval)
     {
         {
             std::lock_guard lk(m);
             t = newval;
         }
 
-        if(newval)
+        if (newval)
             cv.notify_all();
     }
 
@@ -158,7 +168,7 @@ class AmCondition
     void wait_for()
     {
         std::unique_lock lk(m);
-        cv.wait(lk, [this]{ return t; });
+        cv.wait(lk, [this] { return t; });
     }
 
     /** Waits for the condition to be true or a timeout. */
@@ -166,11 +176,9 @@ class AmCondition
     {
         std::unique_lock lk(m);
 
-        auto ret = cv.wait_for(lk,
-            std::chrono::milliseconds(msec),
-            [this]{ return t; });
+        auto ret = cv.wait_for(lk, std::chrono::milliseconds(msec), [this] { return t; });
 
-        if(ret)
+        if (ret)
             return true;
 
         return false;
@@ -180,10 +188,9 @@ class AmCondition
 /**
  * \brief C++ Wrapper class for event_fd
  */
-class AmEventFd
-{
-    int event_fd;
-    int epoll_fd;
+class AmEventFd {
+    int  event_fd;
+    int  epoll_fd;
     bool external;
 
     void add_to_epoll(int fd, bool ptr)
@@ -193,27 +200,29 @@ class AmEventFd
 
         ev.events = EPOLLIN;
 
-        if(ptr) ev.data.ptr = this;
-        else ev.data.fd = -event_fd;
+        if (ptr)
+            ev.data.ptr = this;
+        else
+            ev.data.fd = -event_fd;
 
-        if(epoll_ctl(fd, EPOLL_CTL_ADD, event_fd, &ev) == -1){
+        if (epoll_ctl(fd, EPOLL_CTL_ADD, event_fd, &ev) == -1) {
             throw string("eventfd. epoll_ctl call failed");
         }
     }
 
   public:
     AmEventFd(bool semaphore = true, bool external_epoll = true)
-      : external(external_epoll)
+        : external(external_epoll)
     {
         int flags = EFD_NONBLOCK;
-        if(semaphore)
+        if (semaphore)
             flags |= EFD_SEMAPHORE;
-        if((event_fd = eventfd(0, flags)) == -1)
+        if ((event_fd = eventfd(0, flags)) == -1)
             throw string("eventfd. eventfd call failed");
-        if(!external) {
-            if((epoll_fd = epoll_create1(0)) == -1)
+        if (!external) {
+            if ((epoll_fd = epoll_create1(0)) == -1)
                 throw string("eventfd. epoll_create call failed");
-            add_to_epoll(event_fd,false);
+            add_to_epoll(event_fd, false);
         }
     }
 
@@ -221,7 +230,8 @@ class AmEventFd
 
     ~AmEventFd()
     {
-        if(!external) close(epoll_fd);
+        if (!external)
+            close(epoll_fd);
         close(event_fd);
     }
 
@@ -229,26 +239,31 @@ class AmEventFd
     operator int() { return -event_fd; }
 
     /** Add to external epoll handler */
-    void link(int fd, bool ptr = false){
-        if(!external) return;
-        add_to_epoll(fd,ptr);
+    void link(int fd, bool ptr = false)
+    {
+        if (!external)
+            return;
+        add_to_epoll(fd, ptr);
     }
 
     /** Remove from external epoll handler */
-    void unlink(int fd){
-        if(!external) return;
-        epoll_ctl(fd,EPOLL_CTL_DEL,event_fd,nullptr);
+    void unlink(int fd)
+    {
+        if (!external)
+            return;
+        epoll_ctl(fd, EPOLL_CTL_DEL, event_fd, nullptr);
     }
 
     /** Change the condition's value. */
     void fire()
     {
-        uint64_t u = 1;
-        ssize_t ret = write(event_fd, &u, sizeof(uint64_t));
+        uint64_t u   = 1;
+        ssize_t  ret = write(event_fd, &u, sizeof(uint64_t));
         (void)ret;
     }
 
-    bool read(){
+    bool read()
+    {
         uint64_t u;
         return ::read(event_fd, &u, sizeof(uint64_t)) == sizeof(uint64_t);
     }
@@ -256,55 +271,46 @@ class AmEventFd
     /** Waits for the event or a timeout. */
     bool wait_for(int msec = -1)
     {
-        if(external) return false;
+        if (external)
+            return false;
         struct epoll_event events[1];
-        int ret = epoll_wait(epoll_fd, events, 1, msec);
-        return 1==ret;
+        int                ret = epoll_wait(epoll_fd, events, 1, msec);
+        return 1 == ret;
     }
 };
 
 /**
  * \brief C++ Wrapper class for event_fd
  */
-class AmTimerFd
-{
-    int timer_fd;
+class AmTimerFd {
+    int  timer_fd;
     bool active;
 
     int settime(unsigned int umsec, unsigned int repeat_umsec);
 
   public:
     AmTimerFd(unsigned int umsec = 0, bool repeat = true)
-      : active(false)
+        : active(false)
     {
-        if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
+        if ((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) == -1)
             throw string("timerfd. timerfd_create call failed");
-        if(settime(umsec,repeat?umsec:0))
+        if (settime(umsec, repeat ? umsec : 0))
             throw string("timerfd. timer set failed");
     }
 
     AmTimerFd(const AmTimerFd &) = delete;
 
-    ~AmTimerFd()
-    {
-        close(timer_fd);
-    }
+    ~AmTimerFd() { close(timer_fd); }
 
     /** Get internal fd */
     int fd() { return timer_fd; }
     operator int() { return -timer_fd; }
 
     /** Set time */
-    int set(unsigned int umsec, bool repeat = true)
-    {
-        return settime(umsec,repeat?umsec:0);
-    }
+    int set(unsigned int umsec, bool repeat = true) { return settime(umsec, repeat ? umsec : 0); }
 
     /** Set time with explicit repeat interval */
-    int set(unsigned int umsec, unsigned int repeat_umsec)
-    {
-        return settime(umsec,repeat_umsec);
-    }
+    int set(unsigned int umsec, unsigned int repeat_umsec) { return settime(umsec, repeat_umsec); }
 
     /** Add to external epoll handler */
     void link(int fd, bool ptr = false)
@@ -313,10 +319,12 @@ class AmTimerFd
         bzero(&ev, sizeof(struct epoll_event));
         ev.events = EPOLLIN | EPOLLET;
 
-        if(ptr) ev.data.ptr = this;
-        else ev.data.fd = -timer_fd;
+        if (ptr)
+            ev.data.ptr = this;
+        else
+            ev.data.fd = -timer_fd;
 
-        if(epoll_ctl(fd, EPOLL_CTL_ADD, timer_fd, &ev) == -1){
+        if (epoll_ctl(fd, EPOLL_CTL_ADD, timer_fd, &ev) == -1) {
             throw string("timerfd. epoll_ctl call failed");
         }
     }
@@ -324,19 +332,16 @@ class AmTimerFd
     /** read timer event */
     uint64_t read()
     {
-        uint64_t u = 0;
-        ssize_t ret = ::read(timer_fd, &u, sizeof(uint64_t));
-        if(!ret) {
-            ERROR("error reading timerfd %d",timer_fd);
+        uint64_t u   = 0;
+        ssize_t  ret = ::read(timer_fd, &u, sizeof(uint64_t));
+        if (!ret) {
+            ERROR("error reading timerfd %d", timer_fd);
         }
         return u;
     }
 
-      /** Remove from external epoll handler */
-    void unlink(int fd)
-    {
-        epoll_ctl(fd,EPOLL_CTL_DEL,timer_fd,nullptr);
-    }
+    /** Remove from external epoll handler */
+    void unlink(int fd) { epoll_ctl(fd, EPOLL_CTL_DEL, timer_fd, nullptr); }
 
     bool is_active() { return active; }
 };
@@ -344,18 +349,17 @@ class AmTimerFd
 /**
  * \brief C++ Wrapper class for pthread
  */
-class AmThread
-{
+class AmThread {
     pthread_t _td;
     AmMutex   _m_td;
 
     AmSharedVar<bool> _stopped;
 
-    static void* _start(void*);
+    static void *_start(void *);
 
   protected:
-    virtual void run()=0;
-    virtual void on_stop()=0;
+    virtual void run()     = 0;
+    virtual void on_stop() = 0;
 
   public:
     unsigned long _pid;
@@ -376,26 +380,25 @@ class AmThread
     /** kill the thread (if pthread_setcancelstate(PTHREAD_CANCEL_ENABLED) has been set) **/
     void cancel();
 
-    int setRealtime();
+    int  setRealtime();
     void setThreadName(const char *thread_name);
 };
 
 /**
- * \brief Container/garbage collector for threads. 
- * 
+ * \brief Container/garbage collector for threads.
+ *
  * AmThreadWatcher waits for threads to stop
  * and delete them.
  * It gets started automatically when needed.
  * Once you added a thread to the container,
  * there is no mean to get it out.
  */
-class AmThreadWatcher: public AmThread
-{
-    static AmThreadWatcher* _instance;
+class AmThreadWatcher : public AmThread {
+    static AmThreadWatcher *_instance;
     static AmMutex          _inst_mut;
 
-    std::queue<AmThread*> thread_queue;
-    AmMutex          q_mut;
+    std::queue<AmThread *> thread_queue;
+    AmMutex                q_mut;
 
     /** the daemon only runs if this is true */
     AmCondition<bool> _run_cond;
@@ -405,42 +408,29 @@ class AmThreadWatcher: public AmThread
     void run();
     void on_stop();
 
-public:
-    static AmThreadWatcher* instance();
-    void add(AmThread*);
-    void cleanup();
+  public:
+    static AmThreadWatcher *instance();
+    void                    add(AmThread *);
+    void                    cleanup();
 };
 
-template<class T>
-class AmThreadLocalStorage
-{
+template <class T> class AmThreadLocalStorage {
     pthread_key_t key;
 
-    static void __del_tls_obj(void* obj) {
-        delete static_cast<T*>(obj);
-    }
+    static void __del_tls_obj(void *obj) { delete static_cast<T *>(obj); }
 
   public:
-    AmThreadLocalStorage() {
-        pthread_key_create(&key,__del_tls_obj);
-    }
+    AmThreadLocalStorage() { pthread_key_create(&key, __del_tls_obj); }
 
     AmThreadLocalStorage(const AmThreadLocalStorage &) = delete;
 
-    ~AmThreadLocalStorage() {
-        pthread_key_delete(key);
-    }
+    ~AmThreadLocalStorage() { pthread_key_delete(key); }
 
-    T* get() {
-        return static_cast<T*>(pthread_getspecific(key));
-    }
+    T *get() { return static_cast<T *>(pthread_getspecific(key)); }
 
-    void set(T* p) {
-        pthread_setspecific(key,reinterpret_cast<void*>(p));
-    }
+    void set(T *p) { pthread_setspecific(key, reinterpret_cast<void *>(p)); }
 };
 
 // Local Variables:
 // mode:C++
 // End:
-

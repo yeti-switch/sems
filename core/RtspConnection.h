@@ -15,22 +15,10 @@ class RtspAudio;
 
 namespace Rtsp {
 
-typedef enum {
-    RTSP_UNKNOWN = 0,
-    RTSP_REQUEST,
-    RTSP_REPLY
-} MSG_TYPE;
+typedef enum { RTSP_UNKNOWN = 0, RTSP_REQUEST, RTSP_REPLY } MSG_TYPE;
 
 
-enum {
-    DESCRIBE = 1,
-    PLAY,
-    PAUSE,
-    SETUP,
-    TEARDOWN,
-    OPTIONS,
-    PLAY_NOTIFY
-};
+enum { DESCRIBE = 1, PLAY, PAUSE, SETUP, TEARDOWN, OPTIONS, PLAY_NOTIFY };
 
 
 enum {
@@ -58,103 +46,97 @@ enum {
 
 struct RtspMsg {
 
-    typedef std::map<int, string> Header;
-    typedef Header::const_iterator  HeaderIterator;
+    typedef std::map<int, string>  Header;
+    typedef Header::const_iterator HeaderIterator;
 
-    uint64_t        owner_id;
+    uint64_t owner_id;
 
-    MSG_TYPE        type;
-    int             method;
-    int             notify_reason;
-    int             streamid;
-    uint32_t        rtptime;
-    uint32_t        ssrc;
-    int             cseq;
+    MSG_TYPE type;
+    int      method;
+    int      notify_reason;
+    int      streamid;
+    uint32_t rtptime;
+    uint32_t ssrc;
+    int      cseq;
 
-    int             code;
+    int code;
 
-    Header          header;
+    Header header;
 
-    string          version;
-    string          reason;
-    string          session_id;
-    string          uri;
+    string version;
+    string reason;
+    string session_id;
+    string uri;
 
-    unsigned short int  r_rtp_port;
-    int             ContentLength;
-    string          body;
+    unsigned short int r_rtp_port;
+    int                ContentLength;
+    string             body;
 
-    size_t          size;
+    size_t size;
 
     RtspMsg() {}
 
-    RtspMsg(MSG_TYPE type) : type(type) {}
+    RtspMsg(MSG_TYPE type)
+        : type(type)
+    {
+    }
     RtspMsg(MSG_TYPE type, const string &data);
     RtspMsg(int method, const string &_uri, uint64_t owner_id = 0);
 
-    void    parse_request_line(const char *line, size_t len);
-    void    parse_status_line(const char *line, size_t len);
-    void    parse_header_line(const char *hdr, size_t len);
-    void    process_header(int hdr, const char *v, size_t vl);
-    void    parse_msg(int type, const string &data);
+    void parse_request_line(const char *line, size_t len);
+    void parse_status_line(const char *line, size_t len);
+    void parse_header_line(const char *hdr, size_t len);
+    void process_header(int hdr, const char *v, size_t vl);
+    void parse_msg(int type, const string &data);
 };
 
 
-class RtspSession
-{
-    public:
-        typedef enum {
-            Closed = 0,
-            Connecting,
-            Connected,
-            Active,
-            Shuttingdown
-        } state_t;
+class RtspSession {
+  public:
+    typedef enum { Closed = 0, Connecting, Connected, Active, Shuttingdown } state_t;
 
-    private:
+  private:
+    typedef std::map<uint32_t, uint64_t> CSec2AudioIdMap;
 
-        typedef std::map<uint32_t, uint64_t> CSec2AudioIdMap;
+    AmMutex         cseq2id_mutex;
+    CSec2AudioIdMap cseq2id_map;
 
-        AmMutex                 cseq2id_mutex;
-        CSec2AudioIdMap         cseq2id_map;
+    RtspClient *agent;
+    // int                     md;                 /** media server descriptor */
+    int reconnect_interval;
+    int slot;
+    int cseq;
+    int fd;
 
-        RtspClient              *agent;
-        //int                     md;                 /** media server descriptor */
-        int                     reconnect_interval;
-        int                     slot;
-        int                     cseq;
-        int                     fd;
+    uint64_t         last_activity;
+    sockaddr_storage l_saddr;
+    sockaddr_storage saddr;
 
-        uint64_t                last_activity;
-        sockaddr_storage        l_saddr;
-        sockaddr_storage        saddr;
+    state_t state;
+    string  session_id;
+    string  buffer;
 
-        state_t                 state;
-        string                  session_id;
-        string                  buffer;
+    RtspSession() {}
 
-        RtspSession() {}
+    void close();
+    void connect();
+    void init_connection();
+    bool epoll_link(int op, uint32_t events);
+    void in_event();
 
-        void    close();
-        void    connect();
-        void    init_connection();
-        bool    epoll_link(int op, uint32_t events);
-        void    in_event();
+    size_t parse_server_response();
+    size_t parse_server_request();
 
-        size_t  parse_server_response();
-        size_t  parse_server_request();
+    void process_response(RtspMsg &msg);
+    void process_server_request(RtspMsg &req);
 
-        void    process_response(RtspMsg &msg);
-        void    process_server_request(RtspMsg &req);
+  public:
+    RtspSession(RtspClient *_dispatcher, const sockaddr_storage &_saddr, int _slot);
+    ~RtspSession();
 
-    public:
-
-        RtspSession(RtspClient *_dispatcher, const sockaddr_storage &_saddr, int _slot);
-        ~RtspSession();
-
-        state_t get_state() { return state; }
-        int     rtspSendMsg(const RtspMsg &msg);
-        void    on_timer(uint64_t timer_val);
-        void    handler(uint32_t ev);
+    state_t get_state() { return state; }
+    int     rtspSendMsg(const RtspMsg &msg);
+    void    on_timer(uint64_t timer_val);
+    void    handler(uint32_t ev);
 };
-}
+} // namespace Rtsp

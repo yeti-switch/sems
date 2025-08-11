@@ -7,34 +7,35 @@
 #include <chrono>
 #include <ratio>
 
-using std::string;
 using std::map;
+using std::string;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
 class RegShaper {
   public:
     typedef system_clock::time_point timep;
-    typedef string ThrottlingHashKey;
+    typedef string                   ThrottlingHashKey;
+
   private:
-    typedef timep ThrottlingHashValue;
-    typedef map<ThrottlingHashKey,ThrottlingHashValue> ThrottlingHash;
-    typedef map<ThrottlingHashKey,milliseconds> ThrottlingIntervalsHash;
+    typedef timep                                       ThrottlingHashValue;
+    typedef map<ThrottlingHashKey, ThrottlingHashValue> ThrottlingHash;
+    typedef map<ThrottlingHashKey, milliseconds>        ThrottlingIntervalsHash;
 
-    bool enabled;
-    milliseconds min_interval;
-    ThrottlingHash throttling_hash;
+    bool                    enabled;
+    milliseconds            min_interval;
+    ThrottlingHash          throttling_hash;
     ThrottlingIntervalsHash throttling_intervals_hash;
-    ThrottlingHashValue global_last_req_time;
+    ThrottlingHashValue     global_last_req_time;
 
-    milliseconds diff(const timep& tp1, const timep& tp2);
+    milliseconds diff(const timep &tp1, const timep &tp2);
 
   public:
-
     RegShaper()
-      : enabled(false)
-      , min_interval(milliseconds::zero())
-    {}
+        : enabled(false)
+        , min_interval(milliseconds::zero())
+    {
+    }
 
     /**
      * @brief check if we have to postpone operation
@@ -42,8 +43,7 @@ class RegShaper {
      * @param[out] next_attempt_time scheduled time for next attempt for the operation
      * @return true if have to be postponed
      */
-    bool check_rate_limit(const ThrottlingHashKey &key,
-                          timep &next_attempt_time);
+    bool check_rate_limit(const ThrottlingHashKey &key, timep &next_attempt_time);
     /**
      * @brief check if we have to postpone operation (with external now timepoint)
      * @param[in] key key for throttling bucket
@@ -51,29 +51,22 @@ class RegShaper {
      * @param[out] next_attempt_time scheduled time for next attempt for the operation
      * @return true if have to be postponed
      */
-    bool check_rate_limit(const ThrottlingHashKey &key,
-                          const timep &now,
-                          timep &next_attempt_time);
+    bool check_rate_limit(const ThrottlingHashKey &key, const timep &now, timep &next_attempt_time);
 
     void set_min_interval(int msec)
     {
         min_interval = milliseconds(msec);
-        enabled = true;
+        enabled      = true;
     }
 
-    int get_min_interval()
-    {
-        return min_interval.count();
-    }
+    int get_min_interval() { return min_interval.count(); }
 
-    void set_key_min_interval(const string& key, int msec)
+    void set_key_min_interval(const string &key, int msec)
     {
         auto interval = milliseconds(msec);
-        if (min_interval != milliseconds::zero() &&
-            min_interval > interval)
-        {
-            WARN("global min interval(%ld) is greater than min interval(%ld) for key %s",
-                min_interval.count(), interval.count(), key.c_str());
+        if (min_interval != milliseconds::zero() && min_interval > interval) {
+            WARN("global min interval(%ld) is greater than min interval(%ld) for key %s", min_interval.count(),
+                 interval.count(), key.c_str());
         }
         throttling_intervals_hash.emplace(key, interval);
         enabled = true;

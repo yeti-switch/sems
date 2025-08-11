@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -33,32 +33,31 @@
 using std::string;
 
 /** \brief Factory for echo sessions */
-class EchoFactory: public AmSessionFactory
-{
-  AmSessionEventHandlerFactory* session_timer_f;
-  AmConfigReader conf;
+class EchoFactory : public AmSessionFactory {
+    AmSessionEventHandlerFactory *session_timer_f;
+    AmConfigReader                conf;
 
-  EchoFactory(const string& _app_name);
-public:
-  DECLARE_FACTORY_INSTANCE(EchoFactory);
-  virtual int onLoad();
-  virtual AmSession* onInvite(const AmSipRequest& req, const string& app_name,
-			      const map<string,string>& app_params);
+    EchoFactory(const string &_app_name);
+
+  public:
+    DECLARE_FACTORY_INSTANCE(EchoFactory);
+    virtual int        onLoad();
+    virtual AmSession *onInvite(const AmSipRequest &req, const string &app_name, const map<string, string> &app_params);
 };
 
 /** \brief echo session logic implementation */
-class EchoDialog : public AmSession
-{
-  AmAudioEcho echo;
-  PlayoutType playout_type;
-public:
-  EchoDialog();
-  ~EchoDialog();
+class EchoDialog : public AmSession {
+    AmAudioEcho echo;
+    PlayoutType playout_type;
 
-  void onSessionStart(/*const AmSipRequest& req);
+  public:
+    EchoDialog();
+    ~EchoDialog();
+
+    void onSessionStart(/*const AmSipRequest& req);
 			void onSessionStart(const AmSipReply& rep*/) override;
-  void onBye(const AmSipRequest& req) override;
-  void onDtmf(AmDtmfEvent* e) override;
+    void onBye(const AmSipRequest &req) override;
+    void onDtmf(AmDtmfEvent *e) override;
 };
 
 
@@ -68,4 +67,3 @@ public:
 // Local Variables:
 // mode:C++
 // End:
-

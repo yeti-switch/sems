@@ -4,27 +4,31 @@
 
 #define registrar SipRegistrar::instance()
 
-RegistrarTest::RegistrarTest() {
+RegistrarTest::RegistrarTest()
+{
     DBG("RegistrarTest");
     test_server = &redis_test::instance()->test_server;
-    settings = redis_test::instance()->settings;
+    settings    = redis_test::instance()->settings;
 }
 
-void RegistrarTest::SetUp() {
+void RegistrarTest::SetUp()
+{
     DBG("RegistrarTest SetUp");
 
     test_server->response_enabled.set(false);
     test_server->clear();
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(REGISTER_SCRIPT), register_script_hash);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(LOAD_CONTACTS_SCRIPT), load_contacts_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT),
+                                              rpc_aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(LOAD_CONTACTS_SCRIPT),
+                                              load_contacts_script_hash);
     test_server->response_enabled.set(true);
 
-    auto isConnExists = [&](ConnState state)
-    {
-        for(auto & conn : registrar->connections)
-            if(conn->state == state) return true;
+    auto isConnExists = [&](ConnState state) {
+        for (auto &conn : registrar->connections)
+            if (conn->state == state)
+                return true;
 
         return false;
     };
@@ -40,25 +44,25 @@ void RegistrarTest::SetUp() {
      */
 
     time_t time_ = time(0);
-    while(isConnExists(ConnState::None)) {
-        //DBG("waiting for connections states");
+    while (isConnExists(ConnState::None)) {
+        // DBG("waiting for connections states");
         usleep(100);
         ASSERT_FALSE(time(0) - time_ > 3);
     }
 
     // check is need to reconnect
-    if(isConnExists(ConnState::Disconnected))
+    if (isConnExists(ConnState::Disconnected))
         registrar->connect_all();
 
     time_ = time(0);
-    while(isConnExists(ConnState::Disconnected)) {
-        //DBG("waiting for all connections in 'Connected' state");
+    while (isConnExists(ConnState::Disconnected)) {
+        // DBG("waiting for all connections in 'Connected' state");
         usleep(100);
         ASSERT_FALSE(time(0) - time_ > 3);
     }
 }
 
-void RegistrarTest::dumpKeepAliveContexts(AmArg& ret)
+void RegistrarTest::dumpKeepAliveContexts(AmArg &ret)
 {
     registrar->dump_keep_alive_contexts(ret);
 }

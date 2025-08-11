@@ -2,7 +2,7 @@
  * $Id: ModMysql.cpp 1764 2010-04-01 14:33:30Z peter_lemenkov $
  *
  * Copyright (C) 2010 TelTech Systems Inc.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -43,81 +43,65 @@
 
 #include <map>
 
-class JsonRPCServerLoop 
-: public AmThread, public AmEventQueue, public AmEventHandler, public AmEventNotificationSink
-{
-  static  RpcServerThreadpool threadpool;
-  static ev_async async_w;
-  static ev_async async_stop;
-  static struct ev_loop *loop;
+class JsonRPCServerLoop : public AmThread, public AmEventQueue, public AmEventHandler, public AmEventNotificationSink {
+    static RpcServerThreadpool threadpool;
+    static ev_async            async_w;
+    static ev_async            async_stop;
+    static struct ev_loop     *loop;
 
-  static JsonRPCServerLoop* _instance;
+    static JsonRPCServerLoop *_instance;
 
-  static std::map<string, JsonrpcPeerConnection*> connections;
-  static AmMutex connections_mut;
+    static std::map<string, JsonrpcPeerConnection *> connections;
+    static AmMutex                                   connections_mut;
 
-  static vector<JsonServerEvent*> pending_events; // todo: use map<set<> > if many pending events
-  static AmMutex pending_events_mut;
+    static vector<JsonServerEvent *> pending_events; // todo: use map<set<> > if many pending events
+    static AmMutex                   pending_events_mut;
 
-  int listen_fd;
+    int listen_fd;
 
- public:
-  JsonRPCServerLoop();
-  ~JsonRPCServerLoop();
+  public:
+    JsonRPCServerLoop();
+    ~JsonRPCServerLoop();
 
-  static JsonRPCServerLoop* instance();
-  static void dispose();
+    static JsonRPCServerLoop *instance();
+    static void               dispose();
 
-  static void returnConnection(JsonrpcNetstringsConnection* conn);
-  static void dispatchServerEvent(AmEvent* ev);
-  static void _processEvents();
+    static void returnConnection(JsonrpcNetstringsConnection *conn);
+    static void dispatchServerEvent(AmEvent *ev);
+    static void _processEvents();
 
-  static void execRpc(const string& evq_link, 
-		      const string& notificationReceiver,
-		      const string& requestReceiver,
-		      int conn_type,
-		      int flags,
-		      const string& host, 
-		      int port, const string& method, 
-		      const AmArg& params,
-		      const AmArg& udata,
-		      AmArg& ret);
+    static void execRpc(const string &evq_link, const string &notificationReceiver, const string &requestReceiver,
+                        int conn_type, int flags, const string &host, int port, const string &method,
+                        const AmArg &params, const AmArg &udata, AmArg &ret);
 
-  static void sendMessage(const string& connection_id, 
-			  int msg_type, 
-			  const string& method, 
-			  const string& id,
-			  const string& reply_sink,
-			  const AmArg& params,
-			  const AmArg& udata,
-			  AmArg& ret);
+    static void sendMessage(const string &connection_id, int msg_type, const string &method, const string &id,
+                            const string &reply_sink, const AmArg &params, const AmArg &udata, AmArg &ret);
 
-  int configure();
-  void run();
-  void on_stop();
-  void notify(AmEventQueue* sender);
-  void process(AmEvent* ev);
+    int  configure();
+    void run();
+    void on_stop();
+    void notify(AmEventQueue *sender);
+    void process(AmEvent *ev);
 
-  static string newConnectionId();
+    static string newConnectionId();
 
-  /**
-     add connection with id
-     @return whether connection with this id existed before
-  */
-  static bool registerConnection(JsonrpcPeerConnection* peer, const string& id);
+    /**
+       add connection with id
+       @return whether connection with this id existed before
+    */
+    static bool registerConnection(JsonrpcPeerConnection *peer, const string &id);
 
-  /**
-     remove a connection with id
-     @return whether connection with this id existed
-  */
-  static bool removeConnection(const string& id);
+    /**
+       remove a connection with id
+       @return whether connection with this id existed
+    */
+    static bool removeConnection(const string &id);
 
-  /**
-     get a connection with id
-     @return NULL if not found
-  */
-  static JsonrpcPeerConnection* getConnection(const string& id);
-
+    /**
+       get a connection with id
+       @return NULL if not found
+    */
+    static JsonrpcPeerConnection *getConnection(const string &id);
 };
 
 #endif

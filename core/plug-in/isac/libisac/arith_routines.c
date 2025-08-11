@@ -18,43 +18,40 @@
  */
 int WebRtcIsac_EncTerminate(Bitstr *streamdata) /* in-/output struct containing bitstream */
 {
-  WebRtc_UWord8 *stream_ptr;
+    WebRtc_UWord8 *stream_ptr;
 
 
-  /* point to the right place in the stream buffer */
-  stream_ptr = streamdata->stream + streamdata->stream_index;
+    /* point to the right place in the stream buffer */
+    stream_ptr = streamdata->stream + streamdata->stream_index;
 
-  /* find minimum length (determined by current interval width) */
-  if ( streamdata->W_upper > 0x01FFFFFF )
-  {
-    streamdata->streamval += 0x01000000;
-    /* add carry to buffer */
-    if (streamdata->streamval < 0x01000000)
-    {
-      /* propagate carry */
-      while ( !(++(*--stream_ptr)) );
-      /* put pointer back to the old value */
-      stream_ptr = streamdata->stream + streamdata->stream_index;
+    /* find minimum length (determined by current interval width) */
+    if (streamdata->W_upper > 0x01FFFFFF) {
+        streamdata->streamval += 0x01000000;
+        /* add carry to buffer */
+        if (streamdata->streamval < 0x01000000) {
+            /* propagate carry */
+            while (!(++(*--stream_ptr)))
+                ;
+            /* put pointer back to the old value */
+            stream_ptr = streamdata->stream + streamdata->stream_index;
+        }
+        /* write remaining data to bitstream */
+        *stream_ptr++ = (WebRtc_UWord8)(streamdata->streamval >> 24);
+    } else {
+        streamdata->streamval += 0x00010000;
+        /* add carry to buffer */
+        if (streamdata->streamval < 0x00010000) {
+            /* propagate carry */
+            while (!(++(*--stream_ptr)))
+                ;
+            /* put pointer back to the old value */
+            stream_ptr = streamdata->stream + streamdata->stream_index;
+        }
+        /* write remaining data to bitstream */
+        *stream_ptr++ = (WebRtc_UWord8)(streamdata->streamval >> 24);
+        *stream_ptr++ = (WebRtc_UWord8)((streamdata->streamval >> 16) & 0x00FF);
     }
-    /* write remaining data to bitstream */
-    *stream_ptr++ = (WebRtc_UWord8) (streamdata->streamval >> 24);
-  }
-  else
-  {
-    streamdata->streamval += 0x00010000;
-    /* add carry to buffer */
-    if (streamdata->streamval < 0x00010000)
-    {
-      /* propagate carry */
-      while ( !(++(*--stream_ptr)) );
-      /* put pointer back to the old value */
-      stream_ptr = streamdata->stream + streamdata->stream_index;
-    }
-    /* write remaining data to bitstream */
-    *stream_ptr++ = (WebRtc_UWord8) (streamdata->streamval >> 24);
-    *stream_ptr++ = (WebRtc_UWord8) ((streamdata->streamval >> 16) & 0x00FF);
-  }
 
-  /* calculate stream length */
-  return (int)(stream_ptr - streamdata->stream);
+    /* calculate stream length */
+    return (int)(stream_ptr - streamdata->stream);
 }

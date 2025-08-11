@@ -5,11 +5,11 @@
 
 // G.711 A-law
 unsigned char linear2alaw(short pcm_val);
-short alaw2linear(unsigned char a_val);
+short         alaw2linear(unsigned char a_val);
 
 // G.711 u-law
 unsigned char linear2ulaw(short pcm_val);
-short ulaw2linear(unsigned char u_val);
+short         ulaw2linear(unsigned char u_val);
 
 // A-law <-> u-law conversions
 unsigned char alaw2ulaw(unsigned char aval);

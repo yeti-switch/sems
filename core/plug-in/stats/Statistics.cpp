@@ -18,8 +18,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -32,22 +32,18 @@ using std::string;
 EXPORT_PLUGIN_FACTORY(StatsFactory);
 DEFINE_FACTORY_INSTANCE(StatsFactory, MOD_NAME);
 
-StatsFactory::StatsFactory(const std::string& _app_name)
-  : AmPluginFactory(_app_name)
+StatsFactory::StatsFactory(const std::string &_app_name)
+    : AmPluginFactory(_app_name)
 {
 }
 
 int StatsFactory::onLoad()
 {
-  StatsUDPServer* stat_srv = StatsUDPServer::instance();
-  if(!stat_srv){
-    ERROR("stats UDP server not initialized.");
-    return -1;
-  }
+    StatsUDPServer *stat_srv = StatsUDPServer::instance();
+    if (!stat_srv) {
+        ERROR("stats UDP server not initialized.");
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
-
-
-
-

@@ -2,43 +2,47 @@
 
 #include "parse_header.h"
 
-struct parser_state
-{
-    char* orig_buf;
-    char* c; // cursor
-    char* beg; // last marker for field start
+struct parser_state {
+    char *orig_buf;
+    char *c;   // cursor
+    char *beg; // last marker for field start
 
-    int stage;
-    int st; // parser state (within stage)
-    int saved_st; // saved parser state (within stage)
-    sip_header hdr; // temporary header struct
+    int        stage;
+    int        st;       // parser state (within stage)
+    int        saved_st; // saved parser state (within stage)
+    sip_header hdr;      // temporary header struct
 
     int content_len; // detected body content-length
 
     parser_state()
-      : orig_buf(NULL),c(NULL),beg(NULL),
-        stage(0),st(0),saved_st(0),
-        content_len(0)
-    {}
+        : orig_buf(NULL)
+        , c(NULL)
+        , beg(NULL)
+        , stage(0)
+        , st(0)
+        , saved_st(0)
+        , content_len(0)
+    {
+    }
 
-    void reset(char* buf) {
+    void reset(char *buf)
+    {
         c = orig_buf = buf;
         reset_hdr_parser();
         stage = content_len = 0;
     }
 
-    void reset_hdr_parser() {
+    void reset_hdr_parser()
+    {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
-        memset(&hdr,0,sizeof(sip_header));
+        memset(&hdr, 0, sizeof(sip_header));
 #pragma GCC diagnostic pop
         st = saved_st = 0;
-        beg = c;
+        beg           = c;
     }
 
-    int get_msg_len() {
-        return c - orig_buf + content_len;
-    }
+    int get_msg_len() { return c - orig_buf + content_len; }
 };
 
-int skip_sip_msg_async(parser_state* pst, char* end);
+int skip_sip_msg_async(parser_state *pst, char *end);

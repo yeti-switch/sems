@@ -20,11 +20,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _AMEVENTDISPATCHER_h_ 
+#ifndef _AMEVENTDISPATCHER_h_
 #define _AMEVENTDISPATCHER_h_
 
 #include "AmEventQueue.h"
@@ -32,93 +32,91 @@
 #include <map>
 
 #define EVENT_DISPATCHER_POWER   10
-#define EVENT_DISPATCHER_BUCKETS (1<<EVENT_DISPATCHER_POWER)
+#define EVENT_DISPATCHER_BUCKETS (1 << EVENT_DISPATCHER_POWER)
 
-class AmEventDispatcher
-{
-public:
-
+class AmEventDispatcher {
+  public:
     struct QueueEntry {
-      AmEventQueueInterface* q;
-      string                 id;
+        AmEventQueueInterface *q;
+        string                 id;
 
-      QueueEntry()
-	: q(NULL), id() {}
+        QueueEntry()
+            : q(NULL)
+            , id()
+        {
+        }
 
-      QueueEntry(AmEventQueueInterface* q)
-        : q(q), id() {} 
+        QueueEntry(AmEventQueueInterface *q)
+            : q(q)
+            , id()
+        {
+        }
 
-      QueueEntry(AmEventQueueInterface* q, string id)
-	: q(q), id(id){} 
+        QueueEntry(AmEventQueueInterface *q, string id)
+            : q(q)
+            , id(id)
+        {
+        }
     };
 
     typedef std::map<string, QueueEntry> EvQueueMap;
     typedef EvQueueMap::iterator         EvQueueMapIter;
-    
-    typedef std::map<string,string>  Dictionnary;
+
+    typedef std::map<string, string> Dictionnary;
     typedef Dictionnary::iterator    DictIter;
 
-    using QueueEntryIterateHandler = std::function<
-        void (const string &key,const QueueEntry &entry) >;
+    using QueueEntryIterateHandler = std::function<void(const string &key, const QueueEntry &entry)>;
 
-    using QueueEntryHandler = std::function< void (const QueueEntry &entry) >;
+    using QueueEntryHandler = std::function<void(const QueueEntry &entry)>;
 
-private:
-
+  private:
     static AmEventDispatcher *_instance;
 
-    /** 
-     * Container for active sessions 
+    /**
+     * Container for active sessions
      * local tag -> event queue
      */
     EvQueueMap queues[EVENT_DISPATCHER_BUCKETS];
-    
-    // mutex for "queues" 
+
+    // mutex for "queues"
     AmMutex queues_mut[EVENT_DISPATCHER_BUCKETS];
 
-    /** 
-     * Call ID + remote tag + via_branch -> local tag 
+    /**
+     * Call ID + remote tag + via_branch -> local tag
      *  (needed for CANCELs)
      *  (UAS sessions only)
      */
     Dictionnary id_lookup[EVENT_DISPATCHER_BUCKETS];
-    // mutex for "id_lookup" 
+    // mutex for "id_lookup"
     AmMutex id_lookup_mut[EVENT_DISPATCHER_BUCKETS];
 
-    unsigned int hash(const string& s1);
-    unsigned int hash(const string& s1, const string s2);
-public:
+    unsigned int hash(const string &s1);
+    unsigned int hash(const string &s1, const string s2);
 
-    static AmEventDispatcher* instance();
-    static void dispose();
+  public:
+    static AmEventDispatcher *instance();
+    static void               dispose();
 
-    bool postSipRequest(const AmSipRequest& req);
+    bool postSipRequest(const AmSipRequest &req);
 
-    bool post(const string& local_tag, AmEvent* ev);
-    bool post(const string& callid, 
-	      const string& remote_tag, 
-	      const string& via_branch,
-	      AmEvent* ev);
+    bool post(const string &local_tag, AmEvent *ev);
+    bool post(const string &callid, const string &remote_tag, const string &via_branch, AmEvent *ev);
 
     /* send event to all event queues. Note: event instances will be cloned */
-    bool broadcast(AmEvent* ev);
+    bool broadcast(AmEvent *ev);
 
-    bool addEventQueue(const string& local_tag,
-		       AmEventQueueInterface* q);
+    bool addEventQueue(const string &local_tag, AmEventQueueInterface *q);
 
-    bool addEventQueue(const string& local_tag, 
-		       AmEventQueueInterface* q,
-		       const string& callid, 
-		       const string& remote_tag,
-		       const string& via_branch);
+    bool addEventQueue(const string &local_tag, AmEventQueueInterface *q, const string &callid,
+                       const string &remote_tag, const string &via_branch);
 
-    AmEventQueueInterface* delEventQueue(const string& local_tag);
+    AmEventQueueInterface *delEventQueue(const string &local_tag);
 
     bool empty();
 
     void dump();
     void iterate(QueueEntryIterateHandler callback);
-    bool apply(const string& local_tag, QueueEntryHandler callback);
+    bool apply(const string &local_tag, QueueEntryHandler callback);
 };
 
 #endif

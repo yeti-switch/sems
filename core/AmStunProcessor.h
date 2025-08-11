@@ -10,16 +10,14 @@
 class IceContext;
 class AmStunConnection;
 
-class AmStunProcessor
-  : public AmThread
-{
-    int epoll_fd;
+class AmStunProcessor : public AmThread {
+    int       epoll_fd;
     AmTimerFd timer;
-    bool stopped;
+    bool      stopped;
 
     std::unordered_map<AmStunConnection *, unsigned long long> connections;
-    std::vector<IceContext*> contexts;
-    AmMutex connections_mutex;
+    std::vector<IceContext *>                                  contexts;
+    AmMutex                                                    connections_mutex;
 
     void on_timer();
 
@@ -28,8 +26,8 @@ class AmStunProcessor
     virtual ~AmStunProcessor();
 
   public:
-    void add_ice_context(IceContext* context);
-    void remove_ice_context(IceContext* context);
+    void add_ice_context(IceContext *context);
+    void remove_ice_context(IceContext *context);
     void set_timer(AmStunConnection *connection, unsigned long long timeout);
     void remove_timer(AmStunConnection *connection);
 

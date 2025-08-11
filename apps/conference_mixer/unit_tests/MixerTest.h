@@ -6,10 +6,8 @@
 #include <string>
 using std::string;
 
-class MixerTest : public testing::Test
-{
-public:
+class MixerTest : public testing::Test {
+  public:
     MixerTest();
     void SetUp() override;
 };
-

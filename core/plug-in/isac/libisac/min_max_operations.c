@@ -33,17 +33,15 @@
 // Maximum absolute value of word16 vector.
 WebRtc_Word16 WebRtcSpl_MaxAbsValueW16(const WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word32 tempMax = 0;
-    WebRtc_Word32 absVal;
-    WebRtc_Word16 totMax;
-    int i;
+    WebRtc_Word32          tempMax = 0;
+    WebRtc_Word32          absVal;
+    WebRtc_Word16          totMax;
+    int                    i;
     G_CONST WebRtc_Word16 *tmpvector = vector;
 
-    for (i = 0; i < length; i++)
-    {
+    for (i = 0; i < length; i++) {
         absVal = WEBRTC_SPL_ABS_W32((*tmpvector));
-        if (absVal > tempMax)
-        {
+        if (absVal > tempMax) {
             tempMax = absVal;
         }
         tmpvector++;
@@ -55,23 +53,21 @@ WebRtc_Word16 WebRtcSpl_MaxAbsValueW16(const WebRtc_Word16 *vector, WebRtc_Word1
 #endif
 
 // Index of maximum absolute value in a  word16 vector.
-WebRtc_Word16 WebRtcSpl_MaxAbsIndexW16(G_CONST WebRtc_Word16* vector, WebRtc_Word16 length)
+WebRtc_Word16 WebRtcSpl_MaxAbsIndexW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word16 tempMax;
-    WebRtc_Word16 absTemp;
-    WebRtc_Word16 tempMaxIndex = 0;
-    WebRtc_Word16 i = 0;
-    G_CONST WebRtc_Word16 *tmpvector = vector;
+    WebRtc_Word16          tempMax;
+    WebRtc_Word16          absTemp;
+    WebRtc_Word16          tempMaxIndex = 0;
+    WebRtc_Word16          i            = 0;
+    G_CONST WebRtc_Word16 *tmpvector    = vector;
 
     tempMax = WEBRTC_SPL_ABS_W16(*tmpvector);
     tmpvector++;
-    for (i = 1; i < length; i++)
-    {
+    for (i = 1; i < length; i++) {
         absTemp = WEBRTC_SPL_ABS_W16(*tmpvector);
         tmpvector++;
-        if (absTemp > tempMax)
-        {
-            tempMax = absTemp;
+        if (absTemp > tempMax) {
+            tempMax      = absTemp;
             tempMaxIndex = i;
         }
     }
@@ -81,17 +77,15 @@ WebRtc_Word16 WebRtcSpl_MaxAbsIndexW16(G_CONST WebRtc_Word16* vector, WebRtc_Wor
 // Maximum absolute value of word32 vector.
 WebRtc_Word32 WebRtcSpl_MaxAbsValueW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16 length)
 {
-    WebRtc_UWord32 tempMax = 0;
-    WebRtc_UWord32 absVal;
-    WebRtc_Word32 retval;
-    int i;
+    WebRtc_UWord32         tempMax = 0;
+    WebRtc_UWord32         absVal;
+    WebRtc_Word32          retval;
+    int                    i;
     G_CONST WebRtc_Word32 *tmpvector = vector;
 
-    for (i = 0; i < length; i++)
-    {
+    for (i = 0; i < length; i++) {
         absVal = WEBRTC_SPL_ABS_W32((*tmpvector));
-        if (absVal > tempMax)
-        {
+        if (absVal > tempMax) {
             tempMax = absVal;
         }
         tmpvector++;
@@ -102,15 +96,14 @@ WebRtc_Word32 WebRtcSpl_MaxAbsValueW32(G_CONST WebRtc_Word32 *vector, WebRtc_Wor
 
 // Maximum value of word16 vector.
 #ifndef XSCALE_OPT
-WebRtc_Word16 WebRtcSpl_MaxValueW16(G_CONST WebRtc_Word16* vector, WebRtc_Word16 length)
+WebRtc_Word16 WebRtcSpl_MaxValueW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word16 tempMax;
-    WebRtc_Word16 i;
+    WebRtc_Word16          tempMax;
+    WebRtc_Word16          i;
     G_CONST WebRtc_Word16 *tmpvector = vector;
 
     tempMax = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
+    for (i = 1; i < length; i++) {
         if (*tmpvector++ > tempMax)
             tempMax = vector[i];
     }
@@ -123,17 +116,15 @@ WebRtc_Word16 WebRtcSpl_MaxValueW16(G_CONST WebRtc_Word16* vector, WebRtc_Word16
 // Index of maximum value in a word16 vector.
 WebRtc_Word16 WebRtcSpl_MaxIndexW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word16 tempMax;
-    WebRtc_Word16 tempMaxIndex = 0;
-    WebRtc_Word16 i = 0;
-    G_CONST WebRtc_Word16 *tmpvector = vector;
+    WebRtc_Word16          tempMax;
+    WebRtc_Word16          tempMaxIndex = 0;
+    WebRtc_Word16          i            = 0;
+    G_CONST WebRtc_Word16 *tmpvector    = vector;
 
     tempMax = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
-        if (*tmpvector++ > tempMax)
-        {
-            tempMax = vector[i];
+    for (i = 1; i < length; i++) {
+        if (*tmpvector++ > tempMax) {
+            tempMax      = vector[i];
             tempMaxIndex = i;
         }
     }
@@ -142,15 +133,14 @@ WebRtc_Word16 WebRtcSpl_MaxIndexW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16
 
 // Maximum value of word32 vector.
 #ifndef XSCALE_OPT
-WebRtc_Word32 WebRtcSpl_MaxValueW32(G_CONST WebRtc_Word32* vector, WebRtc_Word16 length)
+WebRtc_Word32 WebRtcSpl_MaxValueW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word32 tempMax;
-    WebRtc_Word16 i;
+    WebRtc_Word32          tempMax;
+    WebRtc_Word16          i;
     G_CONST WebRtc_Word32 *tmpvector = vector;
 
     tempMax = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
+    for (i = 1; i < length; i++) {
         if (*tmpvector++ > tempMax)
             tempMax = vector[i];
     }
@@ -161,19 +151,17 @@ WebRtc_Word32 WebRtcSpl_MaxValueW32(G_CONST WebRtc_Word32* vector, WebRtc_Word16
 #endif
 
 // Index of maximum value in a word32 vector.
-WebRtc_Word16 WebRtcSpl_MaxIndexW32(G_CONST WebRtc_Word32* vector, WebRtc_Word16 length)
+WebRtc_Word16 WebRtcSpl_MaxIndexW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word32 tempMax;
-    WebRtc_Word16 tempMaxIndex = 0;
-    WebRtc_Word16 i = 0;
-    G_CONST WebRtc_Word32 *tmpvector = vector;
+    WebRtc_Word32          tempMax;
+    WebRtc_Word16          tempMaxIndex = 0;
+    WebRtc_Word16          i            = 0;
+    G_CONST WebRtc_Word32 *tmpvector    = vector;
 
     tempMax = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
-        if (*tmpvector++ > tempMax)
-        {
-            tempMax = vector[i];
+    for (i = 1; i < length; i++) {
+        if (*tmpvector++ > tempMax) {
+            tempMax      = vector[i];
             tempMaxIndex = i;
         }
     }
@@ -183,14 +171,13 @@ WebRtc_Word16 WebRtcSpl_MaxIndexW32(G_CONST WebRtc_Word32* vector, WebRtc_Word16
 // Minimum value of word16 vector.
 WebRtc_Word16 WebRtcSpl_MinValueW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word16 tempMin;
-    WebRtc_Word16 i;
+    WebRtc_Word16          tempMin;
+    WebRtc_Word16          i;
     G_CONST WebRtc_Word16 *tmpvector = vector;
 
     // Find the minimum value
     tempMin = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
+    for (i = 1; i < length; i++) {
         if (*tmpvector++ < tempMin)
             tempMin = (vector[i]);
     }
@@ -199,20 +186,18 @@ WebRtc_Word16 WebRtcSpl_MinValueW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16
 
 // Index of minimum value in a word16 vector.
 #ifndef XSCALE_OPT
-WebRtc_Word16 WebRtcSpl_MinIndexW16(G_CONST WebRtc_Word16* vector, WebRtc_Word16 length)
+WebRtc_Word16 WebRtcSpl_MinIndexW16(G_CONST WebRtc_Word16 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word16 tempMin;
-    WebRtc_Word16 tempMinIndex = 0;
-    WebRtc_Word16 i = 0;
-    G_CONST WebRtc_Word16* tmpvector = vector;
+    WebRtc_Word16          tempMin;
+    WebRtc_Word16          tempMinIndex = 0;
+    WebRtc_Word16          i            = 0;
+    G_CONST WebRtc_Word16 *tmpvector    = vector;
 
     // Find index of smallest value
     tempMin = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
-        if (*tmpvector++ < tempMin)
-        {
-            tempMin = vector[i];
+    for (i = 1; i < length; i++) {
+        if (*tmpvector++ < tempMin) {
+            tempMin      = vector[i];
             tempMinIndex = i;
         }
     }
@@ -225,14 +210,13 @@ WebRtc_Word16 WebRtcSpl_MinIndexW16(G_CONST WebRtc_Word16* vector, WebRtc_Word16
 // Minimum value of word32 vector.
 WebRtc_Word32 WebRtcSpl_MinValueW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word32 tempMin;
-    WebRtc_Word16 i;
+    WebRtc_Word32          tempMin;
+    WebRtc_Word16          i;
     G_CONST WebRtc_Word32 *tmpvector = vector;
 
     // Find the minimum value
     tempMin = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
+    for (i = 1; i < length; i++) {
         if (*tmpvector++ < tempMin)
             tempMin = (vector[i]);
     }
@@ -241,20 +225,18 @@ WebRtc_Word32 WebRtcSpl_MinValueW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16
 
 // Index of minimum value in a word32 vector.
 #ifndef XSCALE_OPT
-WebRtc_Word16 WebRtcSpl_MinIndexW32(G_CONST WebRtc_Word32* vector, WebRtc_Word16 length)
+WebRtc_Word16 WebRtcSpl_MinIndexW32(G_CONST WebRtc_Word32 *vector, WebRtc_Word16 length)
 {
-    WebRtc_Word32 tempMin;
-    WebRtc_Word16 tempMinIndex = 0;
-    WebRtc_Word16 i = 0;
-    G_CONST WebRtc_Word32 *tmpvector = vector;
+    WebRtc_Word32          tempMin;
+    WebRtc_Word16          tempMinIndex = 0;
+    WebRtc_Word16          i            = 0;
+    G_CONST WebRtc_Word32 *tmpvector    = vector;
 
     // Find index of smallest value
     tempMin = *tmpvector++;
-    for (i = 1; i < length; i++)
-    {
-        if (*tmpvector++ < tempMin)
-        {
-            tempMin = vector[i];
+    for (i = 1; i < length; i++) {
+        if (*tmpvector++ < tempMin) {
+            tempMin      = vector[i];
             tempMinIndex = i;
         }
     }

@@ -3,22 +3,23 @@
 
 static int socket_callback_static(CURL *e, curl_socket_t s, int what, CurlMultiHandler *cbp, void *sockp)
 {
-    return cbp->socket_callback(e,s,what,(int *)sockp);
+    return cbp->socket_callback(e, s, what, (int *)sockp);
 }
 
 static int timer_function_static(CURLM *multi, long timeout_ms, CurlMultiHandler *cbp)
 {
-    return cbp->timer_function(multi,timeout_ms);
+    return cbp->timer_function(multi, timeout_ms);
 }
 
 CurlMultiHandler::CurlMultiHandler()
-    : curl_running_handles(0),
-      curl_multi(nullptr)
-{ }
+    : curl_running_handles(0)
+    , curl_multi(nullptr)
+{
+}
 
 int CurlMultiHandler::init_curl(int fd, CURLM *handle)
 {
-    epoll_fd = fd;
+    epoll_fd   = fd;
     curl_multi = handle;
 
     curl_timer.link(epoll_fd, true);
@@ -46,54 +47,52 @@ void CurlMultiHandler::on_timer_event()
 void CurlMultiHandler::on_socket_event(int socket, uint32_t events)
 {
     int action = 0;
-    if(events&EPOLLIN) action|= CURL_CSELECT_IN;
-    if(events&EPOLLOUT) action|= CURL_CSELECT_OUT;
-    if(events&EPOLLERR) action|= CURL_CSELECT_ERR;
+    if (events & EPOLLIN)
+        action |= CURL_CSELECT_IN;
+    if (events & EPOLLOUT)
+        action |= CURL_CSELECT_OUT;
+    if (events & EPOLLERR)
+        action |= CURL_CSELECT_ERR;
     curl_multi_socket_action(curl_multi, socket, action, &curl_running_handles);
 }
 
 /* * curl multi callbacks
  */
 
-int CurlMultiHandler::socket_callback(CURL* e, curl_socket_t s, int what, void *sockp)
+int CurlMultiHandler::socket_callback(CURL *e, curl_socket_t s, int what, void *sockp)
 {
-    if(CURL_POLL_NONE==what) return 0;
-    if(CURL_POLL_REMOVE==what) {
-        if(CURLM_OK!=curl_multi_assign(curl_multi, s, nullptr)) {
-            ERROR("curl_multi_assign(%d,0)",s);
+    if (CURL_POLL_NONE == what)
+        return 0;
+    if (CURL_POLL_REMOVE == what) {
+        if (CURLM_OK != curl_multi_assign(curl_multi, s, nullptr)) {
+            ERROR("curl_multi_assign(%d,0)", s);
         }
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_DEL, s, nullptr)) {
-            DBG("epoll_ctl_delete(%d) %d",s,errno);
+        if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_DEL, s, nullptr)) {
+            DBG("epoll_ctl_delete(%d) %d", s, errno);
         }
         return 0;
     }
 
     struct epoll_event ev;
     ev.data.ptr = 0;
-    ev.data.fd = s;
-    ev.events = EPOLLERR;
-    switch(what) {
-    case CURL_POLL_IN:
-        ev.events |= EPOLLIN;
-        break;
-    case CURL_POLL_OUT:
-        ev.events |= EPOLLOUT;
-        break;
-    case CURL_POLL_INOUT:
-        ev.events |= EPOLLOUT | EPOLLIN;
-        break;
+    ev.data.fd  = s;
+    ev.events   = EPOLLERR;
+    switch (what) {
+    case CURL_POLL_IN:    ev.events |= EPOLLIN; break;
+    case CURL_POLL_OUT:   ev.events |= EPOLLOUT; break;
+    case CURL_POLL_INOUT: ev.events |= EPOLLOUT | EPOLLIN; break;
     }
 
-    if(sockp) {
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_MOD, s, &ev)) {
-            DBG("epoll_ctl_mod(%d) %d",s,errno);
+    if (sockp) {
+        if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_MOD, s, &ev)) {
+            DBG("epoll_ctl_mod(%d) %d", s, errno);
         }
     } else {
-        if(CURLM_OK!=curl_multi_assign(curl_multi, s, (void *)1)) {
-            ERROR("curl_multi_assign(%d,1)",s);
+        if (CURLM_OK != curl_multi_assign(curl_multi, s, (void *)1)) {
+            ERROR("curl_multi_assign(%d,1)", s);
         }
-        if(-1==epoll_ctl(epoll_fd, EPOLL_CTL_ADD, s, &ev)) {
-            ERROR("epoll_ctl_add(%d) %d",s,errno);
+        if (-1 == epoll_ctl(epoll_fd, EPOLL_CTL_ADD, s, &ev)) {
+            ERROR("epoll_ctl_add(%d) %d", s, errno);
         }
         set_opt_connection(e);
     }
@@ -103,16 +102,16 @@ int CurlMultiHandler::socket_callback(CURL* e, curl_socket_t s, int what, void *
 
 int CurlMultiHandler::timer_function(CURLM *, long timeout_ms)
 {
-    if(timeout_ms) {
-        if(timeout_ms > 0) {
-            curl_timer.set(timeout_ms*1000,false);
+    if (timeout_ms) {
+        if (timeout_ms > 0) {
+            curl_timer.set(timeout_ms * 1000, false);
         } else {
-            //timeout_ms < 0. disarm timer
-            curl_timer.set(0,false);
+            // timeout_ms < 0. disarm timer
+            curl_timer.set(0, false);
         }
     } else {
-        //timeout_ms == 0. means to arm timer for the shortest possible interval
-        curl_timer.set(1,false);
+        // timeout_ms == 0. means to arm timer for the shortest possible interval
+        curl_timer.set(1, false);
     }
 
     return 0;

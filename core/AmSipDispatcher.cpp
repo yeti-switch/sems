@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -35,9 +35,9 @@
 
 AmSipDispatcher *AmSipDispatcher::_instance;
 
-AmSipDispatcher* AmSipDispatcher::instance()
+AmSipDispatcher *AmSipDispatcher::instance()
 {
-  return _instance ? _instance : ((_instance = new AmSipDispatcher()));
+    return _instance ? _instance : ((_instance = new AmSipDispatcher()));
 }
 
 void AmSipDispatcher::dispose()
@@ -45,105 +45,99 @@ void AmSipDispatcher::dispose()
     _instance ? delete _instance : void();
 }
 
-void AmSipDispatcher::handleSipMsg(const string& dialog_id, AmSipReply &reply)
+void AmSipDispatcher::handleSipMsg(const string &dialog_id, AmSipReply &reply)
 {
-  const string& id = dialog_id.empty() ? reply.from_tag : dialog_id;
-  AmSipReplyEvent* ev = new AmSipReplyEvent(reply);
+    const string    &id = dialog_id.empty() ? reply.from_tag : dialog_id;
+    AmSipReplyEvent *ev = new AmSipReplyEvent(reply);
 
-  if(!AmEventDispatcher::instance()->post(id,ev)){
-    if ((reply.code >= 100) && (reply.code < 300)) {
-      if (AmConfig.unhandled_reply_log_level >= 0) {
-	_LOG(AmConfig.unhandled_reply_log_level,
-	     "unhandled SIP reply: %s\n", reply.print().c_str());
-      }
-    } else {
-      WARN("unhandled SIP reply: %s", reply.print().c_str());
+    if (!AmEventDispatcher::instance()->post(id, ev)) {
+        if ((reply.code >= 100) && (reply.code < 300)) {
+            if (AmConfig.unhandled_reply_log_level >= 0) {
+                _LOG(AmConfig.unhandled_reply_log_level, "unhandled SIP reply: %s\n", reply.print().c_str());
+            }
+        } else {
+            WARN("unhandled SIP reply: %s", reply.print().c_str());
+        }
+        delete ev;
     }
-    delete ev;
-  }
 }
 
 void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
 {
-  string callid     = req.callid;
-  string remote_tag = req.from_tag;
-  string local_tag  = req.to_tag;
+    string callid     = req.callid;
+    string remote_tag = req.from_tag;
+    string local_tag  = req.to_tag;
 
-  AmEventDispatcher* ev_disp = AmEventDispatcher::instance();
+    AmEventDispatcher *ev_disp = AmEventDispatcher::instance();
 
-  if(req.method == SIP_METH_CANCEL){
-      
-    if(ev_disp->postSipRequest(req)){
-      return;
+    if (req.method == SIP_METH_CANCEL) {
+
+        if (ev_disp->postSipRequest(req)) {
+            return;
+        }
+
+        // CANCEL of a (here) non-existing dialog
+        AmSipDialog::reply_error(req, 481, SIP_REPLY_NOT_EXIST);
+        return;
+    } else if (!local_tag.empty()) {
+        // in-dlg request
+        AmSipRequestEvent *ev = new AmSipRequestEvent(req);
+
+        // Contact-user may contain internal dialog ID (must be tried before using
+        // local_tag for identification)
+        if (!req.user.empty() && ev_disp->post(req.user, ev))
+            return;
+
+        if (ev_disp->post(local_tag, ev))
+            return;
+
+        delete ev;
+        if (req.method != SIP_METH_ACK) {
+            AmSipDialog::reply_error(req, 481, SIP_REPLY_NOT_EXIST);
+        } else {
+            DBG("received ACK for non-existing dialog "
+                "(callid=%s;remote_tag=%s;local_tag=%s)\n",
+                callid.c_str(), remote_tag.c_str(), local_tag.c_str());
+        }
+
+        return;
     }
-  
-    // CANCEL of a (here) non-existing dialog
-    AmSipDialog::reply_error(req,481,SIP_REPLY_NOT_EXIST);
-    return;
-  } 
-  else if(!local_tag.empty()) {
-    // in-dlg request
-    AmSipRequestEvent* ev = new AmSipRequestEvent(req);
 
-    // Contact-user may contain internal dialog ID (must be tried before using
-    // local_tag for identification)
-    if(!req.user.empty() && ev_disp->post(req.user,ev))
-      return;
+    DBG3("method: `%s' [%zd].", req.method.c_str(), req.method.length());
 
-    if(ev_disp->post(local_tag,ev))
-      return;
+    if (req.method == SIP_METH_BYE || req.method == SIP_METH_PRACK) {
 
-    delete ev;
-    if(req.method != SIP_METH_ACK) {
-	  AmSipDialog::reply_error(req,481,SIP_REPLY_NOT_EXIST);
-    }
-    else {
-      DBG("received ACK for non-existing dialog "
-	  "(callid=%s;remote_tag=%s;local_tag=%s)\n",
-	  callid.c_str(),remote_tag.c_str(),local_tag.c_str());
+        // BYE/PRACK of a (here) non-existing dialog
+        AmSipDialog::reply_error(req, 481, SIP_REPLY_NOT_EXIST);
+        return;
     }
 
-    return;
-  }
-
-  DBG3("method: `%s' [%zd].", req.method.c_str(), req.method.length());
-
-  if(req.method == SIP_METH_BYE ||
-		req.method == SIP_METH_PRACK){
-
-	  // BYE/PRACK of a (here) non-existing dialog
-	  AmSipDialog::reply_error(req,481,SIP_REPLY_NOT_EXIST);
-	  return;
-  }
-
-  if(AmConfig.shutdown_mode){
-	  AmSipDialog::reply_error(req,AmConfig.shutdown_mode_err_code,
-							   AmConfig.shutdown_mode_err_reason);
-	  return;
-  }
-
-  if(req.method == SIP_METH_INVITE){
-      AmSessionContainer::instance()->startSessionUAS(req);
-  } else {
-    string app_name;
-    AmSessionFactory* sess_fact = AmPlugIn::instance()->findSessionFactory(req,app_name);
-    if (sess_fact) {
-      try {
-	sess_fact->onOoDRequest(req);
-	return;
-      } catch (AmSession::Exception& e) {
-	AmSipDialog::reply_error(req,e.code,e.reason, e.hdrs);
-	ERROR("%i %s %s",e.code,e.reason.c_str(), e.hdrs.c_str());
-	return;
-      }
+    if (AmConfig.shutdown_mode) {
+        AmSipDialog::reply_error(req, AmConfig.shutdown_mode_err_code, AmConfig.shutdown_mode_err_reason);
+        return;
     }
-	
-    if (req.method == SIP_METH_OPTIONS) {
-      AmSessionFactory::replyOptions(req);
-      return;
-    }
-      
-    AmSipDialog::reply_error(req,404,"Not found");
-  }
 
+    if (req.method == SIP_METH_INVITE) {
+        AmSessionContainer::instance()->startSessionUAS(req);
+    } else {
+        string            app_name;
+        AmSessionFactory *sess_fact = AmPlugIn::instance()->findSessionFactory(req, app_name);
+        if (sess_fact) {
+            try {
+                sess_fact->onOoDRequest(req);
+                return;
+            } catch (AmSession::Exception &e) {
+                AmSipDialog::reply_error(req, e.code, e.reason, e.hdrs);
+                ERROR("%i %s %s", e.code, e.reason.c_str(), e.hdrs.c_str());
+                return;
+            }
+        }
+
+        if (req.method == SIP_METH_OPTIONS) {
+            AmSessionFactory::replyOptions(req);
+            return;
+        }
+
+        AmSipDialog::reply_error(req, 404, "Not found");
+    }
 }

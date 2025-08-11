@@ -2,7 +2,7 @@
  * $Id: ModMysql.cpp 1764 2010-04-01 14:33:30Z peter_lemenkov $
  *
  * Copyright (C) 2010 TelTech Systems Inc.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -39,31 +39,33 @@ struct JsonrpcPeerConnection;
 class JsonrpcNetstringsConnection;
 
 struct JsonRpcError {
-  int code;
-  string message;
-  AmArg data; 
-  JsonRpcError(int code, string message, AmArg data)
-  : code(code), message(message), data(data) { }
-  ~JsonRpcError() { }
+    int    code;
+    string message;
+    AmArg  data;
+    JsonRpcError(int code, string message, AmArg data)
+        : code(code)
+        , message(message)
+        , data(data)
+    {
+    }
+    ~JsonRpcError() {}
 };
 
 class JsonRpcServer {
- public:
-  static bool execRpc(const string &connection_id, const AmArg& rpc_params, AmArg& rpc_res);
-  static bool execRpc(const string &connection_id, const string& method, const AmArg& id, const AmArg& params, AmArg& rpc_res);
-  //static void runCoreMethod(const string& method, const AmArg& params, AmArg& res);
- public:
-  static int processMessage(const char* msgbuf, unsigned int msg_size,
-			    JsonrpcPeerConnection* peer);
+  public:
+    static bool execRpc(const string &connection_id, const AmArg &rpc_params, AmArg &rpc_res);
+    static bool execRpc(const string &connection_id, const string &method, const AmArg &id, const AmArg &params,
+                        AmArg &rpc_res);
+    // static void runCoreMethod(const string& method, const AmArg& params, AmArg& res);
+  public:
+    static int processMessage(const char *msgbuf, unsigned int msg_size, JsonrpcPeerConnection *peer);
 
-  static int createRequest(const string& evq_link, const string& method, AmArg& params, 
-			   JsonrpcNetstringsConnection* peer, const AmArg& udata,
-			   bool is_notification = false);
+    static int createRequest(const string &evq_link, const string &method, AmArg &params,
+                             JsonrpcNetstringsConnection *peer, const AmArg &udata, bool is_notification = false);
 
-  static int createReply(JsonrpcNetstringsConnection* peer, const AmArg &id,
-                         AmArg& result, bool is_error);
+    static int createReply(JsonrpcNetstringsConnection *peer, const AmArg &id, AmArg &result, bool is_error);
 
-  static std::map<std::string, std::string> rpc_methods_mapping;
+    static std::map<std::string, std::string> rpc_methods_mapping;
 };
 
 #endif // _JsonRPCServer_h_

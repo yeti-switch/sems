@@ -11,30 +11,32 @@
 #include <gtest/gtest.h>
 #include <string>
 
-#define OFFER  1
-#define ANSWER 2
+#define OFFER            1
+#define ANSWER           2
 #define TIFF_FILE_OFFER  "./unit_tests/q.tiff"
 #define TIFF_FILE_ANSWER "./unit_tests/q1.tiff"
 
-class FaxSession : public AmSession
-{
-public:
-    AmSdp local;
-    AmSdp* remote;
-    FaxAudioImage* audio;
-    FaxT38Image* t38;
+class FaxSession : public AmSession {
+  public:
+    AmSdp               local;
+    AmSdp              *remote;
+    FaxAudioImage      *audio;
+    FaxT38Image        *t38;
     TestPayloadProvider pl_prov;
-    int OAtype;
-    AmCondition<bool> started;
-    bool fax_success;
+    int                 OAtype;
+    AmCondition<bool>   started;
+    bool                fax_success;
 
-    FaxSession(const string& remote_uri, int OA)
-    : remote(0), OAtype(OA), started(false), fax_success(false)
+    FaxSession(const string &remote_uri, int OA)
+        : remote(0)
+        , OAtype(OA)
+        , started(false)
+        , fax_success(false)
     {
         RTPStream()->setMonitorRTPTimeout(false);
 
         audio = new FaxAudioImage(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER), 0);
-        t38 = new FaxT38Image(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER), 0);
+        t38   = new FaxT38Image(this, (OA == OFFER) ? TIFF_FILE_OFFER : TIFF_FILE_ANSWER, (OA == OFFER), 0);
         inc_ref(t38);
         audio->init_tone_fax();
         dlg->setRemoteUri(remote_uri);
@@ -46,15 +48,17 @@ public:
         dec_ref(t38);
     }
 
-    void process(AmEvent* ev) override
+    void process(AmEvent *ev) override
     {
-        FaxCompleteEvent* fax_ev = dynamic_cast<FaxCompleteEvent*>(ev);
-        if(fax_ev){
+        FaxCompleteEvent *fax_ev = dynamic_cast<FaxCompleteEvent *>(ev);
+        if (fax_ev) {
             fax_success = fax_ev->m_isSuccess;
             RTPStream()->stopReceiving();
             AmMediaProcessor::instance()->clearSession(t38);
             AmMediaProcessor::instance()->clearSession(this);
-            while(t38->isProcessingMedia() || isProcessingMedia()) { sleep(1); }
+            while (t38->isProcessingMedia() || isProcessingMedia()) {
+                sleep(1);
+            }
             setStopped();
             return;
         }
@@ -62,15 +66,9 @@ public:
         AmSession::process(ev);
     }
 
-    void setRemoteSdp(AmSdp* remoteSdp)
-    {
-        remote = remoteSdp;
-    }
+    void setRemoteSdp(AmSdp *remoteSdp) { remote = remoteSdp; }
 
-    AmSdp* getLocalSdp()
-    {
-        return &local;
-    }
+    AmSdp *getLocalSdp() { return &local; }
 
     int init()
     {
@@ -83,26 +81,24 @@ public:
         AmSessionContainer::instance()->addSession(getLocalTag(), this);
         started.set(true);
         RTPStream()->resumeReceiving();
-        if(local.media[RTPStream()->getSdpMediaIndex()].type == MT_IMAGE) {
+        if (local.media[RTPStream()->getSdpMediaIndex()].type == MT_IMAGE) {
             AmMediaProcessor::instance()->addSession(t38, callgroup);
         } else {
             startMediaProcessing();
         }
     }
 
-    void checkData() {
+    void checkData()
+    {
         EXPECT_TRUE(fax_success);
         remove(TIFF_FILE_ANSWER);
     }
 
-    void wait_started() {
-        started.wait_for();
-    }
+    void wait_started() { started.wait_for(); }
 };
 
-class FaxTest : public ::testing::Test
-{
-protected:
+class FaxTest : public ::testing::Test {
+  protected:
     void SetUp() override
     {
         AmMediaProcessor::instance()->init();
@@ -117,12 +113,14 @@ protected:
     }
 };
 
-TEST_F(FaxTest, SingleT38Test) {
+TEST_F(FaxTest, SingleT38Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -152,24 +150,29 @@ TEST_F(FaxTest, SingleT38Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }
 
-TEST_F(FaxTest, IceT38Test) {
+TEST_F(FaxTest, IceT38Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -201,24 +204,29 @@ TEST_F(FaxTest, IceT38Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }
 
-TEST_F(FaxTest, DISABLED_DTLST38Test) {
+TEST_F(FaxTest, DISABLED_DTLST38Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -250,24 +258,29 @@ TEST_F(FaxTest, DISABLED_DTLST38Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }
 
-TEST_F(FaxTest, SingleT30Test) {
+TEST_F(FaxTest, SingleT30Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -293,24 +306,29 @@ TEST_F(FaxTest, SingleT30Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }
 
-TEST_F(FaxTest, AudioToT38Test) {
+TEST_F(FaxTest, AudioToT38Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -338,8 +356,8 @@ TEST_F(FaxTest, AudioToT38Test) {
         sessionA.setReuseMediaSlot(false);
         sessionA.getSdpOffer(sessionA.local);
         GTEST_ASSERT_EQ(sessionA.local.media.size(), 2);
-        for(auto &media : sessionA.local.media) {
-            if(media.type == MT_IMAGE)
+        for (auto &media : sessionA.local.media) {
+            if (media.type == MT_IMAGE)
                 EXPECT_NE(media.port, 0);
             else
                 EXPECT_EQ(media.port, 0);
@@ -351,8 +369,8 @@ TEST_F(FaxTest, AudioToT38Test) {
         sessionB.setMediaType(MT_IMAGE);
         sessionB.getSdpAnswer(sessionA.local, sessionB.local);
         GTEST_ASSERT_EQ(sessionB.local.media.size(), 2);
-        for(auto &media : sessionB.local.media) {
-            if(media.type == MT_IMAGE)
+        for (auto &media : sessionB.local.media) {
+            if (media.type == MT_IMAGE)
                 EXPECT_NE(media.port, 0);
             else
                 EXPECT_EQ(media.port, 0);
@@ -367,24 +385,29 @@ TEST_F(FaxTest, AudioToT38Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }
 
-TEST_F(FaxTest, ReinviteT38Test) {
+TEST_F(FaxTest, ReinviteT38Test)
+{
     string error;
     try {
         unsigned int idx = AmConfig.sip_if_names[test_config::instance()->signalling_interface];
-        string ip;
-        if(AmConfig.sip_ifs[idx].proto_info.size()) ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
+        string       ip;
+        if (AmConfig.sip_ifs[idx].proto_info.size())
+            ip = AmConfig.sip_ifs[idx].proto_info[0]->getIP();
         ASSERT_FALSE(ip.empty());
         ip.insert(0, "sip:");
 
@@ -431,14 +454,17 @@ TEST_F(FaxTest, ReinviteT38Test) {
         sessionB.start();
         sessionA.wait_started();
         sessionB.wait_started();
-        while(AmSession::getSessionNum()) { usleep(100); }
+        while (AmSession::getSessionNum()) {
+            usleep(100);
+        }
         sessionA.checkData();
         sessionB.checkData();
-    } catch(const AmSession::Exception& except) {
+    } catch (const AmSession::Exception &except) {
         error = except.reason;
-    } catch(const string& reason) {
+    } catch (const string &reason) {
         error = reason.c_str();
     }
 
-    if(!error.empty()) FAIL() << "Exception - " << error.c_str() << std::endl;
+    if (!error.empty())
+        FAIL() << "Exception - " << error.c_str() << std::endl;
 }

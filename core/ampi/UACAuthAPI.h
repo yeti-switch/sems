@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -46,29 +46,24 @@ enum UACAuthErrorCodes {
     UACAuthNoAuthHeader
 };
 
-class DialogControl 
-: public AmObject 
-{
- public:
-  virtual AmBasicSipDialog* getDlg()=0;
+class DialogControl : public AmObject {
+  public:
+    virtual AmBasicSipDialog *getDlg() = 0;
 };
 
-class UACAuthCred 
-: public AmObject {
- public:
-  string realm;
-  string user;
-  string pwd;
-  UACAuthCred();
-  UACAuthCred(const string& realm,
-	      const string& user,
-	      const string& pwd);
+class UACAuthCred : public AmObject {
+  public:
+    string realm;
+    string user;
+    string pwd;
+    UACAuthCred();
+    UACAuthCred(const string &realm, const string &user, const string &pwd);
 };
 
 class CredentialHolder {
- public:
-  virtual UACAuthCred* getCredentials() = 0;
-  virtual ~CredentialHolder() { }
+  public:
+    virtual UACAuthCred *getCredentials() = 0;
+    virtual ~CredentialHolder() {}
 };
 
 #endif

@@ -28,15 +28,15 @@ using std::map;
 using std::string;
 using std::vector;
 
+using std::shared_ptr;
 using std::string;
 using std::unordered_map;
-using std::shared_ptr;
 
 
-#define MIXER_DEFAULT_LISTEN_ADDRESS      "localhost"
-#define MIXER_DEFAULT_PORT                5002
-#define MIXER_DISPATCHER_MAX_EPOLL_EVENT  256
-#define TIMER_INTERVAL_SEC                1
+#define MIXER_DEFAULT_LISTEN_ADDRESS     "localhost"
+#define MIXER_DEFAULT_PORT               5002
+#define MIXER_DISPATCHER_MAX_EPOLL_EVENT 256
+#define TIMER_INTERVAL_SEC               1
 
 #ifdef RORPP_PLC
 #include "LowcFE.h"

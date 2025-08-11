@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -34,61 +34,48 @@
 
 struct sip_avp;
 
-struct sip_transport
-{
-    enum {
-	UNPARSED=0,
-	UDP,
-	TCP,
-	TLS,
-	SCTP,
-    WS,
-    WSS,
-	OTHER
-    };
+struct sip_transport {
+    enum { UNPARSED = 0, UDP, TCP, TLS, SCTP, WS, WSS, OTHER };
 
     int     type;
     cstring val;
 };
 
-struct sip_address_type
-{
+struct sip_address_type {
     int     type;
     cstring val;
 };
 
-struct sip_via_parm
-{
-    const char* eop;
+struct sip_via_parm {
+    const char *eop;
 
-    list<sip_avp*> params;
+    list<sip_avp *> params;
 
-    sip_transport  trans;
-    cstring        host;
-    cstring        port;
-    unsigned int   port_i;
+    sip_transport trans;
+    cstring       host;
+    cstring       port;
+    unsigned int  port_i;
 
-    cstring        branch;
+    cstring branch;
 
-    cstring        recved;
+    cstring recved;
 
-    bool           has_rport;
-    cstring        rport;
-    unsigned int   rport_i;    
+    bool         has_rport;
+    cstring      rport;
+    unsigned int rport_i;
 
     sip_via_parm();
-    sip_via_parm(const sip_via_parm& p);
+    sip_via_parm(const sip_via_parm &p);
     ~sip_via_parm();
 };
 
-struct sip_via: public sip_parsed_hdr
-{
-    list<sip_via_parm*> parms;
+struct sip_via : public sip_parsed_hdr {
+    list<sip_via_parm *> parms;
 
     ~sip_via();
 };
 
-int parse_via(sip_via* via, const char* beg, int len);
+int     parse_via(sip_via *via, const char *beg, int len);
 cstring transport_str(int transport_id);
 
 #define MAGIC_BRANCH_COOKIE "z9hG4bK"

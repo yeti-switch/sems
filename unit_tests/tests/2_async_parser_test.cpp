@@ -43,13 +43,13 @@ static char data[] =
 
 char *end = data + sizeof(data) - 1;
 
-char *first_msg_end = strstr(data, "SIP/2.0 100 Trying");
-char *first_msg_headers_end = strstr(data, "v=0\r\n");
-char *first_msg_header_partial_Accept_name = strstr(data, "ccept");
+char *first_msg_end                          = strstr(data, "SIP/2.0 100 Trying");
+char *first_msg_headers_end                  = strstr(data, "v=0\r\n");
+char *first_msg_header_partial_Accept_name   = strstr(data, "ccept");
 char *first_msg_header_partial_Contact_value = strstr(data, "er@127.0.0.1");
-char *first_msg_sdp_aline_partial_value = strstr(data, "8 G729");
+char *first_msg_sdp_aline_partial_value      = strstr(data, "8 G729");
 
-char *second_msg_start = first_msg_end;
+char *second_msg_start                     = first_msg_end;
 char *second_msg_header_partial_From_value = strstr(data, ";tag=5yAazpscM");
 
 TEST(AsyncSipParser, SingleMsg_FullBuf)

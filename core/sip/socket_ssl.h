@@ -2,14 +2,13 @@
 #include <string>
 #include "transport.h"
 
-struct sockaddr_ssl
-{
+struct sockaddr_ssl {
     union {
-        sockaddr_in in;
+        sockaddr_in  in;
         sockaddr_in6 in6;
     } addr;
     trsp_socket::socket_transport trsp;
-    bool ssl_marker;
+    bool                          ssl_marker;
     enum sig_method {
         SIG_UNDEFINED = 0,
         SIG_SHA,
@@ -43,13 +42,7 @@ struct sockaddr_ssl
         CIPHER_SEED,
         CIPHER_3DES
     } cipher;
-    enum mac_method {
-        MAC_UNDEFINED = 0,
-        MAC_AEAD,
-        MAC_SHA256,
-        MAC_SHA384,
-        MAC_SHA1
-    } mac;
+    enum mac_method { MAC_UNDEFINED = 0, MAC_AEAD, MAC_SHA256, MAC_SHA384, MAC_SHA1 } mac;
 };
 
 std::string toString(sockaddr_ssl::sig_method sig);

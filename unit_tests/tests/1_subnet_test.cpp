@@ -5,7 +5,7 @@
 
 TEST(Common, SubnetTask)
 {
-    AmSubnet subnet;
+    AmSubnet    subnet;
     std::string a("fe80::5632:aa5e:45ff:fea7:cbf6/64");
     subnet.parse(a);
     sockaddr_storage at, af;

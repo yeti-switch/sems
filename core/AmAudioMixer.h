@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -38,68 +38,62 @@ class AmAudioMixerConnector;
 
 /**
  * \brief \ref AmAudio to mix input
- * 
+ *
  * AmAudio that mixes some sources' audio and writes into a set of sinks.
- * 
+ *
  * Can probably do lots of things together with AmAudioQueue and/or AmAudioMixIn.
  *
- * Attention: Sources (in fact AmAudioMixerConnector) are owned by the AmAudioMixer, 
+ * Attention: Sources (in fact AmAudioMixerConnector) are owned by the AmAudioMixer,
  *            i.e. deleted on releaseSink/destructor.
  *            Sinks are not owned by the AmAudioMixer.
  */
-class AmAudioMixer 
-{
-  AmMultiPartyMixer mixer;
+class AmAudioMixer {
+    AmMultiPartyMixer mixer;
 
-  AmMutex srcsink_mut;
-  std::map<AmAudioMixerConnector*, unsigned int> sources;
+    AmMutex                                         srcsink_mut;
+    std::map<AmAudioMixerConnector *, unsigned int> sources;
 
-  unsigned int sink_channel;
-  AmAudioMixerConnector* sink_connector;
-  std::set<AmAudio*> sinks;
-
- public:
-  AmAudioMixer(int external_sample_rate);
-  ~AmAudioMixer();
-  
-  AmAudio* addSource(int external_sample_rate);
-  void releaseSource(AmAudio* s);
-
-  void addSink(AmAudio* s);
-  void releaseSink(AmAudio* s);
-};
-
-class AmAudioMixerConnector 
-  : public AmAudio
-{
-    AmMultiPartyMixer& mixer;
-    unsigned int channel;
-    AmMutex* audio_mut;
-    std::set<AmAudio*>* sinks;
-    AmAudio* mix_channel;
-
-  protected:
-    int get(unsigned long long system_ts, unsigned char* buffer,
-        int output_sample_rate, unsigned int nb_samples);
-    int put(unsigned long long system_ts, unsigned char* buffer,
-        int input_sample_rate, unsigned int size);
-
-    // dummies for AmAudio's pure virtual methods
-    int read(unsigned int user_ts, unsigned int size){ return -1; }
-    int write(unsigned int user_ts, unsigned int size){ return -1; }
+    unsigned int           sink_channel;
+    AmAudioMixerConnector *sink_connector;
+    std::set<AmAudio *>    sinks;
 
   public:
-    AmAudioMixerConnector(
-        AmMultiPartyMixer& mixer, unsigned int channel,
-        AmAudio* mix_channel,
-        AmMutex* audio_mut = NULL, std::set<AmAudio*>* sinks = NULL)\
-      : mixer(mixer),
-        channel(channel),
-        audio_mut(audio_mut), sinks(sinks),
-        mix_channel(mix_channel)
-      { }
-    ~AmAudioMixerConnector() { }
+    AmAudioMixer(int external_sample_rate);
+    ~AmAudioMixer();
 
+    AmAudio *addSource(int external_sample_rate);
+    void     releaseSource(AmAudio *s);
+
+    void addSink(AmAudio *s);
+    void releaseSink(AmAudio *s);
+};
+
+class AmAudioMixerConnector : public AmAudio {
+    AmMultiPartyMixer   &mixer;
+    unsigned int         channel;
+    AmMutex             *audio_mut;
+    std::set<AmAudio *> *sinks;
+    AmAudio             *mix_channel;
+
+  protected:
+    int get(unsigned long long system_ts, unsigned char *buffer, int output_sample_rate, unsigned int nb_samples);
+    int put(unsigned long long system_ts, unsigned char *buffer, int input_sample_rate, unsigned int size);
+
+    // dummies for AmAudio's pure virtual methods
+    int read(unsigned int user_ts, unsigned int size) { return -1; }
+    int write(unsigned int user_ts, unsigned int size) { return -1; }
+
+  public:
+    AmAudioMixerConnector(AmMultiPartyMixer &mixer, unsigned int channel, AmAudio *mix_channel,
+                          AmMutex *audio_mut = NULL, std::set<AmAudio *> *sinks = NULL)
+        : mixer(mixer)
+        , channel(channel)
+        , audio_mut(audio_mut)
+        , sinks(sinks)
+        , mix_channel(mix_channel)
+    {
+    }
+    ~AmAudioMixerConnector() {}
 };
 
 #endif

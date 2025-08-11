@@ -14,27 +14,26 @@
 EXPORT_PLUGIN_CLASS_FACTORY(Mixer);
 EXPORT_PLUGIN_CONF_FACTORY(Mixer);
 
-struct ReloadEvent
-  : public AmEvent
-{
-  ReloadEvent()
-    : AmEvent(0)
-  {}
+struct ReloadEvent : public AmEvent {
+    ReloadEvent()
+        : AmEvent(0)
+    {
+    }
 };
 
-RxRing              Mixer::rx_ring;
+RxRing Mixer::rx_ring;
 
 backlog Mixer::backlog_data[MAX_CHANNEL_CTX];
 
 /** карта backlog внешних каналов */
-DECLARE_BITMAP_ALIGNED(Mixer::backlog_map,MAX_CHANNEL_CTX);
+DECLARE_BITMAP_ALIGNED(Mixer::backlog_map, MAX_CHANNEL_CTX);
 
-vector<sockaddr_storage>    Mixer::neighbor_saddr;
-int                         Mixer::neighbors_num = 0;
+vector<sockaddr_storage> Mixer::neighbor_saddr;
+int                      Mixer::neighbors_num = 0;
 
-Mixer* Mixer::_instance = nullptr;
+Mixer *Mixer::_instance = nullptr;
 
-Mixer* Mixer::instance()
+Mixer *Mixer::instance()
 {
     if (_instance == nullptr)
         _instance = new Mixer(MOD_NAME);
@@ -43,22 +42,26 @@ Mixer* Mixer::instance()
 }
 
 Mixer::Mixer()
-    : AmDynInvokeFactory(MOD_NAME),
-      AmConfigFactory(MOD_NAME),
-      RpcTreeHandler<Mixer>(true),
-      AmEventFdQueue(this),
-      running(true), stopped(false), epoll_fd(-1)
+    : AmDynInvokeFactory(MOD_NAME)
+    , AmConfigFactory(MOD_NAME)
+    , RpcTreeHandler<Mixer>(true)
+    , AmEventFdQueue(this)
+    , running(true)
+    , stopped(false)
+    , epoll_fd(-1)
 {
     _instance = this;
 }
 
 
-Mixer::Mixer(const string& name)
-    : AmDynInvokeFactory(name),
-      AmConfigFactory(MOD_NAME),
-      RpcTreeHandler<Mixer>(true),
-      AmEventFdQueue(this),
-      running(true), stopped(false), epoll_fd(-1)
+Mixer::Mixer(const string &name)
+    : AmDynInvokeFactory(name)
+    , AmConfigFactory(MOD_NAME)
+    , RpcTreeHandler<Mixer>(true)
+    , AmEventFdQueue(this)
+    , running(true)
+    , stopped(false)
+    , epoll_fd(-1)
 {
     _instance = this;
 }
@@ -73,7 +76,7 @@ Mixer::~Mixer()
 
 void Mixer::init_rpc_tree()
 {
-    reg_method(root,"reload","",&Mixer::reload);
+    reg_method(root, "reload", "", &Mixer::reload);
 }
 
 int Mixer::bind_socket()
@@ -89,9 +92,9 @@ int Mixer::bind_socket()
         return -1;
     }
 
-    struct epoll_event ev = {0};
+    struct epoll_event ev = { 0 };
 
-    ev.events = EPOLLIN | EPOLLERR;
+    ev.events  = EPOLLIN | EPOLLERR;
     ev.data.fd = socket_fd;
 
     if (::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &ev) == -1) {
@@ -104,8 +107,8 @@ int Mixer::bind_socket()
 
 bool Mixer::resolve_name(const string &address, sockaddr_storage &_sa)
 {
-    dns_handle  _dh;
-    bool  res = resolver::instance()->resolve_name(address.c_str(), &_dh, &_sa, IPv4_only) != -1;
+    dns_handle _dh;
+    bool       res = resolver::instance()->resolve_name(address.c_str(), &_dh, &_sa, IPv4_only) != -1;
 
     if (!res)
         ERROR("can't resolve destination: '%s'", address.c_str());
@@ -120,39 +123,38 @@ bool Mixer::resolve_name(const string &address, sockaddr_storage &_sa)
 #define PARAM_PORT_NAME         "port"
 #define PARAM_ADDRESS_NAME      "address"
 
-#define checkMandatoryParameter(cfg, ifname) if(!cfg_size(cfg, ifname)) { \
-                                                ERROR("absent mandatory parameter %s in section %s", ifname, cfg->name);\
-                                                return -1;\
-                                             }
+#define checkMandatoryParameter(cfg, ifname)                                                                           \
+    if (!cfg_size(cfg, ifname)) {                                                                                      \
+        ERROR("absent mandatory parameter %s in section %s", ifname, cfg->name);                                       \
+        return -1;                                                                                                     \
+    }
 static void cfg_error_callback(cfg_t *cfg, const char *fmt, va_list ap)
 {
-    char buf[2048];
+    char  buf[2048];
     char *s = buf;
-    char *e = s+sizeof(buf);
+    char *e = s + sizeof(buf);
 
-    if(cfg->title) {
-        s += snprintf(s,e-s, "%s:%d [%s/%s]: ",
-            cfg->filename,cfg->line,cfg->name,cfg->title);
+    if (cfg->title) {
+        s += snprintf(s, e - s, "%s:%d [%s/%s]: ", cfg->filename, cfg->line, cfg->name, cfg->title);
     } else {
-        s += snprintf(s,e-s, "%s:%d [%s]: ",
-            cfg->filename,cfg->line,cfg->name);
+        s += snprintf(s, e - s, "%s:%d [%s]: ", cfg->filename, cfg->line, cfg->name);
     }
-    s += vsnprintf(s,e-s,fmt,ap);
+    s += vsnprintf(s, e - s, fmt, ap);
 
-    ERROR("%.*s",(int)(s-buf),buf);
+    ERROR("%.*s", (int)(s - buf), buf);
 }
 
-int Mixer::read_neighbor(cfg_t* cfg)
+int Mixer::read_neighbor(cfg_t *cfg)
 {
-    string              neighbor_address;
-    int                 neighbor_port;
+    string neighbor_address;
+    int    neighbor_port;
 
     checkMandatoryParameter(cfg, PARAM_ADDRESS_NAME);
     neighbor_address = cfg_getstr(cfg, PARAM_ADDRESS_NAME);
-    neighbor_port = cfg_getint(cfg, PARAM_PORT_NAME);
+    neighbor_port    = cfg_getint(cfg, PARAM_PORT_NAME);
 
-    sockaddr_storage    saddr;
-    if (resolve_name(neighbor_address,saddr)) {
+    sockaddr_storage saddr;
+    if (resolve_name(neighbor_address, saddr)) {
         am_set_port(&saddr, neighbor_port);
         neighbor_saddr.push_back(saddr);
         neighbors_num++;
@@ -160,41 +162,25 @@ int Mixer::read_neighbor(cfg_t* cfg)
     return 0;
 }
 
-int Mixer::configure(const std::string& config)
+int Mixer::configure(const std::string &config)
 {
-    cfg_opt_t listen[] =
-    {
-        CFG_INT(PARAM_PORT_NAME, MIXER_DEFAULT_PORT, CFGF_NONE),
-        CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
-        CFG_END()
-    };
+    cfg_opt_t listen[] = { CFG_INT(PARAM_PORT_NAME, MIXER_DEFAULT_PORT, CFGF_NONE),
+                           CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT), CFG_END() };
 
-    cfg_opt_t neighbour[] =
-    {
-        CFG_INT(PARAM_PORT_NAME, MIXER_DEFAULT_PORT, CFGF_NONE),
-        CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT),
-        CFG_END()
-    };
+    cfg_opt_t neighbour[] = { CFG_INT(PARAM_PORT_NAME, MIXER_DEFAULT_PORT, CFGF_NONE),
+                              CFG_STR(PARAM_ADDRESS_NAME, "", CFGF_NODEFAULT), CFG_END() };
 
-    cfg_opt_t neighbours[] =
-    {
-        CFG_SEC(SECTION_NEIGHBOUR_NAME, neighbour, CFGF_MULTI | CFGF_TITLE),
-        CFG_END()
-    };
+    cfg_opt_t neighbours[] = { CFG_SEC(SECTION_NEIGHBOUR_NAME, neighbour, CFGF_MULTI | CFGF_TITLE), CFG_END() };
 
-    cfg_opt_t opt[] =
-    {
-        CFG_SEC(SECTION_LISTEN_NAME, listen, CFGF_NODEFAULT),
-        CFG_SEC(SECTION_NEIGHBOURS_NAME, neighbours, CFGF_NODEFAULT),
-        CFG_END()
-    };
-    cfg_t* cfg = cfg_init(opt, 0);
-    if(!cfg) return -1;
+    cfg_opt_t opt[] = { CFG_SEC(SECTION_LISTEN_NAME, listen, CFGF_NODEFAULT),
+                        CFG_SEC(SECTION_NEIGHBOURS_NAME, neighbours, CFGF_NODEFAULT), CFG_END() };
+    cfg_t    *cfg   = cfg_init(opt, 0);
+    if (!cfg)
+        return -1;
     cfg_set_error_function(cfg, cfg_error_callback);
 
-    switch(cfg_parse_buf(cfg, config.c_str())) {
-    case CFG_SUCCESS:
-        break;
+    switch (cfg_parse_buf(cfg, config.c_str())) {
+    case CFG_SUCCESS: break;
     case CFG_PARSE_ERROR:
         ERROR("configuration of module %s parse error", MOD_NAME);
         cfg_free(cfg);
@@ -206,20 +192,20 @@ int Mixer::configure(const std::string& config)
     }
 
     checkMandatoryParameter(cfg, SECTION_LISTEN_NAME);
-    cfg_t* lcfg = cfg_getsec(cfg, SECTION_LISTEN_NAME);
-    int       port = cfg_getint(lcfg, PARAM_PORT_NAME);
+    cfg_t *lcfg = cfg_getsec(cfg, SECTION_LISTEN_NAME);
+    int    port = cfg_getint(lcfg, PARAM_PORT_NAME);
     checkMandatoryParameter(lcfg, PARAM_ADDRESS_NAME);
     string address = cfg_getstr(lcfg, PARAM_ADDRESS_NAME);
-    if (!resolve_name(address,l_saddr)) {
+    if (!resolve_name(address, l_saddr)) {
         cfg_free(cfg);
         return -1;
     }
     am_set_port(&l_saddr, port);
 
     checkMandatoryParameter(cfg, SECTION_NEIGHBOURS_NAME);
-    cfg_t* nodes = cfg_getsec(cfg, SECTION_NEIGHBOURS_NAME);
-    for(unsigned int i = 0; i < cfg_size(nodes, SECTION_NEIGHBOUR_NAME); i++) {
-        if(read_neighbor(cfg_getnsec(nodes, SECTION_NEIGHBOUR_NAME, i)) < 0) {
+    cfg_t *nodes = cfg_getsec(cfg, SECTION_NEIGHBOURS_NAME);
+    for (unsigned int i = 0; i < cfg_size(nodes, SECTION_NEIGHBOUR_NAME); i++) {
+        if (read_neighbor(cfg_getnsec(nodes, SECTION_NEIGHBOUR_NAME, i)) < 0) {
             cfg_free(cfg);
             return -1;
         }
@@ -229,7 +215,7 @@ int Mixer::configure(const std::string& config)
     return 0;
 }
 
-int Mixer::reconfigure(const std::string& config)
+int Mixer::reconfigure(const std::string &config)
 {
     return 0;
 }
@@ -254,9 +240,9 @@ int Mixer::init()
     return 0;
 }
 
-void Mixer::reload(const AmArg& args, AmArg& ret)
+void Mixer::reload(const AmArg &args, AmArg &ret)
 {
-    AmSessionContainer::instance()->postEvent(MIXER_EVENT_QUEUE,new ReloadEvent());
+    AmSessionContainer::instance()->postEvent(MIXER_EVENT_QUEUE, new ReloadEvent());
 }
 
 int Mixer::onLoad()
@@ -273,21 +259,20 @@ int Mixer::onLoad()
 }
 
 
-void Mixer::process(AmEvent* ev)
+void Mixer::process(AmEvent *ev)
 {
     if (ev->event_id == E_SYSTEM) {
-        AmSystemEvent* sys_ev = dynamic_cast<AmSystemEvent*>(ev);
+        AmSystemEvent *sys_ev = dynamic_cast<AmSystemEvent *>(ev);
         if (sys_ev && sys_ev->sys_event == AmSystemEvent::ServerShutdown) {
             running = false;
             event.fire();
         }
-    } else if(dynamic_cast<ReloadEvent*>(ev)) {
+    } else if (dynamic_cast<ReloadEvent *>(ev)) {
         neighbors_num = 0;
         neighbor_saddr.clear();
 
         ConfigContainer config;
-        if(AmLcConfig::instance().readConfiguration(&config) ||
-            configure(config.module_config[MOD_NAME])) {
+        if (AmLcConfig::instance().readConfiguration(&config) || configure(config.module_config[MOD_NAME])) {
             ERROR("configuration error");
             return;
         }
@@ -322,10 +307,10 @@ void Mixer::AttachConferenceMediaToMediaProcessorThreads()
 
     DBG("Attach MixerMedia to %u threads", num_media_threads);
 
-    conference_media2media_threads = new ConferenceMedia*[num_media_threads];
+    conference_media2media_threads = new ConferenceMedia *[num_media_threads];
 
-    for (int i=0; i<num_media_threads; ++i) {
-        ConferenceMedia *m = new ConferenceMedia(this, i, socket_fd);
+    for (int i = 0; i < num_media_threads; ++i) {
+        ConferenceMedia *m                = new ConferenceMedia(this, i, socket_fd);
         conference_media2media_threads[i] = m;
         inc_ref(m);
         AmMediaProcessor::instance()->addTailHandler(m, i);
@@ -337,10 +322,10 @@ void Mixer::DetachConferenceMediaFromMediaProcessorThreads()
 {
     DBG("Detach MixerMedia from threads");
 
-    for (int i=0; i<num_media_threads; ++i)
+    for (int i = 0; i < num_media_threads; ++i)
         AmMediaProcessor::instance()->removeTailHandler(conference_media2media_threads[i], i);
 
-    delete []  conference_media2media_threads;
+    delete[] conference_media2media_threads;
     conference_media2media_threads = nullptr;
 }
 
@@ -371,9 +356,9 @@ void Mixer::run()
         if (ret < 1)
             continue;
 
-        for (int n=0; n < ret; ++n) {
-            uint32_t ev         = events[n].events;
-            int      ev_info    = events[n].data.fd;
+        for (int n = 0; n < ret; ++n) {
+            uint32_t ev      = events[n].events;
+            int      ev_info = events[n].data.fd;
 
             // if (ev_info == timer)
             if (ev_info == -queue_fd()) {
@@ -398,37 +383,30 @@ void Mixer::run()
 }
 
 
-void Mixer::addParticipant(const string& channel_id, const string& local_tag)
+void Mixer::addParticipant(const string &channel_id, const string &local_tag)
 {
     AmLock l(channels_participants_mut);
 
     auto it = channels_participants.find(channel_id);
 
     if (it == channels_participants.end()) {
-        set<string> set {local_tag};
-        channels_participants.insert(std::make_pair(channel_id,set));
+        set<string> set{ local_tag };
+        channels_participants.insert(std::make_pair(channel_id, set));
     } else
         it->second.insert(local_tag);
 
-    postRequest(new Mixer::MixerEvent(
-                    channel_id,
-                    ConfNewParticipant,
-                    local_tag));
+    postRequest(new Mixer::MixerEvent(channel_id, ConfNewParticipant, local_tag));
 }
 
 
-void Mixer::removeParticipant(const string& channel_id,const string& local_tag)
+void Mixer::removeParticipant(const string &channel_id, const string &local_tag)
 {
     AmLock l(channels_participants_mut);
 
     auto it = channels_participants.find(channel_id);
 
-    if (it != channels_participants.end()
-            && it->second.erase(local_tag))
-        postRequest(new Mixer::MixerEvent(
-                        channel_id,
-                        ConfParticipantLeft,
-                        local_tag));
+    if (it != channels_participants.end() && it->second.erase(local_tag))
+        postRequest(new Mixer::MixerEvent(channel_id, ConfParticipantLeft, local_tag));
 }
 
 
@@ -436,13 +414,11 @@ struct backlog *find_backlog_by_id(uint64_t id)
 {
     int i;
 
-    foreach_set (i, Mixer::backlog_map, MAX_CHANNEL_CTX)
-        if (Mixer::backlog_data[i].id == id)
-            return &Mixer::backlog_data[i];
+    foreach_set(i, Mixer::backlog_map,
+                MAX_CHANNEL_CTX) if (Mixer::backlog_data[i].id == id) return &Mixer::backlog_data[i];
 
     return nullptr;
 }
-
 
 
 static inline bool saddr_match(const sockaddr_storage &a0, const sockaddr_storage &a1)
@@ -450,13 +426,14 @@ static inline bool saddr_match(const sockaddr_storage &a0, const sockaddr_storag
     if (a0.ss_family != a1.ss_family)
         return false;
 
-    switch(a0.ss_family) {
+    switch (a0.ss_family) {
     case AF_INET:
-        return !(((const struct sockaddr_in *)&a0)->sin_addr.s_addr
-                 ^ ((const struct sockaddr_in *)&a1)->sin_addr.s_addr);
-    case AF_INET6: {
-        const __be64 *_a0 = (const __be64 *)&((const struct sockaddr_in6*)&a0)->sin6_addr;
-        const __be64 *_a1 = (const __be64 *)&((const struct sockaddr_in6*)&a1)->sin6_addr;
+        return !(((const struct sockaddr_in *)&a0)->sin_addr.s_addr ^
+                 ((const struct sockaddr_in *)&a1)->sin_addr.s_addr);
+    case AF_INET6:
+    {
+        const __be64 *_a0 = (const __be64 *)&((const struct sockaddr_in6 *)&a0)->sin6_addr;
+        const __be64 *_a1 = (const __be64 *)&((const struct sockaddr_in6 *)&a1)->sin6_addr;
         return !((_a0[0] ^ _a1[0]) | (_a0[1] ^ _a1[1]));
     }
     }
@@ -469,7 +446,7 @@ bool isNeighbor(const sockaddr_storage &from, int &idx)
 {
     idx = 0;
 
-    for (const auto& saddr : Mixer::neighbor_saddr) {
+    for (const auto &saddr : Mixer::neighbor_saddr) {
         if (saddr_match(saddr, from))
             return true;
         ++idx;
@@ -480,14 +457,15 @@ bool isNeighbor(const sockaddr_storage &from, int &idx)
 }
 
 
-channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t channel_ext_id, const string &local_tag, int sample_rate)
+channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t channel_ext_id, const string &local_tag,
+                                        int sample_rate)
 {
     // INFO("=> ext_id %ld channel_id='%s' { %ld }", channel_ext_id, channel_id.c_str(), backlog_data[0].id);
 
-    mixer_ptr   mixer;
-    int         i;
-    int         backlog_id = -1;
-    int         mpmixer_ch_id = -1;
+    mixer_ptr mixer;
+    int       i;
+    int       backlog_id    = -1;
+    int       mpmixer_ch_id = -1;
 
     /**
         set/clear_bit - atomic with LOCK_PREFIX
@@ -497,7 +475,8 @@ channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t chann
 
     AmLock l(backlog_mut);
 
-    foreach_set (i, backlog_map, MAX_CHANNEL_CTX) {
+    foreach_set(i, backlog_map, MAX_CHANNEL_CTX)
+    {
 
         mixer = backlog_data[i].mixer; /// take reference to the backlog_data[i].mixer
 
@@ -529,50 +508,45 @@ channel_ptr Mixer::getConferenceChannel(const string &channel_id, uint64_t chann
 
     addParticipant(channel_id, local_tag);
 
-    return
-        channel_ptr(new ConferenceChannel(mpmixer_ch_id, channel_ext_id, std::move(mixer)),
-            [=, this](ConferenceChannel *p) -> void {
+    return channel_ptr(new ConferenceChannel(mpmixer_ch_id, channel_ext_id, std::move(mixer)),
+                       [=, this](ConferenceChannel *p) -> void {
+                           backlog_mut.lock(); /// fetched by reference
 
-                backlog_mut.lock(); /// fetched by reference
+                           mixer_ptr _mixer = get_backlog(backlog_id)->mixer;
 
-                mixer_ptr _mixer = get_backlog(backlog_id)->mixer;
+                           if (p->use_count() != 3) { /// 3 -> _mixer, *p and backlog.mixer refs
+                               AmLock l(_mixer->mpm_mut);
+                               _mixer->removeChannel(mpmixer_ch_id);
+                           } else {
+                               /// last channel released, release backlog mixer refs
+                               backlog_data[backlog_id].mixer.reset();
+                               backlog_data[backlog_id].position.pair = 0;
+                               clear_bit(backlog_id, backlog_map);
+                           }
 
-                if (p->use_count() != 3) {/// 3 -> _mixer, *p and backlog.mixer refs
-                    AmLock l(_mixer->mpm_mut);
-                    _mixer->removeChannel(mpmixer_ch_id);
-                } else {
-                    /// last channel released, release backlog mixer refs
-                    backlog_data[backlog_id].mixer.reset();
-                    backlog_data[backlog_id].position.pair = 0;
-                    clear_bit(backlog_id, backlog_map);
-                }
+                           backlog_mut.unlock();
 
-                backlog_mut.unlock();
+                           removeParticipant(channel_id, local_tag);
 
-                removeParticipant(channel_id, local_tag);
-
-                delete p;
-            });
+                           delete p;
+                       });
 }
 
 
-void Mixer::processEvent(MixerEvent  *ev)
+void Mixer::processEvent(MixerEvent *ev)
 {
     AmLock l(channels_participants_mut);
 
-    auto  ch_it = channels_participants.find(ev->channel_id);
+    auto ch_it = channels_participants.find(ev->channel_id);
 
     if (ch_it != channels_participants.end()) {
 
-        const set<string>& participants = ch_it->second;
-        size_t size = participants.size();
+        const set<string> &participants = ch_it->second;
+        size_t             size         = participants.size();
 
-        for (const auto& local_tag : participants)
-            AmSessionContainer::instance()->postEvent(local_tag,
-                                                      new ConferenceEvent(ev->event_id,
-                                                                          size,
-                                                                          ev->channel_id,
-                                                                          ev->from_tag));
+        for (const auto &local_tag : participants)
+            AmSessionContainer::instance()->postEvent(
+                local_tag, new ConferenceEvent(ev->event_id, size, ev->channel_id, ev->from_tag));
     }
 }
 
@@ -585,8 +559,8 @@ void Mixer::processRequests()
     tmp_queue.swap(pending_queue);
     queue_mtx.unlock();
 
-    while (!tmp_queue.empty() ) {
-        MixerEvent *ev= tmp_queue.front();
+    while (!tmp_queue.empty()) {
+        MixerEvent *ev = tmp_queue.front();
         processEvent(ev);
         tmp_queue.pop_front();
         delete ev;

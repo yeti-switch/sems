@@ -6,10 +6,9 @@
 
 #include <vector>
 
-class ShutdownHandlersProcessor
-{
+class ShutdownHandlersProcessor {
     std::vector<ShutdownHandler *> handlers;
-    AmMutex mutex;
+    AmMutex                        mutex;
 
     void shutdownIfFinished();
 

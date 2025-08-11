@@ -2,7 +2,7 @@
  * Copyright (C) 2012 FRAFOS GmbH
  *
  * Development sponsored by Sipwise GmbH.
- * 
+ *
  * This file is part of SEMS, a free SIP media server.
  *
  * SEMS is free software; you can redistribute it and/or modify
@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _AmSipSubscriptionContainer_h_
@@ -32,33 +32,30 @@
 #include "AmSipSubscription.h"
 #include "AmEventProcessingThread.h"
 
-typedef map<string,AmSipSubscriptionDialog*> AmSipSubscriptionMap;
-typedef AmSipSubscriptionMap::iterator AmSipSubscriptionMapIter;
+typedef map<string, AmSipSubscriptionDialog *> AmSipSubscriptionMap;
+typedef AmSipSubscriptionMap::iterator         AmSipSubscriptionMapIter;
 
 
-class _AmSipSubscriptionContainer 
-: public AmEventProcessingThread
-{
-  AmSipSubscriptionMap subscriptions;
-  AmMutex subscriptions_mut;
+class _AmSipSubscriptionContainer : public AmEventProcessingThread {
+    AmSipSubscriptionMap subscriptions;
+    AmMutex              subscriptions_mut;
 
-  void initialize();
-  bool initialized;
- public:
-  _AmSipSubscriptionContainer();
-  ~_AmSipSubscriptionContainer();
+    void initialize();
+    bool initialized;
 
-  string createSubscription(const AmSipSubscriptionInfo& info, 
-			    const string& sess_link,
-			    unsigned int wanted_expires=0);
+  public:
+    _AmSipSubscriptionContainer();
+    ~_AmSipSubscriptionContainer();
 
-  bool refreshSubscription(const string& sub_handle, 
-			   unsigned int wanted_expires=0);
+    string createSubscription(const AmSipSubscriptionInfo &info, const string &sess_link,
+                              unsigned int wanted_expires = 0);
 
-  void removeSubscription(const string& sub_handle);
+    bool refreshSubscription(const string &sub_handle, unsigned int wanted_expires = 0);
 
-  // AmEventProcessingThread
-  void onEvent(AmEvent* event);
+    void removeSubscription(const string &sub_handle);
+
+    // AmEventProcessingThread
+    void onEvent(AmEvent *event);
 };
 
 typedef singleton<_AmSipSubscriptionContainer> AmSipSubscriptionContainer;

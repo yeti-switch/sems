@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -48,22 +48,22 @@
 #include "sip/msg_logger.h"
 #include "media/AmSrtpConnection.h"
 
-#define RTCP_PAYLOAD_MIN 72
-#define RTCP_PAYLOAD_MAX 76
+#define RTCP_PAYLOAD_MIN   72
+#define RTCP_PAYLOAD_MAX   76
 #define IS_RTCP_PAYLOAD(p) ((p) >= RTCP_PAYLOAD_MIN && (p) <= RTCP_PAYLOAD_MAX)
 
 #define RTCP_PARSE_DEBUG 1
 
-#if RTCP_PARSE_DEBUG==1
-#define RTCP_DBG(fmt, args...) DBG(fmt,##args);
+#if RTCP_PARSE_DEBUG == 1
+#define RTCP_DBG(fmt, args...) DBG(fmt, ##args);
 #else
-    #define RTCP_DBG(fmt, args...) ;
+#define RTCP_DBG(fmt, args...) ;
 #endif
 
-#define NTP32_TO_USEC_SCALING_FACTOR (1e6/65536.0)
+#define NTP32_TO_USEC_SCALING_FACTOR (1e6 / 65536.0)
 
 AmRtpPacket::AmRtpPacket()
-  : data_offset(0)
+    : data_offset(0)
 {
 }
 
@@ -72,29 +72,29 @@ AmRtpPacket::~AmRtpPacket()
     //
 }
 
-void AmRtpPacket::setAddr(struct sockaddr_storage* a)
+void AmRtpPacket::setAddr(struct sockaddr_storage *a)
 {
-  memcpy(&saddr,a,sizeof(sockaddr_storage));
+    memcpy(&saddr, a, sizeof(sockaddr_storage));
 }
 
-void AmRtpPacket::getAddr(struct sockaddr_storage* a)
+void AmRtpPacket::getAddr(struct sockaddr_storage *a)
 {
-  memcpy(a,&saddr,sizeof(sockaddr_storage));
+    memcpy(a, &saddr, sizeof(sockaddr_storage));
 }
 
-void AmRtpPacket::setLocalAddr(struct sockaddr_storage* a)
+void AmRtpPacket::setLocalAddr(struct sockaddr_storage *a)
 {
-  memcpy(&laddr,a,sizeof(sockaddr_storage));
+    memcpy(&laddr, a, sizeof(sockaddr_storage));
 }
 
-void AmRtpPacket::getLocalAddr(struct sockaddr_storage* a)
+void AmRtpPacket::getLocalAddr(struct sockaddr_storage *a)
 {
-  memcpy(&laddr,a,sizeof(sockaddr_storage));
+    memcpy(&laddr, a, sizeof(sockaddr_storage));
 }
 
 bool AmRtpPacket::isRtcp()
 {
-    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    rtp_hdr_t *hdr = (rtp_hdr_t *)buffer;
     return IS_RTCP_PAYLOAD(hdr->pt);
 }
 
@@ -103,49 +103,46 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
     assert(buffer);
     assert(b_size);
 
-    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    rtp_hdr_t *hdr = (rtp_hdr_t *)buffer;
     // ZRTP "Hello" packet has version == 0
     if ((hdr->version != RTP_VERSION) && (hdr->version != 0)) {
-        DBG3("[%p] received RTP packet with unsupported version (%i).",
-            caller,hdr->version);
+        DBG3("[%p] received RTP packet with unsupported version (%i).", caller, hdr->version);
         return RTP_PACKET_PARSE_ERROR;
     }
 
-    data_offset = sizeof(rtp_hdr_t) + (hdr->cc*4);
+    data_offset = sizeof(rtp_hdr_t) + (hdr->cc * 4);
 
-    if(hdr->x != 0) {
+    if (hdr->x != 0) {
         if (b_size >= data_offset + 4) {
-            data_offset +=
-            ntohs(((rtp_xhdr_t*) (buffer + data_offset))->len)*4;
+            data_offset += ntohs(((rtp_xhdr_t *)(buffer + data_offset))->len) * 4;
         }
     }
 
     payload = hdr->pt;
 
-    if(IS_RTCP_PAYLOAD(payload)) {
+    if (IS_RTCP_PAYLOAD(payload)) {
         return RTP_PACKET_PARSE_RTCP;
     }
 
-    marker = hdr->m;
-    sequence = ntohs(hdr->seq);
+    marker    = hdr->m;
+    sequence  = ntohs(hdr->seq);
     timestamp = ntohl(hdr->ts);
-    ssrc = ntohl(hdr->ssrc);
-    version = hdr->version;
+    ssrc      = ntohl(hdr->ssrc);
+    version   = hdr->version;
 
     if (data_offset > b_size) {
-        DBG3("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !",
-              caller,data_offset,b_size);
+        DBG3("[%p] bad rtp packet (hdr-size=%u;pkt-size=%u) !", caller, data_offset, b_size);
         return RTP_PACKET_PARSE_ERROR;
     }
 
     d_size = b_size - data_offset;
 
-    if(hdr->p) {
-        if (buffer[b_size-1]>=d_size) {
-            DBG3("[%p] bad rtp packet (invalid padding size) !",caller);
+    if (hdr->p) {
+        if (buffer[b_size - 1] >= d_size) {
+            DBG3("[%p] bad rtp packet (invalid padding size) !", caller);
             return RTP_PACKET_PARSE_ERROR;
         }
-        d_size -= buffer[b_size-1];
+        d_size -= buffer[b_size - 1];
     }
 
     return RTP_PACKET_PARSE_OK;
@@ -154,75 +151,67 @@ int AmRtpPacket::rtp_parse(AmObject *caller)
 int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
 {
     unsigned char *r, *end, *chunk_end, *p;
-    size_t chunk_size;
-    int idx;
+    size_t         chunk_size;
+    int            idx;
 
     assert(buffer);
     assert(b_size);
 
-    r = buffer;
+    r   = buffer;
     end = r + b_size;
 
-    //RTCP_DBG("got RTCP with size: %u",b_size);
+    // RTCP_DBG("got RTCP with size: %u",b_size);
 
     idx = 0;
     do {
-        chunk_size = end-r;
-        if(chunk_size < sizeof(RtcpCommonHeader)) {
-            RTCP_DBG("received RTCP packet part %d is too short: %lu (expected %lu)",
-                idx,chunk_size,sizeof(RtcpCommonHeader));
+        chunk_size = end - r;
+        if (chunk_size < sizeof(RtcpCommonHeader)) {
+            RTCP_DBG("received RTCP packet part %d is too short: %lu (expected %lu)", idx, chunk_size,
+                     sizeof(RtcpCommonHeader));
             return RTP_PACKET_PARSE_ERROR;
         }
 
         RtcpCommonHeader &h = *(RtcpCommonHeader *)r;
 
-        if(h.version != RTP_VERSION) {
-            //RTCP_DBG("received RTCP packet with wrong version %u",h.version);
+        if (h.version != RTP_VERSION) {
+            // RTCP_DBG("received RTCP packet with wrong version %u",h.version);
             return RTP_PACKET_PARSE_ERROR;
         }
 
-        if(h.p != 0) {
+        if (h.p != 0) {
             RTCP_DBG("received RTCP packet with non-zero padding bit");
             return RTP_PACKET_PARSE_ERROR;
         }
 
-        chunk_end = r + sizeof(uint32_t)*(ntohs(h.length) + 1);
+        chunk_end = r + sizeof(uint32_t) * (ntohs(h.length) + 1);
 
-        if(chunk_end > end) {
+        if (chunk_end > end) {
             RTCP_DBG("RTCP%d: too small buffer for provided chunk length value: %d. "
-                "expected at least %lu but tail is %lu",
-                idx,ntohs(h.length),chunk_end-r,chunk_size);
+                     "expected at least %lu but tail is %lu",
+                     idx, ntohs(h.length), chunk_end - r, chunk_size);
             return RTP_PACKET_PARSE_ERROR;
         }
 
-        RTCP_DBG("RTCP chunk %d > version: %u, pt: %u, p: %u, count: %u, length: %u(%lu), ssrc: 0x%x",
-            idx,
-            h.version,
-            h.pt,
-            h.p,
-            h.count,
-            ntohs(h.length),chunk_end-r,
-            ntohl(h.ssrc));
+        RTCP_DBG("RTCP chunk %d > version: %u, pt: %u, p: %u, count: %u, length: %u(%lu), ssrc: 0x%x", idx, h.version,
+                 h.pt, h.p, h.count, ntohs(h.length), chunk_end - r, ntohl(h.ssrc));
 
-        switch(h.pt) {
+        switch (h.pt) {
         case RtcpCommonHeader::RTCP_SR:
 
             RTCP_DBG("RTCP: parse Sender Report");
-            if(chunk_size < (sizeof(RtcpCommonHeader)
-                             + sizeof(RtcpSenderReportHeader)
-                             + h.count*sizeof(RtcpReceiverReportHeader)))
+            if (chunk_size < (sizeof(RtcpCommonHeader) + sizeof(RtcpSenderReportHeader) +
+                              h.count * sizeof(RtcpReceiverReportHeader)))
             {
-                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid SenderReport",
-                    chunk_size);
+                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid SenderReport", chunk_size);
                 return RTP_PACKET_PARSE_ERROR;
             }
 
             p = r + sizeof(RtcpCommonHeader);
-            process_sender_report(*(RtcpSenderReportHeader*)p,stats);
+            process_sender_report(*(RtcpSenderReportHeader *)p, stats);
 
-            if(h.count) {
+            if (h.count) {
                 p += sizeof(RtcpSenderReportHeader);
-                parse_receiver_reports(p,chunk_end-p,stats);
+                parse_receiver_reports(p, chunk_end - p, stats);
             } else {
                 RTCP_DBG("SR with empty RR");
             }
@@ -233,16 +222,13 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
 
             RTCP_DBG("RTCP: parse Receiver Report");
             p = r + sizeof(RtcpCommonHeader);
-            if(chunk_size < (sizeof(RtcpCommonHeader)
-                             + h.count*sizeof(RtcpReceiverReportHeader)))
-            {
-                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid ReceiverReport. RC = %u",
-                    chunk_size,h.count);
+            if (chunk_size < (sizeof(RtcpCommonHeader) + h.count * sizeof(RtcpReceiverReportHeader))) {
+                RTCP_DBG("RTCP: chunk is too small (%lu) to be a valid ReceiverReport. RC = %u", chunk_size, h.count);
                 return RTP_PACKET_PARSE_ERROR;
             }
 
-            if(h.count)
-                parse_receiver_reports(p,chunk_end-p,stats);
+            if (h.count)
+                parse_receiver_reports(p, chunk_end - p, stats);
             else
                 RTCP_DBG("got empty RR");
 
@@ -253,21 +239,20 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
             RTCP_DBG("RTCP: parse Source Description");
             p = r + sizeof(RtcpCommonHeader);
 
-            if(parse_sdes(p,chunk_end,h.ssrc,stats)) {
+            if (parse_sdes(p, chunk_end, h.ssrc, stats)) {
                 DBG("RTCP: failed to parse SDES packet");
                 return RTP_PACKET_PARSE_ERROR;
             }
 
             break;
 
-        default:
-            DBG("RTCP: skip parsing unsupported payload type: %d",h.pt);
-        } //switch(h.pt)
+        default: DBG("RTCP: skip parsing unsupported payload type: %d", h.pt);
+        } // switch(h.pt)
 
         r = chunk_end;
         idx++;
 
-    } while(r < end);
+    } while (r < end);
 
     if (r != end) {
         RTCP_DBG("wrong format of the RTCP compound packet");
@@ -277,20 +262,20 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
 }
 
 
-int AmRtpPacket::parse_receiver_reports(unsigned char *chunk,size_t chunk_size, RtcpBidirectionalStat &stats)
+int AmRtpPacket::parse_receiver_reports(unsigned char *chunk, size_t chunk_size, RtcpBidirectionalStat &stats)
 {
-    unsigned char *end = chunk+chunk_size;
+    unsigned char *end = chunk + chunk_size;
     do {
-        process_receiver_report(*(RtcpReceiverReportHeader *)chunk,stats);
-        chunk+=sizeof(RtcpReceiverReportHeader);
-    } while(chunk < end);
-    if(chunk != end) {
+        process_receiver_report(*(RtcpReceiverReportHeader *)chunk, stats);
+        chunk += sizeof(RtcpReceiverReportHeader);
+    } while (chunk < end);
+    if (chunk != end) {
         DBG("received reports possibly contain garbage");
     }
     return 0;
 }
 
-int AmRtpPacket::parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint32_t ssrc, RtcpBidirectionalStat &)
+int AmRtpPacket::parse_sdes(unsigned char *chunk, unsigned char *chunk_end, uint32_t ssrc, RtcpBidirectionalStat &)
 {
     u_int8 sdes_type;
     u_int8 sdes_len;
@@ -300,21 +285,21 @@ int AmRtpPacket::parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint3
     while (chunk < chunk_end) {
         sdes_type = *chunk++;
 
-        if(chunk==chunk_end)
+        if (chunk == chunk_end)
             break;
 
-        if(sdes_type == RtcpSourceDescriptionHeader::RTCP_SDES_NULL) {
+        if (sdes_type == RtcpSourceDescriptionHeader::RTCP_SDES_NULL) {
             prev_item_is_null = true;
             continue;
         } else {
-            if(prev_item_is_null) {
+            if (prev_item_is_null) {
                 prev_item_is_null = false;
 
-                if(chunk + sizeof(uint32_t) > chunk_end)
+                if (chunk + sizeof(uint32_t) > chunk_end)
                     break;
 
                 ssrc = *(uint32_t *)chunk;
-                chunk+=sizeof(uint32_t);
+                chunk += sizeof(uint32_t);
 
                 continue;
             }
@@ -325,8 +310,7 @@ int AmRtpPacket::parse_sdes(unsigned char *chunk,unsigned char *chunk_end, uint3
         if (chunk + sdes_len > chunk_end)
             break;
 
-        DBG("RTCP: SDES item %d with value '%.*s' for SSRC 0x%x",
-            sdes_type, sdes_len, chunk, ntohl(ssrc));
+        DBG("RTCP: SDES item %d with value '%.*s' for SSRC 0x%x", sdes_type, sdes_len, chunk, ntohl(ssrc));
 
         chunk += sdes_len;
     }
@@ -340,16 +324,10 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 
     stats.rtcp_sr_recv++;
 
-    DBG("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u",
-        ntohl(sr.ntp_sec),
-        ntohl(sr.ntp_frac),
-        ntohl(sr.rtp_ts),
-        ntohl(sr.sender_pcount),
-        ntohl(sr.sender_bcount)
-    );
+    DBG("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u", ntohl(sr.ntp_sec),
+        ntohl(sr.ntp_frac), ntohl(sr.rtp_ts), ntohl(sr.sender_pcount), ntohl(sr.sender_bcount));
 
-    stats.sr_lsr = ( (ntohl(sr.ntp_sec) << 16) |
-                     (ntohl(sr.ntp_frac) >> 16) );
+    stats.sr_lsr = ((ntohl(sr.ntp_sec) << 16) | (ntohl(sr.ntp_frac) >> 16));
 
     stats.sr_recv_time = recv_time;
 
@@ -364,35 +342,28 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 
     stats.rtcp_rr_recv++;
 
-    DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, total_lost_1: %u, total_lost_2: %u",
-        ntohl(rr.ssrc),
-        ntohl(rr.last_seq),
-        ntohl(rr.lsr),
-        ntohl(rr.dlsr),
-        ntohl(rr.jitter),
-        rr.fract_lost,
-        rr.total_lost_0,
-        rr.total_lost_1,
-        rr.total_lost_2
-    );
+    DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, "
+        "total_lost_1: %u, total_lost_2: %u",
+        ntohl(rr.ssrc), ntohl(rr.last_seq), ntohl(rr.lsr), ntohl(rr.dlsr), ntohl(rr.jitter), rr.fract_lost,
+        rr.total_lost_0, rr.total_lost_1, rr.total_lost_2);
 
-    if(rr.dlsr) {
-        //https://tools.ietf.org/search/rfc3550#section-4
-        //https://tools.ietf.org/search/rfc3550#section-6.4.1
+    if (rr.dlsr) {
+        // https://tools.ietf.org/search/rfc3550#section-4
+        // https://tools.ietf.org/search/rfc3550#section-6.4.1
 
-        int64_t rtt = ((recv_time.tv_sec + NTP_TIME_OFFSET) & 0xffff)*1e6 + recv_time.tv_usec;
-        rtt -= ntohl(rr.dlsr)*NTP32_TO_USEC_SCALING_FACTOR;
-        rtt -= ntohl(rr.lsr)*NTP32_TO_USEC_SCALING_FACTOR;
+        int64_t rtt = ((recv_time.tv_sec + NTP_TIME_OFFSET) & 0xffff) * 1e6 + recv_time.tv_usec;
+        rtt -= ntohl(rr.dlsr) * NTP32_TO_USEC_SCALING_FACTOR;
+        rtt -= ntohl(rr.lsr) * NTP32_TO_USEC_SCALING_FACTOR;
 
-        if(rtt > 0) {
+        if (rtt > 0) {
             stats.rtt.update(rtt);
         }
     }
 
     stats.tx.loss = (rr.total_lost_2 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_0;
-    DBG("stats.tx.loss: %u",stats.tx.loss);
+    DBG("stats.tx.loss: %u", stats.tx.loss);
 
-    if(rr.jitter) {
+    if (rr.jitter) {
         stats.rtcp_remote_jitter.update(ntohl(rr.jitter));
     }
 
@@ -403,7 +374,7 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 
 unsigned char *AmRtpPacket::getData()
 {
-    return buffer+data_offset;
+    return buffer + data_offset;
 }
 
 unsigned char *AmRtpPacket::getBuffer()
@@ -411,7 +382,7 @@ unsigned char *AmRtpPacket::getBuffer()
     return buffer;
 }
 
-int AmRtpPacket::compile(unsigned char* data_buf, unsigned int size)
+int AmRtpPacket::compile(unsigned char *data_buf, unsigned int size)
 {
     assert(data_buf);
     assert(size);
@@ -419,43 +390,41 @@ int AmRtpPacket::compile(unsigned char* data_buf, unsigned int size)
     d_size = size;
     b_size = d_size + sizeof(rtp_hdr_t);
     assert(b_size <= 4096);
-    rtp_hdr_t* hdr = (rtp_hdr_t*)buffer;
+    rtp_hdr_t *hdr = (rtp_hdr_t *)buffer;
 
-    if(b_size>sizeof(buffer)) {
-        ERROR("builtin buffer size (%d) exceeded: %d",
-              (int)sizeof(buffer), b_size);
+    if (b_size > sizeof(buffer)) {
+        ERROR("builtin buffer size (%d) exceeded: %d", (int)sizeof(buffer), b_size);
         return -1;
     }
 
-    memset(hdr,0,sizeof(rtp_hdr_t));
+    memset(hdr, 0, sizeof(rtp_hdr_t));
     hdr->version = RTP_VERSION;
-    hdr->m = marker;
-    hdr->pt = payload;
+    hdr->m       = marker;
+    hdr->pt      = payload;
 
-    hdr->seq = htons(sequence);
-    hdr->ts = htonl(timestamp);
+    hdr->seq  = htons(sequence);
+    hdr->ts   = htonl(timestamp);
     hdr->ssrc = htonl(ssrc);
 
     data_offset = sizeof(rtp_hdr_t);
-    memcpy(&buffer[data_offset],data_buf,d_size);
+    memcpy(&buffer[data_offset], data_buf, d_size);
 
     return 0;
 }
 
-int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
+int AmRtpPacket::compile_raw(unsigned char *data_buf, unsigned int size)
 {
     if ((!size) || (!data_buf))
         return -1;
 
-    if(size>sizeof(buffer)){
-        ERROR("builtin buffer size (%d) exceeded: %d",
-              (int)sizeof(buffer), size);
+    if (size > sizeof(buffer)) {
+        ERROR("builtin buffer size (%d) exceeded: %d", (int)sizeof(buffer), size);
         return -1;
     }
 
     memcpy(&buffer[0], data_buf, size);
     b_size = d_size = size;
-    data_offset = 0;
+    data_offset     = 0;
 
     return size;
 }
@@ -463,7 +432,7 @@ int AmRtpPacket::compile_raw(unsigned char* data_buf, unsigned int size)
 int AmRtpPacket::compile_raw(const std::vector<iovec> &iovecs)
 {
     b_size = 0;
-    for (const auto& iov : iovecs) {
+    for (const auto &iov : iovecs) {
         if (b_size + iov.iov_len > RTP_PACKET_BUF_SIZE) {
             return -1;
         }
@@ -475,7 +444,7 @@ int AmRtpPacket::compile_raw(const std::vector<iovec> &iovecs)
     return b_size;
 }
 
-void AmRtpPacket::setBuffer(unsigned char* buf, unsigned int b)
+void AmRtpPacket::setBuffer(unsigned char *buf, unsigned int b)
 {
     memcpy(buffer, buf, b);
     b_size = b;
@@ -498,11 +467,12 @@ void AmRtpPacket::logSent(msg_logger *logger, struct sockaddr_storage *laddr)
     logger->log((const char *)buffer, b_size, laddr, &saddr, empty);
 }
 
-void AmRtpPacket::mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr){
+void AmRtpPacket::mirrorReceived(msg_sensor *sensor, struct sockaddr_storage *laddr)
+{
     sensor->feed((const char *)buffer, b_size, &saddr, laddr, msg_sensor::PTYPE_RTP);
 }
 
-void AmRtpPacket::mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr){
+void AmRtpPacket::mirrorSent(msg_sensor *sensor, struct sockaddr_storage *laddr)
+{
     sensor->feed((const char *)buffer, b_size, laddr, &saddr, msg_sensor::PTYPE_RTP);
 }
-

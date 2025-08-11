@@ -3,11 +3,12 @@
 #include "AmMediaTransport.h"
 
 AmMediaIceRestartState::AmMediaIceRestartState(AmMediaTransport *transport)
-  : AmMediaState(transport), AmMediaIceState(transport)
+    : AmMediaState(transport)
+    , AmMediaIceState(transport)
 {
 }
 
-AmMediaState* AmMediaIceRestartState::allowStunConnection(const sockaddr_storage* remote_addr, uint32_t priority)
+AmMediaState *AmMediaIceRestartState::allowStunConnection(const sockaddr_storage *remote_addr, uint32_t priority)
 {
     removeConnections();
     return AmMediaIceState::allowStunConnection(remote_addr, priority);
@@ -19,23 +20,20 @@ void AmMediaIceRestartState::removeConnections()
               AmStreamConnection::connType2Str(AmStreamConnection::RTP_CONN).c_str(),
               AmStreamConnection::connType2Str(AmStreamConnection::RTCP_CONN).c_str(),
               AmStreamConnection::connType2Str(AmStreamConnection::DTLS_CONN).c_str(),
-              AmStreamConnection::connType2Str(AmStreamConnection::ZRTP_CONN).c_str(),
-              state2str(), transport->type2str());
+              AmStreamConnection::connType2Str(AmStreamConnection::ZRTP_CONN).c_str(), state2str(),
+              transport->type2str());
 
-    transport->removeConnections(
-        {AmStreamConnection::RTP_CONN,
-         AmStreamConnection::RTCP_CONN,
-         AmStreamConnection::DTLS_CONN,
-         AmStreamConnection::ZRTP_CONN,
-         AmStreamConnection::UDPTL_CONN
-        }, [&](){
-            transport->setCurRtpConn(0);
-            transport->setCurRtcpConn(0);
-            transport->setCurUdptlConn(0);
-        });
+    transport->removeConnections({ AmStreamConnection::RTP_CONN, AmStreamConnection::RTCP_CONN,
+                                   AmStreamConnection::DTLS_CONN, AmStreamConnection::ZRTP_CONN,
+                                   AmStreamConnection::UDPTL_CONN },
+                                 [&]() {
+                                     transport->setCurRtpConn(0);
+                                     transport->setCurRtcpConn(0);
+                                     transport->setCurUdptlConn(0);
+                                 });
 }
 
-const char* AmMediaIceRestartState::state2str()
+const char *AmMediaIceRestartState::state2str()
 {
     static const char *state = "ICE-RESTART";
     return state;

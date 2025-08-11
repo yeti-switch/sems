@@ -3,6 +3,6 @@
 
 #include "RedisTestServer.h"
 
-void makeRedisInstance(RedisTestServer* server_);
+void makeRedisInstance(RedisTestServer *server_);
 
-#endif/*REDIS_TEST_INSTANCE_H*/
+#endif /*REDIS_TEST_INSTANCE_H*/

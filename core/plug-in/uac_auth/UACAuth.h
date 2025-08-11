@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -44,168 +44,141 @@ struct UACAuthDigestChallenge {
 
     std::string nonce;
     std::string opaque;
-    bool stale;
+    bool        stale;
     std::string algorithm;
 
-    std::map<string,string> attributes;
+    std::map<string, string> attributes;
 
-    bool parse(const std::string auth_hdr);
+    bool   parse(const std::string auth_hdr);
     string find_attribute(const string &name);
 };
 
 /** \brief factory for uac_auth session event handlers */
-class UACAuthFactory
-  : public AmSessionEventHandlerFactory,
-    public AmDynInvokeFactory,
-    public AmDynInvoke,
-    public AmConfigFactory
-{
-    UACAuthFactory(const string& name)
-      : AmSessionEventHandlerFactory(name),
-        AmDynInvokeFactory(name),
-        AmConfigFactory(name)
-    { }
+class UACAuthFactory : public AmSessionEventHandlerFactory,
+                       public AmDynInvokeFactory,
+                       public AmDynInvoke,
+                       public AmConfigFactory {
+    UACAuthFactory(const string &name)
+        : AmSessionEventHandlerFactory(name)
+        , AmDynInvokeFactory(name)
+        , AmConfigFactory(name)
+    {
+    }
 
-    static UACAuthFactory* _instance;
-    AmSessionEventHandler* getHandler(AmBasicSipDialog* dlg, CredentialHolder* s);
+    static UACAuthFactory *_instance;
+    AmSessionEventHandler *getHandler(AmBasicSipDialog *dlg, CredentialHolder *s);
 
   public:
-
     int onLoad() override;
-    int configure(const std::string& config) override;
-    int reconfigure(const std::string& config) override;
+    int configure(const std::string &config) override;
+    int reconfigure(const std::string &config) override;
 
     // SessionEventHandler API
-    AmSessionEventHandler* getHandler(AmSession* s) override;
-    bool onInvite(const AmSipRequest& req, AmConfigReader& conf) override;
+    AmSessionEventHandler *getHandler(AmSession *s) override;
+    bool                   onInvite(const AmSipRequest &req, AmConfigReader &conf) override;
 
-    static UACAuthFactory* instance();
-    AmDynInvoke* getInstance() override { return instance(); }
-    void invoke(const string& method, const AmArg& args, AmArg& ret) override;
+    static UACAuthFactory *instance();
+    AmDynInvoke           *getInstance() override { return instance(); }
+    void                   invoke(const string &method, const AmArg &args, AmArg &ret) override;
 };
 
 /** \brief contains necessary information for UAC auth of a SIP request */
 struct SIPRequestInfo {
-    string method;
+    string     method;
     AmMimeBody body;
-    string hdrs;
-    int flags;
-    //AmOfferAnswer::OAState oa_state;
+    string     hdrs;
+    int        flags;
+    // AmOfferAnswer::OAState oa_state;
 
-    SIPRequestInfo(
-        const string& method,
-        const AmMimeBody* body,
-        const string& hdrs,
-        int flags)
-      : method(method),
-        hdrs(hdrs),
-        flags(flags)
+    SIPRequestInfo(const string &method, const AmMimeBody *body, const string &hdrs, int flags)
+        : method(method)
+        , hdrs(hdrs)
+        , flags(flags)
     {
-        if(body) this->body = *body;
+        if (body)
+            this->body = *body;
     }
     SIPRequestInfo() {}
 };
 
 /** \brief SessionEventHandler for implementing uac authentication */
-class UACAuth : public AmSessionEventHandler
-{
+class UACAuth : public AmSessionEventHandler {
   public:
-    enum allowed_qop_t {
-        QOP_AUTH = 1,
-        QOP_AUTH_INT = 2
-    };
-    enum nonce_check_result_t {
-        NCR_EXPIRED,
-        NCR_WRONG,
-        NCR_OK
-    };
+    enum allowed_qop_t { QOP_AUTH = 1, QOP_AUTH_INT = 2 };
+    enum nonce_check_result_t { NCR_EXPIRED, NCR_WRONG, NCR_OK };
+
   private:
     static string server_nonce_secret;
-    static int allowed_qop_types;
-    static int nonce_expire;
+    static int    allowed_qop_types;
+    static int    nonce_expire;
 
     std::map<unsigned int, SIPRequestInfo> sent_requests;
 
-    UACAuthCred* credential;
-    AmBasicSipDialog* dlg;
+    UACAuthCred      *credential;
+    AmBasicSipDialog *dlg;
 
     UACAuthDigestChallenge challenge;
-    unsigned int challenge_code;
+    unsigned int           challenge_code;
 
-    string nonce; // last nonce received from server
+    string       nonce; // last nonce received from server
     unsigned int nonce_count;
 
     bool nonce_reuse; // reused nonce?
 
-    static void uac_calc_HA1(const UACAuthDigestChallenge& challenge,
-        const UACAuthCred* _credential,
-        std::string cnonce,
-        HASHHEX sess_key);
+    static void uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential,
+                             std::string cnonce, HASHHEX sess_key);
 
-    static void uac_calc_HA2(
-        const std::string& method, const std::string& uri,
-        const UACAuthDigestChallenge& challenge,
-        HASHHEX hentity,
-        HASHHEX HA2Hex );
+    static void uac_calc_HA2(const std::string &method, const std::string &uri, const UACAuthDigestChallenge &challenge,
+                             HASHHEX hentity, HASHHEX HA2Hex);
 
-    static void uac_calc_hentity( const std::string& body, HASHHEX hentity );
+    static void uac_calc_hentity(const std::string &body, HASHHEX hentity);
 
-    static void uac_calc_response(HASHHEX ha1, HASHHEX ha2,
-        const UACAuthDigestChallenge& challenge,
-        const std::string& cnonce, const string& qop_value,
-        const std::string& nonce_count_str,
-        HASHHEX response);
+    static void uac_calc_response(HASHHEX ha1, HASHHEX ha2, const UACAuthDigestChallenge &challenge,
+                                  const std::string &cnonce, const string &qop_value,
+                                  const std::string &nonce_count_str, HASHHEX response);
 
     /**
      *  do auth on cmd with nonce in auth_hdr if possible
      *  @return true if successful
      */
-    bool do_auth(const unsigned int code, const string& auth_hdr,
-                 const string& method, const string& uri,
-                 const AmMimeBody* body, string& result);
+    bool do_auth(const unsigned int code, const string &auth_hdr, const string &method, const string &uri,
+                 const AmMimeBody *body, string &result);
 
     /**
      *  do auth on cmd with saved challenge
      *  @return true if successful
      */
-    bool do_auth(const UACAuthDigestChallenge& challenge,
-                 const unsigned int code,
-                 const string& method, const string& uri,
-                 const AmMimeBody* body, string& result);
-  public:
+    bool do_auth(const UACAuthDigestChallenge &challenge, const unsigned int code, const string &method,
+                 const string &uri, const AmMimeBody *body, string &result);
 
-    UACAuth(AmBasicSipDialog* dlg, UACAuthCred* cred);
-    virtual ~UACAuth(){ }
+  public:
+    UACAuth(AmBasicSipDialog *dlg, UACAuthCred *cred);
+    virtual ~UACAuth() {}
 
     /* SEH Hooks @see AmSessionEventHandler */
-    virtual bool process(AmEvent*);
-    virtual bool onSipEvent(AmSipEvent*);
-    virtual bool onSipRequest(const AmSipRequest&);
-    virtual bool onSipReply(const AmSipRequest&, const AmSipReply&,
-                            AmBasicSipDialog::Status old_status);
-    virtual bool onSendRequest(AmSipRequest& req, int& flags);
-    virtual bool onSendReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
+    virtual bool process(AmEvent *);
+    virtual bool onSipEvent(AmSipEvent *);
+    virtual bool onSipRequest(const AmSipRequest &);
+    virtual bool onSipReply(const AmSipRequest &, const AmSipReply &, AmBasicSipDialog::Status old_status);
+    virtual bool onSendRequest(AmSipRequest &req, int &flags);
+    virtual bool onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags);
 
-    static string calcNonce();
-    static nonce_check_result_t checkNonce(const string& nonce);
-    static void fetchAuthentication(const AmSipRequest *req, AmArg &ret);
-    static void checkAuthentication(const AmSipRequest* req, const vector<string>& realms,
-                                    const string& user, const string& pwd,
-                                    const string& default_realm,
-                                    AmArg& ret);
-    static string getChallengeHeader(const string& realm);
+    static string               calcNonce();
+    static nonce_check_result_t checkNonce(const string &nonce);
+    static void                 fetchAuthentication(const AmSipRequest *req, AmArg &ret);
+    static void   checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
+                                      const string &pwd, const string &default_realm, AmArg &ret);
+    static string getChallengeHeader(const string &realm);
 
-    static void setServerSecret(const string& secret);
+    static void setServerSecret(const string &secret);
     static void setAllowedQops(int allowed_qop_mask);
     static void setNonceExpire(int nonce_expire);
 
     /** time-constant string compare function (but leaks timing of length mismatch)
-      * @return true if matching */
-    static bool tc_isequal(const std::string& s1, const std::string& s2);
+     * @return true if matching */
+    static bool tc_isequal(const std::string &s1, const std::string &s2);
     /** time-constant string compare function @return true if matching */
-    static bool tc_isequal(const char* s1, const char* s2, size_t len);
-    static void checkAuthenticationByHA1(const AmSipRequest* req, const string& realm,
-                                         const string& user, const string& HA1, AmArg& ret);
-
+    static bool tc_isequal(const char *s1, const char *s2, size_t len);
+    static void checkAuthenticationByHA1(const AmSipRequest *req, const string &realm, const string &user,
+                                         const string &HA1, AmArg &ret);
 };
-

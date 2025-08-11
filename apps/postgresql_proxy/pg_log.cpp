@@ -1,60 +1,61 @@
 #include "pg_log.h"
 #include <sstream>
 
-#define PG_LOG_PREFIX   "pg_log: "
-#define PG_LOG_MARGIN   "  "
+#define PG_LOG_PREFIX "pg_log: "
+#define PG_LOG_MARGIN "  "
 
-string print_pg_event(const PGExecute& ev,          string prefix, string margin = string());
-string print_pg_event(const PGParamExecute& ev,     string prefix, string margin = string());
-string print_pg_event(const PGPrepare& ev,          string prefix, string margin = string());
-string print_pg_event(const PGPrepareExec& ev,      string prefix, string margin = string());
-string print_pg_event(const PGWorkerPoolCreate& ev, string prefix, string margin = string());
-string print_pg_event(const PGWorkerConfig& ev,     string prefix, string margin = string());
-string print_pg_event(const PGWorkerDestroy& ev,    string prefix, string margin = string());
-string print_pg_event(const PGSetSearchPath& ev,    string prefix, string margin = string());
-string print_pg_event(const PGResponse& ev,         string prefix, string margin = string());
-string print_pg_event(const PGResponseError& ev,    string prefix, string margin = string());
-string print_pg_event(const PGTimeout& ev,          string prefix, string margin = string());
-string print_query_data(const PGQueryData& qd,      string prefix, string margin = string());
-string print_query_info(const QueryInfo& qi,        string prefix, string margin = string());
-string print_prepare_data(const PGPrepareData& pd,   string prefix, string margin = string());
+string print_pg_event(const PGExecute &ev, string prefix, string margin = string());
+string print_pg_event(const PGParamExecute &ev, string prefix, string margin = string());
+string print_pg_event(const PGPrepare &ev, string prefix, string margin = string());
+string print_pg_event(const PGPrepareExec &ev, string prefix, string margin = string());
+string print_pg_event(const PGWorkerPoolCreate &ev, string prefix, string margin = string());
+string print_pg_event(const PGWorkerConfig &ev, string prefix, string margin = string());
+string print_pg_event(const PGWorkerDestroy &ev, string prefix, string margin = string());
+string print_pg_event(const PGSetSearchPath &ev, string prefix, string margin = string());
+string print_pg_event(const PGResponse &ev, string prefix, string margin = string());
+string print_pg_event(const PGResponseError &ev, string prefix, string margin = string());
+string print_pg_event(const PGTimeout &ev, string prefix, string margin = string());
+string print_query_data(const PGQueryData &qd, string prefix, string margin = string());
+string print_query_info(const QueryInfo &qi, string prefix, string margin = string());
+string print_prepare_data(const PGPrepareData &pd, string prefix, string margin = string());
 
 /* print_pg_event PGEvent */
 
-string pg_log::print_pg_event(AmEvent* ev) {
-    switch(ev->event_id) {
+string pg_log::print_pg_event(AmEvent *ev)
+{
+    switch (ev->event_id) {
     case PGEvent::SimpleExecute:
-        if(PGExecute *e = dynamic_cast<PGExecute*>(ev))
+        if (PGExecute *e = dynamic_cast<PGExecute *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::ParamExecute:
-        if(const PGParamExecute *e = dynamic_cast<PGParamExecute*>(ev))
+        if (const PGParamExecute *e = dynamic_cast<PGParamExecute *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::Prepare:
-        if(PGPrepare *e = dynamic_cast<PGPrepare*>(ev))
+        if (PGPrepare *e = dynamic_cast<PGPrepare *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::PrepareExec:
-        if(PGPrepareExec *e = dynamic_cast<PGPrepareExec*>(ev))
+        if (PGPrepareExec *e = dynamic_cast<PGPrepareExec *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::WorkerPoolCreate:
-        if(auto *e = dynamic_cast<PGWorkerPoolCreate*>(ev))
+        if (auto *e = dynamic_cast<PGWorkerPoolCreate *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::WorkerConfig:
-        if(auto *e = dynamic_cast<PGWorkerConfig*>(ev))
+        if (auto *e = dynamic_cast<PGWorkerConfig *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::WorkerDestroy:
-        if(auto *e = dynamic_cast<PGWorkerDestroy*>(ev))
+        if (auto *e = dynamic_cast<PGWorkerDestroy *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::SetSearchPath:
-        if(auto *e = dynamic_cast<PGSetSearchPath*>(ev))
+        if (auto *e = dynamic_cast<PGSetSearchPath *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::Result:
-        if(auto *e = dynamic_cast<PGResponse*>(ev))
+        if (auto *e = dynamic_cast<PGResponse *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::ResultError:
-        if(auto *e = dynamic_cast<PGResponseError*>(ev))
+        if (auto *e = dynamic_cast<PGResponseError *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     case PGEvent::Timeout:
-        if(auto *e = dynamic_cast<PGTimeout*>(ev))
+        if (auto *e = dynamic_cast<PGTimeout *>(ev))
             return print_pg_event(*e, PG_LOG_PREFIX);
     }
 
@@ -63,7 +64,7 @@ string pg_log::print_pg_event(AmEvent* ev) {
 
 /* print pg event */
 
-string print_pg_event(const PGExecute& ev, string prefix, string margin)
+string print_pg_event(const PGExecute &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGExecute: ";
@@ -71,7 +72,7 @@ string print_pg_event(const PGExecute& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGParamExecute& ev, string prefix, string margin)
+string print_pg_event(const PGParamExecute &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGParamExecute: ";
@@ -80,7 +81,7 @@ string print_pg_event(const PGParamExecute& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGPrepare& ev, string prefix, string margin)
+string print_pg_event(const PGPrepare &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGPrepare: ";
@@ -89,7 +90,7 @@ string print_pg_event(const PGPrepare& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGPrepareExec& ev, string prefix, string margin)
+string print_pg_event(const PGPrepareExec &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGPrepareExec: ";
@@ -101,16 +102,16 @@ string print_pg_event(const PGPrepareExec& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGWorkerPoolCreate& ev, string prefix, string margin)
+string print_pg_event(const PGWorkerPoolCreate &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGWorkerPoolCreate: ";
     ss << "worker_name: " << ev.worker_name;
-    ss << ", type: " << (ev.type == 0 ? "master": "slave");
+    ss << ", type: " << (ev.type == 0 ? "master" : "slave");
     return string(ss.str());
 }
 
-string print_pg_event(const PGWorkerConfig& ev, string prefix, string margin)
+string print_pg_event(const PGWorkerConfig &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGWorkerConfig: ";
@@ -126,27 +127,28 @@ string print_pg_event(const PGWorkerConfig& ev, string prefix, string margin)
     ss << ", connection_lifetime: " << ev.connection_lifetime;
 
     int i = 0;
-    for(auto it : ev.prepared) {
-        ss << ",\n" << margin << print_prepare_data(it, "prepared["+ std::to_string(i) +"]: ", margin + PG_LOG_MARGIN);
+    for (auto it : ev.prepared) {
+        ss << ",\n"
+           << margin << print_prepare_data(it, "prepared[" + std::to_string(i) + "]: ", margin + PG_LOG_MARGIN);
         ++i;
     }
 
     i = 0;
-    for(auto it : ev.search_pathes) {
+    for (auto it : ev.search_pathes) {
         ss << ",\n" << margin << "search_pathes[" << i << "]: " << it;
         ++i;
     }
 
     i = 0;
-    for(auto it : ev.reconnect_errors) {
+    for (auto it : ev.reconnect_errors) {
         ss << ",\n" << margin << "reconnect_errors[" << i << "]: " << it;
         ++i;
     }
 
-    //std::list<std::variant<PGExecute, PGParamExecute>> initial_queries;
+    // std::list<std::variant<PGExecute, PGParamExecute>> initial_queries;
     i = 0;
-    for(const auto &initial_query : ev.initial_queries) {
-        if(0==initial_query.index()) {
+    for (const auto &initial_query : ev.initial_queries) {
+        if (0 == initial_query.index()) {
             auto &e = std::get<PGExecute>(initial_query);
             ss << ",\n" << print_pg_event(e, "initial_query[" + std::to_string(i) + "]: ", margin + PG_LOG_MARGIN);
         } else {
@@ -160,7 +162,7 @@ string print_pg_event(const PGWorkerConfig& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGWorkerDestroy& ev, string prefix, string margin)
+string print_pg_event(const PGWorkerDestroy &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGWorkerDestroy: ";
@@ -168,14 +170,14 @@ string print_pg_event(const PGWorkerDestroy& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGSetSearchPath& ev, string prefix, string margin)
+string print_pg_event(const PGSetSearchPath &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGSetSearchPath: ";
     ss << "worker_name: " << ev.worker_name;
 
     int i = 0;
-    for(auto it : ev.search_pathes) {
+    for (auto it : ev.search_pathes) {
         ss << ",\n" << margin << "search_pathes[" << i << "]: " << it;
         ++i;
     }
@@ -183,7 +185,7 @@ string print_pg_event(const PGSetSearchPath& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGResponse& ev, string prefix, string margin)
+string print_pg_event(const PGResponse &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGResponse: ";
@@ -192,7 +194,7 @@ string print_pg_event(const PGResponse& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGResponseError& ev, string prefix, string margin)
+string print_pg_event(const PGResponseError &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGResponseError: ";
@@ -201,7 +203,7 @@ string print_pg_event(const PGResponseError& ev, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_pg_event(const PGTimeout& ev, string prefix, string margin)
+string print_pg_event(const PGTimeout &ev, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGTimeout: ";
@@ -211,7 +213,7 @@ string print_pg_event(const PGTimeout& ev, string prefix, string margin)
 
 /* print data */
 
-string print_query_data(const PGQueryData& qd, string prefix, string margin)
+string print_query_data(const PGQueryData &qd, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGQueryData: ";
@@ -220,7 +222,7 @@ string print_query_data(const PGQueryData& qd, string prefix, string margin)
     ss << ", token: " << qd.token;
 
     int i = 0;
-    for(auto it : qd.info) {
+    for (auto it : qd.info) {
         ss << ",\n" << margin << print_query_info(it, "info[" + std::to_string(i) + "]: ", margin + PG_LOG_MARGIN);
         ++i;
     }
@@ -228,7 +230,7 @@ string print_query_data(const PGQueryData& qd, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_query_info(const QueryInfo& qi, string prefix, string margin)
+string print_query_info(const QueryInfo &qi, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "QueryInfo: ";
@@ -236,7 +238,7 @@ string print_query_info(const QueryInfo& qi, string prefix, string margin)
     ss << ", single: " << qi.single;
 
     int i = 0;
-    for(auto it : qi.params) {
+    for (auto it : qi.params) {
         ss << ",\n" << margin << "params[" << i << "]: " << it.print();
         ++i;
     }
@@ -244,7 +246,7 @@ string print_query_info(const QueryInfo& qi, string prefix, string margin)
     return string(ss.str());
 }
 
-string print_prepare_data(const PGPrepareData& pd,  string prefix, string margin)
+string print_prepare_data(const PGPrepareData &pd, string prefix, string margin)
 {
     std::stringstream ss;
     ss << prefix << "PGPrepareData: ";
@@ -252,13 +254,13 @@ string print_prepare_data(const PGPrepareData& pd,  string prefix, string margin
     ss << ", query: " << pd.query;
 
     int i = 0;
-    for(auto it : pd.oids) {
+    for (auto it : pd.oids) {
         ss << ",\n" << margin << "oids[" << i << "]: " << it;
         ++i;
     }
 
     i = 0;
-    for(auto it : pd.sql_types) {
+    for (auto it : pd.sql_types) {
         ss << ",\n" << margin << "sql_types[" << i << "]: " << it;
         ++i;
     }

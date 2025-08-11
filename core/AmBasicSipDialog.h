@@ -39,509 +39,469 @@ using std::string;
 #include <sip/sip_timers.h>
 
 // flags which may be used when sending request/reply
-#define SIP_FLAGS_VERBATIM     1 // send request verbatim,
-                                 // i.e. modify as little as possible
+#define SIP_FLAGS_VERBATIM                                                                                             \
+    1 // send request verbatim,
+      // i.e. modify as little as possible
 
-#define SIP_FLAGS_NOAUTH       1<<1 // don't add authentication header
-#define SIP_FLAGS_NOCONTACT    1<<2 // don't add contact
+#define SIP_FLAGS_NOAUTH    1 << 1 // don't add authentication header
+#define SIP_FLAGS_NOCONTACT 1 << 2 // don't add contact
 
-#define SIP_FLAGS_NOTAG        1<<3 // don't add to-tag in reply
+#define SIP_FLAGS_NOTAG 1 << 3 // don't add to-tag in reply
 
-#define SIP_FLAGS_NOBL         1<<4 // do not use destination blacklist
+#define SIP_FLAGS_NOBL 1 << 4 // do not use destination blacklist
 
 /** \brief SIP transaction representation */
-struct AmSipTransaction
-{
-  string       method;
-  unsigned int cseq;
-  trans_ticket tt;
+struct AmSipTransaction {
+    string       method;
+    unsigned int cseq;
+    trans_ticket tt;
 
-  AmSipTransaction(const string& method, unsigned int cseq, const trans_ticket& tt)
-  : method(method),
-    cseq(cseq),
-    tt(tt)
-  {}
+    AmSipTransaction(const string &method, unsigned int cseq, const trans_ticket &tt)
+        : method(method)
+        , cseq(cseq)
+        , tt(tt)
+    {
+    }
 
-  AmSipTransaction()
-  {}
+    AmSipTransaction() {}
 };
 
-typedef std::map<int,AmSipRequest> TransMap;
+typedef std::map<int, AmSipRequest> TransMap;
 
 class AmBasicSipEventHandler;
 
 class msg_logger;
 
-class AmBasicSipDialog
-  : public AmObject
-{
-public:
-  enum Status {
-    Disconnected=0,
-    Trying,
-    Proceeding,
-    Cancelling,
-    Early,
-    Connected,
-    Disconnecting,
-    __max_Status
-  };
-
-private:
-  static const char* status2str[__max_Status];
-
-protected:
-  Status status;
-
-  string callid;
-
-  string local_tag;
-  string ext_local_tag;
-
-  string remote_tag;
-  string first_branch;
-
-  string contact_params; // params in Contact-HF
-
-  string scheme;       // local scheme(sip or sips)
-  string user;         // local user
-  string domain;       // local domain
-
-  string local_uri;    // local uri
-  string remote_uri;   // remote uri
-
-  string remote_party; // To/From
-  string local_party;  // To/From
-
-  string remote_ua; // User-Agent/Server
-  uint32_t max_forwards; //Max-Forwards
-
-  vector<string> supported_tags;
-  vector<string> allowed_methods;
-
-  string route;
-  bool force_cancel_route_set;
-
-  string next_hop;
-  bool next_hop_1st_req;
-  bool patch_ruri_next_hop;
-  bool next_hop_fixed;
-
-  string force_outbound_interface_by_name;
-
-  int outbound_interface;
-  int outbound_proto_id;
-  AddressType outbound_address_type;
-
-  int resolve_priority;
-
-  TransMap uas_trans;
-  TransMap uac_trans;
-
-  /** Dialog usages in the sense of RFC 5057 */
-  unsigned int usages;
-
-  AmBasicSipEventHandler* hdl;
-
-  /**
-   * Message logger
-   */
-  msg_logger* logger;
-  msg_sensor* sensor;
-
-  /**
-   * Executed for replies sent by a local UA,
-   * right before the reply is passed to the transaction layer.
-   */
-  virtual int onTxReply(const AmSipRequest& req, AmSipReply& reply, int& flags);
-
-  /**
-   * Executed for requests sent by a local UA,
-   * right before the request is passed to the transaction layer.
-   */
-  virtual int onTxRequest(AmSipRequest& req, int& flags);
-
-  /**
-   * Executed for replies sent by a local UA,
-   * after the reply has been successfuly sent.
-   */
-  virtual void onReplyTxed(const AmSipRequest& req, const AmSipReply& reply);
-
-  /**
-   * Executed for requests sent by a local UA,
-   * after the request has been successfuly sent.
-   */
-  virtual void onRequestTxed(const AmSipRequest& req);
-
-  /**
-   * Executed on request sending failed
-   */
-  virtual void onRequestSendFailed(const AmSipRequest& req);
-
-  /**
-   * Basic sanity check on received requests
-   *
-   * Note: At this point in the processing,
-   *       the request has not been inserted yet
-   *       into the uas_trans container.
-   *       Thus, reply_error() should be used
-   *       instead of reply() method.
-   *
-   * @return true to continue processing, false otherwise
-   */
-  virtual bool onRxReqSanity(const AmSipRequest& req);
-
-  /**
-   * Executed from onRxRequest() to allow inherited classes
-   * to extend the basic behavior.
-   *
-   * @return true to continue processing, false otherwise
-   */
-  virtual bool onRxReqStatus(const AmSipRequest& req) { return true; }
-
-  /**
-   * Basic sanity check on received replies
-   *
-   * @return true to continue processing, false otherwise
-   */
-  virtual bool onRxReplySanity(const AmSipReply& reply);
-
-  /**
-   * Executed from onRxReply() to allow inherited classes
-   * to extend the basic behavior (deletes the transaction on final reply).
-   *
-   * @return true to continue processing, false otherwise
-   */
-  virtual bool onRxReplyStatus(const AmSipReply& reply);
-
-  /**
-   * Terminate pending UAS transactions
-   */
-  virtual void termUasTrans();
-
-  /**
-   * Terminate pending UAC transactions
-   */
-  virtual void termUacTrans();
-
-public:
-
-  string outbound_proxy;
-  bool   force_outbound_proxy;
-
-  bool nat_handling;
-
-  unsigned int cseq; // Local CSeq for next request
-  bool r_cseq_i;
-  unsigned int r_cseq; // last remote CSeq
-
-  AmBasicSipDialog(AmBasicSipEventHandler* h=NULL);
-  virtual ~AmBasicSipDialog();
-
-  void setEventhandler(AmBasicSipEventHandler* h) { hdl = h; }
-
-  /** @return UAC request coresponding to cseq or NULL */
-  AmSipRequest* getUACTrans(unsigned int t_cseq);
-
-  /** @return UAS request coresponding to cseq or NULL */
-  AmSipRequest* getUASTrans(unsigned int t_cseq);
-
-  /** @return the method of the corresponding uac request */
-  string getUACTransMethod(unsigned int t_cseq);
-
-  /** @return whether UAC transaction is pending */
-  bool   getUACTransPending();
-
-  /**
-   * Getter/Setter basic dialog status
-   */
-  Status       getStatus() const { return status; }
-  virtual void setStatus(Status new_status);
-
-  virtual const char* getStatusStr();
-  static const char* getStatusStr(Status st);
-
-  unsigned int getUsages() { return usages; }
-  void incUsages() { usages++; }
-  void decUsages() { usages--; }
-
-  const string& getCallid() const { return callid; }
-  virtual void setCallid(const string& n_callid) { callid = n_callid; }
-
-  const string& getLocalTag() const { return local_tag; }
-  virtual void setLocalTag(const string& n_tag) { local_tag = n_tag; }
-
-  const string& getRemoteTag() const { return remote_tag; }
-  virtual void setRemoteTag(const string& n_tag);
-
-  const string& get1stBranch() const { return first_branch; }
-  virtual void set1stBranch(const string& n_branch)
-  { first_branch = n_branch; }
-
-  const string& getExtLocalTag() const { return ext_local_tag; }
-  virtual void setExtLocalTag(const string& new_ext_tag)
-  { ext_local_tag = new_ext_tag; }
-
-  const string& getContactParams() const { return contact_params; }
-  virtual void setContactParams(const string& new_contact_params)
-  { contact_params = new_contact_params; }
-
-  const string& getUser() const { return user; }
-  virtual void setUser(const string& new_user)
-  { user = new_user; }
-
-  const string& getDomain() const { return domain; }
-  virtual void setDomain(const string& new_domain)
-  { domain = new_domain; }
-
-  const string& getLocalUri() const { return local_uri; }
-  virtual void setLocalUri(const string& new_local_uri)
-  { local_uri = new_local_uri; }
-
-  const string& getRemoteUri() const { return remote_uri; }
-  virtual void setRemoteUri(const string& new_remote_uri)
-  { remote_uri = new_remote_uri; }
-
-  const string& getLocalParty() const { return local_party; }
-  virtual void setLocalParty(const string& new_local_party)
-  { local_party = new_local_party; }
-
-  const string& getRemoteParty() const { return remote_party; }
-  virtual void setRemoteParty(const string& new_remote_party)
-  { remote_party = new_remote_party; }
-
-  const string& getRemoteUA() const { return remote_ua; }
-  virtual void setRemoteUA(const string& new_remote_ua)
-  { remote_ua = new_remote_ua; }
-
-  const string& getRouteSet() const { return route; }
-  virtual void setRouteSet(const string& new_rs)
-  { route = new_rs; }
-
-  bool GetForceCancelRouteSet() const { return force_cancel_route_set; }
-  virtual void setForceCancelRouteSet(bool new_force_cancel_route_set)
-  { force_cancel_route_set = new_force_cancel_route_set; }
-
-  const string& getNextHop() const { return next_hop; }
-  virtual void setNextHop(const string& new_nh)
-  { next_hop = new_nh; }
-
-  bool getNextHop1stReq() const { return next_hop_1st_req; }
-  virtual void setNextHop1stReq(bool nh_1st_req)
-  { next_hop_1st_req = nh_1st_req; }
-
-  bool getPatchRURINextHop() const { return patch_ruri_next_hop; }
-  virtual void setPatchRURINextHop(bool patch_nh)
-  { patch_ruri_next_hop = patch_nh; }
-
-  bool getNextHopFixed() const { return next_hop_fixed; }
-  virtual void setNextHopFixed(bool nh_fixed)
-  { next_hop_fixed = nh_fixed; }
-
-  void setMaxForwards(uint32_t mf) { max_forwards = mf; }
-  uint32_t getMaxForwards() const { return max_forwards; }
-
-  void addSupportedTag(const string &tag) { supported_tags.emplace_back(tag); }
-  void setSupportedTags(const vector<string> &tags) { supported_tags = tags; }
-
-  void addAllowedMethod(const string &method) { allowed_methods.emplace_back(method); }
-  void setAllowedMethods(const vector<string> &methods) { allowed_methods = methods; }
-
-  /**
-   * Compute the Contact-HF for the next request
-   */
-  string getContactHdr();
-
-  /**
-   * Compute the Contact URI for the next request
-   */
-  string getContactUri();
-
-  /**
-   * Compute the Route-HF for the next request
-   */
-  string getRoute(bool for_cancel = false);
-
-  /**
-   * set force_outbound_interface_by_name
-   */
-  void setOutboundInterfaceName(const string &iface_name);
-
-  /**
-   * Set outbound_interface to specific value (-1 = default).
-   */
-  virtual void setOutboundInterface(int interface_id);
-
-  /**
-   * Set outbound_protocol to specific value (-1 = default).
-   */
-  virtual void setOutboundAddrType(AddressType type_id);
-
-  /**
-   * Set outbound_transport to specific value (-1 = default).
-   */
-  virtual void setOutboundProtoId(int proto_id);
-
-  /**
-   * Compute, set and return the outbound interface
-   * based on remote_uri, next_hop_ip, outbound_proxy, route.
-   */
-  int getOutboundIf();
-
-  /**
-   * Compute, set and return the outbound ip protocol version
-   * based on remote_uri, next_hop_ip, outbound_proxy, route.
-   */
-  AddressType getOutboundAddrType();
-
-  /**
-   * Compute, set and return the outbound transport
-   * based on remote_uri, next_hop_ip, outbound_proxy, route.
-   */
-  int getOutboundProtoId();
-
-  /**
-   * Reset outbound_interface to default value (-1).
-   */
-  void resetOutboundIf();
-
-  void setResolvePriority(int priority);
-  int getResolvePriority();
-
-  /** Initialize dialog from locally originated UAC request */
-  virtual void initFromLocalRequest(const AmSipRequest& req);
-
-  /**
-   * Executed for requests received by the local UA.
-   */
-  virtual void onRxRequest(const AmSipRequest& req);
-
-  /**
-   * Executed for replies received by the local UA.
-   */
-  virtual void onRxReply(const AmSipReply& reply);
-
-  /**
-   * Updates remote_uri if necessary.
-   *
-   * Note: this method is offered for inherited classes
-   *       implementing dialog functionnalities. It is
-   *       not used by the basic class.
-   */
-  void updateDialogTarget(const AmSipReply& reply);
-
-  /** @return 0 on success */
-  virtual int reply(const AmSipRequest& req,
-		    unsigned int  code,
-		    const string& reason,
-		    const AmMimeBody* body = NULL,
-		    const string& hdrs = "",
-		    int flags = 0);
-
-  /** @return 0 on success */
-  virtual int sendRequest(const string& method,
-			  const AmMimeBody* body = NULL,
-			  const string& hdrs = "",
-			  int flags = 0,
-			  sip_timers_override *timers_override = NULL,
-			  sip_target_set* target_set_override = NULL,
-			  unsigned int redirects_allowed = -1);
-
-  /**
-   * Terminates pending UAS/UAC transactions
-   */
-  virtual void finalize() {
-    termUasTrans();
-    termUacTrans();
-  }
-
-  virtual void dropTransactions();
-
-  /**
-   * This method should only be used to send responses
-   * to requests which are not referenced by any dialog.
-   *
-   * WARNING: If the request has already been referenced
-   * (see uas_trans), this method cannot mark the request
-   * as replied, thus leaving it in the pending state forever.
-   */
-  static int reply_error(const AmSipRequest& req,
-			 unsigned int  code,
-			 const string& reason,
-			 const string& hdrs = "",
-			 msg_logger* logger = NULL, msg_sensor *sensor = NULL);
-
-  /* dump transaction information (DBG) */
-  void dump();
-  void info(AmArg &s);
-
-  /**
-   * Enable or disable message logger
-   */
-  void setMsgLogger(msg_logger* logger);
-  void setMsgSensor(msg_sensor* _sensor);
-
-  /**
-   * Get message logger
-   */
-  msg_logger* getMsgLogger() { return logger; }
+class AmBasicSipDialog : public AmObject {
+  public:
+    enum Status { Disconnected = 0, Trying, Proceeding, Cancelling, Early, Connected, Disconnecting, __max_Status };
+
+  private:
+    static const char *status2str[__max_Status];
+
+  protected:
+    Status status;
+
+    string callid;
+
+    string local_tag;
+    string ext_local_tag;
+
+    string remote_tag;
+    string first_branch;
+
+    string contact_params; // params in Contact-HF
+
+    string scheme; // local scheme(sip or sips)
+    string user;   // local user
+    string domain; // local domain
+
+    string local_uri;  // local uri
+    string remote_uri; // remote uri
+
+    string remote_party; // To/From
+    string local_party;  // To/From
+
+    string   remote_ua;    // User-Agent/Server
+    uint32_t max_forwards; // Max-Forwards
+
+    vector<string> supported_tags;
+    vector<string> allowed_methods;
+
+    string route;
+    bool   force_cancel_route_set;
+
+    string next_hop;
+    bool   next_hop_1st_req;
+    bool   patch_ruri_next_hop;
+    bool   next_hop_fixed;
+
+    string force_outbound_interface_by_name;
+
+    int         outbound_interface;
+    int         outbound_proto_id;
+    AddressType outbound_address_type;
+
+    int resolve_priority;
+
+    TransMap uas_trans;
+    TransMap uac_trans;
+
+    /** Dialog usages in the sense of RFC 5057 */
+    unsigned int usages;
+
+    AmBasicSipEventHandler *hdl;
+
+    /**
+     * Message logger
+     */
+    msg_logger *logger;
+    msg_sensor *sensor;
+
+    /**
+     * Executed for replies sent by a local UA,
+     * right before the reply is passed to the transaction layer.
+     */
+    virtual int onTxReply(const AmSipRequest &req, AmSipReply &reply, int &flags);
+
+    /**
+     * Executed for requests sent by a local UA,
+     * right before the request is passed to the transaction layer.
+     */
+    virtual int onTxRequest(AmSipRequest &req, int &flags);
+
+    /**
+     * Executed for replies sent by a local UA,
+     * after the reply has been successfuly sent.
+     */
+    virtual void onReplyTxed(const AmSipRequest &req, const AmSipReply &reply);
+
+    /**
+     * Executed for requests sent by a local UA,
+     * after the request has been successfuly sent.
+     */
+    virtual void onRequestTxed(const AmSipRequest &req);
+
+    /**
+     * Executed on request sending failed
+     */
+    virtual void onRequestSendFailed(const AmSipRequest &req);
+
+    /**
+     * Basic sanity check on received requests
+     *
+     * Note: At this point in the processing,
+     *       the request has not been inserted yet
+     *       into the uas_trans container.
+     *       Thus, reply_error() should be used
+     *       instead of reply() method.
+     *
+     * @return true to continue processing, false otherwise
+     */
+    virtual bool onRxReqSanity(const AmSipRequest &req);
+
+    /**
+     * Executed from onRxRequest() to allow inherited classes
+     * to extend the basic behavior.
+     *
+     * @return true to continue processing, false otherwise
+     */
+    virtual bool onRxReqStatus(const AmSipRequest &req) { return true; }
+
+    /**
+     * Basic sanity check on received replies
+     *
+     * @return true to continue processing, false otherwise
+     */
+    virtual bool onRxReplySanity(const AmSipReply &reply);
+
+    /**
+     * Executed from onRxReply() to allow inherited classes
+     * to extend the basic behavior (deletes the transaction on final reply).
+     *
+     * @return true to continue processing, false otherwise
+     */
+    virtual bool onRxReplyStatus(const AmSipReply &reply);
+
+    /**
+     * Terminate pending UAS transactions
+     */
+    virtual void termUasTrans();
+
+    /**
+     * Terminate pending UAC transactions
+     */
+    virtual void termUacTrans();
+
+  public:
+    string outbound_proxy;
+    bool   force_outbound_proxy;
+
+    bool nat_handling;
+
+    unsigned int cseq; // Local CSeq for next request
+    bool         r_cseq_i;
+    unsigned int r_cseq; // last remote CSeq
+
+    AmBasicSipDialog(AmBasicSipEventHandler *h = NULL);
+    virtual ~AmBasicSipDialog();
+
+    void setEventhandler(AmBasicSipEventHandler *h) { hdl = h; }
+
+    /** @return UAC request coresponding to cseq or NULL */
+    AmSipRequest *getUACTrans(unsigned int t_cseq);
+
+    /** @return UAS request coresponding to cseq or NULL */
+    AmSipRequest *getUASTrans(unsigned int t_cseq);
+
+    /** @return the method of the corresponding uac request */
+    string getUACTransMethod(unsigned int t_cseq);
+
+    /** @return whether UAC transaction is pending */
+    bool getUACTransPending();
+
+    /**
+     * Getter/Setter basic dialog status
+     */
+    Status       getStatus() const { return status; }
+    virtual void setStatus(Status new_status);
+
+    virtual const char *getStatusStr();
+    static const char  *getStatusStr(Status st);
+
+    unsigned int getUsages() { return usages; }
+    void         incUsages() { usages++; }
+    void         decUsages() { usages--; }
+
+    const string &getCallid() const { return callid; }
+    virtual void  setCallid(const string &n_callid) { callid = n_callid; }
+
+    const string &getLocalTag() const { return local_tag; }
+    virtual void  setLocalTag(const string &n_tag) { local_tag = n_tag; }
+
+    const string &getRemoteTag() const { return remote_tag; }
+    virtual void  setRemoteTag(const string &n_tag);
+
+    const string &get1stBranch() const { return first_branch; }
+    virtual void  set1stBranch(const string &n_branch) { first_branch = n_branch; }
+
+    const string &getExtLocalTag() const { return ext_local_tag; }
+    virtual void  setExtLocalTag(const string &new_ext_tag) { ext_local_tag = new_ext_tag; }
+
+    const string &getContactParams() const { return contact_params; }
+    virtual void  setContactParams(const string &new_contact_params) { contact_params = new_contact_params; }
+
+    const string &getUser() const { return user; }
+    virtual void  setUser(const string &new_user) { user = new_user; }
+
+    const string &getDomain() const { return domain; }
+    virtual void  setDomain(const string &new_domain) { domain = new_domain; }
+
+    const string &getLocalUri() const { return local_uri; }
+    virtual void  setLocalUri(const string &new_local_uri) { local_uri = new_local_uri; }
+
+    const string &getRemoteUri() const { return remote_uri; }
+    virtual void  setRemoteUri(const string &new_remote_uri) { remote_uri = new_remote_uri; }
+
+    const string &getLocalParty() const { return local_party; }
+    virtual void  setLocalParty(const string &new_local_party) { local_party = new_local_party; }
+
+    const string &getRemoteParty() const { return remote_party; }
+    virtual void  setRemoteParty(const string &new_remote_party) { remote_party = new_remote_party; }
+
+    const string &getRemoteUA() const { return remote_ua; }
+    virtual void  setRemoteUA(const string &new_remote_ua) { remote_ua = new_remote_ua; }
+
+    const string &getRouteSet() const { return route; }
+    virtual void  setRouteSet(const string &new_rs) { route = new_rs; }
+
+    bool         GetForceCancelRouteSet() const { return force_cancel_route_set; }
+    virtual void setForceCancelRouteSet(bool new_force_cancel_route_set)
+    {
+        force_cancel_route_set = new_force_cancel_route_set;
+    }
+
+    const string &getNextHop() const { return next_hop; }
+    virtual void  setNextHop(const string &new_nh) { next_hop = new_nh; }
+
+    bool         getNextHop1stReq() const { return next_hop_1st_req; }
+    virtual void setNextHop1stReq(bool nh_1st_req) { next_hop_1st_req = nh_1st_req; }
+
+    bool         getPatchRURINextHop() const { return patch_ruri_next_hop; }
+    virtual void setPatchRURINextHop(bool patch_nh) { patch_ruri_next_hop = patch_nh; }
+
+    bool         getNextHopFixed() const { return next_hop_fixed; }
+    virtual void setNextHopFixed(bool nh_fixed) { next_hop_fixed = nh_fixed; }
+
+    void     setMaxForwards(uint32_t mf) { max_forwards = mf; }
+    uint32_t getMaxForwards() const { return max_forwards; }
+
+    void addSupportedTag(const string &tag) { supported_tags.emplace_back(tag); }
+    void setSupportedTags(const vector<string> &tags) { supported_tags = tags; }
+
+    void addAllowedMethod(const string &method) { allowed_methods.emplace_back(method); }
+    void setAllowedMethods(const vector<string> &methods) { allowed_methods = methods; }
+
+    /**
+     * Compute the Contact-HF for the next request
+     */
+    string getContactHdr();
+
+    /**
+     * Compute the Contact URI for the next request
+     */
+    string getContactUri();
+
+    /**
+     * Compute the Route-HF for the next request
+     */
+    string getRoute(bool for_cancel = false);
+
+    /**
+     * set force_outbound_interface_by_name
+     */
+    void setOutboundInterfaceName(const string &iface_name);
+
+    /**
+     * Set outbound_interface to specific value (-1 = default).
+     */
+    virtual void setOutboundInterface(int interface_id);
+
+    /**
+     * Set outbound_protocol to specific value (-1 = default).
+     */
+    virtual void setOutboundAddrType(AddressType type_id);
+
+    /**
+     * Set outbound_transport to specific value (-1 = default).
+     */
+    virtual void setOutboundProtoId(int proto_id);
+
+    /**
+     * Compute, set and return the outbound interface
+     * based on remote_uri, next_hop_ip, outbound_proxy, route.
+     */
+    int getOutboundIf();
+
+    /**
+     * Compute, set and return the outbound ip protocol version
+     * based on remote_uri, next_hop_ip, outbound_proxy, route.
+     */
+    AddressType getOutboundAddrType();
+
+    /**
+     * Compute, set and return the outbound transport
+     * based on remote_uri, next_hop_ip, outbound_proxy, route.
+     */
+    int getOutboundProtoId();
+
+    /**
+     * Reset outbound_interface to default value (-1).
+     */
+    void resetOutboundIf();
+
+    void setResolvePriority(int priority);
+    int  getResolvePriority();
+
+    /** Initialize dialog from locally originated UAC request */
+    virtual void initFromLocalRequest(const AmSipRequest &req);
+
+    /**
+     * Executed for requests received by the local UA.
+     */
+    virtual void onRxRequest(const AmSipRequest &req);
+
+    /**
+     * Executed for replies received by the local UA.
+     */
+    virtual void onRxReply(const AmSipReply &reply);
+
+    /**
+     * Updates remote_uri if necessary.
+     *
+     * Note: this method is offered for inherited classes
+     *       implementing dialog functionnalities. It is
+     *       not used by the basic class.
+     */
+    void updateDialogTarget(const AmSipReply &reply);
+
+    /** @return 0 on success */
+    virtual int reply(const AmSipRequest &req, unsigned int code, const string &reason, const AmMimeBody *body = NULL,
+                      const string &hdrs = "", int flags = 0);
+
+    /** @return 0 on success */
+    virtual int sendRequest(const string &method, const AmMimeBody *body = NULL, const string &hdrs = "", int flags = 0,
+                            sip_timers_override *timers_override = NULL, sip_target_set *target_set_override = NULL,
+                            unsigned int redirects_allowed = -1);
+
+    /**
+     * Terminates pending UAS/UAC transactions
+     */
+    virtual void finalize()
+    {
+        termUasTrans();
+        termUacTrans();
+    }
+
+    virtual void dropTransactions();
+
+    /**
+     * This method should only be used to send responses
+     * to requests which are not referenced by any dialog.
+     *
+     * WARNING: If the request has already been referenced
+     * (see uas_trans), this method cannot mark the request
+     * as replied, thus leaving it in the pending state forever.
+     */
+    static int reply_error(const AmSipRequest &req, unsigned int code, const string &reason, const string &hdrs = "",
+                           msg_logger *logger = NULL, msg_sensor *sensor = NULL);
+
+    /* dump transaction information (DBG) */
+    void dump();
+    void info(AmArg &s);
+
+    /**
+     * Enable or disable message logger
+     */
+    void setMsgLogger(msg_logger *logger);
+    void setMsgSensor(msg_sensor *_sensor);
+
+    /**
+     * Get message logger
+     */
+    msg_logger *getMsgLogger() { return logger; }
 };
 
 /**
  * \brief base class for SIP request/reply event handler
  */
-class AmBasicSipEventHandler
-{
- public:
+class AmBasicSipEventHandler {
+  public:
+    /** Hook called when a request has been received */
+    virtual void onSipRequest(const AmSipRequest &req) {}
 
-  /** Hook called when a request has been received */
-  virtual void onSipRequest(const AmSipRequest& req) {}
+    /** Hook called when a reply has been received */
+    virtual void onSipReply(const AmSipRequest &req, const AmSipReply &reply, AmBasicSipDialog::Status old_status) {}
 
-  /** Hook called when a reply has been received */
-  virtual void onSipReply(const AmSipRequest& req,
-			  const AmSipReply& reply,
-			  AmBasicSipDialog::Status old_status) {}
+    /** Hook called before a request is sent */
+    virtual void onSendRequest(AmSipRequest &req, int &flags) {}
 
-  /** Hook called before a request is sent */
-  virtual void onSendRequest(AmSipRequest& req, int& flags) {}
+    /** Hook called before a reply is sent */
+    virtual void onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags) {}
 
-  /** Hook called before a reply is sent */
-  virtual void onSendReply(const AmSipRequest& req,
-			   AmSipReply& reply, int& flags) {}
+    /** Hook called after a request has been sent */
+    virtual void onRequestSent(const AmSipRequest &req) {}
 
-  /** Hook called after a request has been sent */
-  virtual void onRequestSent(const AmSipRequest& req) {}
+    /** Hook called if request sending failed */
+    virtual void onRequestSendFailed(const AmSipRequest &req) {}
 
-  /** Hook called if request sending failed */
-  virtual void onRequestSendFailed(const AmSipRequest& req) {}
+    /** Hook called after a reply has been sent */
+    virtual void onReplySent(const AmSipRequest &req, const AmSipReply &reply) {}
 
-  /** Hook called after a reply has been sent */
-  virtual void onReplySent(const AmSipRequest& req, const AmSipReply& reply) {}
+    /**
+     * Hook called when the all dialog usages should be terminated
+     * after a reply received from the far end, or a locally generated
+     * timeout (408).
+     */
+    virtual void onRemoteDisappeared(const AmSipReply &reply) {}
 
-  /**
-   * Hook called when the all dialog usages should be terminated
-   * after a reply received from the far end, or a locally generated
-   * timeout (408).
-   */
-  virtual void onRemoteDisappeared(const AmSipReply& reply) {}
+    /**
+     * Hook called when the all dialog usages should be terminated
+     * before a local reply is sent.
+     */
+    virtual void onLocalTerminate(const AmSipReply &reply) {}
 
-  /**
-   * Hook called when the all dialog usages should be terminated
-   * before a local reply is sent.
-   */
-  virtual void onLocalTerminate(const AmSipReply& reply) {}
+    /**
+     * Hook called when either a received request or
+     * reply has been rejected by the local SIP UA layer.
+     */
+    virtual void onFailure() {}
 
-  /**
-   * Hook called when either a received request or
-   * reply has been rejected by the local SIP UA layer.
-   */
-  virtual void onFailure() {}
-
-  // called upon finishing either UAC or UAS transaction
-  virtual void onTransFinished() { }
+    // called upon finishing either UAC or UAS transaction
+    virtual void onTransFinished() {}
 
 
-  virtual ~AmBasicSipEventHandler() {}
+    virtual ~AmBasicSipEventHandler() {}
 };
 
 #endif

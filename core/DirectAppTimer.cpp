@@ -2,8 +2,8 @@
 #include "AmAppTimer.h"
 
 DirectAppTimer::direct_timer::direct_timer(DirectAppTimer *owner, SharedMutex *shared_mutex)
- : mutex(shared_mutex),
-   owner(owner)
+    : mutex(shared_mutex)
+    , owner(owner)
 {
     inc_ref(mutex);
 }
@@ -20,18 +20,18 @@ void DirectAppTimer::direct_timer::invalidate()
 
 void DirectAppTimer::direct_timer::onDelete()
 {
-    //clear wheeltimer reference
+    // clear wheeltimer reference
     dec_ref(this);
 }
 
 void DirectAppTimer::direct_timer::fire()
 {
-    //will be unlocked in DirectAppTimer::on_direct_timer_fired(direct_timer *fired_timer)
+    // will be unlocked in DirectAppTimer::on_direct_timer_fired(direct_timer *fired_timer)
     mutex->lock();
 
-    if(!owner) {
-        //deleted timer fired. ignore
-        //will be deleted later by wheeltimer::delete_timer(timer *t)
+    if (!owner) {
+        // deleted timer fired. ignore
+        // will be deleted later by wheeltimer::delete_timer(timer *t)
         mutex->unlock();
         return;
     }
@@ -40,17 +40,19 @@ void DirectAppTimer::direct_timer::fire()
 }
 
 DirectAppTimer::DirectAppTimer()
-  : t(nullptr), mutex(new SharedMutex())
+    : t(nullptr)
+    , mutex(new SharedMutex())
 {
     inc_ref(mutex);
 }
 
 DirectAppTimer::~DirectAppTimer()
 {
-    if(!mutex) return;
+    if (!mutex)
+        return;
     {
         AmLock l(*mutex);
-        if(t) {
+        if (t) {
             t->invalidate();
             AmAppTimer::instance()->remove_timer(t);
             dec_ref(t);
@@ -61,7 +63,8 @@ DirectAppTimer::~DirectAppTimer()
 
 void DirectAppTimer::invalidate_timer_unsafe()
 {
-    if(!t) return;
+    if (!t)
+        return;
 
     t->invalidate();
     AmAppTimer::instance()->remove_timer(t);
@@ -71,11 +74,11 @@ void DirectAppTimer::invalidate_timer_unsafe()
 
 void DirectAppTimer::on_direct_timer_fired(direct_timer *fired_timer)
 {
-    assert(fired_timer==t);
+    assert(fired_timer == t);
 
     invalidate_timer_unsafe();
 
-    //locked in direct_timer::fire()
+    // locked in direct_timer::fire()
     mutex->unlock();
 
     onTimer();
@@ -84,13 +87,13 @@ void DirectAppTimer::on_direct_timer_fired(direct_timer *fired_timer)
 void DirectAppTimer::set(double timeout)
 {
 
-    if(timeout < 0)
+    if (timeout < 0)
         timeout = 0;
 
     auto new_timer = new direct_timer(this, mutex);
-    inc_ref(new_timer); //reference for DirectAppTimer
+    inc_ref(new_timer); // reference for DirectAppTimer
 
-    new_timer->expires = timeout*1000.0*1000.0 / (double)TIMER_RESOLUTION;
+    new_timer->expires = timeout * 1000.0 * 1000.0 / (double)TIMER_RESOLUTION;
     new_timer->expires += AmAppTimer::instance()->wall_clock;
 
     {
@@ -99,7 +102,7 @@ void DirectAppTimer::set(double timeout)
         t = new_timer;
     }
 
-    inc_ref(t); //reference for wheeltimer
+    inc_ref(t); // reference for wheeltimer
     AmAppTimer::instance()->insert_timer(t);
 }
 

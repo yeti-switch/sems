@@ -1,61 +1,57 @@
 
-   /******************************************************************
+/******************************************************************
 
-       iLBC Speech Coder ANSI-C Source Code
+    iLBC Speech Coder ANSI-C Source Code
 
-       hpOutput.c
+    hpOutput.c
 
-       Copyright (C) The Internet Society (2004).
-       All Rights Reserved.
+    Copyright (C) The Internet Society (2004).
+    All Rights Reserved.
 
-   ******************************************************************/
+******************************************************************/
 
-   #include "constants.h"
+#include "constants.h"
 
-   /*----------------------------------------------------------------*
-    *  Output high-pass filter
-    *---------------------------------------------------------------*/
+/*----------------------------------------------------------------*
+ *  Output high-pass filter
+ *---------------------------------------------------------------*/
 
-   void hpOutput(
-
-
+void hpOutput(
 
 
+    float *In,  /* (i) vector to filter */
+    int    len, /* (i) length of vector to filter */
+    float *Out, /* (o) the resulting filtered vector */
+    float *mem  /* (i/o) the filter state */
+)
+{
+    int    i;
+    float *pi, *po;
 
-       float *In,  /* (i) vector to filter */
-       int len,/* (i) length of vector to filter */
-       float *Out, /* (o) the resulting filtered vector */
-       float *mem  /* (i/o) the filter state */
-   ){
-       int i;
-       float *pi, *po;
+    /* all-zero section*/
 
-       /* all-zero section*/
+    pi = &In[0];
+    po = &Out[0];
+    for (i = 0; i < len; i++) {
+        *po = hpo_zero_coefsTbl[0] * (*pi);
+        *po += hpo_zero_coefsTbl[1] * mem[0];
+        *po += hpo_zero_coefsTbl[2] * mem[1];
 
-       pi = &In[0];
-       po = &Out[0];
-       for (i=0; i<len; i++) {
-           *po = hpo_zero_coefsTbl[0] * (*pi);
-           *po += hpo_zero_coefsTbl[1] * mem[0];
-           *po += hpo_zero_coefsTbl[2] * mem[1];
+        mem[1] = mem[0];
+        mem[0] = *pi;
+        po++;
+        pi++;
+    }
 
-           mem[1] = mem[0];
-           mem[0] = *pi;
-           po++;
-           pi++;
+    /* all-pole section*/
 
-       }
+    po = &Out[0];
+    for (i = 0; i < len; i++) {
+        *po -= hpo_pole_coefsTbl[1] * mem[2];
+        *po -= hpo_pole_coefsTbl[2] * mem[3];
 
-       /* all-pole section*/
-
-       po = &Out[0];
-       for (i=0; i<len; i++) {
-           *po -= hpo_pole_coefsTbl[1] * mem[2];
-           *po -= hpo_pole_coefsTbl[2] * mem[3];
-
-           mem[3] = mem[2];
-           mem[2] = *po;
-           po++;
-       }
-   }
-
+        mem[3] = mem[2];
+        mem[2] = *po;
+        po++;
+    }
+}

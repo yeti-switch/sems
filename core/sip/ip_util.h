@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _ip_util_h_
@@ -34,24 +34,20 @@
 #include <string>
 using std::string;
 
-#define SAv4(addr) \
-            ((struct sockaddr_in*)addr)
+#define SAv4(addr) ((struct sockaddr_in *)addr)
 
-#define SAv6(addr) \
-            ((struct sockaddr_in6*)addr)
+#define SAv6(addr) ((struct sockaddr_in6 *)addr)
 
-#define SA_len(addr) \
-            ((addr)->ss_family == AF_INET ?				\
-	     sizeof(sockaddr_in) : sizeof(sockaddr_in6))
+#define SA_len(addr) ((addr)->ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6))
 
 /**
- * Fill the sockaddr_storage structure based 
+ * Fill the sockaddr_storage structure based
  * on the address given in 'src'.
  * @param src string representation of the IP address.
  * @param dst address stucture
  * @return 1 on success, 0 if address is not valid
  */
-int am_inet_pton(const char* src, struct sockaddr_storage* dst);
+int am_inet_pton(const char *src, struct sockaddr_storage *dst);
 
 /**
  * Print a string representation of the IP address in 'addr'.
@@ -60,14 +56,14 @@ int am_inet_pton(const char* src, struct sockaddr_storage* dst);
  * @param size size of the result string buffer.
  * @return NULL if failed, result string otherwise.
  */
-const char* am_inet_ntop(const sockaddr_storage* addr, char* str, size_t size);
+const char *am_inet_ntop(const sockaddr_storage *addr, char *str, size_t size);
 
 /**
  * Print a string representation of the IP address in 'addr'.
  *
  * @return empty string if failed, result string otherwise.
  */
-string am_inet_ntop(const sockaddr_storage* addr);
+string am_inet_ntop(const sockaddr_storage *addr);
 
 /**
  * Print a string representation of the IP address in 'addr'.
@@ -77,9 +73,9 @@ string am_inet_ntop(const sockaddr_storage* addr);
  * @param size size of the result string buffer.
  * @return NULL if failed, result string otherwise
  */
-const char* am_inet_ntop_sip(const sockaddr_storage* addr, char* str, size_t size);
+const char *am_inet_ntop_sip(const sockaddr_storage *addr, char *str, size_t size);
 
-void  am_set_port(struct sockaddr_storage* addr, unsigned short port);
-unsigned short am_get_port(const sockaddr_storage* addr);
+void           am_set_port(struct sockaddr_storage *addr, unsigned short port);
+unsigned short am_get_port(const sockaddr_storage *addr);
 
 #endif

@@ -18,18 +18,18 @@
 
 
 MultiPartyMixer::MultiPartyMixer(int64_t ext_id, unsigned backlog_id, unsigned neighbors, int sample_rate)
-  : channels(),
-    current_sample_rate(0),
-    scaling_factor(16),
-    ext_id(ext_id),
-    backlog_id(backlog_id),
-    neighbors(neighbors)
+    : channels()
+    , current_sample_rate(0)
+    , scaling_factor(16)
+    , ext_id(ext_id)
+    , backlog_id(backlog_id)
+    , neighbors(neighbors)
 {
     DBG("%s neighbors_num %d sample_rate %d ext_id %ld bl_id %d", __func__, neighbors, sample_rate, ext_id, backlog_id);
 
     ext_resampling.resize(neighbors);
 
-    for(auto &r : ext_resampling)
+    for (auto &r : ext_resampling)
         r.reset(new AmLibSamplerateResamplingState());
 }
 
@@ -42,11 +42,13 @@ MultiPartyMixer::~MultiPartyMixer()
 
 void inline MultiPartyMixer::update_current_sample_rate()
 {
-    current_sample_rate = channels.size()
-            ? std::max_element( channels.begin(),
-                                channels.end(),
-                                    [](const std::pair<int, ChannelData>&a, const std::pair<int, ChannelData>&b) -> bool
-                                    { return a.second.samplerate < b.second.samplerate; })->second.samplerate
+    current_sample_rate =
+        channels.size()
+            ? std::max_element(channels.begin(), channels.end(),
+                               [](const std::pair<int, ChannelData> &a, const std::pair<int, ChannelData> &b) -> bool {
+                                   return a.second.samplerate < b.second.samplerate;
+                               })
+                  ->second.samplerate
             : 0;
 }
 
@@ -63,8 +65,7 @@ int MultiPartyMixer::addChannel(int sample_rate)
 
     update_current_sample_rate();
 
-    DBG("XXDebugMixerXX: added channel: #%i current_sample_rate=%d\n",
-         cur_channel_id, current_sample_rate);
+    DBG("XXDebugMixerXX: added channel: #%i current_sample_rate=%d\n", cur_channel_id, current_sample_rate);
 
     return cur_channel_id;
 }
@@ -78,11 +79,11 @@ void MultiPartyMixer::removeChannel(int channel_id)
 
     update_current_sample_rate();
 
-    DBG("XXDebugMixerXX: removed channel: #%i current_sample_rate=%d\n",channel_id, current_sample_rate);
+    DBG("XXDebugMixerXX: removed channel: #%i current_sample_rate=%d\n", channel_id, current_sample_rate);
 
     if (before_sample_rate != GetCurrentSampleRate()) {
         ext_samples_sum.init = false;
-        mixed_channel.init = false;
+        mixed_channel.init   = false;
 
         for (auto &it : channels)
             it.second.samples.init = false;
@@ -90,12 +91,10 @@ void MultiPartyMixer::removeChannel(int channel_id)
 }
 
 
-void MultiPartyMixer::PutExtChannelPacket(int neighbor_idx,
-                                          unsigned long long system_ts,
-                                          unsigned char* buffer,
-                                          unsigned int   size)
+void MultiPartyMixer::PutExtChannelPacket(int neighbor_idx, unsigned long long system_ts, unsigned char *buffer,
+                                          unsigned int size)
 {
-    if(!size)
+    if (!size)
         return;
 
     /**
@@ -109,21 +108,19 @@ void MultiPartyMixer::PutExtChannelPacket(int neighbor_idx,
 
     assert(samples <= SIZE_MIX_BUFFER); /// ???
 
-    unsigned long long put_ts = system_ts + (MIXER_DELAY_MS * WALLCLOCK_RATE / 1000);
-    unsigned long long user_put_ts = put_ts * (GetCurrentSampleRate()/100) / (WALLCLOCK_RATE/100);
+    unsigned long long put_ts      = system_ts + (MIXER_DELAY_MS * WALLCLOCK_RATE / 1000);
+    unsigned long long user_put_ts = put_ts * (GetCurrentSampleRate() / 100) / (WALLCLOCK_RATE / 100);
 
-    ext_samples_sum.get(user_put_ts,tmp_buffer,samples);
-    mix_add(tmp_buffer,tmp_buffer,(short*)buffer,samples);
-    ext_samples_sum.put(user_put_ts,tmp_buffer,samples);
+    ext_samples_sum.get(user_put_ts, tmp_buffer, samples);
+    mix_add(tmp_buffer, tmp_buffer, (short *)buffer, samples);
+    ext_samples_sum.put(user_put_ts, tmp_buffer, samples);
 }
 
 
-void MultiPartyMixer::PutChannelPacket(unsigned int   channel_id,
-                                       unsigned long long system_ts,
-                                       unsigned char* buffer,
-                                       unsigned int   size)
+void MultiPartyMixer::PutChannelPacket(unsigned int channel_id, unsigned long long system_ts, unsigned char *buffer,
+                                       unsigned int size)
 {
-    if(!size)
+    if (!size)
         return;
 
     unsigned samples = PCM16_B2S(size);
@@ -146,29 +143,25 @@ void MultiPartyMixer::PutChannelPacket(unsigned int   channel_id,
         bstate->last_ts = put_ts + (samples * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
     }
 #endif
-    unsigned long long put_ts = system_ts + (MIXER_DELAY_MS * WALLCLOCK_RATE / 1000);
-    unsigned long long user_put_ts = put_ts * (GetCurrentSampleRate()/100) / (WALLCLOCK_RATE/100);
+    unsigned long long put_ts      = system_ts + (MIXER_DELAY_MS * WALLCLOCK_RATE / 1000);
+    unsigned long long user_put_ts = put_ts * (GetCurrentSampleRate() / 100) / (WALLCLOCK_RATE / 100);
 
-    //bstate->mixed_channel_ext->get(user_put_ts,tmp_buffer,samples);
-    //mix_add(tmp_buffer,tmp_buffer,(short*)buffer,samples);
-    //bstate->mixed_channel_ext->put(user_put_ts,tmp_buffer,samples);
+    // bstate->mixed_channel_ext->get(user_put_ts,tmp_buffer,samples);
+    // mix_add(tmp_buffer,tmp_buffer,(short*)buffer,samples);
+    // bstate->mixed_channel_ext->put(user_put_ts,tmp_buffer,samples);
 
     const auto &it = channels.find(channel_id);
 
     if (it != channels.end())
-        it->second.samples.put(user_put_ts, (short*)buffer,samples);
+        it->second.samples.put(user_put_ts, (short *)buffer, samples);
 
-    mixed_channel.get(user_put_ts,tmp_buffer,samples);
-    mix_add(tmp_buffer,tmp_buffer,(short*)buffer,samples);
-    mixed_channel.put(user_put_ts,tmp_buffer,samples);
-
+    mixed_channel.get(user_put_ts, tmp_buffer, samples);
+    mix_add(tmp_buffer, tmp_buffer, (short *)buffer, samples);
+    mixed_channel.put(user_put_ts, tmp_buffer, samples);
 }
 
-void MultiPartyMixer::GetChannelPacket(unsigned int   channel_id,
-                     unsigned long long system_ts,
-                     unsigned char* buffer,
-                     unsigned int&  size,
-                     unsigned int&  output_sample_rate)
+void MultiPartyMixer::GetChannelPacket(unsigned int channel_id, unsigned long long system_ts, unsigned char *buffer,
+                                       unsigned int &size, unsigned int &output_sample_rate)
 {
     if (!size)
         return;
@@ -177,32 +170,32 @@ void MultiPartyMixer::GetChannelPacket(unsigned int   channel_id,
 
     output_sample_rate = GetCurrentSampleRate();
 
-    //unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
+    // unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
 
     unsigned int samples = PCM16_B2S(size); // * (bstate->sample_rate/100) / (GetCurrentSampleRate()/100); => 1
     assert(samples <= PCM16_B2S(AUDIO_BUFFER_SIZE));
 
-    unsigned long long cur_ts = system_ts * (output_sample_rate/100) / (WALLCLOCK_RATE/100);
+    unsigned long long cur_ts = system_ts * (output_sample_rate / 100) / (WALLCLOCK_RATE / 100);
 
     /** mix external channels */
-    ext_samples_sum.get(cur_ts,(int*)buffer,samples);
+    ext_samples_sum.get(cur_ts, (int *)buffer, samples);
 
-    mixed_channel.get(cur_ts,tmp_buffer,samples);
-    mix_add_int(tmp_buffer,tmp_buffer,(int*)buffer,samples);
+    mixed_channel.get(cur_ts, tmp_buffer, samples);
+    mix_add_int(tmp_buffer, tmp_buffer, (int *)buffer, samples);
 
 
     const auto &it = channels.find(channel_id);
 
     if (it != channels.end()) {
-        it->second.samples.get(cur_ts,(short*)buffer,samples);
-        mix_sub(tmp_buffer,tmp_buffer,(short*)buffer,samples);
+        it->second.samples.get(cur_ts, (short *)buffer, samples);
+        mix_sub(tmp_buffer, tmp_buffer, (short *)buffer, samples);
     }
 
     /// TODO: remove echo
-    //channel->get(cur_ts,(short*)buffer,samples);
-    //mix_sub(tmp_buffer,tmp_buffer,(short*)buffer,samples);
+    // channel->get(cur_ts,(short*)buffer,samples);
+    // mix_sub(tmp_buffer,tmp_buffer,(short*)buffer,samples);
 
-    scale((short*)buffer,tmp_buffer,samples);
+    scale((short *)buffer, tmp_buffer, samples);
 
     size = PCM16_S2B(samples);
 
@@ -244,26 +237,25 @@ void MultiPartyMixer::GetChannelPacket(unsigned int   channel_id,
 }
 
 
-int MultiPartyMixer::GetExtChannelPacket(unsigned long long system_ts,
-                     unsigned char* buffer,
-                     unsigned int&  output_sample_rate)
+int MultiPartyMixer::GetExtChannelPacket(unsigned long long system_ts, unsigned char *buffer,
+                                         unsigned int &output_sample_rate)
 {
-    unsigned int size = PCM16_S2B(WC_INC_MS*GetCurrentSampleRate()/1000);
+    unsigned int size = PCM16_S2B(WC_INC_MS * GetCurrentSampleRate() / 1000);
 
     if (!size || size > AUDIO_BUFFER_SIZE)
         return 0;
 
     output_sample_rate = GetCurrentSampleRate();
 
-    //unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
+    // unsigned int last_ts = system_ts + (PCM16_B2S(size) * (WALLCLOCK_RATE/100) / (GetCurrentSampleRate()/100));
 
     unsigned int samples = PCM16_B2S(size); // * (bstate->sample_rate/100) / (GetCurrentSampleRate()/100);
     assert(samples <= PCM16_B2S(AUDIO_BUFFER_SIZE));
 
-    unsigned long long cur_ts = system_ts * (output_sample_rate/100) / (WALLCLOCK_RATE/100);
+    unsigned long long cur_ts = system_ts * (output_sample_rate / 100) / (WALLCLOCK_RATE / 100);
 
-    mixed_channel.get(cur_ts,tmp_buffer,samples);
-    scale((short*)buffer,tmp_buffer,samples);
+    mixed_channel.get(cur_ts, tmp_buffer, samples);
+    scale((short *)buffer, tmp_buffer, samples);
 
     return PCM16_S2B(samples);
 
@@ -305,9 +297,9 @@ int MultiPartyMixer::GetCurrentSampleRate()
 {
   SampleRateSet::reverse_iterator sit = samplerates.rbegin();
   if (sit != samplerates.rend()) {
-	return *sit;
+    return *sit;
   } else {
-	return -1;
+    return -1;
   }
 }*/
 
@@ -316,51 +308,51 @@ int MultiPartyMixer::GetCurrentSampleRate()
 // short src2[size/2]
 //
 
-void MultiPartyMixer::mix_add_int(int* dest,int* src1,int* src2,unsigned int size)
+void MultiPartyMixer::mix_add_int(int *dest, int *src1, int *src2, unsigned int size)
 {
-  int* end_dest = dest + size;
+    int *end_dest = dest + size;
 
-  while(dest != end_dest)
-    *(dest++) = *(src1++) + *(src2++);
+    while (dest != end_dest)
+        *(dest++) = *(src1++) + *(src2++);
 }
 
 
-void MultiPartyMixer::mix_add(int* dest,int* src1,short* src2,unsigned int size)
+void MultiPartyMixer::mix_add(int *dest, int *src1, short *src2, unsigned int size)
 {
-  int* end_dest = dest + size;
+    int *end_dest = dest + size;
 
-  while(dest != end_dest)
-    *(dest++) = *(src1++) + int(*(src2++));
+    while (dest != end_dest)
+        *(dest++) = *(src1++) + int(*(src2++));
 }
 
-void MultiPartyMixer::mix_sub(int* dest,int* src1,short* src2,unsigned int size)
+void MultiPartyMixer::mix_sub(int *dest, int *src1, short *src2, unsigned int size)
 {
-  int* end_dest = dest + size;
+    int *end_dest = dest + size;
 
-  while(dest != end_dest)
-    *(dest++) = *(src1++) - int(*(src2++));
+    while (dest != end_dest)
+        *(dest++) = *(src1++) - int(*(src2++));
 }
 
-void MultiPartyMixer::scale(short* buffer,int* tmp_buf,unsigned int size)
+void MultiPartyMixer::scale(short *buffer, int *tmp_buf, unsigned int size)
 {
-  short* end_dest = buffer + size;
-    
-  if(scaling_factor<64)
-    scaling_factor++;
-    
-  while(buffer != end_dest){
-	
-    int s = (*tmp_buf * scaling_factor) >> 6;
-    if(abs(s) > MAX_LINEAR_SAMPLE){
-      scaling_factor = abs( (MAX_LINEAR_SAMPLE<<6) / (*tmp_buf) );
-      if(s < 0)
-	s = -MAX_LINEAR_SAMPLE;
-      else
-	s = MAX_LINEAR_SAMPLE;
+    short *end_dest = buffer + size;
+
+    if (scaling_factor < 64)
+        scaling_factor++;
+
+    while (buffer != end_dest) {
+
+        int s = (*tmp_buf * scaling_factor) >> 6;
+        if (abs(s) > MAX_LINEAR_SAMPLE) {
+            scaling_factor = abs((MAX_LINEAR_SAMPLE << 6) / (*tmp_buf));
+            if (s < 0)
+                s = -MAX_LINEAR_SAMPLE;
+            else
+                s = MAX_LINEAR_SAMPLE;
+        }
+        *(buffer++) = short(s);
+        tmp_buf++;
     }
-    *(buffer++) = short(s);
-    tmp_buf++;
-  }
 }
 
 #if 0

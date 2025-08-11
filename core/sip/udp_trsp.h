@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef _udp_trsp_h_
@@ -45,28 +45,25 @@
 
 using std::string;
 
-class udp_trsp_socket: public trsp_socket
-{
-    int sendto(const sockaddr_storage* sa, const char* msg, const int msg_len);
-    int sendmsg(const sockaddr_storage* sa, const char* msg, const int msg_len);
+class udp_trsp_socket : public trsp_socket {
+    int sendto(const sockaddr_storage *sa, const char *msg, const int msg_len);
+    int sendmsg(const sockaddr_storage *sa, const char *msg, const int msg_len);
 
   public:
-    udp_trsp_socket(
-        unsigned short if_num, unsigned short proto_idx, unsigned int opts,
-        socket_transport transport, unsigned int sys_if_idx = 0)
-  : trsp_socket(if_num, proto_idx,opts,transport,sys_if_idx)
-    {}
-    ~udp_trsp_socket() {
-        close(sd);
+    udp_trsp_socket(unsigned short if_num, unsigned short proto_idx, unsigned int opts, socket_transport transport,
+                    unsigned int sys_if_idx = 0)
+        : trsp_socket(if_num, proto_idx, opts, transport, sys_if_idx)
+    {
     }
+    ~udp_trsp_socket() { close(sd); }
 
     /**
      * Binds the transport socket to an address
      * @return -1 if error(s) occured.
      */
-    virtual int bind(const string& address, unsigned short port);
+    virtual int bind(const string &address, unsigned short port);
 
-    virtual const char* get_transport() const { return "udp"; }
+    virtual const char *get_transport() const { return "udp"; }
 
     int set_recvbuf_size(int rcvbuf_size);
 
@@ -74,29 +71,29 @@ class udp_trsp_socket: public trsp_socket
      * Sends a message.
      * @return -1 if error(s) occured.
      */
-    int send(const sockaddr_storage* sa, const char* msg,
-	     const int msg_len, unsigned int flags);
-    
+    int send(const sockaddr_storage *sa, const char *msg, const int msg_len, unsigned int flags);
+
     int recv();
 };
 
-class udp_trsp: public AmThread
-{
-    std::vector<udp_trsp_socket*> sockets;
-    int ev;
-    AmEventFd stop_event;
-    AmCondition<bool> stopped;
-protected:
+class udp_trsp : public AmThread {
+    std::vector<udp_trsp_socket *> sockets;
+    int                            ev;
+    AmEventFd                      stop_event;
+    AmCondition<bool>              stopped;
+
+  protected:
     /** @see AmThread */
     void run();
     /** @see AmThread */
-    void on_stop();    
-public:
+    void on_stop();
+
+  public:
     /** @see transport */
     udp_trsp();
     ~udp_trsp();
 
-    void add_socket(udp_trsp_socket* sock);
+    void add_socket(udp_trsp_socket *sock);
 };
 
 #endif

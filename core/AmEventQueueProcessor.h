@@ -20,8 +20,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -36,28 +36,25 @@
 using std::deque;
 using std::vector;
 
-class EventQueueWorker 
-: public AmThread,
-  public AmEventNotificationSink
-{
-  AmSharedVar<bool> stop_requested;
+class EventQueueWorker : public AmThread, public AmEventNotificationSink {
+    AmSharedVar<bool> stop_requested;
 
-  AmCondition<bool> runcond;
-  std::deque<AmEventQueue*> process_queues;
-  AmMutex process_queues_mut;
+    AmCondition<bool>          runcond;
+    std::deque<AmEventQueue *> process_queues;
+    AmMutex                    process_queues_mut;
 
- public:
-  EventQueueWorker();
-  ~EventQueueWorker();
+  public:
+    EventQueueWorker();
+    ~EventQueueWorker();
 
-  // AmThread interface
-  void run();
-  void on_stop();
+    // AmThread interface
+    void run();
+    void on_stop();
 
-  // AmEventNotificationSink interface
-  void notify(AmEventQueue* sender);
+    // AmEventNotificationSink interface
+    void notify(AmEventQueue *sender);
 
-  void startEventQueue(AmEventQueue* q);
+    void startEventQueue(AmEventQueue *q);
 };
 
 /**
@@ -72,20 +69,20 @@ class EventQueueWorker
  */
 class AmEventQueueProcessor {
 
-  typedef vector<EventQueueWorker*> Workers;
+    typedef vector<EventQueueWorker *> Workers;
 
-  Workers threads;
-  AmMutex threads_mut;
-  Workers::iterator threads_it;
+    Workers           threads;
+    AmMutex           threads_mut;
+    Workers::iterator threads_it;
 
- public:
-  AmEventQueueProcessor();
-  ~AmEventQueueProcessor();
+  public:
+    AmEventQueueProcessor();
+    ~AmEventQueueProcessor();
 
-  void addThreads(unsigned int num_threads);
+    void addThreads(unsigned int num_threads);
 
-  EventQueueWorker* getWorker();
-  int startEventQueue(AmEventQueue* q);
+    EventQueueWorker *getWorker();
+    int               startEventQueue(AmEventQueue *q);
 };
 
 #endif // _AmEventQueueProcessor_h_

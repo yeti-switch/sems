@@ -5,11 +5,12 @@
 
 
 ConferenceMedia::ConferenceMedia(Mixer *dispatcher, int num_cnt, int sd)
-    : input_resampling_state(nullptr), tx_ring(sd, dispatcher->getNeighbors())
+    : input_resampling_state(nullptr)
+    , tx_ring(sd, dispatcher->getNeighbors())
 {
     /** calculate range for garbage collection in different threads */
-    run_to = MAX_CHANNEL_CTX / AmConfig.media_proc_threads;
-    run_from  = run_to * num_cnt;
+    run_to   = MAX_CHANNEL_CTX / AmConfig.media_proc_threads;
+    run_from = run_to * num_cnt;
     /** the last one takes rest */
     if (AmConfig.media_proc_threads == num_cnt + 1)
         run_to = MAX_CHANNEL_CTX - run_from;
@@ -43,7 +44,7 @@ int ConferenceMedia::readStreams(unsigned long long ts, unsigned char *buffer)
 
 /**
  * we send out mixer data every media round
-*/
+ */
 /** IV) step in media round:
             ConferenceChannel::put,
             ConferenceMedia::readStreams
@@ -68,7 +69,7 @@ int ConferenceMedia::processMediaTail(unsigned long long ts)
 {
     unsigned char buffer[AUDIO_BUFFER_SIZE];
 
-    for (int i=run_from; i<run_to; ++i) {
+    for (int i = run_from; i < run_to; ++i) {
 
         if (!test_bit(i, Mixer::backlog_map))
             continue;

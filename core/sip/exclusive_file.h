@@ -9,32 +9,30 @@ using std::string;
 
 class _excl_file_reg;
 
-class exclusive_file
-  : public async_file
-{
-  string   name;
-  int      fd;
-  
-  exclusive_file(const string& name);
-  ~exclusive_file();
+class exclusive_file : public async_file {
+    string name;
+    int    fd;
 
-  int open(bool& is_new);
+    exclusive_file(const string &name);
+    ~exclusive_file();
 
-  // async_file API
-  int write_to_file(const void* buf, unsigned int len);
-  void on_flushed();
+    int open(bool &is_new);
 
-  // called only from _excl_file_reg
-  void close() { async_file::close(); }
+    // async_file API
+    int  write_to_file(const void *buf, unsigned int len);
+    void on_flushed();
 
-  friend class _excl_file_reg;
+    // called only from _excl_file_reg
+    void close() { async_file::close(); }
 
-public:
-  static int open(const char* filename, exclusive_file*& excl_fp, bool& is_new);
-  static void close(const exclusive_file* excl_fp);
+    friend class _excl_file_reg;
 
-  int write(const void *buf, int len);
-  int writev(const struct iovec* iov, int iovcnt);
+  public:
+    static int  open(const char *filename, exclusive_file *&excl_fp, bool &is_new);
+    static void close(const exclusive_file *excl_fp);
+
+    int write(const void *buf, int len);
+    int writev(const struct iovec *iov, int iovcnt);
 };
 
 #endif

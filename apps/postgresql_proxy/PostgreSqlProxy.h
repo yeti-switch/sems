@@ -12,23 +12,21 @@
 #include <map>
 #include <unordered_map>
 #include <memory>
-using std::string;
-using std::vector;
 using std::map;
+using std::string;
 using std::unique_ptr;
+using std::vector;
 
-class PostgreSqlProxy
-  : public AmThread,
-    public AmEventFdQueue,
-    public AmEventHandler,
-    public RpcTreeHandler<PostgreSqlProxy>
-{
+class PostgreSqlProxy : public AmThread,
+                        public AmEventFdQueue,
+                        public AmEventHandler,
+                        public RpcTreeHandler<PostgreSqlProxy> {
     friend class PostgreSqlMockFactory;
-    static PostgreSqlProxy* _instance;
+    static PostgreSqlProxy *_instance;
 
-    AmEventFd stop_event;
+    AmEventFd         stop_event;
     AmCondition<bool> stopped;
-    int epoll_fd;
+    int               epoll_fd;
 
     struct Response {
         int ref_index;
@@ -36,49 +34,50 @@ class PostgreSqlProxy
         string upstream_queue;
 
         string value;
-        AmArg parsed_value;
+        AmArg  parsed_value;
         string error;
-        bool timeout;
+        bool   timeout;
     };
 
-    struct Query
-    {
-        string query;
+    struct Query {
+        string        query;
         vector<AmArg> params;
-        Query(const string& query, const vector<AmArg>& params)
-        : query(query), params(params){}
-        bool operator == (const Query& q) const
+        Query(const string &query, const vector<AmArg> &params)
+            : query(query)
+            , params(params)
         {
-            if(query != q.query) return false;
+        }
+        bool operator==(const Query &q) const
+        {
+            if (query != q.query)
+                return false;
             return params == q.params;
         }
-        struct KeyHash
-        {
-            size_t operator()(const Query& q) const {
-               return std::hash<string>()(q.query);
-            }
+        struct KeyHash {
+            size_t operator()(const Query &q) const { return std::hash<string>()(q.query); }
         };
     };
 
-    int init();
-    bool checkQueryData(const PGQueryData& data);
-    Response* find_resp_for_query(const string& query, const vector<AmArg>& params);
-    std::optional<string> handle_query(const string& query, const string& sender_id, const string& token, const vector<AmArg>& params);
-    std::optional<string> handle_query_data(const PGQueryData& qdata);
-    std::optional<string> onSimpleExecute(const PGExecute& e);
-    std::optional<string> onParamExecute(const PGParamExecute& e);
-    std::optional<string> onPrepareExecute(const PGPrepareExec& e);
+    int                   init();
+    bool                  checkQueryData(const PGQueryData &data);
+    Response             *find_resp_for_query(const string &query, const vector<AmArg> &params);
+    std::optional<string> handle_query(const string &query, const string &sender_id, const string &token,
+                                       const vector<AmArg> &params);
+    std::optional<string> handle_query_data(const PGQueryData &qdata);
+    std::optional<string> onSimpleExecute(const PGExecute &e);
+    std::optional<string> onParamExecute(const PGParamExecute &e);
+    std::optional<string> onPrepareExecute(const PGPrepareExec &e);
     std::optional<string> onCfgWorkerManagementEvent(const string &worker_name);
 
-    vector<unique_ptr<Response>> resp_stack;
+    vector<unique_ptr<Response>>                                    resp_stack;
     std::unordered_map<Query, unique_ptr<Response>, Query::KeyHash> resp_map;
-    std::unordered_map<string, string> upstream_workers;
-    lua_State* state;
-    string module_config;
-    string upstream_queue;
-    bool log_pg_events;
+    std::unordered_map<string, string>                              upstream_workers;
+    lua_State                                                      *state;
+    string                                                          module_config;
+    string                                                          upstream_queue;
+    bool                                                            log_pg_events;
 
-    void insert_response(const string& query, const vector<AmArg>& params, std::unique_ptr<Response> &response);
+    void insert_response(const string &query, const vector<AmArg> &params, std::unique_ptr<Response> &response);
 
   protected:
     async_rpc_handler stackPush;
@@ -90,38 +89,38 @@ class PostgreSqlProxy
     async_rpc_handler showStatsAsync;
     async_rpc_handler reload;
     async_rpc_handler logPgEventsAsync;
-    void reloadMap(const AmArg& args, AmArg& ret);
-    void pushStack(const AmArg& args, AmArg& ret);
-    void clearStack(const AmArg& args, AmArg& ret);
-    void showStack(const AmArg& args, AmArg& ret);
-    void insertMap(const AmArg& args, AmArg& ret);
-    void clearMap(const AmArg& args, AmArg& ret);
-    void showMap(const AmArg& args, AmArg& ret);
-    void showStatsSync(const AmArg& args, AmArg& ret);
-    void logPgEventsSync(const AmArg& args, AmArg& ret);
+    void              reloadMap(const AmArg &args, AmArg &ret);
+    void              pushStack(const AmArg &args, AmArg &ret);
+    void              clearStack(const AmArg &args, AmArg &ret);
+    void              showStack(const AmArg &args, AmArg &ret);
+    void              insertMap(const AmArg &args, AmArg &ret);
+    void              clearMap(const AmArg &args, AmArg &ret);
+    void              showMap(const AmArg &args, AmArg &ret);
+    void              showStatsSync(const AmArg &args, AmArg &ret);
+    void              logPgEventsSync(const AmArg &args, AmArg &ret);
 
     void init_rpc_tree() override;
     void on_stop() override;
     void run() override;
-    void process(AmEvent* ev) override;
-    bool process_consuming(AmEvent* ev) override;
-    bool process_postgres_event(PGEvent* ev);
-    void process_jsonrpc_event(JsonRpcRequestEvent* ev);
+    void process(AmEvent *ev) override;
+    bool process_consuming(AmEvent *ev) override;
+    bool process_postgres_event(PGEvent *ev);
+    void process_jsonrpc_event(JsonRpcRequestEvent *ev);
 
   public:
     PostgreSqlProxy();
     ~PostgreSqlProxy();
 
-    static PostgreSqlProxy* instance();
-    static void dispose();
-    AmDynInvoke* getInstance() { return static_cast<AmDynInvoke*>(instance()); }
+    static PostgreSqlProxy *instance();
+    static void             dispose();
+    AmDynInvoke            *getInstance() { return static_cast<AmDynInvoke *>(instance()); }
 
     int onLoad();
-    int configure(const string& config);
-    int reconfigure(const string& config);
+    int configure(const string &config);
+    int reconfigure(const string &config);
 
-    int insert_resp_map(const string& query, const string& resp, const string& error = string(), bool timeout = false);
-    int insert_resp_lua(const string& query, const string& path);
-    int insert_upstream_mapping(const string& query, const string &queue);
-    int insert_upstream_worker_mapping(const string& worker, const string &queue);
+    int insert_resp_map(const string &query, const string &resp, const string &error = string(), bool timeout = false);
+    int insert_resp_lua(const string &query, const string &path);
+    int insert_upstream_mapping(const string &query, const string &queue);
+    int insert_upstream_worker_mapping(const string &worker, const string &queue);
 };

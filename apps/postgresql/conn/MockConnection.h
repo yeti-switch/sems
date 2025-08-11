@@ -2,8 +2,7 @@
 
 #include "Connection.h"
 
-class MockConnection : public Connection
-{
+class MockConnection : public Connection {
     int conn_fd;
 
     bool reset_conn() override;
@@ -14,8 +13,9 @@ class MockConnection : public Connection
     bool sync_pipe() override;
     bool exit_pipe() override;
     bool flush_pipe() override;
-public:
-    MockConnection(IConnectionHandler* handler);
+
+  public:
+    MockConnection(IConnectionHandler *handler);
     ~MockConnection();
 
     int getSocket() override { return conn_fd; }

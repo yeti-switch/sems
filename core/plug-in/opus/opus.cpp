@@ -20,13 +20,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "amci.h"
-#include "codecs.h" 
+#include "codecs.h"
 #include "../../log.h"
 
 #include <math.h>
@@ -36,10 +36,10 @@
 
 /**
  * @file plug-in/opus/opus.c
- * OPUS support 
- * This plug-in imports the OPUS Codec. 
+ * OPUS support
+ * This plug-in imports the OPUS Codec.
  *
- * See http://www.opus-codec.org/ . 
+ * See http://www.opus-codec.org/ .
  * Features: <ul>
  *           <li>OPUS codec/payload/subtype
  *           <li>OPUS file format
@@ -53,7 +53,8 @@
 /* Allowed values:
 OPUS_APPLICATION_VOIP                  Process signal for improved speech intelligibility.
 OPUS_APPLICATION_AUDIO                 Favor faithfulness to the original input.
-OPUS_APPLICATION_RESTRICTED_LOWDELAY   Configure the minimum possible coding delay by disabling certain modes of operation.*/
+OPUS_APPLICATION_RESTRICTED_LOWDELAY   Configure the minimum possible coding delay by disabling certain modes of
+operation.*/
 
 #define _OPUS_MAX_BANDWIDTH_ OPUS_BANDWIDTH_FULLBAND
 /* Allowed values:
@@ -77,18 +78,17 @@ Allowed values: 0 - 1 */
 /* Discontinued transmission
 Allowed values: 0 - 1 */
 
-static int opus_2_pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
-			 unsigned int channels, unsigned int rate, long h_codec );
+static int opus_2_pcm16(unsigned char *out_buf, unsigned char *in_buf, unsigned int size, unsigned int channels,
+                        unsigned int rate, long h_codec);
 
-static int opus_plc( unsigned char* out_buf, unsigned int size,
-		     unsigned int channels, unsigned int rate, long h_codec );
+static int opus_plc(unsigned char *out_buf, unsigned int size, unsigned int channels, unsigned int rate, long h_codec);
 
-static int pcm16_2_opus( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
-			 unsigned int channels, unsigned int rate, long h_codec );
-static long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_description);
+static int  pcm16_2_opus(unsigned char *out_buf, unsigned char *in_buf, unsigned int size, unsigned int channels,
+                         unsigned int rate, long h_codec);
+static long opus_create(const char *format_parameters, amci_codec_fmt_info_t *format_description);
 static void opus_destroy(long h_inst);
 
-static unsigned int opus_frames2samples(long, unsigned char *,unsigned int);
+static unsigned int opus_frames2samples(long, unsigned char *, unsigned int);
 
 #if SYSTEM_SAMPLECLOCK_RATE >= 48000
 #define _OPUS_RATE 48000
@@ -96,208 +96,205 @@ static unsigned int opus_frames2samples(long, unsigned char *,unsigned int);
 #define _OPUS_RATE 24000
 #elif SYSTEM_SAMPLECLOCK_RATE >= 12000
 #define _OPUS_RATE 12000
-#elif SYSTEM_SAMPLECLOCK_RATE >=  8000
-#define _OPUS_RATE  8000
+#elif SYSTEM_SAMPLECLOCK_RATE >= 8000
+#define _OPUS_RATE 8000
 #else
 #error Minimal sample rate for OPUS codec is 8000.
 #endif
 
-BEGIN_EXPORTS( "opus" , AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY )
+BEGIN_EXPORTS("opus", AMCI_NO_MODULEINIT, AMCI_NO_MODULEDESTROY)
 
-  BEGIN_CODECS
-    CODEC_VARIABLE_FRAMES( CODEC_OPUS, pcm16_2_opus, opus_2_pcm16, opus_plc,
-           opus_create, 
-           opus_destroy,
-           NULL, NULL, opus_frames2samples)
-  END_CODECS
-    
-  BEGIN_PAYLOADS
-    PAYLOAD( -1, "OPUS", _OPUS_RATE, 48000, 2, CODEC_OPUS, AMCI_PT_AUDIO_FRAME )
-  END_PAYLOADS
+BEGIN_CODECS
+CODEC_VARIABLE_FRAMES(CODEC_OPUS, pcm16_2_opus, opus_2_pcm16, opus_plc, opus_create, opus_destroy, NULL, NULL,
+                      opus_frames2samples)
+END_CODECS
 
-  BEGIN_FILE_FORMATS
-  END_FILE_FORMATS
+BEGIN_PAYLOADS
+PAYLOAD(-1, "OPUS", _OPUS_RATE, 48000, 2, CODEC_OPUS, AMCI_PT_AUDIO_FRAME)
+END_PAYLOADS
+
+BEGIN_FILE_FORMATS
+END_FILE_FORMATS
 
 END_EXPORTS
 
 typedef struct {
-  OpusEncoder* opus_enc;
-  OpusDecoder* opus_dec;
-  unsigned int frame_size;
+    OpusEncoder *opus_enc;
+    OpusDecoder *opus_dec;
+    unsigned int frame_size;
 } opus_state_t;
 
-long opus_create(const char* format_parameters, amci_codec_fmt_info_t* format_description) {
-  opus_state_t* codec_inst;
-  int error;
- 
-  if (format_parameters) {
-    DBG("OPUS params: >>%s<<.", format_parameters);
-  } 
+long opus_create(const char *format_parameters, amci_codec_fmt_info_t *format_description)
+{
+    opus_state_t *codec_inst;
+    int           error;
 
-  codec_inst = (opus_state_t*)malloc(sizeof(opus_state_t));
+    if (format_parameters) {
+        DBG("OPUS params: >>%s<<.", format_parameters);
+    }
 
-  if (!codec_inst)
-    return -1;
+    codec_inst = (opus_state_t *)malloc(sizeof(opus_state_t));
 
-  /* frame_size(ms) frame_size
-   *    2.5         rate/400
-   *    5           rate/200
-   *    10          rate/100
-   *    20          rate/50
-   *    40          rate/25
-   *    60          3*rate/50
-   */
-  switch(format_description[0].value) {
+    if (!codec_inst)
+        return -1;
+
+    /* frame_size(ms) frame_size
+     *    2.5         rate/400
+     *    5           rate/200
+     *    10          rate/100
+     *    20          rate/50
+     *    40          rate/25
+     *    60          3*rate/50
+     */
+    switch (format_description[0].value) {
     case 5:
-        codec_inst->frame_size = _OPUS_RATE/200;
+        codec_inst->frame_size      = _OPUS_RATE / 200;
         format_description[0].value = 5;
         format_description[1].value = 5 * _OPUS_RATE / 1000;
         break;
     case 10:
-        codec_inst->frame_size = _OPUS_RATE/100;
+        codec_inst->frame_size      = _OPUS_RATE / 100;
         format_description[0].value = 10;
         format_description[1].value = 10 * _OPUS_RATE / 1000;
         break;
     case 20:
-        codec_inst->frame_size = _OPUS_RATE/50;
+        codec_inst->frame_size      = _OPUS_RATE / 50;
         format_description[0].value = 20;
         format_description[1].value = 20 * _OPUS_RATE / 1000;
         break;
     case 40:
-        codec_inst->frame_size = _OPUS_RATE/25;
+        codec_inst->frame_size      = _OPUS_RATE / 25;
         format_description[0].value = 40;
         format_description[1].value = 40 * _OPUS_RATE / 1000;
         break;
     case 60:
-        codec_inst->frame_size = 3*_OPUS_RATE/50;
+        codec_inst->frame_size      = 3 * _OPUS_RATE / 50;
         format_description[0].value = 60;
         format_description[1].value = 60 * _OPUS_RATE / 1000;
         break;
     default:
-        codec_inst->frame_size = _OPUS_RATE/50;
+        codec_inst->frame_size      = _OPUS_RATE / 50;
         format_description[0].value = 20;
         format_description[1].value = 20 * _OPUS_RATE / 1000;
-  };
+    };
 
 
-  codec_inst->opus_enc = opus_encoder_create(_OPUS_RATE,1,_OPUS_APPLICATION_,&error);
-  if (error) {
-    DBG("OPUS: error %d while creating encoder state.", error);
-    return -1;
-  }
+    codec_inst->opus_enc = opus_encoder_create(_OPUS_RATE, 1, _OPUS_APPLICATION_, &error);
+    if (error) {
+        DBG("OPUS: error %d while creating encoder state.", error);
+        return -1;
+    }
 
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_FORCE_CHANNELS(1));
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_MAX_BANDWIDTH(_OPUS_MAX_BANDWIDTH_));
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_PACKET_LOSS_PERC(_OPUS_PKT_LOSS_PCT_));
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_COMPLEXITY(_OPUS_COMPLEXITY_));
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_INBAND_FEC(_OPUS_INBAND_FEC_));
-  opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_DTX(_OPUS_DTX_));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_FORCE_CHANNELS(1));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_MAX_BANDWIDTH(_OPUS_MAX_BANDWIDTH_));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_PACKET_LOSS_PERC(_OPUS_PKT_LOSS_PCT_));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_COMPLEXITY(_OPUS_COMPLEXITY_));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_INBAND_FEC(_OPUS_INBAND_FEC_));
+    opus_encoder_ctl(codec_inst->opus_enc, OPUS_SET_DTX(_OPUS_DTX_));
 
-  codec_inst->opus_dec = opus_decoder_create(_OPUS_RATE,1,&error);
-  if (error) {
-    DBG("OPUS: error %d while creating decoder state.", error);
-    opus_encoder_destroy(codec_inst->opus_enc);
-    return -1;
-  }
+    codec_inst->opus_dec = opus_decoder_create(_OPUS_RATE, 1, &error);
+    if (error) {
+        DBG("OPUS: error %d while creating decoder state.", error);
+        opus_encoder_destroy(codec_inst->opus_enc);
+        return -1;
+    }
 
-  return (long)codec_inst;
+    return (long)codec_inst;
 }
 
-void opus_destroy(long h_inst) {
-  opus_state_t* codec_inst;
-
-  if (h_inst) {
-    codec_inst = (opus_state_t*)h_inst;
-    opus_encoder_destroy(codec_inst->opus_enc);
-    opus_decoder_destroy(codec_inst->opus_dec);
-    free(codec_inst);
-  }
-}
-
-int pcm16_2_opus( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
-		  unsigned int channels, unsigned int rate, long h_codec )
+void opus_destroy(long h_inst)
 {
-  opus_state_t* codec_inst;
-  int res;
+    opus_state_t *codec_inst;
 
-  if (!h_codec){
-    ERROR("opus codec not initialized.");
-    return 0;
-  }
-  codec_inst = (opus_state_t*)h_codec;
-
-
-  //DBG("OPUS encode: frame_size: %d, st->Fs = %d",size/2/channels,_OPUS_RATE);
-  //res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, size/2/channels, out_buf, AUDIO_BUFFER_SIZE);
-  res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, codec_inst->frame_size, out_buf, AUDIO_BUFFER_SIZE);
-
-  //DBG ("OPUS encode: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res);
-  /* returns bytes in encoded frame */
-  return res;
+    if (h_inst) {
+        codec_inst = (opus_state_t *)h_inst;
+        opus_encoder_destroy(codec_inst->opus_enc);
+        opus_decoder_destroy(codec_inst->opus_dec);
+        free(codec_inst);
+    }
 }
 
-static int opus_2_pcm16( unsigned char* out_buf, unsigned char* in_buf, unsigned int size,
-			 unsigned int channels, unsigned int rate, long h_codec )
+int pcm16_2_opus(unsigned char *out_buf, unsigned char *in_buf, unsigned int size, unsigned int channels,
+                 unsigned int rate, long h_codec)
 {
-  opus_state_t* codec_inst;
-  int res;
+    opus_state_t *codec_inst;
+    int           res;
 
-  if (!h_codec){
-    ERROR("opus codec not initialized.");
-    return 0;
-  }
-  codec_inst = (opus_state_t*)h_codec;
+    if (!h_codec) {
+        ERROR("opus codec not initialized.");
+        return 0;
+    }
+    codec_inst = (opus_state_t *)h_codec;
 
-  if (0<(res = opus_decode(codec_inst->opus_dec, in_buf, size, (opus_int16*)out_buf, AUDIO_BUFFER_SIZE/2, 0))) {
-    /* returns samples in encoded frame */
-    res*=2;
-  }
 
-  /* DBG ("OPUS decode: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res); */
+    // DBG("OPUS encode: frame_size: %d, st->Fs = %d",size/2/channels,_OPUS_RATE);
+    // res = opus_encode(codec_inst->opus_enc, (opus_int16*)in_buf, size/2/channels, out_buf, AUDIO_BUFFER_SIZE);
+    res = opus_encode(codec_inst->opus_enc, (opus_int16 *)in_buf, codec_inst->frame_size, out_buf, AUDIO_BUFFER_SIZE);
 
-  return res;
-
+    // DBG ("OPUS encode: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res);
+    /* returns bytes in encoded frame */
+    return res;
 }
 
-static int opus_plc( unsigned char* out_buf, unsigned int size,
-		     unsigned int channels, unsigned int rate, long h_codec )
+static int opus_2_pcm16(unsigned char *out_buf, unsigned char *in_buf, unsigned int size, unsigned int channels,
+                        unsigned int rate, long h_codec)
 {
-  opus_state_t* codec_inst;
-  int res;
+    opus_state_t *codec_inst;
+    int           res;
 
-  if (!h_codec){
-    ERROR("opus codec not initialized.");
-    return 0;
-  }
-  codec_inst = (opus_state_t*)h_codec;
+    if (!h_codec) {
+        ERROR("opus codec not initialized.");
+        return 0;
+    }
+    codec_inst = (opus_state_t *)h_codec;
 
-  if (size/channels > AUDIO_BUFFER_SIZE) {
-    /* DBG("OPUS plc: size %d, chan %d exceeds buffer size %d.", size, channels, AUDIO_BUFFER_SIZE); */
-    return 0;
-  }
+    if (0 < (res = opus_decode(codec_inst->opus_dec, in_buf, size, (opus_int16 *)out_buf, AUDIO_BUFFER_SIZE / 2, 0))) {
+        /* returns samples in encoded frame */
+        res *= 2;
+    }
 
-  if (0<(res = opus_decode(codec_inst->opus_dec, NULL, 0, (opus_int16*)out_buf, size/2/channels, 0))) {
-    /* returns samples in encoded frame */
-    res*=2;
-  }
+    /* DBG ("OPUS decode: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res); */
 
-  /* DBG ("OPUS plc: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res); */
-
-  return res;
+    return res;
 }
 
-static unsigned int opus_frames2samples(long h_codec, unsigned char* in, unsigned int size)
+static int opus_plc(unsigned char *out_buf, unsigned int size, unsigned int channels, unsigned int rate, long h_codec)
 {
-  opus_state_t* codec_inst;
-  if(!h_codec){
-    ERROR("opus codec not initialized.");
-    return 0;
-  }
-  codec_inst = (opus_state_t *)h_codec;
-  return opus_decoder_get_nb_samples(codec_inst->opus_dec,in,size);
-  /*unsigned int ret = opus_decoder_get_nb_samples(codec_inst->opus_dec,in,size);
-  DBG("opus_frames2samples(%ld, %p, %u) = %u",
-      h_codec,in,size,ret);
-  return ret;*/
+    opus_state_t *codec_inst;
+    int           res;
+
+    if (!h_codec) {
+        ERROR("opus codec not initialized.");
+        return 0;
+    }
+    codec_inst = (opus_state_t *)h_codec;
+
+    if (size / channels > AUDIO_BUFFER_SIZE) {
+        /* DBG("OPUS plc: size %d, chan %d exceeds buffer size %d.", size, channels, AUDIO_BUFFER_SIZE); */
+        return 0;
+    }
+
+    if (0 < (res = opus_decode(codec_inst->opus_dec, NULL, 0, (opus_int16 *)out_buf, size / 2 / channels, 0))) {
+        /* returns samples in encoded frame */
+        res *= 2;
+    }
+
+    /* DBG ("OPUS plc: size: %d, chan: %d, rate: %d, result %d.\n", size, channels, rate, res); */
+
+    return res;
 }
 
+static unsigned int opus_frames2samples(long h_codec, unsigned char *in, unsigned int size)
+{
+    opus_state_t *codec_inst;
+    if (!h_codec) {
+        ERROR("opus codec not initialized.");
+        return 0;
+    }
+    codec_inst = (opus_state_t *)h_codec;
+    return opus_decoder_get_nb_samples(codec_inst->opus_dec, in, size);
+    /*unsigned int ret = opus_decoder_get_nb_samples(codec_inst->opus_dec,in,size);
+    DBG("opus_frames2samples(%ld, %p, %u) = %u",
+        h_codec,in,size,ret);
+    return ret;*/
+}

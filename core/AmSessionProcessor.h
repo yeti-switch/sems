@@ -22,8 +22,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
@@ -47,93 +47,78 @@ class AmSession;
 
 #define E_SESSION_PROC_ITERATE 105
 
-struct AmSessionProcessorIterateRequestContext
-{
-    using iterate_func_cb_type = std::function<void (
-        AmSession* session, void* user_data, AmArg& ret)>;
+struct AmSessionProcessorIterateRequestContext {
+    using iterate_func_cb_type = std::function<void(AmSession *session, void *user_data, AmArg &ret)>;
 
-    using finish_func_cb_type = std::function<void (
-        const AmArg& ret, void* user_data)>;
+    using finish_func_cb_type = std::function<void(const AmArg &ret, void *user_data)>;
 
     iterate_func_cb_type iterate_callback;
-    finish_func_cb_type finish_callback;
-    void* user_data;
-    atomic_int threads_awaited;
-    AmArg aggregated_ret;
+    finish_func_cb_type  finish_callback;
+    void                *user_data;
+    atomic_int           threads_awaited;
+    AmArg                aggregated_ret;
 
-    AmSessionProcessorIterateRequestContext(
-        iterate_func_cb_type icb,
-        finish_func_cb_type fcb,
-        void* user_data,
-        int threads_count);
+    AmSessionProcessorIterateRequestContext(iterate_func_cb_type icb, finish_func_cb_type fcb, void *user_data,
+                                            int threads_count);
 };
 
-class AmSessionProcessorIterateRequestEvent
-  : public AmEvent
-{
+class AmSessionProcessorIterateRequestEvent : public AmEvent {
   public:
-    AmSessionProcessorIterateRequestEvent(
-        AmSessionProcessorIterateRequestContext* iterateCtx,
-        int index)
-      : AmEvent(E_SESSION_PROC_ITERATE)
-      , ctx(iterateCtx)
-      , ret(iterateCtx->aggregated_ret[index])
-    {}
+    AmSessionProcessorIterateRequestEvent(AmSessionProcessorIterateRequestContext *iterateCtx, int index)
+        : AmEvent(E_SESSION_PROC_ITERATE)
+        , ctx(iterateCtx)
+        , ret(iterateCtx->aggregated_ret[index])
+    {
+    }
 
-    AmSessionProcessorIterateRequestContext* ctx;
-    AmArg &ret;
+    AmSessionProcessorIterateRequestContext *ctx;
+    AmArg                                   &ret;
 };
 
 class AmSessionProcessor {
-    static vector<AmSessionProcessorThread*> threads;
-    static AmMutex threads_mut;
-    static vector<AmSessionProcessorThread*>::iterator threads_it;
+    static vector<AmSessionProcessorThread *>           threads;
+    static AmMutex                                      threads_mut;
+    static vector<AmSessionProcessorThread *>::iterator threads_it;
 
   public:
-    static void init();
-    static void stop();
-    static AmSessionProcessorThread* getProcessorThread(bool same = false);
-    static void addThreads(unsigned int num_threads);
-    static void sendIterateRequest(
-        AmSessionProcessorIterateRequestContext::iterate_func_cb_type icb,
-        AmSessionProcessorIterateRequestContext::finish_func_cb_type fcb,
-        void* callback_ptr);
+    static void                      init();
+    static void                      stop();
+    static AmSessionProcessorThread *getProcessorThread(bool same = false);
+    static void                      addThreads(unsigned int num_threads);
+    static void sendIterateRequest(AmSessionProcessorIterateRequestContext::iterate_func_cb_type icb,
+                                   AmSessionProcessorIterateRequestContext::finish_func_cb_type  fcb,
+                                   void                                                         *callback_ptr);
     static void get_statistics_count(StatCounterInterface::iterate_func_type f);
     static void get_statistics_time(StatCounterInterface::iterate_func_type f);
 };
 
-struct AmSessionProcessorThreadAddEvent 
-  : AmEvent
-{
-    AmSession* s;
-    AmSessionProcessorThreadAddEvent(AmSession* s)
-      : AmEvent(120),
-        s(s)
-    { }
+struct AmSessionProcessorThreadAddEvent : AmEvent {
+    AmSession *s;
+    AmSessionProcessorThreadAddEvent(AmSession *s)
+        : AmEvent(120)
+        , s(s)
+    {
+    }
 };
 
-class AmSessionProcessorThread 
-: public AmThread,
-  public AmEventHandler,
-  public AmEventNotificationSink
-{
+class AmSessionProcessorThread : public AmThread, public AmEventHandler, public AmEventNotificationSink {
   private:
-    AmEventQueue    events;
-    std::list<AmSession*> sessions;
-    std::vector<AmSession*> startup_sessions;
-    AmSharedVar<bool> stop_requested;
+    AmEventQueue             events;
+    std::list<AmSession *>   sessions;
+    std::vector<AmSession *> startup_sessions;
+    AmSharedVar<bool>        stop_requested;
 
-    AmCondition<bool> runcond;
-    std::set<AmEventQueue*> process_sessions;
-    AmMutex process_sessions_mut;
+    AmCondition<bool>        runcond;
+    std::set<AmEventQueue *> process_sessions;
+    AmMutex                  process_sessions_mut;
 
     EventStats event_stats;
-    AmMutex event_stats_mutex;
+    AmMutex    event_stats_mutex;
 
     // AmEventHandler interface
-    void process(AmEvent* e);
+    void process(AmEvent *e);
 
- public:
+  public:
     AmSessionProcessorThread();
     ~AmSessionProcessorThread();
 
@@ -142,10 +127,10 @@ class AmSessionProcessorThread
     void on_stop();
 
     // AmEventNotificationSink interface
-    void notify(AmEventQueue* sender);
+    void notify(AmEventQueue *sender);
 
-    void startSession(AmSession* s);
-    void sendIterateRequest(AmSessionProcessorIterateRequestEvent* req);
+    void startSession(AmSession *s);
+    void sendIterateRequest(AmSessionProcessorIterateRequestEvent *req);
 
     void get_statistics_count(StatCounterInterface::iterate_func_type f);
     void get_statistics_time(StatCounterInterface::iterate_func_type f);
