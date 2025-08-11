@@ -175,7 +175,8 @@ local function register(keys, args)
             id,
             {
                 first_binding[1],
-                first_binding[4]
+                first_binding[4],
+                first_binding[5],
             }
         }))
     end
