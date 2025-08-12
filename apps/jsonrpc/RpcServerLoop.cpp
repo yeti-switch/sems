@@ -416,13 +416,13 @@ int JsonRPCServerLoop::configure()
     if (JsonRPCServerModule::tcp_md5_password.size()) {
         struct tcp_md5sig md5sig;
         memset(&md5sig, 0, sizeof(md5sig));
-        memcpy(&md5sig.tcpm_addr, &listen_addr, sizeof(listen_addr));
-        /*md5sig.tcpm_flags = TCP_MD5SIG_FLAG_PREFIX;
-        md5sig.tcpm_prefixlen = 0;*/
+        md5sig.tcpm_flags = TCP_MD5SIG_FLAG_PREFIX;
+        md5sig.tcpm_prefixlen = 0;
+        md5sig.tcpm_addr.ss_family = AF_INET;
         md5sig.tcpm_keylen = static_cast<uint16_t>(JsonRPCServerModule::tcp_md5_password.size());
         memcpy(md5sig.tcpm_key, JsonRPCServerModule::tcp_md5_password.data(), md5sig.tcpm_keylen);
 
-        if (setsockopt(listen_fd, IPPROTO_TCP, TCP_MD5SIG, &md5sig, sizeof(md5sig)) < 0) {
+        if (setsockopt(listen_fd, IPPROTO_TCP, TCP_MD5SIG_EXT, &md5sig, sizeof(md5sig)) < 0) {
             ERROR("setsockopt(TCP_MD5SIG): %d", errno);
             return 1;
         }
