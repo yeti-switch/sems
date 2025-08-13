@@ -1,3 +1,10 @@
+sems (1.170.0) stable; urgency=low
+  * jsonrpc: fix tcp md5 password
+  * registrar: support clickhouse snapshots
+    * add options: clickhouse.{destinations, table, period}
+  * uac_auth: checkAuth: support multiple realms and default_realm 
+ -- Michael Furmur <furmur@pm.me>  Wed, 13 Aug 2025 13:43:49 +0300
+
 sems (1.169.0) stable; urgency=low
   * SDP: parse and generate 'ssrc' media attribute
   * add cname for RTCP SDES packets
