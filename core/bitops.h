@@ -73,7 +73,7 @@ will always be carried out atomically:
 
 #define DECLARE_BITMAP_ALIGNED(name, bits) unsigned long name[bits / BITS_PER_LONG] ____cacheline_aligned
 #define DECLARE_BITMAP(name, bits)         unsigned long name[bits / BITS_PER_LONG]
-#define BITMAP_SIZE(bits)                  (sizeof(unsigned long[BITOP_WORD(bits) + ((bits) % BITS_PER_LONG) ? 1 : 0]))
+#define BITMAP_SIZE(bits)                  (sizeof(unsigned long[BITOP_WORD(bits) + (((bits) % BITS_PER_LONG) ? 1 : 0)]))
 #define IS_IMMEDIATE(nr)                   (__builtin_constant_p(nr))
 
 

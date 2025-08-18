@@ -16,19 +16,16 @@ ENDIF(LAME_FOUND)
 
 ADD_SUBDIRECTORY(http)
 ADD_SUBDIRECTORY(s3_client)
-
 ADD_SUBDIRECTORY(redis)
-
 ADD_SUBDIRECTORY(postgresql)
 ADD_SUBDIRECTORY(postgresql_proxy)
-
 ADD_SUBDIRECTORY(bus_client)
 ADD_SUBDIRECTORY(sctp_bus)
 ADD_SUBDIRECTORY(conference_mixer)
-
 ADD_SUBDIRECTORY(radius_client)
 ADD_SUBDIRECTORY(registrar_client)
-
 ADD_SUBDIRECTORY(registrar)
-
 ADD_SUBDIRECTORY(identity_validator)
+ADD_SUBDIRECTORY(packet_filter)
+
+

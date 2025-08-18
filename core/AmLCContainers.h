@@ -276,6 +276,7 @@ class MEDIA_info : public IP_info {
     virtual bool getNextRtpAddress(sockaddr_storage &ss)                                                       = 0;
     virtual void freeRtpAddress(const sockaddr_storage &ss)                                                    = 0;
     virtual void iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl) = 0;
+    virtual void initPortmapHandlers(std::function<void(PortMap &portmap)> cb)                                 = 0;
 
     std::string &getAdvertisedHost()
     {
@@ -322,6 +323,7 @@ class RTP_info : public MEDIA_info {
     bool getNextRtpAddress(sockaddr_storage &ss) override;
     void freeRtpAddress(const sockaddr_storage &ss) override;
     void iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl) override;
+    void initPortmapHandlers(std::function<void(PortMap &)> cb) override;
 };
 
 class RTSP_info : public MEDIA_info {
@@ -335,10 +337,11 @@ class RTSP_info : public MEDIA_info {
     RTSP_info(const RTSP_info &info) = delete;
     virtual ~RTSP_info() {}
 
-    int  prepare(const std::string &iface_name);
-    bool getNextRtpAddress(sockaddr_storage &ss);
-    void freeRtpAddress(const sockaddr_storage &ss);
-    void iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl);
+    int  prepare(const std::string &iface_name) override;
+    bool getNextRtpAddress(sockaddr_storage &ss) override;
+    void freeRtpAddress(const sockaddr_storage &ss) override;
+    void iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl) override;
+    void initPortmapHandlers(std::function<void(PortMap &)> cb) override;
 
     static RTSP_info *toMEDIA_RTSP(MEDIA_info *info)
     {

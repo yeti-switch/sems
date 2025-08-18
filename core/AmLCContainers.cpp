@@ -107,6 +107,13 @@ void RTP_info::iterateUsedPorts(std::function<void(const std::string &, unsigned
     }
 }
 
+void RTP_info::initPortmapHandlers(std::function<void(PortMap &)> cb)
+{
+    for (auto &it : addresses)
+        cb(it);
+}
+
+
 int RTSP_info::prepare(const std::string &iface_name)
 {
     if (MEDIA_info::prepare(iface_name))
@@ -134,6 +141,12 @@ void RTSP_info::iterateUsedPorts(std::function<void(const std::string &, unsigne
 {
     portmap.iterateUsedPorts(cl);
 }
+
+void RTSP_info::initPortmapHandlers(std::function<void(PortMap &)> cb)
+{
+    cb(portmap);
+}
+
 
 bool IPAddr::operator==(const string &ip)
 {

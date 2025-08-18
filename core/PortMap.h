@@ -24,14 +24,27 @@ class PortMap {
     std::string      address;
     sockaddr_storage saddr;
 
+    std::function<void(unsigned short)> portBind;
+    std::function<void(unsigned short)> portUnbind;
+
   public:
     PortMap();
     PortMap(const PortMap &) = delete;
     PortMap(PortMap &&)      = delete;
+    typedef std::function<void(const std::function<void(unsigned short)> &bind_f,
+                               const std::function<void(unsigned short)> &unbind_f)>
+        portCallbackRegistrator;
 
     unsigned short getNextRtpPort();
     void           freeRtpPort(unsigned int port);
     void           iterateUsedPorts(std::function<void(const std::string &, unsigned short, unsigned short)> cl);
+
+    void registerPortCallbacks(const std::function<void(unsigned short)> &bind_f,
+                               const std::function<void(unsigned short)> &unbind_f)
+    {
+        portBind   = std::move(bind_f);
+        portUnbind = std::move(unbind_f);
+    }
 
     /* initialize variables for RTP ports pool management and validate ports range
      * returns 0 on success, 1 otherwise */
@@ -41,5 +54,7 @@ class PortMap {
     void copy_addr(sockaddr_storage &ss);
     bool match_addr(const sockaddr_storage &ss);
 
-    void setAddress(const string &address_) { address = address_; }
+    void                    setAddress(const string &address_) { address = address_; }
+    string                  getAddress() { return address; }
+    const sockaddr_storage &getSockAddr() const { return saddr; }
 };

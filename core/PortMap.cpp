@@ -5,6 +5,7 @@
 
 PortMap::PortMap()
     : opened_ports_counter(nullptr)
+    , saddr{}
 {
     memset(ports_state, 0, sizeof(ports_state));
 }
@@ -145,7 +146,10 @@ bit_is_aquired:
 
     opened_ports_counter->inc(2);
 
-    return (static_cast<unsigned short>(it - ports_state) << _BITOPS_LONG_SHIFT) + i;
+    unsigned short port = (static_cast<unsigned short>(it - ports_state) << _BITOPS_LONG_SHIFT) + i;
+    if (portBind)
+        portBind(port);
+    return port;
 }
 
 void PortMap::freeRtpPort(unsigned int port)
@@ -162,6 +166,9 @@ void PortMap::freeRtpPort(unsigned int port)
     opened_ports_counter->dec(2);
     clear_bit(port % BITS_PER_LONG, &ports_state[USED_PORT2IDX(port)]);
     __sync_synchronize();
+
+    if (portUnbind)
+        portUnbind(port);
 }
 
 

@@ -1,3 +1,4 @@
 usr/lib/sems/plug-in/*.so
+usr/lib/sems/bpf
 usr/lib/sems/scripts
 etc/sems/etc etc/sems/
