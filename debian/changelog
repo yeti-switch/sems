@@ -1,3 +1,7 @@
+sems (1.170.1) stable; urgency=low
+  * clear RTP timeout on RTCP packets
+ -- Michael Furmur <furmur@pm.me>  Tue, 19 Aug 2025 10:36:42 +0300
+
 sems (1.170.0) stable; urgency=low
   * jsonrpc: fix tcp md5 password
   * registrar: support clickhouse snapshots
