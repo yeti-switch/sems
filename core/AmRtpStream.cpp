@@ -1238,6 +1238,7 @@ void AmRtpStream::onRtpPacket(AmRtpPacket *p, AmMediaTransport *transport)
 
 void AmRtpStream::onRtcpPacket(AmRtpPacket *p, AmMediaTransport *transport)
 {
+    clearRTPTimeout(&p->recv_time);
     p->rtcp_parse_update_stats(rtp_stats);
     if (cur_rtcp_trans != transport && multiplexing) {
         cur_rtcp_trans = transport;
