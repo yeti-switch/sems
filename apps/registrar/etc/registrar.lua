@@ -37,6 +37,7 @@ local function load_contacts()
             for _, value in ipairs(other) do
                 table.insert(e, value)
             end
+            table.insert(e, redis.call('TTL', v))
             data[#data +1] = e
         end
     until(tonumber(r[1]) == 0)
