@@ -2,7 +2,7 @@
 #include <log.h>
 #include <AmUtils.h>
 
-int SipRegistrarConfig::parse(const string &config, Configurable *obj)
+int SipRegistrarConfig::parse(const string &config)
 {
     cfg_opt_t redis_pool_opts[] = { CFG_STR_LIST(CFG_PARAM_HOSTS, 0, CFGF_NODEFAULT),
                                     CFG_INT(CFG_PARAM_TIMEOUT, 0, CFGF_NODEFAULT),
@@ -46,7 +46,14 @@ int SipRegistrarConfig::parse(const string &config, Configurable *obj)
         return -1;
     }
 
-    int res = obj->configure(cfg);
+    if (conf_objects.empty())
+        return 0;
+    auto obj = conf_objects.begin();
+    do {
+        if ((*obj)->configure(cfg))
+            return -1;
+        obj++;
+    } while (obj != conf_objects.end());
     cfg_free(cfg);
-    return res;
+    return 0;
 }

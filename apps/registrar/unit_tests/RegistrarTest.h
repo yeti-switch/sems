@@ -32,3 +32,14 @@ class RegistrarTest : public testing::Test {
     void dumpKeepAliveContexts(AmArg &ret);
     void clear_keepalive_context();
 };
+
+class RegistrarTestFactory : public Configurable {
+    string scripts_dir;
+    string get_script_path(const string &sript_name);
+
+  public:
+    RegistrarTestFactory();
+    int configure(cfg_t *cfg) override;
+};
+
+typedef singleton<RegistrarTestFactory> registrar_test;

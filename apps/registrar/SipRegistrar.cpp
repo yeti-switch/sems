@@ -91,7 +91,12 @@ class SipRegistrarFactory : public AmConfigFactory, public AmSessionFactory, pub
 
     /* AmConfigFactory */
 
-    int configure(const string &config) { return SipRegistrarConfig::parse(config, registrar); }
+    int configure(const string &config)
+    {
+        SipRegistrarConfig *reg_cfg = reg_config::instance();
+        reg_cfg->addConfObject(registrar);
+        return reg_cfg->parse(config);
+    }
 
     int reconfigure(const string &config) { return configure(config); }
 

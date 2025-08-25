@@ -44,6 +44,11 @@ class Configurable {
 };
 
 class SipRegistrarConfig {
+    vector<Configurable *> conf_objects;
+
   public:
-    static int parse(const string &config, Configurable *obj);
+    void addConfObject(Configurable *obj) { conf_objects.push_back(obj); }
+    int  parse(const string &config);
 };
+
+typedef singleton<SipRegistrarConfig> reg_config;

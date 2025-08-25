@@ -22,10 +22,12 @@ using std::vector;
 #define RPC_AOR_LOOKUP_SCRIPT "rpc_aor_lookup"
 
 class RegistrarTest;
+class RegistrarTestFactory;
 
 class RegistrarRedisClient : public virtual Configurable {
   protected:
     friend RegistrarTest;
+    friend RegistrarTestFactory;
 
     bool   use_functions;
     string scripts_dir;

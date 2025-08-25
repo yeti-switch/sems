@@ -4,6 +4,33 @@
 
 #define registrar SipRegistrar::instance()
 
+RegistrarTestFactory *registrar_test_global = registrar_test::instance();
+
+RegistrarTestFactory::RegistrarTestFactory()
+{
+    reg_config::instance()->addConfObject(this);
+}
+
+string RegistrarTestFactory::get_script_path(const string &sript_name)
+{
+    return format("{}/{}.lua", scripts_dir, sript_name);
+}
+
+int RegistrarTestFactory::configure(cfg_t *cfg)
+{
+    auto reg_redis = cfg_getsec(cfg, CFG_SEC_REDIS);
+    if (!reg_redis)
+        return -1;
+
+    scripts_dir                  = cfg_getstr(reg_redis, CFG_PARAM_SCRIPTS_DIR);
+    RedisTestServer *test_server = &redis_test::instance()->test_server;
+    test_server->addLoadScriptCommandResponse(get_script_path(REGISTER_SCRIPT), register_script_hash);
+    test_server->addLoadScriptCommandResponse(get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(get_script_path(LOAD_CONTACTS_SCRIPT), load_contacts_script_hash);
+    return 0;
+}
+
 RegistrarTest::RegistrarTest()
 {
     DBG("RegistrarTest");
