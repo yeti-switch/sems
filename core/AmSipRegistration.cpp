@@ -322,6 +322,9 @@ void AmSIPRegistration::applyInfo()
     dlg.initFromLocalRequest(req);
     dlg.cseq = 50;
 
+    if (!info.route_set.empty()) {
+        dlg.setRouteSet(info.route_set);
+    } else
     // set outbound proxy as next hop
     if (!info.proxy.empty()) {
         dlg.outbound_proxy = info.proxy;
