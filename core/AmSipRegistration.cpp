@@ -31,6 +31,7 @@
 #include "AmUtils.h"
 #include "AmSessionContainer.h"
 #include "sip/parse_via.h"
+#include "sip/parse_route.h"
 
 bool SIPRegistrationInfo::init_from_amarg(const AmArg &info)
 {
@@ -323,7 +324,8 @@ void AmSIPRegistration::applyInfo()
     dlg.cseq = 50;
 
     if (!info.route_set.empty()) {
-        dlg.setRouteSet(info.route_set);
+        if(parse_and_validate_route(info.route_set) == 0)
+            dlg.setRouteSet(info.route_set);
     } else
     // set outbound proxy as next hop
     if (!info.proxy.empty()) {

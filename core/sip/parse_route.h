@@ -31,6 +31,9 @@
 
 #include "parse_header.h"
 
+#include <string>
+using std::string;
+
 struct sip_nameaddr;
 struct sip_uri;
 
@@ -60,6 +63,8 @@ struct sip_route : public sip_parsed_hdr {
 };
 
 int parse_route(sip_header *rh);
+
+int parse_and_validate_route(const string &route);
 
 int      parse_first_route_uri(sip_header *fr);
 sip_uri *get_first_route_uri(sip_header *fr);

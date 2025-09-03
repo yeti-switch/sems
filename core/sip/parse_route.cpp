@@ -33,6 +33,9 @@
 #include <memory>
 using std::unique_ptr;
 
+#include <functional>
+using std::function;
+
 route_elmt::~route_elmt()
 {
     if (addr)
@@ -152,16 +155,10 @@ error:
     return 0;
 }
 
-int parse_route(sip_header *rh)
-{
-    if (rh->p)
-        return 0;
+static int parse_route(const char *route, size_t len, function<int(const char *c, const size_t len)> iterator) {
 
-    sip_route *route = new sip_route();
-    rh->p            = route;
-
-    const char *c   = rh->value.s;
-    const char *end = rh->value.s + rh->value.len;
+    const char *c   = route;
+    const char *end = route + len;
     const char *eor = NULL;
 
     while (c < end) {
@@ -174,10 +171,11 @@ int parse_route(sip_header *rh)
         }
 
         if (eor) {
-            route_elmt *re = new route_elmt();
-            re->route.s    = route_begin;
-            re->route.len  = eor - route_begin;
-            route->elmts.push_back(re);
+
+            int res = iterator(route_begin, eor - route_begin);
+
+            if (res != 0)
+                return res;
         }
 
         if (err == 0)
@@ -185,6 +183,42 @@ int parse_route(sip_header *rh)
     }
 
     return 0;
+}
+
+int parse_route(sip_header *rh) {
+
+    if (rh->p)
+        return 0;
+
+    sip_route *route = new sip_route();
+    rh->p            = route;
+
+    return parse_route(rh->value.s, rh->value.len, [&](const char *c, const size_t len) {
+
+        route_elmt *re = new route_elmt();
+        re->route.s    = c;
+        re->route.len  = len;
+        route->elmts.push_back(re);
+
+        return 0;
+    });
+}
+
+int parse_and_validate_route(const string &route) {
+
+    return parse_route(route.c_str(), route.length(), [](const char *c, const size_t len) {
+
+        // validate route
+        sip_nameaddr na;
+        const char *_c = c;
+
+        if (parse_nameaddr_uri(&na, &_c, len) < 0) {
+            ERROR("Parsing name-addr and uri failed for %.*s", len, c);
+            return -1;
+        }
+
+        return 0;
+    });
 }
 
 int parse_first_route_uri(sip_header *fr)
