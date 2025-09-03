@@ -126,7 +126,7 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
                                        bool &force_expires_interval, const int &retry_delay, const int &max_attempts,
                                        const int &transport_protocol_id, const int &proxy_transport_protocol_id,
                                        const int &transaction_timeout, const int &srv_failover_timeout,
-                                       const string &handle, const dns_priority &priority,
+                                       const string &handle, const dns_priority &priority, const string &route_set,
                                        sip_uri::uri_scheme scheme_id);
     bool   hasRegistration(const string &handle);
 

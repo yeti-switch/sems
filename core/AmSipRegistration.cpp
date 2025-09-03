@@ -135,6 +135,7 @@ bool SIPRegistrationInfo::init_from_amarg(const AmArg &info)
     DEF_AND_VALIDATE_OPTIONAL_STR(contact);
     DEF_AND_VALIDATE_OPTIONAL_STR(contact_uri_params);
     DEF_AND_VALIDATE_OPTIONAL_STR(sip_interface_name);
+    DEF_AND_VALIDATE_OPTIONAL_STR(route_set);
 
     DEF_AND_VALIDATE_OPTIONAL_INT_ALT(expires_interval, expires, 0);
     DEF_AND_VALIDATE_OPTIONAL_INT(force_expires_interval, 0);

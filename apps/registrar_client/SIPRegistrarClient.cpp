@@ -104,6 +104,7 @@ static void reg2arg(const map<string, AmSIPRegistration *>::iterator &it, AmArg 
     r["resolve_priority"]   = ri.resolve_priority;
     r["scheme_id"]          = ri.scheme_id;
     r["sip_interface_name"] = ri.sip_interface_name;
+    r["route_set"]          = ri.route_set;
     ret.push(r);
 }
 
@@ -722,14 +723,14 @@ string SIPRegistrarClient::postSIPNewRegistrationEvent(
     const string &pwd, const string &sess_link, const string &proxy, const string &contact, const int &expires_interval,
     bool &force_expires_interval, const int &retry_delay, const int &max_attempts, const int &transport_protocol_id,
     const int &proxy_transport_protocol_id, const int &transaction_timeout, const int &srv_failover_timeout,
-    const string &handle, const dns_priority &priority, sip_uri::uri_scheme scheme_id = sip_uri::SIP)
+    const string &handle, const dns_priority &priority, const string &route_set, sip_uri::uri_scheme scheme_id = sip_uri::SIP)
 {
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
     instance()->postEvent(new SIPNewRegistrationEvent(
         SIPRegistrationInfo(id, domain, user, name, auth_user, pwd, proxy, contact, string(), map<string, string>(),
                             expires_interval, force_expires_interval, retry_delay, max_attempts, transport_protocol_id,
                             proxy_transport_protocol_id, transaction_timeout, srv_failover_timeout, priority,
-                            scheme_id),
+                            route_set, scheme_id),
         l_handle, sess_link));
     return l_handle;
 }
@@ -815,6 +816,10 @@ struct RegistrationMetricGroup : public StatCountersGroupsInterface {
         if (!ri.proxy.empty()) {
             labels["proxy"]                    = ri.proxy;
             labels["proxy_transport_protocol"] = c2stlstr(transport_str(ri.proxy_transport_protocol_id));
+        }
+
+        if (!ri.route_set.empty()) {
+            labels["route_set"] = ri.route_set;
         }
 
         auto reg_state = reg.getState();
@@ -907,7 +912,7 @@ void SIPRegistrarClient::createRegistration(const AmArg &args, AmArg &ret)
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 
     } else {
-        string proxy, contact, handle, sess_link;
+        string proxy, route_set, contact, handle, sess_link;
         int    expires_interval = 0, force = 0, retry_delay = DEFAULT_REGISTER_RETRY_DELAY,
             max_attempts = REGISTER_ATTEMPTS_UNLIMITED, transport_protocol_id = sip_transport::UDP,
             proxy_transport_protocol_id = sip_transport::UDP, scheme_id = sip_uri::SIP, transaction_timeout = 0,
@@ -964,6 +969,7 @@ void SIPRegistrarClient::createRegistration(const AmArg &args, AmArg &ret)
             DEF_AND_VALIDATE_OPTIONAL_STR(17, handle);
             DEF_AND_VALIDATE_OPTIONAL_INT(18, scheme_id);
             DEF_AND_VALIDATE_OPTIONAL_STR(19, priority_str);
+            DEF_AND_VALIDATE_OPTIONAL_STR(20, route_set);
 
             priority = string_to_priority(priority_str);
 
@@ -979,7 +985,7 @@ void SIPRegistrarClient::createRegistration(const AmArg &args, AmArg &ret)
             args.get(0).asCStr(), args.get(1).asCStr(), args.get(2).asCStr(), args.get(3).asCStr(),
             args.get(4).asCStr(), args.get(5).asCStr(), sess_link, proxy, contact, expires_interval,
             force_expires_interval, retry_delay, max_attempts, transport_protocol_id, proxy_transport_protocol_id,
-            transaction_timeout, srv_failover_timeout, handle, priority, static_cast<sip_uri::uri_scheme>(scheme_id)));
+            transaction_timeout, srv_failover_timeout, handle, priority, route_set, static_cast<sip_uri::uri_scheme>(scheme_id)));
     }
 }
 

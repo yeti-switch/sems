@@ -66,6 +66,7 @@ struct SIPRegistrationInfo {
     int                 srv_failover_timeout;
     dns_priority        resolve_priority;
     sip_uri::uri_scheme scheme_id;
+    string              route_set;
 
     SIPRegistrationInfo(const string &id, const string &domain, const string &user, const string &name,
                         const string &auth_user, const string &pwd, const string &proxy, const string &contact,
@@ -73,7 +74,7 @@ struct SIPRegistrationInfo {
                         const int &expires_interval, const bool &force_expires_interval, const int &retry_delay,
                         const int &max_attempts, const int &transport_protocol_id,
                         const int &proxy_transport_protocol_id, const int &transaction_timeout,
-                        const int &srv_failover_timeout, const dns_priority &resolve_priority,
+                        const int &srv_failover_timeout, const dns_priority &resolve_priority, const string &route_set,
                         sip_uri::uri_scheme scheme_id = sip_uri::SIP, int port = 0)
         : id(id)
         , domain(domain)
@@ -97,6 +98,7 @@ struct SIPRegistrationInfo {
         , srv_failover_timeout(srv_failover_timeout)
         , resolve_priority(resolve_priority)
         , scheme_id(scheme_id)
+        , route_set(route_set)
     {
     }
     SIPRegistrationInfo()
