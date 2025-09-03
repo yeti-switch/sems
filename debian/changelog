@@ -1,3 +1,7 @@
+sems (1.170.2) stable; urgency=low
+  * registrar: return back 'expires' for clickhouse snapshots
+ -- Michael Furmur <furmur@pm.me>  Wed, 03 Sep 2025 18:42:33 +0300
+
 sems (1.170.1) stable; urgency=low
   * clear RTP timeout on RTCP packets
  -- Michael Furmur <furmur@pm.me>  Tue, 19 Aug 2025 10:36:42 +0300
