@@ -1,5 +1,7 @@
 #include "RegistrarTest.h"
 #include "../SipRegistrar.h"
+#include "format_helper.h"
+
 #include <hiredis/read.h>
 
 #define registrar SipRegistrar::instance()
