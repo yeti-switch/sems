@@ -45,6 +45,7 @@ class SipSingleProbe : public AmBasicSipEventHandler, public DialogControl, publ
     string               contact_uri;
     string               proxy;
     unsigned int         proxy_transport_protocol_id;
+    string               route_set;
     std::chrono::seconds interval;
     string               append_headers;
     string               sip_interface_name;

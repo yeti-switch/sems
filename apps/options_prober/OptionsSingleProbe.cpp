@@ -5,6 +5,7 @@
 #include "AmSession.h"
 #include "sip/parse_via.h"
 #include "sip/parse_uri.h"
+#include "sip/parse_route.h"
 
 vector<string> ProbersMetricGroup::metrics_keys_names = { "options_probe_last_reply_code",
                                                           "options_probe_last_reply_rtt_ms" };
@@ -177,6 +178,7 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     ASSIGN_OPTIONAL_STR(contact_uri);
     ASSIGN_OPTIONAL_STR(proxy);
     ASSIGN_OPTIONAL_INT(proxy_transport_protocol_id);
+    ASSIGN_OPTIONAL_STR(route_set);
     ASSIGN_OPTIONAL_STR(append_headers);
     ASSIGN_OPTIONAL_STR(sip_interface_name);
     ASSIGN_OPTIONAL_STR(auth_username);
@@ -223,6 +225,10 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     dlg.initFromLocalRequest(req);
     dlg.cseq = 50;
 
+    if (!route_set.empty()) {
+        if(parse_and_validate_route(route_set) == 0)
+            dlg.setRouteSet(route_set);
+    } else
     // set outbound proxy as next hop
     if (!proxy.empty()) {
         dlg.outbound_proxy = proxy;
