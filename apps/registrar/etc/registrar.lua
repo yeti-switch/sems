@@ -5,15 +5,15 @@
 --   * contact_uri2
 -- c:id:contact_uri1 (expires in TTL)
 --   * path: 127.0.0.1:5060
-local function get_bindings(id, auth_id, cleanup, ...)
+local function get_bindings(id, auth_id, cleanup)
     local ret = {}
 
     for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
         local contact_key = 'c:'..id..':'..c
         local expires = redis.call('TTL', contact_key)
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, ...)
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5]}
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers')
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7]}
             ret[#ret+1] = d
         elseif cleanup then
             -- cleanup obsolete SET members
@@ -87,20 +87,34 @@ local function rpc_aor_lookup(keys)
 
     for id in pairs(aor_keys) do
         ret[#ret + 1] = id
-        ret[#ret + 1] = get_bindings(id, 'a:'..id, false, 'node_id', 'interface_name', 'agent','path', 'headers')
+        ret[#ret + 1] = get_bindings(id, 'a:'..id, false)
     end
 
     return ret
 end
 
--- auth_id [ expires [ contact node_id interace_name user_agent path headers ] ]
+
+local function cleanup_instance_reg_id(id, instance, reg_id)
+
+    for i,c in ipairs(redis.call('SMEMBERS', 'a:'..id)) do
+        local contact_key = 'c:'..id..':'..c
+        local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
+
+        if hash_data[1] == instance and hash_data[2] == reg_id then
+            redis.call('DEL', contact_key)
+        end
+    end
+end
+
+
+-- auth_id [ expires [ contact instance reg_id node_id interace_name user_agent path headers ] ]
 local function register(keys, args)
     local id = keys[1]
     local auth_id = 'a:'..id
 
     if not args[1] then
         -- no expires. fetch all bindings
-        return get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id', 'agent', 'headers')
+        return get_bindings(id, auth_id, true)
     end
 
     local expires = tonumber(args[1])
@@ -123,17 +137,19 @@ local function register(keys, args)
             -- remove specific binding
             redis.call('SREM', auth_id, contact)
             redis.call('DEL', contact_key)
-            return get_bindings(id, auth_id, true, 'path','interface_name', 'node_id', 'agent', 'headers')
+            return get_bindings(id, auth_id, true)
         end
     end
 
     local contact_key = 'c:'..id..':'..contact
-    local node_id = args[3]
-    local interface_name = args[4]
-    local user_agent = args[5]
-    local path = args[6]
-    local headers = args[7]
-    local bindings_max = tonumber(args[8])
+    local instance = args[3]
+    local reg_id = args[4]
+    local node_id = args[5]
+    local interface_name = args[6]
+    local user_agent = args[7]
+    local path = args[8]
+    local headers = args[9]
+    local bindings_max = tonumber(args[10])
 
     if not user_agent then
         user_agent = ''
@@ -150,6 +166,10 @@ local function register(keys, args)
         end
     end
 
+    if #instance > 0 then
+        cleanup_instance_reg_id(id, instance, reg_id)
+    end
+
     -- check for max allowed bindings
     if redis.call('SCARD', auth_id) >= bindings_max then
         return 'Too many registered contacts'
@@ -158,6 +178,8 @@ local function register(keys, args)
     -- add binding
     redis.call('SADD', auth_id, contact)
     redis.call('HMSET', contact_key,
+        'instance', instance,
+        'reg_id', reg_id,
         'node_id',node_id,
         'interface_name',interface_name,
         'agent',user_agent,
@@ -167,17 +189,18 @@ local function register(keys, args)
     -- set TTL
     redis.call('EXPIRE', contact_key, expires)
 
-    local bindings = get_bindings(id, auth_id, true, 'path', 'interface_name', 'node_id', 'agent', 'headers')
+    local bindings = get_bindings(id, auth_id, true)
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then
+        -- contact[1] expires[2] contact_key[3] instance [4] reg_id[5] node_id[6] path[7] interface_name[8] agent[9] headers[10]
         -- publish json encoded data in the AoR resolving format to the 'reg' channel
         redis.call('PUBLISH', 'reg', cjson.encode({
             id,
             {
-                first_binding[1],
-                first_binding[4],
-                first_binding[5],
+                first_binding[1], -- contact
+                first_binding[7], -- path
+                first_binding[8], -- interface_name
             }
         }))
     end
@@ -186,13 +209,8 @@ local function register(keys, args)
     return bindings
 end
 
-redis.register_function("register", register)
-redis.register_function{function_name="load_contacts",
-                        callback=load_contacts,
-                        flags={"no-writes"}}
-redis.register_function{function_name="aor_lookup",
-                        callback=aor_lookup,
-                        flags={"no-writes"}}
-redis.register_function{function_name="rpc_aor_lookup",
-                        callback=rpc_aor_lookup,
-                        flags={"no-writes"}}
+
+redis.register_function{function_name="register",      callback=register}
+redis.register_function{function_name="load_contacts", callback=load_contacts, flags={"no-writes"}}
+redis.register_function{function_name="aor_lookup",    callback=aor_lookup,    flags={"no-writes"}}
+redis.register_function{function_name="rpc_aor_lookup",callback=rpc_aor_lookup,flags={"no-writes"}}

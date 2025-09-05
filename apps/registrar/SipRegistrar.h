@@ -125,8 +125,9 @@ class SipRegistrar : public AmThread,
 
     bool fetch_all(AmObject *user_data, int user_type_id, const string &registration_id);
     bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
-    bool bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact, int expires,
-              const string &user_agent, const string &path, const string &interface_name, const string &headers);
+    bool bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
+              const string &instance, long reg_id, int expires, const string &user_agent, const string &path,
+              const string &interface_name, const string &headers);
     bool resolve_aors(AmObject *user_data, int user_type_id, std::set<string> aor_ids);
     bool load_contacts(AmObject *user_data, int user_type_id);
     bool subscribe(int user_type_id);

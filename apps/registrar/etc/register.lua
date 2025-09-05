@@ -1,4 +1,4 @@
--- auth_id [ expires [ contact node_id interace_id user_agent path ] ]
+-- auth_id [ expires [ contact instance reg_id node_id interace_id user_agent path ] ]
 
 local id = KEYS[1]
 local auth_id = 'a:'..id
@@ -9,6 +9,7 @@ local auth_id = 'a:'..id
 -- c:id:contact_uri1 (expires in TTL)
 --   * path: 127.0.0.1:5060
 
+
 local function get_bindings()
     local ret = {}
 
@@ -17,8 +18,8 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'path', 'interface_name', 'node_id', "agent", "headers")
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5] }
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'path', 'interface_name', 'node_id', 'agent', 'headers')
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7] }
             ret[#ret+1] = d
         else
             -- cleanup obsolete SET members
@@ -28,6 +29,19 @@ local function get_bindings()
 
     return ret
 end
+
+local function cleanup_instance_reg_id(id, instance, reg_id)
+
+    for i,c in ipairs(redis.call('SMEMBERS', 'a:'..id)) do
+        local contact_key = 'c:'..id..':'..c
+        local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
+
+        if hash_data[1] == instance and hash_data[2] == reg_id then
+            redis.call('DEL', contact_key)
+        end
+    end
+end
+
 
 if not ARGV[1] then
     -- no expires. fetch all bindings
@@ -60,12 +74,14 @@ if expires==0 then
 end
 
 local contact_key = 'c:'..id..':'..contact
-local node_id = ARGV[3]
-local interface_name = ARGV[4]
-local user_agent = ARGV[5]
-local path = ARGV[6]
-local headers = ARGV[7]
-local bindings_max = tonumber(ARGV[8])
+local instance = ARGV[3]
+local reg_id = ARGV[4]
+local node_id = ARGV[5]
+local interface_name = ARGV[6]
+local user_agent = ARGV[7]
+local path = ARGV[8]
+local headers = ARGV[9]
+local bindings_max = tonumber(ARGV[10])
 
 if not user_agent then
     user_agent = ''
@@ -82,6 +98,10 @@ for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
     end
 end
 
+if #instance > 0 then
+    cleanup_instance_reg_id(id, instance, reg_id)
+end
+
 -- check for max allowed bindings
 if redis.call('SCARD', auth_id) >= bindings_max then
     return 'Too many registered contacts'
@@ -90,6 +110,8 @@ end
 -- add binding
 redis.call('SADD', auth_id, contact)
 redis.call('HMSET', contact_key,
+    'instance', instance,
+    'reg_id', reg_id,
     'node_id', node_id,
     'interface_name', interface_name,
     'agent', user_agent,

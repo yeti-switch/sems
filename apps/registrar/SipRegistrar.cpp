@@ -530,7 +530,7 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
 
         for (j = 0; j < aor_data_arg.size(); j++) {
             AmArg &aor_entry_arg = aor_data_arg[j];
-            if (!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 8) {
+            if (!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 10) {
                 ERROR("unexpected aor_entry_arg layout. skip entry");
                 continue;
             }
@@ -540,18 +540,20 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
             r["auth_id"]        = id_arg;
             r["contact"]        = aor_entry_arg[0];
             r["expires"]        = aor_entry_arg[1];
-            r["node_id"]        = aor_entry_arg[3];
-            r["interface_name"] = aor_entry_arg[4];
-            r["user_agent"]     = aor_entry_arg[5];
-            r["path"]           = aor_entry_arg[6];
+            r["instance"]       = aor_entry_arg[3];
+            r["reg_id"]         = aor_entry_arg[4];
+            r["node_id"]        = aor_entry_arg[5];
+            r["interface_name"] = aor_entry_arg[6];
+            r["user_agent"]     = aor_entry_arg[7];
+            r["path"]           = aor_entry_arg[8];
 
-            const AmArg &hdrs_arg = aor_entry_arg[7];
+            const AmArg &hdrs_arg = aor_entry_arg[9];
             if (isArgCStr(hdrs_arg)) {
                 if (!json2arg(hdrs_arg.asCStr(), r["headers"]))
                     r["headers"].assertStruct();
             }
 
-            parse_path(aor_entry_arg[6], r["path_decoded"]);
+            parse_path(aor_entry_arg[8], r["path_decoded"]);
         }
     }
 }
@@ -734,6 +736,8 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     }
 
     static string       expires_param_header_name("expires");
+    static string       instance_param_header_name("+sip.instance");
+    static string       reg_id_param_header_name("reg-id");
     list<cstring>       contact_list;
     vector<AmUriParser> contacts;
     bool                asterisk_contact = false;
@@ -783,6 +787,8 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     string contact;
     bool   expires_found = false;
     string expires;
+    string instance = "";
+    long   reg_id   = 0;
 
     if (!asterisk_contact) {
         AmUriParser &first_contact = contacts.front();
@@ -793,8 +799,18 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
                 // DBG("found expires param");
                 expires_found = true;
                 expires       = p.second;
-                break;
             }
+
+            if (p.first == instance_param_header_name) {
+                /* trim "<instance_id>" */
+                if (p.second.front() == '"' && p.second.back() == '"')
+                    instance = p.second.substr(1, p.second.length() - 2);
+                else
+                    instance = p.second;
+            }
+
+            if (p.first == reg_id_param_header_name)
+                reg_id = std::stol(p.second);
         }
     }
 
@@ -899,8 +915,8 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     // bind
     auto *user_data      = new RedisRequestUserData(event.session_id, *req);
     auto  interface_name = get_interface_name(req->local_if);
-    if (!bind(user_data, UserTypeId::Register, event.registration_id, contact, expires_int, user_agent, path,
-              interface_name, arg2json(hdrs_arg)))
+    if (!bind(user_data, UserTypeId::Register, event.registration_id, contact, instance, reg_id, expires_int,
+              user_agent, path, interface_name, arg2json(hdrs_arg)))
     {
         delete user_data;
         user_data = nullptr;
@@ -1251,8 +1267,9 @@ void SipRegistrar::process_sip_reply(const AmSipReplyEvent &event)
                 if (event.reply.code == keepalive_failure_code) {
                     if (auto reg_id = parseRegId(key); reg_id) {
                         DBG("unbind %s, %s", reg_id.value().c_str(), ctx.aor.c_str());
-                        bind(nullptr /*user data*/, UserTypeId::Unbind, reg_id.value(), ctx.aor.c_str(), 0 /*expires*/,
-                             std::string() /*user agent*/, std::string() /*path*/, ctx.interface_name, "");
+                        bind(nullptr /*user data*/, UserTypeId::Unbind, reg_id.value(), ctx.aor.c_str(),
+                             std::string() /*instance*/, 0 /*reg_id*/, 0 /*expires*/, std::string() /*user agent*/,
+                             std::string() /*path*/, ctx.interface_name, "");
                     }
                 }
             }
@@ -1320,8 +1337,8 @@ bool SipRegistrar::unbind_all(AmObject *user_data, int user_type_id, const strin
 }
 
 bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &registration_id, const string &contact,
-                        int expires, const string &user_agent, const string &path, const string &interface_name,
-                        const string &headers)
+                        const string &instance, long reg_id, int expires, const string &user_agent, const string &path,
+                        const string &interface_name, const string &headers)
 {
     vector<AmArg> args;
     if (use_functions)
@@ -1331,6 +1348,8 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &reg
                  registration_id.c_str(),
                  expires,
                  contact.c_str(),
+                 instance.c_str(),
+                 reg_id,
                  AmConfig.node_id,
                  interface_name.c_str(),
                  user_agent.c_str(),
@@ -1350,6 +1369,8 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &reg
                  registration_id.c_str(),
                  expires,
                  contact.c_str(),
+                 instance.c_str(),
+                 reg_id,
                  AmConfig.node_id,
                  interface_name.c_str(),
                  user_agent.c_str(),
@@ -1433,6 +1454,8 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
                  registration_id.c_str(),
                  expires,
                  contact.c_str(),
+                 "",
+                 0,
                  AmConfig.node_id,
                  interface_name,
                  user_agent.c_str(),
@@ -1450,6 +1473,8 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
                  registration_id.c_str(),
                  expires,
                  contact.c_str(),
+                 "",
+                 0,
                  AmConfig.node_id,
                  interface_name,
                  user_agent.c_str(),
