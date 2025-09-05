@@ -1,5 +1,5 @@
 #include "MixerTest.h"
-#include "../../unit_tests/Config.h"
+#include "unit_tests/Config.h"
 
 MixerTest::MixerTest()
 {

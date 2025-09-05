@@ -4,11 +4,11 @@
 #include "../trans/Transaction.h"
 #include "../ConnectionPool.h"
 #include "../PoolWorker.h"
+#include "unit_tests/Config.h"
 #include <log.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <gtest/gtest.h>
-#include <../unit_tests/Config.h>
 #include "WorkerHandler.h"
 
 class PostgresqlTest : public ::testing::Test {

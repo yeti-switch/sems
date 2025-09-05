@@ -2,7 +2,7 @@
 #include "RedisTestInstance.h"
 #include "../RedisInstance.h"
 #include "../RedisApp.h"
-#include "../../unit_tests/Config.h"
+#include "unit_tests/Config.h"
 
 #include <hiredis/read.h>
 #include <confuse.h>
