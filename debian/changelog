@@ -1,3 +1,9 @@
+sems (1.171.0) stable; urgency=low
+  * registrar: add SIP outbound support (process instance and reg_id)
+  * options_prober: add route_set support
+  * registrar_client: add route_set support
+ -- Michael Furmur <furmur@pm.me>  Tue, 09 Sep 2025 15:01:13 +0300
+
 sems (1.170.2) stable; urgency=low
   * registrar: return back 'expires' for clickhouse snapshots
  -- Michael Furmur <furmur@pm.me>  Wed, 03 Sep 2025 18:42:33 +0300
