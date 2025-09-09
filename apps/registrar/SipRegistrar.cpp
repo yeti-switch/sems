@@ -1017,8 +1017,17 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
 
     /* response layout:
      * [
-     *   [ contact1 , expires1, contact_key1, path1, interface_name1, node_id1 ]
-     *   [ contact2 , expires2, contact_key2, path2, interface_name2, node_id2 ]
+     *   [ contact,             0
+     *     expires,             1
+     *     contact_key,         2
+     *     instance,            3
+     *     reg_id,              4
+     *     node_id,             5
+     *     path,                6
+     *     interface_name,      7
+     *     agent,               8
+     *     headers              9
+     *   ]
      *   ...
      * ]
      */
@@ -1073,13 +1082,13 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
         if (keepalive_interval.count() && arg2int(d[5]) == AmConfig.node_id) {
             // update KeepAliveContexts
             create_or_update_keep_alive_context(d[2].asCStr(), // key
-                                                [d](AmArg &data) {
-                                                    data["path"]           = d[3];
-                                                    data["interface_name"] = d[4];
+                                                [&d](AmArg &data) {
                                                     data["expires"]        = d[1];
-                                                    repack_headers(d[7].asCStr(), data);
-                                                    data["node_id"]    = d[5];
-                                                    data["user_agent"] = d[6];
+                                                    data["node_id"]        = d[5];
+                                                    data["path"]           = d[6];
+                                                    data["interface_name"] = d[7];
+                                                    data["user_agent"]     = d[8];
+                                                    repack_headers(d[9].asCStr(), data);
                                                 });
         }
     }
