@@ -18,7 +18,7 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'path', 'interface_name', 'node_id', 'agent', 'headers')
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers')
             local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7] }
             ret[#ret+1] = d
         else
@@ -129,9 +129,9 @@ if first_binding ~= nil then
     redis.call('PUBLISH', 'reg', cjson.encode({
         id,
         {
-            first_binding[1],
-            first_binding[4],
-            first_binding[5],
+            first_binding[1], -- contact
+            first_binding[7], -- path
+            first_binding[8], -- interface_name
         }
     }))
 end
