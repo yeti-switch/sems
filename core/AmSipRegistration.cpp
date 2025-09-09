@@ -324,16 +324,16 @@ void AmSIPRegistration::applyInfo()
     dlg.cseq = 50;
 
     if (!info.route_set.empty()) {
-        if(parse_and_validate_route(info.route_set) == 0)
+        if (parse_and_validate_route(info.route_set) == 0)
             dlg.setRouteSet(info.route_set);
     } else
-    // set outbound proxy as next hop
-    if (!info.proxy.empty()) {
-        dlg.outbound_proxy = info.proxy;
-        patch_transport(dlg.outbound_proxy, info.proxy_transport_protocol_id);
-    } else if (!AmConfig.outbound_proxy.empty()) {
-        dlg.outbound_proxy = AmConfig.outbound_proxy;
-    }
+        // set outbound proxy as next hop
+        if (!info.proxy.empty()) {
+            dlg.outbound_proxy = info.proxy;
+            patch_transport(dlg.outbound_proxy, info.proxy_transport_protocol_id);
+        } else if (!AmConfig.outbound_proxy.empty()) {
+            dlg.outbound_proxy = AmConfig.outbound_proxy;
+        }
 }
 
 void AmSIPRegistration::setSessionEventHandler(AmSessionEventHandler *new_seh)

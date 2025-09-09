@@ -226,16 +226,16 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     dlg.cseq = 50;
 
     if (!route_set.empty()) {
-        if(parse_and_validate_route(route_set) == 0)
+        if (parse_and_validate_route(route_set) == 0)
             dlg.setRouteSet(route_set);
     } else
-    // set outbound proxy as next hop
-    if (!proxy.empty()) {
-        dlg.outbound_proxy = proxy;
-        patch_transport(dlg.outbound_proxy, proxy_transport_protocol_id);
-    } else if (!AmConfig.outbound_proxy.empty()) {
-        dlg.outbound_proxy = AmConfig.outbound_proxy;
-    }
+        // set outbound proxy as next hop
+        if (!proxy.empty()) {
+            dlg.outbound_proxy = proxy;
+            patch_transport(dlg.outbound_proxy, proxy_transport_protocol_id);
+        } else if (!AmConfig.outbound_proxy.empty()) {
+            dlg.outbound_proxy = AmConfig.outbound_proxy;
+        }
 
     if (!sip_interface_name.empty() && sip_interface_name != "default") {
         map<string, unsigned short>::const_iterator name_it = AmConfig.sip_if_names.find(sip_interface_name);

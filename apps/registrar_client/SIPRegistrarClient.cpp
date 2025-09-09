@@ -723,14 +723,15 @@ string SIPRegistrarClient::postSIPNewRegistrationEvent(
     const string &pwd, const string &sess_link, const string &proxy, const string &contact, const int &expires_interval,
     bool &force_expires_interval, const int &retry_delay, const int &max_attempts, const int &transport_protocol_id,
     const int &proxy_transport_protocol_id, const int &transaction_timeout, const int &srv_failover_timeout,
-    const string &handle, const dns_priority &priority, const string &route_set, sip_uri::uri_scheme scheme_id = sip_uri::SIP)
+    const string &handle, const dns_priority &priority, const string &route_set,
+    sip_uri::uri_scheme scheme_id = sip_uri::SIP)
 {
     string l_handle = handle.empty() ? AmSession::getNewId() : handle;
     instance()->postEvent(new SIPNewRegistrationEvent(
         SIPRegistrationInfo(id, domain, user, name, auth_user, pwd, proxy, contact, string(), map<string, string>(),
                             expires_interval, force_expires_interval, retry_delay, max_attempts, transport_protocol_id,
-                            proxy_transport_protocol_id, transaction_timeout, srv_failover_timeout, priority,
-                            route_set, scheme_id),
+                            proxy_transport_protocol_id, transaction_timeout, srv_failover_timeout, priority, route_set,
+                            scheme_id),
         l_handle, sess_link));
     return l_handle;
 }
@@ -981,11 +982,12 @@ void SIPRegistrarClient::createRegistration(const AmArg &args, AmArg &ret)
 #undef DEF_AND_VALIDATE_OPTIONAL_STR
 #undef DEF_AND_VALIDATE_OPTIONAL_INT
 
-        ret.push(postSIPNewRegistrationEvent(
-            args.get(0).asCStr(), args.get(1).asCStr(), args.get(2).asCStr(), args.get(3).asCStr(),
-            args.get(4).asCStr(), args.get(5).asCStr(), sess_link, proxy, contact, expires_interval,
-            force_expires_interval, retry_delay, max_attempts, transport_protocol_id, proxy_transport_protocol_id,
-            transaction_timeout, srv_failover_timeout, handle, priority, route_set, static_cast<sip_uri::uri_scheme>(scheme_id)));
+        ret.push(postSIPNewRegistrationEvent(args.get(0).asCStr(), args.get(1).asCStr(), args.get(2).asCStr(),
+                                             args.get(3).asCStr(), args.get(4).asCStr(), args.get(5).asCStr(),
+                                             sess_link, proxy, contact, expires_interval, force_expires_interval,
+                                             retry_delay, max_attempts, transport_protocol_id,
+                                             proxy_transport_protocol_id, transaction_timeout, srv_failover_timeout,
+                                             handle, priority, route_set, static_cast<sip_uri::uri_scheme>(scheme_id)));
     }
 }
 

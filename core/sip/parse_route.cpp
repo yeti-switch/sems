@@ -155,7 +155,8 @@ error:
     return 0;
 }
 
-static int parse_route(const char *route, size_t len, function<int(const char *c, const size_t len)> iterator) {
+static int parse_route(const char *route, size_t len, function<int(const char *c, const size_t len)> iterator)
+{
 
     const char *c   = route;
     const char *end = route + len;
@@ -185,7 +186,8 @@ static int parse_route(const char *route, size_t len, function<int(const char *c
     return 0;
 }
 
-int parse_route(sip_header *rh) {
+int parse_route(sip_header *rh)
+{
 
     if (rh->p)
         return 0;
@@ -194,7 +196,6 @@ int parse_route(sip_header *rh) {
     rh->p            = route;
 
     return parse_route(rh->value.s, rh->value.len, [&](const char *c, const size_t len) {
-
         route_elmt *re = new route_elmt();
         re->route.s    = c;
         re->route.len  = len;
@@ -204,13 +205,13 @@ int parse_route(sip_header *rh) {
     });
 }
 
-int parse_and_validate_route(const string &route) {
+int parse_and_validate_route(const string &route)
+{
 
     return parse_route(route.c_str(), route.length(), [](const char *c, const size_t len) {
-
         // validate route
         sip_nameaddr na;
-        const char *_c = c;
+        const char  *_c = c;
 
         if (parse_nameaddr_uri(&na, &_c, len) < 0) {
             ERROR("Parsing name-addr and uri failed for %.*s", len, c);
