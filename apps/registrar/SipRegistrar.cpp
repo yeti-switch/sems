@@ -1210,12 +1210,27 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply &event)
 {
     clear_keep_alive_contexts();
 
+    /* response layout:
+     * [
+     *   [ node_id,             0
+     *     path,                1
+     *     interface_name,      2
+     *     contact_key,         3
+     *     agent,               4
+     *     headers,             5
+     *     expires,             6
+     *   ]
+     *   ...
+     * ]
+     */
+
     if (!isArgArray(event.data))
         return;
 
     seconds keepalive_interval_offset{ 0 };
 
     DBG("process_loaded_contacts");
+
     int n = static_cast<int>(event.data.size());
     for (int i = 0; i < n; i++) {
         AmArg &d = event.data[i];
@@ -1228,10 +1243,11 @@ void SipRegistrar::process_redis_reply_contact_data_event(RedisReply &event)
         create_or_update_keep_alive_context(
             d[3].asCStr(),
             [d](AmArg &data) {
-                data["path"]           = d[1];
-                data["interface_name"] = d[2];
+                data["path"]           = arg2str(d[1]);
+                data["interface_name"] = arg2str(d[2]);
                 data["expires"]        = d[6];
-                repack_headers(d[5].asCStr(), data);
+                if (isArgCStr(d[5]))
+                    repack_headers(d[5].asCStr(), data);
                 data["node_id"]    = d[0];
                 data["user_agent"] = d[4];
             },
