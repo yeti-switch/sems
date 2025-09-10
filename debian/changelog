@@ -1,3 +1,7 @@
+sems (1.171.1) stable; urgency=low
+  * registrar: fix crash on old registrations format loading
+ -- Michael Furmur <furmur@pm.me>  Wed, 10 Sep 2025 11:27:17 +0300
+
 sems (1.171.0) stable; urgency=low
   * registrar: add SIP outbound support (process instance and reg_id)
   * options_prober: add route_set support
