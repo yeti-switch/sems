@@ -30,13 +30,13 @@ local function get_bindings()
     return ret
 end
 
-local function cleanup_instance_reg_id(id, instance, reg_id)
+local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
 
     for i,c in ipairs(redis.call('SMEMBERS', 'a:'..id)) do
         local contact_key = 'c:'..id..':'..c
         local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
 
-        if hash_data[1] == instance and hash_data[2] == reg_id then
+        if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
             redis.call('DEL', contact_key)
         end
     end
@@ -82,6 +82,7 @@ local user_agent = ARGV[7]
 local path = ARGV[8]
 local headers = ARGV[9]
 local bindings_max = tonumber(ARGV[10])
+local one_contact_per_aor = tonumber(ARGV[11])
 
 if not user_agent then
     user_agent = ''
@@ -98,9 +99,7 @@ for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
     end
 end
 
-if #instance > 0 then
-    cleanup_instance_reg_id(id, instance, reg_id)
-end
+cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
 
 -- check for max allowed bindings
 if redis.call('SCARD', auth_id) >= bindings_max then

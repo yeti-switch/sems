@@ -380,6 +380,8 @@ int SipRegistrar::configure(cfg_t *cfg)
     bindings_max       = cfg_getint(cfg, CFG_PARAM_BINDINGS_MAX);
     if (bindings_max <= 0)
         bindings_max = DEFAULT_BINDINGS_MAX;
+
+    one_contact_per_aor    = cfg_getbool(cfg, CFG_PARAM_ONE_CONTACT_PER_AOR);
     keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
     process_subscriptions  = cfg_getbool(cfg, CFG_PARAM_PROCESS_SUBSCRIPTIONS);
     for (int i = 0; i < cfg_size(cfg, CFG_PARAM_HEADERS); i++) {
@@ -1380,7 +1382,8 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &reg
                  user_agent.c_str(),
                  path.c_str(),
                  headers.c_str(),
-                 bindings_max };
+                 bindings_max,
+                 one_contact_per_aor };
     else {
         auto script = write_conn->script(REGISTER_SCRIPT);
         if (!script || !script->is_loaded()) {
@@ -1401,7 +1404,8 @@ bool SipRegistrar::bind(AmObject *user_data, int user_type_id, const string &reg
                  user_agent.c_str(),
                  path.c_str(),
                  headers.c_str(),
-                 bindings_max };
+                 bindings_max,
+                 one_contact_per_aor };
     }
 
     return post_request(write_conn->id, args, user_data, user_type_id);

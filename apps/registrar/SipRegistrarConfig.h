@@ -16,6 +16,7 @@ using std::string;
 #define CFG_PARAM_BINDINGS_MAX           "bindings_max"
 #define CFG_PARAM_KEEPALIVE_FAILURE_CODE "keepalive_failure_code"
 #define CFG_PARAM_PROCESS_SUBSCRIPTIONS  "process_subscriptions"
+#define CFG_PARAM_ONE_CONTACT_PER_AOR    "one_contact_per_aor"
 #define CFG_PARAM_HEADERS                "headers"
 #define CFG_PARAM_DESTINATIONS           "destinations"
 #define CFG_PARAM_TABLE                  "table"

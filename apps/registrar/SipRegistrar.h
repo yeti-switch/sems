@@ -50,6 +50,7 @@ class SipRegistrar : public AmThread,
     int            expires_max;
     int            expires_default;
     int            bindings_max;
+    int            one_contact_per_aor;
     unsigned int   keepalive_failure_code;
     vector<string> headers;
     AmTimerFd      timer;
