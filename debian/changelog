@@ -1,3 +1,8 @@
+sems (1.171.2) stable; urgency=low
+  * registrar: add option one_contact_per_aor (default: false)
+    to allow single binding only for non sip outbound registrations (without instance)
+ -- Michael Furmur <furmur@pm.me>  Fri, 12 Sep 2025 12:49:35 +0300
+
 sems (1.171.1) stable; urgency=low
   * registrar: fix crash on old registrations format loading
  -- Michael Furmur <furmur@pm.me>  Wed, 10 Sep 2025 11:27:17 +0300
