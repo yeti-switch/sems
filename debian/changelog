@@ -1,3 +1,7 @@
+sems (1.171.3) stable; urgency=low
+  * fix SSRC change on stream update
+ -- Michael Furmur <furmur@pm.me>  Fri, 12 Sep 2025 20:06:48 +0300
+
 sems (1.171.2) stable; urgency=low
   * registrar: add option one_contact_per_aor (default: false)
     to allow single binding only for non sip outbound registrations (without instance)
