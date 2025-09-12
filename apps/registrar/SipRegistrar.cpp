@@ -816,6 +816,9 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
         }
     }
 
+    if (instance.empty())
+        reg_id = 0;
+
     if (!expires_found) {
         // try to find Expires header as failover
         size_t start_pos = 0;
