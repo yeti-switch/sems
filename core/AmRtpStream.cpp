@@ -2206,7 +2206,7 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
     m.dir       = SdpMedia::DirUndefined;
     m.setup     = S_UNDEFINED;
     m.transport = transport;
-    m.ssrc      = get_random();
+    m.ssrc      = l_ssrc;
     m.cname     = getLocalAddress();
 
     switch (dlg->getOAState()) {
