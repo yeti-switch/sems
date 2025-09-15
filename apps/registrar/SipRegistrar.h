@@ -57,7 +57,7 @@ class SipRegistrar : public AmThread,
     seconds        keepalive_interval;
     seconds        max_interval_drift;
 
-    bool process_subscriptions;
+    bool process_subscriptions, add_x_auth_id_hdr;
 
     /*
      * uac_dlgs
@@ -123,6 +123,7 @@ class SipRegistrar : public AmThread,
     rpc_handler rpc_show_keepalive_contexts;
     rpc_handler rpc_bind;
     rpc_handler rpc_unbind;
+    rpc_handler rpc_transport_down;
 
     bool fetch_all(AmObject *user_data, int user_type_id, const string &registration_id);
     bool unbind_all(AmObject *user_data, int user_type_id, const string &registration_id);
@@ -134,6 +135,7 @@ class SipRegistrar : public AmThread,
     bool subscribe(int user_type_id);
     void rpc_bind_(AmObject *user_data, int user_type_id, const AmArg &arg);
     void rpc_unbind_(AmObject *user_data, int user_type_id, const AmArg &arg);
+    void rpc_transport_down_(AmObject *user_data, int user_type_id, const AmArg &arg);
     void rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg);
 
     void on_timer();

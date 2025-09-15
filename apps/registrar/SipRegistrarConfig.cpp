@@ -26,6 +26,7 @@ int SipRegistrarConfig::parse(const string &config)
                       CFG_INT(CFG_PARAM_KEEPALIVE_FAILURE_CODE, DEFAULT_KEEPALIVE_FAILURE_CODE, CFGF_NONE),
                       CFG_BOOL(CFG_PARAM_ONE_CONTACT_PER_AOR, cfg_false, CFGF_NONE),
                       CFG_BOOL(CFG_PARAM_PROCESS_SUBSCRIPTIONS, cfg_false, CFGF_NONE),
+                      CFG_BOOL(CFG_PARAM_ADD_X_AUTH_ID_HEADER, cfg_false, CFGF_NONE),
                       CFG_STR_LIST(CFG_PARAM_HEADERS, 0, CFGF_NONE),
                       CFG_SEC(CFG_SEC_REDIS, redis_opts, CFGF_NONE),
                       CFG_SEC(CFG_SEC_CLICKHOUSE, clickhouse_opts, CFGF_NONE),

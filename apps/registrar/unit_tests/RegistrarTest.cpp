@@ -29,6 +29,8 @@ int RegistrarTestFactory::configure(cfg_t *cfg)
     test_server->addLoadScriptCommandResponse(get_script_path(REGISTER_SCRIPT), register_script_hash);
     test_server->addLoadScriptCommandResponse(get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
     test_server->addLoadScriptCommandResponse(get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(get_script_path(RPC_TRANSPORT_DOWN_SCRIPT),
+                                              rpc_transport_down_script_hash);
     test_server->addLoadScriptCommandResponse(get_script_path(LOAD_CONTACTS_SCRIPT), load_contacts_script_hash);
     return 0;
 }
@@ -50,6 +52,8 @@ void RegistrarTest::SetUp()
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT),
                                               rpc_aor_lookup_script_hash);
+    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_TRANSPORT_DOWN_SCRIPT),
+                                              rpc_transport_down_script_hash);
     test_server->addLoadScriptCommandResponse(registrar->get_script_path(LOAD_CONTACTS_SCRIPT),
                                               load_contacts_script_hash);
     test_server->response_enabled.set(true);

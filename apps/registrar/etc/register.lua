@@ -1,4 +1,4 @@
--- auth_id [ expires [ contact instance reg_id node_id interace_id user_agent path ] ]
+-- auth_id [ expires [ contact instance reg_id node_id interace_name user_agent path headers ] ]
 
 local id = KEYS[1]
 local auth_id = 'a:'..id
@@ -18,8 +18,8 @@ local function get_bindings()
         local expires = redis.call('TTL', contact_key)
 
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers')
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7] }
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers', 'conn_id')
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7], hash_data[8]}
             ret[#ret+1] = d
         else
             -- cleanup obsolete SET members
@@ -31,12 +31,13 @@ local function get_bindings()
 end
 
 local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
-
-    for i,c in ipairs(redis.call('SMEMBERS', 'a:'..id)) do
+    local auth_id = 'a:'..id
+    for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
         local contact_key = 'c:'..id..':'..c
         local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
 
         if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
+            redis.call('SREM', auth_id, c)
             redis.call('DEL', contact_key)
         end
     end
@@ -49,7 +50,6 @@ if not ARGV[1] then
 end
 
 local expires = tonumber(ARGV[1])
-
 local contact = ARGV[2]
 
 if not expires then
@@ -62,7 +62,7 @@ if expires==0 then
         for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
             redis.call('DEL', 'c:'..id..':'..c)
         end
-        redis.call('DEL', auth_id)
+            redis.call('DEL', auth_id)
         return nil
     else
         local contact_key = 'c:'..id..':'..contact
@@ -83,6 +83,19 @@ local path = ARGV[8]
 local headers = ARGV[9]
 local bindings_max = tonumber(ARGV[10])
 local one_contact_per_aor = tonumber(ARGV[11])
+local conn_id = 0
+
+-- fetch 'x_register.conn_id'
+if type(headers) == 'string' then
+    local hdrs = cjson.decode(headers)
+    if type(hdrs) == 'table' then
+        local x_register_str = hdrs['x_register']
+        if type(x_register_str) == 'string' then
+            local  x_register = cjson.decode(x_register_str) or {}
+            conn_id = x_register['conn_id'] or 0
+        end
+    end
+end
 
 if not user_agent then
     user_agent = ''
@@ -109,6 +122,7 @@ end
 -- add binding
 redis.call('SADD', auth_id, contact)
 redis.call('HMSET', contact_key,
+    'conn_id', conn_id,
     'instance', instance,
     'reg_id', reg_id,
     'node_id', node_id,

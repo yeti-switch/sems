@@ -12,8 +12,8 @@ local function get_bindings(id, auth_id, cleanup)
         local contact_key = 'c:'..id..':'..c
         local expires = redis.call('TTL', contact_key)
         if expires > 0 then
-            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers')
-            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7]}
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id', 'node_id', 'path', 'interface_name', 'agent', 'headers', 'conn_id')
+            local d = { c, expires, contact_key, hash_data[1], hash_data[2], hash_data[3], hash_data[4], hash_data[5], hash_data[6], hash_data[7], hash_data[8]}
             ret[#ret+1] = d
         elseif cleanup then
             -- cleanup obsolete SET members
@@ -93,21 +93,39 @@ local function rpc_aor_lookup(keys)
     return ret
 end
 
-
 local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
-
-    for i,c in ipairs(redis.call('SMEMBERS', 'a:'..id)) do
+    local auth_id = 'a:'..id
+    for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
         local contact_key = 'c:'..id..':'..c
         local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
 
         if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
+            redis.call('SREM', auth_id, c)
             redis.call('DEL', contact_key)
         end
     end
 end
 
+local function transport_down(keys, args)
+    local id = args[1]
+    local auth_id = 'a:'..id
+    local conid = tonumber(args[2])
 
--- auth_id [ expires [ contact instance reg_id node_id interace_name user_agent path headers ] ]
+    for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
+        local contact_key = 'c:'..id..':'..c
+        local hash_data = redis.call('HMGET',contact_key, 'conn_id')
+        local conn_id = tonumber(hash_data[1])
+
+        if (conn_id > 0 and conn_id == conid) then
+            redis.call('SREM', auth_id, c)
+            redis.call('DEL', contact_key)
+        end
+    end
+    -- return get_bindings(id, auth_id, true) ???
+end
+
+
+-- auth_id [ expires [ conn_id [ contact instance reg_id node_id interace_name user_agent path headers ] ] ]
 local function register(keys, args)
     local id = keys[1]
     local auth_id = 'a:'..id
@@ -151,6 +169,19 @@ local function register(keys, args)
     local headers = args[9]
     local bindings_max = tonumber(args[10])
     local one_contact_per_aor = tonumber(args[11])
+    local conn_id = 0
+
+    -- fetch 'x_register.conn_id'
+    if type(headers) == 'string' then
+        local hdrs = cjson.decode(headers)
+        if type(hdrs) == 'table' then
+            local x_register_str = hdrs['x_register']
+            if type(x_register_str) == 'string' then
+                local  x_register = cjson.decode(x_register_str) or {}
+                conn_id = x_register['conn_id'] or 0
+            end
+        end
+    end
 
     if not user_agent then
         user_agent = ''
@@ -177,6 +208,7 @@ local function register(keys, args)
     -- add binding
     redis.call('SADD', auth_id, contact)
     redis.call('HMSET', contact_key,
+        'conn_id', conn_id,
         'instance', instance,
         'reg_id', reg_id,
         'node_id',node_id,
@@ -192,7 +224,7 @@ local function register(keys, args)
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then
-        -- contact[1] expires[2] contact_key[3] instance [4] reg_id[5] node_id[6] path[7] interface_name[8] agent[9] headers[10]
+        -- contact[1] expires[2] contact_key[3] instance [4] reg_id[5] node_id[6] path[7] interface_name[8] agent[9] headers[10] conn_id[11]
         -- publish json encoded data in the AoR resolving format to the 'reg' channel
         redis.call('PUBLISH', 'reg', cjson.encode({
             id,
@@ -210,6 +242,7 @@ end
 
 
 redis.register_function{function_name="register",      callback=register}
+redis.register_function{function_name="transport_down",callback=transport_down}
 redis.register_function{function_name="load_contacts", callback=load_contacts, flags={"no-writes"}}
 redis.register_function{function_name="aor_lookup",    callback=aor_lookup,    flags={"no-writes"}}
 redis.register_function{function_name="rpc_aor_lookup",callback=rpc_aor_lookup,flags={"no-writes"}}

@@ -219,6 +219,7 @@ struct aor_lookup_reply {
 class RedisRequestUserData : public AmObject {
   public:
     string                        session_id;
+    string                        registration_id;
     std::unique_ptr<AmSipRequest> req;
 
     RedisRequestUserData(string session_id)
@@ -231,6 +232,14 @@ class RedisRequestUserData : public AmObject {
     RedisRequestUserData(string session_id, const AmSipRequest &req)
         : AmObject()
         , session_id(session_id)
+        , req(new AmSipRequest(req))
+    {
+    }
+
+    RedisRequestUserData(string session_id, const AmSipRequest &req, string registration_id)
+        : AmObject()
+        , session_id(session_id)
+        , registration_id(registration_id)
         , req(new AmSipRequest(req))
     {
     }
@@ -384,6 +393,8 @@ int SipRegistrar::configure(cfg_t *cfg)
     one_contact_per_aor    = cfg_getbool(cfg, CFG_PARAM_ONE_CONTACT_PER_AOR);
     keepalive_failure_code = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_FAILURE_CODE);
     process_subscriptions  = cfg_getbool(cfg, CFG_PARAM_PROCESS_SUBSCRIPTIONS);
+    add_x_auth_id_hdr      = cfg_getbool(cfg, CFG_PARAM_ADD_X_AUTH_ID_HEADER);
+
     for (int i = 0; i < cfg_size(cfg, CFG_PARAM_HEADERS); i++) {
         string header_name(cfg_getnstr(cfg, CFG_PARAM_HEADERS, i));
         std::transform(header_name.begin(), header_name.end(), header_name.begin(), normalize_header_name);
@@ -421,6 +432,7 @@ void SipRegistrar::init_rpc_tree()
     AmArg &request = reg_leaf(root, "request");
     reg_method(request, "bind", "bind contact", &SipRegistrar::rpc_bind, "");
     reg_method(request, "unbind", "unbind contact", &SipRegistrar::rpc_unbind, "");
+    reg_method(request, "transport_down", "transport down", &SipRegistrar::rpc_transport_down, "");
 }
 
 static std::optional<AmArg> parse_flow_token(const string &flow_token)
@@ -532,7 +544,7 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
 
         for (j = 0; j < aor_data_arg.size(); j++) {
             AmArg &aor_entry_arg = aor_data_arg[j];
-            if (!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 10) {
+            if (!isArgArray(aor_entry_arg) || aor_entry_arg.size() != 11) {
                 ERROR("unexpected aor_entry_arg layout. skip entry");
                 continue;
             }
@@ -548,6 +560,7 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
             r["interface_name"] = aor_entry_arg[6];
             r["user_agent"]     = aor_entry_arg[7];
             r["path"]           = aor_entry_arg[8];
+            r["conn_id"]        = aor_entry_arg[10];
 
             const AmArg &hdrs_arg = aor_entry_arg[9];
             if (isArgCStr(hdrs_arg)) {
@@ -646,7 +659,7 @@ void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
     int n = static_cast<int>(ctx.data.size());
     for (int i = 0; i < n; ++i) {
         AmArg &d = ctx.data[i];
-        if (!isArgArray(d) || d.size() != 5) {
+        if (!isArgArray(d) || d.size() != 10) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it", AmArg::print(d).c_str());
             continue;
         }
@@ -656,10 +669,29 @@ void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
         r["contact"]        = d[0];
         r["expires"]        = d[1];
         r["key"]            = d[2];
-        r["path"]           = d[3];
-        r["interface_name"] = d[4];
+        r["instance"]       = d[3];
+        r["reg_id"]         = d[4];
+        r["path"]           = d[5];
+        r["interface_name"] = d[6];
+        r["agent"]          = d[7];
+        r["headers"]        = d[8];
+        r["conn_id"]        = d[9];
     }
 }
+
+
+void SipRegistrar::rpc_transport_down(const AmArg &arg, AmArg &ret)
+{
+    RedisBlockingRequestCtx ctx;
+    rpc_transport_down_(&ctx, UserTypeId::BlockingReqCtx, arg);
+    ctx.cond.wait_for();
+
+    if (RedisReply::SuccessReply != ctx.result)
+        throw AmSession::Exception(500, AmArg::print(ctx.data));
+
+    DBG("%s", AmArg::print(ctx.data).c_str());
+}
+
 
 /* AmEventHandler */
 
@@ -918,7 +950,7 @@ void SipRegistrar::process_register_request_event(SipRegistrarRegisterRequestEve
     }
 
     // bind
-    auto *user_data      = new RedisRequestUserData(event.session_id, *req);
+    auto *user_data      = new RedisRequestUserData(event.session_id, *req, event.registration_id);
     auto  interface_name = get_interface_name(req->local_if);
     if (!bind(user_data, UserTypeId::Register, event.registration_id, contact, instance, reg_id, expires_int,
               user_agent, path, interface_name, arg2json(hdrs_arg)))
@@ -995,6 +1027,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
     auto                user_data  = dynamic_cast<RedisRequestUserData *>(event.user_data.get());
     const AmSipRequest *req        = user_data ? user_data->req.get() : nullptr;
     const string       &session_id = user_data ? user_data->session_id : string();
+    const string       &auth_id    = user_data ? user_data->registration_id : string();
 
     // reply 'failed' response
     if (!req || event.result != RedisReply::SuccessReply) {
@@ -1083,6 +1116,12 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
         hdrs += contact_hdr + c.print();
         hdrs += expires_param_prefix + longlong2str(expires_arg.asLongLong());
         hdrs += CRLF;
+
+        if (add_x_auth_id_hdr && !auth_id.empty()) {
+            static string auth_id_hdr = SIP_HDR_COLSP("X-Auth-id");
+            hdrs += auth_id_hdr + auth_id;
+            hdrs += CRLF;
+        }
 
         if (keepalive_interval.count() && arg2int(d[5]) == AmConfig.node_id) {
             // update KeepAliveContexts
@@ -1539,6 +1578,26 @@ void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmAr
 
     if (post_request(write_conn->id, args, user_data, user_type_id) == false)
         throw AmSession::Exception(500, "failed to post unbind request");
+}
+
+void SipRegistrar::rpc_transport_down_(AmObject *user_data, int user_type_id, const AmArg &arg)
+{
+    const string registration_id = arg2str(arg[0]);
+    long         conn_id         = arg.size() > 1 ? arg2int(arg[1]) : 0;
+
+    vector<AmArg> args;
+    if (use_functions)
+        args = { "FCALL", "transport_down", 0, registration_id.c_str(), conn_id };
+    else {
+        auto script = write_conn->script(RPC_TRANSPORT_DOWN_SCRIPT);
+        if (!script || !script->is_loaded())
+            throw AmSession::Exception(500, "registrar is not enabled");
+
+        args = { "EVALSHA", script->hash.c_str(), 0, registration_id.c_str(), conn_id }; // expires 0
+    }
+
+    if (post_request(write_conn->id, args, user_data, user_type_id) == false)
+        throw AmSession::Exception(500, "failed to post transport_down request");
 }
 
 void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const AmArg &arg)
