@@ -1,3 +1,10 @@
+sems (1.171.4) stable; urgency=low
+  * registrar: support unbinding on transport closing
+    * add X-Register header processing in lua
+    * add rpc method: registrar.request.transport_down·<auth_id>·<conn_id>
+    * add·option·add_x_auth_id_header·(default:·false)·to·add·X-Auth-Id:·<auth_id>·header·for·REGISTER 200ok
+ -- Michael Furmur <furmur@pm.me>  Thu, 18 Sep 2025 19:59:02 +0300
+
 sems (1.171.3) stable; urgency=low
   * fix SSRC change on stream update
  -- Michael Furmur <furmur@pm.me>  Fri, 12 Sep 2025 20:06:48 +0300
