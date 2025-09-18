@@ -77,7 +77,7 @@ void RegistrarClickhouse::on_timer()
 
     AmArg snapshot;
     getSnapshot(snapshot, [&](AmArg &data) {
-        data["id"]                 = snapshot_id.v;
+        data["snapshot_id"]        = snapshot_id.v;
         data["snapshot_timestamp"] = strftime_buf;
     });
 
