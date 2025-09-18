@@ -903,7 +903,7 @@ void UACAuth::setNonceExpire(int nonce_expire)
 
 void UACAuth::fetchAuthentication(const AmSipRequest *req, AmArg &ret)
 {
-    string auth_hdr = getHeader(req->hdrs, "Authorization");
+    string auth_hdr = getHeader(req->hdrs, SIP_HDR_AUTHORIZATION);
 
     if (auth_hdr.size()) {
         UACAuthDigestChallenge r_challenge;
@@ -927,7 +927,7 @@ void UACAuth::checkAuthentication(const AmSipRequest *req, const vector<string> 
         return;
     }
 
-    string auth_hdr      = getHeader(req->hdrs, "Authorization");
+    string auth_hdr      = getHeader(req->hdrs, SIP_HDR_AUTHORIZATION);
     bool   authenticated = false;
     string internal_reason;
     int    internal_code = UACAuthGeneric;
@@ -1119,7 +1119,7 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &re
         return;
     }
 
-    string auth_hdr      = getHeader(req->hdrs, "Authorization");
+    string auth_hdr      = getHeader(req->hdrs, SIP_HDR_AUTHORIZATION);
     bool   authenticated = false;
 
     if (auth_hdr.size()) {
