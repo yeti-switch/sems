@@ -1,3 +1,7 @@
+sems (1.171.5) stable; urgency=low
+  * registrar: rename id -> snapshot_id for clickhouse snapshots
+ -- Michael Furmur <furmur@pm.me>  Thu, 18 Sep 2025 21:20:56 +0300
+
 sems (1.171.4) stable; urgency=low
   * registrar: support unbinding on transport closing
     * add X-Register header processing in lua
