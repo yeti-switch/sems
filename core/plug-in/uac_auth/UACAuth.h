@@ -168,10 +168,11 @@ class UACAuth : public AmSessionEventHandler {
     static void                 fetchAuthentication(const AmSipRequest *req, AmArg &ret);
     static void   checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
                                       const string &pwd, const string &default_realm, AmArg &ret);
-    static string getChallengeHeader(const string &realm);
+    static string               getChallengeHeader(const string &realm, int flags);
 
     static void setServerSecret(const string &secret);
     static void setAllowedQops(int allowed_qop_mask);
+    static int  getAllowedQops(void);
     static void setNonceExpire(int nonce_expire);
 
     /** time-constant string compare function (but leaks timing of length mismatch)

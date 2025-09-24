@@ -62,7 +62,6 @@ UACAuthFactory *UACAuthFactory::_instance    = 0;
 string          UACAuth::server_nonce_secret = "CKASLD§$>NLKJSLDKFJ"; // replaced on load
 int             UACAuth::allowed_qop_types;
 int             UACAuth::nonce_expire;
-static string   qop_str_value;
 
 static string default_nonce_count("00000001");
 
@@ -120,7 +119,8 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
 
         UACAuth::checkAuthentication(req, realms, args.get(2).asCStr(), args.get(3).asCStr(), default_realm, ret);
     } else if (method == "getChallenge") {
-        ret = UACAuth::getChallengeHeader(args.get(0).asCStr());
+        int flags = args.size() > 1 ? args.get(1).asInt() : UACAuth::getAllowedQops();
+        ret       = UACAuth::getChallengeHeader(args.get(0).asCStr(), flags);
     } else if (method == "checkAuthHA1") {
         // params: Request realm user pwd
         if (args.size() < 4) {
@@ -889,14 +889,11 @@ void UACAuth::setServerSecret(const string &secret)
 void UACAuth::setAllowedQops(int allowed_qop_mask)
 {
     allowed_qop_types = allowed_qop_mask;
-    if (allowed_qop_types & QOP_AUTH) {
-        qop_str_value = "auth";
-    }
-    if (allowed_qop_types & QOP_AUTH_INT) {
-        if (!qop_str_value.empty())
-            qop_str_value += ",";
-        qop_str_value += "auth-int";
-    }
+}
+
+int UACAuth::getAllowedQops(void)
+{
+    return allowed_qop_types;
 }
 
 void UACAuth::setNonceExpire(int nonce_expire)
@@ -1069,26 +1066,46 @@ auth_end:
         ret.push(401);
         ret.push("Unauthorized");
         if (!r_realm.empty() && internal_code != UACAuthRealmMismatch) {
-            ret.push(getChallengeHeader(r_realm));
+            ret.push(getChallengeHeader(r_realm, getAllowedQops()));
         } else {
-            ret.push(getChallengeHeader(default_realm));
+            ret.push(getChallengeHeader(default_realm, getAllowedQops()));
         }
     }
     ret.push(internal_reason);
     ret.push(internal_code);
 }
 
-string UACAuth::getChallengeHeader(const string &realm)
+string UACAuth::getChallengeHeader(const string &realm, int flags)
 {
-    return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                   "realm=\"" +
-           realm +
-           "\", "
-           "qop=\"" +
-           qop_str_value +
-           "\", "
-           "nonce=\"" +
-           calcNonce() + "\"\r\n";
+    string qop_str_value;
+    bool   use_qop = flags & allowed_qop_types;
+
+    if (use_qop) {
+        if (flags & QOP_AUTH) {
+            qop_str_value = "auth";
+        }
+        if (flags & QOP_AUTH_INT) {
+            if (!qop_str_value.empty())
+                qop_str_value += ",";
+            qop_str_value += "auth-int";
+        }
+    }
+
+    return use_qop ? SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
+                                                             "realm=\"" +
+                         realm +
+                         "\", "
+                         "qop=\"" +
+                         qop_str_value +
+                         "\", "
+                         "nonce=\"" +
+                         calcNonce() + "\"\r\n"
+                   : SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
+                                                             "realm=\"" +
+                         realm +
+                         "\", "
+                         "nonce=\"" +
+                         calcNonce() + "\"\r\n";
 }
 
 void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &realm, const string &user,
