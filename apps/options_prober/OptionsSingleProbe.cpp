@@ -189,7 +189,7 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     // process variables
     cred.realm = ruri_domain;
     cred.user  = auth_username;
-    cred.user  = auth_password;
+    cred.pwd  = auth_password;
 
     AmUriParser uri_parser;
     req.method = "OPTIONS";
