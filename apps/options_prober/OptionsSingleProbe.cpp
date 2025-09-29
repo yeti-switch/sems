@@ -42,16 +42,16 @@ static AmArgHashValidator SipProbeAmArgValidator({
     { "from_uri", true, { AmArg::CStr } },
     { "to_uri", true, { AmArg::CStr } },
     { "interval", true, { AmArg::Int } },
-    { "ruri_username", false, { AmArg::CStr } },
+    { "ruri_username", false, { AmArg::CStr, AmArg::Undef } },
     { "transport_protocol_id", false, { AmArg::Int }, transport_protocol_validator },
     { "sip_schema_id", false, { AmArg::Int }, sip_schema_validator },
-    { "contact_uri", false, { AmArg::CStr } },
-    { "proxy", false, { AmArg::CStr } },
+    { "contact_uri", false, { AmArg::CStr, AmArg::Undef } },
+    { "proxy", false, { AmArg::CStr, AmArg::Undef } },
     { "proxy_transport_protocol_id", false, { AmArg::Int }, transport_protocol_validator },
-    { "append_headers", false, { AmArg::CStr } },
-    { "sip_interface_name", false, { AmArg::CStr } },
-    { "auth_username", false, { AmArg::CStr } },
-    { "auth_password", false, { AmArg::CStr } }
+    { "append_headers", false, { AmArg::CStr, AmArg::Undef } },
+    { "sip_interface_name", false, { AmArg::CStr, AmArg::Undef } },
+    { "auth_username", false, { AmArg::CStr, AmArg::Undef } },
+    { "auth_password", false, { AmArg::CStr, AmArg::Undef } }
 });
 
 SipSingleProbe::SipSingleProbe()
@@ -155,7 +155,7 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
 #define ASSIGN_MANDATORY_INT(name) name = a[#name].asInt();
 #define ASSIGN_OPTIONAL_STR(name)                                                                                      \
     if (a.hasMember(#name))                                                                                            \
-        name = a[#name].asCStr();
+        name = arg2str(a[#name])
 #define ASSIGN_OPTIONAL_INT(name)                                                                                      \
     if (a.hasMember(#name))                                                                                            \
         name = a[#name].asInt();
