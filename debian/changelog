@@ -1,3 +1,7 @@
+sems (1.171.6) stable; urgency=low
+  * uac_auth: support optional flags for getChallenge method
+ -- Michael Furmur <furmur@pm.me>  Mon, 29 Sep 2025 11:43:33 +0300
+
 sems (1.171.5) stable; urgency=low
   * registrar: rename id -> snapshot_id for clickhouse snapshots
  -- Michael Furmur <furmur@pm.me>  Thu, 18 Sep 2025 21:20:56 +0300
