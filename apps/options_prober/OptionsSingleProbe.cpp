@@ -48,6 +48,7 @@ static AmArgHashValidator SipProbeAmArgValidator({
     { "contact_uri", false, { AmArg::CStr, AmArg::Undef } },
     { "proxy", false, { AmArg::CStr, AmArg::Undef } },
     { "proxy_transport_protocol_id", false, { AmArg::Int }, transport_protocol_validator },
+    { "route_set", false, { AmArg::CStr, AmArg::Undef } },
     { "append_headers", false, { AmArg::CStr, AmArg::Undef } },
     { "sip_interface_name", false, { AmArg::CStr, AmArg::Undef } },
     { "auth_username", false, { AmArg::CStr, AmArg::Undef } },
