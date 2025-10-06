@@ -152,14 +152,14 @@ string SipSingleProbe::preprocess_append_headers()
 
 bool SipSingleProbe::initFromAmArg(const AmArg &a)
 {
-#define ASSIGN_MANDATORY_STR(name) name = a[#name].asCStr();
-#define ASSIGN_MANDATORY_INT(name) name = a[#name].asInt();
+#define ASSIGN_MANDATORY_STR(name) name = a[#name].asCStr()
+#define ASSIGN_MANDATORY_INT(name) name = a[#name].asInt()
 #define ASSIGN_OPTIONAL_STR(name)                                                                                      \
     if (a.hasMember(#name))                                                                                            \
-        name = arg2str(a[#name])
+    name = arg2str(a[#name])
 #define ASSIGN_OPTIONAL_INT(name)                                                                                      \
     if (a.hasMember(#name))                                                                                            \
-        name = a[#name].asInt();
+    name = a[#name].asInt()
 
     string validation_error;
     if (!SipProbeAmArgValidator.validate(a, validation_error)) {
@@ -190,7 +190,7 @@ bool SipSingleProbe::initFromAmArg(const AmArg &a)
     // process variables
     cred.realm = ruri_domain;
     cred.user  = auth_username;
-    cred.pwd  = auth_password;
+    cred.pwd   = auth_password;
 
     AmUriParser uri_parser;
     req.method = "OPTIONS";
