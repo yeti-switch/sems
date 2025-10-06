@@ -1,3 +1,8 @@
+sems (1.171.7) stable; urgency=low
+  * options_prober: accept nil for optional prober parameters
+  * AmBasicSipDialog: fix incoming request's Max-Forwards saving
+ -- Michael Furmur <furmur@pm.me>  Mon, 06 Oct 2025 17:30:41 +0300
+
 sems (1.171.6) stable; urgency=low
   * uac_auth: support optional flags for getChallenge method
  -- Michael Furmur <furmur@pm.me>  Mon, 29 Sep 2025 11:43:33 +0300
