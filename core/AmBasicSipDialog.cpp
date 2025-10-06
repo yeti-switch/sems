@@ -402,11 +402,10 @@ void AmBasicSipDialog::initFromLocalRequest(const AmSipRequest &req)
 {
     setRemoteUri(req.r_uri);
 
-    scheme       = req.scheme;
-    user         = req.user;
-    domain       = req.domain;
-    route        = req.route;
-    max_forwards = req.max_forwards;
+    scheme = req.scheme;
+    user   = req.user;
+    domain = req.domain;
+    route  = req.route;
 
     setCallid(req.callid);
     setLocalTag(req.from_tag);
@@ -495,10 +494,9 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest &req)
     // Dlg not yet initialized?
     if (callid.empty()) {
 
-        scheme       = req.scheme;
-        user         = req.user;
-        domain       = req.domain;
-        max_forwards = req.max_forwards;
+        scheme = req.scheme;
+        user   = req.user;
+        domain = req.domain;
 
         setCallid(req.callid);
         setRemoteTag(req.from_tag);
