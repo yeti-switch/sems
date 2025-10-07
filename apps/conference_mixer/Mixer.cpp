@@ -452,7 +452,7 @@ bool isNeighbor(const sockaddr_storage &from, int &idx)
         ++idx;
     }
 
-    DBG("drop from %s", am_inet_ntop(&from).c_str());
+    // DBG("drop from %s", am_inet_ntop(&from).c_str());
     return false;
 }
 
