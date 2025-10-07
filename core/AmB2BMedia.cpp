@@ -594,8 +594,10 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
 
             int got = src_stream->get(ts, buffer, sample_rate, src_stream->getFrameSize());
             // CLASS_DBG("src_stream->get(%llu,%d)",ts,got);
-            if (got < 0)
+            if (got < 0) {
+                DBG("src_stream->get: %d", got);
                 return -1;
+            }
             if (got > 0) {
                 updateRecvStats(src_stream);
                 // CLASS_DBG("out->put(%llu,%d)",ts,got);
@@ -671,8 +673,15 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
                     }
                 }
             }
-            if (got < 0)
+
+            if (got < 0) {
+                if (!src.isInitialized()) {
+                    DBG("src_in->get: %d", got);
+                } else {
+                    DBG("src_stream->get: %d", got);
+                }
                 return -1;
+            }
         }
 
         stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
@@ -686,7 +695,11 @@ int StreamData::writeStream(unsigned long long ts, unsigned char *buffer, Stream
 
             stream->applyPendingStereoRecorders(owner_session);
 
-            return stream->put(ts, buffer, sample_rate, static_cast<unsigned int>(got));
+            auto ret = stream->put(ts, buffer, sample_rate, static_cast<unsigned int>(got));
+            if (ret < 0) {
+                DBG("stream->put: %d", ret);
+            }
+            return ret;
         } else {
             // to process stuff like dtmf queues even on no data received for stream
             stream->put_on_idle(ts);

@@ -1419,8 +1419,6 @@ int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
     unsigned int f_size = stream->getFrameSize();
     if (stream->checkInterval(ts)) {
         int got = stream->get(ts, buffer, stream->getSampleRate(), f_size);
-        if (got < 0)
-            res = -1;
         if (got > 0) {
             if (isDtmfDetectionEnabled())
                 putDtmfAudio(buffer, got, ts);
@@ -1428,7 +1426,13 @@ int AmSession::readStreams(unsigned long long ts, unsigned char *buffer)
             if (input) {
                 input->applyPendingStereoRecorders(nullptr);
                 res = input->put(ts, buffer, stream->getSampleRate(), got);
+                if (res < 0) {
+                    DBG("input->put: %d", res);
+                }
             }
+        } else if (got < 0) {
+            DBG("stream->get: %d", got);
+            res = -1;
         }
     }
 
@@ -1461,10 +1465,13 @@ int AmSession::writeStreams(unsigned long long ts, unsigned char *buffer)
         stream->processRtcpTimers(ts, stream->scaleSystemTS(ts));
 
         if (got < 0)
-            res = -1;
+            res = -1; // FIXME: looks unreachable because of 'if (got < 0)' above
         if (got > 0) {
             stream->applyPendingStereoRecorders(nullptr);
             res = stream->put(ts, buffer, output_sample_rate, got);
+            if (res < 0) {
+                DBG("stream->put: %d", res);
+            }
         } else {
             stream->put_on_idle(ts);
         }

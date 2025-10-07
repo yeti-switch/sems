@@ -367,6 +367,7 @@ int AmAudio::get(unsigned long long system_ts, unsigned char *buffer, int output
     // DBG("\tread(rd_ts = %10.u; size = %u)",rd_ts,size);
     size = read(rd_ts, size);
     if (size <= 0) {
+        DBG("read: %d", size);
         return size;
     }
 
@@ -395,8 +396,10 @@ int AmAudio::put(unsigned long long system_ts, unsigned char *buffer, int input_
     if (!fmt.get())
         return 0;
 
-    if (max_rec_time > -1 && rec_time >= max_rec_time)
+    if (max_rec_time > -1 && rec_time >= max_rec_time) {
+        DBG("max_rec_time:%d reached", max_rec_time);
         return -1;
+    }
 
     if (stereo_record_enabled) {
         stereo_recorders.put(system_ts, buffer, size, input_sample_rate);
