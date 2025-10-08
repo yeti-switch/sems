@@ -1619,21 +1619,22 @@ bool run_regex_mapping(const RegexMappingVector &mapping, const char *test_s, st
     return false;
 }
 
-// These function comes basically from ser's uac module
-void cvt_hex(HASH bin, HASHHEX hex)
+void cvt_hex(const string_view &bin, string &hex)
 {
     unsigned short i;
     unsigned char  j;
 
-    for (i = 0; i < HASHLEN; i++) {
-        j = (bin[i] >> 4) & 0xf;
+    hex.resize(bin.size() * 2);
+    const char *bin_c = bin.data();
+    for (i = 0; i < bin.size(); i++) {
+        j = (bin_c[i] >> 4) & 0xf;
         if (j <= 9) {
             hex[i * 2] = (j + '0');
         } else {
             hex[i * 2] = (j + 'a' - 10);
         }
 
-        j = bin[i] & 0xf;
+        j = bin_c[i] & 0xf;
 
         if (j <= 9) {
             hex[i * 2 + 1] = (j + '0');
@@ -1641,22 +1642,25 @@ void cvt_hex(HASH bin, HASHHEX hex)
             hex[i * 2 + 1] = (j + 'a' - 10);
         }
     };
-
-    hex[HASHHEXLEN] = '\0';
 }
 
 /** get an MD5 hash of a string */
 string calculateMD5(const string &input)
 {
-    MD5_CTX Md5Ctx;
-    HASH    H;
-    HASHHEX HH;
+
+#define HASHLEN 16
+
+    MD5_CTX       Md5Ctx;
+    unsigned char H[HASHLEN];
+    string        HH;
 
     MD5Init(&Md5Ctx);
     MD5Update(&Md5Ctx, (unsigned char *)input.c_str(), input.length());
     MD5Final(H, &Md5Ctx);
-    cvt_hex(H, HH);
-    return string((const char *)HH);
+    cvt_hex(string_view((char *)H, HASHLEN), HH);
+    return HH;
+
+#undef HASHLEN
 }
 
 // stolen from apps/sbc/HeaderFiler.cpp

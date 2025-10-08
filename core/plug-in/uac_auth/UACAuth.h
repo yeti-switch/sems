@@ -32,6 +32,7 @@
 #include "AmOfferAnswer.h"
 #include "ampi/UACAuthAPI.h"
 #include "AmUtils.h"
+#include "HashCalculation.h"
 
 #include <string>
 using std::string;
@@ -49,8 +50,8 @@ struct UACAuthDigestChallenge {
 
     std::map<string, string> attributes;
 
-    bool   parse(const std::string auth_hdr);
-    string find_attribute(const string &name);
+    static bool parse(const std::string auth_hdr, vector<UACAuthDigestChallenge> &challenges);
+    string      find_attribute(const string &name) const;
 };
 
 /** \brief factory for uac_auth session event handlers */
@@ -58,12 +59,7 @@ class UACAuthFactory : public AmSessionEventHandlerFactory,
                        public AmDynInvokeFactory,
                        public AmDynInvoke,
                        public AmConfigFactory {
-    UACAuthFactory(const string &name)
-        : AmSessionEventHandlerFactory(name)
-        , AmDynInvokeFactory(name)
-        , AmConfigFactory(name)
-    {
-    }
+    UACAuthFactory(const string &name);
 
     static UACAuthFactory *_instance;
     AmSessionEventHandler *getHandler(AmBasicSipDialog *dlg, CredentialHolder *s);
@@ -105,7 +101,6 @@ struct SIPRequestInfo {
 class UACAuth : public AmSessionEventHandler {
   public:
     enum allowed_qop_t { QOP_AUTH = 1, QOP_AUTH_INT = 2 };
-    enum nonce_check_result_t { NCR_EXPIRED, NCR_WRONG, NCR_OK };
 
   private:
     static string server_nonce_secret;
@@ -125,17 +120,8 @@ class UACAuth : public AmSessionEventHandler {
 
     bool nonce_reuse; // reused nonce?
 
-    static void uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential,
-                             std::string cnonce, HASHHEX sess_key);
-
-    static void uac_calc_HA2(const std::string &method, const std::string &uri, const UACAuthDigestChallenge &challenge,
-                             HASHHEX hentity, HASHHEX HA2Hex);
-
-    static void uac_calc_hentity(const std::string &body, HASHHEX hentity);
-
-    static void uac_calc_response(HASHHEX ha1, HASHHEX ha2, const UACAuthDigestChallenge &challenge,
-                                  const std::string &cnonce, const string &qop_value,
-                                  const std::string &nonce_count_str, HASHHEX response);
+    static const UACAuthDigestChallenge *choose_challenge(const vector<UACAuthDigestChallenge> &challenges,
+                                                          string                               &algorithm);
 
     /**
      *  do auth on cmd with nonce in auth_hdr if possible
@@ -163,12 +149,11 @@ class UACAuth : public AmSessionEventHandler {
     virtual bool onSendRequest(AmSipRequest &req, int &flags);
     virtual bool onSendReply(const AmSipRequest &req, AmSipReply &reply, int &flags);
 
-    static string               calcNonce();
-    static nonce_check_result_t checkNonce(const string &nonce);
-    static void                 fetchAuthentication(const AmSipRequest *req, AmArg &ret);
+    static void   fetchAuthentication(const AmSipRequest *req, AmArg &ret);
     static void   checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
-                                      const string &pwd, const string &default_realm, AmArg &ret);
-    static string getChallengeHeader(const string &realm, int flags);
+                                      const string &pwd, const string &default_realm, const vector<string> &algorithms,
+                                      AmArg &ret);
+    static string getChallengeHeader(const string &realm, const string &algorithm, int flags);
 
     static void setServerSecret(const string &secret);
     static void setAllowedQops(int allowed_qop_mask);
@@ -181,5 +166,5 @@ class UACAuth : public AmSessionEventHandler {
     /** time-constant string compare function @return true if matching */
     static bool tc_isequal(const char *s1, const char *s2, size_t len);
     static void checkAuthenticationByHA1(const AmSipRequest *req, const string &realm, const string &user,
-                                         const string &HA1, AmArg &ret);
+                                         const string &HA1, const vector<string> &algorithms, AmArg &ret);
 };

@@ -1,5 +1,6 @@
 set (uac_auth_SRCS
 UACAuth.cpp
+HashCalculation.cpp
 )
 
 IF(SEMS_USE_GTEST)

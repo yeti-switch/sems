@@ -38,6 +38,7 @@
 
 #include <string>
 using std::string;
+using std::string_view;
 
 #include <vector>
 #include <utility>
@@ -46,12 +47,6 @@ using std::string;
 
 #include "md5.h"
 #include "sip/resolver.h"
-
-#define HASHLEN 16
-typedef unsigned char HASH[HASHLEN];
-
-#define HASHHEXLEN 32
-typedef unsigned char HASHHEX[HASHHEXLEN + 1];
 
 // #define FIFO_PERM S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
 
@@ -371,9 +366,8 @@ bool read_regex_mapping(const string &fname, const char *sep, const char *dbg_ty
  */
 bool run_regex_mapping(const RegexMappingVector &mapping, const char *test_s, string &result);
 
-
-/** convert a binary MD5 hash to hex representation */
-void cvt_hex(HASH bin, HASHHEX hex);
+/** convert a binary hash to hex representation */
+void cvt_hex(const string_view &bin, string &hex);
 
 /** get an MD5 hash of a string */
 string calculateMD5(const string &input);
