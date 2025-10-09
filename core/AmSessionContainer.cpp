@@ -220,13 +220,24 @@ void AmSessionContainer::stopAndQueue(AmSession *s)
 
 void AmSessionContainer::destroySession(AmSession *s)
 {
-    AmEventQueueInterface *q = AmEventDispatcher::instance()->delEventQueue(s->getLocalTag());
+    /* removed queue checking because we use manual session queue unregistering
+     * in the certain modules to avoid AmSessionContainer::startSessionUAS AlreadyExist case
+     * looks safe because we have
+     * AmSession::destroy() -> AmSessionContainer::destroySession()
+     * calls from the AmSessionProcessorThread::run() only and they should be unique per session
+     * reconsider decision on double free in AmSessionContainer::clean_sessions()
+     */
+#if 0
 
+    AmEventQueueInterface *q = AmEventDispatcher::instance()->delEventQueue(s->getLocalTag());
     if (q) {
         stopAndQueue(s);
     } else {
         WARN("could not remove session: id not found or wrong type");
     }
+#endif
+
+    stopAndQueue(s);
 }
 
 string AmSessionContainer::startSessionUAC(const AmSipRequest &req, string &app_name, AmArg *session_params)
