@@ -1,3 +1,7 @@
+sems (1.171.9) stable; urgency=low
+  * AmSessionContainer::destroySession: rm queue existence checking
+ -- Michael Furmur <furmur@pm.me>  Thu, 09 Oct 2025 14:29:03 +0300
+
 sems (1.171.8) stable; urgency=low
   * add logs for audio processing errors
  -- Michael Furmur <furmur@pm.me>  Tue, 07 Oct 2025 12:57:22 +0300
