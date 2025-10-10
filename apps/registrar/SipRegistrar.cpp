@@ -516,27 +516,34 @@ void SipRegistrar::rpc_show_aors(const AmArg &arg, AmArg &ret)
 {
     size_t i, j;
 
-    RedisBlockingRequestCtx ctx;
-    rpc_resolve_aors(&ctx, UserTypeId::BlockingReqCtx, arg);
-    ctx.cond.wait_for();
+    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
 
-    if (RedisReply::SuccessReply != ctx.result)
-        throw AmSession::Exception(500, AmArg::print(ctx.data));
+    try {
+        rpc_resolve_aors(ctx.get(), UserTypeId::BlockingReqCtx, arg);
+    } catch (...) {
+        ctx.release();
+        throw;
+    }
 
-    if (!isArgArray(ctx.data) || ctx.data.size() % 2 != 0)
+    ctx->cond.wait_for();
+
+    if (RedisReply::SuccessReply != ctx->result)
+        throw AmSession::Exception(500, AmArg::print(ctx->data));
+
+    if (!isArgArray(ctx->data) || ctx->data.size() % 2 != 0)
         throw AmSession::Exception(500, "unexpected redis reply");
 
-    DBG("%s", AmArg::print(ctx.data).c_str());
+    DBG("%s", AmArg::print(ctx->data).c_str());
     ret.assertArray();
 
-    for (i = 0; i < ctx.data.size(); i += 2) {
-        AmArg &id_arg = ctx.data[i];
+    for (i = 0; i < ctx->data.size(); i += 2) {
+        AmArg &id_arg = ctx->data[i];
         if (!isArgCStr(id_arg)) {
             ERROR("unexpected auth_id type. skip entry");
             continue;
         }
 
-        AmArg &aor_data_arg = ctx.data[i + 1];
+        AmArg &aor_data_arg = ctx->data[i + 1];
         if (!isArgArray(aor_data_arg)) {
             ERROR("unexpected aor_data_arg layout. skip entry");
             continue;
@@ -580,28 +587,35 @@ void SipRegistrar::rpc_show_keepalive_contexts(const AmArg &, AmArg &ret)
 
 void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
 {
-    RedisBlockingRequestCtx ctx;
-    rpc_bind_(&ctx, UserTypeId::BlockingReqCtx, arg);
-    ctx.cond.wait_for();
+    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
 
-    if (RedisReply::SuccessReply != ctx.result)
-        throw AmSession::Exception(500, AmArg::print(ctx.data));
+    try {
+        rpc_bind_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
+    } catch (...) {
+        ctx.release();
+        throw;
+    }
 
-    if (!isArgArray(ctx.data))
+    ctx->cond.wait_for();
+
+    if (RedisReply::SuccessReply != ctx->result)
+        throw AmSession::Exception(500, AmArg::print(ctx->data));
+
+    if (!isArgArray(ctx->data))
         throw AmSession::Exception(500, "unexpected redis reply");
 
-    if (ctx.data.size() == 0) {
-        DBG("zero ctx.data.size reply from redis. no bindings");
+    if (ctx->data.size() == 0) {
+        DBG("zero ctx->data.size reply from redis. no bindings");
         ret = "";
         return;
     }
 
-    DBG("%s", AmArg::print(ctx.data).c_str());
+    DBG("%s", AmArg::print(ctx->data).c_str());
 
     // parse data and fill ret
-    int n = static_cast<int>(ctx.data.size());
+    int n = static_cast<int>(ctx->data.size());
     for (int i = 0; i < n; ++i) {
-        AmArg &d = ctx.data[i];
+        AmArg &d = ctx->data[i];
         if (!isArgArray(d) || d.size() < 8) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it", AmArg::print(d).c_str());
             continue;
@@ -631,34 +645,41 @@ void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
 
 void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
 {
-    RedisBlockingRequestCtx ctx;
-    rpc_unbind_(&ctx, UserTypeId::BlockingReqCtx, arg);
-    ctx.cond.wait_for();
+    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
 
-    if (RedisReply::SuccessReply != ctx.result)
-        throw AmSession::Exception(500, AmArg::print(ctx.data));
+    try {
+        rpc_unbind_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
+    } catch (...) {
+        ctx.release();
+        throw;
+    }
 
-    DBG("%s", AmArg::print(ctx.data).c_str());
+    ctx->cond.wait_for();
 
-    if (isArgUndef(ctx.data)) {
+    if (RedisReply::SuccessReply != ctx->result)
+        throw AmSession::Exception(500, AmArg::print(ctx->data));
+
+    DBG("%s", AmArg::print(ctx->data).c_str());
+
+    if (isArgUndef(ctx->data)) {
         DBG("nil reply from redis. no bindings");
         ret = "";
         return;
     }
 
-    if (!isArgArray(ctx.data))
+    if (!isArgArray(ctx->data))
         throw AmSession::Exception(500, "unexpected redis reply");
 
-    if (ctx.data.size() == 0) {
-        DBG("zero ctx.data.size reply from redis. no bindings");
+    if (ctx->data.size() == 0) {
+        DBG("zero ctx->data.size reply from redis. no bindings");
         ret = "";
         return;
     }
 
     // parse data and fill ret
-    int n = static_cast<int>(ctx.data.size());
+    int n = static_cast<int>(ctx->data.size());
     for (int i = 0; i < n; ++i) {
-        AmArg &d = ctx.data[i];
+        AmArg &d = ctx->data[i];
         if (!isArgArray(d) || d.size() != 10) {
             ERROR("unexpected AoR layout in reply from redis: %s. skip it", AmArg::print(d).c_str());
             continue;
@@ -682,14 +703,21 @@ void SipRegistrar::rpc_unbind(const AmArg &arg, AmArg &ret)
 
 void SipRegistrar::rpc_transport_down(const AmArg &arg, AmArg &ret)
 {
-    RedisBlockingRequestCtx ctx;
-    rpc_transport_down_(&ctx, UserTypeId::BlockingReqCtx, arg);
-    ctx.cond.wait_for();
+    std::unique_ptr<RedisBlockingRequestCtx> ctx(new RedisBlockingRequestCtx());
 
-    if (RedisReply::SuccessReply != ctx.result)
-        throw AmSession::Exception(500, AmArg::print(ctx.data));
+    try {
+        rpc_transport_down_(ctx.get(), UserTypeId::BlockingReqCtx, arg);
+    } catch (...) {
+        ctx.release();
+        throw;
+    }
 
-    DBG("%s", AmArg::print(ctx.data).c_str());
+    ctx->cond.wait_for();
+
+    if (RedisReply::SuccessReply != ctx->result)
+        throw AmSession::Exception(500, AmArg::print(ctx->data));
+
+    DBG("%s", AmArg::print(ctx->data).c_str());
 }
 
 
@@ -1535,8 +1563,10 @@ void SipRegistrar::rpc_bind_(AmObject *user_data, int user_type_id, const AmArg 
                  bindings_max };
     else {
         auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded())
+        if (!script || !script->is_loaded()) {
+            delete user_data;
             throw AmSession::Exception(500, "registrar is not enabled");
+        }
 
         args = { "EVALSHA",
                  script->hash.c_str(),
@@ -1567,8 +1597,10 @@ void SipRegistrar::rpc_unbind_(AmObject *user_data, int user_type_id, const AmAr
         args = { "FCALL", "register", 1, registration_id.c_str(), 0 }; // expires 0
     else {
         auto script = write_conn->script(REGISTER_SCRIPT);
-        if (!script || !script->is_loaded())
+        if (!script || !script->is_loaded()) {
+            delete user_data;
             throw AmSession::Exception(500, "registrar is not enabled");
+        }
 
         args = { "EVALSHA", script->hash.c_str(), 1, registration_id.c_str(), 0 }; // expires 0
     }
@@ -1590,8 +1622,10 @@ void SipRegistrar::rpc_transport_down_(AmObject *user_data, int user_type_id, co
         args = { "FCALL", "transport_down", 0, registration_id.c_str(), conn_id };
     else {
         auto script = write_conn->script(RPC_TRANSPORT_DOWN_SCRIPT);
-        if (!script || !script->is_loaded())
+        if (!script || !script->is_loaded()) {
+            delete user_data;
             throw AmSession::Exception(500, "registrar is not enabled");
+        }
 
         args = { "EVALSHA", script->hash.c_str(), 0, registration_id.c_str(), conn_id }; // expires 0
     }
@@ -1607,8 +1641,10 @@ void SipRegistrar::rpc_resolve_aors(AmObject *user_data, int user_type_id, const
         args = { "FCALL_RO", "rpc_aor_lookup", (int)arg.size() };
     else {
         auto script = read_conn->script(RPC_AOR_LOOKUP_SCRIPT);
-        if (!script || !script->is_loaded())
+        if (!script || !script->is_loaded()) {
+            delete user_data;
             throw AmSession::Exception(500, "registrar is not enabled");
+        }
 
         args = { "EVALSHA", script->hash.c_str(), (int)arg.size() };
     }
