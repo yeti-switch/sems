@@ -461,7 +461,7 @@ int AmAudio::decode(unsigned int size)
     if (codec->decode) {
         s = (*codec->decode)(samples.back_buffer(), samples, s, fmt->channels, getSampleRate(), h_codec);
         if (s < 0) {
-            ERROR("codec %d decode failed", codec->id);
+            ERROR("codec %d decode failed; size = %u", codec->id, size);
             return s;
         }
         samples.swap();
@@ -484,7 +484,7 @@ int AmAudio::encode(unsigned int size)
         s = (*codec->encode)(samples.back_buffer(), samples, (unsigned int)size, fmt->channels, getSampleRate(),
                              h_codec);
         if (s < 0) {
-            ERROR("codec %d encode failed", codec->id);
+            ERROR("codec %d encode failed; size = %u", codec->id, size);
             return s;
         }
         samples.swap();
