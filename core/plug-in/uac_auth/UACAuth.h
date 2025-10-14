@@ -151,6 +151,7 @@ class UACAuth : public AmSessionEventHandler {
     static void   checkAuthentication(const AmSipRequest *req, const vector<string> &realms, const string &user,
                                       const string &pwd, const string &default_realm, const vector<string> &algorithms,
                                       AmArg &ret);
+    static string getChallengeHeader(const string &realm, const HashCalculation &hash, int flags);
     static string getChallengeHeader(const string &realm, const string &algorithm, int flags);
 
     static void setServerSecret(const string &secret);

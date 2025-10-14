@@ -22,7 +22,7 @@ string MD5_Hash::algorithmName() const
 }
 
 /** calculate nonce: time-stamp H(time-stamp private-key) */
-string MD5_Hash::calcNonce(const string &nonce_secret)
+string MD5_Hash::calcNonce(const string &nonce_secret) const
 {
     string        result;
     string        hash;
@@ -202,7 +202,7 @@ string SHA256_Hash::algorithmName() const
 }
 
 /** calculate nonce: time-stamp H(time-stamp private-key) */
-string SHA256_Hash::calcNonce(const string &nonce_secret)
+string SHA256_Hash::calcNonce(const string &nonce_secret) const
 {
     string        result;
     string        hash;

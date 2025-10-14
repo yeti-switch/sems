@@ -19,7 +19,7 @@ struct HashCalculation {
     virtual ~HashCalculation() {}
     virtual unsigned int         getHashLength() const                                    = 0;
     virtual string               algorithmName() const                                    = 0;
-    virtual string               calcNonce(const string &nonce_secret)                    = 0;
+    virtual string               calcNonce(const string &nonce_secret) const              = 0;
     virtual nonce_check_result_t checkNonce(const string &nonce, const string &nonce_secret,
                                             unsigned int nonce_expire) const              = 0;
     virtual void                 uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential,
@@ -39,7 +39,7 @@ class MD5_Hash : public HashCalculation {
   public:
     unsigned int         getHashLength() const override;
     string               algorithmName() const override;
-    string               calcNonce(const string &nonce_secret) override;
+    string               calcNonce(const string &nonce_secret) const override;
     nonce_check_result_t checkNonce(const string &nonce, const string &nonce_secret,
                                     unsigned int nonce_expire) const override;
     void uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential, std::string cnonce,
@@ -59,7 +59,7 @@ class SHA256_Hash : public HashCalculation {
   public:
     unsigned int         getHashLength() const override;
     string               algorithmName() const override;
-    string               calcNonce(const string &nonce_secret) override;
+    string               calcNonce(const string &nonce_secret) const override;
     nonce_check_result_t checkNonce(const string &nonce, const string &nonce_secret,
                                     unsigned int nonce_expire) const override;
     void uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential, std::string cnonce,

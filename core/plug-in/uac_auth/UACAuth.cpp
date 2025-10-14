@@ -29,7 +29,6 @@
 #include "UACAuth.h"
 #include "AmSipMsg.h"
 #include "AmUtils.h"
-#include "AmSipHeaders.h"
 #include "AmLcConfig.h"
 #include "AmUriParser.h"
 
@@ -72,11 +71,11 @@ const UACAuthDigestChallenge *choose_challenge(const vector<UACAuthDigestChallen
     static const auto default_hash_p = hashes[DEFAULT_ALGORITHM].get();
 
     const UACAuthDigestChallenge *challenge_p = nullptr;
-    for (auto &challenge : challenges) {
+    for (const auto &challenge : challenges) {
         string algorithm = challenge.find_attribute("algorithm");
         if (algorithm.empty() || algorithm == DEFAULT_ALGORITHM) {
-            algorithm = DEFAULT_ALGORITHM;
-            hash_p    = default_hash_p;
+            challenge_p = &challenge;
+            hash_p      = default_hash_p;
             break;
         }
 
@@ -155,7 +154,7 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
         vector<string> algorithms;
         if (args.size() >= 6) {
             const AmArg &algs = args.get(5);
-            for (int i = 0; isArgArray(algs) && i < algs.size(); i++) {
+            for (auto i = 0u; isArgArray(algs) && i < algs.size(); i++) {
                 if (isArgCStr(algs[i]))
                     algorithms.push_back(algs[i].asCStr());
             }
@@ -172,7 +171,7 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
             ret = UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).asCStr(), flags);
         } else if (args.size() > 2 && isArgArray(args.get(2))) {
             string challenge;
-            for (int i = 0; i < args.get(2).size(); i++) {
+            for (auto i = 0u; i < args.get(2).size(); i++) {
                 if (isArgCStr(args.get(2).get(i)))
                     challenge += UACAuth::getChallengeHeader(args.get(0).asCStr(), args.get(2).get(i).asCStr(), flags);
             }
@@ -194,7 +193,7 @@ void UACAuthFactory::invoke(const string &method, const AmArg &args, AmArg &ret)
         vector<string> algorithms;
         if (args.size() >= 4) {
             const AmArg &algs = args.get(5);
-            for (int i = 0; isArgArray(algs) && i < algs.size(); i++) {
+            for (auto i = 0u; isArgArray(algs) && i < algs.size(); i++) {
                 if (isArgCStr(algs[i]))
                     algorithms.push_back(algs[i].asCStr());
             }
@@ -725,7 +724,7 @@ bool UACAuth::do_auth(const unsigned int code, const string &auth_hdr, const str
     const HashCalculation        *hash_p;
     const UACAuthDigestChallenge *challenge_p = choose_challenge(challenges, hash_p);
     if (!challenge_p) {
-        DBG("unsupported algorithms");
+        DBG("no supported algorithm found");
         return false;
     }
 
@@ -1039,13 +1038,13 @@ auth_end:
             (!r_realm.empty() && internal_code != UACAuthRealmMismatch) ? r_realm : default_realm;
         if (hash) {
             // return single challenge
-            challenge += getChallengeHeader(challenge_realm, hash->algorithmName(), getAllowedQops());
+            challenge += getChallengeHeader(challenge_realm, *hash, getAllowedQops());
         } else {
             // return headers for all allowed hashes
             for (const auto &[supported_hash_name, supported_hash] : hashes) {
                 if (std::find(algorithms.begin(), algorithms.end(), supported_hash_name) == algorithms.end())
                     continue;
-                challenge += getChallengeHeader(challenge_realm, hash->algorithmName(), getAllowedQops());
+                challenge += getChallengeHeader(challenge_realm, *supported_hash, getAllowedQops());
             }
         }
         ret.push(challenge);
@@ -1054,18 +1053,8 @@ auth_end:
     ret.push(internal_code);
 }
 
-string UACAuth::getChallengeHeader(const string &realm, const string &algorithm, int flags)
+string UACAuth::getChallengeHeader(const string &realm, const HashCalculation &hash, int flags)
 {
-    string alg = algorithm;
-    if (alg.empty())
-        alg = DEFAULT_ALGORITHM;
-    std::transform(alg.begin(), alg.end(), alg.begin(), ::toupper);
-    if (hashes.find(alg) == hashes.end()) {
-        DBG("unsupported algorithm: '%s'", alg.c_str());
-        return "";
-    }
-    auto &hash = hashes[alg];
-
     string qop_str_value;
     bool   use_qop = flags & allowed_qop_types;
 
@@ -1080,21 +1069,45 @@ string UACAuth::getChallengeHeader(const string &realm, const string &algorithm,
         }
     }
 
-    return use_qop ? SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                             "realm=\"" +
-                         realm +
-                         "\", "
-                         "qop=\"" +
-                         qop_str_value +
-                         "\", "
-                         "nonce=\"" +
-                         hash->calcNonce(server_nonce_secret) + "\", algorithm=" + hash->algorithmName() + "\r\n"
-                   : SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
-                                                             "realm=\"" +
-                         realm +
-                         "\", "
-                         "nonce=\"" +
-                         hash->calcNonce(server_nonce_secret) + "\", algorithm=" + hash->algorithmName() + "\r\n";
+    if (use_qop) {
+        return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
+                                                       "realm=\"" +
+               realm +
+               "\", "
+               "qop=\"" +
+               qop_str_value +
+               "\", "
+               "nonce=\"" +
+               hash.calcNonce(server_nonce_secret) + "\", algorithm=" + hash.algorithmName() + "\r\n";
+    }
+
+    return SIP_HDR_COLSP(SIP_HDR_WWW_AUTHENTICATE) "Digest "
+                                                   "realm=\"" +
+           realm +
+           "\", "
+           "nonce=\"" +
+           hash.calcNonce(server_nonce_secret) + "\", algorithm=" + hash.algorithmName() + "\r\n";
+}
+
+string UACAuth::getChallengeHeader(const string &realm, const string &algorithm, int flags)
+{
+    static const auto default_hash_p = hashes[DEFAULT_ALGORITHM].get();
+    HashCalculation  *hash_p;
+
+    if (algorithm.empty()) {
+        hash_p = default_hash_p;
+    } else {
+        string alg = algorithm;
+        std::transform(alg.begin(), alg.end(), alg.begin(), ::toupper);
+        auto it = hashes.find(alg);
+        if (it == hashes.end()) {
+            DBG("unsupported algorithm: '%s'", alg.c_str());
+            return "";
+        }
+        hash_p = it->second.get();
+    }
+
+    return getChallengeHeader(realm, *hash_p, flags);
 }
 
 void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &realm, const string &user,
@@ -1124,7 +1137,7 @@ void UACAuth::checkAuthenticationByHA1(const AmSipRequest *req, const string &re
 
         const UACAuthDigestChallenge *r_challenge_p = choose_challenge(r_challenges, hash);
         if (!r_challenge_p) {
-            DBG("unsupported algorithms");
+            DBG("no supported algorithm found");
             goto auth_end;
         }
         const UACAuthDigestChallenge &r_challenge = *r_challenge_p;
