@@ -11,12 +11,12 @@ inline void w_MD5Update(MD5_CTX *ctx, const string &s)
 #define MD5HASHHEXLEN 32
 #define MD5HASHLEN    16
 
-unsigned int MD5_Hash::getHashLength()
+unsigned int MD5_Hash::getHashLength() const
 {
     return MD5HASHLEN;
 }
 
-string MD5_Hash::algorithmName()
+string MD5_Hash::algorithmName() const
 {
     return "MD5";
 }
@@ -41,7 +41,8 @@ string MD5_Hash::calcNonce(const string &nonce_secret)
     return result + hash.c_str();
 }
 
-nonce_check_result_t MD5_Hash::checkNonce(const string &nonce, const string &nonce_secret, unsigned int nonce_expire)
+nonce_check_result_t MD5_Hash::checkNonce(const string &nonce, const string &nonce_secret,
+                                          unsigned int nonce_expire) const
 {
     string        hash;
     MD5_CTX       Md5Ctx;
@@ -81,7 +82,7 @@ nonce_check_result_t MD5_Hash::checkNonce(const string &nonce, const string &non
  * calculate H(A1)
  */
 void MD5_Hash::uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential, std::string cnonce,
-                            string &sess_key)
+                            string &sess_key) const
 {
     if (nullptr == _credential)
         return;
@@ -115,7 +116,8 @@ void MD5_Hash::uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAu
 /*
  * calculate H(A2)
  */
-void MD5_Hash::uac_calc_HA2(const std::string &method, const std::string &uri, const string &hentity, string &HA2Hex)
+void MD5_Hash::uac_calc_HA2(const std::string &method, const std::string &uri, const string &hentity,
+                            string &HA2Hex) const
 {
     static unsigned char hc[1] = { ':' };
     MD5_CTX              Md5Ctx;
@@ -138,7 +140,7 @@ void MD5_Hash::uac_calc_HA2(const std::string &method, const std::string &uri, c
 /*
  * calculate H(body)
  */
-void MD5_Hash::uac_calc_hentity(const std::string &body, string &hentity)
+void MD5_Hash::uac_calc_hentity(const std::string &body, string &hentity) const
 {
     MD5_CTX       Md5Ctx;
     unsigned char h[MD5HASHLEN];
@@ -154,7 +156,7 @@ void MD5_Hash::uac_calc_hentity(const std::string &body, string &hentity)
  */
 void MD5_Hash::uac_calc_response(const string &ha1, const string &ha2, const UACAuthDigestChallenge &challenge,
                                  const std::string &cnonce, const string &qop_value, const std::string &nonce_count_str,
-                                 string &response)
+                                 string &response) const
 {
     static unsigned char hc[1] = { ':' };
     MD5_CTX              Md5Ctx;
@@ -189,12 +191,12 @@ inline void w_SHA256Update(SHA256_CTX *ctx, const string &s)
 #define SHA256HASHHEXLEN 64
 #define SHA256HASHLEN    32
 
-unsigned int SHA256_Hash::getHashLength()
+unsigned int SHA256_Hash::getHashLength() const
 {
     return SHA256HASHLEN;
 }
 
-string SHA256_Hash::algorithmName()
+string SHA256_Hash::algorithmName() const
 {
     return "SHA-256";
 }
@@ -219,7 +221,8 @@ string SHA256_Hash::calcNonce(const string &nonce_secret)
     return result + hash;
 }
 
-nonce_check_result_t SHA256_Hash::checkNonce(const string &nonce, const string &nonce_secret, unsigned int nonce_expire)
+nonce_check_result_t SHA256_Hash::checkNonce(const string &nonce, const string &nonce_secret,
+                                             unsigned int nonce_expire) const
 {
     string        hash;
     SHA256_CTX    Sha256Ctx;
@@ -259,7 +262,7 @@ nonce_check_result_t SHA256_Hash::checkNonce(const string &nonce, const string &
  * calculate H(A1)
  */
 void SHA256_Hash::uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UACAuthCred *_credential,
-                               std::string cnonce, string &sess_key)
+                               std::string cnonce, string &sess_key) const
 {
     if (nullptr == _credential)
         return;
@@ -293,7 +296,8 @@ void SHA256_Hash::uac_calc_HA1(const UACAuthDigestChallenge &challenge, const UA
 /*
  * calculate H(A2)
  */
-void SHA256_Hash::uac_calc_HA2(const std::string &method, const std::string &uri, const string &hentity, string &HA2Hex)
+void SHA256_Hash::uac_calc_HA2(const std::string &method, const std::string &uri, const string &hentity,
+                               string &HA2Hex) const
 {
     static unsigned char hc[1] = { ':' };
     SHA256_CTX           Sha256Ctx;
@@ -316,7 +320,7 @@ void SHA256_Hash::uac_calc_HA2(const std::string &method, const std::string &uri
 /*
  * calculate H(body)
  */
-void SHA256_Hash::uac_calc_hentity(const std::string &body, string &hentity)
+void SHA256_Hash::uac_calc_hentity(const std::string &body, string &hentity) const
 {
     SHA256_CTX    Sha256Ctx;
     unsigned char h[SHA256HASHLEN];
@@ -332,7 +336,7 @@ void SHA256_Hash::uac_calc_hentity(const std::string &body, string &hentity)
  */
 void SHA256_Hash::uac_calc_response(const string &ha1, const string &ha2, const UACAuthDigestChallenge &challenge,
                                     const std::string &cnonce, const string &qop_value,
-                                    const std::string &nonce_count_str, string &response)
+                                    const std::string &nonce_count_str, string &response) const
 {
     static unsigned char hc[1] = { ':' };
     SHA256_CTX           Sha256Ctx;

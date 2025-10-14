@@ -59,6 +59,7 @@ class UACAuthFactory : public AmSessionEventHandlerFactory,
                        public AmDynInvokeFactory,
                        public AmDynInvoke,
                        public AmConfigFactory {
+
     UACAuthFactory(const string &name);
 
     static UACAuthFactory *_instance;
@@ -119,9 +120,6 @@ class UACAuth : public AmSessionEventHandler {
     unsigned int nonce_count;
 
     bool nonce_reuse; // reused nonce?
-
-    static const UACAuthDigestChallenge *choose_challenge(const vector<UACAuthDigestChallenge> &challenges,
-                                                          string                               &algorithm);
 
     /**
      *  do auth on cmd with nonce in auth_hdr if possible
