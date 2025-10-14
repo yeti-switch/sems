@@ -1,3 +1,8 @@
+sems (1.172.0) stable; urgency=low
+  * uac_auth: add multi challenge and sha-256 support
+  * registrar: fix segfaults in rpc methods during node termination
+ -- Michael Furmur <furmur@pm.me>  Tue, 14 Oct 2025 21:08:26 +0300
+
 sems (1.171.10) stable; urgency=low
   * AmSessionContainer::destroySession: fix removal from AmEventDispatcher
  -- Michael Furmur <furmur@pm.me>  Thu, 09 Oct 2025 17:45:08 +0300
