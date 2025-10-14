@@ -462,7 +462,9 @@ void tls_trsp_socket::tls_record_received([[maybe_unused]] uint64_t seq_no, std:
     }
 }
 
-void tls_trsp_socket::tls_alert([[maybe_unused]] Botan::TLS::Alert alert) {}
+void tls_trsp_socket::tls_alert([[maybe_unused]] Botan::TLS::Alert alert) {
+    DBG("alert type: %d, desc: %s", alert.type(), alert.type_string().c_str());
+}
 
 void tls_trsp_socket::tls_session_established(const Botan::TLS::Session_Summary &session)
 {

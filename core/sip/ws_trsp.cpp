@@ -333,7 +333,7 @@ ssize_t ws_input::recv_callback([[maybe_unused]] wslay_event_context_ptr ctx, ui
 
 void ws_input::on_msg_recv([[maybe_unused]] wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg)
 {
-    DBG("opcode: %s", wslay_opcode2str(arg->opcode));
+    DBG3("opcode: %s", wslay_opcode2str(arg->opcode));
     if (arg->opcode == WSLAY_TEXT_FRAME || arg->opcode == WSLAY_CONTINUATION_FRAME || arg->opcode == WSLAY_BINARY_FRAME) {
         memcpy(trsp_base_input::get_input(), arg->msg, arg->msg_length);
         trsp_base_input::add_input_len(arg->msg_length);
