@@ -1,3 +1,7 @@
+sems (1.172.1) stable; urgency=low
+  * uac_auth: fix checkAuthentication segfault. optimize algo lookup
+ -- Michael Furmur <furmur@pm.me>  Tue, 14 Oct 2025 22:25:51 +0300
+
 sems (1.172.0) stable; urgency=low
   * uac_auth: add multi challenge and sha-256 support
   * registrar: fix segfaults in rpc methods during node termination
