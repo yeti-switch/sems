@@ -69,22 +69,16 @@ struct wslay_event_callbacks ws_input::callbacks = { ws_input::recv_callback,
                                                      NULL, /* on_frame_recv_end_callback */
                                                      ws_input::on_msg_recv_callback };
 
-static const char * wslay_opcode2str(uint8_t code) {
-    switch(code) {
-    case WSLAY_CONTINUATION_FRAME:
-        return "CONTINUATION_FRAME";
-    case WSLAY_TEXT_FRAME:
-        return "TEXT_FRAME";
-    case WSLAY_BINARY_FRAME:
-        return "BINARY_FRAME";
-    case WSLAY_CONNECTION_CLOSE:
-        return "CONNECTION_CLOSE";
-    case WSLAY_PING:
-        return "PING";
-    case WSLAY_PONG:
-        return "PONG";
-    default:
-        return "NONE";
+static const char *wslay_opcode2str(uint8_t code)
+{
+    switch (code) {
+    case WSLAY_CONTINUATION_FRAME: return "CONTINUATION_FRAME";
+    case WSLAY_TEXT_FRAME:         return "TEXT_FRAME";
+    case WSLAY_BINARY_FRAME:       return "BINARY_FRAME";
+    case WSLAY_CONNECTION_CLOSE:   return "CONNECTION_CLOSE";
+    case WSLAY_PING:               return "PING";
+    case WSLAY_PONG:               return "PONG";
+    default:                       return "NONE";
     }
 }
 
@@ -334,7 +328,8 @@ ssize_t ws_input::recv_callback([[maybe_unused]] wslay_event_context_ptr ctx, ui
 void ws_input::on_msg_recv([[maybe_unused]] wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg)
 {
     DBG3("opcode: %s", wslay_opcode2str(arg->opcode));
-    if (arg->opcode == WSLAY_TEXT_FRAME || arg->opcode == WSLAY_CONTINUATION_FRAME || arg->opcode == WSLAY_BINARY_FRAME) {
+    if (arg->opcode == WSLAY_TEXT_FRAME || arg->opcode == WSLAY_CONTINUATION_FRAME || arg->opcode == WSLAY_BINARY_FRAME)
+    {
         memcpy(trsp_base_input::get_input(), arg->msg, arg->msg_length);
         trsp_base_input::add_input_len(arg->msg_length);
         parse_input(dynamic_cast<tcp_base_trsp *>(output));
