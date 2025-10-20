@@ -24,7 +24,7 @@ using std::unique_ptr;
 
 #define MAX_DTLS_SESSIONS 8192
 
-class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager {
+class dtls_conf : public Botan::TLS::Datagram_Policy, public Botan::Credentials_Manager {
     friend class AmSrtpConnection;
     friend class RtpSecureContext;
     dtls_client_settings           *s_client;
@@ -46,13 +46,12 @@ class dtls_conf : public Botan::TLS::Policy, public Botan::Credentials_Manager {
     void operator=(const dtls_conf &conf);
     bool is_client();
 
-    // Policy functions
+    // Datagram_Policy functions
     bool             allow_ssl_key_log_file() const override { return true; }
     vector<string>   allowed_key_exchange_methods() const override;
     vector<string>   allowed_signature_methods() const override;
     vector<string>   allowed_ciphers() const override;
     vector<string>   allowed_macs() const override;
-    bool             allow_tls12() const override { return false; }
     bool             allow_dtls12() const override;
     bool             require_cert_revocation_info() const override { return false; }
     bool             require_client_certificate_authentication() const override { return true; }
