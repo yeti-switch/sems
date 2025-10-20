@@ -1,3 +1,9 @@
+sems (1.172.2) stable; urgency=low
+  * ws_input: handle 'binary frame' msg on on_msg_recv
+  * add logging for tls_trsp_socket::tls_alert
+  * add build for trixie
+ -- Michael Furmur <furmur@pm.me>  Mon, 20 Oct 2025 17:44:36 +0300
+
 sems (1.172.1) stable; urgency=low
   * uac_auth: fix checkAuthentication segfault. optimize algo lookup
  -- Michael Furmur <furmur@pm.me>  Tue, 14 Oct 2025 22:25:51 +0300
