@@ -42,9 +42,11 @@ TEST(UACAuth, nonce_wrong_nonce1)
 TEST(UACAuth, nonce_wrong_nonce2)
 {
     MD5_Hash    hash;
-    std::string secret      = "1234secret";
-    std::string nonce       = hash.calcNonce(secret);
-    nonce[nonce.size() - 1] = nonce[nonce.size() - 2];
+    std::string secret = "1234secret";
+    std::string nonce  = hash.calcNonce(secret);
+
+    auto idx                = nonce.find_last_not_of(nonce[nonce.size() - 1], nonce.size() - 2);
+    nonce[nonce.size() - 1] = nonce[idx];
     ASSERT_FALSE(hash.checkNonce(nonce, secret, DEFAULT_NONCE_EXPIRE) == NCR_OK);
 }
 
