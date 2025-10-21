@@ -343,7 +343,7 @@ ADD_SUBDIRECTORY (apps)
 #ADD_SUBDIRECTORY (tools)
 ADD_SUBDIRECTORY (debian)
 
-IF(BUILD_TESTING AND SEMS_USE_GTEST)
+IF(SEMS_USE_GTEST)
     add_subdirectory(unit_tests)
 ENDIF()
 

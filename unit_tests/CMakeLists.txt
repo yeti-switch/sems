@@ -19,12 +19,14 @@ target_link_libraries(${SEMS_UT} libsems event ev GTest::gtest GTest::gtest_main
 
 install(TARGETS ${SEMS_UT} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 
-gtest_discover_tests(${SEMS_UT}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    TEST_FILTER "-*.DISABLED_*:FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket"
-)
+if (BUILD_TESTING)
+    gtest_discover_tests(${SEMS_UT}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        TEST_FILTER "-*.DISABLED_*:FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket"
+    )
 
-file(MAKE_DIRECTORY
-    ${CMAKE_CURRENT_BINARY_DIR}/rsr
-    ${CMAKE_CURRENT_BINARY_DIR}/logs
-)
+    file(MAKE_DIRECTORY
+        ${CMAKE_CURRENT_BINARY_DIR}/rsr
+        ${CMAKE_CURRENT_BINARY_DIR}/logs
+    )
+endif()
