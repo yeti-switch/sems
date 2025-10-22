@@ -30,3 +30,5 @@ ADD_SUBDIRECTORY(radius_client)
 ADD_SUBDIRECTORY(registrar_client)
 
 ADD_SUBDIRECTORY(registrar)
+
+ADD_SUBDIRECTORY(identity_validator)
