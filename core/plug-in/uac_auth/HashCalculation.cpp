@@ -2,6 +2,7 @@
 #include "UACAuth.h"
 #include <botan/internal/sha2_32.h>
 #include <botan/internal/md5.h>
+#include <botan/hex.h>
 
 string HashCalculation::algorithmName() const
 {
@@ -30,7 +31,7 @@ string HashCalculation::calcNonce(const string &nonce_secret) const
     hash_func->update(result);
     hash_func->update(nonce_secret);
     auto RespHash = hash_func->final();
-    cvt_hex(string_view((char *)RespHash.data(), RespHash.size()), hash);
+    hash          = Botan::hex_encode(RespHash.data(), RespHash.size());
 
     return result + hash.c_str();
 }
@@ -63,7 +64,7 @@ nonce_check_result_t HashCalculation::checkNonce(const string &nonce, const stri
     hash_func->update(nonce.substr(0, INT_HEX_LEN));
     hash_func->update(nonce_secret);
     auto RespHash = hash_func->final();
-    cvt_hex(string_view((char *)RespHash.data(), RespHash.size()), hash);
+    hash          = Botan::hex_encode(RespHash.data(), RespHash.size());
 
     return UACAuth::tc_isequal(hash.c_str(), &nonce[INT_HEX_LEN], getHashHexLength()) ? NCR_OK : NCR_WRONG;
 
@@ -98,7 +99,7 @@ void HashCalculation::uac_calc_HA1(const UACAuthDigestChallenge &challenge, cons
     // 		MD5Update(&Md5Ctx, cnonce.c_str(), cnonce.length());
     // 		MD5Final(HA1, &Md5Ctx);
     // 	  };
-    cvt_hex(string_view((char *)HA1.data(), HA1.size()), sess_key);
+    sess_key = Botan::hex_encode(HA1.data(), HA1.size());
 }
 
 /*
@@ -118,7 +119,7 @@ void HashCalculation::uac_calc_HA2(const std::string &method, const std::string 
     }
 
     auto HA2 = hash_func->final();
-    cvt_hex(string_view((char *)HA2.data(), HA2.size()), HA2Hex);
+    HA2Hex   = Botan::hex_encode(HA2.data(), HA2.size());
 }
 
 /*
@@ -128,8 +129,8 @@ void HashCalculation::uac_calc_hentity(const std::string &body, string &hentity)
 {
     hash_func->clear();
     hash_func->update(body);
-    auto h = hash_func->final();
-    cvt_hex(string_view((char *)h.data(), h.size()), hentity);
+    auto h  = hash_func->final();
+    hentity = Botan::hex_encode(h.data(), h.size());
 }
 
 /*
@@ -156,7 +157,7 @@ void HashCalculation::uac_calc_response(const string &ha1, const string &ha2, co
 
     hash_func->update((unsigned char *)ha2.c_str(), getHashHexLength());
     auto RespHash = hash_func->final();
-    cvt_hex(string_view((char *)RespHash.data(), RespHash.size()), response);
+    response      = Botan::hex_encode(RespHash.data(), RespHash.size());
 }
 
 MD5_Hash::MD5_Hash()

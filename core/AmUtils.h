@@ -367,9 +367,6 @@ bool read_regex_mapping(const string &fname, const char *sep, const char *dbg_ty
  */
 bool run_regex_mapping(const RegexMappingVector &mapping, const char *test_s, string &result);
 
-/** convert a binary hash to hex representation */
-void cvt_hex(const string_view &bin, string &hex);
-
 /** get an MD5 hash of a string */
 string calculateMD5(const string &input);
 

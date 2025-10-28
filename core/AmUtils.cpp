@@ -55,6 +55,7 @@
 #include <algorithm>
 
 #include <fstream>
+#include <botan/hex.h>
 
 
 static char _int2str_lookup[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
@@ -1657,8 +1658,7 @@ string calculateMD5(const string &input)
     Md5Ctx.clear();
     Md5Ctx.update((unsigned char *)input.c_str(), input.length());
     Md5Ctx.final(H);
-    cvt_hex(string_view((char *)H, HASHLEN), HH);
-    return HH;
+    return Botan::hex_encode(H, HASHLEN);
 
 #undef HASHLEN
 }
