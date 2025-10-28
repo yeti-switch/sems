@@ -45,8 +45,9 @@ using std::string_view;
 #include <map>
 #include <optional>
 
-#include "md5.h"
 #include "sip/resolver.h"
+
+#include <botan/internal/md5.h>
 
 // #define FIFO_PERM S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
 

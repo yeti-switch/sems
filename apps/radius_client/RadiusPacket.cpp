@@ -2,8 +2,8 @@
 #include "AmUtils.h"
 #include "log.h"
 
-#include "md5.h"
 #include "string.h"
+#include <botan/internal/md5.h>
 
 #pragma pack(push, 1)
 struct vendor_attr {
@@ -157,17 +157,18 @@ void RadiusPacket::gen_auth(const string &secret)
            Code + Identifier + Length +
            16 zero octets + request attributes + shared secret
         */
-        MD5_CTX        c;
+        // MD5_CTX        c;
+        Botan::MD5     c;
         unsigned char *p = (unsigned char *)&packet.hdr.auth;
 
         memset(p, 0, RAD_AUTH_SIZE);
 
-        MD5Init(&c);
-        MD5Update(&c, (unsigned char *)&packet, sizeof(struct cil_header));
-        MD5Update(&c, p, RAD_AUTH_SIZE);
-        MD5Update(&c, packet.attrs, len() - sizeof(static_header));
-        MD5Update(&c, (const unsigned char *)secret.data(), secret.size());
-        MD5Final(p, &c);
+        c.clear();
+        c.update((unsigned char *)&packet, sizeof(struct cil_header));
+        c.update(p, RAD_AUTH_SIZE);
+        c.update(packet.attrs, len() - sizeof(static_header));
+        c.update((const unsigned char *)secret.data(), secret.size());
+        c.final(p);
 
     } else {
         // random header
@@ -209,7 +210,7 @@ int RadiusPacket::send(int fd)
 
 bool RadiusPacket::validate(const RadiusPacket &request, const string &secret)
 {
-    MD5_CTX       c;
+    Botan::MD5    c;
     unsigned char digest[16];
 
     if (len() > RAD_MAX_PACKET_SIZE) {
@@ -217,12 +218,12 @@ bool RadiusPacket::validate(const RadiusPacket &request, const string &secret)
         return false;
     }
 
-    MD5Init(&c);
-    MD5Update(&c, (unsigned char *)&packet, sizeof(struct cil_header));
-    MD5Update(&c, request.auth(), RAD_AUTH_SIZE);
-    MD5Update(&c, packet.attrs, len() - sizeof(static_header));
-    MD5Update(&c, (const unsigned char *)secret.data(), secret.size());
-    MD5Final(digest, &c);
+    c.clear();
+    c.update((unsigned char *)&packet, sizeof(struct cil_header));
+    c.update(request.auth(), RAD_AUTH_SIZE);
+    c.update(packet.attrs, len() - sizeof(static_header));
+    c.update((const unsigned char *)secret.data(), secret.size());
+    c.final(digest);
 
     if (0 != memcmp(digest, auth(), RAD_AUTH_SIZE)) {
         ERROR("invalid authenticator in reply");

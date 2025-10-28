@@ -1650,13 +1650,13 @@ string calculateMD5(const string &input)
 
 #define HASHLEN 16
 
-    MD5_CTX       Md5Ctx;
+    Botan::MD5    Md5Ctx;
     unsigned char H[HASHLEN];
     string        HH;
 
-    MD5Init(&Md5Ctx);
-    MD5Update(&Md5Ctx, (unsigned char *)input.c_str(), input.length());
-    MD5Final(H, &Md5Ctx);
+    Md5Ctx.clear();
+    Md5Ctx.update((unsigned char *)input.c_str(), input.length());
+    Md5Ctx.final(H);
     cvt_hex(string_view((char *)H, HASHLEN), HH);
     return HH;
 

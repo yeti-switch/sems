@@ -24,14 +24,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include "AmConfigReader.h"
 #include "log.h"
 #include "AmUtils.h"
-#include "md5.h"
+#include "AmLcConfig.h"
+#include "AmConfigReader.h"
 
 #include <errno.h>
 #include <fstream>
-#include "AmLcConfig.h"
 
 #define IS_SPACE(c) ((c == ' ') || (c == '\t'))
 
@@ -342,11 +341,11 @@ bool AmConfigReader::getMD5(const string &path, string &md5hash, bool lowercase)
         return false;
     }
 
-    MD5_CTX md5ctx;
-    MD5Init(&md5ctx);
-    MD5Update(&md5ctx, (unsigned char *)file_data.c_str(), file_data.length());
+    Botan::MD5 md5ctx;
+    md5ctx.clear();
+    md5ctx.update((unsigned char *)file_data.c_str(), file_data.length());
     unsigned char _md5hash[16];
-    MD5Final(_md5hash, &md5ctx);
+    md5ctx.final(_md5hash);
     md5hash = "";
     for (size_t i = 0; i < 16; i++) {
         md5hash += char2hex(_md5hash[i], lowercase);
