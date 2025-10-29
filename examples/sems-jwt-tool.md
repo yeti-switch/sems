@@ -37,7 +37,7 @@ req_extensions = v3_req
 commonName = "SHAKEN"
 [ v3_req ]
 EOF
-od -An -t x1 -w TNAuthList.der | sed -e 's/ /:/g' -e 's/^/1.3.6.1.5.5.7.1.26=DER/' >> openssl.conf
+od -An -t x1 -w255 TNAuthList.der | sed -e 's/ /:/g' -e 's/^/1.3.6.1.5.5.7.1.26=DER/' >> openssl.conf
 
 #gen cert req
 openssl req -new -nodes -key sp-key.pem -keyform PEM -subj '/C=US/ST=VA/L=IQNT/O=YOURCOMPANYNAME, Inc./OU=VOIP/CN=SHAKEN'  -sha256 -config openssl.conf  -out sp-csr.pem
