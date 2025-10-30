@@ -594,6 +594,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest &req, const AmSipReply &re
             } else {
                 end = 0;
                 while (contacts.length() != end) {
+                    bool force_expires = force_expires_interval;
                     if (!server_contact.parse_contact(contacts, end, end)) {
                         DBG("[%s](%s) failed to parse contact", handle.c_str(), info.id.c_str());
                         break;
@@ -612,15 +613,11 @@ void AmSIPRegistration::onSipReply(const AmSipRequest &req, const AmSipReply &re
                         if (contact_expires == server_contact.params.end()) {
                             auto expires_header = getHeader(reply.hdrs, SIP_HDR_EXPIRES, true);
                             if (expires_header.empty()) {
-                                ERROR("[%s](%s) missed both 'expires' param on matched contact and Expires header",
-                                      handle.c_str(), info.id.c_str());
-                                active           = false;
-                                error_code       = 500;
-                                error_reason     = "Failed to extract expires value from matched contact";
-                                error_initiatior = REG_ERROR_LOCAL;
-                                return;
+                                DBG("[%s](%s) missed both 'expires' param on matched contact and Expires header",
+                                    handle.c_str(), info.id.c_str());
+                                force_expires = true;
                             }
-                            if (str2i(expires_header, reg_expires)) {
+                            if (expires_header.size() && str2i(expires_header, reg_expires)) {
                                 ERROR("[%s](%s) could not extract Expires header value", handle.c_str(),
                                       info.id.c_str());
                                 active           = false;
@@ -640,7 +637,7 @@ void AmSIPRegistration::onSipReply(const AmSipRequest &req, const AmSipReply &re
                             }
                         }
 
-                        if (force_expires_interval) {
+                        if (force_expires) {
                             reg_expires = expires_interval;
                         }
 
