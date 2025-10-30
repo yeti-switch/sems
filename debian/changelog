@@ -1,3 +1,9 @@
+sems (1.173.2) stable; urgency=low
+  * AmSipRegistration: use local expires on no expires in 200ok reply for REGISTER
+  * core, uac_auth: use libbotan implementations for md5, sha256, bin2hex
+  * postgresql: remove error for UUID oid
+ -- Michael Furmur <furmur@pm.me>  Thu, 30 Oct 2025 19:12:53 +0200
+
 sems (1.173.1) stable; urgency=low
   * fix sems-tester build with DEB_BUILD_OPTIONS=nocheck
  -- Michael Furmur <furmur@pm.me>  Tue, 21 Oct 2025 13:54:05 +0300
