@@ -206,6 +206,7 @@ const char *QueryParam::get_value()
     case FLOAT4OID:
     case FLOAT8OID:  return binvalue;
     case TEXTOID:
+    case UUIDOID:
     case JSONOID:    return strvalue.c_str();
     }
     return "";
@@ -375,6 +376,7 @@ AmArg get_result(unsigned int oid, bool is_binary, const char *value, bool is_nu
     case CHAROID:
     case TEXTOID:
     case INETOID:
+    case UUIDOID:
     case CIDROID:
     case MACADDROID:
     case NUMERICOID: ret = AmArg(value); break;
