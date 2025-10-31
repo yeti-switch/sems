@@ -31,9 +31,9 @@ string HashCalculation::calcNonce(const string &nonce_secret) const
     hash_func->update(result);
     hash_func->update(nonce_secret);
     auto RespHash = hash_func->final();
-    hash          = Botan::hex_encode(RespHash.data(), RespHash.size());
+    hash          = Botan::hex_encode(RespHash.data(), RespHash.size(), false);
 
-    return result + hash.c_str();
+    return result + hash;
 }
 
 nonce_check_result_t HashCalculation::checkNonce(const string &nonce, const string &nonce_secret,
@@ -64,7 +64,7 @@ nonce_check_result_t HashCalculation::checkNonce(const string &nonce, const stri
     hash_func->update(nonce.substr(0, INT_HEX_LEN));
     hash_func->update(nonce_secret);
     auto RespHash = hash_func->final();
-    hash          = Botan::hex_encode(RespHash.data(), RespHash.size());
+    hash          = Botan::hex_encode(RespHash.data(), RespHash.size(), false);
 
     return UACAuth::tc_isequal(hash.c_str(), &nonce[INT_HEX_LEN], getHashHexLength()) ? NCR_OK : NCR_WRONG;
 
@@ -99,7 +99,7 @@ void HashCalculation::uac_calc_HA1(const UACAuthDigestChallenge &challenge, cons
     // 		MD5Update(&Md5Ctx, cnonce.c_str(), cnonce.length());
     // 		MD5Final(HA1, &Md5Ctx);
     // 	  };
-    sess_key = Botan::hex_encode(HA1.data(), HA1.size());
+    sess_key = Botan::hex_encode(HA1.data(), HA1.size(), false);
 }
 
 /*
@@ -119,7 +119,7 @@ void HashCalculation::uac_calc_HA2(const std::string &method, const std::string 
     }
 
     auto HA2 = hash_func->final();
-    HA2Hex   = Botan::hex_encode(HA2.data(), HA2.size());
+    HA2Hex   = Botan::hex_encode(HA2.data(), HA2.size(), false);
 }
 
 /*
@@ -130,7 +130,7 @@ void HashCalculation::uac_calc_hentity(const std::string &body, string &hentity)
     hash_func->clear();
     hash_func->update(body);
     auto h  = hash_func->final();
-    hentity = Botan::hex_encode(h.data(), h.size());
+    hentity = Botan::hex_encode(h.data(), h.size(), false);
 }
 
 /*
@@ -157,7 +157,7 @@ void HashCalculation::uac_calc_response(const string &ha1, const string &ha2, co
 
     hash_func->update((unsigned char *)ha2.c_str(), getHashHexLength());
     auto RespHash = hash_func->final();
-    response      = Botan::hex_encode(RespHash.data(), RespHash.size());
+    response      = Botan::hex_encode(RespHash.data(), RespHash.size(), false);
 }
 
 MD5_Hash::MD5_Hash()

@@ -1658,7 +1658,7 @@ string calculateMD5(const string &input)
     Md5Ctx.clear();
     Md5Ctx.update((unsigned char *)input.c_str(), input.length());
     Md5Ctx.final(H);
-    return Botan::hex_encode(H, HASHLEN);
+    return Botan::hex_encode(H, HASHLEN, false);
 
 #undef HASHLEN
 }
