@@ -338,14 +338,15 @@ foreach( d ${CoreDefsList} )
 endforeach()
 message(STATUS CoreDefs: ${CoreDefs})
 
+IF(SEMS_USE_GTEST)
+    add_library(sems-tester-marker INTERFACE)
+    add_subdirectory(unit_tests)
+ENDIF()
+
 ADD_SUBDIRECTORY (core)
 ADD_SUBDIRECTORY (apps)
 #ADD_SUBDIRECTORY (tools)
 ADD_SUBDIRECTORY (debian)
-
-IF(SEMS_USE_GTEST)
-    add_subdirectory(unit_tests)
-ENDIF()
 
 #SET_DIRECTORY_PROPERTIES(ADDITIONAL_MAKE_CLEAN_FILES *~)
 

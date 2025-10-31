@@ -1,5 +1,7 @@
 find_package(GTest REQUIRED)
 
+add_subdirectory(tests)
+
 set(SEMS_UT sems-tester)
 
 include_directories(${BOTAN_BUNDLED_INCLUDE_DIRS}
@@ -9,13 +11,12 @@ include_directories(${BOTAN_BUNDLED_INCLUDE_DIRS}
                     ${CMAKE_SOURCE_DIR}/unit_tests)
 
 file(GLOB tester_SRCS "*.c*")
-file(GLOB tester_test_SRCS "tests/*.cpp")
 
 add_executable(${SEMS_UT}
-    ${tester_test_SRCS}
     ${tester_SRCS})
 set_property(TARGET ${SEMS_UT} PROPERTY ENABLE_EXPORTS ON)
 target_link_libraries(${SEMS_UT} libsems event ev GTest::gtest GTest::gtest_main)
+add_dependencies(${SEMS_UT} sems-tester-marker)
 
 install(TARGETS ${SEMS_UT} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 
@@ -30,3 +31,4 @@ if (BUILD_TESTING)
         ${CMAKE_CURRENT_BINARY_DIR}/logs
     )
 endif()
+
