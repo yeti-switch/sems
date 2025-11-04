@@ -703,7 +703,6 @@ int main(int argc, char *argv[])
 
     DBG("Starting application timer scheduler");
     AmAppTimer::instance()->start();
-    AmThreadWatcher::instance()->add(AmAppTimer::instance());
 
     DBG("Starting session container");
     AmSessionContainer::instance()->start();
@@ -806,8 +805,6 @@ error:
     DBG("Disposing session container");
     AmSessionContainer::dispose();
 
-    /*INFO("Disposing app timer");
-    AmAppTimer::dispose();*/
 
     DBG("** Transaction table dump: **");
     dumps_transactions();
@@ -867,6 +864,10 @@ error:
 
     DBG("Disposing plug-ins");
     AmPlugIn::dispose();
+
+    INFO("Disposing app and wheel timer");
+    AmAppTimer::dispose();
+    wheeltimer::dispose();
 
     stream_stats::dispose();
     tls_cleanup();

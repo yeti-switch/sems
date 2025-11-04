@@ -60,7 +60,7 @@ class _AmAppTimer : public _wheeltimer {
   public:
     _AmAppTimer();
     ~_AmAppTimer();
-    void dispose() {}
+    void dispose() { stop(true); }
 
     /** set a timer for event queue eventqueue_name with id timer_id and timeout (s) */
     void setTimer(const string &eventqueue_name, int timer_id, double timeout);

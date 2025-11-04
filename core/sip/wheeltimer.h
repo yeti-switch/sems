@@ -128,7 +128,7 @@ class _wheeltimer : public AmThread {
 
     _wheeltimer(const char *thread_name = "sip-wheeltimer");
     ~_wheeltimer();
-    void dispose() {}
+    void dispose() { stop(true); }
 
   public:
     // clock reference

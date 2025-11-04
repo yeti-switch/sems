@@ -787,7 +787,7 @@ int _SipCtrlInterface::run()
     DBG("Starting SIP control interface");
 
     wheeltimer::instance()->start();
-    AmThreadWatcher::instance()->add(wheeltimer::instance());
+    // AmThreadWatcher::instance()->add(wheeltimer::instance());
 
     if (NULL != udp_servers) {
         for (int i = 0; i < nr_udp_servers; i++) {
