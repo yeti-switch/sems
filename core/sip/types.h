@@ -50,3 +50,9 @@ enum IceCandidateTransport { ICTR_UDP = 0, ICTR_TCP, ICTR_TCP_ACT };
 enum Setup { S_HOLD = 0, S_ACTIVE = 1, S_PASSIVE = 2, S_ACTPASS = 3, S_UNDEFINED = 4 }; // see rfc4145 4.
 
 string transport_p_2_str(int tp);
+string addr_t_2_str(int at);
+string net_t_2_str(int nt);
+string media_t_2_str(int mt);
+string profile_t_2_str(int pt, bool alternative);
+string transport_ice_2_str(int tp);
+string ice_candidate_2_str(int ic);

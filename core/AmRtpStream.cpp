@@ -60,7 +60,6 @@
 #include <set>
 using std::set;
 #include <algorithm>
-#include <sstream>
 
 #define ts_unsigned_diff(a, b) ((a) >= (b) ? (a) - (b) : (b) - (a))
 
@@ -233,15 +232,6 @@ string AmRtpStream::getRHost(int type)
     else if (type == FAX_TRANSPORT && cur_udptl_trans)
         return cur_udptl_trans->getRHost(false);
     return "";
-}
-
-inline string addr_t_2_str(int at)
-{
-    switch (at) {
-    case AT_V4: return "IPv4";
-    case AT_V6: return "IPv6";
-    default:    return "<unknown address type>";
-    }
 }
 
 void AmRtpStream::setLocalIP(AddressType addrtype)
