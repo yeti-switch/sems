@@ -30,7 +30,8 @@ enum RpcMethodId {
 #ifdef TRANS_LOG_ENABLE
     MethodTransLog,
 #endif
-    MethodLogPgEvents
+    MethodLogPgEvents,
+    MethodExecute
 };
 
 class PostgreSQLFactory : public AmDynInvokeFactory, public AmConfigFactory {
@@ -285,6 +286,13 @@ bool PostgreSQL::logPgEventsAsync(const string &connection_id, const AmArg &requ
     return true;
 }
 
+bool PostgreSQL::execRequest(const string &connection_id, const AmArg &request_id, const AmArg &params)
+{
+    params.assertArrayFmt("ss");
+    postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodExecute, params));
+    return true;
+    return true;
+}
 
 void PostgreSQL::showConfig(const AmArg &, AmArg &ret)
 {
@@ -409,6 +417,7 @@ void PostgreSQL::init_rpc_tree()
     AmArg &request = reg_leaf(root, "request");
     reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
     reg_method(request, "reset", "reset pq connection", &PostgreSQL::resetConnection);
+    reg_method(request, "execute", "execute query", &PostgreSQL::execRequest);
     AmArg &remove = reg_leaf(request, "remove");
     reg_method(remove, "trans", "reset pq transaction", &PostgreSQL::removeTrans);
 #ifdef TRANS_LOG_ENABLE
@@ -486,6 +495,11 @@ void PostgreSQL::process_postgres_event(AmEvent *ev)
         if (PGPrepareExec *e = dynamic_cast<PGPrepareExec *>(ev))
             onPrepareExecute(*e);
     } break;
+    case PGEvent::Result:
+    {
+        if (PGResponse *e = dynamic_cast<PGResponse *>(ev))
+            onRpcRequestResponse(*e);
+    } break;
     case AdditionalTypeEvent::Reset:
     {
         if (ResetEvent *e = dynamic_cast<ResetEvent *>(ev))
@@ -528,6 +542,18 @@ void PostgreSQL::process_jsonrpc_request(JsonRpcRequestEvent &request)
         AmArg ret;
         logPgEventsSync(request.params, ret);
         postJsonRpcReply(request, ret);
+    } break;
+    case MethodExecute:
+    {
+        string         worker_name = request.params[0].asCStr();
+        string         func        = request.params[1].asCStr();
+        PGQueryData    qdata(worker_name, func, false, events_queue_name, AmSession::getNewId());
+        PGParamExecute ev         = PGParamExecute(qdata, PGTransactionData(), true);
+        auto          &query_info = ev.qdata.info[0];
+        for (int i = 2; i < request.params.size(); i++)
+            query_info.addParam(request.params[i]);
+        rpcRequests.emplace(qdata.token, request);
+        onParamExecute(ev);
     } break;
     }
 }
@@ -696,6 +722,15 @@ void PostgreSQL::onReset(const ResetEvent &e)
                 dest.second->resetPools();
             }
         }
+    }
+}
+
+void PostgreSQL::onRpcRequestResponse(const PGResponse &e)
+{
+    auto it = rpcRequests.find(e.token);
+    if (it != rpcRequests.end()) {
+        postJsonRpcReply(it->second.connection_id, it->second.id, e.result);
+        rpcRequests.erase(it);
     }
 }
 

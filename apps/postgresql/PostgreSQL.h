@@ -73,10 +73,11 @@ class PostgreSQL : public AmThread,
     friend class PostgreSQLFactory;
     static PostgreSQL *_instance;
 
-    AmEventFd                 stop_event;
-    AmCondition<bool>         stopped;
-    map<string, PoolWorker *> workers;
-    int                       epoll_fd;
+    AmEventFd                        stop_event;
+    AmCondition<bool>                stopped;
+    map<string, PoolWorker *>        workers;
+    map<string, JsonRpcRequestEvent> rpcRequests;
+    int                              epoll_fd;
 
     time_t log_time;
     string log_dir;
@@ -97,6 +98,7 @@ class PostgreSQL : public AmThread,
     void onWorkerConfig(const PGWorkerConfig &e);
     void onSetSearchPath(const PGSetSearchPath &e);
     void onReset(const ResetEvent &e);
+    void onRpcRequestResponse(const PGResponse &e);
 
   public:
     PostgreSQL();
@@ -127,6 +129,7 @@ class PostgreSQL : public AmThread,
     async_rpc_handler showConfiguration;
     async_rpc_handler showRetransmits;
     async_rpc_handler logPgEventsAsync;
+    async_rpc_handler execRequest;
     rpc_handler       requestReconnect;
     rpc_handler       resetConnection;
     rpc_handler       removeTrans;
