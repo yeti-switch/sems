@@ -6,12 +6,12 @@
 
 string HashCalculation::algorithmName() const
 {
-    return hash_func->name();
+    return name;
 }
 
 unsigned int HashCalculation::getHashLength() const
 {
-    return hash_func->output_length();
+    return output_l;
 }
 
 unsigned int HashCalculation::getHashHexLength() const
@@ -27,6 +27,7 @@ string HashCalculation::calcNonce(const string &nonce_secret) const
     time_t now = time(nullptr);
     result     = int2hex(now, true);
 
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update(result);
     hash_func->update(nonce_secret);
@@ -60,6 +61,7 @@ nonce_check_result_t HashCalculation::checkNonce(const string &nonce, const stri
         return NCR_EXPIRED;
     }
 
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update(nonce.substr(0, INT_HEX_LEN));
     hash_func->update(nonce_secret);
@@ -80,6 +82,7 @@ void HashCalculation::uac_calc_HA1(const UACAuthDigestChallenge &challenge, cons
     if (nullptr == _credential)
         return;
 
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update(_credential->user);
     hash_func->update(':');
@@ -108,6 +111,7 @@ void HashCalculation::uac_calc_HA1(const UACAuthDigestChallenge &challenge, cons
 void HashCalculation::uac_calc_HA2(const std::string &method, const std::string &uri, const string &hentity,
                                    string &HA2Hex) const
 {
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update(method);
     hash_func->update(':');
@@ -127,6 +131,7 @@ void HashCalculation::uac_calc_HA2(const std::string &method, const std::string 
  */
 void HashCalculation::uac_calc_hentity(const std::string &body, string &hentity) const
 {
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update(body);
     auto h  = hash_func->final();
@@ -140,6 +145,7 @@ void HashCalculation::uac_calc_response(const string &ha1, const string &ha2, co
                                         const std::string &cnonce, const string &qop_value,
                                         const std::string &nonce_count_str, string &response) const
 {
+    auto hash_func = createFunc();
     hash_func->clear();
     hash_func->update((unsigned char *)ha1.c_str(), getHashHexLength());
     hash_func->update(':');
@@ -162,10 +168,24 @@ void HashCalculation::uac_calc_response(const string &ha1, const string &ha2, co
 
 MD5_Hash::MD5_Hash()
 {
-    hash_func.reset(new Botan::MD5);
+    Botan::MD5 md5;
+    name     = md5.name();
+    output_l = md5.output_length();
+}
+
+unique_ptr<Botan::HashFunction> MD5_Hash::createFunc() const
+{
+    return std::make_unique<Botan::MD5>();
 }
 
 SHA256_Hash::SHA256_Hash()
 {
-    hash_func.reset(new Botan::SHA_256);
+    Botan::SHA_256 sha256;
+    name     = sha256.name();
+    output_l = sha256.output_length();
+}
+
+unique_ptr<Botan::HashFunction> SHA256_Hash::createFunc() const
+{
+    return std::make_unique<Botan::SHA_256>();
 }

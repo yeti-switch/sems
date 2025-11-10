@@ -15,7 +15,10 @@ enum nonce_check_result_t { NCR_EXPIRED, NCR_WRONG, NCR_OK };
 
 class HashCalculation {
   protected:
-    unique_ptr<Botan::HashFunction> hash_func;
+    // std::map<int, std::unique_ptr<Botan::HashFunction>> hashes;
+    string       name;
+    unsigned int output_l;
+
     HashCalculation()                                   = default;
     HashCalculation(const HashCalculation &)            = delete;
     HashCalculation(HashCalculation &&)                 = delete;
@@ -39,16 +42,20 @@ class HashCalculation {
     void uac_calc_response(const string &ha1, const string &ha2, const UACAuthDigestChallenge &challenge,
                            const std::string &cnonce, const string &qop_value, const std::string &nonce_count_str,
                            string &response) const;
+
+    virtual unique_ptr<Botan::HashFunction> createFunc() const = 0;
 };
 
 class MD5_Hash : public HashCalculation {
   public:
     MD5_Hash();
+    unique_ptr<Botan::HashFunction> createFunc() const override;
 };
 
 class SHA256_Hash : public HashCalculation {
   public:
     SHA256_Hash();
+    unique_ptr<Botan::HashFunction> createFunc() const override;
 };
 
 #endif /*HASH_CALCULATION_H*/
