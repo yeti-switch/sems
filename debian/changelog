@@ -1,3 +1,9 @@
+sems (1.174.0) stable; urgency=low
+  * postgresql: add rpc command postgresql.request.execute <worker> <func> [params]
+  * uac_auth: fix hashing thread-safety
+  * fix wheeltimer/AmAppTimer crash on termination
+ -- Michael Furmur <furmur@pm.me>  Mon, 10 Nov 2025 16:40:49 +0200
+
 sems (1.173.3) stable; urgency=low
   * uac_auth: fix authentification. use lower-case hex encoding
  -- Michael Furmur <furmur@pm.me>  Fri, 31 Oct 2025 12:07:37 +0200
