@@ -16,7 +16,7 @@ add_executable(${SEMS_UT}
     ${tester_SRCS})
 set_property(TARGET ${SEMS_UT} PROPERTY ENABLE_EXPORTS ON)
 target_link_libraries(${SEMS_UT} libsems event ev GTest::gtest GTest::gtest_main)
-add_dependencies(${SEMS_UT} sems-tester-marker)
+add_dependencies(${SEMS_UT} sems-tester-modules)
 
 install(TARGETS ${SEMS_UT} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 

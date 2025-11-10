@@ -49,11 +49,11 @@ IF(DEFINED sems_module_dependency)
 
     IF(${sems_module_name}_UNIT_SRCS)
         ADD_DEPENDENCIES(sems_${sems_module_name}_unit ${sems_module_dependency})
-        ADD_DEPENDENCIES(sems-tester-marker sems_${sems_module_name}_unit)
+        ADD_DEPENDENCIES(sems-tester-modules sems_${sems_module_name}_unit)
     ENDIF(${sems_module_name}_UNIT_SRCS)
 ELSE(DEFINED sems_module_dependency)
     IF(${sems_module_name}_UNIT_SRCS)
-        ADD_DEPENDENCIES(sems-tester-marker sems_${sems_module_name}_unit)
+        ADD_DEPENDENCIES(sems-tester-modules sems_${sems_module_name}_unit)
     ENDIF(${sems_module_name}_UNIT_SRCS)
 ENDIF(DEFINED sems_module_dependency)
 

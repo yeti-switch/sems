@@ -339,7 +339,7 @@ endforeach()
 message(STATUS CoreDefs: ${CoreDefs})
 
 IF(SEMS_USE_GTEST)
-    add_library(sems-tester-marker INTERFACE)
+    add_library(sems-tester-modules INTERFACE)
     add_subdirectory(unit_tests)
 ENDIF()
 
