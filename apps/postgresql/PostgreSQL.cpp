@@ -291,7 +291,6 @@ bool PostgreSQL::execRequest(const string &connection_id, const AmArg &request_i
     params.assertArrayFmt("ss");
     postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, MethodExecute, params));
     return true;
-    return true;
 }
 
 void PostgreSQL::showConfig(const AmArg &, AmArg &ret)
