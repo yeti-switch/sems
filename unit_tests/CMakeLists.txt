@@ -16,11 +16,11 @@ add_executable(${SEMS_UT}
     ${tester_SRCS})
 set_property(TARGET ${SEMS_UT} PROPERTY ENABLE_EXPORTS ON)
 target_link_libraries(${SEMS_UT} libsems event ev GTest::gtest GTest::gtest_main)
-add_dependencies(${SEMS_UT} sems-tester-modules)
 
 install(TARGETS ${SEMS_UT} RUNTIME DESTINATION ${SEMS_EXEC_PREFIX}/bin)
 
 if (BUILD_TESTING)
+    set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
     gtest_discover_tests(${SEMS_UT}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         TEST_FILTER "-*.DISABLED_*:FaxTest.*:RTPStream.SingleStreams:ZRTPTest.SingleTest:TransportTest.WebSocket"
