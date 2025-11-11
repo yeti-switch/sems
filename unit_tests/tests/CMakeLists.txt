@@ -11,8 +11,3 @@ ADD_LIBRARY(sems_${sems_module_name} MODULE ${${sems_module_name}_SRCS})
 TARGET_LINK_LIBRARIES(sems_${sems_module_name} ${CMAKE_DL_LIBS} ${sems_module_libs})
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES OUTPUT_NAME ${sems_module_name})
 SET_TARGET_PROPERTIES(sems_${sems_module_name} PROPERTIES PREFIX "")
-
-INSTALL(
-	TARGETS sems_${sems_module_name}
-	LIBRARY DESTINATION ${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/unit_tests
-)
