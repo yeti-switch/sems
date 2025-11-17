@@ -900,10 +900,8 @@ int AmRtpStream::init(const AmSdp &local, const AmSdp &remote, bool sdp_offer_ow
     int    rtcp_port =
         static_cast<int>(remote_media.rtcp_port ? remote_media.rtcp_port : (multiplexing ? 0 : remote_media.port + 1));
 
-    if (!remote_media.cname.empty()) {
-        r_ssrc   = remote_media.ssrc;
-        r_ssrc_i = true;
-    }
+    if (!remote_media.cname.empty())
+        r_ssrc = remote_media.ssrc;
     if (!local_media.cname.empty())
         l_ssrc = local_media.ssrc;
 
@@ -2468,6 +2466,7 @@ void AmRtpStream::fill_sender_report(RtcpSenderReportHeader &s, struct timeval &
 
 void AmRtpStream::init_receiver_info(const AmRtpPacket &p)
 {
+    CLASS_DBG("init_receiver_info");
     r_ssrc = p.ssrc;
     rtcp_reports.update(r_ssrc);
     r_ssrc_i = true;
