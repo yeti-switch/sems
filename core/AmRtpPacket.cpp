@@ -55,7 +55,7 @@
 #define RTCP_PARSE_DEBUG 1
 
 #if RTCP_PARSE_DEBUG == 1
-#define RTCP_DBG(fmt, args...) DBG(fmt, ##args);
+#define RTCP_DBG(fmt, args...) DBG3(fmt, ##args);
 #else
 #define RTCP_DBG(fmt, args...) ;
 #endif
@@ -240,13 +240,13 @@ int AmRtpPacket::rtcp_parse_update_stats(RtcpBidirectionalStat &stats)
             p = r + sizeof(RtcpCommonHeader);
 
             if (parse_sdes(p, chunk_end, h.ssrc, stats)) {
-                DBG("RTCP: failed to parse SDES packet");
+                DBG3("RTCP: failed to parse SDES packet");
                 return RTP_PACKET_PARSE_ERROR;
             }
 
             break;
 
-        default: DBG("RTCP: skip parsing unsupported payload type: %d", h.pt);
+        default: DBG3("RTCP: skip parsing unsupported payload type: %d", h.pt);
         } // switch(h.pt)
 
         r = chunk_end;
@@ -270,7 +270,7 @@ int AmRtpPacket::parse_receiver_reports(unsigned char *chunk, size_t chunk_size,
         chunk += sizeof(RtcpReceiverReportHeader);
     } while (chunk < end);
     if (chunk != end) {
-        DBG("received reports possibly contain garbage");
+        DBG3("received reports possibly contain garbage");
     }
     return 0;
 }
@@ -310,7 +310,7 @@ int AmRtpPacket::parse_sdes(unsigned char *chunk, unsigned char *chunk_end, uint
         if (chunk + sdes_len > chunk_end)
             break;
 
-        DBG("RTCP: SDES item %d with value '%.*s' for SSRC 0x%x", sdes_type, sdes_len, chunk, ntohl(ssrc));
+        DBG3("RTCP: SDES item %d with value '%.*s' for SSRC 0x%x", sdes_type, sdes_len, chunk, ntohl(ssrc));
 
         chunk += sdes_len;
     }
@@ -324,8 +324,8 @@ int AmRtpPacket::process_sender_report(RtcpSenderReportHeader &sr, RtcpBidirecti
 
     stats.rtcp_sr_recv++;
 
-    DBG("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u", ntohl(sr.ntp_sec),
-        ntohl(sr.ntp_frac), ntohl(sr.rtp_ts), ntohl(sr.sender_pcount), ntohl(sr.sender_bcount));
+    DBG3("RTCP SR ntp_sec: %u, ntp_frac: %u, rtp_ts: %u, sender_pcount: %u, sender_bcount: %u", ntohl(sr.ntp_sec),
+         ntohl(sr.ntp_frac), ntohl(sr.rtp_ts), ntohl(sr.sender_pcount), ntohl(sr.sender_bcount));
 
     stats.sr_lsr = ((ntohl(sr.ntp_sec) << 16) | (ntohl(sr.ntp_frac) >> 16));
 
@@ -342,10 +342,10 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
 
     stats.rtcp_rr_recv++;
 
-    DBG("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, "
-        "total_lost_1: %u, total_lost_2: %u",
-        ntohl(rr.ssrc), ntohl(rr.last_seq), ntohl(rr.lsr), ntohl(rr.dlsr), ntohl(rr.jitter), rr.fract_lost,
-        rr.total_lost_0, rr.total_lost_1, rr.total_lost_2);
+    DBG3("RTCP RR ssrc: 0x%x, last_seq: %u, lsr: %u,dlsr: %u, jitter: %u, fract_lost: %u, total_lost_0: %u, "
+         "total_lost_1: %u, total_lost_2: %u",
+         ntohl(rr.ssrc), ntohl(rr.last_seq), ntohl(rr.lsr), ntohl(rr.dlsr), ntohl(rr.jitter), rr.fract_lost,
+         rr.total_lost_0, rr.total_lost_1, rr.total_lost_2);
 
     if (rr.dlsr) {
         // https://tools.ietf.org/search/rfc3550#section-4
@@ -361,7 +361,7 @@ int AmRtpPacket::process_receiver_report(RtcpReceiverReportHeader &rr, RtcpBidir
     }
 
     stats.tx.loss = (rr.total_lost_2 << 16) | (rr.total_lost_1 << 8) | rr.total_lost_0;
-    DBG("stats.tx.loss: %u", stats.tx.loss);
+    DBG3("stats.tx.loss: %u", stats.tx.loss);
 
     if (rr.jitter) {
         stats.rtcp_remote_jitter.update(ntohl(rr.jitter));
