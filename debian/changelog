@@ -1,3 +1,8 @@
+sems (1.175.0) stable; urgency=low
+  * fix backward duration in DTMF events
+  * optimize core.request.certificates.reload
+ -- Michael Furmur <furmur@pm.me>  Wed, 19 Nov 2025 22:48:39 +0200
+
 sems (1.174.1) stable; urgency=low
   * fix RTCP rx statistics initialization
  -- Michael Furmur <furmur@pm.me>  Mon, 10 Nov 2025 16:40:49 +0200
