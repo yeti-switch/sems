@@ -83,15 +83,16 @@ bool AmDtmfSender::sendPacket(unsigned int ts, unsigned int remote_pt, AmRtpStre
                 "send_dtmf_duration_ts: %u",
                 current_event.duration_ms, current_event.frame_size, frame_size_ts, send_dtmf_duration_ts);
 
-            if (send_dtmf_duration_ts < frame_size_ts) {
-                send_dtmf_duration_ts = frame_size_ts;
-                DBG("dtmf event duration %u is less than %u. set it to %u", send_dtmf_duration_ts, frame_size_ts,
-                    frame_size_ts);
+            auto doubled_frame_size = frame_size_ts * 2;
+            if (send_dtmf_duration_ts < doubled_frame_size) {
+                send_dtmf_duration_ts = doubled_frame_size;
+                DBG("dtmf event duration %u is less than %u. set it to %u", send_dtmf_duration_ts, doubled_frame_size,
+                    doubled_frame_size);
             }
 
             current_send_dtmf_ts          = ts;
             current_send_dtmf_duration_ts = current_send_dtmf_ts - frame_size_ts;
-            send_dtmf_end_ts              = ts + send_dtmf_duration_ts;
+            send_dtmf_end_ts              = ts + send_dtmf_duration_ts - frame_size_ts;
 
             DBG("starting to send DTMF. key: %d, duration: %u, current_send_dtmf_ts: %u, send_dtmf_end_ts: %u",
                 current_event.event, send_dtmf_duration_ts, current_send_dtmf_ts, send_dtmf_end_ts);
