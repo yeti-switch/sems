@@ -776,6 +776,9 @@ void ReloadCertificateThread::run()
 {
     try {
         std::vector<settings *> settings;
+        timeval                 start, end, diff;
+
+        gettimeofday(&start, nullptr);
 
         for (auto &sip_if : AmConfig.sip_ifs) {
             for (auto &proto : sip_if.proto_info) {
@@ -813,10 +816,15 @@ void ReloadCertificateThread::run()
         for (auto &setting : settings) {
             setting->load_certificates();
         }
+
+        gettimeofday(&end, nullptr);
+        timersub(&end, &start, &diff);
+
+        INFO("%zd certificates reloaded in %f seconds", settings.size(), timeval2double(diff));
     } catch (AmSession::Exception &ex) {
-        ERROR("reload cerificate failed: %s", ex.reason.c_str());
+        ERROR("certificates reload failed: %s", ex.reason.c_str());
     } catch (Botan::Exception &ex) {
-        ERROR("reload cerificate failed: %s", ex.what());
+        ERROR("certificates reload failed: %s", ex.what());
     }
 }
 
