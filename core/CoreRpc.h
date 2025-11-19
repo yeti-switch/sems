@@ -10,13 +10,6 @@
 
 const char *dump_level2str(int dump_level);
 
-class ReloadCertificateThread : public AmThread {
-  public:
-    ReloadCertificateThread() { start(); }
-    void run() override;
-    void on_stop() override {}
-};
-
 class CoreRpc final : public RpcTreeHandler<CoreRpc>, public AmDynInvokeFactory {
     time_t         start_time;
     static timeval last_shutdown_time;

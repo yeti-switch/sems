@@ -772,6 +772,14 @@ void CoreRpc::requestConnTerminate(const AmArg &args, AmArg &)
     SipCtrlInterface::instance()->terminateConection(ip, port, if_num);
 }
 
+class ReloadCertificateThread : public AmThread {
+  public:
+    ReloadCertificateThread() { start(); }
+    void run() override;
+    void on_stop() override {}
+    void on_finished() override { delete this; }
+};
+
 void ReloadCertificateThread::run()
 {
     try {
@@ -831,7 +839,7 @@ void ReloadCertificateThread::run()
 
 void CoreRpc::requestReloadCertificate(const AmArg &args, AmArg &ret)
 {
-    AmThreadWatcher::instance()->add(new ReloadCertificateThread());
+    new ReloadCertificateThread();
     ret = RPC_CMD_SUCC;
 }
 
