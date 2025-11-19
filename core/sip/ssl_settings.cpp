@@ -13,28 +13,31 @@ AtomicCounter &settings::initNotAfterCounter()
 
 void settings::load_certificates()
 {
-    AmLock l(mutex);
 
-    certificates.clear();
-    Botan::DataSource_Stream in(certificate_path);
+    std::vector<Botan::X509_Certificate> certs;
+    Botan::DataSource_Stream             in(certificate_path);
     while (true) {
         try {
-            certificates.push_back(Botan::X509_Certificate(in));
+            certs.push_back(Botan::X509_Certificate(in));
         } catch (const Botan::Exception &) {
             break;
         }
     }
 
     if (certificate_not_after_counter)
-        certificate_not_after_counter->set(certificates[0].not_after().time_since_epoch());
+        certificate_not_after_counter->set(certs[0].not_after().time_since_epoch());
 
-    Botan::DataSource_Stream stream(certificate_key_path);
-    certificate_key = Botan::PKCS8::load_key(stream);
-
-    ca_list.clear();
+    Botan::DataSource_Stream             stream(certificate_key_path);
+    std::unique_ptr<Botan::Private_Key>  cert_key = Botan::PKCS8::load_key(stream);
+    std::vector<Botan::X509_Certificate> calist;
     for (auto &ca : ca_path_list) {
-        ca_list.emplace_back(ca);
+        calist.emplace_back(ca);
     }
+
+    AmLock l(mutex);
+    certificates.swap(certs);
+    certificate_key = Botan::PKCS8::copy_key(*cert_key.get());
+    ca_list.swap(calist);
 }
 
 bool settings::checkCertificateAndKey(const char *interface_name, const char *interface_type, const char *role_name)

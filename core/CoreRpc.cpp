@@ -772,7 +772,7 @@ void CoreRpc::requestConnTerminate(const AmArg &args, AmArg &)
     SipCtrlInterface::instance()->terminateConection(ip, port, if_num);
 }
 
-void CoreRpc::requestReloadCertificate(const AmArg &args, AmArg &ret)
+void ReloadCertificateThread::run()
 {
     std::vector<settings *> settings;
 
@@ -812,7 +812,15 @@ void CoreRpc::requestReloadCertificate(const AmArg &args, AmArg &ret)
     for (auto &setting : settings) {
         setting->load_certificates();
     }
-    ret = RPC_CMD_SUCC;
+
+    postJsonRpcReply(connection_id, id, AmArg(RPC_CMD_SUCC));
+}
+
+
+bool CoreRpc::requestReloadCertificate(const string &connection_id, const AmArg &request_id, const AmArg &params)
+{
+    AmThreadWatcher::instance()->add(new ReloadCertificateThread(connection_id, request_id, params));
+    return true;
 }
 
 void CoreRpc::plugin(const AmArg &args, AmArg &ret)
