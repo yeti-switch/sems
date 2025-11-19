@@ -11,18 +11,8 @@
 const char *dump_level2str(int dump_level);
 
 class ReloadCertificateThread : public AmThread {
-    string connection_id;
-    AmArg  id;
-    AmArg  params;
-
   public:
-    ReloadCertificateThread(const string &connection_id, const AmArg &id, const AmArg &params)
-        : connection_id(connection_id)
-        , id(id)
-        , params(params)
-    {
-        start();
-    }
+    ReloadCertificateThread() { start(); }
     void run() override;
     void on_stop() override {}
 };
@@ -87,7 +77,7 @@ class CoreRpc final : public RpcTreeHandler<CoreRpc>, public AmDynInvokeFactory 
     rpc_handler showResolverCount;
     rpc_handler showResolverCache;
 
-    async_rpc_handler requestReloadCertificate;
+    rpc_handler requestReloadCertificate;
 
     rpc_handler requestShutdownNormal;
     rpc_handler requestShutdownImmediate;

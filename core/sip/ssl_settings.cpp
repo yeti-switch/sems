@@ -13,7 +13,6 @@ AtomicCounter &settings::initNotAfterCounter()
 
 void settings::load_certificates()
 {
-
     std::vector<Botan::X509_Certificate> certs;
     Botan::DataSource_Stream             in(certificate_path);
     while (true) {

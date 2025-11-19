@@ -774,53 +774,57 @@ void CoreRpc::requestConnTerminate(const AmArg &args, AmArg &)
 
 void ReloadCertificateThread::run()
 {
-    std::vector<settings *> settings;
+    try {
+        std::vector<settings *> settings;
 
-    for (auto &sip_if : AmConfig.sip_ifs) {
-        for (auto &proto : sip_if.proto_info) {
-            SIP_TLS_info *sip_info = SIP_TLS_info::toSIP_TLS(proto);
-            if (sip_info) {
-                if (sip_info->client_settings.checkCertificateAndKey(sip_if.name.c_str(), "SIP", "client")) {
-                    settings.push_back(&sip_info->client_settings);
+        for (auto &sip_if : AmConfig.sip_ifs) {
+            for (auto &proto : sip_if.proto_info) {
+                SIP_TLS_info *sip_info = SIP_TLS_info::toSIP_TLS(proto);
+                if (sip_info) {
+                    if (sip_info->client_settings.checkCertificateAndKey(sip_if.name.c_str(), "SIP", "client")) {
+                        settings.push_back(&sip_info->client_settings);
+                    } else {
+                        throw AmSession::Exception(500, "certificates checking failed");
+                    }
+                    if (sip_info->server_settings.checkCertificateAndKey(sip_if.name.c_str(), "SIP", "server")) {
+                        settings.push_back(&sip_info->server_settings);
+                    } else {
+                        throw AmSession::Exception(500, "certificates checking failed");
+                    }
+                }
+            }
+        }
+
+        for (auto &media_if : AmConfig.media_ifs) {
+            if (media_if.srtp->srtp_enable) {
+                if (media_if.srtp->client_settings.checkCertificateAndKey(media_if.name.c_str(), "RTP", "client")) {
+                    settings.push_back(&media_if.srtp->client_settings);
                 } else {
                     throw AmSession::Exception(500, "certificates checking failed");
                 }
-                if (sip_info->server_settings.checkCertificateAndKey(sip_if.name.c_str(), "SIP", "server")) {
-                    settings.push_back(&sip_info->server_settings);
+                if (media_if.srtp->server_settings.checkCertificateAndKey(media_if.name.c_str(), "RTP", "server")) {
+                    settings.push_back(&media_if.srtp->server_settings);
                 } else {
                     throw AmSession::Exception(500, "certificates checking failed");
                 }
             }
         }
-    }
 
-    for (auto &media_if : AmConfig.media_ifs) {
-        if (media_if.srtp->srtp_enable) {
-            if (media_if.srtp->client_settings.checkCertificateAndKey(media_if.name.c_str(), "RTP", "client")) {
-                settings.push_back(&media_if.srtp->client_settings);
-            } else {
-                throw AmSession::Exception(500, "certificates checking failed");
-            }
-            if (media_if.srtp->server_settings.checkCertificateAndKey(media_if.name.c_str(), "RTP", "server")) {
-                settings.push_back(&media_if.srtp->server_settings);
-            } else {
-                throw AmSession::Exception(500, "certificates checking failed");
-            }
+        for (auto &setting : settings) {
+            setting->load_certificates();
         }
+    } catch (AmSession::Exception &ex) {
+        ERROR("reload cerificate failed: %s", ex.reason.c_str());
+    } catch (Botan::Exception &ex) {
+        ERROR("reload cerificate failed: %s", ex.what());
     }
-
-    for (auto &setting : settings) {
-        setting->load_certificates();
-    }
-
-    postJsonRpcReply(connection_id, id, AmArg(RPC_CMD_SUCC));
 }
 
 
-bool CoreRpc::requestReloadCertificate(const string &connection_id, const AmArg &request_id, const AmArg &params)
+void CoreRpc::requestReloadCertificate(const AmArg &args, AmArg &ret)
 {
-    AmThreadWatcher::instance()->add(new ReloadCertificateThread(connection_id, request_id, params));
-    return true;
+    AmThreadWatcher::instance()->add(new ReloadCertificateThread());
+    ret = RPC_CMD_SUCC;
 }
 
 void CoreRpc::plugin(const AmArg &args, AmArg &ret)
