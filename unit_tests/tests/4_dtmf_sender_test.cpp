@@ -60,3 +60,26 @@ TEST(DtmfSenderTest, EndEventBackwardDuration)
         sender.sendPacket(ts, 0, &stream);
     }
 }
+
+TEST(DtmfSenderTest, ShortEvent)
+{
+    AmDtmfSender sender;
+    bool         has_non_end_packets = false, has_end_packets = false;
+
+    AmRtpStreamMock stream([&](AmRtpPacket *p) {
+        auto dtmf = reinterpret_cast<const dtmf_payload_t &>(*p->getData());
+        if (dtmf.e) {
+            has_non_end_packets |= true;
+        } else {
+            has_end_packets |= true;
+        }
+    });
+
+    sender.queueEvent(9 /* key */, 1 /* duration */, 20 /* volume */, 8000 /* rate */, 20 /* frame_size */);
+    for (auto ts = 0u; ts < 160 * 30; ts += 160) {
+        sender.sendPacket(ts, 0, &stream);
+    }
+
+    GTEST_ASSERT_TRUE(has_non_end_packets);
+    GTEST_ASSERT_TRUE(has_end_packets);
+}
