@@ -72,6 +72,8 @@ void *AmThread::_start(void *_t)
 
     _this->_stopped.set(true);
 
+    _this->on_finished();
+
     return nullptr;
 }
 

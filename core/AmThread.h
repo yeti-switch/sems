@@ -360,6 +360,7 @@ class AmThread {
   protected:
     virtual void run()     = 0;
     virtual void on_stop() = 0;
+    virtual void on_finished() {}
 
   public:
     unsigned long _pid;
