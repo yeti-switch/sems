@@ -1,3 +1,7 @@
+sems (1.175.1) stable; urgency=low
+  * avoid excess reINVITEs in relay/transcoding modes
+ -- Michael Furmur <furmur@pm.me>  Thu, 20 Nov 2025 14:21:44 +0200
+
 sems (1.175.0) stable; urgency=low
   * fix backward duration in DTMF events
   * optimize core.request.certificates.reload
