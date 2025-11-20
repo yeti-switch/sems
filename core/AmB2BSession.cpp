@@ -345,7 +345,7 @@ void AmB2BSession::onB2BEvent(B2BEvent *ev)
                     " (code=%u;cseq=%u;call-id=%s)",
                     reply_ev->reply.code, reply_ev->reply.cseq, reply_ev->reply.callid.c_str());
             }
-        } else {
+        } else if (rtp_relay_mode == RTP_Direct) {
             // check whether not-forwarded (locally initiated)
             // INV/UPD transaction changed session in other leg
             if (SIP_IS_200_CLASS(reply_ev->reply.code) && (!reply_ev->reply.body.empty()) &&
