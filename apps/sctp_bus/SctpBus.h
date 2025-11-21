@@ -25,7 +25,7 @@ class SctpBus : public AmDynInvokeFactory,
                 public AmThread,
                 public AmEventFdQueue,
                 public AmEventHandler,
-                public RpcTreeHandler<SctpBus> {
+                public RpcTreeHandler {
     static SctpBus *_instance;
 
     typedef map<unsigned int, SctpConnection *> Connections;

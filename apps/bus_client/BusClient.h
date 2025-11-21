@@ -46,7 +46,7 @@ class BusDynamicQueue : public AmEventFdQueue, public AmEventHandler {
 
 class BusClient : public AmDynInvokeFactory,
                   public AmConfigFactory,
-                  public RpcTreeHandler<BusClient>,
+                  public RpcTreeHandler,
                   public AmThread,
                   public AmEventFdQueue,
                   public AmEventHandler {

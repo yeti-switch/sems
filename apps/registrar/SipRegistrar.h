@@ -35,7 +35,7 @@ using Aors               = map<RegistrationIdType, list<AorData>>;
 class SipRegistrar : public AmThread,
                      public AmEventFdQueue,
                      public AmEventHandler,
-                     public RpcTreeHandler<SipRegistrar>,
+                     public RpcTreeHandler,
                      public RegistrarRedisClient,
                      public RegistrarClickhouse {
   private:

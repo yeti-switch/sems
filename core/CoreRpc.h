@@ -10,12 +10,12 @@
 
 const char *dump_level2str(int dump_level);
 
-class CoreRpc final : public RpcTreeHandler<CoreRpc>, public AmDynInvokeFactory {
+class CoreRpc final : public RpcTreeHandler, public AmDynInvokeFactory {
     time_t         start_time;
     static timeval last_shutdown_time;
 
     CoreRpc()
-        : RpcTreeHandler<CoreRpc>(true)
+        : RpcTreeHandler(true)
         , AmDynInvokeFactory("core")
     {
     }

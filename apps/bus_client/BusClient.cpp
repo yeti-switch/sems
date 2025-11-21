@@ -635,15 +635,15 @@ void BusClient::requestRoutesTest(const AmArg &args, AmArg &ret)
 
 void BusClient::init_rpc_tree()
 {
-    reg_method(root, "postEvent", "", &BusClient::postEventHdl);
+    reg_method(root, "postEvent", "", "", &BusClient::postEventHdl, this);
 
     AmArg &show = reg_leaf(root, "show", "");
-    reg_method(show, "connections", "", &BusClient::showConnections);
-    reg_method(show, "routes", "", &BusClient::showRoutes);
+    reg_method(show, "connections", "", "", &BusClient::showConnections, this);
+    reg_method(show, "routes", "", "", &BusClient::showRoutes, this);
 
     AmArg &request        = reg_leaf(root, "request", "");
     AmArg &request_routes = reg_leaf(request, "routes", "");
-    reg_method(request_routes, "test", "", &BusClient::requestRoutesTest);
+    reg_method(request_routes, "test", "", "", &BusClient::requestRoutesTest, this);
 }
 
 void BusDynamicQueue::process(AmEvent *ev)

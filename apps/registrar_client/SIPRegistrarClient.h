@@ -48,7 +48,7 @@ class SIPRemoveRegistrationEvent;
 
 class SIPRegistrarClient : public AmDynInvokeFactory,
                            public AmConfigFactory,
-                           public RpcTreeHandler<SIPRegistrarClient>,
+                           public RpcTreeHandler,
                            public AmThread,
                            public AmEventFdQueue,
                            public AmEventHandler,

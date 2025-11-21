@@ -316,18 +316,18 @@ int HttpClient::onLoad()
 void HttpClient::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root, "show");
-    reg_method(show, "auth", "auths dump", &HttpClient::authDump);
-    reg_method(show, "destinations", "destinations dump", &HttpClient::dstDump);
-    reg_method(show, "stats", "show statistics", &HttpClient::showStats);
-    reg_method(show, "dns_cache", "show statistics", &HttpClient::showDnsCache);
+    reg_method(show, "auth", "auths dump", "", &HttpClient::authDump, this);
+    reg_method(show, "destinations", "destinations dump", "", &HttpClient::dstDump, this);
+    reg_method(show, "stats", "show statistics", "", &HttpClient::showStats, this);
+    reg_method(show, "dns_cache", "show statistics", "", &HttpClient::showDnsCache, this);
     AmArg &req = reg_leaf(root, "request");
-    reg_method(req, "post", "post request", &HttpClient::postRequest);
-    reg_method(req, "get", "get request", &HttpClient::getRequest);
-    reg_method(req, "multi", "multi request", &HttpClient::multiRequest);
+    reg_method(req, "post", "post request", "", &HttpClient::postRequest, this);
+    reg_method(req, "get", "get request", "", &HttpClient::getRequest, this);
+    reg_method(req, "multi", "multi request", "", &HttpClient::multiRequest, this);
     AmArg &cache = reg_leaf(req, "dns_cache");
-    reg_method(cache, "reset", "reset dns_cache", &HttpClient::resetDnsCache);
+    reg_method(cache, "reset", "reset dns_cache", "", &HttpClient::resetDnsCache, this);
     AmArg &set = reg_leaf(root, "set");
-    reg_method(set, "events_log_level", "", &HttpClient::setEventsLogLevel);
+    reg_method(set, "events_log_level", "", "", &HttpClient::setEventsLogLevel, this);
 }
 
 bool HttpClient::postRequest(const string &connection_id, const AmArg &request_id, const AmArg &params)

@@ -18,7 +18,7 @@ using std::string;
 class HttpClient : public AmThread,
                    public AmEventFdQueue,
                    public AmEventHandler,
-                   public RpcTreeHandler<HttpClient>,
+                   public RpcTreeHandler,
                    public ShutdownHandler,
                    public CurlMultiHandler {
     friend class HttpClientFactory;

@@ -121,7 +121,7 @@ using channel_ptr = std::unique_ptr<ConferenceChannel, std::function<void(Confer
 
 class Mixer : public AmDynInvokeFactory,
               public AmConfigFactory,
-              public RpcTreeHandler<Mixer>,
+              public RpcTreeHandler,
               public AmThread,
               public AmEventFdQueue,
               public AmEventHandler {

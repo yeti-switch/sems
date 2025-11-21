@@ -41,7 +41,7 @@ struct S3RequestData {
 class S3Client : public AmThread,
                  public AmEventFdQueue,
                  public AmEventHandler,
-                 public RpcTreeHandler<S3Client>,
+                 public RpcTreeHandler,
                  public CurlMultiHandler,
                  public ShutdownHandler {
     friend class S3ClientFactory;

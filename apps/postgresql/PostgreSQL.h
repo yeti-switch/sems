@@ -68,7 +68,7 @@ class ResetEvent : public PGEvent {
 class PostgreSQL : public AmThread,
                    public AmEventFdQueue,
                    public AmEventHandler,
-                   public RpcTreeHandler<PostgreSQL>,
+                   public RpcTreeHandler,
                    public ShutdownHandler {
     friend class PostgreSQLFactory;
     static PostgreSQL *_instance;

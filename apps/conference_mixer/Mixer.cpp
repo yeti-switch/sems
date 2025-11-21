@@ -44,7 +44,7 @@ Mixer *Mixer::instance()
 Mixer::Mixer()
     : AmDynInvokeFactory(MOD_NAME)
     , AmConfigFactory(MOD_NAME)
-    , RpcTreeHandler<Mixer>(true)
+    , RpcTreeHandler(true)
     , AmEventFdQueue(this)
     , running(true)
     , stopped(false)
@@ -57,7 +57,7 @@ Mixer::Mixer()
 Mixer::Mixer(const string &name)
     : AmDynInvokeFactory(name)
     , AmConfigFactory(MOD_NAME)
-    , RpcTreeHandler<Mixer>(true)
+    , RpcTreeHandler(true)
     , AmEventFdQueue(this)
     , running(true)
     , stopped(false)
@@ -76,7 +76,7 @@ Mixer::~Mixer()
 
 void Mixer::init_rpc_tree()
 {
-    reg_method(root, "reload", "", &Mixer::reload);
+    reg_method(root, "reload", "", "", &Mixer::reload, this);
 }
 
 int Mixer::bind_socket()

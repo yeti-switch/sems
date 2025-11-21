@@ -17,10 +17,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-class PostgreSqlProxy : public AmThread,
-                        public AmEventFdQueue,
-                        public AmEventHandler,
-                        public RpcTreeHandler<PostgreSqlProxy> {
+class PostgreSqlProxy : public AmThread, public AmEventFdQueue, public AmEventHandler, public RpcTreeHandler {
     friend class PostgreSqlMockFactory;
     static PostgreSqlProxy *_instance;
 

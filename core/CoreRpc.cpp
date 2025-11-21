@@ -135,75 +135,75 @@ void CoreRpc::init_rpc_tree()
 {
     // show
     AmArg &show = reg_leaf(root, "show");
-    reg_method(show, "status", "", &CoreRpc::showStatus);
+    reg_method(show, "status", "", "", &CoreRpc::showStatus, this);
     AmArg &show_shutdown = reg_leaf(show, "shutdown");
-    reg_method(show_shutdown, "status", "", &CoreRpc::showShutdownStatus);
-    reg_method(show, "connections", "", &CoreRpc::showConnections);
-    reg_method(show, "version", "show version", &CoreRpc::showVersion);
-    reg_method(show, "config", "show config", &CoreRpc::showConfig);
-    reg_method(show, "interfaces", "active media streams info", &CoreRpc::showInterfaces);
-    reg_method(show, "payloads", "", &CoreRpc::showPayloads);
-    reg_method(show, "log-level", "", &CoreRpc::showLogLevel);
-    reg_method(show, "dump-level", "", &CoreRpc::showDumpLevel);
-    reg_method(show, "modules", "", &CoreRpc::showModules);
+    reg_method(show_shutdown, "status", "", "", &CoreRpc::showShutdownStatus, this);
+    reg_method(show, "connections", "", "", &CoreRpc::showConnections, this);
+    reg_method(show, "version", "show version", "", &CoreRpc::showVersion, this);
+    reg_method(show, "config", "show config", "", &CoreRpc::showConfig, this);
+    reg_method(show, "interfaces", "active media streams info", "", &CoreRpc::showInterfaces, this);
+    reg_method(show, "payloads", "", "", &CoreRpc::showPayloads, this);
+    reg_method(show, "log-level", "", "", &CoreRpc::showLogLevel, this);
+    reg_method(show, "dump-level", "", "", &CoreRpc::showDumpLevel, this);
+    reg_method(show, "modules", "", "", &CoreRpc::showModules, this);
     AmArg &show_resolver = reg_leaf(show, "resolver");
-    reg_method(show_resolver, "count", "", &CoreRpc::showResolverCount);
-    reg_method(show_resolver, "list", "", &CoreRpc::showResolverCache);
+    reg_method(show_resolver, "count", "", "", &CoreRpc::showResolverCount, this);
+    reg_method(show_resolver, "list", "", "", &CoreRpc::showResolverCache, this);
     AmArg &show_transport = reg_leaf(show, "transport");
-    reg_method(show_transport, "blacklist", "", &CoreRpc::showTrBlacklist);
-    reg_method(show_transport, "used_ports", "", &CoreRpc::showUsedPorts);
+    reg_method(show_transport, "blacklist", "", "", &CoreRpc::showTrBlacklist, this);
+    reg_method(show_transport, "used_ports", "", "", &CoreRpc::showUsedPorts, this);
     AmArg &show_transactions = reg_leaf(show, "transactions");
-    reg_method(show_transactions, "count", "", &CoreRpc::showTrCount);
-    reg_method(show_transactions, "list", "", &CoreRpc::showTrList);
-    AmArg &show_sessions = reg_method_arg(show, "sessions", "show runtime sessions", &CoreRpc::showSessionsInfo,
-                                          "active sessions", "<LOCAL-TAG>", "show sessions related to given local_tag");
-    reg_method(show_sessions, "count", "", &CoreRpc::showSessionsCount);
-    reg_method(show_sessions, "limit", "", &CoreRpc::showSessionsLimit);
+    reg_method(show_transactions, "count", "", "", &CoreRpc::showTrCount, this);
+    reg_method(show_transactions, "list", "", "", &CoreRpc::showTrList, this);
+    AmArg &show_sessions = reg_method_arg(show, "sessions", "show runtime sessions", "active sessions", "<LOCAL-TAG>",
+                                          "show sessions related to given local_tag", &CoreRpc::showSessionsInfo, this);
+    reg_method(show_sessions, "count", "", "", &CoreRpc::showSessionsCount, this);
+    reg_method(show_sessions, "limit", "", "", &CoreRpc::showSessionsLimit, this);
     AmArg &show_media = reg_leaf(show, "media", "media processor instance");
-    reg_method(show_media, "streams", "active media streams info", &CoreRpc::showMediaStreams);
+    reg_method(show_media, "streams", "active media streams info", "", &CoreRpc::showMediaStreams, this);
     AmArg &show_recorder = reg_leaf(show, "recorder", "async audio recorder instance");
-    reg_method(show_recorder, "stats", "", &CoreRpc::showRecorderStats);
+    reg_method(show_recorder, "stats", "", "", &CoreRpc::showRecorderStats, this);
 
     // request
     AmArg &request      = reg_leaf(root, "request");
     AmArg &request_conn = reg_leaf(request, "connection");
-    reg_method(request_conn, "terminate", "", &CoreRpc::requestConnTerminate);
+    reg_method(request_conn, "terminate", "", "", &CoreRpc::requestConnTerminate, this);
     AmArg &request_log = reg_leaf(request, "log");
-    reg_method(request_log, "dump", "", &CoreRpc::requestLogDump);
+    reg_method(request_log, "dump", "", "", &CoreRpc::requestLogDump, this);
     AmArg &request_shutdown = reg_leaf(request, "shutdown");
-    reg_method(request_shutdown, "normal", "", &CoreRpc::requestShutdownNormal);
-    reg_method(request_shutdown, "immediate", "", &CoreRpc::requestShutdownImmediate);
-    reg_method(request_shutdown, "graceful", "", &CoreRpc::requestShutdownGraceful);
-    reg_method(request_shutdown, "graceful_no_autoterm", "", &CoreRpc::requestShutdownGracefulNoAutoTerm);
-    reg_method(request_shutdown, "cancel", "", &CoreRpc::requestShutdownCancel);
+    reg_method(request_shutdown, "normal", "", "", &CoreRpc::requestShutdownNormal, this);
+    reg_method(request_shutdown, "immediate", "", "", &CoreRpc::requestShutdownImmediate, this);
+    reg_method(request_shutdown, "graceful", "", "", &CoreRpc::requestShutdownGraceful, this);
+    reg_method(request_shutdown, "graceful_no_autoterm", "", "", &CoreRpc::requestShutdownGracefulNoAutoTerm, this);
+    reg_method(request_shutdown, "cancel", "", "", &CoreRpc::requestShutdownCancel, this);
     AmArg &request_resolver = reg_leaf(request, "resolver");
-    reg_method(request_resolver, "clear", "", &CoreRpc::requestResolverClear);
-    reg_method(request_resolver, "get", "", &CoreRpc::requestResolverGet);
+    reg_method(request_resolver, "clear", "", "", &CoreRpc::requestResolverClear, this);
+    reg_method(request_resolver, "get", "", "", &CoreRpc::requestResolverGet, this);
     AmArg &request_cerificates = reg_leaf(request, "certificates");
-    reg_method(request_cerificates, "reload", "", &CoreRpc::requestReloadCertificate);
+    reg_method(request_cerificates, "reload", "", "", &CoreRpc::requestReloadCertificate, this);
     AmArg &set_ssl_key_log = reg_leaf(request, "ssl_key_log");
-    reg_method(set_ssl_key_log, "stop", "", &CoreRpc::stopSslKeyLog);
-    reg_method(set_ssl_key_log, "restart", "", &CoreRpc::restartSslKeyLog);
+    reg_method(set_ssl_key_log, "stop", "", "", &CoreRpc::stopSslKeyLog, this);
+    reg_method(set_ssl_key_log, "restart", "", "", &CoreRpc::restartSslKeyLog, this);
 
     // set
     AmArg &set          = reg_leaf(root, "set");
     AmArg &set_loglevel = reg_leaf(set, "log-level");
-    reg_method(set_loglevel, "syslog", "<log_level>", &CoreRpc::setLogSyslogLevel);
-    reg_method(set_loglevel, "di_log", "<log_level>", &CoreRpc::setLogDiLogLevel);
-    reg_method(set_loglevel, "stderr", "<log_level>", &CoreRpc::setLogStderrLogLevel);
+    reg_method(set_loglevel, "syslog", "<log_level>", "", &CoreRpc::setLogSyslogLevel, this);
+    reg_method(set_loglevel, "di_log", "<log_level>", "", &CoreRpc::setLogDiLogLevel, this);
+    reg_method(set_loglevel, "stderr", "<log_level>", "", &CoreRpc::setLogStderrLogLevel, this);
 
     AmArg &set_dumplevel = reg_leaf(set, "dump-level");
-    reg_method(set_dumplevel, "none", "", &CoreRpc::setDumpLevelNone);
-    reg_method(set_dumplevel, "signalling", "", &CoreRpc::setDumpLevelSignalling);
-    reg_method(set_dumplevel, "rtp", "", &CoreRpc::setDumpLevelRtp);
-    reg_method(set_dumplevel, "full", "", &CoreRpc::setDumpLevelFull);
+    reg_method(set_dumplevel, "none", "", "", &CoreRpc::setDumpLevelNone, this);
+    reg_method(set_dumplevel, "signalling", "", "", &CoreRpc::setDumpLevelSignalling, this);
+    reg_method(set_dumplevel, "rtp", "", "", &CoreRpc::setDumpLevelRtp, this);
+    reg_method(set_dumplevel, "full", "", "", &CoreRpc::setDumpLevelFull, this);
 
     AmArg &set_sessions = reg_leaf(set, "sessions");
-    reg_method(set_sessions, "limit", "", &CoreRpc::setSessionsLimit);
+    reg_method(set_sessions, "limit", "", "", &CoreRpc::setSessionsLimit, this);
 
     AmArg &set_shutdown = reg_leaf(set, "shutdown");
-    reg_method(set_shutdown, "autoterm", "set automatic termination on graceful shutdown",
-               &CoreRpc::setShutdownAutoTerm);
+    reg_method(set_shutdown, "autoterm", "set automatic termination on graceful shutdown", "",
+               &CoreRpc::setShutdownAutoTerm, this);
 }
 
 void CoreRpc::log_invoke(const string &method, const AmArg &args) const

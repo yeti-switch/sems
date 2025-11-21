@@ -14,7 +14,7 @@ class OptionsProber : public AmDynInvokeFactory,
                       public AmThread,
                       public AmEventFdQueue,
                       public AmEventHandler,
-                      public RpcTreeHandler<OptionsProber>,
+                      public RpcTreeHandler,
                       public StatsCountersGroupsContainerInterface {
     int               epoll_fd;
     AmTimerFd         timer;

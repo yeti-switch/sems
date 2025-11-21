@@ -739,43 +739,52 @@ string SIPRegistrarClient::postSIPNewRegistrationEvent(
 void SIPRegistrarClient::init_rpc_tree()
 {
     // back-compatiblity methods
-    reg_method(root, "createRegistration", "create registration", &SIPRegistrarClient::createRegistration);
+    reg_method(root, "createRegistration", "create registration", "", &SIPRegistrarClient::createRegistration, this);
 
-    reg_method(root, "removeRegistration", "remove registration by handle", &SIPRegistrarClient::removeRegistration);
-    reg_method(root, "removeRegistrationById", "remove registration by id",
-               &SIPRegistrarClient::removeRegistrationById);
-    reg_method(root, "flushRegistrations", "flush registrations", &SIPRegistrarClient::flushRegistrations);
+    reg_method(root, "removeRegistration", "remove registration by handle", "", &SIPRegistrarClient::removeRegistration,
+               this);
+    reg_method(root, "removeRegistrationById", "remove registration by id", "",
+               &SIPRegistrarClient::removeRegistrationById, this);
+    reg_method(root, "flushRegistrations", "flush registrations", "", &SIPRegistrarClient::flushRegistrations, this);
 
-    reg_method(root, "getRegistrationState", "return state and expires by handle",
-               &SIPRegistrarClient::getRegistrationState);
+    reg_method(root, "getRegistrationState", "return state and expires by handle", "",
+               &SIPRegistrarClient::getRegistrationState, this);
 
-    reg_method(root, "listRegistrations", "list registrations", &SIPRegistrarClient::listRegistrations);
-    reg_method(root, "getRegistrationsCount", "get registrations count", &SIPRegistrarClient::getRegistrationsCount);
-    reg_method(root, "showRegistration", "show registration by handle", &SIPRegistrarClient::showRegistration);
-    reg_method(root, "showRegistrationById", "show registration by id", &SIPRegistrarClient::showRegistrationById);
+    reg_method(root, "listRegistrations", "list registrations", "", &SIPRegistrarClient::listRegistrations, this);
+    reg_method(root, "getRegistrationsCount", "get registrations count", "", &SIPRegistrarClient::getRegistrationsCount,
+               this);
+    reg_method(root, "showRegistration", "show registration by handle", "", &SIPRegistrarClient::showRegistration,
+               this);
+    reg_method(root, "showRegistrationById", "show registration by id", "", &SIPRegistrarClient::showRegistrationById,
+               this);
 
     // new methods
     AmArg &request               = reg_leaf(root, "request");
     AmArg &request_registrations = reg_leaf(request, "registrations");
-    reg_method(request_registrations, "create", "create registration", &SIPRegistrarClient::createRegistration);
-    reg_method(request_registrations, "flush", "flush registrations", &SIPRegistrarClient::flushRegistrations);
+    reg_method(request_registrations, "create", "create registration", "", &SIPRegistrarClient::createRegistration,
+               this);
+    reg_method(request_registrations, "flush", "flush registrations", "", &SIPRegistrarClient::flushRegistrations,
+               this);
 
     AmArg &request_registration_remove_by = reg_leaf(reg_leaf(request_registrations, "remove"), "by");
-    reg_method(request_registration_remove_by, "handle", "remove registration by handle",
-               &SIPRegistrarClient::removeRegistration);
-    reg_method(request_registration_remove_by, "id", "remove registration by id",
-               &SIPRegistrarClient::removeRegistrationById);
+    reg_method(request_registration_remove_by, "handle", "remove registration by handle", "",
+               &SIPRegistrarClient::removeRegistration, this);
+    reg_method(request_registration_remove_by, "id", "remove registration by id", "",
+               &SIPRegistrarClient::removeRegistrationById, this);
 
     AmArg &show               = reg_leaf(root, "show");
     AmArg &show_registrations = reg_leaf(show, "registrations");
     reg_method(reg_leaf(reg_leaf(show_registrations, "state"), "by"), "handle", "return state and expires by handle",
-               &SIPRegistrarClient::getRegistrationState);
-    reg_method(show_registrations, "list", "list registrations", &SIPRegistrarClient::listRegistrations);
-    reg_method(show_registrations, "count", "get registrations count", &SIPRegistrarClient::getRegistrationsCount);
+               "", &SIPRegistrarClient::getRegistrationState, this);
+    reg_method(show_registrations, "list", "list registrations", "", &SIPRegistrarClient::listRegistrations, this);
+    reg_method(show_registrations, "count", "get registrations count", "", &SIPRegistrarClient::getRegistrationsCount,
+               this);
 
     AmArg &show_registrations_by = reg_leaf(show_registrations, "by");
-    reg_method(show_registrations_by, "handle", "show registration by handle", &SIPRegistrarClient::showRegistration);
-    reg_method(show_registrations_by, "id", "show registration by id", &SIPRegistrarClient::showRegistrationById);
+    reg_method(show_registrations_by, "handle", "show registration by handle", "",
+               &SIPRegistrarClient::showRegistration, this);
+    reg_method(show_registrations_by, "id", "show registration by id", "", &SIPRegistrarClient::showRegistrationById,
+               this);
 }
 
 struct RegistrationMetricGroup : public StatCountersGroupsInterface {

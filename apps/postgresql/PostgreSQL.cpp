@@ -410,20 +410,20 @@ bool PostgreSQL::transLog(const string &connection_id, const AmArg &request_id, 
 void PostgreSQL::init_rpc_tree()
 {
     AmArg &show = reg_leaf(root, "show");
-    reg_method(show, "stats", "show statistics", &PostgreSQL::showStatistics);
-    reg_method(show, "config", "show config", &PostgreSQL::showConfiguration);
-    reg_method(show, "retransmit", "show retransmit queue", &PostgreSQL::showRetransmits);
+    reg_method(show, "stats", "show statistics", "", &PostgreSQL::showStatistics, this);
+    reg_method(show, "config", "show config", "", &PostgreSQL::showConfiguration, this);
+    reg_method(show, "retransmit", "show retransmit queue", "", &PostgreSQL::showRetransmits, this);
     AmArg &request = reg_leaf(root, "request");
-    reg_method(request, "reconnect", "reset pq connection", &PostgreSQL::requestReconnect);
-    reg_method(request, "reset", "reset pq connection", &PostgreSQL::resetConnection);
-    reg_method(request, "execute", "execute query", &PostgreSQL::execRequest);
+    reg_method(request, "reconnect", "reset pq connection", "", &PostgreSQL::requestReconnect, this);
+    reg_method(request, "reset", "reset pq connection", "", &PostgreSQL::resetConnection, this);
+    reg_method(request, "execute", "execute query", "", &PostgreSQL::execRequest, this);
     AmArg &remove = reg_leaf(request, "remove");
-    reg_method(remove, "trans", "reset pq transaction", &PostgreSQL::removeTrans);
+    reg_method(remove, "trans", "reset pq transaction", "", &PostgreSQL::removeTrans, this);
 #ifdef TRANS_LOG_ENABLE
-    reg_method(request, "get_connection_log", "get log of pq connection", &PostgreSQL::transLog);
+    reg_method(request, "get_connection_log", "get log of pq connection", "", &PostgreSQL::transLog, this);
 #endif
     AmArg &set = reg_leaf(root, "set");
-    reg_method(set, "logPgEvents", "enable/disable pg events logs", &PostgreSQL::logPgEventsAsync);
+    reg_method(set, "logPgEvents", "enable/disable pg events logs", "", &PostgreSQL::logPgEventsAsync, this);
 }
 
 void PostgreSQL::process(AmEvent *ev)
