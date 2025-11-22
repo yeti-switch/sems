@@ -174,12 +174,12 @@ int SctpBus::onLoad()
 
 void SctpBus::init_rpc_tree()
 {
-    AmArg &show        = reg_leaf(root, "show");
-    AmArg &show_server = reg_leaf(show, "server");
+    auto &show        = reg_leaf(root, "show");
+    auto &show_server = reg_leaf(show, "server");
     reg_method(show_server, "associations", "", "", &SctpBus::showServerAssocations, this);
-    AmArg &show_client = reg_leaf(show, "client");
+    auto &show_client = reg_leaf(show, "client");
     reg_method(show_client, "connections", "", "", &SctpBus::showClientConnections, this);
-    AmArg &request = reg_leaf(root, "request");
+    auto &request = reg_leaf(root, "request");
     reg_method(request, "reload", "", "", &SctpBus::reload, this);
 }
 

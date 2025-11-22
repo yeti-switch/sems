@@ -8,17 +8,6 @@
 #include <type_traits>
 
 class RpcTreeHandler : public AmDynInvoke {
-    bool process_rpc_cmds(const string &connection_id, const AmArg &request_id, const AmArg &cmds, const string &method,
-                          const AmArg &args, AmArg &ret);
-    bool process_rpc_cmds_methods_tree(const string &connection_id, const AmArg &request_id, const AmArg &cmds,
-                                       vector<string> &methods_tree, const AmArg &args, AmArg &ret);
-    bool process_rpc_cmds_methods_tree_root(const string &connection_id, const AmArg &request_id, const AmArg &cmds,
-                                            const string &method, const AmArg &args, AmArg &ret);
-    void serialize_methods_tree(AmArg &methods_root, AmArg &tree);
-    bool methods_tree;
-
-    void free_methods_three(AmArg &tree);
-
   public:
     using rpc_handler       = void(const AmArg &args, AmArg &ret);
     using async_rpc_handler = bool(const string &connection_id, const AmArg &request_id, const AmArg &params);
@@ -28,8 +17,6 @@ class RpcTreeHandler : public AmDynInvoke {
     virtual ~RpcTreeHandler();
 
   protected:
-    AmArg root;
-
     class RpcHandler {
       private:
         std::function<rpc_handler>       method_handler;
@@ -93,15 +80,17 @@ class RpcTreeHandler : public AmDynInvoke {
                 static_assert(always_false<Method>(), "Unsupported function signature");
         }
 
-        bool isMethod();
-        bool operator()(const string &connection_id, const AmArg &request_id, const AmArg &args, AmArg &ret);
+        bool isMethod() const;
+        bool operator()(const string &connection_id, const AmArg &request_id, const AmArg &args, AmArg &ret) const;
     };
 
     struct rpc_entry : public AmObject {
         RpcHandler handler;
         string     leaf_descr, func_descr, arg, arg_descr;
-        AmArg      leaves;
 
+        std::optional<std::map<string, rpc_entry>> leaves;
+
+        rpc_entry() {}
         rpc_entry(string ld)
             : leaf_descr(ld)
         {
@@ -123,24 +112,38 @@ class RpcTreeHandler : public AmDynInvoke {
         {
         }
 
-        bool isMethod() { return handler.isMethod(); }
-        bool hasLeafs() { return leaves.getType() == AmArg::Struct; }
-        bool hasLeaf(const char *leaf) { return hasLeafs() && leaves.hasMember(leaf); }
-        bool hasLeaf(const string &leaf) { return hasLeafs() && leaves.hasMember(leaf); }
+        bool isMethod() const { return handler.isMethod(); }
+        bool hasLeafs() const { return leaves.has_value(); }
+        bool hasLeaf(const char *leaf) const { return hasLeafs() && leaves->find(leaf) != leaves->end(); }
+        bool hasLeaf(const string &leaf) const { return hasLeafs() && leaves->find(leaf) != leaves->end(); }
     };
 
-    AmArg &reg_leaf(AmArg &parent, const string &name, const string &desc = "");
+    rpc_entry &reg_leaf(rpc_entry &parent, const string &name, const string &desc = "");
 
     template <typename T, typename... Args>
-    AmArg &reg_method(AmArg &parent, const string &name, const string &descr, const string &func_descr, T handler,
-                      Args &&...args);
+    rpc_entry &reg_method(rpc_entry &parent, const string &name, const string &descr, const string &func_descr,
+                          T handler, Args &&...args);
 
     template <typename T, typename... Args>
-    AmArg &reg_method_arg(AmArg &parent, const string &name, const string &descr, const string &func_descr,
-                          const string &arg, const string &arg_descr, T handler, Args &&...args);
+    rpc_entry &reg_method_arg(rpc_entry &parent, const string &name, const string &descr, const string &func_descr,
+                              const string &arg, const string &arg_descr, T handler, Args &&...args);
 
     virtual void init_rpc_tree() = 0;
     virtual void log_invoke(const string &method, const AmArg &args) const {}
+
+  protected:
+    rpc_entry root;
+    bool      methods_tree;
+
+    bool process_rpc_cmds(const string &connection_id, const AmArg &request_id, const rpc_entry &entry,
+                          const string &method, const AmArg &args, AmArg &ret);
+    bool process_rpc_cmds_methods_tree(const string &connection_id, const AmArg &request_id, const rpc_entry &entry,
+                                       vector<string> &methods_tree, const AmArg &args, AmArg &ret);
+    bool process_rpc_cmds_methods_tree_root(const string &connection_id, const AmArg &request_id,
+                                            const rpc_entry &entry, const string &method, const AmArg &args,
+                                            AmArg &ret);
+
+    void serialize_methods_tree(const rpc_entry &entry, AmArg &tree);
 
   public:
     bool invoke_async(const string &connection_id, const AmArg &request_id, const string &method,
@@ -152,25 +155,27 @@ class RpcTreeHandler : public AmDynInvoke {
     void         init_rpc();
 
     bool is_methods_tree() override { return methods_tree; }
-
-  private:
-    rpc_entry *root_entry;
 };
 
 template <typename T, typename... Args>
-AmArg &RpcTreeHandler::reg_method(AmArg &parent, const string &name, const string &descr, const string &func_descr,
-                                  T handler, Args &&...args)
+RpcTreeHandler::rpc_entry &RpcTreeHandler::reg_method(rpc_entry &parent, const string &name, const string &descr,
+                                                      const string &func_descr, T handler, Args &&...args)
 {
-    rpc_entry *e = new rpc_entry(descr, RpcHandler(handler, std::forward<Args>(args)...), func_descr);
-    parent[name] = e;
-    return e->leaves;
+    if (!parent.leaves.has_value())
+        parent.leaves.emplace();
+    auto ret =
+        parent.leaves->emplace(name, rpc_entry(descr, RpcHandler(handler, std::forward<Args>(args)...), func_descr));
+    return ret.first->second;
 }
 
 template <typename T, typename... Args>
-AmArg &RpcTreeHandler::reg_method_arg(AmArg &parent, const string &name, const string &descr, const string &func_descr,
-                                      const string &arg, const string &arg_descr, T handler, Args &&...args)
+RpcTreeHandler::rpc_entry &RpcTreeHandler::reg_method_arg(rpc_entry &parent, const string &name, const string &descr,
+                                                          const string &func_descr, const string &arg,
+                                                          const string &arg_descr, T handler, Args &&...args)
 {
-    rpc_entry *e = new rpc_entry(descr, RpcHandler(handler, std::forward<Args>(args)...), func_descr, arg, arg_descr);
-    parent[name] = e;
-    return e->leaves;
+    if (!parent.leaves.has_value())
+        parent.leaves.emplace();
+    auto ret = parent.leaves->emplace(
+        name, rpc_entry(descr, RpcHandler(handler, std::forward<Args>(args)...), func_descr, arg, arg_descr));
+    return ret.first->second;
 }

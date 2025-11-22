@@ -2,29 +2,19 @@
 
 RpcTreeHandler::RpcTreeHandler(bool methods_tree)
     : methods_tree(methods_tree)
-    , root_entry(nullptr)
 {
 }
 
-RpcTreeHandler::~RpcTreeHandler()
-{
-    if (!isArgStruct(root))
-        return;
-    for (auto &e : *root.asStruct())
-        free_methods_three(e.second);
-    root.clear();
-    if (root_entry)
-        delete root_entry;
-}
+RpcTreeHandler::~RpcTreeHandler() {}
 
 
-bool RpcTreeHandler::RpcHandler::isMethod()
+bool RpcTreeHandler::RpcHandler::isMethod() const
 {
     return method_handler != nullptr || method_async_handler != nullptr;
 }
 
 bool RpcTreeHandler::RpcHandler::operator()(const string &connection_id, const AmArg &request_id, const AmArg &args,
-                                            AmArg &ret)
+                                            AmArg &ret) const
 {
     if (method_async_handler)
         return method_async_handler(connection_id, request_id, args);
@@ -33,84 +23,59 @@ bool RpcTreeHandler::RpcHandler::operator()(const string &connection_id, const A
     return false;
 }
 
-bool RpcTreeHandler::process_rpc_cmds(const string &connection_id, const AmArg &request_id, const AmArg &cmds,
+bool RpcTreeHandler::process_rpc_cmds(const string &connection_id, const AmArg &request_id, const rpc_entry &entry,
                                       const string &method, const AmArg &args, AmArg &ret)
 {
     const char *list_method = "_list";
     if (method == list_method) {
         ret.assertArray();
-        switch (cmds.getType()) {
-        case AmArg::Struct:
-        {
-            AmArg::ValueStruct::const_iterator it = cmds.begin();
-            for (; it != cmds.end(); ++it) {
-                const AmArg &am_e = it->second;
-                rpc_entry   *e    = reinterpret_cast<rpc_entry *>(am_e.asObject());
-                AmArg        f;
-                f.push(it->first);
-                f.push(e->leaf_descr);
-                ret.push(f);
-            }
-        } break;
-
-        case AmArg::AObject:
-        {
-            rpc_entry *e = reinterpret_cast<rpc_entry *>(cmds.asObject());
-            if (!e->func_descr.empty() && (!e->arg.empty() || e->hasLeafs())) {
+        if (!entry.isMethod() || !entry.hasLeafs()) {
+            throw AmArg::TypeMismatchException();
+        }
+        if (entry.isMethod()) {
+            if (!entry.func_descr.empty() && (!entry.arg.empty() || entry.hasLeafs())) {
                 AmArg f;
                 f.push("[Enter]");
-                f.push(e->func_descr);
+                f.push(entry.func_descr);
                 ret.push(f);
             }
-            if (!e->arg.empty()) {
+            if (!entry.arg.empty()) {
                 AmArg f;
-                f.push(e->arg);
-                f.push(e->arg_descr);
+                f.push(entry.arg);
+                f.push(entry.arg_descr);
                 ret.push(f);
             }
-            if (e->hasLeafs()) {
-                const AmArg                       &l  = e->leaves;
-                AmArg::ValueStruct::const_iterator it = l.begin();
-                for (; it != l.end(); ++it) {
-                    const AmArg &am_e = it->second;
-                    rpc_entry   *e    = reinterpret_cast<rpc_entry *>(am_e.asObject());
-                    AmArg        f;
-                    f.push(it->first);
-                    f.push(e->leaf_descr);
-                    ret.push(f);
-                }
+        }
+        if (entry.hasLeafs()) {
+            auto it = entry.leaves->begin();
+            for (; it != entry.leaves->end(); ++it) {
+                const rpc_entry &e = it->second;
+                AmArg            f;
+                f.push(it->first);
+                f.push(e.leaf_descr);
+                ret.push(f);
             }
-        } break;
-
-        default: throw AmArg::TypeMismatchException();
         }
         return false;
     }
 
-    if (cmds.hasMember(method)) {
-        const AmArg &l = cmds[method];
-        if (l.getType() != AmArg::AObject)
-            throw AmArg::TypeMismatchException();
-        rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
+    if (entry.hasLeaf(method)) {
+        const rpc_entry &e = entry.leaves->at(method);
         if (isArgArray(args) && args.size() > 0) {
-            if (e->hasLeaf(args[0].asCStr())) {
+            if (e.hasLeaf(args[0].asCStr()) || args[0] == list_method) {
                 AmArg nargs = args, sub_method;
                 nargs.pop(sub_method);
-                return process_rpc_cmds(connection_id, request_id, e->leaves, sub_method.asCStr(), nargs, ret);
-            } else if (args[0] == list_method) {
-                AmArg nargs = args, sub_method;
-                nargs.pop(sub_method);
-                return process_rpc_cmds(connection_id, request_id, l, sub_method.asCStr(), nargs, ret);
+                return process_rpc_cmds(connection_id, request_id, e, sub_method.asCStr(), nargs, ret);
             }
         }
-        if (e->isMethod()) {
+        if (e.isMethod()) {
             if (isArgArray(args) && args.size() && strcmp(args.back().asCStr(), list_method) == 0) {
-                if (!e->hasLeafs() && e->arg.empty())
+                if (!e.hasLeafs() && e.arg.empty())
                     ret.assertArray();
                 return false;
             }
 
-            return e->handler(connection_id, request_id, args, ret);
+            return e.handler(connection_id, request_id, args, ret);
         }
         throw AmDynInvoke::NotImplemented("missed arg");
     }
@@ -118,16 +83,16 @@ bool RpcTreeHandler::process_rpc_cmds(const string &connection_id, const AmArg &
 }
 
 bool RpcTreeHandler::process_rpc_cmds_methods_tree_root(const string &connection_id, const AmArg &request_id,
-                                                        const AmArg &cmds, const string &method, const AmArg &args,
+                                                        const rpc_entry &entry, const string &method, const AmArg &args,
                                                         AmArg &ret)
 {
     vector<string> methods_tree = explode(method, ".");
-    return process_rpc_cmds_methods_tree(connection_id, request_id, cmds, methods_tree, args, ret);
+    return process_rpc_cmds_methods_tree(connection_id, request_id, entry, methods_tree, args, ret);
 }
 
 bool RpcTreeHandler::process_rpc_cmds_methods_tree(const string &connection_id, const AmArg &request_id,
-                                                   const AmArg &cmds, vector<string> &methods_tree, const AmArg &args,
-                                                   AmArg &ret)
+                                                   const rpc_entry &entry, vector<string> &methods_tree,
+                                                   const AmArg &args, AmArg &ret)
 {
     const char *list_method = "_list";
 
@@ -139,82 +104,30 @@ bool RpcTreeHandler::process_rpc_cmds_methods_tree(const string &connection_id, 
     methods_tree.erase(methods_tree.begin());
 
     if (method == list_method) {
-        ret.assertArray();
-        switch (cmds.getType()) {
-        case AmArg::Struct:
-        {
-            AmArg::ValueStruct::const_iterator it = cmds.begin();
-            for (; it != cmds.end(); ++it) {
-                const AmArg &am_e = it->second;
-                rpc_entry   *e    = reinterpret_cast<rpc_entry *>(am_e.asObject());
-                AmArg        f;
-                f.push(it->first);
-                f.push(e->leaf_descr);
-                ret.push(f);
-            }
-        } break;
-
-        case AmArg::AObject:
-        {
-            rpc_entry *e = reinterpret_cast<rpc_entry *>(cmds.asObject());
-            if (!e->func_descr.empty() && (!e->arg.empty() || e->hasLeafs())) {
-                AmArg f;
-                f.push("[Enter]");
-                f.push(e->func_descr);
-                ret.push(f);
-            }
-            if (!e->arg.empty()) {
-                AmArg f;
-                f.push(e->arg);
-                f.push(e->arg_descr);
-                ret.push(f);
-            }
-            if (e->hasLeafs()) {
-                const AmArg                       &l  = e->leaves;
-                AmArg::ValueStruct::const_iterator it = l.begin();
-                for (; it != l.end(); ++it) {
-                    const AmArg &am_e = it->second;
-                    rpc_entry   *e    = reinterpret_cast<rpc_entry *>(am_e.asObject());
-                    AmArg        f;
-                    f.push(it->first);
-                    f.push(e->leaf_descr);
-                    ret.push(f);
-                }
-            }
-        } break;
-
-        default: throw AmArg::TypeMismatchException();
-        } // switch
-        return false;
+        return process_rpc_cmds(connection_id, request_id, entry, method, args, ret);
     }
 
-    if (cmds.hasMember(method)) {
-        const AmArg &l = cmds[method];
-        if (l.getType() != AmArg::AObject)
-            throw AmArg::TypeMismatchException();
-
-        rpc_entry *e = reinterpret_cast<rpc_entry *>(l.asObject());
+    if (entry.hasLeaf(method)) {
+        const rpc_entry &e = entry.leaves->at(method);
         if (!methods_tree.empty()) {
-            if (e->hasLeaf(methods_tree[0])) {
-                return process_rpc_cmds_methods_tree(connection_id, request_id, e->leaves, methods_tree, args, ret);
-            } else if (methods_tree[0] == list_method) {
-                return process_rpc_cmds_methods_tree(connection_id, request_id, l, methods_tree, args, ret);
+            if (e.hasLeaf(methods_tree[0]) || methods_tree[0] == list_method) {
+                return process_rpc_cmds_methods_tree(connection_id, request_id, e, methods_tree, args, ret);
             } else {
                 throw AmDynInvoke::Exception(-32601,
                                              string("no matches with methods tree. unknown part: ") + methods_tree[0]);
             }
         }
-        if (e->isMethod()) {
+        if (e.isMethod()) {
             if ((!methods_tree.empty() && methods_tree.back() == list_method) ||
                 (args.getType() == AmArg::Array && args.size() && isArgCStr(args.back()) &&
                  strcmp(args.back().asCStr(), list_method) == 0))
             {
-                if (!e->hasLeafs() && e->arg.empty())
+                if (!e.hasLeafs() && e.arg.empty())
                     ret.assertArray();
                 return false;
             }
 
-            return e->handler(connection_id, request_id, args, ret);
+            return e.handler(connection_id, request_id, args, ret);
         }
         throw AmDynInvoke::Exception(-32601, string("not completed method path. last element: ") + method);
     }
@@ -253,54 +166,33 @@ void RpcTreeHandler::invoke(const string &method, const AmArg &args, AmArg &ret)
         process_rpc_cmds(empty, empty, root, method, args, ret);
 }
 
-void RpcTreeHandler::serialize_methods_tree(AmArg &methods_root, AmArg &tree)
+void RpcTreeHandler::serialize_methods_tree(const rpc_entry &entry, AmArg &tree)
 {
-    if (!isArgAObject(methods_root))
+    if (!entry.hasLeafs())
         return;
 
-    rpc_entry *e = reinterpret_cast<rpc_entry *>(methods_root.asObject());
-
-    if (!e->hasLeafs())
-        return;
-
-    for (auto &l : *e->leaves.asStruct())
+    for (auto &l : *entry.leaves)
         serialize_methods_tree(l.second, tree[l.first]);
 }
 
 void RpcTreeHandler::get_methods_tree(AmArg &tree)
 {
-    for (auto &e : *root.asStruct())
+    if (!root.hasLeafs())
+        return;
+
+    for (auto &e : *root.leaves)
         serialize_methods_tree(e.second, tree[e.first]);
 }
 
-void RpcTreeHandler::free_methods_three(AmArg &tree)
+RpcTreeHandler::rpc_entry &RpcTreeHandler::reg_leaf(rpc_entry &parent, const string &name, const string &desc)
 {
-    if (!isArgAObject(tree))
-        return;
-
-    rpc_entry *e = reinterpret_cast<rpc_entry *>(tree.asObject());
-
-    if (!e->hasLeafs()) {
-        delete e;
-        return;
-    }
-
-    for (auto &l : *e->leaves.asStruct())
-        free_methods_three(l.second);
-
-    delete e;
-}
-
-AmArg &RpcTreeHandler::reg_leaf(AmArg &parent, const string &name, const string &desc)
-{
-    rpc_entry *e = new rpc_entry(desc);
-    parent[name] = e;
-    return e->leaves;
+    if (!parent.leaves.has_value())
+        parent.leaves.emplace();
+    auto ret = parent.leaves->emplace(name, rpc_entry(desc));
+    return ret.first->second;
 }
 
 void RpcTreeHandler::init_rpc()
 {
-    root_entry = new rpc_entry("root");
-    root       = root_entry->leaves;
     init_rpc_tree();
 }

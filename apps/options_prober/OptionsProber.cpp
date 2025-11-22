@@ -305,7 +305,7 @@ void OptionsProber::on_stop()
 
 void OptionsProber::init_rpc_tree()
 {
-    AmArg &show = reg_leaf(root, "show");
+    auto &show = reg_leaf(root, "show");
     reg_method(show, "probers", "", "", &OptionsProber::ShowProbers, this);
 }
 

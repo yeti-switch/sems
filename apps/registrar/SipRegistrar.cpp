@@ -425,12 +425,12 @@ void SipRegistrar::getSnapshot(AmArg &ret, std::function<void(AmArg &data)> f_en
 
 void SipRegistrar::init_rpc_tree()
 {
-    AmArg &show = reg_leaf(root, "show");
+    auto &show = reg_leaf(root, "show");
     reg_method(show, "aors", "show registered AoRs", "", &SipRegistrar::rpc_show_aors, this);
     reg_method(show, "keepalive_contexts", "show keepalive contexts", "", &SipRegistrar::rpc_show_keepalive_contexts,
                this);
 
-    AmArg &request = reg_leaf(root, "request");
+    auto &request = reg_leaf(root, "request");
     reg_method(request, "bind", "bind contact", "", &SipRegistrar::rpc_bind, this);
     reg_method(request, "unbind", "unbind contact", "", &SipRegistrar::rpc_unbind, this);
     reg_method(request, "transport_down", "transport down", "", &SipRegistrar::rpc_transport_down, this);

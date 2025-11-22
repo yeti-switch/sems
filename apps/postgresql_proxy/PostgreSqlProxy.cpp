@@ -398,19 +398,19 @@ void PostgreSqlProxy::reloadMap(const AmArg &, AmArg &)
 void PostgreSqlProxy::init_rpc_tree()
 {
     reg_method(root, "reload", "reload all maps", "", &PostgreSqlProxy::reload, this);
-    AmArg &stack = reg_leaf(root, "stack");
+    auto &stack = reg_leaf(root, "stack");
     reg_method(stack, "push", "stack push", "", &PostgreSqlProxy::stackPush, this);
     reg_method(stack, "clear", "stack clear", "", &PostgreSqlProxy::stackClear, this);
     reg_method(stack, "show", "stack show", "", &PostgreSqlProxy::stackShow, this);
-    AmArg &map = reg_leaf(root, "map");
+    auto &map = reg_leaf(root, "map");
     reg_method(map, "insert", "map insert", "", &PostgreSqlProxy::mapInsert, this);
     reg_method(map, "clear", "map clear", "", &PostgreSqlProxy::mapClear, this);
     reg_method(map, "show", "map show", "", &PostgreSqlProxy::mapShow, this);
 
-    AmArg &show = reg_leaf(root, "show");
+    auto &show = reg_leaf(root, "show");
     reg_method(show, "stats", "show module stats", "", &PostgreSqlProxy::showStatsAsync, this);
 
-    AmArg &set = reg_leaf(root, "set");
+    auto &set = reg_leaf(root, "set");
     reg_method(set, "logPgEvents", "enable/disable pg events logs", "", &PostgreSqlProxy::logPgEventsAsync, this);
 }
 

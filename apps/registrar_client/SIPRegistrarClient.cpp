@@ -759,28 +759,28 @@ void SIPRegistrarClient::init_rpc_tree()
                this);
 
     // new methods
-    AmArg &request               = reg_leaf(root, "request");
-    AmArg &request_registrations = reg_leaf(request, "registrations");
+    auto &request               = reg_leaf(root, "request");
+    auto &request_registrations = reg_leaf(request, "registrations");
     reg_method(request_registrations, "create", "create registration", "", &SIPRegistrarClient::createRegistration,
                this);
     reg_method(request_registrations, "flush", "flush registrations", "", &SIPRegistrarClient::flushRegistrations,
                this);
 
-    AmArg &request_registration_remove_by = reg_leaf(reg_leaf(request_registrations, "remove"), "by");
+    auto &request_registration_remove_by = reg_leaf(reg_leaf(request_registrations, "remove"), "by");
     reg_method(request_registration_remove_by, "handle", "remove registration by handle", "",
                &SIPRegistrarClient::removeRegistration, this);
     reg_method(request_registration_remove_by, "id", "remove registration by id", "",
                &SIPRegistrarClient::removeRegistrationById, this);
 
-    AmArg &show               = reg_leaf(root, "show");
-    AmArg &show_registrations = reg_leaf(show, "registrations");
+    auto &show               = reg_leaf(root, "show");
+    auto &show_registrations = reg_leaf(show, "registrations");
     reg_method(reg_leaf(reg_leaf(show_registrations, "state"), "by"), "handle", "return state and expires by handle",
                "", &SIPRegistrarClient::getRegistrationState, this);
     reg_method(show_registrations, "list", "list registrations", "", &SIPRegistrarClient::listRegistrations, this);
     reg_method(show_registrations, "count", "get registrations count", "", &SIPRegistrarClient::getRegistrationsCount,
                this);
 
-    AmArg &show_registrations_by = reg_leaf(show_registrations, "by");
+    auto &show_registrations_by = reg_leaf(show_registrations, "by");
     reg_method(show_registrations_by, "handle", "show registration by handle", "",
                &SIPRegistrarClient::showRegistration, this);
     reg_method(show_registrations_by, "id", "show registration by id", "", &SIPRegistrarClient::showRegistrationById,

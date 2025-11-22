@@ -511,7 +511,7 @@ void S3Client::process_s3_event(AmEvent *ev)
 
 void S3Client::init_rpc_tree()
 {
-    AmArg &show = reg_leaf(root, "show");
+    auto &show = reg_leaf(root, "show");
     reg_method(show, "config", "config dump", "", &S3Client::showConfig, this);
     reg_method(root, "request", "send s3 request", "", &S3Client::runS3Request, this);
 }
