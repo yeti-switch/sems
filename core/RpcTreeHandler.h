@@ -29,15 +29,61 @@ class RpcTreeHandler : public AmDynInvoke {
         {
         }
 
+        // --- function_traits ---
+        template <typename T> struct function_traits;
+
+        // function pointer
+        template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
+            using args        = std::tuple<Args...>;
+            using return_type = R;
+        };
+
+        // member function pointer
+        template <typename R, typename C, typename... Args> struct function_traits<R (C::*)(Args...)> {
+            using args        = std::tuple<Args...>;
+            using return_type = R;
+        };
+
+        // const member function pointer
+        template <typename R, typename C, typename... Args> struct function_traits<R (C::*)(Args...) const> {
+            using args        = std::tuple<Args...>;
+            using return_type = R;
+        };
+
+        template <typename Method> static constexpr bool is_sync_method()
+        {
+            using Args      = typename function_traits<Method>::args;
+            using ProtoArgs = typename function_traits<rpc_handler *>::args;
+
+            if constexpr (std::tuple_size_v<Args> < 2)
+                return false;
+
+            return std::is_same_v<std::tuple_element_t<0, Args>, std::tuple_element_t<0, ProtoArgs>> &&
+                   std::is_same_v<std::tuple_element_t<1, Args>, std::tuple_element_t<1, ProtoArgs>>;
+        }
+
+        template <typename Method> static constexpr bool is_async_method()
+        {
+            using Args      = typename function_traits<Method>::args;
+            using ProtoArgs = typename function_traits<async_rpc_handler *>::args;
+
+            if constexpr (std::tuple_size_v<Args> < 3)
+                return false;
+
+            return std::is_same_v<std::tuple_element_t<0, Args>, std::tuple_element_t<0, ProtoArgs>> &&
+                   std::is_same_v<std::tuple_element_t<1, Args>, std::tuple_element_t<1, ProtoArgs>> &&
+                   std::is_same_v<std::tuple_element_t<2, Args>, std::tuple_element_t<2, ProtoArgs>>;
+        }
+
         template <typename T> struct always_false : std::false_type {};
 
         template <class Method, class... Extra> RpcHandler(Method m, Extra &&...extra)
         {
             using CleanMethod = std::remove_cv_t<std::remove_reference_t<Method>>;
+            auto tup          = std::forward_as_tuple(extra...);
 
             if constexpr (std::is_member_function_pointer_v<CleanMethod>) {
                 static_assert(sizeof...(Extra) >= 1, "Need at least one extra for object instance");
-                auto  tup = std::forward_as_tuple(extra...);
                 auto &obj = std::get<0>(tup);
 
                 using ObjType = std::decay_t<decltype(obj)>;
@@ -47,35 +93,25 @@ class RpcTreeHandler : public AmDynInvoke {
                 auto rest_tuple =
                     std::apply([](auto &&, auto &&...rest) { return std::forward_as_tuple(rest...); }, tup);
 
-                if constexpr (std::is_invocable_r_v<void, CleanMethod, decltype(obj), const AmArg &, AmArg &>) {
-                    method_handler = std::bind(m, obj, std::placeholders::_1, std::placeholders::_2);
-                    std::apply(
-                        [&](auto &&...args) {
-                            if constexpr (sizeof...(args) > 0) {
-                                method_handler = std::bind(method_handler, args...);
-                            }
-                        },
-                        rest_tuple);
-                } else if constexpr (std::is_invocable_r_v<bool, CleanMethod, decltype(obj), const string &,
-                                                           const AmArg &, const AmArg &>)
-                {
-                    method_async_handler =
-                        std::bind(m, obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-                    std::apply(
-                        [&](auto &&...args) {
-                            if constexpr (sizeof...(args) > 0) {
-                                method_async_handler = std::bind(method_async_handler, args...);
-                            }
-                        },
-                        rest_tuple);
+                if constexpr (is_sync_method<CleanMethod>()) {
+                    method_handler = [obj, m, rest_tuple](auto &&...args) {
+                        std::apply([&](auto &&...hidden) { std::invoke(m, obj, args..., hidden...); }, rest_tuple);
+                    };
+                } else if constexpr (is_async_method<CleanMethod>()) {
+                    method_async_handler = [obj, m, rest_tuple](auto &&...args) -> bool {
+                        return std::apply([&](auto &&...hidden) { return std::invoke(m, obj, args..., hidden...); },
+                                          rest_tuple);
+                    };
                 } else
                     static_assert(always_false<Method>(), "Unsupported function signature");
-            } else if constexpr (std::is_same_v<Method, rpc_handler>) {
-                method_handler =
-                    std::bind(m, std::placeholders::_1, std::placeholders::_2, std::forward<Extra>(extra)...);
-            } else if constexpr (std::is_same_v<Method, async_rpc_handler>) {
-                method_async_handler = std::bind(m, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
-                                                 std::forward<Extra>(extra)...);
+            } else if constexpr (is_sync_method<CleanMethod>()) {
+                method_handler = [m, tup](auto &&...args) {
+                    std::apply([&](auto &&...hidden) { std::invoke(m, args..., hidden...); }, tup);
+                };
+            } else if constexpr (is_async_method<CleanMethod>()) {
+                method_async_handler = [m, tup](auto &&...args) -> bool {
+                    return std::apply([&](auto &&...hidden) { return std::invoke(m, args..., hidden...); }, tup);
+                };
             } else
                 static_assert(always_false<Method>(), "Unsupported function signature");
         }
