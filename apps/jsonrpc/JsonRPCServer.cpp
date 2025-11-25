@@ -447,15 +447,17 @@ bool JsonRpcServer::execRpc(const string &connection_id, const string &method, c
                 AmArg &factory_name = ret[i];
                 if (!isArgCStr(factory_name))
                     continue;
-                fact = AmPlugIn::instance()->getFactory4Di(factory_name.asCStr());
+                string name = factory_name.asCStr();
+                fact        = AmPlugIn::instance()->getFactory4Di(name);
                 if (fact == NULL)
                     continue;
                 di_inst = fact->getInstance();
                 if (!di_inst)
                     continue;
-                // DBG("process factory: %s",factory_name.asCStr());
-                if (!traverse_tree(di_inst, string(), fake_args, result[factory_name.asCStr()]))
-                    result.erase(factory_name.asCStr());
+                // DBG("process factory: %s",name.c_str());
+                std::ranges::replace(name, '_', '-');
+                if (!traverse_tree(di_inst, string(), fake_args, result[name]))
+                    result.erase(name);
             }
             return false;
         }
@@ -470,6 +472,10 @@ bool JsonRpcServer::execRpc(const string &connection_id, const string &method, c
         try {
             DBG3("searching for factory '%s' method '%s'", factory.c_str(), fact_meth.c_str());
             AmDynInvokeFactory *fact = AmPlugIn::instance()->getFactory4Di(factory);
+            if (fact == NULL) {
+                std::ranges::replace(factory, '-', '_');
+                fact = AmPlugIn::instance()->getFactory4Di(factory);
+            }
             if (fact == NULL) {
                 throw JsonRpcError(-32601, "Method not found", "module not loaded");
             }

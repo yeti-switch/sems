@@ -124,7 +124,33 @@ class RpcTreeHandler : public AmDynInvoke {
         RpcHandler handler;
         string     leaf_descr, func_descr, arg, arg_descr;
 
-        std::optional<std::map<string, rpc_entry>> leaves;
+        struct DashUnderscoreLess {
+            bool operator()(std::string const &a, std::string const &b) const
+            {
+                if (a.size() != b.size())
+                    return a.size() < b.size();
+
+                size_t n = a.size();
+                for (size_t i = 0; i < n; ++i) {
+                    char ca = normalize(a[i]);
+                    char cb = normalize(b[i]);
+                    if (ca < cb)
+                        return true;
+                    if (ca > cb)
+                        return false;
+                }
+                return false;
+            }
+
+          private:
+            static char normalize(char c)
+            {
+                if (c == '-' || c == '_')
+                    return '_';
+                return c;
+            }
+        };
+        std::optional<std::map<string, rpc_entry, DashUnderscoreLess>> leaves;
 
         rpc_entry() {}
         rpc_entry(string ld)

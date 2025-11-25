@@ -51,7 +51,9 @@ bool RpcTreeHandler::process_rpc_cmds(const string &connection_id, const AmArg &
             for (; it != entry.leaves->end(); ++it) {
                 const rpc_entry &e = it->second;
                 AmArg            f;
-                f.push(it->first);
+                string           name = it->first;
+                std::ranges::replace(name, '_', '-');
+                f.push(name);
                 f.push(e.leaf_descr);
                 ret.push(f);
             }
@@ -171,8 +173,11 @@ void RpcTreeHandler::serialize_methods_tree(const rpc_entry &entry, AmArg &tree)
     if (!entry.hasLeafs())
         return;
 
-    for (auto &l : *entry.leaves)
-        serialize_methods_tree(l.second, tree[l.first]);
+    for (auto &l : *entry.leaves) {
+        string name = l.first;
+        std::ranges::replace(name, '_', '-');
+        serialize_methods_tree(l.second, tree[name]);
+    }
 }
 
 void RpcTreeHandler::get_methods_tree(AmArg &tree)
@@ -180,8 +185,11 @@ void RpcTreeHandler::get_methods_tree(AmArg &tree)
     if (!root.hasLeafs())
         return;
 
-    for (auto &e : *root.leaves)
-        serialize_methods_tree(e.second, tree[e.first]);
+    for (auto &e : *root.leaves) {
+        string name = e.first;
+        std::ranges::replace(name, '_', '-');
+        serialize_methods_tree(e.second, tree[name]);
+    }
 }
 
 RpcTreeHandler::rpc_entry &RpcTreeHandler::reg_leaf(rpc_entry &parent, const string &name, const string &desc)
