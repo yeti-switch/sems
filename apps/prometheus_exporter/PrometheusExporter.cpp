@@ -26,7 +26,7 @@ class PrometheusExporterFactory : public AmConfigFactory {
 
     int onLoad() override { return PrometheusExporter::instance()->onLoad(); }
 
-    void on_destroy() override { PrometheusExporter::instance()->stop(true); }
+    void onShutdown() override { PrometheusExporter::instance()->stop(true); }
 };
 
 EXPORT_PLUGIN_CONF_FACTORY(PrometheusExporterFactory);
