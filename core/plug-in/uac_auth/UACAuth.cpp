@@ -31,6 +31,7 @@
 #include "AmUtils.h"
 #include "AmLcConfig.h"
 #include "AmUriParser.h"
+#include "AmUtils.h"
 
 #include <map>
 
@@ -602,12 +603,9 @@ bool UACAuth::onSipReply(const AmSipRequest &, const AmSipReply &reply, AmBasicS
                 // update remote URI to resolved IP
                 auto hpos = auth_uri.find("@");
                 if (hpos != string::npos && reply.remote_ip.length()) {
-                    string remote_uri;
-                    if (reply.remote_ip[0] == '[') // ipv6
-                        remote_uri =
-                            auth_uri.substr(0, hpos + 1) + "[" + reply.remote_ip + "]:" + int2str(reply.remote_port);
-                    else // ipv4
-                        remote_uri = auth_uri.substr(0, hpos + 1) + reply.remote_ip + ":" + int2str(reply.remote_port);
+                    string remote_ip = reply.remote_ip;
+                    ensure_ipv6_reference(remote_ip);
+                    string remote_uri = auth_uri.substr(0, hpos + 1) + remote_ip + ":" + int2str(reply.remote_port);
                     dlg->setRemoteUri(remote_uri);
                     DBG("updated remote URI to '%s'", remote_uri.c_str());
                 }
