@@ -160,6 +160,7 @@ enum {
     uSPROT,     // protocol
     uSUSER,     // user
     uSHOST,     // host
+    uSHOST_v6,  // ipv6 host
     uSHOSTWSP,  // wsp after host
     uSPORT,     // port
     uSPORTWSP,  // wsp after port
@@ -252,6 +253,10 @@ bool AmUriParser::parse_uri()
                 st       = uSPORT;
                 p1       = pos;
             } break;
+            case '[':
+            {
+                st = uSHOST_v6;
+            } break;
             case '?':
             {
                 uri_host = uri.substr(p1 + 1, pos - p1 - 1);
@@ -275,7 +280,16 @@ bool AmUriParser::parse_uri()
             {
                 uri_host = uri.substr(p1 + 1, pos - p1 - 1);
                 st       = uSHOSTWSP;
-                p1       = pos;
+            } break;
+            };
+        } break;
+        case uSHOST_v6:
+        {
+            switch (c) {
+            case ']':
+            {
+                uri_host = uri.substr(p1 + 1, pos - p1);
+                st       = uSHOSTWSP;
             } break;
             };
         } break;

@@ -892,6 +892,20 @@ TEST(Parser, NonTokenTest)
     ASSERT_EQ(p.name.toString(), "Bell, Alexander");
 }
 
+TEST(Parser, parse_nameaddr_uri_ipv6)
+{
+    sip_nameaddr p;
+    string       name_addr_str = "test "
+                                 "<sip:user@[2a01:ad00:2:1::19]>";
+    const char  *s             = name_addr_str.c_str();
+    ASSERT_EQ(parse_nameaddr_uri(&p, &s, name_addr_str.size()), 0);
+    ASSERT_EQ(c2stlstr(p.name), "test");
+    ASSERT_EQ(c2stlstr(p.uri.user), "user");
+
+    ASSERT_EQ(c2stlstr(p.uri.host), "[2a01:ad00:2:1::19]");
+    ASSERT_EQ(p.uri.scheme, sip_uri::SIP);
+}
+
 TEST(Parser, parse_nameaddr_uri)
 {
     sip_nameaddr p;

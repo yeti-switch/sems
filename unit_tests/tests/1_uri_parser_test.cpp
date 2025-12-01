@@ -11,6 +11,16 @@ TEST(UriParser, angle)
     ASSERT_TRUE(p.uri_host == "d");
 };
 
+TEST(UriParser, ip6)
+{
+    AmUriParser p;
+    size_t      end;
+    ASSERT_TRUE(p.parse_contact("<sip:u@[2a01:ad00:2:1::19]:60900>", 0, end));
+    ASSERT_TRUE(p.uri_user == "u");
+    ASSERT_TRUE(p.uri_host == "[2a01:ad00:2:1::19]");
+    ASSERT_TRUE(p.uri_port == "60900");
+};
+
 TEST(UriParser, angle_param)
 {
     AmUriParser p;
