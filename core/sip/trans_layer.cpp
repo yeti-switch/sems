@@ -1143,7 +1143,7 @@ static int patch_ruri_with_remote_ip(string &n_uri, sip_msg *msg)
     n_uri = string(old_ruri.s, parsed_uri.host.s - old_ruri.s);
 
     // append new host and port
-    n_uri += get_addr_str(&msg->remote_ip);
+    n_uri += get_addr_str_sip(&msg->remote_ip);
     unsigned short new_port = am_get_port(&msg->remote_ip);
     if (new_port != 5060) {
         n_uri += ":" + int2str(new_port);
