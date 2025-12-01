@@ -323,6 +323,7 @@ int _trans_layer::send_reply(sip_msg *msg, const trans_ticket *tt, const cstring
 
     unsigned int new_via1_len  = copy_hdr_len(req->via1);
     string       remote_ip_str = get_addr_str(&req->remote_ip);
+    ensure_ipv6_reference(remote_ip_str);
 
     bool append_received = !(req->via_p1->host == remote_ip_str.c_str());
     if (append_received) {

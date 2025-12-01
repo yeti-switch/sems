@@ -481,7 +481,9 @@ void AmBasicSipDialog::onRxRequest(const AmSipRequest &req)
         if (remote_uri != req.from_uri) {
             setRemoteUri(req.from_uri);
             if (nat_handling && req.first_hop) {
-                string nh = req.remote_ip + ":" + int2str(req.remote_port) + "/" + req.trsp;
+                string nh = req.remote_ip;
+                ensure_ipv6_reference(nh);
+                nh += ":" + int2str(req.remote_port) + "/" + req.trsp;
                 setNextHop(nh);
                 setNextHop1stReq(false);
             }
