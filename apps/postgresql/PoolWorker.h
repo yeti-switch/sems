@@ -125,6 +125,7 @@ class PoolWorker : public ITransactionHandler, public IConnectionHandler {
     void removeTrans(const char *id);
     void resetPools();
 
+    void onExpireTransaction(const TransContainer &trans);
     void onFireTransaction(const TransContainer &trans);
     void onErrorTransaction(const TransContainer &trans, const string &error);
     void applyTimer();

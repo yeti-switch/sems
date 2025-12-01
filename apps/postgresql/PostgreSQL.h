@@ -99,6 +99,7 @@ class PostgreSQL : public AmThread,
     void onSetSearchPath(const PGSetSearchPath &e);
     void onReset(const ResetEvent &e);
     void onRpcRequestResponse(const PGResponse &e);
+    void onRpcRequestError(const string &err, const string &token);
 
   public:
     PostgreSQL();

@@ -574,7 +574,17 @@ void PoolWorker::checkQueue()
     Transaction *trans     = 0;
     size_t       count     = 0;
     bool         need_send = false;
+    time_t       now       = time(0);
     for (auto trans_it = queue.begin(); trans_it != queue.end();) {
+        if (trans_wait_time && now - trans_it->createdTime > trans_wait_time) {
+            onExpireTransaction(*trans_it);
+            delete trans_it->trans;
+            trans_it->trans = NULL;
+            trans_it        = queue.erase(trans_it);
+            queue_size.dec(1);
+            dropped.inc(1);
+            continue;
+        }
         if (!trans) {
             trans = trans_it->trans->clone();
             count += trans_it->trans->get_size();
@@ -850,6 +860,21 @@ void PoolWorker::resetPools()
         master->resetConnections();
     if (slave)
         slave->resetConnections();
+}
+
+void PoolWorker::onExpireTransaction(const TransContainer &trans)
+{
+    ERROR("pg connection %s transaction timeout. transaction size:%d, query:%s", name.c_str(), trans.trans->get_size(),
+          trans.trans->get_query()->get_query().data());
+
+    if (!trans.sender_id.empty()) {
+        auto *ev = new PGTimeout(trans.token);
+
+        if (PostgreSQL::instance()->getLogPgEvents())
+            DBG(pg_log::print_pg_event(ev).c_str());
+
+        AmSessionContainer::instance()->postEvent(trans.sender_id, ev);
+    }
 }
 
 void PoolWorker::onFireTransaction(const TransContainer &trans)

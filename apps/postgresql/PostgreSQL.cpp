@@ -499,6 +499,16 @@ void PostgreSQL::process_postgres_event(AmEvent *ev)
         if (PGResponse *e = dynamic_cast<PGResponse *>(ev))
             onRpcRequestResponse(*e);
     } break;
+    case PGEvent::Timeout:
+    {
+        if (PGTimeout *e = dynamic_cast<PGTimeout *>(ev))
+            onRpcRequestError("timeout", e->token);
+    }
+    case PGEvent::ResultError:
+    {
+        if (PGResponseError *e = dynamic_cast<PGResponseError *>(ev))
+            onRpcRequestError(e->error, e->token);
+    }
     case AdditionalTypeEvent::Reset:
     {
         if (ResetEvent *e = dynamic_cast<ResetEvent *>(ev))
@@ -732,6 +742,16 @@ void PostgreSQL::onRpcRequestResponse(const PGResponse &e)
         rpcRequests.erase(it);
     }
 }
+
+void PostgreSQL::onRpcRequestError(const string &err, const string &token)
+{
+    auto it = rpcRequests.find(token);
+    if (it != rpcRequests.end()) {
+        postJsonRpcReply(it->second.connection_id, it->second.id, err, true);
+        rpcRequests.erase(it);
+    }
+}
+
 
 uint64_t PostgreSQL::get_active_tasks_count()
 {
