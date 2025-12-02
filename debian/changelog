@@ -1,3 +1,10 @@
+sems (1.176.0) stable; urgency=low
+  * fixes for IPv6 host in URIs
+  * postgresql: fix PGTimeout event generation for transactions in the queue
+  * allow both dash/underscore for all jsonrpc methods
+  * prometheus_exporter: fix freeze on sems shutdown
+ -- Michael Furmur <furmur@pm.me>  Tue, 02 Dec 2025 13:34:29 +0200
+
 sems (1.175.1) stable; urgency=low
   * avoid excess reINVITEs in relay/transcoding modes
  -- Michael Furmur <furmur@pm.me>  Thu, 20 Nov 2025 14:21:44 +0200
