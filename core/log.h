@@ -115,12 +115,12 @@ class ContextLoggingHook : public atomic_ref_cnt {
 };
 
 template <class... Types>
-void write_log(int level, const char *func, const char *file, int line, ContextLoggingHook *context_logger,
-               const char *fmt, Types... args)
+void _write_log(int level, ContextLoggingHook *context_logger, const char *func, const char *file, int line,
+                const char *fmt, Types... args)
 {
     // level = FIX_LOG_LEVEL(level);
-    if (level > log_level && !context_logger)
-        return;
+    /*if (level > log_level && !context_logger)
+        return;*/
 
     if constexpr (sizeof...(args) > 0) {
         int n = snprintf(log_buf, sizeof(log_buf), fmt, args...);
@@ -143,10 +143,17 @@ void write_log(int level, const char *func, const char *file, int line, ContextL
     }
 }
 
-#define _LOG(level__, fmt, args...) write_log(level__, FUNC_NAME, __FILE__, __LINE__, nullptr, fmt, ##args)
+#define WRITE_LOG(_LEVEL, _CONTEXT_LOGGER, args...)                                                                    \
+    do {                                                                                                               \
+        if (_LEVEL > log_level && !_CONTEXT_LOGGER)                                                                    \
+            break;                                                                                                     \
+        _write_log(_LEVEL, _CONTEXT_LOGGER, ##args);                                                                   \
+    } while (0)
+
+#define _LOG(level__, fmt, args...) WRITE_LOG(level__, nullptr, FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
 
 #define _LOG_CTX(context_logger, level__, fmt, args...)                                                                \
-    write_log(level__, FUNC_NAME, __FILE__, __LINE__, context_logger, fmt, ##args)
+    WRITE_LOG(level__, context_logger, FUNC_NAME, __FILE__, __LINE__, fmt, ##args)
 
 /**
  * @{ Logging macros
