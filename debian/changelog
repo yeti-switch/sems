@@ -1,3 +1,8 @@
+sems (1.177.0) stable; urgency=low
+  * add identity_validator module
+  * jsonrpc: fix methods _tree/_list generation
+ -- Michael Furmur <furmur@pm.me>  Tue, 02 Dec 2025 18:43:38 +0200
+
 sems (1.176.0) stable; urgency=low
   * fixes for IPv6 host in URIs
   * postgresql: fix PGTimeout event generation for transactions in the queue
