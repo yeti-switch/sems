@@ -456,6 +456,7 @@ bool AmUriParser::parse_uri()
     case uSPARAM: uri_param = uri.substr(p1 + 1, pos - p1 - 1); break;
     case uS0:
     case uSPROT:
+    case uSHOST_v6:
     {
         DBG("ERROR while parsing uri: '%s'", uri.c_str());
         return false;

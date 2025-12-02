@@ -248,7 +248,8 @@ static int parse_sip_uri(sip_uri *uri, const char *beg, int len, bool no_default
             return MALFORMED_URI;
         }
         break;
-    case URI_PORT: uri->port_str.len = c - uri->port_str.s; break;
+    case URI_HOST_V6: DBG("Missing closing ] for IPv6 host"); return MALFORMED_URI;
+    case URI_PORT:    uri->port_str.len = c - uri->port_str.s; break;
     case URI_PNAME:
         // DBG("Empty URI parameter");
         // return MALFORMED_URI;
