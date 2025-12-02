@@ -881,40 +881,39 @@ void IdentityValidatorApp::renewCerts(const AmArg &args, AmArg &ret)
         auto it = certificates.begin();
         while (it != certificates.end()) {
             if (isTrustedRepository(it->first)) {
+                ret[it->first] = "renew";
                 renewCertEntry(*it);
                 it++;
             } else {
-                it = certificates.erase(it);
+                ret[it->first] = "removed";
+                it             = certificates.erase(it);
             }
         }
-
-        ret = certificates.size();
         return;
     }
 
-    int iret = 0;
     for (unsigned int i = 0; i < args.size(); i++) {
         string cert_url(args[i].asCStr());
         bool   repository_is_trusted = isTrustedRepository(cert_url);
         auto   it                    = certificates.find(cert_url);
         if (it != certificates.end()) {
             if (!repository_is_trusted) {
+                ret[cert_url] = "removed";
                 certificates.erase(it);
                 continue;
             }
+            ret[cert_url] = "renew";
             renewCertEntry(*it);
-            iret++;
         } else {
             if (!repository_is_trusted) {
+                ret[cert_url] = "repo is not trusted";
                 continue;
             }
-            auto it = certificates.emplace(cert_url, IdentityValidatorEntry{});
+            auto it       = certificates.emplace(cert_url, IdentityValidatorEntry{});
+            ret[cert_url] = "renew";
             renewCertEntry(*it.first);
-            iret++;
         }
     }
-
-    ret = iret;
 }
 
 bool IdentityValidatorApp::validateIdentity(const string &connection_id, const AmArg &request_id, const AmArg &params)
