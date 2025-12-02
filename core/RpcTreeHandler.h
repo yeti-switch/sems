@@ -12,7 +12,7 @@ class RpcTreeHandler : public AmDynInvoke {
     using rpc_handler       = void(const AmArg &args, AmArg &ret);
     using async_rpc_handler = bool(const string &connection_id, const AmArg &request_id, const AmArg &params);
 
-    RpcTreeHandler(bool methods_tree = false);
+    RpcTreeHandler();
 
     virtual ~RpcTreeHandler();
 
@@ -195,10 +195,7 @@ class RpcTreeHandler : public AmDynInvoke {
 
   protected:
     rpc_entry root;
-    bool      methods_tree;
 
-    bool process_rpc_cmds(const string &connection_id, const AmArg &request_id, const rpc_entry &entry,
-                          const string &method, const AmArg &args, AmArg &ret);
     bool process_rpc_cmds_methods_tree(const string &connection_id, const AmArg &request_id, const rpc_entry &entry,
                                        vector<string> &methods_tree, const AmArg &args, AmArg &ret);
     bool process_rpc_cmds_methods_tree_root(const string &connection_id, const AmArg &request_id,
@@ -216,7 +213,7 @@ class RpcTreeHandler : public AmDynInvoke {
     virtual void get_methods_tree(AmArg &tree) override;
     void         init_rpc();
 
-    bool is_methods_tree() override { return methods_tree; }
+    bool is_methods_tree() override { return true; }
 };
 
 template <typename T, typename... Args>

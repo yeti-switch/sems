@@ -143,7 +143,6 @@ void IdentityValidatorApp::dispose()
 
 IdentityValidatorApp::IdentityValidatorApp()
     : AmEventFdQueue(this)
-    , RpcTreeHandler(true)
     , epoll_fd(-1)
     , name("identity_validator_app")
     , queue_name(IDENTITY_VALIDATOR_APP_QUEUE)
