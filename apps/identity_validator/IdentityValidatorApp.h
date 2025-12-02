@@ -119,7 +119,7 @@ struct IdentityValidatorEntry {
 class IdentityValidatorApp : public AmThread,
                              public AmEventFdQueue,
                              public AmEventHandler,
-                             public RpcTreeHandler<IdentityValidatorApp>,
+                             public RpcTreeHandler,
                              public Configurable {
   private:
     static IdentityValidatorApp *_instance;

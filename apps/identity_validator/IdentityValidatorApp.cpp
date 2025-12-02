@@ -144,6 +144,7 @@ void IdentityValidatorApp::dispose()
 
 IdentityValidatorApp::IdentityValidatorApp()
     : AmEventFdQueue(this)
+    , RpcTreeHandler(true)
     , epoll_fd(-1)
     , name("identity_validator_app")
     , queue_name(IDENTITY_VALIDATOR_APP_QUEUE)
@@ -767,19 +768,20 @@ void IdentityValidatorApp::serializeCert2AmArg(const Botan::X509_Certificate &ce
 
 void IdentityValidatorApp::init_rpc_tree()
 {
-    AmArg &show = reg_leaf(root, "show");
-    reg_method(show, "cached_certificates", "show cached certificates", &IdentityValidatorApp::showCerts, "");
-    reg_method(show, "trusted_certificates", "show trusted certificates", &IdentityValidatorApp::showTrustedCerts, "");
-    reg_method(show, "trusted_repositories", "show trusted repositories",
-               &IdentityValidatorApp::showTrustedRepositories, "");
+    auto &show = reg_leaf(root, "show");
+    reg_method(show, "cached_certificates", "show cached certificates", "", &IdentityValidatorApp::showCerts, this);
+    reg_method(show, "trusted_certificates", "show trusted certificates", "", &IdentityValidatorApp::showTrustedCerts,
+               this);
+    reg_method(show, "trusted_repositories", "show trusted repositories", "",
+               &IdentityValidatorApp::showTrustedRepositories, this);
 
-    AmArg &request = reg_leaf(root, "request");
-    reg_method(request, "validate_identity", "", &IdentityValidatorApp::validateIdentity, "");
-    AmArg &cached_certificates = reg_leaf(request, "cached_certificates", "Cached Certificates");
-    reg_method_arg(cached_certificates, "clear", "", &IdentityValidatorApp::clearCerts, "", "<x5url>...",
-                   "clear certificates in cache");
-    reg_method_arg(cached_certificates, "renew", "", &IdentityValidatorApp::renewCerts, "", "<x5url>...",
-                   "renew certificates in cache");
+    auto &request = reg_leaf(root, "request");
+    reg_method(request, "validate_identity", "", "", &IdentityValidatorApp::validateIdentity, this);
+    auto &cached_certificates = reg_leaf(request, "cached_certificates", "Cached Certificates");
+    reg_method_arg(cached_certificates, "clear", "", "", "<x5url>...", "clear certificates in cache",
+                   &IdentityValidatorApp::clearCerts, this);
+    reg_method_arg(cached_certificates, "renew", "", "", "<x5url>...", "renew certificates in cache",
+                   &IdentityValidatorApp::renewCerts, this);
 }
 
 void IdentityValidatorApp::showTrustedCerts(const AmArg &, AmArg &ret)
