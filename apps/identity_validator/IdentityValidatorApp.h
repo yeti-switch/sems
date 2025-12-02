@@ -147,7 +147,6 @@ class IdentityValidatorApp : public AmThread,
         string name;
         string user;
         string pass;
-        int    size;
         int    statement_timeout;
         int    keepalive_interval;
 

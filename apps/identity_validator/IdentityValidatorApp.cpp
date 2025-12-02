@@ -79,7 +79,6 @@ void IdentityValidatorApp::PGPoolCfg::parse(cfg_t *cfg)
     name               = cfg_getstr(cfg, CFG_PARAM_NAME);
     user               = cfg_getstr(cfg, CFG_PARAM_USER);
     pass               = cfg_getstr(cfg, CFG_PARAM_PASS);
-    size               = cfg_getint(cfg, CFG_PARAM_SIZE);
     statement_timeout  = cfg_getint(cfg, CFG_PARAM_STATEMENT_TIMEOUT);
     keepalive_interval = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_INTERVAL);
 }
@@ -87,7 +86,7 @@ void IdentityValidatorApp::PGPoolCfg::parse(cfg_t *cfg)
 bool IdentityValidatorApp::PGPoolCfg::create_pg_pool_worker(PGWorkerPoolCreate::PoolType type)
 {
     PGPool pg_pool(host, port, name, user, pass);
-    pg_pool.pool_size           = size;
+    pg_pool.pool_size           = 1;
     pg_pool.keepalives_interval = keepalive_interval;
 
     return event_dispatcher->post(POSTGRESQL_QUEUE, new PGWorkerPoolCreate(pg_worker, type, pg_pool));
@@ -200,7 +199,9 @@ int IdentityValidatorApp::onLoad()
                                                    0,                        /* retransmit_interval */
                                                    0 /* reconnect_interval */);
 
-    pg_config->addSearchPath(schema);
+    if (!schema.empty())
+        pg_config->addSearchPath(schema);
+
     event_dispatcher->post(POSTGRESQL_QUEUE, pg_config);
     return 0;
 }
@@ -872,9 +873,6 @@ void IdentityValidatorApp::clearCerts(const AmArg &args, AmArg &ret)
 
 void IdentityValidatorApp::renewCerts(const AmArg &args, AmArg &ret)
 {
-    if (http_destination.empty()) {
-        throw AmSession::Exception(500, "certificates cache is not configured");
-    }
     args.assertArray();
 
     std::unique_lock lock(certificates_mutex);
@@ -945,17 +943,12 @@ int IdentityValidatorApp::configure(cfg_t *cfg)
         identity_validator_failed_verify_ttl = identity_validator_failed_ttl;
     }
 
-    if (cfg_size(cfg, CFG_PARAM_HTTP_DESTINATIION)) {
-        http_destination = cfg_getstr(cfg, CFG_PARAM_HTTP_DESTINATIION);
-    } else {
-        ERROR("missed mandatory param 'http_destination' for identity section");
-        return -1;
-    }
-
+    http_destination  = cfg_getstr(cfg, CFG_PARAM_HTTP_DESTINATIION);
     schema            = cfg_getstr(cfg, CFG_PARAM_PG_SCHEMA_NAME);
     trusted_certs_req = cfg_getstr(cfg, CFG_PARAM_TRUSTED_CERTS_REQ);
     trusted_repos_req = cfg_getstr(cfg, CFG_PARAM_TRUSTED_REPOS_REQ);
-    db_cfg.parse(cfg_getsec(cfg, CFG_PARAM_DB));
+
+    db_cfg.parse(cfg_getsec(cfg, CFG_SECTION_DB));
 
     return 0;
 }
