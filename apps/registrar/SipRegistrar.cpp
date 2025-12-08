@@ -22,7 +22,7 @@ using std::vector;
 
 static vector<string> fl_protos{ "none", "udp", "tcp", "tls", "sctp", "ws", "wss", "other" };
 
-std::string registration_event_channel_name("reg");
+std::string registration_event_channel_name("reg2");
 
 enum UserTypeId { Register = 0, ResolveAors, BlockingReqCtx, ContactSubscribe, ContactData, Unbind };
 
@@ -629,18 +629,6 @@ void SipRegistrar::rpc_bind(const AmArg &arg, AmArg &ret)
         r["key"]            = d[2];
         r["path"]           = d[3];
         r["interface_name"] = d[4];
-
-        if (keepalive_interval.count()) {
-            // update KeepAliveContexts
-            create_or_update_keep_alive_context(d[2].asCStr(), [d](AmArg &data) {
-                data["path"]           = d[3];
-                data["interface_name"] = d[4];
-                data["expires"]        = d[1];
-                repack_headers(d[7].asCStr(), data);
-                data["node_id"]    = d[5];
-                data["user_agent"] = d[6];
-            });
-        }
     }
 }
 
@@ -1094,6 +1082,7 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
      *     interface_name,      7
      *     agent,               8
      *     headers              9
+     *     conn_id              10
      *   ]
      *   ...
      * ]
@@ -1150,19 +1139,6 @@ void SipRegistrar::process_redis_reply_register_event(RedisReply &event)
             static string auth_id_hdr = SIP_HDR_COLSP("X-Auth-id");
             hdrs += auth_id_hdr + auth_id;
             hdrs += CRLF;
-        }
-
-        if (keepalive_interval.count() && arg2int(d[5]) == AmConfig.node_id) {
-            // update KeepAliveContexts
-            create_or_update_keep_alive_context(d[2].asCStr(), // key
-                                                [&d](AmArg &data) {
-                                                    data["expires"]        = d[1];
-                                                    data["node_id"]        = d[5];
-                                                    data["path"]           = d[6];
-                                                    data["interface_name"] = d[7];
-                                                    data["user_agent"]     = d[8];
-                                                    repack_headers(d[9].asCStr(), data);
-                                                });
         }
     }
 
@@ -1245,9 +1221,30 @@ void SipRegistrar::process_redis_reply_contact_subscribe_event(RedisReply &event
 
 void SipRegistrar::process_redis_reply_contact_subscribe_reg_channel_event(RedisReply &event)
 {
-    if (!process_subscriptions)
+    if (!process_subscriptions && !keepalive_interval.count()) {
         return;
+    }
 
+    /* response layout:
+     * [
+     *   auth_id,
+     *   [ contact,             0
+     *     expires,             1
+     *     contact_key,         2
+     *     instance,            3
+     *     reg_id,              4
+     *     node_id,             5
+     *     path,                6
+     *     interface_name,      7
+     *     agent,               8
+     *     headers              9
+     *     conn_id              10
+     *   ]
+     *   ...
+     * ]
+     */
+
+    // get reg_data
     AmArg reg_data;
 
     if (!json2arg(event.data[2].asCStr(), reg_data)) {
@@ -1257,26 +1254,90 @@ void SipRegistrar::process_redis_reply_contact_subscribe_reg_channel_event(Redis
 
     DBG("got reg event with data: %s", reg_data.print().data());
 
-    aor_lookup_reply r;
-    event.data = reg_data;
-    if (!r.parse(event)) {
-        ERROR("reg aor data parser error for: %s", event.data.print().data());
+    if (!isArgArray(reg_data) || reg_data.size() != 2) {
+        ERROR("unexpected event data layout: %s", AmArg::print(reg_data).data());
         return;
     }
 
-    if (r.aors.empty()) {
-        ERROR("empty aors after parsing for: %s", event.data.print().data());
+    // get binding data
+    AmArg &d = reg_data[1];
+    if (!isArgArray(d) || d.size() < 10) {
+        ERROR("unexpected AoR layout: %s.", AmArg::print(d).c_str());
         return;
     }
 
-    const auto &aor_id = r.aors.begin()->first;
+    if (process_subscriptions) {
 
-    auto range = aor_lookup_subscribers.equal_range(aor_id);
-    for (auto it = range.first; it != range.second; ++it) {
-        DBG("send reg_id %s resolving reply to the session_id: %s", aor_id.data(), it->second.session_id.data());
-        post_resolve_response(it->second.session_id, r.aors);
+        // get auth_id
+        AmArg &auth_id_arg = reg_data[0];
+        if (!isArgCStr(auth_id_arg)) {
+            ERROR("unexpected auth_id type");
+            return;
+        }
+
+        RegistrationIdType auth_id = auth_id_arg.asCStr();
+
+        AmArg &contact_arg = d[0];
+        if (!isArgCStr(contact_arg)) {
+            ERROR("unexpected contact_arg");
+            return;
+        }
+
+        // get path
+        string path;
+        AmArg &path_arg = d[6];
+        if (isArgCStr(path_arg)) {
+            path = path_arg.asCStr();
+        } else if (isArgUndef(path_arg)) {
+            // it's expected that 'path' can be nil
+            path = "";
+        } else {
+            ERROR("unexpected path_arg type");
+            return;
+        }
+
+        // get interface_name
+        string interface_name;
+        AmArg &if_name_arg = d[7];
+        if (isArgCStr(if_name_arg)) {
+            interface_name = if_name_arg.asCStr();
+        } else if (isArgUndef(if_name_arg)) {
+            // it's expected that 'interface_name' can be nil
+            interface_name = "";
+        } else {
+            ERROR("unexpected if_name_arg type");
+            return;
+        }
+
+        Aors aors;
+        auto it =
+            aors.insert(aors.begin(), std::pair<RegistrationIdType, std::list<AorData>>(auth_id, std::list<AorData>()));
+        it->second.emplace_back(contact_arg.asCStr(), path.c_str(), interface_name.c_str());
+
+        auto range = aor_lookup_subscribers.equal_range(auth_id);
+        for (auto it = range.first; it != range.second; ++it) {
+            DBG("send reg_id %s resolving reply to the session_id: %s", auth_id.data(), it->second.session_id.data());
+            post_resolve_response(it->second.session_id, aors);
+        }
+        aor_lookup_subscribers.erase(range.first, range.second);
     }
-    aor_lookup_subscribers.erase(range.first, range.second);
+
+    if (keepalive_interval.count()) {
+        if (arg2int(d[5]) == AmConfig.node_id) {
+            // update KeepAliveContexts
+            create_or_update_keep_alive_context(d[2].asCStr(), // key
+                                                [&d](AmArg &data) {
+                                                    data["expires"]        = d[1];
+                                                    data["node_id"]        = d[5];
+                                                    data["path"]           = d[6];
+                                                    data["interface_name"] = d[7];
+                                                    data["user_agent"]     = d[8];
+                                                    repack_headers(d[9].asCStr(), data);
+                                                });
+        } else {
+            remove_keep_alive_context(d[2].asCStr());
+        }
+    }
 }
 
 void SipRegistrar::process_redis_reply_contact_data_event(RedisReply &event)
@@ -1530,7 +1591,7 @@ bool SipRegistrar::subscribe(int user_type_id)
         "__keyevent@0__:expired",
         "__keyevent@0__:del",
     };
-    if (process_subscriptions) {
+    if (process_subscriptions || keepalive_interval.count()) {
         channels.push_back(registration_event_channel_name);
     }
     return post_request(subscr_read_conn->id, channels, nullptr, user_type_id, true);

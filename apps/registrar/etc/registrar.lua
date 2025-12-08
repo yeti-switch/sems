@@ -93,15 +93,17 @@ local function rpc_aor_lookup(keys)
     return ret
 end
 
-local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
+local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor, exclude_contact_key)
     local auth_id = 'a:'..id
     for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
         local contact_key = 'c:'..id..':'..c
-        local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
+        if contact_key ~= exclude_contact_key then
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
 
-        if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
-            redis.call('SREM', auth_id, c)
-            redis.call('DEL', contact_key)
+            if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
+                redis.call('SREM', auth_id, c)
+                redis.call('DEL', contact_key)
+            end
         end
     end
 end
@@ -198,7 +200,7 @@ local function register(keys, args)
         end
     end
 
-    cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
+    cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor, contact_key)
 
     -- check for max allowed bindings
     if redis.call('SCARD', auth_id) >= bindings_max then
@@ -224,16 +226,8 @@ local function register(keys, args)
 
     local _,first_binding = next(bindings)
     if first_binding ~= nil then
-        -- contact[1] expires[2] contact_key[3] instance [4] reg_id[5] node_id[6] path[7] interface_name[8] agent[9] headers[10] conn_id[11]
-        -- publish json encoded data in the AoR resolving format to the 'reg' channel
-        redis.call('PUBLISH', 'reg', cjson.encode({
-            id,
-            {
-                first_binding[1], -- contact
-                first_binding[7], -- path
-                first_binding[8], -- interface_name
-            }
-        }))
+    	-- publish json encoded data to the 'reg2' channel
+   	redis.call('PUBLISH', 'reg2', cjson.encode({id, first_binding}))
     end
 
     -- return active bindings

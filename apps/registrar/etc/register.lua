@@ -30,15 +30,17 @@ local function get_bindings()
     return ret
 end
 
-local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
+local function cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor, exclude_contact_key)
     local auth_id = 'a:'..id
     for i,c in ipairs(redis.call('SMEMBERS', auth_id)) do
         local contact_key = 'c:'..id..':'..c
-        local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
+        if contact_key ~= exclude_contact_key then
+            local hash_data = redis.call('HMGET',contact_key, 'instance', 'reg_id')
 
-        if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
-            redis.call('SREM', auth_id, c)
-            redis.call('DEL', contact_key)
+            if (one_contact_per_aor > 0 or #instance > 0) and hash_data[1] == instance and hash_data[2] == reg_id then
+                redis.call('SREM', auth_id, c)
+                redis.call('DEL', contact_key)
+            end
         end
     end
 end
@@ -112,7 +114,7 @@ for i,c in ipairs(redis.call('SMEMBERS',auth_id)) do
     end
 end
 
-cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor)
+cleanup_instance_reg_id(id, instance, reg_id, one_contact_per_aor, contact_key)
 
 -- check for max allowed bindings
 if redis.call('SCARD', auth_id) >= bindings_max then
@@ -138,15 +140,8 @@ local bindings = get_bindings()
 
 local _,first_binding = next(bindings)
 if first_binding ~= nil then
-    -- publish json encoded data in the AoR resolving format to the 'reg' channel
-    redis.call('PUBLISH', 'reg', cjson.encode({
-        id,
-        {
-            first_binding[1], -- contact
-            first_binding[7], -- path
-            first_binding[8], -- interface_name
-        }
-    }))
+    -- publish json encoded data to the 'reg2' channel
+    redis.call('PUBLISH', 'reg2', cjson.encode({id, first_binding}))
 end
 
 -- return active bindings
