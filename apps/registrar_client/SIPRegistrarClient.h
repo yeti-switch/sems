@@ -33,6 +33,7 @@
 #include "ampi/BusAPI.h"
 #include "RegShaper.h"
 #include "RpcTreeHandler.h"
+#include "RegClientClickhouse.h"
 
 #include <sys/time.h>
 
@@ -52,7 +53,8 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
                            public AmThread,
                            public AmEventFdQueue,
                            public AmEventHandler,
-                           public StatsCountersGroupsContainerInterface {
+                           public StatsCountersGroupsContainerInterface,
+                           public RegClientClickhouse {
     int               epoll_fd;
     AmTimerFd         timer;
     AmTimerFd         postponed_regs_timer;
@@ -118,6 +120,8 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
     void run() override;
     void on_stop() override;
     void process(AmEvent *ev) override;
+
+    void getSnapshot(AmArg &data, std::function<void(AmArg &data)> f_enrich_entry) override;
 
     // API
     string postSIPNewRegistrationEvent(const string &id, const string &domain, const string &user, const string &name,

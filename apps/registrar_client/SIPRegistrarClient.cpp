@@ -40,6 +40,7 @@
 #define CFG_OPT_NAME_MIN_INTERVAL_MSEC            "min_interval_msec"
 #define CFG_OPT_NAME_DEFAULT_EXPIRES              "default_expires"
 #define CFG_OPT_NAME_EXPORT_METRICS               "export_metrics"
+#define CFG_SEC_NAME_CLICKHOUSE                   "clickhouse"
 
 #define DEFAULT_EXPIRES 1800
 
@@ -132,10 +133,15 @@ SIPRegistrarClient::SIPRegistrarClient(const string &name)
 
 int SIPRegistrarClient::configure(const std::string &config)
 {
+    static cfg_opt_t clickhouse_opt[] = { CFG_END() };
+
     cfg_opt_t opt[] = { CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_PER_DOMAIN_MSEC, 0, CFGF_NODEFAULT),
                         CFG_INT(CFG_OPT_NAME_MIN_INTERVAL_MSEC, 0, CFGF_NODEFAULT),
                         CFG_INT(CFG_OPT_NAME_DEFAULT_EXPIRES, DEFAULT_EXPIRES, CFGF_NONE),
-                        CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE), CFG_END() };
+                        CFG_BOOL(CFG_OPT_NAME_EXPORT_METRICS, cfg_false, CFGF_NONE),
+                        CFG_SEC(CFG_SEC_NAME_CLICKHOUSE, clickhouse_opt,
+                                CFGF_NODEFAULT | CFGF_RAW | CFGF_IGNORE_UNKNOWN),
+                        CFG_END() };
     cfg_t    *cfg   = cfg_init(opt, CFGF_NONE);
     if (!cfg)
         return -1;
@@ -168,6 +174,12 @@ int SIPRegistrarClient::configure(const std::string &config)
     default_expires = cfg_getint(cfg, CFG_OPT_NAME_DEFAULT_EXPIRES);
     if (cfg_true == cfg_getbool(cfg, CFG_OPT_NAME_EXPORT_METRICS))
         statistics::instance()->add_groups_container("registrar_client", this, false);
+
+    if (cfg_size(cfg, CFG_SEC_NAME_CLICKHOUSE)) {
+        cfg_t *ch = cfg_getsec(cfg, CFG_SEC_NAME_CLICKHOUSE);
+        if (RegClientClickhouse::configure(ch->raw_info->raw))
+            return -1;
+    }
 
     cfg_free(cfg);
     return 0;
@@ -246,6 +258,9 @@ void SIPRegistrarClient::run()
                 stop_event.read();
                 running = false;
                 break;
+            } else if (f == clickhouse_timer) {
+                RegClientClickhouse::on_timer();
+                clickhouse_timer.read();
             }
         }
     } while (running);
@@ -345,6 +360,7 @@ int SIPRegistrarClient::onLoad()
 
     postponed_regs_timer.set(0, false);
     postponed_regs_timer.link(epoll_fd);
+    RegClientClickhouse::init(epoll_fd);
 
     AmEventDispatcher::instance()->addEventQueue(REG_CLIENT_QUEUE, this);
 
@@ -890,14 +906,29 @@ void SIPRegistrarClient::operator()(const string &, iterate_groups_callback_type
     g.serialize(callback);
 }
 
-#define DEF_AND_VALIDATE_OPTIONAL_STR(key)                                                                             \
-    string key;                                                                                                        \
-    if (args[0].hasMember(#key)) {                                                                                     \
-        AmArg &key##_arg = args[0][#key];                                                                              \
-        if (!isArgCStr(key##_arg))                                                                                     \
-            throw AmSession::Exception(500, "unexpected '" #key "' type. expected string");                            \
-        key = key##_arg.asCStr();                                                                                      \
+void SIPRegistrarClient::getSnapshot(AmArg &ret, std::function<void(AmArg &)> f_enrich_entry)
+{
+    ret.assertArray();
+    RegistrationMetricGroup g;
+    {
+        AmLock           l(reg_mut);
+        RegShaper::timep now(std::chrono::system_clock::now());
+        g.data.reserve(registrations.size());
+        for (const auto &reg_it : registrations) {
+            g.add_reg(now, reg_it.first, *reg_it.second);
+        }
     }
+    g.idx = 0;
+    g.iterate_counters([&](unsigned long long,
+                           /*unsigned long long timestamp,*/
+                           const map<string, string> &labels) {
+        AmArg data;
+        for (const auto &i : labels)
+            data[i.first] = i.second;
+        f_enrich_entry(data);
+        ret.push(data);
+    });
+}
 
 void SIPRegistrarClient::createRegistration(const AmArg &args, AmArg &ret)
 {
