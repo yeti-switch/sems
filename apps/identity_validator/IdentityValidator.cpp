@@ -320,9 +320,9 @@ void IdentityValidator::process(AmEvent *event)
         }
         break;
 
-    case IdentityValidatorRequest::AddIdentity:
-        if (auto *e = dynamic_cast<AddIdentityRequest *>(event)) {
-            addIdentity(e->value, e->session_id);
+    case IdentityValidatorRequest::ValidateIdentities:
+        if (auto *e = dynamic_cast<ValidateIdentitiesRequest *>(event)) {
+            addIdentities(e->identities, e->session_id);
             return;
         }
         break;
@@ -398,7 +398,7 @@ void IdentityValidator::reloadTrustedRepositories(const AmArg &data)
     }
 }
 
-void IdentityValidator::addIdentity(const vector<string> &value, const string &id, const string &rpc_conn_id)
+void IdentityValidator::addIdentities(const vector<string> &value, const string &id, const string &rpc_conn_id)
 {
     auto *ctx = new SessionCtx(id, rpc_conn_id);
 
@@ -576,7 +576,7 @@ void IdentityValidator::handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev
         idents.emplace_back(params[i].asCStr());
     }
 
-    addIdentity(idents, ev->id.asCStr(), ev->connection_id);
+    addIdentities(idents, ev->id.asCStr(), ev->connection_id);
 }
 
 void IdentityValidator::makeIdentityData(SessionCtx *ctx, AmArg &identity_data)
@@ -704,8 +704,8 @@ void IdentityValidator::postResult(SessionCtx *ctx)
         return;
     }
 
-    if (!session_container->postEvent(ctx->id, new IdentityDataResponse(identity_data))) {
-        ERROR("failed to post IdentityDataResponse for session %s", ctx->id.c_str());
+    if (!session_container->postEvent(ctx->id, new ValidateIdentitiesResponse(identity_data))) {
+        ERROR("failed to post ValidateIdentitiesResponse for session %s", ctx->id.c_str());
     }
 }
 

@@ -7,7 +7,7 @@
 /* Request */
 
 struct IdentityValidatorRequest : public AmEvent {
-    enum Type { LoadTrustedCerts = 0, LoadTrustedRepos, AddIdentity };
+    enum Type { LoadTrustedCerts = 0, LoadTrustedRepos, ValidateIdentities };
 
     IdentityValidatorRequest(int event_id)
         : AmEvent(event_id)
@@ -29,13 +29,13 @@ struct LoadTrustedReposRequest : public IdentityValidatorRequest {
     }
 };
 
-struct AddIdentityRequest : public IdentityValidatorRequest {
-    vector<string> value;
+struct ValidateIdentitiesRequest : public IdentityValidatorRequest {
+    vector<string> identities;
     string         session_id;
-    AddIdentityRequest(const vector<string> &_value, const string &_session_id)
-        : IdentityValidatorRequest(AddIdentity)
-        , value(_value)
-        , session_id(_session_id)
+    ValidateIdentitiesRequest(const vector<string> &identities, const string &session_id)
+        : IdentityValidatorRequest(ValidateIdentities)
+        , identities(identities)
+        , session_id(session_id)
     {
     }
 };
@@ -51,9 +51,9 @@ struct IdentityValidatorResponse : public AmEvent {
     }
 };
 
-struct IdentityDataResponse : public IdentityValidatorResponse {
+struct ValidateIdentitiesResponse : public IdentityValidatorResponse {
     AmArg identity_data;
-    IdentityDataResponse(const AmArg &data)
+    ValidateIdentitiesResponse(const AmArg &data)
         : IdentityValidatorResponse(IdentityData)
         , identity_data(data)
     {

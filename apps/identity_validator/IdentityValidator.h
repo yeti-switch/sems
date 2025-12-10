@@ -234,7 +234,7 @@ class IdentityValidator : public AmThread,
     void      onTimer(const std::chrono::system_clock::time_point &now);
     void      reloadTrustedCertificates(const AmArg &data);
     void      reloadTrustedRepositories(const AmArg &data);
-    void      addIdentity(const vector<string> &value, const string &id, const string &rpc_conn_id = string());
+    void      addIdentities(const vector<string> &value, const string &id, const string &rpc_conn_id = string());
     void      processHttpReply(const HttpGetResponseEvent &resp);
     void      processJsonRpcRequestEvent(JsonRpcRequestEvent *ev);
     void      handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev);
