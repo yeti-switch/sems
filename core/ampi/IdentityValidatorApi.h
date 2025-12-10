@@ -51,9 +51,9 @@ struct IdentityValidatorResponse : public AmEvent {
     }
 };
 
-struct IdentityDataResponce : public IdentityValidatorResponse {
+struct IdentityDataResponse : public IdentityValidatorResponse {
     AmArg identity_data;
-    IdentityDataResponce(const AmArg &data)
+    IdentityDataResponse(const AmArg &data)
         : IdentityValidatorResponse(IdentityData)
         , identity_data(data)
     {
