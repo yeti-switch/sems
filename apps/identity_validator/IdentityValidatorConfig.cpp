@@ -1,8 +1,8 @@
-#include "IdentityValidatorAppConfig.h"
+#include "IdentityValidatorConfig.h"
 #include <ampi/PostgreSqlAPI.h>
 #include <log.h>
 
-int IdentityValidatorAppConfig::parse(const string &config, Configurable *obj)
+int IdentityValidatorConfig::parse(const string &config, Configurable *obj)
 {
     cfg_opt_t pg_pool_opts[]{ CFG_STR(CFG_PARAM_HOST, "127.0.0.1", CFGF_NONE),
                               CFG_INT(CFG_PARAM_PORT, 5432, CFGF_NONE),

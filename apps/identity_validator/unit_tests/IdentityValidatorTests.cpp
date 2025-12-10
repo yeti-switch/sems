@@ -1,5 +1,5 @@
-#include "IdentityValidatorAppTests.h"
-#include "../IdentityValidatorApp.h"
+#include "IdentityValidatorTests.h"
+#include "../IdentityValidator.h"
 #include <botan/data_src.h>
 
 string cert_with_TNAuthList = "-----BEGIN CERTIFICATE-----\
@@ -22,13 +22,13 @@ KChWuu7YJFa6QKJQMaZw5NO3GkJlIgIgSW5romYNlkhZhBs9U11Emk6jS+iPy20C\
 sOJ3a2u10F4=\
 -----END CERTIFICATE-----";
 
-TEST_F(IdentityValidatorAppTest, parseTNAuthList)
+TEST_F(IdentityValidatorTest, parseTNAuthList)
 {
     AmArg a;
 
     Botan::DataSource_Memory in(cert_with_TNAuthList);
     Botan::X509_Certificate  cert(in);
 
-    IdentityValidatorApp::serializeCert2AmArg(cert, a);
+    IdentityValidator::serializeCert2AmArg(cert, a);
     ASSERT_EQ(a["tn_auth_list"][0]["spc"], "063E");
 }

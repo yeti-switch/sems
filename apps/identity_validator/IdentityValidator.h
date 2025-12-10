@@ -17,7 +17,7 @@
 #include <regex>
 #include <shared_mutex>
 
-#include "IdentityValidatorAppConfig.h"
+#include "IdentityValidatorConfig.h"
 
 using namespace std;
 
@@ -116,13 +116,13 @@ struct IdentityValidatorEntry {
     void getInfo(AmArg &a, const std::chrono::system_clock::time_point &now) const;
 };
 
-class IdentityValidatorApp : public AmThread,
-                             public AmEventFdQueue,
-                             public AmEventHandler,
-                             public RpcTreeHandler,
-                             public Configurable {
+class IdentityValidator : public AmThread,
+                          public AmEventFdQueue,
+                          public AmEventHandler,
+                          public RpcTreeHandler,
+                          public Configurable {
   private:
-    static IdentityValidatorApp *_instance;
+    static IdentityValidator *_instance;
 
     int         epoll_fd;
     const char *name;
@@ -223,7 +223,7 @@ class IdentityValidatorApp : public AmThread,
     } counters;
 
   protected:
-    friend class IdentityValidatorAppFactory;
+    friend class IdentityValidatorFactory;
     int  init();
     int  onLoad();
     void run() override;
@@ -246,11 +246,11 @@ class IdentityValidatorApp : public AmThread,
     void      postResult(SessionCtx *ctx);
 
   public:
-    IdentityValidatorApp();
-    virtual ~IdentityValidatorApp();
+    IdentityValidator();
+    virtual ~IdentityValidator();
 
-    static IdentityValidatorApp *instance();
-    static void                  dispose();
+    static IdentityValidator *instance();
+    static void               dispose();
 
     static void serializeCertTNAuthList2AmArg(const Botan::X509_Certificate &cert, AmArg &a);
     static void serializeCert2AmArg(const Botan::X509_Certificate &cert, AmArg &a);

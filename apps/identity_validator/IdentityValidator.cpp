@@ -1,4 +1,4 @@
-#include "IdentityValidatorApp.h"
+#include "IdentityValidator.h"
 #include "log.h"
 #include "format_helper.h"
 
@@ -10,7 +10,7 @@
 #define EPOLL_MAX_EVENTS 2048
 
 #define session_container      AmSessionContainer::instance()
-#define identity_validator_app IdentityValidatorApp::instance()
+#define identity_validator_app IdentityValidator::instance()
 #define event_dispatcher       AmEventDispatcher::instance()
 
 const string pg_worker         = "identity_validator";
@@ -42,13 +42,13 @@ void IdentityValidatorEntry::getInfo(AmArg &a, const std::chrono::system_clock::
     cert_chain_amarg.assertArray();
     for (const auto &cert : cert_chain) {
         cert_chain_amarg.push(AmArg());
-        IdentityValidatorApp::serializeCert2AmArg(cert, cert_chain_amarg.back());
+        IdentityValidator::serializeCert2AmArg(cert, cert_chain_amarg.back());
     }
 }
 
 /* Statistics */
 
-IdentityValidatorApp::Counters::Counters()
+IdentityValidator::Counters::Counters()
     : identity_success(stat_group(Counter, MOD_NAME, "identity_headers_success").addAtomicCounter())
     , identity_failed_parse(stat_group(Counter, MOD_NAME, "identity_headers_failed")
                                 .addAtomicCounter()
@@ -72,7 +72,7 @@ IdentityValidatorApp::Counters::Counters()
 
 /* PGPoolCfg */
 
-void IdentityValidatorApp::PGPoolCfg::parse(cfg_t *cfg)
+void IdentityValidator::PGPoolCfg::parse(cfg_t *cfg)
 {
     host               = cfg_getstr(cfg, CFG_PARAM_HOST);
     port               = cfg_getint(cfg, CFG_PARAM_PORT);
@@ -83,7 +83,7 @@ void IdentityValidatorApp::PGPoolCfg::parse(cfg_t *cfg)
     keepalive_interval = cfg_getint(cfg, CFG_PARAM_KEEPALIVE_INTERVAL);
 }
 
-bool IdentityValidatorApp::PGPoolCfg::create_pg_pool_worker(PGWorkerPoolCreate::PoolType type)
+bool IdentityValidator::PGPoolCfg::create_pg_pool_worker(PGWorkerPoolCreate::PoolType type)
 {
     PGPool pg_pool(host, port, name, user, pass);
     pg_pool.pool_size           = 1;
@@ -92,20 +92,20 @@ bool IdentityValidatorApp::PGPoolCfg::create_pg_pool_worker(PGWorkerPoolCreate::
     return event_dispatcher->post(POSTGRESQL_QUEUE, new PGWorkerPoolCreate(pg_worker, type, pg_pool));
 }
 
-/* IdentityValidatorAppFactory */
+/* IdentityValidatorFactory */
 
-class IdentityValidatorAppFactory : public AmConfigFactory, public AmDynInvokeFactory {
+class IdentityValidatorFactory : public AmConfigFactory, public AmDynInvokeFactory {
   private:
-    IdentityValidatorAppFactory(const string &name)
+    IdentityValidatorFactory(const string &name)
         : AmConfigFactory(name)
         , AmDynInvokeFactory(name)
     {
         identity_validator_app;
     }
-    ~IdentityValidatorAppFactory() { IdentityValidatorApp::dispose(); }
+    ~IdentityValidatorFactory() { IdentityValidator::dispose(); }
 
   public:
-    DECLARE_FACTORY_INSTANCE(IdentityValidatorAppFactory)
+    DECLARE_FACTORY_INSTANCE(IdentityValidatorFactory)
 
     AmDynInvoke *getInstance() { return identity_validator_app; }
 
@@ -113,27 +113,27 @@ class IdentityValidatorAppFactory : public AmConfigFactory, public AmDynInvokeFa
     void on_destroy() { identity_validator_app->stop(); }
 
     /* AmConfigFactory */
-    int configure(const string &config) { return IdentityValidatorAppConfig::parse(config, identity_validator_app); }
+    int configure(const string &config) { return IdentityValidatorConfig::parse(config, identity_validator_app); }
     int reconfigure(const string &config) { return configure(config); }
 };
 
-EXPORT_PLUGIN_CLASS_FACTORY(IdentityValidatorAppFactory)
-EXPORT_PLUGIN_CONF_FACTORY(IdentityValidatorAppFactory)
-DEFINE_FACTORY_INSTANCE(IdentityValidatorAppFactory, MOD_NAME)
+EXPORT_PLUGIN_CLASS_FACTORY(IdentityValidatorFactory)
+EXPORT_PLUGIN_CONF_FACTORY(IdentityValidatorFactory)
+DEFINE_FACTORY_INSTANCE(IdentityValidatorFactory, MOD_NAME)
 
-/* IdentityValidatorApp */
+/* IdentityValidator */
 
-IdentityValidatorApp *IdentityValidatorApp::_instance = NULL;
+IdentityValidator *IdentityValidator::_instance = NULL;
 
-IdentityValidatorApp *IdentityValidatorApp::instance()
+IdentityValidator *IdentityValidator::instance()
 {
     if (_instance == nullptr)
-        _instance = new IdentityValidatorApp();
+        _instance = new IdentityValidator();
 
     return _instance;
 }
 
-void IdentityValidatorApp::dispose()
+void IdentityValidator::dispose()
 {
     if (_instance != nullptr)
         delete _instance;
@@ -141,7 +141,7 @@ void IdentityValidatorApp::dispose()
     _instance = nullptr;
 }
 
-IdentityValidatorApp::IdentityValidatorApp()
+IdentityValidator::IdentityValidator()
     : AmEventFdQueue(this)
     , epoll_fd(-1)
     , name("identity_validator_app")
@@ -151,13 +151,13 @@ IdentityValidatorApp::IdentityValidatorApp()
     event_dispatcher->addEventQueue(queue_name, this);
 }
 
-IdentityValidatorApp::~IdentityValidatorApp()
+IdentityValidator::~IdentityValidator()
 {
-    CLASS_DBG("IdentityValidatorApp::~IdentityValidatorApp()");
+    CLASS_DBG("IdentityValidator::~IdentityValidator()");
     event_dispatcher->delEventQueue(queue_name);
 }
 
-int IdentityValidatorApp::init()
+int IdentityValidator::init()
 {
     if ((epoll_fd = epoll_create(10)) == -1) {
         ERROR("epoll_create call failed");
@@ -175,7 +175,7 @@ int IdentityValidatorApp::init()
     return 0;
 }
 
-int IdentityValidatorApp::onLoad()
+int IdentityValidator::onLoad()
 {
     if (init()) {
         ERROR("initialization error");
@@ -205,7 +205,7 @@ int IdentityValidatorApp::onLoad()
     return 0;
 }
 
-void IdentityValidatorApp::run()
+void IdentityValidator::run()
 {
     int                ret;
     void              *p;
@@ -260,13 +260,13 @@ void IdentityValidatorApp::run()
     stopped.set(true);
 }
 
-void IdentityValidatorApp::on_stop()
+void IdentityValidator::on_stop()
 {
     stop_event.fire();
     stopped.wait_for();
 }
 
-void IdentityValidatorApp::onTimer(const std::chrono::system_clock::time_point &now)
+void IdentityValidator::onTimer(const std::chrono::system_clock::time_point &now)
 {
     std::unique_lock lock(certificates_mutex);
 
@@ -289,7 +289,7 @@ void IdentityValidatorApp::onTimer(const std::chrono::system_clock::time_point &
 
 /* AmEventHandler */
 
-void IdentityValidatorApp::process(AmEvent *event)
+void IdentityValidator::process(AmEvent *event)
 {
     switch (event->event_id) {
     case E_SYSTEM:
@@ -354,7 +354,7 @@ void IdentityValidatorApp::process(AmEvent *event)
     }
 }
 
-void IdentityValidatorApp::reloadTrustedCertificates(const AmArg &data)
+void IdentityValidator::reloadTrustedCertificates(const AmArg &data)
 {
     std::unique_lock lock(certificates_mutex);
 
@@ -380,7 +380,7 @@ void IdentityValidatorApp::reloadTrustedCertificates(const AmArg &data)
     }
 }
 
-void IdentityValidatorApp::reloadTrustedRepositories(const AmArg &data)
+void IdentityValidator::reloadTrustedRepositories(const AmArg &data)
 {
     std::unique_lock lock(certificates_mutex);
 
@@ -398,7 +398,7 @@ void IdentityValidatorApp::reloadTrustedRepositories(const AmArg &data)
     }
 }
 
-void IdentityValidatorApp::addIdentity(const vector<string> &value, const string &id, const string &rpc_conn_id)
+void IdentityValidator::addIdentity(const vector<string> &value, const string &id, const string &rpc_conn_id)
 {
     auto *ctx = new SessionCtx(id, rpc_conn_id);
 
@@ -470,7 +470,7 @@ void IdentityValidatorApp::addIdentity(const vector<string> &value, const string
     }
 }
 
-void IdentityValidatorApp::processHttpReply(const HttpGetResponseEvent &resp)
+void IdentityValidator::processHttpReply(const HttpGetResponseEvent &resp)
 {
     std::unique_lock lock(certificates_mutex);
 
@@ -541,7 +541,7 @@ void IdentityValidatorApp::processHttpReply(const HttpGetResponseEvent &resp)
     cert_entry.defer_sessions.clear();
 }
 
-void IdentityValidatorApp::processJsonRpcRequestEvent(JsonRpcRequestEvent *ev)
+void IdentityValidator::processJsonRpcRequestEvent(JsonRpcRequestEvent *ev)
 {
     AmArg ret;
     switch (ev->method_id) {
@@ -549,7 +549,7 @@ void IdentityValidatorApp::processJsonRpcRequestEvent(JsonRpcRequestEvent *ev)
     }
 }
 
-void IdentityValidatorApp::handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev)
+void IdentityValidator::handleValidateIdentityRpcRequest(JsonRpcRequestEvent *ev)
 {
     auto &params = ev->params;
 
@@ -579,7 +579,7 @@ void IdentityValidatorApp::handleValidateIdentityRpcRequest(JsonRpcRequestEvent 
     addIdentity(idents, ev->id.asCStr(), ev->connection_id);
 }
 
-void IdentityValidatorApp::makeIdentityData(SessionCtx *ctx, AmArg &identity_data)
+void IdentityValidator::makeIdentityData(SessionCtx *ctx, AmArg &identity_data)
 {
     string error_reason;
 
@@ -642,7 +642,7 @@ void IdentityValidatorApp::makeIdentityData(SessionCtx *ctx, AmArg &identity_dat
     }
 }
 
-bool IdentityValidatorApp::isTrustedRepository(const string &url) const
+bool IdentityValidator::isTrustedRepository(const string &url) const
 {
     for (const auto &r : trusted_repositories) {
         if (std::regex_match(url, r.regex))
@@ -651,7 +651,7 @@ bool IdentityValidatorApp::isTrustedRepository(const string &url) const
     return false;
 }
 
-void IdentityValidatorApp::renewCertEntry(CertHash::value_type &entry)
+void IdentityValidator::renewCertEntry(CertHash::value_type &entry)
 {
     entry.second.reset();
     session_container->postEvent(HTTP_EVENT_QUEUE,
@@ -661,7 +661,7 @@ void IdentityValidatorApp::renewCertEntry(CertHash::value_type &entry)
                                                   IDENTITY_VALIDATOR_APP_QUEUE)); // session_id
 }
 
-PublicKey IdentityValidatorApp::getPubKey(const string &cert_url, AmArg &info, bool &cert_is_valid) const
+PublicKey IdentityValidator::getPubKey(const string &cert_url, AmArg &info, bool &cert_is_valid) const
 {
     auto it = certificates.find(cert_url);
     if (it == certificates.end()) {
@@ -684,7 +684,7 @@ PublicKey IdentityValidatorApp::getPubKey(const string &cert_url, AmArg &info, b
     return cert.subject_public_key();
 }
 
-void IdentityValidatorApp::postDbQuery(const string &query, const string &token)
+void IdentityValidator::postDbQuery(const string &query, const string &token)
 {
     if (!session_container->postEvent(POSTGRESQL_QUEUE, new PGExecute(PGQueryData(pg_worker, query, true, /* single */
                                                                                   IDENTITY_VALIDATOR_APP_QUEUE, token),
@@ -694,7 +694,7 @@ void IdentityValidatorApp::postDbQuery(const string &query, const string &token)
     }
 }
 
-void IdentityValidatorApp::postResult(SessionCtx *ctx)
+void IdentityValidator::postResult(SessionCtx *ctx)
 {
     AmArg identity_data;
     makeIdentityData(ctx, identity_data);
@@ -709,7 +709,7 @@ void IdentityValidatorApp::postResult(SessionCtx *ctx)
     }
 }
 
-void IdentityValidatorApp::serializeCertTNAuthList2AmArg(const Botan::X509_Certificate &cert, AmArg &a)
+void IdentityValidator::serializeCertTNAuthList2AmArg(const Botan::X509_Certificate &cert, AmArg &a)
 {
     if (const Botan::Cert_Extension::TNAuthList *tn_auth_list =
             cert.v3_extensions().get_extension_object_as<Botan::Cert_Extension::TNAuthList>())
@@ -741,7 +741,7 @@ void IdentityValidatorApp::serializeCertTNAuthList2AmArg(const Botan::X509_Certi
     }
 }
 
-void IdentityValidatorApp::serializeCert2AmArg(const Botan::X509_Certificate &cert, AmArg &a)
+void IdentityValidator::serializeCert2AmArg(const Botan::X509_Certificate &cert, AmArg &a)
 {
     a["not_after"]        = cert.not_after().readable_string();
     a["not_before"]       = cert.not_before().readable_string();
@@ -766,25 +766,25 @@ void IdentityValidatorApp::serializeCert2AmArg(const Botan::X509_Certificate &ce
 
 /* RpcTreeHandler */
 
-void IdentityValidatorApp::init_rpc_tree()
+void IdentityValidator::init_rpc_tree()
 {
     auto &show = reg_leaf(root, "show");
-    reg_method(show, "cached_certificates", "show cached certificates", "", &IdentityValidatorApp::showCerts, this);
-    reg_method(show, "trusted_certificates", "show trusted certificates", "", &IdentityValidatorApp::showTrustedCerts,
+    reg_method(show, "cached_certificates", "show cached certificates", "", &IdentityValidator::showCerts, this);
+    reg_method(show, "trusted_certificates", "show trusted certificates", "", &IdentityValidator::showTrustedCerts,
                this);
     reg_method(show, "trusted_repositories", "show trusted repositories", "",
-               &IdentityValidatorApp::showTrustedRepositories, this);
+               &IdentityValidator::showTrustedRepositories, this);
 
     auto &request = reg_leaf(root, "request");
-    reg_method(request, "validate_identity", "", "", &IdentityValidatorApp::validateIdentity, this);
+    reg_method(request, "validate_identity", "", "", &IdentityValidator::validateIdentity, this);
     auto &cached_certificates = reg_leaf(request, "cached_certificates", "Cached Certificates");
     reg_method_arg(cached_certificates, "clear", "", "", "<x5url>...", "clear certificates in cache",
-                   &IdentityValidatorApp::clearCerts, this);
+                   &IdentityValidator::clearCerts, this);
     reg_method_arg(cached_certificates, "renew", "", "", "<x5url>...", "renew certificates in cache",
-                   &IdentityValidatorApp::renewCerts, this);
+                   &IdentityValidator::renewCerts, this);
 }
 
-void IdentityValidatorApp::showTrustedCerts(const AmArg &, AmArg &ret)
+void IdentityValidator::showTrustedCerts(const AmArg &, AmArg &ret)
 {
     std::shared_lock lock(certificates_mutex);
 
@@ -803,7 +803,7 @@ void IdentityValidatorApp::showTrustedCerts(const AmArg &, AmArg &ret)
         certs.assertArray();
         for (const auto &cert : cert_entry.certs) {
             certs.push(AmArg());
-            IdentityValidatorApp::serializeCert2AmArg(*cert, certs.back());
+            IdentityValidator::serializeCert2AmArg(*cert, certs.back());
         }
     }
 
@@ -817,7 +817,7 @@ void IdentityValidatorApp::showTrustedCerts(const AmArg &, AmArg &ret)
     }
 }
 
-void IdentityValidatorApp::showTrustedRepositories(const AmArg &, AmArg &ret)
+void IdentityValidator::showTrustedRepositories(const AmArg &, AmArg &ret)
 {
     ret.assertArray();
 
@@ -832,7 +832,7 @@ void IdentityValidatorApp::showTrustedRepositories(const AmArg &, AmArg &ret)
     }
 }
 
-void IdentityValidatorApp::showCerts(const AmArg &, AmArg &ret)
+void IdentityValidator::showCerts(const AmArg &, AmArg &ret)
 {
     auto now = std::chrono::system_clock::now();
     ret.assertArray();
@@ -846,7 +846,7 @@ void IdentityValidatorApp::showCerts(const AmArg &, AmArg &ret)
     }
 }
 
-void IdentityValidatorApp::clearCerts(const AmArg &args, AmArg &ret)
+void IdentityValidator::clearCerts(const AmArg &args, AmArg &ret)
 {
     int iret = 0;
     args.assertArray();
@@ -870,7 +870,7 @@ void IdentityValidatorApp::clearCerts(const AmArg &args, AmArg &ret)
     ret = iret;
 }
 
-void IdentityValidatorApp::renewCerts(const AmArg &args, AmArg &ret)
+void IdentityValidator::renewCerts(const AmArg &args, AmArg &ret)
 {
     args.assertArray();
 
@@ -915,7 +915,7 @@ void IdentityValidatorApp::renewCerts(const AmArg &args, AmArg &ret)
     }
 }
 
-bool IdentityValidatorApp::validateIdentity(const string &connection_id, const AmArg &request_id, const AmArg &params)
+bool IdentityValidator::validateIdentity(const string &connection_id, const AmArg &request_id, const AmArg &params)
 {
     postEvent(new JsonRpcRequestEvent(connection_id, request_id, false, ValidateIdentity, params));
     return true;
@@ -923,7 +923,7 @@ bool IdentityValidatorApp::validateIdentity(const string &connection_id, const A
 
 /* Configurable */
 
-int IdentityValidatorApp::configure(cfg_t *cfg)
+int IdentityValidator::configure(cfg_t *cfg)
 {
     expires                = cfg_getint(cfg, CFG_PARAM_EXPIRES);
     identity_validator_ttl = std::chrono::seconds(cfg_getint(cfg, CFG_PARAM_CERTS_CACHE_TTL));

@@ -38,7 +38,7 @@ class Configurable {
     virtual int configure(cfg_t *cfg) = 0;
 };
 
-class IdentityValidatorAppConfig {
+class IdentityValidatorConfig {
   public:
     static int parse(const string &config, Configurable *obj);
 };
