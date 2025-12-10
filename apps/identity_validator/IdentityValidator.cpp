@@ -704,8 +704,8 @@ void IdentityValidator::postResult(SessionCtx *ctx)
         return;
     }
 
-    if (!session_container->postEvent(ctx->id, new IdentityDataResponce(identity_data))) {
-        ERROR("failed to post IdentityDataResponce for session %s", ctx->id.c_str());
+    if (!session_container->postEvent(ctx->id, new IdentityDataResponse(identity_data))) {
+        ERROR("failed to post IdentityDataResponse for session %s", ctx->id.c_str());
     }
 }
 
