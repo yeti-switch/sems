@@ -5,7 +5,8 @@ int RedisAppConfig::parse(const string &config, Configurable *obj)
 {
     cfg_opt_t opts[]{ CFG_INT(CFG_PARAM_MAX_BATCH_SIZE, DEFAULT_MAX_BATCH_SIZE, CFGF_NONE),
                       CFG_INT(CFG_PARAM_BATCH_TIMEOUT, DEFAULT_BATCH_TIMEOUT, CFGF_NONE),
-                      CFG_INT(CFG_PARAM_MAX_QUEUE_SIZE, DEFAULT_MAX_QUEUE_SIZE, CFGF_NONE), CFG_END() };
+                      CFG_INT(CFG_PARAM_MAX_QUEUE_SIZE, DEFAULT_MAX_QUEUE_SIZE, CFGF_NONE),
+                      CFG_BOOL(CFG_PARAM_LOG_CMDS, (cfg_bool_t)DEFAULT_LOG_CMDS, CFGF_NONE), CFG_END() };
 
     cfg_t *cfg = cfg_init(opts, CFGF_NONE);
     if (!cfg)

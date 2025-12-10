@@ -267,6 +267,7 @@ int RedisApp::configure(cfg_t *cfg)
     max_batch_size = cfg_getint(cfg, CFG_PARAM_MAX_BATCH_SIZE);
     batch_timeout  = milliseconds{ cfg_getint(cfg, CFG_PARAM_BATCH_TIMEOUT) };
     max_queue_size = cfg_getint(cfg, CFG_PARAM_MAX_QUEUE_SIZE);
+    log_cmds       = cfg_getbool(cfg, CFG_PARAM_LOG_CMDS);
     return 0;
 }
 

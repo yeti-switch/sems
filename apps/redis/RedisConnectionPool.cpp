@@ -8,6 +8,8 @@
 #define session_container AmSessionContainer::instance()
 #define event_dispatcher  AmEventDispatcher::instance()
 
+bool RedisConnectionPool::log_cmds = false;
+
 int parseReply(redisReply *reply, RedisReply::result_type &result, AmArg &data)
 {
     if (!reply) {
@@ -46,6 +48,9 @@ static void redis_request_cb_static(redisAsyncContext *, void *r, void *privdata
     RedisReply::result_type result;
     AmArg                   data;
     parseReply(reply, result, data);
+
+    if (RedisConnectionPool::is_cmds_logging_enabled())
+        DBG("redis_log: reply: %s", data.print().c_str());
 
     if (ctx->pool)
         ctx->pool->process_internal_reply(ctx->c, result, ctx->user_data.release(), data);
@@ -189,6 +194,10 @@ static int perform_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const vector
 {
     char   *cmd      = nullptr;
     ssize_t cmd_size = args2redis_cmd(event_args, &cmd);
+
+    if (RedisConnectionPool::is_cmds_logging_enabled())
+        DBG("redis_log: request: %s", cmd);
+
     int ret = cmd_size > 0 ? redis::redisAsyncFormattedCommand(ac, &redis_request_cb_static, ctx, cmd, cmd_size) : -1;
     if (cmd)
         free_redis_cmd(cmd);
@@ -219,6 +228,9 @@ static int perform_multi_event(redisAsyncContext *ac, RedisReplyCtx *ctx, const 
         cmd_size = args2redis_cmd(c, &cmd);
         if (cmd_size < 0)
             goto failed;
+
+        if (RedisConnectionPool::is_cmds_logging_enabled())
+            DBG("redis_log: request: %s", cmd);
 
         ret = redis::redisAsyncFormattedCommand(ac, nullptr, nullptr, cmd, cmd_size);
         free_redis_cmd(cmd);

@@ -74,7 +74,9 @@ class RedisConnectionPool : public AmThread,
     void         process_stop_event();
     void         reconnect();
     void         init_retry_reqs_timer(unsigned int timeout_ms);
-    virtual void on_retry_reqs_timer() {};
+    virtual void on_retry_reqs_timer() {}
+
+    static bool log_cmds;
 
   public:
     RedisConnectionPool(const char *name, const string &queue_name);
@@ -83,8 +85,8 @@ class RedisConnectionPool : public AmThread,
     RedisConnection *addConnection(const string &name, const string &host, int port);
     void             removeConnection(RedisConnection *c);
     string           get_queue_name() { return queue_name; }
-    virtual void process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) {
-    };
+    virtual void process_internal_reply(RedisConnection *c, int result, const AmObject *user_data, const AmArg &data) {}
+    static bool  is_cmds_logging_enabled() { return log_cmds; }
 };
 
 #endif /*REDIS_CONNECTION_POOL_H*/
