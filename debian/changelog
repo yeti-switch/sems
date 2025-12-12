@@ -1,3 +1,9 @@
+sems (1.178.0) stable; urgency=low
+  * registrar: fix duplicate keepalive_contexts
+  * redis: add 'log_cmds' opt (default: false)
+  * identity_validator: rename events
+ -- Michael Furmur <furmur@pm.me>  Tue, 02 Dec 2025 18:43:38 +0200
+
 sems (1.177.0) stable; urgency=low
   * add identity_validator module
   * jsonrpc: fix methods _tree/_list generation
