@@ -2212,6 +2212,9 @@ void AmRtpStream::replaceAudioMediaParameters(SdpMedia &m, unsigned int idx, Add
     } break;
     default: CLASS_ERROR("unexpected OA state %d in AmRtpStream::replaceAudioMediaParameters", dlg->getOAState());
     }
+
+    is_ice_stream = session ? session->isUseIceMediaStream() : false;
+    applyIceParams(m);
 }
 
 void AmRtpStream::payloads_id2str(const vector<int> i, vector<string> &s)
