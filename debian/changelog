@@ -1,3 +1,7 @@
+sems (1.178.1) stable; urgency=low
+  * AmRtpStream::replaceAudioMediaParameters: apply ICE params
+ -- Michael Furmur <furmur@pm.me>  Mon, 15 Dec 2025 16:16:19 +0200
+
 sems (1.178.0) stable; urgency=low
   * registrar: fix duplicate keepalive_contexts
   * registrar_client: add clickhouse snapshots
