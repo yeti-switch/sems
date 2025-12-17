@@ -1,3 +1,7 @@
+sems (1.178.3) stable; urgency=low
+  * registrar_client: add 'node_id' field for clickhouse snapshots
+ -- Michael Furmur <furmur@pm.me>  Wed, 17 Dec 2025 18:00:36 +0200
+
 sems (1.178.2) stable; urgency=low
   * registrar_client: add 'state' field for clickhouse snapshots
  -- Michael Furmur <furmur@pm.me>  Wed, 17 Dec 2025 17:30:43 +0200
