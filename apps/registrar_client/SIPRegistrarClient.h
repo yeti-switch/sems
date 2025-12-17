@@ -121,7 +121,7 @@ class SIPRegistrarClient : public AmDynInvokeFactory,
     void on_stop() override;
     void process(AmEvent *ev) override;
 
-    void getSnapshot(AmArg &data, std::function<void(AmArg &data)> f_enrich_entry) override;
+    void getSnapshot(AmArg &data, std::function<void(unsigned long long value, AmArg &data)> f_enrich_entry) override;
 
     // API
     string postSIPNewRegistrationEvent(const string &id, const string &domain, const string &user, const string &name,

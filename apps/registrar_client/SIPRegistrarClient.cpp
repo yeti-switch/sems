@@ -906,7 +906,7 @@ void SIPRegistrarClient::operator()(const string &, iterate_groups_callback_type
     g.serialize(callback);
 }
 
-void SIPRegistrarClient::getSnapshot(AmArg &ret, std::function<void(AmArg &)> f_enrich_entry)
+void SIPRegistrarClient::getSnapshot(AmArg &ret, std::function<void(unsigned long long value, AmArg &)> f_enrich_entry)
 {
     ret.assertArray();
     RegistrationMetricGroup g;
@@ -919,13 +919,13 @@ void SIPRegistrarClient::getSnapshot(AmArg &ret, std::function<void(AmArg &)> f_
         }
     }
     g.idx = 0;
-    g.iterate_counters([&](unsigned long long,
+    g.iterate_counters([&](unsigned long long value,
                            /*unsigned long long timestamp,*/
                            const map<string, string> &labels) {
         AmArg data;
         for (const auto &i : labels)
             data[i.first] = i.second;
-        f_enrich_entry(data);
+        f_enrich_entry(value, data);
         ret.push(data);
     });
 }

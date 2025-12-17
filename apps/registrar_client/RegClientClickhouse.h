@@ -49,5 +49,6 @@ class RegClientClickhouse {
     int  init(int epoll_fd);
     void on_timer();
 
-    virtual void getSnapshot(AmArg &data, std::function<void(AmArg &data)> f_enrich_entry) = 0;
+    virtual void getSnapshot(AmArg                                                     &data,
+                             std::function<void(unsigned long long value, AmArg &data)> f_enrich_entry) = 0;
 };

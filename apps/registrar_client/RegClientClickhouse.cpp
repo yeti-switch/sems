@@ -93,7 +93,8 @@ void RegClientClickhouse::on_timer()
     snapshot_id.fields.counter++;
 
     AmArg snapshot;
-    getSnapshot(snapshot, [&](AmArg &data) {
+    getSnapshot(snapshot, [&](unsigned long long value, AmArg &data) {
+        data["state"]              = static_cast<unsigned int>(value);
         data["snapshot_id"]        = snapshot_id.v;
         data["snapshot_timestamp"] = strftime_buf;
     });
