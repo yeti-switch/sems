@@ -97,6 +97,7 @@ void RegClientClickhouse::on_timer()
         data["state"]              = static_cast<unsigned int>(value);
         data["snapshot_id"]        = snapshot_id.v;
         data["snapshot_timestamp"] = strftime_buf;
+        data["node_id"]            = AmConfig.node_id;
     });
 
     if (!snapshot.size())
