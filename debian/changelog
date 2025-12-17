@@ -1,3 +1,7 @@
+sems (1.178.2) stable; urgency=low
+  * registrar_client: add 'state' field for clickhouse snapshots
+ -- Michael Furmur <furmur@pm.me>  Wed, 17 Dec 2025 17:30:43 +0200
+
 sems (1.178.1) stable; urgency=low
   * AmRtpStream::replaceAudioMediaParameters: apply ICE params
  -- Michael Furmur <furmur@pm.me>  Mon, 15 Dec 2025 16:16:19 +0200
