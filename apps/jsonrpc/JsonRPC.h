@@ -46,6 +46,7 @@ class JsonRPCServerModule : public AmDynInvokeFactory, public AmConfigFactory, p
     // DI methods
     void execRpc(const AmArg &args, AmArg &ret);
     void sendMessage(const AmArg &args, AmArg &ret);
+    bool postRequestEvent(const string &connection_id, const AmArg &request_id, const AmArg &params);
 
   public:
     JsonRPCServerModule(const string &mod_name);
@@ -62,6 +63,8 @@ class JsonRPCServerModule : public AmDynInvokeFactory, public AmConfigFactory, p
     static JsonRPCServerModule *instance();
 
     void invoke(const string &method, const AmArg &args, AmArg &ret) override;
+    bool invoke_async(const string &connection_id, const AmArg &request_id, const string &method,
+                      const AmArg &params) override;
 
     // configuration
     static string              host;

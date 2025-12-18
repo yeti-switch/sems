@@ -29,6 +29,7 @@
 
 #include "JsonRPC.h"
 #include "JsonRPCServer.h"
+#include "AmEventDispatcher.h"
 #include <AmLcConfig.h>
 
 #include <netinet/tcp.h>
@@ -331,11 +332,22 @@ void JsonRPCServerModule::invoke(const string &method, const AmArg &args, AmArg 
         ret.push(AmArg("execServerFunction"));
         ret.push(AmArg("setNotifySink"));
         ret.push(AmArg("setRequestSink"));
+        ret.push(AmArg("postRequestEvent"));
         // ret.push(AmArg("newConnection"));
         // ret.push(AmArg("sendRequest"));
         // ret.push(AmArg("sendRequestList"));
     } else
         throw AmDynInvoke::NotImplemented(method);
+}
+
+bool JsonRPCServerModule::invoke_async(const string &connection_id, const AmArg &request_id, const string &method,
+                                       const AmArg &params)
+{
+    static string postRequestEventMethod("postRequestEvent");
+    if (method == postRequestEventMethod) {
+        return postRequestEvent(connection_id, request_id, params);
+    }
+    return false;
 }
 
 void JsonRPCServerModule::execRpc(const AmArg &args, AmArg &ret)
@@ -377,4 +389,22 @@ void JsonRPCServerModule::sendMessage(const AmArg &args, AmArg &ret)
                                    args.get(3).asCStr(), // id
                                    args.get(4).asCStr(), // reply_sink
                                    params, udata, ret);
+}
+
+bool JsonRPCServerModule::postRequestEvent(const string &connection_id, const AmArg &request_id, const AmArg &params)
+{
+    params.assertArrayFmt("ss");
+
+    const string dst_queue  = params[0].asCStr();
+    const string dst_method = params[1].asCStr();
+
+    auto modified_params = params;
+    modified_params.erase((size_t)0);
+    modified_params.erase((size_t)0);
+
+    auto request_ev = new JsonRpcRequestEvent(connection_id, dst_method, request_id, false, modified_params);
+    bool posted     = AmEventDispatcher::instance()->post(dst_queue, request_ev);
+    if (!posted)
+        delete request_ev;
+    return posted;
 }
