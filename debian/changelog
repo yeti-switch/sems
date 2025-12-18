@@ -1,3 +1,7 @@
+sems (1.178.4) stable; urgency=low
+  * jsonrpc: add postRequestEvent method
+ -- Michael Furmur <furmur@pm.me>  Thu, 18 Dec 2025 14:00:19 +0200
+
 sems (1.178.3) stable; urgency=low
   * registrar_client: add 'node_id' field for clickhouse snapshots
  -- Michael Furmur <furmur@pm.me>  Wed, 17 Dec 2025 18:00:36 +0200
