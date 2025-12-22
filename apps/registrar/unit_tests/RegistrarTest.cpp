@@ -24,39 +24,19 @@ int RegistrarTestFactory::configure(cfg_t *cfg)
     if (!reg_redis)
         return -1;
 
-    scripts_dir                  = cfg_getstr(reg_redis, CFG_PARAM_SCRIPTS_DIR);
-    RedisTestServer *test_server = &redis_test::instance()->test_server;
-    test_server->addLoadScriptCommandResponse(get_script_path(REGISTER_SCRIPT), register_script_hash);
-    test_server->addLoadScriptCommandResponse(get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(get_script_path(RPC_AOR_LOOKUP_SCRIPT), rpc_aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(get_script_path(RPC_TRANSPORT_DOWN_SCRIPT),
-                                              rpc_transport_down_script_hash);
-    test_server->addLoadScriptCommandResponse(get_script_path(LOAD_CONTACTS_SCRIPT), load_contacts_script_hash);
+    scripts_dir = cfg_getstr(reg_redis, CFG_PARAM_SCRIPTS_DIR);
     return 0;
 }
 
 RegistrarTest::RegistrarTest()
 {
     DBG("RegistrarTest");
-    test_server = &redis_test::instance()->test_server;
-    settings    = redis_test::instance()->settings;
+    settings = redis_test::instance()->settings;
 }
 
 void RegistrarTest::SetUp()
 {
     DBG("RegistrarTest SetUp");
-
-    test_server->response_enabled.set(false);
-    test_server->clear();
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(REGISTER_SCRIPT), register_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(AOR_LOOKUP_SCRIPT), aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_AOR_LOOKUP_SCRIPT),
-                                              rpc_aor_lookup_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(RPC_TRANSPORT_DOWN_SCRIPT),
-                                              rpc_transport_down_script_hash);
-    test_server->addLoadScriptCommandResponse(registrar->get_script_path(LOAD_CONTACTS_SCRIPT),
-                                              load_contacts_script_hash);
-    test_server->response_enabled.set(true);
 
     auto isConnExists = [&](ConnState state) {
         for (auto &conn : registrar->connections)

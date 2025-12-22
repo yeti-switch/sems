@@ -92,7 +92,6 @@ TEST_F(RedisTest, RedisConnectionTest)
 
     char *cmd;
     redis::redisFormatCommand(&cmd, "HSET %s %d %d", "r:471", 8, 0);
-    test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_NIL, AmArg());
     conn.process_request(conn.get_connection(), nullptr, "HSET %s %d %d", "r:471", 8, 0);
     redis::redisFreeCommand(cmd);
     cmd = nullptr;
@@ -104,11 +103,6 @@ TEST_F(RedisTest, RedisConnectionTest)
     conn.drop_gotreply();
 
     redis::redisFormatCommand(&cmd, "HGET %s %d", "r:471", 8);
-
-    AmArg res;
-    res.assertArray();
-    res.push("0");
-    test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_ARRAY, res);
     conn.process_request(conn.get_connection(), nullptr, "HGET %s %d", "r:471", 8);
     redis::redisFreeCommand(cmd);
     cmd = nullptr;
@@ -137,17 +131,11 @@ TEST_F(RedisTest, RedisConnectionTest1)
 
     char *cmd;
     redis::redisFormatCommand(&cmd, "HSET %s %d %d", "r:471", 8, 0);
-    test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_NIL, AmArg());
     conn.process_request(conn.get_connection(), nullptr, "HSET %s %d %d", "r:471", 8, 0);
     redis::redisFreeCommand(cmd);
     cmd = nullptr;
 
     redis::redisFormatCommand(&cmd, "HGET %s %d", "r:471", 8);
-
-    AmArg res;
-    res.assertArray();
-    res.push("0");
-    test_server->addFormattedCommandResponse(cmd, REDIS_REPLY_ARRAY, res);
     conn.process_request(conn.get_connection(), nullptr, "HGET %s %d", "r:471", 8);
     redis::redisFreeCommand(cmd);
     cmd = nullptr;
@@ -175,14 +163,6 @@ TEST_F(RedisTest, RedisMultiTest)
     vector<string> commands;
     commands.push_back("HSET r:471 8 0");
     commands.push_back("HGET r:471 8");
-    test_server->addCommandResponse("MULTI", REDIS_REPLY_STATUS, AmArg());
-    test_server->addCommandResponse(commands[0], REDIS_REPLY_STATUS, AmArg());
-    test_server->addCommandResponse(commands[1], REDIS_REPLY_STATUS, AmArg());
-    AmArg res;
-    res.assertArray();
-    res[0] = 0;
-    res[1] = "0";
-    test_server->addCommandResponse("EXEC", REDIS_REPLY_ARRAY, res);
     AmArg ret = runMultiCommand(ctx, commands, "HSET-HGET");
     redis::redisFree(ctx);
 }

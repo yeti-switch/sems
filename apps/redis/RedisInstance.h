@@ -123,25 +123,10 @@ class RedisInstance {
         redis::redisFree((redisAsyncContext *)async_context);
     }
 
-    virtual redisAsyncContext *redisAsyncConnect(const char *ip, int port)                                         = 0;
-    virtual void               redisAsyncDisconnect(redisAsyncContext *ac)                                         = 0;
-    virtual redisContext      *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv)          = 0;
-    virtual redisContext      *redisConnectUnixWithTimeout(const char *path, const struct timeval tv)              = 0;
-    virtual int                redisAppendCommand(redisContext *c, const char *format, va_list list)               = 0;
-    virtual int                redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn)       = 0;
-    virtual int                redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn) = 0;
-    virtual void               redisAsyncHandleRead(redisAsyncContext *ac)                                         = 0;
-    virtual void               redisAsyncHandleWrite(redisAsyncContext *ac)                                        = 0;
-    virtual int                redisGetReply(redisContext *c, void **reply)                                        = 0;
-    virtual int  redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd,
-                                            size_t len)                                                            = 0;
-    virtual int  redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc,
-                                       const char **argv, const size_t *argvlen)                                   = 0;
-    virtual int  redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *format,
-                                    va_list argptr)                                                                = 0;
-    virtual void freeReplyObject(void *reply)                                                                      = 0;
-    virtual void redisFree(redisContext *ctx)                                                                      = 0;
-    virtual RedisInstance *clone(redisInstanceContext *async_context)                                              = 0;
+    int redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn);
+    int redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn);
+
+    RedisInstance *clone(redisInstanceContext *async_context);
 };
 
 extern RedisInstance *_redis_instance_;

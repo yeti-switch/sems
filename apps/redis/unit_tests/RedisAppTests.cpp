@@ -39,7 +39,6 @@ TEST_F(RedisTest, RedisAppConnectScript1)
 
     {
         RedisScript script("test_script_1", "apps/redis/unit_tests/etc/test_script_1.lua");
-        test_server->addLoadScriptCommandResponse(script.path, "a74bd2c0d28faea0cba58a939af200414ad87ef0");
         post_to_redis_app(new RedisAddConnection(REDIS_TEST_CLIENT_QUEUE, "RedisAppConnectScript1",
                                                  RedisConnectionInfo(host, port, RedisMaster, "", "", { script })));
         wait_for_cond(redis_client.connected);
@@ -63,10 +62,6 @@ TEST_F(RedisTest, RedisAppConnectScript2)
         RedisScript script2("test_script_2", "apps/redis/unit_tests/etc/test_script_2.lua");
         RedisScript script3("test_script_3", "apps/redis/unit_tests/etc/test_script_3.lua");
         RedisScript script4("test_script_4", "apps/redis/unit_tests/etc/test_script_4.lua");
-        test_server->addLoadScriptCommandResponse(script1.path, "5f43acad4661a5abf51ab3f32fdf2d1b1a9fec65");
-        test_server->addLoadScriptCommandResponse(script2.path, "af857bc30e9cd6e67f316dc9b0910a19f939f84e");
-        test_server->addLoadScriptCommandResponse(script3.path, "91d6959f211b09a6e7b0f1c3c9fd5bf717a371c9");
-        test_server->addLoadScriptCommandResponse(script4.path, "a74bd2c0d28faea0cba58a939af200414ad87ef0");
         post_to_redis_app(new RedisAddConnection(
             REDIS_TEST_CLIENT_QUEUE, "RedisAppConnectScript2",
             RedisConnectionInfo(host, port, RedisMaster, "", "", { script1, script2, script3, script4 })));
@@ -104,7 +99,6 @@ TEST_F(RedisTest, RedisAppRequest1)
 
         // del
         {
-            test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(0));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -114,7 +108,6 @@ TEST_F(RedisTest, RedisAppRequest1)
         // set string
         {
             // set
-            test_server->addCommandResponse("HSET myhash field1 \"Hello\"", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(
                 new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HSET", "myhash", "field1", "\"Hello\"" }));
             wait_for_cond(redis_client.reply_available);
@@ -122,7 +115,6 @@ TEST_F(RedisTest, RedisAppRequest1)
             GTEST_ASSERT_EQ(redis_client.reply_data.print(), "1");
 
             // get
-            test_server->addCommandResponse("HGET myhash field1", REDIS_REPLY_STRING, AmArg("\"Hello\""));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HGET", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -130,7 +122,6 @@ TEST_F(RedisTest, RedisAppRequest1)
 
 
             // del
-            test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -140,21 +131,18 @@ TEST_F(RedisTest, RedisAppRequest1)
         // set number
         {
             // set
-            test_server->addCommandResponse("HSET myhash field1 5", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HSET", "myhash", "field1", 5 }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
             GTEST_ASSERT_EQ(redis_client.reply_data.print(), "1");
 
             // get
-            test_server->addCommandResponse("HGET myhash field1", REDIS_REPLY_STRING, AmArg("5"));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HGET", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
             GTEST_ASSERT_EQ(redis_client.reply_data.print(), "'5'");
 
             // del
-            test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -164,21 +152,18 @@ TEST_F(RedisTest, RedisAppRequest1)
         // set float
         {
             // set
-            test_server->addCommandResponse("HSET myhash field1 5.3", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HSET", "myhash", "field1", 5.3 }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
             GTEST_ASSERT_EQ(redis_client.reply_data.print(), "1");
 
             // get
-            test_server->addCommandResponse("HGET myhash field1", REDIS_REPLY_STRING, AmArg("5.3"));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HGET", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
             GTEST_ASSERT_EQ(redis_client.reply_data.print(), "'5.3'");
 
             // del
-            test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(1));
             post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
             wait_for_cond(redis_client.reply_available);
             GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -205,7 +190,6 @@ TEST_F(RedisTest, RedisAppRequest2)
         TestUserData user_data;
         const int    user_type_id = 1234;
         user_data.value           = "set hello user data";
-        test_server->addCommandResponse("HSET myhash field1 \"Hello\"", REDIS_REPLY_INTEGER, AmArg(1));
         post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id,
                                            { "HSET", "myhash", "field1", "\"Hello\"" }, &user_data, user_type_id));
         wait_for_cond(redis_client.reply_available);
@@ -216,7 +200,6 @@ TEST_F(RedisTest, RedisAppRequest2)
         GTEST_ASSERT_EQ(redis_client.reply_user_type_id, user_type_id);
 
         // del
-        test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(1));
         post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
         wait_for_cond(redis_client.reply_available);
         GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);
@@ -241,7 +224,6 @@ TEST_F(RedisTest, RedisAppRequest3)
         // wait_for_cond(redis_client.connected);
 
         // set
-        test_server->addCommandResponse("HSET myhash field1 \"Hello\"", REDIS_REPLY_INTEGER, AmArg(1));
         post_to_redis_app(
             new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HSET", "myhash", "field1", "\"Hello\"" }));
 
@@ -256,7 +238,6 @@ TEST_F(RedisTest, RedisAppRequest3)
         wait_for_cond(redis_client.connected);
 
         // del
-        test_server->addCommandResponse("HDEL myhash field1", REDIS_REPLY_INTEGER, AmArg(1));
         post_to_redis_app(new RedisRequest(REDIS_TEST_CLIENT_QUEUE, conn_id, { "HDEL", "myhash", "field1" }));
         wait_for_cond(redis_client.reply_available);
         GTEST_ASSERT_EQ(redis_client.reply_conn_id, conn_id);

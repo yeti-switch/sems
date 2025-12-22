@@ -1,5 +1,4 @@
 #include "RedisInstance.h"
-#include "unit_tests/RedisTestServer.h"
 #include "hiredis/hiredis.h"
 #include "hiredis/async.h"
 #include <sys/socket.h>
@@ -38,76 +37,24 @@ static void disconnectCallback(const struct redisAsyncContext *ctx, int status)
     instance->onDisconnect(status);
 }
 
-class RedisRealConnection : public RedisInstance {
-  public:
-    RedisRealConnection() {}
+int RedisInstance::redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn)
+{
+    connect_callback = fn;
+    return ::redisAsyncSetConnectCallback(ac, &connectCallback);
+}
 
-    redisAsyncContext *redisAsyncConnect(const char *ip, int port) override { return ::redisAsyncConnect(ip, port); }
+int RedisInstance::redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn)
+{
+    disconnect_callback = fn;
+    return ::redisAsyncSetDisconnectCallback(ac, &disconnectCallback);
+}
 
-    void redisAsyncDisconnect(redisAsyncContext *ac) override { ::redisAsyncDisconnect(ac); }
-
-    redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv) override
-    {
-        return ::redisConnectWithTimeout(ip, port, tv);
-    }
-
-    redisContext *redisConnectUnixWithTimeout(const char *path, const struct timeval tv) override
-    {
-        return ::redisConnectUnixWithTimeout(path, tv);
-    }
-
-    void redisFree(redisContext *ctx) override { ::redisFree(ctx); }
-
-    int redisAppendCommand(redisContext *c, const char *format, va_list argptr) override
-    {
-        return ::redisvAppendCommand(c, format, argptr);
-    }
-
-    int redisAsyncSetConnectCallback(redisAsyncContext *ac, redisConnectCallback *fn) override
-    {
-        connect_callback = fn;
-        return ::redisAsyncSetConnectCallback(ac, &connectCallback);
-    }
-
-    int redisAsyncSetDisconnectCallback(redisAsyncContext *ac, redisDisconnectCallback *fn) override
-    {
-        disconnect_callback = fn;
-        return ::redisAsyncSetDisconnectCallback(ac, &disconnectCallback);
-    }
-
-    void redisAsyncHandleRead(redisAsyncContext *ac) override { ::redisAsyncHandleRead(ac); }
-
-    void redisAsyncHandleWrite(redisAsyncContext *ac) override { ::redisAsyncHandleWrite(ac); }
-
-    int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd,
-                                   size_t len) override
-    {
-        return ::redisAsyncFormattedCommand(ac, fn, privdata, cmd, len);
-    }
-
-    int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, int argc, const char **argv,
-                              const size_t *argvlen) override
-    {
-        return ::redisAsyncCommandArgv(ac, fn, privdata, argc, argv, argvlen);
-    }
-
-    int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *format,
-                           va_list argptr) override
-    {
-        return ::redisvAsyncCommand(ac, fn, privdata, format, argptr);
-    }
-
-    int redisGetReply(redisContext *c, void **reply) override { return ::redisGetReply(c, reply); }
-
-    void freeReplyObject(void *reply) override { ::freeReplyObject(reply); }
-
-    RedisInstance *clone(redisInstanceContext *async_context) override
-    {
-        RedisRealConnection *instance = new RedisRealConnection();
-        instance->async_context       = async_context;
-        return instance;
-    }
-};
+RedisInstance *RedisInstance::clone(redisInstanceContext *async_context)
+{
+    RedisInstance *instance = new RedisInstance();
+    instance->async_context = async_context;
+    return instance;
+}
 
 namespace redis {
 
@@ -116,7 +63,7 @@ int redisAppendCommand(redisContext *c, const char *format, ...)
     va_list argptr;
     va_start(argptr, format);
     redisInstanceContext *context = (redisInstanceContext *)c;
-    int                   ret     = context->instance->redisAppendCommand(context->original.c, format, argptr);
+    int                   ret     = ::redisAppendCommand(context->original.c, format, argptr);
     va_end(argptr);
     return ret;
 }
@@ -124,7 +71,7 @@ int redisAppendCommand(redisContext *c, const char *format, ...)
 int redisGetReply(redisContext *c, void **reply)
 {
     redisInstanceContext *context = (redisInstanceContext *)c;
-    return context->instance->redisGetReply(context->original.c, reply);
+    return ::redisGetReply(context->original.c, reply);
 }
 
 bool isReplyError(redisReply *reply)
@@ -144,8 +91,7 @@ char *getReplyError(redisReply *reply)
 
 void freeReplyObject(redisContext *c, void *reply)
 {
-    redisInstanceContext *context = (redisInstanceContext *)c;
-    context->instance->freeReplyObject(reply);
+    ::freeReplyObject(reply);
 }
 
 int redisvFormatCommand(char **cmd, const char *fmt, va_list args)
@@ -177,7 +123,7 @@ int redisvAsyncCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdat
     va_list argptr;
     va_start(argptr, format);
     redisInstanceContext *context = (redisInstanceContext *)ac;
-    int ret = context->instance->redisvAsyncCommand(context->original.ac, fn, privdata, format, argptr);
+    int                   ret     = ::redisvAsyncCommand(context->original.ac, fn, privdata, format, argptr);
     va_end(argptr);
     return ret;
 }
@@ -186,13 +132,13 @@ int redisAsyncCommandArgv(redisAsyncContext *ac, redisCallbackFn *fn, void *priv
                           const size_t *argvlen)
 {
     redisInstanceContext *context = (redisInstanceContext *)ac;
-    return context->instance->redisAsyncCommandArgv(context->original.ac, fn, privdata, argc, argv, argvlen);
+    return ::redisAsyncCommandArgv(context->original.ac, fn, privdata, argc, argv, argvlen);
 }
 
 int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void *privdata, const char *cmd, size_t len)
 {
     redisInstanceContext *context = (redisInstanceContext *)ac;
-    return context->instance->redisAsyncFormattedCommand(context->original.ac, fn, privdata, cmd, len);
+    return ::redisAsyncFormattedCommand(context->original.ac, fn, privdata, cmd, len);
 }
 
 redisAsyncContext *redisAsyncConnect(const char *ip, int port)
@@ -200,7 +146,7 @@ redisAsyncContext *redisAsyncConnect(const char *ip, int port)
     if (!_redis_instance_)
         return 0;
     redisInstanceContext *context = (redisInstanceContext *)malloc(sizeof(redisInstanceContext));
-    context->original.ac          = _redis_instance_->redisAsyncConnect(ip, port);
+    context->original.ac          = ::redisAsyncConnect(ip, port);
     context->async                = true;
     context->original.ac->data = context->instance = _redis_instance_->clone(context);
     return (redisAsyncContext *)context;
@@ -219,7 +165,7 @@ void redisAsyncDisconnect(redisAsyncContext *ac)
         return;
     }
 
-    context->instance->redisAsyncDisconnect(context->original.ac);
+    ::redisAsyncDisconnect(context->original.ac);
 }
 
 redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv)
@@ -227,7 +173,7 @@ redisContext *redisConnectWithTimeout(const char *ip, int port, const struct tim
     if (!_redis_instance_)
         return 0;
     redisInstanceContext *context = (redisInstanceContext *)malloc(sizeof(redisInstanceContext));
-    context->original.c           = _redis_instance_->redisConnectWithTimeout(ip, port, tv);
+    context->original.c           = ::redisConnectWithTimeout(ip, port, tv);
     context->async                = false;
     context->instance             = _redis_instance_->clone(context);
     return (redisContext *)context;
@@ -238,7 +184,7 @@ redisContext *redisConnectUnixWithTimeout(const char *path, const struct timeval
     if (!_redis_instance_)
         return 0;
     redisInstanceContext *context = (redisInstanceContext *)malloc(sizeof(redisInstanceContext));
-    context->original.c           = _redis_instance_->redisConnectUnixWithTimeout(path, tv);
+    context->original.c           = ::redisConnectUnixWithTimeout(path, tv);
     context->async                = false;
     context->instance             = _redis_instance_->clone(context);
     return (redisContext *)context;
@@ -251,7 +197,7 @@ void redisFree(redisContext *ctx)
         ERROR("trying freed async redis context");
         return;
     }
-    context->instance->redisFree(context->original.c);
+    ::redisFree(context->original.c);
     delete context->instance;
     free(context);
 }
@@ -333,20 +279,20 @@ int redisGetFd(void *c)
 void redisAsyncHandleRead(redisAsyncContext *ac)
 {
     redisInstanceContext *context = (redisInstanceContext *)ac;
-    context->instance->redisAsyncHandleRead(context->original.ac);
+    ::redisAsyncHandleRead(context->original.ac);
 }
 
 void redisAsyncHandleWrite(redisAsyncContext *ac)
 {
     redisInstanceContext *context = (redisInstanceContext *)ac;
-    context->instance->redisAsyncHandleWrite(context->original.ac);
+    ::redisAsyncHandleWrite(context->original.ac);
 }
 } // namespace redis
 
 void makeRedisInstance()
 {
     if (!_redis_instance_)
-        _redis_instance_ = new RedisRealConnection;
+        _redis_instance_ = new RedisInstance;
 }
 
 void freeRedisInstance()
